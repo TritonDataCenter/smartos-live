@@ -1,0 +1,168 @@
+#!/sbin/sh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright (c) 1999, 2010, Oracle and/or its affiliates. All rights reserved.
+#
+# Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T.
+# All rights reserved.
+#
+
+. /lib/svc/share/smf_include.sh
+. /lib/svc/share/net_include.sh
+
+#
+# In a shared-IP zone we need this service to be up, but all of the work
+# it tries to do is irrelevant (and will actually lead to the service 
+# failing if we try to do it), so just bail out. 
+# In the global zone and exclusive-IP zones we proceed.
+#
+smf_configure_ip || exit $SMF_EXIT_OK
+
+# Make sure that the libraries essential to this stage of booting can be found.
+LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
+
+smf_netstrategy
+
+if smf_is_globalzone; then
+    FORCE_RECONFIGURE="true"; export FORCE_RECONFIGURE
+	net_reconfigure || exit $SMF_EXIT_ERR_CONFIG
+
+	# Update PVID on interfaces configured with VLAN 1
+	update_pvid
+
+	# 
+	# Upgrade handling. The upgrade file consists of a series of dladm(1M)
+	# commands. Note that after we are done, we cannot rename the upgrade
+	# script file as the file system is still read-only at this point.
+	# Defer this to the manifest-import service.
+	#
+	upgrade_script=/var/svc/profile/upgrade_datalink
+	if [ -f "${upgrade_script}" ]; then 
+		. "${upgrade_script}"
+	fi
+
+	#
+	# Upgrade handling for ibd:
+	# After we are done with the upgrade handling, we can not set the
+	# ibd/ibd_upgraded property to "true" as the file system is
+	# read-only at this point. It will be done later by ibd-post-upgrade
+	# service.
+	#
+	ibd_upgraded=`/bin/svcprop -c -p ibd/ibd_upgraded \
+	    $SMF_FMRI 2> /dev/null`
+	if [ "$ibd_upgraded" != "true" ]; then
+		/sbin/ibd_upgrade -v
+	fi
+
+	#
+	# Bring up simnets, link aggregations and initialize security objects.
+	# Note that link property initialization is deferred until after
+	# IP interfaces are plumbed to ensure that the links will not
+	# be unloaded (and the property settings lost). We should bring
+	# up simnets prior to VLANs/Aggrs to enable creation of VLANs/Aggrs
+	# over simnets.
+	#
+	/sbin/dladm up-simnet
+	/sbin/dladm up-aggr
+	/sbin/dladm up-vlan
+	/sbin/dladm up-part
+	/sbin/dladm init-secobj
+	#
+	# Bring up VNICs
+	#
+	/sbin/dladm up-vnic
+	#
+	# Create flows via flowadm.
+	#
+	/sbin/flowadm init-flow
+
+fi
+
+#
+# If the system was net booted by DHCP, hand DHCP management off to the
+# DHCP agent (ifconfig communicates to the DHCP agent through the
+# loopback interface).
+#
+if [ -n "$_INIT_NET_IF" -a "$_INIT_NET_STRATEGY" = "dhcp" ]; then
+	/sbin/dhcpagent -a
+fi
+
+#
+# The network initialization is done early to support diskless and
+# dataless configurations.  For IPv4 interfaces that were configured by
+# the kernel (e.g.  those on diskless machines) and not configured by
+# DHCP, reset the netmask using the local "/etc/netmasks" file if one
+# exists, and then reset the broadcast address based on the netmask.
+#
+/sbin/ifconfig -auD4 netmask + broadcast +
+
+# create a dhcp.<iface> for all interfaces that are "up"
+primary="0"
+for iface in `/sbin/dladm show-phys | /usr/bin/grep "Ethernet" | /usr/bin/cut -d' ' -f1 | sort -n`; do
+    /sbin/ifconfig $iface plumb
+	#/sbin/ifconfig $iface inet6 plumb
+    if /sbin/ifconfig $iface inet >/dev/null 2>&1; then
+        inet_plumbed="$inet_plumbed $iface"
+    else
+        inet_failed="$inet_failed $iface"
+    fi
+    #if /sbin/ifconfig $iface inet6 >/dev/null 2>&1; then
+        #inet6_plumbed="$inet6_plumbed $iface"
+    #else
+        #inet6_failed="$inet6_failed $iface"
+    #fi
+
+    if [ "$primary" == "0" ]; then
+		/sbin/ifconfig $iface auto-dhcp primary
+        primary=1
+    else
+        # this is where we'd bring up other interfaces
+        # (currently we just care about primary)
+		#/sbin/ifconfig $iface dhcp start wait 0
+        /bin/true
+    fi
+done
+
+[ -n "$inet_failed" ] && warn_failed_ifs "plumb IPv4" "$inet_failed"
+#[ -n "$inet6_failed" ] && warn_failed_ifs "plumb IPv6" "$inet6_failed"
+
+# Any non-loopback IPv4 interfaces with usable addresses up?
+if [ -n "`/sbin/ifconfig -a4u`" ]; then
+    	/sbin/ifconfig -a4u | while read intf addr rest; do
+		[ $intf = inet ] && [ $addr != 127.0.0.1 ] &&
+		[ $addr != 0.0.0.0 ] && exit $SMF_EXIT_OK
+	done && exit $SMF_EXIT_OK
+fi
+
+# Any DHCP interfaces started?
+[ -n "`/sbin/ifconfig -a4 dhcp status 2>/dev/null`" ] && exit $SMF_EXIT_OK
+
+# Any non-loopback IPv6 interfaces up?
+#if [ -n "`/sbin/ifconfig -au6`" ]; then
+	#/sbin/ifconfig -au6 | while read intf addr rest; do
+		#[ $intf = inet6 ] && [ $addr != ::1/128 ] && exit $SMF_EXIT_OK
+	#done && exit $SMF_EXIT_OK
+#fi
+
+# This service was supposed to configure something yet didn't.  Exit
+# with config error.
+exit $SMF_EXIT_ERR_CONFIG

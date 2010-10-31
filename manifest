@@ -134,7 +134,6 @@ s dev/sad/admin=../../devices/pseudo/sad@0:admin
 s dev/sad/user=../../devices/pseudo/sad@0:user
 s dev/sdp=../devices/pseudo/sdp@0:sdp
 s dev/smbios=../devices/pseudo/smbios@0:smbios
-s dev/sndstat=../devices/pseudo/audio@0:sound,sndstat0
 s dev/spdsock=../devices/pseudo/spdsock@0:spdsock
 s dev/sppp=../devices/pseudo/clone@0:sppp
 s dev/sppptun=../devices/pseudo/clone@0:sppptun
@@ -300,9 +299,6 @@ f etc/dladm/flowprop.conf 0644 dladm netadm
 f etc/dladm/secobj.conf 0660 dladm netadm
 f etc/driver_aliases 0644 root sys
 f etc/driver_classes 0644 root sys
-d etc/ds 0755 root sys
-f etc/ds/dfstab 0644 root sys
-f etc/ds/fstypes 0644 root root
 f etc/dumpadm.conf 0644 root other
 f etc/dumpdates 0664 root sys
 s etc/ff=../usr/sbin/ff
@@ -552,7 +548,6 @@ d etc/saf/zsmon 0755 root sys
 f etc/saf/zsmon/_pid 0644 root root
 f etc/saf/zsmon/_pmtab 0644 root sys
 d etc/sasl 0755 root sys
-f etc/screenrc 0644 root sys
 f etc/sdp.conf 0644 root sys
 d etc/security 0755 root sys
 d etc/security/audit 0755 root sys
@@ -661,7 +656,6 @@ s etc/wtmpx=../var/adm/wtmpx
 d etc/xdg 0755 root sys
 d etc/xdg/autostart 0755 root sys
 d etc/zfs 0755 root sys
-f etc/zfs/zpool.cache 0644 root root
 d etc/zones 0755 root sys
 f etc/zones/Joyent.xml 0444 root bin
 f etc/zones/SUNWblank.xml 0444 root bin
@@ -2494,6 +2488,7 @@ f usr/bin/bc 0555 root bin
 f usr/bin/bdiff 0755 root bin
 f usr/bin/bfs 0555 root bin
 f usr/bin/bg 0555 root bin
+f usr/bin/bootparams 0555 root bin
 f usr/bin/bunzip2 0555 root bin
 f usr/bin/busstat 0555 root bin
 h usr/bin/bzcat=usr/bin/bunzip2
@@ -13813,12 +13808,6 @@ s usr/sbin/lockfs=../lib/fs/ufs/lockfs
 f usr/sbin/lockstat 0555 root bin
 f usr/sbin/lofiadm 0555 root bin
 f usr/sbin/logadm 0555 root bin
-f usr/sbin/lpfilter 0555 root lp
-f usr/sbin/lpforms 0555 root lp
-f usr/sbin/lpinfo 0555 root bin
-f usr/sbin/lpshut 0555 root lp
-f usr/sbin/lpsystem 0555 root lp
-f usr/sbin/lpusers 0555 root lp
 f usr/sbin/lshal 0555 root bin
 f usr/sbin/luxadm 0555 root bin
 f usr/sbin/makedbm 0555 root bin

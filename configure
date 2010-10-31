@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+#
+# Copyright (c) 2010 Joyent Inc.
+#
+
+set -e
+
+# Load all site-specific configure files
+source configure.*
+
+echo "==> Installing illumos build dependencies..."
+pfexec pkg install \
+  text/groff \
+  system/zones/internal \
+  library/libxml2 \
+  developer/gnome/gettext \
+  library/python-2/setuptools-26 \
+  library/gnome/gnome-vfs \
+  runtime/perl-510 \
+  runtime/perl-510/extra \
+  developer/build/gnu-make \
+  developer/build/onbld \
+  developer/gcc-3 \
+  developer/astdev \
+  developer/lexer/flex \
+  library/nspr/header-nspr \
+  system/library/mozilla-nss/header-nss \
+  data/docbook \
+  text/gnu-gettext \
+  || /bin/true
+
+
+# TODO: move this to illumos-extras itself
+echo "==> Installing illumos-extras dependencies..."
+pfexec pkg install \
+  compatibility/ucb \
+  developer/build/autoconf \
+  developer/build/automake-19 \
+  developer/build/automake-110 \
+  developer/build/cmake \
+  developer/build/libtool \
+  developer/parser/bison \
+  library/libevent \
+  || /bin/true
+
+
+echo "==> Checking for /opt/SUNWspro/bin/cc..."
+echo " +--> Ensuring SUNWspro (12.1-patched) installed in /opt/SUNWspro/sunstudio12.1..."
+if [ ! -f "/opt/SUNWspro/sunstudio12.1/prod/bin/cc" ]; then
+  if [ ! -z "${SUNW_SPRO12u1_URL}" ]; then
+    (pfexec mkdir -p /opt/SUNWspro \
+      && cd /opt/SUNWspro \
+      && curl -k ${SUNW_SPRO12u1_URL} \
+      | pfexec gtar -zxf -)
+  else
+    echo "FATAL: unable to download sunstudio12u1, no URL is set.  Please set SUNW_SPRO12u1_URL in configure.*"
+    exit 1
+ fi
+fi
+echo " +--> Ensuring SUNWspro (12-patched) installed in /opt/SUNWspro..."
+if [ ! -f "/opt/SUNWspro/prod/bin/cc" ]; then
+  if [ ! -z "${SUNW_SPRO12_URL}" ]; then
+    (pfexec mkdir -p /opt/SUNWspro \
+      && cd /opt/SUNWspro \
+      && curl -k "${SUNW_SPRO12_URL}" \
+      | pfexec gtar -jxf -)
+  else
+    echo "FATAL: unable to download sunstudio12, no URL is set.  Please set SUNW_SPRO12_URL in configure.*"
+    exit 1
+ fi
+fi
+
+echo "==> Creating the missing symlinks..."
+test -f /usr/bin/aclocal || pfexec ln -s /usr/bin/aclocal-1.10 /usr/bin/aclocal
+test -f /usr/bin/automake || pfexec ln -s /usr/bin/automake-1.10 /usr/bin/automake
+# so builds can use --mode and such
+test -f /usr/bin/install || pfexec ln -s /usr/bin/ginstall /usr/bin/install
+test -f /usr/bin/pod2man || pfexec ln -s /usr/perl5/5.10.0/bin/pod2man /usr/bin/pod2man
+
+echo "==> Populating projects/ directories..."
+[ ! -d "projects" ] || mkdir -p projects
+if [ ! -d "projects" ] ; then
+  echo "FATAL: unable to create projects/ directory."
+  exit 1
+fi 
+
+if [ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]; then
+  echo " +--> Getting illumos source tree..."
+  if [ -z "${GET_ILLUMOS}" ]; then
+    echo "FATAL: No GET_ILLUMOS defined in configure.*, can't get illumos!"
+    exit 1
+  fi
+  /bin/bash -c "cd projects && ${GET_ILLUMOS} && cd -"
+  if [ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]; then
+    echo "FATAL: GET_ILLUMOS command failed to get illumos!"
+    exit 1
+  fi
+fi
+
+if [ ! -f "projects/illumos-extras/Makefile" ]; then
+  echo " +--> Getting illumos-extras source tree..."
+  if [ -z "${GET_ILLUMOS_EXTRAS}" ]; then
+    echo "FATAL: No GET_ILLUMOS_EXTRAS defined in configure.*, can't get illumos-extras!"
+    exit 1
+  fi
+  /bin/bash -c "cd projects && ${GET_ILLUMOS_EXTRAS} && cd -"
+  if [ ! -f "projects/illumos-extras/Makefile" ]; then
+    echo "FATAL: GET_ILLUMOS_EXTRAS command failed to get illumos-extras!"
+    exit 1
+  fi
+fi
+
+if [ ! -f "projects/opensolaris-man/README" ]; then
+  echo " +--> Getting opensolaris-man source tree..."
+  if [ -z "${GET_OPENSOLARIS_MAN}" ]; then
+    echo "FATAL: No GET_OPENSOLARIS_MAN defined in configure.*, can't get opensolaris-man!"
+    exit 1
+  fi
+  /bin/bash -c "cd projects && ${GET_OPENSOLARIS_MAN} && cd -"
+  if [ ! -f "projects/opensolaris-man/README" ]; then
+    echo "FATAL: GET_OPENSOLARIS_MAN command failed to get opensolaris-man!"
+    exit 1
+  fi
+fi
+
+ROOT=`pwd`
+echo "==> Setting up illumos-gate"
+
+cd ${ROOT}/projects/illumos
+
+if [ ! -f on-closed-bins.i386.tar.bz2 ]; then
+  if [ -z "${ON_CLOSED_BINS_URL}" ]; then
+    curl -O http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins.i386.tar.bz2
+  else
+    curl -k -O "${ON_CLOSED_BINS_URL}"
+  fi
+  tar xvpf on-closed-bins.i386.tar.bz2
+fi
+if [ ! -f on-closed-bins-nd.i386.tar.bz2 ]; then
+  if [ -z "${ON_CLOSED_BINS_ND_URL}" ]; then
+    curl -O http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins-nd.i386.tar.bz2
+  else
+    curl -k -O "${ON_CLOSED_BINS_ND_URL}"
+  fi
+  tar xvpf on-closed-bins-nd.i386.tar.bz2
+fi
+
+cp usr/src/tools/env/illumos.sh .
+[ ! -z "${RELEASE_VER}" ] && /usr/gnu/bin/sed -i -e "s|^GATE=.*$|GATE=\"${RELEASE_VER}\"; export GATE|" illumos.sh
+[ ! -z "${PUBLISHER}" ] && /usr/gnu/bin/sed -i -e "s|^# PKGPUBLISHER_REDIST=.*$|PKGPUBLISHER_REDIST=\"${PUBLISHER}\"; export PKGPUBLISHER_REDIST|" illumos.sh
+/usr/gnu/bin/sed -i -e "s|^CODEMGR_WS=.*$|CODEMGR_WS=\"${ROOT}/projects/illumos\"; export CODEMGR_WS|" illumos.sh
+/usr/gnu/bin/sed -i -e "s|^NIGHTLY_OPTIONS=.*$|NIGHTLY_OPTIONS=\"-nCmprt\"; export NIGHTLY_OPTIONS|" illumos.sh
+/usr/gnu/bin/sed -i -e "s|^ROOT=.*$|ROOT="${ROOT}/proto";  export ROOT|" illumos.sh
+/usr/gnu/bin/sed -i -e "s|^PARENT_ROOT=.*$|PARENT_ROOT="${ROOT}/proto"; export PARENT_ROOT|" illumos.sh
+
+# For some reason this disappeared before
+touch ${ROOT}/projects/illumos/usr/src/tools/findunref/exception_list.unknown
+
+echo ""
+echo "Configuration complete.  You should now be able to build a live image using ./build_live"
+echo ""
+
+exit 0

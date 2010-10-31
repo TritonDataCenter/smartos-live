@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#
+# Copyright (c) 2010 Joyent Inc.
+#
+
+# Setup for building stuff!
+unset CC
+unset CXX
+ROOT=`pwd`
+export PATH=/opt/onbld/bin:/sbin:/usr/sbin:/usr/bin:/bin
+
+echo "==> Building Illumos"
+
+cd ${ROOT}/projects/illumos
+cp usr/src/tools/scripts/nightly ./nightly
+ksh93 ./usr/src/tools/scripts/bldenv.sh -d illumos.sh 'cd $CODEMGR_WS/usr/src && dmake setup && cd tools && dmake install'
+time ./nightly illumos.sh
+
+exit 0

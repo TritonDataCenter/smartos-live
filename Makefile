@@ -13,16 +13,16 @@ live: world
 	touch 0-illumos-stamp
 
 0-extra-stamp:
-	(cd $(ROOT)/projects/illumos-extras && make DESTDIR=$(PROTO) && make DESTDIR=$(PROTO) install)
+	(cd $(ROOT)/projects/illumos-extras && /usr/ccs/bin/make DESTDIR=$(PROTO) && /usr/ccs/bin/make DESTDIR=$(PROTO) install)
 	touch 0-extra-stamp
 
 0-livesrc-stamp: src/bootparams.c
-	(cd $(ROOT)/src && make DESTDIR=$(PROTO) && make DESTDIR=$(PROTO) install)
+	(cd $(ROOT)/src && /usr/ccs/bin/make DESTDIR=$(PROTO) && /usr/ccs/bin/make DESTDIR=$(PROTO) install)
 	touch 0-livesrc-stamp
 
 clean:
-	(cd $(ROOT)/src && make clean)
-	(cd $(ROOT)/projects/illumos-extras && make clean)
+	(cd $(ROOT)/src && /usr/ccs/bin/make clean)
+	(cd $(ROOT)/projects/illumos-extras && /usr/ccs/bin/make clean)
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO))
 	rm -f 0-*-stamp

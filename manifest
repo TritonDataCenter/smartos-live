@@ -6800,22 +6800,6 @@ d usr/lib/fs/proc 0755 root sys
 f usr/lib/fs/proc/mount 0555 root bin
 d usr/lib/fs/sharefs 0755 root sys
 f usr/lib/fs/sharefs/mount 0555 root bin
-d usr/lib/fs/smb 0755 root sys
-d usr/lib/fs/smb/amd64 0755 root sys
-f usr/lib/fs/smb/amd64/libshare_smb.so.1 0755 root bin
-s usr/lib/fs/smb/amd64/libshare_smb.so=libshare_smb.so.1
-f usr/lib/fs/smb/libshare_smb.so.1 0755 root bin
-s usr/lib/fs/smb/libshare_smb.so=libshare_smb.so.1
-d usr/lib/fs/smbfs 0755 root sys
-d usr/lib/fs/smbfs/amd64 0755 root sys
-f usr/lib/fs/smbfs/amd64/libshare_smbfs.so.1 0755 root sys
-s usr/lib/fs/smbfs/amd64/libshare_smbfs.so=libshare_smbfs.so.1
-f usr/lib/fs/smbfs/chacl 0555 root sys
-f usr/lib/fs/smbfs/libshare_smbfs.so.1 0755 root sys
-s usr/lib/fs/smbfs/libshare_smbfs.so=libshare_smbfs.so.1
-f usr/lib/fs/smbfs/lsacl 0555 root sys
-f usr/lib/fs/smbfs/mount 4555 root sys
-f usr/lib/fs/smbfs/umount 4555 root sys
 d usr/lib/fs/tmpfs 0755 root sys
 f usr/lib/fs/tmpfs/mount 0555 root bin
 d usr/lib/fs/udfs 0755 root sys

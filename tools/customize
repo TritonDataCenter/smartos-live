@@ -20,11 +20,19 @@ pfexec chown root:root ${rdmnt}
 echo "${BUILDSTAMP}" | pfexec tee ${rdmnt}/etc/joyent_buildstamp >/dev/null 2>&1
 pfexec gsed -i -e "s/ [0-9]\{8\}T[0-9]\{6\}Z/ ${BUILDSTAMP}/" ${rdmnt}/etc/motd
 
-# Setup the SMF repository + initial manifests
-pfexec cp /dev/null ${rdmnt}/etc/svc/repository.db
-pfexec /usr/sbin/svccfg -v repository ${rdmnt}/etc/svc/repository.db
-SVCCFG_REPOSITORY=${rdmnt}/etc/svc/repository.db \
-    pfexec /usr/sbin/svccfg -v import ${rdmnt}/lib/svc/manifest/system/early-manifest-import.xml
+REPO_DB=${rdmnt}/etc/svc/repository.db
+SVCCFG="env SVCCFG_CHECKHASH=1 PKG_INSTALL_ROOT=${rdmnt} SVCCFG_DTD=${rdmnt}/usr/share/lib/xml/dtd/service_bundle.dtd.1 SVCCFG_REPOSITORY=${REPO_DB} SVCCFG_CONFIGD_PATH=/lib/svc/bin/svc.configd pfexec /usr/sbin/svccfg"
+
+pfexec cp ${rdmnt}/lib/svc/seed/global.db ${REPO_DB}
+${SVCCFG} -v repository ${REPO_DB}
+${SVCCFG} -v add smf/manifest
+${SVCCFG} -v import ${rdmnt}/lib/svc/manifest
+${SVCCFG} -s "system/boot-config:default" setprop config/fastreboot_default=false
+${SVCCFG} -s "system/manifest-import" setprop start/exec=:true
+${SVCCFG} -v apply ${rdmnt}/etc/svc/profile/generic.xml
+${SVCCFG} -v apply ${rdmnt}/etc/svc/profile/platform.xml
+
+#pfexec /usr/sbin/svccfg -v import ${rdmnt}/lib/svc/manifest/system/early-manifest-import.xml
     
 #SVCCFG_REPOSITORY=${rdmnt}/etc/svc/repository.db \
 #    pfexec /usr/sbin/svccfg -v import ${rdmnt}/lib/svc/manifest

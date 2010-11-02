@@ -2101,6 +2101,7 @@ d lib/svc/manifest/system/svc 0755 root sys
 f lib/svc/manifest/system/svc/global.xml 0444 root sys
 f lib/svc/manifest/system/svc/restarter.xml 0444 root sys
 f lib/svc/manifest/system/sysevent.xml 0444 root sys
+f lib/svc/manifest/system/sysidtool.xml 0444 root sys
 f lib/svc/manifest/system/system-log.xml 0444 root sys
 f lib/svc/manifest/system/tsol-zones.xml 0444 root sys
 f lib/svc/manifest/system/utmp.xml 0444 root sys
@@ -2881,7 +2882,7 @@ f usr/bin/setpgrp 0555 root sys
 f usr/bin/settime 0555 root bin
 f usr/bin/setuname 0555 root bin
 f usr/bin/sftp 0555 root bin
-s usr/bin/sh=i86/ksh93
+s usr/bin/sh=bash
 f usr/bin/shcomp 0555 root bin
 f usr/bin/sleep 0555 root bin
 f usr/bin/soelim 0555 root bin
@@ -17298,7 +17299,6 @@ d var/svc/manifest/system/device 0755 root sys
 d var/svc/manifest/system/filesystem 0755 root sys
 d var/svc/manifest/system/security 0755 root sys
 d var/svc/manifest/system/svc 0755 root sys
-f var/svc/manifest/system/sysidtool.xml 0444 root sys
 d var/svc/profile 0755 root sys
 d var/tmp 1777 root sys
 d var/tpm 0755 root sys

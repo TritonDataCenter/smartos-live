@@ -78,7 +78,7 @@ test -f /usr/bin/install || pfexec ln -s /usr/bin/ginstall /usr/bin/install
 test -f /usr/bin/pod2man || pfexec ln -s /usr/perl5/5.10.0/bin/pod2man /usr/bin/pod2man
 
 echo "==> Populating projects/ directories..."
-[ ! -d "projects" ] || mkdir -p projects
+[ ! -d "projects" ] && mkdir -p projects
 if [ ! -d "projects" ] ; then
   echo "FATAL: unable to create projects/ directory."
   exit 1

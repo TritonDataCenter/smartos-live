@@ -145,7 +145,7 @@ function copy_files
                 case ${e_type} in
                     d)
                         pfexec install -s -d -m ${e_mode} -u ${e_owner} -g ${e_group} ${rdmnt}/${e_target}
-                        [ -d "${rdmnt}/${e_target}" ] || result="*FAILED*"
+                        pfexec [ -d "${rdmnt}/${e_target}" ] || result="*FAILED*"
                         echo "${result} - DIR: ${e_target}"
                     ;;
                     f)

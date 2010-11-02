@@ -134,10 +134,10 @@ void prt_prop(di_prop_t prop)
         case DI_PROP_TYPE_STRING:
             p = (char *)prop_data;
             for (i = 0; i < nitems - 1; i++) {
-                (void) printf("'%s' + ", p);
+                (void) printf("%s + ", p);
                 p += strlen(p) + 1;
             }
-            (void) printf("'%s'", p);
+            (void) printf("%s", p);
             break;
         default:
             for (i = 0; i < nitems - 1; i++)
@@ -166,9 +166,8 @@ int main()
     di_node_t root_node;
 
     if ((root_node = di_init("/", (DINFOSUBTREE | DINFOPROP))) == DI_NODE_NIL) {
-    //if ((root_node = di_init("/", DINFOSUBTREE)) == DI_NODE_NIL) {
-          fprintf(stderr, "di_init() failed\n");
-          exit(1);
+        fprintf(stderr, "di_init() failed\n");
+        exit(1);
     }
     di_walk_node(root_node, DI_WALK_CLDFIRST, NULL, prt_node);
     di_fini(root_node);

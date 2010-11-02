@@ -97,4 +97,3 @@
 *
 *		set test_module:debug = 0x13
 
-forceload: crypto/swrand

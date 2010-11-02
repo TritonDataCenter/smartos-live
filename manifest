@@ -1821,7 +1821,6 @@ f lib/llib-lcmdutils 0644 root bin
 f lib/llib-lcmdutils.ln 0644 root bin
 f lib/llib-lcontract 0644 root bin
 f lib/llib-lcontract.ln 0644 root bin
-f lib/llib-lcrypto 0644 root bin
 f lib/llib-lcryptoutil 0644 root bin
 f lib/llib-lcryptoutil.ln 0644 root bin
 f lib/llib-lctf 0644 root bin
@@ -1914,7 +1913,6 @@ f lib/llib-lsendfile 0644 root bin
 f lib/llib-lsendfile.ln 0644 root bin
 f lib/llib-lsocket 0644 root bin
 f lib/llib-lsocket.ln 0644 root bin
-f lib/llib-lssl 0644 root bin
 f lib/llib-lsysevent 0644 root bin
 f lib/llib-lsysevent.ln 0644 root bin
 s lib/llib-ltermcap.ln=llib-lcurses.ln
@@ -2410,21 +2408,12 @@ f usr/bin/alias 0555 root bin
 d usr/bin/amd64 0755 root bin
 f usr/bin/amd64/amt 0555 root bin
 f usr/bin/amd64/crle 0555 root bin
-f usr/bin/amd64/curl-config 0755 root bin
 f usr/bin/amd64/decrypt 0555 root bin
 f usr/bin/amd64/digest 0555 root bin
 f usr/bin/amd64/elfwrap 0555 root bin
 f usr/bin/amd64/encrypt 0555 root bin
 s usr/bin/amd64/gcaptoinfo=gtic
-f usr/bin/amd64/gclear 0755 root bin
 f usr/bin/amd64/gcore 0555 root bin
-f usr/bin/amd64/ginfocmp 0755 root bin
-s usr/bin/amd64/ginfotocap=gtic
-s usr/bin/amd64/greset=gtset
-f usr/bin/amd64/gtic 0755 root bin
-f usr/bin/amd64/gtoe 0755 root bin
-f usr/bin/amd64/gtput 0755 root bin
-f usr/bin/amd64/gtset 0755 root bin
 f usr/bin/amd64/ksh 0555 root bin
 f usr/bin/amd64/ksh93 0555 root bin
 f usr/bin/amd64/ld 0755 root bin
@@ -2469,8 +2458,6 @@ f usr/bin/amd64/strings 0555 root bin
 f usr/bin/amd64/truss 0555 root bin
 f usr/bin/amd64/uptime 4555 root bin
 f usr/bin/amd64/w 4555 root bin
-f usr/bin/amd64/wish8.4 0555 root bin
-s usr/bin/amd64/wish=wish8.4
 f usr/bin/amt 0555 root bin
 f usr/bin/apropos 0555 root bin
 f usr/bin/arch 0555 root bin

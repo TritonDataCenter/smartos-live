@@ -157,7 +157,7 @@ cp usr/src/tools/env/illumos.sh .
 touch ${ROOT}/projects/illumos/usr/src/tools/findunref/exception_list.unknown
 
 echo ""
-echo "Configuration complete.  You should now be able to build a live image using ./build_live"
+echo "Configuration complete.  You should now be able to build a live image using 'make world && make live'"
 echo ""
 
 exit 0

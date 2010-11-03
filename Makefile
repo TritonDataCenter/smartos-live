@@ -1,6 +1,6 @@
 # Copyright (c) 2010 Joyent Inc., All rights reserved.
 
-ROOT:sh=pwd
+ROOT=$(PWD)
 PROTO=$(ROOT)/proto
 
 world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp

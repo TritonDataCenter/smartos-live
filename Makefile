@@ -8,6 +8,11 @@ world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp
 live: world
 	(cd $(ROOT) && ./tools/build_live $(ROOT)/manifest)
 
+update:
+	@(git pull --rebase)
+	@(cd projects/illumos; git pull --rebase)
+	@(cd projects/illumos-extras; git pull --rebase)
+
 0-illumos-stamp:
 	(cd $(ROOT) && ./tools/build_illumos)
 	touch 0-illumos-stamp

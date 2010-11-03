@@ -59,6 +59,7 @@ The "make live" process works as follows (using the tools/build_live script):
 
 Other notes:
 
+  * The resulting image requires a 64-bit machine
   * The BUILDSTAMP is available in the live image in /etc/joyent_buildstamp
   * There is a manifest created:
 

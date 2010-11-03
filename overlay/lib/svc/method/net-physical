@@ -30,6 +30,59 @@
 . /lib/svc/share/net_include.sh
 
 #
+# Joyent note:
+#
+# This was taken from /lib/svc/share/net_include.sh: net_reconfigure()
+# And modified just so that it always assumes this is a reconfigure boot.
+#
+#
+forced_net_reconfigure ()
+{
+    #
+    # Ensure that the datalink-management service is running since
+    # manifest-import has not yet run for a first boot after
+    # upgrade.  We wouldn't need to do that if manifest-import ran
+    # earlier in boot, since there is an explicit dependency
+    # between datalink-management and network/physical.
+    #
+    svcadm enable -ts network/datalink-management:default
+
+    #
+    # There is a bug in SMF which causes the svcadm command above
+    # to exit prematurely (with an error code of 3) before having
+    # waited for the service to come online after having enabled
+    # it.  Until that bug is fixed, we need to have the following
+    # loop to explicitly wait for the service to come online.
+    #
+    i=0
+    while [ $i -lt 30 ]; do
+        i=`expr $i + 1`
+        sleep 1
+        state=`svcprop -p restarter/state \
+            network/datalink-management:default 2>/dev/null`
+        if [ $? -ne 0 ]; then
+            continue
+        elif [ "$state" = "online" ]; then
+            break
+        fi
+    done
+    if [ "$state" != "online" ]; then
+        echo "The network/datalink-management service \c"
+        echo "did not come online."
+        return 1
+    fi
+
+    #
+    # Initialize the set of physical links, and validate and
+    # remove all the physical links which were removed during the
+    # system shutdown.
+    #
+    /sbin/dladm init-phys
+    return 0
+}
+
+
+#
 # In a shared-IP zone we need this service to be up, but all of the work
 # it tries to do is irrelevant (and will actually lead to the service 
 # failing if we try to do it), so just bail out. 
@@ -43,8 +96,7 @@ LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 smf_netstrategy
 
 if smf_is_globalzone; then
-    FORCE_RECONFIGURE="true"; export FORCE_RECONFIGURE
-	net_reconfigure || exit $SMF_EXIT_ERR_CONFIG
+	forced_net_reconfigure || exit $SMF_EXIT_ERR_CONFIG
 
 	# Update PVID on interfaces configured with VLAN 1
 	update_pvid
@@ -115,8 +167,7 @@ fi
 #
 /sbin/ifconfig -auD4 netmask + broadcast +
 
-# create a dhcp.<iface> for all interfaces that are "up"
-primary="0"
+# plumb all the interfaces
 for iface in `/sbin/dladm show-phys | /usr/bin/grep "Ethernet" | /usr/bin/cut -d' ' -f1 | sort -n`; do
     /sbin/ifconfig $iface plumb
 	#/sbin/ifconfig $iface inet6 plumb
@@ -130,17 +181,49 @@ for iface in `/sbin/dladm show-phys | /usr/bin/grep "Ethernet" | /usr/bin/cut -d
     #else
         #inet6_failed="$inet6_failed $iface"
     #fi
+done
 
-    if [ "$primary" == "0" ]; then
-		/sbin/ifconfig $iface auto-dhcp primary
-        primary=1
-    else
-        # this is where we'd bring up other interfaces
-        # (currently we just care about primary)
-		#/sbin/ifconfig $iface dhcp start wait 0
-        /bin/true
+#
+# We only need the primary interface up here (since other interfaces will come
+# up later).  To find the primary, we use:
+#
+#   1. The NIC with mac that matches kernel param admin_nic=xx:xx:xx:xx:xx:xx
+#   2. The first nic that was plumbed above
+#
+if [ -x "/usr/bin/bootparams" ]; then
+    admin_mac_param=`/usr/bin/bootparams | grep "^admin_nic=" | cut -d'=' -f2-`
+
+    #echo "admin_mac_param='$admin_mac_param'" >> /etc/svc/volatile/admin_mac.log
+
+    # this is to ensure a MAC like: 00:50:56:32:CD:2d ends up matching the form
+    # output by ifconfig (0:50:56:32:cd:2d)
+    admin_mac=`echo "${admin_mac_param}" | sed -e "s/:/ /g" | { read oct0 oct1 oct2 oct3 oct4 oct5 oct6 do
+        if [ -n "${oct0}" ] && [ -n "${oct5}" ] && [ -z "${oct6}" ]; then
+            printf "%x:%x:%x:%x:%x:%x" "0x${oct0}" "0x${oct1}" "0x${oct2}" "0x${oct3}" "0x${oct4}" "0x${oct5}"
+        fi
+    }`
+
+    #echo "admin_mac='$admin_mac'" >> /etc/svc/volatile/admin_mac.log
+fi
+
+found_admin=0
+for iface in $inet_plumbed; do
+    iface_mac=`ifconfig ${iface} ether | grep "ether " | sed -e "s/^.*ether //" | sed -e "s/ *$//"`
+    #echo "plumbed iface ${iface} has '${iface_mac}' looking for '${admin_mac}'" >> /etc/svc/volatile/admin_mac.log
+    if [ -n "${iface_mac}" ] && [ -n "${admin_mac}" ] && [ "${iface_mac}" == "${admin_mac}" ]; then
+        /sbin/ifconfig $iface auto-dhcp primary
+        #echo "found ${iface} with '${iface_mac}' == '${admin_mac}'" >> /etc/svc/volatile/admin_mac.log
+        found_admin=1
     fi
 done
+
+# Not found yet? then just take the first one.
+if [ $found_admin -eq 0 ]; then
+    iface=`echo "${inet_plumbed}" | sed -e "s/^ *//" | cut -d' ' -f1`
+    #echo "didn't find admin_mac on any iface, using: ${iface} as default" >> /etc/svc/volatile/admin_mac.log
+    /sbin/ifconfig $iface auto-dhcp primary
+    found_admin=1
+fi
 
 [ -n "$inet_failed" ] && warn_failed_ifs "plumb IPv4" "$inet_failed"
 #[ -n "$inet6_failed" ] && warn_failed_ifs "plumb IPv6" "$inet6_failed"

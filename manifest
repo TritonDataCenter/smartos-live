@@ -5946,6 +5946,10 @@ s usr/lib/amd64/libelf.so=../../../lib/amd64/libelf.so.1
 f usr/lib/amd64/libentity.so 0755 root bin
 f usr/lib/amd64/libexacct.so.1 0755 root bin
 s usr/lib/amd64/libexacct.so=libexacct.so.1
+s usr/lib/amd64/libexpat.so.0=libexpat.so.1.5.2
+f usr/lib/amd64/libexpat.so.1.5.2 0555 root bin
+s usr/lib/amd64/libexpat.so.1=libexpat.so.1.5.2
+s usr/lib/amd64/libexpat.so=libexpat.so.1.5.2
 f usr/lib/amd64/libfcoe.so.1 0755 root bin
 s usr/lib/amd64/libfcoe.so=libfcoe.so.1
 s usr/lib/amd64/libfdisk.so.1=../../../lib/amd64/libfdisk.so.1
@@ -10392,12 +10396,8 @@ f usr/lib/libentity.so 0555 root bin
 f usr/lib/libexacct.so.1 0755 root bin
 s usr/lib/libexacct.so=libexacct.so.1
 s usr/lib/libexpat.so.0=libexpat.so.1.5.2
-s usr/lib/libexpat.so.1=libexpat.so.1.5.2
 f usr/lib/libexpat.so.1.5.2 0555 root bin
-s usr/lib/amd64/libexpat.so.1=libexpat.so.1.5.2
-f usr/lib/amd64/libexpat.so.1.5.2 0555 root bin
-s usr/lib/amd64/libexpat.so=libexpat.so.1.5.2
-s usr/lib/amd64/libexpat.so.0=libexpat.so.1.5.2
+s usr/lib/libexpat.so.1=libexpat.so.1.5.2
 f usr/lib/libfcoe.so.1 0755 root bin
 s usr/lib/libfcoe.so=libfcoe.so.1
 s usr/lib/libfdisk.so.1=../../lib/libfdisk.so.1
@@ -11543,6 +11543,7 @@ s usr/lib/picl/plugins/libpiclmemcfg.so=libpiclmemcfg.so.1
 d usr/lib/pkgconfig 0755 root bin
 f usr/lib/pkgconfig/hal-storage.pc 0644 root bin
 f usr/lib/pkgconfig/hal.pc 0644 root bin
+f usr/lib/pkgconfig/libcurl.pc 0644 root other
 f usr/lib/pkgconfig/polkit.pc 0644 root bin
 f usr/lib/platexec 0555 root bin
 d usr/lib/pool 0755 root bin
@@ -15766,8 +15767,8 @@ d usr/share/man/man3xmu 0755 root bin
 d usr/share/man/man3xt 0755 root bin
 d usr/share/man/man4 0755 root bin
 d usr/share/man/man5 0755 root bin
-d usr/share/man/man7 0755 root bin
 d usr/share/man/man5openssl 0755 root bin
+d usr/share/man/man7 0755 root bin
 f usr/share/man/man7/FSS.7 0444 root bin
 d usr/share/man/man7openssl 0755 root bin
 d usr/share/src 0755 root sys

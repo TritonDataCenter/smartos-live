@@ -34,6 +34,7 @@ if [ "${HAVE_PKG}" == "true" ]; then
     system/library/mozilla-nss/header-nss \
     data/docbook \
     text/gnu-gettext \
+    developer/java/jdk \
     || /bin/true
 fi
 

@@ -10157,10 +10157,6 @@ s usr/lib/inet/dhcp/svc/ds_SUNWbinfiles.so=ds_SUNWbinfiles.so.1
 f usr/lib/inet/dhcp/svc/ds_SUNWfiles.so.0 0755 root bin
 f usr/lib/inet/dhcp/svc/ds_SUNWfiles.so.1 0755 root bin
 s usr/lib/inet/dhcp/svc/ds_SUNWfiles.so=ds_SUNWfiles.so.1
-d usr/lib/inet/dhcp/svcadm 0755 root bin
-f usr/lib/inet/dhcp/svcadm/dhcpconfig 0555 root bin
-f usr/lib/inet/dhcp/svcadm/dhtadm 0555 root bin
-f usr/lib/inet/dhcp/svcadm/pntadm 0555 root bin
 f usr/lib/inet/dsvclockd 0555 root bin
 d usr/lib/inet/i86 0755 root bin
 f usr/lib/inet/i86/in.iked 0555 root bin
@@ -10395,6 +10391,13 @@ s usr/lib/libelf.so=../../lib/libelf.so.1
 f usr/lib/libentity.so 0555 root bin
 f usr/lib/libexacct.so.1 0755 root bin
 s usr/lib/libexacct.so=libexacct.so.1
+s usr/lib/libexpat.so.0=libexpat.so.1.5.2
+s usr/lib/libexpat.so.1=libexpat.so.1.5.2
+f usr/lib/libexpat.so.1.5.2 0555 root bin
+s usr/lib/amd64/libexpat.so.1=libexpat.so.1.5.2
+f usr/lib/amd64/libexpat.so.1.5.2 0555 root bin
+s usr/lib/amd64/libexpat.so=libexpat.so.1.5.2
+s usr/lib/amd64/libexpat.so.0=libexpat.so.1.5.2
 f usr/lib/libfcoe.so.1 0755 root bin
 s usr/lib/libfcoe.so=libfcoe.so.1
 s usr/lib/libfdisk.so.1=../../lib/libfdisk.so.1
@@ -13632,9 +13635,7 @@ s usr/sbin/devnm=df
 f usr/sbin/df 0555 root bin
 f usr/sbin/dfmounts 0555 root bin
 f usr/sbin/dfshares 0555 root bin
-f usr/sbin/dhcpconfig 0555 root bin
 s usr/sbin/dhcpmgr=../sadm/admin/bin/dhcpmgr
-f usr/sbin/dhtadm 0555 root bin
 f usr/sbin/dig 0555 root bin
 f usr/sbin/disks 0755 root sys
 f usr/sbin/dispadmin 0555 root bin
@@ -13849,7 +13850,6 @@ f usr/sbin/pkgrm 0555 root sys
 f usr/sbin/plockstat 0555 root bin
 f usr/sbin/pmadm 0555 root sys
 f usr/sbin/pmconfig 4555 root bin
-f usr/sbin/pntadm 0555 root bin
 f usr/sbin/polkit-is-privileged 0555 root bin
 f usr/sbin/pooladm 0555 root bin
 f usr/sbin/poolbind 0555 root bin

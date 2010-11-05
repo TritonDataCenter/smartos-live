@@ -8485,6 +8485,9 @@ f usr/kernel/drv/ptm.conf 0644 root sys
 f usr/kernel/drv/pts.conf 0644 root sys
 f usr/kernel/drv/sppp.conf 0644 root sys
 f usr/kernel/drv/sppptun.conf 0644 root sys
+d usr/kernel/fs 0755 root sys
+d usr/kernel/fs/amd64 0755 root sys
+f usr/kernel/fs/amd64/pcfs 0644 root sys
 d usr/kernel/sched 0755 root sys
 d usr/kernel/sched/amd64 0755 root sys
 f usr/kernel/sched/amd64/FSS 0755 root sys

@@ -2999,11 +2999,57 @@ s usr/bin/zonename=../../sbin/zonename
 f usr/bin/zonestat 0555 root bin
 d usr/ccs 0755 root bin
 d usr/ccs/bin 0755 root bin
+s usr/ccs/bin/admin=/opt/local/ccs/bin/admin
 d usr/ccs/bin/amd64 0755 root bin
+s usr/ccs/bin/amd64/ar=/opt/local/ccs/bin/amd64/ar
+s usr/ccs/bin/amd64/dump=/opt/local/ccs/bin/amd64/dump
+s usr/ccs/bin/amd64/elfdump=/opt/local/ccs/bin/amd64/elfdump
 s usr/ccs/bin/amd64/ld=../../../bin/amd64/ld
+s usr/ccs/bin/amd64/mcs=/opt/local/ccs/bin/amd64/mcs
+s usr/ccs/bin/amd64/nm=/opt/local/ccs/bin/amd64/nm
+s usr/ccs/bin/amd64/size=/opt/local/ccs/bin/amd64/size
+s usr/ccs/bin/amd64/strip=/opt/local/ccs/bin/amd64/strip
+s usr/ccs/bin/ar=/opt/local/ccs/bin/ar
+s usr/ccs/bin/as=/opt/local/ccs/bin/as
+s usr/ccs/bin/cdc=/opt/local/ccs/bin/cdc
+s usr/ccs/bin/comb=/opt/local/ccs/bin/comb
+s usr/ccs/bin/delta=/opt/local/ccs/bin/delta
+s usr/ccs/bin/dis=/opt/local/ccs/bin/dis
+s usr/ccs/bin/dump=/opt/local/ccs/bin/dump
+s usr/ccs/bin/elfdump=/opt/local/ccs/bin/elfdump
+s usr/ccs/bin/error=/opt/local/ccs/bin/error
+s usr/ccs/bin/get=/opt/local/ccs/bin/get
+s usr/ccs/bin/gprof=/opt/local/ccs/bin/gprof
+s usr/ccs/bin/help=/opt/local/ccs/bin/help
+s usr/ccs/bin/lari=/opt/local/ccs/bin/lari
 s usr/ccs/bin/ld=../../bin/ld
+s usr/ccs/bin/lex=/opt/local/ccs/bin/lex
+s usr/ccs/bin/lorder=/opt/local/ccs/bin/lorder
 s usr/ccs/bin/m4=../../bin/m4
+s usr/ccs/bin/make=/opt/local/ccs/bin/make
+s usr/ccs/bin/mcs=/opt/local/ccs/bin/mcs
+s usr/ccs/bin/nm=/opt/local/ccs/bin/nm
+s usr/ccs/bin/prof=/opt/local/ccs/bin/prof
+s usr/ccs/bin/prs=/opt/local/ccs/bin/prs
+s usr/ccs/bin/prt=/opt/local/ccs/bin/prt
+s usr/ccs/bin/ranlib=/opt/local/ccs/bin/ranlib
 s usr/ccs/bin/regcmp=../../bin/regcmp
+s usr/ccs/bin/rmdel=/opt/local/ccs/bin/rmdel
+s usr/ccs/bin/sact=/opt/local/ccs/bin/sact
+s usr/ccs/bin/sccs=/opt/local/ccs/bin/sccs
+s usr/ccs/bin/sccsdiff=/opt/local/ccs/bin/sccsdiff
+s usr/ccs/bin/sccshelp=/opt/local/ccs/bin/sccshelp
+s usr/ccs/bin/size=/opt/local/ccs/bin/size
+s usr/ccs/bin/strip=/opt/local/ccs/bin/strip
+s usr/ccs/bin/symorder=/opt/local/ccs/bin/symorder
+s usr/ccs/bin/tsort=/opt/local/ccs/bin/tsort
+s usr/ccs/bin/unget=/opt/local/ccs/bin/unget
+s usr/ccs/bin/unifdef=/opt/local/ccs/bin/unifdef
+s usr/ccs/bin/val=/opt/local/ccs/bin/val
+s usr/ccs/bin/vc=/opt/local/ccs/bin/vc
+s usr/ccs/bin/what=/opt/local/ccs/bin/what
+s usr/ccs/bin/yacc=/opt/local/ccs/bin/yacc
+s usr/ccs/bin/yaccpar=/opt/local/ccs/bin/yaccpar
 d usr/ccs/lib 0755 root bin
 d usr/ccs/lib/amd64 0755 root bin
 s usr/ccs/lib/amd64/libcurses.so=../../../../lib/amd64/libcurses.so.1
@@ -3016,6 +3062,8 @@ s usr/ccs/lib/amd64/libpanel.so=../../../lib/amd64/libpanel.so.1
 s usr/ccs/lib/amd64/libtermcap.so=../../../../lib/amd64/libcurses.so.1
 s usr/ccs/lib/amd64/libtermlib.so=../../../../lib/amd64/libcurses.so.1
 s usr/ccs/lib/amd64/liby.so=../../../lib/amd64/liby.so.1
+s usr/ccs/lib/cm4defs=/opt/local/ccs/lib/cm4defs
+s usr/ccs/lib/cpp=/opt/local/ccs/lib/cpp
 s usr/ccs/lib/libcurses.so=../../../lib/libcurses.so.1
 s usr/ccs/lib/libform.so=../../lib/libform.so.1
 s usr/ccs/lib/libgen.so=../../../lib/libgen.so.1
@@ -3027,6 +3075,7 @@ s usr/ccs/lib/libtermcap.so=../../../lib/libcurses.so.1
 s usr/ccs/lib/libtermlib.so=../../../lib/libcurses.so.1
 s usr/ccs/lib/liby.so=../../lib/liby.so.1
 s usr/ccs/lib/link_audit=../../lib/link_audit
+s usr/ccs/lib/svr4.make=/opt/local/ccs/lib/svr4.make
 d usr/demo 0755 root bin
 s usr/dict=share/lib/dict
 d usr/games 0755 root bin
@@ -16957,6 +17006,7 @@ f usr/share/lib/keytables/type_6/turkeyf 0444 root bin
 f usr/share/lib/keytables/type_6/turkeyq 0444 root bin
 f usr/share/lib/keytables/type_6/uk 0444 root bin
 f usr/share/lib/keytables/type_6/us 0444 root bin
+s usr/share/lib/make=/opt/local/share/lib/make
 d usr/share/lib/mailx 0755 root bin
 d usr/share/lib/nterm 0755 root bin
 f usr/share/lib/nterm/tab.2631 0644 root bin

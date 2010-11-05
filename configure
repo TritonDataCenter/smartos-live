@@ -5,77 +5,89 @@
 
 set -e
 
+INSTALL_BIN_LINK_DIR=/usr/bin
+HAVE_PKG="true"
+ROOTCMD=pfexec
+
 # Load all site-specific configure files
-source configure.*
+for file in `ls configure.*`; do 
+  source ${file}
+done
 
-echo "==> Installing illumos build dependencies..."
-pfexec pkg install \
-  text/groff \
-  system/zones/internal \
-  library/libxml2 \
-  developer/gnome/gettext \
-  library/python-2/setuptools-26 \
-  library/gnome/gnome-vfs \
-  runtime/perl-510 \
-  runtime/perl-510/extra \
-  developer/build/gnu-make \
-  developer/build/onbld \
-  developer/gcc-3 \
-  developer/astdev \
-  developer/lexer/flex \
-  library/nspr/header-nspr \
-  system/library/mozilla-nss/header-nss \
-  data/docbook \
-  text/gnu-gettext \
-  || /bin/true
-
+if [ "${HAVE_PKG}" == "true" ]; then
+  echo "==> Installing illumos build dependencies..."
+  ${ROOTCMD} pkg install \
+    text/groff \
+    system/zones/internal \
+    library/libxml2 \
+    developer/gnome/gettext \
+    library/python-2/setuptools-26 \
+    library/gnome/gnome-vfs \
+    runtime/perl-510 \
+    runtime/perl-510/extra \
+    developer/build/gnu-make \
+    developer/build/onbld \
+    developer/gcc-3 \
+    developer/astdev \
+    developer/lexer/flex \
+    library/nspr/header-nspr \
+    system/library/mozilla-nss/header-nss \
+    data/docbook \
+    text/gnu-gettext \
+    || /bin/true
+fi
 
 # TODO: move this to illumos-extras itself
-echo "==> Installing illumos-extras dependencies..."
-pfexec pkg install \
-  compatibility/ucb \
-  developer/build/autoconf \
-  developer/build/automake-19 \
-  developer/build/automake-110 \
-  developer/build/cmake \
-  developer/build/libtool \
-  developer/parser/bison \
-  library/libevent \
-  || /bin/true
-
+if [ "${HAVE_PKG}" == "true" ]; then
+  echo "==> Installing illumos-extras dependencies..."
+  ${ROOTCMD} pkg install \
+    compatibility/ucb \
+    developer/build/autoconf \
+    developer/build/automake-19 \
+    developer/build/automake-110 \
+    developer/build/cmake \
+    developer/build/libtool \
+    developer/parser/bison \
+    library/libevent \
+    || /bin/true
+fi
 
 echo "==> Checking for /opt/SUNWspro/bin/cc..."
 echo " +--> Ensuring SUNWspro (12.1-patched) installed in /opt/SUNWspro/sunstudio12.1..."
 if [ ! -f "/opt/SUNWspro/sunstudio12.1/prod/bin/cc" ]; then
   if [ ! -z "${SUNW_SPRO12u1_URL}" ]; then
-    (pfexec mkdir -p /opt/SUNWspro \
+    (${ROOTCMD} mkdir -p /opt/SUNWspro \
       && cd /opt/SUNWspro \
       && curl -k ${SUNW_SPRO12u1_URL} \
-      | pfexec gtar -zxf -)
+      | ${ROOTCMD} gtar -zxf -)
   else
     echo "FATAL: unable to download sunstudio12u1, no URL is set.  Please set SUNW_SPRO12u1_URL in configure.*"
     exit 1
  fi
 fi
+
 echo " +--> Ensuring SUNWspro (12-patched) installed in /opt/SUNWspro..."
 if [ ! -f "/opt/SUNWspro/prod/bin/cc" ]; then
   if [ ! -z "${SUNW_SPRO12_URL}" ]; then
-    (pfexec mkdir -p /opt/SUNWspro \
+    (${ROOTCMD} mkdir -p /opt/SUNWspro \
       && cd /opt/SUNWspro \
       && curl -k "${SUNW_SPRO12_URL}" \
-      | pfexec gtar -jxf -)
+      | ${ROOTCMD} gtar -jxf -)
   else
     echo "FATAL: unable to download sunstudio12, no URL is set.  Please set SUNW_SPRO12_URL in configure.*"
     exit 1
  fi
 fi
 
-echo "==> Creating the missing symlinks..."
-test -f /usr/bin/aclocal || pfexec ln -s /usr/bin/aclocal-1.10 /usr/bin/aclocal
-test -f /usr/bin/automake || pfexec ln -s /usr/bin/automake-1.10 /usr/bin/automake
-# so builds can use --mode and such
-test -f /usr/bin/install || pfexec ln -s /usr/bin/ginstall /usr/bin/install
-test -f /usr/bin/pod2man || pfexec ln -s /usr/perl5/5.10.0/bin/pod2man /usr/bin/pod2man
+# XXX doesn't work on zone
+if [ "${WRITABLE_USR}" == "true" ]; then
+  echo "==> Creating the missing symlinks..."
+  test -f /usr/bin/aclocal || ${ROOTCMD} ln -s /usr/bin/aclocal-1.10 /usr/bin/aclocal
+  test -f /usr/bin/automake || ${ROOTCMD} ln -s /usr/bin/automake-1.10 /usr/bin/automake
+  # so builds can use --mode and such
+  test -f /usr/bin/install || ${ROOTCMD} ln -s /usr/bin/ginstall /usr/bin/install
+  test -f /usr/bin/pod2man || ${ROOTCMD} ln -s /usr/perl5/5.10.0/bin/pod2man /usr/bin/pod2man
+fi
 
 echo "==> Populating projects/ directories..."
 [ ! -d "projects" ] && mkdir -p projects
@@ -146,12 +158,12 @@ if [ ! -f on-closed-bins-nd.i386.tar.bz2 ]; then
 fi
 
 cp usr/src/tools/env/illumos.sh .
-[ ! -z "${RELEASE_VER}" ] && /usr/gnu/bin/sed -i -e "s|^GATE=.*$|GATE=\"${RELEASE_VER}\"; export GATE|" illumos.sh
-[ ! -z "${PUBLISHER}" ] && /usr/gnu/bin/sed -i -e "s|^# PKGPUBLISHER_REDIST=.*$|PKGPUBLISHER_REDIST=\"${PUBLISHER}\"; export PKGPUBLISHER_REDIST|" illumos.sh
-/usr/gnu/bin/sed -i -e "s|^CODEMGR_WS=.*$|CODEMGR_WS=\"${ROOT}/projects/illumos\"; export CODEMGR_WS|" illumos.sh
-/usr/gnu/bin/sed -i -e "s|^NIGHTLY_OPTIONS=.*$|NIGHTLY_OPTIONS=\"-nCmprt\"; export NIGHTLY_OPTIONS|" illumos.sh
-/usr/gnu/bin/sed -i -e "s|^ROOT=.*$|ROOT="${ROOT}/proto";  export ROOT|" illumos.sh
-/usr/gnu/bin/sed -i -e "s|^PARENT_ROOT=.*$|PARENT_ROOT="${ROOT}/proto"; export PARENT_ROOT|" illumos.sh
+[ ! -z "${RELEASE_VER}" ] && gsed -i -e "s|^GATE=.*$|GATE=\"${RELEASE_VER}\"; export GATE|" illumos.sh
+[ ! -z "${PUBLISHER}" ] && gsed -i -e "s|^# PKGPUBLISHER_REDIST=.*$|PKGPUBLISHER_REDIST=\"${PUBLISHER}\"; export PKGPUBLISHER_REDIST|" illumos.sh
+gsed -i -e "s|^CODEMGR_WS=.*$|CODEMGR_WS=\"${ROOT}/projects/illumos\"; export CODEMGR_WS|" illumos.sh
+gsed -i -e "s|^NIGHTLY_OPTIONS=.*$|NIGHTLY_OPTIONS=\"-nCmprt\"; export NIGHTLY_OPTIONS|" illumos.sh
+gsed -i -e "s|^ROOT=.*$|ROOT="${ROOT}/proto";  export ROOT|" illumos.sh
+gsed -i -e "s|^PARENT_ROOT=.*$|PARENT_ROOT="${ROOT}/proto"; export PARENT_ROOT|" illumos.sh
 
 # For some reason this disappeared before
 touch ${ROOT}/projects/illumos/usr/src/tools/findunref/exception_list.unknown

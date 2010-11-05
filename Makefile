@@ -22,7 +22,7 @@ update:
 	touch 0-extra-stamp
 
 0-livesrc-stamp: src/bootparams.c
-	(cd $(ROOT)/src && /usr/ccs/bin/make DESTDIR=$(PROTO) && /usr/ccs/bin/make DESTDIR=$(PROTO) install)
+	(cd $(ROOT)/src && gmake DESTDIR=$(PROTO) && gmake DESTDIR=$(PROTO) install)
 	touch 0-livesrc-stamp
 
 clean:

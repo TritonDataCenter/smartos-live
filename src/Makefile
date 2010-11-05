@@ -6,6 +6,7 @@ DESTDIR=../proto
 all: $(TARGETS)
 
 install: $(TARGETS)
+	mkdir -p $(DESTDIR)/usr/bin
 	pfexec cp -p $(TARGETS) $(DESTDIR)/usr/bin
 
 bootparams: bootparams.c

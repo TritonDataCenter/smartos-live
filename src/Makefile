@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall
-TARGETS=bootparams
+TARGETS=bootparams disklist removable_disk
 DESTDIR=../proto
 
 all: $(TARGETS)
@@ -11,6 +11,13 @@ install: $(TARGETS)
 
 bootparams: bootparams.c
 	$(CC) $(CFLAGS) -o $@ $^ -ldevinfo
+
+removable_disk: removable_disk.c
+	$(CC) $(CFLAGS) -o $@ $^
+
+disklist:
+	cp disklist.sh disklist
+	chmod 0755 disklist
 
 clean:
 	@rm -f $(TARGETS)

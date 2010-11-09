@@ -8,12 +8,14 @@ ALLDISKS=`/usr/bin/ls /dev/dsk | /usr/bin/awk "/s2$/ {print}" | /usr/bin/sed "s/
 for disk in $ALLDISKS; 
 do
     pfexec removable_disk /dev/rdsk/${disk}p0 2>&1 >> /dev/null
-    if [[ $? == 0 ]];
-    then
+    case "$?" in
+    0)
         REMDISKS=$REMDISKS" "$disk;
-    else
+        ;;
+    1)
         NONREMDISKS=$NONREMDISKS" "$disk;
-    fi;
+        ;;
+    esac;
 done
 
 while getopts 'anr' OPTION

@@ -2556,6 +2556,7 @@ f usr/bin/diffmk 0555 root bin
 f usr/bin/digest 0555 root bin
 f usr/bin/dircmp 0555 root bin
 f usr/bin/dirname 0555 root bin
+f usr/bin/disklist 0555 root bin
 f usr/bin/diskscan 0555 root bin
 f usr/bin/dispgid 0555 root bin
 f usr/bin/dispuid 0555 root bin
@@ -2869,6 +2870,7 @@ f usr/bin/read 0555 root bin
 f usr/bin/red 0555 root bin
 f usr/bin/refer 0555 root bin
 f usr/bin/regcmp 0555 root bin
+f usr/bin/removable_disk 0555 root bin
 s usr/bin/remsh=rsh
 f usr/bin/renice 0555 root bin
 f usr/bin/rev 0555 root bin

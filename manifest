@@ -537,6 +537,7 @@ d etc/rcm/scripts 0755 root sys
 s etc/reboot=../usr/sbin/halt
 f etc/release 0444 root sys
 f etc/remote 0644 root bin
+f etc/resolv.conf 0644 netadm netadm
 s etc/rmt=../usr/sbin/rmt
 f etc/rpc 0644 root sys
 d etc/rpcsec 0755 root sys
@@ -1617,7 +1618,6 @@ f lib/crypto/amd64/kmf_mapper_cn.so.1 0755 root bin
 f lib/crypto/amd64/kmf_nss.so.1 0755 root bin
 f lib/crypto/amd64/kmf_openssl.so.1 0755 root bin
 f lib/crypto/amd64/kmf_pkcs11.so.1 0755 root bin
-f lib/crypto/kcfd 0555 root bin
 f lib/crypto/kmf_mapper_cn.so.1 0755 root bin
 f lib/crypto/kmf_nss.so.1 0755 root bin
 f lib/crypto/kmf_openssl.so.1 0755 root bin
@@ -2404,6 +2404,7 @@ d usr 0755 root sys
 s usr/adm=../var/adm
 d usr/bin 0755 root bin
 f usr/bin/CA.pl 0555 root bin
+s usr/bin/HtmlConverter=/opt/local/jdk/bin/HtmlConverter
 f usr/bin/addbadsec 0555 root bin
 f usr/bin/addbib 0555 root bin
 f usr/bin/alias 0555 root bin
@@ -2425,6 +2426,7 @@ f usr/bin/amd64/mac 0555 root bin
 f usr/bin/amd64/mdb 0555 root bin
 f usr/bin/amd64/moe 0555 root bin
 f usr/bin/amd64/newtask 4555 root sys
+s usr/bin/amd64/nm=/opt/local/bin/amd64/nm
 f usr/bin/amd64/nohup 0555 root bin
 f usr/bin/amd64/openssl 0555 root bin
 f usr/bin/amd64/pargs 0555 root bin
@@ -2461,7 +2463,9 @@ f usr/bin/amd64/truss 0555 root bin
 f usr/bin/amd64/uptime 4555 root bin
 f usr/bin/amd64/w 4555 root bin
 f usr/bin/amt 0555 root bin
+s usr/bin/appletviewer=/opt/local/jdk/bin/appletviewer
 f usr/bin/apropos 0555 root bin
+s usr/bin/apt=/opt/local/jdk/bin/apt
 f usr/bin/arch 0555 root bin
 f usr/bin/asa 0555 root bin
 f usr/bin/at 4755 root sys
@@ -2577,6 +2581,7 @@ s usr/bin/ex=vim
 f usr/bin/expand 0555 root bin
 f usr/bin/expr 0555 root bin
 f usr/bin/exstr 0555 root bin
+s usr/bin/extcheck=/opt/local/jdk/bin/extcheck
 f usr/bin/factor 0555 root bin
 f usr/bin/false 0555 root bin
 f usr/bin/fc 0555 root bin
@@ -2687,6 +2692,7 @@ f usr/bin/i86pc 0555 root bin
 f usr/bin/iAPX286 0555 root bin
 f usr/bin/iconv 0555 root bin
 f usr/bin/id 0555 root bin
+s usr/bin/idlj=/opt/local/jdk/bin/idlj
 f usr/bin/idn 0555 root bin
 f usr/bin/indxbib 0555 root bin
 f usr/bin/infocmp 0555 root bin
@@ -2695,6 +2701,13 @@ f usr/bin/ipf-mod.pl 0555 root bin
 f usr/bin/isainfo 0555 root bin
 f usr/bin/isalist 0555 root bin
 f usr/bin/itu 0555 root bin
+s usr/bin/jar=/opt/local/jdk/bin/jar
+s usr/bin/jarsigner=/opt/local/jdk/bin/jarsigner
+s usr/bin/javac=/opt/local/jdk/bin/javac
+s usr/bin/javadoc=/opt/local/jdk/bin/javadoc
+s usr/bin/javah=/opt/local/jdk/bin/javah
+s usr/bin/javap=/opt/local/jdk/bin/javap
+s usr/bin/jdb=/opt/local/jdk/bin/jdb
 f usr/bin/jobs 0555 root bin
 f usr/bin/join 0555 root bin
 s usr/bin/jsh=ksh93
@@ -2767,6 +2780,7 @@ f usr/bin/mpstat 0555 root bin
 f usr/bin/msgfmt 0555 root bin
 f usr/bin/mt 0555 root bin
 f usr/bin/mv 0555 root bin
+s usr/bin/native2ascii=/opt/local/jdk/bin/native2ascii
 f usr/bin/nawk 0555 root bin
 f usr/bin/neqn 0555 root bin
 f usr/bin/netstat 0555 root bin
@@ -2777,6 +2791,7 @@ f usr/bin/newtask 0555 root bin
 f usr/bin/nfsstat 0555 root bin
 f usr/bin/nice 0555 root bin
 f usr/bin/nl 0555 root bin
+s usr/bin/nm=/opt/local/bin/nm
 f usr/bin/node 0555 root bin
 f usr/bin/nohup 0555 root bin
 f usr/bin/nroff 0555 root bin
@@ -2863,6 +2878,7 @@ f usr/bin/rlogin 4555 root bin
 f usr/bin/rm 0555 root bin
 s usr/bin/rmail=mail
 f usr/bin/rmdir 0555 root bin
+s usr/bin/rmic=/opt/local/jdk/bin/rmic
 f usr/bin/roffbib 0555 root bin
 f usr/bin/roles 0555 root bin
 f usr/bin/rpcinfo 0555 root bin
@@ -2878,6 +2894,7 @@ f usr/bin/scp 0555 root bin
 f usr/bin/script 0555 root bin
 f usr/bin/sdiff 0555 root bin
 f usr/bin/sed 0555 root bin
+s usr/bin/serialver=/opt/local/jdk/bin/serialver
 f usr/bin/setfacl 0555 root bin
 f usr/bin/setpgrp 0555 root sys
 f usr/bin/settime 0555 root bin
@@ -5771,8 +5788,6 @@ f usr/has/bin/view 0555 root bin
 d usr/has/lib 0755 root bin
 s usr/has/lib/rsh=../bin/sh
 d usr/include 0755 root bin
-f usr/include/FlexLexer.h 0444 root bin
-f usr/include/aalib.h 0444 root bin
 f usr/include/aclutils.h 0644 root bin
 d usr/include/admin 0755 root bin
 f usr/include/admin/ti_api.h 0644 root bin
@@ -5919,7 +5934,6 @@ f usr/include/atomic.h 0644 root bin
 f usr/include/attr.h 0644 root bin
 d usr/include/audio 0755 root bin
 f usr/include/audio/au.h 0644 root bin
-f usr/include/audiofile.h 0644 root bin
 f usr/include/aupvlist.h 0644 root bin
 f usr/include/auth_attr.h 0644 root bin
 f usr/include/auth_list.h 0644 root bin
@@ -5958,12 +5972,6 @@ f usr/include/curl/stdcheaders.h 0644 root bin
 f usr/include/curl/typecheck-gcc.h 0644 root bin
 f usr/include/curl/types.h 0644 root bin
 f usr/include/curses.h 0644 root bin
-f usr/include/cursesapp.h 0644 root bin
-f usr/include/cursesf.h 0644 root bin
-f usr/include/cursesm.h 0644 root bin
-f usr/include/cursesp.h 0644 root bin
-f usr/include/cursesw.h 0644 root bin
-f usr/include/cursslk.h 0644 root bin
 d usr/include/dat 0755 root bin
 f usr/include/dat/dat.h 0644 root bin
 f usr/include/dat/dat_error.h 0644 root bin
@@ -6011,7 +6019,6 @@ f usr/include/errfp.h 0644 root bin
 f usr/include/errno.h 0644 root bin
 f usr/include/esd.h 0644 root bin
 f usr/include/eti.h 0644 root bin
-f usr/include/etip.h 0644 root bin
 f usr/include/euc.h 0644 root bin
 f usr/include/event.h 0444 root bin
 f usr/include/exacct.h 0644 root bin
@@ -6621,7 +6628,6 @@ f usr/include/mps/utilrename.h 0644 root bin
 f usr/include/mqueue.h 0644 root bin
 f usr/include/mtmalloc.h 0644 root bin
 f usr/include/nan.h 0644 root bin
-f usr/include/nc_tparm.h 0644 root bin
 d usr/include/ncurses 0755 root bin
 s usr/include/ncurses.h=curses.h
 f usr/include/ncurses/curses.h 0644 root bin
@@ -6637,12 +6643,8 @@ f usr/include/ncurses/form.h 0644 root bin
 f usr/include/ncurses/menu.h 0644 root bin
 f usr/include/ncurses/nc_tparm.h 0644 root bin
 s usr/include/ncurses/ncurses.h=curses.h
-f usr/include/ncurses/ncurses_dll.h 0644 root bin
 f usr/include/ncurses/panel.h 0644 root bin
 f usr/include/ncurses/term.h 0644 root bin
-f usr/include/ncurses/term_entry.h 0644 root bin
-f usr/include/ncurses/termcap.h 0644 root bin
-f usr/include/ncurses/tic.h 0644 root bin
 f usr/include/ncurses/unctrl.h 0644 root bin
 f usr/include/ncurses_dll.h 0644 root bin
 f usr/include/ndbm.h 0644 root bin
@@ -8453,6 +8455,7 @@ f usr/include/zlib.h 0644 root bin
 f usr/include/zone.h 0644 root bin
 f usr/include/zonestat.h 0644 root bin
 f usr/include/zonestat_impl.h 0644 root bin
+s usr/java=/opt/local/jdk/latest
 d usr/kernel 0755 root sys
 d usr/kernel/drv 0755 root sys
 d usr/kernel/drv/amd64 0755 root sys
@@ -8689,13 +8692,6 @@ f usr/lib/amd64/libfcoe.so.1 0755 root bin
 s usr/lib/amd64/libfcoe.so=libfcoe.so.1
 s usr/lib/amd64/libfdisk.so.1=../../../lib/amd64/libfdisk.so.1
 s usr/lib/amd64/libfdisk.so=../../../lib/amd64/libfdisk.so.1
-d usr/lib/amd64/libffi-3.0.9 0755 root bin
-d usr/lib/amd64/libffi-3.0.9/include 0755 root bin
-f usr/lib/amd64/libffi-3.0.9/include/ffi.h 0755 root bin
-f usr/lib/amd64/libffi-3.0.9/include/ffitarget.h 0755 root bin
-f usr/lib/amd64/libffi.so.5.0.10 0755 root bin
-s usr/lib/amd64/libffi.so.5=libffi.so.5.0.10
-s usr/lib/amd64/libffi.so=libffi.so.5.0.10
 f usr/lib/amd64/libform.so.1 0755 root bin
 s usr/lib/amd64/libform.so=libform.so.1
 f usr/lib/amd64/libfru.so.1 0755 root bin
@@ -13501,15 +13497,6 @@ f usr/lib/link_audit/amd64/who.so.1 0755 root bin
 f usr/lib/link_audit/ldprof.so.1 0755 root bin
 f usr/lib/link_audit/truss.so.1 0755 root bin
 f usr/lib/link_audit/who.so.1 0755 root bin
-d usr/lib/llc2 0755 root bin
-f usr/lib/llc2/llc2_autoconfig 0555 root bin
-f usr/lib/llc2/llc2_config 0555 root bin
-f usr/lib/llc2/llc2_loop2 0555 root bin
-f usr/lib/llc2/llc2_loop3 0555 root bin
-f usr/lib/llc2/llc2_loop4 0555 root bin
-f usr/lib/llc2/llc2_stats 0555 root bin
-f usr/lib/llc2/llc2_tcap 0555 root bin
-f usr/lib/llc2/llc2_tparser 0555 root bin
 f usr/lib/llib-l300 0644 root bin
 f usr/lib/llib-l300.ln 0644 root bin
 f usr/lib/llib-l300s 0644 root bin
@@ -13888,7 +13875,6 @@ d usr/lib/locale/C/LC_NUMERIC 0755 root bin
 d usr/lib/locale/C/LC_TIME 0755 root bin
 f usr/lib/locale/C/LC_TIME/SUNW_OST_OSCMD.po 0644 root bin
 f usr/lib/locale/C/LC_TIME/SUNW_OST_OSLIB.po 0644 root bin
-f usr/lib/locale/C/locale_description 0444 root bin
 s usr/lib/locale/POSIX=C
 d usr/lib/locale/common 0755 root bin
 d usr/lib/locale/common/LC_CTYPE 0755 root bin
@@ -13917,11 +13903,6 @@ d usr/lib/locale/en_US.ISO8859-1/LC_NUMERIC 0755 root bin
 f usr/lib/locale/en_US.ISO8859-1/LC_NUMERIC/LCL_DATA 0444 root bin
 d usr/lib/locale/en_US.ISO8859-1/LC_TIME 0755 root bin
 f usr/lib/locale/en_US.ISO8859-1/LC_TIME/LCL_DATA 0444 root bin
-d usr/lib/locale/en_US.ISO8859-1/amd64 0755 root root
-f usr/lib/locale/en_US.ISO8859-1/amd64/en_US.ISO8859-1.so.3 0444 root root
-f usr/lib/locale/en_US.ISO8859-1/en_US.ISO8859-1.so.3 0444 root root
-f usr/lib/locale/en_US.ISO8859-1/locale_description 0444 root root
-f usr/lib/locale/en_US.ISO8859-1/locale_map 0444 root root
 d usr/lib/locale/en_US.ISO8859-15 0755 root bin
 d usr/lib/locale/en_US.ISO8859-15/LC_COLLATE 0755 root bin
 f usr/lib/locale/en_US.ISO8859-15/LC_COLLATE/LCL_DATA 0444 root bin
@@ -13964,13 +13945,7 @@ f usr/lib/locale/en_US.UTF-8/LC_TIME/LCL_DATA 0444 root bin
 d usr/lib/localedef 0755 root bin
 d usr/lib/localedef/extensions 0755 root bin
 f usr/lib/localedef/extensions/UTF-8.x 0444 root bin
-f usr/lib/localedef/extensions/generic_eucbc.x 0444 root bin
-f usr/lib/localedef/extensions/single_byte.x 0444 root bin
 d usr/lib/localedef/src 0755 root bin
-d usr/lib/localedef/src/iso_8859_1 0755 root bin
-f usr/lib/localedef/src/iso_8859_1/charmap.src 0444 root bin
-f usr/lib/localedef/src/iso_8859_1/extension.src 0444 root bin
-f usr/lib/localedef/src/iso_8859_1/localedef.src 0444 root bin
 s usr/lib/lpadmin=../sbin/lpadmin
 s usr/lib/lpfilter=../sbin/lpfilter
 s usr/lib/lpforms=../sbin/lpforms
@@ -16489,7 +16464,6 @@ f usr/sbin/ikecert 0555 root bin
 f usr/sbin/in.comsat 0555 root bin
 f usr/sbin/in.fingerd 0555 root bin
 f usr/sbin/in.ftpd 0555 root bin
-s usr/sbin/in.named=named
 f usr/sbin/in.rdisc 0555 root bin
 f usr/sbin/in.rexecd 0555 root bin
 f usr/sbin/in.rlogind 0555 root bin
@@ -16573,13 +16547,9 @@ f usr/sbin/mountall 0555 root sys
 f usr/sbin/mpathadm 0555 root bin
 f usr/sbin/msgid 0555 root bin
 f usr/sbin/mvdir 0555 root bin
-f usr/sbin/named 0555 root bin
-f usr/sbin/named-checkconf 0555 root bin
-f usr/sbin/named-checkzone 0555 root bin
 s usr/sbin/ncheck=ff
 s usr/sbin/ndc=rndc
 f usr/sbin/ndd 0555 root bin
-f usr/sbin/netservices 0555 root sys
 s usr/sbin/newaliases=../lib/sendmail
 s usr/sbin/newfs=../lib/fs/ufs/newfs
 f usr/sbin/newkey 0555 root sys
@@ -16763,8 +16733,6 @@ s usr/sfw/lib/libstdc++.so.6=libstdc++.so.6.0.3
 s usr/sfw/lib/libstdc++.so=libstdc++.so.6.0.3
 s usr/sfw/man=share/man
 d usr/sfw/share 0755 root bin
-d usr/sfw/share/info 0755 root bin
-f usr/sfw/share/info/gzip.info 0444 root bin
 d usr/share 0755 root sys
 d usr/share/aclocal 0755 root other
 f usr/share/aclocal/libxml.m4 0444 root other
@@ -16845,11 +16813,6 @@ f usr/share/bash/until 0444 root other
 f usr/share/bash/variable_help 0444 root other
 f usr/share/bash/wait 0444 root other
 f usr/share/bash/while 0444 root other
-d usr/share/info 0755 root bin
-f usr/share/info/bash.info 0444 root bin
-f usr/share/info/history.info 0444 root bin
-f usr/share/info/readline.info 0444 root bin
-f usr/share/info/rluserman.info 0444 root bin
 d usr/share/lib 0755 root sys
 d usr/share/lib/dict 0755 root bin
 f usr/share/lib/dict/words 0444 root bin
@@ -17009,8 +16972,8 @@ f usr/share/lib/keytables/type_6/turkeyf 0444 root bin
 f usr/share/lib/keytables/type_6/turkeyq 0444 root bin
 f usr/share/lib/keytables/type_6/uk 0444 root bin
 f usr/share/lib/keytables/type_6/us 0444 root bin
-s usr/share/lib/make=/opt/local/share/lib/make
 d usr/share/lib/mailx 0755 root bin
+s usr/share/lib/make=/opt/local/share/lib/make
 d usr/share/lib/nterm 0755 root bin
 f usr/share/lib/nterm/tab.2631 0644 root bin
 f usr/share/lib/nterm/tab.2631-c 0644 root bin
@@ -17928,7 +17891,6 @@ f usr/share/man/man1/fgrep.1 0444 root bin
 f usr/share/man/man1/file.1 0444 root bin
 f usr/share/man/man1/filesync.1 0444 root bin
 f usr/share/man/man1/find.1 0444 root bin
-f usr/share/man/man1/fixproc.1 0444 root bin
 f usr/share/man/man1/fmt.1 0444 root bin
 f usr/share/man/man1/fmtmsg.1 0444 root bin
 f usr/share/man/man1/fold.1 0444 root bin
@@ -18182,7 +18144,6 @@ f usr/share/man/man1/units.1 0444 root bin
 f usr/share/man/man1/unix2dos.1 0444 root bin
 f usr/share/man/man1/unpack.1 0444 root bin
 f usr/share/man/man1/uptime.1 0444 root bin
-f usr/share/man/man1/userattr.1 0444 root bin
 f usr/share/man/man1/vax.1 0444 root bin
 s usr/share/man/man1/vedit.1=../../../has/man/man1/vedit.1
 f usr/share/man/man1/vgrind.1 0444 root bin
@@ -18266,7 +18227,6 @@ f usr/share/man/man1m/diskscan.1m 0444 root bin
 f usr/share/man/man1m/dispadmin.1m 0444 root bin
 f usr/share/man/man1m/dladm.1m 0444 root bin
 f usr/share/man/man1m/dlmgmtd.1m 0444 root bin
-f usr/share/man/man1m/dlstat.1m 0444 root bin
 f usr/share/man/man1m/dmesg.1m 0444 root bin
 f usr/share/man/man1m/dminfo.1m 0444 root bin
 f usr/share/man/man1m/dns-sd.1m 0444 root bin
@@ -18281,7 +18241,6 @@ f usr/share/man/man1m/fdisk.1m 0444 root bin
 f usr/share/man/man1m/ff.1m 0444 root bin
 f usr/share/man/man1m/fiocompress.1m 0444 root bin
 f usr/share/man/man1m/flowadm.1m 0444 root bin
-f usr/share/man/man1m/flowstat.1m 0444 root bin
 f usr/share/man/man1m/fmadm.1m 0444 root bin
 f usr/share/man/man1m/fmdump.1m 0444 root bin
 f usr/share/man/man1m/fmstat.1m 0444 root bin
@@ -18329,7 +18288,6 @@ f usr/share/man/man1m/installgrub.1m 0444 root bin
 f usr/share/man/man1m/intrstat.1m 0444 root bin
 f usr/share/man/man1m/iostat.1m 0444 root bin
 f usr/share/man/man1m/ipaddrsel.1m 0444 root bin
-f usr/share/man/man1m/ipadm.1m 0444 root bin
 f usr/share/man/man1m/ipmpstat.1m 0444 root bin
 f usr/share/man/man1m/ipsecalgs.1m 0444 root bin
 f usr/share/man/man1m/ipsecconf.1m 0444 root bin

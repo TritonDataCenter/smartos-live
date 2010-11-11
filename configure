@@ -10,7 +10,7 @@ HAVE_PKG="true"
 ROOTCMD=pfexec
 
 # Load all site-specific configure files
-for file in `ls configure.*`; do 
+for file in `ls configure.*`; do
   source ${file}
 done
 
@@ -95,7 +95,7 @@ echo "==> Populating projects/ directories..."
 if [ ! -d "projects" ] ; then
   echo "FATAL: unable to create projects/ directory."
   exit 1
-fi 
+fi
 
 if [ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]; then
   echo " +--> Getting illumos source tree..."

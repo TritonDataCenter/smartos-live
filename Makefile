@@ -2,6 +2,7 @@
 
 ROOT=$(PWD)
 PROTO=$(ROOT)/proto
+PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin
 
 world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp
 
@@ -18,7 +19,7 @@ update:
 	touch 0-illumos-stamp
 
 0-extra-stamp:
-	(cd $(ROOT)/projects/illumos-extras && /usr/ccs/bin/make DESTDIR=$(PROTO) && /usr/ccs/bin/make DESTDIR=$(PROTO) install)
+	(cd $(ROOT)/projects/illumos-extras && gmake DESTDIR=$(PROTO) && gmake DESTDIR=$(PROTO) install)
 	touch 0-extra-stamp
 
 0-livesrc-stamp: src/bootparams.c
@@ -26,8 +27,8 @@ update:
 	touch 0-livesrc-stamp
 
 clean:
-	(cd $(ROOT)/src && /usr/ccs/bin/make clean)
-	(cd $(ROOT)/projects/illumos-extras && /usr/ccs/bin/make clean)
+	(cd $(ROOT)/src && gmake clean)
+	(cd $(ROOT)/projects/illumos-extras && gmake clean)
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO))
 	rm -f 0-*-stamp

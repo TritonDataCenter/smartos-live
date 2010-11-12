@@ -29,5 +29,6 @@
 . /lib/svc/share/smf_include.sh
 
 mount -F ufs -o remount,rw,nologging /devices/ramdisk:a /
+mount /dev/fd
 
 exit $SMF_EXIT_OK

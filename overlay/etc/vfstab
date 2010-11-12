@@ -6,4 +6,5 @@
 ctfs        -   /system/contract    ctfs     -   no     -
 objfs       -   /system/object      objfs    -   no     -
 sharefs     -   /etc/dfs/sharetab   sharefs  -   no     -
+fd          -   /dev/fd             fd       -   no     -
 swap        -   /tmp                tmpfs    -   yes    -

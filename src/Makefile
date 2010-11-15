@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall
-TARGETS=bootparams disklist removable_disk
+TARGETS=bootparams disklist removable_disk disk_size
 DESTDIR=../proto
 
 all: $(TARGETS)
@@ -13,6 +13,9 @@ bootparams: bootparams.c
 	$(CC) $(CFLAGS) -o $@ $^ -ldevinfo
 
 removable_disk: removable_disk.c
+	$(CC) $(CFLAGS) -o $@ $^
+
+disk_size: disk_size.c
 	$(CC) $(CFLAGS) -o $@ $^
 
 disklist:

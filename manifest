@@ -2403,6 +2403,11 @@ d system/object 0555 root root
 d tmp 1777 root root
 d usr 0755 root sys
 s usr/adm=../var/adm
+d usr/apache 1755 root bin
+s usr/apache/include=/opt/local/include/httpd
+d usr/apr 1755 root bin
+d usr/apr/1.3 1755 root bin
+s usr/apr/1.3/include=/opt/local/include/apr-1
 d usr/bin 0755 root bin
 f usr/bin/CA.pl 0555 root bin
 s usr/bin/HtmlConverter=/opt/local/jdk/bin/HtmlConverter
@@ -2616,6 +2621,7 @@ f usr/bin/getopts 0555 root bin
 f usr/bin/gettext 0555 root bin
 f usr/bin/gettxt 0555 root bin
 f usr/bin/getvol 0555 root bin
+s usr/bin/ggrep=/opt/local/bin/ggrep
 f usr/bin/ginfocmp 0755 root bin
 s usr/bin/ginfotocap=gtic
 f usr/bin/grep 0555 root bin
@@ -2626,6 +2632,7 @@ f usr/bin/gtoe 0755 root bin
 f usr/bin/gtput 0755 root bin
 f usr/bin/gtset 0755 root bin
 f usr/bin/gunzip 0555 root bin
+s usr/bin/gxgettext=/opt/local/bin/xgettext
 h usr/bin/gzcat=usr/bin/gunzip
 f usr/bin/gzcmp 0555 root bin
 f usr/bin/gzdiff 0555 root bin
@@ -2813,6 +2820,7 @@ f usr/bin/pax 0555 root bin
 s usr/bin/pcat=unpack
 f usr/bin/pcred 0555 root bin
 f usr/bin/pdp11 0555 root bin
+s usr/bin/perl=/opt/local/bin/perl
 f usr/bin/pfbash 0555 root bin
 f usr/bin/pfcsh 0555 root bin
 f usr/bin/pfexec 0555 root bin
@@ -2863,6 +2871,9 @@ f usr/bin/pwait 0555 root bin
 s usr/bin/pwconv=../sbin/pwconv
 f usr/bin/pwd 0555 root bin
 f usr/bin/pwdx 0555 root bin
+s usr/bin/python2.4=/opt/local/bin/python2.4
+s usr/bin/python2.6=/opt/local/bin/python2.6
+s usr/bin/python=/opt/local/bin/python
 s usr/bin/rbash=bash
 f usr/bin/rcp 4555 root bin
 f usr/bin/rdate 0555 root bin
@@ -2884,6 +2895,7 @@ f usr/bin/rmdir 0555 root bin
 s usr/bin/rmic=/opt/local/jdk/bin/rmic
 f usr/bin/roffbib 0555 root bin
 f usr/bin/roles 0555 root bin
+s usr/bin/rpcgen=/opt/local/bin/rpcgen
 f usr/bin/rpcinfo 0555 root bin
 f usr/bin/rsh 4555 root bin
 f usr/bin/runat 0555 root bin
@@ -3007,6 +3019,7 @@ f usr/bin/xgettext 0555 root bin
 f usr/bin/xml2-config 0555 root bin
 f usr/bin/xmlcatalog 0555 root bin
 f usr/bin/xmllint 0555 root bin
+s usr/bin/xsltproc=/opt/local/bin/xsltproc
 f usr/bin/xstr 0555 root bin
 f usr/bin/xxd 0755 root bin
 f usr/bin/yes 0555 root bin
@@ -3069,7 +3082,7 @@ s usr/ccs/bin/val=/opt/local/ccs/bin/val
 s usr/ccs/bin/vc=/opt/local/ccs/bin/vc
 s usr/ccs/bin/what=/opt/local/ccs/bin/what
 s usr/ccs/bin/yacc=/opt/local/ccs/bin/yacc
-s usr/ccs/bin/yaccpar=/opt/local/ccs/bin/yaccpar
+s usr/ccs/bin/yaccpar=/opt/local/ccs/lib/yaccpar
 d usr/ccs/lib 0755 root bin
 d usr/ccs/lib/amd64 0755 root bin
 s usr/ccs/lib/amd64/libcurses.so=../../../../lib/amd64/libcurses.so.1
@@ -5986,6 +5999,7 @@ f usr/include/dat/udat.h 0644 root bin
 f usr/include/dat/udat_config.h 0644 root bin
 f usr/include/dat/udat_redirection.h 0644 root bin
 f usr/include/dat/udat_vendor_specific.h 0644 root bin
+s usr/include/dbus-1.0=/opt/local/include/dbus-1.0
 f usr/include/deflt.h 0644 root bin
 f usr/include/demangle.h 0644 root bin
 d usr/include/des 0755 root bin
@@ -6079,6 +6093,7 @@ f usr/include/gio-unix-2.0/gio/gunixinputstream.h 0644 root bin
 f usr/include/gio-unix-2.0/gio/gunixmounts.h 0644 root bin
 f usr/include/gio-unix-2.0/gio/gunixoutputstream.h 0644 root bin
 f usr/include/gio-unix-2.0/gio/gunixsocketaddress.h 0644 root bin
+s usr/include/glib-2.0=/opt/local/include/glib/glib-2.0
 f usr/include/glob.h 0644 root bin
 d usr/include/gmp 0755 root bin
 f usr/include/gmp/gmp.h 0644 root bin
@@ -6913,6 +6928,8 @@ f usr/include/protocols/timed.h 0644 root bin
 f usr/include/pthread.h 0644 root bin
 f usr/include/pw.h 0644 root bin
 f usr/include/pwd.h 0644 root bin
+s usr/include/python2.4=/opt/local/include/python2.4
+s usr/include/python2.6=/opt/local/include/python2.6
 f usr/include/raidcfg.h 0644 root bin
 f usr/include/raidcfg_spi.h 0644 root bin
 f usr/include/rcm_module.h 0644 root bin
@@ -9204,11 +9221,13 @@ f usr/lib/class/SDC/SDCpriocntl 0555 root bin
 d usr/lib/class/TS 0755 root bin
 f usr/lib/class/TS/TSdispadmin 0555 root bin
 f usr/lib/class/TS/TSpriocntl 0555 root bin
+s usr/lib/cpp=/opt/local/ccs/lib/cpp
 s usr/lib/cron=../../etc/cron.d
 f usr/lib/crt1.o 0644 root bin
 f usr/lib/crti.o 0644 root bin
 f usr/lib/crtn.o 0644 root bin
 d usr/lib/crypto 0755 root bin
+s usr/lib/dbus-1.0=/opt/local/lib/dbus-1.0
 d usr/lib/devfsadm 0755 root sys
 s usr/lib/devfsadm/devfsadmd=../../sbin/devfsadm
 d usr/lib/devfsadm/linkmod 0755 root sys
@@ -9623,6 +9642,7 @@ f usr/lib/fwflash/verify/tavor-MELLANOX.so 0755 root bin
 f usr/lib/gcrt1.o 0644 root bin
 f usr/lib/getNAME 0555 root bin
 f usr/lib/getoptcvt 0555 root bin
+s usr/lib/glib-2.0=/opt/local/lib/glib-2.0
 f usr/lib/gmsgfmt 0555 root bin
 d usr/lib/gss 0755 root bin
 f usr/lib/gss/dh1024-0.so.1 0755 root bin
@@ -16720,6 +16740,9 @@ d usr/sfw 0755 root bin
 d usr/sfw/bin 0755 root bin
 d usr/sfw/bin/amd64 0755 root bin
 s usr/sfw/bin/amd64/openssl=../../../bin/amd64/openssl
+s usr/sfw/bin/g++=/opt/local/bin/g++
+s usr/sfw/bin/gas=/opt/local/bin/as
+s usr/sfw/bin/gcc=/opt/local/bin/gcc
 s usr/sfw/bin/openssl=../../bin/openssl
 d usr/sfw/lib 0755 root bin
 s usr/sfw/lib/64=amd64
@@ -16818,6 +16841,7 @@ f usr/share/bash/variable_help 0444 root other
 f usr/share/bash/wait 0444 root other
 f usr/share/bash/while 0444 root other
 d usr/share/lib 0755 root sys
+s usr/share/lib/ccs=/opt/local/ccs/lib
 d usr/share/lib/dict 0755 root bin
 f usr/share/lib/dict/words 0444 root bin
 d usr/share/lib/idn 0755 root sys
@@ -18488,6 +18512,7 @@ d usr/share/man/man5openssl 0755 root bin
 d usr/share/man/man7 0755 root bin
 f usr/share/man/man7/FSS.7 0444 root bin
 d usr/share/man/man7openssl 0755 root bin
+s usr/share/sgml=/opt/local/share/sgml
 d usr/share/src 0755 root sys
 d usr/share/vim 0755 root bin
 d usr/share/vim/vim72 0755 root bin
@@ -19906,6 +19931,7 @@ f usr/ucb/ps 0555 root bin
 f usr/ucb/shutdown 0755 root bin
 f usr/ucb/touch 0755 root bin
 s usr/ucb/uptime=../bin/uptime
+s usr/xpg4=/opt/local/xpg4
 d var 0755 root sys
 d var/adm 0775 root sys
 d var/adm/acct 0775 adm adm

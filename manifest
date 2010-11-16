@@ -602,8 +602,6 @@ f etc/skel/.profile 0644 root other
 f etc/skel/local.cshrc 0644 root sys
 f etc/skel/local.login 0644 root sys
 f etc/skel/local.profile 0644 root sys
-d etc/slsh 0755 root sys
-f etc/slsh/slsh.rc 0644 root sys
 d etc/sock2path.d 0755 root sys
 f etc/sock2path.d/driver%2Fnetwork%2Fbpf 0644 root sys
 f etc/sock2path.d/driver%2Fnetwork%2Fsdp 0644 root sys
@@ -612,7 +610,6 @@ d etc/ssh 0755 root sys
 f etc/ssh/moduli 0644 root sys
 f etc/ssh/ssh_config 0644 root sys
 f etc/ssh/sshd_config 0644 root sys
-f etc/sudoers 0440 root root
 s etc/sulogin=../sbin/sulogin
 d etc/svc 0755 root sys
 d etc/svc/profile 0755 root sys
@@ -648,7 +645,6 @@ s etc/utmpx=../var/adm/utmpx
 f etc/vfstab 0644 root sys
 s etc/volcopy=../usr/sbin/volcopy
 s etc/wall=../usr/sbin/wall
-f etc/wgetrc 0644 root sys
 s etc/whodo=../usr/sbin/whodo
 s etc/wtmpx=../var/adm/wtmpx
 d etc/xdg 0755 root sys
@@ -16713,7 +16709,6 @@ f usr/sbin/update_drv 0555 root bin
 f usr/sbin/useradd 0555 root sys
 f usr/sbin/userdel 0555 root sys
 f usr/sbin/usermod 0555 root sys
-f usr/sbin/visudo 0511 root bin
 f usr/sbin/volcopy 0555 root bin
 f usr/sbin/wall 2555 root tty
 f usr/sbin/wanbootutil 0555 root bin

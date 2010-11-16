@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall
-TARGETS=bootparams disklist removable_disk disk_size
+TARGETS=bootparams disklist removable_disk disk_size sysinfo
 DESTDIR=../proto
 
 all: $(TARGETS)
@@ -21,6 +21,9 @@ disk_size: disk_size.c
 disklist:
 	cp disklist.sh disklist
 	chmod 0755 disklist
+
+sysinfo:
+	touch sysinfo
 
 clean:
 	@rm -f $(TARGETS)

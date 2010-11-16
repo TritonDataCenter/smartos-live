@@ -611,10 +611,6 @@ f etc/sock2path.d/system%2Fkernel 0644 root sys
 d etc/ssh 0755 root sys
 f etc/ssh/moduli 0644 root sys
 f etc/ssh/ssh_config 0644 root sys
-f etc/ssh/ssh_host_dsa_key 0600 root root
-f etc/ssh/ssh_host_dsa_key.pub 0644 root root
-f etc/ssh/ssh_host_rsa_key 0600 root root
-f etc/ssh/ssh_host_rsa_key.pub 0644 root root
 f etc/ssh/sshd_config 0644 root sys
 f etc/sudoers 0440 root root
 s etc/sulogin=../sbin/sulogin

@@ -6657,7 +6657,6 @@ s usr/include/ncurses/ncurses.h=curses.h
 f usr/include/ncurses/panel.h 0644 root bin
 f usr/include/ncurses/term.h 0644 root bin
 f usr/include/ncurses/unctrl.h 0644 root bin
-f usr/include/ncurses_dll.h 0644 root bin
 f usr/include/ndbm.h 0644 root bin
 f usr/include/ndpd.h 0644 root bin
 d usr/include/net 0755 root bin
@@ -8354,14 +8353,11 @@ f usr/include/tclPlatDecls.h 0644 root bin
 f usr/include/tcldbg.h 0444 root bin
 f usr/include/tcpd.h 0644 root bin
 f usr/include/term.h 0644 root bin
-f usr/include/term_entry.h 0644 root bin
-f usr/include/termcap.h 0644 root bin
 f usr/include/termio.h 0644 root bin
 f usr/include/termios.h 0644 root bin
 f usr/include/tgmath.h 0644 root bin
 f usr/include/thread.h 0644 root bin
 f usr/include/thread_db.h 0644 root bin
-f usr/include/tic.h 0644 root bin
 f usr/include/tiff.h 0644 root bin
 f usr/include/tiffconf.h 0644 root bin
 f usr/include/tiffio.h 0644 root bin
@@ -9118,7 +9114,6 @@ f usr/lib/amd64/pkgconfig/hal-storage.pc 0644 root bin
 f usr/lib/amd64/pkgconfig/hal.pc 0644 root bin
 f usr/lib/amd64/pkgconfig/ice.pc 0444 root bin
 f usr/lib/amd64/pkgconfig/libcurl.pc 0644 root other
-f usr/lib/amd64/pkgconfig/libffi.pc 0644 root bin
 f usr/lib/amd64/pkgconfig/libidn.pc 0644 root bin
 f usr/lib/amd64/pkgconfig/libxml-2.0.pc 0444 root other
 f usr/lib/amd64/pkgconfig/openssl.pc 0444 root other
@@ -13169,13 +13164,6 @@ f usr/lib/libfcoe.so.1 0755 root bin
 s usr/lib/libfcoe.so=libfcoe.so.1
 s usr/lib/libfdisk.so.1=../../lib/libfdisk.so.1
 s usr/lib/libfdisk.so=../../lib/libfdisk.so.1
-d usr/lib/libffi-3.0.9 0755 root bin
-d usr/lib/libffi-3.0.9/include 0755 root bin
-f usr/lib/libffi-3.0.9/include/ffi.h 0444 root bin
-f usr/lib/libffi-3.0.9/include/ffitarget.h 0444 root bin
-f usr/lib/libffi.so.5.0.10 0755 root bin
-s usr/lib/libffi.so.5=libffi.so.5.0.10
-s usr/lib/libffi.so=libffi.so.5.0.10
 f usr/lib/libform.so.1 0755 root bin
 s usr/lib/libform.so=libform.so.1
 f usr/lib/libfru.so.1 0755 root bin

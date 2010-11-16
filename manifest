@@ -2915,7 +2915,7 @@ f usr/bin/setpgrp 0555 root sys
 f usr/bin/settime 0555 root bin
 f usr/bin/setuname 0555 root bin
 f usr/bin/sftp 0555 root bin
-s usr/bin/sh=bash
+s usr/bin/sh=ksh93
 f usr/bin/shcomp 0555 root bin
 f usr/bin/sleep 0555 root bin
 f usr/bin/soelim 0555 root bin

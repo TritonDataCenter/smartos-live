@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+# Copyright (c) 2010 Joyent Inc., All rights reserved.
+#
+# Output some JSON info representing the system.
+#
+
+# Get (misnamed in prtconf) memory size in Mebibytes
+MEMORY_IN_MiB=`prtconf \
+  | grep "Memory size: [0-9]* Megabytes" \
+  | cut -d' ' -f3`
+
+SYSTEM_DATA=`smbios -t SMB_TYPE_SYSTEM \
+  | ggrep "Manufacturer: \|Product: \|Serial Number: \|UUID: " \
+  | sed -e 's/^ */  "/' \
+  | sed -e 's/: /": "/' \
+  | sed -e 's/ *$/",/'`
+
+CPU_VERSION=`smbios -t SMB_TYPE_PROCESSOR \
+  | grep "Version: " \
+  | head -n1 \
+  | tr -s ' ' \
+  | sed -e 's/^ *Version: //' \
+  | sed -e 's/ *$//'`
+
+CPU_COUNT=`smbios -t SMB_TYPE_PROCESSOR \
+  | grep "Version: " \
+  | wc -l \
+  | tr -d ' '`
+
+CPU_CORES=`psrinfo \
+  | grep "^[0-9]" \
+  | wc -l \
+  | tr -d ' '`
+
+# Populate disk list with "Size in GB" member for each disk
+DISKS=""
+for line in `disklist -s`; do
+  DISKS=`echo ${line} | tr '=' ' ' | { read device size junk
+    gb_size=$((${size} / 1000000000))
+    printf "    \"${device}\": {\"Size in GB\": ${gb_size}},\n${DISKS}" \
+      | gsed -e '$s/,$//'
+  }`
+done
+
+# Out put the JSON!
+cat <<EOF
+{
+${SYSTEM_DATA}
+  "CPU Type": "${CPU_VERSION}",
+  "CPU Physical Cores": ${CPU_COUNT},
+  "CPU Total Cores": ${CPU_CORES},
+  "MiB of Memory": ${MEMORY_IN_MiB},
+  "Disks": {
+${DISKS}
+  }
+}
+EOF

@@ -1,11 +1,11 @@
 CC=gcc
 CFLAGS=-Wall
-TARGETS=bootparams disklist removable_disk disk_size sysinfo
+TARGETS=bootparams disklist removable_disk disk_size
 DESTDIR=../proto
 
-all: $(TARGETS)
+all: $(TARGETS) sysinfo
 
-install: $(TARGETS)
+install: $(TARGETS) sysinfo
 	mkdir -p $(DESTDIR)/usr/bin
 	pfexec cp -p $(TARGETS) $(DESTDIR)/usr/bin
 

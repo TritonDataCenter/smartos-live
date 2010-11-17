@@ -4,7 +4,7 @@ ROOT=$(PWD)
 PROTO=$(ROOT)/proto
 PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin
 
-world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp
+world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp
 
 live: world
 	(cd $(ROOT) && ./tools/build_live $(ROOT)/manifest)
@@ -13,6 +13,10 @@ update:
 	@(git pull --rebase)
 	@(cd projects/illumos; git pull --rebase)
 	@(cd projects/illumos-extras; git pull --rebase)
+
+0-local-stamp:
+	[ ! -d projects/local ] || (cd projects/local && gmake && gmake DESTDIR=$(PROTO) install)
+	touch 0-local-stamp
 
 0-illumos-stamp:
 	(cd $(ROOT) && ./tools/build_illumos)
@@ -29,6 +33,7 @@ update:
 clean:
 	(cd $(ROOT)/src && gmake clean)
 	(cd $(ROOT)/projects/illumos-extras && gmake clean)
+	[ ! -d projects/local ] || (cd projects/local && gmake clean)
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO))
 	rm -f 0-*-stamp

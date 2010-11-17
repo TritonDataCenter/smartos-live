@@ -657,6 +657,23 @@ f etc/zones/SUNWdefault.xml 0444 root bin
 f etc/zones/index 0644 root sys
 s etc/zprofile=profile
 f etc/zshrc 0644 root bin
+d joyent 0755 root bin
+d joyent/ur-agent 0755 root bin
+f joyent/ur-agent/README 0444 root bin
+d joyent/ur-agent/amqp 0755 root bin
+f joyent/ur-agent/amqp/LICENSE-MIT 0444 root bin
+f joyent/ur-agent/amqp/README.md 0444 root bin
+f joyent/ur-agent/amqp/amqp-0.8.xml 0444 root bin
+f joyent/ur-agent/amqp/amqp-definitions-0-8.js 0444 root bin
+f joyent/ur-agent/amqp/amqp.js 0444 root bin
+f joyent/ur-agent/amqp/index.js 0444 root bin
+f joyent/ur-agent/amqp/package.json 0444 root bin
+f joyent/ur-agent/amqp/promise.js 0444 root bin
+f joyent/ur-agent/amqp/qparser.rb 0444 root bin
+d joyent/ur-agent/amqp/util 0755 root bin
+f joyent/ur-agent/amqp/util/delete-exchange.js 0444 root bin
+f joyent/ur-agent/amqp/util/delete-queue.js 0444 root bin
+f joyent/ur-agent/ur-agent 0555 root bin
 d kernel 0755 root sys
 d kernel/amd64 0755 root sys
 f kernel/amd64/genunix 0755 root sys
@@ -2376,6 +2393,7 @@ s usr/apr/1.3/include=/opt/local/include/apr-1
 d usr/bin 0755 root bin
 f usr/bin/CA.pl 0555 root bin
 s usr/bin/HtmlConverter=/opt/local/jdk/bin/HtmlConverter
+f usr/bin/[ 0555 root bin
 f usr/bin/addbadsec 0555 root bin
 f usr/bin/addbib 0555 root bin
 f usr/bin/alias 0555 root bin

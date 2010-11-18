@@ -251,6 +251,8 @@ d etc/crypto/crls 0755 root sys
 f etc/crypto/kcf.conf 0644 root sys
 f etc/crypto/kmf.conf 0644 root sys
 f etc/crypto/pkcs11.conf 0644 root sys
+d etc/curl 0555 root sys
+f etc/curl/curlCA 0444 root sys
 f etc/dacf.conf 0644 root sys
 d etc/dat 0755 root sys
 f etc/dat/dat.conf 0644 root sys
@@ -666,7 +668,7 @@ f joyent/ur-agent/amqp/README.md 0444 root bin
 f joyent/ur-agent/amqp/amqp-0.8.xml 0444 root bin
 f joyent/ur-agent/amqp/amqp-definitions-0-8.js 0444 root bin
 f joyent/ur-agent/amqp/amqp.js 0444 root bin
-f joyent/ur-agent/amqp/index.js 0444 root bin
+s joyent/ur-agent/amqp/index.js=amqp.js
 f joyent/ur-agent/amqp/package.json 0444 root bin
 f joyent/ur-agent/amqp/promise.js 0444 root bin
 f joyent/ur-agent/amqp/qparser.rb 0444 root bin

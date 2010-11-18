@@ -67,7 +67,7 @@ if smf_is_globalzone; then
             if [[ $headnode == "true" ]]; then
                 ifconfig $iface inet $admin_ip netmask $admin_netmask up
             else
-                ifconfig $iface dhcp up
+                ifconfig $iface dhcp
             fi
         fi
     done

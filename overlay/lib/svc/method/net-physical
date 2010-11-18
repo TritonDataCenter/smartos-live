@@ -77,6 +77,8 @@ else
         ifconfig $iface plumb
         if [[ -f /etc/hostname.$iface ]]; then
             ifconfig $iface inet `cat /etc/hostname.$iface` up
+        else
+            ifconfig $iface dhcp
         fi
     done
 fi

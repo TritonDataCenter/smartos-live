@@ -97,3 +97,5 @@
 *
 *		set test_module:debug = 0x13
 
+
+set ibft_noprobe=1

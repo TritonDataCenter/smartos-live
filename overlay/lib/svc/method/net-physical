@@ -56,7 +56,7 @@ if smf_is_globalzone; then
 #    if [[ $headnode == 'true' ]]; then
 #        . /mnt/config
 #    else
-        admin_nic=`/usr/bin/bootparams | grep "admin_nic" | cut -f2 -d'='`
+        admin_nic=`/usr/bin/bootparams | grep "admin_nic" | cut -f2 -d'=' | sed 's/00/0/g;s/:0/:/g;s/::/:0:/g;s/:$/:0/'`
         admin_ip=`/usr/bin/bootparams | grep "admin_ip" | cut -f2 -d'='`
         admin_netmask=`/usr/bin/bootparams | grep "admin_netmask" | cut -f2 -d'='`
 #    fi

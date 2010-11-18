@@ -2337,8 +2337,6 @@ f sbin/dhcpinfo 0555 root bin
 f sbin/dladm 0555 root bin
 f sbin/dlmgmtd 0555 root bin
 f sbin/dlstat 0555 root bin
-f sbin/fdisk 0555 root bin
-f sbin/fiocompress 0555 root bin
 f sbin/flowadm 0555 root bin
 f sbin/flowstat 0555 root bin
 f sbin/hostconfig 0555 root bin
@@ -2547,6 +2545,7 @@ f usr/bin/diffmk 0555 root bin
 f usr/bin/digest 0555 root bin
 f usr/bin/dircmp 0555 root bin
 f usr/bin/dirname 0555 root bin
+f usr/bin/disk_size 0555 root bin
 f usr/bin/disklist 0555 root bin
 f usr/bin/diskscan 0555 root bin
 f usr/bin/dispgid 0555 root bin

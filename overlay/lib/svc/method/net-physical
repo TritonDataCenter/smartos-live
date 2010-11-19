@@ -50,6 +50,42 @@ if smf_is_globalzone; then
     if [[ `/bin/bootparams | grep "headnode=true"` ]]; then
         headnode="true"
     fi
+
+    #
+    # Use the MAC address to sort the NICs and rename any that are out of
+    # order so that we always get a consistent name for each NIC.
+    #
+    dladm show-phys -m -o ADDRESS,LINK | sort | nawk '{
+	if ($1 == "ADDRESS")
+		next
+
+	l = length($2)
+
+	pos = match($2, "[0-9]+$")
+	if (pos == 0)
+		next
+
+	nm = substr($2, 1, pos - 1)
+	id = substr($2, pos)
+
+	i = idx[nm]++;
+	if (id == i)
+		next
+
+	new_name = nm i
+	tmp_name = "tmp_" nm i
+
+	cmd = "dladm rename-link " $2 " " tmp_name
+	cleanup[tmp_name] = new_name
+	system(cmd)
+    }
+    END {
+	for (i in cleanup) {
+		cmd = "dladm rename-link " i " " cleanup[i]
+		system(cmd)
+	}
+    }'
+
     # future:
     #eval `/bin/bootparams`
 

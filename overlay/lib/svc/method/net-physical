@@ -75,10 +75,10 @@ if smf_is_globalzone; then
 else
     for iface in `dladm show-vnic -p -o link`; do
         ifconfig $iface plumb
-        if [[ -f /etc/hostname.$iface ]]; then
-            ifconfig $iface inet `cat /etc/hostname.$iface` up
-        else
+        if [[ -f /etc/dhcp.$iface || ! -f /etc/hostname.$iface ]]; then
             ifconfig $iface dhcp
+        else
+            ifconfig $iface inet `cat /etc/hostname.$iface` up
         fi
     done
 fi

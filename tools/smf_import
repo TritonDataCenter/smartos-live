@@ -6,7 +6,6 @@
 set -e
 
 rdmnt=$1
-
 if [ -z "${rdmnt}" ] || [ ! -d "${rdmnt}" ]; then
   echo "FATAL: Invalid ramdisk root '${rdmnt}'"
   echo "Usage: $0 <rdmnt>"

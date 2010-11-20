@@ -73,7 +73,8 @@ if [ -z "${MANIFEST}" ] || [ ! -f "${MANIFEST}" ]; then
     usage
 else
     # translate to abs path
-    MANIFEST=$(cd $(dirname ../manifest) && pwd)
+    NEW_MANIFEST=$(cd $(dirname ${MANIFEST}) && pwd)/$(basename ${MANIFEST})
+    MANIFEST=${NEW_MANIFEST}
 fi
 
 if [ -z "${OUT_DIR}" ]; then
@@ -123,11 +124,12 @@ function create_ufs
 
     # do the actual copy
     ${BUILDER} ${MANIFEST} ${rdmnt} ${IN_DIRS}
-    ${CUSTOMIZE_SCRIPT} ${rdmnt} ${OVERLAY}
-    ${SMF_IMPORT} ${rdmnt}
+    ${CUSTOMIZE_SCRIPT} ${rdmnt}
+    ${SMF_IMPORTER} ${rdmnt}
 
-    echo "Writing manifest.."
-    INCLUDE_MD5SUM=1 ${SCANNER} ${rdmnt} . | tee ${rdmnt}/var/log/manifest >/dev/null
+    echo "Writing md5sum manifest.."
+    (cd ${rdmnt} && find . -type f -exec md5sum {} \;) > ${rdmnt}/var/log/manifest
+    #INCLUDE_MD5SUM=1 ${SCANNER} ${rdmnt} . | tee ${rdmnt}/var/log/manifest >/dev/null
     cp ${rdmnt}/var/log/manifest ${archive}.manifest
 
     umount -f "$rdmnt"

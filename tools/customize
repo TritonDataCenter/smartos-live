@@ -6,9 +6,8 @@ if [ -z "${BUILDSTAMP}" ]; then
 fi
 
 rdmnt=$1
-copy_in=$2
-if [ -z "${rdmnt}" ] || [ -z "${copy_in}" ]; then
-  echo "Usage: $0 <root directory> <copy_in directory>"
+if [ -z "${rdmnt}" ]; then
+  echo "Usage: $0 <rdmnt directory>"
   exit 1
 fi
 

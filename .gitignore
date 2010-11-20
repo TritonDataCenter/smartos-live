@@ -7,4 +7,8 @@
 /src/disk_size
 /src/removable_disk
 /src/disklist
+/tools/builder/builder
+/tools/builder/*.o
+/tools/builder/users.c
 /0-*-stamp
+/manifest.new

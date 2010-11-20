@@ -1,0 +1,35 @@
+#!/bin/bash
+#
+# Copyright (c) 2010 Joyent Inc., All rights reserved.
+#
+
+set -e
+
+rdmnt=$1
+
+if [ -z "${rdmnt}" ] || [ ! -d "${rdmnt}" ]; then
+  echo "FATAL: Invalid ramdisk root '${rdmnt}'"
+  echo "Usage: $0 <rdmnt>"
+  exit 1
+fi
+
+# TODO check that we're root
+
+REPO_DB=${rdmnt}/etc/svc/repository.db
+export SVCCFG_CHECKHASH=1
+export PKG_INSTALL_ROOT=${rdmnt}
+export SVCCFG_DTD=${rdmnt}/usr/share/lib/xml/dtd/service_bundle.dtd.1
+export SVCCFG_REPOSITORY=${REPO_DB}
+export SVCCFG_CONFIGD_PATH=/lib/svc/bin/svc.configd
+
+SVCCFG="/usr/sbin/svccfg"
+cp ${rdmnt}/lib/svc/seed/global.db ${REPO_DB}
+${SVCCFG} -v repository ${REPO_DB}
+${SVCCFG} -v add smf/manifest
+${SVCCFG} -v import ${rdmnt}/lib/svc/manifest
+${SVCCFG} -s "system/boot-config:default" setprop config/fastreboot_default=false
+${SVCCFG} -s "system/manifest-import" setprop start/exec=:true
+${SVCCFG} -v apply ${rdmnt}/etc/svc/profile/generic.xml
+${SVCCFG} -v apply ${rdmnt}/etc/svc/profile/platform.xml
+
+exit 0

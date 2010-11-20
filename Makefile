@@ -4,10 +4,10 @@ ROOT=$(PWD)
 PROTO=$(ROOT)/proto
 PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin
 
-world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp
+world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp 0-tools-stamp
 
-live: world
-	(cd $(ROOT) && ./tools/build_live $(ROOT)/manifest)
+live: world 
+	(cd $(ROOT) && pfexec ./tools/build_live $(ROOT)/manifest $(ROOT)/output $(ROOT)/overlay $(ROOT)/proto /)
 
 update:
 	@(git pull --rebase)
@@ -29,6 +29,12 @@ update:
 0-livesrc-stamp: src/bootparams.c
 	(cd $(ROOT)/src && gmake DESTDIR=$(PROTO) && gmake DESTDIR=$(PROTO) install)
 	touch 0-livesrc-stamp
+
+0-tools-stamp: tools/builder/builder
+	touch 0-tools-stamp
+
+tools/builder/builder:
+	(cd $(ROOT)/tools/builder && gmake builder)
 
 clean:
 	(cd $(ROOT)/src && gmake clean)

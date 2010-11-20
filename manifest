@@ -14,11 +14,13 @@ s dev/bpf=../devices/pseudo/bpf@0:bpf
 s dev/bridgectl=../devices/pseudo/clone@0:bridge
 s dev/conslog=../devices/pseudo/log@0:conslog
 s dev/console=../devices/pseudo/cn@0:console
+d dev/cpu 0755 root root
 d dev/cpu/self 0755 root root
 s dev/cpu/self/cpuid=../../../devices/pseudo/cpuid@0:self
 s dev/crypto=../devices/pseudo/crypto@0:crypto
 s dev/cryptoadm=../devices/pseudo/cryptoadm@0:cryptoadm
 s dev/dld=../devices/pseudo/dld@0:ctl
+d dev/dtrace 0755 root root
 d dev/dtrace/provider 0755 root root
 s dev/dtrace/provider/dcpc=../../../devices/pseudo/dcpc@0:dcpc
 s dev/dtrace/provider/fasttrap=../../../devices/pseudo/fasttrap@0:fasttrap
@@ -672,9 +674,6 @@ s joyent/ur-agent/amqp/index.js=amqp.js
 f joyent/ur-agent/amqp/package.json 0444 root bin
 f joyent/ur-agent/amqp/promise.js 0444 root bin
 f joyent/ur-agent/amqp/qparser.rb 0444 root bin
-d joyent/ur-agent/amqp/util 0755 root bin
-f joyent/ur-agent/amqp/util/delete-exchange.js 0444 root bin
-f joyent/ur-agent/amqp/util/delete-queue.js 0444 root bin
 f joyent/ur-agent/ur-agent 0555 root bin
 d kernel 0755 root sys
 d kernel/amd64 0755 root sys
@@ -1317,6 +1316,7 @@ f kernel/misc/amd64/uwba 0755 root sys
 d kernel/misc/kgss 0755 root sys
 d kernel/misc/kgss/amd64 0755 root sys
 f kernel/misc/kgss/amd64/kmech_krb5 0755 root sys
+d kernel/misc/pmcs 0755 root sys
 d kernel/misc/pmcs/amd64 0755 root sys
 f kernel/misc/pmcs/amd64/pmcs8001fw 0755 root sys
 d kernel/misc/qlc 0755 root sys
@@ -2268,6 +2268,7 @@ f platform/i86pc/kernel/cpu/cpu_ms.AuthenticAMD.15 0755 root sys
 f platform/i86pc/kernel/cpu/cpu_ms.GenuineIntel 0755 root sys
 f platform/i86pc/kernel/cpu/cpu_ms.GenuineIntel.6.46 0755 root sys
 f platform/i86pc/kernel/cpu/cpu_ms.GenuineIntel.6.47 0755 root sys
+d platform/i86pc/kernel/dacf 0755 root sys
 d platform/i86pc/kernel/dacf/amd64 0755 root sys
 f platform/i86pc/kernel/dacf/amd64/consconfig_dacf 0755 root sys
 f platform/i86pc/kernel/dacf/consconfig_dacf 0755 root sys
@@ -16220,6 +16221,8 @@ f usr/perl5/vendor_perl/5.8.4/i86pc-solaris-64int/Bundle/Makefile.subs.pl 0444 r
 d usr/perl5/vendor_perl/5.8.4/i86pc-solaris-64int/auto 0755 root bin
 d usr/perl5/vendor_perl/5.8.4/i86pc-solaris-64int/auto/Bundle 0755 root bin
 d usr/platform 0755 root sys
+d usr/platform/i86pc 0755 root sys
+d usr/platform/i86pc/lib 0755 root sys
 d usr/platform/i86pc/lib/mdb 0755 root sys
 s usr/preserve=../var/preserve
 d usr/proc 0755 root bin

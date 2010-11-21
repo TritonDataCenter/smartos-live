@@ -132,6 +132,10 @@ function create_ufs
     #INCLUDE_MD5SUM=1 ${SCANNER} ${rdmnt} . | tee ${rdmnt}/var/log/manifest >/dev/null
     cp ${rdmnt}/var/log/manifest ${archive}.manifest
 
+    # make sure the kernel we copy over matches our boot archive by copying from there.
+    mkdir -p `dirname ${OUT_DIR}/${OUT_KERNEL_64}`
+    cp ${rdmnt}/${KERNEL_64} ${OUT_DIR}/${OUT_KERNEL_64}
+
     umount -f "$rdmnt"
     rmdir "$rdmnt"
     gzip "$rdfile" && mv "${rdfile}.gz" "${archive}-new"
@@ -210,8 +214,6 @@ mkfile ${SIZE}k "${rdfile}"
 chown ${USER} ${rdfile}
 lofidev32=`lofiadm -a "${rdfile}"`
 create_archive "${OUT_DIR}/${BOOT_ARCHIVE_64}" $lofidev32
-mkdir -p `dirname ${OUT_DIR}/${OUT_KERNEL_64}`
-cp ${PROTO}/${KERNEL_64} ${OUT_DIR}/${OUT_KERNEL_64}
 lofiadm -d "$rdfile32" 2>/dev/null
 chmod 0644 ${OUT_DIR}/${BOOT_ARCHIVE_64}
 (cd ${OUT_DIR} && gtar -zcf ${PREFIX}.tgz ${PREFIX})

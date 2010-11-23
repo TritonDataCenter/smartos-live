@@ -27,6 +27,7 @@
 #
 
 . /lib/svc/share/smf_include.sh
+. /lib/svc/share/joyent_include.sh
 
 #
 # In a shared-IP zone we need this service to be up, but all of the work
@@ -49,6 +50,8 @@ if smf_is_globalzone; then
     dladm init-phys
     if [[ `/bin/bootparams | grep "headnode=true"` ]]; then
         headnode="true"
+    else
+        headnode="false"
     fi
 
     #
@@ -86,29 +89,55 @@ if smf_is_globalzone; then
 	}
     }'
 
-    # future:
-    #eval `/bin/bootparams`
+    # We strip leading zero from MAC (eg. 0c:ab => c:ab) to match ifconfig
+    admin_nic=`/usr/bin/bootparams | grep "admin_nic" | cut -f2 -d'=' | sed 's/0\([0-9a-f]\)/\1/g'`
+    if [ -z "${admin_nic}" ]; then
+        admin_nic="undefined"
+    fi
 
-#    if [[ $headnode == 'true' ]]; then
-#        . /mnt/config
-#    else
-        admin_nic=`/usr/bin/bootparams | grep "admin_nic" | cut -f2 -d'=' | sed 's/0\([0-9a-f]\)/\1/g'`
-        admin_ip=`/usr/bin/bootparams | grep "admin_ip" | cut -f2 -d'='`
-        admin_netmask=`/usr/bin/bootparams | grep "admin_netmask" | cut -f2 -d'='`
-#    fi
+    coal="false"
+    admin_started="false"
+    admin_configured="false"
+    external_started="false"
+    if [ ${headnode} == "true" ]; then
+        # Mount the USB Key if we're a headnode to find additional network config
+        if mount_usb; then
+            # Load the config
+            . /mnt/config
+        else
+            echo "FATAL: headnode, but no USB key found. Not bringing up admin network." >> /dev/console
+        fi
+
+        if [ -n ${admin_ip} ] && [ -n ${admin_netmask} ]; then
+            admin_configured="true"
+        fi
+    fi
 
     dladm show-phys -m -p -o link,address | sed 's/:/\ /;s/\\//g' | while read iface mac; do
-        if [[ $mac == $admin_nic ]]; then
-            ifconfig $iface plumb
-            if [[ $headnode == "true" ]]; then
-                ifconfig $iface inet $admin_ip netmask $admin_netmask up
+        if [ ${mac} == ${admin_nic} ]; then
+            ifconfig ${iface} plumb
+            if [ ${headnode} == "true" ]; then
+                if [ ${admin_configured} == "true" ]; then
+                    ifconfig ${iface} inet ${admin_ip} netmask ${admin_netmask} up
+                    admin_started="true"
+                else
+                    echo "WARNING: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
+                fi
             else
-                ifconfig $iface dhcp
+                ifconfig ${iface} dhcp
+                admin_started="true"
             fi
+        elif [ ${external_started} == "false" ] && [ ${headnode} == "true" ] && [ ${coal} == "true" ]; then
+            # in CoaL we also bring up the NAT NIC
+            # TODO: check config [somewhere] to see if this is really the NAT NIC
+            ifconfig ${iface} plumb
+            ifconfig ${iface} dhcp primary
+            external_started="true"
         fi
     done
 
 else
+    # Non-global zones
     for iface in `dladm show-vnic -p -o link`; do
         ifconfig $iface plumb
         if [[ -f /etc/dhcp.$iface || ! -f /etc/hostname.$iface ]]; then

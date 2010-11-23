@@ -2241,6 +2241,7 @@ d lib/svc/share 0755 root bin
 f lib/svc/share/README 0444 root bin
 f lib/svc/share/fs_include.sh 0444 root bin
 f lib/svc/share/ipf_include.sh 0444 root bin
+f lib/svc/share/joyent_include.sh 0444 root bin
 f lib/svc/share/mfsthistory 0444 root bin
 f lib/svc/share/net_include.sh 0444 root bin
 f lib/svc/share/routing_include.sh 0444 root bin

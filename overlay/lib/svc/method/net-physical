@@ -20,10 +20,9 @@
 # CDDL HEADER END
 #
 #
+# Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T. All rights reserved.
 # Copyright (c) 1999, 2010, Oracle and/or its affiliates. All rights reserved.
-#
-# Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T.
-# All rights reserved.
+# Copyright (c) 2010, Joyent Inc., All rights reserved.
 #
 
 . /lib/svc/share/smf_include.sh
@@ -35,7 +34,7 @@
 # failing if we try to do it), so just bail out. 
 # In the global zone and exclusive-IP zones we proceed.
 #
-smf_configure_ip || exit $SMF_EXIT_OK
+smf_configure_ip || exit ${SMF_EXIT_OK}
 
 
 # Make sure that the libraries essential to this stage of booting can be found.
@@ -48,7 +47,7 @@ sleep 1
 
 if smf_is_globalzone; then
     dladm init-phys
-    if [[ `/bin/bootparams | grep "headnode=true"` ]]; then
+    if /bin/bootparams | grep "^headnode=true" >/dev/null; then
         headnode="true"
     else
         headnode="false"
@@ -91,7 +90,7 @@ if smf_is_globalzone; then
 
     # We strip leading zero from MAC (eg. 0c:ab => c:ab) to match ifconfig
     admin_nic=`/usr/bin/bootparams | grep "admin_nic" | cut -f2 -d'=' | sed 's/0\([0-9a-f]\)/\1/g'`
-    if [ -z "${admin_nic}" ]; then
+    if [[ -z "${admin_nic}" ]]; then
         admin_nic="undefined"
     fi
 
@@ -99,25 +98,27 @@ if smf_is_globalzone; then
     admin_started="false"
     admin_configured="false"
     external_started="false"
-    if [ ${headnode} == "true" ]; then
+    if [[ ${headnode} == "true" ]]; then
         # Mount the USB Key if we're a headnode to find additional network config
+        DEBUG="true"
         if mount_usb; then
             # Load the config
             . /mnt/config
         else
             echo "FATAL: headnode, but no USB key found. Not bringing up admin network." >> /dev/console
+            echo "${mount_usb_msg}" >> /dev/console
         fi
 
-        if [ -n ${admin_ip} ] && [ -n ${admin_netmask} ]; then
+        if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]]; then
             admin_configured="true"
         fi
     fi
 
     dladm show-phys -m -p -o link,address | sed 's/:/\ /;s/\\//g' | while read iface mac; do
-        if [ ${mac} == ${admin_nic} ]; then
+        if [[ ${mac} == ${admin_nic} ]]; then
             ifconfig ${iface} plumb
-            if [ ${headnode} == "true" ]; then
-                if [ ${admin_configured} == "true" ]; then
+            if [[ ${headnode} == "true" ]]; then
+                if [[ ${admin_configured} == "true" ]]; then
                     ifconfig ${iface} inet ${admin_ip} netmask ${admin_netmask} up
                     admin_started="true"
                 else
@@ -127,7 +128,7 @@ if smf_is_globalzone; then
                 ifconfig ${iface} dhcp
                 admin_started="true"
             fi
-        elif [ ${external_started} == "false" ] && [ ${headnode} == "true" ] && [ ${coal} == "true" ]; then
+        elif [[ ${external_started} == "false" ]] && [[ ${headnode} == "true" ]] && [[ ${coal} == "true" ]]; then
             # in CoaL we also bring up the NAT NIC
             # TODO: check config [somewhere] to see if this is really the NAT NIC
             ifconfig ${iface} plumb
@@ -139,33 +140,33 @@ if smf_is_globalzone; then
 else
     # Non-global zones
     for iface in `dladm show-vnic -p -o link`; do
-        ifconfig $iface plumb
-        if [[ -f /etc/dhcp.$iface || ! -f /etc/hostname.$iface ]]; then
-            ifconfig $iface dhcp
+        ifconfig ${iface} plumb
+        if [[ -f /etc/dhcp.${iface} || ! -f /etc/hostname.${iface} ]]; then
+            ifconfig ${iface} dhcp
         else
-            ifconfig $iface inet `cat /etc/hostname.$iface` up
+            ifconfig ${iface} inet `cat /etc/hostname.${iface}` up
         fi
     done
 fi
 
 # Any non-loopback IPv4 interfaces with usable addresses up?
-if [ -n "`/sbin/ifconfig -a4u`" ]; then
+if [[ -n "`/sbin/ifconfig -a4u`" ]]; then
     	/sbin/ifconfig -a4u | while read intf addr rest; do
-		[ $intf = inet ] && [ $addr != 127.0.0.1 ] &&
-		[ $addr != 0.0.0.0 ] && exit $SMF_EXIT_OK
-	done && exit $SMF_EXIT_OK
+		[[ ${intf} == "inet" ]] && [[ ${addr} != "127.0.0.1" ]] &&
+		[[ ${addr} != "0.0.0.0" ]] && exit ${SMF_EXIT_OK}
+	done && exit ${SMF_EXIT_OK}
 fi
 
 # Any DHCP interfaces started?
-[ -n "`/sbin/ifconfig -a4 dhcp status 2>/dev/null`" ] && exit $SMF_EXIT_OK
+[[ -n "`/sbin/ifconfig -a4 dhcp status 2>/dev/null`" ]] && exit ${SMF_EXIT_OK}
 
 # Any non-loopback IPv6 interfaces up?
-if [ -n "`/sbin/ifconfig -au6`" ]; then
+if [[ -n "`/sbin/ifconfig -au6`" ]]; then
 	/sbin/ifconfig -au6 | while read intf addr rest; do
-		[ $intf = inet6 ] && [ $addr != ::1/128 ] && exit $SMF_EXIT_OK
-	done && exit $SMF_EXIT_OK
+		[[ ${intf} = "inet6" ]] && [[ ${addr} != "::1/128" ]] && exit ${SMF_EXIT_OK}
+	done && exit ${SMF_EXIT_OK}
 fi
 
 # This service was supposed to configure something yet didn't.  Exit
 # with config error.
-exit $SMF_EXIT_ERR_CONFIG
+exit ${SMF_EXIT_ERR_CONFIG}

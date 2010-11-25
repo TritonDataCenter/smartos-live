@@ -121,6 +121,10 @@ if smf_is_globalzone; then
                 if [[ ${admin_configured} == "true" ]]; then
                     ifconfig ${iface} inet ${admin_ip} netmask ${admin_netmask} up
                     admin_started="true"
+                    if [[ ${coal} == "true" ]]; then
+                        # Also create a bridge which allows traffic to flow correctly to VMWare Host-only
+                        dladm create-bridge -l ${iface} vmwarebr
+                    fi
                 else
                     echo "WARNING: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
                 fi

@@ -39,14 +39,14 @@ SYSTEM_DATA=`smbios -t SMB_TYPE_SYSTEM \
   | sed -e 's/: /": "/' \
   | sed -e 's/ *$/",/'`
 
-CPU_VERSION=`smbios -t SMB_TYPE_PROCESSOR \
+CPU_VERSION=`smbios -t SMB_TYPE_PROCESSOR | grep -v "Version: 0000000000" \
   | grep "Version: " \
   | head -n1 \
   | tr -s ' ' \
   | sed -e 's/^ *Version: //' \
   | sed -e 's/ *$//'`
 
-CPU_COUNT=`smbios -t SMB_TYPE_PROCESSOR \
+CPU_COUNT=`smbios -t SMB_TYPE_PROCESSOR | grep -v "Version: 0000000000" \
   | grep "Version: " \
   | wc -l \
   | tr -d ' '`

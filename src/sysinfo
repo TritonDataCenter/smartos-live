@@ -75,17 +75,22 @@ admin_nic=`/usr/bin/bootparams 2>/dev/null | grep "admin_nic" | cut -d '=' -f2-`
 for line in `pfexec /sbin/dladm show-phys -m | grep -v "^LINK " | awk '{ print $1,$3 }' | tr ' ' '='`; do
   NICS=`echo $line | tr '=' ' ' | { read nic mac junk
     admin=""
+    ip4data=""
     normalize_mac ${mac}
     mac=${normalized}
     if [ -n "${admin_nic}" ] && [ "${admin_nic}" == "${mac}" ]; then
       admin=",\"Admin NIC\": \"true\""
     fi
-    echo "\"${nic}\": {\"MAC Address\": \"${mac}\"${admin}}, ${NICS}"
+    ip4addr=$(ifconfig ${nic} 2>/dev/null | grep "inet " | awk '{ print $2 }')
+    if [ -n "${ip4addr}" ]; then
+        ip4data=",\"ip4addr\": \"${ip4addr}\""
+    fi
+    echo "\"${nic}\": {\"MAC Address\": \"${mac}\"${ip4data}${admin}}, ${NICS}"
   }`
 done
 # clean up formatting of JSON
 NICS=`echo ${NICS} | sed -e "s/,$//" | sed -e 's/, /,\\
-/g' | sed -e "s/^/    /" | sed -e "s/\",\"/\", \"/"`
+/g' | sed -e "s/^/    /" | sed -e "s/\",\"/\", \"/g"`
 
 # Output the JSON!
 cat <<EOF

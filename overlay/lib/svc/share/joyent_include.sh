@@ -5,7 +5,7 @@
 MOUNTPOINT=/mnt
 
 mount_usb() {
-
+    sleep 5
     mount_usb_msg=""
 
     if [[ -z ${DEBUG} || ${DEBUG} != "true" ]]; then

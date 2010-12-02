@@ -16696,6 +16696,7 @@ f usr/sbin/useradd 0555 root sys
 f usr/sbin/userdel 0555 root sys
 f usr/sbin/usermod 0555 root sys
 f usr/sbin/volcopy 0555 root bin
+f usr/sbin/vrrpadm 0555 root bin
 f usr/sbin/wall 2555 root tty
 f usr/sbin/wanbootutil 0555 root bin
 f usr/sbin/whodo 0555 root bin

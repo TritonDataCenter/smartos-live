@@ -2861,6 +2861,7 @@ s usr/bin/python2.4=/opt/local/bin/python2.4
 s usr/bin/python2.6=/opt/local/bin/python2.6
 s usr/bin/python=/opt/local/bin/python
 s usr/bin/rbash=bash
+f usr/bin/rcapstat 0555 root bin
 f usr/bin/rcp 4555 root bin
 f usr/bin/rdate 0555 root bin
 f usr/bin/rdist 4555 root bin
@@ -16603,6 +16604,7 @@ s usr/sbin/quotaoff=../lib/fs/ufs/quotaoff
 s usr/sbin/quotaon=../lib/fs/ufs/quotaon
 f usr/sbin/raidctl 0555 root bin
 f usr/sbin/ramdiskadm 0555 root bin
+f usr/sbin/rcapadm 0555 root bin
 f usr/sbin/rctladm 0555 root bin
 f usr/sbin/reboot 0755 root bin
 f usr/sbin/rem_drv 0555 root bin

@@ -16463,6 +16463,7 @@ f usr/sbin/if_mpadm 0555 root bin
 s usr/sbin/ifconfig=../../sbin/ifconfig
 f usr/sbin/ikeadm 0555 root bin
 f usr/sbin/ikecert 0555 root bin
+f usr/sbin/ilbadm 0555 root bin
 f usr/sbin/in.comsat 0555 root bin
 f usr/sbin/in.fingerd 0555 root bin
 f usr/sbin/in.ftpd 0555 root bin

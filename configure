@@ -38,9 +38,9 @@ if [ "${HAVE_PKG}" == "true" ]; then
     || /bin/true
 fi
 
-# TODO: move this to illumos-extras itself
+# TODO: move this to illumos-extra itself
 if [ "${HAVE_PKG}" == "true" ]; then
-  echo "==> Installing illumos-extras dependencies..."
+  echo "==> Installing illumos-extra dependencies..."
   ${ROOTCMD} pkg install \
     compatibility/ucb \
     developer/build/autoconf \
@@ -110,15 +110,15 @@ if [ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]; then
   fi
 fi
 
-if [ ! -f "projects/illumos-extras/Makefile" ]; then
-  echo " +--> Getting illumos-extras source tree..."
-  if [ -z "${GET_ILLUMOS_EXTRAS}" ]; then
-    echo "FATAL: No GET_ILLUMOS_EXTRAS defined in configure.*, can't get illumos-extras!"
+if [ ! -f "projects/illumos-extra/Makefile" ]; then
+  echo " +--> Getting illumos-extra source tree..."
+  if [ -z "${GET_ILLUMOS_EXTRA}" ]; then
+    echo "FATAL: No GET_ILLUMOS_EXTRA defined in configure.*, can't get illumos-extra!"
     exit 1
   fi
-  /bin/bash -c "cd projects && ${GET_ILLUMOS_EXTRAS} && cd -"
-  if [ ! -f "projects/illumos-extras/Makefile" ]; then
-    echo "FATAL: GET_ILLUMOS_EXTRAS command failed to get illumos-extras!"
+  /bin/bash -c "cd projects && ${GET_ILLUMOS_EXTRA} && cd -"
+  if [ ! -f "projects/illumos-extra/Makefile" ]; then
+    echo "FATAL: GET_ILLUMOS_EXTRA command failed to get illumos-extra!"
     exit 1
   fi
 fi

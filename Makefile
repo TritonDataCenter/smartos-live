@@ -12,7 +12,7 @@ live: world
 update:
 	@(git pull --rebase)
 	@(cd projects/illumos; git pull --rebase)
-	@(cd projects/illumos-extras; git pull --rebase)
+	@(cd projects/illumos-extra; git pull --rebase)
 
 0-local-stamp:
 	[ ! -d projects/local ] || (cd projects/local && gmake && gmake DESTDIR=$(PROTO) install)
@@ -23,7 +23,7 @@ update:
 	touch 0-illumos-stamp
 
 0-extra-stamp:
-	(cd $(ROOT)/projects/illumos-extras && gmake DESTDIR=$(PROTO) && gmake DESTDIR=$(PROTO) install)
+	(cd $(ROOT)/projects/illumos-extra && gmake DESTDIR=$(PROTO) && gmake DESTDIR=$(PROTO) install)
 	touch 0-extra-stamp
 
 0-livesrc-stamp: src/bootparams.c
@@ -38,7 +38,7 @@ tools/builder/builder:
 
 clean:
 	(cd $(ROOT)/src && gmake clean)
-	(cd $(ROOT)/projects/illumos-extras && gmake clean)
+	(cd $(ROOT)/projects/illumos-extra && gmake clean)
 	[ ! -d projects/local ] || (cd projects/local && gmake clean)
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO))

@@ -8650,9 +8650,6 @@ s usr/lib/amd64/libcrypto.so.0.9.8=../../../lib/amd64/libcrypto.so.0.9.8
 s usr/lib/amd64/libcrypto.so=../../../lib/amd64/libcrypto.so
 s usr/lib/amd64/libctf.so.1=../../../lib/amd64/libctf.so.1
 s usr/lib/amd64/libctf.so=../../../lib/amd64/libctf.so.1
-f usr/lib/amd64/libcurl.so.3.0.0 0755 root bin
-s usr/lib/amd64/libcurl.so.3=libcurl.so.3.0.0
-s usr/lib/amd64/libcurl.so=libcurl.so.3.0.0
 s usr/lib/amd64/libcurses.so.1=../../../lib/amd64/libcurses.so.1
 s usr/lib/amd64/libcurses.so=../../../lib/amd64/libcurses.so.1
 f usr/lib/amd64/libdat.so.1 0755 root bin
@@ -13104,9 +13101,9 @@ s usr/lib/libcrypto.so.0.9.8=../../lib/libcrypto.so.0.9.8
 s usr/lib/libcrypto.so=../../lib/libcrypto.so
 s usr/lib/libctf.so.1=../../lib/libctf.so.1
 s usr/lib/libctf.so=../../lib/libctf.so.1
-f usr/lib/libcurl.so.3.0.0 0755 root bin
-s usr/lib/libcurl.so.3=libcurl.so.3.0.0
-s usr/lib/libcurl.so=libcurl.so.3.0.0
+f usr/lib/libcurl.so.4.2.0 0755 root bin
+s usr/lib/libcurl.so.4=libcurl.so.4.2.0
+s usr/lib/libcurl.so=libcurl.so.4.2.0
 s usr/lib/libcurses.so.1=../../lib/libcurses.so.1
 s usr/lib/libcurses.so=../../lib/libcurses.so.1
 f usr/lib/libdat.so.1 0755 root bin

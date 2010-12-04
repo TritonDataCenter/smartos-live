@@ -2010,7 +2010,6 @@ f lib/svc/manifest/network/network-ipqos.xml 0444 root sys
 f lib/svc/manifest/network/network-iptun.xml 0444 root sys
 f lib/svc/manifest/network/network-location.xml 0444 root sys
 f lib/svc/manifest/network/network-loopback.xml 0444 root sys
-f lib/svc/manifest/network/network-netcfg.xml 0444 root sys
 f lib/svc/manifest/network/network-netmask.xml 0444 root sys
 f lib/svc/manifest/network/network-physical.xml 0444 root sys
 f lib/svc/manifest/network/network-routing-setup.xml 0444 root sys
@@ -2153,7 +2152,6 @@ f lib/svc/method/net-iptun 0555 root bin
 f lib/svc/method/net-loc 0555 root bin
 f lib/svc/method/net-loopback 0555 root bin
 f lib/svc/method/net-netmask 0555 root bin
-f lib/svc/method/net-nwam 0555 root bin
 f lib/svc/method/net-physical 0555 root bin
 f lib/svc/method/net-routing-setup 0555 root bin
 f lib/svc/method/net-svc 0555 root bin

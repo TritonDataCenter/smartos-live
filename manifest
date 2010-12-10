@@ -2999,6 +2999,7 @@ f usr/bin/which 0555 root bin
 f usr/bin/who 0555 root bin
 f usr/bin/whocalls 0755 root bin
 f usr/bin/whois 0555 root bin
+s usr/bin/wtf=man
 f usr/bin/wracct 0555 root bin
 f usr/bin/write 2555 root tty
 f usr/bin/xargs 0555 root bin

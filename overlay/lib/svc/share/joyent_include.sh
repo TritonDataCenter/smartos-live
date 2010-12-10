@@ -5,7 +5,15 @@
 MOUNTPOINT=/mnt
 
 mount_usb() {
-    sleep 5
+    i=0
+    while (( i++ <= 30 )); do
+        dc=$(/usr/bin/disklist -a | wc -w )
+        if [[ "$dc" == "" || $dc -eq 0 ]]; then
+            sleep 1
+        else
+            break
+        fi
+    done
     mount_usb_msg=""
 
     if [[ -z ${DEBUG} || ${DEBUG} != "true" ]]; then

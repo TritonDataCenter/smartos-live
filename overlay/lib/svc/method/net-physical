@@ -1,4 +1,4 @@
-#!/sbin/sh
+#!/usr/bin/ksh93
 #
 # CDDL HEADER START
 #
@@ -42,8 +42,10 @@ LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 
 smf_netstrategy
 
-# wait for /dev to get populated. *sigh*
-sleep 1
+i=0
+while (( i++ <= 10 )) && [[ `ls /dev/net | wc -l` == 0 ]] ; do 
+    sleep 1
+done
 
 if smf_is_globalzone; then
     dladm init-phys
@@ -106,8 +108,8 @@ if smf_is_globalzone; then
             . /mnt/config
         else
             echo "FATAL: headnode, but no USB key found. Not bringing up admin network." >> /dev/console
-            echo "${mount_usb_msg}" >> /dev/console
         fi
+        echo "${mount_usb_msg}" >> /dev/console
 
         if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]]; then
             admin_configured="true"

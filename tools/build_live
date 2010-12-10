@@ -128,7 +128,7 @@ function create_ufs
     ${SMF_IMPORTER} ${rdmnt}
 
     echo "Writing md5sum manifest.."
-    (cd ${rdmnt} && find . -type f -exec md5sum {} \;) > ${rdmnt}/var/log/manifest
+    (cd ${rdmnt} && find . -type f | sort | xargs md5sum) > ${rdmnt}/var/log/manifest
     #INCLUDE_MD5SUM=1 ${SCANNER} ${rdmnt} . | tee ${rdmnt}/var/log/manifest >/dev/null
     cp ${rdmnt}/var/log/manifest ${archive}.manifest
 

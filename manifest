@@ -2010,7 +2010,6 @@ f lib/svc/manifest/network/network-ipqos.xml 0444 root sys
 f lib/svc/manifest/network/network-iptun.xml 0444 root sys
 f lib/svc/manifest/network/network-location.xml 0444 root sys
 f lib/svc/manifest/network/network-loopback.xml 0444 root sys
-f lib/svc/manifest/network/network-netcfg.xml 0444 root sys
 f lib/svc/manifest/network/network-netmask.xml 0444 root sys
 f lib/svc/manifest/network/network-physical.xml 0444 root sys
 f lib/svc/manifest/network/network-routing-setup.xml 0444 root sys
@@ -2153,7 +2152,6 @@ f lib/svc/method/net-iptun 0555 root bin
 f lib/svc/method/net-loc 0555 root bin
 f lib/svc/method/net-loopback 0555 root bin
 f lib/svc/method/net-netmask 0555 root bin
-f lib/svc/method/net-nwam 0555 root bin
 f lib/svc/method/net-physical 0555 root bin
 f lib/svc/method/net-routing-setup 0555 root bin
 f lib/svc/method/net-svc 0555 root bin
@@ -2885,6 +2883,7 @@ f usr/bin/roles 0555 root bin
 s usr/bin/rpcgen=/opt/local/bin/rpcgen
 f usr/bin/rpcinfo 0555 root bin
 f usr/bin/rsh 4555 root bin
+f usr/bin/rsync 0555 root bin
 f usr/bin/runat 0555 root bin
 f usr/bin/rup 0555 root bin
 f usr/bin/ruptime 0555 root bin
@@ -8650,9 +8649,6 @@ s usr/lib/amd64/libcrypto.so.0.9.8=../../../lib/amd64/libcrypto.so.0.9.8
 s usr/lib/amd64/libcrypto.so=../../../lib/amd64/libcrypto.so
 s usr/lib/amd64/libctf.so.1=../../../lib/amd64/libctf.so.1
 s usr/lib/amd64/libctf.so=../../../lib/amd64/libctf.so.1
-f usr/lib/amd64/libcurl.so.3.0.0 0755 root bin
-s usr/lib/amd64/libcurl.so.3=libcurl.so.3.0.0
-s usr/lib/amd64/libcurl.so=libcurl.so.3.0.0
 s usr/lib/amd64/libcurses.so.1=../../../lib/amd64/libcurses.so.1
 s usr/lib/amd64/libcurses.so=../../../lib/amd64/libcurses.so.1
 f usr/lib/amd64/libdat.so.1 0755 root bin
@@ -13104,9 +13100,9 @@ s usr/lib/libcrypto.so.0.9.8=../../lib/libcrypto.so.0.9.8
 s usr/lib/libcrypto.so=../../lib/libcrypto.so
 s usr/lib/libctf.so.1=../../lib/libctf.so.1
 s usr/lib/libctf.so=../../lib/libctf.so.1
-f usr/lib/libcurl.so.3.0.0 0755 root bin
-s usr/lib/libcurl.so.3=libcurl.so.3.0.0
-s usr/lib/libcurl.so=libcurl.so.3.0.0
+f usr/lib/libcurl.so.4.2.0 0755 root bin
+s usr/lib/libcurl.so.4=libcurl.so.4.2.0
+s usr/lib/libcurl.so=libcurl.so.4.2.0
 s usr/lib/libcurses.so.1=../../lib/libcurses.so.1
 s usr/lib/libcurses.so=../../lib/libcurses.so.1
 f usr/lib/libdat.so.1 0755 root bin
@@ -18079,6 +18075,7 @@ f usr/share/man/man1/rmdir.1 0444 root bin
 f usr/share/man/man1/roffbib.1 0444 root bin
 f usr/share/man/man1/roles.1 0444 root bin
 f usr/share/man/man1/rsh.1 0444 root bin
+f usr/share/man/man1/rsync.1 0444 root bin
 f usr/share/man/man1/runat.1 0444 root bin
 f usr/share/man/man1/rup.1 0444 root bin
 f usr/share/man/man1/ruptime.1 0444 root bin
@@ -19912,90 +19909,90 @@ f usr/ucb/shutdown 0755 root bin
 f usr/ucb/touch 0755 root bin
 s usr/ucb/uptime=../bin/uptime
 d usr/xpg4 0755 root bin
+d usr/xpg4/bin 0755 root bin
+f usr/xpg4/bin/alias 0555 root bin
+f usr/xpg4/bin/ar 0555 root bin
+f usr/xpg4/bin/at 4755 root sys
+f usr/xpg4/bin/awk 0555 root bin
+f usr/xpg4/bin/basename 0555 root bin
+f usr/xpg4/bin/batch 0555 root bin
+f usr/xpg4/bin/bg 0555 root bin
+f usr/xpg4/bin/cd 0555 root bin
+f usr/xpg4/bin/chgrp 0555 root bin
+f usr/xpg4/bin/chown 0555 root bin
+f usr/xpg4/bin/command 0555 root bin
+f usr/xpg4/bin/cp 0555 root bin
+f usr/xpg4/bin/crontab 4555 root bin
+f usr/xpg4/bin/ctags 0555 root bin
+f usr/xpg4/bin/date 0555 root bin
+f usr/xpg4/bin/df 0555 root bin
+f usr/xpg4/bin/du 0555 root bin
+f usr/xpg4/bin/ed 0555 root bin
+f usr/xpg4/bin/edit 0555 root bin
+f usr/xpg4/bin/egrep 0555 root bin
+f usr/xpg4/bin/env 0555 root bin
+f usr/xpg4/bin/ex 0555 root bin
+f usr/xpg4/bin/expr 0555 root bin
+f usr/xpg4/bin/fc 0555 root bin
+f usr/xpg4/bin/fg 0555 root bin
+f usr/xpg4/bin/fgrep 0555 root bin
+f usr/xpg4/bin/file 0555 root bin
+f usr/xpg4/bin/find 0555 root bin
+f usr/xpg4/bin/getconf 0555 root bin
+f usr/xpg4/bin/getopts 0555 root bin
+f usr/xpg4/bin/grep 0555 root bin
+f usr/xpg4/bin/hash 0555 root bin
+f usr/xpg4/bin/id 0555 root bin
+s usr/xpg4/bin/ipcs=../../bin/ipcs
+f usr/xpg4/bin/jobs 0555 root bin
+f usr/xpg4/bin/kill 0555 root bin
+f usr/xpg4/bin/link 0555 root bin
+f usr/xpg4/bin/ln 0555 root bin
+f usr/xpg4/bin/ls 0555 root bin
+f usr/xpg4/bin/m4 0555 root bin
+f usr/xpg4/bin/more 0555 root bin
+f usr/xpg4/bin/mv 0555 root bin
+f usr/xpg4/bin/nice 0555 root bin
+f usr/xpg4/bin/nl 0555 root bin
+f usr/xpg4/bin/nm 0555 root bin
+f usr/xpg4/bin/nohup 0555 root bin
+f usr/xpg4/bin/od 0555 root bin
+f usr/xpg4/bin/pfsh 0555 root bin
+f usr/xpg4/bin/pr 0555 root bin
+f usr/xpg4/bin/read 0555 root bin
+f usr/xpg4/bin/rm 0555 root bin
+f usr/xpg4/bin/sed 0555 root bin
+f usr/xpg4/bin/sh 0555 root bin
+f usr/xpg4/bin/sort 0555 root bin
+f usr/xpg4/bin/stty 0555 root bin
+f usr/xpg4/bin/tail 0555 root bin
+f usr/xpg4/bin/test 0555 root bin
+s usr/xpg4/bin/tr=../../bin/tr
+f usr/xpg4/bin/type 0555 root bin
+f usr/xpg4/bin/ulimit 0555 root bin
+f usr/xpg4/bin/umask 0555 root bin
+f usr/xpg4/bin/unalias 0555 root bin
+f usr/xpg4/bin/vedit 0555 root bin
+f usr/xpg4/bin/vi 0555 root bin
+f usr/xpg4/bin/view 0555 root bin
+f usr/xpg4/bin/wait 0555 root bin
+f usr/xpg4/bin/who 0555 root bin
 d usr/xpg4/include 0755 root bin
 f usr/xpg4/include/curses.h 0644 root bin
 f usr/xpg4/include/term.h 0644 root bin
 f usr/xpg4/include/unctrl.h 0644 root bin
 d usr/xpg4/lib 0755 root bin
-f usr/xpg4/lib/libcurses.so.1 0755 root bin
-f usr/xpg4/lib/libcurses.so.2 0755 root bin
-f usr/xpg4/lib/llib-lcurses.ln 0644 root bin
+s usr/xpg4/lib/64=amd64
 d usr/xpg4/lib/amd64 0755 root bin
 f usr/xpg4/lib/amd64/libcurses.so.1 0755 root bin
-s usr/xpg4/lib/amd64/libcurses.so=libcurses.so.2
 f usr/xpg4/lib/amd64/libcurses.so.2 0755 root bin
+s usr/xpg4/lib/amd64/libcurses.so=libcurses.so.2
 f usr/xpg4/lib/amd64/llib-lcurses.ln 0644 root bin
-s usr/xpg4/lib/64=amd64
-f usr/xpg4/lib/llib-lcurses 0644 root bin
+f usr/xpg4/lib/libcurses.so.1 0755 root bin
+f usr/xpg4/lib/libcurses.so.2 0755 root bin
 s usr/xpg4/lib/libcurses.so=./libcurses.so.2
-d usr/xpg4/bin 0755 root bin
-f usr/xpg4/bin/kill 0555 root bin
-f usr/xpg4/bin/nl 0555 root bin
-f usr/xpg4/bin/nice 0555 root bin
-f usr/xpg4/bin/tail 0555 root bin
-f usr/xpg4/bin/vedit 0555 root bin
-f usr/xpg4/bin/edit 0555 root bin
-f usr/xpg4/bin/m4 0555 root bin
-f usr/xpg4/bin/ls 0555 root bin
-f usr/xpg4/bin/ed 0555 root bin
-f usr/xpg4/bin/pfsh 0555 root bin
-f usr/xpg4/bin/nohup 0555 root bin
-s usr/xpg4/bin/ipcs=../../bin/ipcs
-f usr/xpg4/bin/ar 0555 root bin
-f usr/xpg4/bin/unalias 0555 root bin
-f usr/xpg4/bin/hash 0555 root bin
-f usr/xpg4/bin/basename 0555 root bin
-f usr/xpg4/bin/rm 0555 root bin
-f usr/xpg4/bin/view 0555 root bin
-f usr/xpg4/bin/env 0555 root bin
-f usr/xpg4/bin/jobs 0555 root bin
-f usr/xpg4/bin/ln 0555 root bin
-f usr/xpg4/bin/pr 0555 root bin
-f usr/xpg4/bin/stty 0555 root bin
-f usr/xpg4/bin/read 0555 root bin
-f usr/xpg4/bin/getopts 0555 root bin
-f usr/xpg4/bin/bg 0555 root bin
-f usr/xpg4/bin/sed 0555 root bin
-f usr/xpg4/bin/chgrp 0555 root bin
-f usr/xpg4/bin/cp 0555 root bin
-f usr/xpg4/bin/ulimit 0555 root bin
-f usr/xpg4/bin/cd 0555 root bin
-f usr/xpg4/bin/fgrep 0555 root bin
-f usr/xpg4/bin/mv 0555 root bin
-f usr/xpg4/bin/du 0555 root bin
-f usr/xpg4/bin/crontab 4555 root bin
-f usr/xpg4/bin/chown 0555 root bin
-f usr/xpg4/bin/awk 0555 root bin
-f usr/xpg4/bin/type 0555 root bin
-s usr/xpg4/bin/tr=../../bin/tr
-f usr/xpg4/bin/egrep 0555 root bin
-f usr/xpg4/bin/at 4755 root sys
-f usr/xpg4/bin/wait 0555 root bin
-f usr/xpg4/bin/od 0555 root bin
-f usr/xpg4/bin/date 0555 root bin
-f usr/xpg4/bin/fg 0555 root bin
-f usr/xpg4/bin/command 0555 root bin
-f usr/xpg4/bin/who 0555 root bin
-f usr/xpg4/bin/nm 0555 root bin
-f usr/xpg4/bin/batch 0555 root bin
-f usr/xpg4/bin/expr 0555 root bin
-f usr/xpg4/bin/df 0555 root bin
-f usr/xpg4/bin/link 0555 root bin
-f usr/xpg4/bin/file 0555 root bin
-f usr/xpg4/bin/id 0555 root bin
-f usr/xpg4/bin/alias 0555 root bin
-f usr/xpg4/bin/ctags 0555 root bin
-f usr/xpg4/bin/getconf 0555 root bin
-f usr/xpg4/bin/grep 0555 root bin
-f usr/xpg4/bin/more 0555 root bin
-f usr/xpg4/bin/sh 0555 root bin
-f usr/xpg4/bin/fc 0555 root bin
-f usr/xpg4/bin/find 0555 root bin
-f usr/xpg4/bin/test 0555 root bin
-f usr/xpg4/bin/ex 0555 root bin
-f usr/xpg4/bin/sort 0555 root bin
-f usr/xpg4/bin/umask 0555 root bin
-f usr/xpg4/bin/vi 0555 root bin
+f usr/xpg4/lib/llib-lcurses 0644 root bin
+f usr/xpg4/lib/llib-lcurses.ln 0644 root bin
 d var 0755 root sys
 d var/adm 0775 root sys
 d var/adm/acct 0775 adm adm

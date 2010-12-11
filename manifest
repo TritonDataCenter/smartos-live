@@ -2326,6 +2326,9 @@ f platform/i86pc/ucode/amd-ucode.bin 0444 root sys
 f platform/i86pc/ucode/intel-ucode.txt 0444 root sys
 d proc 0755 root root
 d root 0755 root root
+f root/.bash_profile 0644 root root
+f root/.bashrc 0644 root root
+f root/.profile 0644 root root
 d sbin 0755 root sys
 f sbin/autopush 0555 root bin
 f sbin/biosdev 0555 root bin
@@ -2999,9 +3002,9 @@ f usr/bin/which 0555 root bin
 f usr/bin/who 0555 root bin
 f usr/bin/whocalls 0755 root bin
 f usr/bin/whois 0555 root bin
-s usr/bin/wtf=man
 f usr/bin/wracct 0555 root bin
 f usr/bin/write 2555 root tty
+s usr/bin/wtf=man
 f usr/bin/xargs 0555 root bin
 f usr/bin/xgettext 0555 root bin
 f usr/bin/xml2-config 0555 root bin

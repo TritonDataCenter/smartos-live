@@ -30,8 +30,8 @@
 
 #
 # In a shared-IP zone we need this service to be up, but all of the work
-# it tries to do is irrelevant (and will actually lead to the service 
-# failing if we try to do it), so just bail out. 
+# it tries to do is irrelevant (and will actually lead to the service
+# failing if we try to do it), so just bail out.
 # In the global zone and exclusive-IP zones we proceed.
 #
 smf_configure_ip || exit ${SMF_EXIT_OK}
@@ -43,7 +43,7 @@ LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 smf_netstrategy
 
 i=0
-while (( i++ <= 10 )) && [[ `ls /dev/net | wc -l` == 0 ]] ; do 
+while (( i++ <= 10 )) && [[ `ls /dev/net | wc -l` == 0 ]] ; do
     sleep 1
 done
 
@@ -107,9 +107,9 @@ if smf_is_globalzone; then
             # Load the config
             . /mnt/config
         else
+            echo "${mount_usb_msg}" >> /dev/console
             echo "FATAL: headnode, but no USB key found. Not bringing up admin network." >> /dev/console
         fi
-        echo "${mount_usb_msg}" >> /dev/console
 
         if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]]; then
             admin_configured="true"

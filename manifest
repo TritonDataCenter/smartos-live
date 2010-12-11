@@ -2787,7 +2787,7 @@ f usr/bin/newtask 0555 root bin
 f usr/bin/nfsstat 0555 root bin
 f usr/bin/nice 0555 root bin
 f usr/bin/nl 0555 root bin
-s usr/bin/nm=/opt/local/bin/nm
+s usr/bin/nm 0555 root bin
 f usr/bin/node 0555 root bin
 f usr/bin/nohup 0555 root bin
 f usr/bin/nroff 0555 root bin

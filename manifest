@@ -2778,6 +2778,7 @@ f usr/bin/mt 0555 root bin
 f usr/bin/mv 0555 root bin
 s usr/bin/native2ascii=/opt/local/jdk/bin/native2ascii
 f usr/bin/nawk 0555 root bin
+f usr/bin/nc 0555 root bin
 f usr/bin/neqn 0555 root bin
 f usr/bin/netstat 0555 root bin
 f usr/bin/newform 0555 root bin

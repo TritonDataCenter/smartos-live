@@ -56,6 +56,12 @@ CPU_CORES=`psrinfo \
   | wc -l \
   | tr -d ' '`
 
+# Add joyent_buildstamp to SYSTEM_INFO
+LIVE_IMAGE=$(cat /etc/joyent_buildstamp 2>/dev/null)
+if [ -n "${LIVE_IMAGE}" ]; then
+  SYSTEM_DATA="  \"Live Image\": \"${LIVE_IMAGE}\","
+fi
+
 # Populate disk list with "Size in GB" member for each disk
 DISKS=""
 for line in `/usr/bin/disklist -s 2>/dev/null`; do

@@ -2999,6 +2999,7 @@ f usr/bin/vmstat 0555 root bin
 f usr/bin/w 0555 root bin
 f usr/bin/wait 0555 root bin
 f usr/bin/wc 0555 root bin
+f usr/bin/wget 0555 root bin
 f usr/bin/whatis 0555 root bin
 f usr/bin/which 0555 root bin
 f usr/bin/who 0555 root bin
@@ -18167,6 +18168,7 @@ f usr/share/man/man1/w.1 0444 root bin
 f usr/share/man/man1/wait.1 0444 root bin
 f usr/share/man/man1/wc.1 0444 root bin
 f usr/share/man/man1/whatis.1 0444 root bin
+f usr/share/man/man1/wget.1 0444 root bin
 f usr/share/man/man1/which.1 0444 root bin
 f usr/share/man/man1/who.1 0444 root bin
 f usr/share/man/man1/whocalls.1 0444 root bin

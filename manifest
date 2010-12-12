@@ -2494,6 +2494,7 @@ f usr/bin/captoinfo 0555 root bin
 f usr/bin/cat 0555 root bin
 f usr/bin/catman 0555 root bin
 f usr/bin/cd 0555 root bin
+f usr/bin/certutil 0555 root bin
 f usr/bin/checkeq 0555 root bin
 f usr/bin/checknr 0555 root bin
 f usr/bin/chgrp 0555 root bin

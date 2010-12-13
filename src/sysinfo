@@ -59,8 +59,7 @@ CPU_CORES=`psrinfo \
 # Add joyent_buildstamp to SYSTEM_INFO
 LIVE_IMAGE=$(cat /etc/joyent_buildstamp 2>/dev/null)
 if [ -n "${LIVE_IMAGE}" ]; then
-  SYSTEM_DATA="  \"Live Image\": \"${LIVE_IMAGE}\",\
-${SYSTEM_DATA}"
+  SYSTEM_DATA=$(printf "  \"Live Image\": \"${LIVE_IMAGE}\",\n${SYSTEM_DATA}")
 fi
 
 # Populate disk list with "Size in GB" member for each disk

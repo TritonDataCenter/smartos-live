@@ -14723,6 +14723,7 @@ f usr/lib/zones/zoneadmd 0555 root bin
 f usr/lib/zones/zoneshare 0555 root bin
 f usr/lib/zones/zonestatd 0555 root bin
 f usr/lib/zones/zoneunshare 0555 root bin
+d usr/local 0755 root root
 s usr/mail=../var/mail
 s usr/man=share/man
 d usr/net 0755 root sys

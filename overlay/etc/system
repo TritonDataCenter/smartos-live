@@ -99,3 +99,17 @@
 
 
 set ibft_noprobe=1
+
+
+* Options Jacques said we're using in production currently (2010-12-13)
+
+set noexec_user_stack=1
+set noexec_user_stack_log=1
+set rlim_fd_cur=1024
+
+* ZFS Tuning
+
+* DANGER!  disabling of zil under review by Bill, Jerry and Ops
+* set zfs:zil_disable=1
+set zfs:zfs_prefetch_disable=1
+set zfs:zfs_nocacheflush=1

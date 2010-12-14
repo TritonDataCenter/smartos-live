@@ -2789,7 +2789,7 @@ f usr/bin/newtask 0555 root bin
 f usr/bin/nfsstat 0555 root bin
 f usr/bin/nice 0555 root bin
 f usr/bin/nl 0555 root bin
-s usr/bin/nm 0555 root bin
+f usr/bin/nm 0555 root bin
 f usr/bin/node 0555 root bin
 f usr/bin/nohup 0555 root bin
 f usr/bin/nroff 0555 root bin
@@ -20090,6 +20090,7 @@ d var/spool/cron/crontabs 0755 root sys
 d var/spool/locks 0755 uucp uucp
 d var/spool/mqueue 0750 root bin
 d var/spool/pkg 1777 root bin
+d var/ssh 0755 root sys
 d var/svc 0755 root sys
 d var/svc/log 0755 root sys
 d var/svc/manifest 0755 root sys

@@ -2615,6 +2615,7 @@ s usr/bin/ginfotocap=gtic
 f usr/bin/grep 0555 root bin
 s usr/bin/greset=gtset
 f usr/bin/groups 0555 root bin
+f usr/bin/gtar 0555 root bin
 f usr/bin/gtic 0755 root bin
 f usr/bin/gtoe 0755 root bin
 f usr/bin/gtput 0755 root bin
@@ -2789,7 +2790,7 @@ f usr/bin/newtask 0555 root bin
 f usr/bin/nfsstat 0555 root bin
 f usr/bin/nice 0555 root bin
 f usr/bin/nl 0555 root bin
-s usr/bin/nm 0555 root bin
+f usr/bin/nm 0555 root bin
 f usr/bin/node 0555 root bin
 f usr/bin/nohup 0555 root bin
 f usr/bin/nroff 0555 root bin
@@ -9147,8 +9148,10 @@ d usr/lib/brand 0755 root bin
 d usr/lib/brand/joyent 0755 root bin
 f usr/lib/brand/joyent/config.xml 0444 root root
 f usr/lib/brand/joyent/jinstall 0755 root root
+f usr/lib/brand/joyent/juninstall 0755 root root
 f usr/lib/brand/joyent/pinstall 0755 root root
 f usr/lib/brand/joyent/platform.xml 0444 root root
+f usr/lib/brand/joyent/prestate 0755 root root
 d usr/lib/brand/labeled 0755 root bin
 f usr/lib/brand/labeled/config.xml 0444 root bin
 f usr/lib/brand/labeled/platform.xml 0444 root bin
@@ -14723,6 +14726,7 @@ f usr/lib/zones/zoneadmd 0555 root bin
 f usr/lib/zones/zoneshare 0555 root bin
 f usr/lib/zones/zonestatd 0555 root bin
 f usr/lib/zones/zoneunshare 0555 root bin
+d usr/local 0755 root root
 s usr/mail=../var/mail
 s usr/man=share/man
 d usr/net 0755 root sys
@@ -20087,6 +20091,7 @@ d var/spool/cron/crontabs 0755 root sys
 d var/spool/locks 0755 uucp uucp
 d var/spool/mqueue 0750 root bin
 d var/spool/pkg 1777 root bin
+d var/ssh 0755 root sys
 d var/svc 0755 root sys
 d var/svc/log 0755 root sys
 d var/svc/manifest 0755 root sys

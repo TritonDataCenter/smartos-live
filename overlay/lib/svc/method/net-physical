@@ -133,6 +133,31 @@ if smf_is_globalzone; then
             ifconfig ${iface} plumb
             ifconfig ${iface} dhcp primary
             external_started="true"
+
+            # Convert the admin IP and netmask to CIDR notation
+            OLDIFS=$IFS
+            IFS=.
+            set -- $admin_ip
+            a=$1
+            b=$2
+            c=$3
+            d=$4
+            set -- $admin_netmask
+            a=$(($a & $1))
+            b=$(($b & $2))
+            c=$(($c & $3))
+            d=$(($d & $4))
+            IFS=$OLDIFS
+
+            let netip=0x$(printf "%02X%02X%02X%02X" $1 $2 $3 $4)
+            bits=32
+            while [ $(($netip & 1 )) == 0 ] ; do
+                netip=$(($netip >> 1))
+                bits=$(($bits - 1))
+            done
+            
+            # Allow zones to reach the internet using the global zone as a router
+            echo "map ${iface} $a.$b.$c.$d/$bits -> 0/32" >> /etc/ipf/ipnat.conf
         fi
     done
     

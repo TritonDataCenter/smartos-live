@@ -2615,6 +2615,7 @@ s usr/bin/ginfotocap=gtic
 f usr/bin/grep 0555 root bin
 s usr/bin/greset=gtset
 f usr/bin/groups 0555 root bin
+f usr/bin/gtar 0555 root bin
 f usr/bin/gtic 0755 root bin
 f usr/bin/gtoe 0755 root bin
 f usr/bin/gtput 0755 root bin

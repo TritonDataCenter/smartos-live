@@ -26,7 +26,6 @@
 #
 
 . /lib/svc/share/smf_include.sh
-. /lib/svc/share/joyent_include.sh
 
 #
 # In a shared-IP zone we need this service to be up, but all of the work
@@ -36,16 +35,10 @@
 #
 smf_configure_ip || exit ${SMF_EXIT_OK}
 
-
 # Make sure that the libraries essential to this stage of booting can be found.
 LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 
 smf_netstrategy
-
-i=0
-while (( i++ <= 10 )) && [[ `ls /dev/net | wc -l` == 0 ]] ; do
-    sleep 1
-done
 
 if smf_is_globalzone; then
     dladm init-phys
@@ -101,23 +94,23 @@ if smf_is_globalzone; then
     admin_configured="false"
     external_started="false"
     if [[ ${headnode} == "true" ]]; then
-        # Mount the USB Key if we're a headnode to find additional network config
-        DEBUG="true"
-        if mount_usb; then
-            # Load the config
-            . /mnt/config
+        # Load the config
+        zpool list | grep zones
+        if [[ $? == 0 ]]; then
+            . `svcprop -p "joyentfs/usb_copy_path" svc:/system/filesystem/joyent:default`/config
         else
-            echo "${mount_usb_msg}" >> /dev/console
-            echo "FATAL: headnode, but no USB key found. Not bringing up admin network." >> /dev/console
+            . `svcprop -p "joyentfs/usb_mountpoint" svc:/system/filesystem/joyent:default`/config
         fi
-
         if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]]; then
             admin_configured="true"
         fi
     fi
 
+    admin_phys=""
+    
     dladm show-phys -m -p -o link,address | sed 's/:/\ /;s/\\//g' | while read iface mac; do
         if [[ ${mac} == ${admin_nic} ]]; then
+            admin_phys=${iface}
             ifconfig ${iface} plumb
             if [[ ${headnode} == "true" ]]; then
                 if [[ ${admin_configured} == "true" ]]; then
@@ -141,6 +134,15 @@ if smf_is_globalzone; then
             ifconfig ${iface} dhcp primary
             external_started="true"
         fi
+    done
+    
+    # Now the zone vnics. They only need to be defined
+    ZONES=`zoneadm list -pi | grep installed | cut -d ":" -f 2`
+    NEXTVNIC=`dladm show-vnic | grep -c vnic`
+    
+    for zone in ${ZONES}; do
+        dladm create-vnic -l ${admin_phys} vnic${NEXTVNIC}
+        NEXTVNIC=$((${NEXTVNIC} + 1))
     done
 
 else

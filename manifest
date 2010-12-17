@@ -2086,9 +2086,6 @@ f lib/svc/manifest/system/keymap.xml 0444 root sys
 f lib/svc/manifest/system/labeld.xml 0444 root sys
 f lib/svc/manifest/system/logadm-upgrade.xml 0444 root sys
 f lib/svc/manifest/system/manifest-import.xml 0444 root sys
-f lib/svc/manifest/system/mdmonitor.xml 0444 root sys
-f lib/svc/manifest/system/metainit.xml 0444 root sys
-f lib/svc/manifest/system/metasync.xml 0444 root sys
 f lib/svc/manifest/system/name-service-cache.xml 0444 root sys
 f lib/svc/manifest/system/ndmp.xml 0444 root sys
 f lib/svc/manifest/system/nws_ii.xml 0444 root sys
@@ -2192,9 +2189,6 @@ f lib/svc/method/svc-joyinit 0555 root sys
 f lib/svc/method/svc-labeld 0555 root sys
 f lib/svc/method/svc-legacy-routing 0555 root bin
 f lib/svc/method/svc-lms 0555 root sys
-f lib/svc/method/svc-mdmonitor 0555 root sys
-f lib/svc/method/svc-metainit 0555 root sys
-f lib/svc/method/svc-metasync 0555 root sys
 f lib/svc/method/svc-ndmp 0555 root sys
 f lib/svc/method/svc-ndp 0555 root bin
 f lib/svc/method/svc-network-discovery 0555 root sys
@@ -16526,7 +16520,6 @@ f usr/sbin/lshal 0555 root bin
 f usr/sbin/luxadm 0555 root bin
 f usr/sbin/makedbm 0555 root bin
 f usr/sbin/makemap 0555 root bin
-f usr/sbin/mdmonitord 0555 root bin
 f usr/sbin/medstat 0555 root bin
 f usr/sbin/metaclear 0555 root bin
 s usr/sbin/metadb=../../sbin/metadb

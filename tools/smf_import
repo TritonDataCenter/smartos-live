@@ -22,7 +22,6 @@ export SVCCFG_REPOSITORY=${REPO_DB}
 export SVCCFG_CONFIGD_PATH=/lib/svc/bin/svc.configd
 
 SVCCFG="/usr/sbin/svccfg"
-cp ${rdmnt}/lib/svc/seed/global.db ${REPO_DB}
 ${SVCCFG} -v repository ${REPO_DB}
 ${SVCCFG} -v add smf/manifest
 ${SVCCFG} -v import ${rdmnt}/lib/svc/manifest

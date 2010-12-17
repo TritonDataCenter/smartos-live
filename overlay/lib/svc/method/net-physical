@@ -162,12 +162,16 @@ if smf_is_globalzone; then
     done
     
     # Now the zone vnics. They only need to be defined
-    ZONES=`zoneadm list -pi | grep installed | cut -d ":" -f 2`
-    NEXTVNIC=`dladm show-vnic | grep -c vnic`
-    
+#    ZONES=`zoneadm list -pi | grep installed | cut -d ":" -f 2`
+#    NEXTVNIC=`dladm show-vnic | grep -c vnic`
+#    
+#    for zone in ${ZONES}; do
+#        dladm create-vnic -l ${admin_phys} vnic${NEXTVNIC}
+#        NEXTVNIC=$((${NEXTVNIC} + 1))
+#    done
+    ZONES=`zoneadm list -pi | grep -v "global" | grep installed | cut -d ":" -f 2`
     for zone in ${ZONES}; do
-        dladm create-vnic -l ${admin_phys} vnic${NEXTVNIC}
-        NEXTVNIC=$((${NEXTVNIC} + 1))
+        dladm create-vnic -l ${admin_phys} ${zone}0
     done
 
 else

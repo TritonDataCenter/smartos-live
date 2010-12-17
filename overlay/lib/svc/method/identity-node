@@ -83,7 +83,7 @@ if [ -z "$hostname" ]; then
 	hostname="`shcat /etc/nodename 2>/dev/null`"
     if [ -z "$hostname" ]; then
         last_octet=$(/usr/bin/sysinfo | grep "Admin NIC" | awk '{ print $6 }' | cut -d '.' -f4 | cut -d'"' -f1)
-        if [ -f "/etc/headnode.config" ]; then
+        if [ -n "$(bootparams | grep '^headnode=true')" ]; then
             hostname="headnode" 
         elif [ -n "${last_octet}" ]; then
             hostname="node-${last_octet}"

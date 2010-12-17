@@ -45,6 +45,9 @@ if [ $? -eq 0 ]; then
 	dumpadm -y -d /dev/zvol/dsk/zones/dump
 fi
 
+# The rest only applies to the headnode
+/bin/bootparams | grep "^headnode=true" >/dev/null || exit $SMF_EXIT_OK
+
 USBMOUNTPOINT=`svcprop -p "joyentfs/usb_mountpoint" ${SMF_FMRI}`
 COPYINPOINT=`svcprop -p "joyentfs/usb_copy_path" ${SMF_FMRI}`
 DEBUG=`svcprop -p "joyentfs/debug" ${SMF_FMRI}`

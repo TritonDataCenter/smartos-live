@@ -2065,6 +2065,7 @@ f lib/svc/manifest/system/early-manifest-import.xml 0444 root sys
 f lib/svc/manifest/system/extended-accounting.xml 0444 root sys
 d lib/svc/manifest/system/filesystem 0755 root sys
 f lib/svc/manifest/system/filesystem/autofs.xml 0444 root sys
+f lib/svc/manifest/system/filesystem/joyent-fs.xml 0444 root sys
 f lib/svc/manifest/system/filesystem/local-fs.xml 0444 root sys
 f lib/svc/manifest/system/filesystem/minimal-fs.xml 0444 root sys
 f lib/svc/manifest/system/filesystem/rmvolmgr.xml 0444 root sys
@@ -2127,6 +2128,7 @@ f lib/svc/method/devices-audio 0555 root bin
 f lib/svc/method/devices-local 0555 root bin
 f lib/svc/method/dns-install 0555 root bin
 f lib/svc/method/fc-fabric 0555 root sys
+f lib/svc/method/fs-joyent 0555 root bin
 f lib/svc/method/fs-local 0555 root bin
 f lib/svc/method/fs-minimal 0555 root bin
 f lib/svc/method/fs-root 0555 root bin

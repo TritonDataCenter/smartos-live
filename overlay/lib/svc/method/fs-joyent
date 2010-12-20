@@ -36,13 +36,13 @@ smf_is_globalzone || exit $SMF_EXIT_OK
 # If the zpool doesn't exist, then there's nothing to mount.
 zpool import -f zones
 if [ $? -eq 0 ]; then
-        mkdir /usbkey
-        mount -F zfs zones/var /var
-        mount -F zfs zones/config /etc/zones
-        mount -F zfs zones/opt /opt
-        mount -F zfs zones/usbkey /usbkey
+    mkdir /usbkey
+    mount -F zfs zones/var /var
+    mount -F zfs zones/config /etc/zones
+    mount -F zfs zones/opt /opt
+    mount -F zfs zones/usbkey /usbkey
     swap -a /dev/zvol/dsk/zones/swap
-	dumpadm -y -d /dev/zvol/dsk/zones/dump
+    dumpadm -y -d /dev/zvol/dsk/zones/dump
 fi
 
 # The rest only applies to the headnode
@@ -51,6 +51,7 @@ fi
 USBMOUNTPOINT=`svcprop -p "joyentfs/usb_mountpoint" ${SMF_FMRI}`
 COPYINPOINT=`svcprop -p "joyentfs/usb_copy_path" ${SMF_FMRI}`
 DEBUG=`svcprop -p "joyentfs/debug" ${SMF_FMRI}`
+MOUNT_OPTS=$(/bin/bootparams | grep "^mountopts=" | cut -d'=' -f2-)
 
 mount_usb_msg=""
 
@@ -70,7 +71,7 @@ fi
 USBKEYS=`/usr/bin/disklist -r`
 for key in ${USBKEYS}; do
     if [[ `/usr/sbin/fstyp /dev/dsk/${key}p0:1` == 'pcfs' ]]; then
-        /usr/sbin/mount -F pcfs /dev/dsk/${key}p0:1 ${USBMOUNTPOINT};
+        /usr/sbin/mount -F pcfs ${MOUNT_OPTS} /dev/dsk/${key}p0:1 ${USBMOUNTPOINT};
         if [[ $? == "0" ]]; then
             if [[ ! -f ${USBMOUNTPOINT}/.joyliveusb ]]; then
                 if [[ ${DEBUG} == "true" ]]; then
@@ -95,7 +96,7 @@ if [[ ! -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
     # we're probably VMWare, so we're looking at a non-USB disk.
     for disk in `/usr/bin/disklist -a`; do
         if [[ `/usr/sbin/fstyp /dev/dsk/${disk}p1` == 'pcfs' ]]; then
-            /usr/sbin/mount -F pcfs /dev/dsk/${disk}p1 ${USBMOUNTPOINT};
+            /usr/sbin/mount -F pcfs ${MOUNT_OPTS} /dev/dsk/${disk}p1 ${USBMOUNTPOINT};
             if [[ $? == "0" ]]; then
                 if [[ ! -f ${USBMOUNTPOINT}/.joyliveusb ]]; then
                     if [[ ${DEBUG} == "true" ]]; then

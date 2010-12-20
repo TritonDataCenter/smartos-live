@@ -56,6 +56,7 @@ fi
 USBMOUNTPOINT=`svcprop -p "joyentfs/usb_mountpoint" ${SMF_FMRI}`
 COPYINPOINT=`svcprop -p "joyentfs/usb_copy_path" ${SMF_FMRI}`
 DEBUG=`svcprop -p "joyentfs/debug" ${SMF_FMRI}`
+MOUNT_OPTS=$(/bin/bootparams | grep "^mountopts=" | cut -d'=' -f2-)
 
 mount_usb_msg=""
 
@@ -75,7 +76,7 @@ fi
 USBKEYS=`/usr/bin/disklist -r`
 for key in ${USBKEYS}; do
     if [[ `/usr/sbin/fstyp /dev/dsk/${key}p0:1` == 'pcfs' ]]; then
-        /usr/sbin/mount -F pcfs /dev/dsk/${key}p0:1 ${USBMOUNTPOINT};
+        /usr/sbin/mount -F pcfs ${MOUNT_OPTS} /dev/dsk/${key}p0:1 ${USBMOUNTPOINT};
         if [[ $? == "0" ]]; then
             if [[ ! -f ${USBMOUNTPOINT}/.joyliveusb ]]; then
                 if [[ ${DEBUG} == "true" ]]; then
@@ -100,7 +101,7 @@ if [[ ! -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
     # we're probably VMWare, so we're looking at a non-USB disk.
     for disk in `/usr/bin/disklist -a`; do
         if [[ `/usr/sbin/fstyp /dev/dsk/${disk}p1` == 'pcfs' ]]; then
-            /usr/sbin/mount -F pcfs /dev/dsk/${disk}p1 ${USBMOUNTPOINT};
+            /usr/sbin/mount -F pcfs ${MOUNT_OPTS} /dev/dsk/${disk}p1 ${USBMOUNTPOINT};
             if [[ $? == "0" ]]; then
                 if [[ ! -f ${USBMOUNTPOINT}/.joyliveusb ]]; then
                     if [[ ${DEBUG} == "true" ]]; then

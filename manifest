@@ -9142,6 +9142,7 @@ d usr/lib/brand/joyent 0755 root bin
 f usr/lib/brand/joyent/config.xml 0444 root root
 f usr/lib/brand/joyent/jinstall 0755 root root
 f usr/lib/brand/joyent/juninstall 0755 root root
+f usr/lib/brand/joyent/manifests 0444 root root
 f usr/lib/brand/joyent/pinstall 0755 root root
 f usr/lib/brand/joyent/platform.xml 0444 root root
 f usr/lib/brand/joyent/prestate 0755 root root

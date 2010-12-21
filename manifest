@@ -2235,7 +2235,6 @@ d lib/svc/share 0755 root bin
 f lib/svc/share/README 0444 root bin
 f lib/svc/share/fs_include.sh 0444 root bin
 f lib/svc/share/ipf_include.sh 0444 root bin
-f lib/svc/share/joyent_include.sh 0444 root bin
 f lib/svc/share/mfsthistory 0444 root bin
 f lib/svc/share/net_include.sh 0444 root bin
 f lib/svc/share/routing_include.sh 0444 root bin
@@ -5941,7 +5940,6 @@ f usr/include/atomic.h 0644 root bin
 f usr/include/attr.h 0644 root bin
 d usr/include/audio 0755 root bin
 f usr/include/audio/au.h 0644 root bin
-f usr/include/aupvlist.h 0644 root bin
 f usr/include/auth_attr.h 0644 root bin
 f usr/include/auth_list.h 0644 root bin
 f usr/include/boot_http.h 0644 root bin
@@ -6025,7 +6023,6 @@ f usr/include/elf.h 0644 root bin
 f usr/include/err.h 0644 root bin
 f usr/include/errfp.h 0644 root bin
 f usr/include/errno.h 0644 root bin
-f usr/include/esd.h 0644 root bin
 f usr/include/eti.h 0644 root bin
 f usr/include/euc.h 0644 root bin
 f usr/include/event.h 0444 root bin

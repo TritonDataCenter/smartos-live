@@ -1,4 +1,4 @@
-export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/ccs/bin:/opt/local/bin
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/ccs/bin:/opt/local/sbin:/opt/local/bin
 
 if [ "$PS1" ]; then
     shopt -s checkwinsize

@@ -13313,8 +13313,6 @@ f usr/lib/libpicltree.so.1 0755 root bin
 s usr/lib/libpicltree.so=libpicltree.so.1
 f usr/lib/libpkcs11.so.1 0755 root bin
 s usr/lib/libpkcs11.so=libpkcs11.so.1
-f usr/lib/libpkg.so.1 0755 root bin
-s usr/lib/libpkg.so=libpkg.so.1
 f usr/lib/libplot.so.1 0755 root bin
 s usr/lib/libplot.so=libplot.so.1
 f usr/lib/libpolkit.so.0.0.0 0755 root bin
@@ -16278,20 +16276,6 @@ f usr/sadm/bin/valstr 0555 root bin
 f usr/sadm/bin/valtime 0555 root bin
 f usr/sadm/bin/valuid 0555 root bin
 f usr/sadm/bin/valyorn 0555 root bin
-d usr/sadm/install 0755 root bin
-d usr/sadm/install/scripts 0755 root bin
-f usr/sadm/install/scripts/i.ipsecalgs 0555 root sys
-f usr/sadm/install/scripts/i.kcfconf 0555 root sys
-f usr/sadm/install/scripts/i.kmfconf 0555 root sys
-f usr/sadm/install/scripts/i.manifest 0555 root sys
-f usr/sadm/install/scripts/i.pkcs11conf 0555 root sys
-f usr/sadm/install/scripts/i.rbac 0555 root sys
-f usr/sadm/install/scripts/r.ipsecalgs 0555 root sys
-f usr/sadm/install/scripts/r.kcfconf 0555 root sys
-f usr/sadm/install/scripts/r.kmfconf 0555 root sys
-f usr/sadm/install/scripts/r.manifest 0555 root sys
-f usr/sadm/install/scripts/r.pkcs11conf 0555 root sys
-f usr/sadm/install/scripts/r.rbac 0555 root sys
 d usr/sadm/sysadm 0755 root bin
 d usr/sadm/sysadm/add-ons 0755 root bin
 d usr/sadm/sysadm/bin 0755 root bin
@@ -16484,7 +16468,6 @@ s usr/sbin/init=../../sbin/init
 f usr/sbin/install 0555 root bin
 f usr/sbin/installadm 0555 root bin
 f usr/sbin/installboot 0555 root sys
-f usr/sbin/installf 0555 root sys
 s usr/sbin/installgrub=../../sbin/installgrub
 f usr/sbin/intrstat 0555 root bin
 f usr/sbin/ipaddrsel 0555 root bin
@@ -16571,10 +16554,6 @@ f usr/sbin/nwamadm 0555 root bin
 f usr/sbin/nwamcfg 0555 root bin
 f usr/sbin/pbind 0555 root bin
 f usr/sbin/ping 4555 root bin
-f usr/sbin/pkgadd 0555 root sys
-f usr/sbin/pkgask 0555 root sys
-f usr/sbin/pkgchk 0555 root sys
-f usr/sbin/pkgrm 0555 root sys
 f usr/sbin/plockstat 0555 root bin
 f usr/sbin/pmadm 0555 root sys
 f usr/sbin/pmconfig 4555 root bin
@@ -16610,7 +16589,6 @@ f usr/sbin/rctladm 0555 root bin
 f usr/sbin/reboot 0755 root bin
 f usr/sbin/rem_drv 0555 root bin
 f usr/sbin/remove_allocatable 0555 root bin
-f usr/sbin/removef 0555 root sys
 s usr/sbin/repquota=../lib/fs/ufs/repquota
 s usr/sbin/rmmount=../bin/rmmount
 f usr/sbin/rmt 0555 root bin

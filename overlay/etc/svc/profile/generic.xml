@@ -147,7 +147,7 @@
   </service>
 
   <service name='network/dns/multicast' version='1' type='service'>
-    <instance name='default' enabled='false'/>
+    <instance name='default' enabled='true'/>
   </service>
   <service name='network/dhcp-server' version='1' type='service'>
     <instance name='default' enabled='false' />

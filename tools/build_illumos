@@ -15,5 +15,6 @@ cd ${ROOT}/projects/illumos
 cp usr/src/tools/scripts/nightly ./nightly
 ksh93 ./usr/src/tools/scripts/bldenv.sh -d illumos.sh 'cd $CODEMGR_WS/usr/src && export PATH="$PATH:/opt/local/bin" && dmake setup && cd tools && dmake install'
 time ./nightly illumos.sh
+res=$?
 
-exit 0
+exit $res

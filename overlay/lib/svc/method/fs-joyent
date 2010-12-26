@@ -43,7 +43,7 @@ if [ $? -ne 0 ]; then
         mount -F zfs zones/opt /opt
         mkdir -p /opt/agents/smf
         mount -O -F lofs /var/svc/manifest/site /opt/agents/smf
-        if [[ -z $(/bin/bootparams | grep '^headnode=true') ]]; then
+        if [[ -n $(/bin/bootparams | grep '^headnode=true') ]]; then
             mkdir /usbkey
             mount -F zfs zones/usbkey /usbkey
         fi

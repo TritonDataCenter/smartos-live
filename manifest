@@ -2876,6 +2876,7 @@ f usr/bin/rksh 0555 root bin
 f usr/bin/rksh93 0555 root bin
 f usr/bin/rlogin 4555 root bin
 f usr/bin/rm 0555 root bin
+f usr/bin/rmformat 0555 root bin
 s usr/bin/rmail=mail
 f usr/bin/rmdir 0555 root bin
 s usr/bin/rmic=/opt/local/jdk/bin/rmic

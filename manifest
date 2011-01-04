@@ -2462,6 +2462,7 @@ f usr/bin/auths 0555 root bin
 f usr/bin/awk 0555 root bin
 f usr/bin/banner 0555 root bin
 f usr/bin/basename 0555 root bin
+f usr/bin/bart 0555 root bin
 f usr/bin/bash 0555 root bin
 f usr/bin/batch 0555 root bin
 f usr/bin/bc 0555 root bin

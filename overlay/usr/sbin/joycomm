@@ -1,0 +1,84 @@
+#!/bin/sh
+
+# Copyright 2011 Joyent, Inc.  All rights reserved.
+
+PATH=/usr/bin:/usr/sbin
+export PATH
+unset LD_LIBRARY_PATH
+
+OPT_V=0
+OPT_X=0
+while getopts "vx" opt
+do
+	case "$opt" in
+		v)	OPT_V="1";;
+		x)	OPT_X="1";;
+		*)	echo "usage: [-v] [-x]"
+			exit 1
+			;;
+	esac
+done
+shift OPTIND-1
+
+f=`ls /var/audit/2* | wc -l`
+if [ $f -eq 0 ]; then
+	echo "no audit files"
+	exit 0
+fi
+
+if [ $OPT_X -eq 1 ]; then
+	files=/var/audit/2*not_terminated*
+else
+	files=/var/audit/2*
+fi
+
+praudit -x $files | nawk -v verbose=$OPT_V '{
+	if ($1 == "<record") {
+		pos = index($0, "iso8601=");
+		if (pos == 0) {
+			dt = "ND";
+		} else {
+			tstr=substr($0, pos + 9)
+			split(tstr, da);
+			dt = da[1] " " da[2];
+		}
+		printf("%s ", dt);
+
+		if ($3 == "event=\"login")
+			cmd="<login>";
+		else if ($3 == "event=\"logout\"")
+			cmd="<logout>";
+		else if ($3 == "event=\"system")
+			cmd="- - <boot>";
+	} else if ($1 == "<subject") {
+		pos = index($0, "tid=");
+		if (pos == 0) {
+			id = "NID";
+		} else {
+			tstr=substr($0, pos + 5)
+			tstr=substr(tstr, 1, length(tstr) - 3)
+			split(tstr, addr);
+			id = addr[1] " " addr[3];
+		}
+		printf("%s ", id);
+	} else if (substr($1, 1, 6) == "<path>") {
+		if (verbose == 1)
+			next;
+		cmd=substr($1, 7);
+		cmd=substr(cmd, 1, length(cmd) - 7);
+
+	} else if (substr($1, 1, 11) == "<exec_args>") {
+		if (verbose == 0)
+			next;
+		cmd=substr($0, 17)
+		pos = index(cmd, "</arg><arg>");
+		while (pos != 0) {
+			head=substr(cmd, 1, pos - 1);
+			tail=substr(cmd, pos + 11, length(cmd));
+			cmd=head " " tail;
+			pos = index(cmd, "</arg><arg>");
+		}
+	} else if ($1 == "</record>") {
+		printf("%s\n", cmd);
+	}
+}'

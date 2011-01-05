@@ -16501,6 +16501,7 @@ f usr/sbin/ipsecalgs 0555 root bin
 f usr/sbin/ipsecconf 0555 root bin
 f usr/sbin/ipseckey 0555 root bin
 f usr/sbin/iscsiadm 0555 root bin
+f usr/sbin/joycomm 0555 root bin
 f usr/sbin/keyserv 0555 root sys
 f usr/sbin/killall 0555 root bin
 f usr/sbin/ksslcfg 0555 root bin

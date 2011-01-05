@@ -2462,6 +2462,7 @@ f usr/bin/auths 0555 root bin
 f usr/bin/awk 0555 root bin
 f usr/bin/banner 0555 root bin
 f usr/bin/basename 0555 root bin
+f usr/bin/bart 0555 root bin
 f usr/bin/bash 0555 root bin
 f usr/bin/batch 0555 root bin
 f usr/bin/bc 0555 root bin
@@ -6340,7 +6341,6 @@ f usr/include/libnvpair.h 0644 root bin
 f usr/include/libnwam.h 0644 root bin
 f usr/include/libnwam_priv.h 0644 root bin
 f usr/include/libpctx.h 0644 root bin
-s usr/include/libpng=libpng12
 d usr/include/libpolkit 0755 root bin
 f usr/include/libpolkit/libpolkit.h 0644 root bin
 f usr/include/libproc.h 0644 root bin
@@ -6895,7 +6895,6 @@ f usr/include/pkglocs.h 0644 root bin
 f usr/include/pkgstrct.h 0644 root bin
 f usr/include/pkgtrans.h 0644 root bin
 f usr/include/plot.h 0644 root bin
-s usr/include/png.h=libpng12/png.h
 f usr/include/poll.h 0644 root bin
 f usr/include/pool.h 0644 root bin
 f usr/include/popt.h 0644 root bin

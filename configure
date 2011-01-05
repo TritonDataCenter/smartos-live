@@ -135,6 +135,9 @@ if [ ! -f "projects/opensolaris-man/README" ]; then
     exit 1
   fi
 fi
+(cd projects/opensolaris-man && [[ -L usr ]] || ln -s . usr)
+(cd projects/opensolaris-man && [[ -L share ]] || ln -s . share)
+(cd projects/opensolaris-man && [[ -L man ]] || ln -s . man)
 
 ROOT=`pwd`
 echo "==> Setting up illumos-gate"

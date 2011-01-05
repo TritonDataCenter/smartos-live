@@ -2906,6 +2906,7 @@ h usr/bin/setuname=usr/bin/amd64/setuname
 f usr/bin/sftp 0555 root bin
 s usr/bin/sh=ksh93
 f usr/bin/shcomp 0555 root bin
+f usr/bin/size 0555 root bin
 f usr/bin/sleep 0555 root bin
 f usr/bin/soelim 0555 root bin
 h usr/bin/sort=usr/bin/amd64/sort
@@ -2926,6 +2927,7 @@ s usr/bin/strclean=../sbin/strclean
 f usr/bin/strconf 0555 root root
 s usr/bin/strerr=../sbin/strerr
 h usr/bin/strings=usr/bin/amd64/strings
+f usr/bin/strip 0555 root bin
 f usr/bin/stty 0555 root bin
 f usr/bin/su 4555 root sys
 f usr/bin/sum 0555 root bin
@@ -2952,6 +2954,7 @@ f usr/bin/tee 0555 root bin
 f usr/bin/test 0555 root bin
 f usr/bin/tic 0555 root bin
 f usr/bin/time 0555 root bin
+f usr/bin/timex 0555 root bin
 f usr/bin/tip 4511 uucp bin
 f usr/bin/touch 0555 root bin
 f usr/bin/tplot 0555 root bin

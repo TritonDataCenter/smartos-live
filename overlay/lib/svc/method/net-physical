@@ -101,6 +101,10 @@ if smf_is_globalzone; then
         else
             . `svcprop -p "joyentfs/usb_mountpoint" svc:/system/filesystem/joyent:default`/config
         fi
+
+        # We strip leading zero from MAC (eg. 0c:ab => c:ab) to match ifconfig
+        admin_nic=`echo "${admin_nic}" | sed 's/0\([0-9a-f]\)/\1/g'`
+
         if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]]; then
             admin_configured="true"
         fi

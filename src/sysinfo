@@ -78,6 +78,10 @@ DISKS=`echo ${DISKS} | sed -e "s/,$//" | sed -e 's/, /,\\
 # ignore 'LINK SLOT ADDRESS INUSE CLIENT' line
 NICS=""
 admin_nic=`/usr/bin/bootparams 2>/dev/null | grep "admin_nic" | cut -d '=' -f2-`
+if [[ -z ${admin_nic} ]] && [[ -L "/etc/headnode.config" ]]; then
+  admin_nic=`grep "^admin_nic=" /etc/headnode.config | cut -f2 -d'='`
+fi
+
 for line in `pfexec /sbin/dladm show-phys -m | grep -v "^LINK " | awk '{ print $1,$3 }' | tr ' ' '='`; do
   NICS=`echo $line | tr '=' ' ' | { read nic mac junk
     admin=""

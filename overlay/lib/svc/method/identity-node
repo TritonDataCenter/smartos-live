@@ -112,6 +112,16 @@ fi
 
 echo "Hostname: `/sbin/uname -n`" > /dev/msglog
 
+# Try to add the /etc/hosts entry if we can find an IP
+ipaddr=$(/usr/bin/sysinfo | grep "ip4addr.*Admin NIC"  | awk '{ print $6 }' | cut -d'"' -f2)
+# if no admin_nic, use first nic
+if [[ -z ${ipaddr} ]]; then
+    ipaddr=$(/usr/bin/sysinfo | grep "MAC Address.*ip4addr" | head -n1 | awk '{ print $6 }' | cut -d'"' -f2)
+fi
+if [[ -n ${ipaddr} ]]; then
+    printf "${ipaddr}\t${hostname}\n" >> /etc/hosts
+fi
+
 # Reset the library path now that we are past the critical stage
 unset LD_LIBRARY_PATH
 

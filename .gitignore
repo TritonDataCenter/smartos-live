@@ -10,5 +10,7 @@
 /tools/builder/builder
 /tools/builder/*.o
 /tools/builder/users.c
+/tools/cryptpass
+/tools/pwgen
 /0-*-stamp
 /manifest.new

@@ -67,7 +67,7 @@ if [[ -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
     zpool list | grep zones
     if [[ $? == 0 ]]; then
         rm -rf ${COPYINPOINT}/*;
-        cp -r ${USBMOUNTPOINT}/* ${COPYINPOINT}
+        cp -r $(ls -d ${USBMOUNTPOINT}/* | grep -v '/private$') ${COPYINPOINT}
         return $?
     fi
     return 0;

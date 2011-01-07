@@ -1,0 +1,251 @@
+pwgen (2.06-1) unstable; urgency=low
+
+  * New upstream version
+  * Fix pwgen -Bs so that this option combination works correctly
+    (Closes: #368010)
+  * Fix the pwgen -Bc option combination (Closes: #355153)
+  * Fix typo in pwgen man page (Closes: #376147)
+  * Make the -s option imply the -nc options (Closes: #427969)
+  * Add -v option to generate passwords without vowels (Closes: #387461)
+
+ -- Theodore Y. Ts'o <tytso@mit.edu>  Wed,  4 Jul 2007 19:19:26 -0400
+
+pwgen (2.05-1) unstable; urgency=low
+
+  * Add a udeb for debian-installer.  Thanks to Martin Michlmayr for the
+    patch.  (Closes: #271115)
+  * Fix bug which would cause pwgen to loop forever if the password length
+    is 1.
+  * Fix spelling errors in the man page.  (Closes: #323538)
+
+ -- Theodore Y. Ts'o <tytso@mit.edu>  Sun, 15 Jan 2006 23:16:59 -0500
+
+pwgen (2.04-1) unstable; urgency=low
+
+  * New upstream version.
+  * Adopt maintainership of pwgen.  (Closes: #282076)
+  * Fix minor bug in man page.  (Closes: #311461)
+  * Convert from debmake to debhelper
+  * Add the --sha1 option so that pwgen uses the SHA1 hash to generate
+    (not so) random passwords.
+  * Add --symbols option which adds special symbols to the password.
+    (Closes: #154561)
+  * Add short options for --no-capitalize and --no-numerals and make those
+    options work when --secure is specified.
+  * Add --ambiguous option which avoids characters that can be confused by
+    the user.  (Closes: #51307)
+  * Fix bug where --no-capitalized and --no-numerals were ignored for short
+    passwords.  (Closes: #276307)
+  * In the pwgen man page, explain that human-memorable passwords are
+    subject to off-line brute force attacks.  (Closes: #276976)
+  * Allow one or more capital letters and digits in human-friendly
+    passwords (Closes: #182595)
+
+ -- Theodore Y. Ts'o <tytso@mit.edu>  Wed, 15 Jun 2005 00:39:10 -0400
+
+pwgen (2.03-1) unstable; urgency=high
+
+  * New upstream release (Thanks Ted for the quick release! :-)
+    (Closes: #170312, #176688).
+  * Bugs fixed in previous release
+    (Closes: #166959, #167485)
+
+ -- Vincent Renardias <vincent@debian.org>  Thu, 16 Jan 2003 11:07:14 +0100
+
+pwgen (2.02-2) unstable; urgency=low
+
+  * Apply small fix from Matthew J Backes (Closes: #176082).
+
+ -- Vincent Renardias <vincent@debian.org>  Mon, 13 Jan 2003 16:09:17 +0100
+
+pwgen (2.02-1) unstable; urgency=low
+
+  * new upstream release; fixes the following bugs (Thanks Ted!):
+    - If the number of characters is less than 5, force the use
+      of the fully random generator, since the quality of phonetic
+      generator is really bad if the lengths are small --- and if
+      the length is less than or equal to 2, pwgen will loop
+      forever (Closes: #117137).
+    - Fix e-mail address in man page (Closes: #150579).
+    - #include the appropriate header files to avoid -Wall warnings
+      (Closes: #126774).
+    - Fix floating point exception errors if the password is longer
+      than terminal width (Closes: #113571).
+    - Return an exit value of 0 when pwgen on success
+      (Closes: #118181, #102063).
+
+ -- Vincent Renardias <vincent@debian.org>  Tue, 16 Jul 2002 11:32:40 +0200
+
+pwgen (2.01-3) unstable; urgency=low
+
+  * Package is not native anymore (Closes: #44169).
+  * pwgen now accept to generate passwords longer than 16 chars
+    (Closes: #54957).
+  * pwgen now really honors the password length (Closes: #70580).
+  * The /usr/doc symlink is created (Closes: #102452).
+
+ -- Vincent Renardias <vincent@debian.org>  Thu,  6 Dec 2001 17:38:58 +0100
+
+pwgen (2.01-2) unstable; urgency=low
+
+  * Fix copyright file (Closes: #104207).
+    The very purpose of having the /usr/share/licences directory is
+    precisely to avoid to duplicate the GPL text in every package.
+    This is explicitely allowed by the Debian policy unless it changed recently.
+
+ -- Vincent Renardias <vincent@debian.org>  Tue, 10 Jul 2001 20:46:25 +0200
+
+pwgen (2.01-1) unstable; urgency=low
+
+  * Now using new GPL'd code from Ted T'so.
+
+ -- Vincent Renardias <vincent@debian.org>  Thu, 21 Jun 2001 11:57:22 +0200
+
+pwgen (1-17) unstable; urgency=low
+
+  * Brandon has put is code under the BSD licence.
+    Closes: #39130.
+  * Remove extra junk files in source archive (yo, *~).
+  * Ack NMU fixed bugs (Closes: 80763, #89985).
+  * Really add /usr/doc/pwgen (NOT sntop!) link (Closes: #90335).
+
+ -- Vincent Renardias <vincent@debian.org>  Wed, 13 Jun 2001 11:34:10 +0200
+    
+pwgen (1-16) unstable; urgency=low
+
+  * Fixed debian/rules
+    manpages moved from /usr/man to /usr/share/man closes: #80763
+    docs in /usr/doc moved to /usr/share/doc closes: #89985
+  * lintian clean
+
+ -- Fredrik Steen <stone@debian.org>  Sat, 17 Mar 2001 13:23:11 +0100
+
+pwgen (1-15) unstable; urgency=low
+
+  * Fix debian/rules; 
+    closes: #54001: can not build from source.
+
+ -- Vincent Renardias <vincent@debian.org>  Tue,  4 Jan 2000 14:53:58 +0100
+    
+pwgen (1-14) unstable; urgency=low
+
+  * Fix bug #38630.
+
+ -- Vincent Renardias <vincent@waw.com>  Wed,  2 Jun 1999 14:55:04 +0200
+
+pwgen (1-13) unstable; urgency=low
+
+  * install pwgen in mode 755, not 555.
+
+ -- Vincent Renardias <vincent@waw.com>  Mon, 25 Jan 1999 05:51:20 +0100
+
+pwgen (1-12) unstable; urgency=low
+
+  * Plenty of good stuff contributed by Jim Lynch <jim@laney.edu>:
+  * added -h and --help to the list of supported options.
+    == pwgen (1-11.4) unstable; urgency=low
+  * Cleaned up options parser. Now:
+     - all options exclude repetition of themselves
+     - -acn excludes -s
+     - -s excludes -acn
+     - -h in a future release.
+    Note: this finshes fixes of Bug#25525.
+    == pwgen (1-11.3) unstable; urgency=low
+  * Made the function header for pwgen() be ANSI-compatible
+  * Note: I just discovered that 1-11.1 fixes Bug#25525, and
+    the parser will be fixed in .4, when I tighten up the parser.
+    == pwgen (1-11.2) unstable; urgency=low
+  * Modified manpage to combine the descriptions for short options with
+    their equivalent long options.
+    == pwgen (1-11.1) unstable; urgency=low
+  * Added command-line arg handling (-a, -c, -n, -s) which implement
+    the old preprocessor definitions ALTPHON, CAPITALIZE, NUMERALS and
+    an unhooked secure password generator, respectively. Define ALLBYOPTS
+    in the preprocessor to activate. When defined, ALTPHON, CAPITALIZE and
+    NUMERALS have no effect. When not defined, is practically identical to
+    version 1-11. The default for 1-11.1 will have ALLBYOPTS defined. Now,
+    one copy of the pwgen binary will suffice when 16 would have been needed
+    before to provide the same functionality. Also, the long options
+    --alt-phonics, --capitalize, --numerals and --secure are identical
+    aliases to -a, -c, -n and -s, respectively.
+  * updated man page pwgen.1 to reflect all new functionality.
+  * updated Makefile so it defines ALLBYOPTS and no longer defines ALTPHON,
+    CAPITALIZE and NUMERALS when compiling pwgen (and spwgen; this
+    has no effect, the secure option in pwgen is identical to the 
+    implementation in spwgen. So, I have arranged for the Makefile to
+    not build or install spwgen.)
+
+ -- Vincent Renardias <vincent@waw.com>  Fri, 24 Apr 1998 19:37:50 +0200
+
+pwgen (1-11) unstable; urgency=low
+
+  * Corrected usage string (Bug #21612).
+
+ -- Vincent Renardias <vincent@waw.com>  Fri, 24 Apr 1998 19:37:50 +0200
+
+pwgen (1-10) unstable; urgency=low
+
+  * Corrected typo. in manpage (Bug #15027).
+
+ -- Vincent Renardias <vincent@waw.com>  Thu, 18 Dec 1997 05:08:06 +0100
+
+pwgen (1-9) unstable; urgency=low
+
+  * Added a 'spwgen' command to get more 'secure' passwords.
+    Fixes bug #13162.
+
+ -- Vincent Renardias <vincent@waw.com>  Mon, 10 Nov 1997 06:14:12 +0100
+
+pwgen (1-8) unstable; urgency=low
+
+  * Documented bug #10192 so that it becomes a feature. _(;
+
+ -- Vincent Renardias <vincent@waw.com>  Wed, 28 May 1997 21:06:38 +0200
+
+pwgen (1-7) unstable; urgency=low
+
+  * Rebuilt with libc6.
+
+ -- Vincent Renardias <vincent@waw.com>  Thu, 1 May 1997 21:45:05 +0200
+
+pwgen (1-6) unstable; urgency=low
+
+  * Changed architecture from control file (i386 => any).
+
+ -- Vincent Renardias <vincent@waw.com>  Sat, 19 Apr 1997 10:42:34 +0200
+
+pwgen (1-5) unstable; urgency=low
+
+  * Modified usage info (Fixes bug #8227).
+
+ -- Vincent Renardias <vincent@waw.com>  Mon, 24 Mar 1997 23:33:11 +0100
+
+pwgen (1-4) unstable; urgency=low
+
+  * Modified RNG initialisation (Fixes Bug #6508).
+
+ -- Vincent Renardias <vincent@waw.com>  Sat, 11 Jan 1997 22:58:24 +0100
+
+pwgen (1-3) unstable; urgency=low
+
+  * Maintainer changed
+  * Tuned Makefile
+
+ -- Vincent Renardias <vincent@waw.com>  Sat, 19 Oct 1996 04:32:26 +0200
+
+pwgen (1-2) unstable; urgency=low
+
+  * Binary not stripped
+  * More documentation regarding the origin of the package
+
+ -- Christoph Lameter <clameter@debian.org>  Thu, 26 Sep 1996 14:51:46 +0800
+
+pwgen (1-1) unstable; urgency=low
+
+  * Initial Release
+
+ -- Christoph Lameter <clameter@debian.org>  Fri, 20 Sep 1996 14:51:46 +0800
+
+Local variables:
+mode: debian-changelog
+End:

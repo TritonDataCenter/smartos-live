@@ -7,6 +7,7 @@ PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:
 world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp 0-tools-stamp
 
 live: world 
+	mkdir -p ${ROOT}/log
 	(cd $(ROOT) && pfexec ./tools/build_live $(ROOT)/manifest $(ROOT)/output $(ROOT)/overlay $(ROOT)/proto $(ROOT)/projects/opensolaris-man /)
 
 update:
@@ -30,11 +31,17 @@ update:
 	(cd $(ROOT)/src && gmake DESTDIR=$(PROTO) && gmake DESTDIR=$(PROTO) install)
 	touch 0-livesrc-stamp
 
-0-tools-stamp: tools/builder/builder
+0-tools-stamp: tools/builder/builder tools/pwgen tools/cryptpass
 	touch 0-tools-stamp
 
 tools/builder/builder:
 	(cd $(ROOT)/tools/builder && gmake builder)
+
+tools/pwgen:
+	(cd ${ROOT}/tools/pwgen-* && ./configure && make && cp pwgen ${ROOT}/tools)
+
+tools/cryptpass: tools/cryptpass.c
+	(cd ${ROOT}/tools && gcc -Wall -W -O2 -o cryptpass cryptpass.c)
 
 clean:
 	(cd $(ROOT)/src && gmake clean)

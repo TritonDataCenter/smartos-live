@@ -1,0 +1,7 @@
+Makefile
+config.cache
+config.log
+config.status
+configure
+pwgen
+*.o

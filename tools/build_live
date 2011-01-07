@@ -30,6 +30,7 @@ CUSTOMIZE_SCRIPT=${ROOT}/tools/customize
 SMF_IMPORTER=${ROOT}/tools/smf_import
 BUILDER=${ROOT}/tools/builder/builder
 SCANNER=${ROOT}/tools/scanner
+PWGEN=${ROOT}/tools/pwgen
 BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`; export BUILDSTAMP 
 LOGFILE="${ROOT}/log/build_live.${BUILDSTAMP}.log"
 ERROR=0
@@ -127,7 +128,10 @@ function create_ufs
     ${CUSTOMIZE_SCRIPT} ${rdmnt}
     ${SMF_IMPORTER} ${rdmnt}
 
-    echo "Writing md5sum manifest.."
+    echo "Setting root password..."
+    create_password "${rdmnt}"
+
+    echo "Writing md5sum manifest..."
     (cd ${rdmnt} && find . -type f | sort | xargs md5sum) > ${rdmnt}/var/log/manifest
     #INCLUDE_MD5SUM=1 ${SCANNER} ${rdmnt} . | tee ${rdmnt}/var/log/manifest >/dev/null
     cp ${rdmnt}/var/log/manifest ${archive}.manifest
@@ -189,6 +193,26 @@ function create_archive
         lockfs -f "/$OUT_DIR" 2>/dev/null
     fi
 
+}
+
+function create_password
+{
+    rdmnt=$1
+
+    password="$(${PWGEN} -B -c -n 16 1)"
+    if [[ -z ${password} ]]; then
+        fatal_error "Unable to generate password."
+    fi
+
+    # actually write password into ${rdmnt}/etc/shadow
+    enc_password="$(${ROOT}/tools/cryptpass "${password}")"
+    if [[ -z ${enc_password} ]]; then
+        fatal_error "Unable to generate encrypted password."
+    fi
+    gsed -i -e "s|^root:[^\:]*:|root:${enc_password}:|" ${rdmnt}/etc/shadow
+
+    # write in plaintext to platform so we can find it later if we need it
+    echo "${password}" > ${OUT_DIR}/${PREFIX}/root.password
 }
 
 function fatal_error

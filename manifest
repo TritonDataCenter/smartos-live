@@ -3023,6 +3023,7 @@ f usr/bin/ypmatch 0555 root other
 f usr/bin/yppasswd 0555 root bin
 f usr/bin/ypwhich 0555 root other
 f usr/bin/zcat 0555 root bin
+f usr/bin/ziostat 0555 root bin
 s usr/bin/zonename=../../sbin/zonename
 f usr/bin/zonestat 0555 root bin
 d usr/ccs 0755 root bin

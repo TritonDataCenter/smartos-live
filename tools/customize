@@ -18,5 +18,6 @@ pfexec cp /dev/null ${rdmnt}/var/adm/wtmpx
 pfexec chown root:root ${rdmnt}
 echo "${BUILDSTAMP}" | pfexec tee ${rdmnt}/etc/joyent_buildstamp >/dev/null 2>&1
 pfexec gsed -i -e "s/ [0-9]\{8\}T[0-9]\{6\}Z/ ${BUILDSTAMP}/" ${rdmnt}/etc/motd
+pfexec gsed -i -e "s/ [0-9]\{8\}T[0-9]\{6\}Z/ ${BUILDSTAMP}/" ${rdmnt}/etc/issue
 
 exit 0

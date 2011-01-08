@@ -421,6 +421,7 @@ d etc/ipadm 0755 netadm netadm
 f etc/ipadm/ipadm.conf 0644 netadm netadm
 d etc/ipf 0755 root sys
 f etc/ipf/ipf.conf 0644 root sys
+f etc/issue 0644 root sys
 f etc/iu.ap 0644 root sys
 s etc/killall=../usr/sbin/killall
 d etc/krb5 0755 root sys

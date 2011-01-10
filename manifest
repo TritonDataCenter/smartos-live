@@ -8504,6 +8504,8 @@ f usr/kernel/fs/amd64/pcfs 0755 root sys
 d usr/kernel/sched 0755 root sys
 d usr/kernel/sched/amd64 0755 root sys
 f usr/kernel/sched/amd64/FSS 0755 root sys
+f usr/kernel/sched/amd64/RT 0755 root sys
+f usr/kernel/sched/amd64/RT_DPTBL 0755 root sys
 d usr/kernel/sys 0755 root sys
 d usr/kernel/sys/amd64 0755 root sys
 f usr/kernel/sys/amd64/acctctl 0755 root sys

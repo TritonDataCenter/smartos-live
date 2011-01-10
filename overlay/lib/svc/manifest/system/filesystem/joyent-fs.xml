@@ -74,7 +74,7 @@
       <stability value='Evolving'/>
       <propval name='debug' type='boolean' value='false'/>
       <propval name='usb_copy_path' type='astring' value='/usbkey'/>
-      <propval name='usb_mountpoint' type='astring' value='/mnt'/>
+      <propval name='usb_mountpoint' type='astring' value='usbkey'/>
     </property_group>
     
 

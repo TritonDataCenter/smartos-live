@@ -55,11 +55,20 @@ fi
 # The rest only applies to the headnode
 /bin/bootparams | grep "^headnode=true" >/dev/null || exit $SMF_EXIT_OK
 
-USBMOUNTPOINT=`svcprop -p "joyentfs/usb_mountpoint" ${SMF_FMRI}`
+USBMOUNTPOINT=/mnt/`svcprop -p "joyentfs/usb_mountpoint" ${SMF_FMRI}`
 COPYINPOINT=`svcprop -p "joyentfs/usb_copy_path" ${SMF_FMRI}`
 DEBUG=`svcprop -p "joyentfs/debug" ${SMF_FMRI}`
 
 mount_usb_msg=""
+
+if [[ -d /mnt ]]; then
+    chown root:root /mnt
+    chmod 700 /mnt
+else
+    mkdir -m 700 /mnt
+fi
+
+mkdir -p ${USBMOUNTPOINT}
 
 if [[ -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
     mount_usb_msg="already mounted"

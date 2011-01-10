@@ -101,7 +101,7 @@ if smf_is_globalzone; then
         if [[ $? == 0 ]]; then
             . `svcprop -p "joyentfs/usb_copy_path" svc:/system/filesystem/joyent:default`/config
         else
-            . `svcprop -p "joyentfs/usb_mountpoint" svc:/system/filesystem/joyent:default`/config
+            . /mnt/`svcprop -p "joyentfs/usb_mountpoint" svc:/system/filesystem/joyent:default`/config
         fi
 
         # We strip leading zero from MAC (eg. 0c:ab => c:ab) to match ifconfig

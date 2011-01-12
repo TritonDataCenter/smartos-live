@@ -2020,6 +2020,7 @@ f lib/svc/manifest/network/nfs/client.xml 0444 root sys
 f lib/svc/manifest/network/nfs/nlockmgr.xml 0444 root sys
 f lib/svc/manifest/network/nfs/server.xml 0444 root sys
 f lib/svc/manifest/network/npiv_config.xml 0444 root sys
+f lib/svc/manifest/network/ntp.xml 0444 root sys
 f lib/svc/manifest/network/rarp.xml 0444 root sys
 f lib/svc/manifest/network/rexec.xml 0444 root sys
 d lib/svc/manifest/network/routing 0755 root sys
@@ -2159,6 +2160,7 @@ f lib/svc/method/nfs-client 0555 root bin
 f lib/svc/method/nfs-server 0555 root sys
 f lib/svc/method/nlockmgr 0555 root bin
 f lib/svc/method/npivconfig 0555 root sys
+f lib/svc/method/ntp 0555 root sys
 f lib/svc/method/ppd-cache-update 0555 root sys
 f lib/svc/method/rmtmpfiles 0555 root bin
 f lib/svc/method/rpc-bind 0555 root bin

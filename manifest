@@ -2104,6 +2104,7 @@ f lib/svc/manifest/system/rbac.xml 0444 root sys
 f lib/svc/manifest/system/rcap.xml 0444 root sys
 f lib/svc/manifest/system/resource-mgmt.xml 0444 root sys
 f lib/svc/manifest/system/rmtmpfiles.xml 0444 root sys
+f lib/svc/manifest/system/sac.xml 0444 root sys
 f lib/svc/manifest/system/sar.xml 0444 root sys
 f lib/svc/manifest/system/scheduler.xml 0444 root sys
 d lib/svc/manifest/system/security 0755 root sys

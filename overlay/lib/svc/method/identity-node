@@ -110,8 +110,6 @@ fi
 
 /sbin/uname -S $hostname
 
-echo "Hostname: `/sbin/uname -n`" > /dev/msglog
-
 # Try to add the /etc/hosts entry if we can find an IP
 ipaddr=$(/usr/bin/sysinfo | grep "ip4addr.*Admin NIC"  | awk '{ print $6 }' | cut -d'"' -f2)
 # if no admin_nic, use first nic

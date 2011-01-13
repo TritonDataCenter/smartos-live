@@ -25,7 +25,7 @@
 # Copyright (c) 2010, Joyent Inc., All rights reserved.
 #
 
-set -o xtrace
+set -x
 
 . /lib/svc/share/smf_include.sh
 
@@ -95,6 +95,8 @@ if smf_is_globalzone; then
     admin_started="false"
     admin_configured="false"
     external_started="false"
+    external_nic=""
+
     if [[ ${headnode} == "true" ]]; then
         # Load the config
         zpool list | grep zones
@@ -106,6 +108,7 @@ if smf_is_globalzone; then
 
         # We strip leading zero from MAC (eg. 0c:ab => c:ab) to match ifconfig
         admin_nic=`echo "${admin_nic}" | sed 's/0\([0-9a-f]\)/\1/g'`
+        external_nic=`echo "${external_nic}" | sed 's/0\([0-9a-f]\)/\1/g'`
 
         if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]]; then
             admin_configured="true"
@@ -133,39 +136,52 @@ if smf_is_globalzone; then
                 ifconfig ${iface} dhcp
                 admin_started="true"
             fi
-        elif [[ ${external_started} == "false" ]] && [[ ${headnode} == "true" ]] && [[ ${coal} == "true" ]]; then
+        elif [[ ${external_started} == "false" ]] && [[ ${headnode} == "true" ]] && [[ ${mac} == ${external_nic} ]] && [[ ! -z "${external_ip}" ]]; then
             # in CoaL we also bring up the NAT NIC
-            # TODO: check config [somewhere] to see if this is really the NAT NIC
             ifconfig ${iface} plumb
-            ifconfig ${iface} dhcp primary
+            if [[ ${external_ip} == "dhcp" ]]; then
+                ifconfig ${iface} dhcp primary
+            else
+                ifconfig ${iface} inet ${external_ip} netmask ${external_netmask} up
+                if [[ ! -z "${external_gateway}" ]]; then
+                    echo "${external_gateway}" > /etc/defaultrouter
+                fi
+            fi
             external_started="true"
 
-            # Convert the admin IP and netmask to CIDR notation
-            OLDIFS=$IFS
-            IFS=.
-            set -- $admin_ip
-            a=$1
-            b=$2
-            c=$3
-            d=$4
-            set -- $admin_netmask
-            a=$(($a & $1))
-            b=$(($b & $2))
-            c=$(($c & $3))
-            d=$(($d & $4))
-            IFS=$OLDIFS
+            # Set up the GZ to NAT for Coal
+            if [[ ${coal} == "true" ]]; then
+                # Convert the admin IP and netmask to CIDR notation
+                OLDIFS=$IFS
+                IFS=.
+                set -- $admin_ip
+                a=$1
+                b=$2
+                c=$3
+                d=$4
+                set -- $admin_netmask
+                a=$(($a & $1))
+                b=$(($b & $2))
+                c=$(($c & $3))
+                d=$(($d & $4))
+                IFS=$OLDIFS
 
-            let netip=0x$(printf "%02X%02X%02X%02X" $1 $2 $3 $4)
-            bits=32
-            while [ $(($netip & 1 )) == 0 ] ; do
-                netip=$(($netip >> 1))
-                bits=$(($bits - 1))
-            done
-            
-            # Allow zones to reach the internet using the global zone as a router
-            echo "map ${iface} $a.$b.$c.$d/$bits -> 0/32" >> /etc/ipf/ipnat.conf
+                let netip=0x$(printf "%02X%02X%02X%02X" $1 $2 $3 $4)
+                bits=32
+                while [ $(($netip & 1 )) == 0 ] ; do
+                    netip=$(($netip >> 1))
+                    bits=$(($bits - 1))
+                done
+
+                # Allow zones to reach the internet using the global zone as a router
+                echo "map ${iface} $a.$b.$c.$d/$bits -> 0/32" >> /etc/ipf/ipnat.conf
+            fi
         fi
     done
+
+    if [[ ${external_started} == "false" ]]; then
+        echo "WARNING: external network not brought up (external_nic=${external_nic}, external_ip=${external_ip}, external_netmask=${external_netmask})"
+    fi
     
     # Now the zone vnics. They only need to be defined
 #    ZONES=`zoneadm list -pi | grep installed | cut -d ":" -f 2`

@@ -108,32 +108,6 @@ for key in ${USBKEYS}; do
 done
 
 if [[ ! -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
-    # new style UFS USB key
-    for disk in `/usr/bin/disklist -r`; do
-        if [[ `/usr/sbin/fstyp /dev/dsk/${disk}s0` == 'ufs' ]]; then
-            /usr/sbin/mount -F ufs /dev/dsk/${disk}s0 ${USBMOUNTPOINT};
-            if [[ $? == "0" ]]; then
-                if [[ ! -f ${USBMOUNTPOINT}/.joyliveusb ]]; then
-                    if [[ ${DEBUG} == "true" ]]; then
-                        mount_usb_msg="${mount_usb_msg}\n[debug] didn't find ${USBMOUNTPOINT}/.joyliveusb on ufs /dev/rdsk/${disk}s0"
-                    fi
-                    /usr/sbin/umount ${USBMOUNTPOINT};
-                else
-                    if [[ ${DEBUG} == "true" ]]; then
-                        mount_usb_msg="${mount_usb_msg}\n[debug] found ${USBMOUNTPOINT}/.joyliveusb on ufs /dev/dsk/${disk}s0"
-                    fi
-                    break;
-                fi
-            elif [[ ${DEBUG} == "true" ]]; then
-                mount_usb_msg="${mount_usb_msg}\n[debug] unable to mount /dev/dsk/${disk}s0"
-            fi
-        elif [[ ${DEBUG} == "true" ]]; then
-            mount_usb_msg="${mount_usb_msg}\n[debug] /dev/dsk/${disk}s0 is not ufs"
-        fi
-    done
-fi
-
-if [[ ! -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
     # we're probably VMWare, so we're looking at a non-USB disk.
     for disk in `/usr/bin/disklist -a`; do
         if [[ `/usr/sbin/fstyp /dev/dsk/${disk}p1` == 'pcfs' ]]; then

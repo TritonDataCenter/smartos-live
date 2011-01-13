@@ -385,6 +385,7 @@ f etc/inet/ipsecinit.sample 0444 root sys
 f etc/inet/netmasks 0644 root sys
 f etc/inet/networks 0644 root sys
 f etc/inet/ntp.client 0644 root sys
+f etc/inet/ntp.conf 0644 root sys
 f etc/inet/ntp.server 0644 root sys
 f etc/inet/protocols 0644 root sys
 d etc/inet/secret 0700 root sys
@@ -16570,6 +16571,8 @@ f usr/sbin/nscd 0555 root bin
 f usr/sbin/nslookup 0555 root bin
 f usr/sbin/nsupdate 0555 root bin
 f usr/sbin/ntp-keygen 0555 root bin
+f usr/sbin/ntp-wait 0555 root bin
+f usr/sbin/ntpd 0555 root bin
 f usr/sbin/ntpdate 0555 root bin
 f usr/sbin/ntpdc 0555 root bin
 f usr/sbin/ntpq 0555 root bin
@@ -23581,6 +23584,7 @@ d var/mail 1777 root mail
 d var/mail/:saved 0775 root mail
 d var/news 0755 root bin
 d var/ntp 0755 root sys
+f var/ntp/ntp.drift 0644 root sys
 d var/ntp/ntpstats 0755 root sys
 d var/opt 0755 root sys
 d var/pkg 0755 root root

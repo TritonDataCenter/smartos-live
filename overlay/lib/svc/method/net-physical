@@ -22,7 +22,7 @@
 #
 # Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T. All rights reserved.
 # Copyright (c) 1999, 2010, Oracle and/or its affiliates. All rights reserved.
-# Copyright (c) 2010, Joyent Inc., All rights reserved.
+# Copyright (c) 2010, 2011 Joyent Inc., All rights reserved.
 #
 
 set -x
@@ -116,7 +116,8 @@ if smf_is_globalzone; then
     fi
 
     admin_phys=""
-    
+    external_phys=""
+
     dladm show-phys -m -p -o link,address | sed 's/:/\ /;s/\\//g' | while read iface mac; do
         if [[ ${mac} == ${admin_nic} ]]; then
             admin_phys=${iface}
@@ -148,6 +149,7 @@ if smf_is_globalzone; then
                 fi
             fi
             external_started="true"
+            external_phys=${iface}
 
             # Set up the GZ to NAT for Coal
             if [[ ${coal} == "true" ]]; then
@@ -182,18 +184,29 @@ if smf_is_globalzone; then
     if [[ ${external_started} == "false" ]]; then
         echo "WARNING: external network not brought up (external_nic=${external_nic}, external_ip=${external_ip}, external_netmask=${external_netmask})"
     fi
-    
+
     # Now the zone vnics. They only need to be defined
-#    ZONES=`zoneadm list -pi | grep installed | cut -d ":" -f 2`
-#    NEXTVNIC=`dladm show-vnic | grep -c vnic`
-#    
-#    for zone in ${ZONES}; do
-#        dladm create-vnic -l ${admin_phys} vnic${NEXTVNIC}
-#        NEXTVNIC=$((${NEXTVNIC} + 1))
-#    done
     ZONES=`zoneadm list -pi | grep -v "global" | grep installed | cut -d ":" -f 2`
     for zone in ${ZONES}; do
-        dladm create-vnic -l ${admin_phys} ${zone}0
+        for vnic in `zonecfg -z ${zone} info net | grep 'physical:' | awk '{ print $2 }'`; do
+            # We currently assume vnics that end with 0 should be attached to
+            # admin_nic and all other vnics should be attached to external_nic
+            if echo ${vnic} | grep "0$"; then
+                dladm create-vnic -l ${admin_phys} ${vnic}
+            elif [[ ${external_started} == "true" ]] && [[ -n ${external_phys} ]]; then
+                # ZONE_public_vlan is defined in the config we sourced earlier
+                # (eg. adminui_public_vlan)
+                zone_public_vlan=$(eval "echo \${${zone}_public_vlan}")
+                zone_public_vlan_opts=
+                if [[ -n "${zone_public_vlan}" ]] && [[ "${zone_public_vlan}" != "0" ]]; then
+                    zone_public_vlan_opts="-v ${zone_public_vlan}"
+                fi
+
+                dladm create-vnic -l ${external_phys} ${zone_public_vlan_opts} ${vnic}
+            else
+                echo "WARNING: not bringing up vnic '${vnic}' for zone '${zone}' due to misconfiguration."
+            fi
+        done
     done
 
 else

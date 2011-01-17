@@ -17963,6 +17963,7 @@ f usr/share/man/man1/keylogout.1 0444 root bin
 f usr/share/man/man1/kill.1 0444 root bin
 f usr/share/man/man1/kinit.1 0444 root bin
 f usr/share/man/man1/klist.1 0444 root bin
+f usr/share/man/man1/kmdb.1 0444 root bin
 f usr/share/man/man1/kmfcfg.1 0444 root bin
 f usr/share/man/man1/kpasswd.1 0444 root bin
 f usr/share/man/man1/krb5-config.1 0444 root bin
@@ -18002,6 +18003,7 @@ f usr/share/man/man1/mach.1 0444 root bin
 f usr/share/man/man1/mail.1 0444 root bin
 f usr/share/man/man1/mailx.1 0444 root bin
 f usr/share/man/man1/man.1 0444 root bin
+f usr/share/man/man1/mdb.1 0444 root bin
 f usr/share/man/man1/mesg.1 0444 root bin
 f usr/share/man/man1/mkdir.1 0444 root bin
 f usr/share/man/man1/mkmsgs.1 0444 root bin
@@ -18436,6 +18438,7 @@ f usr/share/man/man1m/swap.1m 0444 root bin
 f usr/share/man/man1m/sync.1m 0444 root bin
 f usr/share/man/man1m/syncinit.1m 0444 root bin
 f usr/share/man/man1m/syncloop.1m 0444 root bin
+f usr/share/man/man1m/svc.startd.1m 044 root bin
 f usr/share/man/man1m/syncstat.1m 0444 root bin
 f usr/share/man/man1m/sys-unconfig.1m 0444 root bin
 f usr/share/man/man1m/sysdef.1m 0444 root bin
@@ -22039,6 +22042,7 @@ f usr/share/man/man5/zones.5 0444 root bin
 d usr/share/man/man5openssl 0755 root bin
 d usr/share/man/man7 0755 root bin
 f usr/share/man/man7/FSS.7 0444 root bin
+f usr/share/man/man7d/kmdb.7d 0444 root bin
 d usr/share/man/man7openssl 0755 root bin
 s usr/share/sgml=/opt/local/share/sgml
 d usr/share/src 0755 root sys

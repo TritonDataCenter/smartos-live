@@ -16236,6 +16236,12 @@ d usr/platform 0755 root sys
 d usr/platform/i86pc 0755 root sys
 d usr/platform/i86pc/lib 0755 root sys
 d usr/platform/i86pc/lib/mdb 0755 root sys
+d usr/platform/i86pc/lib/mdb/kvm 0755 root sys
+d usr/platform/i86pc/lib/mdb/kvm/amd64 0755 root sys
+f usr/platform/i86pc/lib/mdb/kvm/amd64/apix.so 0555 root sys
+f usr/platform/i86pc/lib/mdb/kvm/amd64/pcplusmp.so 0555 root sys
+f usr/platform/i86pc/lib/mdb/kvm/amd64/unix.so 0555 root sys
+f usr/platform/i86pc/lib/mdb/kvm/amd64/uppc.so 0555 root sys
 s usr/preserve=../var/preserve
 d usr/proc 0755 root bin
 d usr/proc/bin 0755 root bin

@@ -17889,7 +17889,7 @@ f usr/share/man/man1/dumpcs.1 0444 root bin
 f usr/share/man/man1/dumpkeys.1 0444 root bin
 f usr/share/man/man1/echo.1 0444 root bin
 f usr/share/man/man1/ed.1 0444 root bin
-s usr/share/man/man1/edit.1=../../../has/man/man1/edit.1
+f usr/share/man/man1/edit.1 0444 root bin
 f usr/share/man/man1/egrep.1 0444 root bin
 f usr/share/man/man1/eject.1 0444 root bin
 f usr/share/man/man1/elfsign.1 0444 root bin
@@ -18168,7 +18168,7 @@ f usr/share/man/man1/unix2dos.1 0444 root bin
 f usr/share/man/man1/unpack.1 0444 root bin
 f usr/share/man/man1/uptime.1 0444 root bin
 f usr/share/man/man1/vax.1 0444 root bin
-s usr/share/man/man1/vedit.1=../../../has/man/man1/vedit.1
+f usr/share/man/man1/vedit.1 0444 root bin
 f usr/share/man/man1/vgrind.1 0444 root bin
 s usr/share/man/man1/vi.1=vim.1
 s usr/share/man/man1/view.1=vim.1
@@ -18432,13 +18432,13 @@ f usr/share/man/man1m/strerr.1m 0444 root bin
 f usr/share/man/man1m/sttydefs.1m 0444 root bin
 f usr/share/man/man1m/su.1m 0444 root bin
 f usr/share/man/man1m/sulogin.1m 0444 root bin
+f usr/share/man/man1m/svc.startd.1m 044 root bin
 f usr/share/man/man1m/svcadm.1m 0444 root bin
 f usr/share/man/man1m/svccfg.1m 0444 root bin
 f usr/share/man/man1m/swap.1m 0444 root bin
 f usr/share/man/man1m/sync.1m 0444 root bin
 f usr/share/man/man1m/syncinit.1m 0444 root bin
 f usr/share/man/man1m/syncloop.1m 0444 root bin
-f usr/share/man/man1m/svc.startd.1m 044 root bin
 f usr/share/man/man1m/syncstat.1m 0444 root bin
 f usr/share/man/man1m/sys-unconfig.1m 0444 root bin
 f usr/share/man/man1m/sysdef.1m 0444 root bin

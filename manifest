@@ -237,7 +237,6 @@ f etc/certs/SUNW_SunOS_5.10 0644 root sys
 s etc/cfgadm=../usr/sbin/cfgadm
 s etc/chroot=../usr/sbin/chroot
 s etc/clri=../usr/sbin/clri
-f etc/coreadm.conf 0644 root root
 d etc/cron.d 0755 root sys
 f etc/cron.d/.proto 0744 root sys
 f etc/cron.d/at.deny 0644 root sys

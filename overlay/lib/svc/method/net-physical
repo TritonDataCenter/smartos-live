@@ -87,15 +87,12 @@ if smf_is_globalzone; then
 
     # We strip leading zero from MAC (eg. 0c:ab => c:ab) to match ifconfig
     admin_nic=`/usr/bin/bootparams | grep "admin_nic" | cut -f2 -d'=' | sed 's/0\([0-9a-f]\)/\1/g'`
-    if [[ -z "${admin_nic}" ]]; then
-        admin_nic="undefined"
-    fi
+    internal_nic=`/usr/bin/bootparams | grep "internal_nic" | cut -f2 -d'=' | sed 's/0\([0-9a-f]\)/\1/g'`
+    external_nic=`/usr/bin/bootparams | grep "external_nic" | cut -f2 -d'=' | sed 's/0\([0-9a-f]\)/\1/g'`
 
     coal="false"
     admin_started="false"
     admin_configured="false"
-    external_started="false"
-    external_nic=""
 
     if [[ ${headnode} == "true" ]]; then
         # Load the config
@@ -109,6 +106,7 @@ if smf_is_globalzone; then
         # We strip leading zero from MAC (eg. 0c:ab => c:ab) to match ifconfig
         admin_nic=`echo "${admin_nic}" | sed 's/0\([0-9a-f]\)/\1/g'`
         external_nic=`echo "${external_nic}" | sed 's/0\([0-9a-f]\)/\1/g'`
+        internal_nic=`echo "${internal_nic}" | sed 's/0\([0-9a-f]\)/\1/g'`
 
         if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]]; then
             admin_configured="true"
@@ -117,9 +115,10 @@ if smf_is_globalzone; then
 
     admin_phys=""
     external_phys=""
+    internal_phys=""
 
     dladm show-phys -m -p -o link,address | sed 's/:/\ /;s/\\//g' | while read iface mac; do
-        if [[ ${mac} == ${admin_nic} ]]; then
+        if [[ -n ${admin_nic} ]] && [[ ${mac} == ${admin_nic} ]]; then
             admin_phys=${iface}
             ifconfig ${iface} plumb
             if [[ ${headnode} == "true" ]]; then
@@ -137,63 +136,85 @@ if smf_is_globalzone; then
                 ifconfig ${iface} dhcp
                 admin_started="true"
             fi
-        elif [[ ${external_started} == "false" ]] && [[ ${headnode} == "true" ]] && [[ ${mac} == ${external_nic} ]] && [[ ! -z "${external_ip}" ]]; then
-            # in CoaL we also bring up the NAT NIC
-            ifconfig ${iface} plumb
-            if [[ ${external_ip} == "dhcp" ]]; then
-                ifconfig ${iface} dhcp primary
-            else
-                ifconfig ${iface} inet ${external_ip} netmask ${external_netmask} up
-                if [[ ! -z "${external_gateway}" ]]; then
-                    echo "${external_gateway}" > /etc/defaultrouter
-                fi
-            fi
-            external_started="true"
+        elif [[ -n ${internal_nic} ]] && [[ ${mac} == ${internal_nic} ]]; then
+            internal_phys=${iface}
+            # We don't bring up an IP in the GZ on the internal interface,
+            # only customer zones.
+        elif [[ -n ${external_nic} ]] && [[ ${mac} == ${external_nic} ]]; then
             external_phys=${iface}
+            if [[ -n "${external_ip}" ]]; then
+                ifconfig ${iface} plumb
+                if [[ ${external_ip} == "dhcp" ]]; then
+                    ifconfig ${iface} dhcp primary
+                else
+                    ifconfig ${iface} inet ${external_ip} netmask ${external_netmask} up
+                    if [[ ! -z "${external_gateway}" ]]; then
+                        echo "${external_gateway}" > /etc/defaultrouter
+                    fi
+                fi
 
-            # Set up the GZ to NAT for Coal
-            if [[ ${coal} == "true" ]]; then
-                # Convert the admin IP and netmask to CIDR notation
-                OLDIFS=$IFS
-                IFS=.
-                set -- $admin_ip
-                a=$1
-                b=$2
-                c=$3
-                d=$4
-                set -- $admin_netmask
-                a=$(($a & $1))
-                b=$(($b & $2))
-                c=$(($c & $3))
-                d=$(($d & $4))
-                IFS=$OLDIFS
+                # Set up the GZ to NAT for Coal
+                if [[ ${coal} == "true" ]]; then
+                    # Convert the admin IP and netmask to CIDR notation
+                    OLDIFS=$IFS
+                    IFS=.
+                    set -- $admin_ip
+                    a=$1
+                    b=$2
+                    c=$3
+                    d=$4
+                    set -- $admin_netmask
+                    a=$(($a & $1))
+                    b=$(($b & $2))
+                    c=$(($c & $3))
+                    d=$(($d & $4))
+                    IFS=$OLDIFS
 
-                let netip=0x$(printf "%02X%02X%02X%02X" $1 $2 $3 $4)
-                bits=32
-                while [ $(($netip & 1 )) == 0 ] ; do
-                    netip=$(($netip >> 1))
-                    bits=$(($bits - 1))
-                done
+                    let netip=0x$(printf "%02X%02X%02X%02X" $1 $2 $3 $4)
+                    bits=32
+                    while [ $(($netip & 1 )) == 0 ] ; do
+                        netip=$(($netip >> 1))
+                        bits=$(($bits - 1))
+                    done
 
-                # Allow zones to reach the internet using the global zone as a router
-                echo "map ${iface} $a.$b.$c.$d/$bits -> 0/32" >> /etc/ipf/ipnat.conf
+                    # Allow zones to reach the internet using the global zone as a router
+                    echo "map ${iface} $a.$b.$c.$d/$bits -> 0/32" >> /etc/ipf/ipnat.conf
+                fi
             fi
         fi
     done
-
-    if [[ ${external_started} == "false" ]]; then
-        echo "WARNING: external network not brought up (external_nic=${external_nic}, external_ip=${external_ip}, external_netmask=${external_netmask})"
-    fi
 
     # Now the zone vnics. They only need to be defined
     ZONES=`zoneadm list -pi | grep -v "global" | grep installed | cut -d ":" -f 2`
     for zone in ${ZONES}; do
         for vnic in `zonecfg -z ${zone} info net | grep 'physical:' | awk '{ print $2 }'`; do
-            # We currently assume vnics that end with 0 should be attached to
+
+            # Get options from zfs {admin|internal|external} attach to ${nic}_phys if that is set
+            nic=$(zfs get -H smartdc.network:${vnic}.nic zones/${zone} | awk '{ print $3 }')
+            [[ ${nic} == '-' ]] && nic=
+            vlan=$(zfs get -H smartdc.network:${vnic}.vlan_id zones/${zone} | awk '{ print $3 }')
+            [[ ${vlan} == '-' ]] && vlan=
+            zone_phys=
+            if [[ -n ${nic} ]]; then
+                zone_phys=$(eval "echo \${${nic}_phys}")
+            fi
+
+            # We used to assume vnics that end with 0 should be attached to
             # admin_nic and all other vnics should be attached to external_nic
-            if echo ${vnic} | grep "0$"; then
+            # Now we can tell from the metadata attached to the zone dataset.
+            if [[ -n ${zone_phys} ]]; then
+                vnic_vlan_opts=
+                if [[ -n ${vlan} ]] && [[ "${vlan}" != "0" ]]; then
+                    vnic_vlan_opts="-v ${vlan}"
+                fi
+                dladm create-vnic -l ${zone_phys} ${vnic_vlan_opts} ${vnic}
+            elif echo ${vnic} | grep "0$"; then
+                # XXX remove this section after everything should be tagged
+                echo "DEPRECATED: nic not defined for ${vnic} for zone ${zone}, support for this will be removed soon! (assuming admin)"
                 dladm create-vnic -l ${admin_phys} ${vnic}
-            elif [[ ${external_started} == "true" ]] && [[ -n ${external_phys} ]]; then
+            elif [[ -n ${external_phys} ]]; then
+                # XXX remove this section after everything should be tagged
+                echo "DEPRECATED: nic not defined for ${vnic} for zone ${zone}, support for this will be removed soon! (assuming external)"
                 # ZONE_public_vlan is defined in the config we sourced earlier
                 # (eg. adminui_public_vlan)
                 zone_public_vlan=$(eval "echo \${${zone}_public_vlan}")

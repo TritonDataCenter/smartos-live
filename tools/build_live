@@ -238,7 +238,7 @@ mkfile ${SIZE}k "${rdfile}"
 chown ${USER} ${rdfile}
 lofidev32=`lofiadm -a "${rdfile}"`
 create_archive "${OUT_DIR}/${BOOT_ARCHIVE_64}" $lofidev32
-lofiadm -d "$rdfile32" 2>/dev/null
+lofiadm -d "$lofidev32" 2>/dev/null
 chmod 0644 ${OUT_DIR}/${BOOT_ARCHIVE_64}
 (cd ${OUT_DIR} && gtar -zcf ${PREFIX}.tgz ${PREFIX})
 

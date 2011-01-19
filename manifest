@@ -21384,6 +21384,8 @@ f usr/share/man/man3socket/if_nametoindex.3socket 0444 root bin
 f usr/share/man/man3socket/inet.3socket 0444 root bin
 f usr/share/man/man3socket/inet6_opt.3socket 0444 root bin
 f usr/share/man/man3socket/inet6_rth.3socket 0444 root bin
+f usr/share/man/man3socket/inet_aton.3socket 0444 root bin
+f usr/share/man/man3socket/inet_ntoa.3socket 0444 root bin
 f usr/share/man/man3socket/listen.3socket 0444 root bin
 f usr/share/man/man3socket/rcmd.3socket 0444 root bin
 f usr/share/man/man3socket/recv.3socket 0444 root bin
@@ -21680,6 +21682,7 @@ f usr/share/man/man3xnet/getsockopt.3xnet 0444 root bin
 f usr/share/man/man3xnet/htonl.3xnet 0444 root bin
 f usr/share/man/man3xnet/if_nametoindex.3xnet 0444 root bin
 f usr/share/man/man3xnet/inet_addr.3xnet 0444 root bin
+f usr/share/man/man3xnet/inet_ntoa.3xnet 0444 root bin
 f usr/share/man/man3xnet/inet_ntop.3xnet 0444 root bin
 f usr/share/man/man3xnet/listen.3xnet 0444 root bin
 f usr/share/man/man3xnet/recv.3xnet 0444 root bin

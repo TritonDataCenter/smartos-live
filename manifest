@@ -23577,6 +23577,7 @@ d var/ld 0755 root bin
 s var/ld/32=.
 s var/ld/64=amd64
 d var/ld/amd64 0755 root bin
+f var/ld/amd64/ld.config 0644 root root
 f var/ld/ld.config 0644 root root
 d var/ldap 0755 root sys
 d var/lib 0755 root other

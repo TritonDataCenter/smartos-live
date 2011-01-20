@@ -32,6 +32,8 @@
 . /lib/svc/share/smf_include.sh
 . /lib/svc/share/net_include.sh
 
+set -o xtrace
+
 # Make sure that the libraries essential to this stage of booting can be found.
 LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 
@@ -75,6 +77,15 @@ case "$_INIT_NET_STRATEGY" in
         fi ;;
 esac
 
+# Load sysinfo variables with SYSINFO_ prefix
+eval $(/usr/bin/sysinfo -p | sed -e "s/^/SYSINFO_/")
+if [[ -n ${SYSINFO_NIC_admin} ]]; then
+    eval "admin_mac=\${SYSINFO_Network_Interface_${SYSINFO_NIC_admin}_MAC_Address}"
+fi
+if [[ -z ${admin_mac} ]]; then
+    fallback_mac=$(set | grep "^SYSINFO_Network_Interface_.*_MAC_Address" | head -n1 | cut -d'=' -f2)
+fi
+
 #
 # If the netstrategy was unsuccessful and we haven't got a locally configured
 # name, default to "unknown"
@@ -93,13 +104,11 @@ if [ -z "$hostname" ] || [ "$hostname" == "unknown" ]; then
             fi
         elif smf_is_globalzone; then
             # take admin nic as hostname
-            hostname=$(/usr/bin/sysinfo | grep "Admin NIC"  | awk '{ print $4 }' | cut -d'"' -f2 | tr ':' '-')
-            # if no admin_nic, use first nic
-            if [[ -z ${hostname} ]]; then
-                hostname=$(/usr/bin/sysinfo | grep "MAC Address" | head -n1 | awk '{ print $4 }' | cut -d'"' -f2 | tr ':' '-')
-            fi
-            # fall back to unknown
-            if [[ -z ${hostname} ]]; then
+            if [[ -n ${admin_mac} ]]; then
+                hostname=$(echo "${admin_mac}" | tr ':' '-')
+            elif [[ -n ${fallback_mac} ]]; then
+                hostname=$(echo "${fallback_mac}" | tr ':' '-')
+            else
                 hostname="unknown"
             fi
         else
@@ -111,10 +120,11 @@ fi
 /sbin/uname -S $hostname
 
 # Try to add the /etc/hosts entry if we can find an IP
-ipaddr=$(/usr/bin/sysinfo | grep "ip4addr.*Admin NIC"  | awk '{ print $6 }' | cut -d'"' -f2)
-# if no admin_nic, use first nic
+if [[ -n ${SYSINFO_NIC_admin} ]]; then
+    eval "ipaddr=\${SYSINFO_Network_Interface_${SYSINFO_NIC_admin}_IPv4_Address}"
+fi
 if [[ -z ${ipaddr} ]]; then
-    ipaddr=$(/usr/bin/sysinfo | grep "MAC Address.*ip4addr" | head -n1 | awk '{ print $6 }' | cut -d'"' -f2)
+    ipaddr=$(set | grep "^SYSINFO_Network_Interface_.*_IPv4_Address" | head -n1 | cut -d'=' -f2)
 fi
 if [[ -n ${ipaddr} ]]; then
     printf "${ipaddr}\t${hostname}\n" >> /etc/hosts

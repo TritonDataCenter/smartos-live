@@ -17849,6 +17849,7 @@ f usr/share/man/man1/gzmore.1 0444 root bin
 f usr/share/man/man1/gznew.1 0444 root bin
 f usr/share/man/man1/hash.1 0444 root bin
 f usr/share/man/man1/head.1 0444 root bin
+f usr/share/man/man1/history.1 0444 root bin
 f usr/share/man/man1/hostid.1 0444 root bin
 f usr/share/man/man1/hostname.1 0444 root bin
 f usr/share/man/man1/i286.1 0444 root bin
@@ -17892,6 +17893,7 @@ f usr/share/man/man1/less.1 0444 root bin
 f usr/share/man/man1/lessecho.1 0444 root bin
 f usr/share/man/man1/lesskey.1 0444 root bin
 f usr/share/man/man1/lgrpinfo.1 0444 root bin
+f usr/share/man/man1/limit.1 0444 root bin
 f usr/share/man/man1/line.1 0444 root bin
 f usr/share/man/man1/list_devices.1 0444 root bin
 f usr/share/man/man1/listusers.1 0444 root bin
@@ -17908,6 +17910,7 @@ f usr/share/man/man1/ls.1 0444 root bin
 f usr/share/man/man1/m4.1 0444 root bin
 f usr/share/man/man1/mac.1 0444 root bin
 f usr/share/man/man1/mach.1 0444 root bin
+f usr/share/man/man1/machid.1 0444 root bin
 f usr/share/man/man1/mail.1 0444 root bin
 f usr/share/man/man1/mailx.1 0444 root bin
 f usr/share/man/man1/man.1 0444 root bin
@@ -18352,13 +18355,6 @@ f usr/share/man/man1m/syncstat.1m 0444 root bin
 f usr/share/man/man1m/sys-unconfig.1m 0444 root bin
 f usr/share/man/man1m/sysdef.1m 0444 root bin
 f usr/share/man/man1m/syseventadm.1m 0444 root bin
-f usr/share/man/man1m/sysidconfig.1m 0444 root bin
-f usr/share/man/man1m/sysidkbd.1m 0444 root bin
-f usr/share/man/man1m/sysidnet.1m 0444 root bin
-f usr/share/man/man1m/sysidnfs4.1m 0444 root bin
-f usr/share/man/man1m/sysidns.1m 0444 root bin
-f usr/share/man/man1m/sysidroot.1m 0444 root bin
-f usr/share/man/man1m/sysidsys.1m 0444 root bin
 f usr/share/man/man1m/syslogd.1m 0444 root bin
 f usr/share/man/man1m/tapes.1m 0444 root bin
 f usr/share/man/man1m/tic.1m 0444 root bin
@@ -21819,7 +21815,6 @@ f usr/share/man/man4/ssh_config.4 0444 root bin
 f usr/share/man/man4/sshd_config.4 0444 root bin
 f usr/share/man/man4/sulog.4 0444 root bin
 f usr/share/man/man4/sysbus.4 0444 root bin
-f usr/share/man/man4/sysidcfg.4 0444 root bin
 f usr/share/man/man4/syslog.conf.4 0444 root bin
 f usr/share/man/man4/system.4 0444 root bin
 f usr/share/man/man4/term.4 0444 root bin

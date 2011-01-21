@@ -2792,6 +2792,7 @@ f usr/bin/pax 0555 root bin
 s usr/bin/pcat=unpack
 f usr/bin/pcred 0555 root bin
 f usr/bin/pdp11 0555 root bin
+s usr/bin/perl=/opt/local/bin/perl
 f usr/bin/pfbash 0555 root bin
 f usr/bin/pfcsh 0555 root bin
 f usr/bin/pfexec 0555 root bin

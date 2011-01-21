@@ -144,7 +144,7 @@ if smf_is_globalzone; then
             fi
 
             # Set up the GZ to NAT for Coal
-            if [[ ${CONFIG_coal} == "true" ]]; then
+            if [[ "${CONFIG_headnode_nat}" == "true" ]]; then
                 # Convert the admin IP and netmask to CIDR notation
                 OLDIFS=$IFS
                 IFS=.
@@ -168,7 +168,10 @@ if smf_is_globalzone; then
                 done
 
                 # Allow zones to reach the internet using the global zone as a router
-                echo "map ${SYSINFO_NIC_external} $a.$b.$c.$d/$bits -> 0/32" >> /etc/ipf/ipnat.conf
+                cat >> /etc/ipf/ipnat.conf <<IPNAT
+map ${SYSINFO_NIC_external} $a.$b.$c.$d/$bits -> 0.0.0.0/32
+map ${SYSINFO_NIC_external} $a.$b.$c.$d/$bits -> 0.0.0.0/32 portmap tcp/udp auto
+IPNAT
             fi
         fi
     fi

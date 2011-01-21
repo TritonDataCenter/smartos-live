@@ -17,6 +17,11 @@ if [[ $(zonename) != "global" ]]; then
     exit 1
 fi
 
+configfile="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/joyent:default)/config"
+if [[ ! -f ${configfile} ]]; then
+    configfile="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/joyent:default)/config"
+fi
+
 # helper to set global "normalized" to the expanded version of MAC ($1)
 function normalize_mac()
 {
@@ -124,24 +129,24 @@ function get_disks()
 function get_nic_mappings()
 {
     admin_nic=`/usr/bin/bootparams 2>/dev/null | grep "admin_nic" | cut -d '=' -f2-`
-    if [[ -z ${admin_nic} ]] && [[ -L "/etc/headnode.config" ]]; then
-        admin_nic=`grep "^admin_nic=" /etc/headnode.config | cut -f2 -d'='`
+    if [[ -z ${admin_nic} ]] && [[ -f ${configfile} ]]; then
+        admin_nic=`grep "^admin_nic=" ${configfile} | cut -f2 -d'='`
     fi
     if [[ -n ${admin_nic} ]]; then
         normalize_mac ${admin_nic}
         ADMIN_NIC=${normalized}
     fi
     external_nic=`/usr/bin/bootparams 2>/dev/null | grep "external_nic" | cut -d '=' -f2-`
-    if [[ -z ${external_nic} ]] && [[ -L "/etc/headnode.config" ]]; then
-        external_nic=`grep "^external_nic=" /etc/headnode.config | cut -f2 -d'='`
+    if [[ -z ${external_nic} ]] && [[ -f ${configfile} ]]; then
+        external_nic=`grep "^external_nic=" ${configfile} | cut -f2 -d'='`
     fi
     if [[ -n ${external_nic} ]]; then
         normalize_mac ${external_nic}
         EXTERNAL_NIC=${normalized}
     fi
     internal_nic=`/usr/bin/bootparams 2>/dev/null | grep "internal_nic" | cut -d '=' -f2-`
-    if [[ -z ${internal_nic} ]] && [[ -L "/etc/headnode.config" ]]; then
-        internal_nic=`grep "^internal_nic=" /etc/headnode.config | cut -f2 -d'='`
+    if [[ -z ${internal_nic} ]] && [[ -f ${configfile} ]]; then
+        internal_nic=`grep "^internal_nic=" ${configfile} | cut -f2 -d'='`
     fi
     if [[ -n ${internal_nic} ]]; then
         normalize_mac ${internal_nic}

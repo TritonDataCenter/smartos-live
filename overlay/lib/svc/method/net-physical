@@ -149,6 +149,8 @@ IPNAT
             [[ ${nic} == '-' ]] && nic=
             vlan=$(zfs get -H smartdc.network:${vnic}.vlan_id zones/${zone} | awk '{ print $3 }')
             [[ ${vlan} == '-' ]] && vlan=
+            vnic_mac=$(zfs get -H smartdc.network:${vnic}.mac zones/${zone} | awk '{ print $3 }')
+            [[ ${vnic_mac} == '-' ]] && vnic_mac=
             zone_phys=
             if [[ -n ${nic} ]]; then
                 zone_phys=$(eval "echo \${SYSINFO_NIC_${nic}}")
@@ -163,6 +165,11 @@ IPNAT
                     vnic_vlan_opts="-v ${vlan}"
                 fi
                 dladm create-vnic -l ${zone_phys} ${vnic_vlan_opts} ${vnic}
+                if [[ -z ${vnic_mac} ]]; then
+                    # if we didn't already know the MAC, we just created one, save that
+                    vnic_mac=$(dladm show-vnic -p -o MACADDRESS ${vnic})
+                    [[ -n ${vnic_mac} ]] && /usr/sbin/zfs set smartdc.network:${vnic}.mac=${vnic_mac} zones/${zone}
+                fi
             else
                 echo "WARNING: not bringing up vnic '${vnic}' for zone '${zone}' due to misconfiguration."
             fi

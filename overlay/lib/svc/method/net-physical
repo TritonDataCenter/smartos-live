@@ -160,11 +160,14 @@ IPNAT
             # admin_nic and all other vnics should be attached to external_nic
             # Now we can tell from the metadata attached to the zone dataset.
             if [[ -n ${zone_phys} ]]; then
-                vnic_vlan_opts=
+                vnic_opts=
                 if [[ -n ${vlan} ]] && [[ "${vlan}" != "0" ]]; then
-                    vnic_vlan_opts="-v ${vlan}"
+                    vnic_opts="-v ${vlan}"
                 fi
-                dladm create-vnic -l ${zone_phys} ${vnic_vlan_opts} ${vnic}
+                if [[ -n ${vnic_mac} ]]; then
+                    vnic_opts="-m ${vnic_mac} ${vnic_opts}"
+                fi
+                dladm create-vnic -l ${zone_phys} ${vnic_opts} ${vnic}
                 if [[ -z ${vnic_mac} ]]; then
                     # if we didn't already know the MAC, we just created one, save that
                     vnic_mac=$(dladm show-vnic -p -o MACADDRESS ${vnic})

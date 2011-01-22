@@ -26,6 +26,8 @@
 #
 
 . /lib/svc/share/smf_include.sh
+. /lib/sdc/config.sh
+. /lib/sdc/network.sh
 
 set -o errexit
 set -o xtrace
@@ -83,28 +85,9 @@ if smf_is_globalzone; then
     }'
 
     # Load sysinfo variables with SYSINFO_ prefix
-    eval $(/usr/bin/sysinfo -p | sed -e "s/^/SYSINFO_/")
-
-    if /bin/bootparams | grep "^headnode=true" >/dev/null; then
-        headnode="true"
-    else
-        headnode="false"
-    fi
-
-    if [[ ${headnode} == "true" ]]; then
-        # Load config variables with CONFIG_ prefix, ignoring comments,  spaces
-        # at the beginning of lines and lines that don't start with a letter.
-        config_filename="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/joyent:default)/config"
-        if [[ ! -f ${config_filename} ]]; then
-            config_filename="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/joyent:default)/config"
-        fi
-        if [[ -f ${config_filename} ]]; then
-            eval $(cat ${config_filename} | sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | sed -e "s/^/CONFIG_/")
-        else
-            echo "FATAL: Unable to load headnode config."
-            exit 1
-        fi
-    fi
+    load_sdc_sysinfo
+    # Load config variables with CONFIG_ prefix, and sets the headnode variable
+    load_sdc_config
 
     # Setup admin NIC
     if [[ -n ${SYSINFO_NIC_admin} ]]; then
@@ -146,31 +129,11 @@ if smf_is_globalzone; then
             # Set up the GZ to NAT for Coal
             if [[ "${CONFIG_headnode_nat}" == "true" ]]; then
                 # Convert the admin IP and netmask to CIDR notation
-                OLDIFS=$IFS
-                IFS=.
-                set -- ${CONFIG_admin_ip}
-                a=$1
-                b=$2
-                c=$3
-                d=$4
-                set -- ${CONFIG_admin_netmask}
-                a=$(($a & $1))
-                b=$(($b & $2))
-                c=$(($c & $3))
-                d=$(($d & $4))
-                IFS=$OLDIFS
-
-                let netip=0x$(printf "%02X%02X%02X%02X" $1 $2 $3 $4)
-                bits=32
-                while [ $((${netip} & 1 )) == 0 ] ; do
-                    netip=$((${netip} >> 1))
-                    bits=$((${bits} - 1))
-                done
-
+                CIDR=$(ip_netmask_to_cidr ${CONFIG_admin_ip} ${CONFIG_admin_netmask})
                 # Allow zones to reach the internet using the global zone as a router
                 cat >> /etc/ipf/ipnat.conf <<IPNAT
-map ${SYSINFO_NIC_external} $a.$b.$c.$d/$bits -> 0.0.0.0/32
-map ${SYSINFO_NIC_external} $a.$b.$c.$d/$bits -> 0.0.0.0/32 portmap tcp/udp auto
+map ${SYSINFO_NIC_external} ${CIDR} -> 0.0.0.0/32
+map ${SYSINFO_NIC_external} ${CIDR} -> 0.0.0.0/32 portmap tcp/udp auto
 IPNAT
             fi
         fi

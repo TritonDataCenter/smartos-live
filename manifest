@@ -1955,6 +1955,9 @@ f lib/nss_dns.so.1 0755 root bin
 f lib/nss_files.so.1 0755 root bin
 f lib/nss_nis.so.1 0755 root bin
 f lib/nss_user.so.1 0755 root bin
+d lib/sdc 0755 root bin
+f lib/sdc/config.sh 0444 root bin
+f lib/sdc/network.sh 0444 root bin
 d lib/secure 0755 root bin
 s lib/secure/32=.
 s lib/secure/64=amd64

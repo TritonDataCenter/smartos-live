@@ -1555,67 +1555,6 @@ f lib/amd64/libz.so.1 0755 root bin
 s lib/amd64/libz.so=libz.so.1
 f lib/amd64/libzfs.so.1 0755 root bin
 s lib/amd64/libzfs.so=libzfs.so.1
-f lib/amd64/llib-lMPAPI.ln 0644 root bin
-f lib/amd64/llib-ladm.ln 0644 root bin
-f lib/amd64/llib-laio.ln 0644 root bin
-f lib/amd64/llib-lavl.ln 0644 root bin
-f lib/amd64/llib-lbsm.ln 0644 root bin
-f lib/amd64/llib-lc.ln 0644 root bin
-f lib/amd64/llib-lc_db.ln 0644 root bin
-f lib/amd64/llib-lcmdutils.ln 0644 root bin
-f lib/amd64/llib-lcontract.ln 0644 root bin
-f lib/amd64/llib-lcryptoutil.ln 0644 root bin
-f lib/amd64/llib-lctf.ln 0644 root bin
-f lib/amd64/llib-lcurses 0644 root bin
-f lib/amd64/llib-lcurses.ln 0644 root bin
-f lib/amd64/llib-ldevice.ln 0644 root bin
-f lib/amd64/llib-ldevid.ln 0644 root bin
-f lib/amd64/llib-ldevinfo.ln 0644 root bin
-f lib/amd64/llib-ldl.ln 0644 root bin
-f lib/amd64/llib-ldladm.ln 0644 root bin
-f lib/amd64/llib-ldlpi.ln 0644 root bin
-f lib/amd64/llib-ldoor.ln 0644 root bin
-f lib/amd64/llib-lefi.ln 0644 root bin
-f lib/amd64/llib-lelf.ln 0644 root bin
-f lib/amd64/llib-lfdisk.ln 0644 root bin
-f lib/amd64/llib-lgen.ln 0644 root bin
-f lib/amd64/llib-linetutil.ln 0644 root bin
-f lib/amd64/llib-lintl.ln 0644 root bin
-f lib/amd64/llib-lkmf.ln 0644 root bin
-f lib/amd64/llib-lkmfberder.ln 0644 root bin
-f lib/amd64/llib-lkstat.ln 0644 root bin
-f lib/amd64/llib-lmd.ln 0644 root bin
-f lib/amd64/llib-lmd5.ln 0644 root bin
-f lib/amd64/llib-lnsl.ln 0644 root bin
-f lib/amd64/llib-lnvpair.ln 0644 root bin
-f lib/amd64/llib-lpam.ln 0644 root bin
-s lib/amd64/llib-lposix4.ln=llib-lrt.ln
-f lib/amd64/llib-lproc.ln 0644 root bin
-f lib/amd64/llib-lpthread.ln 0644 root bin
-f lib/amd64/llib-lrcm.ln 0644 root bin
-f lib/amd64/llib-lresolv.ln 0644 root bin
-f lib/amd64/llib-lrestart.ln 0644 root bin
-f lib/amd64/llib-lrpcsvc.ln 0644 root bin
-f lib/amd64/llib-lrt.ln 0644 root bin
-f lib/amd64/llib-lrtld_db.ln 0644 root bin
-f lib/amd64/llib-lscf.ln 0644 root bin
-f lib/amd64/llib-lsec.ln 0644 root bin
-f lib/amd64/llib-lsecdb.ln 0644 root bin
-f lib/amd64/llib-lsendfile.ln 0644 root bin
-f lib/amd64/llib-lsocket.ln 0644 root bin
-f lib/amd64/llib-lsysevent.ln 0644 root bin
-s lib/amd64/llib-ltermcap.ln=llib-lcurses.ln
-s lib/amd64/llib-ltermcap=llib-lcurses
-s lib/amd64/llib-ltermlib.ln=llib-lcurses.ln
-s lib/amd64/llib-ltermlib=llib-lcurses
-f lib/amd64/llib-lthread.ln 0644 root bin
-f lib/amd64/llib-ltsnet.ln 0644 root bin
-f lib/amd64/llib-ltsol.ln 0644 root bin
-f lib/amd64/llib-lumem.ln 0644 root bin
-f lib/amd64/llib-luuid.ln 0644 root bin
-f lib/amd64/llib-luutil.ln 0644 root bin
-f lib/amd64/llib-lxnet.ln 0644 root bin
-f lib/amd64/llib-lzfs.ln 0644 root bin
 f lib/amd64/nss_compat.so.1 0755 root bin
 f lib/amd64/nss_dns.so.1 0755 root bin
 f lib/amd64/nss_files.so.1 0755 root bin
@@ -1639,11 +1578,8 @@ d lib/fm 0755 root bin
 d lib/fm/amd64 0755 root bin
 f lib/fm/amd64/libfmevent.so.1 0755 root bin
 s lib/fm/amd64/libfmevent.so=libfmevent.so.1
-f lib/fm/amd64/llib-lfmevent.ln 0644 root bin
 f lib/fm/libfmevent.so.1 0755 root bin
 s lib/fm/libfmevent.so=libfmevent.so.1
-f lib/fm/llib-lfmevent 0644 root bin
-f lib/fm/llib-lfmevent.ln 0644 root bin
 d lib/inet 0755 root bin
 f lib/inet/in.mpathd 0555 root bin
 f lib/inet/ipmgmtd 0555 root bin
@@ -1816,138 +1752,6 @@ f lib/libz.so.1 0755 root bin
 s lib/libz.so=libz.so.1
 f lib/libzfs.so.1 0755 root bin
 s lib/libzfs.so=libzfs.so.1
-f lib/llib-lMPAPI 0644 root bin
-f lib/llib-lMPAPI.ln 0644 root bin
-f lib/llib-ladm 0644 root bin
-f lib/llib-ladm.ln 0644 root bin
-f lib/llib-laio 0644 root bin
-f lib/llib-laio.ln 0644 root bin
-f lib/llib-lavl 0644 root bin
-f lib/llib-lavl.ln 0644 root bin
-f lib/llib-lbsm 0644 root bin
-f lib/llib-lbsm.ln 0644 root bin
-f lib/llib-lc 0644 root bin
-f lib/llib-lc.ln 0644 root bin
-f lib/llib-lc_db 0644 root bin
-f lib/llib-lc_db.ln 0644 root bin
-f lib/llib-lcmdutils 0644 root bin
-f lib/llib-lcmdutils.ln 0644 root bin
-f lib/llib-lcontract 0644 root bin
-f lib/llib-lcontract.ln 0644 root bin
-f lib/llib-lcryptoutil 0644 root bin
-f lib/llib-lcryptoutil.ln 0644 root bin
-f lib/llib-lctf 0644 root bin
-f lib/llib-lctf.ln 0644 root bin
-f lib/llib-lcurses 0644 root bin
-f lib/llib-lcurses.ln 0644 root bin
-f lib/llib-ldevice 0644 root bin
-f lib/llib-ldevice.ln 0644 root bin
-f lib/llib-ldevid 0644 root bin
-f lib/llib-ldevid.ln 0644 root bin
-f lib/llib-ldevinfo 0644 root bin
-f lib/llib-ldevinfo.ln 0644 root bin
-f lib/llib-ldhcpagent 0644 root bin
-f lib/llib-ldhcpagent.ln 0644 root bin
-f lib/llib-ldhcputil 0644 root bin
-f lib/llib-ldhcputil.ln 0644 root bin
-f lib/llib-ldl 0644 root bin
-f lib/llib-ldl.ln 0644 root bin
-f lib/llib-ldladm 0644 root bin
-f lib/llib-ldladm.ln 0644 root bin
-f lib/llib-ldlpi 0644 root bin
-f lib/llib-ldlpi.ln 0644 root bin
-f lib/llib-ldoor 0644 root bin
-f lib/llib-ldoor.ln 0644 root bin
-f lib/llib-lefi 0644 root bin
-f lib/llib-lefi.ln 0644 root bin
-f lib/llib-lelf 0644 root bin
-f lib/llib-lelf.ln 0644 root bin
-f lib/llib-lelfsign 0644 root bin
-f lib/llib-lelfsign.ln 0644 root bin
-f lib/llib-lfdisk 0644 root bin
-f lib/llib-lfdisk.ln 0644 root bin
-f lib/llib-lgen 0644 root bin
-f lib/llib-lgen.ln 0644 root bin
-f lib/llib-lgrubmgmt 0644 root bin
-f lib/llib-lgrubmgmt.ln 0644 root bin
-f lib/llib-linetutil 0644 root bin
-f lib/llib-linetutil.ln 0644 root bin
-f lib/llib-lintl 0644 root bin
-f lib/llib-lintl.ln 0644 root bin
-f lib/llib-lipadm 0644 root bin
-f lib/llib-lipadm.ln 0644 root bin
-f lib/llib-lipmp 0644 root bin
-f lib/llib-lipmp.ln 0644 root bin
-f lib/llib-lkcfd 0644 root bin
-f lib/llib-lkcfd.ln 0644 root bin
-f lib/llib-lkmf.ln 0644 root bin
-f lib/llib-lkmfberder.ln 0644 root bin
-f lib/llib-lkstat 0644 root bin
-f lib/llib-lkstat.ln 0644 root bin
-f lib/llib-lmd 0644 root bin
-f lib/llib-lmd.ln 0644 root bin
-f lib/llib-lmd5 0644 root bin
-f lib/llib-lmd5.ln 0644 root bin
-f lib/llib-lmeta 0644 root bin
-f lib/llib-lmeta.ln 0644 root bin
-f lib/llib-lnsl 0644 root bin
-f lib/llib-lnsl.ln 0644 root bin
-f lib/llib-lnvpair 0644 root bin
-f lib/llib-lnvpair.ln 0644 root bin
-f lib/llib-lnwam 0644 root bin
-f lib/llib-lnwam.ln 0644 root bin
-f lib/llib-lpam 0644 root bin
-f lib/llib-lpam.ln 0644 root bin
-s lib/llib-lposix4.ln=llib-lrt.ln
-s lib/llib-lposix4=llib-lrt
-f lib/llib-lproc 0644 root bin
-f lib/llib-lproc.ln 0644 root bin
-f lib/llib-lpthread 0644 root bin
-f lib/llib-lpthread.ln 0644 root bin
-f lib/llib-lrcm 0644 root bin
-f lib/llib-lrcm.ln 0644 root bin
-f lib/llib-lresolv 0644 root bin
-f lib/llib-lresolv.ln 0644 root bin
-f lib/llib-lrestart 0644 root bin
-f lib/llib-lrestart.ln 0644 root bin
-f lib/llib-lrpcsvc 0644 root bin
-f lib/llib-lrpcsvc.ln 0644 root bin
-f lib/llib-lrt 0644 root bin
-f lib/llib-lrt.ln 0644 root bin
-f lib/llib-lrtld_db 0644 root bin
-f lib/llib-lrtld_db.ln 0644 root bin
-f lib/llib-lscf 0644 root bin
-f lib/llib-lscf.ln 0644 root bin
-f lib/llib-lsec 0644 root bin
-f lib/llib-lsec.ln 0644 root bin
-f lib/llib-lsecdb 0644 root bin
-f lib/llib-lsecdb.ln 0644 root bin
-f lib/llib-lsendfile 0644 root bin
-f lib/llib-lsendfile.ln 0644 root bin
-f lib/llib-lsocket 0644 root bin
-f lib/llib-lsocket.ln 0644 root bin
-f lib/llib-lsysevent 0644 root bin
-f lib/llib-lsysevent.ln 0644 root bin
-s lib/llib-ltermcap.ln=llib-lcurses.ln
-s lib/llib-ltermcap=llib-lcurses
-s lib/llib-ltermlib.ln=llib-lcurses.ln
-s lib/llib-ltermlib=llib-lcurses
-f lib/llib-lthread 0644 root bin
-f lib/llib-lthread.ln 0644 root bin
-f lib/llib-ltsnet 0644 root bin
-f lib/llib-ltsnet.ln 0644 root bin
-f lib/llib-ltsol 0644 root bin
-f lib/llib-ltsol.ln 0644 root bin
-f lib/llib-lumem 0644 root bin
-f lib/llib-lumem.ln 0644 root bin
-f lib/llib-luuid 0644 root bin
-f lib/llib-luuid.ln 0644 root bin
-f lib/llib-luutil 0644 root bin
-f lib/llib-luutil.ln 0644 root bin
-f lib/llib-lxnet 0644 root bin
-f lib/llib-lxnet.ln 0644 root bin
-f lib/llib-lzfs 0644 root bin
-f lib/llib-lzfs.ln 0644 root bin
 d lib/mpxio 0755 root bin
 f lib/mpxio/stmsboot_util 0555 root bin
 f lib/nss_compat.so.1 0755 root bin
@@ -8882,142 +8686,6 @@ f usr/lib/amd64/libzonestat.so.1 0755 root bin
 s usr/lib/amd64/libzonestat.so=libzonestat.so.1
 f usr/lib/amd64/libzpool.so.1 0755 root bin
 s usr/lib/amd64/libzpool.so=libzpool.so.1
-f usr/lib/amd64/llib-l300.ln 0644 root bin
-f usr/lib/amd64/llib-l300s.ln 0644 root bin
-f usr/lib/amd64/llib-l4014.ln 0644 root bin
-f usr/lib/amd64/llib-l450.ln 0644 root bin
-f usr/lib/amd64/llib-lHBAAPI.ln 0644 root bin
-f usr/lib/amd64/llib-lSMHBAAPI.ln 0644 root bin
-s usr/lib/amd64/llib-ladm.ln=../../../lib/amd64/llib-ladm.ln
-f usr/lib/amd64/llib-ladt_jni.ln 0644 root bin
-f usr/lib/amd64/llib-ladutils.ln 0644 root bin
-s usr/lib/amd64/llib-laio.ln=../../../lib/amd64/llib-laio.ln
-f usr/lib/amd64/llib-last.ln 0644 root bin
-s usr/lib/amd64/llib-lavl.ln=../../../lib/amd64/llib-lavl.ln
-f usr/lib/amd64/llib-lbrand.ln 0644 root bin
-f usr/lib/amd64/llib-lbsdmalloc.ln 0644 root bin
-s usr/lib/amd64/llib-lbsm.ln=../../../lib/amd64/llib-lbsm.ln
-s usr/lib/amd64/llib-lc.ln=../../../lib/amd64/llib-lc.ln
-f usr/lib/amd64/llib-lcfgadm.ln 0644 root bin
-f usr/lib/amd64/llib-lcmd.ln 0644 root bin
-s usr/lib/amd64/llib-lcmdutils.ln=../../../lib/amd64/llib-lcmdutils.ln
-f usr/lib/amd64/llib-lcommputil.ln 0644 root bin
-s usr/lib/amd64/llib-lcontract.ln=../../../lib/amd64/llib-lcontract.ln
-f usr/lib/amd64/llib-lcpc.ln 0644 root bin
-f usr/lib/amd64/llib-lcrypt.ln 0644 root bin
-s usr/lib/amd64/llib-lctf.ln=../../../lib/amd64/llib-lctf.ln
-s usr/lib/amd64/llib-lcurses.ln=../../../lib/amd64/llib-lcurses.ln
-s usr/lib/amd64/llib-lcurses=../../../lib/amd64/llib-lcurses
-f usr/lib/amd64/llib-ldat.ln 0644 root bin
-s usr/lib/amd64/llib-ldevice.ln=../../../lib/amd64/llib-ldevice.ln
-s usr/lib/amd64/llib-ldevid.ln=../../../lib/amd64/llib-ldevid.ln
-s usr/lib/amd64/llib-ldevinfo.ln=../../../lib/amd64/llib-ldevinfo.ln
-f usr/lib/amd64/llib-ldisasm.ln 0644 root bin
-f usr/lib/amd64/llib-ldiskmgt.ln 0644 root bin
-s usr/lib/amd64/llib-ldl.ln=../../../lib/amd64/llib-ldl.ln
-f usr/lib/amd64/llib-ldll.ln 0644 root bin
-f usr/lib/amd64/llib-ldns_sd.ln 0644 root bin
-s usr/lib/amd64/llib-ldoor.ln=../../../lib/amd64/llib-ldoor.ln
-f usr/lib/amd64/llib-ldtrace.ln 0644 root bin
-s usr/lib/amd64/llib-lefi.ln=../../../lib/amd64/llib-lefi.ln
-s usr/lib/amd64/llib-lelf.ln=../../../lib/amd64/llib-lelf.ln
-f usr/lib/amd64/llib-lexacct.ln 0644 root bin
-f usr/lib/amd64/llib-lfcoe.ln 0644 root bin
-s usr/lib/amd64/llib-lfdisk.ln=../../../lib/amd64/llib-lfdisk.ln
-f usr/lib/amd64/llib-lform.ln 0644 root bin
-s usr/lib/amd64/llib-lgen.ln=../../../lib/amd64/llib-lgen.ln
-f usr/lib/amd64/llib-lgss.ln 0644 root bin
-f usr/lib/amd64/llib-lhal-storage.ln 0644 root bin
-f usr/lib/amd64/llib-lhal.ln 0644 root bin
-f usr/lib/amd64/llib-lhotplug.ln 0644 root bin
-f usr/lib/amd64/llib-lidmap.ln 0644 root bin
-f usr/lib/amd64/llib-like.ln 0644 root bin
-f usr/lib/amd64/llib-lilb.ln 0644 root bin
-f usr/lib/amd64/llib-lima.ln 0644 root bin
-s usr/lib/amd64/llib-linetutil.ln=../../../lib/amd64/llib-linetutil.ln
-s usr/lib/amd64/llib-lintl.ln=../../../lib/amd64/llib-lintl.ln
-f usr/lib/amd64/llib-lipmi.ln 0644 root bin
-f usr/lib/amd64/llib-lipp.ln 0644 root bin
-f usr/lib/amd64/llib-lipsecutil.ln 0644 root bin
-f usr/lib/amd64/llib-liscsit.ln 0644 root bin
-s usr/lib/amd64/llib-lkstat.ln=../../../lib/amd64/llib-lkstat.ln
-f usr/lib/amd64/llib-lkvm.ln 0644 root bin
-f usr/lib/amd64/llib-ll.ln 0644 root bin
-f usr/lib/amd64/llib-lldap.ln 0644 root bin
-f usr/lib/amd64/llib-llgrp.ln 0644 root bin
-f usr/lib/amd64/llib-lmail.ln 0644 root bin
-f usr/lib/amd64/llib-lmalloc.ln 0644 root bin
-f usr/lib/amd64/llib-lmapmalloc.ln 0644 root bin
-s usr/lib/amd64/llib-lmd5.ln=../../../lib/amd64/llib-lmd5.ln
-f usr/lib/amd64/llib-lmenu.ln 0644 root bin
-f usr/lib/amd64/llib-lmtmalloc.ln 0644 root bin
-f usr/lib/amd64/llib-lndmp.ln 0644 root bin
-f usr/lib/amd64/llib-lnls.ln 0644 root bin
-s usr/lib/amd64/llib-lnsl.ln=../../../lib/amd64/llib-lnsl.ln
-s usr/lib/amd64/llib-lnvpair.ln=../../../lib/amd64/llib-lnvpair.ln
-s usr/lib/amd64/llib-lpam.ln=../../../lib/amd64/llib-lpam.ln
-f usr/lib/amd64/llib-lpanel.ln 0644 root bin
-f usr/lib/amd64/llib-lpasswdutil.ln 0644 root bin
-f usr/lib/amd64/llib-lpctx.ln 0644 root bin
-f usr/lib/amd64/llib-lpicl.ln 0644 root bin
-f usr/lib/amd64/llib-lpkcs11.ln 0644 root bin
-f usr/lib/amd64/llib-lplot.ln 0644 root bin
-f usr/lib/amd64/llib-lpool.ln 0644 root bin
-s usr/lib/amd64/llib-lposix4.ln=../../../lib/amd64/llib-lrt.ln
-f usr/lib/amd64/llib-lproject.ln 0644 root bin
-s usr/lib/amd64/llib-lpthread.ln=../../../lib/amd64/llib-lpthread.ln
-f usr/lib/amd64/llib-lraidcfg.ln 0644 root bin
-f usr/lib/amd64/llib-lreparse.ln 0644 root bin
-s usr/lib/amd64/llib-lresolv.ln=../../../lib/amd64/llib-lresolv.ln
-s usr/lib/amd64/llib-lrpcsvc.ln=../../../lib/amd64/llib-lrpcsvc.ln
-s usr/lib/amd64/llib-lrt.ln=../../../lib/amd64/llib-lrt.ln
-s usr/lib/amd64/llib-lrtld_db.ln=../../../lib/amd64/llib-lrtld_db.ln
-f usr/lib/amd64/llib-lsasl.ln 0644 root bin
-s usr/lib/amd64/llib-lscf.ln=../../../lib/amd64/llib-lscf.ln
-f usr/lib/amd64/llib-lsched.ln 0644 root bin
-f usr/lib/amd64/llib-lsctp.ln 0644 root bin
-s usr/lib/amd64/llib-lsec.ln=../../../lib/amd64/llib-lsec.ln
-s usr/lib/amd64/llib-lsecdb.ln=../../../lib/amd64/llib-lsecdb.ln
-s usr/lib/amd64/llib-lsendfile.ln=../../../lib/amd64/llib-lsendfile.ln
-f usr/lib/amd64/llib-lshare.ln 0644 root bin
-f usr/lib/amd64/llib-lshell.ln 0644 root bin
-f usr/lib/amd64/llib-lsip.ln 0644 root bin
-f usr/lib/amd64/llib-lsldap.ln 0644 root bin
-f usr/lib/amd64/llib-lslp.ln 0644 root bin
-f usr/lib/amd64/llib-lsmbfs.ln 0644 root bin
-f usr/lib/amd64/llib-lsmbios.ln 0644 root bin
-f usr/lib/amd64/llib-lsmedia.ln 0644 root bin
-s usr/lib/amd64/llib-lsocket.ln=../../../lib/amd64/llib-lsocket.ln
-f usr/lib/amd64/llib-lsoftcrypto.ln 0644 root bin
-f usr/lib/amd64/llib-lsrpt.ln 0644 root bin
-f usr/lib/amd64/llib-lssagent.ln 0644 root bin
-f usr/lib/amd64/llib-lssasnmp.ln 0644 root bin
-f usr/lib/amd64/llib-lstmf.ln 0644 root bin
-f usr/lib/amd64/llib-lstmfproxy.ln 0644 root bin
-f usr/lib/amd64/llib-lsum.ln 0644 root bin
-f usr/lib/amd64/llib-lsun_ima.ln 0644 root bin
-s usr/lib/amd64/llib-lsysevent.ln=../../../lib/amd64/llib-lsysevent.ln
-f usr/lib/amd64/llib-ltecla.ln 0644 root bin
-s usr/lib/amd64/llib-ltermcap.ln=../../../lib/amd64/llib-lcurses.ln
-s usr/lib/amd64/llib-ltermcap=../../../lib/amd64/llib-lcurses
-s usr/lib/amd64/llib-ltermlib.ln=../../../lib/amd64/llib-lcurses.ln
-s usr/lib/amd64/llib-ltermlib=../../../lib/amd64/llib-lcurses
-s usr/lib/amd64/llib-lthread.ln=../../../lib/amd64/llib-lthread.ln
-s usr/lib/amd64/llib-lthread_db.ln=../../../lib/amd64/llib-lc_db.ln
-s usr/lib/amd64/llib-ltsnet.ln=../../../lib/amd64/llib-ltsnet.ln
-s usr/lib/amd64/llib-ltsol.ln=../../../lib/amd64/llib-ltsol.ln
-s usr/lib/amd64/llib-lumem.ln=../../../lib/amd64/llib-lumem.ln
-s usr/lib/amd64/llib-luuid.ln=../../../lib/amd64/llib-luuid.ln
-f usr/lib/amd64/llib-lvolmgt.ln 0644 root bin
-f usr/lib/amd64/llib-lvrrpadm.ln 0644 root bin
-f usr/lib/amd64/llib-lvt0.ln 0644 root bin
-s usr/lib/amd64/llib-lxnet.ln=../../../lib/amd64/llib-lxnet.ln
-f usr/lib/amd64/llib-ly.ln 0644 root bin
-s usr/lib/amd64/llib-lzfs.ln=../../../lib/amd64/llib-lzfs.ln
-f usr/lib/amd64/llib-lzfs_jni.ln 0644 root bin
-f usr/lib/amd64/llib-lzonecfg.ln 0644 root bin
-f usr/lib/amd64/llib-lzonestat.ln 0644 root bin
-f usr/lib/amd64/llib-lzpool.ln 0644 root bin
 f usr/lib/amd64/madv.so.1 0755 root bin
 f usr/lib/amd64/mpss.so.1 0755 root bin
 f usr/lib/amd64/ncad_addr.so.1 0755 root bin
@@ -9253,17 +8921,6 @@ f usr/lib/fm/amd64/libseslog.so.1 0755 root bin
 s usr/lib/fm/amd64/libseslog.so=libseslog.so.1
 f usr/lib/fm/amd64/libtopo.so.1 0755 root bin
 s usr/lib/fm/amd64/libtopo.so=libtopo.so.1
-f usr/lib/fm/amd64/llib-ldiagcode.ln 0644 root bin
-f usr/lib/fm/amd64/llib-ldiskstatus.ln 0644 root bin
-f usr/lib/fm/amd64/llib-lfmd_adm.ln 0644 root bin
-f usr/lib/fm/amd64/llib-lfmd_agent.ln 0644 root bin
-f usr/lib/fm/amd64/llib-lfmd_log.ln 0644 root bin
-f usr/lib/fm/amd64/llib-lfmd_msg.ln 0644 root bin
-f usr/lib/fm/amd64/llib-lfmd_snmp.ln 0644 root bin
-s usr/lib/fm/amd64/llib-lfmevent.ln=../../../../lib/fm/amd64/llib-lfmevent.ln
-f usr/lib/fm/amd64/llib-lfmnotify.ln 0644 root bin
-f usr/lib/fm/amd64/llib-lseslog.ln 0644 root bin
-f usr/lib/fm/amd64/llib-ltopo.ln 0644 root bin
 f usr/lib/fm/buildcode 0555 root bin
 f usr/lib/fm/bustcode 0555 root bin
 d usr/lib/fm/dict 0755 root bin
@@ -9385,28 +9042,6 @@ f usr/lib/fm/libseslog.so.1 0755 root bin
 s usr/lib/fm/libseslog.so=libseslog.so.1
 f usr/lib/fm/libtopo.so.1 0755 root bin
 s usr/lib/fm/libtopo.so=libtopo.so.1
-f usr/lib/fm/llib-ldiagcode 0644 root bin
-f usr/lib/fm/llib-ldiagcode.ln 0644 root bin
-f usr/lib/fm/llib-ldiskstatus 0644 root bin
-f usr/lib/fm/llib-ldiskstatus.ln 0644 root bin
-f usr/lib/fm/llib-lfmd_adm 0644 root bin
-f usr/lib/fm/llib-lfmd_adm.ln 0644 root bin
-f usr/lib/fm/llib-lfmd_agent 0644 root bin
-f usr/lib/fm/llib-lfmd_agent.ln 0644 root bin
-f usr/lib/fm/llib-lfmd_log 0644 root bin
-f usr/lib/fm/llib-lfmd_log.ln 0644 root bin
-f usr/lib/fm/llib-lfmd_msg 0644 root bin
-f usr/lib/fm/llib-lfmd_msg.ln 0644 root bin
-f usr/lib/fm/llib-lfmd_snmp 0644 root bin
-f usr/lib/fm/llib-lfmd_snmp.ln 0644 root bin
-s usr/lib/fm/llib-lfmevent.ln=../../../lib/fm/llib-lfmevent.ln
-s usr/lib/fm/llib-lfmevent=../../../lib/fm/llib-lfmevent
-f usr/lib/fm/llib-lfmnotify 0644 root bin
-f usr/lib/fm/llib-lfmnotify.ln 0644 root bin
-f usr/lib/fm/llib-lseslog 0644 root bin
-f usr/lib/fm/llib-lseslog.ln 0644 root bin
-f usr/lib/fm/llib-ltopo 0644 root bin
-f usr/lib/fm/llib-ltopo.ln 0644 root bin
 d usr/lib/fm/notify 0755 root bin
 f usr/lib/fm/notify/process_msg_template.sh 0555 root bin
 f usr/lib/fm/notify/smtp-notify 0555 root bin
@@ -13419,315 +13054,6 @@ f usr/lib/link_audit/amd64/who.so.1 0755 root bin
 f usr/lib/link_audit/ldprof.so.1 0755 root bin
 f usr/lib/link_audit/truss.so.1 0755 root bin
 f usr/lib/link_audit/who.so.1 0755 root bin
-f usr/lib/llib-l300 0644 root bin
-f usr/lib/llib-l300.ln 0644 root bin
-f usr/lib/llib-l300s 0644 root bin
-f usr/lib/llib-l300s.ln 0644 root bin
-f usr/lib/llib-l4014 0644 root bin
-f usr/lib/llib-l4014.ln 0644 root bin
-f usr/lib/llib-l450 0644 root bin
-f usr/lib/llib-l450.ln 0644 root bin
-f usr/lib/llib-lHBAAPI 0644 root bin
-f usr/lib/llib-lHBAAPI.ln 0644 root bin
-f usr/lib/llib-lSMHBAAPI 0644 root bin
-f usr/lib/llib-lSMHBAAPI.ln 0644 root bin
-s usr/lib/llib-ladm.ln=../../lib/llib-ladm.ln
-s usr/lib/llib-ladm=../../lib/llib-ladm
-f usr/lib/llib-ladt_jni.ln 0644 root bin
-f usr/lib/llib-ladutils 0644 root bin
-f usr/lib/llib-ladutils.ln 0644 root bin
-s usr/lib/llib-laio.ln=../../lib/llib-laio.ln
-s usr/lib/llib-laio=../../lib/llib-laio
-f usr/lib/llib-last 0644 root bin
-f usr/lib/llib-last.ln 0644 root bin
-s usr/lib/llib-lavl.ln=../../lib/llib-lavl.ln
-s usr/lib/llib-lavl=../../lib/llib-lavl
-f usr/lib/llib-lbe 0644 root bin
-f usr/lib/llib-lbe.ln 0644 root bin
-f usr/lib/llib-lbrand 0644 root bin
-f usr/lib/llib-lbrand.ln 0644 root bin
-f usr/lib/llib-lbsdmalloc 0644 root bin
-f usr/lib/llib-lbsdmalloc.ln 0644 root bin
-s usr/lib/llib-lbsm.ln=../../lib/llib-lbsm.ln
-s usr/lib/llib-lbsm=../../lib/llib-lbsm
-s usr/lib/llib-lc.ln=../../lib/llib-lc.ln
-s usr/lib/llib-lc=../../lib/llib-lc
-f usr/lib/llib-lcfgadm 0644 root bin
-f usr/lib/llib-lcfgadm.ln 0644 root bin
-f usr/lib/llib-lcmd 0644 root bin
-f usr/lib/llib-lcmd.ln 0644 root bin
-s usr/lib/llib-lcmdutils.ln=../../lib/llib-lcmdutils.ln
-s usr/lib/llib-lcmdutils=../../lib/llib-lcmdutils
-f usr/lib/llib-lcommputil 0644 root bin
-f usr/lib/llib-lcommputil.ln 0644 root bin
-s usr/lib/llib-lcontract.ln=../../lib/llib-lcontract.ln
-s usr/lib/llib-lcontract=../../lib/llib-lcontract
-f usr/lib/llib-lcpc 0644 root bin
-f usr/lib/llib-lcpc.ln 0644 root bin
-f usr/lib/llib-lcrypt 0644 root bin
-f usr/lib/llib-lcrypt.ln 0644 root bin
-s usr/lib/llib-lctf.ln=../../lib/llib-lctf.ln
-s usr/lib/llib-lctf=../../lib/llib-lctf
-s usr/lib/llib-lcurses.ln=../../lib/llib-lcurses.ln
-s usr/lib/llib-lcurses=../../lib/llib-lcurses
-f usr/lib/llib-ldat 0644 root bin
-f usr/lib/llib-ldat.ln 0644 root bin
-s usr/lib/llib-ldevice.ln=../../lib/llib-ldevice.ln
-s usr/lib/llib-ldevice=../../lib/llib-ldevice
-s usr/lib/llib-ldevid.ln=../../lib/llib-ldevid.ln
-s usr/lib/llib-ldevid=../../lib/llib-ldevid
-s usr/lib/llib-ldevinfo.ln=../../lib/llib-ldevinfo.ln
-s usr/lib/llib-ldevinfo=../../lib/llib-ldevinfo
-s usr/lib/llib-ldhcpagent.ln=../../lib/llib-ldhcpagent.ln
-s usr/lib/llib-ldhcpagent=../../lib/llib-ldhcpagent
-f usr/lib/llib-ldhcpsvc 0644 root bin
-f usr/lib/llib-ldhcpsvc.ln 0644 root bin
-s usr/lib/llib-ldhcputil.ln=../../lib/llib-ldhcputil.ln
-s usr/lib/llib-ldhcputil=../../lib/llib-ldhcputil
-f usr/lib/llib-ldisasm 0644 root bin
-f usr/lib/llib-ldisasm.ln 0644 root bin
-f usr/lib/llib-ldiskmgt 0644 root bin
-f usr/lib/llib-ldiskmgt.ln 0644 root bin
-s usr/lib/llib-ldl.ln=../../lib/llib-ldl.ln
-s usr/lib/llib-ldl=../../lib/llib-ldl
-f usr/lib/llib-ldll 0644 root bin
-f usr/lib/llib-ldll.ln 0644 root bin
-f usr/lib/llib-ldns_sd 0644 root bin
-f usr/lib/llib-ldns_sd.ln 0644 root bin
-s usr/lib/llib-ldoor.ln=../../lib/llib-ldoor.ln
-s usr/lib/llib-ldoor=../../lib/llib-ldoor
-f usr/lib/llib-ldscfg.ln 0644 root bin
-f usr/lib/llib-ldtrace 0644 root bin
-f usr/lib/llib-ldtrace.ln 0644 root bin
-s usr/lib/llib-lefi.ln=../../lib/llib-lefi.ln
-s usr/lib/llib-lefi=../../lib/llib-lefi
-s usr/lib/llib-lelf.ln=../../lib/llib-lelf.ln
-s usr/lib/llib-lelf=../../lib/llib-lelf
-f usr/lib/llib-lexacct 0644 root bin
-f usr/lib/llib-lexacct.ln 0644 root bin
-f usr/lib/llib-lfcoe 0644 root bin
-f usr/lib/llib-lfcoe.ln 0644 root bin
-s usr/lib/llib-lfdisk.ln=../../lib/llib-lfdisk.ln
-s usr/lib/llib-lfdisk=../../lib/llib-lfdisk
-f usr/lib/llib-lform 0644 root bin
-f usr/lib/llib-lform.ln 0644 root bin
-f usr/lib/llib-lfsmgt 0644 root bin
-f usr/lib/llib-lfsmgt.ln 0644 root bin
-f usr/lib/llib-lfstyp 0644 root bin
-f usr/lib/llib-lfstyp.ln 0644 root bin
-s usr/lib/llib-lgen.ln=../../lib/llib-lgen.ln
-s usr/lib/llib-lgen=../../lib/llib-lgen
-f usr/lib/llib-lgss 0644 root bin
-f usr/lib/llib-lgss.ln 0644 root bin
-f usr/lib/llib-lhal 0644 root bin
-f usr/lib/llib-lhal-storage 0644 root bin
-f usr/lib/llib-lhal-storage.ln 0644 root bin
-f usr/lib/llib-lhal.ln 0644 root bin
-f usr/lib/llib-lhotplug 0644 root bin
-f usr/lib/llib-lhotplug.ln 0644 root bin
-f usr/lib/llib-lidmap 0644 root bin
-f usr/lib/llib-lidmap.ln 0644 root bin
-f usr/lib/llib-like 0644 root bin
-f usr/lib/llib-like.ln 0644 root bin
-f usr/lib/llib-lilb 0644 root bin
-f usr/lib/llib-lilb.ln 0644 root bin
-f usr/lib/llib-lima 0644 root bin
-f usr/lib/llib-lima.ln 0644 root bin
-f usr/lib/llib-linetsvc 0644 root bin
-f usr/lib/llib-linetsvc.ln 0644 root bin
-s usr/lib/llib-linetutil.ln=../../lib/llib-linetutil.ln
-s usr/lib/llib-linetutil=../../lib/llib-linetutil
-f usr/lib/llib-linstzones 0644 root bin
-f usr/lib/llib-linstzones.ln 0644 root bin
-s usr/lib/llib-lintl.ln=../../lib/llib-lintl.ln
-s usr/lib/llib-lintl=../../lib/llib-lintl
-f usr/lib/llib-lipmi 0644 root bin
-f usr/lib/llib-lipmi.ln 0644 root bin
-f usr/lib/llib-lipp 0644 root bin
-f usr/lib/llib-lipp.ln 0644 root bin
-f usr/lib/llib-lipsecutil 0644 root bin
-f usr/lib/llib-lipsecutil.ln 0644 root bin
-f usr/lib/llib-liscsit 0644 root bin
-f usr/lib/llib-liscsit.ln 0644 root bin
-s usr/lib/llib-lkstat.ln=../../lib/llib-lkstat.ln
-s usr/lib/llib-lkstat=../../lib/llib-lkstat
-f usr/lib/llib-lkvm 0644 root bin
-f usr/lib/llib-lkvm.ln 0644 root bin
-f usr/lib/llib-ll 0644 root bin
-f usr/lib/llib-ll.ln 0644 root bin
-f usr/lib/llib-lldap 0644 root bin
-f usr/lib/llib-lldap.ln 0644 root bin
-f usr/lib/llib-llgrp 0644 root bin
-f usr/lib/llib-llgrp.ln 0644 root bin
-f usr/lib/llib-lmail 0644 root bin
-f usr/lib/llib-lmail.ln 0644 root bin
-f usr/lib/llib-lmalloc 0644 root bin
-f usr/lib/llib-lmalloc.ln 0644 root bin
-f usr/lib/llib-lmapmalloc 0644 root bin
-f usr/lib/llib-lmapmalloc.ln 0644 root bin
-s usr/lib/llib-lmd5.ln=../../lib/llib-lmd5.ln
-s usr/lib/llib-lmd5=../../lib/llib-lmd5
-f usr/lib/llib-lmenu 0644 root bin
-f usr/lib/llib-lmenu.ln 0644 root bin
-s usr/lib/llib-lmeta.ln=../../lib/llib-lmeta.ln
-s usr/lib/llib-lmeta=../../lib/llib-lmeta
-f usr/lib/llib-lmilter 0644 root bin
-f usr/lib/llib-lmilter.ln 0644 root bin
-f usr/lib/llib-lmtmalloc.ln 0644 root bin
-f usr/lib/llib-lndmp 0644 root bin
-f usr/lib/llib-lndmp.ln 0644 root bin
-f usr/lib/llib-lnls 0644 root bin
-f usr/lib/llib-lnls.ln 0644 root bin
-f usr/lib/llib-lnsctl.ln 0644 root bin
-s usr/lib/llib-lnsl.ln=../../lib/llib-lnsl.ln
-s usr/lib/llib-lnsl=../../lib/llib-lnsl
-s usr/lib/llib-lnvpair.ln=../../lib/llib-lnvpair.ln
-s usr/lib/llib-lnvpair=../../lib/llib-lnvpair
-s usr/lib/llib-lpam.ln=../../lib/llib-lpam.ln
-s usr/lib/llib-lpam=../../lib/llib-lpam
-f usr/lib/llib-lpanel 0644 root bin
-f usr/lib/llib-lpanel.ln 0644 root bin
-f usr/lib/llib-lpasswdutil 0644 root bin
-f usr/lib/llib-lpasswdutil.ln 0644 root bin
-f usr/lib/llib-lpctx 0644 root bin
-f usr/lib/llib-lpctx.ln 0644 root bin
-f usr/lib/llib-lpicl 0644 root bin
-f usr/lib/llib-lpicl.ln 0644 root bin
-f usr/lib/llib-lpicld_pluginutil 0644 root bin
-f usr/lib/llib-lpicld_pluginutil.ln 0644 root bin
-f usr/lib/llib-lpicltree 0644 root bin
-f usr/lib/llib-lpicltree.ln 0644 root bin
-f usr/lib/llib-lpkcs11 0644 root bin
-f usr/lib/llib-lpkcs11.ln 0644 root bin
-f usr/lib/llib-lpkg 0644 root bin
-f usr/lib/llib-lpkg.ln 0644 root bin
-f usr/lib/llib-lplot 0644 root bin
-f usr/lib/llib-lplot.ln 0644 root bin
-f usr/lib/llib-lpolkit 0644 root bin
-f usr/lib/llib-lpolkit.ln 0644 root bin
-f usr/lib/llib-lpool 0644 root bin
-f usr/lib/llib-lpool.ln 0644 root bin
-s usr/lib/llib-lposix4.ln=../../lib/llib-lrt.ln
-s usr/lib/llib-lposix4=../../lib/llib-lrt
-f usr/lib/llib-lpp 0644 root bin
-f usr/lib/llib-lpp.ln 0644 root bin
-f usr/lib/llib-lproject 0644 root bin
-f usr/lib/llib-lproject.ln 0644 root bin
-s usr/lib/llib-lpthread.ln=../../lib/llib-lpthread.ln
-s usr/lib/llib-lpthread=../../lib/llib-lpthread
-f usr/lib/llib-lraidcfg 0644 root bin
-f usr/lib/llib-lraidcfg.ln 0644 root bin
-f usr/lib/llib-lrdc.ln 0644 root bin
-f usr/lib/llib-lreparse 0644 root bin
-f usr/lib/llib-lreparse.ln 0644 root bin
-s usr/lib/llib-lresolv.ln=../../lib/llib-lresolv.ln
-s usr/lib/llib-lresolv=../../lib/llib-lresolv
-s usr/lib/llib-lrpcsvc.ln=../../lib/llib-lrpcsvc.ln
-s usr/lib/llib-lrpcsvc=../../lib/llib-lrpcsvc
-f usr/lib/llib-lrstp 0644 root bin
-f usr/lib/llib-lrstp.ln 0644 root bin
-s usr/lib/llib-lrt.ln=../../lib/llib-lrt.ln
-s usr/lib/llib-lrt=../../lib/llib-lrt
-s usr/lib/llib-lrtld_db.ln=../../lib/llib-lrtld_db.ln
-s usr/lib/llib-lrtld_db=../../lib/llib-lrtld_db
-f usr/lib/llib-lsasl 0644 root bin
-f usr/lib/llib-lsasl.ln 0644 root bin
-s usr/lib/llib-lscf.ln=../../lib/llib-lscf.ln
-s usr/lib/llib-lscf=../../lib/llib-lscf
-f usr/lib/llib-lsched 0644 root bin
-f usr/lib/llib-lsched.ln 0644 root bin
-f usr/lib/llib-lsctp 0644 root bin
-f usr/lib/llib-lsctp.ln 0644 root bin
-s usr/lib/llib-lsec.ln=../../lib/llib-lsec.ln
-s usr/lib/llib-lsec=../../lib/llib-lsec
-s usr/lib/llib-lsecdb.ln=../../lib/llib-lsecdb.ln
-s usr/lib/llib-lsecdb=../../lib/llib-lsecdb
-s usr/lib/llib-lsendfile.ln=../../lib/llib-lsendfile.ln
-s usr/lib/llib-lsendfile=../../lib/llib-lsendfile
-f usr/lib/llib-lshare 0644 root bin
-f usr/lib/llib-lshare.ln 0644 root bin
-f usr/lib/llib-lshell 0644 root bin
-f usr/lib/llib-lshell.ln 0644 root bin
-f usr/lib/llib-lsip 0644 root bin
-f usr/lib/llib-lsip.ln 0644 root bin
-f usr/lib/llib-lsldap 0644 root bin
-f usr/lib/llib-lsldap.ln 0644 root bin
-f usr/lib/llib-lslp 0644 root bin
-f usr/lib/llib-lslp.ln 0644 root bin
-f usr/lib/llib-lsmbfs 0644 root bin
-f usr/lib/llib-lsmbfs.ln 0644 root bin
-f usr/lib/llib-lsmbios 0644 root bin
-f usr/lib/llib-lsmbios.ln 0644 root bin
-f usr/lib/llib-lsmedia 0644 root bin
-f usr/lib/llib-lsmedia.ln 0644 root bin
-s usr/lib/llib-lsocket.ln=../../lib/llib-lsocket.ln
-s usr/lib/llib-lsocket=../../lib/llib-lsocket
-f usr/lib/llib-lsoftcrypto 0644 root bin
-f usr/lib/llib-lsoftcrypto.ln 0644 root bin
-f usr/lib/llib-lsqlite.ln 0644 root bin
-f usr/lib/llib-lsrpt 0644 root bin
-f usr/lib/llib-lsrpt.ln 0644 root bin
-f usr/lib/llib-lssagent 0644 root bin
-f usr/lib/llib-lssagent.ln 0644 root bin
-f usr/lib/llib-lssasnmp 0644 root bin
-f usr/lib/llib-lssasnmp.ln 0644 root bin
-f usr/lib/llib-lstmf 0644 root bin
-f usr/lib/llib-lstmf.ln 0644 root bin
-f usr/lib/llib-lstmfproxy 0644 root bin
-f usr/lib/llib-lstmfproxy.ln 0644 root bin
-f usr/lib/llib-lsum 0644 root bin
-f usr/lib/llib-lsum.ln 0644 root bin
-f usr/lib/llib-lsun_ima 0644 root bin
-f usr/lib/llib-lsun_ima.ln 0644 root bin
-s usr/lib/llib-lsysevent.ln=../../lib/llib-lsysevent.ln
-s usr/lib/llib-lsysevent=../../lib/llib-lsysevent
-f usr/lib/llib-ltecla 0644 root bin
-f usr/lib/llib-ltecla.ln 0644 root bin
-s usr/lib/llib-ltermcap.ln=../../lib/llib-lcurses.ln
-s usr/lib/llib-ltermcap=../../lib/llib-lcurses
-s usr/lib/llib-ltermlib.ln=../../lib/llib-lcurses.ln
-s usr/lib/llib-ltermlib=../../lib/llib-lcurses
-s usr/lib/llib-lthread.ln=../../lib/llib-lthread.ln
-s usr/lib/llib-lthread=../../lib/llib-lthread
-s usr/lib/llib-lthread_db.ln=../../lib/llib-lc_db.ln
-s usr/lib/llib-lthread_db=../../lib/llib-lc_db
-s usr/lib/llib-ltsnet.ln=../../lib/llib-ltsnet.ln
-s usr/lib/llib-ltsnet=../../lib/llib-ltsnet
-s usr/lib/llib-ltsol.ln=../../lib/llib-ltsol.ln
-s usr/lib/llib-ltsol=../../lib/llib-ltsol
-s usr/lib/llib-lumem.ln=../../lib/llib-lumem.ln
-s usr/lib/llib-lumem=../../lib/llib-lumem
-f usr/lib/llib-lunistat.ln 0644 root bin
-s usr/lib/llib-luuid.ln=../../lib/llib-luuid.ln
-s usr/lib/llib-luuid=../../lib/llib-luuid
-f usr/lib/llib-lvolmgt 0644 root bin
-f usr/lib/llib-lvolmgt.ln 0644 root bin
-f usr/lib/llib-lvrrpadm 0644 root bin
-f usr/lib/llib-lvrrpadm.ln 0644 root bin
-f usr/lib/llib-lvt0 0644 root bin
-f usr/lib/llib-lvt0.ln 0644 root bin
-f usr/lib/llib-lwanboot 0644 root bin
-f usr/lib/llib-lwanboot.ln 0644 root bin
-f usr/lib/llib-lwanbootutil 0644 root bin
-f usr/lib/llib-lwanbootutil.ln 0644 root bin
-f usr/lib/llib-lwrap 0644 root bin
-f usr/lib/llib-lwrap.ln 0644 root bin
-s usr/lib/llib-lxnet.ln=../../lib/llib-lxnet.ln
-s usr/lib/llib-lxnet=../../lib/llib-lxnet
-f usr/lib/llib-ly 0644 root bin
-f usr/lib/llib-ly.ln 0644 root bin
-s usr/lib/llib-lzfs.ln=../../lib/llib-lzfs.ln
-s usr/lib/llib-lzfs=../../lib/llib-lzfs
-f usr/lib/llib-lzfs_jni 0644 root bin
-f usr/lib/llib-lzfs_jni.ln 0644 root bin
-f usr/lib/llib-lzonecfg 0644 root bin
-f usr/lib/llib-lzonecfg.ln 0644 root bin
-f usr/lib/llib-lzoneinfo 0644 root bin
-f usr/lib/llib-lzoneinfo.ln 0644 root bin
-f usr/lib/llib-lzonestat 0644 root bin
-f usr/lib/llib-lzonestat.ln 0644 root bin
-f usr/lib/llib-lzpool 0644 root bin
-f usr/lib/llib-lzpool.ln 0644 root bin
 f usr/lib/lms 0555 root bin
 d usr/lib/locale 0755 root bin
 d usr/lib/locale/C 0755 root bin
@@ -14154,8 +13480,6 @@ f usr/lib/newsyslog 0555 root sys
 d usr/lib/nfs 0755 root sys
 f usr/lib/nfs/libmapid.so.1 0755 root bin
 s usr/lib/nfs/libmapid.so=libmapid.so.1
-f usr/lib/nfs/llib-lmapid 0644 root bin
-f usr/lib/nfs/llib-lmapid.ln 0644 root bin
 f usr/lib/nfs/lockd 0555 root bin
 f usr/lib/nfs/mountd 0555 root bin
 f usr/lib/nfs/nfs4cbd 0555 root bin
@@ -14256,13 +13580,10 @@ f usr/lib/reparse/amd64/libnfs_basic.so.1 0755 root bin
 s usr/lib/reparse/amd64/libnfs_basic.so=libnfs_basic.so.1
 f usr/lib/reparse/amd64/libreparse_smb.so.1 0755 root bin
 s usr/lib/reparse/amd64/libreparse_smb.so=libreparse_smb.so.1
-f usr/lib/reparse/amd64/llib-lreparse_smb.ln 0644 root bin
 f usr/lib/reparse/libnfs_basic.so.1 0755 root bin
 s usr/lib/reparse/libnfs_basic.so=libnfs_basic.so.1
 f usr/lib/reparse/libreparse_smb.so.1 0755 root bin
 s usr/lib/reparse/libreparse_smb.so=libreparse_smb.so.1
-f usr/lib/reparse/llib-lreparse_smb 0644 root bin
-f usr/lib/reparse/llib-lreparse_smb.ln 0644 root bin
 f usr/lib/reparse/reparsed 0555 root sys
 f usr/lib/rmvolmgr 0555 root bin
 f usr/lib/rpcsec.so.1 0755 root bin
@@ -14295,21 +13616,12 @@ f usr/lib/scsi/amd64/libses.so.1 0755 root bin
 s usr/lib/scsi/amd64/libses.so=libses.so.1
 f usr/lib/scsi/amd64/libsmp.so.1 0755 root bin
 s usr/lib/scsi/amd64/libsmp.so=libsmp.so.1
-f usr/lib/scsi/amd64/llib-lscsi.ln 0644 root bin
-f usr/lib/scsi/amd64/llib-lses.ln 0644 root bin
-f usr/lib/scsi/amd64/llib-lsmp.ln 0644 root bin
 f usr/lib/scsi/libscsi.so.1 0755 root bin
 s usr/lib/scsi/libscsi.so=libscsi.so.1
 f usr/lib/scsi/libses.so.1 0755 root bin
 s usr/lib/scsi/libses.so=libses.so.1
 f usr/lib/scsi/libsmp.so.1 0755 root bin
 s usr/lib/scsi/libsmp.so=libsmp.so.1
-f usr/lib/scsi/llib-lscsi 0644 root bin
-f usr/lib/scsi/llib-lscsi.ln 0644 root bin
-f usr/lib/scsi/llib-lses 0644 root bin
-f usr/lib/scsi/llib-lses.ln 0644 root bin
-f usr/lib/scsi/llib-lsmp 0644 root bin
-f usr/lib/scsi/llib-lsmp.ln 0644 root bin
 d usr/lib/scsi/plugins 0755 root bin
 d usr/lib/scsi/plugins/scsi 0755 root bin
 d usr/lib/scsi/plugins/scsi/engines 0755 root bin
@@ -14508,11 +13820,6 @@ f usr/lib/smbsrv/amd64/libsmbns.so.1 0755 root bin
 s usr/lib/smbsrv/amd64/libsmbns.so=libsmbns.so.1
 f usr/lib/smbsrv/amd64/libsmbrdr.so.1 0755 root bin
 s usr/lib/smbsrv/amd64/libsmbrdr.so=libsmbrdr.so.1
-f usr/lib/smbsrv/amd64/llib-lmlrpc.ln 0644 root bin
-f usr/lib/smbsrv/amd64/llib-lmlsvc.ln 0644 root bin
-f usr/lib/smbsrv/amd64/llib-lsmb.ln 0644 root bin
-f usr/lib/smbsrv/amd64/llib-lsmbns.ln 0644 root bin
-f usr/lib/smbsrv/amd64/llib-lsmbrdr.ln 0644 root bin
 d usr/lib/smbsrv/dtrace 0755 root bin
 f usr/lib/smbsrv/dtrace/cifs.d 0555 root bin
 f usr/lib/smbsrv/dtrace/msrpc.d 0555 root bin
@@ -14531,16 +13838,6 @@ f usr/lib/smbsrv/libsmbrdr.so.1 0755 root bin
 s usr/lib/smbsrv/libsmbrdr.so=libsmbrdr.so.1
 f usr/lib/smbsrv/libsqlite.so.1 0755 root bin
 s usr/lib/smbsrv/libsqlite.so=libsqlite.so.1
-f usr/lib/smbsrv/llib-lmlrpc 0644 root bin
-f usr/lib/smbsrv/llib-lmlrpc.ln 0644 root bin
-f usr/lib/smbsrv/llib-lmlsvc 0644 root bin
-f usr/lib/smbsrv/llib-lmlsvc.ln 0644 root bin
-f usr/lib/smbsrv/llib-lsmb 0644 root bin
-f usr/lib/smbsrv/llib-lsmb.ln 0644 root bin
-f usr/lib/smbsrv/llib-lsmbns 0644 root bin
-f usr/lib/smbsrv/llib-lsmbns.ln 0644 root bin
-f usr/lib/smbsrv/llib-lsmbrdr 0644 root bin
-f usr/lib/smbsrv/llib-lsmbrdr.ln 0644 root bin
 f usr/lib/smbsrv/smbd 0555 root bin
 d usr/lib/smedia 0755 root bin
 d usr/lib/smedia/amd64 0755 root bin
@@ -14627,8 +13924,6 @@ f usr/lib/vplot 0555 root bin
 d usr/lib/vscan 0755 root bin
 f usr/lib/vscan/libvscan.so.1 0755 root bin
 s usr/lib/vscan/libvscan.so=libvscan.so.1
-f usr/lib/vscan/llib-lvscan 0644 root bin
-f usr/lib/vscan/llib-lvscan.ln 0644 root bin
 f usr/lib/vscan/vscand 0555 root bin
 f usr/lib/vtdaemon 0555 root bin
 f usr/lib/vtinfo 0555 root bin
@@ -23448,12 +22743,9 @@ d usr/xpg4/lib/amd64 0755 root bin
 f usr/xpg4/lib/amd64/libcurses.so.1 0755 root bin
 f usr/xpg4/lib/amd64/libcurses.so.2 0755 root bin
 s usr/xpg4/lib/amd64/libcurses.so=libcurses.so.2
-f usr/xpg4/lib/amd64/llib-lcurses.ln 0644 root bin
 f usr/xpg4/lib/libcurses.so.1 0755 root bin
 f usr/xpg4/lib/libcurses.so.2 0755 root bin
 s usr/xpg4/lib/libcurses.so=libcurses.so.2
-f usr/xpg4/lib/llib-lcurses 0644 root bin
-f usr/xpg4/lib/llib-lcurses.ln 0644 root bin
 d var 0755 root sys
 d var/adm 0775 root sys
 d var/adm/acct 0775 adm adm

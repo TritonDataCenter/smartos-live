@@ -1759,6 +1759,9 @@ f lib/nss_dns.so.1 0755 root bin
 f lib/nss_files.so.1 0755 root bin
 f lib/nss_nis.so.1 0755 root bin
 f lib/nss_user.so.1 0755 root bin
+d lib/sdc 0755 root bin
+f lib/sdc/config.sh 0444 root bin
+f lib/sdc/network.sh 0444 root bin
 d lib/secure 0755 root bin
 s lib/secure/32=.
 s lib/secure/64=amd64
@@ -2596,6 +2599,7 @@ f usr/bin/pax 0555 root bin
 s usr/bin/pcat=unpack
 f usr/bin/pcred 0555 root bin
 f usr/bin/pdp11 0555 root bin
+s usr/bin/perl=/opt/local/bin/perl
 f usr/bin/pfbash 0555 root bin
 f usr/bin/pfcsh 0555 root bin
 f usr/bin/pfexec 0555 root bin

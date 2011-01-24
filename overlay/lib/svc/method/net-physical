@@ -25,9 +25,12 @@
 # Copyright (c) 2010, 2011 Joyent Inc., All rights reserved.
 #
 
-set -x
-
 . /lib/svc/share/smf_include.sh
+. /lib/sdc/config.sh
+. /lib/sdc/network.sh
+
+set -o errexit
+set -o xtrace
 
 #
 # In a shared-IP zone we need this service to be up, but all of the work
@@ -43,146 +46,98 @@ LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 smf_netstrategy
 
 if smf_is_globalzone; then
+
     dladm init-phys
-    if /bin/bootparams | grep "^headnode=true" >/dev/null; then
-        headnode="true"
-    else
-        headnode="false"
-    fi
 
     #
     # Use the MAC address to sort the NICs and rename any that are out of
     # order so that we always get a consistent name for each NIC.
     #
     dladm show-phys -m -o ADDRESS,LINK | sort | nawk '{
-	if ($1 == "ADDRESS")
-		next
+    if ($1 == "ADDRESS")
+        next
 
-	l = length($2)
+    l = length($2)
 
-	pos = match($2, "[0-9]+$")
-	if (pos == 0)
-		next
+    pos = match($2, "[0-9]+$")
+    if (pos == 0)
+        next
 
-	nm = substr($2, 1, pos - 1)
-	id = substr($2, pos)
+    nm = substr($2, 1, pos - 1)
+    id = substr($2, pos)
 
-	i = idx[nm]++;
-	if (id == i)
-		next
+    i = idx[nm]++;
+    if (id == i)
+        next
 
-	new_name = nm i
-	tmp_name = "tmp_" nm i
+    new_name = nm i
+    tmp_name = "tmp_" nm i
 
-	cmd = "dladm rename-link " $2 " " tmp_name
-	cleanup[tmp_name] = new_name
-	system(cmd)
+    cmd = "dladm rename-link " $2 " " tmp_name
+    cleanup[tmp_name] = new_name
+    system(cmd)
     }
     END {
-	for (i in cleanup) {
-		cmd = "dladm rename-link " i " " cleanup[i]
-		system(cmd)
-	}
+    for (i in cleanup) {
+        cmd = "dladm rename-link " i " " cleanup[i]
+        system(cmd)
+    }
     }'
 
-    # We strip leading zero from MAC (eg. 0c:ab => c:ab) to match ifconfig
-    admin_nic=`/usr/bin/bootparams | grep "admin_nic" | cut -f2 -d'=' | sed 's/0\([0-9a-f]\)/\1/g'`
-    internal_nic=`/usr/bin/bootparams | grep "internal_nic" | cut -f2 -d'=' | sed 's/0\([0-9a-f]\)/\1/g'`
-    external_nic=`/usr/bin/bootparams | grep "external_nic" | cut -f2 -d'=' | sed 's/0\([0-9a-f]\)/\1/g'`
+    # Load sysinfo variables with SYSINFO_ prefix
+    load_sdc_sysinfo
+    # Load config variables with CONFIG_ prefix, and sets the headnode variable
+    load_sdc_config
 
-    coal="false"
-    admin_started="false"
-    admin_configured="false"
-
-    if [[ ${headnode} == "true" ]]; then
-        # Load the config
-        zpool list | grep zones
-        if [[ $? == 0 ]]; then
-            . `svcprop -p "joyentfs/usb_copy_path" svc:/system/filesystem/joyent:default`/config
+    # Setup admin NIC
+    if [[ -n ${SYSINFO_NIC_admin} ]]; then
+        ifconfig ${SYSINFO_NIC_admin} plumb
+        if [[ ${headnode} == "true" ]]; then
+            if [[ -n ${CONFIG_admin_ip} ]] && [[ -n ${CONFIG_admin_netmask} ]]; then
+                ifconfig ${SYSINFO_NIC_admin} inet ${CONFIG_admin_ip} netmask ${CONFIG_admin_netmask} up
+                if [[ ${CONFIG_coal} == "true" ]]; then
+                    # Also create a bridge which allows traffic to flow correctly to VMWare Host-only
+                    dladm create-bridge -l ${SYSINFO_NIC_admin} vmwarebr
+                fi
+            else
+                echo "WARNING: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
+            fi
         else
-            . /mnt/`svcprop -p "joyentfs/usb_mountpoint" svc:/system/filesystem/joyent:default`/config
-        fi
-
-        # We strip leading zero from MAC (eg. 0c:ab => c:ab) to match ifconfig
-        admin_nic=`echo "${admin_nic}" | sed 's/0\([0-9a-f]\)/\1/g'`
-        external_nic=`echo "${external_nic}" | sed 's/0\([0-9a-f]\)/\1/g'`
-        internal_nic=`echo "${internal_nic}" | sed 's/0\([0-9a-f]\)/\1/g'`
-
-        if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]]; then
-            admin_configured="true"
+            ifconfig ${SYSINFO_NIC_admin} dhcp
         fi
     fi
 
-    admin_phys=""
-    external_phys=""
-    internal_phys=""
-
-    dladm show-phys -m -p -o link,address | sed 's/:/\ /;s/\\//g' | while read iface mac; do
-        if [[ -n ${admin_nic} ]] && [[ ${mac} == ${admin_nic} ]]; then
-            admin_phys=${iface}
-            ifconfig ${iface} plumb
-            if [[ ${headnode} == "true" ]]; then
-                if [[ ${admin_configured} == "true" ]]; then
-                    ifconfig ${iface} inet ${admin_ip} netmask ${admin_netmask} up
-                    admin_started="true"
-                    if [[ ${coal} == "true" ]]; then
-                        # Also create a bridge which allows traffic to flow correctly to VMWare Host-only
-                        dladm create-bridge -l ${iface} vmwarebr
-                    fi
-                else
-                    echo "WARNING: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
-                fi
-            else
-                ifconfig ${iface} dhcp
-                admin_started="true"
+    # Setup external NIC -- only headnode because non-headnodes don't assign
+    # IP to external in GZ.
+    if [[ -n ${SYSINFO_NIC_external} ]]; then
+        if [[ -n "${CONFIG_external_ip}" ]]; then
+            iface=${SYSINFO_NIC_external}
+            if [[ -n ${CONFIG_external_vlan_id} ]]; then
+                dladm create-vnic -l ${iface} -v ${CONFIG_external_vlan_id} global0
+                iface="global0"
             fi
-        elif [[ -n ${internal_nic} ]] && [[ ${mac} == ${internal_nic} ]]; then
-            internal_phys=${iface}
-            # We don't bring up an IP in the GZ on the internal interface,
-            # only customer zones.
-        elif [[ -n ${external_nic} ]] && [[ ${mac} == ${external_nic} ]]; then
-            external_phys=${iface}
-            if [[ -n "${external_ip}" ]]; then
-                ifconfig ${iface} plumb
-                if [[ ${external_ip} == "dhcp" ]]; then
-                    ifconfig ${iface} dhcp primary
-                else
-                    ifconfig ${iface} inet ${external_ip} netmask ${external_netmask} up
-                    if [[ ! -z "${external_gateway}" ]]; then
-                        echo "${external_gateway}" > /etc/defaultrouter
-                    fi
+            ifconfig ${iface} plumb
+            if [[ ${CONFIG_external_ip} == "dhcp" ]]; then
+                ifconfig ${iface} dhcp primary
+            else
+                ifconfig ${iface} inet ${CONFIG_external_ip} netmask ${CONFIG_external_netmask} up
+                if [[ -n "${CONFIG_external_gateway}" ]]; then
+                    echo "${CONFIG_external_gateway}" > /etc/defaultrouter
                 fi
+            fi
 
-                # Set up the GZ to NAT for Coal
-                if [[ ${coal} == "true" ]]; then
-                    # Convert the admin IP and netmask to CIDR notation
-                    OLDIFS=$IFS
-                    IFS=.
-                    set -- $admin_ip
-                    a=$1
-                    b=$2
-                    c=$3
-                    d=$4
-                    set -- $admin_netmask
-                    a=$(($a & $1))
-                    b=$(($b & $2))
-                    c=$(($c & $3))
-                    d=$(($d & $4))
-                    IFS=$OLDIFS
-
-                    let netip=0x$(printf "%02X%02X%02X%02X" $1 $2 $3 $4)
-                    bits=32
-                    while [ $(($netip & 1 )) == 0 ] ; do
-                        netip=$(($netip >> 1))
-                        bits=$(($bits - 1))
-                    done
-
-                    # Allow zones to reach the internet using the global zone as a router
-                    echo "map ${iface} $a.$b.$c.$d/$bits -> 0/32" >> /etc/ipf/ipnat.conf
-                fi
+            # Set up the GZ to NAT for Coal
+            if [[ "${CONFIG_headnode_nat}" == "true" ]]; then
+                # Convert the admin IP and netmask to CIDR notation
+                CIDR=$(ip_netmask_to_cidr ${CONFIG_admin_ip} ${CONFIG_admin_netmask})
+                # Allow zones to reach the internet using the global zone as a router
+                cat >> /etc/ipf/ipnat.conf <<IPNAT
+map ${SYSINFO_NIC_external} ${CIDR} -> 0.0.0.0/32
+map ${SYSINFO_NIC_external} ${CIDR} -> 0.0.0.0/32 portmap tcp/udp auto
+IPNAT
             fi
         fi
-    done
+    fi
 
     # Now the zone vnics. They only need to be defined
     ZONES=`zoneadm list -pi | grep -v "global" | grep installed | cut -d ":" -f 2`
@@ -194,36 +149,30 @@ if smf_is_globalzone; then
             [[ ${nic} == '-' ]] && nic=
             vlan=$(zfs get -H smartdc.network:${vnic}.vlan_id zones/${zone} | awk '{ print $3 }')
             [[ ${vlan} == '-' ]] && vlan=
+            vnic_mac=$(zfs get -H smartdc.network:${vnic}.mac zones/${zone} | awk '{ print $3 }')
+            [[ ${vnic_mac} == '-' ]] && vnic_mac=
             zone_phys=
             if [[ -n ${nic} ]]; then
-                zone_phys=$(eval "echo \${${nic}_phys}")
+                zone_phys=$(eval "echo \${SYSINFO_NIC_${nic}}")
             fi
 
             # We used to assume vnics that end with 0 should be attached to
             # admin_nic and all other vnics should be attached to external_nic
             # Now we can tell from the metadata attached to the zone dataset.
             if [[ -n ${zone_phys} ]]; then
-                vnic_vlan_opts=
+                vnic_opts=
                 if [[ -n ${vlan} ]] && [[ "${vlan}" != "0" ]]; then
-                    vnic_vlan_opts="-v ${vlan}"
+                    vnic_opts="-v ${vlan}"
                 fi
-                dladm create-vnic -l ${zone_phys} ${vnic_vlan_opts} ${vnic}
-            elif echo ${vnic} | grep "0$"; then
-                # XXX remove this section after everything should be tagged
-                echo "DEPRECATED: nic not defined for ${vnic} for zone ${zone}, support for this will be removed soon! (assuming admin)"
-                dladm create-vnic -l ${admin_phys} ${vnic}
-            elif [[ -n ${external_phys} ]]; then
-                # XXX remove this section after everything should be tagged
-                echo "DEPRECATED: nic not defined for ${vnic} for zone ${zone}, support for this will be removed soon! (assuming external)"
-                # ZONE_public_vlan is defined in the config we sourced earlier
-                # (eg. adminui_public_vlan)
-                zone_public_vlan=$(eval "echo \${${zone}_public_vlan}")
-                zone_public_vlan_opts=
-                if [[ -n "${zone_public_vlan}" ]] && [[ "${zone_public_vlan}" != "0" ]]; then
-                    zone_public_vlan_opts="-v ${zone_public_vlan}"
+                if [[ -n ${vnic_mac} ]]; then
+                    vnic_opts="-m ${vnic_mac} ${vnic_opts}"
                 fi
-
-                dladm create-vnic -l ${external_phys} ${zone_public_vlan_opts} ${vnic}
+                dladm create-vnic -l ${zone_phys} ${vnic_opts} ${vnic}
+                if [[ -z ${vnic_mac} ]]; then
+                    # if we didn't already know the MAC, we just created one, save that
+                    vnic_mac=$(dladm show-vnic -p -o MACADDRESS ${vnic})
+                    [[ -n ${vnic_mac} ]] && /usr/sbin/zfs set smartdc.network:${vnic}.mac=${vnic_mac} zones/${zone}
+                fi
             else
                 echo "WARNING: not bringing up vnic '${vnic}' for zone '${zone}' due to misconfiguration."
             fi
@@ -244,10 +193,10 @@ fi
 
 # Any non-loopback IPv4 interfaces with usable addresses up?
 if [[ -n "`/sbin/ifconfig -a4u`" ]]; then
-    	/sbin/ifconfig -a4u | while read intf addr rest; do
-		[[ ${intf} == "inet" ]] && [[ ${addr} != "127.0.0.1" ]] &&
-		[[ ${addr} != "0.0.0.0" ]] && exit ${SMF_EXIT_OK}
-	done && exit ${SMF_EXIT_OK}
+    /sbin/ifconfig -a4u | while read intf addr rest; do
+        [[ ${intf} == "inet" ]] && [[ ${addr} != "127.0.0.1" ]] &&
+        [[ ${addr} != "0.0.0.0" ]] && exit ${SMF_EXIT_OK}
+    done && exit ${SMF_EXIT_OK}
 fi
 
 # Any DHCP interfaces started?
@@ -255,9 +204,9 @@ fi
 
 # Any non-loopback IPv6 interfaces up?
 if [[ -n "`/sbin/ifconfig -au6`" ]]; then
-	/sbin/ifconfig -au6 | while read intf addr rest; do
-		[[ ${intf} = "inet6" ]] && [[ ${addr} != "::1/128" ]] && exit ${SMF_EXIT_OK}
-	done && exit ${SMF_EXIT_OK}
+    /sbin/ifconfig -au6 | while read intf addr rest; do
+        [[ ${intf} = "inet6" ]] && [[ ${addr} != "::1/128" ]] && exit ${SMF_EXIT_OK}
+    done && exit ${SMF_EXIT_OK}
 fi
 
 # This service was supposed to configure something yet didn't.  Exit

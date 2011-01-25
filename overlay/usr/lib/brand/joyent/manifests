@@ -121,7 +121,6 @@ network/network-netmask.xml	enabled
 network/network-physical.xml	enabled
 network/network-routing-setup.xml	enabled
 network/network-service.xml	enabled
-network/nfs/server.xml		disabled
 network/rexec.xml		disabled
 network/routing/legacy-routing.xml	enabled
 network/routing/ndp.xml		disabled

@@ -3,7 +3,7 @@
 ROOT=$(PWD)
 PROTO=$(ROOT)/proto
 PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin
-BUILDSTAMP := $(shell TZ=UTC date "+%Y%m%dT%H%M%SZ")
+BUILDSTAMP=$(shell TZ=UTC date "+%Y%m%dT%H%M%SZ")
 
 
 world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp 0-tools-stamp

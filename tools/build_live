@@ -39,8 +39,8 @@ ERROR=0
 PLATFORM=i86pc
 ISA=i386
 ARCH64=amd64
-RSIZE=290000
-USIZE=425000
+RSIZE=260000
+USIZE=400000
 BOOT_ARCHIVE_64=platform-${BUILDSTAMP}/$PLATFORM/$ARCH64/boot_archive
 OUT_KERNEL_64=platform-${BUILDSTAMP}/$PLATFORM/kernel/$ARCH64/unix
 KERNEL_64=platform/$PLATFORM/kernel/$ARCH64/unix
@@ -122,11 +122,11 @@ function create_ufs
     lofiusrdev=$3
     usrfile=$4
 
-    newfs -o space -m 0 -i 32768 -b 4096 ${lofidev} < /dev/null 2> /dev/null
+    newfs -o space -m 0 -i 50000 -b 4096 ${lofidev} < /dev/null 2> /dev/null
     mkdir "${rdmnt}"
     mount -F ufs -o nologging ${lofidev} "${rdmnt}"
 
-    newfs -o space -m 0 -i 8192 -b 4096 ${lofiusrdev} < /dev/null 2> /dev/null
+    newfs -o space -m 0 -i 14000 -b 4096 ${lofiusrdev} < /dev/null 2> /dev/null
     mkdir "${rdmnt}/usr"
     mount -F ufs -o nologging ${lofiusrdev} "${rdmnt}/usr"
 

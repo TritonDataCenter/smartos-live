@@ -31,7 +31,9 @@ SMF_IMPORTER=${ROOT}/tools/smf_import
 BUILDER=${ROOT}/tools/builder/builder
 SCANNER=${ROOT}/tools/scanner
 PWGEN=${ROOT}/tools/pwgen
-BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`; export BUILDSTAMP 
+if [[ -z ${BUILDSTAMP} ]]; then
+    BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`; export BUILDSTAMP
+fi
 LOGFILE="${ROOT}/log/build_live.${BUILDSTAMP}.log"
 ERROR=0
 PLATFORM=i86pc
@@ -259,10 +261,10 @@ rdfile="$rddir/rd.file.32"
 rdmnt="$rddir/rd.mnt.32"
 usrfile="$rddir/usr.file"
 
-echo "Creating ${RSIZE}k ramdisk image: ${rdfile}" 
+echo "Creating ${RSIZE}k ramdisk image: ${rdfile}"
 mkfile ${RSIZE}k "${rdfile}"
 chown ${USER} ${rdfile}
-echo "Creating ${USIZE}k usr image: ${usrfile}" 
+echo "Creating ${USIZE}k usr image: ${usrfile}"
 mkfile ${USIZE}k "${usrfile}"
 chown ${USER} ${usrfile}
 

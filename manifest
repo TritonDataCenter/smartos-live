@@ -2548,6 +2548,7 @@ f usr/bin/uudecode 0555 root uucp
 f usr/bin/uuencode 0555 root uucp
 f usr/bin/vax 0555 root bin
 f usr/bin/vedit 0555 root bin
+f usr/bin/vfsstat 0555 root bin
 f usr/bin/vgrind 0555 root bin
 s usr/bin/vi=vim
 s usr/bin/view=vim

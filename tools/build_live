@@ -31,8 +31,11 @@ SMF_IMPORTER=${ROOT}/tools/smf_import
 BUILDER=${ROOT}/tools/builder/builder
 SCANNER=${ROOT}/tools/scanner
 PWGEN=${ROOT}/tools/pwgen
+
+BUILDSTAMP=$(cat ${ROOT}/proto/buildstamp)
 if [[ -z ${BUILDSTAMP} ]]; then
-    BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`; export BUILDSTAMP
+    echo "Failed to get buildstamp from proto directory."
+    exit 1
 fi
 LOGFILE="${ROOT}/log/build_live.${BUILDSTAMP}.log"
 ERROR=0
@@ -99,6 +102,7 @@ fi
 
 num=0
 echo "=== Options/ ==="
+echo "BUILDSTAMP. ${BUILDSTAMP}"
 echo "MANIFEST .. ${MANIFEST}"
 echo "OUTPUT .... ${OUT_DIR}"
 for dir in ${IN_DIRS}; do

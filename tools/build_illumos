@@ -9,9 +9,8 @@ unset CXX
 ROOT=`pwd`
 export PATH=/opt/onbld/bin:/sbin:/usr/sbin:/usr/bin:/usr/ccs/bin:/opt/SUNWspro/bin:/opt/local/bin
 
-if [[ -z ${BUILDSTAMP} ]]; then
-    BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`; export BUILDSTAMP
-fi
+BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`; export BUILDSTAMP
+echo ${BUILDSTAMP} > ${ROOT}/proto/buildstamp
 
 echo "==> Building Illumos (${BUILDSTAMP})"
 
@@ -21,7 +20,7 @@ set -e
 cd ${ROOT}/projects/illumos
 cp usr/src/tools/scripts/nightly.sh ./nightly
 chmod u+x ./nightly
-[[ ! -z "${BUILDSTAMP}" ]] && gsed -i -e "s|^GATE=.*$|GATE=\"joyent_${BUILDSTAMP}\"; export GATE|" illumos.sh
+gsed -i -e "s|^GATE=.*$|GATE=\"joyent_${BUILDSTAMP}\"; export GATE|" illumos.sh
 ksh93 ./usr/src/tools/scripts/bldenv.sh -d illumos.sh 'cd $CODEMGR_WS/usr/src && export PATH="$PATH:/opt/local/bin" && dmake setup && cd tools && dmake install'
 time ./nightly illumos.sh
 res=$?

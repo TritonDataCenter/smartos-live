@@ -3,14 +3,12 @@
 ROOT=$(PWD)
 PROTO=$(ROOT)/proto
 PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin
-BUILDSTAMP=$(shell TZ=UTC date "+%Y%m%dT%H%M%SZ")
-
 
 world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp 0-tools-stamp
 
 live: world
 	mkdir -p ${ROOT}/log
-	(cd $(ROOT) && pfexec env BUILDSTAMP=$(BUILDSTAMP) ./tools/build_live $(ROOT)/manifest $(ROOT)/output $(ROOT)/overlay $(ROOT)/proto $(ROOT)/projects/opensolaris-man /)
+	(cd $(ROOT) && pfexec ./tools/build_live $(ROOT)/manifest $(ROOT)/output $(ROOT)/overlay $(ROOT)/proto $(ROOT)/projects/opensolaris-man /)
 
 update:
 	@(git pull --rebase)
@@ -22,7 +20,7 @@ update:
 	touch 0-local-stamp
 
 0-illumos-stamp:
-	(cd $(ROOT) && BUILDSTAMP=$(BUILDSTAMP) ./tools/build_illumos)
+	(cd $(ROOT) && ./tools/build_illumos)
 	touch 0-illumos-stamp
 
 0-extra-stamp:

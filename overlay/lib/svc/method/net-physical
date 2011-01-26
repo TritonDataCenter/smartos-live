@@ -95,15 +95,17 @@ if smf_is_globalzone; then
         if [[ ${headnode} == "true" ]]; then
             if [[ -n ${CONFIG_admin_ip} ]] && [[ -n ${CONFIG_admin_netmask} ]]; then
                 ifconfig ${SYSINFO_NIC_admin} inet ${CONFIG_admin_ip} netmask ${CONFIG_admin_netmask} up
-                if [[ ${CONFIG_coal} == "true" ]]; then
-                    # Also create a bridge which allows traffic to flow correctly to VMWare Host-only
-                    dladm create-bridge -l ${SYSINFO_NIC_admin} vmwarebr
-                fi
+                ADMIN_NIC_UP=true
             else
                 echo "WARNING: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
             fi
         else
             ifconfig ${SYSINFO_NIC_admin} dhcp
+            ADMIN_NIC_UP=true
+        fi
+        # If on VMWare, create a bridge which allows traffic to flow correctly to the host-only network
+        if [[ "${ADMIN_NIC_UP}" == "true" ]] && [[ ${SYSINFO_Product} == "VMware Virtual Platform" ]]; then
+            dladm create-bridge -l ${SYSINFO_NIC_admin} vmwarebr
         fi
     fi
 

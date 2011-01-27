@@ -293,6 +293,7 @@ END
         mac_var="Network_Interface_${iface}_MAC_Address"
         ipv4_var="Network_Interface_${iface}_IPv4_Address"
         nicnames_var="Network_Interface_${iface}_NIC_Names"
+        nic_names_fmt=
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"

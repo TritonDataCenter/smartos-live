@@ -101,6 +101,11 @@ function get_live_image_buildstamp()
     #echo "${Live_Image}"
 }
 
+function get_hostname()
+{
+    Hostname=$(hostname)
+}
+
 function get_disks()
 {
     ORIGIFS=$IFS
@@ -215,6 +220,7 @@ Manufacturer="${Manufacturer}"
 Product="${Product}"
 Serial_Number="${Serial_Number}"
 UUID="${UUID}"
+Hostname="${Hostname}"
 CPU_Type="${CPU_Version}"
 CPU_Physical_Cores=${CPU_Count}
 CPU_Total_Cores=${CPU_Cores}
@@ -257,6 +263,7 @@ function output_json()
   "Product": "${Product}",
   "Serial Number": "${Serial_Number}",
   "UUID": "${UUID}",
+  "Hostname": "${Hostname}",
   "CPU Type": "${CPU_Version}",
   "CPU Physical Cores": ${CPU_Count},
   "CPU Total Cores": ${CPU_Cores},
@@ -313,6 +320,7 @@ get_memory_mib
 get_cpu_info
 get_live_image_buildstamp
 get_disks
+get_hostname
 get_nic_mappings
 get_network_interfaces
 

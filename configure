@@ -1,9 +1,21 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2010 Joyent Inc.
+# Copyright (c) 2010,2011 Joyent Inc.
 #
 
-set -e
+set -o errexit
+
+GLOBAL_ZONE=1
+
+if [[ $(uname -s) != "SunOS" ]]; then
+    echo "FATAL: This only works with SunOS/SmartOS"
+    exit 1
+fi
+
+if [[ $(zonename) != "global" ]]; then
+    echo "NOTICE: Building in a zone, workarounds enabled!"
+    GLOBAL_ZONE=0
+fi
 
 INSTALL_BIN_LINK_DIR=/usr/bin
 HAVE_PKG="true"
@@ -19,41 +31,53 @@ done
 
 if [ "${HAVE_PKG}" == "true" ]; then
   echo "==> Installing illumos build dependencies..."
-  ${ROOTCMD} pkg install \
-    text/groff \
-    system/zones/internal \
-    library/libxml2 \
-    developer/gnome/gettext \
-    library/python-2/setuptools-26 \
-    library/gnome/gnome-vfs \
-    runtime/perl-510 \
-    runtime/perl-510/extra \
-    developer/build/gnu-make \
-    developer/build/onbld \
-    developer/gcc-3 \
-    developer/astdev \
-    developer/lexer/flex \
-    library/nspr/header-nspr \
-    system/library/mozilla-nss/header-nss \
-    data/docbook \
-    text/gnu-gettext \
-    developer/java/jdk \
-    || /bin/true
+  if [[ ${GLOBAL_ZONE} -eq 1 ]]; then
+    ${ROOTCMD} pkg install \
+      text/groff \
+      system/zones/internal \
+      library/libxml2 \
+      developer/gnome/gettext \
+      library/python-2/setuptools-26 \
+      library/gnome/gnome-vfs \
+      runtime/perl-510 \
+      runtime/perl-510/extra \
+      developer/build/gnu-make \
+      developer/build/onbld \
+      developer/gcc-3 \
+      developer/astdev \
+      developer/lexer/flex \
+      library/nspr/header-nspr \
+      system/library/mozilla-nss/header-nss \
+      data/docbook \
+      text/gnu-gettext \
+      developer/java/jdk \
+      || /bin/true
+  else
+    # nonglobal Zone
+    for pkg in gmake gcc34 binutils autoconf automake bison libtool; do
+      pkg_info ${pkg} >/dev/null 2>&1 || pkgin -y install ${pkg}
+    done
+  fi
 fi
 
 # TODO: move this to illumos-extra itself
 if [ "${HAVE_PKG}" == "true" ]; then
   echo "==> Installing illumos-extra dependencies..."
-  ${ROOTCMD} pkg install \
-    compatibility/ucb \
-    developer/build/autoconf \
-    developer/build/automake-19 \
-    developer/build/automake-110 \
-    developer/build/cmake \
-    developer/build/libtool \
-    developer/parser/bison \
-    library/libevent \
-    || /bin/true
+  if [[ ${GLOBAL_ZONE} -eq 1 ]]; then
+    ${ROOTCMD} pkg install \
+      compatibility/ucb \
+      developer/build/autoconf \
+      developer/build/automake-19 \
+      developer/build/automake-110 \
+      developer/build/cmake \
+      developer/build/libtool \
+      developer/parser/bison \
+      library/libevent \
+      || /bin/true
+  else
+    # nonglobal Zone
+    /bin/true
+  fi
 fi
 
 echo "==> Checking for /opt/SUNWspro/bin/cc..."
@@ -83,14 +107,17 @@ if [ ! -f "/opt/SUNWspro/prod/bin/cc" ]; then
  fi
 fi
 
-# XXX doesn't work on zone
-if [ "${WRITABLE_USR}" == "true" ]; then
+
+if [[ ${GLOBAL_ZONE} -eq 1 ]]; then
   echo "==> Creating the missing symlinks..."
   test -f /usr/bin/aclocal || ${ROOTCMD} ln -s /usr/bin/aclocal-1.10 /usr/bin/aclocal
   test -f /usr/bin/automake || ${ROOTCMD} ln -s /usr/bin/automake-1.10 /usr/bin/automake
   # so builds can use --mode and such
   test -f /usr/bin/install || ${ROOTCMD} ln -s /usr/bin/ginstall /usr/bin/install
   test -f /usr/bin/pod2man || ${ROOTCMD} ln -s /usr/perl5/5.10.0/bin/pod2man /usr/bin/pod2man
+else
+  # nonglobal Zone
+  /bin/true
 fi
 
 echo "==> Populating projects/ directories..."

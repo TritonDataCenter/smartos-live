@@ -35,7 +35,7 @@
 <service_bundle type='manifest' name='SUNWcsr:filesystem-joyent'>
 
 <service
-	name='system/filesystem/joyent'
+	name='system/filesystem/smartdc'
 	type='service'
 	version='1'>
 

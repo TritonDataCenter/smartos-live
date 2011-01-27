@@ -94,9 +94,9 @@ if [ -z "$hostname" ] || [ "$hostname" == "unknown" ]; then
     hostname="`shcat /etc/nodename 2>/dev/null`"
     if [ -z "$hostname" ] || [ "$hostname" == "unknown" ]; then
         if smf_is_globalzone && [ -n "$(bootparams | grep '^headnode=true')" ]; then
-            configfile="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/joyent:default)/config"
+            configfile="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/smartdc:default)/config"
             if [[ ! -f ${configfile} ]]; then
-                configfile="$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/joyent:default)/config"
+                configfile="$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/smartdc:default)/config"
             fi
             hostname=$(grep '^hostname=' ${configfile} | cut -d'=' -f2-)
             if [[ -z ${hostname} ]]; then

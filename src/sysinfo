@@ -17,9 +17,9 @@ if [[ $(zonename) != "global" ]]; then
     exit 1
 fi
 
-configfile="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/joyent:default)/config"
+configfile="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/smartdc:default)/config"
 if [[ ! -f ${configfile} ]]; then
-    configfile="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/joyent:default)/config"
+    configfile="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/smartdc:default)/config"
 fi
 
 # helper to set global "normalized" to the expanded version of MAC ($1)

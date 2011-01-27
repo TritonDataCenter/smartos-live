@@ -50,7 +50,7 @@
 		grouping='require_all'
 		restart_on='none'
 		type='service'>
-		<service_fmri value='svc:/system/filesystem/joyent' />
+		<service_fmri value='svc:/system/filesystem/smartdc' />
 	</dependency>
 	
 	<instance name='default' enabled='true'>

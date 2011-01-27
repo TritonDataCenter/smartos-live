@@ -22,9 +22,9 @@ function load_sdc_config {
     if [[ ${headnode} == "true" ]]; then
         # Load config variables with CONFIG_ prefix, ignoring comments,  spaces
         # at the beginning of lines and lines that don't start with a letter.
-        config_filename="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/joyent:default)/config"
+        config_filename="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/smartdc:default)/config"
         if [[ ! -f ${config_filename} ]]; then
-            config_filename="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/joyent:default)/config"
+            config_filename="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/smartdc:default)/config"
         fi
         if [[ -f ${config_filename} ]]; then
             eval $(cat ${config_filename} | sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | sed -e "s/^/CONFIG_/")

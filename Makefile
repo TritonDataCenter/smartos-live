@@ -17,7 +17,6 @@ update:
 
 0-local-stamp:
 	[ ! -d projects/local ] || (cd projects/local && gmake && gmake DESTDIR=$(PROTO) install)
-	touch 0-local-stamp
 
 0-illumos-stamp:
 	(cd $(ROOT) && ./tools/build_illumos)
@@ -29,10 +28,8 @@ update:
 
 0-livesrc-stamp: src/bootparams.c
 	(cd $(ROOT)/src && gmake DESTDIR=$(PROTO) && gmake DESTDIR=$(PROTO) install)
-	touch 0-livesrc-stamp
 
 0-tools-stamp: tools/builder/builder tools/pwgen tools/cryptpass
-	touch 0-tools-stamp
 
 tools/builder/builder:
 	(cd $(ROOT)/tools/builder && gmake builder)

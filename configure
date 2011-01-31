@@ -195,7 +195,7 @@ cp usr/src/tools/env/illumos.sh .
 [ ! -z "${RELEASE_VER}" ] && gsed -i -e "s|^GATE=.*$|GATE=\"${RELEASE_VER}\"; export GATE|" illumos.sh
 [ ! -z "${PUBLISHER}" ] && gsed -i -e "s|^# PKGPUBLISHER_REDIST=.*$|PKGPUBLISHER_REDIST=\"${PUBLISHER}\"; export PKGPUBLISHER_REDIST|" illumos.sh
 gsed -i -e "s|^CODEMGR_WS=.*$|CODEMGR_WS=\"${ROOT}/projects/illumos\"; export CODEMGR_WS|" illumos.sh
-gsed -i -e "s|^NIGHTLY_OPTIONS=.*$|NIGHTLY_OPTIONS=\"-inCmprt\"; export NIGHTLY_OPTIONS|" illumos.sh
+gsed -i -e "s|^NIGHTLY_OPTIONS=.*$|NIGHTLY_OPTIONS=\"-CimNnt\"; export NIGHTLY_OPTIONS|" illumos.sh
 gsed -i -e "s|^ROOT=.*$|ROOT="${ROOT}/proto";  export ROOT|" illumos.sh
 gsed -i -e "s|^PARENT_ROOT=.*$|PARENT_ROOT="${ROOT}/proto"; export PARENT_ROOT|" illumos.sh
 

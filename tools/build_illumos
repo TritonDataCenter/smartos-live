@@ -10,6 +10,7 @@ ROOT=`pwd`
 export PATH=/opt/onbld/bin:/sbin:/usr/sbin:/usr/bin:/usr/ccs/bin:/opt/SUNWspro/bin:/opt/local/bin
 
 BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`; export BUILDSTAMP
+mkdir -p ${ROOT}/proto
 echo ${BUILDSTAMP} > ${ROOT}/proto/buildstamp
 
 echo "==> Building Illumos (${BUILDSTAMP})"

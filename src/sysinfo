@@ -17,9 +17,9 @@ if [[ $(zonename) != "global" ]]; then
     exit 1
 fi
 
-configfile="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/smartdc:default)/config"
+configfile="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/smartdc:default 2>/dev/null)/config"
 if [[ ! -f ${configfile} ]]; then
-    configfile="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/smartdc:default)/config"
+    configfile="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/smartdc:default 2>/dev/null)/config"
 fi
 
 # helper to set global "normalized" to the expanded version of MAC ($1)
@@ -212,6 +212,32 @@ function get_network_interfaces()
     #done
 }
 
+function get_bootparams()
+{
+    count=1
+    for line in $(/usr/bin/bootparams); do
+        fields=(${line//=/ })
+        key=$(echo ${fields[0]} | sed -e "s/\-/\_/g")
+        if ! (echo "${key}" | /usr/xpg4/bin/grep \
+          -e "^tty" \
+          -e "^atapi" \
+          -e "^ata_dma" \
+          -e "^keyboard_" \
+          -e "^bios_boot_device" \
+          -e "^lba_access_" \
+          -e "^boot_ncpus" \
+          -e "^boot_file" \
+          -e "^whoami" \
+          -e "^mfg_name" \
+          -e "^impl_arch_name" \
+          -e "_max_ncpus$" \
+          >/dev/null); then
+            Bootparams[${count}]=${line}
+            ((count++))
+    fi
+    done
+}
+
 function output_parsable()
 {
     cat <<END
@@ -252,6 +278,13 @@ END
         echo "${ipv4_var}=\"${ipv4}\""
         echo "${nicnames_var}=\"${nicnames}\""
     done
+
+    for entry in "${Bootparams[@]}"; do
+        fields=(${entry//=/ })
+        key=$(echo ${fields[0]} | sed -e "s/\-/\_/g")
+        val=${fields[1]}
+        echo "Bootparam_${key}=\"${val}\""
+    done
 }
 
 function output_json()
@@ -283,6 +316,20 @@ END
         echo "    \"${disk}\": {\"Size in GB\": ${gb_size}}${trailing_comma}"
     done
 
+    cat <<END
+  },
+  "Boot Parameters": {
+END
+    printed=0
+    for entry in "${Bootparams[@]}"; do
+        fields=(${entry//=/ })
+        key=$(echo ${fields[0]} | sed -e "s/\-/\_/g")
+        val=${fields[1]}
+        ((printed++))
+        trailing_comma=","
+        [[ ${printed} -eq ${#Bootparams[*]} ]] && trailing_comma=''
+        echo "    \"${key}\": \"$val\"${trailing_comma}"
+    done
     cat <<END
   },
   "Network Interfaces": {
@@ -324,6 +371,7 @@ get_disks
 get_hostname
 get_nic_mappings
 get_network_interfaces
+get_bootparams
 
 if [[ ${PARSABLE} == "true" ]]; then
     output_parsable

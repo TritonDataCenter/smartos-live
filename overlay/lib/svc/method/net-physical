@@ -158,6 +158,12 @@ IPNAT
                 zone_phys=$(eval "echo \${SYSINFO_NIC_${nic}}")
             fi
 
+            # If on VMWare and we have external IPs, create a bridge to allow zones to reach the external gateway
+            if [[ -z "${COAL_EXTERNAL_BRIDGE_CREATED}" ]] && [[ ${nic} == "external" ]] && [[ ${SYSINFO_Product} == "VMware Virtual Platform" ]]; then
+                dladm create-bridge -l ${SYSINFO_NIC_external} vmwareextbr
+                COAL_EXTERNAL_BRIDGE_CREATED=true
+            fi
+
             # We used to assume vnics that end with 0 should be attached to
             # admin_nic and all other vnics should be attached to external_nic
             # Now we can tell from the metadata attached to the zone dataset.

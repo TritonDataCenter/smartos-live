@@ -54,7 +54,9 @@ if [ "${HAVE_PKG}" == "true" ]; then
       || /bin/true
   else
     # nonglobal Zone
-    for pkg in gmake gcc34 binutils autoconf automake bison libtool; do
+    for pkg in gmake gcc34 binutils autoconf automake \
+        bison libtool-base python24 p5-XML-Parser \
+        dbus-glib dbus net-snmp; do
       pkg_info ${pkg} >/dev/null 2>&1 || pkgin -y install ${pkg}
     done
   fi

@@ -24,6 +24,8 @@
 # Copyright 2010 Joyent, Inc.  All rights reserved.
 # Use is subject to license terms.
 
+set -e
+
 ROOT=`pwd`
 MAN_DIR=${ROOT}/projects/opensolaris-man
 CUSTOMIZE_SCRIPT=${ROOT}/tools/customize
@@ -57,7 +59,7 @@ fi
 # Send a copy of stdout and stderr to LOGFILE
 exec > >(tee ${LOGFILE}) 2>&1
 
-export PATH=/usr/sbin:/usr/bin:/sbin
+export PATH=/usr/sbin:/usr/bin:/sbin:/opt/local/bin
 
 usage() {
     echo "This tool is for building a live boot_archive amd64."
@@ -224,7 +226,6 @@ function create_archive
         mv "${archive}-new" "$archive"
         lockfs -f "/$OUT_DIR" 2>/dev/null
     fi
-
 }
 
 function create_password

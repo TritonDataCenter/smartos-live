@@ -35,3 +35,13 @@ function ip_netmask_to_cidr {
 
     echo "$a.$b.$c.$d/$bits"
 }
+
+# Creates a bridge on the external interface (to put the external interface in
+# promiscuous mode), and sets COAL_EXTERNAL_BRIDGE_CREATED to indicate success
+# requires load_sdc_sysinfo (from config.sh) to have been run first
+function create_vmware_external_bridge {
+    if [[ -z "${COAL_EXTERNAL_BRIDGE_CREATED}" ]] && [[ ${SYSINFO_Product} == "VMware Virtual Platform" ]]; then
+        dladm create-bridge -l ${SYSINFO_NIC_external} vmwareextbr
+        COAL_EXTERNAL_BRIDGE_CREATED=true
+    fi
+}

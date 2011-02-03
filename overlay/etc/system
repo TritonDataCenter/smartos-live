@@ -113,3 +113,14 @@ set rlim_fd_cur=1024
 * set zfs:zil_disable=1
 set zfs:zfs_prefetch_disable=1
 set zfs:zfs_nocacheflush=1
+
+*
+* Machines should take a crash dump and reboot when receiving an NMI
+*
+set pcplusmp:apic_panic_on_nmi=1
+
+*
+* Don't use multi-threaded fast crash dump or a high compression level
+*
+set dump_plat_mincpu=0
+set dump_bzip2_level=1

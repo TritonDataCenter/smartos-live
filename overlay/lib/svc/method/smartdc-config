@@ -46,6 +46,7 @@ case "$1" in
     load_sdc_config
     load_sdc_sysinfo
 
+    # Boot parameter takes precidence over config
     if [[ -n "${SYSINFO_Bootparam_root_shadow}" ]]; then
         set_root_password "${SYSINFO_Bootparam_root_shadow}"
         echo "Set root password boot parameters."

@@ -24,8 +24,6 @@
 # Copyright 2010 Joyent, Inc.  All rights reserved.
 # Use is subject to license terms.
 
-set -e
-
 ROOT=`pwd`
 MAN_DIR=${ROOT}/projects/opensolaris-man
 CUSTOMIZE_SCRIPT=${ROOT}/tools/customize

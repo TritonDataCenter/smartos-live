@@ -8578,6 +8578,7 @@ f usr/lib/class/SDC/SDCpriocntl 0555 root bin
 d usr/lib/class/TS 0755 root bin
 f usr/lib/class/TS/TSdispadmin 0555 root bin
 f usr/lib/class/TS/TSpriocntl 0555 root bin
+f usr/lib/cpp 0555 root bin
 s usr/lib/cron=../../etc/cron.d
 f usr/lib/crt1.o 0644 root bin
 f usr/lib/crti.o 0644 root bin

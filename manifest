@@ -2057,6 +2057,7 @@ f usr/bin/amd64/w 4555 root bin
 f usr/bin/amt 0555 root bin
 f usr/bin/apropos 0555 root bin
 f usr/bin/arch 0555 root bin
+f usr/bin/arcstat 0555 root bin
 f usr/bin/asa 0555 root bin
 f usr/bin/at 4755 root sys
 f usr/bin/atq 4755 root sys

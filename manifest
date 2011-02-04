@@ -716,6 +716,7 @@ f kernel/drv/amd64/hid 0755 root sys
 f kernel/drv/amd64/hubd 0755 root sys
 f kernel/drv/amd64/hwahc 0755 root sys
 f kernel/drv/amd64/hwarc 0755 root sys
+f kernel/drv/amd64/hxge 0755 root sys
 f kernel/drv/amd64/i8042 0755 root sys
 f kernel/drv/amd64/icmp 0755 root sys
 f kernel/drv/amd64/icmp6 0755 root sys
@@ -731,6 +732,7 @@ f kernel/drv/amd64/iprb 0755 root sys
 f kernel/drv/amd64/ipsecah 0755 root sys
 f kernel/drv/amd64/ipsecesp 0755 root sys
 f kernel/drv/amd64/iptun 0755 root sys
+f kernel/drv/amd64/iscsi 0755 root sys
 f kernel/drv/amd64/iwscn 0755 root sys
 f kernel/drv/amd64/ixgb 0755 root sys
 f kernel/drv/amd64/ixgbe 0755 root sys
@@ -750,9 +752,11 @@ f kernel/drv/amd64/mpt 0755 root sys
 f kernel/drv/amd64/mpt_sas 0755 root sys
 f kernel/drv/amd64/mr_sas 0755 root sys
 f kernel/drv/amd64/myri10ge 0755 root sys
+f kernel/drv/amd64/nge 0755 root sys
 f kernel/drv/amd64/ntxn 0755 root sys
 f kernel/drv/amd64/nulldriver 0755 root sys
 f kernel/drv/amd64/nv_sata 0755 root sys
+f kernel/drv/amd64/nxge 0755 root sys
 f kernel/drv/amd64/oce 0755 root sys
 f kernel/drv/amd64/ohci 0755 root sys
 f kernel/drv/amd64/openeepr 0755 root sys
@@ -762,6 +766,7 @@ f kernel/drv/amd64/pci_pci 0755 root sys
 f kernel/drv/amd64/pcieb 0755 root sys
 f kernel/drv/amd64/pcser 0755 root sys
 f kernel/drv/amd64/physmem 0755 root sys
+f kernel/drv/amd64/pmcs 0755 root sys
 f kernel/drv/amd64/poll 0755 root sys
 f kernel/drv/amd64/power 0755 root sys
 f kernel/drv/amd64/profile 0755 root sys
@@ -777,6 +782,7 @@ f kernel/drv/amd64/rtls 0755 root sys
 f kernel/drv/amd64/rts 0755 root sys
 f kernel/drv/amd64/sad 0755 root sys
 f kernel/drv/amd64/scsa2usb 0755 root sys
+f kernel/drv/amd64/scsi_vhci 0755 root sys
 f kernel/drv/amd64/sd 0755 root sys
 f kernel/drv/amd64/sdhost 0755 root sys
 f kernel/drv/amd64/sdt 0755 root sys
@@ -865,6 +871,7 @@ f kernel/drv/ippctl.conf 0644 root sys
 f kernel/drv/ipsecah.conf 0644 root sys
 f kernel/drv/ipsecesp.conf 0644 root sys
 f kernel/drv/iptun.conf 0644 root sys
+f kernel/drv/iscsi.conf 0644 root sys
 f kernel/drv/iwscn.conf 0644 root sys
 f kernel/drv/ixgbe.conf 0644 root sys
 f kernel/drv/keysock.conf 0644 root sys
@@ -880,13 +887,16 @@ f kernel/drv/mm.conf 0644 root sys
 f kernel/drv/mpt.conf 0644 root sys
 f kernel/drv/mpt_sas.conf 0644 root sys
 f kernel/drv/mr_sas.conf 0644 root sys
+f kernel/drv/nge.conf 0644 root sys
 f kernel/drv/ntxn.conf 0644 root sys
 f kernel/drv/nv_sata.conf 0644 root sys
+f kernel/drv/nxge.conf 0644 root sys
 f kernel/drv/ohci.conf 0644 root sys
 f kernel/drv/openeepr.conf 0644 root sys
 f kernel/drv/options.conf 0644 root sys
 f kernel/drv/pcieb.conf 0644 root sys
 f kernel/drv/physmem.conf 0644 root sys
+f kernel/drv/pmcs.conf 0644 root sys
 f kernel/drv/poll.conf 0644 root sys
 f kernel/drv/power.conf 0644 root sys
 f kernel/drv/profile.conf 0644 root sys
@@ -898,6 +908,7 @@ f kernel/drv/ramdisk.conf 0644 root sys
 f kernel/drv/random.conf 0644 root sys
 f kernel/drv/sad.conf 0644 root sys
 f kernel/drv/scsa2usb.conf 0644 root sys
+f kernel/drv/scsi_vhci.conf 0644 root sys
 f kernel/drv/sd.conf 0644 root sys
 f kernel/drv/sdt.conf 0644 root sys
 f kernel/drv/ses.conf 0644 root sys
@@ -1012,6 +1023,7 @@ f kernel/kmdb/amd64/random 0555 root sys
 f kernel/kmdb/amd64/rdc 0555 root sys
 f kernel/kmdb/amd64/s1394 0555 root sys
 f kernel/kmdb/amd64/sata 0555 root sys
+f kernel/kmdb/amd64/scsi_vhci 0555 root sys
 f kernel/kmdb/amd64/sctp 0555 root sys
 f kernel/kmdb/amd64/sd 0555 root sys
 f kernel/kmdb/amd64/sdbc 0555 root sys
@@ -1113,6 +1125,17 @@ f kernel/misc/qlc/amd64/qlc_fw_2400 0755 root sys
 f kernel/misc/qlc/amd64/qlc_fw_2500 0755 root sys
 f kernel/misc/qlc/amd64/qlc_fw_6322 0755 root sys
 f kernel/misc/qlc/amd64/qlc_fw_8100 0755 root sys
+d kernel/misc/scsi_vhci 0755 root sys
+d kernel/misc/scsi_vhci/amd64 0755 root sys
+f kernel/misc/scsi_vhci/amd64/scsi_vhci_f_asym_emc 0755 root sys
+f kernel/misc/scsi_vhci/amd64/scsi_vhci_f_asym_lsi 0755 root sys
+f kernel/misc/scsi_vhci/amd64/scsi_vhci_f_asym_sun 0755 root sys
+f kernel/misc/scsi_vhci/amd64/scsi_vhci_f_sym 0755 root sys
+f kernel/misc/scsi_vhci/amd64/scsi_vhci_f_sym_emc 0755 root sys
+f kernel/misc/scsi_vhci/amd64/scsi_vhci_f_sym_hds 0755 root sys
+f kernel/misc/scsi_vhci/amd64/scsi_vhci_f_tape 0755 root sys
+f kernel/misc/scsi_vhci/amd64/scsi_vhci_f_tpgs 0755 root sys
+f kernel/misc/scsi_vhci/amd64/scsi_vhci_f_tpgs_tape 0755 root sys
 d kernel/sched 0755 root sys
 d kernel/sched/amd64 0755 root sys
 f kernel/sched/amd64/SDC 0755 root sys

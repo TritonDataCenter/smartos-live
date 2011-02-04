@@ -241,13 +241,13 @@ function get_bootparams()
 function output_parsable()
 {
     cat <<END
-Live_Image="${Live_Image}"
-Manufacturer="${Manufacturer}"
-Product="${Product}"
-Serial_Number="${Serial_Number}"
-UUID="${UUID}"
-Hostname="${Hostname}"
-CPU_Type="${CPU_Version}"
+Live_Image='${Live_Image}'
+Manufacturer='${Manufacturer}'
+Product='${Product}'
+Serial_Number='${Serial_Number}'
+UUID='${UUID}'
+Hostname='${Hostname}'
+CPU_Type='${CPU_Version}'
 CPU_Physical_Cores=${CPU_Count}
 CPU_Total_Cores=${CPU_Cores}
 MiB_of_Memory=${Memory_in_MiB}
@@ -261,9 +261,9 @@ END
         echo "Disk_${disk}_size_in_GB=${gb_size}"
     done
 
-    [[ -n ${NIC_admin} ]] && echo "NIC_admin=\"${NIC_admin}\""
-    [[ -n ${NIC_external} ]] && echo "NIC_external=\"${NIC_external}\""
-    [[ -n ${NIC_internal} ]] && echo "NIC_internal=\"${NIC_internal}\""
+    [[ -n ${NIC_admin} ]] && echo "NIC_admin='${NIC_admin}'"
+    [[ -n ${NIC_external} ]] && echo "NIC_external='${NIC_external}'"
+    [[ -n ${NIC_internal} ]] && echo "NIC_internal='${NIC_internal}'"
 
     for iface in "${NetworkInterfaces[@]}"; do
         mac_var="Network_Interface_${iface}_MAC_Address"
@@ -274,16 +274,16 @@ END
         eval "ipv4=\${${ipv4_var}}"
         eval "nicnames=\${${nicnames_var}}"
 
-        echo "${mac_var}=\"${mac}\""
-        echo "${ipv4_var}=\"${ipv4}\""
-        echo "${nicnames_var}=\"${nicnames}\""
+        echo "${mac_var}='${mac}'"
+        echo "${ipv4_var}='${ipv4}'"
+        echo "${nicnames_var}='${nicnames}'"
     done
 
     for entry in "${Bootparams[@]}"; do
         fields=(${entry//=/ })
         key=$(echo ${fields[0]} | sed -e "s/\-/\_/g")
         val=${fields[1]}
-        echo "Bootparam_${key}=\"${val}\""
+        echo "Bootparam_${key}='${val}'"
     done
 }
 

@@ -1,7 +1,9 @@
 #!/bin/bash
+#
+# Copyright (c) 2010,2011 Joyent Inc., All Rights Reserved.
+#
 
 if [ -z "${BUILDSTAMP}" ]; then
-  #BUILDSTAMP=`TZ=UTC date "+%Y-%m-%dT%H:%M:%SZ"`
   BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`
 fi
 
@@ -20,7 +22,10 @@ pfexec cp /dev/null ${rdmnt}/var/adm/wtmpx
 # isaexec binaries don't work properly in a chroot.
 (cd ${rdmnt}/usr/bin && pfexec mv sh sh.$$ && ln -s bash sh)
 pfexec mount -F lofs /dev ${rdmnt}/dev
-pfexec mount -F lofs /devices ${rdmnt}/devices
+# If we're in a GZ there will be a /devices we need to
+if [[ -d /devices ]]; then
+    pfexec mount -F lofs /devices ${rdmnt}/devices
+fi
 pfexec chroot ${rdmnt} /usr/bin/catman
 pfexec umount ${rdmnt}/devices
 pfexec umount ${rdmnt}/dev

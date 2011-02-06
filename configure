@@ -55,8 +55,8 @@ if [ "${HAVE_PKG}" == "true" ]; then
   else
     # nonglobal Zone
     for pkg in gmake binutils autoconf automake \
-        bison libtool-base python24 p5-XML-Parser \
-        dbus-glib dbus net-snmp; do
+        bison flex libtool-base python24 p5-XML-Parser \
+        libxslt dbus-glib dbus net-snmp; do
       pkg_info ${pkg} >/dev/null 2>&1 || pkgin -y install ${pkg}
     done
   fi

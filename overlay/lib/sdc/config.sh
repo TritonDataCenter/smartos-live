@@ -31,12 +31,17 @@ function load_sdc_config_filename {
             SDC_CONFIG_FILENAME="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/smartdc:default)/config"
         fi
 
+        if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
+            SDC_CONFIG_INC_DIR="$(dirname ${SDC_CONFIG_FILENAME})/config.inc"
+        fi
+
         if [[ -f ${COMPUTE_NODE_CONFIG_FILENAME} ]]; then
             if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
                 # We write to console to make it clear we don't like this at all.
                 echo "WARNING: ignoring config at ${COMPUTE_NODE_CONFIG_FILENAME} since we have ${SDC_CONFIG_FILENAME}" >> /dev/msglog
             else
                 SDC_CONFIG_FILENAME=${COMPUTE_NODE_CONFIG_FILENAME}
+                SDC_CONFIG_INC_DIR="$(dirname ${COMPUTE_NODE_CONFIG_FILENAME})"
             fi
         fi
     fi
@@ -48,7 +53,7 @@ function sdc_config_keys_contain {
     search=$1
     load_sdc_config_filename
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        matches="$(cat ${SDC_CONFIG_FILENAME} | sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | sed -e "s/=.*//" | grep $search | wc -l)"
+        matches=$((cat ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | sed -e "s/=.*//" | grep $search | wc -l)
         if [[ $matches -eq 0 ]]; then
             echo false
         else
@@ -63,7 +68,7 @@ function sdc_config_keys_contain {
 function sdc_config_keys {
     load_sdc_config_filename
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        keys=$(cat ${SDC_CONFIG_FILENAME} | sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | sed -e "s/=.*//")
+        keys=$((cat ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | sed -e "s/=.*//")
     fi
     echo "${keys}"
 }
@@ -80,15 +85,13 @@ function load_sdc_config {
         headnode="false"
     fi
 
-    if [[ ${headnode} == "true" ]]; then
-        load_sdc_config_filename
-        # Ignore comments,  spaces at the beginning of lines and lines that don't start with a letter.
-        if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-            eval $(cat ${SDC_CONFIG_FILENAME} | sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | sed -e "s/^/${prefix}/")
-        else
-            echo "FATAL: Unable to load headnode config."
-            exit 1
-        fi
+    load_sdc_config_filename
+    # Ignore comments,  spaces at the beginning of lines and lines that don't start with a letter.
+    if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
+        eval $((cat ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | sed -e "s/^/${prefix}/")
+    elif [[ ${headnode} == "true" ]]; then
+        echo "FATAL: Unable to load headnode config."
+        exit 1
     fi
 }
 
@@ -111,4 +114,5 @@ if [[ $1 == "-json" ]]; then
         done
         echo "}"
     )
+    exit 0
 fi

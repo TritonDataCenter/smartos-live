@@ -153,7 +153,7 @@
     <instance name='default' enabled='false' />
   </service>
   <service name='network/ntp' version='1' type='service'>
-    <instance name='default' enabled='false' />
+    <instance name='default' enabled='true' />
   </service>
   <service name='network/rarp' version='1' type='service'>
     <instance name='default' enabled='false' />

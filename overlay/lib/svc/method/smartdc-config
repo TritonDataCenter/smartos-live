@@ -72,13 +72,13 @@ case "$1" in
     fi
 
     # Set authorized_keys for root
-    if [[ -n "${CONFIG_root_authorized_keys}" ]] \
+    if [[ -n "${CONFIG_root_authorized_keys_file}" ]] \
         && [[ -n "${CONFIG_config_inc_dir}" ]] \
         && [[ -d "${CONFIG_config_inc_dir}" ]] \
-        && [[ -f "${CONFIG_config_inc_dir}/${CONFIG_root_authorized_keys}" ]]; then
+        && [[ -f "${CONFIG_config_inc_dir}/${CONFIG_root_authorized_keys_file}" ]]; then
 
         mkdir -p /root/.ssh
-        cp "${CONFIG_config_inc_dir}/${CONFIG_root_authorized_keys}" /root/.ssh/authorized_keys
+        cp "${CONFIG_config_inc_dir}/${CONFIG_root_authorized_keys_file}" /root/.ssh/authorized_keys
         chmod 0600 /root/.ssh/authorized_keys
         chmod 0700 /root/.ssh
     fi

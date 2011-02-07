@@ -3,13 +3,14 @@
 # Copyright (c) 2010,2011 Joyent Inc., All Rights Reserved.
 #
 
+BUILDSTAMP=$2
 if [ -z "${BUILDSTAMP}" ]; then
   BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`
 fi
 
 rdmnt=$1
 if [ -z "${rdmnt}" ]; then
-  echo "Usage: $0 <rdmnt directory>"
+  echo "Usage: $0 <rdmnt directory> [buildstamp]"
   exit 1
 fi
 
@@ -27,7 +28,9 @@ if [[ -d /devices ]]; then
     pfexec mount -F lofs /devices ${rdmnt}/devices
 fi
 pfexec chroot ${rdmnt} /usr/bin/catman
-pfexec umount ${rdmnt}/devices
+if [[ -d /devices ]]; then
+    pfexec umount ${rdmnt}/devices
+fi
 pfexec umount ${rdmnt}/dev
 (cd ${rdmnt}/usr/bin && pfexec rm sh && pfexec mv sh.$$ sh)
 

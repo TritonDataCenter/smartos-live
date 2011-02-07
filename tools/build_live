@@ -141,7 +141,7 @@ function create_ufs
         ERROR=1
 	return
     fi
-    ${CUSTOMIZE_SCRIPT} ${rdmnt}
+    ${CUSTOMIZE_SCRIPT} ${rdmnt} ${BUILDSTAMP}
     ${SMF_IMPORTER} ${rdmnt}
 
     echo "Setting root password..."

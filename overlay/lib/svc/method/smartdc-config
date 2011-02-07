@@ -39,6 +39,20 @@ set_root_password() {
       && mv /etc/shadow.new /etc/shadow
 }
 
+set_ntp_hosts() {
+    ntp_hosts=$1
+
+    (
+    for i in $(echo ${ntp_hosts} | sed -e "s/,/ /"); do
+        echo ${i}
+    done
+    if [[ -f /etc/inet/ntp.conf ]]; then
+        cat /etc/inet/ntp.conf | grep -v "^server"
+    fi
+    ) > /etc/inet/ntp.conf.new \
+    && mv /etc/inet/ntp.conf.new /etc/inet/ntp.conf
+}
+
 case "$1" in
 'start')
 
@@ -55,6 +69,58 @@ case "$1" in
         echo "Set root password from config."
     else
         echo "No root shadow entry in the config, cannot set."
+    fi
+
+    # Set authorized_keys for root
+    if [[ -n "${CONFIG_root_authorized_keys}" ]] \
+        && [[ -n "${CONFIG_config_inc_dir}" ]] \
+        && [[ -d "${CONFIG_config_inc_dir}" ]] \
+        && [[ -f "${CONFIG_config_inc_dir}/${CONFIG_root_authorized_keys}" ]]; then
+
+        mkdir -p /root/.ssh
+        cp "${CONFIG_config_inc_dir}/${CONFIG_root_authorized_keys}" /root/.ssh/authorized_keys
+        chmod 0600 /root/.ssh/authorized_keys
+        chmod 0700 /root/.ssh
+    fi
+
+    if [[ -n "${CONFIG_ntp_conf_file}" ]] \
+        && [[ -n "${CONFIG_config_inc_dir}" ]] \
+        && [[ -d "${CONFIG_config_inc_dir}" ]] \
+        && [[ -f "${CONFIG_config_inc_dir}/${CONFIG_ntp_conf_file}" ]]; then
+
+        cp "${CONFIG_config_inc_dir}/${CONFIG_ntp_conf_file}" /etc/inet/ntp.conf
+        echo "Copied ntp config."
+
+    elif [[ -n "${CONFIG_ntp_hosts}" ]]; then
+        # split on ',' and resolve bits that aren't IP addresses then merge back
+        servers=""
+        for entry in $(echo "${CONFIG_ntp_hosts}" | tr ',' ' '); do
+            if echo "${entry}" | grep "^[0-9,\.]*$" >/dev/null 2>&1; then
+                # entry is an IP
+                [[ -n ${servers} ]] && entry=",${entry}"
+                servers="${servers}${entry}"
+            else
+                # DNS, try to resolve
+                for s in $(dig pool.ntp.org +short || /bin/true | grep "^[0-9]" | xargs); do
+                    [[ -n ${servers} ]] && s=",${s}"
+                    servers="${servers}${s}"
+                done
+            fi
+        done
+
+        if [[ -n ${servers} ]]; then
+            set_ntp_hosts "${servers}"
+            echo "Set ntp hosts (${servers})."
+        fi
+    else
+        # No NTP hosts set, use some from pool.ntp.org
+        servers=$(dig pool.ntp.org +short || /bin/true | grep "^[0-9]" | xargs | sed -e "s/ /,/g")
+
+        # Note, if we don't find some here, we just go with ones already in the file.
+        if [[ -n ${servers} ]]; then
+            set_ntp_hosts "${servers}"
+            echo "Set default ntp hosts (${servers})."
+        fi
     fi
 
     ;;

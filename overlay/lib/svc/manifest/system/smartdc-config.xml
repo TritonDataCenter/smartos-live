@@ -59,6 +59,14 @@
         <service_fmri value='svc:/network/ssh' />
     </dependent>
 
+    <!-- Make ntp wait so we can setup the config. -->
+    <dependent
+        name='ntp'
+        grouping='require_all'
+        restart_on='none'>
+        <service_fmri value='svc:/network/ntp' />
+    </dependent>
+
 	<exec_method
 		type='method'
 		name='start'

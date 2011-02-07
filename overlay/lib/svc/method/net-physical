@@ -96,6 +96,14 @@ if smf_is_globalzone; then
             if [[ -n ${CONFIG_admin_ip} ]] && [[ -n ${CONFIG_admin_netmask} ]]; then
                 ifconfig ${SYSINFO_NIC_admin} inet ${CONFIG_admin_ip} netmask ${CONFIG_admin_netmask} up
                 ADMIN_NIC_UP=true
+
+                # also setup resolv.conf if we can
+                if [[ -n ${CONFIG_dns_domain} ]] && [[ -n ${CONFIG_dns_resolvers} ]]; then
+                    echo "search ${CONFIG_dns_domain}" > /etc/resolv.conf
+                    for serv in $(echo "${CONFIG_dns_resolvers}" | sed -e "s/,/ /g"); do
+                        echo "nameserver ${serv}" >> /etc/resolv.conf
+                    done
+                fi
             else
                 echo "WARNING: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
             fi

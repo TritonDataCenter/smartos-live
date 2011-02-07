@@ -101,7 +101,7 @@ case "$1" in
                 servers="${servers}${entry}"
             else
                 # DNS, try to resolve
-                for s in $(dig pool.ntp.org +short || /bin/true | grep "^[0-9]" | xargs); do
+                for s in $((dig pool.ntp.org +short || /bin/true) | grep "^[0-9]" | xargs); do
                     [[ -n ${servers} ]] && s=",${s}"
                     servers="${servers}${s}"
                 done
@@ -114,7 +114,7 @@ case "$1" in
         fi
     else
         # No NTP hosts set, use some from pool.ntp.org
-        servers=$(dig pool.ntp.org +short || /bin/true | grep "^[0-9]" | xargs | sed -e "s/ /,/g")
+        servers=$((dig pool.ntp.org +short || /bin/true) | grep "^[0-9]" | xargs | sed -e "s/ /,/g")
 
         # Note, if we don't find some here, we just go with ones already in the file.
         if [[ -n ${servers} ]]; then

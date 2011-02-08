@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # CDDL HEADER START
 #
@@ -21,6 +21,7 @@
 #
 # Copyright (c) 2010 Joyent Inc.
 
+set +o xtrace
 
 . /lib/svc/share/smf_include.sh
 . /lib/svc/share/fs_include.sh
@@ -76,13 +77,13 @@ if [[ -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
     zpool list | grep zones
     if [[ $? == 0 ]]; then
         $(cd ${USBMOUNTPOINT}; rsync -a --exclude private * ${COPYINPOINT})
-        return $?
+        exit $?
     fi
-    return 0;
+    exit 0;
 fi
 
 # First thing to do is to mount the USB key / VMWare disk
-USBKEYS=`/usr/bin/disklist -r`
+USBKEYS=`/usr/bin/disklist -a`
 for key in ${USBKEYS}; do
     if [[ `/usr/sbin/fstyp /dev/dsk/${key}p0:1` == 'pcfs' ]]; then
         /usr/sbin/mount -F pcfs -o foldcase /dev/dsk/${key}p0:1 ${USBMOUNTPOINT};
@@ -141,8 +142,8 @@ if [[ -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
         $(cd ${USBMOUNTPOINT}; rsync -a --exclude private * ${COPYINPOINT})
     fi
 
-    return 0;
+    exit 0;
 fi
 
 mount_usb_msg="${mount_usb_msg}\n[FATAL] mount_usb(): could not find USB Key"
-return 1;
+exit 1;

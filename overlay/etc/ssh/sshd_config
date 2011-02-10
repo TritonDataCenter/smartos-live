@@ -30,6 +30,10 @@ Protocol 2
 # Listen port (the IANA registered port number for ssh is 22)
 Port 22
 
+# Don't use reverse DNS for connecting clients
+LookupClientHostnames no
+VerifyReverseMapping no
+
 # The default listen address is all interfaces, this may need to be changed
 # if you wish to restrict the interfaces sshd listens on for a multi homed host.
 # Multiple ListenAddress entries are allowed.

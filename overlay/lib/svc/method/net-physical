@@ -108,7 +108,9 @@ if smf_is_globalzone; then
                 echo "WARNING: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
             fi
         else
-            ifconfig ${SYSINFO_NIC_admin} dhcp
+            # We ignore errors here because the most common one is that DHCP is
+            # already running.
+            ifconfig ${SYSINFO_NIC_admin} dhcp || /bin/true
             ADMIN_NIC_UP=true
         fi
         # If on VMWare, create a bridge which allows traffic to flow correctly to the host-only network
@@ -128,7 +130,9 @@ if smf_is_globalzone; then
             fi
             ifconfig ${iface} plumb
             if [[ ${CONFIG_external_ip} == "dhcp" ]]; then
-                ifconfig ${iface} dhcp primary
+                # We ignore errors here because the most common one is that DHCP
+                # is already running.
+                ifconfig ${iface} dhcp primary || /bin/true
             else
                 ifconfig ${iface} inet ${CONFIG_external_ip} netmask ${CONFIG_external_netmask} up
                 if [[ -n "${CONFIG_external_gateway}" ]]; then
@@ -164,19 +168,19 @@ IPNAT
     ZONES=`zoneadm list -pi | grep -v "global" | grep installed | cut -d ":" -f 2`
     for zone in ${ZONES}; do
         for vnic in `zonecfg -z ${zone} info net | \
-	    awk '{if ($1 == "physical:") print $2}'`; do
+            awk '{if ($1 == "physical:") print $2}'`; do
 
             # Get the rest of the network options
             nic=$(zonecfg -z ${zone} info net physical=$vnic | \
-		awk '{if ($1 == "global-nic:") print $2}')
+                awk '{if ($1 == "global-nic:") print $2}')
             [[ ${nic} == 'not' ]] && nic=
 
             vlan=$(zonecfg -z ${zone} info net physical=$vnic | \
-		awk '{if ($1 == "vlan-id:") print $2}')
+                awk '{if ($1 == "vlan-id:") print $2}')
             [[ ${vlan} == 'not' ]] && vlan=
 
             vnic_mac=$(zonecfg -z ${zone} info net physical=$vnic | \
-		awk '{if ($1 == "mac-addr:") print $2}')
+                awk '{if ($1 == "mac-addr:") print $2}')
             [[ ${vnic_mac} == 'not' ]] && vnic_mac=
 
             zone_phys=
@@ -185,7 +189,7 @@ IPNAT
             fi
 
             # If on VMWare and we have external IPs, create a bridge to allow
-	    # zones to reach the external gateway
+            # zones to reach the external gateway
             if [[ "${headnode}" == "true" ]] && [[ ${nic} == "external" ]]; then
                 create_vmware_external_bridge
             fi
@@ -204,10 +208,10 @@ IPNAT
                 dladm create-vnic -l ${zone_phys} ${vnic_opts} ${vnic}
                 if [[ -z ${vnic_mac} ]]; then
                     # if we didn't already know the MAC, we just created one,
-		    # save that
+                    # save that
                     vnic_mac=$(dladm show-vnic -p -o MACADDRESS ${vnic})
                     [[ -n ${vnic_mac} ]] && zonecfg -z ${zone} \
-			"select net physical=$vnic; set mac-addr=${vnic_mac}; end; exit"
+                        "select net physical=$vnic; set mac-addr=${vnic_mac}; end; exit"
                 fi
             else
                 echo "WARNING: not bringing up vnic '${vnic}' for zone '${zone}' due to misconfiguration."

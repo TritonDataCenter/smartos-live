@@ -36,6 +36,7 @@ function ip_netmask_to_cidr {
     echo "$a.$b.$c.$d/$bits"
 }
 
+
 # Creates a bridge on the external interface (to put the external interface in
 # promiscuous mode), and sets COAL_EXTERNAL_BRIDGE_CREATED to indicate success
 # requires load_sdc_sysinfo (from config.sh) to have been run first
@@ -43,5 +44,16 @@ function create_vmware_external_bridge {
     if [[ -z "${COAL_EXTERNAL_BRIDGE_CREATED}" ]] && [[ ${SYSINFO_Product} == "VMware Virtual Platform" ]]; then
         dladm create-bridge -l ${SYSINFO_NIC_external} vmwareextbr
         COAL_EXTERNAL_BRIDGE_CREATED=true
+    fi
+}
+
+
+# Gets the static IP for a vnic + zone pair (from their config files)
+function get_static_ip_for_vnic {
+    zone=$1
+    vnic=$2
+    vnic_file="/zones/${zone}/root/etc/hostname.${vnic}"
+    if [ -e ${vnic_file} ]; then
+        cat ${vnic_file} | nawk '{ print $1 }' | /usr/xpg4/bin/egrep "[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}"
     fi
 }

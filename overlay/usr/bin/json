@@ -5,7 +5,7 @@
 // See <https://github.com/trentm/json>.
 //
 
-var VERSION = "1.1.1";
+var VERSION = "1.1.2";
 
 var sys = require('sys');
 var Script = process.binding('evals').Script;
@@ -102,7 +102,7 @@ function parseArgv(argv) {
 
 
 function log(o) {
-  console.log(o);
+  console.warn(o);
 }
 
 function isInteger(s) {
@@ -159,9 +159,9 @@ function main(argv) {
       data = JSON.parse(buffer);
     } catch(ex) {
       // Doesn't look like JSON. Just print it out and move on.
-      log("warning: doesn't look like JSON: "+ex+"\n-- buffer\n"+buffer);
+      log("warning: doesn't look like JSON: "+ex+" (buffer="+JSON.stringify(buffer)+")");
       process.stdout.write(buffer);
-      if (buffer[buffer.length-1] !== "\n") {
+      if (buffer.length && buffer[buffer.length-1] !== "\n") {
         process.stdout.write('\n');
       }
       return;

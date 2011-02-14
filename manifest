@@ -2298,6 +2298,7 @@ f usr/bin/itu 0555 root bin
 f usr/bin/jobs 0555 root bin
 f usr/bin/join 0555 root bin
 s usr/bin/jsh=ksh93
+f usr/bin/json 0555 root bin
 f usr/bin/kbd 0555 root bin
 f usr/bin/kbdcomp 0555 root bin
 f usr/bin/kdestroy 0555 root bin

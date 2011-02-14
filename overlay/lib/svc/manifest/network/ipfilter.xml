@@ -96,7 +96,7 @@
 		type='method'
 		name='refresh'
 		exec='/lib/svc/method/ipfilter reload'
-		timeout_seconds='120' >
+		timeout_seconds='1200' >
 	</exec_method>
 
 	<instance name='default' enabled='true'>

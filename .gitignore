@@ -1,4 +1,5 @@
 /configure.*
+/configure-branches
 /output
 /projects
 /proto

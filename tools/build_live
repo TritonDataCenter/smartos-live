@@ -31,6 +31,7 @@ SMF_IMPORTER=${ROOT}/tools/smf_import
 BUILDER=${ROOT}/tools/builder/builder
 SCANNER=${ROOT}/tools/scanner
 PWGEN=${ROOT}/tools/pwgen
+GET_STATUS=${ROOT}/tools/get_status
 
 BUILDSTAMP=$(cat ${ROOT}/proto/buildstamp)
 if [[ -z ${BUILDSTAMP} ]]; then
@@ -152,6 +153,9 @@ function create_ufs
     echo "Setting root password..."
     create_password "${rdmnt}"
 
+    echo "Adding git manifest..."
+    (cd ${ROOT} && ${GET_STATUS}) > ${archive}.gitstatus
+
     echo "Writing md5sum manifest..."
     (cd ${rdmnt} && find . -type f | sort | xargs md5sum) > ${rdmnt}/var/log/manifest
     #INCLUDE_MD5SUM=1 ${SCANNER} ${rdmnt} . | tee ${rdmnt}/var/log/manifest >/dev/null
@@ -195,6 +199,7 @@ function create_ufs
     if [ $? -ne 0 ] ; then
         rm -f "${archive}-new"
         rm -f "${archive}.manifest"
+        rm -f "${archive}.gitstatus"
     fi
 }
 

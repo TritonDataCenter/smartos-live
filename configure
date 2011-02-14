@@ -204,6 +204,45 @@ gsed -i -e "s|^PARENT_ROOT=.*$|PARENT_ROOT="${ROOT}/proto"; export PARENT_ROOT|"
 # For some reason this disappeared before
 touch ${ROOT}/projects/illumos/usr/src/tools/findunref/exception_list.unknown
 
+function update_branch
+{
+    target_dir=$1
+    target=$2
+
+    oldwd=$(pwd)
+    cd ${target_dir}
+    current=$(git branch | grep "^*" | cut -d' ' -f2)
+    if [[ "${current}" != "${target}" ]]; then
+        if [[ -n $(git branch | grep " ${target}$") ]]; then
+            # have branch already, checkout
+            git checkout ${target}
+        else
+            # don't have, add to tracking and checkout
+            git checkout --track -b ${target} origin/${target}
+        fi
+    fi
+    cd ${oldwd}
+
+    return 0
+}
+
+# Setup branches
+if [[ -f ${ROOT}/configure-branches ]]; then
+    branch=$(grep "^illumos-live: " ${ROOT}/configure-branches | cut -d' ' -f2)
+    [[ -z ${branch} ]] && update_branch "${ROOT}" ${branch}
+    branch=$(grep "^illumos-extra: " ${ROOT}/configure-branches | cut -d' ' -f2)
+    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/illumos-extra" ${branch}
+    branch=$(grep "^illumos-joyent: " ${ROOT}/configure-branches | cut -d' ' -f2)
+    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/illumos" ${branch}
+    branch=$(grep "^ur-agent: " ${ROOT}/configure-branches | cut -d' ' -f2)
+    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/ur-agent" ${branch}
+else
+    echo ""
+    echo "WARNING! No configure-branches file!!! Using master branch for everything!"
+    echo ""
+    sleep 3
+fi
+
 echo ""
 echo "Configuration complete.  You should now be able to build a live image using 'make world && make live'"
 echo ""

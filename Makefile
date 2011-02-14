@@ -3,6 +3,7 @@
 ROOT=$(PWD)
 PROTO=$(ROOT)/proto
 PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin
+LOCAL_SUBDIRS="ur-agent"
 
 world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp 0-tools-stamp
 
@@ -14,9 +15,10 @@ update:
 	@(git pull --rebase)
 	@(cd projects/illumos; git pull --rebase)
 	@(cd projects/illumos-extra; git pull --rebase)
+	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do (cd projects/local/$${dir} && git pull --rebase); done
 
 0-local-stamp:
-	[ ! -d projects/local ] || (cd projects/local && gmake && gmake DESTDIR=$(PROTO) install)
+	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do (cd projects/local/$${dir} && gmake && gmake DESTDIR=$(PROTO) install); done
 
 0-illumos-stamp:
 	(cd $(ROOT) && ./tools/build_illumos)
@@ -43,7 +45,7 @@ tools/cryptpass: tools/cryptpass.c
 clean:
 	(cd $(ROOT)/src && gmake clean)
 	(cd $(ROOT)/projects/illumos-extra && gmake clean)
-	[ ! -d projects/local ] || (cd projects/local && gmake clean)
+	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do (cd projects/local/$${dir} && gmake clean); done
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO))
 	rm -f 0-*-stamp

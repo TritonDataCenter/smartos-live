@@ -44,10 +44,15 @@ ISA=i386
 ARCH64=amd64
 RSIZE=264000
 USIZE=400000
-BOOT_ARCHIVE_64=platform-${BUILDSTAMP}/$PLATFORM/$ARCH64/boot_archive
-OUT_KERNEL_64=platform-${BUILDSTAMP}/$PLATFORM/kernel/$ARCH64/unix
 KERNEL_64=platform/$PLATFORM/kernel/$ARCH64/unix
-PREFIX=platform-${BUILDSTAMP}
+BUILDVER=$(head -n1 ${ROOT}/configure-buildver)
+if [[ -n "${BUILDVER}" ]]; then
+    PREFIX=platform-${BUILDVER}-${BUILDSTAMP}
+else
+    PREFIX=platform-${BUILDSTAMP}
+fi
+BOOT_ARCHIVE_64=${PREFIX}/$PLATFORM/$ARCH64/boot_archive
+OUT_KERNEL_64=${PREFIX}/$PLATFORM/kernel/$ARCH64/unix
 
 if [ "$(id -u)" != "0" ]; then
   echo "You must have euid 0 to run this tool."

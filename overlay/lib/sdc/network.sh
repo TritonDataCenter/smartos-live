@@ -57,3 +57,23 @@ function get_static_ip_for_vnic {
         cat ${vnic_file} | nawk '{ print $1 }' | /usr/xpg4/bin/egrep "[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}"
     fi
 }
+
+# Enable antispoof options for the given vnic and zone pair:
+# - IP
+# - MAC
+# - DHCP
+# - Restrict IPs to the zone's static IPs (if it has a static IP)
+# (Only the MAC option is enabled for the dhcpd zone)
+function enable_antispoof_for_vnic {
+    zone=$1
+    vnic=$2
+    antispoof_opts="ip-nospoof,mac-nospoof,restricted,dhcp-nospoof"
+    if [[ "${zone}" == "dhcpd" ]]; then
+        antispoof_opts="mac-nospoof"
+    fi
+    dladm set-linkprop -p "protection=${antispoof_opts}" ${vnic}
+    zone_ip=$(get_static_ip_for_vnic ${zone} ${vnic})
+    if [[ -n "${zone_ip}" ]]; then
+        dladm set-linkprop -p "allowed-ips=${zone_ip}" ${vnic}
+    fi
+}

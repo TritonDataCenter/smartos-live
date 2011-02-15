@@ -206,17 +206,8 @@ IPNAT
                     vnic_opts="-m ${vnic_mac} ${vnic_opts}"
                 fi
                 dladm create-vnic -l ${zone_phys} ${vnic_opts} ${vnic}
-                # Enable antispoof (but not dhcp antispoof for the dhcpd zone)
-                dhcp_nospoof=",dhcp-nospoof"
-                if [[ "${zone}" == "dhcpd" ]]; then
-                    dhcp_nospoof=""
-                fi
-                dladm set-linkprop -p "protection=ip-nospoof,mac-nospoof,restricted${dhcp_nospoof}" ${vnic}
-
-                zone_ip=$(get_static_ip_for_vnic ${zone} ${vnic})
-                if [[ -n "${zone_ip}" ]]; then
-                    dladm set-linkprop -p "allowed-ips=${zone_ip}" ${vnic}
-                fi
+                # Enable antispoof for this vnic
+                enable_antispoof_for_vnic ${zone} ${vnic}
 
                 if [[ -z ${vnic_mac} ]]; then
                     # if we didn't already know the MAC, we just created one,

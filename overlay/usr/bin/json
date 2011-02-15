@@ -5,7 +5,7 @@
 // See <https://github.com/trentm/json>.
 //
 
-var VERSION = "1.1.2";
+var VERSION = "1.1.3";
 
 var sys = require('sys');
 var Script = process.binding('evals').Script;
@@ -25,11 +25,12 @@ function printHelp() {
   sys.puts("value, which is printed without quotes. Use '-j' or '-i' to override.");
   sys.puts("");
   sys.puts("Options:");  
-  sys.puts("  -h, --help  print this help info and exit");
-  sys.puts("  --version   print version of this command and exit");
-  sys.puts("  -H          drop any HTTP header block");
-  sys.puts("  -i          output using node's `sys.inspect`");
-  sys.puts("  -j          output using `JSON.stringfy`, i.e. strict JSON");
+  sys.puts("  -h, --help    print this help info and exit");
+  sys.puts("  --version     print version of this command and exit");
+  sys.puts("  -q, --quiet   don't warn if input isn't valid JSON");
+  sys.puts("  -H            drop any HTTP header block");
+  sys.puts("  -i            output using node's `sys.inspect`");
+  sys.puts("  -j            output using `JSON.stringfy`, i.e. strict JSON");
   sys.puts("");
   sys.puts("Examples:");
   sys.puts("  curl -s http://search.twitter.com/search.json?q=node.js | json");
@@ -52,6 +53,7 @@ function parseArgv(argv) {
     lookup: null,
     extra: [],
     help: false,
+    quiet: false,
     dropHeaders: false,
     outputSysInspect: false,
     outputJSON: false
@@ -78,6 +80,10 @@ function parseArgv(argv) {
       case "--version":
         parsed.version = true;
         break;
+      case "-q":
+      case "--quiet":
+        parsed.quiet = true;
+        break;
       case "-H": // drop any headers
         parsed.dropHeaders = true;
         break;
@@ -101,7 +107,7 @@ function parseArgv(argv) {
 }
 
 
-function log(o) {
+function warn(o) {
   console.warn(o);
 }
 
@@ -114,7 +120,7 @@ function isInteger(s) {
 
 function main(argv) {
   var args = parseArgv(argv);
-  //log(args);
+  //warn(args);
   if (args.help) {
     printHelp();
     return;
@@ -152,14 +158,19 @@ function main(argv) {
         buffer = buffer.slice(index+sepLen);
       }
     }
-    
+
     // Expect the remainder to be JSON.
+    if (! buffer.length) {
+      return;
+    }
     var data;
     try {
       data = JSON.parse(buffer);
     } catch(ex) {
       // Doesn't look like JSON. Just print it out and move on.
-      log("warning: doesn't look like JSON: "+ex+" (buffer="+JSON.stringify(buffer)+")");
+      if (! args.quiet) {
+        warn("warning: doesn't look like JSON: "+ex+" (buffer="+JSON.stringify(buffer)+")");
+      }
       process.stdout.write(buffer);
       if (buffer.length && buffer[buffer.length-1] !== "\n") {
         process.stdout.write('\n');
@@ -168,10 +179,45 @@ function main(argv) {
     }
     
     if (args.lookup) {
-      var lookup = args.lookup;
-      if (lookup[0] !== '[') {
-        lookup = '.' + lookup;
+      // Parse command line lookup string into separate parts of the lookup.
+      var split = args.lookup.split(/(\.|\[)/);
+      var bits = [];
+      var save = null;
+      for (var i=0; i < split.length; i++) {
+        var bit = split[i];
+        switch (bit) {
+        case '.':
+          save = null;
+          break;
+        case '[':
+          save = bit;
+          break;
+        default:
+          if (save) {
+            bits.push(save + bit);
+          } else {
+            bits.push(bit);
+          }
+          save = null;
+          break;
+        }
       }
+
+      // Put it back together with some convenience transformations.
+      lookup = "";
+      var isJSIdentifier = /^[$A-Za-z_][0-9A-Za-z_]*$/;
+      for (var i=0; i < bits.length; i++) {
+        var bit = bits[i];
+        if (bit[0] === '[') {
+          lookup += bit;
+        } else if (! isJSIdentifier(bits[i])) {
+          // Allow a non-JS-indentifier token, e.g. `json foo-bar`.
+          lookup += '["' + bits[i].replace('"', '\\"') + '"]';
+        } else {
+          lookup += '.' + bits[i];
+        }
+      }
+
       data = Script.runInNewContext("(" + JSON.stringify(data) + ")" + lookup);
     }
     

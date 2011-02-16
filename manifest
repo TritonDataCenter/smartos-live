@@ -222,7 +222,9 @@ f etc/auto_home 0644 root bin
 f etc/auto_master 0644 root bin
 s etc/autopush=../sbin/autopush
 d etc/bash 0755 root sys
+f etc/bash/bash_completion 0644 root sys
 d etc/bash/bash_completion.d 0755 root sys
+f etc/bash/bash_completion.d/zones 0644 root sys
 f etc/bootrc 0755 root sys
 d etc/brand 0755 root sys
 d etc/certs 0755 root sys
@@ -2338,9 +2340,9 @@ f usr/bin/logger 0555 root bin
 f usr/bin/login 4555 root bin
 f usr/bin/logins 0750 root bin
 f usr/bin/logname 0555 root bin
-f usr/bin/lorder 0555 root bin
 f usr/bin/look 0755 root bin
 f usr/bin/lookbib 0555 root bin
+f usr/bin/lorder 0555 root bin
 f usr/bin/ls 0555 root bin
 f usr/bin/m4 0555 root bin
 f usr/bin/m68k 0555 root bin

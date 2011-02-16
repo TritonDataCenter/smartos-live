@@ -163,65 +163,6 @@ IPNAT
             fi
         fi
     fi
-
-    # Now the zone vnics. They only need to be defined
-    ZONES=`zoneadm list -pi | grep -v "global" | grep installed | cut -d ":" -f 2`
-    for zone in ${ZONES}; do
-        for vnic in `zonecfg -z ${zone} info net | \
-            awk '{if ($1 == "physical:") print $2}'`; do
-
-            # Get the rest of the network options
-            nic=$(zonecfg -z ${zone} info net physical=$vnic | \
-                awk '{if ($1 == "global-nic:") print $2}')
-            [[ ${nic} == 'not' ]] && nic=
-
-            vlan=$(zonecfg -z ${zone} info net physical=$vnic | \
-                awk '{if ($1 == "vlan-id:") print $2}')
-            [[ ${vlan} == 'not' ]] && vlan=
-
-            vnic_mac=$(zonecfg -z ${zone} info net physical=$vnic | \
-                awk '{if ($1 == "mac-addr:") print $2}')
-            [[ ${vnic_mac} == 'not' ]] && vnic_mac=
-
-            zone_phys=
-            if [[ -n ${nic} ]]; then
-                zone_phys=$(eval "echo \${SYSINFO_NIC_${nic}}")
-            fi
-
-            # If on VMWare and we have external IPs, create a bridge to allow
-            # zones to reach the external gateway
-            if [[ "${headnode}" == "true" ]] && [[ ${nic} == "external" ]]; then
-                create_vmware_external_bridge
-            fi
-
-            # We used to assume vnics that end with 0 should be attached to
-            # admin_nic and all other vnics should be attached to external_nic
-            # Now we can tell from the data on the zonecfg.
-            if [[ -n ${zone_phys} ]]; then
-                vnic_opts=
-                if [[ -n ${vlan} ]] && [[ "${vlan}" != "0" ]]; then
-                    vnic_opts="-v ${vlan}"
-                fi
-                if [[ -n ${vnic_mac} ]]; then
-                    vnic_opts="-m ${vnic_mac} ${vnic_opts}"
-                fi
-                dladm create-vnic -l ${zone_phys} ${vnic_opts} ${vnic}
-                # Enable antispoof for this vnic
-                enable_antispoof_for_vnic ${zone} ${vnic}
-
-                if [[ -z ${vnic_mac} ]]; then
-                    # if we didn't already know the MAC, we just created one,
-                    # save that
-                    vnic_mac=$(dladm show-vnic -p -o MACADDRESS ${vnic})
-                    [[ -n ${vnic_mac} ]] && zonecfg -z ${zone} \
-                        "select net physical=$vnic; set mac-addr=${vnic_mac}; end; exit"
-                fi
-            else
-                echo "WARNING: not bringing up vnic '${vnic}' for zone '${zone}' due to misconfiguration."
-            fi
-        done
-    done
-
 else
     # Non-global zones
     for iface in `dladm show-vnic -p -o link`; do

@@ -6312,8 +6312,11 @@ f usr/include/node/node_events.h 0644 root bin
 f usr/include/node/node_object_wrap.h 0644 root bin
 f usr/include/node/node_version.h 0644 root bin
 f usr/include/node/v8-debug.h 0644 root bin
+f usr/include/node/v8-preparser.h 0644 root bin
 f usr/include/node/v8-profiler.h 0644 root bin
+f usr/include/node/v8-testing.h 0644 root bin
 f usr/include/node/v8.h 0644 root bin
+f usr/include/node/v8stdint.h 0644 root bin
 f usr/include/note.h 0644 root bin
 f usr/include/nsctl.h 0644 root bin
 f usr/include/nss.h 0644 root bin
@@ -8676,6 +8679,7 @@ f usr/lib/dtrace/ip.d 0644 root bin
 f usr/lib/dtrace/iscsit.d 0644 root bin
 f usr/lib/dtrace/net.d 0644 root bin
 f usr/lib/dtrace/nfs.d 0644 root bin
+f usr/lib/dtrace/node.d 0644 root bin
 f usr/lib/dtrace/procfs.d 0644 root bin
 f usr/lib/dtrace/regs.d 0644 root bin
 f usr/lib/dtrace/sched.d 0644 root bin

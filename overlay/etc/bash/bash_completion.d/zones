@@ -32,3 +32,5 @@ complete -F _zlogin zlogin
 complete -F _dash_z_zone zoneadm
 complete -F _dash_z_zone zonecfg
 complete -F _dash_z_zone svcs
+complete -F _dash_z_zone svcadm
+complete -F _dash_z_zone svcprop

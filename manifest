@@ -17010,6 +17010,7 @@ f usr/share/man/man1/login.1 0444 root bin
 f usr/share/man/man1/logname.1 0444 root bin
 f usr/share/man/man1/look.1 0444 root bin
 f usr/share/man/man1/lookbib.1 0444 root bin
+f usr/share/man/man1/lorder.1 0444 root bin
 f usr/share/man/man1/ls.1 0444 root bin
 f usr/share/man/man1/m4.1 0444 root bin
 f usr/share/man/man1/mac.1 0444 root bin
@@ -17164,6 +17165,7 @@ f usr/share/man/man1/tr.1 0444 root bin
 f usr/share/man/man1/troff.1 0444 root bin
 f usr/share/man/man1/true.1 0444 root bin
 f usr/share/man/man1/truss.1 0444 root bin
+f usr/share/man/man1/tsort.1 0444 root bin
 f usr/share/man/man1/tty.1 0444 root bin
 f usr/share/man/man1/type.1 0444 root bin
 f usr/share/man/man1/u370.1 0444 root bin

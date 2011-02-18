@@ -2000,6 +2000,7 @@ d usr/apr/1.3 1755 root bin
 d usr/bin 0755 root bin
 f usr/bin/CA.pl 0555 root bin
 f usr/bin/[ 0555 root bin
+f usr/bin/ack 0555 root bin
 f usr/bin/addbadsec 0555 root bin
 f usr/bin/addbib 0555 root bin
 f usr/bin/alias 0555 root bin
@@ -16808,6 +16809,7 @@ d usr/share/man/cat1 0755 root bin
 d usr/share/man/cat1m 0755 root bin
 d usr/share/man/cat5 0755 root bin
 d usr/share/man/man1 0755 root bin
+f usr/share/man/man1/ack.1 0444 root bin
 f usr/share/man/man1/addbib.1 0444 root bin
 f usr/share/man/man1/alias.1 0444 root bin
 f usr/share/man/man1/allocate.1 0444 root bin

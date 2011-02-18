@@ -244,7 +244,7 @@ else
 fi
 
 echo ""
-echo "Configuration complete.  You should now be able to build a live image using 'make world && make live'"
+echo "Configuration complete.  You should now be able to build a live image using 'gmake world && gmake live'"
 echo ""
 
 exit 0

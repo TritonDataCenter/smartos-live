@@ -1,0 +1,401 @@
+#!/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at COPYING
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at COPYING.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2010,2011 Joyent Inc.
+#
+# Output some info representing the system.  Default: JSON
+#
+# Important: Don't use anything here that you don't include in the live image!
+#
+
+PARSABLE=
+if [[ $1 == "-p" ]]; then
+    PARSABLE="true"
+fi
+
+if [[ $(zonename) != "global" ]]; then
+    echo "This program is for use in the global zone only."
+    exit 1
+fi
+
+configfile="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/smartdc:default 2>/dev/null)/config"
+if [[ ! -f ${configfile} ]]; then
+    configfile="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/smartdc:default 2>/dev/null)/config"
+fi
+
+# helper to set global "normalized" to the expanded version of MAC ($1)
+function normalize_mac()
+{
+    mac=$1
+    if [ -z "${mac}" ]; then
+        echo "FATAL: unable to normalize empty mac!"
+        exit 1
+    fi
+
+    normalized=`echo ${mac} | awk -F':' '{ print $1, $2, $3, $4, $5, $6 }' | { read o1 o2 o3 o4 o5 o6 junk
+        printf "%02x:%02x:%02x:%02x:%02x:%02x" 0x${o1} 0x${o2} 0x${o3} 0x${o4} 0x${o5} 0x${o6}
+    }`
+
+    # ensure results are 'normal'
+    echo "${normalized}" | grep "[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}" >/dev/null 2>&1
+    if [ "$?" != "0" ]; then
+        echo "FATAL: failed to normalize MAC '${mac}'"
+        exit 1
+    fi
+}
+
+function get_smbios_system_info()
+{
+    # This puts the variables we're pulling out into the local environment
+    eval $(smbios -t SMB_TYPE_SYSTEM \
+        | egrep "Manufacturer: |Product: |Serial Number: |UUID: " \
+        | sed -e 's/^ *//' \
+        | sed -e 's/: /="/' \
+        | sed -e 's/ *$/"/' \
+        | sed -e 's/Serial Number/Serial_Number/')
+
+    #echo "${UUID}"
+    #echo "${Product}"
+    #echo "${Serial_Number}"
+    #echo "${Manufacturer}"
+}
+
+function get_memory_mib()
+{
+    # Get (misnamed in prtconf) memory size in Mebibytes
+    Memory_in_MiB=`prtconf \
+        | grep "Memory size: [0-9]* Megabytes" \
+        | cut -d' ' -f3`
+
+    #echo "${Memory_in_MiB}"
+}
+
+function get_cpu_info()
+{
+    CPU_Version=`smbios -t SMB_TYPE_PROCESSOR | grep -v "Version: 0000000000" \
+        | grep "Version: " \
+        | head -n1 \
+        | tr -s ' ' \
+        | sed -e 's/^ *Version: //' \
+        | sed -e 's/ *$//'`
+
+    CPU_Count=`smbios -t SMB_TYPE_PROCESSOR | grep -v "Version: 0000000000" \
+        | grep "Version: " \
+        | wc -l \
+        | tr -d ' '`
+
+    CPU_Cores=`psrinfo \
+        | grep "^[0-9]" \
+        | wc -l \
+        | tr -d ' '`
+
+    #echo "${CPU_Version}"
+    #echo "${CPU_Count}"
+    #echo "${CPU_Cores}"
+}
+
+function get_live_image_buildstamp()
+{
+    # Add joyent_buildstamp to SYSTEM_INFO
+    Live_Image=$(cat /etc/joyent_buildstamp 2>/dev/null)
+
+    #echo "${Live_Image}"
+}
+
+function get_hostname()
+{
+    Hostname=$(hostname)
+}
+
+function get_disks()
+{
+    ORIGIFS=$IFS
+
+    # set $IFS to end-of-line
+    IFS=`echo -en "\n\b"`
+
+    count=1
+    for line in $(/usr/bin/disklist -s 2>/dev/null); do
+        Disks[${count}]=${line}
+        ((count++))
+    done
+
+    # set $IFS back
+    IFS=$ORIGIFS
+
+    #for entry in "${Disks[@]}"
+    #do
+    #    fields=(${entry//=/ })
+    #    disk=${fields[0]}
+    #    size=${fields[1]}
+    #    echo "disk: ${disk} size: ${size}"
+    #done
+}
+
+function get_nic_mappings()
+{
+    admin_nic=`/usr/bin/bootparams 2>/dev/null | grep "admin_nic" | cut -d '=' -f2-`
+    if [[ -z ${admin_nic} ]] && [[ -f ${configfile} ]]; then
+        admin_nic=`grep "^admin_nic=" ${configfile} | cut -f2 -d'='`
+    fi
+    if [[ -n ${admin_nic} ]]; then
+        normalize_mac ${admin_nic}
+        ADMIN_NIC=${normalized}
+    fi
+    external_nic=`/usr/bin/bootparams 2>/dev/null | grep "external_nic" | cut -d '=' -f2-`
+    if [[ -z ${external_nic} ]] && [[ -f ${configfile} ]]; then
+        external_nic=`grep "^external_nic=" ${configfile} | cut -f2 -d'='`
+    fi
+    if [[ -n ${external_nic} ]]; then
+        normalize_mac ${external_nic}
+        EXTERNAL_NIC=${normalized}
+    fi
+    internal_nic=`/usr/bin/bootparams 2>/dev/null | grep "internal_nic" | cut -d '=' -f2-`
+    if [[ -z ${internal_nic} ]] && [[ -f ${configfile} ]]; then
+        internal_nic=`grep "^internal_nic=" ${configfile} | cut -f2 -d'='`
+    fi
+    if [[ -n ${internal_nic} ]]; then
+        normalize_mac ${internal_nic}
+        INTERNAL_NIC=${normalized}
+    fi
+
+    #echo "${ADMIN_NIC}"
+    #echo "${EXTERNAL_NIC}"
+    #echo "${INTERNAL_NIC}"
+}
+
+
+function get_network_interfaces()
+{
+    count=1
+    # ignore 'LINK SLOT ADDRESS INUSE CLIENT' line
+    for line in $(pfexec /sbin/dladm show-phys -m | grep -v "^LINK " | awk '{ print $1,$3 }' | tr ' ' '='); do
+        nicnames=
+        fields=(${line//=/ })
+        iface=${fields[0]}
+        normalize_mac ${fields[1]}
+        mac=${normalized}
+        ip4addr=$(ifconfig ${iface} 2>/dev/null | grep "inet " | awk '{ print $2 }')
+
+        if [[ -n "${ADMIN_NIC}" ]] && [[ "${ADMIN_NIC}" == "${mac}" ]]; then
+            nicnames="admin"
+            NIC_admin=${iface}
+        fi
+        if [[ -n "${EXTERNAL_NIC}" ]] && [[ "${EXTERNAL_NIC}" == "${mac}" ]]; then
+            [[ -n ${nicnames} ]] && nicnames="${nicnames},"
+            nicnames="${nicnames}external"
+            NIC_external=${iface}
+        fi
+        if [[ -n "${INTERNAL_NIC}" ]] && [[ "${INTERNAL_NIC}" == "${mac}" ]]; then
+            [[ -n ${nicnames} ]] && nicnames="${nicnames},"
+            nicnames="${nicnames}internal"
+            NIC_internal=${iface}
+        fi
+
+        NetworkInterfaces[${count}]=${iface}
+        eval "Network_Interface_${iface}_MAC_Address=${mac}"
+        eval "Network_Interface_${iface}_IPv4_Address=${ip4addr}"
+        if [[ -n ${nicnames} ]]; then
+            eval "Network_Interface_${iface}_NIC_Names=${nicnames}"
+        fi
+        ((count++))
+    done
+
+    #echo "${NIC_admin}"
+    #echo "${NIC_external}"
+    #echo "${NIC_internal}"
+    #for iface in "${NetworkInterfaces[@]}"
+    #do
+    #  eval "mac=\${Network_Interface_${iface}_MAC_Address}"
+    #  eval "ipv4=\${Network_Interface_${iface}_IPv4_Address}"
+    #  eval "nicnames=\${Network_Interface_${iface}_NIC_Names}"
+    #  echo "mac: ${mac} ---- ${ipv4} ---- ${nicnames}"
+    #done
+}
+
+function get_bootparams()
+{
+    count=1
+    for line in $(/usr/bin/bootparams); do
+        fields=(${line//=/ })
+        key=$(echo ${fields[0]} | sed -e "s/\-/\_/g")
+        if ! (echo "${key}" | /usr/xpg4/bin/grep \
+          -e "^tty" \
+          -e "^atapi" \
+          -e "^ata_dma" \
+          -e "^keyboard_" \
+          -e "^bios_boot_device" \
+          -e "^lba_access_" \
+          -e "^boot_ncpus" \
+          -e "^boot_file" \
+          -e "^whoami" \
+          -e "^mfg_name" \
+          -e "^impl_arch_name" \
+          -e "_max_ncpus$" \
+          >/dev/null); then
+            Bootparams[${count}]=${line}
+            ((count++))
+    fi
+    done
+}
+
+function output_parsable()
+{
+    cat <<END
+Live_Image='${Live_Image}'
+Manufacturer='${Manufacturer}'
+Product='${Product}'
+Serial_Number='${Serial_Number}'
+UUID='${UUID}'
+Hostname='${Hostname}'
+CPU_Type='${CPU_Version}'
+CPU_Physical_Cores=${CPU_Count}
+CPU_Total_Cores=${CPU_Cores}
+MiB_of_Memory=${Memory_in_MiB}
+END
+
+    for entry in "${Disks[@]}"; do
+        fields=(${entry//=/ })
+        disk=${fields[0]}
+        size=${fields[1]}
+        gb_size=$((${size} / 1000000000))
+        echo "Disk_${disk}_size_in_GB=${gb_size}"
+    done
+
+    [[ -n ${NIC_admin} ]] && echo "NIC_admin='${NIC_admin}'"
+    [[ -n ${NIC_external} ]] && echo "NIC_external='${NIC_external}'"
+    [[ -n ${NIC_internal} ]] && echo "NIC_internal='${NIC_internal}'"
+
+    for iface in "${NetworkInterfaces[@]}"; do
+        mac_var="Network_Interface_${iface}_MAC_Address"
+        ipv4_var="Network_Interface_${iface}_IPv4_Address"
+        nicnames_var="Network_Interface_${iface}_NIC_Names"
+
+        eval "mac=\${${mac_var}}"
+        eval "ipv4=\${${ipv4_var}}"
+        eval "nicnames=\${${nicnames_var}}"
+
+        echo "${mac_var}='${mac}'"
+        echo "${ipv4_var}='${ipv4}'"
+        echo "${nicnames_var}='${nicnames}'"
+    done
+
+    for entry in "${Bootparams[@]}"; do
+        fields=(${entry//=/ })
+        key=$(echo ${fields[0]} | sed -e "s/\-/\_/g")
+        val=${fields[1]}
+        echo "Bootparam_${key}='${val}'"
+    done
+}
+
+function output_json()
+{
+    cat <<END
+{
+  "Live Image": "${Live_Image}",
+  "Manufacturer": "${Manufacturer}",
+  "Product": "${Product}",
+  "Serial Number": "${Serial_Number}",
+  "UUID": "${UUID}",
+  "Hostname": "${Hostname}",
+  "CPU Type": "${CPU_Version}",
+  "CPU Physical Cores": ${CPU_Count},
+  "CPU Total Cores": ${CPU_Cores},
+  "MiB of Memory": "${Memory_in_MiB}",
+  "Disks": {
+END
+
+    printed=0
+    for entry in "${Disks[@]}"; do
+        fields=(${entry//=/ })
+        disk=${fields[0]}
+        size=${fields[1]}
+        gb_size=$((${size} / 1000000000))
+        ((printed++))
+        trailing_comma=","
+        [[ ${printed} -eq ${#Disks[*]} ]] && trailing_comma=''
+        echo "    \"${disk}\": {\"Size in GB\": ${gb_size}}${trailing_comma}"
+    done
+
+    cat <<END
+  },
+  "Boot Parameters": {
+END
+    printed=0
+    for entry in "${Bootparams[@]}"; do
+        fields=(${entry//=/ })
+        key=$(echo ${fields[0]} | sed -e "s/\-/\_/g")
+        val=${fields[1]}
+        ((printed++))
+        trailing_comma=","
+        [[ ${printed} -eq ${#Bootparams[*]} ]] && trailing_comma=''
+        echo "    \"${key}\": \"$val\"${trailing_comma}"
+    done
+    cat <<END
+  },
+  "Network Interfaces": {
+END
+
+    printed=0
+    for iface in "${NetworkInterfaces[@]}"; do
+        mac_var="Network_Interface_${iface}_MAC_Address"
+        ipv4_var="Network_Interface_${iface}_IPv4_Address"
+        nicnames_var="Network_Interface_${iface}_NIC_Names"
+        nic_names_fmt=
+
+        eval "mac=\${${mac_var}}"
+        eval "ipv4=\${${ipv4_var}}"
+        eval "nicnames=\${${nicnames_var}}"
+
+        nic_names_array=$(echo "${nicnames}" | sed -e "s/,/\", \"/g")
+        if [[ -n ${nic_names_array} ]]; then
+            nic_names_fmt="\"${nic_names_array}\""
+        fi
+
+        ((printed++))
+        trailing_comma=","
+        [[ ${printed} -eq ${#NetworkInterfaces[*]} ]] && trailing_comma=''
+        echo "    \"${iface}\": {\"MAC Address\": \"${mac}\", \"ip4addr\": \"${ipv4}\", \"NIC Names\": [${nic_names_fmt}]}${trailing_comma}"
+    done
+
+    cat <<END
+  }
+}
+END
+}
+
+get_smbios_system_info
+get_memory_mib
+get_cpu_info
+get_live_image_buildstamp
+get_disks
+get_hostname
+get_nic_mappings
+get_network_interfaces
+get_bootparams
+
+if [[ ${PARSABLE} == "true" ]]; then
+    output_parsable
+else
+    output_json
+fi
+
+exit 0

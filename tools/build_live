@@ -1,0 +1,297 @@
+#!/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Joyent, Inc.  All rights reserved.
+# Use is subject to license terms.
+
+ROOT=`pwd`
+MAN_DIR=${ROOT}/projects/opensolaris-man
+CUSTOMIZE_SCRIPT=${ROOT}/tools/customize
+SMF_IMPORTER=${ROOT}/tools/smf_import
+BUILDER=${ROOT}/tools/builder/builder
+SCANNER=${ROOT}/tools/scanner
+PWGEN=${ROOT}/tools/pwgen
+GET_STATUS=${ROOT}/tools/get_status
+
+BUILDSTAMP=$(cat ${ROOT}/proto/buildstamp)
+if [[ -z ${BUILDSTAMP} ]]; then
+    echo "Failed to get buildstamp from proto directory."
+    exit 1
+fi
+LOGFILE="${ROOT}/log/build_live.${BUILDSTAMP}.log"
+ERROR=0
+PLATFORM=i86pc
+ISA=i386
+ARCH64=amd64
+RSIZE=264000
+USIZE=400000
+KERNEL_64=platform/$PLATFORM/kernel/$ARCH64/unix
+BUILDVER=$(head -n1 ${ROOT}/configure-buildver)
+if [[ -n "${BUILDVER}" ]]; then
+    PREFIX=platform-${BUILDVER}-${BUILDSTAMP}
+else
+    PREFIX=platform-${BUILDSTAMP}
+fi
+BOOT_ARCHIVE_64=${PREFIX}/$PLATFORM/$ARCH64/boot_archive
+OUT_KERNEL_64=${PREFIX}/$PLATFORM/kernel/$ARCH64/unix
+
+if [ "$(id -u)" != "0" ]; then
+  echo "You must have euid 0 to run this tool."
+  exit 1
+fi
+
+# Send a copy of stdout and stderr to LOGFILE
+exec > >(tee ${LOGFILE}) 2>&1
+
+export PATH=/usr/sbin:/usr/bin:/sbin:/opt/local/bin
+
+usage() {
+    echo "This tool is for building a live boot_archive amd64."
+    echo ""
+    echo "Usage: ${0##*/}: <manifest> <outdir> <dir> [<dir> <dir> ...]"
+    exit 1
+}
+
+MANIFEST=$1
+shift
+OUT_DIR=$1
+shift
+IN_DIRS=$*
+
+# We need the manifest file
+if [ -z "${MANIFEST}" ] || [ ! -f "${MANIFEST}" ]; then
+    echo "FATAL: <manifest> file required"
+    usage
+else
+    # translate to abs path
+    NEW_MANIFEST=$(cd $(dirname ${MANIFEST}) && pwd)/$(basename ${MANIFEST})
+    MANIFEST=${NEW_MANIFEST}
+fi
+
+if [ -z "${OUT_DIR}" ]; then
+    echo "FATAL: <outdir> required."
+    usage
+fi
+
+if [ -z "${IN_DIRS}" ]; then
+    echo "FATAL: at least one <dir> required."
+    usage
+fi
+
+if [ ! -d "${OUT_DIR}" ]; then
+    mkdir -p ${OUT_DIR}
+    if [ ! -d "${OUT_DIR}" ]; then
+        echo "FATAL: Tried to create OUT_DIR: ${OUT_DIR} but failed."
+        exit 1
+    fi
+fi
+
+num=0
+echo "=== Options/ ==="
+echo "BUILDSTAMP. ${BUILDSTAMP}"
+echo "MANIFEST .. ${MANIFEST}"
+echo "OUTPUT .... ${OUT_DIR}"
+for dir in ${IN_DIRS}; do
+  num=$((${num} + 1))
+  echo "DIR[$(printf '%02d' ${num})] ... ${dir}"
+done
+echo "=== /Options ==="
+
+
+function cleanup
+{
+    umount -f "${rdmnt}" 2>/dev/null
+    lofiadm -d "${rdfile}" 2>/dev/null
+    [ -n "${rddir}" ] && rm -fr "${rddir}" 2> /dev/null
+}
+
+function create_ufs
+{
+    archive=$1
+    lofidev=$2
+    lofiusrdev=$3
+    usrfile=$4
+
+    newfs -o space -m 0 -i 50000 -b 4096 ${lofidev} < /dev/null 2> /dev/null
+    mkdir "${rdmnt}"
+    mount -F ufs -o nologging ${lofidev} "${rdmnt}"
+
+    newfs -o space -m 0 -i 14000 -b 4096 ${lofiusrdev} < /dev/null 2> /dev/null
+    mkdir "${rdmnt}/usr"
+    mount -F ufs -o nologging ${lofiusrdev} "${rdmnt}/usr"
+
+    # do the actual copy
+    ${BUILDER} ${MANIFEST} ${rdmnt} ${IN_DIRS}
+    if [ $? -ne 0 ]; then
+        echo "ERROR: copy onto the image failed, may need to increase the size"
+        ERROR=1
+	return
+    fi
+    ${CUSTOMIZE_SCRIPT} ${rdmnt} ${BUILDSTAMP}
+    ${SMF_IMPORTER} ${rdmnt}
+
+    echo "Setting root password..."
+    create_password "${rdmnt}"
+
+    echo "Adding git manifest..."
+    (cd ${ROOT} && ${GET_STATUS}) > ${archive}.gitstatus
+
+    echo "Writing md5sum manifest..."
+    (cd ${rdmnt} && find . -type f | sort | xargs md5sum) > ${rdmnt}/var/log/manifest
+    #INCLUDE_MD5SUM=1 ${SCANNER} ${rdmnt} . | tee ${rdmnt}/var/log/manifest >/dev/null
+    cp ${rdmnt}/var/log/manifest ${archive}.manifest
+
+    # make sure the kernel we copy over matches our boot archive by copying from there.
+    mkdir -p `dirname ${OUT_DIR}/${OUT_KERNEL_64}`
+    cp ${rdmnt}/${KERNEL_64} ${OUT_DIR}/${OUT_KERNEL_64}
+
+    # Set up the /usr files we need before /usr is mounted
+    echo "tmpdir $rddir/usr"
+    umount -f "$rdmnt/usr"
+    mkdir $rddir/usr
+    mount -F ufs -o nologging ${lofiusrdev} "${rddir}/usr"
+    (cd ${rddir}/usr && tar cbf 512 - \
+	bin/[ bin/cat bin/head bin/i86/ksh93 bin/ls kernel/sched/amd64/FSS \
+	lib/fm/libfmevent.so lib/fm/libfmevent.so.1 lib/fm/libtopo.so \
+	lib/fm/libtopo.so.1 lib/libast.so lib/libast.so.1 lib/libcmd.so \
+	lib/libcmd.so.1 lib/libdll.so lib/libdll.so.1 lib/libexacct.so \
+	lib/libexacct.so.1 lib/libfstyp.so lib/libfstyp.so.1 lib/libidmap.so \
+	lib/libidmap.so.1 lib/libipmi.so lib/libipmi.so.1 lib/libpkcs11.so \
+	lib/libpkcs11.so.1 lib/libpool.so lib/libpool.so.1 lib/libproject.so \
+	lib/libproject.so.1 lib/libshell.so lib/libshell.so.1 lib/libsmbios.so \
+	lib/libsmbios.so.1 lib/libsum.so lib/libsum.so.1 sbin/lofiadm) | \
+	(cd ${rdmnt}/usr; tar xbf 512 -)
+
+    umount -f "${rddir}/usr"
+
+    (cd $rdmnt/usr/bin && ln -s "i86/ksh93" $rdmnt/usr/bin/sh)
+
+    # Now lofi compress our /usr filesystem
+    echo "lofi compressing usr file system"
+    lofiadm -d "$lofiusrdev" 2>/dev/null
+    lofiadm -C $usrfile
+    mv $usrfile $rdmnt/usr.lgz
+
+    umount -f "$rdmnt"
+    rmdir "$rdmnt"
+
+    mv "${rdfile}" "${archive}-new"
+    if [ $? -ne 0 ] ; then
+        rm -f "${archive}-new"
+        rm -f "${archive}.manifest"
+        rm -f "${archive}.gitstatus"
+    fi
+}
+
+function create_archive
+{
+    archive=$1
+    lofidev=$2
+    lofiusrdev=$3
+    usrfile=$4
+
+    echo "creating ${archive} (${lofidev}) (${lofiusrdev})"
+    mkdir -p `dirname ${archive}`
+
+    create_ufs "$archive" "$lofidev" "$lofiusrdev" "$usrfile"
+
+    # sanity check the archive before moving it into place
+    #
+    ARCHIVE_SIZE=`ls -l "${archive}-new" 2> /dev/null | nawk '{ print $5 }'`
+    ls "${archive}-new" >/dev/null 2>&1
+
+    if [ $? -eq 1 -o "$ARCHIVE_SIZE" -lt 10000 ]
+    then
+        #
+        # Two of these functions may be run in parallel.  We
+        # need to allow the other to clean up, so we can't
+        # exit immediately.  Instead, we set a flag.
+        #
+        echo "update of $archive failed"
+        ERROR=1
+    else
+        lockfs -f "/$OUT_DIR" 2>/dev/null
+        mv "${archive}-new" "$archive"
+        lockfs -f "/$OUT_DIR" 2>/dev/null
+    fi
+}
+
+function create_password
+{
+    rdmnt=$1
+
+    password="$(${PWGEN} -B -c -n 16 1)"
+    if [[ -z ${password} ]]; then
+        fatal_error "Unable to generate password."
+    fi
+
+    # actually write password into ${rdmnt}/etc/shadow
+    enc_password="$(${ROOT}/tools/cryptpass "${password}")"
+    if [[ -z ${enc_password} ]]; then
+        fatal_error "Unable to generate encrypted password."
+    fi
+    gsed -i -e "s|^root:[^\:]*:|root:${enc_password}:|" ${rdmnt}/etc/shadow
+
+    # write in plaintext to platform so we can find it later if we need it
+    echo "${password}" > ${OUT_DIR}/${PREFIX}/root.password
+}
+
+function fatal_error
+{
+    print -u2 $*
+    exit 1
+}
+
+# Create tmp dir to do the work in
+rddir="/tmp/create_ramdisk.$$.tmp"
+rm -rf "$rddir"
+mkdir "$rddir" || fatal_error "Could not create temporary directory $rddir"
+
+# Clean up upon exit.
+trap 'cleanup' EXIT
+
+rdfile="$rddir/rd.file.32"
+rdmnt="$rddir/rd.mnt.32"
+usrfile="$rddir/usr.file"
+
+echo "Creating ${RSIZE}k ramdisk image: ${rdfile}"
+mkfile ${RSIZE}k "${rdfile}"
+chown ${USER} ${rdfile}
+echo "Creating ${USIZE}k usr image: ${usrfile}"
+mkfile ${USIZE}k "${usrfile}"
+chown ${USER} ${usrfile}
+
+lofidev32=`lofiadm -a "${rdfile}"`
+lofidevusr=`lofiadm -a "${usrfile}"`
+
+create_archive "${OUT_DIR}/${BOOT_ARCHIVE_64}" $lofidev32 $lofidevusr $usrfile
+
+lofiadm -d "$lofidev32" 2>/dev/null
+
+chmod 0644 ${OUT_DIR}/${BOOT_ARCHIVE_64}
+(cd ${OUT_DIR} && gtar -zcf ${PREFIX}.tgz ${PREFIX})
+
+if [ $ERROR = 1 ]; then
+    cleanup
+    exit 1
+fi

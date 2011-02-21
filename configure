@@ -1,0 +1,298 @@
+#!/usr/bin/env bash
+#
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at COPYING
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at COPYING.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2010,2011 Joyent Inc.
+#
+
+set -o errexit
+
+GLOBAL_ZONE=1
+
+if [[ $(uname -s) != "SunOS" ]]; then
+    echo "FATAL: This only works with SunOS/SmartOS"
+    exit 1
+fi
+
+if [[ $(zonename) != "global" ]]; then
+    echo "NOTICE: Building in a zone, workarounds enabled!"
+    GLOBAL_ZONE=0
+fi
+
+INSTALL_BIN_LINK_DIR=/usr/bin
+HAVE_PKG="true"
+ROOTCMD=pfexec
+
+# illumos-extra is now in github but git's ssl doesn't always work in our build machines.
+export GIT_SSL_NO_VERIFY=true
+
+# Load all site-specific configure files
+for file in `ls configure.*`; do
+  source ${file}
+done
+
+if [ "${HAVE_PKG}" == "true" ]; then
+  echo "==> Installing illumos build dependencies..."
+  if [[ ${GLOBAL_ZONE} -eq 1 ]]; then
+    ${ROOTCMD} pkg install \
+      text/groff \
+      system/zones/internal \
+      library/libxml2 \
+      developer/gnome/gettext \
+      library/python-2/setuptools-26 \
+      library/gnome/gnome-vfs \
+      runtime/perl-510 \
+      runtime/perl-510/extra \
+      developer/build/gnu-make \
+      developer/build/onbld \
+      developer/gcc-3 \
+      developer/astdev \
+      developer/lexer/flex \
+      library/nspr/header-nspr \
+      system/library/mozilla-nss/header-nss \
+      data/docbook \
+      text/gnu-gettext \
+      developer/java/jdk \
+      || /bin/true
+  else
+    # nonglobal Zone
+    for pkg in gmake binutils autoconf automake \
+        bison flex libtool-base python24 p5-XML-Parser \
+        libxslt dbus-glib dbus net-snmp; do
+      pkg_info ${pkg} >/dev/null 2>&1 || pkgin -y install ${pkg}
+    done
+  fi
+fi
+
+# TODO: move this to illumos-extra itself
+if [ "${HAVE_PKG}" == "true" ]; then
+  echo "==> Installing illumos-extra dependencies..."
+  if [[ ${GLOBAL_ZONE} -eq 1 ]]; then
+    ${ROOTCMD} pkg install \
+      compatibility/ucb \
+      developer/build/autoconf \
+      developer/build/automake-19 \
+      developer/build/automake-110 \
+      developer/build/cmake \
+      developer/build/libtool \
+      developer/parser/bison \
+      library/libevent \
+      || /bin/true
+  else
+    # nonglobal Zone
+    /bin/true
+  fi
+fi
+
+echo "==> Checking for /opt/SUNWspro/bin/cc..."
+echo " +--> Ensuring SUNWspro (12.1-patched) installed in /opt/SUNWspro/sunstudio12.1..."
+if [ ! -f "/opt/SUNWspro/sunstudio12.1/prod/bin/cc" ]; then
+  if [ ! -z "${SUNW_SPRO12u1_URL}" ]; then
+    (${ROOTCMD} mkdir -p /opt/SUNWspro \
+      && cd /opt/SUNWspro \
+      && curl -k ${SUNW_SPRO12u1_URL} \
+      | ${ROOTCMD} gtar -zxf -)
+  else
+    echo "FATAL: unable to download sunstudio12u1, no URL is set.  Please set SUNW_SPRO12u1_URL in configure.*"
+    exit 1
+ fi
+fi
+
+echo " +--> Ensuring SUNWspro (12-patched) installed in /opt/SUNWspro..."
+if [ ! -f "/opt/SUNWspro/prod/bin/cc" ]; then
+  if [ ! -z "${SUNW_SPRO12_URL}" ]; then
+    (${ROOTCMD} mkdir -p /opt/SUNWspro \
+      && cd /opt/SUNWspro \
+      && curl -k "${SUNW_SPRO12_URL}" \
+      | ${ROOTCMD} gtar -jxf -)
+  else
+    echo "FATAL: unable to download sunstudio12, no URL is set.  Please set SUNW_SPRO12_URL in configure.*"
+    exit 1
+ fi
+fi
+
+
+if [[ ${GLOBAL_ZONE} -eq 1 ]]; then
+  echo "==> Creating the missing symlinks..."
+  test -f /usr/bin/aclocal || ${ROOTCMD} ln -s /usr/bin/aclocal-1.10 /usr/bin/aclocal
+  test -f /usr/bin/automake || ${ROOTCMD} ln -s /usr/bin/automake-1.10 /usr/bin/automake
+  # so builds can use --mode and such
+  test -f /usr/bin/install || ${ROOTCMD} ln -s /usr/bin/ginstall /usr/bin/install
+  test -f /usr/bin/pod2man || ${ROOTCMD} ln -s /usr/perl5/5.10.0/bin/pod2man /usr/bin/pod2man
+else
+  # nonglobal Zone
+  /bin/true
+fi
+
+echo "==> Populating projects/ directories..."
+[ ! -d "projects" ] && mkdir -p projects
+if [ ! -d "projects" ] ; then
+  echo "FATAL: unable to create projects/ directory."
+  exit 1
+fi
+
+if [ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]; then
+  echo " +--> Getting illumos source tree..."
+  if [ -z "${GET_ILLUMOS}" ]; then
+    echo "FATAL: No GET_ILLUMOS defined in configure.*, can't get illumos!"
+    exit 1
+  fi
+  /bin/bash -c "cd projects && ${GET_ILLUMOS} && cd -"
+  if [ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]; then
+    echo "FATAL: GET_ILLUMOS command failed to get illumos!"
+    exit 1
+  fi
+fi
+
+if [ ! -f "projects/illumos-extra/Makefile" ]; then
+  echo " +--> Getting illumos-extra source tree..."
+  if [ -z "${GET_ILLUMOS_EXTRA}" ]; then
+    echo "FATAL: No GET_ILLUMOS_EXTRA defined in configure.*, can't get illumos-extra!"
+    exit 1
+  fi
+  /bin/bash -c "cd projects && ${GET_ILLUMOS_EXTRA} && cd -"
+  if [ ! -f "projects/illumos-extra/Makefile" ]; then
+    echo "FATAL: GET_ILLUMOS_EXTRA command failed to get illumos-extra!"
+    exit 1
+  fi
+fi
+
+if [ ! -f "projects/opensolaris-man/README" ]; then
+  echo " +--> Getting opensolaris-man source tree..."
+  if [ -z "${GET_OPENSOLARIS_MAN}" ]; then
+    echo "FATAL: No GET_OPENSOLARIS_MAN defined in configure.*, can't get opensolaris-man!"
+    exit 1
+  fi
+  /bin/bash -c "cd projects && ${GET_OPENSOLARIS_MAN} && cd -"
+  if [ ! -f "projects/opensolaris-man/README" ]; then
+    echo "FATAL: GET_OPENSOLARIS_MAN command failed to get opensolaris-man!"
+    exit 1
+  fi
+fi
+(cd projects/opensolaris-man && [[ -L usr ]] || ln -s . usr)
+(cd projects/opensolaris-man && [[ -L share ]] || ln -s . share)
+(cd projects/opensolaris-man && [[ -L man ]] || ln -s . man)
+
+ROOT=`pwd`
+echo "==> Setting up illumos-gate"
+
+cd ${ROOT}/projects/illumos
+
+if [ ! -f on-closed-bins.i386.tar.bz2 ]; then
+  if [ -z "${ON_CLOSED_BINS_URL}" ]; then
+    curl -O http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins.i386.tar.bz2
+  else
+    curl -k -O "${ON_CLOSED_BINS_URL}"
+  fi
+  tar xvpf on-closed-bins.i386.tar.bz2
+fi
+if [ ! -f on-closed-bins-nd.i386.tar.bz2 ]; then
+  if [ -z "${ON_CLOSED_BINS_ND_URL}" ]; then
+    curl -O http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins-nd.i386.tar.bz2
+  else
+    curl -k -O "${ON_CLOSED_BINS_ND_URL}"
+  fi
+  tar xvpf on-closed-bins-nd.i386.tar.bz2
+fi
+
+cat <<EOF> illumos.sh
+NIGHTLY_OPTIONS="-CimNnt"; export NIGHTLY_OPTIONS
+GATE="${RELEASE_VER}"; export GATE
+CODEMGR_WS="${ROOT}/projects/illumos"; export CODEMGR_WS
+maxjobs() {
+        ncpu=\`kstat -p cpu_info:::state | grep -c on-line\`
+        expr \$ncpu + 2
+}
+DMAKE_MAX_JOBS=\`maxjobs\`;                       export DMAKE_MAX_JOBS
+
+ONBLD_BIN="/opt/onbld/bin"
+PARENT_WS="";                   export PARENT_WS
+CLONE_WS="http://hg.illumos.org/illumos-gate"
+export CLONE_WS
+STAFFER=nobody;                         export STAFFER
+MAILTO=$STAFFER;                        export MAILTO
+BUILD_PROJECT=;                         export BUILD_PROJECT
+LOCKNAME="\`basename \$CODEMGR_WS\`_nightly.lock"; export LOCKNAME
+ATLOG="\$CODEMGR_WS/log";                        export ATLOG
+LOGFILE="\$ATLOG/nightly.log";                   export LOGFILE
+MACH=\`uname -p\`;                                export MACH
+ON_CLOSED_BINS="\$CODEMGR_WS/closed";            export ON_CLOSED_BINS
+ON_CRYPTO_BINS="\$CODEMGR_WS/on-crypto.\$MACH.tar.bz2"; export ON_CRYPTO_BINS
+REF_PROTO_LIST=\$PARENT_WS/usr/src/proto_list_\${MACH}; export REF_PROTO_LIST
+ROOT="${ROOT}/proto";  export ROOT
+SRC="\$CODEMGR_WS/usr/src";              export SRC
+VERSION="\$GATE";                        export VERSION
+PARENT_ROOT="${ROOT}/proto"; export PARENT_ROOT
+PARENT_TOOLS_ROOT=\$PARENT_WS/usr/src/tools/proto/root_\$MACH-nd; export PARENT_TOOLS_ROOT
+PKGARCHIVE="\${CODEMGR_WS}/packages/\${MACH}/nightly";    export PKGARCHIVE
+PKGPUBLISHER_REDIST="${PUBLISHER}"; export PKGPUBLISHER_REDIST
+MAKEFLAGS=k;    export MAKEFLAGS
+UT_NO_USAGE_TRACKING="1"; export UT_NO_USAGE_TRACKING
+CW_NO_SHADOW="1"; export CW_NO_SHADOW
+BUILD_TOOLS=/opt;                               export BUILD_TOOLS
+SPRO_ROOT=/opt/SUNWspro;                        export SPRO_ROOT
+SPRO_VROOT=\$SPRO_ROOT;                          export SPRO_VROOT
+
+EOF
+
+# For some reason this disappeared before
+touch ${ROOT}/projects/illumos/usr/src/tools/findunref/exception_list.unknown
+
+function update_branch
+{
+    target_dir=$1
+    target=$2
+
+    oldwd=$(pwd)
+    cd ${target_dir}
+    current=$(git branch | grep "^*" | cut -d' ' -f2)
+    if [[ "${current}" != "${target}" ]]; then
+        if [[ -n $(git branch | grep " ${target}$") ]]; then
+            # have branch already, checkout
+            git checkout ${target}
+        else
+            # don't have, add to tracking and checkout
+            git checkout --track -b ${target} origin/${target}
+        fi
+    fi
+    cd ${oldwd}
+
+    return 0
+}
+
+# Setup branches
+if [[ -f ${ROOT}/configure-branches ]]; then
+    branch=$(grep "^illumos-live: " ${ROOT}/configure-branches | cut -d' ' -f2)
+    [[ -z ${branch} ]] && update_branch "${ROOT}" ${branch}
+    branch=$(grep "^illumos-extra: " ${ROOT}/configure-branches | cut -d' ' -f2)
+    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/illumos-extra" ${branch}
+else
+    echo ""
+    echo "WARNING! No configure-branches file!!! Using master branch for everything!"
+    echo ""
+    sleep 3
+fi
+
+echo ""
+echo "Configuration complete.  You should now be able to build a live image using 'gmake world && gmake live'"
+echo ""
+
+exit 0

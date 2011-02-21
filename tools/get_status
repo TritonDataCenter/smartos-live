@@ -1,0 +1,56 @@
+#!/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at COPYING
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at COPYING.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2010,2011 Joyent Inc.
+#
+
+if [[ -z ${ROOT} ]]; then
+    ROOT=$(pwd)
+fi
+
+function get_status()
+{
+    dir=$1
+
+    if [[ -z ${dir} ]]; then
+        echo "WARNING: skilling empty \$dir"
+        return 0
+    fi
+    
+    oldpwd=$(pwd)
+    cd ${dir}
+    branch=$(git branch | grep "^* " | cut -d ' ' -f2)
+    rev=$(git rev-parse HEAD)
+
+    if [[ -n ${branch} ]] && [[ -n ${rev} ]]; then
+        echo "\"branch\": \"${branch}\", \"rev\": \"${rev}\""
+    else
+        echo "\"branch\": \"unknown\""
+    fi
+
+    cd ${oldpwd}
+}
+
+echo "["
+echo "    { \"repo\": \"illumos-live\", $(get_status ${ROOT}) }"
+echo "  , { \"repo\": \"illumos-extra\", $(get_status ${ROOT}/projects/illumos-extra) }"
+echo "  , { \"repo\": \"illumos-joyent\", $(get_status ${ROOT}/projects/illumos) }"
+echo "]"

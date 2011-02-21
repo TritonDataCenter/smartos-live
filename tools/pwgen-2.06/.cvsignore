@@ -1,0 +1,8 @@
+config.status
+pwgen
+configure
+config.log
+config.cache
+.depend
+build
+Makefile

@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at COPYING
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at COPYING.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2010,2011 Joyent Inc.
+#
+
+set -e
+
+rdmnt=$1
+if [ -z "${rdmnt}" ] || [ ! -d "${rdmnt}" ]; then
+  echo "FATAL: Invalid ramdisk root '${rdmnt}'"
+  echo "Usage: $0 <rdmnt>"
+  exit 1
+fi
+
+# TODO check that we're root
+
+REPO_DB=${rdmnt}/etc/svc/repository.db
+export SVCCFG_CHECKHASH=1
+export PKG_INSTALL_ROOT=${rdmnt}
+export SVCCFG_DTD=${rdmnt}/usr/share/lib/xml/dtd/service_bundle.dtd.1
+export SVCCFG_REPOSITORY=${REPO_DB}
+export SVCCFG_CONFIGD_PATH=/lib/svc/bin/svc.configd
+
+SVCCFG="/usr/sbin/svccfg"
+${SVCCFG} -v repository ${REPO_DB}
+${SVCCFG} -v add smf/manifest
+${SVCCFG} -v import ${rdmnt}/lib/svc/manifest
+${SVCCFG} -s "system/boot-config:default" setprop config/fastreboot_default=false
+${SVCCFG} -s "system/auditd:default" setprop general/enabled=true
+${SVCCFG} -s "system/coreadm:default" setprop config_params/global_enabled=true
+${SVCCFG} -s "system/coreadm:default" setprop config_params/global_pattern='/zones/%z/cores/core.%f.%p'
+# ${SVCCFG} -s "system/manifest-import" setprop start/exec=:true
+${SVCCFG} -v apply ${rdmnt}/etc/svc/profile/generic.xml
+${SVCCFG} -v apply ${rdmnt}/etc/svc/profile/platform.xml
+
+exit 0

@@ -1,0 +1,84 @@
+#!/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at COPYING
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at COPYING.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2010,2011 Joyent Inc.
+#
+
+ROOT=$1
+DIR=$2
+command="pfexec find $DIR -ls"
+
+if [ ! -z ${ROOT} ] && [ "${ROOT}" == "-" ]; then
+    ROOT="/"
+    DIR="-"
+    command="cat -"
+fi
+
+if [ -z "${ROOT}" ] || [ -z "${DIR}" ]; then
+    echo ""
+    echo "Use this program to create manifest entries for use with the live image creation"
+    echo "script. eg. '$0 / etc' will generate a manifest list that could be used for /etc"
+    echo ""
+    echo "Usage: $0 <ROOT> <DIR>"
+    exit 1
+fi
+
+cd ${ROOT}
+sh -c "${command}" | \
+{  
+    while read line; do  
+        # Squeeze multiple spaces/tabs into one space
+        line=`echo "${line}" | sed -e "s/   / /" | tr -s ' '`
+
+        # Remove leading/trailing spaces
+        line=`echo "${line}" | sed -e "s/ +$//" | sed -e "s/^ +//"`
+
+        echo "${line}" | { read l_inode l_size l_hmode l_links l_user l_group l_size l_month l_day l_year l_path ;
+            l_md5sum=
+            l_type=`echo "${l_hmode}" | cut -c1`
+            if [ "${l_type}" != "l" ] && [ "${l_type}" != "c" ] && [ "${l_type}" != "b" ]; then
+                l_mode=`pfexec stat --printf "%04a" ${l_path}`
+            else
+                l_type="s"
+                l_path=`echo "${l_path}" | sed -e "s/ -> /=/"`
+                l_mode= #"0777"
+                l_user= #"root"
+                l_group= #"root"
+            fi
+
+            if [ "${l_type}" == "-" ]; then
+                l_type="f"
+            fi
+
+            if [ "${l_type}" == "f" ] && [ ! -z "${INCLUDE_MD5SUM}" ]; then
+                # include md5sum for files if requested.
+                l_md5sum=`md5sum ${l_path} | cut -d' ' -f1`
+            fi
+
+            # ignore char and block devices for now
+            if [ "${l_type}" != "c" ] && [ "${l_type}" != "b" ]; then
+                echo "${l_type} ${l_path} ${l_mode} ${l_user} ${l_group} ${l_md5sum}" \
+                    | sed -e "s/ +$//"
+            fi
+        }
+    done
+}
+

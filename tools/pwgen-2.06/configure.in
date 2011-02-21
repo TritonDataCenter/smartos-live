@@ -1,0 +1,11 @@
+AC_INIT(pwgen.c)
+AC_PREREQ(2.12)
+AC_PROG_CC
+AC_PROG_INSTALL
+AC_PATH_PROG(MV, mv, mv)
+AC_PATH_PROG(RM, rm, rm)
+AC_PATH_PROG(SED, sed, sed)
+AC_PATH_PROG(PERL, perl, perl)
+AC_CHECK_FUNCS(drand48 getopt_long)
+AC_CHECK_HEADERS(getopt.h)
+AC_OUTPUT(Makefile)

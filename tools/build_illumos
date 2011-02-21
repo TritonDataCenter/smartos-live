@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at COPYING
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at COPYING.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2010,2011 Joyent Inc.
+#
+
+# Setup for building stuff!
+unset CC
+unset CXX
+ROOT=`pwd`
+export PATH=/opt/onbld/bin:/sbin:/usr/sbin:/usr/bin:/usr/ccs/bin:/opt/SUNWspro/bin:/opt/local/bin
+
+BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`; export BUILDSTAMP
+mkdir -p ${ROOT}/proto
+echo ${BUILDSTAMP} > ${ROOT}/proto/buildstamp
+
+echo "==> Building Illumos (${BUILDSTAMP})"
+
+set -o pipefail
+set -e
+
+cd ${ROOT}/projects/illumos
+[[ -d "log" ]] || mkdir -p log
+cp usr/src/tools/scripts/nightly.sh ./nightly
+chmod u+x ./nightly
+ksh93 ./usr/src/tools/scripts/bldenv.sh -d illumos.sh 'cd $CODEMGR_WS/usr/src && export PATH="$PATH:/opt/local/bin" && dmake setup && cd tools && dmake install'
+time ./nightly illumos.sh
+res=$?
+
+exit $res

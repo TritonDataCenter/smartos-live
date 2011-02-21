@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at COPYING
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at COPYING.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2010,2011 Joyent Inc.
+#
+
+BUILDSTAMP=$2
+if [ -z "${BUILDSTAMP}" ]; then
+  BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`
+fi
+
+rdmnt=$1
+if [ -z "${rdmnt}" ]; then
+  echo "Usage: $0 <rdmnt directory> [buildstamp]"
+  exit 1
+fi
+
+echo "Customizing ${rdmnt}"
+pfexec cp /dev/null ${rdmnt}/etc/mnttab
+pfexec cp /dev/null ${rdmnt}/var/log/syslog
+pfexec cp /dev/null ${rdmnt}/var/adm/wtmpx
+
+# This rebuilds the man index but needs to work around the fact that
+# isaexec binaries don't work properly in a chroot.
+(cd ${rdmnt}/usr/bin && pfexec mv sh sh.$$ && ln -s bash sh)
+pfexec mount -F lofs /dev ${rdmnt}/dev
+# If we're in a GZ there will be a /devices we need to
+if [[ -d /devices ]]; then
+    pfexec mount -F lofs /devices ${rdmnt}/devices
+fi
+pfexec chroot ${rdmnt} /usr/bin/catman
+if [[ -d /devices ]]; then
+    pfexec umount ${rdmnt}/devices
+fi
+pfexec umount ${rdmnt}/dev
+(cd ${rdmnt}/usr/bin && pfexec rm sh && pfexec mv sh.$$ sh)
+
+pfexec chown root:root ${rdmnt}
+echo "${BUILDSTAMP}" | pfexec tee ${rdmnt}/etc/joyent_buildstamp >/dev/null 2>&1
+pfexec gsed -i -e "s/ [0-9]\{8\}T[0-9]\{6\}Z/ ${BUILDSTAMP}/" ${rdmnt}/etc/motd
+pfexec gsed -i -e "s/ [0-9]\{8\}T[0-9]\{6\}Z/ ${BUILDSTAMP}/" ${rdmnt}/etc/issue
+
+exit 0

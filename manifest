@@ -8553,7 +8553,9 @@ d usr/lib/autofs 0755 root sys
 f usr/lib/autofs/automountd 0555 root bin
 d usr/lib/brand 0755 root bin
 d usr/lib/brand/joyent 0755 root bin
+f usr/lib/brand/joyent/common.ksh 0444 root root
 f usr/lib/brand/joyent/config.xml 0444 root root
+f usr/lib/brand/joyent/jattach 0755 root root
 f usr/lib/brand/joyent/jinstall 0755 root root
 f usr/lib/brand/joyent/juninstall 0755 root root
 f usr/lib/brand/joyent/manifests 0444 root root

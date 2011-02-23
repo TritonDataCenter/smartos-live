@@ -40,4 +40,4 @@ ON_CLOSED_BINS_URL="http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins
 ON_CLOSED_BINS_ND_URL="http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins-nd.i386.tar.bz2"
 GET_ILLUMOS="hg clone ssh://anonhg@hg.illumos.org/illumos-gate illumos"
 GET_ILLUMOS_EXTRA="git clone https://github.com/joyent/illumos-extra.git illumos-extra"
-GET_OPENSOLARIS_MAN="(curl -k https://joydev:NebQuernOb@216.57.203.66/illumos/man-sunosman-20090930.tar.bz2 | gtar -jxf - && mv man opensolaris-man)"
+GET_OPENSOLARIS_MAN="(curl -k http://dlc.sun.com/osol/man/downloads/current/man-sunosman-20090930.tar.bz2 | gtar -jxf - && mv man opensolaris-man)"

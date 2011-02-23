@@ -15747,6 +15747,7 @@ f usr/sbin/zic 0555 root bin
 f usr/sbin/zlogin 0555 root bin
 f usr/sbin/zoneadm 0555 root bin
 f usr/sbin/zonecfg 0555 root bin
+f usr/sbin/zonemon 0555 root bin
 s usr/sbin/zpool=../../sbin/zpool
 f usr/sbin/zstreamdump 0555 root bin
 d usr/sfw 0755 root bin

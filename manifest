@@ -12419,6 +12419,7 @@ f usr/lib/lib4014.so.1 0755 root bin
 s usr/lib/lib4014.so=lib4014.so.1
 f usr/lib/lib450.so.1 0755 root bin
 s usr/lib/lib450.so=lib450.so.1
+f usr/lib/libCrun.so.1 0755 root bin
 f usr/lib/libHBAAPI.so.1 0755 root bin
 s usr/lib/libHBAAPI.so=libHBAAPI.so.1
 f usr/lib/libSMHBAAPI.so.1 0755 root bin

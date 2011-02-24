@@ -19,9 +19,9 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010 Joyent Inc.
+# Copyright (c) 2010,2011 Joyent Inc.
 
-set +o xtrace
+set -o xtrace
 
 . /lib/svc/share/smf_include.sh
 . /lib/svc/share/fs_include.sh

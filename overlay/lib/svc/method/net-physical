@@ -49,6 +49,13 @@ if smf_is_globalzone; then
 
     dladm init-phys
 
+    # The next commands are for logging purposes only
+    echo "== debug start: before =="
+    dladm show-phys
+    dladm show-linkprop
+    /sbin/ifconfig -a
+    echo "== debug end: before =="
+
     #
     # Use the MAC address to sort the NICs and rename any that are out of
     # order so that we always get a consistent name for each NIC.
@@ -174,6 +181,13 @@ else
         fi
     done
 fi
+
+    # The next commands are for logging purposes only
+    echo "== debug start: after =="
+    dladm show-phys
+    dladm show-linkprop
+    /sbin/ifconfig -a
+    echo "== debug end: after =="
 
 # Any non-loopback IPv4 interfaces with usable addresses up?
 if [[ -n "`/sbin/ifconfig -a4u`" ]]; then

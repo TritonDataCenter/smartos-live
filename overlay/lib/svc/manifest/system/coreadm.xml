@@ -96,13 +96,13 @@
 			<propval name='global_content'
 				type='astring' value='default' />
 			<propval name='init_pattern'
-				type='astring' value='core' />
+				type='astring' value='/zones/%z/cores/core.%f.%p' />
 			<propval name='init_content'
 				type='astring' value='default' />
 			<propval name='global_enabled'
 				type='boolean' value='true' />
 			<propval name='process_enabled'
-				type='boolean' value='true' />
+				type='boolean' value='false' />
 			<propval name='global_setid_enabled'
 				type='boolean' value='false' />
 			<propval name='process_setid_enabled'

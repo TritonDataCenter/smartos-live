@@ -31,6 +31,7 @@ SMF_IMPORTER=${ROOT}/tools/smf_import
 BUILDER=${ROOT}/tools/builder/builder
 SCANNER=${ROOT}/tools/scanner
 PWGEN=${ROOT}/tools/pwgen
+GET_STATUS=${ROOT}/tools/get_status
 
 BUILDSTAMP=$(cat ${ROOT}/proto/buildstamp)
 if [[ -z ${BUILDSTAMP} ]]; then
@@ -44,10 +45,15 @@ ISA=i386
 ARCH64=amd64
 RSIZE=264000
 USIZE=400000
-BOOT_ARCHIVE_64=platform-${BUILDSTAMP}/$PLATFORM/$ARCH64/boot_archive
-OUT_KERNEL_64=platform-${BUILDSTAMP}/$PLATFORM/kernel/$ARCH64/unix
 KERNEL_64=platform/$PLATFORM/kernel/$ARCH64/unix
-PREFIX=platform-${BUILDSTAMP}
+BUILDVER=$(head -n1 ${ROOT}/configure-buildver)
+if [[ -n "${BUILDVER}" ]]; then
+    PREFIX=platform-${BUILDVER}-${BUILDSTAMP}
+else
+    PREFIX=platform-${BUILDSTAMP}
+fi
+BOOT_ARCHIVE_64=${PREFIX}/$PLATFORM/$ARCH64/boot_archive
+OUT_KERNEL_64=${PREFIX}/$PLATFORM/kernel/$ARCH64/unix
 
 if [ "$(id -u)" != "0" ]; then
   echo "You must have euid 0 to run this tool."
@@ -147,6 +153,9 @@ function create_ufs
     echo "Setting root password..."
     create_password "${rdmnt}"
 
+    echo "Adding git manifest..."
+    (cd ${ROOT} && ${GET_STATUS}) > ${archive}.gitstatus
+
     echo "Writing md5sum manifest..."
     (cd ${rdmnt} && find . -type f | sort | xargs md5sum) > ${rdmnt}/var/log/manifest
     #INCLUDE_MD5SUM=1 ${SCANNER} ${rdmnt} . | tee ${rdmnt}/var/log/manifest >/dev/null
@@ -190,6 +199,7 @@ function create_ufs
     if [ $? -ne 0 ] ; then
         rm -f "${archive}-new"
         rm -f "${archive}.manifest"
+        rm -f "${archive}.gitstatus"
     fi
 }
 

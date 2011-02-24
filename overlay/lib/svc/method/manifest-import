@@ -204,8 +204,13 @@ function import_manifests {
 
 	rm -f $logf
 
-	nonsite_dirs=`/usr/bin/find $basedir/* -name site \
-	    -prune -o -type d -print -prune`
+	if [ "${basedir}" == "/opt/custom/smf" ]; then
+		# Special case where we will just import from the root, not subdirs
+		nonsite_dirs=${basedir}
+	else
+		nonsite_dirs=`/usr/bin/find $basedir/* -name site \
+			-prune -o -type d -print -prune`
+	fi
 
 	if [ -n "$_MFST_DEBUG" ]; then
 		nonsite_manifests=`/lib/svc/bin/mfstscan $nonsite_dirs`
@@ -456,6 +461,10 @@ else
 	#
 	import_manifests "/lib/svc/manifest" true
 	import_manifests "/var/svc/manifest" true
+
+	if [ -d "/opt/custom/smf" ]; then
+		import_manifests "/opt/custom/smf" true
+	fi
 
 	#
 	# Apply profiles

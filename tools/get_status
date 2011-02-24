@@ -1,0 +1,35 @@
+#!/bin/bash
+
+if [[ -z ${ROOT} ]]; then
+    ROOT=$(pwd)
+fi
+
+function get_status()
+{
+    dir=$1
+
+    if [[ -z ${dir} ]]; then
+        echo "WARNING: skilling empty \$dir"
+        return 0
+    fi
+    
+    oldpwd=$(pwd)
+    cd ${dir}
+    branch=$(git branch | grep "^* " | cut -d ' ' -f2)
+    rev=$(git rev-parse HEAD)
+
+    if [[ -n ${branch} ]] && [[ -n ${rev} ]]; then
+        echo "\"branch\": \"${branch}\", \"rev\": \"${rev}\""
+    else
+        echo "\"branch\": \"unknown\""
+    fi
+
+    cd ${oldpwd}
+}
+
+echo "["
+echo "    { \"repo\": \"illumos-live\", $(get_status ${ROOT}) }"
+echo "  , { \"repo\": \"illumos-extra\", $(get_status ${ROOT}/projects/illumos-extra) }"
+echo "  , { \"repo\": \"illumos-joyent\", $(get_status ${ROOT}/projects/illumos) }"
+echo "  , { \"repo\": \"ur-agent\", $(get_status ${ROOT}/projects/local/ur-agent) }"
+echo "]"

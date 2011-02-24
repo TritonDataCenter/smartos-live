@@ -1,10 +1,12 @@
 
 Quickstart:
 
-  [optional: create/download configure.* for your environment]
-  ./configure
-  make world
-  make live
+See: https://hub.joyent.com/wiki/display/dev/Building+the+147+live+image
+
+  * get configure.joyent
+  * run configure
+  * gmake world
+  * gmake live
 
 The configure script sets everything up for building including:
 

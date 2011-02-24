@@ -222,7 +222,9 @@ f etc/auto_home 0644 root bin
 f etc/auto_master 0644 root bin
 s etc/autopush=../sbin/autopush
 d etc/bash 0755 root sys
+f etc/bash/bash_completion 0644 root sys
 d etc/bash/bash_completion.d 0755 root sys
+f etc/bash/bash_completion.d/zones 0644 root sys
 f etc/bootrc 0755 root sys
 d etc/brand 0755 root sys
 d etc/certs 0755 root sys
@@ -1713,6 +1715,7 @@ f lib/svc/manifest/system/sar.xml 0444 root sys
 f lib/svc/manifest/system/scheduler.xml 0444 root sys
 d lib/svc/manifest/system/security 0755 root sys
 f lib/svc/manifest/system/smartdc-config.xml 0444 root sys
+f lib/svc/manifest/system/smartdc-ur.xml 0444 root sys
 f lib/svc/manifest/system/stmf.xml 0444 root sys
 d lib/svc/manifest/system/svc 0755 root sys
 f lib/svc/manifest/system/svc/global.xml 0444 root sys
@@ -1773,6 +1776,7 @@ f lib/svc/method/rpc-bind 0555 root bin
 f lib/svc/method/sendmail-client 0555 root sys
 f lib/svc/method/slp 0555 root sys
 f lib/svc/method/smartdc-config 0555 root bin
+f lib/svc/method/smartdc-ur 0555 root bin
 f lib/svc/method/smb-client 0555 root sys
 f lib/svc/method/smtp-sendmail 0555 root sys
 f lib/svc/method/sshd 0555 root bin
@@ -1998,6 +2002,7 @@ d usr/apr/1.3 1755 root bin
 d usr/bin 0755 root bin
 f usr/bin/CA.pl 0555 root bin
 f usr/bin/[ 0555 root bin
+f usr/bin/ack 0555 root bin
 f usr/bin/addbadsec 0555 root bin
 f usr/bin/addbib 0555 root bin
 f usr/bin/alias 0555 root bin
@@ -2298,6 +2303,7 @@ f usr/bin/itu 0555 root bin
 f usr/bin/jobs 0555 root bin
 f usr/bin/join 0555 root bin
 s usr/bin/jsh=ksh93
+f usr/bin/json 0555 root bin
 f usr/bin/kbd 0555 root bin
 f usr/bin/kbdcomp 0555 root bin
 f usr/bin/kdestroy 0555 root bin
@@ -2337,9 +2343,9 @@ f usr/bin/logger 0555 root bin
 f usr/bin/login 4555 root bin
 f usr/bin/logins 0750 root bin
 f usr/bin/logname 0555 root bin
-f usr/bin/lorder 0555 root bin
 f usr/bin/look 0755 root bin
 f usr/bin/lookbib 0555 root bin
+f usr/bin/lorder 0555 root bin
 f usr/bin/ls 0555 root bin
 f usr/bin/m4 0555 root bin
 f usr/bin/m68k 0555 root bin
@@ -2378,7 +2384,6 @@ f usr/bin/news 0555 root bin
 f usr/bin/newtask 0555 root bin
 f usr/bin/nfsstat 0555 root bin
 f usr/bin/nice 0555 root bin
-f usr/bin/nicerest 0555 root bin
 f usr/bin/nl 0555 root bin
 f usr/bin/nm 0555 root bin
 f usr/bin/node 0555 root bin
@@ -6309,8 +6314,11 @@ f usr/include/node/node_events.h 0644 root bin
 f usr/include/node/node_object_wrap.h 0644 root bin
 f usr/include/node/node_version.h 0644 root bin
 f usr/include/node/v8-debug.h 0644 root bin
+f usr/include/node/v8-preparser.h 0644 root bin
 f usr/include/node/v8-profiler.h 0644 root bin
+f usr/include/node/v8-testing.h 0644 root bin
 f usr/include/node/v8.h 0644 root bin
+f usr/include/node/v8stdint.h 0644 root bin
 f usr/include/note.h 0644 root bin
 f usr/include/nsctl.h 0644 root bin
 f usr/include/nss.h 0644 root bin
@@ -8545,12 +8553,15 @@ d usr/lib/autofs 0755 root sys
 f usr/lib/autofs/automountd 0555 root bin
 d usr/lib/brand 0755 root bin
 d usr/lib/brand/joyent 0755 root bin
+f usr/lib/brand/joyent/common.ksh 0444 root root
 f usr/lib/brand/joyent/config.xml 0444 root root
+f usr/lib/brand/joyent/jattach 0755 root root
 f usr/lib/brand/joyent/jinstall 0755 root root
 f usr/lib/brand/joyent/juninstall 0755 root root
 f usr/lib/brand/joyent/manifests 0444 root root
 f usr/lib/brand/joyent/pinstall 0755 root root
 f usr/lib/brand/joyent/platform.xml 0444 root root
+f usr/lib/brand/joyent/poststate 0755 root root
 f usr/lib/brand/joyent/prestate 0755 root root
 d usr/lib/brand/shared 0755 root sys
 f usr/lib/brand/shared/common.ksh 0444 root bin
@@ -8672,6 +8683,7 @@ f usr/lib/dtrace/ip.d 0644 root bin
 f usr/lib/dtrace/iscsit.d 0644 root bin
 f usr/lib/dtrace/net.d 0644 root bin
 f usr/lib/dtrace/nfs.d 0644 root bin
+f usr/lib/dtrace/node.d 0644 root bin
 f usr/lib/dtrace/procfs.d 0644 root bin
 f usr/lib/dtrace/regs.d 0644 root bin
 f usr/lib/dtrace/sched.d 0644 root bin
@@ -12407,6 +12419,7 @@ f usr/lib/lib4014.so.1 0755 root bin
 s usr/lib/lib4014.so=lib4014.so.1
 f usr/lib/lib450.so.1 0755 root bin
 s usr/lib/lib450.so=lib450.so.1
+f usr/lib/libCrun.so.1 0755 root bin
 f usr/lib/libHBAAPI.so.1 0755 root bin
 s usr/lib/libHBAAPI.so=libHBAAPI.so.1
 f usr/lib/libSMHBAAPI.so.1 0755 root bin
@@ -15735,6 +15748,7 @@ f usr/sbin/zic 0555 root bin
 f usr/sbin/zlogin 0555 root bin
 f usr/sbin/zoneadm 0555 root bin
 f usr/sbin/zonecfg 0555 root bin
+f usr/sbin/zonemon 0555 root bin
 s usr/sbin/zpool=../../sbin/zpool
 f usr/sbin/zstreamdump 0555 root bin
 d usr/sfw 0755 root bin
@@ -16800,6 +16814,7 @@ d usr/share/man/cat1 0755 root bin
 d usr/share/man/cat1m 0755 root bin
 d usr/share/man/cat5 0755 root bin
 d usr/share/man/man1 0755 root bin
+f usr/share/man/man1/ack.1 0444 root bin
 f usr/share/man/man1/addbib.1 0444 root bin
 f usr/share/man/man1/alias.1 0444 root bin
 f usr/share/man/man1/allocate.1 0444 root bin
@@ -17002,6 +17017,7 @@ f usr/share/man/man1/login.1 0444 root bin
 f usr/share/man/man1/logname.1 0444 root bin
 f usr/share/man/man1/look.1 0444 root bin
 f usr/share/man/man1/lookbib.1 0444 root bin
+f usr/share/man/man1/lorder.1 0444 root bin
 f usr/share/man/man1/ls.1 0444 root bin
 f usr/share/man/man1/m4.1 0444 root bin
 f usr/share/man/man1/mac.1 0444 root bin
@@ -17156,6 +17172,7 @@ f usr/share/man/man1/tr.1 0444 root bin
 f usr/share/man/man1/troff.1 0444 root bin
 f usr/share/man/man1/true.1 0444 root bin
 f usr/share/man/man1/truss.1 0444 root bin
+f usr/share/man/man1/tsort.1 0444 root bin
 f usr/share/man/man1/tty.1 0444 root bin
 f usr/share/man/man1/type.1 0444 root bin
 f usr/share/man/man1/u370.1 0444 root bin

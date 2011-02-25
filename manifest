@@ -15678,9 +15678,7 @@ f usr/sbin/sharectl 0555 root bin
 f usr/sbin/sharemgr 0555 root bin
 s usr/sbin/showmount=../lib/fs/nfs/showmount
 f usr/sbin/shutdown 0755 root sys
-f usr/sbin/smbadm 0555 root bin
 f usr/sbin/smbios 0555 root bin
-f usr/sbin/smbstat 0555 root bin
 f usr/sbin/snoop 0555 root bin
 f usr/sbin/sppptun 0555 root bin
 f usr/sbin/spray 0555 root bin
@@ -17444,9 +17442,7 @@ f usr/share/man/man1m/sharectl.1m 0444 root bin
 f usr/share/man/man1m/sharemgr.1m 0444 root bin
 f usr/share/man/man1m/showmount.1m 0444 root bin
 f usr/share/man/man1m/shutdown.1m 0444 root bin
-f usr/share/man/man1m/smbadm.1m 0444 root bin
 f usr/share/man/man1m/smbios.1m 0444 root bin
-f usr/share/man/man1m/smbstat.1m 0444 root bin
 f usr/share/man/man1m/snoop.1m 0444 root bin
 f usr/share/man/man1m/soconfig.1m 0444 root bin
 f usr/share/man/man1m/spray.1m 0444 root bin

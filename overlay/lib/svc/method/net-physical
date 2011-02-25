@@ -51,9 +51,15 @@ if smf_is_globalzone; then
 
     # The next commands are for logging purposes only
     echo "== debug start: before =="
-    dladm show-phys
-    dladm show-linkprop
-    /sbin/ifconfig -a
+    if ! dladm show-phys; then
+        echo "WARNING: 'dladm show-phys' failed"
+    fi
+    if ! dladm show-linkprop; then
+        echo "WARNING: 'dladm show-linkprop' failed"
+    fi
+    if ! /sbin/ifconfig -a; then
+        echo "WARNING: 'ifconfig -a' failed"
+    fi
     echo "== debug end: before =="
 
     #
@@ -182,12 +188,18 @@ else
     done
 fi
 
-    # The next commands are for logging purposes only
-    echo "== debug start: after =="
-    dladm show-phys
-    dladm show-linkprop
-    /sbin/ifconfig -a
-    echo "== debug end: after =="
+# The next commands are for logging purposes only
+echo "== debug start: after =="
+if ! dladm show-phys; then
+    echo "WARNING: 'dladm show-phys' failed"
+fi
+if ! dladm show-linkprop; then
+    echo "WARNING: 'dladm show-linkprop' failed"
+fi
+if ! /sbin/ifconfig -a; then
+    echo "WARNING: 'ifconfig -a' failed"
+fi
+echo "== debug end: after =="
 
 # Any non-loopback IPv4 interfaces with usable addresses up?
 if [[ -n "`/sbin/ifconfig -a4u`" ]]; then

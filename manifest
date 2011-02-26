@@ -17203,6 +17203,7 @@ f usr/share/man/man1m/auditreduce.1m 0444 root bin
 f usr/share/man/man1m/auditstat.1m 0444 root bin
 f usr/share/man/man1m/automount.1m 0444 root bin
 f usr/share/man/man1m/autopush.1m 0444 root bin
+f usr/share/man/man1m/bart.1m 0444 root bin
 f usr/share/man/man1m/bootadm.1m 0444 root bin
 f usr/share/man/man1m/busstat.1m 0444 root bin
 f usr/share/man/man1m/cachefslog.1m 0444 root bin
@@ -17301,6 +17302,7 @@ f usr/share/man/man1m/installgrub.1m 0444 root bin
 f usr/share/man/man1m/intrstat.1m 0444 root bin
 f usr/share/man/man1m/iostat.1m 0444 root bin
 f usr/share/man/man1m/ipaddrsel.1m 0444 root bin
+f usr/share/man/man1m/ipf.1m 0444 root bin
 f usr/share/man/man1m/ipmpstat.1m 0444 root bin
 f usr/share/man/man1m/ipsecalgs.1m 0444 root bin
 f usr/share/man/man1m/ipsecconf.1m 0444 root bin
@@ -17411,6 +17413,7 @@ f usr/share/man/man1m/smbios.1m 0444 root bin
 f usr/share/man/man1m/snoop.1m 0444 root bin
 f usr/share/man/man1m/soconfig.1m 0444 root bin
 f usr/share/man/man1m/spray.1m 0444 root bin
+f usr/share/man/man1m/sshd.1m 0444 root bin
 f usr/share/man/man1m/stmsboot.1m 0444 root bin
 f usr/share/man/man1m/strace.1m 0444 root bin
 f usr/share/man/man1m/strclean.1m 0444 root bin

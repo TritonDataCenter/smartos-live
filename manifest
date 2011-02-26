@@ -359,7 +359,6 @@ d etc/inet/secret/ike.privatekeys 0700 root sys
 f etc/inet/secret/ipseckeys.sample 0600 root sys
 f etc/inet/services 0644 root sys
 f etc/inet/slp.conf.example 0644 root sys
-f etc/inet/wanboot.conf.sample 0444 root sys
 s etc/inetd.conf=inet/inetd.conf
 d etc/init.d 0755 root sys
 f etc/init.d/PRESERVE 0744 root sys
@@ -8079,7 +8078,6 @@ f usr/lib/abi/appcert/symreport 0555 root bin
 f usr/lib/abi/apptrace.so.1 0755 root bin
 f usr/lib/abi/spec2map 0755 root bin
 f usr/lib/abi/spec2trace 0755 root bin
-s usr/lib/accept=../sbin/accept
 d usr/lib/acct 0755 root bin
 f usr/lib/acct/acctcms 0555 root bin
 f usr/lib/acct/acctcon 0555 root bin
@@ -12320,16 +12318,6 @@ f usr/lib/inet/pppoec 0555 root bin
 f usr/lib/inet/pppoed 0555 root bin
 f usr/lib/inet/slpd 0555 root bin
 f usr/lib/inet/vrrpd 0555 root bin
-d usr/lib/inet/wanboot 0755 root bin
-f usr/lib/inet/wanboot/bootlog-cgi 0555 root bin
-f usr/lib/inet/wanboot/encr 0555 root bin
-f usr/lib/inet/wanboot/hmac 0555 root bin
-f usr/lib/inet/wanboot/ickey 0555 root bin
-f usr/lib/inet/wanboot/keygen 0555 root bin
-f usr/lib/inet/wanboot/keymgmt 0555 root bin
-f usr/lib/inet/wanboot/netbootinfo 0555 root bin
-f usr/lib/inet/wanboot/p12split 0555 root bin
-f usr/lib/inet/wanboot/wanboot-cgi 0555 root bin
 f usr/lib/inet/wpad 0555 root bin
 f usr/lib/intrd 0555 root bin
 d usr/lib/ipf 0755 root bin
@@ -12834,10 +12822,6 @@ f usr/lib/libvt0.so.1 0755 root bin
 s usr/lib/libvt0.so=libvt0.so.1
 s usr/lib/libw.so.1=../../lib/libw.so.1
 s usr/lib/libw.so=../../lib/libw.so.1
-f usr/lib/libwanboot.so.1 0755 root bin
-s usr/lib/libwanboot.so=libwanboot.so.1
-f usr/lib/libwanbootutil.so.1 0755 root bin
-s usr/lib/libwanbootutil.so=libwanbootutil.so.1
 f usr/lib/libwrap.so.1.0 0755 root bin
 s usr/lib/libwrap.so.1=libwrap.so.1.0
 s usr/lib/libwrap.so=libwrap.so.1.0
@@ -13011,14 +12995,6 @@ d usr/lib/localedef 0755 root bin
 d usr/lib/localedef/extensions 0755 root bin
 f usr/lib/localedef/extensions/UTF-8.x 0444 root bin
 d usr/lib/localedef/src 0755 root bin
-s usr/lib/lpadmin=../sbin/lpadmin
-s usr/lib/lpfilter=../sbin/lpfilter
-s usr/lib/lpforms=../sbin/lpforms
-s usr/lib/lpmove=../sbin/lpmove
-f usr/lib/lpsched 0555 root bin
-s usr/lib/lpshut=../sbin/lpshut
-s usr/lib/lpsystem=../sbin/lpsystem
-s usr/lib/lpusers=../sbin/lpusers
 f usr/lib/lslabels 0555 root bin
 d usr/lib/lvm 0755 root bin
 f usr/lib/lvm/mddoors 0555 root bin
@@ -13033,7 +13009,6 @@ s usr/lib/lwp/libthread.so.1=../libthread.so.1
 s usr/lib/lwp/libthread_db.so.1=../libthread_db.so.1
 f usr/lib/madv.so.1 0755 root bin
 f usr/lib/mail.local 0555 root bin
-s usr/lib/mail=../../etc/mail/cf
 f usr/lib/makekey 0555 root bin
 f usr/lib/makewhatis 0555 root bin
 d usr/lib/mdb 0755 root sys
@@ -13390,7 +13365,6 @@ d usr/lib/refer/papers 0755 root bin
 f usr/lib/refer/papers/Rbstjissue 0644 root bin
 f usr/lib/refer/papers/Rv7man 0644 root bin
 f usr/lib/refer/papers/runinv 0755 root bin
-s usr/lib/reject=../sbin/reject
 d usr/lib/reparse 0755 root bin
 d usr/lib/reparse/amd64 0755 root bin
 f usr/lib/reparse/amd64/libnfs_basic.so.1 0755 root bin
@@ -15368,7 +15342,6 @@ f usr/sbin/amd64/update_drv 0555 root sys
 f usr/sbin/amd64/whodo 4555 root bin
 f usr/sbin/amd64/zdb 0555 root bin
 f usr/sbin/arp 0555 root bin
-f usr/sbin/asppp2pppd 0550 root bin
 f usr/sbin/atohexlabel 0555 root sys
 f usr/sbin/audit 0555 root bin
 f usr/sbin/auditconfig 0555 root bin
@@ -15379,9 +15352,6 @@ f usr/sbin/auditstat 0555 root bin
 f usr/sbin/audlinks 0755 root sys
 s usr/sbin/automount=../lib/fs/autofs/automount
 s usr/sbin/autopush=../../sbin/autopush
-s usr/sbin/beadm=../../sbin/beadm
-s usr/sbin/bootadm=../../sbin/bootadm
-f usr/sbin/bootconfchk 0555 root bin
 s usr/sbin/cachefslog=../lib/fs/cachefs/cachefslog
 s usr/sbin/cachefswssize=../lib/fs/cachefs/cachefswssize
 f usr/sbin/cfgadm 0555 root bin
@@ -15408,7 +15378,6 @@ s usr/sbin/devnm=df
 f usr/sbin/df 0555 root bin
 f usr/sbin/dfmounts 0555 root bin
 f usr/sbin/dfshares 0555 root bin
-s usr/sbin/dhcpmgr=../sadm/admin/bin/dhcpmgr
 f usr/sbin/dig 0555 root bin
 f usr/sbin/disks 0755 root sys
 f usr/sbin/dispadmin 0555 root bin
@@ -15560,21 +15529,16 @@ f usr/sbin/makedbm 0555 root bin
 f usr/sbin/makemap 0555 root bin
 f usr/sbin/medstat 0555 root bin
 f usr/sbin/metaclear 0555 root bin
-s usr/sbin/metadb=../../sbin/metadb
 f usr/sbin/metadetach 0555 root bin
-s usr/sbin/metadevadm=../../sbin/metadevadm
 f usr/sbin/metahs 0555 root bin
 f usr/sbin/metaimport 0555 root bin
-s usr/sbin/metainit=../../sbin/metainit
 f usr/sbin/metaoffline 0555 root bin
 f usr/sbin/metaonline 0555 root bin
 f usr/sbin/metaparam 0555 root bin
-s usr/sbin/metarecover=../../sbin/metarecover
 f usr/sbin/metarename 0555 root bin
 f usr/sbin/metareplace 0555 root bin
 f usr/sbin/metaroot 0555 root bin
 f usr/sbin/metaset 0555 root bin
-s usr/sbin/metastat=../../sbin/metastat
 f usr/sbin/metasync 0555 root bin
 f usr/sbin/metattach 0555 root bin
 f usr/sbin/mkdevalloc 0555 root bin
@@ -15649,14 +15613,12 @@ f usr/sbin/reboot 0755 root bin
 f usr/sbin/rem_drv 0555 root bin
 f usr/sbin/remove_allocatable 0555 root bin
 s usr/sbin/repquota=../lib/fs/ufs/repquota
-s usr/sbin/rmmount=../bin/rmmount
 f usr/sbin/rmt 0555 root bin
 f usr/sbin/rndc 0555 root bin
 f usr/sbin/rndc-confgen 0555 root bin
 f usr/sbin/roleadd 0555 root sys
 f usr/sbin/roledel 0555 root sys
 f usr/sbin/rolemod 0555 root sys
-f usr/sbin/root_archive 0555 root sys
 s usr/sbin/route=../../sbin/route
 s usr/sbin/routeadm=../../sbin/routeadm
 f usr/sbin/rpc.mdcommd 0555 root bin
@@ -15708,7 +15670,6 @@ f usr/sbin/tcpd 0555 root bin
 f usr/sbin/tcpdchk 0555 root bin
 f usr/sbin/tcpdmatch 0555 root bin
 f usr/sbin/tnchkdb 0555 root sys
-s usr/sbin/tnctl=../../sbin/tnctl
 f usr/sbin/tnd 0555 root sys
 f usr/sbin/tninfo 0555 root sys
 f usr/sbin/traceroute 4555 root bin
@@ -15734,7 +15695,6 @@ f usr/sbin/usermod 0555 root sys
 f usr/sbin/volcopy 0555 root bin
 f usr/sbin/vrrpadm 0555 root bin
 f usr/sbin/wall 2555 root tty
-f usr/sbin/wanbootutil 0555 root bin
 f usr/sbin/whodo 0555 root bin
 s usr/sbin/wusbadm=../../sbin/wusbadm
 s usr/sbin/xntpdc=ntpdc
@@ -17430,7 +17390,6 @@ f usr/share/man/man1m/rmt.1m 0444 root bin
 f usr/share/man/man1m/roleadd.1m 0444 root bin
 f usr/share/man/man1m/roledel.1m 0444 root bin
 f usr/share/man/man1m/rolemod.1m 0444 root bin
-f usr/share/man/man1m/root_archive.1m 0444 root bin
 f usr/share/man/man1m/route.1m 0444 root bin
 f usr/share/man/man1m/routeadm.1m 0444 root bin
 f usr/share/man/man1m/rpc.rexd.1m 0444 root bin
@@ -20944,7 +20903,6 @@ f usr/share/man/man4/utmpx.4 0444 root bin
 f usr/share/man/man4/vfstab.4 0444 root bin
 f usr/share/man/man4/volume-config.4 0444 root bin
 f usr/share/man/man4/volume-request.4 0444 root bin
-f usr/share/man/man4/wanboot.conf.4 0444 root bin
 f usr/share/man/man4/warn.conf.4 0444 root bin
 f usr/share/man/man4/xferlog.4 0444 root bin
 f usr/share/man/man4/ypfiles.4 0444 root bin
@@ -22615,7 +22573,6 @@ d var/lib 0755 root other
 d var/lib/sgml 0755 root sys
 s var/lib/sgml/CATALOG.jade_dsl=CATALOG.openjade
 d var/log 0755 root sys
-d var/log/beadm 0644 root root
 d var/log/pool 0755 root sys
 d var/logadm 0755 root bin
 d var/mail 1777 root mail

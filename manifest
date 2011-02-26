@@ -2489,6 +2489,7 @@ s usr/bin/rview=vim
 s usr/bin/rvim=vim
 f usr/bin/savecore 0555 root bin
 f usr/bin/scp 0555 root bin
+f usr/bin/screen 0555 root bin
 f usr/bin/script 0555 root bin
 f usr/bin/sdiff 0555 root bin
 f usr/bin/sed 0555 root bin
@@ -17125,6 +17126,7 @@ f usr/share/man/man1/rusers.1 0444 root bin
 s usr/share/man/man1/rview.1=vim.1
 s usr/share/man/man1/rvim.1=vim.1
 f usr/share/man/man1/scp.1 0444 root bin
+f usr/share/man/man1/screen.1 0444 root bin
 f usr/share/man/man1/script.1 0444 root bin
 f usr/share/man/man1/sdiff.1 0444 root bin
 f usr/share/man/man1/sed.1 0444 root bin

@@ -22616,7 +22616,6 @@ d var/mail 1777 root mail
 d var/mail/:saved 0775 root mail
 d var/news 0755 root bin
 d var/ntp 0755 root sys
-f var/ntp/ntp.drift 0644 root sys
 d var/ntp/ntpstats 0755 root sys
 d var/opt 0755 root sys
 d var/pkg 0755 root root

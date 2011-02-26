@@ -2164,6 +2164,7 @@ f usr/bin/dns-sd 0555 root bin
 f usr/bin/domainname 0555 root bin
 f usr/bin/dos2unix 0555 root bin
 f usr/bin/du 0555 root bin
+f usr/bin/dump 0555 root bin
 f usr/bin/dumpcs 0555 root bin
 f usr/bin/dumpkeys 0555 root bin
 f usr/bin/echo 0555 root bin
@@ -2171,6 +2172,7 @@ f usr/bin/ed 0555 root bin
 f usr/bin/edit 0555 root bin
 f usr/bin/egrep 0555 root bin
 f usr/bin/eject 0555 root bin
+f usr/bin/elfdump 0555 root bin
 f usr/bin/elfsign 0555 root bin
 f usr/bin/elfwrap 0555 root bin
 f usr/bin/encrypt 0555 root bin
@@ -15679,9 +15681,7 @@ f usr/sbin/sharectl 0555 root bin
 f usr/sbin/sharemgr 0555 root bin
 s usr/sbin/showmount=../lib/fs/nfs/showmount
 f usr/sbin/shutdown 0755 root sys
-f usr/sbin/smbadm 0555 root bin
 f usr/sbin/smbios 0555 root bin
-f usr/sbin/smbstat 0555 root bin
 f usr/sbin/snoop 0555 root bin
 f usr/sbin/sppptun 0555 root bin
 f usr/sbin/spray 0555 root bin
@@ -16905,6 +16905,7 @@ f usr/share/man/man1/dispgid.1 0444 root bin
 f usr/share/man/man1/dispuid.1 0444 root bin
 f usr/share/man/man1/dos2unix.1 0444 root bin
 f usr/share/man/man1/du.1 0444 root bin
+f usr/share/man/man1/dump.1 0444 root bin
 f usr/share/man/man1/dumpcs.1 0444 root bin
 f usr/share/man/man1/dumpkeys.1 0444 root bin
 f usr/share/man/man1/echo.1 0444 root bin
@@ -16912,6 +16913,7 @@ f usr/share/man/man1/ed.1 0444 root bin
 f usr/share/man/man1/edit.1 0444 root bin
 f usr/share/man/man1/egrep.1 0444 root bin
 f usr/share/man/man1/eject.1 0444 root bin
+f usr/share/man/man1/elfdump.1 0444 root bin
 f usr/share/man/man1/elfsign.1 0444 root bin
 f usr/share/man/man1/elfwrap.1 0444 root bin
 f usr/share/man/man1/encrypt.1 0444 root bin
@@ -17446,9 +17448,7 @@ f usr/share/man/man1m/sharectl.1m 0444 root bin
 f usr/share/man/man1m/sharemgr.1m 0444 root bin
 f usr/share/man/man1m/showmount.1m 0444 root bin
 f usr/share/man/man1m/shutdown.1m 0444 root bin
-f usr/share/man/man1m/smbadm.1m 0444 root bin
 f usr/share/man/man1m/smbios.1m 0444 root bin
-f usr/share/man/man1m/smbstat.1m 0444 root bin
 f usr/share/man/man1m/snoop.1m 0444 root bin
 f usr/share/man/man1m/soconfig.1m 0444 root bin
 f usr/share/man/man1m/spray.1m 0444 root bin
@@ -22622,7 +22622,6 @@ d var/mail 1777 root mail
 d var/mail/:saved 0775 root mail
 d var/news 0755 root bin
 d var/ntp 0755 root sys
-f var/ntp/ntp.drift 0644 root sys
 d var/ntp/ntpstats 0755 root sys
 d var/opt 0755 root sys
 d var/pkg 0755 root root

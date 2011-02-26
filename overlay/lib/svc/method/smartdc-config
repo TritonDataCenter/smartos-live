@@ -60,6 +60,13 @@ case "$1" in
     load_sdc_config
     load_sdc_sysinfo
 
+    # Write the info about this datacenter to /.dcinfo so we can use in the GZ
+    echo "SDC_DATACENTER_NAME='${CONFIG_datacenter_name}'" > /.dcinfo
+    if [[ "${SYSINFO_Bootparam_headnode}" == "true" ]]; then
+        echo "SDC_DATACENTER_HEADNODE_ID=${CONFIG_datacenter_headnode_id}" \
+            >> /.dcinfo
+    fi
+
     # Boot parameter takes precidence over config
     if [[ -n "${SYSINFO_Bootparam_root_shadow}" ]]; then
         set_root_password "${SYSINFO_Bootparam_root_shadow}"

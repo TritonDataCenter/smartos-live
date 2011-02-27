@@ -15517,7 +15517,6 @@ s usr/sbin/lockfs=../lib/fs/ufs/lockfs
 f usr/sbin/lockstat 0555 root bin
 f usr/sbin/lofiadm 0555 root bin
 f usr/sbin/logadm 0555 root bin
-f usr/sbin/lshal 0555 root bin
 f usr/sbin/luxadm 0555 root bin
 f usr/sbin/makedbm 0555 root bin
 f usr/sbin/makemap 0555 root bin

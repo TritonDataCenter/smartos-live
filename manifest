@@ -1351,6 +1351,8 @@ f lib/amd64/libxnet.so.1 0755 root bin
 s lib/amd64/libxnet.so=libxnet.so.1
 f lib/amd64/libz.so.1 0755 root bin
 s lib/amd64/libz.so=libz.so.1
+f lib/amd64/libzdoor.so.1 0755 root bin
+s lib/amd64/libzdoor.so=libzdoor.so.1
 f lib/amd64/libzfs.so.1 0755 root bin
 s lib/amd64/libzfs.so=libzfs.so.1
 f lib/amd64/nss_compat.so.1 0755 root bin
@@ -1548,6 +1550,8 @@ f lib/libxnet.so.1 0755 root bin
 s lib/libxnet.so=libxnet.so.1
 f lib/libz.so.1 0755 root bin
 s lib/libz.so=libz.so.1
+f lib/libzdoor.so.1 0755 root bin
+s lib/libzdoor.so=libzdoor.so.1
 f lib/libzfs.so.1 0755 root bin
 s lib/libzfs.so=libzfs.so.1
 d lib/mpxio 0755 root bin
@@ -8001,6 +8005,7 @@ f usr/include/wsreg.h 0644 root bin
 f usr/include/xti.h 0644 root bin
 f usr/include/xti_inet.h 0644 root bin
 f usr/include/zconf.h 0644 root bin
+f usr/include/zdoor.h 0644 root bin
 f usr/include/zlib.h 0644 root bin
 f usr/include/zone.h 0644 root bin
 f usr/include/zonestat.h 0644 root bin
@@ -8488,6 +8493,8 @@ f usr/lib/amd64/liby.so.1 0755 root bin
 s usr/lib/amd64/liby.so=liby.so.1
 s usr/lib/amd64/libz.so.1=../../../lib/amd64/libz.so.1
 s usr/lib/amd64/libz.so=libz.so.1
+s usr/lib/amd64/libzdoor.so.1=../../../lib/amd64/libzdoor.so.1
+s usr/lib/amd64/libzdoor.so=../../../lib/amd64/libzdoor.so.1
 s usr/lib/amd64/libzfs.so.1=../../../lib/amd64/libzfs.so.1
 s usr/lib/amd64/libzfs.so=../../../lib/amd64/libzfs.so.1
 f usr/lib/amd64/libzfs_jni.so.1 0755 root bin
@@ -12828,6 +12835,8 @@ f usr/lib/liby.so.1 0755 root bin
 s usr/lib/liby.so=liby.so.1
 s usr/lib/libz.so.1=../../lib/libz.so.1
 s usr/lib/libz.so=libz.so.1
+s usr/lib/libzdoor.so.1=../../lib/libzdoor.so.1
+s usr/lib/libzdoor.so=../../lib/libzdoor.so.1
 s usr/lib/libzfs.so.1=../../lib/libzfs.so.1
 s usr/lib/libzfs.so=../../lib/libzfs.so.1
 f usr/lib/libzfs_jni.so.1 0755 root bin

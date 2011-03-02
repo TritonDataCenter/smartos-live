@@ -17051,6 +17051,7 @@ f usr/share/man/man1/pwait.1 0444 root bin
 f usr/share/man/man1/pwd.1 0444 root bin
 f usr/share/man/man1/pwdx.1 0444 root bin
 f usr/share/man/man1/rbash.1 0444 root bin
+f usr/share/man/man1/rcapstat.1 0444 root bin
 f usr/share/man/man1/rcp.1 0444 root bin
 f usr/share/man/man1/rdist.1 0444 root bin
 f usr/share/man/man1/read.1 0444 root bin
@@ -17372,6 +17373,7 @@ f usr/share/man/man1m/quotaoff.1m 0444 root bin
 f usr/share/man/man1m/quotaon.1m 0444 root bin
 f usr/share/man/man1m/raidctl.1m 0444 root bin
 f usr/share/man/man1m/ramdiskadm.1m 0444 root bin
+f usr/share/man/man1m/rcapadm.1m 0444 root bin
 f usr/share/man/man1m/rctladm.1m 0444 root bin
 f usr/share/man/man1m/rdate.1m 0444 root bin
 f usr/share/man/man1m/reboot.1m 0444 root bin

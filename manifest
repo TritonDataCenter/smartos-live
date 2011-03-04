@@ -1319,6 +1319,8 @@ f lib/amd64/libsecdb.so.1 0755 root bin
 s lib/amd64/libsecdb.so=libsecdb.so.1
 f lib/amd64/libsendfile.so.1 0755 root bin
 s lib/amd64/libsendfile.so=libsendfile.so.1
+f lib/amd64/libsmartsshd.so.1 0755 root bin
+s lib/amd64/libsmartsshd.so=libsmartsshd.so.1
 f lib/amd64/libsocket.so.1 0755 root bin
 s lib/amd64/libsocket.so=libsocket.so.1
 f lib/amd64/libssl.so.0.9.8 0755 root bin
@@ -1518,6 +1520,8 @@ f lib/libsecdb.so.1 0755 root bin
 s lib/libsecdb.so=libsecdb.so.1
 f lib/libsendfile.so.1 0755 root bin
 s lib/libsendfile.so=libsendfile.so.1
+f lib/libsmartsshd.so.1 0755 root bin
+s lib/libsmartsshd.so=libsmartsshd.so.1
 f lib/libsocket.so.1 0755 root bin
 s lib/libsocket.so=libsocket.so.1
 f lib/libssl.so.0.9.8 0755 root bin
@@ -8417,6 +8421,8 @@ f usr/lib/amd64/libsldap.so.1 0755 root bin
 s usr/lib/amd64/libsldap.so=libsldap.so.1
 f usr/lib/amd64/libslp.so.1 0755 root bin
 s usr/lib/amd64/libslp.so=libslp.so.1
+s usr/lib/amd64/libsmartsshd.so.1=../../../lib/amd64/libsmartsshd.so.1
+s usr/lib/amd64/libsmartsshd.so=../../../lib/amd64/libsmartsshd.so.1
 f usr/lib/amd64/libsmbfs.so.1 0755 root bin
 s usr/lib/amd64/libsmbfs.so=libsmbfs.so.1
 f usr/lib/amd64/libsmbios.so.1 0755 root bin
@@ -12749,6 +12755,8 @@ f usr/lib/libsldap.so.1 0755 root bin
 s usr/lib/libsldap.so=libsldap.so.1
 f usr/lib/libslp.so.1 0755 root bin
 s usr/lib/libslp.so=libslp.so.1
+s usr/lib/libsmartsshd.so.1=../../lib/libsmartsshd.so.1
+s usr/lib/libsmartsshd.so=../../lib/libsmartsshd.so.1
 f usr/lib/libsmbfs.so.1 0755 root bin
 s usr/lib/libsmbfs.so=libsmbfs.so.1
 f usr/lib/libsmbios.so.1 0755 root bin

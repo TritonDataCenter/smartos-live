@@ -8566,6 +8566,7 @@ f usr/lib/brand/joyent/pinstall 0755 root root
 f usr/lib/brand/joyent/platform.xml 0444 root root
 f usr/lib/brand/joyent/poststate 0755 root root
 f usr/lib/brand/joyent/prestate 0755 root root
+f usr/lib/brand/joyent/statechange 0755 root root
 d usr/lib/brand/shared 0755 root sys
 f usr/lib/brand/shared/common.ksh 0444 root bin
 f usr/lib/brand/shared/query 0755 root bin

@@ -97,14 +97,14 @@
 	<property_group name='ttymon' type='application'>
 		<propval name='value_authorization' type='astring'
 			value='solaris.smf.value.vt' />
-		<propval name='device' type='astring' value='/dev/console' />
+		<propval name='device' type='astring' value='/dev/wscons' />
 		<propval name='label' type='astring' value='console' />
 		<propval name='timeout' type='count' value='0' />
 		<propval name='nohangup' type='boolean' value='true' />
 		<propval name='modules' type='astring'
 		    value='ldterm,ttcompat' />
 		<propval name='prompt' type='astring'
-		   value='`uname -n` console login:' />
+		   value='`uname -n` wscons login:' />
 		<propval name='terminal_type' type='astring'
 		     value='' />
 	</property_group>

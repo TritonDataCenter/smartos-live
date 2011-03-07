@@ -17197,6 +17197,7 @@ f usr/share/man/man1/ypwhich.1 0444 root bin
 f usr/share/man/man1/zcat.1 0444 root bin
 f usr/share/man/man1/zlogin.1 0444 root bin
 f usr/share/man/man1/zonename.1 0444 root bin
+f usr/share/man/man1/zonestat.1 0444 root bin
 d usr/share/man/man1m 0755 root bin
 f usr/share/man/man1m/6to4relay.1m 0444 root bin
 f usr/share/man/man1m/acctadm.1m 0444 root bin
@@ -17480,6 +17481,7 @@ f usr/share/man/man1m/zfs.1m 0444 root bin
 f usr/share/man/man1m/zic.1m 0444 root bin
 f usr/share/man/man1m/zoneadm.1m 0444 root bin
 f usr/share/man/man1m/zonecfg.1m 0444 root bin
+f usr/share/man/man1m/zonestatd.1m 0444 root bin
 f usr/share/man/man1m/zpool.1m 0444 root bin
 f usr/share/man/man1m/zstreamdump.1m 0444 root bin
 d usr/share/man/man2 0755 root bin

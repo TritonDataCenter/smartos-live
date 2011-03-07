@@ -1,0 +1,9 @@
+# TODO
+
+* generate index
+* show <hr> tags using something like
+    \l'\n(.lu*8u/10u'
+  and take care of the current indentation.
+
+* tests !
+* spawn man properly. Use example in npm code.

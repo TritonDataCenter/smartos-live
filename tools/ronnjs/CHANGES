@@ -1,0 +1,76 @@
+Ronnjs Changes and Release Notes
+==============================
+
+Version 0.3.6
+------------------------------
+
+* Minor changes the README
+
+
+Version 0.3.5
+------------------------------
+
+### Fixed bugs
+
+* -V requires sys, move requires before
+* package.json main should be lib/ronnjs, so that require works
+  (Thanks to Evan Meagher)
+
+
+Version 0.3.4
+------------------------------
+
+### Fixed bugs
+
+* Fix syntax error in bin/ronn.js
+
+
+Version 0.3.3
+------------------------------
+
+### Features
+
+* opts is now a dependency
+
+### Fixed bugs
+
+* -v outputs right version...
+
+
+Version 0.3.2
+------------------------------
+
+### Features
+
+* cleanup git and npm package.
+
+
+Version 0.3.1
+------------------------------
+
+### Features
+
+* package.json
+* npm
+* Outputs self-closing tags when they're empty.
+* Adds id to level >= 2 headings. Allows links to refer to them.
+* Outputs roff .TP for level 4 headings.
+
+### Fixed bugs
+
+* Fix lists with inline text and then sub-lists.
+* Roff skips generating title heading if name is empty.
+* Strip space from dt and dd values in roff output.
+* Section links are bare links in roff output.
+* Correct node shebang
+
+
+Version 0.2
+------------------------------
+
+Supports output to html fragment.
+
+Version 0.1
+------------------------------
+
+Initial release.

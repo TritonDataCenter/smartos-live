@@ -15,3 +15,6 @@
 /tools/pwgen
 /0-*-stamp
 /manifest.new
+zonestat.1
+zonestatd.1m
+ronn-format.7

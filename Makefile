@@ -5,7 +5,7 @@ PROTO=$(ROOT)/proto
 PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin
 LOCAL_SUBDIRS="ur-agent"
 
-world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp 0-tools-stamp
+world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp 0-tools-stamp 0-man-stamp
 
 live: world
 	mkdir -p ${ROOT}/log
@@ -30,6 +30,9 @@ update:
 
 0-livesrc-stamp: src/bootparams.c
 	(cd $(ROOT)/src && gmake DESTDIR=$(PROTO) && gmake DESTDIR=$(PROTO) install)
+
+0-man-stamp:
+	(cd $(ROOT)/man/src && gmake clean && gmake)
 
 0-tools-stamp: tools/builder/builder tools/pwgen tools/cryptpass
 

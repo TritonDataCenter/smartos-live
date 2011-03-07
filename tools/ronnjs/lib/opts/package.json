@@ -1,0 +1,7 @@
+{ "name" : "opts"
+, "version" : "1.2.1"
+, "description" : "Command line argument parser written in the style of commonjs. To be used with node.js"
+, "author" : "Joey Mazzarelli <mazzarelli@gmail.com> (http://joey.mazzarelli.com)"
+, "main" : "js/opts"
+, "engines" : { "node" : ">=0.1.90" }
+}

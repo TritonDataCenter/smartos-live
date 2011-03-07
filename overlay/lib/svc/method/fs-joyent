@@ -51,6 +51,9 @@ if [ $? -ne 0 ]; then
         fi
         swap -a /dev/zvol/dsk/zones/swap
 	    dumpadm -y -d /dev/zvol/dsk/zones/dump
+
+	[[ -f /zones/currbooted ]] && mv /zones/currbooted /zones/lastbooted
+	uname -v >/zones/currbooted
     fi
 fi
 

@@ -1,0 +1,252 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH sccs-prs 1 "3 Jul 2007" "SunOS 5.11" "User Commands"
+.SH NAME
+sccs-prs, prs \- display selected portions of an SCCS history
+.SH SYNOPSIS
+.LP
+.nf
+\fBprs\fR [\fB-ael\fR] [\fB-c\fR\fIdate-time\fR] [\fB-d\fR\fIdataspec\fR] [\fB-r\fR\fIsid\fR] \fIs.filename\fR...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBprs\fR utility displays part or all of the \fBSCCS\fR file (see \fBsccsfile\fR(4)) in a user supplied format.
+.sp
+.LP
+If a directory name is used in place of the \fIs.filename\fR argument, the \fBprs\fR command applies to all \fBs.\fRfiles in that directory. Unreadable \fBs.\fRfiles produce an error; processing continues with the next file (if any). The use of `\fB\(mi\fR\&' as the \fIs.filename\fR argument indicates that the names of files are to be read from the standard input, one \fBs.\fRfile per line.
+.SH OPTIONS
+.sp
+.LP
+In the absence of options, \fBprs\fR displays the delta table (version log). In the absence of \fB-d\fR, or \fB-l\fR, \fBprs\fR displays the entry for each delta indicated by the other options.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fR
+.ad
+.RS 15n
+.rt  
+Includes all deltas, including those marked as removed (see \fBsccs-rmdel\fR(1)). 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-e\fR\fR
+.ad
+.RS 15n
+.rt  
+Requests information for all deltas created \fIearlier\fR than, and including, the delta indicated with \fB-r\fR or \fB-c\fR. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR\fR
+.ad
+.RS 15n
+.rt  
+Requests information for all deltas created \fIlater\fR than, and including, the delta indicated with \fB-r\fR or \fB-c\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR\fIdate-time\fR\fR
+.ad
+.RS 15n
+.rt  
+Either options \fB-e\fRor \fB-l\fRmust be used with this option. \fB-c\fR\fIdate-time\fR displays information on the deltas checked in either prior to and including the date and time indicated by the \fIdate-time\fR argument (option \fB-e\fR); or later than and including the date and time indicated (option \fB-l\fR). \fIdate-time\fR takes the form:
+.sp
+\fIyy\fR[\fImm\fR[\fIdd\fR[\fIhh\fR[\fImm\fR[\fIss\fR]\|]\|]\|]\|]
+.sp
+Units omitted from the indicated date and time default to their maximum possible values; that is \fB-c\fR\fB7502\fR is equivalent to \fB-c\fR\fB750228235959\fR. Any number of non-numeric characters may separate the various 2 digit components. If white-space characters occur, the \fIdate-time\fR specification must be quoted. Values of \fIyy\fR in the range \fB69\(mi99\fR refer to the twentieth century. Values in the range of \fB00\(mi68\fR refer to the twenty-first century.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR\fIdataspec\fR\fR
+.ad
+.RS 15n
+.rt  
+Produce a report according to the indicated data specification. \fIdataspec\fR consists of a (quoted) text string that includes embedded data keywords of the form: `\fB:\fR\fIkey\fR\fB:\fR' (see \fBData Keywords\fR, below). \fBprs\fR expands these keywords in the output it produces. To specify a \fBTAB\fR character in the output, use \fB\et\fR; to specify a NEWLINE in the output, use \fB\en\fR\&. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR\fIsid\fR\fR
+.ad
+.RS 15n
+.rt  
+Specifies the \fBSCCS\fR delta \fBID\fR (\fBSID\fR) of the delta for which information is desired. If no  \fBSID\fR is specified, the most recently created delta is used.
+.RE
+
+.SH USAGE
+.sp
+.LP
+Usage of \fBprs\fR is described below.
+.SS "Data Keywords"
+.sp
+.LP
+Data keywords specify which parts of an \fBSCCS\fR file are to be retrieved. All parts of an \fBSCCS\fR file (see \fBsccsfile\fR(4)) have an associated data keyword. A data keyword may appear any number of times in a data specification argument to \fB-d\fR. These data keywords are listed in the table below: 
+.sp
+.in +2
+.nf
+
+.fi
+.in -2
+.sp
+
+.sp
+
+.sp
+.TS
+tab();
+cw(.65i) cw(1.94i) cw(.65i) cw(1.62i) cw(.65i) 
+lw(.65i) lw(1.94i) lw(.65i) lw(1.62i) lw(.65i) 
+.
+\fIKeyword\fR\fIData Item\fR\fIFile Section*\fR\fIValue\fR\fIFormat\fR**
+\fB:A:\fRa format for the \fBwhat\fR string:N/A\fB:Z::Y: :M: :I::Z:\fRS
+\fB:B:\fRbranch numberD\fInnnn\fRS
+\fB:BD:\fRbodyB\fItext\fRM
+\fB:BF:\fRbranch flagF\fByes\fR or \fBno\fRS
+\fB:CB:\fRceiling boundaryF\fB:R:\fRS
+\fB:C:\fRcomments for deltaD\fItext\fRM
+\fB:D:\fRdate delta createdD\fB:Dy:/:Dm:/:Dd:\fRS
+\fB:Dd:\fRday delta createdD\fInn\fRS
+\fB:Dg:\fRdeltas ignored (seq #)D\fB:DS: :DS:\fR\|.\|.\|.S
+\fB:DI:\fRT{
+seq-no. of deltas included, excluded, ignored
+T}D\fB:Dn:/:Dx:/:Dg:\fRS
+\fB:DL:\fRdelta line statisticsD\fB:Li:/:Ld:/:Lu:\fRS
+\fB:Dm:\fRmonth delta createdD\fInn\fRS
+\fB:Dn:\fRdeltas included (seq #)D\fB:DS: :DS:\fR\|.\|.\|.S
+\fB:DP:\fRpredecessor delta seq-no. D\fInnnn\fRS
+\fB:Ds:\fRdefault SIDF\fB:I:\fRS
+\fB:DS:\fRdelta sequence numberD\fInnnn\fRS
+\fB:Dt:\fRdelta informationD \fB:DT: :I: :D: :T: :P: :DS: :DP:\fRS
+\fB:DT:\fRdelta typeD\fBD\fR or \fBR\fRS
+\fB:Dx:\fRdeltas excluded (seq #)D\fB:DS:\fR \|.\|.\|.S
+\fB:Dy:\fRyear delta createdD\fInn\fRS
+\fB:F:\fR\fBs.\fRfile nameN/A\fItext\fRS
+\fB:FB:\fRfloor boundaryF\fB:R:\fRS
+\fB:FD:\fRfile descriptive textC\fItext\fRM
+\fB:FL:\fRflag listF\fItext\fRM
+\fB:GB:\fRgotten bodyB\fItext\fRM
+\fB:I:\fRSCCS delta ID (SID)D\fB:R:.:L:.:B:.:S:\fRS
+\fB:J:\fRjoint edit flagF\fByes\fR or \fBno\fRS
+\fB:KF:\fRkeyword error/warning flagF\fByes\fR or \fBno\fRS
+\fB:L:\fRlevel numberD\fInnnn\fRS
+\fB:Ld:\fRlines deleted by deltaD\fInnnnn\fRS
+\fB:Li:\fRlines inserted by deltaD\fInnnnn\fRS
+\fB:LK:\fRlocked releasesF\fB:R:\fR\|.\|.\|.S
+\fB:Lu:\fRlines unchanged by deltaD\fInnnnn\fRS
+\fB:M:\fRmodule nameF\fItext\fRS
+\fB:MF:\fRMR validation flagF\fByes\fR or \fBno\fRS
+\fB:MP:\fRMR validation programF\fItext\fRS
+\fB:MR:\fRMR numbers for deltaD\fItext\fRM
+\fB:ND:\fRnull delta flagF\fByes\fR or \fBno\fRS
+\fB:Q:\fRuser defined keywordF\fItext\fRS
+\fB:P:\fRuser who created deltaD\fIusername\fRS
+\fB:PN:\fR\fBs.\fRfile's pathnameN/A\fItext\fRS
+\fB:R:\fRrelease numberD\fInnnn\fRS
+\fB:S:\fRsequence numberD\fInnnn\fRS
+\fB:T:\fRtime delta createdD\fB:Th:::Tm:::Ts:\fRS
+\fB:Th:\fRhour delta createdD\fInn\fRS
+\fB:Tm:\fRminutes delta createdD\fInn\fRS
+\fB:Ts:\fRseconds delta createdD\fInn\fRS
+\fB:UN:\fRuser namesU\fItext\fRM
+\fB:W:\fRa form of \fBwhat\fR stringN/A\fB:Z::M:\et:I:\fRS
+\fB:Y:\fRmodule type flagF\fItext\fRS
+\fB:Z:\fR\fBwhat\fR string delimiterN/A\fB@(#)\fRS
+.TE
+
+.sp
+.LP
+*B = body, D = delta table, F = flags, U = user names
+.sp
+.LP
+**S = simple format, M = multi-line format
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRDisplaying delta entries
+.sp
+.LP
+The following command displays delta entries:
+
+.sp
+.in +2
+.nf
+example% \fBprs -e -d":I:\et:P:" program.c\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+produces:
+
+.sp
+.in +2
+.nf
+1.6	username
+1.5 username...
+.fi
+.in -2
+.sp
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.LP
+See \fBenviron\fR(5) for descriptions of the following environment variables that affect the execution of \fBprs\fR: \fBLANG\fR, \fBLC_ALL\fR, \fBLC_CTYPE\fR, \fBLC_MESSAGES\fR, and \fBNLSPATH\fR.
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/tmp/pr?????\fR\fR
+.ad
+.RS 16n
+.rt  
+temporary file
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWsprot
+_
+Interface StabilityStandard
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBsccs\fR(1), \fBsccs-cdc\fR(1), \fBsccs-delta\fR(1), \fBsccs-get\fR(1), \fBsccs-help\fR(1), \fBsccs-prt\fR(1), \fBsccs-sact\fR(1), \fBsccs-sccsdiff\fR(1), \fBwhat\fR(1), \fBsccsfile\fR(4), \fBattributes\fR(5), \fBenviron\fR(5), \fBstandards\fR(5)
+.SH DIAGNOSTICS
+.sp
+.LP
+Use the \fBSCCS\fR \fBhelp\fR command for explanations (see \fBsccs-help\fR(1)).

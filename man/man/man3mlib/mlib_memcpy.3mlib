@@ -1,0 +1,88 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_memcpy 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_memcpy \- copy a block of bytes
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBvoid *\fR\fBmlib_memcpy\fR(\fBvoid *\fR\fIdst\fR, \fBconst void *\fR\fIsrc\fR, \fBsize_t\fR \fIn\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_memcpy()\fR function copies \fIn\fR bytes from memory area \fIsrc\fR to \fIdst\fR. It returns \fIdst\fR.  The memory areas may not overlap.  Use \fBmlib_memmove()\fR if the memory areas do overlap.
+.sp
+.LP
+This function is a wrapper of the standard C function \fBmemcpy()\fR.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdst\fR\fR
+.ad
+.RS 7n
+.rt  
+Pointer to the destination.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc\fR\fR
+.ad
+.RS 7n
+.rt  
+Pointer to the source.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIn\fR\fR
+.ad
+.RS 7n
+.rt  
+Number of bytes to be copied.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns a pointer to the destination.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_memmove\fR(3MLIB), \fBmlib_memset\fR(3MLIB), \fBmemory\fR(3C), \fBattributes\fR(5)

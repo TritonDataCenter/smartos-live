@@ -1,0 +1,374 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_SignalDTWVectorPath_F32 3MLIB "23 May 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_SignalDTWVectorPath_F32 \- perform dynamic time warping on vector data
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_SignalDTWVectorPath_F32\fR(\fBmlib_d64 *\fR\fIdist\fR, \fBmlib_s32 *\fR\fIpath\fR,
+     \fBmlib_s32 *\fR\fIlpath\fR, \fBconst mlib_f32 **\fR\fIdobs\fR, \fBmlib_s32\fR \fIlobs\fR, \fBvoid *\fR\fIstate\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_SignalDTWVectorPath_F32()\fR function performs dynamic time warping on vector data.
+.sp
+.LP
+Assume the reference data are
+.sp
+.in +2
+.nf
+    r(y), y=1,2,...,N
+.fi
+.in -2
+
+.sp
+.LP
+and the observed data are
+.sp
+.in +2
+.nf
+    o(x), x=1,2,...,M
+.fi
+.in -2
+
+.sp
+.LP
+the dynamic time warping is to find a mapping function (a path)
+.sp
+.in +2
+.nf
+    p(i) = {px(i),py(i)}, i=1,2,...,Q
+.fi
+.in -2
+
+.sp
+.LP
+with the minimum distance.
+.sp
+.LP
+In K-best paths case, K paths with the K minimum distances are searched.
+.sp
+.LP
+The distance of a path is defined as
+.sp
+.in +2
+.nf
+            Q
+    dist = SUM d(r(py(i)),o(px(i))) * m(px(i),py(i))
+           i=1
+.fi
+.in -2
+
+.sp
+.LP
+where \fBd(r,o)\fR is the dissimilarity between data point/vector \fBr\fR and data point/vector \fBo\fR; \fBm(x,y)\fR is the path weighting coefficient associated with path point \fB(x,y)\fR; \fBN\fR is the length of the reference data; \fBM\fR is the length of the observed data; \fBQ\fR is the length of the path.
+.sp
+.LP
+Using L1 norm (sum of absolute differences)
+.sp
+.in +2
+.nf
+             L-1
+    d(r,o) = SUM |r(i) - o(i)|
+             i=0
+.fi
+.in -2
+
+.sp
+.LP
+Using L2 norm (Euclidean distance)
+.sp
+.in +2
+.nf
+                    L-1 
+    d(r,o) = SQRT { SUM (r(i) - o(i))**2 }
+                    i=0
+.fi
+.in -2
+
+.sp
+.LP
+where \fBL\fR is the length of each data vector.
+.sp
+.LP
+To scalar data where \fBL=1\fR, the two norms are the same.
+.sp
+.in +2
+.nf
+    d(r,o) = |r - o| = SQRT {(r - o)**2 }
+.fi
+.in -2
+
+.sp
+.LP
+The constraints of dynamic time warping are:
+.RS +4
+.TP
+1.
+Endpoint constraints
+.sp
+.in +2
+.nf
+    px(1) = 1
+    1 \(<= py(1) \(<= 1 + delta
+.fi
+.in -2
+
+and
+.sp
+.in +2
+.nf
+    px(Q) = M
+    N-delta \(<= py(Q) \(<= N
+.fi
+.in -2
+
+.RE
+.RS +4
+.TP
+2.
+Monotonicity Conditions
+.sp
+.in +2
+.nf
+    px(i) \(<= px(i+1)
+    py(i) \(<= py(i+1)
+.fi
+.in -2
+
+.RE
+.RS +4
+.TP
+3.
+Local Continuity Constraints
+.sp
+See Table 4.5 on page 211 in Rabiner and Juang's book.
+.sp
+Itakura Type:
+.sp
+.in +2
+.nf
+    py
+    |
+    *----*----*
+    |p4  |p1  |p0
+    |    |    |
+    *----*----*
+    |    |p2  |
+    |    |    |
+    *----*----*-- px
+          p3
+.fi
+.in -2
+
+Allowable paths are
+.sp
+.in +2
+.nf
+    p1->p0    (1,0)
+    p2->p0    (1,1)
+    p3->p0    (1,2)
+.fi
+.in -2
+
+Consecutive \fB(1,0)(1,0)\fR is disallowed. So path \fBp4->p1->p0\fR is disallowed.
+.RE
+.RS +4
+.TP
+4.
+Global Path Constraints
+.sp
+Due to local continuity constraints, certain portions of the \fB(px,py)\fR plane are excluded from the region the optimal warping path can traverse. This forms global path constraints.
+.RE
+.RS +4
+.TP
+5.
+Slope Weighting
+.sp
+See Equation 4.150-3 on page 216 in Rabiner and Juang's book.
+.RE
+.sp
+.LP
+A path in \fB(px,py)\fR plane can be represented in chain code. The value of the chain code is defined as following.
+.sp
+.in +2
+.nf
+    ============================
+    shift ( x , y ) | chain code
+    ----------------------------
+        ( 1 , 0 )   |     0
+        ( 0 , 1 )   |     1
+        ( 1 , 1 )   |     2
+        ( 2 , 1 )   |     3
+        ( 1 , 2 )   |     4
+        ( 3 , 1 )   |     5
+        ( 3 , 2 )   |     6
+        ( 1 , 3 )   |     7
+        ( 2 , 3 )   |     8
+    ============================
+
+        py
+        |
+        *  8  7  *
+        |
+        *  4  *  6
+        |
+        1  2  3  5
+        |
+        x--0--*--*-- px
+.fi
+.in -2
+
+.sp
+.LP
+where \fBx\fR marks the start point of a path segment, the numbers are the values of the chain code for the segment that ends at the point.
+.sp
+.LP
+In following example, the observed data with 11 data points are mapped into the reference data with 9 data points
+.sp
+.in +2
+.nf
+        py
+        |
+     9  | * * * * * * * * * *-*
+        |                  /
+        | * * * * * * * *-* * *
+        |              /
+        | * * * * * * * * * * *
+        |            /
+        | * * * * *-* * * * * *
+        |        /
+        | * * * * * * * * * * *
+        |       |
+        | * * * * * * * * * * *
+        |      /
+        | * * * * * * * * * * *
+        |    /
+        | * * * * * * * * * * *
+        |  /
+     1  | * * * * * * * * * * *
+        |
+        +------------------------ px
+          1                   11
+.fi
+.in -2
+
+.sp
+.LP
+The chain code that represents the path is
+.sp
+.in +2
+.nf
+    (2 2 2 1 2 0 2 2 0 2 0)
+.fi
+.in -2
+
+.sp
+.LP
+See \fIFundamentals of Speech Recognition\fR by Lawrence Rabiner and Biing-Hwang Juang, Prentice Hall, 1993.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdist\fR\fR
+.ad
+.RS 9n
+.rt  
+The distance of the optimal path.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIpath\fR\fR
+.ad
+.RS 9n
+.rt  
+The optimal path.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIlpath\fR\fR
+.ad
+.RS 9n
+.rt  
+The length of the optimal path.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdobs\fR\fR
+.ad
+.RS 9n
+.rt  
+The observed data array.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIlobs\fR\fR
+.ad
+.RS 9n
+.rt  
+The length of the observed data array.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIstate\fR\fR
+.ad
+.RS 9n
+.rt  
+Pointer to the internal state structure.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_SignalDTWVectorInit_F32\fR(3MLIB), \fBmlib_SignalDTWVector_F32\fR(3MLIB), mlib_SignalDTWVectorPath_F32(3MLIB), \fBmlib_SignalDTWVectorFree_F32\fR(3MLIB), \fBattributes\fR(5)

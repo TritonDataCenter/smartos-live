@@ -1,0 +1,274 @@
+'\" te
+.\"  Copyright (c) 2000, Sun Microsystems, Inc.  All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH pcram 7D "2 Mar 2007" "SunOS 5.11" "Devices"
+.SH NAME
+pcram \- PCMCIA RAM memory card device driver
+.SH SYNOPSIS
+.LP
+.nf
+\fBmemory@\fR\fI<socket>\fR\fB/pcram@\fR\fI<technology>\fR\fB,0:c\fR
+.fi
+
+.LP
+.nf
+\fBmemory@\fR\fI<socket>\fR\fB/pcram@\fR\fI<technology>\fR\fB,0:c,raw\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBPCMCIA RAM\fR memory card device driver supports disk-like \fBI/O\fR access to any standard \fBPCMCIA\fR static random access memory (SRAM) card and dynamic random access memory (DRAM) card. The driver supports standard \fBPCMCIA SRAM/DRAM\fR cards that contain a Card Information Structure (CIS). \fBRAM\fR card densities in the 512Kilobytes to 64Mbyte range are supported.
+.SH PRECONFIGURATION
+.sp
+.LP
+If a PC card memory device is recognized, the \fBpcram\fR device driver is automatically loaded, the physical address allocated, and special files created (if they do not already exist).
+.SS "Known Problems and Limitations"
+.sp
+.LP
+The Solaris \fBpcmem\fR driver is not capable of handling "combo" memory cards with multiple types of memory on them (for example, combined SRAM and nonvolatile FLASH). Inserting such a card into a system running the Solaris software may cause a system panic. 
+.sp
+.LP
+Because the PC card memory device is designed as a pseudo-floppy diskette type, the only utility that can be used for formatting is \fBfdformat\fR(1).
+.SH CONFIGURATION
+.sp
+.LP
+Configuration topics include initial installation and configuration, identifying an unrecognized device, special files, using PC card memory devices, and hot-plugging. 
+.SS "Initial Installation and Configuration"
+.RS +4
+.TP
+1.
+Install the Solaris software.
+.RE
+.RS +4
+.TP
+2.
+Boot the system.
+.RE
+.RS +4
+.TP
+3.
+Insert the card.
+.RE
+.SS "Identifying an Unrecognized Device"
+.sp
+.LP
+If you insert a memory device and it is not recognized (no special files created), use the \fBprtconf\fR command.
+.RS +4
+.TP
+1.
+Become root.
+.RE
+.RS +4
+.TP
+2.
+Run the \fBprtconf -D\fR command to display the configuration recognized by the system. A recognized device will appear in the \fBprtconf\fR output. For example:
+.sp
+.in +2
+.nf
+# prtconf -D
+\&.  .  .
+pcic, instance #0 (driver name: pcic)
+    .  .  .
+   memory, instance #0 (driver name: pcmem)
+         pcram, instance #0 (driver name: pcram)
+.fi
+.in -2
+
+.RE
+.RS +4
+.TP
+3.
+If your memory device does not appear at the end of the \fBprtconf\fR output, it is not supported and cannot be used with the \fBpcram\fR driver.
+.RE
+.SS "Special Files"
+.sp
+.LP
+The special files created for PC card memory devices act like disks and have names in the form \fB/dev/dsk/c\fI#\fRt\fI#\fRd\fI#\fRp\fI#\fR\fR or \fB/dev/dsk/c\fI#\fRt\fI#\fRd\fI#\fRs\fI#\fR\fR. Abbreviations used in the names are:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+c\fI#\fR Controller \fI#\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+t\fI#\fR Card technology type \fI#\fR, defined as follows:
+.br
+.in +2
+0 Null--no device
+.in -2
+.br
+.in +2
+1 ROM
+.in -2
+.br
+.in +2
+2 OTPROM (One Time PROM)
+.in -2
+.br
+.in +2
+3 UV EPROM
+.in -2
+.br
+.in +2
+4 EEPROM
+.in -2
+.br
+.in +2
+5 Flash EPROM
+.in -2
+.br
+.in +2
+6 SRAM
+.in -2
+.br
+.in +2
+7 DRAM
+.in -2
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+d\fI#\fR Device region of type \fI#\fR, usually zero
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+p\fI#\fR fdisk partition \fI#\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+s\fI#\fR Solaris slice \fI#\fR
+.RE
+.LP
+Note - 
+.sp
+.RS 2
+A device name can be specified either by a partition name (p\fI#\fR) or a slice name (s\fI#\fR), but not both.
+.RE
+.SS "Using PC Card Memory Devices"
+.sp
+.LP
+Solaris recognizes a PC Card memory device automatically upon the card's insertion.  If you do not want automatic handling of a PC card memory device,  insert an entry for the device in \fB/etc/vfstab\fR and set the \fBmount at boot\fR field to \fBno\fR. See \fBvfstab\fR(4).
+.sp
+.LP
+PC Card memory devices do not need to have file systems on them, though typically, before using a new PC Card memory card, you will want to create a file system on it. DOS PCFS is the best format to use. (You can use virtually any file system format on a PC card memory card, but most other file system formats are platform-dependent, making them unsuitable for moving data between different types of machines. See "Using a PCMCIA Memory Card" in the \fIOpenWindows Advanced User's Guide\fR.)
+.LP
+Note - 
+.sp
+.RS 2
+If you want to redirect the output of a \fBtar\fR command (or \fBdd\fR or \fBcpio\fR) to a PC card memory device, first create a file system on the card, using the \fBfdformat\fR(1) command without arguments. The card must be reformatted before it can be written on again.
+.RE
+.SS "Hot-Plugging"
+.sp
+.LP
+If a memory card is removed while in use, the device driver returns errors until the memory card is inserted into the appropriate socket. Close and reopen the device with the card reinserted, and the memory card will work.
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If you remove the card while in use as a file system, unmount the file system using the \fBumount\fR command. Then reinsert the card and remount the file system using the \fBmount\fR command.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If you remove the card and interrupt a \fBtar\fR or \fBcpio\fR process, stop the process, reinsert the card, and restart the process.
+.RE
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/kernel/drv/pcram\fR\fR
+.ad
+.RS 22n
+.rt  
+\fBpcram\fR driver
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/dev/dsk/c\fR\fIn\fR\fBt\fR\fIn\fR\fBd\fR\fIn\fR\fBs\fR\fIn\fR\fR
+.ad
+.RS 22n
+.rt  
+block files
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/dev/rdsk/c\fR\fIn\fR\fBt\fR\fIn\fR\fBd\fR\fIn\fR\fBs\fR\fIn\fR\fR
+.ad
+.RS 22n
+.rt  
+raw fileswhere:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBc\fR\fIn\fR\fR
+.ad
+.RS 6n
+.rt  
+controller \fIn\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBt\fR\fIn\fR\fR
+.ad
+.RS 6n
+.rt  
+technology type \fIn\fR
+.sp
+\fB0x1\fR\fIROM,\fR\fB0x2\fR\fIOTPROM,\fR\fB0x3\fR\fIEPROM,\fR
+.sp
+\fB0x4\fR\fIEEPROM,\fR\fB0x5\fR\fIFLASH,\fR\fB0x6\fR\fISRAM,\fR
+.sp
+\fB0x7\fR\fIDRAM\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBd\fR\fIn\fR\fR
+.ad
+.RS 6n
+.rt  
+technology region in type \fIn\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBs\fR\fIn\fR\fR
+.ad
+.RS 6n
+.rt  
+slice \fIn\fR
+.RE
+
+.RE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBfdformat\fR(1), \fBpcmcia\fR(7D), \fBdkio\fR(7I), \fBpcmem\fR(7D)

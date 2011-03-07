@@ -1,0 +1,493 @@
+'\" te
+.\" Copyright (c) 2008 Sun Microsystems, Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License"). You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing. See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE. If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH stclient 1M "24 Aug 2009" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+stclient \- Service Tag Administration Program
+.SH SYNOPSIS
+.LP
+.nf
+\fBstclient\fR \fB-x\fR | \fB-E\fR [\fB-r\fR \fIroot_dir\fR]
+.fi
+
+.LP
+.nf
+\fBstclient\fR \fB-a\fR [\fB-i\fR \fIinstance_URN\fR] \fB-p\fR \fIproduct_name\fR \fB-e\fR \fIproduct_version\fR 
+     \fB-t\fR \fIproduct_URN\fR [\fB-F\fR \fIparent_URN\fR] \fB-P\fR \fIproduct_parent\fR 
+     [\fB-I\fR \fIproduct_defined_instance_id\fR] \fB-m\fR \fIproduct_vendor\fR \fB-A\fR \fIplatform_arch\fR 
+     \fB-z\fR \fIcontainer\fR \fB-S\fR \fIsource\fR [\fB-r\fR \fIroot_dir\fR]
+.fi
+
+.LP
+.nf
+\fBstclient\fR \fB-u\fR \fB-i\fR \fIinstance_URN\fR \fB-F\fR \fIparent_URN\fR \fB-I\fR \fIproduct_defined_instance_id\fR 
+     [\fB-r\fR \fIroot_dir\fR]
+.fi
+
+.LP
+.nf
+\fBstclient\fR \fB-d\fR \fB-i\fR \fIinstance_URN\fR [\fB-r\fR \fIroot_dir\fR]
+.fi
+
+.LP
+.nf
+\fBstclient\fR \fB-g\fR \fB-i\fR \fIinstance_URN\fR [\fB-r\fR \fIroot_dir\fR]
+.fi
+
+.LP
+.nf
+\fBstclient\fR \fB-f\fR \fB-t\fR \fIproduct_URN\fR [\fB-r\fR \fIroot_dir\fR]
+.fi
+
+.LP
+.nf
+\fBstclient\fR \fB-h\fR
+.fi
+
+.LP
+.nf
+\fBstclient\fR \fB-v\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBstclient\fR command displays, finds, adds, updates and deletes records in the Service Tag registry. The registry is in the XML file \fB/var/sadm/servicetag/registry/servicetag.xml\fR, and contains the inventory of the product instances installed in the machine. Each record has a unique product instance identifier which is generated when the service tag is added in the registry. This product instance identifier is used as a key when finding, updating or deleting the service tag records. The extract option prints out the registry contents in XML format in stdout.
+.sp
+.LP
+The \fBstclient\fR command also runs in interactive mode. This mode is invoked by running \fBstclient\fR without any parameters. A menu of all the available options are displayed, and the user is prompted to enter different parameters depending on the option chosen.
+.sp
+.LP
+Any user can extract or get the contents of the registry, but only users with the appropriate privileges, the "svctag" user, or the creator of the service tag is authorized to update or delete a service tag record. 
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR \fIproduct_name\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the product name of the service tag to be added. For example, "stclient -p "Solaris 10 Operating System"" sets the product name to the "Solaris 10 Operating System".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-e\fR \fIproduct_version\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the product version of the service tag to be added. For example, "stclient -r 5.10" sets the product version to "5.10".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fIproduct_URN\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the Sun product unique identifier of the service tag to be added. For example, "stclient -t urn:uuid:5005588c-36f3-11d6-9cec-fc96f718e113" sets the Sun product unique identifier to "urn:uuid:5005588c-36f3-11d6-9cec-fc96f718e113".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR \fIinstance_URN\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the product instance unique identifier of the service tag. For example, "stclient -i 3a444ab2-1dd2-11b2-a69d-830020782a6b" sets the product instance unique identifier to "3a444ab2-1dd2-11b2-a69d-830020782a6b" This field may also be set when the service tag is added but is not typically used. The generation of the instance \fBID\fR is normally left to the \fBstclient\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-F\fR \fIproduct_parent_URN\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the Sun product unique identifier of parent product. For example, "stclient -F urn:uuid:5005588c-36f3-11d6-9cec-fc96f718e113" sets the Sun product unique identifier of parent product to "urn:uuid:5005588c-36f3-11d6-9cec-fc96f718e113".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-P\fR \fIproduct_parent\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the parent product of the service tag. For example, "stclient -P JES" sets the product parent to "JES".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-I\fR \fIproduct_defined_instance_id\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the product defined instance identifier. For example, "stclient -I ser:abc-klm-000-7190" sets the product defined instance identifier to "ser:abc-klm-000-7190".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-m\fR \fIproduct_vendor\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the vendor of the product. For example, "stclient -m Sun" sets the product vendor to "Sun".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-A\fR \fIplatform_arch\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the platform architecture that the product is running on. For example, "stclient -A sparc" sets the platform architecture to "sparc"
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-z\fR \fIcontainer\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the container that the product is running on. For example, "stclient -z "global zone"" sets the container to "global zone".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-S\fR \fIsource\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the source of this service tag, naming the entity that created it.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fIroot_dir\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the root directory where the command searches for the registry. The command searches \fB/var/sadm/servicetag/registry\fR by default. When this option is used, the command looks for the Registry in the specified root directory, (for example, "\fB-r\fR \fB/home/user1\fR" searches \fB/home/user1/var/sadm/servicetag\fR). This is typically used for testing.
+.RE
+
+.SH OPERANDS
+.SS "Function Letters"
+.sp
+.LP
+The function portion of the key is specified by one of the following letters:
+.sp
+.ne 2
+.mk
+.na
+\fBx\fR
+.ad
+.RS 5n
+.rt  
+Extract. Extracts and prints the contents of the Service Tag registry in XML format. An alternate root directory may be specified for testing purposes.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBa\fR
+.ad
+.RS 5n
+.rt  
+Add. Adds a service tag in the registry. A unique product instance identifier may be supplied and is automatically generated if not provided. This field is returned by the command. The required fields for add are product name, product version, product URN, product parent, vendor, platform architecture, container and source.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBu\fR
+.ad
+.RS 5n
+.rt  
+Update. Updates a service tag in the registry using the product instance URN as the key. The parent URN and product defined instance id fields can be updated.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBd\fR
+.ad
+.RS 5n
+.rt  
+Delete. Deletes a service tag in the registry using the product instance URN as the key.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBE\fR
+.ad
+.RS 5n
+.rt  
+Extract Environment. Enumerates to standard output the environmental or "agent"' information associated with the registered Service Tags on this system.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBg\fR
+.ad
+.RS 5n
+.rt  
+Get. Gets and prints a service tag from the registry using the product instance URN as the key.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBf\fR
+.ad
+.RS 5n
+.rt  
+Find. Finds and prints all the instance URNs of a given product URN.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBh\fR
+.ad
+.RS 5n
+.rt  
+Help. Displays the command options.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBv\fR
+.ad
+.RS 5n
+.rt  
+Version. Displays the version number of the command.
+.RE
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 7n
+.rt  
+Successful completion.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB> 0\fR\fR
+.ad
+.RS 7n
+.rt  
+An error occurred.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRAdding a Service Tag in the Registry
+.sp
+.LP
+To add a service tag, enter the following:
+
+.sp
+.in +2
+.nf
+\fB# stclient -a -p "Java Enterprise Web Server 6.0" -e 6.0 \e
+   -t urn:uuid:f2b8b59c-6eba-11d7-986f-9f5d47ec72fe  \e
+   -P Java Enterprise Server -m Sun -A sparc -z global -S patch\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The screen displays the following:
+
+.sp
+.in +2
+.nf
+Java Enterprise Web Server 6.0 6.0 added
+Product instance URN=urn:st:7fc61914-1dd2-11b2-b992-830020782a6b
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRUpdating a Service Tag in the Registry
+.sp
+.LP
+To update a service tag, enter the following:
+
+.sp
+.in +2
+.nf
+\fB# stclient -u -i 7fc61914-1dd2-11b2-b992-830020782a6b \e
+   -I urn:st:product.defined.id\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The screen displays the following:
+.sp
+.in +2
+.nf
+Service tag updated
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 3 \fRExtracting a Service Tag Registry
+.sp
+.LP
+To extract a service tag, enter the following:
+
+.sp
+.in +2
+.nf
+\fB# stclient -x\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The screen displays output similar to the following:
+
+.sp
+.in +2
+.nf
+<?xml version="1.0" encoding="UTF-8"?>
+<registry urn="urn:uuid:1234ab-00e1-11b3-98737646873" version="1.0">
+   <service_tag>
+  .
+  .
+  .
+   </service_tag>
+ </registry>
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 4 \fRFinding all product instances
+.sp
+.LP
+To find all product instances, enter the following:
+
+.sp
+.in +2
+.nf
+\fB# stclient -f -t urn:uuid:f2b8b59c-6eba-11d7-986f-9f5d47ec72fe \e
+   fc61914-1dd2-11b2-b992-830020782a6b\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 5 \fRListing the Environmental Information
+.sp
+.LP
+To list the environmental information associated with the registered Service Tags on this system, enter the following:
+
+.sp
+.in +2
+.nf
+\fB# stclient -E\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The screen displays output similar to the following:
+
+.sp
+.in +2
+.nf
+<?xml version="1.0" encoding="UTF-8"?>
+<agent>
+   <agent_urn>urn:st:af15ee62-0bb3-ef2d-fa96-85a11996cc71</agent_urn>
+  .
+  .
+  .
+   </system_info>
+ </agent>
+.fi
+.in -2
+.sp
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.LP
+See \fBenviron\fR(5)for descriptions of the following environment variables that affect the execution of \fBstclient:\fR \fBLANG\fR, \fBLC_ALL\fR, \fBLC_CTYPE\fR, \fBLC_MESSAGES\fR, and \fBNLSPATH\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWservicetagu
+_
+Interface StabilityCommitted
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBin.stdiscover\fR(1M), \fBin.stlisten\fR(1M)

@@ -1,0 +1,139 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH XTSOLgetPropAttributes 3XTSOL "20 Jul 2007" "SunOS 5.11" "Trusted Extensions to X Windows Library Functions"
+.SH NAME
+XTSOLgetPropAttributes \- get the label attributes associated with a property hanging on a window
+.SH SYNOPSIS
+.LP
+.nf
+\fBcc\fR [\fIflag\fR...] \fIfile\fR... \fB-lX11\fR \fB-lXtsol\fR [\fIlibrary\fR...]
+#include <X11/extensions/Xtsol.h>
+
+\fBStatus XTSOLgetPropAttributes\fR(\fIdisplay\fR, \fIwindow\fR, \fIproperty\fR, \fIpropattrp\fR);
+
+Display *\fIdisplay\fR;
+Window \fIwindow\fR;
+Atom \fIproperty\fR;
+XTSOLPropAttributes *\fIpropattrp\fR;
+.fi
+
+.SH PARAMETERS
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdisplay\fR\fR
+.ad
+.RS 13n
+.rt  
+Specifies a pointer to the \fBDisplay\fR structure; returned from \fBXOpenDisplay()\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIwindow\fR\fR
+.ad
+.RS 13n
+.rt  
+Specifies the \fBID\fR of a window system object.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIproperty\fR\fR
+.ad
+.RS 13n
+.rt  
+Specifies the property atom.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIpropattrp\fR\fR
+.ad
+.RS 13n
+.rt  
+Client must provide a pointer to \fBXTSOLPropAttributes\fR.
+.RE
+
+.SH DESCRIPTION
+.sp
+.LP
+The client requires the \fBPRIV_WIN_DAC_READ\fR and \fBPRIV_WIN_MAC_READ\fR privileges. \fBThe XTSOLgetPropAttributes()\fR function retrieves the label attributes that are associated with a property hanging out of a window in a single call. The attributes include \fBUID\fR and sensitivity label.
+.SH RETURN VALUES
+.sp
+.LP
+None
+.SH ERRORS
+.sp
+.ne 2
+.mk
+.na
+\fB\fBBadAccess\fR\fR
+.ad
+.RS 13n
+.rt  
+Lack of privilege
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBBadWindow\fR\fR
+.ad
+.RS 13n
+.rt  
+Not a valid window
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBBadAtom\fR\fR
+.ad
+.RS 13n
+.rt  
+Not a valid atom
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.6i) |cw(2.9i) 
+lw(2.6i) |lw(2.9i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Unsafe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBlibXtsol\fR(3LIB), \fBXTSOLgetClientAttributes\fR(3XTSOL), \fBXTSOLgetResAttributes\fR(3XTSOL), \fBattributes\fR(5)
+.sp
+.LP
+\fISetting Window Polyinstantiation Information\fR in \fISolaris Trusted Extensions Developer\&'s Guide\fR
+.SH NOTES
+.sp
+.LP
+The functionality described on this manual page is available only if the system is configured with Trusted Extensions.

@@ -1,0 +1,117 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_VolumeFindMaxCMask_U8 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_VolumeFindMaxCMask_U8, mlib_VolumeFindMaxCMask_S16 \- maximum intensity searching
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_VolumeFindMaxCMask_U8\fR(\fBmlib_u8 *\fR\fImax\fR,
+     \fBconst mlib_rays *\fR\fIrays\fR, \fBconst mlib_u8 *\fR\fIcmask\fR, \fBmlib_s32\fR \fIthresh\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VolumeFindMaxCMask_S16\fR(\fBmlib_s16 *\fR\fImax\fR,
+     \fBconst mlib_rays *\fR\fIrays\fR, \fBconst mlib_u8 *\fR\fIcmask\fR, \fBmlib_s32\fR \fIthresh\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Each function performs maximum intensity searching.
+.sp
+.LP
+It uses the following equation:
+.sp
+.in +2
+.nf
+max[i] = MAX{ rays->results[j][i]
+              j = 0, 1, ..., rays->nsteps[i]; cmask[j] > thresh }
+.fi
+.in -2
+
+.sp
+.LP
+where \fBi = 0, 1, ..., rays->nrays - 1\fR.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fImax\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to an array of \fBrays->nrays\fR maximum values of the samples in each ray.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIrays\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to an \fBmlib_rays\fR structure. The data \fBrays->results\fR are organized with ray number (rather than ray step) varying fastest. Ray number and ray step are the output of the ray casting functions. The data might have values beyond the maximum step on a ray. For example, \fBrays->results[rays->nsteps[i]][i]\fR on ray \fBi\fR might not equal \fB0\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcmask\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to an unsigned 8-bit mask array. If \fBcmask[j] > thresh\fR, then data in step \fBj\fR, \fBrays->results[j]\fR, are considered.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIthresh\fR\fR
+.ad
+.RS 10n
+.rt  
+Threshold.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_VolumeFindMax_U8\fR(3MLIB), \fBmlib_VolumeFindMaxBMask_U8\fR(3MLIB), \fBattributes\fR(5)

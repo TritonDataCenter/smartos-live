@@ -1,0 +1,171 @@
+'\" te
+.\"  Copyright 1989 AT&T  Copyright (c) 1995, Sun Microsystems, Inc.  All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH fmlgrep 1F "28 Mar 1995" "SunOS 5.11" "FMLI Commands"
+.SH NAME
+fmlgrep \- search a file for a pattern
+.SH SYNOPSIS
+.LP
+.nf
+\fBfmlgrep\fR [\fB-b\fR] [\fB-c\fR] [\fB-i\fR] [\fB-l\fR] [\fB-n\fR] [\fB-s\fR] [\fB-v\fR]
+     \fIlimited_regular_expression\fR [\fIfilename\fR]...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBfmlgrep\fR searches \fIfilename\fR for a pattern and prints all lines that contain that pattern. \fBfmlgrep\fR uses limited regular expressions (expressions that have string values that use a subset of the possible alphanumeric and special characters) like those described on the  \fBregexp\fR(5) manual page to match the patterns. It uses a compact non-deterministic algorithm.
+.sp
+.LP
+Be careful when using  \fBFMLI\fR special characters (for instance, \fB$, `, ', "\fR) in \fIlimited_regular_expression\fR. It is safest to enclose the entire \fIlimited_regular_expression\fR in single quotes \fB\&' ... \&'\fR.
+.sp
+.LP
+If \fIfilename\fR is not specified, \fBfmlgrep\fR assumes standard input. Normally, each line matched is copied to standard output. The file name is printed before each line matched if there is more than one input file.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR\fR
+.ad
+.RS 6n
+.rt  
+Precede each line by the block number on which it was found. This can be useful in locating block numbers by context (first block is 0).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR\fR
+.ad
+.RS 6n
+.rt  
+Print only a count of the lines that contain the pattern.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR\fR
+.ad
+.RS 6n
+.rt  
+Ignore upper/lower case distinction during comparisons.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR\fR
+.ad
+.RS 6n
+.rt  
+Print only the names of files with matching lines, separated by new-lines. Does not repeat the names of files when the pattern is found more than once.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR\fR
+.ad
+.RS 6n
+.rt  
+Precede each line by its line number in the file (first line is 1).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR\fR
+.ad
+.RS 6n
+.rt  
+Suppress error messages about nonexistent or unreadable files.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.RS 6n
+.rt  
+Print all lines except those that contain the pattern.
+.RE
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 5n
+.rt  
+if the pattern is found (that is, \fBTRUE\fR)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 5n
+.rt  
+if the pattern is not found (that is, \fBFALSE\fR)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB2\fR\fR
+.ad
+.RS 5n
+.rt  
+if an invalid expression was used or \fIfilename\fR is inaccessible
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBegrep\fR(1), \fBfgrep\fR(1), \fBfmlcut\fR(1F), \fBgrep\fR(1), \fBattributes\fR(5), \fBregexp\fR(5)
+.SH NOTES
+.sp
+.LP
+Lines are limited to  \fBBUFSIZ\fR characters; longer lines are truncated. \fBBUFSIZ\fR is defined in \fB/usr/include/stdio.h\fR.
+.sp
+.LP
+If there is a line with embedded nulls, \fBfmlgrep\fR will only match up to the first null; if it matches, it will print the entire line.

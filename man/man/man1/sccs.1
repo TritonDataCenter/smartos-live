@@ -1,0 +1,1213 @@
+'\" te
+.\"  Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH sccs 1 "30 Jun 2007" "SunOS 5.11" "User Commands"
+.SH NAME
+sccs \- front end for the Source Code Control System (SCCS)
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/bin/sccs\fR [\fB-r\fR] [\fB-d\fR\fIrootprefix\fR] [\fB-p\fR\fIsubdir\fR] \fIsubcommand\fR 
+     [\fIoption\fR]... [\fIfile\fR]...
+.fi
+
+.LP
+.nf
+\fB/usr/xpg4/bin/sccs\fR [\fB-r\fR] [\fB-d\fR \fIrootprefix\fR] [\fB-p\fR \fIsubdir\fR] \fIsubcommand\fR 
+     [\fIoption\fR]... [\fIfile\fR]...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBsccs\fR command is a comprehensive, straightforward front end to the various utility programs of the Source Code Control System (\fBSCCS\fR).
+.sp
+.LP
+\fBsccs\fR applies the indicated \fIsubcommand\fR to the history file associated with each of the indicated files.
+.sp
+.LP
+The name of an \fBSCCS\fR history file is derived by prepending the `\fBs.\fR' prefix to the filename of a working copy. The \fBsccs\fR command normally expects these `\fBs.\fRfiles' to reside in an \fBSCCS\fR subdirectory. Thus, when you supply \fBsccs\fR with a \fIfile\fR argument, it normally applies the subcommand to a file named \fBs.\fR\fIfile\fR in the \fBSCCS\fR subdirectory. If \fIfile\fR is a path name, \fBsccs\fR looks for the history file in the \fBSCCS\fR subdirectory of that file's parent directory. If \fIfile\fR is a directory, however, \fBsccs\fR applies the subcommand to every \fBs.\fRfile file it contains. Thus, the command:
+.sp
+.in +2
+.nf
+example% \fBsccs get program.c\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+would apply the \fBget\fR subcommand to a history file named \fBSCCS/s.program.c\fR, while the command:
+.sp
+.in +2
+.nf
+example% \fBsccs get SCCS\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+would apply it to every \fBs.\fRfile in the  \fBSCCS\fR subdirectory.
+.sp
+.LP
+Options for the \fBsccs\fR command itself must appear before the \fIsubcommand\fR argument.  Options for a given subcommand must appear after the \fIsubcommand\fR argument. These options are specific to each subcommand, and are described along with the subcommands themselves (see \fBSubcommands\fR below).
+.SS "Running Setuid"
+.sp
+.LP
+The \fBsccs\fR command also includes the capability to run ``setuid'' to provide additional protection.  However, this does not apply to subcommands such as \fBsccs-admin\fR(1), since this would allow anyone to change the authorizations of the history file.  Commands that would do so always run as the real user.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.SS "/usr/bin/sccs"
+.sp
+.LP
+\fB-d\fR\fIrootprefix\fR
+.SS "/usr/xpg4/bin/sccs"
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR \fIrootprefix\fR\fR
+.ad
+.sp .6
+.RS 4n
+Defines the root portion of the path name for \fBSCCS\fR history files. The default root portion is the current directory. \fIrootprefix\fR is prepended to the entire  \fIfile\fR argument, even if \fIfile\fR is an absolute path name. \fB-d\fR overrides any directory specified by the \fBPROJECTDIR\fR environment variable (see ENVIRONMENT VARIABLES below).
+.RE
+
+.SS "/usr/bin/sccs"
+.sp
+.LP
+\fB-p\fR\fIsubdir\fR
+.SS "/usr/xpg4/bin/sccs"
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR\fIsubdir\fR\fR
+.ad
+.sp .6
+.RS 4n
+Defines the (sub)directory within which a history file is expected to reside. \fBSCCS\fR is the default. (See EXAMPLES below).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR\fR
+.ad
+.sp .6
+.RS 4n
+Runs \fBsccs\fR with the real user \fBID\fR, rather than set to the effective user \fBID\fR.
+.RE
+
+.SH OPERANDS
+.sp
+.LP
+The following operands are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIfile\fR\fR
+.ad
+.sp .6
+.RS 4n
+a file passed to \fIsubcommand\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIoption\fR\fR
+.ad
+.sp .6
+.RS 4n
+an option or option-argument passed to \fIsubcommand\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsubcommand\fR\fR
+.ad
+.sp .6
+.RS 4n
+one of the subcommands listed in \fBUsage\fR
+.RE
+
+.SH USAGE
+.sp
+.LP
+The usage for \fBsccs\fR is described below.
+.SS "Subcommands"
+.sp
+.LP
+Many of the following \fBsccs\fR subcommands invoke programs that reside in \fB/usr/bin\fR. Many of these subcommands accept additional arguments that are documented in the reference page for the utility program the subcommand invokes.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBadmin\fR\fR
+.ad
+.sp .6
+.RS 4n
+Modify the flags or checksum of an \fBSCCS\fR history file. Refer to \fBsccs-admin\fR(1) for more information about the \fBadmin\fR utility. While \fBadmin\fR can be used to initialize a history file, you might find that the \fBcreate\fR subcommand is simpler to use for this purpose.
+.RE
+
+.SS "/usr/bin/sccs"
+.sp
+.LP
+\fBcdc\fR \fB-r\fR\fIsid\fR  [ \fB-y\fR[\fIcomment\fR]]
+.SS "/usr/xpg4/bin/sccs"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcdc\fR \fB-r\fR\fIsid\fR | \fB-r\fR\fIsid\fR [ \fB-y\fR[\fIcomment\fR]]\fR
+.ad
+.sp .6
+.RS 4n
+Annotate (change) the delta commentary. Refer to \fBsccs-cdc\fR(1). The \fBfix\fR subcommand can be used to replace the delta, rather than merely annotating the existing commentary.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fIsid\fR | \fB-r\fR\fIsid\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify the \fBSCCS\fR delta \fBID\fR (\fBSID\fR) to which the change notation is to be added. The \fBSID\fR for a given delta is a number, in Dewey decimal format, composed of two or four fields: the \fIrelease\fR and \fIlevel\fR fields, and for branch deltas, the \fIbranch\fR and \fIsequence\fR fields.  For instance, the \fBSID\fR for the initial delta is normally \fB1.1\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-y\fR"[\fIcomment\fR]"\fR
+.ad
+.sp .6
+.RS 4n
+Specify the comment with which to annotate the delta commentary. If \fB-y\fR is omitted, \fBsccs\fR prompts for a comment. A null \fIcomment\fR results in an empty annotation.
+.RE
+
+.RE
+
+.SS "/usr/bin/sccs"
+.sp
+.LP
+\fBcheck\fR [\fB-b\fR] [\fB-u\fR[\fIusername\fR] ]
+.SS "/usr/xpg4/bin/sccs"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcheck\fR [\fB-b\fR] [\fB-u\fR [\fIusername\fR] | \fB-U\fR ]\fR
+.ad
+.sp .6
+.RS 4n
+Check for files currently being edited. Like \fBinfo\fR and \fBtell\fR, but returns an exit code, rather than producing a listing of files. \fBcheck\fR returns a non-zero exit status if anything is being edited.  
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR\fR
+.ad
+.sp .6
+.RS 4n
+Ignore branches.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-u\fR[\fIusername\fR] | \fB-u\fR [ \fIusername\fR] | \fB-U\fR\fR
+.ad
+.sp .6
+.RS 4n
+Check only files being edited by you.  When \fIusername\fR is specified, check only files being edited by that user. For \fB/usr/xpg4/bin/sccs\fR, the  \fB-U\fR option is equivalent to \fB-u\fR <\fIcurrent_user\fR>.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBclean\fR [ \fB-b\fR ]\fR
+.ad
+.sp .6
+.RS 4n
+Remove everything in the current directory that can be retrieved from an \fBSCCS\fR history.  Does not remove files that are being edited.  
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR\fR
+.ad
+.RS 6n
+.rt  
+Do not check branches to see if they are being edited. `\fBclean\fR \fB-b\fR' is dangerous when branch versions are kept in the same directory.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcomb\fR\fR
+.ad
+.sp .6
+.RS 4n
+Generate scripts to combine deltas. Refer to \fBsccs-comb\fR(1).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate\fR\fR
+.ad
+.sp .6
+.RS 4n
+Create (initialize) history files. \fBcreate\fR performs the following steps: 
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Renames the original source file to \fB,program.c\fR in the current directory.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Create the history file called \fBs.program.c\fR in the \fBSCCS\fR subdirectory.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Performs an `\fBsccs get\fR' on \fBprogram.c\fR to retrieve a read-only copy of the initial version.
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdeledit\fR [\fB-s\fR] [\fB-y\fR[\fIcomment\fR]\|]\fR
+.ad
+.sp .6
+.RS 4n
+Equivalent to an `\fBsccs delta\fR' and then an `\fBsccs edit\fR'. \fBdeledit\fR checks in a delta, and checks the file back out again, but leaves the current working copy of the file intact.  
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR\fR
+.ad
+.RS 15n
+.rt  
+Silent. Do not report delta numbers or statistics.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-y\fR\fB[\fR\fIcomment]\fR\fR
+.ad
+.RS 15n
+.rt  
+Supply a comment for the delta commentary.  If \fB-y\fR is omitted, \fBdelta\fR prompts for a comment.  A null \fIcomment\fR results in an empty comment field for the delta.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelget\fR [\fB-s\fR] [\fB-y\fR[\fIcomment\fR]\|]\fR
+.ad
+.sp .6
+.RS 4n
+Perform an `\fBsccs delta\fR' and then an `\fBsccs get\fR' to check in a delta and retrieve read-only copies of the resulting new version. See the \fBdeledit\fR subcommand for a description of \fB-s\fR and \fB-y\fR. \fBsccs\fR performs a \fBdelta\fR on all the files specified in the argument list, and then a  \fBget\fR on all the files. If an error occurs during the \fBdelta\fR, the \fBget\fR is not performed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdelta\fR [\fB-s\fR] [\fB-y\fR[\fIcomment\fR]\|]\fR
+.ad
+.sp .6
+.RS 4n
+Check in pending changes. Records the line-by-line changes introduced while the file was checked out. The effective user \fBID\fR must be the same as the \fBID\fR of the person who has the file checked out. Refer to \fBsccs-delta\fR(1). See the \fBdeledit\fR subcommand for a description of \fB-s\fR and \fB-y\fR.
+.RE
+
+.SS "/usr/bin/sccs"
+.sp
+.LP
+\fBdiffs\fR [\fB-C\fR] [\fB-I\fR] [\fB-c\fR\fIdate-time\fR] [\fB-r\fR\fIsid\fR] \fIdiff-options\fR
+.SS "/usr/xpg4/bin/sccs"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdiffs\fR [\fB-C\fR] [\fB-I\fR] [\fB-c\fR \fIdate-time\fR | \fB-c\fR\fIdate-time\fR ]\fR
+.ad
+.br
+.na
+\fB[\fB-r\fR \fIsid\fR | \fB-r\fR\fIsid\fR] \fIdiff-options\fR\fR
+.ad
+.sp .6
+.RS 4n
+Compare (in \fBdiff\fR(1) format) the working copy of a file that is checked out for editing, with a version from the \fBSCCS\fR history. Use the most recent checked-in version by default. The \fBdiffs\fR subcommand accepts the same options as \fBdiff\fR.
+.sp
+Any \fB-r\fR, \fB-c\fR, \fB-i\fR, \fB-x\fR, and \fB-t\fR options are passed to subcommand \fBget\fR. A \fB-C\fR option is passed to \fBdiff\fR as \fB-c\fR. An \fB-I\fR option is passed to \fBdiff\fR as \fB-i\fR.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR \fIdate-time\fR | \fB-c\fR\fIdate-time\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use the most recent version checked in before the indicated date and time for comparison. \fIdate-time\fR takes the form: \fIyy\fR[\fImm\fR[\fIdd\fR[ \fIhh\fR[\fImm\fR[\fIss\fR]\|]\|]\|]\|]. Omitted units default to their maximum possible values; that is \fB-c\fR\fB7502\fR is equivalent to \fB-c\fR\fB750228235959\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fIsid\fR | \fB-r\fR\fIsid\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use the version corresponding to the indicated delta for comparison.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBedit\fR\fR
+.ad
+.sp .6
+.RS 4n
+Retrieve a version of the file for editing. `\fBsccs edit\fR' extracts a version of the file that is writable by you, and creates a \fBp.\fRfile in the \fB\fR\fBSCCS\fR\fB \fR subdirectory as lock on the history, so that no one else can check that version in or out. \fBID\fR keywords are retrieved in unexpanded form. \fBedit\fR accepts the same options as \fBget\fR, below. Refer to \fBsccs-get\fR(1) for a list of ID keywords and their definitions.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBenter\fR\fR
+.ad
+.sp .6
+.RS 4n
+Similar to \fBcreate\fR, but omits the final `\fBsccs get\fR'. This can be used if an `\fBsccs edit\fR' is to be performed immediately after the history file is initialized.
+.RE
+
+.SS "/usr/bin/sccs"
+.sp
+.LP
+\fBfix\fR \fB-r\fR\fIsid\fR
+.SS "/usr/xpg4/bin/sccs"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBfix\fR \fB-r\fR \fIsid\fR | \fB-r\fR\fIsid\fR\fR
+.ad
+.sp .6
+.RS 4n
+Revise a (leaf) delta.  Remove the indicated delta from the \fBSCCS\fR history, but leave a working copy of the current version in the directory. This is useful for incorporating trivial updates for which no audit record is needed, or for revising the delta commentary. \fBfix\fR must be followed by a \fB-r\fR option, to specify the \fBSID\fR of the delta to remove. The indicated delta must be the most recent (leaf) delta in its branch. Use \fBfix\fR with caution since it does not leave an audit trail of differences (although the previous commentary is retained within the history file).
+.RE
+
+.SS "/usr/bin/sccs"
+.sp
+.LP
+\fBget\fR [\fB-ekmps\fR] [\fB-G\fR\fInewname\fR] [\fB-c\fR\fIdate-time\fR] [\fB-r\fR[\fIsid\fR] ]
+.SS "/usr/xpg4/bin/sccs"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBget\fR [\fB-ekmps\fR] [\fB-G\fR \fInewname\fR | \fB-G\fR\fInewname\fR]\fR
+.ad
+.br
+.na
+\fB[\fB-c\fR \fIdate-time\fR | \fB-c\fR\fIdate-time\fR] [\fB-r\fR \fIsid\fR | \fB-r\fR\fIsid\fR]\fR
+.ad
+.sp .6
+.RS 4n
+Retrieve a version from the \fBSCCS\fR history. By default, this is a read-only working copy of the most recent version. \fBID\fR keywords are in expanded form. Refer to \fBsccs-get\fR(1), which includes a list of \fBID\fR keywords and their definitions.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR \fIdate-time\fR | \fB-c\fR\fIdate-time\fR\fR
+.ad
+.sp .6
+.RS 4n
+Retrieve the latest version checked in prior to the date and time indicated by the \fIdate-time\fR argument.   \fIdate-time\fR takes the form: \fIyy\fR[\fImm\fR[\fBdd\fR[ \fIhh\fR[\fImm\fR[\fIss\fR]\|]\|]\|]\|].
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-e\fR\fR
+.ad
+.sp .6
+.RS 4n
+Retrieve a version for editing. Same as \fBsccs edit\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-G\fR \fInewname\fR | \fB-G\fR\fInewname\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use \fInewname\fR as the name of the retrieved version.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-k\fR\fR
+.ad
+.sp .6
+.RS 4n
+Retrieve a writable copy but do not check out the file. \fBID\fR keywords are unexpanded.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-m\fR\fR
+.ad
+.sp .6
+.RS 4n
+Precede each line with the \fBSID\fR of the delta in which it was added.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR\fR
+.ad
+.sp .6
+.RS 4n
+Produce the retrieved version on the standard output.  Reports that would normally go to the standard output (delta \fBID\fRs and statistics) are directed to the standard error.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fIsid\fR | \fB-r\fR\fIsid\fR\fR
+.ad
+.sp .6
+.RS 4n
+Retrieve the version corresponding to the indicated \fBSID\fR. For \fB/usr/bin/sccs\fR, if no \fIsid\fR is specified, the latest \fIsid\fR for the specified file is retrieved.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR\fR
+.ad
+.sp .6
+.RS 4n
+Silent. Do not report version numbers or statistics.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBhelp\fR \fImessage-code\fR|\fIsccs-command\fR\fR
+.ad
+.br
+.na
+\fB\fBhelp\fR \fBstuck\fR\fR
+.ad
+.sp .6
+.RS 4n
+Supply more information about \fBSCCS\fR diagnostics. \fBhelp\fR displays a brief explanation of the error when you supply the code displayed by an \fBSCCS\fR diagnostic message.  If you supply the name of an \fBSCCS\fR command, it prints a usage line. \fBhelp\fR also recognizes the keyword \fBstuck\fR. Refer to \fBsccs-help\fR(1).
+.RE
+
+.SS "/usr/bin/sccs"
+.sp
+.LP
+\fBinfo\fR [\fB-b\fR] [\fB-u\fR[\fIusername\fR] ]
+.SS "/usr/xpg4/bin/sccs"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBinfo\fR [\fB-b\fR] [\fB-u\fR [ \fIusername\fR] | \fB-U\fR]\fR
+.ad
+.sp .6
+.RS 4n
+Display a list of files being edited, including the version number checked out, the version to be checked in, the name of the user who holds the lock, and the date and time the file was checked out.  
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR\fR
+.ad
+.sp .6
+.RS 4n
+Ignore branches.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-u\fR[\fIusername\fR] | \fB-u\fR [\fIusername\fR] | \fB-U\fR\fR
+.ad
+.sp .6
+.RS 4n
+List only files checked out by you. When \fIusername\fR is specified, list only files checked out by that user. For \fB/usr/xpg4/bin/sccs\fR, the \fB-U\fR option is equivalent to \fB-u\fR <\fIcurrent_user\fR>.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBprint\fR\fR
+.ad
+.sp .6
+.RS 4n
+Print the entire history of each named file. Equivalent to an `\fBsccs prs\fR \fB-e\fR' followed by an `\fBsccs get\fR \fB-p\fR \fB-m\fR'.
+.RE
+
+.SS "/usr/bin/sccs"
+.sp
+.LP
+\fBprs\fR [\fB-el\fR] [\fB-c\fR\fIdate-time\fR] [\fB-r\fR\fIsid\fR]
+.SS "/usr/xpg4/bin/sccs"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBprs\fR [\fB-el\fR] \fB[\fR \fB-c\fR \fIdate-time\fR | \fB-c\fR\fIdate-time\fR] [\fB-r\fR \fIsid\fR | \fB-r\fR\fIsid\fR]\fR
+.ad
+.sp .6
+.RS 4n
+Peruse (display) the delta table, or other portion of an \fBs.\fR file. Refer to \fBsccs-prs\fR(1).
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR \fIdate-time\fR | \fB-c\fR\fIdate-time\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify the latest delta checked in before the indicated date and time. The \fIdate-time\fR argument takes the orm: \fIyy\fR[\fImm\fR[\fBdd\fR[ \fIhh\fR[\fImm\fR[\fIss\fR]\|]\|]\|]\|].
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-e\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display delta table information for all deltas earlier than the one specified with \fB-r\fR (or all deltas if none is specified).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display information for all deltas later than, and including, that specified by \fB-c\fR or \fB-r\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fIsid\fR | \fB-r\fR\fIsid\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify a given delta by \fBSID\fR.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBprt\fR [\fB-y\fR]\fR
+.ad
+.RS 12n
+.rt  
+Display the delta table, but omit the \fBMR\fR field (see \fBsccsfile\fR(4) for more information on this field). Refer to \fBsccs-prt\fR(1).   
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-y\fR\fR
+.ad
+.RS 6n
+.rt  
+Display the most recent delta table entry.  The format is a single output line for each file argument, which is convenient for use in a pipeline with \fBawk\fR(1) or \fBsed\fR(1).
+.RE
+
+.RE
+
+.SS "/usr/bin/sccs"
+.sp
+.LP
+\fBrmdel\fR \fB-r\fR\fIsid\fR
+.SS "/usr/xpg4/bin/sccs"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBrmdel\fR \fB-r\fR \fIsid\fR\fR
+.ad
+.sp .6
+.RS 4n
+Remove the indicated delta from the history file.  That delta must be the most recent (leaf) delta in its branch. Refer to \fBsccs-rmdel\fR(1).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsact\fR\fR
+.ad
+.sp .6
+.RS 4n
+Show editing activity status of an \fBSCCS\fR file. Refer to \fBsccs-sact\fR(1).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsccsdiff\fR \fB-r\fR\fIold-sid\fR \fB-r\fR\fInew-sid\fR \fIdiff-options\fR\fR
+.ad
+.sp .6
+.RS 4n
+Compare two versions corresponding to the indicated \fBSIDs\fR (deltas) using \fBdiff\fR. Refer to \fBsccs-sccsdiff\fR(1).
+.RE
+
+.SS "/usr/bin/sccs"
+.sp
+.LP
+\fBtell\fR [\fB-b\fR] [\fB-u\fR[\fIusername\fR] ]
+.SS "/usr/xpg4/bin/sccs"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtell\fR [\fB-b\fR] [\fB-u\fR [\fIusername\fR] | \fB-U\fR]\fR
+.ad
+.sp .6
+.RS 4n
+Display the list of files that are currently checked out, one file per line.  
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR\fR
+.ad
+.sp .6
+.RS 4n
+Ignore branches.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-u\fR[\fIusername\fR] | \fB-u\fR [\fIusername\fR] | \fB-U\fR\fR
+.ad
+.sp .6
+.RS 4n
+List only files checked out to you.  When \fIusername\fR is specified, list only files checked out to that user. For \fB/usr/xpg4/bin/sccs\fR, the  \fB-U\fR option is equivalent to \fB-u\fR <\fIcurrent_user\fR>.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBunedit\fR\fR
+.ad
+.sp .6
+.RS 4n
+"Undo" the last \fBedit\fR or `\fBget\fR \fB-e\fR', and return the working copy to its previous condition. \fBunedit\fR backs out all pending changes made since the file was checked out.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBunget\fR\fR
+.ad
+.sp .6
+.RS 4n
+Same as \fBunedit\fR. Refer to \fBsccs-unget\fR(1).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBval\fR\fR
+.ad
+.sp .6
+.RS 4n
+Validate the history file. Refer to \fBsccs-val\fR(1).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBwhat\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display any expanded \fBID\fR keyword strings contained in a binary (object) or text file. Refer to \fBwhat\fR(1) for more information.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRChecking out, editing, and checking in a file
+.sp
+.LP
+To check out a copy of \fBprogram.c\fR for editing, edit it, and then check it back in:
+
+.sp
+.in +2
+.nf
+example% \fBsccs edit program.c\fR
+1.1
+new delta 1.2
+14 lines
+
+example% \fBvi program.c
+\fIyour editing session\fR\fR
+
+example% \fBsccs delget program.c\fR
+comments? \fBclarified cryptic diagnostic\fR
+1.2
+3 inserted
+2 deleted
+12 unchanged
+1.2
+15 lines
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRDefining the root portion of the command pathname
+.sp
+.LP
+\fBsccs\fR converts the command:
+
+.sp
+.in +2
+.nf
+example% \fBsccs -d/usr/src/include get stdio.h\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+to:
+
+.sp
+.in +2
+.nf
+\fB/usr/bin/get   /usr/src/include/SCCS/s.stdio.h\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 3 \fRDefining the resident subdirectory
+.sp
+.LP
+The command:
+
+.sp
+.in +2
+.nf
+example% \fBsccs -pprivate get include/stdio.h\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+becomes:
+
+.sp
+.in +2
+.nf
+\fB/usr/bin/get   include/private/s.stdio.h\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 4 \fRInitializing a history file
+.sp
+.LP
+To initialize the history file for a source file named \fBprogram.c\fR, make the \fBSCCS\fR subdirectory, and then use `\fBsccs create\fR':
+
+.sp
+.in +2
+.nf
+example% \fBmkdir SCCS\fR
+example% \fBsccs create program.c\fR
+program.c:
+1.1
+14 lines
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+After verifying the working copy, you can remove the backup file that starts with a comma:
+
+.sp
+.in +2
+.nf
+example% \fBdiff program.c ,program.c\fR
+example% \fBrm ,program.c\fR 
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 5 \fRRetrieving a file from another directory
+.sp
+.LP
+To retrieve a file from another directory into the current directory:
+
+.sp
+.in +2
+.nf
+example% \fBsccs get /usr/src/sccs/cc.c\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+or:
+
+.sp
+.in +2
+.nf
+example% \fBsccs -p/usr/src/sccs/ get cc.c\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 6 \fRChecking out all files
+.sp
+.LP
+To check out all files under \fBSCCS\fR in the current directory:
+
+.sp
+.in +2
+.nf
+example% \fBsccs edit SCCS\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 7 \fRChecking in all files
+.sp
+.LP
+To check in all files currently checked out to you:
+
+.sp
+.in +2
+.nf
+example% \fBsccs delta `sccs tell -u`\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 8 \fREntering multiple lines of comments
+.sp
+.LP
+If using \fB-y\fR to enter a comment, for most shells, enclose the comment in single or double quotes. In the following example, \fBMyfile\fR is checked in with a two-line comment:
+
+.sp
+.in +2
+.nf
+example% \fBsccs deledit Myfile -y"Entering a
+multi-line comment"\fR
+No id keywords (cm7)
+1.2
+2 inserted
+0 deleted
+14 unchanged
+1.2
+new delta 1.3
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Displaying the SCCS history of \fBMyfile\fR:
+
+.sp
+.in +2
+.nf
+example% \fBsccs prt Myfile\fR
+
+SCCS/s.Myfile:
+
+D 1.2   01/04/20  16:37:07  me 2 1    00002/00000/00014
+Entering a
+multi-line comment
+
+D 1.1   01/04/15  13:23:32  me 1 0    00014/00000/00000
+date and time created 01/04/15 13:23:32 by me
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+If \fB-y\fR is not used and \fBsccs\fR prompts for a comment, the newlines must be escaped using the backslash character (\fB\e\fR):
+
+.sp
+.in +2
+.nf
+example% \fBsccs deledit Myfile\fR
+comments? \fBEntering a \e
+multi-line comment\fR
+No id keywords (cm7)
+1.2
+0 inserted
+0 deleted
+14 unchanged
+1.2
+new delta 1.3
+.fi
+.in -2
+.sp
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.LP
+See \fBenviron\fR(5) for descriptions of the following environment variables that affect the execution of \fBsccs\fR: \fBLANG\fR, \fBLC_ALL\fR, \fBLC_CTYPE\fR, \fBLC_MESSAGES\fR, and \fBNLSPATH\fR.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBPROJECTDIR\fR\fR
+.ad
+.RS 14n
+.rt  
+If contains an absolute path name (beginning with a slash), \fBsccs\fR searches for \fBSCCS\fR history files in the directory given by that variable.
+.sp
+If \fBPROJECTDIR\fR does not begin with a slash, it is taken as the name of a user, and \fBsccs\fR searches the \fBsrc\fR or \fBsource\fR subdirectory of that user's home directory for history files. If such a directory is found, it is used. Otherwise, the value is used as a relative path name.
+.RE
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 6n
+.rt  
+Successful completion.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB>0\fR\fR
+.ad
+.RS 6n
+.rt  
+An error occurred.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSCCS\fR\fR
+.ad
+.RS 15n
+.rt  
+\fBSCCS\fR subdirectory
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSCCS/d.\fIfile\fR\fR\fR
+.ad
+.RS 15n
+.rt  
+temporary file of differences
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSCCS/p.\fIfile\fR\fR\fR
+.ad
+.RS 15n
+.rt  
+lock (permissions) file for checked-out versions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSCCS/q.\fIfile\fR\fR\fR
+.ad
+.RS 15n
+.rt  
+temporary file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSCCS/s.\fIfile\fR\fR\fR
+.ad
+.RS 15n
+.rt  
+\fBSCCS\fR history file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSCCS/x.\fIfile\fR\fR\fR
+.ad
+.RS 15n
+.rt  
+temporary copy of the \fBs.\fRfile
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSCCS/z.\fIfile\fR\fR\fR
+.ad
+.RS 15n
+.rt  
+temporary lock file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/bin/*\fR\fR
+.ad
+.RS 15n
+.rt  
+\fBSCCS\fR utility programs
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.SS "/usr/bin/sccs"
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWsprot
+.TE
+
+.SS "/usr/xpg4/bin/sccs"
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWxcu4t
+_
+Interface StabilityStandard
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBawk\fR(1), \fBdiff\fR(1), \fBsccs-admin\fR(1), \fBsccs-cdc\fR(1), \fBsccs-comb\fR(1), \fBsccs-delta\fR(1), \fBsccs-get\fR(1), \fBsccs-help\fR(1), \fBsccs-prs\fR(1), \fBsccs-rmdel\fR(1), \fBsccs-sact\fR(1), \fBsccs-sccsdiff\fR(1), \fBsccs-unget\fR(1), \fBsccs-val\fR(1), \fBsed\fR(1), \fBwhat\fR(1), \fBsccsfile\fR(4), \fBattributes\fR(5), \fBenviron\fR(5), \fBstandards\fR(5)

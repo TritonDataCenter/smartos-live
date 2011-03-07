@@ -1,0 +1,116 @@
+'\" te
+.\" Copyright (c) 2004, Sun Microsystems, Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH bsmconv 1M "20 Jan 2009" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+bsmconv, bsmunconv \- enable or disable Solaris Auditing
+.SH SYNOPSIS
+.LP
+.nf
+\fB/etc/security/bsmconv\fR [\fIrootdir\fR]...
+.fi
+
+.LP
+.nf
+\fB/etc/security/bsmunconv\fR [\fIrootdir\fR]...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBbsmconv\fR and \fBbsmunconv\fR scripts are used to enable or disable the \fBBSM\fR features on a Solaris system. The optional argument \fIrootdir\fR is a list of one or more root directories of diskless clients that have already been configured. See \fBsmdiskless\fR(1M).
+.sp
+.LP
+To enable or disable \fBBSM\fR on a diskless client, a server, or a stand-alone system, logon as super-user to the system being converted and use the \fBbsmconv\fR or \fBbsmunconv\fR commands without any options.
+.sp
+.LP
+To enable or disable \fBBSM\fR on a diskless client from that client's server, logon to the server as super-user and use \fBbsmconv\fR, specifying the root directory of each diskless client you wish to affect. For example, the command:
+.sp
+.in +2
+.nf
+myhost# bsmconv /export/root/client1 /export/root/client2 
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+enables \fBBSM\fR on the two machines named \fBclient1\fR and \fBclient2\fR. While the command:
+.sp
+.in +2
+.nf
+myhost# bsmconv 
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+enables \fBBSM\fR only on the machine called \fBmyhost\fR. It is no longer necessary to enable \fBBSM \fRon both the server and its diskless clients.
+.sp
+.LP
+After running \fBbsmconv\fR the system can be configured by editing the files in \fB/etc/security\fR. Each diskless client has its own copy of configuration files in its root directory. You might want to edit these files before rebooting each client.
+.sp
+.LP
+Following the completion of either script, the affected system(s) should be rebooted to allow the auditing subsystem to come up properly initialized.
+.SH FILES
+.sp
+.LP
+The following files are created by \fBbsmconv\fR:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/etc/security/device_maps\fR\fR
+.ad
+.sp .6
+.RS 4n
+Administrative file defining the mapping of device special files to allocatable device names.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/etc/security/device_allocate\fR\fR
+.ad
+.sp .6
+.RS 4n
+Administrative file defining parameters for device allocation.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsr
+_
+Interface StabilityObsolete Committed
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBauditconfig\fR(1M), \fBauditd\fR(1M), \fBaudit_startup\fR(1M), \fBaudit.log\fR(4), \fBaudit_control\fR(4), \fBattributes\fR(5)
+.sp
+.LP
+See the section on Solaris Auditing in \fISystem Administration Guide: Security Services\fR.
+.SH NOTES
+.sp
+.LP
+\fBbsmconv\fR and \fBbsmunconv\fR are not valid in a non-global zone.
+.sp
+.LP
+These commands are Obsolete and may be removed and replaced with equivalent functionality in a future release of Solaris.

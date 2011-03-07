@@ -1,0 +1,438 @@
+'\" te
+.\"  Copyright (c) 1992, X/Open Company Limited  All Rights Reserved  Portions Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved
+.\" Sun Microsystems, Inc. gratefully acknowledges The Open Group for permission to reproduce portions of its copyrighted documentation. Original documentation from The Open Group can be obtained online at 
+.\" http://www.opengroup.org/bookstore/.
+.\" The Institute of Electrical and Electronics Engineers and The Open Group, have given us permission to reprint portions of their documentation. In the following statement, the phrase "this text" refers to portions of the system documentation. Portions of this text are reprinted and reproduced in electronic form in the Sun OS Reference Manual, from IEEE Std 1003.1, 2004 Edition, Standard for Information Technology -- Portable Operating System Interface (POSIX), The Open Group Base Specifications Issue 6, Copyright (C) 2001-2004 by the Institute of Electrical and Electronics Engineers, Inc and The Open Group. In the event of any discrepancy between these versions and the original IEEE and The Open Group Standard, the original IEEE and The Open Group Standard is the referee document. The original Standard can be obtained online at http://www.opengroup.org/unix/online.html.
+.\"  This notice shall appear on any product containing this material.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH patch 1 "17 Jul 2007" "SunOS 5.11" "User Commands"
+.SH NAME
+patch \- apply changes to files
+.SH SYNOPSIS
+.LP
+.nf
+\fBpatch\fR [\fB-blNR\fR] [\fB-c\fR | \fB-e\fR | \fB-n\fR | \fB-u\fR] [\fB-d\fR \fIdir\fR] [\fB-D\fR \fIdefine\fR] 
+     [\fB-i\fR \fIpatchfile\fR] [\fB-o\fR \fIoutfile\fR] [\fB-p\fR \fInum\fR] [\fB-r\fR \fIrejectfile\fR] 
+     [\fIfile\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBpatch\fR command reads a source (patch) file containing any of the three forms of difference (diff) listings produced by the \fBdiff\fR(1) command (normal, context or in the style of \fBed\fR(1)) and apply those differences to a file.  By default, \fBpatch\fR reads from the standard input.
+.sp
+.LP
+\fBpatch\fR attempts to determine the type of the \fBdiff\fR listing, unless overruled by a \fB-c\fR, \fB-e\fR, or \fB-n\fR option.
+.sp
+.LP
+If the patch file contains more than one patch, \fBpatch\fR attempts to apply each of them as if they came from separate patch files. (In this case the name of the patch file must be determinable for each \fBdiff\fR listing.)
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR\fR
+.ad
+.RS 13n
+.rt  
+Saves a copy of the original contents of each modified file, before the differences are applied, in a file of the same name with the suffix \fB\&.orig\fR appended to it. If the file already exists, it is overwritten. If multiple patches are applied to the same file, the \fB\&.orig\fR file is written only for the first patch. When the \fB-o\fR \fIoutfile\fR option is also specified, \fIfile\fR\fB\&.orig\fR is not created but, if \fIoutfile\fR already exists, \fIoutfile\fR\fB\&.orig\fR is created.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR\fR
+.ad
+.RS 13n
+.rt  
+Interprets the patch file as a context difference (the output of the command \fBdiff\fR when the \fB-c\fR or \fB-C\fR options are specified).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR \fIdir\fR\fR
+.ad
+.RS 13n
+.rt  
+Changes the current directory to \fIdir\fR before processing as described in \fBEXTENDED DESCRIPTION\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-D\fR \fIdefine\fR\fR
+.ad
+.RS 13n
+.rt  
+Marks changes with the C preprocessor construct:
+.sp
+.in +2
+.nf
+\fB#ifdef\fR \fIdefine\fR
+\&.\|.\|.
+#endif
+.fi
+.in -2
+.sp
+
+.RE
+
+.sp
+.LP
+The option-argument \fIdefine\fR is used as the differentiating symbol.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-e\fR\fR
+.ad
+.RS 17n
+.rt  
+Interprets the patch file as an \fBed\fR script, rather than a \fBdiff\fR script.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR \fIpatchfile\fR\fR
+.ad
+.RS 17n
+.rt  
+Reads the patch information from the file named by the path name \fIpatchfile\fR, rather than the standard input.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR\fR
+.ad
+.RS 17n
+.rt  
+(The letter ell.) Causes any sequence of blank characters in the difference script to match any sequence of blank characters in the input file. Other characters is matched exactly.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR\fR
+.ad
+.RS 17n
+.rt  
+Interprets the script as a normal difference.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-N\fR\fR
+.ad
+.RS 17n
+.rt  
+Ignores patches where the differences have already been applied to the file; by default, already-applied patches are rejected.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR \fIoutfile\fR\fR
+.ad
+.RS 17n
+.rt  
+Instead of modifying the files (specified by the \fIfile\fR operand or the difference listings) directly, writes a copy of the file referenced by each patch, with the appropriate differences applied, to \fIoutfile\fR. Multiple patches for a single file is applied to the intermediate versions of the file created by any previous patches, and results  in multiple, concatenated versions of the file being written to \fIoutfile\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR \fInum\fR\fR
+.ad
+.RS 17n
+.rt  
+For all path names in the patch file that indicate the names of files to be patched, deletes \fInum\fR path name components from the beginning of each path name. If the path name in the patch file is absolute, any leading slashes are considered the first component (that is, \fB-p\fR \fB1\fR removes the leading slashes). Specifying \fB-p\fR \fB0\fR causes the full path name to be used. If \fB-p\fR is not specified, only the basename (the final path name component) is used.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-R\fR\fR
+.ad
+.RS 17n
+.rt  
+Reverses the sense of the patch script. That is, assumes that the difference script was created from the new version to the old version. The \fB-R\fR option cannot be used with \fBed\fR scripts. \fBpatch\fR attempts to reverse each portion of the script before applying it. Rejected differences is saved in swapped format. If this option is not specified, and until a portion of the patch file is successfully applied, \fBpatch\fR attempts to apply each portion in its reversed sense as well as in its normal sense. If the attempt is successful, the user is prompted to determine if the \fB-R\fR option should be set.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fIrejectfile\fR\fR
+.ad
+.RS 17n
+.rt  
+Overrides the default reject file name. In the default case, the reject file has the same name as the output file, with the suffix \fB\&.rej\fR appended to it. See \fBPatch Application\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-u\fR\fR
+.ad
+.RS 17n
+.rt  
+Interprets the patch file as a unified context difference, that is, the output of the command \fBdiff\fR when the \fB-u\fR or \fB-U\fR options are specified.
+.RE
+
+.SH OPERANDS
+.sp
+.LP
+The following operand is supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIfile\fR\fR
+.ad
+.RS 8n
+.rt  
+A path name of a file to patch.
+.RE
+
+.SH USAGE
+.sp
+.LP
+The \fB-R\fR option does not work with \fBed\fR scripts because there is too little information to reconstruct the reverse operation.
+.sp
+.LP
+The \fB-p\fR option makes it possible to customize a patch file to local user directory structures without manually editing the patch file. For example, if the file name in the patch file was \fB/curds/whey/src/blurfl/blurfl.c\fR:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Setting \fB-p\fR \fB0\fR gives the entire path name unmodified.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Setting \fB-p\fR \fB1\fR gives:
+.sp
+.in +2
+.nf
+curds/whey/src/blurfl/blurfl.c
+.fi
+.in -2
+.sp
+
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Without the leading slash, \fB-p\fR \fB4\fR gives:
+.sp
+.in +2
+.nf
+blurfl/blurfl.c
+.fi
+.in -2
+.sp
+
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Not specifying \fB-p\fR at all gives:
+.sp
+.in +2
+.nf
+blurfl.c
+.fi
+.in -2
+.sp
+
+.RE
+.sp
+.LP
+When using \fB-b\fR in some file system implementations, the saving of a \fB\&.orig\fR file might produce unwanted results. In the case of 12-, 13-, or 14-character file names, on file systems supporting 14-character maximum file names, the \fB\&.orig\fR file overwrites the new file.
+.SH ENVIRONMENT VARIABLES
+.sp
+.LP
+See \fBenviron\fR(5) for descriptions of the following environment variables that affect the execution of \fBpatch\fR: \fBLANG\fR, \fBLC_ALL\fR, \fBLC_COLLATE\fR, \fBLC_CTYPE\fR, \fBLC_MESSAGES\fR, \fBLC_TIME\fR, and \fBNLSPATH\fR.
+.sp
+.LP
+Affirmative responses are processed using the extended regular expression defined for the \fByesexpr\fR keyword in the \fBLC_MESSAGES\fR category of the user's locale. The locale specified in the \fBLC_COLLATE\fR category defines the behavior of ranges, equivalence classes, and multi-character collating elements used in the expression defined for \fByesexpr\fR. The locale specified in \fBLC_CTYPE\fR determines the locale for interpretation of sequences of bytes of text data a characters, the behavior of character classes used in the expression defined for the \fByesexpr\fR. See \fBlocale\fR(5).
+.SH OUTPUT FILES
+.sp
+.LP
+The output of \fBpatch\fR the save files (\fB\&.orig\fR suffixes) and the reject files (\fB\&.rej\fR suffixes) are text files.
+.SH EXTENDED DESCRIPTION
+.sp
+.LP
+A patch file can contain patching instructions for more than one file. File names are determined as specified in \fBPatch Determination\fR. When the \fB-b\fR option is specified, for each patched file, the original is saved in a file of the same name with the suffix \fB\&.orig\fR appended to it.
+.sp
+.LP
+For each patched file, a reject file can also be created as noted in \fBPatch Application\fR. In the absence of an \fB-r\fR option, the name of this file is formed by appending the suffix \fB\&.rej\fR to the original file name.
+.SS "Patch File Format"
+.sp
+.LP
+The patch file must contain zero or more lines of header information followed by one or more patches. Each patch must contain zero or more lines of file name identification in the format produced by \fBdiff\fR \fB-c\fR, and one or more sets of \fBdiff\fR output, which are customarily called hunks.
+.sp
+.LP
+\fBpatch\fR recognizes the following expression in the header information:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBIndex:\fR\fIpathname\fR\fR
+.ad
+.RS 18n
+.rt  
+The file to be patched is named \fIpathname\fR.
+.RE
+
+.sp
+.LP
+If all lines (including headers) within a patch begin with the same leading sequence of blank characters, \fBpatch\fR removes this sequence before proceeding. Within each patch, if the type of difference is context, \fBpatch\fR recognizes the following expressions:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB*\|*\|*\|\fR \fIfilename timestamp\fR\fR
+.ad
+.sp .6
+.RS 4n
+The patches arose from \fIfilename\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\(mi\|\(mi\|\(mi\fR \fIfilename timestamp\fR\fR
+.ad
+.sp .6
+.RS 4n
+The patches should be applied to \fIfilename\fR.
+.RE
+
+.sp
+.LP
+Each hunk within a patch must be the \fBdiff\fR output to change a line range within the original file. The line numbers for successive hunks within a patch must occur in ascending order.
+.SS "File Name Determination"
+.sp
+.LP
+If no \fIfile\fR operand is specified, \fBpatch\fR performs the following steps to obtain a path name:
+.RS +4
+.TP
+1.
+If the patch contains the strings \fB***\fR and \fB\(mi\|\(mi\|\(mi\fR\fI,\fR \fBpatch\fR strips components from the beginning of each path name (depending on the presence or value of the \fB-p\fR option), then tests for the existence of both files in the current directory (or directory specified with the \fB-d\fR option).
+.RE
+.RS +4
+.TP
+2.
+If both files exist, \fBpatch\fR assumes that no path name can be obtained from this step. If the header information contains a line with the string \fBIndex:\fR, \fBpatch\fR strips components from the beginning of the path name (depending on \fB-p\fR), then tests for the existence of this file in the current directory (or directory specified with the \fB-d\fR option).
+.RE
+.RS +4
+.TP
+3.
+If an \fBSCCS\fR directory exists in the current directory, \fBpatch\fR attempts to perform a \fBget\fR \fB-e\fR \fBSCCS/s.\fR\fIfilename\fR command to retrieve an editable version of the file.
+.RE
+.RS +4
+.TP
+4.
+If no path name can be obtained by applying the previous steps, or if the path names obtained do not exist, \fBpatch\fR writes a prompt to standard output and request a file name interactively from standard input.
+.RE
+.SS "Patch Application"
+.sp
+.LP
+If the \fB-c\fR, \fB-e\fR, \fB-n\fR, or \fB-u\fR option is present, \fBpatch\fR interprets information within each hunk as a context difference, an \fBed\fR difference, a normal difference, or a unified context difference, respectively. In the absence of any of these options, \fBpatch\fR determines the type of difference based on the format of information within the hunk.
+.sp
+.LP
+For each hunk, \fBpatch\fR begins to search for the place to apply the patch at the line number at the beginning of the hunk, plus or minus any offset used in applying the previous hunk. If lines matching the hunk context are not found, \fBpatch\fR scans both forwards and backwards at least 1000 bytes for a set of lines that match the hunk context.
+.sp
+.LP
+If no such place is found and it is a context difference, then another scan takes place, ignoring the first and last line of context. If that fails, the first two and last two lines of context is ignored and another scan is made. Implementations can search more extensively for installation locations.
+.sp
+.LP
+If no location can be found, \fBpatch\fR appends the hunk to the reject file. The rejected hunk is written in context-difference format regardless of the format of the patch file. If the input was a normal or \fBed\fR \fB-style\fR difference, the reject file can contain differences with zero lines of context. The line numbers on the hunks in the reject file can be different from the line numbers in the patch file since they reflect the approximate locations for the failed hunks in the new file rather than the old one.
+.sp
+.LP
+If the type of patch is an \fBed\fR diff, the implementation can accomplish the patching by invoking the \fBed\fR command.
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 6n
+.rt  
+Successful completion.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 6n
+.rt  
+One or more lines were written to a reject file.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB>1\fR\fR
+.ad
+.RS 6n
+.rt  
+An error occurred.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsu
+_
+Interface StabilityStandard
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBed\fR(1), \fBdiff\fR(1), \fBattributes\fR(5), \fBenviron\fR(5), \fBstandards\fR(5)

@@ -1,0 +1,284 @@
+'\" te
+.\" Copyright (c) 2009, Sun Microsystems, Inc.  All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License. You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.
+.\"  See the License for the specific language governing permissions and limitations under the License. When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with
+.\" the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH n2cp 7d "15 Apr 2009" "SunOS 5.11" "Devices"
+.SH NAME
+n2cp \- Ultra-SPARC T2 crypto provider device driver
+.SH DESCRIPTION
+.sp
+.LP
+The \fBn2cp\fR device driver is a multi-threaded, loadable hardware driver supporting hardware-assisted acceleration of the following cryptographic operations, which are built into the Ultra-SPARC T2 CMT processor:
+.sp
+.in +2
+.nf
+DES:    CKM_DES_CBC, CKM_DES_ECB
+DES3:   CKM_DES3_CBC, CKM_DES3_ECB,
+AES:    CKM_AES_CBC, CKM_AES_ECB, CKM_AES_CTR, CKM_AES_CCM, CKM_AES_GCM,
+        CKM_AES_GMAC
+RC4:    CKM_RC4
+MD5:    KM_MD5, CKM_MD5_HMAC, CKM_MD5_HMAC_GENERAL, 
+	       CKM_SSL3_MD5_MAC
+SHA-1:  CKM_SHA_1, CKM_SHA_1_HMAC, 
+        CKM_SHA_1_HMAC_GENERAL, CKM_SSL3_SHA1_MAC
+SHA-256:CKM_SHA256, CKM_SHA256_HMAC, 
+        CKM_SHA256_HMAC_GENERAL
+.fi
+.in -2
+
+.SH CONFIGURATION
+.sp
+.LP
+You configure the \fBn2cp\fR driver by defining properties in the \fB/platform/sun4v/kernel/drv/n2cp.conf\fR which override the default settings. The following property is supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnostats\fR\fR
+.ad
+.RS 28n
+.rt  
+Disables the generation of statistics.  The \fBnostats\fR property may be used to help prevent traffic analysis, however, this may inhibit support personnel.
+.RE
+
+.SH CRYPTO STATISTICS
+.sp
+.LP
+Solaris crypto drivers must implement statistics variables. The \fBn2cp\fR driver maintains the following statistics:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcwqXstate\fR\fR
+.ad
+.RS 28n
+.rt  
+State (online, offline, error) of respective cryptographic engine, CWQ X.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcwqXsubmit\fR\fR
+.ad
+.RS 28n
+.rt  
+Number of jobs submitted to CWQ X.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcwqXqfull\fR\fR
+.ad
+.RS 28n
+.rt  
+Number of times when submitting a job that the queue for CWQ X was full.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcwqXqupdate_failure\fR\fR
+.ad
+.RS 28n
+.rt  
+Number of submit job failures on CWQ X.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdes\fR\fR
+.ad
+.RS 28n
+.rt  
+Total number of jobs submitted to device for DES operations.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdes3\fR\fR
+.ad
+.RS 28n
+.rt  
+Total number of jobs submitted to device for DES3 operations.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBaes\fR\fR
+.ad
+.RS 28n
+.rt  
+Total number of jobs submitted to device for AES operations.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmd5\fR\fR
+.ad
+.RS 28n
+.rt  
+Total number of jobs submitted to device for MD5 operations.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsha1\fR\fR
+.ad
+.RS 28n
+.rt  
+Total number of jobs submitted to device for SHA-1 operations.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsha256\fR\fR
+.ad
+.RS 28n
+.rt  
+Total number of jobs submitted to device for SHA-256 operations.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmd5hmac\fR\fR
+.ad
+.RS 28n
+.rt  
+Total number of jobs submitted to device for HMAC_MD5 operations.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsha1hmac\fR\fR
+.ad
+.RS 28n
+.rt  
+Total number of jobs submitted to device for HMAC_SHA-1 operations.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsha256hmac\fR\fR
+.ad
+.RS 28n
+.rt  
+Total number of jobs submitted to device for HMAC_SHA-256 operations.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBssl3md5mac\fR\fR
+.ad
+.RS 28n
+.rt  
+Total number of jobs submitted to device for SSL3_MAC_MD5 operations.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBssl3sha1mac\fR\fR
+.ad
+.RS 28n
+.rt  
+Total number of jobs submitted to device for SSL3_MAC_SHA-1 operations.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBssl3sha256mac\fR\fR
+.ad
+.RS 28n
+.rt  
+Total number of jobs submitted to device for SSL3_MAC_SHA-256 operations.
+.RE
+
+.LP
+Note - 
+.sp
+.RS 2
+Additional statistics targeted for Sun support personnel are not documented in this manpage.
+.RE
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/platform/sun4v/kernel/drv/sparcv9/n2cp\fR\fR
+.ad
+.sp .6
+.RS 4n
+64-bit ELF kernel driver.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/platform/sun4v/kernel/drv/n2cp.conf\fR\fR
+.ad
+.sp .6
+.RS 4n
+Configuration file.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+ArchitectureSPARC
+_
+AvailabilitySUNWn2cp.v
+_
+Interface Stability Uncommitted
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBelfsign\fR(1), \fBcryptoadm\fR(1M), \fBkstat\fR(1M), \fBlibpkcs11\fR(3LIB), \fBprinters.conf\fR(4), \fBpkcs11_kernel\fR(5), \fBattributes\fR(5)
+.sp
+.LP
+\fISolaris Cryptographic Framework - Solaris Software Developer Collection\fR
+.sp
+.LP
+\fISolaris Security for Developer's Guide - Solaris Software Developer Collection\fR

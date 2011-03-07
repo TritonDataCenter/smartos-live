@@ -1,0 +1,183 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nisln 1 "2 Dec 2005" "SunOS 5.11" "User Commands"
+.SH NAME
+nisln \- symbolically link NIS+ objects
+.SH SYNOPSIS
+.LP
+.nf
+\fBnisln\fR [\fB-L\fR] [\fB-D\fR \fIdefaults\fR] \fIname\fR \fIlinkname\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBnisln\fR command links a \fBNIS+\fR object named \fIname\fR to a \fBNIS+\fR name \fIlinkname\fR. If \fIname\fR is an indexed name (see \fBnismatch\fR(1)), the link points to entries within a \fBNIS+\fR table. Clients wishing to look up information in the name service can use the \fBFOLLOW_LINKS\fR flag to force the client library to follow links to the name they point to. Further, all of the \fBNIS+\fR administration commands accept the \fB-L\fR switch indicating they should follow links (see \fBnis_names\fR(3NSL) for a description of the \fBFOLLOW_LINKS\fR flag).
+.sp
+.LP
+When creating the link, \fBnisln\fR verifies that the linked object exists. Once created, the linked object may be deleted or replaced and the link will not be affected. At that time, the link will become invalid and attempts to follow it will return  \fBNIS_LINKNAMEERROR\fR to the client. When the path attribute in tables specifies a link rather than another table, the link will be followed if the flag \fBFOLLOW_LINKS\fR was present in the call to  \fBnis_list()\fR (see \fBnis_tables\fR(3NSL)) and ignored if the flag is not present. If the flag is present and the link is no longer valid, a warning is sent to the system logger and the link is ignored.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-D\fR \fIdefaults\fR\fR
+.ad
+.RS 15n
+.rt  
+Specify a different set of defaults to be used for the creation of the link object. The \fIdefaults\fR string is a series of tokens separated by colons. These tokens represent the default values to be used for the generic object properties. All of the legal tokens are described below.  
+.sp
+.ne 2
+.mk
+.na
+\fB\fBttl=\fR\fItime\fR\fR
+.ad
+.RS 19n
+.rt  
+This token sets the default time to live for objects that are created by this command. The value \fItime\fR is specified in the format as defined by the \fBnischttl\fR(1) command. The default is \fB12\fR hours.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBowner=\fR\fIownername\fR\fR
+.ad
+.RS 19n
+.rt  
+This token specifies that the \fBNIS+\fR principal \fIownername\fR should own the created object. The default for this value is the the principal who is executing the command.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBgroup=\fR\fIgroupname\fR\fR
+.ad
+.RS 19n
+.rt  
+This token specifies that the group \fIgroupname\fR should be the group owner for the object that is created. The default is \fINULL\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBaccess=\fR\fIrights\fR\fR
+.ad
+.RS 19n
+.rt  
+This token specifies the set of access rights that are to be granted for the given object. The value \fIrights\fR is specified in the format as defined by the  \fBnischmod\fR(1) command. The default value is \fB\(mi\(mi\(mi\(mirmcdr\(mi\(mi\(mir\(mi\(mi\(mi\fR\&.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-L\fR\fR
+.ad
+.RS 15n
+.rt  
+When present, this option specifies that this command should follow links. If \fIname\fR is itself a link, then this command will follow it to the linked object that it points to. The new link will point to that linked object rather than to \fIname\fR.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRCreating a link
+.sp
+.LP
+In this example, we create a link in the domain \fBfoo.com.\fR named \fBhosts\fR that points to the object \fBhosts.bar.com.\fR:
+
+.sp
+.in +2
+.nf
+example% \fBnisln hosts.bar.com. hosts.foo.com.\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRMaking a link that points to an entry in the hosts table
+.sp
+.LP
+In this example, we make a link \fIexample.foo.com.\fR that points to an entry in the hosts table in \fIeng.foo.com\fR:
+
+.sp
+.in +2
+.nf
+example% \fBnisln '[name=example],hosts.eng.foo.com.' example.foo.com.\fR
+.fi
+.in -2
+.sp
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_PATH\fR\fR
+.ad
+.RS 12n
+.rt  
+If this variable is set, and the \fBNIS+\fR name is not fully qualified, each directory specified will be searched until the object is found (see \fBnisdefaults\fR(1)).
+.RE
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 5n
+.rt  
+Successful operation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 5n
+.rt  
+Operation failed.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBnisdefaults\fR(1), \fBnismatch\fR(1), \fBnisrm\fR(1), \fBnistbladm\fR(1), \fBnis_names\fR(3NSL), \fBnis_tables\fR(3NSL), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

@@ -1,0 +1,163 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_VideoReversibleColorYUV2RGB_U8_U8 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_VideoReversibleColorYUV2RGB_U8_U8, mlib_VideoReversibleColorYUV2RGB_U8_S16, mlib_VideoReversibleColorYUV2RGB_S16_S16, mlib_VideoReversibleColorYUV2RGB_S16_S32 \- reversible color space conversion for wavelet transformation
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_VideoReversibleColorYUV2RGB_U8_U8\fR(\fBmlib_u8 *\fR\fIr\fR,
+     \fBmlib_u8 *\fR\fIg\fR, \fBmlib_u8 *\fR\fIb\fR, \fBconst mlib_u8 *\fR\fIy\fR, \fBconst mlib_u8 *\fR\fIu\fR,
+     \fBconst mlib_u8 *\fR\fIv\fR, \fBmlib_s32\fR \fIn\fR, \fBmlib_s32\fR \fIdepth\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VideoReversibleColorYUV2RGB_U8_S16\fR(\fBmlib_u8 *\fR\fIr\fR,
+     \fBmlib_u8 *\fR\fIg\fR, \fBmlib_u8 *\fR\fIb\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBconst mlib_s16 *\fR\fIu\fR,
+     \fBconst mlib_s16 *\fR\fIv\fR, \fBmlib_s32\fR \fIn\fR, \fBmlib_s32\fR \fIdepth\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VideoReversibleColorYUV2RGB_S16_S16\fR(\fBmlib_s16 *\fR\fIr\fR,
+     \fBmlib_s16 *\fR\fIg\fR, \fBmlib_s16 *\fR\fIb\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBconst mlib_s16 *\fR\fIu\fR,
+     \fBconst mlib_s16 *\fR\fIv\fR, \fBmlib_s32\fR \fIn\fR, \fBmlib_s32\fR \fIdepth\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VideoReversibleColorYUV2RGB_S16_S32\fR(\fBmlib_s16 *\fR\fIr\fR,
+     \fBmlib_s16 *\fR\fIg\fR, \fBmlib_s16 *\fR\fIb\fR, \fBconst mlib_s32 *\fR\fIy\fR, \fBconst mlib_s32 *\fR\fIu\fR,
+     \fBconst mlib_s32 *\fR\fIv\fR, \fBmlib_s32\fR \fIn\fR, \fBmlib_s32\fR \fIdepth\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Each of the functions provides support to reversible wavelet transformation. It is for reversible color space conversion.
+.SH PARAMETERS
+.sp
+.LP
+Each of the functions takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIr\fR\fR
+.ad
+.RS 9n
+.rt  
+Pointer to destination R component.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIg\fR\fR
+.ad
+.RS 9n
+.rt  
+Pointer to destination G component.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIb\fR\fR
+.ad
+.RS 9n
+.rt  
+Pointer to destination B component.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIy\fR\fR
+.ad
+.RS 9n
+.rt  
+Pointer to source Y component.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIu\fR\fR
+.ad
+.RS 9n
+.rt  
+Pointer to source U component.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIv\fR\fR
+.ad
+.RS 9n
+.rt  
+Pointer to source V component.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIn\fR\fR
+.ad
+.RS 9n
+.rt  
+Length of data.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdepth\fR\fR
+.ad
+.RS 9n
+.rt  
+Number of bit planes required to store the original R, G, and B components.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+Each of the functions returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_VideoReversibleColorRGB2YUV_U8_U8\fR(3MLIB), \fBattributes\fR(5)

@@ -1,0 +1,64 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_version 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_version \- return a version string
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBchar *\fR\fBmlib_version\fR(\fBvoid\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_version()\fR function returns a string about the version of the library being used.
+.sp
+.LP
+This function returns a string in the following format:
+.sp
+.LP
+\fIlib_name\fR:\fIversion\fR:\fIbuild_date\fR:\fItarget_isa\fR
+.sp
+.LP
+The \fIlib_name\fR is \fBmediaLib\fR.  The \fIversion\fR consists of four digits. The first two digits of the version are the major version.  The third digit is the minor version, and the fourth digit is the micro version.  The \fIbuild_date\fR is in the \fByyyymmdd\fR format.  The \fItarget_isa\fR is the value used for the \fB-xarch=a\fR flag of the compiler when the library was built. For example, the following version string corresponds to a library in mediaLib version 2.1.0, which was built on 11/01/2001 and for the \fBsparcv8plus+vis\fR architecture.
+.sp
+.LP
+\fBmediaLib:0210:20011101:v8plusa\fR
+.SH PARAMETERS
+.sp
+.LP
+The function takes no argument.
+.SH RETURN VALUES
+.sp
+.LP
+The function returns a pointer to a string of characters.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBattributes\fR(5)

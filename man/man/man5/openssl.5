@@ -1,0 +1,80 @@
+'\" te
+.\" Copyright (c) 2008, Sun Microsystems, Inc.  All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH openssl 5 "1 Aug 2008" "SunOS 5.11" "Standards, Environments, and Macros"
+.SH NAME
+openssl \- OpenSSL cryptographic and Secure Sockets Layer toolkit
+.SH DESCRIPTION
+.sp
+.LP
+OpenSSL is a cryptography toolkit that implements the Secure Sockets Layer (SSLv2/v3) and Transport Layer Security (TLS v1) network protocols.
+.sp
+.LP
+The following features are omitted from the binaries for issues including but not limited to patents, trademark, and US export restrictions: ECC,  IDEA, MDC2, RC3, RC5, Dynamic Engine Loading, 4758_CCA Engine, AEP Engine,  Atalla Engine, CHIL Engine, CSWIFT Engine, GMP Engine, NURON Engine, PadLock Engine, Sureware Engine, and UBSEC Engine.
+.sp
+.LP
+A new PKCS#11 engine has been included with ENGINE name "pkcs11". The engine was developed in Sun and is not integrated in the OpenSSL project.
+.sp
+.LP
+The PKCS#11 engine is configured to use the Solaris Cryptographic Framework. See \fBcryptoadm\fR(1M) for configuration information.
+.sp
+.LP
+The PKCS#11 engine can support the following set of mechanisms: CKM_AES_CBC, CKM_AES_ECB, CKM_BLOWFISH_CBC, CKM_DES_CBC, CKM_DES_ECB, CKM_DES3_CBC, CKM_DES3_ECB, CKM_DSA, CKM_MD5, CKM_RC4, CKM_RSA_PKCS, CKM_RSA_X_509, CKM_SHA_1, CKM_SHA224, CKM_SHA256, CKM_SHA384, and CKM_SHA512.
+.sp
+.LP
+The set of mechanisms available depends on installed Crypto Framework providers. To see what mechanisms can be offloaded to the Cryptographic Framework through the PKCS#11 engine on a given machine, run the following command:
+.sp
+.in +2
+.nf
+/usr/sfw/bin/openssl engine -vvv -t -c
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Due to requirements of the PKCS#11 standard regarding \fBfork\fR(2) behavior, some applications that use the OpenSSL EVP interfaces and \fBfork()\fR with active crypto contexts might experience unexpected behavior.
+.sp
+.LP
+To build an OpenSSL application, use the following \fBcc\fR command line options:
+.sp
+.in +2
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... -lcrypto -lssl [ \fIlibrary\fR... ]
+.fi
+.in -2
+
+.sp
+.LP
+Extensive additional documentation for OpenSSL modules is available in the \fB/usr/share/man/man1openssl\fR, \fB/usr/share/man/man3openssl\fR, \fB/usr/share/man/man5openssl\fR, and \fB/usr/share/man/man7openssl\fR directories.
+.sp
+.LP
+To view the license terms, attribution, and copyright for OpenSSL, see \fB/var/sadm/pkg/SUNWopensslr/install/copyright\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for a description of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWopensslr, SUNWopenssl
+_
+Interface StabilityExternal
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBcryptoadm\fR(1M), \fBlibpkcs11\fR(3LIB), \fBattributes\fR(5)
+.sp
+.LP
+\fB/usr/share/man/man1openssl/openssl.1openssl\fR, \fB/usr/sfw/man/man3/engine.3\fR, \fB/usr/sfw/man/man3/evp.3\fR

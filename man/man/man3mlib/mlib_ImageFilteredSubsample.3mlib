@@ -1,0 +1,313 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_ImageFilteredSubsample 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_ImageFilteredSubsample, mlib_ImageFilteredSubsample_Fp \- antialias filters and subsamples an image
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_ImageFilteredSubsample\fR(\fBmlib_image *\fR\fIdst\fR,
+     \fBconst mlib_image *\fR\fIsrc\fR, \fBmlib_s32\fR \fIscaleX\fR, \fBmlib_s32\fR \fIscaleY\fR,
+     \fBmlib_s32\fR \fItransX\fR, \fBmlib_s32\fR \fItransY\fR,
+     \fBconst mlib_d64 *\fR\fIhKernel\fR, \fBconst mlib_d64 *\fR\fIvKernel\fR, \fBmlib_s32\fR \fIhSize\fR,
+     \fBmlib_s32\fR \fIvSize\fR, \fBmlib_s32\fR \fIhParity\fR, \fBmlib_s32\fR \fIvParity\fR, \fBmlib_edge\fR \fIedge\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_ImageFilteredSubsample_Fp\fR(\fBmlib_image *\fR\fIdst\fR,
+     \fBconst mlib_image *\fR\fIsrc\fR, \fBmlib_s32\fR \fIscaleX\fR, \fBmlib_s32\fR \fIscaleY\fR,
+     \fBmlib_s32\fR \fItransX\fR, \fBmlib_s32\fR \fItransY\fR,
+     \fBconst mlib_d64 *\fR\fIhKernel\fR, \fBconst mlib_d64 *\fR\fIvKernel\fR, \fBmlib_s32\fR \fIhSize\fR,
+     \fBmlib_s32\fR \fIvSize\fR, \fBmlib_s32\fR \fIhParity\fR, \fBmlib_s32\fR \fIvParity\fR, \fBmlib_edge\fR \fIedge\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Each of the functions antialias filters and subsamples an image.
+.sp
+.LP
+The effect of one of the functions on an image is equivalent to performing convolution (filter) followed by subsampling (zoom out).
+.sp
+.LP
+The functions are similar to the \fBmlib_ImageZoomTranslate()\fR and \fBmlib_ImageZoomTranslate_Fp()\fR functions. But they have different definitions on scale factors and translations, hence use different coordinate mapping equations. The \fBscaleX\fR and \fBscaleY\fR used by \fBmlib_ImageFilteredSubsample()\fR and \fBmlib_ImageFilteredSubsample_Fp()\fR are the reciprocals of the \fBzoomx\fR and \fBzoomy\fR, respectively, used by \fBmlib_ImageZoomTranslate()\fR and \fBmlib_ImageZoomTranslate_Fp()\fR.
+.sp
+.LP
+The functions use the following equations for coordinate mapping:
+.sp
+.in +2
+.nf
+xS = xD*scaleX + transX
+yS = yD*scaleY + transY
+.fi
+.in -2
+
+.sp
+.LP
+where, a point \fB(xD, yD)\fR in the destination image is backward mapped to a point \fB(xS, yS)\fR in the source image. The arguments \fBtransX\fR and \fBtransY\fR are provided to support tiling.
+.sp
+.LP
+The subsample terms, i.e., the scale factors \fBscaleX\fR and \fBscaleY\fR, are restricted to positive integral values. Geometrically, one destination pixel maps to \fBscaleX\fR by \fBscaleY\fR source pixels. With odd scale factors, destination pixel centers map directly onto source pixel centers. With even scale factors, destination pixel centers map squarely between source pixel centers. Below are examples of even, odd, and combination cases.
+.sp
+.in +2
+.nf
+  s   s   s   s   s   s           s   s   s   s   s   s
+    d       d       d
+  s   s   s   s   s   s           s   d   s   s   d   s
+
+  s   s   s   s   s   s           s   s   s   s   s   s
+    d       d       d
+  s   s   s   s   s   s           s   s   s   s   s   s
+
+  s   s   s   s   s   s           s   d   s   s   d   s
+    d       d       d
+  s   s   s   s   s   s           s   s   s   s   s   s
+
+  Even scaleX/Y factors           Odd scaleX/Y factors
+
+  s   s   s   s   s   s           s   s   s   s   s   s
+      d           d
+  s   s   s   s   s   s           s d s   s d s   s d s
+
+  s   s   s   s   s   s           s   s   s   s   s   s
+      d           d
+  s   s   s   s   s   s           s   s   s   s   s   s
+
+  s   s   s   s   s   s           s d s   s d s   s d s
+      d           d
+  s   s   s   s   s   s           s   s   s   s   s   s
+
+  Odd/even scaleX/Y factors       Even/odd scaleX/Y factors
+.fi
+.in -2
+
+.sp
+.LP
+where
+.sp
+.in +2
+.nf
+  s = source pixel centers
+  d = destination pixel centers mapped to source
+.fi
+.in -2
+
+.sp
+.LP
+The applied filter is quadrant symmetric (typically antialias + resample). The filter is product-separable, quadrant symmetric, and is defined by half of its span. Parity is used to signify whether the symmetric kernel has a double center (even parity) or a single center value (odd parity). For example, if \fBhParity == 0\fR (even), the horizontal kernel is defined as:
+.sp
+.in +2
+.nf
+hKernel[hSize-1], ..., hKernel[0], hKernel[0], ...,
+hKernel[hSize-1]
+.fi
+.in -2
+
+.sp
+.LP
+Otherwise, if \fBhParity == 1\fR (odd), the horizontal kernel is defined as:
+.sp
+.in +2
+.nf
+hKernel[hSize-1], ..., hKernel[0], ...,
+hKernel[hSize-1]
+.fi
+.in -2
+
+.sp
+.LP
+Horizontal and vertical kernels representing convolved resample (i.e., the combined separable kernels) can be computed from a convolution filter (with odd parity), a resample filter, and because the subsample factors affect resample weights, the subsample scale factors. It is the user's responsibility to provide meaningful combined kernels.
+.sp
+.LP
+To compute the value of a pixel centered at point \fB(xD, yD)\fR in the destination image, apply the combined kernel to the source image by aligning the kernel's geometric center to the backward mapped point \fB(xS, yS)\fR in the source image. In the cases that it can not be exactly on top of point \fB(xS, yS)\fR, the kernel's center should be half-pixel right and/or below that point. When this is done in a separable manner, the centers of horizontal and vertical kernels should align with \fBxS\fR and \fByS\fR, respectively.
+.sp
+.LP
+The combination of subsampling and filtering has performance benefits over sequential fucntion usage in part due to the symmetry constraints imposed by only allowing integer parameters for scaling and only allowing separable symmetric filters.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdst\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to destination image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to source image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIscaleX\fR\fR
+.ad
+.RS 11n
+.rt  
+The x scale factor of subsampling.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIscaleY\fR\fR
+.ad
+.RS 11n
+.rt  
+The y scale factor of subsampling.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fItransX\fR\fR
+.ad
+.RS 11n
+.rt  
+The x translation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fItransY\fR\fR
+.ad
+.RS 11n
+.rt  
+The y translation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIhKernel\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to the compact form of horizontal kernel.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIvKernel\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to the compact form of vertical kernel.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIhSize\fR\fR
+.ad
+.RS 11n
+.rt  
+Size of array \fBhKernel\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIvSize\fR\fR
+.ad
+.RS 11n
+.rt  
+Size of array \fBvKernel\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIhParity\fR\fR
+.ad
+.RS 11n
+.rt  
+Parity of horizontal kernel (0: even, 1: odd).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIvParity\fR\fR
+.ad
+.RS 11n
+.rt  
+Parity of vertical kernel (0: even, 1: odd).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIedge\fR\fR
+.ad
+.RS 11n
+.rt  
+Type of edge condition. It can be one of the following:
+.sp
+.in +2
+.nf
+MLIB_EDGE_DST_NO_WRITE
+.fi
+.in -2
+
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_ImageSubsampleAverage\fR(3MLIB), \fBmlib_ImageZoomTranslate\fR(3MLIB), \fBmlib_ImageZoomTranslate_Fp\fR(3MLIB), \fBattributes\fR(5)

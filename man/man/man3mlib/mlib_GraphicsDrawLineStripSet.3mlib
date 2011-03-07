@@ -1,0 +1,417 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_GraphicsDrawLineStripSet 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_GraphicsDrawLineStripSet, mlib_GraphicsDrawLineStripSet_8, mlib_GraphicsDrawLineStripSet_32, mlib_GraphicsDrawLineStripSet_X_8, mlib_GraphicsDrawLineStripSet_X_32, mlib_GraphicsDrawLineStripSet_A_8, mlib_GraphicsDrawLineStripSet_A_32, mlib_GraphicsDrawLineStripSet_B_8, mlib_GraphicsDrawLineStripSet_B_32, mlib_GraphicsDrawLineStripSet_G_8, mlib_GraphicsDrawLineStripSet_G_32, mlib_GraphicsDrawLineStripSet_Z_8, mlib_GraphicsDrawLineStripSet_Z_32, mlib_GraphicsDrawLineStripSet_AB_8, mlib_GraphicsDrawLineStripSet_AB_32, mlib_GraphicsDrawLineStripSet_ABG_8, mlib_GraphicsDrawLineStripSet_ABG_32, mlib_GraphicsDrawLineStripSet_ABGZ_8, mlib_GraphicsDrawLineStripSet_ABGZ_32, mlib_GraphicsDrawLineStripSet_ABZ_8, mlib_GraphicsDrawLineStripSet_ABZ_32, mlib_GraphicsDrawLineStripSet_AG_8, mlib_GraphicsDrawLineStripSet_AG_32, mlib_GraphicsDrawLineStripSet_AGZ_8, mlib_GraphicsDrawLineStripSet_AGZ_32, mlib_GraphicsDrawLineStripSet_AZ_8, mlib_GraphicsDrawLineStripSet_AZ_32, mlib_GraphicsDrawLineStripSet_BG_8, mlib_GraphicsDrawLineStripSet_BG_32, mlib_GraphicsDrawLineStripSet_BGZ_8, mlib_GraphicsDrawLineStripSet_BGZ_32, mlib_GraphicsDrawLineStripSet_BZ_8, mlib_GraphicsDrawLineStripSet_BZ_32, mlib_GraphicsDrawLineStripSet_GZ_8, mlib_GraphicsDrawLineStripSet_GZ_32 \- draw line set where each member of the set starts at the point where the previous member ended
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_X_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR,
+     \fBmlib_s32\fR \fIc2\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_X_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR,
+     \fBmlib_s32\fR \fIc2\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_A_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_A_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_B_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR,
+     \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_B_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR,
+     \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_G_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_G_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_Z_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_Z_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR,
+     \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_AB_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR,
+     \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_AB_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBmlib_s32\fR \fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_ABG_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_ABG_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_ABGZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_ABGZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_ABZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_ABZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_AG_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_AG_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_AGZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_AGZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_AZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_AZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_BG_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, 
+     \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_BG_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_BGZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_BGZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_BZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_BZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_GZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawLineStripSet_GZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR,
+     \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Each of the \fBmlib_GraphicsDrawLineStripSet_*()\fR functions draws a set of lines connecting \fB(x1,y1)\fR with \fB(x2,y2)\fR, \fB(x2,y2)\fR with \fB(x3,y3)\fR, ..., and \fB(xn-1,yn-1)\fR with \fB(xn,yn)\fR.
+.sp
+.LP
+Each of the \fBmlib_GraphicsDrawLineStripSet_X_*()\fR functions draws a set of lines in Xor mode as follows:
+.sp
+.in +2
+.nf
+    data[x,y] ^= c ^ c2
+.fi
+.in -2
+
+.sp
+.LP
+Each of the \fBmlib_GraphicsDrawLineStripSet_A_*()\fR functions draws a set of lines with antialiasing.
+.sp
+.LP
+Each of the \fBmlib_GraphicsDrawLineStripSet_B_*()\fR functions draws a set of lines with alpha blending as follows:
+.sp
+.in +2
+.nf
+    data[x,y] = (data[x,y] * (255 - a) + c * a) / 255
+.fi
+.in -2
+
+.sp
+.LP
+Each of the \fBmlib_GraphicsDrawLineStripSet_G_*()\fR functions draws a set of lines with Gouraud shading.
+.sp
+.LP
+Each of the \fBmlib_GraphicsDrawLineStripSet_Z_*()\fR functions draws a set of lines with Z buffering.
+.sp
+.LP
+Each of the other functions draws a set of lines with a combination of two or more features like antialiasing (A), alpha blending (B), Gouraud shading (G), and Z buffering (Z).
+.sp
+.LP
+Note that the \fBmlib_GraphicsDrawPolyline_*()\fR functions are aliases of the \fBmlib_GraphicsDrawLineStripSet_*()\fR functions.
+.SH PARAMETERS
+.sp
+.LP
+Each of the functions takes some of the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIbuffer\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to the image into which the function is drawing.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIzbuffer\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to the image that holds the Z buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIx\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to array of X coordinates of the points.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIy\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to array of Y coordinates of the points.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIz\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to array of Z coordinates of the points.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fInpoints\fR\fR
+.ad
+.RS 11n
+.rt  
+Number of points in the arrays.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIc\fR\fR
+.ad
+.RS 11n
+.rt  
+Color used in the drawing, or pointer to array of colors of the points in the case of Gouraud shading.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIc2\fR\fR
+.ad
+.RS 11n
+.rt  
+Alternation color.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIa\fR\fR
+.ad
+.RS 11n
+.rt  
+Alpha value for blending. \fB0 \(<= a \(<= 255\fR.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+Each of the functions returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_GraphicsDrawLine\fR(3MLIB), \fBmlib_GraphicsDrawLineSet\fR(3MLIB), \fBmlib_GraphicsDrawLineFanSet\fR(3MLIB), \fBmlib_GraphicsDrawPolyline\fR(3MLIB), \fBattributes\fR(5)

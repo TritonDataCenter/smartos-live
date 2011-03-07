@@ -25,7 +25,6 @@
 # Use is subject to license terms.
 
 ROOT=`pwd`
-MAN_DIR=${ROOT}/projects/opensolaris-man
 CUSTOMIZE_SCRIPT=${ROOT}/tools/customize
 SMF_IMPORTER=${ROOT}/tools/smf_import
 BUILDER=${ROOT}/tools/builder/builder

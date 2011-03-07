@@ -1,0 +1,174 @@
+'\" te
+.\" Copyright (c) 2009, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mmsinit 1M "2 Feb 2009" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+mmsinit \- initialize MMS services
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/bin/mmsinit\fR \fB-t\fR \fIserver\fR [\fB-o\fR \fIoptionname\fR=\fIvalue\fR [\fB-o\fR \fIoptionname2\fR=\fIvalue\fR]...]
+     [\fB-P\fR \fIpasswordfile\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmmsinit\fR command initializes the Media Management System (MMS) environment and enables MMS services. An MMS server runs the Media Management (MM) daemon, which controls access to MMS-managed storage resources, and hosts the MMS database. Run this command once to start MMS services with the specified attributes. To change the attributes after this command has been invoked, use the \fBmmsadm\fR(1M) command.
+.sp
+.LP
+The \fBmmsinit\fR command requires the \fB-t\fR \fIserver\fR argument, to specify the server on which MMS services will run.
+.sp
+.LP
+To run \fBmmsinit\fR, you must become superuser, or assume the Primary Administrator role.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported: 
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR \fIoptionname\fR=\fIvalue\fR...\fR
+.ad
+.sp .6
+.RS 4n
+Specify one or more of the options and values listed below.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlog-level\fR=\fBemergency\fR|\fBalert\fR|\fBcritical\fR|\fBerror\fR|\fBwarning\fR|\fR
+.ad
+.br
+.na
+\fB\fBnotice\fR|\fBinformation\fR|\fBdebug\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the severity level of messages to be included in the log file. Default level is \fBerror\fR, logging all error messages.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnum-restarts\fR=\fInum\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the number of attempts to start a failed daemon before the drive or library associated with the daemon is disabled and requires the \fBmmsadm online\fR command to be run after the problem with the system or device is resolved. Use a value of \fB-1\fR for unlimited restart attempts. The default value is \fB3\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBattended\fR=\fByes\fR|\fBno\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify whether MMS makes operator requests when an operation cannot be automatically satisfied. An example of such a case would be if a mount request was made for a tape volume that had been physically removed from a library. The default action, \fByes\fR, indicates that an operator is available to respond.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnum-sockets\fR=\fInum\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the number of open file descriptors the MM daemon can have at one time. On a resource-constrained system, set this value to a number between 30 and 65536. It is not recommended to set the value to less than 256. The default value is \fB-1\fR, which sets number of file descriptors to the maximum supported.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdisk-timeout\fR=\fIseconds\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the time a disk archiving drive manager waits for the file system containing a disk archiving volume to become available. It is strongly recommended to set the time to a minimum of 120 seconds (two minutes). Use a value of \fB0\fR to specify no expiration time.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-P\fR \fIpasswordfile\fR\fR
+.ad
+.sp .6
+.RS 4n
+Path to a file containing the MMS administrative password. If this option is not specified, the user will be prompted for the password. A password must contain at least eight characters.
+.RE
+
+.SH EXIT STATUS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.sp .6
+.RS 4n
+Successful completion.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB!=0\fR\fR
+.ad
+.sp .6
+.RS 4n
+An error occurred.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWmmsu
+_
+Interface StabilityVolatile
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmmsadm\fR(1M), \fBmmsclient\fR(1M), \fBmmsexplorer\fR(1M), \fBmmsclient_script\fR(4), \fBattributes\fR(5)
+.sp
+.LP
+IEEE 1244, \fIIEEE Storage Systems Standards\fR, a set of MMS standards
+.SH NOTES
+.sp
+.LP
+When MMS is added to the Automated Cartridge System Library Software (ACSLS) environment, the ACSLS configuration must be modified to allow them to work together. See the procedure for performing these modifications at the OpenSolaris web site for MMS:
+.sp
+.in +2
+.nf
+http://opensolaris.org/os/project/mms/
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The preceding URL is valid as of the date of publication of this man page.

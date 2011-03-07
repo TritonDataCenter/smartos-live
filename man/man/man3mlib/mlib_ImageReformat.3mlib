@@ -1,0 +1,306 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_ImageReformat 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_ImageReformat \- image data buffer reformat
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_ImageReformat\fR(\fBvoid **\fR\fIdstData\fR, \fBconst void **\fR\fIsrcData\fR,
+     \fBmlib_s32\fR \fInumBands\fR, \fBmlib_s32\fR \fIxSize\fR, \fBmlib_s32\fR \fIySize\fR,
+     \fBmlib_type\fR \fIdstDataType\fR, \fBconst mlib_s32 *\fR\fIdstBandoffsets\fR,
+     \fBmlib_s32\fR \fIdstScanlinestride\fR, \fBmlib_s32\fR \fIdstPixelstride\fR,
+     \fBmlib_type\fR \fIsrcDataType\fR, \fBconst mlib_s32 *\fR\fIsrcBandoffsets\fR,
+     \fBmlib_s32\fR \fIsrcScanlinestride\fR, \fBmlib_s32\fR \fIsrcPixelstride\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_ImageReformat()\fR function copies and casts, if needed, an image from one buffer to another. The formats and data types of the two buffers may be different.
+.sp
+.in +2
+.nf
+dstPixel[x][y][i] = (dstDataType) srcPixel[x][y][i]
+.fi
+.in -2
+
+.sp
+.LP
+where the values of a pixel at position \fB(x, y)\fR and in channel \fBi\fR are:
+.sp
+.in +2
+.nf
+srcPixel[x][y][i] = srcData[i][srcBandoffsets[i] +
+                               srcScanlinestride*y +
+                               srcPixelstride*x]
+
+dstPixel[x][y][i] = dstData[i][dstBandoffsets[i] +
+                               dstScanlinestride*y +
+                               dstPixelstride*x]
+.fi
+.in -2
+
+.sp
+.LP
+It is the user's responsibility to make sure that the data buffers supplied are suitable for this operation. The srcData and dstData can have 1, 2, 3, or 4 channels, and they must have the same number of channels. The srcDataType and dstDataType can be \fBMLIB_BYTE\fR, \fBMLIB_SHORT\fR, \fBMLIB_USHORT\fR, \fBMLIB_INT\fR, \fBMLIB_FLOAT\fR, or \fBMLIB_DOUBLE\fR.
+.sp
+.LP
+The conversions between different data types are implemented as described in the following table:
+.sp
+
+.sp
+.TS
+tab();
+cw(0i) cw(0i) cw(5.5i) 
+lw(0i) lw(0i) lw(5.5i) 
+.
+Source TypeDest. TypeAction
+_
+MLIB_SHORTMLIB_BYTE(mlib_u8)clamp(x, 0, 255)
+MLIB_USHORTMLIB_BYTE(mlib_u8)clamp(x, 0, 255)
+_
+MLIB_INTMLIB_BYTE(mlib_u8)clamp(x, 0, 255)
+_
+MLIB_FLOATMLIB_BYTE(mlib_u8)clamp(x, 0, 255)
+_
+MLIB_DOUBLEMLIB_BYTE(mlib_u8)clamp(x, 0, 255)
+_
+MLIB_BYTEMLIB_SHORT(mlib_s16)x
+_
+MLIB_USHORTMLIB_SHORT(mlib_s16)clamp(x, -32768, 32767)
+_
+MLIB_INTMLIB_SHORT(mlib_s16)clamp(x, -32768, 32767)
+_
+MLIB_FLOATMLIB_SHORT(mlib_s16)clamp(x, -32768, 32767)
+_
+MLIB_DOUBLEMLIB_SHORT(mlib_s16)clamp(x, -32768, 32767)
+_
+MLIB_BYTEMLIB_USHORT(mlib_u16)x
+_
+MLIB_SHORTMLIB_USHORT(mlib_u16)clamp(x, 0, 65535)
+_
+MLIB_INTMLIB_USHORT(mlib_u16)clamp(x, 0, 65535)
+_
+MLIB_FLOATMLIB_USHORT(mlib_u16)clamp(x, 0, 65535)
+_
+MLIB_DOUBLEMLIB_USHORT(mlib_u16)clamp(x, 0, 65535)
+_
+MLIB_BYTEMLIB_INT(mlib_s32)x
+_
+MLIB_SHORTMLIB_INT(mlib_s32)x
+_
+MLIB_USHORTMLIB_INT(mlib_s32)x
+_
+MLIB_FLOATMLIB_INTT{
+(mlib_s32)clamp(x, -2147483647-1, 2147483647)
+T}
+_
+MLIB_DOUBLEMLIB_INTT{
+(mlib_s32)clamp(x, -2147483647-1, 2147483647)
+T}
+_
+MLIB_BYTEMLIB_FLOAT(mlib_f32)x
+_
+MLIB_SHORTMLIB_FLOAT(mlib_f32)x
+_
+MLIB_USHORTMLIB_FLOAT(mlib_f32)x
+_
+MLIB_INTMLIB_FLOAT(mlib_f32)x
+_
+MLIB_DOUBLEMLIB_FLOAT(mlib_f32)x
+_
+MLIB_BYTEMLIB_DOUBLE(mlib_d64)x
+_
+MLIB_SHORTMLIB_DOUBLE(mlib_d64)x
+_
+MLIB_USHORTMLIB_DOUBLE(mlib_d64)x
+_
+MLIB_INTMLIB_DOUBLE(mlib_d64)x
+_
+MLIB_FLOATMLIB_DOUBLE(mlib_d64)x
+.TE
+
+.sp
+.LP
+The actions are defined in C-style pseudo-code. All type casts follow the rules of standard C. \fBclamp()\fR can be defined as a macro: \fB#define clamp(x, low, high) (((x) < (low)) ? (low) : (((x) > (high)) ? (high) : (x)))\fR
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdstData\fR\fR
+.ad
+.RS 21n
+.rt  
+The pointer to the destination image data buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrcData\fR\fR
+.ad
+.RS 21n
+.rt  
+The pointer to the source image data buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fInumBands\fR\fR
+.ad
+.RS 21n
+.rt  
+The number of channels of the image data buffers.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIxSize\fR\fR
+.ad
+.RS 21n
+.rt  
+The width of the image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIySize\fR\fR
+.ad
+.RS 21n
+.rt  
+The height of the image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdstDataType\fR\fR
+.ad
+.RS 21n
+.rt  
+The data type of the \fIdstData\fR buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdstBandoffsets\fR\fR
+.ad
+.RS 21n
+.rt  
+The initial pixel's offsets in the \fIdstData\fR buffer in terms of destination data buffer elements.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdstScanlinestride\fR\fR
+.ad
+.RS 21n
+.rt  
+The scanline stride of the \fIdstData\fR buffer in terms of destination data buffer elements.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdstPixelstride\fR\fR
+.ad
+.RS 21n
+.rt  
+The pixel stride of the \fIdstData\fR buffer in terms of destination data buffer elements.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrcDataType\fR\fR
+.ad
+.RS 21n
+.rt  
+The data type of the \fIsrcData\fR buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrcBandoffsets\fR\fR
+.ad
+.RS 21n
+.rt  
+The initial pixel's offsets in the \fIsrcData\fR buffer in terms of source data buffer elements.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrcScanlinestride\fR\fR
+.ad
+.RS 21n
+.rt  
+The scanline stride of the \fIsrcData\fR buffer in terms of source data buffer elements.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrcPixelstride\fR\fR
+.ad
+.RS 21n
+.rt  
+The pixel stride of the \fIsrcData\fR buffer in terms of source data buffer elements.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_ImageDataTypeConvert\fR(3MLIB), \fBattributes\fR(5)

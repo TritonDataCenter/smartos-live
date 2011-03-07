@@ -1,0 +1,92 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_ImageMaxFilter7x7_Fp 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_ImageMaxFilter7x7_Fp \- 7x7 Max Filter
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_ImageMaxFilter7x7_Fp\fR(\fBmlib_image *\fR\fIdst\fR,
+     \fBconst mlib_image *\fR\fIsrc\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_ImageMaxFilter7x7_Fp()\fR function replaces the center pixel in a neighborhood with the floating-point maximum value in that neighborhood for each 7x7 neighborhood in the image.
+.sp
+.LP
+The source and destination images must be single-channel images.
+.sp
+.LP
+It uses the following equation:
+.sp
+.in +2
+.nf
+dst[x][y][0] = MAX{ src[p][q][0],
+                    x-3 \(<= p \(<= x+3; y-3 \(<= q \(<= y+3 }
+.fi
+.in -2
+
+.sp
+.LP
+where \fBx = 3, ..., w - 4; y = 3, ..., h - 4\fR.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdst\fR\fR
+.ad
+.RS 7n
+.rt  
+Pointer to destination image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc\fR\fR
+.ad
+.RS 7n
+.rt  
+Pointer to source image.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_ImageMaxFilter3x3\fR(3MLIB), \fBmlib_ImageMaxFilter3x3_Fp\fR(3MLIB), \fBmlib_ImageMaxFilter5x5\fR(3MLIB), \fBmlib_ImageMaxFilter5x5_Fp\fR(3MLIB), \fBmlib_ImageMaxFilter7x7\fR(3MLIB), \fBmlib_ImageMedianFilter3x3\fR(3MLIB), \fBmlib_ImageMedianFilter3x3_Fp\fR(3MLIB), \fBmlib_ImageMedianFilter3x3_US\fR(3MLIB), \fBmlib_ImageMedianFilter5x5\fR(3MLIB), \fBmlib_ImageMedianFilter5x5_Fp\fR(3MLIB), \fBmlib_ImageMedianFilter5x5_US\fR(3MLIB), \fBmlib_ImageMedianFilter7x7\fR(3MLIB), \fBmlib_ImageMedianFilter7x7_Fp\fR(3MLIB), \fBmlib_ImageMedianFilter7x7_US\fR(3MLIB), \fBmlib_ImageMedianFilterMxN\fR(3MLIB), \fBmlib_ImageMedianFilterMxN_Fp\fR(3MLIB), \fBmlib_ImageMedianFilterMxN_US\fR(3MLIB), \fBmlib_ImageMinFilter3x3\fR(3MLIB), \fBmlib_ImageMinFilter3x3_Fp\fR(3MLIB), \fBmlib_ImageMinFilter5x5\fR(3MLIB), \fBmlib_ImageMinFilter5x5_Fp\fR(3MLIB), \fBmlib_ImageMinFilter7x7\fR(3MLIB), \fBmlib_ImageMinFilter7x7_Fp\fR(3MLIB), \fBmlib_ImageRankFilter3x3\fR(3MLIB), \fBmlib_ImageRankFilter3x3_Fp\fR(3MLIB), \fBmlib_ImageRankFilter3x3_US\fR(3MLIB), \fBmlib_ImageRankFilter5x5\fR(3MLIB), \fBmlib_ImageRankFilter5x5_Fp\fR(3MLIB), \fBmlib_ImageRankFilter5x5_US\fR(3MLIB), \fBmlib_ImageRankFilter7x7\fR(3MLIB), \fBmlib_ImageRankFilter7x7_Fp\fR(3MLIB), \fBmlib_ImageRankFilter7x7_US\fR(3MLIB), \fBmlib_ImageRankFilterMxN\fR(3MLIB), \fBmlib_ImageRankFilterMxN_Fp\fR(3MLIB), \fBmlib_ImageRankFilterMxN_US\fR(3MLIB), \fBattributes\fR(5)

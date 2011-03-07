@@ -1,0 +1,98 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc. All rights reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH libXtsol 3LIB "20 Jul 2007" "SunOS 5.11" "Interface Libraries"
+.SH NAME
+libXtsol, libxtsol \- Trusted Extensions to X Windows Library
+.SH SYNOPSIS
+.LP
+.nf
+\fBcc\fR [\fIflag\fR...] \fIfile\fR... \fB-lX11\fR \fB-lXtsol\fR [\fIlibrary\fR...]
+#include <X11/extensions/Xtsol.h>
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Functions in this library provide Trusted Extensions to the X windows library.
+.sp
+.LP
+The functions in this library are available only if the system is configured with Trusted Extensions.
+.SH INTERFACES
+.sp
+.LP
+The shared object \fBlibXtsol.so.1\fR provides the public interfaces that are defined below. See \fBIntro\fR(3) for additional information on shared object interfaces.
+.sp
+
+.sp
+.TS
+tab();
+lw(2.75i) lw(2.75i) 
+lw(2.75i) lw(2.75i) 
+.
+\fBXTSOLIsWindowTrusted\fR\fBXTSOLMakeTPWindow\fR
+\fBXTSOLgetClientAttributes\fR\fBXTSOLgetPropAttributes\fR
+\fBXTSOLgetPropLabel\fR\fBXTSOLgetPropUID\fR
+\fBXTSOLgetResAttributes\fR\fBXTSOLgetResLabel\fR
+\fBXTSOLgetResUID\fR\fBXTSOLgetSSHeight\fR
+\fBXTSOLgetWorkstationOwner\fR\fBXTSOLsetPolyInstInfo\fR
+\fBXTSOLsetPropLabel\fR\fBXTSOLsetPropUID\fR
+\fBXTSOLsetResLabel\fR\fBXTSOLsetResUID\fR
+\fBXTSOLsetSSHeight\fR\fBXTSOLsetSessionHI\fR
+\fBXTSOLsetSessionLO\fR\fBXTSOLsetWorkstationOwner\fR
+.TE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/lib/libXtsol.so.1\fR\fR
+.ad
+.RS 25n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/lib/64/libXtsol.so.1\fR\fR
+.ad
+.RS 25n
+.rt  
+64-bit shared object
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWxwts
+_
+Interface StabilityCommitted
+_
+MT-LevelUnsafe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBIntro\fR(3), \fBlibtsnet\fR(3LIB), \fBlibtsol\fR(3LIB), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+The functionality described on this manual page is available only if the system has been configured with Trusted Extensions.

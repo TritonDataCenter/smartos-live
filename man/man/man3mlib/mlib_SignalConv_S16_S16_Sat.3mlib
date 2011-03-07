@@ -1,0 +1,184 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_SignalConv_S16_S16_Sat 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_SignalConv_S16_S16_Sat, mlib_SignalConv_S16S_S16S_Sat, mlib_SignalConv_F32_F32, mlib_SignalConv_F32S_F32S \- signal convolution
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_SignalConv_S16_S16_Sat\fR(\fBmlib_s16 *\fR\fIdst\fR, 
+     \fBconst mlib_s16 *\fR\fIsrc1\fR, \fBconst mlib_s16 *\fR\fIsrc2\fR, \fBmlib_s32\fR \fIm\fR, 
+     \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_SignalConv_S16S_S16S_Sat\fR(\fBmlib_s16 *\fR\fIdst\fR, 
+     \fBconst mlib_s16 *\fR\fIsrc1\fR, \fBconst mlib_s16 *\fR\fIsrc2\fR, \fBmlib_s32\fR \fIm\fR, 
+     \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_SignalConv_F32_F32\fR(\fBmlib_f32 *\fR\fIdst\fR, 
+     \fBconst mlib_f32 *\fR\fIsrc1\fR, \fBconst mlib_f32 *\fR\fIsrc2\fR, \fBmlib_s32\fR \fIm\fR, 
+     \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_SignalConv_F32S_F32S\fR(\fBmlib_f32 *\fR\fIdst\fR, 
+     \fBconst mlib_f32 *\fR\fIsrc1\fR, \fBconst mlib_f32 *\fR\fIsrc2\fR, \fBmlib_s32\fR \fIm\fR, 
+     \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Each of these functions performs convolution.
+.sp
+.LP
+For monaural signals, the following equation is used:
+.sp
+.in +2
+.nf
+         m-1
+dst[i] = SUM (src1[j] * src2[i - j])  if m \(<= n
+         j=0
+
+         n-1
+dst[i] = SUM (src2[j] * src1[i - j])  if m > n
+         j=0
+.fi
+.in -2
+
+.sp
+.LP
+where \fBi = 0, 1, ..., (m + n - 2)\fR.
+.sp
+.LP
+For stereo signals, the following equation is used:
+.sp
+.in +2
+.nf
+               m-1
+dst[2*i]     = SUM (src1[2*j] * src2[2*(i - j)])
+               j=0
+
+               m-1
+dst[2*i + 1] = SUM (src1[2*j + 1] * src2[2*(i - j) + 1])
+               j=0
+.fi
+.in -2
+
+.sp
+.LP
+if \fBm \(<= n\fR, or
+.sp
+.in +2
+.nf
+               n-1
+dst[2*i]     = SUM (src2[2*j] * src1[2*(i - j)])
+               j=0
+
+               n-1
+dst[2*i + 1] = SUM (src2[2*j + 1] * src1[2*(i - j) + 1])
+               j=0
+.fi
+.in -2
+
+.sp
+.LP
+if \fBm > n\fR; where \fBi = 0, 1, ..., (m + n - 2)\fR.
+.SH PARAMETERS
+.sp
+.LP
+Each of the functions takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdst\fR\fR
+.ad
+.RS 8n
+.rt  
+Destination signal array.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc1\fR\fR
+.ad
+.RS 8n
+.rt  
+First source signal array.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc2\fR\fR
+.ad
+.RS 8n
+.rt  
+Second source signal array.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIm\fR\fR
+.ad
+.RS 8n
+.rt  
+Number of samples in the first source signal array.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIn\fR\fR
+.ad
+.RS 8n
+.rt  
+Number of samples in the second source signal arrays.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+Each of the functions returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBattributes\fR(5)

@@ -1,0 +1,150 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_SignalLPCPitchAnalyze_S16 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_SignalLPCPitchAnalyze_S16 \- perform open-loop pitch analysis
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_SignalLPCPitchAnalyze_S16\fR(\fBmlib_s32 *\fR\fIpitch\fR,
+     \fBconst mlib_s16 *\fR\fIsigwgt\fR, \fBconst mlib_s32 *\fR\fIregion\fR,
+     \fBmlib_s32\fR \fIlength\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_SignalLPCPitchAnalyze_S16()\fR function performs open-loop pitch analysis.
+.sp
+.LP
+The open-loop pitch analysis uses perceptual weighted signal and is done with following steps.
+.sp
+.LP
+In the first step, three maxima of the correlation
+.sp
+.in +2
+.nf
+	       N-1
+	R(k) = SUM sw(j) * sw(j-k)
+	       j=0
+.fi
+.in -2
+
+.sp
+.LP
+where \fBN = length\fR, is located for each of the three search regions.
+.sp
+.LP
+In the second step, the retained maxima \fBR(Ti), i=0,1,2\fR are normalized as following.
+.sp
+.in +2
+.nf
+	                  R(Ti)
+	Rn(ti) = ---------------------, i=0,1,2
+	               N-1         2
+	          SQRT(SUM sw(j-Ti) )
+	               j=0
+.fi
+.in -2
+
+.sp
+.LP
+where \fBN = length\fR.
+.sp
+.LP
+In the third step, the best open-loop delay \fBTopt\fR is determined as following.
+.sp
+.in +2
+.nf
+	Topt = T0
+	if (Rn(t1) \(>= (0.85 * Rn(Topt))
+		Topt = t1
+	if (Rn(t2) \(>= (0.85 * Rn(Topt))
+		Topt = t2
+.fi
+.in -2
+
+.sp
+.LP
+See G.729, G.729A, GSM EFR standards.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIpitch\fR\fR
+.ad
+.RS 10n
+.rt  
+The speech pitch estimated.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsigwgt\fR\fR
+.ad
+.RS 10n
+.rt  
+The weighted signal vector with samples in \fBQ15\fR format. \fBsigwgt\fR points to the current sample of the weighted signal vector, \fBlength\fR samples must be availabe after this point, and \fBMAX{region[i],i=0,1,...,5}\fR samples must be available before this point.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIregion\fR\fR
+.ad
+.RS 10n
+.rt  
+The lower/upper boundaries of the three search regions, where \fBregion[2*i]\fR is the lower boundary of search region \fBi\fR and \fBregion[2*i+1]\fR is the upper boundary of search region \fBi\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIlength\fR\fR
+.ad
+.RS 10n
+.rt  
+The length of the signal vectors over which the correlation is calculated.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_SignalLPCPitchAnalyze_F32\fR(3MLIB), \fBattributes\fR(5)

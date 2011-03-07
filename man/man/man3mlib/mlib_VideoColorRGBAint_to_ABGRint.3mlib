@@ -1,0 +1,121 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_VideoColorRGBAint_to_ABGRint 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_VideoColorRGBAint_to_ABGRint \- convert RGBA interleaved to ABGR
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBvoid\fR \fBmlib_VideoColorRGBAint_to_ABGRint\fR(\fBmlib_u32 *\fR\fIABGR\fR,
+     \fBconst mlib_u32 *\fR\fIRGBA\fR,\fBmlib_s32\fR \fIw\fR, 
+     \fBmlib_s32\fR \fIh\fR, \fBmlib_s32\fR \fIdlb\fR,
+     \fBmlib_s32\fR \fIslb\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The RGBA pixel stream is broken apart and recombined into an ABGR pixel stream. All pixel components are 8-bit unsigned integers. The buffers have dimensions \fIw\fR and \fIh\fR. Within each 32-bit input word, the component ordering is R (bits 31-24), G (bits 23-16), B (bits 15-8), and A (bits 7-0). Within each 32-bit output word, the component ordering is A (bits 31-24), B (bits 23-16), G (bits 15-8), and R (bits 7-0).
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIABGR\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to output buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIRGBA\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to input buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIw\fR\fR
+.ad
+.RS 8n
+.rt  
+Image width in pixels.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIh\fR\fR
+.ad
+.RS 8n
+.rt  
+Image height in lines.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdlb\fR\fR
+.ad
+.RS 8n
+.rt  
+Linebytes for output buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIslb\fR\fR
+.ad
+.RS 8n
+.rt  
+Linebytes for input buffer.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+None.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_VideoColorABGRint_to_ARGBint\fR(3MLIB), \fBmlib_VideoColorBGRAint_to_ABGRint\fR(3MLIB), \fBattributes\fR(5)

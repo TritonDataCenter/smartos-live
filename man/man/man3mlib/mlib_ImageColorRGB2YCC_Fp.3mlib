@@ -1,0 +1,105 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_ImageColorRGB2YCC_Fp 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_ImageColorRGB2YCC_Fp \- RGB to YCC color conversion
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_ImageColorRGB2YCC_Fp\fR(\fBmlib_image *\fR\fIdst\fR,
+     \fBconst mlib_image *\fR\fIsrc\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_ImageColorRGB2YCC_Fp()\fR function performs a color space conversion from computer R'G'B' to ITU-R Rec.601 Y'CbCr.
+.sp
+.LP
+The source and destination images must be three-channel images.
+.sp
+.LP
+It uses the following equation:
+.sp
+.in +2
+.nf
+|Y'|   |cmat[0] cmat[1] cmat[2]|   |R'|   |offset[0]|
+|Cb| = |cmat[3] cmat[4] cmat[5]| * |G'| + |offset[1]|
+|Cr|   |cmat[6] cmat[7] cmat[8]|   |B'|   |offset[2]|
+.fi
+.in -2
+
+.sp
+.LP
+where
+.sp
+.in +2
+.nf
+cmat[] = { 65.738/256, 129.057/256,  25.064/256,
+          -37.945/256, -74.494/256, 112.439/256,
+          112.439/256, -94.154/256, -18.285/256 };
+offset[] = { 16, 128, 128 };
+src[x][y] = { R', G', B' };
+dst[x][y] = { Y', Cb, Cr };
+.fi
+.in -2
+
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdst\fR\fR
+.ad
+.RS 7n
+.rt  
+Pointer to destination image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc\fR\fR
+.ad
+.RS 7n
+.rt  
+Pointer to source image.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_ImageColorConvert2\fR(3MLIB), \fBmlib_ImageColorConvert2_Fp\fR(3MLIB), \fBmlib_ImageColorRGB2YCC\fR(3MLIB), \fBmlib_ImageColorXYZ2RGB\fR(3MLIB), \fBmlib_ImageColorXYZ2RGB_Fp\fR(3MLIB), \fBmlib_ImageColorYCC2RGB\fR(3MLIB), \fBmlib_ImageColorYCC2RGB_Fp\fR(3MLIB), \fBattributes\fR(5)

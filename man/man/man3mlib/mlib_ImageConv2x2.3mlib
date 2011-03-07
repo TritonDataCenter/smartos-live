@@ -1,0 +1,151 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_ImageConv2x2 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_ImageConv2x2 \- 2x2 convolution
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_ImageConv2x2\fR(\fBmlib_image *\fR\fIdst\fR, \fBconst mlib_image *\fR\fIsrc\fR,
+     \fBconst mlib_s32 *\fR\fIkernel\fR, \fBmlib_s32\fR \fIscale\fR, \fBmlib_s32\fR \fIcmask\fR,
+     \fBmlib_edge\fR \fIedge\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_ImageConv2x2()\fR function performs a 2x2 convolution on the source image by using the user-supplied kernel.
+.sp
+.LP
+The input image and the output image must have the same image type and have the same number of channels. The unselected channels in the output image are not overwritten. For single-channel images, the channel mask is ignored.
+.sp
+.LP
+For this convolution, the key element of the convolution kernel is located at \fB(0, 0)\fR of the kernel matrix.
+.sp
+.LP
+It uses the following equation:
+.sp
+.in +2
+.nf
+               m-1-dm n-1-dn
+dst[x][y][i] =  SUM    SUM  src[x+p][y+q][i]*k[p][q]*2**(-scale)
+               p=-dm  q=-dn
+.fi
+.in -2
+
+.sp
+.LP
+where \fBm = 2, n = 2, dm = (m - 1)/2 = 0, dn = (n - 1)/2 = 0\fR.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdst\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to destination image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to source image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIkernel\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to the convolution kernel, in row major order.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIscale\fR\fR
+.ad
+.RS 10n
+.rt  
+Scaling factor.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcmask\fR\fR
+.ad
+.RS 10n
+.rt  
+Channel mask to indicate the channels to be convolved, each bit of which represents a channel in the image. The channels corresponding to bits with a value of 1 are those to be processed. For a single-channel image, the channel mask is ignored.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIedge\fR\fR
+.ad
+.RS 10n
+.rt  
+Type of edge condition. It can be one of the following:
+.sp
+.in +2
+.nf
+MLIB_EDGE_DST_NO_WRITE
+MLIB_EDGE_DST_FILL_ZERO
+MLIB_EDGE_DST_COPY_SRC
+MLIB_EDGE_SRC_EXTEND
+.fi
+.in -2
+
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_ImageConv2x2_Fp\fR(3MLIB), \fBmlib_ImageConv2x2Index\fR(3MLIB), \fBmlib_ImageConv3x3\fR(3MLIB), \fBmlib_ImageConv3x3_Fp\fR(3MLIB), \fBmlib_ImageConv3x3Index\fR(3MLIB), \fBmlib_ImageConv4x4\fR(3MLIB), \fBmlib_ImageConv4x4_Fp\fR(3MLIB), \fBmlib_ImageConv4x4Index\fR(3MLIB), \fBmlib_ImageConv5x5\fR(3MLIB), \fBmlib_ImageConv5x5_Fp\fR(3MLIB), \fBmlib_ImageConv5x5Index\fR(3MLIB), \fBmlib_ImageConv7x7\fR(3MLIB), \fBmlib_ImageConv7x7_Fp\fR(3MLIB), \fBmlib_ImageConv7x7Index\fR(3MLIB), \fBmlib_ImageConvKernelConvert\fR(3MLIB), \fBmlib_ImageConvMxN\fR(3MLIB), \fBmlib_ImageConvMxN_Fp\fR(3MLIB), \fBmlib_ImageConvMxNIndex\fR(3MLIB), \fBmlib_ImageConvolveMxN\fR(3MLIB), \fBmlib_ImageConvolveMxN_Fp\fR(3MLIB), \fBmlib_ImageSConv3x3\fR(3MLIB), \fBmlib_ImageSConv3x3_Fp\fR(3MLIB), \fBmlib_ImageSConv5x5\fR(3MLIB), \fBmlib_ImageSConv5x5_Fp\fR(3MLIB), \fBmlib_ImageSConv7x7\fR(3MLIB), \fBmlib_ImageSConv7x7_Fp\fR(3MLIB), \fBmlib_ImageSConvKernelConvert\fR(3MLIB), \fBattributes\fR(5)

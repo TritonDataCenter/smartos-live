@@ -1,0 +1,108 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_ImageBlend1_Fp_Inp 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_ImageBlend1_Fp_Inp \- blend with an alpha image
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_ImageBlend1_Fp_Inp\fR(\fBmlib_image *\fR\fIsrc1dst\fR,
+     \fBconst mlib_image *\fR\fIsrc2\fR, \fBconst mlib_image *\fR\fIalpha\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_ImageBlend1_Fp_Inp()\fR function blends two images together, in place, on a pixel-by-pixel basis using an alpha image, when alpha is also on a pixel basis. The \fIalpha\fR image can be a single-channel image or have the same number of channels as the source and destination images.
+.sp
+.LP
+It uses the following equation when the \fIalpha\fR image is a single-channel image:
+.sp
+.in +2
+.nf
+src1dst[x][y][i] = alpha[x][y][0]*src1dst[x][y][i] +
+                   (1 - alpha[x][y][0])*src2[x][y][i]
+.fi
+.in -2
+
+.sp
+.LP
+It uses the following equation when the \fIalpha\fR image has the same number of channels as the source and destination images:
+.sp
+.in +2
+.nf
+src1dst[x][y][i] = alpha[x][y][i]*src1dst[x][y][i] +
+                   (1 - alpha[x][y][i])*src2[x][y][i]
+.fi
+.in -2
+
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc1dst\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to first source and destination image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc2\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to second source image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIalpha\fR\fR
+.ad
+.RS 11n
+.rt  
+Alpha image used to control blending. The pixels in this image should have values in the range of [0.0,1.0].
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_ImageBlend\fR(3MLIB), \fBmlib_ImageBlend_Fp\fR(3MLIB), \fBmlib_ImageBlend1_Inp\fR(3MLIB), \fBmlib_ImageBlend2_Fp_Inp\fR(3MLIB), \fBmlib_ImageBlend2_Inp\fR(3MLIB), \fBattributes\fR(5)

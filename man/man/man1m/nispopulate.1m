@@ -1,0 +1,376 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" Copyright 1989 AT&T
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nispopulate 1M "17 Aug 2006" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+nispopulate \- populate the NIS+ tables in a NIS+ domain
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/lib/nis/nispopulate\fR \fB-Y\fR [\fB-x\fR] [\fB-f\fR] [\fB-n\fR] [\fB-u\fR] [\fB-v\fR] 
+     [\fB-S\fR \fI0\fR | \fI2\fR] [\fB-l\fR <\fInetwork_passwd\fR>] 
+     [\fB-d\fR <\fINIS+_domain\fR>] \fB-h\fR <\fINIS_server_host\fR> 
+     [\fB-a\fR <\fINIS_server_addr\fR>] \fB-y\fR <\fINIS_domain\fR> 
+     [\fItable\fR] ...
+.fi
+
+.LP
+.nf
+\fB/usr/lib/nis/nispopulate\fR \fB-F\fR [\fB-x\fR] [\fB-f\fR] [\fB-u\fR] [\fB-v\fR] [\fB-S\fR 0 | 2] 
+     [\fB-d\fR <\fINIS+_domain\fR>] [\fB-l\fR <\fInetwork_passwd\fR>] 
+     [\fB-p\fR <\fIdirectory_path\fR>] [\fItable\fR] ...
+.fi
+
+.LP
+.nf
+\fB/usr/lib/nis/nispopulate\fR \fB-C\fR [\fB-x\fR] [\fB-f\fR] [\fB-v\fR] 
+     [\fB-d\fR <\fINIS+_domain\fR>] [\fB-l\fR <\fInetwork_passwd\fR>] 
+     [\fIhosts\fR | \fIpasswd\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBnispopulate\fR shell script can be used to populate NIS+ tables in a specified domain from their corresponding files or NIS maps. \fBnispopulate\fR assumes that the tables have been created either through \fBnisserver\fR(1M) or \fBnissetup\fR(1M).
+.sp
+.LP
+The table argument accepts standard names that are used in the administration of Solaris systems and non-standard \fIkey-value\fR type tables. See \fBnisaddent\fR(1M) for more information on \fIkey-value\fR type tables. If the table argument is not specified, \fBnispopulate\fR will automatically populate each of the standard tables. These standard (default) tables are: \fBauto_master\fR, \fBauto_home\fR, \fBethers\fR, \fBgroup\fR, \fBhosts\fR, \fBipnodes\fR, \fBnetworks\fR, \fBpasswd\fR, \fBprotocols\fR, \fBservices\fR, \fBrpc\fR, \fBnetmasks\fR, \fBbootparams\fR, \fBnetgroup\fR, \fBaliases\fR and \fBshadow\fR. Note that the \fBshadow\fR table is only used when populating from files. The non-standard tables that \fBnispopulate\fR accepts are those of \fIkey-value\fR type. These tables must first be created manually with the \fBnistbladm\fR(1) command.
+.sp
+.LP
+Use the first synopsis (\fB-Y\fR) to populate NIS+ tables from NIS maps. \fBnispopulate\fR uses \fBypxfr\fR(1M) to transfer the NIS maps from the NIS servers to the \fB/var/yp/\fR<\fINIS_domain\fR> directory on the local machine. Then, it uses these files as the input source. Note that <\fINIS_domain\fR> is case sensitive. Make sure there is enough disk space for that directory.
+.sp
+.LP
+Use the second synopsis (\fB-F\fR) to populate \fBNIS+\fR tables from local files. \fBnispopulate\fR will use those files that match the table name as input sources in the current working directory or in the specified directory.
+.sp
+.LP
+Note that when populating the \fBhosts\fR, \fBipnodes\fR, and \fBpasswd\fR tables, \fBnispopulate\fR will automatically create the NIS+ credentials for all users and \fBhosts\fR (\fBipnodes\fR) that are defined in the \fBhosts\fR, \fBipnodes\fR, and \fBpasswd\fR tables, respectively. A network passwd is required to create these credentials. This network password is used to encrypt the secret key for the new users and hosts. This password can be specified using the \fB-l\fR option or it will use the default password, \fBnisplus\fR. \fBnispopulate\fR will not overwrite any existing credential entries in the credential table. Use \fBnisclient\fR(1M) to overwrite the entries in the \fBcred\fR table. It creates both LOCAL and \fBDES\fR credentials for users, and only \fBDES\fR credentials for hosts. To disable automatic credential creation, specify the "\fB-S\fR \fI0\fR" option.
+.sp
+.LP
+The third synopsis (\fB-C\fR) is used to populate \fBNIS+\fR credential table with level 2 authentication (\fBDES\fR) from the \fBhosts\fR, \fBipnodes\fR and \fBpasswd\fR tables of the specified domain. The valid table arguments for this operation are \fBhosts\fR, \fBipnodes\fR and \fBpasswd\fR. If this argument is not specified then it will use \fBhosts\fR, \fBipnodes\fR and \fBpasswd\fR as the input source. If other authentication mechanisms are configured using \fBnisauthconf\fR(1M), the NIS+ credential table will be loaded with credentials for those mechanisms.
+.sp
+.LP
+If \fBnispopulate\fR was earlier used with "\fB-S\fR \fI0\fR" option, then no credentials were added for the hosts or the users. If later the site decides to add credentials for all users and hosts, then this (\fB-C\fR) option can be used to add credentials.
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR <\fINIS_server_addr\fR>\fR
+.ad
+.RS 24n
+.rt  
+Specifies the \fBIP\fR address for the NIS server. This option is only used with the \fB-Y\fR option.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-C\fR\fR
+.ad
+.RS 24n
+.rt  
+Populate the NIS+ credential table from \fBhosts\fR, \fBipnodes\fR, and \fBpasswd\fR tables using \fBDES\fR authentication (security level 2). If other authentication mechanisms are configured using \fBnisauthconf\fR(1M), the NIS+ credential table will be populated with credentials for those mechanisms.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR <\fINIS+_domain.\fR>\fR
+.ad
+.RS 24n
+.rt  
+Specifies the NIS+ domain. The default is the local domain.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-F\fR\fR
+.ad
+.RS 24n
+.rt  
+Populates NIS+ tables from files.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR\fR
+.ad
+.RS 24n
+.rt  
+Forces the script to populate the NIS+ tables without prompting for confirmation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR <\fINIS_server_host\fR>\fR
+.ad
+.RS 24n
+.rt  
+Specifies the NIS server hostname from where the NIS maps are copied from. This is only used with the \fB-Y\fR option. This hostname must be present in the NIS+ \fBhosts\fR or \fBipnodes\fR table, or in the \fB/etc/hosts\fR file. If the hostname is not defined, the script will prompt you for its \fBIP\fR address, or you can use the \fB-a\fR option to specify the address manually.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR <\fInetwork_passwd\fR>\fR
+.ad
+.RS 24n
+.rt  
+Specifies the network password for populating the NIS+ credential table. This is only used when you are populating the \fBhosts\fR, \fBipnodes\fR, and \fBpasswd\fR tables. The default passwd is "nisplus".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR\fR
+.ad
+.RS 24n
+.rt  
+Does not overwrite local NIS maps in \fB/var/yp/\fR<\fINISdomain\fR> directory if they already exist. The default is to overwrite the existing \fBNIS\fR maps in the local \fB/var/yp/\fR<\fINISdomain\fR> directory. This is only used with the \fB-Y\fR option.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR <\fIdirectory_path\fR>\fR
+.ad
+.RS 24n
+.rt  
+Specifies the directory where the files are stored. This is only used with the \fB-F\fR option. The default is the current working directory.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-S\fR \fI0|2\fR\fR
+.ad
+.RS 24n
+.rt  
+Specifies the authentication level for the NIS+ clients. Level 0 is for unauthenticated clients and no credentials will be created for users and hosts in the specified domain. Level 2 is for authenticated (\fBDES\fR) clients and \fBDES\fR credentials will be created for users and hosts in the specified domain. The default is to set up with level 2 authentication (\fBDES\fR). There is no need to run \fBnispopulate\fR with \fB-C\fR for level 0 authentication. Also, if other authentication mechanisms are configured with \fBnisauthconf\fR(1M), credentials for those mechanisms will also be populated for the NIS+ clients.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-u\fR\fR
+.ad
+.RS 24n
+.rt  
+Updates the NIS+ tables (ie., adds, deletes, modifies) from either files or NIS maps. This option should be used to bring an NIS+ table up to date when there are only a small number of changes. The default is to add to the NIS+ tables without deleting any existing entries. Also, see the \fB-n\fR option for updating NIS+ tables from existing maps in the \fB/var/yp\fR directory.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.RS 24n
+.rt  
+Runs the script in verbose mode.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-x\fR\fR
+.ad
+.RS 24n
+.rt  
+Turns the "echo" mode on. The script just prints the commands that it would have executed. Note that the commands are not actually executed. The default is off.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-Y\fR\fR
+.ad
+.RS 24n
+.rt  
+Populate the NIS+ tables from NIS maps.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-y\fR <\fINIS_domain\fR>\fR
+.ad
+.RS 24n
+.rt  
+Specifies the NIS domain to copy the NIS maps from. This is only used with the \fB-Y\fR option. The default domainname is the same as the local domainname.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRUsing \fBnispopulate\fR
+.sp
+.LP
+To populate all the NIS+ standard tables in the domain \fIxyz.sun.com.\fR from NIS maps of the \fIyp.sun.COM\fR domain as input source where host \fIyp_host\fR is a \fBYP\fR server of \fIyp.sun.COM\fR:
+
+.sp
+.in +2
+.nf
+nis_server# \fB/usr/lib/nis/nispopulate -Y -y yp.sun.COM \e
+-h yp_host -d xyz.sun.com.\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+To update all of the NIS+ standard tables from the same NIS domain and hosts shown above:
+
+.sp
+.in +2
+.nf
+nis_server# \fB/usr/lib/nis/nispopulate -Y -u -y yp.sun.COM -h yp_host \e   
+-d xyz.sun.com.\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+To populate the \fBhosts\fR table in domain \fIxyz.sun.com.\fR from the \fBhosts\fR file in the \fB/var/nis/files\fR directory and using \fBsomepasswd\fR as the network password for key encryption:
+
+.sp
+.in +2
+.nf
+nis_server# \fB/usr/lib/nis/nispopulate -F -p \e
+ /var/nis/files -l somepasswd hosts\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+To populate the \fBpasswd\fR table in domain \fIxyz.sun.com.\fR from the \fBpasswd\fR file in the \fB/var/nis/files\fR directory without automatically creating the NIS+ credentials:
+
+.sp
+.in +2
+.nf
+nis_server# \fB/usr/lib/nis/nispopulate -F -p /var/nis/files \e
+ -d xys.sun.com. -S 0 passwd\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+To populate the credential table in \fIdomain xyz.sun.com.\fR for all users defined in the passwd table.
+
+.sp
+.in +2
+.nf
+nis_server# \fB/usr/lib/nis/nispopulate -C -d xys.sun.com. passwd\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+To create and populate a non-standard key-value type NIS+ table, \fBprivate\fR, from the file \fB/var/nis/files/\fR\fBprivate\fR: (nispopulate assumes that the private.org_dirkey-value type table has already been created).
+
+.sp
+.in +2
+.nf
+nis_server# \fB/usr/bin/nistbladm -D access=og=rmcd,nw=r \e 
+-c private key=S,nogw= value=,nogw= private.org.dir\fR
+nis_server# \fB/usr/lib/nis/nispopulate -F -p /var/nis/files private\fR
+.fi
+.in -2
+.sp
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.LP
+\fBnispopulate\fR normally creates temporary files in the directory \fB/tmp\fR. You may specify another directory by setting the environment variable \fBTMPDIR\fR to your chosen directory. If \fBTMPDIR\fR is not a valid directory, then \fBnispopulate\fR will use \fB/tmp\fR).
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/etc/inet/hosts\fR\fR
+.ad
+.RS 19n
+.rt  
+local database associating names of nodes with IP addresses
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/var/yp\fR\fR
+.ad
+.RS 19n
+.rt  
+NIS (\fBYP\fR) domain directory
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/var/nis\fR\fR
+.ad
+.RS 19n
+.rt  
+NIS+ domain directory
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/tmp\fR\fR
+.ad
+.RS 19n
+.rt  
+
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBNIS+\fR(1), \fBnistbladm\fR(1), \fBnisaddcred\fR(1M), \fBnisaddent\fR(1M), \fBnisauthconf\fR(1M), \fBnisclient\fR( 1M), \fBnisserver\fR(1M), \fBnissetup\fR(1M), \fBrpc.nisd\fR(1M), \fBypxfr\fR(1M), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

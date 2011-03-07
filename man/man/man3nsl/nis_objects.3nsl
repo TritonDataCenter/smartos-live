@@ -1,0 +1,393 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nis_objects 3NSL "10 Nov 2005" "SunOS 5.11" "Networking Services Library Functions"
+.SH NAME
+nis_objects \- NIS+ object formats
+.SH SYNOPSIS
+.LP
+.nf
+\fBcc\fR [ \fIflag\fR ... ] \fIfile\fR ... \fB-lnsl\fR [ \fIlibrary\fR ... ]
+/usr/include/rpcsvc/nis_objects.x
+.fi
+
+.SH DESCRIPTION
+.SS "Common Attributes"
+.sp
+.LP
+The NIS+ service uses a variant record structure to hold the contents of the objects that are used by the NIS+ service.  These objects all share a common structure that defines a set of attributes that all objects possess.  The \fBnis_object\fR structure contains the following members:
+.sp
+.in +2
+.nf
+typedef	char	*nis_name;
+	struct	nis_object {
+		nis_oid		zo_oid;
+		nis_name	zo_name;
+		nis_name	zo_owner;
+		nis_name	zo_group;
+		nis_name	zo_domain;
+		uint_t		zo_access;
+		uint32_t		zo_ttl;
+		objdata		zo_data;
+        };
+.fi
+.in -2
+
+.sp
+.LP
+In this structure, the first member \fBzo_oid\fR, is a 64 bit number that uniquely identifies this instance of the object on this server. This member is filled in by the server when the object is created and changed by the server when the object is modified. When used in conjunction with the object's name and domain it uniquely identifies the object  in the entire NIS+ namespace.
+.sp
+.LP
+The second member, \fBzo_name\fR, contains the leaf name of the object. This name is  never terminated with a `.' (dot). When an object is created or added to the namespace, the client library will automatically fill in  this field and the domain name from the name that was passed to the function.
+.sp
+.LP
+\fBzo_domain\fR contains the name of the  NIS+ domain to which this object belongs. This information is useful when tracking the parentage of an object from a cache. When used in conjunction with the members \fBzo_name\fR and  \fBzo_oid\fR, it uniquely identifies an object.  This makes it possible to always reconstruct the name of an object by using the code fragment
+.sp
+.in +2
+.nf
+sprintf(buf,"%s.%s", obj->zo_name, obj->zo_domain);
+.fi
+.in -2
+
+.sp
+.LP
+The \fBzo_owner\fR and \fBzo_group\fR members contain the  NIS+ names of the object's principal owner and group owner, respectively. Both names must be  NIS+ fully qualified names. However, neither name can be used directly to identify the object they represent. This stems from the condition that  NIS+ uses itself to store information that it exports.
+.sp
+.LP
+The \fBzo_owner\fR member contains a fully qualified NIS+ name of the form \fIprincipal.domain\fR. This name is called a NIS+ principal name and is used to identify authentication information in a credential table. When the server constructs a search query of the form
+.sp
+.in +2
+.nf
+\fB[cname=\fR\fIprincipal\fR\fB],cred.org_dir.\fR\fIdomain\fR\fB\&.\fR
+.fi
+.in -2
+
+.sp
+.LP
+The query will return to the server credential information about \fIprincipal\fR for all flavors of \fBRPC\fR authentication that are in use by that principal. When an \fBRPC\fR request is made to the server, the authentication flavor is extracted from the request and is used to find out the NIS+ principal name of the client. For example, if the client is using the  \fBAUTH_DES\fR authentication flavor, it will include in the authentication credentials the network name or \fInetname\fR of the user making the request. This netname will be of the form
+.sp
+.in +2
+.nf
+\fBunix.\fR\fIUID\fR\fB@\fR\fIdomain\fR
+.fi
+.in -2
+
+.sp
+.LP
+The  NIS+ server will then construct a query on the credential database of the form
+.sp
+.in +2
+.nf
+\fB[auth_name=\fR\fInetname\fR\fB,auth_type=AUTH_DES],cred.org_dir.\fR\fIdomain\fR\fB\&.\fR
+.fi
+.in -2
+
+.sp
+.LP
+This query will return an entry which contains a principal name in the first column. This NIS+ principal name is used to control access to  NIS+ objects.
+.sp
+.LP
+The group owner for the object is treated differently. The group owner member is optional (it should be the null string if not present) but must be fully qualified if present. A group name takes the form
+.sp
+.in +2
+.nf
+\fIgroup.domain.\fR
+.fi
+.in -2
+
+.sp
+.LP
+which the server then maps into a name of the form
+.sp
+.in +2
+.nf
+\fIgroup\fR\fB\&.groups_dir.\fR\fIdomain.\fR
+.fi
+.in -2
+
+.sp
+.LP
+The purpose of this mapping is to prevent NIS+ group names from conflicting with user specified domain or table names. For example, if a domain was called \fIengineering.foo.com.\fR, then without the mapping a NIS+ group of the same name to represent members of engineering would not be possible. The contents of groups are lists of NIS+ principal names which are used exactly like the \fBzo_owner\fR name in the object. See \fBnis_groups\fR(3NSL) for more details.
+.sp
+.LP
+The \fBzo_access\fR member contains the bitmask of access rights assigned to this object. There are four access rights defined, and four are  reserved for future use and must be zero. This group of 8 access rights  can be granted to four categories of client. These categories are the object's owner, the object's group owner, all authenticated clients (world),  and all unauthenticated clients (nobody). Note that access granted to  ``nobody'' is really access granted to everyone, authenticated  and unauthenticated clients.
+.sp
+.LP
+The \fBzo_ttl\fR member contains the number of seconds that the object can ``live'' in a cache before it is expired. This value is called the time to live for this object. This number is particularly important on group and directory (domain) objects. When an object is  cached, the current time is added to the value in \fBzo_ttl\fR. Then each time the cached object is used, the time in \fBzo_ttl\fR is compared with the current time. If the current time is later than the time in \fBzo_ttl\fR the object is said to have expired and the cached copy should not be used.
+.sp
+.LP
+Setting the \fBTTL\fR is somewhat of an art. You can think of it as the ``half life'' of the object, or half the amount of time you believe will pass before the object changes. The benefit of setting the ttl to a large number is that the object will stay in a cache for long periods of time. The problem with setting it to a large value is that when the object changes it will take a long time for the caches to flush out old copies of that object. The problems and benefits are reversed for setting the time to a small value. Generally setting the value to 43200 (12 hrs) is reasonable for things that change day to day, and 3024000 is good for things that change week to  week. Setting the value to 0 will prevent the object from ever being cached since it would expire immediately.
+.sp
+.LP
+The \fBzo_data\fR member is a discriminated union with the following members:
+.sp
+.in +2
+.nf
+zotypes zo_type;
+	union {
+		struct directory_obj	di_data;
+		struct group_obj	gr_data;
+		struct table_obj	ta_data;
+		struct entry_obj	en_data;
+		struct link_obj	li_data;
+		struct {
+		           uint_t	po_data_len;
+		           char	*po_data_val;
+		} po_data;
+        } objdata_u;
+.fi
+.in -2
+
+.sp
+.LP
+The union is discriminated based on the type value contained in \fBzo_type\fR. There six types of objects currently defined in the NIS+ service. These types are the directory, link, group, table, entry, and private types.  
+.sp
+.in +2
+.nf
+enum zotypes {
+		BOGUS_OBJ	= 0,
+		NO_OBJ	= 1,
+		DIRECTORY_OBJ	= 2,
+		GROUP_OBJ	= 3,
+		TABLE_OBJ	= 4,
+		ENTRY_OBJ	= 5,
+		LINK_OBJ	= 6,
+		PRIVATE_OBJ	= 7
+	};
+	typedef enum zotypes zotypes;
+.fi
+.in -2
+
+.sp
+.LP
+All object types define a structure that contains data  specific to that type of object. The simplest are private objects which are defined to contain a variable length array of octets. Only the owner of the object is expected to understand the contents of a private object. The following section describe the other five object types in more significant detail.
+.SS "Directory Objects"
+.sp
+.LP
+The first type of object is the \fIdirectory\fR object. This object's variant part is defined as follows:
+.sp
+.in +2
+.nf
+enum nstype {
+		UNKNOWN	= 0,
+		NIS	= 1,
+		SUNYP	= 2,
+		DNS	= 4,
+		X500	= 5,
+		DNANS	= 6,
+		XCHS	= 7,
+	}
+	typedef enum nstype nstype;
+	struct oar_mask {
+		uint_t	oa_rights;
+		zotypes	oa_otype;
+	}
+	typedef struct oar_mask oar_mask;
+	struct endpoint {
+		char	*uaddr;
+		char	*family;
+		char	*proto;
+	}
+	typedef struct endpoint endpoint;
+	struct nis_server {
+		nis_name	name;
+		struct {
+			uint_t	ep_len;
+			endpoint	*ep_val;
+		} ep;
+		uint_t	key_type;
+		netobj	pkey;
+	}
+	typedef struct nis_server nis_server;
+	struct directory_obj {
+		nis_name	 do_name;
+		nstype	 do_type;
+		struct {
+			uint_t	do_servers_len;
+			nis_server	*do_servers_val;
+		} do_servers;
+		uint32_t	do_ttl;
+		struct {
+			uint_t	do_armask_len;
+			oar_mask	*do_armask_val;
+		} do_armask;
+	}
+        typedef struct directory_obj directory_obj;
+.fi
+.in -2
+
+.sp
+.LP
+The main structure contains five primary members:  \fBdo_name\fR, \fBdo_type\fR, \fBdo_servers\fR, \fBdo_ttl\fR, and \fBdo_armask\fR. The information in the \fBdo_servers\fR structure is sufficient for the client library to create a network connection with the named server for the directory.
+.sp
+.LP
+The \fBdo_name\fR member contains the name of the directory or domain  represented in a format that is understandable by the type of nameservice serving that domain. In the case of NIS+ domains, this is the same as the name that can be composed using the \fBzo_name\fR and \fBzo_domain\fR members. For other name services, this name will be a name that they understand. For example, if this were a directory object describing an X.500 namespace that is ``under'' the  NIS+ directory \fIeng.sun.com.\fR, this name might contain  ``/C=US, /O=Sun Microsystems, /OU=Engineering/''. The type of nameservice that is being described is determined by the value of the member \fBdo_type\fR.
+.sp
+.LP
+The \fBdo_servers\fR structure contains two members. \fBdo_servers_val\fR is an array of \fInis_server\fR structures; \fBdo_servers_len\fR is the number of cells in the array. The \fBnis_server\fR structure is designed to contain enough information such that machines on the network providing name services can be contacted without having to use a name service. In the case of NIS+ servers, this information is the name of the machine in \fIname\fR, its public key for authentication in \fIpkey\fR, and a variable length array of endpoints, each of which describes the network endpoint for the \fBrpcbind\fR daemon on the named machine. The client library uses the addresses to contact the server using a transport that both the client and server can communicate on and then queries the \fBrpcbind\fR daemon to get the actual transport address that the server is using.
+.sp
+.LP
+Note that the first server in the \fIdo_servers\fR list is always the master server for the directory.
+.sp
+.LP
+The \fIkey_type\fR field describes the type of key stored in the \fIpkey\fR netobj (see \fB/usr/include/rpc/xdr.h\fR for a definition of the network object structure). Currently supported types are \fBNIS_PK_NONE\fR for no public key, \fBNIS_PK_DH\fR for a Diffie-Hellman type public key, and \fBNIS_PK_DHEXT\fR for an extended Diffie-Hellman public key.
+.sp
+.LP
+The \fBdo_ttl\fR member contains a copy of the  \fBzo_ttl\fR member from the common attributes. This is the duplicated  because the cache manager only caches the variant part of the directory object.
+.sp
+.LP
+The \fBdo_armask\fR structure contains two members. \fBdo_armask_val\fR is an array of \fBoar_mask\fR structures; \fBdo_armask_len\fR is the number of cells in the array. The \fBoar_mask\fR structure contains two members: \fBoa_rights\fR specifies the access rights allowed for objects of type \fBoa_otype\fR. These access rights are used for objects of the given type in the directory when they are present in this array.
+.sp
+.LP
+The granting of access rights for objects contained within a directory is actually two-tiered.  If the directory object itself grants a given access right (using the \fBzo_access\fR member in the \fBnis_object\fR structure representing the directory), then all objects within the directory are allowed that access. Otherwise, the \fBdo_armask\fR structure is examined to see if the access is allowed specifically for that type of structure.  This allows the administrator of a namespace to set separate policies for different object types, for example, one policy for the creation of tables and another policy for the creation of other directories. See  \fBNIS+\fR(1) for more details.
+.SS "Link Objects"
+.sp
+.LP
+Link objects provide a means of providing \fIaliases\fR or symbolic links within the namespace. Their variant part is defined as follows.
+.sp
+.in +2
+.nf
+struct link_obj {
+	zotypes	li_rtype;
+	struct {
+		uint_t	li_attrs_len;
+		nis_attr	*li_attrs_val;
+	} li_attrs;
+	nis_name li_name;
+}
+.fi
+.in -2
+
+.sp
+.LP
+The \fBli_rtype\fR member contains the object type of the object pointed to by the link. This is only a hint, since the object which the link points to may have changed or been removed. The fully qualified name of the object (table or otherwise) is specified in the member \fBli_name\fR.
+.sp
+.LP
+NIS+ links can point to either other objects within the NIS+ namespace, or to entries within a NIS+ table. If the object pointed to by the link is a table and the member \fBli_attrs\fR has a nonzero number of attributes (index name/value pairs) specified, the table is searched when this link is followed. All entries which match the specified search pattern are returned. Note, that unless the flag  \fBFOLLOW_LINKS\fR is specified, the  \fBnis_lookup\fR(3NSL) function will always return non-entry objects.
+.SS "Group Objects"
+.sp
+.LP
+Group objects contain a membership list of  NIS+ principals. The group objects' variant part is defined as follows.
+.sp
+.in +2
+.nf
+struct group_obj {
+	uint_t	gr_flags;
+	struct {
+		uint_t	gr_members_len;
+		nis_name	*gr_members_val;
+	} gr_members;
+}
+.fi
+.in -2
+
+.sp
+.LP
+The \fBgr_flags\fR member contains flags that are currently unused. The \fBgr_members\fR structure contains the list of principals. For a complete description of how group objects are manipulated see  \fBnis_groups\fR(3NSL).
+.SS "Table Objects"
+.sp
+.LP
+The NIS+ table object is analogous to a \fBYP\fR map. The differences stem from the access controls, and the variable schemas that NIS+ allows. The table objects data structure is defined as follows:
+.sp
+.in +2
+.nf
+#define TA_BINARY	1
+#define TA_CRYPT	2
+#define TA_XDR	4
+#define TA_SEARCHABLE	8
+#define TA_CASE	16
+#define TA_MODIFIED	32
+struct table_col {
+	char	*tc_name;
+	uint_t	tc_flags;
+	uint_t	tc_rights;
+}
+typedef struct table_col table_col;
+struct table_obj {
+	char	*ta_type;
+	uint_t	ta_maxcol;
+	uchar_t	ta_sep;
+	struct {
+		uint_t	ta_cols_len;
+		table_col	*ta_cols_val;
+	} ta_cols;
+	char	*ta_path;
+}
+.fi
+.in -2
+
+.sp
+.LP
+The \fBta_type\fR member contains a string that identifies the type of entries in this table. NIS+ does not enforce any policies as to the contents of this string. However, when entries are added to the table, the NIS+ service will check to see that they have the same ``type'' as the table as specified by this member.
+.sp
+.LP
+The structure \fBta_cols\fR contains two members. \fBta_cols_val\fR is an array of \fBtable_col\fR structures. The length of the array depends on the number of columns in the table; it is defined when the table is created and is stored in \fBta_cols_len\fR. \fBta_maxcol\fR also contains the number of columns in the table and always has the same value as \fBta_cols_len\fR. Once the table is created, this length field cannot be changed.
+.sp
+.LP
+The \fBta_sep\fR character is used by client applications that wish to print out an entry from the table. Typically this is either space (`` '') or colon (``:'').
+.sp
+.LP
+The \fBta_path\fR string defines a concatenation path for tables. This string contains an ordered list of fully qualified table names, separated by colons, that are to be searched if a search on this table fails to match any entries. This path is only used with the flag \fBFOLLOW_PATH\fR with a  \fBnis_list()\fR call. See  \fBnis_tables\fR(3NSL) for information on these flags.
+.sp
+.LP
+In addition to checking the type, the service will  check  that the number of columns in an entry is the same as those in the table before allowing that entry to be added.
+.sp
+.LP
+Each column has associated with it a name in \fBtc_name\fR, a set of flags in \fBtc_flags\fR, and a set of access rights in \fBtc_rights\fR. The name should be indicative of the contents of that column.
+.sp
+.LP
+The \fBTA_BINARY\fR flag indicates that data in the column is binary (rather than text). Columns that are searchable cannot contain binary data. The \fBTA_CRYPT\fR flag specifies that the information in this column should be encrypted prior to sending it over the network. This flag has no effect in the export version of NIS+. The  \fBTA_XDR\fR flag is used to tell the client application that the data in this column is encoded using the XDR protocol. The \fBTA_BINARY\fR flag must be specified with the XDR flag. Further, by convention, the name of a column that has the \fBTA_XDR\fR flag set is the name of the XDR function that will decode the data in that column.
+.sp
+.LP
+The  \fBTA_SEARCHABLE\fR flag specifies that values in this column can be searched. Searchable columns must contain textual data and must have a name associated with them. The flag \fBTA_CASE\fR specifies that searches involving this column ignore the case of the value in the column. At least one of the columns in the table should be searchable. Also, the combination of all searchable column values should uniquely select an entry within the table. The \fBTA_MODIFIED\fR flag is set only when the table column is modified.  When  \fBTA_MODIFIED\fR is set, and the object is modified again, the modified access rights for the table column must be copied, not the default access rights.
+.SS "Entry Objects"
+.sp
+.LP
+Entry objects are stored in tables. The structure used to define the entry data is as follows.
+.sp
+.in +2
+.nf
+#define EN_BINARY	1
+#define EN_CRYPT	2
+#define EN_XDR	4
+#define EN_MODIFIED	8
+struct entry_col {
+	uint_t	ec_flags;
+	struct {
+		uint_t	ec_value_len;
+		char	*ec_value_val;
+	} ec_value;
+}
+typedef struct entry_col entry_col;
+struct entry_obj {
+	char	*en_type;
+	struct {
+		uint_t	en_cols_len;
+		entry_col	*en_cols_val;
+	} en_cols;
+}
+.fi
+.in -2
+
+.sp
+.LP
+The \fBen_type\fR member contains a string that specifies the type of data this entry represents. The NIS+ server will compare this string to the type string specified in the table object and disallow any updates or modifications if they differ.
+.sp
+.LP
+The \fBen_cols\fR structure contains two members: \fBen_cols_len\fR and \fBen_cols_val\fR. \fBen_cols_val\fR is an array of \fBentry_col\fR structures.  \fBen_cols_len\fR contains a count of the number of cells in the \fBen_cols_val\fR array and reflects the number of columns in the table -- it always contains the same value as the \fBtable_obj.ta_cols.ta_cols_len\fR member from the table which contains the entry.
+.sp
+.LP
+The \fBentry_col\fR structure contains information about the entry's per-column values. \fBec_value\fR contains information about a particular value.  It has two members: \fBec_value_val\fR, which is the value itself, and \fBec_value_len\fR, which is the length (in bytes) of the value. \fBentry_col\fR also contains the member \fBec_flags\fR, which contains a set of flags for the entry.
+.sp
+.LP
+The flags in \fBec_flags\fR are primarily used when adding or modifying  entries in a table. All columns that have the flag \fBEN_CRYPT\fR set will be encrypted prior to sending them over the network. Columns with \fBEN_BINARY\fR set are presumed to contain binary data. The server will ensure that the column in the table object specifies binary data prior to allowing the entry to be added. When modifying entries in a table, only those columns that have changed need be sent to the server. Those columns should each have the \fBEN_MODIFIED\fR flag set to indicate this to the server.
+.SH SEE ALSO
+.sp
+.LP
+\fBNIS+\fR(1), \fBnis_groups\fR(3NSL), \fBnis_names\fR(3NSL), \fBnis_server\fR(3NSL), \fBnis_subr\fR(3NSL), \fBnis_tables\fR(3NSL) 
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

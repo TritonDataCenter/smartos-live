@@ -1,0 +1,143 @@
+'\" te
+.\" Copyright (C) 2001, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nisrm 1 "10 Dec 2001" "SunOS 5.11" "User Commands"
+.SH NAME
+nisrm \- remove NIS+ objects from the namespace
+.SH SYNOPSIS
+.LP
+.nf
+\fBnisrm\fR [\fB-if\fR] \fIname\fR...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBnisrm\fR command removes NIS+ objects named \fIname\fR from the  NIS+ namespace.
+.sp
+.LP
+This command will fail if the NIS+ master server is not running.
+.sp
+.LP
+This command will not remove directories. See \fBnisrmdir\fR(1). Nor will it remove non-empty tables. See \fBnistbladm\fR(1).
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR\fR
+.ad
+.RS 6n
+.rt  
+Interactive mode. Like the system  \fBrm\fR(1) command the \fBnisrm\fR command will ask for confirmation prior to removing an object. If the name specified by \fIname\fR is a non-fully qualified name this option is forced on. This prevents the removal of unexpected objects.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR\fR
+.ad
+.RS 6n
+.rt  
+Force. The removal is attempted, and if it fails for permission reasons, a  \fBnischmod\fR(1) is attempted and the removal retried. If the command fails, it fails silently.
+.RE
+
+.SH OPERANDS
+.sp
+.LP
+The following operand is supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIname\fR\fR
+.ad
+.RS 8n
+.rt  
+A NIS+ named object.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRUsing the \fBnisrm\fR Command
+.sp
+.LP
+Remove the objects  \fIfoo\fR, \fIbar\fR, and \fIbaz\fR from the namespace:
+
+.sp
+.in +2
+.nf
+example% \fBnisrm foo bar baz\fR
+.fi
+.in -2
+.sp
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_PATH\fR \fR
+.ad
+.RS 13n
+.rt  
+If this variable is set, and the NIS+ name is not fully qualified, each directory specified will be searched until the object is found. See \fBnisdefaults\fR(1).
+.RE
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 5n
+.rt  
+Successful operation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 5n
+.rt  
+Operation failed.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBNIS+\fR(1), \fBnischmod\fR(1), \fBnisdefaults\fR(1), \fBnisrmdir\fR(1), \fBnistbladm\fR(1), \fBrm\fR(1), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris\u\s-2TM\s+2\d Operating Environment. Tools to aid the migration from NIS+ to LDAP are available in the Solaris 9 operating environment. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

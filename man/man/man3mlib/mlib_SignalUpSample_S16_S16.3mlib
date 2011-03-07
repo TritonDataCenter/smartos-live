@@ -1,0 +1,161 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_SignalUpSample_S16_S16 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_SignalUpSample_S16_S16, mlib_SignalUpSample_S16S_S16S, mlib_SignalUpSample_F32_F32, mlib_SignalUpSample_F32S_F32S \- signal upsampling
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_SignalUpSample_S16_S16\fR(\fBmlib_s16 *\fR\fIdst\fR, 
+     \fBconst mlib_s16 *\fR\fIsrc\fR, \fBmlib_s32\fR \fIfactor\fR, \fBmlib_s32\fR \fIphase\fR, 
+     \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_SignalUpSample_S16S_S16S\fR(\fBmlib_s16 *\fR\fIdst\fR, 
+     \fBconst mlib_s16 *\fR\fIsrc\fR, \fBmlib_s32\fR \fIfactor\fR, \fBmlib_s32\fR \fIphase\fR, 
+     \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_SignalUpSample_F32_F32\fR(\fBmlib_f32 *\fR\fIdst\fR, 
+     \fBconst mlib_f32 *\fR\fIsrc\fR, \fBmlib_s32\fR \fIfactor\fR, \fBmlib_s32\fR \fIphase\fR, 
+     \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_SignalUpSample_F32S_F32S\fR(\fBmlib_f32 *\fR\fIdst\fR, 
+     \fBconst mlib_f32 *\fR\fIsrc\fR, \fBmlib_s32\fR \fIfactor\fR, \fBmlib_s32\fR \fIphase\fR, 
+     \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Each of these functions performs upsampling.
+.sp
+.LP
+For monaural signals, the following equation is used:
+.sp
+.in +2
+.nf
+dst[i] = src[k]  if i == k*factor + phase
+dst[i] = 0       if i != k*factor + phase
+.fi
+.in -2
+
+.sp
+.LP
+where \fBk = 0, 1, ..., (n - 1)\fR; \fBi = 0, 1, ..., (n*factor - 1)\fR.
+.sp
+.LP
+For stereo signals, the following equation is used:
+.sp
+.in +2
+.nf
+dst[2*i]     = src[2*k]      if i == k*factor + phase
+dst[2*i]     = 0             if i != k*factor + phase
+
+dst[2*i + 1] = src[2*k + 1]  if i == k*factor + phase
+dst[2*i + 1] = 0             if i != k*factor + phase
+.fi
+.in -2
+
+.sp
+.LP
+where \fBk = 0, 1, ..., (n - 1)\fR; \fBi = 0, 1, ..., (n*factor - 1)\fR.
+.SH PARAMETERS
+.sp
+.LP
+Each of the functions takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdst\fR\fR
+.ad
+.RS 10n
+.rt  
+Output signal array.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc\fR\fR
+.ad
+.RS 10n
+.rt  
+Input signal array.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIfactor\fR\fR
+.ad
+.RS 10n
+.rt  
+Factor by which to upsample. \fBfactor \(>= 1\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIphase\fR\fR
+.ad
+.RS 10n
+.rt  
+Parameter that determines relative position of an input value, within the output signal. \fB0 \(<= phase < factor\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIn\fR\fR
+.ad
+.RS 10n
+.rt  
+Number of samples in the input signal array.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+Each of the functions returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_SignalDownSample_S16_S16\fR(3MLIB), \fBattributes\fR(5)

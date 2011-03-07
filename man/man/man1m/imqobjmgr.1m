@@ -1,0 +1,1142 @@
+'\" te
+.\" Copyright (c) 2004, Sun Microsystems, Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH imqobjmgr 1M "7 Apr 2004" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+imqobjmgr \- manage Message Queue administered objects
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/bin/imqobjmgr\fR \fIsubcommand\fR [[\fIoption\fR]\&.\|.\|.] \fI\fR
+.fi
+
+.LP
+.nf
+\fB/usr/bin/imqobjmgr\fR \fB-i\fR \fIfileName\fR
+.fi
+
+.LP
+.nf
+\fB/usr/bin/imqobjmgr\fR \fB-h\fR | [\fB-H\fR] | \fB-help\fR | \fB-Help\fR
+.fi
+
+.LP
+.nf
+\fB/usr/bin/imqobjmgr\fR \fB-v\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBimqobjmgr\fR manages Message Queue administered objects in an object store accessible using \fBJNDI\fR. Administered objects allow \fBJMS\fR clients to be provider-independent by insulating them from provider-specific naming and configuration formats. 
+.sp
+.LP
+\fBimqobjmgr\fR supports five management subcommands. These \fIsubcommand\fRs, and their corresponding \fIoption\fRs follow the \fBimqobjmgr\fR command on the command line. See \fBUSAGE\fR and \fBOPTIONS\fR.
+.sp
+.LP
+The following subcommands are supported:
+.sp
+.ne 2
+.mk
+.na
+\fBadd\fR
+.ad
+.RS 10n
+.rt  
+Add a new administered object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBdelete\fR
+.ad
+.RS 10n
+.rt  
+Delete an administered object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBlist\fR
+.ad
+.RS 10n
+.rt  
+Display a list of administered objects
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBquery\fR
+.ad
+.RS 10n
+.rt  
+Display information about administered objects
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBupdate\fR
+.ad
+.RS 10n
+.rt  
+Update administered objects
+.RE
+
+.sp
+.LP
+You can use the \fB-i\fR option to specify the name of an input file that uses java property file syntax to represent all or part of any \fBimqobjmgr\fR subcommand clause. The \fB-f\fR, \fB-s\fR, and \fB-pre\fR options can be used with any \fBimqobjmgr\fR subcommand. 
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR\fR
+.ad
+.RS 23n
+.rt  
+Perform action without user confirmation. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR | \fB-help\fR\fR
+.ad
+.RS 23n
+.rt  
+Display usage help. Execute nothing else on the command line.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-H\fR | \fB-Help\fR\fR
+.ad
+.RS 23n
+.rt  
+ Display usage help, attribute list, and examples. Execute nothing else on the command line.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR \fIfileName\fR\fR
+.ad
+.RS 23n
+.rt  
+Specify the name of an input file containing all or part of the subcommand clause, specifying object type, lookup name, object attributes, object store attributes, or other options. Use this option for repetitive information, such as object store attributes.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-j\fR \fIattribute\fR=\fIvalue\fR\fR
+.ad
+.RS 23n
+.rt  
+Specify attributes necessary to identify and access a \fBJNDI\fR object store.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-javahome\fR\fR
+.ad
+.RS 23n
+.rt  
+Specify an alternate Java 2 compatible runtime to use. \fBimqobjmgr\fR uses the runtime bundled with the operating system by default.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR \fIlookupName\fR\fR
+.ad
+.RS 23n
+.rt  
+Specify the JNDI lookup name of an administered object. This name must be unique in the object store's context.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR \fIattribute\fR=\fIvalue\fR\fR
+.ad
+.RS 23n
+.rt  
+ Specify the attributes of an administered object.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-pre\fR\fR
+.ad
+.RS 23n
+.rt  
+Run command in preview mode. Preview mode indicates what will be done without performing the command. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fIread-only_state \fR\fR
+.ad
+.RS 23n
+.rt  
+Specify if an administered object is a read-only object. A value of true indicates the administered object is a read-only object. JMS clients cannot modify the attributes of read-only administered objects. The read-only state is set to false by default. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR\fR
+.ad
+.RS 23n
+.rt  
+Silent mode. No output is displayed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fItype\fR\fR
+.ad
+.RS 23n
+.rt  
+Specify the type of an administered object: 
+.sp
+.in +2
+.nf
+q = queue
+t = topic
+cf = ConnectionFactory
+qf = queueConnectionFactory
+tf = topicConnectionFactory
+xcf = XA ConnectionFactory (distributed transactions)
+xqf = XA queueConnectionFactory (distributed transactions)
+xtf = XA topicConnectionFactory (distributed transactions)
+e = SOAP endpoint (used to support SOAP messaging)
+.fi
+.in -2
+.sp
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.RS 23n
+.rt  
+Display version information. Execute nothing else on the command line.
+.RE
+
+.SH USAGE
+.sp
+.LP
+This section provides information on subcommands, options, and attribute value pairs.
+.SS "Subcommands and Options"
+.sp
+.LP
+The following subcommands and corresponding options are supported: 
+.sp
+.ne 2
+.mk
+.na
+\fBadd \fB-t\fR \fItype\fR \fB-l\fR \fIlookupName\fR [\fB-o\fR \fIattribute\fR=\fIvalue\fR]... \fB- j\fR \fIattribute\fR=\fIvalue\fR...\fR
+.ad
+.sp .6
+.RS 4n
+Add a new administered object of the specified type, lookup name , and object attributes to an object store. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBdelete \fB-t\fR \fItype\fR \fB-l\fR \fIlookupName\fR \fB-j\fR \fIattribute\fR=\fIvalue\fR...\fR
+.ad
+.sp .6
+.RS 4n
+Delete an administered object, of the specified type and lookup name from an object store.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBlist [\fB-t\fR \fItype\fR] \fB-j\fR \fIattribute\fR=\fIvalue\fR...\fR
+.ad
+.sp .6
+.RS 4n
+Display a list of administered objects of a specified type, or all administered objects, in an object store. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB query \fB-l\fR \fIlookupName\fR \fB-j\fR \fIattribute\fR=\fIvalue.\fR..\fR
+.ad
+.sp .6
+.RS 4n
+Display information about an administered object of a specified lookup name in an object store.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBupdate \fB-l\fR l\fIookupName\fR [\fB-o\fR \fIattribute\fR=\fIvalue\fR]... \fB-j\fR \fIattribute\fR=\fIvalue\fR... \fR
+.ad
+.sp .6
+.RS 4n
+Update the specified attribute values of an administered object of the specified lookup name in an object store.
+.RE
+
+.SS "Attribute Value Pairs"
+.sp
+.LP
+The following attribute value pairs are supported for the specified administered object types:
+.sp
+.LP
+Type = ConnectionFactories: ConnectionFactory, TopicConnectionFactory, QueueConnectionFactory, XAConnectionFactory, XATopicConnectionFactory, and XAQueueConnectionFactory
+.sp
+.ne 2
+.mk
+.na
+\fBimqAckOnAcknowledge\fR
+.ad
+.sp .6
+.RS 4n
+Value: String (\fBtrue\fR, \fBfalse\fR, not specified) 
+.sp
+Default: not specified
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqAckOnProduce\fR
+.ad
+.sp .6
+.RS 4n
+Value: String (\fBtrue\fR, \fBfalse\fR, not specified) 
+.sp
+Default: not specified 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqAckTimeout\fR
+.ad
+.sp .6
+.RS 4n
+Value: String (time in milliseconds) 
+.sp
+Default: \fB0\fR (no timeout)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqAddressList\fR
+.ad
+.sp .6
+.RS 4n
+Value: String
+.sp
+Default: not specified
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqAddressListBehavior\fR
+.ad
+.sp .6
+.RS 4n
+Value: String
+.sp
+Default: Priority
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqAddressListIterations\fR
+.ad
+.sp .6
+.RS 4n
+Value: Integer
+.sp
+Default: 1
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqBrokerHostName\fR
+.ad
+.sp .6
+.RS 4n
+Used if imqConnectionType is \fBTCP\fR or \fBTLS\fR. This attribute type is only supported in Message Queue 3.0.
+.sp
+Value: String 
+.sp
+Default:\fBlocalhost\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqBrokerHostPort\fR
+.ad
+.sp .6
+.RS 4n
+Used if imqConnectionType is \fBTCP\fR or \fBTLS\fR. This attribute type is only supported in Message Queue 3.0.
+.sp
+Value: Integer 
+.sp
+Default: \fB7676\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqBrokerServicePort\fR
+.ad
+.sp .6
+.RS 4n
+Used if imqConnectionType is \fBTCP\fR or \fBTLS\fR. This attribute type is only supported in Message Queue 3.0.
+.sp
+Value: Integer 
+.sp
+Default: \fB0\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqConfiguredClientID\fR
+.ad
+.sp .6
+.RS 4n
+Value: String (ID number) 
+.sp
+Default: no ID specified 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqConnectionFlowCount\fR
+.ad
+.sp .6
+.RS 4n
+Value: Integer
+.sp
+Default: 100
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqConnectionFlowLimit\fR
+.ad
+.sp .6
+.RS 4n
+Value: Integer
+.sp
+Default: 1000
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqConnectionFlowLimitEnabled\fR
+.ad
+.sp .6
+.RS 4n
+Value: Boolean
+.sp
+Default: \fBfalse\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqConnectionType\fR
+.ad
+.sp .6
+.RS 4n
+This attribute type is only supported in Message Queue 3.0.
+.sp
+Value: String (\fBTCP\fR, \fBTLS\fR, \fBHTTP\fR). 
+.sp
+Default: \fBTCP\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqConnectionURL\fR
+.ad
+.sp .6
+.RS 4n
+Used if imqConnectionType is \fBHTTP\fR. This attribute type is only supported in Message Queue 3.0.
+.sp
+Value: String 
+.sp
+Default: \fBhttp://\fR\fIlocalhost\fR\fB/imq/tunnel\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqConsumerFlowLimit\fR
+.ad
+.sp .6
+.RS 4n
+Value: Integer
+.sp
+Default: 1000
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqConsumerFlowThreshold\fR
+.ad
+.sp .6
+.RS 4n
+Value: Integer
+.sp
+Default: 50
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqDefaultPassword\fR
+.ad
+.sp .6
+.RS 4n
+Value: String 
+.sp
+Default: \fBguest \fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqDefaultUsername\fR
+.ad
+.sp .6
+.RS 4n
+Value: String 
+.sp
+Default: \fBguest \fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqDisableSetClientID\fR
+.ad
+.sp .6
+.RS 4n
+Value: Boolean 
+.sp
+Default: \fBfalse\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqJMSDeliveryMode\fR
+.ad
+.sp .6
+.RS 4n
+Value: Integer (\fB1\fR=non-persistent, \fB2\fR=persistent) 
+.sp
+Default: \fB2\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqJMSExpiration\fR
+.ad
+.sp .6
+.RS 4n
+Value: Long (time in milliseconds)
+.sp
+Default: \fB0\fR (does not expire) 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqJMSPriority\fR
+.ad
+.sp .6
+.RS 4n
+Value: Integer (\fB0\fR to \fB9\fR)
+.sp
+Default: \fB4\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqLoadMaxToServerSession\fR
+.ad
+.sp .6
+.RS 4n
+Value: Boolean
+.sp
+Default: \fBtrue\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqOverrideJMSDeliveryMode\fR
+.ad
+.sp .6
+.RS 4n
+Value: Boolean
+.sp
+Default: \fBfalse\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqOverrideJMSExpiration\fR
+.ad
+.sp .6
+.RS 4n
+Value: Boolean
+.sp
+Default: \fBfalse\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqOverrideJMSHeadersToTemporaryDestinations \fR
+.ad
+.sp .6
+.RS 4n
+Value: Boolean 
+.sp
+Default: \fBfalse\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqOverrideJMSPriority\fR
+.ad
+.sp .6
+.RS 4n
+ Value: Boolean 
+.sp
+Default: \fBfalse\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqQueueBrowserMaxMessagesPerRetrieve\fR
+.ad
+.sp .6
+.RS 4n
+Value: Integer 
+.sp
+Default: \fB1000\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqBrowserRetrieveTimeout\fR
+.ad
+.sp .6
+.RS 4n
+Value: Long (time in milliseconds) 
+.sp
+Default: \fB60,000\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqReconnectAttempts\fR
+.ad
+.sp .6
+.RS 4n
+Value: Integer 
+.sp
+Default: \fB0\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqReconnectEnabled\fR
+.ad
+.sp .6
+.RS 4n
+Value: Boolean 
+.sp
+Default: \fBfalse\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqReconnectInterval\fR
+.ad
+.sp .6
+.RS 4n
+ Value: Long (time in milliseconds)
+.sp
+Default: \fB3000 \fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqSetJMSXAppID\fR
+.ad
+.sp .6
+.RS 4n
+Value: Boolean 
+.sp
+Default: \fBfalse \fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqSetJMSXConsumerTXID\fR
+.ad
+.sp .6
+.RS 4n
+Value: Boolean 
+.sp
+Default: \fBfalse\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqSetJMSXProducerTXID\fR
+.ad
+.sp .6
+.RS 4n
+Value: Boolean 
+.sp
+Default: \fBfalse\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB imqSetJMSXRcvTimestamp\fR
+.ad
+.sp .6
+.RS 4n
+Value: Boolean 
+.sp
+Default:\fB false \fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB imqSetJMSXUserID\fR
+.ad
+.sp .6
+.RS 4n
+Value: Boolean 
+.sp
+Default: \fBfalse\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB imqSSLIsHostTrusted\fR
+.ad
+.sp .6
+.RS 4n
+Used if imqConnectionType is \fBTLS\fR. This attribute type is only supported in Message Queue 3.0.
+.sp
+Value: Boolean 
+.sp
+Default: \fBtrue\fR
+.RE
+
+.sp
+.LP
+Type = Destinations: Topic and Queue
+.sp
+.ne 2
+.mk
+.na
+\fBimqDestinationDescription\fR
+.ad
+.RS 29n
+.rt  
+Value: String 
+.sp
+Default: no description
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqDestinationName\fR
+.ad
+.RS 29n
+.rt  
+ Value: String 
+.sp
+Default: \fBUntitled_Destination_Object\fR
+.RE
+
+.sp
+.LP
+Type = Endpoint (SOAP Endpoint)
+.sp
+.ne 2
+.mk
+.na
+\fBimqEndpointDescription\fR
+.ad
+.RS 26n
+.rt  
+Value: String 
+.sp
+Default: \fBA description for the endpoint object\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqEndpointName\fR
+.ad
+.RS 26n
+.rt  
+Value: String 
+.sp
+Default: \fBUntitled_Endpoint_Object\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBimqSOAPEndpointList\fR
+.ad
+.RS 26n
+.rt  
+Value: String (one or more space-separated URLs) 
+.sp
+Default: no url 
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRAdding a Topic Administered Object to an Object Store
+.sp
+.LP
+Where JNDI lookup name\fB=myTopic\fR and \fBimqDestinationName=MyTestTopic\fR, the following command adds to an LDAP server object store: 
+
+.sp
+.in +2
+.nf
+imqobjmgr add \fB-t\fR t \fB-l\fR "cn=myTopic"\e
+\fB-o\fR "imqDestinationName=MyTestTopic"\e
+\fB-j\fR "java.naming.factory.initial=com.sun.jndi.ldap.LdapCtxFactory"\e
+\fB-j\fR "java.naming.provider.url=ldap://mydomain.com:389/o=imq"
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Where JNDI lookup name\fB=myTopic\fR and \fBimqDestinationName=MyTestTopic\fR, the following command adds to a file system object store: 
+
+.sp
+.in +2
+.nf
+imqobjmgr add \fB-t\fR \fB-l\fR "cn=myTopic"\e
+\fB-o\fR "imqDestinationName=MyTestTopic"\e
+\fB-j\fR \e
+  "java.naming.factory.initial=com.sun.jndi.fscontext.RefFSContextFactory"\e
+\fB-j\fR "java.naming.provider.url=file:/home/foo/imq_admin_objects"
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Where JNDI lookup name\fB=myTopic\fR and \fBimqDestinationName=MyTestTopic\fR, the following command adds to a file system object store, using an input file:
+
+.sp
+.in +2
+.nf
+imqobjmgr \fB-i\fR inputfile
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The associated input file consists of the following:
+
+.sp
+.in +2
+.nf
+cmdtype=add
+obj.type=t
+obj.lookupName=cn=myTopic
+obj.attrs.imqDestinationName=MyTestTopic
+objstore.attrs.java.naming.factory.initial=com.sun.jndi.fscontext.\e
+  RefFSContextFactory
+objstore.attrs.java.naming.provider.url=file:/home/foo/imq_admin_objects
+.fi
+.in -2
+
+.LP
+\fBExample 2 \fRAdding a \fBQueueConnectionFactory\fR Administered Object to an Object Store
+.sp
+.LP
+Where JNDI lookup name\fB=myQCF\fR, \fBread-only state=true\fR, \fBimqAddressList=mq://foohost:777/jms\fR, the following command adds to an LDAP server object store:
+
+.sp
+.in +2
+.nf
+imqobjmgr add \fB-t\fR qf \fB-l\fR "cn=myQCF" \fB-r\fR true\e
+
+\fB-o\fR "imqAddressList=mq://foohost:777/jms"\e
+\fB-j\fR "java.naming.factory.initial=com.sun.jndi.ldap.LdapCtxFactory"\e
+\fB-j\fR "java.naming.provider.url=ldap://mydomain.com:389/o=imq"\e
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Where JNDI lookup name\fB=myQCF\fR, \fBread-only state=true\fR, \fBimqAddressList=mq://foohost:777/jms\fR, the following command adds to an LDAP server object store using an input file: 
+
+.sp
+.in +2
+.nf
+imqobjmgr \fB-i\fR inputfile
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The associated input file consists of the following:
+
+.sp
+.in +2
+.nf
+cmdtype=add
+obj.type=qf
+obj.lookupName=cn=myQCF
+obj.readOnly=true
+obj.attrs.imqAddressList=mq://foohost:777/jms
+objstore.attrs.java.naming.factory.initial=com.sun.jndi.\e
+  ldap.LdapCtxFactory
+objstore.attrs.java.naming.provider.url=ldap://mydomain.com:389/o=imq
+.fi
+.in -2
+
+.sp
+.LP
+Where JNDI lookup name\fB=myQCF\fR, read-only state\fB=true\fR, \fBimqAddressList=mq://foohost:777/jms\fR, the following command adds to an LDAP server object store, using both an input file and command options:
+
+.sp
+.in +2
+.nf
+imqobjmgr add \fB-t\fR qf \fB-l\fR "cn=myQCF"\e
+\fB-o\fR "imqAddressList=mq://foohost:777/jms"\e
+\fB-i\fR inputfile
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The associated input file consists of the following: 
+
+.sp
+.in +2
+.nf
+objstore.attrs.java.naming.factory.initial=com.sun.jndi.ldap.LdapCtxFactory
+objstore.attrs.java.naming.provider.url=ldap://mydomain.com:389/o=imq
+.fi
+.in -2
+
+.LP
+\fBExample 3 \fRDeleting a Topic Administered Object from an Object Store
+.sp
+.LP
+Where JNDI lookup name\fB=myTopic\fR and no confirmation is requested, the following command deletes from an LDAP server object store:
+
+.sp
+.in +2
+.nf
+imqobjmgr delete \fB-f\fR \fB-l\fR "cn=myTopic"\e
+\fB-j\fR "java.naming.factory.initial=com.sun.jndi.ldap.LdapCtxFactory"\e
+\fB-j\fR "java.naming.provider.url=ldap://mydomain.com:389/o=imq"
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 4 \fRQuerying Information About a Topic Administered Object
+.sp
+.LP
+Where JNDI lookup name\fB=myTopic\fR, the following command queries from an LDAP server object store using simple authentication scheme: 
+
+.sp
+.in +2
+.nf
+imqobjmgr query \fB-l\fR "cn=myTopic"\e
+\fB-j\fR "java.naming.factory.initial=com.sun.jndi.ldap.LdapCtxFactory"\e
+\fB-j\fR "java.naming.provider.url=ldap://mydomain.com:389/o=imq"\e
+\fB-j\fR "java.naming.security.authentication=simple"\e
+\fB-j\fR "java.naming.security.principal=uid=foo,ou=imqobjmgr,o=imq"\e
+\fB-j\fR "java.naming.security.credentials=foo"
+.fi
+.in -2
+.sp
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR \fR
+.ad
+.RS 6n
+.rt  
+Successful completion. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB>\fB0\fR\fR
+.ad
+.RS 6n
+.rt  
+An error occurred.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWiqu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBimqadmin\fR(1M), \fBimqcmd\fR(1M), \fBimqbrokerd\fR(1M), \fBimqkeytool\fR(1M), \fBimqusermgr\fR(1M), \fBattributes\fR(5)
+.sp
+.LP
+\fISun Java System Message Queue Administrator's Guide\fR

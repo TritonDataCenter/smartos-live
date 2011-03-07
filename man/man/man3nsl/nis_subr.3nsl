@@ -1,0 +1,127 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nis_subr 3NSL "10 Nov 2005" "SunOS 5.11" "Networking Services Library Functions"
+.SH NAME
+nis_subr, nis_leaf_of, nis_name_of, nis_domain_of, nis_getnames, nis_freenames, nis_dir_cmp, nis_clone_object, nis_destroy_object, nis_print_object \- NIS+ subroutines
+.SH SYNOPSIS
+.LP
+.nf
+\fBcc\fR [ \fIflag\fR ... ] \fIfile\fR ... \fB-lnsl\fR [ \fIlibrary\fR ... ]
+#include <rpcsvc/nis.h>
+
+
+
+\fBnis_name\fR \fBnis_leaf_of\fR(\fBconst nis_name\fR \fIname\fR);
+.fi
+
+.LP
+.nf
+\fBnis_name\fR \fBnis_name_of\fR(\fBconst nis_name\fR \fIname\fR);
+.fi
+
+.LP
+.nf
+\fBnis_name\fR \fBnis_domain_of\fR(\fBconst nis_name\fR \fIname\fR);
+.fi
+
+.LP
+.nf
+\fBnis_name *\fR\fBnis_getnames\fR(\fBconst nis_name\fR \fIname\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBnis_freenames\fR(\fBnis_name *\fR\fInamelist\fR);
+.fi
+
+.LP
+.nf
+\fBname_pos\fR \fBnis_dir_cmp\fR(\fBconst nis_name\fR \fIn1\fR, \fBconst nis_name\fR \fIn2\fR);
+.fi
+
+.LP
+.nf
+\fBnis_object *\fR\fBnis_clone_object\fR(\fBconst nis_object *\fR\fIsrc\fR, \fBnis_object *\fR\fIdest\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBnis_destroy_object\fR(\fBnis_object *\fR\fIobj\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBnis_print_object\fR(\fBconst nis_object *\fR\fIobj\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+These subroutines are provided to assist in the development of NIS+ applications. They provide several useful operations on both NIS+ names and objects.
+.sp
+.LP
+The first group, \fBnis_leaf_of()\fR, \fBnis_domain_of()\fR, and \fBnis_name_of()\fR provide the functions for parsing NIS+ names. \fBnis_leaf_of()\fR will return the first label in an NIS+ name. It takes into account the double quote character \fB`"'\fR which can be used to protect embedded \fB`.'\fR (dot) characters in object names. Note that the name returned will never have a trailing dot character. If passed the global root directory name ".", it will return the null string.
+.sp
+.LP
+\fBnis_domain_of()\fR returns the name of the NIS+ domain in which an object resides. This name will always be a fully qualified NIS+ name and ends with a dot. By iteratively calling \fBnis_leaf_of()\fR and  \fBnis_domain_of()\fR it is possible to break a NIS+ name into its individual components.
+.sp
+.LP
+\fBnis_name_of()\fR is used to extract the unique part of a  NIS+ name.  This function removes from the tail portion of the name all labels that are in common with the local domain. Thus if a machine were in domain  \fBfoo.bar.baz.\fR and \fBnis_name_of()\fR were passed a name \fBbob.friends.foo.bar.baz\fR, then  \fBnis_name_of()\fR would return the unique part,  \fBbob.friends\fR. If the name passed to this function is not in either the local domain or one of its children, this function will return null.
+.sp
+.LP
+\fBnis_getnames()\fR will return a list of candidate names for the name passed in as \fIname\fR. If this name is not fully qualified, \fBnis_getnames()\fR will generate a list of names using the default NIS+ directory search path, or the environment variable \fBNIS_PATH\fR  if it is set. The returned array of pointers is terminated by a null pointer, and the memory associated with this array should be freed by calling \fBnis_freenames()\fR
+.sp
+.LP
+Though \fBnis_dir_cmp()\fR can be used to compare any two NIS+ names, it is used primarily to compare domain names. This comparison is done in a case independent fashion, and the results are an enum of type  \fBname_pos\fR. When the names passed to this function are identical, the function  returns a value of \fBSAME_NAME.\fR If the name \fIn1\fR is a direct ancestor of name \fIn2\fR, then this function returns the result \fBHIGHER_NAME.\fR Similarly, if the name \fIn1\fR is a direct descendant of name \fIn2\fR, then this function returns the result \fBLOWER_NAME.\fR When the name \fIn1\fR is neither a direct ancestor nor a direct descendant of \fIn2\fR, as it would be if the two names were siblings in separate portions of the namespace, then this function returns the result \fBNOT_SEQUENTIAL.\fR Finally, if either name cannot be parsed as a legitimate name then this function returns the value  \fBBAD_NAME.\fR
+.sp
+.LP
+The second set of functions, consisting of  \fBnis_clone_object()\fR and \fBnis_destroy_object()\fR, are used for manipulating objects. \fBnis_clone_object()\fR creates an exact duplicate of the NIS+ object \fIsrc\fR. If the value of \fIdest\fR is non-null, it creates the clone of the object into this object structure and allocate the necessary memory for the variable length arrays. If this parameter is null, a pointer to the cloned object is returned. Refer to \fBnis_objects\fR(3NSL) for a description of the  \fBnis_object\fR structure.
+.sp
+.LP
+\fBnis_destroy_object()\fR can be used to destroy an object created by \fBnis_clone_object()\fR. This will free up all memory associated with the object and free the pointer passed. If the object was cloned into an array using the \fIdest\fR parameter to \fBnis_clone_object()\fR, then the object \fIcannot\fR be freed with this function. Instead, the function \fBxdr_free(xdr_nis_object,\fR\fIdest\fR\fB)\fR must be used.
+.sp
+.LP
+\fBnis_print_object()\fR prints out the contents of a NIS+ object structure on the standard output. Its primary use is for debugging NIS+ programs.
+.sp
+.LP
+\fBnis_leaf_of()\fR, \fBnis_name_of()\fRand \fBnis_clone_object()\fR return their results as thread-specific data in multithreaded applications.
+.SH ENVIRONMENT VARIABLES
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_PATH\fR\fR
+.ad
+.RS 12n
+.rt  
+This variable overrides the default NIS+ directory search path used by \fBnis_getnames()\fR. It contains an ordered list of directories separated by ':' (colon) characters. The '$' (dollar sign) character is treated specially. Directory names that end in '$' have the default domain appended to them, and a '$' by itself is replaced by the list of directories between the default domain and the global root that are at least two levels deep. The default NIS+ directory search path is '$'.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+MT-LevelSafe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBnis_names\fR(3NSL), \fBnis_objects\fR(3NSL), \fBnis_tables\fR(3NSL), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

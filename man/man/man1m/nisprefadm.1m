@@ -1,0 +1,341 @@
+'\" te
+.\" Copyright (C) 2001, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nisprefadm 1M "12 Dec 2001" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+nisprefadm \- NIS+ utility to set server preferences for NIS+ clients
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/bin/nisprefadm\fR \fB-a\fR {\fB-L\fR | \fB-G\fR} [\fB-o\fR \fIopt-string\fR] 
+     [\fB-d\fR \fIdomain\fR] [\fB-C\fR \fIclient\fR] \fIserver\fR...
+.fi
+
+.LP
+.nf
+\fB/usr/bin/nisprefadm\fR \fB-m\fR {\fB-L\fR | \fB-G\fR} [\fB-o\fR \fIopt-string\fR] 
+     [\fB-d\fR \fIdomain\fR] [\fB-C\fR \fIclient\fR] \fIoldserver\fR=\fInewserver\fR...
+.fi
+
+.LP
+.nf
+\fB/usr/bin/nisprefadm\fR \fB-r\fR {\fB-L\fR | \fB-G\fR} [\fB-o\fR \fIopt-string\fR] 
+     [\fB-d\fR \fIdomain\fR] [\fB-C\fR \fIclient\fR] \fIserver\fR...
+.fi
+
+.LP
+.nf
+\fB/usr/bin/nisprefadm\fR \fB-u\fR {\fB-L\fR | \fB-G\fR} [\fB-o\fR \fIopt-string\fR] 
+     [\fB-d\fR \fIdomain\fR] [\fB-C\fR \fIclient\fR] \fIserver\fR...
+.fi
+
+.LP
+.nf
+\fB/usr/bin/nisprefadm\fR \fB-x\fR {\fB-L\fR | \fB-G\fR} [\fB-d\fR \fIdomain\fR] [\fB-C\fR \fIclient\fR]
+.fi
+
+.LP
+.nf
+\fB/usr/bin/nisprefadm\fR \fB-l\fR {\fB-L\fR | \fB-G\fR} [\fB-d\fR \fIdomain\fR] [\fB-C\fR \fIclient\fR]
+.fi
+
+.LP
+.nf
+\fB/usr/bin/nisprefadm\fR \fB-F\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBnisprefadm\fR defines which servers are to be preferred by NIS+ clients. This information is used by \fBnis_cachemgr\fR(1M) to control the order in which it selects which server to use for a particular domain. On a client system, the cache manager first looks for a local preferred server list in \fB/var/nis\fR. If it doesn't find one, it looks for an entry with its host name in the NIS+ table. Finally, if it doesn't find it there, it looks for an entry for its subnet.
+.sp
+.LP
+By default, \fBnis_cachemgr\fR puts all servers that are on the same subnet as the client system (that is, local servers) are on the preferred server list. In some cases this default preferred server list is inadequate. For example, if all of the servers for a domain are remote, but some are \fIcloser\fR than others, the cache manager should try to select the closer one. Because the cache manager has no reliable way to determine the distance to remote servers, \fBnisprefadm\fR is used to provide this information.
+.sp
+.LP
+The preferred server information is stored either globally in a NIS+ table (with the \fB-G\fR option) or locally in a file, \fB/var/nis/client_info\fR (with the \fB-L\fR option). It is preferable to store the information globally so that it can be used by all clients on a subnet. The \fBnis_cachemgr\fR process on a client machine reloads the preferred server information periodically, depending on the machine's setup. If the local file is used, the information is reloaded every 12 hours. If the global table is used, the information is reloaded based on the \fBTTL\fR value of the client information table. This TTL value can be changed using \fB nischttl\fR(1). If you want your changes to take effect immediately, use the \fBnisprefadm\fR \fB-F\fR command. When changing local information (\fB-L\fR), \fBnisprefadm\fR automatically forces \fBnis_cachemgr\fR to reload the information.
+.sp
+.LP
+The cache manager assigns weights to all of the servers on the preferred list. By default, local servers (that is, servers on the same subnet) are given a weight of 0. Other servers are given the weight, "infinite". This can be changed by using the \fBnisprefadm\fR command and giving a weight in parentheses after the server name. When selecting a server for a domain, the cache manager first tries to contact the servers with the lowest weight. If it doesn't get a response, it tries the servers with the next lowest weight, and so on. If it fails to get a response from any of the preferred servers, it tries to contact the non-preferred servers.
+.sp
+.LP
+The use of weights gives fine control over the server selection process, but care must be given to avoid assigning too many different weights. For example, if weights 0, 1, 2, and 3 are used, but all of the servers with weight 0, 1, and 2, are unavailable, then there will be a noticeable delay in selecting a server. This is because the cache manager waits 5 seconds for a response at each weight level before moving on to the next one. As a general rule, one or two weight levels provides a good balance of server selection control and performance.
+.sp
+.LP
+When specifying a server name, it is not necessary to fully qualify the name. When the cache manager tries to access a domain, it compares the list of servers for the domain with the list of preferred servers. It will find a match if a preferred server name is a prefix of the name of a server for the domain. If a domain is served by two servers with the same prefix, the preferred server name must include enough of the domain name to distinguish the two.
+.sp
+.LP
+The \fBnis_cachemgr\fR(1M) process automatically adds local servers (same subnet as the client) to the preferred server list with a weight of 0. Thus, it is not necessary to specify them, though it does no harm.
+.sp
+.LP
+If you specify a weight for a server, you probably should quote the parentheses to avoid having the shell interpret them. The following command illustrates this:
+.sp
+.in +2
+.nf
+example% \fBnisprefadm -G -a -C client1 "srv1(2)"\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+In general, \fBnis_cachemgr\fR does a fairly good job of selecting servers on its own. Therefore, the use of \fBnisprefadm\fR is not usually necessary. Some situations in which it is recommended are:
+.sp
+.ne 2
+.mk
+.na
+\fBNo local servers, many remote servers\fR
+.ad
+.sp .6
+.RS 4n
+In this case, \fBnis_cachemgr\fR needs to choose one of the remote servers. Because it doesn't have information on which is closest, it sends a ping to all of them and then selects the one that responds fastest. This may not always select the best server. If some of the servers are closer to the client than the others, they should be listed as preferred servers so that \fBnis_cachemgr\fR will try them first. This reduces the amount of network traffic for selecting a server.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBVery remote servers\fR
+.ad
+.sp .6
+.RS 4n
+In some networks there are NIS+ servers that are only reachable through very slow network connections. It is usually best to avoid unnecessary traffic over that connection. If the \fIpref_type\fR=\fBpref_only\fR option is set along with preferred servers, then only the preferred servers are contacted for domains they serve. The non-preferred servers are not tried at all; even if all of the preferred servers are unavailable. For domains that are not served by any of the preferred servers, the \fBpref_only\fR option is ignored.
+.RE
+
+.SH OPTIONS
+.sp
+.LP
+In the \fBSYNOPSIS\fR, when several options are surrounded by braces (that is, by `{' and `}') one of the options must be specified.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fR
+.ad
+.RS 13n
+.rt  
+Add the specified servers to the preferred server list.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fR\fB-C\fR \fIclient\fR\fR
+.ad
+.RS 13n
+.rt  
+Store the preferred server information with the key, \fIclient\fR. The \fIclient\fR can be either a hostname or a subnet number. When a hostname is specified, the preferred server information applies to that host only. When a subnet is specified, the preferred server information applies to all clients on that subnet. The cache manager searches for host specific entries first. It only searches for subnet entries if no host entry is found. If this option is not specified, then the hostname of the machine on which the command is run is used.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR \fIdomain\fR\fR
+.ad
+.RS 13n
+.rt  
+Specify the \fIdomain\fR to which the command is to apply.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-F\fR\fR
+.ad
+.RS 13n
+.rt  
+Tells \fBnis_cachemgr\fR(1M) to refresh its preferred server information. The program periodically does this anyway, but this option forces it to do the refresh immediately. When updating the local information, \fBnis_cachemgr\fR automatically refreshes the preferred server information.
+.sp
+This option must be executed as \fBroot\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR\fR
+.ad
+.RS 13n
+.rt  
+List the current preferred server information.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-L\fR \fB\||\fR \fB-G\fR\fR
+.ad
+.RS 13n
+.rt  
+Store the preferred server information locally in the file, \fB/var/nis/client_info\fR (the \fB-L\fR option), or globally in a NIS+ table \fBclient.info.org-dir.\fR\fIdomain\fR (the \fB-G\fR option). If the information is stored locally, then it only applies to the system on which the command is run. If it is stored globally then it can apply to all systems on a subnet (depending on the value of the \fB-C\fR option).
+.sp
+The \fB-L\fR option must be run as \fBroot\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-m\fR\fR
+.ad
+.RS 13n
+.rt  
+Modify the preferred server list. The server specified by \fIoldserver\fR is replaced by \fInewserver\fR. This is typically used to change the weight for a server.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR\fR
+.ad
+.RS 13n
+.rt  
+Specify additional options to control server selection. Currently the only valid option is \fIpref_type\fR, which can have a value of either \fBall\fR (the default) or \fBpref_only\fR. If the value is \fBall\fR, then the cache manager tries to contact non-preferred servers if all of the preferred servers fail to respond. If \fBpref_only\fR is specified, then it won't try non-preferred servers. The only exception to this is when a domain is not served by any of the preferred servers. In this case, the cache manager ignores the option. This is to avoid requiring that preferred servers be defined for every domain.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR\fR
+.ad
+.RS 13n
+.rt  
+Remove the specified servers from the preferred server list.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-u\fR\fR
+.ad
+.RS 13n
+.rt  
+Clear the list of preferred servers and then add the specified servers to the preferred server list.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-x\fR\fR
+.ad
+.RS 13n
+.rt  
+Remove the preferred server information completely.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+\fBnisprefadm\fR returns the following values:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 5n
+.rt  
+On success.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 5n
+.rt  
+On failure.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRUsing \fBnisprefadm\fR
+.sp
+.LP
+This command sets the preferred server list for the system on which it is run:
+
+.sp
+.in +2
+.nf
+example% \fBnisprefadm -L -a srv1 srv2\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The information is stored in a file, \fB/var/nis/client_info\fR, so it will only affect this one system.
+
+.sp
+.LP
+The following command has the same effect, but the information is stored in a NIS+ table in the default domain.
+
+.sp
+.in +2
+.nf
+example% \fBnisprefadm -G -a srv1 srv2\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+As a system administrator, you might want to set the preferred server information for a client system other than the one you are running the command on. The following command sets the preferred server information for a client system named \fIclient1\fR:
+
+.sp
+.in +2
+.nf
+example% \fBnisprefadm -G -a -C client1 srv1 srv2\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+It is common for all client systems on a subnet to use the same set of preferred servers. The following command sets a preferred server list that applies to all clients on subnet, 192.85.18.0:
+
+.sp
+.in +2
+.nf
+example% \fBnisprefadm -G -a -C 192.85.18.0 srv1 srv2\fR
+.fi
+.in -2
+.sp
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBnischttl\fR(1), \fBnis_cachemgr\fR(1M), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris Operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

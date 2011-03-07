@@ -1,0 +1,3085 @@
+'\" te
+.\" Copyright (c) 2009, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License. You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.
+.\"  See the License for the specific language governing permissions and limitations under the License. When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with
+.\" the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mmsadm 1M "16 Apr 2009" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+mmsadm \- administration command for the Media Management System
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/sbin/mmsadm\fR [\fB-h\fR | \fB-?\fR]
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR discover [\fB-H\fR] [\fB-t\fR library|drive|vol] [\fB-S\fR \fIACSLS-host\fR[:\fIport\fR]] \fB-a\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR create \fB-t\fR library|drive|mpool|dpool|app|voltype
+     \fB-o\fR \fIoption\fR=\fIx\fR [\fB-o\fR \fIoption2\fR=\fIy\fR...] \fIname\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR delete \fB-t\fR library|drive|mpool|dpool|app|voltype
+     [\fB-f\fR] \fIname\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR set \fB-t\fR library|drive|mpool|dpool|app|voltype
+     \fB-o\fR \fIoption\fR=\fIx\fR [\fB-o\fR \fIoption2\fR=\fIy\fR...] \fIname\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR list [\fB-vH\fR] \fB-t\fR library|drive|mpool|dpool|app|voltype
+     \fB-o\fR \fIoption\fR=\fIx\fR [\fB-o\fR \fIoption2\fR=\fIy\fR...] [\fB-F\fR \fIfilter\fR [\fB-F\fR \fIfilter2\fR...] [\fIname\fR]
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR passwd [\fB-P\fR \fIfile\fR] \fIname\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR online \fB-t\fR library|drive \fIname\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR offline \fB-t\fR library|drive \fIname\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR add-volume \fB-l\fR \fIlibrary\fR \fB-o\fR voltype=\fItype\fR \fB-x\fR \fIvol1\fR[,\fIvol2\fR,...] \fImpool\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR remove-volume \fB-x\fR [\fB-l\fR \fIlibrary\fR] [\fB-x\fR \fIvol1\fR[,\fIvol2\fR,...]] \fImpool\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR label [\fB-n\fR] [\fB-A\fR \fIapplication\fR] [\fB-l\fR \fIlibrary\fR]
+     [\fB-P\fR \fIfile\fR]\fIvolume\fR[,\fIvolume\fR,...]]
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR showreq [\fB-H\fR] [\fIdrivename\fR]
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR accept [\fB-r\fR "\fIreason\fR"] \fIrequestid\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR reject [\fB-r\fR "\fIreason\fR"] \fIrequestid\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR dbbackup \fIdirectory\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR dbrestore \fIfile\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR mount [\fB-n\fR] [\fB-N\fR] [\fB-d\fR \fIdrive\fR] [\fB-D\fR \fIdensity\fR] \fB-A\fR \fIapplication\fR \fB-l\fR \fIlibrary\fR
+     [\fB-P\fR \fIpasswordfile\fR] [\fB-u\fR \fIusername\fR] [\fB-b\fR \fIblocksize\fR] [\fB-R\fR]
+     [\fB-M\fR \fImode\fR[,\fImode\fR...] \fIvolume\fR
+.fi
+
+.LP
+.nf
+\fBmmsadm\fR unmount [\fB-A\fR \fIapplication\fR] [\fB-P\fR \fIfile\fR] [\fB-f\fR] \fIvolume\fR|\fIpseudodevice\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The Media Management System (MMS) is a software interface that manages removable storage media such as tape libraries, tape drives, media pools, tape volumes, and disk resources that emulate tape drives and tape volumes. It is an implementation of the IEEE 1244 specification for removable media.
+.sp
+.LP
+The MMS consists of an MM server and database that control various library managers and drive managers. Administrators use \fBmmsadm\fR and its subcommands to configure and maintain storage resources from a variety of vendors. The MMS management commands, such as \fBmmsadm\fR, construct and issue the most frequently-used Media Management Protocol (MMP) commands, handling all events and acknowledgments. The MMP is defined in the IEEE 1244 specification.
+.sp
+.LP
+The \fBmmsinit\fR(1M) command must be run to initialize MMS on a system before you can use the \fBmmsadm\fR command.
+.sp
+.LP
+The \fBmmsadm\fR command is RBAC-compliant. (See \fBrbac\fR(5).) Required authorizations vary among individual subcommands and are listed in the descriptions of those subcommands.
+.SH SUB-COMMANDS
+.sp
+.LP
+The \fBmmsadm\fR supports the subcommands listed below. Each subcommand description includes a description of that subcommand's options and operands. A \fBmmsadm\fR command takes the form:
+.sp
+.in +2
+.nf
+# \fBmmsadm\fR \fIsubcommand\fR [\fIoptions\fR]
+.fi
+.in -2
+.sp
+
+.SS "\fBdiscover\fR Subcommand"
+.sp
+.LP
+The \fBdiscover\fR subcommand displays the library, drives, or volumes on an Automated Control System Library Server (ACSLS) server, or the tape drives connected to the local system. Use this command to determine what resources are available and whether they have been configured for use with MMS.
+.sp
+.LP
+\fBdiscover\fR requires the \fBsolaris.smf.read.mms\fR authorization. The subcommand has the following syntax:
+.sp
+.in +2
+.nf
+\fBmmsadm discover\fR [\fB-H\fR] [\fB-t\fR \fBlibrary\fR|\fBdrive\fR|\fBvol\fR]
+     [\fB-S\fR \fIACSLS-host\fR[:\fIport\fR]] \fB-a\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The subcommand options are described as follows.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fR
+.ad
+.sp .6
+.RS 4n
+Displays all discovered resources, including those configured for MMS. By default, only unconfigured resources are displayed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-H\fR\fR
+.ad
+.sp .6
+.RS 4n
+Displays the resources in a manner parseable by scripts. The display does not include headers and it separates fields with a tab character.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-S\fR \fIACSLS-host\fR[:\fIport\fR]\fR
+.ad
+.sp .6
+.RS 4n
+Displays resources managed by the specified server and port. The default port number is 50004. If the \fB-S\fR option is not used, the command displays tape drives connected to the local system.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fBlibrary\fR|\fBdrive\fR|\fBvol\fR\fR
+.ad
+.sp .6
+.RS 4n
+Displays only the specified type of resource:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fBlibrary\fR\fR
+.ad
+.sp .6
+.RS 4n
+Shows discovered libraries.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fBdrive\fR\fR
+.ad
+.sp .6
+.RS 4n
+Shows discovered drives.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fBvol\fR\fR
+.ad
+.sp .6
+.RS 4n
+Shows discovered volumes.
+.RE
+
+If this option is not used, library and drive resources are included in the display. The number of volumes can be large so their discovery must be requested explicitly.
+.RE
+
+.SS "\fBcreate\fR and \fBset\fR Subcommands"
+.sp
+.LP
+The \fBcreate\fR subcommand configures the resource to be managed by MMS. The \fBset\fR subcommand modifies the attributes of a resource managed by MMS. These subcommands share a common set of options.
+.sp
+.LP
+ACSLS-controlled libraries and disk archiving libraries are supported. Libraries must be configured before any drive pool and drives managed in that library can be configured, or any volumes managed by the library added to media pools. \fBvoltype\fR must be configured before adding volumes to media pools.
+.sp
+.LP
+The \fBcreate\fR and \fBset\fR subcommands require the \fBsolaris.smf.modify.mms\fR, \fBsolaris.smf.value.mms\fR, \fBsolaris.mms.*\fR, and \fBsolaris.smf.read.mms\fR authorizations, with the exception of changing tracing attributes. If changing the size of trace files or trace level, only \fBsolaris.mms.device.log\fR and \fBsolaris.smf.read.mms\fR authorizations are required.
+.sp
+.LP
+These subcommands have the following syntax:
+.sp
+.in +2
+.nf
+\fBcreate\fR \fB-t\fR \fBlibrary|drive|mpool|dpool|app|voltype\fR
+     \fB-o\fR \fIoption\fR=\fIx\fR [\fB-o\fR \fIoption2\fR=\fIy\fR...] \fIname\fR
+
+\fBset\fR \fB-t\fR \fBlibrary|drive|mpool|dpool|app|voltype\fR
+     \fB-o\fR \fIoption\fR=\fIx\fR [\fB-o\fR \fIoption2\fR=\fIy\fR...] \fIname\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The subcommand options and operand are described as follows.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fItype\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the type of resource being created or modified. \fItype\fR can be one of:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlibrary\fR\fR
+.ad
+.RS 11n
+.rt  
+Tape library
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdrive\fR\fR
+.ad
+.RS 11n
+.rt  
+Tape or disk archiving drive
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmpool\fR\fR
+.ad
+.RS 11n
+.rt  
+Media pool
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdpool\fR\fR
+.ad
+.RS 11n
+.rt  
+Drive pool
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBapp\fR\fR
+.ad
+.RS 11n
+.rt  
+MMS-aware application
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvoltype\fR\fR
+.ad
+.RS 11n
+.rt  
+An MMS construct to map tape cartridge types (such as LTO3) to a user-defined type. Allows the user to specify a default cartridge size for this type of tape.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR \fIoption\fR=\fIx\fR [\fB-o\fR \fIoption2\fR=\fIy\fR...]\fR
+.ad
+.sp .6
+.RS 4n
+Options are key/value pairs and are specific to the resource type.
+.sp
+Library Options:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBhwtype=\fR\fItype\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify one of the supported library types: L180, L500, L700, SL500,  SL8500, or SL3000. This option is required for \fBcreate\fR operations.
+.RE
+
+For disk archiving libraries, specify \fBDISK\fR.
+.sp
+The following are options for real network attached libraries.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBacs=\fR\fIacs_number\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the ACSLS ACS number for the library, as shown by the \fBdiscover\fR subcommand. Required for \fBcreate\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlsm=\fR\fIlsm_number\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the ACSLS LSM number for the library, as shown by the \fBdiscover\fR subcommand. Required for \fBcreate\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBserialno=\fR\fIserial_num\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the serial number of the library as reported by the \fBdiscover\fR subcommand. Required for \fBcreate\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBacsls=\fR\fIhost\fR[:\fIport\fR]\fR
+.ad
+.sp .6
+.RS 4n
+Identifies the host and port number of the ACSLS server controlling the library. If not specified, the default port is \fB50004\fR. Required for \fBcreate\fR.
+.RE
+
+The following are options for disk archiving libraries.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdkpath=\fR\fIpath\fR\fR
+.ad
+.sp .6
+.RS 4n
+Defines the default path of the DISK library. The path specifies the parent directory of the library and its name must not be the last component of the path.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdkaltpath=\fR\fIhost1\fR@\fIdirectory1\fR[,\fIhost2\fR@\fIdirectory2\fR]\fR
+.ad
+.sp .6
+.RS 4n
+Defines the path of a \fBDISK\fR library in a host which cannot use the default path to access the \fBDISK\fR library. The path specifies the parent directory of the library and its name must not be the last component of the path.
+.RE
+
+All libraries have the following options.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmsg-level=emergency|alert|critical|error|warning|notice|\fR\fR
+.ad
+.br
+.na
+\fB\fBinformation|debug\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the level of detail in messages written to the log file. The default level is \fBerror\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtrace-level=emergency|alert|critical|error|warning|\fR\fR
+.ad
+.br
+.na
+\fB\fBnotice|information|debug\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the level of detail in messages written to the trace file. The default level is \fBerror\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtrace-file-size=\fR\fIsize\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the maximum size of the trace file before it is rotated and restarted. Specify the size using a value and the character that identifies the unit:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBK\fR for kilobytes
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBM\fR for megabytes
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBG\fR for gigabytes
+.RE
+The default size is 10 megabytes. To set the maximum size of the trace file to 15 megabytes (for example), enter:
+.sp
+.in +2
+.nf
+trace-file-size=15M
+.fi
+.in -2
+.sp
+
+.RE
+
+Drive Options:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBhwtype=\fR\fItype\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the drive type as reported from the \fBdiscover\fR subcommand. Required for \fBcreate\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBserialno=\fR\fIserial\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the serial number of the drive as reported from the discover subcommand. Required for \fBcreate\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlibrary=\fR\fIlibrary_name\fR\fR
+.ad
+.sp .6
+.RS 4n
+Defines the MMS identifier of the library controlling this drive as reported from the \fBlist\fR subcommand. Required for \fBcreate\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBconnection=\fR\fIhost\fR,[\fIhost\fR]\fR
+.ad
+.sp .6
+.RS 4n
+Identifies the host name or IP address to which the drive is physically connected. If the drive is multiported, enter each host separated by a comma. Required for \fBcreate\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBapps=\fR\fIapp1\fR[,\fIapp2\fR,...]\fR
+.ad
+.sp .6
+.RS 4n
+Specifies which applications registered with MMS can use this drive. To specify that more than one application can use this drive, enter each application name, separated by commas.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmsg-level=emergency|alert|critical|error|warning|notice|\fR\fR
+.ad
+.br
+.na
+\fB\fBinformation|debug\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the level of detail in messages written to the log file. The default level is \fBerror\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtrace-level=emergency|alert|critical|error|warning|\fR\fR
+.ad
+.br
+.na
+\fB\fBnotice|information|debug\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the level of detail in messages written to the trace file. The default level is \fBerror\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtrace-file-size=\fR\fIsize\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the maximum size of the trace file before it is rotated and restarted. Specify the size using a value and the character that identifies the unit:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBK\fR for kilobytes
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBM\fR for megabytes
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBG\fR for gigabytes
+.RE
+The default size is 10 megabytes. To set the maximum size of the trace file to 15 megabytes (for example), enter:
+.sp
+.in +2
+.nf
+trace-file-size=15M
+.fi
+.in -2
+.sp
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBunload-time=\fR\fInum_minutes\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the maximum time an unused volume is left in a drive before it is ejected. After an application has finished using a volume, it is often left in the drive. This is to speed up requests if the same volume is needed again in a short amount of time. This option ensures the drive is emptied and available to load other volumes when requested. The default number of minutes is \fB60\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBreserve=yes|no\fR\fR
+.ad
+.sp .6
+.RS 4n
+Defines whether access to a drive is enforced. Use \fByes\fR to use SCSI reserve and release commands to enforce access to the drive. Use \fBno\fR to not use SCSI reservations. Use \fBno\fR only if the drive behaves improperly when access is enforced, or if the drive does not support the SCSI reservation commands. The default value is \fByes\fR.
+.RE
+
+Drive Pool Options
+.sp
+Specifies which applications registered with MMS can use this drive pool. To specify that more than one application can use this pool, enter each application name, separated by commas.
+.sp
+Media Pool Options
+.sp
+.ne 2
+.mk
+.na
+\fB\fBapps=\fR\fIapp1\fR[,\fIapp2\fR,...]\fR
+.ad
+.sp .6
+.RS 4n
+Specifies which applications registered with MMS can use this media pool. To specify that more than one application can use this pool, enter each application name, separated by commas.
+.RE
+
+Application Options
+.sp
+.ne 2
+.mk
+.na
+\fB\fBretain=\fR\fInum_days\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the number of days that the volume's data is preserved after the expiration date defined by the application for a volume. The default value is 0.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvalidate-expiration=yes|no\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies whether overwriting unexpired files is allowed. Use \fBno\fR to allow overwriting of unexpired volume files. Use \fByes\fR to prevent overwriting unexpired volume files. The default value is \fBno\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvalidate-volid=yes|no\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies whether the volume identifier is verified. Use \fByes\fR to verify that the volume ID obtained from the \fBmmsadm mount\fR command matches the volume identifier on the volume label. Use \fBno\fR to specify that this verification is not done. The default value is \fByes\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvalidate-filename=yes|no\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies whether the file name is verified. Use \fByes\fR to verify that the file name obtained from the \fBmmsadm mount\fR command matches the file name on the HDR1 header label of the file. Use \fBno\fR to specify that this verification is not done. The default value is \fBno\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBoverwrite-existing=yes|no|ask\fR\fR
+.ad
+.sp .6
+.RS 4n
+This option is only for unlabeled volumes that are not blank. It specifies whether the data on an unlabeled volume can be overwritten. The default is \fByes\fR to indicate data can be overwritten. Use \fBno\fR to reject any write requests. Use \fBask\fR to prompt an operator for his wish when a write request is received.
+.RE
+
+System Options
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlog-level=emergency|alert|critical|error|warning|notice|\fR\fR
+.ad
+.br
+.na
+\fB\fBinformation|debug\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the level of detail in messages written to the log file. The default level is \fBerror\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnum-restarts=\fR\fInum\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the number of attempts to start a failed daemon before the drive or library associated with the daemon is disabled and requires the \fBmmsadm online\fR command to be run after the problem with the system or device is resolved. Use a value of -1 for unlimited restart attempts. The default value is \fB3\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBattended=yes|no\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify whether MMS makes operator requests when an operation cannot be automatically satisfied. An example of such a case would be if a \fBmount\fR request was made for a tape volume that had been physically removed from a library. The default action, \fByes\fR, indicates that an operator is available to respond. Use \fBno\fR to specify that no operator is available. If no operator is available, all operator requests are rejected.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnum-sockets=\fR\fInum\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the number of open file descriptors the MM daemon can have at one time. On a resource-constrained system, set this value to a number between 30 and 65536. It is not recommended to set the value to less than 256. The default value is \fB-1\fR, meaning an unlimited number of file descriptors.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdisk-timeout=\fR\fIseconds\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the time a disk archiving drive manager waits for the file system containing a disk archiving volume to become available. It is strongly recommended to set the time to a minimum of 120 seconds (two minutes). Use a value of \fB0\fR to specify no expiration time.
+.RE
+
+\fBdkvol\fR Options
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdirname=\fR\fIpath\fR\fR
+.ad
+.sp .6
+.RS 4n
+Required by (and only valid for) \fBcreate\fR. Specifies the directory in which the new disk archiving volume will created.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsize=\fR\fInum\fR\fR
+.ad
+.sp .6
+.RS 4n
+Valid only for \fBcreate\fR. Specifies the size, in megabytes, of the disk archiving volume.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBreadonly=true|false\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the volume to read-only or to allow write operations. The default is \fBfalse\fR, meaning that the disk archiving volume is writeable.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmpool=\fR\fIpool_name\fR\fR
+.ad
+.sp .6
+.RS 4n
+Media pool to which this disk archiving volume will be added after it is created. This option is required for \fBcreate\fR.
+.RE
+
+\fBdkdrive\fR Options
+.sp
+.ne 2
+.mk
+.na
+\fB\fBapps=\fR\fIapp1\fR[,\fIapp2\fR,...]\fR
+.ad
+.sp .6
+.RS 4n
+Specifies which applications registered with MMS can use this drive. To specify that more than one application can use this drive, enter each application name, separated by commas.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmsg-level=emergency|alert|critical|error|warning|notice|\fR\fR
+.ad
+.br
+.na
+\fB\fBinformation|debug\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the level of detail in messages written to the log file. The default level is \fBerror\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtrace-level=emergency|alert|critical|error|warning|\fR\fR
+.ad
+.br
+.na
+\fB\fBnotice|information|debug\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the level of detail in messages written to the trace file. The default level is \fBerror\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtrace-file-size=\fR\fIsize\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the maximum size of the trace file before it is rotated and restarted. Specify the size using a value and the character that identifies the unit:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBK\fR for kilobytes
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBM\fR for megabytes
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBG\fR for gigabytes
+.RE
+The default size is 10 megabytes. To set the maximum size of the trace file to 15 megabytes (for example), enter:
+.sp
+.in +2
+.nf
+trace-file-size=15M
+.fi
+.in -2
+.sp
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBunload-time=\fR\fInum_minutes\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the maximum time an unused volume is left in a drive before it is ejected. After an application has finished using a volume, it is often left in the drive. This is to speed up requests if the same volume is needed again in a short amount of time. This option ensures the drive is emptied and available to load other volumes when requested. The default number of minutes is \fB60\fR.
+.RE
+
+\fBvoltype\fR Options
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmediatype=\fR\fItype\fR\fR
+.ad
+.sp .6
+.RS 4n
+One of the supported media types: \fB9940\fR, \fB9940_worm\fR, \fB9840\fR, \fB9840_worm\fR, \fB9840C_worm\fR,  \fB9840D_worm\fR, \fBLTO1\fR, \fBLTO2\fR, \fBLTO3\fR, \fBLTO3_worm\fR, \fBLTO4\fR, \fBLTO4_worm\fR, \fBSDLT2\fR, and \fBDISK\fR. This option is required for \fBcreate\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fR
+.ad
+.br
+.na
+\fB\fBsize=\fR\fInum\fR\fR
+.ad
+.sp .6
+.RS 4n
+The size, in megabytes, of the this volume type. This option is required for \fBcreate\fR.
+.RE
+
+.RE
+
+.sp
+.LP
+The \fBcreate\fR and \fBset\fR subcommands have the following operand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIname\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the name of the resource being added or modified. With the exception of applications, names are simple text strings, and they must be unique for their resource type. Recommended naming conventions are:
+.sp
+For a library: \fBLIB_\fItype\fR_\fIserial\fR\fR
+.sp
+Example: \fBLIB_L180_MPC02209500\fR
+.sp
+For a drive: \fBDRV_\fItype\fR_\fIserial\fR\fR
+.sp
+Example: \fBDRV_T9940B_479000010675\fR
+.sp
+For a disk archive volume: \fBVOL_\fIxxxxxx\fR\fR
+.sp
+Application names must reflect the name the application itself is going to use when communicating with MMS. Check the application documentation to find this value.
+.RE
+
+.SS "\fBdelete\fR Subcommand"
+.sp
+.LP
+The \fBdelete\fR subcommand deletes the entry for the specified resource from the MMS configuration. Use caution when removing media pools, as this might result in data loss. If the resource to be deleted is determined to be in use, the operation will be rejected unless the \fB-f\fR option is specified.
+.sp
+.LP
+Deleting a library involves deleting all associated drives, and removing volumes managed by this library from media pools. Deleting a library is prohibited if any of its associated drives is actively in use, or any of its volumes have been used by an application.
+.sp
+.LP
+Deleting a drive is prohibited if it is actively in use.
+.sp
+.LP
+Deleting a drive pool is prohibited if any of its drives is being used by an application.
+.sp
+.LP
+Deleting a media pool is prohibited if any of its volumes is being used by an application.
+.sp
+.LP
+Deleting an application will cause all volumes that have been used by that application to be recycled and made available for reuse. Ensure that all required data has been copied from these volumes before deleting the application.
+.sp
+.LP
+Deleting a \fBvoltype\fR is prohibited if any volumes are assigned that type. The \fB-f\fR option cannot be used to force this operation.
+.sp
+.LP
+The \fBdelete\fR subcommand requires the \fBsolaris.smf.value.mms\fR and \fBsolaris.mms.*\fR authorizations.
+.sp
+.LP
+This subcommand has the following syntax:
+.sp
+.in +2
+.nf
+\fBmmsadm delete\fR \fB-t\fR \fBlibrary|drive|mpool|dpool|app|voltype\fR
+     [\fB-f\fR] \fIname\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The subcommand has the following options:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR\fR
+.ad
+.sp .6
+.RS 4n
+Forces the removal of the specified resource, subject to the restrictions outlined above.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fBlibrary|drive|mpool|dpool|app|voltype\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the type of resource being deleted.
+.RE
+
+.sp
+.LP
+The subcommand has the following operand:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIname\fR\fR
+.ad
+.sp .6
+.RS 4n
+Identifies the resource as reported by the \fBlist\fR subcommand.
+.RE
+
+.SS "\fBlist\fR Subcommand"
+.sp
+.LP
+The \fBlist\fR subcommand displays all of the storage resources or messages that meet the criteria specified in the options, filter, and name parameters. This subcommand is available to any user.
+.sp
+.LP
+This subcommand has the following syntax:
+.sp
+.in +2
+.nf
+\fBmmsadm list\fR [\fB-vH\fR] \fB-t\fR \fBlibrary|drive|mpool|dpool|app|voltype\fR
+     \fB-o\fR \fIoption\fR[,\fB-o\fR \fIoption2\fR,...] [\fB-F\fR \fIfilter\fR [\fB-F\fR \fIfilter2\fR...] [\fIname\fR]
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBlist\fR subcommand has all of the options that are supported by the \fBcreate\fR and \fBset\fR subcommands. See the section on these subcommands for descriptions of those options. In addition to these options, \fBlist\fR has the options and operand listed below.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.sp .6
+.RS 4n
+Verbose.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-H\fR\fR
+.ad
+.sp .6
+.RS 4n
+Displays the information in a manner parseable by scripts. The display does not include headers and it separates fields with a tab character.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fItype\fR\fR
+.ad
+.sp .6
+.RS 4n
+One of:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBapp\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBdrive\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBlibrary\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBmpool\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBdpool\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBvoltype\fR
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR \fIoption\fR[,\fB-o\fR \fIoption2\fR,...]\fR
+.ad
+.sp .6
+.RS 4n
+Specifies which properties of a resource are displayed. For example, to list only drive names and their respective states, enter:
+.sp
+.in +2
+.nf
+% \fBmmsadm list -t drive -o name,state\fR
+.fi
+.in -2
+.sp
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-F\fR \fIfilter\fR [\fB-F\fR \fIfilter2\fR...]\fR
+.ad
+.sp .6
+.RS 4n
+Restricts the listed items to those with specified filter. Filter names are the same as option names, and results are restricted to those resources that match the option value. For example, to show all drives of type \fBLTO4\fR, enter:
+.sp
+.in +2
+.nf
+# \fBmmsadm list -t drive -F hwtype=LTO4\fR
+.fi
+.in -2
+.sp
+
+Each resource type has its own options. All options are listed below. Most options are in common with the \fBcreate\fR subcommand; see the section on that subcommand for descriptions of these common options. Those options that are supported only by the \fBlist\fR subcommand have their descriptions below.
+.sp
+Library Options
+.sp
+Options in common with \fBset\fR:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBacs\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBacsls\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBhwtype\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBlsm\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBmsg-level\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBserialno\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBtrace-file-size\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBtrace-level\fR
+.RE
+The following library options are unique to \fBlist\fR.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-time\fR\fR
+.ad
+.sp .6
+.RS 4n
+The date and time when the library was added to the MMS.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBstate\fR\fR
+.ad
+.sp .6
+.RS 4n
+The current state of the library, one of \fBready\fR, \fBoffline\fR, or \fBbroken\fR.
+.RE
+
+Drive Options
+.sp
+Options in common with \fBset\fR:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBapps\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBconnection\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBhwtype\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBlibrary\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBmsg-level\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBreserve\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBserialno\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBtrace-file-size\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBtrace-level\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBunload-time\fR
+.RE
+The following drive options are unique to \fBlist\fR.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-time\fR\fR
+.ad
+.sp .6
+.RS 4n
+The date and time when the drive was added to the MMS.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdevice-name\fR\fR
+.ad
+.sp .6
+.RS 4n
+The Unix device name of the drive, if available.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlast-mount\fR\fR
+.ad
+.sp .6
+.RS 4n
+The date and time when the drive was last mounted.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBstate\fR\fR
+.ad
+.sp .6
+.RS 4n
+The current state of the drive, one of \fBready\fR, \fBoffline\fR, or \fBbroken\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtotal-mount-time\fR\fR
+.ad
+.sp .6
+.RS 4n
+The total amount of time the drive has had tapes mounted.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvolume\fR\fR
+.ad
+.sp .6
+.RS 4n
+The volume name of the volume loaded in the drive, if any.
+.RE
+
+Media Pool Options
+.sp
+There is one option in common with \fBcreate\fR, \fBapps\fR.
+.sp
+The following media pool options are unique to \fBlist\fR.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-time\fR\fR
+.ad
+.sp .6
+.RS 4n
+The date and time the media pool was created.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBfree\fR\fR
+.ad
+.sp .6
+.RS 4n
+The total amount of free space remaining on volumes in the media pool.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsize\fR\fR
+.ad
+.sp .6
+.RS 4n
+The total capacity of the media pool.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBused\fR\fR
+.ad
+.sp .6
+.RS 4n
+The total amount of data on volumes in the media pool.
+.RE
+
+Application Options
+.sp
+All of the application options are in common with \fBcreate\fR. These options are as follows:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBoverwrite-existing\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBretain\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBvalidate-expiration\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBvalidate-filename\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBvalidate-volid\fR
+.RE
+System Options
+.sp
+Options in common with \fBset\fR:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBacsls-install-dir\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBattended\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBdisk-timeout\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBhost\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBlog-file\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBlog-level\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBport\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBnum-restarts\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBnum-sockets\fR
+.RE
+There is one system option unique to \fBlist\fR.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBactive-sessions\fR\fR
+.ad
+.sp .6
+.RS 4n
+Brief listing of active sessions.
+.RE
+
+Volume Options
+.sp
+All of the volume options are unique to \fBlist\fR.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBapps\fR\fR
+.ad
+.sp .6
+.RS 4n
+Lists the application that has stored data on this volume.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcreate-time\fR\fR
+.ad
+.sp .6
+.RS 4n
+Date and time this volume was added to the MMS.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBfree\fR\fR
+.ad
+.sp .6
+.RS 4n
+Amount of free space on the volume.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlast-mounted\fR\fR
+.ad
+.sp .6
+.RS 4n
+Date and time this volume was last mounted.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlibrary\fR\fR
+.ad
+.sp .6
+.RS 4n
+Lists the library controlling this volume.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmpool\fR\fR
+.ad
+.sp .6
+.RS 4n
+Media pool, of which this volume is a member.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnum-mounts\fR\fR
+.ad
+.sp .6
+.RS 4n
+Number of times this volume has been mounted.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsize\fR\fR
+.ad
+.sp .6
+.RS 4n
+Size of the volume.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtotal-mount-time\fR\fR
+.ad
+.sp .6
+.RS 4n
+Total amount of time this volume has been mounted.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBused\fR\fR
+.ad
+.sp .6
+.RS 4n
+Amount of data written to the volume.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvoltype\fR\fR
+.ad
+.sp .6
+.RS 4n
+Lists the volume type as was specified when the volume was added to a media pool.
+.RE
+
+Volume Type Options
+.sp
+Both of the volume type options are unique to \fBlist\fR.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmtype\fR\fR
+.ad
+.sp .6
+.RS 4n
+MMS media type associated with this \fBvoltype\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsize\fR\fR
+.ad
+.sp .6
+.RS 4n
+Default size, in megabytes, for volumes of this type.
+.RE
+
+.RE
+
+.SS "The \fBpasswd\fR Subcommand"
+.sp
+.LP
+The \fBpasswd\fR subcommand changes the password for the MMS administrator, MMS Database administrator, or for MMS applications. If the \fB-P\fR option is not specified, the user will be prompted to enter the password.
+.sp
+.LP
+The \fBpasswd\fR subcommand has the following syntax.
+.sp
+.in +2
+.nf
+\fBmmsadm passwd\fR [\fB-P\fR \fIpasswdfile\fR] \fIname\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+This subcommand requires the \fBsolaris.smf.value.mms\fR and \fBsolaris.mms.*\fR authorizations.
+.sp
+.LP
+The \fBpasswd\fR subcommand has the following option.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-P\fR \fIpasswdfile\fR\fR
+.ad
+.sp .6
+.RS 4n
+Path to a temporary file containing the password.
+.RE
+
+.sp
+.LP
+The \fBpasswd\fR subcommand has the following operand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIname\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use \fBadmin\fR to change the MMS administrative password. Use \fBdbadmin\fR to change the MMS database administrative password. Use the application name to change the password for any other application.
+.RE
+
+.SS "The \fBonline\fR and \fBoffline\fR Subcommands"
+.sp
+.LP
+The \fBonline\fR and \fBoffline\fR subcommands control whether the specified library or drive is available to clients. If a library is set to \fBoffline\fR, all drives and volumes managed by that library are unavailable. If a drive is set to \fBoffline\fR, no volume can be mounted or accessed on that drive.
+.sp
+.LP
+The syntax for the \fBonline\fR and \fBoffline\fR subcommands is as follows:
+.sp
+.in +2
+.nf
+\fBmmsadm online\fR \fB-t\fR \fBlibrary\fR | \fBdrive\fR \fIname\fR
+
+\fBmmsadm offline\fR \fB-t\fR \fBlibrary\fR | \fBdrive\fR \fIname\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBonline\fR and \fBoffline\fR subcommands require the \fBsolaris.smf.read.mms\fR and \fBsolaris.mms.device.state.*\fR authorizations.
+.sp
+.LP
+The \fBonline\fR and \fBoffline\fR subcommands have the following option.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fBlibrary\fR | \fBdrive\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the type of resource to make unavailable or to restore.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdrive\fR\fR
+.ad
+.sp .6
+.RS 4n
+Tape or disk archiving drive.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlibrary\fR\fR
+.ad
+.sp .6
+.RS 4n
+Tape library.
+.RE
+
+.RE
+
+.sp
+.LP
+The \fBonline\fR and \fBoffline\fR subcommands have the following operand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIname\fR\fR
+.ad
+.sp .6
+.RS 4n
+Name of the library or drive, as reported by the \fBlist\fR subcommand
+.RE
+
+.SS "The \fBlabel\fR Subcommand"
+.sp
+.LP
+The \fBlabel\fR subcommand labels specified volumes. The subcommand has the following syntax:
+.sp
+.in +2
+.nf
+\fBmmsadm label\fR [\fB-n\fR] \fB-l\fR \fIlibrary\fR \fB-A\fR \fIapplication\fR [\fB-P\fR \fIfile\fR]
+     \fIvolume\fR[,\fIvolume\fR,...]
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBlabel\fR subcommand requires the \fBsolaris.smf.read.mms\fR and \fBsolaris.mms.media.*\fR authorizations.
+.sp
+.LP
+The \fBlabel\fR subcommand has the following options.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR \fIlibrary\fR\fR
+.ad
+.sp .6
+.RS 4n
+Name of the library holding the volume.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR\fR
+.ad
+.sp .6
+.RS 4n
+Do not mount the volume. If this is not specified, the specified volume will be mounted and header labels will be written.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-A\fR \fIapplication\fR\fR
+.ad
+.sp .6
+.RS 4n
+Name of the application to which this volume will be assigned after labeling.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-P\fR \fIfile\fR\fR
+.ad
+.sp .6
+.RS 4n
+Path to a file containing the application password. If a file name is not provided, the user is prompted for the password.
+.RE
+
+.sp
+.LP
+The \fBlabel\fR subcommand has the following operand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIvolume\fR[,\fIvolume\fR,...]\fR
+.ad
+.sp .6
+.RS 4n
+Volume(s) to be labeled.
+.RE
+
+.SS "The \fBadd-volume\fR Subcommand"
+.sp
+.LP
+The \fBadd-volume\fR subcommand adds new volumes to the specified media pool. The subcommand has the following syntax:
+.sp
+.in +2
+.nf
+\fBmmsadm add-volume\fR \fB-l\fR \fIlibrary_name\fR \fB-o\fR \fBvoltype\fR=\fItype\fR
+     \fB-x\fR \fIvol1\fR[,\fIvol2\fR,...] \fImpool\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBadd-volume\fR subcommand requires the \fBsolaris.smf.read.mms\fR and \fBsolaris.mms.media.*\fR authorizations.
+.sp
+.LP
+The \fBadd-volume\fR subcommand has the following options.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR \fIlibrary_name\fR\fR
+.ad
+.sp .6
+.RS 4n
+Name of the library from which volumes are selected.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR \fBvoltype\fR=\fItype\fR\fR
+.ad
+.sp .6
+.RS 4n
+Volumes to be added will be assigned the \fBvoltype\fR specified here. To add volumes of different types to the same media pool, use the \fBmmsadm add-volume\fR command multiple times, specifying a different \fBvoltype\fR each time.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-x\fR \fIvol1\fR[,\fIvol2\fR,...]\fR
+.ad
+.sp .6
+.RS 4n
+A comma-separated list of unused volumes in the specified library.
+.RE
+
+.sp
+.LP
+The \fBadd-volume\fR subcommand has the following operand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fImpool\fR\fR
+.ad
+.sp .6
+.RS 4n
+Name of the media pool as reported by the \fBlist\fR subcommand.
+.RE
+
+.SS "The \fBremove-volume\fR Subcommand"
+.sp
+.LP
+The \fBremove-volume\fR subcommand removes volumes from the specified media pools. If a volume is being used by an application, the force option, \fB-f\fR, is required. If the option is not included in the command, the request is rejected. This subcommand prompts for confirmation unless \fB-f\fR is provided. The subcommand has the following syntax:
+.sp
+.in +2
+.nf
+\fBmmsadm remove-volume\fR \fB-f\fR \fB-x\fR [\fB-l\fR \fIlibrary\fR] \fIvol1\fR[,\fIvol2\fR,...] \fImpool\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBremove-volume\fR subcommand requires the \fBsolaris.smf.read.mms\fR and \fBsolaris.mms.media.*\fR authorizations.
+.sp
+.LP
+The \fBremove-volume\fR subcommand has the following options.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR\fR
+.ad
+.sp .6
+.RS 4n
+Forces the removal of the specified volume(s), even if they are in use by an application.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR \fIlibrary_name\fR\fR
+.ad
+.sp .6
+.RS 4n
+Name of the library from which volumes are removed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-x\fR \fIvol1\fR[,\fIvol2\fR,...]\fR
+.ad
+.sp .6
+.RS 4n
+A comma-separated list of volumes.
+.RE
+
+.sp
+.LP
+The \fBremove-volume\fR subcommand has the following operand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fImpool\fR\fR
+.ad
+.sp .6
+.RS 4n
+Name of the media pool as reported by the \fBlist\fR subcommand.
+.RE
+
+.SS "The \fBshowreq\fR Subcommand"
+.sp
+.LP
+The \fBshowreq\fR subcommand lists any pending operator requests, each with a request identifier. The subcommand has the following syntax:
+.sp
+.in +2
+.nf
+\fBmmsadm showreq\fR [\fB-H\fR] [\fIdrivename\fR]
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBshowreq\fR subcommand does not require any authorizations.
+.sp
+.LP
+The \fBshowreq\fR subcommand has the following option.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-H\fR\fR
+.ad
+.sp .6
+.RS 4n
+Displays the requests in a manner parseable by scripts. The display does not include headers; fields are separated with a tab character.
+.RE
+
+.sp
+.LP
+The \fBshowreq\fR subcommand has the following operand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdrivename\fR\fR
+.ad
+.sp .6
+.RS 4n
+Displays the requests only for the specified drive.
+.RE
+
+.SS "The \fBaccept\fR Subcommand"
+.sp
+.LP
+The \fBaccept\fR subcommand accepts the operator request so that the MMS can proceed with the operation. The subcommand has the following syntax.
+.sp
+.in +2
+.nf
+\fBmmsadm accept\fR [\fB-r\fR "\fIresponse text\fR"] \fIrequestid\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBaccept\fR subcommand requires the \fBsolaris.mms.request.*\fR and \fBsolaris.smf.read.mms\fR authorizations.
+.sp
+.LP
+The \fBaccept\fR subcommand has the following option.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR "\fIresponse text\fR"\fR
+.ad
+.sp .6
+.RS 4n
+Displays the text that explains the reason for the action.
+.RE
+
+.sp
+.LP
+The \fBaccept\fR subcommand has the following operand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIrequestid\fR\fR
+.ad
+.sp .6
+.RS 4n
+The identifier of the operator request, as displayed by the \fBmmsadm showreq\fR command.
+.RE
+
+.SS "The \fBreject\fR Subcommand"
+.sp
+.LP
+The \fBreject\fR subcommand rejects the operator request. The subcommand has the following syntax.
+.sp
+.in +2
+.nf
+\fBmmsadm reject\fR [\fB-r\fR "\fIresponse text\fR"] \fIrequestid\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBreject\fR subcommand requires the \fBsolaris.mms.request.*\fR and \fBsolaris.smf.read.mms\fR authorizations.
+.sp
+.LP
+The \fBreject\fR subcommand has the following option.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR "\fIresponse text\fR"\fR
+.ad
+.sp .6
+.RS 4n
+Displays the text that explains the reason for the action.
+.RE
+
+.sp
+.LP
+The \fBreject\fR subcommand has the following operand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIrequestid\fR\fR
+.ad
+.sp .6
+.RS 4n
+The identifier of the operator request, as displayed by the \fBmmsadm showreq\fR command.
+.RE
+
+.SS "The \fBdbbackup\fR Subcommand"
+.sp
+.LP
+The \fBdbbackup\fR subcommand creates a backup file containing the contents of the MMS database. This file can be used to restore the MMS database in the case of accidental removal, corruption, or other destructive event. It is strongly suggested this backup file be created on a regular basis, and backed up as part of the system backups. The subcommand has the following syntax.
+.sp
+.in +2
+.nf
+\fBmmsadm dbbackup\fR \fIdirectory\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBdbbackup\fR subcommand requires the \fBsolaris.smf.manage.mms\fR, \fBsolaris.smf.value.mms\fR, and \fBsolaris.mms.*\fR authorizations.
+.sp
+.LP
+The \fBdbbackup\fR subcommand has the following operand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdirectory\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the location where the database backup files will be stored.
+.RE
+
+.SS "The \fBdbrestore\fR Subcommand"
+.sp
+.LP
+The \fBdbrestore\fR subcommand restores the MMS database from the specified file. The database is restored to the state it was in at the time the file was created by the \fBmmsadm dbbackup\fR command. The subcommand has the following syntax
+.sp
+.in +2
+.nf
+\fBmmsadm dbrestore\fR \fIfilename\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBdbrestore\fR subcommand requires the \fBsolaris.smf.manage.mms\fR and \fBsolaris.smf.value.mms\fR authorizations.
+.sp
+.LP
+The \fBdbrestore\fR subcommand has the following operand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIfilename\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the complete pathname to the file containing the backup of the MMS database.
+.RE
+
+.SS "The \fBmount\fR Subcommand"
+.sp
+.LP
+The \fBmount\fR subcommand mounts a specified volume. The subcommand has the following syntax.
+.sp
+.in +2
+.nf
+\fBmmsadm mount\fR [\fB-n\fR] [\fB-N\fR] [\fB-d\fR \fIdrive\fR] [\fB-D\fR \fIdensity\fR] 
+     \fB-A\fR \fIapplication\fR \fB-l\fR \fIlibrary\fR [\fB-P\fR \fIfile\fR] [\fB-u\fR \fIusername\fR]
+     [\fB-b\fR \fIblocksize\fR] [\fB-R\fR] [\fB-M\fR \fImode\fR[,\fImode\fR...] \fIvolume\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBmount\fR subcommand requires the \fBsolaris.mms.io.\fR[\fBread\fR|\fBwrite\fR|\fB*\fR] authorization.
+.sp
+.LP
+The \fBmount\fR subcommand has the following options.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-A\fR \fIapplication\fR\fR
+.ad
+.sp .6
+.RS 4n
+Application name to be used when authenticating with the MM server. The name is the identifer used by the application itself, according to its API documentation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR \fIblocksize\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the largest block that the application can write to the tape drive for both variable and fixed blocks. Default is 262144. The maximum size depends on the drive type:
+.sp
+.ne 2
+.mk
+.na
+\fB9940 and 9840\fR
+.ad
+.sp .6
+.RS 4n
+1 - 262144. If you specify \fBfixed\fR for the \fB-M\fR option (described below), must be an even number.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBLTO (all models)\fR
+.ad
+.sp .6
+.RS 4n
+1 - 16777215. If you specify \fBfixed\fR for the \fB-M\fR option (described below).
+.RE
+
+The choice of variable or fixed block is specified in the argument to the \fB-M\fR (mode) option. If you specify \fBfixed\fR, then \fB-b\fR is the block size because you can only read and write blocks in the block size you specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR \fIdrive\fR\fR
+.ad
+.sp .6
+.RS 4n
+Drive on which to mount a volume. If this option is not specified, the MM server selects a drive based on availability and capability.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-D\fR \fIdensity\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the output density. Can be one of:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBhigh\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBmedium\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBlow\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBcompressed\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBden_9840\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBden_T9840C\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBden_T9940A\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBden_T9940B\fR
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR \fIlibrary_name\fR\fR
+.ad
+.sp .6
+.RS 4n
+Library containing the volume to be mounted.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-M\fR \fImode\fR[,\fImode\fR...]\fR
+.ad
+.sp .6
+.RS 4n
+The \fImode\fR argument can be one or more of \fBcreat\fR, \fBold\fR, \fBst_nobsd\fR, \fBst_tm\fR, \fBraw\fR, \fBmms\fR, \fBcompression\fR, \fBnocompression\fR, \fBvariable\fR, \fBblock\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies \fBnorewind\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-N\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies \fBnowait\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-P\fR \fIfile\fR\fR
+.ad
+.sp .6
+.RS 4n
+Path to a file containing the application password. If a file name is not provided, the user is prompted for the password.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-R\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies a read-only mount. The default is read/write.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-u\fR \fIusername\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the user who will own the pseudodevice created by \fBmount\fR.
+.RE
+
+.sp
+.LP
+The \fBmount\fR subcommand has the following operand.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIvolume\fR\fR
+.ad
+.sp .6
+.RS 4n
+Volume to be mounted.
+.RE
+
+.SS "The \fBunmount\fR Subcommand"
+.sp
+.LP
+The \fBunmount\fR subcommand unmounts the specified volume or MMS pseudodevice. The subcommand has the following syntax.
+.sp
+.in +2
+.nf
+\fBmmsadm unmount\fR [\fB-f\fR] [\fB-l\fR \fIlibrary_name\fR] [\fB-A\fR \fIapplication\fR]
+     [\fB-P\fR \fIfile\fR] \fIvolume\fR|\fIpseudodevice\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The \fBunmount\fR subcommand requires the \fBsolaris.mms.io.\fR[\fBread\fR|\fBwrite\fR|\fB*\fR] authorization.
+.sp
+.LP
+The \fBunmount\fR subcommand has the following options.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-A\fR \fIapplication\fR\fR
+.ad
+.sp .6
+.RS 4n
+Application name to be used when authenticating with the MM server.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR\fR
+.ad
+.sp .6
+.RS 4n
+Forces an unmount operation of this volume even if it is in use by another user.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR \fIlibrary_name\fR\fR
+.ad
+.sp .6
+.RS 4n
+Library containing the mounted volume. Required only if using the volume name operand.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-P\fR \fIfile\fR\fR
+.ad
+.sp .6
+.RS 4n
+Path to a temporary file containing the application password.
+.RE
+
+.sp
+.LP
+The \fBunmount\fR subcommand has one of the following operands.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIpseudodevice\fR\fR
+.ad
+.sp .6
+.RS 4n
+Device path as returned from the \fBmmsadm mount\fR command. If this form of \fBunmount\fR is used, the library need not be specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIvolume\fR\fR
+.ad
+.sp .6
+.RS 4n
+Volume to be unmounted.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRDisplaying Available Libraries
+.sp
+.LP
+To display all libraries available to be managed by the MMS, enter:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm discover -t library -S my-acsls-server\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRCreating a Library
+.sp
+.LP
+To create a library in the MMS, enter:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t library -o acsls=my-acsls-server -o acs=0 \e
+-o lsm=1 -o hwtype=L180 -o serialno=7493476 LIB_L180_7493476\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 3 \fRCreating a Drive
+.sp
+.LP
+To create a drive in the MMS, enter:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t drive -o library=LIB_L180_7493476 \e
+-o hwtype=LTO2 -o serialno=6453805873 \e
+-o connection=myhost DRV_LTO2_6453805873\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 4 \fRMaking Library Available
+.sp
+.LP
+To make a library available for use, enter:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm online LIB_L180_7493476\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 5 \fRRegistering an Application
+.sp
+.LP
+To register an application, enter:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t app -P /var/tmp/app_passwd MyBackupApp\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 6 \fRAllowing an Application to Use a Drive
+.sp
+.LP
+To allow the \fBMyBackupApp\fR application to use a drive, enter:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm set -t drive -o apps=MyBackupApp DRV_LTO2_6453805873\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 7 \fRListing Volumes in a Library
+.sp
+.LP
+To show volumes in library \fBL700_99987004\fR of type \fBLT03\fR, enter:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm list -t vol -o library=L700_99987004 -F mtype=LTO3\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 8 \fRListing Unconfigured Volumes
+.sp
+.LP
+To show volumes not yet configured for the MMS, enter:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm discover -t vol -S my_acsls_server\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 9 \fRConfigure an MMS for Three Applications
+.sp
+.LP
+The following sequence of commands illustrates the process of configuring a Media Management System for three applications, engineering, finance, and backup.
+
+.sp
+.LP
+Initialize the MM server and set the administrator password to \fBmmsadm2008\fR in the password file, \fBmmsadm_passwd\fR:
+
+.sp
+.in +2
+.nf
+# \fBmmsinit -P ~/mmsadm_passwd\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create an application for the engineering application:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t app -P ~/eng_passwd eng\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create an application for the finance application:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t app -P ~/finance_passwd finance\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create an application for the backup application:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t app -P ~/backup_passwd backup\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create an L700 library named \fBlibrary1\fR:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t library -o acsls=mms-280-1 -o hwtype=L700 \e
+-o acs=0 -o lsm=0 -o serialno=MPC02201638 library1\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create a drive pool named \fBorg_dpool\fR, to be shared between the engineering and finance applications:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t dpool -o apps=eng,finance org_dpool\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create a drive pool named \fBshared_dpool\fR, to be shared by the engineering, finance, and backup applications:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t dpool -o apps=eng,finance,backup shared_dpool\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create an exclusive drive pool for the backup application named \fBbk_dpool\fR:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t dpool -o apps=backup bk_dpool\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Add a 9940 drive named \fBdrive1\fR shared by the engineering and finance applications:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t drive -o hwtype=9940 -o serialno=479000002009 \e
+-o library=library1 -o dpool=org_dpool drive1\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Add a 9940 drive named \fBdrive2\fR shared by the engineering, finance, and backup applications:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t drive -o hwtype=9940 -o serialno=479000001954 \e
+-o library=library1 -o dpool=shared_dpool drive2\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Add an exclusive 9940 drive named \fBdrive3\fR for the backup application:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t drive -o hwtype=9940 -o serialno=479000001944 \e
+-o library=library1 -o dpool=bk_dpool drive3\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create media pool for the engineering and finance applications named \fBorg_mpool\fR:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t mpool -o apps=eng,finance org_mpool\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create an exclusive media pool for the backup application named \fBbk_mpool\fR:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t mpool -o apps=backup bk_mpool\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Add three volumes to the engineering and finance media pool:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm add-volume -l library1 -o voltype=9940 \e
+-x 000220,000221,000222 org_mpool\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Add two volumes to the backup media pool:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm add-volume -l library1 -o voltype=9940 \e
+-x 000230,000231 bk_mpool\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Write a volume label on the volume. The volume becomes owned by the engineering application. The finance or backup applications are, as a result, not able to use the volume:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm label -P ~/eng_passwd -l library1 -A eng 000220\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Verify that the engineering application owns the volume:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm label -P ~/finance_passwd -l library1 -A finance 000220\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Write a volume label for the finance application:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm label -P ~/finance_passwd -l library1 -A finance 000221\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Write a volume label for the backup application:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm label -P ~/backup_passwd -l library1 -A backup 000230\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Mount media for the engineering, finance and backup applications. The handle returned by the \fBmount\fR command will be used as a normal \fB/dev/rmt\fR entry:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm mount -P ~/eng_passwd -l library1 -A eng 000220\fR
+# \fBmmsadm mount -P ~/finance_passwd -l library1 -A finance 000221\fR
+# \fBmmsadm mount -P ~/backup_passwd -l library1 -A backup 000230\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Unmount the media and unload the drives:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm unmount -P ~/eng_passwd -U -l library1 -A eng 000220\fR
+# \fBmmsadm unmount -P ~/finance_passwd -U -l library1 -A finance 000221\fR
+# \fBmmsadm unmount -P ~/backup_passwd -U -l library1 -A backup 000230\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 10 \fRConfigure an MMS for Disk Archiving
+.sp
+.LP
+The following sequence of commands configures a Media Management System for disk archiving.
+
+.sp
+.LP
+Create a test application:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t app -P ~/test_passwd test\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create a disk archiving library named \fBdklib1\fR:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t library -o hwtype=DISK -o dkpath=/dskpool dklib1\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create a disk archiving media pool named \fBdkcarts\fR:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t mpool -o apps=test dkcarts\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create three 100 GB volumes for disk archiving and place the volumes in the media pool:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm add-volume -l dklib1 -o voltype=DISK -x 000000,000001,000002 \e
+-o size=100g dkcarts\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create a disk archiving drive pool named \fBdkdrives\fR:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t dpool -o apps=test dkdrives\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create a disk archiving drive and place it in the drive pool:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm create -t drive -o hwtype=DISK -o library=dklib1 \e
+-o dpool=dkdrives dkdrive1\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create volume labels. The volume will be labeled when it is mounted:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm label -P ~/test_passwd -n -l dklib1 -A test 000000\fR
+# \fBmmsadm label -P ~/test_passwd -n -l dklib1 -A test 000001\fR
+# \fBmmsadm label -P ~/test_passwd -n -l dklib1 -A test 000002\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Mount the volume \fB000000\fR. Use the returned tape handle in a subsequent \fBtar\fR command:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm mount -P ~/test_passwd -n -l dklib1 -A test 000000\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Show the file sizes of the disk archiving volume before creating \fBtar\fR archive:
+
+.sp
+.in +2
+.nf
+% \fBls -la /dskpool/dklib1/000000\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Create a disk archiving \fBtar\fR archive:
+
+.sp
+.in +2
+.nf
+# \fBtar -cvf\fR \fI<mms_handle>\fR \fB/var > /tmp/out$$ 2>&1\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Show the file sizes of the disk archiving volume after creating the \fBtar\fR archive:
+
+.sp
+.in +2
+.nf
+% \fBls -la /dskpool/dklib1/000000\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Unmount and unload the volume from the drive:
+
+.sp
+.in +2
+.nf
+# \fBmmsadm unmount -P ~/test_passwd -U -l dklib1 -A test 000000\fR
+.fi
+.in -2
+.sp
+
+.SH EXIT STATUS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.sp .6
+.RS 4n
+Command succeeded.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB>0\fR\fR
+.ad
+.sp .6
+.RS 4n
+An error occurred.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWmmsu
+_
+Interface StabilityCommitted
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmmsclient\fR(1M), \fBmmsexplorer\fR(1M), \fBmmsinit\fR(1M), \fBmount\fR(1M), \fBattributes\fR(5), \fBmms\fR(5), \fBrbac\fR(5)

@@ -1,0 +1,154 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_VideoColorXRGBint_to_ARGBint 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_VideoColorXRGBint_to_ARGBint \- convert XRGB interleaved to ARGB interleaved
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBvoid\fR \fBmlib_VideoColorXRGBint_to_ARGBint\fR(\fBmlib_u32 *\fR\fIARGB\fR,
+     \fBconst mlib_u32 *\fR\fIXRGB\fR, \fBconst mlib_u8 *\fR\fIA_array\fR,
+     \fBmlib_u8\fR \fIA_const\fR, \fBmlib_s32\fR \fIw\fR, \fBmlib_s32\fR \fIh\fR,
+     \fBmlib_s32\fR \fIdlb\fR,\fBmlib_s32\fR \fIslb\fR, \fBmlib_s32\fR \fIalb\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Similar to mlib_VideoColorRGBXint_to_ARGBint except that the input component ordering is: R (bits 23-16), G (bits 15-8), and B (bits 7-0).
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIARGB\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to output buffer (word-aligned).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIXRGB\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to input buffer (word-aligned).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIA_array\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to array of alpha values (byte-aligned).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIA_const\fR\fR
+.ad
+.RS 11n
+.rt  
+Constant alpha value (range = 0..255).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIw\fR\fR
+.ad
+.RS 11n
+.rt  
+Image width in pixels.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIh\fR\fR
+.ad
+.RS 11n
+.rt  
+Image height in lines.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdlb\fR\fR
+.ad
+.RS 11n
+.rt  
+Linebytes for output buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIslb\fR\fR
+.ad
+.RS 11n
+.rt  
+Linebytes for input buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIalb\fR\fR
+.ad
+.RS 11n
+.rt  
+Linebytes for alphabuffer.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+None.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_VideoColorRGBseq_to_ABGRint\fR(3MLIB), \fBmlib_VideoColorRGBint_to_ABGRint\fR(3MLIB), \fBmlib_VideoColorBGRint_to_ABGRint\fR(3MLIB), \fBmlib_VideoColorRGBXint_to_ABGRint\fR(3MLIB), \fBmlib_VideoColorRGBXint_to_ARGBint\fR(3MLIB), \fBmlib_VideoColorXRGBint_to_ABGRint\fR(3MLIB), \fBattributes\fR(5)

@@ -1,0 +1,152 @@
+'\" te
+.\"  Copyright 1989 AT&T  Copyright (c) 1995, Sun Microsystems, Inc.  All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH soldelapp 1M "15 Sep 1995" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+soldelapp \- remove an application from the Solstice application registry
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/snadm/bin/soldelapp\fR [\fB-r\fR \fIregistry\fR] \fB-n\fR \fIname\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBsoldelapp\fR removes an application from the Solstice application registry. After removal, the application is no longer displayed in the Solstice Launcher main window (see  \fBsolstice\fR(1M)).
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fR\fB-r\fR\fB \fR\fIregistry\fR\fR
+.ad
+.RS 15n
+.rt  
+Define the full path name of the Solstice registry file.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fR\fB-n\fR\fB \fR\fIname\fR\fR
+.ad
+.RS 15n
+.rt  
+Define the name of the tool to be removed.
+.RE
+
+.sp
+.LP
+When executed without options,  \fBsoldelapp\fR uses  \fB/opt/SUNWadm/etc/.solstice_registry\fR (the default registry path).
+.SH RETURN VALUES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 5n
+.rt  
+on success
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 5n
+.rt  
+on failure
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB2\fR\fR
+.ad
+.RS 5n
+.rt  
+if the registry is locked
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB3\fR\fR
+.ad
+.RS 5n
+.rt  
+if  \fIname\fR is not found in the registry
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB4\fR\fR
+.ad
+.RS 5n
+.rt  
+if the named registry or default registry is not found
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRA sample display of the \fBsoldelapp\fR command.
+.sp
+.LP
+The following removes an application called Disk Manager from the Solstice application registry and the Solstice Launcher main window.
+
+.sp
+.in +2
+.nf
+\fB# soldelapp -r /opt/SUNWadm/etc/.solstice_registry -n "Disk Manager" \fR
+.fi
+.in -2
+.sp
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/opt/SUNWadm/etc/.solstice_registry\fR\fR
+.ad
+.sp .6
+.RS 4n
+The default registry file.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWsadml
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBsoladdapp\fR(1M), \fBsolstice\fR(1M), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+Globally registered applications are used by local and remote users sharing the software in a particular \fB/opt\fR directory. They can be removed only using  \fBsoldelapp\fR.

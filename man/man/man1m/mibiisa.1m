@@ -1,0 +1,1537 @@
+'\" te
+.\" Copyright (C) 2003, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License. You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.
+.\"  See the License for the specific language governing permissions and limitations under the License. When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with
+.\" the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mibiisa 1M "11 Dec 2003" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+mibiisa \- Sun SNMP Agent
+.SH SYNOPSIS
+.LP
+.nf
+\fBmibiisa\fR [\fB-ar\fR] [\fB-c\fR \fIconfig-dir\fR] [\fB-d\fR \fIdebug-level\fR] [\fB-p\fR \fIport\fR] 
+     [\fB-t\fR \fIcache-timer\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmibiisa\fR utility is an RFC 1157-compliant SNMP agent. It supports MIB-II as defined in \fIRFC 1213\fR, with Sun extensions under Sun's enterprise number. The MIB (Management Information Base) is both readable and writable. The \fBmibiisa\fR utility supports all SNMP protocol operations including GET-REQUEST, GETNEXT-REQUEST, SET-REQUEST, GET-REPLY, and TRAP.
+.sp
+.LP
+The SMA (Systems Management Agent) is the default SNMP agent in Solaris. MIB-II subagent \fBmibiisa\fR does not run by default. To enable \fBmibiisa\fR, rename the configuration file from \fB/etc/snmp/conf/mibiisa.rsrc-\fR to \fB/etc/snmp/conf/mibiisa.rsrc\fR. SMA has the capability to handle any MIB-II requests.
+.sp
+.LP
+The \fBmibiisa\fR utility supports the coldStart, linkUp, linkDown, and authentication traps. The authentication trap may be disabled by a command-line switch, which itself may be overridden by a management station writing to a MIB variable in the standard SNMP MIB group.
+.sp
+.LP
+The \fBmibiisa\fR utility supports four distinct views of the MIB. The view used for any request is determined by the community string contained in that request.
+.sp
+.LP
+To enhance security, \fBmibiisa\fR supports an option to block all writes to the MIB. You can also limit the set of management stations from which the agent will accept requests in the configuration file used when starting the \fBmibiisa\fR. See the  section for more information.
+.sp
+.LP
+Unless overridden, \fBmibiisa\fR uses UDP port 161, the standard SNMP port. The \fBmibiisa\fR utility issues traps through the same port on which it receives SNMP requests.
+.sp
+.LP
+The \fBmibiisa\fR utility must run with super-user privileges and is typically started at system startup via \fB/etc/rc3.d\fR. \fBmibiisa\fR may not be started using \fBinetd\fR(1M). When started, \fBmibiisa\fR detaches itself from the keyboard, disables all signals except \fBSIGKILL\fR, \fBSIGILL\fR, \fBSIGUSR1\fR, and \fBSIGUSR2\fR, and places itself in the background.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported by \fBmibiisa\fR:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fR
+.ad
+.RS 18n
+.rt  
+Disable the generation of authentication traps. However, an SNMP manager may write a value into \fBsnmpEnableAuthenTraps\fR to enable or disable authentication traps.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR \fIconfig-dir\fR\fR
+.ad
+.RS 18n
+.rt  
+Specify a directory where it expects \fBsnmpd.conf\fR file, on startup. The default directory is \fB/etc/snmp/conf\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR \fIdebug-level\fR\fR
+.ad
+.RS 18n
+.rt  
+Debug. A value of 0 disables all debug and is the default. Levels 1 through 3 represent increasing levels of debug output. When \fBmibiisa\fR receives the signal \fBSIGUSR1\fR, it resets the debug-level to 0. When \fBmibiisa\fR receives the signal \fBSIGUSR2\fR, it increments the debug-level by one.
+.sp
+Debug output is sent to the standard output in effect at the time \fBmibiisa\fR is started. No matter what debug level is in effect, certain significant events are logged in the system log.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR \fIport\fR\fR
+.ad
+.RS 18n
+.rt  
+Define an alternative UDP port on which \fBmibiisa\fR listens for incoming requests. The default is UDP port 161.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR\fR
+.ad
+.RS 18n
+.rt  
+Place the MIB into read-only mode.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fIcache-timer\fR\fR
+.ad
+.RS 18n
+.rt  
+By default, information fetched from the kernel is considered to be valid for 45 seconds from the time it is retrieved. This cache lifetime may be altered with this parameter. You cannot set \fIcache-timer\fR to any value less than 1.
+.RE
+
+.SH CONFIGURATION FILE
+.sp
+.LP
+The \fBsnmpd.conf\fR file is used for configuration information. Each entry in the file consists of a keyword followed by a parameter string. The keyword must begin in the first position. Parameters are separated from the keyword and from one another by white space. Case in keywords is ignored. Each entry must be contained on a single line. All text following (and including) a pound sign (#) is ignored. Keywords currently supported are:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsysdescr\fR\fR
+.ad
+.sp .6
+.RS 4n
+The value to be used to answer queries for sysDescr.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsyscontact\fR\fR
+.ad
+.sp .6
+.RS 4n
+The value to be used to answer queries for sysContact.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsyslocation\fR\fR
+.ad
+.sp .6
+.RS 4n
+The value to be used to answer queries for sysLocation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtrap\fR\fR
+.ad
+.sp .6
+.RS 4n
+The parameter names one or more hosts to receive traps. Only five hosts may be listed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsystem-group-read-community\fR\fR
+.ad
+.sp .6
+.RS 4n
+The community name to get read access to the system group and Sun's extended system group.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsystem-group-write-community\fR\fR
+.ad
+.sp .6
+.RS 4n
+The community name to get write access to the system group and Sun's extended system group.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBread-community\fR\fR
+.ad
+.sp .6
+.RS 4n
+The community name to get read access to the entire MIB.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBwrite-community\fR\fR
+.ad
+.sp .6
+.RS 4n
+The community name to get write access to the entire MIB (implies read access).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtrap-community\fR\fR
+.ad
+.sp .6
+.RS 4n
+The community name to be used in traps.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBkernel-file\fR\fR
+.ad
+.sp .6
+.RS 4n
+The name of the file to use for kernel symbols.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmanagers\fR\fR
+.ad
+.sp .6
+.RS 4n
+The names of hosts that may send SNMP queries. Only five hosts may be listed on any one line. This keyword may be repeated for a total of 32 hosts.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnewdevice\fR\fR
+.ad
+.sp .6
+.RS 4n
+The additional devices which are not built in SNMPD. The format is as follows: \fInewdevice\fR \fBtype\fR \fIspeed\fR \fIname\fR where \fInewdevice\fR is the keyword, \fBtype\fR is an integer which has to match your schema file, \fIspeed\fR is the new device's speed, and \fIname\fR is this new device's name.
+.RE
+
+.sp
+.LP
+An example \fBsnmpd.conf\fR file is shown below:
+.sp
+.in +2
+.nf
+sysdescr        Sun SNMP Agent, Sun Fire 4800, Company
+                   Property Number 123456
+syscontact      Cliff Claven
+sysLocation     Room 1515, building 1
+#
+system-group-read-community     public
+system-group-write-community    private
+#
+read-community  all_public
+write-community all_private
+#
+trap            localhost
+trap-community  SNMP-trap
+#
+#kernel-file    /vmunix
+#
+managers        lvs golden
+managers        swap
+.fi
+.in -2
+.sp
+
+.SH INSTALLATION
+.sp
+.LP
+The \fBmibiisa\fR utility and its configuration file, \fBsnmpd.conf\fR, may be placed in any directory. However for Solaris 2.4 and subseqent releases, use \fB/usr/lib/snmp\fR for \fBmibiisa\fR itself and \fB/etc/snmp/conf\fR for the configuration file. You can modify the configuration file as appropriate. If you make any changes to \fBsnmpd.conf\fR file keyword values, you must kill and restart \fBmibiisa\fR for the changes to take effect.
+.sp
+.LP
+Your \fB/etc/services\fR file (or NIS equivalent) should contain the following entries:
+.sp
+
+.sp
+.TS
+tab();
+lw(0i) lw(0i) lw(0i) lw(5.5i) 
+lw(0i) lw(0i) lw(0i) lw(5.5i) 
+.
+\fBsnmp\fR\fB161/udp\fR\fB# Simple Network Mgmt Protocol\fR
+\fBsnmp-trap\fR\fB162/udp\fR\fBsnmptrap\fR\fB# SNMP trap (event) messages\fR
+.TE
+
+.sp
+.LP
+The following is an example for Solaris 2.\fIx\fR and releases compatible with Solaris 2.\fIx\fR, such as Solaris 9:
+.sp
+.in +2
+.nf
+#
+# Start the SNMP agent
+#
+if [ -f /etc/snmp/conf/snmpd.conf -a -x
+   /usr/lib/snmp/mibiisa ];
+then
+/opt/SUNWconn/snm/agents/snmpd
+echo 'Starting SNMP-agent.'
+.fi
+.in -2
+.sp
+
+.SH SECURITY
+.sp
+.LP
+SNMP, as presently defined, offers relatively little security. The \fBmibiisa\fR utility accepts requests from other machines, which can have the effect of disabling the network capabilities of your computer. To limit the risk, the configuration file lets you specify a list of up to 32 manager stations from which \fBmibiisa\fR will accept requests. If you do not specify any such manager stations, \fBmibiisa\fR accepts requests from anywhere.
+.sp
+.LP
+The \fBmibiisa\fR utility also allows you to mark the MIB as "read-only" by using the \fB-r\fR option.
+.sp
+.LP
+\fBmibiisa\fR supports four different community strings. These strings, however, are visible in the configuration file and within the SNMP packets as they flow on the network.
+.sp
+.LP
+The configuration file should be owned by, and readable only by super-user. In other words the mode should be:
+.sp
+.in +2
+.nf
+\(mirw\(mi\(mi\(mi\(mi\(mi\(mi\(mi  1 root         2090 Oct 17 15:04 /etc/snmp/conf/snmpd.conf
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Managers can be restricted based on the community strings. This can be configured by creating an optional secondary configuration file \fB/etc/snmp/conf/mibiisa.acl\fR. To enable such a restriction, add the security line in the \fB/etc/snmp/conf/mibiisa.rsrc\fR file.
+.sp
+.LP
+An example \fBmibiisa.acl\fR file is as follows:
+.sp
+.in +2
+.nf
+acl = {
+        {
+                communities = public
+                access = read-only
+                managers = xyz
+        }
+        {
+                communities = private
+                access = read-write
+                managers = abc,pqrs
+        }
+}
+.fi
+.in -2
+
+.sp
+.LP
+An example \fBmibiisa.rsrc\fR file is as follows:
+.sp
+.in +2
+.nf
+resource =
+{
+        {
+                registration_file = "/etc/snmp/conf/mibiisa.reg"
+                security = "/etc/snmp/conf/mibiisa.acl"
+                policy = "spawn"
+                type = "legacy"
+                command = "/usr/lib/snmp/mibiisa -r -p $PORT"
+        }
+}
+.fi
+.in -2
+
+.SH MIB
+.sp
+.LP
+This section discusses some of the differences between the \fBmibiisa\fR MIB and the standard MIB-II (as defined in RFC 1213).
+.sp
+.LP
+The following variables are read-only in the \fBmibiisa\fR MIB:
+.sp
+.in +2
+.nf
+sysName
+atIfIndex
+ipDefaultTTL
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+These variables are read-write in the standard MIB-II.
+.sp
+.LP
+The \fBmibiisa\fR MIB Address Translation tables support limited write access: only atPhysAddress may be written, either to change the physical address of an existing entry or to delete an entire ARP table entry.
+.sp
+.LP
+The \fBmibiisa\fR MIB IP Net to Media table supports limited write access: only ipNetToMediaPhysAddress and ipNetToMediaType may be written, either to change the physical address of an existing entry or to delete an entire ARP table entry.
+.sp
+.LP
+The following variables are read-write in the \fBmibiisa\fR MIB; however, these variables have fixed values. Any new values "set" to them are accepted, but have no effect:
+.sp
+.in +2
+.nf
+ipRoutIfIndex
+ipRouteMetric1
+ipRouteMetric2
+ipRouteMetric3
+ipRouteMetric4
+ipRouteType
+ipRouteAge
+ipRouteMask
+ipRouteMetric5
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The following \fBmibiisa\fR MIB variable reflects the actual state of the related table entry. "Sets" are accepted but have no effect:
+.sp
+.in +2
+.nf
+tcpConnState
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The following \fBmibiisa\fR MIB variables are readable, but return a fixed value:
+.sp
+
+.sp
+.TS
+tab();
+lw(2.08i) lw(3.42i) 
+lw(2.08i) lw(3.42i) 
+.
+\fBicmpInDestUnreachs\fRReturns 1
+\fBicmpInTimeExcds\fRReturns 1
+\fBicmpInParmProbs\fRReturns 1
+\fBicmpInSrcQuenchs\fRReturns 1
+\fBicmpInRedirects\fRReturns 1
+\fBicmpInEchos\fRReturns 1
+\fBicmpInEchoReps\fRReturns 1
+\fBicmpInTimestamps\fRReturns 1
+\fBicmpInTimestampReps\fRReturns 1
+\fBicmpInAddrMasks\fRReturns 1
+\fBicmpInAddrMaskReps\fRReturns 1
+\fBicmpOutDestUnreachs\fRReturns 1
+\fBicmpOutTimeExcds\fRReturns 1
+\fBicmpOutParmProbs\fRReturns 1
+\fBicmpOutSrcQuenchs\fRReturns 1
+\fBicmpOutRedirects\fRReturns 1
+\fBicmpOutEchos\fRReturns 1
+\fBicmpOutEchoReps\fRReturns 1
+\fBicmpOutTimestamps\fRReturns 1
+\fBicmpOutTimestampReps\fRReturns 1
+\fBicmpOutAddrMasks\fRReturns 1
+\fBicmpOutAddrMaskReps\fRReturns 1
+\fBifInUnknownProtos\fRReturns 0
+\fBipAdEntBcastAddr\fRReturns 1
+\fBipAdEntReasmMaxSiz\fRReturns 65535
+\fBipRouteMetric1\fRReturns \(mi1
+\fBipRouteMetric2\fRReturns \(mi1
+\fBipRouteMetric3\fRReturns \(mi1
+\fBipRouteMetric4\fRReturns \(mi1
+\fBipRouteAge\fRReturns 0
+\fBipRouteMetric5\fRReturns \(mi1
+\fBipNetToMediaType\fRReturns (3) dynamic
+\fBipRoutingDiscards\fRReturns 0
+.TE
+
+.sp
+.LP
+The following variables return a fixed value of \fB0\fR for drivers not conforming to the \fBGLD\fR framework (see \fBgld\fR(7D)), including the old \fBLAN\fR drivers on SPARC machines:
+.sp
+
+.sp
+.TS
+tab();
+lw(2.08i) lw(3.42i) 
+lw(2.08i) lw(3.42i) 
+.
+\fBifInOctets\fRReturns 0
+\fBifInNUcastPkts\fRReturns 0
+\fBifInDiscards\fRReturns 0
+\fBifOutOctets\fRReturns 0
+\fBifOutNUcastPkts\fRReturns 0
+\fBifOutDiscards\fRReturns 0
+.TE
+
+.SH SCHEMA ATTRIBUTES
+.sp
+.LP
+The following describes the attributes in the group and table definitions in the \fB/var/snmp/mib/sun.mib\fR file.
+.SS "system"
+.sp
+.LP
+The \fBsystem\fR group reports statistics about a particular system (for example, a workstation or a printer).
+.sp
+.LP
+\fBsysDescr\fR \(mi A textual description of the entity. This value should include the full name and version identification of the system's hardware type, software operating-system, and networking software. This value must only contain printable ASCII characters. (string[255])
+.sp
+.LP
+\fBsysObjectID\fR \(mi The vendor's authoritative identification of the network management subsystem contained in the entity. This value is allocated within the SMI enterprises subtree (1.3.6.1.4.1) and provides an easy and unambiguous means for determining what type of equipment is being managed. For example, if vendor "Flintstones, Inc." was assigned the subtree 1.3.6.1.4.1.4242, it could assign the identifier 1.3.6.1.4.1.4242.1.1 to its "Fred Router." (objectid)
+.sp
+.LP
+\fBsysUpTime\fR \(mi Time (in hundredths of a second) since the network management portion of the system was last reinitialized. (timeticks)
+.sp
+.LP
+\fBsysContact\fR \(mi The textual identification of the contact person for this managed node, together with information on how to contact this person. (string[255])
+.sp
+.LP
+\fBsysName\fR \(mi An administratively-assigned name for this managed node. By convention, this is the node's fully-qualified domain name. (string[255])
+.sp
+.LP
+\fBsysLocation\fR \(mi The physical location of this node (for example, "telephone closet, 3rd floor" (string[255]))
+.sp
+.LP
+\fBsysServices\fR \(mi A value indicating the set of services that this entity primarily offers. (int) The value is a sum. This sum initially takes the value zero. Then, for each layer L in the range 1 through 7 for which this node performs transactions, 2 raised to (L - 1) is added to the sum. For example, a node that performs primarily routing functions would have a value of 4 (2**(3-1)). In contrast, a node that is a host offering application services would have a value of 72 (2**(4-1) + 2**(7-1)). Note that in the context of the Internet suite of protocols, values should be calculated accordingly:
+.sp
+
+.sp
+.TS
+tab();
+cw(2.75i) cw(2.75i) 
+lw(2.75i) lw(2.75i) 
+.
+LayerFunctionality
+1physical (such as repeaters)
+2datalink/subnetwork (such as bridges)
+3internet (such as IP gateways)
+4end-to-end (such as IP hosts)
+7applications (such as mail relays)
+.TE
+
+.sp
+.LP
+For systems including OSI protocols, Layers 5 and 6 may also be counted.
+.SS "interfaces"
+.sp
+.LP
+The \fBinterfaces\fR group reports the number of interfaces handled by the agent.
+.sp
+.LP
+\fBifNumber\fR \(mi The number of network interfaces, regardless of their current state, present on this system. (int)
+.SS "ifTable"
+.sp
+.LP
+The \fBifTable\fR is a table of interface entries. The number of entries is given by the value of ifNumber.
+.sp
+.LP
+\fBifIndex\fR \(mi A unique value for each interface. Its value ranges between 1 and the value of ifNumber. The value for each interface must remain constant at least from one reinitialization of the entity's network management system to the next reinitialization. (int)
+.sp
+.LP
+\fBifDescr\fR \(mi A textual string containing information about the interface. This string should include the name of the manufacturer, the product name, and the version of the hardware interface. (string[255])
+.sp
+.LP
+\fBifType\fR \(mi The type of interface, distinguished according to the physical/link protocol(s) immediately below the network layer in the protocol stack. (enum)
+.sp
+.LP
+\fBifMtu\fR \(mi The size of the largest datagram that can be sent/received on the interface, specified in octets. For interfaces used for transmitting network datagrams, this is the size of the largest network datagram that can be sent on the interface. (int)
+.sp
+.LP
+\fBifSpeed\fR \(mi An estimate of the interface's current bandwidth in bits-per-second. For interfaces that do not vary in bandwidth, or for those where no accurate estimation can be made, this object should contain the nominal bandwidth. (gauge)
+.sp
+.LP
+\fBif1hysAddress\fR \(mi The interface's address at the protocol layer immediately below the network layer in the protocol stack. For interfaces without such an address (for example, a serial line), this object should contain an octet string of zero length. (octet[128])
+.sp
+.LP
+\fBifAdminStatus\fR \(mi The desired state of the interface. The testing(3) state indicates that no operational packets can be passed. (enum)
+.sp
+.LP
+\fBif\fR \fBOperStatus\fR \(mi The current operational state of the interface. The testing(3) state indicates that no operational packets can be passed. (enum)
+.sp
+.LP
+\fBifLastChange\fR \(mi The value of sysUpTime at the time the interface entered its current operational state. If the current state was entered prior to the last reinitialization of the local network management subsystem, then this object contains a zero value. (timeticks)
+.sp
+.LP
+\fBifInOctets\fR \(mi The total number of octets received on the interface, including framing characters. (counter) Returns a fixed value of 0.
+.sp
+.LP
+\fBifInUcastPkts\fR \(mi The number of subnetwork-unicast packets delivered to a higher-layer protocol. (counter)
+.sp
+.LP
+\fBifInNUcastPkts\fR \(mi The number of non-unicast (that is, subnetwork- broadcast or subnetwork-multicast) packets delivered to a higher-layer protocol. (counter) Returns a fixed value of 0.
+.sp
+.LP
+\fBifInDiscards\fR \(mi The number of inbound packets chosen to be discarded, even though no errors had been detected to prevent their being deliverable to a higher-layer protocol. One possible reason for discarding such a packet could be to free up buffer space. (counter) Returns a fixed value of 0.
+.sp
+.LP
+\fBifInErrors\fR \(mi The number of inbound packets that contained errors preventing them from being deliverable to a higher-layer protocol. (counter)
+.sp
+.LP
+\fBifInUnknownProtos\fR \(mi The number of packets received via the interface that were discarded because of an unknown or unsupported protocol. (counter) Returns a fixed value of 0.
+.sp
+.LP
+\fBifOutOctets\fR \(mi The total number of octets transmitted out of the interface, including framing characters. (counter) Returns a fixed value of 0.
+.sp
+.LP
+\fBifOutUcastPkts\fR \(mi The total number of packets that higher-level protocols requested be transmitted to a subnetwork-unicast address, including those that were discarded or not sent. (counter)
+.sp
+.LP
+\fBifOutNUcastPkts\fR \(mi The total number of packets that higher-level protocols requested be transmitted to a non- unicast (that is, a subnetwork-broadcast or subnetwork-multicast) address, including those that were discarded or not sent. (counter) Returns a fixed value of 0.
+.sp
+.LP
+\fBifOutDiscards\fR \(mi The number of outbound packets that were chosen to be discarded even though no errors had been detected to prevent their being transmitted. One possible reason for discarding such a packet could be to free up buffer space. (counter) Returns a fixed value of 0.
+.sp
+.LP
+\fBifOutErrors\fR \(mi The number of outbound packets that could not be transmitted because of errors. (counter)
+.sp
+.LP
+\fBifOutQLen\fR \(mi The length of the output packet queue (in packets). (gauge)
+.sp
+.LP
+\fBifSpecific\fR \(mi A reference to MIB definitions specific to the particular media being used to realize the interface. For example, if the interface is realized by an Ethernet, then the value of this object refers to a document defining objects specific to Ethernet. If this information is not present, its value should be set to the \fBOBJECT IDENTIFIER\fR { 0 0 }, which is a syntactically valid object identifier. Any conformant implementation of ASN.1 and BER must be able to generate and recognize this value. (objectid)
+.SS "atTable"
+.sp
+.LP
+\fBatTable\fR Address Translation tables contain the NetworkAddress to physical address equivalences. Some interfaces do not use translation tables for determining address equivalences (for example, DDN-X.25 has an algorithmic method). If all interfaces are of this type, then the Address Translation table is empty, that is, has zero entries.
+.sp
+.LP
+\fBatIfIndex\fR \(mi The interface on which this entry's equivalence is effective. The interface identified by a particular value of this index is the same interface as identified by the same value of ifIndex. (int)
+.sp
+.LP
+\fBatPhysAddress\fR \(mi The media-dependent physical address. (octet[128]) Setting this object to a null string (one of zero length) has the effect of invaliding the corresponding entry in the atTable object. That is, it effectively dissociates the interface identified with said entry from the mapping identified with said entry. It is an implementation-specific matter as to whether the agent removes an invalidated entry from the table. Accordingly, management stations must be prepared to receive tabular information from agents that corresponds to entries not currently in use. Proper interpretation of such entries requires examination of the relevant atPhysAddress object.
+.sp
+.LP
+\fBatNetAddress\fR \(mi The NetworkAddress (that is, the IP address) corresponding to the media-dependent physical address. (netaddress)
+.SS "ip"
+.sp
+.LP
+The \fBip\fR group reports statistics about the Internet Protocol (IP) group.
+.sp
+.LP
+\fBipForwarding\fR \(mi The indication of whether this entity is acting as an IP gateway in respect to the forwarding of datagrams received by, but not addressed to, this entity. IP gateways forward datagrams. IP hosts do not\(em except those source-routed via the host. (enum)
+.sp
+.LP
+Note that for some managed nodes, this object may take on only a subset of the values possible. Accordingly, it is appropriate for an agent to return a "badValue" response if a management station attempts to change this object to an inappropriate value.
+.sp
+.LP
+\fBipDefaultTTL\fR \(mi The default value inserted into the Time-To-Live field of the IP header of datagrams originated at this entity, whenever a TTL value is not supplied by the transport layer protocol. (int)
+.sp
+.LP
+\fBipInReceives\fR \(mi The total number of input datagrams received from interfaces, including those received in error. (counter)
+.sp
+.LP
+\fBipInHdrErrors\fR \(mi The number of input datagrams discarded due to errors in their IP headers, including bad checksums, version number mismatch, other format errors, time-to-live exceeded, errors discovered in processing their IP options, and so on. (counter)
+.sp
+.LP
+\fBipInAddrErrors\fR \(mi The number of input datagrams discarded because the IP address in their IP header's destination field was not a valid address to be received at this entity. This count includes invalid addresses (for example, 0.0.0.0) and addresses of unsupported Classes (for example, Class E). For entities that are not IP Gateways and therefore do not forward datagrams, this counter includes datagrams discarded because the destination address was not a local address. (counter)
+.sp
+.LP
+\fBipForwDatagrams\fR \(mi The number of input datagrams for which this entity was not their final IP destination, as a result of which an attempt was made to find a route to forward them to that final destination. In entities that do not act as IP Gateways, this counter will include only those packets that were Source-Routed via this entity, and the Source- Route option processing was successful. (counter)
+.sp
+.LP
+\fBipInUnknownProtos\fR \(mi The number of locally-addressed datagrams received successfully but discarded because of an unknown or unsupported protocol. (counter)
+.sp
+.LP
+\fBipInDiscards\fR \(mi The number of input IP datagrams for which no problems were encountered to prevent their continued processing, but which were discarded, for example, for lack of buffer space. Note that this counter does not include any datagrams discarded while awaiting reassembly. (counter)
+.sp
+.LP
+\fBipInDelivers\fR \(mi The total number of input datagrams successfully delivered to IP user-protocols (including ICMP). (counter)
+.sp
+.LP
+\fBipOutRequests\fR \(mi The total number of IP datagrams that local IP user-protocols (including ICMP) supplied to IP in requests for transmission. Note that this counter does not include any datagrams counted in ipForwDatagrams. (counter)
+.sp
+.LP
+\fBipOutDiscards\fR \(mi The number of output IP datagrams for which no problem was encountered to prevent their transmission to their destination, but which were discarded (for example, for lack of buffer space). Note that this counter would include datagrams counted in ipForwDatagrams if any such packets met this (discretionary) discard criterion. (counter)
+.sp
+.LP
+\fBipOutNoRoutes\fR \(mi The number of IP datagrams discarded because no route could be found to transmit them to their destination. Note that this counter includes any packets counted in ipForwDatagrams which meet this "no-route" criterion. Note that this includes any datagrams that a host cannot route because all its default gateways are down. (counter)
+.sp
+.LP
+\fBipReasmTimeout\fR \(mi The maximum number of seconds that received fragments are held while they are awaiting reassembly at this entity. (int)
+.sp
+.LP
+\fBipReasmReqds\fR \(mi The number of IP fragments received that needed to be reassembled at this entity. (counter)
+.sp
+.LP
+\fBipReasmOKs\fR \(mi The number of IP datagrams successfully reassembled. (counter)
+.sp
+.LP
+\fBipReasmFails\fR \(mi The number of failures detected by the IP reassembly algorithm, for whatever reason: timed out, errors, and the like. Note that this is not necessarily a count of discarded IP fragments since some algorithms (notably the algorithm in RFC 815) can lose track of the number of fragments by combining them as they are received. (counter)
+.sp
+.LP
+\fBipFragOKs\fR \(mi The number of IP datagrams that have been successfully fragmented at this entity. (counter)
+.sp
+.LP
+\fBipFragFails\fR \(mi The number of IP datagrams that have been discarded because they needed to be fragmented at this entity but could not be, for example, because their "Don't Fragment" flag was set. (counter)
+.sp
+.LP
+\fBipFragCreates\fR \(mi The number of IP datagram fragments that have been generated as a result of fragmentation at this entity. (counter)
+.sp
+.LP
+\fBipRoutingDiscards\fR \(mi The number of routing entries that were chosen to be discarded even though they were valid. One possible reason for discarding such an entry could be to free-up buffer space for other routing entries. (counter) Returns a fixed value of 0.
+.SS "ipAddrTable"
+.sp
+.LP
+\fBipAddrTable\fR is a table of addressing information relevant to this entity's IP addresses.
+.sp
+.LP
+\fBipAdEntAddr\fR \(mi The IP address to which this entry's addressing information pertains. (netaddress)
+.sp
+.LP
+\fBipAdEntIfIndex\fR \(mi The index value that uniquely identifies the interface to which this entry is applicable. The interface identified by a particular value of this index is the same interface as identified by the same value of ifIndex. (int)
+.sp
+.LP
+\fBipAdEntNetMask\fR \(mi The subnet mask associated with the IP address of this entry. The value of the mask is an IP address with all the network bits set to 1, and all the hosts bits set to 0. (netaddress)
+.sp
+.LP
+\fBipAdEntBcastAddr\fR \(mi The value of the least-significant bit in the IP broadcast address used for sending datagrams on the (logical) interface associated with the IP address of this entry. For example, when the Internet standard all-ones broadcast address is used, the value will be 1. This value applies to both the subnet and network broadcasts addresses used by the entity on this (logical) interface. (int) Returns a fixed value of 1.
+.sp
+.LP
+\fBipAdEntReasmMaxSize\fR \(mi The size of the largest IP datagram that this entity can reassemble from incoming IP fragmented datagrams received on this interface. (int) Returns a fixed value of 65535.
+.SS "ipRouteTable"
+.sp
+.LP
+The \fBipRouteTable\fR is this entity's IP Routing table.
+.sp
+.LP
+\fBipRouteDest\fR \(mi The destination IP address of this route. An entry with a value of 0.0.0.0 is considered a default route. Multiple routes to a single destination can appear in the table, but access to such multiple entries is dependent on the table- access mechanisms defined by the network management protocol in use. (netaddress)
+.sp
+.LP
+\fBipRouteIfIndex\fR \(mi The index value that uniquely identifies the local interface through which the next hop of this route should be reached. The interface identified by a particular value of this index is the same interface as identified by the same value of ifIndex. (int)
+.sp
+.LP
+\fBipRouteMetric1\fR \(mi The primary routing metric for this route. The semantics of this metric are determined by the routing-protocol specified in the route's ipRouteProto value. If this metric is not used, its value should be set to \(mi1. (int) Returns a fixed value of \(mi1.
+.sp
+.LP
+\fBipRouteMetric2\fR \(mi An alternate routing metric for this route. The semantics of this metric are determined by the routing-protocol specified in the route's ipRouteProto value. If this metric is not used, its value should be set to \(mi1. (int) Returns a fixed value of \(mi1.
+.sp
+.LP
+\fBipRouteMetric3\fR \(mi An alternate routing metric for this route. The semantics of this metric are determined by the routing-protocol specified in the route's ipRouteProto value. If this metric is not used, its value should be set to \(mi1. (int) Returns a fixed value of \(mi1.
+.sp
+.LP
+\fBipRouteMetric4\fR \(mi An alternate routing metric for this route. The semantics of this metric are determined by the routing-protocol specified in the route's ipRouteProto value. If this metric is not used, its value should be set to \(mi1. (int) Returns a fixed value of \(mi1.
+.sp
+.LP
+\fBipRouteNextHop\fR \(mi The IP address of the next hop of this route. (In the case of a route bound to an interface that is realized via a broadcast media, the value of this field is the agent's IP address on that interface.) (netaddress)
+.sp
+.LP
+\fBipRouteType\fR \(mi The type of route. Note that the values direct (3) and indirect (4) refer to the notion of direct and indirect routing in the IP architecture. (enum)
+.sp
+.LP
+Setting this object to the value invalid (2) has the effect of invalidating the corresponding entry in the ipRouteTable object. That is, it effectively dissociates the destination identified with said entry from the route identified with said entry. It is an implementation-specific matter as to whether the agent removes an invalidated entry from the table. Accordingly, management stations must be prepared to receive tabular information from agents that corresponds to entries not currently in use. Proper interpretation of such entries requires examination of the relevant ipRouteType object.
+.sp
+.LP
+\fBipRouteProto\fR \(mi The routing mechanism through which this route was learned. Inclusion of values for gateway routing protocols is not intended to imply that hosts should support those protocols. (enum)
+.sp
+.LP
+\fBipRouteAge\fR \(mi The number of seconds since this route was last updated or otherwise determined to be correct. Note that no semantics of "too old" can be implied except through knowledge of the routing protocol by which the route was learned. (int) Returns a fixed value of 0.
+.sp
+.LP
+\fBipRouteMask\fR \(mi Indicate the mask to be logical-ANDed with the destination address before being compared to the value in the ipRouteDest field. For those systems that do not support arbitrary subnet masks, an agent constructs the value of the ipRouteMask by determining whether the value of the correspondent ipRouteDest field belongs to a class-A, B, or C network, and then using one of:
+.sp
+
+.sp
+.TS
+tab();
+cw(2.75i) cw(2.75i) 
+lw(2.75i) lw(2.75i) 
+.
+MaskNetwork
+255.0.0.0class-A
+255.255.0.0class-B
+255.255.255.0class-C
+.TE
+
+.sp
+.LP
+If the value of the ipRouteDest is 0.0.0.0 (a default route), then the mask value is also 0.0.0.0. It should be noted that all IP routing subsystems implicitly use this mechanism. (netaddress)
+.sp
+.LP
+\fBipRouteMetric5\fR \(mi An alternate routing metric for this route. The semantics of this metric are determined by the routing-protocol specified in the route's ipRouteProto value. If this metric is not used, its value should be set to \(mi1. (int) Returns a fixed value of \(mi1.
+.sp
+.LP
+\fBipRouteInfo\fR \(mi A reference to MIB definitions specific to the particular routing protocol responsible for this route, as determined by the value specified in the route's ipRouteProto value. If this information is not present, its value should be set to the \fBOBJECT IDENTIFIER\fR { 0 0 }, which is a syntactically valid object identifier. Any conformant implementation of ASN.1 and BER must be able to generate and recognize this value. (objectid)
+.SS "ipNetToMediaTable"
+.sp
+.LP
+The \fBipNetToMediaTable\fR is the IP Address Translation table used for mapping from IP addresses to physical addresses.
+.sp
+.LP
+\fBipNetToMediaIfIndex\fR \(mi The interface on which this entry's equivalence is effective. The interface identified by a particular value of this index is the same interface as identified by the same value of ifIndex. (int)
+.sp
+.LP
+\fBipNetToMediaPhysAddress\fR \(mi The media-dependent physical address. (octet[128])
+.sp
+.LP
+\fBipNetToMediaNetAddress\fR \(mi The IpAddress corresponding to the media- dependent physical address. (netaddress)
+.sp
+.LP
+\fBipNetToMediaType\fR \(mi The type of mapping. (enum) Returns a fixed value of (3)dynamic. Setting this object to the value invalid(2) has the effect of invalidating the corresponding entry in the ipNetToMediaTable. That is, it effectively dissociates the interface identified with said entry from the mapping identified with said entry. It is an implementation-specific matter as to whether the agent removes an invalidated entry from the table. Accordingly, management stations must be prepared to receive tabular information from agents that corresponds to entries not currently in use. Proper interpretation of such entries requires examination of the relevant ipNetToMediaType object.
+.SS "icmp"
+.sp
+.LP
+The \fBicmp\fR group reports statistics about the ICMP group.
+.sp
+.LP
+\fBicmpInMsgs\fR \(mi The total number of ICMP messages that the entity received. Note that this counter includes all those counted by icmpInErrors. (counter)
+.sp
+.LP
+\fBicmpInErrors\fR \(mi The number of ICMP messages that the entity received but determined as having ICMP-specific errors (bad ICMP checksums, bad length, and the like.). (counter)
+.sp
+.LP
+\fBicmpInDestUnreachs\fR \(mi The number of ICMP Destination Unreachable messages received. (counter)
+.sp
+.LP
+\fBicmpInTimeExcds\fR \(mi The number of ICMP Time Exceeded messages received. (counter)
+.sp
+.LP
+\fBicmpInParmProbs\fR \(mi The number of ICMP Parameter Problem messages received. (counter)
+.sp
+.LP
+\fBicmpInSrcQuenchs\fR \(mi The number of ICMP Source Quench messages received. (counter)
+.sp
+.LP
+\fBicmpInRedirects\fR \(mi The number of ICMP Redirect messages received. (counter)
+.sp
+.LP
+\fBicmpInEchos\fR \(mi The number of ICMP Echo (request) messages received. (counter)
+.sp
+.LP
+\fBicmpInEchoReps\fR \(mi The number of ICMP Echo Reply messages received. (counter)
+.sp
+.LP
+\fBicmpInTimestamps\fR \(mi The number of ICMP Timestamp (request) messages received. (counter)
+.sp
+.LP
+\fBicmpInTimestampReps\fR \(mi The number of ICMP Timestamp Reply messages received. (counter)
+.sp
+.LP
+\fBicmpInAddrMasks\fR \(mi The number of ICMP Address Mask Request messages received. (counter)
+.sp
+.LP
+\fBicmpInAddrMaskReps\fR \(mi The number of ICMP Address Mask Reply messages received. (counter)
+.sp
+.LP
+\fBicmpOutMsgs\fR \(mi The total number of ICMP messages that this entity attempted to send. Note that this counter includes all those counted by icmpOutErrors. (counter)
+.sp
+.LP
+\fBicmpOutErrors\fR \(mi The number of ICMP messages that this entity did not send due to problems discovered within ICMP, such as a lack of buffers. This value should not include errors discovered outside the ICMP layer, such as the inability of IP to route the resultant datagram.  In some implementations there may be no types of errors that contribute to this counter's value. (counter)
+.sp
+.LP
+\fBicmpOutDestUnreachs\fR \(mi The number of ICMP Destination Unreachable messages sent. (counter)
+.sp
+.LP
+\fBicmpOutTimeExcds\fR \(mi The number of ICMP Time Exceeded messages sent. (counter)
+.sp
+.LP
+\fBicmpOutParmProbs\fR \(mi The number of ICMP Parameter Problem messages sent. (counter)
+.sp
+.LP
+\fBicmpOutSrcQuenchs\fR \(mi The number of ICMP Source Quench messages sent. (counter)
+.sp
+.LP
+\fBicmpOutRedirects\fR \(mi The number of ICMP Redirect messages sent. For a host, this object will always be zero, since hosts do not send redirects. (counter)
+.sp
+.LP
+\fBicmpOutEchos\fR \(mi The number of ICMP Echo (request) messages sent. (counter)
+.sp
+.LP
+\fBicmpOutEchoReps\fR \(mi The number of ICMP Echo Reply messages sent. (counter)
+.sp
+.LP
+\fBicmpOutTimestamps\fR \(mi The number of ICMP Timestamp (request) messages sent. (counter)
+.sp
+.LP
+\fBicmpOutTimestampReps\fR \(mi The number of ICMP Timestamp Reply messages sent. (counter)
+.sp
+.LP
+\fBicmpOutAddrMasks\fR \(mi The number of ICMP Address Mask Request messages sent. (counter)
+.sp
+.LP
+\fBicmpOutAddrMaskReps\fR \(mi The number of ICMP Address Mask Reply messages sent. (counter)
+.SS "tcp"
+.sp
+.LP
+The \fBtcp\fR group reports statistics about the TCP group.
+.sp
+.LP
+\fBtcpRtoAlgorithm\fR \(mi The algorithm used to determine the timeout value used for retransmitting unacknowledged octets. (enum)
+.sp
+.LP
+\fBtcpRtoMin\fR \(mi The minimum value permitted by a TCP implementation for the retransmission timeout, measured in milliseconds. More refined semantics for objects of this type depend upon the algorithm used to determine the retransmission timeout. In particular, when the timeout algorithm is rsre(3), an object of this type has the semantics of the \fBLBOUND\fR quantity described in RFC 793. (int)
+.sp
+.LP
+\fBtcpRtoMax\fR \(mi The maximum value permitted by a TCP implementation for the retransmission timeout, measured in milliseconds. More refined semantics for objects of this type depend upon the algorithm used to determine the retransmission timeout. In particular, when the timeout algorithm is rsre(3), an object of this type has the semantics of the \fBUBOUND\fR quantity described in RFC 793. (int)
+.sp
+.LP
+\fBtcpMaxConn\fR \(mi The limit on the total number of TCP connections that the entity can support. In entities where the maximum number of connections is dynamic, this object should contain the value -1. (int)
+.sp
+.LP
+\fBtcpActiveOpens\fR \(mi The number of times that TCP connections have made a direct transition to the \fBSYN-SENT\fR state from the \fBCLOSED\fR state. (counter)
+.sp
+.LP
+\fBtcpPassiveOpens\fR \(mi The number of times that TCP connections have made a direct transition to the \fBSYN-RCVD\fR state from the \fBLISTEN\fR state. (counter)
+.sp
+.LP
+\fBtcpAttemptFails\fR \(mi The number of times that TCP connections have made a direct transition to the \fBCLOSED\fR state from either the \fBSYN-SENT\fR state or the \fBSYN-RCVD\fR state, plus the number of times TCP connections have made a direct transition to the \fBLISTEN\fR state from the \fBSYN-RCVD\fR state. (counter)
+.sp
+.LP
+\fBtcpEstabResets\fR \(mi The number of times TCP connections have made a direct transition to the \fBCLOSED\fR state from either the \fBESTABLISHED\fR state or the \fBCLOSE-WAIT\fR state. (counter)
+.sp
+.LP
+\fBtcpCurrEstab\fR \(mi The number of TCP connections for which the current state is either \fBESTABLISHED\fR or CLOSE-WAIT. (gauge)
+.sp
+.LP
+\fBtcpInSegs\fR \(mi The total number of segments received, including those received in error. This count includes segments received on currently established connections. (counter)
+.sp
+.LP
+\fBtcpOutSegs\fR \(mi The total number of segments sent, including those on current connections but excluding those containing only retransmitted octets. (counter)
+.sp
+.LP
+\fBtcpRetransSegs\fR \(mi The total number of segments retransmitted - that is, the number of TCP segments transmitted containing one or more previously transmitted octets. (counter)
+.sp
+.LP
+\fBtcpInErrs\fR \(mi The total number of segments received in error (for example, bad TCP checksums). (counter)
+.sp
+.LP
+\fBtcpOutRsts\fR \(mi The number of TCP segments sent containing the RST flag. (counter)
+.SS "tcpConnTable"
+.sp
+.LP
+The \fBtcpConnTable\fR is a table containing TCP connection-specific information.
+.sp
+.LP
+\fBtcpConnState\fR \(mi The state of this TCP connection. (enum)
+.sp
+.LP
+The only value that may be set by a management station is deleteTCB(12). Accordingly, it is appropriate for an agent to return a "badValue" response if a management station attempts to set this object to any other value.
+.sp
+.LP
+If a management station sets this object to the value deleteTCB(12), then this has the effect of deleting the TCB (as defined in RFC 793) of the corresponding connection on the managed node. This results in immediate termination of the connection.
+.sp
+.LP
+As an implementation-specific option, an RST segment may be sent from the managed node to the other TCP endpoint. (Note, however, that RST segments are not sent reliably.)
+.sp
+.LP
+\fBtcpConnLocalAddress\fR \(mi The local IP address for this TCP connection. For a connection in the listen state that is willing to accept connections for any IP interface associated with the node, the value 0.0.0.0 is used. (netaddress)
+.sp
+.LP
+\fBtcpConnLocalPort\fR \(mi The local port number for this TCP connection. (int)
+.sp
+.LP
+\fBtcpConnRemAddress\fR \(mi The remote IP address for this TCP connection. (netaddress)
+.sp
+.LP
+\fBtcpConnRemPort\fR \(mi The remote port number for this TCP connection. (int)
+.SS "upd"
+.sp
+.LP
+The \fBudp\fR group reports statistics about the UDP group.
+.sp
+.LP
+\fBudpInDatagrams\fR \(mi The total number of UDP datagrams delivered to UDP users. (counter) Returns a fixed value of 0.
+.sp
+.LP
+\fBudpNoPorts\fR \(mi The total number of received UDP datagrams for which there was no application at the destination port. (counter) Returns a fixed value of 0.
+.sp
+.LP
+\fBudpInErrors\fR \(mi The number of received UDP datagrams that could not be delivered for reasons other than the lack of an application at the destination port. (counter)
+.sp
+.LP
+\fBudpOutDatagrams\fR \(mi The total number of UDP datagrams sent from this entity. (counter) Returns a fixed value of 0.
+.SS "udpTable"
+.sp
+.LP
+The \fBudpTable\fR is a table containing UDP listener information.
+.sp
+.LP
+\fBudpLocalAddress\fR \(mi The local IP address for this UDP listener. For a UDP listener that is willing to accept datagrams for any IP interface associated with the node, the value 0.0.0.0 is used. (netaddress)
+.sp
+.LP
+\fBudpLocalPort\fR \(mi The local port number for this UDP listener. (int)
+.SS "snmp"
+.sp
+.LP
+The \fBsnmp\fR group reports statistics about the SNMP group.
+.sp
+.LP
+\fBsnmpInPkts\fR \(mi The total number of Messages delivered to the SNMP entity from the transport service. (counter)
+.sp
+.LP
+\fBsnmpOutPkts\fR \(mi The total number of SNMP Messages passed from the SNMP protocol entity to the transport service. (counter)
+.sp
+.LP
+\fBsnmpInBadVersions\fR \(mi The total number of SNMP Messages delivered to the SNMP protocol entity that were for an unsupported SNMP version. (counter)
+.sp
+.LP
+\fBsnmpInBadCommunityNames\fR \(mi The total number of SNMP Messages delivered to the SNMP protocol entity that used a SNMP community name not known to said entity. (counter)
+.sp
+.LP
+\fBsnmpInBadCommunityUses\fR \(mi The total number of SNMP Messages delivered to the SNMP protocol entity, which represented an SNMP operation not allowed by the SNMP community named in the Message. (counter)
+.sp
+.LP
+\fBsnmpInASNParseErrs\fR \(mi The total number of ASN.1 or BER errors encountered by the SNMP protocol entity when decoding received SNMP Messages. (counter)
+.sp
+.LP
+\fBsnmpInTooBigs\fR \(mi The total number of SNMP PDUs delivered to the SNMP protocol entity for which the value of the error-status field is "tooBig." (counter)
+.sp
+.LP
+\fBsnmpInNoSuchNames\fR \(mi The total number of SNMP PDUs delivered to the SNMP protocol entity for which the value of the error-status field is "noSuchName." (counter)
+.sp
+.LP
+\fBsnmpInBadValues\fR \(mi The total number of SNMP PDUs delivered to the SNMP protocol entity for which the value of the error-status field is "badValue." (counter)
+.sp
+.LP
+\fBsnmpInReadOnlys\fR \(mi The total number valid SNMP PDUs delivered to the SNMP protocol entity for which the value of the error-status field is "readOnly." It should be noted that it is a protocol error to generate an SNMP PDU that contains the value "readOnly" in the error-status field. This object is provided as a means of detecting incorrect implementations of the SNMP. (counter)
+.sp
+.LP
+\fBsnmpInGenErrs\fR \(mi The total number of SNMP PDUs delivered to the SNMP protocol entity for which the value of the error-status field is "genErr." (counter)
+.sp
+.LP
+\fBsnmpInTotalReqVars\fR \(mi The total number of MIB objects successfully retrieved by the SNMP protocol entity as the result of receiving valid SNMP Get-Request and Get-Next PDUs. (counter)
+.sp
+.LP
+\fBsnmpInTotalSetVars\fR \(mi The total number of MIB objects successfully altered by the SNMP protocol entity as the result of receiving valid SNMP Set-Request PDUs. (counter)
+.sp
+.LP
+\fBsnmpInGetRequests\fR \(mi The total number of SNMP Get-Request PDUs accepted and processed by the SNMP protocol entity. (counter)
+.sp
+.LP
+\fBsnmpInGetNexts\fR \(mi The total number of SNMP Get-Next PDUs accepted and processed by the SNMP protocol entity. (counter)
+.sp
+.LP
+\fBsnmpInSetRequests\fR \(mi The total number of SNMP Set-Request PDUs accepted and processed by the SNMP protocol entity. (counter)
+.sp
+.LP
+\fBsnmpInGetResponses\fR \(mi The total number of SNMP Get-Response PDUs accepted and processed by the SNMP protocol entity. (counter)
+.sp
+.LP
+\fBsnmpInTraps\fR \(mi The total number of SNMP Trap PDUs accepted and processed by the SNMP protocol entity. (counter)
+.sp
+.LP
+\fBsnmpOutTooBigs\fR \(mi The total number of SNMP PDUs generated by the SNMP protocol entity for which the value of the error-status field is "tooBig." (counter)
+.sp
+.LP
+\fBsnmpOutNoSuchNames\fR \(mi The total number of SNMP PDUs generated by the SNMP protocol entity for which the value of the error-status is "noSuchName." (counter)
+.sp
+.LP
+\fBsnmpOutBadValues\fR \(mi The total number of SNMP PDUs generated by the SNMP protocol entity for which the value of the error-status field is "badValue." (counter)
+.sp
+.LP
+\fBsnmpOutGenErrs\fR \(mi The total number of SNMP PDUs generated by the SNMP protocol entity for which the value of the error-status field is "genErr." (counter)
+.sp
+.LP
+\fBsnmpOutGetRequests\fR \(mi The total number of SNMP Get-Request PDUs which have been generated by the SNMP protocol entity. (counter)
+.sp
+.LP
+\fBsnmpOutGetNexts\fR \(mi The total number of SNMP Get-Next PDUs generated by the SNMP protocol entity. (counter)
+.sp
+.LP
+\fBsnmpOutSetRequests\fR \(mi The total number of SNMP Set-Request PDUs generated by the SNMP protocol entity. (counter)
+.sp
+.LP
+\fBsnmpOutGetResponses\fR \(mi The total number of SNMP Get-Response PDUs generated by the SNMP protocol entity. (counter)
+.sp
+.LP
+\fBsnmpOutTraps\fR \(mi The total number of SNMP Trap PDUs generated by the SNMP protocol entity. (counter)
+.sp
+.LP
+\fBsnmpEnableAuthenTraps\fR \(mi Indicates whether the SNMP agent process is permitted to generate authentication-failure traps. The value of this object overrides any configuration information. As such, it provides a means whereby all authentication-failure traps may be disabled. (enum)
+.sp
+.LP
+Note that this object must be stored in non-volatile memory, so that it remains constant between reinitializations of the network management system.
+.sp
+.LP
+The following are Sun-specific group and table definitions.
+.SS "sunSystem"
+.sp
+.LP
+The \fBsunSystem\fR group reports general system information.
+.sp
+.LP
+\fBagentDescr\fR \(mi The SNMP agent's description of itself. (string[255])
+.sp
+.LP
+\fBhostID\fR \(mi The unique Sun hardware identifier. The value returned is four byte binary string. (octet[4])
+.sp
+.LP
+\fBmotd\fR \(mi The first line of \fB/etc/motd\fR. (string[255])
+.sp
+.LP
+\fBunixTime\fR \(mi The UNIX system time. Measured in seconds since January 1, 1970 GMT. (counter)
+.SS "sunProcessTable"
+.sp
+.LP
+The \fBsunProcessTable\fR table reports UNIX process table information.
+.sp
+.LP
+\fBpsProcessID\fR \(mi The process identifier for this process. (int)
+.sp
+.LP
+\fBpsParentProcessID\fR \(mi The process identifier of this process's parent. (int)
+.sp
+.LP
+\fBpsProcessSize\fR \(mi The combined size of the data and stack segments (in kilobytes.) (int)
+.sp
+.LP
+\fBpsProcessCpuTime\fR \(mi The CPU time (including both user and system time) consumed so far. (int)
+.sp
+.LP
+\fBpsProcessState\fR \(mi The run-state of the process. (octet[4])
+.sp
+
+.sp
+.TS
+tab();
+lw(2.75i) lw(2.75i) 
+lw(2.75i) lw(2.75i) 
+.
+RRunnable
+TStopped
+PIn page wait
+DNon-interruptable wait
+SSleeping (less than 20 seconds)
+IIdle (more than 20 seconds)
+ZZombie
+.TE
+
+.sp
+.LP
+\fBpsProcessWaitChannel\fR \(mi Reason process is waiting. (octet[16])
+.sp
+.LP
+\fBpsProcessTTY\fR \(mi Terminal, if any, controlling this process. (octet[16])
+.sp
+.LP
+\fBpsProcessUserName\fR \(mi Name of the user associated with this process. (octet[16])
+.sp
+.LP
+\fBpsProcessUserID\fR \(mi Numeric form of the name of the user associated with this process. (int)
+.sp
+.LP
+\fBpsProcessName\fR \(mi Command name used to invoke this process. (octet[64])
+.sp
+.LP
+\fBpsProcessStatus\fR \(mi Setting this variable will cause a signal of the set value to be sent to the process. (int)
+.SS "sunHostPerf"
+.sp
+.LP
+The \fBsunHostPerf\fR group reports hostperf information.
+.sp
+.LP
+\fBrsUserProcessTime\fR \(mi Total number of timeticks used by user processes since the last system boot. (counter)
+.sp
+.LP
+\fBrsNiceModeTime\fR \(mi Total number of timeticks used by "nice" mode since the last system boot. (counter)
+.sp
+.LP
+\fBrsSystemProcessTime\fR \(mi Total number of timeticks used by system processes since the last system boot. (counter)
+.sp
+.LP
+\fBrsIdleModeTime\fR \(mi Total number of timeticks in idle mode since the last system boot. (counter)
+.sp
+.LP
+\fBrsDiskXfer1\fR \(mi Total number of disk transfers since the last boot for the first of four configured disks. (counter)
+.sp
+.LP
+\fBrsDiskXfer2\fR \(mi Total number of disk transfers since the last boot for the second of four configured disks. (counter)
+.sp
+.LP
+\fBrsDiskXfer3\fR \(mi Total number of disk transfers since the last boot for the third of four configured disks. (counter)
+.sp
+.LP
+\fBrsDiskXfer4\fR \(mi Total number of disk transfers since the last boot for the fourth of four configured disks. (counter)
+.sp
+.LP
+\fBrsVPagesIn\fR \(mi Number of pages read in from disk. (counter)
+.sp
+.LP
+\fBrsVPagesOut\fR \(mi Number of pages written to disk. (counter)
+.sp
+.LP
+\fBrsVSwapIn\fR \(mi Number of pages swapped in. (counter)
+.sp
+.LP
+\fBrsVSwapOut\fR \(mi Number of pages swapped out. (counter)
+.sp
+.LP
+\fBrsVIntr\fR \(mi Number of device interrupts. (counter)
+.sp
+.LP
+\fBrsIfInPackets\fR \(mi Number of input packets. (counter)
+.sp
+.LP
+\fBrsIfOutPackets\fR \(mi Number of output packets. (counter)
+.sp
+.LP
+\fBrsIfInErrors\fR \(mi Number of input errors. (counter)
+.sp
+.LP
+\fBrsIfOutErrors\fR \(mi Number of output errors. (counter)
+.sp
+.LP
+\fBrsIfCollisions\fR \(mi Number of output collisions. (counter)
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/etc/snmp/conf/snmpd.conf\fR\fR
+.ad
+.RS 30n
+.rt  
+configuration information
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/etc/snmp/conf/mibiisa.acl\fR\fR
+.ad
+.RS 30n
+.rt  
+access control file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/var/snmp/mib/sun.mib\fR\fR
+.ad
+.RS 30n
+.rt  
+standard SNMP MIBII file
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWmibii
+_
+Interface StabilityObsolete
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBinetd\fR(1M), \fBselect\fR(3C), \fBrecvfrom\fR(3SOCKET), \fBsendto\fR(3SOCKET), \fBattributes\fR(5), \fBgld\fR(7D)
+.SH DIAGNOSTICS
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcannot dispatch request\fR\fR
+.ad
+.sp .6
+.RS 4n
+The proxy cannot dispatch the request. The rest of the message indicates the cause of the failure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBselect(3C) failed\fR\fR
+.ad
+.sp .6
+.RS 4n
+A \fBselect\fR(3C) call failed. The rest of the message indicates the cause of the failure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsendto(3SOCKET) failed\fR\fR
+.ad
+.sp .6
+.RS 4n
+A \fBsendto\fR(3SOCKET) call failed. The rest of the message indicates the cause of the failure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBrecvfrom(3SOCKET) failed\fR\fR
+.ad
+.sp .6
+.RS 4n
+A \fBrecvfrom\fR(3SOCKET) call failed. The rest of the message indicates the cause of the failure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBno response from system\fR\fR
+.ad
+.sp .6
+.RS 4n
+The SNMP agent on the target system does not respond to SNMP requests. This error might indicate that the SNMP agent is not running on the target system, the target system is down, or the network containing the target system is unreachable.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBresponse too big\fR\fR
+.ad
+.sp .6
+.RS 4n
+The agent could not fit the results of an operation into a single SNMP message. Split large groups or tables into smaller entities.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmissing attribute\fR\fR
+.ad
+.sp .6
+.RS 4n
+An attribute is missing from the requested group.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBbad attribute type\fR\fR
+.ad
+.sp .6
+.RS 4n
+An object attribute type received from the SNMP agent that does not match the attribute type specified by the proxy agent schema. The rest of the message indicates the expected type and received type.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcannot get sysUpTime\fR\fR
+.ad
+.sp .6
+.RS 4n
+The proxy agent cannot get the variable \fIsysUpTime\fR from the SNMP agent.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsysUpTime type bad\fR\fR
+.ad
+.sp .6
+.RS 4n
+The variable \fIsysUpTime\fR received from the SNMP agent has the wrong data type.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBunknown SNMP error\fR\fR
+.ad
+.sp .6
+.RS 4n
+An unknown SNMP error was received.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBbad variable value\fR\fR
+.ad
+.sp .6
+.RS 4n
+The requested specified an incorrect syntax or value for a set operation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvariable is read only\fR\fR
+.ad
+.sp .6
+.RS 4n
+The SNMP agent did not perform the set request because a variable to set may not be written.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBgeneral error\fR\fR
+.ad
+.sp .6
+.RS 4n
+A general error was received.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcannot make request PDU\fR\fR
+.ad
+.sp .6
+.RS 4n
+An error occurred building a request PDU.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcannot make request varbind list\fR\fR
+.ad
+.sp .6
+.RS 4n
+An error occurred building a request variable binding list.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcannot parse response PDU\fR\fR
+.ad
+.sp .6
+.RS 4n
+An error occurred parsing a response PDU.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBrequest ID - response ID mismatch\fR\fR
+.ad
+.sp .6
+.RS 4n
+The response ID does not match the request ID.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBstring contains non-displayable characters\fR\fR
+.ad
+.sp .6
+.RS 4n
+A displayable string contains non-displayable characters.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcannot open schema file\fR\fR
+.ad
+.sp .6
+.RS 4n
+An error occurred opening the proxy agent schema file.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcannot parse schema file\fR\fR
+.ad
+.sp .6
+.RS 4n
+The proxy agent couldn't parse the proxy agent schema file.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcannot open host file\fR\fR
+.ad
+.sp .6
+.RS 4n
+An error occurred opening the file associated with the \fIna.snmp.hostfile\fR keyword in \fB/etc/snmp/conf/snmpd.conf\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcannot parse host file\fR\fR
+.ad
+.sp .6
+.RS 4n
+The proxy agent was unable to parse the file associated with the \fIna.snmp.hostfile\fR keyword in \fB/etc/snmp/conf/snm.conf\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBattribute unavailable for set operations\fR\fR
+.ad
+.sp .6
+.RS 4n
+The set could not be completed because the attribute was not available for set operations.
+.RE
+
+.SH BUGS
+.sp
+.LP
+The \fBmibiisa\fR utility returns the wrong interface speed for the SBUS FDDI interface (for example, "bf0").
+.sp
+.LP
+The \fBmibiisa\fR utility does not return a MAC address for the SBUS FDDI interface (for example, "bf0").
+.sp
+.LP
+Process names retrieved from \fBmibiisa\fR contain a leading blank space.
+.sp
+.LP
+When you change attribute values in the system group with an SNMP set request, the change is effective only as long as \fBmibiisa\fR is running. \fBmibiisa\fR does not save the changes to \fB/etc/snmp/conf/snmpd.conf\fR.

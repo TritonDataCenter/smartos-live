@@ -1,0 +1,143 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_SignalLPCCovariance_F32 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_SignalLPCCovariance_F32 \- perform linear predictive coding with covariance method
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_SignalLPCCovariance_F32\fR(\fBmlib_f32 *\fR\fIcoeff\fR,
+     \fBconst mlib_f32 *\fR\fIsignal\fR, \fBvoid *\fR\fIstate\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_SignalLPCCovariance_F32()\fR function performs linear predictive coding with covariance method.
+.sp
+.LP
+In linear predictive coding (LPC) model, each speech sample is represented as a linear combination of the past \fBM\fR samples.
+.sp
+.in +2
+.nf
+	        M
+	s(n) = SUM a(i) * s(n-i) + G * u(n)
+	       i=1
+.fi
+.in -2
+
+.sp
+.LP
+where \fBs(*)\fR is the speech signal, \fBu(*)\fR is the excitation signal, and \fBG\fR is the gain constants, \fBM\fR is the order of the linear prediction filter. Given \fBs(*)\fR, the goal is to find a set of coefficient \fBa(*)\fR that minimizes the prediction error \fBe(*)\fR.
+.sp
+.in +2
+.nf
+	               M
+	e(n) = s(n) - SUM a(i) * s(n-i)
+	              i=1
+.fi
+.in -2
+
+.sp
+.LP
+In covariance method, the coefficients can be obtained by solving following set of linear equations.
+.sp
+.in +2
+.nf
+	 M
+	SUM a(i) * c(i,k) = c(0,k), k=1,...,M
+	i=1
+.fi
+.in -2
+
+.sp
+.LP
+where
+.sp
+.in +2
+.nf
+	         N-k-1
+	c(i,k) =  SUM s(j) * s(j+k-i)
+	          j=0
+.fi
+.in -2
+
+.sp
+.LP
+are the covariance coefficients of \fBs(*)\fR, \fBN\fR is the length of the input speech vector.
+.sp
+.LP
+Note that the covariance matrix \fBR\fR is a symmetric matrix, and the equations can be solved efficiently with Cholesky decomposition method.
+.sp
+.LP
+See \fIFundamentals of Speech Recognition\fR by Lawrence Rabiner and Biing-Hwang Juang, Prentice Hall, 1993.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcoeff\fR\fR
+.ad
+.RS 10n
+.rt  
+The linear prediction coefficients.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsignal\fR\fR
+.ad
+.RS 10n
+.rt  
+The input signal vector.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIstate\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to the internal state structure.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_SignalLPCCovarianceInit_F32\fR(3MLIB), \fBmlib_SignalLPCCovarianceFree_F32\fR(3MLIB), \fBattributes\fR(5)

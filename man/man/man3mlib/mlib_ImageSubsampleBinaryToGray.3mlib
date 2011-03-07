@@ -1,0 +1,154 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_ImageSubsampleBinaryToGray 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_ImageSubsampleBinaryToGray \- subsamples a binary image and converts it to a grayscale image
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_ImageSubsampleBinaryToGray\fR(\fBmlib_image *\fR\fIdst\fR,
+     \fBconst mlib_image *\fR\fIsrc\fR, \fBmlib_d64\fR \fIxscale\fR, \fBmlib_d64\fR \fIyscale\fR,
+     \fBconst mlib_u8 *\fR\fIlutGray\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_ImageSubsampleBinaryToGray()\fR function subsamples a binary (\fBMLIB_BIT\fR) image and converts it to a grayscale (\fBMLIB_BYTE\fR) image.
+.sp
+.LP
+The subsampling algorithm performs the scaling operation by accumulating all the bits in the source image that correspond to the destination pixel and, based on the x and y scaling factors, reserving consecutive indexes in the colormap for the maximum number of gray levels possible in the destination image. The destination image pixel values of this function are either gray levels or indexes (if \fBlutGray==NULL\fR).
+.sp
+.LP
+For representing the source block of pixels that is used to determine destination pixel values, the index \fB0\fR represents a block with no \fB1\fR's (all \fB0\fR's), the index \fB1\fR represents a block with a single \fB1\fR, and so on. If the scaling factors require a fractional block of source pixels to determine a destination pixel value, the block size is rounded up. For example, if a 2.2-by-2.2 block of source pixels would be required to determine destination pixel values, a 3-by-3 block is used, resulting in 10 possible gray levels and therefore 10 colormap indexes, whose values are 0 through 9.
+.sp
+.LP
+The width and height of the source block for a destination pixel are computed as:
+.sp
+.in +2
+.nf
+  blockX = (int)ceil(1.0/xscale);
+  blockY = (int)ceil(1.0/yscale);
+.fi
+.in -2
+
+.sp
+.LP
+If we denote a pixel's location in an image by its column number and row number (both counted from 0), the destination pixel at \fB(i, j)\fR is backward mapped to the source block whose upper-left corner pixel is at \fB(xValues[i], yValues[j])\fR, where
+.sp
+.in +2
+.nf
+  xValues[i] = (int)(i/xscale + 0.5);
+  yValues[j] = (int)(j/yscale + 0.5);
+.fi
+.in -2
+
+.sp
+.LP
+The width and height of the filled area in the destination are restricted by
+.sp
+.in +2
+.nf
+  dstW = (int)(srcWidth * xscale);
+  dstH = (int)(srcHeight * yscale);
+.fi
+.in -2
+
+.sp
+.LP
+where \fBsrcWidth\fR and \fBsrcHeight\fR are width and height of the source image.
+.sp
+.LP
+Since the block size in source is defined from scale factors with roundup, some blocks (the rightmost and the bottommost blocks) may overrun the border of the source image by 1 pixel. In this case, such blocks are moved by 1 pixel to left/up direction in order to be inside of the source image.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdst\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to destination image . It must be of type \fBMLIB_BYTE\fR and have just one channel.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to source image. It must be of type \fBMLIB_BIT\fR and have just one channel.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIxscale\fR\fR
+.ad
+.RS 11n
+.rt  
+X scale factor. \fB0.0 < xscale \(<= 1.0\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIyscale\fR\fR
+.ad
+.RS 11n
+.rt  
+Y scale factor. \fB0.0 < yscale \(<= 1.0\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIlutGray\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to a grayscale lookup-table.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_ImageZoomTranslateToGray\fR(3MLIB), \fBmlib_ImageSubsampleAverage\fR(3MLIB), \fBattributes\fR(5)

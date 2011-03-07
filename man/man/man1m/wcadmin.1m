@@ -1,0 +1,617 @@
+'\" te
+.\" Copyright (c) 2006, Sun Microsystems, Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH wcadmin 1M "22 Aug 2006" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+wcadmin \- manage the configuration of the Sun Java Web Console
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/sbin/wcadmin\fR \fI subcommand\fR \fIoptions\fR
+.fi
+
+.LP
+.nf
+\fB/usr/sbin/wcadmin\fR \fI [-h| --help]\fR 
+.fi
+
+.LP
+.nf
+\fB/usr/sbin/wcadmin\fR \fI [-V | --version]\fR 
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBwcadmin\fR is a Command Line Interface (CLI) \(em based tool for managing the configuration of the Sun Java Web Console.
+.SH SUBCOMMANDS
+.sp
+.LP
+The following subcommands are supported:
+.sp
+.ne 2
+.mk
+.na
+\fBadd\fR
+.ad
+.RS 12n
+.rt  
+The \fBwcadmin add\fR subcommand adds a new shared jar file, a new JAAS login module, or a new shared service property to the console configuration. An optional identifier may be specified; if omitted, the identifier is derived from the resource name. The resource is added when the console is next started.
+.sp
+The format of the \fBadd\fR subcommand is:
+.sp
+add \fB-l\fR \fB-a\fR \fIappname\fR [\fB-n\fR \fIid\fR] \fIjarpath\fR
+.sp
+add \fB-m\fR \fB-a\fR \fIappname\fR [\fB-n\fR \fIid\fR] \fB-b\fR \fIbehavior\fR \fB-s\fR \fIservice\fR [\fB-o\fR \fIname=value\fR] \fIclassname\fR
+.sp
+add \fB-p\fR \fB-a\fR \fIappname\fR \fIname=value\fR [... \fIname=value\fR]
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBdeploy\fR
+.ad
+.RS 12n
+.rt  
+The \fBwcadmin deploy\fR subcommand deploys the specified web application into the console's web server instance. Applications are deployed directly from their installation directories.
+.sp
+The format of the \fBdeploy\fR subcommand is:
+.sp
+deploy [\fB-D\fR] \fB-a\fR \fIappname\fR \fB-x\fR \fIcontext\fR \fIapp_path\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBdisable\fR
+.ad
+.RS 12n
+.rt  
+The \fBwcadmin disable\fR subcommand disables access to the specified web application in the console's web server instance.
+.sp
+The format of the \fBdisable\fR subcommand is:
+.sp
+disable \fB-x\fR \fIcontext\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBenable\fR
+.ad
+.RS 12n
+.rt  
+The \fBwcadmin enable\fR subcommand enables access to the specified web application in the console's web server instance.
+.sp
+The format of the \fBenable\fR subcommand is:
+.sp
+enable \fB-x\fR \fIcontext\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBlist\fR
+.ad
+.RS 12n
+.rt  
+The \fBwcadmin list\fR subcommand lists the resources currently configured for the console; including deployed web applications, shared jar files, login modules, and shared service properties. If no option is specified, all resources are listed.
+.sp
+The format of the \fBlist\fR subcommand is:
+.sp
+list [\fB-a\fR] [\fB-d\fR] [\fB-l\fR] [\fB-m\fR] [\fB-p\fR]
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBpassword\fR
+.ad
+.RS 12n
+.rt  
+The \fBwcadmin password\fR subcommand manages the administrator and security keystore passwords for the console. Keystore passwords should not be changed while the console is running.
+.sp
+The format of the \fBpassword\fR subcommand is:
+.sp
+password [\fB-a\fR] [\fB-k\fR] [\fB-t\fR]
+.sp
+password \fB-f\fR \fIpassword_file\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBreload\fR
+.ad
+.RS 12n
+.rt  
+The \fBwcadmin reload\fR subcommand unloads the specified web application from the console's web server instance and reloads the application from its original installation directory.
+.sp
+The format of the \fBreload\fR subcommand is:
+.sp
+reload \fB-x\fR \fIcontext\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBremove\fR
+.ad
+.RS 12n
+.rt  
+The \fBwcadmin remove\fR subcommand removes a shared jar file, a login module, or a shared service property from the console configuration. The resource may be specified by its identifier or by its full jarpath or classname. The resource is removed when the console is next started.
+.sp
+The format of the \fBremove\fR subcommand is:
+.sp
+remove \fB-l\fR \fB-a\fR \fIappname\fR [\fB-n\fR \fIid\fR] \fIjarpath\fR
+.sp
+remove \fB-m\fR \fB-a\fR \fIappname\fR [\fB-n\fR \fIid\fR] \fIclassname\fR
+.sp
+remove \fB-p\fR \fB-a\fR \fIappname\fR \fIproperty\fR [...]
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBundeploy\fR
+.ad
+.RS 12n
+.rt  
+The \fBwcadmin undeploy\fR subcommand undeploys the specified web application from the console's web server instance.
+.sp
+The format of the \fBundeploy\fR subcommand is:
+.sp
+undeploy [\fB-D\fR] \fB-a\fR \fIappname\fR \fB-x\fR \fIcontext\fR
+.RE
+
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR | \fB--help\fR | \fB-?\fR\fR
+.ad
+.RS 24n
+.rt  
+Display runtime help.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-V\fR | \fB--version\fR\fR
+.ad
+.RS 24n
+.rt  
+Display console version information.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-D\fR | \fB--defer\fR\fR
+.ad
+.RS 24n
+.rt  
+When used with the deploy and undeploy subcommands, defers the deployment or undeployment until the next console restart. The operation is deferred by simply adding or removing the corresponding resource registration notification file. If defer is not specified, a runtime deployment or undeployment is performed, so that the application becomes available or unavailable in the running console. If the console instance is not currently running, the operation is automatically deferred.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR | \fB--adminpassword\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify that the administrator password should be changed, when used with password subcommand. You are prompted for a new password, which must be 8 to 32 characters.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR | \fB--application\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify the application name, when used with subcommands other than password subcommand.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR | \fB--detail\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify that configuration details of each resource should be displayed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify the fully qualified path name to a file containing one or more password property values. See the description of the password_file argument.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-k\fR | \fB--keypassword\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify that the keystore password should be changed. You are prompted for a new password, which must be 8 to 32 characters.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR | \fB--library\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify that the resource is a shared jar file.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-m\fR | \fB--module\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify that the resource is a JAAS login module.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR | \fB--name\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify the short-hand identifier name for the resource. If omitted, the identifier name is derived from the full resource name.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR | \fB--option\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify the name and value of a login module option property, separated by the equals character.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR | \fB--property\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify that the resource is one or more shared service properties.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR | \fB--service\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify the name of the JAAS login service definition. If omitted, the default console login service definition is assumed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR | \fB--trustpassword\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify that the truststore password should be changed. You are prompted for a new password, which must be 8 to 32 characters.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-x\fR | \fB--context\fR\fR
+.ad
+.RS 24n
+.rt  
+Specify the web application context path name under which the application is deployed.
+.RE
+
+.SH ARGUMENTS
+.sp
+.ne 2
+.mk
+.na
+\fB\fIapp_path\fR\fR
+.ad
+.RS 17n
+.rt  
+The fully qualified file system path to the web application installation directory.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIappname\fR\fR
+.ad
+.RS 17n
+.rt  
+The application name. The name must be unique among all web applications registered with the console. It is also used as the name of the subdirectory under the console's pre-registration directory which contains all the resource registration notification files for that application. Typically, the application package name, plugin identifier, or context path name is specified for the application name.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIbehavior\fR\fR
+.ad
+.RS 17n
+.rt  
+The JAAS login module control flag behavior. Must be one of "optional", "required", "requisite", or "sufficient".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIclassname\fR\fR
+.ad
+.RS 17n
+.rt  
+The fully qualified Java package class name of the JAAS login module. The specified class must be included in a shared jar file added to the console.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcontext\fR\fR
+.ad
+.RS 17n
+.rt  
+The web application context path name under which the application is deployed. With the .reg suffix, the context forms the file name of the registration notification file for that application.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIid\fR\fR
+.ad
+.RS 17n
+.rt  
+The short-hand identifier name for a jar file or login module resource to be added or removed. The identifier name must be unique among the resources shared for a given application name. With the .reg suffix, it forms the file name of the registration notfication file for that resource.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIjarpath\fR\fR
+.ad
+.RS 17n
+.rt  
+The fully qualified file system path to the jar file resource. When the resource is added to the console, its path is included in the classpath of the console's shared class loader.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIoption\fR\fR
+.ad
+.RS 17n
+.rt  
+The JAAS login module option property name.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIproperty\fR\fR
+.ad
+.RS 17n
+.rt  
+The shared service property name.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIpassword_file\fR\fR
+.ad
+.RS 17n
+.rt  
+The fully qualified path to a password text file that contains the new administrator, keystore, and truststore passwords in property file format. The administrator password is specified using the "adminpassword" property. The keystore password is specified using the "keypassword" property. The truststore password is specified using the "trustpasswd" property. At least one password property must be contained in the password file.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIvalue\fR\fR
+.ad
+.RS 17n
+.rt  
+The login module option or shared service property value. If the value contains white space, it must be quoted.
+.RE
+
+.SH EXAMPLES
+.sp
+.LP
+The following command adds a jar file to be shared in the console: 
+.sp
+.in +2
+.nf
+wcadmin add -l -a myapp_1.0 -n wbem /usr/sadm/lib/wbem.jar
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The following command deploys a new web application: 
+.sp
+.in +2
+.nf
+wcadmin deploy -a myapp_1.0 -x myapp /opt/SUNWmyapp/myapp
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The following command reloads an existing web application: 
+.sp
+.in +2
+.nf
+wcadmin reload -x myapp
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The following command undeploys a web application at the next server restart: 
+.sp
+.in +2
+.nf
+wcadmin undeploy -D -a myapp_1.0 -x myapp
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The following command lists all the deployed web applications in the console. If the status field is "running", the web application is available. If the status field is "stopped", the web application is disabled and is not available. If all web applications are "stopped", this typically indicates the console web server instance is not running. 
+.sp
+.in +2
+.nf
+wcadmin list -a
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The following command removes a shared jar file: 
+.sp
+.in +2
+.nf
+wcadmin remove -l -a myapp_1.0 -n wbem
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The following command changes passwords that are specified in a file: 
+.sp
+.in +2
+.nf
+wcadmin password -f /home/mydir/console-passwords
+.fi
+.in -2
+.sp
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 5n
+.rt  
+Subcommand succeeded without error
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 5n
+.rt  
+Usage error: missing or malformed arguments
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB2\fR\fR
+.ad
+.RS 5n
+.rt  
+Fatal error: subcommand failed with one or more errors
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWmcon
+_
+Interface StabilityStable
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBsmcwebserver\fR(1M), \fBsmreg\fR(1M), \fBattributes\fR(5), \fBenviron\fR(5)

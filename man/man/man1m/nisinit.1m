@@ -1,0 +1,288 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nisinit 1M "12 Dec 2001" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+nisinit \- NIS+ client and server initialization utility
+.SH SYNOPSIS
+.LP
+.nf
+\fBnisinit\fR \fB-r\fR
+.fi
+
+.LP
+.nf
+\fBnisinit\fR \fB-p\fR Y | D | N \fIparent_domain\fR \fIhost\fR...
+.fi
+
+.LP
+.nf
+\fBnisinit\fR \fB-c\fR [\fB-k\fR \fI<key_domain>\fR] \fB-H\fR \fIhost\fR | \fB-B\fR | \fB-C\fR \fIcoldstart\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBnisinit\fR initializes a machine to be a NIS+ client or an NIS+ root master server. It may be easier to use \fBnisclient\fR(1M) or \fBnisserver\fR(1M) to accomplish this same task.
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR\fR
+.ad
+.sp .6
+.RS 4n
+Initialize the machine to be a NIS+ root server. This option creates the file \fB/var/nis/data/root.object\fR and initialize it to contain information about this machine. It uses the \fBsysinfo\fR(2) system call to retrieve the name of the default domain.
+.sp
+To initialize the machine as an NIS+ root server, it is advisable to use the "\fB-r\fR" option of \fBnisserver\fR(1M), instead of using "\fBnisinit -r\fR".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fR\fB-p\fR\fB Y \|| D \|| N\fR \fIparent_domain host .\|.\|.\fR\fR
+.ad
+.sp .6
+.RS 4n
+This option is used on a root server to initialize a \fB/var/nis/data/parent.object\fR to make this domain a part of the namespace above it. Only root servers can have parent objects. A parent object describes the namespace ``above'' the NIS+ root. If this is an isolated domain, this option should not be used. The argument to this option tells the command what type of name server is serving the domain above the NIS+ domain. When clients attempt to resolve a name that is outside of the NIS+ namespace, this object is returned with the error \fBNIS_FOREIGNNS\fR indicating that a name space boundary has been reached. It is up to the client to continue the name resolution process.
+.sp
+The parameter \fIparent_domain\fR is the name of the parent domain in a syntax that is native to that type of domain. The list of host names that follow the domain parameter are the names of hosts that serve the parent domain. If there is more than one server for a parent domain, the first host specified should be the master server for that domain.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBY\fR\fR
+.ad
+.RS 5n
+.rt  
+Specifies that the parent directory is a NIS version 2 domain.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBD\fR\fR
+.ad
+.RS 5n
+.rt  
+Specifies that the parent directory is a DNS domain.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBN\fR\fR
+.ad
+.RS 5n
+.rt  
+Specifies that the parent directory is another NIS+ domain. This option is useful for connecting a pre-existing NIS+ subtree into the global namespace.
+.RE
+
+Note that in the current implementation, the NIS+ clients do not take advantage of the \fB-p\fR feature. Also, since the parent object is currently not replicated on root replica servers, it is recommended that this option not be used.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR\fR
+.ad
+.sp .6
+.RS 4n
+Initializes the machine to be a NIS+ client. There are three initialization options available: initialize by coldstart, initialize by hostname, and initialize by broadcast. The most secure mechanism is to initialize from a trusted coldstart file. The second option is to initialize using a hostname that you specify as a trusted host. The third method is to initialize by broadcast and it is the least secure method. 
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-C\fR \fIcoldstart\fR\fR
+.ad
+.RS 16n
+.rt  
+Causes the file \fIcoldstart\fR to be used as a prototype coldstart file when initializing a NIS+ client. This coldstart file can be copied from a machine that is already a client of the NIS+ namespace. For maximum security, an administrator can encrypt and encode (with \fBuuencode\fR(1C)) the coldstart file and mail it to an administrator bringing up a new machine. The new administrator would then decode (with \fBuudecode\fR), decrypt, and then use this file with the \fBnisinit\fR command to initialize the machine as an NIS+ client. If the coldstart file is from another client in the same domain, the \fBnisinit\fR command may be safely skipped and the file copied into the \fB/var/nis\fR directory as \fB/var/nis/NIS_COLD_START\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-H\fR \fIhostname\fR\fR
+.ad
+.RS 16n
+.rt  
+Specifies that the host \fBhostname\fR should be contacted as a trusted NIS+ server. The \fBnisinit\fR command will iterate over each transport in the \fBNETPATH\fR environment variable and attempt to contact \fBrpcbind\fR(1M) on that machine. This hostname \fImust\fR be reachable from the client without the name service running. For \fBIP\fR networks this means that there must be an entry in \fB/etc/hosts\fR for this host when \fBnisinit\fR is invoked. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-B\fR\fR
+.ad
+.RS 16n
+.rt  
+Specifies that the \fBnisinit\fR command should use an IP broadcast to locate a NIS+ server on the local subnet. Any machine that is running the NIS+ service may answer. No guarantees are made that the server that answers is a server of the organization's namespace. If this option is used, it is advisable to check with your system administrator that the server and domain served are valid. The binding information can be dumped to the standard output using the \fBnisshowcache\fR(1M) command.
+.RE
+
+Note that \fBnisinit\fR \fB-c\fR will just enable navigation of the NIS+ name space from this client. To make NIS+ your name service, modify the file \fB/etc/nsswitch.conf\fR to reflect that. See \fBnsswitch.conf\fR(4) for more details.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-k\fR <\fIkey_domain\fR>\fR
+.ad
+.sp .6
+.RS 4n
+This option specifies the domain where root's credentials are stored. If it is not specified, then the system default domain is assumed. This domain name is used to create the \fB/var/nis/NIS_COLD_START\fR file.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+\fBnisinit\fR returns \fB0\fR on success and \fB1\fR on failure.
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRInitializing the Machine as an NIS+ Client using the Host \fIfreddy\fR as a Trusted Server
+.sp
+.LP
+This example initializes the machine as an NIS+ client using the host \fIfreddy\fR as a trusted server.
+
+.sp
+.in +2
+.nf
+example# \fBnisinit -cH freddy\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRSetting up a Client using a Trusted Coldstart File
+.sp
+.LP
+This example sets up a client using a trusted coldstart file.
+
+.sp
+.in +2
+.nf
+example# \fBnisinit -cC /tmp/colddata\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 3 \fRSetting up a Client Using an IP Broadcast
+.sp
+.LP
+This example sets up a client using an IP broadcast.
+
+.sp
+.in +2
+.nf
+example# \fBnisinit -cB\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 4 \fRSetting up a Root Server
+.sp
+.LP
+This example sets up a root server.
+
+.sp
+.in +2
+.nf
+example# \fBnisinit -r\fR
+.fi
+.in -2
+.sp
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNETPATH\fR\fR
+.ad
+.RS 11n
+.rt  
+This environment variable may be set to the transports to try when contacting the \fBNIS+\fR server (see \fBnetconfig\fR(4)). The client library will only attempt to contact the server using connection oriented transports.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/var/nis/NIS_COLD_START\fR\fR
+.ad
+.sp .6
+.RS 4n
+This file contains a list of servers, their transport addresses, and their Secure RPC public keys that serve the machine's default domain.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/var/nis/data/root.object\fR\fR
+.ad
+.sp .6
+.RS 4n
+This file describes the root object of the NIS+ namespace. It is a standard XDR-encoded NIS+ directory object that can be modified by authorized clients using the \fBnis_modify()\fR interface.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/var/nis/data/parent.object\fR\fR
+.ad
+.sp .6
+.RS 4n
+This file describes the namespace that is logically above the NIS+ namespace. The most common type of parent object is a DNS object. This object contains contact information for a server of that domain.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/etc/hosts\fR\fR
+.ad
+.sp .6
+.RS 4n
+Internet host table.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBNIS+\fR(1), \fBuuencode\fR(1C), \fBnisclient\fR(1M), \fBnisserver\fR(1M), \fBnisshowcache\fR(1M), \fBsysinfo \fR(2), \fBhosts\fR(4), \fBnetconfig\fR(4), \fBnisfiles\fR(4), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

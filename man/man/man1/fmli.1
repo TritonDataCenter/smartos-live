@@ -1,0 +1,229 @@
+'\" te
+.\"  Copyright 1989 AT&T  Copyright (c) 1992, Sun Microsystems, Inc.  All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH fmli 1 "14 Sep 1992" "SunOS 5.11" "User Commands"
+.SH NAME
+fmli \- invoke FMLI
+.SH SYNOPSIS
+.LP
+.nf
+\fBfmli\fR [\fB-a\fR \fIalias_file\fR] [\fB-c\fR \fIcommand_file\fR] 
+     [\fB-i\fR \fIinitialization_file\fR] \fIfilename\fR...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBfmli\fR command invokes the Form and Menu Language Interpreter and opens the frame(s) specified by the \fIfilename\fR argument. The \fIfilename\fR argument is the pathname of the initial frame definition file(s), and must follow the naming convention \fBMenu.\fR\fIxxx,\fR \fBForm.\fR\fIxxx,\fR or \fBText.\fR\fIxxx\fR for a menu, form or text frame respectively, where \fIxxx\fR is any string that conforms to  \fBUNIX\fR system file naming conventions. The  \fBFMLI\fR descriptor \fBlifetime\fR will be ignored for all frames opened by argument to \fBfmli\fR. These frames have a lifetime of \fBimmortal\fR by default.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fI alias_file\fR\fR
+.ad
+.RS 26n
+.rt  
+If \fB-a\fR is specified, \fIalias_file\fR is the name of a file which contains lines of the form \fBalias\fR\fB=\fR\fIpathname\fR. Thereafter, \fB$\fR\fBalias\fR can be used in definition files to simplify references to objects or devices with lengthy  pathnames, or to define a search path (similar to  \fB$\fR\fBPATH\fR in the \fBUNIX\fR system shell).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR\fI command_file\fR\fR
+.ad
+.RS 26n
+.rt  
+If \fB-c\fR is specified, \fIcommand_file\fR is the name of a file in which default  \fBFMLI\fR commands can be disabled, and new application-specific commands can be defined. The contents of \fIcommand_file\fR are reflected in the  \fBFMLI\fR Command Menu.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR\fI initialization_file\fR\fR
+.ad
+.RS 26n
+.rt  
+If \fB-i\fR is specified, \fIinitialization_file\fR is the name of a file in which the following characteristics of the application as a whole can be specified:  
+.sp
+.ne 2
+.mk
+.na
+\fB\(mi\fR
+.ad
+.RS 8n
+.rt  
+A transient introductory frame displaying product information
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\(mi\fR
+.ad
+.RS 8n
+.rt  
+A banner, its position, and other elements of the banner line
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\(mi\fR
+.ad
+.RS 8n
+.rt  
+Color attributes for all elements of the screen
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\(mi\fR
+.ad
+.RS 8n
+.rt  
+Screen Labeled Keys (SLKs) and their layout on the screen.
+.RE
+
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRExamples of the \fBfmli\fR command.
+.sp
+.LP
+To invoke \fBfmli\fR:
+
+.sp
+.in +2
+.nf
+\fBexample% fmli Menu.start\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+where \fBMenu.start\fR is an example of \fIfilename\fR named according to the file name conventions for menu definition files explained above.
+
+.sp
+.LP
+To invoke \fBfmli\fR and name an initialization file:
+
+.sp
+.in +2
+.nf
+\fBexample% fmli -i init.myapp Menu.start\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+where \fBinit.myapp\fR is an example of \fIinitialization_file\fR.
+
+.SH ENVIRONMENT VARIABLES
+.SS "Variables"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBLOADPFK\fR\fR
+.ad
+.RS 11n
+.rt  
+Leaving this environment variable unset tells FMLI, for certain terminals like the AT&T 5620 and 630, to download its equivalent character sequences for using function keys into the terminal's programmable function keys, wiping out any settings the user may already have set in the function keys. Setting \fBLOADPFK=NO\fR in the environment will prevent this downloading.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBCOLUMNS\fR\fR
+.ad
+.RS 11n
+.rt  
+Can be used to override the width of the logical screen defined for the terminal set in \fBTERM\fR. For terminals with a 132-column mode, for example, invoking  \fBFMLI\fR with the line 
+.sp
+\fBCOLUMNS=132 fmli \fIframe-file\fR\fR
+.sp
+will allow this wider screen width to be used.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBLINES\fR\fR
+.ad
+.RS 11n
+.rt  
+Can be used to override the length of the logical screen defined for the terminal set in \fBTERM\fR.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/bin/fmli\fR\fR
+.ad
+.RS 17n
+.rt  
+
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBvsig\fR(1F), \fBattributes\fR(5)
+.SH DIAGNOSTICS
+.sp
+.LP
+If \fIfilename\fR is not supplied to the \fBfmli\fR command, \fBfmli\fR returns the message:
+.sp
+.LP
+\fBInitial object must be specified.\fR
+.sp
+.LP
+If \fIfilename\fR does not exist or is not readable, \fBfmli\fR returns an error message and exits. The example command line above returns the following message and exits:
+.sp
+.LP
+\fBCan't open object "Menu.start"\fR
+.sp
+.LP
+If \fIfilename\fR exists, but does not start with one of the three correct object names (\fBMenu.\fR, \fBForm.\fR, or \fBText.\fR) or if it is named correctly but does not contain the proper data, \fBfmli\fR starts to build the screen by putting out the screen labels for function keys, after which it flashes the message:
+.sp
+.LP
+\fBI do not recognize that kind of object\fR
+.sp
+.LP
+and then exits.

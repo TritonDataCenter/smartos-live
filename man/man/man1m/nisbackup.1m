@@ -1,0 +1,236 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nisbackup 1M "12 Dec 2001" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+nisbackup \- backup NIS+ directories
+.SH SYNOPSIS
+.LP
+.nf
+\fBnisbackup\fR [\fB-v\fR] \fIbackup-dir\fR \fIdirectory\fR...
+.fi
+
+.LP
+.nf
+\fBnisbackup\fR [\fB-v\fR] \fB-a\fR \fIbackup-dir\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBnisbackup\fR backs up a NIS+ directory object on a NIS+ master server. Updates to the NIS+ database will be temporarily disabled while \fBnisbackup\fR is running. The \fIbackup-dir\fR is a UNIX directory that must exist prior to running \fBnisbackup\fR. The \fBnisbackup\fR command can be used to backup an individual NIS+ directory object or all ( \fB-a\fR) of the NIS+ directory objects served by a master server. The NIS+ directory objects being backed up will be placed into subdirectories under the \fIbackup-dir\fR directory. These subdirectories are named according to the NIS+ directory object they contain. \fBnisbackup\fR operates on individual NIS+ directory objects (for example, \fBorg_dir.wiz.com\fR). This allows an administrator to selectively backup specific directories.
+.sp
+.LP
+The \fBrpc.nisd\fR(1M) process must be running on the master server with a stable NIS+ database for \fBnisbackup\fR to complete. \fBnisbackup\fR will not attempt to correct any corruption in the NIS+ database, so it is important that backups be done regularly as part of the NIS+ administration.
+.sp
+.LP
+The first synopsis is used to backup a single NIS+ directory object or a list of NIS+ directory objects. The objects can be partially qualified or fully qualified. The machine on which the command is executing must be the master for the NIS+ directory objects specified.
+.sp
+.LP
+The second synopsis will backup all of the NIS+ directory objects that are served by this master. The \fB-a\fR option is the recommended method of backing up a master server, since it will backup all NIS+ directory objects that are served by this master. If this server is a master server for more than one domain, the backup will include NIS+ directories that belong to all of the domains served. Individual NIS+ directory objects can be selected for restoring from a \fIbackup-dir\fR created with the \fB-a\fR option. See \fBnisrestore\fR(1M).
+.sp
+.LP
+The \fB-a\fR option only includes directory objects for which this server is the master. It is possible, but not recommended, to configure a master server as a replica for other domains. The objects belonging to those replicated domains will not be backed up with the \fB-a\fR option. The backup of replicated objects must be run on the master server for those objects.
+.sp
+.LP
+Do not use the same \fIbackup-dir\fR to backup different master servers. Each master server must have its own \fIbackup-dir\fR.
+.sp
+.LP
+\fBnisbackup\fR will set the \fBrpc.nisd\fR(1M) to read only mode, which will disable updates to the NIS+ database. This is neccessary to ensure the consistency of the backup. For this reason, \fBnisbackup\fR should not be run while large numbers of updates are being applied to the NIS+ database. Update utilities such as \fBnisaddent\fR(1M) should not be run simultaneously with \fBnisbackup\fR.
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fR
+.ad
+.RS 6n
+.rt  
+Creates a backup of all NIS+ directory objects for which this server is a master.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.RS 6n
+.rt  
+Verbose option. Additional output will be produced and sent to \fBsyslog\fR(3C) upon execution of the command (see \fBsyslog.conf\fR(4)).
+.RE
+
+.SH OPERANDS
+.sp
+.ne 2
+.mk
+.na
+\fB\fIbackup-dir\fR\fR
+.ad
+.RS 14n
+.rt  
+The directory into which the subdirectories containing the backed up objects are placed. This must be created prior to running \fBnisbackup\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdirectory\fR\fR
+.ad
+.RS 14n
+.rt  
+The NIS+ directory object(s) being backed up.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRBackup of the \fBorg_dir\fR NIS+ directory object of the domain \fBfoo.com\fR on a master server to a directory named \fB/backup\fR
+.sp
+.LP
+To backup the \fBorg_dir\fR NIS+ directory object of the domain \fBfoo.com\fR on a master server to a directory named \fB/backup\fR:
+
+.sp
+.in +2
+.nf
+master_server# \fBnisbackup /backup org_dir.foo.com.\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRBackup of the entire NIS+ domain \fBfoo.com\fR to a directory named \fB/backup\fR
+.sp
+.LP
+To backup the entire NIS+ domain \fBfoo.com\fR to a directory named \fB/backup\fR:
+
+.sp
+.in +2
+.nf
+master_server# \fBnisbackup /backup foo.com. \e
+              org_dir.foo.com. groups_dir.foo.com. \e
+              ctx_dir.foo.com.\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 3 \fRBackup of an entire NIS+ database to a backup directory named \fB/backup\fR
+.sp
+.LP
+To backup an entire NIS+ database to a backup directory named \fB/backup\fR:
+
+.sp
+.in +2
+.nf
+master_server# \fBnisbackup -a /backup\fR 
+.fi
+.in -2
+.sp
+
+.SH EXIT STATUS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 5n
+.rt  
+Successful completion.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 5n
+.rt  
+An error occurred.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/\fR\fIbackup-dir\fR\fB/\fR\fIbackup_list\fR\fR
+.ad
+.sp .6
+.RS 4n
+This ascii file contains a list of all the objects contained in this \fIbackup-dir\fR directory.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fI/backup-dir/directory-object\fR\fR
+.ad
+.sp .6
+.RS 4n
+A subdirectory that is created in the \fIbackup-dir\fR that contains the NIS+ directory-object backup.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fI/backup-dir/directory-object/\fR\fBdata\fR\fR
+.ad
+.sp .6
+.RS 4n
+A subdirectory that contains the data files that are part of the NIS+ directory-object backup.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fI/backup-dir/directory-object/\fR\fBlast.upd\fR\fR
+.ad
+.sp .6
+.RS 4n
+This data file contains timestamp information about the directory-object.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fI/backup-dir/directory-object/\fR\fBdata.dict\fR\fR
+.ad
+.sp .6
+.RS 4n
+A NIS+ data dictionary for all of the objects contained in the NIS+ directory-object backup.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBNIS+\fR(1), \fBnisdefaults\fR(1), \fBnisrm\fR(1), \fBnisrestore\fR(1M), \fBrpc.nisd\fR(1M), \fB syslog\fR(3C), \fBnisfiles\fR(4), \fBsyslog.conf\fR(4), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

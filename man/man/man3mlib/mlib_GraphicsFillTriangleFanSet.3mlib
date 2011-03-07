@@ -1,0 +1,412 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_GraphicsFillTriangleFanSet 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_GraphicsFillTriangleFanSet, mlib_GraphicsFillTriangleFanSet_8, mlib_GraphicsFillTriangleFanSet_32, mlib_GraphicsFillTriangleFanSet_X_8, mlib_GraphicsFillTriangleFanSet_X_32, mlib_GraphicsFillTriangleFanSet_A_8, mlib_GraphicsFillTriangleFanSet_A_32, mlib_GraphicsFillTriangleFanSet_B_8, mlib_GraphicsFillTriangleFanSet_B_32, mlib_GraphicsFillTriangleFanSet_G_8, mlib_GraphicsFillTriangleFanSet_G_32, mlib_GraphicsFillTriangleFanSet_Z_8, mlib_GraphicsFillTriangleFanSet_Z_32, mlib_GraphicsFillTriangleFanSet_AB_8, mlib_GraphicsFillTriangleFanSet_AB_32, mlib_GraphicsFillTriangleFanSet_ABG_8, mlib_GraphicsFillTriangleFanSet_ABG_32, mlib_GraphicsFillTriangleFanSet_ABGZ_8, mlib_GraphicsFillTriangleFanSet_ABGZ_32, mlib_GraphicsFillTriangleFanSet_ABZ_8, mlib_GraphicsFillTriangleFanSet_ABZ_32, mlib_GraphicsFillTriangleFanSet_AG_8, mlib_GraphicsFillTriangleFanSet_AG_32, mlib_GraphicsFillTriangleFanSet_AGZ_8, mlib_GraphicsFillTriangleFanSet_AGZ_32, mlib_GraphicsFillTriangleFanSet_AZ_8, mlib_GraphicsFillTriangleFanSet_AZ_32, mlib_GraphicsFillTriangleFanSet_BG_8, mlib_GraphicsFillTriangleFanSet_BG_32, mlib_GraphicsFillTriangleFanSet_BGZ_8, mlib_GraphicsFillTriangleFanSet_BGZ_32, mlib_GraphicsFillTriangleFanSet_BZ_8, mlib_GraphicsFillTriangleFanSet_BZ_32, mlib_GraphicsFillTriangleFanSet_GZ_8, mlib_GraphicsFillTriangleFanSet_GZ_32 \- draw filled triangle set where all members of the set have a common vertex
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_X_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR,
+     \fBmlib_s32\fR \fIc2\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_X_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR,
+     \fBmlib_s32\fR \fIc2\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_A_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_A_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_B_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR,
+     \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_B_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR,
+     \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_G_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_G_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_Z_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_Z_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_AB_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR,
+     \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_AB_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR,
+     \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_ABG_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_ABG_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_ABGZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_ABGZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_ABZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_ABZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_AG_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_AG_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_AGZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_AGZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR,\fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_AZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_AZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_BG_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR, 
+     \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_BG_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR, \fBmlib_s32\fR \fInpoints\fR,
+     \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_BGZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_BGZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_BZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_BZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBmlib_s32\fR \fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_GZ_8\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsFillTriangleFanSet_GZ_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_image *\fR\fIzbuffer\fR, \fBconst mlib_s16 *\fR\fIx\fR, \fBconst mlib_s16 *\fR\fIy\fR,
+     \fBconst mlib_s16 *\fR\fIz\fR, \fBmlib_s32\fR \fInpoints\fR, \fBconst mlib_s32 *\fR\fIc\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Each of the \fBmlib_GraphicsFillTriangleFanSet_*()\fR functions draws a set of filled triangles with vertices at \fB{(x1,y1), (x2,y2), (x3,y3)}\fR, \fB{(x1,y1), (x3,y3), (x4,y4)}\fR, ..., and \fB{(x1,y1), (xn-1,yn-1), (xn,yn)}\fR.
+.sp
+.LP
+Each of the \fBmlib_GraphicsFillTriangleFanSet_X_*()\fR functions draws a set of filled triangles in Xor mode as follows:
+.sp
+.in +2
+.nf
+    data[x,y] ^= c ^ c2
+.fi
+.in -2
+
+.sp
+.LP
+Each of the \fBmlib_GraphicsFillTriangleFanSet_A_*()\fR functions draws a set of filled triangles with antialiasing.
+.sp
+.LP
+Each of the \fBmlib_GraphicsFillTriangleFanSet_B_*()\fR functions draws a set of filled triangles with alpha blending as follows:
+.sp
+.in +2
+.nf
+    data[x,y] = (data[x,y] * (255 - a) + c * a) / 255
+.fi
+.in -2
+
+.sp
+.LP
+Each of the \fBmlib_GraphicsFillTriangleFanSet_G_*()\fR functions draws a set of filled triangles with Gouraud shading.
+.sp
+.LP
+Each of the \fBmlib_GraphicsFillTriangleFanSet_Z_*()\fR functions draws a set of filled triangles with Z buffering.
+.sp
+.LP
+Each of the other functions draws a set of filled triangles with a combination of two or more features like antialiasing (A), alpha blending (B), Gouraud shading (G), and Z buffering (Z).
+.SH PARAMETERS
+.sp
+.LP
+Each of the functions takes some of the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIbuffer\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to the image into which the function is drawing.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIzbuffer\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to the image that holds the Z buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIx\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to array of X coordinates of the points.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIy\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to array of Y coordinates of the points.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIz\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to array of Z coordinates of the points.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fInpoints\fR\fR
+.ad
+.RS 11n
+.rt  
+Number of points in the arrays.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIc\fR\fR
+.ad
+.RS 11n
+.rt  
+Color used in the drawing, or pointer to array of colors of the points in the case of Gouraud shading.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIc2\fR\fR
+.ad
+.RS 11n
+.rt  
+Alternation color.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIa\fR\fR
+.ad
+.RS 11n
+.rt  
+Alpha value for blending. \fB0 \(<= a \(<= 255\fR.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+Each of the functions returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_GraphicsFillTriangle\fR(3MLIB), \fBmlib_GraphicsFillTriangleSet\fR(3MLIB), \fBmlib_GraphicsFillTriangleStripSet\fR(3MLIB), \fBattributes\fR(5)

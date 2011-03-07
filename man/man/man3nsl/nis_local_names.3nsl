@@ -1,0 +1,90 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nis_local_names 3NSL "10 Nov 2005" "SunOS 5.11" "Networking Services Library Functions"
+.SH NAME
+nis_local_names, nis_local_directory, nis_local_host, nis_local_group, nis_local_principal \- NIS+ local names
+.SH SYNOPSIS
+.LP
+.nf
+\fBcc\fR [ \fIflag\fR ... ] \fIfile\fR ... \fB-lnsl\fR [ \fIlibrary\fR ... ]
+#include <rpcsvc/nis.h>
+
+
+
+\fBnis_name\fR \fBnis_local_directory\fR(\fBvoid\fR);
+.fi
+
+.LP
+.nf
+\fBnis_name\fR \fBnis_local_host\fR(\fBvoid\fR);
+.fi
+
+.LP
+.nf
+\fBnis_name\fR \fBnis_local_group\fR(\fBvoid\fR);
+.fi
+
+.LP
+.nf
+\fBnis_name\fR \fBnis_local_principal\fR(\fBvoid\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+These functions return several default NIS+ names associated with the current process.
+.sp
+.LP
+\fBnis_local_directory()\fR returns the name of the NIS+ domain for this machine. This is currently the same as the Secure RPC domain returned by the \fBsysinfo\fR(2) system call.
+.sp
+.LP
+\fBnis_local_host()\fR returns the  NIS+ name of the current machine. This is the fully qualified name for the host and is either the value returned by the  \fBgethostname\fR(3C) function or, if the host name is only partially qualified, the concatenation of that value and the name of the NIS+ directory. Note that if a machine's name and address cannot be found in the local NIS+ directory, its hostname must be fully qualified.
+.sp
+.LP
+\fBnis_local_group()\fR returns the name of the current NIS+ group name. This is currently set by setting the environment variable \fBNIS_GROUP\fR to the groupname.
+.sp
+.LP
+\fBnis_local_principal()\fR returns the  NIS+ principal name for the user associated with the effective UID of the calling process. This function maps the effective uid into a principal name by looking for a \fBLOCAL\fR type credential in the table named \fIcred.org_dir\fR in the default domain. See \fBnisaddcred\fR(1M).
+.sp
+.LP
+The result returned by these routines is a pointer to a data structure with the NIS+ library, and should be considered a "read-only" result and should not be modified.
+.SH ENVIRONMENT VARIABLES
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_GROUP\fR\fR
+.ad
+.RS 13n
+.rt  
+This variable contains the name of the local NIS+ group. If the name is not fully qualified, the value returned by \fBnis_local_directory()\fR will be concatenated to it.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBnisdefaults\fR(1), \fBnisaddcred\fR(1M), \fBsysinfo\fR(2), \fBgethostname\fR(3C), \fBnis_names\fR(3NSL), \fBnis_objects\fR(3NSL), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

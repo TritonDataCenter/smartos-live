@@ -1,0 +1,170 @@
+'\" te
+.\" Portions Copyright (c) 2008, Sun Microsystems, Inc. All Right Reserved. 
+.\" This manual page is derived from documentation obtained from the OpenSC organization (www.opensc-project.org). This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free
+.\" Software Foundation; either version 2.1 of the License, or (at your option) any later version. This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser
+.\" General Public License for more details. You should have received a copy of the GNU Lesser General Public License along with this library; if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+.TH pklogin_finder 1 "17 Jul 2008" "SunOS 5.11" "User Commands"
+.SH NAME
+pklogin_finder \- map certificates into a user
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/lib/pam_pkcs11/pklogin_finder\fR [debug] [config_file=\fIfilename\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBpklogin_finder\fR uses the \fBpam_pkcs11\fR library infrastructure to interactively map a PKCS#11 provided certificate to a user.
+.sp
+.LP
+\fBpklogin_finder\fR uses the same configuration file and arguments than \fBpam_pkcs11\fR(5) PAM module. It loads defined mapper modules and tries to find a map between found certificates and a user login. 
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBconfig_file=\fR\fIfileame\fR\fR
+.ad
+.RS 23n
+.rt  
+Set the configuration file. 
+.sp
+The default value is \fB/etc/security/pam_pkcs11/pam_pkcs11.conf\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdebug\fR\fR
+.ad
+.RS 23n
+.rt  
+Enable debugging output.
+.sp
+The default is no debug.
+.RE
+
+.sp
+.LP
+As it uses the same configuration file as \fBpam_pkcs11\fR(5), all of the \fBpam_pkcs11\fR options are available. Some of these options make no sense in a non-PAM environment, and are therefore ignored. Some mapper options (\fBmapfile\fR, \fBignorecase\fR) have no effect on certificate contents, and they are ignored as well.
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 5n
+.rt  
+Successful completion. 
+.sp
+\fBpkcs11_inspect\fR prints on \fBstdout\fR the login name and exits.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 5n
+.rt  
+An error occurred.
+.sp
+A user mapping error was found.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB2\fR\fR
+.ad
+.RS 5n
+.rt  
+An error occurred.
+.sp
+No user match was found.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRUsing \fBpklogin_finder\fR
+.sp
+.LP
+The following example runs the \fBpklogin_finder\fR command without any options:
+
+.sp
+.in +2
+.nf
+% pkcs11_inspect
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRUsing \fBpklogin_finder\fR with Options
+.sp
+.LP
+The following example runs the \fBpkcs_finder\fR command with options:
+
+.sp
+.in +2
+.nf
+% pklogin_finder debug config_file=${HOME}/.pam_pkcs11.conf
+.fi
+.in -2
+.sp
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/etc/security/pam_pkcs11/pam_pkcs11.conf\fR\fR
+.ad
+.sp .6
+.RS 4n
+
+.RE
+
+.SH AUTHORS
+.sp
+.LP
+Juan Antonio Martinez, \fBjonsito@teleline.es\fR
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilityT{
+SUNWpampkcs11u, SUNWpampkcs11r, SUNWpampkcs11-docs
+T}
+_
+Interface StabilityUncommitted
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBpkcs11_inspect\fR(1), \fBattributes\fR(5), \fBpam_pkcs11\fR(5)
+.sp
+.LP
+\fIPAM-PKCS11 User Manual\fR, http://www.opensc-project.org/pam_pkcs11

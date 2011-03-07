@@ -1,0 +1,149 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_ImageLookUpMask 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_ImageLookUpMask \- table lookup with mask
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_ImageLookUpMask\fR(\fBmlib_image *\fR\fIdst\fR, \fBconst mlib_image *\fR\fIsrc\fR,
+     \fBconst void **\fR\fItable\fR, \fBmlib_s32\fR \fIchannels\fR, \fBmlib_s32\fR \fIcmask\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_ImageLookUpMask()\fR function maps the source image to the destination image by using the user-specified lookup table and applying a channel mask.
+.sp
+.LP
+The source and destination images must have the same width and height. The source image can be a single channel image or can have the same number of channels as the destination image. One of the following equations is used accordingly: 
+.sp
+.in +2
+.nf
+dst[x][y][i] = table[i][src[x][y][0]]
+dst[x][y][i] = table[i][src[x][y][i]]
+.fi
+.in -2
+
+.sp
+.LP
+The source and destination images can have different data types. See the following table for available variations of the table lookup function on image types:
+.sp
+
+.sp
+.TS
+tab();
+cw(1.38i) cw(0i) cw(0i) cw(1.38i) cw(1.38i) cw(0i) cw(1.38i) 
+lw(1.38i) lw(0i) lw(0i) lw(1.38i) lw(1.38i) lw(0i) lw(1.38i) 
+.
+Type [*]BYTESHORTUSHORTINTFLOATDOUBLE
+_
+MLIB_BITY
+MLIB_BYTEYYYYYY
+_
+MLIB_SHORTYYYYYY
+_
+MLIB_USHORTYYYYYY
+_
+MLIB_INTYYYYYY
+.TE
+
+.sp
+.LP
+[*] Each row represents a source data type. Each column represents a destination data type.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdst\fR\fR
+.ad
+.RS 12n
+.rt  
+Pointer to destination image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc\fR\fR
+.ad
+.RS 12n
+.rt  
+Pointer to source image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fItable\fR\fR
+.ad
+.RS 12n
+.rt  
+Pointer to lookup table. The data type of the lookup table is the same as the destination image. The number of entries in the lookup table is determined by the type of the input image. The format of the lookup table is:
+.sp
+\fBtable[channel][index]\fR
+.sp
+The \fBMLIB_BIT\fR type entries are indexed from 0 to 1. The \fBMLIB_BYTE\fR type entries are indexed from 0 to 255. The \fBMLIB_SHORT\fR type entries are indexed from -32768 to -1, then from 0 to 32767. The \fBMLIB_USHORT\fR type entries are indexed from 0 to 65535. The \fBMLIB_INT\fR type entries are indexed from -2147483648 to -1, and then from 0 to 2147483647.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIchannels\fR\fR
+.ad
+.RS 12n
+.rt  
+Number of channels in the lookup table. If the number of channels is equal to 1, then the same table is applied to all channels. Otherwise, the number of channels must be no less than the number of valid 1s in the channel mask.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcmask\fR\fR
+.ad
+.RS 12n
+.rt  
+Channel mask. Each bit of the mask represents a channel of an image or a lookup table. Only the rightmost four bits of cmask are considered, where the least significant bit of cmask is for the last channel. The channels corresponding to 0 bits of cmask are not processed or used. cmask is always applied to the destination image dst. If the source image src has the same number of channels as dst, then cmask is also applied to src. Otherwise, each channel of src is used for each cmask bit with a value of 1, in this order: the first channel for the first 1 from the left in cmask. If src has only one channel, then the same src channel is used for every cmask bit with a value of 1. If the lookup table has the same number of channels as dst, then cmask is also applied to table. Otherwise, each table channel is used for each cmask bit with a value of 1, in this order: the first channel for the first 1 from the left in cmask. If table has only one channel, then the same table channel is used for every cmask bit with a value of 1.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_ImageLookUp\fR(3MLIB), \fBmlib_ImageLookUp_Inp\fR(3MLIB), \fBmlib_ImageLookUp2\fR(3MLIB), \fBattributes\fR(5)

@@ -1,0 +1,93 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_VideoQuantize_S16 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_VideoQuantize_S16 \- quantization of forward Discrete Cosine Transform (DCT) coefficients
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_VideoQuantize_S16\fR(\fBmlib_s16\fR \fIicoeffs[64]\fR,
+     \fBconst mlib_d64\fR \fIdqtable[64]\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_VideoQuantize_S16()\fR function performs quantization on DCT coefficients.
+.sp
+.LP
+The following equation is used:
+.sp
+.in +2
+.nf
+icoeffs[i] = icoeffs[i] * dqtable[i];  0 \(<= i < 64
+.fi
+.in -2
+
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIicoeffs\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to the output DCT coefficients:
+.sp
+.in +2
+.nf
+-2048 < icoeffs[i] < 2048
+.fi
+.in -2
+
+Note that \fBicoeffs\fR must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdqtable\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to quantizer table coefficients.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_VideoDCT2x2_S16_S16\fR(3MLIB), \fBmlib_VideoDCT4x4_S16_S16\fR(3MLIB), \fBmlib_VideoDCT8x8_S16_S16\fR(3MLIB), \fBmlib_VideoDCT8x8_S16_S16_B12\fR(3MLIB), \fBmlib_VideoDCT8x8_S16_S16_NA\fR(3MLIB), \fBmlib_VideoDCT8x8_S16_U8\fR(3MLIB), \fBmlib_VideoDCT8x8_S16_U8_NA\fR(3MLIB), \fBmlib_VideoDCT16x16_S16_S16\fR(3MLIB), \fBmlib_VideoDCT16x16_S16_S16_B10\fR(3MLIB), \fBmlib_VideoDeQuantize_S16\fR(3MLIB), \fBmlib_VideoDeQuantizeInit_S16\fR(3MLIB), \fBmlib_VideoQuantizeInit_S16\fR(3MLIB), \fBattributes\fR(5)

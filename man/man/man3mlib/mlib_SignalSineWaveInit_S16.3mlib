@@ -1,0 +1,97 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_SignalSineWaveInit_S16 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_SignalSineWaveInit_S16 \- sine wave generation
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_SignalSineWaveInit_S16\fR(\fBvoid **\fR\fIstate\fR, 
+     \fBmlib_s16\fR \fImag\fR, \fBmlib_f32\fR \fIfreq\fR, \fBmlib_f32\fR \fIphase\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_SignalSineWaveInit_S16()\fR function allocates memory for an internal state structure and converts the parameters of the wave to an internal representation.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIstate\fR\fR
+.ad
+.RS 9n
+.rt  
+Internal state structure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fImag\fR\fR
+.ad
+.RS 9n
+.rt  
+Magnitude of sine wave to be generated, in Q15 format.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIfreq\fR\fR
+.ad
+.RS 9n
+.rt  
+Angular frequency of the sine wave to be generated, measured in radians per sample.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIphase\fR\fR
+.ad
+.RS 9n
+.rt  
+Start phase of the sine wave to be generated, measured in radians.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_SignalSineWave_S16\fR(3MLIB), \fBmlib_SignalSineWaveFree_S16\fR(3MLIB), \fBattributes\fR(5)

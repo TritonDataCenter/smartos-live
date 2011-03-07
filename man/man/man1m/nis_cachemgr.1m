@@ -1,0 +1,122 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nis_cachemgr 1M "13 Aug 2004" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+nis_cachemgr \- NIS+ utility to cache location information about NIS+ servers
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/sbin/nis_cachemgr\fR [\fB-i\fR] [\fB-v\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBnis_cachemgr\fR daemon maintains a cache of NIS+ directory objects and active servers for domains. It is responsible for locating servers for a domain on behalf of client processes.  This improves performance because only one process has to search for servers. The cache contains location information necessary to contact the NIS+ servers. This includes transport addresses, information neeeded to authenticate the server, and a time to live field which gives a hint on how long the directory object can be cached. The cache helps to improve the performance of the clients that are traversing the NIS+ name space. \fBnis_cachemgr\fR should be running on all the machines that are using NIS+. However, it is not required that the \fBnis_cachemgr\fR program be running in order for NIS+ requests to be serviced.
+.sp
+.LP
+The cache maintained by this program is shared by all the processes that access NIS+ on a machine. The cache is maintained in a file that is memory mapped by all the processes. See \fBmmap\fR(2). On start up, \fBnis_cachemgr\fR initializes the cache from the cold start file and preserves unexpired entries that already exist in the cache file. See \fBnisinit\fR(1M). Thus, the cache survives machine reboots.
+.sp
+.LP
+The \fBnis_cachemgr\fR program is normally started from a system startup script. \fBnisshowcache\fR(1M) can be used to look at the cached objects and active servers.
+.sp
+.LP
+The \fBnisprefadm\fR(1M) command can be used to control which NIS+ servers the \fBnis_cachemgr\fR program will try to select.
+.sp
+.LP
+The \fBnis_cachemgr\fR program makes NIS+ requests under the NIS+ principal name of the host on which it runs. Before running \fBnis_cachemgr\fR, security credentials for the host should be added to the \fBcred.org_dir\fR table in the host's domain using \fBnisaddcred\fR(1M). Credentials of type \fBDES\fR will be needed if the NIS+ service is operating at security level 2 (see \fBrpc.nisd\fR(1M)). See the  section, below. Additionally, a "\fBkeylogin \fR\fB-r\fR\fB \fR" should be done on the machine.
+.sp
+.LP
+\fBsvc:/network/rpc/keyserv:default\fR is required for NIS+ operation. See \fBNOTES\fR.
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR\fR
+.ad
+.RS 6n
+.rt  
+Force \fBnis_cachemgr\fR to ignore the previous cache file and reinitialize the cache from just the cold start file. By default, the cache manager initializes itself from both the cold start file and the old cache file, thereby maintaining the entries in the cache across machine reboots.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.RS 6n
+.rt  
+This flag sets verbose mode. In this mode, the \fBnis_cachemgr\fR program logs not only errors and warnings, but also additional status messages. The additional messages are logged using \fBsyslog\fR(3C) with a priority of \fBLOG_INFO\fR.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/var/nis/NIS_SHARED_DIRCACHE\fR\fR
+.ad
+.sp .6
+.RS 4n
+the shared cache file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/var/nis/NIS_COLD_START\fR\fR
+.ad
+.sp .6
+.RS 4n
+the coldstart file
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBkeylogin\fR(1), \fBsvcs\fR(1), \fBnisaddcred\fR(1M), \fBnisinit\fR(1M), \fBnisprefadm\fR(1M), \fBnisshowcache\fR(1M), \fBrpc.nisd\fR(1M), \fBsvcadm\fR(1M), \fBmmap\fR(2), \fBrpc\fR(3NSL), \fBsyslog\fR(3C), \fBnisfiles\fR(4), \fBattributes\fR(5), \fBsmf\fR(5)
+.SH DIAGNOSTICS
+.sp
+.LP
+The \fBnis_cachemgr\fR daemon logs error messages and warnings using \fBsyslog\fR(3C). Error messages are logged to the \fBDAEMON\fR facility with a priority of \fBLOG_ERR\fR . Warning messages are logged with a priority of \fBLOG_WARNING\fR. Additional status messages can be obtained using the \fB-v\fR option.
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.
+.sp
+.LP
+The \fBnis_cachemgr\fR service is managed by the service management facility, \fBsmf\fR(5), under the service identifier:
+.sp
+.in +2
+.nf
+svc:/network/rpc/nisplus:default
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Administrative actions on this service, such as enabling, disabling, or requesting restart, can be performed using \fBsvcadm\fR(1M). The service's status can be queried using the \fBsvcs\fR(1) command.

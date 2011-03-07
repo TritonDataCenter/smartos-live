@@ -1,0 +1,186 @@
+'\" te
+.\"  Copyright 1989 AT&T
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH message 1F "5 Jul 1990" "SunOS 5.11" "FMLI Commands"
+.SH NAME
+message \- puts its arguments on FMLI message line
+.SH SYNOPSIS
+.LP
+.nf
+\fBmessage\fR [\fB-t\fR] [\fB-b\fR [\fInum\fR]] [\fB-o\fR] [\fB-w\fR] [\fIstring\fR]
+.fi
+
+.LP
+.nf
+\fBmessage\fR [\fB-f\fR] [\fB-b\fR [\fInum\fR]] [\fB-o\fR] [\fB-w\fR] [\fIstring\fR]
+.fi
+
+.LP
+.nf
+\fBmessage\fR [\fB-p\fR] [\fB-b\fR [\fInum\fR]] [\fB-o\fR] [\fB-w\fR] [\fIstring\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmessage\fR command puts \fIstring\fR out on the FMLI message line. If there is no string, the \fIstdin\fR input to \fBmessage\fR will be used. The output of \fBmessage\fR has a duration (length of time it remains on the message line). The default duration is "transient": it or one of two other durations can be requested with the mutually-exclusive options below.
+.sp
+.LP
+Messages displayed with \fBmessage\fR \fB-p\fR will replace (change the value of) any message currently displayed or stored via use of the \fBpermanentmsg\fR descriptor. Likewise, \fBmessage\fR \fB-f\fR will replace any message currently displayed or stored via use of the \fBframemsg\fR descriptor. If more than one message in a frame definition file is specified with the \fB-p\fR option, the last one specified will be the permanent duration message.
+.sp
+.LP
+The \fIstring\fR argument should always be the last argument.
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR\fR
+.ad
+.RS 11n
+.rt  
+Explicitly defines a message to have transient duration. Transient messages remain on the message line only until the user presses another key or a \fBCHECKWORLD\fR occurs. The descriptors \fBitemmsg , fieldmsg , invalidmsg , choicemsg ,\fR the default-if-not-defined value of \fBoninterrupt ,\fR and FMLI generated error messages (that is, from syntax errors) also output transient duration messages. Transient messages take precedence over both frame messages and permanent messages.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR\fR
+.ad
+.RS 11n
+.rt  
+Defines a message to have "frame" duration. Frame messages remain on the message line as long as the frame in which they are defined is current. The descriptor  \fBframemsg\fR also outputs a frame duration message. Frame messages take precedence over permanent messages.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR\fR
+.ad
+.RS 11n
+.rt  
+Defines a message to have "permanent" duration. Permanent messages remain on the message line for the length of the FMLI session, unless explicitly replaced by another permanent message or temporarily superseded by a transient message or frame message. A permanent message is not affected by navigating away from, or by closing, the frame which generated the permanent message. The descriptor \fBpermanentmsg\fR also outputs a permanent duration message.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR\fI[num]\fR\fR
+.ad
+.RS 11n
+.rt  
+Rings the terminal bell \fInum\fR times, where \fInum\fR is an integer from 1 to 10. The default value is 1. If the terminal has no bell, the screen will flash \fInum\fR times instead, if possible.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR\fR
+.ad
+.RS 11n
+.rt  
+Forces \fBmessage\fR to duplicate its message to \fIstdout\fR \fI\&.\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-w\fR\fR
+.ad
+.RS 11n
+.rt  
+Turns on the working indicator.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRA sample output of \fBmessage\fR on the message line:
+.sp
+.LP
+When a value entered in a field is invalid, ring the bell 3 times and then display \fBInvalid Entry: Try again!\fR on the message line:
+
+.sp
+.in +2
+.nf
+\fBinvalidmsg=`message \fR\fB-b\fR\fB 3 "Invalid Entry: Try again!"`\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Display a message that tells the user what is being done:
+
+.sp
+.in +2
+.nf
+\fBdone=`message EDITOR has been set in your environment` close\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Display a message on the message line and \fIstdout\fR for each field in a form (a pseudo-"field duration" message).
+
+.sp
+.in +2
+.nf
+\fBfieldmsg="`message -o -f "Enter a filename."`"\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Display a blank transient message (effect is to "remove" a permanent or frame duration message).
+
+.sp
+.in +2
+.nf
+\fBdone=`message  ""` nop\fR
+.fi
+.in -2
+.sp
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBsleep\fR(1), \fBattributes\fR(5)   
+.SH NOTES
+.sp
+.LP
+If \fBmessage\fR is coded more than once on a single line, it may appear that only the right-most instance is interpreted and displayed. Use  \fBsleep\fR(1) between uses of \fBmessage\fR in this case, to display multiple messages.
+.sp
+.LP
+\fBmessage -f\fR should not be used in a stand-alone backquoted expression or with the \fBinit\fR descriptor because the frame is not yet current when these are evaluated.
+.sp
+.LP
+In cases where \fB`message -f "\fR\fIstring\fR\fB"` \fRis part of a stand-alone backquoted expression, the context for evaluation of the expression is the previously current frame. The previously current frame can be the frame that issued the \fBopen\fR command for the frame containing the backquoted expression, or it can be a frame given as an argument when \fBfmli\fR was invoked. That is, the previously current frame is the one whose frame message will be modified.
+.sp
+.LP
+Permanent duration messages are displayed when the user navigates to the command line.

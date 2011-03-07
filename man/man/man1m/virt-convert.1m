@@ -1,0 +1,268 @@
+'\" te
+.\" Copyright 2005-2006 Red Hat, Inc. Jeremy Katz (katzj@redhat.com) Option handling added by Andrew Puch (apuch@redhat.com).
+.\" This manual page is based in part on material found at fedoraproject.org.
+.\" This software may be freely redistributed under the terms of the GNU general public license. You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA
+.\" 02139, USA.
+.\" Portions Copyright (c) 2009, Sun Microsystems, Inc. All Rights Reserved
+.TH virt-convert 1M "8 Sep 2009" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+virt-convert \- convert virtual machines between formats
+.SH SYNOPSIS
+.LP
+.nf
+\fBvirt-convert\fR [\fIoption\fR]... \fIinput.vmx\fR | \fIinput-dir\fR [\fIoutput.xml\fR | \fIoutput-dir\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBvirt-convert\fR program is a command line tool for converting virtual machines (VMs) from one format to another. It accepts either a VM definition file (such as VMware \fBvmx\fR format) or a directory containing a VM. By default, a new VM definition file, and converted disk images, will be placed in a new output directory.
+.sp
+.LP
+If an output directory is specified, it will be created if necessary, and the output VM definition placed within the new directory, along with any disk images, as needed.
+.sp
+.LP
+If an output VM definition file is specified, it will be created alongside any disks in the same directory.
+.SH OPTIONS
+.sp
+.LP
+Any of the following options can be omitted, in which case  \fBvirt-convert\fR will use defaults when required. An input VM definition or containing directory must be provided. By default, an output directory is generated based upon the name of the VM. The default input format is VMware \fBvmx\fR, and the default output format is a \fBlibvirt\fR "image" XML definition.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR, \fB--arch\fR=\fIarch\fR\fR
+.ad
+.sp .6
+.RS 4n
+Architecture of the virtual machine (\fBi686\fR, \fBx86_64\fR, \fBppc\fR). Defaults to that of the host machine.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-D\fR, \fB--disk-format\fR=\fIformat\fR\fR
+.ad
+.sp .6
+.RS 4n
+Output disk format, or \fBnone\fR if no conversion should be performed. \fIformat\fRis one of:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnone\fR\fR
+.ad
+.sp .6
+.RS 4n
+No disks are converted or copied.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvmdk\fR\fR
+.ad
+.sp .6
+.RS 4n
+VMWare VMDK format
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBraw\fR\fR
+.ad
+.sp .6
+.RS 4n
+raw file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvdisk\fR\fR
+.ad
+.sp .6
+.RS 4n
+\fBvdisk\fR format (see \fBvdiskadm\fR(1M))
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR, \fB--debug\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display debugging information.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR, \fB--help\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display the help message and exit.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR, \fB--input-format\fR \fIformat\fR\fR
+.ad
+.sp .6
+.RS 4n
+Input format. Currently, \fBvmx\fR is the only supported input format.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--noacpi\fR\fR
+.ad
+.sp .6
+.RS 4n
+Override the OS type and variant to disable the ACPI setting for fully virtualized guest.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--noapic\fR\fR
+.ad
+.sp .6
+.RS 4n
+Override the OS type and variant to disable the APIC setting for fully virtualized guest.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR, \fB--output-format\fR \fIformat\fR\fR
+.ad
+.sp .6
+.RS 4n
+Output format. Currently, the supported output formats are \fBvirt-instance\fR and \fBvirt-image\fR. \fBvirt-instance\fR is the recommended format for Solaris.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--os-type\fR=\fIos_type\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optimize the guest configuration for a type of operating system. This will attempt to pick the most suitable ACPI and APIC settings, optimally supported mouse drivers, and generally accommodate other operating system quirks. See \fBvirt-install\fR(1M) for a list of valid operating system types.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--os-variant\fR=\fIos_variant\fR\fR
+.ad
+.sp .6
+.RS 4n
+Further optimize the guest configuration for a specific operating system variant. This parameter is optional. See \fBvirt-install\fR(1M) for a list of valid operating system variants.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR, \fB--paravirt\fR\fR
+.ad
+.sp .6
+.RS 4n
+Create  a paravirtualized guest image. Convert machine to a paravirtualized Xen-based image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-q\fR, \fB--quiet\fR\fR
+.ad
+.sp .6
+.RS 4n
+Avoid verbose output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR, \fB--hvm\fR\fR
+.ad
+.sp .6
+.RS 4n
+Create a fully virtualized guest image. Convert machine to a \fBhvm\fR/\fBqemu\fR-based image (this is the default if \fB--paravirt\fR is not specified).
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRConverting a VMware VMX appliance
+.sp
+.LP
+The following sequence of commands converts a VMware VMX appliance and imports it into Solaris xVM.
+
+.sp
+.in +2
+.nf
+# \fBvirt-convert -o virt-instance /guests/vmx-appliance/ \e\fR
+\fB/guests/xvm-appliance/\fR
+# \fBvirsh define --relative-path=/guests/xvm-appliance/ \e\fR
+\fB\eguests/xvm-appliance/appliance.xml\fR
+.fi
+.in -2
+.sp
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWxvmu
+_
+Interface StabilityVolatile
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBvdiskadm\fR(1M), \fBvirt-install\fR(1M), \fBattributes\fR(5), \fBxvm\fR(5)
+.SH CAVEATS
+.sp
+.LP
+Not all conversions will result in a working guest installation. If the source OS image is configured to use SCSI disks, the use of IDE disks may cause the OS boot to fail. Some images may be configured to use the VMware drivers such as \fBvlance\fR. In the \fBvlance\fR case and in general, device emulation support may not be sufficient for all OS installations.
+.SH AUTHORS
+.sp
+.LP
+Written by Joey Boggs and John Levon.
+.sp
+.LP
+See the \fBAUTHORS\fR file in the source distribution for the complete list of credits.

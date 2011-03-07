@@ -1,0 +1,162 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_ImageSetSubimageStruct 3MLIB "10 Sep 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_ImageSetSubimageStruct \- set sub-image data structure
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_ImageSetSubimageStruct\fR(\fBmlib_image *\fR\fIsubimg\fR,
+     \fBconst mlib_image *\fR\fIimg\fR, \fBmlib_s32\fR \fIx\fR, \fBmlib_s32\fR \fIy\fR, 
+     \fBmlib_s32\fR \fIw\fR, \fBmlib_s32\fR \fIh\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_ImageSetSubimageStruct()\fR function sets a sub-image's data structure using parameters supplied by the user.
+.sp
+.LP
+The \fBmlib_ImageSetSubimageStruct()\fR function returns \fBMLIB_FAILURE\fR if the supplied parameters do not pass the following sanity checks:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBsubimg != NULL\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fBimg != NULL\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fB0 < w \(<= mlib_ImageGetWidth(img)\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fB0 < h \(<= mlib_ImageGetHeight(img)\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fB0 \(<= x \(<= (mlib_ImageGetWidth(img) - w)\fR
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+\fB0 \(<= y \(<= (mlib_ImageGetHeight(img) - h)\fR
+.RE
+.sp
+.LP
+Whenever \fBMLIB_FAILURE\fR is returned, the original image data structure is not changed.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsubimg\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to the sub-image data structure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIimg\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to the source image data structure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIx\fR\fR
+.ad
+.RS 10n
+.rt  
+X coordinate of the left border in the source image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIy\fR\fR
+.ad
+.RS 10n
+.rt  
+Y coordinate of the top border in the source image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIw\fR\fR
+.ad
+.RS 10n
+.rt  
+Width of the sub-image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIh\fR\fR
+.ad
+.RS 10n
+.rt  
+Height of the sub-image.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+\fBMLIB_SUCCESS\fR is returned if the image data structure is set successfully. \fBMLIB_FAILURE\fR is returned when the image data structure can not be set according to the parameters supplied.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_ImageCreate\fR(3MLIB), \fBmlib_ImageCreateSubimage\fR(3MLIB), \fBmlib_ImageCreateStruct\fR(3MLIB), \fBmlib_ImageSetStruct\fR(3MLIB), \fBmlib_ImageResetStruct\fR(3MLIB), \fBmlib_ImageResetSubimageStruct\fR(3MLIB), \fBmlib_ImageDelete\fR(3MLIB), \fBmlib_ImageSetFormat\fR(3MLIB), \fBmlib_ImageSetPaddings\fR(3MLIB), \fBattributes\fR(5)

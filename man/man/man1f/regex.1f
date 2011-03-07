@@ -1,0 +1,174 @@
+'\" te
+.\"  Copyright 1989 AT&T  Copyright (c) 1996, Sun Microsystems, Inc.  All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH regex 1F "12 Jul 1999" "SunOS 5.11" "FMLI Commands"
+.SH NAME
+regex \- match patterns against a string
+.SH SYNOPSIS
+.LP
+.nf
+\fBregex\fR [\fB-e\fR] [\fB-v\fR "\fIstring\fR"] [\fIpattern\fR \fItemplate\fR] ...
+     \fIpattern\fR [\fItemplate\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBregex\fR command takes a string from the standard input, and a list of \fIpattern\fR / \fItemplate\fR pairs, and runs \fBregex()\fR to compare the string against each \fIpattern\fR until there is a match. When a match occurs, \fBregex\fR writes the corresponding \fItemplate\fR to the standard output and returns \fBTRUE\fR. The last (or only) \fIpattern\fR does not need a template. If that is the pattern that matches the string, the function simply returns \fBTRUE\fR. If no match is found, \fBregex\fR returns \fBFALSE\fR.
+.sp
+.LP
+The argument \fIpattern\fR is a regular expression of the form described in \fBregex()\fR. In most cases, \fIpattern\fR should be enclosed in single quotes to turn off special meanings of characters. Note that only the final \fIpattern\fR in the list may lack a \fItemplate\fR.
+.sp
+.LP
+The argument \fItemplate\fR may contain the strings \fB$m0\fR through \fB$m9\fR, which will be expanded to the part of \fIpattern\fR enclosed in \fB( .\|.\|. )$0\fR through \fB( .\|.\|. )$9\fR constructs (see examples below). Note that if you use this feature, you must be sure to enclose \fItemplate\fR in single quotes so that \fBFMLI\fR does not expand \fB$m0\fR through \fB$m9\fR at parse time. This feature gives \fBregex\fR much of the power of \fBcut\fR(1), \fBpaste\fR(1), and \fBgrep\fR(1), and some of the capabilities of \fBsed\fR(1). If there is no \fItemplate\fR, the default is \fB$m0$m1$m2$m3$m4$m5$m6$m7$m8$m9\fR.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-e\fR\fR
+.ad
+.RS 15n
+.rt  
+Evaluates the corresponding template and writes the result to the standard output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR "\fIstring\fR"\fR
+.ad
+.RS 15n
+.rt  
+Uses \fIstring\fR instead of the standard input to match against patterns.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRCutting letters out of a string
+.sp
+.LP
+To cut the 4th through 8th letters out of a string (this example will output \fBstrin\fR and return \fBTRUE\fR):
+
+.sp
+.in +2
+.nf
+\fB`regex -v "my string is nice" '^.{3}(.{5})$0' '$m0'`\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRValidating input in a form
+.sp
+.LP
+In a form, to validate input to field 5 as an integer:
+
+.sp
+.in +2
+.nf
+\fBvalid=`regex -v "$F5" '^[0-9]+$'`\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 3 \fRTranslating an environment variable in a form
+.sp
+.LP
+In a form, to translate an environment variable which contains one of the numbers \fB1\fR, \fB2\fR, \fB3\fR, \fB4\fR, \fB5\fR to the letters \fBa\fR, \fBb\fR, \fBc\fR, \fBd\fR, \fBe\fR:
+
+.sp
+.in +2
+.nf
+\fBvalue=`regex -v "$VAR1" 1 a 2 b 3 c 4 d 5 e '.*' 'Error'`\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Note the use of the pattern \fB\&'.*'\fR to mean "anything else".
+
+.LP
+\fBExample 4 \fRUsing backquoted expressions
+.sp
+.LP
+In the example below, all three lines constitute a single backquoted expression. This expression, by itself, could be put in a menu definition file. Since backquoted expressions are expanded as they are parsed, and output from a backquoted expression (the \fBcat\fR command, in this example) becomes part of the definition file being parsed, this expression would read \fB/etc/passwd\fR and make a dynamic menu of all the login ids on the system.
+
+.sp
+.in +2
+.nf
+\fB`cat /etc/passwd | regex '^([^:]*)$0.*$' '
+name=$m0
+action=`message "$m0 is a user"`'`\fR
+.fi
+.in -2
+.sp
+
+.SH DIAGNOSTICS
+.sp
+.LP
+If none of the patterns match, \fBregex\fR returns \fBFALSE\fR, otherwise \fBTRUE\fR.
+.SH NOTES
+.sp
+.LP
+Patterns and templates must often be enclosed in single quotes to turn off the special meanings of characters. Especially if you use the \fB$m0\fR through \fB$m9\fR variables in the template, since \fBFMLI\fR will expand the variables (usually to "") before \fBregex\fR even sees them.
+.sp
+.LP
+Single characters in character classes (inside \fB[\|]\fR) must be listed before character ranges, otherwise they will not be recognized. For example, \fB[a-zA-Z_/]\fR will not find underscores (\fB_\fR) or slashes (\fB/\fR), but \fB[_/a-zA-Z]\fR will.
+.sp
+.LP
+The regular expressions accepted by \fBregcmp\fR differ slightly from other utilities (that is, \fBsed\fR, \fBgrep\fR, \fBawk\fR, \fBed\fR, and so forth).
+.sp
+.LP
+\fBregex\fR with the \fB-e\fR option forces subsequent commands to be ignored. In other words, if a backquoted statement appears as follows:
+.sp
+.in +2
+.nf
+\fB`regex -e ...; command1; command2`\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fBcommand1\fR and \fBcommand2\fR would never be executed. However, dividing the expression into two:
+.sp
+.in +2
+.nf
+\fB`regex -e ...``command1; command2`\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+would yield the desired result.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBawk\fR(1), \fBcut\fR(1), \fBgrep\fR(1), \fBpaste\fR(1), \fBsed\fR(1), \fBregcmp\fR(3C), \fBattributes\fR(5)

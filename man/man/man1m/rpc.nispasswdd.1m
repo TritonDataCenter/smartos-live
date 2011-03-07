@@ -1,0 +1,146 @@
+'\" te
+.\" Copyright (C) 2004, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH rpc.nispasswdd 1M "13 Aug 2004" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+rpc.nispasswdd, nispasswdd \- NIS+ password update daemon
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/sbin/rpc.nispasswdd\fR [\fB-a\fR \fIattempts\fR] [\fB-c\fR \fIminutes\fR] [\fB-D\fR] 
+     [\fB-g\fR] [\fB-v\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBrpc.nispasswdd\fR daemon is an \fBONC+ RPC\fR service that services password update requests from \fBnispasswd\fR(1) and \fByppasswd\fR(1). It updates password entries in the NIS+ \fBpasswd\fR table.
+.sp
+.LP
+\fBrpc.nispasswdd\fR is normally started from a system startup script after the NIS+ server (\fBrpc.nisd\fR(1M)) has been started. \fBrpc.nispasswdd\fR will determine whether it is running on a machine that is a master server for one or more NIS+ directories. If it discovers that the host is not a master server, then it will promptly exit. It will also determine if \fBrpc.nisd\fR(1M) is running in NIS (YP) compatibility mode (the \fB-Y\fRoption) and will register as \fByppasswdd\fR for NIS (YP) clients as well.
+.sp
+.LP
+\fBrpc.nispasswdd\fR will syslog all failed password update attempts, which will allow an administrator to determine whether someone was trying to "crack" the passwords.
+.sp
+.LP
+\fBrpc.nispasswdd\fR has to be run by a superuser.
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR \fIattempts\fR\fR
+.ad
+.RS 15n
+.rt  
+Set the maximum number of attempts allowed to authenticate the caller within a password update request session. Failed attempts are \fBsyslogd\fR(1M) and the request is cached by the daemon. After the maximum number of allowed attempts the daemon severs the connection to the client. The default value is set to \fB3\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR \fIminutes\fR\fR
+.ad
+.RS 15n
+.rt  
+Set the number of minutes a failed password update request should be cached by the daemon. This is the time during which if the daemon receives further password update requests for the same user and authentication of the caller fails, then the daemon will simply not respond. The default value is set to \fB30\fRminutes.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-D\fR\fR
+.ad
+.RS 15n
+.rt  
+Debug. Run in debugging mode.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-g\fR\fR
+.ad
+.RS 15n
+.rt  
+Generate \fBDES\fR credential. By default the \fBDES\fR credential is not generated for the user if they do not have one. By specifying this option, if the user does not have a credential, then one will be generated for them and stored in the NIS+ cred table.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.RS 15n
+.rt  
+Verbose. With this option, the daemon sends a running narration of what it is doing to the syslog daemon. This option is useful for debugging problems.
+.RE
+
+.SH EXIT STATUS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 5n
+.rt  
+success
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 5n
+.rt  
+an error has occurred.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBsvcs\fR(1), \fBnispasswd\fR(1), \fBpasswd\fR(1), \fByppasswd\fR(1), \fBrpc.nisd\fR(1M), \fBsyslogd\fR(1M), \fBsvcadm\fR(1M), \fB nsswitch.conf\fR(4), \fBattributes\fR(5), \fBsmf\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris Operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.
+.sp
+.LP
+The \fBrpc.nispasswdd\fR service is managed by the service management facility, \fBsmf\fR(5), under the service identifier:
+.sp
+.in +2
+.nf
+ svc:/network/rpc/nisplus:default
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Administrative actions on this service, such as enabling, disabling, or requesting restart, can be performed using \fBsvcadm\fR(1M). The service's status can be queried using the \fBsvcs\fR(1) command.

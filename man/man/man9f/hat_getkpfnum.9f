@@ -1,0 +1,78 @@
+'\" te
+.\" Copyright (c) 2004, Sun Microsystems, Inc. All Rights Reserved.
+.\" Copyright 1989 AT&T
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH hat_getkpfnum 9F "13 June 2004" "SunOS 5.11" "Kernel Functions for Drivers"
+.SH NAME
+hat_getkpfnum \- get page frame number for kernel address
+.SH SYNOPSIS
+.LP
+.nf
+#include <sys/types.h>
+#include <sys/ddi.h>
+#include <sys/sunddi.h>
+
+\fBpfn_t\fR \fBhat_getkpfnum\fR(\fBcaddr_t\fR \fIaddr\fR);
+.fi
+
+.SH INTERFACE LEVEL
+.sp
+.LP
+This interface is obsolete. A driver \fBdevmap\fR(9E) entry point should be provided instead.
+.SH PARAMETERS
+.sp
+.ne 2
+.mk
+.na
+\fB\fIaddr\fR \fR
+.ad
+.RS 9n
+.rt  
+The kernel virtual address for which the page frame number is to be returned.
+.RE
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBhat_getkpfnum()\fR returns the page frame number corresponding to the kernel virtual address, \fIaddr\fR. 
+.sp
+.LP
+\fIaddr\fR must be a kernel virtual address which maps to device memory. \fBddi_map_regs\fR(9F) can be used to obtain this address. For example, \fBddi_map_regs\fR(9F) can be called in the driver's \fBattach\fR(9E) routine. The resulting kernel virtual address can be saved by the driver (see \fBddi_soft_state\fR(9F)) and used in \fBmmap\fR(9E). The corresponding \fBddi_unmap_regs\fR(9F) call can be made in the driver's \fBdetach\fR(9E) routine. Refer to \fBmmap\fR(9E) for more information.
+.SH RETURN VALUES
+.sp
+.LP
+The page frame number corresponding to the valid, device-mapped virtual address \fIaddr\fR. Otherwise the return value is undefined.
+.SH CONTEXT
+.sp
+.LP
+\fBhat_getkpfnum()\fR can be called only from user or kernel context.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes: 
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface stabilityObsolete
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBattach\fR(9E), \fBdetach\fR(9E), \fBdevmap\fR(9E), \fBmmap\fR(9E), \fBddi_map_regs\fR(9F), \fBddi_soft_state\fR(9F), \fBddi_unmap_regs\fR(9F) 
+.sp
+.LP
+\fIWriting Device Drivers\fR 
+.SH NOTES
+.sp
+.LP
+For some devices, mapping device memory in the driver's \fBattach\fR(9E) routine and unmapping device memory in the driver's \fBdetach\fR(9E) routine is a sizeable drain on system resources. This is especially true for devices with a large amount of physical address space. Refer to \fBmmap\fR(9E) for alternative methods.

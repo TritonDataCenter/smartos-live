@@ -1,0 +1,109 @@
+'\" te
+.\" Copyright (c) 2008, Sun Microsystems, Inc.  All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH blk2scsa 7D "28 Feb 2008" "SunOS 5.11" "Devices"
+.SH NAME
+blk2scsa \- SCSA block device emulation
+.SH DESCRIPTION
+.sp
+.LP
+The \fBblk2scsa\fR module provides support services for generic block devices so that they appear to the system as devices on a virtual SCSI bus, thus allowing them to be serviced by the \fBsd\fR(7D) SCSI disk driver. The \fBblk2scsa\fR device supports the SCSI-2 command set for Direct Access Devices. The \fBblk2scsa\fR device supports multiple LUNs per physical device and creates a separate child device for each LUN. All child nodes attach to \fBsd\fR(7D).
+.SH DEVICE SPECIAL FILES
+.sp
+.LP
+Disk block special file names are located in \fB/dev/dsk\fR. Raw file names are located in \fB/dev/rdsk\fR.  See \fBsd\fR(7D).
+.SH IOCTLS
+.sp
+.LP
+See \fBdkio\fR(7I)
+.SH ERRORS
+.sp
+.LP
+See \fBsd\fR(7D).
+.SH FILES
+.sp
+.LP
+Device special files for the storage device are created in the same way as those for a SCSI disk. See \fBsd\fR(7D) for more information.
+.sp
+.ne 2
+.mk
+.na
+\fB/dev/dsk/c\fIn\fRt\fIn\fRd\fIn\fRs\fIn\fR\fR
+.ad
+.sp .6
+.RS 4n
+Block files for disks.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB/dev/rdsk/ct\fIn\fRd\fIn\fRs\fIn\fR\fR
+.ad
+.sp .6
+.RS 4n
+Raw files for disks.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/kernel/misc/blk2scsa\fR\fR
+.ad
+.sp .6
+.RS 4n
+32-bit ELF kernel module (x86).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/kernel/misc/amd64/blk2scsa\fR\fR
+.ad
+.sp .6
+.RS 4n
+64-bit ELF kernel module (x86).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/kernel/misc/sparcv9/blk2scsa\fR\fR
+.ad
+.sp .6
+.RS 4n
+64-bit ELF kernel module (SPARC).
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for a description of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+ArchitectureSPARC, x86
+_
+AvailabilitySUNWckr
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBeject\fR(1), \fBrmformat\fR(1), \fBrmmount\fR(1), \fBcfgadm_scsi\fR(1M), \fBfdisk\fR(1M), \fBmount\fR(1M), \fBumount\fR(1M), \fBscsi\fR(4), \fBvfstab\fR(4), \fBattributes\fR(5), \fBsd\fR(7D), \fBdkio\fR(7I), \fBpcfs\fR(7FS)
+.sp
+.LP
+\fI802.11b Standard for Wireless Local Area Networks (WLANs)\fR - IEEE

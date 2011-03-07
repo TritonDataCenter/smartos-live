@@ -1,0 +1,128 @@
+'\" te
+.\"  Copyright 1989 AT&T
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH indicator 1F "5 Jul 1990" "SunOS 5.11" "FMLI Commands"
+.SH NAME
+indicator \- display application specific alarms and/or the "working" indicator
+.SH SYNOPSIS
+.LP
+.nf
+\fBindicator\fR [\fB-b\fR [\fIn\fR]] [\fB-c\fR \fIcolumn\fR] [\fB-l\fR \fIlength\fR] [\fB-o\fR] [\fB-w\fR] 
+     [\fIstring\fR]...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBindicator\fR function displays application specific alarms or the "working" indicator, or both, on the  \fBFMLI\fR banner line. The argument \fIstring\fR is a string to be displayed on the banner line, and should always be the last argument given. Note that \fIstring\fR is not automatically cleared from the banner line.
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR\fIn\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fB-b\fR option rings the terminal bell \fIn\fR times, where \fIn\fR is an integer from 1 to 10. The default value is 1. If the terminal has no bell, the screen is flashed instead, if possible.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fR\fB-c\fR\fB \fR\fIcolumn\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fB-c\fR option defines the column of the banner line at which to start the indicator string. The argument \fIcolumn\fR  must be an integer from \fB0\fR to \fBDISPLAYW-1.\fR If the \fB-c\fR option is not used, \fIcolumn\fR defaults to \fB0 .\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\fR\fB-l\fR\fB \fR\fIlength\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fB-l\fR option defines the maximum length of the string displayed. If \fIstring\fR is longer than \fIlength\fR characters, it will be truncated. The argument \fIlength\fR must be an integer from \fB1\fR to \fBDISPLAYW.\fR If the \fB-l\fR option is not used, \fIlength\fR defaults to \fBDISPLAYW.\fR Note that if \fIstring\fR doesn't fit it will be truncated.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fB-o\fR option causes \fBindicator\fR to duplicate its output to \fIstdout\fR \fI\&.\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-w\fR\fR
+.ad
+.RS 13n
+.rt  
+The \fB-w\fR option turns on the "working" indicator.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRA sample output of the \fBindicator\fR command.
+.sp
+.LP
+When the value entered in a form field is invalid, the following use of \fBindicator\fR will ring the bell three times and display the word \fBWRONG\fR starting at column 1 of the banner line.
+
+.sp
+.in +2
+.nf
+\fBinvalidmsg=`indicator \fR\fB-b\fR 3 \fB-c\fR 1 "WRONG"`
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+To clear the indicator after telling the user the entry is wrong:
+
+.sp
+.in +2
+.nf
+\fBinvalidmsg=`indicator \fR\fB-b\fR\fB 9 \fR\fB-c\fR\fB 1 "WRONG"; sleep 3;
+        indicator \fR\fB-c\fR\fB 1 "     "`\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+In this example the value of \fBinvalidmsg\fR (in this case the default value \fBInput is not valid\fR), still appears on the  \fBFMLI\fR message line.   
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBattributes\fR(5)

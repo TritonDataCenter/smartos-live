@@ -1,0 +1,182 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_VideoColorRGBint_to_BGRAint 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_VideoColorRGBint_to_BGRAint \- convert RGB interleaved to BGRA interleaved
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBvoid\fR \fBmlib_VideoColorRGBint_to_BGRAint\fR(\fBmlib_u8 *\fR\fIbgra\fR,
+     \fBconst mlib_u8 *\fR\fIrgb\fR, \fBconst mlib_u8 *\fR\fIa_array\fR,
+     \fBmlib_u8\fR \fIa_const\fR, \fBmlib_s32\fR \fIw\fR, \fBmlib_s32\fR \fIh\fR,
+     \fBmlib_s32\fR \fIdlb\fR, \fBmlib_s32\fR \fIslb\fR, \fBmlib_s32\fR \fIalb\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The interleaved RGB stream and the A values are combined into an interleaved BGRA byte stream.
+.sp
+.LP
+The alpha values for this function work in the following fashion:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the \fBa_array\fR pointer is not \fBNULL\fR, the values are taken from there. It has to have the at least 1/3 the dimension of the RGB buffer.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the \fBa_array\fR pointer is \fBNULL\fR, the alpha values for every pixel are set to \fBa_const\fR.
+.RE
+.sp
+.LP
+In other words, this function's inner loop works like this:
+.sp
+.in +2
+.nf
+bgra[0] = rgb[2];
+bgra[1] = rgb[1];
+bgra[2] = rgb[0];
+bgra[3] = (a_array == NULL) ? a_const : a_array[0];
+.fi
+.in -2
+
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIbgra\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to the output BGRA buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIrgb\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to the input RGB buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIa_array\fR\fR
+.ad
+.RS 11n
+.rt  
+Pointer to the alpha buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIa_const\fR\fR
+.ad
+.RS 11n
+.rt  
+Constant alpha value.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIw\fR\fR
+.ad
+.RS 11n
+.rt  
+Image width in pixels.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIh\fR\fR
+.ad
+.RS 11n
+.rt  
+Image height in lines.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdlb\fR\fR
+.ad
+.RS 11n
+.rt  
+Linebytes of the output buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIslb\fR\fR
+.ad
+.RS 11n
+.rt  
+Linebytes of the input buffer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIalb\fR\fR
+.ad
+.RS 11n
+.rt  
+Linebytes of the alpha buffer.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+None.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_VideoColorRGBint_to_ABGRint\fR(3MLIB), \fBattributes\fR(5)

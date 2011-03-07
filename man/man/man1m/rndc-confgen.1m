@@ -1,0 +1,189 @@
+'\" te
+.\" Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")  Copyright (C) 2001-2003  Internet Software Consortium.   Permission to use, copy, modify, and distribute this software for any  purpose with or without fee is hereby granted, provided that the above 
+.\" copyright notice and this permission notice appear in all copies.   THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH  REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY  AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,  INDIRECT,
+.\" OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM  LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE  OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR  PERFORMANCE OF THIS SOFTWARE.
+.\" Portions Copyright (c) 2009, Sun Microsystems, Inc. All Rights Reserved.
+.TH rndc-confgen 1M "24 Dec 2008" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+rndc-confgen \- rndc key generation tool
+.SH SYNOPSIS
+.LP
+.nf
+\fBrndc-confgen\fR [\fB-ah\fR] [\fB-b\fR \fIkeysize\fR] [\fB-c\fR \fIkeyfile\fR] [\fB-k\fR \fIkeyname\fR] 
+     [\fB-p\fR \fIport\fR] [\fB-r\fR \fIrandomfile\fR] [\fB-s\fR \fIaddress\fR] [\fB-t\fR \fIchrootdir\fR] 
+     [\fB-u\fR \fIuser\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBrndc-confgen\fR utility generates configuration files for \fBrndc\fR(1M). This utility can be used as a convenient alternative to writing  by hand the \fBrndc.conf\fR(4) file and the corresponding \fBcontrols\fR and \fBkey\fR statements in \fBnamed.conf\fR. It can also be run with the \fB-a\fR option to set up a \fBrndc.key\fR file and avoid altogether the need for a \fBrndc.conf\fR file and a \fBcontrols\fR statement.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fR
+.ad
+.RS 17n
+.rt  
+Perform automatic \fBrndc\fR configuration. This option creates a file \fBrndc.key\fR in \fB/etc\fR (or however \fIsysconfdir\fR was specified when BIND was built) that is read by both \fBrndc\fR and \fBnamed\fR(1M) on startup. The \fBrndc.key\fR file defines a default command channel and authentication key allowing \fBrndc\fR to communicate with \fBnamed\fR with no further configuration. Running \fBrndc-confgen\fR with \fB-a\fR specified allows BIND 9 and \fBrndc\fR to be used as drop-in replacements for BIND 8 and \fBndc\fR, with no changes to the existing BIND 8 \fBnamed.conf\fR file.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR \fIkeysize\fR\fR
+.ad
+.RS 17n
+.rt  
+Specify the size of the authentication key in bits. The \fIkeysize\fR argument must be between 1 and 512 bits; the default is 128.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR \fIkeyfile\fR\fR
+.ad
+.RS 17n
+.rt  
+Used with the \fB-a\fR option to specify an alternate location for \fBrndc.key\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR\fR
+.ad
+.RS 17n
+.rt  
+Print a short summary of the options and arguments to \fBrndc-confgen\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-k\fR \fIkeyname\fR\fR
+.ad
+.RS 17n
+.rt  
+Specify the key name of the \fBrndc\fR authentication key. The \fIkeyname\fR argument must be a valid domain name. The default is \fBrndc-key\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR \fIport\fR\fR
+.ad
+.RS 17n
+.rt  
+Specify the command channel port where \fBnamed\fR listens for connections from \fBrndc\fR. The default is 953.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fIrandomfile\fR\fR
+.ad
+.RS 17n
+.rt  
+Specify a source of random data for generating the authorization. By default, \fB/dev/random\fR is used. The \fIrandomdev\fR argument specifies the name of a character device or file containing random data to be used instead of the default. The special value \fBkeyboard\fR indicates that keyboard input should be used.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR \fIaddress\fR\fR
+.ad
+.RS 17n
+.rt  
+Specify the IP address where \fBnamed\fR listens for command channel connections from \fBrndc\fR. The default is the loopback address 127.0.0.1.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fIchrootdir\fR\fR
+.ad
+.RS 17n
+.rt  
+Used with the \fB-a\fR option to specify a directory where \fBnamed\fR will run after the root directory is changed with \fBchroot\fR(1M). An additional copy of the \fBrndc.key\fR will be written relative to this directory so that it will be found by the \fBnamed\fR in the new directory.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-u\fR \fIuser\fR\fR
+.ad
+.RS 17n
+.rt  
+Used with the \fB-a\fR option to set the owner of the \fBrndc.key\fR file generated. If \fB-t\fR is also specified only the file in the chroot area has its owner changed.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRCreate Automatic \fBrndc\fR Configuration
+.sp
+.LP
+The following command creates an automatic \fBrndc\fR configuration, so that \fBrndc\fR can be used immediately.
+
+.sp
+.in +2
+.nf
+# rndc-confgen -a
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRPrint a Sample \fBrndc.conf\fR File
+.sp
+.LP
+The following command prints a sample \fBrndc.conf\fR file with corresponding \fBcontrols\fR and \fBkey\fR statements. These statements can subsequently be manually inserted in the file \fBnamed.conf\fR.
+
+.sp
+.in +2
+.nf
+# rndc-confgen
+.fi
+.in -2
+.sp
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWbind
+_
+Interface StabilityExternal
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBchroot\fR(1M), \fBnamed\fR(1M), \fBrndc\fR(1M), \fBrndc.conf\fR(4), \fBattributes\fR(5)
+.sp
+.LP
+\fIBIND 9 Administrator Reference Manual\fR, available at the ISC web site

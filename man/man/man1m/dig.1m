@@ -1,0 +1,736 @@
+'\" te
+.\" Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")  Copyright (C) 2000, 2001, 2003  Internet Software Consortium. Permission to use, copy, modify, and distribute this software for any  purpose with or without fee is hereby granted, provided
+.\" that the above  copyright notice and this permission notice appear in all copies. THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH  REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY  AND FITNESS. IN NO EVENT SHALL ISC BE LIABLE FOR ANY
+.\" SPECIAL, DIRECT,  INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM  LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE  OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR  PERFORMANCE OF THIS SOFTWARE.
+.\" Portions Copyright (c) 2004, Sun Microsystems, Inc. All Rights Reserved.
+.TH dig 1M "24 Dec 2008" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+dig \- DNS lookup utility
+.SH SYNOPSIS
+.LP
+.nf
+\fBdig\fR [@server] [\fB-b\fR \fIaddress\fR] [\fB-c\fR \fIclass\fR] [\fB-f\fR \fIfilename\fR] 
+     [\fB-k\fR \fIfilename\fR] [\fB-m\fR] [\fB-p\fR \fIport#\fR] [\fB-t\fR \fItype\fR] [\fB-x\fR \fIaddr\fR] 
+     [\fB-y\fR \fIname:key\fR] [\fB-4\fR] [\fB-6\fR] [\fIname\fR] [\fItype\fR] [\fIclass\fR] [\fIqueryopt\fR]...
+.fi
+
+.LP
+.nf
+\fBdig\fR [\fB-h\fR]
+.fi
+
+.LP
+.nf
+\fBdig\fR [\fIglobal-queryopt\fR...] [\fIquery\fR...]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBdig\fR utility (domain information groper) is a flexible tool for interrogating DNS name servers. It performs DNS lookups and displays the answers that are returned from the name server(s) that were queried. Most DNS administrators use \fBdig\fR to troubleshoot DNS problems because of its flexibility, ease of use and clarity of output. Other lookup tools tend to have less functionality than \fBdig\fR.
+.sp
+.LP
+Although \fBdig\fR is normally used with command-line arguments, it also has a batch mode of operation for reading lookup requests from a file. A brief summary of its command-line arguments and options is printed when the \fB-h\fR option is specified. Unlike earlier versions, the BIND 9 implementation of \fBdig\fR allows multiple lookups to be issued from the command line.
+.sp
+.LP
+Unless it is told to query a specific name server, \fBdig\fR tries each of the servers listed in \fB/etc/resolv.conf\fR.
+.sp
+.LP
+When no command line arguments or options are given, \fBdig\fR performs an NS query for "." (the root).
+.sp
+.LP
+It is possible to set per-user defaults for \fBdig\fR with \fB${HOME}/.digrc\fR. This file is read and any options in it are applied before the command line arguments.
+.sp
+.LP
+The \fBIN\fR and \fBCH\fR class names overlap with the \fBIN\fR and \fBCH\fR top level domains names. Either use the \fB-t\fR and \fB-c\fR options to specify the type and class, or use \fB"IN."\fR and \fB"CH."\fR when looking up these top level domains.
+.SS "Simple Usage"
+.sp
+.LP
+The following is a typical invocation of \fBdig\fR:
+.sp
+.in +2
+.nf
+dig @server name type 
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+where:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIserver\fR\fR
+.ad
+.RS 10n
+.rt  
+The name or IP address of the name server to query. This can be an IPv4 address in dotted-decimal notation or an IPv6 address in colon-delimited notation. When the supplied \fIserver\fR argument is a hostname, \fBdig\fR resolves that name before querying that name server. If no \fIserver\fR argument is provided, \fBdig\fR consults \fB/etc/resolv.conf\fR and queries the name servers listed there. The reply from the name server that responds is displayed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIname\fR\fR
+.ad
+.RS 10n
+.rt  
+The name of the resource record that is to be looked up.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fItype\fR\fR
+.ad
+.RS 10n
+.rt  
+Indicates what type of query is required (ANY, A, MX, SIG, among others.) \fItype\fR can be any valid query type. If no \fItype\fR argument is supplied, \fBdig\fR performs a lookup for an A record.
+.RE
+
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-4\fR\fR
+.ad
+.RS 15n
+.rt  
+Use only IPv4 transport. By default both IPv4 and IPv6 transports can be used. Options \fB-4\fR and \fB-6\fR are mutually exclusive.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-6\fR\fR
+.ad
+.RS 15n
+.rt  
+Use only IPv6 transport. By default both IPv4 and IPv6 transports can be used. Options \fB-4\fR and \fB-6\fR are mutually exclusive.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR \fIaddress\fR\fR
+.ad
+.RS 15n
+.rt  
+Set the source IP address of the query to \fIaddress\fR. This must be a valid address on one of the host's network interfaces or \fB0.0.0.0\fR or \fB::\fR. An optional port may be specified by appending: \fB#\fR\fI<port>\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR \fIclass\fR\fR
+.ad
+.RS 15n
+.rt  
+Override the default query class (IN for internet). The \fIclass\fR argument is any valid class, such as HS for Hesiod records or CH for CHAOSNET records.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR \fIfilename\fR\fR
+.ad
+.RS 15n
+.rt  
+Operate in batch mode by reading a list of lookup requests to process from the file \fIfilename\fR. The file contains a number of queries, one per line. Each entry in the file should be organized in the same way they would be presented as queries to \fBdig\fR using the command-line interface.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR\fR
+.ad
+.RS 15n
+.rt  
+Print a brief summary of command-line arguments and options.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-k\fR \fIfilename\fR\fR
+.ad
+.RS 15n
+.rt  
+Specify a transaction signature (TSIG) key file to sign the DNS queries sent by \fBdig\fR and their responses using TSIGs.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-m\fR\fR
+.ad
+.RS 15n
+.rt  
+Enable memory usage debugging.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR \fIport#\fR\fR
+.ad
+.RS 15n
+.rt  
+Query a non-standard port number. The \fIport#\fR argument is the port number that \fBdig\fR sends its queries instead of the standard DNS port number 53. This option tests a name server that has been configured to listen for queries on a non-standard port number.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fItype\fR\fR
+.ad
+.RS 15n
+.rt  
+Set the query type to \fItype\fR, which can be any valid query type supported in BIND9. The default query type "A", unless the \fB-x\fR option is supplied to indicate a reverse lookup. A zone transfer can be requested by specifying a type of AXFR. When an incremental zone transfer (IXFR) is required, \fItype\fR is set to \fBixfr\fR=\fIN\fR. The incremental zone transfer will contain the changes made to the zone since the serial number in the zone's SOA record was \fIN\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-x\fR \fIaddr\fR\fR
+.ad
+.RS 15n
+.rt  
+Simplify reverse lookups (mapping addresses to names ). The \fIaddr\fR argument is an IPv4 address in dotted-decimal notation, or a colon-delimited IPv6 address. When this option is used, there is no need to provide the \fIname\fR, \fIclass\fR and \fItype\fR arguments. The \fBdig\fR utility automatically performs a lookup for a name like \fB11.12.13.10.in-addr.arpa\fR and sets the query type and class to PTR and IN, respectively. By default, IPv6 addresses are looked up using nibble format under the IP6.ARPA domain. To use the older RFC1886 method using the IP6.INT domain, specify the \fB-i\fR option. Bit string labels (RFC 2874) are now experimental and are not attempted.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-y\fR \fIname\fR:\fIkey\fR\fR
+.ad
+.RS 15n
+.rt  
+Specify a transaction signature (TSIG) key on the command line. This is done to sign the DNS queries sent by \fBdig\fR, as well as their responses. You can also specify the TSIG key itself on the command line using the \fB-y\fR option. The \fIname\fR argument is the name of the TSIG key and the \fIkey\fR argument is the actual key. The key is a base-64 encoded string, typically generated by \fBdnssec-keygen\fR(1M). Caution should be taken when using the \fB-y\fR option on multi-user systems, since the key can be visible in the output from \fBps\fR(1) or in the shell's history file. When using TSIG authentication with \fBdig\fR, the name server that is queried needs to know the key and algorithm that is being used. In BIND, this is done by providing appropriate \fBkey\fR and \fBserver\fR statements in \fBnamed.conf\fR.
+.RE
+
+.SH QUERY OPTIONS
+.sp
+.LP
+The \fBdig\fR utility provides a number of query options which affect the way in which lookups are made and the results displayed. Some of these set or reset flag bits in the query header, some determine which sections of the answer get printed, and others determine the timeout and retry strategies.
+.sp
+.LP
+Each query option is identified by a keyword preceded by a plus sign (+). Some keywords set or reset an option. These may be preceded by the string no to negate the meaning of that keyword. Other keywords assign values to options like the timeout interval. They have the form \fB+keyword=\fR\fIvalue\fR. The query options are:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]tcp\fR\fR
+.ad
+.RS 21n
+.rt  
+Use [do not use] TCP when querying name servers. The default behaviour is to use UDP unless an AXFR or IXFR query is requested, in which case a TCP connection is used.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]vc\fR\fR
+.ad
+.RS 21n
+.rt  
+Use [do not use] TCP when querying name servers. This alternate syntax to \fB+[no]tcp\fR is provided for backwards compatibility. The "vc" stands for "virtual circuit".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]ignore\fR\fR
+.ad
+.RS 21n
+.rt  
+Ignore truncation in UDP responses instead of retrying with TCP. By default, TCP retries are performed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+domain=\fR\fIsomename\fR\fR
+.ad
+.RS 21n
+.rt  
+Set the search list to contain the single domain \fIsomename\fR, as if specified in a \fBdomain\fR directive in \fB/etc/resolv.conf\fR, and enable search list processing as if the \fB+search\fR option were given.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]search\fR\fR
+.ad
+.RS 21n
+.rt  
+Use [do not use] the search list defined by the \fBsearchlist\fR or \fBdomain\fR directive in \fBresolv.conf\fR (if any). The search list is not used by default.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]defname\fR\fR
+.ad
+.RS 21n
+.rt  
+Deprecated, treated as a synonym for \fB+[no]search\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]aaonly\fR\fR
+.ad
+.RS 21n
+.rt  
+Sets the \fBaa\fR flag in the query.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]aaflag\fR\fR
+.ad
+.RS 21n
+.rt  
+A synonym for \fB+[no]aaonly\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]adflag\fR\fR
+.ad
+.RS 21n
+.rt  
+Set [do not set] the AD (authentic data) bit in the query. The AD bit currently has a standard meaning only in responses, not in queries, but the ability to set the bit in the query is provided for completeness.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]cdflag\fR\fR
+.ad
+.RS 21n
+.rt  
+Set [do not set] the CD (checking disabled) bit in the query. This requests the server to not perform DNSSEC validation of responses.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]cl\fR\fR
+.ad
+.RS 21n
+.rt  
+Display [do not display] the CLASS when printing the record.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]ttlid\fR\fR
+.ad
+.RS 21n
+.rt  
+Display [do not display] the TTL when printing the record.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]recurse\fR\fR
+.ad
+.RS 21n
+.rt  
+Toggle the setting of the RD (recursion desired) bit in the query. This bit is set by default, which means \fBdig\fR normally sends recursive queries. Recursion is automatically disabled when the \fB+nssearch\fR or \fB+trace\fR query options are used.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]nssearch\fR\fR
+.ad
+.RS 21n
+.rt  
+When this option is set, \fBdig\fR attempts to find the authoritative name servers for the zone containing the name being looked up and display the SOA record that each name server has for the zone.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]trace\fR\fR
+.ad
+.RS 21n
+.rt  
+Toggle tracing of the delegation path from the root name servers for the name being looked up. Tracing is disabled by default. When tracing is enabled, \fBdig\fR makes iterative queries to resolve the name being looked up. It will follow referrals from the root servers, showing the answer from each server that was used to resolve the lookup.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]cmd\fR\fR
+.ad
+.RS 21n
+.rt  
+Toggle the printing of the initial comment in the output identifying the version of \fBdig\fR and the query options that have been applied. This comment is printed by default.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]short\fR\fR
+.ad
+.RS 21n
+.rt  
+Provide a terse answer. The default is to print the answer in a verbose form.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]identify\fR\fR
+.ad
+.RS 21n
+.rt  
+Show [or do not show] the IP address and port number that supplied the answer when the +\fIshort\fR option is enabled. If short form answers are requested, the default is not to show the source address and port number of the server that provided the answer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]comments\fR\fR
+.ad
+.RS 21n
+.rt  
+Toggle the display of comment lines in the output. The default is to print comments.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]stats\fR\fR
+.ad
+.RS 21n
+.rt  
+Toggle the printing of statistics: when the query was made, the size of the reply and so on. The default behaviour is to print the query statistics.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]qr\fR\fR
+.ad
+.RS 21n
+.rt  
+Print [do not print] the query as it is sent. By default, the query is not printed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]question\fR\fR
+.ad
+.RS 21n
+.rt  
+Print [do not print] the question section of a query when an answer is returned. The default is to print the question section as a comment.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]answer\fR\fR
+.ad
+.RS 21n
+.rt  
+Display [do not display] the answer section of a reply. The default is to display it.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]authority\fR\fR
+.ad
+.RS 21n
+.rt  
+Display [do not display] the authority section of a reply. The default is to display it.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]additional\fR\fR
+.ad
+.RS 21n
+.rt  
+Display [do not display] the additional section of a reply. The default is to display it.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]all\fR\fR
+.ad
+.RS 21n
+.rt  
+Set or clear all display flags.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+time=\fR\fIT\fR\fR
+.ad
+.RS 21n
+.rt  
+Sets the timeout for a query to \fIT\fR seconds. The default time out is 5 seconds. An attempt to set \fIT\fR to less than 1 will result in a query timeout of 1 second being applied.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+tries=\fR\fIT\fR\fR
+.ad
+.RS 21n
+.rt  
+Sets the maximum number of UDP attempts to \fIT\fR. The default number is 3 (1 initial attempt followed by 2 retries). If T is less than or equal to zero, the number of retries is silently rounded up to 1.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+retry=\fR\fIT\fR\fR
+.ad
+.RS 21n
+.rt  
+Sets the number of UDP retries to \fIT\fR. The default is 2.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+ndots=\fR\fID\fR\fR
+.ad
+.RS 21n
+.rt  
+Set the number of dots that have to appear in \fIname\fR to \fID\fR for it to be considered absolute. The default value is that defined using the \fBndots\fR statement in \fB/etc/resolv.conf\fR, or 1 if no \fBndots\fR statement is present. Names with fewer dots are interpreted as relative names and will be searched for in the domains listed in the \fBsearch\fR or \fBdomain\fR directive in \fB/etc/resolv.conf\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+bufsize=\fR\fIB\fR\fR
+.ad
+.RS 21n
+.rt  
+Set the UDP message buffer size advertised using EDNS0 to \fIB\fR bytes. The maximum and minimum sizes of this buffer are 65535 and 0 respectively. Values outside this range are rounded up or down appropriately.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]multiline\fR\fR
+.ad
+.RS 21n
+.rt  
+Print records like the SOA records in a verbose multi-line format with human-readable comments. The default is to print each record on a single line, to facilitate machine parsing of the \fBdig\fR output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]fail\fR\fR
+.ad
+.RS 21n
+.rt  
+Do not try the next server if you receive a \fBSERVFAIL\fR. The default is to not try the next server which is the reverse of normal stub resolver behavior.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]besteffort\fR\fR
+.ad
+.RS 21n
+.rt  
+Attempt to display the contents of messages which are malformed. The default is to not display malformed answers.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]dnssec\fR\fR
+.ad
+.RS 21n
+.rt  
+Request DNSSEC records be sent by setting the DNSSEC OK bit (DO) in the OPT record in the additional section of the query.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]sigchase\fR\fR
+.ad
+.RS 21n
+.rt  
+Chase DNSSEC signature chains. Requires \fBdig\fR be compiled with \fB-DDIG_SIGCHASE\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+trusted-key=\fR####\fR
+.ad
+.RS 21n
+.rt  
+Specifies a file containing trusted keys to be used with \fB+sigchase\fR. Each \fBDNSKEY\fR record must be on its own line.
+.sp
+If not specified dig will look for \fB/etc/trusted-key.key\fR then \fBtrusted-key.key\fR in the current directory.
+.sp
+Requires \fBdig\fR be compiled with \fB-DDIG_SIGCHASE\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+[no]topdown\fR\fR
+.ad
+.RS 21n
+.rt  
+When chasing DNSSEC signature chains, perform a top-down validation. Requires \fBdig\fR be compiled with \fB-DDIG_SIGCHASE\fR.
+.RE
+
+.SH MULTIPLE QUERIES
+.sp
+.LP
+The BIND 9 implementation of \fBdig\fR supports specifying multiple queries on the command line (in addition to supporting the \fB-f\fR batch file option). Each of those queries can be supplied with its own set of flags, options and query options.
+.sp
+.LP
+In this case, each \fIquery\fR argument represent an individual query in the command-line syntax described above. Each consists of any of the standard options and flags, the name to be looked up, an optional query type, and class and any query options that should be applied to that query.
+.sp
+.LP
+A global set of query options, which should be applied to all queries, can also be supplied. These global query options must precede the first tuple of name, class, type, options, flags, and query options supplied on the command line. Any global query options (except the \fB+[no]cmd\fR option) can be overridden by a query-specific set of query options. For example:
+.sp
+.in +2
+.nf
+dig +qr www.isc.org any -x 127.0.0.1 isc.org ns +noqr
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\&...shows how \fBdig\fR could be used from the command line to make three lookups: an ANY query for \fBwww.isc.org\fR, a reverse lookup of 127.0.0.1 and a query for the NS records of \fBisc.org\fR. A global query option of \fB+qr\fR is applied, so that \fBdig\fR shows the initial query it made for each lookup. The final query has a local query option of \fB+noqr\fR which means that \fBdig\fR will not print the initial query when it looks up the NS records for \fBisc.org\fR.
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/etc/resolv.conf\fR\fR
+.ad
+.RS 20n
+.rt  
+Resolver configuration file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB${HOME}/.digrc\fR\fR
+.ad
+.RS 20n
+.rt  
+User-defined configuration file
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWbind
+_
+Interface StabilityExternal
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBdnssec-keygen\fR(1M), \fBhost\fR(1M), \fBnamed\fR(1M), \fBnslookup\fR(1M), \fBattributes\fR(5)
+.sp
+.LP
+\fIRFC 1035\fR
+.SH BUGS
+.sp
+.LP
+There are probably too many query options.
+.SH NOTES
+.sp
+.LP
+\fBnslookup\fR(1M) and \fBdig\fR now report "Not Implemented" as \fBNOTIMP\fR rather  than \fBNOTIMPL\fR. This will have impact on scripts that are looking for \fBNOTIMPL\fR.

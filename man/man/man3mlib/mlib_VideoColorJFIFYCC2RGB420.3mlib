@@ -1,0 +1,178 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_VideoColorJFIFYCC2RGB420 3MLIB "23 May 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_VideoColorJFIFYCC2RGB420 \- JFIF YCbCr to RGB color conversion
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_VideoColorJFIFYCC2RGB420\fR(\fBmlib_u8 *\fR\fIrgb0\fR,
+     \fBmlib_u8 *\fR\fIrgb1\fR, \fBconst mlib_u8 *\fR\fIy0\fR,
+     \fBconst mlib_u8 *\fR\fIy1\fR, \fBconst mlib_u8 *\fR\fIcb0\fR,
+     \fBconst mlib_u8 *\fR\fIcr0\fR, \fBconst mlib_u8 *\fR\fIcb1\fR,
+     \fBconst mlib_u8 *\fR\fIcr1\fR, \fBconst mlib_u8 *\fR\fIcb2\fR,
+     \fBconst mlib_u8 *\fR\fIcr2\fR, \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_VideoColorJFIFYCC2RGB420()\fR function performs color space conversion from YCbCr to RGB together with sampling rate conversion when used in the JPEG File Interchange Format (JFIF).
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIrgb0\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to upper destination RGB multi-component row. rgb0 must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIrgb1\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to lower destination RGB multi-component row. rgb1 must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIy0\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to upper destination Y component row. y0 must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIy1\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to lower destination Y component row. y1 must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcb0\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to source upper Cb component row. cb0 must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcr0\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to source upper Cr component row. cr0 must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcb1\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to source middle Cb component row. cb1 must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcr1\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to source middle Cr component row. cr1 must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcb2\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to source lower Cb component row. cb2 must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcr2\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to source lower Cr component row. cr2 must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIn\fR\fR
+.ad
+.RS 8n
+.rt  
+Length of Y component row. \fBn\fR must be even. The length of Cb and Cr component rows must be \fBn/2\fR. The length of the RGB multi-component row must be \fB3*n\fR.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_VideoColorJFIFYCC2RGB420_Nearest\fR(3MLIB), \fBmlib_VideoColorJFIFYCC2RGB422\fR(3MLIB), \fBmlib_VideoColorJFIFYCC2RGB422_Nearest\fR(3MLIB), \fBattributes\fR(5)

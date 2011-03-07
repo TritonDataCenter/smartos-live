@@ -1,0 +1,165 @@
+'\" te
+.\" Copyright (c) 2008, Sun Microsystems Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mms_rsp_type 3MMS "28 Oct 2008" "SunOS 5.11" "Media Management System Library Functions"
+.SH NAME
+mms_rsp_type, mms_get_tree, mms_get_str, mms_get_attribute, mms_handle_err_rsp \- MMS client functions for handling responses
+.SH SYNOPSIS
+.LP
+.nf
+\fBcc\fR [ \fIflag\fR...] \fIfile\fR... -\fBlmms\fR [ \fIlibrary\fR...]
+#include <mms_api.h>
+
+\fBint\fR \fBmms_rsp_type\fR(\fBvoid *\fR\fIresponse\fR);
+.fi
+
+.LP
+.nf
+\fBmms_par_node_t *\fR\fBmms_get_tree\fR(\fBvoid *\fR\fIresponse\fR);
+.fi
+
+.LP
+.nf
+\fBchar *\fR\fBmms_get_str\fR(\fBvoid *\fR\fIresponse\fR);
+.fi
+
+.LP
+.nf
+\fBchar *\fR\fBmms_get_attribute\fR(\fBvoid *\fR\fIresponse\fR, \fBchar *\fR\fIname\fR, \fBvoid **\fR\fIprev\fR);
+.fi
+
+.LP
+.nf
+\fBint\fR \fBmms_handle_err_response\fR(\fBvoid *\fR\fIresponse\fR, \fBint *\fR \fIclass\fR, \fBint *\fR \fIcode\fR,
+     \fBchar **\fR\fImessage\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+For these functions, \fIresponse\fR is the MMS response to an MMP command sent by the client.
+.sp
+.LP
+The \fBmms_rsp_type()\fR macro returns the type of the response. The following is a list of responses:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBMMS_API_RSP_UNACC\fR\fR
+.ad
+.RS 26n
+.rt  
+unacceptable response
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBMMS_API_RSP_FINAL\fR\fR
+.ad
+.RS 26n
+.rt  
+success response
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBMMS_API_RSP_FINAL_INTR\fR\fR
+.ad
+.RS 26n
+.rt  
+intermediate response
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBMMS_API_RSP_FINAL_ERR\fR\fR
+.ad
+.RS 26n
+.rt  
+error response
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBMMS_API_RSP_FINAL_CANC\fR\fR
+.ad
+.RS 26n
+.rt  
+cancelled response
+.RE
+
+.sp
+.LP
+The \fBmms_get_tree()\fR macro returns the parse tree of the response.
+.sp
+.LP
+The \fBmms_get_str()\fR macro returns the response string.
+.sp
+.LP
+The \fBmms_get_attribute()\fR function takes a response with name values looking for \fIname\fR, and returning the value associated with it. A client can call this function multiple times if the response contains multiple instances of \fIname\fR. When all occurrences of \fIname\fR have been found, \fINULL\fR is returned.
+.sp
+.LP
+The \fBmms_handle_err_rsp()\fR function processes an error response on behalf of the client. It returns the error class, error code, and the internationalized error message if one was included.
+.SH RETURN VALUES
+.sp
+.LP
+Upon successful completion, \fBmms_handle_err_rsp()\fR returns \fBMMS_API_OK\fR. If it encounters a processing error, it returns an error code indicating the type of error.
+.SH ERRORS
+.sp
+.LP
+These functions will fail if:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBMMS_API_ERROR\fR\fR
+.ad
+.RS 23n
+.rt  
+Unable to obtain error class or code.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBMMS_API_NOT_ERR_RSP\fR\fR
+.ad
+.RS 23n
+.rt  
+Response is not an error response.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityUncommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBlibmms\fR(3LIB), \fBmms_init\fR(3MMS), \fBmms_send_cmd\fR(3MMS), \fBattributes\fR(5)

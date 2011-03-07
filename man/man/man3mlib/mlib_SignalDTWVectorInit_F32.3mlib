@@ -1,0 +1,146 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_SignalDTWVectorInit_F32 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_SignalDTWVectorInit_F32 \- initialization for vector data
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_SignalDTWVectorInit_F32\fR(\fBvoid *\fR\fIstate\fR, 
+     \fBconst mlib_f32 **\fR\fIdref\fR, \fBmlib_s32\fR \fIlref\fR, \fBmlib_s32\fR \fIndata\fR, 
+     \fBmlib_s32\fR \fIdtype\fR, \fBmlib_s32\fR \fIdelta\fR, \fBmlib_s32\fR \fIlocal\fR, 
+     \fBmlib_s32\fR \fIslope\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_SignalDTWVectorInit_F32()\fR function initializes the internal state structure for dynamic time warping (DTW) of vector data.
+.sp
+.LP
+The init function performs internal state structure allocation and global initialization. Per DTW function call initialization is done in DTW function, so the same internal state structure can be reused for multiple DTW function calls.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdref\fR\fR
+.ad
+.RS 9n
+.rt  
+The reference data array.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIlref\fR\fR
+.ad
+.RS 9n
+.rt  
+The length of the reference data array.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIndata\fR\fR
+.ad
+.RS 9n
+.rt  
+The length of each data vector.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdtype\fR\fR
+.ad
+.RS 9n
+.rt  
+The type of distance metric between data vectors. \fBMLIB_DTW_L1NORM\fR for L1 norm of difference (sum of absolute difference). \fBMLIB_DTW_L2NORM\fR for L2 norm of difference (Euclidean distance).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdelta\fR\fR
+.ad
+.RS 9n
+.rt  
+The delta in the endpoint constraints.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIlocal\fR\fR
+.ad
+.RS 9n
+.rt  
+The type of the local continuity constraints. \fBMLIB_DTW_ITAKURA\fR for Itakura type constraints.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIslope\fR\fR
+.ad
+.RS 9n
+.rt  
+The type of the slope weighting. \fBMLIB_DTW_NONE\fR for no slope weighting.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIstate\fR\fR
+.ad
+.RS 9n
+.rt  
+Pointer to the internal state structure.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+mlib_SignalDTWVectorInit_F32(3MLIB), \fBmlib_SignalDTWVector_F32\fR(3MLIB), \fBmlib_SignalDTWVectorPath_F32\fR(3MLIB), \fBmlib_SignalDTWVectorFree_F32\fR(3MLIB), \fBattributes\fR(5)

@@ -1,0 +1,63 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_SignalIMDCTSplit_D64 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_SignalIMDCTSplit_D64 \- Dolby AC-3 digital audio standard transformation
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_SignalIMDCTSplit_D64\fR(\fBmlib_d64 *\fR\fIdata\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_SignalIMDCTSplit_D64()\fR function performs the inverse modified discrete cosine transformation in Dolby's AC-3 digital audio standard.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdata\fR\fR
+.ad
+.RS 8n
+.rt  
+Pointer to the data array. \fBdata[4*i]\fR contains the real parts of the first arrary, \fBdata[4*i+1]\fR contains the real parts of the second arrary, \fBdata[4*i+2]\fR contains the imaginary parts of the first arrary, and \fBdata[4*i+3]\fR contains the imaginary parts of the second arrary.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_SignalIMDCT_D64\fR(3MLIB), \fBmlib_SignalIMDCT_F32\fR(3MLIB), \fBmlib_SignalIMDCTSplit_F32\fR(3MLIB), \fBattributes\fR(5)

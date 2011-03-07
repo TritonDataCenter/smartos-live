@@ -1,0 +1,43 @@
+'\" te
+.\" Copyright (c) 1992, Sun Microsystems, Inc.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH cgsix 7D "27 Mar 1992" "SunOS 5.11" "Devices"
+.SH NAME
+cgsix \- accelerated 8-bit color frame buffer
+.SH SYNOPSIS
+.LP
+.nf
+\fB/dev/fbs/cgsix\fIn\fR\fR 
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBcgsix\fR is a low-end graphics accelerator designed to enhance vector and polygon drawing performance. It has an 8-bit color frame buffer and provides the standard frame buffer interface as defined in \fBfbio\fR(7I).
+.sp
+.LP
+In addition, \fBcgsix\fR supports the following \fBcgsix\fR-specific \fBIOCTL\fR, defined in <\fBsys/fbio.h\fR>.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBFBIOGXINFO\fR\fR
+.ad
+.RS 14n
+.rt  
+Returns \fBcgsix\fR-specific information about the hardware.  See the definition of \fBcg6_info\fR in <\fBsys/fbio.h\fR> for more information.
+.RE
+
+.sp
+.LP
+\fBcgsix\fR has registers and memory that may be mapped with \fBmmap\fR(2), using the offsets defined in <\fBsys/cg6reg.h\fR>.
+.SH FILES
+.sp
+.LP
+\fB/dev/fbs/cgsix0\fR
+.SH SEE ALSO
+.sp
+.LP
+\fBmmap\fR(2), \fBfbio\fR(7I)

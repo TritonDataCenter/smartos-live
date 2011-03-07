@@ -1,0 +1,163 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_SignalLPCAutoCorrel_S16 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_SignalLPCAutoCorrel_S16, mlib_SignalLPCAutoCorrel_S16_Adp \- perform linear predictive coding with autocorrelation method
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_SignalLPCAutoCorrel_S16\fR(\fBmlib_s16 *\fR\fIcoeff\fR,
+     \fBmlib_s32\fR \fIcscale\fR, \fBconst mlib_s16 *\fR\fIsignal\fR, \fBvoid *\fR\fIstate\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_SignalLPCAutoCorrel_S16_Adp\fR(\fBmlib_s16 *\fR\fIcoeff\fR,
+     \fBmlib_s32 *\fR\fIcscale\fR, \fBconst mlib_s16 *\fR\fIsignal\fR, \fBvoid *\fR\fIstate\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Each function performs linear predictive coding with autocorrelation method.
+.sp
+.LP
+In linear predictive coding (LPC) model, each speech sample is represented as a linear combination of the past \fBM\fR samples.
+.sp
+.in +2
+.nf
+	        M
+	s(n) = SUM a(i) * s(n-i) + G * u(n)
+	       i=1
+.fi
+.in -2
+
+.sp
+.LP
+where \fBs(*)\fR is the speech signal, \fBu(*)\fR is the excitation signal, and \fBG\fR is the gain constants, \fBM\fR is the order of the linear prediction filter. Given \fBs(*)\fR, the goal is to find a set of coefficient \fBa(*)\fR that minimizes the prediction error \fBe(*)\fR.
+.sp
+.in +2
+.nf
+	               M
+	e(n) = s(n) - SUM a(i) * s(n-i)
+	              i=1
+.fi
+.in -2
+
+.sp
+.LP
+In autocorrelation method, the coefficients can be obtained by solving following set of linear equations.
+.sp
+.in +2
+.nf
+	 M
+	SUM a(i) * r(|i-k|) = r(k), k=1,...,M
+	i=1
+.fi
+.in -2
+
+.sp
+.LP
+where
+.sp
+.in +2
+.nf
+	      N-k-1
+	r(k) = SUM s(j) * s(j+k)
+	       j=0
+.fi
+.in -2
+
+.sp
+.LP
+are the autocorrelation coefficients of \fBs(*)\fR, \fBN\fR is the length of the input speech vector. \fBr(0)\fR is the energy of the speech signal.
+.sp
+.LP
+Note that the autocorrelation matrix \fBR\fR is a Toeplitz matrix (symmetric with all diagonal elements equal), and the equations can be solved efficiently with Levinson-Durbin algorithm.
+.sp
+.LP
+See \fIFundamentals of Speech Recognition\fR by Lawrence Rabiner and Biing-Hwang Juang, Prentice Hall, 1993.
+.sp
+.LP
+Note for functions with adaptive scaling (with \fB_Adp\fR postfix), the scaling factor of the output data will be calculated based on the actual data; for functions with non-adaptive scaling (without \fB_Adp\fR postfix), the user supplied scaling factor will be used and the output will be saturated if necessary.
+.SH PARAMETERS
+.sp
+.LP
+Each function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcoeff\fR\fR
+.ad
+.RS 10n
+.rt  
+The linear prediction coefficients.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcscale\fR\fR
+.ad
+.RS 10n
+.rt  
+The scaling factor of the linear prediction coefficients, where \fBactual_data = output_data * 2**(-scaling_factor)\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsignal\fR\fR
+.ad
+.RS 10n
+.rt  
+The input signal vector with samples in \fBQ15\fR format.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIstate\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to the internal state structure.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+Each function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_SignalLPCAutoCorrelInit_S16\fR(3MLIB), \fBmlib_SignalLPCAutoCorrelGetEnergy_S16\fR(3MLIB), \fBmlib_SignalLPCAutoCorrelGetPARCOR_S16\fR(3MLIB), \fBmlib_SignalLPCAutoCorrelFree_S16\fR(3MLIB), \fBattributes\fR(5)

@@ -1,0 +1,242 @@
+'\" te
+.\" Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")  Copyright (C) 2000-2003  Internet Software Consortium.   Permission to use, copy, modify, and distribute this software for any  purpose with or without fee is hereby granted, provided that the above 
+.\" copyright notice and this permission notice appear in all copies.   THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH  REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY  AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,  INDIRECT,
+.\" OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM  LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE  OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR  PERFORMANCE OF THIS SOFTWARE.
+.\" Portions Copyright (c) 2004, Sun Microsystems, Inc. All Rights Reserved.
+.TH host 1M "24 Dec 2008" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+host \- DNS lookup utility
+.SH SYNOPSIS
+.LP
+.nf
+\fBhost\fR [\fB-aCdilrTvw\fR] [\fB-c\fR \fIclass\fR] [\fB-N\fR \fIndots\fR] [\fB-R\fR \fInumber\fR] 
+     [\fB-t\fR \fItype\fR] [\fB-W\fR \fIwait\fR]  [\fB-4\fR | \fB-6\fR] `a\fIname\fR [\fIserver\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBhost\fR utility performs simple DNS lookups. It is normally used to convert names to IP addresses and IP addresses to names. When no arguments or options are given, \fBhost\fR prints a short summary of its command line arguments and options.
+.sp
+.LP
+The \fIname\fR argument is the domain name that is to be looked up. It can also be a dotted-decimal IPv4 address or a colon-delimited IPv6 address, in which case \fBhost\fR by default performs a reverse lookup for that address. The optional \fIserver\fR argument is either the name or IP address of the name server that \fBhost\fR should query instead of the server or servers listed in \fB/etc/resolv.conf\fR.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-4\fR\fR
+.ad
+.RS 13n
+.rt  
+Use only IPv4 transport. By default, both IPv4 and IPv6 transports can be used. Options \fB-4\fR and \fB-6\fR are mutually exclusive.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-6\fR\fR
+.ad
+.RS 13n
+.rt  
+Use only IPv6 transport. By default, both IPv4 and IPv6 transports can be used. Options \fB-4\fR and \fB-6\fR are mutually exclusive.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fR
+.ad
+.RS 13n
+.rt  
+Equivalent to setting the \fB-v\fR option and asking \fBhost\fR to make a query of type \fBANY\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR \fIclass\fR\fR
+.ad
+.RS 13n
+.rt  
+Make a DNS query of class \fIclass\fR. This can be used to lookup Hesiod or Chaosnet class resource records. The default class is IN (Internet).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-C\fR\fR
+.ad
+.RS 13n
+.rt  
+Attempt to display the SOA records for zone \fIname\fR from all the listed authoritative name servers for that zone. The list of name servers is defined by the NS records that are found for the zone.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR\fR
+.ad
+.RS 13n
+.rt  
+Generate verbose output. This option is equivalent to \fB-v\fR. These two options are provided for backward compatibility. In previous versions, the \fB-d\fR option switched on debugging traces and \fB-v\fR enabled verbose output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR\fR
+.ad
+.RS 13n
+.rt  
+Specifies that reverse lookups of IPv6 addresses should use the IP6.INT domain as defined in RFC 1886. The default is to use RFC 3152 domain IP6.ARPA.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR\fR
+.ad
+.RS 13n
+.rt  
+List mode. This option makes \fBhost\fR perform a zone transfer for zone \fIname\fR, displaying the NS, PTR and address records (A/AAAA). If combined with \fB-a\fR, all records will be displayed. The argument is provided for compatibility with previous implementations. Options \fB-la\fR is equivalent to making a query of type \fBAXFR\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-N\fR \fIndots\fR\fR
+.ad
+.RS 13n
+.rt  
+Set the number of dots that have to be in \fIname\fR for it to be considered absolute. The default value is that defined using the ndots statement in \fB/etc/resolv.conf\fR, or 1 if no ndots statement is present. Names with fewer dots are interpreted as relative names and will be searched for in the domains listed in the \fBsearch\fR or \fBdomain\fR directive in \fB/etc/resolv.conf\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR\fR
+.ad
+.RS 13n
+.rt  
+Make a non-recursive query. Setting this option clears the \fBRD\fR (recursion desired) bit in the query made by \fBhost\fR. The name server receiving the query does not attempt to resolve \fIname\fR. The \fB-r\fR option enables \fBhost\fR to mimic the behaviour of a name server by making non-recursive queries and expecting to receive answers to those queries that are usually referrals to other name servers.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-R\fR \fInumber\fR\fR
+.ad
+.RS 13n
+.rt  
+Change the number of UDP retries for a lookup. The \fInumber\fR argument indicates how many times \fBhost\fR will repeat a query that does not get answered. The default number of retries is 1. If \fInumber\fR is negative or zero, the number of retries will default to 1.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fItype\fR\fR
+.ad
+.RS 13n
+.rt  
+Select the query type. The \fItype\fR argument can be any recognised query type: \fBCNAME\fR, \fBNS\fR, \fBSOA\fR, \fBSIG\fR, \fBKEY\fR, and \fBAXFR\fR, among others. When no query type is specified, \fBhost\fR automatically selects an appropriate query type. By default it looks for A, AAAA, and MX records, but if the \fB-C\fR option is specified, queries are made for SOA records. If \fIname\fR is a dotted-decimal IPv4 address or colon-delimited IPv6 address, \fBhost\fR queries for PTR records.
+.sp
+If a query type of IXFR is chosen the starting serial number can be specified by appending an equal followed by the starting serial number (for example: \fB-t\fR \fBIXFR=12345678\fR).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-T\fR\fR
+.ad
+.RS 13n
+.rt  
+Use a TCP connection when querying the name server. TCP is automatically selected for queries that require it, such as zone transfer (\fBAXFR\fR) requests. By default \fBhost\fR uses UDP when making queries.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.RS 13n
+.rt  
+Generate verbose output. This option is equivalent to \fB-d\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-w\fR\fR
+.ad
+.RS 13n
+.rt  
+Wait forever for a reply. The time to wait for a response will be set to the number of seconds given by the hardware's maximum value for an integer quantity.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-W\fR \fIwait\fR\fR
+.ad
+.RS 13n
+.rt  
+Wait for \fIwait\fR seconds for a reply.  If \fIwait\fR is less than one, the wait interval is set to one second.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/etc/resolv.conf\fR\fR
+.ad
+.RS 20n
+.rt  
+Resolver configuration file
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWbind
+_
+Interface StabilityExternal
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBdig\fR(1M), \fBnamed\fR(1M), \fBattributes\fR(5)
+.sp
+.LP
+\fIRFC 1035\fR, \fIRFC 1886\fR, \fIRFC 3152\fR

@@ -1,0 +1,142 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_SignalEmphasize_S16_S16_Sat 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_SignalEmphasize_S16_S16_Sat, mlib_SignalEmphasize_S16S_S16S_Sat, mlib_SignalEmphasize_F32_F32, mlib_SignalEmphasize_F32S_F32S \- signal pre-emphasizing
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_SignalEmphasize_S16_S16_Sat\fR(\fBmlib_s16 *\fR\fIdst\fR, 
+     \fBconst mlib_s16 *\fR\fIsrc\fR, \fBvoid *\fR\fIfilter\fR, \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_SignalEmphasize_S16S_S16S_Sat\fR(\fBmlib_s16 *\fR\fIdst\fR, 
+     \fBconst mlib_s16 *\fR\fIsrc\fR, \fBvoid *\fR\fIfilter\fR, \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_SignalEmphasize_F32_F32\fR(\fBmlib_f32 *\fR\fIdst\fR, 
+     \fBconst mlib_f32 *\fR\fIsrc\fR, \fBvoid *\fR\fIfilter\fR, \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_SignalEmphasize_F32S_F32S\fR(\fBmlib_f32 *\fR\fIdst\fR, 
+     \fBconst mlib_f32 *\fR\fIsrc\fR, \fBvoid *\fR\fIfilter\fR, \fBmlib_s32\fR \fIn\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Each of these functions applies the preemphasizer to one signal packet and updates the filter states.
+.sp
+.LP
+For monaural signals, the following equation is used:
+.sp
+.in +2
+.nf
+dst[i] = src[i] - alpha*src[i - 1]
+.fi
+.in -2
+
+.sp
+.LP
+where \fBi = 0, 1, ..., (n - 1)\fR; \fBsrc[-1] = 0\fR.
+.sp
+.LP
+For stereo signals, the following equation is used:
+.sp
+.in +2
+.nf
+dst[2*i]     = src[2*i]     - alpha*src[2*(i - 1)]
+dst[2*i + 1] = src[2*i + 1] - alpha*src[2*(i - 1) + 1]
+.fi
+.in -2
+
+.sp
+.LP
+where \fBi = 0, 1, ..., (n - 1)\fR; \fBsrc[-2] = src[-1] = 0\fR.
+.SH PARAMETERS
+.sp
+.LP
+Each of the functions takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdst\fR\fR
+.ad
+.RS 10n
+.rt  
+Destination signal array.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc\fR\fR
+.ad
+.RS 10n
+.rt  
+Source signal array.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIfilter\fR\fR
+.ad
+.RS 10n
+.rt  
+Internal filter structure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIn\fR\fR
+.ad
+.RS 10n
+.rt  
+Number of samples in the source signal array.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+Each of the functions returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_SignalEmphasizeFree_S16_S16\fR(3MLIB), \fBmlib_SignalEmphasizeInit_S16_S16\fR(3MLIB), \fBattributes\fR(5)

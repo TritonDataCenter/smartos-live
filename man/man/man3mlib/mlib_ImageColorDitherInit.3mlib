@@ -1,0 +1,285 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_ImageColorDitherInit 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_ImageColorDitherInit \- initialization for image dithering
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_ImageColorDitherInit\fR(\fBvoid **\fR\fIcolormap\fR, \fBconst mlib_s32 *\fR\fIdimensions\fR,
+     \fBmlib_type\fR \fIintype\fR, \fBmlib_type\fR \fIouttype\fR, \fBmlib_s32\fR \fIchannels\fR, \fBmlib_s32\fR \fIentries\fR,
+     \fBmlib_s32\fR \fIoffset\fR, \fBvoid **\fR\fIlut\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_ImageColorDitherInit()\fR function creates an internal data structure, \fIcolormap\fR, which can be used by one of the following functions for image dithering: 
+.sp
+.in +2
+.nf
+mlib_ImageColorErrorDiffusion3x3
+mlib_ImageColorErrorDiffusionMxN
+mlib_ImageColorOrderedDither8x8
+mlib_ImageColorOrderedDitherMxN
+.fi
+.in -2
+
+.sp
+.LP
+The \fIlut\fR might have either 1 or 3 channels. The type of the \fIlut\fR can be one of the following: 
+.sp
+.in +2
+.nf
+MLIB_BYTE in, MLIB_BYTE out (i.e., BYTE-to-BYTE)
+MLIB_BIT in, MLIB_BYTE out (i.e., BIT-to-BYTE)
+.fi
+.in -2
+
+.sp
+.LP
+If \fBdimensions == NULL\fR, then no colorcube will be created. In this case, the user-provided lookup table, \fIlut\fR, will be used for dithering.
+.sp
+.LP
+If \fBdimensions != NULL\fR, then a colorcube is created from scratch in a way shown in the following example.
+.sp
+.LP
+To dither an RGB image of type \fBMLIB_BYTE\fR to a color-indexed image of type \fBMLIB_BYTE\fR, we can use the following parameters: 
+.sp
+.in +2
+.nf
+mlib_s32  dimensions[] = {2, 3, 4};
+mlib_type intype = MLIB_BYTE;
+mlib_type outtype = MLIB_BYTE;
+mlib_s32  channels = 3;
+mlib_s32  offset = 6;
+.fi
+.in -2
+
+.sp
+.LP
+These values would lead to the creation of a colorcube that would dither red values in the source image to one of 2 red levels, green values to one of 3 green levels, and blue values to one of 4 blue levels.  You could picture this colorcube as a cube with dimensions of 2, 3, and 4.  The index values assigned to the elements in that cube can be described by the following lookup table:
+.sp
+
+.sp
+.TS
+tab();
+cw(1.38i) |cw(1.38i) |cw(1.38i) |cw(1.38i) 
+lw(1.38i) |lw(1.38i) |lw(1.38i) |lw(1.38i) 
+.
+IndexesRed ValuesGreen ValuesBlue Values
+_
+0
+_
+\&...
+_
+5
+_
+6000
+_
+725500
+_
+801280
+_
+92551280
+_
+1002550
+_
+112552550
+_
+120085
+_
+13255085
+_
+14012885
+_
+1525512885
+_
+16025585
+_
+1725525585
+_
+1800170
+_
+192550170
+_
+200128170
+_
+21255128170
+_
+220255170
+_
+23255255170
+_
+2400255
+_
+252550255
+_
+260128255
+_
+27255128255
+_
+280255255
+_
+29255255255
+_
+\&...
+.TE
+
+.sp
+.LP
+The distance between level changes in each channel of the lookup table is determined by the following formulas:
+.sp
+.in +2
+.nf
+multipliers[0] = signof(dimensions[0])*1;
+multipliers[i] = signof(dimensions[i])*
+                 abs(multipliers[i-1]*dimension[i-1]);
+.fi
+.in -2
+
+.sp
+.LP
+A negative \fBdimensions[i]\fR, so as to a negative \fBmultipliers[i]\fR, indicates that the values in a color ramp for channel \fBi\fR should appear in decreasing as opposed to increasing order.
+.sp
+.LP
+For each channel \fBi\fR, the values of the levels are determined by the following formulas:
+.sp
+.in +2
+.nf
+double delta = (dataMax - dataMin)/(abs(dimensions[i]) - 1);
+int levels[j] = (int)(j*delta + 0.5);
+.fi
+.in -2
+
+.sp
+.LP
+where \fBdataMax\fR and \fBdataMin\fR are the maximum and minimum values, respectively, for data type \fIintype\fR.
+.sp
+.LP
+Whenever a colorcube is created, if \fBlut != NULL\fR, the lookup table will be filled according to the colorcube and supplied parameters like \fIoffset\fR.  For the example shown above, the lookup table will start from line 6.  In this case, it is the user's responsibility to allocate memory for the lookup table.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcolormap\fR\fR
+.ad
+.RS 14n
+.rt  
+Internal data structure for image dithering.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdimensions\fR\fR
+.ad
+.RS 14n
+.rt  
+ Dimensions of the colorcube in the colormap structure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIintype\fR\fR
+.ad
+.RS 14n
+.rt  
+Data type of the source image and the lookup table.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIouttype\fR\fR
+.ad
+.RS 14n
+.rt  
+Data type of the destination indexed image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIchannels\fR\fR
+.ad
+.RS 14n
+.rt  
+Number of channels of the lookup table and source image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIentries\fR\fR
+.ad
+.RS 14n
+.rt  
+Number of entries of the lookup table.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIoffset\fR\fR
+.ad
+.RS 14n
+.rt  
+Index offset of the lookup table.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIlut\fR\fR
+.ad
+.RS 14n
+.rt  
+Lookup table.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_ImageColorDitherFree\fR(3MLIB), \fBmlib_ImageColorErrorDiffusion3x3\fR(3MLIB), \fBmlib_ImageColorErrorDiffusionMxN\fR(3MLIB), \fBmlib_ImageColorOrderedDither8x8\fR(3MLIB), \fBmlib_ImageColorOrderedDitherMxN\fR(3MLIB), \fBattributes\fR(5)

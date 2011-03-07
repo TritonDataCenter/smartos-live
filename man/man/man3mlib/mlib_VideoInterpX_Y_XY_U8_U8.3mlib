@@ -1,0 +1,131 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_VideoInterpX_Y_XY_U8_U8 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_VideoInterpX_Y_XY_U8_U8 \- half-pixel interpolation in both X and Y directions for replenishment mode
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_VideoInterpX_Y_XY_U8_U8\fR(\fBmlib_u8 *\fR\fIoutputX\fR,
+     \fBmlib_u8 *\fR\fIoutputY\fR, \fBmlib_u8 *\fR\fIoutputXY\fR, \fBconst mlib_u8 *\fR\fIimage\fR,
+     \fBmlib_s32\fR \fIstride\fR, \fBmlib_s32\fR \fIwidth\fR, \fBmlib_s32\fR \fIheight\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_VideoInterpX_Y_XY_U8_U8()\fR function performs half-pixel interpolation in both X and Y directions for the replenishment mode.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIoutputX\fR\fR
+.ad
+.RS 12n
+.rt  
+Pointer to the output of X-interpolation. \fIoutputX\fR must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIoutputY\fR\fR
+.ad
+.RS 12n
+.rt  
+Pointer to the output of Y-interpolation. \fIoutputY\fR must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIoutputXY\fR\fR
+.ad
+.RS 12n
+.rt  
+Pointer to the output of XY-interpolation. \fIoutputXY\fR must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIimage\fR\fR
+.ad
+.RS 12n
+.rt  
+Pointer to the image data. \fIimage\fR must be 8-byte aligned
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIstride\fR\fR
+.ad
+.RS 12n
+.rt  
+Stride, in bytes, between adjacent rows in the image. \fIstride\fR must be a multiple of eight.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIwidth\fR\fR
+.ad
+.RS 12n
+.rt  
+Width of the image. \fIwidth\fR must be a multiple of eight.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIheight\fR\fR
+.ad
+.RS 12n
+.rt  
+Height of the image. \fIheight\fR must be a multiple of two.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_VideoInterpX_U8_U8\fR(3MLIB), \fBmlib_VideoInterpXY_U8_U8\fR(3MLIB), \fBmlib_VideoInterpY_U8_U8\fR(3MLIB), \fBattributes\fR(5)

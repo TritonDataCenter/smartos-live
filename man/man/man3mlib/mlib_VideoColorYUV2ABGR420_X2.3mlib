@@ -1,0 +1,156 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_VideoColorYUV2ABGR420_X2 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_VideoColorYUV2ABGR420_X2 \- YUV to RGB color conversion
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_VideoColorYUV2ABGR420_X2\fR(\fBmlib_u8 *\fR\fIabgr\fR, \fBconst mlib_u8 *\fR\fIy\fR,
+     \fBconst mlib_u8 *\fR\fIu\fR, \fBconst mlib_u8 *\fR\fIv\fR, \fBmlib_s32\fR \fIwidth\fR, \fBmlib_s32\fR \fIheight\fR,
+     \fBmlib_s32\fR \fIabgr_stride\fR, \fBmlib_s32\fR \fIy_stride\fR, \fBmlib_s32\fR \fIuv_stride\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_VideoColorYUV2ABGR420_X2()\fR function performs YUV to RGB color conversion used in MPEG1 and MPEG2 video compression in the 4:2:0 sequence. It performs color conversion together with 2X zooming.
+.sp
+.LP
+The luminance component is stored in Y, the chrominance components are stored in U and V, respectively. The size of the chrominance image depends on the chroma format used by the sequence. In this sequence, the chrominance components are subsampled 2-to-1 in both the horizontal and vertical directions in respect to the luminance component.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIabgr\fR\fR
+.ad
+.RS 15n
+.rt  
+Pointer to the destination packed ABGR image. abgr must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIy\fR\fR
+.ad
+.RS 15n
+.rt  
+Pointer to the source Y component. y must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIu\fR\fR
+.ad
+.RS 15n
+.rt  
+Pointer to the source U component. u must be 4-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIv\fR\fR
+.ad
+.RS 15n
+.rt  
+Pointer to the source V component. v must be 4-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIwidth\fR\fR
+.ad
+.RS 15n
+.rt  
+Width of the image. width must be a multiple of 8.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIheight\fR\fR
+.ad
+.RS 15n
+.rt  
+Height of the image. height must be a multiple of 2.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIabgr_stride\fR\fR
+.ad
+.RS 15n
+.rt  
+Stride, in bytes, between adjacent rows in the ABGR image. abgr_stride must be a multiple of 8.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIy_stride\fR\fR
+.ad
+.RS 15n
+.rt  
+Stride, in bytes, between adjacent rows in the Y component image. y_stride must be a multiple of 8.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIuv_stride\fR\fR
+.ad
+.RS 15n
+.rt  
+Stride, in bytes, between adjacent rows in the U and V component images. uv_stride must be a multiple of 8.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_VideoColorYUV2ABGR420_W\fR(3MLIB), \fBmlib_VideoColorYUV2ABGR420_WX2\fR(3MLIB), \fBmlib_VideoColorYUV2ABGR420_WX3\fR(3MLIB), \fBmlib_VideoColorYUV2ABGR420_X3\fR(3MLIB), \fBattributes\fR(5)

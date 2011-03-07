@@ -1,0 +1,163 @@
+'\" te
+.\" Copyright (c) 2000, Sun Microsystems, Inc.
+.\"  All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH dpt 7D "27 November 2000" "SunOS 5.11" "Devices"
+.SH NAME
+dpt \- DPT ServeRAID IV SCSI host bus adapter and RAID adapter driver
+.SH DESCRIPTION
+.sp
+.LP
+The \fBdpt\fR driver is a driver for the DPT (Distributed Processing Technology) family of SmartRAID IV SCSI HBA and RAID adapters. The following HBA adapters are supported: PM2024, PM2044UW, PM2044W, PM2124, PM2124W, PM2144UW, and PM2144W.
+.sp
+.LP
+The following RAID adapters are supported: PM3224, PM3224W, PM3334UW, and PM3334W.
+.SH PRECONFIGURATION
+.RS +4
+.TP
+.ie t \(bu
+.el o
+DPT PM3224 \fBonly\fR: Only EPROM 7A and later versions are supported.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+DPT PM2024 and PM2124 \fBonly\fR: Only EPROM 6D4 and later versions are supported.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Use adapters with SmartROM version 3.B or later versions only.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Be sure that the controller board is installed in a PCI bus-mastering slot.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Disable PCI parity checking if your firmware version is earlier than version 7A, if your system memory is ECC, or if your system does not check parity.
+.RE
+.SS "Known Problems and Limitations"
+.sp
+.LP
+During system boot, a message may be displayed saying a DPT controller driver cannot be installed. This message indicates that the motherboard installed in your system may contain ECC memory or may not check parity. If you see this message is displayed, disable PCI parity checking.
+.SS "Supported Settings"
+.RS +4
+.TP
+.ie t \(bu
+.el o
+I/O Address: Auto
+.RE
+.SH CONFIGURATION
+.sp
+.LP
+Auto-configuration code determines whether the adapter is present at the configured address and what types of devices are attached to it. The DPT ServeRAID is primarily used as a disk array (system drive) controller.
+.sp
+.LP
+To configure the attached disk arrays, you must configure the controller (using the configuration utilities provided by the hardware manufacturer) before you boot the Solaris operating environment. You use the configuration utilities to set RAID levels, stripe parameters, cache mechanisms and perform other functions. For more information, see the user manual supplied with your hardware.
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/kernel/drv/dpt.conf\fR \fR
+.ad
+.RS 25n
+.rt  
+\fBdpt\fR configuration file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/dev/dsk/c\fR\fIn\fR\fBd\fR\fIn\fR\fB[s|p]\fR\fIn\fR\fR
+.ad
+.RS 25n
+.rt  
+block device
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/dev/rdsk/c\fR\fIn\fR\fBd\fR\fIn\fR\fB[s|p]\fR\fIn\fR\fR
+.ad
+.RS 25n
+.rt  
+raw device where:
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBc\fR\fIn\fR \fR
+.ad
+.RS 25n
+.rt  
+controller \fIn\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBd\fR\fIn\fR \fR
+.ad
+.RS 25n
+.rt  
+LUN \fIn\fR (0-7)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBs\fR\fIn\fR \fR
+.ad
+.RS 25n
+.rt  
+UNIX system slice \fIn\fR (0-15)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBp\fR\fIn\fR \fR
+.ad
+.RS 25n
+.rt  
+\fBfdisk\fR(1M) partition (0)
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+lw(2.75i) lw(2.75i) 
+lw(2.75i) lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+Architecturex86
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBfdisk\fR(1M), \fBattributes\fR(5), \fBcmdk\fR(7D)

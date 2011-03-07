@@ -1,0 +1,186 @@
+'\" te
+.\"  Copyright 1989 AT&T Copyright (c) 1997 Sun Microsystems, Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH sag 1 "4 Mar 1998" "SunOS 5.11" "User Commands"
+.SH NAME
+sag \- system activity graph
+.SH SYNOPSIS
+.LP
+.nf
+\fBsag\fR [\fB-e\fR \fItime\fR] [\fB-f\fR \fIfile\fR] [\fB-i\fR \fIsec\fR] [\fB-s\fR \fItime\fR] [\fB-T\fR \fIterm\fR] 
+     [\fB-x\fR \fIspec\fR] [\fB-y\fR \fIspec\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBsag\fR utility graphically displays the system activity data stored in a binary data file by a previous \fBsar\fR(1) run. Any of the \fBsar\fR data items may be plotted singly or in combination, as cross plots or versus time. Simple arithmetic combinations of data may be specified. \fBsag\fR invokes \fBsar\fR and finds the desired data by string-matching the data column header (run \fBsar\fR to see what is available). The \fBsag\fR utility requires a graphic terminal to draw the graph, and uses \fBtplot\fR(1) to produce its output. When running Solaris 2.\fIx\fR and OpenWindows, perform the following steps:
+.RS +4
+.TP
+1.
+Run an \fBxterm\fR as a Tektronics terminal: \fBprompt#\fR \fBxterm\fR \fB-t\fR
+.RE
+.RS +4
+.TP
+2.
+In the \fBxterm\fR window, run \fBsag\fR specifying a \fBtek\fR terminal: \fBprompt# sag \fR\fB-T\fR\fB tek options\fR
+.RE
+.SH OPTIONS
+.sp
+.LP
+The following options are supported and passed through to \fBsar\fR (see \fBsar\fR(1)):
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-e\fR \fItime\fR\fR
+.ad
+.RS 11n
+.rt  
+Select data up to \fBtime\fR. Default is 18:00.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR \fIfile\fR\fR
+.ad
+.RS 11n
+.rt  
+Use \fBfile\fR as the data source for \fBsar\fR. Default is the current daily data file \fB/usr/adm/sa/sa\fR\fIdd.\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR \fIsec\fR\fR
+.ad
+.RS 11n
+.rt  
+Select data at intervals as close as possible to \fIsec\fR seconds.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR \fItime\fR\fR
+.ad
+.RS 11n
+.rt  
+Select data later than \fBtime\fR in the form \fIhh\|\fR[\fI:mm\fR]. Default is 08:00.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-T\fR \fIterm\fR\fR
+.ad
+.RS 11n
+.rt  
+Produce output suitable for terminal \fIterm\fR. See \fBtplot\fR(1) for known terminals. Default for \fIterm\fR is \fB$TERM\fR. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-x\fR \fIspec\fR\fR
+.ad
+.RS 11n
+.rt  
+x axis specification with \fIspec\fR in the form: 
+.sp
+\fIname\|\fR[\fIop name\fR]\|.\|.\|.\|[\fIlo \|hi\fR]
+.sp
+\fIname\fR is either a string that will match a column header in the \fBsar\fR report, with an optional device name in square brackets, for example, \fBr+w/s[dsk\(mi1]\fR, or an integer value. \fIop\fR is \fB+\fR \fB\(mi\fR \fB*\fR or \fB/\fR surrounded by blank spaces. Up to five names may be specified. Parentheses are not recognized. Contrary to custom, \fB+\fR and \fB-\fR have precedence over \fB*\fR and \fB/\fR. Evaluation is left to right. Thus, A/A+B*100 is evaluated as (A/(A+B))*100, and A+B/C+D is (A+B)/(C+D). \fIlo\fR and \fIhi\fR are optional numeric scale limits. If unspecified, they are deduced from the data.
+.sp
+Enclose \fIspec\fR in double-quotes (\fB"\|"\fR) if it includes white space.
+.sp
+A single \fIspec\fR is permitted for the x axis. If unspecified, \fBtime\fR is used.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-y\fR \fIspec\fR\fR
+.ad
+.RS 11n
+.rt  
+y axis specification with \fIspec\fR in the same form as for \fB-x\fR. Up to 5 \fIspec\fR arguments separated by a semi-colon (\fB;\fR) may be given for \fB-y\fR. The \fB-y\fR default is:
+.sp
+\fB\fR\fB-y\fR\fB"%usr0100;%usr+%sys0100;%usr+%sys+%wio0100"\fR
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRExamples of the \fBsag\fR command.
+.sp
+.LP
+To see today's \fBCPU\fR utilization:
+
+.sp
+.in +2
+.nf
+\fBexample$\fR \fBsag\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+To see activity over 15 minutes of all disk drives:
+
+.sp
+.in +2
+.nf
+\fBexample$ TS=`date +%H:%M`
+example$ sar -o /tmp/tempfile 60 15
+example$ TE=`date +%H:%M`
+example$ sag -f /tmp/tempfile -s $TS -e $TE -y "r+w/s[dsk]"\fR
+.fi
+.in -2
+.sp
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/adm/sa/sa\fR\fBdd\fR\fR
+.ad
+.RS 20n
+.rt  
+daily data file for day \fBdd\fR
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWaccu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBsar\fR(1), \fBtplot\fR(1), \fBattributes\fR(5)
+.sp
+.LP
+\fISystem Administration Guide: Advanced Administration\fR

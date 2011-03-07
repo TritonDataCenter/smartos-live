@@ -1,0 +1,78 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_VideoIDCT8x8_S16_S16_Q1_Mismatch 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_VideoIDCT8x8_S16_S16_Q1_Mismatch \- inverse Discrete Cosine Transform
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_VideoIDCT8x8_S16_S16_Q1_Mismatch\fR(
+     \fBmlib_s16\fR \fIblock[64]\fR, \fBconst mlib_s16\fR \fIcoeffs[64]\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_VideoIDCT8x8_S16_S16_Q1_Mismatch()\fR function computes the inverse IDCT in the inter mode.
+.sp
+.LP
+This function is similar to \fBmlib_VideoIDCT8x8_S16_S16_Q1()\fR which should only be used when \fBcoeffs[u][v]\fR  (\fBu,v = 0...7\fR) are non-zero only for \fBu\fR and \fBv\fR less then \fB4\fR. However, this function also allows element \fBcoeffs[7][7]\fR to be non-zero. The primary benefit of this modification is that it can handle situations where \fBcoeffs[7][7]\fR has been made non-zero by MPEG mismatch-control, allowing a simplified version of the IDCT to be undertaken for a much larger number of situations.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIblock\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to an 8x8 motion-compensated block which is the difference between the reference block and current block. \fBblock\fR must be 8-byte aligned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcoeffs\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to the input DCT coefficients. \fBcoeffs\fR must be 8-byte aligned. \fBcoeffs\fR should be in S12 range or it should be obtained from the corresponding forward DCT.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_VideoIDCT8x8_S16_S16_Q1\fR(3MLIB), \fBattributes\fR(5)

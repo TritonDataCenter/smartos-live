@@ -1,0 +1,495 @@
+'\" te
+.\" Copyright (C) 2002, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH packagetoc 4 "19 Nov 2002" "SunOS 5.11" "File Formats"
+.SH NAME
+packagetoc \- package table of contents description file
+.SH DESCRIPTION
+.sp
+.LP
+The package table of contents file, \fB\&.packagetoc,\fR is an \fBASCII\fR file containing all of the information necessary for installing a product release distributed in package form. It centralizes and summarizes all of the relevant information about each package in the product.  This allows the install software to quickly read one file to obtain all of the relevant information about each package instead of having to examine each package at run time to obtain this information. The \fB\&.packagetoc\fR file resides in the top-level directory containing the product.
+.sp
+.LP
+If a \fB\&.packagetoc\fR file exists for a product, there must also be a \fB\&.order\fR file.
+.sp
+.LP
+Each entry in the \fB\&.packagetoc\fR file is a line that establishes the value of a parameter in the following form:
+.sp
+.in +2
+.nf
+PARAM=\fIvalue\fR
+.fi
+.in -2
+
+.sp
+.LP
+A line starting with a pound-sign, ``#'', is considered a comment and is ignored.
+.sp
+.LP
+Parameters are grouped by package.  The start of a package description is defined by a line of the form:
+.sp
+.in +2
+.nf
+PKG=\fIvalue\fR
+.fi
+.in -2
+
+.sp
+.LP
+There is no order implied or assumed for specifying the parameters for a package with the exception of the \fBPKG\fR parameter, which must appear first.  Only one occurrence of a parameter is permitted per package.
+.sp
+.LP
+The parameters recognized are described below.  Those marked with an asterisk are mandatory.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBPKG*\fR\fR
+.ad
+.RS 16n
+.rt  
+The package identifier, for example,  \fBSUNWaccu\fR. The maximum length of the identifier is nine characters. All the characters must be alphanumeric.  The first character must be alphabetic. \fBinstall\fR, \fBnew\fR, and \fBall\fR are reserved identifiers.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBPKGDIR*\fR\fR
+.ad
+.RS 16n
+.rt  
+The name of the directory containing the package. This directory is relative to the directory containing the product.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNAME*\fR\fR
+.ad
+.RS 16n
+.rt  
+The full name of the package.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBVENDOR\fR\fR
+.ad
+.RS 16n
+.rt  
+The name of the package's vendor.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBVERSION\fR\fR
+.ad
+.RS 16n
+.rt  
+The version of the package.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBPRODNAME\fR\fR
+.ad
+.RS 16n
+.rt  
+The name of the product to which this package belongs.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBPRODVERS\fR\fR
+.ad
+.RS 16n
+.rt  
+The version of the product to which this package belongs.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSUNW_PKGTYPE\fR\fR
+.ad
+.RS 16n
+.rt  
+The package type. Valid values are: 
+.sp
+.ne 2
+.mk
+.na
+\fB\fBroot\fR\fR
+.ad
+.RS 8n
+.rt  
+indicates that the package will be installed in the \fB/\fR file system. The \fBroot\fR packages are the only packages installed during dataless client installations.  The \fBroot\fR packages are spooled during a server installation to allow the later installation of diskless clients.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBusr\fR\fR
+.ad
+.RS 8n
+.rt  
+indicates that the package will be installed in the \fB/usr\fR file system.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBkvm\fR\fR
+.ad
+.RS 8n
+.rt  
+indicates that the package will be installed in the \fB/usr/platform\fR file system.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBow\fR\fR
+.ad
+.RS 8n
+.rt  
+indicates a package that is part of the bundled OpenWindows product release. If no \fBSUNW_PKGTYPE\fR macro is present, the package is assumed to be of type \fBusr\fR.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBARCH*\fR\fR
+.ad
+.RS 16n
+.rt  
+The architecture(s) supported by the package.  This macro is taken from the package's \fBpkginfo\fR(4) file and is subject to the same length and formatting constraints.
+.sp
+The install program currently assumes that exactly one architecture token is specified for a package.  For example, \fBARCH=sparc.sun4u\fR is acceptable, but \fBARCH=sparc.sun4u, sparc.sun4m\fR is not.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBDESC\fR\fR
+.ad
+.RS 16n
+.rt  
+A detailed textual description of the package.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBBASEDIR*\fR\fR
+.ad
+.RS 16n
+.rt  
+The default installation base directory of the package.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSUNW_PDEPEND\fR\fR
+.ad
+.RS 16n
+.rt  
+A dependency specification for a prerequisite package. Each prerequisite dependency must appear as a separate macro. See \fBdepend\fR(4) for more information on dependencies and instance specifications.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSUNW_IDEPEND\fR\fR
+.ad
+.RS 16n
+.rt  
+A dependency specification for an incompatible package. Each incompatible dependency should appear as a separate macro. See \fBdepend\fR(4) for more information on dependencies and instance specifications.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSUNW_RDEPEND\fR\fR
+.ad
+.RS 16n
+.rt  
+A dependency specification for a reversed package dependency. Each reverse dependency should appear as a separate macro. See \fBdepend\fR(4) for more information on dependencies and instance specifications.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBCATEGORY\fR\fR
+.ad
+.RS 16n
+.rt  
+The category of the package.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSUNW_LOC\fR\fR
+.ad
+.RS 16n
+.rt  
+Indicates that this package contains localizations for other packages. Such localization packages are treated as special case packages. Each package which has a \fBSUNW_LOC\fR macro must have a corresponding \fBSUNW_PKGLIST\fR macro.  The value specified by this macro should be a valid locale.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSUNW_PKGLIST\fR\fR
+.ad
+.RS 16n
+.rt  
+A comma separated list of package identifiers. Currently this macro is used to indicate which packages are localized by a localization package.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBROOTSIZE*\fR\fR
+.ad
+.RS 16n
+.rt  
+The space used by the package in the \fB/\fR file system.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBUSRSIZE*\fR\fR
+.ad
+.RS 16n
+.rt  
+The space used by the package in the \fB/usr\fR subtree of the file system.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBVARSIZE*\fR\fR
+.ad
+.RS 16n
+.rt  
+The space used by the package in the \fB/var\fR subtree of the file system.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBOPTSIZE*\fR\fR
+.ad
+.RS 16n
+.rt  
+The space used by the package in the \fB/opt\fR subtree of the file system.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBEXPORTSIZE*\fR\fR
+.ad
+.RS 16n
+.rt  
+The space used by the package in the \fB/export\fR subtree of the file system.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBUSROWNSIZE*\fR\fR
+.ad
+.RS 16n
+.rt  
+The space used by the package in the \fB/usr/openwin\fR subtree of the file system.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSPOOLEDSIZE*\fR\fR
+.ad
+.RS 16n
+.rt  
+The space used by the spooled version of this package. This is used during the setup of a server by the initial system installation programs.
+.RE
+
+.sp
+.LP
+All sizes are specified in bytes.  Default disk partitions and file system sizes are derived from the values provided: accuracy is important.
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRA Sample \fB\&.packagetoc\fR File
+.sp
+.LP
+The following is an example package entry in a \fB\&.packagetoc\fR file.
+
+.sp
+.in +2
+.nf
+#ident "@(#)packagetoc.4 1.2 92/04/28"
+PKG=SUNWaccr
+PKGDIR=SUNWaccr
+NAME=System Accounting, (Root)
+VENDOR=Sun Microsystems, Inc.
+VERSION=8.1
+PRODNAME=SunOS
+PRODVERS=5.0beta2
+SUNW_PKGTYPE=root
+ARCH=sparc
+DESC=System Accounting, (Root)
+BASEDIR=/
+CATEGORY=system
+ROOTSIZE=11264
+VARSIZE= 15360
+OPTSIZE=0
+EXPORTSIZE=0
+USRSIZE=0
+USROWNSIZE=0
+.fi
+.in -2
+.sp
+
+.SH SEE ALSO
+.sp
+.LP
+\fBcdtoc\fR(4), \fBclustertoc\fR(4), \fBdepend\fR(4), \fBorder\fR(4), \fBpkginfo\fR(4), \fBpkgmap\fR(4)
+.SH NOTES
+.sp
+.LP
+The parameters \fBNAME\fR, \fBVENDOR\fR, \fBVERSION\fR, \fBPRODNAME\fR, \fBPRODVERS\fR, \fBSUNW_PKGTYPE\fR, \fBSUNW_LOC\fR, \fBSUNW_PKGLIST\fR, \fBARCH\fR, \fBDESC\fR, \fBBASEDIR\fR, and \fBCATEGORY\fR are assumed to have been taken directly from the package's \fBpkginfo\fR(4) file.  The length and formatting restrictions placed on the values for these parameters are identical to those for the corresponding entries in the \fBpkginfo\fR(4) file.
+.sp
+.LP
+The value specified for the parameter \fBPKGDIR\fR should not exceed 255 characters.
+.sp
+.LP
+The value specified for the parameters \fBROOTSIZE\fR, \fBVARSIZE\fR, \fBOPTSIZE\fR, \fBEXPORTSIZE\fR, \fBUSRSIZE\fR and \fBUSROWNSIZE\fR must be a single integer value.  The values can be derived from the package's \fBpkgmap\fR file by counting all space consumed by any files installed in the applicable file system. The space includes that used for directory entries and any UFS overhead that exists because of the way the files are represented (directory allocation scheme; direct, indirect, double indirect blocks; fragments; etc.)
+.sp
+.LP
+The following kinds of entries in the  \fBpkgmap\fR(4) file should be included in the space derivation:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBf\fR\fR
+.ad
+.RS 8n
+.rt  
+regular file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBc\fR\fR
+.ad
+.RS 8n
+.rt  
+character special file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBb\fR\fR
+.ad
+.RS 8n
+.rt  
+block special file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBp\fR\fR
+.ad
+.RS 8n
+.rt  
+pipe
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBl\fR\fR
+.ad
+.RS 8n
+.rt  
+hard link
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBs\fR\fR
+.ad
+.RS 8n
+.rt  
+symbolic link
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBx, d\fR\fR
+.ad
+.RS 8n
+.rt  
+directory
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBi\fR\fR
+.ad
+.RS 8n
+.rt  
+packaging installation script or information file (\fIcopyright\fR, \fIdepend\fR, \fIpostinstall\fR, \fIpostremove\fR)
+.RE
+

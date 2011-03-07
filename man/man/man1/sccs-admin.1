@@ -1,0 +1,455 @@
+'\" te
+.\"  Copyright (c) 2002, Sun Microsystems, Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH sccs-admin 1 "30 Sep 2002" "SunOS 5.11" "User Commands"
+.SH NAME
+sccs-admin, admin \- create and administer SCCS history files
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/ccs/bin/admin\fR [\fB-bhnz\fR] [\fB-a\fR \fIusername\fR | \fIgroupid\fR]... 
+     [\fB-d\fR \fIflag\fR] ... [\fB-e\fR \fIusername\fR | \fIgroupid\fR]... 
+     [\fB-f\fR \fIflag\fR [\fIvalue\fR]] ... [\fB-i\fR [\fIfilename\fR]] [\fB-m\fR \fImr-list\fR] 
+     [\fB-r\fR\fIrelease\fR] [\fB-t\fR [\fIdescription-file\fR]] [\fB-y\fR [\fIcomment\fR]] \fIs.filename\fR...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBadmin\fR command creates or modifies the flags and other parameters of SCCS history files. Filenames of SCCS history files begin with the `\fBs.\fR' prefix, and are referred to as \fBs.\fRfiles, or ``history'' files.
+.sp
+.LP
+The named \fBs.\fRfile is created if it does not exist already. Its parameters are initialized or modified according to the options you specify.  Parameters not specified are given default values when the file is initialized, otherwise they remain unchanged.
+.sp
+.LP
+If a directory name is used in place of the \fIs.filename\fR argument, the \fBadmin\fR command applies to all \fBs.\fRfiles in that directory.  Unreadable \fBs.\fRfiles produce an error.  The use of `\fB\(mi\fR\&' as the \fIs.filename\fR argument indicates that the names of files are to be read from the standard input, one \fBs.\fRfile per line.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR \fIusername\fR | \fIgroupid\fR\fR
+.ad
+.RS 25n
+.rt  
+Adds a user name, or a numerical group \fBID\fR, to the list of users who may check deltas in or out. If the list is empty, any user is allowed to do so.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR\fR
+.ad
+.RS 25n
+.rt  
+Forces encoding of binary data. Files that contain ASCII NUL or other control characters, or that do not end with a \fBNEWLINE\fR, are recognized as binary data files. The contents of such files are stored in the history file in encoded form. See \fBuuencode\fR(1C) for details about the encoding. This option is normally used in conjunction with \fB-i\fR to force \fBadmin\fR to encode initial versions not recognized as containing binary data.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR \fIflag\fR\fR
+.ad
+.RS 25n
+.rt  
+Deletes the indicated \fIflag\fR from the SCCS file. The \fB-d\fR option may be specified only for existing \fBs.\fRfiles. See \fB-f\fR for the list of recognized flags.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-e\fR \fIusername\fR | \fIgroupid\fR\fR
+.ad
+.RS 25n
+.rt  
+Erases a user name or group \fBID\fR from the list of users allowed to make deltas.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR \fIflag\fR [\fIvalue\fR]\fR
+.ad
+.RS 25n
+.rt  
+Sets the indicated \fIflag\fR to the (optional) \fIvalue\fR specified. The following flags are recognized: 
+.sp
+.ne 2
+.mk
+.na
+\fB\fBb\fR\fR
+.ad
+.sp .6
+.RS 4n
+Enables branch deltas. When \fBb\fR is set, branches can be created using the \fB-b\fR option of the SCCS \fBget\fR command (see \fBsccs-get\fR(1)).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBc\fR\fIceil\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets a ceiling on the releases that can be checked out. \fIceil\fR is a number less than or equal to 9999. If \fBc\fR is not set, the ceiling is 9999.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBd\fR\fIsid\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the default delta number, or  \fBSID\fR, to be used by an SCCS \fBget\fR command.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBf\fR\fIfloor\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets a floor on the releases that can be checked out. The floor is a number greater than 0 but less than 9999. If \fBf\fR is not set, the floor is 1.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBi\fR\fR
+.ad
+.sp .6
+.RS 4n
+Treats the `\fBNo id keywords (ge6)\fR' message issued by an SCCS \fBget\fR or \fBdelta\fR command as an error rather than a warning.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBj\fR\fR
+.ad
+.sp .6
+.RS 4n
+Allows concurrent updates.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBla\fR\fR
+.ad
+.br
+.na
+\fB\fBl\fR \fIrelease\fR[\fB,\fR \fIrelease\fR...]\fR
+.ad
+.sp .6
+.RS 4n
+Locks the indicated list of releases against deltas. If \fBa\fR is used, this flag locks out deltas to all releases. An SCCS `\fBget\fR \fB-e\fR' command fails when applied against a locked release.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBm\fR\fImodule\fR\fR
+.ad
+.sp .6
+.RS 4n
+Supplies a value for the module name to which the \fBsccs-admin.1\fR keyword is to expand. If the \fBm\fR flag is not specified, the value assigned is the name of the SCCS file with the leading \fBs.\fR removed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBn\fR\fR
+.ad
+.sp .6
+.RS 4n
+Creates empty releases when releases are skipped. These null (empty) deltas serve as anchor points for branch deltas.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBq\fR\fIvalue\fR\fR
+.ad
+.sp .6
+.RS 4n
+Supplies a  \fIvalue\fR to which the \fB\fR keyword is to expand when a read-only version is retrieved with the SCCS \fBget\fR command.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBs\fR\fInumber\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies how many lines of code are scanned for the SCCS keyword.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBt\fR\fItype\fR\fR
+.ad
+.sp .6
+.RS 4n
+Supplies a value for the module type to which the \fB\fR keyword is to expand.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBv\fR[\fIprogram\fR]\fR
+.ad
+.sp .6
+.RS 4n
+Specifies a validation \fIprogram\fR for the \fBMR\fR numbers associated with a new delta. The optional \fIprogram\fR specifies the name of an \fBMR\fR number validity checking \fIprogram\fR. If this flag is set when creating an SCCS file, the \fB-m\fR option must also be used, in which case the list of \fBMR\fRs may be empty.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBy\fR[\fIvalue\fR\fB,\fR[\fIvalue\fR]]\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the SCCS keywords to be expanded. If no \fIvalue\fR is specified, no keywords will be expanded.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR\fR
+.ad
+.RS 25n
+.rt  
+Checks the structure of an existing \fBs.\fRfile (see \fBsccsfile\fR(4)), and compares a newly computed check-sum with one stored in the first line of that file. \fB-h\fR inhibits writing on the file and so nullifies the effect of any other options.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR[\fIfilename\fR]\fR
+.ad
+.RS 25n
+.rt  
+Initializes the history file with text from the indicated file. This text constitutes the initial delta, or set of checked-in changes. If \fIfilename\fR is omitted, the initial text is obtained from the standard input. Omitting the \fB-i\fR option altogether creates an empty \fBs.\fRfile. You can only initialize one \fBs.\fRfile with text using \fB-i\fR. This option implies the \fB-n\fR option.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-m\fR \fImr-list\fR\fR
+.ad
+.RS 25n
+.rt  
+Inserts the indicated Modification Request (MR) numbers into the commentary for the initial version. When specifying more than one MR number on the command line, \fImr-list\fR takes the form of a quoted, space-separated list. A warning results if the \fBv\fR flag is not set or the \fBMR\fR validation fails.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR\fR
+.ad
+.RS 25n
+.rt  
+Creates a new SCCS history file.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR\fIrelease\fR\fR
+.ad
+.RS 25n
+.rt  
+Specifies the release for the initial delta. \fB-r\fR may be used only in conjunction with \fB-i\fR. The initial delta is inserted into release 1 if this option is omitted. The level of the initial delta is always \fB1\fR. Initial deltas are named \fB1.1\fR by default.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR\fB[\fR\fIdescription-file\fR\fB]\fR\fR
+.ad
+.RS 25n
+.rt  
+Inserts descriptive text from the file \fIdescription-file\fR. When  \fB-t\fR is used in conjunction with \fB-n\fR, or \fB-i\fR to initialize a new s.file, the \fIdescription-file\fR must be supplied. When modifying the description for an existing file: a \fB-t\fR option without a \fIdescription-file\fR removes the descriptive text, if any; a \fB-t\fR option with a \fIdescription-file\fR replaces the existing text.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-y\fR\fB[\fR\fIcomment\fR\fB]\fR\fR
+.ad
+.RS 25n
+.rt  
+Inserts the indicated \fIcomment\fR in the ``\fBComments:\fR'' field for the initial delta. Valid only in conjunction with \fB-i\fR or \fB-n\fR. If \fB-y\fR option is omitted, a default comment line is inserted that notes the date and time the history file was created.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-z\fR\fR
+.ad
+.RS 25n
+.rt  
+Recomputes the file check-sum and stores it in the first line of the \fBs.\fRfile. \fBCaution:\fR It is important to verify the contents of the history file (see \fBsccs-val\fR(1), and the \fBprint\fR subcommand in \fBsccs\fR(1)), since using \fB-z\fR on a truly corrupted file may prevent detection of the error.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRPreventing SCCS keyword expansion
+.sp
+.LP
+In the following example, \fB10\fR lines of \fBfile\fR will be scanned and only the \fBW,Y,X\fR keywords will be interpreted:
+
+.sp
+.in +2
+.nf
+example% \fBsccs admin -fs10 file\fR
+example% \fBsccs admin -fyW,Y,X file\fR
+example% \fBget file\fR
+.fi
+.in -2
+.sp
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.LP
+See \fBenviron\fR(5) for descriptions of the following environment variables that affect the execution of \fBalias\fR and \fBunalias\fR: \fBLANG\fR, \fBLC_ALL\fR, \fBLC_CTYPE\fR, \fBLC_MESSAGES\fR, and \fBNLSPATH\fR.
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 5n
+.rt  
+Successful completion.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 5n
+.rt  
+An error occurred.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fBs.*\fR\fR
+.ad
+.RS 12n
+.rt  
+history file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBSCCS/s.*\fR\fR
+.ad
+.RS 12n
+.rt  
+history file in SCCS subdirectory
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBz.*\fR\fR
+.ad
+.RS 12n
+.rt  
+temporary lock file
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWsprot
+_
+Interface StabilityCommitted
+_
+StandardSee \fBstandards\fR(5).
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBsccs\fR(1), \fBsccs-cdc\fR(1), \fBsccs-delta\fR(1), \fBsccs-get\fR(1), \fBsccs-help\fR(1), \fBsccs-rmdel\fR(1), \fBsccs-val\fR(1), \fBsccsfile\fR(4), \fBattributes\fR(5), \fBenviron\fR(5), \fBstandards\fR(5)
+.SH DIAGNOSTICS
+.sp
+.LP
+Use the SCCS \fBhelp\fR command for explanations (see \fBsccs-help\fR(1)).
+.SH WARNINGS
+.sp
+.LP
+The last component of all SCCS filenames must have the `\fBs.\fR' prefix. New SCCS files are given mode \fB444\fR (see \fBchmod\fR(1)). All writing done by \fBadmin\fR is to a temporary file with an \fBx.\fR prefix, created with mode \fB444\fR for a new SCCS file, or with the same mode as an existing SCCS file. After successful execution of \fBadmin\fR, the existing \fBs.\fRfile is removed and replaced with the \fBx.\fRfile. This ensures that changes are made to the SCCS file only when no errors have occurred.
+.sp
+.LP
+It is recommended that directories containing SCCS files have permission mode \fB755\fR, and that the \fBs.\fRfiles themselves have mode \fB444\fR. The  mode for directories allows only the owner to modify the SCCS files contained in the directories, while the mode of the \fBs.\fRfiles prevents all modifications except those performed using SCCS commands.
+.sp
+.LP
+If it should be necessary to patch an SCCS file for any reason, the mode may be changed to \fB644\fR by the owner to allow use of a text editor. However, extreme care must be taken when doing this. The edited file should \fIalways\fR be processed by an `\fBadmin\fR \fB-h\fR' command to check for corruption, followed by an `\fBadmin\fR \fB-z\fR' command to generate a proper check-sum. Another `\fBadmin\fR \fB-h\fR' command is recommended to ensure that the resulting \fBs.\fRfile is valid.
+.sp
+.LP
+\fBadmin\fR also uses a temporary lock \fBs.\fRfile, starting with the `\fBz.\fR' prefix, to prevent simultaneous updates to the \fBs.\fRfile. See \fBsccs-get\fR(1) for further information about the `\fBz.\fRfile'.

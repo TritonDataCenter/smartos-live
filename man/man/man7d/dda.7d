@@ -1,0 +1,104 @@
+'\" te
+.\" Copyright (c) 2008, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH dda 7D "17 Oct 2008" "SunOS 5.11" "Devices"
+.SH NAME
+dda \- MMS disk archiving driver
+.SH SYNOPSIS
+.LP
+.nf
+/devices/pseudo/dda@lun:bn
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The Media Management System (MMS) is a distributed removable media management system based on the \fIIEEE 1244\fR Media Management System specification. MMS provides a uniform and consistent tape interface to client applications.
+.sp
+.LP
+The \fBdda\fR driver is a pseudo tape drive with filesystem file media. The \fBdda\fR driver is a minimal emulation of the \fBst\fR(7D) tape driver \fBmtio\fR(7I) interface with BSD no-rewind behavior and is used for MMS disk archiving. The \fBdda\fR driver should be used with a MMS MMP mount command handle. You configure DDA tapes, drives, and libraries for disk archiving using the \fBmmsadm\fR(1M) command. You also use \fBmmsadm\fR(1M) to mount and unmount \fBdda\fR media.
+.SH CONFIGURATION
+.sp
+.LP
+To set the number of disk archiving tape drives available for MMS disk archiving, edit the \fB/kernel/drv/dda.conf\fR configuration file. The default number of disk archiving tape drives is 20.
+.sp
+.LP
+The disk archiving tape drive devlinks are located in the \fB/dev/dda\fR directory.
+.sp
+.LP
+The DDA maximum block size is 262144 bytes and the minimum is 1 byte.
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/kernel/drv/dda\fR\fR
+.ad
+.RS 27n
+.rt  
+32-bit kernel module (x86)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/kernel/drv/sparcv9/dda\fR\fR
+.ad
+.RS 27n
+.rt  
+64-bit kernel module (SPARC)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/kernel/drv/amd64/dda\fR\fR
+.ad
+.RS 27n
+.rt  
+64-bit kernel module (x86)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/kernel/drv/dda.conf\fR\fR
+.ad
+.RS 27n
+.rt  
+\fBdda\fR configuration file
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for a description of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(0i) |cw(5.5i) 
+lw(0i) |lw(5.5i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+ArchitectureSPARC, x86
+_
+Availability SUNWmmsr
+_
+Interface StabilityUncommitted
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmt\fR(1), \fBmmsadm\fR(1M), \fBattributes\fR(5), \fBdmd\fR(7D), \fBst\fR(7D), \fBmtio\fR(7I)
+.sp
+.LP
+\fIIEEE 1244 Removable Media Standards Specification\fR \(em IEEE, 2000

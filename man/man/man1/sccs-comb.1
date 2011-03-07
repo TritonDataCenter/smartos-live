@@ -1,0 +1,128 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH sccs-comb 1 "30 Jun 2007" "SunOS 5.11" "User Commands"
+.SH NAME
+sccs-comb, comb \- combine SCCS deltas
+.SH SYNOPSIS
+.LP
+.nf
+\fBcomb\fR [\fB-os\fR] [\fB-c\fR\fIsid-list\fR] [\fB-p\fR\fIsid\fR] \fIs.filename\fR...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBcomb\fR generates a shell script (see \fBsh\fR(1)) that you can use to reconstruct the indicated \fBs.\fRfiles. This script is written to the standard output.
+.sp
+.LP
+If a directory name is used in place of the \fIs.filename\fR argument, the \fBcomb\fR command applies to all \fBs.\fRfiles in that directory. Unreadable \fBs.\fRfiles produce an error; processing continues with the next file (if any). The use of `\fB\(mi\fR\&' as the \fIs.filename\fR argument indicates that the names of files are to be read from the standard input, one \fBs.\fRfile per line.
+.sp
+.LP
+If no options are specified, \fBcomb\fR preserves only the most recent (leaf) delta in a branch, and the minimal number of ancestors needed to preserve the history.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR\fR
+.ad
+.RS 14n
+.rt  
+For each `\fBget \fR\fB-e\fR' generated, access the reconstructed file at the release of the delta to be created. Otherwise, the reconstructed file is accessed at the most recent ancestor. The use of \fB-o\fR can decrease the size of the reconstructed \fBs.\fRfile. It can also alter the shape of the delta tree of the original file.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR\fR
+.ad
+.RS 14n
+.rt  
+Generate scripts to gather statistics, rather than combining deltas. When run, the shell scripts report: the file name, size (in blocks) after combining, original size (also in blocks), and the percentage size change, computed by the formula: 
+.sp
+100 * ( \fIoriginal\fR\fB \(mi \fR\fIcombined\fR\fB ) / \fR\fIoriginal\fR\fB\fR
+.sp
+This option can be used to calculate the space that is saved, before actually doing the combining.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR\fIsid-list\fR\fR
+.ad
+.RS 14n
+.rt  
+Include the indicated list of deltas.  All other deltas are omitted. \fIsid-list\fR is a comma-separated list of \fBSCCS\fR delta \fBIDs\fR (SIDs). To specify a range of deltas, use a `\fB\(mi\fR\&' separator instead of a comma, between two \fBSIDs\fR in the list.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR\fISID\fR\fR
+.ad
+.RS 14n
+.rt  
+The \fBSID\fR of the oldest delta to be preserved.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fBs.\|COMB\fR\fR
+.ad
+.RS 13n
+.rt  
+reconstructed  \fBSCCS\fR file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcomb?????\fR\fR
+.ad
+.RS 13n
+.rt  
+temporary file
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWsprot
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBsccs\fR(1), \fBsccs-admin\fR(1), \fBsccs-cdc\fR(1), \fBsccs-delta\fR(1), \fBsccs-help\fR(1), \fBsccs-prs\fR(1), \fBsccs-prt\fR(1), \fBsccs-rmdel\fR(1), \fBsccs-sccsdiff\fR(1), \fBwhat\fR(1), \fBsccsfile\fR(4), \fBattributes\fR(5)
+.SH DIAGNOSTICS
+.sp
+.LP
+Use the \fBSCCS\fR \fBhelp\fR command for explanations (see \fBsccs-help\fR(1)).
+.SH BUGS
+.sp
+.LP
+\fBcomb\fR might rearrange the shape of the tree of deltas. It might not save any space; in fact, it is possible for the reconstructed file to actually be larger than the original.

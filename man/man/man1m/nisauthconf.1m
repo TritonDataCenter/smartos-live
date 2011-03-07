@@ -1,0 +1,173 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nisauthconf 1M "12 Dec 2001" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+nisauthconf \- configure NIS+ security
+.SH SYNOPSIS
+.LP
+.nf
+\fBnisauthconf\fR [\fB-v\fR] [\fImechanism\fR,]...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBnisauthconf\fR controls which authentication flavors NIS+ should use when communicating with other NIS+ clients and servers. If the command is not executed, then NIS+ will default to the \fBAUTH_DES\fR authentication flavor when running security level 2. See \fBrpc.nisd\fR(1M). 
+.sp
+.LP
+\fBnisauthconf\fR takes a list of authentication \fImechanism\fR's in order of preference. An authentication \fImechanism\fR may use one or more authentication flavors listed below. If \fBdes\fR is the only specified mechanism, then NIS+ only use \fBAUTH_DES\fR with other NIS+ clients and servers. If \fBdes\fR is the first mechanism, then other authentication \fImechanism\fR's after \fBdes\fR will be ignored by NIS+, except for \fBnisaddcred\fR(1M). After changing the mechanism configuration, the \fBkeyserv\fR(1M) daemon must be restarted. Note that doing so will remove encryption keys stored by the running \fBkeyserv\fR process. This means that a \fBreboot\fR usually is the safest option when the mechanism configuration has been changed.
+.sp
+.LP
+The following mechanisms are available: 
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+Authentication \fImechanism\fRAuthentication Flavor
+_
+des\fBAUTH_DES\fR
+_
+dh640-0T{
+\fBRPCSEC_GSS\fR using 640-bit Diffie-Hellman keys
+T}
+_
+dh1024-0T{
+\fBRPCSEC_GSS\fR using 1024-bit Diffie-Hellman keys 
+T}
+.TE
+
+.sp
+.LP
+If no mechanisms are specified, then a list of currently configured mechanisms is printed.
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.RS 6n
+.rt  
+Displays a verbose table listing the currently configured authentication mechanisms.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRConfiguring a System with only \fBRPCSEC_GSS\fR Authentication Flavor
+.sp
+.LP
+To configure a system to use only the \fBRPCSEC_GSS\fR authentication flavor with 640-bit Diffie-Hellman keys, execute the following as root:
+
+.sp
+.in +2
+.nf
+example# \fB/usr/lib/nis/nisauthconf dh640-0\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRConfiguring a System with both \fBRPCSEC_GSS\fR and \fBAUTH_DES\fR Authentication Flavors
+.sp
+.LP
+To configure a system to use both \fBRPCSEC_GSS\fR (with 640-bit Diffie-Hellman keys) and \fBAUTH_DES\fR authentication flavors:
+
+.sp
+.in +2
+.nf
+example# \fB/usr/lib/nis/nisauthconf dh640-0 des\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 3 \fRTransitioning to Other Authentication Flavors
+.sp
+.LP
+The following example can be used while adding credentials for a new mechanism before NIS+ is authenticating with the new mechanism: 
+
+.sp
+.in +2
+.nf
+example# \fB/usr/lib/nis/nisauthconf des dh640-0\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Note that except for \fBnisaddcred\fR(1M), NIS+ will not use mechanisms that follow '\fBdes\fR.'
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 5n
+.rt  
+Successful completion. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 5n
+.rt  
+An error occurred.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/etc/rpcsec/nisplussec.conf\fR\fR
+.ad
+.sp .6
+.RS 4n
+NIS+ authentication configuration file. This file may change or be removed in future versions of Solaris.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBNIS+\fR(1), \fBkeyserv\fR(1M), \fBnisaddcred\fR(1M), \fBrpc.nisd\fR(1M), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+A NIS+ client of a server that is configured for either dh640-0 or dh1024-0 must run Solaris 7 or later, even if the server is also configured with \fBdes\fR.
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

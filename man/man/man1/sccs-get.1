@@ -1,0 +1,549 @@
+'\" te
+.\"  Copyright (c) 2007, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH sccs-get 1 "2 Jul 2007" "SunOS 5.11" "User Commands"
+.SH NAME
+sccs-get, get \- retrieve a version of an SCCS file
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/bin/get\fR [\fB-begkmnpst\fR] [\fB-l\fR [p]] [\fB-a\fR\fIsequence\fR] 
+     [\fB-c\fR \fIdate-time\fR | \fB-c\fR\fIdate-time\fR] [\fB-G\fR\fIg-file\fR] 
+     [\fB-i\fR \fIsid-list\fR | \fB-i\fR\fIsid-list\fR] [\fB-r\fR [\fIsid\fR]] 
+     [\fB-x\fR \fIsid-list\fR | \fB-x\fR\fIsid-list\fR] \fIs.filename\fR...
+.fi
+
+.LP
+.nf
+\fB/usr/xpg4/bin/get\fR [\fB-begkmnpst\fR] [\fB-l\fR [p]] [\fB-a\fR\fIsequence\fR] 
+     [\fB-c\fR \fIdate-time\fR | \fB-c\fR\fIdate-time\fR] [\fB-G\fR\fIg-file\fR] 
+     [\fB-i\fR \fIsid-list\fR | \fB-i\fR\fIsid-list\fR] [\fB-r\fR \fIsid\fR | \fB-r\fR\fIsid\fR] 
+     [\fB-x\fR \fIsid-list\fR | \fB-x\fR\fIsid-list\fR] \fIs.filename\fR...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBget\fR utility retrieves a working copy from the SCCS history file, according to the specified options.
+.sp
+.LP
+For each \fIs.filename\fR argument, \fBget\fR displays the  SCCS delta \fBID\fR (SID) and number of lines retrieved.
+.sp
+.LP
+If a directory name is used in place of the \fIs.filename\fR argument, the \fBget\fR command applies to all \fBs.\fRfiles in that directory. Unreadable \fBs.\fRfiles produce an error; processing continues with the next file (if any). The use of `\fB\(mi\fR\&' as the \fIs.filename\fR argument indicates that the names of files are to be read from the standard input, one \fBs.\fRfile per line.
+.sp
+.LP
+The retrieved file normally has the same filename base as the \fBs.\fRfile, less the prefix, and is  referred to as the \fBg-\fRfile.
+.sp
+.LP
+For each file processed, \fBget\fR responds (on the standard output) with the \fBSID\fR being accessed, and with the number of lines retrieved from the \fBs.\fRfile.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fIsequence\fR\fR
+.ad
+.RS 30n
+.rt  
+Retrieves the version corresponding to the indicated delta sequence number. This option is used primarily by the SCCS \fBcomb\fR command (see \fBsccs-comb\fR(1)). For users, \fB-r\fR is an easier way to specify a version. The \fB-a\fR option supersedes the \fB-r\fR option when both are used.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR\fR
+.ad
+.RS 30n
+.rt  
+Creates a new branch. Used with the \fB-e\fR option to indicate that the new delta should have a \fBSID\fR in a new branch. Instead of incrementing the level for version to be checked in, \fBget\fR indicates in the \fBp.\fRfile that the delta to be checked in should either initialize a new branch and sequence (if there is no existing branch at the current level), or increment the branch component of the \fBSID\fR. If the \fBb\fR flag is not set in the \fBs.\fRfile, this option is ignored.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR \fIdate-time\fR | \fB-c\fR\fIdate-time\fR\fR
+.ad
+.RS 30n
+.rt  
+Retrieves the latest version checked in prior to the date and time indicated by the \fIdate-time\fR argument. \fIdate-time\fR takes the form:
+.sp
+\fIyy\fR[\fImm\fR[\fIdd\fR[ \fIhh\fR[\fImm\fR[\fIss\fR]\|]\|]\|]\|]
+.sp
+Units omitted from the indicated date and time default to their maximum possible values; that is \fB\fR\fB-c\fR\fB7502\fR is equivalent to \fB\fR\fB-c\fR\fB750228235959\fR. Values of \fIyy\fR in the range \fB69\fR\(mi\fB99\fR refer to the twentieth century. Values in the range \fB00\fR\(mi\fB68\fR refer to the twenty-first century. Any number of non-numeric characters can separate the various 2 digit components. If white-space characters occur, the \fIdate-time\fR specification must be quoted.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-e\fR\fR
+.ad
+.RS 30n
+.rt  
+Retrieves a version for editing. With this option, \fBget\fR places a lock on the \fBs.\fRfile, so that no one else can check in changes to the version  you have checked out. If the \fBj\fR flag is set in the \fBs.\fRfile, the lock is advisory: \fBget\fR issues a warning message. Concurrent use of `\fBget\fR  \fB-e\fR' for different \fBSID\fRs is allowed. However, \fBget\fR does not check out a version of the file if a writable version is present in the directory. All SCCS file protections stored in the \fBs.\fRfile, including the release ceiling, floor, and authorized user list, are honored by `\fBget\fR \fB-e\fR'.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-g\fR\fR
+.ad
+.RS 30n
+.rt  
+Gets the SCCS version \fBID\fR, without retrieving the version itself. Used to verify the existence of a particular \fBSID\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-G\fR\fInewname\fR\fR
+.ad
+.RS 30n
+.rt  
+Uses \fInewname\fR as the name of the retrieved version.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR \fIsid-list\fR | \fB-i\fR\fIsid-list\fR\fR
+.ad
+.RS 30n
+.rt  
+Specifies a list of deltas to include in the retrieved version. The included deltas are noted in the standard output message. \fIsid-list\fR is a comma-separated list of \fBSID\fRs. To specify a range of deltas, use a  `\fB\(mi\fR\&' separator instead of a comma, between two \fBSID\fRs in the list.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-k\fR\fR
+.ad
+.RS 30n
+.rt  
+Suppresses expansion of \fBID\fR keywords. \fB-k\fR is implied by the \fB-e\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR\|[\|\fBp\fR\|]\fR
+.ad
+.RS 30n
+.rt  
+Retrieves a summary of the delta table (version log) and write it to a listing file, with the `\fBl.\fR' prefix (called `\fBl.\fRfile'). When \fB-lp\fR is used, write the summary onto the standard output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-m\fR\fR
+.ad
+.RS 30n
+.rt  
+Precedes each retrieved line with the \fBSID\fR of the delta in which it was added to the file. The \fBSID\fR is separated from the line with a TAB.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR\fR
+.ad
+.RS 30n
+.rt  
+Precedes each line with the \fB%M%\fR \fBID\fR keyword and a TAB. When both the \fB-m\fR and \fB-n\fR options are used, the \fBID\fR keyword precedes the \fBSID\fR, and the line of text.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR\fR
+.ad
+.RS 30n
+.rt  
+Writes the text of the retrieved version to the standard output. All messages that normally go to the standard output are written to the standard error instead.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR\fR
+.ad
+.RS 30n
+.rt  
+Suppresses all output normally written on the standard output. However, fatal error messages (which always go to the standard error) remain unaffected.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR\fR
+.ad
+.RS 30n
+.rt  
+Retrieves the most recently created (top) delta in a given release (for example: \fB-r1\fR).
+.RE
+
+.SS "/usr/bin/get"
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR[\fIsid\fR]\fR
+.ad
+.RS 11n
+.rt  
+Retrieves the version corresponding to the indicated \fBSID\fR (delta).
+.sp
+The \fBSID\fR for a given delta is a number, in Dewey decimal format, composed of two or four fields: the \fIrelease\fR and \fIlevel\fR fields, and for branch deltas, the \fIbranch\fR and \fIsequence\fR fields. For instance, if \fB1.2\fR is the \fBSID\fR, \fB1\fR is the release, and \fB2\fR is the level number.  If \fB1.2.3.4\fR is the \fBSID,\fR \fB3\fR is the branch and \fB4\fR is the sequence number.
+.sp
+You need not specify the entire \fBSID\fR to retrieve a version with \fBget\fR. When you omit \fB-r\fR altogether, or when you omit both release and level, \fBget\fR normally retrieves the highest release and level.  If the \fBd\fR flag is set to an \fBSID\fR in the \fBs.\fRfile and you omit the \fBSID\fR, \fBget\fR retrieves the default version indicated by that flag.
+.sp
+When you specify a release but omit the level, \fBget\fR retrieves the highest level in that release. If that release does not exist, \fBget\fR retrieves highest level from the next-highest existing release.
+.sp
+Similarly with branches, if you specify a release, level and branch, \fBget\fR retrieves the highest sequence in that branch.
+.RE
+
+.SS "/usr/xpg4/bin/get"
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fIsid\fR | \fB-r\fR\fIsid\fR\fR
+.ad
+.RS 28n
+.rt  
+Same as for \fB/usr/bin/get\fR except that \fBSID\fR is mandatory.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-x\fR \fIsid-list\fR | \fB-x\fR\fIsid-list\fR\fR
+.ad
+.RS 28n
+.rt  
+Excludes the indicated deltas from the retrieved version. The excluded deltas are noted in the standard output message. \fIsid-list\fR is a comma-separated list of \fBSID\fRs. To specify a range of deltas, use a  `\fB\(mi\fR\&' separator instead of a comma, between two  \fBSID\fRs in the list.
+.RE
+
+.SH OUTPUT
+.SS "/usr/bin/get"
+.sp
+.LP
+The output format for \fB/usr/bin/get\fR is as follows:
+.sp
+.in +2
+.nf
+\fB"%%s\en%%d lines\en"\fR, <\fISID\fR>, <\fInumber of lines\fR>
+.fi
+.in -2
+.sp
+
+.SS "/usr/xpg4/bin/get"
+.sp
+.LP
+The output format for \fB/usr/xpg4/bin/get\fR is as follows:
+.sp
+.in +2
+.nf
+\fB"%%s\en%%d\en"\fR, <\fISID\fR>, <\fInumber of lines\fR>
+.fi
+.in -2
+.sp
+
+.SH USAGE
+.sp
+.LP
+Usage guidelines are as follows:
+.SS "ID Keywords"
+.sp
+.LP
+In the absence of \fB-e\fR or \fB-k\fR, \fBget\fR expands the following  \fBID\fR keywords by replacing them with the indicated values in the text of the retrieved source.
+.sp
+
+.sp
+.TS
+tab() box;
+cw(.79i) |cw(4.71i) 
+lw(.79i) |lw(4.71i) 
+.
+\fIKeyword\fR\fIValue\fR
+_
+\fB%%A%%\fRT{
+Shorthand notation for an ID line with  data for \fBwhat\fR(1)\fB: %%Z%%Y%  %M%  %I%%Z%\fR
+T}
+_
+\fB%B%\fRSID branch component
+_
+\fB%C%\fRT{
+Current line number. Intended for identifying messages output by the program such as ``\fIthis shouldn't have happened\fR'' type errors.  It is \fInot\fR intended to be used on every line to provide sequence numbers.
+T}
+_
+\fB%D%\fRCurrent date: \fIyy\fR/\fImm\fR/\fIdd\fR
+_
+\fB%E%\fRT{
+Date newest applied delta was created: \fIyy\fR/\fImm\fR/\fIdd\fR
+T}
+_
+\fB%F%\fR\fBSCCS\fR \fBs.\fRfile name
+_
+\fB%G%\fRT{
+Date newest applied delta was created: \fImm\fR/\fIdd\fR/\fIyy\fR
+T}
+_
+\fB%H%\fRCurrent date: \fImm\fR\fB/\fR\fIdd\fR\fB/\fR\fIyy\fR
+_
+\fB%I%\fRT{
+\fBSID\fR of the retrieved version: \fB%R%.%L%.%B%.%S%\fR
+T}
+_
+\fB%%\fR\fBSID\fR level component
+_
+\fB%M%\fRT{
+Module name: either the value of the \fBm\fR flag in the \fBs.\fRfile (see \fBsccs-admin\fR(1)), or the name of the \fBs.\fRfile less the prefix
+T}
+_
+\fB%P%\fRFully qualified \fBs.\fRfile name
+_
+\fB%Q%\fRValue of the \fBq\fR flag in the \fBs.\fRfile
+_
+\fB%R%\fR\fBSID\fR Release component
+_
+\fB%S%\fR\fBSID\fR Sequence component
+_
+\fB%T%\fRCurrent time: \fIhh\fR\fB:\fR\fImm\fR\fB:\fR\fIss\fR
+_
+\fB%U%\fRT{
+Time the newest applied delta was created: \fIhh\fR\fB:\fR\fImm\fR\fB:\fR\fIss\fR
+T}
+_
+\fB%W%\fRT{
+Shorthand notation for an \fBID\fR line with data for \fBwhat\fR: \fB%Z%%&;%  %I%\fR
+T}
+_
+\fB%Y%\fRT{
+Module type: value of the \fBt\fR flag in the \fBs.\fRfile
+T}
+_
+\fB%Z%\fRT{
+4-character string: `\fB@(#)\fR', recognized by \fBwhat\fR
+T}
+.TE
+
+.SS "ID String"
+.sp
+.LP
+The table below explains how the  SCCS identification string is  determined for retrieving and creating deltas.
+.sp
+
+.sp
+.TS
+tab() box;
+cw(.92i) |cw(.92i) |cw(1.38i) |cw(.92i) |cw(1.38i) 
+cw(.92i) |cw(.92i) |cw(1.38i) |cw(.92i) |cw(1.38i) 
+.
+T{
+Determination of SCCS Identification String
+T}
+_
+SID (1)  Specified\fB-b\fR Option Used (2)Other ConditionsSID RetrievedSID of Delta to be Created
+_
+none (3)noR defaults to mRmR.mLmR.(mL+1)
+none (3)yesR defaults to mRmR.mLmR.mL.(mB+1).1
+RnoR > mRmR.mLR.1 (4)
+RnoR = mRmR.mLmR.(mL+1)
+RyesR > mRmR.mLmR.mL.(mB+1).1
+RyesR = mRmR.mLmR.mL.(mB+1).1
+R\(miR < mR and R does \fInot\fR existhR.mL (5)hR.mL.(mB+1).1
+R\(miT{
+Trunk succ. (6) in release > R and R exists
+T}R.mLR.mL.(mB+1).1
+R.LnoNo trunk succ.R.LR.(L+1)
+R.LyesNo trunk succ.R.LR.L.(mB+1).1
+R.L\(miTrunk succ. in release \(>= RR.LR.L.(mB+1).1
+R.L.BnoNo branch succ.R.L.B.mSR.L.B.(mS+1)
+R.L.ByesNo branch succ.R.L.B.mSR.L.(mB+1).1
+R.L.B.SnoNo branch succ.R.L.B.SR.L.B.(S+1)
+R.L.B.SyesNo branch succ. R.L.B.SR.L.(mB+1).1
+R.L.B.S\(miBranch succ.R.L.B.SR.L.(mB+1).1
+.TE
+
+.sp
+.ne 2
+.mk
+.na
+\fB(1)\fR
+.ad
+.RS 7n
+.rt  
+`R', `L', `B', and `S' are the `release', `level', `branch', and `sequence' components of the \fBSID\fR, respectively; `m' means `maximum'. Thus, for example, `R.mL' means `the maximum level number within release R'; `R.L.(mB+1).1' means `the first sequence number on the \fInew\fR branch (that is, maximum branch number plus one) of level L within release R'. \fBNote:\fR If the \fBSID\fR specified is of the form `R.L', `R.L.B', or `R.L.B.S', each of the specified components \fBmust\fR exist.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB(2)\fR
+.ad
+.RS 7n
+.rt  
+The \fB-b\fR option is effective only if the \fBb\fR flag is present in the file. An entry of `\fB\(mi\fR\&' means `irrelevant'.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB(3)\fR
+.ad
+.RS 7n
+.rt  
+This case applies if the \fBd\fR (default \fBSID\fR) flag is \fBnot\fR present in the file.  If the \fBd\fR flag \fBis\fR present in the file, the \fBSID\fR obtained from the \fBd\fR flag is interpreted as if it had been specified on the command line. Thus, one of the other cases in this table applies.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB(4)\fR
+.ad
+.RS 7n
+.rt  
+Forces creation of the \fBfirst\fR delta in a \fBnew\fR release.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB(5)\fR
+.ad
+.RS 7n
+.rt  
+`hR' is the highest \fBexisting\fR release that is lower than the specified, \fBnonexistent\fR, release R.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB(6)\fR
+.ad
+.RS 7n
+.rt  
+Successor.
+.RE
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.LP
+See \fBenviron\fR(5) for descriptions of the following environment variables that affect the execution of \fBget\fR: \fBLANG\fR, \fBLC_ALL\fR, \fBLC_COLLATE\fR, \fBLC_CTYPE\fR, \fBLC_MESSAGES\fR, and \fBNLSPATH\fR.
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB``g-file''\fR
+.ad
+.RS 14n
+.rt  
+version retrieved by \fBget\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBl.\fR\fIfile\fR\fR
+.ad
+.RS 14n
+.rt  
+file containing extracted delta table info
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBp.\fR\fIfile\fR\fR
+.ad
+.RS 14n
+.rt  
+permissions (lock) file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBz.\fR\fIfile\fR\fR
+.ad
+.RS 14n
+.rt  
+temporary copy of \fBs.\fR\fIfile\fR
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.SS "/usr/bin/get"
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWsprot
+.TE
+
+.SS "/usr/xpg4/bin/get"
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWxcu4t
+_
+Interface StabilityStandard
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBsccs\fR(1), \fBsccs-admin\fR(1), \fBsccs-delta\fR(1), \fBsccs-help\fR(1), \fBsccs-prs\fR(1), \fBsccs-prt\fR(1), \fBsccs-sact\fR(1), \fBsccs-unget\fR(1), \fBwhat\fR(1), \fBsccsfile\fR(4), \fBattributes\fR(5), \fBenviron\fR(5), \fBstandards\fR(5)
+.SH DIAGNOSTICS
+.sp
+.LP
+Use the SCCS \fBhelp\fR command for explanations (see \fBsccs-help\fR(1)).
+.SH BUGS
+.sp
+.LP
+If the effective user has write permission (either explicitly or implicitly) in the directory containing the SCCS files, but the real user does not, only one file can be named when using \fB-e\fR.

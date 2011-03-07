@@ -1,0 +1,144 @@
+'\" te
+.\"  Copyright (c) 2009, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH native 5 "13 Feb 2009" "SunOS 5.11" "Standards, Environments, and Macros"
+.SH NAME
+native \- native branded zone
+.SH DESCRIPTION
+.sp
+.LP
+The native brand uses the branded zones framework described in \fBbrands\fR(5) to run zones installed with the same software as is installed in the global zone. The system software must always be in sync with the global zone when using a native brand.
+.SH SUB-COMMANDS
+.sp
+.LP
+The following native brand-specific subcommand options are supported in \fBzoneadm\fR(1M).
+.sp
+.ne 2
+.mk
+.na
+\fB\fBattach\fR [\fB-u\fR] [\fB-b\fR \fIpatchid\fR]...\fR
+.ad
+.sp .6
+.RS 4n
+For native zones, \fBzoneadm\fR checks package and patch levels on the  machine to which the zone is to be attached. If the packages/patches that the zone depends on from the global zone are different (have different revision numbers) from the dependent packages/patches on the source machine, \fBzoneadm\fR reports these conflicts and does not perform the attach. If the destination system has only newer dependent packages/patches (higher revision numbers) than those on the source system, you can use the \fB-u\fR option to update the attached zone to match the \fB-revision\fR packages and patches that exist on the new system. With \fB-u\fR, as in the default behavior, \fBzoneadm\fR does not perform an attach if outdated packages/patches are found on the target system.
+.sp
+For native zones, one or more \fB-b\fR options can be used to specify a patch ID for a patch installed in the zone. These patches will be backed out before the zone is attached or, if \fB-u\fR was also specified, updated.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBinstall\fR [\fB-a\fR \fIarchive\fR] | [\fB-d\fR \fIpath\fR] [\fB-p\fR] [\fB-s\fR] [\fB-u\fR] [\fB-v\fR] [\fB-b\fR \fIpatchid\fR]...\fR
+.ad
+.sp .6
+.RS 4n
+The native brand installer supports installing the zone from either the software already installed on the system or from an image of an installed system running the same release.  This can be a full flash archive (see \fBflash_archive\fR(4)) or a \fBcpio\fR(1) or \fBpax\fR(1) "xustar" archive.  The \fBcpio\fR archive be compressed with \fBgzip\fR or \fBbzip2\fR.  The image can also be a level \fB0\fR \fBufsdump\fR(1M), a path to the top-level of a system's root tree, or a pre-existing zone path.
+.sp
+With no options the zone is installed using same software as is running the global zone.
+.sp
+To install the zone from a system image either the \fB-a\fR or \fB-d\fR is required.  Either the \fB-u\fR or \fB-p\fR option is also required in this case.
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR \fIarchive\fR\fR
+.ad
+.sp .6
+.RS 4n
+The path to a \fBflash_archive\fR(4), \fBcpio\fR(1), or \fBpax\fR(1) "xustar" archive, or a level\fB0\fR \fBufsdump\fR(1M), of an installed system. \fBcpio\fR archives may be compressed using \fBgzip\fR or \fBbzip2\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR \fIpatchid\fR\fR
+.ad
+.sp .6
+.RS 4n
+One or more \fB-b\fR options can be used to specify a patch ID for a patch installed in the system image. These patches will be backed out during the installation process.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR \fIpath\fR\fR
+.ad
+.sp .6
+.RS 4n
+The path to the root directory of an installed system. If path is a hyphen (\fB-\fR), the \fIzonepath\fR is presumed to be already populated with the system image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR\fR
+.ad
+.sp .6
+.RS 4n
+Preserve the system configuration after installing the zone.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR\fR
+.ad
+.sp .6
+.RS 4n
+Install silently.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-u\fR\fR
+.ad
+.sp .6
+.RS 4n
+Run \fBsys-unconfig\fR(1M) on the zone after installing it.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.sp .6
+.RS 4n
+Verbose output from the install process.
+.RE
+
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for a description of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+\fBATTRIBUTE TYPE\fR\fBATTRIBUTE VALUE\fR
+_
+AvailabilitySUNWzoneu
+_
+Interface StabilityUncommitted
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBcpio\fR(1), \fBpax\fR(1), \fBzlogin\fR(1), \fBzonename\fR(1), \fBsys-unconfig\fR(1M), \fBufsdump\fR(1M), \fBzoneadm\fR(1M), \fBzonecfg\fR(1M), \fBflash_archive\fR(4), \fBattributes\fR(5), \fBbrands\fR(5), \fBprivileges\fR(5), \fBzones\fR(5), \fBlx_systrace\fR(7D)

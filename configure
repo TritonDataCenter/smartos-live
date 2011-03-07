@@ -155,22 +155,6 @@ if [ ! -f "projects/illumos-extra/Makefile" ]; then
   fi
 fi
 
-if [ ! -f "projects/opensolaris-man/README" ]; then
-  echo " +--> Getting opensolaris-man source tree..."
-  if [ -z "${GET_OPENSOLARIS_MAN}" ]; then
-    echo "FATAL: No GET_OPENSOLARIS_MAN defined in configure.*, can't get opensolaris-man!"
-    exit 1
-  fi
-  /bin/bash -c "cd projects && ${GET_OPENSOLARIS_MAN} && cd -"
-  if [ ! -f "projects/opensolaris-man/README" ]; then
-    echo "FATAL: GET_OPENSOLARIS_MAN command failed to get opensolaris-man!"
-    exit 1
-  fi
-fi
-(cd projects/opensolaris-man && [[ -L usr ]] || ln -s . usr)
-(cd projects/opensolaris-man && [[ -L share ]] || ln -s . share)
-(cd projects/opensolaris-man && [[ -L man ]] || ln -s . man)
-
 ROOT=`pwd`
 echo "==> Setting up illumos-gate"
 

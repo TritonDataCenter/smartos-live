@@ -1,0 +1,1349 @@
+'\" te
+.\"  Copyright (c) 2007 Sun Microsystems, Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH patchadd 1M "11 Dec 2007" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+patchadd \- apply a patch package to a system running the Solaris operating system
+.SH SYNOPSIS
+.LP
+.nf
+\fBpatchadd\fR [\fB-dun\fR] [\fB-G\fR] [\fB-B\fR \fIbackout_dir\fR] [\fB-k\fR \fIkeystore\fR] 
+     [\fB-P\fR \fIpasswd\fR] [\fB-t\fR] [\fB-x\fR \fIproxy\fR] {\fIpatch\fR} | 
+     {\fB-M\fR \fIpatch_location\fR [\fIpatch_list\fR]} [\fB-C\fR \fInet_install_image\fR | 
+     \fB-R\fR \fIclient_root_path\fR | \fB-S\fR \fIservice\fR]
+.fi
+
+.LP
+.nf
+\fBpatchadd\fR \fB-p\fR 
+     [\fB-C\fR \fInet_install_image\fR | \fB-R\fR \fIclient_root_path\fR | \fB-S\fR \fIservice\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBpatchadd\fR applies a patch package to a system running the Solaris 2.\fIx\fR operating environment or later Solaris environments (such as Solaris 10) that are compatible with Solaris 2.\fIx.\fR This patch installation utility cannot be used to apply Solaris 1 patches. \fBpatchadd\fR must be run as root.
+.sp
+.LP
+The \fBpatchadd\fR command has the following forms:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The first form of \fBpatchadd\fR installs one or more patches to a system, client, service, or to the miniroot of a Net Install Image.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The second form of \fBpatchadd\fR displays installed patches on the client, service, or to the miniroot of a Net Install Image.
+.RE
+.sp
+.LP
+Starting with version 10 of the Solaris operating system, \fBpatchadd\fR performs validity and dependency checking among a collection of patches that you specify with the \fB-M\fR source specifier. See the description of \fB-M\fR under OPERANDS, below.
+.sp
+.LP
+With respect to \fBzones\fR(5), when invoked in the global zone, by default, \fBpatchadd\fR patches all appropriate packages in all zones. Patching behavior on system with \fBzones\fR installed varies according to the following factors:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+use of the \fB-G\fR option (described below)
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+setting of the \fBSUNW_PKG_ALLZONES\fR variable in the \fBpkginfo\fR file (see \fBpkginfo\fR(4))
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+type of zone, global or local (non-global) in \fBpatchadd\fR which is invoked
+.RE
+.sp
+.LP
+The interaction of the factors above is specified in "Interaction of \fB-G\fR and \fBpkginfo\fR Variable in Zones," below.
+.sp
+.LP
+When you add patches to packages on a Solaris system with zones installed, you will see numerous zones-related messages, the frequency and content of which depend on whether you invoke \fBpatchadd\fR in a global or local zone, the setting of \fBSUNW_PKG_ALLZONES\fR, and the use of the \fB-G\fR option.
+.sp
+.LP
+The \fIpatch\fR, \fB-M\fR, \fB-C\fR, \fB-R\fR, and \fB-S\fR arguments shown in the SYNOPSIS are described under OPERANDS, following OPTIONS.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-B\fR \fIbackout_dir\fR\fR
+.ad
+.sp .6
+.RS 4n
+Saves backout data to a directory other than the package database. Specify \fIbackout_dir\fR as an absolute path name.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR\fR
+.ad
+.sp .6
+.RS 4n
+Does not back up the files to be patched. \fBThe patch cannot be removed.\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-G\fR\fR
+.ad
+.sp .6
+.RS 4n
+Add patch(es) to packages in the current zone only. When used in the global zone, the patch is added to packages in the global zone only and is not propagated to packages in any existing or yet-to-be-created non-global zone. When used in a non-global zone, the patch is added to packages in the non-global zone only. See "Interaction of \fB-G\fR and \fBpkginfo\fR Variable in Zones,", below.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-k\fR \fIkeystore\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use \fIkeystore\fR as the location to get trusted certificate authority certificates when verifying digital signatures found in each patch. If no keystore is specified, then the default keystore locations are searched for valid trusted certificates. See \fBKEY STORE LOCATIONS\fR in \fBpkgadd\fR(1M) for more information.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR\fR
+.ad
+.sp .6
+.RS 4n
+Tells \fBpatchadd\fR to ignore the signature and not to validate it. This should be used only when the content of the patch is known and trusted, and is primarily included to allow \fBpatchadd\fR to apply a patch on systems without the ability to verify the patch signature, such as Solaris 8.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR\fR
+.ad
+.sp .6
+.RS 4n
+In the second form, displays a list of the patches currently applied.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-P\fR \fIpasswd\fR\fR
+.ad
+.sp .6
+.RS 4n
+Password to use to decrypt the keystore specified with \fB-k\fR, if required. See \fBPASS PHRASE ARGUMENTS\fR in \fBpkgadd\fR(1M) for more information about the format of this option's argument.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR\fR
+.ad
+.sp .6
+.RS 4n
+Maintains the \fBpatchadd\fR return codes from the Solaris release prior to Solaris 10. On a system with \fBzones\fR(5) installed, a return code of 0 indicates success. Any other return code indicates failure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-u\fR\fR
+.ad
+.sp .6
+.RS 4n
+Turns off validation against other required or incompatible patches. Use extreme caution when using this option. Its use can precipitate unanticipated bad consequences.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-x\fR \fIproxy\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify a HTTP[S] proxy to use when downloading packages The format of proxy is \fIhost\fR:\fIport\fR, where \fIhost\fR is the hostname of the HTTP[S] proxy, and \fIport\fR is the port number associated with the proxy. This switch overrides all other methods of specifying a proxy. See ENVIRONMENT VARIABLES in \fBpkgadd\fR(1M) for more information on alternate methods of specifying a default proxy.
+.RE
+
+.SH OPERANDS
+.sp
+.LP
+The following operands are supported:
+.SS "Sources"
+.sp
+.LP
+\fBpatchadd\fR must be supplied a source for retrieving the patch. Specify sources using the syntax shown below.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIpatch\fR\fR
+.ad
+.sp .6
+.RS 4n
+The absolute path name to \fIpatch_id\fR or a URI pointing to a signed patch. \fB/var/sadm/spool/patch/104945-02\fR is an example of a \fIpatch\fR. \fBhttps://syrinx.eng:8887/patches/104945-02\fR is an example of a URI pointing to a signed patch.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-M\fR \fIpatch_location\fR [\fIpatch_list\fR]\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the patches to be installed by directory location or URL and, optionally, the name of a file containing a patch list.
+.sp
+When using a directory as the \fIpatch_location\fR, specify that directory as an absolute path name. Specify a URL as the server and path name that contains the spooled patches. The optional \fIpatch_list\fR is the name of the file at a specified location containing the patches to be installed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-M\fR \fIpatch_location\fR \fIpatch_id\fR [\fIpatch_id\fR...]\fR
+.ad
+.sp .6
+.RS 4n
+Specifies the patches to be installed by directory location or URL, and patch number.
+.sp
+To use the directory location or URL and the patch number, specify \fIpatch_location\fR as the absolute path name of the directory that contains spooled patches. Specify a URL as the server and path name that contains the spooled patches. Specify \fIpatch_id\fR as the patch number of a given patch. \fB104945-02\fR is an example of a \fIpatch_id\fR. \fB104945-02\fR is also an example of a patchid in \fB104945-02.jar\fR.
+.RE
+
+.sp
+.LP
+Note that \fBpatchadd\fR does not require a list of patches. Among a collection of patches\(emresiding in a directory, specified in a list, or entered on a command line\(em\fBpatchadd\fR performs validity and dependency checking. Specifically, the command does the following:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Determines whether a patch is applicable for a system. For example, if the package to be patched is not installed, \fBpatchadd\fR does not attempt to add the patch.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Establishes dependencies among valid patches and orders the installation of patches accordingly.
+.RE
+.sp
+.LP
+Most users will find the easiest way to specify a source for \fBpatchadd\fR is to specify only a \fIpatch_location\fR containing a set of patches.
+.SS "Destinations"
+.sp
+.LP
+By default, \fBpatchadd\fR applies a patch to the specified destination. If no destination is specified, then the current system (the one with its root filesystem mounted at \fB/\fR) is assumed to be the destination for the patch. You can specify a destination in the following ways:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-C\fR \fInet_install_image\fR\fR
+.ad
+.sp .6
+.RS 4n
+Patches the files located on the miniroot on a Net Install Image created by \fBsetup_install_server\fR. Specify \fInet_install_image\fR as the absolute path name to a Solaris 8 or compatible version boot directory. See \fBEXAMPLES\fR.
+.sp
+You should use the \fB-C\fR option only to install patches that are recommended for installation to the miniroot. Patches that are recommended for installation to the miniroot usually include install-related patches such as package commands, and Sun install and patch installation tools. If you apply too many patches to the miniroot it can grow too large to fit into memory during a net installation of Solaris. Use the \fB-B\fR option and the \fB-C\fR option together so the miniroot does not get too large. See \fB-B\fR, above.
+.sp
+Note that in the current release and in certain versions of Solaris 10, the miniroot is compressed. To determine whether the miniroot is compressed on your system, look for a file called \fBsparc.miniroot\fR or \fBx86.miniroot\fR under \fB/boot\fR, on the boot medium. Before you can patch a compressed miniroot, you must perform certains steps. See "Patching a Compressed Miniroot" below.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-R\fR \fIclient_root_path\fR\fR
+.ad
+.sp .6
+.RS 4n
+Locates all patch files generated by \fBpatchadd\fR under the directory \fIclient_root_path\fR. \fIclient_root_path\fR is the directory that contains the bootable root of a client from the server's perspective. Specify \fIclient_root_path\fR as the absolute path name to the beginning of the directory tree under which all patch files generated by \fBpatchadd\fR are to be located. \fB-R\fR cannot be specified with the \fB-S\fR option. See \fBNOTES\fR.
+.LP
+Note - 
+.sp
+.RS 2
+The root file system of any non-global zones must not be referenced with the \fB-R\fR option. Doing so might damage the global zone's file system, might compromise the security of the global zone, and might damage the non-global zone's file system. See \fBzones\fR(5).
+.RE
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-S\fR \fIservice\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies an alternate service (for example, \fBSolaris_8\fR). This service is part of the server and client model, and can only be used from the server's console. Servers can contain shared \fB/usr\fR file systems that are created by \fBsmosservice\fR(1M). These service areas can then be made available to the clients they serve. \fB-S\fR cannot be specified with the \fB-R\fR option. See \fBNOTES\fR.
+.RE
+
+.SS "Patching a Compressed Miniroot"
+.sp
+.LP
+The Solaris operating system uses a compressed miniroot. The compressed miniroot was adopted first in Solaris for x86 and then in Solaris for SPARC over the course of Solaris 10 update releases. See below for an easy way to determine whether your Solaris system uses a compressed miniroot.
+.sp
+.LP
+To patch a system with a compressed miniroot (full or partial), you must unpack and then repack the miniroot before and after running \fBpatchadd\fR with the \fB-C\fR destination specifier. Use the procedure shown below and accompanying example commands.
+.RS +4
+.TP
+1.
+Unpack the compressed miniroot:
+.sp
+.in +2
+.nf
+# \fB/boot/solaris/bin/root_archive unpackmedia \e
+/export/home/altuser/testdir /export/home/altuser/mr\fR
+.fi
+.in -2
+.sp
+
+.RE
+.RS +4
+.TP
+2.
+Run \fBpatchadd\fR with \fB-C\fR to patch the miniroot:
+.sp
+.in +2
+.nf
+# \fBpatchadd -C /export/home/altuser/mr \e
+/var/sadm/spool/104945-02\fR
+.fi
+.in -2
+.sp
+
+.RE
+.RS +4
+.TP
+3.
+Repack the miniroot:
+.sp
+.in +2
+.nf
+# \fB/boot/solaris/bin/root_archive packmedia \e
+/export/home/altuser/testdir /export/home/altuser/mr\fR
+.fi
+.in -2
+.sp
+
+.RE
+.sp
+.LP
+At this point, you can use \fBsetup_install_server\fR(1M) to install the patched miniroot on an install server. See \fBroot_archive\fR(1M) for a description of that command.
+.sp
+.LP
+To determine whether a Solaris image uses a compressed miniroot, check for the presence of either an \fBx86.miniroot\fR or \fBsparc.miniroot\fR file under \fB/boot\fR on the boot medium.
+.SS "Interaction of \fB-G\fR and \fBpkginfo\fR Variable in Zones"
+.sp
+.LP
+The following list specifies the interaction between the \fB-G\fR option and the \fBSUNW_PKG_ALLZONES\fR variable (see \fBpkginfo\fR(4)) when adding a patch in global and local (non-global) zones.
+.sp
+.ne 2
+.mk
+.na
+\fBglobal zone, \fB-G\fR specified\fR
+.ad
+.sp .6
+.RS 4n
+If \fBany\fR packages have \fBSUNW_PKG_ALLZONES\fR set to true: Error; nothing changes.
+.sp
+If \fBno\fR packages have \fBSUNW_PKG_ALLZONES\fR set to true: Apply patch to package(s) in global zone only.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBglobal zone, \fB-G\fR not specified\fR
+.ad
+.sp .6
+.RS 4n
+If \fBany\fR packages have \fBSUNW_PKG_ALLZONES\fR set to true: Apply patch to appropriate package(s) in all zones.
+.sp
+If \fBno\fR packages have \fBSUNW_PKG_ALLZONES\fR set to true: Apply patch to appropriate package(s) in all zones.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBlocal zone, \fB-G\fR specified or not specified\fR
+.ad
+.sp .6
+.RS 4n
+If \fBany\fR packages have \fBSUNW_PKG_ALLZONES\fR set to true: Error; nothing changes.
+.sp
+If \fBno\fR packages have \fBSUNW_PKG_ALLZONES\fR set to true: Apply patch package(s) in local zone only.
+.RE
+
+.SH KEYSTORE LOCATIONS
+.sp
+.LP
+See the section KEYSTORE LOCATIONS in the \fBpkgadd\fR(1M) man page for details.
+.SH KEYSTORE AND CERTIFICATE FORMATS
+.sp
+.LP
+See the section KEYSTORE AND CERTIFICATE FORMATS in the \fBpkgadd\fR(1M) man page for details.
+.SH EXAMPLES
+.sp
+.LP
+The examples in this section are all relative to the \fB/usr/sbin\fR directory.
+.LP
+\fBExample 1 \fRInstalling a Patch to a Standalone Machine
+.sp
+.LP
+The following example installs a patch to a standalone machine:
+
+.sp
+.in +2
+.nf
+example# patchadd /var/sadm/spool/104945-02
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRInstalling a Patch to a Client From the Server's Console
+.sp
+.LP
+The following example installs a patch to a client from the server's console:
+
+.sp
+.in +2
+.nf
+example# patchadd -R /export/root/client1  /var/sadm/spool/104945-02
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 3 \fRInstalling a Patch to a Service From the Server's Console
+.sp
+.LP
+The following example installs a patch to a service from the server's console:
+
+.sp
+.in +2
+.nf
+example# patchadd -S Solaris_8 /var/sadm/spool/104945-02
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 4 \fRInstalling Multiple Patches in a Single Invocation
+.sp
+.LP
+The following example installs multiple patches in a single \fBpatchadd\fR invocation:
+
+.sp
+.in +2
+.nf
+example# patchadd -M /var/sadm/spool 104945-02 104946-02 102345-02
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 5 \fRInstalling Multiple Patches Specifying List of Patches to Install
+.sp
+.LP
+The following example installs multiple patches specifying a file with the list of patches to install:
+
+.sp
+.in +2
+.nf
+example# patchadd -M /var/sadm/spool patchlist
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 6 \fRInstalling Multiple Patches to a Client and Saving the Backout Data
+.sp
+.LP
+The following example installs multiple patches to a client and saves the backout data to a directory other than the default:
+
+.sp
+.in +2
+.nf
+example# patchadd -M /var/sadm/spool -R /export/root/client1 \e
+     -B /export/backoutrepository 104945-02 104946-02 102345-02
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 7 \fRInstalling a Patch to a Solaris 8 or Compatible Version Net Install Image
+.sp
+.LP
+The following example installs a patch to a Solaris 8 or compatible version Net Install Image:
+
+.sp
+.in +2
+.nf
+example# \fBpatchadd -C /export/Solaris_8/Tools/Boot \e
+    /var/sadm/spool/104945-02\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 8 \fRInstalling a Patch to a Compressed Miniroot
+.sp
+.LP
+The following example installs a patch to a compressed miniroot, such as one finds on a Solaris x86 machine that supports GRUB-style booting. This example assumes that \fB/export/Solaris_11/Tools/Boot\fR contains the unpacked miniroot. After applying the patch, the miniroot needs to be repacked
+
+.sp
+.in +2
+.nf
+example# \fBpatchadd -C /export/Solaris_11/Tools/Boot \e
+/var/sadm/spool/104945-02\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+See "Patching a Compressed Miniroot," above, for information on Solaris versions that use a compressed miniroot.
+
+.LP
+\fBExample 9 \fRInstalling a Patch to an Uncompressed Miniroot
+.sp
+.LP
+The following example installs a patch to a miniroot on a Solaris machine that does not have a compressed miniroot.
+
+.sp
+.in +2
+.nf
+example# \fBpatchadd -C /export/Solaris_9/Tools/Boot \e
+/var/sadm/spool/104945-02\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+See "Patching a Compressed Miniroot," above, for information on Solaris versions that use a compressed miniroot.
+
+.LP
+\fBExample 10 \fRDisplaying the Patches Installed on a Client
+.sp
+.LP
+The following example displays the patches installed on a client:
+
+.sp
+.in +2
+.nf
+example# patchadd -R /export/root/client1 -p
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+Note the caveat on the use of the \fB-R\fR option in the description of that option, above.
+
+.LP
+\fBExample 11 \fRInstalling a Digitally Signed Set of Patches
+.sp
+.LP
+The following example installs multiple patches, some of which have been signed, using the supplied keystore, password, and HTTP proxy.
+
+.sp
+.in +2
+.nf
+example# patchadd -k /etc/mycerts -P pass:abcd -x webcache.eng:8080 \e
+-M http://www.sun.com/solaris/patches/latest 101223-02 102323-02
+.fi
+.in -2
+.sp
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.sp .6
+.RS 4n
+Successful completion.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB>0\fR\fR
+.ad
+.sp .6
+.RS 4n
+An error occurred.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWswmt, SUNWcsu
+_
+Interface StabilityEvolving
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBcpio\fR(1), \fBpkginfo\fR(1), \fBpatchrm\fR(1M), \fBpkgadd\fR(1M), \fBpkgadm\fR(1M), \fBpkgchk\fR(1M), \fBpkgrm\fR(1M), \fBsetup_install_server\fR(1M), \fBsmpatch\fR(1M), \fBshowrev\fR(1M), \fBpkginfo\fR(4), \fBattributes\fR(5), \fBgrub\fR(5), \fBzones\fR(5)
+.SH DIAGNOSTICS
+.sp
+.LP
+The following messages might help in determining some of the most common problems associated with installing a patch.
+.SS "Patch Installation errors"
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+The prepatch script exited with return code \fIretcode\fR.
+patchadd is terminating.
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+The prepatch script supplied with the patch exited with a return code other than \fB0\fR. Run a script trace of the prepatch script and find out why the prepatch had a bad return code. Add the \fB-x\fR option to the first line of the prepatch script to fix the problem and run \fBpatchadd\fR again.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+The signature on patch patch_id was unable to be verified.
+patchadd is terminating.
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+The digital signature on a patch was unable to be verified given the keystore in use and the signature on the patch. Check the keystore to make sure it has the requisite trust anchor(s) required to validate the signature on the package and that the package has not been tampered with.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+The postpatch script exited with return code \fIretcode\fR.
+Backing out patch.
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+The postpatch script provided with the patch exited with an error code other than \fB0\fR. This script is mostly used to cleanup files (that is, when a package is known to have ownership or permission problems) attributes that do not correspond to the patch package's objects. After the user has noted all validation errors and taken the appropriate action for each one, the user should re-run \fBpatchadd\fR using the \fB-u\fR (unconditional) option. This time, the patch installation will ignore validation errors and install the patch anyway.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+Insufficient space in /var/sadm/patch to save old files.
+(For 2.4 systems and previous)
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+There is insufficient space in the \fB/var/sadm/patch\fR directory to save old files. The user has three options for handling this problem: Use the \fB-B\fR option while invoking \fBpatchadd\fR. This option will direct \fBpatchadd\fR to: save the backout data to the user specified file system, generate additional disk space by deleting unneeded files, or override the saving of the old files by using the \fB-d\fR (do not save) option when running \fBpatchadd\fR.
+.sp
+If the user elects not to save the old versions of the files to be patched, \fBpatchrm\fR \fBcannot\fR be used. One way to regain space on a system is to remove the save area for previously applied patches. Once the user has decided that it is unlikely that a patch will be backed out, the user can remove the files that were saved by \fBpatchadd\fR. The following commands should be executed to remove the saved files for \fBpatch\fR\fIpatch_id\fR: 
+.sp
+.in +2
+.nf
+\fBcd /var/sadm/patch/\fIpatch_id\fR
+rm -r save/*
+rm .oldfilessaved\fR
+.fi
+.in -2
+.sp
+
+After these commands have been executed, \fBpatch\fR \fIpatch_id\fR can no longer be backed out. 
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+Insufficient space in /var/sadm/pkg/\fIPKG\fR/save to save old files.
+(For 2.5 systems and later)
+ 
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+There is insufficient space in the \fB/var/sadm/pkg/PKG/save\fR directory to save old files. The user has three options for handling this problem: (1) Use the \fB-B\fR option while invoking \fBpatchadd\fR. This option will direct \fBpatchadd\fR to save the backout data to the user specified file system. (See synopsis above.) (2) Generate additional disk space by deleting unneeded files, or (3) override the saving of the old files by using the \fB-d\fR (do not save) option when running \fBpatchadd\fR. However, if the user elects not to save the old versions of the files to be patched, \fBpatchrm\fR \fBcannot\fR be used. One way to regain space on a system is to remove the save area for previously applied patches. Once the user has decided that it is unlikely that a patch will be backed out, the user can remove the files that were saved by \fBpatchadd\fR. The following commands should be executed to remove the saved files for patch \fIpatch_id\fR: 
+.sp
+.in +2
+.nf
+\fBcd /var/sadm/pkg/\fIpkgabbrev\fR/save
+rm -r \fIpatch_id\fR\fR
+.fi
+.in -2
+.sp
+
+After these commands have been executed, \fBpatch\fR \fIpatch_id\fR can no longer be backed out. 
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+Save of old files failed.
+(For 2.4 systems and previous)
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+Before applying the patch, the patch installation script uses \fBcpio\fR to save the old versions of the files to be patched. This error message means that the \fBcpio\fR failed. The output of the \fBcpio\fR would have been preceded this message. The user should take the appropriate action to correct the \fBcpio\fR failure. A common reason for failure will be insufficient disk space to save the old versions of the files. The user has two options for handling insufficient disk space: (1) generate additional disk space by deleting unneeded files, or (2) override the saving of the old files by using the \fB-d\fR option when running \fBpatchadd\fR. However if the user elects not to save the old versions of the files to be patched, the patch \fBcannot\fR be backed out.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+Pkgadd of \fIpkgname\fR package failed with error code \fIcode\fR.
+See /tmp/log.\fIpatch_id\fR for reason for failure.
+ 
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+The installation of one of the patch packages failed. \fBpatchadd\fR will backout the patch to leave the system in its pre-patched state. See the log file for the reason for failure. Correct the problem and reapply the patch. 
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+Pkgadd of \fIpkgname\fR package failed with error code \fIcode\fR.
+Will not backout patch...patch re-installation.
+Warning: The system may be in an unstable state!
+See /tmp/log.\fIpatch_id\fR for reason for failure.
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+The installation of one of the patch packages failed. \fBpatchadd\fR will \fBnot\fR backout the patch. You may manually backout the patch using \fBpatchrm\fR, then re-apply the entire patch. Look in the log file for the reason \fBpkgadd\fR failed. Correct the problem and re-apply the patch. 
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+patchadd is unable to find the INST_RELEASE file. This file
+must be present for patchadd to function correctly.
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+The \fBINST_RELEASE\fR file is missing from the system. This file is created during either initial installation or during an update.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+A previous installation of patch \fIpatch_id\fR was invoked
+that saved files that were to be patched. Since files
+were saved, you must run this instance of patchadd
+without the -d option.
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+If a patch was previously installed without using the \fB-d\fR option, then the re-installation attempt must also be invoked without the \fB-d\fR option. Execute \fBpatchadd\fR without the \fB-d\fR option.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+A previous installation of patch \fIpatch_id\fR was invoked
+with the -d option. (i.e. Do not save files that would
+be patched) Therefore, this invocation of patchadd
+must also be run with the -d option.
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+If a patch was previously installed using the \fB-d\fR option, then the re-installation attempt must also be invoked with the\fB-d\fR option. Execute \fBpatchadd\fR with the \fB-d\fR' option. 
+.RE
+
+.RE
+
+.SS "Diagnostic Reference"
+.sp
+.LP
+The patch installation messages listed below are not necessarily considered errors, as indicated in the explanations given. These messages are, however, recorded in the patch installation log for diagnostic reference.
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+Package not patched:
+PKG=SUNxxxx
+Original package not installed
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+One of the components of the patch would have patched a package that is not installed on your system. This is not necessarily an error. A patch may fix a related bug for several packages.
+.sp
+For example, suppose a patch fixes a bug in both the online-backup and \fBfddi\fR packages. If you had online-backup installed but didn't have \fBfddi\fR installed, you would get the message : 
+.sp
+.in +2
+.nf
+Package not patched:
+PKG=SUNWbf
+Original package not installed 
+.fi
+.in -2
+.sp
+
+This message only indicates an error if you thought the package was installed on your system. If this is the case, take the necessary action to install the package, backout the patch (if it installed other packages) and re-install the patch.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+Package not patched:
+PKG=SUNxxx
+ARCH=xxxxxxx
+VERSION=xxxxxxx
+Architecture mismatch
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+One of the components of the patch would have patched a package for an architecture different from your system. This is not necessarily an error. Any patch to one of the architecture-specific packages might contain one element for each of the possible architectures. For example, assume you are running on a \fBsun4u\fR. If you were to install a patch to package \fBSUNWcar\fR, you would see the following (or similar) messages: 
+.sp
+.in +2
+.nf
+Package not patched:
+PKG=SUNWcar
+ARCH=sparc.sun4c
+VERSION=11.5.0,REV=2.0.18
+Architecture mismatch
+
+Package not patched:
+PKG=SUNWcar
+ARCH=sparc.sun4u
+VERSION=11.5.0,REV=2.0.18
+Architecture mismatch
+
+Package not patched:
+PKG=SUNWcar
+ARCH=sparc.sun4e
+VERSION=11.5.0,REV=2.0.18
+
+Package not patched:
+PKG=SUNWcar
+ARCH=sparc.sun4
+VERSION=11.5.0,REV=2.0.18
+Architecture mismatch
+.fi
+.in -2
+.sp
+
+These messages indicate an error condition only if \fBpatchadd\fR does not correctly recognize your architecture. 
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+Package not patched:
+PKG=SUNxxxx
+ARCH=xxxx
+VERSION=xxxxxxx
+Version mismatch
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+The version of software to which the patch is applied is not installed on your system. For example, if you were running Solaris 8, and you tried to install a patch against Solaris 9, you would see the following (or similar) message: 
+.sp
+.in +2
+.nf
+Package not patched:
+PKG=SUNWcsu
+ARCH=sparc
+VERSION=10.0.2
+Version mismatch
+.fi
+.in -2
+.sp
+
+This message does not necessarily indicate an error. If the version mismatch was for a package you needed patched, either get the correct patch version or install the correct package version. Then backout the patch (if necessary) and reapply. 
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+Re-installing Patch.
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+The patch has already been applied, but there is at least one package in the patch that could be added. For example, if you applied a patch that had both Openwindows and Answerbook components, but your system did not have Answerbook installed, the Answerbook parts of the patch would not have been applied. If, at a later time, you \fBpkgadd\fR Answerbook, you could re-apply the patch, and the Answerbook components of the patch would be applied to the system. 
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+patchadd Interrupted. 
+patchadd is terminating.
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+\fBpatchadd\fR was interrupted during execution (usually through pressing CTRL-c). \fBpatchadd\fR will clean up its working files and exit.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBMessage\fR
+.ad
+.sp .6
+.RS 4n
+.sp
+.in +2
+.nf
+patchadd Interrupted.
+Backing out Patch...
+.fi
+.in -2
+.sp
+
+.sp
+.ne 2
+.mk
+.na
+\fBExplanation and Recommended Action\fR
+.ad
+.sp .6
+.RS 4n
+\fBpatchadd\fR was interrupted during execution (usually through pressing CTRL-c). \fBpatchadd\fR will clean up its working files, backout the patch, and exit.
+.RE
+
+.RE
+
+.SH NOTES
+.sp
+.LP
+To successfully install a patch to a client or server, \fBpatchadd\fR must be issued twice, once with the \fB-R\fR option and once with the \fB-S\fR option. This guarantees that the patch is installed to both the \fB/usr\fR and \fBroot\fR partitions. This is necessary if there are both \fB/usr\fR and \fBroot\fR packages in the patch.
+.sp
+.LP
+\fBpkgadd\fR is invoked by \fBpatchadd\fR and executes the installation scripts in the \fB\fIpkg\fR/install\fR directory. The \fBcheckinstall\fR script is executed with its ownership set to user \fBinstall\fR, if there is no user \fBinstall\fR then \fBpkgadd\fR executes the \fBcheckinstall\fR script as noaccess. The SVR4 \fBABI\fR states that the \fBcheckinstall\fR shall only be used as an information gathering script. If the permissions for the \fBcheckinstall\fR script are changed to something other than the initial settings, \fBpkgadd\fR may not be able to open the file for reading, thus causing the patch installation to abort with the following error: 
+.sp
+.in +2
+.nf
+pkgadd: ERROR: checkinstall script did not complete successfully. 
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The permission for the \fBcheckinstall\fR script should not be changed. Contents of log file for a successfull installation: \fBpatchadd\fR redirects \fBpkgadd\fR's output to the patch installation log file. For a successfull installation, \fBpkgadd\fR will produce the following message that gets inserted into the log file: 
+.sp
+.in +2
+.nf
+This appears to be an attempt to install the same architecture
+and version of a package which is already installed. This
+installation will attempt to overwrite this package.
+This message does not indicate a failure, it represents the
+correct behavior by pkgadd when a patch installs correctly.
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+This message does not indicate a failure, it represents the correct behavior by \fBpkgadd\fR when a patch installs correctly. 
+.sp
+.LP
+On client server machines the patch package is \fBnot\fR applied to existing clients or to the client root template space. Therefore, when appropriate, \fBall client machines will need the patch applied directly using this same patchadd method on the client.\fR See instructions above for applying patches to a client. A bug affecting a package utility (for example, \fBpkgadd\fR, \fBpkgrm\fR, \fBpkgchk\fR) could affect the reliability of \fBpatchadd\fR or \fBpatchrm\fR, which use package utilities to install and backout the patch package. It is recommended that any patch that fixes package utility problems be reviewed and, if necessary, applied before other patches are applied. Existing patches are:
+.sp
+.ne 2
+.mk
+.na
+\fBSolaris 2.5.1 Sparc Platform Edition:\fR
+.ad
+.sp .6
+.RS 4n
+104578
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBSolaris 2.5.1 Intel Platform Edition:\fR
+.ad
+.sp .6
+.RS 4n
+104579
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBSolaris 2.6 Sparc Platform Edition:\fR
+.ad
+.sp .6
+.RS 4n
+106292
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBSolaris 2.6 Intel Platform Edition:\fR
+.ad
+.sp .6
+.RS 4n
+106293
+.RE
+
+.SH WARNINGS
+.sp
+.LP
+Certain patches are classified as "deferred activation" patches (sometimes with initial capitals, as "Deferred Activation" patches). Under conditions indicated below, such patches require special treatment.  A patch's \fBREADME\fR file specifies whether that patch is of the deferred activation variety. (Search on "Deferred  Activation" in the \fBREADME\fR file.)
+.sp
+.LP
+If you are installing or removing a patch that uses deferred activation patching, you must check on the following:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+On a system running zones, all non-global zones must be in a halted state for adding or removing a patch.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Deferred activation patching requires the loopback file system (\fBlofs\fR) in order to complete safely. Systems running Sun Cluster 3.1 or Sun Cluster 3.2 are likely to have \fBlofs\fR turned off because of restrictions on HA-NFS functionality when \fBlofs\fR is enabled. Therefore, before a deferred activation patch is installed or removed, you must re-enable the loopback file system by commenting out the following line in the \fB/etc/system\fR file:
+.sp
+.in +2
+.nf
+exclude:lofs
+.fi
+.in -2
+.sp
+
+Then, reboot your system and install or remove the patch. After you have completed the patch operation, uncomment the line cited above, then reboot to resume normal operation.
+.RE

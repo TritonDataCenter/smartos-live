@@ -1,0 +1,1774 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH NIS+ 1 "2 Dec 2005" "SunOS 5.11" "User Commands"
+.SH NAME
+NIS+, nis+, nis \- a new version of the network information name service
+.SH DESCRIPTION
+.sp
+.LP
+\fBNIS+\fR is a new version of the network information nameservice. This version differs in several significant ways from version 2, which is referred to as \fBNIS\fR or \fBYP\fR in earlier releases. Specific areas of enhancement include the ability to scale to larger networks, security, and the administration of the service.
+.sp
+.LP
+The man pages for \fBNIS+\fR are broken up into three basic categories. Those in section 1 are the user commands that are most often executed from a shell script or directly from the command line. Section 1M man pages describe utility commands that can be used by the network administrator to administer the service itself. The \fBNIS+\fR programming \fBAPI\fR is described by man pages in section 3NSL.
+.sp
+.LP
+All commands and functions that use \fBNIS\fR version 2 are prefixed by the letters \fByp\fR as in \fBypmatch\fR(1), \fBypcat\fR(1), \fByp_match\fR(3NSL), and \fByp_first\fR(3NSL). Commands and functions that use the new replacement software \fBNIS+\fR are prefixed by the letters \fBnis\fR as in \fBnismatch\fR(1), \fBnischown\fR(1), \fBnis_list\fR(3NSL), and \fBnis_add_entry\fR(3NSL). A complete list of \fBNIS+\fR commands is in the \fBLIST OF COMMANDS\fR section.
+.sp
+.LP
+This man page introduces the \fBNIS+\fR terminology. It also describes the \fBNIS+\fR namespace, authentication, and authorization policies.
+.SH NIS+ NAMESPACE
+.sp
+.LP
+The naming model of \fBNIS+\fR is based upon a tree structure. Each node in the tree corresponds to an  \fBNIS+\fR object. There are six types of \fBNIS+\fR objects: \fIdirectory\fR, \fItable\fR, \fIgroup\fR, \fIlink\fR, \fIentry\fR, and \fIprivate\fR. 
+.SS "NIS+ Directory Object"
+.sp
+.LP
+Each \fBNIS+\fR namespace has at least one \fBNIS+\fR directory object. An \fBNIS+\fR directory is like a UNIX file system directory which contains other \fBNIS+\fR objects including \fBNIS+\fR directories. The \fBNIS+\fR directory that forms the root of the \fBNIS+\fR namespace is called the root directory. There are two special \fBNIS+\fR directories: \fBorg_dir\fR and \fBgroups_dir\fR. The \fBorg_dir\fR directory consists of all the system-wide administration tables, such as \fBpasswd\fR, \fBhosts\fR, and  \fBmail_aliases\fR. The \fBgroups_dir\fR directory consists of \fBNIS+\fR group objects which are used for access control. The collection of \fBorg_dir\fR, \fBgroups_dir\fR and their parent directory is referred to as an \fBNIS+\fR domain. \fBNIS+\fR directories can be arranged in a tree-like structure so that the \fBNIS+\fR namespace can match the organizational or administrative hierarchy.
+.SS "NIS+ Table Object"
+.sp
+.LP
+\fBNIS+\fR tables (not files), contained within \fBNIS+\fR directories, store the actual information about some particular type. For example, the \fBhosts\fR system table stores information about the \fBIP\fR address of the hosts in that domain. \fBNIS+\fR tables are multicolumn and the tables can be searched through any of the searchable columns. Each table object defines the schema for its table. The \fBNIS+\fR tables consist of \fBNIS+\fR entry objects. For each entry in the \fBNIS+\fR table, there is an \fBNIS+\fR entry object. \fBNIS+\fR entry objects conform to the schema defined by the \fBNIS+\fR table object.
+.SS "NIS+ Group Object"
+.sp
+.LP
+\fBNIS+\fR group objects are used for access control at group granularity. \fBNIS+\fR group objects, contained within the \fBgroups_dir\fR directory of a domain, contain a list of all the \fBNIS+\fR principals within a certain \fBNIS+\fR group. An \fBNIS+\fR principal is a user or a machine making \fBNIS+\fR requests.
+.SS "NIS+ Link Object"
+.sp
+.LP
+\fBNIS+\fR link objects are like UNIX symbolic file-system links and are typically used for shortcuts in the \fBNIS+\fR namespace.
+.sp
+.LP
+Refer to \fBnis_objects\fR(3NSL) for more information about the  \fBNIS+\fR objects.
+.SH NIS+ NAMES
+.sp
+.LP
+The \fBNIS+\fR service defines two forms of names, \fIsimple\fR names and \fIindexed\fR names. Simple names are used by the service to identify \fBNIS+\fR objects contained within the \fBNIS+\fR namespace. Indexed names are used to identify \fBNIS+\fR entries contained within \fBNIS+\fR tables. Furthermore, entries within \fBNIS+\fR tables are returned to the caller as \fBNIS+\fR objects of type  \fIentry\fR. \fBNIS+\fR objects are implemented as a union structure which is described in the file \fB<rpcsvc/nis_object.x>\fR\&. The differences between the various types and the meanings of the components of these objects are described in  \fBnis_objects\fR(3NSL). 
+.SS "Simple Names"
+.sp
+.LP
+Simple names consist of a series of labels that are  separated by the `.'(dot) character. Each label is composed of printable characters from the ISO  Latin 1 set. Each label can be of any nonzero length, provided that the fully qualified name is fewer than \fBNIS_MAXNAMELEN\fR octets including the separating dots. (See \fB<rpcsvc/nis.h>\fR for the actual value of \fBNIS_MAXNAMELEN\fR in the current release.) Labels that contain special characters (see \fBGrammar\fR) must be quoted.
+.sp
+.LP
+The \fBNIS+\fR namespace is organized as a singly rooted tree. Simple names identify nodes within this tree. These names are constructed such that the leftmost label in a name identifies the leaf node and all of the labels to the right of the leaf identify that object's parent node. The parent node is referred to as the leaf's \fIdirectory\fR. This is a naming directory and should not be confused with a file system directory.
+.sp
+.LP
+For example, the name \fIexample.simple.name.\fR is a simple name with three labels, where \fIexample\fR is the leaf node in this name, the directory of this leaf is \fIsimple.name.\fR which by itself is a simple name. The leaf of which is \fIsimple\fR and its directory is simply \fIname\fR. 
+.sp
+.LP
+The function \fBnis_leaf_of\fR(3NSL) returns the first label of a simple name. The function \fBnis_domain_of\fR(3NSL) returns the name of the directory that contains the leaf. Iterative use of these two functions can break a simple name into each of its label components.
+.sp
+.LP
+The name `.' (dot) is reserved to name the  \fIglobal\fR \fIroot\fR of the namespace. For systems that are connected to the Internet, this global root is served by a Domain Name Service.  When an \fBNIS+\fR server is serving a root directory whose name is not `.'(dot) this directory is referred to as a \fIlocal root\fR.
+.sp
+.LP
+\fBNIS+\fR names are said to be \fIfully qualified\fR when the name includes all of the labels identifying all of the directories, up to the  global root. Names without the trailing dot are called \fIpartially\fR qualified.
+.SS "Indexed Names"
+.sp
+.LP
+Indexed names are compound names that are composed of a search criterion and a simple name. The search criterion component is used to select entries from a table; the simple name component is used to identify the \fBNIS+\fR table that is to be searched. The search criterion is a series of column names and their desired values enclosed in bracket `\fB[\|]\fR'  characters. These criteria take the following form:
+.sp
+.LP
+\fB[\fR\fIcolumn_name\fR\fB=\fR\fIvalue\fR\fB,\fR \fIcolumn_name\fR \fB=\fR\fIvalue\fR , ... \fB]\fR
+.sp
+.LP
+A search criterion is combined with a simple name to form an indexed name by concatenating the two parts, separated by a `,'(comma) character as follows.
+.sp
+.LP
+\fB[\fR\fI search-criterion \fR\fB],\fR\fItable.directory\fR
+.sp
+.LP
+When multiple column name/value pairs are present in the search criterion, only those entries in the table that have the appropriate value in all columns specified are returned. When no column name/value pairs are specified in the search criterion, \fB[\|]\fR, \fIall\fR entries in the table are returned.
+.SS "Grammar"
+.sp
+.LP
+The following text represents a context-free grammar that defines the set of legal  \fBNIS+\fR names. The terminals in this grammar are the characters `.' (dot), `[' (open bracket), `]' (close bracket), `,' (comma), `=' (equals) and whitespace. Angle brackets (`<' and `>'), which delineate non-terminals, are not part of the grammar. The character `|' (vertical bar) is used to separate alternate productions and should be read as ``this production \fBOR\fR this production''.
+.sp
+
+.sp
+.TS
+tab();
+lw(1.38i) lw(.46i) lw(3.67i) 
+lw(1.38i) lw(.46i) lw(3.67i) 
+.
+\fIname\fR::=\&. | <\fIsimple name\fR> | <\fIindexed name\fR>
+\fIsimple name\fR::=<\fIstring\fR>. | <\fIstring\fR>.<\fIsimple name\fR>
+\fIindexed name\fR::=<\fIsearch criterion\fR>,<\fIsimple name\fR>
+\fIsearch criterion\fR::=[ <\fIattribute list\fR> ]
+\fIattribute list\fR::=T{
+<\fIattribute\fR> | <\fIattribute\fR>,<\fIattribute list\fR>
+T}
+\fIattribute\fR::=<\fIstring\fR> = <\fIstring\fR>
+\fIstring\fR::=T{
+ISO Latin 1 character set except the character '/' (slash). The initial character can not be a terminal character or the characters '@' (at), '+' (plus), or (`\(mi') hyphen.
+T}
+.TE
+
+.sp
+.LP
+Terminals that appear in strings must be quoted  with `"' (double quote). The `"' character can be quoted by quoting it with itself `""'.
+.SS "Name Expansion"
+.sp
+.LP
+The \fBNIS+\fR service only accepts fully qualified names. However, since such names can be unwieldy, the  \fBNIS+\fR commands in section 1 employ a set of standard expansion rules that  attempt to fully qualify a partially qualified name. This expansion is actually done by the \fBNIS+\fR library function \fBnis_getnames\fR(3NSL) which generates a list of names using the default  \fBNIS+\fR directory search path or the \fBNIS_PATH\fR environment variable. The default  \fBNIS+\fR directory search path includes all the names in its path. \fBnis_getnames()\fR is invoked by the functions \fBnis_lookup\fR(3NSL) and \fBnis_list\fR(3NSL) when the \fBEXPAND_NAME\fR flag is used.
+.sp
+.LP
+The \fBNIS_PATH\fR environment variable contains an ordered list of simple names. The names are separated by the  `:' (colon) character. If any name in the list contains colons, the colon should be quoted as described in the  \fBGrammar\fR section.  When the list is exhausted, the resolution function returns the error \fBNIS_NOTFOUND\fR. This can mask the fact that the name existed but a server for it was unreachable.  If the name presented to the list or lookup interface is fully qualified, the \fBEXPAND_NAME\fR flag is ignored.
+.sp
+.LP
+In the list of names from the \fBNIS_PATH\fR environment variable, the '$' (dollar sign) character is treated specially.  Simple names that end with the label '$' have this character replaced by the default directory (see \fBnis_local_directory\fR(3NSL)). Using "$" as a name in this list results in this name being replaced by the list of directories  between the default directory and the global root that contain at least two labels.
+.sp
+.LP
+Below is an example of this expansion. Given the default directory of  \fIsome.long.domain.name.\fR, and the \fBNIS_PATH\fR variable set to  \fBfred.bar.:org_dir.$:$\fR. This path is initially broken up into the list:
+.sp
+.ne 2
+.mk
+.na
+\fB1\fR
+.ad
+.RS 5n
+.rt  
+\fBfred.bar.\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB2\fR
+.ad
+.RS 5n
+.rt  
+\fBorg_dir.$\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB3\fR
+.ad
+.RS 5n
+.rt  
+\fB$\fR 
+.RE
+
+.sp
+.LP
+The dollar sign in the second component is replaced by the default directory. The dollar sign in the third component is replaced with the names of the directories between the default directory and the global root that have at least two labels in them. The effective path value becomes:
+.sp
+.ne 2
+.mk
+.na
+\fB1\fR
+.ad
+.RS 6n
+.rt  
+\fBfred.bar.\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB2a\fR
+.ad
+.RS 6n
+.rt  
+\fBorg_dir.some.long.domain.name.\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB3a\fR
+.ad
+.RS 6n
+.rt  
+\fBsome.long.domain.name.\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB3b\fR
+.ad
+.RS 6n
+.rt  
+\fBlong.domain.name.\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB3c\fR
+.ad
+.RS 6n
+.rt  
+\fBdomain.name.\fR 
+.RE
+
+.sp
+.LP
+Each of these simple names is appended to the partially qualified name that was passed to the \fBnis_lookup\fR(3NSL) or  \fBnis_list\fR(3NSL) interface. Each is tried in turn until  \fBNIS_SUCCESS\fR is returned or the list is exhausted. 
+.sp
+.LP
+If the \fBNIS_PATH\fR variable is not set, the path ``$'' is used.
+.sp
+.LP
+The library function \fBnis_getnames\fR(3NSL) can be called from user programs to generate the list of names that would be attempted. The program \fBnisdefaults\fR(1) with the  \fB-s\fR option can also be used to show the fully expanded path.
+.SS "Concatenation Path"
+.sp
+.LP
+Normally, all the entries for a certain type of information are stored within the table itself. However, there are times when it is desirable for the table to point to other tables where entries can be found. For example, you might want to store all the IP addresses in the host table for their own domain, and yet want to be able to resolve hosts in some other domain without explicitly specifying the new domain name. \fBNIS+\fR provides a mechanism for concatenating different but related tables with a "NIS+ Concatenation Path". With a concatenation path, you can create a sort of flat namespace from a hierarchical structure. You can also create a table with no entries and just point the hosts or any other table to its parent domain. Notice that with such a setup, you are moving the administrative burden of managing the tables to the parent domain. The concatenation path slows down the request response time because more tables and more servers are searched. It also decreases the availability if all the servers are incapacitated for a particular directory in the table path.
+.sp
+.LP
+The \fBNIS+\fR Concatenation Path is also referred to as the "table path". This path is set up at table creation time through \fBnistbladm\fR(1). You can specify more than one table to be concatenated and they are searched in the given order. Notice that the \fBNIS+\fR client libraries, by default, do not follow the  concatenation path set in site-specific tables. Refer to \fBnis_list\fR(3NSL) for more details.
+.SS "Namespaces"
+.sp
+.LP
+The \fBNIS+\fR service defines two additional \fIdisjoint\fR namespaces for its own use. These namespaces are the \fBNIS+\fR \fIPrincipal\fR namespace, and the \fBNIS+\fR \fIGroup\fR namespace.  The names associated with the group and principal namespaces are  syntactically identical to simple names. However, the information they represent  \fIcannot\fR be obtained by directly presenting these names to the \fBNIS+\fR interfaces. Instead, special interfaces are defined to map these names into \fBNIS+\fR names so that they can then be resolved.
+.SS "Principal Names"
+.sp
+.LP
+\fBNIS+\fR principal names are used to uniquely identify users and machines that are making \fBNIS+\fR requests. These names have the form:
+.sp
+.LP
+\fIprincipal\fR.\fIdomain\fR 
+.sp
+.LP
+Here \fIdomain\fR is the fully qualified name of an \fBNIS+\fR directory where the named principal's credentials can be found. See \fBDirectories and Domains\fR for more information on domains. Notice that in this name, \fIprincipal\fR, is not a leaf in the \fBNIS+\fR namespace.
+.sp
+.LP
+Credentials are used to map the identity of a host or user from one context such as a process \fBUID\fR into the \fBNIS+\fR context. They are stored as records in an \fBNIS+\fR table named \fIcred\fR, which always appears in the  \fIorg_dir\fR subdirectory of the directory named in the principal name.
+.sp
+.LP
+This mapping can be expressed as a replacement function:
+.sp
+.in +2
+.nf
+\fIprincipal.domain ->\fR\fB[cname\fR\fI=principal.domain \fR\fB],cred.org_dir\fR\fI\&.domain\fR 
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+This latter name is an \fBNIS+\fR name that can be presented to the \fBnis_list\fR(3NSL) interface for resolution. \fBNIS+\fR principal names are administered using the \fBnisaddcred\fR(1M) command.
+.sp
+.LP
+The \fIcred\fR table contains five columns named \fIcname\fR, \fIauth_name\fR, \fIauth_type\fR,  \fIpublic_data\fR, and \fIprivate_data\fR. There is one record in this table for each identity mapping for an \fBNIS+\fR principal. The current service supports three types of mappings:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBLOCAL\fR \fR
+.ad
+.RS 12n
+.rt  
+This mapping is used to map from the \fBUID\fR of a given process to the \fBNIS+\fR principal name associated with that \fBUID\fR. If no mapping exists, the name \fInobody\fR is returned. When the effective \fBUID\fR of the process is 0 (for example, the superuser), the \fBNIS+\fR name associated with the host is returned. Notice that  \fBUID\fRs are sensitive to the context of the machine on which the process is executing. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBDES\fR \fR
+.ad
+.RS 12n
+.rt  
+This mapping is used to map to and from a Secure RPC ``netname'' into an \fBNIS+\fR principal name. See \fBsecure_rpc\fR(3NSL) for more information on netnames. Notice that since netnames contain the notion of a domain, they span \fBNIS+\fR directories.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBDHnnn-m\fR \fR
+.ad
+.RS 12n
+.rt  
+Example: DH640-0, DH1024-0. Analogous to \fBDES\fR mappings, these are used to map netnames and \fBNIS+\fR principal names for extended Diffie-Hellman keys. See \fBnisauthconf\fR(1M) for further information.
+.RE
+
+.sp
+.LP
+The \fBNIS+\fR client library function \fBnis_local_principal\fR(3NSL) uses the \fIcred.org_dir\fR table to map the UNIX notion of an identity, a process'  \fBUID\fR, into an \fBNIS+\fR principal name. Shell programs can use the program \fBnisdefaults\fR(1) with the \fB-p\fR switch to return this information.
+.sp
+.LP
+Mapping from  \fBUID\fRs to an \fBNIS+\fR principal name is accomplished by constructing a query of the form:
+.sp
+.LP
+\fB[auth_type=LOCAL, auth_name=\fR\fIuid\fR\fB],cred.org_dir.\fR\fIdefault-domain\fR\fB\&.\fR 
+.sp
+.LP
+This query returs a record containing the \fBNIS+\fR principal name associated with this  \fBUID,\fR in the machine's default domain.
+.sp
+.LP
+The \fBNIS+\fR service uses the  \fBDES\fR mapping to map the names associated with Secure RPC requests into \fBNIS+\fR principal names. RPC requests that use Secure RPC include the \fInetname\fR of the client making the request in the RPC header. This netname has the form:
+.sp
+.LP
+\fBunix.\fR\fIUID\fR\fB@\fR\fIdomain\fR 
+.sp
+.LP
+The service constructs a query using this name of the form:
+.sp
+.LP
+\fB[auth_type=DES, auth_name=\fR\fInetname\fR\fB],cred.org_dir.\fR\fIdomain\fR\fB\&.\fR 
+.sp
+.LP
+where the domain part is extracted from the netname rather than using the default domain. This query is used to look up the mapping of this netname into an \fBNIS+\fR principal name in the domain where it was created.
+.sp
+.LP
+This mechanism of mapping \fBUID\fR and netnames into an \fBNIS+\fR principal name guarantees that a client of the \fBNIS+\fR service has only one principal name. This principal name is used as the basis for authorization which is described below. All objects in the \fBNIS+\fR namespace and all entries in \fBNIS+\fR tables must have an owner specified for them. This owner field always contains an \fBNIS+\fR principal name.
+.SS "Group Names"
+.sp
+.LP
+Like \fBNIS+\fR principal names, \fBNIS+\fR group names take the form:
+.sp
+.LP
+group_name\fB\&.domain\fR 
+.sp
+.LP
+All objects in the \fBNIS+\fR namespace and all entries in \fBNIS+\fR tables can optionally have a \fIgroup\fR \fIowner\fR specified for them. This group owner field, when filled in, always contains the fully qualified \fBNIS+\fR group name.
+.sp
+.LP
+The \fBNIS+\fR client library defines several interfaces (\fBnis_groups\fR(3NSL)) for dealing with \fBNIS+\fR groups. These interfaces internally map \fBNIS+\fR group names into an \fBNIS+\fR simple name which identifies the \fBNIS+\fR group object associated with that group name. This mapping can be shown as follows:
+.sp
+.LP
+\fIgroup.domain\fR\fB \(mi>\fR \fIgroup\fR\fB\&.groups_dir\fR\fI\&.domain\fR 
+.sp
+.LP
+This mapping eliminates collisions between \fBNIS+\fR group names and \fBNIS+\fR directory names. For example, without this mapping, a directory with the name \fIengineering.foo.com.\fR, would make it impossible to have a group named \fIengineering.foo.com.\fR. This is due to the restriction that within the  \fBNIS+\fR namespace, a name unambiguously identifies a single object. With this mapping, the \fBNIS+\fR \fIgroup\fR name \fIengineering.foo.com.\fR maps to the \fBNIS+\fR \fIobject\fR name \fIengineering.groups_dir.foo.com.\fR
+.sp
+.LP
+The contents of a group object is a list of \fBNIS+\fR principal names, and the names of other \fBNIS+\fR groups. See \fBnis_groups\fR(3NSL) for a more complete description of their use.
+.SH NIS+ SECURITY
+.sp
+.LP
+\fBNIS+\fR defines a security model to control access to information managed by the service. The service defines access rights that are selectively granted to individual clients or groups of clients. Principal names and group names are used to define clients and groups of clients that can be granted or denied access to \fBNIS+\fR information.  These principals and groups are associated with \fBNIS+\fR domains as defined below.
+.sp
+.LP
+The security model also uses the notion of a class of principals called \fInobody\fR, which contains all clients, whether or not they have authenticated themselves to the service.  The class \fIworld\fR includes any client who has been authenticated.
+.SS "Directories and Domains"
+.sp
+.LP
+Some directories within the \fBNIS+\fR namespace are referred to as \fBNIS+\fR \fBDomains\fR. Domains are those \fBNIS+\fR directories that contain the subdirectories \fIgroups_dir\fR and \fIorg_dir\fR. Further, the subdirectory \fIorg_dir\fR should contain the table named \fIcred\fR. \fBNIS+\fR Group names and \fBNIS+\fR Principal names \fBalways\fR include the \fBNIS+\fR domain name after their first label.
+.SS "Authentication"
+.sp
+.LP
+The \fBNIS+\fR name service uses Secure RPC for the integrity of the  \fBNIS+\fR service. This requires that users of the service and their machines must have a Secure RPC key pair associated with them. This key is initially generated with either the \fBnisaddcred\fR(1M) or \fBnisclient\fR(1M) commands and modified with the \fBchkey\fR(1) or \fBnispasswd\fR(1) commands. 
+.sp
+.LP
+The use of Secure RPC allows private information to be stored in the name service that is not available to untrusted machines or users on the network.
+.sp
+.LP
+In addition to the Secure RPC key, users need a mapping of their \fBUID\fR into an \fBNIS+\fR principal name. This mapping is created by the system administrator using either the \fBnisclient\fR(1M) or the \fBnisaddcred\fR(1M) command.
+.sp
+.LP
+Users that are using machines in several \fBNIS+\fR domains must insure that they have a \fIlocal\fR credential entry in each of those domains.  This credential should be created with the \fBNIS+\fR principal name of the user in the user's ``home'' domain. For the purposes of \fBNIS+\fR and Secure RPC, the home domain is defined to be the one where the user's Secure RPC key pair is located. 
+.sp
+.LP
+Although extended Diffie-Hellman keys  use an alternative to Secure RPC, administration is done through the same commands. See \fBnisauthconf\fR(1M). 
+.SS "Authorization"
+.sp
+.LP
+The \fBNIS+\fR service defines four access rights that can be granted or denied to clients of the service.  These rights are \fBread\fR, \fImodify\fR, \fIcreate\fR, and \fIdestroy\fR. These rights are specified in the object structure at creation time and can be modified later with the \fBnischmod\fR(1) command. In general, the rights granted for an object apply only to that object. However, for purposes of authorization, rights granted to clients reading \fIdirectory\fR and \fItable\fR objects are granted to those clients for all of the  objects ``contained'' by the parent object. This notion of containment is abstract. The objects do not actually contain other objects within them. Notice that \fIgroup\fR objects do contain the list of principals within their definition.
+.sp
+.LP
+Access rights are interpreted as follows:
+.sp
+.ne 2
+.mk
+.na
+\fBread\fR
+.ad
+.RS 11n
+.rt  
+This right grants read access to an object. For directory and table objects, having read access on the parent object conveys read access to all of the objects that are direct children of a directory, or entries within a table.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBmodify\fR
+.ad
+.RS 11n
+.rt  
+This right grants modification access to an existing object. Read access is not required for modification.  However, in many applications, one needs to read an object before modifying it. Such modify operations fail unless read access is also granted.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBcreate\fR
+.ad
+.RS 11n
+.rt  
+This right gives a client permission to create new objects where one had not previously existed. It is only used in conjunction with  directory and table objects. Having create access for a table allows a  client to add additional entries to the table. Having create access for a directory allows a client to add new objects to an \fBNIS+\fR directory.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBdestroy\fR
+.ad
+.RS 11n
+.rt  
+This right gives a client permission to destroy or remove an existing object or entry. When a client attempts to destroy an entry or object by removing it, the service first checks to see if the table or directory containing that object grants the client destroy access. If it does, the operation proceeds, if the containing object does not grant this right then the object itself is checked to see if it grants this right to the client. If the object grants the right, then the operation proceeds; otherwise the request is rejected.
+.RE
+
+.sp
+.LP
+Each of these rights can be granted to any one of four different categories.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIowner\fR \fR
+.ad
+.RS 16n
+.rt  
+A right can be granted to the  \fIowner\fR of an object.  The owner is the \fBNIS+\fR principal identified in the owner field.  The owner can be changed with the \fBnischown\fR(1) command. Notice that if the owner does not have modification access  rights to the object, the owner cannot change any access rights to the object, unless the owner has modification access rights to its parent object. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIgroup\fR \fIowner\fR \fR
+.ad
+.RS 16n
+.rt  
+A right can be granted to the  \fIgroup\fR \fIowner\fR of an object. This grants the right to any principal that is identified as a member of the group associated with the object.  The group owner can be changed with the \fBnischgrp\fR(1) command. The object owner need not be a member of this group.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIworld\fR \fR
+.ad
+.RS 16n
+.rt  
+A right can be granted to everyone in the  \fIworld\fR. This grants the right to all clients who have authenticated themselves with the service.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fInobody\fR \fR
+.ad
+.RS 16n
+.rt  
+A right can be granted to the  \fInobody\fR principal. This has the effect of granting the right to any client that makes a request of the service, regardless of whether they are authenticated or not.
+.RE
+
+.sp
+.LP
+Notice that for bootstrapping reasons, directory objects that are \fBNIS+\fR domains, the \fIorg_dir\fR subdirectory and the \fIcred\fR table within that subdirectory must have \fBread\fR access to the \fInobody\fR principal. This makes navigation of the namespace possible when a client is in the process of locating its credentials. Granting this access does not allow the contents of other tables within \fIorg_dir\fR to be read (such as the entries in the password table) unless the table itself gives "real" access rights to the \fInobody\fR principal.
+.SS "Directory Authorization"
+.sp
+.LP
+Additional capabilities are provided for granting access rights  to clients for directories. These rights are contained within the \fIobject\fR \fIaccess\fR \fIrights\fR (OAR) structure of the directory. This structure allows the \fBNIS+\fR service to grant rights that are not granted by the directory object to be granted for objects contained by the directory of a specific type.
+.sp
+.LP
+An example of this capability is a directory object which does not grant  create access to all clients, but does grant create access in the \fBOAR\fR structure for \fIgroup\fR type objects to clients who are members of the \fBNIS+\fR group associated with the directory. In this example the only objects that could be created as children of the directory would have to be of the type \fIgroup\fR.
+.sp
+.LP
+Another example is a directory object that grants create access only to the owner of the directory, and then additionally grants create access through the \fBOAR\fR structure for objects of type \fItable\fR, \fBlink\fR, \fIgroup\fR, and \fIprivate\fR to any member of the directory's group. This has the effect of giving nearly complete create access to the group with the exception of creating subdirectories. This restricts the creation of new \fBNIS+\fR domains because creating a domain requires creating both a  \fIgroups_dir\fR and \fIorg_dir\fR subdirectory. 
+.sp
+.LP
+Notice that there is currently no command line interface to set or change the \fBOAR\fR of the directory object.
+.SS "Table Authorization"
+.sp
+.LP
+As with directories, additional capabilities are provided for granting  access to entries within tables. Rights granted to a client by the access rights field in a table object apply to the table object and all of the entry objects ``contained'' by that table. If an access right is not granted by the table object, it can be granted by an entry within the table. This holds for all rights except \fIcreate\fR.
+.sp
+.LP
+For example, a table can not grant read access to a client performing a \fBnis_list\fR(3NSL) operation on the table. However, the access rights field of entries within that table can grant read access to the client. Notice that access rights in an entry are granted to the owner and group owner of the \fIentry\fR and not the owner or group of the table. When the list operation is performed, all entries that the client has read access to are returned. Those entries that do not grant read access are not returned. If none of the entries that match the search criterion grant read access to the client making the request, no entries are returned and the result status contains the \fBNIS_NOTFOUND\fR error code.
+.sp
+.LP
+Access rights that are granted by the rights field in an entry are granted for the entire entry. However, in the table object an additional set of access rights is maintained for each column in the table. These rights apply to the equivalent column in the entry. The rights are used to grant access when neither the table nor the entry itself grant access. The access rights in a column specification apply to the owner and group owner of the entry rather than the owner and group owner of the table object.
+.sp
+.LP
+When a read operation is performed, if read access is not granted by the table and is not granted by the entry but  \fIis\fR granted by the access rights in a column, that entry is returned with the correct values in all columns that are readable and the string \fB*NP*\fR (No Permission) in columns where read access is not granted.
+.sp
+.LP
+As an example, consider a client that has performed a list operation on a table that does not grant read access to that client. Each entry object that satisfied the search criterion specified by the client is examined to see if it grants read access to the client. If it does, it is included in the returned result. If it does not, then each column is checked to see if it grants read access to the client. If any columns grant read access to the client, data in those columns is returned. Columns that do not grant read access have their contents replaced by the string  \fB*NP*\fR. If none of the columns grant read access, then the entry is not returned.
+.SS "Protocol Operation Authorization"
+.sp
+.LP
+Most \fBNIS+\fR operations have implied access control through the permissions on the objects that they manipulate. For example, in order to read an entry in a table, you must have read permission on that entry. However, some \fBNIS+\fR operations by default perform no access checking at all and so are allowed for anyone.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBOperation\fR \fR
+.ad
+.RS 18n
+.rt  
+\fBExample of commands that use the operation\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_CHECKPOINT\fR\fR
+.ad
+.RS 18n
+.rt  
+\fBnisping\fR \fB-C\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_CPTIME\fR\fR
+.ad
+.RS 18n
+.rt  
+\fBnisping\fR, \fBrpc.nisd\fR  
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_MKDIR\fR\fR
+.ad
+.RS 18n
+.rt  
+\fBnismkdir\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_PING\fR\fR
+.ad
+.RS 18n
+.rt  
+ \fBnisping\fR,  \fBrpc.nisd\fR  
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_RMDIR\fR\fR
+.ad
+.RS 18n
+.rt  
+\fBnisrmdir\fR
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_SERVSTATE\fR\fR
+.ad
+.RS 18n
+.rt  
+\fBnisbackup\fR,   \fBnisrestore\fR  
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_STATUS\fR\fR
+.ad
+.RS 18n
+.rt  
+\fBnisstat\fR,  \fBrpc.nispasswdd\fR 
+.RE
+
+.sp
+.LP
+See \fBnisopaccess\fR(1) for a description of how to enforce access control to these \fBNIS+\fR operations.
+.SH LIST OF COMMANDS
+.sp
+.LP
+The following lists all commands and programming functions related to \fBNIS+\fR:
+.SS "NIS+ User Commands"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisaddent\fR(1M) \fR
+.ad
+.RS 21n
+.rt  
+add  \fB/etc\fR files and  \fBNIS\fR maps into their corresponding  \fBNIS+\fR tables
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBniscat\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+display \fBNIS+\fR tables and objects
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnischgrp\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+change the group owner of a \fBNIS+\fR object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnischmod\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+change access rights on a \fBNIS+\fR object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnischown\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+change the owner of a \fBNIS+\fR object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnischttl\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+change the time to live value of a \fBNIS+\fR object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisdefaults\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+display \fBNIS+\fR default values
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBniserror\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+display \fBNIS+\fR error messages
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisgrep\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+utilities for searching \fBNIS+\fR tables
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisgrpadm\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+\fBNIS+\fR group administration command
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisln\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+symbolically link \fBNIS+\fR objects
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisls\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+list the contents of a \fBNIS+\fR directory
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnismatch\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+utilities for searching  \fBNIS+\fR tables
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnismkdir\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+create \fBNIS+\fR directories
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisopaccess\fR(1)\fR
+.ad
+.RS 21n
+.rt  
+access control for protocol operations
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnispasswd\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+change \fBNIS+\fR password information
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisrm\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+remove \fBNIS+\fR objects from the namespace
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisrmdir\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+remove \fBNIS+\fR directories
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisshowcache\fR(1M) \fR
+.ad
+.RS 21n
+.rt  
+\fBNIS+\fR utility to print out the contents of the shared cache file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnistbladm\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+\fBNIS+\fR table administration command
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnistest\fR(1) \fR
+.ad
+.RS 21n
+.rt  
+return the state of the \fBNIS+\fR namespace using a conditional expression
+.RE
+
+.SS "NIS+ Administrative Commands"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBaliasadm\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+manipulate the \fBNIS+\fR aliases map
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_cachemgr\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+\fBNIS+\fR utility to cache location information about \fBNIS+\fR servers
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisaddcred\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+create \fBNIS+\fR credentials
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisaddent\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+create  \fBNIS+\fR tables from corresponding /etc files or \fBNIS+\fR maps
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisauthconf\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+configure extended Diffie-Hellman keys
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisbackup\fR(1M)\fR
+.ad
+.RS 24n
+.rt  
+backup \fBNIS+\fR directories
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisclient\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+initialize \fBNIS+\fR credentials for \fBNIS+\fR principals
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisd\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+\fBNIS+\fR service daemon
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisd_resolv\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+\fBNIS+\fR service daemon
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisinit\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+\fBNIS+\fR client and server initialization utility
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnislog\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+display the contents of the \fBNIS+\fR transaction log
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisping\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+send ping to \fBNIS+\fR servers
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnispopulate\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+populate the  \fBNIS+\fR tables in a \fBNIS+\fR domain
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisprefadm\fR(1M)\fR
+.ad
+.RS 24n
+.rt  
+\fBNIS+\fR utility to set server preferences for \fBNIS+\fR clients
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisrestore\fR(1M)\fR
+.ad
+.RS 24n
+.rt  
+restore \fBNIS+\fR directory backup
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisserver\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+set up  \fBNIS+\fR servers
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnissetup\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+initialize a \fBNIS+\fR domain
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisshowcache\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+\fBNIS+\fR utility to print out the contents of the shared cache file
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisstat\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+report \fBNIS+\fR server statistics
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisupdkeys\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+update the public keys in a \fBNIS+\fR directory object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBrpc.nisd\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+\fBNIS+\fR service daemon
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBrpc.nisd_resolv\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+\fBNIS+\fR service daemon
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsysidns\fR(1M) \fR
+.ad
+.RS 24n
+.rt  
+system configuration
+.RE
+
+.SS "NIS+ Programming API"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_add\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR namespace functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_add_entry\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR table functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_addmember\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR group manipulation functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_checkpoint\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+misellaneous \fBNIS+\fR log administration functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_clone_object\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR subroutines
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_creategroup\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR group manipulation functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_destroy_object\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR subroutines
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_destroygroup\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR group manipulation functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_dir_cmp\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR subroutines
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_domain_of\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR subroutines
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_error\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+display  \fBNIS+\fR error messages
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_first_entry\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR table functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_freenames\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR subroutines
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_freeresult\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR namespace functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_freeservlist\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+miscellaneous  \fBNIS+\fR functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_freetags\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+miscellaneous  \fBNIS+\fR functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_getnames\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR subroutines
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_getservlist\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+miscellaneous  \fBNIS+\fR functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_groups\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR group manipulation functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_ismember\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR group manipulation functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_leaf_of\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR subroutines
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_lerror\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+display some \fBNIS+\fR error messages
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_list\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR table functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_local_directory\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR local names
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_local_group\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR local names
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_local_host\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR local names
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_local_names\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR local names
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_local_principal\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR local names
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_lookup\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR namespace functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_mkdir\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+miscellaneous  \fBNIS+\fR functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_modify\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR namespace functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_modify_entry\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR table functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_name_of\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR subroutines
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_names\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR namespace functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_next_entry\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR table functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_objects\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR object formats
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_perror\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+display  \fBNIS+\fR error messages
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_ping\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+miscellaneous \fBNIS+\fR log administration functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_print_group_entry\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR group manipulation functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_print_object\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR subroutines
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_remove\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR namespace functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_remove_entry\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR table functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_removemember\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR group manipulation functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_rmdir\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+miscellaneous \fBNIS+\fR functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_server\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+miscellaneous  \fBNIS+\fR functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_servstate\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+miscellaneous \fBNIS+\fR functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_sperrno\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+display \fBNIS+\fR error messages
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_sperror\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+display \fBNIS+\fR error messages
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_sperror_r\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+display \fBNIS+\fR error messages
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_stats\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+miscellaneous \fBNIS+\fR functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_subr\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR subroutines
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_tables\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR table functions
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnis_verifygroup\fR(3NSL) \fR
+.ad
+.sp .6
+.RS 4n
+\fBNIS+\fR group manipulation functions
+.RE
+
+.SS "NIS+ Files and Directories"
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisfiles\fR(4) \fR
+.ad
+.RS 16n
+.rt  
+\fBNIS+\fR database files and directory structure
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB<rpcsvc/nis_object.x>\fR \fR
+.ad
+.RS 26n
+.rt  
+protocol description of an \fBNIS+\fR object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB<rpcsvc/nis.x>\fR \fR
+.ad
+.RS 26n
+.rt  
+defines the \fBNIS+\fR protocol using the RPC language as described in the  \fIONC+ Developer\&'s Guide\fR 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB<rpcsvc/nis.h>\fR \fR
+.ad
+.RS 26n
+.rt  
+should be included by all clients of the \fBNIS+\fR service
+.RE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBnischown\fR(1), \fBnisdefaults\fR(1), \fBnismatch\fR(1), \fBnisopaccess\fR(1), \fBnispasswd\fR(1), \fBnewkey\fR(1M), \fBnisaddcred\fR(1M), \fBnisauthconf\fR(1M), \fBnisclient\fR(1M), \fBnispopulate\fR(1M), \fBnisserver\fR(1M), \fBnis_add_entry\fR(3NSL), \fBnis_domain_of\fR(3NSL), \fBnis_getnames\fR(3NSL), \fBnis_groups\fR(3NSL), \fBnis_leaf_of\fR(3NSL), \fBnis_list\fR(3NSL), \fBnis_local_directory\fR(3NSL), \fBnis_lookup\fR(3NSL), \fBnis_objects\fR(3NSL) 
+.sp
+.ne 2
+.mk
+.na
+\fB\fISystem Administration Guide: Naming and Directory Services (DNS, NIS, and LDAP)\fR \fR
+.ad
+.sp .6
+.RS 4n
+Describes how to make the transition from \fBNIS\fR to  \fBNIS+\fR. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIONC+ Developer\&'s Guide\fR \fR
+.ad
+.sp .6
+.RS 4n
+Describes the application programming interfaces for networks including \fBNIS+\fR. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fISystem Administration Guide: Naming and Directory Services (DNS, NIS, and LDAP)\fR \fR
+.ad
+.sp .6
+.RS 4n
+Describes how to plan for and configure an \fBNIS+\fR namespace.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fISystem Administration Guide: IP Services\fR\fR
+.ad
+.sp .6
+.RS 4n
+Describes IPv6 extensions to Solaris name services.
+.RE
+
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

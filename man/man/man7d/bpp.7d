@@ -1,0 +1,315 @@
+'\" te
+.\" Copyright (c) 1994, Sun Microsystems, Inc.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH bpp 7D "22 Aug 1994" "SunOS 5.11" "Devices"
+.SH NAME
+bpp \- bi-directional parallel port driver
+.SH SYNOPSIS
+.LP
+.nf
+\fBSUNW,bpp@\fR\fIslot\fR\fB,\fR\fIoffset\fR\fB:bpp\fR\fIn\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBbpp\fR driver provides a general-purpose bi-directional interface to parallel devices. It supports a variety of output (printer) and input (scanner) devices, using programmable timing relationships between the various handshake signals.
+.SH APPLICATION PROGRAMMING INTERFACE
+.sp
+.LP
+The \fBbpp\fR driver is an  \fIexclusive-use\fR device. If the device has already been opened, subsequent opens fail with  \fBEBUSY.\fR
+.SS "Default Operation"
+.sp
+.LP
+Each time the  \fBbpp\fR device is opened, the default configuration is \fBBPP_ACK_BUSY_HS\fR for read handshake, \fBBPP_ACK_HS\fR for write handshake, 1 microsecond for all setup times and strobe widths, and 60 seconds for both timeouts. This configuration (in the write mode) drives many common personal computer parallel printers with Centronics-type interfaces. The application should use the  \fBBPPIOC_SETPARMS\fR ioctl request to configure the \fBbpp\fR for the particular device which is attached, if necessary.
+.SS "Write Operation"
+.sp
+.LP
+If a failure or error condition occurs during a \fBwrite\fR(2), the number of bytes successfully written is returned (short write). Note that \fBerrno\fR will not be set. The contents of certain status bits will be captured at the time of the error, and can be retrieved by the application program, using the \fBBPPIOC_GETERR\fR ioctl request. Subsequent \fBwrite\fR(2) calls may fail with the system error  \fBENXIO\fR if the error condition is not rectified. The captured status information will be overwritten each time an attempted transfer or a \fBBPPIOC_TESTIO\fR ioctl request occurs.
+.SS "Read Operations"
+.sp
+.LP
+If a failure or error condition occurs during a \fBread\fR(2), the number of bytes successfully read is returned (short read). Note that \fBerrno\fR will not be set. The contents of certain status bits will be captured at the time of the error, and can be retrieved by the application, using the \fBBPPIOC_GETERR\fR ioctl request. Subsequent \fBread\fR(2) calls may fail with \fBENXIO\fR if the error condition is not rectified. The captured register information will be overwritten each time an attempted transfer or a \fBBPPIOC_TESTIO\fR ioctl request.
+.sp
+.LP
+If the  \fBread_handshake\fR element of the  \fBbpp_transfer_parms\fR structure (see below) is set to \fBBPP_CLEAR_MEM\fR or \fBBPP_SET_MEM\fR, zeroes or ones, respectively, are written into the user buffer.
+.SS "Read/Write Operation"
+.sp
+.LP
+When the driver is opened for reading and writing, it is assumed that scanning will take place, as scanners are the only devices supported by this mode. Most scanners require that the  \fBSLCT_IN\fR or \fBAFX\fR pin be set to tell the scanner the direction of the transfer. The  \fBAFX\fR line is set when the  \fBread_handshake\fR element of the \fBbpp_transfer_parms\fR structure is set to \fBBPP_HSCAN_HS\fR, otherwise the \fBSLCT_IN\fR pin is set. Normally, scanning starts by writing a command to the scanner, at which time the pin is set.  When the scan data is read back, the pin is reset.
+.SH IOCTLS
+.sp
+.LP
+The following  ioctl requests are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBBPPIOC_SETPARMS\fR\fR
+.ad
+.RS 21n
+.rt  
+Set transfer parameters.
+.sp
+The argument is a pointer to a  \fBbpp_transfer_parms\fR structure. See below for a description of the elements of this structure. If a parameter is out of range, \fBEINVAL\fR is returned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBBPPIOC_GETPARMS\fR\fR
+.ad
+.RS 21n
+.rt  
+Get current transfer parameters. 
+.sp
+The argument is a pointer to a  \fBbpp_transfer_parms\fR structure. See below for a description of the elements of this structure. If no parameters have been configured since the device was opened, the contents of the structure will be the default conditions of the parameters (see \fBDefault Operation\fR above).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBBPPIOC_SETOUTPINS\fR\fR
+.ad
+.RS 21n
+.rt  
+Set output pin values. 
+.sp
+The argument is a pointer to a  \fBbpp_pins\fR structure. See below for a description of the elements of this structure. If a parameter is out of range,  \fBEINVAL\fR is returned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBBPPIOC_GETOUTPINS\fR\fR
+.ad
+.RS 21n
+.rt  
+Read output pin values. The argument is a pointer to a  \fBbpp_pins\fR structure. See below for a description of the elements of this structure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBBPPIOC_GETERR\fR\fR
+.ad
+.RS 21n
+.rt  
+Get last error status. 
+.sp
+The argument is a pointer to a \fBbpp_error_status\fR structure. See below for a description of the elements of this structure. This structure indicates the status of all the appropriate  status bits at the time of the most recent error condition during a \fBread\fR(2) or \fBwrite\fR(2) call, or the status of the bits at the most recent  \fBBPPIOC_TESTIO\fR ioctl request. Note:  The bits in the  \fBpin_status\fR element indicate whether the associated pin is active, not the actual polarity. The application can check transfer readiness without attempting another transfer using the  \fBBPPIOC_TESTIO\fR ioctl.  Note:  The \fBtimeout_occurred\fR and \fBbus_error\fR fields will never be set by the  \fBBPPIOC_TESTIO\fR ioctl, only by an actual failed transfer.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBBPPIOC_TESTIO\fR\fR
+.ad
+.RS 21n
+.rt  
+Test transfer readiness. 
+.sp
+This command checks to see if a read or write transfer would succeed based on pin status, opened mode, and handshake selected. If a handshake would succeed,  \fB0\fR is returned. If a transfer would fail,  \fB-1\fR is returned, and \fBerrno\fR is set to \fBEIO,\fR and the error status information is captured. The captured status can be retrieved using the \fBBPPIOC_GETERR\fR ioctl call.  Note that the \fBtimeout_occurred\fR and \fBbus_error\fR fields will never be set by this ioctl.
+.RE
+
+.SS "Transfer Parameters Structure"
+.sp
+.LP
+This structure is defined in  <\fBsys/bpp_io.h\fR>. 
+.sp
+.in +2
+.nf
+struct bpp_transfer_parms {
+    enum  handshake_t
+         read_handshake;      /* parallel port read handshake mode */
+    int  read_setup_time;    /* DSS register - in nanoseconds */
+    int  read_strobe_width;  /* DSW register - in nanoseconds */
+    int  read_timeout;       /*
+                              * wait this many seconds
+                              * before aborting a transfer
+                             */
+    enum	handshake_t
+         write_handshake;      /* parallel port write handshake mode */
+    int  write_setup_time;    /* DSS register - in nanoseconds */
+    int  write_strobe_width;  /* DSW register - in nanoseconds */
+    int  write_timeout;       /*
+                               * wait this many seconds
+                               * before aborting a transfer
+                              */
+};
+/* Values for read_handshake and write_handshake fields */
+    enum	handshake_t {
+        BPP_NO_HS,            /* no handshake pins */
+        BPP_ACK_HS,           /* handshake controlled by ACK line */
+        BPP_BUSY_HS,          /* handshake controlled by BSY line */
+        BPP_ACK_BUSY_HS,      /*
+                               * handshake controlled by ACK and BSY lines
+                               * read_handshake only!
+                              */
+        BPP_XSCAN_HS,         /* xerox scanner mode,
+                               * read_handshake only!
+	                             */
+        BPP_HSCAN_HS,         /*
+                               * HP scanjet scanner mode
+                               * read_handshake only!
+                              */
+        BPP_CLEAR_MEM,        /* write 0's to memory,
+                               * read_handshake only!
+                              */
+        BPP_SET_MEM,          /* write 1's to memory,
+                               * read_handshake only!
+                              */
+	/* The following handshakes are RESERVED. Do not use. */
+        BPP_VPRINT_HS,        /* valid only in read/write mode */
+        BPP_VPLOT_HS          /* valid only in read/write mode */
+};
+.fi
+.in -2
+
+.sp
+.LP
+The  \fBread_setup_time\fR field controls the time between dstrb falling edge to bsy rising edge if the  \fBread_handshake\fR field is set to \fBBPP_NO_HS\fR or \fBBPP_ACK_HS\fR. It controls the time between dstrb falling edge to ack rising edge if the \fBread_handshake\fR field is set to  \fBBPP_ACK_HS\fR or \fBBPP_ACK_BUSY_HS\fR. It controls the time between ack falling edge to dstrb rising edge if the \fBread_handshake\fR field is set to \fBBPP_XSCAN_HS\fR.
+.sp
+.LP
+The  \fBread_strobe_width\fR field controls the time between ack rising edge and ack falling edge if the \fBread_handshake\fR field is set to \fBBPP_NO_HS\fR or \fBBPP_ACK_BUSY_HS\fR. It controls the time between dstrb rising edge to dstrb falling edge if the \fBread_handshake\fR field is set to  \fBBPP_XSCAN_HS\fR.
+.sp
+.LP
+The values allowed for the \fBwrite_handshake\fR field are duplicates of the definitions for the \fBread_handshake\fR field. Note that some of these handshake definitions are only valid in one mode or the other.
+.sp
+.LP
+The  \fBwrite_setup_time\fR field controls the time between data valid to dstrb rising edge for all values of the  \fBwrite_handshake\fR field.
+.sp
+.LP
+The  \fBwrite_strobe_width\fR field controls the time between dstrb rising edge and dstrb falling edge if the \fBwrite_handshake\fR field is not set to \fBBPP_VPRINT_HS\fR or \fBBPP_VPLOT_HS\fR. It controls the minimum time between dstrb rising edge to dstrb falling edge if the \fBwrite_handshake\fR field is set to  \fBBPP_VPRINT_HS\fR or \fBBPP_VPLOT_HS\fR.
+.SS "Transfer Pins Structure"
+.sp
+.LP
+This structure is defined in <\fBsys/bpp_io.h\fR>. 
+.sp
+.in +2
+.nf
+struct  bpp_pins {
+    uchar_t  output_reg_pins;  /* pins in P_OR register */
+    uchar_t  input_reg_pins;   /* pins in P_IR register */
+};
+
+/* Values for output_reg_pins field */
+#define BPP_SLCTIN_PIN  0x01  /* Select in pin */
+#define BPP_AFX_PIN     0x02  /* Auto feed pin */
+#define BPP_INIT_PIN    0x04  /* Initialize pin */
+#define BPP_V1_PIN      0x08  /* reserved pin 1 */
+#define BPP_V2_PI       0x10  /* reserved pin 2 */
+#define BPP_V3_PIN      0x20  /* reserved pin 3 */
+#define BPP_ERR_PIN     0x01  /* Error pin */
+#define BPP_SLCT_PIN    0x02  /* Select pin */
+#define BPP_PE_PIN      0x04  /* Paper empty pin */
+.fi
+.in -2
+
+.SS "Error Pins Structure"
+.sp
+.LP
+This structure is defined in the include file <\fBsys/bpp_io.h\fR>. 
+.sp
+.in +2
+.nf
+struct bpp_error_status {
+	char	timeout_occurred;	/* 1 if a timeout occurred */
+	char	bus_error;	/* 1 if an SBus bus error */
+	uchar_t pin_status;	/*
+			 * status of pins which could
+			 * cause an error
+			 */
+};
+/* Values for pin_status field */
+#define BPP_ERR_ERR    0x01	/* Error pin active */
+#define BPP_SLCT_ERR   0x02	/* Select pin active */
+#define BPP_PE_ERR     0x04	/* Paper empty pin active */
+#define BPP_SLCTIN_ERR 0x10	/* Select in pin active	*/
+#define BPP_BUSY_ERR   0x40	/* Busy pin active */
+.fi
+.in -2
+
+.SH ERRORS
+.sp
+.ne 2
+.mk
+.na
+\fB\fBEBADF\fR\fR
+.ad
+.RS 10n
+.rt  
+The device is opened for write-only access and a read is attempted, or the device is opened for read-only access and a write is attempted.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBEBUSY\fR\fR
+.ad
+.RS 10n
+.rt  
+The device has been opened and another open is attempted. An attempt has been made to unload the driver while one of the units is open.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBEINVAL\fR\fR
+.ad
+.RS 10n
+.rt  
+A \fBBPPIOC_SETPARMS ioctl\fR is attempted with an out of range value in the \fBbpp_transfer_parms\fR structure. A  \fBBPPIOC_SETOUTPINS ioctl\fR is attempted with an invalid value in the pins structure. An  \fBioctl\fR is attempted with an invalid value in the command argument. An invalid command argument is received  during \fBmodload\fR(1M) or \fBmodunload\fR(1M).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBEIO\fR\fR
+.ad
+.RS 10n
+.rt  
+The driver encountered an SBus bus error when attempting an access.
+.sp
+A read or write does not complete properly, due to a peripheral error or a transfer timeout.
+.sp
+A \fBBPPIOC_TESTIO ioctl\fR call is attempted while a condition exists which would prevent a transfer (such as a peripheral error).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBENXIO\fR\fR
+.ad
+.RS 10n
+.rt  
+The driver has received an open request for a  unit for which the attach failed. The driver has received a read or write request for a unit number greater than the number of units available. The driver has received a write request for a unit which has an active peripheral error.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/dev/bpp\fIn\fR\fR\fR
+.ad
+.RS 13n
+.rt  
+bi-directional parallel port devices
+.RE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBioctl\fR(2), \fBread\fR(2), \fBwrite\fR(2), \fBsbus\fR(4)

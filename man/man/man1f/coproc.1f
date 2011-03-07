@@ -1,0 +1,206 @@
+'\" te
+.\" Copyright (c) 1996, Sun Microsystems, Inc. All Rights Reserved.
+.\" Copyright 1989 AT&T
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH coproc 1F "5 Jul 1990" "SunOS 5.11" "FMLI Commands"
+.SH NAME
+coproc, cocreate, cosend, cocheck, coreceive, codestroy \- communicate with a process
+.SH SYNOPSIS
+.LP
+.nf
+\fBcocreate\fR [\fB-r\fR \fIrpath\fR] [\fB-w\fR \fIwpath\fR] [\fB-i\fR \fIid\fR] [\fB-R\fR \fIrefname\fR] 
+     [\fB-s\fR \fIsend_string\fR] [\fB-e\fR \fIexpect_string\fR] \fIcommand\fR
+.fi
+
+.LP
+.nf
+\fBcosend\fR [\fB-n\fR] \fIproc_id\fR \fIstring\fR
+.fi
+
+.LP
+.nf
+\fBcocheck\fR \fIproc_id\fR
+.fi
+
+.LP
+.nf
+\fBcoreceive\fR \fIproc_id\fR
+.fi
+
+.LP
+.nf
+\fBcodestroy\fR [\fB-R\fR \fIrefname\fR] \fIproc_id\fR [\fIstring\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+These co-processing functions provide a flexible means of interaction between  \fBFMLI\fR and an independent process;  especially, they enable  \fBFMLI\fR to be responsive to asynchronous activity.
+.sp
+.LP
+The \fBcocreate\fR function starts \fIcommand\fR as a co-process and initializes communications by setting up pipes between  \fBFMLI\fR and the standard input and standard output of \fIcommand\fR. The argument \fBcommand\fR must be an executable and its arguments (if any). This means that \fIcommand\fR expects strings on its input (supplied by \fBcosend\fR) and sends information on its output that can be handled in various ways by FMLI.
+.sp
+.LP
+The \fBcosend\fR function sends \fIstring\fR to the co-process identified by \fIproc_id\fR via the pipe set up by \fBcocreate\fR (optionally \fIwpath\fR), where \fIproc_id\fR can be either the \fIcommand\fR or \fIid\fR specified in \fBcocreate\fR. By default, \fBcosend\fR blocks, waiting for a response from the co-process. Also by default,  \fBFMLI\fR does not send a \fIsend_string\fR and does not expect an \fIexpect_string\fR (except a newline). That is, it reads only one line of output from the co-process. If \fB-e\fR\fI expect_string\fR was not defined when the pipe was created, then the output of the co-process is any single string followed by a newline: any other lines of output remain on the pipe. If the \fB-e\fR option was specified when the pipe was created, \fBcosend\fR reads lines from the pipe until it reads a line starting with \fIexpect_string\fR. All lines except the line starting with \fIexpect_string\fR become the output of \fBcosend\fR.
+.sp
+.LP
+The \fBcocheck\fR function determines if input is available from the process identified by \fIproc_id\fR, where \fIproc_id\fR can be either the \fBcommand\fR or \fBid\fR specified in \fBcocreate\fR. It returns a Boolean value, which makes \fBcocheck\fR useful in \fBif\fR statements and in other backquoted expressions in Boolean descriptors. \fBcocheck\fR receives no input from the co-process; it simply indicates if input is available from the co-process. You must use \fBcoreceive\fR to actually accept the input. The \fBcocheck\fR function can be called from a \fBreread\fR descriptor to force a frame to update when new data is available. This is useful when the default value of a field in a form includes \fBcoreceive\fR.
+.sp
+.LP
+The \fBcoreceive\fR function is used to read input from the co-process identified by \fIproc_id\fR, where \fIproc_id\fR can be either the \fIcommand\fR or \fIid\fR specified in \fBcocreate\fR. It should only be used when it has been determined, using \fBcocheck\fR, that input is actually available. If the \fB-e\fR option was used when the co-process was created, \fBcoreceive\fR will continue to return lines of input until \fIexpect_string\fR is read. At this point, \fBcoreceive\fR will terminate. The output of \fBcoreceive\fR is all the lines that were read excluding the line starting with \fIexpect_string \fR. If the \fB-e\fR option was not used in the \fBcocreate\fR, each invocation of \fBcoreceive\fR will return exactly one line from the co-process. If no input is available when \fBcoreceive\fR is invoked, it will simply terminate without producing output.
+.sp
+.LP
+The \fBcodestroy\fR function terminates the read/write pipes to \fIproc-id\fR, where \fIproc_id\fR can be either the \fIcommand\fR or \fIid\fR specified in \fBcocreate\fR. It generates a \fBSIGPIPE\fR signal to the (child) co-process. This kills the co-process, unless the co-process ignores the  \fBSIGPIPE\fR signal. If the co-process ignores the  \fBSIGPIPE\fR, it will not die, even after the  \fBFMLI\fR process terminates (the parent process id of the co-process will be \fB1\fR).
+.sp
+.LP
+The optional argument \fIstring\fR is sent to the co-process before the co-process dies. If \fIstring\fR is not supplied, a  NULL string is passed, followed by the normal \fIsend_string\fR (newline by default). That is, \fBcodestroy\fR will call \fBcosend \fR\fIproc_id string\fR: this implies that \fBcodestroy\fR will write any output generated by the co-process to \fIstdout\fR. For example, if an interactive co-process is written to expect a "quit" string when the communication is over, the \fBclose\fR descriptor could be defined;      \fBclose=`codestroy ID 'quit' | message`\fR and any output generated by the co-process when the string \fBquit\fR is sent to it via \fBcodestroy\fR (using \fBcosend\fR) would be redirected to the message line.
+.sp
+.LP
+The \fBcodestroy\fR function should usually be given the \fB-R\fR option, since you may have more than one process with the same name, and you do not want to kill the wrong one. \fBcodestroy\fR keeps track of the number of \fIrefnames\fR you have assigned to a process with \fBcocreate\fR, and when the last instance is killed, it kills the process (\fIid\fR) for you. \fBcodestroy\fR is typically called as part of a \fBclose\fR descriptor because \fBclose\fR is evaluated when a frame is closed. This is important because the co-process will continue to run if \fBcodestroy\fR is not issued.
+.sp
+.LP
+When writing programs to use as co-processes, the following tips may be useful. If the co-process program is written in C language, be sure to flush output after writing to the pipe. (Currently, \fBawk\fR(1) and \fBsed\fR(1) cannot be used in a co-process program because they do not flush after lines of output.) Shell scripts are well-mannered, but slow. C language is recommended. If possible, use the default \fIsend_string\fR, \fIrpath\fR and \fIwpath\fR. In most cases, \fI expect_string\fR will have to be specified. This, of course, depends on the co-process.
+.sp
+.LP
+In the case where asynchronous communication from a co-process is desired, a co-process program should use \fBvsig\fR to force strings into the pipe and then signal  \fBFMLI\fR that output from the co-process is available. This causes the \fBreread\fR descriptor of all frames to be evaluated immediately.
+.SH OPTIONS
+.sp
+.LP
+\fBcocreate\fR options are:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR\fI rpath\fR\fR
+.ad
+.RS 20n
+.rt  
+If \fB-r\fR is specified, \fIrpath\fR is the pathname from which  \fBFMLI\fR reads information. This option is usually used to set up communication with processes that naturally write to a certain path. If \fB-r\fR is not specified, \fBcocreate\fR will choose a unique path in \fB/var/tmp\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-w\fR\fI wpath\fR\fR
+.ad
+.RS 20n
+.rt  
+If \fB-w\fR is specified, \fIwpath\fR is the pathname to which \fBcosend\fR writes information. This option is usually used so that one process can talk to many different \fBFMLI\fR processes through the same pipe. If \fB-w\fR is not specified, \fBcocreate\fR will choose a unique path in \fB/var/tmp\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR\fI id\fR\fR
+.ad
+.RS 20n
+.rt  
+If \fB-i\fR is specified, \fBid\fR is an alternative name for the co-processinitialized by this \fBcocreate\fR. If \fB-i\fR is not specified, \fIid\fR defaults to \fIcommand\fR. The argument \fIid\fR can later be used with the other co-processing functions rather than \fIcommand\fR. This option is typically used, since it facilitates the creation of two or more co-processes generated from the same \fIcommand\fR. (For example, \fBcocreate\fR \fB-i\fR \fBID1 program args\fR and \fBcocreate\fR \fB-i\fR \fBID2 program different_args\fR).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-R\fR\fI refname\fR\fR
+.ad
+.RS 20n
+.rt  
+If \fB-R\fR is specified, \fIrefname\fR is a local name for the co-process. Since the \fBcocreate\fR function can be issued more than once, a \fIrefname\fR is useful when the same co-process is referenced a second or subsequent time. With the \fB-R\fR option, if the co-process already exists a new one will not be created: the same pipes will be shared. Then, \fIrefname\fR can be used as an argument to the \fB-R\fR option to \fBcodestroy\fR when you want to end a particular connection to a co-process and leave other connections undisturbed. (The co-process is only killed after \fB codestroy\fR \fB-R\fR has been called as many times as \fBcocreate\fR \fB-R\fR was called.)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR\fI send_string\fR\fR
+.ad
+.RS 20n
+.rt  
+The \fB-s\fR option specifies \fIsend_string\fR as a string that will be appended to all output sent to the co-process using \fBcosend\fR. This option allows a co-process to know when input from  \fBFMLI\fR has completed. The default \fIsend_string\fR is a newline if \fB-s\fR is not specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-e\fR\fI expect_string\fR\fR
+.ad
+.RS 20n
+.rt  
+The \fB-e\fR option specifies \fIexpect_string\fR as a string that identifies the end of all output returned by the co-process. (Note: \fIexpect_string\fR need only be the initial part of a line, and there must be a newline at the end of the co-process output.) This option allows  \fBFMLI\fR to know when output from the co-process has completed. The default \fIexpect_string\fR is a newline if \fB-e\fR is not specified.
+.RE
+
+.sp
+.LP
+\fBcosend\fR options are:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR\fR
+.ad
+.RS 6n
+.rt  
+If the \fB-n\fR option is specified, \fBcosend\fR will not wait for a response from the co-process. It simply returns, providing no output. If the \fB-n\fR option is not used, a co-process that does not answer will cause  \fBFMLI\fR to permanently hang, waiting for input from the co-process.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRSample commands
+.sp
+.in +2
+.nf
+\fB   .
+   .
+   .
+init=`cocreate \fR\fB-i\fR\fB BIGPROCESS initialize`
+close=`codestroy BIGPROCESS`
+   .
+   .
+   .
+reread=`cocheck BIGPROCESS`
+
+name=`cosend \fR\fB-n\fR\fB BIGPROCESS field1`
+   .
+   .
+   .
+name="Receive field"
+inactive=TRUE
+value=`coreceive BIGPROCESS`\fR
+.fi
+.in -2
+.sp
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBawk\fR(1), \fBcat\fR(1), \fBsed\fR(1), \fBvsig\fR(1F), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+If \fBcosend\fR is used without the \fB-n\fR option, a co-process that does not answer will cause  \fBFMLI\fR to permanently hang.
+.sp
+.LP
+The use of non-alphabetic characters in input and output strings to a co-process should be avoided because they may not get transferred correctly.     

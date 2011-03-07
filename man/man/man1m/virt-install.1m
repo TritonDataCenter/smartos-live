@@ -1,0 +1,1020 @@
+'\" te
+.\" Copyright 2005-2006 Red Hat, Inc. Jeremy Katz (katzj@redhat.com) Option handling added by Andrew Puch (apuch@redhat.com).
+.\" This manual page is based in part on material found at fedoraproject.org.
+.\" This software may be freely redistributed under the terms of the GNU general public license. You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA
+.\" 02139, USA.
+.\" Portions Copyright (c) 2009, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License. You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.
+.\"  See the License for the specific language governing permissions and limitations under the License. When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with
+.\" the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH virt-install 1M "4 Sep 2009" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+virt-install \- install guest operating system on xVM system
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/bin/virt-install\fR [\fIoptions\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBvirt-install\fR program enables you to install a guest operating system on a machine running Solaris xVM.
+.sp
+.LP
+\fBvirt-install\fR allows you to enter information about a guest as a set of command-line options that enable you to specify the following:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Name of your guest domain. This name serves as the label of the guest operating system and will be the name of the file that stores the guest's configuration. For network-based installs, the name of the domain must match its real hostname.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Amount of RAM to be allocated to the guest, in MB. Solaris domains should use 512MB minimum.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Path to the disk image of the guest. This path is exported as an entire disk to your guest. It is on the xVM control domain and can be to a physical disk, a flat file, or any device that provides a block device interface; for example, a ZFS volume or a Solaris Volume Manager volume.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+If the path specified in the preceding bullet does not already exist, the size, in GB, of the virtual disk for your guest.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+You must choose whether to enable graphics support for the domain. Note that paravirtualized Solaris domains do not currently support a graphical console in this manner.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+URI for the location of the installation software. This can be an NFS path, or the path to a local directory or ISO. Some operating systems do not yet support ISO installs. Some operating systems require that the install host be fully qualified (for example, \fBmy.nfs.server.com\fR) for the install to work. Examples of acceptable installation paths are:
+.sp
+.in +2
+.nf
+nfs:my.nfs.server.com:/home/install/test/tree
+/export/solarisdvd.iso
+.fi
+.in -2
+.sp
+
+.RE
+.sp
+.LP
+After entering required information, installation starts. If you enabled graphics, a Virtual Network Computing (VNC) window opens and presents the graphical installer. If graphics are not enabled, the text installer is displayed.
+.sp
+.LP
+You can connect to the graphical console by finding the correct display with the command:
+.sp
+.in +2
+.nf
+% \fBvirsh vncdisplay \fIdom-name\fR\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\&...and then running:
+.sp
+.in +2
+.nf
+% \fBvncviewer localhost:\fId\fR\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\&...where \fId\fR is the display returned by the preceding \fBvirsh vncdisplay\fR command.
+.sp
+.LP
+Autoconfiguration data (see the \fB--autocf\fR option, below) is presented to the guest as a floppy device. For Solaris, this can be a UFS or PCFS file system image containing \fBsysidcfg\fR(4) and Jumpstart profile data.
+.sp
+.LP
+To run \fBvirt-install\fR, you must become superuser or assume the Primary Administrator role.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--autocf\fR=\fIlocation\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies location of autoconfiguration data for the guest.
+.sp
+For fully virtualized guests installing from an ISO file or DVD, \fIlocation\fR specifies the pathname of a disk image to be presented to the guest as the floppy device \fBfda\fR. The following is the path to a local filename containing a floppy image:
+.sp
+.in +2
+.nf
+/path/to/guest/autocf.img
+.fi
+.in -2
+.sp
+
+This option is ignored for fully virtualized guests installing over a network using PXE. Such a guest will retrieve any autoconfiguration data over the network. For paravirtualized guests, support for this option is guest-specific.
+.sp
+For Solaris paravirtualized guests installing over NFS, this option allows you to specify the NFS pathname to a directory containing a \fBsysidcfg\fR(4) file along with a Solaris Jumpstart profile. The following is the path to a NFS directory containing Solaris autoconfiguration data:
+.sp
+.in +2
+.nf
+nfs:netinstall:/export/guests/guest.autocf
+.fi
+.in -2
+.sp
+
+For OpenSolaris paravirtualized guests installing using an OpenSolaris AI (Automated Installer) server using the \fBopensolaris\fR \fBos-variant\fR flag, specify a set of comma-separated name/value pairs used by AI. These are:
+.sp
+.in +2
+.nf
+install_service=[\fIinstall_service_name\fR]
+install_media=[\fIHTTP server containing AI image\fR]
+.fi
+.in -2
+.sp
+
+At present, only \fBinstall_service\fR is required. \fBinstall_media\fR can be used to override the \fBinstall_media\fR path specified in the \fB--location\fR option (see below). Additional name/value pairs can be appended should the AI server require them.
+.sp
+At such time as the OpenSolaris AI supports the ability of clients to self-discover the AI install service, an empty string should be used for \fBinstall_service\fR to indicate an AI install is desired.
+.sp
+For fully virtualized guests (HVM domains), use the \fB--pxe\fR argument to perform AI installs.
+.sp
+See EXAMPLES for an example of the use of the OpenSolaris AI.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-b\fR \fIbridge\fR, \fB--bridge\fR=\fIbridge\fR\fR
+.ad
+.sp .6
+.RS 4n
+Bridge to which to connect the network interface. If you do not specify a bridge, the system attempts to determine the default. This should be the name of the interface in the control domain through which to route the domain's networking traffic, for example, \fBbge0\fR. This option is obsolete. Use the \fB-w\fR/\fB--network\fR option, instead.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR \fIcdrom\fR, \fB--cdrom\fR=\fIcdrom\fR\fR
+.ad
+.sp .6
+.RS 4n
+File to use as a virtual CD-ROM device for fully virtualized guests. This option works with HVM domains and is ignored with paravirtualized domains. It can be path to an ISO image, or to a CD-ROM device. It can also be a URL from which to fetch or access a minimal boot ISO image. The URLs take the same format as described for the \fB--location\fR argument. If this option is omitted then either the \fB--location\fR argument must be entered, to specify a location for the kernel and \fBinitrd\fR, or the \fB--pxe\fR option used, to install from the network.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--check-cpu\fR\fR
+.ad
+.sp .6
+.RS 4n
+Check that VCPUs do not exceed physical CPUs and warn if they do.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--connect\fR=\fIURI\fR\fR
+.ad
+.sp .6
+.RS 4n
+Connect to hypervisor at \fIURI\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--cpuset\fR=\fIcpuset\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specify which physical CPUs the guest can use. \fIcpuset\fR is a comma-separated list of numbers, which can be specified in ranges. For example:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0,2,3,5\fR\fR
+.ad
+.RS 13n
+.rt  
+Use processors 0, 2, 3, and 5
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1-3,5,6-8\fR\fR
+.ad
+.RS 13n
+.rt  
+Use processors 1, 2, 3, 5, 6, 7, and 8
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR, \fB--debug\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display debugging information. The debugging information is stored in \fB$HOME/.virtinst/virt-install.log\fR, even if this option is omitted. In this path, \fB$HOME\fR is the home directory of the user invoking \fBvirt-install\fR, such as \fB/\fR or \fB/root\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--disk\fR \fBpath=\fR\fI\&...\fR [\fIoptions\fR]\fR
+.ad
+.sp .6
+.RS 4n
+Specify a disk to attach to the guest domain. This is a comma-separated list of options, which must start with the \fBpath\fR argument. For example:
+.sp
+.in +2
+.nf
+--disk path=/guest/root.img,sparse=true
+.fi
+.in -2
+.sp
+
+The available argument and options are:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBpath=\fR\fI\&...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Path to the file, disk partition, or logical volume to use as the backing store for the guest's virtual disk.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBperms=ro\fR\fR
+.ad
+.sp .6
+.RS 4n
+The disk should be read-only.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdevice=disk|cdrom|floppy\fR\fR
+.ad
+.sp .6
+.RS 4n
+The disk should be presented as a normal hard disk, CD-ROM, or floppy disk.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsize=\fR\fI\&...\fR\fR
+.ad
+.sp .6
+.RS 4n
+Size of the disk in Gb, if it does not yet exist.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsparse=true|false\fR\fR
+.ad
+.sp .6
+.RS 4n
+Where appropriate, mark the disk as sparse or fully-allocated.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR \fIpathname\fR, \fB--file\fR=\fIpathname\fR\fR
+.ad
+.sp .6
+.RS 4n
+Path to the file, disk partition, or logical volume to use as the backing store for the guest's virtual disk. If the path does not exist, then \fB--file-size\fR option should also be specified, allowing the disk to be created.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR, \fB--help\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display list of \fBvirt-install\fR options.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--import\fR\fR
+.ad
+.sp .6
+.RS 4n
+Skip the OS installation process, and build a guest around an existing disk image. The device used for booting is the first device specified by means of the \fB--disk\fR or \fB--file\fR options.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-k\fR \fIkeymap\fR, \fB--keymap\fR=\fIkeymap\fR\fR
+.ad
+.sp .6
+.RS 4n
+Request that the virtual console be configured to run with a non-English keyboard layout.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR \fIlocation\fR, \fB--location\fR=\fIlocation\fR\fR
+.ad
+.sp .6
+.RS 4n
+Installation source for paravirtualized guest. Fully virtualized guests must use either \fB--location\fR to specify a kernel and \fBinitrd\fR or the \fB--cdrom\fR option to specify an ISO/CDROM image. The \fIlocation\fR argument can take the forms, \fBnfs:\fIhost\fR:/\fIpath\fR\fR, or a file system path in the control domain, as described above.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--livecd\fR\fR
+.ad
+.sp .6
+.RS 4n
+Treat the CD-ROM media as a live CD.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-m\fR \fImac_addr\fR, \fB--mac\fR=\fImac_addr\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies a fixed MAC address for the guest. If this parameter is omitted, or the value \fBrandom\fR is specified, a suitable address will be randomly generated. For xVM virtual machines it is required that the first 3 pairs in the MAC address be the sequence \fB00:16:3e\fR. This option could be used when performing PXE or NFS-based installations of Solaris guests. This option  is obsolete. Use the \fB-w\fR/\fB--network\fR option, instead.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR \fIname\fR, \fB--name\fR=\fIname\fR\fR
+.ad
+.sp .6
+.RS 4n
+Name of the new guest virtual machine instance. This must be unique among all guests known to the hypervisor on this machine, including those not currently active.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--noacpi\fR\fR
+.ad
+.sp .6
+.RS 4n
+Disables Advanced Configuration and Power Interface (ACPI) for fully virtualized guest. Overrides configuration setting stored in systems specified by \fB--os-type\fR and \fB--os-variant\fR options.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--noapic\fR\fR
+.ad
+.sp .6
+.RS 4n
+Disables Advanced Programmable Interrupt Controller (APIC) for fully virtualized guest. Overrides configuration setting stored in systems specified by \fB--os-type\fR and \fB--os-variant\fR options.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--noautoconsole\fR\fR
+.ad
+.sp .6
+.RS 4n
+Do not automatically try to connect to the guest console. The default behavior is to launch a VNC client to display the graphical console, or to run the \fBvirsh console\fR command to display the text console. Use of this option disables this behavior.
+.sp
+Use of this option should be combined with the \fB--wait\fR option, as described below.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--nodisks\fR\fR
+.ad
+.sp .6
+.RS 4n
+Request a virtual machine without any local disk storage, typically used for running "Live CD" images or installing to network storage (iSCSI or NFS root). This disables all interactive prompts for disk setup.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--nographics\fR\fR
+.ad
+.sp .6
+.RS 4n
+Disable all interactive prompts for the guest virtual console. No graphical console will be allocated for the guest. A text-based console will always be available on the first serial port (or equivalent paravirtualised console device).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--nonetworks\fR\fR
+.ad
+.sp .6
+.RS 4n
+Do not create network interfaces for the guest.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--nonsparse\fR\fR
+.ad
+.sp .6
+.RS 4n
+Request creation of a non-sparse file for the guest virtual disk. Note that use of this option causes guest creation to be significantly slower than otherwise.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--noreboot\fR\fR
+.ad
+.sp .6
+.RS 4n
+Do not automatically reboot the guest domain after the first stage of installation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--os-type\fR=\fIos_type\fR\fR
+.ad
+.sp .6
+.RS 4n
+Optimize the guest configuration for a type of operating system. This option attempts to pick the most suitable ACPI and APIC settings, select optimally supported mouse drivers, and generally accommodate other operating system peculiarities. See "OS Types and OS Variants", below for a list of acceptable values.
+.sp
+For optimal guest operating system performance, you should specify the \fB--os-type\fR and \fB--os-variant\fR options.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--os-variant\fR=\fIos_variant\fR\fR
+.ad
+.sp .6
+.RS 4n
+The OS variant for fully virtualized guests. See "OS Types and OS Variants", below for a list of acceptable values.
+.sp
+For optimal guest operating system performance, you should specify the \fB--os-type\fR and \fB--os-variant\fR options.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR, \fB--paravirt\fR\fR
+.ad
+.sp .6
+.RS 4n
+Indicates that guest is paravirtualized. If the host supports both paravirtualization and full virtualization, and neither this parameter nor the \fB--hvm\fR option are specified, this will be prompted for interactively.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--pxe\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use the PXE boot protocol to load the initial ramdisk and kernel for starting the guest installation process. If this option is omitted, then either the \fB--location\fR or \fB--cdrom\fR options must be entered, to specify a location for the kernel and \fBinitrd\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fImem_amount\fR, \fB--ram\fR=\fImem_amount\fR\fR
+.ad
+.sp .6
+.RS 4n
+Memory to allocate for guest instance, in megabytes.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR \fIfilesize\fR, \fB--file-size\fR=\fIfilesize\fR\fR
+.ad
+.sp .6
+.RS 4n
+Size of the file to create for the guest virtual disk, if the path specified with the \fB--file\fR does not already exist. The \fIfilesize\fR is specified in gigabytes, with fractional numbers allowed. The storage for the file will not be pre-allocated unless the \fB--nonsparse\fR option is also specified.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--sdl\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use Simple DirectMedia Layer (SDL) for graphics support. This option works with some guest domains, including HVM, but not with Solaris.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--sound\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use sound device emulation. Does not work on Solars xVM.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-u\fR \fIUUID\fR, \fB--uuid\fR=\fIUUID\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies UUID, as a 32-digit hexadecimal number, for the guest. if no UUID is specified, the system generates a random UUID. If you enter a UUID, keep in mind that it is intended to be a globally unique value.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR, \fB--hvm\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies that the guest is a Hardware-assisted Virtual Machine (HVM). Requests the use of full virtualization, if both paravirtualization and full virtualization are available on the host. This parameter might not be available if connecting to a hypervisor on a machine without hardware virtualization support.
+.sp
+This guest should be fully virtualized.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--vcpus\fR=\fIvcpus\fR\fR
+.ad
+.sp .6
+.RS 4n
+Number of Virtual (VCPUs) to configure for your guest.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--vnc\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use Virtual Network Computing (VNC) for graphics support. This option works with HVM domains but not with paravirtualized domains. Unless the \fB--vncport\fR parameter is also provided, the VNC server will run on the first free port number at 5900 or above. The actual VNC display allocated can be obtained using the \fBvncdisplay\fR subcommand to \fBvirsh\fR(1M).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--vncport\fR=\fIvncport\fR\fR
+.ad
+.sp .6
+.RS 4n
+Request a permanent, statically assigned port number for the guest VNC console. Use of this option is discouraged as another guest might automatically choose to run on the specified port, creating a conflict.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-w\fR \fIproperty_list\fR, \fB--network\fR=\fIproperty_list\fR\fR
+.ad
+.sp .6
+.RS 4n
+Describes a virtual interface by means of a list of property-value pairs, each pair separated by a comma. Supported properties are:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBbridge=\fR\fIbridge\fR\fR
+.ad
+.sp .6
+.RS 4n
+Bridge to which to connect the virtual interface. If you do not specify a bridge, the system attempts to determine the default. This should be the name of the interface in the control domain through which to route the domain's networking traffic, for example, \fBbge0\fR. This property makes the \fB-b\fR/\fB--bridge\fR option obsolete.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmac=\fR\fImac_addr\fR\fR
+.ad
+.sp .6
+.RS 4n
+Specifies a fixed MAC address for the guest. If this parameter is omitted, or the value \fBRANDOM\fR is specified, a suitable address will be randomly generated. For Solaris xVM virtual machines it is required that the first three pairs in the MAC address be the sequence \fB00:16:3e\fR. This property is required when performing PXE or NFS-based installations of Solaris guests. This property makes the \fB-m\fR/\fB--mac\fR option obsolete.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcapped-bandwidth=\fR\fIbandwidth\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets bandwidth of this interface. Bandwidth should be specified as an integer with one of the scale suffixes  (\fBK\fR, \fBM\fR, or \fBG\fR for Kbps, Mbps, or Gbps, respectively). Bandwidth will be rounded  up to 1.2M, if the input is smaller than that figure.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBvlanid=\fR\fIvid\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets VLAN ID of this interface to \fIvid\fR.
+.RE
+
+If this option is omitted, a single NIC will be created in the guest. If there is a bridge device in the host with a physical interface enslaved, this interface will be used for connectivity. This option can be specified multiple times to setup more than one NIC. Do not mix it with any one of the \fB-b\fR/\fB--bridge\fR and \fB-m\fR/\fB--mac\fR options.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB--wait\fR=\fInum_minutes\fR\fR
+.ad
+.sp .6
+.RS 4n
+If a VNC viewer could not be launched for a graphical installation, and the guest is a Windows domain, \fBvirt-install\fR waits indefinitely for the guest to finish installation.
+.sp
+For the domain to correctly reboot during install, \fBvirt-install\fR must stay running until installation is complete. This happens by default when \fBvirt-install\fR connects to the console. If the \fB--noautoconsole\fR option is used, or you need to disconnect from the console, use this option to keep \fBvirt-install\fR running. A value of \fB-1\fR will wait indefinitely. A value of \fB0\fR will exit immediately (and thus implies \fB--noautoconsole\fR).
+.sp
+It is recommended that scripts use:
+.sp
+.in +2
+.nf
+--wait=-1 --noautoconsole
+.fi
+.in -2
+.sp
+
+\&...as needed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-x\fR \fIextra_args\fR, \fB--extra-args\fR=\fIextra_args\fR\fR
+.ad
+.sp .6
+.RS 4n
+When installing paravirtualized guests, specifies additional arguments to pass to the installer.
+.RE
+
+.SS "OS Types and OS Variants"
+.sp
+.LP
+The following are the valid OS type and OS variant values for \fB--os-type\fR and \fB--os-variant\fR options described above.
+.sp
+.in +2
+.nf
+os-type  os-variant
+-------  ----------
+linux (Linux 2.x series)
+         rhel2.1
+         rhel3
+         rhel4
+         rhel5
+         fedora5
+         fedora6
+         fedora7
+         fedora8
+         fedora9
+         fedora10
+         fedora11
+         ubuntuhardy
+         ubuntuintrepid
+         ubuntujaunty
+         sles10
+         debianEtch
+         debianLenny
+         generic24
+         generic26
+
+windows (Microsoft Windows 9x or later)
+         winxp
+         winxp64
+         win2k
+         win2k3
+         win2k8
+         vista
+
+unix (Traditional UNIX BSD or SysV derivatives)
+         freebsd6
+         freebsd7
+         openbsd4
+
+solaris (Solaris 9 or later)
+         solaris9
+         solaris10
+         opensolaris
+
+other (Not in one of groups above)
+         msdos
+         netware4
+         netware5
+         netware6
+         generic
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+For Windows 7, use \fBvista\fR.
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRInstalling Solaris onto a Local Disk from an ISO
+.sp
+.LP
+The following command installs a paravirtualized Solaris guest from an ISO file.
+
+.sp
+.in +2
+.nf
+# \fBvirt-install --name solaris2 --ram 1024 --nographics \e
+  --file /dev/md/dsk/solaris2-disk \e
+  --os-type=solaris os-variant=solaris10 \e
+  --location /export/isos/nv75-dvd.iso\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRInstalling Microsoft Windows
+.sp
+.LP
+The following command installs a Microsoft Windows guest using a local file as a root disk.
+
+.sp
+.in +2
+.nf
+# \fBvirt-install --hvm --name windows1 --ram 1024 \e
+  --cdrom //en_winxp_pro_with_sp2.iso \e
+  --file /guests/windows1-disk --file-size 10 \e
+  --os-type=windows os-variant=winxp \e
+  --vnc\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 3 \fRInstalling Paravirtualized Solaris Guest from an NFS Server
+.sp
+.LP
+The following command installs a Solaris paravirtualized xVM guest, 500 MB of RAM, 6 GB of disk, from an NFS server, in text-only mode:
+
+.sp
+.in +2
+.nf
+# \fBvirt-install \e
+    --paravirt \e
+    --name demo \e
+    --ram 500 \e
+    --file /export/guests/demo/images/demo.img \e
+    --file-size 6 \e
+    --nographics \e
+    --mac=00:16:3e:2f:8a:1a \e
+    --os-type=solaris os-variant=opensolaris \e
+    --location nfs:netinstall:/export/s10u6/combined.s10x_u6wos/latest \e
+    --autocf=nfs:netinstall:/export/guests/demo/autocf\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 4 \fRInstalling xVM Guest Using ZFS \fBzvol\fR
+.sp
+.LP
+The following command installs an xVM guest, using a ZFS \fBzvol\fR, booting from the host CD-ROM, using the VNC server/viewer:
+
+.sp
+.in +2
+.nf
+# \fBvirt-install \e
+       --hvm --name demo \e
+       --ram 500 \e
+       --file /dev/zvol/dsk/guests/root \e
+       --vnc \e
+       --hvm \e
+       --os-type=solaris os-variant=opensolaris \e
+       --autocf=/export/guests/demo/images/autocf.img \e
+       --cdrom /dev/dsk/c2t0d0s2\fR
+
+\fB\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 5 \fRInstalling Paravirtualized Guest over HTTP
+.sp
+.LP
+The following command installs a paravirtualized Fedora guest domain over HTTP using the text installer:
+
+.sp
+.in +2
+.nf
+# \fBvirt-install -n demo -x 'console=hvc0' --paravirt \e
+-f /dev/zvol/dsk/guests/root \e
+-l http://mirror.cc.vt.edu/pub/fedora/linux/releases/8/Fedora/x86_64/os/ \e
+--os-type=linux os-variant=fedora8 \e
+-r 512 --nographics\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 6 \fRInstalling Red Hat Enterprise Linux Guest over NFS
+.sp
+.LP
+The following sequence of commands installs a Red Hat Enterprise Linux guest over NFS using the text installer:
+
+.sp
+.in +2
+.nf
+# \fBmount -F hsfs /rhel.iso /mnt\fR
+# \fBshare -o ro /mnt\fR
+# \fBvirt-install -n pv-rhel -r 1024 -l nfs:mydom0:/mnt \e
+ --os-type=linux os-variant=rhel4 \e
+ -f /dev/zvol/dsk/pv-rhel.zvol -p --nographics\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 7 \fRInstalling with Kickstart Automation
+.sp
+.LP
+The following command installs a RedHat guest using the media in the \fBdom0\fR CD-ROM, utilizing \fBkickstart\fR to automate the installation process.
+
+.sp
+.in +2
+.nf
+# \fBvirt-install \e
+        --name rhat \e
+        --ram 500 \e
+        --file /dev/zvol/dsk/rhat.zvol \e
+        --paravirt \e
+        --location /dev/dsk/c2t0d0s2 \e
+        --os-type=linux os-variant=rhel5 \e
+        --extra-args "ks=/export/install/rhat/ks.cfg"\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 8 \fRInstalling an HVM Solaris Domain Using Network Boot
+.sp
+.LP
+The following commands install HVM Solaris domains using network boot (PXE).
+
+.sp
+.in +2
+.nf
+# \fBvirt-install -n pxe-domu -r 1024 --hvm --mac 00:16:3e:2f:8a:1a \e
+--os-type=solaris --os-variant=opensolaris \e
+-f /dev/zvol/dsk/guests/root \e
+--vnc --pxe --vcpus=4\fR
+
+# \fBvirt-install -n domu-221 -r 1024 --hvm \e
+--mac `~johnlev/bin/maca domu-221` --os-type=solaris  \e
+--os-variant=opensolaris -f /iscsi/nevada-hvm --vnc --pxe --vcpus=4\fR
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 9 \fRInstalling with OpenSolaris AI
+.sp
+.LP
+The following command installs an OpenSolaris guest using the \fBx86_install\fR AI install service from a specified install media.
+
+.sp
+.in +2
+.nf
+# \fBvirt-install --name osol \e
+--location http://10.0.0.1:5555/space/images/osol_111b \e
+--ram 1024 \e
+--file /rpool/guests/osol.raw \e
+--os-variant=opensolaris \e
+--autocf install_service=myservice\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The following command installs an OpenSolaris guest, under conditions in which the guest is able to self-discover its install service:
+
+.sp
+.in +2
+.nf
+# \fBvirt-install --name osol \e
+--location http://10.0.0.1:5555/space/images/osol_111b \e
+--ram 1024 \e
+--file /rpool/guests/osol.raw \e
+--os-variant=opensolaris \e
+--autocf ""\fR
+.fi
+.in -2
+.sp
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWxvmu
+_
+Interface StabilityVolatile
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBvirsh\fR(1M), \fBvirt-clone\fR(1M), \fBxend\fR(1M), \fBxentop\fR(1M), \fBxenstored\fR(1M), \fBxm\fR(1M), \fBsysidcfg\fR(4), \fBattributes\fR(5), \fBxVM\fR(5)

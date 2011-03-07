@@ -1,0 +1,455 @@
+'\" te
+.\" Copyright 1989 AT&T
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nispasswd 1 "2 Dec 2005" "SunOS 5.11" "User Commands"
+.SH NAME
+nispasswd \- change NIS+ password information
+.SH SYNOPSIS
+.LP
+.nf
+\fBnispasswd\fR [\fB-ghs\fR] [\fB-D\fR \fIdomainname\fR] [\fIusername\fR]
+.fi
+
+.LP
+.nf
+\fBnispasswd\fR \fB-a\fR
+.fi
+
+.LP
+.nf
+\fBnispasswd\fR [\fB-D\fR \fIdomainname\fR] [\fB-d\fR [\fIusername\fR]]
+.fi
+
+.LP
+.nf
+\fBnispasswd\fR [\fB-l\fR] [\fB-f\fR] [\fB-n\fR \fImin\fR] [\fB-x\fR \fImax\fR] [\fB-w\fR \fIwarn\fR] 
+     [\fB-D\fR \fIdomainname\fR] \fIusername\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBnispasswd\fR utility changes a password,  gecos (finger) field (\fB-g\fR option),  home directory (\fB-h\fR option),  or login shell (\fB-s\fR option) associated with the \fIusername\fR (invoker by default) in the NIS+ passwd table.
+.sp
+.LP
+Additionally, the command can be used to view or modify aging information associated with the user specified  if the invoker has the right NIS+ privileges.
+.sp
+.LP
+\fBnispasswd\fR uses secure RPC to communicate with the NIS+ server,  and therefore, never sends unencrypted passwords over  the communication medium.
+.sp
+.LP
+\fBnispasswd\fR does not read or modify the local password information stored in the \fB/etc/passwd\fR and  \fB/etc/shadow\fR files.
+.sp
+.LP
+When used to change a password, \fBnispasswd\fR prompts non-privileged users for their old password.  It then prompts for the new password twice to forestall typing mistakes. When the old password is entered, \fBnispasswd\fR checks to see if it has "aged" sufficiently. If "aging" is insufficient, \fBnispasswd\fR terminates; see \fBgetspnam\fR(3C).
+.sp
+.LP
+The old password is used to decrypt the username's secret key. If the password does not decrypt the secret key,  \fBnispasswd\fR prompts for the old secure-RPC password.  It uses this password to decrypt the secret key. If this fails, it gives the user one more chance. The old password is also used to ensure that the new password differs from the old by at least three characters. Assuming aging is sufficient, a check is made to ensure that  the new password meets construction requirements described below. When the new password is entered a second time,  the two copies of the new password are compared.  If the two copies are not identical, the cycle of prompting for  the new password is repeated twice. The new password is used to  re-encrypt the user's secret key. Hence, it also becomes their secure-RPC password. Therefore, the secure-RPC password is no longer a different password from the user's password.
+.sp
+.LP
+Passwords must be constructed to meet the following requirements:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Each password must have at least six characters.  Only the first eight characters are significant.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Each password must contain at least two alphabetic characters and at least one numeric or special character. In this case, "alphabetic" refers to all upper or lower case letters.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Each password must differ from the  user's login  \fIusername\fR and any  reverse or circular shift of that login \fIusername\fR. For comparison purposes, an upper case letter  and its corresponding lower case letter are equivalent.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+New passwords must differ from the  old by at least three characters. For comparison purposes, an upper  case letter and its corresponding lower case letter are equivalent.
+.RE
+.sp
+.LP
+Network administrators, who own the NIS+ password table, may change any password attributes  if they establish their credentials (see \fBkeylogin\fR(1)) before invoking  \fBnispasswd\fR. Hence, \fBnispasswd\fR does not prompt these privileged-users  for the old password and they are not forced to comply with password aging and password construction requirements.
+.sp
+.LP
+Any user may use the \fB-d\fR option to display password attributes for his or her own login name. The format of the display will be:
+.sp
+.in +2
+.nf
+\fIusername\fR \fIstatus\fR \fImm/dd/yy\fR \fImin\fR \fImax\fR \fIwarn\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+or, if password aging information is not present,
+.sp
+.in +2
+.nf
+\fIusername\fR \fIstatus\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+where
+.sp
+.ne 2
+.mk
+.na
+\fB\fIusername\fR\fR
+.ad
+.RS 12n
+.rt  
+The login \fBID\fR of the user.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIstatus\fR\fR
+.ad
+.RS 12n
+.rt  
+The password status of \fIusername\fR: "PS" stands for password exists or locked, "LK" stands for locked, and "NP" stands for no password.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fImm/dd/yy\fR\fR
+.ad
+.RS 12n
+.rt  
+The date password was last changed for \fIusername\fR. (Note that all password aging dates are determined using Greenwich Mean Time (Universal Time) and, therefore, may differ by as much as a day in other time zones.)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fImin\fR\fR
+.ad
+.RS 12n
+.rt  
+The minimum number of days required between password changes for \fIusername\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fImax\fR\fR
+.ad
+.RS 12n
+.rt  
+The maximum number of days the password is valid for \fIusername\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIwarn\fR\fR
+.ad
+.RS 12n
+.rt  
+The number of days relative to \fImax\fR before the password expires that the \fIusername\fR will be warned.
+.RE
+
+.sp
+.LP
+The use of \fBnispasswd\fR is strongly discouraged. It is a wrapper around the \fBpasswd\fR(1) command.
+.sp
+.LP
+Using \fBpasswd\fR(1) with the \fB-r\fR \fBnisplus\fR option will achieve the same result and will be consistent across all the different name services available. This is the recommended way to change the password in NIS+.
+.sp
+.LP
+The login program, file access display programs (for example, \fBls\fR \fB-l\fR), and network programs that require user passwords, for example, \fBrlogin\fR(1), \fBftp\fR(1), and so on, use the standard  \fBgetpwnam\fR(3C) and \fBgetspnam\fR(3C) interfaces to get password information. These programs will get the NIS+ password information, which is modified by \fBnispasswd\fR, only if the  \fBpasswd:\fR entry in the  \fB/etc/nsswitch.conf\fR file includes \fBnisplus\fR. See \fBnsswitch.conf\fR(4) for more details.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fR
+.ad
+.RS 17n
+.rt  
+Shows the password attributes for all entries. This will show only the entries in the NIS+ passwd table in the local domain that the invoker is authorized to "read".
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR [\fIusername\fR]\fR
+.ad
+.RS 17n
+.rt  
+Displays password attributes for the caller or the user specified if the invoker has the right privileges.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-D\fR \fIdomainname\fR\fR
+.ad
+.RS 17n
+.rt  
+Consults the \fBpasswd.org_dir\fR table in \fBdomainname\fR. If this option is not specified, the default \fBdomainname\fR returned by \fBnis_local_directory()\fR will be used. This \fBdomainname\fR is the same as that returned by  \fBdomainname\fR(1M).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR\fR
+.ad
+.RS 17n
+.rt  
+Forces the user to change password at the next login  by expiring the password for \fIusername\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-g\fR\fR
+.ad
+.RS 17n
+.rt  
+Changes the gecos (finger) information.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR\fR
+.ad
+.RS 17n
+.rt  
+Changes the home directory.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR\fR
+.ad
+.RS 17n
+.rt  
+Locks the password entry for \fIusername\fR. Subsequently,  \fBlogin\fR(1) would disallow logins with this NIS+ password entry.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR \fImin\fR\fR
+.ad
+.RS 17n
+.rt  
+Sets minimum field for \fIusername\fR. The \fImin\fR field contains the minimum number of days  between password changes for \fIusername\fR.  If \fImin\fR is greater than \fImax\fR, the user may not change the password. Always use this option with the \fB-x\fR option, unless \fImax\fR is set  to \fB-1\fR (aging turned off).  In that case, \fImin\fR need not be set.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR\fR
+.ad
+.RS 17n
+.rt  
+Changes the login shell. By default, only the NIS+ administrator can change the login shell. The user will be prompted for the new login shell.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-w\fR \fIwarn\fR\fR
+.ad
+.RS 17n
+.rt  
+Sets \fIwarn\fR field for \fIusername\fR. The \fIwarn\fR field contains the number of days before the password expires that the user will be warned whenever he or she attempts to login.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-x\fR \fImax\fR\fR
+.ad
+.RS 17n
+.rt  
+Sets maximum field for \fIusername\fR. The \fImax\fR field contains the number of days that  the password is valid for \fIusername\fR. The aging for \fIusername\fR will be turned off immediately  if \fImax\fR is set to \fB-1\fR.  If it is set to \fB0\fR, then the user is forced to change the password  at the next login session and aging is turned off.
+.RE
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 6n
+.rt  
+Success.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 6n
+.rt  
+Permission denied.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB2\fR\fR
+.ad
+.RS 6n
+.rt  
+Invalid combination of options.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB3\fR\fR
+.ad
+.RS 6n
+.rt  
+Unexpected failure. NIS+ passwd table unchanged.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB4\fR\fR
+.ad
+.RS 6n
+.rt  
+NIS+ passwd table missing.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB5\fR\fR
+.ad
+.RS 6n
+.rt  
+NIS+ is busy. Try again later.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB6\fR\fR
+.ad
+.RS 6n
+.rt  
+Invalid argument to option.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB7\fR\fR
+.ad
+.RS 6n
+.rt  
+Aging is disabled.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB8\fR\fR
+.ad
+.RS 6n
+.rt  
+No memory.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB9\fR\fR
+.ad
+.RS 6n
+.rt  
+System error.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB10\fR\fR
+.ad
+.RS 6n
+.rt  
+Account expired.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBkeylogin\fR(1), \fBlogin\fR(1), \fBNIS+\fR(1), \fBnistbladm\fR(1), \fBpasswd\fR(1), \fBrlogin\fR(1), \fBdomainname\fR(1M), \fBnisserver\fR(1M), \fBgetpwnam\fR(3C), \fBgetspnam\fR(3C), \fBnis_local_directory\fR(3NSL), \fBnsswitch.conf\fR(4), \fBpasswd\fR(4), \fBshadow\fR(4), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

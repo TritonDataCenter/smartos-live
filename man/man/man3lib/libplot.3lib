@@ -1,0 +1,199 @@
+'\" te
+.\" Copyright (c) 2003, Sun Microsystems, Inc.  All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH libplot 3LIB "13 Jun 2003" "SunOS 5.11" "Interface Libraries"
+.SH NAME
+libplot, lib300, lib300s, lib4014, lib450, libvt0 \- graphics interface libraries
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lplot\fR [ \fIlibrary\fR... ]
+#include <\fBplot.h\fR>
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Functions in this library generate graphics output.
+.SH INTERFACES
+.sp
+.LP
+The shared object \fBlibplot.so.1\fR provides the public interfaces defined below. See \fBIntro\fR(3) for additional information on shared object interfaces.
+.sp
+
+.sp
+.TS
+tab();
+lw(2.75i) lw(2.75i) 
+lw(2.75i) lw(2.75i) 
+.
+\fBarc\fR\fBbox\fR
+\fBcircle\fR\fBclosepl\fR
+\fBclosevt\fR\fBcont\fR
+\fBerase\fR\fBlabel\fR
+\fBline\fR\fBlinemod\fR
+\fBmove\fR\fBopenpl\fR
+\fBopenvt\fR\fBpoint\fR
+\fBspace\fR
+.TE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/libplot.so.1\fR\fR
+.ad
+.RS 28n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/libplot.so.1\fR\fR
+.ad
+.RS 28n
+.rt  
+64-bit shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/lib300.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/lib300.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+64-bit shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/lib300s.so.1\fR\fR
+.ad
+.RS 28n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/lib300s.so.1\fR\fR
+.ad
+.RS 28n
+.rt  
+64-bit shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/lib4014.so.1\fR\fR
+.ad
+.RS 28n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/lib4014.so.1\fR\fR
+.ad
+.RS 28n
+.rt  
+64-bit shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/lib450.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/lib450.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+64-bit shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/libvt0.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/libvt0.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+64-bit shared object
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsl (32-bit)
+_
+SUNWcslx (64-bit)
+_
+MT-LevelUnsafe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBpvs\fR(1), \fBIntro\fR(3), \fBattributes\fR(5) 

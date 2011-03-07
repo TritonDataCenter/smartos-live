@@ -1,0 +1,62 @@
+'\" te
+.\"  Copyright 1989 AT&T
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH getfrm 1F "5 Jul 1990" "SunOS 5.11" "FMLI Commands"
+.SH NAME
+getfrm \- returns the current frameID number
+.SH SYNOPSIS
+.LP
+.nf
+\fBgetfrm\fR 
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBgetfrm\fR returns the current frameID number. The frameID number is a number assigned to the frame by  \fBFMLI\fR and displayed flush left in the frame's title bar. If a frame is closed its frameID number may be reused when a new frame is opened. \fBgetfrm\fR takes no arguments.
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRA sample of the \fBgetfrm\fR command.
+.sp
+.LP
+If a menu whose frameID is \fB3\fR defines an item to have this \fBaction\fR descriptor:
+
+.sp
+.in +2
+.nf
+\fBaction=open text stdtext `getfrm`\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+the text frame defined in the definition file \fBstdtext\fR would be passed the  argument \fB3\fR when it is opened.
+
+.SH NOTES
+.sp
+.LP
+It is not a good idea to use \fBgetfrm\fR in a backquoted expression coded on a line by itself. Stand-alone backquoted expressions are evaluated before any descriptors are parsed, thus the frame is not yet fully current, and may not have been assigned a frameID number.   
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBattributes\fR(5)

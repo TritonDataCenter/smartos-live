@@ -1,0 +1,193 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_GraphicsDrawRectangle 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_GraphicsDrawRectangle, mlib_GraphicsDrawRectangle_8, mlib_GraphicsDrawRectangle_32, mlib_GraphicsDrawRectangle_X_8, mlib_GraphicsDrawRectangle_X_32, mlib_GraphicsDrawRectangle_B_8, mlib_GraphicsDrawRectangle_B_32 \- draw rectangle
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_GraphicsDrawRectangle_8\fR(\fBmlib_image *\fR\fIbuffer\fR, \fBmlib_s16\fR \fIx\fR,
+     \fBmlib_s16\fR \fIy\fR, \fBmlib_s32\fR \fIw\fR, \fBmlib_s32\fR \fIh\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawRectangle_32\fR(\fBmlib_image *\fR\fIbuffer\fR, \fBmlib_s16\fR \fIx\fR,
+     \fBmlib_s16\fR \fIy\fR, \fBmlib_s32\fR \fIw\fR, \fBmlib_s32\fR \fIh\fR, \fBmlib_s32\fR \fIc\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawRectangle_X_8\fR(\fBmlib_image *\fR\fIbuffer\fR, \fBmlib_s16\fR \fIx\fR,
+     \fBmlib_s16\fR \fIy\fR, \fBmlib_s32\fR \fIw\fR, \fBmlib_s32\fR \fIh\fR, \fBmlib_s32\fR \fIc\fR, \fBmlib_s32\fR \fIc2\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawRectangle_X_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_s16\fR \fIx\fR, \fBmlib_s16\fR \fIy\fR, \fBmlib_s32\fR \fIw\fR, \fBmlib_s32\fR \fIh\fR, \fBmlib_s32\fR \fIc\fR, 
+     \fBmlib_s32\fR \fIc2\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawRectangle_B_8\fR(\fBmlib_image *\fR\fIbuffer\fR, \fBmlib_s16\fR \fIx\fR,
+     \fBmlib_s16\fR \fIy\fR, \fBmlib_s32\fR \fIw\fR, \fBmlib_s32\fR \fIh\fR, \fBmlib_s32\fR \fIc\fR, \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_GraphicsDrawRectangle_B_32\fR(\fBmlib_image *\fR\fIbuffer\fR,
+     \fBmlib_s16\fR \fIx\fR, \fBmlib_s16\fR \fIy\fR, \fBmlib_s32\fR \fIw\fR, \fBmlib_s32\fR \fIh\fR, \fBmlib_s32\fR \fIc\fR, 
+     \fBmlib_s32\fR \fIa\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Each of the \fBmlib_GraphicsDrawRectangle_*()\fR functions draws a rectangle with the upper-left corner at (\fIx\fR, \fIy\fR), width \fIw\fR, and height \fIh\fR.
+.sp
+.LP
+Each of the \fBmlib_GraphicsDrawRectangle_X_*()\fR functions draws a rectangle in Xor mode as follows:
+.sp
+.in +2
+.nf
+    data[x,y] ^= c ^ c2
+.fi
+.in -2
+
+.sp
+.LP
+Each of the \fBmlib_GraphicsDrawRectangle_B_*()\fR functions draws a rectangle with alpha blending as follows:
+.sp
+.in +2
+.nf
+    data[x,y] = (data[x,y] * (255 - a) + c * a) / 255
+.fi
+.in -2
+
+.SH PARAMETERS
+.sp
+.LP
+Each of the functions takes some of the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIbuffer\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to the image into which the function is drawing.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIx\fR\fR
+.ad
+.RS 10n
+.rt  
+X coordinate of the upper-left corner of the rectangle.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIy\fR\fR
+.ad
+.RS 10n
+.rt  
+Y coordinate of the upper-left corner of the rectangle.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIw\fR\fR
+.ad
+.RS 10n
+.rt  
+Width of the rectangle.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIh\fR\fR
+.ad
+.RS 10n
+.rt  
+Height of the rectangle.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIc\fR\fR
+.ad
+.RS 10n
+.rt  
+Color used in the drawing.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIc2\fR\fR
+.ad
+.RS 10n
+.rt  
+Alternation color.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIa\fR\fR
+.ad
+.RS 10n
+.rt  
+Alpha value for blending. \fB0 \(<= a \(<= 255\fR.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+Each of the functions returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_GraphicsFillRectangle\fR(3MLIB), \fBattributes\fR(5)

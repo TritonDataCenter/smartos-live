@@ -1,0 +1,113 @@
+'\" te
+.\" Copyright (C) 2001, Sun Microsystems, Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH rpc.nisd_resolv 1M "12 Dec 2001" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+rpc.nisd_resolv, nisd_resolv \- NIS+ service daemon
+.SH SYNOPSIS
+.LP
+.nf
+\fBrpc.nisd_resolv\fR [\fB-v\fR | \fB-V\fR] [\fB-F\fR [\fB-C\fR \fIfd\fR]] [\fB-t\fR \fIxx\fR] [\fB-p\fR \fIyy\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBrpc.nisd_resolv\fR is an auxiliary process which provides \fBDNS\fR forwarding service for NIS hosts requests to both \fBypserv\fR and \fBrpc.nisd\fR that are running in the NIS compatibility mode. It is generally started by invoking \fBrpc.nisd\fR(1M) with the \fB-B\fR option or \fBypserv\fR(1M) with the \fB-d\fR option. Although it is not recommended, \fBrpc.nisd_resolv\fR can also be started independently with the following options.
+.sp
+.LP
+This command requires that the \fB/etc/resolv.conf\fR file be setup for communication with a DNS nameserver. The \fBnslookup\fR utility can be used to verify communication with a DNS nameserver. See \fBresolv.conf\fR(4) and \fBnslookup\fR(1M).
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-F\fR\fR
+.ad
+.RS 9n
+.rt  
+Run in foreground.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-C\fR \fIfd\fR\fR
+.ad
+.RS 9n
+.rt  
+Use \fIfd\fR for service xprt (from \fBnisd\fR).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.RS 9n
+.rt  
+Verbose. Send output to the syslog daemon.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-V\fR\fR
+.ad
+.RS 9n
+.rt  
+Verbose. Send output to stdout.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fIxx\fR\fR
+.ad
+.RS 9n
+.rt  
+Use transport \fIxx\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR \fIyy\fR\fR
+.ad
+.RS 9n
+.rt  
+Use transient program#  \fIyy\fR.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBnslookup\fR(1M), \fBrpc.nisd\fR(1M), \fBresolv.conf\fR(4), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris Operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

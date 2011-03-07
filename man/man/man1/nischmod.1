@@ -1,0 +1,355 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nischmod 1 "2 Dec 2005" "SunOS 5.11" "User Commands"
+.SH NAME
+nischmod \- change access rights on a NIS+ object
+.SH SYNOPSIS
+.LP
+.nf
+\fBnischmod\fR [\fB-AfLP\fR] \fImode\fR \fIname\fR...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBnischmod\fR changes the access rights (mode) of the \fBNIS+\fR objects or entries specified by  \fIname\fR to \fImode\fR. Entries are specified using indexed names (see \fBnismatch\fR(1)). Only principals with modify access to an object may change its mode.
+.sp
+.LP
+\fImode\fR has the following form:
+.sp
+.LP
+\fIrights\fR [, \fIrights\fR\|]\fI\|.\|.\|.\fR
+.sp
+.LP
+\fIrights\fR has the form:
+.sp
+.in +2
+.nf
+[ \fBwho\fR ] \fIop\fR \fIpermission\fR [ \fIop\fR \fIpermission\fR ]\|.\|.\|.
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+\fBwho\fR is a combination of:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBn\fR\fR
+.ad
+.RS 5n
+.rt  
+Nobody's permissions.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBo\fR\fR
+.ad
+.RS 5n
+.rt  
+Owner's permissions.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBg\fR\fR
+.ad
+.RS 5n
+.rt  
+Group's permissions.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBw\fR\fR
+.ad
+.RS 5n
+.rt  
+World's permissions.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBa\fR\fR
+.ad
+.RS 5n
+.rt  
+All, or  \fBowg\fR.
+.sp
+If  \fBwho\fR is omitted, the default is  \fBa\fR.
+.RE
+
+.sp
+.LP
+\fIop\fR is one of:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB+\fR\fR
+.ad
+.RS 8n
+.rt  
+To grant the  \fIpermission\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB\(mi\fR\fR
+.ad
+.RS 8n
+.rt  
+To revoke the  \fIpermission\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB=\fR\fR
+.ad
+.RS 8n
+.rt  
+To set the permissions explicitly.
+.RE
+
+.sp
+.LP
+\fIpermission\fR is any combination of:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBr\fR\fR
+.ad
+.RS 5n
+.rt  
+Read.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBm\fR\fR
+.ad
+.RS 5n
+.rt  
+Modify.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBc\fR\fR
+.ad
+.RS 5n
+.rt  
+Create.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBd\fR\fR
+.ad
+.RS 5n
+.rt  
+Destroy.
+.RE
+
+.sp
+.LP
+Unlike the system \fBchmod\fR(1) command, this command does not accept an octal notation.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-A\fR\fR
+.ad
+.RS 6n
+.rt  
+Modify all entries in all tables in the concatenation path that match the search criteria specified in \fIname\fR. This option implies the \fB-P\fR switch.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR\fR
+.ad
+.RS 6n
+.rt  
+Force the operation and fail silently if it does not succeed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-L\fR\fR
+.ad
+.RS 6n
+.rt  
+Follow links and change the permission of the linked object or entries rather than the permission of the link itself.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-P\fR\fR
+.ad
+.RS 6n
+.rt  
+Follow the concatenation path within a named table. This option is only applicable when either \fIname\fR is an indexed name or the \fB-L\fR switch is also specified and the named object is a link pointing to an entry.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRUsing the \fBnischmod\fR Command
+.sp
+.LP
+This example gives everyone read access to an object. (that is, access for owner, group, and all).
+
+.sp
+.in +2
+.nf
+example% nischmod a+r object
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+This example denies create and modify privileges to  \fBgroup\fR and unauthenticated clients (\fBnobody\fR).
+
+.sp
+.in +2
+.nf
+example% nischmod gn\(micm object
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+In this example, a complex set of permissions are set for an object.
+
+.sp
+.in +2
+.nf
+example% nischmod o=rmcd,g=rm,w=rc,n=r object
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+This example sets the permissions of an entry in the password table so that the group owner can modify them.
+
+.sp
+.in +2
+.nf
+example% nischmod g+m '[uid=55],passwd.org_dir'
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+The next example changes the permissions of a linked object.
+
+.sp
+.in +2
+.nf
+example% nischmod -L w+mr linkname
+.fi
+.in -2
+.sp
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_PATH\fR \fR
+.ad
+.RS 13n
+.rt  
+If this variable is set, and the \fBNIS+\fR name is not fully qualified, each directory specified will be searched until the object is found (see  \fBnisdefaults\fR(1)).
+.RE
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR\fR
+.ad
+.RS 5n
+.rt  
+Successful operation.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB1\fR\fR
+.ad
+.RS 5n
+.rt  
+Operation failed.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBchmod\fR(1), \fBNIS+\fR(1), \fBnischgrp\fR(1), \fBnischown\fR(1), \fBnisdefaults\fR(1), \fBnismatch\fR(1), \fBnis_objects\fR(3NSL), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

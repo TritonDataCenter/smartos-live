@@ -1,0 +1,95 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nislog 1M "12 Dec 2001" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+nislog \- display the contents of the NIS+ transaction log
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/sbin/nislog\fR [\fB-h\fR \fInum\fR | \fB-t\fR \fInum\fR] [\fB-v\fR] [\fIdirectory\fR]...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBnislog\fR displays the contents of the NIS+ server transaction log on the standard output. This command can be used to track changes in the namespace. The \fB/var/nis/trans.log\fR file contains the transaction log maintained by the NIS+ server. When updates occur, they are logged to this file and then propagated to replicas as log transactions. When the log is checkpointed, updates that have been propagated to the replicas are removed.
+.sp
+.LP
+The \fBnislog\fR command can only be run on an NIS+ server by superuser. It displays the log entries for that server only.
+.sp
+.LP
+If \fIdirectory\fR is not specified, the entire log is searched. Otherwise, only those logs entries that correspond to the specified directories are displayed.
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR \fInum\fR\fR
+.ad
+.RS 10n
+.rt  
+Display \fInum\fR transactions from the ``head'' of the log. If the numeric parameter is \fB0\fR, only the log header is displayed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR \fInum\fR\fR
+.ad
+.RS 10n
+.rt  
+Display \fInum\fR transactions from the ``tail'' of the log. If the numeric parameter is \fB0\fR, only the log header is displayed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.RS 10n
+.rt  
+Verbose mode.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/var/nis/trans.log\fR\fR
+.ad
+.RS 22n
+.rt  
+transaction log
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBNIS+\fR(1), \fBrpc.nisd\fR(1M), \fBnisfiles\fR(4), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

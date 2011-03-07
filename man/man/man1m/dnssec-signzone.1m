@@ -1,0 +1,332 @@
+'\" te
+.\" Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")  Copyright (C) 2000, 2001, 2003  Internet Software Consortium.   Permission to use, copy, modify, and distribute this software for any  purpose with or without fee is hereby granted, provided that the
+.\" above  copyright notice and this permission notice appear in all copies.   THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH  REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY  AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+.\"  INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM  LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE  OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR  PERFORMANCE OF THIS SOFTWARE.
+.\" Portions Copyright (c) 2004, Sun Microsystems, Inc. All Rights Reserved.
+.TH dnssec-signzone 1M "24 Dec 2008" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+dnssec-signzone \- DNSSEC zone signing tool
+.SH SYNOPSIS
+.LP
+.nf
+\fBdnssec-signzone\fR [\fB-aghptz\fR] [\fB-c\fR \fIclass\fR] [\fB-d\fR \fIdirectory\fR] 
+     [\fB-e\fR \fIend-time\fR] [\fB-f\fR \fIoutput-file\fR] [\fB-i\fR \fIinterval\fR] [\fB-k\fR \fIkey\fR]
+     [\fB-l\fR \fIdomain\fR] [\fB-n\fR \fInthreads\fR] [\fB-o\fR \fIorigin\fR] [\fB-r\fR \fIrandomdev\fR]
+     [\fB-s\fR \fIstart-time\fR] [\fB-v\fR \fIlevel\fR] \fIzonefile\fR [\fIkey\fR]...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBdnssec-signzone\fR utility signs a zone. It generates \fBNSEC\fR and \fBRRSIG\fR records and produces a signed version of the zone. The security status of delegations from the signed zone (that is, whether the child zones are secure or not) is determined by the presence or absence of a \fBkeyset\fR file for each child zone.
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fR
+.ad
+.RS 18n
+.rt  
+Verify all generated signatures.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-c\fR \fIclass\fR\fR
+.ad
+.RS 18n
+.rt  
+Specify the \fBDNS\fR class of the zone.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR \fIdirectory\fR\fR
+.ad
+.RS 18n
+.rt  
+Look for \fBkeyset\fR files in \fIdirectory\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-e\fR \fIend-time\fR\fR
+.ad
+.RS 18n
+.rt  
+Specify the date and time when the generated \fBRRSIG\fR records expire. As with \fBstart-time\fR, an absolute time is indicated in \fBYYYYMMDDHHMMSS\fR notation. A time relative to the start time is indicated with +\fIN\fR, which is \fIN\fR seconds from the start time. A time relative to the current time is indicated with \fBnow\fR+\fIN\fR. If no \fIend-time\fR is specified, 30 days from the start time is used as a default.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-f\fR \fIoutput-file\fR\fR
+.ad
+.RS 18n
+.rt  
+The name of the output file containing the signed zone. The default is to append \fB\&.signed\fR to the input file name.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-g\fR\fR
+.ad
+.RS 18n
+.rt  
+Generate DS records for child zones from \fBkeyset\fR files. Existing DS records will be removed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR\fR
+.ad
+.RS 18n
+.rt  
+Prints a short summary of the options and arguments to \fBdnssec-signzone()\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-i\fR \fIinterval\fR\fR
+.ad
+.RS 18n
+.rt  
+Specify the cycle interval as an offset from the current time (in seconds). When a previously signed zone is passed as input, records could be resigned. If a \fBSIG\fR record expires after the cycle interval, it is retained. Otherwise, it is considered to be expiring soon and will be replaced.  The default cycle interval is one quarter of the difference between the signature end and start times. If neither \fIend-time\fR or \fIstart-time\fR are specified, \fBdnssec-signzone\fR generates signatures that are valid for 30 days, with a cycle interval of 7.5 days. Any existing SIG records due to expire in less than 7.5 days would be replaced.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-k\fR \fIkey\fR\fR
+.ad
+.RS 18n
+.rt  
+Treat specified \fIkey\fR as a key-signing key, ignoring any key flags. This option can be specified multiple times.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-k\fR \fIkey\fR\fR
+.ad
+.RS 18n
+.rt  
+Treat specified \fIkey\fR as a key-signing key, ignoring any key flags. This option can be specified multiple times.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l\fR \fIdomain\fR\fR
+.ad
+.RS 18n
+.rt  
+Generate a DLV set in addition to the key (DNSKEY) and DS sets. The domain is appended to the name of the records.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-n\fR \fInthreads\fR\fR
+.ad
+.RS 18n
+.rt  
+Specifies the number of threads to use. By default, one thread is started for each detected CPU.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-o\fR \fIorigin\fR\fR
+.ad
+.RS 18n
+.rt  
+Specify the zone origin. If not specified, the name of the zone file is assumed to be the origin.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-p\fR\fR
+.ad
+.RS 18n
+.rt  
+Use pseudo-random data when signing the zone. This is faster, but less secure, than using real random data. This option may be useful when signing large zones or when the entropy source is limited.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR \fIrandomdev\fR\fR
+.ad
+.RS 18n
+.rt  
+Specify the source of randomness. By default, \fB/dev/random\fR is used. The \fIrandomdev\fR argument specifies the name of a character device or file containing random data to be used instead of the default. The special value \fBkeyboard\fR indicates that keyboard input should be used.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR \fIstart-time\fR\fR
+.ad
+.RS 18n
+.rt  
+Specify the date and time when the generated \fBRRSIG\fR records become valid. This can be either an absolute or relative time. An absolute start time is indicated by a number in \fIYYYYMMDDHHMMSS\fR notation; 20000530144500 denotes 14:45:00 UTC on May 30th, 2000. A relative start time is indicated by +\fIN\fR, which is \fIN\fR seconds from the current time. If no \fIstart-time\fR is specified, the current time minus one hour (to allow for clock skew) is used.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-t\fR\fR
+.ad
+.RS 18n
+.rt  
+Print statistics at completion.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR \fIlevel\fR\fR
+.ad
+.RS 18n
+.rt  
+Set the debugging level.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-z\fR\fR
+.ad
+.RS 18n
+.rt  
+Ignore KSK flag on key when determining what to sign.
+.RE
+
+.SH OPERANDS
+.sp
+.LP
+The following operands are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIzonefile\fR\fR
+.ad
+.RS 12n
+.rt  
+The file containing the zone to be signed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIkey\fR\fR
+.ad
+.RS 12n
+.rt  
+Specify which keys should be used to sign the zone. If no keys are specified, then the zone will be examined for \fBDNSKEY\fR records at the zone apex. If these are found and there are matching private keys in the current directory, these will be used for signing.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRSigning a Zone with a DSA Key
+.sp
+.LP
+The following command signs the \fBexample.com\fR zone with the DSA key generated in the example in the \fBdnssec-keygen\fR(1M) manual page (\fBKexample.com.+003+17247\fR). The zone's keys must be in the master file (\fBdb.example.com\fR). This invocation looks for keyset files in the current directory, so that DS records can be generated from them (\fB-g\fR).
+
+.sp
+.in +2
+.nf
+% dnssec-signzone -g -o example.com db.example.com \e
+Kexample.com.+003+17247
+db.example.com.signed
+%
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+In the above example, \fBdnssec-signzone\fR creates the file \fBdb.example.com.signed\fR. This file should be referenced in a zone statement in a \fBnamed.conf\fR file.
+
+.LP
+\fBExample 2 \fRRe-signing a Previously Signed Zone
+.sp
+.LP
+The following commands re-sign a previously signed zone with default parameters. The private keys are assumed to be in the current directory.
+
+.sp
+.in +2
+.nf
+% cp db.example.com.signed db.example.com
+% dnssec-signzone -o example.com db.example.com
+db.example.com.signed
+%
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+In the above example, \fBdnssec-signzone\fR creates the file \fBdb.example.com.signed\fR. This file should be referenced in a zone statement in a \fBnamed.conf\fR file.
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWbind
+_
+Interface StabilityVolatile
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBdnssec-keygen\fR(1M), \fBattributes\fR(5)
+.sp
+.LP
+\fIRFC 2535\fR
+.sp
+.LP
+\fIBIND 9 Administrator Reference Manual\fR

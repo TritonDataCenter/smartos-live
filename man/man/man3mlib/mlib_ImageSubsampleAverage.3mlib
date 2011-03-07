@@ -1,0 +1,145 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_ImageSubsampleAverage 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_ImageSubsampleAverage, mlib_ImageSubsampleAverage_Fp \- subsamples an image with a box filter
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_ImageSubsampleAverage\fR(\fBmlib_image *\fR\fIdst\fR,
+     \fBconst mlib_image *\fR\fIsrc\fR, \fBmlib_d64\fR \fIxscale\fR, \fBmlib_d64\fR \fIyscale\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_ImageSubsampleAverage_Fp\fR(\fBmlib_image *\fR\fIdst\fR,
+     \fBconst mlib_image *\fR\fIsrc\fR, \fBmlib_d64\fR \fIxscale\fR, \fBmlib_d64\fR \fIyscale\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Each function scales an image down with an adaptive box filter.
+.sp
+.LP
+The subsampling algorithm performs the scaling operation by averaging all the pixel values from a block in the source image that correspond to the destination pixel.
+.sp
+.LP
+The width and height of the source block for a destination pixel are computed as:
+.sp
+.in +2
+.nf
+  blockX = (int)ceil(1.0/xscale);
+  blockY = (int)ceil(1.0/yscale);
+.fi
+.in -2
+
+.sp
+.LP
+If we denote a pixel's location in an image by its column number and row number (both counted from 0), the destination pixel at \fB(i, j)\fR is backward mapped to the source block whose upper-left corner pixel is at \fB(xValues[i], yValues[j])\fR, where
+.sp
+.in +2
+.nf
+  xValues[i] = (int)(i/xscale + 0.5);
+  yValues[j] = (int)(j/yscale + 0.5);
+.fi
+.in -2
+
+.sp
+.LP
+The width and height of the filled area in the destination are restricted by
+.sp
+.in +2
+.nf
+  dstW = (int)(srcWidth * xscale);
+  dstH = (int)(srcHeight * yscale);
+.fi
+.in -2
+
+.sp
+.LP
+where \fBsrcWidth\fR and \fBsrcHeight\fR are width and height of the source image.
+.sp
+.LP
+Since the block size in source is defined from scale factors with roundup, some blocks (the rightmost and the bottommost blocks) may overrun the border of the source image by 1 pixel. In this case, such blocks are moved by 1 pixel to left/up direction in order to be inside of the source image.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdst\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to destination image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc\fR\fR
+.ad
+.RS 10n
+.rt  
+Pointer to source image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIxscale\fR\fR
+.ad
+.RS 10n
+.rt  
+X scale factor. \fB0.0 < xscale \(<= 1.0\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIyscale\fR\fR
+.ad
+.RS 10n
+.rt  
+Y scale factor. \fB0.0 < yscale \(<= 1.0\fR.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_ImageSubsampleBinaryToGray\fR(3MLIB), \fBmlib_ImageFilteredSubsample\fR(3MLIB), \fBmlib_ImageZoomTranslate\fR(3MLIB), \fBmlib_ImageZoomTranslate_Fp\fR(3MLIB), \fBattributes\fR(5)

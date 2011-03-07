@@ -1,0 +1,167 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_SignalLPC2Cepstral_S16 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_SignalLPC2Cepstral_S16 \- convert linear prediction coefficients to cepstral coefficients
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_SignalLPC2Cepstral_S16\fR(\fBmlib_s16 *\fR\fIcepst\fR,
+     \fBmlib_s32\fR \fIcscale\fR, \fBconst mlib_s16 *\fR\fIlpc\fR, \fBmlib_s32\fR \fIlscale\fR,
+     \fBmlib_s16\fR \fIgain\fR, \fBmlib_s32\fR \fIgscale\fR, \fBmlib_s32\fR \fIlength\fR,
+     \fBmlib_s32\fR \fIorder\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_SignalLPC2Cepstral_S16()\fR function converts linear prediction coefficients to cepstral coefficients. The user supplied scaling factor, \fIcscale\fR, will be used and the output will be saturated if necessary.
+.sp
+.LP
+The cepstral coefficients are the coefficients of the Fourier transform representation of the log magnitude spectrum.
+.sp
+.LP
+The LPC cepstral coefficients can be derived recursively from the LPC coefficients as following.
+.sp
+.in +2
+.nf
+c(0) = log(G)
+
+              m-1  k
+c(m) = a(m) + SUM --- * c(k) * a(m-k), 1 \(<= m \(<= M
+              k=1  m
+
+       m-1  k
+c(m) = SUM --- * c(k) * a(m-k), m > M
+       k=1  m
+.fi
+.in -2
+
+.sp
+.LP
+See \fIFundamentals of Speech Recognition\fR by Lawrence Rabiner and Biing-Hwang Juang, Prentice Hall, 1993.
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcepst\fR\fR
+.ad
+.RS 10n
+.rt  
+The cepstral coefficients.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcscale\fR\fR
+.ad
+.RS 10n
+.rt  
+The scaling factor of the cepstral coefficients, where \fBactual_data = output_data * 2**(-scaling_factor)\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIlpc\fR\fR
+.ad
+.RS 10n
+.rt  
+The linear prediction coefficients.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIlscale\fR\fR
+.ad
+.RS 10n
+.rt  
+The scaling factor of the linear prediction coefficients, where \fBactual_data = input_data * 2**(-scaling_factor)\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIgain\fR\fR
+.ad
+.RS 10n
+.rt  
+The gain of the LPC model.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIgscale\fR\fR
+.ad
+.RS 10n
+.rt  
+The scaling factor of the gain of the LPC model, where \fBactual_data = input_data * 2**(-scaling_factor)\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIlength\fR\fR
+.ad
+.RS 10n
+.rt  
+The length of the cepstral coefficients.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIorder\fR\fR
+.ad
+.RS 10n
+.rt  
+The order of the linear prediction filter.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+mlib_SignalLPC2Cepstral_S16(3MLIB), \fBmlib_SignalLPC2Cepstral_S16_Adp\fR(3MLIB), \fBmlib_SignalLPC2Cepstral_F32\fR(3MLIB), \fBattributes\fR(5)

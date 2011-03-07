@@ -1,0 +1,62 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nis_ping 3NSL "10 Nov 2005" "SunOS 5.11" "Networking Services Library Functions"
+.SH NAME
+nis_ping, nis_checkpoint \- NIS+ log administration functions
+.SH SYNOPSIS
+.LP
+.nf
+\fBcc\fR [ \fIflag\fR ... ] \fIfile\fR ... \fB-lnsl\fR [ \fIlibrary\fR ... ]
+#include <rpcsvc/nis.h>
+
+
+
+\fBvoid\fR \fBnis_ping\fR(\fBnis_name\fR \fIdirname\fR, \fBuint32_t\fR \fIutime\fR, \fBnis_object *\fR\fIdirobj\fR);
+.fi
+
+.LP
+.nf
+\fBnis_result *\fR\fBnis_checkpoint\fR(\fBnis_name\fR \fIdirname\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBnis_ping()\fR is called by the master server for a directory when a change has occurred within that directory. The parameter \fBdirname\fR identifies the directory with the change. If the parameter \fIdirobj\fR is \fINULL\fR, this function looks up the directory object for \fBdirname\fR and uses the list of replicas it contains. The parameter \fIutime\fR contains the timestamp of the last change made to the directory. This timestamp is used by the replicas when retrieving updates made to the directory.
+.sp
+.LP
+The effect of calling \fBnis_ping()\fR is to schedule an update on the replica. A short time after a ping is received, typically about two minutes, the replica compares the last update time for its databases to the timestamp sent by the ping. If the ping timestamp is later, the replica establishes a connection with the master  server and request all changes from the log that occurred after the last update that it had recorded in its local log.
+.sp
+.LP
+\fBnis_checkpoint()\fR is used to force the service to checkpoint information that has been entered in the log but has not been checkpointed to disk. When called, this function checkpoints the database for each table in the directory, the database containing the directory and the transaction log. Care should be used in calling this function since directories that have seen a lot of changes may take several minutes to checkpoint. During the checkpointing process, the service will be unavailable for updates for all directories  that are served by this machine as master.
+.sp
+.LP
+\fBnis_checkpoint()\fR returns a pointer to a \fInis_result\fR structure. See \fBnis_tables\fR(3NSL). This structure should be freed with  \fBnis_freeresult()\fR. See \fBnis_names\fR(3NSL). The only items of interest in the returned result are the status value and the statistics.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBnislog\fR(1M), \fBnis_names\fR(3NSL), \fBnis_tables\fR(3NSL), \fBnisfiles\fR(4), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

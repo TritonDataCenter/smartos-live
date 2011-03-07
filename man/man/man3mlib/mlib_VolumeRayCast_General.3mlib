@@ -1,0 +1,165 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.
+.\"  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_VolumeRayCast_General 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_VolumeRayCast_General, mlib_VolumeRayCast_General_Parallel_Nearest_U8_Bit, mlib_VolumeRayCast_General_Parallel_Nearest_U8_U8, mlib_VolumeRayCast_General_Parallel_Nearest_S16_S16, mlib_VolumeRayCast_General_Parallel_Trilinear_U8_U8, mlib_VolumeRayCast_General_Parallel_Trilinear_S16_S16, mlib_VolumeRayCast_General_Divergent_Nearest_U8_Bit, mlib_VolumeRayCast_General_Divergent_Nearest_U8_U8, mlib_VolumeRayCast_General_Divergent_Nearest_S16_S16, mlib_VolumeRayCast_General_Divergent_Trilinear_U8_U8, mlib_VolumeRayCast_General_Divergent_Trilinear_S16_S16 \- cast a ray (or rays) through a 3D data set
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_VolumeRayCast_General_Parallel_Nearest_U8_Bit\fR(
+     \fBmlib_rays *\fR\fIrays\fR, \fBconst mlib_genvolume *\fR\fIvol\fR, \fBvoid *\fR\fIbuffer\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VolumeRayCast_General_Parallel_Nearest_U8_U8\fR(
+     \fBmlib_rays *\fR\fIrays\fR, \fBconst mlib_genvolume *\fR\fIvol\fR, \fBvoid *\fR\fIbuffer\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VolumeRayCast_General_Parallel_Nearest_S16_S16\fR(
+     \fBmlib_rays *\fR\fIrays\fR, \fBconst mlib_genvolume *\fR\fIvol\fR, \fBvoid *\fR\fIbuffer\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VolumeRayCast_General_Parallel_Trilinear_U8_U8\fR(
+     \fBmlib_rays *\fR\fIrays\fR, \fBconst mlib_genvolume *\fR\fIvol\fR, \fBvoid *\fR\fIbuffer\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VolumeRayCast_General_Parallel_Trilinear_S16_S16\fR(
+     \fBmlib_rays *\fR\fIrays\fR, \fBconst mlib_genvolume *\fR\fIvol\fR, \fBvoid *\fR\fIbuffer\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VolumeRayCast_General_Divergent_Nearest_U8_Bit\fR(
+     \fBmlib_rays *\fR\fIrays\fR, \fBconst mlib_genvolume *\fR\fIvol\fR, \fBvoid *\fR\fIbuffer\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VolumeRayCast_General_Divergent_Nearest_U8_U8\fR(
+     \fBmlib_rays *\fR\fIrays\fR, \fBconst mlib_genvolume *\fR\fIvol\fR, \fBvoid *\fR\fIbuffer\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VolumeRayCast_General_Divergent_Nearest_S16_S16\fR(
+     \fBmlib_rays *\fR\fIrays\fR, \fBconst mlib_genvolume *\fR\fIvol\fR, \fBvoid *\fR\fIbuffer\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VolumeRayCast_General_Divergent_Trilinear_U8_U8\fR(
+     \fBmlib_rays *\fR\fIrays\fR, \fBconst mlib_genvolume *\fR\fIvol\fR, \fBvoid *\fR\fIbuffer\fR);
+.fi
+
+.LP
+.nf
+\fBmlib_status\fR \fBmlib_VolumeRayCast_General_Divergent_Trilinear_S16_S16\fR(
+     \fBmlib_rays *\fR\fIrays\fR, \fBconst mlib_genvolume *\fR\fIvol\fR, \fBvoid *\fR\fIbuffer\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Each of these functions casts a ray (or rays) through a three-dimensional (3D) data set, then computes and returns the interpolated samples at each step along the way.
+.sp
+.LP
+In trilinear interpolation, the value at point P is computed from its eight surrounding neighbors based on the equation below.
+.sp
+.in +2
+.nf
+P = (1-a)*(1-b)*(1-c)*P0 +
+    a*(1-b)*(1-c)*Px + (1-a)*b*(1-c)*Py + (1-a)*(1-b)*c*Pz +
+    a*b*(1-c)*Pxy + a*(1-b)*c*Pxz + (1-a)*b*c*Pyz +
+    a*b*c*Pxyz
+.fi
+.in -2
+
+.sp
+.LP
+where a, b, and c are the fractional parts of the coordinates of point P.
+.sp
+.LP
+The trilinear interpolation is represented by the following figure:
+.sp
+Printed copy or docs.sun.com displays a figure that represents the trilinear interpolation.
+.sp
+.LP
+In nearest neighbor operation, the sample value at point P is replaced by the value of the nearest neighbor voxel.
+.SH PARAMETERS
+.sp
+.LP
+Each of the functions takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIrays\fR\fR
+.ad
+.RS 10n
+.rt  
+Casting rays.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIvol\fR\fR
+.ad
+.RS 10n
+.rt  
+Volume data that consists of slices.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIbuffer\fR\fR
+.ad
+.RS 10n
+.rt  
+Working buffer.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+Each of the functions returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_VolumeRayCast_Blocked\fR(3MLIB), \fBattributes\fR(5)

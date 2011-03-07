@@ -1,0 +1,42 @@
+'\" te
+.\"  Copyright 1989 AT&T
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH reinit 1F "5 Jul 1990" "SunOS 5.11" "FMLI Commands"
+.SH NAME
+reinit \- runs an initialization file
+.SH SYNOPSIS
+.LP
+.nf
+\fBreinit\fR \fIfilename\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBreinit\fR command is used to change the values of descriptors defined in the initialization file that was named when \fBfmli\fR was invoked and/or define additional descriptors. FMLI will parse and evaluate the descriptors in \fIfilename\fR, and then continue running the current application. The argument \fIfilename\fR must be the name of a valid FMLI initialization file.
+.sp
+.LP
+The \fBreinit\fR command does not re-display the introductory frame or change the layout of screen labels for function keys.   
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWcsu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBattributes\fR(5)

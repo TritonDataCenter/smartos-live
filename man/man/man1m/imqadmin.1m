@@ -1,0 +1,153 @@
+'\" te
+.\" Copyright (c) 2004, Sun Microsystems, Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH imqadmin 1M "11 Mar 2004" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+imqadmin \- launch the Message Queue administration console
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/bin/imqadmin\fR [\fB-javahome\fR \fIpath\fR]
+.fi
+
+.LP
+.nf
+\fB/usr/bin/imqadmin\fR \fB-h\fR
+.fi
+
+.LP
+.nf
+\fB/usr/bin/imqadmin\fR \fB-v\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBimqadmin\fR launches the graphical user interface application that performs most Message Queue administration tasks. These tasks include managing broker instances (including physical destinations) and administered objects. 
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-h\fR\fR
+.ad
+.RS 18n
+.rt  
+Display usage help. The application is not launched.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-javahome\fR \fIpath\fR\fR
+.ad
+.RS 18n
+.rt  
+Specify a path to an alternate Java 2 compatible runtime.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.RS 18n
+.rt  
+Display version information. 
+.RE
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.LP
+ The following environment variables affect the execution of this command: 
+.sp
+.ne 2
+.mk
+.na
+\fB\fBIMQ_JAVAHOME\fR\fR
+.ad
+.RS 16n
+.rt  
+Specify the Java 2 compatible runtime. When this environment variable is not set it defaults to \fB/usr/j2se\fR. 
+.RE
+
+.SH EXIT STATUS
+.sp
+.LP
+The following exit values are returned:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB0\fR \fR
+.ad
+.RS 6n
+.rt  
+Successful completion. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB>\fB0\fR\fR
+.ad
+.RS 6n
+.rt  
+An error occurred.
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB$HOME/.imq/admin/brokerlist.properties\fR \fR
+.ad
+.sp .6
+.RS 4n
+Contains user settings, a list of broker instances being managed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB$HOME/.imq/admin/objectstorelist.properties\fR\fR
+.ad
+.sp .6
+.RS 4n
+Contains user settings, a list of object stores being managed.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWiqu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBimqbrokerd\fR(1M), \fBimqcmd\fR(1M), \fBimqdbmgr\fR(1M), \fBimqkeytool\fR(1M), \fBimqobjmgr\fR(1M), \fBimqusermgr\fR(1M), \fBattributes\fR(5)
+.sp
+.LP
+\fISun Java System Message Queue Administrator's Guide\fR

@@ -1,0 +1,232 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_VideoColorBlendABGR_Inp 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_VideoColorBlendABGR_Inp, mlib_VideoColorBlendABGR_ResetAlpha_Inp \- in-place image blend
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBvoid\fR \fBmlib_VideoColorBlendABGR_Inp\fR(\fBmlib_u32 *\fR\fIsrc1dst\fR, 
+     \fBconst mlib_u32 *\fR\fIsrc2\fR,\fBmlib_s32\fR \fIsrc1dst_w\fR,
+     \fBmlib_s32\fR \fIsrc1dst_h\fR,\fBmlib_s32\fR \fIsrc2_w\fR,
+     \fBmlib_s32\fR \fIsrc2_h\fR,\fBmlib_s32\fR \fIsrc2_x\fR,
+     \fBmlib_s32\fR \fIsrc2_y\fR,\fBmlib_s32\fR \fIsrc1dst_lb\fR,
+     \fBmlib_s32\fR \fIsrc2_lb\fR,\fBmlib_blend\fR \fIsrc1dst_blend\fR,
+     \fBmlib_blend\fR \fIsrc2_blend\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBmlib_VideoColorBlendABGR_ResetAlpha_Inp\fR(\fBmlib_u32 *\fR\fIsrc1dst\fR,
+     \fBconst mlib_u32 *\fR\fIsrc2\fR, \fBmlib_s32\fR \fIsrc1dst_w\fR,
+     \fBmlib_s32\fR \fIsrc1dst_h\fR, \fBmlib_s32\fR \fIsrc2_w\fR,
+     \fBmlib_s32\fR \fIsrc2_h\fR, \fBmlib_s32\fR \fIsrc2_x\fR,
+     \fBmlib_s32\fR \fIsrc2_y\fR, \fBmlib_s32\fR \fIsrc1dst_lb\fR,
+     \fBmlib_s32\fR \fIsrc2_lb\fR, \fBmlib_blend\fR \fIsrc1dst_blend\fR,
+     \fBmlib_blend\fR \fIsrc2_blend\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The functions use the following equation for blending images:
+.sp
+.in +2
+.nf
+  src1dst = (src1dst * src1dst_blend) + (src2 * src2_blend)
+.fi
+.in -2
+
+.sp
+.LP
+The two multi-banded source images (src1dst and src2) are blended together and the result is stored in src1dst. src1dst_blend specifies the blend function to be applied to the src1dst image and src2_blend specifies the blend function to be applied to the src2 image. src2_x and src2_y specify position of src2 relative to the upper-left corner of src1dst.  src2 is clipped to the boundaries of src1dst, if needed.
+.sp
+.LP
+Possible blend functions are:
+.sp
+.in +2
+.nf
+  MLIB_BLEND_ZERO
+  MLIB_BLEND_ONE
+  MLIB_BLEND_SRC_ALPHA
+  MLIB_BLEND_ONE_MINUS_SRC_ALPHA
+  MLIB_BLEND_DST_ALPHA
+  MLIB_BLEND_ONE_MINUS_DST_ALPHA
+.fi
+.in -2
+
+.sp
+.LP
+MLIB_BLEND_DST_ALPHA is the alpha band of image src1 scaled to the range 0 to 1. MLIB_BLEND_SRC_ALPHA is the alpha band of image src2 scaled to the range 0 to 1. The output pixel bands are clamped to the range 0 to 255.
+.sp
+.LP
+For the \fBmlib_VideoColorBlendABGR_ResetAlpha_Inp()\fR function,  the alpha value of every pixel in destination image is set to 0 after blending is complete.
+.SH PARAMETERS
+.sp
+.LP
+Each of the functions takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc1dst\fR\fR
+.ad
+.RS 17n
+.rt  
+Pointer to 1st input image (also dest. image).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc2\fR\fR
+.ad
+.RS 17n
+.rt  
+Pointer to 2nd input image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc1dst_w\fR\fR
+.ad
+.RS 17n
+.rt  
+src1dst image width in pixels.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc1dst_h\fR\fR
+.ad
+.RS 17n
+.rt  
+src1dst image height in rows.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc2_w\fR\fR
+.ad
+.RS 17n
+.rt  
+src2 image width in pixels.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc2_h\fR\fR
+.ad
+.RS 17n
+.rt  
+src2 image height in rows.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc2_x\fR\fR
+.ad
+.RS 17n
+.rt  
+src2 horizontal displacement (in pixels), relative to the upper-left corner of src1dst.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc2_y\fR\fR
+.ad
+.RS 17n
+.rt  
+src2 vertical displacement (in rows), relative to the upper-left corner of src1dst.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc1dst_lb\fR\fR
+.ad
+.RS 17n
+.rt  
+Linebytes for src1dst image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc2_lb\fR\fR
+.ad
+.RS 17n
+.rt  
+Linebytes for src2 image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc1dst_blend\fR\fR
+.ad
+.RS 17n
+.rt  
+Blend function for src1dst image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc2_blend\fR\fR
+.ad
+.RS 17n
+.rt  
+Blend function for src2 image.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+None.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_VideoColorBlendABGR\fR(3MLIB), \fBattributes\fR(5)

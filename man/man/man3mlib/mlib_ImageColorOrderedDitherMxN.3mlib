@@ -1,0 +1,155 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.  All Rights Reserved 
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH mlib_ImageColorOrderedDitherMxN 3MLIB "2 Mar 2007" "SunOS 5.11" "mediaLib Library Functions"
+.SH NAME
+mlib_ImageColorOrderedDitherMxN \- true-color to indexed-color or grayscale to black-white conversion, using ordered dithering
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmlib\fR [ \fIlibrary\fR... ]
+#include <mlib.h>
+
+\fBmlib_status\fR \fBmlib_ImageColorOrderedDitherMxN\fR(\fBmlib_image *\fR\fIdst\fR,
+     \fBconst mlib_image *\fR\fIsrc\fR, \fBconst mlib_s32 **\fR\fIdmask\fR, \fBmlib_s32\fR \fIm\fR,
+     \fBmlib_s32\fR \fIn\fR, \fBmlib_s32\fR \fIscale\fR, \fBconst void *\fR\fIcolormap\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBmlib_ImageColorOrderedDitherMxN()\fR function converts a 3-channel image to a 1-channel indexed image, or converts a 1-channel grayscale image to a 1-channel \fBMLIB_BIT\fR image, with the method of ordered dithering.
+.sp
+.LP
+The \fIsrc\fR can be an \fBMLIB_BYTE\fR image with 1 or 3 channels. The \fIdst\fR must be a 1-channel \fBMLIB_BIT\fR or \fBMLIB_BYTE\fR image.
+.sp
+.LP
+The \fIcolormap\fR must be created by \fBmlib_ImageColorDitherInit()\fR, and it must have a colorcube included.
+.sp
+.LP
+The dither masks are required to have the following property:
+.sp
+.in +2
+.nf
+0 \(<= dmask[i][j] < 2**scale; scale > 0
+.fi
+.in -2
+
+.SH PARAMETERS
+.sp
+.LP
+The function takes the following arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdst\fR\fR
+.ad
+.RS 12n
+.rt  
+Pointer to destination image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIsrc\fR\fR
+.ad
+.RS 12n
+.rt  
+Pointer to source image.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdmask\fR\fR
+.ad
+.RS 12n
+.rt  
+Pointer to the dither masks, one per channel, in row major order.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIm\fR\fR
+.ad
+.RS 12n
+.rt  
+Mask width. \fBm > 1\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIn\fR\fR
+.ad
+.RS 12n
+.rt  
+Mask height. \fBn > 1\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIscale\fR\fR
+.ad
+.RS 12n
+.rt  
+Scaling factor for dmask to convert the input integer coefficients into floating-point coefficients:
+.sp
+.in +2
+.nf
+floating-point coefficient = integer coefficient * \e
+2**(-scale)
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcolormap\fR\fR
+.ad
+.RS 12n
+.rt  
+Internal data structure for image dithering.
+.RE
+
+.SH RETURN VALUES
+.sp
+.LP
+The function returns \fBMLIB_SUCCESS\fR if successful. Otherwise it returns \fBMLIB_FAILURE\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmlib_ImageColorDitherInit\fR(3MLIB), \fBmlib_ImageColorDitherFree\fR(3MLIB), \fBmlib_ImageColorErrorDiffusion3x3\fR(3MLIB), \fBmlib_ImageColorErrorDiffusionMxN\fR(3MLIB), \fBmlib_ImageColorOrderedDither8x8\fR(3MLIB), \fBattributes\fR(5)

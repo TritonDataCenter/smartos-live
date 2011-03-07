@@ -1,0 +1,139 @@
+'\" te
+.\" Copyright (c) 2007, Sun Microsystems, Inc.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH sccs-cdc 1 "30 Jun 2007" "SunOS 5.11" "User Commands"
+.SH NAME
+sccs-cdc, cdc \- change the delta commentary of an SCCS delta
+.SH SYNOPSIS
+.LP
+.nf
+\fBcdc\fR \fB-r\fR\fIsid\fR [\fB-m\fR\fImr-list\fR] [\fB-y\fR [\fIcomment\fR]] \fIs.filename\fR...
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBcdc\fR annotates the delta commentary for the \fBSCCS\fR delta ID (SID) specified by the \fB-r\fR option in each named \fBs.\fRfile.
+.sp
+.LP
+If the \fBv\fR flag is set in the \fBs.\fRfile, you can also use \fBcdc\fR to update the Modification Request (MR) list.
+.sp
+.LP
+If you checked in the delta, or, if you own the file and directory and have write permission, you can use \fBcdc\fR to annotate the commentary.
+.sp
+.LP
+Rather than replacing the existing commentary, \fBcdc\fR inserts the new comment you supply, followed by a line of the form:
+.sp
+.LP
+\fB*** CHANGED ***\fR \fIyy\fR\fB/\fR\fImm\fR\fB/\fR\fBdd\fR \fIhh\fR\fB/\fR\fImm\fR\fB/\fR\fIss\fR \fIusername\fR
+.sp
+.LP
+above the existing commentary.
+.sp
+.LP
+If a directory is named as the \fIs.filename\fR argument, the \fBcdc\fR command applies to all \fBs.\fRfiles in that directory. Unreadable \fBs.\fRfiles produce an error; processing continues with the next file (if any). If `\fB\(mi\fR\&' is given as the \fIs.filename\fR argument, each line of the standard input is taken as the name of an \fBSCCS\fR history file to be processed, and the \fB-m\fR and \fB-y\fR options must be used.
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-r\fR\fIsid\fR\fR
+.ad
+.RS 15n
+.rt  
+Specify the \fBSID\fR of the delta to change.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-m\fR\fImr-list\fR\fR
+.ad
+.RS 15n
+.rt  
+Specify one or more MR numbers to add or delete. When specifying more than one MR on the command line, \fImr-list\fR takes the form of a quoted, space-separated list. To delete an MR number, precede it with a \fB!\fR character (an empty \fBMR\fR list has no effect). A list of deleted \fBMRs\fR is placed in the comment section of the delta commentary. If \fB-m\fR is not used and the standard input is a terminal, \fBcdc\fR prompts with \fBMRs?\fR for the list (before issuing the \fBcomments?\fR prompt). \fB-m\fR is only useful when the \fBv\fR flag is set in the \fBs.\fRfile. If that flag has a value, it is taken to be the name of a program to validate the MR numbers.  If that validation program returns a non-zero exit status, \fBcdc\fR terminates and the delta commentary remains unchanged.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-y\fR[\fIcomment\fR]\fR
+.ad
+.RS 15n
+.rt  
+Use \fIcomment\fR as the annotation in the delta commentary. The previous comments are retained; the \fIcomment\fR is added along with a notation that the commentary was changed. A  null \fIcomment\fR leaves the commentary unaffected. If \fB-y\fR is not specified and the standard input is a terminal, \fBcdc\fR prompts with \fBcomments?\fR for the text of the notation to be added.  An unescaped \fBNEWLINE\fR character terminates the annotation text.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRChanging the annotated commentary
+.sp
+.LP
+The following command:
+
+.sp
+.in +2
+.nf
+example% \fBcdc -r1.6 -y"corrected commentary" s.program.c\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+produces the following annotated commentary for delta 1.6 in \fBs.program.c\fR:
+
+.sp
+.in +2
+.nf
+D 1.6 88/07/05 23:21:07 username 9 0 00001/00000/00000
+MRs:
+COMMENTS:
+corrected commentary
+*** CHANGED *** 88/07/07 14:09:41 username
+performance enhancements in main()
+.fi
+.in -2
+.sp
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fBz.file\fR\fR
+.ad
+.RS 10n
+.rt  
+temporary lock file
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWsprot
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBsccs\fR(1), \fBsccs-admin\fR(1), \fBsccs-comb\fR(1), \fBsccs-delta\fR(1), \fBsccs-help\fR(1), \fBsccs-prs\fR(1), \fBsccs-prt\fR(1), \fBsccs-rmdel\fR(1), \fBwhat\fR(1), \fBsccsfile\fR(4), \fBattributes\fR(5)
+.SH DIAGNOSTICS
+.sp
+.LP
+Use the \fBSCCS\fR \fBhelp\fR command for explanations (see \fBsccs-help\fR(1)).

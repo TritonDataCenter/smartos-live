@@ -1,0 +1,156 @@
+'\" te
+.\" Copyright (C) 2001, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nisupdkeys 1M "13 Dec 2001" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+nisupdkeys \- update the public keys in a NIS+ directory object
+.SH SYNOPSIS
+.LP
+.nf
+\fB/usr/lib/nis/nisupdkeys\fR [\fB-a\fR | \fB-C\fR] [\fB-H\fR \fIhost\fR] [\fIdirectory\fR]
+.fi
+
+.LP
+.nf
+\fB/usr/lib/nis/nisupdkeys\fR \fB-s\fR [\fB-a\fR | \fB-C\fR] \fB-H\fR \fIhost\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+This command updates the public keys in an NIS+ directory object. When the public key(s) for a NIS+ server are changed, \fBnisupdkeys\fR reads a directory object and attempts to get the public key data for each server of that directory. These keys are placed in the directory object and the object is then modified to reflect the new keys. If \fIdirectory\fR is present, the directory object for that directory is updated. Otherwise the directory object for the default domain is updated. The new key must be propagated to all directory objects that reference that server.
+.sp
+.LP
+On the other hand, \fBnisupdkeys\fR \fB-s\fR gets a list of all the directories served by \fIhost\fR and updates those directory objects. This assumes that the caller has adequate permission to change all the associated directory objects. The list of directories being served by a given server can also be obtained by \fBnisstat\fR(1M). Before you do this operation, make sure that the new address/public key has been propagated to all replicas. If multiple authentication mechanisms are configured using \fBnisauthconf\fR(1M), then the keys for those mechanisms will also be updated or cleared.
+.sp
+.LP
+The user executing this command must have modify access to the directory object for it to succeed. The existing directory object can be displayed with the \fBniscat\fR(1) command using the \fB-o\fR option.
+.sp
+.LP
+This command does not update the directory objects stored in the \fBNIS_COLD_START\fR file on the NIS+ clients.
+.sp
+.LP
+If a server is also the root master server, then \fBnisupdkeys\fR \fB-s\fR cannot be used to update the root directory.
+.SH OPTIONS
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-a\fR\fR
+.ad
+.RS 11n
+.rt  
+Update the universal addresses of the NIS+ servers in the directory object. Currently, this only works for the \fBTCP/IP\fR family of transports. This option should be used when the \fBIP\fR address of the server is changed. The server's new address is resolved using \fBgetipnodebyname\fR(3SOCKET) on this machine. The \fB/etc/nsswitch.conf\fR file must point to the correct source for \fIipnodes\fR and \fIhosts\fR for this resolution to work.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-C\fR\fR
+.ad
+.RS 11n
+.rt  
+Specify to clear rather than set the public key(s). Communication with a server that has no public key(s) does not require the use of secure RPC.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-H\fR \fIhost\fR\fR
+.ad
+.RS 11n
+.rt  
+Limit key changes only to the server named \fIhost\fR. If the hostname is not a fully qualified NIS+ name, then it is assumed to be a host in the default domain. If the named host does not serve the directory, no action is taken.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-s\fR\fR
+.ad
+.RS 11n
+.rt  
+Update all the NIS+ directory objects served by the specified server. This assumes that the caller has adequate access rights to change all the associated directory objects. If the NIS+ principal making this call does not have adequate permissions to update the directory objects, those particular updates will fail and the caller will be notified. If the \fBrpc.nisd\fR on \fIhost\fR cannot return the list of servers it serves, the command will print an error message. The caller would then have to invoke \fBnisupdkeys\fR multiple times (as in the first synopsis), once per NIS+ directory that it serves.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRUsing \fBnisupdkeys\fR
+.sp
+.LP
+The following example updates the keys for servers of the \fIfoo.bar.\fR domain.
+
+.sp
+.in +2
+.nf
+example% \fBnisupdkeys foo.bar.\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+This example updates the key(s) for host \fIfred\fR that serves the \fIfoo.bar.\fR domain.
+
+.sp
+.in +2
+.nf
+example% \fBnisupdkeys -H fred foo.bar.\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+This example clears the public key(s) for host \fIwilma\fR in the \fIfoo.bar.\fR directory.
+
+.sp
+.in +2
+.nf
+example% \fBnisupdkeys -CH wilma foo.bar.\fR
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+This example updates the public key(s) in all directory objects that are served by the host \fIwilma\fR.
+
+.sp
+.in +2
+.nf
+example% \fBnisupdkeys -s -H wilma\fR
+.fi
+.in -2
+.sp
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisu
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBchkey\fR(1), \fBniscat\fR(1), \fBnisaddcred\fR(1M), \fBnisauthconf\fR(1M), \fBnisstat\fR(1M), \fBgetipnodebyname\fR(3SOCKET), \fBnis_objects\fR(3NSL), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris Operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

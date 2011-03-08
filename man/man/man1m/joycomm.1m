@@ -10,7 +10,7 @@ joycomm \- display the last commands executed, in reverse order
 .SH SYNOPSIS
 .LP
 .nf
-\fBjoycomm\fR [\fB-v\fR] [\fB-x\fR]
+\fBjoycomm\fR [\fB-R days\fR] [\fB-v\fR] [\fB-x\fR]
 .fi
 
 .SH DESCRIPTION
@@ -53,6 +53,17 @@ The command name under which the process was called.
 .sp
 .LP
 The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-R\fR \fBdays\fR\fR 
+.ad
+.RS 11n
+.rt  
+Rotates the audit log and removes any logs older than \fBdays\fR.  This option cannot be used with any other options.
+.RE
+
 .sp
 .ne 2
 .mk

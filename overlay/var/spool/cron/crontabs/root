@@ -1,0 +1,2 @@
+## Rotate and trim the audit logs nightly at midnight.
+0 0 * * * /usr/sbin/joycomm -R 30

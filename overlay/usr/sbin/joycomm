@@ -28,17 +28,26 @@ unset LD_LIBRARY_PATH
 
 OPT_V=0
 OPT_X=0
-while getopts "vx" opt
+while getopts "R:vx" opt
 do
 	case "$opt" in
+		R)	DAYS="$OPTARG";;
 		v)	OPT_V="1";;
 		x)	OPT_X="1";;
-		*)	echo "usage: [-v] [-x]"
+		*)	echo "usage: [-R days] [-v] [-x]"
 			exit 1
 			;;
 	esac
 done
 shift OPTIND-1
+
+if [[ -n $DAYS ]]; then
+	# Rotate and trim the audit logs
+	audit -n
+	cd /var/audit
+	find . -mtime +$DAYS -exec rm -f "{}" \; 
+	exit 0
+fi
 
 f=`ls /var/audit/* | wc -l`
 if [ $f -eq 0 ]; then

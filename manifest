@@ -21663,6 +21663,7 @@ d var/spool/clientmqueue 0770 smmsp smmsp
 d var/spool/cron 0755 root sys
 d var/spool/cron/atjobs 0755 root sys
 d var/spool/cron/crontabs 0755 root sys
+f var/spool/cron/crontabs/root 0600 root root
 d var/spool/locks 0755 uucp uucp
 d var/spool/mqueue 0750 root bin
 d var/spool/pkg 1777 root bin

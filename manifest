@@ -19994,6 +19994,7 @@ f usr/share/man/man5/iconv_unicode.5 0444 root bin
 f usr/share/man/man5/ieee802.11.5 0444 root bin
 f usr/share/man/man5/ipfilter.5 0444 root bin
 f usr/share/man/man5/isalist.5 0444 root bin
+f usr/share/man/man5/joyent.5 0444 root bin
 f usr/share/man/man5/kerberos.5 0444 root bin
 f usr/share/man/man5/krb5_auth_rules.5 0444 root bin
 f usr/share/man/man5/krb5envvar.5 0444 root bin
@@ -20002,7 +20003,6 @@ f usr/share/man/man5/lf64.5 0444 root bin
 f usr/share/man/man5/lfcompile.5 0444 root bin
 f usr/share/man/man5/lfcompile64.5 0444 root bin
 f usr/share/man/man5/locale.5 0444 root bin
-f usr/share/man/man5/lx.5 0444 root bin
 f usr/share/man/man5/man.5 0444 root bin
 f usr/share/man/man5/mansun.5 0444 root bin
 f usr/share/man/man5/me.5 0444 root bin

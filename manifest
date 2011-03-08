@@ -17317,6 +17317,7 @@ f usr/share/man/man1m/ipsecalgs.1m 0444 root bin
 f usr/share/man/man1m/ipsecconf.1m 0444 root bin
 f usr/share/man/man1m/ipseckey.1m 0444 root bin
 f usr/share/man/man1m/itu.1m 0444 root bin
+f usr/share/man/man1m/joycomm.1m 0444 root bin
 f usr/share/man/man1m/keyserv.1m 0444 root bin
 f usr/share/man/man1m/killall.1m 0444 root bin
 f usr/share/man/man1m/ksslcfg.1m 0444 root bin

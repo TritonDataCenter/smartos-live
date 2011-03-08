@@ -27,7 +27,7 @@ pfexec mount -F lofs /dev ${rdmnt}/dev
 if [[ -d /devices ]]; then
     pfexec mount -F lofs /devices ${rdmnt}/devices
 fi
-pfexec chroot ${rdmnt} /usr/bin/catman
+pfexec chroot ${rdmnt} /usr/bin/catman -T /usr/share/lib/tmac/ansun
 if [[ -d /devices ]]; then
     pfexec umount ${rdmnt}/devices
 fi

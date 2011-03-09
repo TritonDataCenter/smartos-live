@@ -95,8 +95,8 @@ function get_cpu_info()
 
 function get_live_image_buildstamp()
 {
-    # Add joyent_buildstamp to SYSTEM_INFO
-    Live_Image=$(cat /etc/joyent_buildstamp 2>/dev/null)
+    # Add joyent buildstamp to SYSTEM_INFO
+    Live_Image=$(uname -v | sed -e "s/.*_//")
 
     #echo "${Live_Image}"
 }

@@ -23,17 +23,18 @@ exports.Ronn = function(text, version, manual, date) {
 	var gMD = md.parse(text);
 	prepareTree(gMD);
 	var gHtml = md.toHTMLTree(gMD);
+	//console.log(JSON.stringify(gHtml));
 
 	this.roff = function() {
-		return blockFilter("", gHtml, {parent:null, previous:null, position:null});
+		return blockFilter("", gHtml, {parent:null, previous:null, position:null}) + "\n";
 	};
 
 	this.html = function() {
-		return toHTML(gHtml);
+		return toHTML(gHtml) + "\n";
 	};
 
 	this.fragment = function() {
-		return toHTMLfragment(gHtml);
+		return toHTMLfragment(gHtml) + "\n";
 	};
 
 	function blockFilter(out, node, context) {
@@ -102,16 +103,20 @@ exports.Ronn = function(text, version, manual, date) {
 				out = macro(out, "HR");
 			break;
 			case "p":
-				if (fPrevious && fParent && (fParent == "dd" || fParent == "li"))
+				if (fPrevious && fParent && (fParent == "dd" || fParent == "li")) {
 					out = macro(out, "IP");
-				else if (fPrevious == "h4")
+				} else if (fPrevious == "h4") {
 					out = out + "\n.";
-				else if (fPrevious && !(fPrevious == "h1" || fPrevious == "h2" || fPrevious == "h3"))
+				// Ronn also has 'h1' here, but its preprocessing removes the
+				// first 'h1' on a page -- different than the 'h1' preprocessing
+				// in ronnjs -- so the same exclusion doesn't apply here.
+				} else if (fPrevious && !(fPrevious == "h2" || fPrevious == "h3")) {
 					out = macro(out, "P");
+				}
 				out = callInlineChildren(out, node, context);
 			break;
 			case "pre":
-				var indent = (fPrevious == null || !(fPrevious == "h1" || fPrevious == "h2" || fPrevious == "h3"));
+				var indent = (fPrevious == null || !(fPrevious == "h2" || fPrevious == "h3"));
 				if (indent) out = macro(out, "IP", [quote(""), 4]);
 				out = macro(out, "nf");
 				out = callInlineChildren(out, node, context);
@@ -201,10 +206,16 @@ exports.Ronn = function(text, version, manual, date) {
 			}
 			if (context.parent == "pre") {
 				// do nothing
-            } else if (context.previous == null && !context.hasNext) {
-				// do nothing
+			} else if (context.previous == null && !context.hasNext) {
+				// Not sure of the intention here, but this removes desired
+				// whitespace separation in man pages,
+				// e.g. 'test/cases/blank_lines.ronn'.
+				//node = node.replace(/\n+$/gm, '');
 			} else {
-				node = node.replace(/\n+$/gm, ' ');
+				// Not sure of the intention here, but this removes desired
+				// whitespace separation in man pages,
+				// e.g. 'test/cases/blank_lines.ronn'.
+				//node = node.replace(/\n+$/gm, ' ');
 			}
 			out += esc(node);
 			return out;

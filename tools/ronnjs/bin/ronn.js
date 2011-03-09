@@ -96,8 +96,8 @@ if (opts.get("man") && !opts.get("build")) {
 		if (fHtml) fs.writeFileSync(fBase + ".html", fHtml, 'utf8');
 		if (fFrag) fs.writeFileSync(fBase + ".fragment", fFrag, 'utf8');
 	} else {
-		if (fRoff) sys.puts(fRoff);
-		if (fHtml) sys.puts(fHtml);
-		if (fFrag) sys.puts(fFrag);
+		if (fRoff) process.stdout.write(fRoff);
+		if (fHtml) process.stdout.write(fHtml);
+		if (fFrag) process.stdout.write(fFrag);
 	}
 }

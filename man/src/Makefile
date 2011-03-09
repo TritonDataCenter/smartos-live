@@ -7,7 +7,7 @@
 #
 # To build man pages and test one use something like:
 #
-# gmake clean && gmake && man -M ../man zonestat
+# gmake clean && gmake && man -T /usr/share/lib/tmac/ansun -M ../man zonestat
 #
 
 ROOT=$(PWD)

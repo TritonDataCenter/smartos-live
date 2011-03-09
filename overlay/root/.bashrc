@@ -23,13 +23,13 @@ if [ "${TERM}" == "screen" ]; then
     export TERM=xterm-color
 fi
 
-smflog() {
+svclog() {
   if [[ -z "$PAGER" ]]; then
     PAGER=less
   fi
   $PAGER `svcs -L $1`
 }
 
-smflogf() {
+svclogf() {
   /usr/bin/tail -f `svcs -L $1`
 }

@@ -9,7 +9,7 @@ zonemon \- display zone related troubleshooting data
 .SH SYNOPSIS
 .LP
 .nf
-\fBzonemon\fR
+\fBzonemon\fR [\fB-k\fR]
 .fi
 
 .SH DESCRIPTION
@@ -17,6 +17,21 @@ zonemon \- display zone related troubleshooting data
 .LP
 The \fBzonemon\fR command prints zone's kernel state that is useful for troubleshooting zone's related issues, then waits for zone state transitions and reports those as they occur.  This command is a useful first step for monitoring and troubleshooting zones.
 .sp
+
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-k\fR
+.ad
+.RS 11n
+.rt  
+Print zone kernel state and exit without monitoring for zone state transitions.
+.RE
 
 .SH SEE ALSO
 .sp

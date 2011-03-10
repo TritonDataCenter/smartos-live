@@ -1997,6 +1997,9 @@ f sbin/wusbadm 0555 root bin
 f sbin/zfs 0555 root bin
 f sbin/zonename 0555 root bin
 f sbin/zpool 0555 root bin
+d smartdc 0755 root bin
+d smartdc/bin 0755 root bin
+f smartdc/bin/sbcreate 0755 root bin
 d system 0755 root root
 d system/contract 0555 root root
 d system/object 0555 root root

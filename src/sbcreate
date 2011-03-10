@@ -1,0 +1,160 @@
+#!/bin/bash
+#
+# Copyright (c) 2011 Joyent Inc., All rights reserved.
+#
+
+set -o errexit
+
+# Need the output dir first.
+TEMPDIR=/tmp/sdcsb.$$
+LOGFILE=/tmp/sdcsb.$$.log
+OUTFILE=/tmp/sdc-support.$(hostname).$(TZ=UTC date "+%Y%m%dT%H%M%SZ").tar.bz2
+COUNTDOWN=10
+
+function do_countdown
+{
+    echo ""
+    echo "This tool will create an SDC support bundle in /tmp."
+    echo "This may take some time...  If you wish to abort press CTRL-C now!"
+    echo ""
+    countdown=$((${COUNTDOWN} - 1))
+    while [[ ${countdown} -ge 0 ]]; do
+        printf "                                   \r"
+        printf "Starting in ${countdown} seconds...\r"
+        sleep 1
+        countdown=$((${countdown} - 1))
+    done
+    echo ""
+    echo ""
+}
+
+function grab_sysinfo
+{
+    sysinfo > ${TEMPDIR}/sysinfo.json
+    echo "  > sysinfo"
+}
+
+function grab_dlinfo
+{
+    dladm show-phys -m > ${TEMPDIR}/dladm.phys
+    dladm show-vnic > ${TEMPDIR}/dladm.vnic
+    dladm show-linkprop > ${TEMPDIR}/dladm.linkprop
+    echo "  > datalink info"
+}
+
+function grab_ifconfig
+{
+    ifconfig -a > ${TEMPDIR}/ifconfig.a
+    echo "  > network interface info"
+}
+
+function grab_routes
+{
+    netstat -rn > ${TEMPDIR}/netstat.rn
+    echo "  > routing table"
+}
+
+function grab_auditlog
+{
+    (cd /var/audit && tar -cvf ${TEMPDIR}/var.audit.tar .) >&4 2>&1
+    echo "  > auditlog info"
+}
+
+function grab_svcs
+{
+    svcs -Z -a > ${TEMPDIR}/svcs.all
+    echo "  > services"
+}
+
+function grab_ps
+{
+    ps -efZ > ${TEMPDIR}/ps.efZ
+    echo "  > process information"
+}
+
+function grab_df
+{
+    df > ${TEMPDIR}/df
+    echo "  > disk utilization"
+}
+
+function grab_modinfo
+{
+    modinfo -w > ${TEMPDIR}/modinfo
+    echo "  > module information"
+}
+
+function grab_headnode_info
+{
+    if [[ -d /usbkey ]]; then
+        find /usbkey -ls > ${TEMPDIR}/usbkey.filelist
+        echo "  > usbkey filelist"
+        tar -cvf ${TEMPDIR}/usbkey.config.tar /usbkey/config* >&4
+    fi
+}
+
+function grab_zonelist
+{
+    zoneadm list -v -c > ${TEMPDIR}/zonelist.vc
+    echo "  > zone list"
+}
+
+function grab_zoneconfigs
+{
+    tar -cvf ${TEMPDIR}/zone.configs.tar /etc/zones
+    echo "  > zone configs"
+}
+
+# XXX how do we limit the data here while still being useful?  Don't want to
+# fill up /tmp
+function grab_cores
+{
+    tar -cvf ${TEMPDIR}/cores.tar /zones/*/cores >&4 2>&1
+    echo "  > cores"
+}
+
+function grab_dumps
+{
+    tar -cvf ${TEMPDIR}/dumps.tar /var/crash/volatile >&4 2>&1
+    echo "  > kernel crash dumps"
+}
+
+function grab_logs
+{
+    tar -cvf ${TEMPDIR}/gz-logs.tar /var/svc/log /etc/svc/volatile /var/adm >&4 2>&1
+    echo "  > logs"
+}
+
+# Give the user a sanity pause before beginning, this script can
+# take some time and write a lot of data.
+do_countdown
+
+mkdir ${TEMPDIR}
+
+exec 4>${LOGFILE}
+export BASH_XTRACEFD=4
+export PS4='${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+set -o xtrace
+
+echo "==> Gathering System Information"
+
+grab_sysinfo
+grab_dlinfo
+grab_ifconfig
+grab_routes
+grab_auditlog
+grab_svcs
+grab_ps
+grab_df
+grab_modinfo
+grab_headnode_info
+grab_zonelist
+grab_cores
+grab_dumps
+grab_logs
+
+echo "==> packing data to ${OUTFILE}"
+tar -jcvf ${OUTFILE} ${TEMPDIR} >&4 2>&1
+
+echo "==> cleaning up"
+rm -rf ${TEMPDIR}

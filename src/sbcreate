@@ -121,7 +121,7 @@ function grab_dumps
 
 function grab_logs
 {
-    tar -cvf ${TEMPDIR}/gz-logs.tar /var/svc/log /etc/svc/volatile /var/adm >&4 2>&1
+    tar -cvf ${TEMPDIR}/gz-logs.tar /var/svc/log /etc/svc/volatile /var/adm >&4 2>&1 || /bin/true
     echo "  > logs"
 }
 

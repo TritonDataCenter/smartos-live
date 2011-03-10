@@ -216,7 +216,6 @@ s etc/.syslog_door=../var/run/syslog_door
 s etc/TIMEZONE=default/init
 d etc/acct 0755 adm adm
 f etc/acct/holidays 0644 root bin
-s etc/aliases=mail/aliases
 d etc/amd64 0755 root sys
 f etc/auto_home 0644 root bin
 f etc/auto_master 0644 root bin
@@ -19759,7 +19758,6 @@ f usr/share/man/man4/TrustedExtensionsPolicy.4 0444 root bin
 f usr/share/man/man4/a.out.4 0444 root bin
 f usr/share/man/man4/admin.4 0444 root bin
 f usr/share/man/man4/alias.4 0444 root bin
-f usr/share/man/man4/aliases.4 0444 root bin
 f usr/share/man/man4/au.4 0444 root bin
 f usr/share/man/man4/audit.log.4 0444 root bin
 f usr/share/man/man4/audit_class.4 0444 root bin

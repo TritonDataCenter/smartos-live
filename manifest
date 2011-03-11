@@ -2066,6 +2066,7 @@ f usr/bin/amd64/uptime 4555 root bin
 f usr/bin/amd64/w 4555 root bin
 f usr/bin/amt 0555 root bin
 f usr/bin/apropos 0555 root bin
+f usr/bin/ar 0555 root bin
 f usr/bin/arch 0555 root bin
 f usr/bin/arcstat 0555 root bin
 f usr/bin/asa 0555 root bin
@@ -2205,7 +2206,6 @@ f usr/bin/fold 0555 root bin
 f usr/bin/fsstat 0555 root bin
 f usr/bin/ftp 0555 root bin
 s usr/bin/gcaptoinfo=gtic
-f usr/bin/gclear 0755 root bin
 f usr/bin/gcore 0555 root bin
 f usr/bin/gencat 0555 root bin
 f usr/bin/geniconvtbl 0555 root bin
@@ -2664,7 +2664,6 @@ d usr/gnu 0755 root bin
 d usr/gnu/bin 0755 root bin
 d usr/gnu/bin/amd64 0755 root bin
 s usr/gnu/bin/amd64/captoinfo=tic
-s usr/gnu/bin/amd64/clear=../../../bin/amd64/gclear
 s usr/gnu/bin/amd64/infocmp=../../../bin/amd64/ginfocmp
 s usr/gnu/bin/amd64/infotocap=tic
 f usr/gnu/bin/amd64/ncurses5-config 0755 root bin
@@ -2674,7 +2673,6 @@ s usr/gnu/bin/amd64/toe=../../../bin/amd64/gtoe
 s usr/gnu/bin/amd64/tput=../../../bin/amd64/gtput
 s usr/gnu/bin/amd64/tset=../../../bin/amd64/gtset
 s usr/gnu/bin/captoinfo=tic
-s usr/gnu/bin/clear=../../bin/gclear
 s usr/gnu/bin/infocmp=../../bin/ginfocmp
 s usr/gnu/bin/infotocap=tic
 f usr/gnu/bin/ncurses5-config 0755 root bin
@@ -16789,6 +16787,7 @@ f usr/share/man/man1/alias.1 0444 root bin
 f usr/share/man/man1/allocate.1 0444 root bin
 f usr/share/man/man1/amt.1 0444 root bin
 f usr/share/man/man1/apropos.1 0444 root bin
+f usr/share/man/man1/ar.1 0444 root bin
 f usr/share/man/man1/arch.1 0444 root bin
 f usr/share/man/man1/asa.1 0444 root bin
 f usr/share/man/man1/at.1 0444 root bin

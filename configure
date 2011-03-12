@@ -177,13 +177,45 @@ if [ ! -f on-closed-bins-nd.i386.tar.bz2 ]; then
   tar xvpf on-closed-bins-nd.i386.tar.bz2
 fi
 
-cp usr/src/tools/env/illumos.sh .
-[ ! -z "${RELEASE_VER}" ] && gsed -i -e "s|^GATE=.*$|GATE=\"${RELEASE_VER}\"; export GATE|" illumos.sh
-[ ! -z "${PUBLISHER}" ] && gsed -i -e "s|^# PKGPUBLISHER_REDIST=.*$|PKGPUBLISHER_REDIST=\"${PUBLISHER}\"; export PKGPUBLISHER_REDIST|" illumos.sh
-gsed -i -e "s|^CODEMGR_WS=.*$|CODEMGR_WS=\"${ROOT}/projects/illumos\"; export CODEMGR_WS|" illumos.sh
-gsed -i -e "s|^NIGHTLY_OPTIONS=.*$|NIGHTLY_OPTIONS=\"-CimNnt\"; export NIGHTLY_OPTIONS|" illumos.sh
-gsed -i -e "s|^ROOT=.*$|ROOT="${ROOT}/proto";  export ROOT|" illumos.sh
-gsed -i -e "s|^PARENT_ROOT=.*$|PARENT_ROOT="${ROOT}/proto"; export PARENT_ROOT|" illumos.sh
+cat <<EOF> illumos.sh
+NIGHTLY_OPTIONS="-CimNnt"; export NIGHTLY_OPTIONS
+GATE="${RELEASE_VER}"; export GATE
+CODEMGR_WS="${ROOT}/projects/illumos"; export CODEMGR_WS
+maxjobs() {
+        ncpu=\`kstat -p cpu_info:::state | grep -c on-line\`
+        expr \$ncpu + 2
+}
+DMAKE_MAX_JOBS=\`maxjobs\`;                       export DMAKE_MAX_JOBS
+
+ONBLD_BIN="/opt/onbld/bin"
+PARENT_WS="";                   export PARENT_WS
+CLONE_WS="http://hg.illumos.org/illumos-gate"
+export CLONE_WS
+STAFFER=nobody;                         export STAFFER
+MAILTO=$STAFFER;                        export MAILTO
+BUILD_PROJECT=;                         export BUILD_PROJECT
+LOCKNAME="\`basename \$CODEMGR_WS\`_nightly.lock"; export LOCKNAME
+ATLOG="\$CODEMGR_WS/log";                        export ATLOG
+LOGFILE="\$ATLOG/nightly.log";                   export LOGFILE
+MACH=\`uname -p\`;                                export MACH
+ON_CLOSED_BINS="\$CODEMGR_WS/closed";            export ON_CLOSED_BINS
+ON_CRYPTO_BINS="\$CODEMGR_WS/on-crypto.\$MACH.tar.bz2"; export ON_CRYPTO_BINS
+REF_PROTO_LIST=\$PARENT_WS/usr/src/proto_list_\${MACH}; export REF_PROTO_LIST
+ROOT="${ROOT}/proto";  export ROOT
+SRC="\$CODEMGR_WS/usr/src";              export SRC
+VERSION="\$GATE";                        export VERSION
+PARENT_ROOT="${ROOT}/proto"; export PARENT_ROOT
+PARENT_TOOLS_ROOT=\$PARENT_WS/usr/src/tools/proto/root_\$MACH-nd; export PARENT_TOOLS_ROOT
+PKGARCHIVE="\${CODEMGR_WS}/packages/\${MACH}/nightly";    export PKGARCHIVE
+PKGPUBLISHER_REDIST="${PUBLISHER}"; export PKGPUBLISHER_REDIST
+MAKEFLAGS=k;    export MAKEFLAGS
+UT_NO_USAGE_TRACKING="1"; export UT_NO_USAGE_TRACKING
+CW_NO_SHADOW="1"; export CW_NO_SHADOW
+BUILD_TOOLS=/opt;                               export BUILD_TOOLS
+SPRO_ROOT=/opt/SUNWspro;                        export SPRO_ROOT
+SPRO_VROOT=\$SPRO_ROOT;                          export SPRO_VROOT
+
+EOF
 
 # For some reason this disappeared before
 touch ${ROOT}/projects/illumos/usr/src/tools/findunref/exception_list.unknown

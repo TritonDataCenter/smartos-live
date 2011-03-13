@@ -3,13 +3,20 @@
 # Copyright (c) 2011 Joyent Inc., All rights reserved.
 #
 
-set -o errexit
+#
+# Since this script is grabbing data from a system in a potentially unknown state
+# we don't use 'set -o errexit' here because we don't want to fail to grab other
+# data when we fail to grab data from one source.
+#
 
 # Need the output dir first.
 TEMPDIR=/tmp/sdcsb.$$
 LOGFILE=/tmp/sdcsb.$$.log
 OUTFILE=/tmp/sdc-support.$(hostname).$(TZ=UTC date "+%Y%m%dT%H%M%SZ").tar.bz2
 COUNTDOWN=10
+
+. /lib/sdc/config.sh
+load_sdc_config
 
 function do_countdown
 {
@@ -39,6 +46,7 @@ function grab_dlinfo
     dladm show-phys -m > ${TEMPDIR}/dladm.phys
     dladm show-vnic > ${TEMPDIR}/dladm.vnic
     dladm show-linkprop > ${TEMPDIR}/dladm.linkprop
+    dladm show-bridge > ${TEMPDIR}/dladm.bridge
     echo "  > datalink info"
 }
 
@@ -64,12 +72,28 @@ function grab_svcs
 {
     svcs -Z -a > ${TEMPDIR}/svcs.all
     echo "  > services"
+    mkdir ${TEMPDIR}/svccfg_archive
+    svccfg archive | gzip > ${TEMPDIR}/svccfg_archive/global.gz
+    if [[ -d /usbkey/zones ]]; then
+        for zone in $(cd /usbkey/zones ; ls); do
+            zlogin ${zone} svccfg archive \
+            | gzip
+            > ${TEMPDIR}/svccfg_archive/${zone}.gz
+        done
+    fi
 }
 
 function grab_ps
 {
     ps -efZ > ${TEMPDIR}/ps.efZ
     echo "  > process information"
+}
+
+function grab_zfsinfo
+{
+    zpool status -v > ${TEMPDIR}/zpool.status
+    zfs list > ${TEMPDIR}/zfs.list
+    echo "  > zfs info"
 }
 
 function grab_df
@@ -107,6 +131,13 @@ function grab_zoneconfigs
     echo "  > zone configs"
 }
 
+function grab_zonelogs
+{
+    tar -zcvf ${TEMPDIR}/zone.logs.tar.gz /zones/*/root/var/svc/log \
+        /zones/*/root/opt/smartdc/*/log
+    echo "  > zone logs"
+}
+
 # XXX how do we limit the data here while still being useful?  Don't want to
 # fill up /tmp
 function grab_cores
@@ -122,10 +153,25 @@ function grab_dumps
     echo "  > kernel crash dumps"
 }
 
+function grab_fmdump
+{
+    fmdump > ${TEMPDIR}/fmdump.out
+    fmdump -e > ${TEMPDIR}/fmdump.e.out
+    echo "  > fmdump"
+}
+
 function grab_logs
 {
     tar -zcvf ${TEMPDIR}/gz-logs.tar.gz /var/svc/log /etc/svc/volatile /var/adm >&4 2>&1 || /bin/true
     echo "  > logs"
+}
+
+function grab_castatus
+{
+    if [[ -n ${CONFIG_ca_admin_ip} ]]; then
+	curl http://${CONFIG_ca_admin_ip}:23181/ca/admin/status?recurse=true \
+	| json > ${TEMPDIR}/ca.status
+    fi
 }
 
 # Give the user a sanity pause before beginning, this script can
@@ -148,13 +194,18 @@ grab_routes
 grab_auditlog
 grab_svcs
 grab_ps
+grab_zfsinfo
 grab_df
 grab_modinfo
 grab_headnode_info
 grab_zoneinfo
+grab_zoneconfigs
+grab_zonelogs
 grab_cores
 grab_dumps
+grab_fmdump
 grab_logs
+grab_castatus
 
 echo "==> packing data to ${OUTFILE}"
 tar -jcvf ${OUTFILE} ${TEMPDIR} >&4 2>&1

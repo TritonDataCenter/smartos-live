@@ -9,13 +9,13 @@ zonemon \- display zone related troubleshooting data
 .SH SYNOPSIS
 .LP
 .nf
-\fBzonemon\fR [\fB-k\fR]
+\fBzonemon\fR [\fB-k\fR] [\fB-w\fR | \fB-z zonename\fR | \fB-Z\fR]
 .fi
 
 .SH DESCRIPTION
 .sp
 .LP
-The \fBzonemon\fR command prints zone's kernel state that is useful for troubleshooting zone's related issues, then waits for zone state transitions and reports those as they occur.  This command is a useful first step for monitoring and troubleshooting zones.
+The \fBzonemon\fR command can print zone's kernel state that is useful for troubleshooting zone's related issues, as well as details related to zone state transitions.  This command is a useful first step for monitoring and troubleshooting zones.
 .sp
 
 .SH OPTIONS
@@ -31,6 +31,39 @@ The following options are supported:
 .RS 11n
 .rt  
 Print zone kernel state and exit without monitoring for zone state transitions.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-w\fR
+.ad
+.RS 11n
+.rt  
+Watch for zone state transitions and report details as they occur.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-z\fR \fBzonename\fR
+.ad
+.RS 11n
+.rt  
+Watch the specified zone for shut down and reboot state transitions.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-Z\fR
+.ad
+.RS 11n
+.rt  
+Watch all zones for shut down and reboot state transitions.
 .RE
 
 .SH SEE ALSO

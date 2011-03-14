@@ -288,6 +288,7 @@ create_archive "${OUT_DIR}/${BOOT_ARCHIVE_64}" $lofidev32 $lofidevusr $usrfile
 lofiadm -d "$lofidev32" 2>/dev/null
 
 chmod 0644 ${OUT_DIR}/${BOOT_ARCHIVE_64}
+echo "${BUILDSTAMP}" > ${OUT_DIR}/buildstamp
 (cd ${OUT_DIR} && gtar -zcf ${PREFIX}.tgz ${PREFIX})
 
 if [ $ERROR = 1 ]; then

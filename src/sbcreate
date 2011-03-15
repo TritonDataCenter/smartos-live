@@ -13,7 +13,7 @@
 TEMPDIR=/tmp/sdcsb.$$
 LOGFILE=/tmp/sdcsb.$$.log
 OUTFILE=/tmp/sdc-support.$(hostname).$(TZ=UTC date "+%Y%m%dT%H%M%SZ").tar.bz2
-COUNTDOWN=10
+COUNTDOWN=5
 
 . /lib/sdc/config.sh
 load_sdc_config
@@ -73,12 +73,11 @@ function grab_svcs
     svcs -Z -a > ${TEMPDIR}/svcs.all
     echo "  > services"
     mkdir ${TEMPDIR}/svccfg_archive
-    svccfg archive | gzip > ${TEMPDIR}/svccfg_archive/global.gz
+    svccfg archive | gzip -c > ${TEMPDIR}/svccfg_archive/global.gz
     if [[ -d /usbkey/zones ]]; then
         for zone in $(cd /usbkey/zones ; ls); do
             zlogin ${zone} svccfg archive \
-            | gzip
-            > ${TEMPDIR}/svccfg_archive/${zone}.gz
+            | gzip -c > ${TEMPDIR}/svccfg_archive/${zone}.gz
         done
     fi
 }
@@ -113,7 +112,7 @@ function grab_headnode_info
     if [[ -d /usbkey ]]; then
         find /usbkey -ls > ${TEMPDIR}/usbkey.filelist
         echo "  > usbkey filelist"
-        tar -cvf ${TEMPDIR}/usbkey.config.tar /usbkey/config* >&4
+        tar -cvf ${TEMPDIR}/usbkey.config.tar /usbkey/config* >&4 2>&1
     fi
 }
 
@@ -127,14 +126,14 @@ function grab_zoneinfo
 
 function grab_zoneconfigs
 {
-    tar -cvf ${TEMPDIR}/zone.configs.tar /etc/zones
+    tar -cvf ${TEMPDIR}/zone.configs.tar /etc/zones >&4 2>&1
     echo "  > zone configs"
 }
 
 function grab_zonelogs
 {
     tar -zcvf ${TEMPDIR}/zone.logs.tar.gz /zones/*/root/var/svc/log \
-        /zones/*/root/opt/smartdc/*/log
+        /zones/*/root/opt/smartdc/*/log >&4 2>&1
     echo "  > zone logs"
 }
 
@@ -169,7 +168,7 @@ function grab_logs
 function grab_castatus
 {
     if [[ -n ${CONFIG_ca_admin_ip} ]]; then
-	curl http://${CONFIG_ca_admin_ip}:23181/ca/admin/status?recurse=true \
+	curl http://${CONFIG_ca_admin_ip}:23181/ca/admin/status?recurse=true >&4 2>&1 \
 	| json > ${TEMPDIR}/ca.status
     fi
 }
@@ -209,6 +208,7 @@ grab_castatus
 
 echo "==> packing data to ${OUTFILE}"
 tar -jcvf ${OUTFILE} ${TEMPDIR} >&4 2>&1
+mv ${LOGFILE} ${OUTFILE}.log
 
 echo "==> cleaning up"
 rm -rf ${TEMPDIR}

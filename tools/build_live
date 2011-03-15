@@ -21,7 +21,7 @@
 #
 
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Copyright 2010 Joyent, Inc.  All rights reserved.
+# Copyright 2010, 2011 Joyent, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 ROOT=`pwd`
@@ -42,8 +42,8 @@ ERROR=0
 PLATFORM=i86pc
 ISA=i386
 ARCH64=amd64
-RSIZE=264000
-USIZE=400000
+RSIZE=262000
+USIZE=380000
 KERNEL_64=platform/$PLATFORM/kernel/$ARCH64/unix
 BUILDVER=$(head -n1 ${ROOT}/configure-buildver)
 if [[ -n "${BUILDVER}" ]]; then

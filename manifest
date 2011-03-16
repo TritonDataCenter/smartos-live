@@ -2521,6 +2521,7 @@ f usr/bin/uptime 0555 root bin
 f usr/bin/userattr 0555 root bin
 f usr/bin/uudecode 0555 root uucp
 f usr/bin/uuencode 0555 root uucp
+f usr/bin/uuid 0755 root bin
 f usr/bin/vax 0555 root bin
 f usr/bin/vedit 0555 root bin
 f usr/bin/vfsstat 0555 root bin
@@ -15240,6 +15241,7 @@ f usr/share/man/man1/units.1 0444 root bin
 f usr/share/man/man1/unix2dos.1 0444 root bin
 f usr/share/man/man1/unpack.1 0444 root bin
 f usr/share/man/man1/uptime.1 0444 root bin
+f usr/share/man/man1/uuid.1 0644 root bin
 f usr/share/man/man1/vax.1 0444 root bin
 f usr/share/man/man1/vedit.1 0444 root bin
 f usr/share/man/man1/vgrind.1 0444 root bin

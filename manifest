@@ -1201,10 +1201,6 @@ f lib/amd64/libmp.so.2 0755 root bin
 s lib/amd64/libmp.so=libmp.so.2
 f lib/amd64/libmpscsi_vhci.so.1 0755 root bin
 s lib/amd64/libmpscsi_vhci.so=libmpscsi_vhci.so.1
-f lib/amd64/libmtsk.so.1 0755 root bin
-s lib/amd64/libmtsk.so=libmtsk.so.1
-f lib/amd64/libmtsk_db.so.1 0755 root bin
-s lib/amd64/libmtsk_db.so=libmtsk_db.so.1
 f lib/amd64/libmvec.so.1 0755 root bin
 s lib/amd64/libmvec.so=libmvec.so.1
 f lib/amd64/libnsl.so.1 0755 root bin
@@ -1395,10 +1391,6 @@ f lib/libmp.so.2 0755 root bin
 s lib/libmp.so=libmp.so.2
 f lib/libmpscsi_vhci.so.1 0755 root bin
 s lib/libmpscsi_vhci.so=libmpscsi_vhci.so.1
-f lib/libmtsk.so.1 0755 root bin
-s lib/libmtsk.so=libmtsk.so.1
-f lib/libmtsk_db.so.1 0755 root bin
-s lib/libmtsk_db.so=libmtsk_db.so.1
 d lib/libmvec 0755 root bin
 f lib/libmvec.so.1 0755 root bin
 s lib/libmvec.so=libmvec.so.1
@@ -1649,7 +1641,6 @@ f lib/svc/manifest/system/svc/restarter.xml 0444 root sys
 f lib/svc/manifest/system/sysevent.xml 0444 root sys
 f lib/svc/manifest/system/sysidtool.xml 0444 root sys
 f lib/svc/manifest/system/system-log.xml 0444 root sys
-f lib/svc/manifest/system/tsol-zones.xml 0444 root sys
 f lib/svc/manifest/system/utmp.xml 0444 root sys
 f lib/svc/manifest/system/vtdaemon.xml 0444 root sys
 f lib/svc/manifest/system/zones.xml 0444 root sys
@@ -1696,7 +1687,6 @@ f lib/svc/method/nfs-server 0555 root sys
 f lib/svc/method/nlockmgr 0555 root bin
 f lib/svc/method/npivconfig 0555 root sys
 f lib/svc/method/ntp 0555 root sys
-f lib/svc/method/ppd-cache-update 0555 root sys
 f lib/svc/method/rmtmpfiles 0555 root bin
 f lib/svc/method/rpc-bind 0555 root bin
 f lib/svc/method/sendmail-client 0555 root sys
@@ -1755,7 +1745,6 @@ f lib/svc/method/svc-stmf 0555 root sys
 f lib/svc/method/svc-sv 0744 root sys
 f lib/svc/method/svc-syseventd 0555 root sys
 f lib/svc/method/svc-tnd 0555 root sys
-f lib/svc/method/svc-tsol-zones 0555 root sys
 f lib/svc/method/svc-utmpd 0555 root bin
 f lib/svc/method/svc-vrrp 0555 root sys
 f lib/svc/method/svc-wusb 0555 root sys
@@ -2132,7 +2121,6 @@ f usr/bin/fgrep 0555 root bin
 f usr/bin/file 0555 root bin
 f usr/bin/filesync 0555 root bin
 f usr/bin/find 0555 root bin
-f usr/bin/fixproc 0555 root bin
 f usr/bin/fmt 0555 root bin
 f usr/bin/fmtmsg 0555 root bin
 f usr/bin/fold 0555 root bin
@@ -2236,7 +2224,6 @@ f usr/bin/idn 0555 root bin
 f usr/bin/indxbib 0555 root bin
 f usr/bin/infocmp 0555 root bin
 f usr/bin/iostat 0555 root bin
-f usr/bin/ipf-mod.pl 0555 root bin
 f usr/bin/isainfo 0555 root bin
 f usr/bin/isalist 0555 root bin
 f usr/bin/itu 0555 root bin
@@ -2245,7 +2232,6 @@ f usr/bin/join 0555 root bin
 s usr/bin/jsh=ksh93
 f usr/bin/json 0555 root bin
 f usr/bin/kbd 0555 root bin
-f usr/bin/kbdcomp 0555 root bin
 f usr/bin/kdestroy 0555 root bin
 f usr/bin/keylogin 0555 root bin
 f usr/bin/keylogout 0555 root bin
@@ -2594,16 +2580,6 @@ s usr/ccs/lib/link_audit=../../lib/link_audit
 s usr/dict=share/lib/dict
 d usr/gnu 0755 root bin
 d usr/gnu/bin 0755 root bin
-d usr/gnu/bin/amd64 0755 root bin
-s usr/gnu/bin/amd64/captoinfo=tic
-s usr/gnu/bin/amd64/infocmp=../../../bin/amd64/ginfocmp
-s usr/gnu/bin/amd64/infotocap=tic
-f usr/gnu/bin/amd64/ncurses5-config 0755 root bin
-s usr/gnu/bin/amd64/reset=tset
-s usr/gnu/bin/amd64/tic=../../../bin/amd64/gtic
-s usr/gnu/bin/amd64/toe=../../../bin/amd64/gtoe
-s usr/gnu/bin/amd64/tput=../../../bin/amd64/gtput
-s usr/gnu/bin/amd64/tset=../../../bin/amd64/gtset
 s usr/gnu/bin/captoinfo=tic
 s usr/gnu/bin/infocmp=../../bin/ginfocmp
 s usr/gnu/bin/infotocap=tic
@@ -2643,12 +2619,8 @@ s usr/gnu/lib/libpanel.so=libpanel.so.5
 s usr/gnu/lib/terminfo=../share/terminfo
 d usr/gnu/share 0755 root sys
 d usr/gnu/share/doc 0755 root other
-d usr/gnu/share/doc/SUNWncurses 0755 root bin
-f usr/gnu/share/doc/SUNWncurses/ANNOUNCE 0444 root bin
-f usr/gnu/share/doc/SUNWncurses/AUTHORS 0444 root bin
-f usr/gnu/share/doc/SUNWncurses/MANIFEST 0444 root bin
-f usr/gnu/share/doc/SUNWncurses/NEWS 0444 root bin
-f usr/gnu/share/doc/SUNWncurses/README 0444 root bin
+d usr/gnu/share/doc/ncurses 0755 root bin
+f usr/gnu/share/doc/ncurses/README 0444 root bin
 d usr/gnu/share/man 0755 root bin
 d usr/gnu/share/man/man1 0755 root bin
 d usr/gnu/share/man/man3 0755 root bin
@@ -5283,10 +5255,6 @@ d usr/has/lib 0755 root bin
 s usr/has/lib/rsh=../bin/sh
 d usr/include 0755 root bin
 f usr/include/aclutils.h 0644 root bin
-d usr/include/admin 0755 root bin
-f usr/include/admin/ti_api.h 0644 root bin
-f usr/include/admin/transfermod.h 0644 root bin
-f usr/include/af_vfs.h 0644 root bin
 f usr/include/aio.h 0644 root bin
 f usr/include/alloca.h 0644 root bin
 d usr/include/amd64 0755 root bin
@@ -5477,7 +5445,6 @@ f usr/include/dat/udat_config.h 0644 root bin
 f usr/include/dat/udat_redirection.h 0644 root bin
 f usr/include/dat/udat_vendor_specific.h 0644 root bin
 f usr/include/deflt.h 0644 root bin
-f usr/include/demangle.h 0644 root bin
 d usr/include/des 0755 root bin
 f usr/include/des/des.h 0644 root bin
 f usr/include/des/desdata.h 0644 root bin
@@ -5519,10 +5486,6 @@ f usr/include/exec_attr.h 0644 root bin
 f usr/include/execinfo.h 0644 root bin
 f usr/include/expat.h 0444 root bin
 f usr/include/expat_external.h 0444 root bin
-f usr/include/expect.h 0444 root bin
-f usr/include/expect_comm.h 0444 root bin
-f usr/include/expect_tcl.h 0444 root bin
-f usr/include/fam.h 0644 root bin
 f usr/include/fatal.h 0644 root bin
 f usr/include/fcntl.h 0644 root bin
 f usr/include/fenv.h 0644 root bin
@@ -5549,7 +5512,6 @@ f usr/include/fm/topo_mod.h 0644 root bin
 f usr/include/fmtmsg.h 0644 root bin
 f usr/include/fnmatch.h 0644 root bin
 f usr/include/form.h 0644 root bin
-f usr/include/ft2build.h 0444 root bin
 f usr/include/ftw.h 0644 root bin
 d usr/include/fwflash 0755 root bin
 f usr/include/fwflash/fwflash.h 0644 root bin
@@ -5559,33 +5521,7 @@ f usr/include/gelf.h 0644 root bin
 f usr/include/getopt.h 0644 root bin
 f usr/include/getwidth.h 0644 root bin
 f usr/include/getxby_door.h 0644 root bin
-d usr/include/gio-unix-2.0 0755 root bin
-d usr/include/gio-unix-2.0/gio 0755 root bin
-f usr/include/gio-unix-2.0/gio/gdesktopappinfo.h 0644 root bin
-f usr/include/gio-unix-2.0/gio/gunixconnection.h 0644 root bin
-f usr/include/gio-unix-2.0/gio/gunixfdmessage.h 0644 root bin
-f usr/include/gio-unix-2.0/gio/gunixinputstream.h 0644 root bin
-f usr/include/gio-unix-2.0/gio/gunixmounts.h 0644 root bin
-f usr/include/gio-unix-2.0/gio/gunixoutputstream.h 0644 root bin
-f usr/include/gio-unix-2.0/gio/gunixsocketaddress.h 0644 root bin
 f usr/include/glob.h 0644 root bin
-d usr/include/gmp 0755 root bin
-f usr/include/gmp/gmp.h 0644 root bin
-f usr/include/gmp/gmpxx.h 0644 root bin
-f usr/include/gmp/mp.h 0644 root bin
-d usr/include/gnutls 0755 root bin
-f usr/include/gnutls/compat.h 0644 root bin
-f usr/include/gnutls/crypto.h 0644 root bin
-f usr/include/gnutls/gnutls.h 0644 root bin
-f usr/include/gnutls/gnutlsxx.h 0644 root bin
-f usr/include/gnutls/openpgp.h 0644 root bin
-f usr/include/gnutls/pkcs12.h 0644 root bin
-f usr/include/gnutls/x509.h 0644 root bin
-d usr/include/gp11 0755 root bin
-f usr/include/gp11/gp11.h 0644 root bin
-f usr/include/gp11/pkcs11.h 0644 root bin
-f usr/include/gp11/pkcs11g.h 0644 root bin
-f usr/include/gp11/pkcs11n.h 0644 root bin
 f usr/include/gpg-error.h 0644 root bin
 f usr/include/grp.h 0644 root bin
 d usr/include/gssapi 0755 root bin
@@ -5610,14 +5546,6 @@ f usr/include/ia32/sys/trap.h 0644 root bin
 f usr/include/ia32/sys/traptrace.h 0644 root bin
 f usr/include/iconv.h 0644 root bin
 f usr/include/idmap.h 0644 root bin
-d usr/include/idn 0755 root bin
-f usr/include/idn/idn-free.h 0644 root bin
-f usr/include/idn/idn-int.h 0644 root bin
-f usr/include/idn/idna.h 0644 root bin
-f usr/include/idn/pr29.h 0644 root bin
-f usr/include/idn/punycode.h 0644 root bin
-f usr/include/idn/stringprep.h 0644 root bin
-f usr/include/idn/tld.h 0644 root bin
 f usr/include/ieeefp.h 0644 root bin
 f usr/include/ifaddrs.h 0644 root bin
 f usr/include/ikedoor.h 0644 root bin
@@ -5732,9 +5660,6 @@ f usr/include/iso/wchar_iso.h 0644 root bin
 f usr/include/iso/wctype_c99.h 0644 root bin
 f usr/include/iso/wctype_iso.h 0644 root bin
 f usr/include/iso646.h 0644 root bin
-f usr/include/jconfig.h 0644 root bin
-f usr/include/jerror.h 0644 root bin
-f usr/include/jmorecfg.h 0644 root bin
 d usr/include/kerberosv5 0755 root bin
 f usr/include/kerberosv5/com_err.h 0644 root bin
 f usr/include/kerberosv5/krb5.h 0644 root bin
@@ -5747,7 +5672,6 @@ f usr/include/kstat.h 0644 root bin
 f usr/include/kvm.h 0644 root bin
 f usr/include/langinfo.h 0644 root bin
 f usr/include/lastlog.h 0644 root bin
-f usr/include/lauxlib.h 0444 root bin
 f usr/include/lber.h 0644 root bin
 f usr/include/ldap.h 0644 root bin
 f usr/include/libbe.h 0644 root bin
@@ -5758,14 +5682,6 @@ f usr/include/libcontract.h 0644 root bin
 f usr/include/libcontract_priv.h 0644 root bin
 f usr/include/libcpc.h 0644 root bin
 f usr/include/libctf.h 0644 root bin
-d usr/include/libdaemon 0755 root other
-f usr/include/libdaemon/daemon.h 0644 root other
-f usr/include/libdaemon/dexec.h 0644 root other
-f usr/include/libdaemon/dfork.h 0644 root other
-f usr/include/libdaemon/dlog.h 0644 root other
-f usr/include/libdaemon/dnonblock.h 0644 root other
-f usr/include/libdaemon/dpid.h 0644 root other
-f usr/include/libdaemon/dsignal.h 0644 root other
 f usr/include/libdevice.h 0644 root bin
 f usr/include/libdevinfo.h 0644 root bin
 f usr/include/libdisasm.h 0644 root bin
@@ -5790,19 +5706,12 @@ f usr/include/libdlwlan.h 0644 root bin
 f usr/include/libdlwlan_impl.h 0644 root bin
 f usr/include/libelf.h 0644 root bin
 f usr/include/libelfsign.h 0644 root bin
-f usr/include/liberrsvc.h 0644 root bin
-f usr/include/liberrsvc_defs.h 0644 root bin
-d usr/include/libexslt 0755 root bin
-f usr/include/libexslt/exslt.h 0444 root bin
-f usr/include/libexslt/exsltconfig.h 0444 root bin
-f usr/include/libexslt/exsltexports.h 0444 root bin
 f usr/include/libfcoe.h 0644 root bin
 f usr/include/libfdisk.h 0644 root bin
 f usr/include/libfstyp.h 0644 root bin
 f usr/include/libfstyp_module.h 0644 root bin
 f usr/include/libgen.h 0644 root bin
 f usr/include/libgrubmgmt.h 0644 root bin
-f usr/include/libguile.h 0444 root bin
 f usr/include/libilb.h 0644 root bin
 f usr/include/libinetutil.h 0644 root bin
 f usr/include/libintl.h 0644 root bin
@@ -5815,7 +5724,6 @@ d usr/include/libmilter 0755 root bin
 f usr/include/libmilter/README 0644 root bin
 f usr/include/libmilter/mfapi.h 0644 root bin
 f usr/include/libmilter/mfdef.h 0644 root bin
-f usr/include/libmtsk_db.h 0644 root bin
 f usr/include/libndmp.h 0644 root bin
 f usr/include/libnvpair.h 0644 root bin
 f usr/include/libnwam.h 0644 root bin
@@ -5838,12 +5746,9 @@ f usr/include/libsrpt.h 0644 root bin
 f usr/include/libstmf.h 0644 root bin
 f usr/include/libstmfproxy.h 0644 root bin
 f usr/include/libsun_ima.h 0644 root bin
-f usr/include/libsvm.h 0644 root bin
 f usr/include/libsysevent.h 0644 root bin
 f usr/include/libsysevent_impl.h 0644 root bin
-f usr/include/libtasn1.h 0644 root bin
 f usr/include/libtecla.h 0644 root bin
-f usr/include/libtsnet.h 0644 root bin
 f usr/include/libuutil.h 0644 root bin
 f usr/include/libuutil_impl.h 0644 root bin
 f usr/include/libvrrpadm.h 0644 root bin
@@ -5898,28 +5803,6 @@ f usr/include/libxml2/libxml/xmlwriter.h 0444 root bin
 f usr/include/libxml2/libxml/xpath.h 0444 root bin
 f usr/include/libxml2/libxml/xpathInternals.h 0444 root bin
 f usr/include/libxml2/libxml/xpointer.h 0444 root bin
-d usr/include/libxslt 0755 root bin
-f usr/include/libxslt/attributes.h 0444 root bin
-f usr/include/libxslt/documents.h 0444 root bin
-f usr/include/libxslt/extensions.h 0444 root bin
-f usr/include/libxslt/extra.h 0444 root bin
-f usr/include/libxslt/functions.h 0444 root bin
-f usr/include/libxslt/imports.h 0444 root bin
-f usr/include/libxslt/keys.h 0444 root bin
-f usr/include/libxslt/namespaces.h 0444 root bin
-f usr/include/libxslt/numbersInternals.h 0444 root bin
-f usr/include/libxslt/pattern.h 0444 root bin
-f usr/include/libxslt/preproc.h 0444 root bin
-f usr/include/libxslt/security.h 0444 root bin
-f usr/include/libxslt/templates.h 0444 root bin
-f usr/include/libxslt/transform.h 0444 root bin
-f usr/include/libxslt/variables.h 0444 root bin
-f usr/include/libxslt/xslt.h 0444 root bin
-f usr/include/libxslt/xsltInternals.h 0444 root bin
-f usr/include/libxslt/xsltconfig.h 0444 root bin
-f usr/include/libxslt/xsltexports.h 0444 root bin
-f usr/include/libxslt/xsltlocale.h 0444 root bin
-f usr/include/libxslt/xsltutils.h 0444 root bin
 f usr/include/libzfs.h 0644 root bin
 f usr/include/libzfs_jni_dataset.h 0644 root bin
 f usr/include/libzfs_jni_disk.h 0644 root bin
@@ -5937,9 +5820,6 @@ f usr/include/link.h 0644 root bin
 f usr/include/listen.h 0644 root bin
 f usr/include/locale.h 0644 root bin
 f usr/include/ltdl.h 0644 root bin
-f usr/include/lua.h 0444 root bin
-f usr/include/luaconf.h 0444 root bin
-f usr/include/lualib.h 0444 root bin
 f usr/include/macros.h 0644 root bin
 f usr/include/maillock.h 0644 root bin
 f usr/include/malloc.h 0644 root bin
@@ -6039,7 +5919,6 @@ f usr/include/mps/plbase64.h 0644 root bin
 f usr/include/mps/plerror.h 0644 root bin
 f usr/include/mps/plgetopt.h 0644 root bin
 f usr/include/mps/plhash.h 0644 root bin
-f usr/include/mps/plresolv.h 0644 root bin
 f usr/include/mps/plstr.h 0644 root bin
 f usr/include/mps/portreg.h 0644 root bin
 f usr/include/mps/pratom.h 0644 root bin
@@ -6260,8 +6139,6 @@ f usr/include/nss_netdir.h 0644 root bin
 f usr/include/nsswitch.h 0644 root bin
 f usr/include/nvfru.h 0644 root bin
 f usr/include/ofmt.h 0644 root bin
-f usr/include/omp.h 0644 root bin
-f usr/include/omp_collector_api.h 0644 root bin
 d usr/include/openssl 0755 root bin
 f usr/include/openssl/aes.h 0444 root bin
 f usr/include/openssl/asn1.h 0444 root bin
@@ -6332,7 +6209,6 @@ f usr/include/p12access.h 0644 root bin
 f usr/include/p12aux.h 0644 root bin
 f usr/include/p12err.h 0644 root bin
 f usr/include/panel.h 0644 root bin
-f usr/include/papi.h 0644 root bin
 f usr/include/parseURL.h 0644 root bin
 d usr/include/parted 0755 root bin
 f usr/include/parted/constraint.h 0644 root bin
@@ -6350,24 +6226,6 @@ f usr/include/parted/solaris.h 0644 root bin
 f usr/include/parted/timer.h 0644 root bin
 f usr/include/parted/unit.h 0644 root bin
 f usr/include/passwdutil.h 0644 root bin
-d usr/include/pcap 0755 root bin
-f usr/include/pcap-bpf.h 0444 root bin
-f usr/include/pcap-namedb.h 0444 root bin
-f usr/include/pcap.h 0444 root bin
-f usr/include/pcap/bpf.h 0444 root bin
-f usr/include/pcap/namedb.h 0444 root bin
-f usr/include/pcap/pcap.h 0444 root bin
-f usr/include/pcap/sll.h 0444 root bin
-f usr/include/pcap/usb.h 0444 root bin
-d usr/include/pcre 0755 root bin
-f usr/include/pcre/pcre.h 0644 root bin
-f usr/include/pcre/pcre_internal.h 0644 root bin
-f usr/include/pcre/pcre_scanner.h 0644 root bin
-f usr/include/pcre/pcre_stringpiece.h 0644 root bin
-f usr/include/pcre/pcrecpp.h 0644 root bin
-f usr/include/pcre/pcrecpparg.h 0644 root bin
-f usr/include/pcre/pcreposix.h 0644 root bin
-f usr/include/pcre/ucp.h 0644 root bin
 f usr/include/pcsample.h 0644 root bin
 f usr/include/pfmt.h 0644 root bin
 f usr/include/picl.h 0644 root bin
@@ -6377,7 +6235,6 @@ f usr/include/pkginfo.h 0644 root bin
 f usr/include/pkglocs.h 0644 root bin
 f usr/include/pkgstrct.h 0644 root bin
 f usr/include/pkgtrans.h 0644 root bin
-f usr/include/plot.h 0644 root bin
 f usr/include/poll.h 0644 root bin
 f usr/include/pool.h 0644 root bin
 f usr/include/popt.h 0644 root bin
@@ -6403,15 +6260,6 @@ f usr/include/raidcfg_spi.h 0644 root bin
 f usr/include/rcm_module.h 0644 root bin
 f usr/include/rctl.h 0644 root bin
 f usr/include/re_comp.h 0644 root bin
-d usr/include/readline 0755 root bin
-f usr/include/readline/chardefs.h 0444 root bin
-f usr/include/readline/history.h 0444 root bin
-f usr/include/readline/keymaps.h 0444 root bin
-f usr/include/readline/readline.h 0444 root bin
-f usr/include/readline/rlconf.h 0444 root bin
-f usr/include/readline/rlstdc.h 0444 root bin
-f usr/include/readline/rltypedefs.h 0444 root bin
-f usr/include/readline/tilde.h 0444 root bin
 f usr/include/regex.h 0644 root bin
 f usr/include/regexp.h 0644 root bin
 f usr/include/regexpr.h 0644 root bin
@@ -6557,58 +6405,10 @@ d usr/include/sharefs 0755 root bin
 f usr/include/sharefs/share.h 0644 root bin
 f usr/include/sharefs/sharefs.h 0644 root bin
 f usr/include/sharefs/sharetab.h 0644 root bin
-d usr/include/sigc++-2.0 0755 root bin
-d usr/include/sigc++-2.0/sigc++ 0755 root bin
-d usr/include/sigc++-2.0/sigc++/adaptors 0755 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/adaptor_trait.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/adaptors.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/bind.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/bind_return.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/bound_argument.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/compose.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/deduce_result_type.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/exception_catch.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/hide.h 0644 root bin
-d usr/include/sigc++-2.0/sigc++/adaptors/lambda 0755 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/lambda/base.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/lambda/group.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/lambda/lambda.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/lambda/operator.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/lambda/select.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/retype.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/adaptors/retype_return.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/bind.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/bind_return.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/class_slot.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/connection.h 0644 root bin
-d usr/include/sigc++-2.0/sigc++/functors 0755 root bin
-f usr/include/sigc++-2.0/sigc++/functors/functor_trait.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/functors/functors.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/functors/mem_fun.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/functors/ptr_fun.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/functors/slot.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/functors/slot_base.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/hide.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/limit_reference.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/method_slot.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/object.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/object_slot.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/reference_wrapper.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/retype.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/retype_return.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/sigc++.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/signal.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/signal_base.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/slot.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/trackable.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/type_traits.h 0644 root bin
-f usr/include/sigc++-2.0/sigc++/visit_each.h 0644 root bin
 f usr/include/siginfo.h 0644 root bin
 f usr/include/signal.h 0644 root bin
 f usr/include/sigsegv.h 0444 root bin
 f usr/include/sip.h 0644 root bin
-f usr/include/slang.h 0644 root bin
-f usr/include/slcurses.h 0644 root bin
 f usr/include/slp.h 0644 root bin
 d usr/include/smb 0755 root bin
 f usr/include/smb/doserror.h 0644 root bin
@@ -6774,9 +6574,6 @@ f usr/include/sys/callo.h 0644 root bin
 f usr/include/sys/cap_util.h 0644 root bin
 f usr/include/sys/ccompile.h 0644 root bin
 f usr/include/sys/cdio.h 0644 root bin
-f usr/include/sys/ce.h 0644 root bin
-f usr/include/sys/ce_hp.h 0644 root bin
-f usr/include/sys/ce_mac.h 0644 root bin
 f usr/include/sys/cis.h 0644 root bin
 f usr/include/sys/cis_handlers.h 0644 root bin
 f usr/include/sys/cis_protos.h 0644 root bin
@@ -7698,12 +7495,6 @@ f usr/include/sys/tpicommon.h 0644 root bin
 f usr/include/sys/trap.h 0644 root bin
 f usr/include/sys/traptrace.h 0644 root bin
 f usr/include/sys/ts.h 0644 root bin
-d usr/include/sys/tsol 0755 root bin
-f usr/include/sys/tsol/label.h 0644 root bin
-f usr/include/sys/tsol/label_macro.h 0644 root bin
-f usr/include/sys/tsol/priv.h 0644 root bin
-f usr/include/sys/tsol/tndb.h 0644 root bin
-f usr/include/sys/tsol/tsyscall.h 0644 root bin
 f usr/include/sys/tspriocntl.h 0644 root bin
 f usr/include/sys/tss.h 0644 root bin
 f usr/include/sys/ttcompat.h 0644 root bin
@@ -7823,10 +7614,6 @@ f usr/include/sys/zone.h 0644 root bin
 f usr/include/sysexits.h 0644 root bin
 f usr/include/syslog.h 0644 root bin
 f usr/include/tar.h 0644 root bin
-f usr/include/tcl.h 0644 root bin
-f usr/include/tclDecls.h 0644 root bin
-f usr/include/tclPlatDecls.h 0644 root bin
-f usr/include/tcldbg.h 0444 root bin
 f usr/include/tcpd.h 0644 root bin
 f usr/include/term.h 0644 root bin
 f usr/include/termio.h 0644 root bin
@@ -7834,22 +7621,14 @@ f usr/include/termios.h 0644 root bin
 f usr/include/tgmath.h 0644 root bin
 f usr/include/thread.h 0644 root bin
 f usr/include/thread_db.h 0644 root bin
-f usr/include/tiff.h 0644 root bin
-f usr/include/tiffconf.h 0644 root bin
-f usr/include/tiffio.h 0644 root bin
 f usr/include/time.h 0644 root bin
 f usr/include/tiuser.h 0644 root bin
-f usr/include/tk.h 0644 root bin
-f usr/include/tkDecls.h 0644 root bin
-f usr/include/tkPlatDecls.h 0644 root bin
 d usr/include/tnf 0755 root bin
 f usr/include/tnf/com.h 0644 root bin
 f usr/include/tnf/probe.h 0644 root bin
 f usr/include/tnf/tnf.h 0644 root bin
 f usr/include/tnf/tnfctl.h 0644 root bin
 f usr/include/tnf/writer.h 0644 root bin
-d usr/include/tsol 0755 root bin
-f usr/include/tsol/label.h 0644 root bin
 f usr/include/tzfile.h 0644 root bin
 f usr/include/ucontext.h 0644 root bin
 f usr/include/ucred.h 0644 root bin
@@ -7905,7 +7684,6 @@ f usr/include/wchar_impl.h 0644 root bin
 f usr/include/wctype.h 0644 root bin
 f usr/include/widec.h 0644 root bin
 f usr/include/wordexp.h 0644 root bin
-f usr/include/wsreg.h 0644 root bin
 f usr/include/xti.h 0644 root bin
 f usr/include/xti_inet.h 0644 root bin
 f usr/include/zconf.h 0644 root bin
@@ -8042,14 +7820,6 @@ s usr/lib/amd64/gss/mech_krb5.so=mech_krb5.so.1
 f usr/lib/amd64/gss/mech_spnego.so.1 0755 root bin
 s usr/lib/amd64/ld.so.1=../../../lib/amd64/ld.so.1
 f usr/lib/amd64/lddstub 0555 root bin
-f usr/lib/amd64/lib300.so.1 0755 root bin
-s usr/lib/amd64/lib300.so=lib300.so.1
-f usr/lib/amd64/lib300s.so.1 0755 root bin
-s usr/lib/amd64/lib300s.so=lib300s.so.1
-f usr/lib/amd64/lib4014.so.1 0755 root bin
-s usr/lib/amd64/lib4014.so=lib4014.so.1
-f usr/lib/amd64/lib450.so.1 0755 root bin
-s usr/lib/amd64/lib450.so=lib450.so.1
 f usr/lib/amd64/libCrun.so.1 0755 root bin
 f usr/lib/amd64/libCstd.so.1 0755 root bin
 f usr/lib/amd64/libHBAAPI.so.1 0755 root bin
@@ -8138,7 +7908,6 @@ s usr/lib/amd64/libefi.so.1=../../../lib/amd64/libefi.so.1
 s usr/lib/amd64/libefi.so=../../../lib/amd64/libefi.so.1
 s usr/lib/amd64/libelf.so.1=../../../lib/amd64/libelf.so.1
 s usr/lib/amd64/libelf.so=../../../lib/amd64/libelf.so.1
-f usr/lib/amd64/libentity.so 0755 root bin
 f usr/lib/amd64/libexacct.so.1 0755 root bin
 s usr/lib/amd64/libexacct.so=libexacct.so.1
 s usr/lib/amd64/libexpat.so.0=libexpat.so.1.5.2
@@ -8169,15 +7938,10 @@ s usr/lib/amd64/libhal-storage.so=libhal-storage.so.1.0.0
 f usr/lib/amd64/libhal.so.1.0.0 0755 root bin
 s usr/lib/amd64/libhal.so.1=libhal.so.1.0.0
 s usr/lib/amd64/libhal.so=libhal.so.1.0.0
-f usr/lib/amd64/libhistory.so.5 0555 root bin
-s usr/lib/amd64/libhistory.so=libhistory.so.5
 f usr/lib/amd64/libhotplug.so.1 0755 root bin
 s usr/lib/amd64/libhotplug.so=libhotplug.so.1
 f usr/lib/amd64/libidmap.so.1 0755 root bin
 s usr/lib/amd64/libidmap.so=libidmap.so.1
-f usr/lib/amd64/libidn.so.11.5.38 0755 root bin
-s usr/lib/amd64/libidn.so.11=libidn.so.11.5.38
-s usr/lib/amd64/libidn.so=libidn.so.11.5.38
 f usr/lib/amd64/libike.so.1 0755 root bin
 s usr/lib/amd64/libike.so=libike.so.1
 f usr/lib/amd64/libilb.so.1 0755 root bin
@@ -8238,10 +8002,6 @@ s usr/lib/amd64/libmp.so.2=../../../lib/amd64/libmp.so.2
 s usr/lib/amd64/libmp.so=../../../lib/amd64/libmp.so.2
 f usr/lib/amd64/libmtmalloc.so.1 0755 root bin
 s usr/lib/amd64/libmtmalloc.so=libmtmalloc.so.1
-s usr/lib/amd64/libmtsk.so.1=../../../lib/amd64/libmtsk.so.1
-s usr/lib/amd64/libmtsk.so=../../../lib/amd64/libmtsk.so.1
-s usr/lib/amd64/libmtsk_db.so.1=../../../lib/amd64/libmtsk_db.so.1
-s usr/lib/amd64/libmtsk_db.so=../../../lib/amd64/libmtsk_db.so.1
 s usr/lib/amd64/libmvec.so.1=../../../lib/amd64/libmvec.so.1
 s usr/lib/amd64/libmvec.so=../../../lib/amd64/libmvec.so.1
 f usr/lib/amd64/libndmp.so.1 0755 root bin
@@ -8335,10 +8095,6 @@ f usr/lib/amd64/libsoftcrypto.so.1 0755 root bin
 s usr/lib/amd64/libsoftcrypto.so=libsoftcrypto.so.1
 f usr/lib/amd64/libsrpt.so.1 0755 root bin
 s usr/lib/amd64/libsrpt.so=libsrpt.so.1
-f usr/lib/amd64/libssagent.so.1 0755 root bin
-s usr/lib/amd64/libssagent.so=libssagent.so.1
-f usr/lib/amd64/libssasnmp.so.1 0755 root bin
-s usr/lib/amd64/libssasnmp.so=libssasnmp.so.1
 s usr/lib/amd64/libssl.so.0.9.8=../../../lib/amd64/libssl.so.0.9.8
 s usr/lib/amd64/libssl.so=../../../lib/amd64/libssl.so
 f usr/lib/amd64/libstanddisasm.so 0644 root bin
@@ -8370,13 +8126,6 @@ f usr/lib/amd64/libtnfctl.so.1 0755 root bin
 s usr/lib/amd64/libtnfctl.so=libtnfctl.so.1
 f usr/lib/amd64/libtnfprobe.so.1 0755 root bin
 s usr/lib/amd64/libtnfprobe.so=libtnfprobe.so.1
-s usr/lib/amd64/libtsnet.so.1=../../../lib/amd64/libtsnet.so.1
-s usr/lib/amd64/libtsnet.so=../../../lib/amd64/libtsnet.so.1
-s usr/lib/amd64/libtsol.so.2=../../../lib/amd64/libtsol.so.2
-s usr/lib/amd64/libtsol.so=../../../lib/amd64/libtsol.so.2
-f usr/lib/amd64/libtspi.so.1.1.3 0555 root bin
-s usr/lib/amd64/libtspi.so.1=libtspi.so.1.1.3
-s usr/lib/amd64/libtspi.so=libtspi.so.1.1.3
 s usr/lib/amd64/libumem.so.1=../../../lib/amd64/libumem.so.1
 s usr/lib/amd64/libumem.so=../../../lib/amd64/libumem.so.1
 s usr/lib/amd64/libuuid.so.1=../../../lib/amd64/libuuid.so.1
@@ -8387,8 +8136,6 @@ f usr/lib/amd64/libvolmgt.so.1 0755 root bin
 s usr/lib/amd64/libvolmgt.so=libvolmgt.so.1
 f usr/lib/amd64/libvrrpadm.so.1 0755 root bin
 s usr/lib/amd64/libvrrpadm.so=libvrrpadm.so.1
-f usr/lib/amd64/libvt0.so.1 0755 root bin
-s usr/lib/amd64/libvt0.so=libvt0.so.1
 s usr/lib/amd64/libw.so.1=../../../lib/amd64/libw.so.1
 s usr/lib/amd64/libw.so=../../../lib/amd64/libw.so.1
 s usr/lib/amd64/libxml2.so.2=../../../lib/amd64/libxml2.so.2
@@ -8427,27 +8174,14 @@ f usr/lib/amd64/passwdutil.so.1 0755 root bin
 d usr/lib/amd64/pkgconfig 0755 root other
 f usr/lib/amd64/pkgconfig/hal-storage.pc 0644 root bin
 f usr/lib/amd64/pkgconfig/hal.pc 0644 root bin
-f usr/lib/amd64/pkgconfig/ice.pc 0444 root bin
 f usr/lib/amd64/pkgconfig/libcurl.pc 0644 root other
 f usr/lib/amd64/pkgconfig/libidn.pc 0644 root bin
 f usr/lib/amd64/pkgconfig/libxml-2.0.pc 0444 root other
 f usr/lib/amd64/pkgconfig/openssl.pc 0444 root other
-f usr/lib/amd64/pkgconfig/sm.pc 0444 root bin
-f usr/lib/amd64/pkgconfig/sqlite3.pc 0444 root bin
-f usr/lib/amd64/pkgconfig/x11.pc 0444 root bin
-f usr/lib/amd64/pkgconfig/xau.pc 0444 root bin
-f usr/lib/amd64/pkgconfig/xaw7.pc 0444 root bin
-f usr/lib/amd64/pkgconfig/xdmcp.pc 0444 root bin
-f usr/lib/amd64/pkgconfig/xext.pc 0444 root bin
-f usr/lib/amd64/pkgconfig/xmu.pc 0444 root bin
-f usr/lib/amd64/pkgconfig/xmuu.pc 0444 root bin
-f usr/lib/amd64/pkgconfig/xpm.pc 0444 root bin
-f usr/lib/amd64/pkgconfig/xt.pc 0444 root bin
 f usr/lib/amd64/rpcsec.so.1 0755 root bin
 s usr/lib/amd64/rpcsec.so=rpcsec.so.1
 f usr/lib/amd64/straddr.so.2 0755 root bin
 s usr/lib/amd64/straddr.so=straddr.so.2
-f usr/lib/amd64/tkConfig.sh 0555 root bin
 f usr/lib/amd64/udapl_tavor.so.1 0755 root bin
 f usr/lib/amd64/values-Xa.o 0644 root bin
 f usr/lib/amd64/values-Xc.o 0644 root bin
@@ -9533,14 +9267,6 @@ f usr/lib/ldap/idsconfig 0555 root bin
 f usr/lib/ldap/ldap_cachemgr 0555 root bin
 f usr/lib/lddstub 0555 root bin
 f usr/lib/lib.b 0444 root bin
-f usr/lib/lib300.so.1 0755 root bin
-s usr/lib/lib300.so=lib300.so.1
-f usr/lib/lib300s.so.1 0755 root bin
-s usr/lib/lib300s.so=lib300s.so.1
-f usr/lib/lib4014.so.1 0755 root bin
-s usr/lib/lib4014.so=lib4014.so.1
-f usr/lib/lib450.so.1 0755 root bin
-s usr/lib/lib450.so=lib450.so.1
 f usr/lib/libCrun.so.1 0755 root bin
 f usr/lib/libHBAAPI.so.1 0755 root bin
 s usr/lib/libHBAAPI.so=libHBAAPI.so.1
@@ -9644,7 +9370,6 @@ s usr/lib/libefi.so.1=../../lib/libefi.so.1
 s usr/lib/libefi.so=../../lib/libefi.so.1
 s usr/lib/libelf.so.1=../../lib/libelf.so.1
 s usr/lib/libelf.so=../../lib/libelf.so.1
-f usr/lib/libentity.so 0555 root bin
 f usr/lib/libexacct.so.1 0755 root bin
 s usr/lib/libexacct.so=libexacct.so.1
 s usr/lib/libexpat.so.0=libexpat.so.1.5.2
@@ -9678,8 +9403,6 @@ s usr/lib/libhal-storage.so=libhal-storage.so.1.0.0
 f usr/lib/libhal.so.1.0.0 0755 root bin
 s usr/lib/libhal.so.1=libhal.so.1.0.0
 s usr/lib/libhal.so=libhal.so.1.0.0
-f usr/lib/libhistory.so.5 0555 root bin
-s usr/lib/libhistory.so=libhistory.so.5
 f usr/lib/libhotplug.so.1 0755 root bin
 s usr/lib/libhotplug.so=libhotplug.so.1
 f usr/lib/libidmap.so.1 0755 root bin
@@ -9758,10 +9481,6 @@ s usr/lib/libmp.so.2=../../lib/libmp.so.2
 s usr/lib/libmp.so=../../lib/libmp.so.2
 f usr/lib/libmtmalloc.so.1 0755 root bin
 s usr/lib/libmtmalloc.so=libmtmalloc.so.1
-s usr/lib/libmtsk.so.1=../../lib/libmtsk.so.1
-s usr/lib/libmtsk.so=../../lib/libmtsk.so.1
-s usr/lib/libmtsk_db.so.1=../../lib/libmtsk_db.so.1
-s usr/lib/libmtsk_db.so=../../lib/libmtsk_db.so.1
 s usr/lib/libmvec.so.1=../../lib/libmvec.so.1
 s usr/lib/libmvec.so=../../lib/libmvec.so.1
 f usr/lib/libndmp.so.1 0755 root bin
@@ -9891,10 +9610,6 @@ f usr/lib/libsqlite-native.o 0644 root bin
 f usr/lib/libsqlite.o 0644 root bin
 f usr/lib/libsrpt.so.1 0755 root bin
 s usr/lib/libsrpt.so=libsrpt.so.1
-f usr/lib/libssagent.so.1 0755 root bin
-s usr/lib/libssagent.so=libssagent.so.1
-f usr/lib/libssasnmp.so.1 0755 root bin
-s usr/lib/libssasnmp.so=libssasnmp.so.1
 s usr/lib/libssl.so.0.9.8=../../lib/libssl.so.0.9.8
 s usr/lib/libssl.so=../../lib/libssl.so
 f usr/lib/libstanddisasm.so 0644 root bin
@@ -9930,13 +9645,6 @@ f usr/lib/libtnfctl.so.1 0755 root bin
 s usr/lib/libtnfctl.so=libtnfctl.so.1
 f usr/lib/libtnfprobe.so.1 0755 root bin
 s usr/lib/libtnfprobe.so=libtnfprobe.so.1
-s usr/lib/libtsnet.so.1=../../lib/libtsnet.so.1
-s usr/lib/libtsnet.so=../../lib/libtsnet.so.1
-s usr/lib/libtsol.so.2=../../lib/libtsol.so.2
-s usr/lib/libtsol.so=../../lib/libtsol.so.2
-f usr/lib/libtspi.so.1.1.3 0555 root bin
-s usr/lib/libtspi.so.1=libtspi.so.1.1.3
-s usr/lib/libtspi.so=libtspi.so.1.1.3
 s usr/lib/libumem.so.1=../../lib/libumem.so.1
 s usr/lib/libumem.so=../../lib/libumem.so.1
 f usr/lib/libunistat.so.1 0755 root bin
@@ -9949,8 +9657,6 @@ f usr/lib/libvolmgt.so.1 0755 root bin
 s usr/lib/libvolmgt.so=libvolmgt.so.1
 f usr/lib/libvrrpadm.so.1 0755 root bin
 s usr/lib/libvrrpadm.so=libvrrpadm.so.1
-f usr/lib/libvt0.so.1 0755 root bin
-s usr/lib/libvt0.so=libvt0.so.1
 s usr/lib/libw.so.1=../../lib/libw.so.1
 s usr/lib/libw.so=../../lib/libw.so.1
 f usr/lib/libwrap.so.1.0 0755 root bin
@@ -10633,8 +10339,6 @@ f usr/lib/security/amd64/pam_sample.so.1 0755 root bin
 s usr/lib/security/amd64/pam_sample.so=pam_sample.so.1
 f usr/lib/security/amd64/pam_smbfs_login.so.1 0755 root bin
 s usr/lib/security/amd64/pam_smbfs_login.so=pam_smbfs_login.so.1
-f usr/lib/security/amd64/pam_tsol_account.so.1 0755 root bin
-s usr/lib/security/amd64/pam_tsol_account.so=pam_tsol_account.so.1
 f usr/lib/security/amd64/pam_unix_account.so.1 0755 root bin
 s usr/lib/security/amd64/pam_unix_account.so=pam_unix_account.so.1
 f usr/lib/security/amd64/pam_unix_auth.so.1 0755 root bin
@@ -10649,8 +10353,6 @@ f usr/lib/security/amd64/pkcs11_kms.so.1 0755 root bin
 s usr/lib/security/amd64/pkcs11_kms.so=pkcs11_kms.so.1
 f usr/lib/security/amd64/pkcs11_softtoken.so.1 0755 root bin
 s usr/lib/security/amd64/pkcs11_softtoken.so=pkcs11_softtoken.so.1
-f usr/lib/security/amd64/pkcs11_tpm.so.1 0755 root bin
-s usr/lib/security/amd64/pkcs11_tpm.so=pkcs11_tpm.so.1
 f usr/lib/security/audit_binfile.so.1 0755 root bin
 s usr/lib/security/audit_binfile.so=audit_binfile.so.1
 f usr/lib/security/audit_remote.so.1 0755 root bin
@@ -10704,8 +10406,6 @@ f usr/lib/security/pam_smb_passwd.so.1 0755 root bin
 s usr/lib/security/pam_smb_passwd.so=pam_smb_passwd.so.1
 f usr/lib/security/pam_smbfs_login.so.1 0755 root bin
 s usr/lib/security/pam_smbfs_login.so=pam_smbfs_login.so.1
-f usr/lib/security/pam_tsol_account.so.1 0755 root bin
-s usr/lib/security/pam_tsol_account.so=pam_tsol_account.so.1
 f usr/lib/security/pam_unix_account.so.1 0755 root bin
 s usr/lib/security/pam_unix_account.so=pam_unix_account.so.1
 f usr/lib/security/pam_unix_auth.so.1 0755 root bin
@@ -10720,8 +10420,6 @@ f usr/lib/security/pkcs11_kms.so.1 0755 root bin
 s usr/lib/security/pkcs11_kms.so=pkcs11_kms.so.1
 f usr/lib/security/pkcs11_softtoken.so.1 0755 root bin
 s usr/lib/security/pkcs11_softtoken.so=pkcs11_softtoken.so.1
-f usr/lib/security/pkcs11_tpm.so.1 0755 root bin
-s usr/lib/security/pkcs11_tpm.so=pkcs11_tpm.so.1
 f usr/lib/sendmail 2555 root smmsp
 f usr/lib/servinfo 0555 root bin
 f usr/lib/set_keyboard_layout 0555 root bin
@@ -10745,11 +10443,6 @@ s usr/lib/smbsrv/amd64/libsmbns.so=libsmbns.so.1
 f usr/lib/smbsrv/amd64/libsmbrdr.so.1 0755 root bin
 s usr/lib/smbsrv/amd64/libsmbrdr.so=libsmbrdr.so.1
 d usr/lib/smbsrv/dtrace 0755 root bin
-f usr/lib/smbsrv/dtrace/cifs.d 0555 root bin
-f usr/lib/smbsrv/dtrace/msrpc.d 0555 root bin
-f usr/lib/smbsrv/dtrace/smbnode.d 0555 root bin
-f usr/lib/smbsrv/dtrace/smbvfs.d 0555 root bin
-f usr/lib/smbsrv/dtrace/stype.d 0555 root bin
 f usr/lib/smbsrv/libmlrpc.so.1 0755 root bin
 s usr/lib/smbsrv/libmlrpc.so=libmlrpc.so.1
 f usr/lib/smbsrv/libmlsvc.so.1 0755 root bin
@@ -10779,8 +10472,6 @@ f usr/lib/sn1_brand.so.1 0755 root bin
 f usr/lib/sndrd 0555 root bin
 f usr/lib/sndrsyncd 0555 root bin
 d usr/lib/snmp 0755 root bin
-f usr/lib/snmp/mibiisa 0755 root bin
-f usr/lib/snmp/snmpdx 0755 root bin
 d usr/lib/spell 0755 root bin
 f usr/lib/spell/compress 0555 root bin
 f usr/lib/spell/hashcheck 0555 root bin
@@ -10810,31 +10501,12 @@ f usr/lib/sysevent/modules/sysevent_reg_mod.so 0755 root bin
 f usr/lib/sysevent/modules/zfs_mod.so 0755 root bin
 f usr/lib/sysevent/syseventconfd 0555 root bin
 f usr/lib/sysevent/syseventd 0555 root bin
-f usr/lib/t300 0555 root bin
-f usr/lib/t300s 0555 root bin
-f usr/lib/t4014 0555 root bin
-f usr/lib/t450 0555 root bin
 s usr/lib/tabset=../share/lib/tabset
 f usr/lib/th_script 0555 root bin
-f usr/lib/tkConfig.sh 0555 root bin
 s usr/lib/tmac=../share/lib/tmac
 f usr/lib/udapl_tavor.so.1 0755 root bin
 f usr/lib/utmp_update 4555 root bin
 f usr/lib/utmpd 0555 root bin
-d usr/lib/uucp 0755 root bin
-f usr/lib/uucp/Uutry 0555 root bin
-f usr/lib/uucp/bnuconvert 0510 root bin
-f usr/lib/uucp/remote.unknown 4511 root bin
-f usr/lib/uucp/uucheck 0510 root bin
-f usr/lib/uucp/uucico 4511 root bin
-f usr/lib/uucp/uucleanup 0510 root bin
-f usr/lib/uucp/uudemon.admin 0555 root bin
-f usr/lib/uucp/uudemon.cleanup 0555 root bin
-f usr/lib/uucp/uudemon.crontab 0444 root bin
-f usr/lib/uucp/uudemon.hour 0555 root bin
-f usr/lib/uucp/uudemon.poll 0555 root bin
-f usr/lib/uucp/uusched 4511 root bin
-f usr/lib/uucp/uuxqt 4511 root bin
 f usr/lib/values-Xa.o 0644 root bin
 f usr/lib/values-Xc.o 0644 root bin
 f usr/lib/values-Xs.o 0644 root bin
@@ -10843,7 +10515,6 @@ f usr/lib/values-xpg4.o 0644 root bin
 f usr/lib/values-xpg6.o 0644 root bin
 f usr/lib/vfontedpr 0555 root bin
 f usr/lib/vgrindefs 0444 root bin
-f usr/lib/vplot 0555 root bin
 d usr/lib/vscan 0755 root bin
 f usr/lib/vscan/libvscan.so.1 0755 root bin
 s usr/lib/vscan/libvscan.so=libvscan.so.1
@@ -15151,7 +14822,6 @@ f usr/share/man/man1/pvs.1 0444 root bin
 f usr/share/man/man1/pwait.1 0444 root bin
 f usr/share/man/man1/pwd.1 0444 root bin
 f usr/share/man/man1/pwdx.1 0444 root bin
-f usr/share/man/man1/rbash.1 0444 root bin
 f usr/share/man/man1/rcapstat.1 0444 root bin
 f usr/share/man/man1/rcp.1 0444 root bin
 f usr/share/man/man1/rdist.1 0444 root bin
@@ -17492,7 +17162,6 @@ f usr/share/man/man3lgrp/lgrp_view.3lgrp 0444 root bin
 d usr/share/man/man3lib 0755 root bin
 f usr/share/man/man3lib/libMPAPI.3lib 0444 root bin
 f usr/share/man/man3lib/libSMHBAAPI.3lib 0444 root bin
-f usr/share/man/man3lib/libXtsol.3lib 0444 root bin
 f usr/share/man/man3lib/libadm.3lib 0444 root bin
 f usr/share/man/man3lib/libaio.3lib 0444 root bin
 f usr/share/man/man3lib/libauto_ef.3lib 0444 root bin
@@ -17580,8 +17249,6 @@ f usr/share/man/man3lib/libtecla.3lib 0444 root bin
 f usr/share/man/man3lib/libthread.3lib 0444 root bin
 f usr/share/man/man3lib/libtnfctl.3lib 0444 root bin
 f usr/share/man/man3lib/libtsalarm.3lib 0444 root bin
-f usr/share/man/man3lib/libtsnet.3lib 0444 root bin
-f usr/share/man/man3lib/libtsol.3lib 0444 root bin
 f usr/share/man/man3lib/libumem.3lib 0444 root bin
 f usr/share/man/man3lib/libusb.3lib 0444 root bin
 f usr/share/man/man3lib/libuuid.3lib 0444 root bin
@@ -18268,7 +17935,6 @@ f usr/share/man/man3sysevent/sysevent_get_class_name.3sysevent 0444 root bin
 f usr/share/man/man3sysevent/sysevent_get_vendor_name.3sysevent 0444 root bin
 f usr/share/man/man3sysevent/sysevent_post_event.3sysevent 0444 root bin
 f usr/share/man/man3sysevent/sysevent_subscribe_event.3sysevent 0444 root bin
-d usr/share/man/man3tcl 0755 root bin
 d usr/share/man/man3tecla 0755 root bin
 f usr/share/man/man3tecla/cpl_complete_word.3tecla 0444 root bin
 f usr/share/man/man3tecla/ef_expand_file.3tecla 0444 root bin
@@ -18276,7 +17942,6 @@ f usr/share/man/man3tecla/gl_get_line.3tecla 0444 root bin
 f usr/share/man/man3tecla/gl_io_mode.3tecla 0444 root bin
 f usr/share/man/man3tecla/libtecla_version.3tecla 0444 root bin
 f usr/share/man/man3tecla/pca_lookup_file.3tecla 0444 root bin
-d usr/share/man/man3tk 0755 root bin
 d usr/share/man/man3tnf 0755 root bin
 f usr/share/man/man3tnf/TNF_DECLARE_RECORD.3tnf 0444 root bin
 f usr/share/man/man3tnf/TNF_PROBE.3tnf 0444 root bin
@@ -18295,28 +17960,6 @@ f usr/share/man/man3tnf/tnfctl_strerror.3tnf 0444 root bin
 f usr/share/man/man3tnf/tnfctl_trace_attrs_get.3tnf 0444 root bin
 f usr/share/man/man3tnf/tnfctl_trace_state_set.3tnf 0444 root bin
 f usr/share/man/man3tnf/tracing.3tnf 0444 root bin
-d usr/share/man/man3tsol 0755 root bin
-f usr/share/man/man3tsol/blcompare.3tsol 0444 root bin
-f usr/share/man/man3tsol/blminmax.3tsol 0444 root bin
-f usr/share/man/man3tsol/bltocolor.3tsol 0444 root bin
-f usr/share/man/man3tsol/bltos.3tsol 0444 root bin
-f usr/share/man/man3tsol/btohex.3tsol 0444 root bin
-f usr/share/man/man3tsol/getdevicerange.3tsol 0444 root bin
-f usr/share/man/man3tsol/getpathbylabel.3tsol 0444 root bin
-f usr/share/man/man3tsol/getplabel.3tsol 0444 root bin
-f usr/share/man/man3tsol/getuserrange.3tsol 0444 root bin
-f usr/share/man/man3tsol/getzonelabelbyid.3tsol 0444 root bin
-f usr/share/man/man3tsol/getzonerootbyid.3tsol 0444 root bin
-f usr/share/man/man3tsol/hextob.3tsol 0444 root bin
-f usr/share/man/man3tsol/label_to_str.3tsol 0444 root bin
-f usr/share/man/man3tsol/labelbuilder.3tsol 0444 root bin
-f usr/share/man/man3tsol/labelclipping.3tsol 0444 root bin
-f usr/share/man/man3tsol/m_label.3tsol 0444 root bin
-f usr/share/man/man3tsol/sbltos.3tsol 0444 root bin
-f usr/share/man/man3tsol/setflabel.3tsol 0444 root bin
-f usr/share/man/man3tsol/stobl.3tsol 0444 root bin
-f usr/share/man/man3tsol/str_to_label.3tsol 0444 root bin
-f usr/share/man/man3tsol/tsol_getrhtype.3tsol 0444 root bin
 d usr/share/man/man3ucb 0755 root bin
 f usr/share/man/man3ucb/dbm.3ucb 0444 root bin
 f usr/share/man/man3ucb/flock.3ucb 0444 root bin
@@ -18798,14 +18441,12 @@ f usr/share/man/man5/pam_sample.5 0444 root bin
 f usr/share/man/man5/pam_smartcard.5 0444 root bin
 f usr/share/man/man5/pam_smb_passwd.5 0444 root bin
 f usr/share/man/man5/pam_smbfs_login.5 0444 root bin
-f usr/share/man/man5/pam_tsol_account.5 0444 root bin
 f usr/share/man/man5/pam_unix_account.5 0444 root bin
 f usr/share/man/man5/pam_unix_auth.5 0444 root bin
 f usr/share/man/man5/pam_unix_cred.5 0444 root bin
 f usr/share/man/man5/pam_unix_session.5 0444 root bin
 f usr/share/man/man5/pkcs11_kernel.5 0444 root bin
 f usr/share/man/man5/pkcs11_softtoken.5 0444 root bin
-f usr/share/man/man5/pkcs11_tpm.5 0444 root bin
 f usr/share/man/man5/privileges.5 0444 root bin
 f usr/share/man/man5/prof.5 0444 root bin
 f usr/share/man/man5/rbac.5 0444 root bin

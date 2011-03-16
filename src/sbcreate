@@ -91,7 +91,7 @@ function grab_ps
 function grab_zfsinfo
 {
     zpool status -v > ${TEMPDIR}/zpool.status
-    zfs list > ${TEMPDIR}/zfs.list
+    zfs list -t all > ${TEMPDIR}/zfs.list
     echo "  > zfs info"
 }
 

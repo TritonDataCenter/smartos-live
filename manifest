@@ -219,7 +219,6 @@ f etc/acct/holidays 0644 root bin
 d etc/amd64 0755 root sys
 f etc/auto_home 0644 root bin
 f etc/auto_master 0644 root bin
-s etc/autopush=../sbin/autopush
 d etc/bash 0755 root sys
 f etc/bash/bash_completion 0644 root sys
 d etc/bash/bash_completion.d 0755 root sys
@@ -230,15 +229,11 @@ d etc/certs 0755 root sys
 f etc/certs/SUNWObjectCA 0644 root sys
 f etc/certs/SUNWSolarisCA 0644 root sys
 f etc/certs/SUNW_SunOS_5.10 0644 root sys
-s etc/cfgadm=../usr/sbin/cfgadm
-s etc/chroot=../usr/sbin/chroot
-s etc/clri=../usr/sbin/clri
 d etc/cron.d 0755 root sys
 f etc/cron.d/.proto 0744 root sys
 f etc/cron.d/at.deny 0644 root sys
 f etc/cron.d/cron.deny 0644 root sys
 f etc/cron.d/queuedefs 0644 root sys
-s etc/cron=../usr/sbin/cron
 d etc/crypto 0755 root sys
 d etc/crypto/certs 0755 root sys
 f etc/crypto/certs/CA 0644 root sys
@@ -254,7 +249,6 @@ f etc/dacf.conf 0644 root sys
 d etc/dat 0755 root sys
 f etc/dat/dat.conf 0644 root sys
 f etc/datemsk 0444 root sys
-s etc/dcopy=../usr/sbin/dcopy
 d etc/default 0755 root sys
 f etc/default/autofs 0644 root sys
 f etc/default/cron 0644 root sys
@@ -301,12 +295,9 @@ f etc/driver_aliases 0644 root sys
 f etc/driver_classes 0644 root sys
 f etc/dumpadm.conf 0644 root other
 f etc/dumpdates 0664 root sys
-s etc/ff=../usr/sbin/ff
 d etc/fm 0755 root sys
 d etc/fm/fmd 0755 root sys
-s etc/fmthard=../usr/sbin/fmthard
 f etc/format.dat 0644 root sys
-s etc/format=../usr/sbin/format
 d etc/fs 0755 root sys
 d etc/fs/dev 0755 root sys
 f etc/fs/dev/mount 0555 root bin
@@ -319,18 +310,11 @@ f etc/fs/ufs/mount 0555 root bin
 d etc/fs/zfs 0755 root sys
 s etc/fs/zfs/mount=../../../sbin/zfs
 s etc/fs/zfs/umount=../../../sbin/zfs
-s etc/fsck=../usr/sbin/fsck
-s etc/fsdb=../usr/sbin/fsdb
-s etc/fstyp=../usr/sbin/fstyp
-s etc/fuser=../usr/sbin/fuser
-s etc/getty=../usr/lib/saf/ttymon
 f etc/group 0644 root sys
-s etc/grpck=../usr/sbin/grpck
 d etc/gss 0755 root sys
 f etc/gss/gsscred.conf 0644 root sys
 f etc/gss/mech 0644 root sys
 f etc/gss/qop 0644 root sys
-s etc/halt=../usr/sbin/halt
 f etc/hba.conf 0644 root bin
 s etc/hosts=inet/hosts
 f etc/ima.conf 0644 root bin
@@ -377,9 +361,7 @@ f etc/init.d/sendmail 0744 root sys
 f etc/init.d/slpd 0744 root sys
 f etc/init.d/sysetup 0744 root sys
 f etc/init.d/ufs_quota 0744 root sys
-s etc/init=../sbin/init
 f etc/inittab 0644 root sys
-s etc/install=../usr/sbin/install
 f etc/ioctl.syscon 0644 root sys
 d etc/ipadm 0755 netadm netadm
 f etc/ipadm/ipadm.conf 0644 netadm netadm
@@ -387,17 +369,10 @@ d etc/ipf 0755 root sys
 f etc/ipf/ipf.conf 0644 root sys
 f etc/issue 0644 root sys
 f etc/iu.ap 0644 root sys
-s etc/killall=../usr/sbin/killall
 d etc/krb5 0755 root sys
 f etc/krb5/krb5.conf 0644 root sys
 f etc/krb5/warn.conf 0644 root sys
 f etc/ksh.kshrc 0644 root sys
-s etc/labelit=../usr/sbin/labelit
-d etc/lib 0755 root sys
-s etc/lib/ld.so.1=../../lib/ld.so.1
-s etc/lib/libdl.so.1=../../lib/libdl.so.1
-s etc/lib/nss_files.so.1=../../lib/nss_files.so.1
-s etc/link=../usr/sbin/link
 s etc/log=../var/adm/log
 f etc/logadm.conf 0644 root sys
 d etc/logadm.d 0755 root sys
@@ -416,17 +391,11 @@ f etc/magic 0444 root bin
 f etc/mailcap 0644 root bin
 f etc/mime.types 0644 root bin
 f etc/minor_perm 0644 root sys
-s etc/mkfs=../usr/sbin/mkfs
-s etc/mknod=../usr/sbin/mknod
 f etc/mnttab 0444 root root
 f etc/motd 0644 root sys
-s etc/mount=../sbin/mount
-s etc/mountall=../sbin/mountall
 f etc/mpapi.conf 0644 root bin
-s etc/mvdir=../usr/sbin/mvdir
 f etc/name_to_major 0644 root sys
 f etc/name_to_sysnum 0644 root sys
-s etc/ncheck=../usr/sbin/ncheck
 d etc/net 0755 root sys
 d etc/net/ticlts 0755 root sys
 f etc/net/ticlts/hosts 0644 root sys
@@ -476,15 +445,11 @@ d etc/ppp/plugins 0755 root sys
 f etc/profile 0644 root sys
 f etc/project 0644 root sys
 s etc/protocols=inet/protocols
-s etc/prtvtoc=../usr/sbin/prtvtoc
 f etc/publickey 0644 root bin
-s etc/pwck=../usr/sbin/pwck
 d etc/rc0.d 0755 root sys
 f etc/rc0.d/K50pppd 0744 root sys
-s etc/rc0=../sbin/rc0
 d etc/rc1.d 0755 root sys
 f etc/rc1.d/K50pppd 0744 root sys
-s etc/rc1=../sbin/rc1
 d etc/rc2.d 0755 root sys
 f etc/rc2.d/README 0644 root sys
 f etc/rc2.d/S20sysetup 0744 root sys
@@ -492,22 +457,15 @@ f etc/rc2.d/S47pppd 0744 root sys
 f etc/rc2.d/S73cachefs.daemon 0744 root sys
 f etc/rc2.d/S81dodatadm.udaplt 0744 root sys
 f etc/rc2.d/S89PRESERVE 0744 root sys
-s etc/rc2=../sbin/rc2
 d etc/rc3.d 0755 root sys
 f etc/rc3.d/README 0644 root sys
-s etc/rc3=../sbin/rc3
-s etc/rc5=../sbin/rc5
-s etc/rc6=../sbin/rc6
 d etc/rcS.d 0755 root sys
 f etc/rcS.d/README 0644 root sys
-s etc/rcS=../sbin/rcS
 d etc/rcm 0755 root sys
 d etc/rcm/scripts 0755 root sys
-s etc/reboot=../usr/sbin/halt
 f etc/release 0444 root sys
 f etc/remote 0644 root bin
 f etc/resolv.conf 0644 netadm netadm
-s etc/rmt=../usr/sbin/rmt
 f etc/rpc 0644 root sys
 d etc/rpcsec 0755 root sys
 f etc/rtc_config 0644 root root
@@ -553,11 +511,9 @@ d etc/security/prof_attr.d 0755 root sys
 f etc/security/prof_attr.d/SUNWcs 0644 root sys
 f etc/security/prof_attr.d/ntp 0444 root sys
 s etc/services=inet/services
-s etc/setmnt=../usr/sbin/setmnt
 d etc/sfw 0755 root bin
 s etc/sfw/openssl=../openssl
 f etc/shadow 0400 root sys
-s etc/shutdown=../usr/sbin/shutdown
 d etc/skel 0755 root sys
 f etc/skel/.bashrc 0644 root other
 f etc/skel/.profile 0644 root other
@@ -572,32 +528,22 @@ d etc/ssh 0755 root sys
 f etc/ssh/moduli 0644 root sys
 f etc/ssh/ssh_config 0644 root sys
 f etc/ssh/sshd_config 0644 root sys
-s etc/sulogin=../sbin/sulogin
 d etc/svc 0755 root sys
 d etc/svc/profile 0755 root sys
 f etc/svc/profile/generic.xml 0444 root sys
 f etc/svc/profile/platform.xml 0444 root sys
 d etc/svc/volatile 0755 root sys
-s etc/swap=../usr/sbin/swap
-s etc/swapadd=../sbin/swapadd
 d etc/sysconfig 0755 root root
-s etc/sysdef=../usr/sbin/sysdef
 d etc/sysevent 0755 root sys
 d etc/sysevent/config 0755 root sys
 d etc/sysevent/devfsadm_event_channel 0755 root root
 f etc/syslog.conf 0644 root sys
 s etc/syslog.pid=../var/run/syslog.pid
 f etc/system 0644 root sys
-s etc/tar=../usr/sbin/tar
-s etc/telinit=../sbin/init
 s etc/termcap=../usr/share/lib/termcap
 d etc/tm 0755 root sys
 f etc/ttydefs 0644 root sys
 f etc/ttysrch 0644 root sys
-s etc/uadmin=../sbin/uadmin
-s etc/umount=../sbin/umount
-s etc/umountall=../sbin/umountall
-s etc/unlink=../usr/sbin/unlink
 d etc/usb 0755 root sys
 f etc/usb/config_map.conf 0644 root sys
 f etc/user_attr 0644 root sys
@@ -605,9 +551,6 @@ d etc/user_attr.d 0755 root sys
 f etc/user_attr.d/SUNWcs 0644 root sys
 s etc/utmpx=../var/adm/utmpx
 f etc/vfstab 0644 root sys
-s etc/volcopy=../usr/sbin/volcopy
-s etc/wall=../usr/sbin/wall
-s etc/whodo=../usr/sbin/whodo
 s etc/wtmpx=../var/adm/wtmpx
 d etc/xdg 0755 root sys
 d etc/xdg/autostart 0755 root sys

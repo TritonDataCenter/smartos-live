@@ -1723,7 +1723,6 @@ f lib/svc/method/svc-ndmp 0555 root sys
 f lib/svc/method/svc-ndp 0555 root bin
 f lib/svc/method/svc-network-discovery 0555 root sys
 f lib/svc/method/svc-nscd 0555 root bin
-f lib/svc/method/svc-pkg-mdns 0755 root bin
 f lib/svc/method/svc-poold 0555 root sys
 f lib/svc/method/svc-pools 0555 root sys
 f lib/svc/method/svc-power 0555 root sys
@@ -1738,7 +1737,6 @@ f lib/svc/method/svc-route 0555 root bin
 f lib/svc/method/svc-sar 0555 root sys
 f lib/svc/method/svc-scheduler 0555 root sys
 f lib/svc/method/svc-scm 0744 root sys
-f lib/svc/method/svc-smbd 0555 root sys
 f lib/svc/method/svc-sockfilter 0555 root bin
 f lib/svc/method/svc-srpt 0555 root sys
 f lib/svc/method/svc-stmf 0555 root sys
@@ -1883,8 +1881,8 @@ f sbin/rc0 0744 root sys
 f sbin/rc1 0744 root sys
 f sbin/rc2 0744 root sys
 f sbin/rc3 0744 root sys
-f sbin/rc5 0744 root sys
-f sbin/rc6 0744 root sys
+h sbin/rc5=sbin/rc0
+h sbin/rc6=sbin/rc0
 f sbin/rcS 0744 root sys
 f sbin/route 0555 root bin
 f sbin/routeadm 0555 root bin
@@ -1928,7 +1926,7 @@ d usr 0755 root sys
 s usr/adm=../var/adm
 d usr/bin 0755 root bin
 f usr/bin/CA.pl 0555 root bin
-f usr/bin/[ 0555 root bin
+h usr/bin/[=usr/bin/alias
 f usr/bin/ack 0555 root bin
 f usr/bin/addbadsec 0555 root bin
 f usr/bin/addbib 0555 root bin
@@ -1936,13 +1934,13 @@ f usr/bin/alias 0555 root bin
 d usr/bin/amd64 0755 root bin
 f usr/bin/amd64/amt 0555 root bin
 f usr/bin/amd64/crle 0555 root bin
-f usr/bin/amd64/decrypt 0555 root bin
-f usr/bin/amd64/digest 0555 root bin
+h usr/bin/amd64/decrypt=usr/bin/amd64/encrypt
+h usr/bin/amd64/digest=usr/bin/amd64/mac
 f usr/bin/amd64/elfwrap 0555 root bin
 f usr/bin/amd64/encrypt 0555 root bin
 s usr/bin/amd64/gcaptoinfo=gtic
 f usr/bin/amd64/gcore 0555 root bin
-f usr/bin/amd64/ksh 0555 root bin
+h usr/bin/amd64/ksh=usr/bin/amd64/ksh93
 f usr/bin/amd64/ksh93 0555 root bin
 f usr/bin/amd64/ld 0755 root bin
 f usr/bin/amd64/ldd 0555 root bin
@@ -1977,17 +1975,17 @@ f usr/bin/amd64/ptree 0555 root bin
 f usr/bin/amd64/pvs 0555 root bin
 f usr/bin/amd64/pwait 0555 root bin
 f usr/bin/amd64/pwdx 0555 root bin
-f usr/bin/amd64/rksh 0555 root bin
-f usr/bin/amd64/rksh93 0555 root bin
+h usr/bin/amd64/rksh=usr/bin/amd64/ksh93
+h usr/bin/amd64/rksh93=usr/bin/amd64/ksh93
 f usr/bin/amd64/savecore 0555 root bin
 f usr/bin/amd64/setuname 0555 root bin
 f usr/bin/amd64/sort 0555 root bin
 f usr/bin/amd64/strings 0555 root bin
 f usr/bin/amd64/truss 0555 root bin
-f usr/bin/amd64/uptime 4555 root bin
+h usr/bin/amd64/uptime=usr/bin/amd64/w
 f usr/bin/amd64/w 4555 root bin
 f usr/bin/amt 0555 root bin
-f usr/bin/apropos 0555 root bin
+h usr/bin/apropos=usr/bin/man
 f usr/bin/ar 0555 root bin
 f usr/bin/arch 0555 root bin
 f usr/bin/arcstat 0555 root bin
@@ -2005,15 +2003,15 @@ f usr/bin/batch 0555 root bin
 f usr/bin/bc 0555 root bin
 f usr/bin/bdiff 0755 root bin
 f usr/bin/bfs 0555 root bin
-f usr/bin/bg 0555 root bin
+h usr/bin/bg=usr/bin/alias
 f usr/bin/bootparams 0555 root bin
 f usr/bin/bunzip2 0555 root bin
 f usr/bin/busstat 0555 root bin
 h usr/bin/bzcat=usr/bin/bunzip2
 f usr/bin/bzcmp 0555 root bin
 f usr/bin/bzdiff 0555 root bin
-f usr/bin/bzegrep 0555 root bin
-f usr/bin/bzfgrep 0555 root bin
+h usr/bin/bzegrep=usr/bin/bzgrep
+h usr/bin/bzfgrep=usr/bin/bzgrep
 f usr/bin/bzgrep 0555 root bin
 h usr/bin/bzip2=usr/bin/bunzip2
 f usr/bin/bzip2recover 0555 root bin
@@ -2025,8 +2023,8 @@ f usr/bin/cal 0555 root bin
 f usr/bin/calendar 0555 root bin
 f usr/bin/captoinfo 0555 root bin
 f usr/bin/cat 0555 root bin
-f usr/bin/catman 0555 root bin
-f usr/bin/cd 0555 root bin
+h usr/bin/catman=usr/bin/man
+h usr/bin/cd=usr/bin/alias
 f usr/bin/certutil 0555 root bin
 f usr/bin/checkeq 0555 root bin
 f usr/bin/checknr 0555 root bin
@@ -2042,15 +2040,15 @@ f usr/bin/ckkeywd 0555 root bin
 f usr/bin/ckpath 0555 root bin
 f usr/bin/ckrange 0555 root bin
 f usr/bin/ckstr 0555 root bin
-f usr/bin/cksum 0555 root bin
+h usr/bin/cksum=usr/bin/alias
 f usr/bin/cktime 0555 root bin
 f usr/bin/ckuid 0555 root bin
 f usr/bin/ckyorn 0555 root bin
 f usr/bin/clear 0555 root bin
-f usr/bin/cmp 0555 root bin
+h usr/bin/cmp=usr/bin/alias
 f usr/bin/col 0555 root bin
-f usr/bin/comm 0555 root bin
-f usr/bin/command 0555 root bin
+h usr/bin/comm=usr/bin/alias
+h usr/bin/command=usr/bin/alias
 f usr/bin/compress 0555 root bin
 f usr/bin/coreadm 0555 root bin
 f usr/bin/cp 0555 root bin
@@ -2066,11 +2064,11 @@ f usr/bin/ctstat 0555 root bin
 f usr/bin/ctwatch 0555 root bin
 f usr/bin/curl 0755 root bin
 f usr/bin/curl-config 0755 root bin
-f usr/bin/cut 0555 root bin
+h usr/bin/cut=usr/bin/alias
 f usr/bin/date 0555 root bin
 f usr/bin/dc 0555 root bin
 f usr/bin/dd 0555 root bin
-f usr/bin/decrypt 0555 root bin
+h usr/bin/decrypt=usr/lib/isaexec
 f usr/bin/deroff 0555 root bin
 f usr/bin/devattr 0555 root bin
 f usr/bin/devfree 0555 root bin
@@ -2079,7 +2077,7 @@ s usr/bin/df=../sbin/df
 f usr/bin/diff 0555 root bin
 f usr/bin/diff3 0555 root bin
 f usr/bin/diffmk 0555 root bin
-f usr/bin/digest 0555 root bin
+h usr/bin/digest=usr/lib/isaexec
 f usr/bin/dircmp 0555 root bin
 f usr/bin/dirname 0555 root bin
 f usr/bin/disk_size 0555 root bin
@@ -2103,7 +2101,7 @@ f usr/bin/eject 0555 root bin
 f usr/bin/elfdump 0555 root bin
 f usr/bin/elfsign 0555 root bin
 f usr/bin/elfwrap 0555 root bin
-f usr/bin/encrypt 0555 root bin
+h usr/bin/encrypt=usr/lib/isaexec
 f usr/bin/enhance 0555 root bin
 f usr/bin/env 0555 root bin
 f usr/bin/eqn 0555 root bin
@@ -2113,10 +2111,10 @@ f usr/bin/expr 0555 root bin
 f usr/bin/exstr 0555 root bin
 f usr/bin/factor 0555 root bin
 f usr/bin/false 0555 root bin
-f usr/bin/fc 0555 root bin
+h usr/bin/fc=usr/bin/alias
 f usr/bin/fdetach 0555 root bin
 f usr/bin/fdformat 4555 root bin
-f usr/bin/fg 0555 root bin
+h usr/bin/fg=usr/bin/alias
 f usr/bin/fgrep 0555 root bin
 f usr/bin/file 0555 root bin
 f usr/bin/filesync 0555 root bin
@@ -2127,7 +2125,7 @@ f usr/bin/fold 0555 root bin
 f usr/bin/fsstat 0555 root bin
 f usr/bin/ftp 0555 root bin
 s usr/bin/gcaptoinfo=gtic
-f usr/bin/gcore 0555 root bin
+h usr/bin/gcore=usr/lib/isaexec
 f usr/bin/gencat 0555 root bin
 f usr/bin/geniconvtbl 0555 root bin
 f usr/bin/genmsg 0555 root bin
@@ -2137,7 +2135,7 @@ f usr/bin/getdgrp 0555 root bin
 f usr/bin/getent 0555 root bin
 f usr/bin/getfacl 0555 root bin
 f usr/bin/getopt 0555 root bin
-f usr/bin/getopts 0555 root bin
+h usr/bin/getopts=usr/bin/alias
 f usr/bin/gettext 0555 root bin
 f usr/bin/gettxt 0555 root bin
 f usr/bin/getvol 0555 root bin
@@ -2154,30 +2152,30 @@ f usr/bin/gtset 0755 root bin
 f usr/bin/gunzip 0555 root bin
 h usr/bin/gzcat=usr/bin/gunzip
 f usr/bin/gzcmp 0555 root bin
-f usr/bin/gzdiff 0555 root bin
-f usr/bin/gzegrep 0555 root bin
+h usr/bin/gzdiff=usr/bin/gzcmp
+h usr/bin/gzegrep=usr/bin/gzgrep
 f usr/bin/gzexe 0555 root bin
-f usr/bin/gzfgrep 0555 root bin
+h usr/bin/gzfgrep=usr/bin/gzgrep
 f usr/bin/gzforce 0555 root bin
 f usr/bin/gzgrep 0555 root bin
 h usr/bin/gzip=usr/bin/gunzip
 f usr/bin/gzless 0555 root bin
 f usr/bin/gzmore 0555 root bin
 f usr/bin/gznew 0555 root bin
-f usr/bin/hash 0555 root bin
+h usr/bin/hash=usr/bin/alias
 f usr/bin/head 0555 root bin
 f usr/bin/hostid 0555 root bin
 f usr/bin/hostname 0555 root bin
-f usr/bin/i286 0555 root bin
-f usr/bin/i386 0555 root bin
-f usr/bin/i486 0555 root bin
+h usr/bin/i286=usr/bin/sun
+h usr/bin/i386=usr/bin/sun
+h usr/bin/i486=usr/bin/sun
 d usr/bin/i86 0755 root bin
 f usr/bin/i86/amt 0555 root bin
-f usr/bin/i86/decrypt 0555 root bin
-f usr/bin/i86/digest 0555 root bin
+h usr/bin/i86/decrypt=usr/bin/i86/encrypt
+h usr/bin/i86/digest=usr/bin/i86/mac
 f usr/bin/i86/encrypt 0555 root bin
 f usr/bin/i86/gcore 0555 root bin
-f usr/bin/i86/ksh 0555 root bin
+h usr/bin/i86/ksh=usr/bin/i86/ksh93
 f usr/bin/i86/ksh93 0555 root bin
 f usr/bin/i86/mac 0555 root bin
 f usr/bin/i86/mdb 0555 root bin
@@ -2206,43 +2204,42 @@ f usr/bin/i86/ptime 0555 root bin
 f usr/bin/i86/ptree 0555 root bin
 f usr/bin/i86/pwait 0555 root bin
 f usr/bin/i86/pwdx 0555 root bin
-f usr/bin/i86/rksh 0555 root bin
-f usr/bin/i86/rksh93 0555 root bin
+h usr/bin/i86/rksh=usr/bin/i86/ksh93
+h usr/bin/i86/rksh93=usr/bin/i86/ksh93
 f usr/bin/i86/savecore 0555 root bin
 f usr/bin/i86/setuname 0555 root bin
 f usr/bin/i86/sort 0555 root bin
 f usr/bin/i86/strings 0555 root bin
 f usr/bin/i86/truss 0555 root bin
-f usr/bin/i86/uptime 4555 root bin
+h usr/bin/i86/uptime=usr/bin/i86/w
 f usr/bin/i86/w 4555 root bin
-f usr/bin/i860 0555 root bin
-f usr/bin/i86pc 0555 root bin
-f usr/bin/iAPX286 0555 root bin
+h usr/bin/i860=usr/bin/sun
+h usr/bin/i86pc=usr/bin/sun
+h usr/bin/iAPX286=usr/bin/sun
 f usr/bin/iconv 0555 root bin
 f usr/bin/id 0555 root bin
-f usr/bin/idn 0555 root bin
 f usr/bin/indxbib 0555 root bin
 f usr/bin/infocmp 0555 root bin
 f usr/bin/iostat 0555 root bin
 f usr/bin/isainfo 0555 root bin
 f usr/bin/isalist 0555 root bin
 f usr/bin/itu 0555 root bin
-f usr/bin/jobs 0555 root bin
-f usr/bin/join 0555 root bin
+h usr/bin/jobs=usr/bin/alias
+h usr/bin/join=usr/bin/alias
 s usr/bin/jsh=ksh93
 f usr/bin/json 0555 root bin
 f usr/bin/kbd 0555 root bin
 f usr/bin/kdestroy 0555 root bin
 f usr/bin/keylogin 0555 root bin
 f usr/bin/keylogout 0555 root bin
-f usr/bin/kill 0555 root bin
+h usr/bin/kill=usr/bin/alias
 f usr/bin/kinit 0555 root bin
 f usr/bin/klist 0555 root bin
 f usr/bin/kmfcfg 0555 root bin
 f usr/bin/kpasswd 0555 root bin
 f usr/bin/krb5-config 0555 root bin
-f usr/bin/ksh 0555 root bin
-f usr/bin/ksh93 0555 root bin
+h usr/bin/ksh=usr/lib/isaexec
+h usr/bin/ksh93=usr/lib/isaexec
 f usr/bin/kstat 0555 root bin
 f usr/bin/ktutil 0555 root bin
 f usr/bin/last 0555 root bin
@@ -2251,7 +2248,7 @@ f usr/bin/ld 0755 root bin
 f usr/bin/ldapadd 0555 root bin
 f usr/bin/ldapdelete 0555 root bin
 f usr/bin/ldaplist 0555 root bin
-f usr/bin/ldapmodify 0555 root bin
+h usr/bin/ldapmodify=usr/bin/ldapadd
 f usr/bin/ldapmodrdn 0555 root bin
 f usr/bin/ldapsearch 0555 root bin
 f usr/bin/ldd 0555 root bin
@@ -2268,25 +2265,25 @@ f usr/bin/locale 0555 root bin
 f usr/bin/logger 0555 root bin
 f usr/bin/login 4555 root bin
 f usr/bin/logins 0750 root bin
-f usr/bin/logname 0555 root bin
+h usr/bin/logname=usr/bin/alias
 f usr/bin/look 0755 root bin
 f usr/bin/lookbib 0555 root bin
 f usr/bin/lorder 0555 root bin
 f usr/bin/ls 0555 root bin
 f usr/bin/m4 0555 root bin
 f usr/bin/m68k 0555 root bin
-f usr/bin/mac 0555 root bin
+h usr/bin/mac=usr/lib/isaexec
 f usr/bin/mach 0555 root bin
 f usr/bin/mail 2511 root mail
 f usr/bin/mailx 2511 root mail
 f usr/bin/makedev 0555 root bin
 f usr/bin/man 0555 root bin
-f usr/bin/mc68000 0555 root bin
-f usr/bin/mc68010 0555 root bin
-f usr/bin/mc68020 0555 root bin
-f usr/bin/mc68030 0555 root bin
-f usr/bin/mc68040 0555 root bin
-f usr/bin/mdb 0555 root bin
+h usr/bin/mc68000=usr/bin/sun
+h usr/bin/mc68010=usr/bin/sun
+h usr/bin/mc68020=usr/bin/sun
+h usr/bin/mc68030=usr/bin/sun
+h usr/bin/mc68040=usr/bin/sun
+h usr/bin/mdb=usr/lib/isaexec
 f usr/bin/mesg 0555 root bin
 f usr/bin/mkbootmedia 0555 root bin
 f usr/bin/mkdir 0555 root bin
@@ -2307,13 +2304,13 @@ f usr/bin/netstat 0555 root bin
 f usr/bin/newform 0555 root bin
 f usr/bin/newgrp 4755 root sys
 f usr/bin/news 0555 root bin
-f usr/bin/newtask 0555 root bin
+h usr/bin/newtask=usr/lib/isaexec
 f usr/bin/nfsstat 0555 root bin
 f usr/bin/nice 0555 root bin
 f usr/bin/nl 0555 root bin
 f usr/bin/nm 0555 root bin
 f usr/bin/node 0555 root bin
-f usr/bin/nohup 0555 root bin
+h usr/bin/nohup=usr/lib/isaexec
 f usr/bin/nroff 0555 root bin
 f usr/bin/oawk 0555 root bin
 f usr/bin/od 0555 root bin
@@ -2321,82 +2318,82 @@ f usr/bin/on 0555 root bin
 f usr/bin/openssl 0555 root bin
 f usr/bin/optisa 0555 root bin
 f usr/bin/pack 0555 root bin
-f usr/bin/page 0555 root bin
+h usr/bin/page=usr/bin/more
 f usr/bin/pagesize 0555 root bin
-f usr/bin/pargs 0555 root bin
+h usr/bin/pargs=usr/lib/isaexec
 f usr/bin/passwd 6555 root sys
-f usr/bin/paste 0555 root bin
+h usr/bin/paste=usr/bin/alias
 f usr/bin/pathchk 0555 root bin
 f usr/bin/pax 0555 root bin
 s usr/bin/pcat=unpack
-f usr/bin/pcred 0555 root bin
-f usr/bin/pdp11 0555 root bin
+h usr/bin/pcred=usr/lib/isaexec
+h usr/bin/pdp11=usr/bin/sun
 s usr/bin/perl=/opt/local/bin/perl
-f usr/bin/pfbash 0555 root bin
-f usr/bin/pfcsh 0555 root bin
+h usr/bin/pfbash=usr/bin/pfexec
+h usr/bin/pfcsh=usr/bin/pfexec
 f usr/bin/pfexec 0555 root bin
-f usr/bin/pfiles 0555 root bin
-f usr/bin/pfksh 0555 root bin
-f usr/bin/pfksh93 0555 root bin
-f usr/bin/pflags 0555 root bin
-f usr/bin/pfrksh 0555 root bin
-f usr/bin/pfrksh93 0555 root bin
-f usr/bin/pfsh 0555 root bin
-f usr/bin/pftcsh 0555 root bin
-f usr/bin/pfzsh 0555 root bin
+h usr/bin/pfiles=usr/lib/isaexec
+h usr/bin/pfksh=usr/bin/pfexec
+h usr/bin/pfksh93=usr/bin/pfexec
+h usr/bin/pflags=usr/lib/isaexec
+h usr/bin/pfrksh=usr/bin/pfexec
+h usr/bin/pfrksh93=usr/bin/pfexec
+h usr/bin/pfsh=usr/bin/pfexec
+h usr/bin/pftcsh=usr/bin/pfexec
+h usr/bin/pfzsh=usr/bin/pfexec
 f usr/bin/pg 0555 root bin
 f usr/bin/pginfo 0555 root bin
 f usr/bin/pgrep 0555 root bin
 f usr/bin/pgstat 0555 root bin
 f usr/bin/pkg2du 0555 root bin
-f usr/bin/pkill 0555 root bin
+h usr/bin/pkill=usr/bin/pgrep
 f usr/bin/pktool 0555 root bin
-f usr/bin/pldd 0555 root bin
-f usr/bin/plgrp 0555 root bin
-f usr/bin/plimit 0555 root bin
-f usr/bin/pmadvise 0555 root bin
-f usr/bin/pmap 0555 root bin
+h usr/bin/pldd=usr/lib/isaexec
+h usr/bin/plgrp=usr/lib/isaexec
+h usr/bin/plimit=usr/lib/isaexec
+h usr/bin/pmadvise=usr/lib/isaexec
+h usr/bin/pmap=usr/lib/isaexec
 f usr/bin/poolstat 0555 root bin
-f usr/bin/ppgsz 0555 root bin
-f usr/bin/ppriv 0555 root bin
+h usr/bin/ppgsz=usr/lib/isaexec
+h usr/bin/ppriv=usr/lib/isaexec
 f usr/bin/pr 0555 root bin
-f usr/bin/prctl 0555 root bin
-f usr/bin/preap 0555 root bin
-f usr/bin/print 0555 root bin
+h usr/bin/prctl=usr/lib/isaexec
+h usr/bin/preap=usr/lib/isaexec
+h usr/bin/print=usr/bin/alias
 f usr/bin/printf 0555 root bin
 f usr/bin/priocntl 0555 root bin
 f usr/bin/profiles 0555 root bin
 f usr/bin/projects 0555 root bin
-f usr/bin/prstat 0555 root bin
-f usr/bin/prun 0555 root bin
-f usr/bin/ps 0555 root bin
-f usr/bin/psig 0555 root bin
-f usr/bin/pstack 0555 root bin
-f usr/bin/pstop 0555 root bin
-f usr/bin/ptime 0555 root bin
-f usr/bin/ptree 0555 root bin
+h usr/bin/prstat=usr/lib/isaexec
+h usr/bin/prun=usr/lib/isaexec
+h usr/bin/ps=usr/lib/isaexec
+h usr/bin/psig=usr/lib/isaexec
+h usr/bin/pstack=usr/lib/isaexec
+h usr/bin/pstop=usr/lib/isaexec
+h usr/bin/ptime=usr/lib/isaexec
+h usr/bin/ptree=usr/lib/isaexec
 f usr/bin/putdev 0555 root bin
 f usr/bin/putdgrp 0555 root bin
 f usr/bin/pvs 0555 root bin
-f usr/bin/pwait 0555 root bin
+h usr/bin/pwait=usr/lib/isaexec
 s usr/bin/pwconv=../sbin/pwconv
 f usr/bin/pwd 0555 root bin
-f usr/bin/pwdx 0555 root bin
+h usr/bin/pwdx=usr/lib/isaexec
 s usr/bin/rbash=bash
 f usr/bin/rcapstat 0555 root bin
 f usr/bin/rcp 4555 root bin
 f usr/bin/rdate 0555 root bin
 f usr/bin/rdist 4555 root bin
-f usr/bin/read 0555 root bin
+h usr/bin/read=usr/bin/alias
 f usr/bin/red 0555 root bin
 f usr/bin/refer 0555 root bin
 f usr/bin/regcmp 0555 root bin
 f usr/bin/removable_disk 0555 root bin
 s usr/bin/remsh=rsh
 f usr/bin/renice 0555 root bin
-f usr/bin/rev 0555 root bin
-f usr/bin/rksh 0555 root bin
-f usr/bin/rksh93 0555 root bin
+h usr/bin/rev=usr/bin/alias
+h usr/bin/rksh=usr/lib/isaexec
+h usr/bin/rksh93=usr/lib/isaexec
 f usr/bin/rlogin 4555 root bin
 f usr/bin/rm 0555 root bin
 s usr/bin/rmail=mail
@@ -2413,7 +2410,7 @@ f usr/bin/ruptime 0555 root bin
 f usr/bin/rusers 0555 root bin
 s usr/bin/rview=vim
 s usr/bin/rvim=vim
-f usr/bin/savecore 0555 root bin
+h usr/bin/savecore=usr/lib/isaexec
 f usr/bin/scp 0555 root bin
 f usr/bin/screen 0555 root bin
 f usr/bin/script 0555 root bin
@@ -2422,17 +2419,17 @@ f usr/bin/sed 0555 root bin
 f usr/bin/setfacl 0555 root bin
 f usr/bin/setpgrp 0555 root sys
 f usr/bin/settime 0555 root bin
-f usr/bin/setuname 0555 root bin
+h usr/bin/setuname=usr/lib/isaexec
 f usr/bin/sftp 0555 root bin
 s usr/bin/sh=ksh93
 f usr/bin/shcomp 0555 root bin
 f usr/bin/size 0555 root bin
-f usr/bin/sleep 0555 root bin
+h usr/bin/sleep=usr/bin/alias
 f usr/bin/soelim 0555 root bin
-f usr/bin/sort 0555 root bin
+h usr/bin/sort=usr/lib/isaexec
 f usr/bin/sortbib 0555 root bin
 f usr/bin/sotruss 0755 root bin
-f usr/bin/sparc 0555 root bin
+h usr/bin/sparc=usr/bin/sun
 f usr/bin/spell 0555 root bin
 f usr/bin/split 0555 root bin
 f usr/bin/srchtxt 0555 root bin
@@ -2446,20 +2443,20 @@ f usr/bin/strchg 0555 root root
 s usr/bin/strclean=../sbin/strclean
 f usr/bin/strconf 0555 root root
 s usr/bin/strerr=../sbin/strerr
-f usr/bin/strings 0555 root bin
+h usr/bin/strings=usr/lib/isaexec
 f usr/bin/strip 0555 root bin
 f usr/bin/stty 0555 root bin
 f usr/bin/su 4555 root sys
-f usr/bin/sum 0555 root bin
+h usr/bin/sum=usr/bin/alias
 f usr/bin/sun 0555 root bin
-f usr/bin/sun2 0555 root bin
-f usr/bin/sun3 0555 root bin
-f usr/bin/sun3x 0555 root bin
-f usr/bin/sun4 0555 root bin
-f usr/bin/sun4c 0555 root bin
-f usr/bin/sun4d 0555 root bin
-f usr/bin/sun4e 0555 root bin
-f usr/bin/sun4m 0555 root bin
+h usr/bin/sun2=usr/bin/sun
+h usr/bin/sun3=usr/bin/sun
+h usr/bin/sun3x=usr/bin/sun
+h usr/bin/sun4=usr/bin/sun
+h usr/bin/sun4c=usr/bin/sun
+h usr/bin/sun4d=usr/bin/sun
+h usr/bin/sun4e=usr/bin/sun
+h usr/bin/sun4m=usr/bin/sun
 f usr/bin/svcprop 0555 root bin
 f usr/bin/svcs 0555 root bin
 s usr/bin/sync=../../sbin/sync
@@ -2470,8 +2467,8 @@ f usr/bin/tail 0555 root bin
 s usr/bin/tar=../sbin/tar
 f usr/bin/tbl 0555 root bin
 f usr/bin/tcopy 0555 root bin
-f usr/bin/tee 0555 root bin
-f usr/bin/test 0555 root bin
+h usr/bin/tee=usr/bin/alias
+h usr/bin/test=usr/bin/alias
 f usr/bin/tic 0555 root bin
 f usr/bin/time 0555 root bin
 f usr/bin/timex 0555 root bin
@@ -2481,35 +2478,35 @@ f usr/bin/tput 0555 root bin
 f usr/bin/tr 0555 root bin
 f usr/bin/troff 0555 root bin
 f usr/bin/true 0555 root bin
-f usr/bin/truss 0555 root bin
+h usr/bin/truss=usr/lib/isaexec
 f usr/bin/tsort 0555 root bin
 f usr/bin/tty 0555 root bin
-f usr/bin/type 0555 root bin
+h usr/bin/type=usr/bin/alias
 f usr/bin/tzselect 0555 root bin
-f usr/bin/u370 0555 root bin
-f usr/bin/u3b 0555 root bin
-f usr/bin/u3b15 0555 root bin
-f usr/bin/u3b2 0555 root bin
-f usr/bin/u3b5 0555 root bin
+h usr/bin/u370=usr/bin/sun
+h usr/bin/u3b=usr/bin/sun
+h usr/bin/u3b15=usr/bin/sun
+h usr/bin/u3b2=usr/bin/sun
+h usr/bin/u3b5=usr/bin/sun
 f usr/bin/ul 0555 root bin
-f usr/bin/ulimit 0555 root bin
-f usr/bin/umask 0555 root bin
-f usr/bin/unalias 0555 root bin
+h usr/bin/ulimit=usr/bin/alias
+h usr/bin/umask=usr/bin/alias
+h usr/bin/unalias=usr/bin/alias
 s usr/bin/uname=../../sbin/uname
 f usr/bin/uncompress 0555 root bin
 f usr/bin/unexpand 0555 root bin
-f usr/bin/uniq 0555 root bin
+h usr/bin/uniq=usr/bin/alias
 f usr/bin/units 0555 root bin
 f usr/bin/unix2dos 0555 root bin
 f usr/bin/unpack 0555 root bin
 f usr/bin/updatemedia 0555 root bin
-f usr/bin/uptime 0555 root bin
+h usr/bin/uptime=usr/lib/isaexec
 f usr/bin/userattr 0555 root bin
 f usr/bin/uudecode 0555 root uucp
 f usr/bin/uuencode 0555 root uucp
 f usr/bin/uuid 0755 root bin
-f usr/bin/vax 0555 root bin
-f usr/bin/vedit 0555 root bin
+h usr/bin/vax=usr/bin/sun
+h usr/bin/vedit=usr/bin/edit
 f usr/bin/vfsstat 0555 root bin
 f usr/bin/vgrind 0555 root bin
 s usr/bin/vi=vim
@@ -2518,11 +2515,11 @@ f usr/bin/vim 0755 root bin
 s usr/bin/vimdiff=vim
 f usr/bin/vimtutor 0755 root bin
 f usr/bin/vmstat 0555 root bin
-f usr/bin/w 0555 root bin
-f usr/bin/wait 0555 root bin
-f usr/bin/wc 0555 root bin
+h usr/bin/w=usr/lib/isaexec
+h usr/bin/wait=usr/bin/alias
+h usr/bin/wc=usr/bin/alias
 f usr/bin/wget 0555 root bin
-f usr/bin/whatis 0555 root bin
+h usr/bin/whatis=usr/bin/man
 f usr/bin/which 0555 root bin
 f usr/bin/who 0555 root bin
 f usr/bin/whocalls 0755 root bin
@@ -5245,7 +5242,6 @@ d usr/has/bin 0755 root bin
 f usr/has/bin/edit 0555 root bin
 f usr/has/bin/ex 0555 root bin
 s usr/has/bin/jsh=sh
-f usr/has/bin/patch 0555 root bin
 f usr/has/bin/pfsh 0555 root bin
 f usr/has/bin/sh 0555 root bin
 f usr/has/bin/vedit 0555 root bin
@@ -5479,7 +5475,6 @@ f usr/include/errfp.h 0644 root bin
 f usr/include/errno.h 0644 root bin
 f usr/include/eti.h 0644 root bin
 f usr/include/euc.h 0644 root bin
-f usr/include/event.h 0444 root bin
 f usr/include/exacct.h 0644 root bin
 f usr/include/exacct_impl.h 0644 root bin
 f usr/include/exec_attr.h 0644 root bin
@@ -5515,14 +5510,11 @@ f usr/include/form.h 0644 root bin
 f usr/include/ftw.h 0644 root bin
 d usr/include/fwflash 0755 root bin
 f usr/include/fwflash/fwflash.h 0644 root bin
-f usr/include/gcrypt-module.h 0644 root bin
-f usr/include/gcrypt.h 0644 root bin
 f usr/include/gelf.h 0644 root bin
 f usr/include/getopt.h 0644 root bin
 f usr/include/getwidth.h 0644 root bin
 f usr/include/getxby_door.h 0644 root bin
 f usr/include/glob.h 0644 root bin
-f usr/include/gpg-error.h 0644 root bin
 f usr/include/grp.h 0644 root bin
 d usr/include/gssapi 0755 root bin
 f usr/include/gssapi/gssapi.h 0644 root bin
@@ -5819,7 +5811,6 @@ f usr/include/linenum.h 0644 root bin
 f usr/include/link.h 0644 root bin
 f usr/include/listen.h 0644 root bin
 f usr/include/locale.h 0644 root bin
-f usr/include/ltdl.h 0644 root bin
 f usr/include/macros.h 0644 root bin
 f usr/include/maillock.h 0644 root bin
 f usr/include/malloc.h 0644 root bin
@@ -6237,7 +6228,6 @@ f usr/include/pkgstrct.h 0644 root bin
 f usr/include/pkgtrans.h 0644 root bin
 f usr/include/poll.h 0644 root bin
 f usr/include/pool.h 0644 root bin
-f usr/include/popt.h 0644 root bin
 f usr/include/port.h 0644 root bin
 f usr/include/priv.h 0644 root bin
 f usr/include/priv_utils.h 0644 root bin
@@ -6407,7 +6397,6 @@ f usr/include/sharefs/sharefs.h 0644 root bin
 f usr/include/sharefs/sharetab.h 0644 root bin
 f usr/include/siginfo.h 0644 root bin
 f usr/include/signal.h 0644 root bin
-f usr/include/sigsegv.h 0444 root bin
 f usr/include/sip.h 0644 root bin
 f usr/include/slp.h 0644 root bin
 d usr/include/smb 0755 root bin
@@ -6480,8 +6469,6 @@ f usr/include/spawn.h 0644 root bin
 d usr/include/sqlite 0755 root bin
 f usr/include/sqlite/sqlite-misc.h 0644 root bin
 f usr/include/sqlite/sqlite.h 0644 root bin
-f usr/include/sqlite3.h 0444 root bin
-f usr/include/sqlite3ext.h 0444 root bin
 f usr/include/stack_unwind.h 0644 root bin
 f usr/include/stdarg.h 0644 root bin
 f usr/include/stdbool.h 0644 root bin
@@ -7821,11 +7808,8 @@ f usr/lib/amd64/gss/mech_spnego.so.1 0755 root bin
 s usr/lib/amd64/ld.so.1=../../../lib/amd64/ld.so.1
 f usr/lib/amd64/lddstub 0555 root bin
 f usr/lib/amd64/libCrun.so.1 0755 root bin
-f usr/lib/amd64/libCstd.so.1 0755 root bin
 f usr/lib/amd64/libHBAAPI.so.1 0755 root bin
 s usr/lib/amd64/libHBAAPI.so=libHBAAPI.so.1
-f usr/lib/amd64/libSM.so.6 0555 root bin
-s usr/lib/amd64/libSM.so=libSM.so.6
 f usr/lib/amd64/libSMHBAAPI.so.1 0755 root bin
 s usr/lib/amd64/libSMHBAAPI.so=libSMHBAAPI.so.1
 s usr/lib/amd64/libadm.so.1=../../../lib/amd64/libadm.so.1
@@ -7879,7 +7863,6 @@ s usr/lib/amd64/libcurses.so.1=../../../lib/amd64/libcurses.so.1
 s usr/lib/amd64/libcurses.so=../../../lib/amd64/libcurses.so.1
 f usr/lib/amd64/libdat.so.1 0755 root bin
 s usr/lib/amd64/libdat.so=libdat.so.1
-f usr/lib/amd64/libdemangle.so.1 0755 root bin
 s usr/lib/amd64/libdevice.so.1=../../../lib/amd64/libdevice.so.1
 s usr/lib/amd64/libdevice.so=../../../lib/amd64/libdevice.so.1
 s usr/lib/amd64/libdevid.so.1=../../../lib/amd64/libdevid.so.1
@@ -7952,7 +7935,6 @@ s usr/lib/amd64/libinetutil.so.1=../../../lib/amd64/libinetutil.so.1
 s usr/lib/amd64/libinetutil.so=../../../lib/amd64/libinetutil.so.1
 s usr/lib/amd64/libintl.so.1=../../../lib/amd64/libintl.so.1
 s usr/lib/amd64/libintl.so=../../../lib/amd64/libintl.so.1
-f usr/lib/amd64/libiostream.so.1 0755 root bin
 f usr/lib/amd64/libipmi.so.1 0755 root bin
 s usr/lib/amd64/libipmi.so=libipmi.so.1
 f usr/lib/amd64/libipp.so.1 0755 root bin
@@ -8024,8 +8006,6 @@ f usr/lib/amd64/libpicl.so.1 0755 root bin
 s usr/lib/amd64/libpicl.so=libpicl.so.1
 f usr/lib/amd64/libpkcs11.so.1 0755 root bin
 s usr/lib/amd64/libpkcs11.so=libpkcs11.so.1
-f usr/lib/amd64/libplot.so.1 0755 root bin
-s usr/lib/amd64/libplot.so=libplot.so.1
 f usr/lib/amd64/libpool.so.1 0755 root bin
 s usr/lib/amd64/libpool.so=libpool.so.1
 s usr/lib/amd64/libposix4.so.1=../../../lib/amd64/librt.so.1
@@ -8040,8 +8020,6 @@ f usr/lib/amd64/libraidcfg.so.1 0755 root bin
 s usr/lib/amd64/libraidcfg.so=libraidcfg.so.1
 s usr/lib/amd64/librcm.so.1=../../../lib/amd64/librcm.so.1
 s usr/lib/amd64/librcm.so=../../../lib/amd64/librcm.so.1
-f usr/lib/amd64/libreadline.so.5 0555 root bin
-s usr/lib/amd64/libreadline.so=libreadline.so.5
 f usr/lib/amd64/libreparse.so.1 0755 root bin
 s usr/lib/amd64/libreparse.so=libreparse.so.1
 s usr/lib/amd64/libresolv.so.2=../../../lib/amd64/libresolv.so.2
@@ -8177,10 +8155,7 @@ f usr/lib/amd64/passwdutil.so.1 0755 root bin
 d usr/lib/amd64/pkgconfig 0755 root other
 f usr/lib/amd64/pkgconfig/hal-storage.pc 0644 root bin
 f usr/lib/amd64/pkgconfig/hal.pc 0644 root bin
-f usr/lib/amd64/pkgconfig/libcurl.pc 0644 root other
-f usr/lib/amd64/pkgconfig/libidn.pc 0644 root bin
-f usr/lib/amd64/pkgconfig/libxml-2.0.pc 0444 root other
-f usr/lib/amd64/pkgconfig/openssl.pc 0444 root other
+s usr/lib/amd64/pkgconfig/libcurl.pc=../../pkgconfig/libcurl.pc
 f usr/lib/amd64/rpcsec.so.1 0755 root bin
 s usr/lib/amd64/rpcsec.so=rpcsec.so.1
 f usr/lib/amd64/straddr.so.2 0755 root bin
@@ -9335,8 +9310,6 @@ s usr/lib/libcurses.so.1=../../lib/libcurses.so.1
 s usr/lib/libcurses.so=../../lib/libcurses.so.1
 f usr/lib/libdat.so.1 0755 root bin
 s usr/lib/libdat.so=libdat.so.1
-f usr/lib/libdemangle.so.1 0755 root bin
-s usr/lib/libdemangle.so=libdemangle.so.1
 s usr/lib/libdevice.so.1=../../lib/libdevice.so.1
 s usr/lib/libdevice.so=../../lib/libdevice.so.1
 s usr/lib/libdevid.so.1=../../lib/libdevid.so.1
@@ -9427,13 +9400,8 @@ f usr/lib/libinstzones.so.1 0755 root bin
 s usr/lib/libinstzones.so=libinstzones.so.1
 s usr/lib/libintl.so.1=../../lib/libintl.so.1
 s usr/lib/libintl.so=../../lib/libintl.so.1
-f usr/lib/libiostream.so.1 0755 root bin
 f usr/lib/libipmi.so.1 0755 root bin
 s usr/lib/libipmi.so=libipmi.so.1
-f usr/lib/libipp-core.so.0 0755 root bin
-s usr/lib/libipp-core.so=libipp-core.so.0
-f usr/lib/libipp-listener.so.0 0755 root bin
-s usr/lib/libipp-listener.so=libipp-listener.so.0
 f usr/lib/libipp.so.1 0755 root bin
 s usr/lib/libipp.so=libipp.so.1
 f usr/lib/libipsecutil.so.1 0755 root bin
@@ -9512,10 +9480,6 @@ s usr/lib/libpam.so.1=../../lib/libpam.so.1
 s usr/lib/libpam.so=../../lib/libpam.so.1
 f usr/lib/libpanel.so.1 0755 root bin
 s usr/lib/libpanel.so=libpanel.so.1
-f usr/lib/libpapi-common.so.0 0755 root bin
-s usr/lib/libpapi-common.so=libpapi-common.so.0
-f usr/lib/libpapi.so.0 0755 root bin
-s usr/lib/libpapi.so=libpapi.so.0
 f usr/lib/libparted.so.8 0755 root bin
 s usr/lib/libparted.so=libparted.so.8
 f usr/lib/libpctx.so.1 0755 root bin
@@ -9528,8 +9492,6 @@ f usr/lib/libpicltree.so.1 0755 root bin
 s usr/lib/libpicltree.so=libpicltree.so.1
 f usr/lib/libpkcs11.so.1 0755 root bin
 s usr/lib/libpkcs11.so=libpkcs11.so.1
-f usr/lib/libplot.so.1 0755 root bin
-s usr/lib/libplot.so=libplot.so.1
 f usr/lib/libpolkit.so.0.0.0 0755 root bin
 s usr/lib/libpolkit.so.0=libpolkit.so.0.0.0
 s usr/lib/libpolkit.so=libpolkit.so.0.0.0
@@ -9539,8 +9501,6 @@ s usr/lib/libposix4.so.1=../../lib/librt.so.1
 s usr/lib/libposix4.so=../../lib/librt.so.1
 f usr/lib/libpp.so.1 0755 root bin
 s usr/lib/libpp.so=libpp.so.1
-f usr/lib/libprint.so.2 0755 root bin
-s usr/lib/libprint.so=libprint.so.2
 s usr/lib/libproc.so.1=../../lib/libproc.so.1
 s usr/lib/libproc.so=../../lib/libproc.so.1
 f usr/lib/libproject.so.1 0755 root bin
@@ -9553,8 +9513,6 @@ s usr/lib/librcm.so.1=../../lib/librcm.so.1
 s usr/lib/librcm.so=../../lib/librcm.so.1
 f usr/lib/librdc.so.1 0755 root bin
 s usr/lib/librdc.so=librdc.so.1
-f usr/lib/libreadline.so.5 0555 root bin
-s usr/lib/libreadline.so=libreadline.so.5
 f usr/lib/libreparse.so.1 0755 root bin
 s usr/lib/libreparse.so=libreparse.so.1
 s usr/lib/libresolv.so.1=../../lib/libresolv.so.1
@@ -9768,22 +9726,7 @@ d usr/lib/locale/C/LC_MONETARY 0755 root bin
 d usr/lib/locale/C/LC_NUMERIC 0755 root bin
 d usr/lib/locale/C/LC_TIME 0755 root bin
 f usr/lib/locale/C/LC_TIME/SUNW_OST_OSCMD.po 0644 root bin
-f usr/lib/locale/C/LC_TIME/SUNW_OST_OSLIB.po 0644 root bin
 s usr/lib/locale/POSIX=C
-d usr/lib/locale/common 0755 root bin
-d usr/lib/locale/common/LC_CTYPE 0755 root bin
-f usr/lib/locale/common/LC_CTYPE/LCL_DEF_unicode 0555 root bin
-d usr/lib/locale/common/LC_CTYPE/amd64 0755 root bin
-f usr/lib/locale/common/LC_CTYPE/amd64/wdresolve_unicode.so 0555 root bin
-f usr/lib/locale/common/LC_CTYPE/ldterm_unicode.dat 0555 root bin
-f usr/lib/locale/common/LC_CTYPE/wdresolve_unicode.so 0555 root bin
-d usr/lib/locale/common/LO_LTYPE 0755 root bin
-d usr/lib/locale/common/LO_LTYPE/amd64 0755 root bin
-f usr/lib/locale/common/LO_LTYPE/amd64/umle.layout.so.1 0555 root bin
-f usr/lib/locale/common/LO_LTYPE/umle.layout.so.1 0555 root bin
-d usr/lib/locale/common/amd64 0755 root bin
-f usr/lib/locale/common/amd64/methods_unicode.so.3 0555 root bin
-f usr/lib/locale/common/methods_unicode.so.3 0555 root bin
 d usr/lib/locale/en_US.ISO8859-1 0755 root bin
 d usr/lib/locale/en_US.ISO8859-1/LC_COLLATE 0755 root bin
 f usr/lib/locale/en_US.ISO8859-1/LC_COLLATE/LCL_DATA 0444 root bin
@@ -9810,19 +9753,6 @@ d usr/lib/locale/en_US.ISO8859-15/LC_NUMERIC 0755 root bin
 f usr/lib/locale/en_US.ISO8859-15/LC_NUMERIC/LCL_DATA 0444 root bin
 d usr/lib/locale/en_US.ISO8859-15/LC_TIME 0755 root bin
 f usr/lib/locale/en_US.ISO8859-15/LC_TIME/LCL_DATA 0444 root bin
-d usr/lib/locale/en_US.US-ASCII 0755 root bin
-d usr/lib/locale/en_US.US-ASCII/LC_COLLATE 0755 root bin
-f usr/lib/locale/en_US.US-ASCII/LC_COLLATE/LCL_DATA 0444 root bin
-d usr/lib/locale/en_US.US-ASCII/LC_CTYPE 0755 root bin
-f usr/lib/locale/en_US.US-ASCII/LC_CTYPE/LCL_DATA 0444 root bin
-d usr/lib/locale/en_US.US-ASCII/LC_MESSAGES 0755 root bin
-f usr/lib/locale/en_US.US-ASCII/LC_MESSAGES/LCL_DATA 0444 root bin
-d usr/lib/locale/en_US.US-ASCII/LC_MONETARY 0755 root bin
-f usr/lib/locale/en_US.US-ASCII/LC_MONETARY/LCL_DATA 0444 root bin
-d usr/lib/locale/en_US.US-ASCII/LC_NUMERIC 0755 root bin
-f usr/lib/locale/en_US.US-ASCII/LC_NUMERIC/LCL_DATA 0444 root bin
-d usr/lib/locale/en_US.US-ASCII/LC_TIME 0755 root bin
-f usr/lib/locale/en_US.US-ASCII/LC_TIME/LCL_DATA 0444 root bin
 d usr/lib/locale/en_US.UTF-8 0755 root bin
 d usr/lib/locale/en_US.UTF-8/LC_COLLATE 0755 root bin
 f usr/lib/locale/en_US.UTF-8/LC_COLLATE/LCL_DATA 0444 root bin
@@ -10465,7 +10395,6 @@ f usr/lib/smbsrv/libsmbrdr.so.1 0755 root bin
 s usr/lib/smbsrv/libsmbrdr.so=libsmbrdr.so.1
 f usr/lib/smbsrv/libsqlite.so.1 0755 root bin
 s usr/lib/smbsrv/libsqlite.so=libsqlite.so.1
-f usr/lib/smbsrv/smbd 0555 root bin
 d usr/lib/smedia 0755 root bin
 d usr/lib/smedia/amd64 0755 root bin
 f usr/lib/smedia/amd64/sm_blkdev.so.1 0555 root bin
@@ -13172,7 +13101,7 @@ d usr/sbin 0755 root bin
 f usr/sbin/6to4relay 0555 root bin
 f usr/sbin/acctadm 0555 root bin
 f usr/sbin/add_allocatable 0555 root bin
-f usr/sbin/add_drv 0555 root bin
+h usr/sbin/add_drv=usr/lib/isaexec
 f usr/sbin/allocate 4555 root bin
 d usr/sbin/amd64 0755 root bin
 f usr/sbin/amd64/add_drv 0555 root sys
@@ -13206,7 +13135,7 @@ f usr/sbin/auditd 0555 root bin
 f usr/sbin/auditrecord 0555 root bin
 f usr/sbin/auditreduce 0555 root bin
 f usr/sbin/auditstat 0555 root bin
-f usr/sbin/audlinks 0755 root sys
+h usr/sbin/audlinks=usr/sbin/devfsadm
 s usr/sbin/automount=../lib/fs/autofs/automount
 s usr/sbin/autopush=../../sbin/autopush
 s usr/sbin/cachefslog=../lib/fs/cachefs/cachefslog
@@ -13227,16 +13156,16 @@ f usr/sbin/cron 0555 root sys
 s usr/sbin/cryptoadm=../../sbin/cryptoadm
 f usr/sbin/datadm 0555 root bin
 s usr/sbin/dcopy=clri
-f usr/sbin/deallocate 4555 root bin
+h usr/sbin/deallocate=usr/sbin/allocate
 f usr/sbin/devfsadm 0755 root sys
 f usr/sbin/devinfo 0555 root bin
-f usr/sbin/devlinks 0755 root sys
+h usr/sbin/devlinks=usr/sbin/devfsadm
 s usr/sbin/devnm=df
 f usr/sbin/df 0555 root bin
 f usr/sbin/dfmounts 0555 root bin
-f usr/sbin/dfshares 0555 root bin
+h usr/sbin/dfshares=usr/sbin/dfmounts
 f usr/sbin/dig 0555 root bin
-f usr/sbin/disks 0755 root sys
+h usr/sbin/disks=usr/sbin/devfsadm
 f usr/sbin/dispadmin 0555 root bin
 s usr/sbin/dladm=../../sbin/dladm
 s usr/sbin/dlstat=../../sbin/dlstat
@@ -13246,8 +13175,8 @@ f usr/sbin/dnssec-dsfromkey 0555 root bin
 f usr/sbin/dnssec-keyfromlabel 0555 root bin
 f usr/sbin/dnssec-keygen 0555 root bin
 f usr/sbin/dnssec-signzone 0555 root bin
-f usr/sbin/drvconfig 0755 root sys
-f usr/sbin/dtrace 0555 root bin
+h usr/sbin/drvconfig=usr/sbin/devfsadm
+h usr/sbin/dtrace=usr/lib/isaexec
 f usr/sbin/dumpadm 0555 root bin
 f usr/sbin/editmap 0555 root bin
 s usr/sbin/edquota=../lib/fs/ufs/edquota
@@ -13255,7 +13184,7 @@ f usr/sbin/eeprom 2555 root sys
 f usr/sbin/etrn 0555 root bin
 f usr/sbin/exportfs 0555 root bin
 f usr/sbin/fcadm 0555 root bin
-f usr/sbin/fcinfo 0555 root bin
+h usr/sbin/fcinfo=usr/sbin/fcadm
 s usr/sbin/fdisk=../../sbin/fdisk
 f usr/sbin/ff 0555 root bin
 s usr/sbin/fiocompress=../../sbin/fiocompress
@@ -13349,17 +13278,17 @@ s usr/sbin/init=../../sbin/init
 f usr/sbin/install 0555 root bin
 f usr/sbin/installboot 0555 root sys
 s usr/sbin/installgrub=../../sbin/installgrub
-f usr/sbin/intrstat 0555 root bin
+h usr/sbin/intrstat=usr/lib/isaexec
 f usr/sbin/ipaddrsel 0555 root bin
 s usr/sbin/ipadm=../../sbin/ipadm
-f usr/sbin/ipf 0555 root bin
-f usr/sbin/ipfs 0555 root bin
-f usr/sbin/ipfstat 0555 root bin
+h usr/sbin/ipf=usr/lib/isaexec
+h usr/sbin/ipfs=usr/lib/isaexec
+h usr/sbin/ipfstat=usr/lib/isaexec
 f usr/sbin/ipmitool 0555 root bin
-f usr/sbin/ipmon 0555 root bin
+h usr/sbin/ipmon=usr/lib/isaexec
 s usr/sbin/ipmpstat=../../sbin/ipmpstat
-f usr/sbin/ipnat 0555 root bin
-f usr/sbin/ippool 0555 root bin
+h usr/sbin/ipnat=usr/lib/isaexec
+h usr/sbin/ippool=usr/lib/isaexec
 f usr/sbin/ipsecalgs 0555 root bin
 f usr/sbin/ipsecconf 0555 root bin
 f usr/sbin/ipseckey 0555 root bin
@@ -13372,10 +13301,10 @@ s usr/sbin/labelit=clri
 f usr/sbin/ldapaddent 0555 root bin
 f usr/sbin/ldapclient 0555 root bin
 f usr/sbin/link 0555 root bin
-f usr/sbin/list_devices 4555 root bin
+h usr/sbin/list_devices=usr/sbin/allocate
 f usr/sbin/locator 0555 root bin
 s usr/sbin/lockfs=../lib/fs/ufs/lockfs
-f usr/sbin/lockstat 0555 root bin
+h usr/sbin/lockstat=usr/lib/isaexec
 f usr/sbin/lofiadm 0555 root bin
 f usr/sbin/logadm 0555 root bin
 f usr/sbin/makedbm 0555 root bin
@@ -13395,13 +13324,13 @@ f usr/sbin/metaset 0555 root bin
 f usr/sbin/metasync 0555 root bin
 f usr/sbin/metattach 0555 root bin
 f usr/sbin/mkdevalloc 0555 root bin
-f usr/sbin/mkdevmaps 0555 root bin
+h usr/sbin/mkdevmaps=usr/sbin/mkdevalloc
 f usr/sbin/mkfile 0555 root bin
 s usr/sbin/mkfs=clri
 f usr/sbin/mknod 0555 root bin
-f usr/sbin/modinfo 0555 root bin
-f usr/sbin/modload 0555 root bin
-f usr/sbin/modunload 0555 root bin
+h usr/sbin/modinfo=usr/lib/isaexec
+h usr/sbin/modload=usr/lib/isaexec
+h usr/sbin/modunload=usr/lib/isaexec
 s usr/sbin/mount=../../sbin/mount
 f usr/sbin/mountall 0555 root sys
 f usr/sbin/mpathadm 0555 root bin
@@ -13427,29 +13356,29 @@ f usr/sbin/ntptime 0555 root bin
 f usr/sbin/ntptrace 0555 root bin
 f usr/sbin/nwamadm 0555 root bin
 f usr/sbin/nwamcfg 0555 root bin
-f usr/sbin/pbind 0555 root bin
+h usr/sbin/pbind=usr/lib/isaexec
 f usr/sbin/ping 4555 root bin
-f usr/sbin/plockstat 0555 root bin
+h usr/sbin/plockstat=usr/lib/isaexec
 f usr/sbin/pmadm 0555 root sys
 f usr/sbin/pmconfig 4555 root bin
 f usr/sbin/polkit-is-privileged 0555 root bin
 f usr/sbin/pooladm 0555 root bin
 f usr/sbin/poolbind 0555 root bin
 f usr/sbin/poolcfg 0555 root bin
-f usr/sbin/ports 0755 root sys
-f usr/sbin/poweroff 0755 root bin
+h usr/sbin/ports=usr/sbin/devfsadm
+h usr/sbin/poweroff=usr/sbin/halt
 f usr/sbin/praudit 0555 root bin
 f usr/sbin/privatepw 0555 root bin
 f usr/sbin/projadd 0555 root sys
 f usr/sbin/projdel 0555 root sys
 f usr/sbin/projmod 0555 root sys
-f usr/sbin/prtconf 0555 root bin
+h usr/sbin/prtconf=usr/lib/isaexec
 f usr/sbin/prtdiag 2755 root sys
 f usr/sbin/prtpicl 0755 root bin
 f usr/sbin/prtvtoc 0555 root sys
 f usr/sbin/psradm 0555 root sys
 f usr/sbin/psrinfo 0555 root sys
-f usr/sbin/psrset 0555 root bin
+h usr/sbin/psrset=usr/lib/isaexec
 f usr/sbin/pwck 0555 root bin
 f usr/sbin/pwconv 0555 root sys
 s usr/sbin/quot=../lib/fs/ufs/quot
@@ -13461,9 +13390,9 @@ f usr/sbin/raidctl 0555 root bin
 f usr/sbin/ramdiskadm 0555 root bin
 f usr/sbin/rcapadm 0555 root bin
 f usr/sbin/rctladm 0555 root bin
-f usr/sbin/reboot 0755 root bin
-f usr/sbin/rem_drv 0555 root bin
-f usr/sbin/remove_allocatable 0555 root bin
+h usr/sbin/reboot=usr/sbin/halt
+h usr/sbin/rem_drv=usr/lib/isaexec
+h usr/sbin/remove_allocatable=usr/sbin/add_allocatable
 s usr/sbin/repquota=../lib/fs/ufs/repquota
 f usr/sbin/rmt 0555 root bin
 f usr/sbin/roleadd 0555 root sys
@@ -13487,7 +13416,7 @@ f usr/sbin/sbdadm 0555 root bin
 f usr/sbin/sdpadm 0555 root bin
 s usr/sbin/sendmail=../lib/sendmail
 f usr/sbin/setmnt 0555 root bin
-f usr/sbin/share 0555 root bin
+h usr/sbin/share=usr/sbin/sharemgr
 f usr/sbin/shareall 0555 root bin
 f usr/sbin/sharectl 0555 root bin
 f usr/sbin/sharemgr 0555 root bin
@@ -13505,16 +13434,16 @@ f usr/sbin/strerr 0555 root sys
 f usr/sbin/sttydefs 0755 root sys
 f usr/sbin/svcadm 0555 root bin
 f usr/sbin/svccfg 0555 root bin
-f usr/sbin/swap 0555 root bin
+h usr/sbin/swap=usr/lib/isaexec
 s usr/sbin/sync=../../sbin/sync
 f usr/sbin/syncinit 0555 root bin
 f usr/sbin/syncloop 0555 root bin
 f usr/sbin/syncstat 0555 root bin
-f usr/sbin/sysdef 0555 root bin
+h usr/sbin/sysdef=usr/lib/isaexec
 f usr/sbin/syseventadm 0555 root sys
 f usr/sbin/sysidpm 0755 root sys
 f usr/sbin/syslogd 0555 root sys
-f usr/sbin/tapes 0755 root sys
+h usr/sbin/tapes=usr/sbin/devfsadm
 f usr/sbin/tar 0555 root bin
 f usr/sbin/tcpd 0555 root bin
 f usr/sbin/tcpdchk 0555 root bin
@@ -13536,23 +13465,23 @@ s usr/sbin/ufsrestore=../lib/fs/ufs/ufsrestore
 s usr/sbin/umount=../../sbin/umount
 f usr/sbin/umountall 0555 root sys
 f usr/sbin/unlink 0555 root bin
-f usr/sbin/unshare 0555 root bin
+h usr/sbin/unshare=usr/sbin/sharemgr
 f usr/sbin/unshareall 0555 root bin
-f usr/sbin/update_drv 0555 root bin
+h usr/sbin/update_drv=usr/lib/isaexec
 f usr/sbin/useradd 0555 root sys
 f usr/sbin/userdel 0555 root sys
 f usr/sbin/usermod 0555 root sys
 f usr/sbin/volcopy 0555 root bin
 f usr/sbin/vrrpadm 0555 root bin
 f usr/sbin/wall 2555 root tty
-f usr/sbin/whodo 0555 root bin
+h usr/sbin/whodo=usr/lib/isaexec
 s usr/sbin/wusbadm=../../sbin/wusbadm
 s usr/sbin/xntpdc=ntpdc
 f usr/sbin/ypalias 0555 root bin
 f usr/sbin/ypinit 0555 root bin
 f usr/sbin/yppoll 0555 root bin
 f usr/sbin/ypset 0555 root bin
-f usr/sbin/zdb 0555 root bin
+h usr/sbin/zdb=usr/lib/isaexec
 f usr/sbin/zdump 0555 root bin
 s usr/sbin/zfs=../../sbin/zfs
 f usr/sbin/zic 0555 root bin
@@ -14540,9 +14469,6 @@ f usr/share/lib/zoneinfo/tab/zone_sun.tab 0644 root bin
 d usr/share/locale 0755 root other
 d usr/share/locale/C 0755 root bin
 d usr/share/locale/C/LC_MESSAGES 0755 root bin
-d usr/share/locale/en 0755 root other
-d usr/share/locale/en/LC_MESSAGES 0755 root other
-f usr/share/locale/en/LC_MESSAGES/bash.mo 0444 root other
 d usr/share/man 0755 root bin
 d usr/share/man/cat1 0755 root bin
 d usr/share/man/cat1m 0755 root bin
@@ -14704,7 +14630,6 @@ f usr/share/man/man1/i286.1 0444 root bin
 f usr/share/man/man1/i386.1 0444 root bin
 f usr/share/man/man1/i486.1 0444 root bin
 f usr/share/man/man1/iconv.1 0444 root bin
-f usr/share/man/man1/idn.1 0444 root bin
 f usr/share/man/man1/indxbib.1 0444 root bin
 f usr/share/man/man1/isainfo.1 0444 root bin
 f usr/share/man/man1/isalist.1 0444 root bin
@@ -17227,12 +17152,10 @@ f usr/share/man/man3lib/libnsl.3lib 0444 root bin
 f usr/share/man/man3lib/libnvpair.3lib 0444 root bin
 f usr/share/man/man3lib/libpam.3lib 0444 root bin
 f usr/share/man/man3lib/libpanel.3lib 0444 root bin
-f usr/share/man/man3lib/libpapi.3lib 0444 root bin
 f usr/share/man/man3lib/libpctx.3lib 0444 root bin
 f usr/share/man/man3lib/libpicl.3lib 0444 root bin
 f usr/share/man/man3lib/libpicltree.3lib 0444 root bin
 f usr/share/man/man3lib/libpkcs11.3lib 0444 root bin
-f usr/share/man/man3lib/libplot.3lib 0444 root bin
 f usr/share/man/man3lib/libpool.3lib 0444 root bin
 f usr/share/man/man3lib/libproject.3lib 0444 root bin
 f usr/share/man/man3lib/libpthread.3lib 0444 root bin

@@ -10353,6 +10353,8 @@ f usr/lib/security/amd64/pkcs11_kms.so.1 0755 root bin
 s usr/lib/security/amd64/pkcs11_kms.so=pkcs11_kms.so.1
 f usr/lib/security/amd64/pkcs11_softtoken.so.1 0755 root bin
 s usr/lib/security/amd64/pkcs11_softtoken.so=pkcs11_softtoken.so.1
+f usr/lib/security/amd64/pkcs11_tpm.so.1 0755 root bin
+s usr/lib/security/amd64/pkcs11_tpm.so=pkcs11_tpm.so.1
 f usr/lib/security/audit_binfile.so.1 0755 root bin
 s usr/lib/security/audit_binfile.so=audit_binfile.so.1
 f usr/lib/security/audit_remote.so.1 0755 root bin
@@ -10420,6 +10422,8 @@ f usr/lib/security/pkcs11_kms.so.1 0755 root bin
 s usr/lib/security/pkcs11_kms.so=pkcs11_kms.so.1
 f usr/lib/security/pkcs11_softtoken.so.1 0755 root bin
 s usr/lib/security/pkcs11_softtoken.so=pkcs11_softtoken.so.1
+f usr/lib/security/pkcs11_tpm.so.1 0755 root bin
+s usr/lib/security/pkcs11_tpm.so=pkcs11_tpm.so.1
 f usr/lib/sendmail 2555 root smmsp
 f usr/lib/servinfo 0555 root bin
 f usr/lib/set_keyboard_layout 0555 root bin
@@ -18447,6 +18451,7 @@ f usr/share/man/man5/pam_unix_cred.5 0444 root bin
 f usr/share/man/man5/pam_unix_session.5 0444 root bin
 f usr/share/man/man5/pkcs11_kernel.5 0444 root bin
 f usr/share/man/man5/pkcs11_softtoken.5 0444 root bin
+f usr/share/man/man5/pkcs11_tpm.5 0444 root bin
 f usr/share/man/man5/privileges.5 0444 root bin
 f usr/share/man/man5/prof.5 0444 root bin
 f usr/share/man/man5/rbac.5 0444 root bin

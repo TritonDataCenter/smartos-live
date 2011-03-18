@@ -378,14 +378,6 @@ f etc/logadm.conf 0644 root sys
 d etc/logadm.d 0755 root sys
 f etc/logadm.d/fmd.logadm.conf 0444 root sys
 f etc/logindevperm 0644 root sys
-d etc/lvm 0755 root sys
-f etc/lvm/devpath 0644 root sys
-f etc/lvm/lock 0644 root sys
-f etc/lvm/md.cf 0644 root sys
-f etc/lvm/md.ctlrmap 0644 root sys
-f etc/lvm/md.tab 0644 root sys
-f etc/lvm/mddb.cf 0644 root sys
-f etc/lvm/runtime.cf 0644 root sys
 f etc/mach 0644 root sys
 f etc/magic 0444 root bin
 f etc/mailcap 0644 root bin
@@ -447,13 +439,13 @@ f etc/project 0644 root sys
 s etc/protocols=inet/protocols
 f etc/publickey 0644 root bin
 d etc/rc0.d 0755 root sys
-f etc/rc0.d/K50pppd 0744 root sys
+h etc/rc0.d/K50pppd=etc/init.d/pppd
 d etc/rc1.d 0755 root sys
-f etc/rc1.d/K50pppd 0744 root sys
+h etc/rc1.d/K50pppd=etc/init.d/pppd
 d etc/rc2.d 0755 root sys
 f etc/rc2.d/README 0644 root sys
 f etc/rc2.d/S20sysetup 0744 root sys
-f etc/rc2.d/S47pppd 0744 root sys
+h etc/rc2.d/S47pppd=etc/init.d/pppd
 f etc/rc2.d/S73cachefs.daemon 0744 root sys
 f etc/rc2.d/S81dodatadm.udaplt 0744 root sys
 f etc/rc2.d/S89PRESERVE 0744 root sys
@@ -1065,15 +1057,15 @@ f kernel/sched/amd64/TS 0755 root sys
 f kernel/sched/amd64/TS_DPTBL 0755 root sys
 d kernel/socketmod 0755 root sys
 d kernel/socketmod/amd64 0755 root sys
-f kernel/socketmod/amd64/icmp 0755 root sys
+h kernel/socketmod/amd64/icmp=kernel/drv/amd64/icmp
 f kernel/socketmod/amd64/ksslf 0755 root sys
 f kernel/socketmod/amd64/rts 0755 root sys
 f kernel/socketmod/amd64/sockrds 0755 root sys
 f kernel/socketmod/amd64/socksctp 0755 root sys
 f kernel/socketmod/amd64/socksdp 0755 root sys
-f kernel/socketmod/amd64/tcp 0755 root sys
+h kernel/socketmod/amd64/tcp=kernel/drv/amd64/tcp
 f kernel/socketmod/amd64/trill 0755 root sys
-f kernel/socketmod/amd64/udp 0755 root sys
+h kernel/socketmod/amd64/udp=kernel/drv/amd64/udp
 d kernel/strmod 0755 root sys
 d kernel/strmod/amd64 0755 root sys
 f kernel/strmod/amd64/arp 0755 root sys
@@ -1081,7 +1073,7 @@ f kernel/strmod/amd64/bufmod 0755 root sys
 f kernel/strmod/amd64/connld 0755 root sys
 f kernel/strmod/amd64/dedump 0755 root sys
 f kernel/strmod/amd64/drcompat 0755 root sys
-f kernel/strmod/amd64/icmp 0755 root sys
+h kernel/strmod/amd64/icmp=kernel/drv/amd64/icmp
 f kernel/strmod/amd64/ip 0755 root sys
 f kernel/strmod/amd64/ipsecah 0755 root sys
 f kernel/strmod/amd64/ipsecesp 0755 root sys
@@ -1095,11 +1087,11 @@ f kernel/strmod/amd64/ptem 0755 root sys
 f kernel/strmod/amd64/redirmod 0755 root sys
 f kernel/strmod/amd64/rpcmod 0755 root sys
 f kernel/strmod/amd64/sdpib 0755 root sys
-f kernel/strmod/amd64/tcp 0755 root sys
+h kernel/strmod/amd64/tcp=kernel/drv/amd64/tcp
 f kernel/strmod/amd64/timod 0755 root sys
 f kernel/strmod/amd64/tirdwr 0755 root sys
 f kernel/strmod/amd64/ttcompat 0755 root sys
-f kernel/strmod/amd64/udp 0755 root sys
+h kernel/strmod/amd64/udp=kernel/drv/amd64/udp
 f kernel/strmod/amd64/usb_ah 0755 root sys
 f kernel/strmod/amd64/usbkbm 0755 root sys
 f kernel/strmod/amd64/usbms 0755 root sys
@@ -2083,8 +2075,8 @@ f usr/bin/dirname 0555 root bin
 f usr/bin/disk_size 0555 root bin
 f usr/bin/disklist 0555 root bin
 f usr/bin/diskscan 0555 root bin
-f usr/bin/dispgid 0555 root bin
-f usr/bin/dispuid 0555 root bin
+h usr/bin/dispgid=usr/bin/ckgid
+h usr/bin/dispuid=usr/bin/ckuid
 s usr/bin/dmesg=../sbin/dmesg
 f usr/bin/dns-sd 0555 root bin
 f usr/bin/domainname 0555 root bin
@@ -2259,7 +2251,7 @@ f usr/bin/lgrpinfo 0555 root bin
 f usr/bin/line 0555 root bin
 f usr/bin/listdgrp 0555 root bin
 f usr/bin/listusers 0555 root bin
-f usr/bin/ln 0555 root bin
+h usr/bin/ln=usr/bin/cp
 f usr/bin/loadkeys 0555 root bin
 f usr/bin/locale 0555 root bin
 f usr/bin/logger 0555 root bin
@@ -2296,7 +2288,7 @@ f usr/bin/more 0555 root bin
 f usr/bin/mpstat 0555 root bin
 f usr/bin/msgfmt 0555 root bin
 f usr/bin/mt 0555 root bin
-f usr/bin/mv 0555 root bin
+h usr/bin/mv=usr/bin/cp
 f usr/bin/nawk 0555 root bin
 f usr/bin/nc 0555 root bin
 f usr/bin/neqn 0555 root bin
@@ -2312,7 +2304,7 @@ f usr/bin/nm 0555 root bin
 f usr/bin/node 0555 root bin
 h usr/bin/nohup=usr/lib/isaexec
 f usr/bin/nroff 0555 root bin
-f usr/bin/oawk 0555 root bin
+h usr/bin/oawk=usr/bin/awk
 f usr/bin/od 0555 root bin
 f usr/bin/on 0555 root bin
 f usr/bin/openssl 0555 root bin
@@ -2418,7 +2410,7 @@ f usr/bin/sdiff 0555 root bin
 f usr/bin/sed 0555 root bin
 f usr/bin/setfacl 0555 root bin
 f usr/bin/setpgrp 0555 root sys
-f usr/bin/settime 0555 root bin
+h usr/bin/settime=usr/bin/touch
 h usr/bin/setuname=usr/lib/isaexec
 f usr/bin/sftp 0555 root bin
 s usr/bin/sh=ksh93
@@ -2917,7 +2909,7 @@ f usr/gnu/share/terminfo/a/arm100 0644 root bin
 f usr/gnu/share/terminfo/a/arm100-am 0644 root bin
 f usr/gnu/share/terminfo/a/arm100-w 0644 root bin
 f usr/gnu/share/terminfo/a/arm100-wam 0644 root bin
-f usr/gnu/share/terminfo/a/at386 0644 root bin
+h usr/gnu/share/terminfo/a/at386=usr/gnu/share/terminfo/3/386at
 f usr/gnu/share/terminfo/a/atari 0644 root bin
 f usr/gnu/share/terminfo/a/aterm 0644 root bin
 f usr/gnu/share/terminfo/a/att2300 0644 root bin
@@ -2996,12 +2988,12 @@ f usr/gnu/share/terminfo/a/att620-103k-w 0644 root bin
 f usr/gnu/share/terminfo/a/att620-w 0644 root bin
 f usr/gnu/share/terminfo/a/att630 0644 root bin
 f usr/gnu/share/terminfo/a/att630-24 0644 root bin
-f usr/gnu/share/terminfo/a/att6386 0644 root bin
+h usr/gnu/share/terminfo/a/att6386=usr/gnu/share/terminfo/3/386at
 f usr/gnu/share/terminfo/a/att700 0644 root bin
 f usr/gnu/share/terminfo/a/att730 0644 root bin
 f usr/gnu/share/terminfo/a/att730-24 0644 root bin
 f usr/gnu/share/terminfo/a/att730-41 0644 root bin
-f usr/gnu/share/terminfo/a/att7300 0644 root bin
+h usr/gnu/share/terminfo/a/att7300=usr/gnu/share/terminfo/3/3b1
 f usr/gnu/share/terminfo/a/att730r 0644 root bin
 f usr/gnu/share/terminfo/a/att730r-24 0644 root bin
 f usr/gnu/share/terminfo/a/att730r-41 0644 root bin
@@ -3791,7 +3783,7 @@ f usr/gnu/share/terminfo/i/ibmpc3r-mono 0644 root bin
 f usr/gnu/share/terminfo/i/ibmpcx 0644 root bin
 f usr/gnu/share/terminfo/i/ibmvga 0644 root bin
 f usr/gnu/share/terminfo/i/ibmvga-c 0644 root bin
-f usr/gnu/share/terminfo/i/ibmx 0644 root bin
+h usr/gnu/share/terminfo/i/ibmx=usr/gnu/share/terminfo/i/ibmpcx
 f usr/gnu/share/terminfo/i/icl6402 0644 root bin
 f usr/gnu/share/terminfo/i/icl6404 0644 root bin
 f usr/gnu/share/terminfo/i/icl6404-w 0644 root bin
@@ -3838,8 +3830,8 @@ f usr/gnu/share/terminfo/k/klone+koi8acs 0644 root bin
 f usr/gnu/share/terminfo/k/klone+sgr 0644 root bin
 f usr/gnu/share/terminfo/k/klone+sgr-dumb 0644 root bin
 f usr/gnu/share/terminfo/k/klone+sgr8 0644 root bin
-f usr/gnu/share/terminfo/k/kon 0644 root bin
-f usr/gnu/share/terminfo/k/kon2 0644 root bin
+h usr/gnu/share/terminfo/k/kon=usr/gnu/share/terminfo/j/jfbterm
+h usr/gnu/share/terminfo/k/kon2=usr/gnu/share/terminfo/j/jfbterm
 f usr/gnu/share/terminfo/k/konsole 0644 root bin
 f usr/gnu/share/terminfo/k/konsole+pcfkeys 0644 root bin
 f usr/gnu/share/terminfo/k/konsole-16color 0644 root bin
@@ -4221,7 +4213,7 @@ f usr/gnu/share/terminfo/p/pc3-bold 0644 root bin
 f usr/gnu/share/terminfo/p/pc3r 0644 root bin
 f usr/gnu/share/terminfo/p/pc3r-m 0644 root bin
 f usr/gnu/share/terminfo/p/pc6300plus 0644 root bin
-f usr/gnu/share/terminfo/p/pc7300 0644 root bin
+h usr/gnu/share/terminfo/p/pc7300=usr/gnu/share/terminfo/3/3b1
 f usr/gnu/share/terminfo/p/pcansi 0644 root bin
 f usr/gnu/share/terminfo/p/pcansi-25 0644 root bin
 f usr/gnu/share/terminfo/p/pcansi-25-m 0644 root bin
@@ -4386,7 +4378,7 @@ f usr/gnu/share/terminfo/r/rxvt-cygwin 0644 root bin
 f usr/gnu/share/terminfo/r/rxvt-cygwin-native 0644 root bin
 f usr/gnu/share/terminfo/r/rxvt-xpm 0644 root bin
 d usr/gnu/share/terminfo/s 0755 root bin
-f usr/gnu/share/terminfo/s/s4 0644 root bin
+h usr/gnu/share/terminfo/s/s4=usr/gnu/share/terminfo/3/3b1
 f usr/gnu/share/terminfo/s/sb1 0644 root bin
 f usr/gnu/share/terminfo/s/sb2 0644 root bin
 f usr/gnu/share/terminfo/s/sb3 0644 root bin
@@ -4707,7 +4699,7 @@ f usr/gnu/share/terminfo/u/ultima2 0644 root bin
 f usr/gnu/share/terminfo/u/ultimaII 0644 root bin
 f usr/gnu/share/terminfo/u/uniterm 0644 root bin
 f usr/gnu/share/terminfo/u/uniterm49 0644 root bin
-f usr/gnu/share/terminfo/u/unixpc 0644 root bin
+h usr/gnu/share/terminfo/u/unixpc=usr/gnu/share/terminfo/3/3b1
 f usr/gnu/share/terminfo/u/unknown 0644 root bin
 f usr/gnu/share/terminfo/u/uts30 0644 root bin
 f usr/gnu/share/terminfo/u/uwin 0644 root bin
@@ -5091,7 +5083,7 @@ f usr/gnu/share/terminfo/x/x68k 0644 root bin
 f usr/gnu/share/terminfo/x/x68k-ite 0644 root bin
 f usr/gnu/share/terminfo/x/x820 0644 root bin
 f usr/gnu/share/terminfo/x/xdku 0644 root bin
-f usr/gnu/share/terminfo/x/xenix 0644 root bin
+h usr/gnu/share/terminfo/x/xenix=usr/gnu/share/terminfo/i/ibmpcx
 f usr/gnu/share/terminfo/x/xerox 0644 root bin
 f usr/gnu/share/terminfo/x/xerox-lm 0644 root bin
 f usr/gnu/share/terminfo/x/xerox1720 0644 root bin
@@ -5237,18 +5229,6 @@ f usr/gnu/share/terminfo/z/zt-1 0644 root bin
 f usr/gnu/share/terminfo/z/ztx 0644 root bin
 f usr/gnu/share/terminfo/z/ztx-1-a 0644 root bin
 f usr/gnu/share/terminfo/z/ztx11 0644 root bin
-d usr/has 0755 root bin
-d usr/has/bin 0755 root bin
-f usr/has/bin/edit 0555 root bin
-f usr/has/bin/ex 0555 root bin
-s usr/has/bin/jsh=sh
-f usr/has/bin/pfsh 0555 root bin
-f usr/has/bin/sh 0555 root bin
-f usr/has/bin/vedit 0555 root bin
-f usr/has/bin/vi 0555 root bin
-f usr/has/bin/view 0555 root bin
-d usr/has/lib 0755 root bin
-s usr/has/lib/rsh=../bin/sh
 d usr/include 0755 root bin
 f usr/include/aclutils.h 0644 root bin
 f usr/include/aio.h 0644 root bin
@@ -8272,25 +8252,6 @@ f usr/lib/devfsadm/linkmod/SUNW_zfs_link.so 0755 root sys
 f usr/lib/devfsadm/linkmod/SUNW_zut_link.so 0755 root sys
 f usr/lib/diff3prog 0555 root bin
 f usr/lib/diffh 0555 root bin
-d usr/lib/dns 0755 root bin
-f usr/lib/dns/libbind9.so.50.0.3 0555 root bin
-s usr/lib/dns/libbind9.so.50=libbind9.so.50.0.3
-s usr/lib/dns/libbind9.so=libbind9.so.50.0.3
-f usr/lib/dns/libdns.so.55.1.1 0555 root bin
-s usr/lib/dns/libdns.so.55=libdns.so.55.1.1
-s usr/lib/dns/libdns.so=libdns.so.55.1.1
-f usr/lib/dns/libisc.so.50.2.1 0555 root bin
-s usr/lib/dns/libisc.so.50=libisc.so.50.2.1
-s usr/lib/dns/libisc.so=libisc.so.50.2.1
-f usr/lib/dns/libisccc.so.50.0.1 0555 root bin
-s usr/lib/dns/libisccc.so.50=libisccc.so.50.0.1
-s usr/lib/dns/libisccc.so=libisccc.so.50.0.1
-f usr/lib/dns/libisccfg.so.50.0.1 0555 root bin
-s usr/lib/dns/libisccfg.so.50=libisccfg.so.50.0.1
-s usr/lib/dns/libisccfg.so=libisccfg.so.50.0.1
-f usr/lib/dns/liblwres.so.50.0.3 0555 root bin
-s usr/lib/dns/liblwres.so.50=liblwres.so.50.0.3
-s usr/lib/dns/liblwres.so=liblwres.so.50.0.3
 f usr/lib/dscfglockd 0555 root bin
 d usr/lib/dtrace 0755 root bin
 d usr/lib/dtrace/64 0755 root bin
@@ -8530,7 +8491,7 @@ s usr/lib/fs/dev/mount=../../../../etc/fs/dev/mount
 d usr/lib/fs/fd 0755 root sys
 f usr/lib/fs/fd/mount 0555 root bin
 d usr/lib/fs/hsfs 0755 root sys
-f usr/lib/fs/hsfs/fstyp 0555 root sys
+h usr/lib/fs/hsfs/fstyp=usr/sbin/fstyp
 f usr/lib/fs/hsfs/fstyp.so.1 0555 root bin
 f usr/lib/fs/hsfs/labelit 0555 root bin
 s usr/lib/fs/hsfs/mount=../../../../etc/fs/hsfs/mount
@@ -8543,7 +8504,7 @@ d usr/lib/fs/nfs/amd64 0755 root sys
 f usr/lib/fs/nfs/amd64/libshare_nfs.so.1 0755 root sys
 s usr/lib/fs/nfs/amd64/libshare_nfs.so=libshare_nfs.so.1
 f usr/lib/fs/nfs/dfmounts 0555 root bin
-f usr/lib/fs/nfs/dfshares 0555 root bin
+h usr/lib/fs/nfs/dfshares=usr/lib/fs/nfs/dfmounts
 f usr/lib/fs/nfs/libshare_nfs.so.1 0755 root sys
 s usr/lib/fs/nfs/libshare_nfs.so=libshare_nfs.so.1
 s usr/lib/fs/nfs/mount=../../../../etc/fs/nfs/mount
@@ -8554,7 +8515,7 @@ d usr/lib/fs/objfs 0755 root sys
 f usr/lib/fs/objfs/mount 0555 root bin
 d usr/lib/fs/pcfs 0755 root sys
 f usr/lib/fs/pcfs/fsck 0555 root bin
-f usr/lib/fs/pcfs/fstyp 0555 root sys
+h usr/lib/fs/pcfs/fstyp=usr/sbin/fstyp
 f usr/lib/fs/pcfs/fstyp.so.1 0555 root bin
 f usr/lib/fs/pcfs/mkfs 0555 root bin
 f usr/lib/fs/pcfs/mount 0555 root bin
@@ -8575,7 +8536,7 @@ f usr/lib/fs/ufs/fsckall 0555 root bin
 f usr/lib/fs/ufs/fsdb 0555 root bin
 f usr/lib/fs/ufs/fsirand 0555 root bin
 f usr/lib/fs/ufs/fssnap 0555 root bin
-f usr/lib/fs/ufs/fstyp 0555 root sys
+h usr/lib/fs/ufs/fstyp=usr/sbin/fstyp
 f usr/lib/fs/ufs/fstyp.so.1 0555 root bin
 f usr/lib/fs/ufs/labelit 0555 root bin
 f usr/lib/fs/ufs/lockfs 0555 root bin
@@ -8596,7 +8557,7 @@ f usr/lib/fs/ufs/ufsrestore 4555 root bin
 f usr/lib/fs/ufs/volcopy 0555 root bin
 d usr/lib/fs/zfs 0755 root sys
 f usr/lib/fs/zfs/bootinstall 0555 root bin
-f usr/lib/fs/zfs/fstyp 0555 root sys
+h usr/lib/fs/zfs/fstyp=usr/sbin/fstyp
 f usr/lib/fs/zfs/fstyp.so.1 0555 root bin
 s usr/lib/fs/zfs/mount=../../../../sbin/zfs
 s usr/lib/fs/zfs/umount=../../../../sbin/zfs
@@ -9145,7 +9106,7 @@ f usr/lib/inet/in.daytimed 0555 root bin
 f usr/lib/inet/in.dhcpd 0555 root bin
 f usr/lib/inet/in.discardd 0555 root bin
 f usr/lib/inet/in.echod 0555 root bin
-f usr/lib/inet/in.iked 0555 root bin
+h usr/lib/inet/in.iked=usr/lib/isaexec
 s usr/lib/inet/in.mpathd=../../../lib/inet/in.mpathd
 f usr/lib/inet/in.ndpd 0555 root bin
 f usr/lib/inet/in.ripngd 0555 root bin
@@ -9169,7 +9130,7 @@ d usr/lib/ipf/amd64 0755 root sys
 f usr/lib/ipf/amd64/ipftest 0555 root bin
 d usr/lib/ipf/i86 0755 root sys
 f usr/lib/ipf/i86/ipftest 0555 root bin
-f usr/lib/ipf/ipftest 0555 root bin
+h usr/lib/ipf/ipftest=usr/lib/isaexec
 d usr/lib/ipqosconf 0755 root bin
 f usr/lib/ipqosconf/dlcosmk.types 0444 root bin
 f usr/lib/ipqosconf/dscpmk.types 0444 root bin
@@ -9771,9 +9732,6 @@ d usr/lib/localedef/extensions 0755 root bin
 f usr/lib/localedef/extensions/UTF-8.x 0444 root bin
 d usr/lib/localedef/src 0755 root bin
 f usr/lib/lslabels 0555 root bin
-d usr/lib/lvm 0755 root bin
-f usr/lib/lvm/mddoors 0555 root bin
-f usr/lib/lvm/metaclust 0555 root bin
 d usr/lib/lwp 0755 root bin
 s usr/lib/lwp/32=.
 s usr/lib/lwp/64=amd64
@@ -10110,7 +10068,7 @@ d usr/lib/rcap/amd64 0755 root bin
 f usr/lib/rcap/amd64/rcapd 0555 root bin
 d usr/lib/rcap/i86 0755 root bin
 f usr/lib/rcap/i86/rcapd 0555 root bin
-f usr/lib/rcap/rcapd 0555 root bin
+h usr/lib/rcap/rcapd=usr/lib/isaexec
 d usr/lib/rcm 0755 root bin
 d usr/lib/rcm/modules 0755 root bin
 f usr/lib/rcm/modules/SUNW_aggr_rcm.so 0555 root bin
@@ -10124,7 +10082,6 @@ f usr/lib/rcm/modules/SUNW_ip_rcm.so 0555 root bin
 f usr/lib/rcm/modules/SUNW_mpxio_rcm.so 0555 root bin
 f usr/lib/rcm/modules/SUNW_network_rcm.so 0555 root bin
 f usr/lib/rcm/modules/SUNW_pool_rcm.so 0555 root bin
-f usr/lib/rcm/modules/SUNW_svm_rcm.so 0555 root bin
 f usr/lib/rcm/modules/SUNW_swap_rcm.so 0555 root bin
 f usr/lib/rcm/modules/SUNW_vlan_rcm.so 0555 root bin
 f usr/lib/rcm/modules/SUNW_vnic_rcm.so 0555 root bin
@@ -13046,38 +13003,38 @@ s usr/proc/bin/pwdx=../../bin/pwdx
 s usr/pub=share/lib/pub
 d usr/sadm 0755 root bin
 d usr/sadm/bin 0755 root bin
-f usr/sadm/bin/dispgid 0555 root bin
-f usr/sadm/bin/dispuid 0555 root bin
-f usr/sadm/bin/errange 0555 root bin
-f usr/sadm/bin/errdate 0555 root bin
-f usr/sadm/bin/errgid 0555 root bin
-f usr/sadm/bin/errint 0555 root bin
-f usr/sadm/bin/erritem 0555 root bin
-f usr/sadm/bin/errpath 0555 root bin
-f usr/sadm/bin/errstr 0555 root bin
-f usr/sadm/bin/errtime 0555 root bin
-f usr/sadm/bin/erruid 0555 root bin
-f usr/sadm/bin/erryorn 0555 root bin
-f usr/sadm/bin/helpdate 0555 root bin
-f usr/sadm/bin/helpgid 0555 root bin
-f usr/sadm/bin/helpint 0555 root bin
-f usr/sadm/bin/helpitem 0555 root bin
-f usr/sadm/bin/helppath 0555 root bin
-f usr/sadm/bin/helprange 0555 root bin
-f usr/sadm/bin/helpstr 0555 root bin
-f usr/sadm/bin/helptime 0555 root bin
-f usr/sadm/bin/helpuid 0555 root bin
-f usr/sadm/bin/helpyorn 0555 root bin
+h usr/sadm/bin/dispgid=usr/bin/ckgid
+h usr/sadm/bin/dispuid=usr/bin/ckuid
+h usr/sadm/bin/errange=usr/bin/ckrange
+h usr/sadm/bin/errdate=usr/bin/ckdate
+h usr/sadm/bin/errgid=usr/bin/ckgid
+h usr/sadm/bin/errint=usr/bin/ckint
+h usr/sadm/bin/erritem=usr/bin/ckitem
+h usr/sadm/bin/errpath=usr/bin/ckpath
+h usr/sadm/bin/errstr=usr/bin/ckstr
+h usr/sadm/bin/errtime=usr/bin/cktime
+h usr/sadm/bin/erruid=usr/bin/ckuid
+h usr/sadm/bin/erryorn=usr/bin/ckyorn
+h usr/sadm/bin/helpdate=usr/bin/ckdate
+h usr/sadm/bin/helpgid=usr/bin/ckgid
+h usr/sadm/bin/helpint=usr/bin/ckint
+h usr/sadm/bin/helpitem=usr/bin/ckitem
+h usr/sadm/bin/helppath=usr/bin/ckpath
+h usr/sadm/bin/helprange=usr/bin/ckrange
+h usr/sadm/bin/helpstr=usr/bin/ckstr
+h usr/sadm/bin/helptime=usr/bin/cktime
+h usr/sadm/bin/helpuid=usr/bin/ckuid
+h usr/sadm/bin/helpyorn=usr/bin/ckyorn
 f usr/sadm/bin/puttext 0555 root bin
-f usr/sadm/bin/valdate 0555 root bin
-f usr/sadm/bin/valgid 0555 root bin
-f usr/sadm/bin/valint 0555 root bin
-f usr/sadm/bin/valpath 0555 root bin
-f usr/sadm/bin/valrange 0555 root bin
-f usr/sadm/bin/valstr 0555 root bin
-f usr/sadm/bin/valtime 0555 root bin
-f usr/sadm/bin/valuid 0555 root bin
-f usr/sadm/bin/valyorn 0555 root bin
+h usr/sadm/bin/valdate=usr/bin/ckdate
+h usr/sadm/bin/valgid=usr/bin/ckgid
+h usr/sadm/bin/valint=usr/bin/ckint
+h usr/sadm/bin/valpath=usr/bin/ckpath
+h usr/sadm/bin/valrange=usr/bin/ckrange
+h usr/sadm/bin/valstr=usr/bin/ckstr
+h usr/sadm/bin/valtime=usr/bin/cktime
+h usr/sadm/bin/valuid=usr/bin/ckuid
+h usr/sadm/bin/valyorn=usr/bin/ckyorn
 d usr/sadm/install 0755 root bin
 d usr/sadm/install/scripts 0755 root bin
 f usr/sadm/install/scripts/i.ipsecalgs 0555 root sys
@@ -13164,17 +13121,12 @@ s usr/sbin/devnm=df
 f usr/sbin/df 0555 root bin
 f usr/sbin/dfmounts 0555 root bin
 h usr/sbin/dfshares=usr/sbin/dfmounts
-f usr/sbin/dig 0555 root bin
 h usr/sbin/disks=usr/sbin/devfsadm
 f usr/sbin/dispadmin 0555 root bin
 s usr/sbin/dladm=../../sbin/dladm
 s usr/sbin/dlstat=../../sbin/dlstat
 f usr/sbin/dmesg 0555 root bin
 f usr/sbin/dminfo 0555 root bin
-f usr/sbin/dnssec-dsfromkey 0555 root bin
-f usr/sbin/dnssec-keyfromlabel 0555 root bin
-f usr/sbin/dnssec-keygen 0555 root bin
-f usr/sbin/dnssec-signzone 0555 root bin
 h usr/sbin/drvconfig=usr/sbin/devfsadm
 h usr/sbin/dtrace=usr/lib/isaexec
 f usr/sbin/dumpadm 0555 root bin
@@ -13205,7 +13157,7 @@ f usr/sbin/ftpconfig 0555 root bin
 f usr/sbin/ftpcount 0555 root bin
 f usr/sbin/ftprestart 0555 root bin
 f usr/sbin/ftpshut 0555 root bin
-f usr/sbin/ftpwho 0555 root bin
+h usr/sbin/ftpwho=usr/sbin/ftpcount
 f usr/sbin/fuser 0555 root bin
 f usr/sbin/fwflash 0555 root bin
 f usr/sbin/getdevpolicy 0555 root sys
@@ -13225,7 +13177,6 @@ f usr/sbin/hal-get-property 0555 root bin
 f usr/sbin/hal-set-property 0555 root bin
 f usr/sbin/halt 0755 root bin
 f usr/sbin/hextoalabel 0555 root sys
-f usr/sbin/host 0555 root bin
 s usr/sbin/hostconfig=../../sbin/hostconfig
 f usr/sbin/hotplug 0555 root bin
 f usr/sbin/htable 0555 root bin
@@ -13310,19 +13261,6 @@ f usr/sbin/logadm 0555 root bin
 f usr/sbin/makedbm 0555 root bin
 f usr/sbin/makemap 0555 root bin
 f usr/sbin/medstat 0555 root bin
-f usr/sbin/metaclear 0555 root bin
-f usr/sbin/metadetach 0555 root bin
-f usr/sbin/metahs 0555 root bin
-f usr/sbin/metaimport 0555 root bin
-f usr/sbin/metaoffline 0555 root bin
-f usr/sbin/metaonline 0555 root bin
-f usr/sbin/metaparam 0555 root bin
-f usr/sbin/metarename 0555 root bin
-f usr/sbin/metareplace 0555 root bin
-f usr/sbin/metaroot 0555 root bin
-f usr/sbin/metaset 0555 root bin
-f usr/sbin/metasync 0555 root bin
-f usr/sbin/metattach 0555 root bin
 f usr/sbin/mkdevalloc 0555 root bin
 h usr/sbin/mkdevmaps=usr/sbin/mkdevalloc
 f usr/sbin/mkfile 0555 root bin
@@ -13344,8 +13282,6 @@ f usr/sbin/newkey 0555 root sys
 f usr/sbin/nfsref 0555 root bin
 f usr/sbin/nlsadmin 0755 root adm
 f usr/sbin/nscd 0555 root bin
-f usr/sbin/nslookup 0555 root bin
-f usr/sbin/nsupdate 0555 root bin
 f usr/sbin/ntp-keygen 0555 root bin
 f usr/sbin/ntp-wait 0555 root bin
 f usr/sbin/ntpd 0555 root bin
@@ -13400,10 +13336,6 @@ f usr/sbin/roledel 0555 root sys
 f usr/sbin/rolemod 0555 root sys
 s usr/sbin/route=../../sbin/route
 s usr/sbin/routeadm=../../sbin/routeadm
-f usr/sbin/rpc.mdcommd 0555 root bin
-f usr/sbin/rpc.metad 0555 root bin
-f usr/sbin/rpc.metamedd 0555 root bin
-f usr/sbin/rpc.metamhd 0555 root bin
 f usr/sbin/rpc.rexd 0555 root bin
 f usr/sbin/rpcbind 0555 root bin
 f usr/sbin/rtc 0555 root bin
@@ -13452,7 +13384,7 @@ f usr/sbin/tnchkdb 0555 root sys
 f usr/sbin/tnd 0555 root sys
 f usr/sbin/tninfo 0555 root sys
 f usr/sbin/traceroute 4555 root bin
-f usr/sbin/trapstat 0555 root bin
+h usr/sbin/trapstat=usr/lib/platexec
 f usr/sbin/try-from 0555 root bin
 f usr/sbin/ttyadm 0755 root sys
 s usr/sbin/tunefs=../lib/fs/ufs/tunefs
@@ -13468,9 +13400,9 @@ f usr/sbin/unlink 0555 root bin
 h usr/sbin/unshare=usr/sbin/sharemgr
 f usr/sbin/unshareall 0555 root bin
 h usr/sbin/update_drv=usr/lib/isaexec
-f usr/sbin/useradd 0555 root sys
-f usr/sbin/userdel 0555 root sys
-f usr/sbin/usermod 0555 root sys
+h usr/sbin/useradd=usr/sbin/roleadd
+h usr/sbin/userdel=usr/sbin/roledel
+h usr/sbin/usermod=usr/sbin/rolemod
 f usr/sbin/volcopy 0555 root bin
 f usr/sbin/vrrpadm 0555 root bin
 f usr/sbin/wall 2555 root tty
@@ -19833,7 +19765,7 @@ f usr/ucb/i86/ps 0555 root bin
 f usr/ucb/ls 0755 root bin
 s usr/ucb/more=../bin/more
 s usr/ucb/page=../bin/more
-f usr/ucb/ps 0555 root bin
+h usr/ucb/ps=usr/lib/isaexec
 f usr/ucb/shutdown 0755 root bin
 f usr/ucb/touch 0755 root bin
 s usr/ucb/uptime=../bin/uptime
@@ -19858,13 +19790,13 @@ f usr/xpg4/bin/df 0555 root bin
 f usr/xpg4/bin/du 0555 root bin
 f usr/xpg4/bin/ed 0555 root bin
 f usr/xpg4/bin/edit 0555 root bin
-f usr/xpg4/bin/egrep 0555 root bin
+h usr/xpg4/bin/egrep=usr/xpg4/bin/grep
 f usr/xpg4/bin/env 0555 root bin
-f usr/xpg4/bin/ex 0555 root bin
+h usr/xpg4/bin/ex=usr/xpg4/bin/edit
 f usr/xpg4/bin/expr 0555 root bin
 s usr/xpg4/bin/fc=../../bin/alias
 s usr/xpg4/bin/fg=../../bin/alias
-f usr/xpg4/bin/fgrep 0555 root bin
+h usr/xpg4/bin/fgrep=usr/xpg4/bin/grep
 f usr/xpg4/bin/file 0555 root bin
 f usr/xpg4/bin/find 0555 root bin
 f usr/xpg4/bin/getconf 0555 root bin
@@ -19876,11 +19808,11 @@ s usr/xpg4/bin/ipcs=../../bin/ipcs
 s usr/xpg4/bin/jobs=../../bin/alias
 s usr/xpg4/bin/kill=../../bin/alias
 f usr/xpg4/bin/link 0555 root bin
-f usr/xpg4/bin/ln 0555 root bin
+h usr/xpg4/bin/ln=usr/xpg4/bin/cp
 f usr/xpg4/bin/ls 0555 root bin
 f usr/xpg4/bin/m4 0555 root bin
 f usr/xpg4/bin/more 0555 root bin
-f usr/xpg4/bin/mv 0555 root bin
+h usr/xpg4/bin/mv=usr/xpg4/bin/cp
 f usr/xpg4/bin/nice 0555 root bin
 f usr/xpg4/bin/nl 0555 root bin
 f usr/xpg4/bin/nm 0555 root bin
@@ -19901,9 +19833,9 @@ s usr/xpg4/bin/type=../../bin/alias
 s usr/xpg4/bin/ulimit=../../bin/alias
 s usr/xpg4/bin/umask=../../bin/alias
 s usr/xpg4/bin/unalias=../../bin/alias
-f usr/xpg4/bin/vedit 0555 root bin
-f usr/xpg4/bin/vi 0555 root bin
-f usr/xpg4/bin/view 0555 root bin
+h usr/xpg4/bin/vedit=usr/xpg4/bin/edit
+h usr/xpg4/bin/vi=usr/xpg4/bin/edit
+h usr/xpg4/bin/view=usr/xpg4/bin/edit
 s usr/xpg4/bin/wait=../../bin/alias
 f usr/xpg4/bin/who 0555 root bin
 d usr/xpg4/include 0755 root bin

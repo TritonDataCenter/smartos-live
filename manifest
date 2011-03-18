@@ -8084,9 +8084,6 @@ f usr/lib/amd64/libtnfctl.so.1 0755 root bin
 s usr/lib/amd64/libtnfctl.so=libtnfctl.so.1
 f usr/lib/amd64/libtnfprobe.so.1 0755 root bin
 s usr/lib/amd64/libtnfprobe.so=libtnfprobe.so.1
-f usr/lib/amd64/libtspi.so.1.1.3 0555 root bin
-s usr/lib/amd64/libtspi.so.1=libtspi.so.1.1.3
-s usr/lib/amd64/libtspi.so=libtspi.so.1.1.3
 s usr/lib/amd64/libumem.so.1=../../../lib/amd64/libumem.so.1
 s usr/lib/amd64/libumem.so=../../../lib/amd64/libumem.so.1
 s usr/lib/amd64/libuuid.so.1=../../../lib/amd64/libuuid.so.1
@@ -9567,9 +9564,6 @@ f usr/lib/libtnfctl.so.1 0755 root bin
 s usr/lib/libtnfctl.so=libtnfctl.so.1
 f usr/lib/libtnfprobe.so.1 0755 root bin
 s usr/lib/libtnfprobe.so=libtnfprobe.so.1
-f usr/lib/libtspi.so.1.1.3 0555 root bin
-s usr/lib/libtspi.so.1=libtspi.so.1.1.3
-s usr/lib/libtspi.so=libtspi.so.1.1.3
 s usr/lib/libumem.so.1=../../lib/libumem.so.1
 s usr/lib/libumem.so=../../lib/libumem.so.1
 f usr/lib/libunistat.so.1 0755 root bin
@@ -10246,8 +10240,6 @@ f usr/lib/security/amd64/pkcs11_kms.so.1 0755 root bin
 s usr/lib/security/amd64/pkcs11_kms.so=pkcs11_kms.so.1
 f usr/lib/security/amd64/pkcs11_softtoken.so.1 0755 root bin
 s usr/lib/security/amd64/pkcs11_softtoken.so=pkcs11_softtoken.so.1
-f usr/lib/security/amd64/pkcs11_tpm.so.1 0755 root bin
-s usr/lib/security/amd64/pkcs11_tpm.so=pkcs11_tpm.so.1
 f usr/lib/security/audit_binfile.so.1 0755 root bin
 s usr/lib/security/audit_binfile.so=audit_binfile.so.1
 f usr/lib/security/audit_remote.so.1 0755 root bin
@@ -10315,8 +10307,6 @@ f usr/lib/security/pkcs11_kms.so.1 0755 root bin
 s usr/lib/security/pkcs11_kms.so=pkcs11_kms.so.1
 f usr/lib/security/pkcs11_softtoken.so.1 0755 root bin
 s usr/lib/security/pkcs11_softtoken.so=pkcs11_softtoken.so.1
-f usr/lib/security/pkcs11_tpm.so.1 0755 root bin
-s usr/lib/security/pkcs11_tpm.so=pkcs11_tpm.so.1
 f usr/lib/sendmail 2555 root smmsp
 f usr/lib/servinfo 0555 root bin
 f usr/lib/set_keyboard_layout 0555 root bin
@@ -18312,7 +18302,6 @@ f usr/share/man/man5/pam_unix_cred.5 0444 root bin
 f usr/share/man/man5/pam_unix_session.5 0444 root bin
 f usr/share/man/man5/pkcs11_kernel.5 0444 root bin
 f usr/share/man/man5/pkcs11_softtoken.5 0444 root bin
-f usr/share/man/man5/pkcs11_tpm.5 0444 root bin
 f usr/share/man/man5/privileges.5 0444 root bin
 f usr/share/man/man5/prof.5 0444 root bin
 f usr/share/man/man5/rbac.5 0444 root bin

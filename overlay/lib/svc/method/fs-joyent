@@ -84,6 +84,7 @@ function make_usb_copy
                 # buildstamp, so fix it here.
                 source_dir=${dir}
                 target_dir=$(echo ${dir} | tr "[:lower:]" "[:upper:]")
+                mkdir -p ${COPYINPOINT}/os
                 rsync -a ${source_dir}/ ${COPYINPOINT}/os/${target_dir}
             done
         )

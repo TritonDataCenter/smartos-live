@@ -7462,6 +7462,12 @@ f usr/include/sys/tpicommon.h 0644 root bin
 f usr/include/sys/trap.h 0644 root bin
 f usr/include/sys/traptrace.h 0644 root bin
 f usr/include/sys/ts.h 0644 root bin
+d usr/include/sys/tsol 0755 root bin
+f usr/include/sys/tsol/label.h 0644 root bin
+f usr/include/sys/tsol/label_macro.h 0644 root bin
+f usr/include/sys/tsol/priv.h 0644 root bin
+f usr/include/sys/tsol/tndb.h 0644 root bin
+f usr/include/sys/tsol/tsyscall.h 0644 root bin
 f usr/include/sys/tspriocntl.h 0644 root bin
 f usr/include/sys/tss.h 0644 root bin
 f usr/include/sys/ttcompat.h 0644 root bin
@@ -9341,9 +9347,9 @@ f usr/lib/libhotplug.so.1 0755 root bin
 s usr/lib/libhotplug.so=libhotplug.so.1
 f usr/lib/libidmap.so.1 0755 root bin
 s usr/lib/libidmap.so=libidmap.so.1
-f usr/lib/libidn.so.11.5.38 0755 root bin
-s usr/lib/libidn.so.11=libidn.so.11.5.38
-s usr/lib/libidn.so=libidn.so.11.5.38
+f usr/lib/libidn.so.11.5.40 0755 root bin
+s usr/lib/libidn.so.11=libidn.so.11.5.40
+s usr/lib/libidn.so=libidn.so.11.5.40
 f usr/lib/libike.so.1 0755 root bin
 s usr/lib/libike.so=libike.so.1
 f usr/lib/libilb.so.1 0755 root bin

@@ -5692,6 +5692,25 @@ f usr/lib/devfsadm/linkmod/SUNW_zfs_link.so 0755 root sys
 f usr/lib/devfsadm/linkmod/SUNW_zut_link.so 0755 root sys
 f usr/lib/diff3prog 0555 root bin
 f usr/lib/diffh 0555 root bin
+d usr/lib/dns 0755 root bin
+s usr/lib/dns/libbind9.so=libbind9.so.50.0.3
+s usr/lib/dns/libbind9.so.50=libbind9.so.50.0.3
+f usr/lib/dns/libbind9.so.50.0.3 0555 root bin
+s usr/lib/dns/libdns.so=libdns.so.55.1.1
+s usr/lib/dns/libdns.so.55=libdns.so.55.1.1
+f usr/lib/dns/libdns.so.55.1.1 0555 root bin
+s usr/lib/dns/libisc.so=libisc.so.50.2.1
+s usr/lib/dns/libisc.so.50=libisc.so.50.2.1
+f usr/lib/dns/libisc.so.50.2.1 0555 root bin
+s usr/lib/dns/libisccc.so=libisccc.so.50.0.1
+s usr/lib/dns/libisccc.so.50=libisccc.so.50.0.1
+f usr/lib/dns/libisccc.so.50.0.1 0555 root bin
+s usr/lib/dns/libisccfg.so=libisccfg.so.50.0.1
+s usr/lib/dns/libisccfg.so.50=libisccfg.so.50.0.1
+f usr/lib/dns/libisccfg.so.50.0.1 0555 root bin
+s usr/lib/dns/liblwres.so=liblwres.so.50.0.3
+s usr/lib/dns/liblwres.so.50=liblwres.so.50.0.3
+f usr/lib/dns/liblwres.so.50.0.3 0555 root bin
 f usr/lib/dscfglockd 0555 root bin
 d usr/lib/dtrace 0755 root bin
 d usr/lib/dtrace/64 0755 root bin
@@ -10554,6 +10573,7 @@ s usr/sbin/devnm=df
 f usr/sbin/df 0555 root bin
 f usr/sbin/dfmounts 0555 root bin
 h usr/sbin/dfshares=usr/sbin/dfmounts
+f usr/sbin/dig 0555 root bin
 h usr/sbin/disks=usr/sbin/devfsadm
 f usr/sbin/dispadmin 0555 root bin
 s usr/sbin/dladm=../../sbin/dladm
@@ -10610,6 +10630,7 @@ f usr/sbin/hal-get-property 0555 root bin
 f usr/sbin/hal-set-property 0555 root bin
 f usr/sbin/halt 0755 root bin
 f usr/sbin/hextoalabel 0555 root sys
+f usr/sbin/host 0555 root bin
 s usr/sbin/hostconfig=../../sbin/hostconfig
 f usr/sbin/hotplug 0555 root bin
 f usr/sbin/htable 0555 root bin
@@ -10715,6 +10736,7 @@ f usr/sbin/newkey 0555 root sys
 f usr/sbin/nfsref 0555 root bin
 f usr/sbin/nlsadmin 0755 root adm
 f usr/sbin/nscd 0555 root bin
+f usr/sbin/nslookup 0555 root bin
 f usr/sbin/ntp-keygen 0555 root bin
 f usr/sbin/ntp-wait 0555 root bin
 f usr/sbin/ntpd 0555 root bin

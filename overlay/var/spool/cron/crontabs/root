@@ -1,2 +1,4 @@
 ## Rotate and trim the audit logs nightly at midnight.
 0 0 * * * /usr/sbin/joycomm -R 30
+## Rotate and trim the regular logs nightly at 10 after midnight.
+10 0 * * * /usr/sbin/logadm

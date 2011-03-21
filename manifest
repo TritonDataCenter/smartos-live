@@ -14564,6 +14564,7 @@ f usr/share/man/man1/isalist.1 0444 root bin
 f usr/share/man/man1/jobs.1 0444 root bin
 f usr/share/man/man1/join.1 0444 root bin
 f usr/share/man/man1/jsh.1 0444 root bin
+f usr/share/man/man1/json.1 0444 root bin
 f usr/share/man/man1/kbd.1 0444 root bin
 f usr/share/man/man1/kdestroy.1 0444 root bin
 f usr/share/man/man1/keylogin.1 0444 root bin

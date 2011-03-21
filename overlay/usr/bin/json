@@ -5,10 +5,16 @@
 // See <https://github.com/trentm/json>.
 //
 
-var VERSION = "1.1.4";
+var VERSION = "1.1.7";
 
 var sys = require('sys');
 var Script = process.binding('evals').Script;
+
+
+//--- exports for module usage
+
+exports.main = main;
+exports.parseLookup = parseLookup;
 
 
 
@@ -102,6 +108,7 @@ function parseArgv(argv) {
         break;
     } 
   }
+  //TODO: '--' handling and error on a first arg that looks like an option.,d
 
   return parsed;
 }
@@ -114,6 +121,119 @@ function warn(o) {
 function isInteger(s) {
   return (s.search(/^-?[0-9]+$/) == 0);
 }
+
+
+// Parse a lookup string into a list of lookup bits. E.g.:
+//    "a.b.c" -> ["a","b","c"]
+//    "b['a']" -> ["b","['a']"]
+function parseLookup(lookup) {
+  //var debug = console.warn;
+  var debug = function() {};
+  
+  var bits = [];
+  debug("\n*** "+lookup+" ***")
+
+  bits = [];
+  var bit = "";
+  var states = [null];
+  var escaped = false;
+  var ch = null;
+  for (var i=0; i < lookup.length; ++i) {
+    var escaped = (!escaped && ch === '\\');
+    var ch = lookup[i];
+    debug("-- i="+i+", ch="+JSON.stringify(ch)+" escaped="+JSON.stringify(escaped))
+    debug("states: "+JSON.stringify(states))
+
+    if (escaped) {
+      bit += ch;
+      continue;
+    }
+
+    switch (states[states.length-1]) {
+    case null:
+      switch (ch) {
+      case '"':
+      case "'":
+        states.push(ch);
+        bit += ch;
+        break;
+      case '[':
+        states.push(ch);
+        if (bit !== "") {
+          bits.push(bit);
+          bit = ""
+        }
+        bit += ch;
+        break;
+      case '.':
+        if (bit !== "") {
+          bits.push(bit);
+          bit = ""
+        }
+        break;
+      default:
+        bit += ch;
+        break;
+      }
+      break;
+
+    case '[':
+      bit += ch;
+      switch (ch) {
+      case '"':
+      case "'":
+      case '[':
+        states.push(ch);
+        break;
+      case ']':
+        states.pop();
+        if (states[states.length-1] === null) {
+          bits.push(bit);
+          bit = ""
+        }
+        break;
+      }
+      break;
+
+    case '"':
+      bit += ch;
+      switch (ch) {
+      case '"':
+        states.pop();
+        if (states[states.length-1] === null) {
+          bits.push(bit);
+          bit = ""
+        }
+        break;
+      }
+      break;
+
+    case "'":
+      bit += ch;
+      switch (ch) {
+      case "'":
+        states.pop();
+        if (states[states.length-1] === null) {
+          bits.push(bit);
+          bit = ""
+        }
+        break;
+      }
+      break;
+    }
+    debug("bit: "+JSON.stringify(bit))
+    debug("bits: "+JSON.stringify(bits))
+  }
+
+  if (bit !== "") {
+    bits.push(bit);
+    bit = ""
+  }
+
+  debug(JSON.stringify(lookup)+" -> "+JSON.stringify(bits))
+  return bits
+}
+
 
 
 //---- mainline
@@ -130,8 +250,8 @@ function main(argv) {
     return;
   }
   if (args.extra.length) {
-    sys.puts("error: too many arguments: extra="+args.extra);
-    return 1;
+    sys.puts("json: error: too many arguments: extra="+args.extra);
+    process.exit(1);
   }
   
   var buffer = "";
@@ -169,41 +289,17 @@ function main(argv) {
     } catch(ex) {
       // Doesn't look like JSON. Just print it out and move on.
       if (! args.quiet) {
-        warn("warning: doesn't look like JSON: "+ex+" (buffer="+JSON.stringify(buffer)+")");
+        warn("json: error: doesn't look like JSON: "+ex+" (buffer="+JSON.stringify(buffer)+")");
       }
       process.stdout.write(buffer);
       if (buffer.length && buffer[buffer.length-1] !== "\n") {
         process.stdout.write('\n');
       }
-      return;
+      process.exit(1);
     }
     
     if (args.lookup) {
-      // Parse command line lookup string into separate parts of the lookup.
-      var split = args.lookup.split(/(\.|\[)/);
-      var bits = [];
-      var save = null;
-      for (var i=0; i < split.length; i++) {
-        var bit = split[i];
-        switch (bit) {
-        case '':
-          break;
-        case '.':
-          save = null;
-          break;
-        case '[':
-          save = bit;
-          break;
-        default:
-          if (save) {
-            bits.push(save + bit);
-          } else {
-            bits.push(bit);
-          }
-          save = null;
-          break;
-        }
-      }
+      var bits = parseLookup(args.lookup);
 
       // Put it back together with some convenience transformations.
       lookup = "";
@@ -242,8 +338,5 @@ function main(argv) {
 }
 
 if (require.main === module) {
-  var retval = main(process.argv);
-  if (retval) {
-    process.exit(retval);
-  }
+  main(process.argv);
 }

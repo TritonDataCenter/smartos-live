@@ -5692,25 +5692,6 @@ f usr/lib/devfsadm/linkmod/SUNW_zfs_link.so 0755 root sys
 f usr/lib/devfsadm/linkmod/SUNW_zut_link.so 0755 root sys
 f usr/lib/diff3prog 0555 root bin
 f usr/lib/diffh 0555 root bin
-d usr/lib/dns 0755 root bin
-s usr/lib/dns/libbind9.so=libbind9.so.50.0.3
-s usr/lib/dns/libbind9.so.50=libbind9.so.50.0.3
-f usr/lib/dns/libbind9.so.50.0.3 0555 root bin
-s usr/lib/dns/libdns.so=libdns.so.55.1.1
-s usr/lib/dns/libdns.so.55=libdns.so.55.1.1
-f usr/lib/dns/libdns.so.55.1.1 0555 root bin
-s usr/lib/dns/libisc.so=libisc.so.50.2.1
-s usr/lib/dns/libisc.so.50=libisc.so.50.2.1
-f usr/lib/dns/libisc.so.50.2.1 0555 root bin
-s usr/lib/dns/libisccc.so=libisccc.so.50.0.1
-s usr/lib/dns/libisccc.so.50=libisccc.so.50.0.1
-f usr/lib/dns/libisccc.so.50.0.1 0555 root bin
-s usr/lib/dns/libisccfg.so=libisccfg.so.50.0.1
-s usr/lib/dns/libisccfg.so.50=libisccfg.so.50.0.1
-f usr/lib/dns/libisccfg.so.50.0.1 0555 root bin
-s usr/lib/dns/liblwres.so=liblwres.so.50.0.3
-s usr/lib/dns/liblwres.so.50=liblwres.so.50.0.3
-f usr/lib/dns/liblwres.so.50.0.3 0555 root bin
 f usr/lib/dscfglockd 0555 root bin
 d usr/lib/dtrace 0755 root bin
 d usr/lib/dtrace/64 0755 root bin

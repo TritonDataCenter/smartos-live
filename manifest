@@ -2338,6 +2338,7 @@ f usr/bin/pginfo 0555 root bin
 f usr/bin/pgrep 0555 root bin
 f usr/bin/pgstat 0555 root bin
 f usr/bin/pkg2du 0555 root bin
+f usr/bin/pkgtrans 0555 root bin
 h usr/bin/pkill=usr/bin/pgrep
 f usr/bin/pktool 0555 root bin
 h usr/bin/pldd=usr/lib/isaexec
@@ -6883,6 +6884,8 @@ f usr/lib/libpanel.so.1 0755 root bin
 s usr/lib/libpanel.so=libpanel.so.1
 f usr/lib/libparted.so.8 0755 root bin
 s usr/lib/libparted.so=libparted.so.8
+f usr/lib/libpkg.so.1 0755 root bin
+s usr/lib/libpkg.so=libpkg.so.1
 f usr/lib/libpctx.so.1 0755 root bin
 s usr/lib/libpctx.so=libpctx.so.1
 f usr/lib/libpicl.so.1 0755 root bin
@@ -7021,6 +7024,8 @@ f usr/lib/libvrrpadm.so.1 0755 root bin
 s usr/lib/libvrrpadm.so=libvrrpadm.so.1
 s usr/lib/libw.so.1=../../lib/libw.so.1
 s usr/lib/libw.so=../../lib/libw.so.1
+f usr/lib/libwanboot.so.1 0755 root bin
+s usr/lib/libwanboot.so=../../lib/libwanboot.so.1
 f usr/lib/libwrap.so.1.0 0755 root bin
 s usr/lib/libwrap.so.1=libwrap.so.1.0
 s usr/lib/libwrap.so=libwrap.so.1.0
@@ -11983,6 +11988,7 @@ f usr/share/man/man1/pflags.1 0444 root bin
 f usr/share/man/man1/pfsh.1 0444 root bin
 f usr/share/man/man1/pg.1 0444 root bin
 f usr/share/man/man1/pgrep.1 0444 root bin
+f usr/share/man/man1/pkgtrans.1 0444 root bin
 f usr/share/man/man1/pkill.1 0444 root bin
 f usr/share/man/man1/pktool.1 0444 root bin
 f usr/share/man/man1/pldd.1 0444 root bin

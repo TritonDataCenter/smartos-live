@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010 Joyent Inc.
+# Copyright (c) 2011 Joyent Inc.
 #
 # To build everything just run 'gmake' in this directory.
 #
@@ -26,7 +26,7 @@
 PATH=/sbin:/usr/sbin:/usr/bin:/opt/SUNWspro/bin:/opt/local/bin
 BASE=$(PWD)
 DESTDIR=$(BASE)/proto
-SUBDIRS= bind
+SUBDIRS= bind ipmi
 
 -include Makefile.inc
 

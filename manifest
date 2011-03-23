@@ -1896,7 +1896,14 @@ f sbin/zonename 0555 root bin
 f sbin/zpool 0555 root bin
 d smartdc 0755 root bin
 d smartdc/bin 0755 root bin
-f smartdc/bin/sbcreate 0755 root bin
+f smartdc/bin/sdc-capi 0555 root bin
+f smartdc/bin/sdc-dsapi 0555 root bin
+f smartdc/bin/sdc-mapi 0555 root bin
+f smartdc/bin/sdc-mapi-destroy-container 0555 root bin
+f smartdc/bin/sdc-pubapi 0555 root bin
+f smartdc/bin/sdc-sbcreate 0555 root bin
+f smartdc/bin/sdc-zfs-io-throttle.d 0555 root bin
+f smartdc/bin/sdc-zoneinfo 0555 root bin
 d smartdc/ur-agent 0755 root bin
 f smartdc/ur-agent/README 0444 root bin
 d smartdc/ur-agent/amqp 0755 root bin
@@ -1932,8 +1939,8 @@ f usr/bin/amd64/elfwrap 0555 root bin
 f usr/bin/amd64/encrypt 0555 root bin
 s usr/bin/amd64/gcaptoinfo=gtic
 f usr/bin/amd64/gcore 0555 root bin
-h usr/bin/amd64/ksh=usr/bin/amd64/ksh93
 f usr/bin/amd64/ksh93 0555 root bin
+h usr/bin/amd64/ksh=usr/bin/amd64/ksh93
 f usr/bin/amd64/ld 0755 root bin
 f usr/bin/amd64/ldd 0555 root bin
 f usr/bin/amd64/ls 0555 root bin
@@ -1967,8 +1974,8 @@ f usr/bin/amd64/ptree 0555 root bin
 f usr/bin/amd64/pvs 0555 root bin
 f usr/bin/amd64/pwait 0555 root bin
 f usr/bin/amd64/pwdx 0555 root bin
-h usr/bin/amd64/rksh=usr/bin/amd64/ksh93
 h usr/bin/amd64/rksh93=usr/bin/amd64/ksh93
+h usr/bin/amd64/rksh=usr/bin/amd64/ksh93
 f usr/bin/amd64/savecore 0555 root bin
 f usr/bin/amd64/setuname 0555 root bin
 f usr/bin/amd64/sort 0555 root bin
@@ -2167,8 +2174,8 @@ h usr/bin/i86/decrypt=usr/bin/i86/encrypt
 h usr/bin/i86/digest=usr/bin/i86/mac
 f usr/bin/i86/encrypt 0555 root bin
 f usr/bin/i86/gcore 0555 root bin
-h usr/bin/i86/ksh=usr/bin/i86/ksh93
 f usr/bin/i86/ksh93 0555 root bin
+h usr/bin/i86/ksh=usr/bin/i86/ksh93
 f usr/bin/i86/mac 0555 root bin
 f usr/bin/i86/mdb 0555 root bin
 f usr/bin/i86/newtask 4555 root sys
@@ -2196,8 +2203,8 @@ f usr/bin/i86/ptime 0555 root bin
 f usr/bin/i86/ptree 0555 root bin
 f usr/bin/i86/pwait 0555 root bin
 f usr/bin/i86/pwdx 0555 root bin
-h usr/bin/i86/rksh=usr/bin/i86/ksh93
 h usr/bin/i86/rksh93=usr/bin/i86/ksh93
+h usr/bin/i86/rksh=usr/bin/i86/ksh93
 f usr/bin/i86/savecore 0555 root bin
 f usr/bin/i86/setuname 0555 root bin
 f usr/bin/i86/sort 0555 root bin
@@ -2230,8 +2237,8 @@ f usr/bin/klist 0555 root bin
 f usr/bin/kmfcfg 0555 root bin
 f usr/bin/kpasswd 0555 root bin
 f usr/bin/krb5-config 0555 root bin
-h usr/bin/ksh=usr/lib/isaexec
 h usr/bin/ksh93=usr/lib/isaexec
+h usr/bin/ksh=usr/lib/isaexec
 f usr/bin/kstat 0555 root bin
 f usr/bin/ktutil 0555 root bin
 f usr/bin/last 0555 root bin
@@ -2325,11 +2332,11 @@ h usr/bin/pfbash=usr/bin/pfexec
 h usr/bin/pfcsh=usr/bin/pfexec
 f usr/bin/pfexec 0555 root bin
 h usr/bin/pfiles=usr/lib/isaexec
-h usr/bin/pfksh=usr/bin/pfexec
 h usr/bin/pfksh93=usr/bin/pfexec
+h usr/bin/pfksh=usr/bin/pfexec
 h usr/bin/pflags=usr/lib/isaexec
-h usr/bin/pfrksh=usr/bin/pfexec
 h usr/bin/pfrksh93=usr/bin/pfexec
+h usr/bin/pfrksh=usr/bin/pfexec
 h usr/bin/pfsh=usr/bin/pfexec
 h usr/bin/pftcsh=usr/bin/pfexec
 h usr/bin/pfzsh=usr/bin/pfexec
@@ -2385,8 +2392,8 @@ f usr/bin/removable_disk 0555 root bin
 s usr/bin/remsh=rsh
 f usr/bin/renice 0555 root bin
 h usr/bin/rev=usr/bin/alias
-h usr/bin/rksh=usr/lib/isaexec
 h usr/bin/rksh93=usr/lib/isaexec
+h usr/bin/rksh=usr/lib/isaexec
 f usr/bin/rlogin 4555 root bin
 f usr/bin/rm 0555 root bin
 s usr/bin/rmail=mail
@@ -2477,10 +2484,10 @@ f usr/bin/tty 0555 root bin
 h usr/bin/type=usr/bin/alias
 f usr/bin/tzselect 0555 root bin
 h usr/bin/u370=usr/bin/sun
-h usr/bin/u3b=usr/bin/sun
 h usr/bin/u3b15=usr/bin/sun
 h usr/bin/u3b2=usr/bin/sun
 h usr/bin/u3b5=usr/bin/sun
+h usr/bin/u3b=usr/bin/sun
 f usr/bin/ul 0555 root bin
 h usr/bin/ulimit=usr/bin/alias
 h usr/bin/umask=usr/bin/alias
@@ -5934,8 +5941,8 @@ s usr/lib/fs/dev/mount=../../../../etc/fs/dev/mount
 d usr/lib/fs/fd 0755 root sys
 f usr/lib/fs/fd/mount 0555 root bin
 d usr/lib/fs/hsfs 0755 root sys
-h usr/lib/fs/hsfs/fstyp=usr/sbin/fstyp
 f usr/lib/fs/hsfs/fstyp.so.1 0555 root bin
+h usr/lib/fs/hsfs/fstyp=usr/sbin/fstyp
 f usr/lib/fs/hsfs/labelit 0555 root bin
 s usr/lib/fs/hsfs/mount=../../../../etc/fs/hsfs/mount
 d usr/lib/fs/lofs 0755 root sys
@@ -5958,8 +5965,8 @@ d usr/lib/fs/objfs 0755 root sys
 f usr/lib/fs/objfs/mount 0555 root bin
 d usr/lib/fs/pcfs 0755 root sys
 f usr/lib/fs/pcfs/fsck 0555 root bin
-h usr/lib/fs/pcfs/fstyp=usr/sbin/fstyp
 f usr/lib/fs/pcfs/fstyp.so.1 0555 root bin
+h usr/lib/fs/pcfs/fstyp=usr/sbin/fstyp
 f usr/lib/fs/pcfs/mkfs 0555 root bin
 f usr/lib/fs/pcfs/mount 0555 root bin
 d usr/lib/fs/proc 0755 root sys
@@ -5979,8 +5986,8 @@ f usr/lib/fs/ufs/fsckall 0555 root bin
 f usr/lib/fs/ufs/fsdb 0555 root bin
 f usr/lib/fs/ufs/fsirand 0555 root bin
 f usr/lib/fs/ufs/fssnap 0555 root bin
-h usr/lib/fs/ufs/fstyp=usr/sbin/fstyp
 f usr/lib/fs/ufs/fstyp.so.1 0555 root bin
+h usr/lib/fs/ufs/fstyp=usr/sbin/fstyp
 f usr/lib/fs/ufs/labelit 0555 root bin
 f usr/lib/fs/ufs/lockfs 0555 root bin
 f usr/lib/fs/ufs/mboot 0444 root sys
@@ -6000,8 +6007,8 @@ f usr/lib/fs/ufs/ufsrestore 4555 root bin
 f usr/lib/fs/ufs/volcopy 0555 root bin
 d usr/lib/fs/zfs 0755 root sys
 f usr/lib/fs/zfs/bootinstall 0555 root bin
-h usr/lib/fs/zfs/fstyp=usr/sbin/fstyp
 f usr/lib/fs/zfs/fstyp.so.1 0555 root bin
+h usr/lib/fs/zfs/fstyp=usr/sbin/fstyp
 s usr/lib/fs/zfs/mount=../../../../sbin/zfs
 s usr/lib/fs/zfs/umount=../../../../sbin/zfs
 d usr/lib/fwflash 0755 root bin
@@ -6886,8 +6893,6 @@ f usr/lib/libpanel.so.1 0755 root bin
 s usr/lib/libpanel.so=libpanel.so.1
 f usr/lib/libparted.so.8 0755 root bin
 s usr/lib/libparted.so=libparted.so.8
-f usr/lib/libpkg.so.1 0755 root bin
-s usr/lib/libpkg.so=libpkg.so.1
 f usr/lib/libpctx.so.1 0755 root bin
 s usr/lib/libpctx.so=libpctx.so.1
 f usr/lib/libpicl.so.1 0755 root bin
@@ -6898,6 +6903,8 @@ f usr/lib/libpicltree.so.1 0755 root bin
 s usr/lib/libpicltree.so=libpicltree.so.1
 f usr/lib/libpkcs11.so.1 0755 root bin
 s usr/lib/libpkcs11.so=libpkcs11.so.1
+f usr/lib/libpkg.so.1 0755 root bin
+s usr/lib/libpkg.so=libpkg.so.1
 f usr/lib/libpolkit.so.0.0.0 0755 root bin
 s usr/lib/libpolkit.so.0=libpolkit.so.0.0.0
 s usr/lib/libpolkit.so=libpolkit.so.0.0.0
@@ -10936,7 +10943,6 @@ h usr/share/lib/keytables/type_6/layout_0a=usr/share/lib/keytables/type_6/greece
 h usr/share/lib/keytables/type_6/layout_0c=usr/share/lib/keytables/type_6/hungary
 h usr/share/lib/keytables/type_6/layout_0e=usr/share/lib/keytables/type_6/italy
 h usr/share/lib/keytables/type_6/layout_0f=usr/share/lib/keytables/type_6/japan
-h usr/share/lib/keytables/type_6/layout_10=usr/share/lib/keytables/type_6/korea
 h usr/share/lib/keytables/type_6/layout_100=usr/share/lib/keytables/type_6/slovenia
 h usr/share/lib/keytables/type_6/layout_101=usr/share/lib/keytables/type_6/serbiaandmontenegro
 h usr/share/lib/keytables/type_6/layout_102=usr/share/lib/keytables/type_6/iceland
@@ -10947,14 +10953,15 @@ h usr/share/lib/keytables/type_6/layout_106=usr/share/lib/keytables/type_6/malta
 h usr/share/lib/keytables/type_6/layout_107=usr/share/lib/keytables/type_6/maltauk
 h usr/share/lib/keytables/type_6/layout_108=usr/share/lib/keytables/type_6/albania
 h usr/share/lib/keytables/type_6/layout_109=usr/share/lib/keytables/type_6/lithuania
+h usr/share/lib/keytables/type_6/layout_10=usr/share/lib/keytables/type_6/korea
 h usr/share/lib/keytables/type_6/layout_10a=usr/share/lib/keytables/type_6/latvia
 h usr/share/lib/keytables/type_6/layout_10b=usr/share/lib/keytables/type_6/macedonia
 h usr/share/lib/keytables/type_6/layout_10f=usr/share/lib/keytables/type_6/japan
-h usr/share/lib/keytables/type_6/layout_11=usr/share/lib/keytables/type_6/latinamerica
 h usr/share/lib/keytables/type_6/layout_110=usr/share/lib/keytables/type_6/brazil
 h usr/share/lib/keytables/type_6/layout_111=usr/share/lib/keytables/type_6/dvorak
 h usr/share/lib/keytables/type_6/layout_112=usr/share/lib/keytables/type_6/estonia
 h usr/share/lib/keytables/type_6/layout_113=usr/share/lib/keytables/type_6/romania
+h usr/share/lib/keytables/type_6/layout_11=usr/share/lib/keytables/type_6/latinamerica
 h usr/share/lib/keytables/type_6/layout_12=usr/share/lib/keytables/type_6/netherlands
 h usr/share/lib/keytables/type_6/layout_13=usr/share/lib/keytables/type_6/norway
 h usr/share/lib/keytables/type_6/layout_15=usr/share/lib/keytables/type_6/poland
@@ -11498,7 +11505,6 @@ f usr/share/lib/zoneinfo/EST5EDT 0644 root bin
 f usr/share/lib/zoneinfo/Egypt 0644 root bin
 f usr/share/lib/zoneinfo/Eire 0644 root bin
 d usr/share/lib/zoneinfo/Etc 0755 root bin
-h usr/share/lib/zoneinfo/Etc/GMT=usr/share/lib/zoneinfo/GMT
 h usr/share/lib/zoneinfo/Etc/GMT+0=usr/share/lib/zoneinfo/GMT
 f usr/share/lib/zoneinfo/Etc/GMT+1 0644 root bin
 f usr/share/lib/zoneinfo/Etc/GMT+10 0644 root bin
@@ -11528,6 +11534,7 @@ f usr/share/lib/zoneinfo/Etc/GMT-7 0644 root bin
 f usr/share/lib/zoneinfo/Etc/GMT-8 0644 root bin
 f usr/share/lib/zoneinfo/Etc/GMT-9 0644 root bin
 h usr/share/lib/zoneinfo/Etc/GMT0=usr/share/lib/zoneinfo/GMT
+h usr/share/lib/zoneinfo/Etc/GMT=usr/share/lib/zoneinfo/GMT
 h usr/share/lib/zoneinfo/Etc/Greenwich=usr/share/lib/zoneinfo/GMT
 f usr/share/lib/zoneinfo/Etc/UCT 0644 root bin
 h usr/share/lib/zoneinfo/Etc/UTC=usr/share/lib/zoneinfo/UTC

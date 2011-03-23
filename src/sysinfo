@@ -214,6 +214,14 @@ function get_network_interfaces()
         ((count++))
     done
 
+    for line in $(dladm show-phys -p -olink,state); do
+        fields=(${line//:/ })
+        iface=${fields[0]}
+        link_status=${fields[1]}
+        eval "Network_Interface_${iface}_Link_Status=${link_status}"
+
+    done
+
     #echo "${NIC_admin}"
     #echo "${NIC_external}"
     #echo "${NIC_internal}"
@@ -229,7 +237,7 @@ function get_network_interfaces()
 function get_nic_tags()
 {
     count=1
-    for line in $(/usr/bin/bootparams 2>/dev/null | grep "^[a-z0-9_]*_nic" ; grep "^[a-z0-9]*_nic" ${configfile} 2>/dev/null); do
+    for line in $(/usr/bin/bootparams 2>/dev/null | grep "^[a-z0-9_]*_nic=" ; grep "^[a-z0-9]*_nic=" ${configfile} 2>/dev/null); do
         fields=(${line//=/ })
         key=${fields[0]}
         if [[ $key != "admin_nic" ]] && [[ $key != "external_nic" ]] && [[ $key != "internal_nic" ]]; then
@@ -303,14 +311,18 @@ END
         mac_var="Network_Interface_${iface}_MAC_Address"
         ipv4_var="Network_Interface_${iface}_IPv4_Address"
         nicnames_var="Network_Interface_${iface}_NIC_Names"
+        link_status_var="Network_Interface_${iface}_Link_Status"
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"
         eval "nicnames=\${${nicnames_var}}"
+        link_status="unknown"
+        eval "link_status=\${${link_status_var}}"
 
         echo "${mac_var}='${mac}'"
         echo "${ipv4_var}='${ipv4}'"
         echo "${nicnames_var}='${nicnames}'"
+        echo "${link_status_var}='${link_status}'"
     done
 
     for entry in "${Bootparams[@]}"; do
@@ -374,11 +386,13 @@ END
         mac_var="Network_Interface_${iface}_MAC_Address"
         ipv4_var="Network_Interface_${iface}_IPv4_Address"
         nicnames_var="Network_Interface_${iface}_NIC_Names"
+        link_status_var="Network_Interface_${iface}_Link_Status"
         nic_names_fmt=
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"
         eval "nicnames=\${${nicnames_var}}"
+        eval "link_status=\${${link_status_var}}"
 
         nic_names_array=$(echo "${nicnames}" | sed -e "s/,/\", \"/g")
         if [[ -n ${nic_names_array} ]]; then
@@ -388,7 +402,7 @@ END
         ((printed++))
         trailing_comma=","
         [[ ${printed} -eq ${#NetworkInterfaces[*]} ]] && trailing_comma=''
-        echo "    \"${iface}\": {\"MAC Address\": \"${mac}\", \"ip4addr\": \"${ipv4}\", \"NIC Names\": [${nic_names_fmt}]}${trailing_comma}"
+        echo "    \"${iface}\": {\"MAC Address\": \"${mac}\", \"ip4addr\": \"${ipv4}\", \"Link Status\": \"${link_status}\", \"NIC Names\": [${nic_names_fmt}]}${trailing_comma}"
     done
 
     cat <<END

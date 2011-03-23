@@ -5040,6 +5040,8 @@ f usr/include/tnf/probe.h 0644 root bin
 f usr/include/tnf/tnf.h 0644 root bin
 f usr/include/tnf/tnfctl.h 0644 root bin
 f usr/include/tnf/writer.h 0644 root bin
+d usr/include/tsol 0755 root bin
+f usr/include/tsol/label.h 0644 root bin
 f usr/include/tzfile.h 0644 root bin
 f usr/include/ucontext.h 0644 root bin
 f usr/include/ucred.h 0644 root bin

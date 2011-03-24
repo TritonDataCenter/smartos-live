@@ -1,0 +1,41 @@
+#!/bin/bash
+
+if [[ $# != 1 || ! -f $1 ]]; then
+    echo "Usage: $0 <filename>"
+    exit 1
+fi
+
+OUTFILE=$1
+
+. /lib/sdc/config.sh
+load_sdc_config
+load_sdc_sysinfo
+
+JOYENT_KEY=/smartdc/pubkey.key
+ENCRYPTED_OUT=${OUTFILE}.${SYSINFO_UUID}.`TZ=UTC date "+%Y%m%dT%H%M%SZ"`
+
+function encrypt_bundle
+{
+    gpg --import $JOYENT_KEY
+    gpg --encrypt --recipient 'support@joyent.com' --always-trust --output $ENCRYPTED_OUT $OUTFILE
+}
+
+function upload_bundle
+{
+    if echo "${BUNDLE_UPLOAD_SERVER}" | grep "^[0-9,\.]*$" >/dev/null 2>&1; then
+        # BUNDLE_UPLOAD_SERVER is an IP
+        server="${BUNDLE_UPLOAD_SERVER}"
+    else
+        # DNS, try to resolve
+        serverlist=( $( (dig ${BUNDLE_UPLOAD_SERVER} +short || /bin/true) | grep "^[0-9]") )
+        rand=$RANDOM
+        let "rand %= ${#serverlist[@]}"
+        server=${serverlist[$rand]}
+    fi
+    curl -T ${ENCRYPTED_OUT} ${server}
+
+}
+
+encrypt_bundle
+upload_bundle
+

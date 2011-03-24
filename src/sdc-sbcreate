@@ -212,3 +212,11 @@ mv ${LOGFILE} ${OUTFILE}.log
 
 echo "==> cleaning up"
 rm -rf ${TEMPDIR}
+
+echo "Would you like to automatically upload your support bundle to Joyent Support? (y/N)"
+read -n1 response
+if [[ $response == "Y" || $response == "y" ]]; then
+    /smartdc/bin/sdc-sbupload ${OUTFILE}
+fi
+
+echo "==> Done!"

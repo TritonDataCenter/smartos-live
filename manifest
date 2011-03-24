@@ -1905,11 +1905,13 @@ f smartdc/bin/sdc-capi 0555 root bin
 f smartdc/bin/sdc-dsapi 0555 root bin
 f smartdc/bin/sdc-mapi 0555 root bin
 f smartdc/bin/sdc-mapi-destroy-container 0555 root bin
+f smartdc/bin/sdc-oneachnode 0555 root bin
 f smartdc/bin/sdc-pubapi 0555 root bin
 f smartdc/bin/sdc-sbcreate 0555 root bin
+f smartdc/bin/sdc-sbupload 0555 root bin
 f smartdc/bin/sdc-zfs-io-throttle.d 0555 root bin
 f smartdc/bin/sdc-zoneinfo 0555 root bin
-f smartdc/bin/sdc-oneachnode 0555 root bin
+f smartdc/pubkey.key 0555 root bin
 d smartdc/ur-agent 0755 root bin
 f smartdc/ur-agent/README 0444 root bin
 d smartdc/ur-agent/amqp 0755 root bin
@@ -2146,6 +2148,7 @@ f usr/bin/gettxt 0555 root bin
 f usr/bin/getvol 0555 root bin
 f usr/bin/ginfocmp 0755 root bin
 s usr/bin/ginfotocap=gtic
+f usr/bin/gpg 0555 root bin
 f usr/bin/grep 0555 root bin
 s usr/bin/greset=gtset
 f usr/bin/groups 0555 root bin
@@ -6932,6 +6935,7 @@ s usr/lib/librcm.so.1=../../lib/librcm.so.1
 s usr/lib/librcm.so=../../lib/librcm.so.1
 f usr/lib/librdc.so.1 0755 root bin
 s usr/lib/librdc.so=librdc.so.1
+f usr/lib/libreadline.so.5 0555 root bin
 f usr/lib/libreparse.so.1 0755 root bin
 s usr/lib/libreparse.so=libreparse.so.1
 s usr/lib/libresolv.so.1=../../lib/libresolv.so.1
@@ -7029,6 +7033,7 @@ s usr/lib/libumem.so.1=../../lib/libumem.so.1
 s usr/lib/libumem.so=../../lib/libumem.so.1
 f usr/lib/libunistat.so.1 0755 root bin
 s usr/lib/libunistat.so=libunistat.so.1
+f usr/lib/libusb.so.1 0555 root bin
 s usr/lib/libuuid.so.1=../../lib/libuuid.so.1
 s usr/lib/libuuid.so=../../lib/libuuid.so.1
 s usr/lib/libuutil.so.1=../../lib/libuutil.so.1
@@ -7880,6 +7885,7 @@ f usr/lib/zones/zoneadmd 0555 root bin
 f usr/lib/zones/zoneshare 0555 root bin
 f usr/lib/zones/zonestatd 0555 root bin
 f usr/lib/zones/zoneunshare 0555 root bin
+d usr/libexec 07555 root bin
 d usr/local 0755 root root
 s usr/mail=../var/mail
 s usr/man=share/man

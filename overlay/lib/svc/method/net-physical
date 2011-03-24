@@ -147,9 +147,6 @@ if smf_is_globalzone; then
                 ifconfig ${iface} dhcp primary || /bin/true
             else
                 ifconfig ${iface} inet ${CONFIG_external_ip} netmask ${CONFIG_external_netmask} up
-                if [[ -n "${CONFIG_external_gateway}" ]]; then
-                    echo "${CONFIG_external_gateway}" > /etc/defaultrouter
-                fi
             fi
 
             # Set up the GZ to NAT for Coal
@@ -175,6 +172,15 @@ IPNAT
             fi
         fi
     fi
+
+    # Use headnode_default_gateway if set, otherwise fall back to admin_gateway
+    # if that's set.
+    if [[ -n "${CONFIG_headnode_default_gateway}" ]]; then
+        echo "${CONFIG_headnode_default_gateway}" > /etc/defaultrouter
+    elif [[ -n ${CONFIG_admin_gateway} ]]; then
+        echo "${CONFIG_admin_gateway}" > /etc/defaultrouter
+    fi
+
 else
     # Non-global zones
     for iface in `dladm show-vnic -p -o link`; do

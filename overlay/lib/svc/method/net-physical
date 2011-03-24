@@ -156,7 +156,7 @@ if smf_is_globalzone; then
 
                 # Allow zones to reach the internet using the global zone as a router
                 if [[ -n ${CONFIG_external_vlan_id} ]]; then
-                    IPNAT_NIC="external0"
+                    IPNAT_NIC="gz_external0"
                 else
                     IPNAT_NIC=${SYSINFO_NIC_external}
                 fi

@@ -12,6 +12,11 @@ if [[ $1 == "-p" ]]; then
     PARSABLE="true"
 fi
 
+DETECT_NICS=
+if [[ $1 == "-n" ]] || [[ $2 == "-n" ]]; then
+    DETECT_NICS="true"
+fi
+
 if [[ $(zonename) != "global" ]]; then
     echo "This program is for use in the global zone only."
     exit 1
@@ -247,6 +252,26 @@ function get_nic_tags()
     done
 }
 
+function detect_nic_tags() {
+    for iface in "${NetworkInterfaces[@]}"; do
+        eval "link_status=\${Network_Interface_${iface}_Link_Status}"
+        if [[ "${link_status}" != "up" ]]; then
+            # polo needs the interface to be plumbed to work
+            /usr/sbin/ifconfig ${iface} plumb
+        fi
+
+        # Leave it at the 30 second timeout for now
+        detected_tag=$(/smartdc/bin/polo ${iface})
+
+        if [[ "${link_status}" != "up" ]]; then
+            /usr/sbin/ifconfig ${iface} unplumb
+        fi
+        if [[ -n "${detected_tag}" ]]; then
+            eval "Network_Interface_${iface}_Detected_Nic_Tag=${detected_tag}"
+        fi
+    done
+}
+
 function get_bootparams()
 {
     count=1
@@ -312,17 +337,22 @@ END
         ipv4_var="Network_Interface_${iface}_IPv4_Address"
         nicnames_var="Network_Interface_${iface}_NIC_Names"
         link_status_var="Network_Interface_${iface}_Link_Status"
+        detected_tag_var="Network_Interface_${iface}_Detected_Nic_Tag"
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"
         eval "nicnames=\${${nicnames_var}}"
         link_status="unknown"
         eval "link_status=\${${link_status_var}}"
+        eval "detected_tag=\${${detected_tag_var}}"
 
         echo "${mac_var}='${mac}'"
         echo "${ipv4_var}='${ipv4}'"
         echo "${nicnames_var}='${nicnames}'"
         echo "${link_status_var}='${link_status}'"
+        if [[ -n "${detected_tag}" ]] ; then
+            echo "${detected_tag_var}='${detected_tag}'"
+        fi
     done
 
     for entry in "${Bootparams[@]}"; do
@@ -387,12 +417,19 @@ END
         ipv4_var="Network_Interface_${iface}_IPv4_Address"
         nicnames_var="Network_Interface_${iface}_NIC_Names"
         link_status_var="Network_Interface_${iface}_Link_Status"
+        detected_tag_var="Network_Interface_${iface}_Detected_Nic_Tag"
         nic_names_fmt=
+        detected_fmt=
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"
         eval "nicnames=\${${nicnames_var}}"
         eval "link_status=\${${link_status_var}}"
+        eval "detected_tag=\${${detected_tag_var}}"
+
+        if [[ -n "${detected_tag}" ]] ; then
+            detected_fmt="\"Detected NIC Name\": \"${detected_tag}\","
+        fi
 
         nic_names_array=$(echo "${nicnames}" | sed -e "s/,/\", \"/g")
         if [[ -n ${nic_names_array} ]]; then
@@ -402,7 +439,7 @@ END
         ((printed++))
         trailing_comma=","
         [[ ${printed} -eq ${#NetworkInterfaces[*]} ]] && trailing_comma=''
-        echo "    \"${iface}\": {\"MAC Address\": \"${mac}\", \"ip4addr\": \"${ipv4}\", \"Link Status\": \"${link_status}\", \"NIC Names\": [${nic_names_fmt}]}${trailing_comma}"
+        echo "    \"${iface}\": {\"MAC Address\": \"${mac}\", \"ip4addr\": \"${ipv4}\", \"Link Status\": \"${link_status}\", ${detected_fmt} \"NIC Names\": [${nic_names_fmt}]}${trailing_comma}"
     done
 
     cat <<END
@@ -420,6 +457,9 @@ get_hostname
 get_nic_mappings
 get_nic_tags
 get_network_interfaces
+if [[ ${DETECT_NICS} == "true" ]]; then
+    detect_nic_tags
+fi
 get_bootparams
 
 if [[ ${PARSABLE} == "true" ]]; then

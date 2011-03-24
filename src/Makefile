@@ -1,15 +1,16 @@
 CC=gcc
 CFLAGS=-Wall
 TARGETS=bootparams disklist removable_disk disk_size
+SMARTDC_TARGETS=sdc-sbcreate marco polo
 DESTDIR=../proto
 
-all: $(TARGETS) sysinfo sdc-sbcreate
+all: $(TARGETS) sysinfo $(SMARTDC_TARGETS)
 
 install: $(TARGETS) sysinfo
 	mkdir -p $(DESTDIR)/usr/bin
 	pfexec cp -p $(TARGETS) sysinfo $(DESTDIR)/usr/bin
 	mkdir -p $(DESTDIR)/smartdc/bin
-	pfexec cp -p sdc-sbcreate $(DESTDIR)/smartdc/bin
+	pfexec cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin
 
 bootparams: bootparams.c
 	$(CC) $(CFLAGS) -o $@ $^ -ldevinfo
@@ -29,6 +30,12 @@ sysinfo:
 
 sdc-sbcreate:
 	touch sdc-sbcreate
+
+marco: marco.c
+	$(CC) $(CFLAGS) -o $@ $^ -lsocket
+
+polo: polo.c
+	$(CC) $(CFLAGS) -o $@ $^ -lsocket
 
 clean:
 	@rm -f $(TARGETS)

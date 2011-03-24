@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
-<service_bundle type="manifest" name="ur">
-  <service name="smartdc/agent/ur" type="service" version="0.0.1">
+<service_bundle type="manifest" name="beacon">
+    <service name="smartdc/system/beacon" type="service" version="0.0.1">
 
     <create_default_instance enabled="true"/>
     <single_instance/>

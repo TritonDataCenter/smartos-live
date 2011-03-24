@@ -1909,6 +1909,7 @@ f smartdc/bin/sdc-pubapi 0555 root bin
 f smartdc/bin/sdc-sbcreate 0555 root bin
 f smartdc/bin/sdc-zfs-io-throttle.d 0555 root bin
 f smartdc/bin/sdc-zoneinfo 0555 root bin
+f smartdc/bin/sdc-oneachnode 0555 root bin
 d smartdc/ur-agent 0755 root bin
 f smartdc/ur-agent/README 0444 root bin
 d smartdc/ur-agent/amqp 0755 root bin

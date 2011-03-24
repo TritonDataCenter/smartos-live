@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-Wall
 TARGETS=bootparams disklist removable_disk disk_size
-SMARTDC_TARGETS=sdc-sbcreate marco polo
+SMARTDC_TARGETS=sdc-sbcreate marco polo beacon
 DESTDIR=../proto
 
 all: $(TARGETS) sysinfo $(SMARTDC_TARGETS)
@@ -30,6 +30,9 @@ sysinfo:
 
 sdc-sbcreate:
 	touch sdc-sbcreate
+
+beacon:
+	touch beacon
 
 marco: marco.c
 	$(CC) $(CFLAGS) -o $@ $^ -lsocket

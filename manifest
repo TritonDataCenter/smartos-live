@@ -1624,6 +1624,7 @@ f lib/svc/manifest/system/sac.xml 0444 root sys
 f lib/svc/manifest/system/sar.xml 0444 root sys
 f lib/svc/manifest/system/scheduler.xml 0444 root sys
 d lib/svc/manifest/system/security 0755 root sys
+f lib/svc/manifest/system/smartdc-beacon.xml 0444 root sys
 f lib/svc/manifest/system/smartdc-config.xml 0444 root sys
 f lib/svc/manifest/system/smartdc-ur.xml 0444 root sys
 f lib/svc/manifest/system/stmf.xml 0444 root sys
@@ -1683,6 +1684,7 @@ f lib/svc/method/rmtmpfiles 0555 root bin
 f lib/svc/method/rpc-bind 0555 root bin
 f lib/svc/method/sendmail-client 0555 root sys
 f lib/svc/method/slp 0555 root sys
+f lib/svc/method/smartdc-beacon 0555 root bin
 f lib/svc/method/smartdc-config 0555 root bin
 f lib/svc/method/smartdc-ur 0555 root bin
 f lib/svc/method/smb-client 0555 root sys
@@ -1896,6 +1898,7 @@ f sbin/zonename 0555 root bin
 f sbin/zpool 0555 root bin
 d smartdc 0755 root bin
 d smartdc/bin 0755 root bin
+f smartdc/bin/beacon 0555 root bin
 f smartdc/bin/marco 0555 root bin
 f smartdc/bin/polo 0555 root bin
 f smartdc/bin/sdc-capi 0555 root bin

@@ -173,6 +173,9 @@ function get_network_interfaces()
 {
     count=1
     nic_tag_count=1
+    NicTagList="admin"
+    seen_nic_tag_admin="true"
+
     # ignore 'LINK SLOT ADDRESS INUSE CLIENT' line
     for line in $(pfexec /sbin/dladm show-phys -m | grep -v "^LINK " | awk '{ print $1,$3 }' | tr ' ' '='); do
         nicnames=
@@ -189,11 +192,13 @@ function get_network_interfaces()
         if [[ -n "${EXTERNAL_NIC}" ]] && [[ "${EXTERNAL_NIC}" == "${mac}" ]]; then
             [[ -n ${nicnames} ]] && nicnames="${nicnames},"
             nicnames="${nicnames}external"
+            NicTagList="${NicTagList},external"
             NIC_external=${iface}
         fi
         if [[ -n "${INTERNAL_NIC}" ]] && [[ "${INTERNAL_NIC}" == "${mac}" ]]; then
             [[ -n ${nicnames} ]] && nicnames="${nicnames},"
             nicnames="${nicnames}internal"
+            NicTagList="${NicTagList},internal"
             NIC_internal=${iface}
         fi
 
@@ -207,6 +212,13 @@ function get_network_interfaces()
                 nicnames="${nicnames}${tag_name}"
                 NicTags[${nic_tag_count}]="${tag_name}=${iface}"
                 ((nic_tag_count++))
+            fi
+
+            # Build up the list of tags
+            eval "seen_nic_tag=\${seen_nic_tag_${tag_name}}"
+            if [[ -z "${seen_nic_tag}" ]]; then
+                NicTagList="${NicTagList},${tag_name}"
+                eval "seen_nic_tag_${tag_name}=true"
             fi
         done
 
@@ -311,6 +323,7 @@ CPU_Type='${CPU_Version}'
 CPU_Physical_Cores=${CPU_Count}
 CPU_Total_Cores=${CPU_Cores}
 MiB_of_Memory=${Memory_in_MiB}
+Nic_Tags=${NicTagList}
 END
 
     for entry in "${Disks[@]}"; do

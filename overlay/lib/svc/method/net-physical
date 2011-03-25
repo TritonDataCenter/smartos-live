@@ -137,8 +137,8 @@ if smf_is_globalzone; then
         if [[ -n "${CONFIG_external_ip}" ]]; then
             iface=${SYSINFO_NIC_external}
             if [[ -n ${CONFIG_external_vlan_id} ]]; then
-                dladm create-vnic -l ${iface} -v ${CONFIG_external_vlan_id} global0
-                iface="global0"
+                dladm create-vnic -l ${iface} -v ${CONFIG_external_vlan_id} gz_external0
+                iface="gz_external0"
             fi
             ifconfig ${iface} plumb
             if [[ ${CONFIG_external_ip} == "dhcp" ]]; then
@@ -156,7 +156,7 @@ if smf_is_globalzone; then
 
                 # Allow zones to reach the internet using the global zone as a router
                 if [[ -n ${CONFIG_external_vlan_id} ]]; then
-                    IPNAT_NIC="global0"
+                    IPNAT_NIC="gz_external0"
                 else
                     IPNAT_NIC=${SYSINFO_NIC_external}
                 fi
@@ -181,6 +181,43 @@ IPNAT
         echo "${CONFIG_admin_gateway}" > /etc/defaultrouter
     fi
 
+    # Setup extra nics, if specified in the config file
+    nic_tags="${SYSINFO_Nic_Tags}"
+    if [[ -n "${nic_tags}" ]]; then
+        tags=(${nic_tags//,/ })
+
+        for tag in "${tags[@]}"; do
+            if [[ "${tag}" == "admin" ]] || [[ "${tag}" == "external" ]]; then
+                continue
+            fi
+            echo "found extra nic in config tagged '${tag}'"
+
+            eval "iface=\${SYSINFO_NIC_${tag}}"
+            eval "ip=\${CONFIG_${tag}_ip}"
+            eval "netmask=\${CONFIG_${tag}_netmask}"
+            eval "vlan=\${CONFIG_${tag}_vlan_id}"
+
+            echo "found extra nic in config tagged '${tag}': iface='${iface}', ip='${ip}', netmask='${netmask}, vlan='${vlan}'"
+
+            if [[ -z "${iface}" ]] || [[ -z "${ip}" ]] || [[ -z "${netmask}" ]]; then
+                echo "Not bringing up interface tagged '${tag}'"
+                continue
+            fi
+
+            if [[ -n "${vlan}" ]]; then
+                dladm create-vnic -l ${iface} -v ${vlan} gz_${tag}0
+                iface="gz_${tag}0"
+            fi
+            ifconfig ${iface} plumb
+            if [[ ${ip} == "dhcp" ]]; then
+                # We ignore errors here because the most common one is that DHCP
+                # is already running.
+                ifconfig ${iface} dhcp || /bin/true
+            else
+                ifconfig ${iface} inet ${ip} netmask ${netmask} up
+            fi
+        done
+    fi
 else
     # Non-global zones
     for iface in `dladm show-vnic -p -o link`; do

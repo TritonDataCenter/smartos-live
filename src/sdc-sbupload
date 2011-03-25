@@ -22,17 +22,13 @@ function encrypt_bundle
 
 function upload_bundle
 {
-    if echo "${BUNDLE_UPLOAD_SERVER}" | grep "^[0-9,\.]*$" >/dev/null 2>&1; then
-        # BUNDLE_UPLOAD_SERVER is an IP
-        server="${BUNDLE_UPLOAD_SERVER}"
-    else
-        # DNS, try to resolve
-        serverlist=( $( (dig ${BUNDLE_UPLOAD_SERVER} +short || /bin/true) | grep "^[0-9]") )
-        rand=$RANDOM
-        let "rand %= ${#serverlist[@]}"
-        server=${serverlist[$rand]}
-    fi
-    curl -T ${ENCRYPTED_OUT} ${server}
+    # no DNS, resolve the server
+    hostname=$(echo $CONFIG_sbapi_url | cut -f3 -d "/" | cut -f1 -d ":")
+    ip=$(dig $hostname +short)
+    # replace the host.domain with ip address, then ensure there's always a trailing /
+    with_ip=$(echo $CONFIG_sbapi_url | sed  "s|\(.*\)$hostname\(.*\)|\1$ip\2|" | sed 's|/*$|/|')
+
+    curl -k -T ${ENCRYPTED_OUT} ${with_ip}
 
 }
 

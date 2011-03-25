@@ -4,16 +4,10 @@
 #
 
 #
-# Since this script is grabbing data from a system in a potentially unknown state
-# we don't use 'set -o errexit' here because we don't want to fail to grab other
-# data when we fail to grab data from one source.
+# Since this script is grabbing data from a system in a potentially unknown
+# state we don't use 'set -o errexit' here because we don't want to fail to
+# grab other data when we fail to grab data from one source.
 #
-
-# Need the output dir first.
-TEMPDIR=/tmp/sdcsb.$$
-LOGFILE=/tmp/sdcsb.$$.log
-OUTFILE=/tmp/sdc-support.$(hostname).$(TZ=UTC date "+%Y%m%dT%H%M%SZ").tar.bz2
-COUNTDOWN=5
 
 . /lib/sdc/config.sh
 load_sdc_config
@@ -21,7 +15,7 @@ load_sdc_config
 function do_countdown
 {
     echo ""
-    echo "This tool will create an SDC support bundle in /tmp."
+    echo "This tool will create an SDC support bundle in `dirname $TEMPDIR`."
     echo "This may take some time...  If you wish to abort press CTRL-C now!"
     echo ""
     countdown=$((${COUNTDOWN} - 1))
@@ -37,45 +31,48 @@ function do_countdown
 
 function grab_sysinfo
 {
-    sysinfo > ${TEMPDIR}/sysinfo.json
     echo "  > sysinfo"
+    sysinfo > ${TEMPDIR}/sysinfo.json
 }
 
 function grab_dlinfo
 {
+    echo "  > datalink info"
     dladm show-phys -m > ${TEMPDIR}/dladm.phys
     dladm show-vnic > ${TEMPDIR}/dladm.vnic
     dladm show-linkprop > ${TEMPDIR}/dladm.linkprop
     dladm show-bridge > ${TEMPDIR}/dladm.bridge
-    echo "  > datalink info"
 }
 
 function grab_ifconfig
 {
-    ifconfig -a > ${TEMPDIR}/ifconfig.a
     echo "  > network interface info"
+    ifconfig -a > ${TEMPDIR}/ifconfig.a
 }
 
 function grab_routes
 {
-    netstat -rn > ${TEMPDIR}/netstat.rn
     echo "  > routing table"
+    netstat -rn > ${TEMPDIR}/netstat.rn
 }
 
 function grab_auditlog
 {
-    (cd /var/audit && tar -zcvf ${TEMPDIR}/var.audit.tar.gz .) >&4 2>&1
     echo "  > auditlog info"
+    (cd /var/audit && tar -zcvf ${TEMPDIR}/var.audit.tar.gz .) >&4 2>&1
 }
 
 function grab_svcs
 {
-    svcs -Z -a > ${TEMPDIR}/svcs.all
     echo "  > services"
+    echo "    (all services)"
+    svcs -Z -a > ${TEMPDIR}/svcs.all
     mkdir ${TEMPDIR}/svccfg_archive
+    echo "    (global service archive)"
     svccfg archive | gzip -c > ${TEMPDIR}/svccfg_archive/global.gz
     if [[ -d /usbkey/zones ]]; then
         for zone in $(cd /usbkey/zones ; ls); do
+            echo "    (service archive for $zone)"
             zlogin ${zone} svccfg archive \
             | gzip -c > ${TEMPDIR}/svccfg_archive/${zone}.gz
         done
@@ -84,27 +81,29 @@ function grab_svcs
 
 function grab_ps
 {
-    ps -efZ > ${TEMPDIR}/ps.efZ
     echo "  > process information"
+    ps -efZ > ${TEMPDIR}/ps.efZ
 }
 
 function grab_zfsinfo
 {
-    zpool status -v > ${TEMPDIR}/zpool.status
-    zfs list -t all > ${TEMPDIR}/zfs.list
     echo "  > zfs info"
+    echo "    (zpool status)"
+    zpool status -v > ${TEMPDIR}/zpool.status
+    echo "    (zfs list)"
+    zfs list -t all > ${TEMPDIR}/zfs.list
 }
 
 function grab_df
 {
-    df > ${TEMPDIR}/df
     echo "  > disk utilization"
+    df > ${TEMPDIR}/df
 }
 
 function grab_modinfo
 {
-    modinfo -w > ${TEMPDIR}/modinfo
     echo "  > module information"
+    modinfo -w > ${TEMPDIR}/modinfo
 }
 
 function grab_headnode_info
@@ -118,51 +117,54 @@ function grab_headnode_info
 
 function grab_zoneinfo
 {
-    zoneadm list -v -c > ${TEMPDIR}/zonelist.vc
     echo "  > zone list"
-    zonemon -k > ${TEMPDIR}/zonekstate
+    zoneadm list -v -c > ${TEMPDIR}/zonelist.vc
     echo "  > zone kernel state"
+    zonemon -k > ${TEMPDIR}/zonekstate
 }
 
 function grab_zoneconfigs
 {
-    tar -cvf ${TEMPDIR}/zone.configs.tar /etc/zones >&4 2>&1
     echo "  > zone configs"
+    tar -cvf ${TEMPDIR}/zone.configs.tar /etc/zones >&4 2>&1
 }
 
 function grab_zonelogs
 {
-    tar -zcvf ${TEMPDIR}/zone.logs.tar.gz /zones/*/root/var/svc/log \
-        /zones/*/root/opt/smartdc/*/log >&4 2>&1
-    echo "  > zone logs"
+    if [[ -n $headnode ]]; then
+        echo "  > zone logs"
+        tar -zcvf ${TEMPDIR}/zone.logs.tar.gz /zones/*/root/var/svc/log \
+            /zones/*/root/opt/smartdc/*/log >&4 2>&1
+    fi
 }
 
-# XXX how do we limit the data here while still being useful?  Don't want to
-# fill up /tmp
 function grab_cores
 {
-    tar -zcvf ${TEMPDIR}/cores.tar.gz /zones/*/cores >&4 2>&1
-    echo "  > cores"
+    if [[ -n $headnode ]]; then
+        echo "  > cores"
+        tar -zcvf ${TEMPDIR}/cores.tar.gz /zones/*/cores >&4 2>&1
+    fi
 }
 
 function grab_dumps
 {
     # These are already compressed
-    tar -cvf ${TEMPDIR}/dumps.tar /var/crash/volatile >&4 2>&1
     echo "  > kernel crash dumps"
+    tar -cvf ${TEMPDIR}/dumps.tar /var/crash/volatile >&4 2>&1
 }
 
 function grab_fmdump
 {
+    echo "  > fmdump"
     fmdump > ${TEMPDIR}/fmdump.out
     fmdump -e > ${TEMPDIR}/fmdump.e.out
-    echo "  > fmdump"
 }
 
 function grab_logs
 {
-    tar -zcvf ${TEMPDIR}/gz-logs.tar.gz /var/svc/log /etc/svc/volatile /var/adm >&4 2>&1 || /bin/true
     echo "  > logs"
+    tar -zcvf ${TEMPDIR}/gz-logs.tar.gz /var/svc/log \
+        /etc/svc/volatile /var/adm >&4 2>&1
 }
 
 function grab_castatus
@@ -173,11 +175,86 @@ function grab_castatus
     fi
 }
 
-# Give the user a sanity pause before beginning, this script can
-# take some time and write a lot of data.
-do_countdown
+function grab_compute
+{
+    if [[ -z $headnode ]]; then
+        return
+    fi
 
-mkdir ${TEMPDIR}
+    local oneach=/smartdc/bin/sdc-oneachnode
+    local outfile=/var/tmp/bundle.$$
+    local destdir=$TEMPDIR/compute-nodes
+    local file
+
+    mkdir -p $destdir
+
+    echo "  > compute nodes"
+
+    #
+    # First, generate the bundles
+    #
+    echo "    (remote bundle generation)"
+    $oneach -cv -t 10 -T 1800 /smartdc/bin/sdc-sbcreate -io $outfile >&4 2>&1
+
+    #
+    # Now copy the bundles...
+    #
+    echo "    (remote bundle collection)"
+    $oneach -cv -t 10 -T 1800 -f $outfile -d $destdir >&4 2>&1
+
+    #
+    # ...expand them...
+    #
+    echo "    (remote bundle expansion)"
+    for file in `ls -1 $destdir`; do
+        mv $file $file.tar.bz2
+        ( cd $destdir && ( bzip2 -d -c $file.tar.bz2 | tar xvf - >&4 2>&1 ) )
+        rm $file.tar.bz2
+    done
+
+    #
+    # ...and blow them away.
+    #
+    echo "    (remote bundle destruction)"
+    $oneach -cv -t 10 -T 30 rm $outfile >&4 2>&1
+}
+
+while getopts "d:o:ciu" opt; do
+    if [[ "$opt" == "?" ]]; then
+        echo "Usage: `basename $0` [-d dir] [-o output] [-ciu]"
+        exit 1
+    fi
+
+    varname=opt_${opt}
+
+    if [[ -z $OPTARG ]]; then
+        eval $varname=true
+    else
+        eval $varname=\$OPTARG
+    fi
+done
+
+# Need the output dir first.
+BASEDIR=${opt_d:-/var/tmp}
+TEMPDIR=$BASEDIR/sdcsb.$$/`sysinfo | json UUID`
+LOGFILE=$BASEDIR/sdcsb.$$.log
+FILENAME=sdc-support.$(hostname).$(TZ=UTC date "+%Y%m%dT%H%M%SZ").tar.bz
+OUTFILE=${opt_o:-$BASEDIR/$FILENAME}
+COUNTDOWN=5
+
+if [[ -z $opt_i ]]; then
+    #
+    # If the user has not specified immediate operation (-i), give them a
+    # sanity pause before beginning -- this script can take some time and
+    # write a lot of data.
+    do_countdown
+fi
+
+if [[ "$(sysinfo | json 'Boot Parameters'.headnode)" == "true" ]]; then
+    headnode=true
+fi
+
+mkdir -p ${TEMPDIR}
 
 exec 4>${LOGFILE}
 export BASH_XTRACEFD=4
@@ -206,17 +283,20 @@ grab_fmdump
 grab_logs
 grab_castatus
 
+if [[ -n $opt_c ]]; then
+    grab_compute
+fi
+
 echo "==> packing data to ${OUTFILE}"
-tar -jcvf ${OUTFILE} ${TEMPDIR} >&4 2>&1
+( cd ${TEMPDIR}/.. && tar -jcvf ${OUTFILE} `basename ${TEMPDIR}` >&4 2>&1 )
 mv ${LOGFILE} ${OUTFILE}.log
 
 echo "==> cleaning up"
-rm -rf ${TEMPDIR}
+rm -rf `dirname ${TEMPDIR}`
 
-echo "Would you like to automatically upload your support bundle to Joyent Support? (y/N)"
-read -n1 response
-if [[ $response == "Y" || $response == "y" ]]; then
+if [[ -n $opt_u ]]; then
+    echo "==> uploading to Joyent support"
     /smartdc/bin/sdc-sbupload ${OUTFILE}
 fi
 
-echo "==> Done!"
+echo "==> done"

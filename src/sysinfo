@@ -4,22 +4,73 @@
 #
 # Output some info representing the system.  Default: JSON
 #
-# Important: Don't use anything here that you don't include in the live image!
+# IMPORTANT:
+#
+#  - Don't use anything here that you don't include in the live image!
+#
+#  - This data gets cached in /tmp/.sysinfo.* and *DOES NOT* automatically
+#    have the cache refreshed.  If you change something where the change
+#    needs to be visible to sysinfo, make sure you run this with either
+#    the -f or -u flag after changing the system's state.
 #
 
-PARSABLE=
-if [[ $1 == "-p" ]]; then
-    PARSABLE="true"
-fi
+#set -o xtrace
 
+CACHE="true"
 DETECT_NICS=
-if [[ $1 == "-n" ]] || [[ $2 == "-n" ]]; then
-    DETECT_NICS="true"
-fi
+FORCE=
+PARSABLE=
+UPDATE_ONLY=
+while getopts fnpu? name
+do
+    case $name in
+    f)
+        # Force re-running commands (don't read the cached values)
+        FORCE="true"
+        ;;
+    n)
+        # Doing network discovery, in this mode we can't use the
+        # cached values.  *And* we don't want to cache the output
+        # we create since its non-standard.
+        CACHE=
+        FORCE="true"
+        DETECT_NICS="true"
+        ;;
+    p)
+        # Output key=value format, not json
+        PARSABLE="true"
+        ;;
+    u)
+        # Update cache *only*, do not output.
+        FORCE="true"
+        UPDATE_ONLY="true"
+        ;;
+    ?)
+        printf "Usage: %s: [-f] [-n] [-p] [-u]\n"  $0
+        exit 2
+    ;;
+    esac
+done
 
 if [[ $(zonename) != "global" ]]; then
     echo "This program is for use in the global zone only."
     exit 1
+fi
+
+if [[ ${EUID} != 0 ]]; then
+    echo "This program can only be run as root."
+    exit 1
+fi
+
+# If we're not forcing update and we have a cached version, use that!
+if [[ -z ${FORCE} ]]; then
+    if [[ -z ${PARSABLE} && -s /tmp/.sysinfo.json ]]; then
+        exec cat /tmp/.sysinfo.json
+        exit 3
+    elif [[ -s /tmp/.sysinfo.parsable ]]; then
+        exec cat /tmp/.sysinfo.parsable
+        exit 3
+    fi
 fi
 
 configfile="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/smartdc:default 2>/dev/null)/config"
@@ -177,13 +228,16 @@ function get_network_interfaces()
     seen_nic_tag_admin="true"
 
     # ignore 'LINK SLOT ADDRESS INUSE CLIENT' line
-    for line in $(pfexec /sbin/dladm show-phys -m | grep -v "^LINK " | awk '{ print $1,$3 }' | tr ' ' '='); do
+    for line in $(pfexec /sbin/dladm show-phys -m \
+        | grep -v "^LINK " | awk '{ print $1,$3 }' | tr ' ' '='); do
+
         nicnames=
         fields=(${line//=/ })
         iface=${fields[0]}
         normalize_mac ${fields[1]}
         mac=${normalized}
-        ip4addr=$(ifconfig ${iface} 2>/dev/null | grep "inet " | awk '{ print $2 }')
+        ip4addr=$(ifconfig ${iface} 2>/dev/null \
+            | grep "inet " | awk '{ print $2 }')
 
         if [[ -n "${ADMIN_NIC}" ]] && [[ "${ADMIN_NIC}" == "${mac}" ]]; then
             nicnames="admin"
@@ -254,10 +308,15 @@ function get_network_interfaces()
 function get_nic_tags()
 {
     count=1
-    for line in $(/usr/bin/bootparams 2>/dev/null | grep "^[a-z0-9_]*_nic=" ; grep "^[a-z0-9]*_nic=" ${configfile} 2>/dev/null); do
+    for line in $(/usr/bin/bootparams 2>/dev/null \
+        | grep "^[a-z0-9_]*_nic=" \
+        ; grep "^[a-z0-9]*_nic=" ${configfile} 2>/dev/null); do
         fields=(${line//=/ })
         key=${fields[0]}
-        if [[ $key != "admin_nic" ]] && [[ $key != "external_nic" ]] && [[ $key != "internal_nic" ]]; then
+        if [[ $key != "admin_nic" ]] \
+            && [[ $key != "external_nic" ]] \
+            && [[ $key != "internal_nic" ]]; then
+
             NicTagsMacs[${count}]=$(echo ${line} | sed -e 's/_nic//')
             ((count++))
         fi
@@ -441,7 +500,7 @@ END
         eval "detected_tag=\${${detected_tag_var}}"
 
         if [[ -n "${detected_tag}" ]] ; then
-            detected_fmt="\"Detected NIC Name\": \"${detected_tag}\","
+            detected_fmt="\"Detected NIC Name\": \"${detected_tag}\", "
         fi
 
         nic_names_array=$(echo "${nicnames}" | sed -e "s/,/\", \"/g")
@@ -452,7 +511,13 @@ END
         ((printed++))
         trailing_comma=","
         [[ ${printed} -eq ${#NetworkInterfaces[*]} ]] && trailing_comma=''
-        echo "    \"${iface}\": {\"MAC Address\": \"${mac}\", \"ip4addr\": \"${ipv4}\", \"Link Status\": \"${link_status}\", ${detected_fmt} \"NIC Names\": [${nic_names_fmt}]}${trailing_comma}"
+        echo -n "    \"${iface}\": {"
+        echo -n "\"MAC Address\": \"${mac}\", "
+        echo -n "\"ip4addr\": \"${ipv4}\", "
+        echo -n "\"Link Status\": \"${link_status}\", "
+        echo -n "${detected_fmt}"
+        echo -n "\"NIC Names\": [${nic_names_fmt}]}"
+        echo "${trailing_comma}"
     done
 
     cat <<END
@@ -475,10 +540,35 @@ if [[ ${DETECT_NICS} == "true" ]]; then
 fi
 get_bootparams
 
-if [[ ${PARSABLE} == "true" ]]; then
-    output_parsable
-else
-    output_json
+# whenever we update the cache, update both
+if [[ ${CACHE} == "true" ]]; then
+    output_parsable >> /tmp/.sysinfo.parsable.new \
+        && chmod 600 /tmp/.sysinfo.parsable.new \
+        && mv /tmp/.sysinfo.parsable.new /tmp/.sysinfo.parsable
+    output_json >> /tmp/.sysinfo.json.new \
+        && chmod 600 /tmp/.sysinfo.json.new \
+        && mv /tmp/.sysinfo.json.new /tmp/.sysinfo.json
+fi
+
+# if we also want output, give it now
+if [[ -z ${UPDATE_ONLY} ]]; then
+    if [[ ${PARSABLE} == "true" ]]; then
+        if [[ -z ${CACHE} ]]; then
+            # We shouldn't read/write cache
+            output_parsable
+        else
+            cat /tmp/.sysinfo.parsable \
+                || output_parsable
+        fi
+    else
+        if [[ -z ${CACHE} ]]; then
+            # We shouldn't read/write cache
+            output_json
+        else
+            cat /tmp/.sysinfo.json \
+                || output_json
+        fi
+    fi
 fi
 
 exit 0

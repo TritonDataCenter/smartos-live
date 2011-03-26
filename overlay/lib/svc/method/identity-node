@@ -78,6 +78,8 @@ case "$_INIT_NET_STRATEGY" in
 esac
 
 # Load sysinfo variables with SYSINFO_ prefix
+# Note: since we're still starting up, "soft" values like network IP and such could
+# not be set yet.
 eval $(/usr/bin/sysinfo -p | sed -e "s/^/SYSINFO_/")
 if [[ -n ${SYSINFO_NIC_admin} ]]; then
     eval "admin_mac=\${SYSINFO_Network_Interface_${SYSINFO_NIC_admin}_MAC_Address}"
@@ -118,6 +120,11 @@ if [ -z "$hostname" ] || [ "$hostname" == "unknown" ]; then
 fi
 
 /sbin/uname -S $hostname
+
+# Reloading sysinfo here serves two purposes:
+#   - getting the IP info (which should exist now)
+#   - updating the host info (which we just set)
+eval $(/usr/bin/sysinfo -f -p | sed -e "s/^/SYSINFO_/")
 
 # Try to add the /etc/hosts entry if we can find an IP
 if [[ -n ${SYSINFO_NIC_admin} ]]; then

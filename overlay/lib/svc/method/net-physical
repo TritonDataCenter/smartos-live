@@ -243,6 +243,11 @@ if ! /sbin/ifconfig -a; then
 fi
 echo "== debug end: after =="
 
+# Since we hopefully made networking changes here, update the sysinfo cache
+if smf_is_globalzone; then
+    /usr/bin/sysinfo -u
+fi
+
 # Any non-loopback IPv4 interfaces with usable addresses up?
 if [[ -n "`/sbin/ifconfig -a4u`" ]]; then
     /sbin/ifconfig -a4u | while read intf addr rest; do

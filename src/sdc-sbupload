@@ -28,7 +28,7 @@ function upload_bundle
     # replace the host.domain with ip address, then ensure there's always a trailing /
     with_ip=$(echo $CONFIG_sbapi_url | sed  "s|\(.*\)$hostname\(.*\)|\1$ip\2|" | sed 's|/*$|/|')
 
-    curl -k -T ${ENCRYPTED_OUT} ${with_ip}
+    curl -k -T ${ENCRYPTED_OUT} -u ${CONFIG_sbapi_http_user}:${CONFIG_sbapi_http_pass} ${with_ip}
 
 }
 

@@ -175,6 +175,13 @@ function grab_castatus
     fi
 }
 
+function grab_phonehome
+{
+    if [[ -d /opt/smartdc/phonehome ]]; then
+        tar -zcvf ${TEMPDIR}/phonehome.tar.gz /opt/smartdc/phonehome
+    fi
+}
+
 function grab_compute
 {
     if [[ -z $headnode ]]; then
@@ -282,6 +289,7 @@ grab_dumps
 grab_fmdump
 grab_logs
 grab_castatus
+grab_phonehome
 
 if [[ -n $opt_c ]]; then
     grab_compute

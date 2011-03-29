@@ -1905,6 +1905,7 @@ f smartdc/bin/sdc-dsapi 0555 root bin
 f smartdc/bin/sdc-mapi 0555 root bin
 f smartdc/bin/sdc-mapi-destroy-container 0555 root bin
 f smartdc/bin/sdc-oneachnode 0555 root bin
+f smartdc/bin/sdc-phonehome 0555 root bin
 f smartdc/bin/sdc-pubapi 0555 root bin
 f smartdc/bin/sdc-sbcreate 0555 root bin
 f smartdc/bin/sdc-sbupload 0555 root bin

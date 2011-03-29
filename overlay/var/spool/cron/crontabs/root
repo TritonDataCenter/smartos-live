@@ -2,3 +2,5 @@
 0 0 * * * /usr/sbin/joycomm -R 30
 ## Rotate and trim the regular logs nightly at 10 after midnight.
 10 0 * * * /usr/sbin/logadm
+## Phone home at 1a UTC
+1 0 * * * /smartdc/bin/sdc-phonehome

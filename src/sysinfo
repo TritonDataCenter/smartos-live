@@ -16,6 +16,8 @@
 
 #set -o xtrace
 
+CACHE_FILE_PARSABLE="/tmp/.sysinfo.parsable"
+CACHE_FILE_JSON="/tmp/.sysinfo.json"
 CACHE="true"
 DETECT_NICS=
 FORCE=
@@ -64,11 +66,11 @@ fi
 
 # If we're not forcing update and we have a cached version, use that!
 if [[ -z ${FORCE} ]]; then
-    if [[ -z ${PARSABLE} && -s /tmp/.sysinfo.json ]]; then
-        exec cat /tmp/.sysinfo.json
+    if [[ -z ${PARSABLE} && -s ${CACHE_FILE_JSON} ]]; then
+        exec cat ${CACHE_FILE_JSON}
         exit 3
-    elif [[ -s /tmp/.sysinfo.parsable ]]; then
-        exec cat /tmp/.sysinfo.parsable
+    elif [[ -s ${CACHE_FILE_PARSABLE} ]]; then
+        exec cat ${CACHE_FILE_PARSABLE}
         exit 3
     fi
 fi
@@ -542,12 +544,12 @@ get_bootparams
 
 # whenever we update the cache, update both
 if [[ ${CACHE} == "true" ]]; then
-    output_parsable >> /tmp/.sysinfo.parsable.new \
-        && chmod 600 /tmp/.sysinfo.parsable.new \
-        && mv /tmp/.sysinfo.parsable.new /tmp/.sysinfo.parsable
-    output_json >> /tmp/.sysinfo.json.new \
-        && chmod 600 /tmp/.sysinfo.json.new \
-        && mv /tmp/.sysinfo.json.new /tmp/.sysinfo.json
+    output_parsable >> ${CACHE_FILE_PARSABLE}.new \
+        && chmod 600 ${CACHE_FILE_PARSABLE}.new \
+        && mv ${CACHE_FILE_PARSABLE}.new ${CACHE_FILE_PARSABLE}
+    output_json >> ${CACHE_FILE_JSON}.new \
+        && chmod 600 ${CACHE_FILE_JSON}.new \
+        && mv ${CACHE_FILE_JSON}.new ${CACHE_FILE_JSON}
 fi
 
 # if we also want output, give it now
@@ -557,7 +559,7 @@ if [[ -z ${UPDATE_ONLY} ]]; then
             # We shouldn't read/write cache
             output_parsable
         else
-            cat /tmp/.sysinfo.parsable \
+            cat ${CACHE_FILE_PARSABLE} \
                 || output_parsable
         fi
     else
@@ -565,7 +567,7 @@ if [[ -z ${UPDATE_ONLY} ]]; then
             # We shouldn't read/write cache
             output_json
         else
-            cat /tmp/.sysinfo.json \
+            cat ${CACHE_FILE_JSON} \
                 || output_json
         fi
     fi

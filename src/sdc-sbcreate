@@ -12,6 +12,35 @@
 . /lib/sdc/config.sh
 load_sdc_config
 
+function usage
+{
+    echo "Usage: `basename $0` [-d dir] [-o output] [-c content] [-iu]"
+    usage=/tmp/usage.$$
+
+    #
+    # Some things are just worth doing properly.
+    #
+    cat > $usage <<EOF
+        BEGIN { p = indent = 8; printf("%*s", p - 1, ""); }
+        {
+            l = length($1) + 1;
+            if (p + l >= 80) {
+                printf("\n%*s%s", indent, "", \$1);
+                p = indent + l;
+            } else {
+                printf(" %s", \$1);
+                p += l;
+            }
+        }
+        END { printf("\n"); }
+EOF
+
+    echo "  'content' must be one or more of:"
+    compgen -A function grab_ | cut -d_ -f2- | nawk -f $usage
+    rm $usage
+    exit 1
+}
+
 function do_countdown
 {
     echo ""
@@ -111,7 +140,7 @@ function grab_headnode_info
     if [[ -d /usbkey ]]; then
         find /usbkey -ls > ${TEMPDIR}/usbkey.filelist
         echo "  > usbkey filelist"
-        tar -cvf ${TEMPDIR}/usbkey.config.tar /usbkey/config* >&4 2>&1
+        tar -cvf ${TEMPDIR}/usbkey.config.tar usbkey/config* >&4 2>&1
     fi
 }
 
@@ -126,15 +155,15 @@ function grab_zoneinfo
 function grab_zoneconfigs
 {
     echo "  > zone configs"
-    tar -cvf ${TEMPDIR}/zone.configs.tar /etc/zones >&4 2>&1
+    tar -cvf ${TEMPDIR}/zone.configs.tar etc/zones >&4 2>&1
 }
 
 function grab_zonelogs
 {
     if [[ -n $headnode ]]; then
         echo "  > zone logs"
-        tar -zcvf ${TEMPDIR}/zone.logs.tar.gz /zones/*/root/var/svc/log \
-            /zones/*/root/opt/smartdc/*/log >&4 2>&1
+        tar -zcvf ${TEMPDIR}/zone.logs.tar.gz zones/*/root/var/svc/log \
+            zones/*/root/opt/smartdc/*/log >&4 2>&1
     fi
 }
 
@@ -142,7 +171,7 @@ function grab_cores
 {
     if [[ -n $headnode ]]; then
         echo "  > cores"
-        tar -zcvf ${TEMPDIR}/cores.tar.gz /zones/*/cores >&4 2>&1
+        tar -zcvf ${TEMPDIR}/cores.tar.gz zones/*/cores >&4 2>&1
     fi
 }
 
@@ -150,7 +179,7 @@ function grab_dumps
 {
     # These are already compressed
     echo "  > kernel crash dumps"
-    tar -cvf ${TEMPDIR}/dumps.tar /var/crash/volatile >&4 2>&1
+    tar -cvf ${TEMPDIR}/dumps.tar var/crash/volatile >&4 2>&1
 }
 
 function grab_fmdump
@@ -163,8 +192,8 @@ function grab_fmdump
 function grab_logs
 {
     echo "  > logs"
-    tar -zcvf ${TEMPDIR}/gz-logs.tar.gz /var/svc/log \
-        /etc/svc/volatile /var/adm >&4 2>&1
+    tar -zcvf ${TEMPDIR}/gz-logs.tar.gz var/svc/log \
+        etc/svc/volatile var/adm >&4 2>&1
 }
 
 function grab_castatus
@@ -178,7 +207,7 @@ function grab_castatus
 function grab_phonehome
 {
     if [[ -d /opt/smartdc/phonehome ]]; then
-        tar -zcvf ${TEMPDIR}/phonehome.tar.gz /opt/smartdc/phonehome
+        tar -zcvf ${TEMPDIR}/phonehome.tar.gz opt/smartdc/phonehome >&4 2>&1
     fi
 }
 
@@ -191,6 +220,7 @@ function grab_compute
     local oneach=/smartdc/bin/sdc-oneachnode
     local outfile=/var/tmp/bundle.$$
     local destdir=$TEMPDIR/compute-nodes
+    local opts="-io $outfile"
     local file
 
     mkdir -p $destdir
@@ -201,7 +231,7 @@ function grab_compute
     # First, generate the bundles
     #
     echo "    (remote bundle generation)"
-    $oneach -cv -t 10 -T 1800 /smartdc/bin/sdc-sbcreate -io $outfile >&4 2>&1
+    $oneach -cv -t 10 -T 1800 /smartdc/bin/sdc-sbcreate -c $opt_c $opts >&4 2>&1
 
     #
     # Now copy the bundles...
@@ -226,10 +256,9 @@ function grab_compute
     $oneach -cv -t 10 -T 30 rm $outfile >&4 2>&1
 }
 
-while getopts "d:o:ciu" opt; do
+while getopts "d:o:c:iu" opt; do
     if [[ "$opt" == "?" ]]; then
-        echo "Usage: `basename $0` [-d dir] [-o output] [-ciu]"
-        exit 1
+        usage
     fi
 
     varname=opt_${opt}
@@ -240,6 +269,17 @@ while getopts "d:o:ciu" opt; do
         eval $varname=\$OPTARG
     fi
 done
+
+if [[ -n $opt_c ]]; then
+    contents=`echo $opt_c | tr ',' ' '`
+    for content in $contents; do
+        if ! compgen -A function grab_ | \
+          grep "^grab_${content}\$" 1> /dev/null ; then
+            echo "`basename $0`: unrecognized content '$content'"
+            usage
+        fi
+    done
+fi
 
 # Need the output dir first.
 BASEDIR=${opt_d:-/var/tmp}
@@ -270,29 +310,36 @@ set -o xtrace
 
 echo "==> Gathering System Information"
 
-grab_sysinfo
-grab_dlinfo
-grab_ifconfig
-grab_routes
-grab_auditlog
-grab_svcs
-grab_ps
-grab_zfsinfo
-grab_df
-grab_modinfo
-grab_headnode_info
-grab_zoneinfo
-grab_zoneconfigs
-grab_zonelogs
-grab_cores
-grab_dumps
-grab_fmdump
-grab_logs
-grab_castatus
-grab_phonehome
+cd /
 
-if [[ -n $opt_c ]]; then
-    grab_compute
+if [[ -z $opt_c ]]; then 
+    #
+    # By default, we grab everything except for compute nodes.
+    #
+    grab_sysinfo
+    grab_dlinfo
+    grab_ifconfig
+    grab_routes
+    grab_auditlog
+    grab_svcs
+    grab_ps
+    grab_zfsinfo
+    grab_df
+    grab_modinfo
+    grab_headnode_info
+    grab_zoneinfo
+    grab_zoneconfigs
+    grab_zonelogs
+    grab_cores
+    grab_dumps
+    grab_fmdump
+    grab_logs
+    grab_castatus
+    grab_phonehome
+else
+    for content in $contents; do
+        eval grab_${content}
+    done
 fi
 
 echo "==> packing data to ${OUTFILE}"

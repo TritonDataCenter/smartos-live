@@ -1914,7 +1914,12 @@ f smartdc/bin/sdc-zoneinfo 0555 root bin
 d smartdc/man 0755 root bin
 d smartdc/man/cat1 0755 root bin
 d smartdc/man/man1 0755 root bin
+f smartdc/man/man1/sdc-capi.1 0444 root bin
+f smartdc/man/man1/sdc-dsapi.1 0444 root bin
 f smartdc/man/man1/sdc-mapi.1 0444 root bin
+f smartdc/man/man1/sdc-oneachnode.1 0444 root bin
+f smartdc/man/man1/sdc-pubapi.1 0444 root bin
+f smartdc/man/man1/sdc-zoneinfo.1 0444 root bin
 f smartdc/pubkey.key 0555 root bin
 d smartdc/ur-agent 0755 root bin
 f smartdc/ur-agent/README 0444 root bin

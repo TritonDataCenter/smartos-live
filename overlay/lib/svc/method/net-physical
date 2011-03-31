@@ -54,8 +54,8 @@ if smf_is_globalzone; then
     if ! dladm show-phys; then
         echo "WARNING: 'dladm show-phys' failed"
     fi
-    # NOTE: DO NOT do a 'dladm show-linkprop' between init and plumbing the
-    # interface!  This causes the bnx driver to get into an unusable state!
+    # NOTE: DO NOT do a 'dladm show-linkprop' when using the bnx driver,
+    # as it puts it into an unusable state!
     if ! /sbin/ifconfig -a; then
         echo "WARNING: 'ifconfig -a' failed"
     fi
@@ -235,9 +235,9 @@ echo "== debug start: after =="
 if ! dladm show-phys; then
     echo "WARNING: 'dladm show-phys' failed"
 fi
-if ! dladm show-linkprop; then
-    echo "WARNING: 'dladm show-linkprop' failed"
-fi
+# NOTE: DO NOT do a 'dladm show-linkprop' when using the bnx driver,
+# as it puts it into an unusable state!
+# TODO: do a show-linkprop if not using bnx
 if ! /sbin/ifconfig -a; then
     echo "WARNING: 'ifconfig -a' failed"
 fi

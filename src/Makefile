@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-Wall
 TARGETS=bootparams disklist removable_disk disk_size
-SMARTDC_TARGETS=sdc-sbcreate sdc-sbupload marco polo beacon
+SMARTDC_TARGETS=sdc-sbcreate sdc-sbupload marco polo beacon has_hvx
 JOYENT_PUBKEY=pubkey.key
 DESTDIR=../proto
 
@@ -21,6 +21,9 @@ removable_disk: removable_disk.c
 	$(CC) $(CFLAGS) -o $@ $^
 
 disk_size: disk_size.c
+	$(CC) $(CFLAGS) -o $@ $^
+
+has_hvx: has_hvx.c
 	$(CC) $(CFLAGS) -o $@ $^
 
 disklist:

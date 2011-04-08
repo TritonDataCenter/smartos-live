@@ -146,6 +146,12 @@ function get_cpu_info()
         | wc -l \
         | tr -d ' '`
 
+    if [[ -x /smartdc/bin/has_hvx ]]; then
+        CPU_Virtualization=$(/smartdc/bin/has_hvx)
+    else
+        CPU_Virtualization="unknown"
+    fi
+
     #echo "${CPU_Version}"
     #echo "${CPU_Count}"
     #echo "${CPU_Cores}"
@@ -381,6 +387,7 @@ Serial_Number='${Serial_Number}'
 UUID='${UUID}'
 Hostname='${Hostname}'
 CPU_Type='${CPU_Version}'
+CPU_Virtualization='${CPU_Virtualization}'
 CPU_Physical_Cores=${CPU_Count}
 CPU_Total_Cores=${CPU_Cores}
 MiB_of_Memory=${Memory_in_MiB}
@@ -448,6 +455,7 @@ function output_json()
   "UUID": "${UUID}",
   "Hostname": "${Hostname}",
   "CPU Type": "${CPU_Version}",
+  "CPU Virtualization": "${CPU_Virtualization}",
   "CPU Physical Cores": ${CPU_Count},
   "CPU Total Cores": ${CPU_Cores},
   "MiB of Memory": "${Memory_in_MiB}",

@@ -18,3 +18,10 @@
 zonestat.1
 zonestatd.1m
 ronn-format.7
+man/man/man1m/vfsstat.1m
+man/man/man1m/ziostat.1m
+src/has_hvx
+src/marco
+src/polo
+src_addon/bind/bind-9.8.0/
+src_addon/ipmi/ipmitool-1.8.11/

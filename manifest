@@ -233,6 +233,8 @@ d etc/cron.d 0755 root sys
 f etc/cron.d/.proto 0744 root sys
 f etc/cron.d/at.deny 0644 root sys
 f etc/cron.d/cron.deny 0644 root sys
+d etc/cron.d/crontabs 0755 root sys
+f etc/cron.d/crontabs/root 0600 root root
 f etc/cron.d/queuedefs 0644 root sys
 d etc/crypto 0755 root sys
 d etc/crypto/certs 0755 root sys
@@ -17297,7 +17299,6 @@ d var/spool/clientmqueue 0770 smmsp smmsp
 d var/spool/cron 0755 root sys
 d var/spool/cron/atjobs 0755 root sys
 d var/spool/cron/crontabs 0755 root sys
-f var/spool/cron/crontabs/root 0600 root root
 d var/spool/locks 0755 uucp uucp
 d var/spool/mqueue 0750 root bin
 d var/spool/pkg 1777 root bin

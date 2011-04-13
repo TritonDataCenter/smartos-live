@@ -1729,7 +1729,6 @@ f lib/svc/method/svc-resource-mgmt 0555 root sys
 f lib/svc/method/svc-ripng 0555 root bin
 f lib/svc/method/svc-rmvolmgr 0555 root sys
 f lib/svc/method/svc-route 0555 root bin
-f lib/svc/method/svc-sar 0555 root sys
 f lib/svc/method/svc-scheduler 0555 root sys
 f lib/svc/method/svc-scm 0744 root sys
 f lib/svc/method/svc-sockfilter 0555 root bin
@@ -10819,7 +10818,6 @@ f usr/sbin/rtquery 0555 root bin
 f usr/sbin/rwall 0555 root bin
 f usr/sbin/sacadm 4755 root sys
 f usr/sbin/safe_finger 0555 root bin
-f usr/sbin/sar 0555 root bin
 f usr/sbin/sbdadm 0555 root bin
 f usr/sbin/sdpadm 0555 root bin
 s usr/sbin/sendmail=../lib/sendmail

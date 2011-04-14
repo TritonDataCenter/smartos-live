@@ -5,7 +5,7 @@
 // See <https://github.com/trentm/json>.
 //
 
-var VERSION = "1.1.7";
+var VERSION = "1.1.9";
 
 var sys = require('sys');
 var Script = process.binding('evals').Script;
@@ -108,7 +108,7 @@ function parseArgv(argv) {
         break;
     } 
   }
-  //TODO: '--' handling and error on a first arg that looks like an option.,d
+  //TODO: '--' handling and error on a first arg that looks like an option.
 
   return parsed;
 }
@@ -264,19 +264,26 @@ function main(argv) {
   
   stdin.on('end', function () {
     // Take off a leading HTTP header if any and pass it through.
-    if (buffer.slice(0,5) === "HTTP/") {
-      var index = buffer.indexOf('\r\n\r\n');
-      var sepLen = 4;
-      if (index == -1) {
-        index = buffer.indexOf('\n\n');
-        sepLen = 2;
-      }
-      if (index != -1) {
-        if (! args.dropHeaders) {
-          process.stdout.write(buffer.slice(0, index+sepLen));
+    while (true) {
+      if (buffer.slice(0,5) === "HTTP/") {
+        var index = buffer.indexOf('\r\n\r\n');
+        var sepLen = 4;
+        if (index == -1) {
+          index = buffer.indexOf('\n\n');
+          sepLen = 2;
         }
-        buffer = buffer.slice(index+sepLen);
+        if (index != -1) {
+          if (! args.dropHeaders) {
+            process.stdout.write(buffer.slice(0, index+sepLen));
+          }
+          var is100Continue = (buffer.slice(0, 21) === "HTTP/1.1 100 Continue");
+          buffer = buffer.slice(index+sepLen);
+          if (is100Continue) {
+            continue;
+          }
+        }
       }
+      break;
     }
 
     // Expect the remainder to be JSON.
@@ -320,20 +327,24 @@ function main(argv) {
     }
     
     // Print out results.
+    var output = null;
     if (args.outputSysInspect) {
-      process.stdout.write(sys.inspect(data, false, Infinity, true));
+      output = sys.inspect(data, false, Infinity, true);
     } else if (args.outputJSON) {
       if (typeof data !== 'undefined') {
-        process.stdout.write(JSON.stringify(data, null, 2));
+        output = JSON.stringify(data, null, 2);
       }
     } else {
       if (typeof data === 'string') {
-        process.stdout.write(data);
+        output = data;
       } else if (typeof data !== 'undefined') {
-        process.stdout.write(JSON.stringify(data, null, 2));
+        output = JSON.stringify(data, null, 2);
       }
     }
-    process.stdout.write('\n');
+    if (output.length) {
+      process.stdout.write(output);
+      process.stdout.write('\n');
+    }
   });
 }
 

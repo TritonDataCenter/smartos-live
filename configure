@@ -234,7 +234,8 @@ function update_branch
             git checkout ${target}
         else
             # don't have, add to tracking and checkout
-            git checkout --track -b ${target} origin/${target}
+            git branch --track ${target} origin/${target}
+            git checkout ${target}
         fi
     fi
     cd ${oldwd}

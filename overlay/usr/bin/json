@@ -5,10 +5,16 @@
 // See <https://github.com/trentm/json>.
 //
 
-var VERSION = "1.1.9";
+var VERSION = "1.2.1";
 
 var sys = require('sys');
-var Script = process.binding('evals').Script;
+var runInNewContext;
+try {
+  runInNewContext = require('vm').runInNewContext;
+} catch (ex) {
+  runInNewContext = process.binding('evals').Script.runInNewContext;  // node v0.2
+}
+//var runInNewContext = process.binding('evals').Script.runInNewContext;
 
 
 //--- exports for module usage
@@ -323,7 +329,7 @@ function main(argv) {
         }
       }
 
-      data = Script.runInNewContext("(" + JSON.stringify(data) + ")" + lookup);
+      data = runInNewContext("(" + JSON.stringify(data) + ")" + lookup);
     }
     
     // Print out results.
@@ -341,7 +347,7 @@ function main(argv) {
         output = JSON.stringify(data, null, 2);
       }
     }
-    if (output.length) {
+    if (output && output.length) {
       process.stdout.write(output);
       process.stdout.write('\n');
     }

@@ -129,6 +129,11 @@ case "$1" in
             echo "Set default ntp hosts (${servers})."
         fi
     fi
+    # set the keymap. For dvorak for instance
+    if [[ -n ${CONFIG_default_keymap} ]]; then
+        /usr/bin/loadkeys ${CONFIG_default_keymap}
+    fi
+
 
     ;;
 

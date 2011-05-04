@@ -112,7 +112,7 @@ function get_smbios_system_info()
         | sed -e 's/Serial Number/Serial_Number/')
 
     # overwrite UUID if config dictates otherwise
-    tmp_uuid=`grep "^admin_uuid=" ${configfile} | cut -f2 -d'='`
+    tmp_uuid=$(/usr/bin/bootparams | grep "^override_uuid=" | cut -f2 -d'=')
     if [[ -n $tmp_uuid ]]; then
         UUID=$tmp_uuid
     fi

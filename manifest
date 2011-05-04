@@ -5265,6 +5265,7 @@ f usr/lib/amd64/gss/mech_spnego.so.1 0755 root bin
 s usr/lib/amd64/ld.so.1=../../../lib/amd64/ld.so.1
 f usr/lib/amd64/lddstub 0555 root bin
 f usr/lib/amd64/libCrun.so.1 0755 root bin
+f usr/lib/amd64/libCstd.so.1 0755 root bin
 f usr/lib/amd64/libHBAAPI.so.1 0755 root bin
 s usr/lib/amd64/libHBAAPI.so=libHBAAPI.so.1
 f usr/lib/amd64/libSMHBAAPI.so.1 0755 root bin
@@ -6682,6 +6683,7 @@ f usr/lib/ldap/ldap_cachemgr 0555 root bin
 f usr/lib/lddstub 0555 root bin
 f usr/lib/lib.b 0444 root bin
 f usr/lib/libCrun.so.1 0755 root bin
+f usr/lib/libCstd.so.1 0755 root bin
 f usr/lib/libHBAAPI.so.1 0755 root bin
 s usr/lib/libHBAAPI.so=libHBAAPI.so.1
 f usr/lib/libSMHBAAPI.so.1 0755 root bin

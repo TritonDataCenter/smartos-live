@@ -256,6 +256,14 @@ function grab_compute
     $oneach -cv -t 10 -T 30 rm $outfile >&4 2>&1
 }
 
+function grab_platform_md5
+{
+    echo "  > kernel & platform integrity hash"
+    sum -R -x md5 /usbkey/os > ${TEMPDIR}/platforms_cache.md5 
+    /usbkey/scripts/mount-usb.sh
+    sum -R -x md5 /mnt/usbkey/os > ${TEMPDIR}/platforms_bootable.md5
+}
+
 while getopts "d:o:c:iu" opt; do
     if [[ "$opt" == "?" ]]; then
         usage
@@ -336,6 +344,7 @@ if [[ -z $opt_c ]]; then
     grab_logs
     grab_castatus
     grab_phonehome
+    grab_platform_md5
 else
     for content in $contents; do
         eval grab_${content}

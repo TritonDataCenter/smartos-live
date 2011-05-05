@@ -6616,10 +6616,6 @@ f usr/lib/ipqosconf/tokenmt.types 0444 root bin
 f usr/lib/ipqosconf/tswtclmt.types 0444 root bin
 f usr/lib/isaexec 0555 root bin
 d usr/lib/krb5 0755 root bin
-f usr/lib/krb5/HelpIndex.html 0444 root bin
-d usr/lib/krb5/ListResourceBundle 0755 root bin
-f usr/lib/krb5/ListResourceBundle/GuiResource.java 0444 root bin
-f usr/lib/krb5/ListResourceBundle/HelpData.java 0444 root bin
 f usr/lib/krb5/README.db2 0444 root bin
 d usr/lib/krb5/amd64 0755 root bin
 f usr/lib/krb5/amd64/libkadm5clnt.so.1 0755 root bin
@@ -6647,8 +6643,6 @@ f usr/lib/krb5/libkadm5clnt.so.1 0755 root bin
 s usr/lib/krb5/libkadm5clnt.so=libkadm5clnt.so.1
 f usr/lib/krb5/libkadm5srv.so.1 0755 root bin
 s usr/lib/krb5/libkadm5srv.so=libkadm5srv.so.1
-f usr/lib/krb5/libkadmin.so.1 0755 root bin
-s usr/lib/krb5/libkadmin.so=libkadmin.so.1
 f usr/lib/krb5/libkdb.so.1 0755 root bin
 s usr/lib/krb5/libkdb.so=libkdb.so.1
 f usr/lib/krb5/libkdb_ldap.so.1 0755 root bin

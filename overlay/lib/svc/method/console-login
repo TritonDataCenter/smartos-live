@@ -63,7 +63,8 @@ fi
 
 if [[ ! -e $val ]]; then
     # This device doesn't exist, can't run a tty on it.
-    exit $SMF_EXIT_MON_OFFLINE
+    /usr/sbin/svcadm disable $SMF_FMRI
+    exit $SMF_EXIT_OK
 fi
 
 args="$args -d $val"

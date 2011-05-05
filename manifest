@@ -10899,6 +10899,7 @@ f usr/sbin/zic 0555 root bin
 f usr/sbin/zlogin 0555 root bin
 f usr/sbin/zoneadm 0555 root bin
 f usr/sbin/zonecfg 0555 root bin
+f usr/sbin/zonememstat 0555 root bin
 f usr/sbin/zonemon 0555 root bin
 s usr/sbin/zpool=../../sbin/zpool
 f usr/sbin/zstreamdump 0555 root bin
@@ -12465,6 +12466,7 @@ f usr/share/man/man1m/zic.1m 0444 root bin
 f usr/share/man/man1m/ziostat.1m 0444 root bin
 f usr/share/man/man1m/zoneadm.1m 0444 root bin
 f usr/share/man/man1m/zonecfg.1m 0444 root bin
+f usr/share/man/man1m/zonememstat.1m 0444 root bin
 f usr/share/man/man1m/zonemon.1m 0444 root bin
 f usr/share/man/man1m/zonestatd.1m 0444 root bin
 f usr/share/man/man1m/zpool.1m 0444 root bin

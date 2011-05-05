@@ -33,4 +33,7 @@ ${SVCCFG} -s "system/coreadm:default" setprop config_params/global_pattern='/zon
 ${SVCCFG} -v apply ${rdmnt}/etc/svc/profile/generic.xml
 ${SVCCFG} -v apply ${rdmnt}/etc/svc/profile/platform.xml
 
+# rcap imports with enabled=false, but applying generic.xml enables it.
+${SVCCFG} -s "rcap:default" setprop general/enabled=false
+
 exit 0

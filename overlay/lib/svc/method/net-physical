@@ -70,8 +70,10 @@ if smf_is_globalzone; then
     if [[ -n ${SYSINFO_NIC_admin} ]]; then
         ifconfig ${SYSINFO_NIC_admin} plumb
         if [[ ${headnode} == "true" ]]; then
-            if [[ -n ${CONFIG_admin_ip} ]] && [[ -n ${CONFIG_admin_netmask} ]]; then
-                ifconfig ${SYSINFO_NIC_admin} inet ${CONFIG_admin_ip} netmask ${CONFIG_admin_netmask} up
+            if [[ -n ${CONFIG_admin_ip} ]] && [[ -n ${CONFIG_admin_netmask} ]];
+            then
+                ifconfig ${SYSINFO_NIC_admin} inet ${CONFIG_admin_ip} \
+                    netmask ${CONFIG_admin_netmask} up
                 ADMIN_NIC_UP=true
 
                 # also setup resolv.conf if we can
@@ -94,6 +96,9 @@ if smf_is_globalzone; then
         if [[ "${ADMIN_NIC_UP}" == "true" ]] && [[ ${SYSINFO_Product} == "VMware Virtual Platform" ]]; then
             dladm create-bridge -l ${SYSINFO_NIC_admin} vmwarebr
         fi
+    else
+        echo "ERROR: admin NIC not found, unable to bring up admin network."
+        exit ${SMF_EXIT_ERR_CONFIG}
     fi
 
     # Setup external NIC -- only headnode because non-headnodes don't assign

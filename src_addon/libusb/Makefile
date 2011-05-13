@@ -18,25 +18,22 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011 Joyent Inc.
-#
-# To build everything just run 'gmake' in this directory.
+# Copyright (c) 2011 Joyent Inc., All rights reserved.
 #
 
-PATH=/sbin:/usr/sbin:/usr/bin:/opt/SUNWspro/bin:/opt/local/bin
 BASE=$(PWD)
 DESTDIR=$(BASE)/proto
-SUBDIRS= bind ipmi libreadline libusb
 
--include Makefile.inc
+all: libusb.so.1
 
-all:
-	-for dir in $(SUBDIRS); do (cd $$dir; $(MAKE) DESTDIR=$(DESTDIR) all); done
+libusb.so.1: wr_libusb.o
+	cc  -D_REENTRANT -ldl -M libusb.mapfile -o libusb.so.1 -G  wr_libusb.o
 
-install:
-	-for dir in $(SUBDIRS); do (cd $$dir; $(MAKE) DESTDIR=$(DESTDIR) install); done
+wr_libusb.o: wr_libusb.c
+	cc -D_REENTRANT -c -o wr_libusb.o wr_libusb.c
 
-clean: $(SUBDIRS)
-	-for dir in $(SUBDIRS); do (cd $$dir; $(MAKE) DESTDIR=$(DESTDIR) clean); done
-	-rm -rf proto
+install: all
+	/usr/sbin/install -m 0755 -f $(DESTDIR)/usr/lib libusb.so.1
 
+clean:
+	rm -f wr_libusb.o libusb.so.1

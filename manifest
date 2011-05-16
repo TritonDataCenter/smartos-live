@@ -1748,9 +1748,6 @@ f lib/svc/method/system-log 0555 root bin
 f lib/svc/method/vtdaemon 0555 root bin
 f lib/svc/method/yp 0555 root bin
 d lib/svc/monitor 0755 root bin
-d lib/svc/seed 0755 root bin
-f lib/svc/seed/global.db 0444 root sys
-f lib/svc/seed/nonglobal.db 0444 root sys
 d lib/svc/share 0755 root bin
 f lib/svc/share/README 0444 root bin
 f lib/svc/share/fs_include.sh 0444 root bin

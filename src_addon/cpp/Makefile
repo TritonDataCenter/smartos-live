@@ -20,23 +20,15 @@
 #
 # Copyright (c) 2011 Joyent Inc.
 #
-# To build everything just run 'gmake' in this directory.
-#
 
-PATH=/sbin:/usr/sbin:/usr/bin:/opt/SUNWspro/bin:/opt/local/bin
-BASE=$(PWD)
-DESTDIR=$(BASE)/proto
-SUBDIRS= bind cpp ipmi libreadline libusb
+all: cpp.o y.tab.o
+	cc -o cpp cpp.o y.tab.o
 
--include Makefile.inc
+install: all
+	/usr/sbin/install -m 0755 -f $(DESTDIR)/usr/lib cpp
 
-all:
-	-for dir in $(SUBDIRS); do (cd $$dir; $(MAKE) DESTDIR=$(DESTDIR) all); done
+y.tab.c: cpy.y
+	$(YACC) cpy.y
 
-install:
-	-for dir in $(SUBDIRS); do (cd $$dir; $(MAKE) DESTDIR=$(DESTDIR) install); done
-
-clean: $(SUBDIRS)
-	-for dir in $(SUBDIRS); do (cd $$dir; $(MAKE) DESTDIR=$(DESTDIR) clean); done
-	-rm -rf proto
-
+clean:
+	rm -f  cpp *.o y.tab.c

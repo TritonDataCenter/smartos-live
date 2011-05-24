@@ -45,13 +45,16 @@
 	<single_instance />
 
 	<!--
-	Ideally we would define the system/zones svc to be dependent on this
-	svc so that we run before system/zones.  However, we cannot create
-	that dependency since the system/zones svc already exists in the
-	template repo and we'll get an error during early manifest import when
-	this svc is imported.  Thus, we'll just use the zone autoboot logic
-	directly in our start method and have a dependency on the zones svc so
-	that there is no race condition booting the zones.
+	dependency info
+	This depends on the system/zones svc which seems weird since that
+	svc runs late in boot because it depends on milestone/multi-user-server.
+	Our svc does the initial setup of the infrastructure zones on the
+	headnode so we need the system/zones svc to run first so that we can
+	install and boot the infrastructure zones.  The reason this seems
+	weird is that this svc also sets up the zpool when we first boot,
+	before we reboot to install the infrastructure zones, so it might seem
+	like it should run early in boot, but it can't because of the zone
+	issue described above.
 	-->
 	<dependency
 		name='zones'
@@ -64,14 +67,14 @@
 	<exec_method
 		type='method'
 		name='start'
-		exec='/lib/svc/method/svc-joyinit %m'
+		exec='/lib/svc/method/smartdc-init %m'
 		timeout_seconds='0'>
 	</exec_method>
 
 	<exec_method
 		type='method'
 		name='stop'
-		exec='/lib/svc/method/svc-joyinit %m'
+		exec='/lib/svc/method/smartdc-init %m'
 		timeout_seconds='60'>
 	</exec_method>
 

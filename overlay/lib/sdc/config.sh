@@ -53,7 +53,9 @@ function sdc_config_keys_contain {
     search=$1
     load_sdc_config_filename
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        matches=$((cat ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | sed -e "s/=.*//" | grep $search | wc -l)
+        matches=$((cat ${SDC_CONFIG_FILENAME} ${SDC_CONFIG_INC_DIR}/generic; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
+	    sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
+	    sed -e "s/=.*//" | grep $search | wc -l)
         if [[ $matches -eq 0 ]]; then
             echo false
         else
@@ -68,7 +70,9 @@ function sdc_config_keys_contain {
 function sdc_config_keys {
     load_sdc_config_filename
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        keys=$((cat ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | sed -e "s/=.*//")
+        keys=$((cat ${SDC_CONFIG_FILENAME} ${SDC_CONFIG_INC_DIR}/generic; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
+	    sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
+	    sed -e "s/=.*//")
     fi
     echo "${keys}"
 }
@@ -86,9 +90,12 @@ function load_sdc_config {
     fi
 
     load_sdc_config_filename
-    # Ignore comments,  spaces at the beginning of lines and lines that don't start with a letter.
+    # Ignore comments, spaces at the beginning of lines and lines that don't
+    # start with a letter.
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        eval $((cat ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | sed -e "s/^/${prefix}/")
+        eval $((cat ${SDC_CONFIG_FILENAME} ${SDC_CONFIG_INC_DIR}/generic; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
+	    sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
+	    sed -e "s/^/${prefix}/")
     elif [[ ${headnode} == "true" ]]; then
         echo "FATAL: Unable to load headnode config."
         exit 1

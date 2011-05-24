@@ -1601,7 +1601,7 @@ f lib/svc/manifest/system/ibsrp/target.xml 0444 root sys
 f lib/svc/manifest/system/identity.xml 0444 root sys
 f lib/svc/manifest/system/idmap.xml 0444 root sys
 f lib/svc/manifest/system/intrd.xml 0444 root sys
-f lib/svc/manifest/system/joyinit.xml 0444 root sys
+f lib/svc/manifest/system/smartdc-init.xml 0444 root sys
 f lib/svc/manifest/system/keymap.xml 0444 root sys
 f lib/svc/manifest/system/labeld.xml 0444 root sys
 f lib/svc/manifest/system/logadm-upgrade.xml 0444 root sys
@@ -1687,6 +1687,7 @@ f lib/svc/method/sendmail-client 0555 root sys
 f lib/svc/method/slp 0555 root sys
 f lib/svc/method/smartdc-beacon 0555 root bin
 f lib/svc/method/smartdc-config 0555 root bin
+f lib/svc/method/smartdc-init 0555 root sys
 f lib/svc/method/smartdc-ur 0555 root bin
 f lib/svc/method/smb-client 0555 root sys
 f lib/svc/method/smtp-sendmail 0555 root sys
@@ -1710,7 +1711,6 @@ f lib/svc/method/svc-hostid 0555 root bin
 f lib/svc/method/svc-hotplug 0555 root bin
 f lib/svc/method/svc-ii 0744 root sys
 f lib/svc/method/svc-intrd 0555 root sys
-f lib/svc/method/svc-joyinit 0555 root sys
 f lib/svc/method/svc-labeld 0555 root sys
 f lib/svc/method/svc-legacy-routing 0555 root bin
 f lib/svc/method/svc-lms 0555 root sys

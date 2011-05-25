@@ -25,3 +25,10 @@ src/marco
 src/polo
 src_addon/bind/bind-9.8.0/
 src_addon/ipmi/ipmitool-1.8.11/
+src_addon/libreadline/Makefile
+src_addon/libreadline/config.log
+src_addon/libreadline/config.status
+src_addon/libreadline/*.o
+src_addon/libreadline/*.a
+src_addon/libreadline/shlib/*.so
+src_addon/libusb/*.1

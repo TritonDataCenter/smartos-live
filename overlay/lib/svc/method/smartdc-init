@@ -47,6 +47,10 @@ case "$1" in
     if /bin/bootparams | grep "^headnode=true" > /dev/null 2>&1; then
         USBMOUNT=/mnt/`svcprop -p joyentfs/usb_mountpoint svc:/system/filesystem/smartdc:default`
 
+	# No config file (e.g. user quit during interactive configuration), so
+	# treat as if "noimport=true".
+	[[ ! -f $USBMOUNT/config ]] && exit $SMF_EXIT_OK
+
         initial_script=${USBMOUNT}/$(grep "^initial_script=" $USBMOUNT/config 2>/dev/null | cut -d'=' -f2-)
         if [ -n ${initial_script} ] && [ -e ${initial_script} ]; then
             # Execute the script

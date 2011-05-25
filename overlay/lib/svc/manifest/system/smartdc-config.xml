@@ -53,6 +53,8 @@
 		(system/identy)
 	We don't want manifest import scribbling on the console while running
 		(manifest-import)
+	network/physical can't run without a config file
+		(network/physical)
 	-->
 	<dependency
 		name='filesystem-joyent'
@@ -101,6 +103,12 @@
 		<service_fmri value='svc:/system/manifest-import' />
 	</dependent>
 
+	<dependent
+		name='network-physical'
+		grouping='optional_all'
+		restart_on='none'>
+		<service_fmri value='svc:/network/physical:default' />
+	</dependent>
 
 	<exec_method
 		type='method'

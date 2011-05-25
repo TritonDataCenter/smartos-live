@@ -52,8 +52,15 @@ function load_sdc_config_filename {
 function sdc_config_keys_contain {
     search=$1
     load_sdc_config_filename
+
+    if [[ -f ${SDC_CONFIG_INC_DIR}/generic ]]; then
+        GEN_FILE=${SDC_CONFIG_INC_DIR}/generic
+    else
+        GEN_FILE=/dev/null
+    fi
+
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        matches=$((cat ${SDC_CONFIG_FILENAME} ${SDC_CONFIG_INC_DIR}/generic; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
+        matches=$((cat ${SDC_CONFIG_FILENAME} ${GEN_FILE}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
 	    sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
 	    sed -e "s/=.*//" | grep $search | wc -l)
         if [[ $matches -eq 0 ]]; then
@@ -69,8 +76,14 @@ function sdc_config_keys_contain {
 
 function sdc_config_keys {
     load_sdc_config_filename
+    if [[ -f ${SDC_CONFIG_INC_DIR}/generic ]]; then
+        GEN_FILE=${SDC_CONFIG_INC_DIR}/generic
+    else
+        GEN_FILE=/dev/null
+    fi
+
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        keys=$((cat ${SDC_CONFIG_FILENAME} ${SDC_CONFIG_INC_DIR}/generic; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
+        keys=$((cat ${SDC_CONFIG_FILENAME} ${GEN_FILE}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
 	    sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
 	    sed -e "s/=.*//")
     fi
@@ -90,10 +103,16 @@ function load_sdc_config {
     fi
 
     load_sdc_config_filename
+    if [[ -f ${SDC_CONFIG_INC_DIR}/generic ]]; then
+        GEN_FILE=${SDC_CONFIG_INC_DIR}/generic
+    else
+        GEN_FILE=/dev/null
+    fi
+
     # Ignore comments, spaces at the beginning of lines and lines that don't
     # start with a letter.
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        eval $((cat ${SDC_CONFIG_FILENAME} ${SDC_CONFIG_INC_DIR}/generic; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
+        eval $((cat ${SDC_CONFIG_FILENAME} ${GEN_FILE}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
 	    sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
 	    sed -e "s/^/${prefix}/")
     elif [[ ${headnode} == "true" ]]; then

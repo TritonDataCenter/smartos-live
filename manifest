@@ -2887,6 +2887,7 @@ f usr/include/dat/udat_config.h 0644 root bin
 f usr/include/dat/udat_redirection.h 0644 root bin
 f usr/include/dat/udat_vendor_specific.h 0644 root bin
 f usr/include/deflt.h 0644 root bin
+f usr/include/demangle.h 0644 root bin
 d usr/include/des 0755 root bin
 f usr/include/des/des.h 0644 root bin
 f usr/include/des/desdata.h 0644 root bin
@@ -5263,6 +5264,8 @@ s usr/lib/amd64/ld.so.1=../../../lib/amd64/ld.so.1
 f usr/lib/amd64/lddstub 0555 root bin
 f usr/lib/amd64/libCrun.so.1 0755 root bin
 f usr/lib/amd64/libCstd.so.1 0755 root bin
+f usr/lib/amd64/libdemangle.so.1 0755 root bin
+f usr/lib/amd64/libiostream.so.1 0755 root bin
 f usr/lib/amd64/libHBAAPI.so.1 0755 root bin
 s usr/lib/amd64/libHBAAPI.so=libHBAAPI.so.1
 f usr/lib/amd64/libSMHBAAPI.so.1 0755 root bin
@@ -6674,8 +6677,11 @@ f usr/lib/ldap/idsconfig 0555 root bin
 f usr/lib/ldap/ldap_cachemgr 0555 root bin
 f usr/lib/lddstub 0555 root bin
 f usr/lib/lib.b 0444 root bin
+f usr/lib/libC.so.5 0755 root bin
 f usr/lib/libCrun.so.1 0755 root bin
 f usr/lib/libCstd.so.1 0755 root bin
+f usr/lib/libdemangle.so.1 0755 root bin
+f usr/lib/libiostream.so.1 0755 root bin
 f usr/lib/libHBAAPI.so.1 0755 root bin
 s usr/lib/libHBAAPI.so=libHBAAPI.so.1
 f usr/lib/libSMHBAAPI.so.1 0755 root bin

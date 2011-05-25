@@ -29,6 +29,7 @@ all:
 	/bin/true
 
 install:
+	/usr/sbin/install -m 0755 -f $(DESTDIR)/usr/include include/demangle.h
 	/usr/sbin/install -m 0755 -f $(DESTDIR)/usr/lib lib/libC.so.5
 	/usr/sbin/install -m 0755 -f $(DESTDIR)/usr/lib lib/libCrun.so.1
 	/usr/sbin/install -m 0755 -f $(DESTDIR)/usr/lib lib/libCstd.so.1

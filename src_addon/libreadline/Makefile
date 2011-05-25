@@ -134,7 +134,7 @@ DOCSUPPORT = doc/Makefile
 DOCUMENTATION = $(DOCSOURCE) $(DOCOBJECT) $(DOCSUPPORT)
 
 CREATED_MAKEFILES = Makefile doc/Makefile examples/Makefile shlib/Makefile
-CREATED_CONFIGURE = config.status config.h config.cache config.log \
+CREATED_CONFIGURE = config.h config.cache config.log \
 		    stamp-config stamp-h
 CREATED_TAGS = TAGS tags
 
@@ -173,21 +173,9 @@ readline: $(OBJECTS) readline.h rldefs.h chardefs.h ./libreadline.a
 lint:	force
 	$(MAKE) $(MFLAGS) CCFLAGS='$(GCC_LINT_CFLAGS)' static
 
-Makefile makefile: config.status $(srcdir)/Makefile.in
-	CONFIG_FILES=Makefile CONFIG_HEADERS= $(SHELL) ./config.status
-
-Makefiles makefiles: config.status $(srcdir)/Makefile.in
-	@for mf in $(CREATED_MAKEFILES); do \
-		CONFIG_FILES=$$mf CONFIG_HEADERS= $(SHELL) ./config.status ; \
-	done
-
-config.status: configure
-	$(SHELL) ./config.status --recheck
-
 config.h:	stamp-h
 
-stamp-h: config.status $(srcdir)/config.h.in
-	CONFIG_FILES= CONFIG_HEADERS=config.h ./config.status
+stamp-h: $(srcdir)/config.h.in
 	echo > $@
 
 #$(srcdir)/configure: $(srcdir)/configure.in	## Comment-me-out in distribution

@@ -15550,7 +15550,6 @@ f usr/share/man/man4/rpc.4 0444 root bin
 f usr/share/man/man4/rpc.nisd.4 0444 root bin
 f usr/share/man/man4/rt_dptbl.4 0444 root bin
 f usr/share/man/man4/sasl_appname.conf.4 0444 root bin
-f usr/share/man/man4/sbus.4 0444 root bin
 f usr/share/man/man4/sccsfile.4 0444 root bin
 f usr/share/man/man4/scsi.4 0444 root bin
 f usr/share/man/man4/securenets.4 0444 root bin

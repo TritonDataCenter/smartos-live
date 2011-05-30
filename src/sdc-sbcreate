@@ -123,6 +123,36 @@ function grab_zfsinfo
     zfs list -t all > ${TEMPDIR}/zfs.list
 }
 
+function grab_app_config
+{
+    echo "  > app zone config"
+    zones=$(zoneadm list -i | grep -v global)
+    for zone in ${zones}; do
+      if [[ -d /zones/${zone}/root/opt/smartdc/${zone}-data/config ]]; then
+         ( cd  /zones/${zone}/root/opt/smartdc/${zone}-data/; /usr/bin/gtar -zcf ${TEMPDIR}/${zone}.config.tgz config )
+      fi
+    done 
+}
+
+function grab_disk_list
+{
+    echo "  > disk list"
+    /usr/bin/disklist -a > ${TEMPDIR}/disklist
+}
+
+function grab_zpool_history
+{
+    echo "  > zpool history"
+    zpool history > ${TEMPDIR}/zpool.history
+}
+
+function grab_fmd
+{
+    echo "  > fmd"
+    (cd /var/fm ; /usr/bin/gtar -zcf ${TEMPDIR}/fmd.tgz fmd)
+    
+}
+
 function grab_df
 {
     echo "  > disk utilization"
@@ -345,6 +375,10 @@ if [[ -z $opt_c ]]; then
     grab_castatus
     grab_phonehome
     grab_platform_md5
+    grab_app_config
+    grab_fmd
+    grab_disk_list
+    grab_zpool_history
 else
     for content in $contents; do
         eval grab_${content}

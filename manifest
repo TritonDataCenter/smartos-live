@@ -1900,6 +1900,7 @@ f smartdc/bin/has_hvx 0555 root bin
 f smartdc/bin/marco 0555 root bin
 f smartdc/bin/polo 0555 root bin
 f smartdc/bin/sdc-capi 0555 root bin
+f smartdc/bin/sdc-cloudapi 0555 root bin
 f smartdc/bin/sdc-dsapi 0555 root bin
 f smartdc/bin/sdc-dsimport 0555 root bin
 f smartdc/bin/sdc-healthcheck 0555 root bin
@@ -1916,6 +1917,7 @@ d smartdc/man 0755 root bin
 d smartdc/man/cat1 0755 root bin
 d smartdc/man/man1 0755 root bin
 f smartdc/man/man1/sdc-capi.1 0444 root bin
+f smartdc/man/man1/sdc-cloudapi.1 0444 root bin
 f smartdc/man/man1/sdc-dsapi.1 0444 root bin
 f smartdc/man/man1/sdc-dsimport.1 0444 root bin
 f smartdc/man/man1/sdc-healthcheck.1 0444 root bin

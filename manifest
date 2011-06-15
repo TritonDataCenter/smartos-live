@@ -1924,8 +1924,13 @@ f smartdc/man/man1/sdc-dsimport.1 0444 root bin
 f smartdc/man/man1/sdc-dspublish.1 0444 root bin
 f smartdc/man/man1/sdc-healthcheck.1 0444 root bin
 f smartdc/man/man1/sdc-mapi.1 0444 root bin
+f smartdc/man/man1/sdc-mapi-destroy-container.1 0444 root bin
 f smartdc/man/man1/sdc-oneachnode.1 0444 root bin
+f smartdc/man/man1/sdc-phonehome.1 0444 root bin
 f smartdc/man/man1/sdc-pubapi.1 0444 root bin
+f smartdc/man/man1/sdc-sbcreate.1 0444 root bin
+f smartdc/man/man1/sdc-sbupload.1 0444 root bin
+f smartdc/man/man1/sdc-zfs-io-throttle.1 0444 root bin
 f smartdc/man/man1/sdc-zoneinfo.1 0444 root bin
 f smartdc/pubkey.key 0555 root bin
 d smartdc/ur-agent 0755 root bin

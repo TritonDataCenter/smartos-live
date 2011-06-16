@@ -1828,6 +1828,22 @@ d platform/i86pc/kernel/misc/amd64 0755 root sys
 f platform/i86pc/kernel/misc/amd64/acpidev 0755 root sys
 f platform/i86pc/kernel/misc/amd64/cpr 0755 root sys
 f platform/i86pc/kernel/misc/amd64/drmach_acpi 0755 root sys
+d platform/i86pc/kernel/pcbe 0755 root sys
+d platform/i86pc/kernel/pcbe/amd64 0755 root sys
+f platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.15 0755 root sys
+f platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.5 0755 root sys
+f platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.6 0755 root sys
+f platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.6.15 0755 root sys
+s platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.6.23=pcbe.GenuineIntel.6.15
+s platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.6.26=pcbe.GenuineIntel.6.15
+s platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.6.28=pcbe.GenuineIntel.6.15
+s platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.6.29=pcbe.GenuineIntel.6.15
+s platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.6.30=pcbe.GenuineIntel.6.15
+s platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.6.31=pcbe.GenuineIntel.6.15
+s platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.6.37=pcbe.GenuineIntel.6.15
+s platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.6.44=pcbe.GenuineIntel.6.15
+s platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.6.46=pcbe.GenuineIntel.6.15
+s platform/i86pc/kernel/pcbe/amd64/pcbe.GenuineIntel.6.47=pcbe.GenuineIntel.6.15
 d platform/i86pc/kernel/sys 0755 root sys
 d platform/i86pc/kernel/sys/amd64 0755 root sys
 f platform/i86pc/kernel/sys/amd64/cpc 0755 root sys

@@ -41,6 +41,12 @@ EOF
     exit 1
 }
 
+function fatal
+{
+    echo "`basename $0`: $*"
+    exit 1
+}
+
 function do_countdown
 {
     echo ""
@@ -243,13 +249,14 @@ function grab_phonehome
 
 function grab_compute
 {
-    if [[ -z $headnode ]]; then
+    if [[ $headnode != "true" ]]; then
         return
     fi
 
     local oneach=/smartdc/bin/sdc-oneachnode
     local outfile=/var/tmp/bundle.$$
     local destdir=$TEMPDIR/compute-nodes
+    local curdir=`pwd`
     local opts="-io $outfile"
     local file
 
@@ -273,12 +280,15 @@ function grab_compute
     # ...expand them...
     #
     echo "    (remote bundle expansion)"
-    for file in `ls -1 $destdir`; do
-        mv $file $file.tar.bz2
-        ( cd $destdir && ( bzip2 -d -c $file.tar.bz2 | tar xvf - >&4 2>&1 ) )
-        rm $file.tar.bz2
-    done
 
+    cd $destdir
+    for file in `ls -1`; do
+        mv $file $file.tar.bz2 >&4 2>&1
+        bzip2 -d -c $file.tar.bz2 2>&4 | tar xvf - >&4 2>&1
+        rm $file.tar.bz2 >&4 2>&1
+    done
+    cd $curdir
+ 
     #
     # ...and blow them away.
     #
@@ -310,13 +320,21 @@ done
 
 if [[ -n $opt_c ]]; then
     contents=`echo $opt_c | tr ',' ' '`
+    opt_c=
     for content in $contents; do
         if ! compgen -A function grab_ | \
           grep "^grab_${content}\$" 1> /dev/null ; then
             echo "`basename $0`: unrecognized content '$content'"
             usage
         fi
+        if [[ $content != "compute" ]]; then
+            opt_c=${opt_c}${content},
+        fi
     done
+
+    if [[ -z $opt_c ]]; then
+        fatal "must additionally specify content to gather from compute nodes"
+    fi
 fi
 
 # Need the output dir first.

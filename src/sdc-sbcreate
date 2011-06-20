@@ -260,9 +260,20 @@ function grab_compute
     local opts="-io $outfile"
     local file
 
+    if [[ -n $opt_n ]]; then
+        oneach="$oneach -n $opt_n"
+        if ! $oneach -t 10 date >&4 2>&1 ; then
+             fatal "node $opt_n is invalid or not responding"
+        fi
+    fi
+
     mkdir -p $destdir
 
-    echo "  > compute nodes"
+    if [[ -z $opt_n ]]; then
+        echo "  > compute nodes"
+    else
+        echo "  > node $opt_n"
+    fi
 
     #
     # First, generate the bundles
@@ -304,7 +315,7 @@ function grab_platform_md5
     sum -R -x md5 /mnt/usbkey/os > ${TEMPDIR}/platforms_bootable.md5
 }
 
-while getopts "d:o:c:iu" opt; do
+while getopts "d:o:c:in:u" opt; do
     if [[ "$opt" == "?" ]]; then
         usage
     fi
@@ -329,12 +340,16 @@ if [[ -n $opt_c ]]; then
         fi
         if [[ $content != "compute" ]]; then
             opt_c=${opt_c}${content},
+        elif [[ -n $opt_n ]]; then
+            fatal "cannot specify both node and 'compute' content"
         fi
     done
 
     if [[ -z $opt_c ]]; then
         fatal "must additionally specify content to gather from compute nodes"
     fi
+elif [[ -n $opt_n ]]; then
+    fatal "must specify content when node is specified"
 fi
 
 # Need the output dir first.
@@ -397,6 +412,8 @@ if [[ -z $opt_c ]]; then
     grab_fmd
     grab_disk_list
     grab_zpool_history
+elif [[ -n $opt_n ]]; then
+    grab_compute
 else
     for content in $contents; do
         eval grab_${content}

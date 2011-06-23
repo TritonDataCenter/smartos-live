@@ -17,7 +17,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
 
 BASE=$(PWD)
-DESTDIR=$(BASE)/proto
 
 RL_LIBRARY_VERSION = 5.0
 RL_LIBRARY_NAME = readline
@@ -33,7 +32,7 @@ PACKAGE_VERSION = 5.0-rc1
 srcdir = .
 VPATH = .
 top_srcdir = .
-BUILD_DIR = /home/jerry/illumos-live/src_addon/libreadline
+BUILD_DIR = ${BASE}
 
 INSTALL = /usr/bin/ginstall -c
 INSTALL_PROGRAM = ${INSTALL}

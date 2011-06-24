@@ -17,6 +17,8 @@
 /* Globals! */
 char *search_dirs[MAX_DIRS] = { NULL };
 
+static int exit_status = 0;
+
 /* These are from the generated users.c */
 int uid_from_name(const char *user);
 int gid_from_name(const char *group);
@@ -104,6 +106,7 @@ void handle_file(const char *target, const char *mode, const char *user, const c
     printf("OK (%s)\n", found);
   } else {
     printf("FAILED\n");
+    exit_status = 1;
   } 
 
 }
@@ -243,5 +246,5 @@ int main(int argc, char *argv[])
     pass++;
   }
 
-  exit(0);
+  exit(exit_status);
 }

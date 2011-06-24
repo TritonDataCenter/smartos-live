@@ -142,7 +142,8 @@ function create_ufs
     # do the actual copy
     ${BUILDER} ${MANIFEST} ${rdmnt} ${IN_DIRS}
     if [ $? -ne 0 ]; then
-        echo "ERROR: copy onto the image failed, may need to increase the size"
+        echo "ERROR: copy onto the image failed"
+        echo "(may need to increase the size or manifest file not found)"
         ERROR=1
 	return
     fi
@@ -213,6 +214,8 @@ function create_archive
     mkdir -p `dirname ${archive}`
 
     create_ufs "$archive" "$lofidev" "$lofiusrdev" "$usrfile"
+    [ $ERROR -eq 1 ] && return
+
 
     # sanity check the archive before moving it into place
     #
@@ -287,11 +290,15 @@ create_archive "${OUT_DIR}/${BOOT_ARCHIVE_64}" $lofidev32 $lofidevusr $usrfile
 
 lofiadm -d "$lofidev32" 2>/dev/null
 
-chmod 0644 ${OUT_DIR}/${BOOT_ARCHIVE_64}
-echo "${BUILDSTAMP}" > ${OUT_DIR}/buildstamp
-(cd ${OUT_DIR} && gtar -zcf ${PREFIX}.tgz ${PREFIX})
+if [ $ERROR -eq 0 ]; then
+    chmod 0644 ${OUT_DIR}/${BOOT_ARCHIVE_64}
+    echo "${BUILDSTAMP}" > ${OUT_DIR}/buildstamp
+    (cd ${OUT_DIR} && gtar -zcf ${PREFIX}.tgz ${PREFIX})
+fi
 
-if [ $ERROR = 1 ]; then
+if [ $ERROR -eq 1 ]; then
     cleanup
     exit 1
 fi
+
+exit 0

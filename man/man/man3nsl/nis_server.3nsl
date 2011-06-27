@@ -1,0 +1,108 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nis_server 3NSL "10 Nov 2005" "SunOS 5.11" "Networking Services Library Functions"
+.SH NAME
+nis_server, nis_mkdir, nis_rmdir, nis_servstate, nis_stats, nis_getservlist, nis_freeservlist, nis_freetags \- miscellaneous NIS+ functions
+.SH SYNOPSIS
+.LP
+.nf
+\fBcc\fR [ \fIflag\fR... ] \fIfile\fR... \fB-lnsl\fR [ \fIlibrary\fR... ]
+#include <rpcsvc/nis.h>
+
+\fBnis_error\fR \fBnis_mkdir\fR(\fBnis_name\fR \fIdirname\fR, \fBnis_server *\fR\fImachine\fR);
+.fi
+
+.LP
+.nf
+\fBnis_error\fR \fBnis_rmdir\fR(\fBnis_name\fR \fIdirname\fR, \fBnis_server *\fR\fImachine\fR);
+.fi
+
+.LP
+.nf
+\fBnis_error\fR \fBnis_servstate\fR(\fBnis_server *\fR\fImachine\fR, \fBnis_tag *\fR\fItags\fR, \fBint\fR \fInumtags\fR,
+     \fBnis_tag **\fR\fIresult\fR);
+.fi
+
+.LP
+.nf
+\fBnis_error\fR \fBnis_stats\fR(\fBnis_server *\fR\fImachine\fR, \fBnis_tag *\fR\fItags\fR, \fBint\fR \fInumtags\fR,
+     \fBnis_tag **\fR\fIresult\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBnis_freetags\fR(\fBnis_tag *\fR\fItags\fR, \fBint\fR \fInumtags\fR);
+.fi
+
+.LP
+.nf
+\fBnis_server **\fR\fBnis_getservlist\fR(\fBnis_name\fR \fIdirname\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBnis_freeservlist\fR(\fBnis_server **\fR\fImachines\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+These functions provide a variety of services for NIS+ applications.
+.sp
+.LP
+The \fBnis_mkdir()\fR function is used to create the necessary databases to support NIS+ service for a directory, \fIdirname\fR, on a server, \fImachine\fR. If this operation is successful, it means that the directory object describing \fIdirname\fR has been updated to reflect that server \fImachine\fR is serving the named directory. For a description of the \fBnis_server\fR structure, refer to \fBnis_objects\fR(3NSL).
+.sp
+.LP
+Per-server and per-directory access restrictions can apply to the \fBnis_mkdir()\fR function. See \fBnisopaccess\fR(1).
+.sp
+.LP
+The \fBnis_rmdir()\fR function is used to delete the directory, \fIdirname\fR, from the specified server machine. The \fImachine\fR parameter cannot be \fINULL\fR. The \fBnis_rmdir()\fR function does not remove the directory \fIdirname\fR from the namespace or remove a server from the server list in the directory object. To remove a directory from the namespace you must call \fBnis_remove()\fR to remove the directory \fBdirname\fR from the namespace and call the\fBnis_rmdir()\fR for each server in the server list to remove the directory from the server. To remove a replica from the server list, you need to first call \fBnis_modify()\fR to remove the server from the directory object and then call \fBnis_rmdir()\fR to remove the replica.
+.sp
+.LP
+Per-server and per-directory access restrictions can apply to \fBnis_rmdir()\fR. See \fBnisopaccess\fR(1).
+.sp
+.LP
+For a description of the \fBnis_server\fR structure, refer to \fBnis_objects\fR(3NSL).
+.sp
+.LP
+The \fBnis_servstate()\fR function is used to set and read the various state variables of the NIS+ servers. In particular the internal debugging state of the servers can be set and queried.
+.sp
+.LP
+The \fBnis_stats()\fR function is used to retrieve statistics about how the server is operating. Tracking these statistics can help administrators determine when they need to add additional replicas or to break up a domain into two or more subdomains. For more information on reading statistics, see \fBnisstat\fR(1M)
+.sp
+.LP
+The \fBnis_servstate()\fR and \fBnis_stats()\fR functions use the tag list. The tag list is a variable length array of \fInis_tag\fR structures whose length is passed to the function in the \fInumtags\fR parameter. The set of legal tags are defined in the file <\fBrpcsvc/nis_tags.h\fR> which is included in <\fBrpcsvc/nis.h\fR>. Because these tags can and do vary between implementations of the NIS+ service, it is best to consult this file for the supported list. Passing unrecognized tags to a server will result in their \fItag_value\fR member being set to the string \fBunknown\fR. Both of these functions return their results in malloced tag structure, \fI*result\fR. If there is an error, \fI*result\fR is set to \fINULL\fR. The \fItag_value\fR pointers points to allocated string memory which contains the results. Use \fBnis_freetags()\fR to free the tag structure.
+.sp
+.LP
+Per-server and per-directory access restrictions can apply to the \fBNIS_SERVSTATE\fR or \fBNIS_STATUS\fR (\fBnis_stats()\fR) operations and their sub-operations (\fItags\fR). See \fBnisopaccess\fR(1).
+.sp
+.LP
+The \fBnis_getservlist()\fR function returns a null terminated list of \fInis_server\fR structures that represent the list of servers that serve the domain named \fIdirname\fR. Servers from this list can be used when calling functions that require the name of a NIS+ server. For a description of the \fBnis_server\fR refer to \fBnis_objects\fR(3NSL). \fBnis_freeservlist()\fR frees the list of servers list of servers returned by \fBnis_getservlist()\fR. Note that this is the only legal way to free that list.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBnisopaccess\fR(1), \fBnisstat\fR(1M), \fBnis_names\fR(3NSL), \fBnis_objects\fR(3NSL), \fBnis_subr\fR(3NSL), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

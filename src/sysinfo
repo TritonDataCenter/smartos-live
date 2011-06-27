@@ -4,17 +4,75 @@
 #
 # Output some info representing the system.  Default: JSON
 #
-# Important: Don't use anything here that you don't include in the live image!
+# IMPORTANT:
+#
+#  - Don't use anything here that you don't include in the live image!
+#
+#  - This data gets cached in /tmp/.sysinfo.* and *DOES NOT* automatically
+#    have the cache refreshed.  If you change something where the change
+#    needs to be visible to sysinfo, make sure you run this with either
+#    the -f or -u flag after changing the system's state.
 #
 
+#set -o xtrace
+
+CACHE_FILE_PARSABLE="/tmp/.sysinfo.parsable"
+CACHE_FILE_JSON="/tmp/.sysinfo.json"
+CACHE="true"
+DETECT_NICS=
+FORCE=
 PARSABLE=
-if [[ $1 == "-p" ]]; then
-    PARSABLE="true"
-fi
+UPDATE_ONLY=
+while getopts fnpu? name
+do
+    case $name in
+    f)
+        # Force re-running commands (don't read the cached values)
+        FORCE="true"
+        ;;
+    n)
+        # Doing network discovery, in this mode we can't use the
+        # cached values.  *And* we don't want to cache the output
+        # we create since its non-standard.
+        CACHE=
+        FORCE="true"
+        DETECT_NICS="true"
+        ;;
+    p)
+        # Output key=value format, not json
+        PARSABLE="true"
+        ;;
+    u)
+        # Update cache *only*, do not output.
+        FORCE="true"
+        UPDATE_ONLY="true"
+        ;;
+    ?)
+        printf "Usage: %s: [-f] [-n] [-p] [-u]\n"  $0
+        exit 2
+    ;;
+    esac
+done
 
 if [[ $(zonename) != "global" ]]; then
     echo "This program is for use in the global zone only."
     exit 1
+fi
+
+if [[ ${EUID} != 0 ]]; then
+    echo "This program can only be run as root."
+    exit 1
+fi
+
+# If we're not forcing update and we have a cached version, use that!
+if [[ -z ${FORCE} ]]; then
+    if [[ -z ${PARSABLE} && -s ${CACHE_FILE_JSON} ]]; then
+        exec cat ${CACHE_FILE_JSON}
+        exit 3
+    elif [[ -s ${CACHE_FILE_PARSABLE} ]]; then
+        exec cat ${CACHE_FILE_PARSABLE}
+        exit 3
+    fi
 fi
 
 configfile="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/smartdc:default 2>/dev/null)/config"
@@ -25,7 +83,7 @@ fi
 # helper to set global "normalized" to the expanded version of MAC ($1)
 function normalize_mac()
 {
-    mac=$1
+    local mac=$1
     if [ -z "${mac}" ]; then
         echo "FATAL: unable to normalize empty mac!"
         exit 1
@@ -53,6 +111,11 @@ function get_smbios_system_info()
         | sed -e 's/ *$/"/' \
         | sed -e 's/Serial Number/Serial_Number/')
 
+    # overwrite UUID if config dictates otherwise
+    tmp_uuid=$(/usr/bin/bootparams | grep "^override_uuid=" | cut -f2 -d'=')
+    if [[ -n $tmp_uuid ]]; then
+        UUID=$tmp_uuid
+    fi
     #echo "${UUID}"
     #echo "${Product}"
     #echo "${Serial_Number}"
@@ -88,6 +151,12 @@ function get_cpu_info()
         | wc -l \
         | tr -d ' '`
 
+    if [[ -x /smartdc/bin/has_hvx ]]; then
+        CPU_Virtualization=$(/smartdc/bin/has_hvx)
+    else
+        CPU_Virtualization="unknown"
+    fi
+
     #echo "${CPU_Version}"
     #echo "${CPU_Count}"
     #echo "${CPU_Cores}"
@@ -95,8 +164,8 @@ function get_cpu_info()
 
 function get_live_image_buildstamp()
 {
-    # Add joyent_buildstamp to SYSTEM_INFO
-    Live_Image=$(cat /etc/joyent_buildstamp 2>/dev/null)
+    # Add joyent buildstamp to SYSTEM_INFO
+    Live_Image=$(uname -v | sed -e "s/.*_//")
 
     #echo "${Live_Image}"
 }
@@ -167,14 +236,21 @@ function get_nic_mappings()
 function get_network_interfaces()
 {
     count=1
+    nic_tag_count=1
+    NicTagList="admin"
+    seen_nic_tag_admin="true"
+
     # ignore 'LINK SLOT ADDRESS INUSE CLIENT' line
-    for line in $(pfexec /sbin/dladm show-phys -m | grep -v "^LINK " | awk '{ print $1,$3 }' | tr ' ' '='); do
+    for line in $(pfexec /sbin/dladm show-phys -m \
+        | grep -v "^LINK " | awk '{ print $1,$3 }' | tr ' ' '='); do
+
         nicnames=
         fields=(${line//=/ })
         iface=${fields[0]}
         normalize_mac ${fields[1]}
         mac=${normalized}
-        ip4addr=$(ifconfig ${iface} 2>/dev/null | grep "inet " | awk '{ print $2 }')
+        ip4addr=$(ifconfig ${iface} 2>/dev/null \
+            | grep "inet " | awk '{ print $2 }')
 
         if [[ -n "${ADMIN_NIC}" ]] && [[ "${ADMIN_NIC}" == "${mac}" ]]; then
             nicnames="admin"
@@ -183,13 +259,35 @@ function get_network_interfaces()
         if [[ -n "${EXTERNAL_NIC}" ]] && [[ "${EXTERNAL_NIC}" == "${mac}" ]]; then
             [[ -n ${nicnames} ]] && nicnames="${nicnames},"
             nicnames="${nicnames}external"
+            NicTagList="${NicTagList},external"
             NIC_external=${iface}
         fi
         if [[ -n "${INTERNAL_NIC}" ]] && [[ "${INTERNAL_NIC}" == "${mac}" ]]; then
             [[ -n ${nicnames} ]] && nicnames="${nicnames},"
             nicnames="${nicnames}internal"
+            NicTagList="${NicTagList},internal"
             NIC_internal=${iface}
         fi
+
+        for tag in "${NicTagsMacs[@]}"; do
+            tag_fields=(${tag//=/ })
+            tag_name=${tag_fields[0]}
+            normalize_mac ${tag_fields[1]}
+            tag_mac=${normalized}
+            if [[ "${tag_mac}" == "${mac}" ]]; then
+                [[ -n ${nicnames} ]] && nicnames="${nicnames},"
+                nicnames="${nicnames}${tag_name}"
+                NicTags[${nic_tag_count}]="${tag_name}=${iface}"
+                ((nic_tag_count++))
+            fi
+
+            # Build up the list of tags
+            eval "seen_nic_tag=\${seen_nic_tag_${tag_name}}"
+            if [[ -z "${seen_nic_tag}" ]]; then
+                NicTagList="${NicTagList},${tag_name}"
+                eval "seen_nic_tag_${tag_name}=true"
+            fi
+        done
 
         NetworkInterfaces[${count}]=${iface}
         eval "Network_Interface_${iface}_MAC_Address=${mac}"
@@ -198,6 +296,14 @@ function get_network_interfaces()
             eval "Network_Interface_${iface}_NIC_Names=${nicnames}"
         fi
         ((count++))
+    done
+
+    for line in $(dladm show-phys -p -olink,state); do
+        fields=(${line//:/ })
+        iface=${fields[0]}
+        link_status=${fields[1]}
+        eval "Network_Interface_${iface}_Link_Status=${link_status}"
+
     done
 
     #echo "${NIC_admin}"
@@ -210,6 +316,44 @@ function get_network_interfaces()
     #  eval "nicnames=\${Network_Interface_${iface}_NIC_Names}"
     #  echo "mac: ${mac} ---- ${ipv4} ---- ${nicnames}"
     #done
+}
+
+function get_nic_tags()
+{
+    count=1
+    for line in $(/usr/bin/bootparams 2>/dev/null \
+        | grep "^[a-z0-9_]*_nic=" \
+        ; grep "^[a-z0-9]*_nic=" ${configfile} 2>/dev/null); do
+        fields=(${line//=/ })
+        key=${fields[0]}
+        if [[ $key != "admin_nic" ]] \
+            && [[ $key != "external_nic" ]] \
+            && [[ $key != "internal_nic" ]]; then
+
+            NicTagsMacs[${count}]=$(echo ${line} | sed -e 's/_nic//')
+            ((count++))
+        fi
+    done
+}
+
+function detect_nic_tags() {
+    for iface in "${NetworkInterfaces[@]}"; do
+        eval "link_status=\${Network_Interface_${iface}_Link_Status}"
+        if [[ "${link_status}" != "up" ]]; then
+            # polo needs the interface to be plumbed to work
+            /usr/sbin/ifconfig ${iface} plumb
+        fi
+
+        # Leave it at the 30 second timeout for now
+        detected_tag=$(/smartdc/bin/polo ${iface})
+
+        if [[ "${link_status}" != "up" ]]; then
+            /usr/sbin/ifconfig ${iface} unplumb
+        fi
+        if [[ -n "${detected_tag}" ]]; then
+            eval "Network_Interface_${iface}_Detected_Nic_Tag=${detected_tag}"
+        fi
+    done
 }
 
 function get_bootparams()
@@ -248,9 +392,11 @@ Serial_Number='${Serial_Number}'
 UUID='${UUID}'
 Hostname='${Hostname}'
 CPU_Type='${CPU_Version}'
+CPU_Virtualization='${CPU_Virtualization}'
 CPU_Physical_Cores=${CPU_Count}
 CPU_Total_Cores=${CPU_Cores}
 MiB_of_Memory=${Memory_in_MiB}
+Nic_Tags=${NicTagList}
 END
 
     for entry in "${Disks[@]}"; do
@@ -265,18 +411,34 @@ END
     [[ -n ${NIC_external} ]] && echo "NIC_external='${NIC_external}'"
     [[ -n ${NIC_internal} ]] && echo "NIC_internal='${NIC_internal}'"
 
+    for tag in "${NicTags[@]}"; do
+        tag_fields=(${tag//=/ })
+        tag_name=${tag_fields[0]}
+        int=${tag_fields[1]}
+        echo "NIC_${tag_name}='${int}'"
+    done
+
     for iface in "${NetworkInterfaces[@]}"; do
         mac_var="Network_Interface_${iface}_MAC_Address"
         ipv4_var="Network_Interface_${iface}_IPv4_Address"
         nicnames_var="Network_Interface_${iface}_NIC_Names"
+        link_status_var="Network_Interface_${iface}_Link_Status"
+        detected_tag_var="Network_Interface_${iface}_Detected_Nic_Tag"
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"
         eval "nicnames=\${${nicnames_var}}"
+        link_status="unknown"
+        eval "link_status=\${${link_status_var}}"
+        eval "detected_tag=\${${detected_tag_var}}"
 
         echo "${mac_var}='${mac}'"
         echo "${ipv4_var}='${ipv4}'"
         echo "${nicnames_var}='${nicnames}'"
+        echo "${link_status_var}='${link_status}'"
+        if [[ -n "${detected_tag}" ]] ; then
+            echo "${detected_tag_var}='${detected_tag}'"
+        fi
     done
 
     for entry in "${Bootparams[@]}"; do
@@ -298,6 +460,7 @@ function output_json()
   "UUID": "${UUID}",
   "Hostname": "${Hostname}",
   "CPU Type": "${CPU_Version}",
+  "CPU Virtualization": "${CPU_Virtualization}",
   "CPU Physical Cores": ${CPU_Count},
   "CPU Total Cores": ${CPU_Cores},
   "MiB of Memory": "${Memory_in_MiB}",
@@ -340,11 +503,20 @@ END
         mac_var="Network_Interface_${iface}_MAC_Address"
         ipv4_var="Network_Interface_${iface}_IPv4_Address"
         nicnames_var="Network_Interface_${iface}_NIC_Names"
+        link_status_var="Network_Interface_${iface}_Link_Status"
+        detected_tag_var="Network_Interface_${iface}_Detected_Nic_Tag"
         nic_names_fmt=
+        detected_fmt=
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"
         eval "nicnames=\${${nicnames_var}}"
+        eval "link_status=\${${link_status_var}}"
+        eval "detected_tag=\${${detected_tag_var}}"
+
+        if [[ -n "${detected_tag}" ]] ; then
+            detected_fmt="\"Detected NIC Name\": \"${detected_tag}\", "
+        fi
 
         nic_names_array=$(echo "${nicnames}" | sed -e "s/,/\", \"/g")
         if [[ -n ${nic_names_array} ]]; then
@@ -354,7 +526,13 @@ END
         ((printed++))
         trailing_comma=","
         [[ ${printed} -eq ${#NetworkInterfaces[*]} ]] && trailing_comma=''
-        echo "    \"${iface}\": {\"MAC Address\": \"${mac}\", \"ip4addr\": \"${ipv4}\", \"NIC Names\": [${nic_names_fmt}]}${trailing_comma}"
+        echo -n "    \"${iface}\": {"
+        echo -n "\"MAC Address\": \"${mac}\", "
+        echo -n "\"ip4addr\": \"${ipv4}\", "
+        echo -n "\"Link Status\": \"${link_status}\", "
+        echo -n "${detected_fmt}"
+        echo -n "\"NIC Names\": [${nic_names_fmt}]}"
+        echo "${trailing_comma}"
     done
 
     cat <<END
@@ -370,13 +548,42 @@ get_live_image_buildstamp
 get_disks
 get_hostname
 get_nic_mappings
+get_nic_tags
 get_network_interfaces
+if [[ ${DETECT_NICS} == "true" ]]; then
+    detect_nic_tags
+fi
 get_bootparams
 
-if [[ ${PARSABLE} == "true" ]]; then
-    output_parsable
-else
-    output_json
+# whenever we update the cache, update both
+if [[ ${CACHE} == "true" ]]; then
+    output_parsable >> ${CACHE_FILE_PARSABLE}.new \
+        && chmod 600 ${CACHE_FILE_PARSABLE}.new \
+        && mv ${CACHE_FILE_PARSABLE}.new ${CACHE_FILE_PARSABLE}
+    output_json >> ${CACHE_FILE_JSON}.new \
+        && chmod 600 ${CACHE_FILE_JSON}.new \
+        && mv ${CACHE_FILE_JSON}.new ${CACHE_FILE_JSON}
+fi
+
+# if we also want output, give it now
+if [[ -z ${UPDATE_ONLY} ]]; then
+    if [[ ${PARSABLE} == "true" ]]; then
+        if [[ -z ${CACHE} ]]; then
+            # We shouldn't read/write cache
+            output_parsable
+        else
+            cat ${CACHE_FILE_PARSABLE} \
+                || output_parsable
+        fi
+    else
+        if [[ -z ${CACHE} ]]; then
+            # We shouldn't read/write cache
+            output_json
+        else
+            cat ${CACHE_FILE_JSON} \
+                || output_json
+        fi
+    fi
 fi
 
 exit 0

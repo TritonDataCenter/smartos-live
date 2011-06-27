@@ -1,0 +1,1233 @@
+'\" te
+.\" Copyright (C) 2003, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH rpc.nisd 4 "18 Feb 2003" "SunOS 5.11" "File Formats"
+.SH NAME
+rpc.nisd \- configuration file for NIS+ service daemon
+.SH SYNOPSIS
+.LP
+.nf
+\fB/etc/default/rpc.nisd\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBrpc.nisd\fR file specifies configuration information for the \fBrpc.nisd\fR(1M) server. Configuration information can come from a combination of three places. It can be derived from LDAP. It can be specified in the \fBrpc.nisd\fR file. It can be specified on the \fBrpc.nisd\fR(1M) command line. The values in the \fBrpc.nisd\fR file override values obtained from the LDAP server.  Command line values supersede values in the configuration file.
+.sp
+.LP
+The \fBNIS+LDAPmapping\fR(4) file contains mapping information connecting  NIS+ object data to LDAP entries. See the \fBNIS+LDAPmapping\fR(4) manual page for an overview of the setup needed to map NIS+ data to or from LDAP. 
+.SS "Attributes"
+.sp
+.LP
+The \fBrpc.nisd\fR(1M) server recognizes the following attributes. Any values specified for these attributes in the \fBrpc.nisd\fR file, including an empty value, override values obtained from LDAP. However, the \fBnisplusLDAPconfig*\fR values are read from the \fBrpc.nisd\fR file or the command line only. They are not obtained from LDAP. 
+.sp
+.LP
+The following are attributes used for initial configuration.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPconfigDN\fR\fR
+.ad
+.sp .6
+.RS 4n
+The \fBDN\fR for configuration information. If empty,  all other \fBnisplusLDAPConfig*\fR values are ignored, in the expectation that all attributes are specified in this file or on the command line. When \fBnisplusLDAPConfigDN\fR is not specified at all, the \fBDN\fR is derived from the NIS+ domain name by default. If the domain name is \fBx.y.z.\fR, the default \fBnisplusLDAPconfigDN\fR is:
+.sp
+.in +2
+.nf
+nisplusLDAPconfigDN=dc=x,dc=y,dc=z
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPconfigPreferredServerList\fR\fR
+.ad
+.sp .6
+.RS 4n
+The list of servers to use for the configuration phase. There is no default. The following is an example of a value for \fBnisplusLDAPconfigPreferredServerList\fR:
+.sp
+.in +2
+.nf
+nisplusLDAPconfigPreferredServerList=127.0.0.1:389
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPconfigAuthenticationMethod\fR\fR
+.ad
+.sp .6
+.RS 4n
+The authentication method used to obtain the configuration information. The recognized values for \fBnisplusLDAPconfigAuthenticationMethod\fR are:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnone\fR\fR
+.ad
+.sp .6
+.RS 4n
+No authentication attempted.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsimple\fR\fR
+.ad
+.sp .6
+.RS 4n
+Password of proxy user sent in the clear to the LDAP server.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsasl/cram-md5\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use SASL/CRAM-MD5 authentication. This authentication method may not be supported by all LDAP servers. A password must be supplied.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsasl/digest-md5\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use SASL/DIGEST-MD5 authentication. This authentication method may not be supported by all LDAP servers. A password must be supplied.
+.RE
+
+There is no default value. The following is an example of a value for \fBnisplusLDAPconfigAuthenticationMethod\fR:
+.sp
+.in +2
+.nf
+nisplusLDAPconfigAuthenticationMethod=simple
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPconfigTLS\fR\fR
+.ad
+.sp .6
+.RS 4n
+The transport layer security used for the connection to the server. The recognized values are:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnone\fR\fR
+.ad
+.sp .6
+.RS 4n
+No encryption of transport layer data. This is the default value.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBssl\fR\fR
+.ad
+.sp .6
+.RS 4n
+SSL encryption of transport layer data.  A certificate is required. 
+.RE
+
+Export and import control restrictions may limit the availability of transport layer security.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPconfigTLSCertificateDBPath\fR\fR
+.ad
+.sp .6
+.RS 4n
+The name of the file containing the certificate database. The default path is \fB/var/nis\fR, and the default file name is \fBcert7.db\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPconfigProxyUser\fR\fR
+.ad
+.sp .6
+.RS 4n
+The proxy user used to obtain configuration information. There is no default value. If the value ends with a comma, the value of the \fBnisplusLDAPconfigDN\fR attribute is appended. For example:
+.sp
+.in +2
+.nf
+nisplusLDAPconfigProxyUser=cn=nisplusAdmin,ou=People,
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPconfigProxyPassword\fR\fR
+.ad
+.sp .6
+.RS 4n
+The password that should be supplied to LDAP for the proxy  user when the authentication method requires one. In order to avoid having this password publically visible on the machine, the password should only appear in the configuration file, and the file should have an appropriate owner, group, and file mode. There is no default value.
+.RE
+
+.sp
+.LP
+The following are attributes used for data retrieval. The object class name used for these attributes is \fBnisplusLDAPconfig\fR.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBpreferredServerList\fR\fR
+.ad
+.sp .6
+.RS 4n
+The list of servers to use when reading or writing mapped NIS+ data from or to LDAP. There is no default value.  For example:
+.sp
+.in +2
+.nf
+preferredServerList=127.0.0.1:389 
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBauthenticationMethod\fR\fR
+.ad
+.sp .6
+.RS 4n
+The authentication method to use when reading or writing mapped NIS+ data from or to LDAP. For recognized values, see the \fBLDAPconfigAuthenticationMethod\fR attribute. There is no default value. For example, 
+.sp
+.in +2
+.nf
+authenticationMethod=simple
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPTLS\fR\fR
+.ad
+.sp .6
+.RS 4n
+The transport layer security to use when reading or writing NIS+ data from or to LDAP. For recognized values,  see the \fBnisplusLDAPconfigTLS\fR attribute. The default value is  \fBnone\fR. Note that export and import control restrictions may limit the availability of transport layer security. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPTLSCertificateDBPath\fR\fR
+.ad
+.sp .6
+.RS 4n
+The name of the file containing the certificate \fBDB\fR. For recognized and default values, see the \fBnisplusLDAPconfigTLSCertificateDBPath\fR attribute.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdefaultSearchBase\fR\fR
+.ad
+.sp .6
+.RS 4n
+The default portion of the \fBDN\fR to use when reading or writing mapped NIS+ data from or to LDAP. The default is derived from the value of the \fBbaseDomain\fR attribute, which in turn usually defaults to the NIS+ domain name. If \fBnisplusLDAPbaseDomain\fR has the value \fBx.y.z\fR, the default \fBdefaultSearchBase\fR  is \fBdc=x,dc=y,dc=z\fR.  See the following sample attribute value:
+.sp
+.in +2
+.nf
+defaultSearchBase=dc=somewhere,dc=else
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPbaseDomain\fR\fR
+.ad
+.sp .6
+.RS 4n
+The domain to append when NIS+ object names are not fully qualified. The default is the domain the \fBrpc.nisd\fR daemon is  serving, or the first such domain, if there is more than one candidate.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPproxyUser\fR\fR
+.ad
+.sp .6
+.RS 4n
+Proxy user used by the \fBrpc.nisd\fR to read or write from or to LDAP. Assumed to have the appropriate permission  to read and modify LDAP data. There is no  default value. If the value ends in a comma, the value of the \fBdefaultSearchBase\fR attribute is appended.  For example:
+.sp
+.in +2
+.nf
+nisplusLDAPproxyUser=cn=nisplusAdmin,ou=People, 
+.fi
+.in -2
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPproxyPassword\fR\fR
+.ad
+.sp .6
+.RS 4n
+The password that should be supplied to LDAP for the proxy   user when the authentication method so requires. In order to avoid having this password publically visible on the machine, the password should only appear in the configuration file, and the file should have an appropriate owner, group, and file mode. There is no default value.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPbindTimeout\fR\fR
+.ad
+.br
+.na
+\fB\fBnisplusLDAPsearchTimeout\fR\fR
+.ad
+.br
+.na
+\fB\fBnisplusLDAPmodifyTimeout\fR\fR
+.ad
+.br
+.na
+\fB\fBnisplusLDAPaddTimeout\fR\fR
+.ad
+.br
+.na
+\fB\fBnisplusLDAPdeleteTimeout\fR\fR
+.ad
+.sp .6
+.RS 4n
+Establish timeouts for LDAP bind, search, modify, add,  and delete operations, respectively. The default value is 15 seconds for each one. Decimal values are allowed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPsearchTimeLimit\fR\fR
+.ad
+.sp .6
+.RS 4n
+Establish a value for the \fBLDAP_OPT_TIMELIMIT\fR option,  which suggests a time limit for the search operation on the LDAP server. The server may impose its own constraints  on possible values. See your LDAP server documentation. The default is the \fBnisplusLDAPsearchTimeout\fR value. Only  integer values are allowed.
+.sp
+Since the \fBnisplusLDAPsearchTimeout\fR limits the amount of time the client \fBrpc.nisd\fR will wait for completion of a search operation, setting the \fBnisplusLDAPsearchTimeLimit\fR   larger than the \fBnisplusLDAPsearchTimeout\fR is not recommended.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPsearchSizeLimit\fR\fR
+.ad
+.sp .6
+.RS 4n
+Establish a value for the \fBLDAP_OPT_SIZELIMIT\fR option, which suggests a size limit, in bytes, for the search results on the LDAP server. The server may impose its own constraints  on possible values. See your LDAP server documentation. The default is zero, which means unlimited. Only integer values are allowed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPfollowReferral\fR\fR
+.ad
+.sp .6
+.RS 4n
+Determines if the \fBrpc.nisd\fR should follow referrals or not.  Recognized values are \fByes\fR and \fBno\fR. The default value is \fBno\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusNumberOfServiceThreads\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the maximum number of RPC service threads that the \fBrpc.nisd\fR may use. Note that the \fBrpc.nisd\fR may create additional threads for certain tasks, so that the actual  number of threads running may be larger than the \fBnisplusNumberOfServiceThreads\fR value. 
+.sp
+The value of this attribute is a decimal integer from  zero to (2**31)-1, inclusive. Zero, which is the default,  sets the number of service threads to three plus the number of CPUs available when the \fBrpc.nisd\fR daemon starts. For example:
+.sp
+.in +2
+.nf
+nisplusNumberOfServiceThreads=16
+.fi
+.in -2
+
+.RE
+
+.sp
+.LP
+The following attributes specify the action to be taken when some event occurs. The values are all of the form \fBevent=action\fR. The default action is the first one listed for each event.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPinitialUpdateAction\fR\fR
+.ad
+.sp .6
+.RS 4n
+Provides the optional capability to update all NIS+ data from LDAP, or vice versa, when the \fBrpc.nisd\fR starts. Depending on various factors such as both NIS+ and LDAP server and network performance, as well as the amount of data to be uploaded or downloaded, these operations can consume very significant CPU and memory resources. During upload and download, the \fBrpc.nisd\fR has not yet registered with \fBrpcbind\fR, and provides no NIS+ service. When data is downloaded from LDAP, any new items added to the \fBrpc.nisd\fR's database get a \fBTTL\fR as for an initial load. See the description for the \fBnisplusLDAPentryTtl\fR attribute on \fBNIS+LDAPmapping\fR(4).
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnone\fR\fR
+.ad
+.sp .6
+.RS 4n
+No initial update in either direction. This is the default.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBfrom_ldap\fR\fR
+.ad
+.sp .6
+.RS 4n
+Causes the \fBrpc.nisd\fR to fetch data for all NIS+ objects it serves, and for which mapping entries are available, from the LDAP repository.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBto_ldap\fR\fR
+.ad
+.sp .6
+.RS 4n
+The \fBrpc.nisd\fR writes all NIS+ objects for which it is the master server, and for which mapping entries are available, to the LDAP repository.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPinitialUpdateOnly\fR\fR
+.ad
+.sp .6
+.RS 4n
+Use in conjunction with \fBnisplusLDAPinitialUpdateAction\fR.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBno\fR\fR
+.ad
+.sp .6
+.RS 4n
+Following the initial update, the \fBrpc.nisd\fR  starts serving NIS+ requests. This is the default.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fByes\fR\fR
+.ad
+.sp .6
+.RS 4n
+The \fBrpc.nisd\fR exits after the initial update.  This value is ignored if specified together with \fBnisplusLDAPinitialUpdateAction=none\fR.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPretrieveErrorAction\fR\fR
+.ad
+.sp .6
+.RS 4n
+If an error occurs while trying to retrieve an entry from LDAP, one of the following actions can be selected:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBuse_cached\fR\fR
+.ad
+.sp .6
+.RS 4n
+Action according to \fBnisplusLDAPrefreshError\fR  below. This is the default.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBretry\fR\fR
+.ad
+.sp .6
+.RS 4n
+Retry the retrieval the number of time specified by \fBnisplusLDAPretrieveErrorAttempts\fR, with the \fBnisplusLDAPretrieveErrorTimeout\fR value controlling the wait between each attempt.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBtry_again\fR\fR
+.ad
+.br
+.na
+\fB\fBunavail\fR\fR
+.ad
+.br
+.na
+\fB\fBno_such_name\fR\fR
+.ad
+.sp .6
+.RS 4n
+Return \fBNIS_TRYAGAIN\fR, \fBNIS_UNAVAIL\fR, or \fBNIS_NOSUCHNAME\fR, respectively, to the client. Note that the client code may not be prepared for this and can react in unexpected ways.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPretrieveErrorAttempts\fR\fR
+.ad
+.sp .6
+.RS 4n
+The number of times a failed retrieval should be retried. The default is unlimited. The \fBnisplusLDAPretrieveErrorAttempts\fR value is ignored unless \fBnisplusLDAPretrieveErrorAction=retry\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPretrieveErrorTimeout\fR\fR
+.ad
+.sp .6
+.RS 4n
+The timeout (in seconds) between each new attempt to retrieve LDAP data. The default is 15 seconds. The value for \fBnisplusLDAPretrieveErrorTimeout\fR is ignored unless  \fBnisplusLDAPretrieveErrorAction=retry\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPstoreErrorAction\fR\fR
+.ad
+.sp .6
+.RS 4n
+An error occurred while trying to store data to  the LDAP repository. 
+.sp
+.ne 2
+.mk
+.na
+\fB\fBretry\fR\fR
+.ad
+.sp .6
+.RS 4n
+Retry operation \fBnisplusLDAPstoreErrorAttempts\fR times with \fBnisplusLDAPstoreErrorTimeout\fR seconds between each attempt. Note that this may tie up a thread in the \fBrpc.nisd\fR daemon.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBsystem_error\fR\fR
+.ad
+.sp .6
+.RS 4n
+Return \fBNIS_SYSTEMERROR\fR to the client. 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBunavail\fR\fR
+.ad
+.sp .6
+.RS 4n
+Return \fBNIS_UNAVAIL\fR to the client. Note that the client code may not be prepared for this and can react in unexpected ways.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPstoreErrorAttempts\fR\fR
+.ad
+.sp .6
+.RS 4n
+The number of times a failed attempt to store should be retried. The default is unlimited. The value for \fBnisplusLDAPstoreErrorAttempts\fR is ignored unless \fBnisplusLDAPstoreErrorAction=retry\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPstoreErrortimeout\fR\fR
+.ad
+.sp .6
+.RS 4n
+The timeout, in seconds, between each new attempt to store LDAP data. The default is 15 seconds. The \fBnisplusLDAPstoreErrortimeout\fR value is ignored unless \fBnisplusLDAPstoreErrorAction=retry\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPrefreshErrorAction\fR\fR
+.ad
+.sp .6
+.RS 4n
+An error occured while trying to refresh a cache entry.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcontinue_using\fR\fR
+.ad
+.sp .6
+.RS 4n
+Continue using expired cache entry,  if one is available. Otherwise, the  action is \fBretry\fR. This is the default.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBretry\fR\fR
+.ad
+.sp .6
+.RS 4n
+Retry operation \fBnisplusLDAPrefreshErrorAttempts\fR times with \fBnisplusLDAPrefreshErrorTimeout\fR seconds between each attempt. Note that this may tie up a thread in the \fBrpc.nisd\fR daemon.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBcache_expired\fR\fR
+.ad
+.br
+.na
+\fB\fBtryagain\fR\fR
+.ad
+.sp .6
+.RS 4n
+Return \fBNIS_CACHEEXPIRED\fR or \fBNIS_TRYAGAIN\fR, respectively, to the client. Note that the client code may not be prepared for this and could  can react in unexpected ways. 
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPrefreshErrorAttempts\fR\fR
+.ad
+.sp .6
+.RS 4n
+The number of times a failed refresh should be retried. The default is unlimited. This applies to the \fBretry\fR and \fBcontinue_using\fR actions, but for the latter, only when there is no cached entry.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPrefreshErrorTimeout\fR\fR
+.ad
+.sp .6
+.RS 4n
+The timeout (in seconds) between each new attempt to refresh  data. The default is 15 seconds. The value for \fBnisplusLDAPrefreshErrorTimeout\fR applies to the \fBretry\fR and \fBcontinue_using\fR actions.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusThreadCreationErrorAction\fR\fR
+.ad
+.sp .6
+.RS 4n
+The action to take when an error occured while trying to  create a new thread. This only applies to threads controlled by the \fBrpc.nisd\fR daemon not to RPC service threads. An example of threads controlled by the \fBrpc.nisd\fR daemon are those created to serve \fBnis_list\fR(3NSL) with callback, as used by \fBniscat\fR(1) to enumerate tables.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBpass_error\fR\fR
+.ad
+.sp .6
+.RS 4n
+Pass on the thread creation error to the client, to the extent allowed  by the available NIS+ error codes. The error might be \fBNIS_NOMEMORY\fR, or another resource shortage error. This action is the default.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBretry\fR\fR
+.ad
+.sp .6
+.RS 4n
+Retry operation \fBnisplusThreadCreationErrorAttempts\fR times, waiting \fBnisplusThreadCreationErrorTimeout\fR seconds between each attempt. Note that this may tie up a thread in the \fBrpc.nisd\fR daemon. 
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusThreadCreationErrorAttempts\fR\fR
+.ad
+.sp .6
+.RS 4n
+The number of times a failed thread creation should be retried. The default is unlimited. The value for \fBnisplusThreadCreationErrorAttempts\fR is ignored unless the  \fBnisplusThreadCreationErrorAction=retry\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusThreadCreationErrorTimeout\fR\fR
+.ad
+.sp .6
+.RS 4n
+The number of seconds to wait between each new attempt  to create a thread. The default is 15 seconds. Ignored unless \fBnisplusThreadCreationErrorAction=retry\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusDumpError\fR\fR
+.ad
+.sp .6
+.RS 4n
+An error occurred during a full dump of a NIS+ directory  from the master to a replica. The replica can: 
+.sp
+.ne 2
+.mk
+.na
+\fB\fBretry\fR\fR
+.ad
+.sp .6
+.RS 4n
+Retry operation \fBnisplusDumpErrorAttempts\fR times  waiting \fBnisplusDumpErrorTimeout\fR seconds between each attempt. Note that this may tie up a thread in the \fBrpc.nisd\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBrollback\fR\fR
+.ad
+.sp .6
+.RS 4n
+Try to roll back the changes made so far before retrying per the \fBretry\fR action. If the rollback fails or cannot be performed due to the selected \fBResyncServiceAction\fR level, the \fBretry\fR action is selected.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusDumpErrorAttempts\fR\fR
+.ad
+.sp .6
+.RS 4n
+The number of times a failed full dump should be retried.   The default is unlimited. When the number of retry attempts has been used up, the full dump is abandoned, and will not  be retried again until a resync fails because no update time  is available.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusDumpErrorTimeout\fR\fR
+.ad
+.sp .6
+.RS 4n
+The number of seconds to wait between each attempt to execute a full dump. The default is 120 seconds.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusResyncService\fR\fR
+.ad
+.sp .6
+.RS 4n
+Type of NIS+ service to be provided by a replica during resync, that is, data transfer from NIS+ master to NIS+ replica. This includes both partial and full resyncs.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBfrom_copy\fR\fR
+.ad
+.sp .6
+.RS 4n
+Service is provided from a copy of the directory to be resynced  while the resync is in progress. Rollback is  possible if an error occurs. Note that making a copy of the directory may require a significant amount of time, depending on the size of the tables in the directory and available memory  on the system.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBdirectory_locked\fR\fR
+.ad
+.sp .6
+.RS 4n
+While the resync for a directory is in progress, it is locked against access. Operations to the directory are blocked until the resync is done. Rollback is not possible.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBfrom_live\fR\fR
+.ad
+.sp .6
+.RS 4n
+The replica database is updated in  place. Rollback is not possible. If there are dependencies between individual updates in the resync, clients may be exposed to data inconsistencies   during the resync. In particular, directories  or tables may disappear for a time during a full dump.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusUpdateBatching\fR\fR
+.ad
+.sp .6
+.RS 4n
+How updates should be batched together on the master.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBaccumulate\fR\fR
+.ad
+.sp .6
+.RS 4n
+Accumulate updates for at least  \fBnisplusUpdateBatchingTimeout\fR seconds. Any update that comes in before the timeout has occured will reset the timeout counter. Thus, a steady  stream of updates less than \fBnisplusUpdateBatchingTimeout\fR seconds apart could delay pinging  replicas indefinitely.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBbounded_accumulate\fR\fR
+.ad
+.sp .6
+.RS 4n
+Accumulate updates for at least \fBnisplusUpdateBatchingTimeout\fR seconds. The default value for \fBtimeout\fR is 120 seconds. Incoming updates do not reset the timeout counter, so replicas will be informed once the initial timeout has expired.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnone\fR\fR
+.ad
+.sp .6
+.RS 4n
+Updates are not batched. Instead,  replicas are informed immediately of any update. While this should  maximize data consistency between master and replicas, it can also cause considerable overhead on both master and replicas.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusUpdateBatchingTimeout\fR\fR
+.ad
+.sp .6
+.RS 4n
+The minimum time (in seconds) during which to accumulate  updates. Replicas will not be pinged during this time.  The default is 120 seconds.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusLDAPmatchFetchAction\fR\fR
+.ad
+.sp .6
+.RS 4n
+A NIS+ match operation, that is, any search other than a table enumeration, will encounter one of the following situations:
+.RS +4
+.TP
+1.
+Table believed to be entirely in cache, and all cached entries are known to be valid. The cached  tabled data is authoritative for the match operation. 
+.RE
+.RS +4
+.TP
+2.
+Table wholly or partially cached, but there may be individual entries that have timed out.
+.RE
+.RS +4
+.TP
+3.
+No cached entries for the table. Always attempt to retrieve matching data from LDAP.
+.RE
+When the table is wholly or partially cached, the action for the \fBnisplusLDAPmatchFetchAction\fR attribute controls whether or not the LDAP repository is  searched:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBno_match_only\fR\fR
+.ad
+.sp .6
+.RS 4n
+Only go to LDAP when there is no match at all on the search of the available NIS+ data, or the match includes at least one entry that has timed out.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBalways\fR\fR
+.ad
+.sp .6
+.RS 4n
+Always make an LDAP lookup.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnever\fR\fR
+.ad
+.sp .6
+.RS 4n
+Never make an LDAP lookup.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBnisplusMaxRPCRecordSize\fR\fR
+.ad
+.sp .6
+.RS 4n
+Sets the maximum RPC record size that NIS+ can use over connection oriented transports. The minimum record size is 9000, which is the default. The default value will be used in place of any value less than 9000. The value of this attribute is a decimal integer from 9000 to 2^31, inclusive.
+.RE
+
+.SS "Storing Configuration Attributes in LDAP"
+.sp
+.LP
+Most attributes described on this man page, as well as those from \fBNIS+LDAPmapping\fR(4), can be stored in LDAP. In order to do so, you will need to add the following definitions to your LDAP server, which are described here in LDIF format suitable for use by \fBldapadd\fR(1).   The attribute and object class OIDs are examples only.
+.sp
+.in +2
+.nf
+dn: cn=schema
+changetype: modify
+add: attributetypes
+OIDattributetypes: ( 1.3.6.1.4.1.11.1.3.1.1.1 \e
+          NAME 'defaultSearchBase' \e
+          DESC 'Default LDAP base DN used by a DUA' \e
+          EQUALITY distinguishedNameMatch \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.11.1.3.1.1.2 \e
+          NAME 'preferredServerList' \e
+          DESC 'Preferred LDAP server host addresses used by DUA' \e
+          EQUALITY caseIgnoreMatch \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.11.1.3.1.1.6 \e
+          NAME 'authenticationMethod' \e
+          DESC 'Authentication method used to contact the DSA' \e
+          EQUALITY caseIgnoreMatch \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )
+.fi
+.in -2
+
+.sp
+.in +2
+.nf
+dn: cn=schema
+changetype: modify
+add: attributetypes
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.0 \e
+          NAME 'nisplusLDAPTLS' \e
+          DESC 'Transport Layer Security' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.1 \e
+          NAME 'nisplusLDAPTLSCertificateDBPath' \e
+          DESC 'Certificate file' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.2 \e
+          NAME 'nisplusLDAPproxyUser' \e
+          DESC 'Proxy user for data store/retrieval' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.3 \e
+          NAME 'nisplusLDAPproxyPassword' \e
+          DESC 'Password/key/shared secret for proxy user' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.4 \e
+          NAME 'nisplusLDAPinitialUpdateAction' \e
+          DESC 'Type of initial update' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.5 \e
+          NAME 'nisplusLDAPinitialUpdateOnly' \e
+          DESC 'Exit after update ?' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.6 \e
+          NAME 'nisplusLDAPretrieveErrorAction' \e
+          DESC 'Action following an LDAP search error' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.7 \e
+          NAME 'nisplusLDAPretrieveErrorAttempts' \e
+          DESC 'Number of times to retry an LDAP search' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.8 \e
+          NAME 'nisplusLDAPretrieveErrorTimeout' \e
+          DESC 'Timeout between each search attempt' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.9 \e
+          NAME 'nisplusLDAPstoreErrorAction' \e
+          DESC 'Action following an LDAP store error' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.10 \e
+          NAME 'nisplusLDAPstoreErrorAttempts' \e
+          DESC 'Number of times to retry an LDAP store' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.11 \e
+          NAME 'nisplusLDAPstoreErrorTimeout' \e
+          DESC 'Timeout between each store attempt' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.12 \e
+          NAME 'nisplusLDAPrefreshErrorAction' \e
+          DESC 'Action when refresh of NIS+ data from LDAP fails' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.13 \e
+          NAME 'nisplusLDAPrefreshErrorAttempts' \e
+          DESC 'Number of times to retry an LDAP refresh' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.14 \e
+          NAME 'nisplusLDAPrefreshErrorTimeout' \e
+          DESC 'Timeout between each refresh attempt' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.15 \e
+          NAME 'nisplusNumberOfServiceThreads' \e
+          DESC 'Max number of RPC service threads' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.16 \e
+          NAME 'nisplusThreadCreationErrorAction' \e
+          DESC 'Action when a non-RPC-service thread creation fails' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.17 \e
+          NAME 'nisplusThreadCreationErrorAttempts' \e
+          DESC 'Number of times to retry thread creation' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.18 \e
+          NAME 'nisplusThreadCreationErrorTimeout' \e
+          DESC 'Timeout between each thread creation attempt' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.19 \e
+          NAME 'nisplusDumpErrorAction' \e
+          DESC 'Action when a NIS+ dump fails' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.20 \e
+          NAME 'nisplusDumpErrorAttempts' \e
+          DESC 'Number of times to retry a failed dump' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.21 \e
+          NAME 'nisplusDumpErrorTimeout' \e
+          DESC 'Timeout between each dump attempt' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.22 \e
+          NAME 'nisplusResyncService' \e
+          DESC 'Service provided during a resync' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.23 \e
+          NAME 'nisplusUpdateBatching' \e
+          DESC 'Method for batching updates on master' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.24 \e
+          NAME 'nisplusUpdateBatchingTimeout' \e
+          DESC 'Minimum time to wait before pinging replicas' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.25 \e
+          NAME 'nisplusLDAPmatchFetchAction' \e
+          DESC 'Should pre-fetch be done ?' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.26 \e
+          NAME 'nisplusLDAPbaseDomain' \e
+          DESC 'Default domain name used in NIS+/LDAP mapping' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 SINGLE-VALUE )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.27 \e
+          NAME 'nisplusLDAPdatabaseIdMapping' \e
+          DESC 'Defines a database id for a NIS+ object' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.28 \e
+          NAME 'nisplusLDAPentryTtl' \e
+          DESC 'TTL for cached objects derived from LDAP' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.29 \e
+          NAME 'nisplusLDAPobjectDN' \e
+          DESC 'Location in LDAP tree where NIS+ data is stored' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.30 \e
+          NAME 'nisplusLDAPcolumnFromAttribute' \e
+          DESC 'Rules for mapping LDAP attributes to NIS+ columns' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+attributetypes: ( 1.3.6.1.4.1.42.2.27.5.42.42.18.31 \e
+          NAME 'nisplusLDAPattributeFromColumn' \e
+          DESC 'Rules for mapping NIS+ columns to LDAP attributes' \e
+          SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+
+dn: cn=schema
+changetype: modify
+add: objectclasses
+objectclasses:  ( 1.3.6.1.4.1.42.2.27.5.42.42.19.0 \e
+          NAME 'nisplusLDAPconfig' \e
+          DESC 'NIS+/LDAP mapping configuration' \e
+          SUP top STRUCTURAL MUST ( cn ) \e
+          MAY ( preferredServerList $ defaultSearchBase $
+            authenticationMethod $ nisplusLDAPTLS $
+            nisplusLDAPTLSCertificateDBPath $
+            nisplusLDAPproxyUser $ nisplusLDAPproxyPassword $
+            nisplusLDAPinitialUpdateAction $
+            nisplusLDAPinitialUpdateOnly $
+            nisplusLDAPretrieveErrorAction $
+            nisplusLDAPretrieveErrorAttempts $
+            nisplusLDAPretrieveErrorTimeout $
+            nisplusLDAPstoreErrorAction $
+            nisplusLDAPstoreErrorAttempts $
+            nisplusLDAPstoreErrorTimeout $
+            nisplusLDAPrefreshErrorAction $
+            nisplusLDAPrefreshErrorAttempts $
+            nisplusLDAPrefreshErrorTimeout $
+            nisplusNumberOfServiceThreads $
+            nisplusThreadCreationErrorAction $
+            nisplusThreadCreationErrorAttempts $
+            nisplusThreadCreationErrorTimeout $
+            nisplusDumpErrorAction $
+            nisplusDumpErrorAttempts $
+            nisplusDumpErrorTimeout $
+            nisplusResyncService $ nisplusUpdateBatching $
+            nisplusUpdateBatchingTimeout $
+            nisplusLDAPmatchFetchAction $
+            nisplusLDAPbaseDomain $
+            nisplusLDAPdatabaseIdMapping $
+            nisplusLDAPentryTtl $
+            nisplusLDAPobjectDN $
+            nisplusLDAPcolumnFromAttribute $
+            nisplusLDAPattributeFromColumn ) )
+.fi
+.in -2
+
+.sp
+.LP
+Create a file containing the following LDIF data. Substitute your actual search base for \fIsearchBase\fR, and your fully qualified domain name for \fIdomain\fR:
+.sp
+.in +2
+.nf
+dn: cn=\fIdomain\fR,\fIsearchBase\fR
+cn: \fIdomain\fR
+objectClass: top
+objectClass: nisplusLDAPconfig
+.fi
+.in -2
+
+.sp
+.LP
+Use this file as input to the \fBldapadd\fR(1) command in order to create the NIS+/LDAP configuration entry. Initially, the entry  is empty. You can use the \fBldapmodify\fR(1) command to add  configuration attributes. 
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRCreating a NIS+/LDAP Configuration Entry
+.sp
+.LP
+To set the \fBnisplusNumberOfServiceThreads\fR attribute to \fB32\fR, create the following file and use it as input to \fBldapmodify\fR(1):
+
+.sp
+.in +2
+.nf
+dn: cn=\fIdomain\fR,\fIsearchBase\fR
+nisplusNumberOfServiceThreads: 32
+.fi
+.in -2
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5)  for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWnisr
+_
+Interface Stability(Obsolete)
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBnisldapmaptest\fR(1M), \fBrpc.nisd\fR(1M), \fBNIS+LDAPmapping\fR(4), \fBattributes\fR(5)
+.sp
+.LP
+\fISystem Administration Guide: Naming and Directory Services (DNS, NIS, and LDAP)\fR

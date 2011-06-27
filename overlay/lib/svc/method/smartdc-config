@@ -56,9 +56,35 @@ set_ntp_hosts() {
 case "$1" in
 'start')
 
+    # If we're a headnode, see if we have to do interactive configuration.
+    if /bin/bootparams | grep "^headnode=true" > /dev/null 2>&1; then
+        USB_PATH=/mnt/`svcprop -p "joyentfs/usb_mountpoint" svc:/system/filesystem/smartdc:default`
+
+        # Check for config and run interactive if it doesn't exist.
+        if [[ ! -f ${USB_PATH}/config ]]; then
+            if [ `/bin/bootparams | grep "^noimport=true" >/dev/null` ]; then
+                # Skipping interactive config, bypass rest of script.
+                exit $SMF_EXIT_OK
+            fi
+
+            ${USB_PATH}/scripts/prompt-config.sh "${USB_PATH}" \
+                </dev/console >&/dev/console
+
+            # If user quit from interactive configuration then we're done.
+            [[ ! -f ${USB_PATH}/config ]] && exit $SMF_EXIT_OK
+        fi
+    fi
+
     # This puts config vars in CONFIG_
     load_sdc_config
     load_sdc_sysinfo
+
+    # Write the info about this datacenter to /.dcinfo so we can use in the GZ
+    echo "SDC_DATACENTER_NAME='${CONFIG_datacenter_name}'" > /.dcinfo
+    if [[ "${SYSINFO_Bootparam_headnode}" == "true" ]]; then
+        echo "SDC_DATACENTER_HEADNODE_ID=${CONFIG_datacenter_headnode_id}" \
+            >> /.dcinfo
+    fi
 
     # Boot parameter takes precidence over config
     if [[ -n "${SYSINFO_Bootparam_root_shadow}" ]]; then
@@ -122,6 +148,11 @@ case "$1" in
             echo "Set default ntp hosts (${servers})."
         fi
     fi
+    # set the keymap. For dvorak for instance
+    if [[ -n ${CONFIG_default_keymap} ]]; then
+        /usr/bin/loadkeys ${CONFIG_default_keymap}
+    fi
+
 
     ;;
 

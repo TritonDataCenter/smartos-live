@@ -5,10 +5,22 @@
 // See <https://github.com/trentm/json>.
 //
 
-var VERSION = "1.1.4";
+var VERSION = "1.2.1";
 
 var sys = require('sys');
-var Script = process.binding('evals').Script;
+var runInNewContext;
+try {
+  runInNewContext = require('vm').runInNewContext;
+} catch (ex) {
+  runInNewContext = process.binding('evals').Script.runInNewContext;  // node v0.2
+}
+//var runInNewContext = process.binding('evals').Script.runInNewContext;
+
+
+//--- exports for module usage
+
+exports.main = main;
+exports.parseLookup = parseLookup;
 
 
 
@@ -102,6 +114,7 @@ function parseArgv(argv) {
         break;
     } 
   }
+  //TODO: '--' handling and error on a first arg that looks like an option.
 
   return parsed;
 }
@@ -114,6 +127,119 @@ function warn(o) {
 function isInteger(s) {
   return (s.search(/^-?[0-9]+$/) == 0);
 }
+
+
+// Parse a lookup string into a list of lookup bits. E.g.:
+//    "a.b.c" -> ["a","b","c"]
+//    "b['a']" -> ["b","['a']"]
+function parseLookup(lookup) {
+  //var debug = console.warn;
+  var debug = function() {};
+  
+  var bits = [];
+  debug("\n*** "+lookup+" ***")
+
+  bits = [];
+  var bit = "";
+  var states = [null];
+  var escaped = false;
+  var ch = null;
+  for (var i=0; i < lookup.length; ++i) {
+    var escaped = (!escaped && ch === '\\');
+    var ch = lookup[i];
+    debug("-- i="+i+", ch="+JSON.stringify(ch)+" escaped="+JSON.stringify(escaped))
+    debug("states: "+JSON.stringify(states))
+
+    if (escaped) {
+      bit += ch;
+      continue;
+    }
+
+    switch (states[states.length-1]) {
+    case null:
+      switch (ch) {
+      case '"':
+      case "'":
+        states.push(ch);
+        bit += ch;
+        break;
+      case '[':
+        states.push(ch);
+        if (bit !== "") {
+          bits.push(bit);
+          bit = ""
+        }
+        bit += ch;
+        break;
+      case '.':
+        if (bit !== "") {
+          bits.push(bit);
+          bit = ""
+        }
+        break;
+      default:
+        bit += ch;
+        break;
+      }
+      break;
+
+    case '[':
+      bit += ch;
+      switch (ch) {
+      case '"':
+      case "'":
+      case '[':
+        states.push(ch);
+        break;
+      case ']':
+        states.pop();
+        if (states[states.length-1] === null) {
+          bits.push(bit);
+          bit = ""
+        }
+        break;
+      }
+      break;
+
+    case '"':
+      bit += ch;
+      switch (ch) {
+      case '"':
+        states.pop();
+        if (states[states.length-1] === null) {
+          bits.push(bit);
+          bit = ""
+        }
+        break;
+      }
+      break;
+
+    case "'":
+      bit += ch;
+      switch (ch) {
+      case "'":
+        states.pop();
+        if (states[states.length-1] === null) {
+          bits.push(bit);
+          bit = ""
+        }
+        break;
+      }
+      break;
+    }
+    debug("bit: "+JSON.stringify(bit))
+    debug("bits: "+JSON.stringify(bits))
+  }
+
+  if (bit !== "") {
+    bits.push(bit);
+    bit = ""
+  }
+
+  debug(JSON.stringify(lookup)+" -> "+JSON.stringify(bits))
+  return bits
+}
+
 
 
 //---- mainline
@@ -130,8 +256,8 @@ function main(argv) {
     return;
   }
   if (args.extra.length) {
-    sys.puts("error: too many arguments: extra="+args.extra);
-    return 1;
+    sys.puts("json: error: too many arguments: extra="+args.extra);
+    process.exit(1);
   }
   
   var buffer = "";
@@ -144,19 +270,26 @@ function main(argv) {
   
   stdin.on('end', function () {
     // Take off a leading HTTP header if any and pass it through.
-    if (buffer.slice(0,5) === "HTTP/") {
-      var index = buffer.indexOf('\r\n\r\n');
-      var sepLen = 4;
-      if (index == -1) {
-        index = buffer.indexOf('\n\n');
-        sepLen = 2;
-      }
-      if (index != -1) {
-        if (! args.dropHeaders) {
-          process.stdout.write(buffer.slice(0, index+sepLen));
+    while (true) {
+      if (buffer.slice(0,5) === "HTTP/") {
+        var index = buffer.indexOf('\r\n\r\n');
+        var sepLen = 4;
+        if (index == -1) {
+          index = buffer.indexOf('\n\n');
+          sepLen = 2;
         }
-        buffer = buffer.slice(index+sepLen);
+        if (index != -1) {
+          if (! args.dropHeaders) {
+            process.stdout.write(buffer.slice(0, index+sepLen));
+          }
+          var is100Continue = (buffer.slice(0, 21) === "HTTP/1.1 100 Continue");
+          buffer = buffer.slice(index+sepLen);
+          if (is100Continue) {
+            continue;
+          }
+        }
       }
+      break;
     }
 
     // Expect the remainder to be JSON.
@@ -169,41 +302,17 @@ function main(argv) {
     } catch(ex) {
       // Doesn't look like JSON. Just print it out and move on.
       if (! args.quiet) {
-        warn("warning: doesn't look like JSON: "+ex+" (buffer="+JSON.stringify(buffer)+")");
+        warn("json: error: doesn't look like JSON: "+ex+" (buffer="+JSON.stringify(buffer)+")");
       }
       process.stdout.write(buffer);
       if (buffer.length && buffer[buffer.length-1] !== "\n") {
         process.stdout.write('\n');
       }
-      return;
+      process.exit(1);
     }
     
     if (args.lookup) {
-      // Parse command line lookup string into separate parts of the lookup.
-      var split = args.lookup.split(/(\.|\[)/);
-      var bits = [];
-      var save = null;
-      for (var i=0; i < split.length; i++) {
-        var bit = split[i];
-        switch (bit) {
-        case '':
-          break;
-        case '.':
-          save = null;
-          break;
-        case '[':
-          save = bit;
-          break;
-        default:
-          if (save) {
-            bits.push(save + bit);
-          } else {
-            bits.push(bit);
-          }
-          save = null;
-          break;
-        }
-      }
+      var bits = parseLookup(args.lookup);
 
       // Put it back together with some convenience transformations.
       lookup = "";
@@ -220,30 +329,31 @@ function main(argv) {
         }
       }
 
-      data = Script.runInNewContext("(" + JSON.stringify(data) + ")" + lookup);
+      data = runInNewContext("(" + JSON.stringify(data) + ")" + lookup);
     }
     
     // Print out results.
+    var output = null;
     if (args.outputSysInspect) {
-      process.stdout.write(sys.inspect(data, false, Infinity, true));
+      output = sys.inspect(data, false, Infinity, true);
     } else if (args.outputJSON) {
       if (typeof data !== 'undefined') {
-        process.stdout.write(JSON.stringify(data, null, 2));
+        output = JSON.stringify(data, null, 2);
       }
     } else {
       if (typeof data === 'string') {
-        process.stdout.write(data);
+        output = data;
       } else if (typeof data !== 'undefined') {
-        process.stdout.write(JSON.stringify(data, null, 2));
+        output = JSON.stringify(data, null, 2);
       }
     }
-    process.stdout.write('\n');
+    if (output && output.length) {
+      process.stdout.write(output);
+      process.stdout.write('\n');
+    }
   });
 }
 
 if (require.main === module) {
-  var retval = main(process.argv);
-  if (retval) {
-    process.exit(retval);
-  }
+  main(process.argv);
 }

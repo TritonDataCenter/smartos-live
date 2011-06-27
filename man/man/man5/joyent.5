@@ -1,0 +1,57 @@
+'\" te
+.\"  Copyright (c) 2011, Joyent, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License"). You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing. See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE. If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH joyent 5 "8 Mar 2011" "SunOS 5.11" "Standards, Environments, and Macros"
+.SH NAME
+joyent \- Joyent branded zone
+.SH DESCRIPTION
+.sp
+.LP
+The \fBjoyent\fR brand uses the branded zones framework described in \fBbrands\fR(5) to implement Joyent SmartMachines.
+.sp
+.LP
+.SS "Configuration and Administration"
+.sp
+.LP
+The \fBjoyent\fR brand supports a file system model similar to the now obsolete sparse root model. You cannot use the defunct \fBinherit-pkg-dir\fR resource with the \fBjoyent\fR brand, but the brand itself will share the /lib, /sbin and /usr directories with the global zone.  The brand provides zone-writable /lib/svc/manifest/site and /usr/local directories.
+.sp
+.LP
+The \fBjoyent\fR brand provides VNICs on-demand for exclusive stack zones.  When the zone boots, a VNIC will be created on the specified global-nic and destroyed when the zone shuts down.
+.sp
+The following \fBnet\fR properties are supported by the brand:
+.sp
+.ne 2
+.mk
+.na
+\fBblocked-outgoing-ports\fR
+.ad
+.sp .6
+.RS 4n
+Blocks network traffic on the specified list of ports.
+.RE
+
+.sp
+.LP
+The \fBzonecfg\fR(1M) utility is used to configure an \fBjoyent\fR branded zone. Once a branded zone has been installed, that zone's brand cannot be changed or removed. The \fBzoneadm\fR(1M) utility is used to report the zone's brand type and administer the zone. The \fBzlogin\fR(1) utility is used to log in to the zone.
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for a description of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+Interface StabilityEvolving
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBmdb\fR(1), \fBzlogin\fR(1), \fBzonename\fR(1), \fBdtrace\fR(1M), \fBzoneadm\fR(1M), \fBzonecfg\fR(1M), \fBbrands\fR(5), \fBzones\fR(5)

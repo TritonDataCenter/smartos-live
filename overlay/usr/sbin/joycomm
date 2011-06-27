@@ -1,6 +1,26 @@
 #!/bin/sh
-
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
 # Copyright 2011 Joyent, Inc.  All rights reserved.
+#
 
 PATH=/usr/bin:/usr/sbin
 export PATH
@@ -8,31 +28,42 @@ unset LD_LIBRARY_PATH
 
 OPT_V=0
 OPT_X=0
-while getopts "vx" opt
+while getopts "R:vx" opt
 do
 	case "$opt" in
+		R)	DAYS="$OPTARG";;
 		v)	OPT_V="1";;
 		x)	OPT_X="1";;
-		*)	echo "usage: [-v] [-x]"
+		*)	echo "usage: [-R days] [-v] [-x]"
 			exit 1
 			;;
 	esac
 done
 shift OPTIND-1
 
-f=`ls /var/audit/2* | wc -l`
+if [[ -n $DAYS ]]; then
+	# Rotate and trim the audit logs
+	audit -n
+	cd /var/audit
+	find . -mtime +$DAYS -exec rm -f "{}" \; 
+	exit 0
+fi
+
+f=`ls /var/audit/* | wc -l`
 if [ $f -eq 0 ]; then
 	echo "no audit files"
 	exit 0
 fi
 
 if [ $OPT_X -eq 1 ]; then
-	files=/var/audit/2*not_terminated*
+	files=/var/audit/*
 else
-	files=/var/audit/2*
+	files=`ls -t /var/audit/*not* | head -1`
 fi
 
-praudit -x $files | nawk -v verbose=$OPT_V '{
+for i in $files
+do
+    praudit -x $i | nawk -v verbose=$OPT_V '{
 	if ($1 == "<record") {
 		pos = index($0, "iso8601=");
 		if (pos == 0) {
@@ -81,4 +112,5 @@ praudit -x $files | nawk -v verbose=$OPT_V '{
 	} else if ($1 == "</record>") {
 		printf("%s\n", cmd);
 	}
-}'
+    }'
+done

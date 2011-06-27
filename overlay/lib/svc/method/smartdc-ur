@@ -32,6 +32,7 @@ PATH=/usr/sbin:/usr/bin; export PATH
 
 if /bin/bootparams | grep "^standalone=true" > /dev/null 2>&1; then
     # Standalone machines don't need Ur
+    svcadm disable smartdc/agent/ur
     exit $SMF_EXIT_OK
 fi
 
@@ -61,7 +62,7 @@ case "$1" in
     export AMQP_HOST=$(echo $rabbit | cut -d: -f3)
     export AMQP_PORT=$(echo $rabbit | cut -d: -f4)
 
-    /joyent/ur-agent/ur-agent 2>&1 &
+    /smartdc/ur-agent/ur-agent 2>&1 &
 
     ;;
 

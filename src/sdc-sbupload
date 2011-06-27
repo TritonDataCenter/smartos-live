@@ -1,0 +1,37 @@
+#!/bin/bash
+
+if [[ $# != 1 || ! -f $1 ]]; then
+    echo "Usage: $0 <filename>"
+    exit 1
+fi
+
+OUTFILE=$1
+
+. /lib/sdc/config.sh
+load_sdc_config
+load_sdc_sysinfo
+
+JOYENT_KEY=/smartdc/pubkey.key
+ENCRYPTED_OUT=${OUTFILE}.${SYSINFO_UUID}.`TZ=UTC date "+%Y%m%dT%H%M%SZ"`
+
+function encrypt_bundle
+{
+    gpg --import $JOYENT_KEY
+    gpg --encrypt --recipient 'support@joyent.com' --always-trust --output $ENCRYPTED_OUT $OUTFILE
+}
+
+function upload_bundle
+{
+    # no DNS, resolve the server
+    hostname=$(echo $CONFIG_sbapi_url | cut -f3 -d "/" | cut -f1 -d ":")
+    ip=$(dig $hostname +short)
+    # replace the host.domain with ip address, then ensure there's always a trailing /
+    with_ip=$(echo $CONFIG_sbapi_url | sed  "s|\(.*\)$hostname\(.*\)|\1$ip\2|" | sed 's|/*$|/|')
+
+    curl -k -T ${ENCRYPTED_OUT} -u ${CONFIG_sbapi_http_user}:${CONFIG_sbapi_http_pass} ${with_ip}
+
+}
+
+encrypt_bundle
+upload_bundle
+

@@ -51,45 +51,15 @@ if smf_is_globalzone; then
 
     # The next commands are for logging purposes only
     echo "== debug start: before =="
-    dladm show-phys
-    dladm show-linkprop
-    /sbin/ifconfig -a
+    if ! dladm show-phys; then
+        echo "WARNING: 'dladm show-phys' failed"
+    fi
+    # NOTE: DO NOT do a 'dladm show-linkprop' when using the bnx driver,
+    # as it puts it into an unusable state!
+    if ! /sbin/ifconfig -a; then
+        echo "WARNING: 'ifconfig -a' failed"
+    fi
     echo "== debug end: before =="
-
-    #
-    # Use the MAC address to sort the NICs and rename any that are out of
-    # order so that we always get a consistent name for each NIC.
-    #
-    dladm show-phys -m -o ADDRESS,LINK | sort | nawk '{
-    if ($1 == "ADDRESS")
-        next
-
-    l = length($2)
-
-    pos = match($2, "[0-9]+$")
-    if (pos == 0)
-        next
-
-    nm = substr($2, 1, pos - 1)
-    id = substr($2, pos)
-
-    i = idx[nm]++;
-    if (id == i)
-        next
-
-    new_name = nm i
-    tmp_name = "tmp_" nm i
-
-    cmd = "dladm rename-link " $2 " " tmp_name
-    cleanup[tmp_name] = new_name
-    system(cmd)
-    }
-    END {
-    for (i in cleanup) {
-        cmd = "dladm rename-link " i " " cleanup[i]
-        system(cmd)
-    }
-    }'
 
     # Load sysinfo variables with SYSINFO_ prefix
     load_sdc_sysinfo
@@ -100,8 +70,10 @@ if smf_is_globalzone; then
     if [[ -n ${SYSINFO_NIC_admin} ]]; then
         ifconfig ${SYSINFO_NIC_admin} plumb
         if [[ ${headnode} == "true" ]]; then
-            if [[ -n ${CONFIG_admin_ip} ]] && [[ -n ${CONFIG_admin_netmask} ]]; then
-                ifconfig ${SYSINFO_NIC_admin} inet ${CONFIG_admin_ip} netmask ${CONFIG_admin_netmask} up
+            if [[ -n ${CONFIG_admin_ip} ]] && [[ -n ${CONFIG_admin_netmask} ]];
+            then
+                ifconfig ${SYSINFO_NIC_admin} inet ${CONFIG_admin_ip} \
+                    netmask ${CONFIG_admin_netmask} up
                 ADMIN_NIC_UP=true
 
                 # also setup resolv.conf if we can
@@ -124,6 +96,9 @@ if smf_is_globalzone; then
         if [[ "${ADMIN_NIC_UP}" == "true" ]] && [[ ${SYSINFO_Product} == "VMware Virtual Platform" ]]; then
             dladm create-bridge -l ${SYSINFO_NIC_admin} vmwarebr
         fi
+    else
+        echo "ERROR: admin NIC not found, unable to bring up admin network."
+        exit ${SMF_EXIT_ERR_CONFIG}
     fi
 
     # Setup external NIC -- only headnode because non-headnodes don't assign
@@ -132,8 +107,8 @@ if smf_is_globalzone; then
         if [[ -n "${CONFIG_external_ip}" ]]; then
             iface=${SYSINFO_NIC_external}
             if [[ -n ${CONFIG_external_vlan_id} ]]; then
-                dladm create-vnic -l ${iface} -v ${CONFIG_external_vlan_id} global0
-                iface="global0"
+                dladm create-vnic -l ${iface} -v ${CONFIG_external_vlan_id} gz_external0
+                iface="gz_external0"
             fi
             ifconfig ${iface} plumb
             if [[ ${CONFIG_external_ip} == "dhcp" ]]; then
@@ -142,9 +117,6 @@ if smf_is_globalzone; then
                 ifconfig ${iface} dhcp primary || /bin/true
             else
                 ifconfig ${iface} inet ${CONFIG_external_ip} netmask ${CONFIG_external_netmask} up
-                if [[ -n "${CONFIG_external_gateway}" ]]; then
-                    echo "${CONFIG_external_gateway}" > /etc/defaultrouter
-                fi
             fi
 
             # Set up the GZ to NAT for Coal
@@ -154,7 +126,7 @@ if smf_is_globalzone; then
 
                 # Allow zones to reach the internet using the global zone as a router
                 if [[ -n ${CONFIG_external_vlan_id} ]]; then
-                    IPNAT_NIC="global0"
+                    IPNAT_NIC="gz_external0"
                 else
                     IPNAT_NIC=${SYSINFO_NIC_external}
                 fi
@@ -170,6 +142,52 @@ IPNAT
             fi
         fi
     fi
+
+    # Use headnode_default_gateway if set, otherwise fall back to admin_gateway
+    # if that's set.
+    if [[ -n "${CONFIG_headnode_default_gateway}" ]]; then
+        echo "${CONFIG_headnode_default_gateway}" > /etc/defaultrouter
+    elif [[ -n ${CONFIG_admin_gateway} ]]; then
+        echo "${CONFIG_admin_gateway}" > /etc/defaultrouter
+    fi
+
+    # Setup extra nics, if specified in the config file
+    nic_tags="${SYSINFO_Nic_Tags}"
+    if [[ -n "${nic_tags}" ]]; then
+        tags=(${nic_tags//,/ })
+
+        for tag in "${tags[@]}"; do
+            if [[ "${tag}" == "admin" ]] || [[ "${tag}" == "external" ]]; then
+                continue
+            fi
+            echo "found extra nic in config tagged '${tag}'"
+
+            eval "iface=\${SYSINFO_NIC_${tag}}"
+            eval "ip=\${CONFIG_${tag}_ip}"
+            eval "netmask=\${CONFIG_${tag}_netmask}"
+            eval "vlan=\${CONFIG_${tag}_vlan_id}"
+
+            echo "found extra nic in config tagged '${tag}': iface='${iface}', ip='${ip}', netmask='${netmask}, vlan='${vlan}'"
+
+            if [[ -z "${iface}" ]] || [[ -z "${ip}" ]] || [[ -z "${netmask}" ]]; then
+                echo "Not bringing up interface tagged '${tag}'"
+                continue
+            fi
+
+            if [[ -n "${vlan}" ]]; then
+                dladm create-vnic -l ${iface} -v ${vlan} gz_${tag}0
+                iface="gz_${tag}0"
+            fi
+            ifconfig ${iface} plumb
+            if [[ ${ip} == "dhcp" ]]; then
+                # We ignore errors here because the most common one is that DHCP
+                # is already running.
+                ifconfig ${iface} dhcp || /bin/true
+            else
+                ifconfig ${iface} inet ${ip} netmask ${netmask} up
+            fi
+        done
+    fi
 else
     # Non-global zones
     for iface in `dladm show-vnic -p -o link`; do
@@ -182,12 +200,23 @@ else
     done
 fi
 
-    # The next commands are for logging purposes only
-    echo "== debug start: after =="
-    dladm show-phys
-    dladm show-linkprop
-    /sbin/ifconfig -a
-    echo "== debug end: after =="
+# The next commands are for logging purposes only
+echo "== debug start: after =="
+if ! dladm show-phys; then
+    echo "WARNING: 'dladm show-phys' failed"
+fi
+# NOTE: DO NOT do a 'dladm show-linkprop' when using the bnx driver,
+# as it puts it into an unusable state!
+# TODO: do a show-linkprop if not using bnx
+if ! /sbin/ifconfig -a; then
+    echo "WARNING: 'ifconfig -a' failed"
+fi
+echo "== debug end: after =="
+
+# Since we hopefully made networking changes here, update the sysinfo cache
+if smf_is_globalzone; then
+    /usr/bin/sysinfo -u
+fi
 
 # Any non-loopback IPv4 interfaces with usable addresses up?
 if [[ -n "`/sbin/ifconfig -a4u`" ]]; then

@@ -1,0 +1,196 @@
+'\" te
+.\"  Copyright (c) 2006 Sun Microsystems, Inc.  All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH SSAAgentIsAlive 3SNMP "30 Apr 2006" "SunOS 5.11" "SNMP Library Functions"
+.SH NAME
+SSAAgentIsAlive, SSAGetTrapPort, SSARegSubtable, SSARegSubagent, SSARegSubtree, SSASendTrap, SSASubagentOpen \- Sun Solstice Enterprise Agent registration and communication helper functions
+.SH SYNOPSIS
+.LP
+.nf
+\fBcc\fR [ \fIflag\fR ... ] \fIfile\fR ... \fB-lssagent\fR \fB -lssasnmp \fR [ \fIlibrary\fR .. ]
+#include <impl.h>
+
+
+
+\fBextern int\fR \fBSSAAgentIsAlive\fR(\fBIPAddress *\fR\fIagent_addr\fR, \fBint *\fR\fIport\fR,
+     \fBchar *\fR\fIcommunity\fR, \fBstruct timeval *\fR\fItimeout\fR);
+.fi
+
+.LP
+.nf
+\fBextern int\fR \fBSSAGetTrapPort\fR();
+.fi
+
+.LP
+.nf
+\fBextern int *\fR\fBSSARegSubagent\fR(\fBAgent*\fR \fIagent\fR);
+.fi
+
+.LP
+.nf
+\fBint\fR \fBSSARegSubtable\fR(\fBSSA_Table *\fR\fItable\fR);
+.fi
+
+.LP
+.nf
+\fBint\fR \fBSSARegSubtree\fR(\fBSSA_Subtree *\fR\fIsubtree\fR);
+.fi
+
+.LP
+.nf
+\fBextern void\fR \fBSSASendTrap\fR(\fBchar *\fR\fIname\fR);
+.fi
+
+.LP
+.nf
+\fBextern int\fR \fBSSASubagentOpen\fR(\fBint *\fR\fInum_of_retry\fR, \fBchar *\fR\fIagent_name\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBSSAAgentIsAlive()\fR function returns \fBTRUE\fR if the master agent is alive, otherwise returns \fBFALSE\fR. The \fIagent_addr\fR parameter is the address of the agent. Specify the security token in the \fIcommunity\fR parameter. You can specify the maximum amount of time to wait for a response with the \fItimeout\fR parameter.
+.sp
+.LP
+The \fBSSAGetTrapPort()\fR function returns the port number used by the Master Agent to communicate with the subagent.
+.sp
+.LP
+The  \fBSSARegSubagent()\fR function enables a subagent to register and unregister with a Master Agent. The \fIagent\fR parameter is a pointer to an \fBAgent\fR structure containing the following members:
+.sp
+.in +2
+.nf
+int      timeout;         /* optional */ 
+int      agent_id;        /* required */ 
+int      agent_status;    /* required */ 
+char     *personal_file;  /* optional */ 
+char     *config_file;    /* optional */ 
+char     *executable;     /* optional */ 
+char     *version_string; /* optional */
+char     *protocol;       /* optional */ 
+int      process_id;      /* optional */ 
+char     *name;           /* optional */ 
+int      system_up_time;  /* optional */ 
+int      watch_dog_time;  /* optional */ 
+Address  address;         /* required */ 
+struct   _Agent;          /* reserved */ 
+struct   _Subtree;        /* reserved */
+.fi
+.in -2
+
+.sp
+.LP
+The \fBagent_id\fR member is an integer value returned by the  \fBSSASubagentOpen()\fR function. After calling \fBSSASubagentOpen()\fR, you pass the \fBagent_id\fR in the \fBSSARegSubagent()\fR call to  register the subagent with the Master Agent.
+.sp
+.LP
+The following values are supported for \fBagent_status\fR:
+.sp
+.in +2
+.nf
+SSA_OPER_STATUS_ACTIVE 
+SSA_OPER_STATUS_NOT_IN_SERVICE 
+SSA_OPER_STATUS_DESTROY 
+.fi
+.in -2
+
+.sp
+.LP
+You pass \fBSSA_OPER_STATUS_DESTROY\fR as the value in a \fBSSARegSubagent()\fR function call when you want to unregister the agent from the Master Agent.
+.sp
+.LP
+\fBAddress\fR has the same structure as \fBsockaddr_in\fR, that is a common UNIX structure containing the following members:
+.sp
+.in +2
+.nf
+short      sin_family;
+ushort_t   sin_port;
+struct     in_addr sin_addr;
+char       sin_zero[8];
+.fi
+.in -2
+
+.sp
+.LP
+The \fBSSARegSubtable()\fR function registers a MIB table with the Master Agent. If this function is successful, an index number is returned, otherwise \fB0\fR is returned. The \fItable\fR parameter is a pointer to a \fBSSA_Table\fR structure containing the following members:
+.sp
+.in +2
+.nf
+int  regTblIndex;         /* index value */
+int  regTblAgentID;       /* current agent ID */
+Oid  regTblOID;           /* Object ID of the table */
+int  regTblStartColumn;   /* start column index */
+int  regTblEndColumn;     /* end column index */
+int  regTblStartRow;      /* start row index */
+int  regTblEndRow;        /* end row index */
+int  regTblStatus;        /* status */
+.fi
+.in -2
+
+.sp
+.LP
+The \fBregTblStatus\fR can have one of the following values:
+.sp
+.in +2
+.nf
+SSA_OPER_STATUS_ACTIVE 
+SSA_OPER_STATUS_NOT_IN_SERVICE 
+.fi
+.in -2
+
+.sp
+.LP
+The \fBSSARegSubtree()\fR function registers a MIB subtree with the master agent. If successful this function returns an index number, otherwise \fB0\fR is returned. The \fIsubtree\fR parameter is a pointer to a \fBSSA_Subtree\fR structure containing the following members:
+.sp
+.in +2
+.nf
+int  regTreeIndex;      /* index value */
+int  regTreeAgentID;    /* current agent ID */
+Oid  name;              /* Object ID to register */
+int  regtreeStatus;     /* status */
+.fi
+.in -2
+
+.sp
+.LP
+The \fBregtreeStatus\fR can have one of the following values:
+.sp
+.in +2
+.nf
+SSA_OPER_STATUS_ACTIVE 
+SSA_OPER_STATUS_NOT_IN_SERVICE 
+.fi
+.in -2
+
+.sp
+.LP
+The \fBSSASendTrap()\fR function instructs the Master Agent to send a trap notification, based on the keyword passed with \fIname\fR. When your subagent MIB is compiled by \fBmibcodegen\fR, it creates a lookup table of the trap notifications defined in the MIB. By passing the name of the trap notification type as \fIname\fR, the subagent instructs the Master Agent to construct the type of trap defined in the MIB.
+.sp
+.LP
+The \fBSSASubagentOpen()\fR function initializes communication between the subagent and the Master Agent.  You must call this function before calling \fBSSARegSubagent()\fR to register the subagent with the Master Agent. The \fBSSASubagentOpen()\fR function returns a unique agent ID that is passed in the \fBSSARegSubagent()\fR call to register the subagent. If \fB0\fR is returned as the agent ID, the attempt to initialize communication with the Master Agent was unsuccessful. Since UDP is used to initialize communication with the Master Agent, you may want to set the value of \fInum_of_retry\fR to make multiple attempts.
+.sp
+.LP
+The value for \fIagent_name\fR must be unique within the domain for which the Master Agent is responsible.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityObsolete
+_
+MT-LevelUnsafe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBattributes\fR(5)

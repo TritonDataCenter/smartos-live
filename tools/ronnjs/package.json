@@ -1,0 +1,23 @@
+{
+	"name" : "ronn",
+	"version" : "0.3.6",
+	"description" : "markdown to roff and html converter",
+	"keywords" : [ "markdown", "roff", "man", "documentation" ],
+	"main" : "lib/ronn",
+	"directories" : {"lib" : "lib"},
+	"engines" : { "node" : ">=0.1.103" },
+	"bin" : { "ronn" : "./bin/ronn.js" },
+	"dependencies" : {
+		"opts" : ">=1.2.0"
+	},
+	"contributors" : [
+		{ "name" : "Jérémy Lal", "email" : "kapouer@melix.org" },
+		{ "name" : "Ryan Tomayko", "email" : "r@tomayko.com" }
+	],
+	"licenses" : [
+		{ "type" : "MIT", "url" : "http://www.opensource.org/licenses/mit-license.php" }
+	],
+	"repositories" : [
+		{ "type" : "git", "url" : "http://github.com/kapouer/ronnjs" }
+	]
+}

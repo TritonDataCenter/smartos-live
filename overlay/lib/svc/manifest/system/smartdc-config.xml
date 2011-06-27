@@ -43,6 +43,19 @@
 
 	<single_instance />
 
+	<!--
+	dependency/dependent info
+	We need to wait for fs-joyent to be done so we can access the USB key
+	We need to run before sysconfig so interactive configuration can talk
+	on the console
+		(sysconfig)
+	We don't want anything else running which spews on console
+		(system/identy)
+	We don't want manifest import scribbling on the console while running
+		(manifest-import)
+	network/physical can't run without a config file
+		(network/physical)
+	-->
 	<dependency
 		name='filesystem-joyent'
 		type='service'
@@ -51,21 +64,51 @@
 		<service_fmri value='svc:/system/filesystem/smartdc' />
 	</dependency>
 
-	<!-- We don't want ssh starting if we haven't updated the passwords/keys -->
-    <dependent
-        name='ssh_multi-user-server'
-        grouping='require_all'
-        restart_on='none'>
-        <service_fmri value='svc:/network/ssh' />
-    </dependent>
+	<!--
+	We don't want ssh starting if we haven't updated the passwords/keys
+	-->
+	<dependent
+		name='ssh_multi-user-server'
+		grouping='require_all'
+		restart_on='none'>
+		<service_fmri value='svc:/network/ssh' />
+	</dependent>
 
-    <!-- Make ntp wait so we can setup the config. -->
-    <dependent
-        name='ntp'
-        grouping='require_all'
-        restart_on='none'>
-        <service_fmri value='svc:/network/ntp' />
-    </dependent>
+	<!-- Make ntp wait so we can setup the config. -->
+	<dependent
+		name='ntp'
+		grouping='require_all'
+		restart_on='none'>
+		<service_fmri value='svc:/network/ntp' />
+	</dependent>
+
+	<dependent
+		name='headnode_config'
+		grouping='optional_all'
+		restart_on='none'>
+		<service_fmri value='svc:/milestone/sysconfig' />
+	</dependent>
+
+	<dependent
+		name='identity'
+		grouping='optional_all'
+		restart_on='none'>
+                <service_fmri value='svc:/system/identity:node' /> 
+        </dependent>   
+
+	<dependent
+		name='headnode_no_output'
+		grouping='optional_all'
+		restart_on='none'>
+		<service_fmri value='svc:/system/manifest-import' />
+	</dependent>
+
+	<dependent
+		name='network-physical'
+		grouping='optional_all'
+		restart_on='none'>
+		<service_fmri value='svc:/network/physical:default' />
+	</dependent>
 
 	<exec_method
 		type='method'

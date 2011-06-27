@@ -1,0 +1,76 @@
+'\" te
+.\" Copyright (c) 1996, The Open Group. All Rights Reserved.
+.\" Portions Copyright (c) 2008, Sun Microsystems, Inc.  All Rights Reserved.
+.\" Sun Microsystems, Inc. gratefully acknowledges
+.\" The Open Group for permission to reproduce portions of its copyrighted documentation. Original documentation from The Open Group can be obtained online at http://www.opengroup.org/bookstore/.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH m_getvalues_layout 3LAYOUT "7 Aug 2006" "SunOS 5.11" "Layout Service Library Functions"
+.SH NAME
+m_getvalues_layout \- query layout values of a LayoutObject
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... -llayout [ \fIlibrary\fR... ]
+#include <sys/layout.h>
+
+\fBint\fR \fBm_getvalues_layout\fR(\fBconst LayoutObject\fR
+     \fIlayout_object\fR, \fBLayoutValues\fR \fIvalues\fR, \fBint *\fR\fIindex_returned\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBm_getvalues_layout()\fR function queries the current setting of layout values within a \fBLayoutObject\fR. 
+.sp
+.LP
+The \fIlayout_object\fR argument specifies a \fBLayoutObject\fR returned by the \fBm_create_layout\fR(3LAYOUT) function.
+.sp
+.LP
+The \fIvalues\fR argument specifies the list of layout values that are to be queried. Each value element of a \fBLayoutValueRec\fR must point to a location where the layout value is stored. That is, if the layout value is of type \fBT\fR, the argument must be of type \fBT*\fR. The values are queried from the \fBLayoutObject\fR and represent its current state. 
+.sp
+.LP
+It is the user's responsibility to manage the space allocation for the layout values queried. If the layout value name has \fBQueryValueSize\fR OR-ed to it, instead of the value of the layout value, only its size is returned. The caller can use this option to determine the amount of memory needed to be allocated for the layout values queried.
+.SH RETURN VALUES
+.sp
+.LP
+Upon successful completion, the \fBm_getvalues_layout()\fR function returns \fB0\fR. If any value cannot be queried, the index of the value causing the error is returned in \fIindex_returned\fR, \fB\(mi1\fR is returned and \fBerrno\fR is set to indicate the error.
+.SH ERRORS
+.sp
+.LP
+The \fBm_getvalues_layout()\fR function may fail if:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBEINVAL\fR\fR
+.ad
+.RS 10n
+.rt  
+The layout value specified by \fIindex_returned\fR is unknown, its value is invalid, or the \fIlayout_object\fR argument is invalid. In the case of an invalid \fIlayout_object\fR argument, the value returned in \fIindex_returned\fR is \fB\(mi1\fR\&.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityStandard
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBm_create_layout\fR(3LAYOUT), \fBattributes\fR(5), \fBstandards\fR(5)

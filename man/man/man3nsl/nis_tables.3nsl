@@ -1,0 +1,659 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nis_tables 3NSL "10 Nov 2005" "SunOS 5.11" "Networking Services Library Functions"
+.SH NAME
+nis_tables, nis_list, nis_add_entry, nis_remove_entry, nis_modify_entry, nis_first_entry, nis_next_entry \- NIS+ table functions
+.SH SYNOPSIS
+.LP
+.nf
+\fBcc\fR [ \fIflag\fR ... ] \fIfile\fR ... \fB-lnsl\fR [ \fIlibrary\fR ... ]
+#include <rpcsvc/nis.h>
+\fBnis_result *\fR\fBnis_list\fR(\fBnis_name\fR \fIname\fR, \fBuint_t\fR\fIflags\fR,
+     \fBint (*callback)(nis_name\fR \fItable_name\fR,\fBnis_object *\fR\fIobject\fR,
+     \fBvoid *\fR\fIuserdata\fR), \fBvoid *\fR\fIuserdata\fR);
+.fi
+
+.LP
+.nf
+\fBnis_result *\fR\fBnis_add_entry\fR(\fBnis_name\fR \fItable_name\fR, \fBnis_object *\fR\fIobject\fR,
+     \fBuint_t\fR \fIflags\fR);
+.fi
+
+.LP
+.nf
+\fBnis_result *\fR\fBnis_remove_entry\fR(\fBnis_name\fR \fIname\fR, \fBnis_object *\fR\fIobject\fR, 
+     \fBuint_t\fR \fIflags\fR);
+.fi
+
+.LP
+.nf
+\fBnis_result *\fR\fBnis_modify_entry\fR(\fBnis_name\fR \fIname\fR, \fBnis_object *\fR\fIobject\fR,
+     \fBuint_t\fR \fIflags\fR);
+.fi
+
+.LP
+.nf
+\fBnis_result *\fR\fBnis_first_entry\fR(\fBnis_name\fR \fItable_name\fR);
+.fi
+
+.LP
+.nf
+\fBnis_result *\fR\fBnis_next_entry\fR(\fBnis_name\fR \fItable_name\fR, \fBnetobj *\fR\fIcookie\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBnis_freeresult\fR(\fBnis_result *\fR\fIresult\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Use the NIS+ table functions to search and modify NIS+ tables. \fBnis_list()\fR is used to search a table in the NIS+ namespace. \fBnis_first_entry()\fR and \fBnis_next_entry()\fR are used to enumerate a table one entry at a time. \fBnis_add_entry()\fR, \fBnis_remove_entry()\fR, and \fBnis_modify_entry()\fR are used to change the information stored in a table. \fBnis_freeresult()\fR is used to free the memory associated with the \fBnis_result\fR structure.
+.sp
+.LP
+Entries within a table are named by NIS+ indexed names. An indexed name is a compound name that is composed of a search criteria and a simple NIS+ name that identifies a table object. A search criteria is a series of column names and their associated values enclosed in bracket '[\|]' characters. Indexed names have the following form:
+.sp
+.in +2
+.nf
+\fB[\fR \fIcolname\fR\fB=\fR\fIvalue\fR\fB,\fR \fB\&.\fR\|\fB\&.\fR\|\fB\&.\fR \fB\fR], \fItablename\fR
+.fi
+.in -2
+
+.sp
+.LP
+The list function, \fBnis_list()\fR, takes an indexed name as the value for the \fIname\fR parameter. Here, the tablename should be a fully qualified NIS+ name unless the \fBEXPAND_NAME\fR flag (described below) is set. The second parameter, \fIflags\fR, defines how the function will respond to various conditions. The value for this parameter is created by logically \fBOR\fRing together one or more flags from the following list.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBFOLLOW_LINKS\fR\fR
+.ad
+.RS 17n
+.rt  
+If the table specified in \fIname\fR resolves to be a \fBLINK\fR type object (see \fBnis_objects\fR(3NSL)), this flag specifies that the client library follow that link and do the search at that object. If this flag is not set and the name resolves to a link, the error \fBNIS_NOTSEARCHABLE\fR will be returned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBFOLLOW_PATH\fR\fR
+.ad
+.RS 17n
+.rt  
+This flag specifies that if the entry is not found within this table, the list operation should follow the path specified in the table object. When used in conjunction with the \fBALL_RESULTS\fR flag below, it specifies that the path should be followed regardless of the result of the search. When used in conjunction with the \fBFOLLOW_LINKS\fR flag above, named tables in the path that resolve to links will be followed until the table they point to is located. If a table in the path is not reachable because no server that serves it is available, the result of the operation will be either a "soft" success or a "soft" failure to indicate that not all tables in the path could be searched. If a name in the path names is either an invalid or non-existent object then it is silently ignored.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBHARD_LOOKUP\fR\fR
+.ad
+.RS 17n
+.rt  
+This flag specifies that the operation should continue trying to contact a server of the named table until a definitive result is returned (such as \fBNIS_NOTFOUND\fR).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBALL_RESULTS\fR\fR
+.ad
+.RS 17n
+.rt  
+This flag can only be used in conjunction with \fB\fR\fBFOLLOW_PATH\fR and a callback function. When specified, it forces all of the tables in the path to be searched. If \fIname\fR does not specify a search criteria (imply that all entries are to be returned), then this flag will cause all of the entries in all of the tables in the path to be returned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNO_CACHE\fR\fR
+.ad
+.RS 17n
+.rt  
+This flag specifies that the client library should bypass any client object caches and get its information directly from either the master server or a replica server for the named table.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBMASTER_ONLY\fR\fR
+.ad
+.RS 17n
+.rt  
+This flag is even stronger than \fBNO_CACHE\fR in that it specifies that the client library should \fIonly\fR get its information from the master server for a particular table. This guarantees that the information will be up to date. However, there may be severe performance penalties associated with contacting the master server directly on large networks. When used in conjunction with the \fBHARD_LOOKUP\fR flag, this will block the list operation until the master  server is up and available.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBEXPAND_NAME\fR\fR
+.ad
+.RS 17n
+.rt  
+When specified, the client library will attempt to expand a partially qualified name by calling \fBnis_getnames()\fR, which uses the environment variable \fBNIS_PATH\fR. See \fBnis_local_names\fR(3NSL).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBRETURN_RESULT\fR\fR
+.ad
+.RS 17n
+.rt  
+This flag is used to specify that a copy of the returning object be returned in the \fBnis_result\fR structure if the operation was successful.
+.RE
+
+.sp
+.LP
+The third parameter to \fBnis_list()\fR, \fIcallback\fR, is an optional pointer to a function that will process the \fBENTRY\fR type objects that are returned from the search. If this pointer is \fINULL\fR, then all entries that match the search criteria are returned in the \fInis_result\fR structure, otherwise this function will be called once for each entry returned. When called, this function should return \fB0\fR when additional objects are desired and \fB1\fR when it no longer wishes to see any more objects. The fourth parameter, \fIuserdata\fR, is simply passed to callback function along with the returned entry object. The client can use this pointer to pass state information or other relevant data that the callback function might need to process the entries.
+.sp
+.LP
+The \fBnis_list()\fR function is not MT-Safe with callbacks.
+.sp
+.LP
+\fBnis_add_entry()\fR will add the  NIS+ object to the \fBNIS+\fR \fItable_name\fR. The \fIflags\fR parameter is used to specify the failure semantics for the add operation. The default (\fIflags\fR equal 0) is to fail if the entry being added already exists in the table. The \fBADD_OVERWRITE\fR flag may be used to specify that existing object is to be overwritten if it exists, (a modify operation) or added if it does not exist. With the \fBADD_OVERWRITE\fR flag, this function will fail with the error \fBNIS_PERMISSION\fR if the existing object does not allow modify privileges to the client.
+.sp
+.LP
+If the flag \fBRETURN_RESULT\fR has been specified, the server will return a copy of the resulting object if the operation was successful.
+.sp
+.LP
+\fBnis_remove_entry()\fR removes the identified entry from the table or a set of entries identified  by \fItable_name\fR. If the parameter \fIobject\fR is non-null, it is presumed to point to a cached copy of the entry. When the removal is attempted, and the object that would be removed is not the same as the cached object pointed to by \fIobject\fR then the operation will fail with an \fBNIS_NOTSAMEOBJ\fR error. If an object is passed with this function, the search criteria in name is optional as it can be constructed from the values within the entry. However, if no object is present, the search  criteria must be included in the \fIname\fR parameter.  If the flags variable is null, and the search criteria  does not uniquely identify an entry, the \fBNIS_NOTUNIQUE\fR error is returned and the operation is aborted. If the flag parameter \fBREM_MULTIPLE\fR is passed, and if remove permission is allowed for each of these objects, then all objects that match the search criteria will be removed. Note that a null search criteria and the \fBREM_MULTIPLE\fR flag will remove all entries in a table.
+.sp
+.LP
+\fBnis_modify_entry()\fR modifies an object identified by \fIname\fR. The parameter \fIobject\fR should point to an entry with the  \fBEN_MODIFIED\fR flag set in each column that contains new information.
+.sp
+.LP
+The owner, group, and access rights of an entry are modified by placing the modified information into the respective fields of the parameter, \fIobject\fR: \fBzo_owner\fR, \fBzo_group\fR, and \fBzo_access\fR.
+.sp
+.LP
+These columns will replace their counterparts in the entry that is stored in the table. The entry passed must have the same number of columns, same type, and valid data in the modified columns for this operation  to succeed.
+.sp
+.LP
+If the flags parameter contains the flag \fBMOD_SAMEOBJ\fR then the object pointed to by \fIobject\fR is assumed to be a  cached copy of the original object. If the \fBOID\fR of the object passed is different than the \fBOID\fR of the object the server fetches, then the operation fails with the \fBNIS_NOTSAMEOBJ\fR error. This can be used to implement a simple read-modify-write protocol which will fail if the object is modified before the client can write the object back.
+.sp
+.LP
+If the flag \fBRETURN_RESULT\fR has been specified, the server will return a copy of the resulting object  if the operation was successful.
+.sp
+.LP
+\fBnis_first_entry()\fR fetches entries from a table one at a time. This mode of operation is extremely inefficient and callbacks should be used instead wherever possible. The table containing the entries of interest is identified by \fIname\fR. If a search criteria is present in \fIname\fR it is ignored. The value of \fIcookie\fR within the \fBnis_result\fR structure must be copied by the caller into local storage and passed as an argument to \fBnis_next_entry()\fR.
+.sp
+.LP
+\fBnis_next_entry()\fR retrieves the "next" entry from a table specified by \fItable_name\fR. The order in which entries are returned is not guaranteed.  Further, should an update occur in the table between client calls to \fBnis_next_entry()\fR there is no guarantee that an entry that is added or modified will be seen by the client. Should an entry be removed from the table that would have been the "next" entry returned, the error \fBNIS_CHAINBROKEN\fR is returned instead.
+.sp
+.LP
+The path used when the flag \fBFOLLOW_PATH\fR is specified, is the one present in the \fIfirst\fR table searched. The path values in tables that are subsequently searched are ignored.
+.sp
+.LP
+It is legal to call functions that would access the nameservice from within a list callback. However, calling a function that would  itself use a callback, or calling \fBnis_list()\fR with a callback from within a list callback function is not currently supported.
+.sp
+.LP
+There are currently no known methods for \fBnis_first_entry()\fR and \fBnis_next_entry()\fR to get their answers from only the master server.
+.sp
+.LP
+The \fBnis_list()\fR function is not MT-Safe with callbacks. \fBnis_list()\fR callbacks are serialized.  A call to \fBnis_list()\fR with a callback from within  \fBnis_list()\fR will deadlock.   \fBnis_list()\fR with a callback cannot be called from an rpc server.  See \fBrpc_svc_calls\fR(3NSL). Otherwise, this function is MT-Safe.
+.SH RETURN VALUES
+.sp
+.LP
+These functions return a pointer to a structure of type \fBnis_result\fR:
+.sp
+.in +2
+.nf
+struct nis_result {
+		nis_error	status;
+		struct {
+			uint_t	objects_len;
+			nis_object	*objects_val;
+		} objects;
+		netobj	cookie;
+		uint32_t	zticks;
+		uint32_t	dticks;
+		uint32_t	aticks;
+		uint32_t	cticks;
+        };
+.fi
+.in -2
+
+.sp
+.LP
+The \fIstatus\fR member contains the error status of the the operation. A text message that describes the error can be obtained by calling the function \fBnis_sperrno()\fR. See \fBnis_error\fR(3NSL).
+.sp
+.LP
+The \fBobjects\fR structure contains two members. \fIobjects_val\fR is an array of \fInis_object\fR structures; \fIobjects_len\fR is the number of cells in the array. These objects will be freed by a call to \fBnis_freeresult()\fR. See \fBnis_names\fR(3NSL). If you need to keep a copy of one or more objects, they can be copied with the function \fBnis_clone_object()\fR and freed with the function \fBnis_destroy_object()\fR. See \fBnis_server\fR(3NSL).
+.sp
+.LP
+The various ticks contain details of where the time, in microseconds, was taken during a request.  They can be used to tune one's data organization for faster access and to compare different database implementations.
+.sp
+.ne 2
+.mk
+.na
+\fB\fIzticks\fR\fR
+.ad
+.RS 10n
+.rt  
+The time spent in the NIS+ service itself, this count starts when  the server receives the request and stops when it sends the reply.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIdticks\fR\fR
+.ad
+.RS 10n
+.rt  
+The time spent in the database backend, this time is measured from the time a database call starts, until a result is returned. If the request results in multiple calls to the database, this is the sum of all the time spent in those calls.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIaticks\fR\fR
+.ad
+.RS 10n
+.rt  
+The time spent in any "accelerators" or caches. This includes the time required to locate the server needed to resolve the request.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcticks\fR\fR
+.ad
+.RS 10n
+.rt  
+The total time spent in the request, this clock starts when you  enter the client library and stops when a result is returned. By subtracting the sum of the other ticks values from this value you can obtain the  local overhead of generating a NIS+ request.
+.RE
+
+.sp
+.LP
+Subtracting the value in \fIdticks\fR from the value in \fIzticks\fR will yield the time spent in the service code itself. Subtracting the sum of the values in \fIzticks\fR and  \fIaticks\fR from the value in  \fIcticks\fR will yield the time spent in the client library itself. Note: all of the tick times are measured in microseconds.
+.SH ERRORS
+.sp
+.LP
+The client library can return a variety of error returns and diagnostics. The more salient ones are documented below.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_BADATTRIBUTE\fR\fR
+.ad
+.RS 23n
+.rt  
+The name of an attribute did not match up with a named column in the table, or the attribute did not have an associated value.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_BADNAME\fR\fR
+.ad
+.RS 23n
+.rt  
+The name passed to the function is not a legal NIS+ name.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_BADREQUEST\fR\fR
+.ad
+.RS 23n
+.rt  
+A problem was detected in the request structure passed to the client library.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_CACHEEXPIRED\fR\fR
+.ad
+.RS 23n
+.rt  
+The entry returned came from an object cache that has \fIexpired\fR. This means that the time to live value has gone to zero and the entry may have changed. If the flag \fBNO_CACHE\fR was passed to the lookup function then the lookup function will retry the operation to get an unexpired copy of the object.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_CBERROR\fR\fR
+.ad
+.RS 23n
+.rt  
+An \fBRPC\fR error occurred on the server while it was calling back to the client. The transaction was aborted at that time and any unsent data was discarded.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_CBRESULTS\fR\fR
+.ad
+.RS 23n
+.rt  
+Even though the request was successful, all of the entries have been sent to your callback function and are thus not included in this result.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_FOREIGNNS\fR\fR
+.ad
+.RS 23n
+.rt  
+The name could not be completely resolved. When the name passed to the function would resolve in a namespace that is outside the NIS+ name tree, this error is returned with a NIS+ object of type \fBDIRECTORY\fR. The returned object contains the type of namespace and contact information for a server within that namespace.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_INVALIDOBJ\fR\fR
+.ad
+.RS 23n
+.rt  
+The object pointed to by \fIobject\fR is not a valid NIS+ entry object for the given table. This could occur if it had a mismatched number of columns, or a different data type than the associated column in the table, for example, binary or text.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_LINKNAMEERROR\fR\fR
+.ad
+.RS 23n
+.rt  
+The name passed resolved to a \fBLINK\fR type object and the contents of the object pointed to an invalid name.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_MODFAIL\fR\fR
+.ad
+.RS 23n
+.rt  
+The attempted modification failed for some reason.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_NAMEEXISTS\fR\fR
+.ad
+.RS 23n
+.rt  
+An attempt was made to add a name that already exists. To add the name, first remove the existing name and then add the new name or modify the existing named object.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_NAMEUNREACHABLE\fR\fR
+.ad
+.RS 23n
+.rt  
+This soft error indicates that a server for the  desired directory of the named table object could not be reached.  This can occur when there is a network partition or the server has crashed. Attempting the operation again may succeed. See the \fBHARD_LOOKUP\fR flag.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_NOCALLBACK\fR\fR
+.ad
+.RS 23n
+.rt  
+The server was unable to contact the callback service on your machine. This results in no data being returned.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_NOMEMORY\fR\fR
+.ad
+.RS 23n
+.rt  
+Generally a fatal result. It means that the service ran out of heap space.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_NOSUCHNAME\fR\fR
+.ad
+.RS 23n
+.rt  
+This hard error indicates that the named directory of the  table object does not exist. This occurs when the server that should be the parent of the server that serves the table, does not know about the directory in which the table resides.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_NOSUCHTABLE\fR\fR
+.ad
+.RS 23n
+.rt  
+The named table does not exist.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_NOT_ME\fR\fR
+.ad
+.RS 23n
+.rt  
+A request was made to a server that does not serve the given name. Normally this will not occur, however if you are not using the built in location mechanism for servers, you may see this if your mechanism is broken.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_NOTFOUND\fR\fR
+.ad
+.RS 23n
+.rt  
+No entries in the table matched the search criteria. If the search criteria was null (return all entries) then this result means that the table is empty and may safely be removed by  calling the \fBnis_remove()\fR.
+.sp
+If the  \fBFOLLOW_PATH\fR flag was set, this error indicates that none of the tables in the path contain entries that match the search criteria.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_NOTMASTER\fR\fR
+.ad
+.RS 23n
+.rt  
+A change request was made to a server that  serves the name, but it is not the master server. This can occur when a directory object changes and it specifies a new master server. Clients that have cached copies of the directory object in the \fB/var/nis/NIS_SHARED_DIRCACHE\fR file will need to have their cache managers restarted to flush this cache. Use \fBnis_cachemgr -i\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_NOTSAMEOBJ\fR\fR
+.ad
+.RS 23n
+.rt  
+An attempt to remove an object from the namespace was aborted because the object that would have been removed was not the same object that was passed in the request.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_NOTSEARCHABLE\fR\fR
+.ad
+.RS 23n
+.rt  
+The table name resolved to a  NIS+ object that was not searchable.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_PARTIAL\fR\fR
+.ad
+.RS 23n
+.rt  
+This result is similar to \fBNIS_NOTFOUND\fR except that it means the request succeeded but resolved to zero entries. When this occurs, the server returns a copy of the table object instead of an entry so that the client may then process the path or implement some other local policy.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_RPCERROR\fR\fR
+.ad
+.RS 23n
+.rt  
+This fatal error indicates the  \fBRPC\fR subsystem failed in some way. Generally there will be a \fBsyslog\fR(3C) message indicating why the  \fBRPC\fR request failed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_S_NOTFOUND\fR\fR
+.ad
+.RS 23n
+.rt  
+The named entry does not exist in the table, however not all tables in the path could be searched, so the entry may exist in one of those tables.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_S_SUCCESS\fR\fR
+.ad
+.RS 23n
+.rt  
+Even though the request was successful, a table in the search path was not able to be searched, so the result may not be the same as the one you would have received if that table had been accessible.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_SUCCESS\fR\fR
+.ad
+.RS 23n
+.rt  
+The request was successful.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_SYSTEMERROR\fR\fR
+.ad
+.RS 23n
+.rt  
+Some form of generic system error occurred while attempting the request. Check the \fBsyslog\fR(3C) record for error messages from the server.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_TOOMANYATTRS\fR\fR
+.ad
+.RS 23n
+.rt  
+The search criteria passed to the server had more attributes than the table had searchable columns.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_TRYAGAIN\fR\fR
+.ad
+.RS 23n
+.rt  
+The server connected to was too busy to handle your request. \fBadd_entry()\fR, \fBremove_entry()\fR, and \fBmodify_entry()\fR return this error when the master server is currently updating its internal state.  It can be returned to \fBnis_list()\fR when the function specifies a callback and the server does not have the resources to handle callbacks.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_TYPEMISMATCH\fR\fR
+.ad
+.RS 23n
+.rt  
+An attempt was made to add or modify an entry in a table, and the entry passed was of a different type than the table.
+.RE
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.ne 2
+.mk
+.na
+\fB\fBNIS_PATH\fR\fR
+.ad
+.RS 12n
+.rt  
+When set, this variable is the search path used by \fBnis_list()\fR if the flag   \fBEXPAND_NAME\fR is set.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+MT-LevelMT-Safe with exceptions
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBniscat\fR(1), \fBniserror\fR(1), \fBnismatch\fR(1), \fBnis_cachemgr\fR(1M), \fBnis_clone_object\fR(3NSL), n, \fBnis_destroy_object\fR(3NSL), \fBnis_error\fR(3NSL), \fBnis_getnames\fR(3NSL), \fBnis_local_names\fR(3NSL), \fBnis_names\fR(3NSL), \fBnis_objects\fR(3NSL), \fBnis_server\fR(3NSL), \fBrpc_svc_calls\fR(3NSL), \fBsyslog\fR(3C), \fBattributes\fR(5)
+.SH WARNINGS
+.sp
+.LP
+Use the flag \fBHARD_LOOKUP\fR carefully since it can cause the application to block indefinitely during a network partition.
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

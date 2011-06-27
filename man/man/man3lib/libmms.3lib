@@ -1,0 +1,265 @@
+'\" te
+.\" Copyright (c) 2008, Sun Microsystems, Inc.
+.\" All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH libmms 3LIB "2 Dec 2008" "SunOS 5.11" "Interface Libraries"
+.SH NAME
+libmms \- Media Management System library
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lmms\fR [ \fIlibrary\fR... ] 
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Functions in this library provide access to the Media Management System (MMS).
+.sp
+.LP
+The Media Management System (MMS) is a distributed removable media management system. It is based on IEEE 1244, Media Management System (MMS). Client applications request MMS to mount and unmount cartridges and process them after they are mounted. Applications use Media Management Protocol (MMP) commands to make requests. The Media Management System (MMS) client API provides basic functions that give an application the ability to connect to MMS, send commands to MMS, and interpret the responses to the commands.
+.sp
+.LP
+For a client to establish a connection to MMS, it needs to first initialize a session and then establish the connection. There are two types of sessions:
+.sp
+.ne 2
+.mk
+.na
+\fBsynchronous\fR
+.ad
+.RS 16n
+.rt  
+A synchronous connection means that the client waits for a response for each command that it sends to MMS.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBasynchronous\fR
+.ad
+.RS 16n
+.rt  
+A asynchronous connections means the client can continue to send commands to MMS without waiting for a response to the commands.
+.RE
+
+.sp
+.LP
+The type of session is specified with the choice of initialization function, either \fBmms_init()\fR or \fBmms_ainit()\fR.
+.sp
+.LP
+The connection is established with the hello function, \fBmms_hello()\fR.
+.sp
+.LP
+Within an asynchronous session, the client can also send synchronous commands.
+.sp
+.LP
+If a client's instance is configured to allow multiple sessions, the client can create more than one session, in any combination of synchronous and asynchronous types. The client must manage which commands are sent over which session.
+.sp
+.LP
+If the client's instance is not configured to allow multiple sessions and a second init function is called, the client's hello function receives an "unwelcome" response from MMS.
+.sp
+.LP
+Any command sent using the asynchronous send function, \fBmms_send_acmd()\fR, specifies a callback routine that is invoked when the MMS API receives a response to the command. This callback routine is a client-specified function. A callback function can not issue other commands to MMS because the callback function is executed as part of the MMS API's reader thread.
+.sp
+.LP
+An asynchronous session allows the client to also issue commands using the synchronous send function, \fBmms_send_cmd()\fR, waiting for a response before returning.
+.sp
+.LP
+A client can receive notification of certain events that occur within MMS through the event notification mechanism.
+.sp
+.LP
+Routines are provided by the API to help in the processing of responses to the client's commands.
+.sp
+.LP
+For OpenSolaris platforms, \fBlibmms\fR is released in shared object (\fB\&.so\fR) format, installed in \fB/usr/lib/libmms.so\fR.
+.sp
+.LP
+The following table lists \fBlibmms\fR library routines and indicates the type of connection that supports them and whether they are optional.
+.sp
+
+.sp
+.TS
+tab();
+cw(.89i) cw(1.86i) cw(2.75i) 
+lw(.89i) lw(1.86i) lw(2.75i) 
+.
+RoutineAvailabilityRequired
+_
+\fBmms_init()\fRsynchronousrequired for synchronous
+_
+\fBmms_ainit()\fRasynchronousrequired for asynchronous
+_
+\fBmms_hello()\fRsynchronous and asynchronousrequired for both
+_
+\fBmms_send_cmd()\fRsynchronous and asynchronousT{
+required for synchronous, optional for asynchronous
+T}
+_
+\fBmms_send_acmd()\fRsynchronous and asynchronousT{
+required for asynchronous, optional for synchronous
+T}
+_
+\fBmms_read_response()\fRsynchronous and asynchronousT{
+required for intermediate response to \fBmms_send_cmd()\fR
+T}
+_
+\fBmms_free_rsp()\fRsynchronous and asynchronousrequired for both
+_
+\fBmms_goodbye()\fRsynchronousrequired for synchronous
+_
+\fBmms_agoodbye()\fRasynchronousrequired for asynchronous
+.TE
+
+.sp
+.LP
+The following routines are used by a client to to process the response to a MMS command.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmms_rsp_type()\fR\fR
+.ad
+.RS 24n
+.rt  
+Returns the type of response that was received for the command.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmms_handle_err_rsp()\fR\fR
+.ad
+.RS 24n
+.rt  
+Returns the error code and error message from an error response.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmms_get_tree()\fR\fR
+.ad
+.RS 24n
+.rt  
+Returns the parse tree of the response.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBmms_get_attribute()\fR\fR
+.ad
+.RS 24n
+.rt  
+Obtains the value associcated with a attribute name from a response in namevalue mode.
+.RE
+
+.SH USAGE
+.sp
+.LP
+To make a client application able to use MMS, build the client with access to the MMS API library routines and then configure the application.
+.RS +4
+.TP
+1.
+Get a copy of the MMS source tree.
+.RE
+.RS +4
+.TP
+2.
+Include \fB<mms_api.h>\fR and \fB<mms_sym.h>\fR in the makefile. The path is the \fBsan-andreas/include/$(OBJ_DIR)\fR. For example, \fBOBJ_DIR\fR is the \fBobj/SunOS_5.10_sparc_DEBUG\fR.
+.RE
+.RS +4
+.TP
+3.
+Link the client to the mms library to get the MMS API. A client can link either statically or dynamically. To link the library statically, the path is \fBsan-andreas/lib/$(OBJ_DIR)\fR. To link at runtime, MMS is installed in \fB/opt/SUNWsmmms/lib/libmms.so\fR.
+.RE
+.RS +4
+.TP
+4.
+Link with either \fBlibcommon.so\fR or \fBlibcommon.a\fR depending on if the client is dynamically linked or statically linked.
+.RE
+.RS +4
+.TP
+5.
+Create the client's application name in MMS database. Client application instances must be created within MMS database in order for clients to establish  a connection with MMS.
+.RE
+.RS +4
+.TP
+6.
+Use the MMS database password to connect to MMS. The default database password is a construction of the administrator password with the characters " \fBdbadmin\fR" appended.
+.RE
+.SH INTERFACES
+.sp
+.LP
+The shared object \fBlibmms.so.1\fR provides the public interfaces defined below. See \fBIntro\fR(3) for additional information on shared object interfaces.
+.sp
+
+.sp
+.TS
+tab();
+lw(2.75i) lw(2.75i) 
+lw(2.75i) lw(2.75i) 
+.
+\fBmms_agoodbye\fR\fBmms_ainit\fR
+\fBmms_free_rsp\fR\fBmms_get_attribute\fR
+\fBmms_get_str\fR\fBmms_get_tree\fR
+\fBmms_goodbye\fR\fBmms_handle_err_rsp\fR
+\fBmms_hello\fR\fBmms_init\fR
+\fBmms_read_response\fR\fBmms_rsp_type\fR
+\fBmms_send_acmd\fR\fBmms_send_cmd\fR
+.TE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/libmms.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/libmms.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+64-bit shared object
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWmmsu
+_
+Interface StabilityUncommitted
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBIntro\fR(3), \fBmms_init\fR(3MMS), \fBmms_rsp_type\fR(3MMS), \fBmms_send_cmd\fR(3MMS), \fBattributes\fR(5)

@@ -1,0 +1,7 @@
+The OpenSolaris devpro consolidation can be pulled from:
+
+http://hub.opensolaris.org/bin/view/downloads/devpro
+
+However, the libC binary components in that download are from 2006.
+We are using the binary components from the b147-based OpenSolaris
+release.

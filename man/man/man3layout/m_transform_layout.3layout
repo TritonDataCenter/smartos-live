@@ -1,0 +1,230 @@
+'\" te
+.\" Copyright (c) 1996, The Open Group. All Rights Reserved.
+.\" Portions Copyright (c) 2008, Sun Microsystems, Inc.  All Rights Reserved.
+.\" Sun Microsystems, Inc. gratefully acknowledges
+.\" The Open Group for permission to reproduce portions of its copyrighted documentation. Original documentation from The Open Group can be obtained online at http://www.opengroup.org/bookstore/.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH m_transform_layout 3LAYOUT "7 Aug 2006" "SunOS 5.11" "Layout Service Library Functions"
+.SH NAME
+m_transform_layout \- layout transformation
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... -llayout [ \fIlibrary\fR... ]
+#include <sys/layout.h>
+
+
+
+\fBint\fR \fBm_transform_layout\fR(\fBLayoutObject\fR \fIlayout_object\fR,
+     \fBconst char *\fR\fIInpBuf\fR, \fBconst size_t\fR \fIImpSize\fR, \fBconst void *\fR\fIOutBuf\fR,
+     \fBsize_t *\fR\fIOutsize\fR, \fBsize_t *\fR\fIInpToOut\fR, \fBsize_t *\fR\fIOutToInp\fR,
+     \fBunsigned char *\fR\fIProperty\fR, \fBsize_t *\fR\fIInpBufIndex\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBm_transform_layout()\fR function performs layout transformations (reordering, shaping, cell determination) or provides additional information needed for layout transformation (such as the expected size of the transformed layout, the nesting level of different segments in the text and cross-references between the locations of the corresponding elements before and after the layout transformation). Both the input text and output text are character strings.
+.sp
+.LP
+The \fBm_transform_layout()\fR function transforms the input text in \fIInpBuf\fR according to the current layout values in \fIlayout_object\fR. Any layout value whose value type is \fBLayoutTextDescriptor\fR describes the attributes of the \fIInpBuf\fR and \fIOutBuf\fR arguments. If the attributes are the same for both \fIInpBuf\fR and \fIOutBuf\fR, a null transformation is performed with respect to that specific layout value.
+.sp
+.LP
+The \fIInpBuf\fR argument specifies the source text to be processed. The \fIInpBuf\fR may not be \fINULL\fR, unless there is a need to reset the internal state.
+.sp
+.LP
+The \fIInpSize\fR argument is the number of bytes within \fIInpBuf\fR to be processed by the transformation. Its value will not change after return from the transformation. \fIInpSize\fR set to \(mi1 indicates that the text in \fIInpBuf\fR is delimited by a null code element. If \fIInpSize\fR is not set to \(mi1, it is possible to have some null elements in the input buffer. This might be used, for example, for a "one shot" transformation of several strings, separated by nulls.
+.sp
+.LP
+Output of this function may be one or more of the following depending on the setting of the arguments:
+.sp
+.ne 2
+.mk
+.na
+\fB\fIOutBuf\fR\fR
+.ad
+.RS 12n
+.rt  
+Any transformed data is stored in \fIOutBuf\fR, converted to \fBShapeCharset\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIOutsize\fR\fR
+.ad
+.RS 12n
+.rt  
+The number of bytes in \fIOutBuf\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIInpToOut\fR\fR
+.ad
+.RS 12n
+.rt  
+A cross-reference from each \fIInpBuf\fR code element to the transformed data. The cross-reference relates to the data in \fIInpBuf\fR starting with the first element that \fIInpBufIndex\fR points to (and not necessarily starting from the beginning of the \fIInpBuf\fR). 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIOutToInp\fR\fR
+.ad
+.RS 12n
+.rt  
+A cross-reference to each \fIInpBuf\fR code element from the transformed data. The cross-reference relates to the data in \fIInpBuf\fR starting with the first element that \fIInpBufIndex\fR points to (and not necessarily starting from the beginning of the \fIInpBuf\fR). 
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fIProperty\fR\fR
+.ad
+.RS 12n
+.rt  
+A weighted value that represents peculiar input string transformation properties with different connotations as explained below.  If this argument is not a null pointer, it represents an array of values with the same number of elements as the source substring text before the transformation. Each byte will contain relevant "property" information of the corresponding element in \fIInpBuf\fR starting from the element pointed by \fIInpBufIndex\fR. The four rightmost bits of each "property" byte will contain information for bidirectional environments (when \fBActiveDirectional\fR is True) and they will mean "\fBNestingLevels\fR." The possible value from 0 to 15 represents the nesting level of the corresponding element in the \fIInpBuf\fR starting from the element pointed by \fIInpBufIndex\fR. If \fBActiveDirectional\fR is false the content of \fBNestingLevel\fR bits will be ignored. The leftmost bit of each "property" byte will contain a "new cell indicator" for composed character environments, and will have a value of either 1 (for an element in \fIInpBuf\fR that is transformed to the beginning of a new cell) or 0 (for the "zero-length" composing character elements, when these are grouped into the same presentation cell with a non-composing character). Here again, each element of "property" pertains to the elements in the \fIInpBuf\fR starting from the element pointed by \fIInpBufIndex\fR. (Remember that this is not necessarily the beginning of \fIInpBuf\fR). If none of the transformation properties is required, the argument \fIProperty\fR can be \fINULL\fR.  The use of "property" can be enhanced in the future to pertain to other possible usage in other environments.
+.RE
+
+.sp
+.LP
+The \fIInpBufIndex\fR argument is an offset value to the location of the transformed text. When \fBm_transform_layout()\fR is called, \fIInpBufIndex\fR contains the offset to the element in \fIInpBuf\fR that will be transformed first. (Note that this is not necessarily the first element in \fIInpBuf\fR). At the return from the transformation, \fIInpBufIndex\fR contains the offset to the first element in the \fIInpBuf\fR that has not been transformed. If the entire substring has been transformed successfully, \fIInpBufIndex\fR will be incremented by the amount defined by \fIInpSize\fR. 
+.sp
+.LP
+Each of these output arguments may be \fINULL\fR to specify that no output is desired for the specific argument, but at least one of them should be set to a non-null value to perform any significant work.  
+.sp
+.LP
+The layout object maintains a directional state that keeps track of directional changes, based on the last segment transformed. The directional state is maintained across calls to the layout transformation functions and allows stream data to be processed with the layout functions. The directional state is reset to its initial state whenever any of the layout values \fBTypeOfText\fR, \fBOrientation\fR, or \fBImplicitAlg\fR is modified by means of a call to \fBm_setvalues_layout()\fR.
+.sp
+.LP
+The \fIlayout_object\fR argument specifies a \fBLayoutObject\fR returned by the \fBm_create_layout()\fR function.  
+.sp
+.LP
+The \fIOutBuf\fRargument contains the transformed data. This argument can be specified as a null pointer to indicate that no transformed data is required.
+.sp
+.LP
+The encoding of the \fIOutBuf\fR argument depends on the \fBShapeCharset\fR layout value defined in \fIlayout_object\fR. If the \fBActiveShapeEditing\fR layout value is not set (False), the encoding of \fIOutBuf\fR is guaranteed to be the same as the codeset of the locale associated with the \fBLayoutObject\fR defined by \fIlayout_object\fR.
+.sp
+.LP
+On input, the \fIOutSize\fR argument specifies the size of the output buffer in number of bytes. The output buffer should be large enough to contain the transformed result; otherwise, only a partial transformation is performed. If the \fBActiveShapeEditing\fR layout value is set (True) the \fIOutBuf\fR should be allocated to contain at least the \fIInpSize\fR multiplied by \fBShapeCharsetSize\fR.
+.sp
+.LP
+On return, the \fIOutSize\fR argument is modified to the actual number of bytes placed in \fIOutBuf\fR.
+.sp
+.LP
+When the \fIOutSize\fR argument is specified as zero, the function calculates the size of an output buffer large enough to contain the transformed text, and the result is returned in this field. The content of the buffers specified by \fIInpBuf\fR and \fIOutBuf\fR, and the value of \fIInpBufIndex\fR, remain unchanged. If \fIOutSize\fR = NULL, the \fBEINVAL\fR error condition should be returned.
+.sp
+.LP
+If the \fIInpToOut\fR argument is not a null pointer, it points to an array of values with the same number of bytes in \fIInpBuf\fR starting with the one pointed by \fIInpBufIndex\fR and up to the end of the substring in the buffer. On output, the nth value in \fIInpToOut\fR corresponds to the nth byte in \fIInpBuf\fR. This value is the index (in units of bytes) in \fIOutBuf\fRthat identifies the transformed \fBShapeCharset\fR element of the nth byte in \fIInpBuf\fR. In the case of multibyte encoding, the index points (for each of the bytes of a code element in the \fIInpBuf\fR) to the first byte of the transformed code element in the \fIOutBuf\fR.
+.sp
+.LP
+\fIInpToOut\fR may be specified as \fINULL\fR if no index array from \fIInpBuf\fR to \fIOutBuf\fR is desired.
+.sp
+.LP
+If the \fIOutToInp\fR argument is not a null pointer, it points to an array of values with the same number of bytes as contained in \fIOutBuf\fR. On output, the nth value in \fIOutToInp\fR corresponds to the nth byte in \fIOutBuf\fR This value is the index in \fIInpBuf\fR, starting with the byte pointed to by \fIInpBufIndex\fR, that identifies the logical code element of the nth byte in \fIOutBuf\fR. In the case of multibyte encoding, the index will point for each of the bytes of a transformed code element in the \fIOutBuf\fR to the first byte of the code element in the \fIInpBuf\fR.
+.sp
+.LP
+\fIOutToInp\fR may be specified as \fINULL\fR if no index array from \fIOutBuf\fR to \fIInpBuf\fR is desired.
+.sp
+.LP
+To perform shaping of a text string without reordering of code elements, the \fIlayout_object\fR should be set with input and output layout value \fITypeOfText\fR set to \fBTEXT_VISUAL\fR and both in and out of \fBOrientation\fR set to the same value.
+.SH RETURN VALUES
+.sp
+.LP
+If successful, the \fBm_transform_layout()\fR function returns \fB0\fR. If unsuccessful, the returned value is \fB\(mi1\fR and the \fBerrno\fR is set to indicate the source of error. When the size of \fIOutBuf\fR is not large enough to contain the entire transformed text, the input text state at the end of the uncompleted transformation is saved internally and the error condition \fBE2BIG\fR is returned in \fBerrno\fR.
+.SH ERRORS
+.sp
+.LP
+The \fBm_transform_layout()\fR function may fail if:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBE2BIG\fR\fR
+.ad
+.RS 10n
+.rt  
+The output buffer is full and the source text is not entirely processed.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBEBADF\fR\fR
+.ad
+.RS 10n
+.rt  
+The layout values are set to a meaningless combination or the layout object is not valid.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBEILSEQ\fR\fR
+.ad
+.RS 10n
+.rt  
+Transformation stopped due to an input code element that cannot be shaped or is invalid. The \fIInpBufIndex\fR argument is set to indicate the code element causing the error. The suspect code element is either a valid code element but cannot be shaped into the \fBShapeCharset\fR layout value, or is an invalid code element not defined by the codeset of the locale of \fIlayout_object\fR. The \fBmbtowc()\fR and \fBwctomb()\fR functions, when used in the same locale as the \fBLayoutObject\fR, can be used to determine if the code element is valid.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBEINVAL\fR\fR
+.ad
+.RS 10n
+.rt  
+Transformation stopped due to an incomplete composite sequence at the end of the input buffer, or \fIOutSize\fR contains \fINULL\fR.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBERANGE\fR\fR
+.ad
+.RS 10n
+.rt  
+More than 15 embedding levels are in source text or \fIInpBuf\fR contain unbalanced directional layout information (push/pop) or an incomplete composite sequence has been detected in the input buffer at the beginning of the string pointed to by \fIInpBufIndex\fR.
+.sp
+An incomplete composite sequence at the end of the input buffer is not always detectable. Sometimes, the fact that the sequence is incomplete will only be detected when additional character elements belonging to the composite sequence are found at the beginning of the next input buffer.
+.RE
+
+.SH USAGE
+.sp
+.LP
+A \fBLayoutObject\fR will have a meaningful combination of default layout values. Whoever chooses to change the default layout values is responsible for making sure that the combination of layout values is meaningful. Otherwise, the result of \fBm_transform_layout()\fR might be unpredictable or implementation-specific with \fBerrno\fR set to \fBEBADF\fR.
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityStandard
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBattributes\fR(5), \fBstandards\fR(5)

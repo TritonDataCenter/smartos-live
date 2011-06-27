@@ -1,0 +1,249 @@
+'\" te
+.\" Copyright (C) 2002, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH platform 4 "19 Nov 2002" "SunOS 5.11" "File Formats"
+.SH NAME
+platform \- directory of files specifying supported platforms
+.SH SYNOPSIS
+.LP
+.nf
+\fB\&.platform\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The Solaris operating environment release includes the \fB\&.platform\fR directory, a new directory on the Solaris CD image. This directory contains files (created by Sun and Solaris OEMs) that define platform support. These files are generically referred to as \fIplatform definition files\fR. They provide a means to map different platform types into a platform group.
+.sp
+.LP
+Platform definition files in the .platform directory are used by the installation software to ensure that software appropriate for the architecture of the system will be installed.
+.sp
+.LP
+Sun provides a platform definition file named \fB\|.platform/Solaris\fR . This file is the only one that can define platform groups to which other platform definition files can refer. For example, an OEM platform definition file can refer to any platform group specified in the Solaris platform definition file.
+.sp
+.LP
+Other platform definition files are delivered by OEMs. To avoid name conflicts, OEMs will name their platform definition file with an OEM-unique string. OEMs should use whatever string they use to make their package names unique. This unique string is often the OEM's stock symbol.
+.sp
+.LP
+Comments are allowed in a platform definition file. A "\fB#\fR" begins a comment and can be placed anywhere on a line.
+.sp
+.LP
+Platform definition files are composed of keyword-value pairs, and there are two kinds of stanzas in the file: platform group definitions and platform identifications.
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Platform group definitions:
+.sp
+The keywords in a platform group definition stanza are:
+.RS
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBPLATFORM_GROUP\fR\fR
+.ad
+.RS 18n
+.rt  
+The \fBPLATFORM_GROUP\fR keyword \fImust\fR be the first keyword in the platform group definition stanza. The value assigned to this keyword is the name of the platform group, for example:
+.sp
+PLATFORM_GROUP=sun4c
+.sp
+The \fBPLATFORM_GROUP\fR name is an arbitrary name assigned to a group of platforms. However, \fBPLATFORM_GROUP\fR typically equals the output of the \fBuname \fR\fB-m\fR command. \fBPLATFORM_GROUP\fR value cannot have white space and is limited to 256 ASCII characters.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBINST_ARCH\fR\fR
+.ad
+.RS 18n
+.rt  
+The instruction set architecture of all platforms in the platform group, for example:
+.sp
+INST_ARCH=sparc
+.sp
+The \fBINST_ARCH\fR keyword value must be the value returned by the \fBuname \fR\fB-p\fR command on all platforms in the platform group.
+.RE
+
+.RE
+
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+Platform identifications:
+.sp
+The keywords in a platform identification stanza are:
+.RS
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBPLATFORM_NAME\fR\fR
+.ad
+.RS 21n
+.rt  
+The \fBPLATFORM_NAME\fR keyword \fImust\fR be the first keyword in the platform identification stanza. The \fBPLATFORM_NAME\fR is the name assigned to the platform, for example:
+.sp
+PLATFORM_NAME=SUNW,SPARCstation-5
+.sp
+Typically, this name is the same as the value returned by the \fBuname \fR\fB-i\fRcommand on the machine, but it need not be the same.
+.sp
+The \fBPLATFORM_NAME\fR value cannot have white space and is limited to 256 ASCII characters. If it contains parentheses, it must contain only balanced parentheses. For example. the string "foo(bar)foo" is a valid value for this keyword, but "foo(bar" is not.
+.sp
+The other keywords in the platform identification stanza can be in any order, as long as the \fBPLATFORM_NAME\fR keyword is first.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBPLATFORM_ID\fR\fR
+.ad
+.RS 21n
+.rt  
+The value returned by the \fBuname \fR\fB-i\fR command on the machine, for example:
+.sp
+PLATFORM_ID=SUNW,SPARCstation-5
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBMACHINE_TYPE\fR\fR
+.ad
+.RS 21n
+.rt  
+The value returned by the \fBuname \fR\fB-m\fR command on the machine, for example:
+.sp
+MACHINE_TYPE=sun4c
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBIN_PLATFORM_GROUP\fR\fR
+.ad
+.RS 21n
+.rt  
+The platform group of which the platform is a member, for example:
+.sp
+IN_PLATFORM_GROUP=sun4c
+.sp
+The platform group name must be specified in the same file as the platform identification stanza or in the platform definition file with the name \fB\|.platform/Solaris\fR .
+.sp
+The \fBIN_PLATFORM_GROUP\fR keyword is optional. A platform doesn't have to belong to a platform group. If a platform is not explicitly assigned to a platform group, it essentially forms its own platform group, where the platform group name is the \fBPLATFORM_NAME\fR value. The \fBIN_PLATFORM_GROUP\fR value typically equals the output of the \fBuname \fR\fB-m\fR command.  \fBIN_PLATFORM_GROUP\fR value cannot have white space and is limited to 256 ASCII characters.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBINST_ARCH\fR\fR
+.ad
+.RS 21n
+.rt  
+The instruction set architecture of the platform, for example:
+.sp
+INST_ARCH=sparc
+.sp
+This field is only required if the platform does not belong to a platform group. The \fBINST_ARCH\fR keyword value must be the value returned by the \fBuname \fR\fB-i\fR command on all platforms in the platform group.
+.RE
+
+.RE
+
+.RE
+.SH COMPATIBILITY
+.sp
+.LP
+The installation program will remain compatible with the old Solaris CD format. If a Solaris CD image does not contain any platform definition files, the installation and upgrade programs will select the packages to be installed based on machine type, that is, the value returned by the \fBuname \fR\fB-p\fR command.
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRPlatform Group Definitions
+.sp
+.LP
+The following example shows platform group definitions from the \fB\&.platform/Solaris\fR platform definition file.
+
+.sp
+.in +2
+.nf
+#
+PLATFORM_GROUP=sun4u
+INST_ARCH=sparc
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRPlatform Identification Stanzas
+.sp
+.LP
+The following example shows platform identification stanzas, which define systems that belong in a platform group, from the \fB\&.platform/Solaris\fR platform definition file.
+
+.sp
+.in +2
+.nf
+#
+PLATFORM_NAME=SUNW,SunFire
+PLATFORM_ID=SUNW,SunFire
+IN_PLATFORM_GROUP=sun4u
+PLATFORM_NAME=SUNW,Ultra-80
+PLATFORM_ID=SUNW,Ultra-80
+IN_PLATFORM_GROUP=sun4u
+#
+PLATFORM_NAME=SUNW,SunFire
+PLATFORM_ID=SUNW,SunFire
+IN_PLATFORM_GROUP=sun4u
+#
+PLATFORM_NAME=SUNW,Ultra-80
+PLATFORM_ID=SUNW,Ultra-80
+IN_PLATFORM_GROUP=sun4u
+.fi
+.in -2
+.sp
+
+.SH FILES
+.sp
+.LP
+The \fB\&.platform\fR directory must reside as /\fI\|cd_image\fR\fB/Solaris_\fR\fIvers\fR\fB/.platform\fR, where
+.sp
+.ne 2
+.mk
+.na
+\fB\fIcd_image\fR\fR
+.ad
+.RS 16n
+.rt  
+Is the path to the mounted Solaris CD (\fB/cdrom/cdrom0/s0 by default\fR) or the path to a copy of the Solaris CD on a disk.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBSolaris_\fIvers\fR\fR
+.ad
+.RS 16n
+.rt  
+Is the version of Solaris, for example, Solaris_2.9.
+.RE
+
+.SH NOTES
+.sp
+.LP
+Typically, a platform identification stanza contains either a \fBPLATFORM_ID\fR or a \fBMACHINE_TYPE\fR stanza, but not both.
+.sp
+.LP
+If both are specified, both must match for a platform to be identified as this platform type. Each platform identification stanza must contain either a \fBPLATFORM_ID\fR value or a \fBMACHINE_TYPE\fR value. If a platform matches two different platform identification stanzas\(emone which matched on the value of \fBPLATFORM_ID\fR and one which matched on the value of \fBMACHINE_TYPE\fR , the one that matched on \fBPLATFORM_ID\fR will take precedence.
+.sp
+.LP
+The \fB\&.platform\fR directory is part of the Solaris CD image, whether that be the Solaris CD or a copy of the Solaris CD on a system's hard disk.

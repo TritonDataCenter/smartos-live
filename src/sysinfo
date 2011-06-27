@@ -322,8 +322,8 @@ function get_nic_tags()
 {
     count=1
     for line in $(/usr/bin/bootparams 2>/dev/null \
-        | grep "^[a-z0-9_]*_nic=" \
-        ; grep "^[a-z0-9]*_nic=" ${configfile} 2>/dev/null); do
+        | grep "^[a-zA-Z0-9_]*_nic=" \
+        ; grep "^[a-zA-Z0-9_]*_nic=" ${configfile} 2>/dev/null); do
         fields=(${line//=/ })
         key=${fields[0]}
         if [[ $key != "admin_nic" ]] \

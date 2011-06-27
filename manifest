@@ -1917,6 +1917,7 @@ f smartdc/bin/marco 0555 root bin
 f smartdc/bin/polo 0555 root bin
 f smartdc/bin/sdc-capi 0555 root bin
 f smartdc/bin/sdc-cloudapi 0555 root bin
+f smartdc/bin/sdc-createvm 0555 root bin
 f smartdc/bin/sdc-dsapi 0555 root bin
 f smartdc/bin/sdc-dsimport 0555 root bin
 f smartdc/bin/sdc-dspublish 0555 root bin

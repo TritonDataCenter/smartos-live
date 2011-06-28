@@ -709,7 +709,6 @@ f kernel/drv/amd64/sgen 0755 root sys
 f kernel/drv/amd64/si3124 0755 root sys
 f kernel/drv/amd64/simnet 0755 root sys
 f kernel/drv/amd64/smbios 0755 root sys
-f kernel/drv/amd64/smbsrv 0755 root sys
 f kernel/drv/amd64/softmac 0755 root sys
 f kernel/drv/amd64/spdsock 0755 root sys
 f kernel/drv/amd64/srn 0755 root sys
@@ -831,7 +830,6 @@ f kernel/drv/ses.conf 0644 root sys
 f kernel/drv/sgen.conf 0644 root sys
 f kernel/drv/simnet.conf 0644 root sys
 f kernel/drv/smbios.conf 0644 root sys
-f kernel/drv/smbsrv.conf 0644 root sys
 f kernel/drv/smp.conf 0644 root sys
 f kernel/drv/softmac.conf 0644 root sys
 f kernel/drv/spdsock.conf 0644 root sys
@@ -943,7 +941,6 @@ f kernel/kmdb/amd64/scsi_vhci 0555 root sys
 f kernel/kmdb/amd64/sctp 0555 root sys
 f kernel/kmdb/amd64/sd 0555 root sys
 f kernel/kmdb/amd64/sdbc 0555 root sys
-f kernel/kmdb/amd64/smbsrv 0555 root sys
 f kernel/kmdb/amd64/sockfs 0555 root sys
 f kernel/kmdb/amd64/specfs 0555 root sys
 f kernel/kmdb/amd64/sppp 0555 root sys
@@ -5171,6 +5168,7 @@ f usr/kernel/drv/amd64/kstat 0755 root sys
 f usr/kernel/drv/amd64/ksyms 0755 root sys
 f usr/kernel/drv/amd64/logindmux 0755 root sys
 f usr/kernel/drv/amd64/nsmb 0755 root sys
+f usr/kernel/drv/amd64/smbsrv 0755 root sys
 f usr/kernel/drv/amd64/pm 0755 root sys
 f usr/kernel/drv/amd64/pool 0755 root sys
 f usr/kernel/drv/amd64/ptm 0755 root sys
@@ -5186,12 +5184,16 @@ f usr/kernel/drv/kstat.conf 0644 root sys
 f usr/kernel/drv/ksyms.conf 0644 root sys
 f usr/kernel/drv/logindmux.conf 0644 root sys
 f usr/kernel/drv/nsmb.conf 0644 root sys
+f usr/kernel/drv/smbsrv.conf 0644 root sys
 f usr/kernel/drv/pm.conf 0644 root sys
 f usr/kernel/drv/pool.conf 0644 root sys
 f usr/kernel/drv/ptm.conf 0644 root sys
 f usr/kernel/drv/pts.conf 0644 root sys
 f usr/kernel/drv/sppp.conf 0644 root sys
 f usr/kernel/drv/sppptun.conf 0644 root sys
+d usr/kernel/kmdb 0755 root sys
+d usr/kernel/kmdb/amd64 0755 root sys
+f usr/kernel/kmdb/amd64/smbsrv 0555 root sys
 d usr/kernel/fs 0755 root sys
 d usr/kernel/fs/amd64 0755 root sys
 f usr/kernel/fs/amd64/fdfs 0755 root sys

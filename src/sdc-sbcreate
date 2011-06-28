@@ -315,6 +315,31 @@ function grab_platform_md5
     sum -R -x md5 /mnt/usbkey/os > ${TEMPDIR}/platforms_bootable.md5
 }
 
+function grab_rabbitmq_info
+{
+    echo "  > rabbitmq status"
+
+    rbout=${TEMPDIR}/rabbitmq.list
+    rbcmd=/opt/local/sbin/rabbitmqctl
+
+    rbstatus=`zoneadm -z rabbitmq list -p 2>&1 | cut -d: -f3`
+    if [ $? -eq 0 -a "$rbstatus" == "running" ]; then
+        zlogin rabbitmq $rbcmd list_queues > $rbout
+        echo >>$rbout
+        zlogin rabbitmq $rbcmd list_exchanges >> $rbout
+        echo >>$rbout
+        zlogin rabbitmq $rbcmd list_bindings >> $rbout
+        echo >>$rbout
+        zlogin rabbitmq $rbcmd list_connections >> $rbout
+        echo >>$rbout
+        zlogin rabbitmq $rbcmd list_channels >> $rbout
+        echo >>$rbout
+        zlogin rabbitmq $rbcmd list_consumers >> $rbout
+    else
+        echo "No rabbitmq zone or zone not running" >$rbout
+    fi
+}
+
 while getopts "d:o:c:in:u" opt; do
     if [[ "$opt" == "?" ]]; then
         usage
@@ -412,6 +437,7 @@ if [[ -z $opt_c ]]; then
     grab_fmd
     grab_disk_list
     grab_zpool_history
+    grab_rabbitmq_info
 elif [[ -n $opt_n ]]; then
     grab_compute
 else

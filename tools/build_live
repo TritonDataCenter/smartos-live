@@ -119,8 +119,10 @@ echo "=== /Options ==="
 
 function cleanup
 {
+    umount -f "${rdmnt}/usr" 2>/dev/null
     umount -f "${rdmnt}" 2>/dev/null
     lofiadm -d "${rdfile}" 2>/dev/null
+    lofiadm -d "${usrfile}" 2>/dev/null
     [ -n "${rddir}" ] && rm -fr "${rddir}" 2> /dev/null
 }
 

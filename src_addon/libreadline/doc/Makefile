@@ -44,7 +44,7 @@ RM = rm -f
 INSTALL = /usr/bin/ginstall -c
 INSTALL_DATA = ${INSTALL} -m 644
 
-BUILD_DIR = /home/jerry/illumos-live/src_addon/libreadline
+BUILD_DIR = $(PWD)/..
 TEXINPUTDIR = $(srcdir)
 
 MAKEINFO    = LANGUAGE= makeinfo

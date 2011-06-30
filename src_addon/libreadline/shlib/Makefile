@@ -31,7 +31,7 @@ RL_LIBRARY_NAME = readline
 srcdir = .
 VPATH = .:..
 topdir = ..
-BUILD_DIR = /home/jerry/illumos-live/src_addon/libreadline
+BUILD_DIR = $(PWD)/..
 
 INSTALL = /usr/bin/ginstall -c
 INSTALL_PROGRAM = ${INSTALL}

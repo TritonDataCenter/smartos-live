@@ -23,7 +23,11 @@ cd ${ROOT}/projects/illumos
 cp usr/src/tools/scripts/nightly.sh ./nightly
 chmod u+x ./nightly
 gsed -i -e "s|^GATE=.*$|GATE=\"joyent_${BUILDSTAMP}\"; export GATE|" illumos.sh
-ksh93 ./usr/src/tools/scripts/bldenv.sh -d illumos.sh 'cd $CODEMGR_WS/usr/src && export PATH="$PATH:/opt/local/bin" && dmake setup && cd tools && dmake install'
+
+ksh93 ./usr/src/tools/scripts/bldenv.sh illumos.sh \
+    'cd $CODEMGR_WS/usr/src && export PATH="$PATH:/opt/local/bin" && \
+    dmake setup && cd tools && dmake install'
+
 time ./nightly illumos.sh
 res=$?
 

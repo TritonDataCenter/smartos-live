@@ -31,7 +31,7 @@ update:
 	touch 0-illumos-stamp
 
 0-extra-stamp:
-	(cd $(ROOT)/projects/illumos-extra && gmake DESTDIR=$(PROTO) && gmake DESTDIR=$(PROTO) install)
+	(cd $(ROOT)/projects/illumos-extra && gmake DESTDIR=$(PROTO) install)
 	touch 0-extra-stamp
 
 0-livesrc-stamp: src/bootparams.c

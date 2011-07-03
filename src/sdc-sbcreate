@@ -9,12 +9,16 @@
 # grab other data when we fail to grab data from one source.
 #
 
+PATH=/bin:/usr/bin:/sbin:/usr/sbin:/smartdc/bin:/opt/local/bin:/opt/local/sbin
+
 . /lib/sdc/config.sh
 load_sdc_config
 
+OS=$(uname -s)
+
 function usage
 {
-    echo "Usage: `basename $0` [-d dir] [-o output] [-c content] [-iu]"
+    echo "Usage: `basename $0` [-d dir] [-o output] [-c content] [-n <compute node>] [-iu]"
     usage=/tmp/usage.$$
 
     #
@@ -64,19 +68,79 @@ function do_countdown
     echo ""
 }
 
+function grab_default
+{
+    #
+    # By default, we grab everything except for compute nodes.
+    #
+    grab_sysinfo
+    grab_meminfo
+    grab_cpuinfo
+    grab_dlinfo
+    grab_ifconfig
+    grab_routes
+    grab_auditlog
+    grab_svcs
+    grab_ps
+    grab_zfsinfo
+    grab_df
+    grab_modinfo
+    grab_headnode_info
+    grab_zoneinfo
+    grab_zoneconfigs
+    grab_vmconfigs
+    grab_zonelogs
+    grab_cores
+    grab_dumps
+    grab_fmdump
+    grab_logs
+    grab_castatus
+    grab_phonehome
+    grab_platform_md5
+    grab_app_config
+    grab_fmd
+    grab_disk_list
+    grab_zpool_history
+    grab_rabbitmq_info
+}
+
 function grab_sysinfo
 {
     echo "  > sysinfo"
     sysinfo > ${TEMPDIR}/sysinfo.json
 }
 
+function grab_meminfo
+{
+    if [[ ${OS} == "Linux" ]]; then
+        echo "  > meminfo"
+        cat /proc/meminfo > ${TEMPDIR}/meminfo
+    fi
+}
+
+function grab_cpuinfo
+{
+    if [[ ${OS} == "Linux" ]]; then
+        echo "  > cpuinfo"
+        cat /proc/cpuinfo > ${TEMPDIR}/cpuinfo
+    fi
+}
+
 function grab_dlinfo
 {
-    echo "  > datalink info"
-    dladm show-phys -m > ${TEMPDIR}/dladm.phys
-    dladm show-vnic > ${TEMPDIR}/dladm.vnic
-    dladm show-linkprop > ${TEMPDIR}/dladm.linkprop
-    dladm show-bridge > ${TEMPDIR}/dladm.bridge
+    if [[ ${OS} == "SunOS" ]]; then
+        echo "  > datalink info"
+        dladm show-phys -m > ${TEMPDIR}/dladm.phys
+        dladm show-vnic > ${TEMPDIR}/dladm.vnic
+        dladm show-linkprop > ${TEMPDIR}/dladm.linkprop
+        dladm show-bridge > ${TEMPDIR}/dladm.bridge
+    elif [[ ${OS} == "Linux" ]]; then
+        echo "  > datalink info"
+        for eth in $(ifconfig -a | grep "^eth[0-9]* " | cut -d' ' -f1); do
+            ethtool ${eth} > ${TEMPDIR}/ethtool.${eth}
+            ethtool -S ${eth} >> ${TEMPDIR}/ethtool.${eth}
+        done
+    fi
 }
 
 function grab_ifconfig
@@ -93,70 +157,105 @@ function grab_routes
 
 function grab_auditlog
 {
-    echo "  > auditlog info"
-    (cd /var/audit && tar -zcvf ${TEMPDIR}/var.audit.tar.gz .) >&4 2>&1
+    if [[ ${OS} == "SunOS" ]]; then
+        echo "  > auditlog info"
+        (cd /var/audit && tar -zcvf ${TEMPDIR}/var.audit.tar.gz .) >&4 2>&1
+    fi
 }
 
 function grab_svcs
 {
     echo "  > services"
     echo "    (all services)"
-    svcs -Z -a > ${TEMPDIR}/svcs.all
-    mkdir ${TEMPDIR}/svccfg_archive
-    echo "    (global service archive)"
-    svccfg archive | gzip -c > ${TEMPDIR}/svccfg_archive/global.gz
-    if [[ -d /usbkey/zones ]]; then
-        for zone in $(cd /usbkey/zones ; ls); do
-            echo "    (service archive for $zone)"
-            zlogin ${zone} svccfg archive \
-            | gzip -c > ${TEMPDIR}/svccfg_archive/${zone}.gz
-        done
+    if [[ ${OS} == "SunOS" ]]; then
+        svcs -Z -a > ${TEMPDIR}/svcs.all
+        mkdir ${TEMPDIR}/svccfg_archive
+        echo "    (global service archive)"
+        svccfg archive | gzip -c > ${TEMPDIR}/svccfg_archive/global.gz
+        if [[ -d /usbkey/zones ]]; then
+            for zone in $(cd /usbkey/zones ; ls); do
+                echo "    (service archive for $zone)"
+                zlogin ${zone} svccfg archive \
+                | gzip -c > ${TEMPDIR}/svccfg_archive/${zone}.gz
+            done
+        fi
+    elif [[ ${OS} == "Linux" ]]; then
+        initctl list > ${TEMPDIR}/initctl.list
     fi
 }
 
 function grab_ps
 {
     echo "  > process information"
-    ps -efZ > ${TEMPDIR}/ps.efZ
+    if [[ ${OS} == "SunOS"  ]]; then
+        ps -efZ > ${TEMPDIR}/ps.efZ
+    elif [[ ${OS} == "Linux" ]]; then
+        ps -eLfwlyF > ${TEMPDIR}/ps.eLfwlyF
+    fi
 }
 
 function grab_zfsinfo
 {
-    echo "  > zfs info"
-    echo "    (zpool status)"
-    zpool status -v > ${TEMPDIR}/zpool.status
-    echo "    (zfs list)"
-    zfs list -t all > ${TEMPDIR}/zfs.list
+    if [[ ${OS} == "SunOS" ]]; then
+        echo "  > zfs info"
+        echo "    (zpool status)"
+        zpool status -v > ${TEMPDIR}/zpool.status
+        echo "    (zfs list)"
+        zfs list -t all > ${TEMPDIR}/zfs.list
+    elif [[ ${OS} == "Linux" ]]; then
+        echo "  > LVM info"
+        echo "    (pvs)"
+        pvs -v --all > ${TEMPDIR}/lvm.pvs 2>/dev/null
+        echo "    (vgs)"
+        vgs -v --all > ${TEMPDIR}/lvm.vgs 2>/dev/null
+        echo "    (lvs)"
+        lvs -v --all > ${TEMPDIR}/lvm.lvs 2>/dev/null
+    fi
 }
 
 function grab_app_config
 {
-    echo "  > app zone config"
-    zones=$(zoneadm list -i | grep -v global)
-    for zone in ${zones}; do
-      if [[ -d /zones/${zone}/root/opt/smartdc/${zone}-data/config ]]; then
-         ( cd  /zones/${zone}/root/opt/smartdc/${zone}-data/; /usr/bin/gtar -zcf ${TEMPDIR}/${zone}.config.tgz config )
-      fi
-    done 
+    if [[ ${OS} == "SunOS" ]]; then
+        echo "  > app zone config"
+        zones=$(zoneadm list -i | grep -v global)
+        for zone in ${zones}; do
+          if [[ -d /zones/${zone}/root/opt/smartdc/${zone}-data/config ]]; then
+             ( cd  /zones/${zone}/root/opt/smartdc/${zone}-data/; /usr/bin/gtar -zcf ${TEMPDIR}/${zone}.config.tgz config )
+          fi
+        done
+    elif [[ ${OS} == "Linux" ]]; then
+        echo "  > skipping zone info on Linux"
+    fi
 }
 
 function grab_disk_list
 {
     echo "  > disk list"
-    /usr/bin/disklist -a > ${TEMPDIR}/disklist
+    if [[ ${OS} == "SunOS" ]]; then
+        /usr/bin/disklist -a > ${TEMPDIR}/disklist
+    elif [[ ${OS} == "Linux" ]]; then
+        /sbin/fdisk -lu > ${TEMPDIR}/disklist 2>/dev/null
+    fi
 }
 
 function grab_zpool_history
 {
-    echo "  > zpool history"
-    zpool history > ${TEMPDIR}/zpool.history
+    if [[ ${OS} == "SunOS" ]]; then
+        echo "  > zpool history"
+        zpool history > ${TEMPDIR}/zpool.history
+    elif [[ ${OS} == "Linux" ]]; then
+        echo "  > skipping zpool history on Linux"
+    fi
 }
 
 function grab_fmd
 {
-    echo "  > fmd"
-    (cd /var/fm ; /usr/bin/gtar -zcf ${TEMPDIR}/fmd.tgz fmd)
-    
+    if [[ ${OS} == "SunOS" ]]; then
+        echo "  > fmd"
+        (cd /var/fm ; /usr/bin/gtar -zcf ${TEMPDIR}/fmd.tgz fmd)
+    elif [[ ${OS} == "Linux" ]]; then
+        echo "  > skipping fmd logs on Linux"
+    fi
 }
 
 function grab_df
@@ -168,7 +267,11 @@ function grab_df
 function grab_modinfo
 {
     echo "  > module information"
-    modinfo -w > ${TEMPDIR}/modinfo
+    if [[ ${OS} == "SunOS" ]]; then
+        modinfo -w > ${TEMPDIR}/modinfo
+    elif [[ ${OS} == "Linux" ]]; then
+        lsmod > ${TEMPDIR}/lsmod
+    fi
 }
 
 function grab_headnode_info
@@ -182,16 +285,32 @@ function grab_headnode_info
 
 function grab_zoneinfo
 {
-    echo "  > zone list"
-    zoneadm list -v -c > ${TEMPDIR}/zonelist.vc
-    echo "  > zone kernel state"
-    zonemon -k > ${TEMPDIR}/zonekstate
+    if [[ ${OS} == "SunOS" ]]; then
+        echo "  > zone list"
+        zoneadm list -v -c > ${TEMPDIR}/zonelist.vc
+        echo "  > zone kernel state"
+        zonemon -k > ${TEMPDIR}/zonekstate
+    elif [[ ${OS} == "Linux" ]]; then
+        echo "  > skipping zone info on Linux"
+    fi
 }
 
 function grab_zoneconfigs
 {
-    echo "  > zone configs"
-    tar -cvf ${TEMPDIR}/zone.configs.tar etc/zones >&4 2>&1
+    if [[ ${OS} == "SunOS" ]]; then
+        echo "  > zone configs"
+        tar -cvf ${TEMPDIR}/zone.configs.tar etc/zones >&4 2>&1
+    elif [[ ${OS} == "Linux" ]]; then
+        echo "  > skipping zone configs on Linux"
+    fi
+}
+
+function grab_vmconfigs
+{
+    if [[ -d /etc/vms ]]; then
+        echo "  > VM configs"
+        tar -cvf ${TEMPDIR}/vm.configs.tar etc/vms >&4 2>&1
+    fi
 }
 
 function grab_zonelogs
@@ -213,30 +332,42 @@ function grab_cores
 
 function grab_dumps
 {
-    # These are already compressed
-    echo "  > kernel crash dumps"
-    tar -cvf ${TEMPDIR}/dumps.tar var/crash/volatile >&4 2>&1
+    if [[ ${OS} == "SunOS" ]]; then
+        # These are already compressed
+        echo "  > kernel crash dumps"
+        tar -cvf ${TEMPDIR}/dumps.tar var/crash/volatile >&4 2>&1
+    elif [[ ${OS} == "Linux" ]]; then
+        echo "  > skipping kernel crash dumps on Linux"
+    fi
 }
 
 function grab_fmdump
 {
-    echo "  > fmdump"
-    fmdump > ${TEMPDIR}/fmdump.out
-    fmdump -e > ${TEMPDIR}/fmdump.e.out
+    if [[ ${OS} == "SunOS" ]]; then
+        echo "  > fmdump"
+        fmdump > ${TEMPDIR}/fmdump.out
+        fmdump -e > ${TEMPDIR}/fmdump.e.out
+    elif [[ ${OS} == "Linux" ]]; then
+        echo "  > skipping kernel crash dumps on Linux"
+    fi
 }
 
 function grab_logs
 {
     echo "  > logs"
-    tar -zcvf ${TEMPDIR}/gz-logs.tar.gz var/svc/log \
-        etc/svc/volatile var/adm >&4 2>&1
+    if [[ ${OS} == "SunOS" ]]; then
+       tar -zcvf ${TEMPDIR}/gz-logs.tar.gz var/svc/log \
+           etc/svc/volatile var/adm >&4 2>&1
+    elif [[ ${OS} == "Linux" ]]; then
+       tar -zcvf ${TEMPDIR}/host-logs.tar.gz var/log >&4 2>&1
+    fi
 }
 
 function grab_castatus
 {
-    if [[ -n ${CONFIG_ca_admin_ip} ]]; then
-	curl http://${CONFIG_ca_admin_ip}:23181/ca/admin/status?recurse=true >&4 2>&1 \
-	| json > ${TEMPDIR}/ca.status
+    if [[ ${OS} == "SunOS" && -n ${CONFIG_ca_admin_ip} ]]; then
+        curl http://${CONFIG_ca_admin_ip}:23181/ca/admin/status?recurse=true >&4 2>&1 \
+        | json > ${TEMPDIR}/ca.status
     fi
 }
 
@@ -309,6 +440,10 @@ function grab_compute
 
 function grab_platform_md5
 {
+    if [[ $headnode != "true" ]]; then
+        return
+    fi
+
     echo "  > kernel & platform integrity hash"
     sum -R -x md5 /usbkey/os > ${TEMPDIR}/platforms_cache.md5 
     /usbkey/scripts/mount-usb.sh
@@ -317,6 +452,10 @@ function grab_platform_md5
 
 function grab_rabbitmq_info
 {
+    if [[ $headnode != "true" ]]; then
+        return
+    fi
+
     echo "  > rabbitmq status"
 
     rbout=${TEMPDIR}/rabbitmq.list
@@ -354,8 +493,24 @@ while getopts "d:o:c:in:u" opt; do
     fi
 done
 
+if [[ -n ${opt_n} && ${headnode} != "true" ]]; then
+    fatal "can only specify -n flag when running on a headnode"
+fi
+
 if [[ -n $opt_c ]]; then
     contents=`echo $opt_c | tr ',' ' '`
+
+    # ensure -c didn't include 'default' and anything other than 'compute'
+    contents_count=$(echo ${contents} | wc -w | tr -d '[:space:]')
+    if echo " ${contents} " | grep " default " >/dev/null; then
+        if [[ ${contents_count} -gt 2 ]]; then
+            fatal "cannot specify default and contents included by default"
+        elif [[ ${contents_count} -eq 2 ]] && \
+            ! echo " ${contents} " | grep " compute " >/dev/null; then
+            fatal "cannot specify default and contents included by default"
+        fi
+    fi
+
     opt_c=
     for content in $contents; do
         if ! compgen -A function grab_ | \
@@ -367,6 +522,8 @@ if [[ -n $opt_c ]]; then
             opt_c=${opt_c}${content},
         elif [[ -n $opt_n ]]; then
             fatal "cannot specify both node and 'compute' content"
+        elif [[ ${headnode} != "true" ]]; then
+            fatal "can only specify 'compute' content on a headnode"
         fi
     done
 
@@ -409,35 +566,7 @@ echo "==> Gathering System Information"
 cd /
 
 if [[ -z $opt_c ]]; then 
-    #
-    # By default, we grab everything except for compute nodes.
-    #
-    grab_sysinfo
-    grab_dlinfo
-    grab_ifconfig
-    grab_routes
-    grab_auditlog
-    grab_svcs
-    grab_ps
-    grab_zfsinfo
-    grab_df
-    grab_modinfo
-    grab_headnode_info
-    grab_zoneinfo
-    grab_zoneconfigs
-    grab_zonelogs
-    grab_cores
-    grab_dumps
-    grab_fmdump
-    grab_logs
-    grab_castatus
-    grab_phonehome
-    grab_platform_md5
-    grab_app_config
-    grab_fmd
-    grab_disk_list
-    grab_zpool_history
-    grab_rabbitmq_info
+    grab_default
 elif [[ -n $opt_n ]]; then
     grab_compute
 else

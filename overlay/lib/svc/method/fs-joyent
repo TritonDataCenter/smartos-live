@@ -37,23 +37,38 @@ smf_is_globalzone || exit $SMF_EXIT_OK
 /bin/bootparams | grep "^noimport=true" >/dev/null
 if [ $? -ne 0 ]; then
     # If the zpool doesn't exist, then there's nothing to mount.
-    zpool import -f zones
-    zpool status -v zones
+
+    # Assume the system zpool is zones, but if a different system pool
+    # identifies itself (by virtue of the .system_pool file being present in the
+    # pool's root dataset), then use that system pool instead.
+    SYS_ZPOOL=zones
+
+    # Import all zpools available
+    for pool in $(zpool import | grep "pool:" | awk '{print $2}') ; do
+        zpool import -f $pool
+        [[ -f /$pool/.system_pool ]] && SYS_ZPOOL=$pool
+    done
+
+    # For the system zpool, mount and configure all system datasets
+    zpool status -v ${SYS_ZPOOL}
     if [ $? -eq 0 ]; then
-        mount -F zfs zones/var /var
-        mount -F zfs zones/config /etc/zones
-        mount -F zfs zones/opt /opt
+        mount -F zfs ${SYS_ZPOOL}/var /var
+        mount -F zfs ${SYS_ZPOOL}/config /etc/zones
+        mount -F zfs ${SYS_ZPOOL}/opt /opt
         mkdir -p /opt/smartdc/agents/smf
         mount -O -F lofs /var/svc/manifest/site /opt/smartdc/agents/smf
+
         if [[ -n $(/bin/bootparams | grep '^headnode=true') ]]; then
             mkdir /usbkey
-            mount -F zfs zones/usbkey /usbkey
+            mount -F zfs ${SYS_ZPOOL}/usbkey /usbkey
         fi
-        swap -a /dev/zvol/dsk/zones/swap
-	    dumpadm -y -d /dev/zvol/dsk/zones/dump
 
-	[[ -f /zones/currbooted ]] && mv /zones/currbooted /zones/lastbooted
-	uname -v >/zones/currbooted
+        swap -a /dev/zvol/dsk/${SYS_ZPOOL}/swap
+	dumpadm -y -d /dev/zvol/dsk/${SYS_ZPOOL}/dump
+
+	[[ -f /${SYS_ZPOOL}/currbooted ]] && \
+            mv /${SYS_ZPOOL}/currbooted /${SYS_ZPOOL}/lastbooted
+	uname -v >/${SYS_ZPOOL}/currbooted
     fi
 fi
 

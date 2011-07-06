@@ -1919,6 +1919,7 @@ f smartdc/bin/sdc-dsapi 0555 root bin
 f smartdc/bin/sdc-dsimport 0555 root bin
 f smartdc/bin/sdc-dspublish 0555 root bin
 f smartdc/bin/sdc-healthcheck 0555 root bin
+f smartdc/bin/sdc-netinfo 0555 root bin
 f smartdc/bin/sdc-mapi 0555 root bin
 f smartdc/bin/sdc-mapi-destroy-container 0555 root bin
 f smartdc/bin/sdc-oneachnode 0555 root bin

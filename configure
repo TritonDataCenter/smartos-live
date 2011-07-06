@@ -211,7 +211,7 @@ PKGPUBLISHER_REDIST="${PUBLISHER}"; export PKGPUBLISHER_REDIST
 MAKEFLAGS=k;    export MAKEFLAGS
 UT_NO_USAGE_TRACKING="1"; export UT_NO_USAGE_TRACKING
 CW_NO_SHADOW="1"; export CW_NO_SHADOW
-BUILD_TOOLS=/opt;                               export BUILD_TOOLS
+BUILD_TOOLS="\${CODEMGR_WS}/usr/src/tools/proto/root_\${MACH}-nd/opt"; export BUILD_TOOLS
 SPRO_ROOT=/opt/SUNWspro;                        export SPRO_ROOT
 SPRO_VROOT=\$SPRO_ROOT;                          export SPRO_VROOT
 

@@ -9,6 +9,9 @@
 # grab other data when we fail to grab data from one source.
 #
 
+# Note for man page. Use this to generate the list of available args to "-c":
+#   grep ^function sdc-sbcreate | grep grab_ | cut -c 15- | grep -v default | sort
+
 PATH=/bin:/usr/bin:/sbin:/usr/sbin:/smartdc/bin:/opt/local/bin:/opt/local/sbin
 
 . /lib/sdc/config.sh

@@ -224,6 +224,12 @@ function grab_app_config
         for zone in ${zones}; do
           if [[ -d /zones/${zone}/root/opt/smartdc/${zone}-data/config ]]; then
              ( cd  /zones/${zone}/root/opt/smartdc/${zone}-data/; /usr/bin/gtar -zcf ${TEMPDIR}/${zone}.config.tgz config )
+          elif [[ ${zone} == "cloudapi" && -d /zones/${zone}/root/opt/smartdc/cloudapi/cfg ]]; then
+             ( cd  /zones/${zone}/root/opt/smartdc/${zone}/; /usr/bin/gtar -zcf ${TEMPDIR}/${zone}.config.tgz cfg )
+          elif [[ ${zone} == "portal" && -f /zones/${zone}/root/opt/smartdc/portal/config.js ]]; then
+             ( cd  /zones/${zone}/root/opt/smartdc/${zone}/; /usr/bin/gtar -zcf ${TEMPDIR}/${zone}.config.tgz config.js )
+          elif [[ ${zone} == "dhcpd" && -f /zones/${zone}/root/opt/smartdc/booter/config.js ]]; then
+             ( cd  /zones/${zone}/root/opt/smartdc/booter/; /usr/bin/gtar -zcf ${TEMPDIR}/${zone}.config.tgz config.js )
           fi
         done
     elif [[ ${OS} == "Linux" ]]; then

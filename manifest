@@ -6821,6 +6821,7 @@ s usr/lib/libexacct.so=libexacct.so.1
 s usr/lib/libexpat.so.0=libexpat.so.1.5.2
 f usr/lib/libexpat.so.1.5.2 0555 root bin
 s usr/lib/libexpat.so.1=libexpat.so.1.5.2
+s usr/lib/libexpat.so=libexpat.so.1.5.2
 f usr/lib/libfcoe.so.1 0755 root bin
 s usr/lib/libfcoe.so=libfcoe.so.1
 s usr/lib/libfdisk.so.1=../../lib/libfdisk.so.1

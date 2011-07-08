@@ -536,10 +536,18 @@ fi
 
 # Need the output dir first.
 BASEDIR=${opt_d:-/var/tmp}
+if [[ ${BASEDIR:0:1} != "/" ]]; then
+    BASEDIR=`pwd`/$BASEDIR
+fi
 TEMPDIR=$BASEDIR/sdcsb.$$/`sysinfo | json UUID`
 LOGFILE=$BASEDIR/sdcsb.$$.log
 FILENAME=sdc-support.$(hostname).$(TZ=UTC date "+%Y%m%dT%H%M%SZ").tar.bz
-OUTFILE=${opt_o:-$BASEDIR/$FILENAME}
+OUTFILE=${opt_o}
+if [[ -z "${OUTFILE}" ]]; then
+    OUTFILE=$BASEDIR/$FILENAME
+elif [[ ${OUTFILE:0:1} != "/" ]]; then
+    OUTFILE=$BASEDIR/$OUTFILE
+fi
 COUNTDOWN=5
 
 if [[ -z $opt_i ]]; then

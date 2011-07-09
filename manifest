@@ -2287,6 +2287,7 @@ h usr/bin/ksh93=usr/lib/isaexec
 h usr/bin/ksh=usr/lib/isaexec
 f usr/bin/kstat 0555 root bin
 f usr/bin/ktutil 0555 root bin
+f usr/bin/kvmstat 0555 root bin
 f usr/bin/last 0555 root bin
 f usr/bin/lastcomm 0555 root bin
 f usr/bin/ld 0755 root bin

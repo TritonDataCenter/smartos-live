@@ -49,6 +49,12 @@ if [ $? -ne 0 ]; then
         [[ -f /$pool/.system_pool ]] && SYS_ZPOOL=$pool
     done
 
+    # Destroy the system zpool if instructed before we do any system mounting
+    /bin/bootparams | grep "^destroy_system_zpool=true" >/dev/null
+    if [ $? -eq 0 ]; then
+        zpool destroy -f ${SYS_ZPOOL}
+    fi
+
     # For the system zpool, mount and configure all system datasets
     zpool status -v ${SYS_ZPOOL}
     if [ $? -eq 0 ]; then

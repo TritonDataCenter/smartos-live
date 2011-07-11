@@ -106,7 +106,7 @@ if smf_is_globalzone; then
     if [[ -n ${SYSINFO_NIC_external} ]]; then
         if [[ -n "${CONFIG_external_ip}" ]]; then
             iface=${SYSINFO_NIC_external}
-            if [[ -n ${CONFIG_external_vlan_id} ]]; then
+            if [[ -n ${CONFIG_external_vlan_id} ]] && [[ ${CONFIG_external_vlan_id} != 0 ]]; then
                 dladm create-vnic -l ${iface} -v ${CONFIG_external_vlan_id} gz_external0
                 iface="gz_external0"
             fi
@@ -120,7 +120,7 @@ if smf_is_globalzone; then
             fi
 
             # Set up the GZ to NAT for Coal
-            if [[ "${CONFIG_headnode_nat}" == "true" ]]; then
+            if [[ "${CONFIG_coal}" == "true" ]]; then
                 # Convert the admin IP and netmask to CIDR notation
                 CIDR=$(ip_netmask_to_cidr ${CONFIG_admin_ip} ${CONFIG_admin_netmask})
 
@@ -174,7 +174,7 @@ IPNAT
                 continue
             fi
 
-            if [[ -n "${vlan}" ]]; then
+            if [[ -n "${vlan}" ]] && [[ "${vlan}" != 0 ]]; then
                 dladm create-vnic -l ${iface} -v ${vlan} gz_${tag}0
                 iface="gz_${tag}0"
             fi

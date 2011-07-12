@@ -46,13 +46,20 @@ if [ $? -ne 0 ]; then
     # Import all zpools available
     for pool in $(zpool import | grep "pool:" | awk '{print $2}') ; do
         zpool import -f $pool
-        [[ -f /$pool/.system_pool ]] && SYS_ZPOOL=$pool
+        if [[ -f /$pool/.system_pool ]] ; then
+            SYS_ZPOOL=$pool
+            svccfg -s svc:/system/smartdc/init setprop \
+                config/zpool=${SYS_ZPOOL}
+            svccfg -s svc:/system/smartdc/init:default refresh
+        fi
     done
 
-    # Destroy the system zpool if instructed before we do any system mounting
-    /bin/bootparams | grep "^destroy_system_zpool=true" >/dev/null
+    # If the destroy_zpools boot parameter is set, destroy all zpools
+    /bin/bootparams | grep "^destroy_zpools=true" >/dev/null
     if [ $? -eq 0 ]; then
-        zpool destroy -f ${SYS_ZPOOL}
+        for pool in $(zpool list -p -o name | grep -v NAME) ; do
+            zpool destroy -f ${pool}
+        done
     fi
 
     # For the system zpool, mount and configure all system datasets

@@ -136,7 +136,8 @@ fi
 USBKEYS=`/usr/bin/disklist -a`
 for key in ${USBKEYS}; do
     if [[ `/usr/sbin/fstyp /dev/dsk/${key}p0:1` == 'pcfs' ]]; then
-        /usr/sbin/mount -F pcfs -o foldcase /dev/dsk/${key}p0:1 ${USBMOUNTPOINT};
+        /usr/sbin/mount -F pcfs -o foldcase,noatime /dev/dsk/${key}p0:1 \
+            ${USBMOUNTPOINT};
         if [[ $? == "0" ]]; then
             if [[ ! -f ${USBMOUNTPOINT}/.joyliveusb ]]; then
                 if [[ ${DEBUG} == "true" ]]; then
@@ -161,7 +162,8 @@ if [[ ! -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
     # we're probably VMWare, so we're looking at a non-USB disk.
     for disk in `/usr/bin/disklist -a`; do
         if [[ `/usr/sbin/fstyp /dev/dsk/${disk}p1` == 'pcfs' ]]; then
-            /usr/sbin/mount -F pcfs -o foldcase /dev/dsk/${disk}p1 ${USBMOUNTPOINT};
+            /usr/sbin/mount -F pcfs -o foldcase,noatime /dev/dsk/${disk}p1 \
+                ${USBMOUNTPOINT};
             if [[ $? == "0" ]]; then
                 if [[ ! -f ${USBMOUNTPOINT}/.joyliveusb ]]; then
                     if [[ ${DEBUG} == "true" ]]; then

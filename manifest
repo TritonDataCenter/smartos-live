@@ -1290,6 +1290,7 @@ f lib/fm/amd64/libfmevent.so.1 0755 root bin
 s lib/fm/amd64/libfmevent.so=libfmevent.so.1
 f lib/fm/libfmevent.so.1 0755 root bin
 s lib/fm/libfmevent.so=libfmevent.so.1
+h lib/fs=etc/fs
 d lib/inet 0755 root bin
 f lib/inet/in.mpathd 0555 root bin
 f lib/inet/ipmgmtd 0555 root bin

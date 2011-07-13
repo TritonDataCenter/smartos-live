@@ -1,3 +1,7 @@
+d admin 0755 admin staff
+f admin/.bash_profile 0644 admin staff
+f admin/.bashrc 0644 admin staff
+f admin/.profile 0644 admin staff
 s bin=usr/bin
 d boot 0755 root sys
 d boot/acpi 0755 root sys
@@ -1920,6 +1924,7 @@ f smartdc/bin/sdc-dsapi 0555 root bin
 f smartdc/bin/sdc-dsimport 0555 root bin
 f smartdc/bin/sdc-dspublish 0555 root bin
 f smartdc/bin/sdc-healthcheck 0555 root bin
+f smartdc/bin/sdc-image-sync 0555 root bin
 f smartdc/bin/sdc-netinfo 0555 root bin
 f smartdc/bin/sdc-mapi 0555 root bin
 f smartdc/bin/sdc-mapi-destroy-container 0555 root bin
@@ -1940,6 +1945,7 @@ f smartdc/man/man1/sdc-dsapi.1 0444 root bin
 f smartdc/man/man1/sdc-dsimport.1 0444 root bin
 f smartdc/man/man1/sdc-dspublish.1 0444 root bin
 f smartdc/man/man1/sdc-healthcheck.1 0444 root bin
+f smartdc/man/man1/sdc-image-sync.1 0444 root bin
 f smartdc/man/man1/sdc-mapi.1 0444 root bin
 f smartdc/man/man1/sdc-mapi-destroy-container.1 0444 root bin
 f smartdc/man/man1/sdc-oneachnode.1 0444 root bin

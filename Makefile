@@ -40,13 +40,13 @@ update:
 0-man-stamp:
 	(cd $(ROOT)/man/src && gmake clean && gmake)
 
-0-tools-stamp: tools/builder/builder tools/pwgen tools/cryptpass
+0-tools-stamp: 0-builder-stamp 0-pwgen-stamp tools/cryptpass
 	(cp ${ROOT}/tools/cryptpass $(PROTO)/usr/lib)
 
-tools/builder/builder:
+0-builder-stamp:
 	(cd $(ROOT)/tools/builder && gmake builder)
 
-tools/pwgen:
+0-pwgen-stamp:
 	(cd ${ROOT}/tools/pwgen-* && ./configure && make && cp pwgen ${ROOT}/tools)
 
 tools/cryptpass: tools/cryptpass.c

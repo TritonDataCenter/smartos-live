@@ -5764,7 +5764,6 @@ f usr/lib/devfsadm/linkmod/SUNW_dtrace_link.so 0755 root sys
 f usr/lib/devfsadm/linkmod/SUNW_fssnap_link.so 0755 root sys
 f usr/lib/devfsadm/linkmod/SUNW_ieee1394_link.so 0755 root sys
 f usr/lib/devfsadm/linkmod/SUNW_lofi_link.so 0755 root sys
-f usr/lib/devfsadm/linkmod/SUNW_md_link.so 0755 root sys
 f usr/lib/devfsadm/linkmod/SUNW_misc_link.so 0755 root sys
 f usr/lib/devfsadm/linkmod/SUNW_misc_link_i386.so 0755 root sys
 f usr/lib/devfsadm/linkmod/SUNW_port_link.so 0755 root sys
@@ -10693,7 +10692,6 @@ f usr/sbin/gettable 0555 root bin
 f usr/sbin/groupadd 0555 root sys
 f usr/sbin/groupdel 0555 root sys
 f usr/sbin/groupmod 0555 root sys
-f usr/sbin/growfs 0555 root bin
 f usr/sbin/grpck 0555 root bin
 f usr/sbin/gsscred 0555 root sys
 f usr/sbin/hal-device 0555 root bin
@@ -10788,7 +10786,6 @@ f usr/sbin/lofiadm 0555 root bin
 f usr/sbin/logadm 0555 root bin
 f usr/sbin/makedbm 0555 root bin
 f usr/sbin/makemap 0555 root bin
-f usr/sbin/medstat 0555 root bin
 f usr/sbin/mkdevalloc 0555 root bin
 h usr/sbin/mkdevmaps=usr/sbin/mkdevalloc
 f usr/sbin/mkfile 0555 root bin

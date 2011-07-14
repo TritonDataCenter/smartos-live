@@ -26,13 +26,15 @@ BASE=$(PWD)
 DESTDIR=$(BASE)/../proto
 CC=/usr/sfw/bin/gcc
 LD=/usr/ccs/bin/ld
-MAKE=/usr/sfw/bin/gmake
+MAKE=gmake
+INSTALL=ginstall
+PATH=/opt/SUNWspro/bin:/opt/local/bin:$(PATH)
 
 all: $(VER)/config.status
-	(cd $(VER); env \
-	    PATH=/opt/SUNWspro/bin:/usr/gnu/bin:$(PATH) \
+	(cd $(VER); env - \
+	    PATH=$(PATH) \
 	    CC=$(CC) "CFLAGS= -g $(LARGEFILES)" LD=$(LD) \
-	    "INSTALL=/usr/ucb/install -c" \
+	    "INSTALL=$(INSTALL) -c" \
 	    MAKE=$(MAKE) $(MAKE))
 	@find . -name core -exec rm -f {} \;
 
@@ -40,10 +42,10 @@ install: all
 	DESTDIR=$(DESTDIR) /bin/bash ./install-joyent
 
 $(VER)/config.status: $(VER)/configure
-	(cd $(VER); env \
-	    PATH=/opt/SUNWspro/bin:/usr/gnu/bin:$(PATH) \
+	(cd $(VER); env - \
+	    PATH=$(PATH) \
 	    CC=$(CC) CFLAGS=$(CFLAGS) LD=$(LD) \
-	    "INSTALL=/usr/ucb/install -c" \
+	    "INSTALL=$(INSTALL) -c" \
 	    "MAKE=$(MAKE)" \
 	    ./configure)
 

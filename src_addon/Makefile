@@ -30,13 +30,13 @@ SUBDIRS= bind cpp ipmi libreadline libusb
 
 -include Makefile.inc
 
-all:
-	-for dir in $(SUBDIRS); do (cd $$dir; $(MAKE) DESTDIR=$(DESTDIR) all); done
+$(SUBDIRS): FRC
+	cd $@; $(MAKE) PATH=$(PATH) DESTDIR=$(DESTDIR) install
 
-install:
-	-for dir in $(SUBDIRS); do (cd $$dir; $(MAKE) DESTDIR=$(DESTDIR) install); done
+install: $(SUBDIRS)
 
 clean: $(SUBDIRS)
-	-for dir in $(SUBDIRS); do (cd $$dir; $(MAKE) DESTDIR=$(DESTDIR) clean); done
+	-for dir in $(SUBDIRS); do (cd $$dir; $(MAKE) PATH=$(PATH) DESTDIR=$(DESTDIR) clean); done
 	-rm -rf proto
 
+FRC:

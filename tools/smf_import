@@ -5,11 +5,23 @@
 
 set -e
 
+SVCCFG="${ROOT}/projects/illumos/usr/src/cmd/svc/svccfg/svccfg-native"
+
 rdmnt=$1
 if [ -z "${rdmnt}" ] || [ ! -d "${rdmnt}" ]; then
   echo "FATAL: Invalid ramdisk root '${rdmnt}'"
   echo "Usage: $0 <rdmnt>"
   exit 1
+fi
+
+if [ -z "${ROOT}" ]; then
+	echo "FATAL: ROOT not specified"
+	exit 1
+fi
+
+if [[ ! -x ${SVCCFG} ]]; then
+	echo "FATAL: Missing svccfg-native binary from illumos build looked in '${SVCCFG}'"
+	exit 1
 fi
 
 # TODO check that we're root
@@ -21,7 +33,6 @@ export SVCCFG_DTD=${rdmnt}/usr/share/lib/xml/dtd/service_bundle.dtd.1
 export SVCCFG_REPOSITORY=${REPO_DB}
 export SVCCFG_CONFIGD_PATH=/lib/svc/bin/svc.configd
 
-SVCCFG="/usr/sbin/svccfg"
 ${SVCCFG} -v repository ${REPO_DB}
 ${SVCCFG} -v add smf/manifest
 ${SVCCFG} -v import ${rdmnt}/lib/svc/manifest

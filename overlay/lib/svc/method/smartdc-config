@@ -39,6 +39,15 @@ set_root_password() {
       && mv /etc/shadow.new /etc/shadow
 }
 
+set_admin_password() {
+    enc_password=$1
+
+    sed -e "s|^admin:[^\:]*:|admin:${enc_password}:|" /etc/shadow \
+        > /etc/shadow.new \
+      && chmod 400 /etc/shadow.new \
+      && mv /etc/shadow.new /etc/shadow
+}
+
 set_ntp_hosts() {
     ntp_hosts=$1
 
@@ -95,6 +104,17 @@ case "$1" in
         echo "Set root password from config."
     else
         echo "No root shadow entry in the config, cannot set."
+    fi
+
+    # Boot parameter takes precidence over config
+    if [[ -n "${SYSINFO_Bootparam_admin_shadow}" ]]; then
+        set_admin_password "${SYSINFO_Bootparam_admin_shadow}"
+        echo "Set admin password boot parameters."
+    elif [[ -n "${CONFIG_admin_shadow}" ]]; then
+        set_admin_password "${CONFIG_admin_shadow}"
+        echo "Set admin password from config."
+    else
+        echo "No admin shadow entry in the config, cannot set."
     fi
 
     # Set authorized_keys for root

@@ -1,3 +1,7 @@
+d admin 0755 admin staff
+f admin/.bash_profile 0644 admin staff
+f admin/.bashrc 0644 admin staff
+f admin/.profile 0644 admin staff
 s bin=usr/bin
 d boot 0755 root sys
 d boot/acpi 0755 root sys

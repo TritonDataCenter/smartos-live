@@ -3312,14 +3312,6 @@ f usr/include/mdiox.h 0644 root bin
 f usr/include/mdmn_changelog.h 0644 root bin
 f usr/include/memory.h 0644 root bin
 f usr/include/menu.h 0644 root bin
-f usr/include/meta.h 0644 root bin
-f usr/include/meta_basic.h 0644 root bin
-f usr/include/meta_runtime.h 0644 root bin
-f usr/include/metacl.h 0644 root bin
-f usr/include/metad.h 0644 root bin
-f usr/include/metadyn.h 0644 root bin
-f usr/include/metamed.h 0644 root bin
-f usr/include/metamhd.h 0644 root bin
 f usr/include/mhdx.h 0644 root bin
 f usr/include/mon.h 0644 root bin
 f usr/include/monetary.h 0644 root bin

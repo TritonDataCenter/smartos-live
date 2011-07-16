@@ -549,6 +549,7 @@ d etc/user_attr.d 0755 root sys
 f etc/user_attr.d/SUNWcs 0644 root sys
 s etc/utmpx=../var/adm/utmpx
 f etc/vfstab 0644 root sys
+d etc/vms 0755 root sys
 s etc/wtmpx=../var/adm/wtmpx
 d etc/xdg 0755 root sys
 d etc/xdg/autostart 0755 root sys
@@ -1641,6 +1642,7 @@ d lib/svc/manifest/system/security 0755 root sys
 f lib/svc/manifest/system/smartdc-config.xml 0444 root sys
 f lib/svc/manifest/system/smartdc-init.xml 0444 root sys
 f lib/svc/manifest/system/smartdc-ur.xml 0444 root sys
+f lib/svc/manifest/system/smartdc-vmadmd.xml 0444 root bin
 f lib/svc/manifest/system/stmf.xml 0444 root sys
 d lib/svc/manifest/system/svc 0755 root sys
 f lib/svc/manifest/system/svc/global.xml 0444 root sys
@@ -1702,6 +1704,7 @@ f lib/svc/method/smartdc-beacon 0555 root bin
 f lib/svc/method/smartdc-config 0555 root bin
 f lib/svc/method/smartdc-init 0555 root sys
 f lib/svc/method/smartdc-ur 0555 root bin
+f lib/svc/method/smartdc-vmadmd 0555 root bin
 f lib/svc/method/smb-client 0555 root sys
 f lib/svc/method/smtp-sendmail 0555 root sys
 f lib/svc/method/sshd 0555 root bin
@@ -1927,6 +1930,7 @@ d smartdc/bin 0555 root bin
 f smartdc/bin/beacon 0555 root bin
 f smartdc/bin/has_hvx 0555 root bin
 f smartdc/bin/marco 0555 root bin
+f smartdc/bin/metadata 0555 root bin
 f smartdc/bin/polo 0555 root bin
 f smartdc/bin/qemu-img 0555 root bin
 f smartdc/bin/qemu-io 0555 root bin
@@ -1951,6 +1955,8 @@ f smartdc/bin/sdc-sbupload 0555 root bin
 f smartdc/bin/sdc-vmmanifest 0555 root bin
 f smartdc/bin/sdc-zfs-io-throttle.d 0555 root bin
 f smartdc/bin/sdc-zoneinfo 0555 root bin
+f smartdc/bin/vmadm 0555 root bin
+f smartdc/bin/vmadmd 0555 root bin
 d smartdc/etc 0555 root bin
 d smartdc/etc/qemu 0555 root bin
 f smartdc/etc/qemu/target-x86_64.conf 0444 root bin
@@ -1973,6 +1979,10 @@ f smartdc/man/man1/sdc-sbcreate.1 0444 root bin
 f smartdc/man/man1/sdc-sbupload.1 0444 root bin
 f smartdc/man/man1/sdc-zfs-io-throttle.1 0444 root bin
 f smartdc/man/man1/sdc-zoneinfo.1 0444 root bin
+d smartdc/node_modules 0555 root bin
+f smartdc/node_modules/async.js 0444 root bin
+f smartdc/node_modules/dateformat.js 0444 root bin
+f smartdc/node_modules/sprintf.js 0444 root bin
 f smartdc/pubkey.key 0555 root bin
 d smartdc/share 0555 root bin
 d smartdc/share/qemu 0555 root bin

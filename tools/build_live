@@ -42,8 +42,8 @@ ERROR=0
 PLATFORM=i86pc
 ISA=i386
 ARCH64=amd64
-RSIZE=260000
-USIZE=380000
+RSIZE=265000
+USIZE=390000
 KERNEL_64=platform/$PLATFORM/kernel/$ARCH64/unix
 BUILDVER=$(head -n1 ${ROOT}/configure-buildver)
 if [[ -n "${BUILDVER}" ]]; then

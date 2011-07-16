@@ -1614,7 +1614,6 @@ f lib/svc/manifest/system/ibsrp/target.xml 0444 root sys
 f lib/svc/manifest/system/identity.xml 0444 root sys
 f lib/svc/manifest/system/idmap.xml 0444 root sys
 f lib/svc/manifest/system/intrd.xml 0444 root sys
-f lib/svc/manifest/system/smartdc-init.xml 0444 root sys
 f lib/svc/manifest/system/keymap.xml 0444 root sys
 f lib/svc/manifest/system/labeld.xml 0444 root sys
 f lib/svc/manifest/system/logadm-upgrade.xml 0444 root sys
@@ -1640,6 +1639,7 @@ f lib/svc/manifest/system/sar.xml 0444 root sys
 f lib/svc/manifest/system/scheduler.xml 0444 root sys
 d lib/svc/manifest/system/security 0755 root sys
 f lib/svc/manifest/system/smartdc-config.xml 0444 root sys
+f lib/svc/manifest/system/smartdc-init.xml 0444 root sys
 f lib/svc/manifest/system/smartdc-ur.xml 0444 root sys
 f lib/svc/manifest/system/stmf.xml 0444 root sys
 d lib/svc/manifest/system/svc 0755 root sys
@@ -1922,12 +1922,16 @@ f sbin/wusbadm 0555 root bin
 f sbin/zfs 0555 root bin
 f sbin/zonename 0555 root bin
 f sbin/zpool 0555 root bin
-d smartdc 0755 root bin
-d smartdc/bin 0755 root bin
+d smartdc 0555 root bin
+d smartdc/bin 0555 root bin
 f smartdc/bin/beacon 0555 root bin
 f smartdc/bin/has_hvx 0555 root bin
 f smartdc/bin/marco 0555 root bin
 f smartdc/bin/polo 0555 root bin
+f smartdc/bin/qemu-img 0555 root bin
+f smartdc/bin/qemu-io 0555 root bin
+f smartdc/bin/qemu-nbd 0555 root bin
+f smartdc/bin/qemu-system-x86_64 0555 root bin
 f smartdc/bin/sdc-capi 0555 root bin
 f smartdc/bin/sdc-cloudapi 0555 root bin
 f smartdc/bin/sdc-createvm 0555 root bin
@@ -1936,9 +1940,9 @@ f smartdc/bin/sdc-dsimport 0555 root bin
 f smartdc/bin/sdc-dspublish 0555 root bin
 f smartdc/bin/sdc-healthcheck 0555 root bin
 f smartdc/bin/sdc-image-sync 0555 root bin
-f smartdc/bin/sdc-netinfo 0555 root bin
 f smartdc/bin/sdc-mapi 0555 root bin
 f smartdc/bin/sdc-mapi-destroy-container 0555 root bin
+f smartdc/bin/sdc-netinfo 0555 root bin
 f smartdc/bin/sdc-oneachnode 0555 root bin
 f smartdc/bin/sdc-phonehome 0555 root bin
 f smartdc/bin/sdc-pubapi 0555 root bin
@@ -1947,9 +1951,12 @@ f smartdc/bin/sdc-sbupload 0555 root bin
 f smartdc/bin/sdc-vmmanifest 0555 root bin
 f smartdc/bin/sdc-zfs-io-throttle.d 0555 root bin
 f smartdc/bin/sdc-zoneinfo 0555 root bin
-d smartdc/man 0755 root bin
-d smartdc/man/cat1 0755 root bin
-d smartdc/man/man1 0755 root bin
+d smartdc/etc 0555 root bin
+d smartdc/etc/qemu 0555 root bin
+f smartdc/etc/qemu/target-x86_64.conf 0444 root bin
+d smartdc/man 0555 root bin
+d smartdc/man/cat1 0555 root bin
+d smartdc/man/man1 0555 root bin
 f smartdc/man/man1/sdc-capi.1 0444 root bin
 f smartdc/man/man1/sdc-cloudapi.1 0444 root bin
 f smartdc/man/man1/sdc-dsapi.1 0444 root bin
@@ -1957,8 +1964,8 @@ f smartdc/man/man1/sdc-dsimport.1 0444 root bin
 f smartdc/man/man1/sdc-dspublish.1 0444 root bin
 f smartdc/man/man1/sdc-healthcheck.1 0444 root bin
 f smartdc/man/man1/sdc-image-sync.1 0444 root bin
-f smartdc/man/man1/sdc-mapi.1 0444 root bin
 f smartdc/man/man1/sdc-mapi-destroy-container.1 0444 root bin
+f smartdc/man/man1/sdc-mapi.1 0444 root bin
 f smartdc/man/man1/sdc-oneachnode.1 0444 root bin
 f smartdc/man/man1/sdc-phonehome.1 0444 root bin
 f smartdc/man/man1/sdc-pubapi.1 0444 root bin
@@ -1967,6 +1974,66 @@ f smartdc/man/man1/sdc-sbupload.1 0444 root bin
 f smartdc/man/man1/sdc-zfs-io-throttle.1 0444 root bin
 f smartdc/man/man1/sdc-zoneinfo.1 0444 root bin
 f smartdc/pubkey.key 0555 root bin
+d smartdc/share 0555 root bin
+d smartdc/share/qemu 0555 root bin
+f smartdc/share/qemu/bamboo.dtb 0444 root bin
+f smartdc/share/qemu/bios.bin 0444 root bin
+f smartdc/share/qemu/gpxe-eepro100-80861209.rom 0444 root bin
+d smartdc/share/qemu/keymaps 0555 root bin
+f smartdc/share/qemu/keymaps/ar 0444 root bin
+f smartdc/share/qemu/keymaps/common 0444 root bin
+f smartdc/share/qemu/keymaps/da 0444 root bin
+f smartdc/share/qemu/keymaps/de 0444 root bin
+f smartdc/share/qemu/keymaps/de-ch 0444 root bin
+f smartdc/share/qemu/keymaps/en-gb 0444 root bin
+f smartdc/share/qemu/keymaps/en-us 0444 root bin
+f smartdc/share/qemu/keymaps/es 0444 root bin
+f smartdc/share/qemu/keymaps/et 0444 root bin
+f smartdc/share/qemu/keymaps/fi 0444 root bin
+f smartdc/share/qemu/keymaps/fo 0444 root bin
+f smartdc/share/qemu/keymaps/fr 0444 root bin
+f smartdc/share/qemu/keymaps/fr-be 0444 root bin
+f smartdc/share/qemu/keymaps/fr-ca 0444 root bin
+f smartdc/share/qemu/keymaps/fr-ch 0444 root bin
+f smartdc/share/qemu/keymaps/hr 0444 root bin
+f smartdc/share/qemu/keymaps/hu 0444 root bin
+f smartdc/share/qemu/keymaps/is 0444 root bin
+f smartdc/share/qemu/keymaps/it 0444 root bin
+f smartdc/share/qemu/keymaps/ja 0444 root bin
+f smartdc/share/qemu/keymaps/lt 0444 root bin
+f smartdc/share/qemu/keymaps/lv 0444 root bin
+f smartdc/share/qemu/keymaps/mk 0444 root bin
+f smartdc/share/qemu/keymaps/modifiers 0444 root bin
+f smartdc/share/qemu/keymaps/nl 0444 root bin
+f smartdc/share/qemu/keymaps/nl-be 0444 root bin
+f smartdc/share/qemu/keymaps/no 0444 root bin
+f smartdc/share/qemu/keymaps/pl 0444 root bin
+f smartdc/share/qemu/keymaps/pt 0444 root bin
+f smartdc/share/qemu/keymaps/pt-br 0444 root bin
+f smartdc/share/qemu/keymaps/ru 0444 root bin
+f smartdc/share/qemu/keymaps/sl 0444 root bin
+f smartdc/share/qemu/keymaps/sv 0444 root bin
+f smartdc/share/qemu/keymaps/th 0444 root bin
+f smartdc/share/qemu/keymaps/tr 0444 root bin
+f smartdc/share/qemu/linuxboot.bin 0444 root bin
+f smartdc/share/qemu/multiboot.bin 0444 root bin
+f smartdc/share/qemu/openbios-ppc 0444 root bin
+f smartdc/share/qemu/openbios-sparc32 0444 root bin
+f smartdc/share/qemu/openbios-sparc64 0444 root bin
+f smartdc/share/qemu/petalogix-s3adsp1800.dtb 0444 root bin
+f smartdc/share/qemu/ppc_rom.bin 0444 root bin
+f smartdc/share/qemu/pxe-e1000.bin 0444 root bin
+f smartdc/share/qemu/pxe-ne2k_pci.bin 0444 root bin
+f smartdc/share/qemu/pxe-pcnet.bin 0444 root bin
+f smartdc/share/qemu/pxe-rtl8139.bin 0444 root bin
+f smartdc/share/qemu/pxe-virtio.bin 0444 root bin
+f smartdc/share/qemu/s390-zipl.rom 0444 root bin
+f smartdc/share/qemu/vapic.bin 0444 root bin
+f smartdc/share/qemu/vgabios-cirrus.bin 0444 root bin
+f smartdc/share/qemu/vgabios-qxl.bin 0444 root bin
+f smartdc/share/qemu/vgabios-stdvga.bin 0444 root bin
+f smartdc/share/qemu/vgabios-vmware.bin 0444 root bin
+f smartdc/share/qemu/vgabios.bin 0444 root bin
 d smartdc/ur-agent 0755 root bin
 f smartdc/ur-agent/README 0444 root bin
 d smartdc/ur-agent/amqp 0755 root bin
@@ -5179,13 +5246,14 @@ f usr/kernel/drv/amd64/fssnap 0755 root sys
 f usr/kernel/drv/amd64/ipf 0755 root sys
 f usr/kernel/drv/amd64/kstat 0755 root sys
 f usr/kernel/drv/amd64/ksyms 0755 root sys
+f usr/kernel/drv/amd64/kvm 0755 root sys
 f usr/kernel/drv/amd64/logindmux 0755 root sys
 f usr/kernel/drv/amd64/nsmb 0755 root sys
-f usr/kernel/drv/amd64/smbsrv 0755 root sys
 f usr/kernel/drv/amd64/pm 0755 root sys
 f usr/kernel/drv/amd64/pool 0755 root sys
 f usr/kernel/drv/amd64/ptm 0755 root sys
 f usr/kernel/drv/amd64/pts 0755 root sys
+f usr/kernel/drv/amd64/smbsrv 0755 root sys
 f usr/kernel/drv/amd64/sppp 0755 root sys
 f usr/kernel/drv/amd64/sppptun 0755 root sys
 f usr/kernel/drv/amd64/zcons 0755 root sys
@@ -5195,22 +5263,23 @@ f usr/kernel/drv/fssnap.conf 0644 root sys
 f usr/kernel/drv/ipf.conf 0644 root sys
 f usr/kernel/drv/kstat.conf 0644 root sys
 f usr/kernel/drv/ksyms.conf 0644 root sys
+f usr/kernel/drv/kvm.conf 0644 root sys
 f usr/kernel/drv/logindmux.conf 0644 root sys
 f usr/kernel/drv/nsmb.conf 0644 root sys
-f usr/kernel/drv/smbsrv.conf 0644 root sys
 f usr/kernel/drv/pm.conf 0644 root sys
 f usr/kernel/drv/pool.conf 0644 root sys
 f usr/kernel/drv/ptm.conf 0644 root sys
 f usr/kernel/drv/pts.conf 0644 root sys
+f usr/kernel/drv/smbsrv.conf 0644 root sys
 f usr/kernel/drv/sppp.conf 0644 root sys
 f usr/kernel/drv/sppptun.conf 0644 root sys
-d usr/kernel/kmdb 0755 root sys
-d usr/kernel/kmdb/amd64 0755 root sys
-f usr/kernel/kmdb/amd64/smbsrv 0555 root sys
 d usr/kernel/fs 0755 root sys
 d usr/kernel/fs/amd64 0755 root sys
 f usr/kernel/fs/amd64/fdfs 0755 root sys
 f usr/kernel/fs/amd64/pcfs 0755 root sys
+d usr/kernel/kmdb 0755 root sys
+d usr/kernel/kmdb/amd64 0755 root sys
+f usr/kernel/kmdb/amd64/smbsrv 0555 root sys
 d usr/kernel/sched 0755 root sys
 d usr/kernel/sched/amd64 0755 root sys
 f usr/kernel/sched/amd64/FSS 0755 root sys
@@ -5309,8 +5378,6 @@ s usr/lib/amd64/ld.so.1=../../../lib/amd64/ld.so.1
 f usr/lib/amd64/lddstub 0555 root bin
 f usr/lib/amd64/libCrun.so.1 0755 root bin
 f usr/lib/amd64/libCstd.so.1 0755 root bin
-f usr/lib/amd64/libdemangle.so.1 0755 root bin
-f usr/lib/amd64/libiostream.so.1 0755 root bin
 f usr/lib/amd64/libHBAAPI.so.1 0755 root bin
 s usr/lib/amd64/libHBAAPI.so=libHBAAPI.so.1
 f usr/lib/amd64/libSMHBAAPI.so.1 0755 root bin
@@ -5366,6 +5433,7 @@ s usr/lib/amd64/libcurses.so.1=../../../lib/amd64/libcurses.so.1
 s usr/lib/amd64/libcurses.so=../../../lib/amd64/libcurses.so.1
 f usr/lib/amd64/libdat.so.1 0755 root bin
 s usr/lib/amd64/libdat.so=libdat.so.1
+f usr/lib/amd64/libdemangle.so.1 0755 root bin
 s usr/lib/amd64/libdevice.so.1=../../../lib/amd64/libdevice.so.1
 s usr/lib/amd64/libdevice.so=../../../lib/amd64/libdevice.so.1
 s usr/lib/amd64/libdevid.so.1=../../../lib/amd64/libdevid.so.1
@@ -5438,6 +5506,7 @@ s usr/lib/amd64/libinetutil.so.1=../../../lib/amd64/libinetutil.so.1
 s usr/lib/amd64/libinetutil.so=../../../lib/amd64/libinetutil.so.1
 s usr/lib/amd64/libintl.so.1=../../../lib/amd64/libintl.so.1
 s usr/lib/amd64/libintl.so=../../../lib/amd64/libintl.so.1
+f usr/lib/amd64/libiostream.so.1 0755 root bin
 f usr/lib/amd64/libipmi.so.1 0755 root bin
 s usr/lib/amd64/libipmi.so=libipmi.so.1
 f usr/lib/amd64/libipp.so.1 0755 root bin
@@ -6725,8 +6794,6 @@ f usr/lib/lib.b 0444 root bin
 f usr/lib/libC.so.5 0755 root bin
 f usr/lib/libCrun.so.1 0755 root bin
 f usr/lib/libCstd.so.1 0755 root bin
-f usr/lib/libdemangle.so.1 0755 root bin
-f usr/lib/libiostream.so.1 0755 root bin
 f usr/lib/libHBAAPI.so.1 0755 root bin
 s usr/lib/libHBAAPI.so=libHBAAPI.so.1
 f usr/lib/libSMHBAAPI.so.1 0755 root bin
@@ -6791,6 +6858,7 @@ s usr/lib/libcurses.so.1=../../lib/libcurses.so.1
 s usr/lib/libcurses.so=../../lib/libcurses.so.1
 f usr/lib/libdat.so.1 0755 root bin
 s usr/lib/libdat.so=libdat.so.1
+f usr/lib/libdemangle.so.1 0755 root bin
 s usr/lib/libdevice.so.1=../../lib/libdevice.so.1
 s usr/lib/libdevice.so=../../lib/libdevice.so.1
 s usr/lib/libdevid.so.1=../../lib/libdevid.so.1
@@ -6882,6 +6950,7 @@ f usr/lib/libinstzones.so.1 0755 root bin
 s usr/lib/libinstzones.so=libinstzones.so.1
 s usr/lib/libintl.so.1=../../lib/libintl.so.1
 s usr/lib/libintl.so=../../lib/libintl.so.1
+f usr/lib/libiostream.so.1 0755 root bin
 f usr/lib/libipmi.so.1 0755 root bin
 s usr/lib/libipmi.so=libipmi.so.1
 f usr/lib/libipp.so.1 0755 root bin
@@ -7289,6 +7358,7 @@ f usr/lib/mdb/kvm/amd64/ip.so 0555 root sys
 f usr/lib/mdb/kvm/amd64/ipc.so 0555 root sys
 f usr/lib/mdb/kvm/amd64/ipp.so 0555 root sys
 f usr/lib/mdb/kvm/amd64/krtld.so 0555 root sys
+f usr/lib/mdb/kvm/amd64/kvm.so 0555 root sys
 f usr/lib/mdb/kvm/amd64/lofs.so 0555 root sys
 f usr/lib/mdb/kvm/amd64/logindmux.so 0555 root sys
 f usr/lib/mdb/kvm/amd64/mac.so 0555 root sys

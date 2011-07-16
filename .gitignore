@@ -31,3 +31,11 @@ src_addon/libreadline/*.o
 src_addon/libreadline/*.a
 src_addon/libreadline/shlib/*.so
 src_addon/libusb/*.1
+src_addon/cpp/cpp
+src_addon/cpp/cpp.o
+src_addon/cpp/y.tab.c
+src_addon/cpp/y.tab.o
+src_addon/libreadline/shlib/libhistory.so.5
+src_addon/libreadline/shlib/libreadline.so.5
+src_addon/libusb/wr_libusb.o
+tools/pwgen-2.06/autom4te.cache

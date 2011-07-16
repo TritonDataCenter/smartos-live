@@ -257,6 +257,8 @@ if [[ -f ${ROOT}/configure-branches ]]; then
     [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/kvm" ${branch}
     branch=$(grep "^kvm-cmd: " ${ROOT}/configure-branches | cut -d' ' -f2)
     [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/kvm-cmd" ${branch}
+    branch=$(grep "^vmadm: " ${ROOT}/configure-branches | cut -d' ' -f2)
+    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/vmadm" ${branch}
 else
     echo ""
     echo "WARNING! No configure-branches file!!! Using master branch for everything!"

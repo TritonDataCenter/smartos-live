@@ -5766,6 +5766,18 @@ f usr/lib/brand/joyent/poststate 0755 root root
 f usr/lib/brand/joyent/prestate 0755 root root
 f usr/lib/brand/joyent/query 0755 root root
 f usr/lib/brand/joyent/statechange 0755 root root
+d usr/lib/brand/kvm 0755 root bin
+f usr/lib/brand/kvm/common.ksh 0444 root root
+f usr/lib/brand/kvm/config.xml 0444 root root
+f usr/lib/brand/kvm/kattach 0755 root root
+f usr/lib/brand/kvm/kdetach 0755 root root
+f usr/lib/brand/kvm/kinstall 0755 root root
+f usr/lib/brand/kvm/kuninstall 0755 root root
+f usr/lib/brand/kvm/pinstall 0755 root root
+f usr/lib/brand/kvm/platform.xml 0444 root root
+f usr/lib/brand/kvm/poststate 0755 root root
+f usr/lib/brand/kvm/prestate 0755 root root
+f usr/lib/brand/kvm/statechange 0755 root root
 d usr/lib/brand/shared 0755 root sys
 f usr/lib/brand/shared/common.ksh 0444 root bin
 f usr/lib/brand/shared/query 0755 root bin
@@ -17457,5 +17469,6 @@ d var/svc/manifest/system/security 0755 root sys
 d var/svc/manifest/system/svc 0755 root sys
 d var/svc/profile 0755 root sys
 d var/tmp 1777 root sys
+d var/vms 0755 root sys
 d var/yp 0755 root bin
 d var/yp/binding 0755 root bin

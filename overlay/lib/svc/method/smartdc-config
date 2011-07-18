@@ -71,7 +71,7 @@ case "$1" in
 
         # Check for config and run interactive if it doesn't exist.
         if [[ ! -f ${USB_PATH}/config ]]; then
-            if [ `/bin/bootparams | grep "^noimport=true" >/dev/null` ]; then
+            if /bin/bootparams | grep "^noimport=true" >/dev/null 2>&1; then
                 # Skipping interactive config, bypass rest of script.
                 exit $SMF_EXIT_OK
             fi

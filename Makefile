@@ -22,7 +22,7 @@ update:
 0-local-stamp:
 	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
         (cd $(ROOT)/projects/local/$${dir} && \
-        ./build.sh || gmake && \
+        [ -f build.sh ] && ./build.sh || gmake && \
         gmake SMARTOS=true DESTDIR=$(PROTO) install); done
 
 0-devpro-stamp:

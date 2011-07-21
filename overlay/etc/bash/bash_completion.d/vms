@@ -1,4 +1,4 @@
-vmadm()
+_vmadm()
 {
     local cur prev opts base
     COMPREPLY=()

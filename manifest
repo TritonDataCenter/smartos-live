@@ -550,7 +550,6 @@ d etc/user_attr.d 0755 root sys
 f etc/user_attr.d/SUNWcs 0644 root sys
 s etc/utmpx=../var/adm/utmpx
 f etc/vfstab 0644 root sys
-d etc/vms 0755 root sys
 s etc/wtmpx=../var/adm/wtmpx
 d etc/xdg 0755 root sys
 d etc/xdg/autostart 0755 root sys
@@ -17471,6 +17470,5 @@ d var/svc/manifest/system/security 0755 root sys
 d var/svc/manifest/system/svc 0755 root sys
 d var/svc/profile 0755 root sys
 d var/tmp 1777 root sys
-d var/vms 0755 root sys
 d var/yp 0755 root bin
 d var/yp/binding 0755 root bin

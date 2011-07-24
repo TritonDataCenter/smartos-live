@@ -260,6 +260,12 @@ function get_system_type()
     Uname_System=${UNAME_S}
 }
 
+function get_vm_capable()
+{
+    # XXX all compute nodes should now support VMs
+    VM_Capable="true"
+}
+
 function get_hostname()
 {
     Hostname=$(hostname)
@@ -582,6 +588,7 @@ Product='${Product}'
 Serial_Number='${Serial_Number}'
 UUID='${UUID}'
 Hostname='${Hostname}'
+VM_Capable='${VM_Capable}'
 CPU_Type='${CPU_Version}'
 CPU_Virtualization='${CPU_Virtualization}'
 CPU_Physical_Cores=${CPU_Count}
@@ -651,6 +658,7 @@ function output_json()
   "Serial Number": "${Serial_Number}",
   "UUID": "${UUID}",
   "Hostname": "${Hostname}",
+  "VM Capable": "${VM_Capable}",
   "CPU Type": "${CPU_Version}",
   "CPU Virtualization": "${CPU_Virtualization}",
   "CPU Physical Cores": ${CPU_Count},
@@ -746,6 +754,7 @@ else
 fi
 get_live_image_buildstamp
 get_system_type
+get_vm_capable
 get_disks
 get_hostname
 get_nic_mappings

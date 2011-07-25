@@ -5844,6 +5844,7 @@ f usr/lib/cryptpass 0555 root bin
 d usr/lib/devfsadm 0755 root sys
 s usr/lib/devfsadm/devfsadmd=../../sbin/devfsadm
 d usr/lib/devfsadm/linkmod 0755 root sys
+f usr/lib/devfsadm/linkmod/JOY_kvm_link.so 0755 root sys
 f usr/lib/devfsadm/linkmod/SUNW_audio_link.so 0755 root sys
 f usr/lib/devfsadm/linkmod/SUNW_cfg_link.so 0755 root sys
 f usr/lib/devfsadm/linkmod/SUNW_dcam1394_link.so 0755 root sys

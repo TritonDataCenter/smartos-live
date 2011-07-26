@@ -658,7 +658,7 @@ function output_json()
   "Serial Number": "${Serial_Number}",
   "UUID": "${UUID}",
   "Hostname": "${Hostname}",
-  "VM Capable": "${VM_Capable}",
+  "VM Capable": ${VM_Capable},
   "CPU Type": "${CPU_Version}",
   "CPU Virtualization": "${CPU_Virtualization}",
   "CPU Physical Cores": ${CPU_Count},

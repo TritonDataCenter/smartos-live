@@ -1930,7 +1930,6 @@ d smartdc/bin 0555 root bin
 f smartdc/bin/beacon 0555 root bin
 f smartdc/bin/has_hvx 0555 root bin
 f smartdc/bin/marco 0555 root bin
-f smartdc/bin/metadata 0555 root bin
 f smartdc/bin/polo 0555 root bin
 f smartdc/bin/qemu-img 0555 root bin
 f smartdc/bin/qemu-io 0555 root bin
@@ -1957,6 +1956,7 @@ f smartdc/bin/sdc-zfs-io-throttle.d 0555 root bin
 f smartdc/bin/sdc-zoneinfo 0555 root bin
 f smartdc/bin/vmadm 0555 root bin
 f smartdc/bin/vmadmd 0555 root bin
+f smartdc/bin/vmcfg 0555 root bin
 d smartdc/etc 0555 root bin
 d smartdc/etc/qemu 0555 root bin
 f smartdc/etc/qemu/target-x86_64.conf 0444 root bin

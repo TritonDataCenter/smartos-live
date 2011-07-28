@@ -54,6 +54,7 @@ rts 48
 random 49
 sad 50
 scsi_vhci 51
+kvm 52
 simnet 54
 sgen 55
 softmac 56

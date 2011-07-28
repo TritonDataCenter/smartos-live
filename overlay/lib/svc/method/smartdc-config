@@ -173,6 +173,16 @@ case "$1" in
         /usr/bin/loadkeys ${CONFIG_default_keymap}
     fi
 
+    # Enable virtual terminals to support interactive installation
+    vtdaemon="svc:/system/vtdaemon"
+    svccfg -s ${vtdaemon} setprop options/hotkeys=true
+    svcadm refresh ${vtdaemon}
+    svcadm enable ${vtdaemon}
+    svcadm enable svc:/system/console-login:vt2
+    svcadm enable svc:/system/console-login:vt3
+    svcadm enable svc:/system/console-login:vt4
+    svcadm enable svc:/system/console-login:vt5
+    svcadm enable svc:/system/console-login:vt6
 
     ;;
 

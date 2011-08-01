@@ -10876,6 +10876,7 @@ f usr/sbin/lofiadm 0555 root bin
 f usr/sbin/logadm 0555 root bin
 f usr/sbin/makedbm 0555 root bin
 f usr/sbin/makemap 0555 root bin
+f usr/sbin/mdata-get 0555 root bin
 f usr/sbin/mkdevalloc 0555 root bin
 h usr/sbin/mkdevmaps=usr/sbin/mkdevalloc
 f usr/sbin/mkfile 0555 root bin
@@ -12132,6 +12133,7 @@ f usr/share/man/man1/msgfmt.1 0444 root bin
 f usr/share/man/man1/mt.1 0444 root bin
 f usr/share/man/man1/mv.1 0444 root bin
 f usr/share/man/man1/nawk.1 0444 root bin
+f usr/share/man/man1/nc.1 0444 root bin
 f usr/share/man/man1/neqn.1 0444 root bin
 f usr/share/man/man1/newform.1 0444 root bin
 f usr/share/man/man1/newgrp.1 0444 root bin

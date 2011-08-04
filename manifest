@@ -1937,6 +1937,7 @@ f smartdc/bin/qemu-nbd 0555 root bin
 f smartdc/bin/qemu-system-x86_64 0555 root bin
 f smartdc/bin/sdc-capi 0555 root bin
 f smartdc/bin/sdc-cloudapi 0555 root bin
+f smartdc/bin/sdc-compnode 0555 root bin
 f smartdc/bin/sdc-createvm 0555 root bin
 f smartdc/bin/sdc-dsapi 0555 root bin
 f smartdc/bin/sdc-dsimport 0555 root bin
@@ -1965,6 +1966,7 @@ d smartdc/man/cat1 0555 root bin
 d smartdc/man/man1 0555 root bin
 f smartdc/man/man1/sdc-capi.1 0444 root bin
 f smartdc/man/man1/sdc-cloudapi.1 0444 root bin
+f smartdc/man/man1/sdc-compnode.1 0444 root bin
 f smartdc/man/man1/sdc-dsapi.1 0444 root bin
 f smartdc/man/man1/sdc-dsimport.1 0444 root bin
 f smartdc/man/man1/sdc-dspublish.1 0444 root bin

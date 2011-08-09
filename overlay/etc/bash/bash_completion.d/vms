@@ -40,4 +40,23 @@ _vmadm()
     return 0
 }
 
+_vmcfg()
+{
+    local cur prev opts base
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    if [[ ${prev} == 'vmcfg' ]]; then
+        vms=$(vmadm list)
+        COMPREPLY=( $(compgen -W "${vms}" -- ${cur}) )
+    else
+        # Just expand files by default
+        COMPREPLY=( $(compgen -f -- ${cur}) )
+    fi
+
+    return 0
+}
+
 complete -F _vmadm vmadm
+complete -F _vmcfg vmcfg

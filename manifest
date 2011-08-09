@@ -1949,7 +1949,6 @@ f smartdc/bin/sdc-mapi-destroy-container 0555 root bin
 f smartdc/bin/sdc-netinfo 0555 root bin
 f smartdc/bin/sdc-oneachnode 0555 root bin
 f smartdc/bin/sdc-phonehome 0555 root bin
-f smartdc/bin/sdc-pubapi 0555 root bin
 f smartdc/bin/sdc-sbcreate 0555 root bin
 f smartdc/bin/sdc-sbupload 0555 root bin
 f smartdc/bin/sdc-vmmanifest 0555 root bin
@@ -1976,7 +1975,6 @@ f smartdc/man/man1/sdc-mapi-destroy-container.1 0444 root bin
 f smartdc/man/man1/sdc-mapi.1 0444 root bin
 f smartdc/man/man1/sdc-oneachnode.1 0444 root bin
 f smartdc/man/man1/sdc-phonehome.1 0444 root bin
-f smartdc/man/man1/sdc-pubapi.1 0444 root bin
 f smartdc/man/man1/sdc-sbcreate.1 0444 root bin
 f smartdc/man/man1/sdc-sbupload.1 0444 root bin
 f smartdc/man/man1/sdc-zfs-io-throttle.1 0444 root bin

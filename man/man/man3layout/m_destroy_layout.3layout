@@ -1,0 +1,79 @@
+'\" te
+.\" Copyright (c) 1996, The Open Group. All Rights Reserved.
+.\" Portions Copyright (c) 2008, Sun Microsystems, Inc.  All Rights Reserved.
+.\" Sun Microsystems, Inc. gratefully acknowledges
+.\" The Open Group for permission to reproduce portions of its copyrighted documentation. Original documentation from The Open Group can be obtained online at http://www.opengroup.org/bookstore/.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH m_destroy_layout 3LAYOUT "7 Aug 2006" "SunOS 5.11" "Layout Service Library Functions"
+.SH NAME
+m_destroy_layout \- destroy a layout object
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... -llayout [ \fIlibrary\fR... ]
+#include <sys/layout.h>
+
+
+
+\fBint\fR \fBm_destroy_layout\fR(\fBconst LayoutObject\fR \fIlayoutobject\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBm_destroy_layout()\fR function destroys a \fBLayoutObject\fR by deallocating the layout object and all the associated resources previously allocated by the \fBm_create_layout\fR(3LAYOUT) function. 
+.SH RETURN VALUES
+.sp
+.LP
+Upon successful completion, \fB0\fR is returned. Otherwise \fB\(mi1\fR is returned and \fBerrno\fR is set to indicate the error.
+.SH ERRORS
+.sp
+.LP
+The \fBm_destroy_layout()\fR function may fail if:
+.sp
+.ne 2
+.mk
+.na
+\fB\fBEBADF\fR\fR
+.ad
+.RS 10n
+.rt  
+The attribute object is erroneous.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fBEFAULT\fR\fR
+.ad
+.RS 10n
+.rt  
+Errors occurred while processing the request.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityStandard
+_
+MT-LevelMT-Safe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBm_create_layout\fR(3LAYOUT), \fBattributes\fR(5), \fBstandards\fR(5)

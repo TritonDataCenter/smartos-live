@@ -1,0 +1,36 @@
+SUNWlibC-closed-bins-20060918.i386 Distribution README
+
+1. Subject to the terms and conditions of the Software License Agreement
+   and the obligations, restrictions, and exceptions set forth below, You
+   may reproduce and distribute the Software (and also portions of Software
+   identified below as Redistributable), provided that:
+
+  (i) distribute the Software or Redistributables bundled as part of,
+      and for the sole purpose of running, a version of OpenSolaris;
+
+ (ii) do not remove or alter any proprietary legends or notices contained
+      in or on the Software or Redistributables,
+
+(iii) only distribute the Software or Redistributables subject to a license
+      agreement that protects Sun's interests consistent with the terms
+      contained in this Agreement, and
+
+ (iv) you agree to defend and indemnify Sun and its licensors from and
+      against any damages, costs, liabilities, settlement amounts and/or
+      expenses (including attorneys' fees) incurred in connection with
+      any claim, lawsuit or action by any third party that arises or results
+      from the use or distribution of any and all Programs, Software, or
+      Redistributables.
+
+Redistributables:
+
+usr/include/demangle.h
+usr/lib/amd64/libCrun.so.1
+usr/lib/amd64/libCstd.so.1
+usr/lib/amd64/libdemangle.so.1
+usr/lib/amd64/libiostream.so.1
+usr/lib/libC.so.5
+usr/lib/libCrun.so.1
+usr/lib/libCstd.so.1
+usr/lib/libdemangle.so.1
+usr/lib/libiostream.so.1

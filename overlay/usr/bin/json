@@ -1,0 +1,359 @@
+#!/usr/bin/env node
+//
+// json -- pipe in your JSON for nicer output and for extracting data bits
+//
+// See <https://github.com/trentm/json>.
+//
+
+var VERSION = "1.2.1";
+
+var sys = require('sys');
+var runInNewContext;
+try {
+  runInNewContext = require('vm').runInNewContext;
+} catch (ex) {
+  runInNewContext = process.binding('evals').Script.runInNewContext;  // node v0.2
+}
+//var runInNewContext = process.binding('evals').Script.runInNewContext;
+
+
+//--- exports for module usage
+
+exports.main = main;
+exports.parseLookup = parseLookup;
+
+
+
+//---- support functions
+
+function printHelp() {
+  sys.puts("Usage: <something generating JSON on stdout> | json [options] [lookup]");
+  sys.puts("");
+  sys.puts("Pipe in your JSON for nicer output. Or supply a `lookup` to extract");
+  sys.puts("a subset of the JSON. HTTP header blocks are skipped by default");
+  sys.puts("(as from `curl -i`) by default.");
+  sys.puts("");
+  sys.puts("By default, the output is JSON-y: JSON except for a simple string return");
+  sys.puts("value, which is printed without quotes. Use '-j' or '-i' to override.");
+  sys.puts("");
+  sys.puts("Options:");  
+  sys.puts("  -h, --help    print this help info and exit");
+  sys.puts("  --version     print version of this command and exit");
+  sys.puts("  -q, --quiet   don't warn if input isn't valid JSON");
+  sys.puts("  -H            drop any HTTP header block");
+  sys.puts("  -i            output using node's `sys.inspect`");
+  sys.puts("  -j            output using `JSON.stringfy`, i.e. strict JSON");
+  sys.puts("");
+  sys.puts("Examples:");
+  sys.puts("  curl -s http://search.twitter.com/search.json?q=node.js | json");
+  sys.puts("  curl -s http://search.twitter.com/search.json?q=node.js | json results");
+  sys.puts("");
+  sys.puts("See <https://github.com/trentm/json> for more.");
+}
+
+
+// Parse the command-line options and arguments into an object.
+//
+//    {
+//      'lookup': '...'    // the first arg: lookup
+//      'extra': [...]     // extra args put here
+//      'help': true,      // true if '-h' option given
+//      // etc.
+//    }
+function parseArgv(argv) {
+  var parsed = {
+    lookup: null,
+    extra: [],
+    help: false,
+    quiet: false,
+    dropHeaders: false,
+    outputSysInspect: false,
+    outputJSON: false
+  };
+  
+  // Turn '-iH' into '-i -H'.
+  var a = argv.slice(2);  // drop ['node', 'scriptname']
+  for (var i = 0; i < a.length; i ++) {
+    if (a[i].charAt(0) === "-" && a[i].charAt(1) != '-' && a[i].length > 2) {
+      var arg = a[i].replace(/^-+/, "").split("").map(function (a) {
+        return "-" + a;
+      });
+      a.splice.apply(a, [i, 1].concat(arg));
+    }
+  }
+
+  while (a.length > 0) {
+    var arg = a.shift();
+    switch(arg) {
+      case "-h": // display help and exit
+      case "--help":
+        parsed.help = true;
+        break;
+      case "--version":
+        parsed.version = true;
+        break;
+      case "-q":
+      case "--quiet":
+        parsed.quiet = true;
+        break;
+      case "-H": // drop any headers
+        parsed.dropHeaders = true;
+        break;
+      case "-i": // output with sys.inspect
+        parsed.outputSysInspect = true;
+        break;
+      case "-j": // output with JSON.stringify
+        parsed.outputJSON = true;
+        break;
+      default: // arguments
+        if (parsed.lookup === null) {
+          parsed.lookup = arg;
+        } else {
+          parsed.extra.push(arg);
+        }
+        break;
+    } 
+  }
+  //TODO: '--' handling and error on a first arg that looks like an option.
+
+  return parsed;
+}
+
+
+function warn(o) {
+  console.warn(o);
+}
+
+function isInteger(s) {
+  return (s.search(/^-?[0-9]+$/) == 0);
+}
+
+
+// Parse a lookup string into a list of lookup bits. E.g.:
+//    "a.b.c" -> ["a","b","c"]
+//    "b['a']" -> ["b","['a']"]
+function parseLookup(lookup) {
+  //var debug = console.warn;
+  var debug = function() {};
+  
+  var bits = [];
+  debug("\n*** "+lookup+" ***")
+
+  bits = [];
+  var bit = "";
+  var states = [null];
+  var escaped = false;
+  var ch = null;
+  for (var i=0; i < lookup.length; ++i) {
+    var escaped = (!escaped && ch === '\\');
+    var ch = lookup[i];
+    debug("-- i="+i+", ch="+JSON.stringify(ch)+" escaped="+JSON.stringify(escaped))
+    debug("states: "+JSON.stringify(states))
+
+    if (escaped) {
+      bit += ch;
+      continue;
+    }
+
+    switch (states[states.length-1]) {
+    case null:
+      switch (ch) {
+      case '"':
+      case "'":
+        states.push(ch);
+        bit += ch;
+        break;
+      case '[':
+        states.push(ch);
+        if (bit !== "") {
+          bits.push(bit);
+          bit = ""
+        }
+        bit += ch;
+        break;
+      case '.':
+        if (bit !== "") {
+          bits.push(bit);
+          bit = ""
+        }
+        break;
+      default:
+        bit += ch;
+        break;
+      }
+      break;
+
+    case '[':
+      bit += ch;
+      switch (ch) {
+      case '"':
+      case "'":
+      case '[':
+        states.push(ch);
+        break;
+      case ']':
+        states.pop();
+        if (states[states.length-1] === null) {
+          bits.push(bit);
+          bit = ""
+        }
+        break;
+      }
+      break;
+
+    case '"':
+      bit += ch;
+      switch (ch) {
+      case '"':
+        states.pop();
+        if (states[states.length-1] === null) {
+          bits.push(bit);
+          bit = ""
+        }
+        break;
+      }
+      break;
+
+    case "'":
+      bit += ch;
+      switch (ch) {
+      case "'":
+        states.pop();
+        if (states[states.length-1] === null) {
+          bits.push(bit);
+          bit = ""
+        }
+        break;
+      }
+      break;
+    }
+    debug("bit: "+JSON.stringify(bit))
+    debug("bits: "+JSON.stringify(bits))
+  }
+
+  if (bit !== "") {
+    bits.push(bit);
+    bit = ""
+  }
+
+  debug(JSON.stringify(lookup)+" -> "+JSON.stringify(bits))
+  return bits
+}
+
+
+
+//---- mainline
+
+function main(argv) {
+  var args = parseArgv(argv);
+  //warn(args);
+  if (args.help) {
+    printHelp();
+    return;
+  }
+  if (args.version) {
+    sys.puts("json "+VERSION);
+    return;
+  }
+  if (args.extra.length) {
+    sys.puts("json: error: too many arguments: extra="+args.extra);
+    process.exit(1);
+  }
+  
+  var buffer = "";
+  
+  var stdin = process.openStdin();
+  stdin.setEncoding('utf8');
+  stdin.on('data', function (chunk) {
+      buffer += chunk;
+  });
+  
+  stdin.on('end', function () {
+    // Take off a leading HTTP header if any and pass it through.
+    while (true) {
+      if (buffer.slice(0,5) === "HTTP/") {
+        var index = buffer.indexOf('\r\n\r\n');
+        var sepLen = 4;
+        if (index == -1) {
+          index = buffer.indexOf('\n\n');
+          sepLen = 2;
+        }
+        if (index != -1) {
+          if (! args.dropHeaders) {
+            process.stdout.write(buffer.slice(0, index+sepLen));
+          }
+          var is100Continue = (buffer.slice(0, 21) === "HTTP/1.1 100 Continue");
+          buffer = buffer.slice(index+sepLen);
+          if (is100Continue) {
+            continue;
+          }
+        }
+      }
+      break;
+    }
+
+    // Expect the remainder to be JSON.
+    if (! buffer.length) {
+      return;
+    }
+    var data;
+    try {
+      data = JSON.parse(buffer);
+    } catch(ex) {
+      // Doesn't look like JSON. Just print it out and move on.
+      if (! args.quiet) {
+        warn("json: error: doesn't look like JSON: "+ex+" (buffer="+JSON.stringify(buffer)+")");
+      }
+      process.stdout.write(buffer);
+      if (buffer.length && buffer[buffer.length-1] !== "\n") {
+        process.stdout.write('\n');
+      }
+      process.exit(1);
+    }
+    
+    if (args.lookup) {
+      var bits = parseLookup(args.lookup);
+
+      // Put it back together with some convenience transformations.
+      lookup = "";
+      var isJSIdentifier = /^[$A-Za-z_][0-9A-Za-z_]*$/;
+      for (var i=0; i < bits.length; i++) {
+        var bit = bits[i];
+        if (bit[0] === '[') {
+          lookup += bit;
+        } else if (! isJSIdentifier(bits[i])) {
+          // Allow a non-JS-indentifier token, e.g. `json foo-bar`.
+          lookup += '["' + bits[i].replace('"', '\\"') + '"]';
+        } else {
+          lookup += '.' + bits[i];
+        }
+      }
+
+      data = runInNewContext("(" + JSON.stringify(data) + ")" + lookup);
+    }
+    
+    // Print out results.
+    var output = null;
+    if (args.outputSysInspect) {
+      output = sys.inspect(data, false, Infinity, true);
+    } else if (args.outputJSON) {
+      if (typeof data !== 'undefined') {
+        output = JSON.stringify(data, null, 2);
+      }
+    } else {
+      if (typeof data === 'string') {
+        output = data;
+      } else if (typeof data !== 'undefined') {
+        output = JSON.stringify(data, null, 2);
+      }
+    }
+    if (output && output.length) {
+      process.stdout.write(output);
+      process.stdout.write('\n');
+    }
+  });
+}
+
+if (require.main === module) {
+  main(process.argv);
+}

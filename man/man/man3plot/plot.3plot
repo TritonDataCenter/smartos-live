@@ -1,0 +1,358 @@
+'\" te
+.\" Copyright (c) 2004, Sun Microsystems, Inc. All Rights Reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH plot 3PLOT "6 Oct 2004" "SunOS 5.11" "Graphics Interface Library Functions"
+.SH NAME
+plot, arc, box, circle, closepl, closevt, cont, erase, label, line, linemod, move, openpl, openvt, point, space \- graphics interface
+.SH SYNOPSIS
+.LP
+.nf
+\fBcc\fR [ \fIflag\fR ... ] \fIfile\fR ... \fB-lplot\fR [ \fIlibrary\fR... ]
+#include <plot.h>
+
+\fBvoid\fR \fBarc\fR(\fBshort\fR \fIx0\fR, \fBshort\fR \fIy0\fR, \fBshort\fR \fIx1\fR, \fBshort\fR \fIy1\fR, \fBshort\fR \fIx2\fR,
+     \fBshort\fR \fIy2\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBbox\fR(\fBshort\fR \fIx0\fR, \fBshort\fR \fIy0\fR, \fBshort\fR \fIx1\fR, \fBshort\fR \fIy1\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBcircle\fR(\fBshort\fR \fIx\fR, \fBshort\fR \fIy\fR, \fBshort\fR \fIr\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBclosepl\fR();
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBclosevt\fR();
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBcont\fR(\fBshort\fR \fIx\fR, \fBshort\fR \fIy\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBerase\fR();
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBlabel\fR(\fBchar *\fR\fIs\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBline\fR(\fBshort\fR \fIx0\fR, \fBshort\fR \fIy0\fR, \fBshort\fR \fIx1\fR, \fBshort\fR \fIy1\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBlinemod\fR(\fBchar *\fR\fIs\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBmove\fR(\fBshort\fR \fIx\fR, \fBshort\fR \fIy\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBopenpl\fR();
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBopenvt\fR();
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBpoint\fR(\fBshort\fR \fIx\fR, \fBshort\fR \fIy\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBspace\fR(\fBshort\fR \fIx0\fR, \fBshort\fR \fIy0\fR, \fBshort\fR \fIx1\fR, \fBshort\fR \fIy1\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+These functions generate graphics output for a set of output devices. The format of the output is dependent upon which  link editor option is used when the program is compiled and  linked (see  \fBLink Editor\fR).
+.sp
+.LP
+The term "current point" refers to the current setting for the \fIx\fR and \fIy\fR coordinates.
+.sp
+.LP
+The \fBarc()\fR function specifies a circular arc. The coordinates \fB(\fIx0\fR, \fIy0\fR)\fR specify the center of the arc. The coordinates \fB(\fIx1\fR, \fIy1\fR)\fR specify the starting point of the arc. The coordinates \fB(\fIx2\fR, \fIy2\fR)\fR specify the end point of the circular arc.
+.sp
+.LP
+The \fBbox()\fR function specifies a rectangle with coordinates  \fB(\fIx0\fR, \fIy0\fR)\fR, \fB(\fIx0\fR, \fIy1\fR)\fR, \fB(\fIx1\fR, \fIy0\fR)\fR, and \fB(\fIx1\fR, \fIy1\fR)\fR. The current point is set to  \fB(\fIx1\fR, \fIy1\fR)\fR.
+.sp
+.LP
+The \fBcircle()\fR function specifies a circle with a center at the coordinates \fB(\fIx\fR, \fIy\fR)\fR and a radius of \fIr\fR.
+.sp
+.LP
+The \fBclosevt()\fR and \fBclosepl()\fR functions flush the output.
+.sp
+.LP
+The \fBcont()\fR function specifies a line beginning at the current point and ending at the coordinates \fB(\fIx\fR, \fIy\fR)\fR. The current point is set to  \fB(\fIx\fR, \fIy\fR)\fR.
+.sp
+.LP
+The \fBerase()\fR function starts another frame of output.
+.sp
+.LP
+The \fBlabel()\fR function places the null terminated string \fIs\fR so that the first character falls on the current point.  The  string is then terminated by a  \fBNEWLINE\fR character.
+.sp
+.LP
+The \fBline()\fR function draws a line starting at the coordinates \fB(\fIx0\fR, \fIy0\fR)\fR and ending at the coordinates \fB(\fIx1\fR, \fIy1\fR)\fR. The current point is set to  \fB(\fIx1\fR, \fIy1\fR)\fR.
+.sp
+.LP
+The \fBlinemod()\fR function specifies the style for drawing future lines.  \fIs\fR may contain one of the following: \fBdotted\fR, \fBsolid\fR, \fBlongdashed\fR, \fBshortdashed\fR, or \fBdotdashed\fR.
+.sp
+.LP
+The \fBmove()\fR function sets the current point to the coordinates \fB(\fIx\fR, \fIy\fR)\fR.
+.sp
+.LP
+The \fBopenpl()\fR or \fBopenvt()\fR function must be called to open the device before any other \fBplot\fR functions are called.
+.sp
+.LP
+The \fBpoint()\fR function plots the point given by the coordinates \fB(\fIx\fR, \fIy\fR)\fR. The current point is set to  \fB(\fIx\fR, \fIy\fR)\fR.
+.sp
+.LP
+The \fBspace()\fR function specifies the size of the plotting area.  The plot will be reduced or enlarged as necessary to fit the area specified. The coordinates \fB(\fIx0\fR, \fIy0\fR)\fR specify the lower left hand corner of the plotting area. The coordinates \fB(\fIx1\fR, \fIy1\fR)\fR specify the upper right hand corner of the plotting area.
+.SS "Link Editor"
+.sp
+.LP
+Various flavors of these functions exist for different output  devices.  They are obtained by using the following  \fBld\fR(1) options:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-lplot\fR\fR
+.ad
+.RS 10n
+.rt  
+device-independent graphics stream on standard output in the format described in  \fBplot\fR(4B)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l300\fR\fR
+.ad
+.RS 10n
+.rt  
+\fBGSI\fR 300 terminal
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l300s\fR\fR
+.ad
+.RS 10n
+.rt  
+\fBGSI\fR 300S terminal
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l4014\fR\fR
+.ad
+.RS 10n
+.rt  
+Tektronix 4014 terminal
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-l450\fR\fR
+.ad
+.RS 10n
+.rt  
+\fBGSI\fR 450 terminal
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-lvt0\fR\fR
+.ad
+.RS 10n
+.rt  
+
+.RE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/libplot.so.1\fR\fR
+.ad
+.RS 28n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/libplot.so.1\fR\fR
+.ad
+.RS 28n
+.rt  
+64-bit shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/lib300.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/lib300.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+64-bit shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/lib300s.so.1\fR\fR
+.ad
+.RS 28n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/lib300s.so.1\fR\fR
+.ad
+.RS 28n
+.rt  
+64-bit shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/lib4014.so.1\fR\fR
+.ad
+.RS 28n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/lib4014.so.1\fR\fR
+.ad
+.RS 28n
+.rt  
+64-bit shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/lib450.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/lib450.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+64-bit shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/libvt0.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/libvt0.so.1\fR\fR
+.ad
+.RS 27n
+.rt  
+64-bit shared object
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+MT-LevelUnsafe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBgraph\fR(1), \fBld\fR(1), \fBlibplot\fR(3LIB), \fBplot\fR(4B), \fBattributes\fR(5)

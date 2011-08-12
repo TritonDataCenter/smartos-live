@@ -1,0 +1,153 @@
+.\" Generated with Ronnjs/v0.1
+.\" http://github.com/kapouer/ronnjs/
+.
+.TH "JSON" "1" "April 2011" "" ""
+.
+.SH "NAME"
+\fBjson\fR \-\- JSON love for your command line
+.
+.SH "SYNOPSIS"
+\fB<something generating JSON on stdout> | json [options] [lookup]\fR
+.
+.SH "DESCRIPTION"
+Pipe in your JSON for nicer (pretty\-printed) output\. Or supply a \fBlookup\fR to
+extract a subset of the JSON\. HTTP header blocks are skipped by default (as from
+\fBcurl \-i\fR) by default\.
+.
+.P
+See a full changelog here \fIhttps://github\.com/trentm/json/blob/master/CHANGES\.md\fR
+.
+.SH "OPTIONS"
+By default \fBjson\fR outputs results in a "flat" format that is intended to be
+of most use to the UNIX command\-line\. Currently the only difference between
+flat and JSON output is that a simple string result is printed \fIwithout\fR JSON\'s
+double\-quotes\. Other output formats:
+.
+.IP "\(bu" 4
+\fB\-i\fR:
+output using node\'s \fBsys\.inspect\fR
+.
+.IP "\(bu" 4
+\fB\-j\fR:
+output using \fBJSON\.stringfy\fR, i\.e\. strict JSON
+.
+.IP "" 0
+.
+.P
+If your JSON output is a REST API response, it migth include the headers
+(e\.g\. when calling with \fBcurl \-i\fR)\. By default \fBjson\fR will pass those headers
+through (without choking on them)\. However if you want then stripped you
+can use:
+.
+.IP "\(bu" 4
+\fB\-H\fR:
+drop a leading HTTP header block, if any
+.
+.IP "" 0
+.
+.P
+Miscellaneous options:
+.
+.IP "\(bu" 4
+\fB\-h, \-\-help\fR:
+print this help info and exit
+.
+.IP "\(bu" 4
+\fB\-\-version\fR:
+print version of this command and exit
+.
+.IP "\(bu" 4
+\fB\-q, \-\-quiet\fR:
+don\'t warn if input isn\'t valid JSON
+.
+.IP "" 0
+.
+.SH "EXAMPLES"
+A REST API:
+.
+.IP "" 4
+.
+.nf
+$ curl \-s http://github\.com/api/v2/json/repos/show/joyent/node
+{"repository":{"has_wiki":true,"forks":597,"language":"C++","pushed_at":"2011/03/18 15:19:24 \-0700","homepage":"http://nodejs\.org/","open_issues":271,"fork":false,"has_issues":true,"url":"https://github\.com/joyent/node","created_at":"2009/05/27 09:29:46 \-0700","size":20984,"private":false,"has_downloads":false,"name":"node","owner":"joyent","organization":"joyent","watchers":5584,"description":"evented I/O for v8 javascript"}}
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Nice output by default:
+.
+.IP "" 4
+.
+.nf
+$ curl \-s http://github\.com/api/v2/json/repos/show/joyent/node | json
+{
+  "repository": {
+    "has_wiki": true,
+    "language": "C++",
+    "homepage": "http://nodejs\.org/",
+    "open_issues": 271,
+    "fork": false,
+    "has_issues": true,
+    "url": "https://github\.com/joyent/node",
+    "forks": 597,
+    "created_at": "2009/05/27 09:29:46 \-0700",
+    "pushed_at": "2011/03/18 15:19:24 \-0700",
+    "size": 20984,
+    "private": false,
+    "has_downloads": false,
+    "name": "node",
+    "owner": "joyent",
+    "organization": "joyent",
+    "watchers": 5584,
+    "description": "evented I/O for v8 javascript"
+  }
+}
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Say you just want to extract one value:
+.
+.IP "" 4
+.
+.nf
+$ curl \-s https://github\.com/api/v2/json/repos/show/joyent/node | json repository\.open_issues
+271
+.
+.fi
+.
+.IP "" 0
+.
+.P
+More examples at \fIhttps://github\.com/trentm/json#readme\fR
+.
+.SH "BUGS"
+\fBjson\fR is written in JavaScript and requires node\.js (\fBnode\fR)\. Report bugs
+to \fIhttps://github\.com/trentm/json\fR\|\.
+.
+.SH "COPYRIGHT"
+json is Copyright (c) 2011 Trent Mick
+.
+.SH "SEE ALSO"
+.
+.IP "\(bu" 4
+jsonpipe: \fIhttps://github\.com/dvxhouse/jsonpipe\fR
+.
+.IP "\(bu" 4
+json\-command: \fIhttps://github\.com/zpoley/json\-command\fR
+.
+.IP "\(bu" 4
+JSONPath: \fIhttp://goessner\.net/articles/JsonPath/\fR, \fIhttp://code\.google\.com/p/jsonpath/wiki/Javascript\fR
+.
+.IP "\(bu" 4
+jsawk: \fIhttps://github\.com/micha/jsawk\fR
+.
+.IP "\(bu" 4
+jshon: \fIhttp://kmkeen\.com/jshon/\fR
+.
+.IP "" 0
+

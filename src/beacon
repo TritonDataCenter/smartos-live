@@ -1,0 +1,37 @@
+#!/bin/bash
+
+source /lib/sdc/config.sh
+load_sdc_sysinfo
+
+FIRST="true"
+
+while [ true ]; do
+    for line in $(dladm show-phys -p -olink,state); do
+        fields=(${line//:/ })
+        iface=${fields[0]}
+        link_status=${fields[1]}
+
+        if [[ ${link_status} != "up" ]]; then
+            # marco needs the interface to be plumbed to work
+            /usr/sbin/ifconfig ${iface} plumb
+        fi
+
+        eval "nic_names=\${SYSINFO_Network_Interface_${iface}_NIC_Names}"
+        if [[ -n "${nic_names}" ]]; then
+            if [[ $FIRST == "true" ]]; then
+                echo "- ${iface}: ${nic_names}"
+            fi
+            /smartdc/bin/marco ${iface} ${nic_names}
+        else
+            if [[ $FIRST == "true" ]]; then
+                echo "No nic names for interface ${iface}.  Not broadcasting."
+            fi
+        fi
+
+        if [[ ${link_status} != "up" ]]; then
+            /usr/sbin/ifconfig ${iface} unplumb
+        fi
+    done
+    FIRST="false"
+    sleep 15
+done

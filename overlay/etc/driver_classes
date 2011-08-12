@@ -2,6 +2,7 @@ scsi_vhci	scsi-self-identifying
 mpt	scsi
 pci_pci	pci
 cpqary3	scsi
+aac	scsi
 adpu320	scsi
 ahci	scsi-self-identifying
 amr	scsi

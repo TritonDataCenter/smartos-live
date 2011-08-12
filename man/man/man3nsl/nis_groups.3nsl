@@ -1,0 +1,214 @@
+'\" te
+.\" Copyright (C) 2005, Sun Microsystems, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH nis_groups 3NSL "10 Nov 2005" "SunOS 5.11" "Networking Services Library Functions"
+.SH NAME
+nis_groups, nis_ismember, nis_addmember, nis_removemember, nis_creategroup, nis_destroygroup, nis_verifygroup, nis_print_group_entry \- NIS+ group manipulation functions
+.SH SYNOPSIS
+.LP
+.nf
+\fBcc\fR [ \fIflag\fR ... ] \fIfile\fR ... \fB-lnsl\fR [ \fIlibrary\fR ... ]
+#include <rpcsvc/nis.h>
+
+
+
+\fBbool_t\fR \fBnis_ismember\fR(\fBnis_name\fR \fIprincipal\fR, \fBnis_name\fR \fIgroup\fR);
+.fi
+
+.LP
+.nf
+\fBnis_error\fR \fBnis_addmember\fR(\fBnis_name\fR \fImember\fR, \fBnis_name\fR \fIgroup\fR);
+.fi
+
+.LP
+.nf
+\fBnis_error\fR \fBnis_removemember\fR(\fBnis_name\fR \fImember\fR, \fBnis_name\fR \fIgroup\fR);
+.fi
+
+.LP
+.nf
+\fBnis_error\fR \fBnis_creategroup\fR(\fBnis_name\fR \fIgroup\fR, \fBuint_t\fR \fIflags\fR);
+.fi
+
+.LP
+.nf
+\fBnis_error\fR \fBnis_destroygroup\fR(\fBnis_name\fR \fIgroup\fR);
+.fi
+
+.LP
+.nf
+\fBvoid\fR \fBnis_print_group_entry\fR(\fBnis_name\fR \fIgroup\fR);
+.fi
+
+.LP
+.nf
+\fBnis_error\fR \fBnis_verifygroup\fR(\fBnis_name\fR \fIgroup\fR);
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+These functions manipulate NIS+ groups.  They are used by NIS+ clients and servers, and are the interfaces to the  group authorization object.
+.sp
+.LP
+The names of NIS+ groups are syntactically similar to names of NIS+ objects but they occupy a separate namespace. A group named "a.b.c.d." is represented by a NIS+ group object named "a.groups_dir.b.c.d."; the functions described here all expect the name of the group, not the name of the corresponding group object.
+.sp
+.LP
+There are three types of group members:
+.RS +4
+.TP
+.ie t \(bu
+.el o
+An \fIexplicit\fR member is just a NIS+ principal-name, for example "wickedwitch.west.oz."
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+An \fIimplicit\fR ("domain") member, written "*.west.oz.", means that all principals in the given domain belong to this member.  No other forms of wildcarding are allowed: "wickedwitch.*.oz." is invalid, as is "wickedwitch.west.*.". Note that principals in subdomains of the given domain are \fInot\fR included.
+.RE
+.RS +4
+.TP
+.ie t \(bu
+.el o
+A \fIrecursive\fR ("group") member, written "@cowards.oz.", refers to another group. All principals that belong to that group are considered to belong here.
+.RE
+.sp
+.LP
+Any member may be made \fInegative\fR by prefixing it with a minus sign ('\(mi').  A group may thus contain explicit, implicit, recursive, negative explicit, negative implicit, and negative recursive members.
+.sp
+.LP
+A principal is considered to belong to a group if it belongs to at least one non-negative group member of the group and belongs to no negative group members.
+.sp
+.LP
+The \fBnis_ismember()\fR function returns \fBTRUE\fR if it can establish that  \fIprincipal\fR belongs to  \fIgroup\fR; otherwise it returns  \fBFALSE.\fR
+.sp
+.LP
+The \fBnis_addmember()\fR and  \fBnis_removemember()\fR functions add or remove a member. They do not check whether the member is valid. The user must have read and modify rights for the group in question.
+.sp
+.LP
+The \fBnis_creategroup()\fR and  \fBnis_destroygroup()\fR functions create and destroy group objects. The user must have create or destroy rights, respectively, for the \fIgroups_dir\fR directory in the appropriate domain. The parameter \fIflags\fR to \fBnis_creategroup()\fR is currently unused and should be set to zero.
+.sp
+.LP
+The \fBnis_print_group_entry()\fR function lists a group's members on the standard output.
+.sp
+.LP
+The \fBnis_verifygroup()\fR function returns  \fBNIS_SUCCESS\fR if the given group exists, otherwise it returns an error code.
+.sp
+.LP
+These functions only accept fully-qualified NIS+ names.
+.sp
+.LP
+A group is represented by a  NIS+ object with a variant part that is defined in the  \fBgroup_obj\fR structure. See \fBnis_objects\fR(3NSL). It contains the following fields:
+.sp
+.in +2
+.nf
+uint_t	gr_flags;	/* Interpretation Flags
+			(currently unused) */
+struct {
+	uint_t	gr_members_len;
+	nis_name	*gr_members_val;
+} gr_members;		/* Array of members */
+.fi
+.in -2
+
+.sp
+.LP
+NIS+ servers and clients maintain a local cache of expanded groups to enhance their  performance when checking for group membership.  Should the membership of a group change, servers and clients with that group cached will not see the change  until either the group cache has expired or it is explicitly flushed. A server's cache may be flushed programmatically by calling the \fBnis_servstate()\fR function with tag \fBTAG_GCACHE\fR and a value of 1.
+.sp
+.LP
+There are currently no known methods for \fBnis_ismember()\fR, \fBnis_print_group_entry()\fR, and \fBnis_verifygroup()\fR to get their answers from only the master server.
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRSimple Memberships
+.sp
+.LP
+Given a group  \fBsadsouls.oz.\fR with members \fBtinman.oz.\fR, \fBlion.oz.\fR, and \fBscarecrow.oz.\fR, the function call
+
+.sp
+.in +2
+.nf
+bool_var = nis_ismember("lion.oz.", "sadsouls.oz.");
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+will return 1 (TRUE) and the function call
+
+.sp
+.in +2
+.nf
+bool_var = nis_ismember("toto.oz.", "sadsouls.oz.");
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+will return 0 (FALSE).
+
+.LP
+\fBExample 2 \fRImplicit Memberships
+.sp
+.LP
+Given a group  \fBbaddies.oz.\fR, with members  \fBwickedwitch.west.oz.\fR and \fB*.monkeys.west.oz.\fR, the function call \fBbool_var = nis_ismember("hogan.monkeys.west.oz.", "baddies.oz.");\fR will return 1 (TRUE) because any principal from the \fBmonkeys.west.oz.\fR domain belongs to the implicit group \fB*.monkeys.west.oz.\fR, but the function call
+
+.sp
+.in +2
+.nf
+bool_var = nis_ismember("hogan.big.monkeys.west.oz.", "baddies.oz.");
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+will return 0 (FALSE).
+
+.LP
+\fBExample 3 \fRRecursive Memberships
+.sp
+.LP
+Given a group  \fBgoodandbad.oz.\fR, with members  \fBtoto.kansas\fR, \fB@sadsouls.oz.\fR, and \fB@baddies.oz.\fR, and the groups  \fBsadsouls.oz.\fR and \fBbaddies.oz.\fR defined above, the function call
+
+.sp
+.in +2
+.nf
+bool_var = nis_ismember("wickedwitch.west.oz.", "goodandbad.oz.");
+.fi
+.in -2
+.sp
+
+.sp
+.LP
+will return 1 (TRUE), because  \fBwickedwitch.west.oz.\fR is a member of the  \fBbaddies.oz.\fR group which is recursively included in the  \fBgoodandbad.oz.\fR group.
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+\fBATTRIBUTE TYPE\fR\fBATTRIBUTE VALUE\fR
+_
+\fBMT-Level\fR\fBMT-Safe\fR
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBnisgrpadm\fR(1), \fBnis_objects\fR(3NSL), \fBattributes\fR(5)
+.SH NOTES
+.sp
+.LP
+NIS+ might not be supported in future releases of the Solaris operating system. Tools to aid the migration from NIS+ to LDAP are available in the current Solaris release. For more information, visit http://www.sun.com/directory/nisplus/transition.html.

@@ -22,8 +22,8 @@ _dash_z_zone()
 
     # The -z takes a zone option, ignore everything else
     if [[ ${prev} =~ -.*z$ ]]; then
-        local running=$(zoneadm list | grep -v '^global$')
-        COMPREPLY=( $(compgen -W "${running}" -- ${cur}) )
+        local zones=$(zoneadm list -c | grep -v '^global$')
+        COMPREPLY=( $(compgen -W "${zones}" -- ${cur}) )
     fi
     return 0
 }

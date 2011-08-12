@@ -21,7 +21,6 @@
 #
 #
 # Copyright (c) 1992, 2010, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2011 Joyent Inc.
 #
 
 # Make sure that the libraries essential to this stage of booting can be found.
@@ -65,7 +64,7 @@ if smf_is_nonglobalzone; then
 fi
 
 /sbin/mount -F ufs -o remount,rw,nologging /devices/ramdisk:a /
-/usr/sbin/lofiadm -a /usr.lgz
+/usr/sbin/lofiadm -X -a /usr.lgz
 /sbin/mount -F ufs -o ro /devices/pseudo/lofi\@0:1 /usr
 
 #

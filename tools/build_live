@@ -21,11 +21,10 @@
 #
 
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Copyright 2010 Joyent, Inc.  All rights reserved.
+# Copyright 2010, 2011 Joyent, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 ROOT=`pwd`
-MAN_DIR=${ROOT}/projects/opensolaris-man
 CUSTOMIZE_SCRIPT=${ROOT}/tools/customize
 SMF_IMPORTER=${ROOT}/tools/smf_import
 BUILDER=${ROOT}/tools/builder/builder
@@ -43,8 +42,8 @@ ERROR=0
 PLATFORM=i86pc
 ISA=i386
 ARCH64=amd64
-RSIZE=264000
-USIZE=400000
+RSIZE=272000
+USIZE=390000
 KERNEL_64=platform/$PLATFORM/kernel/$ARCH64/unix
 BUILDVER=$(head -n1 ${ROOT}/configure-buildver)
 if [[ -n "${BUILDVER}" ]]; then
@@ -120,8 +119,10 @@ echo "=== /Options ==="
 
 function cleanup
 {
+    umount -f "${rdmnt}/usr" 2>/dev/null
     umount -f "${rdmnt}" 2>/dev/null
     lofiadm -d "${rdfile}" 2>/dev/null
+    lofiadm -d "${usrfile}" 2>/dev/null
     [ -n "${rddir}" ] && rm -fr "${rddir}" 2> /dev/null
 }
 
@@ -143,12 +144,18 @@ function create_ufs
     # do the actual copy
     ${BUILDER} ${MANIFEST} ${rdmnt} ${IN_DIRS}
     if [ $? -ne 0 ]; then
-        echo "ERROR: copy onto the image failed, may need to increase the size"
+        echo "ERROR: copy onto the image failed"
+        echo "(may need to increase the size or manifest file not found)"
         ERROR=1
 	return
     fi
     ${CUSTOMIZE_SCRIPT} ${rdmnt} ${BUILDSTAMP}
-    ${SMF_IMPORTER} ${rdmnt}
+    ROOT=${ROOT} ${SMF_IMPORTER} ${rdmnt}
+    if [ $? -ne 0 ]; then
+	echo "ERROR: setting up live image SMF repoistory failed"
+	ERROR=1
+	return
+    fi
 
     echo "Setting root password..."
     create_password "${rdmnt}"
@@ -214,6 +221,8 @@ function create_archive
     mkdir -p `dirname ${archive}`
 
     create_ufs "$archive" "$lofidev" "$lofiusrdev" "$usrfile"
+    [ $ERROR -eq 1 ] && return
+
 
     # sanity check the archive before moving it into place
     #
@@ -288,10 +297,15 @@ create_archive "${OUT_DIR}/${BOOT_ARCHIVE_64}" $lofidev32 $lofidevusr $usrfile
 
 lofiadm -d "$lofidev32" 2>/dev/null
 
-chmod 0644 ${OUT_DIR}/${BOOT_ARCHIVE_64}
-(cd ${OUT_DIR} && gtar -zcf ${PREFIX}.tgz ${PREFIX})
+if [ $ERROR -eq 0 ]; then
+    chmod 0644 ${OUT_DIR}/${BOOT_ARCHIVE_64}
+    echo "${BUILDSTAMP}" > ${OUT_DIR}/buildstamp
+    (cd ${OUT_DIR} && gtar -zcf ${PREFIX}.tgz ${PREFIX})
+fi
 
-if [ $ERROR = 1 ]; then
+if [ $ERROR -eq 1 ]; then
     cleanup
     exit 1
 fi
+
+exit 0

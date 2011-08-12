@@ -1,0 +1,241 @@
+#!/usr/bin/ksh93
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T. All rights reserved.
+# Copyright (c) 1999, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011 Joyent Inc., All rights reserved.
+#
+
+. /lib/svc/share/smf_include.sh
+. /lib/sdc/config.sh
+. /lib/sdc/network.sh
+
+set -o errexit
+set -o xtrace
+
+#
+# In a shared-IP zone we need this service to be up, but all of the work
+# it tries to do is irrelevant (and will actually lead to the service
+# failing if we try to do it), so just bail out.
+# In the global zone and exclusive-IP zones we proceed.
+#
+smf_configure_ip || exit ${SMF_EXIT_OK}
+
+# Make sure that the libraries essential to this stage of booting can be found.
+LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
+
+smf_netstrategy
+
+if smf_is_globalzone; then
+
+    dladm init-phys
+
+    # The next commands are for logging purposes only
+    echo "== debug start: before =="
+    if ! dladm show-phys; then
+        echo "WARNING: 'dladm show-phys' failed"
+    fi
+    # NOTE: DO NOT do a 'dladm show-linkprop' when using the bnx driver,
+    # as it puts it into an unusable state!
+    if ! /sbin/ifconfig -a; then
+        echo "WARNING: 'ifconfig -a' failed"
+    fi
+    echo "== debug end: before =="
+
+    # Load sysinfo variables with SYSINFO_ prefix
+    load_sdc_sysinfo
+    # Load config variables with CONFIG_ prefix, and sets the headnode variable
+    load_sdc_config
+
+    # Setup admin NIC
+    if [[ -n ${SYSINFO_NIC_admin} ]]; then
+        ifconfig ${SYSINFO_NIC_admin} plumb
+        if [[ ${headnode} == "true" ]]; then
+            if [[ -n ${CONFIG_admin_ip} ]] && [[ -n ${CONFIG_admin_netmask} ]];
+            then
+                ifconfig ${SYSINFO_NIC_admin} inet ${CONFIG_admin_ip} \
+                    netmask ${CONFIG_admin_netmask} up
+                ADMIN_NIC_UP=true
+
+                # also setup resolv.conf if we can
+                if [[ -n ${CONFIG_dns_domain} ]] && [[ -n ${CONFIG_dns_resolvers} ]]; then
+                    echo "search ${CONFIG_dns_domain}" > /etc/resolv.conf
+                    for serv in $(echo "${CONFIG_dns_resolvers}" | sed -e "s/,/ /g"); do
+                        echo "nameserver ${serv}" >> /etc/resolv.conf
+                    done
+                fi
+            else
+                echo "WARNING: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
+            fi
+        else
+            # We ignore errors here because the most common one is that DHCP is
+            # already running.
+            ifconfig ${SYSINFO_NIC_admin} dhcp || /bin/true
+            ADMIN_NIC_UP=true
+        fi
+        # If on VMWare, create a bridge which allows traffic to flow correctly to the host-only network
+        if [[ "${ADMIN_NIC_UP}" == "true" ]] && [[ ${SYSINFO_Product} == "VMware Virtual Platform" ]]; then
+            dladm create-bridge -l ${SYSINFO_NIC_admin} vmwarebr
+        fi
+    else
+        echo "ERROR: admin NIC not found, unable to bring up admin network."
+        exit ${SMF_EXIT_ERR_CONFIG}
+    fi
+
+    # Setup external NIC -- only headnode because non-headnodes don't assign
+    # IP to external in GZ.
+    if [[ -n ${SYSINFO_NIC_external} ]]; then
+        if [[ -n "${CONFIG_external_ip}" ]]; then
+            iface=${SYSINFO_NIC_external}
+            if [[ -n ${CONFIG_external_vlan_id} ]] && [[ ${CONFIG_external_vlan_id} != 0 ]]; then
+                dladm create-vnic -l ${iface} -v ${CONFIG_external_vlan_id} gz_external0
+                iface="gz_external0"
+            fi
+            ifconfig ${iface} plumb
+            if [[ ${CONFIG_external_ip} == "dhcp" ]]; then
+                # We ignore errors here because the most common one is that DHCP
+                # is already running.
+                ifconfig ${iface} dhcp primary || /bin/true
+            else
+                ifconfig ${iface} inet ${CONFIG_external_ip} netmask ${CONFIG_external_netmask} up
+            fi
+
+            # Set up the GZ to NAT for Coal
+            if [[ "${CONFIG_coal}" == "true" ]]; then
+                # Convert the admin IP and netmask to CIDR notation
+                CIDR=$(ip_netmask_to_cidr ${CONFIG_admin_ip} ${CONFIG_admin_netmask})
+
+                # Allow zones to reach the internet using the global zone as a router
+                if [[ -n ${CONFIG_external_vlan_id} ]]; then
+                    IPNAT_NIC="gz_external0"
+                else
+                    IPNAT_NIC=${SYSINFO_NIC_external}
+                fi
+                cat >> /etc/ipf/ipnat.conf <<IPNAT
+map ${IPNAT_NIC} ${CIDR} -> 0.0.0.0/32
+map ${IPNAT_NIC} ${CIDR} -> 0.0.0.0/32 portmap tcp/udp auto
+IPNAT
+            fi
+            # If any of the headnode zones are configured to use public IPs, create a bridge on the external
+            # interface so vnics on the external interface work as well
+            if [[ "${headnode}" == "true" ]] && [[ "$(sdc_config_keys_contain public_ip)" == "true" ]]; then
+                create_vmware_external_bridge
+            fi
+        fi
+    fi
+
+    # Use headnode_default_gateway if set, otherwise fall back to admin_gateway
+    # if that's set.
+    if [[ -n "${CONFIG_headnode_default_gateway}" ]]; then
+        echo "${CONFIG_headnode_default_gateway}" > /etc/defaultrouter
+    elif [[ -n ${CONFIG_admin_gateway} ]]; then
+        echo "${CONFIG_admin_gateway}" > /etc/defaultrouter
+    fi
+
+    # Setup extra nics, if specified in the config file
+    nic_tags="${SYSINFO_Nic_Tags}"
+    if [[ -n "${nic_tags}" ]]; then
+        tags=(${nic_tags//,/ })
+
+        for tag in "${tags[@]}"; do
+            if [[ "${tag}" == "admin" ]] || [[ "${tag}" == "external" ]]; then
+                continue
+            fi
+            echo "found extra nic in config tagged '${tag}'"
+
+            eval "iface=\${SYSINFO_NIC_${tag}}"
+            eval "ip=\${CONFIG_${tag}_ip}"
+            eval "netmask=\${CONFIG_${tag}_netmask}"
+            eval "vlan=\${CONFIG_${tag}_vlan_id}"
+
+            echo "found extra nic in config tagged '${tag}': iface='${iface}', ip='${ip}', netmask='${netmask}, vlan='${vlan}'"
+
+            if [[ -z "${iface}" ]] || [[ -z "${ip}" ]] || [[ -z "${netmask}" ]]; then
+                echo "Not bringing up interface tagged '${tag}'"
+                continue
+            fi
+
+            if [[ -n "${vlan}" ]] && [[ "${vlan}" != 0 ]]; then
+                dladm create-vnic -l ${iface} -v ${vlan} gz_${tag}0
+                iface="gz_${tag}0"
+            fi
+            ifconfig ${iface} plumb
+            if [[ ${ip} == "dhcp" ]]; then
+                # We ignore errors here because the most common one is that DHCP
+                # is already running.
+                ifconfig ${iface} dhcp || /bin/true
+            else
+                ifconfig ${iface} inet ${ip} netmask ${netmask} up
+            fi
+        done
+    fi
+else
+    # Non-global zones
+    for iface in `dladm show-vnic -p -o link`; do
+        ifconfig ${iface} plumb
+        if [[ -f /etc/dhcp.${iface} || ! -f /etc/hostname.${iface} ]]; then
+            ifconfig ${iface} dhcp
+        else
+            ifconfig ${iface} inet `cat /etc/hostname.${iface}` up
+        fi
+    done
+fi
+
+# The next commands are for logging purposes only
+echo "== debug start: after =="
+if ! dladm show-phys; then
+    echo "WARNING: 'dladm show-phys' failed"
+fi
+# NOTE: DO NOT do a 'dladm show-linkprop' when using the bnx driver,
+# as it puts it into an unusable state!
+# TODO: do a show-linkprop if not using bnx
+if ! /sbin/ifconfig -a; then
+    echo "WARNING: 'ifconfig -a' failed"
+fi
+echo "== debug end: after =="
+
+# Since we hopefully made networking changes here, update the sysinfo cache
+if smf_is_globalzone; then
+    /usr/bin/sysinfo -u
+fi
+
+# Any non-loopback IPv4 interfaces with usable addresses up?
+if [[ -n "`/sbin/ifconfig -a4u`" ]]; then
+    /sbin/ifconfig -a4u | while read intf addr rest; do
+        [[ ${intf} == "inet" ]] && [[ ${addr} != "127.0.0.1" ]] &&
+        [[ ${addr} != "0.0.0.0" ]] && exit ${SMF_EXIT_OK}
+    done && exit ${SMF_EXIT_OK}
+fi
+
+# Any DHCP interfaces started?
+[[ -n "`/sbin/ifconfig -a4 dhcp status 2>/dev/null`" ]] && exit ${SMF_EXIT_OK}
+
+# Any non-loopback IPv6 interfaces up?
+if [[ -n "`/sbin/ifconfig -au6`" ]]; then
+    /sbin/ifconfig -au6 | while read intf addr rest; do
+        [[ ${intf} = "inet6" ]] && [[ ${addr} != "::1/128" ]] && exit ${SMF_EXIT_OK}
+    done && exit ${SMF_EXIT_OK}
+fi
+
+# This service was supposed to configure something yet didn't.  Exit
+# with config error.
+exit ${SMF_EXIT_ERR_CONFIG}

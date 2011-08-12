@@ -1,25 +1,5 @@
 #!/usr/bin/env bash
 #
-#
-# CDDL HEADER START
-#
-# The contents of this file are subject to the terms of the
-# Common Development and Distribution License, Version 1.0 only
-# (the "License").  You may not use this file except in compliance
-# with the License.
-#
-# You can obtain a copy of the license at COPYING
-# See the License for the specific language governing permissions
-# and limitations under the License.
-#
-# When distributing Covered Code, include this CDDL HEADER in each
-# file and include the License file at COPYING.
-# If applicable, add the following below this CDDL HEADER, with the
-# fields enclosed by brackets "[]" replaced with your own identifying
-# information: Portions Copyright [yyyy] [name of copyright owner]
-#
-# CDDL HEADER END
-#
 # Copyright (c) 2010,2011 Joyent Inc.
 #
 
@@ -76,7 +56,7 @@ if [ "${HAVE_PKG}" == "true" ]; then
     # nonglobal Zone
     for pkg in gmake binutils autoconf automake \
         bison flex libtool-base python24 p5-XML-Parser \
-        libxslt dbus-glib dbus net-snmp; do
+        libxslt dbus-glib dbus sun-jre6 sun-jdk6; do
       pkg_info ${pkg} >/dev/null 2>&1 || pkgin -y install ${pkg}
     done
   fi
@@ -175,22 +155,6 @@ if [ ! -f "projects/illumos-extra/Makefile" ]; then
   fi
 fi
 
-if [ ! -f "projects/opensolaris-man/README" ]; then
-  echo " +--> Getting opensolaris-man source tree..."
-  if [ -z "${GET_OPENSOLARIS_MAN}" ]; then
-    echo "FATAL: No GET_OPENSOLARIS_MAN defined in configure.*, can't get opensolaris-man!"
-    exit 1
-  fi
-  /bin/bash -c "cd projects && ${GET_OPENSOLARIS_MAN} && cd -"
-  if [ ! -f "projects/opensolaris-man/README" ]; then
-    echo "FATAL: GET_OPENSOLARIS_MAN command failed to get opensolaris-man!"
-    exit 1
-  fi
-fi
-(cd projects/opensolaris-man && [[ -L usr ]] || ln -s . usr)
-(cd projects/opensolaris-man && [[ -L share ]] || ln -s . share)
-(cd projects/opensolaris-man && [[ -L man ]] || ln -s . man)
-
 ROOT=`pwd`
 echo "==> Setting up illumos-gate"
 
@@ -230,7 +194,7 @@ export CLONE_WS
 STAFFER=nobody;                         export STAFFER
 MAILTO=$STAFFER;                        export MAILTO
 BUILD_PROJECT=;                         export BUILD_PROJECT
-LOCKNAME="\`basename \$CODEMGR_WS\`_nightly.lock"; export LOCKNAME
+LOCKNAME="\`whoami\`_\`basename \$CODEMGR_WS\`_nightly.lock"; export LOCKNAME
 ATLOG="\$CODEMGR_WS/log";                        export ATLOG
 LOGFILE="\$ATLOG/nightly.log";                   export LOGFILE
 MACH=\`uname -p\`;                                export MACH
@@ -247,7 +211,7 @@ PKGPUBLISHER_REDIST="${PUBLISHER}"; export PKGPUBLISHER_REDIST
 MAKEFLAGS=k;    export MAKEFLAGS
 UT_NO_USAGE_TRACKING="1"; export UT_NO_USAGE_TRACKING
 CW_NO_SHADOW="1"; export CW_NO_SHADOW
-BUILD_TOOLS=/opt;                               export BUILD_TOOLS
+BUILD_TOOLS="\${CODEMGR_WS}/usr/src/tools/proto/root_\${MACH}-nd/opt"; export BUILD_TOOLS
 SPRO_ROOT=/opt/SUNWspro;                        export SPRO_ROOT
 SPRO_VROOT=\$SPRO_ROOT;                          export SPRO_VROOT
 
@@ -270,7 +234,8 @@ function update_branch
             git checkout ${target}
         else
             # don't have, add to tracking and checkout
-            git checkout --track -b ${target} origin/${target}
+            git branch --track ${target} origin/${target}
+            git checkout ${target}
         fi
     fi
     cd ${oldwd}
@@ -284,6 +249,16 @@ if [[ -f ${ROOT}/configure-branches ]]; then
     [[ -z ${branch} ]] && update_branch "${ROOT}" ${branch}
     branch=$(grep "^illumos-extra: " ${ROOT}/configure-branches | cut -d' ' -f2)
     [[ -z ${branch} ]] && update_branch "${ROOT}/projects/illumos-extra" ${branch}
+    branch=$(grep "^illumos-joyent: " ${ROOT}/configure-branches | cut -d' ' -f2)
+    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/illumos" ${branch}
+    branch=$(grep "^ur-agent: " ${ROOT}/configure-branches | cut -d' ' -f2)
+    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/ur-agent" ${branch}
+    branch=$(grep "^kvm: " ${ROOT}/configure-branches | cut -d' ' -f2)
+    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/kvm" ${branch}
+    branch=$(grep "^kvm-cmd: " ${ROOT}/configure-branches | cut -d' ' -f2)
+    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/kvm-cmd" ${branch}
+    branch=$(grep "^vmadm: " ${ROOT}/configure-branches | cut -d' ' -f2)
+    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/vmadm" ${branch}
 else
     echo ""
     echo "WARNING! No configure-branches file!!! Using master branch for everything!"

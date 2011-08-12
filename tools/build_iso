@@ -1,0 +1,219 @@
+#!/bin/bash
+# Copyright (c) 2011 Joyent, Inc.
+
+# Automates the process of building an iso image of a smartos build. It uses
+# the latest platform file that's been built.
+#
+
+shopt -s xpg_echo
+set -o pipefail
+export PATH=/usr/bin
+
+bi_tmpdir=/tmp/build_iso-$USER.$$
+bi_output_dir="output-iso"
+bi_arg0=$(basename $0)
+bi_grub_dir="proto/boot/grub"
+bi_output_grub_dir="$bi_tmpdir/boot/grub"
+bi_grub_files="stage1 stage2 stage2_eltorito"
+bi_archive_path="i86pc/amd64/boot_archive"
+bi_unix_path="i86pc/kernel/amd64/unix"
+bi_platform_dir="output/"
+bi_platform_name=
+bi_platform=
+bi_grub_optstr=
+bi_dont_clean=0
+
+function usage
+{
+	local msg="$*"
+	[[ -z "$msg" ]] && echo "$msg"
+	cat <<USAGE >&2
+Usage: $bi_arg0 [ -o options ] [ -k ]
+
+Generate a bootable iso from the proto area and newest platform directory.
+
+	-o options	Append all the options to every GRUB menu.lst entry
+	-k		Don't delete temporary files
+	-h		Display this message
+
+USAGE
+	exit 2
+}
+
+function fail
+{
+	local msg="$*"
+	[[ -z "$msg" ]] && msg="failed"
+	echo "$bi_arg0: $msg" >&2
+	exit 1
+}
+
+function bi_verif_mkisofs
+{
+	echo "Checking for mkisofs ... \c "
+	which mkisofs >/dev/null
+	[[ $? -eq 0 ]] || fail "missing mkisofs"
+	echo "done"
+}
+
+function bi_get_build
+{
+	echo "Determining platform... \c "
+	bi_platform_name=$(ls $bi_platform_dir | grep platform | grep -v .tgz | \
+	    sort -r | head -n1)
+	[[ $? -eq 0 ]] || fail "failed to get platform file"
+	[[ -z $bi_platform_name ]] && fail "couldn't find platform file"
+	echo "done"
+	echo "Using platform: $bi_platform_name"
+	bi_platform=$bi_platform_dir$bi_platform_name
+}
+
+#
+# Check to make sure the 64-bit kernel is actually there as a brief sanity check
+#
+function bi_verif_platform
+{
+	echo "Verifying platform... \c "
+	[[ -d $bi_platform ]] || fail "invalid platform directory"
+	[[ -f $bi_platform/$bi_archive_path ]] || fail "missing boot archive"
+	[[ -f $bi_platform/$bi_unix_path ]] || fail "missing kernel image"
+	echo "done"
+}
+
+function bi_verif_grub
+{
+	echo "Verifying grub files... \c "
+	[[ -d $bi_grub_dir ]] || fail "missing /boot/grub from proto area"
+	for file in $bi_grub_files; do
+		[[ -f $bi_grub_dir/$file ]] ||
+		    fail "missing required file from grub proto area: $file"
+	done
+	echo "done"
+}
+
+function bi_setup_work_dir
+{
+	echo "Creating temporary directory... \c "
+	mkdir $bi_tmpdir >/dev/null
+	[[ $? -eq 0 ]] || fail "failed to make temporary directory"
+	echo "done"
+}
+
+function bi_cleanup_work_dir
+{
+	[[ $bi_dont_clean -eq 1 ]] && return
+	echo "Removing temporary directory... \c "
+	[[ ! -d $bi_tmpdir ]] && return
+	rm -rf $bi_tmpdir/*
+	[[ $? -eq 0 ]] || fail "failed to remove temporary directory contents"
+	rmdir $bi_tmpdir
+	[[ $? -eq 0 ]] || fail "failed to remove temporary directory"
+	echo "done"
+}
+
+function bi_copy_contents
+{
+	echo "Copying platform directory... \c "
+	cp -r $bi_platform $bi_tmpdir/platform >/dev/null
+	[[ $? -eq 0 ]] || fail "failed to copy platform file"
+	echo "done"
+	echo "Copying grub components... \c "
+	mkdir -p $bi_output_grub_dir >/dev/null
+	[[ $? -eq 0 ]] || fail "failed to iso9960 grub output directory"
+	for file in $bi_grub_files; do
+		cp $bi_grub_dir/$file $bi_output_grub_dir > /dev/null
+		[[ $? -eq 0 ]] || fail "failed to copy grub file: $file"
+	done
+	echo "done"
+}
+
+function bi_generate_grub_conf
+{
+	local shadow='$5$2HOHRnK3$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA'
+	echo "Generating grub menu.lst... \c "
+	cat > $bi_output_grub_dir/menu.lst <<EOF
+default=0
+timeout=10
+min_mem64 1024
+color light-gray/black black/light-gray
+serial --unit=0 --speed=115200 --word=8 --parity=no --stop=1
+terminal --timeout=3 serial console
+
+title Live 64-bit (text)
+   kernel /platform/i86pc/kernel/amd64/unix -B console=text,standalone=true,noimport=true,root_shadow='$shadow'$bi_grub_optstr
+   module /platform/i86pc/amd64/boot_archive
+
+title Live 64-bit (text) +kmdb
+   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=text,standalone=true,noimport=true,root_shadow='$shadow'$bi_grub_optstr
+   module /platform/i86pc/amd64/boot_archive
+
+title Live 64-bit (ttya) +kmdb
+   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=ttya,ttya-mode="115200,8,n,1,-",standalone=true,noimport=true,root_shadow='$shadow'$bi_grub_optstr
+   module /platform/i86pc/amd64/boot_archive
+
+title Live 64-bit (ttya)
+   kernel /platform/i86pc/kernel/amd64/unix -B console=ttya,ttya-mode="115200,8,n,1,-",standalone=true,noimport=true,root_shadow='$shadow'$bi_grub_optstr
+   module /platform/i86pc/amd64/boot_archive
+EOF
+	[[ $? -eq 0 ]] || fail "failed to create menu.lst"
+	echo "done"
+}
+
+function bi_generate_iso
+{
+	local isopath
+
+	if [[ ! -d $bi_output_dir ]]; then
+		mkdir $bi_output_dir > /dev/null
+		[[ $? -eq 0 ]] || fail "failed to make output directory"
+	fi
+	echo "Generating iso... \c "
+	isopath="$bi_output_dir/$bi_platform_name.iso"
+	mkisofs -R -b 			\
+	    boot/grub/stage2_eltorito	\
+	    -no-emul-boot 		\
+	    -boot-load-size 4		\
+	    -boot-info-table		\
+	    -quiet			\
+	    -o 	$isopath		\
+	    $bi_tmpdir/ >/dev/null
+	[[ $? -eq 0 ]] || fail "Failed to create iso"
+	echo "done"
+	echo "iso is available at $(pwd)/$isopath"
+}
+
+while getopts "ko:h" c $@; do
+	case "$c" in
+	o)
+		echo "Building iso with additional options: $OPTARG"
+		bi_grub_optstr=",$OPTARG"
+		;;
+	k)
+		bi_dont_clean=1
+		;;
+	h)
+		usage
+		;;
+	:)
+		usage "missing required argument -- $OPTARG"
+		;;
+	*)
+		usage "invalid option: $OPTARG"
+		;;
+	esac
+done
+
+#
+# Get us to the root of the workspace
+#
+cd $(dirname $0)
+cd ..
+bi_verif_mkisofs
+bi_verif_grub
+bi_get_build
+bi_verif_platform
+bi_setup_work_dir
+bi_copy_contents
+bi_generate_grub_conf
+bi_generate_iso
+bi_cleanup_work_dir

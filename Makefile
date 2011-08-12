@@ -1,64 +1,55 @@
-#
-#
-# CDDL HEADER START
-#
-# The contents of this file are subject to the terms of the
-# Common Development and Distribution License, Version 1.0 only
-# (the "License").  You may not use this file except in compliance
-# with the License.
-#
-# You can obtain a copy of the license at COPYING
-# See the License for the specific language governing permissions
-# and limitations under the License.
-#
-# When distributing Covered Code, include this CDDL HEADER in each
-# file and include the License file at COPYING.
-# If applicable, add the following below this CDDL HEADER, with the
-# fields enclosed by brackets "[]" replaced with your own identifying
-# information: Portions Copyright [yyyy] [name of copyright owner]
-#
-# CDDL HEADER END
-#
-# Copyright (c) 2010,2011 Joyent Inc.
-#
+# Copyright (c) 2010, 2011 Joyent Inc., All rights reserved.
 
 ROOT=$(PWD)
 PROTO=$(ROOT)/proto
 PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin
-LOCAL_SUBDIRS=""
+LOCAL_SUBDIRS=ur-agent operator-toolkit kvm kvm-cmd vmadm
 
-world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp 0-tools-stamp
+world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp \
+	0-tools-stamp 0-man-stamp 0-devpro-stamp
 
 live: world
+	(cd $(ROOT)/src_addon && gmake DESTDIR=$(PROTO) install)
 	mkdir -p ${ROOT}/log
-	(cd $(ROOT) && pfexec ./tools/build_live $(ROOT)/manifest $(ROOT)/output $(ROOT)/overlay $(ROOT)/proto $(ROOT)/projects/opensolaris-man /)
+	(cd $(ROOT) && pfexec ./tools/build_live $(ROOT)/manifest $(ROOT)/output $(ROOT)/overlay $(ROOT)/proto $(ROOT)/man/man)
 
 update:
 	@(git pull --rebase)
-	@(cd projects/illumos; git pull --rebase || hg pull -u)
+	@(cd projects/illumos; git pull --rebase)
 	@(cd projects/illumos-extra; git pull --rebase)
-	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do (cd projects/local/$${dir} && git pull --rebase); done
+	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do (cd projects/local/$${dir} && gmake update); done
 
 0-local-stamp:
-	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do (cd projects/local/$${dir} && gmake && gmake DESTDIR=$(PROTO) install); done
+	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
+        (cd $(ROOT)/projects/local/$${dir} && \
+        [ -f build.sh ] && ./build.sh || gmake && \
+        gmake SMARTOS=true DESTDIR=$(PROTO) install); done
+
+0-devpro-stamp:
+	[ ! -d projects/devpro ] || \
+	(cd projects/devpro && gmake DESTDIR=$(PROTO) install)
 
 0-illumos-stamp:
 	(cd $(ROOT) && ./tools/build_illumos)
 	touch 0-illumos-stamp
 
 0-extra-stamp:
-	(cd $(ROOT)/projects/illumos-extra && gmake DESTDIR=$(PROTO) && gmake DESTDIR=$(PROTO) install)
+	(cd $(ROOT)/projects/illumos-extra && gmake DESTDIR=$(PROTO) install)
 	touch 0-extra-stamp
 
 0-livesrc-stamp: src/bootparams.c
 	(cd $(ROOT)/src && gmake DESTDIR=$(PROTO) && gmake DESTDIR=$(PROTO) install)
 
-0-tools-stamp: tools/builder/builder tools/pwgen tools/cryptpass
+0-man-stamp:
+	(cd $(ROOT)/man/src && gmake clean && gmake)
 
-tools/builder/builder:
+0-tools-stamp: 0-builder-stamp 0-pwgen-stamp tools/cryptpass
+	(cp ${ROOT}/tools/cryptpass $(PROTO)/usr/lib)
+
+0-builder-stamp:
 	(cd $(ROOT)/tools/builder && gmake builder)
 
-tools/pwgen:
+0-pwgen-stamp:
 	(cd ${ROOT}/tools/pwgen-* && ./configure && make && cp pwgen ${ROOT}/tools)
 
 tools/cryptpass: tools/cryptpass.c

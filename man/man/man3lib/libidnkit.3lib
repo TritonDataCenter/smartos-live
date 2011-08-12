@@ -1,0 +1,219 @@
+'\" te
+.\" Copyright (c) 2003 by Sun Microsystems, Inc.  All rights reserved.
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH libidnkit 3LIB "15 Aug 2003" "SunOS 5.11" "Interface Libraries"
+.SH NAME
+libidnkit \- IDN conversion library
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag\fR... ] \fIfile\fR... \fB-lidnkit\fR [ \fIlibrary\fR... ]
+#include <\fBidn/api.h\fR>
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+Functions in this library provide conversions between ACE string and multibyte character string of the current locale or a specified codeset. They support various manipulations of internationalized domain names, including encoding conversion and name preparation. They are designed according to IDNA framework where each application must do necessary preparations for the internationalized domain names before passing them to the resolver. The library provides easy-to-use, high-level interfaces to help applications with the preparation.
+.sp
+.LP
+The \fBlibidnkit\fR library internally uses \fBiconv\fR(3C) to provide encoding conversion from UTF-8 to the local encoding (such as ISO8859-1, usually determined by the current locale), and from the local encoding to UTF-8.
+.SH INTERFACES
+.sp
+.LP
+The shared object \fBlibidnkit.so.1\fR provides the public interfaces defined below. See \fBIntro\fR(3) for additional information on shared object interfaces.
+.sp
+
+.sp
+.TS
+tab();
+lw(2.75i) lw(2.75i) 
+lw(2.75i) lw(2.75i) 
+.
+\fBidn_decodename\fR\fBidn_decodename2\fR
+\fBidn_enable\fR\fBidn_encodename\fR
+\fBidn_nameinit\fR
+.TE
+
+.SH FILES
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/libidnkit.so.1\fR\fR
+.ad
+.RS 30n
+.rt  
+shared object
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB/usr/lib/64/libidnkit.so.1\fR\fR
+.ad
+.RS 30n
+.rt  
+64-bit shared object
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i) 
+lw(2.75i) |lw(2.75i) 
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+AvailabilitySUNWidnl
+_
+Interface StabilityEvolving
+_
+MT-LevelUnsafe
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBIntro\fR(3), \fBiconv\fR(3C), \fBidn_decodename\fR(3EXT), \fBsetlocale\fR(3C), \fBhosts\fR(4), \fBattributes\fR(5), \fBenviron\fR(5)
+.sp
+.ne 2
+.mk
+.na
+\fBRFC 3490\fR
+.ad
+.RS 19n
+.rt  
+Internationalizing Domain Names in Applications (IDNA)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBRFC 3491\fR
+.ad
+.RS 19n
+.rt  
+Nameprep: A Stringprep Profile for Internationalized Domain Names (IDN)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBRFC 3492\fR
+.ad
+.RS 19n
+.rt  
+Punycode: A Bootstring encoding of Unicode for Internationalized Domain Names in Applications (IDNA)
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBRFC 3454\fR
+.ad
+.RS 19n
+.rt  
+Preparation of Internationalized Strings ("stringprep")
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBRFC 952\fR
+.ad
+.RS 19n
+.rt  
+DoD Internet Host Table Specification
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBRFC 921\fR
+.ad
+.RS 19n
+.rt  
+Domain Name System Implementation Schedule - Revised
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBSTD 3, RFC 1122\fR
+.ad
+.RS 19n
+.rt  
+Requirements for Internet Hosts -- Communication Layers
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fBSTD 3, RFC 1123\fR
+.ad
+.RS 19n
+.rt  
+Requirements for Internet Hosts -- Applications and Support
+.RE
+
+.sp
+.LP
+Unicode Standard Annex #15: Unicode Normalization Forms, Version 3.2.0. http://www.unicode.org
+.sp
+.LP
+International Language Environments Guide (for this version of Solaris)
+.SH COPYRIGHT AND LICENSE
+.sp
+.LP
+Copyright (c) 2000-2002 Japan Network Information Center.  All rights reserved.
+.sp
+.LP
+By using this file, you agree to the terms and conditions set forth bellow.
+.sp
+.LP
+LICENSE TERMS AND CONDITIONS
+.sp
+.LP
+The following License Terms and Conditions apply, unless a different license is obtained from Japan Network Information Center ("JPNIC"), a Japanese association, Kokusai-Kougyou-Kanda Bldg 6F, 2-3-4 Uchi-Kanda, Chiyoda-ku, Tokyo 101-0047, Japan.
+.RS +4
+.TP
+1.
+Use, Modification and Redistribution (including distribution of any modified or derived work) in source and/or binary forms is permitted under this License Terms and Conditions.
+.RE
+.RS +4
+.TP
+2.
+Redistribution of source code must retain the copyright notices as they appear in each source code file, this License Terms and Conditions.
+.RE
+.RS +4
+.TP
+3.
+Redistribution in binary form must reproduce the Copyright Notice, this License Terms and Conditions, in the documentation and/or other materials provided with the distribution. For the purposes of binary distribution the "Copyright Notice" refers to the following language: "Copyright (c) 2000-2002 Japan Network Information Center. All rights reserved."
+.RE
+.RS +4
+.TP
+4.
+The name of JPNIC may not be used to endorse or promote products derived from this Software without specific prior written approval of JPNIC.
+.RE
+.RS +4
+.TP
+5.
+Disclaimer/Limitation of Liability: THIS SOFTWARE IS PROVIDED BY JPNIC "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL JPNIC BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+.RE

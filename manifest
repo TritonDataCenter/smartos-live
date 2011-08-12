@@ -1951,6 +1951,7 @@ f smartdc/bin/sdc-oneachnode 0555 root bin
 f smartdc/bin/sdc-phonehome 0555 root bin
 f smartdc/bin/sdc-sbcreate 0555 root bin
 f smartdc/bin/sdc-sbupload 0555 root bin
+f smartdc/bin/sdc-setup 0555 root bin
 f smartdc/bin/sdc-vmmanifest 0555 root bin
 f smartdc/bin/sdc-zfs-io-throttle.d 0555 root bin
 f smartdc/bin/sdc-zoneinfo 0555 root bin
@@ -1977,6 +1978,7 @@ f smartdc/man/man1/sdc-oneachnode.1 0444 root bin
 f smartdc/man/man1/sdc-phonehome.1 0444 root bin
 f smartdc/man/man1/sdc-sbcreate.1 0444 root bin
 f smartdc/man/man1/sdc-sbupload.1 0444 root bin
+f smartdc/man/man1/sdc-setup.1 0444 root bin
 f smartdc/man/man1/sdc-zfs-io-throttle.1 0444 root bin
 f smartdc/man/man1/sdc-zoneinfo.1 0444 root bin
 d smartdc/node_modules 0555 root bin
@@ -1984,6 +1986,13 @@ f smartdc/node_modules/async.js 0444 root bin
 f smartdc/node_modules/dateformat.js 0444 root bin
 f smartdc/node_modules/sprintf.js 0444 root bin
 f smartdc/pubkey.key 0555 root bin
+d smartdc/setup 0555 root bin
+s smartdc/setup/adminui=create-zone
+s smartdc/setup/ca=create-zone
+s smartdc/setup/capi=create-zone
+s smartdc/setup/cloudapi=create-zone
+f smartdc/setup/create-zone 0555 root bin
+s smartdc/setup/portal=create-zone
 d smartdc/share 0555 root bin
 d smartdc/share/qemu 0555 root bin
 f smartdc/share/qemu/bamboo.dtb 0444 root bin

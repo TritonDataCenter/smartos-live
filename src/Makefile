@@ -1,8 +1,7 @@
 CC=gcc
 CFLAGS=-Wall
 TARGETS=bootparams disklist removable_disk disk_size
-SMARTDC_TARGETS=sdc-sbcreate sdc-sbupload marco polo beacon has_hvx
-JOYENT_PUBKEY=pubkey.key
+SMARTDC_TARGETS=marco polo beacon has_hvx
 DESTDIR=../proto
 
 all: $(TARGETS) sysinfo $(SMARTDC_TARGETS)
@@ -12,7 +11,6 @@ install: $(TARGETS) sysinfo
 	pfexec cp -p $(TARGETS) sysinfo $(DESTDIR)/usr/bin
 	mkdir -p $(DESTDIR)/smartdc/bin
 	pfexec cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin
-	pfexec cp -p $(JOYENT_PUBKEY) $(DESTDIR)/smartdc
 
 bootparams: bootparams.c
 	$(CC) $(CFLAGS) -o $@ $^ -ldevinfo
@@ -32,12 +30,6 @@ disklist:
 
 sysinfo:
 	touch sysinfo
-
-sdc-sbcreate:
-	touch sdc-sbcreate
-
-sdc-sbupload:
-	touch sdc-sbupload
 
 beacon:
 	touch beacon

@@ -251,14 +251,10 @@ if [[ -f ${ROOT}/configure-branches ]]; then
     [[ -z ${branch} ]] && update_branch "${ROOT}/projects/illumos-extra" ${branch}
     branch=$(grep "^illumos-joyent: " ${ROOT}/configure-branches | cut -d' ' -f2)
     [[ -z ${branch} ]] && update_branch "${ROOT}/projects/illumos" ${branch}
-    branch=$(grep "^ur-agent: " ${ROOT}/configure-branches | cut -d' ' -f2)
-    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/ur-agent" ${branch}
     branch=$(grep "^kvm: " ${ROOT}/configure-branches | cut -d' ' -f2)
     [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/kvm" ${branch}
     branch=$(grep "^kvm-cmd: " ${ROOT}/configure-branches | cut -d' ' -f2)
     [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/kvm-cmd" ${branch}
-    branch=$(grep "^vmadm: " ${ROOT}/configure-branches | cut -d' ' -f2)
-    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/vmadm" ${branch}
 else
     echo ""
     echo "WARNING! No configure-branches file!!! Using master branch for everything!"

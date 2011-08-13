@@ -1,0 +1,197 @@
+#!/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright 2011 Joyent, Inc.  All rights reserved.
+# Use is subject to license terms.
+
+set -o errexit
+set -o xtrace
+
+. /lib/svc/share/smf_include.sh
+. /lib/sdc/config.sh
+
+export PATH="/usr/sbin:/sbin:/usr/bin"
+
+set_root_password() {
+    enc_password=$1
+
+    sed -e "s|^root:[^\:]*:|root:${enc_password}:|" /etc/shadow > /etc/shadow.new \
+      && chmod 400 /etc/shadow.new \
+      && mv /etc/shadow.new /etc/shadow
+}
+
+set_admin_password() {
+    enc_password=$1
+
+    sed -e "s|^admin:[^\:]*:|admin:${enc_password}:|" /etc/shadow \
+        > /etc/shadow.new \
+      && chmod 400 /etc/shadow.new \
+      && mv /etc/shadow.new /etc/shadow
+}
+
+set_ntp_hosts() {
+    ntp_hosts=$1
+
+    (
+    for i in $(echo ${ntp_hosts} | sed -e "s/,/ /g"); do
+        echo "server ${i}"
+    done
+    if [[ -f /etc/inet/ntp.conf ]]; then
+        cat /etc/inet/ntp.conf | grep -v "^server"
+    fi
+    ) > /etc/inet/ntp.conf.new \
+    && mv /etc/inet/ntp.conf.new /etc/inet/ntp.conf
+}
+
+case "$1" in
+'start')
+
+    # If we're a headnode, see if we have to do interactive configuration.
+    if /bin/bootparams | grep "^headnode=true" > /dev/null 2>&1; then
+        USB_PATH=/mnt/`svcprop -p "joyentfs/usb_mountpoint" svc:/system/filesystem/smartdc:default`
+
+        # Check for config and run interactive if it doesn't exist.
+        if [[ ! -f ${USB_PATH}/config ]]; then
+            if /bin/bootparams | grep "^noimport=true" >/dev/null 2>&1; then
+                # Skipping interactive config, bypass rest of script.
+                exit $SMF_EXIT_OK
+            fi
+
+            ${USB_PATH}/scripts/prompt-config.sh "${USB_PATH}" \
+                </dev/console >&/dev/console
+
+            # If user quit from interactive configuration then we're done.
+            [[ ! -f ${USB_PATH}/config ]] && exit $SMF_EXIT_OK
+        fi
+    fi
+
+    # This puts config vars in CONFIG_
+    load_sdc_config
+    load_sdc_sysinfo
+
+    # Write the info about this datacenter to /.dcinfo so we can use in the GZ
+    echo "SDC_DATACENTER_NAME='${CONFIG_datacenter_name}'" > /.dcinfo
+    if [[ "${SYSINFO_Bootparam_headnode}" == "true" ]]; then
+        echo "SDC_DATACENTER_HEADNODE_ID=${CONFIG_datacenter_headnode_id}" \
+            >> /.dcinfo
+    fi
+
+    # Boot parameter takes precidence over config
+    if [[ -n "${SYSINFO_Bootparam_root_shadow}" ]]; then
+        set_root_password "${SYSINFO_Bootparam_root_shadow}"
+        echo "Set root password boot parameters."
+    elif [[ -n "${CONFIG_root_shadow}" ]]; then
+        set_root_password "${CONFIG_root_shadow}"
+        echo "Set root password from config."
+    else
+        echo "No root shadow entry in the config, cannot set."
+    fi
+
+    # Boot parameter takes precidence over config
+    if [[ -n "${SYSINFO_Bootparam_admin_shadow}" ]]; then
+        set_admin_password "${SYSINFO_Bootparam_admin_shadow}"
+        echo "Set admin password boot parameters."
+    elif [[ -n "${CONFIG_admin_shadow}" ]]; then
+        set_admin_password "${CONFIG_admin_shadow}"
+        echo "Set admin password from config."
+    else
+        echo "No admin shadow entry in the config, cannot set."
+    fi
+
+    # Set authorized_keys for root
+    if [[ -n "${CONFIG_root_authorized_keys_file}" ]] \
+        && [[ -n "${CONFIG_config_inc_dir}" ]] \
+        && [[ -d "${CONFIG_config_inc_dir}" ]] \
+        && [[ -f "${CONFIG_config_inc_dir}/${CONFIG_root_authorized_keys_file}" ]]; then
+
+        mkdir -p /root/.ssh
+        cp "${CONFIG_config_inc_dir}/${CONFIG_root_authorized_keys_file}" /root/.ssh/authorized_keys
+        chmod 0600 /root/.ssh/authorized_keys
+        chmod 0700 /root/.ssh
+    fi
+
+    if [[ -n "${CONFIG_ntp_conf_file}" ]] \
+        && [[ -n "${CONFIG_config_inc_dir}" ]] \
+        && [[ -d "${CONFIG_config_inc_dir}" ]] \
+        && [[ -f "${CONFIG_config_inc_dir}/${CONFIG_ntp_conf_file}" ]]; then
+
+        cp "${CONFIG_config_inc_dir}/${CONFIG_ntp_conf_file}" /etc/inet/ntp.conf
+        echo "Copied ntp config."
+
+    elif [[ -n "${CONFIG_ntp_hosts}" ]]; then
+        # split on ',' and resolve bits that aren't IP addresses then merge back
+        servers=""
+        for entry in $(echo "${CONFIG_ntp_hosts}" | tr ',' ' '); do
+            if echo "${entry}" | grep "^[0-9,\.]*$" >/dev/null 2>&1; then
+                # entry is an IP
+                [[ -n ${servers} ]] && entry=",${entry}"
+                servers="${servers}${entry}"
+            else
+                # DNS, try to resolve
+                for s in $( (dig ${entry} +short || /bin/true) | grep "^[0-9]" | xargs); do
+                    [[ -n ${servers} ]] && s=",${s}"
+                    servers="${servers}${s}"
+                done
+            fi
+        done
+
+        if [[ -n ${servers} ]]; then
+            set_ntp_hosts "${servers}"
+            echo "Set ntp hosts (${servers})."
+        fi
+    else
+        # No NTP hosts set, use some from pool.ntp.org
+        servers=$( (dig pool.ntp.org +short || /bin/true) | grep "^[0-9]" | xargs | sed -e "s/ /,/g")
+
+        # Note, if we don't find some here, we just go with ones already in the file.
+        if [[ -n ${servers} ]]; then
+            set_ntp_hosts "${servers}"
+            echo "Set default ntp hosts (${servers})."
+        fi
+    fi
+    # set the keymap. For dvorak for instance
+    if [[ -n ${CONFIG_default_keymap} ]]; then
+        /usr/bin/loadkeys ${CONFIG_default_keymap}
+    fi
+
+    # Enable virtual terminals to support interactive installation
+    vtdaemon="svc:/system/vtdaemon"
+    svccfg -s ${vtdaemon} setprop options/hotkeys=true
+    svcadm refresh ${vtdaemon}
+    svcadm enable ${vtdaemon}
+    svcadm enable svc:/system/console-login:vt2
+    svcadm enable svc:/system/console-login:vt3
+    svcadm enable svc:/system/console-login:vt4
+    svcadm enable svc:/system/console-login:vt5
+    svcadm enable svc:/system/console-login:vt6
+
+    ;;
+
+'stop')
+    ;;
+
+*)
+    echo "Usage: $0 { start | stop }"
+    exit $SMF_EXIT_ERR_FATAL
+    ;;
+esac
+exit $SMF_EXIT_OK

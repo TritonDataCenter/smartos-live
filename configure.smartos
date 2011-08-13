@@ -22,22 +22,29 @@
 # Copyright (c) 2010,2011 Joyent Inc.
 #
 
+mkdir -p projects/local
+(cd projects/local && [[ -d kvm ]] \
+    || git clone https://github.com/joyent/illumos-kvm.git kvm)
+(cd projects/local && [[ -d kvm-cmd ]] \
+    || git clone https://github.com/joyent/illumos-kvm-cmd.git kvm-cmd)
 
 # default branch list if there isn't one
 if [[ ! -f configure-branches ]]; then
     cat >configure-branches <<EOF
 # after editing, rerun configure
-illumos-live: develop
+illumos-live: master
+illumos-joyent: master
 illumos-extra: master
+kvm: master
+kvm-cmd: master
 EOF
 fi
 
 PUBLISHER="illumos"
-RELEASE_VER="illumos_147"
+RELEASE_VER="joyent_147"
 SUNW_SPRO12_URL=""
 SUNW_SPRO12u1_URL=""
 ON_CLOSED_BINS_URL="http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins.i386.tar.bz2"
 ON_CLOSED_BINS_ND_URL="http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins-nd.i386.tar.bz2"
-GET_ILLUMOS="hg clone ssh://anonhg@hg.illumos.org/illumos-gate illumos"
+GET_ILLUMOS="(git clone https://github.com/joyent/illumos-joyent.git illumos)"
 GET_ILLUMOS_EXTRA="git clone https://github.com/joyent/illumos-extra.git illumos-extra"
-GET_OPENSOLARIS_MAN="(curl -k http://dlc.sun.com/osol/man/downloads/current/man-sunosman-20090930.tar.bz2 | gtar -jxf - && mv man opensolaris-man)"

@@ -1983,7 +1983,6 @@ f smartdc/man/man1/sdc-zfs-io-throttle.1 0444 root bin
 f smartdc/man/man1/sdc-zoneinfo.1 0444 root bin
 d smartdc/node_modules 0555 root bin
 f smartdc/node_modules/async.js 0444 root bin
-f smartdc/node_modules/dateformat.js 0444 root bin
 f smartdc/node_modules/sprintf.js 0444 root bin
 f smartdc/pubkey.key 0555 root bin
 d smartdc/setup 0555 root bin

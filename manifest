@@ -5399,6 +5399,7 @@ f usr/lib/amd64/libCrun.so.1 0755 root bin
 f usr/lib/amd64/libCstd.so.1 0755 root bin
 f usr/lib/amd64/libHBAAPI.so.1 0755 root bin
 s usr/lib/amd64/libHBAAPI.so=libHBAAPI.so.1
+s usr/lib/amd64/libMPAPI.so=../../../lib/amd64/libMPAPI.so.1
 f usr/lib/amd64/libSMHBAAPI.so.1 0755 root bin
 s usr/lib/amd64/libSMHBAAPI.so=libSMHBAAPI.so.1
 s usr/lib/amd64/libadm.so.1=../../../lib/amd64/libadm.so.1
@@ -5446,6 +5447,7 @@ s usr/lib/amd64/libcrypt_i.so.1=libcrypt.so.1
 s usr/lib/amd64/libcrypt_i.so=libcrypt.so
 s usr/lib/amd64/libcrypto.so.0.9.8=../../../lib/amd64/libcrypto.so.0.9.8
 s usr/lib/amd64/libcrypto.so=../../../lib/amd64/libcrypto.so
+s usr/lib/amd64/libcryptoutil.so=../../../lib/amd64/libcryptoutil.so.1
 s usr/lib/amd64/libctf.so.1=../../../lib/amd64/libctf.so.1
 s usr/lib/amd64/libctf.so=../../../lib/amd64/libctf.so.1
 s usr/lib/amd64/libcurses.so.1=../../../lib/amd64/libcurses.so.1
@@ -5467,6 +5469,7 @@ s usr/lib/amd64/libdl.so.1=../../../lib/amd64/libdl.so.1
 s usr/lib/amd64/libdl.so=../../../lib/amd64/libdl.so.1
 f usr/lib/amd64/libdll.so.1 0755 root bin
 s usr/lib/amd64/libdll.so=libdll.so.1
+s usr/lib/amd64/libdladm.so=../../../lib/amd64/libdladm.so.1
 s usr/lib/amd64/libdlpi.so.1=../../../lib/amd64/libdlpi.so.1
 s usr/lib/amd64/libdlpi.so=../../../lib/amd64/libdlpi.so.1
 f usr/lib/amd64/libdns_sd.so.1 0755 root bin
@@ -5536,6 +5539,7 @@ f usr/lib/amd64/libiscsit.so.1 0755 root bin
 s usr/lib/amd64/libiscsit.so=libiscsit.so.1
 f usr/lib/amd64/libjdns_sd.so.1 0755 root bin
 s usr/lib/amd64/libjdns_sd.so=libjdns_sd.so.1
+s usr/lib/amd64/libkmfberder.so=../../../lib/amd64/libkmfberder.so.1
 f usr/lib/amd64/libkmsagent.so.1 0755 root bin
 s usr/lib/amd64/libkmsagent.so=libkmsagent.so.1
 f usr/lib/amd64/libkrb5.so.1 0755 root bin
@@ -5573,6 +5577,7 @@ f usr/lib/amd64/libmenu.so.1 0755 root bin
 s usr/lib/amd64/libmenu.so=libmenu.so.1
 s usr/lib/amd64/libmp.so.2=../../../lib/amd64/libmp.so.2
 s usr/lib/amd64/libmp.so=../../../lib/amd64/libmp.so.2
+s usr/lib/amd64/libmpscsi_vhci.so=../../../lib/amd64/libmpscsi_vhci.so.1
 f usr/lib/amd64/libmtmalloc.so.1 0755 root bin
 s usr/lib/amd64/libmtmalloc.so=libmtmalloc.so.1
 s usr/lib/amd64/libmvec.so.1=../../../lib/amd64/libmvec.so.1
@@ -5695,6 +5700,8 @@ f usr/lib/amd64/libtnfctl.so.1 0755 root bin
 s usr/lib/amd64/libtnfctl.so=libtnfctl.so.1
 f usr/lib/amd64/libtnfprobe.so.1 0755 root bin
 s usr/lib/amd64/libtnfprobe.so=libtnfprobe.so.1
+s usr/lib/amd64/libtsnet.so=../../../lib/amd64/libtsnet.so.1
+s usr/lib/amd64/libtsol.so=../../../lib/amd64/libtsol.so.2
 s usr/lib/amd64/libumem.so.1=../../../lib/amd64/libumem.so.1
 s usr/lib/amd64/libumem.so=../../../lib/amd64/libumem.so.1
 s usr/lib/amd64/libuuid.so.1=../../../lib/amd64/libuuid.so.1
@@ -6828,6 +6835,7 @@ f usr/lib/libCrun.so.1 0755 root bin
 f usr/lib/libCstd.so.1 0755 root bin
 f usr/lib/libHBAAPI.so.1 0755 root bin
 s usr/lib/libHBAAPI.so=libHBAAPI.so.1
+s usr/lib/libMPAPI.so=../../lib/libMPAPI.so.1
 f usr/lib/libSMHBAAPI.so.1 0755 root bin
 s usr/lib/libSMHBAAPI.so=libSMHBAAPI.so.1
 s usr/lib/libadm.so.1=../../lib/libadm.so.1
@@ -6881,6 +6889,7 @@ s usr/lib/libcrypt_i.so.1=libcrypt.so.1
 s usr/lib/libcrypt_i.so=libcrypt.so
 s usr/lib/libcrypto.so.0.9.8=../../lib/libcrypto.so.0.9.8
 s usr/lib/libcrypto.so=../../lib/libcrypto.so
+s usr/lib/libcryptoutil.so=../../lib/libcryptoutil.so.1
 s usr/lib/libctf.so.1=../../lib/libctf.so.1
 s usr/lib/libctf.so=../../lib/libctf.so.1
 f usr/lib/libcurl.so.4.2.0 0755 root bin
@@ -6909,6 +6918,7 @@ f usr/lib/libdiskmgt.so.1 0755 root bin
 s usr/lib/libdiskmgt.so=libdiskmgt.so.1
 s usr/lib/libdl.so.1=../../lib/libdl.so.1
 s usr/lib/libdl.so=../../lib/libdl.so.1
+s usr/lib/libdladm.so=../../lib/libdladm.so.1
 f usr/lib/libdll.so.1 0755 root bin
 s usr/lib/libdll.so=libdll.so.1
 s usr/lib/libdlpi.so.1=../../lib/libdlpi.so.1
@@ -6927,6 +6937,7 @@ s usr/lib/libefi.so.1=../../lib/libefi.so.1
 s usr/lib/libefi.so=../../lib/libefi.so.1
 s usr/lib/libelf.so.1=../../lib/libelf.so.1
 s usr/lib/libelf.so=../../lib/libelf.so.1
+s usr/lib/libelfsign.so=../../lib/libelfsign.so.1
 f usr/lib/libexacct.so.1 0755 root bin
 s usr/lib/libexacct.so=libexacct.so.1
 s usr/lib/libexpat.so.0=libexpat.so.1.5.2
@@ -6953,6 +6964,7 @@ f usr/lib/libfstyp.so.1 0755 root bin
 s usr/lib/libfstyp.so=libfstyp.so.1
 s usr/lib/libgen.so.1=../../lib/libgen.so.1
 s usr/lib/libgen.so=../../lib/libgen.so.1
+s usr/lib/libgrubmgmt.so=../../lib/libgrubmgmt.so.1
 f usr/lib/libgss.so.1 0755 root bin
 s usr/lib/libgss.so=libgss.so.1
 f usr/lib/libhal-storage.so.1.0.0 0755 root bin
@@ -6983,8 +6995,10 @@ s usr/lib/libinstzones.so=libinstzones.so.1
 s usr/lib/libintl.so.1=../../lib/libintl.so.1
 s usr/lib/libintl.so=../../lib/libintl.so.1
 f usr/lib/libiostream.so.1 0755 root bin
+s usr/lib/libipadm.so=../../lib/libipadm.so.1
 f usr/lib/libipmi.so.1 0755 root bin
 s usr/lib/libipmi.so=libipmi.so.1
+s usr/lib/libipmp.so=../../lib/libipmp.so.1
 f usr/lib/libipp.so.1 0755 root bin
 s usr/lib/libipp.so=libipp.so.1
 f usr/lib/libipsecutil.so.1 0755 root bin
@@ -6993,6 +7007,9 @@ f usr/lib/libiscsit.so.1 0755 root bin
 s usr/lib/libiscsit.so=libiscsit.so.1
 f usr/lib/libjdns_sd.so.1 0755 root bin
 s usr/lib/libjdns_sd.so=libjdns_sd.so.1
+s usr/lib/libkcfd.so=../../lib/libkcfd.so.1
+s usr/lib/libkmf.so=../../lib/libkmf.so.1
+s usr/lib/libkmfberder.so=../../lib/libkmfberder.so.1
 f usr/lib/libkmsagent.so.1 0755 root bin
 s usr/lib/libkmsagent.so=libkmsagent.so.1
 f usr/lib/libkrb5.so.1 0755 root bin
@@ -7033,6 +7050,7 @@ s usr/lib/libmilter.so=libmilter.so.1
 s usr/lib/libmp.so.1=../../lib/libmp.so.1
 s usr/lib/libmp.so.2=../../lib/libmp.so.2
 s usr/lib/libmp.so=../../lib/libmp.so.2
+s usr/lib/libmpscsi_vhci.so=../../lib/libmpscsi_vhci.so.1
 f usr/lib/libmtmalloc.so.1 0755 root bin
 s usr/lib/libmtmalloc.so=libmtmalloc.so.1
 s usr/lib/libmvec.so.1=../../lib/libmvec.so.1
@@ -7053,6 +7071,7 @@ f usr/lib/libnvfru.so.1 0755 root bin
 s usr/lib/libnvfru.so=libnvfru.so.1
 s usr/lib/libnvpair.so.1=../../lib/libnvpair.so.1
 s usr/lib/libnvpair.so=../../lib/libnvpair.so.1
+s usr/lib/libnwam.so=../../lib/libnwam.so.1
 d usr/lib/libp 0755 root bin
 s usr/lib/libp/32=.
 s usr/lib/libp/64=amd64
@@ -7192,6 +7211,8 @@ f usr/lib/libtnfctl.so.1 0755 root bin
 s usr/lib/libtnfctl.so=libtnfctl.so.1
 f usr/lib/libtnfprobe.so.1 0755 root bin
 s usr/lib/libtnfprobe.so=libtnfprobe.so.1
+s usr/lib/libtsnet.so=../../lib/libtsnet.so.1
+s usr/lib/libtsol.so=../../lib/libtsol.so.2
 s usr/lib/libumem.so.1=../../lib/libumem.so.1
 s usr/lib/libumem.so=../../lib/libumem.so.1
 f usr/lib/libunistat.so.1 0755 root bin

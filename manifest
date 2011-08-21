@@ -1928,6 +1928,7 @@ f sbin/zpool 0555 root bin
 d smartdc 0555 root bin
 d smartdc/bin 0555 root bin
 f smartdc/bin/beacon 0555 root bin
+f smartdc/bin/create-machine 0555 root bin
 f smartdc/bin/has_hvx 0555 root bin
 f smartdc/bin/marco 0555 root bin
 f smartdc/bin/polo 0555 root bin

@@ -7,7 +7,7 @@
 
 shopt -s xpg_echo
 set -o pipefail
-export PATH=/usr/bin
+export PATH=/usr/bin:/opt/local/bin
 
 bi_tmpdir=/tmp/build_iso-$USER.$$
 bi_output_dir="output-iso"

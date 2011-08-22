@@ -1883,6 +1883,7 @@ f sbin/dhcpinfo 0555 root bin
 f sbin/dladm 0555 root bin
 f sbin/dlmgmtd 0555 root bin
 f sbin/dlstat 0555 root bin
+f sbin/fdisk 0555 root bin
 f sbin/flowadm 0555 root bin
 f sbin/flowstat 0555 root bin
 f sbin/hostconfig 0555 root bin

@@ -1937,6 +1937,7 @@ f smartdc/bin/qemu-img 0555 root bin
 f smartdc/bin/qemu-io 0555 root bin
 f smartdc/bin/qemu-nbd 0555 root bin
 f smartdc/bin/qemu-system-x86_64 0555 root bin
+f smartdc/bin/sdc-backup 0555 root bin
 f smartdc/bin/sdc-capi 0555 root bin
 f smartdc/bin/sdc-cloudapi 0555 root bin
 f smartdc/bin/sdc-compnode 0555 root bin
@@ -1950,6 +1951,7 @@ f smartdc/bin/sdc-mapi-destroy-container 0555 root bin
 f smartdc/bin/sdc-netinfo 0555 root bin
 f smartdc/bin/sdc-oneachnode 0555 root bin
 f smartdc/bin/sdc-phonehome 0555 root bin
+f smartdc/bin/sdc-restore 0555 root bin
 f smartdc/bin/sdc-sbcreate 0555 root bin
 f smartdc/bin/sdc-sbupload 0555 root bin
 f smartdc/bin/sdc-setup 0555 root bin
@@ -1965,6 +1967,7 @@ f smartdc/etc/qemu/target-x86_64.conf 0444 root bin
 d smartdc/man 0555 root bin
 d smartdc/man/cat1 0555 root bin
 d smartdc/man/man1 0555 root bin
+f smartdc/man/man1/sdc-backup.1 0444 root bin
 f smartdc/man/man1/sdc-capi.1 0444 root bin
 f smartdc/man/man1/sdc-cloudapi.1 0444 root bin
 f smartdc/man/man1/sdc-compnode.1 0444 root bin
@@ -1977,6 +1980,7 @@ f smartdc/man/man1/sdc-mapi-destroy-container.1 0444 root bin
 f smartdc/man/man1/sdc-mapi.1 0444 root bin
 f smartdc/man/man1/sdc-oneachnode.1 0444 root bin
 f smartdc/man/man1/sdc-phonehome.1 0444 root bin
+f smartdc/man/man1/sdc-restore.1 0444 root bin
 f smartdc/man/man1/sdc-sbcreate.1 0444 root bin
 f smartdc/man/man1/sdc-sbupload.1 0444 root bin
 f smartdc/man/man1/sdc-setup.1 0444 root bin

@@ -4,7 +4,7 @@
  * Receives a single broadcast message on the given interface.  The interface
  * must be plumbed, but does not need to have an IP address.
  *
- * Intended to be used with its counterpart, "marco"
+ * Intended to be used with its counterpart, "marco", which sends the message that will be received here.
  *
  * Compile with: gcc -Wall -o polo polo.c -lsocket
  */

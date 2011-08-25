@@ -1929,7 +1929,6 @@ f sbin/zpool 0555 root bin
 d smartdc 0555 root bin
 d smartdc/bin 0555 root bin
 f smartdc/bin/beacon 0555 root bin
-f smartdc/bin/create-machine 0555 root bin
 f smartdc/bin/has_hvx 0555 root bin
 f smartdc/bin/marco 0555 root bin
 f smartdc/bin/polo 0555 root bin
@@ -1958,9 +1957,6 @@ f smartdc/bin/sdc-setup 0555 root bin
 f smartdc/bin/sdc-vmmanifest 0555 root bin
 f smartdc/bin/sdc-zfs-io-throttle.d 0555 root bin
 f smartdc/bin/sdc-zoneinfo 0555 root bin
-f smartdc/bin/vmadm 0555 root bin
-f smartdc/bin/vmadmd 0555 root bin
-f smartdc/bin/vmcfg 0555 root bin
 d smartdc/etc 0555 root bin
 d smartdc/etc/qemu 0555 root bin
 f smartdc/etc/qemu/target-x86_64.conf 0444 root bin
@@ -1986,9 +1982,6 @@ f smartdc/man/man1/sdc-sbupload.1 0444 root bin
 f smartdc/man/man1/sdc-setup.1 0444 root bin
 f smartdc/man/man1/sdc-zfs-io-throttle.1 0444 root bin
 f smartdc/man/man1/sdc-zoneinfo.1 0444 root bin
-d smartdc/node_modules 0555 root bin
-f smartdc/node_modules/async.js 0444 root bin
-f smartdc/node_modules/sprintf.js 0444 root bin
 f smartdc/pubkey.key 0555 root bin
 d smartdc/setup 0555 root bin
 s smartdc/setup/adminui=create-zone
@@ -5472,9 +5465,9 @@ f usr/lib/amd64/libdiskmgt.so.1 0755 root bin
 s usr/lib/amd64/libdiskmgt.so=libdiskmgt.so.1
 s usr/lib/amd64/libdl.so.1=../../../lib/amd64/libdl.so.1
 s usr/lib/amd64/libdl.so=../../../lib/amd64/libdl.so.1
+s usr/lib/amd64/libdladm.so=../../../lib/amd64/libdladm.so.1
 f usr/lib/amd64/libdll.so.1 0755 root bin
 s usr/lib/amd64/libdll.so=libdll.so.1
-s usr/lib/amd64/libdladm.so=../../../lib/amd64/libdladm.so.1
 s usr/lib/amd64/libdlpi.so.1=../../../lib/amd64/libdlpi.so.1
 s usr/lib/amd64/libdlpi.so=../../../lib/amd64/libdlpi.so.1
 f usr/lib/amd64/libdns_sd.so.1 0755 root bin
@@ -8059,6 +8052,7 @@ f usr/lib/values-xpg4.o 0644 root bin
 f usr/lib/values-xpg6.o 0644 root bin
 f usr/lib/vfontedpr 0555 root bin
 f usr/lib/vgrindefs 0444 root bin
+f usr/lib/vmadmd 0555 root bin
 d usr/lib/vscan 0755 root bin
 f usr/lib/vscan/libvscan.so.1 0755 root bin
 s usr/lib/vscan/libvscan.so=libvscan.so.1
@@ -8085,6 +8079,9 @@ s usr/net/nls/listen=../../lib/saf/listen
 s usr/net/nls/nlps_server=../../lib/saf/nlps_server
 d usr/net/servers 0755 root sys
 s usr/news=../var/news
+d usr/node_modules 0555 root bin
+f usr/node_modules/async.js 0444 root bin
+f usr/node_modules/sprintf.js 0444 root bin
 d usr/perl5 0755 root bin
 d usr/perl5/5.12 0755 root bin
 d usr/perl5/5.12/bin 0755 root bin
@@ -10758,6 +10755,7 @@ f usr/sbin/clri 0555 root bin
 f usr/sbin/consadm 0555 root sys
 f usr/sbin/consadmd 0555 root sys
 f usr/sbin/cpustat 0555 root bin
+f usr/sbin/create-machine 0555 root bin
 f usr/sbin/cron 0555 root sys
 s usr/sbin/cryptoadm=../../sbin/cryptoadm
 f usr/sbin/datadm 0555 root bin
@@ -11053,6 +11051,8 @@ h usr/sbin/update_drv=usr/lib/isaexec
 h usr/sbin/useradd=usr/sbin/roleadd
 h usr/sbin/userdel=usr/sbin/roledel
 h usr/sbin/usermod=usr/sbin/rolemod
+f usr/sbin/vmadm 0555 root bin
+f usr/sbin/vmcfg 0555 root bin
 f usr/sbin/volcopy 0555 root bin
 f usr/sbin/vrrpadm 0555 root bin
 f usr/sbin/wall 2555 root tty

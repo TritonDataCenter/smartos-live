@@ -50,6 +50,8 @@
  *    uuid -- pre-specify a UUID for this machine (default is to create one)
  *    autoboot -- boolean, true means this VM will be started after create
  *    customer_uuid -- The UUID of the customer to associate this VM with
+ *    customer_metadata -- A json object of key/value pairs for the metadata
+ *        agent to provide to the zone/vm.
  *    cpu_shares -- The (relative) shares of the CPU this machine should get
  *    cpu_cap -- sets a CPU cap for this machine
  *    zfs_io_priority -- The (relative) shares of the IO this machine should get
@@ -168,6 +170,10 @@ function output(type, message, data)
     obj.message = message;
 
     console.log(JSON.stringify(obj));
+}
+
+function outputProgress(pct, message) {
+    output('update', message, {'percent': pct});
 }
 
 // Write a message to stderr with a timestamp
@@ -431,17 +437,18 @@ function createVolumes(payload, progress, callback)
     });
 }
 
-// writes a VM's metadata JSON to /zones/<uuid>/config/metadata.json
-function saveMetadata(vm, progress, callback)
+// writes a Zone's metadata JSON to /zones/<uuid>/config/metadata.json
+function saveMetadata(zone, progress, callback)
 {
-    var zonepath = vm.zone_path = '/' + vm.zfs_storage_pool_name + '/' + vm.uuid;
+    var zonepath = zone.zone_path = '/' + zone.zfs_storage_pool_name + '/' +
+        zone.uuid;
     var mdata_filename = zonepath + '/config/metadata.json';
     var mdata;
 
-    debug('saveMetadata() --', vm);
+    debug('saveMetadata() --', zone);
 
-    if (vm.hasOwnProperty('customer_metadata')) {
-        mdata = {"customer_metadata": vm.customer_metadata};
+    if (zone.hasOwnProperty('customer_metadata')) {
+        mdata = {"customer_metadata": zone.customer_metadata};
     } else {
         mdata = {"customer_metadata": {}};
     }
@@ -491,36 +498,32 @@ function createVM(payload, callback)
 
     debug('createVM() --', payload);
 
-    function progress(pct, message) {
-        output('update', message, {'percent': pct});
-    }
-
     async.series([
         function (cb)
         {
-            progress(1, 'checking and applying defaults to payload');
+            outputProgress(1, 'checking and applying defaults to payload');
             // XXX: checkProperties
             cb();
         },
         function (cb)
         {
-            progress(2, 'checking required datasets');
-            checkDatasets(payload, quantize(3, 28, progress), cb);
+            outputProgress(2, 'checking required datasets');
+            checkDatasets(payload, quantize(3, 28, outputProgress), cb);
         },
         function (cb)
         {
-            progress(29, 'creating volumes');
-            createVolumes(payload,  quantize(30, 50, progress), cb);
+            outputProgress(29, 'creating volumes');
+            createVolumes(payload,  quantize(30, 50, outputProgress), cb);
         },
         function (cb)
         {
-            progress(51, 'creating zone container');
-            createZone(payload,  quantize(51, 93, progress), cb);
+            outputProgress(51, 'creating zone container');
+            createZone(payload,  quantize(51, 93, outputProgress), cb);
         },
         function (cb)
         {
-            progress(94, 'storing zone metadata');
-            saveMetadata(payload,  quantize(94, 95, progress), cb);
+            outputProgress(94, 'storing zone metadata');
+            saveMetadata(payload,  quantize(94, 95, outputProgress), cb);
         }
     ],
     function (err, results)
@@ -1176,24 +1179,27 @@ function main()
                 });
             });
         } else if (payload.brand === "joyent") {
-            function progress(pct, message) {
-                output('update', message, {'percent': pct});
-            }
-
             createZoneUUID(payload, function (err, uuid) {
                 if (err) {
                     output('failure', 'unable to create UUID', {'error': err});
                     process.exit(1);
                 }
 
-                createZone(payload, progress, function (err, result) {
+                createZone(payload, outputProgress, function (err, result) {
                     if (err) {
                         output('failure', 'unable to create VM',
                             {'error': err});
                         process.exit(1);
                     }
-                    output('success', 'created Zone', {'uuid': payload.uuid});
-                    process.exit(0);
+                    saveMetadata(payload, outputProgress, function (err) {
+                        if (err) {
+                            output('failure', 'unable to save metadata',
+                                {'error': err});
+                            process.exit(1);
+                        }
+                        output('success', 'created Zone', {'uuid': payload.uuid});
+                        process.exit(0);
+                    });
                 });
             });
         } else {

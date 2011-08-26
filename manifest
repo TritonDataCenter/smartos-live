@@ -1936,6 +1936,7 @@ f smartdc/bin/qemu-img 0555 root bin
 f smartdc/bin/qemu-io 0555 root bin
 f smartdc/bin/qemu-nbd 0555 root bin
 f smartdc/bin/qemu-system-x86_64 0555 root bin
+f smartdc/bin/sdc-apipw 0555 root bin
 f smartdc/bin/sdc-backup 0555 root bin
 f smartdc/bin/sdc-capi 0555 root bin
 f smartdc/bin/sdc-cloudapi 0555 root bin
@@ -1963,6 +1964,7 @@ f smartdc/etc/qemu/target-x86_64.conf 0444 root bin
 d smartdc/man 0555 root bin
 d smartdc/man/cat1 0555 root bin
 d smartdc/man/man1 0555 root bin
+f smartdc/man/man1/sdc-apipw.1 0444 root bin
 f smartdc/man/man1/sdc-backup.1 0444 root bin
 f smartdc/man/man1/sdc-capi.1 0444 root bin
 f smartdc/man/man1/sdc-cloudapi.1 0444 root bin

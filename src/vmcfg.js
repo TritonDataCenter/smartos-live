@@ -64,9 +64,10 @@ var DISK_PROPS = [
     'media'
 ];
 
-var cp   = require('child_process');
-var exec = cp.exec;
-var path = require('path');
+var cp     = require('child_process');
+var exec   = cp.exec;
+var onlyif = require('onlyif');
+var path   = require('path');
 
 var DEBUG = false;
 if (process.env.DEBUG) {
@@ -338,4 +339,10 @@ function main()
     });
 }
 
-main();
+onlyif.rootInSmartosGlobal(function(err) {
+    if (err) {
+        console.log('Fatal: cannot run because: ' + err);
+        process.exit(1);
+    }
+    main();
+});

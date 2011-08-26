@@ -27,6 +27,7 @@
 
 var async   = require('async');
 var net     = require('net');
+var onlyif  = require('onlyif');
 var sprintf = require('sprintf').sprintf;
 var sys     = require('sys');
 
@@ -351,4 +352,10 @@ function main()
     }
 }
 
-main();
+onlyif.rootInSmartosGlobal(function(err) {
+    if (err) {
+        console.log('Fatal: cannot run because: ' + err);
+        process.exit(1);
+    }
+    main();
+});

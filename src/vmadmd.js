@@ -33,6 +33,7 @@ var exec       = cp.exec;
 var execFile   = cp.execFile;
 var fs         = require('fs');
 var net        = require('net');
+var onlyif     = require('onlyif');
 var path       = require('path');
 var spawn      = cp.spawn;
 var sys        = require('sys');
@@ -2423,4 +2424,10 @@ function main()
     });
 }
 
-main();
+onlyif.rootInSmartosGlobal(function(err) {
+    if (err) {
+        console.log('Fatal: cannot run because: ' + err);
+        process.exit(1);
+    }
+    main();
+});

@@ -8082,6 +8082,7 @@ d usr/net/servers 0755 root sys
 s usr/news=../var/news
 d usr/node_modules 0555 root bin
 f usr/node_modules/async.js 0444 root bin
+f usr/node_modules/onlyif.js 0444 root bin
 f usr/node_modules/sprintf.js 0444 root bin
 d usr/perl5 0755 root bin
 d usr/perl5/5.12 0755 root bin

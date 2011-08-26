@@ -904,9 +904,19 @@ function applyZoneDefaults(payload)
         payload.max_lwps = 2000;
     }
 
+    // We need to set the RAM here because we use it as the default for
+    // the max_physical_memory below.
+    if (payload.brand === 'kvm' && !payload.hasOwnProperty('ram')) {
+        payload.ram = 256;
+    }
+
     // NOTE: We add 1024 to memory limits for 'kvm' brand zones below.
     if (!payload.hasOwnProperty('max_physical_memory')) {
-        payload.max_physical_memory = 256; // in MiB
+        if (payload.brand === 'kvm') {
+            payload.max_physical_memory = payload.ram;
+        } else {
+            payload.max_physical_memory = 256; // in MiB
+        }
     }
 
     if (!payload.hasOwnProperty('max_locked_memory')) {
@@ -925,9 +935,6 @@ function applyZoneDefaults(payload)
         payload.max_locked_memory = payload.max_locked_memory + 1024;
         payload.max_swap = payload.max_swap + 1024;
 
-        if (!payload.hasOwnProperty('ram')) {
-            payload.ram = 256;
-        }
         if (!payload.hasOwnProperty('vcpus')) {
             payload.vcpus = 1;
         }

@@ -1659,6 +1659,7 @@ function bootVM(payload, options, callback)
         working_dir = '/zones/' + vm.uuid + '/root';
 
         cmdargs.push('-m', vm.ram);
+        cmdargs.push('-name', vm.uuid);
         cmdargs.push('-uuid', vm.uuid);
 
         if (vm.hasOwnProperty('cpu_type')) {

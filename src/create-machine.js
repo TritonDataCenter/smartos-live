@@ -1006,17 +1006,17 @@ function createZone(payload, progress, callback)
         zonecfg = zonecfg + 'set autoboot=false\n';
 
         if (payload.hasOwnProperty('boot')) {
-            zonecfg = zonecfg + 'add attr; set name="boot"; '
+            zonecfg = zonecfg + 'add attr; set name="boot"; ' +
                 'set type=string; set value="' + payload.boot + '"; end\n';
         }
 
         if (payload.hasOwnProperty('cpu_type')) {
-            zonecfg = zonecfg + 'add attr; set name="cpu-type"; '
+            zonecfg = zonecfg + 'add attr; set name="cpu-type"; ' +
                 'set type=string; set value="' + payload.cpu_type + '"; end\n';
         }
 
         if (payload.hasOwnProperty('hostname')) {
-            zonecfg = zonecfg + 'add attr; set name="hostname"; '
+            zonecfg = zonecfg + 'add attr; set name="hostname"; ' +
                 'set type=string; set value="' + payload.hostname + '"; end\n';
         }
 

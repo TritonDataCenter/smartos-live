@@ -1064,6 +1064,8 @@ function createZone(payload, progress, callback)
         if (payload.brand === 'joyent') {
             args.push('-t');
             args.push(payload.dataset_uuid);
+            args.push('-x');
+            args.push('nodataset');
         }
 
         if (error) {

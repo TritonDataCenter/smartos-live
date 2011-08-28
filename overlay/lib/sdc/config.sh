@@ -121,6 +121,28 @@ function load_sdc_config {
     fi
 }
 
+# Loads bootparams as variables with prefix (default: BOOT_)
+function load_sdc_bootparams {
+    prefix=$1
+    [[ -z ${prefix} ]] && prefix="BOOT_"
+    for line in $(/bin/bootparams); do
+        fields=(${line//=/ })
+        key=$(echo ${fields[0]} | sed -e "s/-/_/g")
+        eval "${prefix}${key}=${fields[1]}"
+    done
+}
+
+# Outputs the keys from bootparams
+function sdc_bootparams_keys {
+    #keys=$(/bin/bootparams | sed -e "s/=.*//")
+    #keys=$(cat /tmp/bootparams | sed -e "s/=.*//")
+    for line in $(/bin/bootparams); do
+        fields=(${line//=/ })
+        key=$(echo ${fields[0]} | sed -e "s/=.*//")
+        echo ${key}
+    done
+}
+
 if [[ $1 == "-json" ]]; then
     # If called to output config as JSON, we'll do that.
     (

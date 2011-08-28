@@ -424,6 +424,32 @@ function get_smartos_network_interfaces()
     #done
 }
 
+function get_smartos_vnics()
+{
+    count=1
+
+    # ignore 'LINK SLOT ADDRESS INUSE CLIENT' line
+    for line in $(pfexec /sbin/dladm show-vnic -z '' \
+        | grep -v "^LINK " | awk '{ print $1,$2,$4,$6 }' | tr ' ' '='); do
+        fields=(${line//=/ })
+        iface=${fields[0]}
+        over=${fields[1]}
+        normalize_mac ${fields[2]}
+        mac=${normalized}
+        vlan=${fields[3]}
+        link_status=$(pfexec /sbin/dladm show-link -p -o state ${iface})
+        ip4addr=$(ifconfig ${iface} 2>/dev/null \
+            | grep "inet " | awk '{ print $2 }')
+        VirtualNetworkInterfaces[${count}]=${iface}
+        eval "Virtual_Network_Interface_${iface}_MAC_Address=${mac}"
+        eval "Virtual_Network_Interface_${iface}_IPv4_Address=${ip4addr}"
+        eval "Virtual_Network_Interface_${iface}_Link_Status=${link_status}"
+        eval "Virtual_Network_Interface_${iface}_VLAN=${vlan}"
+        eval "Virtual_Network_Interface_${iface}_Host_Interface=${over}"
+        ((count++))
+    done
+}
+
 function get_linux_network_interfaces()
 {
     count=1
@@ -639,6 +665,26 @@ END
         fi
     done
 
+    for iface in "${VirtualNetworkInterfaces[@]}"; do
+        mac_var="Virtual_Network_Interface_${iface}_MAC_Address"
+        ipv4_var="Virtual_Network_Interface_${iface}_IPv4_Address"
+        link_status_var="Virtual_Network_Interface_${iface}_Link_Status"
+        vlan_var="Virtual_Network_Interface_${iface}_VLAN"
+        host_var="Virtual_Network_Interface_${iface}_Host_Interface"
+
+        eval "mac=\${${mac_var}}"
+        eval "ipv4=\${${ipv4_var}}"
+        eval "link_status=\${${link_status_var}}"
+        eval "vlan=\${${vlan_var}}"
+        eval "host=\${${host_var}}"
+
+        echo "${mac_var}='${mac}'"
+        echo "${ipv4_var}='${ipv4}'"
+        echo "${link_status_var}='${link_status}'"
+        echo "${vlan_var}='${vlan}'"
+        echo "${host_var}='${host}'"
+    done
+
     for entry in "${Bootparams[@]}"; do
         fields=(${entry//=/ })
         key=$(echo ${fields[0]} | sed -e "s/\-/\_/g")
@@ -736,6 +782,36 @@ END
     done
 
     cat <<END
+  },
+  "Virtual Network Interfaces": {
+END
+    printed=0
+    for iface in "${VirtualNetworkInterfaces[@]}"; do
+        mac_var="Virtual_Network_Interface_${iface}_MAC_Address"
+        ipv4_var="Virtual_Network_Interface_${iface}_IPv4_Address"
+        link_status_var="Virtual_Network_Interface_${iface}_Link_Status"
+        vlan_var="Virtual_Network_Interface_${iface}_VLAN"
+        parent_var="Virtual_Network_Interface_${iface}_Host_Interface"
+
+        eval "mac=\${${mac_var}}"
+        eval "ipv4=\${${ipv4_var}}"
+        eval "link_status=\${${link_status_var}}"
+        eval "vlan=\${${vlan_var}}"
+        eval "host=\${${host_var}}"
+
+        ((printed++))
+        trailing_comma=","
+        [[ ${printed} -eq ${#VirtualNetworkInterfaces[*]} ]] && trailing_comma=''
+        echo -n "    \"${iface}\": {"
+        echo -n "\"MAC Address\": \"${mac}\", "
+        echo -n "\"ip4addr\": \"${ipv4}\", "
+        echo -n "\"Link Status\": \"${link_status}\", "
+        echo -n "\"VLAN\": \"${vlan}\", "
+        echo -n "\"Host Interface\": \"${host}\"}"
+        echo "${trailing_comma}"
+    done
+
+    cat <<END
   }
 }
 END
@@ -761,6 +837,7 @@ get_nic_mappings
 get_nic_tags
 if [[ ${UNAME_S} == "SunOS" ]]; then
     get_smartos_network_interfaces
+    get_smartos_vnics
 else
     get_linux_network_interfaces
 fi

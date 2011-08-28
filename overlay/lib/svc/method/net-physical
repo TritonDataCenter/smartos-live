@@ -45,12 +45,9 @@ LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 
 smf_netstrategy
 
-if smf_is_globalzone; then
-
-    dladm init-phys
-
-    # The next commands are for logging purposes only
-    echo "== debug start: before =="
+function log_if_state
+{
+    echo "== debug start: $1 =="
     if ! dladm show-phys; then
         echo "WARNING: 'dladm show-phys' failed"
     fi
@@ -59,12 +56,74 @@ if smf_is_globalzone; then
     if ! /sbin/ifconfig -a; then
         echo "WARNING: 'ifconfig -a' failed"
     fi
-    echo "== debug end: before =="
+    echo "== debug end: $1 =="
+}
+
+# Creates, plumbs and brings up a vnic with the specified parameters
+function vnic_up
+{
+    typeset link="$1"
+    typeset iface="$2"
+    typeset ip="$3"
+    typeset netmask="$4"
+    typeset vlan_id="$5"
+    typeset mac_addr="$6"
+    typeset dhcp_primary="$7"
+    typeset details="link='${link}', iface='${iface}', ip='${ip}', netmask='${netmask}, vlan_id='${vlan_id}'"
+    typeset vlan_opt=
+    typeset mac_addr_opt=
+
+    if [[ -z ${link} ]] || [[ -z ${iface} ]] || [[ -z ${ip} ]] || [[ -z ${netmask} ]]; then
+        echo "WARNING: not bringing up nic (insufficient configuration): $details"
+        return
+    fi
+
+    eval "vnic_already_up=\${vnic_${iface}_up}"
+    if [[ -n "${vnic_already_up}" ]]; then
+        echo "vnic already up: $details"
+        return
+    fi
+    echo "Bringing up nic: $details"
+
+    if [[ -n ${vlan_id} ]] && [[ ${vlan_id} != 0 ]]; then
+        vlan_opt="-v ${vlan_id}"
+    fi
+
+    if [[ -n ${mac_addr} ]]; then
+        mac_addr_opt="-m ${mac_addr}"
+    fi
+
+    dladm create-vnic -l ${link} ${vlan_opt} ${mac_addr_opt} ${iface}
+    ifconfig ${iface} plumb
+
+    if [[ ${ip} == "dhcp" ]]; then
+        # We ignore errors here because the most common one is that DHCP
+        # is already running.
+
+        if [[ -n ${dhcp_primary} ]]; then
+            ifconfig ${iface} dhcp primary || /bin/true
+        else
+            ifconfig ${iface} dhcp || /bin/true
+        fi
+    else
+        ifconfig ${iface} inet ${ip} netmask ${netmask} up
+    fi
+    eval "vnic_${iface}_up=true"
+}
+
+if smf_is_globalzone; then
+
+    dladm init-phys
+
+    # The next command is for logging purposes only
+    log_if_state before
 
     # Load sysinfo variables with SYSINFO_ prefix
     load_sdc_sysinfo
     # Load config variables with CONFIG_ prefix, and sets the headnode variable
     load_sdc_config
+    # Load boot params with BOOT_ prefix
+    load_sdc_bootparams
 
     # Setup admin NIC
     if [[ -n ${SYSINFO_NIC_admin} ]]; then
@@ -101,46 +160,24 @@ if smf_is_globalzone; then
         exit ${SMF_EXIT_ERR_CONFIG}
     fi
 
-    # Setup external NIC -- only headnode because non-headnodes don't assign
-    # IP to external in GZ.
-    if [[ -n ${SYSINFO_NIC_external} ]]; then
-        if [[ -n "${CONFIG_external_ip}" ]]; then
-            iface=${SYSINFO_NIC_external}
-            if [[ -n ${CONFIG_external_vlan_id} ]] && [[ ${CONFIG_external_vlan_id} != 0 ]]; then
-                dladm create-vnic -l ${iface} -v ${CONFIG_external_vlan_id} gz_external0
-                iface="gz_external0"
-            fi
-            ifconfig ${iface} plumb
-            if [[ ${CONFIG_external_ip} == "dhcp" ]]; then
-                # We ignore errors here because the most common one is that DHCP
-                # is already running.
-                ifconfig ${iface} dhcp primary || /bin/true
-            else
-                ifconfig ${iface} inet ${CONFIG_external_ip} netmask ${CONFIG_external_netmask} up
-            fi
+    # Setup external NIC
+    if [[ -n ${SYSINFO_NIC_external} ]] && [[ -n "${CONFIG_external_ip}" ]]; then
+        vnic_up "${SYSINFO_NIC_external}" "external0" "${CONFIG_external_ip}" \
+            "${CONFIG_external_netmask}" "${CONFIG_external_vlan_id}" "" "primary"
+    fi
 
-            # Set up the GZ to NAT for Coal
-            if [[ "${CONFIG_coal}" == "true" ]]; then
-                # Convert the admin IP and netmask to CIDR notation
-                CIDR=$(ip_netmask_to_cidr ${CONFIG_admin_ip} ${CONFIG_admin_netmask})
+    # Set up the GZ to NAT for Coal
+    if [[ -n ${SYSINFO_NIC_external} ]] && [[ -n "${CONFIG_external_ip}" ]] &&
+        [[ "${CONFIG_coal}" == "true" ]]; then
 
-                # Allow zones to reach the internet using the global zone as a router
-                if [[ -n ${CONFIG_external_vlan_id} ]]; then
-                    IPNAT_NIC="gz_external0"
-                else
-                    IPNAT_NIC=${SYSINFO_NIC_external}
-                fi
-                cat >> /etc/ipf/ipnat.conf <<IPNAT
-map ${IPNAT_NIC} ${CIDR} -> 0.0.0.0/32
-map ${IPNAT_NIC} ${CIDR} -> 0.0.0.0/32 portmap tcp/udp auto
+        # Convert the admin IP and netmask to CIDR notation
+        CIDR=$(ip_netmask_to_cidr ${CONFIG_admin_ip} ${CONFIG_admin_netmask})
+
+        # Allow zones to reach the internet using the global zone as a router
+        cat >> /etc/ipf/ipnat.conf <<IPNAT
+map external0 ${CIDR} -> 0.0.0.0/32
+map external0 ${CIDR} -> 0.0.0.0/32 portmap tcp/udp auto
 IPNAT
-            fi
-            # If any of the headnode zones are configured to use public IPs, create a bridge on the external
-            # interface so vnics on the external interface work as well
-            if [[ "${headnode}" == "true" ]] && [[ "$(sdc_config_keys_contain public_ip)" == "true" ]]; then
-                create_vmware_external_bridge
-            fi
-        fi
     fi
 
     # Use headnode_default_gateway if set, otherwise fall back to admin_gateway
@@ -156,36 +193,42 @@ IPNAT
     if [[ -n "${nic_tags}" ]]; then
         tags=(${nic_tags//,/ })
 
+        bootparam_ip_keys=$(sdc_bootparams_keys | grep -- "-ip$" || true)
+        config_ip_keys=$(sdc_config_keys | grep "_ip$" || true)
         for tag in "${tags[@]}"; do
-            if [[ "${tag}" == "admin" ]] || [[ "${tag}" == "external" ]]; then
-                continue
-            fi
-            echo "found extra nic in config tagged '${tag}'"
 
-            eval "iface=\${SYSINFO_NIC_${tag}}"
-            eval "ip=\${CONFIG_${tag}_ip}"
-            eval "netmask=\${CONFIG_${tag}_netmask}"
-            eval "vlan=\${CONFIG_${tag}_vlan_id}"
-
-            echo "found extra nic in config tagged '${tag}': iface='${iface}', ip='${ip}', netmask='${netmask}, vlan='${vlan}'"
-
-            if [[ -z "${iface}" ]] || [[ -z "${ip}" ]] || [[ -z "${netmask}" ]]; then
-                echo "Not bringing up interface tagged '${tag}'"
+            eval "link=\${SYSINFO_NIC_${tag}}"
+            if [[ -z "${link}" ]]; then
+                echo "WARNING: No link found with tag '${tag}'"
                 continue
             fi
 
-            if [[ -n "${vlan}" ]] && [[ "${vlan}" != 0 ]]; then
-                dladm create-vnic -l ${iface} -v ${vlan} gz_${tag}0
-                iface="gz_${tag}0"
-            fi
-            ifconfig ${iface} plumb
-            if [[ ${ip} == "dhcp" ]]; then
-                # We ignore errors here because the most common one is that DHCP
-                # is already running.
-                ifconfig ${iface} dhcp || /bin/true
-            else
-                ifconfig ${iface} inet ${ip} netmask ${netmask} up
-            fi
+            for key in ${config_ip_keys}; do
+                if [[ ${key} == ${tag}[0-9]_ip ]] || [[ ${key} == ${tag}[0-9][0-9]_ip ]]; then
+                    iface=${key//_ip/}
+                    #echo "   iface=$iface"
+                    eval "ip=\${CONFIG_${iface}_ip}"
+                    eval "netmask=\${CONFIG_${iface}_netmask}"
+                    eval "vlan=\${CONFIG_${iface}_vlan_id}"
+                    eval "macaddr=\${CONFIG_${iface}_mac}"
+
+                    echo vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}"
+                    vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}"
+                fi
+            done
+
+            for key in ${bootparam_ip_keys}; do
+                if [[ ${key} == ${tag}[0-9]-ip ]] || [[ ${key} == ${tag}[0-9][0-9]-ip ]]; then
+                    iface=${key//-ip/}
+                    eval "ip=\${BOOT_${iface}_ip}"
+                    eval "netmask=\${BOOT_${iface}_netmask}"
+                    eval "vlan=\${BOOT_${iface}_vlan_id}"
+                    eval "macaddr=\${BOOT_${iface}_mac}"
+                    echo vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}"
+                    vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}"
+                fi
+            done
+
         done
     fi
 else
@@ -200,18 +243,7 @@ else
     done
 fi
 
-# The next commands are for logging purposes only
-echo "== debug start: after =="
-if ! dladm show-phys; then
-    echo "WARNING: 'dladm show-phys' failed"
-fi
-# NOTE: DO NOT do a 'dladm show-linkprop' when using the bnx driver,
-# as it puts it into an unusable state!
-# TODO: do a show-linkprop if not using bnx
-if ! /sbin/ifconfig -a; then
-    echo "WARNING: 'ifconfig -a' failed"
-fi
-echo "== debug end: after =="
+log_if_state after
 
 # Since we hopefully made networking changes here, update the sysinfo cache
 if smf_is_globalzone; then

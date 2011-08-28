@@ -460,6 +460,48 @@ function setAutoboot(uuid, value, callback)
     );
 }
 
+function markOff(uuid)
+{
+    VMS[uuid].state = 'off';
+    // VM is not running, so don't bring it up if we reboot now.
+    setAutoboot(uuid, false, function (err, result) {
+        if (err) {
+            log('Failed to update vm-autoboot to false for ' + uuid);
+        }
+    });
+    clearVNC(uuid);
+}
+
+function recheckStatus(uuid)
+{
+     VMS[uuid].status_checks = 6; // every 5 seconds
+}
+
+function updateStatus(uuid)
+{
+    // we've got a socket so the process is running, but we need
+    // to query-status to see if the VM is actually running.
+    VMS[uuid].qmp.command('query-status', null, function (err, result) {
+        if (err) {
+            return log('query-status err [', err, ']');
+        }
+        if (result['return'].running && VMS[uuid].state !== 'running') {
+            VMS[uuid].state = 'running';
+            spawnVNC(uuid);
+            // the VM is running now, so make sure it's running if
+            // we reboot right now.
+            setAutoboot(uuid, true, function (err, result) {
+                if (err) {
+                    log('error setting vm-autoboot to true ' +
+                        'for ' + uuid + ':', err);
+                }
+            });
+        } else if (!result['return'].running && VMS[uuid].state === 'running') {
+            markOff(uuid);
+        }
+    });
+}
+
 function loadVM(uuid, callback)
 {
     log('loadVM(', uuid, ')');
@@ -489,51 +531,29 @@ function loadVM(uuid, callback)
                         VMS[uuid].shutdown_timer = null;
                     }
                     VMS[uuid].emitter.emit('qmp_close');
-                    // VM shut down, set vm-autoboot to false so if we reboot
-                    // now, VM won't come up.
                     if (VMS[uuid].state !== 'off') {
-                        setAutoboot(uuid, false, function (err, result) {
-                            if (err) {
-                                log('Failed to update vm-autoboot to false after ' +
-                                    uuid + ' socket was closed.');
-                            }
-                        });
-                        VMS[uuid].state = 'off';
+                        markOff(uuid);
                     }
                     if (VMS[uuid].action && VMS[uuid].action === 'info') {
                         log('info still running when VM went off. Clearing.');
                         VMS[uuid].action = null;
                     }
-                    clearVNC(uuid);
                     // XXX find other cases where this should be unset.
                     VMS[uuid].sock_open = false;
                     while (VMS[uuid].on_shutdown.length > 0) {
                         func = VMS[uuid].on_shutdown.shift();
                         func();
                     }
+                } else {
+                    // On any event other than close, we'll reschedule this VM
+                    // for status checks in case it takes some time to settle.
+                    recheckStatus(uuid);
                 }
             });
             VMS[uuid].state = 'unknown';
+            recheckStatus(uuid); // mark for status check
+            updateStatus(uuid); // update status immediately too.
             VMS[uuid].sock_open = false;
-            VMS[uuid].qmp.command('query-status', null, function (err, result) {
-                if (err) {
-                    log('query-status err [', err, ']');
-                } else {
-                    log('query-status result [', JSON.stringify(result), ']');
-                    if (result['return'].running) {
-                        VMS[uuid].state = 'running';
-                        spawnVNC(uuid);
-                        // the VM is running now, so make sure it's running if
-                        // we reboot right now.
-                        setAutoboot(uuid, true, function (err, result) {
-                            if (err) {
-                                log('error setting vm-autoboot to true for ' +
-                                    uuid + ':', err);
-                            }
-                        });
-                    }
-                }
-            });
             VMS[uuid].reconnector = setInterval(function () {
                 if (VMS[uuid] && ! VMS[uuid].sock_open) {
                     if (DEBUG) {
@@ -553,19 +573,7 @@ function loadVM(uuid, callback)
                                     if (VMS[uuid] &&
                                         VMS[uuid].state !== 'off') {
 
-                                        VMS[uuid].state = 'off';
-                                        // VM is not running, so don't bring it
-                                        // up if we reboot now.
-                                        setAutoboot(uuid, false,
-                                            function (err, result) {
-                                                if (err) {
-                                                    log('Failed to update ' +
-                                                    'vm-autoboot to false ' +
-                                                    'for ' + uuid);
-                                                }
-                                            }
-                                        );
-                                        clearVNC(uuid);
+                                        markOff(uuid);
                                     }
                                     break;
                                 default:
@@ -577,17 +585,18 @@ function loadVM(uuid, callback)
                             } else {
                                 VMS[uuid].sock_open = true;
                                 log('QMP connected for', uuid);
-
-                                // Tell the metadata API about this VM
-                                //metadata_api.stdin.write(zone_prefix +
-                                    //'/root/tmp/vm.ttyb ' + filename + '\n');
                             }
                         }
                     );
+                } else if (VMS[uuid] && VMS[uuid].status_checks > 0) {
+                    updateStatus(uuid);
+                    // we do the status checks some number of times after each
+                    // event that might have changed the status (in case things
+                    // take some time to settle).
+                    VMS[uuid].status_checks--;
                 }
-            }, 1000);
+            }, 5000);
             callback(null, VMS[uuid]);
-            // TODO whenever connection closes, mark vm as unavailable
         }
     });
 }
@@ -626,8 +635,7 @@ function loadVMs(callback)
                 if (VMS.hasOwnProperty(vm)) {
                     if (all_vms.indexOf(vm) === -1) {
                         // doesn't exist
-                        log('loadVMs(): removing', vm,
-                            "which doesn't exist.");
+                        log('loadVMs(): removing', vm, "which doesn't exist.");
                         delete VMS[vm];
                     }
                 }

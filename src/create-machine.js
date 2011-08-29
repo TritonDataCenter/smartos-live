@@ -69,6 +69,8 @@
  *        nic.gateway -- The IPv4 router on this network
  *        nic.vlan -- The vlan with which to tag this NIC's traffic (0 = none)
  *        nic.model -- The driver for this NIC [virtio|e1000|rtl8136|...]
+ *        nic.blocked_outgoing_ports -- array of ports on which this nic is
+ *            prevented from sending traffic.
  *
  *    VMs Only
  *    ========
@@ -561,6 +563,12 @@ function nicZonecfg(nic, idx, callback)
 
     if (nic.hasOwnProperty('vlan') && (nic.vlan !== "0")) {
         zonecfg = zonecfg + 'set vlan-id=' + nic.vlan + '\n';
+    }
+
+    if (nic.hasOwnProperty('blocked_outgoing_ports')) {
+        zonecfg = zonecfg +
+            'add property (name=blocked-outgoing-ports, value="' +
+            nic.blocked_outgoing_ports.join(',') + '");';
     }
 
     zonecfg = zonecfg + 'end\n';

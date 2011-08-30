@@ -79,6 +79,8 @@ if [ $? -ne 0 ]; then
         swap -a /dev/zvol/dsk/${SYS_ZPOOL}/swap
 	dumpadm -y -d /dev/zvol/dsk/${SYS_ZPOOL}/dump
 
+	ln -s /${SYS_ZPOOL}/global/cores /cores
+
 	[[ -f /${SYS_ZPOOL}/currbooted ]] && \
             mv /${SYS_ZPOOL}/currbooted /${SYS_ZPOOL}/lastbooted
 	uname -v >/${SYS_ZPOOL}/currbooted

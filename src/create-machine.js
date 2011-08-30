@@ -643,7 +643,6 @@ function writeZoneconfig(payload, callback)
     var data;
     var rootpw = payload.rootpw;
     var adminpw = payload.adminpw;
-    var public_ip, private_ip;
 
     if (!payload.hasOwnProperty('hostname')) {
         payload.hostname = payload.uuid;
@@ -662,6 +661,17 @@ function writeZoneconfig(payload, callback)
             'ROOT_PW=' + payload.rootpw + '\n' +
             'ADMIN_PW=' + payload.adminpw + '\n' +
             'TMPFS=' + payload.tmpfs + 'm\n';
+
+        if (payload.nics[0]) {
+            data = data + 'PUBLIC_IP=' + payload.nics[0].ip + '\n';
+        }
+        if (payload.nics[1]) {
+            data = data + 'PRIVATE_IP=' + payload.nics[1].ip + '\n';
+        } else if (payload.nics[0]) {
+            // zoneinit uses private_ip for /etc/hosts, we want to
+            // make that same as public, if there's no actual private.
+            data = data + 'PRIVATE_IP=' + payload.nics[0].ip + '\n';
+        }
 
         nic_idx = 0;
         for (nic in payload.nics) {

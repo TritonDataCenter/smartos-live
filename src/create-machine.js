@@ -1039,7 +1039,8 @@ function createZone(payload, progress, callback)
         }
 
         if (payload.hasOwnProperty('cpu_cap')) {
-            zonecfg = zonecfg + 'set cpu-cap="' + payload.cpu_cap + '"\n';
+            zonecfg = zonecfg + 'add attr; set name="cpu-cap"; ' +
+                'set type=string; set value="' + payload.cpu_cap + '"; end\n';
         }
 
         // only VMs have 'disks'

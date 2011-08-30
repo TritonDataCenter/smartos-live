@@ -49,7 +49,7 @@
  *    brand -- either 'joyent' or 'kvm', determines the type of machine created
  *    uuid -- pre-specify a UUID for this machine (default is to create one)
  *    autoboot -- boolean, true means this VM will be started after create
- *    customer_uuid -- The UUID of the customer to associate this VM with
+ *    owner_uuid -- The UUID of the customer to associate this VM with
  *    customer_metadata -- A json object of key/value pairs for the metadata
  *        agent to provide to the zone/vm.
  *    cpu_shares -- The (relative) shares of the CPU this machine should get
@@ -892,9 +892,9 @@ function applyZoneDefaults(payload)
 {
     debug('applyZoneDefaults()');
 
-    if (!payload.hasOwnProperty('customer_uuid')) {
+    if (!payload.hasOwnProperty('owner_uuid')) {
         // We assume that this all-zero uuid can be treated as 'admin'
-        payload.customer_uuid = '00000000-0000-0000-0000-000000000000';
+        payload.owner_uuid = '00000000-0000-0000-0000-000000000000';
     }
 
     if (!payload.hasOwnProperty('autoboot')) {
@@ -1004,7 +1004,7 @@ function createZone(payload, progress, callback)
             'set locked=' + payload.max_locked_memory.toString() + 'm;' +
             'set swap=' + payload.max_swap.toString() + 'm; end\n' +
         'add attr; set name="owner-uuid"; set type=string; set value="' +
-            payload.customer_uuid + '"; end\n';
+            payload.owner_uuid + '"; end\n';
 
     if (payload.hasOwnProperty('limit_priv')) {
         zonecfg = zonecfg + 'set limitpriv="' + payload.limit_priv + '"\n';

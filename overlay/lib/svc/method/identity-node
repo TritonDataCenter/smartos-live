@@ -80,12 +80,19 @@ esac
 # Load sysinfo variables with SYSINFO_ prefix
 # Note: since we're still starting up, "soft" values like network IP and such could
 # not be set yet.
-eval $(/usr/bin/sysinfo -p | sed -e "s/^/SYSINFO_/")
-if [[ -n ${SYSINFO_NIC_admin} ]]; then
-    eval "admin_mac=\${SYSINFO_Network_Interface_${SYSINFO_NIC_admin}_MAC_Address}"
-fi
-if [[ -z ${admin_mac} ]]; then
-    fallback_mac=$(set | grep "^SYSINFO_Network_Interface_.*_MAC_Address" | head -n1 | cut -d'=' -f2)
+
+if smf_is_globalzone; then
+  eval $(/usr/bin/sysinfo -p | sed -e "s/^/SYSINFO_/")
+  if [[ -n ${SYSINFO_NIC_admin} ]]; then
+      eval "admin_mac=\${SYSINFO_Network_Interface_${SYSINFO_NIC_admin}_MAC_Address}"
+  fi
+  if [[ -z ${admin_mac} ]]; then
+      fallback_mac=$(set | grep "^SYSINFO_Network_Interface_.*_MAC_Address" | head -n1 | cut -d'=' -f2)
+  fi
+
+  if [[ -z $hostname ]]; then
+    hostname=$SYSINFO_Bootparam_hostname
+  fi
 fi
 
 #

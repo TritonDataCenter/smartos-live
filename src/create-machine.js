@@ -77,6 +77,8 @@
  *    ram -- The amount of virtual RAM to attach to the VM (in MiB)
  *    vcpus -- The number of virtual CPUs to attach to this VM
  *    cpu_type -- The type of the virtual CPU [qemu64|host]
+ *    disk_driver -- The default model for disks attached to this VM
+ *    nic_driver -- The default model for nics attached to this VM
  *    disks -- array of disk objects:
  *        disk.image_uuid -- uuid of dataset from which to clone this VM's disk
  *        disk.image_name -- name of dataset from which to clone this VM's disk
@@ -890,6 +892,8 @@ function createZoneUUID(payload, callback)
 
 function applyZoneDefaults(payload)
 {
+    var nic, n, disk, zvol;
+
     debug('applyZoneDefaults()');
 
     if (!payload.hasOwnProperty('owner_uuid')) {
@@ -975,7 +979,60 @@ function applyZoneDefaults(payload)
         payload.quota = '10'; // in GiB
     }
 
+    for (disk in payload.disks) {
+        if (payload.disks.hasOwnProperty(disk)) {
+            zvol = payload.disks[disk];
+            if (!zvol.hasOwnProperty('model') &&
+                payload.hasOwnProperty('disk_driver')) {
+
+                zvol.model = payload.disk_driver;
+            }
+        }
+    }
+
+    for (nic in payload.nics) {
+        if (payload.nics.hasOwnProperty(nic)) {
+            n = payload.nics[nic];
+            if (!n.hasOwnProperty('model') &&
+                payload.hasOwnProperty('nic_driver')) {
+
+                n.model = payload.nic_driver;
+            }
+        }
+    }
+
     return;
+}
+
+function checkProperties(payload, callback)
+{
+    var disk, zvol, nic, n;
+
+    // TODO check for missing keys and reused IP addresses
+
+    for (disk in payload.disks) {
+        if (payload.disks.hasOwnProperty(disk)) {
+            zvol = payload.disks[disk];
+
+            if (!zvol.hasOwnProperty('model') || zvol.model === 'undefined') {
+                callback('missing .model option for disk: ' +
+                    JSON.stringify(zvol));
+            }
+        }
+    }
+
+    for (nic in payload.nics) {
+        if (payload.nics.hasOwnProperty(nic)) {
+            n = payload.nics[nic];
+
+            if (!n.hasOwnProperty('model') || n.model === 'undefined') {
+                callback('missing .model option for NIC: ' +
+                    JSON.stringify(n));
+            }
+        }
+    }
+
+    callback();
 }
 
 // create and install a 'joyent' or 'kvm' brand zone.
@@ -1152,9 +1209,57 @@ function assignMACs(payload)
     }
 }
 
+function createMachine(payload, callback)
+{
+    if (payload.brand === "kvm") {
+        createZoneUUID(payload, function (err, uuid) {
+            if (err) {
+                output('failure', 'unable to create UUID', {'error': err});
+                process.exit(1);
+            }
+
+            createVM(payload, function (err, result) {
+                if (err) {
+                    output('failure', 'unable to create VM',
+                        {'error': err});
+                    process.exit(1);
+                }
+                output('success', 'created VM', {'uuid': payload.uuid});
+                process.exit(0);
+            });
+        });
+    } else if (payload.brand === "joyent") {
+        createZoneUUID(payload, function (err, uuid) {
+            if (err) {
+                output('failure', 'unable to create UUID', {'error': err});
+                process.exit(1);
+            }
+
+            createZone(payload, outputProgress, function (err, result) {
+                if (err) {
+                    output('failure', 'unable to create VM',
+                        {'error': err});
+                    process.exit(1);
+                }
+                saveMetadata(payload, outputProgress, function (err) {
+                    if (err) {
+                        output('failure', 'unable to save metadata',
+                            {'error': err});
+                        process.exit(1);
+                    }
+                    output('success', 'created Zone', {'uuid': payload.uuid});
+                    process.exit(0);
+                });
+            });
+        });
+    } else {
+        output('failure', "Don't know how to create a '" + payload.brand + "'");
+        process.exit(1);
+    }
+}
+
 function main()
 {
-    var uuid;
     var filename;
     var payload;
 
@@ -1179,54 +1284,15 @@ function main()
         payload = JSON.parse(data.toString());
         assignMACs(payload);
         applyZoneDefaults(payload);
-
-        // TODO check for missing keys and reused IP addresses
-
-        if (payload.brand === "kvm") {
-            createZoneUUID(payload, function (err, uuid) {
-                if (err) {
-                    output('failure', 'unable to create UUID', {'error': err});
-                    process.exit(1);
-                }
-
-                createVM(payload, function (err, result) {
-                    if (err) {
-                        output('failure', 'unable to create VM',
-                            {'error': err});
-                        process.exit(1);
-                    }
-                    output('success', 'created VM', {'uuid': payload.uuid});
-                    process.exit(0);
-                });
-            });
-        } else if (payload.brand === "joyent") {
-            createZoneUUID(payload, function (err, uuid) {
-                if (err) {
-                    output('failure', 'unable to create UUID', {'error': err});
-                    process.exit(1);
-                }
-
-                createZone(payload, outputProgress, function (err, result) {
-                    if (err) {
-                        output('failure', 'unable to create VM',
-                            {'error': err});
-                        process.exit(1);
-                    }
-                    saveMetadata(payload, outputProgress, function (err) {
-                        if (err) {
-                            output('failure', 'unable to save metadata',
-                                {'error': err});
-                            process.exit(1);
-                        }
-                        output('success', 'created Zone', {'uuid': payload.uuid});
-                        process.exit(0);
-                    });
-                });
-            });
-        } else {
-            output('failure', "Don't know how to create a '" + payload.brand + "'");
-            process.exit(1);
-        }
+        checkProperties(payload, function (err) {
+            if (err) {
+                output('failure', 'unable to validate properties',
+                    {'error': err});
+                process.exit(1);
+            }
+            createMachine(payload);
+            // XXX: won't get here, createMachine() will call process.exit();
+        });
     });
 }
 

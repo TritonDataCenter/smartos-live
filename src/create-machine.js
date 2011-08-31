@@ -46,56 +46,139 @@
  *
  *    Both VMs + Zones
  *    ================
- *    brand -- either 'joyent' or 'kvm', determines the type of machine created
- *    uuid -- pre-specify a UUID for this machine (default is to create one)
- *    autoboot -- boolean, true means this VM will be started after create
- *    owner_uuid -- The UUID of the customer to associate this VM with
- *    customer_metadata -- A json object of key/value pairs for the metadata
- *        agent to provide to the zone/vm.
- *    cpu_shares -- The (relative) shares of the CPU this machine should get
- *    cpu_cap -- sets a CPU cap for this machine
- *    zfs_io_priority -- The (relative) shares of the IO this machine should get
- *    max_lwps -- The maximum number of lightweight processes in this machine
- *    max_physical_memory -- Max memory in MiB for this machine
- *    max_locked_memory -- Max locked memory in MiB for this machine
- *    max_swap -- Max total virtual memory in MiB for this machine
- *    quota -- quota for the ZFS filesystem we'll create for this zone
- *    limit_priv -- a comma separated list of priviledges to give this zone
- *    zfs_storage_pool_name -- specify the ZFS pool for this VM and its disks
- *    nics -- array of nic objects:
- *        nic.mac -- MAC address of virtual NIC (we'll generate one by default)
- *        nic.ip -- IPv4 unicast address for this NIC
- *        nic.netmask -- The netmask for this NIC's network
- *        nic.gateway -- The IPv4 router on this network
- *        nic.vlan -- The vlan with which to tag this NIC's traffic (0 = none)
- *        nic.model -- The driver for this NIC [virtio|e1000|rtl8136|...]
- *        nic.blocked_outgoing_ports -- array of ports on which this nic is
- *            prevented from sending traffic.
+ *
+ *    "autoboot"
+ *      - boolean, true means this VM will be started after create
+ *      - default: true
+ *
+ *    "brand"
+ *      - either 'joyent' or 'kvm', determines the type of machine created
+ *      - default: 'joyent'
+ *
+ *    "cpu_cap"
+ *      - sets a CPU cap for this machine
+ *      - default: no cap
+ *
+ *    "cpu_shares"
+ *      - The (relative) shares of the CPU this machine should get
+ *      - default: 100
+ *
+ *    "customer_metadata"
+ *       - A json object of key/value pairs for the metadata agent to provide to
+ *         the zone/vm.
+ *       - default: {}
+ *
+ *    "limit_priv"
+ *       - a comma separated list of priviledges to give this zone
+ *       - default: use brand's default privs
+ *
+ *    "max_lwps"
+ *       - The maximum number of lightweight processes in this machine
+ *       - default: 2000
+ *
+ *    "max_locked_memory"
+ *       - Max locked memory in MiB for this machine
+ *       - default: max_physical_memory
+ *
+ *    "max_physical_memory"
+ *       - Max memory in MiB for this machine
+ *       - VM default: ram
+ *       - Zone default: 256
+ *
+ *    "max_swap"
+ *       - Max total virtual memory in MiB for this machine
+ *       - default: max_physical_memory
+ *
+ *    "nics" -- array of nic objects:
+ *
+ *      nic.blocked_outgoing_ports
+ *        - array of ports on which this nic is prevented from sending traffic.
+ *        - default: []
+ *      nic.gateway
+ *        - The IPv4 router on this network
+ *      nic.ip
+ *        - IPv4 unicast address for this NIC
+ *      nic.mac
+ *        - MAC address of virtual NIC (we'll generate one by default)
+ *      nic.model
+ *        - The driver for this NIC [virtio|e1000|rtl8136|...]
+ *      nic.netmask
+ *        - The netmask for this NIC's network
+ *      nic.vlan
+ *        - The vlan with which to tag this NIC's traffic (0 = none)
+ *        - default: 0
+ *
+ *    "owner_uuid"
+ *      - The UUID of the customer to associate this VM with
+ *      - 00000000-0000-0000-0000-000000000000
+ *
+ *    "quota"
+ *      - quota for the ZFS filesystem we'll create for this zone (in GiB)
+ *      - default: 10
+ *
+ *    "uuid"
+ *      - pre-specify a UUID for this machine (default is to create one)
+ *      - this gets used for zonename
+ *      - default: we'll generate a new uuid
+ *
+ *    "zfs_io_priority"
+ *      - The (relative) shares of the IO this machine should get
+ *      - default: 100
+ *
+ *    "zfs_storage_pool_name"
+ *      - specify the ZFS pool for this VM and its disks
+ *      - default: 'zones'
  *
  *    VMs Only
  *    ========
- *    ram -- The amount of virtual RAM to attach to the VM (in MiB)
- *    vcpus -- The number of virtual CPUs to attach to this VM
- *    cpu_type -- The type of the virtual CPU [qemu64|host]
- *    disk_driver -- The default model for disks attached to this VM
- *    nic_driver -- The default model for nics attached to this VM
- *    disks -- array of disk objects:
- *        disk.image_uuid -- uuid of dataset from which to clone this VM's disk
+ *
+ *    "cpu_type"
+ *      - The type of the virtual CPU [qemu64|host]
+ *
+ *    "disk_driver"
+ *      - The default model for disks attached to this VM
+ *
+ *    "disks"
+ *      - array of disk objects:
+ *
+ *        disk.boot -- boolean whether this disk should be bootable (only one should)
  *        disk.image_name -- name of dataset from which to clone this VM's disk
  *        disk.image_size -- size of ^^ in MiB
+ *        disk.image_uuid -- uuid of dataset from which to clone this VM's disk
  *        disk.size -- size of disk in MiB (only if not using an image)
- *        disk.zpool -- zpool in which to create this VM and its zvol
- *        disk.model -- driver for this disk [virtio|ide|scsi]
  *        disk.media -- either 'disk' or 'cdrom'
- *        disk.boot -- boolean whether this disk should be bootable (only one should)
+ *        disk.model -- driver for this disk [virtio|ide|scsi]
+ *        disk.zpool -- zpool in which to create this VM and its zvol
+ *
+ *    "nic_driver"
+ *      - The default model for nics attached to this VM
+ *
+ *    "ram"
+ *      - The amount of virtual RAM to attach to the VM (in MiB)
+ *
+ *    "vcpus"
+ *      - The number of virtual CPUs to attach to this VM
  *
  *    Zones Only
  *    ==========
- *    hostname -- The hostname portion of the /etc/hosts entry for this machine
- *    dns_domain -- The DNS domain name of this machine (for /etc/hosts)
- *    rootpw -- The initial root password for this zone (default is to generate)
- *    adminpw -- The initial admin password for this zone (default is generated)
- *    tmpfs -- The maximum number of MiB to use for the /tmp filesystem
+ *
+ *    "adminpw"
+ *      - The initial admin password for this zone
+ *      - default is to generate the password
+ *
+ *    "dns_domain"
+ *      - The DNS domain name of this machine (for /etc/hosts)
+ *      - default here is .local
+ *
+ *    "hostname"
+ *      - The hostname portion of the /etc/hosts entry for this machine
+ *
+ *    "rootpw"
+ *      - The initial root password for this zone
+ *      - default: we'll generate a password
+ *
+ *    "tmpfs"
+ *      - The maximum number of MiB to use for the /tmp filesystem
  *
  *
  * VM EXAMPLE JSON
@@ -103,7 +186,6 @@
  *   {
  *     "brand": "kvm",
  *     "vcpus": 1,
- *     "cpu_shares": 3,
  *     "ram": 256,
  *     "disks": [
  *       {

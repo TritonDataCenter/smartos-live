@@ -52,6 +52,7 @@ function usage()
         "timeout=180s)");
     out("    list [-v] ............. lists all VMs (optional verbose list)");
     out("    reset <uuid> .......... resets (power-cycles) the specified VM");
+    out("    reboot <uuid> ......... reboots (halt+boots) the specified VM");
     out("    nmi <uuid> ............ sends an NMI to the specified VM");
     out("    info <uuid> [type] .... prints detailed info about specified VM");
     out("    mac <macaddr> ......... prints network info for specified MAC");
@@ -294,6 +295,7 @@ function main()
     case 'halt':
     case 'kill':
     case 'reset':
+    case 'reboot':
     case 'nmi':
     case 'info':
     case 'boot':

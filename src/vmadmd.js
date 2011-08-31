@@ -370,6 +370,10 @@ function spawnVNC(uuid)
             log('vnc closed for', uuid);
         });
 
+        vnc.on('error', function () {
+            log('Warning: VNC socket error: ', JSON.stringify(arguments));
+        });
+
         vnc.connect(zonepath + '/root/tmp/vm.vnc');
     });
 
@@ -971,6 +975,37 @@ function resetVM(payload, options, callback)
     });
 }
 
+// send halt to the VM.  Then boot when halt completes.
+function rebootVM(payload, options, callback)
+{
+    var trace = options.trace;
+    var timeout = options.timeout;
+
+    if (!payload.hasOwnProperty('uuid')) {
+        return callback('Payload missing "uuid" field');
+    }
+
+    if (!VMS.hasOwnProperty(payload.uuid)) {
+        return callback('Cannot find VM with UUID ' + payload.uuid);
+    }
+
+    haltVM(payload, options, function (e, res) {
+        log('rebootVM:haltVM result[' + JSON.stringify(res) +
+            '] err[' + e + ']');
+        if (e) {
+            return callback(e);
+        }
+        bootVM(payload, options, function (err, result) {
+            log('rebootVM:bootVM result[' + JSON.stringify(result) +
+                '] err[' + e + ']');
+            if (err) {
+                return callback(err);
+            }
+            return callback();
+        });
+    });
+}
+
 function nmiVM(payload, options, callback)
 {
     var trace = options.trace;
@@ -1503,6 +1538,7 @@ var VM_ACTIONS = {
     'mac':     { 'func': macInfo,   'nowait': true },
     'boot':    { 'func': bootVM,   'okstates': ['off'],     'needs_uuid': true},
     'halt':    { 'func': haltVM,   'okstates': ['running'], 'needs_uuid': true},
+    'reboot':  { 'func': rebootVM, 'okstates': ['running'], 'needs_uuid': true},
     'reset':   { 'func': resetVM,  'okstates': ['running'], 'needs_uuid': true},
     'nmi':     { 'func': nmiVM,    'okstates': ['running'], 'needs_uuid': true},
     'add_nic': { 'func': addNicToVM, 'okstates': ['off'],   'needs_uuid': true},
@@ -1604,7 +1640,7 @@ function handleMessage(stream_fd, obj, responder, trace)
         return responder('Invalid UUID');
     }
 
-    if (obj.action === 'halt') {
+    if (obj.action === 'halt' || obj.action === 'reboot') {
         options.timeout = obj.payload.timeout || 180000;
     }
     options.trace = trace;

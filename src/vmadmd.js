@@ -1671,7 +1671,16 @@ function bootVM(payload, options, callback)
         cmdargs.push('-uuid', vm.uuid);
 
         if (vm.hasOwnProperty('cpu_type')) {
-            cmdargs.push('-cpu', vm.cpu_type);
+            if (vm.cpu_type === 'host' &&
+                SDC.sysinfo['Product'] === 'VMware Virtual Platform') {
+
+                // Some systems (eg. when running SmartOS in a VM on VMWare)
+                // don't support the '-cpu host' option.  On those systems we
+                // instead use '-cpu qemu64'
+                cmdargs.push('-cpu', 'qemu64');
+            } else {
+                cmdargs.push('-cpu', vm.cpu_type);
+            }
         } else {
             cmdargs.push('-cpu', 'qemu64');
         }

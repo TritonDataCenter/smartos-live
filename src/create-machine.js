@@ -1096,7 +1096,9 @@ function checkProperties(payload, callback)
         if (payload.disks.hasOwnProperty(disk)) {
             zvol = payload.disks[disk];
 
-            if (!zvol.hasOwnProperty('model') || zvol.model === 'undefined') {
+            if (payload.brand === 'kvm' && (!zvol.hasOwnProperty('model') ||
+                zvol.model === 'undefined')) {
+
                 callback('missing .model option for disk: ' +
                     JSON.stringify(zvol));
             }
@@ -1107,7 +1109,9 @@ function checkProperties(payload, callback)
         if (payload.nics.hasOwnProperty(nic)) {
             n = payload.nics[nic];
 
-            if (!n.hasOwnProperty('model') || n.model === 'undefined') {
+            if (payload.brand === 'kvm' && (!n.hasOwnProperty('model') ||
+                n.model === 'undefined')) {
+
                 callback('missing .model option for NIC: ' +
                     JSON.stringify(n));
             }

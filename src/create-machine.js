@@ -161,6 +161,8 @@ var onlyif   = require('onlyif');
 var spawn    = cp.spawn;
 var sys      = require('sys');
 
+var logfile  = null;
+
 if (process.env.DEBUG) {
     var DEBUG = true;
 }
@@ -180,13 +182,14 @@ function outputProgress(pct, message) {
     output('update', message, {'percent': pct});
 }
 
-// Write a message to stderr with a timestamp
-function logerr()
+// Write a message to the log file and optionally stderr with a timestamp
+// IMPORTANT: this debug output on stderr is *not* converted to JSON
+function debug()
 {
     var now = new Date;
     var args = [];
 
-    args.push(now.toISOString() + ' --');
+    args.push(now.toISOString() + ' -- ' + process.pid + '--');
     for (var i = 0; i < arguments.length; i++) {
         if (typeof(arguments[i]) === 'string') {
             args.push(arguments[i].replace(/\n/g, '\\n'));
@@ -196,15 +199,12 @@ function logerr()
     }
     args.push('\n');
 
-    process.stderr.write(args.join(' '));
-}
-
-// logs a message to stderr when DEBUG=true
-// IMPORTANT: this debug output on stderr is *not* converted to JSON
-function debug()
-{
     if (DEBUG) {
-        logerr.apply(this, arguments);
+        process.stderr.write(args.join(' '));
+    }
+
+    if (logfile) {
+        logfile.write(args.join(' '));
     }
 }
 
@@ -1273,7 +1273,8 @@ function main()
         if (err) {
             if (err.code === 'ENOENT') {
                 // XXX: should we output JSON even in this case?
-                logerr('FATAL file "' + filename + '" does not exist.');
+                process.stderr.write('FATAL file "' + filename +
+                    '" does not exist.');
                 usage();
             } else {
                 output('failure', 'unable to read file', {'error': err});
@@ -1301,5 +1302,9 @@ onlyif.rootInSmartosGlobal(function(err) {
         console.log('Fatal: cannot run because: ' + err);
         process.exit(1);
     }
+
+    logfile = fs.createWriteStream('/var/log/create-machine.log',
+        {"mode": 0644, "flags": "a"});
+
     main();
 });

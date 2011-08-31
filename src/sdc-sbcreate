@@ -295,7 +295,7 @@ function grab_logs
 {
     echo "  > logs"
     tar -zcvf ${TEMPDIR}/gz-logs.tar.gz var/svc/log \
-        etc/svc/volatile var/adm >&4 2>&1
+        etc/svc/volatile var/adm var/log/*.log >&4 2>&1
 }
 
 function grab_castatus

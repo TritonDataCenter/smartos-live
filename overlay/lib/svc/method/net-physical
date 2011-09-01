@@ -143,7 +143,9 @@ if smf_is_globalzone; then
                     done
                 fi
             else
-                echo "WARNING: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
+                echo "ERROR: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
+                # Set a flag, but try to plumb the other interfaces anyway
+                ADMIN_NIC_MISCONFIGURED=true
             fi
         else
             # We ignore errors here because the most common one is that DHCP is
@@ -248,6 +250,11 @@ log_if_state after
 # Since we hopefully made networking changes here, update the sysinfo cache
 if smf_is_globalzone; then
     /usr/bin/sysinfo -u
+fi
+
+# If the admin nic was missing config options, exit with a config error
+if [[ -n "${ADMIN_NIC_MISCONFIGURED}" ]]; then
+    exit ${SMF_EXIT_ERR_CONFIG}
 fi
 
 # Any non-loopback IPv4 interfaces with usable addresses up?

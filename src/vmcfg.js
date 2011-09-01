@@ -40,6 +40,7 @@ var GLOBAL_PROPS = [
     'cpu-type',
     'owner-uuid',
     'hostname',
+    'resolvers',
     'boot'
 ];
 
@@ -239,7 +240,14 @@ function parseConfig(input)
                 } else if (key === 'cpu-type') {
                     key = 'cpu_type';
                 }
-                result[key] = fixBoolean(attrs[attr].value);
+
+                if (key === 'resolvers') {
+                  if (key != '') {
+                      result[key] = attrs[attr].value.split(',');
+                  }
+                } else {
+                    result[key] = fixBoolean(attrs[attr].value);
+                }
             } else if (DEBUG) {
                 out("WARNING: ignoring unknown VM prop:", attrs[attr].name);
             }

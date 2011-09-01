@@ -756,6 +756,11 @@ function writeZoneconfig(payload, callback)
             // make that same as public, if there's no actual private.
             data = data + 'PRIVATE_IP=' + payload.nics[0].ip + '\n';
         }
+        if (payload.hasOwnProperty('resolvers')) {
+            // zoneinit appends to resolv.conf rather than overwriting, so just
+            // add to the zoneconfig and let zoneinit handle it
+            data = data + 'RESOLVERS="' + payload.resolvers.join(' ') + '"\n';
+        }
 
         nic_idx = 0;
         for (nic in payload.nics) {
@@ -772,6 +777,11 @@ function writeZoneconfig(payload, callback)
 
                 nic_idx++;
             }
+        }
+
+        if (n.hasOwnProperty('default_gateway')) {
+            fs.writeFileSync(payload.default_gateway + '/root/etc/defaultrouter',
+                n.gateway + '\n');
         }
 
         debug('writing extra files to zone root');
@@ -1179,6 +1189,11 @@ function createZone(payload, progress, callback)
         if (payload.hasOwnProperty('hostname')) {
             zonecfg = zonecfg + 'add attr; set name="hostname"; ' +
                 'set type=string; set value="' + payload.hostname + '"; end\n';
+        }
+
+        if (payload.hasOwnProperty('resolvers')) {
+            zonecfg = zonecfg + 'add attr; set name="resolvers"; ' +
+                'set type=string; set value="' + payload.resolvers.join(',') + '"; end\n';
         }
 
         if (payload.hasOwnProperty('cpu_cap')) {

@@ -1393,6 +1393,11 @@ function bootVM(payload, options, callback)
             cmdargs.push('-boot', 'order=cd');
         }
 
+        var hostname = vm.uuid;
+        if (vm.hasOwnProperty('hostname')) {
+            hostname = vm.hostname;
+        }
+
         for (nic in vm.nics) {
             if (vm.nics.hasOwnProperty(nic)) {
                 nic = vm.nics[nic];
@@ -1402,12 +1407,20 @@ function bootVM(payload, options, callback)
                     ',vlan=' + nic_idx +
                     ',name=net' + nic_idx +
                     ',model=' + nic.model);
-                cmdargs.push('-net', 'vnic,name=net' + nic_idx +
+                var vnic_opts = 'vnic,name=net' + nic_idx +
                     ',vlan=' + nic_idx +
                     ',ifname=net' + nic_idx +
                     ',ip=' + nic.ip +
                     ',netmask=' + nic.netmask +
-                    ',gateway_ip=' + nic.gateway);
+                    ',hostname=' + hostname +
+                    ',gateway_ip=' + nic.gateway;
+
+                if (vm.hasOwnProperty('resolvers')) {
+                  for (r in vm.resolvers) {
+                    vnic_opts += ',dns_ip' + r + '=' + vm.resolvers[r];
+                  }
+                }
+                cmdargs.push('-net', vnic_opts);
                 nic_idx++;
             }
         }

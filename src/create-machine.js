@@ -604,12 +604,7 @@ function createVM(payload, callback)
         function (cb)
         {
             outputProgress(51, 'creating zone container');
-            createZone(payload,  quantize(51, 93, outputProgress), cb);
-        },
-        function (cb)
-        {
-            outputProgress(94, 'storing zone metadata');
-            saveMetadata(payload,  quantize(94, 95, outputProgress), cb);
+            createZone(payload,  quantize(51, 95, outputProgress), cb);
         }
     ],
     function (err, results)
@@ -1254,31 +1249,38 @@ function createZone(payload, progress, callback)
                     'error': error, 'stdout': stdout, 'stderr': stderr});
             }
 
-            if (payload.brand === 'joyent') {
-                writeZoneconfig(payload, function (err, result) {
-                    if (payload.autoboot) {
-                        bootZone(payload, function(e, res) {
-                            if (e) {
-                                return callback(e);
-                            }
+            saveMetadata(payload, progress, function (err) {
+                if (err) {
+                    output('failure', 'unable to save metadata',
+                        {'error': err});
+                    process.exit(1);
+                }
+                if (payload.brand === 'joyent') {
+                    writeZoneconfig(payload, function (err, result) {
+                        if (payload.autoboot) {
+                            bootZone(payload, function(e, res) {
+                                if (e) {
+                                    return callback(e);
+                                }
+                                return callback(null, [stdout, stderr]);
+                            });
+                        } else {
                             return callback(null, [stdout, stderr]);
-                        });
-                    } else {
+                        }
+                    });
+                } else if (payload.brand === 'kvm') {
+                    // bootZone will only boot kvm zones if autoboot === true, but
+                    // will load them regardless so needs to be called each time.
+                    bootZone(payload, function(e, res) {
+                        if (e) {
+                            return callback(e);
+                        }
                         return callback(null, [stdout, stderr]);
-                    }
-                });
-            } else if (payload.brand === 'kvm') {
-                // bootZone will only boot kvm zones if autoboot === true, but
-                // will load them regardless so needs to be called each time.
-                bootZone(payload, function(e, res) {
-                    if (e) {
-                        return callback(e);
-                    }
-                    return callback(null, [stdout, stderr]);
-                });
-            } else {
-                return callback('error, unhandled brand "' + payload.brand + '"');
-            }
+                    });
+                } else {
+                    return callback('error, unhandled brand "' + payload.brand + '"');
+                }
+            });
         });
     });
 }
@@ -1342,15 +1344,8 @@ function createMachine(payload, callback)
                         {'error': err});
                     process.exit(1);
                 }
-                saveMetadata(payload, outputProgress, function (err) {
-                    if (err) {
-                        output('failure', 'unable to save metadata',
-                            {'error': err});
-                        process.exit(1);
-                    }
-                    output('success', 'created Zone', {'uuid': payload.uuid});
-                    process.exit(0);
-                });
+                output('success', 'created Zone', {'uuid': payload.uuid});
+                process.exit(0);
             });
         });
     } else {

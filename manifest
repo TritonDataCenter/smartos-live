@@ -1957,6 +1957,7 @@ f smartdc/bin/sdc-sbupload 0555 root bin
 f smartdc/bin/sdc-setup 0555 root bin
 f smartdc/bin/sdc-vmmanifest 0555 root bin
 f smartdc/bin/sdc-zfs-io-throttle.d 0555 root bin
+f smartdc/bin/sdc-zone-net-attr 0555 root bin
 f smartdc/bin/sdc-zoneinfo 0555 root bin
 d smartdc/etc 0555 root bin
 d smartdc/etc/qemu 0555 root bin

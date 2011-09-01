@@ -104,7 +104,7 @@
  *        - The driver for this NIC [virtio|e1000|rtl8136|...]
  *      nic.netmask
  *        - The netmask for this NIC's network
- *      nic.vlan
+ *      nic.vlan_id
  *        - The vlan with which to tag this NIC's traffic (0 = none)
  *        - default: 0
  *
@@ -640,8 +640,8 @@ function nicZonecfg(nic, idx, callback)
             'add property (name=model, value="' + nic.model + '")\n';
     }
 
-    if (nic.hasOwnProperty('vlan') && (nic.vlan !== "0")) {
-        zonecfg = zonecfg + 'set vlan-id=' + nic.vlan + '\n';
+    if (nic.hasOwnProperty('vlan_id') && (nic.vlan_id !== "0")) {
+        zonecfg = zonecfg + 'set vlan-id=' + nic.vlan_id + '\n';
     }
 
     if (nic.hasOwnProperty('blocked_outgoing_ports')) {

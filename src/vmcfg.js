@@ -268,7 +268,7 @@ function parseConfig(input)
                         } else if (key === 'mac-addr') {
                             key = 'mac';
                         } else if (key === 'vlan-id') {
-                            key = 'vlan';
+                            key = 'vlan_id';
                         }
                         tmp[key] = fixBoolean(nets[nic][obj]);
                     } else if (DEBUG) {

@@ -769,6 +769,10 @@ function writeZoneconfig(payload, callback)
                     fs.writeFileSync(payload.zone_path + '/root/etc/defaultrouter',
                         n.gateway + '\n');
                 }
+                data = data + 'NET' + nic_idx + '_IP=' + n.ip + '\n'
+                            + 'NET' + nic_idx + '_NETMASK=' + n.netmask + '\n'
+                            + 'NET' + nic_idx + '_MAC=' + n.ip + '\n'
+                            + 'NET' + nic_idx + '_INTERFACE=NET' + nic_idx + '\n';
 
                 nic_idx++;
             }

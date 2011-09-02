@@ -8,20 +8,20 @@ DESTDIR=../proto
 all: $(TARGETS) sysinfo $(SMARTDC_TARGETS)
 
 install: $(TARGETS) sysinfo
-	pfexec mkdir -p $(DESTDIR)/usr/bin
-	pfexec cp -p $(TARGETS) sysinfo $(DESTDIR)/usr/bin
-	pfexec mkdir -p $(DESTDIR)/smartdc/bin
-	pfexec cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin
-	pfexec cp -p $(JOYENT_PUBKEY) $(DESTDIR)/smartdc
-	pfexec mkdir -m 0755 -p $(DESTDIR)/usr/sbin
-	pfexec mkdir -m 0755 -p $(DESTDIR)/usr/lib
-	pfexec cp vmadmd.js $(DESTDIR)/usr/lib/vmadmd
-	pfexec cp vmadm.js $(DESTDIR)/usr/sbin/vmadm
-	pfexec cp vmcfg.js $(DESTDIR)/usr/sbin/vmcfg
-	pfexec cp create-machine.js $(DESTDIR)/usr/sbin/create-machine
-	pfexec cp guest/mdata-get $(DESTDIR)/usr/sbin/mdata-get
-	pfexec mkdir -m 0755 -p $(DESTDIR)/usr/node_modules
-	pfexec find node_modules -type f -exec cp {} $(DESTDIR)/usr/node_modules/ \;
+	mkdir -p $(DESTDIR)/usr/bin
+	cp -p $(TARGETS) sysinfo $(DESTDIR)/usr/bin
+	mkdir -p $(DESTDIR)/smartdc/bin
+	cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin
+	cp -p $(JOYENT_PUBKEY) $(DESTDIR)/smartdc
+	mkdir -m 0755 -p $(DESTDIR)/usr/sbin
+	mkdir -m 0755 -p $(DESTDIR)/usr/lib
+	cp vmadmd.js $(DESTDIR)/usr/lib/vmadmd
+	cp vmadm.js $(DESTDIR)/usr/sbin/vmadm
+	cp vmcfg.js $(DESTDIR)/usr/sbin/vmcfg
+	cp create-machine.js $(DESTDIR)/usr/sbin/create-machine
+	cp guest/mdata-get $(DESTDIR)/usr/sbin/mdata-get
+	mkdir -m 0755 -p $(DESTDIR)/usr/node_modules
+	find node_modules -type f -exec cp {} $(DESTDIR)/usr/node_modules/ \;
 
 check:
 	@tools/node-lint/bin/node-lint *.js \

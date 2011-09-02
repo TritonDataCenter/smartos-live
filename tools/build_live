@@ -45,7 +45,7 @@ ARCH64=amd64
 RSIZE=272000
 USIZE=390000
 KERNEL_64=platform/$PLATFORM/kernel/$ARCH64/unix
-BUILDVER=$(head -n1 ${ROOT}/configure-buildver)
+BUILDVER=$(head -n1 ${ROOT}/configure-buildver || /usr/bin/true )
 if [[ -n "${BUILDVER}" ]]; then
     PREFIX=platform-${BUILDVER}-${BUILDSTAMP}
 else

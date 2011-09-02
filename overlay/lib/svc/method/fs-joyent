@@ -34,6 +34,13 @@ smf_is_globalzone || exit $SMF_EXIT_OK
 # so that we can try to import the zpool.
 /usr/lib/sysevent/syseventd
 
+function destroy_zpools
+{
+    for pool in $(zpool list -p -o name | grep -v NAME) ; do
+        zpool destroy -f ${pool}
+    done
+}
+
 /bin/bootparams | grep "^noimport=true" >/dev/null
 if [ $? -ne 0 ]; then
     # If the zpool doesn't exist, then there's nothing to mount.
@@ -57,9 +64,14 @@ if [ $? -ne 0 ]; then
     # If the destroy_zpools boot parameter is set, destroy all zpools
     /bin/bootparams | grep "^destroy_zpools=true" >/dev/null
     if [ $? -eq 0 ]; then
-        for pool in $(zpool list -p -o name | grep -v NAME) ; do
-            zpool destroy -f ${pool}
-        done
+        destroy_zpools
+    fi
+
+    # A machine is reset to its original unsetup state (i.e. a 'factory reset')
+    # when the smartdc:factoryreset ZFS user property is set on the var dataset.
+    reset=$(zfs get -H -o value smartdc:factoryreset ${SYS_ZPOOL}/var)
+    if [ ${reset} == "yes" ]; then
+        destroy_zpools
     fi
 
     # For the system zpool, mount and configure all system datasets

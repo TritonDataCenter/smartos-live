@@ -1944,6 +1944,7 @@ f smartdc/bin/sdc-compnode 0555 root bin
 f smartdc/bin/sdc-dsapi 0555 root bin
 f smartdc/bin/sdc-dsimport 0555 root bin
 f smartdc/bin/sdc-dspublish 0555 root bin
+f smartdc/bin/sdc-factoryreset 0555 root bin
 f smartdc/bin/sdc-healthcheck 0555 root bin
 f smartdc/bin/sdc-image-sync 0555 root bin
 f smartdc/bin/sdc-mapi 0555 root bin

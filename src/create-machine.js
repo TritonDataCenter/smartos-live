@@ -771,7 +771,7 @@ function writeZoneconfig(payload, callback)
                 }
                 data = data + 'NET' + nic_idx + '_IP=' + n.ip + '\n'
                             + 'NET' + nic_idx + '_NETMASK=' + n.netmask + '\n'
-                            + 'NET' + nic_idx + '_MAC=' + n.ip + '\n'
+                            + 'NET' + nic_idx + '_MAC=' + n.mac + '\n'
                             + 'NET' + nic_idx + '_INTERFACE=NET' + nic_idx + '\n';
 
                 nic_idx++;

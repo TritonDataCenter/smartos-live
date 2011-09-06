@@ -476,7 +476,7 @@ if [[ ${BASEDIR:0:1} != "/" ]]; then
 fi
 TEMPDIR=$BASEDIR/sdcsb.$$/`sysinfo | json UUID`
 LOGFILE=$BASEDIR/sdcsb.$$.log
-FILENAME=sdc-support.$(hostname).$(TZ=UTC date "+%Y%m%dT%H%M%SZ").tar.bz
+FILENAME=sdc-support.$(hostname).$(TZ=UTC date "+%Y%m%dT%H%M%SZ").tar.bz2
 OUTFILE=${opt_o}
 if [[ -z "${OUTFILE}" ]]; then
     OUTFILE=$BASEDIR/$FILENAME

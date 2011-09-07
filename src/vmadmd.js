@@ -437,18 +437,6 @@ function setAutoboot(uuid, value, callback)
     );
 }
 
-function markOff(uuid)
-{
-    VMS[uuid].state = 'off';
-    // VM is not running, so don't bring it up if we reboot now.
-    setAutoboot(uuid, false, function (err, result) {
-        if (err) {
-            log('Failed to update vm-autoboot to false for ' + uuid);
-        }
-    });
-    clearVNC(uuid);
-}
-
 function recheckStatus(uuid)
 {
      VMS[uuid].status_checks = 6; // every 5 seconds
@@ -465,16 +453,9 @@ function updateStatus(uuid)
         if (result['return'].running && VMS[uuid].state !== 'running') {
             VMS[uuid].state = 'running';
             spawnVNC(uuid);
-            // the VM is running now, so make sure it's running if
-            // we reboot right now.
-            setAutoboot(uuid, true, function (err, result) {
-                if (err) {
-                    log('error setting vm-autoboot to true ' +
-                        'for ' + uuid + ':', err);
-                }
-            });
         } else if (!result['return'].running && VMS[uuid].state === 'running') {
-            markOff(uuid);
+            VMS[uuid].state = 'off';
+            clearVNC(uuid);
         }
     });
 }
@@ -509,7 +490,8 @@ function loadVM(uuid, callback)
                     }
                     VMS[uuid].emitter.emit('qmp_close');
                     if (VMS[uuid].state !== 'off') {
-                        markOff(uuid);
+                        VMS[uuid].state = 'off';
+                        clearVNC(uuid);
                     }
                     if (VMS[uuid].action && VMS[uuid].action === 'info') {
                         log('info still running when VM went off. Clearing.');
@@ -550,7 +532,8 @@ function loadVM(uuid, callback)
                                     if (VMS[uuid] &&
                                         VMS[uuid].state !== 'off') {
 
-                                        markOff(uuid);
+                                        VMS[uuid].state = 'off';
+                                        clearVNC(uuid);
                                     }
                                     break;
                                 default:
@@ -755,7 +738,15 @@ function killVM(payload, options, callback)
         log('Finally finished killing');
         // these variables will be set by the callback from quit below.
         trace({'killVM': 'died'});
-        callback(error, result);
+        setAutoboot(payload.uuid, false, function (e, res) {
+            if (e) {
+                // The VM is off at this point, erroring out here would
+                // do no good, so we just log it.
+                log('killVM(): Failed to set vm-autoboot=false for ' +
+                    payload.uuid);
+            }
+            callback(err, result);
+        });
     });
 
     // send the quit command
@@ -888,7 +879,14 @@ function haltVM(payload, options, callback)
         VMS[uuid].on_shutdown.push(function () {
             log('POWERDOWN RESULT:[', result, '] ERROR:[', err, ']');
             trace({'haltVM:system_powerdown': 'done'});
-            callback(err, result);
+            setAutoboot(uuid, false, function (e, res) {
+                if (e) {
+                    // The VM is off at this point, erroring out here would
+                    // do no good, so we just log it.
+                    log('haltVM(): Failed to set vm-autoboot=false for ' + uuid);
+                }
+                callback(err, result);
+            });
         });
     });
 }
@@ -1484,7 +1482,15 @@ function bootVM(payload, options, callback)
 
         trace({'bootVM:qemu:pid': proc.pid});
         log('cmd[' + proc.pid + ']:', cmd, cmdargs.join(' '));
-        callback(null, proc.pid);
+
+        setAutoboot(uuid, true, function (err, result) {
+            if (err) {
+                // The VM is running at this point, erroring out here would
+                // do no good, so we just log it.
+                log('bootVM(): Failed to set vm-autoboot=true for ' + uuid);
+            }
+            callback(null, proc.pid);
+        });
     });
 }
 

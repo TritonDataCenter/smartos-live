@@ -587,12 +587,6 @@ function createVM(payload, callback)
     async.series([
         function (cb)
         {
-            outputProgress(1, 'checking and applying defaults to payload');
-            // XXX: checkProperties
-            cb();
-        },
-        function (cb)
-        {
             outputProgress(2, 'checking required datasets');
             checkDatasets(payload, quantize(3, 28, outputProgress), cb);
         },
@@ -1100,6 +1094,13 @@ function checkProperties(payload, callback)
     var disk, zvol, nic, n;
 
     // TODO check for missing keys and reused IP addresses
+
+    if (payload.max_locked_memory > payload.max_physical_memory) {
+        callback('max_locked_memory must be <= max_physical_memory');
+    }
+    if (payload.max_swap < payload.max_physical_memory) {
+        callback('max_swap must be >= max_physical_memory');
+    }
 
     for (disk in payload.disks) {
         if (payload.disks.hasOwnProperty(disk)) {

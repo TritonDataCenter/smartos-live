@@ -26,10 +26,61 @@
 set -o xtrace
 
 . /lib/svc/share/smf_include.sh
+. /lib/sdc/config.sh
 
 # Make sure working directory is / to prevent unmounting problems.
 cd /
 PATH=/usr/sbin:/usr/bin; export PATH
+
+update_root_password()
+{
+
+    enc_password=`nawk -F= '{
+        if ($1 == "root_shadow")
+                print substr($2, 2, length($2) - 2)
+    }' /opt/smartdc/config/node.config`
+
+    [[ -z "$enc_password" ]] && return 0
+
+    sed -e "s|^root:[^\:]*:|root:${enc_password}:|" /etc/shadow \
+      >/etc/shadow.new \
+      && chmod 400 /etc/shadow.new \
+      && mv /etc/shadow.new /etc/shadow
+}
+
+# Loads config file for the node. These are the config values from the headnode
+# plus authorized keys and anything else we want.
+# This function is only invoked on a compute node.
+install_config()
+{
+    # On standalone machines we don't do this update
+    [[ -n $(/usr/bin/bootparams | grep "^standalone=true") ]] && return 0
+
+    load_sdc_config
+
+    curl -k -o /tmp/node.config --silent \
+	$CONFIG_assets_admin_ip:/config/node.config
+
+    [[ ! -f /tmp/node.config ]] && return 0
+    grep datacenter_name /tmp/node.config >/dev/null 2>&1
+    if [ $? != 0 ]; then
+	# There is no valid config file served by the assets zone
+	rm -f /tmp/node.config
+	return 0
+    fi
+
+    # Install the file if the local copy is different
+    diff /tmp/node.config /opt/smartdc/config/node.config >/dev/null 2>&1
+    if [ $? != 0 ]; then
+	printf "Updating config file\n" >/dev/console
+	mkdir -p /opt/smartdc/config
+	mv /tmp/node.config /opt/smartdc/config
+        update_root_password
+    else
+	rm -f /tmp/node.config
+    fi
+}
+
 
 case "$1" in
 'start')
@@ -65,6 +116,8 @@ case "$1" in
                 exit $SMF_EXIT_ERR_FATAL
             fi
         fi
+    else
+	install_config
     fi
 
     if /bin/bootparams | grep "^headnode=true" > /dev/null 2>&1; then

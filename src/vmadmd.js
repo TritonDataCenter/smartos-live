@@ -745,7 +745,7 @@ function killVM(payload, options, callback)
                 log('killVM(): Failed to set vm-autoboot=false for ' +
                     payload.uuid);
             }
-            callback(err, result);
+            callback(e, res);
         });
     });
 

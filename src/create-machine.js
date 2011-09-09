@@ -110,7 +110,13 @@
  *
  *    "owner_uuid"
  *      - The UUID of the customer to associate this VM with
- *      - 00000000-0000-0000-0000-000000000000
+ *      - default: 00000000-0000-0000-0000-000000000000
+ *
+ *    "package_name"
+ *      - The name of the package this VM/Zone was provisioned with
+ *
+ *    "package_version"
+ *      - The version of the package this VM/Zone was provisioned with
  *
  *    "quota"
  *      - quota for the ZFS filesystem we'll create for this zone (in GiB)
@@ -1161,6 +1167,17 @@ function createZone(payload, progress, callback)
 
     if (payload.hasOwnProperty('limit_priv')) {
         zonecfg = zonecfg + 'set limitpriv="' + payload.limit_priv + '"\n';
+    }
+
+    if (payload.hasOwnProperty('package_name')) {
+        zonecfg = zonecfg + 'add attr; set name="package-name"; ' +
+            'set type=string; set value="' + payload.package_name + '"; end\n';
+    }
+
+    if (payload.hasOwnProperty('package_version')) {
+        zonecfg = zonecfg + 'add attr; set name="package-version"; ' +
+            'set type=string; set value="' + payload.package_version +
+            '"; end\n';
     }
 
     if (payload.brand === 'joyent') {

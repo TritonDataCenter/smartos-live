@@ -561,8 +561,8 @@ function loadVM(uuid, callback)
     });
 }
 
-// load (or reload) the global VMS object from the json files in
-// /zones/<uuid>/config/vm.json
+// load (or reload) the global VMS object from the vmcfg output for each kvm
+// zone on the system.
 function loadVMs(callback)
 {
     var new_vms = [];
@@ -1311,7 +1311,7 @@ function bootVM(payload, options, callback)
         }
 
         vm = vm.data;
-        working_dir = '/zones/' + vm.uuid + '/root';
+        working_dir = vm.zonepath + '/root';
 
         cmdargs.push('-m', vm.ram);
         cmdargs.push('-name', vm.uuid);
@@ -1457,10 +1457,8 @@ function bootVM(payload, options, callback)
                 '"\n\n' +
             "exit 1\n";
 
-        // TODO: get real zone root (might not be in /zones!)
-
-        fs.writeFileSync('/zones/' + vm.uuid + '/root/startvm', script);
-        fs.chmodSync('/zones/' + vm.uuid + '/root/startvm', "0755");
+        fs.writeFileSync(vm.zonepath + '/root/startvm', script);
+        fs.chmodSync(vm.zonepath + '/root/startvm', "0755");
 
         cmd = '/usr/sbin/zoneadm';
         cmdargs = ['-z', vm.uuid, 'boot'];

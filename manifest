@@ -10822,6 +10822,7 @@ f usr/sbin/groupadd 0555 root sys
 f usr/sbin/groupdel 0555 root sys
 f usr/sbin/groupmod 0555 root sys
 f usr/sbin/grpck 0555 root bin
+f usr/sbin/grub 0555 root bin
 f usr/sbin/gsscred 0555 root sys
 f usr/sbin/hal-device 0555 root bin
 f usr/sbin/hal-fdi-validate 0555 root bin

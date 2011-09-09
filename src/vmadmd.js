@@ -1503,7 +1503,7 @@ function listVMs(properties, options, callback)
 
     for (vm in VMS) {
         if (VMS.hasOwnProperty(vm)) {
-            results.push({'uuid': vm, 'state': VMS[vm].state});
+            results.push({'uuid': vm, 'state': VMS[vm].state, 'ram': VMS[vm].data.ram});
         }
     }
 

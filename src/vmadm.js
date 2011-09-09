@@ -209,9 +209,9 @@ function formatVMList(result, flag)
         res = result.data;
         if (res.length > 0) {
             if (flag === '-v') {
-                out(sprintf('%-36s  %-16s', 'UUID', 'STATUS'));
+                out(sprintf('%-36s  %-7s  %-16s', 'UUID', 'RAM', 'STATUS'));
                 res.forEach(function (vm) {
-                    out(sprintf('%-36s  %-16s', vm.uuid, vm.state));
+                    out(sprintf('%-36s  %-7d  %-16s', vm.uuid, vm.ram, vm.state));
                 });
             } else {
                 res.forEach(function (vm) {

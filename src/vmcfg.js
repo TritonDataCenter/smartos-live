@@ -39,6 +39,7 @@ var GLOBAL_PROPS = [
     'vcpus',
     'cpu-type',
     'owner-uuid',
+    'billing-id',
     'package-name',
     'package-version',
     'hostname',
@@ -239,6 +240,8 @@ function parseConfig(input)
                     key = 'autoboot';
                 } else if (key === 'owner-uuid') {
                     key = 'customer_uuid';
+                } else if (key === 'billing-id') {
+                    key = 'billing_id';
                 } else if (key === 'package-name') {
                     key = 'package_name';
                 } else if (key === 'package-version') {

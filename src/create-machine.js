@@ -55,6 +55,11 @@
  *      - either 'joyent' or 'kvm', determines the type of machine created
  *      - default: 'joyent'
  *
+ *    "billing_id"
+ *      - an identifier representing the billing type of this machine
+ *      - default: dataset_uuid if provided, otherwise:
+ *        00000000-0000-0000-0000-000000000000
+ *
  *    "cpu_cap"
  *      - sets a CPU cap for this machine
  *      - default: no cap
@@ -220,7 +225,7 @@
  *     "brand": "joyent",
  *     "zfs_io_priority": 30,
  *     "quota": 20,
- *     "dataset_uuid": "47e6af92-daf0-11e0-ac11-473ca1173ab0",
+ *     "dataset_uuid": "bb6d5a10-c330-11e0-8f18-9fbfcd26660b",
  *     "nics": [
  *       {
  *         "nic_tag": "external",
@@ -1070,6 +1075,14 @@ function applyZoneDefaults(payload)
         payload.quota = '10'; // in GiB
     }
 
+    if (!payload.hasOwnProperty('billing_id')) {
+        if (payload.hasOwnProperty('dataset_uuid')) {
+            payload.billing_id = payload.dataset_uuid;
+        } else {
+            payload.billing_id = '00000000-0000-0000-0000-000000000000';
+        }
+    }
+
     for (disk in payload.disks) {
         if (payload.disks.hasOwnProperty(disk)) {
             zvol = payload.disks[disk];
@@ -1162,6 +1175,8 @@ function createZone(payload, progress, callback)
             'set physical=' + payload.max_physical_memory.toString() + 'm; ' +
             'set locked=' + payload.max_locked_memory.toString() + 'm;' +
             'set swap=' + payload.max_swap.toString() + 'm; end\n' +
+        'add attr; set name="billing-id"; set type=string; set value="' +
+            payload.billing_id + '"; end\n' +
         'add attr; set name="owner-uuid"; set type=string; set value="' +
             payload.owner_uuid + '"; end\n';
 

@@ -783,9 +783,9 @@ function writeZoneconfig(payload, callback)
             }
         }
 
-        if (n.hasOwnProperty('default_gateway')) {
-            fs.writeFileSync(payload.default_gateway + '/root/etc/defaultrouter',
-                n.gateway + '\n');
+        if (payload.hasOwnProperty('default_gateway')) {
+            fs.writeFileSync(payload.zone_path + '/root/etc/defaultrouter',
+                payload.default_gateway + '\n');
         }
 
         debug('writing extra files to zone root');

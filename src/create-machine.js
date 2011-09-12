@@ -282,7 +282,7 @@ function debug()
     var now = new Date;
     var args = [];
 
-    args.push(now.toISOString() + ' -- ' + process.pid + '--');
+    args.push(now.toISOString() + ' -- ' + process.pid + ' --');
     for (var i = 0; i < arguments.length; i++) {
         if (typeof(arguments[i]) === 'string') {
             args.push(arguments[i].replace(/\n/g, '\\n'));
@@ -352,6 +352,10 @@ function performVmadmdAction(action, data, callback)
                 }
             }
             buffer = chunks.pop();
+        });
+
+        stream.on('error', function(err) {
+            callback(err);
         });
 
         stream.connect('/tmp/vmadmd.sock');
@@ -499,7 +503,7 @@ function createVolumes(payload, progress, callback)
     var createme = [];
     var d, disk, disk_idx;
 
-    debug('createVolumes() --', payload);
+    debug('createVolumes() --', payload.disks);
 
     // generate list of volumes we need to create
     disk_idx = 0;
@@ -542,11 +546,12 @@ function saveMetadata(zone, progress, callback)
     var mdata_filename = zonepath + '/config/metadata.json';
     var mdata;
 
-    debug('saveMetadata() --', zone);
 
     if (zone.hasOwnProperty('customer_metadata')) {
+        debug('saveMetadata() --', zone.customer_metadata);
         mdata = {"customer_metadata": zone.customer_metadata};
     } else {
+        debug('saveMetadata() -- no metadata, using {}');
         mdata = {"customer_metadata": {}};
     }
 
@@ -897,7 +902,7 @@ function waitForJoyentZone(payload, callback)
 
 function bootZone(payload, callback)
 {
-    debug('bootZone() --', payload.uuid);
+    debug('bootZone(' + payload.brand + ') --', payload.uuid);
 
     if (payload.brand === 'joyent') {
         execFile('zoneadm', ['-z', payload.uuid, 'boot'],
@@ -916,14 +921,38 @@ function bootZone(payload, callback)
             }
         );
     } else if (payload.brand === 'kvm') {
-        performVmadmdAction('init', {"uuid": payload.uuid}, function (err, result) {
-
-            if (err) {
-                return callback(err);
+        performVmadmdAction('init', {"uuid": payload.uuid},
+            function (err, result) {
+                if (err) {
+                    /*
+                     * If there's an error trying to init/boot the VM we'll set
+                     * the 'never-booted' flag to true for the VM and vmadmd
+                     * will boot it the next time it's loaded.
+                     *
+                     */
+                    if (!payload.autoboot) {
+                        debug('ignoring vmadmd err, but no autoboot: ', err);
+                        return callback();
+                    } else {
+                        debug('ignoring vmadmd err, marking never-booted: ', err);
+                        zoneCfg(payload.uuid, 'add attr; ' +
+                            'set name="never-booted"; ' +
+                            'set type=string; set value="true"; end\n',
+                            function(error, stdout, stderr) {
+                                if (error) {
+                                    return callback(error);
+                                }
+                                debug('vmadmd is unavailable, set ' +
+                                    'never-booted=true');
+                                return callback();
+                            }
+                        );
+                    }
+                } else {
+                    return callback();
+                }
             }
-
-            return callback();
-        });
+        );
     } else {
         return callback("don't know how to boot zone with brand " + payload.brand);
     }

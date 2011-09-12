@@ -36,6 +36,7 @@ var GLOBAL_PROPS = [
     'zonepath',
     'ram',
     'vm-autoboot',
+    'never-booted',
     'vcpus',
     'cpu-type',
     'owner-uuid',
@@ -239,6 +240,8 @@ function parseConfig(input)
                 key = attrs[attr].name;
                 if (key === 'vm-autoboot') {
                     key = 'autoboot';
+                } else if (key === 'never-booted') {
+                    key = 'never_booted';
                 } else if (key === 'owner-uuid') {
                     key = 'customer_uuid';
                 } else if (key === 'billing-id') {

@@ -1854,6 +1854,27 @@ function autobootVMs()
                     autobootVM(VMS[uuid].data);
                 }
             }
+        } else {
+            // this is not first boot, but we still need to boot any VMs that
+            // tried to boot while we were off.  These will be set with the attr
+            // never_booted=true.
+
+            for (uuid in VMS) {
+                if (VMS.hasOwnProperty(uuid) && VMS[uuid].data.never_booted) {
+                    autobootVM(VMS[uuid].data);
+                    // remove never_booted flag so we don't do this again.
+                    log('setting never_booted=false for ' + uuid);
+
+                    zoneCfg(uuid, 'remove attr name="never-booted"\n',
+                        function (err, result) {
+                            if (err) {
+                                log('WARNING: unable to remove never-booted ' +
+                                    'property for ' + uuid + ': ', err);
+                            }
+                        }
+                    );
+                }
+            }
         }
     });
 }

@@ -469,8 +469,8 @@ function createVolume(volume, progress, callback)
                     volume.uuid;
                 trace_cmd = 'zfs-clone';
             } else {
-                cmd = 'zfs create -V ' + size + 'M ' + volume.zpool + '/' +
-                    volume.uuid;
+                cmd = 'zfs create -o refreservation=none -V ' + size +
+                   'M ' + volume.zpool + '/' + volume.uuid;
                 volume.path = '/dev/zvol/rdsk/' + volume.zpool + '/' +
                     volume.uuid;
                 trace_cmd = 'zfs-create';

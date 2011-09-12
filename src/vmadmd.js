@@ -296,7 +296,6 @@ Qemu.prototype.connect = function (uuid, socket, callback)
 
     stream.on('error', function (e) {
         if (send_interval) {
-            log('clearing qmp send_interval after qmp error.');
             clearInterval(send_interval);
             send_interval = null;
         }
@@ -729,7 +728,18 @@ function deleteVM(vm, options, callback)
         }
 
         // don't keep trying to reconnect to this socket, since it's gone.
-        clearInterval(VMS[vm.uuid].reconnector);
+        if (VMS[vm.uuid] && VMS[vm.uuid].reconnector) {
+            log('Clearing reconnector for', vm.uuid);
+            clearInterval(VMS[vm.uuid].reconnector);
+            VMS[vm.uuid].reconnector = null;
+        } else {
+            if (!VMS[vm.uuid]) {
+                log('Unable to remove reconnector for missing', vm.uuid);
+            } else {
+                log('Unable to remove reconnector (no Interval) for', vm.uuid);
+            }
+        }
+
         delete VMS[vm.uuid];
 
         destroyZone(vm.uuid, options, function (err) {

@@ -225,7 +225,7 @@
  *     "brand": "joyent",
  *     "zfs_io_priority": 30,
  *     "quota": 20,
- *     "dataset_uuid": "bb6d5a10-c330-11e0-8f18-9fbfcd26660b",
+ *     "dataset_uuid": "47e6af92-daf0-11e0-ac11-473ca1173ab0",
  *     "nics": [
  *       {
  *         "nic_tag": "external",

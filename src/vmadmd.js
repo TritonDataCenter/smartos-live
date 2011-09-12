@@ -206,6 +206,7 @@ Qemu.prototype.connect = function (uuid, socket, callback)
     var in_transit = this.in_transit;
     var event_handler = this.event_handler;
     var chunks, result, buffer = '', id, cb;
+    var send_interval;
 
     stream.setEncoding('utf8');
     stream.on('data', function (chunk) {
@@ -252,6 +253,27 @@ Qemu.prototype.connect = function (uuid, socket, callback)
         buffer = chunks.pop();
     });
 
+    send_interval = setInterval(function () {
+        var id;
+        var msg;
+        if (connected) {
+            // send any commands that are in the queue.
+            for (id in in_transit) {
+                msg = in_transit[id];
+                if (!msg.sent) {
+                    if (stream.writable) {
+                        log('sending[' + id + ']:', JSON.stringify(msg));
+                        stream.write(JSON.stringify(msg.packet) + '\n');
+                        msg.sent = true;
+                    } else {
+                        log('WARNING: message still in transit for VM ' + uuid +
+                        ' when qmp socket closed:', msg);
+                    }
+                }
+            }
+        }
+    }, 1000);
+
     stream.on('close', function () {
         if (connected) {
             log('QMP close');
@@ -261,27 +283,21 @@ Qemu.prototype.connect = function (uuid, socket, callback)
             outputEvent({"timestamp": new Date().toISOString(),
                 "event": "QMP_CLOSED", "uuid": uuid});
             connected = false;
+            if (send_interval) {
+                clearInterval(send_interval);
+                send_interval = null;
+            }
             stream.end();
         }
     });
 
-    setInterval(function () {
-        var id;
-        if (connected) {
-            // send any commands that are in the queue.
-            for (id in in_transit) {
-                if (!in_transit[id].sent) {
-                    log('sending[' + id + ']:', JSON.stringify(in_transit[id]));
-                    stream.write(JSON.stringify(in_transit[id].packet) + '\n');
-                    in_transit[id].sent = true;
-                }
-            }
-        }
-    }, 1000);
-
     this.socket = socket;
 
     stream.on('error', function (e) {
+        if (send_interval) {
+            clearInterval(send_interval);
+            send_interval = null;
+        }
         callback(e);
     });
 

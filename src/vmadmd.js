@@ -284,6 +284,7 @@ Qemu.prototype.connect = function (uuid, socket, callback)
                 "event": "QMP_CLOSED", "uuid": uuid});
             connected = false;
             if (send_interval) {
+                log('clearing qmp send_interval after qmp closed.');
                 clearInterval(send_interval);
                 send_interval = null;
             }
@@ -295,6 +296,7 @@ Qemu.prototype.connect = function (uuid, socket, callback)
 
     stream.on('error', function (e) {
         if (send_interval) {
+            log('clearing qmp send_interval after qmp error.');
             clearInterval(send_interval);
             send_interval = null;
         }

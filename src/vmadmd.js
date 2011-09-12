@@ -1396,6 +1396,11 @@ function bootVM(payload, options, callback)
             hostname = vm.hostname;
         }
 
+        var defaultgw = '';
+        if (vm.hasOwnProperty('default-gateway')) {
+            defaultgw = vm['default-gateway'];
+        }
+
         for (nic in vm.nics) {
             if (vm.nics.hasOwnProperty(nic)) {
                 nic = vm.nics[nic];
@@ -1409,15 +1414,25 @@ function bootVM(payload, options, callback)
                     ',vlan=' + nic_idx +
                     ',ifname=net' + nic_idx +
                     ',ip=' + nic.ip +
-                    ',netmask=' + nic.netmask +
-                    ',hostname=' + hostname +
-                    ',gateway_ip=' + nic.gateway;
+                    ',netmask=' + nic.netmask;
 
-                if (vm.hasOwnProperty('resolvers')) {
-                  for (r in vm.resolvers) {
-                    vnic_opts += ',dns_ip' + r + '=' + vm.resolvers[r];
-                  }
+                // The primary network provides the resolvers, default gateway
+                // and hostname to prevent machines from trying to use settings
+                // from more than one nic
+                if (defaultgw && nic.hasOwnProperty('gateway') && nic.gateway == defaultgw) {
+                    vnic_opts += ',gateway_ip=' + nic.gateway;
+                    if (hostname) {
+                        vnic_opts += ',hostname=' + hostname;
+                    }
+                    if (vm.hasOwnProperty('resolvers')) {
+                      for (r in vm.resolvers) {
+                        vnic_opts += ',dns_ip' + r + '=' + vm.resolvers[r];
+                      }
+                    }
+                    // Unset this so that we only have one primary
+                    defaultgw = '';
                 }
+
                 cmdargs.push('-net', vnic_opts);
                 nic_idx++;
             }

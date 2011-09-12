@@ -44,6 +44,7 @@ var GLOBAL_PROPS = [
     'package-version',
     'hostname',
     'resolvers',
+    'default-gateway',
     'boot'
 ];
 

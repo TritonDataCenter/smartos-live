@@ -1228,6 +1228,11 @@ function createZone(payload, progress, callback)
                 'set type=string; set value="' + payload.resolvers.join(',') + '"; end\n';
         }
 
+        if (payload.hasOwnProperty('default_gateway')) {
+            zonecfg = zonecfg + 'add attr; set name="default-gateway"; ' +
+                'set type=string; set value="' + payload.default_gateway + '"; end\n';
+        }
+
         if (payload.hasOwnProperty('cpu_cap')) {
             zonecfg = zonecfg + 'add attr; set name="cpu-cap"; ' +
                 'set type=string; set value="' + payload.cpu_cap + '"; end\n';

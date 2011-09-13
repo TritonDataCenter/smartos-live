@@ -12508,6 +12508,13 @@ f usr/share/man/man1m/mkpwdict.1m 0444 root bin
 f usr/share/man/man1m/modinfo.1m 0444 root bin
 f usr/share/man/man1m/modload.1m 0444 root bin
 f usr/share/man/man1m/modunload.1m 0444 root bin
+f usr/share/man/man1m/mount_hsfs.1m 0444 root bin
+f usr/share/man/man1m/mount_nfs.1m 0444 root bin
+f usr/share/man/man1m/mount_pcfs.1m 0444 root bin
+f usr/share/man/man1m/mount_smbfs.1m 0444 root bin
+f usr/share/man/man1m/mount_tmpfs.1m 0444 root bin
+f usr/share/man/man1m/mount_udfs.1m 0444 root bin
+f usr/share/man/man1m/mount_ufs.1m 0444 root bin
 f usr/share/man/man1m/mount.1m 0444 root bin
 f usr/share/man/man1m/mountall.1m 0444 root bin
 f usr/share/man/man1m/mpstat.1m 0444 root bin

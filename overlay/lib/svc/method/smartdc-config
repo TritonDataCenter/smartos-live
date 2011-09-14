@@ -76,8 +76,30 @@ case "$1" in
                 exit $SMF_EXIT_OK
             fi
 
+	    # Start interactive config on console and ttys
+
             ${USB_PATH}/scripts/prompt-config.sh "${USB_PATH}" \
-                </dev/console >&/dev/console
+                </dev/console >&/dev/console &
+	    cnt=1
+
+	    if [ -c /dev/ttya ]; then
+                ${USB_PATH}/scripts/prompt-config.sh "${USB_PATH}" \
+                    </dev/ttya >&/dev/ttya &
+                cnt=`expr $cnt + 1`
+	    fi
+
+	    if [ -c /dev/ttyb ]; then
+                ${USB_PATH}/scripts/prompt-config.sh "${USB_PATH}" \
+                    </dev/ttyb >&/dev/ttyb &
+                cnt=`expr $cnt + 1`
+	    fi
+
+            # Wait for one of the interactive configs to finish
+            while [ true ]; do
+                got=`jobs -p | wc -l`
+                [ $got -lt $cnt ] && break
+                sleep 1
+            done
 
             # If user quit from interactive configuration then we're done.
             [[ ! -f ${USB_PATH}/config ]] && exit $SMF_EXIT_OK

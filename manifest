@@ -12502,6 +12502,9 @@ f usr/share/man/man1m/mkdevalloc.1m 0444 root bin
 f usr/share/man/man1m/mkdevmaps.1m 0444 root bin
 f usr/share/man/man1m/mkfifo.1m 0444 root bin
 f usr/share/man/man1m/mkfile.1m 0444 root bin
+f usr/share/man/man1m/mkfs_pcfs.1m 0444 root bin
+f usr/share/man/man1m/mkfs_ufs.1m 0444 root bin
+f usr/share/man/man1m/mkfs_udfs.1m 0444 root bin
 f usr/share/man/man1m/mkfs.1m 0444 root bin
 f usr/share/man/man1m/mknod.1m 0444 root bin
 f usr/share/man/man1m/mkpwdict.1m 0444 root bin

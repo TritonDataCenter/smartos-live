@@ -129,7 +129,7 @@
  *
  *    "uuid"
  *      - pre-specify a UUID for this machine (default is to create one)
- *      - this gets used for zonename
+ *      - this gets used as default for zonename if none specified
  *      - default: we'll generate a new uuid
  *
  *    "zfs_io_priority"
@@ -191,6 +191,10 @@
  *    "tmpfs"
  *      - The maximum number of MiB to use for the /tmp filesystem
  *
+ *    "zonename"
+ *      - specifies the name of this zone when it is intended that the zonename
+ *        not match the uuid.
+ *      - default: uuid
  *
  * VM EXAMPLE JSON
  *
@@ -542,7 +546,7 @@ function createVolumes(payload, progress, callback)
 function saveMetadata(zone, progress, callback)
 {
     var zonepath = zone.zone_path = '/' + zone.zfs_storage_pool_name + '/' +
-        zone.uuid;
+        zone.zonename;
     var mdata_filename = zonepath + '/config/metadata.json';
     var mdata;
 
@@ -734,7 +738,7 @@ function writeZoneconfig(payload, callback)
     var adminpw = payload.adminpw;
 
     if (!payload.hasOwnProperty('hostname')) {
-        payload.hostname = payload.uuid;
+        payload.hostname = payload.zonename;
     }
 
     debug('writeZoneconfig() --', payload);
@@ -745,7 +749,7 @@ function writeZoneconfig(payload, callback)
         }
 
         data = 'TEMPLATE_VERSION=0.0.1\n' +
-            'ZONENAME=' + payload.uuid + '\n' +
+            'ZONENAME=' + payload.zonename + '\n' +
             'HOSTNAME=' + payload.hostname + '.' + payload.dns_domain + '\n' +
             'ROOT_PW=' + payload.rootpw + '\n' +
             'ADMIN_PW=' + payload.adminpw + '\n' +
@@ -800,8 +804,8 @@ function writeZoneconfig(payload, callback)
             '/root/var/svc/log/system-zoneinit:default.log', '');
 
         debug('writing', data, 'to /' + payload.zfs_storage_pool_name + '/' +
-            payload.uuid);
-        fs.writeFile('/' + payload.zfs_storage_pool_name + '/' + payload.uuid +
+            payload.zonename);
+        fs.writeFile('/' + payload.zfs_storage_pool_name + '/' + payload.zonename +
             '/root/root/zoneconfig', data,
             function (err, result) {
                 if (err) {
@@ -815,18 +819,18 @@ function writeZoneconfig(payload, callback)
 }
 
 // runs zonecfg to apply changes to a zone.
-function zoneCfg(uuid, zonecfg, callback)
+function zoneCfg(zonename, zonecfg, callback)
 {
-    var tmpfile = '/tmp/zonecfg.' + uuid + '.tmp';
+    var tmpfile = '/tmp/zonecfg.' + zonename + '.tmp';
 
-    debug('zoneCfg() --', uuid);
+    debug('zoneCfg() --', zonename);
 
     fs.writeFile(tmpfile, zonecfg, function (err, result) {
         if (err) {
             // On failure we don't delete the tmpfile so we can debug it.
             return callback(err);
         } else {
-            execFile('zonecfg', ['-z', uuid, '-f', tmpfile],
+            execFile('zonecfg', ['-z', zonename, '-f', tmpfile],
                 function (error, stdout, stderr) {
 
                     if (error) {
@@ -853,7 +857,7 @@ function waitForJoyentZone(payload, callback)
     var timeout_secs = 5 * 60;
     var state = 'running';
 
-    watcher = spawn('/usr/sbin/zonemon', ['-z', payload.uuid],
+    watcher = spawn('/usr/sbin/zonemon', ['-z', payload.zonename],
         {'customFds': [-1, -1, -1]});
 
     output('update', 'zonemon running with pid ' + watcher.pid +
@@ -902,10 +906,10 @@ function waitForJoyentZone(payload, callback)
 
 function bootZone(payload, callback)
 {
-    debug('bootZone(' + payload.brand + ') --', payload.uuid);
+    debug('bootZone(' + payload.brand + ') --', payload.zonename);
 
     if (payload.brand === 'joyent') {
-        execFile('zoneadm', ['-z', payload.uuid, 'boot'],
+        execFile('zoneadm', ['-z', payload.zonename, 'boot'],
             function (error, stdout, stderr)
             {
                 if (error) {
@@ -960,22 +964,17 @@ function bootZone(payload, callback)
 
 function ifZoneDoesNotExist(uuid, callback)
 {
-    exec('zonecfg -z ' + uuid + ' info zonepath',
+    exec('zoneadm -u ' + uuid + ' list | grep global >/dev/null',
         function (err, stdout, stderr) {
-            debug('"zonecfg -z ' + uuid + ' info zonename" exited with code ' +
+            debug('"zoneadm -u ' + uuid + ' list | grep global" exited with code ' +
                 (err ? err.code : 0) + ' stdout: "' + stdout + '" stderr:"' +
                 stderr + '"');
 
-            if (err) {
-                if (err.code === 1) {
-                    // exit code 1 means zone doesn't exist
-                    return callback();
-                } else {
-                    return callback('unable to determine if zone already ' +
-                        'exists with uuid ' + uuid);
-                }
-            } else {
+            if (err && err.code !== 0) {
                 return callback("zone w/ uuid '" + uuid + "' already exists.");
+            } else {
+                // exit code 0 means zone doesn't exist (global was in list)
+                return callback();
             }
         }
     );
@@ -1020,6 +1019,10 @@ function applyZoneDefaults(payload)
     var nic, n, disk, zvol;
 
     debug('applyZoneDefaults()');
+
+    if (!payload.hasOwnProperty('zonename')) {
+        payload.zonename = payload.uuid;
+    }
 
     if (!payload.hasOwnProperty('owner_uuid')) {
         // We assume that this all-zero uuid can be treated as 'admin'
@@ -1191,7 +1194,7 @@ function createZone(payload, progress, callback)
         return callback('createZone(): FAILED -- dataset_uuid is required.');
     }
 
-    payload.zone_path = '/' + payload.zfs_storage_pool_name + '/' + payload.uuid;
+    payload.zone_path = '/' + payload.zfs_storage_pool_name + '/' + payload.zonename;
 
     zonecfg = 'create -b\n' +
         'set zonepath=' + payload.zone_path + '\n' +
@@ -1301,10 +1304,10 @@ function createZone(payload, progress, callback)
         }
     }
 
-    zoneCfg(payload.uuid, zonecfg, function (error, stdout, stderr) {
+    zoneCfg(payload.zonename, zonecfg, function (error, stdout, stderr) {
 
-        args = ['-z', payload.uuid, 'install', '-q', payload.quota.toString(),
-            '-U', payload.uuid];
+        args = ['-z', payload.zonename, 'install', '-q',
+            payload.quota.toString(), '-U', payload.uuid];
 
         if (payload.brand === 'joyent') {
             args.push('-t');
@@ -1400,7 +1403,8 @@ function createMachine(payload, callback)
                         {'error': err});
                     process.exit(1);
                 }
-                output('success', 'created VM', {'uuid': payload.uuid});
+                output('success', 'created VM', {'uuid': payload.uuid,
+                    'zonename': payload.zonename});
                 process.exit(0);
             });
         });
@@ -1417,7 +1421,8 @@ function createMachine(payload, callback)
                         {'error': err});
                     process.exit(1);
                 }
-                output('success', 'created Zone', {'uuid': payload.uuid});
+                output('success', 'created Zone', {'uuid': payload.uuid,
+                    'zonename': payload.zonename});
                 process.exit(0);
             });
         });

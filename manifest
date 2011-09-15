@@ -5780,7 +5780,6 @@ f usr/lib/brand/joyent/jdetach 0755 root root
 f usr/lib/brand/joyent/jinstall 0755 root root
 f usr/lib/brand/joyent/juninstall 0755 root root
 f usr/lib/brand/joyent/manifests 0444 root root
-f usr/lib/brand/joyent/pinstall 0755 root root
 f usr/lib/brand/joyent/platform.xml 0444 root root
 f usr/lib/brand/joyent/poststate 0755 root root
 f usr/lib/brand/joyent/prestate 0755 root root
@@ -5793,7 +5792,6 @@ f usr/lib/brand/kvm/kattach 0755 root root
 f usr/lib/brand/kvm/kdetach 0755 root root
 f usr/lib/brand/kvm/kinstall 0755 root root
 f usr/lib/brand/kvm/kuninstall 0755 root root
-f usr/lib/brand/kvm/pinstall 0755 root root
 f usr/lib/brand/kvm/platform.xml 0444 root root
 f usr/lib/brand/kvm/poststate 0755 root root
 f usr/lib/brand/kvm/prestate 0755 root root

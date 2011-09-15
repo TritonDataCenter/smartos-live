@@ -1224,6 +1224,11 @@ function createZone(payload, progress, callback)
             '"; end\n';
     }
 
+    if (payload.hasOwnProperty('cpu_cap')) {
+        zonecfg = zonecfg + 'add capped-cpu; ' +
+            'set ncpus=' + payload.cpu_cap.toString() + '; end\n';
+    }
+
     if (payload.brand === 'joyent') {
         zonecfg = zonecfg + 'set autoboot=' + payload.autoboot + '\n';
     } else if (payload.brand === 'kvm') {
@@ -1260,11 +1265,6 @@ function createZone(payload, progress, callback)
         if (payload.hasOwnProperty('default_gateway')) {
             zonecfg = zonecfg + 'add attr; set name="default-gateway"; ' +
                 'set type=string; set value="' + payload.default_gateway + '"; end\n';
-        }
-
-        if (payload.hasOwnProperty('cpu_cap')) {
-            zonecfg = zonecfg + 'add attr; set name="cpu-cap"; ' +
-                'set type=string; set value="' + payload.cpu_cap + '"; end\n';
         }
 
         // only VMs have 'disks'

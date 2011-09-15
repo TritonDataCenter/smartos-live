@@ -637,7 +637,7 @@ function deleteVolume(volume, options, callback)
     var cmd;
     var trace = options.trace;
 
-    cmd = 'zfs destroy ' + volume.zfs_filesystem;
+    cmd = 'zfs destroy -F ' + volume.zfs_filesystem;
     log('deleteVolume() running:', cmd);
     exec(cmd, function (err, stdout, stderr) {
         // err will be non-null if something broke

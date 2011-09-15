@@ -173,20 +173,12 @@
  *    Zones Only
  *    ==========
  *
- *    "adminpw"
- *      - The initial admin password for this zone
- *      - default is to generate the password
- *
  *    "dns_domain"
  *      - The DNS domain name of this machine (for /etc/hosts)
  *      - default here is .local
  *
  *    "hostname"
  *      - The hostname portion of the /etc/hosts entry for this machine
- *
- *    "rootpw"
- *      - The initial root password for this zone
- *      - default: we'll generate a password
  *
  *    "tmpfs"
  *      - The maximum number of MiB to use for the /tmp filesystem
@@ -673,69 +665,9 @@ function nicZonecfg(nic, idx, callback)
     return zonecfg;
 }
 
-function generatePassword(callback)
-{
-    var cmd = '/usr/bin/openssl rand -base64 16 | /usr/bin/tr -d [+=/]';
-
-    debug('generatePassword()');
-
-    exec(cmd, function (error, stdout, stderr) {
-        if (error) {
-            return callback(error);
-        }
-        return callback(null, stdout.toString().replace(/\s+$/g, ''));
-    });
-}
-
-function addPasswords(payload, callback)
-{
-    async.series([
-        function (cb)
-        {
-            if (payload.hasOwnProperty('rootpw')) {
-                return cb();
-            }
-            generatePassword(function(err, passwd) {
-                if (err) {
-                    return cb(err);
-                }
-                payload.rootpw = passwd;
-                output('notice', "(generated) root password is '" +
-                    payload.rootpw + "'");
-                return cb();
-            });
-        },
-        function (cb)
-        {
-            if (payload.hasOwnProperty('adminpw')) {
-                return cb();
-            }
-            generatePassword(function(err, passwd) {
-                if (err) {
-                    return cb(err);
-                }
-                payload.adminpw = passwd;
-                output('notice', "(generated) admin password is '" +
-                    payload.adminpw + "'");
-                return cb();
-            });
-        }
-    ],
-    function (err, results)
-    {
-        if (err) {
-            return callback(err);
-        }
-
-        return callback();
-    });
-}
-
 function writeZoneconfig(payload, callback)
 {
     var data;
-    var rootpw = payload.rootpw;
-    var adminpw = payload.adminpw;
 
     if (!payload.hasOwnProperty('hostname')) {
         payload.hostname = payload.zonename;
@@ -743,79 +675,70 @@ function writeZoneconfig(payload, callback)
 
     debug('writeZoneconfig() --', payload);
 
-    addPasswords(payload, function(err) {
-        if (err) {
-            return callback(err);
-        }
+    data = 'TEMPLATE_VERSION=0.0.1\n' +
+        'ZONENAME=' + payload.zonename + '\n' +
+        'HOSTNAME=' + payload.hostname + '.' + payload.dns_domain + '\n' +
+        'TMPFS=' + payload.tmpfs + 'm\n';
 
-        data = 'TEMPLATE_VERSION=0.0.1\n' +
-            'ZONENAME=' + payload.zonename + '\n' +
-            'HOSTNAME=' + payload.hostname + '.' + payload.dns_domain + '\n' +
-            'ROOT_PW=' + payload.rootpw + '\n' +
-            'ADMIN_PW=' + payload.adminpw + '\n' +
-            'TMPFS=' + payload.tmpfs + 'm\n';
+    if (payload.nics[0]) {
+        data = data + 'PUBLIC_IP=' + payload.nics[0].ip + '\n';
+    }
+    if (payload.nics[1]) {
+        data = data + 'PRIVATE_IP=' + payload.nics[1].ip + '\n';
+    } else if (payload.nics[0]) {
+        // zoneinit uses private_ip for /etc/hosts, we want to
+        // make that same as public, if there's no actual private.
+        data = data + 'PRIVATE_IP=' + payload.nics[0].ip + '\n';
+    }
+    if (payload.hasOwnProperty('resolvers')) {
+        // zoneinit appends to resolv.conf rather than overwriting, so just
+        // add to the zoneconfig and let zoneinit handle it
+        data = data + 'RESOLVERS="' + payload.resolvers.join(' ') + '"\n';
+    }
 
-        if (payload.nics[0]) {
-            data = data + 'PUBLIC_IP=' + payload.nics[0].ip + '\n';
-        }
-        if (payload.nics[1]) {
-            data = data + 'PRIVATE_IP=' + payload.nics[1].ip + '\n';
-        } else if (payload.nics[0]) {
-            // zoneinit uses private_ip for /etc/hosts, we want to
-            // make that same as public, if there's no actual private.
-            data = data + 'PRIVATE_IP=' + payload.nics[0].ip + '\n';
-        }
-        if (payload.hasOwnProperty('resolvers')) {
-            // zoneinit appends to resolv.conf rather than overwriting, so just
-            // add to the zoneconfig and let zoneinit handle it
-            data = data + 'RESOLVERS="' + payload.resolvers.join(' ') + '"\n';
-        }
+    nic_idx = 0;
+    for (nic in payload.nics) {
+        if (payload.nics.hasOwnProperty(nic)) {
+            n = payload.nics[nic];
 
-        nic_idx = 0;
-        for (nic in payload.nics) {
-            if (payload.nics.hasOwnProperty(nic)) {
-                n = payload.nics[nic];
+            fs.writeFileSync(payload.zone_path + '/root/etc/hostname.net' +
+                nic_idx, n.ip + ' netmask ' + n.netmask + ' up' + '\n');
 
-                fs.writeFileSync(payload.zone_path + '/root/etc/hostname.net' +
-                    nic_idx, n.ip + ' netmask ' + n.netmask + ' up' + '\n');
-
-                if (n.hasOwnProperty('gateway')) {
-                    fs.writeFileSync(payload.zone_path + '/root/etc/defaultrouter',
-                        n.gateway + '\n');
-                }
-                data = data + 'NET' + nic_idx + '_IP=' + n.ip + '\n'
-                            + 'NET' + nic_idx + '_NETMASK=' + n.netmask + '\n'
-                            + 'NET' + nic_idx + '_MAC=' + n.mac + '\n'
-                            + 'NET' + nic_idx + '_INTERFACE=NET' + nic_idx + '\n';
-
-                nic_idx++;
+            if (n.hasOwnProperty('gateway')) {
+                fs.writeFileSync(payload.zone_path + '/root/etc/defaultrouter',
+                    n.gateway + '\n');
             }
+            data = data + 'NET' + nic_idx + '_IP=' + n.ip + '\n'
+                        + 'NET' + nic_idx + '_NETMASK=' + n.netmask + '\n'
+                        + 'NET' + nic_idx + '_MAC=' + n.mac + '\n'
+                        + 'NET' + nic_idx + '_INTERFACE=NET' + nic_idx + '\n';
+
+            nic_idx++;
         }
+    }
 
-        if (payload.hasOwnProperty('default_gateway')) {
-            fs.writeFileSync(payload.zone_path + '/root/etc/defaultrouter',
-                payload.default_gateway + '\n');
-        }
+    if (payload.hasOwnProperty('default_gateway')) {
+        fs.writeFileSync(payload.zone_path + '/root/etc/defaultrouter',
+            payload.default_gateway + '\n');
+    }
 
-        debug('writing extra files to zone root');
-        fs.writeFileSync(payload.zone_path + '/root/etc/nodename',
-            payload.hostname);
-        fs.writeFileSync(payload.zone_path +
-            '/root/var/svc/log/system-zoneinit:default.log', '');
+    debug('writing extra files to zone root');
+    fs.writeFileSync(payload.zone_path + '/root/etc/nodename',
+        payload.hostname);
+    fs.writeFileSync(payload.zone_path +
+        '/root/var/svc/log/system-zoneinit:default.log', '');
 
-        debug('writing', data, 'to /' + payload.zfs_storage_pool_name + '/' +
-            payload.zonename);
-        fs.writeFile('/' + payload.zfs_storage_pool_name + '/' + payload.zonename +
-            '/root/root/zoneconfig', data,
-            function (err, result) {
-                if (err) {
-                    return callback(err);
-                }
-                return callback();
+    debug('writing', data, 'to /' + payload.zfs_storage_pool_name + '/' +
+        payload.zonename);
+    fs.writeFile('/' + payload.zfs_storage_pool_name + '/' + payload.zonename +
+        '/root/root/zoneconfig', data,
+        function (err, result) {
+            if (err) {
+                return callback(err);
             }
-        );
-
-    });
+            return callback();
+        }
+    );
 }
 
 // runs zonecfg to apply changes to a zone.

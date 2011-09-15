@@ -1226,7 +1226,8 @@ function createZone(payload, progress, callback)
 
     if (payload.hasOwnProperty('cpu_cap')) {
         zonecfg = zonecfg + 'add capped-cpu; ' +
-            'set ncpus=' + payload.cpu_cap.toString() + '; end\n';
+            'set ncpus=' +  (Number(payload.cpu_cap) * 0.01).toString() +
+            '; end\n';
     }
 
     if (payload.brand === 'joyent') {

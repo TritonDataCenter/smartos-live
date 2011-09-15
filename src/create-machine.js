@@ -1303,7 +1303,8 @@ function createZone(payload, progress, callback)
 
     zoneCfg(payload.uuid, zonecfg, function (error, stdout, stderr) {
 
-        args = ['-z', payload.uuid, 'install', '-q', payload.quota.toString()];
+        args = ['-z', payload.uuid, 'install', '-q', payload.quota.toString(),
+            '-U', payload.uuid];
 
         if (payload.brand === 'joyent') {
             args.push('-t');

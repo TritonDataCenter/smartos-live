@@ -164,6 +164,18 @@
  *    "nic_driver"
  *      - The default model for nics attached to this VM
  *
+ *    "qemu_opts"
+ *      - replacement for default opts:
+ *        '-vnc unix:/tmp/vm.vnc -parallel none -usb -usbdevice tablet -k en-us -vga cirrus'
+ *        important: this replaces *all* of the above options, so rewrite to
+ *        still include those you want to keep.
+ *      - default: no replacement
+ *
+ *    "qemu_extra_opts"
+ *      - lists of *additional* qemu cmdline arguments, this string (if set)
+ *        will be appended to the end of the qemu cmdline.
+ *      - default: none
+ *
  *    "ram"
  *      - The amount of virtual RAM to attach to the VM (in MiB)
  *
@@ -916,6 +928,9 @@ function createZoneUUID(payload, callback)
             if (err) {
                 return callback(err);
             }
+            if (!payload.hasOwnProperty('zonename')) {
+                payload.zonename = payload.uuid;
+            }
             return callback(null, payload.uuid);
         });
     } else {
@@ -931,6 +946,9 @@ function createZoneUUID(payload, callback)
                 if (err) {
                     return callback(err);
                 }
+                if (!payload.hasOwnProperty('zonename')) {
+                    payload.zonename = payload.uuid;
+                }
                 return callback(null, uuid);
             });
         });
@@ -942,10 +960,6 @@ function applyZoneDefaults(payload)
     var nic, n, disk, zvol;
 
     debug('applyZoneDefaults()');
-
-    if (!payload.hasOwnProperty('zonename')) {
-        payload.zonename = payload.uuid;
-    }
 
     if (!payload.hasOwnProperty('owner_uuid')) {
         // We assume that this all-zero uuid can be treated as 'admin'
@@ -1192,6 +1206,23 @@ function createZone(payload, progress, callback)
         if (payload.hasOwnProperty('default_gateway')) {
             zonecfg = zonecfg + 'add attr; set name="default-gateway"; ' +
                 'set type=string; set value="' + payload.default_gateway + '"; end\n';
+        }
+
+        // we use base64 here for these next two options, since these can
+        // contain characters zonecfg doesn't like.
+
+        if (payload.hasOwnProperty('qemu_opts')) {
+            zonecfg = zonecfg + 'add attr; set name="qemu-opts"; ' +
+                'set type=string; set value="' +
+                new Buffer(payload.qemu_opts).toString('base64') +
+                '"; end\n';
+        }
+
+        if (payload.hasOwnProperty('qemu_extra_opts')) {
+            zonecfg = zonecfg + 'add attr; set name="qemu-extra-opts"; ' +
+                'set type=string; set value="' +
+                new Buffer(payload.qemu_extra_opts).toString('base64') +
+                '"; end\n';
         }
 
         // only VMs have 'disks'

@@ -46,6 +46,8 @@ var GLOBAL_PROPS = [
     'hostname',
     'resolvers',
     'default-gateway',
+    'qemu-opts',
+    'qemu-extra-opts',
     'boot'
 ];
 
@@ -252,12 +254,21 @@ function parseConfig(input)
                     key = 'package_version';
                 } else if (key === 'cpu-type') {
                     key = 'cpu_type';
+                } else if (key === 'qemu-opts') {
+                    key = 'qemu_opts';
+                } else if (key === 'qemu-extra-opts') {
+                    key = 'qemu_extra_opts';
                 }
 
                 if (key === 'resolvers') {
                   if (key != '') {
                       result[key] = attrs[attr].value.split(',');
                   }
+                } else if (['qemu_opts',
+                    'qemu_extra_opts'].indexOf(key) !== -1) {
+
+                    result[key] = new Buffer(attrs[attr].value,
+                        'base64').toString('ascii');
                 } else {
                     result[key] = fixBoolean(attrs[attr].value);
                 }

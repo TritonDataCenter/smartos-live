@@ -1320,6 +1320,7 @@ function bootVM(payload, options, callback)
     var diskargs = '';
     var uuid = payload.uuid;
     var trace = options.trace;
+    var qemu_opts = '';
 
     if (DEBUG) {
         log('bootVM(', uuid, ')');
@@ -1466,7 +1467,13 @@ function bootVM(payload, options, callback)
             }
         }
 
+        cmdargs.push('-smbios', 'type=1,manufacturer=Joyent,' +
+            'product=SmartDC HVM,version=6.1,' +
+            'serial=' + vm.uuid + ',uuid=' + vm.uuid + ',' +
+            'sku=001,family=Virtual Machine');
+
         cmdargs.push('-pidfile', '/tmp/vm.pid');
+
         cmdargs.push('-chardev',
             'socket,id=qmp,path=/tmp/vm.qmp,server,nowait');
         cmdargs.push('-qmp', 'chardev:qmp');
@@ -1481,23 +1488,27 @@ function bootVM(payload, options, callback)
             'socket,id=serial1,path=/tmp/vm.ttyb,server,nowait');
         cmdargs.push('-serial', 'chardev:serial1');
 
-        cmdargs.push('-vnc', 'unix:/tmp/vm.vnc');
-        cmdargs.push('-parallel', 'none');
-        cmdargs.push('-usb');
-        cmdargs.push('-usbdevice', 'tablet');
-        cmdargs.push('-k', 'en-us');
-        cmdargs.push('-vga', 'cirrus');
-        cmdargs.push('-smbios', 'type=1,manufacturer=Joyent,' +
-            'product=SmartDC HVM,version=6.1,' +
-            'serial=' + vm.uuid + ',uuid=' + vm.uuid + ',' +
-            'sku=001,family=Virtual Machine');
+        if (!vm.qemu_opts) {
+            cmdargs.push('-vnc', 'unix:/tmp/vm.vnc');
+            cmdargs.push('-parallel', 'none');
+            cmdargs.push('-usb');
+            cmdargs.push('-usbdevice', 'tablet');
+            cmdargs.push('-k', 'en-us');
+            cmdargs.push('-vga', 'cirrus');
+        } else {
+            qemu_opts = vm.qemu_opts.toString();
+        }
+
+        if (vm.qemu_extra_opts) {
+            qemu_opts = qemu_opts + ' ' + vm.qemu_extra_opts;
+        }
 
         // This actually creates the qemu process
         script = "#!/usr/bin/bash\n\n" +
             "exec >/tmp/vm.log 2>&1\n\n" +
             "set -o xtrace\n\n" +
             'exec /smartdc/bin/qemu-system-x86_64 "' + cmdargs.join('" "') +
-                '"\n\n' +
+                '" ' + qemu_opts + '\n\n' +
             "exit 1\n";
 
         fs.writeFileSync(vm.zonepath + '/root/startvm', script);

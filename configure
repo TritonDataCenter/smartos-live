@@ -177,8 +177,43 @@ if [ ! -f on-closed-bins-nd.i386.tar.bz2 ]; then
   tar xvpf on-closed-bins-nd.i386.tar.bz2
 fi
 
+
+#
+# Use environment variables to determine if we should be building debug or not,
+# etc.
+#
+# ILLUMOS_ENABLE_LINT
+# ILLUMOS_ENABLE_DEBUG=yes|exclusive
+#
+# ENABLE_LINT implies ENABLE_DEBUG=yes
+#
+	
+NIGHTLY_OPTIONS_BASE="-CimNt"
+NIGHTLY_EXTRA=""
+
+NIGHTLY_DEBUG=0
+ENABLE_LINT=0
+if [[ "$ILLUMOS_ENABLE_LINT" != "" ]]; then
+	ENABLE_LINT=1
+	ENABLE_DEBUG=1
+fi
+
+if [[ "$ILLUMOS_ENABLE_DEBUG" == "yes" ]]; then
+	ENABLE_DEBUG=1
+elif [[ "$ILLUMOS_ENABLE_DEBUG" == "exclusive" ]]; then
+	ENABLE_DEBUG=2
+elif [[ "$ILLUMOS_ENABLE_DEBUG" != "" ]]; then
+	echo "Unknown value for ILLUMOS_ENABLE_DEBUG: $ILLUMOS_ENABLE_DEBUG"
+	echo "Aborting configure."
+	exit 1
+fi
+
+[[ $ENABLE_LINT -eq 1 ]] && NIGHTLY_EXTRA="l"
+[[ $ENABLE_DEBUG -eq 1 ]] && NIGHTLY_EXTRA=$NIGHTLY_EXTRA"D"
+[[ $ENABLE_DEBUG -eq 2 ]] && NIGHTLY_EXTRA=$NIGHTLY_EXTRA"DF"
+
 cat <<EOF> illumos.sh
-NIGHTLY_OPTIONS="-CimNnt"; export NIGHTLY_OPTIONS
+NIGHTLY_OPTIONS="$NIGHTLY_OPTIONS_BASE$NIGHTLY_EXTRA"; export NIGHTLY_OPTIONS
 GATE="${RELEASE_VER}"; export GATE
 CODEMGR_WS="${ROOT}/projects/illumos"; export CODEMGR_WS
 maxjobs() {

@@ -769,8 +769,11 @@ function zoneCfg(zonename, zonecfg, callback)
                 function (error, stdout, stderr) {
 
                     if (error) {
-                        return callback({'error': error, 'stdout': stdout,
-                            'stderr': stderr});
+                        return callback({
+                            'error': error,
+                            'stdout': stdout,
+                            'stderr': stderr
+                        });
                     }
 
                     fs.unlink(tmpfile, function () {
@@ -799,6 +802,7 @@ function waitForJoyentZone(payload, callback)
         ' waiting for zoneinit to reboot zone');
 
     timeout = setTimeout(function () {
+        timeout = null;
         watcher.kill();
         watcher = null;
         callback('Timed out waiting for zone to reboot');
@@ -833,10 +837,43 @@ function waitForJoyentZone(payload, callback)
 
     watcher.on('exit', function (code) {
         // Shouldn't get here. We should callback when zonemon notices reboot.
-        clearTimeout(timeout);
-        watcher = null;
-        callback('zonemon exited prematurely with code: ' + code);
+        if (timeout) {
+            // didn't timeout yet.
+            clearTimeout(timeout);
+            watcher = null;
+            callback('zonemon exited prematurely with code: ' + code);
+        }
     });
+}
+
+function failZone(zonename, callback)
+{
+    debug('failZone() --', zonename);
+
+    zoneCfg(zonename, 'set autoboot=false\n',
+        function (err, stdout, stderr) {
+            if (err) {
+                debug('failZone(' + zonename +
+                    ') failed to set autoboot, ignoring [' +
+                    JSON.stringify(err) + '][' +
+                    JSON.stringify(stdout) + '][' +
+                    JSON.stringify(stderr) + ']');
+            }
+            execFile('zoneadm', ['-z', zonename, 'halt'],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        debug('failZone(' + zonename +
+                            ') failed to halt, ignoring [' +
+                            JSON.stringify(err) + '][' +
+                            JSON.stringify(stdout) + '][' +
+                            JSON.stringify(stderr) + ']');
+                    }
+                    debug(err, stdout, stderr);
+                    callback();
+                }
+            );
+        }
+    );
 }
 
 function bootZone(payload, callback)
@@ -848,14 +885,31 @@ function bootZone(payload, callback)
             function (error, stdout, stderr)
             {
                 if (error) {
-                    return callback({'error': error, 'stdout': stdout,
-                        'stderr': stderr});
+                    return callback({
+                        'error': error,
+                        'stdout': stdout,
+                        'stderr': stderr
+                    });
                 }
 
                 // zoneinit runs in joyent branded zones and the zone is not
                 // considered provisioned until it's rebooted once.
                 waitForJoyentZone(payload, function(err, result) {
-                    return callback(null, [stdout, stderr]);
+                    if (err) {
+                        output('notice',
+                            'WARNING: zoneinit failed, zone is being halted ' +
+                            'for manual investigation.',
+                            {'error': err});
+                        failZone(payload.zonename, function () {
+                            return callback({
+                                'error': err,
+                                'stdout': stdout,
+                                'stderr': stderr
+                            });
+                        });
+                    } else {
+                        return callback(null, [stdout, stderr]);
+                    }
                 });
             }
         );

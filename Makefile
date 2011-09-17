@@ -57,8 +57,8 @@ tools/cryptpass: tools/cryptpass.c
 
 clean:
 	(cd $(ROOT)/src && gmake clean)
-	(cd $(ROOT)/projects/illumos-extra && gmake clean)
-	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do (cd projects/local/$${dir} && gmake clean); done
+	[ ! -d $(ROOT)/projects/illumos-extra ] || (cd $(ROOT)/projects/illumos-extra && gmake clean)
+	for dir in $(LOCAL_SUBDIRS); do ([ ! -d projects/local/$${dir} ] || (cd projects/local/$${dir} && gmake clean)); done
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO))
 	rm -f 0-*-stamp

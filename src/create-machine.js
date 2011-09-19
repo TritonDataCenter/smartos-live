@@ -47,6 +47,10 @@
  *    Both VMs + Zones
  *    ================
  *
+ *    "alias"
+ *      - a "customer-friendly" name for this machine
+ *      - default: none
+ *
  *    "autoboot"
  *      - boolean, true means this VM will be started after create
  *      - default: true
@@ -72,6 +76,9 @@
  *       - A json object of key/value pairs for the metadata agent to provide to
  *         the zone/vm.
  *       - default: {}
+ *
+ *    "default_gateway"
+ *       - The IP Address of the router that should act as the default gateway
  *
  *    "limit_priv"
  *       - a comma separated list of priviledges to give this zone
@@ -126,6 +133,14 @@
  *    "quota"
  *      - quota for the ZFS filesystem we'll create for this zone (in GiB)
  *      - default: 10
+ *
+ *    "resolvers"
+ *       - JSON array of IP addresses to use as resolvers for this machine
+ *       - eg: [ '8.8.8.8', '8.8.4.4' ]
+ *
+ *    "tags"
+ *      - a JSON structure of user tags for this machine
+ *      - eg: { group: "deployment", type: "database" }
  *
  *    "uuid"
  *      - pre-specify a UUID for this machine (default is to create one)
@@ -1224,6 +1239,45 @@ function createZone(payload, progress, callback)
             '; end\n';
     }
 
+    if (payload.hasOwnProperty('alias')) {
+        zonecfg = zonecfg + 'add attr; set name="alias"; ' +
+            'set type=string; set value="' +
+            new Buffer(payload.alias).toString('base64') +
+            '"; end\n';
+    }
+
+    if (payload.hasOwnProperty('tags')) {
+        zonecfg = zonecfg + 'add attr; set name="tags"; ' +
+            'set type=string; set value="' +
+            new Buffer(JSON.stringify(payload.tags)).toString('base64') +
+            '"; end\n';
+    }
+
+    if (payload.hasOwnProperty('tmpfs')) {
+        zonecfg = zonecfg + 'add attr; set name="tmpfs"; ' +
+            'set type=string; set value="' + payload.tmpfs.toString() + '"; end\n';
+    }
+
+    if (payload.hasOwnProperty('hostname')) {
+        zonecfg = zonecfg + 'add attr; set name="hostname"; ' +
+            'set type=string; set value="' + payload.hostname + '"; end\n';
+    }
+
+    if (payload.hasOwnProperty('dns_domain')) {
+        zonecfg = zonecfg + 'add attr; set name="dns-domain"; ' +
+            'set type=string; set value="' + payload.dns_domain + '"; end\n';
+    }
+
+    if (payload.hasOwnProperty('resolvers')) {
+        zonecfg = zonecfg + 'add attr; set name="resolvers"; ' +
+            'set type=string; set value="' + payload.resolvers.join(',') + '"; end\n';
+    }
+
+    if (payload.hasOwnProperty('default_gateway')) {
+        zonecfg = zonecfg + 'add attr; set name="default-gateway"; ' +
+            'set type=string; set value="' + payload.default_gateway + '"; end\n';
+    }
+
     if (payload.brand === 'joyent') {
         zonecfg = zonecfg + 'set autoboot=' + payload.autoboot + '\n';
     } else if (payload.brand === 'kvm') {
@@ -1245,21 +1299,6 @@ function createZone(payload, progress, callback)
         if (payload.hasOwnProperty('cpu_type')) {
             zonecfg = zonecfg + 'add attr; set name="cpu-type"; ' +
                 'set type=string; set value="' + payload.cpu_type + '"; end\n';
-        }
-
-        if (payload.hasOwnProperty('hostname')) {
-            zonecfg = zonecfg + 'add attr; set name="hostname"; ' +
-                'set type=string; set value="' + payload.hostname + '"; end\n';
-        }
-
-        if (payload.hasOwnProperty('resolvers')) {
-            zonecfg = zonecfg + 'add attr; set name="resolvers"; ' +
-                'set type=string; set value="' + payload.resolvers.join(',') + '"; end\n';
-        }
-
-        if (payload.hasOwnProperty('default_gateway')) {
-            zonecfg = zonecfg + 'add attr; set name="default-gateway"; ' +
-                'set type=string; set value="' + payload.default_gateway + '"; end\n';
         }
 
         // we use base64 here for these next two options, since these can
@@ -1289,8 +1328,29 @@ function createZone(payload, progress, callback)
                     'add property (name=index, value="' + disk_idx + '")\n' +
                     'add property (name=boot, value="' +
                         (zvol.boot ? 'true' : 'false') + '")\n' +
-                    'add property (name=model, value="' + zvol.model + '")\n' +
-                    'end\n';
+                    'add property (name=model, value="' + zvol.model + '")\n';
+                if (zvol.hasOwnProperty('image_size')) {
+                    zonecfg = zonecfg +
+                        'add property (name=image-size, value="' +
+                        zvol.image_size + '")\n';
+                } else if (zvol.hasOwnProperty('size')) {
+                    zonecfg = zonecfg + 'add property (name=size, value="' +
+                        zvol.size + '")\n';
+                }
+
+                if (zvol.hasOwnProperty('image_uuid')) {
+                    zonecfg = zonecfg +
+                        'add property (name=image-uuid, value="' +
+                        zvol.image_uuid + '")\n';
+                }
+
+                if (zvol.hasOwnProperty('image_name')) {
+                    zonecfg = zonecfg +
+                        'add property (name=image-name, value="' +
+                        zvol.image_name + '")\n';
+                }
+
+                zonecfg = zonecfg + 'end\n';
                 disk_idx ++;
             }
         }

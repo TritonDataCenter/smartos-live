@@ -19,6 +19,7 @@ install: $(TARGETS) sysinfo
 	cp vmadm.js $(DESTDIR)/usr/sbin/vmadm
 	cp vmcfg.js $(DESTDIR)/usr/sbin/vmcfg
 	cp create-machine.js $(DESTDIR)/usr/sbin/create-machine
+	cp machine/machine-json.js $(DESTDIR)/usr/sbin/machine-json
 	cp guest/mdata-get $(DESTDIR)/usr/sbin/mdata-get
 	mkdir -m 0755 -p $(DESTDIR)/usr/node_modules
 	find node_modules -type f -exec cp {} $(DESTDIR)/usr/node_modules/ \;

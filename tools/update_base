@@ -42,29 +42,39 @@ function fail
 	exit 1
 }
 
+#
+# Does a git pull --rebase and sees if anything has changed. Returns 0 if
+# nothing changed.
+#
+function git_update
+{
+	local sha newsha
+	sha=$(git show HEAD | head -n1 | awk '{print $2 }')
+	[[ $? -eq 0 ]] || fail 'failed to get current git sha'
+	git pull --rebase > /dev/null
+	[[ $? -eq 0 ]] || fail 'failed to update git'
+	newsha=$(git show HEAD | head -n1 | awk '{print $2 }')
+	[[ "$sha" == "$newsha" ]]
+	return
+}
+
 echo "Updating illumos-extra... \c "
 cd $upd_root/projects/illumos-extra
 [[ $? -eq 0 ]] || fail "can't find illumos-extra directory"
-out=$(git pull --rebase)
-[[ $? -eq 0 ]] || fail "failed to update illumos-extra"
-echo $out | grep -q -i "up to date" || rm -f $upd_extra_stamp
+git_update || rm -f $upd_extra_stamp
 echo "done"
 
 echo "Updating illumos-joyent... \c "
 cd $upd_root/projects/illumos
 [[ $? -eq 0 ]] || fail "can't find illumos directory"
-out=$(git pull --rebase)
-[[ $? -eq 0 ]] || fail "failed to update illumos-joyent"
-echo $out | grep -q -i "up to date" || rm -f $upd_illumos_stamp
+git_update || rm -f $upd_illumos_stamp
 echo "done"
 
 
 echo "Updating illumos-live... \c "
 cd $upd_root
 [[ $? -eq 0 ]] || fail "illumos-live repo disappeared"
-out=$(git pull --rebase)
-[[ $? -eq 0 ]] || fail "failed to update illumos-live"
-echo $out | grep -q -i "up to date"
+git_update
 echo "done"
 
 exit 0

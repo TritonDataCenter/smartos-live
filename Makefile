@@ -16,15 +16,15 @@ live: world
 update:
 	./tools/update_base
 	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
-        cd $(ROOT)/projects/local/$${dir}; \
-        if [[ -f Makefile.joyent ]]; then \
+	cd $(ROOT)/projects/local/$${dir}; \
+	if [[ -f Makefile.joyent ]]; then \
 	gmake -f Makefile.joyent update; else gmake update; fi; done
 
 
 0-local-stamp:
 	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
-        cd $(ROOT)/projects/local/$${dir}; \
-        if [[ -f Makefile.joyent ]]; then \
+	cd $(ROOT)/projects/local/$${dir}; \
+	if [[ -f Makefile.joyent ]]; then \
 	gmake -f Makefile.joyent world; else gmake world; fi; \
         gmake SMARTOS=true DESTDIR=$(PROTO) install; done
 
@@ -62,8 +62,8 @@ clean:
 	(cd $(ROOT)/src && gmake clean)
 	[ ! -d $(ROOT)/projects/illumos-extra ] || (cd $(ROOT)/projects/illumos-extra && gmake clean)
 	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
-        cd $(ROOT)/projects/local/$${dir}; \
-        if [[ -f Makefile.joyent ]]; then \
+	cd $(ROOT)/projects/local/$${dir}; \
+	if [[ -f Makefile.joyent ]]; then \
 	gmake -f Makefile.joyent clean; else gmake clean; fi; done
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO))

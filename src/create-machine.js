@@ -1053,6 +1053,11 @@ function applyZoneDefaults(payload)
 
     if (!payload.hasOwnProperty('cpu_shares')) {
         payload.cpu_shares = 100;
+    } else {
+        if (payload.cpu_shares > 65535) {
+            payload.cpu_shares = 65535; // max is 64K
+            debug('capping cpu_shares at 64k');
+        }
     }
 
     if (!payload.hasOwnProperty('zfs_io_priority')) {

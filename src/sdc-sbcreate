@@ -231,6 +231,7 @@ function grab_zoneinfo
     zoneadm list -v -c > ${TEMPDIR}/zonelist.vc
     echo "  > zone kernel state"
     zonemon -k > ${TEMPDIR}/zonekstate
+    sdc-setup -lv > ${TEMPDIR}/compnode_zones
 }
 
 function grab_zoneconfigs
@@ -243,7 +244,9 @@ function grab_zonelogs
 {
     if [[ -n $headnode ]]; then
         echo "  > zone logs"
-        tar -zcvf ${TEMPDIR}/zone.logs.tar.gz zones/*/root/var/svc/log \
+        tar -zcvf ${TEMPDIR}/zone.logs.tar.gz \
+	    zones/*/root/var/svc/log \
+	    zones/*/root/var/log \
             zones/*/root/opt/smartdc/*/log >&4 2>&1
     fi
 }

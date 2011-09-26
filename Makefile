@@ -2,16 +2,31 @@
 
 ROOT=$(PWD)
 PROTO=$(ROOT)/proto
+MPROTO=$(ROOT)/manifest.d
 PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin
 LOCAL_SUBDIRS:=$(shell ls projects/local)
+MANIFEST=manifest.gen
 
 world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp \
 	0-tools-stamp 0-man-stamp 0-devpro-stamp
 
-live: world
+live: world manifest
 	(cd $(ROOT)/src_addon && gmake DESTDIR=$(PROTO) install)
 	mkdir -p ${ROOT}/log
-	(cd $(ROOT) && pfexec ./tools/build_live $(ROOT)/manifest $(ROOT)/output $(ROOT)/overlay $(ROOT)/proto $(ROOT)/man/man)
+	(cd $(ROOT) && pfexec ./tools/build_live $(ROOT)/$(MANIFEST) $(ROOT)/output $(ROOT)/overlay $(ROOT)/proto $(ROOT)/man/man)
+
+manifest:
+	rm -f $(MANIFEST) $(MPROTO)/*
+	-[ ! -d $(MPROTO) ] && mkdir $(MPROTO)
+	cp src/manifest $(MPROTO)/live.manifest
+	cp projects/illumos/manifest $(MPROTO)/illumos.manifest	
+	gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest -C projects/illumos-extra manifest
+	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
+	cd $(ROOT)/projects/local/$${dir}; \
+	if [[ -f Makefile.joyent ]]; then \
+	gmake DESTDIR=$(MPROTO) DESTNAME=$${dir}.manifest -f Makefile.joyent \
+	manifest; else gmake DESTDIR=$(MPROTO) DESTNAME=$${dir}.manifest manifest; fi; done
+	./tools/build_manifest
 
 update:
 	./tools/update_base
@@ -59,6 +74,8 @@ tools/cryptpass: tools/cryptpass.c
 	(cd ${ROOT}/tools && gcc -Wall -W -O2 -o cryptpass cryptpass.c)
 
 clean:
+	rm -f $(MANIFEST)
+	rm -rf $(ROOT)/$(MPROTO)/*
 	(cd $(ROOT)/src && gmake clean)
 	[ ! -d $(ROOT)/projects/illumos-extra ] || (cd $(ROOT)/projects/illumos-extra && gmake clean)
 	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
@@ -68,3 +85,5 @@ clean:
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO))
 	rm -f 0-*-stamp
+
+.PHONY: manifest

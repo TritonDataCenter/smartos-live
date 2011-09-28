@@ -27,7 +27,8 @@ f smartdc/pubkey.key 0555 root bin
 f usr/lib/vmadmd 0555 root bin
 f usr/sbin/vmadm 0555 root bin
 f usr/sbin/vmcfg 0555 root bin
-f usr/sbin/create-machine 0555 root bin
+s usr/sbin/create-machine=machine-create
+f usr/sbin/machine-create 0555 root bin
 f usr/sbin/machine-json 0555 root bin
 f usr/sbin/mdata-get 0555 root bin
 d usr/node_modules 0555 root bin

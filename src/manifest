@@ -306,7 +306,3 @@ s var/ld/32=.
 s var/ld/64=amd64
 d var/ld/amd64 0755 root bin
 f var/ld/amd64/ld.config 0644 root root
-d admin 0755 admin staff
-f admin/.bash_profile 0644 admin staff
-f admin/.bashrc 0644 admin staff
-f admin/.profile 0644 admin staff

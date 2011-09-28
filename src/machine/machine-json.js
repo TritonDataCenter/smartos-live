@@ -159,7 +159,7 @@ function parseConfig(input)
                 line = ltrim(line);
                 kv = line.split(':');
                 key = trim(kv[0], "\\s\\[");
-                value = trim(kv.slice(1).join(':'), "\\s\\]");
+                value = trim(kv.slice(1).join(':'), "\\s\\]\\\"");
 
                 if (key === "property") {
                     // handle form: "property": "(name=model,value=\"virtio\")"

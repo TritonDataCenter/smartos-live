@@ -54,7 +54,6 @@ var GLOBAL_PROPS = [
     'default-gateway',
     'qemu-opts',
     'qemu-extra-opts',
-    'tags',
     'alias',
     'boot'
 ];
@@ -308,8 +307,6 @@ function parseConfig(input)
                     key = 'cpu_type';
                 } else if (key === 'dns-domain') {
                     key = 'dns_domain';
-                } else if (key === 'tags') {
-                    key = 'tags';
                 } else if (key === 'alias') {
                     key = 'alias';
                 } else if (key === 'qemu-opts') {
@@ -324,7 +321,6 @@ function parseConfig(input)
                   }
                 } else if ([
                     'alias',
-                    'tags',
                     'qemu_opts',
                     'qemu_extra_opts'
                     ].indexOf(key) !== -1) {
@@ -471,6 +467,38 @@ function loadQuota(vmcfg, callback)
     }
 }
 
+function loadTags(vmcfg, callback)
+{
+    var filename;
+
+    if (vmcfg.zonepath) {
+        filename = vmcfg.zonepath + '/config/tags.json';
+        if (DEBUG) {
+            out('loading tags from', filename);
+        }
+        path.exists(filename, function (exists) {
+            if (exists) {
+                fs.readFile(filename, function (error, data) {
+                    var tags;
+                    if (error) {
+                        return callback(error);
+                    }
+                    try {
+                        tags = JSON.parse(data.toString());
+                    } catch (e) {
+                        tags = {};
+                    }
+                    return callback(null, tags);
+                });
+            } else {
+                return callback(null, {});
+            }
+        });
+    } else {
+        return callback(null, {});
+    }
+}
+
 function loadMetadata(vmcfg, callback)
 {
     var filename;
@@ -492,7 +520,14 @@ function loadMetadata(vmcfg, callback)
                     } catch (e) {
                         metadata = {};
                     }
-                    return callback(null, metadata);
+
+                    loadTags(vmcfg, function (err, tags) {
+                        if (err) {
+                            return callback(null, metadata, {});
+                        } else {
+                            return callback(null, metadata, tags);
+                        }
+                    });
                 });
             } else {
                 return callback(null, {});
@@ -515,7 +550,7 @@ function dumpZoneConfig(zonename, uuid, callback)
 
         vmcfg = parseConfig(stdout);
         vmcfg.uuid = uuid;
-        loadMetadata(vmcfg, function (err, metadata) {
+        loadMetadata(vmcfg, function (err, metadata, tags) {
             if (err) {
                 return callback('Unable to add metadata:' + err.toSring());
             }
@@ -535,6 +570,11 @@ function dumpZoneConfig(zonename, uuid, callback)
                 }
                 if (!vmcfg.hasOwnProperty('customer_metadata')) {
                     vmcfg.customer_metadata = {};
+                }
+                if (tags) {
+                    vmcfg.tags = tags;
+                } else {
+                    vmcfg.tags = {};
                 }
                 out(JSON.stringify(vmcfg, null, 2));
                 callback();

@@ -567,15 +567,23 @@ function saveMetadata(zone, progress, callback)
     var zonepath = zone.zone_path = '/' + zone.zfs_storage_pool_name + '/' +
         zone.zonename;
     var mdata_filename = zonepath + '/config/metadata.json';
-    var mdata;
-
+    var tags_filename = zonepath + '/config/tags.json';
+    var mdata, tags;
 
     if (zone.hasOwnProperty('customer_metadata')) {
-        debug('saveMetadata() --', zone.customer_metadata);
+        debug('saveMetadata(customer_metadata) --', zone.customer_metadata);
         mdata = {"customer_metadata": zone.customer_metadata};
     } else {
         debug('saveMetadata() -- no metadata, using {}');
         mdata = {"customer_metadata": {}};
+    }
+
+    if (zone.hasOwnProperty('tags')) {
+        debug('saveMetadata(tags) --', zone.tags);
+        tags = zone.tags;
+    } else {
+        debug('saveMetadata() -- no tags, using {}');
+        tags = {};
     }
 
     fs.writeFile(mdata_filename, JSON.stringify(mdata, null, 2),
@@ -585,7 +593,15 @@ function saveMetadata(zone, progress, callback)
                 return callback(err);
             }
             debug('wrote metadata to', mdata_filename);
-            callback();
+            fs.writeFile(tags_filename, JSON.stringify(tags, null, 2),
+                function (err) {
+                    if (err) {
+                        return callback(err);
+                    }
+                    debug('wrote tags to', tags_filename);
+                    callback();
+                }
+            );
         }
     );
 }
@@ -1248,13 +1264,6 @@ function createZone(payload, progress, callback)
         zonecfg = zonecfg + 'add attr; set name="alias"; ' +
             'set type=string; set value="' +
             new Buffer(payload.alias).toString('base64') +
-            '"; end\n';
-    }
-
-    if (payload.hasOwnProperty('tags')) {
-        zonecfg = zonecfg + 'add attr; set name="tags"; ' +
-            'set type=string; set value="' +
-            new Buffer(JSON.stringify(payload.tags)).toString('base64') +
             '"; end\n';
     }
 

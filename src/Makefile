@@ -20,6 +20,7 @@ install: $(TARGETS) sysinfo
 	cp vmcfg.js $(DESTDIR)/usr/sbin/vmcfg
 	cp machine/machine-create.js $(DESTDIR)/usr/sbin/machine-create
 	cp machine/machine-json.js $(DESTDIR)/usr/sbin/machine-json
+	cp machine/machine-lookup.js $(DESTDIR)/usr/sbin/machine-lookup
 	cp guest/mdata-get $(DESTDIR)/usr/sbin/mdata-get
 	mkdir -m 0755 -p $(DESTDIR)/usr/node_modules
 	find node_modules -type f -exec cp {} $(DESTDIR)/usr/node_modules/ \;

@@ -327,10 +327,27 @@ function debug()
 function usage()
 {
     process.stderr.write('Usage: ' + process.argv[1] +
-        '-f <filename.json>\n\n');
+        ' -f <filename.json>\n\n');
     process.stderr.write('This tool will create either a VM or Zone based on ' +
         'a JSON payload.\n');
     process.exit(1);
+}
+
+function ltrim(str, chars) {
+    chars = chars || "\\s";
+    str = str || "";
+    return str.replace(new RegExp("^[" + chars + "]+", "g"), "");
+}
+
+function rtrim(str, chars) {
+    chars = chars || "\\s";
+    str = str || "";
+    return str.replace(new RegExp("[" + chars + "]+$", "g"), "");
+}
+
+function trim(str, chars)
+{
+    return ltrim(rtrim(str, chars), chars);
 }
 
 // XXX Lifted from vmadm.js, need to merge the implementations.
@@ -459,6 +476,69 @@ function checkDatasets(payload, progress, callback)
             callback();
         }
     });
+}
+
+function checkItemUnused(item, type, lookup_arg, callback)
+{
+    exec('/usr/sbin/machine-lookup ' + lookup_arg + ' ' + item,
+        function (err, stdout, stderr)
+        {
+            if (!err) {
+                // exit 0 means used!
+                return callback(null, false, stdout);
+            }
+            if (err.code === 1) {
+                // does not exist!
+                return callback(null, true);
+            } else {
+                // don't know, so assume unused
+                debug('Warning: unable to determine if ' + type +
+                    ' is used, assuming unused.');
+                return callback(null, true);
+            }
+        }
+    );
+}
+
+function checkIpUnused(ip, callback)
+{
+    return checkItemUnused(ip, 'IP', '-i', callback);
+}
+
+function checkMacUnused(mac, callback)
+{
+    return checkItemUnused(mac, 'MAC', '-m', callback);
+}
+
+function checkItemsUnused(items, type, func, callback)
+{
+    async.forEach(items,
+        function (item, cb)
+        {
+            func(item, function (err, unused, stdout) {
+                if (err) {
+                    return cb(err);
+                } else if (!unused) {
+                    if (stdout) {
+                        return cb(type + ' ' + item + ' is already in use by ' +
+                            trim(stdout));
+                    } else {
+                        return cb(type + ' ' + item + ' is already in use.');
+                    }
+                } else {
+                    return cb();
+                }
+            });
+        },
+        function (err)
+        {
+            // checked all macs.
+            if (err) {
+                return callback(err);
+            }
+            return callback();
+        }
+    );
 }
 
 // create a new LVM volume, updating progress
@@ -1174,9 +1254,7 @@ function applyZoneDefaults(payload)
 
 function checkProperties(payload, callback)
 {
-    var disk, zvol, nic, n;
-
-    // TODO check for missing keys and reused IP addresses
+    var disk, zvol, nic, n, macs = [], ips = [];
 
     if (payload.max_locked_memory > payload.max_physical_memory) {
         callback('max_locked_memory must be <= max_physical_memory');
@@ -1202,6 +1280,14 @@ function checkProperties(payload, callback)
         if (payload.nics.hasOwnProperty(nic)) {
             n = payload.nics[nic];
 
+            if (n.hasOwnProperty('mac')) {
+                macs.push(n.mac);
+            }
+
+            if (n.hasOwnProperty('ip')) {
+                ips.push(n.ip);
+            }
+
             if (payload.brand === 'kvm' && (!n.hasOwnProperty('model') ||
                 n.model === 'undefined')) {
 
@@ -1211,7 +1297,20 @@ function checkProperties(payload, callback)
         }
     }
 
-    callback();
+    // ensure MACs and IPs are not already used on this machine
+    // NOTE: can't check other machines currently.
+
+    checkItemsUnused(macs, 'MAC', checkMacUnused, function (err) {
+        if (err) {
+            return callback(err);
+        }
+        checkItemsUnused(ips, 'IP', checkIpUnused, function (err) {
+            if (err) {
+                return callback(err);
+            }
+            callback();
+        });
+    });
 }
 
 // create and install a 'joyent' or 'kvm' brand zone.

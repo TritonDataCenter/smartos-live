@@ -30,6 +30,7 @@ f usr/sbin/vmcfg 0555 root bin
 s usr/sbin/create-machine=machine-create
 f usr/sbin/machine-create 0555 root bin
 f usr/sbin/machine-json 0555 root bin
+f usr/sbin/machine-lookup 0555 root bin
 f usr/sbin/mdata-get 0555 root bin
 d usr/node_modules 0555 root bin
 f usr/node_modules/async.js 0444 root bin

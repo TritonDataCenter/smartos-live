@@ -6,6 +6,7 @@ MPROTO=$(ROOT)/manifest.d
 PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin
 LOCAL_SUBDIRS:=$(shell ls projects/local)
 MANIFEST=manifest.gen
+OVERLAYS:=$(shell cat overlay/order)
 
 world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp \
 	0-tools-stamp 0-man-stamp 0-devpro-stamp
@@ -13,7 +14,7 @@ world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp \
 live: world manifest
 	(cd $(ROOT)/src_addon && gmake DESTDIR=$(PROTO) install)
 	mkdir -p ${ROOT}/log
-	(cd $(ROOT) && pfexec ./tools/build_live $(ROOT)/$(MANIFEST) $(ROOT)/output $(ROOT)/overlay/generic $(ROOT)/overlay/sdc $(ROOT)/proto $(ROOT)/man/man)
+	(cd $(ROOT) && pfexec ./tools/build_live $(ROOT)/$(MANIFEST) $(ROOT)/output $(OVERLAYS) $(ROOT)/proto $(ROOT)/man/man)
 
 manifest:
 	rm -f $(MANIFEST) $(MPROTO)/*

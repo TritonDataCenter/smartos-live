@@ -1430,6 +1430,7 @@ function bootVM(payload, options, callback)
             defaultgw = vm['default-gateway'];
         }
 
+        primary_found = false;
         for (nic in vm.nics) {
             if (vm.nics.hasOwnProperty(nic)) {
                 nic = vm.nics[nic];
@@ -1448,18 +1449,28 @@ function bootVM(payload, options, callback)
                 // The primary network provides the resolvers, default gateway
                 // and hostname to prevent machines from trying to use settings
                 // from more than one nic
-                if (defaultgw && nic.hasOwnProperty('gateway') && nic.gateway == defaultgw) {
-                    vnic_opts += ',gateway_ip=' + nic.gateway;
-                    if (hostname) {
-                        vnic_opts += ',hostname=' + hostname;
+                if (!primary_found) {
+                    if (nic.hasOwnProperty('primary') && nic.primary) {
+                        if (nic.hasOwnProperty('gateway')) {
+                            vnic_opts += ',gateway_ip=' + nic.gateway;
+                        }
+                        primary_found = true;
                     }
-                    if (vm.hasOwnProperty('resolvers')) {
-                      for (r in vm.resolvers) {
-                        vnic_opts += ',dns_ip' + r + '=' + vm.resolvers[r];
-                      }
+                    else if (defaultgw && nic.hasOwnProperty('gateway') && nic.gateway == defaultgw) {
+                        vnic_opts += ',gateway_ip=' + nic.gateway;
+                        primary_found = true;
                     }
-                    // Unset this so that we only have one primary
-                    defaultgw = '';
+
+                    if (primary_found) {
+                        if (hostname) {
+                            vnic_opts += ',hostname=' + hostname;
+                        }
+                        if (vm.hasOwnProperty('resolvers')) {
+                          for (r in vm.resolvers) {
+                            vnic_opts += ',dns_ip' + r + '=' + vm.resolvers[r];
+                          }
+                        }
+                    }
                 }
 
                 cmdargs.push('-net', vnic_opts);

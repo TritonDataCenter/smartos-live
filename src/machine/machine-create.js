@@ -689,6 +689,11 @@ function nicZonecfg(nic, idx, callback)
             'add property (name=model, value="' + nic.model + '")\n';
     }
 
+    if (nic.hasOwnProperty('primary')) {
+        zonecfg = zonecfg +
+            'add property (name=primary, value="' + nic.primary + '")\n';
+    }
+
     if (nic.hasOwnProperty('vlan_id') && (nic.vlan_id !== "0")) {
         zonecfg = zonecfg + 'set vlan-id=' + nic.vlan_id + '\n';
     }
@@ -740,6 +745,7 @@ function writeZoneconfig(payload, callback)
     }
 
     nic_idx = 0;
+    primary_found = false;
     for (nic in payload.nics) {
         if (payload.nics.hasOwnProperty(nic)) {
             n = payload.nics[nic];
@@ -747,9 +753,13 @@ function writeZoneconfig(payload, callback)
             fs.writeFileSync(payload.zone_path + '/root/etc/hostname.net' +
                 nic_idx, n.ip + ' netmask ' + n.netmask + ' up' + '\n');
 
-            if (n.hasOwnProperty('gateway')) {
-                fs.writeFileSync(payload.zone_path + '/root/etc/defaultrouter',
-                    n.gateway + '\n');
+            if (n.hasOwnProperty('primary') && !primary_found) {
+                // only allow one primary network
+                primary_found = true;
+                if (n.hasOwnProperty('gateway')) {
+                    fs.writeFileSync(payload.zone_path + '/root/etc/defaultrouter',
+                        n.gateway + '\n');
+                }
             }
             data = data + 'NET' + nic_idx + '_IP=' + n.ip + '\n'
                         + 'NET' + nic_idx + '_NETMASK=' + n.netmask + '\n'
@@ -758,11 +768,6 @@ function writeZoneconfig(payload, callback)
 
             nic_idx++;
         }
-    }
-
-    if (payload.hasOwnProperty('default_gateway')) {
-        fs.writeFileSync(payload.zone_path + '/root/etc/defaultrouter',
-            payload.default_gateway + '\n');
     }
 
     debug('writing extra files to zone root');

@@ -60,7 +60,8 @@ var NET_PROPS = [
     'model',
     'ip',
     'netmask',
-    'gateway'
+    'gateway',
+    'primary'
 ];
 
 var DISK_PROPS = [

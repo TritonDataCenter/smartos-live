@@ -1,11 +1,9 @@
-d admin 0755 admin staff
-f admin/.bash_profile 0644 admin staff
-f admin/.bashrc 0644 admin staff
-f admin/.profile 0644 admin staff
 s bin=usr/bin
 d boot 0755 root sys
 d boot/acpi 0755 root sys
 d boot/acpi/tables 0755 root sys
+d boot/grub 0755 root sys
+d boot/grub/bin/ 0755 root sys
 d boot/solaris 0755 root sys
 f boot/solaris/bootenv.rc 0644 root root
 d boot/solaris/devicedb 0755 root sys
@@ -226,6 +224,7 @@ f etc/auto_master 0644 root bin
 d etc/bash 0755 root sys
 f etc/bash/bash_completion 0644 root sys
 d etc/bash/bash_completion.d 0755 root sys
+f etc/bash/bash_completion.d/machines 0644 root sys
 f etc/bash/bash_completion.d/vms 0644 root sys
 f etc/bash/bash_completion.d/zones 0644 root sys
 f etc/bootrc 0755 root sys
@@ -1232,8 +1231,6 @@ f lib/amd64/libsecdb.so.1 0755 root bin
 s lib/amd64/libsecdb.so=libsecdb.so.1
 f lib/amd64/libsendfile.so.1 0755 root bin
 s lib/amd64/libsendfile.so=libsendfile.so.1
-f lib/amd64/libsmartsshd.so.1 0755 root bin
-s lib/amd64/libsmartsshd.so=libsmartsshd.so.1
 f lib/amd64/libsocket.so.1 0755 root bin
 s lib/amd64/libsocket.so=libsocket.so.1
 f lib/amd64/libssl.so.0.9.8 0755 root bin
@@ -1439,8 +1436,6 @@ f lib/libsecdb.so.1 0755 root bin
 s lib/libsecdb.so=libsecdb.so.1
 f lib/libsendfile.so.1 0755 root bin
 s lib/libsendfile.so=libsendfile.so.1
-f lib/libsmartsshd.so.1 0755 root bin
-s lib/libsmartsshd.so=libsmartsshd.so.1
 f lib/libsocket.so.1 0755 root bin
 s lib/libsocket.so=libsocket.so.1
 f lib/libssl.so.0.9.8 0755 root bin
@@ -1487,6 +1482,7 @@ f lib/nss_user.so.1 0755 root bin
 d lib/sdc 0755 root bin
 f lib/sdc/config.sh 0444 root bin
 f lib/sdc/network.sh 0444 root bin
+f lib/sdc/zone.sh 0444 root bin
 d lib/secure 0755 root bin
 s lib/secure/32=.
 s lib/secure/64=amd64
@@ -1641,6 +1637,7 @@ f lib/svc/manifest/system/scheduler.xml 0444 root sys
 d lib/svc/manifest/system/security 0755 root sys
 f lib/svc/manifest/system/smartdc-config.xml 0444 root sys
 f lib/svc/manifest/system/smartdc-init.xml 0444 root sys
+f lib/svc/manifest/system/smartdc-vmadmd.xml 0444 root bin
 f lib/svc/manifest/system/stmf.xml 0444 root sys
 d lib/svc/manifest/system/svc 0755 root sys
 f lib/svc/manifest/system/svc/global.xml 0444 root sys
@@ -1700,6 +1697,7 @@ f lib/svc/method/sendmail-client 0555 root sys
 f lib/svc/method/slp 0555 root sys
 f lib/svc/method/smartdc-config 0555 root bin
 f lib/svc/method/smartdc-init 0555 root sys
+f lib/svc/method/smartdc-vmadmd 0555 root bin
 f lib/svc/method/smb-client 0555 root sys
 f lib/svc/method/smtp-sendmail 0555 root sys
 f lib/svc/method/sshd 0555 root bin
@@ -1864,9 +1862,6 @@ f platform/i86pc/ucode/amd-ucode.bin 0444 root sys
 f platform/i86pc/ucode/intel-ucode.txt 0444 root sys
 d proc 0755 root root
 d root 0755 root root
-f root/.bash_profile 0644 root root
-f root/.bashrc 0644 root root
-f root/.profile 0644 root root
 d sbin 0755 root sys
 f sbin/autopush 0555 root bin
 f sbin/biosdev 0555 root bin
@@ -1878,6 +1873,7 @@ f sbin/dhcpinfo 0555 root bin
 f sbin/dladm 0555 root bin
 f sbin/dlmgmtd 0555 root bin
 f sbin/dlstat 0555 root bin
+f sbin/fdisk 0555 root bin
 f sbin/flowadm 0555 root bin
 f sbin/flowstat 0555 root bin
 f sbin/hostconfig 0555 root bin
@@ -1922,21 +1918,15 @@ f sbin/zonename 0555 root bin
 f sbin/zpool 0555 root bin
 d smartdc 0555 root bin
 d smartdc/bin 0555 root bin
-f smartdc/bin/beacon 0555 root bin
 f smartdc/bin/has_hvx 0555 root bin
-f smartdc/bin/marco 0555 root bin
-f smartdc/bin/polo 0555 root bin
 f smartdc/bin/qemu-img 0555 root bin
 f smartdc/bin/qemu-io 0555 root bin
 f smartdc/bin/qemu-nbd 0555 root bin
 f smartdc/bin/qemu-system-x86_64 0555 root bin
+f smartdc/bin/smartos_prompt_config.sh 0555 root bin
 d smartdc/etc 0555 root bin
 d smartdc/etc/qemu 0555 root bin
 f smartdc/etc/qemu/target-x86_64.conf 0444 root bin
-d smartdc/man 0555 root bin
-d smartdc/man/cat1 0555 root bin
-d smartdc/man/man1 0555 root bin
-d smartdc/node_modules 0555 root bin
 d smartdc/share 0555 root bin
 d smartdc/share/qemu 0555 root bin
 f smartdc/share/qemu/bamboo.dtb 0444 root bin
@@ -2720,6 +2710,7 @@ f usr/gnu/share/terminfo/a/at386 0644 root bin
 d usr/gnu/share/terminfo/s 0755 root bin
 f usr/gnu/share/terminfo/s/screen 0644 root bin
 f usr/gnu/share/terminfo/s/screen+fkeys 0644 root bin
+f usr/gnu/share/terminfo/s/screen-256color 0644 root bin
 f usr/gnu/share/terminfo/s/screen-s 0644 root bin
 f usr/gnu/share/terminfo/s/screen-w 0644 root bin
 f usr/gnu/share/terminfo/s/screen.linux 0644 root bin
@@ -5331,6 +5322,7 @@ f usr/lib/amd64/libCrun.so.1 0755 root bin
 f usr/lib/amd64/libCstd.so.1 0755 root bin
 f usr/lib/amd64/libHBAAPI.so.1 0755 root bin
 s usr/lib/amd64/libHBAAPI.so=libHBAAPI.so.1
+s usr/lib/amd64/libMPAPI.so=../../../lib/amd64/libMPAPI.so.1
 f usr/lib/amd64/libSMHBAAPI.so.1 0755 root bin
 s usr/lib/amd64/libSMHBAAPI.so=libSMHBAAPI.so.1
 s usr/lib/amd64/libadm.so.1=../../../lib/amd64/libadm.so.1
@@ -5378,6 +5370,7 @@ s usr/lib/amd64/libcrypt_i.so.1=libcrypt.so.1
 s usr/lib/amd64/libcrypt_i.so=libcrypt.so
 s usr/lib/amd64/libcrypto.so.0.9.8=../../../lib/amd64/libcrypto.so.0.9.8
 s usr/lib/amd64/libcrypto.so=../../../lib/amd64/libcrypto.so
+s usr/lib/amd64/libcryptoutil.so=../../../lib/amd64/libcryptoutil.so.1
 s usr/lib/amd64/libctf.so.1=../../../lib/amd64/libctf.so.1
 s usr/lib/amd64/libctf.so=../../../lib/amd64/libctf.so.1
 s usr/lib/amd64/libcurses.so.1=../../../lib/amd64/libcurses.so.1
@@ -5397,6 +5390,7 @@ f usr/lib/amd64/libdiskmgt.so.1 0755 root bin
 s usr/lib/amd64/libdiskmgt.so=libdiskmgt.so.1
 s usr/lib/amd64/libdl.so.1=../../../lib/amd64/libdl.so.1
 s usr/lib/amd64/libdl.so=../../../lib/amd64/libdl.so.1
+s usr/lib/amd64/libdladm.so=../../../lib/amd64/libdladm.so.1
 f usr/lib/amd64/libdll.so.1 0755 root bin
 s usr/lib/amd64/libdll.so=libdll.so.1
 s usr/lib/amd64/libdlpi.so.1=../../../lib/amd64/libdlpi.so.1
@@ -5468,6 +5462,7 @@ f usr/lib/amd64/libiscsit.so.1 0755 root bin
 s usr/lib/amd64/libiscsit.so=libiscsit.so.1
 f usr/lib/amd64/libjdns_sd.so.1 0755 root bin
 s usr/lib/amd64/libjdns_sd.so=libjdns_sd.so.1
+s usr/lib/amd64/libkmfberder.so=../../../lib/amd64/libkmfberder.so.1
 f usr/lib/amd64/libkmsagent.so.1 0755 root bin
 s usr/lib/amd64/libkmsagent.so=libkmsagent.so.1
 f usr/lib/amd64/libkrb5.so.1 0755 root bin
@@ -5505,6 +5500,7 @@ f usr/lib/amd64/libmenu.so.1 0755 root bin
 s usr/lib/amd64/libmenu.so=libmenu.so.1
 s usr/lib/amd64/libmp.so.2=../../../lib/amd64/libmp.so.2
 s usr/lib/amd64/libmp.so=../../../lib/amd64/libmp.so.2
+s usr/lib/amd64/libmpscsi_vhci.so=../../../lib/amd64/libmpscsi_vhci.so.1
 f usr/lib/amd64/libmtmalloc.so.1 0755 root bin
 s usr/lib/amd64/libmtmalloc.so=libmtmalloc.so.1
 s usr/lib/amd64/libmvec.so.1=../../../lib/amd64/libmvec.so.1
@@ -5582,8 +5578,6 @@ f usr/lib/amd64/libsldap.so.1 0755 root bin
 s usr/lib/amd64/libsldap.so=libsldap.so.1
 f usr/lib/amd64/libslp.so.1 0755 root bin
 s usr/lib/amd64/libslp.so=libslp.so.1
-s usr/lib/amd64/libsmartsshd.so.1=../../../lib/amd64/libsmartsshd.so.1
-s usr/lib/amd64/libsmartsshd.so=../../../lib/amd64/libsmartsshd.so.1
 f usr/lib/amd64/libsmbfs.so.1 0755 root bin
 s usr/lib/amd64/libsmbfs.so=libsmbfs.so.1
 f usr/lib/amd64/libsmbios.so.1 0755 root bin
@@ -5627,6 +5621,8 @@ f usr/lib/amd64/libtnfctl.so.1 0755 root bin
 s usr/lib/amd64/libtnfctl.so=libtnfctl.so.1
 f usr/lib/amd64/libtnfprobe.so.1 0755 root bin
 s usr/lib/amd64/libtnfprobe.so=libtnfprobe.so.1
+s usr/lib/amd64/libtsnet.so=../../../lib/amd64/libtsnet.so.1
+s usr/lib/amd64/libtsol.so=../../../lib/amd64/libtsol.so.2
 s usr/lib/amd64/libumem.so.1=../../../lib/amd64/libumem.so.1
 s usr/lib/amd64/libumem.so=../../../lib/amd64/libumem.so.1
 s usr/lib/amd64/libuuid.so.1=../../../lib/amd64/libuuid.so.1
@@ -5701,7 +5697,6 @@ f usr/lib/brand/joyent/jdetach 0755 root root
 f usr/lib/brand/joyent/jinstall 0755 root root
 f usr/lib/brand/joyent/juninstall 0755 root root
 f usr/lib/brand/joyent/manifests 0444 root root
-f usr/lib/brand/joyent/pinstall 0755 root root
 f usr/lib/brand/joyent/platform.xml 0444 root root
 f usr/lib/brand/joyent/poststate 0755 root root
 f usr/lib/brand/joyent/prestate 0755 root root
@@ -5714,7 +5709,6 @@ f usr/lib/brand/kvm/kattach 0755 root root
 f usr/lib/brand/kvm/kdetach 0755 root root
 f usr/lib/brand/kvm/kinstall 0755 root root
 f usr/lib/brand/kvm/kuninstall 0755 root root
-f usr/lib/brand/kvm/pinstall 0755 root root
 f usr/lib/brand/kvm/platform.xml 0444 root root
 f usr/lib/brand/kvm/poststate 0755 root root
 f usr/lib/brand/kvm/prestate 0755 root root
@@ -6760,6 +6754,7 @@ f usr/lib/libCrun.so.1 0755 root bin
 f usr/lib/libCstd.so.1 0755 root bin
 f usr/lib/libHBAAPI.so.1 0755 root bin
 s usr/lib/libHBAAPI.so=libHBAAPI.so.1
+s usr/lib/libMPAPI.so=../../lib/libMPAPI.so.1
 f usr/lib/libSMHBAAPI.so.1 0755 root bin
 s usr/lib/libSMHBAAPI.so=libSMHBAAPI.so.1
 s usr/lib/libadm.so.1=../../lib/libadm.so.1
@@ -6813,6 +6808,7 @@ s usr/lib/libcrypt_i.so.1=libcrypt.so.1
 s usr/lib/libcrypt_i.so=libcrypt.so
 s usr/lib/libcrypto.so.0.9.8=../../lib/libcrypto.so.0.9.8
 s usr/lib/libcrypto.so=../../lib/libcrypto.so
+s usr/lib/libcryptoutil.so=../../lib/libcryptoutil.so.1
 s usr/lib/libctf.so.1=../../lib/libctf.so.1
 s usr/lib/libctf.so=../../lib/libctf.so.1
 f usr/lib/libcurl.so.4.2.0 0755 root bin
@@ -6841,6 +6837,7 @@ f usr/lib/libdiskmgt.so.1 0755 root bin
 s usr/lib/libdiskmgt.so=libdiskmgt.so.1
 s usr/lib/libdl.so.1=../../lib/libdl.so.1
 s usr/lib/libdl.so=../../lib/libdl.so.1
+s usr/lib/libdladm.so=../../lib/libdladm.so.1
 f usr/lib/libdll.so.1 0755 root bin
 s usr/lib/libdll.so=libdll.so.1
 s usr/lib/libdlpi.so.1=../../lib/libdlpi.so.1
@@ -6859,6 +6856,7 @@ s usr/lib/libefi.so.1=../../lib/libefi.so.1
 s usr/lib/libefi.so=../../lib/libefi.so.1
 s usr/lib/libelf.so.1=../../lib/libelf.so.1
 s usr/lib/libelf.so=../../lib/libelf.so.1
+s usr/lib/libelfsign.so=../../lib/libelfsign.so.1
 f usr/lib/libexacct.so.1 0755 root bin
 s usr/lib/libexacct.so=libexacct.so.1
 s usr/lib/libexpat.so.0=libexpat.so.1.5.2
@@ -6885,6 +6883,7 @@ f usr/lib/libfstyp.so.1 0755 root bin
 s usr/lib/libfstyp.so=libfstyp.so.1
 s usr/lib/libgen.so.1=../../lib/libgen.so.1
 s usr/lib/libgen.so=../../lib/libgen.so.1
+s usr/lib/libgrubmgmt.so=../../lib/libgrubmgmt.so.1
 f usr/lib/libgss.so.1 0755 root bin
 s usr/lib/libgss.so=libgss.so.1
 f usr/lib/libhal-storage.so.1.0.0 0755 root bin
@@ -6915,8 +6914,10 @@ s usr/lib/libinstzones.so=libinstzones.so.1
 s usr/lib/libintl.so.1=../../lib/libintl.so.1
 s usr/lib/libintl.so=../../lib/libintl.so.1
 f usr/lib/libiostream.so.1 0755 root bin
+s usr/lib/libipadm.so=../../lib/libipadm.so.1
 f usr/lib/libipmi.so.1 0755 root bin
 s usr/lib/libipmi.so=libipmi.so.1
+s usr/lib/libipmp.so=../../lib/libipmp.so.1
 f usr/lib/libipp.so.1 0755 root bin
 s usr/lib/libipp.so=libipp.so.1
 f usr/lib/libipsecutil.so.1 0755 root bin
@@ -6925,6 +6926,9 @@ f usr/lib/libiscsit.so.1 0755 root bin
 s usr/lib/libiscsit.so=libiscsit.so.1
 f usr/lib/libjdns_sd.so.1 0755 root bin
 s usr/lib/libjdns_sd.so=libjdns_sd.so.1
+s usr/lib/libkcfd.so=../../lib/libkcfd.so.1
+s usr/lib/libkmf.so=../../lib/libkmf.so.1
+s usr/lib/libkmfberder.so=../../lib/libkmfberder.so.1
 f usr/lib/libkmsagent.so.1 0755 root bin
 s usr/lib/libkmsagent.so=libkmsagent.so.1
 f usr/lib/libkrb5.so.1 0755 root bin
@@ -6965,6 +6969,7 @@ s usr/lib/libmilter.so=libmilter.so.1
 s usr/lib/libmp.so.1=../../lib/libmp.so.1
 s usr/lib/libmp.so.2=../../lib/libmp.so.2
 s usr/lib/libmp.so=../../lib/libmp.so.2
+s usr/lib/libmpscsi_vhci.so=../../lib/libmpscsi_vhci.so.1
 f usr/lib/libmtmalloc.so.1 0755 root bin
 s usr/lib/libmtmalloc.so=libmtmalloc.so.1
 s usr/lib/libmvec.so.1=../../lib/libmvec.so.1
@@ -6985,6 +6990,7 @@ f usr/lib/libnvfru.so.1 0755 root bin
 s usr/lib/libnvfru.so=libnvfru.so.1
 s usr/lib/libnvpair.so.1=../../lib/libnvpair.so.1
 s usr/lib/libnvpair.so=../../lib/libnvpair.so.1
+s usr/lib/libnwam.so=../../lib/libnwam.so.1
 d usr/lib/libp 0755 root bin
 s usr/lib/libp/32=.
 s usr/lib/libp/64=amd64
@@ -7073,8 +7079,6 @@ f usr/lib/libsldap.so.1 0755 root bin
 s usr/lib/libsldap.so=libsldap.so.1
 f usr/lib/libslp.so.1 0755 root bin
 s usr/lib/libslp.so=libslp.so.1
-s usr/lib/libsmartsshd.so.1=../../lib/libsmartsshd.so.1
-s usr/lib/libsmartsshd.so=../../lib/libsmartsshd.so.1
 f usr/lib/libsmbfs.so.1 0755 root bin
 s usr/lib/libsmbfs.so=libsmbfs.so.1
 f usr/lib/libsmbios.so.1 0755 root bin
@@ -7124,6 +7128,8 @@ f usr/lib/libtnfctl.so.1 0755 root bin
 s usr/lib/libtnfctl.so=libtnfctl.so.1
 f usr/lib/libtnfprobe.so.1 0755 root bin
 s usr/lib/libtnfprobe.so=libtnfprobe.so.1
+s usr/lib/libtsnet.so=../../lib/libtsnet.so.1
+s usr/lib/libtsol.so=../../lib/libtsol.so.2
 s usr/lib/libumem.so.1=../../lib/libumem.so.1
 s usr/lib/libumem.so=../../lib/libumem.so.1
 f usr/lib/libunistat.so.1 0755 root bin
@@ -7965,6 +7971,7 @@ f usr/lib/values-xpg4.o 0644 root bin
 f usr/lib/values-xpg6.o 0644 root bin
 f usr/lib/vfontedpr 0555 root bin
 f usr/lib/vgrindefs 0444 root bin
+f usr/lib/vmadmd 0555 root bin
 d usr/lib/vscan 0755 root bin
 f usr/lib/vscan/libvscan.so.1 0755 root bin
 s usr/lib/vscan/libvscan.so=libvscan.so.1
@@ -7991,6 +7998,10 @@ s usr/net/nls/listen=../../lib/saf/listen
 s usr/net/nls/nlps_server=../../lib/saf/nlps_server
 d usr/net/servers 0755 root sys
 s usr/news=../var/news
+d usr/node_modules 0555 root bin
+f usr/node_modules/async.js 0444 root bin
+f usr/node_modules/onlyif.js 0444 root bin
+f usr/node_modules/sprintf.js 0444 root bin
 d usr/perl5 0755 root bin
 d usr/perl5/5.12 0755 root bin
 d usr/perl5/5.12/bin 0755 root bin
@@ -10664,6 +10675,7 @@ f usr/sbin/clri 0555 root bin
 f usr/sbin/consadm 0555 root sys
 f usr/sbin/consadmd 0555 root sys
 f usr/sbin/cpustat 0555 root bin
+f usr/sbin/create-machine 0555 root bin
 f usr/sbin/cron 0555 root sys
 s usr/sbin/cryptoadm=../../sbin/cryptoadm
 f usr/sbin/datadm 0555 root bin
@@ -10800,7 +10812,6 @@ f usr/sbin/ipsecalgs 0555 root bin
 f usr/sbin/ipsecconf 0555 root bin
 f usr/sbin/ipseckey 0555 root bin
 f usr/sbin/iscsiadm 0555 root bin
-f usr/sbin/joycomm 0555 root bin
 f usr/sbin/keyserv 0555 root sys
 f usr/sbin/killall 0555 root bin
 f usr/sbin/ksslcfg 0555 root bin
@@ -10814,6 +10825,7 @@ s usr/sbin/lockfs=../lib/fs/ufs/lockfs
 h usr/sbin/lockstat=usr/lib/isaexec
 f usr/sbin/lofiadm 0555 root bin
 f usr/sbin/logadm 0555 root bin
+f usr/sbin/machine-json 0555 root bin
 f usr/sbin/makedbm 0555 root bin
 f usr/sbin/makemap 0555 root bin
 f usr/sbin/mkdevalloc 0555 root bin
@@ -10958,6 +10970,8 @@ h usr/sbin/update_drv=usr/lib/isaexec
 h usr/sbin/useradd=usr/sbin/roleadd
 h usr/sbin/userdel=usr/sbin/roledel
 h usr/sbin/usermod=usr/sbin/rolemod
+f usr/sbin/vmadm 0555 root bin
+f usr/sbin/vmcfg 0555 root bin
 f usr/sbin/volcopy 0555 root bin
 f usr/sbin/vrrpadm 0555 root bin
 f usr/sbin/wall 2555 root tty
@@ -12377,7 +12391,6 @@ f usr/share/man/man1m/ipsecalgs.1m 0444 root bin
 f usr/share/man/man1m/ipsecconf.1m 0444 root bin
 f usr/share/man/man1m/ipseckey.1m 0444 root bin
 f usr/share/man/man1m/itu.1m 0444 root bin
-f usr/share/man/man1m/joycomm.1m 0444 root bin
 f usr/share/man/man1m/keyserv.1m 0444 root bin
 f usr/share/man/man1m/killall.1m 0444 root bin
 f usr/share/man/man1m/ksslcfg.1m 0444 root bin
@@ -12399,12 +12412,22 @@ f usr/share/man/man1m/mkdevalloc.1m 0444 root bin
 f usr/share/man/man1m/mkdevmaps.1m 0444 root bin
 f usr/share/man/man1m/mkfifo.1m 0444 root bin
 f usr/share/man/man1m/mkfile.1m 0444 root bin
+f usr/share/man/man1m/mkfs_pcfs.1m 0444 root bin
+f usr/share/man/man1m/mkfs_ufs.1m 0444 root bin
+f usr/share/man/man1m/mkfs_udfs.1m 0444 root bin
 f usr/share/man/man1m/mkfs.1m 0444 root bin
 f usr/share/man/man1m/mknod.1m 0444 root bin
 f usr/share/man/man1m/mkpwdict.1m 0444 root bin
 f usr/share/man/man1m/modinfo.1m 0444 root bin
 f usr/share/man/man1m/modload.1m 0444 root bin
 f usr/share/man/man1m/modunload.1m 0444 root bin
+f usr/share/man/man1m/mount_hsfs.1m 0444 root bin
+f usr/share/man/man1m/mount_nfs.1m 0444 root bin
+f usr/share/man/man1m/mount_pcfs.1m 0444 root bin
+f usr/share/man/man1m/mount_smbfs.1m 0444 root bin
+f usr/share/man/man1m/mount_tmpfs.1m 0444 root bin
+f usr/share/man/man1m/mount_udfs.1m 0444 root bin
+f usr/share/man/man1m/mount_ufs.1m 0444 root bin
 f usr/share/man/man1m/mount.1m 0444 root bin
 f usr/share/man/man1m/mountall.1m 0444 root bin
 f usr/share/man/man1m/mpstat.1m 0444 root bin
@@ -15714,7 +15737,6 @@ f usr/share/man/man5/iconv_unicode.5 0444 root bin
 f usr/share/man/man5/ieee802.11.5 0444 root bin
 f usr/share/man/man5/ipfilter.5 0444 root bin
 f usr/share/man/man5/isalist.5 0444 root bin
-f usr/share/man/man5/joyent.5 0444 root bin
 f usr/share/man/man5/kerberos.5 0444 root bin
 f usr/share/man/man5/krb5_auth_rules.5 0444 root bin
 f usr/share/man/man5/krb5envvar.5 0444 root bin
@@ -18741,3 +18763,4 @@ d var/svc/profile 0755 root sys
 d var/tmp 1777 root sys
 d var/yp 0755 root bin
 d var/yp/binding 0755 root bin
+f boot/grub/bin/grub 0555 root bin

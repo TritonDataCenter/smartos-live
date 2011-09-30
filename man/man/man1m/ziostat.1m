@@ -1,0 +1,106 @@
+.\" Generated with Ronnjs/v0.1
+.\" http://github.com/kapouer/ronnjs/
+.
+.TH "ZIOSTAT" "1m" "September 2011" "" ""
+.
+.SH "NAME"
+\fBziostat\fR \-\- Report ZFS read I/O activity
+.
+.SH "SYNOPSIS"
+.
+.nf
+ziostat [\-hIMrzZ] [interval [count]]
+.
+.fi
+.
+.SH "DESCRIPTION"
+The ziostat utility reports a summary of ZFS read I/O operations\.
+It first prints all activity since boot, then reports activity
+over a specified interval\.
+.
+.P
+When run from a non\-global zone (NGZ), only activity from that NGZ
+can be observed\.  When run from a the global zone (GZ), activity
+from the GZ and all other NGZs can be observed\.
+.
+.P
+This tool is useful for determining if disk I/O is a source of
+application latency\.  Combined with vfsstat(1M), ziostat(1M) shows
+the relative contribution of disk I/O latency to overall I/O (and
+therefore application) latency\.
+.
+.SH "OUTPUT"
+The ziostat utility reports the following information:
+.
+.IP "" 4
+.
+.nf
+r/s	reads per second
+
+kr/s	kilobytes read per second
+
+actv	average number of ZFS read I/O operations being
+		handled by the disk
+
+wsvc_t	average wait time per I/O, in milliseconds
+
+asvc_t	average disk service time per I/O, in milliseconds
+
+%b	percent of time there is  an I/O operation pending
+.
+.fi
+.
+.IP "" 0
+.
+.SH "OPTIONS"
+The following options are supported:
+.
+.P
+\-h	Show help message and exit
+.
+.P
+\-I	Print results per interval, rather than per second (where
+	applicable)
+.
+.P
+\-M	Print results in MB/s instead of KB/s
+.
+.P
+\-r	Show results in a comma\-separated format
+.
+.P
+\-z	Hide zones with no read I/O activity
+.
+.P
+\-Z	Print results for all zones, not just the current zone
+.
+.SH "OPERANDS"
+interval
+.
+.P
+Specifies the length in seconds to pause between each interval
+report\.  If not specified, ziostat will print a summary since boot
+and exit\.
+.
+.P
+count 
+.
+.P
+Specifies the number of intervals to report\.  Defaults to
+unlimited if not specified\. 
+.
+.SH "SEE ALSO"
+.
+.nf
+iostat(1m), vfsstat(1m), mpstat(1m)
+.
+.fi
+.
+.SH "NOTES"
+This utility does not show any ZFS write I/O activity\.  Most write
+operations are asynchronous, so the latency of those operations
+committing to disk is much less important that read latency\.
+.
+.P
+The output format from ziostat may change over time; use the
+comma\-separated output for a stable output format\.

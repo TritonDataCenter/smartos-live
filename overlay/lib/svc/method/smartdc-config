@@ -39,15 +39,6 @@ set_root_password() {
       && mv /etc/shadow.new /etc/shadow
 }
 
-set_admin_password() {
-    enc_password=$1
-
-    sed -e "s|^admin:[^\:]*:|admin:${enc_password}:|" /etc/shadow \
-        > /etc/shadow.new \
-      && chmod 400 /etc/shadow.new \
-      && mv /etc/shadow.new /etc/shadow
-}
-
 set_ntp_hosts() {
     ntp_hosts=$1
 
@@ -76,7 +67,45 @@ case "$1" in
                 exit $SMF_EXIT_OK
             fi
 
+	    # Start interactive config on console and ttys
+
             ${USB_PATH}/scripts/prompt-config.sh "${USB_PATH}" \
+                </dev/console >&/dev/console &
+	    cnt=1
+
+	    if [ -c /dev/ttya ]; then
+                ${USB_PATH}/scripts/prompt-config.sh "${USB_PATH}" \
+                    </dev/ttya >&/dev/ttya &
+                cnt=`expr $cnt + 1`
+	    fi
+
+	    if [ -c /dev/ttyb ]; then
+                ${USB_PATH}/scripts/prompt-config.sh "${USB_PATH}" \
+                    </dev/ttyb >&/dev/ttyb &
+                cnt=`expr $cnt + 1`
+	    fi
+
+            # Wait for one of the interactive configs to finish
+            while [ true ]; do
+                got=`jobs -p | wc -l`
+                [ $got -lt $cnt ] && break
+                sleep 1
+            done
+
+            # If user quit from interactive configuration then we're done.
+            [[ ! -f ${USB_PATH}/config ]] && exit $SMF_EXIT_OK
+        fi
+    elif /bin/bootparams | grep "^smartos=true" > /dev/null 2>&1; then
+        USB_PATH=/`svcprop -p "joyentfs/usb_copy_path" svc:/system/filesystem/smartdc:default`
+
+        # Check for config and run interactive if it doesn't exist.
+        if [[ ! -f ${USB_PATH}/config ]]; then
+            if /bin/bootparams | grep "^noimport=true" >/dev/null 2>&1; then
+                # Skipping interactive config, bypass rest of script.
+                exit $SMF_EXIT_OK
+            fi
+
+            /smartdc/bin/smartos_prompt_config.sh "${USB_PATH}" \
                 </dev/console >&/dev/console
 
             # If user quit from interactive configuration then we're done.
@@ -95,28 +124,20 @@ case "$1" in
             >> /.dcinfo
     fi
 
-    # Boot parameter takes precidence over config
-    if [[ -n "${SYSINFO_Bootparam_root_shadow}" ]]; then
+    if [[ -n "${SYSINFO_Bootparam_smartos}" && -f /usbkey/shadow ]]; then
+      echo "setting root password from /usbkey/shadow"
+    else
+      # Boot parameter takes precidence over config
+      if [[ -n "${SYSINFO_Bootparam_root_shadow}" ]]; then
         set_root_password "${SYSINFO_Bootparam_root_shadow}"
         echo "Set root password boot parameters."
-    elif [[ -n "${CONFIG_root_shadow}" ]]; then
+      elif [[ -n "${CONFIG_root_shadow}" ]]; then
         set_root_password "${CONFIG_root_shadow}"
         echo "Set root password from config."
-    else
+      else
         echo "No root shadow entry in the config, cannot set."
+      fi
     fi
-
-    # Boot parameter takes precidence over config
-    if [[ -n "${SYSINFO_Bootparam_admin_shadow}" ]]; then
-        set_admin_password "${SYSINFO_Bootparam_admin_shadow}"
-        echo "Set admin password boot parameters."
-    elif [[ -n "${CONFIG_admin_shadow}" ]]; then
-        set_admin_password "${CONFIG_admin_shadow}"
-        echo "Set admin password from config."
-    else
-        echo "No admin shadow entry in the config, cannot set."
-    fi
-
     # Set authorized_keys for root
     if [[ -n "${CONFIG_root_authorized_keys_file}" ]] \
         && [[ -n "${CONFIG_config_inc_dir}" ]] \

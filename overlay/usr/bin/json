@@ -5,26 +5,38 @@
 // See <https://github.com/trentm/json>.
 //
 
-var VERSION = "1.2.1";
+var VERSION = "1.3.4";
 
 var sys = require('sys');
+var pathlib = require('path');
 var runInNewContext;
 try {
   runInNewContext = require('vm').runInNewContext;
 } catch (ex) {
   runInNewContext = process.binding('evals').Script.runInNewContext;  // node v0.2
 }
-//var runInNewContext = process.binding('evals').Script.runInNewContext;
+var warn = console.warn;
+
 
 
 //--- exports for module usage
 
 exports.main = main;
+exports.getVersion = getVersion;
 exports.parseLookup = parseLookup;
+
+// As an exported API, these are still experimental:
+exports.processDatum = processDatum;
+exports.processDatumExperimental = processDatumExperimental;
+exports.printData = printData;
 
 
 
 //---- support functions
+
+function getVersion() {
+  return VERSION;
+}
 
 function printHelp() {
   sys.puts("Usage: <something generating JSON on stdout> | json [options] [lookup]");
@@ -43,6 +55,8 @@ function printHelp() {
   sys.puts("  -H            drop any HTTP header block");
   sys.puts("  -i            output using node's `sys.inspect`");
   sys.puts("  -j            output using `JSON.stringfy`, i.e. strict JSON");
+  sys.puts("  -x, --experimental");
+  sys.puts("                enable experimental features: '*' in lookup");
   sys.puts("");
   sys.puts("Examples:");
   sys.puts("  curl -s http://search.twitter.com/search.json?q=node.js | json");
@@ -68,7 +82,8 @@ function parseArgv(argv) {
     quiet: false,
     dropHeaders: false,
     outputSysInspect: false,
-    outputJSON: false
+    outputJSON: false,
+    experimental: false
   };
   
   // Turn '-iH' into '-i -H'.
@@ -105,6 +120,10 @@ function parseArgv(argv) {
       case "-j": // output with JSON.stringify
         parsed.outputJSON = true;
         break;
+      case "-x":
+      case "--experimental":
+        parsed.experimental = true;
+        break;
       default: // arguments
         if (parsed.lookup === null) {
           parsed.lookup = arg;
@@ -119,10 +138,6 @@ function parseArgv(argv) {
   return parsed;
 }
 
-
-function warn(o) {
-  console.warn(o);
-}
 
 function isInteger(s) {
   return (s.search(/^-?[0-9]+$/) == 0);
@@ -240,6 +255,322 @@ function parseLookup(lookup) {
   return bits
 }
 
+/**
+ * Process the input JSON object.
+ *
+ * @argument datum {Object}  The parsed JSON object.
+ * @argument args {Object} Command-line args from parseArgv.
+ * @returns {Array} Array of filtered data.
+ */
+//TODO: s/args/lookup/
+function processDatum(datum, args) {
+  if (args.lookup) {
+    var bits = parseLookup(args.lookup);
+
+    // Put it back together with some convenience transformations.
+    lookup = "";
+    var isJSIdentifier = /^[$A-Za-z_][0-9A-Za-z_]*$/;
+    for (var i=0; i < bits.length; i++) {
+      var bit = bits[i];
+      if (bit[0] === '[') {
+        lookup += bit;
+      } else if (! isJSIdentifier.exec(bits[i])) {
+        // Allow a non-JS-indentifier token, e.g. `json foo-bar`.
+        lookup += '["' + bits[i].replace('"', '\\"') + '"]';
+      } else {
+        lookup += '.' + bits[i];
+      }
+    }
+
+    datum = runInNewContext("(" + JSON.stringify(datum) + ")" + lookup);
+  }
+  
+  return [datum];
+}
+
+/**
+ * Experimenal processing of the input JSON object.
+ * This is turned on by the "-x|--experimental" switch.
+ *
+ * - add support for '*' in lookup
+ *
+ * @argument datum {Object}  The parsed JSON object.
+ * @argument args {Object} Command-line args from parseArgv.
+ * @returns {Array} Array of filtered data.
+ */
+function processDatumExperimental(datum, args) {
+  var data = [datum];
+  if (args.lookup) {
+    var bits = parseLookup(args.lookup);
+
+    var isJSIdentifier = /^[$A-Za-z_][0-9A-Za-z_]*$/;
+    var i = 0;
+    var lookup = "";
+    while (i < bits.length) {
+      var bit = bits[i];
+      if (bit === '*') {
+        if (lookup) {
+          data = data.map(function(d) {
+              return runInNewContext("(" + JSON.stringify(d) + ")" + lookup);
+            }).filter(function(d) { return d !== undefined });
+          lookup = "";
+        }
+        var newdata = [];
+        data.forEach(function(d) {
+          newdata = newdata.concat(d);
+        });
+        data = newdata;
+      } else if (bit[0] === '[') {
+        lookup += bit;
+      } else if (! isJSIdentifier.exec(bits[i])) {
+        // Allow a non-JS-indentifier token, e.g. `json foo-bar`.
+        lookup += '["' + bits[i].replace('"', '\\"') + '"]';
+      } else {
+        lookup += '.' + bits[i];
+      }
+      i++;
+    }
+    if (lookup) {
+      data = data.map(function(d) {
+            return runInNewContext("(" + JSON.stringify(d) + ")" + lookup);
+          }).filter(function(d) { return d !== null });
+    }
+    return data;
+  }
+}
+
+
+/**
+ * TODO: doc this
+ */
+function printData(data, args) {
+  // Print out results.
+  data.forEach(function(d) {
+    var output = null;
+    if (args.outputSysInspect) {
+      output = sys.inspect(d, false, Infinity, true);
+    } else if (args.outputJSON) {
+      if (typeof d !== 'undefined') {
+        output = JSON.stringify(d, null, 2);
+      }
+    } else {
+      if (typeof d === 'string') {
+        output = d;
+      } else if (typeof d !== 'undefined') {
+        output = JSON.stringify(d, null, 2);
+      }
+    }
+    if (output && output.length) {
+      process.stdout.write(output);
+      process.stdout.write('\n');
+    }
+  })
+}
+
+
+//---- minimatch
+// Make a regex for a given fnmatch-like string that git uses for .gitignore.
+// See `man 5 gitignore`.
+//
+// (This is `makeRe` from
+// <https://github.com/isaacs/npm/blob/master/lib/utils/minimatch.js>
+// at Isaac's suggestion.)
+
+function makeMinimatchRe (pattern) {
+  var braceDepth = 0
+    , re = ""
+    , escaping = false
+    , oneStar = "[^\\/]*?"
+    , twoStar = ".*?"
+    , reSpecials = "().*{}+?[]^$/\\"
+    , patternListStack = []
+    , stateChar
+    , negate = false
+    , negating = false
+
+  for ( var i = 0, len = pattern.length, c
+      ; (i < len) && (c = pattern.charAt(i))
+      ; i ++ ) {
+
+    switch (c) {
+      case "\\":
+        if (escaping) {
+          re += "\\\\" // must match literal \
+          escaping = false
+        } else {
+          escaping = true
+        }
+        continue
+
+      case "!":
+        if (i === 0 || negating) {
+          negate = !negate
+          negating = true
+          break
+        }
+        // fallthrough
+      case "+":
+      case "@":
+      case "*":
+      case "?":
+        negating = false
+        if (escaping) {
+          re += "\\" + c
+          escaping = false
+        } else {
+          if (c === "*" && stateChar === "*") { // **
+            re += twoStar
+            stateChar = false
+          } else {
+            stateChar = c
+          }
+        }
+        continue
+
+      case "(":
+        if (escaping) {
+          re += "\\("
+          escaping = false
+        } else if (stateChar) {
+          plType = stateChar
+          patternListStack.push(plType)
+          re += stateChar === "!" ? "(?!" : "(:?"
+          stateChar = false
+        } else {
+          re += "\\("
+        }
+        continue
+
+      case ")":
+        if (escaping) {
+          re += "\\)"
+          escaping = false
+        } else if (patternListStack.length) {
+          re += ")"
+          plType = patternListStack.pop()
+          switch (plType) {
+            case "?":
+            case "+":
+            case "*": re += plType
+            case "!":
+            case "@": break
+          }
+        } else {
+          re += "\\)"
+        }
+        continue
+
+      case "|":
+        if (escaping) {
+          re += "\\|"
+          escaping = false
+        } else if (patternListStack.length) {
+          re += "|"
+        } else {
+          re += "\\|"
+        }
+        continue
+
+      // turns out these are the same in regexp and glob :)
+      case "]":
+      case "[":
+        if (escaping) {
+          re += "\\" + c
+          escaping = false
+        } else {
+          re += c
+        }
+        continue
+
+      case "{":
+        if (escaping) {
+          re += "\\{"
+          escaping = false
+        } else {
+          re += "(:?"
+          braceDepth ++
+        }
+        continue
+
+      case "}":
+        if (escaping || braceDepth === 0) {
+          re += "\\}"
+          escaping = false
+        } else {
+          re += ")"
+          braceDepth --
+        }
+        continue
+
+      case ",":
+        if (escaping || braceDepth === 0) {
+          re += ","
+          escaping = false
+        } else {
+          re += "|"
+        }
+        continue
+
+      default:
+        if (stateChar) {
+          // we had some state-tracking character
+          // that wasn't consumed by this pass.
+          switch (stateChar) {
+            case "*":
+              re += oneStar
+              break
+            case "?":
+              re += "."
+              break
+            default:
+              re += "\\"+stateChar
+              break
+          }
+          stateChar = false
+        }
+        if (escaping) {
+          // no need
+          escaping = false
+        } else if (reSpecials.indexOf(c) !== -1) {
+          re += "\\"
+        }
+        re += c
+    } // switch
+
+    if (negating && c !== "!") negating = false
+
+  } // for
+
+  // handle trailing things that only matter at the very end.
+  if (stateChar) {
+    // we had some state-tracking character
+    // that wasn't consumed by this pass.
+    switch (stateChar) {
+      case "*":
+        re += oneStar
+        break
+      case "?":
+        re += "."
+        break
+      default:
+        re += "\\"+stateChar
+        break
+    }
+    stateChar = false
+  } else if (escaping) {
+    re += "\\\\"
+  }
+
+  // must match entire pattern
+  // ending in a * or ** will make it less strict.
+  re = "^" + re + "$"
+
+  // fail on the pattern, but allow anything otherwise.
+  if (negate) re = "^(!?" + re + ").*$"
+
+  return new RegExp(re)
+}
+
 
 
 //---- mainline
@@ -252,7 +583,7 @@ function main(argv) {
     return;
   }
   if (args.version) {
-    sys.puts("json "+VERSION);
+    sys.puts("json " + getVersion());
     return;
   }
   if (args.extra.length) {
@@ -296,9 +627,9 @@ function main(argv) {
     if (! buffer.length) {
       return;
     }
-    var data;
+    var datum;
     try {
-      data = JSON.parse(buffer);
+      datum = JSON.parse(buffer);
     } catch(ex) {
       // Doesn't look like JSON. Just print it out and move on.
       if (! args.quiet) {
@@ -308,49 +639,23 @@ function main(argv) {
       if (buffer.length && buffer[buffer.length-1] !== "\n") {
         process.stdout.write('\n');
       }
+      process.stdout.flush();
       process.exit(1);
     }
     
-    if (args.lookup) {
-      var bits = parseLookup(args.lookup);
-
-      // Put it back together with some convenience transformations.
-      lookup = "";
-      var isJSIdentifier = /^[$A-Za-z_][0-9A-Za-z_]*$/;
-      for (var i=0; i < bits.length; i++) {
-        var bit = bits[i];
-        if (bit[0] === '[') {
-          lookup += bit;
-        } else if (! isJSIdentifier(bits[i])) {
-          // Allow a non-JS-indentifier token, e.g. `json foo-bar`.
-          lookup += '["' + bits[i].replace('"', '\\"') + '"]';
-        } else {
-          lookup += '.' + bits[i];
-        }
-      }
-
-      data = runInNewContext("(" + JSON.stringify(data) + ")" + lookup);
+    // Process the JSON data.
+    if (args.experimental) {
+      var outputData = processDatumExperimental(datum, args);
+    } else {
+      var outputData = processDatum(datum, args);
     }
     
-    // Print out results.
-    var output = null;
-    if (args.outputSysInspect) {
-      output = sys.inspect(data, false, Infinity, true);
-    } else if (args.outputJSON) {
-      if (typeof data !== 'undefined') {
-        output = JSON.stringify(data, null, 2);
-      }
-    } else {
-      if (typeof data === 'string') {
-        output = data;
-      } else if (typeof data !== 'undefined') {
-        output = JSON.stringify(data, null, 2);
-      }
-    }
-    if (output && output.length) {
-      process.stdout.write(output);
-      process.stdout.write('\n');
-    }
+    // Emit the filtered data.
+    printData(outputData, args);
+  });
+
+  process.on('exit', function () {
+    process.stdout.flush();
   });
 }
 

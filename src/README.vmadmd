@@ -1,0 +1,52 @@
+Introduction to vmadmd
+======================
+
+The vmadmd daemon facilitates the management of virtual machines.  It can do the following:
+
+ * create a new virtual machine
+   * allocate storage
+   * store VMs attributes in a file in /etc/vms/<uuid>.json
+ * destroy a VM
+ * boot a virtual machine
+ * kill (yank power cable) a virtual machine
+ * send a ACPI power off event to the VM (VM is free to ignore) with a timeout (then kill)
+ * reset a VM (hard reset)
+ * list VMs (and status)
+ * get runtime info about a VM (from Qemu)
+ * get network info about a VM given a MAC address
+
+Talking to vmadmd
+=================
+
+The vmadmd daemon listens on a unix socket /tmp/vmadmd.sock.  It speaks a very
+simple JSON protocol.  This example illustrates this protocol:
+
+    [root@00-0c-29-32-38-eb (coal) ~]# nc -U /tmp/vmadmd.sock
+    {"action": "list"}
+
+    {"type":"success","data":[{"uuid":"797ec428-b745-444b-b74a-b5001fc23f35","state":"running"}]}
+    ^C
+    [root@00-0c-29-32-38-eb (coal) ~]#
+
+You can see here that I sent a 'list' comand and got a response.  Each request
+to vmadmd should be a single line of JSON followed by \n\n.  The response will
+be a json object followed by \n.
+
+Also note that some commands (notably create) will periodically provide updates
+on the status of their operation.  These will come as additional JSON messages
+of the form:
+
+    {"type": "update", "data": {...}}
+
+All messages from vmadmd will include the keys: "type" and "data".  The "type"
+field will be one of the following:
+
+ * success -- command was succesful and has been completed
+ * failure -- command failed (details should be in data)
+ * update  -- command is still in progress and has an update on its status
+
+And the data will be a value appropriate for the response.
+
+XXX -> make responses more uniform.
+
+

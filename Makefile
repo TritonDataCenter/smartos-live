@@ -3,7 +3,7 @@
 ROOT=$(PWD)
 PROTO=$(ROOT)/proto
 PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin
-LOCAL_SUBDIRS=kvm kvm-cmd
+LOCAL_SUBDIRS:=$(shell ls projects/local)
 
 world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp \
 	0-tools-stamp 0-man-stamp 0-devpro-stamp
@@ -11,19 +11,22 @@ world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp \
 live: world
 	(cd $(ROOT)/src_addon && gmake DESTDIR=$(PROTO) install)
 	mkdir -p ${ROOT}/log
-	(cd $(ROOT) && pfexec ./tools/build_live $(ROOT)/manifest $(ROOT)/output $(ROOT)/overlay $(ROOT)/proto $(ROOT)/man/man)
+	(cd $(ROOT) && pfexec ./tools/build_live $(ROOT)/manifest $(ROOT)/output $(ROOT)/overlay $(ROOT)/proto $(ROOT)/man/)
 
 update:
-	@(git pull --rebase)
-	@(cd projects/illumos; git pull --rebase)
-	@(cd projects/illumos-extra; git pull --rebase)
-	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do (cd projects/local/$${dir} && gmake update); done
+	./tools/update_base
+	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
+	cd $(ROOT)/projects/local/$${dir}; \
+	if [[ -f Makefile.joyent ]]; then \
+	gmake -f Makefile.joyent update; else gmake update; fi; done
+
 
 0-local-stamp:
 	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
-        (cd $(ROOT)/projects/local/$${dir} && \
-        [ -f build.sh ] && ./build.sh || gmake && \
-        gmake SMARTOS=true DESTDIR=$(PROTO) install); done
+	cd $(ROOT)/projects/local/$${dir}; \
+	if [[ -f Makefile.joyent ]]; then \
+	gmake -f Makefile.joyent world; else gmake world; fi; \
+        gmake SMARTOS=true DESTDIR=$(PROTO) install; done
 
 0-devpro-stamp:
 	[ ! -d projects/devpro ] || \
@@ -57,8 +60,11 @@ tools/cryptpass: tools/cryptpass.c
 
 clean:
 	(cd $(ROOT)/src && gmake clean)
-	(cd $(ROOT)/projects/illumos-extra && gmake clean)
-	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do (cd projects/local/$${dir} && gmake clean); done
+	[ ! -d $(ROOT)/projects/illumos-extra ] || (cd $(ROOT)/projects/illumos-extra && gmake clean)
+	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
+	cd $(ROOT)/projects/local/$${dir}; \
+	if [[ -f Makefile.joyent ]]; then \
+	gmake -f Makefile.joyent clean; else gmake clean; fi; done
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO))
 	rm -f 0-*-stamp

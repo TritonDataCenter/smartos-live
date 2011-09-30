@@ -1,4 +1,4 @@
-#!/bin/bash
+#gents!/bin/bash
 #
 # CDDL HEADER START
 #
@@ -34,6 +34,13 @@ smf_is_globalzone || exit $SMF_EXIT_OK
 # so that we can try to import the zpool.
 /usr/lib/sysevent/syseventd
 
+function destroy_zpools
+{
+    for pool in $(zpool list -p -o name | grep -v NAME) ; do
+        zpool destroy -f ${pool}
+    done
+}
+
 /bin/bootparams | grep "^noimport=true" >/dev/null
 if [ $? -ne 0 ]; then
     # If the zpool doesn't exist, then there's nothing to mount.
@@ -42,7 +49,7 @@ if [ $? -ne 0 ]; then
     # identifies itself (by virtue of the .system_pool file being present in the
     # pool's root dataset), then use that system pool instead.
     SYS_ZPOOL=zones
-
+    
     # Import all zpools available
     for pool in $(zpool import | grep "pool:" | awk '{print $2}') ; do
         zpool import -f $pool
@@ -57,27 +64,41 @@ if [ $? -ne 0 ]; then
     # If the destroy_zpools boot parameter is set, destroy all zpools
     /bin/bootparams | grep "^destroy_zpools=true" >/dev/null
     if [ $? -eq 0 ]; then
-        for pool in $(zpool list -p -o name | grep -v NAME) ; do
-            zpool destroy -f ${pool}
-        done
+        destroy_zpools
+    fi
+
+    # A machine is reset to its original unsetup state (i.e. a 'factory reset')
+    # when the smartdc:factoryreset ZFS user property is set on the var dataset.
+    reset=$(zfs get -H -o value smartdc:factoryreset ${SYS_ZPOOL}/var)
+    if [ ${reset} == "yes" ]; then
+        destroy_zpools
     fi
 
     # For the system zpool, mount and configure all system datasets
     zpool status -v ${SYS_ZPOOL}
-    if [ $? -eq 0 ]; then
+    if [ $? -eq 0 ]; then 
         mount -F zfs ${SYS_ZPOOL}/var /var
         mount -F zfs ${SYS_ZPOOL}/config /etc/zones
         mount -F zfs ${SYS_ZPOOL}/opt /opt
-        mkdir -p /opt/smartdc/agents/smf
-        mount -O -F lofs /var/svc/manifest/site /opt/smartdc/agents/smf
-
-        if [[ -n $(/bin/bootparams | grep '^headnode=true') ]]; then
-            mkdir /usbkey
-            mount -F zfs ${SYS_ZPOOL}/usbkey /usbkey
+        if [[ -n $(/bin/bootparams | grep '^headnode=true') ]]; then 
+          mkdir -p /opt/smartdc/agents/smf
+          mount -O -F lofs /var/svc/manifest/site /opt/smartdc/agents/smf
         fi
 
-        swap -a /dev/zvol/dsk/${SYS_ZPOOL}/swap
+  if [[ -n $(/bin/bootparams | grep '^headnode=true') || \
+        -n $(/bin/bootparams | grep '^smartos=true') ]]; then
+        mkdir /usbkey
+    mount -F zfs ${SYS_ZPOOL}/usbkey /usbkey
+  fi
+  if [[ -n $(/bin/bootparams | grep '^smartos=true') ]]; then
+    mount -F lofs /usbkey/shadow /etc/shadow
+    mount -F lofs /usbkey/ssh /etc/ssh
+  fi
+
+  swap -a /dev/zvol/dsk/${SYS_ZPOOL}/swap
 	dumpadm -y -d /dev/zvol/dsk/${SYS_ZPOOL}/dump
+
+	ln -s /${SYS_ZPOOL}/global/cores /cores
 
 	[[ -f /${SYS_ZPOOL}/currbooted ]] && \
             mv /${SYS_ZPOOL}/currbooted /${SYS_ZPOOL}/lastbooted

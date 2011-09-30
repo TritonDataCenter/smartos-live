@@ -1,0 +1,80 @@
+#!/usr/bin/bash
+#
+#
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2011, Joyent, Inc.
+#
+
+#
+# Update all of the non-local repos as necessary
+#
+shopt -s xpg_echo
+
+upd_arg0=$(basename $0)
+upd_root=$(pwd)
+upd_extra_stamp=$upd_root/0-extra-stamp
+upd_illumos_stamp=$upd_root/0-illumos-stamp
+
+function fail
+{
+	local msg="$*"
+	[[ -z "$msg" ]] && msg="failed"
+	echo "$sbz_arg0: $msg" >&2
+	exit 1
+}
+
+#
+# Does a git pull --rebase and sees if anything has changed. Returns 0 if
+# nothing changed.
+#
+function git_update
+{
+	local sha newsha
+	sha=$(git show HEAD | head -n1 | awk '{print $2 }')
+	[[ $? -eq 0 ]] || fail 'failed to get current git sha'
+	git pull --rebase > /dev/null
+	[[ $? -eq 0 ]] || fail 'failed to update git'
+	newsha=$(git show HEAD | head -n1 | awk '{print $2 }')
+	[[ "$sha" == "$newsha" ]]
+	return
+}
+
+echo "Updating illumos-extra... \c "
+cd $upd_root/projects/illumos-extra
+[[ $? -eq 0 ]] || fail "can't find illumos-extra directory"
+git_update || rm -f $upd_extra_stamp
+echo "done"
+
+echo "Updating illumos-joyent... \c "
+cd $upd_root/projects/illumos
+[[ $? -eq 0 ]] || fail "can't find illumos directory"
+git_update || rm -f $upd_illumos_stamp
+echo "done"
+
+
+echo "Updating illumos-live... \c "
+cd $upd_root
+[[ $? -eq 0 ]] || fail "illumos-live repo disappeared"
+git_update
+echo "done"
+
+exit 0

@@ -8,7 +8,7 @@ _vmadm()
     up_patterns=$(printf " running *\$\n halting *\$\n")
 
     if [[ ${prev} == 'vmadm' ]]; then
-        COMPREPLY=( $(compgen -W "boot destroy dump kill halt list reset info nmi" -- ${cur}) )
+        COMPREPLY=( $(compgen -W "boot destroy dump kill halt list reboot reset info nmi" -- ${cur}) )
     else
         case ${prev} in
             boot)
@@ -21,7 +21,7 @@ _vmadm()
                     /usr/xpg4/bin/grep -e "${up_patterns}" | cut -d ' ' -f1)
                 COMPREPLY=( $(compgen -W "${running}" -- ${cur}) )
             ;;
-            halt|reset|nmi)
+            halt|reboot|reset|nmi)
                 local running=$(vmadm list -v | grep -v "^UUID" | \
                     grep " running *$" | cut -d ' ' -f1)
                 COMPREPLY=( $(compgen -W "${running}" -- ${cur}) )

@@ -92,11 +92,11 @@
 				value='solaris.smf.value.coreadm' />
 
 			<propval name='global_pattern'
-				type='astring' value='/zones/%z/cores/core.%f.%p' />
+				type='astring' value='/%Z/cores/core.%f.%p' />
 			<propval name='global_content'
 				type='astring' value='default' />
 			<propval name='init_pattern'
-				type='astring' value='/zones/%z/cores/core.%f.%p' />
+				type='astring' value='/%Z/cores/core.%f.%p' />
 			<propval name='init_content'
 				type='astring' value='default' />
 			<propval name='global_enabled'

@@ -60,7 +60,7 @@ function sdc_config_keys_contain {
     fi
 
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        matches=$((cat ${SDC_CONFIG_FILENAME} ${GEN_FILE}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
+        matches=$((cat ${GEN_FILE} ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
 	    sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
 	    sed -e "s/=.*//" | grep $search | wc -l)
         if [[ $matches -eq 0 ]]; then
@@ -83,7 +83,7 @@ function sdc_config_keys {
     fi
 
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        keys=$((cat ${SDC_CONFIG_FILENAME} ${GEN_FILE}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
+        keys=$((cat ${GEN_FILE} ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
 	    sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
 	    sed -e "s/=.*//")
     fi
@@ -112,13 +112,35 @@ function load_sdc_config {
     # Ignore comments, spaces at the beginning of lines and lines that don't
     # start with a letter.
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        eval $((cat ${SDC_CONFIG_FILENAME} ${GEN_FILE}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
+        eval $((cat ${GEN_FILE} ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
 	    sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
 	    sed -e "s/^/${prefix}/")
     elif [[ ${headnode} == "true" ]]; then
         echo "FATAL: Unable to load headnode config."
         exit 1
     fi
+}
+
+# Loads bootparams as variables with prefix (default: BOOT_)
+function load_sdc_bootparams {
+    prefix=$1
+    [[ -z ${prefix} ]] && prefix="BOOT_"
+    for line in $(/bin/bootparams); do
+        fields=(${line//=/ })
+        key=$(echo ${fields[0]} | sed -e "s/-/_/g")
+        eval "${prefix}${key}=${fields[1]}"
+    done
+}
+
+# Outputs the keys from bootparams
+function sdc_bootparams_keys {
+    #keys=$(/bin/bootparams | sed -e "s/=.*//")
+    #keys=$(cat /tmp/bootparams | sed -e "s/=.*//")
+    for line in $(/bin/bootparams); do
+        fields=(${line//=/ })
+        key=$(echo ${fields[0]} | sed -e "s/=.*//")
+        echo ${key}
+    done
 }
 
 if [[ $1 == "-json" ]]; then

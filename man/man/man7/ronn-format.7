@@ -1,0 +1,215 @@
+.\" Generated with Ronnjs/v0.1
+.\" http://github.com/kapouer/ronnjs/
+.
+.TH "RONN\-FORMAT" "7" "September 2011" "" ""
+.
+.SH "NAME"
+\fBronn-format\fR \-\- manual authoring format based on Markdown
+.
+.SH "SYNOPSIS"
+.
+.nf
+name(1) \-\- short, single\-sentence description
+=============================================
+
+## SYNOPSIS
+
+`name` [<optional>\.\.\.] <flags>
+
+## DESCRIPTION
+
+A normal paragraph\. This can span multiple lines and is terminated with two
+or more line endings \-\- just like Markdown\.
+
+Inline markup for `code`, `user input`, and **strong** are displayed
+boldface; <variable>, _emphasis_, *emphasis*, are displayed in italics
+(HTML) or underline (roff)\.
+
+Manual references like sh(1), markdown(7), roff(7), etc\. are hyperlinked in
+HTML output\.
+
+Link to sections like [STANDARDS][], [SEE ALSO][], or [WITH A DIFFERENT LINK
+TEXT][#SEE\-ALSO]\.
+
+Definition lists:
+
+  * `\-a`, `\-\-argument`=[<value>]:
+    One or more paragraphs describing the argument\.
+
+  * You can put whatever you *want* here, really:
+    Nesting and paragraph spacing are respected\.
+
+Frequently used sections:
+
+## OPTIONS
+## SYNTAX
+## ENVIRONMENT
+## RETURN VALUES
+## STANDARDS
+## SECURITY CONSIDERATIONS
+## BUGS
+## HISTORY
+## AUTHOR
+## COPYRIGHT
+## SEE ALSO
+.
+.fi
+.
+.SH "DESCRIPTION"
+The ronn(1) command converts text in a simple markup to UNIX manual pages\. The
+syntax includes all Markdown formatting features, plus conventions for
+expressing the structure and various notations present in standard UNIX
+manpages\.
+.
+.P
+Not all roff(7) typesetting features can be expressed using ronn syntax\.
+.
+.SH "MANPAGE TITLE"
+Manpages have a <name>, <section>, and a one\-line <description>\. Files must
+start with a level one heading defining these attributes:
+.
+.IP "" 4
+.
+.nf
+ls(1) \-\- list directory contents
+================================
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Indicates that the manpage is named \fBls\fR in manual section \fB1\fR ("user
+commands")\.
+.
+.SH "SECTION HEADINGS"
+Man section headings are expressed with markdown level two headings\. There
+are two syntaxes for level two headings\.
+.
+.P
+Hash prefix syntax:
+.
+.IP "" 4
+.
+.nf
+## HEADING TEXT
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Dash underline syntax:
+.
+.IP "" 4
+.
+.nf
+HEADING TEXT
+\-\-\-\-\-\-\-\-\-\-\-\-
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Section headings should be all uppercase and may not contain inline markup\.
+.
+.SH "INLINE MARKUP"
+Manpages have a limited set of text formatting capabilities\. There\'s basically
+<b>boldface</b> and <i>italics</i> (often displayed using <u>underline</u>)\.
+Ronn uses the following bits of markdown(7) to accomplish this:
+.
+.IP "\(bu" 4
+<code>`backticks`</code> (markdown compatible):
+Code, flags, commands, and noun\-like things; typically displayed in in
+<b>boldface</b>\. All text included within \fBbackticks\fR is displayed
+literally; other inline markup is not processed\. HTML output:
+\fB<code>\fR\|\.
+.
+.IP "\(bu" 4
+\fB**double\-stars**\fR (markdown compatible):
+Also displayed in boldface\. Unlike backticks, inline markup is processed\.
+HTML output: \fB<strong>\fR\|\.
+.
+.IP "\(bu" 4
+\fB<anglequotes>\fR (non\-compatible markdown extension):
+User\-specified arguments, variables, or user input\. Typically displayed with
+<u>underline</u> in roff output\. HTML output: \fB<var/>\fR\|\.
+.
+.IP "\(bu" 4
+\fB_\fR\fIunderbars\fR\fB_\fR (markdown compatible):
+Emphasis\. May be used for literal option values\. Typically displayed with
+<u>underline</u> in roff output\. HTML output: \fB<em>\fR\|\.
+.
+.IP "" 0
+.
+.P
+Here is grep(1)\'s DESCRIPTION section represented in \fBronn\fR:
+.
+.IP "" 4
+.
+.nf
+`Grep` searches the named input <FILE> (or standard input if
+no files are named, or the file name `\-` is given) for lines
+containing a match to the given <PATTERN>\. By default, `grep`
+prints the matching lines\.
+.
+.fi
+.
+.IP "" 0
+.
+.SH "DEFINITION LISTS"
+The definition list syntax is compatible with markdown\'s unordered list syntax
+but requires that the first line of each list item be terminated with a colon
+"\fB:\fR" character\. The contents of the first line is the <term>; subsequent lines
+may be comprised of multiple paragraphs, code blocks, standard lists, and nested
+definition lists\.
+.
+.P
+An example definition list, taken from BSD test(1)\'s \fIDESCRIPTION\fR section:
+.
+.IP "" 4
+.
+.nf
+ The following primaries are used to construct expressions:
+
+   * `\-b` <file>:
+     True if <file> exists and is a block special file\.
+
+   * `\-c` <file>:
+     True if _file_ exists and is a character special file\.
+
+   * `\-d` <file>:
+     True if file exists and is a directory\.
+.
+.fi
+.
+.IP "" 0
+.
+.SH "LINKS"
+All markdown(7) linking features are supported\.
+.
+.P
+Markdown reference\-style links can be used to link to specific sections by name:
+.
+.IP "" 4
+.
+.nf
+## SECTION 1
+
+See the following section\.
+
+## SECTION 2
+
+See [SECTION 1][] or [to put it another way][SECTION 1]\.
+.
+.fi
+.
+.IP "" 0
+.
+.P
+The anchor name would be \fB#SECTION\-1\fR and \fB#SECTION\-2\fR\|\. All non\-word characters
+are removed and spaces are replaced by dashes\.
+.
+.SH "SEE ALSO"
+ronn(1), markdown(7), roff(7)

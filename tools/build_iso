@@ -7,7 +7,7 @@
 
 shopt -s xpg_echo
 set -o pipefail
-export PATH=/usr/bin
+export PATH=/usr/bin:/opt/local/bin
 
 bi_tmpdir=/tmp/build_iso-$USER.$$
 bi_output_dir="output-iso"
@@ -140,19 +140,23 @@ serial --unit=0 --speed=115200 --word=8 --parity=no --stop=1
 terminal --timeout=3 serial console
 
 title Live 64-bit (text)
+   kernel /platform/i86pc/kernel/amd64/unix -B console=text,smartos=true,root_shadow='$shadow'$bi_grub_optstr
+   module /platform/i86pc/amd64/boot_archive
+
+title Live 64-bit Standalone (noinstall)
    kernel /platform/i86pc/kernel/amd64/unix -B console=text,standalone=true,noimport=true,root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive
 
 title Live 64-bit (text) +kmdb
-   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=text,standalone=true,noimport=true,root_shadow='$shadow'$bi_grub_optstr
+   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=text,smartos=true,root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive
 
 title Live 64-bit (ttya) +kmdb
-   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=ttya,ttya-mode="115200,8,n,1,-",standalone=true,noimport=true,root_shadow='$shadow'$bi_grub_optstr
+   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=ttya,ttya-mode="115200,8,n,1,-",smartos=true,root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive
 
 title Live 64-bit (ttya)
-   kernel /platform/i86pc/kernel/amd64/unix -B console=ttya,ttya-mode="115200,8,n,1,-",standalone=true,noimport=true,root_shadow='$shadow'$bi_grub_optstr
+   kernel /platform/i86pc/kernel/amd64/unix -B console=ttya,ttya-mode="115200,8,n,1,-",smartos=true,root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive
 EOF
 	[[ $? -eq 0 ]] || fail "failed to create menu.lst"
@@ -169,7 +173,7 @@ function bi_generate_iso
 	fi
 	echo "Generating iso... \c "
 	isopath="$bi_output_dir/$bi_platform_name.iso"
-	mkisofs -R -b 			\
+	LC_ALL=C mkisofs -R -b 			\
 	    boot/grub/stage2_eltorito	\
 	    -no-emul-boot 		\
 	    -boot-load-size 4		\

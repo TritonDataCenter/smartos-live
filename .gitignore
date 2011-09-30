@@ -43,3 +43,4 @@ tools/pwgen-2.06/autom4te.cache
 manifest.gen
 manifest.d/
 overlay/order
+overlay/sdc

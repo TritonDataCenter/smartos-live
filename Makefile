@@ -27,6 +27,7 @@ manifest:
 	if [[ -f Makefile.joyent ]]; then \
 	gmake DESTDIR=$(MPROTO) DESTNAME=$${dir}.manifest -f Makefile.joyent \
 	manifest; else gmake DESTDIR=$(MPROTO) DESTNAME=$${dir}.manifest manifest; fi; done
+	for dir in $(OVERLAYS); do cp $${dir}/manifest $(MPROTO)/overlay-$$(basename $${dir}).manifest; done
 	./tools/build_manifest
 
 update:

@@ -1,0 +1,12 @@
+d root 0755 root root
+f root/.bash_profile 0644 root root
+f root/.bashrc 0644 root root
+f root/.profile 0644 root root
+d lib 0755 root bin
+d lib/svc 0755 root bin
+d lib/svc/method 0755 root bin
+f lib/svc/method/smartdc-ur 0555 root bin
+f lib/svc/method/smartdc-beacon 0555 root bin
+d lib/svc/manifest 0755 root sys
+d lib/svc/manifest/system 0755 root sys
+f lib/svc/manifest/system/smartdc-ur.xml 0444 root sys

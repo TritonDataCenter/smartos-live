@@ -21,7 +21,7 @@ _vmadm()
                     /usr/xpg4/bin/grep -e "${up_patterns}" | cut -d ' ' -f1)
                 COMPREPLY=( $(compgen -W "${running}" -- ${cur}) )
             ;;
-            halt|reboot|reset|nmi)
+            halt|reboot|reset|nmi|screenshot)
                 local running=$(vmadm list -v | grep -v "^UUID" | \
                     grep " running *$" | cut -d ' ' -f1)
                 COMPREPLY=( $(compgen -W "${running}" -- ${cur}) )

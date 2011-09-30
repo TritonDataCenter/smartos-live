@@ -145,8 +145,9 @@ function grab_svcs
     mkdir ${TEMPDIR}/svccfg_archive
     echo "    (global service archive)"
     svccfg archive | gzip -c > ${TEMPDIR}/svccfg_archive/global.gz
-    if [[ -d /usbkey/zones ]]; then
-        for zone in $(cd /usbkey/zones ; ls); do
+    if [[ -n $headnode ]]; then
+        for zone in `zoneadm list`; do
+	    [ "$zone" == "global" ] && continue
             echo "    (service archive for $zone)"
             zlogin ${zone} svccfg archive \
             | gzip -c > ${TEMPDIR}/svccfg_archive/${zone}.gz
@@ -303,8 +304,8 @@ function grab_logs
 
 function grab_castatus
 {
-    if [[ -n ${CONFIG_ca_admin_ip} ]]; then
-        curl http://${CONFIG_ca_admin_ip}:23181/ca/admin/status?recurse=true >&4 2>&1 \
+    if [[ -n ${CONFIG_ca_client_url} ]]; then
+        curl ${CONFIG_ca_client_url}/ca/admin/status?recurse=true >&4 2>&1 \
         | json > ${TEMPDIR}/ca.status
     fi
 }
@@ -386,6 +387,7 @@ function grab_platform_md5
     sum -R -x md5 /usbkey/os > ${TEMPDIR}/platforms_cache.md5
     /usbkey/scripts/mount-usb.sh
     sum -R -x md5 /mnt/usbkey/os > ${TEMPDIR}/platforms_bootable.md5
+    umount /mnt/usbkey
 }
 
 function grab_rabbitmq_info

@@ -10,20 +10,14 @@ f usr/lib/amd64/libCstd.so.1 0755 root bin
 f usr/lib/amd64/libdemangle.so.1 0755 root bin
 f usr/lib/amd64/libiostream.so.1 0755 root bin
 # 0-livesrc-stamp
-f usr/bin/sysinfo 0555 root bin
-f usr/bin/bootparams 0555 root bin
 d smartdc 0555 root bin
 d smartdc/bin 0555 root bin
-f smartdc/bin/beacon 0555 root bin
 f smartdc/bin/has_hvx 0555 root bin
-f smartdc/bin/marco 0555 root bin
-f smartdc/bin/polo 0555 root bin
-f smartdc/bin/sdc-sbcreate 0555 root bin
-f smartdc/bin/sdc-sbupload 0555 root bin
+f usr/bin/sysinfo 0555 root bin
+f usr/bin/bootparams 0555 root bin
 f usr/bin/disklist 0555 root bin
 f usr/bin/removable_disk 0555 root bin
 f usr/bin/disk_size 0555 root bin
-f smartdc/pubkey.key 0555 root bin
 f usr/lib/vmadmd 0555 root bin
 f usr/sbin/vmadm 0555 root bin
 f usr/sbin/vmcfg 0555 root bin
@@ -31,7 +25,6 @@ s usr/sbin/create-machine=machine-create
 f usr/sbin/machine-create 0555 root bin
 f usr/sbin/machine-json 0555 root bin
 f usr/sbin/machine-lookup 0555 root bin
-f usr/sbin/mdata-get 0555 root bin
 d usr/node_modules 0555 root bin
 f usr/node_modules/async.js 0444 root bin
 f usr/node_modules/onlyif.js 0444 root bin

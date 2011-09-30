@@ -76,6 +76,33 @@ function trim(str, chars)
     return ltrim(rtrim(str, chars), chars);
 }
 
+function getZonename(input, callback)
+{
+    var cmd;
+
+    // this gives us a zonename if input is *either* of: a zonename or uuid.
+    if (input.length === 36 &&
+        input[8] === '-' && input[13] === '-' &&
+        input[18] === '-' && input[23] === '-') {
+
+        cmd = '/usr/sbin/zoneadm -z ' + input + ' -u ' + input + ' '  +
+            'list -p';
+    } else {
+        cmd = '/usr/sbin/zoneadm -z ' + input + ' '  + 'list -p';
+    }
+
+    exec(cmd, function (err, stdout, stderr) {
+        var fields;
+        if (err) {
+            return callback(rtrim(stderr));
+        }
+
+        fields = rtrim(stdout).split(':');
+        // equiv: null, [zonename, uuid]
+        callback(null, [fields[1], fields[4]]);
+    });
+}
+
 /*
  * This fixes MAC addresses to standard form xx:xx:xx:xx:xx:xx
  * since some SmartOS tools (unfortunately) remove leading zeros.
@@ -245,10 +272,20 @@ function main()
             getter(z, function (err, values) {
                 if (!err && values.indexOf(needle) !== -1)  {
                     // found the needle in zone 'z'!
-                    console.log(z);
-                    found = true;
+                    getZonename(z, function (error, info) {
+                        var zoneuuid, zonename;
+                        if (error) {
+                            return callback(error);
+                        }
+                        zonename = info[0];
+                        zoneuuid = info[1];
+                        console.log(zoneuuid);
+                        callback();
+                        found = true;
+                    });
+                } else {
+                    callback();
                 }
-                callback();
             });
         },
         function(err) {

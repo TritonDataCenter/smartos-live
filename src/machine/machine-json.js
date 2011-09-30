@@ -440,6 +440,7 @@ function getZonename(input, callback)
         }
 
         fields = rtrim(stdout).split(':');
+        // equiv: null, [zonename, uuid]
         callback(null, [fields[1], fields[4]]);
     });
 }

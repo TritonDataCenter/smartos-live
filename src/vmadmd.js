@@ -1058,6 +1058,33 @@ function nmiVM(payload, options, callback)
     });
 }
 
+function screenshotVM(payload, options, callback)
+{
+    var trace = options.trace;
+    var filename = '/tmp/vm.ppm';
+
+    if (!payload.hasOwnProperty('uuid')) {
+        return callback('Payload missing "uuid" field');
+    }
+
+    if (!VMS.hasOwnProperty(payload.uuid)) {
+        return callback('Cannot find VM with UUID ' + payload.uuid);
+    }
+
+    VMS[payload.uuid].qmp.command('screendump',
+        {'filename': filename}, function (err, result) {
+
+        log('screenshot RESULT[', result, '] ERROR:[', err, ']');
+        if (err) {
+            trace({'screenshotVM': 'error',
+                'screenshotVM:error': err});
+        } else {
+            trace({'screenshotVM': 'sent'});
+        }
+        callback(err, result);
+    });
+}
+
 function nicZonecfg(nic, idx, callback)
 {
     var zonecfg = '';
@@ -1623,6 +1650,8 @@ var VM_ACTIONS = {
     'reboot':  { 'func': rebootVM, 'okstates': ['running'], 'needs_uuid': true},
     'reset':   { 'func': resetVM,  'okstates': ['running'], 'needs_uuid': true},
     'nmi':     { 'func': nmiVM,    'okstates': ['running'], 'needs_uuid': true},
+    'screenshot': { 'func': screenshotVM, 'okstates': ['running', 'halting'],
+        'needs_uuid': true},
     'add_nic': { 'func': addNicToVM, 'okstates': ['off'],   'needs_uuid': true},
     'remove_nic': {
         'func': removeNicFromVM,

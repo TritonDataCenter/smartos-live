@@ -32,7 +32,7 @@ var sprintf = require('sprintf').sprintf;
 var sys     = require('sys');
 
 var INFO_TYPES = ['all', 'version', 'chardev', 'block', 'blockstats', 'cpus',
-    'pci', 'kvm', 'vnc'];
+    'pci', 'kvm', 'vnc', 'screenshot'];
 
 function out()
 {
@@ -54,6 +54,7 @@ function usage()
     out("    reset <uuid> .......... resets (power-cycles) the specified VM");
     out("    reboot <uuid> ......... reboots (halt+boots) the specified VM");
     out("    nmi <uuid> ............ sends an NMI to the specified VM");
+    out("    screenshot <uuid> ..... request a screenshot of the specified VM");
     out("    info <uuid> [type] .... prints detailed info about specified VM");
     out("    mac <macaddr> ......... prints network info for specified MAC");
     out("\n  'boot' Options:\n");
@@ -297,6 +298,7 @@ function main()
     case 'reset':
     case 'reboot':
     case 'nmi':
+    case 'screenshot':
     case 'info':
     case 'boot':
         uuid = process.argv[3];

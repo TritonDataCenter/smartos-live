@@ -1469,26 +1469,32 @@ function bootVM(payload, options, callback)
                     ',model=' + nic.model);
                 var vnic_opts = 'vnic,name=net' + nic_idx +
                     ',vlan=' + nic_idx +
-                    ',ifname=net' + nic_idx +
-                    ',ip=' + nic.ip +
-                    ',netmask=' + nic.netmask;
+                    ',ifname=net' + nic_idx;
+
+                if (nic.ip != 'dhcp') {
+                    vnic_opts = vnic_opts +
+                        ',ip=' + nic.ip +
+                        ',netmask=' + nic.netmask;
+                }
 
                 // The primary network provides the resolvers, default gateway
                 // and hostname to prevent machines from trying to use settings
                 // from more than one nic
                 if (!primary_found) {
                     if (nic.hasOwnProperty('primary') && nic.primary) {
-                        if (nic.hasOwnProperty('gateway')) {
+                        if (nic.hasOwnProperty('gateway') && nic.ip != 'dhcp') {
                             vnic_opts += ',gateway_ip=' + nic.gateway;
                         }
                         primary_found = true;
                     }
                     else if (defaultgw && nic.hasOwnProperty('gateway') && nic.gateway == defaultgw) {
-                        vnic_opts += ',gateway_ip=' + nic.gateway;
+                        if (nic.ip != 'dhcp') {
+                            vnic_opts += ',gateway_ip=' + nic.gateway;
+                        }
                         primary_found = true;
                     }
 
-                    if (primary_found) {
+                    if (primary_found && nic.ip != 'dhcp') {
                         if (hostname) {
                             vnic_opts += ',hostname=' + hostname;
                         }

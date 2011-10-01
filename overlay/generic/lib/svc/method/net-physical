@@ -235,12 +235,39 @@ IPNAT
     fi
 else
     # Non-global zones
+
+    # Bring up statically assigned interfaces, and find the primary DHCP
+    # interface, if it exists
     for iface in `dladm show-vnic -p -o link`; do
-        ifconfig ${iface} plumb
-        if [[ -f /etc/dhcp.${iface} || ! -f /etc/hostname.${iface} ]]; then
-            ifconfig ${iface} dhcp
-        else
+        if [[ -f /etc/hostname.${iface} ]]; then
+            ifconfig ${iface} plumb
             ifconfig ${iface} inet `cat /etc/hostname.${iface}` up
+        else
+            if [[ -z "${first_iface}" ]]; then
+                first_iface=${iface}
+            fi
+            if [[ -z "${primary}" && -f /etc/dhcp.${iface} ]]; then
+                primary=${iface}
+            fi
+        fi
+    done
+
+    if [[ -z "${primary}" && -n "${first_iface}" ]]; then
+        primary=${first_iface}
+    fi
+
+    if [[ -n "${primary}" ]]; then
+        /sbin/ifconfig ${primary} plumb
+        /sbin/ifconfig ${primary} auto-dhcp primary
+    fi
+
+    for iface in `dladm show-vnic -p -o link`; do
+        if [[ "${iface}" == "${primary}" ]]; then
+            continue
+        fi
+        /sbin/ifconfig ${iface} plumb
+        if [[ ! -f /etc/hostname.${iface} ]]; then
+            /sbin/ifconfig ${iface} dhcp start wait 0
         fi
     done
 fi

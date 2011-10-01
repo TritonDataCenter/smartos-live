@@ -77,8 +77,8 @@
  *         the zone/vm.
  *       - default: {}
  *
- *    "default_gateway"
- *       - The IP Address of the router that should act as the default gateway
+ *    "hostname"
+ *      - The hostname for this machine
  *
  *    "limit_priv"
  *       - a comma separated list of priviledges to give this zone
@@ -107,15 +107,16 @@
  *        - array of ports on which this nic is prevented from sending traffic.
  *        - default: []
  *      nic.gateway
- *        - The IPv4 router on this network
+ *        - The IPv4 router on this network (not required if using DHCP)
  *      nic.ip
- *        - IPv4 unicast address for this NIC
+ *        - IPv4 unicast address for this NIC, or 'dhcp' to obtain address
+ *          via DHCP
  *      nic.mac
  *        - MAC address of virtual NIC (we'll generate one by default)
  *      nic.model
  *        - The driver for this NIC [virtio|e1000|rtl8136|...]
  *      nic.netmask
- *        - The netmask for this NIC's network
+ *        - The netmask for this NIC's network (not required if using DHCP)
  *      nic.vlan_id
  *        - The vlan with which to tag this NIC's traffic (0 = none)
  *        - default: 0
@@ -204,9 +205,6 @@
  *      - The DNS domain name of this machine (for /etc/hosts)
  *      - default here is .local
  *
- *    "hostname"
- *      - The hostname portion of the /etc/hosts entry for this machine
- *
  *    "tmpfs"
  *      - The maximum number of MiB to use for the /tmp filesystem
  *
@@ -236,7 +234,8 @@
  *         "model": "virtio",
  *         "ip": "10.88.88.51",
  *         "netmask": "255.255.255.0",
- *         "gateway": "10.88.88.2"
+ *         "gateway": "10.88.88.2",
+ *         "primary": 1
  *       }
  *     ]
  *   }
@@ -254,7 +253,8 @@
  *         "nic_tag": "external",
  *         "ip": "10.88.88.52",
  *         "netmask": "255.255.255.0",
- *         "gateway": "10.88.88.2"
+ *         "gateway": "10.88.88.2",
+ *         "primary": 1
  *       }
  *     ]
  *   }
@@ -650,6 +650,7 @@ function saveMetadata(zone, progress, callback)
     var tags_filename = zonepath + '/config/tags.json';
     var mdata, tags;
 
+
     if (zone.hasOwnProperty('customer_metadata')) {
         debug('saveMetadata(customer_metadata) --', zone.customer_metadata);
         mdata = {"customer_metadata": zone.customer_metadata};
@@ -760,9 +761,17 @@ function nicZonecfg(nic, idx, callback)
         'set global-nic=' + nic.nic_tag + '\n' +
         'set mac-addr=' + nic.mac + '\n' +
         'add property (name=index, value="' + idx + '")\n' +
-        'add property (name=netmask, value="' + nic.netmask + '")\n' +
-        'add property (name=ip, value="' + nic.ip + '")\n' +
-        'add property (name=gateway, value="' + nic.gateway + '")\n';
+        'add property (name=ip, value="' + nic.ip + '")\n';
+
+    if (nic.hasOwnProperty('netmask')) {
+        zonecfg = zonecfg +
+          'add property (name=netmask, value="' + nic.netmask + '")\n';
+    }
+
+    if (nic.hasOwnProperty('gateway')) {
+        zonecfg = zonecfg +
+            'add property (name=gateway, value="' + nic.gateway + '")\n';
+    }
 
     if (nic.hasOwnProperty('model')) {
         zonecfg = zonecfg +
@@ -808,16 +817,17 @@ function writeZoneconfig(payload, callback)
         'HOSTNAME=' + payload.hostname + '.' + payload.dns_domain + '\n' +
         'TMPFS=' + payload.tmpfs + 'm\n';
 
-    if (payload.nics[0]) {
+    if (payload.nics[0] && payload.nics[0].ip != 'dhcp') {
         data = data + 'PUBLIC_IP=' + payload.nics[0].ip + '\n';
     }
-    if (payload.nics[1]) {
+    if (payload.nics[1] && payload.nics[1].ip != 'dhcp') {
         data = data + 'PRIVATE_IP=' + payload.nics[1].ip + '\n';
-    } else if (payload.nics[0]) {
+    } else if (payload.nics[0] && payload.nics[0].ip != 'dhcp') {
         // zoneinit uses private_ip for /etc/hosts, we want to
         // make that same as public, if there's no actual private.
         data = data + 'PRIVATE_IP=' + payload.nics[0].ip + '\n';
     }
+
     if (payload.hasOwnProperty('resolvers')) {
         // zoneinit appends to resolv.conf rather than overwriting, so just
         // add to the zoneconfig and let zoneinit handle it
@@ -829,9 +839,15 @@ function writeZoneconfig(payload, callback)
     for (nic in payload.nics) {
         if (payload.nics.hasOwnProperty(nic)) {
             n = payload.nics[nic];
+            data = data + 'NET' + nic_idx + '_MAC=' + n.mac + '\n'
+                        + 'NET' + nic_idx + '_INTERFACE=NET' + nic_idx + '\n';
 
-            fs.writeFileSync(payload.zone_path + '/root/etc/hostname.net' +
-                nic_idx, n.ip + ' netmask ' + n.netmask + ' up' + '\n');
+            if (n.ip != 'dhcp') {
+                fs.writeFileSync(payload.zone_path + '/root/etc/hostname.net' +
+                    nic_idx, n.ip + ' netmask ' + n.netmask + ' up' + '\n');
+                data = data + 'NET' + nic_idx + '_IP=' + n.ip + '\n'
+                            + 'NET' + nic_idx + '_NETMASK=' + n.netmask + '\n';
+            }
 
             if (n.hasOwnProperty('primary') && !primary_found) {
                 // only allow one primary network
@@ -840,11 +856,11 @@ function writeZoneconfig(payload, callback)
                     fs.writeFileSync(payload.zone_path + '/root/etc/defaultrouter',
                         n.gateway + '\n');
                 }
+                if (n.ip == 'dhcp') {
+                    fs.writeFileSync(payload.zone_path + '/root/etc/dhcp.net' +
+                        nic_idx, '');
+                }
             }
-            data = data + 'NET' + nic_idx + '_IP=' + n.ip + '\n'
-                        + 'NET' + nic_idx + '_NETMASK=' + n.netmask + '\n'
-                        + 'NET' + nic_idx + '_MAC=' + n.mac + '\n'
-                        + 'NET' + nic_idx + '_INTERFACE=NET' + nic_idx + '\n';
 
             nic_idx++;
         }

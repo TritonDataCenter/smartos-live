@@ -1347,7 +1347,7 @@ function addDelegatedDataset(payload, callback)
         dataset = payload.zone_path.substr(1) + '/data';
         debug('adding delegated dataset ' + dataset);
 
-        exec('zfs create ' + dataset, function (error, stdout, stderr) {
+        exec('zfs create -o compression=on ' + dataset, function (error, stdout, stderr) {
             if (error) {
                 return callback('failed adding delegated dataset. stdout: ' +
                     stdout + ' stderr: ' + stderr);

@@ -201,6 +201,10 @@
  *    Zones Only
  *    ==========
  *
+ *    "delegate_dataset"
+ *      - boolean value (default: false) that determines whether we should also
+ *        create a <zonepath>/data dataset and delegate that to the zone.
+ *
  *    "dns_domain"
  *      - The DNS domain name of this machine (for /etc/hosts)
  *      - default here is .local
@@ -1223,6 +1227,12 @@ function applyZoneDefaults(payload)
         if (!payload.hasOwnProperty('tmpfs')) {
             payload.tmpfs = 256;
         }
+        if (!payload.hasOwnProperty('delegate_dataset')) {
+            payload.delegate_dataset = false;
+        } else {
+            // ensure boolean
+            payload.delegate_dataset = !!payload.delegate_dataset;
+        }
     }
 
     if (!payload.hasOwnProperty('limit_priv')) {
@@ -1327,6 +1337,36 @@ function checkProperties(payload, callback)
             callback();
         });
     });
+}
+
+function addDelegatedDataset(payload, callback)
+{
+    var dataset;
+
+    if (payload.delegate_dataset) {
+        dataset = payload.zone_path.substr(1) + '/data';
+        debug('adding delegated dataset ' + dataset);
+
+        exec('zfs create ' + dataset, function (error, stdout, stderr) {
+            if (error) {
+                return callback('failed adding delegated dataset. stdout: ' +
+                    stdout + ' stderr: ' + stderr);
+            }
+
+            zoneCfg(payload.zonename, 'add dataset; set name=' + dataset + '; end\n',
+                function (err, stdout, stderr) {
+                    if (err) {
+                        return callback('Failed to add delegated dataset. ' +
+                            'stdout: ' + stdout + ' stderr: ' + stderr);
+                    }
+
+                    return callback();
+                }
+            );
+        });
+    } else {
+        return callback();
+    }
 }
 
 // create and install a 'joyent' or 'kvm' brand zone.
@@ -1535,16 +1575,21 @@ function createZone(payload, progress, callback)
                 }
                 if (payload.brand === 'joyent') {
                     writeZoneconfig(payload, function (err, result) {
-                        if (payload.autoboot) {
-                            bootZone(payload, function(e, res) {
-                                if (e) {
-                                    return callback(e);
-                                }
+                        addDelegatedDataset(payload, function (err) {
+                            if (err) {
+                                return callback(err);
+                            }
+                            if (payload.autoboot) {
+                                bootZone(payload, function(e, res) {
+                                    if (e) {
+                                        return callback(e);
+                                    }
+                                    return callback(null, [stdout, stderr]);
+                                });
+                            } else {
                                 return callback(null, [stdout, stderr]);
-                            });
-                        } else {
-                            return callback(null, [stdout, stderr]);
-                        }
+                            }
+                        });
                     });
                 } else if (payload.brand === 'kvm') {
                     // bootZone will only boot kvm zones if autoboot === true, but

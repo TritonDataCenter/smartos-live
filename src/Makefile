@@ -3,6 +3,7 @@ CFLAGS=-Wall
 TARGETS=bootparams disklist removable_disk disk_size node-kstat/build/default/kstat.node
 SMARTDC_TARGETS=has_hvx
 DESTDIR=../proto
+NODE_WAF=$(PWD)/../proto/usr/bin/node-waf
 
 all: $(TARGETS) sysinfo $(SMARTDC_TARGETS)
 
@@ -39,8 +40,8 @@ disk_size: disk_size.c
 has_hvx: has_hvx.c
 	$(CC) $(CFLAGS) -o $@ $^
 
-node-kstat/build/default/kstat.node: node-kstat/kstat.cc
-	(cd node-kstat && node-waf configure && node-waf build)
+node-kstat/build/default/kstat.node: node-kstat/kstat.cc $(NODE_WAF)
+	(cd node-kstat && $(NODE_WAF) configure && $(NODE_WAF) build)
 
 disklist:
 	cp disklist.sh disklist

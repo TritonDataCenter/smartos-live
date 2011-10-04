@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall
-TARGETS=bootparams disklist removable_disk disk_size
+TARGETS=bootparams disklist removable_disk disk_size node-kstat/build/default/kstat.node
 SMARTDC_TARGETS=has_hvx
 DESTDIR=../proto
 
@@ -21,6 +21,7 @@ install: $(TARGETS) sysinfo
 	cp machine/machine-lookup.js $(DESTDIR)/usr/sbin/machine-lookup
 	mkdir -m 0755 -p $(DESTDIR)/usr/node_modules
 	find node_modules -type f -exec cp {} $(DESTDIR)/usr/node_modules/ \;
+	cp node-kstat/build/default/kstat.node $(DESTDIR)/usr/node_modules/
 
 check:
 	@tools/node-lint/bin/node-lint *.js \
@@ -37,6 +38,9 @@ disk_size: disk_size.c
 
 has_hvx: has_hvx.c
 	$(CC) $(CFLAGS) -o $@ $^
+
+node-kstat/build/default/kstat.node: node-kstat/kstat.cc
+	(cd node-kstat && node-waf configure && node-waf build)
 
 disklist:
 	cp disklist.sh disklist

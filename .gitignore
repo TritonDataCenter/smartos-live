@@ -8,6 +8,8 @@
 /src/disk_size
 /src/removable_disk
 /src/disklist
+/src/node-kstat/.lock-wscript
+/src/node-kstat/build
 /tools/builder/builder
 /tools/builder/*.o
 /tools/builder/users.c

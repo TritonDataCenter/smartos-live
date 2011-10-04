@@ -27,8 +27,10 @@ f usr/sbin/machine-json 0555 root bin
 f usr/sbin/machine-lookup 0555 root bin
 d usr/node_modules 0555 root bin
 f usr/node_modules/async.js 0444 root bin
+f usr/node_modules/kstat.node 0444 root bin
 f usr/node_modules/onlyif.js 0444 root bin
 f usr/node_modules/sprintf.js 0444 root bin
+f usr/node_modules/system.js 0444 root bin
 # 0-man-stamp
 d usr/share/man/man3m 0755 root bin
 f usr/share/man/man3m/acos.3m 0444 root bin

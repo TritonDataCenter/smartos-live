@@ -280,6 +280,7 @@ var net      = require('net');
 var onlyif   = require('onlyif');
 var spawn    = cp.spawn;
 var sys      = require('sys');
+var system   = require('system');
 
 var logfile  = null;
 
@@ -1282,11 +1283,20 @@ function checkProperties(payload, callback)
 {
     var disk, zvol, nic, n, macs = [], ips = [];
 
+    if (payload.brand === 'kvm' && payload.hasOwnProperty('available_MiB')) {
+        if (payload.available_MiB < payload.ram) {
+            return callback("VM 'ram' value: " + payload.ram + ' is less than' +
+                ' available memory: ' + payload.available_MiB);
+        } else {
+            debug('memory ok:', payload.ram, 'have:', payload.available_MiB);
+        }
+    }
+
     if (payload.max_locked_memory > payload.max_physical_memory) {
-        callback('max_locked_memory must be <= max_physical_memory');
+        return callback('max_locked_memory must be <= max_physical_memory');
     }
     if (payload.max_swap < payload.max_physical_memory) {
-        callback('max_swap must be >= max_physical_memory');
+        return callback('max_swap must be >= max_physical_memory');
     }
 
     for (disk in payload.disks) {
@@ -1296,7 +1306,7 @@ function checkProperties(payload, callback)
             if (payload.brand === 'kvm' && (!zvol.hasOwnProperty('model') ||
                 zvol.model === 'undefined')) {
 
-                callback('missing .model option for disk: ' +
+                return callback('missing .model option for disk: ' +
                     JSON.stringify(zvol));
             }
         }
@@ -1317,7 +1327,7 @@ function checkProperties(payload, callback)
             if (payload.brand === 'kvm' && (!n.hasOwnProperty('model') ||
                 n.model === 'undefined')) {
 
-                callback('missing .model option for NIC: ' +
+                return callback('missing .model option for NIC: ' +
                     JSON.stringify(n));
             }
         }
@@ -1706,14 +1716,23 @@ function main()
         payload = JSON.parse(data.toString());
         assignMACs(payload);
         applyZoneDefaults(payload);
-        checkProperties(payload, function (err) {
+        system.getProvisionableMemory(function (err, available_MiB) {
             if (err) {
-                output('failure', 'unable to validate properties',
-                    {'error': err});
-                process.exit(1);
+                output('notice', 'WARNING: unable to determine system memory ' +
+                    'usage, assuming we have sufficient memory.');
+                payload.available_MiB = payload.ram;
+            } else {
+                payload.available_MiB = available_MiB;
             }
-            createMachine(payload);
-            // XXX: won't get here, createMachine() will call process.exit();
+            checkProperties(payload, function (err) {
+                if (err) {
+                    output('failure', 'unable to validate properties',
+                        {'error': err});
+                    process.exit(1);
+                }
+                createMachine(payload);
+                // XXX: won't get here, createMachine() will call process.exit();
+            });
         });
     });
 }

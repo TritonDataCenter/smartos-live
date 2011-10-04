@@ -15,6 +15,7 @@
 /tools/builder/users.c
 /tools/cryptpass
 /tools/pwgen
+/tools/pwgen-2.06/configure
 /0-*-stamp
 /manifest.new
 zonestat.1

@@ -70,7 +70,8 @@ update:
 	(cd $(ROOT)/tools/builder && gmake builder)
 
 0-pwgen-stamp:
-	(cd ${ROOT}/tools/pwgen-* && ./configure && make && cp pwgen ${ROOT}/tools)
+	(cd ${ROOT}/tools/pwgen-* && autoconf && ./configure \
+        && make && cp pwgen ${ROOT}/tools)
 
 tools/cryptpass: tools/cryptpass.c
 	(cd ${ROOT}/tools && gcc -Wall -W -O2 -o cryptpass cryptpass.c)

@@ -773,7 +773,7 @@ function nicZonecfg(nic, idx, callback)
           'add property (name=netmask, value="' + nic.netmask + '")\n';
     }
 
-    if (nic.hasOwnProperty('gateway')) {
+    if (nic.hasOwnProperty('gateway') && nic.gateway.length > 0) {
         zonecfg = zonecfg +
             'add property (name=gateway, value="' + nic.gateway + '")\n';
     }

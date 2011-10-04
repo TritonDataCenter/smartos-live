@@ -149,6 +149,7 @@ function parseConfig(input)
     var attr, nic, disk;
     var nets = [], attrs = [], devices = [], rctls = [];
     var props = {};
+    var matches;
 
     lines = input.split('\n');
     for (line in lines) {
@@ -162,8 +163,13 @@ function parseConfig(input)
 
                 if (key === "property") {
                     // handle form: "property": "(name=model,value=\"virtio\")"
-                    key = value.match(/name=([^,]+),value=\"([^\"]+)\"/)[1];
-                    value = value.match(/name=([^,]+),value=\"([^\"]+)\"/)[2];
+                    matches = value.match(/name=([^,]+),value=\"([^\"]+)\"/);
+                    if (matches) {
+                        key = matches[1];
+                        value = matches[2];
+                    } else {
+                        continue;
+                    }
                 }
 
                 value = fixBoolean(value);

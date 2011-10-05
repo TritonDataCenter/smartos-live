@@ -22,6 +22,7 @@ CACHE_FILE_PARSABLE="/tmp/.sysinfo.parsable"
 CACHE_FILE_JSON="/tmp/.sysinfo.json"
 CACHE="true"
 UNAME_S=$(uname -s)
+ZONENAME=$(zonename)
 DETECT_NICS=
 FORCE=
 PARSABLE=
@@ -58,8 +59,8 @@ do
     esac
 done
 
-if [[ ${UNAME_S} == "SunOS" && $(zonename) != "global" ]]; then
-    echo "This program is for use in the global zone only."
+if [[ ${UNAME_S} != "SunOS" ]]; then
+    echo "This program is for use in SmartOS only."
     exit 1
 fi
 
@@ -128,10 +129,16 @@ function get_smbios_system_info()
     #echo "${Manufacturer}"
 }
 
+function get_nonglobal_info()
+{
+    UUID=$(/usr/sbin/mdata-get sdc:instance_uuid)
+    QUOTA=$(/usr/sbin/zfs get -Ho value quota /)
+}
+
 function get_memory_mib()
 {
     # Get (misnamed in prtconf) memory size in Mebibytes
-    Memory_in_MiB=`prtconf \
+    Memory_in_MiB=`prtconf 2>/dev/null \
             | grep "Memory size: [0-9]* Megabytes" \
             | cut -d' ' -f3`
 
@@ -140,28 +147,30 @@ function get_memory_mib()
 
 function get_smartos_cpu_info()
 {
-    CPU_Version=`smbios -t SMB_TYPE_PROCESSOR | grep -v "Version: 0000000000" \
-        | grep "Version: " \
-        | head -n1 \
-        | tr -s ' ' \
-        | sed -e 's/^ *Version: //' \
-        | sed -e 's/ *$//'`
+    if [[ ${ZONENAME} == "global" ]]; then
+        CPU_Version=`smbios -t SMB_TYPE_PROCESSOR | grep -v "Version: 0000000000" \
+            | grep "Version: " \
+            | head -n1 \
+            | tr -s ' ' \
+            | sed -e 's/^ *Version: //' \
+            | sed -e 's/ *$//'`
 
-    CPU_Count=`smbios -t SMB_TYPE_PROCESSOR | grep -v "Version: 0000000000" \
-        | grep "Version: " \
-        | wc -l \
-        | tr -d ' '`
+        CPU_Count=`smbios -t SMB_TYPE_PROCESSOR | grep -v "Version: 0000000000" \
+            | grep "Version: " \
+            | wc -l \
+            | tr -d ' '`
+
+        if [[ -x /smartdc/bin/has_hvx ]]; then
+            CPU_Virtualization=$(/smartdc/bin/has_hvx)
+        else
+            CPU_Virtualization="unknown"
+        fi
+    fi
 
     CPU_Cores=`psrinfo \
         | grep "^[0-9]" \
         | wc -l \
         | tr -d ' '`
-
-    if [[ -x /smartdc/bin/has_hvx ]]; then
-        CPU_Virtualization=$(/smartdc/bin/has_hvx)
-    else
-        CPU_Virtualization="unknown"
-    fi
 
     #echo "${CPU_Version}"
     #echo "${CPU_Count}"
@@ -422,7 +431,7 @@ function get_bootparams()
           >/dev/null); then
             Bootparams[${count}]=${line}
             ((count++))
-    fi
+        fi
     done
 }
 
@@ -431,18 +440,28 @@ function output_parsable()
     cat <<END
 Live_Image='${Live_Image}'
 System_Type='${Uname_System}'
+END
+
+    if [[ ${ZONENAME} == "global" ]]; then
+        cat <<END
 Manufacturer='${Manufacturer}'
 Product='${Product}'
 Serial_Number='${Serial_Number}'
-UUID='${UUID}'
-Hostname='${Hostname}'
 VM_Capable='${VM_Capable}'
 CPU_Type='${CPU_Version}'
 CPU_Virtualization='${CPU_Virtualization}'
 CPU_Physical_Cores=${CPU_Count}
+Nic_Tags=${NicTagList}
+END
+    else
+        echo "Zfs_Quota='${QUOTA}'"
+    fi
+
+    cat <<END
+UUID='${UUID}'
+Hostname='${Hostname}'
 CPU_Total_Cores=${CPU_Cores}
 MiB_of_Memory=${Memory_in_MiB}
-Nic_Tags=${NicTagList}
 END
 
     for entry in "${Disks[@]}"; do
@@ -504,7 +523,9 @@ END
         echo "${ipv4_var}='${ipv4}'"
         echo "${link_status_var}='${link_status}'"
         echo "${vlan_var}='${vlan}'"
-        echo "${host_var}='${host}'"
+        if [[ ${ZONENAME} == "global" ]]; then
+            echo "${host_var}='${host}'"
+        fi
     done
 
     for entry in "${Bootparams[@]}"; do
@@ -521,19 +542,31 @@ function output_json()
 {
   "Live Image": "${Live_Image}",
   "System Type": "${Uname_System}",
+END
+
+    if [[ ${ZONENAME} == "global" ]]; then
+        cat <<END
   "Manufacturer": "${Manufacturer}",
   "Product": "${Product}",
   "Serial Number": "${Serial_Number}",
-  "UUID": "${UUID}",
-  "Hostname": "${Hostname}",
   "VM Capable": ${VM_Capable},
   "CPU Type": "${CPU_Version}",
   "CPU Virtualization": "${CPU_Virtualization}",
   "CPU Physical Cores": ${CPU_Count},
+END
+    else
+        echo "  \"ZFS Quota\": \"${QUOTA}\","
+    fi
+
+cat <<END
+  "UUID": "${UUID}",
+  "Hostname": "${Hostname}",
   "CPU Total Cores": ${CPU_Cores},
   "MiB of Memory": "${Memory_in_MiB}",
-  "Disks": {
 END
+
+if [[ ${ZONENAME} == "global" ]]; then
+    echo '  "Disks": {'
 
     printed=0
     for entry in "${Disks[@]}"; do
@@ -603,8 +636,10 @@ END
         echo "${trailing_comma}"
     done
 
-    cat <<END
-  },
+    echo "  },"
+fi
+
+cat << END
   "Virtual Network Interfaces": {
 END
     printed=0
@@ -628,8 +663,10 @@ END
         echo -n "\"MAC Address\": \"${mac}\", "
         echo -n "\"ip4addr\": \"${ipv4}\", "
         echo -n "\"Link Status\": \"${link_status}\", "
-        echo -n "\"VLAN\": \"${vlan}\", "
-        echo -n "\"Host Interface\": \"${host}\"}"
+        if [[ ${ZONENAME} == "global" ]]; then
+            echo -n "\"Host Interface\": \"${host}\", "
+        fi
+        echo -n "\"VLAN\": \"${vlan}\"}"
         echo "${trailing_comma}"
     done
 
@@ -639,13 +676,18 @@ END
 END
 }
 
-get_smbios_system_info
+if [[ ${ZONENAME} == "global" ]]; then
+    get_smbios_system_info
+    get_vm_capable
+    get_disks
+    get_bootparams
+else
+    get_nonglobal_info
+fi
 get_memory_mib
 get_smartos_cpu_info
 get_live_image_buildstamp
 get_system_type
-get_vm_capable
-get_disks
 get_hostname
 get_nic_mappings
 get_nic_tags
@@ -654,7 +696,6 @@ get_smartos_vnics
 if [[ ${DETECT_NICS} == "true" ]]; then
     detect_nic_tags
 fi
-get_bootparams
 
 # whenever we update the cache, update both
 if [[ ${CACHE} == "true" ]]; then

@@ -16,8 +16,10 @@ if len(sys.argv) >= 2 and os.path.isfile(sys.argv[1]):
 for line in open(filename).readlines():
     line=line.lstrip()
     if len(line) == 0 or line[0] == '#':
-       next
+        continue
     fields = line.rstrip().split(' ')
+    if len(fields) < 2:
+        continue
     if fields[1] in files:
         print >> sys.stderr, "WARNING: duplicate entry for '%s'" % (fields[1])
     files[fields[1]] = line.rstrip('\n')

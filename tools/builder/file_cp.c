@@ -58,6 +58,7 @@ int file_cp(const char *to, const char *from)
     }
 
   out_error:
+    printf("Error copying %s to %s\n", from, to);
     saved_errno = errno;
 
     close(fd_from);

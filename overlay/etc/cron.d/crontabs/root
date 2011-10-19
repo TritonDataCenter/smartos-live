@@ -1,2 +1,0 @@
-## Rotate and trim the regular logs nightly at 10 after midnight.
-10 0 * * * /usr/sbin/logadm

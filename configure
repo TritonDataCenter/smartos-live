@@ -156,6 +156,19 @@ if [ ! -f "projects/illumos-extra/Makefile" ]; then
 fi
 
 ROOT=`pwd`
+echo "==> Setting up overlay"
+
+if [ -z "${OVERLAYS}" ]; then
+  echo "FATAL: overlay order not specified"
+  exit 1
+fi
+
+rm -f ${ROOT}/overlay/order
+touch ${ROOT}/overlay/order
+for entry in ${OVERLAYS}; do
+  echo -n "${ROOT}/overlay/${entry} " >> ${ROOT}/overlay/order
+done
+
 echo "==> Setting up illumos-gate"
 
 cd ${ROOT}/projects/illumos

@@ -1058,6 +1058,33 @@ function nmiVM(payload, options, callback)
     });
 }
 
+function screenshotVM(payload, options, callback)
+{
+    var trace = options.trace;
+    var filename = '/tmp/vm.ppm';
+
+    if (!payload.hasOwnProperty('uuid')) {
+        return callback('Payload missing "uuid" field');
+    }
+
+    if (!VMS.hasOwnProperty(payload.uuid)) {
+        return callback('Cannot find VM with UUID ' + payload.uuid);
+    }
+
+    VMS[payload.uuid].qmp.command('screendump',
+        {'filename': filename}, function (err, result) {
+
+        log('screenshot RESULT[', result, '] ERROR:[', err, ']');
+        if (err) {
+            trace({'screenshotVM': 'error',
+                'screenshotVM:error': err});
+        } else {
+            trace({'screenshotVM': 'sent'});
+        }
+        callback(err, result);
+    });
+}
+
 function nicZonecfg(nic, idx, callback)
 {
     var zonecfg = '';
@@ -1430,6 +1457,7 @@ function bootVM(payload, options, callback)
             defaultgw = vm['default-gateway'];
         }
 
+        primary_found = false;
         for (nic in vm.nics) {
             if (vm.nics.hasOwnProperty(nic)) {
                 nic = vm.nics[nic];
@@ -1441,25 +1469,41 @@ function bootVM(payload, options, callback)
                     ',model=' + nic.model);
                 var vnic_opts = 'vnic,name=net' + nic_idx +
                     ',vlan=' + nic_idx +
-                    ',ifname=net' + nic_idx +
-                    ',ip=' + nic.ip +
-                    ',netmask=' + nic.netmask;
+                    ',ifname=net' + nic_idx;
+
+                if (nic.ip != 'dhcp') {
+                    vnic_opts = vnic_opts +
+                        ',ip=' + nic.ip +
+                        ',netmask=' + nic.netmask;
+                }
 
                 // The primary network provides the resolvers, default gateway
                 // and hostname to prevent machines from trying to use settings
                 // from more than one nic
-                if (defaultgw && nic.hasOwnProperty('gateway') && nic.gateway == defaultgw) {
-                    vnic_opts += ',gateway_ip=' + nic.gateway;
-                    if (hostname) {
-                        vnic_opts += ',hostname=' + hostname;
+                if (!primary_found) {
+                    if (nic.hasOwnProperty('primary') && nic.primary) {
+                        if (nic.hasOwnProperty('gateway') && nic.ip != 'dhcp') {
+                            vnic_opts += ',gateway_ip=' + nic.gateway;
+                        }
+                        primary_found = true;
                     }
-                    if (vm.hasOwnProperty('resolvers')) {
-                      for (r in vm.resolvers) {
-                        vnic_opts += ',dns_ip' + r + '=' + vm.resolvers[r];
-                      }
+                    else if (defaultgw && nic.hasOwnProperty('gateway') && nic.gateway == defaultgw) {
+                        if (nic.ip != 'dhcp') {
+                            vnic_opts += ',gateway_ip=' + nic.gateway;
+                        }
+                        primary_found = true;
                     }
-                    // Unset this so that we only have one primary
-                    defaultgw = '';
+
+                    if (primary_found && nic.ip != 'dhcp') {
+                        if (hostname) {
+                            vnic_opts += ',hostname=' + hostname;
+                        }
+                        if (vm.hasOwnProperty('resolvers')) {
+                          for (r in vm.resolvers) {
+                            vnic_opts += ',dns_ip' + r + '=' + vm.resolvers[r];
+                          }
+                        }
+                    }
                 }
 
                 cmdargs.push('-net', vnic_opts);
@@ -1612,6 +1656,8 @@ var VM_ACTIONS = {
     'reboot':  { 'func': rebootVM, 'okstates': ['running'], 'needs_uuid': true},
     'reset':   { 'func': resetVM,  'okstates': ['running'], 'needs_uuid': true},
     'nmi':     { 'func': nmiVM,    'okstates': ['running'], 'needs_uuid': true},
+    'screenshot': { 'func': screenshotVM, 'okstates': ['running', 'halting'],
+        'needs_uuid': true},
     'add_nic': { 'func': addNicToVM, 'okstates': ['off'],   'needs_uuid': true},
     'remove_nic': {
         'func': removeNicFromVM,

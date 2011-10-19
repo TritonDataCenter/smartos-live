@@ -1,10 +1,11 @@
 CC=gcc
 CFLAGS=-Wall
-TARGETS=bootparams disklist removable_disk disk_size has_hvx
+TARGETS=bootparams disklist removable_disk disk_size node-kstat/build/default/kstat.node
 SMARTDC_TARGETS=has_hvx
 DESTDIR=../proto
+NODE_WAF=$(PWD)/../proto/usr/bin/node-waf
 
-all: $(TARGETS) sysinfo 
+all: $(TARGETS) sysinfo $(SMARTDC_TARGETS)
 
 install: $(TARGETS) sysinfo
 	mkdir -p $(DESTDIR)/usr/bin
@@ -16,10 +17,12 @@ install: $(TARGETS) sysinfo
 	cp vmadmd.js $(DESTDIR)/usr/lib/vmadmd
 	cp vmadm.js $(DESTDIR)/usr/sbin/vmadm
 	cp vmcfg.js $(DESTDIR)/usr/sbin/vmcfg
-	cp create-machine.js $(DESTDIR)/usr/sbin/create-machine
+	cp machine/machine-create.js $(DESTDIR)/usr/sbin/machine-create
 	cp machine/machine-json.js $(DESTDIR)/usr/sbin/machine-json
+	cp machine/machine-lookup.js $(DESTDIR)/usr/sbin/machine-lookup
 	mkdir -m 0755 -p $(DESTDIR)/usr/node_modules
 	find node_modules -type f -exec cp {} $(DESTDIR)/usr/node_modules/ \;
+	cp node-kstat/build/default/kstat.node $(DESTDIR)/usr/node_modules/
 
 check:
 	@tools/node-lint/bin/node-lint *.js \
@@ -36,6 +39,9 @@ disk_size: disk_size.c
 
 has_hvx: has_hvx.c
 	$(CC) $(CFLAGS) -o $@ $^
+
+node-kstat/build/default/kstat.node: node-kstat/kstat.cc $(NODE_WAF)
+	(cd node-kstat && $(NODE_WAF) configure && $(NODE_WAF) build)
 
 disklist:
 	cp disklist.sh disklist

@@ -1,0 +1,137 @@
+#!/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright 2010-2011 Joyent, Inc.  All rights reserved.
+# Use is subject to license terms.
+
+set -o xtrace
+
+. /lib/svc/share/smf_include.sh
+. /lib/sdc/config.sh
+
+# Make sure working directory is / to prevent unmounting problems.
+cd /
+PATH=/usr/sbin:/usr/bin; export PATH
+
+update_root_password()
+{
+
+    enc_password=`nawk -F= '{
+        if ($1 == "root_shadow")
+                print substr($2, 2, length($2) - 2)
+    }' /opt/smartdc/config/node.config`
+
+    [[ -z "$enc_password" ]] && return 0
+
+    sed -e "s|^root:[^\:]*:|root:${enc_password}:|" /etc/shadow \
+      >/etc/shadow.new \
+      && chmod 400 /etc/shadow.new \
+      && mv /etc/shadow.new /etc/shadow
+}
+
+# Loads config file for the node. These are the config values from the headnode
+# plus authorized keys and anything else we want.
+# This function is only invoked on a compute node.
+install_config()
+{
+    # On standalone machines we don't do this update
+    [[ -n $(/usr/bin/bootparams | grep "^standalone=true") ]] && return 0
+
+    load_sdc_config
+
+    curl -k -o /tmp/node.config --silent \
+	$CONFIG_assets_admin_ip:/config/node.config
+
+    [[ ! -f /tmp/node.config ]] && return 0
+    grep datacenter_name /tmp/node.config >/dev/null 2>&1
+    if [ $? != 0 ]; then
+	# There is no valid config file served by the assets zone
+	rm -f /tmp/node.config
+	return 0
+    fi
+
+    # Install the file if the local copy is different
+    diff /tmp/node.config /opt/smartdc/config/node.config >/dev/null 2>&1
+    if [ $? != 0 ]; then
+	printf "Updating config file\n" >/dev/console
+	mkdir -p /opt/smartdc/config
+	mv /tmp/node.config /opt/smartdc/config
+        update_root_password
+    else
+	rm -f /tmp/node.config
+    fi
+}
+
+
+case "$1" in
+'start')
+
+    USBMOUNT=
+
+    # If we're not importing the pools, we shouldn't try to setup as a headnode
+    # (since there'll be no zpool)
+    if /bin/bootparams | grep "^noimport=true" > /dev/null 2>&1; then
+        exit $SMF_EXIT_OK
+    fi
+
+    # If we're a headnode, we'll not have AMQP args on the cmdline, and we want
+    # to run an initial_script first anyway.
+    if /bin/bootparams | grep "^headnode=true" > /dev/null 2>&1; then
+        USBMOUNT=/mnt/`svcprop -p joyentfs/usb_mountpoint svc:/system/filesystem/smartdc:default`
+
+	# No config file (e.g. user quit during interactive configuration), so
+	# treat as if "noimport=true".
+	[[ ! -f $USBMOUNT/config ]] && exit $SMF_EXIT_OK
+
+        initial_script=${USBMOUNT}/$(grep "^initial_script=" $USBMOUNT/config 2>/dev/null | cut -d'=' -f2-)
+        if [ -n ${initial_script} ] && [ -e ${initial_script} ]; then
+            # Execute the script
+            ${initial_script}
+            result=$?
+            if [ ${result} -eq 2 ]; then
+                # we're rebooting, no need to start ur
+                echo "REBOOTING!" >> /dev/console
+                enable_ur="false"
+            elif [ ${result} -ne 0 ]; then
+                echo "WARNING: initial_script failed with exit code [${result}]."
+                exit $SMF_EXIT_ERR_FATAL
+            fi
+        fi
+    else
+	install_config
+    fi
+
+    if /bin/bootparams | grep "^headnode=true" > /dev/null 2>&1; then
+        /usr/sbin/umount $USBMOUNT
+    fi
+
+    ;;
+
+'stop')
+    ;;
+
+*)
+    echo "Usage: $0 { start | stop }"
+    exit $SMF_EXIT_ERR_FATAL
+    ;;
+esac
+exit $SMF_EXIT_OK

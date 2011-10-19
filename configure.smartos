@@ -41,10 +41,12 @@ EOF
 fi
 
 PUBLISHER="illumos"
-RELEASE_VER="joyent_147"
+RELEASE_VER="smartos_20111019"
 SUNW_SPRO12_URL=""
 SUNW_SPRO12u1_URL=""
 ON_CLOSED_BINS_URL="http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins.i386.tar.bz2"
 ON_CLOSED_BINS_ND_URL="http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins-nd.i386.tar.bz2"
-GET_ILLUMOS="(git clone https://github.com/joyent/illumos-joyent.git illumos)"
+GET_ILLUMOS="(git clone https://github.com/joyent/illumos-joyent illumos)"
 GET_ILLUMOS_EXTRA="git clone https://github.com/joyent/illumos-extra.git illumos-extra"
+
+OVERLAYS="smartos generic"

@@ -51,6 +51,7 @@ if [ "${HAVE_PKG}" == "true" ]; then
       data/docbook \
       text/gnu-gettext \
       developer/java/jdk \
+      library/math/header-math \
       || /bin/true
   else
     # nonglobal Zone

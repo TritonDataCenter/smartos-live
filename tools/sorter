@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# vi: expandtab ts=4 sw=4
 #
 # Takes a 'manifest' style file and outputs a sorted version, warning about
 # any duplicates.
@@ -6,7 +7,8 @@
 
 import os
 import sys
-files = dict()
+
+files = {}
 filename = 'manifest'
 
 # if filename is passed as first argument, use that file instead
@@ -14,17 +16,18 @@ if len(sys.argv) >= 2 and os.path.isfile(sys.argv[1]):
     filename = sys.argv[1]
 
 for line in open(filename).readlines():
-    line=line.lstrip()
+    line = line.strip()
     if len(line) == 0 or line[0] == '#':
         continue
-    fields = line.rstrip().split(' ')
+    fields = line.split(' ')
     if len(fields) < 2:
+        sys.stderr.write("WARNING: unexpected manifest line: '%s' (removing)\n" % line)
         continue
-    if fields[1] in files:
-        print >> sys.stderr, "WARNING: duplicate entry for '%s'" % (fields[1])
-    files[fields[1]] = line.rstrip('\n')
+    if fields[1] in files and not (
+            # Don't warn about same directory with identical properties.
+            fields[0] == 'd' and files[fields[1]] == line):
+        sys.stderr.write("WARNING: duplicate entry for '%s'\n" % fields[1])
+    files[fields[1]] = line
 
-k = files.keys()
-ks = k.sort()
-for key in k:
+for key in sorted(files):
     print files[key].rstrip(' ')

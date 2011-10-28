@@ -29,6 +29,7 @@ manifest:
 	manifest; else gmake DESTDIR=$(MPROTO) DESTNAME=$${dir}.manifest manifest; fi; done
 	for dir in $(OVERLAYS); do cp $${dir}/manifest $(MPROTO)/overlay-$$(basename $${dir}).manifest; done
 	./tools/build_manifest
+	./tools/sorter manifest.gen > manifest.gen.sorted && mv manifest.gen.sorted manifest.gen
 
 update:
 	./tools/update_base

@@ -49,6 +49,7 @@ if [ "${HAVE_PKG}" == "true" ]; then
       text/gnu-gettext \
       developer/java/jdk \
       library/math/header-math \
+      system/header \
       || /bin/true
   else
     # nonglobal Zone

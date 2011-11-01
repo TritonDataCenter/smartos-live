@@ -50,6 +50,7 @@ if [ "${HAVE_PKG}" == "true" ]; then
       developer/java/jdk \
       library/math/header-math \
       system/header \
+      developer/versioning/git \
       || /bin/true
   else
     # nonglobal Zone

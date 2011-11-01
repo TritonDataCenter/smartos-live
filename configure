@@ -8,13 +8,13 @@ set -o errexit
 GLOBAL_ZONE=1
 
 if [[ $(uname -s) != "SunOS" ]]; then
-    echo "FATAL: This only works with SunOS/SmartOS"
-    exit 1
+  echo "FATAL: This only works with SunOS/SmartOS"
+  exit 1
 fi
 
 if [[ $(zonename) != "global" ]]; then
-    echo "NOTICE: Building in a zone, workarounds enabled!"
-    GLOBAL_ZONE=0
+  echo "NOTICE: Building in a zone, workarounds enabled!"
+  GLOBAL_ZONE=0
 fi
 
 INSTALL_BIN_LINK_DIR=/usr/bin

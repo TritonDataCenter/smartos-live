@@ -21,7 +21,7 @@ mds := $(subst .md,.roff,$(wildcard *.md))
 all: $(mds)
 
 $(mds): %.roff: %.md
-	$(RONNJS) --build --roff $<
+	PATH=$(ROOT)/../../proto/usr/bin:$PATH $(RONNJS) --build --roff $<
 	mkdir -p $(shell dirname $(OUTFILE))
 	mv $@ $(OUTFILE)
 

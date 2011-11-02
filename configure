@@ -6,6 +6,9 @@
 set -o errexit
 
 GLOBAL_ZONE=1
+INSTALL_BIN_LINK_DIR=/usr/bin
+HAVE_PKG="true"
+ROOTCMD=pfexec
 
 if [[ $(uname -s) != "SunOS" ]]; then
   echo "FATAL: This only works with SunOS/SmartOS"
@@ -17,9 +20,6 @@ if [[ $(zonename) != "global" ]]; then
   GLOBAL_ZONE=0
 fi
 
-INSTALL_BIN_LINK_DIR=/usr/bin
-HAVE_PKG="true"
-ROOTCMD=pfexec
 
 # illumos-extra is now in github but git's ssl doesn't always work in our build machines.
 export GIT_SSL_NO_VERIFY=true

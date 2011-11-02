@@ -287,8 +287,10 @@ usrfile="$rddir/usr.file"
 
 echo "Creating ${RSIZE}k ramdisk image: ${rdfile}"
 mkfile ${RSIZE}k "${rdfile}"
+chown ${USER} ${rdfile}
 echo "Creating ${USIZE}k usr image: ${usrfile}"
 mkfile ${USIZE}k "${usrfile}"
+chown ${USER} ${usrfile}
 
 lofidev32=`lofiadm -a "${rdfile}"`
 lofidevusr=`lofiadm -a "${usrfile}"`

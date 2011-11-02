@@ -61,11 +61,16 @@ if [ "${HAVE_PKG}" == "true" ]; then
       || /bin/true
   else
     # nonglobal Zone
-    for pkg in gmake binutils autoconf automake \
-        bison flex libtool-base python24 p5-XML-Parser \
-        libxslt dbus-glib dbus sun-jre6 sun-jdk6; do
-      pkg_info ${pkg} >/dev/null 2>&1 || pkgin -y install ${pkg}
-    done
+    if [[ ${OPENINDIANA} -eq 1 ]]; then
+      echo "FATAL: Building inside OpenIndiana zones is not supported for now"
+      exit 1
+    else
+      for pkg in gmake binutils autoconf automake \
+          bison flex libtool-base python24 p5-XML-Parser \
+          libxslt dbus-glib dbus sun-jre6 sun-jdk6; do
+        pkg_info ${pkg} >/dev/null 2>&1 || pkgin -y install ${pkg}
+      done
+    fi
   fi
 fi
 

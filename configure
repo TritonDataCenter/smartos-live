@@ -6,6 +6,7 @@
 set -o errexit
 
 GLOBAL_ZONE=1
+OPENINDIANA=0
 
 if [[ $(uname -s) != "SunOS" ]]; then
     echo "FATAL: This only works with SunOS/SmartOS"
@@ -20,6 +21,12 @@ fi
 INSTALL_BIN_LINK_DIR=/usr/bin
 HAVE_PKG="true"
 ROOTCMD=pfexec
+
+# Check if running on OpenIndiana
+if [[ $(uname -v) == oi_* ]]; then
+  OPENINDIANA=1
+  ROOTCMD=sudo
+fi
 
 # Load all site-specific configure files
 for file in `ls configure.*`; do

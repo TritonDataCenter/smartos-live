@@ -6,6 +6,7 @@
 set -o errexit
 
 GLOBAL_ZONE=1
+OPENINDIANA=0
 
 if [[ $(uname -s) != "SunOS" ]]; then
     echo "FATAL: This only works with SunOS/SmartOS"
@@ -21,8 +22,11 @@ INSTALL_BIN_LINK_DIR=/usr/bin
 HAVE_PKG="true"
 ROOTCMD=pfexec
 
-# illumos-extra is now in github but git's ssl doesn't always work in our build machines.
-export GIT_SSL_NO_VERIFY=true
+# Check if running on OpenIndiana
+if [[ $(uname -v) == oi_* ]]; then
+  OPENINDIANA=1
+  ROOTCMD=sudo
+fi
 
 # Load all site-specific configure files
 for file in `ls configure.*`; do
@@ -51,14 +55,22 @@ if [ "${HAVE_PKG}" == "true" ]; then
       data/docbook \
       text/gnu-gettext \
       developer/java/jdk \
+      library/math/header-math \
+      system/header \
+      developer/versioning/git \
       || /bin/true
   else
     # nonglobal Zone
-    for pkg in gmake binutils autoconf automake \
-        bison flex libtool-base python24 p5-XML-Parser \
-        libxslt dbus-glib dbus sun-jre6 sun-jdk6; do
-      pkg_info ${pkg} >/dev/null 2>&1 || pkgin -y install ${pkg}
-    done
+    if [[ ${OPENINDIANA} -eq 1 ]]; then
+      echo "FATAL: Building inside OpenIndiana zones is not supported for now"
+      exit 1
+    else
+      for pkg in gmake binutils autoconf automake \
+          bison flex libtool-base python24 p5-XML-Parser \
+          libxslt dbus-glib dbus sun-jre6 sun-jdk6; do
+        pkg_info ${pkg} >/dev/null 2>&1 || pkgin -y install ${pkg}
+      done
+    fi
   fi
 fi
 
@@ -79,6 +91,21 @@ if [ "${HAVE_PKG}" == "true" ]; then
   else
     # nonglobal Zone
     /bin/true
+  fi
+fi
+
+if [ ! -d /usr/perl5/5.12 ]; then
+  # TODO: Add instructions for other distributions, on how to get Perl 5.12
+  if [[ ${OPENINDIANA} -eq 1 ]]; then
+    echo "FATAL: Perl 5.12 needs to be installed at '/usr/perl5/5.12'."
+    echo ""
+    echo "You can install it by adding the experimental repository, and"
+    echo "installing the package 'runtime/perl-512':"
+    echo ""
+    echo "  ${ROOTCMD} pkg set-publisher -g" \
+         "http://pkg.openindiana.org/experimental oi-experimental"
+    echo "  ${ROOTCMD} pkg install runtime/perl-512"
+    exit 1
   fi
 fi
 

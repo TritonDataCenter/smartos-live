@@ -89,6 +89,21 @@ if [ "${HAVE_PKG}" == "true" ]; then
   fi
 fi
 
+if [ ! -d /usr/perl5/5.12 ]; then
+  # TODO: Add instructions for other distributions, on how to get Perl 5.12
+  if [[ ${OPENINDIANA} -eq 1 ]]; then
+    echo "FATAL: Perl 5.12 needs to be installed at '/usr/perl5/5.12'."
+    echo ""
+    echo "You can install it by adding the experimental repository, and"
+    echo "installing the package 'runtime/perl-512':"
+    echo ""
+    echo "  ${ROOTCMD} pkg set-publisher -g" \
+         "http://pkg.openindiana.org/experimental oi-experimental"
+    echo "  ${ROOTCMD} pkg install runtime/perl-512"
+    exit 1
+  fi
+fi
+
 echo "==> Checking for /opt/SUNWspro/bin/cc..."
 echo " +--> Ensuring SUNWspro (12.1-patched) installed in /opt/SUNWspro/sunstudio12.1..."
 if [ ! -f "/opt/SUNWspro/sunstudio12.1/prod/bin/cc" ]; then

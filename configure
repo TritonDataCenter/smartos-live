@@ -12,6 +12,11 @@ if [[ $(uname -s) != "SunOS" ]]; then
   exit 1
 fi
 
+if [ "$(pfexec id -u)" != "0" ]; then
+  echo "FATAL: pfexec must be configured to provide root permissions, see README file"
+  exit 1
+fi
+
 if [[ $(zonename) != "global" ]]; then
   echo "NOTICE: Building in a zone, workarounds enabled!"
   GLOBAL_ZONE=0

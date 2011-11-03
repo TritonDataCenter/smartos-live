@@ -87,6 +87,11 @@ if [ "${HAVE_PKG}" == "true" ]; then
   fi
 fi
 
+if [ ! -d /usr/perl5/5.12 ]; then
+  echo "FATAL: Perl 5.12 needs to be installed at '/usr/perl5/5.12'"
+  exit 1
+fi
+
 echo "==> Checking for /opt/SUNWspro/bin/cc..."
 echo " +--> Ensuring SUNWspro (12.1-patched) installed in /opt/SUNWspro/sunstudio12.1..."
 if [ ! -f "/opt/SUNWspro/sunstudio12.1/prod/bin/cc" ]; then

@@ -124,3 +124,8 @@ set pcplusmp:apic_panic_on_nmi=1
 *
 set dump_plat_mincpu=0
 set dump_bzip2_level=1
+
+*
+* See OS-717 and OS-718 for dealing with the APIX woes.
+*
+set apix_enable=0

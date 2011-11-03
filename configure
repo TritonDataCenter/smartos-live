@@ -21,9 +21,6 @@ INSTALL_BIN_LINK_DIR=/usr/bin
 HAVE_PKG="true"
 ROOTCMD=pfexec
 
-# illumos-extra is now in github but git's ssl doesn't always work in our build machines.
-export GIT_SSL_NO_VERIFY=true
-
 # Load all site-specific configure files
 for file in `ls configure.*`; do
   source ${file}

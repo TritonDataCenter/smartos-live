@@ -913,7 +913,11 @@ function haltVM(payload, options, callback)
                     // do no good, so we just log it.
                     log('haltVM(): Failed to set vm-autoboot=false for ' + uuid);
                 }
-                callback(err, result);
+                exec('/usr/sbin/zoneadm -z ' + uuid + ' halt', function () {
+                    // we ignore any errors here because if the machine actually shut down
+                    // before this ran, we're happy, and if not there's nothing we can do.
+                    callback(err, result);
+                });
             });
         });
     });

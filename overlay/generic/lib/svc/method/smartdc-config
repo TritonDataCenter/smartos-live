@@ -53,12 +53,49 @@ set_ntp_hosts() {
     && mv /etc/inet/ntp.conf.new /etc/inet/ntp.conf
 }
 
+interactive_config() {
+    # Start interactive config on console and ttys
+
+    ${USB_PATH}/scripts/prompt-config.sh $1 "${USB_PATH}" \
+        </dev/console >&/dev/console &
+    cnt=1
+
+    if [ -c /dev/ttya ]; then
+        ${USB_PATH}/scripts/prompt-config.sh $1 "${USB_PATH}" \
+            </dev/ttya >&/dev/ttya &
+        cnt=`expr $cnt + 1`
+    fi
+
+    if [ -c /dev/ttyb ]; then
+        ${USB_PATH}/scripts/prompt-config.sh $1 "${USB_PATH}" \
+            </dev/ttyb >&/dev/ttyb &
+        cnt=`expr $cnt + 1`
+    fi
+
+    # Wait for one of the interactive configs to finish
+    while [ true ]; do
+        got=`jobs -p | wc -l`
+        [ $got -lt $cnt ] && break
+        sleep 1
+    done
+}
+
 case "$1" in
 'start')
 
     # If we're a headnode, see if we have to do interactive configuration.
     if /bin/bootparams | grep "^headnode=true" > /dev/null 2>&1; then
         USB_PATH=/mnt/`svcprop -p "joyentfs/usb_mountpoint" svc:/system/filesystem/smartdc:default`
+
+        if /bin/bootparams | grep "^standby=true" >/dev/null 2>&1; then
+            if [[ ! -f ${USB_PATH}/config ]]; then
+                echo "ERROR: standby missing configuration file"
+                echo "ERROR: standby missing configuration file" >/dev/console
+            else
+                echo "configuring standby"
+                interactive_config -S
+            fi
+        fi
 
         # Check for config and run interactive if it doesn't exist.
         if [[ ! -f ${USB_PATH}/config ]]; then
@@ -67,30 +104,7 @@ case "$1" in
                 exit $SMF_EXIT_OK
             fi
 
-	    # Start interactive config on console and ttys
-
-            ${USB_PATH}/scripts/prompt-config.sh "${USB_PATH}" \
-                </dev/console >&/dev/console &
-	    cnt=1
-
-	    if [ -c /dev/ttya ]; then
-                ${USB_PATH}/scripts/prompt-config.sh "${USB_PATH}" \
-                    </dev/ttya >&/dev/ttya &
-                cnt=`expr $cnt + 1`
-	    fi
-
-	    if [ -c /dev/ttyb ]; then
-                ${USB_PATH}/scripts/prompt-config.sh "${USB_PATH}" \
-                    </dev/ttyb >&/dev/ttyb &
-                cnt=`expr $cnt + 1`
-	    fi
-
-            # Wait for one of the interactive configs to finish
-            while [ true ]; do
-                got=`jobs -p | wc -l`
-                [ $got -lt $cnt ] && break
-                sleep 1
-            done
+            interactive_config
 
             # If user quit from interactive configuration then we're done.
             [[ ! -f ${USB_PATH}/config ]] && exit $SMF_EXIT_OK

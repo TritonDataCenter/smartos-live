@@ -1,3 +1,24 @@
+# new vmadmd
+s etc/bash/bash_completion.d/vmadm=/usr/vm/etc/vmadm.completion
+f lib/svc/manifest/system/system-vmadmd.xml 0444 root bin
+f usr/share/man/man1m/vmadmd.1m 0444 root bin
+f usr/share/man/man1m/vmadm.1m 0444 root bin
+d usr/vm 0555 root bin
+d usr/vm/etc 0555 root bin
+d usr/vm/man 0555 root bin
+d usr/vm/node_modules 0555 root bin
+d usr/vm/sbin 0555 root bin
+d usr/vm/smf 0555 root bin
+f usr/vm/sbin/vmadm 0555 root bin
+f usr/vm/sbin/vmadmd 0555 root bin
+f usr/vm/sbin/zoneevent 0555 root bin
+f usr/vm/etc/vmadm.completion 0444 root bin
+f usr/vm/node_modules/httpu.js 0444 root bin
+f usr/vm/node_modules/nopt.js 0444 root bin
+f usr/vm/node_modules/qmp.js 0444 root bin
+f usr/vm/node_modules/VM.js 0444 root bin
+f usr/vm/smf/system-vmadmd 0555 root bin
+f usr/vm/smf/system-vmadmd.xml 0444 root bin
 # 0-devpro-stamp
 f usr/include/demangle.h 0644 root bin
 f usr/lib/libC.so.5 0755 root bin

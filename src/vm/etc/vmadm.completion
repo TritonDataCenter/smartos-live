@@ -1,0 +1,49 @@
+_vmadm()
+{
+    local cur prev opts base
+    COMPREPLY=()
+    # NOTE: we don't want the aliases boot,halt,destroy,etc here because we
+    # want people to use the 'proper' commands when they can.
+    COMMANDS="start create delete stop info get list lookup reboot sysrq update"
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    if [[  ${prev} == 'start'
+        || ${prev} == 'boot'
+        || ${prev} == 'delete'
+        || ${prev} == 'destroy'
+        || ${prev} == 'stop'
+        || ${prev} == 'halt'
+        || ${prev} == 'get'
+        || ${prev} == 'json'
+        || ${prev} == 'update'
+        || ${prev} == 'reboot'
+    ]] && [[ ${COMP_WORDS[COMP_CWORD-2]} == "vmadm" ]]; then
+
+        vms_uuids=$(zoneadm list -cp | grep -v ':global:' | cut -d':' -f5 | \
+            sort | uniq)
+        COMPREPLY=( $(compgen -W "${vms_uuids}" -- ${cur}) )
+
+    elif [[ ${prev} == 'info'
+          || ${prev} == 'sysrq' ]]; then
+
+        # KVM only commands
+        vms_uuids=$(zoneadm list -cp | grep -v ':global:' | grep ":kvm:excl:" | \
+            cut -d':' -f5 | sort | uniq)
+        COMPREPLY=( $(compgen -W "${vms_uuids}" -- ${cur}) )
+
+    elif [[ ${prev} == 'vmadm' ]]; then
+
+        COMPREPLY=( $(compgen -W "${COMMANDS}" -- ${cur}) )
+
+    else
+
+        # Just expand files by default
+        COMPREPLY=( $(compgen -f -- ${cur}) )
+
+    fi
+
+    return 0
+}
+
+complete -F _vmadm vmadm

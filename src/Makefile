@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall
-TARGETS=bootparams disklist removable_disk disk_size node-kstat/build/default/kstat.node
+TARGETS=bootparams disklist removable_disk disk_size node-kstat/build/default/kstat.node zoneevent
 SMARTDC_TARGETS=has_hvx
 DESTDIR=../proto
 NODE_WAF=$(PWD)/../proto/usr/bin/node-waf
@@ -23,6 +23,14 @@ install: $(TARGETS) sysinfo
 	mkdir -m 0755 -p $(DESTDIR)/usr/node_modules
 	find node_modules -type f -exec cp {} $(DESTDIR)/usr/node_modules/ \;
 	cp node-kstat/build/default/kstat.node $(DESTDIR)/usr/node_modules/
+	mkdir -m 0755 -p $(DESTDIR)/usr/vm/
+	rm -rf $(DESTDIR)/usr/vm
+	cp -PR vm $(DESTDIR)/usr/
+	cp zoneevent $(DESTDIR)/usr/vm/sbin/zoneevent
+	mkdir -p $(DESTDIR)/lib/svc/manifest/system
+	cp vm/smf/system-vmadmd.xml $(DESTDIR)/lib/svc/manifest/system/system-vmadmd.xml
+	mv $(DESTDIR)/usr/vm/sbin/vmadmd.js $(DESTDIR)/usr/vm/sbin/vmadmd
+	mv $(DESTDIR)/usr/vm/sbin/vmadm.js $(DESTDIR)/usr/vm/sbin/vmadm
 
 check:
 	@tools/node-lint/bin/node-lint *.js \
@@ -49,6 +57,9 @@ disklist:
 
 sysinfo:
 	touch sysinfo
+
+zoneevent: zoneevent.c
+	gcc -Wall -W -o zoneevent zoneevent.c -lnvpair -lsysevent
 
 clean:
 	@rm -f $(TARGETS)

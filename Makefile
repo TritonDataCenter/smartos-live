@@ -21,7 +21,11 @@ manifest:
 	-[ ! -d $(MPROTO) ] && mkdir $(MPROTO)
 	cp src/manifest $(MPROTO)/live.manifest
 	cp projects/illumos/manifest $(MPROTO)/illumos.manifest	
-	gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest -C projects/illumos-extra manifest
+ifeq ($(EXTRA_TARBALL),)
+		gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest -C projects/illumos-extra manifest
+else
+		tar -Ozxf $(EXTRA_TARBALL) manifest > $(MPROTO)/illumos-extra.manifest
+endif	
 	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
 	cd $(ROOT)/projects/local/$${dir}; \
 	if [[ -f Makefile.joyent ]]; then \
@@ -55,7 +59,11 @@ update:
 	touch 0-illumos-stamp
 
 0-extra-stamp:
-	(cd $(ROOT)/projects/illumos-extra && gmake DESTDIR=$(PROTO) install)
+ifeq ($(EXTRA_TARBALL),)
+		(cd $(ROOT)/projects/illumos-extra && gmake DESTDIR=$(PROTO) install)
+else
+		(cd $(PROTO)/../ && gtar -zxf $(EXTRA_TARBALL) proto/)
+endif
 	touch 0-extra-stamp
 
 0-livesrc-stamp: src/bootparams.c

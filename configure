@@ -142,7 +142,7 @@ if [ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]; then
   fi
 fi
 
-if [ ! -f "projects/illumos-extra/Makefile" ]; then
+if [[ ! -f "projects/illumos-extra/Makefile" && -z $EXTRA_TARBALL ]]; then
   echo " +--> Getting illumos-extra source tree..."
   if [ -z "${GET_ILLUMOS_EXTRA}" ]; then
     echo "FATAL: No GET_ILLUMOS_EXTRA defined in configure.*, can't get illumos-extra!"

@@ -27,7 +27,7 @@ vmadmd(1m) -- virtual machine management daemon
 
     The HTTP interface is expected to only be used by vmadm(1m) and endpoints
     should be considered a private interface. It is documented here in order to
-    aid understanding of its behavior.
+    aid understanding of its behaviour.
 
 ## KVM Autoboot
 
@@ -140,7 +140,7 @@ vmadmd(1m) -- virtual machine management daemon
         This sends a acpi shutdown request to the VM. The guest kernel needs to
         be configured to handle this request and should immediately begin a
         shutdown in order to prevent data loss. If the shutdown sequence is not
-        completed within the timeout number of seconds, the VM is forcably shut
+        completed within the timeout number of seconds, the VM is forcibly shut
         down.
 
     reset (POST /vm/:id?action=reset)

@@ -1197,10 +1197,6 @@ The following exit values are returned:
      2
          Invalid usage.
 
-     3
-         svc:system/smartdc/vmadmd:default not running or not
-         responding.
-
 
 ## SEE ALSO
 

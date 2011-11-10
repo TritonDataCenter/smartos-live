@@ -96,7 +96,7 @@ function usage(message)
         console.error(message);
     }
     console.error('Usage: ' + process.argv[1] + ' <command> [options]');
-    process.exit(1);
+    process.exit(2);
 }
 
 function getUUID(command, p)

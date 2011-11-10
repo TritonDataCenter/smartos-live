@@ -537,7 +537,9 @@ tab-complete UUIDs rather than having to type them out for every command.
     disk.size:
 
         Size of disk in MiB. You should only specify this parameter if you've
-        not included the image_* parameters.
+        not included the image_* parameters. It will show up in get requests
+        for all disks whether you've specified or not as a means to determine
+        the size of the zvol.
 
         type: integer (size in MiB)
         vmtype: KVM

@@ -79,6 +79,7 @@ var LIST_FIELDS = {
     'package_version': {header: 'PACKAGE_VER', width: 11},
     'quota': {header: 'QUOTA', width: 5},
     'real_state': {header: 'REAL_STATE', width: 10},
+    'role': {header: 'ROLE', width: 12},
     'state': {header: 'STATE', width: 16},
     'tmpfs': {header: 'TMPFS', width: 5},
     'type': {header: 'TYPE', width: 4},

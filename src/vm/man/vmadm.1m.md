@@ -907,6 +907,17 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (but unused after create for OS VMs)
 
+    role:
+
+        This property can be used to set a 'role' for special VMs. Typically
+        this is used for VMs that are reserved for operators.
+
+        type: string
+        vmtype: OS,KVM
+        listable: yes
+        create: yes
+        update: yes
+
     state:
 
         This property exposes the current state of a VM.

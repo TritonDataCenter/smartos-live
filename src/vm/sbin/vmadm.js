@@ -25,11 +25,13 @@
  *
  */
 
+var async = require('async');
 var fs = require('fs');
 var VM = require('VM');
 var nopt = require('nopt');
 var onlyif = require('onlyif');
 var path = require('path');
+var spawn = require('child_process').spawn;
 var sprintf = require('sprintf').sprintf;
 var tty = require('tty');
 
@@ -37,6 +39,7 @@ var tty = require('tty');
 
 var COMMANDS = [
     'start', 'boot',
+    'console',
     'create',
     'delete', 'destroy',
     'stop', 'halt',
@@ -253,6 +256,89 @@ function startVM(uuid, extra, callback)
                 ':', err.message));
         }
         callback();
+    });
+}
+
+function openConsole(uuid, callback)
+{
+    VM.load(uuid, function (err, obj) {
+        var child;
+        var cmd;
+        var args;
+        var stty;
+
+        if (err) {
+            return callback(err);
+        }
+        if (obj.state !== 'running') {
+            return callback(new Error('cannot connect to console when state is '
+                + '"' + obj.state + '" must be "running".'));
+        }
+
+        if (obj.brand === 'joyent') {
+            cmd = '/usr/sbin/zlogin';
+            args = ['-C', '-e', "\\035", obj.zonename];
+
+            VM.logger('DEBUG', cmd + ' ' + args.join(' '));
+            child = spawn(cmd, args, {customFds: [process.stdin, process.stdout, process.stderr]});
+            child.on('exit', function (code) {
+                VM.logger('DEBUG', 'zlogin process exited with code ' + code);
+                return callback();
+            });
+        } else if (obj.brand === 'kvm') {
+
+            async.series([
+                function (cb)
+                {
+                    cmd = '/usr/bin/stty';
+                    args = ['-g'];
+                    stty = '';
+
+                    VM.logger('DEBUG', cmd + ' ' + args.join(' '));
+                    child = spawn(cmd, args, {customFds: [process.stdin, -1, -1]});
+                    child.stdout.on('data', function (data) {
+                        //VM.logger('DEBUG', 'data: ' + data.toString());
+                        stty = data.toString();
+                    });
+                    child.on('exit', function (code) {
+                        VM.logger('DEBUG', 'stty process exited with code ' + code);
+                        return cb();
+                    });
+                },
+                function (cb)
+                {
+                    cmd = '/usr/bin/socat';
+                    args = ['unix-client:' + obj.zonepath + '/root/tmp/vm.console',
+                        '-,raw,echo=0,escape=0x1d']
+
+                    VM.logger('DEBUG', cmd + ' ' + args.join(' '));
+                    child = spawn(cmd, args, {customFds: [process.stdin, process.stdout, process.stderr]});
+                    child.on('exit', function (code) {
+                        VM.logger('DEBUG', 'zlogin process exited with code ' + code);
+                        return cb();
+                    });
+                },
+                function (cb)
+                {
+                    cmd = '/usr/bin/stty';
+                    args = [stty];
+
+                    VM.logger('DEBUG', cmd + ' ' + args.join(' '));
+                    child = spawn(cmd, args, {customFds: [process.stdin, -1, -1]});
+                    child.on('exit', function (code) {
+                        VM.logger('DEBUG', 'stty process exited with code ' + code);
+                        return cb();
+                    });
+                }
+            ],
+            function (err, results)
+            {
+                return callback(err);
+            });
+        } else {
+            return callback(new Error('Cannot get console for brand: ' +
+                obj.brand));
+        }
     });
 }
 
@@ -486,6 +572,11 @@ function main(callback)
                 return callback(err);
             }
             return callback(null, 'Successfully started ' + uuid);
+        });
+    case 'console':
+        uuid = getUUID(command, parsed);
+        return openConsole(uuid, function (err) {
+            return callback(err);
         });
     case 'update':
         uuid = getUUID(command, parsed);

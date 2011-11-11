@@ -30,6 +30,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         See the 'PROPERTIES' or 'EXAMPLES' sections below for details on what
         to put in the JSON payload.
 
+      console <uuid>
+
+        Connect to the text console for a running VM. For OS VMs, this will be
+        the zone console. For KVM VMs, this will be the serial console and your
+        VM will need to be setup with getty or similar running on the first
+        serial device.
+
+        To end the serial console session hit CTRL-]. For OS VMs, you'll need
+        to do this at the start of a line, so generally this means pressing:
+        ENTER then CTRL-] then a dot character. For KVM VMs you should just need
+        to press CTRL-] by itself.
+
       delete <uuid>
 
         Delete the VM with the specified UUID. The VM and any associated storage

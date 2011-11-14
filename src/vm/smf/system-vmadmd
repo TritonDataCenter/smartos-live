@@ -38,7 +38,7 @@ case "$1" in
         exit $SMF_EXIT_OK
     fi
 
-    /usr/vm/sbin/vmadmd 2>&1 &
+    /usr/bin/ctrun -l child -o noorphan /usr/vm/sbin/vmadmd 2>&1 &
     ;;
 
 'stop')

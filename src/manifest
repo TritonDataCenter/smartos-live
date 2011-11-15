@@ -13,7 +13,9 @@ f usr/vm/sbin/vmadm 0555 root bin
 f usr/vm/sbin/vmadmd 0555 root bin
 f usr/vm/sbin/zoneevent 0555 root bin
 f usr/vm/etc/vmadm.completion 0444 root bin
+f usr/vm/node_modules/expat_binding.node 0444 root bin
 f usr/vm/node_modules/httpu.js 0444 root bin
+f usr/vm/node_modules/node-expat.js 0444 root bin
 f usr/vm/node_modules/nopt.js 0444 root bin
 f usr/vm/node_modules/qmp.js 0444 root bin
 f usr/vm/node_modules/VM.js 0444 root bin

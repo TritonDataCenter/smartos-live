@@ -75,6 +75,7 @@ var LIST_FIELDS = {
     'owner_uuid': {header: 'OWNER_UUID', width: 36},
     'package_name': {header: 'PACKAGE_NAME', width: 32},
     'package_version': {header: 'PACKAGE_VER', width: 11},
+    'qemu_extra_opts': {header: 'QEMU_EXTRA_OPTS', width: 15},
     'quota': {header: 'QUOTA', width: 5},
     'real_state': {header: 'REAL_STATE', width: 10},
     'state': {header: 'STATE', width: 16},

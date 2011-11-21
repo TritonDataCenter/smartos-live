@@ -829,6 +829,17 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    pid:
+
+        For KVM VMs that are currently running, this field indicates the PID of
+        the qemu process for the zone.
+
+        type: integer (PID)
+        vmtype: KVM
+        listable: yes
+        create: no
+        update: no
+
     qemu_opts:
 
         This parameter allows one to specify additional arguments to be passed

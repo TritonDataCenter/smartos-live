@@ -63,13 +63,13 @@ interactive_config() {
     if [ -c /dev/ttya ]; then
         ${USB_PATH}/scripts/prompt-config.sh $1 "${USB_PATH}" \
             </dev/ttya >&/dev/ttya &
-        cnt=`expr $cnt + 1`
+        let cnt=$cnt+1
     fi
 
     if [ -c /dev/ttyb ]; then
         ${USB_PATH}/scripts/prompt-config.sh $1 "${USB_PATH}" \
             </dev/ttyb >&/dev/ttyb &
-        cnt=`expr $cnt + 1`
+        let cnt=$cnt+1
     fi
 
     # Wait for one of the interactive configs to finish
@@ -77,6 +77,11 @@ interactive_config() {
         got=`jobs -p | wc -l`
         [ $got -lt $cnt ] && break
         sleep 1
+    done
+
+    for i in `jobs -p`
+    do
+        kill -9 $i
     done
 }
 
@@ -94,6 +99,7 @@ case "$1" in
             else
                 echo "configuring standby"
                 interactive_config -S
+		rm -f /tmp/config_in_progress
             fi
         fi
 

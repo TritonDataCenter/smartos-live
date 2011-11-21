@@ -1465,6 +1465,7 @@ function bootVM(payload, options, callback)
         for (nic in vm.nics) {
             if (vm.nics.hasOwnProperty(nic)) {
                 nic = vm.nics[nic];
+                nic_idx = nic.index;
                 log('nic:', nic);
                 cmdargs.push('-net',
                     'nic,macaddr=' + nic.mac +
@@ -1511,7 +1512,6 @@ function bootVM(payload, options, callback)
                 }
 
                 cmdargs.push('-net', vnic_opts);
-                nic_idx++;
             }
         }
 

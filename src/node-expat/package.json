@@ -1,0 +1,23 @@
+{ "name": "node-expat"
+,"version": "1.4.0"
+,"main": "./lib/node-expat"
+,"description": "NodeJS binding for fast XML parsing."
+,"scripts" : { "install": "node-waf configure build"
+	      ,"update": "node-waf build"
+	      ,"test": "node test.js"
+	     }
+,"dependencies": []
+,"devDependencies": ["vows"]
+,"repositories": [{ "type": "git"
+		   ,"path": "git://github.com/astro/node-expat.git"
+		  }]
+,"homepage": "http://github.com/astro/node-expat"
+,"bugs": "http://github.com/astro/node-expat/issues"
+,"maintainers": [{ "name": "Astro"
+		  ,"email": "astro@spaceboyz.net"
+		  ,"web": "http://spaceboyz.net/~astro/"
+		 }]
+,"contributors": ["Stephan Maka", "Derek Hammer", "Iein Valdez", "Peter Körner", "Camilo Aguilar"]
+,"licenses": [{ "type": "MIT" }]
+,"engine": "node"
+}

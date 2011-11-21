@@ -4,12 +4,13 @@ _vmadm()
     COMPREPLY=()
     # NOTE: we don't want the aliases boot,halt,destroy,etc here because we
     # want people to use the 'proper' commands when they can.
-    COMMANDS="start create delete stop info get list lookup reboot sysrq update"
+    COMMANDS="start console create delete stop info get list lookup reboot sysrq update"
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     if [[  ${prev} == 'start'
         || ${prev} == 'boot'
+        || ${prev} == 'console'
         || ${prev} == 'delete'
         || ${prev} == 'destroy'
         || ${prev} == 'stop'

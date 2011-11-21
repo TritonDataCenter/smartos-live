@@ -1,6 +1,8 @@
 CC=gcc
 CFLAGS=-Wall
-TARGETS=bootparams disklist removable_disk disk_size node-kstat/build/default/kstat.node zoneevent
+TARGETS=bootparams disklist removable_disk disk_size \
+    node-kstat/build/default/kstat.node zoneevent \
+    node-expat/build/default/node-expat.node
 SMARTDC_TARGETS=has_hvx
 DESTDIR=../proto
 NODE_WAF=$(PWD)/../proto/usr/bin/node-waf
@@ -23,9 +25,14 @@ install: $(TARGETS) sysinfo
 	mkdir -m 0755 -p $(DESTDIR)/usr/node_modules
 	find node_modules -type f -exec cp {} $(DESTDIR)/usr/node_modules/ \;
 	cp node-kstat/build/default/kstat.node $(DESTDIR)/usr/node_modules/
-	mkdir -m 0755 -p $(DESTDIR)/usr/vm/
 	rm -rf $(DESTDIR)/usr/vm
 	cp -PR vm $(DESTDIR)/usr/
+	mkdir -m 0755 -p $(DESTDIR)/usr/vm/node_modules
+	cp node-expat/build/default/node-expat.node \
+        $(DESTDIR)/usr/vm/node_modules/expat_binding.node
+	cat node-expat/lib/node-expat.js | \
+        sed -e "s|var expat.*;|var expat = require('expat_binding');|" > \
+        $(DESTDIR)/usr/vm/node_modules/node-expat.js
 	cp zoneevent $(DESTDIR)/usr/vm/sbin/zoneevent
 	mkdir -p $(DESTDIR)/lib/svc/manifest/system
 	cp vm/smf/system-vmadmd.xml $(DESTDIR)/lib/svc/manifest/system/system-vmadmd.xml
@@ -50,6 +57,9 @@ has_hvx: has_hvx.c
 
 node-kstat/build/default/kstat.node: node-kstat/kstat.cc $(NODE_WAF)
 	(cd node-kstat && $(NODE_WAF) configure && $(NODE_WAF) build)
+
+node-expat/build/default/node-expat.node: node-expat/node-expat.cc $(NODE_WAF)
+	(cd node-expat && $(NODE_WAF) configure && $(NODE_WAF) build)
 
 disklist:
 	cp disklist.sh disklist

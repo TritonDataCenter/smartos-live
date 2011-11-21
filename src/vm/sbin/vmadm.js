@@ -37,6 +37,7 @@ var tty = require('tty');
 
 var COMMANDS = [
     'start', 'boot',
+    'console',
     'create',
     'delete', 'destroy',
     'stop', 'halt',
@@ -74,6 +75,8 @@ var LIST_FIELDS = {
     'owner_uuid': {header: 'OWNER_UUID', width: 36},
     'package_name': {header: 'PACKAGE_NAME', width: 32},
     'package_version': {header: 'PACKAGE_VER', width: 11},
+    'pid': {header: 'PID', width: 6},
+    'qemu_extra_opts': {header: 'QEMU_EXTRA_OPTS', width: 15},
     'quota': {header: 'QUOTA', width: 5},
     'real_state': {header: 'REAL_STATE', width: 10},
     'state': {header: 'STATE', width: 16},
@@ -96,7 +99,7 @@ function usage(message)
         console.error(message);
     }
     console.error('Usage: ' + process.argv[1] + ' <command> [options]');
-    process.exit(1);
+    process.exit(2);
 }
 
 function getUUID(command, p)
@@ -486,6 +489,11 @@ function main(callback)
                 return callback(err);
             }
             return callback(null, 'Successfully started ' + uuid);
+        });
+    case 'console':
+        uuid = getUUID(command, parsed);
+        return VM.console(uuid, function (err) {
+            return callback(err);
         });
     case 'update':
         uuid = getUUID(command, parsed);

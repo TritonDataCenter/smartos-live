@@ -42,13 +42,17 @@ update:
 	if [[ -f Makefile.joyent ]]; then \
 	gmake -f Makefile.joyent update; else gmake update; fi; done
 
-
 0-local-stamp:
 	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
 	cd $(ROOT)/projects/local/$${dir}; \
 	if [[ -f Makefile.joyent ]]; then \
-	gmake -f Makefile.joyent world; else gmake world; fi; \
-        gmake SMARTOS=true DESTDIR=$(PROTO) install; done
+		gmake -f Makefile.joyent world; else gmake world; fi; \
+	if [[ -f Makefile.joyent ]]; then \
+		gmake -f Makefile.joyent SMARTOS=true DESTDIR=$(PROTO) install; \
+	else \
+		gmake SMARTOS=true DESTDIR=$(PROTO) install; \
+	fi; \
+	done
 
 0-devpro-stamp:
 	[ ! -d projects/devpro ] || \

@@ -31,6 +31,8 @@ echo "["
 echo "    { \"repo\": \"illumos-live\", $(get_status ${ROOT}) }"
 echo "  , { \"repo\": \"illumos-extra\", $(get_status ${ROOT}/projects/illumos-extra) }"
 echo "  , { \"repo\": \"illumos-joyent\", $(get_status ${ROOT}/projects/illumos) }"
+echo "  , { \"repo\": \"illumos-kvm\", $(get_status ${ROOT}/projects/local/kvm) }"
+echo "  , { \"repo\": \"illumos-kvm-cmd\", $(get_status ${ROOT}/projects/local/kvm-cmd) }"
 if [[ -d ${ROOT}/projects/local/ur-agent ]]; then
     echo "  , { \"repo\": \"ur-agent\", $(get_status ${ROOT}/projects/local/ur-agent) }"
 fi

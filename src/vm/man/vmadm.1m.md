@@ -275,11 +275,36 @@ tab-complete UUIDs rather than having to type them out for every command.
         If you pass in a JSON object, that object should be formatted in the
         same manner as a create payload. The only exception is with fields
         that are themselves objects: VM NICs, KVM VM disks, customer_metadata,
-        tags.  In these cases there are 3 special objects:
+        tags.  In the the case of the "simple" properties 'tags' and
+        'customer_metadata' which are key-value pairs, there are 2 special
+        payload members:
 
-          add_X
-          remove_X
-          update_X
+          set_tags || set_customer_metadata
+          remove_tags || remove_customer_metadata
+
+        which can add/update or remove entries from key/value sets. To add an
+        entry, include it in the set_X object with a simple string value. To
+        remove an object from these dictionaries, include its name in a list
+        as the value to remove_X. For example, to add a tag 'hello' with value
+        'world', your JSON would look like this:
+
+          {"set_tags": {"hello": "world"}}
+
+        then to change the value for this key you'd do:
+
+          {"set_tags": {"hello": "universe"}}
+
+        and finally to remove this key you'd do:
+
+          {"remove_tags": ["hello"]}
+
+        The same pattern is used for customer_metadata.
+
+        In the case of nics and disks, there are 3 special objects:
+
+          add_disks || add_nics
+          remove_disks || remove_nics
+          update_disks || update_nics
 
         For NICs for example, you can include an array of NIC objects with the
         parameter add_nics in your input. Those NICs would get added to the VM.
@@ -293,23 +318,6 @@ tab-complete UUIDs rather than having to type them out for every command.
         For updating disks, you use the same format as described above for NICs
         except that the options are add_disks, remove_disks and update_disks
         and instead of "mac" these will be keyed on "path".
-
-        For tags and customer_metadata, you do the same thing as disks and NICs,
-        but the keys are the index and the add/remove/update fields are:
-
-            add_tags
-            remove_tags
-            update_tags
-            add_customer_metadata
-            remove_customer_metadata
-            update_customer_metadata
-
-        and in the case of these options, the add and update values are objects
-        instead of arrays of object. Eg.
-
-            echo '{"add_tags": {"hello": "world"}}' | vmadm update <uuid>
-
-        would add the tag 'hello' with value 'world'.
 
         Those fields marked in the PROPERTIES section below as updatable and
         modified with '(live update)' mean that when you update the property

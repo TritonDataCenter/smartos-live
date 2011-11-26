@@ -275,12 +275,12 @@ tab-complete UUIDs rather than having to type them out for every command.
         If you pass in a JSON object, that object should be formatted in the
         same manner as a create payload. The only exception is with fields
         that are themselves objects: VM NICs, KVM VM disks, customer_metadata,
-        tags.  In the the case of the "simple" properties 'tags' and
-        'customer_metadata' which are key-value pairs, there are 2 special
-        payload members:
+        internal_metadata, tags.  In the the case of the "simple" properties
+        'tags', 'customer_metadata' and 'internal_metadata' which are key-value
+        pairs, there are 2 special payload members:
 
-          set_tags || set_customer_metadata
-          remove_tags || remove_customer_metadata
+          set_tags || set_customer_metadata || set_internal_metadata
+          remove_tags || remove_customer_metadata || remove_internal_metadata
 
         which can add/update or remove entries from key/value sets. To add an
         entry, include it in the set_X object with a simple string value. To
@@ -298,7 +298,7 @@ tab-complete UUIDs rather than having to type them out for every command.
 
           {"remove_tags": ["hello"]}
 
-        The same pattern is used for customer_metadata.
+        The same pattern is used for customer_metadata and internal_metadata.
 
         In the case of nics and disks, there are 3 special objects:
 
@@ -638,6 +638,20 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (but does nothing for OS VMs)
         default: the value of zonename
+
+    internal_metadata:
+
+        This field allows metadata to be set and associated with this VM. The
+        value should be an object with only top-level key=value pairs. The
+        intention is that customer_metadata contain customer modifiable keys
+        whereas internal_metadata is for operator generated keys.
+
+        type: JSON Object (key: value)
+        vmtype: OS,KVM
+        listable: no
+        create: yes
+        update: yes (but see special notes on update command)
+        default: {}
 
     limit_priv:
 

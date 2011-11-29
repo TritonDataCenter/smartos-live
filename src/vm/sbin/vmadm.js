@@ -227,6 +227,8 @@ function addCommandOptions(command, opts, shorts)
     case 'lookup':
         opts.json = Boolean;
         shorts.j = ['--json'];
+        opts.unique = Boolean;
+        shorts['1'] = ['--unique'];
         break;
     case 'create':
     case 'update':
@@ -601,6 +603,10 @@ function main(callback)
             if (err) {
                 return callback(err);
             }
+            if (parsed.unique && results.length !== 1) {
+                return callback(new Error('Requested unique lookup but found ' +
+                    results.length + ' results.'));
+            }
             if (parsed.json) {
                 console.log(JSON.stringify(results, null, 2));
             } else {
@@ -667,16 +673,16 @@ function main(callback)
 
 onlyif.rootInSmartosGlobal(function(err) {
     if (err) {
-        console.log('FATAL: cannot run because: ' + err);
+        console.error('FATAL: cannot run because: ' + err);
         process.exit(2);
     }
     main(function (err, message) {
         if (err) {
-            console.log(err.message);
+            console.error(err.message);
             process.exit(1);
         }
         if (message) {
-            console.log(message);
+            console.error(message);
         }
         process.exit(0);
     });

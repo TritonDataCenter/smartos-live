@@ -873,7 +873,7 @@ function writeZoneconfig(payload, callback)
 
     debug('writing extra files to zone root');
     fs.writeFileSync(payload.zone_path + '/root/etc/nodename',
-        payload.hostname);
+        payload.hostname + '\n');
     fs.writeFileSync(payload.zone_path +
         '/root/var/svc/log/system-zoneinit:default.log', '');
 

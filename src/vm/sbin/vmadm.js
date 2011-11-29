@@ -309,8 +309,8 @@ function sortVM(a, b, sort_fields)
             direction = 1;
         }
 
-        avalue = VM.getFlattened(a, field);
-        bvalue = VM.getFlattened(b, field);
+        avalue = VM.flatten(a, field);
+        bvalue = VM.flatten(b, field);
 
         if (avalue > bvalue || (!avalue && bvalue) ||
             ((avalue === undefined) && (bvalue !== undefined))) {
@@ -349,8 +349,8 @@ function outputVMListLine(order_fields, m, options)
         if (!m) {
             // This is special case to just write the header.
             value = getListProperties(field).header;
-        } else if (VM.getFlattened(m, field)) {
-            value = VM.getFlattened(m, field).toString();
+        } else if (VM.flatten(m, field)) {
+            value = VM.flatten(m, field).toString();
         } else if (options.parsable) {
             value = '';
         } else {

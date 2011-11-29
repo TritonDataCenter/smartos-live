@@ -505,56 +505,61 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         When creating a KVM VM or getting a KVM VM's JSON, you will use this
         property. This is an array of 'disk' objects. The properties available
-        are listed below under the disk.<property> options. If you want to
+        are listed below under the disks.*.<property> options. If you want to
         update disks, see the special notes in the section above about the
         'upgrade' command.
 
-    disk.boot:
+        To use these properties in a list output or lookup, use the format:
+
+          disks.*.size   # for lookup matching any disk
+          disks.0.size   # for list output or lookup of a specific disk
+
+    disks.*.boot:
 
         Specifies whether this disk should be bootable (only one disk should).
 
         type: boolean
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: no
 
-    disk.image_name:
+    disks.*.image_name:
 
         Name of dataset from which to clone this VM's disk. You should specify
         either this and 'image_size' and 'image_uuid', or 'size' for a disk.
 
         type: string
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: no
 
-    disk.image_size:
+    disks.*.image_size:
 
         The size of the image from which we will create this disk.
 
         type: integer (size in MiB)
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: no
 
-    disk.image_uuid:
+    disks.*.image_uuid:
 
         UUID of dataset from which to clone this VM's disk.
 
         type: string (UUID)
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: no
 
-    disk.size:
+    disks.*.size:
 
         Size of disk in MiB. You should only specify this parameter if you've
         not included the image_* parameters. It will show up in get requests
@@ -563,23 +568,23 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         type: integer (size in MiB)
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: no
 
-    disk.media:
+    disks.*.media:
 
         Specify whether this disk is a 'disk' or 'cdrom'.
 
         type: string (one of ['disk','cdrom'])
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: no
 
-    disk.model:
+    disks.*.model:
 
         Specify the driver for this disk. If your image supports it, you should
         use virtio. If not, use ide or scsi depending on the drivers in your
@@ -587,25 +592,25 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         type: string (one of ['virtio','ide','scsi'])
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: the value of the disk_driver parameter for this VM
 
-    disk.zpool:
+    disks.*.zpool:
 
         The zpool in which to create this zvol.
 
         type: string (zpool name)
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: zones
 
     disk_driver:
 
-        This specifies the default values for disk.model for disks attached to
+        This specifies the default values for disks.*.model for disks attached to
         this VM.
 
         type: string (one of ['virtio','ide','scsi'])
@@ -715,86 +720,91 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         When creating a KVM VM or getting a KVM VM's JSON, you will use this
         property. This is an array of 'nic' objects. The properties available
-        are listed below under the nic.<property> options. If you want to
+        are listed below under the nics.*.<property> options. If you want to
         update nics, see the special notes in the section above about the
         'upgrade' command.
 
-    nic.blocked_outgoing_ports:
+        To use these properties in a list output or lookup, use the format:
+
+          nics.*.ip   # for lookup matching any interface
+          nics.0.ip   # for list output or lookup of a specific interface
+
+    nics.*.blocked_outgoing_ports:
 
         Array of ports on which this nic is prevented from sending traffic.
 
         type: array
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes
 
-    nic.gateway:
+    nics.*.gateway:
 
         The IPv4 router on this network (not required if using DHCP)
 
         type: string (IPv4 address)
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes
 
-    nic.ip:
+    nics.*.ip:
 
         IPv4 unicast address for this NIC, or 'dhcp' to obtain address via DHCP.
 
         type: string (IPv4 address or 'dhcp')
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes
 
-    nic.mac:
+    nics.*.mac:
 
         MAC address of virtual NIC.
 
         type: string (MAC address)
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: no (see 'update' command description)
         default: we'll generate one
 
-    nic.model:
+    nics.*.model:
 
         The driver for this NIC [virtio|e1000|rtl8136|...]
 
         type: string (one of ['virtio','e1000','rtl8136'])
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes
         default: the value of the nic_driver property on the VM
 
-    nic.netmask
+    nics.*.netmask
 
         The netmask for this NIC's network (not required if using DHCP)
 
         type: string (IPv4 netmask, eg. 255.255.255.0)
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes
 
-    nic.vlan_id:
+    nics.*.vlan_id:
 
         The vlan with which to tag this NIC's traffic (0 = none).
 
         type: integer (0-4095)
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes
         default: 0
 
     nic_driver:
 
-        This specifies the default values for nic.model for NICs attached to
+        This specifies the default values for nics.*.model for NICs attached to
         this VM.
 
         type: string (one of ['virtio','e1000','rtl8136'])
@@ -1156,8 +1166,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     Example 5: Find the VM with the IP 10.2.121.70 (second one with JSON output)
 
-        vmadm lookup nic.ip=10.2.121.70
-        vmadm lookup -j nic.ip=10.2.121.70
+        vmadm lookup nics.*.ip=10.2.121.70
+        vmadm lookup -j nics.*.ip=10.2.121.70
 
     Example 6: Looking up all 128M VMs with an alias that starts with 'a' or 'b'
                and then again with JSON output.

@@ -102,6 +102,25 @@ function usage(message)
     process.exit(2);
 }
 
+function getListProperties(field)
+{
+    var result = {};
+    var fields = [];
+
+    if (LIST_FIELDS.hasOwnProperty(field)) {
+        return LIST_FIELDS[field];
+    }
+
+    fields = field.split('.');
+    if (fields.length === 3 && VM.FLATTENABLE_ARRAY_HASH_KEYS.indexOf(fields[0]) !== -1) {
+        return {"header": field.toUpperCase(), "width": 20};
+    } else if (fields.length === 2 && VM.FLATTENABLE_HASH_KEYS.indexOf(fields[0]) !== -1) {
+        return {"header": field.toUpperCase(), "width": 20};
+    }
+
+    return undefined;
+}
+
 function getUUID(command, p)
 {
     var uuid;
@@ -274,6 +293,7 @@ function sortVM(a, b, sort_fields)
     var field;
     var fields;
     var direction;
+    var avalue, bvalue;
 
     for (field in sort_fields) {
         direction = 1;
@@ -289,14 +309,15 @@ function sortVM(a, b, sort_fields)
             direction = 1;
         }
 
-        if ((a[field] > b[field]) ||
-            (!a.hasOwnProperty(field) && b.hasOwnProperty(field)) ||
-            ((a[field] === undefined) && (b[field] !== undefined))) {
+        avalue = VM.getFlattened(a, field);
+        bvalue = VM.getFlattened(b, field);
+
+        if (avalue > bvalue || (!avalue && bvalue) ||
+            ((avalue === undefined) && (bvalue !== undefined))) {
 
             return (direction);
-        } else if ((a[field] < b[field]) ||
-            (a.hasOwnProperty(field) && !b.hasOwnProperty(field)) ||
-            ((a[field] !== undefined) && (b[field] === undefined))) {
+        } else if (avalue < bvalue || avalue && !bvalue ||
+            ((avalue !== undefined) && (bvalue === undefined))) {
 
             return (direction * -1);
         }
@@ -323,13 +344,13 @@ function outputVMListLine(order_fields, m, options)
         } else if (fmt.length !== 0) {
             fmt = fmt + '  ';
         }
-        width = LIST_FIELDS[field].width;
+        width = getListProperties(field).width;
 
         if (!m) {
             // This is special case to just write the header.
-            value=LIST_FIELDS[field].header;
-        } else if (m.hasOwnProperty(field) && m[field]) {
-            value = m[field].toString();
+            value = getListProperties(field).header;
+        } else if (VM.getFlattened(m, field)) {
+            value = VM.getFlattened(m, field).toString();
         } else if (options.parsable) {
             value = '';
         } else {
@@ -365,11 +386,11 @@ function formatVMList(vmobjs, order, sortby, options, callback)
         for (field in sort_fields) {
             field = sort_fields[field];
             if (field[0] === '-' || field[0] === '+') {
-                if (!LIST_FIELDS.hasOwnProperty(field.substr(1))) {
+                if (!getListProperties(field.substr(1))) {
                     return callback(new Error('invalid sort field: ' + field));
                 }
             } else {
-                if (!LIST_FIELDS.hasOwnProperty(field)) {
+                if (!getListProperties(field)) {
                     return callback(new Error('invalid sort field: ' + field));
                 }
             }
@@ -382,7 +403,7 @@ function formatVMList(vmobjs, order, sortby, options, callback)
 
         for (field in order_fields) {
             field = order_fields[field];
-            if (!LIST_FIELDS.hasOwnProperty(field)) {
+            if (!getListProperties(field)) {
                 return callback(new Error('invalid order field: ' + field));
             }
         }

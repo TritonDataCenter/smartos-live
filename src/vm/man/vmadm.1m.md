@@ -136,7 +136,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         You can see several examples using order, sort and selection in the
         EXAMPLES section below.
 
-      lookup [-j] [field=value ...]
+      lookup [-j|-1] [field=value ...]
 
         The lookup command is designed to help you find VMs. It takes a set of
         filter options in the same format as the list command. This means you
@@ -156,6 +156,10 @@ tab-complete UUIDs rather than having to type them out for every command.
         the -j parameter. With that flag set, the output will be a JSON array of
         VM objects containing the same JSON data as the 'get' command for each
         VM matched.
+
+        If you pass the -1 parameter, lookup should only return 1 result. If
+        multiple results are matched or 0 results are matched, an error will
+        be returned and the exit status will be non-zero.
 
         See the PROPERTIES section below for the list of keys allowed. All those
         listed there as 'listable' can be used as keys for filtering.
@@ -486,6 +490,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         vmtype: OS,KVM
         listable: yes
         create: yes (if passed, this sets the default for the billing_id option)
+        update: no
+
+    datasets:
+
+        If a VM has extra datasets available to it (eg. if you specified the
+        delegate_dataset option when creating) the list and get output will
+        include the information about that dataset under this key.
+
+        type: string (dataset name)
+        vmtype: OS
+        listable: no
+        create: no (use delegate_dataset to include one)
         update: no
 
     delegate_dataset:

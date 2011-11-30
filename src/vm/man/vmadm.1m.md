@@ -525,6 +525,9 @@ tab-complete UUIDs rather than having to type them out for every command.
         update disks, see the special notes in the section above about the
         'upgrade' command.
 
+        When adding or removing disks, the disks will be available to the VM in
+        the order that the disks are included in the disks or add_disks array.
+
         To use these properties in a list output or lookup, use the format:
 
           disks.*.size   # for lookup matching any disk
@@ -740,6 +743,9 @@ tab-complete UUIDs rather than having to type them out for every command.
         update nics, see the special notes in the section above about the
         'upgrade' command.
 
+        When adding or removing NICs, the NIC names will be created in the order
+        the interfaces are in the nics or add_nics array.
+
         To use these properties in a list output or lookup, use the format:
 
           nics.*.ip   # for lookup matching any interface
@@ -764,6 +770,17 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: yes (see above)
         create: yes
         update: yes
+
+    nics.*.interface:
+
+        This is the interface name the the VM will see for this interface. It
+        will always be in the format netX where X is an integer >= 0.
+
+        type: string (netX)
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: no
 
     nics.*.ip:
 
@@ -1207,7 +1224,6 @@ tab-complete UUIDs rather than having to type them out for every command.
           "add_nics": [
             {
               "physical": "net1",
-              "index": 1,
               "nic_tag": "external",
               "mac": "b2:1e:ba:a5:6e:71",
               "ip": "10.2.121.71",

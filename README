@@ -66,3 +66,15 @@ Other notes:
 
    which contains a list of all files/links in the image + md5sums of files and
    is also available in the live image itself in /var/log/manifest
+
+pfexec:
+
+  Root permissions are required during parts of the build process, and if you
+  are not running the build as root, the pfexec command is required to provide
+  your user with root permissions.  On systems such as Solaris 11 and
+  OpenIndiana this is not the default setting, so you will have to provide the
+  account used for building SmartOS with the "Primary Administrator" profile, or
+  equivalent.  It can be done with a command such as the following, which needs
+  to be executed as root:
+
+    usermod -P "Primary Administrator" <user>

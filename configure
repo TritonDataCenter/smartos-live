@@ -8,21 +8,23 @@ set -o errexit
 GLOBAL_ZONE=1
 
 if [[ $(uname -s) != "SunOS" ]]; then
-    echo "FATAL: This only works with SunOS/SmartOS"
-    exit 1
+  echo "FATAL: This only works with SunOS/SmartOS"
+  exit 1
+fi
+
+if [ "$(pfexec id -u)" != "0" ]; then
+  echo "FATAL: pfexec must be configured to provide root permissions, see README file"
+  exit 1
 fi
 
 if [[ $(zonename) != "global" ]]; then
-    echo "NOTICE: Building in a zone, workarounds enabled!"
-    GLOBAL_ZONE=0
+  echo "NOTICE: Building in a zone, workarounds enabled!"
+  GLOBAL_ZONE=0
 fi
 
 INSTALL_BIN_LINK_DIR=/usr/bin
 HAVE_PKG="true"
 ROOTCMD=pfexec
-
-# illumos-extra is now in github but git's ssl doesn't always work in our build machines.
-export GIT_SSL_NO_VERIFY=true
 
 # Load all site-specific configure files
 for file in `ls configure.*`; do
@@ -51,6 +53,9 @@ if [ "${HAVE_PKG}" == "true" ]; then
       data/docbook \
       text/gnu-gettext \
       developer/java/jdk \
+      library/math/header-math \
+      system/header \
+      developer/versioning/git \
       || /bin/true
   else
     # nonglobal Zone
@@ -80,6 +85,11 @@ if [ "${HAVE_PKG}" == "true" ]; then
     # nonglobal Zone
     /bin/true
   fi
+fi
+
+if [ ! -d /usr/perl5/5.12 ]; then
+  echo "FATAL: Perl 5.12 needs to be installed at '/usr/perl5/5.12'"
+  exit 1
 fi
 
 echo "==> Checking for /opt/SUNWspro/bin/cc..."

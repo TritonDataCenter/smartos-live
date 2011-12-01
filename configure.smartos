@@ -24,9 +24,9 @@
 
 mkdir -p projects/local
 (cd projects/local && [[ -d kvm ]] \
-    || git clone https://github.com/joyent/illumos-kvm.git kvm)
+    || git clone git://github.com/joyent/illumos-kvm.git kvm)
 (cd projects/local && [[ -d kvm-cmd ]] \
-    || git clone https://github.com/joyent/illumos-kvm-cmd.git kvm-cmd)
+    || git clone git://github.com/joyent/illumos-kvm-cmd.git kvm-cmd)
 
 # default branch list if there isn't one
 if [[ ! -f configure-branches ]]; then
@@ -46,7 +46,7 @@ SUNW_SPRO12_URL=""
 SUNW_SPRO12u1_URL=""
 ON_CLOSED_BINS_URL="http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins.i386.tar.bz2"
 ON_CLOSED_BINS_ND_URL="http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins-nd.i386.tar.bz2"
-GET_ILLUMOS="(git clone https://github.com/joyent/illumos-joyent illumos)"
-GET_ILLUMOS_EXTRA="git clone https://github.com/joyent/illumos-extra.git illumos-extra"
+GET_ILLUMOS="git clone git://github.com/joyent/illumos-joyent illumos"
+GET_ILLUMOS_EXTRA="git clone git://github.com/joyent/illumos-extra.git illumos-extra"
 
 OVERLAYS="smartos generic"

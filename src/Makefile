@@ -2,7 +2,8 @@ CC=gcc
 CFLAGS=-Wall
 TARGETS=bootparams disklist removable_disk disk_size \
     node-kstat/build/default/kstat.node zoneevent \
-    node-expat/build/default/node-expat.node
+    node-expat/build/default/node-expat.node \
+    node-syslog/build/default/syslog.node
 SMARTDC_TARGETS=has_hvx
 DESTDIR=../proto
 NODE_WAF=$(PWD)/../proto/usr/bin/node-waf
@@ -25,6 +26,7 @@ install: $(TARGETS) sysinfo
 	mkdir -m 0755 -p $(DESTDIR)/usr/node_modules
 	find node_modules -type f -exec cp {} $(DESTDIR)/usr/node_modules/ \;
 	cp node-kstat/build/default/kstat.node $(DESTDIR)/usr/node_modules/
+	cp node-syslog/build/default/syslog.node $(DESTDIR)/usr/node_modules/syslog.node
 	rm -rf $(DESTDIR)/usr/vm
 	cp -PR vm $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/usr/vm/node_modules
@@ -60,6 +62,9 @@ node-kstat/build/default/kstat.node: node-kstat/kstat.cc $(NODE_WAF)
 
 node-expat/build/default/node-expat.node: node-expat/node-expat.cc $(NODE_WAF)
 	(cd node-expat && $(NODE_WAF) configure && $(NODE_WAF) build)
+
+node-syslog/build/default/syslog.node: node-syslog/syslog.cc $(NODE_WAF)
+	(cd node-syslog && $(NODE_WAF) configure && $(NODE_WAF) build)
 
 disklist:
 	cp disklist.sh disklist

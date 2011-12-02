@@ -1,0 +1,8 @@
+node-syslog is a simple wrapping of syslog for NodeJS.
+
+http://nodejs.org/api.html#addons-310
+
+It may be useful to those who are starting to write NodeJS addons, as it
+is a very simple project.
+
+Licensed under MIT, BSD and GPLv2.

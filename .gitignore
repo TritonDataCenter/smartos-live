@@ -11,6 +11,8 @@
 /src/zoneevent
 /src/node-kstat/.lock-wscript
 /src/node-kstat/build
+/src/node-syslog/.lock-wscript
+/src/node-syslog/build
 /tools/builder/builder
 /tools/builder/*.o
 /tools/builder/users.c

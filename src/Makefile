@@ -15,14 +15,6 @@ install: $(TARGETS) sysinfo
 	cp -p $(TARGETS) sysinfo $(DESTDIR)/usr/bin
 	mkdir -p $(DESTDIR)/smartdc/bin
 	cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin
-	mkdir -m 0755 -p $(DESTDIR)/usr/sbin
-	mkdir -m 0755 -p $(DESTDIR)/usr/lib
-	cp vmadmd.js $(DESTDIR)/usr/lib/vmadmd
-	cp vmadm.js $(DESTDIR)/usr/sbin/vmadm
-	cp vmcfg.js $(DESTDIR)/usr/sbin/vmcfg
-	cp machine/machine-create.js $(DESTDIR)/usr/sbin/machine-create
-	cp machine/machine-json.js $(DESTDIR)/usr/sbin/machine-json
-	cp machine/machine-lookup.js $(DESTDIR)/usr/sbin/machine-lookup
 	mkdir -m 0755 -p $(DESTDIR)/usr/node_modules
 	find node_modules -type f -exec cp {} $(DESTDIR)/usr/node_modules/ \;
 	cp node-kstat/build/default/kstat.node $(DESTDIR)/usr/node_modules/

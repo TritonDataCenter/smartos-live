@@ -86,13 +86,11 @@ f lib/svc/method/sysidtool-net 0555 root bin
 f lib/svc/method/net-physical 0555 root bin
 f lib/svc/method/sysidtool-system 0555 root bin
 f lib/svc/method/fs-root 0555 root bin
-f lib/svc/method/smartdc-vmadmd 0555 root bin
 f lib/svc/method/smartdc-init 0555 root sys
 d lib/svc/manifest 0755 root sys
 d lib/svc/manifest/system 0755 root sys
 d lib/svc/manifest/network 0755 root sys
 d lib/svc/manifest/system 0755 root sys
-f lib/svc/manifest/system/smartdc-vmadmd.xml 0444 root bin
 f lib/svc/manifest/system/sysidtool.xml 0444 root sys
 f lib/svc/manifest/system/auditd.xml 0444 root sys
 d lib/svc/manifest/system/filesystem 0755 root sys

@@ -61,12 +61,6 @@ if [ $? -ne 0 ]; then
         fi
     done
 
-    # If the destroy_zpools boot parameter is set, destroy all zpools
-    /bin/bootparams | grep "^destroy_zpools=true" >/dev/null
-    if [ $? -eq 0 ]; then
-        destroy_zpools
-    fi
-
     # A machine is reset to its original unsetup state (i.e. a 'factory reset')
     # when the smartdc:factoryreset ZFS user property is set on the var dataset.
     reset=$(zfs get -H -o value smartdc:factoryreset ${SYS_ZPOOL}/var)

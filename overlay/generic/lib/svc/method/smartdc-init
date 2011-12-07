@@ -58,6 +58,8 @@ install_config()
 
     load_sdc_config
 
+    [[ -z "$CONFIG_assets_admin_ip" ]] && return 0
+
     curl -k -o /tmp/node.config --silent \
 	$CONFIG_assets_admin_ip:/config/node.config
 

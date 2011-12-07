@@ -26,7 +26,7 @@ function ip_netmask_to_cidr {
     d=$(($d & $4))
     IFS=$OLDIFS
 
-    let netip=0x$(printf "%02X%02X%02X%02X" $1 $2 $3 $4)
+    typeset -i netip=0x$(printf "%02X%02X%02X%02X" $1 $2 $3 $4)
     bits=32
     while [ $((${netip} & 1 )) == 0 ] ; do
         netip=$((${netip} >> 1))

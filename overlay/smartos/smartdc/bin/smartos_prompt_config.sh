@@ -301,7 +301,7 @@ create_dump()
     # Create the dump zvol
     zfs create -V ${base_size}mb ${SYS_ZPOOL}/dump || \
       fatal "failed to create the dump zvol"
-    dumpadm -a /dev/zvol/dsk/${SYS_ZPOOL}/dump
+    dumpadm -d /dev/zvol/dsk/${SYS_ZPOOL}/dump
 }
 
 #

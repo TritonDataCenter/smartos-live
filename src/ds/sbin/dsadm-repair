@@ -1,0 +1,36 @@
+#!/usr/bin/bash
+
+# A really brute-force way to scan through the existing
+# zvols and check to see if they're datasets.
+
+# I'm relying pretty much on the chances of a dataset UUID
+# being the same as the UUID of a machine
+# (the odds of a collision are theoretically ~ 1 in 3x10^38)
+
+# TODO: Set the zfs properties
+
+DBDIR=/var/db/dsadm
+
+if [[ ! -d $DBDIR ]] ; then
+	mkdir -p $DBDIR
+fi
+
+zvols=$(zfs list -pH -o name -t snapshot \
+  | cut -d/ -f2 \
+  | cut -d@ -f1 \
+  | sort -u)
+
+for i in ${zvols[@]} ; do
+  unset manifest
+  unset urn
+  echo "Checking for manifest with UUID: $i"
+  manifest=$(dsadm get $i)
+
+  if [[ ! -z $manifest ]] ; then
+    echo "$i - manifest was found. Copying to $DBDIR"
+    echo "${manifest}" > $DBDIR/$i.dsmanifest 
+    urn=$(cat $DBDIR/$i.dsmanifest | json urn)
+    echo "$i - urn: $urn"    
+  fi
+
+done

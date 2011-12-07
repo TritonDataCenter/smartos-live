@@ -32,6 +32,8 @@ install: $(TARGETS) sysinfo
 	cp vm/smf/system-vmadmd.xml $(DESTDIR)/lib/svc/manifest/system/system-vmadmd.xml
 	mv $(DESTDIR)/usr/vm/sbin/vmadmd.js $(DESTDIR)/usr/vm/sbin/vmadmd
 	mv $(DESTDIR)/usr/vm/sbin/vmadm.js $(DESTDIR)/usr/vm/sbin/vmadm
+	mkdir -m 0755 -p $(DESTDIR)/var/db/dsadm
+	cp -PR ds $(DESTDIR)/usr/
 
 check:
 	@tools/node-lint/bin/node-lint *.js \

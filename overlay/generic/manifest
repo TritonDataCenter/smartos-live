@@ -108,6 +108,8 @@ f lib/svc/manifest/network/nfs/nlockmgr.xml 0444 root sys
 f lib/svc/manifest/network/nfs/server.xml 0444 root sys
 f lib/svc/manifest/network/nfs/status.xml 0444 root sys
 f lib/svc/manifest/network/forwarding.xml 0444 root sys
+d var/db 0755 root bin
+d var/db/dsadm 0755 root bin
 d var/ld 0755 root bin
 s var/ld/32=.
 s var/ld/64=amd64

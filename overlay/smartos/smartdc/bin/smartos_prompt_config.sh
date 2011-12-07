@@ -403,7 +403,7 @@ create_zpool()
     pool=zones
 
     # If the pool already exists, don't create it again.
-    if /usr/sbin/zpool list -H -o name $pool; then
+    if /usr/sbin/zpool list -H -o name $pool >/dev/null 2>&1; then
         return 0
     fi
 

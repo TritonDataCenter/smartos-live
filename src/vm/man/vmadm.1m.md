@@ -469,6 +469,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: no
         default: always set to current time at VM.create().
 
+    compute_node_uuid:
+
+        This is the UUID of the compute node on which the VM currently exists.
+        It is most useful when pulled from sources external to the GZ (whether
+        in the VM, or from another node).
+
+        type: string (compute node's UUID)
+        vmtype: OS,KVM
+        listable: no
+        create: no
+        update: no
+        default: this is always pulled when the object is loaded.
+
     customer_metadata:
 
         This field allows metadata to be set and associated with this VM. The

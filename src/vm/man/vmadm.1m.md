@@ -663,6 +663,69 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: no
         default: local
 
+    filesystems:
+
+        This property can be used to mount additional filesystems into an OS VM.
+        It is primarily intended for SDC special VMs.  The value is an array of
+        objects. Those objects can have the following properties: source, target,
+        raw (optional), type and options.  These are described below:
+
+    filesystem.type:
+
+        For OS VMs this specifies the type of the filesystem being mounted in.
+        Example: lofs
+
+        type: string (fs type)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: no
+
+    filesystem.source:
+
+        For OS VMs this specifies the directory in the global zone of the
+        filesystem being mounted in.  Example: /pool/somedirectory
+
+        type: string (path)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: no
+
+    filesystem.target:
+
+        For OS VMs this specifies the directory inside the Zone where this
+        filesystem should be mounted.  Example: /somedirectory
+
+        type: string (path)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: no
+
+    filesystem.raw:
+
+        For OS VMs this specifies the additional raw device that should be
+        associated with the source filesystem.  Example: /dev/rdsk/somedisk
+
+        type: string (device)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: no
+
+    filesystem.options:
+
+        For OS VMs this specifies the array of mount options for this filesystem
+        when it is mounted into the zone.  Examples of options include: "ro" and
+        "nodevices".
+
+        type: array of strings (each string is an option)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: no
+
     hostname:
 
         For KVM VMs, this value will be handed out via DHCP as the hostname for
@@ -773,6 +836,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: yes (see above)
         create: yes
         update: yes
+
+    nics.*.dhcp_server:
+
+        With this property set to true, this VM will be able to operate as a
+        DHCP server on this interface.  Without this, some of the packets
+        required of a DHCP server will not get through.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: false
 
     nics.*.gateway:
 

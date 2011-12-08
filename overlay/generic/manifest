@@ -11,6 +11,7 @@ f etc/driver_aliases 0644 root sys
 f etc/logadm.conf 0644 root sys
 f etc/group 0644 root sys
 f etc/inittab 0644 root sys
+f etc/syslog.conf 0644 root sys
 f etc/system 0644 root sys
 f etc/driver_classes 0644 root sys
 f etc/user_attr 0644 root sys
@@ -115,3 +116,6 @@ s var/ld/32=.
 s var/ld/64=amd64
 d var/ld/amd64 0755 root bin
 f var/ld/amd64/ld.config 0644 root root
+f var/log 0755 root sys
+f var/log/vmactions.debug 0644 root root
+f var/log/vmactions.log 0644 root root

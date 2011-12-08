@@ -529,7 +529,11 @@ function main(callback)
         }
         if (JSON.stringify(extra) !== '{}') {
             VM.update(uuid, extra, function (err, info) {
-                return callback(err);
+                if (err) {
+                    return callback(err);
+                } else {
+                    return callback(null, 'Successfully updated ' + uuid);
+                }
             });
         } else {
             if (filename === '-' && tty.isatty(0)) {

@@ -81,8 +81,8 @@ LogLevel info
 
 # Host private key files
 # Must be on a local disk and readable only by the root user (root:sys 600).
-HostKey /var/ssh/ssh_host_rsa_key
-HostKey /var/ssh/ssh_host_dsa_key
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_dsa_key
 
 # Length of the server key
 # Default 768, Minimum 512

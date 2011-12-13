@@ -1,0 +1,21 @@
+#!/bin/bash
+
+if [[ $(uname -s) != 'SunOS' ]]; then
+    echo "FATAL: this can only run on SmartOS"
+    exit 1
+fi
+
+if [[ $(zonename) != 'global' ]]; then
+    echo "FATAL: this can only run in the GZ"
+    exit 1
+fi
+
+if [[ $(id -u) != 0 ]]; then
+    echo "FATAL: this can only run as root"
+    exit 1
+fi
+
+export TAP=1
+./node-tap/bin/tap $(pwd)/tests
+
+exit 0

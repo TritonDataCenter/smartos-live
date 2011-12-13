@@ -1,0 +1,51 @@
+# dsadm bash autocompletion
+
+set completion-display-width 0 
+
+_dsadm() {
+  local cur prev opts base options
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev="${COMP_WORDS[COMP_CWORD-1]}"
+  options=( list avail show import destroy get ) 
+  case "$prev" in
+    dsadm)
+      COMPREPLY=( $(compgen -W '${options[@]}' -- ${cur}) )
+      return 0
+      ;;
+    import)
+      local avail=$(dsadm -p avail | cut -d: -f1)
+      COMPREPLY=( $(compgen -W "${avail}" -- ${cur}) )
+      return 0
+      ;;
+    destroy)
+      local installed=$(dsadm -p list | cut -d: -f1)
+      COMPREPLY=( $(compgen -W "${installed}" -- ${cur}) )
+      return 0
+      ;;
+    dump)
+      local installed=$(dsadm -p list | cut -d: -f1)
+      COMPREPLY=( $(compgen -W "${installed}" -- ${cur}) )
+      return 0
+      ;;
+    info)
+      local installed=$(dsadm -p list | cut -d: -f1)
+      COMPREPLY=( $(compgen -W "${installed}" -- ${cur}) )
+      return 0
+      ;;
+    get)
+      local avail=$(dsadm -p avail | cut -d: -f1)
+      COMPREPLY=( $(compgen -W "${avail}" -- ${cur}) )
+      return 0
+      ;;
+  esac
+
+}
+
+DSADM=$(which dsadm 2>&1 > /dev/null)
+
+if [[ $? -ne 0 ]] ; then
+  echo "Error: Cannot find dsadm. Won't load autocomple script. Check \$PATH"
+else
+  complete -F _dsadm dsadm
+fi

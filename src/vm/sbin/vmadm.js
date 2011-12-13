@@ -102,6 +102,25 @@ function usage(message)
     process.exit(2);
 }
 
+function getListProperties(field)
+{
+    var result = {};
+    var fields = [];
+
+    if (LIST_FIELDS.hasOwnProperty(field)) {
+        return LIST_FIELDS[field];
+    }
+
+    fields = field.split('.');
+    if (fields.length === 3 && VM.FLATTENABLE_ARRAY_HASH_KEYS.indexOf(fields[0]) !== -1) {
+        return {"header": field.toUpperCase(), "width": 20};
+    } else if (fields.length === 2 && VM.FLATTENABLE_HASH_KEYS.indexOf(fields[0]) !== -1) {
+        return {"header": field.toUpperCase(), "width": 20};
+    }
+
+    return undefined;
+}
+
 function getUUID(command, p)
 {
     var uuid;
@@ -208,6 +227,8 @@ function addCommandOptions(command, opts, shorts)
     case 'lookup':
         opts.json = Boolean;
         shorts.j = ['--json'];
+        opts.unique = Boolean;
+        shorts['1'] = ['--unique'];
         break;
     case 'create':
     case 'update':
@@ -274,6 +295,7 @@ function sortVM(a, b, sort_fields)
     var field;
     var fields;
     var direction;
+    var avalue, bvalue;
 
     for (field in sort_fields) {
         direction = 1;
@@ -289,14 +311,15 @@ function sortVM(a, b, sort_fields)
             direction = 1;
         }
 
-        if ((a[field] > b[field]) ||
-            (!a.hasOwnProperty(field) && b.hasOwnProperty(field)) ||
-            ((a[field] === undefined) && (b[field] !== undefined))) {
+        avalue = VM.flatten(a, field);
+        bvalue = VM.flatten(b, field);
+
+        if (avalue > bvalue || (!avalue && bvalue) ||
+            ((avalue === undefined) && (bvalue !== undefined))) {
 
             return (direction);
-        } else if ((a[field] < b[field]) ||
-            (a.hasOwnProperty(field) && !b.hasOwnProperty(field)) ||
-            ((a[field] !== undefined) && (b[field] === undefined))) {
+        } else if (avalue < bvalue || avalue && !bvalue ||
+            ((avalue !== undefined) && (bvalue === undefined))) {
 
             return (direction * -1);
         }
@@ -323,13 +346,13 @@ function outputVMListLine(order_fields, m, options)
         } else if (fmt.length !== 0) {
             fmt = fmt + '  ';
         }
-        width = LIST_FIELDS[field].width;
+        width = getListProperties(field).width;
 
         if (!m) {
             // This is special case to just write the header.
-            value=LIST_FIELDS[field].header;
-        } else if (m.hasOwnProperty(field) && m[field]) {
-            value = m[field].toString();
+            value = getListProperties(field).header;
+        } else if (VM.flatten(m, field)) {
+            value = VM.flatten(m, field).toString();
         } else if (options.parsable) {
             value = '';
         } else {
@@ -365,11 +388,11 @@ function formatVMList(vmobjs, order, sortby, options, callback)
         for (field in sort_fields) {
             field = sort_fields[field];
             if (field[0] === '-' || field[0] === '+') {
-                if (!LIST_FIELDS.hasOwnProperty(field.substr(1))) {
+                if (!getListProperties(field.substr(1))) {
                     return callback(new Error('invalid sort field: ' + field));
                 }
             } else {
-                if (!LIST_FIELDS.hasOwnProperty(field)) {
+                if (!getListProperties(field)) {
                     return callback(new Error('invalid sort field: ' + field));
                 }
             }
@@ -382,7 +405,7 @@ function formatVMList(vmobjs, order, sortby, options, callback)
 
         for (field in order_fields) {
             field = order_fields[field];
-            if (!LIST_FIELDS.hasOwnProperty(field)) {
+            if (!getListProperties(field)) {
                 return callback(new Error('invalid order field: ' + field));
             }
         }
@@ -506,7 +529,11 @@ function main(callback)
         }
         if (JSON.stringify(extra) !== '{}') {
             VM.update(uuid, extra, function (err, info) {
-                return callback(err);
+                if (err) {
+                    return callback(err);
+                } else {
+                    return callback(null, 'Successfully updated ' + uuid);
+                }
             });
         } else {
             if (filename === '-' && tty.isatty(0)) {
@@ -580,6 +607,10 @@ function main(callback)
             if (err) {
                 return callback(err);
             }
+            if (parsed.unique && results.length !== 1) {
+                return callback(new Error('Requested unique lookup but found ' +
+                    results.length + ' results.'));
+            }
             if (parsed.json) {
                 console.log(JSON.stringify(results, null, 2));
             } else {
@@ -646,16 +677,16 @@ function main(callback)
 
 onlyif.rootInSmartosGlobal(function(err) {
     if (err) {
-        console.log('FATAL: cannot run because: ' + err);
+        console.error('FATAL: cannot run because: ' + err);
         process.exit(2);
     }
     main(function (err, message) {
         if (err) {
-            console.log(err.message);
+            console.error(err.message);
             process.exit(1);
         }
         if (message) {
-            console.log(message);
+            console.error(message);
         }
         process.exit(0);
     });

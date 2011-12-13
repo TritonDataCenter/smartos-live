@@ -1,0 +1,297 @@
+#!/usr/bin/env node
+
+var path = require('path');
+var sprintf = require('sprintf').sprintf;
+var dsadm = require('dsadm');
+var onlyif = require('onlyif');
+var common = require('common');
+var log = common.log;
+ 
+var _argv = process.argv;
+ 
+var options = {
+  verbose: false,
+  parseable: false,
+  printHeader: true
+}
+
+log.setWriter(function(message) {
+  var _msg = message.message + '\n';
+  process.stdout.write(_msg);
+});
+
+var printHelp = function(code) {
+  var code = code || 0;
+  var msg = 
+  [ "Usage: dsadm [options] command"
+  , ""
+  , " Commands:"
+  , ""
+  , " list              lists locally installed datasets"
+  , " dump <uuid>       dumps the raw local manifest in JSON format"
+  , " info <uuid>       prints information the local dataset and its children"
+  , " import <uuid|url> local install of the dataset specified by UUID or URL"
+  , " avail             lists all datasets available to this user from the API"
+  , " get <uuid>        retrieve manifest from API"
+  , " destroy <uuid>    remotes dataset from the local storage pool"
+  , ""
+  , " Options: "
+  , ""
+  , " -p                prints colon-separated parseable output."
+  , " -v                verbose output to stderr"
+  , ""
+  ].join('\n');
+
+  _stdout(msg);
+  process.exit(code);
+};
+
+_stdout = function() {
+  var msg = sprintf.apply(null, arguments) + '\n';
+  process.stdout.write(msg);
+}
+
+_fatal = function() {
+  var msg = sprintf.apply(null, arguments) + '\n';
+  process.stdout.write(msg);
+  process.exit(1);
+}
+
+_isUuid = function(obj) {
+  var uuidReg = /[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/;
+  if (typeof(obj) === 'string') {
+    return (uuidReg.test(obj));
+  } 
+  return false;
+}
+
+printHeader = function() {
+  _stdout("%-36s %-7s %-10s %-23s", 
+    'UUID',
+    'OS',
+    'PUBLISHED',
+    'URN');
+}; 
+
+printInfoHeader = function() {
+  _stdout("%-20s  %-30s", 
+    'PROPERTY',
+    'VALUE');
+};
+
+_toSimpleDate = function(d) {
+  function pad(n) { return n < 10 ? '0'+n : n}
+  var result = [
+    d.getUTCFullYear(),
+    pad(d.getMonth()),
+    pad(d.getDate()),
+  ].join('-');
+  return result;
+
+};
+
+
+// output formatters
+
+onInfo = function(err, dump) {
+  if (err) throw err;
+ 
+  printInfoHeader();
+
+  var _out = function(k, v) {
+    _stdout("%-20s  %-30s", k, v);
+  }
+
+ 
+  var fields = [
+    'uuid',
+    'name',
+    'version',
+    'os',
+    'description',
+    'type',
+    'published_at',
+    'urn' 
+  ];
+
+  for (i in fields) {
+    var n = fields[i];
+    _out(n, dump.manifest[n]);
+  }
+
+  // number of snapshots
+  // number of of clones
+ 
+  var nsnap, nclone;
+  nsnap = dump.children.snapshots.length;
+  nclone = dump.children.clones.length;
+
+  //_out("children", nsnap + nclone);
+  _out("snapshots", nsnap);
+  _out("clones", nclone);
+
+  _out("size", dump.volume.usedbydataset + "MB");
+      
+}
+
+onDump = function(err, dump) {
+  if (err) throw err;
+  _stdout(JSON.stringify(dump, null, "  "));
+}
+
+onGet = function(err, dataset) {
+  if (err) throw err;
+  _stdout(JSON.stringify(dataset, null, "  "));
+}
+
+onList = function(err, datasets) {
+  if (err) throw err;
+
+  if (!options.parseable) {
+    printHeader();
+  }
+ 
+  for (var i=0; i<datasets.length; i++) {
+    var ds = datasets[i];
+    var date = _toSimpleDate(new Date(ds.published_at));
+    if (options.parseable) {
+      _stdout("%s:%s:%s:%s", 
+        ds.uuid,
+        ds.os,
+        date,
+        ds.urn);
+    }
+    else {
+			_stdout("%-36s %-7s %-10s %-23s", 
+        ds.uuid,
+        ds.os,
+        date,
+        ds.urn);
+    }
+  }
+}
+
+
+var validators = {
+  uuid: function(value) {
+    if (!_isUuid(value)) {
+      _fatal("error: '%s' does not appear to be a uuid", value);
+    } 
+  }
+}
+
+var _required = function(type) {
+  var val = _argv.shift();
+  if (!val) _fatal("error: missing required '%s' parameter", type)
+  validators[type](val);
+  return val;
+}
+
+var switches = {
+  p: function() { 
+    options.parseable = true;
+  },
+  v: function() { 
+    options.verbose = true;
+    log.level('Debug');
+  },
+  H: function() {
+    options.printHeader = false;
+  }
+}
+ 
+var commands = {
+  'avail': function() {
+    dsadm.listRemote(null, onList);
+  },
+  'list': function() {
+    dsadm.listLocal(onList);
+  },
+  'dump': function() {
+    var uuid = _required('uuid');
+    dsadm.dumpLocal(uuid, onDump);
+  },
+  'info': function() {
+    var uuid = _required('uuid');
+    dsadm.dumpLocal(uuid, onInfo);
+  },
+  'get': function() {
+    var uuid = _required('uuid');
+    dsadm.showRemote(uuid, onGet);
+  },
+  'import': function() {
+    var uuid = _required('uuid');
+    dsadm.importDataset(uuid, function(err) {
+      if (err) {
+        errHandler(err);
+      } 
+      else {
+        _stdout("dataset %s successfully imported", uuid)
+      }
+    });
+  },
+  'destroy': function() {
+    var uuid = _required('uuid');
+    dsadm.destroyDataset(uuid, function(err) {
+      if (err) {
+        errHandler(err);
+      }
+      else {
+        _stdout("dataset %s destroyed", uuid);
+      }
+    });
+  },
+  'help': function() {
+    printHelp(0);
+  }
+
+}
+
+function errHandler(error) { 
+  _fatal(error.toString());
+}
+
+function main() {
+  
+  SWITCH_REGEX = /^-([a-z])+$/;
+  
+  parseSwitch = function(command) {
+    var s = command.split("");
+    s.shift(); // throw away '-'
+
+    for (var i=0; i<s.length; i++) {
+      if (s[i] in switches) {
+        switches[s[i]]();
+      }
+    }
+  } 
+ 
+  _argv.shift(); // always node
+  _argv.shift(); // always execname
+
+  if (_argv.length === 0 ) printHelp(1);
+
+  while (command = _argv.shift()) {
+    if (SWITCH_REGEX.test(command)) {
+      parseSwitch(command);
+    } 
+    else if (command in commands) {
+      commands[command]();
+      break; // so extra flags dont get set half-way through
+    }
+    else {
+      printHelp(1);
+    }
+  }
+
+}
+
+onlyif.rootInSmartosGlobal(function(err) {
+  if (err) {
+    _stdout("fatal: cannot run because: %s", err);
+    process.exit(2);
+  }
+  else {
+    main();
+  }
+});

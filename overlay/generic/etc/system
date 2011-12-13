@@ -137,3 +137,11 @@ set apix_enable=0
 * Want additional crash dump metrics
 *
 set dump_metrics_on=1
+
+*
+* With lots of zones, each with a large limit on lwps, we need more pids.  We
+* could go to 999999, but for now stick with 5 digits to match the existing
+* default of 30000.  This is mostly being conservative, so we can bump higher
+* if necessary.
+*
+set pidmax=99999

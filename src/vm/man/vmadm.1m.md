@@ -136,7 +136,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         You can see several examples using order, sort and selection in the
         EXAMPLES section below.
 
-      lookup [-j] [field=value ...]
+      lookup [-j|-1] [field=value ...]
 
         The lookup command is designed to help you find VMs. It takes a set of
         filter options in the same format as the list command. This means you
@@ -156,6 +156,10 @@ tab-complete UUIDs rather than having to type them out for every command.
         the -j parameter. With that flag set, the output will be a JSON array of
         VM objects containing the same JSON data as the 'get' command for each
         VM matched.
+
+        If you pass the -1 parameter, lookup should only return 1 result. If
+        multiple results are matched or 0 results are matched, an error will
+        be returned and the exit status will be non-zero.
 
         See the PROPERTIES section below for the list of keys allowed. All those
         listed there as 'listable' can be used as keys for filtering.
@@ -275,11 +279,36 @@ tab-complete UUIDs rather than having to type them out for every command.
         If you pass in a JSON object, that object should be formatted in the
         same manner as a create payload. The only exception is with fields
         that are themselves objects: VM NICs, KVM VM disks, customer_metadata,
-        tags.  In these cases there are 3 special objects:
+        internal_metadata, tags.  In the the case of the "simple" properties
+        'tags', 'customer_metadata' and 'internal_metadata' which are key-value
+        pairs, there are 2 special payload members:
 
-          add_X
-          remove_X
-          update_X
+          set_tags || set_customer_metadata || set_internal_metadata
+          remove_tags || remove_customer_metadata || remove_internal_metadata
+
+        which can add/update or remove entries from key/value sets. To add an
+        entry, include it in the set_X object with a simple string value. To
+        remove an object from these dictionaries, include its name in a list
+        as the value to remove_X. For example, to add a tag 'hello' with value
+        'world', your JSON would look like this:
+
+          {"set_tags": {"hello": "world"}}
+
+        then to change the value for this key you'd do:
+
+          {"set_tags": {"hello": "universe"}}
+
+        and finally to remove this key you'd do:
+
+          {"remove_tags": ["hello"]}
+
+        The same pattern is used for customer_metadata and internal_metadata.
+
+        In the case of nics and disks, there are 3 special objects:
+
+          add_disks || add_nics
+          remove_disks || remove_nics
+          update_disks || update_nics
 
         For NICs for example, you can include an array of NIC objects with the
         parameter add_nics in your input. Those NICs would get added to the VM.
@@ -293,23 +322,6 @@ tab-complete UUIDs rather than having to type them out for every command.
         For updating disks, you use the same format as described above for NICs
         except that the options are add_disks, remove_disks and update_disks
         and instead of "mac" these will be keyed on "path".
-
-        For tags and customer_metadata, you do the same thing as disks and NICs,
-        but the keys are the index and the add/remove/update fields are:
-
-            add_tags
-            remove_tags
-            update_tags
-            add_customer_metadata
-            remove_customer_metadata
-            update_customer_metadata
-
-        and in the case of these options, the add and update values are objects
-        instead of arrays of object. Eg.
-
-            echo '{"add_tags": {"hello": "world"}}' | vmadm update <uuid>
-
-        would add the tag 'hello' with value 'world'.
 
         Those fields marked in the PROPERTIES section below as updatable and
         modified with '(live update)' mean that when you update the property
@@ -457,6 +469,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: no
         default: always set to current time at VM.create().
 
+    compute_node_uuid:
+
+        This is the UUID of the compute node on which the VM currently exists.
+        It is most useful when pulled from sources external to the GZ (whether
+        in the VM, or from another node).
+
+        type: string (compute node's UUID)
+        vmtype: OS,KVM
+        listable: no
+        create: no
+        update: no
+        default: this is always pulled when the object is loaded.
+
     customer_metadata:
 
         This field allows metadata to be set and associated with this VM. The
@@ -480,6 +505,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes (if passed, this sets the default for the billing_id option)
         update: no
 
+    datasets:
+
+        If a VM has extra datasets available to it (eg. if you specified the
+        delegate_dataset option when creating) the list and get output will
+        include the information about that dataset under this key.
+
+        type: string (dataset name)
+        vmtype: OS
+        listable: no
+        create: no (use delegate_dataset to include one)
+        update: no
+
     delegate_dataset:
 
         This property indicates whether we should delegate a ZFS dataset to an
@@ -497,56 +534,64 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         When creating a KVM VM or getting a KVM VM's JSON, you will use this
         property. This is an array of 'disk' objects. The properties available
-        are listed below under the disk.<property> options. If you want to
+        are listed below under the disks.*.<property> options. If you want to
         update disks, see the special notes in the section above about the
         'upgrade' command.
 
-    disk.boot:
+        When adding or removing disks, the disks will be available to the VM in
+        the order that the disks are included in the disks or add_disks array.
+
+        To use these properties in a list output or lookup, use the format:
+
+          disks.*.size   # for lookup matching any disk
+          disks.0.size   # for list output or lookup of a specific disk
+
+    disks.*.boot:
 
         Specifies whether this disk should be bootable (only one disk should).
 
         type: boolean
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: no
 
-    disk.image_name:
+    disks.*.image_name:
 
         Name of dataset from which to clone this VM's disk. You should specify
         either this and 'image_size' and 'image_uuid', or 'size' for a disk.
 
         type: string
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: no
 
-    disk.image_size:
+    disks.*.image_size:
 
         The size of the image from which we will create this disk.
 
         type: integer (size in MiB)
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: no
 
-    disk.image_uuid:
+    disks.*.image_uuid:
 
         UUID of dataset from which to clone this VM's disk.
 
         type: string (UUID)
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: no
 
-    disk.size:
+    disks.*.size:
 
         Size of disk in MiB. You should only specify this parameter if you've
         not included the image_* parameters. It will show up in get requests
@@ -555,23 +600,23 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         type: integer (size in MiB)
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: no
 
-    disk.media:
+    disks.*.media:
 
         Specify whether this disk is a 'disk' or 'cdrom'.
 
         type: string (one of ['disk','cdrom'])
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: no
 
-    disk.model:
+    disks.*.model:
 
         Specify the driver for this disk. If your image supports it, you should
         use virtio. If not, use ide or scsi depending on the drivers in your
@@ -579,25 +624,25 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         type: string (one of ['virtio','ide','scsi'])
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: the value of the disk_driver parameter for this VM
 
-    disk.zpool:
+    disks.*.zpool:
 
         The zpool in which to create this zvol.
 
         type: string (zpool name)
         vmtype: KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
         default: zones
 
     disk_driver:
 
-        This specifies the default values for disk.model for disks attached to
+        This specifies the default values for disks.*.model for disks attached to
         this VM.
 
         type: string (one of ['virtio','ide','scsi'])
@@ -618,6 +663,69 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: no
         default: local
 
+    filesystems:
+
+        This property can be used to mount additional filesystems into an OS VM.
+        It is primarily intended for SDC special VMs.  The value is an array of
+        objects. Those objects can have the following properties: source, target,
+        raw (optional), type and options.  These are described below:
+
+    filesystem.type:
+
+        For OS VMs this specifies the type of the filesystem being mounted in.
+        Example: lofs
+
+        type: string (fs type)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: no
+
+    filesystem.source:
+
+        For OS VMs this specifies the directory in the global zone of the
+        filesystem being mounted in.  Example: /pool/somedirectory
+
+        type: string (path)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: no
+
+    filesystem.target:
+
+        For OS VMs this specifies the directory inside the Zone where this
+        filesystem should be mounted.  Example: /somedirectory
+
+        type: string (path)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: no
+
+    filesystem.raw:
+
+        For OS VMs this specifies the additional raw device that should be
+        associated with the source filesystem.  Example: /dev/rdsk/somedisk
+
+        type: string (device)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: no
+
+    filesystem.options:
+
+        For OS VMs this specifies the array of mount options for this filesystem
+        when it is mounted into the zone.  Examples of options include: "ro" and
+        "nodevices".
+
+        type: array of strings (each string is an option)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: no
+
     hostname:
 
         For KVM VMs, this value will be handed out via DHCP as the hostname for
@@ -630,6 +738,20 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (but does nothing for OS VMs)
         default: the value of zonename
+
+    internal_metadata:
+
+        This field allows metadata to be set and associated with this VM. The
+        value should be an object with only top-level key=value pairs. The
+        intention is that customer_metadata contain customer modifiable keys
+        whereas internal_metadata is for operator generated keys.
+
+        type: JSON Object (key: value)
+        vmtype: OS,KVM
+        listable: no
+        create: yes
+        update: yes (but see special notes on update command)
+        default: {}
 
     limit_priv:
 
@@ -693,86 +815,118 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         When creating a KVM VM or getting a KVM VM's JSON, you will use this
         property. This is an array of 'nic' objects. The properties available
-        are listed below under the nic.<property> options. If you want to
+        are listed below under the nics.*.<property> options. If you want to
         update nics, see the special notes in the section above about the
         'upgrade' command.
 
-    nic.blocked_outgoing_ports:
+        When adding or removing NICs, the NIC names will be created in the order
+        the interfaces are in the nics or add_nics array.
+
+        To use these properties in a list output or lookup, use the format:
+
+          nics.*.ip   # for lookup matching any interface
+          nics.0.ip   # for list output or lookup of a specific interface
+
+    nics.*.blocked_outgoing_ports:
 
         Array of ports on which this nic is prevented from sending traffic.
 
         type: array
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes
 
-    nic.gateway:
+    nics.*.dhcp_server:
+
+        With this property set to true, this VM will be able to operate as a
+        DHCP server on this interface.  Without this, some of the packets
+        required of a DHCP server will not get through.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: false
+
+    nics.*.gateway:
 
         The IPv4 router on this network (not required if using DHCP)
 
         type: string (IPv4 address)
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes
 
-    nic.ip:
+    nics.*.interface:
+
+        This is the interface name the the VM will see for this interface. It
+        will always be in the format netX where X is an integer >= 0.
+
+        type: string (netX)
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: no
+
+    nics.*.ip:
 
         IPv4 unicast address for this NIC, or 'dhcp' to obtain address via DHCP.
 
         type: string (IPv4 address or 'dhcp')
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes
 
-    nic.mac:
+    nics.*.mac:
 
         MAC address of virtual NIC.
 
         type: string (MAC address)
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: no (see 'update' command description)
         default: we'll generate one
 
-    nic.model:
+    nics.*.model:
 
         The driver for this NIC [virtio|e1000|rtl8136|...]
 
         type: string (one of ['virtio','e1000','rtl8136'])
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes
         default: the value of the nic_driver property on the VM
 
-    nic.netmask
+    nics.*.netmask
 
         The netmask for this NIC's network (not required if using DHCP)
 
         type: string (IPv4 netmask, eg. 255.255.255.0)
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes
 
-    nic.vlan_id:
+    nics.*.vlan_id:
 
         The vlan with which to tag this NIC's traffic (0 = none).
 
         type: integer (0-4095)
         vmtype: OS,KVM
-        listable: no
+        listable: yes (see above)
         create: yes
         update: yes
         default: 0
 
     nic_driver:
 
-        This specifies the default values for nic.model for NICs attached to
+        This specifies the default values for nics.*.model for NICs attached to
         this VM.
 
         type: string (one of ['virtio','e1000','rtl8136'])
@@ -1134,8 +1288,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     Example 5: Find the VM with the IP 10.2.121.70 (second one with JSON output)
 
-        vmadm lookup nic.ip=10.2.121.70
-        vmadm lookup -j nic.ip=10.2.121.70
+        vmadm lookup nics.*.ip=10.2.121.70
+        vmadm lookup -j nics.*.ip=10.2.121.70
 
     Example 6: Looking up all 128M VMs with an alias that starts with 'a' or 'b'
                and then again with JSON output.
@@ -1159,7 +1313,6 @@ tab-complete UUIDs rather than having to type them out for every command.
           "add_nics": [
             {
               "physical": "net1",
-              "index": 1,
               "nic_tag": "external",
               "mac": "b2:1e:ba:a5:6e:71",
               "ip": "10.2.121.71",

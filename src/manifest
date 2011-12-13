@@ -1,3 +1,19 @@
+# dsadm
+s etc/bash/bash_completion.d/dsadm=/usr/ds/etc/dsadm.completion
+s usr/sbin/dsadm=/usr/ds/sbin/dsadm
+d usr/ds 0555 root bin
+d usr/ds/node_modules 0555 root bin
+d usr/ds/sbin 0555 root bin
+d usr/ds/etc 0555 root bin
+f usr/ds/etc/dsadm.completion 0444 root bin
+f usr/ds/sbin/dsadm 0555 root bin
+f usr/ds/sbin/dsadm-repair 0555 root bin
+f usr/ds/node_modules/log.js 0444 root bin
+f usr/ds/node_modules/dsadm.js 0444 root bin 
+f usr/ds/node_modules/common.js 0444 root bin 
+f usr/ds/node_modules/db.js 0444 root bin 
+f usr/ds/node_modules/onlyif.js 0444 root bin 
+f usr/ds/node_modules/zfs.js 0444 root bin 
 # new vmadmd
 s etc/bash/bash_completion.d/vmadm=/usr/vm/etc/vmadm.completion
 f lib/svc/manifest/system/system-vmadmd.xml 0444 root bin
@@ -41,18 +57,13 @@ f usr/bin/bootparams 0555 root bin
 f usr/bin/disklist 0555 root bin
 f usr/bin/removable_disk 0555 root bin
 f usr/bin/disk_size 0555 root bin
-f usr/lib/vmadmd 0555 root bin
-f usr/sbin/vmadm 0555 root bin
-f usr/sbin/vmcfg 0555 root bin
-s usr/sbin/create-machine=machine-create
-f usr/sbin/machine-create 0555 root bin
-f usr/sbin/machine-json 0555 root bin
-f usr/sbin/machine-lookup 0555 root bin
+s usr/sbin/vmadm=../vm/sbin/vmadm
 d usr/node_modules 0555 root bin
 f usr/node_modules/async.js 0444 root bin
 f usr/node_modules/kstat.node 0444 root bin
 f usr/node_modules/onlyif.js 0444 root bin
 f usr/node_modules/sprintf.js 0444 root bin
+f usr/node_modules/syslog.node 0444 root bin
 f usr/node_modules/system.js 0444 root bin
 # 0-man-stamp
 d usr/share/man/man3m 0755 root bin

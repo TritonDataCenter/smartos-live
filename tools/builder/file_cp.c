@@ -1,7 +1,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-
+#include <err.h>
 
 /*
  * didn't want to reinvent the wheel, so took this from:
@@ -58,7 +58,7 @@ int file_cp(const char *to, const char *from)
     }
 
   out_error:
-    printf("Error copying %s to %s\n", from, to);
+    warn("Error copying %s to %s\n", from, to);
     saved_errno = errno;
 
     close(fd_from);

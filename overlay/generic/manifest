@@ -78,7 +78,6 @@ d lib/svc 0755 root bin
 f lib/svc/method/ipfilter 0555 root sys
 f lib/svc/method/sshd 0555 root bin
 f lib/svc/method/fs-usr 0555 root bin
-f lib/svc/method/smartdc-config 0555 root bin
 f lib/svc/method/identity-node 0555 root bin
 f lib/svc/method/manifest-import 0555 root bin
 f lib/svc/method/console-login 0555 root bin

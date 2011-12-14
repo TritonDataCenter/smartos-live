@@ -1,6 +1,0 @@
-{
-    "build_cmd" :"sh -e './configure && make world && make live'",
-    "artifact" : "platform-\\d{8}T\\d{6}Z.tgz",
-    "artifact_dir" : "output"
-}
-

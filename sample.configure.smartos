@@ -1,0 +1,19 @@
+mkdir -p projects/local
+(cd projects/local && [[ -d kvm ]] \
+    || git clone http://github.com/joyent/illumos-kvm kvm)
+(cd projects/local && [[ -d kvm-cmd ]] \
+    || git clone http://github.com/joyent/illumos-kvm-cmd kvm-cmd)
+(cd projects/local && [[ -d smartos-overlay ]] \
+    || git clone http://github.com/joyent/smartos-overlay)
+(cd overlay && [[ -d smartos ]] || \
+    ln -s ../projects/local/smartos-overlay smartos)
+
+PUBLISHER="joyent"
+RELEASE_VER="smartos_20111213"
+SUNW_SPRO12_URL=""
+SUNW_SPRO12u1_URL=""
+ON_CLOSED_BINS_URL="http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins.i386.tar.bz2"
+ON_CLOSED_BINS_ND_URL="http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins-nd.i386.tar.bz2"
+GET_ILLUMOS="(git clone -b gcc4 http://github.com/joyent/illumos-joyent illumos)"
+GET_ILLUMOS_EXTRA="git clone http://github.com/joyent/illumos-extra illumos-extra"
+OVERLAYS="smartos generic"

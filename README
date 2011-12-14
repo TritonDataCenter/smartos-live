@@ -1,9 +1,6 @@
 
 Quickstart:
 
-See: https://hub.joyent.com/wiki/display/dev/Building+the+147+live+image
-
-  * get configure.joyent
   * run configure
   * gmake world
   * gmake live

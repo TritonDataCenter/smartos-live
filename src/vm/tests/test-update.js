@@ -59,7 +59,7 @@ var PAYLOADS = {
 
 test('import dataset', function(t) {
     path.exists('/zones/' + dataset_uuid, function (exists) {
-        t.ok(exists, "dataset doesn't exist");
+        t.ok(exists, "dataset exists");
         t.end();
     });
 });

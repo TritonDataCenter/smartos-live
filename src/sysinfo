@@ -228,7 +228,7 @@ function get_disks()
 
 function get_nic_mappings()
 {
-    admin_nic=`/usr/bin/bootparams 2>/dev/null | grep "admin_nic" | cut -d '=' -f2-`
+    admin_nic=`/usr/bin/bootparams 2>/dev/null | grep "^admin_nic=" | cut -d '=' -f2-`
     if [[ -z ${admin_nic} ]] && [[ -f ${configfile} ]]; then
         admin_nic=`grep "^admin_nic=" ${configfile} | cut -f2- -d'='`
     fi
@@ -236,7 +236,7 @@ function get_nic_mappings()
         normalize_mac ${admin_nic}
         ADMIN_NIC=${normalized}
     fi
-    external_nic=`/usr/bin/bootparams 2>/dev/null | grep "external_nic" | cut -d '=' -f2-`
+    external_nic=`/usr/bin/bootparams 2>/dev/null | grep "^external_nic=" | cut -d '=' -f2-`
     if [[ -z ${external_nic} ]] && [[ -f ${configfile} ]]; then
         external_nic=`grep "^external_nic=" ${configfile} | cut -f2- -d'='`
     fi
@@ -244,7 +244,7 @@ function get_nic_mappings()
         normalize_mac ${external_nic}
         EXTERNAL_NIC=${normalized}
     fi
-    internal_nic=`/usr/bin/bootparams 2>/dev/null | grep "internal_nic" | cut -d '=' -f2-`
+    internal_nic=`/usr/bin/bootparams 2>/dev/null | grep "^internal_nic=" | cut -d '=' -f2-`
     if [[ -z ${internal_nic} ]] && [[ -f ${configfile} ]]; then
         internal_nic=`grep "^internal_nic=" ${configfile} | cut -f2- -d'='`
     fi

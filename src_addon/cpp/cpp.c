@@ -1594,6 +1594,7 @@ main(argc,argv)
 	}
 	ulnloc=stsym ("__LINE__");
 	uflloc=stsym ("__FILE__");
+	varloc=stsym ("__BUILTIN_VA_ARG_INCR");
 
 	tf=fnames[ifno]; fnames[ifno]="command line"; lineno[ifno]=1;
 	cp2=prespc;

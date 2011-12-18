@@ -6,6 +6,8 @@ var test = require('tap').test;
 var path = require('path');
 var VM = require('VM');
 
+VM.loglevel = 'DEBUG';
+
 var dataset_uuid = '47e6af92-daf0-11e0-ac11-473ca1173ab0';
 var vm_uuid;
 

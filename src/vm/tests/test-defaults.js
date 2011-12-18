@@ -10,8 +10,10 @@ var path = require('path');
 var VM = require('VM');
 var vmtest = require('../common/vmtest.js');
 
+VM.loglevel = 'DEBUG';
+
 var dataset_uuid = '47e6af92-daf0-11e0-ac11-473ca1173ab0';
-var vm_dataset_uuid = '56108678-1183-11e1-83c3-ff3185a5b47f';
+//var vm_dataset_uuid = '56108678-1183-11e1-83c3-ff3185a5b47f';
 
 // Format:
 // 1. property of the vmobj
@@ -54,7 +56,7 @@ var kvm_defaults = {
     'ram': [256],
     'brand': ['kvm'],
     'max_physical_memory': [1280],
-    'billing_id': [vm_dataset_uuid],
+    'billing_id': ['00000000-0000-0000-0000-000000000000'],
     'disks': ['<EMPTY-ARRAY>'],
     'vcpus': [1]
 };
@@ -153,7 +155,7 @@ test('check default zone properties', {'timeout': 240000}, function(t) {
 
 test('check default kvm properties', {'timeout': 240000}, function(t) {
     state = {'brand': 'kvm'};
-    vmtest.on_new_vm(t, vm_dataset_uuid, {'brand': 'kvm'}, state, [
+    vmtest.on_new_vm(t, null, {'brand': 'kvm'}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 if (err) {

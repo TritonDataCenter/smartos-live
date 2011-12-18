@@ -1090,32 +1090,42 @@ ppsym(s) char *s; {/* kluge */
 	cinit=SALT; *savch++=SALT; sp=stsym(s); --sp->name; cinit=0; return(sp);
 }
 
+void
+verror(char *fmt, va_list args)
+{
+	if (fnames[ifno][0])
+		fprintf(stderr, "%s: ", fnames[ifno]);
+	fprintf(stderr, "%d: ",lineno[ifno]);
+
+	(void)vfprintf(stderr, fmt, args);
+	fputc('\n', stderr);
+}
+
 /* VARARGS1 */
 void
 pperror(char *fmt, ...)
 {
 	va_list	args;
 
-	if (fnames[ifno][0])
-		fprintf(stderr, "%s: ", fnames[ifno]);
-	fprintf(stderr, "%d: ",lineno[ifno]);
-
 	va_start(args);
-	(void)fprintf(stderr, "%r\n", fmt, args);
+	verror(fmt, args);
 	va_end(args);
+
 	++exfail;
 }
 
+/* VARARGS1 */
 void
 yyerror(char *fmt, ...)
 {
 	va_list	args;
 
 	va_start(args);
-	pperror("%r", fmt, args);
+	verror(fmt, args);
 	va_end(args);
 }
 
+/* VARARGS1 */
 static void
 ppwarn(char *fmt, ...)
 {
@@ -1124,7 +1134,7 @@ ppwarn(char *fmt, ...)
 	exfail = -1;
 
 	va_start(args);
-	pperror("%r", fmt, args);
+	verror(fmt, args);
 	va_end(args);
 
 	exfail = fail;

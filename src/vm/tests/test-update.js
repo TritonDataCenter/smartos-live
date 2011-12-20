@@ -2,6 +2,7 @@
 
 process.env['TAP'] = 1;
 require.paths.push('/usr/vm/test/node-tap/node_modules');
+var async = require('async');
 var test = require('tap').test;
 var path = require('path');
 var VM = require('VM');
@@ -58,6 +59,16 @@ var PAYLOADS = {
         ]
     }
 };
+
+simple_properties = [
+    ['alias', 'useless VM'],
+    ['billing_id', '9.99'],
+    ['dns_domain', 'fail.foo'],
+    ['hostname', 'hamburgerhelper'],
+    ['owner_uuid', '36bf401a-28ef-11e1-b4a7-c344deb1a5d6'],
+    ['package_name', 'really expensive package'],
+    ['package_version', 'XP']
+];
 
 test('import dataset', function(t) {
     path.exists('/zones/' + dataset_uuid, function (exists) {
@@ -187,6 +198,58 @@ test('remove net0 and net1', function(t) {
             });
         }
     });
+});
+
+test('set then unset simple properties', function(t) {
+    async.forEachSeries(simple_properties,
+        function (item, cb) {
+            var prop = item[0];
+            var value = item[1];
+            var payload = {};
+
+            payload[prop] = value;
+
+            VM.update(vm_uuid, payload, function(err) {
+                if (err) {
+                    t.ok(false, 'error updating VM: ' + err.message);
+                    t.end();
+                    cb();
+                } else {
+                    VM.load(vm_uuid, function (err, obj) {
+                        if (err) {
+                            t.ok(false, 'failed reloading VM');
+                            return cb();
+                        } else {
+                            t.ok(obj[prop] === value, prop + ' is ' + obj[prop]
+                                + ', expected: ' + value);
+                        }
+                        payload[prop] = undefined;
+                        VM.update(vm_uuid, payload, function (err) {
+                            if (err) {
+                                t.ok(false, 'error updating VM: ' + err.message);
+                                t.end();
+                                cb();
+                            } else {
+                                VM.load(vm_uuid, function (err, obj) {
+                                    if (err) {
+                                        t.ok(false, 'failed reloading VM');
+                                        return cb();
+                                    }
+                                    t.ok(!obj.hasOwnProperty(prop), prop +
+                                        ' is ' + obj[prop] + ', expected: ' +
+                                        'undefined');
+                                    cb();
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+        },
+        function (err) {
+            t.end();
+        }
+    );
 });
 
 test('delete zone', function(t) {

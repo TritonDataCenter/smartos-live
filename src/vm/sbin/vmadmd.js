@@ -652,17 +652,40 @@ function sysrqVM(uuid, req, callback)
             }
 
             if (req === 'screenshot') {
-                q.command('screendump', {'filename': '/tmp/vm.ppm'},
-                    function (err, result) {
-                        // XXX handle failuer
-                        q.disconnect();
-                        return callback(null);
+                // We send a 'shift' character before showing the screen to wake
+                // up from any screen blanking that may have happened.
+                async.series([
+                    function (cb) {
+                        q.command('human-monitor-command',
+                            {"command-line": "sendkey shift"},
+                            function (err, result) {
+                                // XXX check result?
+                                VM.log('DEBUG', 'sendkey err: ' +
+                                    JSON.stringify(err) + ' result: ' +
+                                    JSON.stringify(result));
+                                VM.log
+                                return cb(err);
+                            }
+                        );
+                    }, function (cb) {
+                        q.command('screendump', {'filename': '/tmp/vm.ppm'},
+                            function (err, result) {
+                                // XXX check result?
+                                VM.log('DEBUG', 'sendkey err: ' +
+                                    JSON.stringify(err) + ' result: ' +
+                                    JSON.stringify(result));
+                                q.disconnect();
+                                return cb(err);
+                            }
+                        );
                     }
-                );
+                ], function (err) {
+                    return callback(err);
+                });
             } else if (req === 'nmi') {
                 q.command('human-monitor-command', {'command-line': "nmi 0"},
                     function (err, result) {
-                        // XXX handle failuer
+                        // XXX handle failure
                         q.disconnect();
                         return callback(null);
                     }

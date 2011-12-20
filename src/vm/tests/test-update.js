@@ -3,6 +3,7 @@
 process.env['TAP'] = 1;
 require.paths.push('/usr/vm/test/node-tap/node_modules');
 var async = require('async');
+var execFile = require('child_process').execFile;
 var test = require('tap').test;
 var path = require('path');
 var VM = require('VM');
@@ -250,6 +251,70 @@ test('set then unset simple properties', function(t) {
             t.end();
         }
     );
+});
+
+test('update quota', function(t) {
+    VM.update(vm_uuid, {'quota': 13}, function(err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                    t.end();
+                } else if (obj.quota !== 13) {
+                    t.ok(false, 'VM has ' + obj.quota + ' != 13');
+                    t.end();
+                } else {
+                    execFile('/usr/sbin/zfs', ['get', '-H', '-o', 'value', 'quota', obj.zonepath.substr(1)],
+                        function (error, stdout, stderr) {
+                            var res;
+                            if (error) {
+                                t.ok(false, 'Failed to get quota from zfs: ' + e.message);
+                            } else {
+                                res = stdout.replace(new RegExp("[\\s]+$", "g"), "");
+                                t.ok(res === '13G', 'updated quota now: ' + res + ' vs 13G');
+                            }
+                            t.end();
+                        }
+                    );
+                }
+            });
+        }
+    });
+});
+
+test('remove quota', function(t) {
+    VM.update(vm_uuid, {'quota': 0}, function(err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                    t.end();
+                } else if (obj.quota !== 0) {
+                    t.ok(false, 'VM has ' + obj.quota + ' != 0');
+                    t.end();
+                } else {
+                    execFile('/usr/sbin/zfs', ['get', '-H', '-o', 'value', 'quota', obj.zonepath.substr(1)],
+                        function (error, stdout, stderr) {
+                            var res;
+                            if (error) {
+                                t.ok(false, 'Failed to get quota from zfs: ' + e.message);
+                            } else {
+                                res = stdout.replace(new RegExp("[\\s]+$", "g"), "");
+                                t.ok(res === 'none', 'updated quota now: ' + res + ' vs none');
+                            }
+                            t.end();
+                        }
+                    );
+                }
+            });
+        }
+    });
 });
 
 test('delete zone', function(t) {

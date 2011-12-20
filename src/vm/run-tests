@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# All tests must pass!
+set -o errexit
+
 if [[ $(uname -s) != 'SunOS' ]]; then
     echo "FATAL: this can only run on SmartOS"
     exit 1
@@ -16,6 +19,9 @@ if [[ $(id -u) != 0 ]]; then
 fi
 
 export TAP=1
-./node-tap/bin/tap $(pwd)/tests
+# ./node-tap/bin/tap doesn't work.
+for test in $(ls $(pwd)/tests/); do
+    node $(pwd)/tests/${test}
+done
 
 exit 0

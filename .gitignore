@@ -9,6 +9,7 @@
 /src/removable_disk
 /src/disklist
 /src/zoneevent
+/src/vm/tests.tar.gz
 /src/node-kstat/.lock-wscript
 /src/node-kstat/build
 /src/node-syslog/.lock-wscript

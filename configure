@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2010,2011 Joyent Inc.
+# Copyright (c) 2010-2012 Joyent Inc.
 #
 
 set -o errexit
@@ -142,6 +142,13 @@ if [ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]; then
   fi
 fi
 
+if [[ -n ${ILLUMOS_EXTRA_TARBALL_URL} && -z ${NO_EXTRA_TARBALL} ]]; then
+	EXTRA_TARBALL=$(curl -k ${ILLUMOS_EXTRA_TARBALL_URL} | grep href | tail -n1 | cut -d '"' -f2)
+	curl -k -O ${ILLUMOS_EXTRA_TARBALL_URL}/${EXTRA_TARBALL}
+	if [[ $? != 0 ]]; then
+		EXTRA_TARBALL=""
+	fi
+fi
 if [[ ! -f "projects/illumos-extra/Makefile" && -z $EXTRA_TARBALL ]]; then
   echo " +--> Getting illumos-extra source tree..."
   if [ -z "${GET_ILLUMOS_EXTRA}" ]; then

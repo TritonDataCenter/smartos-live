@@ -8,7 +8,7 @@ LOCAL_SUBDIRS:=$(shell ls projects/local)
 MANIFEST=manifest.gen
 OVERLAYS:=$(shell cat overlay/order)
 ifeq ($(EXTRA_TARBALL),)
-EXTRA_TARBALL:=$(ROOT)/$(shell ls illumos-extra*.tgz | tail -n1)
+EXTRA_TARBALL:=$(shell ls illumos-extra*.tgz | tail -n1 && echo $?)
 endif
 world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp \
 	0-tools-stamp 0-man-stamp 0-devpro-stamp
@@ -26,7 +26,7 @@ manifest:
 ifeq ($(EXTRA_TARBALL),)
 		gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest -C projects/illumos-extra manifest
 else
-		tar -Ozxf $(EXTRA_TARBALL) manifest > $(MPROTO)/illumos-extra.manifest
+		tar -Ozxf $(ROOT)/$(EXTRA_TARBALL) manifest > $(MPROTO)/illumos-extra.manifest
 endif
 	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
 	cd $(ROOT)/projects/local/$${dir}; \
@@ -66,13 +66,12 @@ update:
 
 0-extra-stamp:
 ifeq ($(EXTRA_TARBALL),)
-	  echo $(EXTRA_TARBALL)
 		(cd $(ROOT)/projects/illumos-extra && gmake DESTDIR=$(PROTO) install)
 else
 ifneq ($(NO_EXTRA_TARBALL),)
 			(cd $(ROOT)/projects/illumos-extra && gmake DESTDIR=$(PROTO) install)
 else
-			(cd $(PROTO)/../ && gtar -zxf $(EXTRA_TARBALL) proto/)
+			(cd $(PROTO)/../ && gtar -zxf $(ROOT)/$(EXTRA_TARBALL) proto/)
 endif
 endif
 	touch 0-extra-stamp

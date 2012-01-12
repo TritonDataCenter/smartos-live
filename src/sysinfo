@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2010,2011 Joyent Inc., All rights reserved.
+# Copyright (c) 2012 Joyent Inc., All rights reserved.
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -201,6 +201,50 @@ function get_hostname()
     Hostname=$(hostname)
 }
 
+function get_zpool_disks()
+{
+	local zpool=$1
+	Zpool_disks=
+
+	for disk in $(/usr/bin/disklist -n); do
+		local disk_in_pool=$(/usr/sbin/zpool status ${zpool} | grep ${disk})
+		if [[ -n ${disk_in_pool} ]]; then
+			Zpool_disks="${Zpool_disks},${disk}"
+		fi
+	done
+
+	Zpool_disks=${Zpool_disks/#,/}
+}
+
+function get_zpool_profile()
+{
+	local zpool=$1
+	local profiles=( mirror raidz3 raidz2 raidz )
+	Zpool_profile="striped"
+
+	for profile in ${profiles[*]}; do
+		if [[ -n $(/usr/sbin/zpool status ${zpool} | grep ${profile}) ]]; then
+			Zpool_profile=${profile}
+			break
+		fi
+	done
+}
+
+function get_zpool()
+{
+	if [[ $(zpool list) != "no pools available" ]]; then
+		Zpool=$(zpool list -H | awk '{print $1}');
+
+	        local used=$(zfs get -Hp -o value used ${Zpool})
+	        local available=$(zfs get -Hp -o value available ${Zpool})
+	        local size=$(( $used + $available ))
+	        Zpool_size=$(($size / 1024 / 1024 / 1024))
+
+	        get_zpool_disks ${Zpool}
+	        get_zpool_profile ${Zpool}
+	fi
+}
+
 function get_disks()
 {
     ORIGIFS=$IFS
@@ -216,14 +260,6 @@ function get_disks()
 
     # set $IFS back
     IFS=$ORIGIFS
-
-    #for entry in "${Disks[@]}"
-    #do
-    #    fields=(${entry//=/ })
-    #    disk=${fields[0]}
-    #    size=${fields[1]}
-    #    echo "disk: ${disk} size: ${size}"
-    #done
 }
 
 function get_nic_mappings()
@@ -566,6 +602,13 @@ cat <<END
 END
 
 if [[ ${ZONENAME} == "global" ]]; then
+    if [[ -n ${Zpool} ]]; then
+        echo '  "Zpool": "'${Zpool}'",'
+        echo '  "Zpool Disks": "'${Zpool_disks}'",'
+        echo '  "Zpool Profile": "'${Zpool_profile}'",'
+        echo '  "Zpool Size in GiB":' ${Zpool_size}','
+    fi
+
     echo '  "Disks": {'
 
     printed=0
@@ -679,6 +722,7 @@ END
 if [[ ${ZONENAME} == "global" ]]; then
     get_smbios_system_info
     get_vm_capable
+    get_zpool
     get_disks
     get_bootparams
 else

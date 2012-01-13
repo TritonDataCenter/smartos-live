@@ -3,7 +3,7 @@ mkdir -p projects/local
     || git clone http://github.com/joyent/illumos-kvm kvm)
 (cd projects/local && [[ -d kvm-cmd ]] \
     || git clone http://github.com/joyent/illumos-kvm-cmd kvm-cmd)
-(cd overlay && [[ -d smartos-overlay ]] \
+(cd overlay && [[ -d smartos ]] \
     || git clone http://github.com/joyent/smartos-overlay smartos)
 
 PUBLISHER="joyent"

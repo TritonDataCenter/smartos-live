@@ -5,6 +5,7 @@ var sprintf = require('sprintf').sprintf;
 var dsadm = require('dsadm');
 var onlyif = require('onlyif');
 var common = require('common');
+var url = require('url');
 var log = common.log;
  
 var _argv = process.argv;
@@ -61,8 +62,20 @@ _isUuid = function(obj) {
   var uuidReg = /[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/;
   if (typeof(obj) === 'string') {
     return (uuidReg.test(obj));
-  } 
-  return false;
+  }  
+  else {
+    return false;
+  }
+}
+
+_isURL = function(obj) {
+  var p = url.parse(obj);
+  if (p.host && p.protocol) {
+    return true;
+  }
+  else {
+    return false;
+  }
 }
 
 printHeader = function() {
@@ -162,7 +175,7 @@ onList = function(err, datasets) {
         ds.urn);
     }
     else {
-			_stdout("%-36s %-7s %-10s %-23s", 
+      _stdout("%-36s %-7s %-10s %-23s", 
         ds.uuid,
         ds.os,
         date,
@@ -171,20 +184,33 @@ onList = function(err, datasets) {
   }
 }
 
-
-var validators = {
-  uuid: function(value) {
-    if (!_isUuid(value)) {
-      _fatal("error: '%s' does not appear to be a uuid", value);
-    } 
-  }
-}
-
-var _required = function(type) {
+var _required = function() {
+  var types = [];
   var val = _argv.shift();
-  if (!val) _fatal("error: missing required '%s' parameter", type)
-  validators[type](val);
-  return val;
+  var valid = false;
+  
+  for (k in arguments) {
+    types.push(arguments[k]);
+  }
+
+  var validators = {
+    uuid: function(value) {
+      return _isUuid(value);
+    },
+    url: function(value) {
+      return _isURL(value);
+    }
+  }
+ 
+  if (!val) _fatal("error: missing required <%s> parameter", types.join("|"))
+  
+  for (i in types) {
+    valid = validators[types[i]](val);
+    if (valid) return val;
+  }
+  
+  if (!valid) _fatal("error: 's' does not appear to be one of %s", types.join(", "));
+
 }
 
 var switches = {
@@ -216,12 +242,12 @@ var commands = {
     dsadm.dumpLocal(uuid, onInfo);
   },
   'get': function() {
-    var uuid = _required('uuid');
+    var uuid = _required('uuid', 'url');
     dsadm.showRemote(uuid, onGet);
   },
   'import': function() {
-    var uuid = _required('uuid');
-    dsadm.importDataset(uuid, function(err) {
+    var id = _required('uuid', 'url');
+    dsadm.importDataset(id, function(err, uuid) {
       if (err) {
         errHandler(err);
       } 

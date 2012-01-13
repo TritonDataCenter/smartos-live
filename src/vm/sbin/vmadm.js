@@ -331,6 +331,13 @@ function sortVM(a, b, sort_fields)
     return 0;
 }
 
+function rtrim(str, chars)
+{
+    chars = chars || "\\s";
+    str = str || "";
+    return str.replace(new RegExp("[" + chars + "]+$", "g"), "");
+}
+
 function outputVMListLine(order_fields, m, options)
 {
     var fmt = '';
@@ -338,6 +345,7 @@ function outputVMListLine(order_fields, m, options)
     var fields;
     var width;
     var value;
+    var output;
 
     for (field in order_fields) {
         field = order_fields[field];
@@ -369,7 +377,8 @@ function outputVMListLine(order_fields, m, options)
     }
     args.unshift(fmt);
 
-    console.log(sprintf.apply(this, args));
+    output = rtrim(sprintf.apply(this, args));
+    console.log(output);
 }
 
 function formatVMList(vmobjs, order, sortby, options, callback)
@@ -626,7 +635,7 @@ function main(callback)
             return usage('Wrong number of parameters to "sysrq"');
         }
         type = parsed.argv.remain[0];
-        if (VM.SYSRQ_TYPES.indexOf(type) !== 1) {
+        if (VM.SYSRQ_TYPES.indexOf(type) === -1) {
             return usage('Invalid sysrq type: ' + type);
         }
 

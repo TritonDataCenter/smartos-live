@@ -22,7 +22,7 @@ var dataset_uuid = '47e6af92-daf0-11e0-ac11-473ca1173ab0';
 var zone_defaults = {
     'zonename': ['uuid', state_property],
     'autoboot': [true],
-    'zonepath': ['uuid', prefix_zones],
+    'zonepath': ['uuid', prefix_zones_slash],
     'brand': ['joyent'],
     'quota': [10],
     'cpu_shares': [100],
@@ -34,6 +34,8 @@ var zone_defaults = {
     'max_swap': ['max_physical_memory', zone_property],
     'max_physical_memory': [256],
     'billing_id': [dataset_uuid],
+    'dataset_uuid': [dataset_uuid],
+    'zone_root_dataset': ['uuid', prefix_zones],
     'owner_uuid': ['00000000-0000-0000-0000-000000000000'],
     'uuid': ['uuid', state_property],
     'dns_domain': ['local'],
@@ -48,7 +50,8 @@ var zone_defaults = {
 
 // properties that are only for OS VMs
 var zone_only = [
-    'tmpfs'
+    'tmpfs',
+    'dataset_uuid'
 ];
 
 // values specific to KVM
@@ -79,9 +82,14 @@ function state_property(state, property)
     return state[property];
 }
 
-function prefix_zones(state, property)
+function prefix_zones_slash(state, property)
 {
     return '/zones/' + state[property];
+}
+
+function prefix_zones(state, property)
+{
+    return 'zones/' + state[property];
 }
 
 function check_property(t, state, prop, expected, transform)

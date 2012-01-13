@@ -635,7 +635,7 @@ function main(callback)
             return usage('Wrong number of parameters to "sysrq"');
         }
         type = parsed.argv.remain[0];
-        if (VM.SYSRQ_TYPES.indexOf(type) !== 1) {
+        if (VM.SYSRQ_TYPES.indexOf(type) === -1) {
             return usage('Invalid sysrq type: ' + type);
         }
 

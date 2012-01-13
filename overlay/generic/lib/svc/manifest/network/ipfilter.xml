@@ -102,8 +102,8 @@
 	<instance name='default' enabled='true'>
 		<property_group name='firewall_config_default'
 			type='com.sun,fw_configuration'>
-			<propval name='policy' type='astring' value='none' />
-			<propval name='custom_policy_file' type='astring' value='' />
+			<propval name='policy' type='astring' value='custom' />
+      <propval name='custom_policy_file' type='astring' value='/etc/ipf/ipf.conf' />
 			<propval name='apply_to' type='astring' value='' />
 			<propval name='exceptions' type='astring' value='' />
 			<propval name='open_ports' type='astring' value='' />

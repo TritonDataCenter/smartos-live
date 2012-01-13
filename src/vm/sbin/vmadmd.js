@@ -82,7 +82,7 @@ function spawnVNC(vmobj)
 
     server = net.createServer(function (c) {
         var vnc = net.Stream();
-        c.pipe(vnc);
+        c.pipe(vnc, {end: false});
         vnc.pipe(c);
 
         vnc.on('close', function (had_error) {
@@ -102,7 +102,8 @@ function spawnVNC(vmobj)
         });
 
         vnc.on('error', function () {
-            VM.log('WARN', 'Warning: VNC socket error: ' + JSON.stringify(arguments));
+            VM.log('WARN', 'Warning: VNC socket error: ' +
+                JSON.stringify(arguments));
             clearVNC(vmobj.uuid);
         });
 
@@ -178,7 +179,8 @@ function updateZoneStatus(ev)
         ev.hasOwnProperty('newstate') && ev.hasOwnProperty('when')) {
 
         if (ev.newstate === 'running') {
-            VM.log('NOTICE', '"' + ev.zonename + '" went from ' + ev.oldstate + ' to running at ' + ev.when);
+            VM.log('NOTICE', '"' + ev.zonename + '" went from ' + ev.oldstate +
+                ' to running at ' + ev.when);
             VM.load(ev.zonename, function (err, obj) {
                 var socket;
                 var q = new Qmp(function () {return;});
@@ -190,7 +192,8 @@ function updateZoneStatus(ev)
 
                 if (obj.brand !== 'kvm') {
                     // do nothing
-                    VM.log('DEBUG', 'Ignoring freshly started vm ' + obj.uuid + ' with brand=' + obj.brand);
+                    VM.log('DEBUG', 'Ignoring freshly started vm ' + obj.uuid +
+                        ' with brand=' + obj.brand);
                     return;
                 }
 
@@ -200,15 +203,18 @@ function updateZoneStatus(ev)
                 spawnVNC(obj);
             });
         } else if (ev.oldstate === 'running') {
-            VM.log('NOTICE', '"' + ev.zonename + '" went from running to ' + ev.newstate + ' at ' + ev.when);
+            VM.log('NOTICE', '"' + ev.zonename + '" went from running to ' +
+                ev.newstate + ' at ' + ev.when);
             if (VNC.hasOwnProperty(ev.zonename)) {
-                // VMs always have zonename === uuid, so we can remove this VNC session
-                VM.log('INFO', 'clearing state for disappearing VM ' + ev.zonename);
+                // VMs always have zonename === uuid, so we can remove this
+                VM.log('INFO', 'clearing state for disappearing VM ' +
+                    ev.zonename);
                 clearVM(ev.zonename);
             }
-        } else if (ev.newstate === 'uninitialized') { // this means 'installed'!?
-            VM.log('NOTICE', '"' + ev.zonename + '" went from running to ' + ev.newstate + ' at ' + ev.when);
-            // XXX we're running stop so that it will clear the transition marker
+        } else if (ev.newstate === 'uninitialized') { // this means installed!?
+            VM.log('NOTICE', '"' + ev.zonename + '" went from running to ' +
+                ev.newstate + ' at ' + ev.when);
+            // XXX we're running stop so it will clear the transition marker
 
             VM.load(ev.zonename, function (err, obj) {
                 if (err) {
@@ -218,7 +224,8 @@ function updateZoneStatus(ev)
 
                 if (obj.brand !== 'kvm') {
                     // do nothing
-                    VM.log('DEBUG', 'Ignoring freshly stopped vm ' + obj.uuid + ' with brand=' + obj.brand);
+                    VM.log('DEBUG', 'Ignoring freshly stopped vm ' + obj.uuid +
+                        ' with brand=' + obj.brand);
                     return;
                 }
 
@@ -282,7 +289,8 @@ function handlePost(c, args, response)
 
     if (!args.hasOwnProperty('action') ||
         ['stop', 'sysrq', 'reset'].indexOf(args.action) === -1 ||
-        (args.action === 'sysrq' && ['nmi', 'screenshot'].indexOf(args.request) === -1) ||
+        (args.action === 'sysrq' &&
+        ['nmi', 'screenshot'].indexOf(args.request) === -1) ||
         (args.action === 'stop' && !args.hasOwnProperty('timeout'))) {
 
         // Bad request
@@ -531,7 +539,9 @@ function infoVM(uuid, types, callback)
                 {
                     var base = command.replace(/^query-/, '');
 
-                    if ((types.indexOf('all') !== -1) || (types.indexOf(base) !== -1)) {
+                    if ((types.indexOf('all') !== -1) ||
+                        (types.indexOf(base) !== -1)) {
+
                         q.command(command, null, function (err, result) {
                             cb(null, [base, result]);
                         });
@@ -636,12 +646,13 @@ function sysrqVM(uuid, req, callback)
 
         if (obj.state !== 'running' && obj.state !== 'stopping') {
             return callback(new Error('Unable to send request to vm from "'
-                + 'state "' + obj.state + '", must be "running" or "stopping".'));
+                + 'state "' + obj.state + '", must be "running" or "stopping".')
+            );
         }
 
         if (SUPPORTED_REQS.indexOf(req) === -1) {
-            return callback(new Error('Invalid sysrq "' + req + '" valid values: '
-                + '"' + SUPPORTED_REQS.join('","') + '".'));
+            return callback(new Error('Invalid sysrq "' + req +
+                '" valid values: "' + SUPPORTED_REQS.join('","') + '".'));
         }
 
         socket = obj.zonepath + '/root/tmp/vm.qmp';
@@ -652,17 +663,40 @@ function sysrqVM(uuid, req, callback)
             }
 
             if (req === 'screenshot') {
-                q.command('screendump', {'filename': '/tmp/vm.ppm'},
-                    function (err, result) {
-                        // XXX handle failuer
-                        q.disconnect();
-                        return callback(null);
+                // We send a 'shift' character before showing the screen to wake
+                // up from any screen blanking that may have happened.
+                async.series([
+                    function (cb) {
+                        q.command('human-monitor-command',
+                            {"command-line": "sendkey shift"},
+                            function (err, result) {
+                                // XXX check result?
+                                VM.log('DEBUG', 'sendkey err: ' +
+                                    JSON.stringify(err) + ' result: ' +
+                                    JSON.stringify(result));
+                                VM.log
+                                return cb(err);
+                            }
+                        );
+                    }, function (cb) {
+                        q.command('screendump', {'filename': '/tmp/vm.ppm'},
+                            function (err, result) {
+                                // XXX check result?
+                                VM.log('DEBUG', 'sendkey err: ' +
+                                    JSON.stringify(err) + ' result: ' +
+                                    JSON.stringify(result));
+                                q.disconnect();
+                                return cb(err);
+                            }
+                        );
                     }
-                );
+                ], function (err) {
+                    return callback(err);
+                });
             } else if (req === 'nmi') {
                 q.command('human-monitor-command', {'command-line': "nmi 0"},
                     function (err, result) {
-                        // XXX handle failuer
+                        // XXX handle failure
                         q.disconnect();
                         return callback(null);
                     }
@@ -687,14 +721,16 @@ function setStopTimer(uuid, expire)
             }
             // ensure we've not started and started stopping
             // again since we checked.
-            VM.log('DEBUG', 'times two: ' + Date.now() + ' ' + obj.transition_expire);
+            VM.log('DEBUG', 'times two: ' + Date.now() + ' ' +
+                obj.transition_expire);
             if (obj.state === 'stopping' && obj.transition_expire &&
                 (Date.now() >= obj.transition_expire)) {
 
                 // We assume kill will clear the transition even if the
                 // vm is already stopped.
                 VM.stop(obj.uuid, {'force': true}, function (err) {
-                    VM.log('DEBUG', 'timeout vm.kill() = ' + JSON.stringify(err));
+                    VM.log('DEBUG', 'timeout vm.kill() = ' +
+                        JSON.stringify(err));
                 });
             }
         });
@@ -715,11 +751,13 @@ function loadVM(vmobj, do_autoboot)
     }
 
     if (vmobj.state === 'stopping' && vmobj.transition_expire) {
-        VM.log('DEBUG', 'times: ' + Date.now() + ' ' +  vmobj.transition_expire);
+        VM.log('DEBUG', 'times: ' + Date.now() + ' ' + vmobj.transition_expire);
         if (Date.now() >= vmobj.transition_expire ||
-            (vmobj.transition_to === 'stopped' && vmobj.real_state === 'installed')) {
+            (vmobj.transition_to === 'stopped' &&
+            vmobj.real_state === 'installed')) {
 
-            VM.log('INFO', 'killing VM with expired running stop: ' + vmobj.uuid);
+            VM.log('INFO', 'killing VM with expired running stop: ' +
+                vmobj.uuid);
             // We assume kill will clear the transition even if the
             // vm is already stopped.
             VM.stop(vmobj.uuid, {'force': true}, function (err) {
@@ -730,7 +768,8 @@ function loadVM(vmobj, do_autoboot)
             setStopTimer(vmobj.uuid, expire);
        }
     } else {
-        VM.log('DEBUG', 'state: ' + vmobj.state + ' expire: ' + vmobj.transition_expire);
+        VM.log('DEBUG', 'state: ' + vmobj.state + ' expire: ' +
+            vmobj.transition_expire);
     }
 
     // Start VNC
@@ -760,7 +799,8 @@ function main()
             if (!exists) {
                 do_autoboot = true;
                 // boot all autoboot vms because this vm just booted, now
-                // create file so on restart we know they system wasn't just booted.
+                // create file so on restart we know they system wasn't just
+                // booted.
                 fs.writeFileSync(VMADMD_AUTOBOOT_FILE, "booted");
             }
 

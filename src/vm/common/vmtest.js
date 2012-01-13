@@ -10,7 +10,7 @@ var path = require('path');
 var VM = require('VM');
 var test = require('tap').test;
 
-exports.on_new_vm = function(t, uuid, payload, state, fnlist)
+exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
 {
     functions = [
         function(cb) {
@@ -18,27 +18,28 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist)
             if (state.brand === 'joyent') {
                 path.exists('/zones/' + uuid, function (exists) {
                     if (exists) {
-                        t.ok(exists, 'dataset ' + uuid + ' exists');
+                        t.ok(true, 'dataset ' + uuid + ' exists');
                     } else {
-                        t.bailout('unable to find dataset ' + uuid);
+                        t.ok(false, 'unable to find dataset ' + uuid);
+                    }
+                    payload.dataset_uuid = uuid;
+                    cb();
+                });
+            } else if (state.brand === 'kvm' && uuid) {
+                path.exists('/dev/zvol/rdsk/zones/' + uuid, function (exists) {
+                    if (exists) {
+                        t.ok(true, 'dataset ' + uuid + ' exists');
+                    } else {
+                        t.ok(false, 'unable to find dataset ' + uuid);
                     }
                     payload.dataset_uuid = uuid;
                     cb();
                 });
             } else {
-                path.exists('/dev/zvol/rdsk/zones/' + uuid, function (exists) {
-                    if (exists) {
-                        t.ok(exists, 'dataset ' + uuid + ' exists');
-                    } else {
-                        t.bailout('unable to find dataset ' + uuid);
-                    }
-                    payload.dataset_uuid = uuid;
-                    cb();
-                });
+                // skip dataset altogether
+                cb();
             }
         }, function(cb) {
-            payload.dataset_uuid = uuid;
-            console.error('PAYLOAD: ' + JSON.stringify(payload));
             VM.create(payload, function (err, obj) {
                 if (err) {
                     t.ok(false, 'error creating VM: ' + err.message);
@@ -47,7 +48,6 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist)
                     state.vminfo = obj;
                     state.uuid = obj.uuid;
                     e = new Error('foo');
-                    console.error('BT: ' + JSON.stringify(e));
                     t.ok(true, 'created VM: ' + state.uuid);
                     cb();
                 }
@@ -70,11 +70,20 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist)
         });
     });
 
+    functions.push(function (cb) {
+        cb();
+    });
+
     async.series(functions, function (err) {
         if (err) {
             t.ok(false, err.message);
         }
-        t.end();
+        if (callback) {
+            // up to caller to call t.end!
+            return callback();
+        } else {
+             t.end();
+        }
     });
 };
 

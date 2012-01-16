@@ -229,9 +229,11 @@ function updateZoneStatus(ev)
                     return;
                 }
 
-                VM.stop(ev.zonename, {"force": true}, function (err) {
+                VM.stop(ev.zonename, {"force": true}, function (err, msg) {
                     if (err) {
                         VM.log('ERROR', 'stop failed', err);
+                    } else if (msg) {
+                        VM.log('DEBUG', msg);
                     }
                 });
             });
@@ -728,9 +730,13 @@ function setStopTimer(uuid, expire)
 
                 // We assume kill will clear the transition even if the
                 // vm is already stopped.
-                VM.stop(obj.uuid, {'force': true}, function (err) {
-                    VM.log('DEBUG', 'timeout vm.kill() = ' +
-                        JSON.stringify(err));
+                VM.stop(obj.uuid, {'force': true}, function (err, msg) {
+                    if (err) {
+                        VM.log('DEBUG', 'timeout vm.kill() = ' +
+                            JSON.stringify(err));
+                    } else if (msg) {
+                        VM.log('DEBUG', 'timeout vm.kill() = ' + msg);
+                    }
                 });
             }
         });
@@ -760,8 +766,12 @@ function loadVM(vmobj, do_autoboot)
                 vmobj.uuid);
             // We assume kill will clear the transition even if the
             // vm is already stopped.
-            VM.stop(vmobj.uuid, {'force': true}, function (err) {
-                VM.log('DEBUG', 'vm.kill() = ' + err.message, err);
+            VM.stop(vmobj.uuid, {'force': true}, function (err, msg) {
+                if (err) {
+                    VM.log('DEBUG', 'vm.kill() = ' + err.message, err);
+                } else if (msg) {
+                    VM.log('DEBUG', 'vm.kill() = ' + msg);
+                }
             });
         } else {
             expire = ((Number(vmobj.transition_expire) + 1000) - Date.now());

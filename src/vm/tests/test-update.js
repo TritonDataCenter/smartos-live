@@ -1,7 +1,6 @@
 // Copyright 2011 Joyent, Inc.  All rights reserved.
 
 process.env['TAP'] = 1;
-require.paths.push('/usr/vm/test/node-tap/node_modules');
 var async = require('async');
 var execFile = require('child_process').execFile;
 var test = require('tap').test;

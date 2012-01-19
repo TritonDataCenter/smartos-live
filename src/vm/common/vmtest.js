@@ -4,7 +4,6 @@
 //
 
 process.env['TAP'] = 1;
-require.paths.push('/usr/vm/test/node-tap/node_modules');
 var async = require('async');
 var path = require('path');
 var VM = require('VM');

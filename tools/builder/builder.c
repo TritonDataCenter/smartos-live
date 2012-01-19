@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
   }
 
   /* scan through the manifest once each for each type of entry, in order */
-  while (pass < 5) {
+  while (pass < 6) {
     file = fopen(manifest, "r");
     if (file != NULL) {
        while(fgets(line, MAX_LINE_LEN, file) != NULL) {
@@ -201,6 +201,13 @@ int main(int argc, char *argv[])
              if (args_found == 5) {
                if (pass == 1) {
                  handle_dir(target, mode, user, group);
+               } else if (pass == 5) { /* Set permissions last, in case read-only */
+                   mode_t m;
+                   m = str_to_mode(mode);
+                   if (chmod(target, m) != 0) {
+                       perror("chmod()");
+                       exit(1);
+                   }
                }
              } else {
                printf("Wrong number of arguments for directory on line[%d]: %s\n", lineno, line);

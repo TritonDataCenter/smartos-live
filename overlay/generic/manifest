@@ -90,8 +90,6 @@ d lib/svc/manifest/network 0755 root sys
 d lib/svc/manifest/system 0755 root sys
 f lib/svc/manifest/system/sysidtool.xml 0444 root sys
 f lib/svc/manifest/system/auditd.xml 0444 root sys
-d lib/svc/manifest/system/filesystem 0755 root sys
-f lib/svc/manifest/system/filesystem/minimal-fs.xml 0444 root sys
 f lib/svc/manifest/system/smartdc-config.xml 0444 root sys
 f lib/svc/manifest/system/coreadm.xml 0444 root sys
 f lib/svc/manifest/system/console-login.xml 0444 root sys

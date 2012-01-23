@@ -26,7 +26,7 @@ manifest:
 ifeq ($(EXTRA_TARBALL),)
 		gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest -C projects/illumos-extra manifest
 else
-		tar -Ozxf $(EXTRA_TARBALL) manifest > $(MPROTO)/illumos-extra.manifest
+		gtar -Ozxf $(EXTRA_TARBALL) manifest > $(MPROTO)/illumos-extra.manifest
 endif
 	[ ! -d projects/local ] || for dir in $(LOCAL_SUBDIRS); do \
 	cd $(ROOT)/projects/local/$${dir}; \

@@ -56,6 +56,13 @@ The "make live" process works as follows (using the tools/build_live script):
       * OK[S] - FILE: indicating a file that was copied from the running system
       * *FAILED* - indicating a file that was not found in any of the above
 
+Contributing:
+  In order to accept patches, Joyent requires contributors to sign 
+  a Contributor agreement, available at:
+    https://download.joyent.com/pub/cla_smartos.pdf 
+  Please fill out this form and email to smartos@joyent.com prior to sending
+  pull requests or patches
+
 Other notes:
 
   * The resulting image requires a 64-bit machine

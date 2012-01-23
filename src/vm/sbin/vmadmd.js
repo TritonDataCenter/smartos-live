@@ -112,14 +112,14 @@ function spawnVNC(vmobj)
 
     VM.log('INFO', 'spawning VNC listener for ' + vmobj.uuid + ' on ' +
         SDC.sysinfo.admin_ip);
-    // Listen on a random port on admin_ip
-    server.listen(0, SDC.sysinfo.admin_ip);
-    addr = server.address();
 
-    VNC[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip, 'port': addr.port,
-        'display': (addr.port - 5900), 'server': server};
-
-    VM.log('DEBUG', 'VNC details for ' + vmobj.uuid + ':' + VNC[vmobj.uuid]);
+    server.listen(0, SDC.sysinfo.admin_ip, function() {
+        addr = server.address();
+        VNC[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip, 'port': addr.port,
+            'display': (addr.port - 5900), 'server': server};
+        VM.log('DEBUG', 'VNC details for ' + vmobj.uuid + ':' +
+            VNC[vmobj.uuid]);
+    });
 }
 
 function clearVNC(uuid)
@@ -229,11 +229,9 @@ function updateZoneStatus(ev)
                     return;
                 }
 
-                VM.stop(ev.zonename, {"force": true}, function (err, msg) {
+                VM.stop(ev.zonename, {"force": true}, function (err) {
                     if (err) {
                         VM.log('ERROR', 'stop failed', err);
-                    } else if (msg) {
-                        VM.log('DEBUG', msg);
                     }
                 });
             });
@@ -730,13 +728,9 @@ function setStopTimer(uuid, expire)
 
                 // We assume kill will clear the transition even if the
                 // vm is already stopped.
-                VM.stop(obj.uuid, {'force': true}, function (err, msg) {
-                    if (err) {
-                        VM.log('DEBUG', 'timeout vm.kill() = ' +
-                            JSON.stringify(err));
-                    } else if (msg) {
-                        VM.log('DEBUG', 'timeout vm.kill() = ' + msg);
-                    }
+                VM.stop(obj.uuid, {'force': true}, function (err) {
+                    VM.log('DEBUG', 'timeout vm.kill() = ' +
+                        JSON.stringify(err));
                 });
             }
         });
@@ -766,12 +760,8 @@ function loadVM(vmobj, do_autoboot)
                 vmobj.uuid);
             // We assume kill will clear the transition even if the
             // vm is already stopped.
-            VM.stop(vmobj.uuid, {'force': true}, function (err, msg) {
-                if (err) {
-                    VM.log('DEBUG', 'vm.kill() = ' + err.message, err);
-                } else if (msg) {
-                    VM.log('DEBUG', 'vm.kill() = ' + msg);
-                }
+            VM.stop(vmobj.uuid, {'force': true}, function (err) {
+                VM.log('DEBUG', 'vm.kill() = ' + err.message, err);
             });
         } else {
             expire = ((Number(vmobj.transition_expire) + 1000) - Date.now());

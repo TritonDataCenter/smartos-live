@@ -1,9 +1,9 @@
 CC=gcc
 CFLAGS=-Wall
 TARGETS=bootparams disklist removable_disk disk_size \
-    node-kstat/build/default/kstat.node zoneevent \
-    node-expat/build/default/node-expat.node \
-    node-syslog/build/default/syslog.node
+    node-kstat/build/Release/kstat.node zoneevent \
+    node-expat/build/Release/node-expat.node \
+    node-syslog/build/Release/syslog.node
 SMARTDC_TARGETS=has_hvx
 DESTDIR=../proto
 NODE_WAF=$(PWD)/../proto/usr/bin/node-waf
@@ -17,12 +17,12 @@ install: $(TARGETS) sysinfo
 	cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin
 	mkdir -m 0755 -p $(DESTDIR)/usr/node_modules
 	find node_modules -type f -exec cp {} $(DESTDIR)/usr/node_modules/ \;
-	cp node-kstat/build/default/kstat.node $(DESTDIR)/usr/node_modules/
-	cp node-syslog/build/default/syslog.node $(DESTDIR)/usr/node_modules/syslog.node
+	cp node-kstat/build/Release/kstat.node $(DESTDIR)/usr/node_modules/
+	cp node-syslog/build/Release/syslog.node $(DESTDIR)/usr/node_modules/syslog.node
 	rm -rf $(DESTDIR)/usr/vm
 	cp -PR vm $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/usr/vm/node_modules
-	cp node-expat/build/default/node-expat.node \
+	cp node-expat/build/Release/node-expat.node \
         $(DESTDIR)/usr/vm/node_modules/expat_binding.node
 	cat node-expat/lib/node-expat.js | \
         sed -e "s|var expat.*;|var expat = require('expat_binding');|" > \
@@ -51,13 +51,13 @@ disk_size: disk_size.c
 has_hvx: has_hvx.c
 	$(CC) $(CFLAGS) -o $@ $^
 
-node-kstat/build/default/kstat.node: node-kstat/kstat.cc $(NODE_WAF)
+node-kstat/build/Release/kstat.node: node-kstat/kstat.cc $(NODE_WAF)
 	(cd node-kstat && $(NODE_WAF) configure && $(NODE_WAF) build)
 
-node-expat/build/default/node-expat.node: node-expat/node-expat.cc $(NODE_WAF)
+node-expat/build/Release/node-expat.node: node-expat/node-expat.cc $(NODE_WAF)
 	(cd node-expat && $(NODE_WAF) configure && $(NODE_WAF) build)
 
-node-syslog/build/default/syslog.node: node-syslog/syslog.cc $(NODE_WAF)
+node-syslog/build/Release/syslog.node: node-syslog/syslog.cc $(NODE_WAF)
 	(cd node-syslog && $(NODE_WAF) configure && $(NODE_WAF) build)
 
 disklist:
@@ -72,3 +72,6 @@ zoneevent: zoneevent.c
 
 clean:
 	@rm -f $(TARGETS)
+	(cd node-kstat && $(NODE_WAF) clean)
+	(cd node-expat && $(NODE_WAF) clean)
+	(cd node-syslog && $(NODE_WAF) clean)

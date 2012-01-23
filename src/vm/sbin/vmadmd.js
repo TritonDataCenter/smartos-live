@@ -113,13 +113,14 @@ function spawnVNC(vmobj)
     VM.log('INFO', 'spawning VNC listener for ' + vmobj.uuid + ' on ' +
         SDC.sysinfo.admin_ip);
     // Listen on a random port on admin_ip
-    server.listen(0, SDC.sysinfo.admin_ip);
-    addr = server.address();
+    server.listen(0, SDC.sysinfo.admin_ip, function () {
+        addr = server.address();
 
-    VNC[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip, 'port': addr.port,
-        'display': (addr.port - 5900), 'server': server};
+        VNC[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip, 'port': addr.port,
+            'display': (addr.port - 5900), 'server': server};
 
-    VM.log('DEBUG', 'VNC details for ' + vmobj.uuid + ':' + VNC[vmobj.uuid]);
+        VM.log('DEBUG', 'VNC details for ' + vmobj.uuid + ':' + VNC[vmobj.uuid]);
+    });
 }
 
 function clearVNC(uuid)

@@ -20,7 +20,6 @@ d etc/notices 0755 root sys
 f etc/notices/COPYRIGHT 0444 root sys
 f etc/name_to_major 0644 root sys
 f etc/passwd 0644 root sys
-f etc/release 0444 root sys
 f etc/nodename 0644 root root
 d etc/svc 0755 root sys
 d etc/svc/profile 0755 root sys

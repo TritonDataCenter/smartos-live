@@ -5,11 +5,11 @@
 // See <https://github.com/trentm/json>.
 //
 
-var VERSION = "2.0.3";
+var VERSION = "2.2.1";
 
 var util = require('util');
 var pathlib = require('path');
-var runInNewContext = require('vm').runInNewContext;
+var vm = require('vm');
 var warn = console.warn;
 
 
@@ -54,6 +54,11 @@ function isArray(ar) {
          (ar && ar !== Object.prototype && isArray(ar.__proto__));
 }
 
+// json_parse.js (<https://github.com/douglascrockford/JSON-js>)
+// START json_parse
+var json_parse=function(){"use strict";var a,b,c={'"':'"',"\\":"\\","/":"/",b:"\b",f:"\f",n:"\n",r:"\r",t:"\t"},d,e=function(b){throw{name:"SyntaxError",message:b,at:a,text:d}},f=function(c){return c&&c!==b&&e("Expected '"+c+"' instead of '"+b+"'"),b=d.charAt(a),a+=1,b},g=function(){var a,c="";b==="-"&&(c="-",f("-"));while(b>="0"&&b<="9")c+=b,f();if(b==="."){c+=".";while(f()&&b>="0"&&b<="9")c+=b}if(b==="e"||b==="E"){c+=b,f();if(b==="-"||b==="+")c+=b,f();while(b>="0"&&b<="9")c+=b,f()}a=+c;if(!isFinite(a))e("Bad number");else return a},h=function(){var a,d,g="",h;if(b==='"')while(f()){if(b==='"')return f(),g;if(b==="\\"){f();if(b==="u"){h=0;for(d=0;d<4;d+=1){a=parseInt(f(),16);if(!isFinite(a))break;h=h*16+a}g+=String.fromCharCode(h)}else if(typeof c[b]=="string")g+=c[b];else break}else g+=b}e("Bad string")},i=function(){while(b&&b<=" ")f()},j=function(){switch(b){case"t":return f("t"),f("r"),f("u"),f("e"),!0;case"f":return f("f"),f("a"),f("l"),f("s"),f("e"),!1;case"n":return f("n"),f("u"),f("l"),f("l"),null}e("Unexpected '"+b+"'")},k,l=function(){var a=[];if(b==="["){f("["),i();if(b==="]")return f("]"),a;while(b){a.push(k()),i();if(b==="]")return f("]"),a;f(","),i()}}e("Bad array")},m=function(){var a,c={};if(b==="{"){f("{"),i();if(b==="}")return f("}"),c;while(b){a=h(),i(),f(":"),Object.hasOwnProperty.call(c,a)&&e('Duplicate key "'+a+'"'),c[a]=k(),i();if(b==="}")return f("}"),c;f(","),i()}}e("Bad object")};return k=function(){i();switch(b){case"{":return m();case"[":return l();case'"':return h();case"-":return g();default:return b>="0"&&b<="9"?g():j()}},function(c,f){var g;return d=c,a=0,b=" ",g=k(),i(),b&&e("Syntax error"),typeof f=="function"?function h(a,b){var c,d,e=a[b];if(e&&typeof e=="object")for(c in e)Object.prototype.hasOwnProperty.call(e,c)&&(d=h(e,c),d!==undefined?e[c]=d:delete e[c]);return f.call(a,b,e)}({"":g},""):g}}();
+// END json_parse
+
 function printHelp() {
   util.puts("Usage:");
   util.puts("  <something generating JSON on stdout> | json [OPTIONS] [LOOKUPS...]");
@@ -87,9 +92,9 @@ function printHelp() {
   util.puts("  ...");
   util.puts("");
   util.puts("  # auto-arrayification")
-  util.puts("  $ echo '{\"a\":1}{\"b\":2}' | json -o json-0");
+  util.puts("  $ echo '{\"a\":1}{\"b\":2}' | json");
   util.puts("  [{\"a\":1},{\"b\":2}]");
-  util.puts("  $ echo '[1,2][3,4]' | json -o json-0");
+  util.puts("  $ echo '[1,2][3,4]' | json");
   util.puts("  [{\"a\":1},{\"b\":2}]");
   util.puts("");
   util.puts("Options:");
@@ -101,6 +106,10 @@ function printHelp() {
   util.puts("  -a, --array   process input as an array of separate inputs");
   util.puts("                and output in tabular form");
   util.puts("  -d DELIM      delimiter string for tabular output (default is ' ')");
+  util.puts("");
+  util.puts("  -e CODE       execute the given code on input, on each array item");
+  util.puts("                if '-a' is used. This execution is run before ");
+  util.puts("                filtering.");
   util.puts("");
   util.puts("  -o, --output MODE   Specify an output mode. One of");
   util.puts("                  jsony (default): JSON with string quotes elided");
@@ -132,6 +141,7 @@ function parseArgv(argv) {
     help: false,
     quiet: false,
     dropHeaders: false,
+    executableSnippets: [],
     outputMode: OM_JSONY,
     jsonIndent: 2,
     delim: ' '
@@ -209,6 +219,9 @@ function parseArgv(argv) {
         break;
       case "-d":
         parsed.delim = args.shift();
+        break;
+      case "-e":
+        parsed.executableSnippets.push(args.shift());
         break;
       default: // arguments
         if (!endOfOptions && arg.length > 0 && arg[0] === '-') {
@@ -422,7 +435,7 @@ function lookupDatum(datum, lookup) {
       lookupCode += '.' + lookup[i];
     }
   }
-  return runInNewContext("(" + JSON.stringify(datum) + ")" + lookupCode);
+  return vm.runInNewContext("(" + JSON.stringify(datum) + ")" + lookupCode);
 }
 
 
@@ -587,8 +600,33 @@ function main(argv) {
     if (input.error) {
       // Doesn't look like JSON. Just print it out and move on.
       if (! opts.quiet) {
-        warn("json: error: doesn't look like JSON: %s (input='%s')",
-          input.error, JSON.stringify(buffer));
+        // Use JSON-js' "json_parse" parser to get more detail on the
+        // syntax error.
+        var details = "";
+        var normBuffer = buffer.replace(/\r\n|\n|\r/, '\n');
+        try {
+          json_parse(normBuffer);
+          details = input.error;
+        } catch(err) {
+          // err.at has the position. Get line/column from that.
+          var at = err.at - 1;  // `err.at` looks to be 1-based.
+          var lines = buffer.split('\n');
+          var line, col, pos = 0;
+          for (line = 0; line < lines.length; line++) {
+            pos += lines[line].length + 1;
+            if (pos > at) {
+              col = at - (pos - lines[line].length - 1);
+              break;
+            }
+          }
+          var spaces = '';
+          for (var i=0; i<col; i++) {
+            spaces += '.';
+          }
+          details = err.message+" at line "+(line+1)+", column "+(col+1)
+            + ":\n\t"+lines[line]+"\n\t"+spaces+"^";
+        }
+        warn("json: error: input is not JSON: %s", details);
       }
       emit(buffer);
       if (buffer.length && buffer[buffer.length-1] !== "\n") {
@@ -601,14 +639,20 @@ function main(argv) {
     var lookups = lookupStrs.map(parseLookup);
     var results = [];
     if (opts.array) {
-      var data = (isArray(input.datum) ? input.datum : [input.datum]);
       if (lookups.length === 0) {
         results = input.datum;
       } else {
+        var data = (isArray(input.datum) ? input.datum : [input.datum]);
         for (var j=0; j < data.length; j++) {
+          var datum = data[j];
+          for (var e=0; e < opts.executableSnippets.length; e++) {
+            var code = opts.executableSnippets[e];
+            vm.runInNewContext(code, datum);
+          }
+          
           var result = [];
           for (var i=0; i < lookups.length; i++) {
-            result.push(lookupDatum(data[j], lookups[i]));
+            result.push(lookupDatum(datum, lookups[i]));
           }
           results.push(result);
         }
@@ -621,11 +665,17 @@ function main(argv) {
         printDatum(row[c], opts, '\n', true);
       });
     } else {
+      var datum = input.datum;
+      for (var e=0; e < opts.executableSnippets.length; e++) {
+        var code = opts.executableSnippets[e];
+        vm.runInNewContext(code, datum);
+      }
+
       if (lookups.length === 0) {
-        results = input.datum;
+        results = datum;
       } else {
         for (var i=0; i < lookups.length; i++) {
-          results.push(lookupDatum(input.datum, lookups[i]));
+          results.push(lookupDatum(datum, lookups[i]));
         }
       }
       results.forEach(function (r) {
@@ -636,5 +686,18 @@ function main(argv) {
 }
 
 if (require.main === module) {
+  // HACK guard for <https://github.com/trentm/json/issues/24>.
+  // We override the `process.stdout.end` guard that core node.js puts in
+  // place. The real fix is that `.end()` shouldn't be called on stdout
+  // in node core. Hopefully node v0.6.9 will fix that. Only guard
+  // for v0.6.0..v0.6.8.
+  var nodeVer = process.versions.node.split('.').map(Number);
+  if ([0,6,0] <= nodeVer && nodeVer <= [0,6,8]) {
+    var stdout = process.stdout;
+    stdout.end = stdout.destroy = stdout.destroySoon = function() {
+      /* pass */
+    };
+  }
+  
   main(process.argv);
 }

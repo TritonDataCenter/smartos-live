@@ -32,6 +32,7 @@ var onlyif = require('onlyif');
 var path = require('path');
 var sprintf = require('sprintf').sprintf;
 var tty = require('tty');
+var util = require('util');
 
 //VM.DEBUG=true;
 
@@ -174,6 +175,10 @@ function parseStartArgs(args)
             if (!model || !path || path.length === 0 || model.length === 0) {
                 usage('Parameter to ' + key + ' must be: path,model');
             }
+            if (VM.DISK_MODELS.indexOf(model) === -1) {
+                usage('Invalid model "' + model + '": model must be one of: ' +
+                    VM.DISK_MODELS.join(','));
+            }
             if (!extra.disks) {
                 extra.disks = [];
             }
@@ -274,9 +279,10 @@ function startVM(uuid, extra, callback)
         if (err) {
             // Our error message here gets shown to the user.
             return callback(new Error('Unable to start VM ' + uuid +
-                ':', err.message));
+                ': ' + err.message));
+        } else {
+            return callback();
         }
-        callback();
     });
 }
 
@@ -519,8 +525,9 @@ function main(callback)
         return startVM(uuid, extra, function (err) {
             if (err) {
                 return callback(err);
+            } else {
+                return callback(null, 'Successfully started ' + uuid);
             }
-            return callback(null, 'Successfully started ' + uuid);
         });
     case 'console':
         uuid = getUUID(command, parsed);

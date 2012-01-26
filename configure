@@ -249,7 +249,11 @@ export CLONE_WS
 STAFFER=nobody;                         export STAFFER
 MAILTO=$STAFFER;                        export MAILTO
 BUILD_PROJECT=;                         export BUILD_PROJECT
+if [[ -z "${HUDSON_SERVER_COOKIE}" ]]; then
 LOCKNAME="\`whoami\`_\`basename \$CODEMGR_WS\`_nightly.lock"; export LOCKNAME
+else
+LOCKNAME="\`whoami\`_\`basename \$CODEMGR_WS\`_nightly-${HUDSON_SERVER_COOKIE}.lock"; export LOCKNAME
+fi
 ATLOG="\$CODEMGR_WS/log";                        export ATLOG
 LOGFILE="\$ATLOG/nightly.log";                   export LOGFILE
 MACH=\`uname -p\`;                                export MACH

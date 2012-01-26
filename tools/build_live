@@ -127,7 +127,20 @@ function cleanup
     lofiadm -d "${usrfile}" 2>/dev/null
     [ -n "${rddir}" ] && rm -fr "${rddir}" 2> /dev/null
 }
+function gen_etcrelease
+{
+  rdmnt=$1
+  cat <<EOF> ${rdmnt}/etc/release
+                       SmartOS ${BUILDSTAMP} x86_64
+              Copyright 2010 Sun Microsystems, Inc.  All Rights Reserved.
+              Copyright 2010-2012 Joyent, Inc.  All Rights Reserved.
+                        Use is subject to license terms.
 
+   Built with the following components:
+
+EOF
+  (cd ${ROOT} && ${GET_STATUS}) >>  ${rdmnt}/etc/release
+}
 function create_ufs
 {
     archive=$1
@@ -200,6 +213,8 @@ function create_ufs
     lofiadm -d "$lofiusrdev" 2>/dev/null
     lofiadm -C $usrfile
     mv $usrfile $rdmnt/usr.lgz
+
+    gen_etcrelease $rdmnt
 
     umount -f "$rdmnt"
     rmdir "$rdmnt"

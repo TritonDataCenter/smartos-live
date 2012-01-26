@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2011 Joyent, Inc.  All rights reserved.
+# Copyright 2011, 2012 Joyent, Inc.  All rights reserved.
 #
 
 unset LD_LIBRARY_PATH
@@ -34,7 +34,7 @@ do
 	case "$opt" in
 	o)	OVER=1;;
 	z)	ZONENAME=$OPTARG;;
-	*)	printf "zonememstat [-n] [-z zonename]\n"
+	*)	printf "zonememstat [-o] [-z zonename]\n"
 		exit 1;;
 	esac
 done

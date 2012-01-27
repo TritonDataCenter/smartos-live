@@ -128,7 +128,7 @@ function load_sdc_bootparams {
     for line in $(/bin/bootparams); do
         fields=(${line//=/ })
         key=$(echo ${fields[0]} | sed -e "s/-/_/g")
-        eval "${prefix}${key}=${fields[1]}"
+        eval "${prefix}${key}=\"${fields[1]}\""
     done
 }
 

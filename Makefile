@@ -8,7 +8,7 @@ LOCAL_SUBDIRS:=$(shell ls projects/local)
 MANIFEST=manifest.gen
 OVERLAYS:=$(shell cat overlay/order)
 ifeq ($(EXTRA_TARBALL),)
-EXTRA_TARBALL:=$(shell ls `pwd`/illumos-extra*.tgz | tail -n1 && echo $?)
+EXTRA_TARBALL:=$(shell ls `pwd`/illumos-extra*.tgz 2> /dev/null | tail -n1 && echo $?)
 endif
 world: 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp 0-local-stamp \
 	0-tools-stamp 0-man-stamp 0-devpro-stamp

@@ -34,7 +34,7 @@ var zone_defaults = {
     'max_physical_memory': [256],
     'billing_id': [dataset_uuid],
     'dataset_uuid': [dataset_uuid],
-    'zone_root_dataset': ['uuid', prefix_zones],
+    'zfs_filesystem': ['uuid', prefix_zones],
     'owner_uuid': ['00000000-0000-0000-0000-000000000000'],
     'uuid': ['uuid', state_property],
     'dns_domain': ['local'],

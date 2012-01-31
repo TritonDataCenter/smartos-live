@@ -38,6 +38,7 @@ d etc/bash 0755 root sys
 f etc/bash/bash_completion 0644 root sys
 d etc/bash/bash_completion.d 0755 root sys
 f etc/bash/bash_completion.d/zones 0644 root sys
+f etc/bash/bash_completion.d/dladm 0644 root sys
 d etc/curl 0555 root sys
 f etc/curl/curlCA 0444 root sys
 f etc/dispadmin.conf 0644 root sys

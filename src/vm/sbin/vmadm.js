@@ -79,7 +79,7 @@ var LIST_FIELDS = {
     'pid': {header: 'PID', width: 6},
     'qemu_extra_opts': {header: 'QEMU_EXTRA_OPTS', width: 15},
     'quota': {header: 'QUOTA', width: 5},
-    'real_state': {header: 'REAL_STATE', width: 10},
+    'zone_state': {header: 'ZONE_STATE', width: 10},
     'state': {header: 'STATE', width: 16},
     'tmpfs': {header: 'TMPFS', width: 5},
     'type': {header: 'TYPE', width: 4},

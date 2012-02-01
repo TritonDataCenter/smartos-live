@@ -1047,12 +1047,11 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: KVM VMs only, for OS VMs update max_physical_memory instead.
         default: 256
 
-    real_state:
+    zone_state:
 
-        This property may show up when fetching a VMs JSON if that VM is in a
-        transition. In that case the 'state' option will show something like
-        'stopping' but the 'real_state' property will show the zone's actual
-        state: eg. 'running'.
+        This property will show up when fetching a VMs JSON.  this shows the
+        state of the zone in which this VM is contained. eg. 'running'.  It
+        can be different from the 'state' value in several cases.
 
         type: string
         vmtype: KVM

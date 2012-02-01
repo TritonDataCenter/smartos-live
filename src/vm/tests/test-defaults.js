@@ -22,6 +22,7 @@ var zone_defaults = {
     'zonename': ['uuid', state_property],
     'autoboot': [true],
     'zonepath': ['uuid', prefix_zones_slash],
+    'do_not_inventory': [true],
     'brand': ['joyent'],
     'quota': [10],
     'cpu_shares': [100],
@@ -106,7 +107,7 @@ function check_property(t, state, prop, expected, transform)
     } else if (expected === '<EMPTY-OBJ>') {
         t.ok(JSON.stringify(value) === '{}', prop + ' {},' + JSON.stringify(value));
     } else {
-        t.ok(value === expected, prop + ' [' + expected + ',' + value + ']');
+        t.ok(value === expected, prop + ' [' + expected + typeof(expected) + ',' + value + typeof(value) + ']');
     }
 }
 
@@ -130,7 +131,7 @@ function check_values(t, state)
 
     for (prop in state.vmobj) {
         // the only remaining members we expect are state and zoneid
-        if (prop === 'state') {
+        if (prop === 'state' || prop === 'zone_state') {
             continue;
         } else if (prop === 'zoneid') {
             continue;
@@ -144,7 +145,7 @@ function check_values(t, state)
 
 test('check default zone properties', {'timeout': 240000}, function(t) {
     state = {'brand': 'joyent'};
-    vmtest.on_new_vm(t, dataset_uuid, {}, state, [
+    vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 if (err) {
@@ -162,7 +163,8 @@ test('check default zone properties', {'timeout': 240000}, function(t) {
 
 test('check default kvm properties', {'timeout': 240000}, function(t) {
     state = {'brand': 'kvm'};
-    vmtest.on_new_vm(t, null, {'brand': 'kvm'}, state, [
+    vmtest.on_new_vm(t, null, {'brand': 'kvm',
+        'do_not_inventory': true}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 if (err) {

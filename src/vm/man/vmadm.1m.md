@@ -651,6 +651,22 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    do_not_inventory:
+
+        This specifies that the VM should not be counted or automatically
+        imported into external management tools. The primary use-case is for
+        test zones that are created but you don't want their existence
+        propagated up to a management system since they'll be short-lived.
+
+        Note: this property will only show up in a 'vmadm get' when it's set
+        true. When set false the property will not appear.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: no
+        create: yes
+        update: yes
+
     dns_domain:
 
         For OS VMs this specifies the domain value for /etc/hosts that gets set

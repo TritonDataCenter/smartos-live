@@ -25,7 +25,8 @@ test('create and destroy 50 zones', {'timeout': 240000}, function(t) {
         function (callback) {
             var state = {'brand': 'joyent'};
             vmtest.on_new_vm(t, dataset_uuid, {'autoboot': false,
-                'alias': 'autozone-' + i, 'nowait': true}, state, [
+                'do_not_inventory': true, 'alias': 'autozone-' + i,
+                'nowait': true}, state, [
                 function (cb) {
                     VM.load(state.uuid, function(err, obj) {
                         if (err) {

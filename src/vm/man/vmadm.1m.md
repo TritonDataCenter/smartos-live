@@ -742,6 +742,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: no
 
+    fs_allowed:
+
+        This option allows you to specify filesystem types this zone is allowed
+        to mount.  For example on a zone for building SmartOS you probably want
+        to set this to: "ufs,pcfs,tmpfs".  To unset this property, set the value
+        to the empty string.
+
+        type: string (comma separated list of filesystem types)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: yes (requires zone reboot to take effect)
+
     hostname:
 
         For KVM VMs, this value will be handed out via DHCP as the hostname for

@@ -42,6 +42,7 @@ var COMMANDS = [
     'create',
     'delete', 'destroy',
     'stop', 'halt',
+    'help',
     'info',
     'get', 'json',
     'list',
@@ -94,13 +95,44 @@ var LIST_FIELDS = {
 var DEFAULT_SORT = 'ram,uuid';
 var DEFAULT_ORDER = 'uuid,type,ram,state,alias';
 
-function usage(message)
+function usage(message, code)
 {
-    if (message) {
-        console.error(message);
+    var out;
+
+    if (code === null) {
+        code = 2;
     }
-    console.error('Usage: ' + process.argv[1] + ' <command> [options]');
-    process.exit(2);
+
+    if (code === 0) {
+        out = console.log;
+    } else {
+        out = console.error;
+    }
+
+    if (message) {
+        out(message);
+    }
+
+    out('Usage: ' + process.argv[1] + ' <command> [options]');
+    out('');
+    out('create [-f <filename>]');
+    out('console <uuid>');
+    out('delete <uuid>');
+    out('get <uuid>');
+    out('info <uuid> [type,...]');
+    out('list [-p] [-H] [-o field,...] [-s field,...] [field=value ...]');
+    out('lookup [-j|-1] [field=value ...]');
+    out('reboot <uuid> [-F]');
+    out('start <uuid> [option=value ...]');
+    out('stop <uuid> [-F]');
+    out('sysrq <uuid> <nmi|screenshot>');
+    out('update <uuid> [-f <filename>]');
+    out(' -or- update <uuid> property=value [property=value ...]');
+    out('');
+    out('For more detailed information on the use of this command,' +
+       "type 'man vmadm'.");
+
+    process.exit(code);
 }
 
 function getListProperties(field)
@@ -227,6 +259,7 @@ function addCommandOptions(command, opts, shorts)
     case 'get':
     case 'json':
     case 'sysrq':
+    case 'help':
         // these only take uuid or 'special' args like start order=cd
         break;
     case 'lookup':
@@ -502,6 +535,8 @@ function main(callback)
 
     if (!command) {
         usage();
+    } else if (command == '-h' || command == '-?') {
+        usage(null, 0);
     } else if (COMMANDS.indexOf(command) === -1) {
         usage('Invalid command: "' + command + '".');
     }
@@ -612,6 +647,9 @@ function main(callback)
         uuid = getUUID(command, parsed);
         types = parseInfoArgs(parsed.argv.remain);
         return getInfo(uuid, types, callback);
+    case 'help':
+        usage(null, 0);
+        break;
     case 'lookup':
         extra = parseKeyEqualsValue(parsed.argv.remain);
         options = {"transform": addFakeFields};

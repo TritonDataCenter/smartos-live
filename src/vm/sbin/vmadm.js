@@ -153,6 +153,10 @@ function validFilterKey(key)
         return true;
     }
 
+    if (key.match(/^(tags|customer_metadata|internal_metadata)\..*/)) {
+        return true;
+    }
+
     return false;
 }
 

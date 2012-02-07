@@ -68,6 +68,7 @@ var LIST_FIELDS = {
     'cpu_type': {header: 'CPU_TYPE', width: 8},
     'create_timestamp': {header: 'CREATE_TIMESTAMP', width: 24},
     'dns_domain': {header: 'DOMAIN', width: 32},
+    'do_not_inventory': {header: 'DNI', width: 5},
     'hostname': {header: 'HOSTNAME', width: 32},
     'ram': {header: 'RAM', width: 7},
     'max_locked_memory': {header: 'MAX_LOCKED', width: 10},
@@ -89,6 +90,7 @@ var LIST_FIELDS = {
     'zfs_io_priority': {header: 'IO_PRIORITY', width: 11},
     'zfs_storage_pool_name': {header: 'ZFS_POOL', width: 12},
     'zonename': {header: 'ZONENAME', width: 12},
+    'zonepath': {header: 'ZONEPATH', width: 40},
     'zoneid': {header: 'ZONEID', width: 6}
 };
 
@@ -133,6 +135,25 @@ function usage(message, code)
        "type 'man vmadm'.");
 
     process.exit(code);
+}
+
+function validFilterKey(key)
+{
+    if (LIST_FIELDS.hasOwnProperty(key)) {
+        return true;
+    }
+
+    // for complex fields we need a regex
+
+    if (key.match(/^disks\.[\*0-9]*\.(boot|image_name|image_size|image_uuid|size|media|model|zpool)$/)) {
+        return true;
+    }
+
+    if (key.match(/^nics\.[\*0-9]*\.(dhcp_server|gateway|interface|ip|mac|model|netmask|vlan_id)$/)) {
+        return true;
+    }
+
+    return false;
 }
 
 function getListProperties(field)
@@ -525,6 +546,7 @@ function main(callback)
     var filename;
     var extra = {};
     var options = {};
+    var key;
     var knownOpts = {};
     var order;
     var parsed;
@@ -656,6 +678,13 @@ function main(callback)
         if (parsed.json) {
             options.full = true;
         }
+
+        for (key in extra) {
+            if (!validFilterKey(key)) {
+                return callback(new Error('Invalid lookup key: "' + key + '"'));
+            }
+        }
+
         return VM.lookup(extra, options, function (err, results) {
             var m;
             if (err) {
@@ -709,6 +738,13 @@ function main(callback)
             // allow -h to force header on or -H to force off.
             options.header = parsed.header;
         }
+
+        for (key in extra) {
+            if (!validFilterKey(key)) {
+                return callback(new Error('Invalid filter key: "' + key + '"'));
+            }
+        }
+
         return listVM(extra, order, sortby, options, callback);
     case 'halt':
         command = 'stop';

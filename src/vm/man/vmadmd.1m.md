@@ -149,6 +149,21 @@ vmadmd(1m) -- virtual machine management daemon
         similarly to pressing the virtual reset switch on your VM. The guest OS
         will not be given warning or have time to respond to this request.
 
+    media (POST /vm/:id?action=media&command=[change|eject]&device=<device>&arg=<target|force>)
+
+        The media command controls devices that have changeable media, namely the
+        cdrom and floppy devices. There are two commands:
+
+        eject:
+
+            This will eject the device, the optional "force" parameter can
+            be used for force an eject when the device is in use.
+
+        change:
+
+            This sets the appropriate target path for the media, this path
+            is relative to the zone root.
+
     sysrq (POST /vm/:id?action=sysrq&request=[nmi|screenshot])
 
         There are two types of request you can make through the sysrq command:

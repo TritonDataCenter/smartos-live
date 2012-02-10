@@ -47,6 +47,7 @@ var COMMANDS = [
     'get', 'json',
     'list',
     'lookup',
+    'media',
     'reboot',
     'sysrq',
     'update'
@@ -124,6 +125,7 @@ function usage(message, code)
     out('info <uuid> [type,...]');
     out('list [-p] [-H] [-o field,...] [-s field,...] [field=value ...]');
     out('lookup [-j|-1] [field=value ...]');
+    out('media <uuid> <eject|change> <device> [path]');
     out('reboot <uuid> [-F]');
     out('start <uuid> [option=value ...]');
     out('stop <uuid> [-F]');
@@ -283,6 +285,7 @@ function addCommandOptions(command, opts, shorts)
     case 'info':
     case 'get':
     case 'json':
+    case 'media':
     case 'sysrq':
     case 'help':
         // these only take uuid or 'special' args like start order=cd
@@ -722,6 +725,31 @@ function main(callback)
                 return callback(err);
             }
             return callback(null, 'Sent ' + type + ' sysrq to ' + uuid);
+        });
+    case 'media':
+        uuid = getUUID(command, parsed);
+	if (!parsed.argv.remain) {
+            return usage('Wrong number of parameters to "media"');
+        }
+        type = parsed.argv.remain[0];
+        // Basically we can have...
+        //    eject <device> [force]
+        //    change <device> <target>
+        // So we will pass device and arg (if set) through...
+        if (VM.MEDIA_CMDS.indexOf(type) === -1) {
+            return usage('Invalid media command: ' + type);
+        }
+	if(parsed.argv.remain.length !== 2 && parsed.argv.remain.length !== 3) {
+            return usage('Wrong number of parameters to "media ' + type + '"');
+	}
+	options.device = parsed.argv.remain[1];
+	if (parsed.argv.remain.length == 3) options.arg = parsed.argv.remain[2];
+
+        return VM.media(uuid, type, options, function (err) {
+            if (err) {
+                return callback(err);
+            }
+            return callback(null, 'Sent ' + type + ' media to ' + uuid);
         });
     case 'list':
         extra = parseKeyEqualsValue(parsed.argv.remain);

@@ -69,6 +69,7 @@ function spawnVNC(vmobj)
 {
     var server;
     var addr;
+    var port;
     var zonepath = vmobj.zonepath;
 
     if (!vmobj.zonepath) {
@@ -77,6 +78,11 @@ function spawnVNC(vmobj)
 
     if (vmobj.state !== 'running' && vmobj.zone_state !== 'running') {
         VM.log('DEBUG', 'skipping VNC setup for non-running VM ' + vmobj.uuid);
+        return;
+    }
+
+    if (vmobj.vnc == 'off') {
+        VM.log('DEBUG', 'skipping VNC setup for vnc=off VM ' + vmobj.uuid);
         return;
     }
 
@@ -99,6 +105,11 @@ function spawnVNC(vmobj)
             //     we wouldn't be able to reconnect anyway.
             VM.log('INFO', 'vnc ended for ' + vmobj.uuid);
             clearVNC(vmobj.uuid);
+
+            // XXX UPDATE: if we are using VNC passwords then the connection
+            //     ends for an incorrect password, so we do need to respawn
+            //     here, otherwise we'll be unable to reconnect.
+            spawnVNC(vmobj);
         });
 
         vnc.on('error', function () {
@@ -113,7 +124,33 @@ function spawnVNC(vmobj)
     VM.log('INFO', 'spawning VNC listener for ' + vmobj.uuid + ' on ' +
         SDC.sysinfo.admin_ip);
 
-    server.listen(0, SDC.sysinfo.admin_ip, function() {
+    if (vmobj.vnc_port) {
+        port = vmobj.vnc_port;
+    } else {
+        port = 0;
+    }
+
+    // Before we start the listener, lets set the password if needed...
+    if (vmobj.vnc == 'secure' && vmobj.vnc_password) {
+        var socket;
+        var q = new Qmp(function () {return;});
+        socket = obj.zonepath + '/root/tmp/vm.qmp';
+
+        q.connect(socket, function(err) {
+            if (err) {
+                VM.log('WARN', 'Warning: VNC password-set error: ' + err);
+            } else {
+                q.command('set_password', {'protocol': 'vnc', 'password': vmobj.vnc_password },
+                    function (err, result) {
+                        VM.log('DEBUG', 'result: ' + JSON.stringify(result));
+                        // XXX handle failure
+                        q.disconnect();
+                    });
+            }
+        });
+    }
+
+    server.listen(port, SDC.sysinfo.admin_ip, function() {
         addr = server.address();
         VNC[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip, 'port': addr.port,
             'display': (addr.port - 5900), 'server': server};

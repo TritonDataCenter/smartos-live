@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall
-TARGETS=bootparams disklist removable_disk disk_size \
+TARGETS=bootparams diskinfo disklist removable_disk disk_size \
     node-kstat/build/Release/kstat.node zoneevent \
     node-expat/build/Release/node-expat.node \
     node-syslog/build/Release/syslog.node
@@ -44,6 +44,9 @@ bootparams: bootparams.c
 
 removable_disk: removable_disk.c
 	$(CC) $(CFLAGS) -o $@ $^
+
+diskinfo: diskinfo.c
+	$(CC) $(CCFLAGS) -ldladm -ldiskmgt -lnvpair -o $@ $^
 
 disk_size: disk_size.c
 	$(CC) $(CFLAGS) -o $@ $^

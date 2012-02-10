@@ -96,7 +96,7 @@ _toSimpleDate = function(d) {
   function pad(n) { return n < 10 ? '0'+n : n}
   var result = [
     d.getUTCFullYear(),
-    pad(d.getMonth()),
+    pad(d.getMonth() + 1),
     pad(d.getDate()),
   ].join('-');
   return result;

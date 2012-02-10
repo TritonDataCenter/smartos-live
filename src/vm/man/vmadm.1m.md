@@ -651,6 +651,22 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    do_not_inventory:
+
+        This specifies that the VM should not be counted or automatically
+        imported into external management tools. The primary use-case is for
+        test zones that are created but you don't want their existence
+        propagated up to a management system since they'll be short-lived.
+
+        Note: this property will only show up in a 'vmadm get' when it's set
+        true. When set false the property will not appear.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: no
+        create: yes
+        update: yes
+
     dns_domain:
 
         For OS VMs this specifies the domain value for /etc/hosts that gets set
@@ -725,6 +741,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: no
         create: yes
         update: no
+
+    fs_allowed:
+
+        This option allows you to specify filesystem types this zone is allowed
+        to mount.  For example on a zone for building SmartOS you probably want
+        to set this to: "ufs,pcfs,tmpfs".  To unset this property, set the value
+        to the empty string.
+
+        type: string (comma separated list of filesystem types)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: yes (requires zone reboot to take effect)
 
     hostname:
 
@@ -1047,12 +1076,11 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: KVM VMs only, for OS VMs update max_physical_memory instead.
         default: 256
 
-    real_state:
+    zone_state:
 
-        This property may show up when fetching a VMs JSON if that VM is in a
-        transition. In that case the 'state' option will show something like
-        'stopping' but the 'real_state' property will show the zone's actual
-        state: eg. 'running'.
+        This property will show up when fetching a VMs JSON.  this shows the
+        state of the zone in which this VM is contained. eg. 'running'.  It
+        can be different from the 'state' value in several cases.
 
         type: string
         vmtype: KVM

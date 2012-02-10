@@ -42,6 +42,7 @@ var COMMANDS = [
     'create',
     'delete', 'destroy',
     'stop', 'halt',
+    'help',
     'info',
     'get', 'json',
     'list',
@@ -67,6 +68,7 @@ var LIST_FIELDS = {
     'cpu_type': {header: 'CPU_TYPE', width: 8},
     'create_timestamp': {header: 'CREATE_TIMESTAMP', width: 24},
     'dns_domain': {header: 'DOMAIN', width: 32},
+    'do_not_inventory': {header: 'DNI', width: 5},
     'hostname': {header: 'HOSTNAME', width: 32},
     'ram': {header: 'RAM', width: 7},
     'max_locked_memory': {header: 'MAX_LOCKED', width: 10},
@@ -79,7 +81,7 @@ var LIST_FIELDS = {
     'pid': {header: 'PID', width: 6},
     'qemu_extra_opts': {header: 'QEMU_EXTRA_OPTS', width: 15},
     'quota': {header: 'QUOTA', width: 5},
-    'real_state': {header: 'REAL_STATE', width: 10},
+    'zone_state': {header: 'ZONE_STATE', width: 10},
     'state': {header: 'STATE', width: 16},
     'tmpfs': {header: 'TMPFS', width: 5},
     'type': {header: 'TYPE', width: 4},
@@ -88,19 +90,74 @@ var LIST_FIELDS = {
     'zfs_io_priority': {header: 'IO_PRIORITY', width: 11},
     'zfs_storage_pool_name': {header: 'ZFS_POOL', width: 12},
     'zonename': {header: 'ZONENAME', width: 12},
+    'zonepath': {header: 'ZONEPATH', width: 40},
     'zoneid': {header: 'ZONEID', width: 6}
 };
 
 var DEFAULT_SORT = 'ram,uuid';
 var DEFAULT_ORDER = 'uuid,type,ram,state,alias';
 
-function usage(message)
+function usage(message, code)
 {
-    if (message) {
-        console.error(message);
+    var out;
+
+    if (code === null) {
+        code = 2;
     }
-    console.error('Usage: ' + process.argv[1] + ' <command> [options]');
-    process.exit(2);
+
+    if (code === 0) {
+        out = console.log;
+    } else {
+        out = console.error;
+    }
+
+    if (message) {
+        out(message);
+    }
+
+    out('Usage: ' + process.argv[1] + ' <command> [options]');
+    out('');
+    out('create [-f <filename>]');
+    out('console <uuid>');
+    out('delete <uuid>');
+    out('get <uuid>');
+    out('info <uuid> [type,...]');
+    out('list [-p] [-H] [-o field,...] [-s field,...] [field=value ...]');
+    out('lookup [-j|-1] [field=value ...]');
+    out('reboot <uuid> [-F]');
+    out('start <uuid> [option=value ...]');
+    out('stop <uuid> [-F]');
+    out('sysrq <uuid> <nmi|screenshot>');
+    out('update <uuid> [-f <filename>]');
+    out(' -or- update <uuid> property=value [property=value ...]');
+    out('');
+    out('For more detailed information on the use of this command,' +
+       "type 'man vmadm'.");
+
+    process.exit(code);
+}
+
+function validFilterKey(key)
+{
+    if (LIST_FIELDS.hasOwnProperty(key)) {
+        return true;
+    }
+
+    // for complex fields we need a regex
+
+    if (key.match(/^disks\.[\*0-9]*\.(boot|image_name|image_size|image_uuid|size|media|model|zpool)$/)) {
+        return true;
+    }
+
+    if (key.match(/^nics\.[\*0-9]*\.(dhcp_server|gateway|interface|ip|mac|model|netmask|vlan_id)$/)) {
+        return true;
+    }
+
+    if (key.match(/^(tags|customer_metadata|internal_metadata)\..*/)) {
+        return true;
+    }
+
+    return false;
 }
 
 function getListProperties(field)
@@ -227,6 +284,7 @@ function addCommandOptions(command, opts, shorts)
     case 'get':
     case 'json':
     case 'sysrq':
+    case 'help':
         // these only take uuid or 'special' args like start order=cd
         break;
     case 'lookup':
@@ -492,6 +550,7 @@ function main(callback)
     var filename;
     var extra = {};
     var options = {};
+    var key;
     var knownOpts = {};
     var order;
     var parsed;
@@ -502,6 +561,8 @@ function main(callback)
 
     if (!command) {
         usage();
+    } else if (command == '-h' || command == '-?') {
+        usage(null, 0);
     } else if (COMMANDS.indexOf(command) === -1) {
         usage('Invalid command: "' + command + '".');
     }
@@ -612,12 +673,22 @@ function main(callback)
         uuid = getUUID(command, parsed);
         types = parseInfoArgs(parsed.argv.remain);
         return getInfo(uuid, types, callback);
+    case 'help':
+        usage(null, 0);
+        break;
     case 'lookup':
         extra = parseKeyEqualsValue(parsed.argv.remain);
         options = {"transform": addFakeFields};
         if (parsed.json) {
             options.full = true;
         }
+
+        for (key in extra) {
+            if (!validFilterKey(key)) {
+                return callback(new Error('Invalid lookup key: "' + key + '"'));
+            }
+        }
+
         return VM.lookup(extra, options, function (err, results) {
             var m;
             if (err) {
@@ -671,6 +742,13 @@ function main(callback)
             // allow -h to force header on or -H to force off.
             options.header = parsed.header;
         }
+
+        for (key in extra) {
+            if (!validFilterKey(key)) {
+                return callback(new Error('Invalid filter key: "' + key + '"'));
+            }
+        }
+
         return listVM(extra, order, sortby, options, callback);
     case 'halt':
         command = 'stop';

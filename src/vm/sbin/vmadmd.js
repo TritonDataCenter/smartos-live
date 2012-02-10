@@ -75,7 +75,7 @@ function spawnVNC(vmobj)
         zonepath = '/zones/' + vmobj.uuid;
     }
 
-    if (vmobj.state !== 'running' && vmobj.real_state !== 'running') {
+    if (vmobj.state !== 'running' && vmobj.zone_state !== 'running') {
         VM.log('DEBUG', 'skipping VNC setup for non-running VM ' + vmobj.uuid);
         return;
     }
@@ -754,7 +754,7 @@ function loadVM(vmobj, do_autoboot)
         VM.log('DEBUG', 'times: ' + Date.now() + ' ' + vmobj.transition_expire);
         if (Date.now() >= vmobj.transition_expire ||
             (vmobj.transition_to === 'stopped' &&
-            vmobj.real_state === 'installed')) {
+            vmobj.zone_state === 'installed')) {
 
             VM.log('INFO', 'killing VM with expired running stop: ' +
                 vmobj.uuid);

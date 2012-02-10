@@ -19,26 +19,123 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2011, 2012 Joyent, Inc.  All rights reserved.
+# Copyright 2012, Joyent, Inc.  All rights reserved.
 #
 
 unset LD_LIBRARY_PATH
 PATH=/usr/bin:/usr/sbin
 export PATH
 
+sum_proc()
+{
+	pmap -x $1 2>/dev/null | nawk '{
+		if ($1 == "Address") next
+		if ($1 == "total") next
+		if ($8 == "stack") {
+			stk_kb += $2
+			if ($3 != "-") stk_rss += $3
+			if ($4 != "-") stk_anon += $4
+			if ($5 != "-") stk_locked += $5
+		} else if ($8 == "heap") {
+			heap_kb += $2
+			if ($3 != "-") heap_rss += $3
+			if ($4 != "-") heap_anon += $4
+			if ($5 != "-") heap_locked += $5
+		} else if ($8 == "ism") {
+			shm_kb += $2
+			if ($3 != "-") shm_rss += $3
+			if ($4 != "-") shm_anon += $4
+			if ($5 != "-") shm_locked += $5
+		} else {
+			txt_kb += $2
+			if ($3 != "-") txt_rss += $3
+			if ($4 != "-") txt_anon += $4
+			if ($5 != "-") txt_locked += $5
+		}
+	}
+	END {
+		printf("stk %d %d %6d %d\n",
+		    stk_kb, stk_rss, stk_anon, stk_locked);
+		printf("heap %d %d %d %d\n",
+		    heap_kb, heap_rss, heap_anon, heap_locked);
+		printf("shm %d %d %d %d\n",
+		    shm_kb, shm_rss, shm_anon, shm_locked);
+		printf("txt %d %d %d %d\n",
+		    txt_kb, txt_rss, txt_anon, txt_locked);
+	}'
+}
+
+sum_zone()
+{
+	for p in `ls $2/root/proc`
+	do
+		sum_proc $p
+	done
+}
+
+do_proc()
+{
+	printf "    %8s %8s %8s %8s %8s %8s %8s %8s\n" \
+	    "txtrss" "stkrss" "stkanon" "heaprss" "heapanon" "heaplck" \
+	    "shmrss" "shmlck"
+	for z in `zoneadm list`
+	do
+		[ $z == "global" ] && continue
+		[[ "$ZONENAME" != "ALL" && "$ZONENAME" != "$z" ]] && continue
+		echo "$z"
+		zpath=`zonecfg -z $z info zonepath | cut -d' ' -f2`
+		sum_zone $z $zpath | nawk '{
+			if ($1 == "stk") {
+				stk_kb += $2
+				stk_rss += $3
+				stk_anon += $4
+				stk_locked += $5
+			} else if ($1 == "heap") {
+				heap_kb += $2
+				heap_rss += $3
+				heap_anon += $4
+				heap_locked += $5
+			} else if ($1 == "shm") {
+				shm_kb += $2
+				shm_rss += $3
+				shm_anon += $4
+				shm_locked += $5
+			} else {
+				txt_kb += $2
+				txt_rss += $3
+				txt_anon += $4
+				txt_locked += $5
+			}
+		}
+		END {
+			printf("    %8d %8d %8d %8d %8d %8d %8d %8d\n",
+			    txt_rss,
+			    stk_rss, stk_anon,
+			    heap_rss, heap_anon, heap_locked,
+			    shm_rss, shm_locked);
+		}'
+	done
+
+	exit 0;
+}
+
 OVER=0
+SUMMARY=0
 ZONENAME="ALL"
 
-while getopts "oz:" opt
+while getopts "opz:" opt
 do
 	case "$opt" in
+	p)	SUMMARY=1;;
 	o)	OVER=1;;
 	z)	ZONENAME=$OPTARG;;
-	*)	printf "zonememstat [-o] [-z zonename]\n"
+	*)	printf "zonememstat [-p | -o] [-z zonename]\n"
 		exit 1;;
 	esac
 done
 shift OPTIND-1
+
+[ $SUMMARY == 1 ] && do_proc
 
 kstat -c zone_memory_cap | nawk -v zname=$ZONENAME -v over=$OVER 'BEGIN {
 	printf("%36s %8s %8s %6s %8s\n", "ZONE", "RSS", "CAP", "NOVER", "POUT");

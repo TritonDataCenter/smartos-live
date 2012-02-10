@@ -16,6 +16,7 @@ var PAYLOADS = {
     "create": {
         "dataset_uuid": dataset_uuid,
         "alias": "autotest" + process.pid,
+        "do_not_inventory": true
     }, "add_net0": {
         "add_nics": [
             {

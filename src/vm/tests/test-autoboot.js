@@ -16,7 +16,8 @@ var dataset_uuid = '47e6af92-daf0-11e0-ac11-473ca1173ab0';
 
 test('check autoboot when autoboot=true', {'timeout': 240000}, function(t) {
     state = {'brand': 'joyent'};
-    vmtest.on_new_vm(t, dataset_uuid, {'autoboot': true}, state, [
+    vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true,
+        'autoboot': true}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 if (err) {
@@ -41,7 +42,8 @@ test('check autoboot when autoboot=true', {'timeout': 240000}, function(t) {
 
 test('check autoboot when autoboot="true"', {'timeout': 240000}, function(t) {
     state = {'brand': 'joyent'};
-    vmtest.on_new_vm(t, dataset_uuid, {'autoboot': 'true'}, state, [
+    vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true,
+        'autoboot': 'true'}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 if (err) {
@@ -66,7 +68,8 @@ test('check autoboot when autoboot="true"', {'timeout': 240000}, function(t) {
 
 test('check autoboot when autoboot=false', {'timeout': 240000}, function(t) {
     state = {'brand': 'joyent'};
-    vmtest.on_new_vm(t, dataset_uuid, {'autoboot': false}, state, [
+    vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true,
+        'autoboot': false}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 if (err) {
@@ -91,7 +94,8 @@ test('check autoboot when autoboot=false', {'timeout': 240000}, function(t) {
 
 test('check autoboot when autoboot="false"', {'timeout': 240000}, function(t) {
     state = {'brand': 'joyent'};
-    vmtest.on_new_vm(t, dataset_uuid, {'autoboot': 'false'}, state, [
+    vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true,
+        'autoboot': 'false'}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 if (err) {
@@ -116,7 +120,8 @@ test('check autoboot when autoboot="false"', {'timeout': 240000}, function(t) {
 
 test('check kvm autoboot when autoboot=true', {'timeout': 240000}, function(t) {
     state = {'brand': 'kvm'};
-    vmtest.on_new_vm(t, null, {'brand': 'kvm', 'autoboot': true}, state, [
+    vmtest.on_new_vm(t, null, {'brand': 'kvm', 'do_not_inventory': true,
+        'autoboot': true}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 if (err) {
@@ -141,7 +146,8 @@ test('check kvm autoboot when autoboot=true', {'timeout': 240000}, function(t) {
 
 test('check kvm autoboot when autoboot="true"', {'timeout': 240000}, function(t) {
     state = {'brand': 'kvm'};
-    vmtest.on_new_vm(t, null, {'brand': 'kvm', 'autoboot': 'true'}, state, [
+    vmtest.on_new_vm(t, null, {'brand': 'kvm', 'do_not_inventory': true,
+        'autoboot': 'true'}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 if (err) {
@@ -166,7 +172,8 @@ test('check kvm autoboot when autoboot="true"', {'timeout': 240000}, function(t)
 
 test('check kvm autoboot when autoboot=false', {'timeout': 240000}, function(t) {
     state = {'brand': 'kvm'};
-    vmtest.on_new_vm(t, null, {'brand': 'kvm', 'autoboot': false}, state, [
+    vmtest.on_new_vm(t, null, {'brand': 'kvm', 'do_not_inventory': true,
+        'autoboot': false}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 if (err) {
@@ -191,7 +198,8 @@ test('check kvm autoboot when autoboot=false', {'timeout': 240000}, function(t) 
 
 test('check kvm autoboot when autoboot="false"', {'timeout': 240000}, function(t) {
     state = {'brand': 'kvm'};
-    vmtest.on_new_vm(t, null, {'brand': 'kvm', 'autoboot': 'false'}, state, [
+    vmtest.on_new_vm(t, null, {'brand': 'kvm', 'do_not_inventory': true,
+        'autoboot': 'false'}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 if (err) {

@@ -19,6 +19,7 @@ f etc/motd 0644 root sys
 d etc/notices 0755 root sys
 f etc/notices/COPYRIGHT 0444 root sys
 f etc/name_to_major 0644 root sys
+f etc/nsswitch.conf 0644 root sys
 f etc/passwd 0644 root sys
 f etc/nodename 0644 root root
 d etc/svc 0755 root sys
@@ -78,7 +79,6 @@ d lib/svc 0755 root bin
 f lib/svc/method/ipfilter 0555 root sys
 f lib/svc/method/sshd 0555 root bin
 f lib/svc/method/fs-usr 0555 root bin
-f lib/svc/method/smartdc-config 0555 root bin
 f lib/svc/method/identity-node 0555 root bin
 f lib/svc/method/manifest-import 0555 root bin
 f lib/svc/method/console-login 0555 root bin

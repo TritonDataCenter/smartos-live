@@ -22,6 +22,7 @@ bi_platform_name=
 bi_platform=
 bi_grub_optstr=
 bi_dont_clean=0
+no_smartos=0
 
 function usage
 {
@@ -34,6 +35,7 @@ Generate a bootable iso from the proto area and newest platform directory.
 
 	-o options	Append all the options to every GRUB menu.lst entry
 	-k		Don't delete temporary files
+	-n		Don't build for SmartOS
 	-h		Display this message
 
 USAGE
@@ -129,30 +131,30 @@ function bi_copy_contents
 
 function bi_generate_grub_conf
 {
+	if [[ $no_smartos != 1 ]]; then
+		bi_grub_optstr="${bi_grub_optstr},smartos=true"
+	fi
 	local shadow='$5$2HOHRnK3$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA'
 	echo "Generating grub menu.lst... \c "
 	cat > $bi_output_grub_dir/menu.lst <<EOF
 default=0
 timeout=10
 min_mem64 1024
-color light-gray/black black/light-gray
-serial --unit=0 --speed=115200 --word=8 --parity=no --stop=1
-terminal --timeout=3 serial console
 
 title Live 64-bit (text)
-   kernel /platform/i86pc/kernel/amd64/unix -B console=text,standalone=true,noimport=true,root_shadow='$shadow'$bi_grub_optstr
+   kernel /platform/i86pc/kernel/amd64/unix -B console=text,root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive
 
 title Live 64-bit (text) +kmdb
-   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=text,standalone=true,noimport=true,root_shadow='$shadow'$bi_grub_optstr
+   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=text,root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive
 
 title Live 64-bit (ttya) +kmdb
-   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=ttya,ttya-mode="115200,8,n,1,-",standalone=true,noimport=true,root_shadow='$shadow'$bi_grub_optstr
+   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=ttya,ttya-mode="115200,8,n,1,-",root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive
 
 title Live 64-bit (ttya)
-   kernel /platform/i86pc/kernel/amd64/unix -B console=ttya,ttya-mode="115200,8,n,1,-",standalone=true,noimport=true,root_shadow='$shadow'$bi_grub_optstr
+   kernel /platform/i86pc/kernel/amd64/unix -B console=ttya,ttya-mode="115200,8,n,1,-",root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive
 EOF
 	[[ $? -eq 0 ]] || fail "failed to create menu.lst"
@@ -182,7 +184,7 @@ function bi_generate_iso
 	echo "iso is available at $(pwd)/$isopath"
 }
 
-while getopts "ko:h" c $@; do
+while getopts "ko:nh" c $@; do
 	case "$c" in
 	o)
 		echo "Building iso with additional options: $OPTARG"
@@ -190,6 +192,9 @@ while getopts "ko:h" c $@; do
 		;;
 	k)
 		bi_dont_clean=1
+		;;
+	n)
+		no_smartos=1
 		;;
 	h)
 		usage

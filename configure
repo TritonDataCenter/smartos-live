@@ -273,6 +273,10 @@ CW_NO_SHADOW="1"; export CW_NO_SHADOW
 BUILD_TOOLS="\${CODEMGR_WS}/usr/src/tools/proto/root_\${MACH}-nd/opt"; export BUILD_TOOLS
 SPRO_ROOT=/opt/SUNWspro;                        export SPRO_ROOT
 SPRO_VROOT=\$SPRO_ROOT;                          export SPRO_VROOT
+export GCC_ROOT=/opt/gcc/4.4.4;     # Where to find GCC4.x
+export CW_GCC_DIR=\${GCC_ROOT}/bin;  # A temporary hack to allow bootstrap of cw(1)
+export __GNUC="";           # Use GCC as the primary compiler
+export __GNUC4="";          # Use GCC4 specific flags
 
 EOF
 
@@ -303,8 +307,6 @@ if [[ -f ${ROOT}/configure-branches ]]; then
     [[ -z ${branch} ]] && update_branch "${ROOT}/projects/illumos-extra" ${branch}
     branch=$(grep "^illumos-joyent: " ${ROOT}/configure-branches | cut -d' ' -f2)
     [[ -z ${branch} ]] && update_branch "${ROOT}/projects/illumos" ${branch}
-    branch=$(grep "^ur-agent: " ${ROOT}/configure-branches | cut -d' ' -f2)
-    [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/ur-agent" ${branch}
     branch=$(grep "^kvm: " ${ROOT}/configure-branches | cut -d' ' -f2)
     [[ -z ${branch} ]] && update_branch "${ROOT}/projects/local/kvm" ${branch}
     branch=$(grep "^kvm-cmd: " ${ROOT}/configure-branches | cut -d' ' -f2)

@@ -6,11 +6,6 @@
     <create_default_instance enabled="true"/>
     <single_instance/>
 
-    <!-- smartdc-init also depends on zones, so we can be sure zones is ready too -->
-    <dependency name="smartdc-init" grouping="require_all" restart_on="error" type="service">
-      <service_fmri value="svc:/system/smartdc/init"/>
-    </dependency>
-
     <exec_method
       type="method"
       name="start"

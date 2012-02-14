@@ -31,13 +31,6 @@ PATH=/usr/sbin:/usr/bin; export PATH
 
 case "$1" in
 'start')
-
-    if [[ $(zpool list -H | wc -l | tr -d '[:space:]') == "0" ]]; then
-        # no zpool yet, can't manage vms on an unsetup compute node.
-        /usr/sbin/svcadm disable $SMF_FMRI
-        exit $SMF_EXIT_OK
-    fi
-
     /usr/bin/ctrun -l child -o noorphan /usr/vm/sbin/metadata 2>&1 &
     ;;
 

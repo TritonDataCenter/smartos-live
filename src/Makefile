@@ -3,7 +3,10 @@ CFLAGS=-Wall
 TARGETS=bootparams diskinfo disklist removable_disk disk_size \
     node-kstat/build/Release/kstat.node zoneevent \
     node-expat/build/Release/node-expat.node \
-    node-syslog/build/Release/syslog.node
+    node-syslog/build/Release/syslog.node \
+    node-zsock/build/Release/zsock_bindings.node \
+    node-zutil/build/Release/zutil_bindings.node \
+
 SMARTDC_TARGETS=has_hvx
 DESTDIR=../proto
 NODE_WAF=$(PWD)/../proto/usr/bin/node-waf
@@ -16,12 +19,19 @@ install: $(TARGETS) sysinfo
 	mkdir -p $(DESTDIR)/smartdc/bin
 	cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin
 	mkdir -m 0755 -p $(DESTDIR)/usr/node_modules
-	find node_modules -type f -exec cp {} $(DESTDIR)/usr/node_modules/ \;
+	cp -Pr node_modules/* $(DESTDIR)/usr/node_modules
 	cp node-kstat/build/Release/kstat.node $(DESTDIR)/usr/node_modules/
 	cp node-syslog/build/Release/syslog.node $(DESTDIR)/usr/node_modules/syslog.node
 	rm -rf $(DESTDIR)/usr/vm
 	cp -PR vm $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/usr/vm/node_modules
+	mkdir -p $(DESTDIR)/usr/vm/node_modules/{zsock,zutil}/build/Release
+	cp -Pr node-zsock/{package.json,lib} $(DESTDIR)/usr/vm/node_modules/zsock
+	cp -Pr node-zutil/{package.json,lib} $(DESTDIR)/usr/vm/node_modules/zutil
+	cp node-zsock/build/Release/zsock_bindings.node \
+        $(DESTDIR)/usr/vm/node_modules/zsock/build/Release
+	cp node-zutil/build/Release/zutil_bindings.node \
+        $(DESTDIR)/usr/vm/node_modules/zutil/build/Release
 	cp node-expat/build/Release/node-expat.node \
         $(DESTDIR)/usr/vm/node_modules/expat_binding.node
 	cat node-expat/lib/node-expat.js | \
@@ -30,8 +40,10 @@ install: $(TARGETS) sysinfo
 	cp zoneevent $(DESTDIR)/usr/vm/sbin/zoneevent
 	mkdir -p $(DESTDIR)/lib/svc/manifest/system
 	cp vm/smf/system-vmadmd.xml $(DESTDIR)/lib/svc/manifest/system/system-vmadmd.xml
+	cp vm/smf/system-metadata.xml $(DESTDIR)/lib/svc/manifest/system/system-metadata.xml
 	mv $(DESTDIR)/usr/vm/sbin/vmadmd.js $(DESTDIR)/usr/vm/sbin/vmadmd
 	mv $(DESTDIR)/usr/vm/sbin/vmadm.js $(DESTDIR)/usr/vm/sbin/vmadm
+	mv $(DESTDIR)/usr/vm/sbin/metadata.js $(DESTDIR)/usr/vm/sbin/metadata
 	mkdir -m 0755 -p $(DESTDIR)/var/db/dsadm
 	cp -PR ds $(DESTDIR)/usr/
 
@@ -62,6 +74,12 @@ node-expat/build/Release/node-expat.node: node-expat/node-expat.cc $(NODE_WAF)
 
 node-syslog/build/Release/syslog.node: node-syslog/syslog.cc $(NODE_WAF)
 	(cd node-syslog && $(NODE_WAF) configure && $(NODE_WAF) build)
+
+node-zutil/build/Release/zutil_bindings.node: $(NODE_WAF)
+	(cd node-zutil && $(NODE_WAF) configure && $(NODE_WAF) build)
+
+node-zsock/build/Release/zsock_bindings.node: $(NODE_WAF)
+	(cd node-zutil && $(NODE_WAF) configure && $(NODE_WAF) build)
 
 disklist:
 	cp disklist.sh disklist

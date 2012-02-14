@@ -79,7 +79,7 @@ node-zutil/build/Release/zutil_bindings.node: $(NODE_WAF)
 	(cd node-zutil && $(NODE_WAF) configure && $(NODE_WAF) build)
 
 node-zsock/build/Release/zsock_bindings.node: $(NODE_WAF)
-	(cd node-zutil && $(NODE_WAF) configure && $(NODE_WAF) build)
+	(cd node-zsock && $(NODE_WAF) configure && $(NODE_WAF) build)
 
 disklist:
 	cp disklist.sh disklist

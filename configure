@@ -83,24 +83,11 @@ if [ "${HAVE_PKG}" == "true" ]; then
 fi
 
 echo "==> Checking for /opt/SUNWspro/bin/cc..."
-echo " +--> Ensuring SUNWspro (12.1-patched) installed in /opt/SUNWspro/sunstudio12.1..."
-if [ ! -f "/opt/SUNWspro/sunstudio12.1/prod/bin/cc" ]; then
-  if [ ! -z "${SUNW_SPRO12u1_URL}" ]; then
-    (${ROOTCMD} mkdir -p /opt/SUNWspro \
-      && cd /opt/SUNWspro \
-      && curl -k ${SUNW_SPRO12u1_URL} \
-      | ${ROOTCMD} gtar -zxf -)
-  else
-    echo "FATAL: unable to download sunstudio12u1, no URL is set.  Please set SUNW_SPRO12u1_URL in configure.*"
-    exit 1
- fi
-fi
 
-echo " +--> Ensuring SUNWspro (12-patched) installed in /opt/SUNWspro..."
+echo " +--> Ensuring SUNWspro installed in /opt/SUNWspro..."
 if [ ! -f "/opt/SUNWspro/prod/bin/cc" ]; then
   if [ ! -z "${SUNW_SPRO12_URL}" ]; then
-    (${ROOTCMD} mkdir -p /opt/SUNWspro \
-      && cd /opt/SUNWspro \
+    (cd /opt/ \
       && curl -k "${SUNW_SPRO12_URL}" \
       | ${ROOTCMD} gtar -jxf -)
   else

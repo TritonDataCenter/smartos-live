@@ -164,6 +164,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         See the PROPERTIES section below for the list of keys allowed. All those
         listed there as 'listable' can be used as keys for filtering.
 
+      media <uuid> eject <device> [force]
+      media <uuid> change <device> <target>
+
+        Control changeable media within a KVM VM. The first case will eject
+        a device (floppy or cdrom) with the option to force the eject even if
+        the device is in use.
+
+        The second form (change) sets the path to the media image, generally
+        and iso or floppy image. This path is relative to the zone root.
+
+        The device names can be found by querying the "block" info. Commonly
+        used devices are "ide1-cd0" and "floppy0".
+
       reboot <uuid> [-F]
 
         Reboot a VM. The default reboot will attempt a graceful stop of the VM
@@ -1075,6 +1088,52 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: KVM VMs only
         update: KVM VMs only, for OS VMs update max_physical_memory instead.
         default: 256
+
+    vga:
+
+        This parameter allows one to specify the VGA emulation to be used by
+        KVM VMs. The default is 'cirrus'.
+
+        type: string (one of ['cirrus','std','vmare','qxl','xenfb' or 'none'])
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: 'cirrus'
+
+    vnc:
+
+        This parameter controls the VNC capability for KVM VM's. By default
+        the VNC server runs in an open mode with no password protection. This
+        allows you to either turn it off, or specify that passwords are required.
+
+        type: string (one of ['off','on' or 'secure'])
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: 'on'
+
+    vnc_password:
+
+        The VNC password to use when VNC is in secure mode.
+
+        type: string (8 chars max)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+
+    vnc_port:
+
+        The port to listen on for the VNC server, the default is zero which
+        means a port will be chosen at random.
+
+        type: integer
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
 
     zone_state:
 

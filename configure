@@ -82,6 +82,19 @@ if [ "${HAVE_PKG}" == "true" ]; then
   fi
 fi
 
+echo "==> Checking for /opt/gcc/4.4.4/bin/gcc"
+if [ ! -f "/opt/gcc/4.4.4/bin/gcc" ]; then
+  if [ ! -z "${GCC44_URL}" ]; then
+    cd /opt
+    curl -k https://download.joyent.com/pub/build/gcc-4.tar.bz2 | bzcat \
+      | ${ROOTCMD} tar -xf -
+    cd - >/dev/null
+  else
+    echo "FATAL: unable to download gcc 4.4.4, no URL is set. Please set GCC44_URL in configure."
+    exit 1
+  fi
+fi
+
 echo "==> Checking for /opt/SUNWspro/bin/cc..."
 echo " +--> Ensuring SUNWspro (12.1-patched) installed in /opt/SUNWspro/sunstudio12.1..."
 if [ ! -f "/opt/SUNWspro/sunstudio12.1/prod/bin/cc" ]; then

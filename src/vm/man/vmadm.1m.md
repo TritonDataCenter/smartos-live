@@ -942,6 +942,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    nics.*.nic_tag
+
+        This option for a NIC determines which host NIC the VMs nic will be
+        attached to. The value can be either a nic tag as listed in the 'NIC
+        Names' field in `sysinfo`, or an etherstub or device name.
+
+        type: string (device name or nic tag name)
+        vmtype: OS,KVM
+        listable: yes
+        create: yes
+        update yes (requires zone stop/boot)
+
     nics.*.vlan_id:
 
         The vlan with which to tag this NIC's traffic (0 = none).
@@ -1053,8 +1065,8 @@ tab-complete UUIDs rather than having to type them out for every command.
     quota:
 
         This sets a quota on the zone filesystem. For OS VMs, this value is the
-        space actually usable by the users of the guest. For KVM VMs, this value
-        is the quota for the Zone containing the VM, which is not directly
+        space actually visible/usable in the guest. For KVM VMs, this value is
+        the quota for the Zone containing the VM, which is not directly
         available to users.
 
         type: integer (number of GiB)

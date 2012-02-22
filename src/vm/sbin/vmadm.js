@@ -347,7 +347,7 @@ function getInfo(uuid, types, callback)
         if (err) {
             // Our error message here gets shown to the user.
             callback(new Error('Unable to get VM info for ' + uuid
-                + ':', err.message));
+                + ': ' + err.message));
         } else {
             console.log(JSON.stringify(data, null, 2));
             callback();

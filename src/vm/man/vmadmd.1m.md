@@ -143,6 +143,13 @@ vmadmd(1m) -- virtual machine management daemon
         completed within the timeout number of seconds, the VM is forcibly shut
         down.
 
+    reload_vnc (POST /vm/:id?action=reload_vnc)
+
+        This recreates the VNC listener for the VM after loading the new
+        parameters. If the vnc_password and vnc_port are unchanged, this is
+        a NO-OP. The intention is that this be used after modifying a VM's
+        VNC settings.
+
     reset (POST /vm/:id?action=reset)
 
         This is the action used by 'vmadm reboot <uuid> -F' command. It acts

@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2011 Joyent Inc., All rights reserved.
+ * Copyright (c) 2012, Joyent, Inc. All rights reserved.
  *
  */
 

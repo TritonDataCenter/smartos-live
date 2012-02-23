@@ -8,6 +8,7 @@
 /src/disk_size
 /src/removable_disk
 /src/disklist
+/src/qemu-exec
 /src/zoneevent
 /src/vm/tests.tar.gz
 /src/node-kstat/.lock-wscript

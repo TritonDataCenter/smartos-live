@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall
+CFLAGS=-Wall -Wextra
 TARGETS=bootparams diskinfo disklist removable_disk disk_size \
     node-kstat/build/Release/kstat.node zoneevent \
     node-expat/build/Release/node-expat.node \
@@ -7,7 +7,7 @@ TARGETS=bootparams diskinfo disklist removable_disk disk_size \
     node-zsock/build/Release/zsock_bindings.node \
     node-zutil/build/Release/zutil_bindings.node \
 
-SMARTDC_TARGETS=has_hvx
+SMARTDC_TARGETS=has_hvx qemu-exec
 DESTDIR=../proto
 NODE_WAF=$(PWD)/../proto/usr/bin/node-waf
 
@@ -66,6 +66,9 @@ disk_size: disk_size.c
 has_hvx: has_hvx.c
 	$(CC) $(CFLAGS) -o $@ $^
 
+qemu-exec: qemu-exec.c
+	$(CC) $(CFLAGS) -o $@ $^
+
 node-kstat/build/Release/kstat.node: node-kstat/kstat.cc $(NODE_WAF)
 	(cd node-kstat && $(NODE_WAF) configure && $(NODE_WAF) build)
 
@@ -92,7 +95,7 @@ zoneevent: zoneevent.c
 	gcc -Wall -W -o zoneevent zoneevent.c -lnvpair -lsysevent
 
 clean:
-	@rm -f $(TARGETS)
+	@rm -f $(TARGETS) $(SMARTDC_TARGETS)
 	(cd node-kstat && $(NODE_WAF) clean)
 	(cd node-expat && $(NODE_WAF) clean)
 	(cd node-syslog && $(NODE_WAF) clean)

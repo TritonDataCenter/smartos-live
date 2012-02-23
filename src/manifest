@@ -25,6 +25,7 @@ d usr/vm/man 0555 root bin
 d usr/vm/node_modules 0555 root bin
 d usr/vm/sbin 0555 root bin
 d usr/vm/smf 0555 root bin
+d usr/vm/test 0555 root bin
 f usr/vm/sbin/vmadm 0555 root bin
 f usr/vm/sbin/vmadmd 0555 root bin
 f usr/vm/sbin/zoneevent 0555 root bin
@@ -36,6 +37,30 @@ f usr/vm/node_modules/qmp.js 0444 root bin
 f usr/vm/node_modules/VM.js 0444 root bin
 f usr/vm/smf/system-vmadmd 0555 root bin
 f usr/vm/smf/system-vmadmd.xml 0444 root bin
+# metadata daemon
+d usr/vm/lib 0555 root bin
+d usr/vm/lib/metadata 0555 root bin
+f usr/vm/lib/metadata/common.js 0444 root bin
+f usr/vm/lib/metadata/zwatch.js 0444 root bin
+f usr/vm/lib/metadata/agent.js 0444 root bin
+f usr/vm/lib/metadata/zone_booted_watcher.js 0444 root bin
+f usr/vm/sbin/metadata 0555 root bin
+f usr/vm/smf/system-metadata 0555 root bin
+f lib/svc/manifest/system/system-metadata.xml 0444 root bin
+d usr/vm/node_modules/zsock 0555 root bin
+f usr/vm/node_modules/zsock/package.json 0444 root bin
+d usr/vm/node_modules/zsock/lib 0555 root bin
+f usr/vm/node_modules/zsock/lib/zsock.js 0444 root bin
+d usr/vm/node_modules/zsock/build 0555 root bin
+d usr/vm/node_modules/zsock/build/Release 0555 root bin
+f usr/vm/node_modules/zsock/build/Release/zsock_bindings.node 0444 root bin
+d usr/vm/node_modules/zutil 0555 root bin
+f usr/vm/node_modules/zutil/package.json 0444 root bin
+d usr/vm/node_modules/zutil/build 0555 root bin
+d usr/vm/node_modules/zutil/build/Release 0555 root bin
+f usr/vm/node_modules/zutil/build/Release/zutil_bindings.node 0444 root bin
+d usr/vm/node_modules/zutil/lib 0555 root bin
+f usr/vm/node_modules/zutil/lib/zutil.js 0444 root bin
 # 0-devpro-stamp
 f usr/include/demangle.h 0644 root bin
 f usr/lib/libC.so.5 0755 root bin
@@ -51,8 +76,10 @@ f usr/lib/amd64/libiostream.so.1 0755 root bin
 d smartdc 0555 root bin
 d smartdc/bin 0555 root bin
 f smartdc/bin/has_hvx 0555 root bin
+f smartdc/bin/qemu-exec 0555 root bin
 f usr/bin/sysinfo 0555 root bin
 f usr/bin/bootparams 0555 root bin
+f usr/bin/diskinfo 0555 root bin
 f usr/bin/disklist 0555 root bin
 f usr/bin/removable_disk 0555 root bin
 f usr/bin/disk_size 0555 root bin
@@ -64,6 +91,22 @@ f usr/node_modules/onlyif.js 0444 root bin
 f usr/node_modules/sprintf.js 0444 root bin
 f usr/node_modules/syslog.node 0444 root bin
 f usr/node_modules/system.js 0444 root bin
+d usr/node_modules/log4js 0555 root bin
+f usr/node_modules/log4js/package.json 0444 root bin
+d usr/node_modules/log4js/lib 0555 root bin
+f usr/node_modules/log4js/lib/date_format.js 0444 root bin
+f usr/node_modules/log4js/lib/log4js.json 0444 root bin
+f usr/node_modules/log4js/lib/log4js.js 0444 root bin
+d usr/node_modules/log4js/lib/appenders 0555 root bin
+f usr/node_modules/log4js/lib/appenders/multiprocess.js 0444 root bin
+f usr/node_modules/log4js/lib/appenders/console.js 0444 root bin
+f usr/node_modules/log4js/lib/appenders/file.js 0444 root bin
+f usr/node_modules/log4js/lib/appenders/smtp.js 0444 root bin
+f usr/node_modules/log4js/lib/appenders/logLevelFilter.js 0444 root bin
+f usr/node_modules/log4js/lib/appenders/hookio.js 0444 root bin
+f usr/node_modules/log4js/lib/connect-logger.js 0444 root bin
+f usr/node_modules/log4js/lib/layouts.js 0444 root bin
+f usr/node_modules/log4js/lib/levels.js 0444 root bin
 # 0-man-stamp
 d usr/share/man/man3m 0755 root bin
 f usr/share/man/man3m/acos.3m 0444 root bin

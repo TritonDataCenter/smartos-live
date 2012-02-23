@@ -8,6 +8,7 @@
 /src/disk_size
 /src/removable_disk
 /src/disklist
+/src/qemu-exec
 /src/zoneevent
 /src/vm/tests.tar.gz
 /src/node-kstat/.lock-wscript
@@ -21,8 +22,11 @@
 /tools/cryptpass
 /tools/pwgen
 /tools/pwgen-2.06/configure
+/tools/javascriptlint/build
+/tools/javascriptlint/spidermonkey/src/build
 /0-*-stamp
 /manifest.new
+/illumos-extra-*.tgz
 zonestat.1
 zonestatd.1m
 ronn-format.7
@@ -33,6 +37,11 @@ man/man/man1m/vmadmd.1m
 src/has_hvx
 src/marco
 src/polo
+src/diskinfo
+src/node-zsock/.lock-wscript
+src/node-zsock/build/
+src/node-zutil/.lock-wscript
+src/node-zutil/build/
 src_addon/bind/bind-9.8.0/
 src_addon/ipmi/ipmitool-1.8.11/
 src_addon/libreadline/config.log

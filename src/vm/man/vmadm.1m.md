@@ -942,6 +942,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    nics.*.nic_tag
+
+        This option for a NIC determines which host NIC the VMs nic will be
+        attached to. The value can be either a nic tag as listed in the 'NIC
+        Names' field in `sysinfo`, or an etherstub or device name.
+
+        type: string (device name or nic tag name)
+        vmtype: OS,KVM
+        listable: yes
+        create: yes
+        update yes (requires zone stop/boot)
+
     nics.*.vlan_id:
 
         The vlan with which to tag this NIC's traffic (0 = none).
@@ -1053,8 +1065,8 @@ tab-complete UUIDs rather than having to type them out for every command.
     quota:
 
         This sets a quota on the zone filesystem. For OS VMs, this value is the
-        space actually usable by the users of the guest. For KVM VMs, this value
-        is the quota for the Zone containing the VM, which is not directly
+        space actually visible/usable in the guest. For KVM VMs, this value is
+        the quota for the Zone containing the VM, which is not directly
         available to users.
 
         type: integer (number of GiB)
@@ -1075,6 +1087,47 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: KVM VMs only
         update: KVM VMs only, for OS VMs update max_physical_memory instead.
         default: 256
+
+    vga:
+
+        This property allows one to specify the VGA emulation to be used by
+        KVM VMs. The default is 'cirrus'. NOTE: with the Qemu bundled in SmartOS
+        qxl and xenfb do not work.
+
+        type: string (one of: 'cirrus','std','vmware','qxl','xenfb')
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: 'cirrus'
+
+    vnc_password:
+
+        This property allows you to set a password which will be required when
+        connecting to the VNC port. IMPORTANT: this password will be visible
+        from the GZ of the CN and anyone with access to the serial port in the
+        guest. Set to an empty string (default) to not require a password at
+        this level.
+
+        type: string (8 chars max)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: <unset>
+
+    vnc_port:
+
+        This specifies the TCP port to listen on for the VNC server, the default
+        is zero which means a port will be chosen at random. Set to -1 to
+        disable TCP listening.
+
+        type: integer (0 for random, -1 for disabled)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: 0
 
     zone_state:
 

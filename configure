@@ -101,7 +101,7 @@ echo " +--> Ensuring SUNWspro installed in /opt/SUNWspro..."
 if [ ! -f "/opt/SUNWspro/prod/bin/cc" ]; then
   if [ ! -z "${SUNW_SPRO12_URL}" ]; then
     (cd /opt/ \
-      && curl -k "${SUNW_SPRO12_URL}" \
+      && curl -k "${SUNW_SPRO12_URL}" | bzcat \
       | ${ROOTCMD} gtar -jxf -)
   else
     echo "FATAL: unable to download sunstudio12, no URL is set.  Please set SUNW_SPRO12_URL in configure.*"

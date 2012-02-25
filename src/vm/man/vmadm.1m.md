@@ -1048,7 +1048,11 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: no
         create: yes
         update: yes
-        default: '-vnc unix:/tmp/vm.vnc -parallel none -usb -usbdevice tablet -k en-us -vga cirrus'
+        default:
+            if vnc_password.length != 0:
+                '-vnc unix:/tmp/vm.vnc,password -parallel none -usb -usbdevice tablet -k en-us'
+            else
+                '-vnc unix:/tmp/vm.vnc -parallel none -usb -usbdevice tablet -k en-us'
 
     qemu_extra_opts:
 

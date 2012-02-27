@@ -42,9 +42,6 @@ var qs = require('querystring');
 var url = require('url');
 var util = require('util');
 
-VM.loglevel = 'DEBUG';
-VM.syslog_action = 'vmadmd';
-
 var VMADMD_SOCK = '/tmp/vmadmd.http';
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
 
@@ -941,6 +938,7 @@ function main()
 }
 
 onlyif.rootInSmartosGlobal(function (err) {
+    VM.resetLog('vmadmd');
     if (err) {
         VM.log('ERROR', 'Fatal: cannot run because: ' + err);
         process.exit(1);

@@ -797,7 +797,7 @@ tab-complete UUIDs rather than having to type them out for every command.
     max_locked_memory:
 
         The total amount of physical memory in the host than can be locked for
-        this VM.
+        this VM. This value cannot be higher than max_physical_memory.
 
         type: integer (number of MiB)
         vmtype: OS,KVM
@@ -821,6 +821,8 @@ tab-complete UUIDs rather than having to type them out for every command.
     max_physical_memory:
 
         The maximum amount of memory on the host that the VM is allowed to use.
+        For KVM VMs, this value cannot be lower than 'ram' and should be
+        ram + 1024.
 
         type: integer (number of MiB)
         vmtype: OS,KVM
@@ -831,7 +833,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     max_swap:
 
-        The maximum amount of virtual memory the VM is allowed to use.
+        The maximum amount of virtual memory the VM is allowed to use.  This
+        cannot be lower than max_physical_memory.
 
         type: integer (number of MiB)
         vmtype: OS,KVM

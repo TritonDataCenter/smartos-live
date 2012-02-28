@@ -58,6 +58,12 @@ var PAYLOADS = {
             "01:02:03:04:05:06",
             "02:03:04:05:06:07"
         ]
+    }, "add_nic_with_just_mac": {
+        "add_nics": [
+            {
+                "mac": "01:02:03:04:05:06"
+            }
+        ]
     }
 };
 
@@ -194,6 +200,32 @@ test('remove net0 and net1', function(t) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 0 nics');
                 } else {
                     t.ok(true, 'Successfully removed net0 and net1 from VM');
+                }
+                t.end();
+            });
+        }
+    });
+});
+
+test('add NIC with just MAC', function(t) {
+    VM.update(vm_uuid, PAYLOADS.add_nic_with_just_mac, function(err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                var nic;
+                var prop;
+
+                t.ok(!err, 'failed reloading VM');
+                if (err) {
+                    return;
+                }
+                t.ok(obj.nics.length === 1, 'VM has ' + obj.nics.length + ' nics, expected: 1');
+                nic = obj.nics[0];
+                for (prop in nic) {
+                    t.ok((['interface', 'mac'].indexOf(prop) !== -1), 'prop is expected: ' + prop);
+                    t.ok(nic[prop] !== 'undefined', 'prop ' + prop + ' is not undefined');
                 }
                 t.end();
             });

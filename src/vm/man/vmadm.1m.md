@@ -957,6 +957,20 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update yes (requires zone stop/boot)
 
+    nics.*.primary
+
+        This option selects which NIC's default gateway and nameserver values
+        will be used for this VM. If a VM has any nics, there must always be
+        exactly one primary.  Setting a new primary will unset the old. Trying
+        to set two nics to primary is an error.
+
+        type: boolean (only true is valid)
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes (setting primary=true on one NIC removes the flag from the
+            current primary, and sets on the new)
+
     nics.*.vlan_id:
 
         The vlan with which to tag this NIC's traffic (0 = none).
@@ -1335,7 +1349,7 @@ tab-complete UUIDs rather than having to type them out for every command.
               "ip": "10.2.121.70",
               "netmask": "255.255.0.0",
               "gateway": "10.2.121.1",
-              "primary": 1
+              "primary": true
             }
           ]
         }
@@ -1364,7 +1378,7 @@ tab-complete UUIDs rather than having to type them out for every command.
               "ip": "10.88.88.51",
               "netmask": "255.255.255.0",
               "gateway": "10.88.88.2",
-              "primary": 1
+              "primary": true
             }
           ]
         }

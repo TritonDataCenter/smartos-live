@@ -22,7 +22,7 @@
 #
 
 all: cpp.o y.tab.o
-	cc -o cpp cpp.o y.tab.o
+	$(CC) -o cpp cpp.o y.tab.o
 
 install: all
 	/usr/sbin/install -m 0755 -f $(DESTDIR)/usr/lib cpp

@@ -75,7 +75,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
-#include <varargs.h>
+#include <stdarg.h>
 
 #include "cpp.h"
 
@@ -1107,7 +1107,7 @@ pperror(char *fmt, ...)
 {
 	va_list	args;
 
-	va_start(args);
+	va_start(args, fmt);
 	verror(fmt, args);
 	va_end(args);
 
@@ -1120,7 +1120,7 @@ yyerror(char *fmt, ...)
 {
 	va_list	args;
 
-	va_start(args);
+	va_start(args, fmt);
 	verror(fmt, args);
 	va_end(args);
 }
@@ -1133,7 +1133,7 @@ ppwarn(char *fmt, ...)
 	int fail = exfail;
 	exfail = -1;
 
-	va_start(args);
+	va_start(args, fmt);
 	verror(fmt, args);
 	va_end(args);
 

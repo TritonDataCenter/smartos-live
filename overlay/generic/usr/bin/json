@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/node
 //
 // json -- pipe in your JSON for nicer output and for extracting data bits
 //

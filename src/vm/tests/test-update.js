@@ -462,7 +462,47 @@ test('update max_swap', function(t) {
     });
 });
 
-// now try *just* updating max_physical_memory
+// now try *just* updating max_physical_memory (up)
+test('update max_physical_memory', function(t) {
+    var test_value = 2048;
+
+    VM.load(vm_uuid, function (err, before_obj) {
+        if (err) {
+            t.ok(false, 'error loading existing VM: ' + err.message);
+            t.end();
+            return;
+        }
+        VM.update(vm_uuid, {'max_physical_memory': test_value}, function(err) {
+            if (err) {
+                t.ok(false, 'error updating VM: ' + err.message);
+                t.end();
+            } else {
+                VM.load(vm_uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'failed reloading VM');
+                        t.end();
+                        return;
+                    }
+
+                    // everything else should have been bumped too
+                    t.ok((obj.max_swap === test_value), 'vm.max_swap: ' + obj.max_swap
+                        + ' expected: ' + test_value);
+                    t.ok((obj.tmpfs === test_value), 'vm.tmpfs: ' + obj.tmpfs
+                        + ' expected: ' + test_value);
+                    t.ok((obj.max_physical_memory === test_value),
+                        'vm.max_physical_memory: ' + obj.max_physical_memory
+                        + ' expected: ' + test_value);
+                    t.ok((obj.max_locked_memory === test_value),
+                        'vm.max_locked_memory: ' + obj.max_locked_memory
+                        + ' expected: ' + test_value);
+                    t.end();
+                });
+            }
+        });
+    });
+});
+
+// now try *just* updating max_physical_memory (down)
 test('update max_physical_memory', function(t) {
     var test_value = 512;
 

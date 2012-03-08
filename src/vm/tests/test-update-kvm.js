@@ -458,7 +458,7 @@ test('update max_physical_memory', function(t) {
     });
 });
 
-// now try *just* updating max_physical_memory to a value: ram - 64
+// now try *just* updating max_physical_memory to a value: ram + 1024
 test('update max_physical_memory', function(t) {
     var test_value;
 
@@ -468,36 +468,31 @@ test('update max_physical_memory', function(t) {
             t.end();
             return;
         }
-        test_value = before_obj.ram - 64;
+        test_value = before_obj.ram + 1024;
         VM.update(vm_uuid, {'max_physical_memory': test_value}, function(err) {
             if (err) {
-                t.ok(true, 'error updating VM: ' + err.message);
+                t.ok(false, 'error updating VM: ' + err.message);
+                t.end();
             } else {
-                t.ok(false, 'expected setting max_physical_memory < ram to fail');
-            }
-            t.end();
-        });
-    });
-});
+                VM.load(vm_uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'failed reloading VM');
+                        t.end();
+                        return;
+                    }
 
-// now try *just* updating max_locked_memory to a value: ram - 64
-test('update max_locked_memory', function(t) {
-    var test_value;
-
-    VM.load(vm_uuid, function (err, before_obj) {
-        if (err) {
-            t.ok(false, 'error loading existing VM: ' + err.message);
-            t.end();
-            return;
-        }
-        test_value = before_obj.ram - 64;
-        VM.update(vm_uuid, {'max_locked_memory': test_value}, function(err) {
-            if (err) {
-                t.ok(true, 'error updating VM: ' + err.message);
-            } else {
-                t.ok(false, 'expected setting max_locked_memory < ram to fail');
+                    // everything else should have been lowered to match too
+                    t.ok((obj.max_swap === test_value), 'vm.max_swap: ' + obj.max_swap
+                        + ' expected: ' + test_value);
+                    t.ok((obj.max_physical_memory === test_value),
+                        'vm.max_physical_memory: ' + obj.max_physical_memory
+                        + ' expected: ' + test_value);
+                    t.ok((obj.max_locked_memory === test_value),
+                        'vm.max_locked_memory: ' + obj.max_locked_memory
+                        + ' expected: ' + test_value);
+                    t.end();
+                });
             }
-            t.end();
         });
     });
 });

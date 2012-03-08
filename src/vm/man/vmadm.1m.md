@@ -792,7 +792,9 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: no
         create: yes
         update: yes
-        default: default,dtrace_proc,dtrace_user
+        OS default: "default"
+        KVM default: "default,-file_link_any,-net_access,-proc_fork,-proc_info,-proc_session"
+
 
     max_locked_memory:
 

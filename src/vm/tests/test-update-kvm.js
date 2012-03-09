@@ -9,13 +9,13 @@ var VM = require('VM');
 
 VM.loglevel = 'DEBUG';
 
-var dataset_uuid = '47e6af92-daf0-11e0-ac11-473ca1173ab0';
 var vm_uuid;
 
 var PAYLOADS = {
     "create": {
-        "dataset_uuid": dataset_uuid,
-        "alias": "autotest" + process.pid,
+        "brand": "kvm",
+        "ram": 256,
+        "alias": "autotest-vm" + process.pid,
         "do_not_inventory": true
     }, "add_net0": {
         "add_nics": [
@@ -58,12 +58,6 @@ var PAYLOADS = {
             "01:02:03:04:05:06",
             "02:03:04:05:06:07"
         ]
-    }, "add_nic_with_just_mac": {
-        "add_nics": [
-            {
-                "mac": "01:02:03:04:05:06"
-            }
-        ]
     }
 };
 
@@ -76,13 +70,6 @@ simple_properties = [
     ['package_name', 'really expensive package'],
     ['package_version', 'XP']
 ];
-
-test('import dataset', function(t) {
-    path.exists('/zones/' + dataset_uuid, function (exists) {
-        t.ok(exists, "dataset exists");
-        t.end();
-    });
-});
 
 test('create zone', {'timeout': 240000}, function(t) {
     VM.create(PAYLOADS.create, function (err, vmobj) {
@@ -207,32 +194,6 @@ test('remove net0 and net1', function(t) {
     });
 });
 
-test('add NIC with just MAC', function(t) {
-    VM.update(vm_uuid, PAYLOADS.add_nic_with_just_mac, function(err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
-            t.end();
-        } else {
-            VM.load(vm_uuid, function (err, obj) {
-                var nic;
-                var prop;
-
-                t.ok(!err, 'failed reloading VM');
-                if (err) {
-                    return;
-                }
-                t.ok(obj.nics.length === 1, 'VM has ' + obj.nics.length + ' nics, expected: 1');
-                nic = obj.nics[0];
-                for (prop in nic) {
-                    t.ok((['interface', 'mac'].indexOf(prop) !== -1), 'prop is expected: ' + prop);
-                    t.ok(nic[prop] !== 'undefined', 'prop ' + prop + ' is not undefined');
-                }
-                t.end();
-            });
-        }
-    });
-});
-
 test('set then unset simple properties', function(t) {
     async.forEachSeries(simple_properties,
         function (item, cb) {
@@ -245,7 +206,6 @@ test('set then unset simple properties', function(t) {
             VM.update(vm_uuid, payload, function(err) {
                 if (err) {
                     t.ok(false, 'error updating VM: ' + err.message);
-                    t.end();
                     cb();
                 } else {
                     VM.load(vm_uuid, function (err, obj) {
@@ -260,7 +220,6 @@ test('set then unset simple properties', function(t) {
                         VM.update(vm_uuid, payload, function (err) {
                             if (err) {
                                 t.ok(false, 'error updating VM: ' + err.message);
-                                t.end();
                                 cb();
                             } else {
                                 VM.load(vm_uuid, function (err, obj) {
@@ -363,12 +322,13 @@ function test_update_ram(ram)
                         t.end();
                     }
 
-                    t.ok((obj.max_physical_memory === ram), 'vm.max_physical_memory: '
-                        + obj.max_physical_memory + ' expected: ' + ram);
-                    t.ok((obj.max_locked_memory === ram), 'vm.max_locked_memory: '
-                        + obj.max_locked_memory + ' expected: ' + ram);
-                    t.ok((obj.max_swap === ram), 'vm.max_swap: '
-                        + obj.max_swap + ' expected: ' + ram);
+                    t.ok((obj.ram === ram), 'vm.ram: ' + obj.ram + ' expected: ' + ram);
+                    t.ok((obj.max_physical_memory === (ram + VM.KVM_MEM_OVERHEAD)), 'vm.max_physical_memory: '
+                        + obj.max_physical_memory + ' expected: ' + (ram + VM.KVM_MEM_OVERHEAD));
+                    t.ok((obj.max_locked_memory === (ram + VM.KVM_MEM_OVERHEAD)), 'vm.max_locked_memory: '
+                        + obj.max_locked_memory + ' expected: ' + (ram + VM.KVM_MEM_OVERHEAD));
+                    t.ok((obj.max_swap === (ram + VM.KVM_MEM_OVERHEAD)), 'vm.max_swap: '
+                        + obj.max_swap + ' expected: ' + (ram + VM.KVM_MEM_OVERHEAD));
                     t.end();
                 });
             }
@@ -385,7 +345,7 @@ test_update_ram(1024);
 
 // now try *just* updating swap
 test('update max_swap', function(t) {
-    var test_value = 1536;
+    var test_value = 2560;
 
     VM.load(vm_uuid, function (err, before_obj) {
         if (err) {
@@ -406,8 +366,6 @@ test('update max_swap', function(t) {
                     }
                     t.ok((obj.max_swap === test_value), 'vm.max_swap: ' + obj.max_swap
                         + ' expected: ' + test_value);
-                    t.ok((obj.tmpfs == before_obj.tmpfs), 'vm.tmpfs: ' + obj.tmpfs
-                        + ' expected: ' + before_obj.tmpfs);
                     t.ok((obj.max_physical_memory == before_obj.max_physical_memory),
                         'vm.max_physical_memory: ' + obj.max_physical_memory
                         + ' expected: ' + before_obj.max_physical_memory);
@@ -443,12 +401,11 @@ test('update max_swap', function(t) {
                         t.end();
                         return;
                     }
+
                     // We expect that it was raised to match max_physical_memory
                     t.ok((obj.max_swap === before_obj.max_physical_memory),
                         'vm.max_swap: ' + obj.max_swap
                         + ' expected: ' + before_obj.max_physical_memory);
-                    t.ok((obj.tmpfs == before_obj.tmpfs), 'vm.tmpfs: ' + obj.tmpfs
-                        + ' expected: ' + before_obj.tmpfs);
                     t.ok((obj.max_physical_memory == before_obj.max_physical_memory),
                         'vm.max_physical_memory: ' + obj.max_physical_memory
                         + ' expected: ' + before_obj.max_physical_memory);
@@ -462,9 +419,9 @@ test('update max_swap', function(t) {
     });
 });
 
-// now try *just* updating max_physical_memory (up)
+// now try *just* updating max_physical_memory to a value: ram + 256
 test('update max_physical_memory', function(t) {
-    var test_value = 2048;
+    var test_value;
 
     VM.load(vm_uuid, function (err, before_obj) {
         if (err) {
@@ -472,6 +429,7 @@ test('update max_physical_memory', function(t) {
             t.end();
             return;
         }
+        test_value = before_obj.ram + 256;
         VM.update(vm_uuid, {'max_physical_memory': test_value}, function(err) {
             if (err) {
                 t.ok(false, 'error updating VM: ' + err.message);
@@ -484,10 +442,8 @@ test('update max_physical_memory', function(t) {
                         return;
                     }
 
-                    // everything else should have been bumped too
+                    // everything else should have been lowered to match too
                     t.ok((obj.max_swap === test_value), 'vm.max_swap: ' + obj.max_swap
-                        + ' expected: ' + test_value);
-                    t.ok((obj.tmpfs === test_value), 'vm.tmpfs: ' + obj.tmpfs
                         + ' expected: ' + test_value);
                     t.ok((obj.max_physical_memory === test_value),
                         'vm.max_physical_memory: ' + obj.max_physical_memory
@@ -502,9 +458,9 @@ test('update max_physical_memory', function(t) {
     });
 });
 
-// now try *just* updating max_physical_memory (down)
+// now try *just* updating max_physical_memory to a value: ram + 1024
 test('update max_physical_memory', function(t) {
-    var test_value = 512;
+    var test_value;
 
     VM.load(vm_uuid, function (err, before_obj) {
         if (err) {
@@ -512,7 +468,8 @@ test('update max_physical_memory', function(t) {
             t.end();
             return;
         }
-        VM.update(vm_uuid, {'max_physical_memory': 512}, function(err) {
+        test_value = before_obj.ram + 1024;
+        VM.update(vm_uuid, {'max_physical_memory': test_value}, function(err) {
             if (err) {
                 t.ok(false, 'error updating VM: ' + err.message);
                 t.end();
@@ -524,10 +481,8 @@ test('update max_physical_memory', function(t) {
                         return;
                     }
 
-                    // everything else should have been lowered
+                    // everything else should have been lowered to match too
                     t.ok((obj.max_swap === test_value), 'vm.max_swap: ' + obj.max_swap
-                        + ' expected: ' + test_value);
-                    t.ok((obj.tmpfs === test_value), 'vm.tmpfs: ' + obj.tmpfs
                         + ' expected: ' + test_value);
                     t.ok((obj.max_physical_memory === test_value),
                         'vm.max_physical_memory: ' + obj.max_physical_memory
@@ -538,6 +493,39 @@ test('update max_physical_memory', function(t) {
                     t.end();
                 });
             }
+        });
+    });
+});
+
+// now try *just* updating max_swap to a value: ram - 64
+test('update max_swap', function(t) {
+    var test_value;
+
+    VM.load(vm_uuid, function (err, before_obj) {
+        if (err) {
+            t.ok(false, 'error loading existing VM: ' + err.message);
+            t.end();
+            return;
+        }
+        test_value = before_obj.ram - 64;
+        VM.update(vm_uuid, {'max_swap': test_value}, function(err) {
+            if (err) {
+                t.ok(false, 'error updating VM: ' + err.message);
+                t.end();
+                return;
+            }
+            VM.load(vm_uuid, function (err, obj) {
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                    t.end();
+                    return;
+                }
+                // should have been raised.
+                t.ok((obj.max_swap === before_obj.max_physical_memory),
+                    'vm.max_swap: ' + obj.max_swap + ' expected: '
+                    + before_obj.max_physical_memory);
+                t.end();
+            });
         });
     });
 });
@@ -566,8 +554,6 @@ test('update max_locked_memory', function(t) {
                     }
                     t.ok((obj.max_swap === before_obj.max_swap), 'vm.max_swap: ' + obj.max_swap
                         + ' expected: ' + before_obj.max_swap);
-                    t.ok((obj.tmpfs == before_obj.tmpfs), 'vm.tmpfs: ' + obj.tmpfs
-                        + ' expected: ' + before_obj.tmpfs);
                     t.ok((obj.max_physical_memory == before_obj.max_physical_memory),
                         'vm.max_physical_memory: ' + obj.max_physical_memory
                         + ' expected: ' + before_obj.max_physical_memory);
@@ -597,4 +583,3 @@ test('delete zone', function(t) {
         t.end();
     }
 });
-

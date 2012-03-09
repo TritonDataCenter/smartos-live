@@ -792,12 +792,14 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: no
         create: yes
         update: yes
-        default: default,dtrace_proc,dtrace_user
+        OS default: "default"
+        KVM default: "default,-file_link_any,-net_access,-proc_fork,-proc_info,-proc_session"
+
 
     max_locked_memory:
 
         The total amount of physical memory in the host than can be locked for
-        this VM.
+        this VM. This value cannot be higher than max_physical_memory.
 
         type: integer (number of MiB)
         vmtype: OS,KVM
@@ -821,6 +823,8 @@ tab-complete UUIDs rather than having to type them out for every command.
     max_physical_memory:
 
         The maximum amount of memory on the host that the VM is allowed to use.
+        For KVM VMs, this value cannot be lower than 'ram' and should be
+        ram + 1024.
 
         type: integer (number of MiB)
         vmtype: OS,KVM
@@ -831,7 +835,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     max_swap:
 
-        The maximum amount of virtual memory the VM is allowed to use.
+        The maximum amount of virtual memory the VM is allowed to use.  This
+        cannot be lower than max_physical_memory.
 
         type: integer (number of MiB)
         vmtype: OS,KVM
@@ -954,6 +959,20 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update yes (requires zone stop/boot)
 
+    nics.*.primary
+
+        This option selects which NIC's default gateway and nameserver values
+        will be used for this VM. If a VM has any nics, there must always be
+        exactly one primary.  Setting a new primary will unset the old. Trying
+        to set two nics to primary is an error.
+
+        type: boolean (only true is valid)
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes (setting primary=true on one NIC removes the flag from the
+            current primary, and sets on the new)
+
     nics.*.vlan_id:
 
         The vlan with which to tag this NIC's traffic (0 = none).
@@ -1048,7 +1067,11 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: no
         create: yes
         update: yes
-        default: '-vnc unix:/tmp/vm.vnc -parallel none -usb -usbdevice tablet -k en-us -vga cirrus'
+        default:
+            if vnc_password.length != 0:
+                '-vnc unix:/tmp/vm.vnc,password -parallel none -usb -usbdevice tablet -k en-us'
+            else
+                '-vnc unix:/tmp/vm.vnc -parallel none -usb -usbdevice tablet -k en-us'
 
     qemu_extra_opts:
 
@@ -1328,7 +1351,7 @@ tab-complete UUIDs rather than having to type them out for every command.
               "ip": "10.2.121.70",
               "netmask": "255.255.0.0",
               "gateway": "10.2.121.1",
-              "primary": 1
+              "primary": true
             }
           ]
         }
@@ -1357,7 +1380,7 @@ tab-complete UUIDs rather than having to type them out for every command.
               "ip": "10.88.88.51",
               "netmask": "255.255.255.0",
               "gateway": "10.88.88.2",
-              "primary": 1
+              "primary": true
             }
           ]
         }

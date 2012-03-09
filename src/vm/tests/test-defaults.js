@@ -39,7 +39,7 @@ var zone_defaults = {
     'owner_uuid': ['00000000-0000-0000-0000-000000000000'],
     'uuid': ['uuid', state_property],
     'dns_domain': ['local'],
-    'limit_priv': ['default,dtrace_proc,dtrace_user'],
+    'limit_priv': ['default'],
     'compute_node_uuid': ['<NON-EMPTY>'],
     'create_timestamp': ['<NON-EMPTY>'],
     'nics': ['<EMPTY-ARRAY>'],
@@ -59,6 +59,7 @@ var kvm_defaults = {
     'ram': [256],
     'brand': ['kvm'],
     'max_physical_memory': [1280],
+    'limit_priv': ['default,-file_link_any,-net_access,-proc_fork,-proc_info,-proc_session'],
     'billing_id': ['00000000-0000-0000-0000-000000000000'],
     'disks': ['<EMPTY-ARRAY>'],
     'vcpus': [1]
@@ -107,7 +108,8 @@ function check_property(t, state, prop, expected, transform)
     } else if (expected === '<EMPTY-OBJ>') {
         t.ok(JSON.stringify(value) === '{}', prop + ' {},' + JSON.stringify(value));
     } else {
-        t.ok(value === expected, prop + ' [' + expected + typeof(expected) + ',' + value + typeof(value) + ']');
+        t.ok(value === expected, prop + ' [' + expected + ':' + typeof(expected)
+            + ',' + value + ':' + typeof(value) + ']');
     }
 }
 

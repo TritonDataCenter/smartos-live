@@ -187,8 +187,7 @@ function getListProperties(field)
         return {header: field.toUpperCase(), width: 20};
     }
 
-    // default, really shouldn't get here
-    return {header: field.toUpperCase(), width: 20};
+    return undefined;
 }
 
 function getUUID(command, p)

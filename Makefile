@@ -19,6 +19,9 @@ live: world manifest
 	(cd $(ROOT)/src_addon && gmake DESTDIR=$(PROTO) install)
 	mkdir -p ${ROOT}/log
 	(cd $(ROOT) && pfexec ./tools/build_live $(ROOT)/$(MANIFEST) $(ROOT)/output $(OVERLAYS) $(ROOT)/proto $(ROOT)/man/man)
+	if [[ -f $(ROOT)/src/vm/tests.tar.gz && -f $(ROOT)/proto/buildstamp ]]; then \
+		cp $(ROOT)/src/vm/tests.tar.gz $(ROOT)/output/vmtests-$$(cat $(ROOT)/proto/buildstamp).tgz ; \
+	fi
 
 manifest:
 	rm -f $(MANIFEST) $(MPROTO)/*

@@ -11,7 +11,9 @@ SMARTDC_TARGETS=has_hvx qemu-exec
 DESTDIR=../proto
 NODE_WAF=$(PWD)/../proto/usr/bin/node-waf
 
-all: $(TARGETS) sysinfo $(SMARTDC_TARGETS)
+.PHONY: vm/tests.tar.gz
+
+all: $(TARGETS) sysinfo $(SMARTDC_TARGETS) vm/tests.tar.gz
 
 install: $(TARGETS) sysinfo
 	mkdir -p $(DESTDIR)/usr/bin
@@ -93,6 +95,9 @@ sysinfo:
 
 zoneevent: zoneevent.c
 	gcc -Wall -W -o zoneevent zoneevent.c -lnvpair -lsysevent
+
+vm/tests.tar.gz:
+	(cd vm && ./tools/build-test-tarball.sh)
 
 clean:
 	@rm -f $(TARGETS) $(SMARTDC_TARGETS)

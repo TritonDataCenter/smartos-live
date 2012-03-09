@@ -1,11 +1,14 @@
 # dsadm
 s etc/bash/bash_completion.d/dsadm=/usr/ds/etc/dsadm.completion
 s usr/sbin/dsadm=/usr/ds/sbin/dsadm
+f usr/share/man/man1m/dsadm.1m 0444 root bin
 d usr/ds 0555 root bin
 d usr/ds/node_modules 0555 root bin
 d usr/ds/sbin 0555 root bin
 d usr/ds/etc 0555 root bin
+d usr/ds/man 0555 root bin
 f usr/ds/etc/dsadm.completion 0444 root bin
+f usr/ds/etc/sources.list.sample 0444 root bin
 f usr/ds/sbin/dsadm 0555 root bin
 f usr/ds/sbin/dsadm-repair 0555 root bin
 f usr/ds/node_modules/log.js 0444 root bin

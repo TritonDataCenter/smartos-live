@@ -1,11 +1,14 @@
 # dsadm
 s etc/bash/bash_completion.d/dsadm=/usr/ds/etc/dsadm.completion
 s usr/sbin/dsadm=/usr/ds/sbin/dsadm
+f usr/share/man/man1m/dsadm.1m 0444 root bin
 d usr/ds 0555 root bin
 d usr/ds/node_modules 0555 root bin
 d usr/ds/sbin 0555 root bin
 d usr/ds/etc 0555 root bin
+d usr/ds/man 0555 root bin
 f usr/ds/etc/dsadm.completion 0444 root bin
+f usr/ds/etc/sources.list.sample 0444 root bin
 f usr/ds/sbin/dsadm 0555 root bin
 f usr/ds/sbin/dsadm-repair 0555 root bin
 f usr/ds/node_modules/log.js 0444 root bin
@@ -220,7 +223,6 @@ d usr/share/man/man1m 0755 root bin
 f usr/share/man/man1m/netservices.1m 0444 root bin
 f usr/share/man/man1m/tzreload.1m 0444 root bin
 f usr/share/man/man1m/sys-unconfig.1m 0444 root bin
-f usr/share/man/man1m/zonestatd.1m 0444 root bin
 f usr/share/man/man1m/ziostat.1m 0444 root bin
 f usr/share/man/man1m/vfsstat.1m 0444 root bin
 f usr/share/man/man1m/hotplug.1m 0444 root bin
@@ -230,7 +232,6 @@ d usr/share/man/man3lib 0755 root bin
 f usr/share/man/man3lib/libm.3lib 0444 root bin
 f usr/share/man/man3lib/libusb.3lib 0444 root bin
 f usr/share/man/man3lib/libmvec.3lib 0444 root bin
-f usr/share/man/man1/zonestat.1 0444 root bin
 d usr/share/man/man3mvec 0755 root bin
 f usr/share/man/man3mvec/vsin_.3mvec 0444 root bin
 f usr/share/man/man3mvec/vz_abs_.3mvec 0444 root bin

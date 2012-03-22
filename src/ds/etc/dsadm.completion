@@ -7,25 +7,15 @@ _dsadm() {
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD-1]}"
-  options=( list avail show import destroy get ) 
+  options=( list info show available import install update destroy )
   case "$prev" in
     dsadm)
       COMPREPLY=( $(compgen -W '${options[@]}' -- ${cur}) )
       return 0
       ;;
     import)
-      local avail=$(dsadm -p avail | cut -d: -f1)
-      COMPREPLY=( $(compgen -W "${avail}" -- ${cur}) )
-      return 0
-      ;;
-    destroy)
-      local installed=$(dsadm -p list | cut -d: -f1)
-      COMPREPLY=( $(compgen -W "${installed}" -- ${cur}) )
-      return 0
-      ;;
-    dump)
-      local installed=$(dsadm -p list | cut -d: -f1)
-      COMPREPLY=( $(compgen -W "${installed}" -- ${cur}) )
+      local available=$(dsadm -p avail | cut -d: -f1)
+      COMPREPLY=( $(compgen -W "${available}" -- ${cur}) )
       return 0
       ;;
     info)
@@ -33,9 +23,9 @@ _dsadm() {
       COMPREPLY=( $(compgen -W "${installed}" -- ${cur}) )
       return 0
       ;;
-    get)
-      local avail=$(dsadm -p avail | cut -d: -f1)
-      COMPREPLY=( $(compgen -W "${avail}" -- ${cur}) )
+    show)
+      local installed=$(dsadm -p list | cut -d: -f1)
+      COMPREPLY=( $(compgen -W "${installed}" -- ${cur}) )
       return 0
       ;;
   esac

@@ -223,7 +223,6 @@ d usr/share/man/man1m 0755 root bin
 f usr/share/man/man1m/netservices.1m 0444 root bin
 f usr/share/man/man1m/tzreload.1m 0444 root bin
 f usr/share/man/man1m/sys-unconfig.1m 0444 root bin
-f usr/share/man/man1m/zonestatd.1m 0444 root bin
 f usr/share/man/man1m/ziostat.1m 0444 root bin
 f usr/share/man/man1m/vfsstat.1m 0444 root bin
 f usr/share/man/man1m/hotplug.1m 0444 root bin
@@ -233,7 +232,6 @@ d usr/share/man/man3lib 0755 root bin
 f usr/share/man/man3lib/libm.3lib 0444 root bin
 f usr/share/man/man3lib/libusb.3lib 0444 root bin
 f usr/share/man/man3lib/libmvec.3lib 0444 root bin
-f usr/share/man/man1/zonestat.1 0444 root bin
 d usr/share/man/man3mvec 0755 root bin
 f usr/share/man/man3mvec/vsin_.3mvec 0444 root bin
 f usr/share/man/man3mvec/vz_abs_.3mvec 0444 root bin

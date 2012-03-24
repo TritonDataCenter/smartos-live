@@ -25,8 +25,8 @@ ROOTCMD=pfexec
 export GIT_SSL_NO_VERIFY=true
 
 # Load all site-specific configure files
-for file in `ls configure.*`; do
-  source ${file}
+for file in configure.*; do
+  source "${file}"
 done
 
 if [ "${HAVE_PKG}" == "true" ]; then
@@ -57,13 +57,13 @@ if [ "${HAVE_PKG}" == "true" ]; then
     for pkg in gmake binutils autoconf automake \
         bison flex libtool-base python24 p5-XML-Parser \
         libxslt dbus-glib dbus sun-jre6 sun-jdk6 gmp mpfr; do
-      pkg_info ${pkg} >/dev/null 2>&1 || pkgin -y install ${pkg}
+      pkg_info "${pkg}" >/dev/null 2>&1 || pkgin -y install "${pkg}"
     done
   fi
 fi
 
 # TODO: move this to illumos-extra itself
-if [ "${HAVE_PKG}" == "true" ]; then
+if [[ "${HAVE_PKG}" == "true" ]]; then
   echo "==> Installing illumos-extra dependencies..."
   if [[ ${GLOBAL_ZONE} -eq 1 ]]; then
     ${ROOTCMD} pkg install \
@@ -83,9 +83,8 @@ if [ "${HAVE_PKG}" == "true" ]; then
 fi
 
 echo "==> Checking for /opt/gcc/4.4.4/bin/gcc"
-if [ ! -f "/opt/gcc/4.4.4/bin/gcc" ]; then
-  if [ ! -z "${GCC44_URL}" ]; then
-    cd /opt
+if [[ ! -f "/opt/gcc/4.4.4/bin/gcc" ]]; then
+  if [[ -n "${GCC44_URL}" ]] && cd /opt; then
     curl -k https://download.joyent.com/pub/build/gcc-4.tar.bz2 | bzcat \
       | ${ROOTCMD} tar -xf -
     cd - >/dev/null
@@ -98,11 +97,11 @@ fi
 echo "==> Checking for /opt/SUNWspro/bin/cc..."
 
 echo " +--> Ensuring SUNWspro installed in /opt/SUNWspro..."
-if [ ! -f "/opt/SUNWspro/prod/bin/cc" ]; then
-  if [ ! -z "${SUNW_SPRO12_URL}" ]; then
-    (cd /opt/ \
-      && curl -k "${SUNW_SPRO12_URL}" \
-      | ${ROOTCMD} gtar -jxf -)
+if [[ ! -f "/opt/SUNWspro/prod/bin/cc" ]]; then
+  if [[ -n "${SUNW_SPRO12_URL}" ]] && cd /opt; then
+     curl -k "${SUNW_SPRO12_URL}" \
+       | ${ROOTCMD} gtar -jxf -
+     cd - >/dev/null
   else
     echo "FATAL: unable to download sunstudio12, no URL is set.  Please set SUNW_SPRO12_URL in configure.*"
     exit 1
@@ -123,20 +122,20 @@ else
 fi
 
 echo "==> Populating projects/ directories..."
-[ ! -d "projects" ] && mkdir -p projects
-if [ ! -d "projects" ] ; then
+mkdir -p projects
+if [[ ! -d "projects" ]]; then
   echo "FATAL: unable to create projects/ directory."
   exit 1
 fi
 
-if [ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]; then
+if [[ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]]; then
   echo " +--> Getting illumos source tree..."
-  if [ -z "${GET_ILLUMOS}" ]; then
+  if [[ -z "${GET_ILLUMOS}" ]]; then
     echo "FATAL: No GET_ILLUMOS defined in configure.*, can't get illumos!"
     exit 1
   fi
   /bin/bash -c "cd projects && ${GET_ILLUMOS} && cd -"
-  if [ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]; then
+  if [[ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]]; then
     echo "FATAL: GET_ILLUMOS command failed to get illumos!"
     exit 1
   fi
@@ -144,19 +143,18 @@ fi
 
 if [[ -n ${ILLUMOS_EXTRA_TARBALL_URL} && -z ${NO_EXTRA_TARBALL} ]]; then
 	EXTRA_TARBALL=$(curl -k ${ILLUMOS_EXTRA_TARBALL_URL} | grep href | tail -n1 | cut -d '"' -f2)
-	curl -k -O ${ILLUMOS_EXTRA_TARBALL_URL}/${EXTRA_TARBALL}
-	if [[ $? != 0 ]]; then
+	if ! curl -k -O ${ILLUMOS_EXTRA_TARBALL_URL}/${EXTRA_TARBALL}; then
 		EXTRA_TARBALL=""
 	fi
 fi
 if [[ ! -f "projects/illumos-extra/Makefile" && -z $EXTRA_TARBALL ]]; then
   echo " +--> Getting illumos-extra source tree..."
-  if [ -z "${GET_ILLUMOS_EXTRA}" ]; then
+  if [[ -z "${GET_ILLUMOS_EXTRA}" ]]; then
     echo "FATAL: No GET_ILLUMOS_EXTRA defined in configure.*, can't get illumos-extra!"
     exit 1
   fi
   /bin/bash -c "cd projects && ${GET_ILLUMOS_EXTRA} && cd -"
-  if [ ! -f "projects/illumos-extra/Makefile" ]; then
+  if [[ ! -f "projects/illumos-extra/Makefile" ]]; then
     echo "FATAL: GET_ILLUMOS_EXTRA command failed to get illumos-extra!"
     exit 1
   fi
@@ -165,7 +163,7 @@ fi
 ROOT=`pwd`
 echo "==> Setting up overlay"
 
-if [ -z "${OVERLAYS}" ]; then
+if [[ -z "${OVERLAYS}" ]]; then
   echo "FATAL: overlay order not specified"
   exit 1
 fi
@@ -180,16 +178,16 @@ echo "==> Setting up illumos-gate"
 
 cd ${ROOT}/projects/illumos
 
-if [ ! -f on-closed-bins.i386.tar.bz2 ]; then
-  if [ -z "${ON_CLOSED_BINS_URL}" ]; then
+if [[ ! -f on-closed-bins.i386.tar.bz2 ]]; then
+  if [[ -z "${ON_CLOSED_BINS_URL}" ]]; then
     curl -O http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins.i386.tar.bz2
   else
     curl -k -O "${ON_CLOSED_BINS_URL}"
   fi
   tar xvpf on-closed-bins.i386.tar.bz2
 fi
-if [ ! -f on-closed-bins-nd.i386.tar.bz2 ]; then
-  if [ -z "${ON_CLOSED_BINS_ND_URL}" ]; then
+if [[ ! -f on-closed-bins-nd.i386.tar.bz2 ]]; then
+  if [[ -z "${ON_CLOSED_BINS_ND_URL}" ]]; then
     curl -O http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins-nd.i386.tar.bz2
   else
     curl -k -O "${ON_CLOSED_BINS_ND_URL}"
@@ -207,7 +205,7 @@ fi
 #
 # ENABLE_LINT implies ENABLE_DEBUG=yes
 #
-	
+
 NIGHTLY_OPTIONS_BASE="-CimNnt"
 NIGHTLY_EXTRA=""
 

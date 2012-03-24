@@ -651,6 +651,22 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    do_not_inventory:
+
+        This specifies that the VM should not be counted or automatically
+        imported into external management tools. The primary use-case is for
+        test zones that are created but you don't want their existence
+        propagated up to a management system since they'll be short-lived.
+
+        Note: this property will only show up in a 'vmadm get' when it's set
+        true. When set false the property will not appear.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: no
+        create: yes
+        update: yes
+
     dns_domain:
 
         For OS VMs this specifies the domain value for /etc/hosts that gets set
@@ -726,6 +742,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: no
 
+    fs_allowed:
+
+        This option allows you to specify filesystem types this zone is allowed
+        to mount.  For example on a zone for building SmartOS you probably want
+        to set this to: "ufs,pcfs,tmpfs".  To unset this property, set the value
+        to the empty string.
+
+        type: string (comma separated list of filesystem types)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: yes (requires zone reboot to take effect)
+
     hostname:
 
         For KVM VMs, this value will be handed out via DHCP as the hostname for
@@ -763,12 +792,14 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: no
         create: yes
         update: yes
-        default: default,dtrace_proc,dtrace_user
+        OS default: "default"
+        KVM default: "default,-file_link_any,-net_access,-proc_fork,-proc_info,-proc_session"
+
 
     max_locked_memory:
 
         The total amount of physical memory in the host than can be locked for
-        this VM.
+        this VM. This value cannot be higher than max_physical_memory.
 
         type: integer (number of MiB)
         vmtype: OS,KVM
@@ -792,6 +823,8 @@ tab-complete UUIDs rather than having to type them out for every command.
     max_physical_memory:
 
         The maximum amount of memory on the host that the VM is allowed to use.
+        For KVM VMs, this value cannot be lower than 'ram' and should be
+        ram + 1024.
 
         type: integer (number of MiB)
         vmtype: OS,KVM
@@ -802,7 +835,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     max_swap:
 
-        The maximum amount of virtual memory the VM is allowed to use.
+        The maximum amount of virtual memory the VM is allowed to use.  This
+        cannot be lower than max_physical_memory.
 
         type: integer (number of MiB)
         vmtype: OS,KVM
@@ -913,6 +947,32 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    nics.*.nic_tag
+
+        This option for a NIC determines which host NIC the VMs nic will be
+        attached to. The value can be either a nic tag as listed in the 'NIC
+        Names' field in `sysinfo`, or an etherstub or device name.
+
+        type: string (device name or nic tag name)
+        vmtype: OS,KVM
+        listable: yes
+        create: yes
+        update yes (requires zone stop/boot)
+
+    nics.*.primary
+
+        This option selects which NIC's default gateway and nameserver values
+        will be used for this VM. If a VM has any nics, there must always be
+        exactly one primary.  Setting a new primary will unset the old. Trying
+        to set two nics to primary is an error.
+
+        type: boolean (only true is valid)
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes (setting primary=true on one NIC removes the flag from the
+            current primary, and sets on the new)
+
     nics.*.vlan_id:
 
         The vlan with which to tag this NIC's traffic (0 = none).
@@ -1007,7 +1067,11 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: no
         create: yes
         update: yes
-        default: '-vnc unix:/tmp/vm.vnc -parallel none -usb -usbdevice tablet -k en-us -vga cirrus'
+        default:
+            if vnc_password.length != 0:
+                '-vnc unix:/tmp/vm.vnc,password -parallel none -usb -usbdevice tablet -k en-us'
+            else
+                '-vnc unix:/tmp/vm.vnc -parallel none -usb -usbdevice tablet -k en-us'
 
     qemu_extra_opts:
 
@@ -1024,8 +1088,8 @@ tab-complete UUIDs rather than having to type them out for every command.
     quota:
 
         This sets a quota on the zone filesystem. For OS VMs, this value is the
-        space actually usable by the users of the guest. For KVM VMs, this value
-        is the quota for the Zone containing the VM, which is not directly
+        space actually visible/usable in the guest. For KVM VMs, this value is
+        the quota for the Zone containing the VM, which is not directly
         available to users.
 
         type: integer (number of GiB)
@@ -1047,12 +1111,52 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: KVM VMs only, for OS VMs update max_physical_memory instead.
         default: 256
 
-    real_state:
+    vga:
 
-        This property may show up when fetching a VMs JSON if that VM is in a
-        transition. In that case the 'state' option will show something like
-        'stopping' but the 'real_state' property will show the zone's actual
-        state: eg. 'running'.
+        This property allows one to specify the VGA emulation to be used by
+        KVM VMs. The default is 'cirrus'. NOTE: with the Qemu bundled in SmartOS
+        qxl and xenfb do not work.
+
+        type: string (one of: 'cirrus','std','vmware','qxl','xenfb')
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: 'cirrus'
+
+    vnc_password:
+
+        This property allows you to set a password which will be required when
+        connecting to the VNC port. IMPORTANT: this password will be visible
+        from the GZ of the CN and anyone with access to the serial port in the
+        guest. Set to an empty string (default) to not require a password at
+        this level.
+
+        type: string (8 chars max)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: <unset>
+
+    vnc_port:
+
+        This specifies the TCP port to listen on for the VNC server, the default
+        is zero which means a port will be chosen at random. Set to -1 to
+        disable TCP listening.
+
+        type: integer (0 for random, -1 for disabled)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: 0
+
+    zone_state:
+
+        This property will show up when fetching a VMs JSON.  this shows the
+        state of the zone in which this VM is contained. eg. 'running'.  It
+        can be different from the 'state' value in several cases.
 
         type: string
         vmtype: KVM
@@ -1247,7 +1351,7 @@ tab-complete UUIDs rather than having to type them out for every command.
               "ip": "10.2.121.70",
               "netmask": "255.255.0.0",
               "gateway": "10.2.121.1",
-              "primary": 1
+              "primary": true
             }
           ]
         }
@@ -1276,7 +1380,7 @@ tab-complete UUIDs rather than having to type them out for every command.
               "ip": "10.88.88.51",
               "netmask": "255.255.255.0",
               "gateway": "10.88.88.2",
-              "primary": 1
+              "primary": true
             }
           ]
         }

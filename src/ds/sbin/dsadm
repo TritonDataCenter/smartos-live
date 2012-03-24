@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* vim: set ts=2 et sw=2 tw=80 syntax=javascript: */
+
 
 var path = require('path');
 var sprintf = require('sprintf').sprintf;
@@ -24,22 +26,7 @@ log.setWriter(function(message) {
 var printHelp = function(code) {
   var code = code || 0;
   var msg = 
-  [ "Usage: dsadm [options] command"
-  , ""
-  , " Commands:"
-  , ""
-  , " list              lists locally installed datasets"
-  , " dump <uuid>       dumps the raw local manifest in JSON format"
-  , " info <uuid>       prints information the local dataset and its children"
-  , " import <uuid|url> local install of the dataset specified by UUID or URL"
-  , " avail             lists all datasets available to this user from the API"
-  , " get <uuid>        retrieve manifest from API"
-  , " destroy <uuid>    remotes dataset from the local storage pool"
-  , ""
-  , " Options: "
-  , ""
-  , " -p                prints colon-separated parseable output."
-  , " -v                verbose output to stderr"
+  [ "Usage: dsadm [pvH] <command> [comment-specific arguments]"
   , ""
   ].join('\n');
 
@@ -53,7 +40,7 @@ _stdout = function() {
 }
 
 _fatal = function() {
-  var msg = sprintf.apply(null, arguments) + '\n';
+  var msg = "error: " + sprintf.apply(null, arguments) + '\n';
   process.stdout.write(msg);
   process.exit(1);
 }
@@ -148,17 +135,17 @@ onInfo = function(err, dump) {
 }
 
 onDump = function(err, dump) {
-  if (err) throw err;
+  if (err) _fatal(err);
   _stdout(JSON.stringify(dump, null, "  "));
 }
 
-onGet = function(err, dataset) {
-  if (err) throw err;
+onShow = function(err, dataset) {
+  if (err) _fatal(err);
   _stdout(JSON.stringify(dataset, null, "  "));
 }
 
 onList = function(err, datasets) {
-  if (err) throw err;
+  if (err) _fatal(err);
 
   if (!options.parseable) {
     printHeader();
@@ -187,7 +174,7 @@ onList = function(err, datasets) {
 var _required = function() {
   var types = [];
   var val = _argv.shift();
-  var valid = false;
+  var valid = true ;
   
   for (k in arguments) {
     types.push(arguments[k]);
@@ -199,18 +186,21 @@ var _required = function() {
     },
     url: function(value) {
       return _isURL(value);
+    },
+    path: function(value) {
+      return true;
     }
   }
  
   if (!val) _fatal("error: missing required <%s> parameter", types.join("|"))
-  
+ 
   for (i in types) {
     valid = validators[types[i]](val);
     if (valid) return val;
   }
-  
-  if (!valid) _fatal("error: 's' does not appear to be one of %s", types.join(", "));
 
+  return false;
+  
 }
 
 var switches = {
@@ -227,54 +217,67 @@ var switches = {
 }
  
 var commands = {
-  'avail': function() {
-    dsadm.listRemote(null, onList);
-  },
   'list': function() {
     dsadm.listLocal(onList);
   },
-  'dump': function() {
-    var uuid = _required('uuid');
-    dsadm.dumpLocal(uuid, onDump);
-  },
   'info': function() {
     var uuid = _required('uuid');
-    dsadm.dumpLocal(uuid, onInfo);
+    dsadm.dump(uuid, onDump);
   },
-  'get': function() {
-    var uuid = _required('uuid', 'url');
-    dsadm.showRemote(uuid, onGet);
+  'avail': function () {
+    dsadm.cacheList(onList);
   },
+  'available': function () {
+    dsadm.cacheList(onList);
+  }, 
   'import': function() {
     var id = _required('uuid', 'url');
-    dsadm.importDataset(id, function(err, uuid) {
-      if (err) {
-        errHandler(err);
-      } 
-      else {
-        _stdout("dataset %s successfully imported", uuid)
-      }
+    dsadm.importRemote(id, function(err, uuid) {
+      if (err) _fatal(err);
+      _stdout("dataset %s successfully imported", uuid)
+    });
+  },
+  'show': function() {
+    var uuid = _required('uuid');
+    dsadm.show(uuid, onShow);
+  },
+  'install': function() {
+    var nextflag = _argv.shift();
+    if (nextflag !== '-m') _fatal("manifest not specified");
+    var manifestFile = _required('path');
+    
+    var nextflag = _argv.shift();
+    if (nextflag !== '-f') _fatal("dataset file not specified");
+    var datasetFile = _required('path');
+
+    var mfile = path.resolve(manifestFile);
+    var dsfile = path.resolve(datasetFile);
+
+    if (!path.existsSync(mfile)) _fatal("specified file does not exist: " + mfile);
+    if (!path.existsSync(dsfile)) _fatal("specified file does not exist: " + dsfile);
+
+    dsadm.importLocal(mfile, dsfile, function(err, uuid) {
+      if (err) _fatal(err);
+      _stdout("dataset %s successfully imported", uuid)
+    });
+  },
+  'update': function() {
+    dsadm.cacheUpdate(function(err) {
+      if (err) _fatal(err);
+      _stdout("database updated");
     });
   },
   'destroy': function() {
     var uuid = _required('uuid');
     dsadm.destroyDataset(uuid, function(err) {
-      if (err) {
-        errHandler(err);
-      }
-      else {
-        _stdout("dataset %s destroyed", uuid);
-      }
+      if (err) _fatal(err);
+      _stdout("dataset %s destroyed", uuid);
     });
   },
   'help': function() {
     printHelp(0);
   }
 
-}
-
-function errHandler(error) { 
-  _fatal(error.toString());
 }
 
 function main() {
@@ -321,3 +324,4 @@ onlyif.rootInSmartosGlobal(function(err) {
     main();
   }
 });
+

@@ -4,7 +4,7 @@
  */
 
 var md = require(__dirname + '/ext/markdown');
-var sys = require('sys');
+var util = require('util');
 
 /* exports Ronn class
  * usage :
@@ -39,7 +39,7 @@ exports.Ronn = function(text, version, manual, date) {
 
 	function blockFilter(out, node, context) {
 		if (typeof node == "string") {
-			if (!node.match(/^\s*$/m)) sys.debug("unexpected text: " + node);
+			if (!node.match(/^\s*$/m)) util.debug("unexpected text: " + node);
 			return out;
 		}
 		var tag = node.shift();	
@@ -178,7 +178,7 @@ exports.Ronn = function(text, version, manual, date) {
 				out = inlineFilter(out, node, context);
 			break;
 			default:
-				sys.debug("unrecognized block tag: " + tag);
+				util.debug("unrecognized block tag: " + tag);
 			break;
 		}
 		context.parent = fParent;
@@ -274,7 +274,7 @@ exports.Ronn = function(text, version, manual, date) {
 				}
 			break;
 			default:
-				sys.debug("unrecognized inline tag: " + tag);
+				util.debug("unrecognized inline tag: " + tag);
 			break;
 		}
 		context.parent = fParent;

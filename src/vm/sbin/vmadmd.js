@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2011 Joyent Inc., All rights reserved.
+ * Copyright (c) 2012, Joyent, Inc. All rights reserved.
  *
  */
 
@@ -37,12 +37,10 @@ var onlyif = require('onlyif');
 var path = require('path');
 var spawn = cp.spawn;
 var http = require('http');
-var qmp = require('qmp');
+var Qmp = require('qmp').Qmp;
 var qs = require('querystring');
 var url = require('url');
-
-VM.loglevel = 'DEBUG';
-VM.syslog_action = 'vmadmd';
+var util = require('util');
 
 var VMADMD_SOCK = '/tmp/vmadmd.http';
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
@@ -57,26 +55,70 @@ function sysinfo(callback)
     execFile('/usr/bin/sysinfo', [], function (error, stdout, stderr) {
         var obj;
         if (error) {
-            return callback(new Error(stderr.toString()));
+            callback(new Error(stderr.toString()));
+        } else {
+            obj = JSON.parse(stdout.toString());
+            VM.log('DEBUG', 'sysinfo:\n' + JSON.stringify(obj, null, 2));
+            callback(null, obj);
         }
-        obj = JSON.parse(stdout.toString());
-        VM.log('DEBUG', 'sysinfo:\n' + JSON.stringify(obj, null, 2));
-        callback(null, obj);
+    });
+}
+
+function setVNCPassword(vmobj, password)
+{
+    var q;
+    var socket;
+
+    q = new Qmp(VM.log);
+
+    socket = vmobj.zonepath + '/root/tmp/vm.qmp';
+
+    VM.log('DEBUG', 'setting password to "' + password + '"');
+
+    q.connect(socket, function (err) {
+        if (err) {
+            VM.log('WARN', 'Warning: VNC password-set error: ' + err);
+        } else {
+            q.command('set_password', {'protocol': 'vnc',
+                'password': vmobj.vnc_password}, function (e, result) {
+
+                if (e) {
+                    VM.log('WARN', 'failed to set password for VNC', e);
+                } else {
+                    VM.log('DEBUG', 'result: '
+                        + JSON.stringify(result));
+                    q.disconnect();
+                }
+            });
+        }
     });
 }
 
 function spawnVNC(vmobj)
 {
-    var server;
     var addr;
+    var port;
+    var server;
     var zonepath = vmobj.zonepath;
 
     if (!vmobj.zonepath) {
         zonepath = '/zones/' + vmobj.uuid;
     }
 
-    if (vmobj.state !== 'running' && vmobj.real_state !== 'running') {
+    if (vmobj.state !== 'running' && vmobj.zone_state !== 'running') {
         VM.log('DEBUG', 'skipping VNC setup for non-running VM ' + vmobj.uuid);
+        return;
+    }
+
+    if (vmobj.hasOwnProperty('vnc_port')) {
+        port = vmobj.vnc_port;
+    } else {
+        port = 0;
+    }
+
+    if (port === -1) {
+        VM.log('INFO', 'VNC listener disabled (port === -1) for VM '
+            + vmobj.uuid);
         return;
     }
 
@@ -99,26 +141,56 @@ function spawnVNC(vmobj)
             //     we wouldn't be able to reconnect anyway.
             VM.log('INFO', 'vnc ended for ' + vmobj.uuid);
             clearVNC(vmobj.uuid);
+
+            if (vmobj.hasOwnProperty('vnc_password')
+                && vmobj.vnc_password.length > 0) {
+                // if we are using VNC passwords then the connection ends for an
+                // incorrect password, so we do need to respawn here, otherwise
+                // we'll be unable to reconnect. We reload first so we skip
+                // respawn if VM is not running.
+                VM.load(vmobj.uuid, function (e, obj) {
+                    if (e) {
+                        VM.log('ERROR', 'Unable to reload VM ' + vmobj.uuid, e);
+                    } else {
+                        spawnVNC(obj);
+                        VM.log('INFO', 'respawned VNC for VM ' + obj.uuid);
+                    }
+                });
+            }
         });
 
         vnc.on('error', function () {
-            VM.log('WARN', 'Warning: VNC socket error: ' +
-                JSON.stringify(arguments));
+            VM.log('WARN', 'Warning: VNC socket error: '
+                + JSON.stringify(arguments));
             clearVNC(vmobj.uuid);
         });
 
         vnc.connect(zonepath + '/root/tmp/vm.vnc');
     });
 
-    VM.log('INFO', 'spawning VNC listener for ' + vmobj.uuid + ' on ' +
-        SDC.sysinfo.admin_ip);
+    VM.log('INFO', 'spawning VNC listener for ' + vmobj.uuid + ' on '
+        + SDC.sysinfo.admin_ip);
 
-    server.listen(0, SDC.sysinfo.admin_ip, function() {
+    // Before we start the listener, set the password if needed.
+    if (vmobj.hasOwnProperty('vnc_password') && vmobj.vnc_password.length > 0) {
+        setVNCPassword(vmobj, vmobj.vnc_password);
+    }
+
+    server.listen(port, SDC.sysinfo.admin_ip, function () {
         addr = server.address();
         VNC[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip, 'port': addr.port,
-            'display': (addr.port - 5900), 'server': server};
-        VM.log('DEBUG', 'VNC details for ' + vmobj.uuid + ':' +
-            VNC[vmobj.uuid]);
+            'server': server};
+        if (addr.port >= 5900) {
+            // only add the display number when it's non-negative
+            VNC[vmobj.uuid].display = (addr.port - 5900);
+        }
+        if (vmobj.hasOwnProperty('vnc_password')
+            && vmobj.vnc_password.length > 0) {
+
+            VNC[vmobj.uuid].password = vmobj.vnc_password;
+        }
+        VM.log('DEBUG', 'VNC details for ' + vmobj.uuid + ': '
+            + util.inspect(VNC[vmobj.uuid]));
     });
 }
 
@@ -128,6 +200,13 @@ function clearVNC(uuid)
         VNC[uuid].server.close();
     }
     delete VNC[uuid];
+}
+
+function reloadVNC(vmobj)
+{
+    VM.log('INFO', 'reloading VNC for ' + vmobj.uuid);
+    clearVNC(vmobj.uuid);
+    spawnVNC(vmobj);
 }
 
 function clearTimer(uuid)
@@ -153,100 +232,89 @@ function loadConfig(callback)
         var nic, nics;
 
         if (error) {
-            return callback(error);
-        }
-
-        SDC.sysinfo = s;
-        // nic tags are in sysinfo but not readily available, we need admin_ip
-        // to know where to listen for stuff like VNC.
-        nics = SDC.sysinfo['Network Interfaces'];
-        for (nic in nics) {
-            if (nics.hasOwnProperty(nic)) {
-                if (nics[nic]['NIC Names'].indexOf('admin') !== -1) {
-                    SDC.sysinfo.admin_ip = nics[nic].ip4addr;
-                    VM.log('DEBUG', 'found admin_ip: ' + SDC.sysinfo.admin_ip);
+            callback(error);
+        } else {
+            SDC.sysinfo = s;
+            // nic tags are in sysinfo but not readily available, we need
+            // admin_ip to know where to listen for stuff like VNC.
+            nics = SDC.sysinfo['Network Interfaces'];
+            for (nic in nics) {
+                if (nics.hasOwnProperty(nic)) {
+                    if (nics[nic]['NIC Names'].indexOf('admin') !== -1) {
+                        SDC.sysinfo.admin_ip = nics[nic].ip4addr;
+                        VM.log('DEBUG', 'found admin_ip: '
+                            + SDC.sysinfo.admin_ip);
+                    }
                 }
             }
-        }
 
-        return callback();
+            callback();
+        }
     });
 }
 
 function updateZoneStatus(ev)
 {
-    if (ev.hasOwnProperty('zonename') && ev.hasOwnProperty('oldstate') &&
-        ev.hasOwnProperty('newstate') && ev.hasOwnProperty('when')) {
+    if (ev.hasOwnProperty('zonename') && ev.hasOwnProperty('oldstate')
+        && ev.hasOwnProperty('newstate') && ev.hasOwnProperty('when')) {
 
         if (ev.newstate === 'running') {
-            VM.log('NOTICE', '"' + ev.zonename + '" went from ' + ev.oldstate +
-                ' to running at ' + ev.when);
+            VM.log('NOTICE', '"' + ev.zonename + '" went from ' + ev.oldstate
+                + ' to running at ' + ev.when);
             VM.load(ev.zonename, function (err, obj) {
-                var socket;
-                var q = new Qmp(function () {return;});
-
                 if (err) {
-                    VM.log('ERROR', "Unable to load vm", err);
-                    return callback(err);
-                }
-
-                if (obj.brand !== 'kvm') {
+                    VM.log('ERROR', 'Unable to load vm', err);
+                } else if (obj.brand !== 'kvm') {
                     // do nothing
-                    VM.log('DEBUG', 'Ignoring freshly started vm ' + obj.uuid +
-                        ' with brand=' + obj.brand);
-                    return;
+                    VM.log('DEBUG', 'Ignoring freshly started vm ' + obj.uuid
+                        + ' with brand=' + obj.brand);
+                } else {
+                    // clear any old timers or VNC since this vm just came up,
+                    // then spin up a new VNC.
+                    clearVM(obj.uuid);
+                    spawnVNC(obj);
                 }
-
-                // clear any old timers or VNC since this vm just came up,
-                // then spin up a new VNC.
-                clearVM(obj.uuid);
-                spawnVNC(obj);
             });
         } else if (ev.oldstate === 'running') {
-            VM.log('NOTICE', '"' + ev.zonename + '" went from running to ' +
-                ev.newstate + ' at ' + ev.when);
+            VM.log('NOTICE', '"' + ev.zonename + '" went from running to '
+                + ev.newstate + ' at ' + ev.when);
             if (VNC.hasOwnProperty(ev.zonename)) {
                 // VMs always have zonename === uuid, so we can remove this
-                VM.log('INFO', 'clearing state for disappearing VM ' +
-                    ev.zonename);
+                VM.log('INFO', 'clearing state for disappearing VM '
+                    + ev.zonename);
                 clearVM(ev.zonename);
             }
         } else if (ev.newstate === 'uninitialized') { // this means installed!?
-            VM.log('NOTICE', '"' + ev.zonename + '" went from running to ' +
-                ev.newstate + ' at ' + ev.when);
+            VM.log('NOTICE', '"' + ev.zonename + '" went from running to '
+                + ev.newstate + ' at ' + ev.when);
             // XXX we're running stop so it will clear the transition marker
 
             VM.load(ev.zonename, function (err, obj) {
                 if (err) {
-                    VM.log('ERROR', "Unable to load vm", err);
-                    return callback(err);
-                }
-
-                if (obj.brand !== 'kvm') {
+                    VM.log('ERROR', 'Unable to load vm', err);
+                } else if (obj.brand !== 'kvm') {
                     // do nothing
-                    VM.log('DEBUG', 'Ignoring freshly stopped vm ' + obj.uuid +
-                        ' with brand=' + obj.brand);
-                    return;
+                    VM.log('DEBUG', 'Ignoring freshly stopped vm ' + obj.uuid
+                        + ' with brand=' + obj.brand);
+                } else {
+                    VM.stop(ev.zonename, {'force': true}, function (e) {
+                        if (e) {
+                            VM.log('ERROR', 'stop failed', e);
+                        }
+                    });
                 }
-
-                VM.stop(ev.zonename, {"force": true}, function (err) {
-                    if (err) {
-                        VM.log('ERROR', 'stop failed', err);
-                    }
-                });
             });
         }
     } else {
         VM.log('DEBUG', 'skip: ' + ev);
     }
-
-    return;
 }
 
 function startZoneWatcher(callback)
 {
     var chunks;
     var buffer = '';
+    var watcher;
 
     watcher = spawn('/usr/vm/sbin/zoneevent', [], {'customFds': [-1, -1, -1]});
 
@@ -254,15 +322,13 @@ function startZoneWatcher(callback)
 
     watcher.stdout.on('data', function (data) {
         var chunk;
-        var new_state;
+        var obj;
 
         buffer += data.toString();
         chunks = buffer.split('\n');
         while (chunks.length > 1) {
             chunk = chunks.shift();
             obj = JSON.parse(chunk);
-
-            //log('CHUNK: ' + JSON.stringify(obj));
             callback(obj);
         }
         buffer = chunks.pop();
@@ -278,6 +344,8 @@ function startZoneWatcher(callback)
 
 function handlePost(c, args, response)
 {
+    var uuid;
+
     VM.log('DEBUG', 'POST len: ' + c + args);
 
     if (c.length !== 2 || c[0] !== 'vm') {
@@ -287,11 +355,13 @@ function handlePost(c, args, response)
         return;
     }
 
-    if (!args.hasOwnProperty('action') ||
-        ['stop', 'sysrq', 'reset'].indexOf(args.action) === -1 ||
-        (args.action === 'sysrq' &&
-        ['nmi', 'screenshot'].indexOf(args.request) === -1) ||
-        (args.action === 'stop' && !args.hasOwnProperty('timeout'))) {
+    uuid = c[1];
+
+    if (!args.hasOwnProperty('action')
+        || ['stop', 'sysrq', 'reset', 'reload_vnc'].indexOf(args.action) === -1
+        || (args.action === 'sysrq'
+            && ['nmi', 'screenshot'].indexOf(args.request) === -1)
+        || (args.action === 'stop' && !args.hasOwnProperty('timeout'))) {
 
         // Bad request
         response.writeHead(400, { 'Content-Type': 'application/json'});
@@ -301,40 +371,54 @@ function handlePost(c, args, response)
 
     switch (args.action) {
     case 'stop':
-        stopVM(c[1], args.timeout, function (err, res) {
+        stopVM(uuid, args.timeout, function (err, res) {
             if (err) {
                 response.writeHead(500, { 'Content-Type': 'application/json'});
                 response.write(err.message);
                 response.end();
             } else {
                 response.writeHead(202, { 'Content-Type': 'application/json'});
-                response.write('Stopped ' + c[1]);
+                response.write('Stopped ' + uuid);
                 response.end();
             }
         });
         break;
     case 'sysrq':
-        sysrqVM(c[1], args.request, function(err, res) {
+        sysrqVM(uuid, args.request, function (err, res) {
             if (err) {
                 response.writeHead(500, { 'Content-Type': 'application/json'});
                 response.write(err.message);
                 response.end();
             } else {
                 response.writeHead(202, { 'Content-Type': 'application/json'});
-                response.write('Sent sysrq to ' + c[1]);
+                response.write('Sent sysrq to ' + uuid);
                 response.end();
             }
         });
         break;
+    case 'reload_vnc':
+        VM.load(uuid, function (err, obj) {
+            if (err) {
+                response.writeHead(404);
+                response.write('Unable to load VM ' + uuid);
+                response.end();
+                return;
+            }
+            reloadVNC(obj);
+            response.writeHead(202, { 'Content-Type': 'application/json'});
+            response.write('Sent request to reload VNC for ' + uuid);
+            response.end();
+        });
+        break;
     case 'reset':
-        resetVM(c[1], function (err, res) {
+        resetVM(uuid, function (err, res) {
             if (err) {
                 response.writeHead(500, { 'Content-Type': 'application/json'});
                 response.write(err.message);
                 response.end();
             } else {
                 response.writeHead(202, { 'Content-Type': 'application/json'});
-                response.write('Sent reset to ' + c[1]);
+                response.write('Sent reset to ' + uuid);
                 response.end();
             }
         });
@@ -351,7 +435,9 @@ function handlePost(c, args, response)
 function handleGet(c, args, response)
 {
     var t;
+    var type;
     var types = [];
+    var uuid = c[1];
 
     VM.log('DEBUG', 'GET (' + JSON.stringify(c) + ') len: ' + c.length);
 
@@ -374,7 +460,7 @@ function handleGet(c, args, response)
 
     VM.log('DEBUG', 'TYPES: ' + JSON.stringify(types));
 
-    infoVM(c[1], types, function (err, res) {
+    infoVM(uuid, types, function (err, res) {
         if (err) {
             VM.log('ERROR', err.message, err);
             response.writeHead(500, { 'Content-Type': 'application/json'});
@@ -389,8 +475,9 @@ function handleGet(c, args, response)
 function startHTTPHandler()
 {
     http.createServer(function (request, response) {
-        var url_parts;
+        var args;
         var c;
+        var url_parts;
 
         url_parts = url.parse(request.url, true);
         c = url_parts.pathname.split('/');
@@ -406,19 +493,22 @@ function startHTTPHandler()
         if (url_parts.hasOwnProperty('query')) {
             args = url_parts.query;
             VM.log('DEBUG', 'url ' + request.url);
-            VM.log('DEBUG', 'args ' + args);
+            VM.log('DEBUG', 'args ' + JSON.stringify(args));
         } else {
             args = {};
         }
 
         if (request.method === 'POST') {
-            var body='';
+            var body = '';
+
             request.on('data', function (data) {
-                body +=data;
+                body += data;
             });
-            request.on('end',function(){
-                var POST =  qs.parse(body);
-                VM.log('DEBUG', 'POST: ' + POST);
+            request.on('end', function () {
+                var k;
+                var POST = qs.parse(body);
+
+                VM.log('DEBUG', 'POST: ' + JSON.stringify(POST));
                 for (k in POST) {
                     if (POST.hasOwnProperty(k)) {
                         args[k] = POST[k];
@@ -436,6 +526,7 @@ function startHTTPHandler()
  * GET /vm/:id[?type=vnc,xxx]
  * POST /vm/:id?action=stop
  * POST /vm/:id?action=reset
+ * POST /vm/:id?action=reload_vnc
  * POST /vm/:id?action=sysrq&request=[nmi|screenshot]
  *
  */
@@ -445,41 +536,48 @@ function stopVM(uuid, timeout, callback)
     VM.log('DEBUG', 'DEBUG stop(' + uuid + ')');
 
     if (!timeout) {
-        return callback(new Error('stopVM() requires timeout to be set.'));
+        callback(new Error('stopVM() requires timeout to be set.'));
+        return;
     }
 
     /* We load here to get the zonepath and ensure it exists. */
     VM.load(uuid, function (err, obj) {
         var socket;
-        var q = new Qmp(function () {return;});
+        var q;
 
         if (err) {
             VM.log('DEBUG', 'Unable to load vm: ' + err.message, err);
-            return callback(err);
+            callback(err);
+            return;
         }
 
+        q = new Qmp(VM.log);
+
         if (obj.brand !== 'kvm') {
-            return callback(new Error('vmadmd only handles "stop" for kvm (' +
-                'your brand is: ' + obj.brand + ')'));
+            callback(new Error('vmadmd only handles "stop" for kvm ('
+                + 'your brand is: ' + obj.brand + ')'));
+            return;
         }
 
         socket = obj.zonepath + '/root/tmp/vm.qmp';
-        q.connect(socket, function(err) {
-            if (err) {
-                return callback(err);
+        q.connect(socket, function (error) {
+            if (error) {
+                callback(error);
+                return;
             }
-            q.command('system_powerdown', null, function (err, result) {
+            q.command('system_powerdown', null, function (e, result) {
                 VM.log('DEBUG', 'result: ' + JSON.stringify(result));
                 q.disconnect();
 
                 // Setup to send kill when timeout expires
                 setStopTimer(uuid, timeout * 1000);
 
-                return callback(null);
+                callback(null);
+                return;
             });
         });
     });
-};
+}
 
 // sends several query-* commands to QMP to get details for a VM
 function infoVM(uuid, types, callback)
@@ -492,29 +590,34 @@ function infoVM(uuid, types, callback)
         'query-blockstats',
         'query-cpus',
         'query-pci',
-        'query-kvm',
+        'query-kvm'
     ];
 
     VM.log('DEBUG', 'LOADING: ' + uuid);
 
     VM.load(uuid, function (err, obj) {
+        var q;
         var socket;
-        //var q = new Qmp(console.log);
-        var q = new Qmp(function () {return;});
+        var type;
 
         if (err) {
-            return callback('Unable to load vm: ' + JSON.stringify(err));
+            callback('Unable to load vm: ' + JSON.stringify(err));
+            return;
         }
 
         if (obj.brand !== 'kvm') {
-            return callback(new Error('vmadmd only handles "info" for kvm (' +
-                'your brand is: ' + obj.brand + ')'));
+            callback(new Error('vmadmd only handles "info" for kvm ('
+                + 'your brand is: ' + obj.brand + ')'));
+            return;
         }
 
         if (obj.state !== 'running' && obj.state !== 'stopping') {
-            return callback(new Error('Unable to get info for vm from ' +
-                'state "' + obj.state + '", must be "running" or "stopping".'));
+            callback(new Error('Unable to get info for vm from state "'
+                + obj.state + '", must be "running" or "stopping".'));
+            return;
         }
+
+        q = new Qmp(VM.log);
 
         if (!types) {
             types = ['all'];
@@ -523,62 +626,67 @@ function infoVM(uuid, types, callback)
         for (type in types) {
             type = types[type];
             if (VM.INFO_TYPES.indexOf(type) === -1) {
-                return callback(new Error('unknown info type: ' + type));
+                callback(new Error('unknown info type: ' + type));
+                return;
             }
         }
 
         socket = obj.zonepath + '/root/tmp/vm.qmp';
 
-        q.connect(socket, function(err) {
-            if (err) {
-                return callback(err);
+        q.connect(socket, function (error) {
+            if (error) {
+                callback(error);
+                return;
             }
             // run each command in commands
-            async.map(commands,
-                function (command, cb)
-                {
-                    var base = command.replace(/^query-/, '');
+            async.map(commands, function (command, cb) {
+                var base = command.replace(/^query-/, '');
 
-                    if ((types.indexOf('all') !== -1) ||
-                        (types.indexOf(base) !== -1)) {
+                if ((types.indexOf('all') !== -1)
+                    || (types.indexOf(base) !== -1)) {
 
-                        q.command(command, null, function (err, result) {
-                            cb(null, [base, result]);
-                        });
-                    } else {
-                        cb(null, null);
-                    }
-                },
-                function (err, results)
-                {
-                    var i;
-                    q.disconnect();
-                    if (err) {
-                        VM.log('ERROR', 'getVMInfo(): Unknown Error', err);
-                        callback(err);
-                    } else {
-                        // key is in results[i][0], value in results[i][1]
-                        for (i = 0; i < results.length; i++) {
-                            if (results[i]) {
-                                res[results[i][0]] = results[i][1];
-                            }
+                    q.command(command, null, function (e, result) {
+                        cb(null, [base, result]);
+                    });
+                } else {
+                    cb(null, null);
+                }
+            }, function (e, results) {
+                var i;
+
+                q.disconnect();
+                if (e) {
+                    VM.log('ERROR', 'getVMInfo(): Unknown Error', e);
+                    callback(e);
+                } else {
+                    // key is in results[i][0], value in results[i][1]
+                    for (i = 0; i < results.length; i++) {
+                        if (results[i]) {
+                            res[results[i][0]] = results[i][1];
                         }
-                        if ((types.indexOf('all') !== -1) ||
-                            (types.indexOf('vnc') !== -1)) {
+                    }
+                    if ((types.indexOf('all') !== -1)
+                        || (types.indexOf('vnc') !== -1)) {
 
-                            res.vnc = {};
-                            if (VNC.hasOwnProperty(obj.uuid)) {
-                                res.vnc.host = VNC[obj.uuid].host;
-                                res.vnc.port = VNC[obj.uuid].port;
+                        res.vnc = {};
+                        if (VNC.hasOwnProperty(obj.uuid)) {
+                            res.vnc.host = VNC[obj.uuid].host;
+                            res.vnc.port = VNC[obj.uuid].port;
+                            if (VNC[obj.uuid].hasOwnProperty('display')) {
                                 res.vnc.display = VNC[obj.uuid].display;
                             }
-                            callback(null, res);
-                        } else {
-                            callback(null, res);
+                            if (VNC[obj.uuid].hasOwnProperty('password')
+                                && VNC[obj.uuid].password.length > 0) {
+
+                                res.vnc.password = VNC[obj.uuid].password;
+                            }
                         }
+                        callback(null, res);
+                    } else {
+                        callback(null, res);
                     }
                 }
-            );
+            });
         });
     });
 }
@@ -589,77 +697,88 @@ function resetVM(uuid, callback)
 
     /* We load here to get the zonepath and ensure the vm exists. */
     VM.load(uuid, function (err, obj) {
+        var q;
         var socket;
-        //var q = new Qmp(function () {console.log.apply(this, arguments);});
-        var q = new Qmp(function () {return;});
 
         if (err) {
-            VM.log('DEBUG', "Unable to load vm: " + err.message, err);
-            return callback(err);
+            VM.log('DEBUG', 'Unable to load vm: ' + err.message, err);
+            callback(err);
+            return;
         }
 
         if (obj.brand !== 'kvm') {
-            return callback(new Error('vmadmd only handles "reset" for kvm (' +
-                'your brand is: ' + obj.brand + ')'));
+            callback(new Error('vmadmd only handles "reset" for kvm ('
+                + 'your brand is: ' + obj.brand + ')'));
+            return;
         }
 
         if (obj.state !== 'running') {
-            return callback(new Error('Unable to reset vm from state "' +
-                obj.state + '", must be "running".'));
+            callback(new Error('Unable to reset vm from state "'
+                + obj.state + '", must be "running".'));
+            return;
         }
 
+        q = new Qmp(VM.log);
+
         socket = obj.zonepath + '/root/tmp/vm.qmp';
-        q.connect(socket, function(err) {
-            if (err) {
-                return callback(err);
+        q.connect(socket, function (error) {
+            if (error) {
+                callback(error);
+            } else {
+                q.command('system_reset', null, function (e, result) {
+                    VM.log('DEBUG', 'result: ' + JSON.stringify(result));
+                    q.disconnect();
+                    callback();
+                });
             }
-            q.command('system_reset', null, function (err, result) {
-                //cb(null, result);
-                VM.log('DEBUG', 'result: ' + JSON.stringify(result));
-                q.disconnect();
-                return callback(null);
-            });
         });
     });
-};
+}
 
 function sysrqVM(uuid, req, callback)
 {
     var SUPPORTED_REQS = ['screenshot', 'nmi'];
+
     VM.log('DEBUG', 'sysrq(' + uuid + ',' + req + ')');
 
     /* We load here to ensure this vm exists. */
     VM.load(uuid, function (err, obj) {
+        var q;
         var socket;
-        //var q = new Qmp(function () {console.log.apply(this, arguments);});
-        var q = new Qmp(function () {return;});
 
         if (err) {
             VM.log('ERROR', 'unable to load vm: ' + err.message, err);
-            return callback(err);
+            callback(err);
+            return;
         }
 
         if (obj.brand !== 'kvm') {
-            return callback(new Error('vmadmd only handles "reset" for kvm (' +
-                'your brand is: ' + obj.brand + ')'));
+            callback(new Error('vmadmd only handles "reset" for kvm ('
+                + 'your brand is: ' + obj.brand + ')'));
+            return;
         }
 
         if (obj.state !== 'running' && obj.state !== 'stopping') {
-            return callback(new Error('Unable to send request to vm from "'
-                + 'state "' + obj.state + '", must be "running" or "stopping".')
-            );
+            callback(new Error('Unable to send request to vm from "'
+                + 'state "' + obj.state + '", must be "running" or '
+                + '"stopping".'));
+            return;
         }
 
         if (SUPPORTED_REQS.indexOf(req) === -1) {
-            return callback(new Error('Invalid sysrq "' + req +
-                '" valid values: "' + SUPPORTED_REQS.join('","') + '".'));
+            callback(new Error('Invalid sysrq "' + req
+                + '" valid values: "' + SUPPORTED_REQS.join('","') + '".'));
+            return;
         }
 
-        socket = obj.zonepath + '/root/tmp/vm.qmp';
-        q.connect(socket, function(err) {
+        q = new Qmp(VM.log);
 
-            if (err) {
-                return callback(err);
+        socket = obj.zonepath + '/root/tmp/vm.qmp';
+        q.connect(socket, function (error) {
+
+            if (error) {
+                callback(error);
+                return;
             }
 
             if (req === 'screenshot') {
@@ -668,43 +787,44 @@ function sysrqVM(uuid, req, callback)
                 async.series([
                     function (cb) {
                         q.command('human-monitor-command',
-                            {"command-line": "sendkey shift"},
-                            function (err, result) {
-                                // XXX check result?
-                                VM.log('DEBUG', 'sendkey err: ' +
-                                    JSON.stringify(err) + ' result: ' +
-                                    JSON.stringify(result));
-                                VM.log
-                                return cb(err);
-                            }
-                        );
+                            {'command-line': 'sendkey shift'},
+                            function (e, result) {
+
+                            // XXX check result?
+                            VM.log('DEBUG', 'sendkey err: '
+                                + JSON.stringify(e) + ' result: '
+                                + JSON.stringify(result));
+                            cb(e);
+                        });
                     }, function (cb) {
                         q.command('screendump', {'filename': '/tmp/vm.ppm'},
-                            function (err, result) {
-                                // XXX check result?
-                                VM.log('DEBUG', 'sendkey err: ' +
-                                    JSON.stringify(err) + ' result: ' +
-                                    JSON.stringify(result));
-                                q.disconnect();
-                                return cb(err);
-                            }
-                        );
+                            function (e, result) {
+
+                            // XXX check result?
+                            VM.log('DEBUG', 'sendkey err: '
+                                + JSON.stringify(e) + ' result: '
+                                + JSON.stringify(result));
+                            q.disconnect();
+                            cb(e);
+                        });
                     }
-                ], function (err) {
-                    return callback(err);
+                ], function (e) {
+                    callback(e);
                 });
             } else if (req === 'nmi') {
-                q.command('human-monitor-command', {'command-line': "nmi 0"},
-                    function (err, result) {
-                        // XXX handle failure
-                        q.disconnect();
-                        return callback(null);
-                    }
-                );
+                q.command('human-monitor-command', {'command-line': 'nmi 0'},
+                    function (e, result) {
+
+                    // XXX handle failure
+                    q.disconnect();
+                    callback();
+                });
+            } else {
+                callback();
             }
         });
     });
-};
+}
 
 function setStopTimer(uuid, expire)
 {
@@ -716,21 +836,21 @@ function setStopTimer(uuid, expire)
         // reload and make sure we still need to kill.
         VM.load(uuid, function (e, obj) {
             if (e) {
-                VM.log('ERROR', "expire(): Unable to load vm: " + e.message, e);
+                VM.log('ERROR', 'expire(): Unable to load vm: ' + e.message, e);
                 return;
             }
             // ensure we've not started and started stopping
             // again since we checked.
-            VM.log('DEBUG', 'times two: ' + Date.now() + ' ' +
-                obj.transition_expire);
-            if (obj.state === 'stopping' && obj.transition_expire &&
-                (Date.now() >= obj.transition_expire)) {
+            VM.log('DEBUG', 'times two: ' + Date.now() + ' '
+                + obj.transition_expire);
+            if (obj.state === 'stopping' && obj.transition_expire
+                && (Date.now() >= obj.transition_expire)) {
 
                 // We assume kill will clear the transition even if the
                 // vm is already stopped.
                 VM.stop(obj.uuid, {'force': true}, function (err) {
-                    VM.log('DEBUG', 'timeout vm.kill() = ' +
-                        JSON.stringify(err));
+                    VM.log('DEBUG', 'timeout vm.kill() = '
+                        + JSON.stringify(err));
                 });
             }
         });
@@ -752,12 +872,12 @@ function loadVM(vmobj, do_autoboot)
 
     if (vmobj.state === 'stopping' && vmobj.transition_expire) {
         VM.log('DEBUG', 'times: ' + Date.now() + ' ' + vmobj.transition_expire);
-        if (Date.now() >= vmobj.transition_expire ||
-            (vmobj.transition_to === 'stopped' &&
-            vmobj.real_state === 'installed')) {
+        if (Date.now() >= vmobj.transition_expire
+            || (vmobj.transition_to === 'stopped'
+                && vmobj.zone_state === 'installed')) {
 
-            VM.log('INFO', 'killing VM with expired running stop: ' +
-                vmobj.uuid);
+            VM.log('INFO', 'killing VM with expired running stop: '
+                + vmobj.uuid);
             // We assume kill will clear the transition even if the
             // vm is already stopped.
             VM.stop(vmobj.uuid, {'force': true}, function (err) {
@@ -766,10 +886,10 @@ function loadVM(vmobj, do_autoboot)
         } else {
             expire = ((Number(vmobj.transition_expire) + 1000) - Date.now());
             setStopTimer(vmobj.uuid, expire);
-       }
+        }
     } else {
-        VM.log('DEBUG', 'state: ' + vmobj.state + ' expire: ' +
-            vmobj.transition_expire);
+        VM.log('DEBUG', 'state: ' + vmobj.state + ' expire: '
+            + vmobj.transition_expire);
     }
 
     // Start VNC
@@ -793,22 +913,17 @@ function main()
         }
 
         path.exists(VMADMD_AUTOBOOT_FILE, function (exists) {
-            var autobootLog;
-            var uuid;
+            var vmobj;
 
             if (!exists) {
                 do_autoboot = true;
                 // boot all autoboot vms because this vm just booted, now
                 // create file so on restart we know they system wasn't just
                 // booted.
-                fs.writeFileSync(VMADMD_AUTOBOOT_FILE, "booted");
+                fs.writeFileSync(VMADMD_AUTOBOOT_FILE, 'booted');
             }
 
-            VM.lookup({}, {"full": true}, function (err, vmobjs) {
-                if (err) {
-                    //return callback(err);
-                }
-
+            VM.lookup({}, {'full': true}, function (e, vmobjs) {
                 for (vmobj in vmobjs) {
                     vmobj = vmobjs[vmobj];
                     if (vmobj.brand === 'kvm') {
@@ -816,15 +931,14 @@ function main()
                     } else {
                         VM.log('DEBUG', 'ignoring non-kvm VM ' + vmobj.uuid);
                     }
-
-                    //return callback();
                 }
             });
         });
     });
 }
 
-onlyif.rootInSmartosGlobal(function(err) {
+onlyif.rootInSmartosGlobal(function (err) {
+    VM.resetLog('vmadmd');
     if (err) {
         VM.log('ERROR', 'Fatal: cannot run because: ' + err);
         process.exit(1);

@@ -16,6 +16,7 @@ var PAYLOADS = {
     "create": {
         "dataset_uuid": dataset_uuid,
         "alias": "autotest" + process.pid,
+        "do_not_inventory": true
     }, "add_net0": {
         "add_nics": [
             {
@@ -56,6 +57,12 @@ var PAYLOADS = {
         "remove_nics": [
             "01:02:03:04:05:06",
             "02:03:04:05:06:07"
+        ]
+    }, "add_nic_with_just_mac": {
+        "add_nics": [
+            {
+                "mac": "01:02:03:04:05:06"
+            }
         ]
     }
 };
@@ -200,6 +207,32 @@ test('remove net0 and net1', function(t) {
     });
 });
 
+test('add NIC with just MAC', function(t) {
+    VM.update(vm_uuid, PAYLOADS.add_nic_with_just_mac, function(err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                var nic;
+                var prop;
+
+                t.ok(!err, 'failed reloading VM');
+                if (err) {
+                    return;
+                }
+                t.ok(obj.nics.length === 1, 'VM has ' + obj.nics.length + ' nics, expected: 1');
+                nic = obj.nics[0];
+                for (prop in nic) {
+                    t.ok((['interface', 'mac'].indexOf(prop) !== -1), 'prop is expected: ' + prop);
+                    t.ok(nic[prop] !== 'undefined', 'prop ' + prop + ' is not undefined');
+                }
+                t.end();
+            });
+        }
+    });
+});
+
 test('set then unset simple properties', function(t) {
     async.forEachSeries(simple_properties,
         function (item, cb) {
@@ -313,6 +346,239 @@ test('remove quota', function(t) {
                 }
             });
         }
+    });
+});
+
+function test_update_ram(ram)
+{
+    test('update ram ' + ram, function(t) {
+        VM.update(vm_uuid, {'ram': ram}, function(err) {
+            if (err) {
+                t.ok(false, 'error updating VM: ' + err.message);
+                t.end();
+            } else {
+                VM.load(vm_uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'failed reloading VM');
+                        t.end();
+                    }
+
+                    t.ok((obj.max_physical_memory === ram), 'vm.max_physical_memory: '
+                        + obj.max_physical_memory + ' expected: ' + ram);
+                    t.ok((obj.max_locked_memory === ram), 'vm.max_locked_memory: '
+                        + obj.max_locked_memory + ' expected: ' + ram);
+                    t.ok((obj.max_swap === ram), 'vm.max_swap: '
+                        + obj.max_swap + ' expected: ' + ram);
+                    t.end();
+                });
+            }
+        });
+    });
+}
+
+// We started at 256, double that
+test_update_ram(512);
+// Update to a lower value should lower everything...
+test_update_ram(128);
+// Now something bigger
+test_update_ram(1024);
+
+// now try *just* updating swap
+test('update max_swap', function(t) {
+    var test_value = 1536;
+
+    VM.load(vm_uuid, function (err, before_obj) {
+        if (err) {
+            t.ok(false, 'error loading existing VM: ' + err.message);
+            t.end();
+            return;
+        }
+        VM.update(vm_uuid, {'max_swap': test_value}, function(err) {
+            if (err) {
+                t.ok(false, 'error updating VM: ' + err.message);
+                t.end();
+            } else {
+                VM.load(vm_uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'failed reloading VM');
+                        t.end();
+                        return;
+                    }
+                    t.ok((obj.max_swap === test_value), 'vm.max_swap: ' + obj.max_swap
+                        + ' expected: ' + test_value);
+                    t.ok((obj.tmpfs == before_obj.tmpfs), 'vm.tmpfs: ' + obj.tmpfs
+                        + ' expected: ' + before_obj.tmpfs);
+                    t.ok((obj.max_physical_memory == before_obj.max_physical_memory),
+                        'vm.max_physical_memory: ' + obj.max_physical_memory
+                        + ' expected: ' + before_obj.max_physical_memory);
+                    t.ok((obj.max_locked_memory == before_obj.max_locked_memory),
+                        'vm.max_locked_memory: ' + obj.max_locked_memory
+                        + ' expected: ' + before_obj.max_locked_memory);
+                    t.end();
+                });
+            }
+        });
+    });
+});
+
+// now try *just* updating swap, and to a lower than RAM.
+test('update max_swap', function(t) {
+    var test_value;
+
+    VM.load(vm_uuid, function (err, before_obj) {
+        if (err) {
+            t.ok(false, 'error loading existing VM: ' + err.message);
+            t.end();
+            return;
+        }
+        test_value = (before_obj.max_physical_memory - 64);
+        VM.update(vm_uuid, {'max_swap': test_value}, function(err) {
+            if (err) {
+                t.ok(false, 'error updating VM: ' + err.message);
+                t.end();
+            } else {
+                VM.load(vm_uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'failed reloading VM');
+                        t.end();
+                        return;
+                    }
+                    // We expect that it was raised to match max_physical_memory
+                    t.ok((obj.max_swap === before_obj.max_physical_memory),
+                        'vm.max_swap: ' + obj.max_swap
+                        + ' expected: ' + before_obj.max_physical_memory);
+                    t.ok((obj.tmpfs == before_obj.tmpfs), 'vm.tmpfs: ' + obj.tmpfs
+                        + ' expected: ' + before_obj.tmpfs);
+                    t.ok((obj.max_physical_memory == before_obj.max_physical_memory),
+                        'vm.max_physical_memory: ' + obj.max_physical_memory
+                        + ' expected: ' + before_obj.max_physical_memory);
+                    t.ok((obj.max_locked_memory == before_obj.max_locked_memory),
+                        'vm.max_locked_memory: ' + obj.max_locked_memory
+                        + ' expected: ' + before_obj.max_locked_memory);
+                    t.end();
+                });
+            }
+        });
+    });
+});
+
+// now try *just* updating max_physical_memory (up)
+test('update max_physical_memory', function(t) {
+    var test_value = 2048;
+
+    VM.load(vm_uuid, function (err, before_obj) {
+        if (err) {
+            t.ok(false, 'error loading existing VM: ' + err.message);
+            t.end();
+            return;
+        }
+        VM.update(vm_uuid, {'max_physical_memory': test_value}, function(err) {
+            if (err) {
+                t.ok(false, 'error updating VM: ' + err.message);
+                t.end();
+            } else {
+                VM.load(vm_uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'failed reloading VM');
+                        t.end();
+                        return;
+                    }
+
+                    // everything else should have been bumped too
+                    t.ok((obj.max_swap === test_value), 'vm.max_swap: ' + obj.max_swap
+                        + ' expected: ' + test_value);
+                    t.ok((obj.tmpfs === test_value), 'vm.tmpfs: ' + obj.tmpfs
+                        + ' expected: ' + test_value);
+                    t.ok((obj.max_physical_memory === test_value),
+                        'vm.max_physical_memory: ' + obj.max_physical_memory
+                        + ' expected: ' + test_value);
+                    t.ok((obj.max_locked_memory === test_value),
+                        'vm.max_locked_memory: ' + obj.max_locked_memory
+                        + ' expected: ' + test_value);
+                    t.end();
+                });
+            }
+        });
+    });
+});
+
+// now try *just* updating max_physical_memory (down)
+test('update max_physical_memory', function(t) {
+    var test_value = 512;
+
+    VM.load(vm_uuid, function (err, before_obj) {
+        if (err) {
+            t.ok(false, 'error loading existing VM: ' + err.message);
+            t.end();
+            return;
+        }
+        VM.update(vm_uuid, {'max_physical_memory': 512}, function(err) {
+            if (err) {
+                t.ok(false, 'error updating VM: ' + err.message);
+                t.end();
+            } else {
+                VM.load(vm_uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'failed reloading VM');
+                        t.end();
+                        return;
+                    }
+
+                    // everything else should have been lowered
+                    t.ok((obj.max_swap === test_value), 'vm.max_swap: ' + obj.max_swap
+                        + ' expected: ' + test_value);
+                    t.ok((obj.tmpfs === test_value), 'vm.tmpfs: ' + obj.tmpfs
+                        + ' expected: ' + test_value);
+                    t.ok((obj.max_physical_memory === test_value),
+                        'vm.max_physical_memory: ' + obj.max_physical_memory
+                        + ' expected: ' + test_value);
+                    t.ok((obj.max_locked_memory === test_value),
+                        'vm.max_locked_memory: ' + obj.max_locked_memory
+                        + ' expected: ' + test_value);
+                    t.end();
+                });
+            }
+        });
+    });
+});
+
+// now try *just* updating max_locked_memory, high value (should get clamped)
+test('update max_locked_memory', function(t) {
+    var test_value;
+
+    VM.load(vm_uuid, function (err, before_obj) {
+        if (err) {
+            t.ok(false, 'error loading existing VM: ' + err.message);
+            t.end();
+            return;
+        }
+        test_value = before_obj.max_physical_memory + 256;
+        VM.update(vm_uuid, {'max_locked_memory': test_value}, function(err) {
+            if (err) {
+                t.ok(false, 'error updating VM: ' + err.message);
+                t.end();
+            } else {
+                VM.load(vm_uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'failed reloading VM');
+                        t.end();
+                        return;
+                    }
+                    t.ok((obj.max_swap === before_obj.max_swap), 'vm.max_swap: ' + obj.max_swap
+                        + ' expected: ' + before_obj.max_swap);
+                    t.ok((obj.tmpfs == before_obj.tmpfs), 'vm.tmpfs: ' + obj.tmpfs
+                        + ' expected: ' + before_obj.tmpfs);
+                    t.ok((obj.max_physical_memory == before_obj.max_physical_memory),
+                        'vm.max_physical_memory: ' + obj.max_physical_memory
+                        + ' expected: ' + before_obj.max_physical_memory);
+                    // should have been clamped
+                    t.ok((obj.max_locked_memory == before_obj.max_physical_memory),
+                        'vm.max_locked_memory: ' + obj.max_locked_memory
+                        + ' expected: ' + before_obj.max_physical_memory);
+                    t.end();
+                });
+            }
+        });
     });
 });
 

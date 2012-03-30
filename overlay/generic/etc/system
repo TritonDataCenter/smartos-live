@@ -114,7 +114,7 @@ set idle_cpu_no_deep_c=1
 
 * DANGER!  disabling of zil under review by Bill, Jerry and Ops
 * set zfs:zil_disable=1
-set zfs:zfs_prefetch_disable=1
+set zfs:zfs_prefetch_disable=0
 set zfs:zfs_nocacheflush=1
 
 * 10 GbE Tuning

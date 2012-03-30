@@ -3,7 +3,7 @@
 ROOT=$(PWD)
 PROTO=$(ROOT)/proto
 MPROTO=$(ROOT)/manifest.d
-PATH=/opt/local/bin:/opt/local/sbin:/opt/local/gcc34/bin:/usr/xpg4/bin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/openwin/bin:/opt/SUNWspro/bin:/usr/ccs/bin
+PATH=/opt/gcc/4.4.4/bin:/opt/local/bin:/opt/local/sbin:/usr/bin:/usr/sbin:/usr/sfw/bin:/usr/ccs/bin
 LOCAL_SUBDIRS:=$(shell ls projects/local)
 MANIFEST=manifest.gen
 OVERLAYS:=$(shell cat overlay/order)

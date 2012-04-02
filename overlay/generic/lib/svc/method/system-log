@@ -54,6 +54,52 @@ convert()
 	rm -f ${OLD_CONF}.new
 }
 
+#
+# If the rsyslog.conf file doesn't exist and the syslog.conf file has not
+# been customized, generate the default rsyslog.conf.
+#
+generate_rsyslog_conf()
+{
+	if [ ! -f /etc/syslog.conf ]; then
+		return
+	fi
+
+	CONF_SUM=`nawk '{
+	    if (substr($1, 1, 1) != "#" && NF != 0) print $0
+	    }' /etc/syslog.conf | sum -x md5`
+
+	if [ "$CONF_SUM" != "$DFLT_SUM" ]; then
+		return
+	fi
+
+	cat <<-DONE >/etc/rsyslog.conf
+	#
+	# Sample rsyslog configuration file
+	#
+
+	$ModLoad immark
+	$ModLoad imsolaris
+	$ModLoad imtcp
+	$ModLoad imudp
+
+	*.err;kern.notice;auth.notice			/dev/sysmsg
+	*.err;kern.debug;daemon.notice;mail.crit	/var/adm/messages
+
+	*.alert;kern.err;daemon.err			operator
+	*.alert						root
+
+	*.emerg						*
+
+	mail.debug					/var/log/syslog
+
+	auth.info					/var/log/auth.log
+	mail.info					/var/log/postfix.log
+	DONE
+}
+
+if [ ! -f /etc/rsyslog.conf -a -x /usr/sbin/rsyslogd ]; then
+	generate_rsyslog_conf
+fi
 
 if [ -f /etc/rsyslog.conf ]; then
 	if [ ! -x /usr/sbin/rsyslogd ]; then

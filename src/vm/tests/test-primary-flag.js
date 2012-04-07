@@ -245,3 +245,89 @@ test('create VM with 3 nics (all primary)', {'timeout': 240000}, function(t) {
         t.end();
     });
 });
+
+test('create VM with 3 nics (one primary, 2 false)', {'timeout': 240000}, function(t) {
+    var state = { 'brand': 'joyent' };
+    vmtest.on_new_vm(t, dataset_uuid,
+        {
+            'autoboot': false,
+            'do_not_inventory': true,
+            'alias': 'autozone-' + process.pid,
+            'nowait': true,
+            'nics': [
+                {'primary': true},
+                {'primary': false},
+                {'primary': false}
+            ]}, state,
+    [
+        function (cb) {
+            VM.load(state.uuid, function(err, obj) {
+                var has_primary = 0;
+                var n;
+
+                if (err) {
+                    t.ok(false, 'load obj from new VM: ' + err.message);
+                    return cb(err);
+                }
+
+                for (n in obj.nics) {
+                    n = obj.nics[n];
+                    if (n.hasOwnProperty('primary')) {
+                        t.ok((n.primary === true),
+                            'nic.primary is boolean true');
+                        has_primary++;
+                    }
+                }
+
+                t.ok((has_primary === 1), 'VM has ' + has_primary + ' primary'
+                    + ' nics, expected: 1');
+                cb();
+            });
+        }
+    ],
+    function (err) {
+        t.end();
+    });
+});
+
+test('create VM with 3 nics (all false)', {'timeout': 240000}, function(t) {
+    var state = { 'brand': 'joyent' };
+    vmtest.on_new_vm(t, dataset_uuid,
+        {
+            'autoboot': false,
+            'do_not_inventory': true,
+            'alias': 'autozone-' + process.pid,
+            'nowait': true,
+            'nics': [
+                {'primary': false},
+                {'primary': false},
+                {'primary': false}
+            ]}, state, [
+                function (cb) {
+                    VM.load(state.uuid, function(err, obj) {
+                        var has_primary = 0;
+                        var n;
+
+                        if (err) {
+                            t.ok(false, 'load obj from new VM: ' + err.message);
+                            return cb(err);
+                        }
+
+                        for (n in obj.nics) {
+                            n = obj.nics[n];
+                            if (n.hasOwnProperty('primary')) {
+                                t.ok((n.primary === true),
+                                    'nic.primary is boolean true');
+                                has_primary++;
+                            }
+                        }
+
+                        t.ok((has_primary === 1), 'VM has ' + has_primary + ' primary'
+                            + ' nics, expected: 1');
+                        cb();
+                    });
+            }],
+    function (err) {
+        t.end();
+    });
+});

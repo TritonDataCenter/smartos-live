@@ -48,7 +48,6 @@ install: $(TARGETS) sysinfo
 	mv $(DESTDIR)/usr/vm/sbin/metadata.js $(DESTDIR)/usr/vm/sbin/metadata
 	cp -PR ds $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/var/db/dsadm
-	cp $(DESTDIR)/usr/ds/etc/sources.list.sample $(DESTDIR)/var/db/dsadm/sources.list
 
 check:
 	@tools/node-lint/bin/node-lint *.js \

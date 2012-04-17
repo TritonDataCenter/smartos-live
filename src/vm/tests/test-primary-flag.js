@@ -115,8 +115,7 @@ test('create VM with 2 nics', {'timeout': 240000}, function(t) {
                     }
                 }
 
-                VM.update(state.uuid, {'update_nics': [{'mac': update_mac, 'primary': false}]},
-                    function (e) {
+                VM.update(state.uuid, {'update_nics': [{'mac': update_mac, 'primary': false}]}, function (e) {
 
                     t.ok(e, 'updating to set primary=false failed');
                     cb();

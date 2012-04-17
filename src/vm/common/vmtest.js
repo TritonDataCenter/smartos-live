@@ -48,10 +48,14 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
                         t.ok(false, 'error creating VM: ' + err.message);
                         cb(err);
                     }
+                } else if (state.expect_create_failure) {
+                    state.vminfo = obj;
+                    state.uuid = obj.uuid;
+                    t.ok(false, 'create succeeded when expected failure.');
+                    cb();
                 } else {
                     state.vminfo = obj;
                     state.uuid = obj.uuid;
-                    e = new Error('foo');
                     t.ok(true, 'created VM: ' + state.uuid);
                     cb();
                 }

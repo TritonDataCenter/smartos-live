@@ -1,4 +1,4 @@
-// Copyright 2011 Joyent, Inc.  All rights reserved.
+// Copyright 2012 Joyent, Inc.  All rights reserved.
 
 process.env['TAP'] = 1;
 var async = require('async');
@@ -68,7 +68,11 @@ simple_properties = [
     ['hostname', 'hamburgerhelper'],
     ['owner_uuid', '36bf401a-28ef-11e1-b4a7-c344deb1a5d6'],
     ['package_name', 'really expensive package'],
-    ['package_version', 'XP']
+    ['package_version', 'XP'],
+    ['virtio_txtimer', 150000],
+    ['virtio_txtimer', '200000', 200000],
+    ['virtio_txburst', 256],
+    ['virtio_txburst', '128', 128]
 ];
 
 test('create zone', {'timeout': 240000}, function(t) {
@@ -199,9 +203,14 @@ test('set then unset simple properties', function(t) {
         function (item, cb) {
             var prop = item[0];
             var value = item[1];
+            var expected_value = item[2];
             var payload = {};
 
             payload[prop] = value;
+
+            if (expected_value === undefined) {
+                expected_value = value;
+            }
 
             VM.update(vm_uuid, payload, function(err) {
                 if (err) {
@@ -213,8 +222,11 @@ test('set then unset simple properties', function(t) {
                             t.ok(false, 'failed reloading VM');
                             return cb();
                         } else {
-                            t.ok(obj[prop] === value, prop + ' is ' + obj[prop]
-                                + ', expected: ' + value);
+                            t.ok(obj[prop] === expected_value, prop + ' is '
+                                + obj[prop] + ' (' + typeof(obj[prop])
+                                + '), expected: ' + expected_value + ' ('
+                                + typeof(expected_value) + ')'
+                            );
                         }
                         payload[prop] = undefined;
                         VM.update(vm_uuid, payload, function (err) {
@@ -227,9 +239,10 @@ test('set then unset simple properties', function(t) {
                                         t.ok(false, 'failed reloading VM');
                                         return cb();
                                     }
-                                    t.ok(!obj.hasOwnProperty(prop), prop +
-                                        ' is ' + obj[prop] + ', expected: ' +
-                                        'undefined');
+                                    t.ok(!obj.hasOwnProperty(prop), prop
+                                        + ' is ' + obj[prop] + ' ('
+                                        + typeof(obj[prop]) + '), expected: '
+                                        + 'undefined');
                                     cb();
                                 });
                             }

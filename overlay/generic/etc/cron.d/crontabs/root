@@ -4,3 +4,7 @@
 10 0 * * * /usr/sbin/logadm
 ## Headnode should phone home at 1a UTC
 0 1 * * * /smartdc/bin/sdc-phonehome
+
+# NOTE: all entries above are in root's system-defined crontab; see the
+# crontab(1) man page.
+

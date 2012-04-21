@@ -41,12 +41,21 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
         }, function(cb) {
             VM.create(payload, function (err, obj) {
                 if (err) {
-                    t.ok(false, 'error creating VM: ' + err.message);
-                    cb(err);
+                    if (state.expect_create_failure) {
+                        t.ok(true, 'failed to create VM: ' + err.message);
+                        cb();
+                    } else {
+                        t.ok(false, 'error creating VM: ' + err.message);
+                        cb(err);
+                    }
+                } else if (state.expect_create_failure) {
+                    state.vminfo = obj;
+                    state.uuid = obj.uuid;
+                    t.ok(false, 'create succeeded when expected failure.');
+                    cb();
                 } else {
                     state.vminfo = obj;
                     state.uuid = obj.uuid;
-                    e = new Error('foo');
                     t.ok(true, 'created VM: ' + state.uuid);
                     cb();
                 }
@@ -59,14 +68,19 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
     }
 
     functions.push(function (cb) {
-        VM.delete(state.uuid, function (err) {
-            if (err) {
-                t.ok(false, 'error deleting VM: ' + err.message);
-            } else {
-                t.ok(true, 'deleted VM: ' + state.uuid);
-            }
+        if (state.hasOwnProperty('uuid')) {
+            VM.delete(state.uuid, function (err) {
+                if (err) {
+                    t.ok(false, 'error deleting VM: ' + err.message);
+                } else {
+                    t.ok(true, 'deleted VM: ' + state.uuid);
+                }
+                cb();
+            });
+        } else {
+            // we didn't create a VM, don't also fail deleting.
             cb();
-        });
+        }
     });
 
     functions.push(function (cb) {

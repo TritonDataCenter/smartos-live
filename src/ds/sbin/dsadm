@@ -19,8 +19,8 @@ var options = {
 }
 
 log.setWriter(function(message) {
-  var _msg = message.message + '\n';
-  process.stdout.write(_msg);
+  var _msg = message.message;
+  console.log(_msg);
 });
 
 var printHelp = function(code) {
@@ -35,13 +35,13 @@ var printHelp = function(code) {
 };
 
 _stdout = function() {
-  var msg = sprintf.apply(null, arguments) + '\n';
-  process.stdout.write(msg);
+  var msg = sprintf.apply(null, arguments);
+  console.log(msg);
 }
 
 _fatal = function() {
-  var msg = "error: " + sprintf.apply(null, arguments) + '\n';
-  process.stdout.write(msg);
+  var msg = "error: " + sprintf.apply(null, arguments);
+  console.log(msg);
   process.exit(1);
 }
 

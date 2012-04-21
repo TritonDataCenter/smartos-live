@@ -1111,59 +1111,6 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: KVM VMs only, for OS VMs update max_physical_memory instead.
         default: 256
 
-    vga:
-
-        This property allows one to specify the VGA emulation to be used by
-        KVM VMs. The default is 'cirrus'. NOTE: with the Qemu bundled in SmartOS
-        qxl and xenfb do not work.
-
-        type: string (one of: 'cirrus','std','vmware','qxl','xenfb')
-        vmtype: KVM
-        listable: no
-        create: yes
-        update: yes
-        default: 'cirrus'
-
-    vnc_password:
-
-        This property allows you to set a password which will be required when
-        connecting to the VNC port. IMPORTANT: this password will be visible
-        from the GZ of the CN and anyone with access to the serial port in the
-        guest. Set to an empty string (default) to not require a password at
-        this level.
-
-        type: string (8 chars max)
-        vmtype: KVM
-        listable: no
-        create: yes
-        update: yes
-        default: <unset>
-
-    vnc_port:
-
-        This specifies the TCP port to listen on for the VNC server, the default
-        is zero which means a port will be chosen at random. Set to -1 to
-        disable TCP listening.
-
-        type: integer (0 for random, -1 for disabled)
-        vmtype: KVM
-        listable: no
-        create: yes
-        update: yes
-        default: 0
-
-    zone_state:
-
-        This property will show up when fetching a VMs JSON.  this shows the
-        state of the zone in which this VM is contained. eg. 'running'.  It
-        can be different from the 'state' value in several cases.
-
-        type: string
-        vmtype: KVM
-        listable: yes
-        create: no
-        update: no
-
     resolvers:
 
         For OS VMs, this value sets the initial resolvers which get put into the
@@ -1260,6 +1207,72 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: KVM only (requires VM reboot to take effect)
         default: 1
 
+    vga:
+
+        This property allows one to specify the VGA emulation to be used by
+        KVM VMs. The default is 'cirrus'. NOTE: with the Qemu bundled in SmartOS
+        qxl and xenfb do not work.
+
+        type: string (one of: 'cirrus','std','vmware','qxl','xenfb')
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: 'cirrus'
+
+    virtio_txburst:
+
+        This controls how many packets can be sent on a single flush of the tx
+        queue. This applies to all the vnics attached to this VM using the
+        virtio model.
+
+        type: integer
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: 128
+
+    virtio_txtimer:
+
+        This sets the timeout for the TX timer.  It applies to all the vnics
+        attached to this VM using the virtio model.
+
+        type: integer (in nanoseconds)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: 200000
+
+    vnc_password:
+
+        This property allows you to set a password which will be required when
+        connecting to the VNC port. IMPORTANT: this password will be visible
+        from the GZ of the CN and anyone with access to the serial port in the
+        guest. Set to an empty string (default) to not require a password at
+        this level.
+
+        type: string (8 chars max)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: <unset>
+
+    vnc_port:
+
+        This specifies the TCP port to listen on for the VNC server, the default
+        is zero which means a port will be chosen at random. Set to -1 to
+        disable TCP listening.
+
+        type: integer (0 for random, -1 for disabled)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: 0
+
     zfs_io_priority:
 
         This sets an IO throttle priority value relative to other VMs. If one
@@ -1286,6 +1299,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: no
         default: zones
+
+    zone_state:
+
+        This property will show up when fetching a VMs JSON.  this shows the
+        state of the zone in which this VM is contained. eg. 'running'.  It
+        can be different from the 'state' value in several cases.
+
+        type: string
+        vmtype: KVM
+        listable: yes
+        create: no
+        update: no
 
     zonepath:
 

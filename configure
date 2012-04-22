@@ -103,6 +103,9 @@ if [ ! -f "/opt/SUNWspro/prod/bin/cc" ]; then
     (cd /opt/ \
       && curl -k "${SUNW_SPRO12_URL}" \
       | ${ROOTCMD} gtar -jxf -)
+    if [ ! -d "/opt/SUNWspro/sunstudio12.1" ]; then
+      ln -s . /opt/SUNWspro/sunstudio12.1
+    fi
   else
     echo "FATAL: unable to download sunstudio12, no URL is set.  Please set SUNW_SPRO12_URL in configure.*"
     exit 1

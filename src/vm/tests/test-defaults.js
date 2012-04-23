@@ -40,6 +40,7 @@ var zone_defaults = {
     'uuid': ['uuid', state_property],
     'dns_domain': ['local'],
     'limit_priv': ['default'],
+    'last_modified': ['<NON-EMPTY>'],
     'compute_node_uuid': ['<NON-EMPTY>'],
     'create_timestamp': ['<NON-EMPTY>'],
     'nics': ['<EMPTY-ARRAY>'],

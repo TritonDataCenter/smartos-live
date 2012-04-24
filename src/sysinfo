@@ -233,7 +233,7 @@ function get_zpool_profile()
 function get_zpool()
 {
 	if [[ $(zpool list) != "no pools available" ]]; then
-		Zpool=$(zpool list -H | awk '{print $1}');
+		Zpool=$(svcprop -p "config/zpool" svc:/system/smartdc/init);
 
 	        local used=$(zfs get -Hp -o value used ${Zpool})
 	        local available=$(zfs get -Hp -o value available ${Zpool})

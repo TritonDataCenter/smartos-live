@@ -1,0 +1,101 @@
+#!/bin/bash
+#
+# Copyright (c) 2011 Joyent Inc., All rights reserved.
+#
+# Note: for boot scripts, FD 2 (stderr) should be redirected to /dev/console
+# by the caller so that metadata errors are noticed.
+#
+# EXIT CODES:
+#
+# 0 - success, value will be on stdout
+# 1 - not found, server responded and there is no such key
+# 2 - error getting metadata for key
+# 3 - invalid usage
+#
+
+#set -o xtrace
+
+key=$1
+if [[ -z ${key} ]]; then
+  echo "Usage: $0 <key>" >&2
+  exit 3
+fi
+
+NC_SOCK=
+DISABLE_ECHO="yes"
+TIMEOUT=60
+
+case $(uname -s) in
+  Linux)
+    SERIAL_DEV="/dev/ttyS1"
+    ;;
+  FreeBSD)
+    SERIAL_DEV="/dev/cuau1"
+    ;;
+  SunOS)
+    NC_SOCK="/var/run/smartdc/metadata.sock"
+    DISABLE_ECHO="no"
+    ;;
+  *)
+    echo "Don't know which serial to use for $(uname -s)" >&2
+    exit 3
+  ;;
+esac
+
+if [[ -n ${NC_SOCK} ]]; then
+  coproc nc -U ${NC_SOCK}
+  exec <&${COPROC[0]} 3>&${COPROC[1]}
+else
+  exec <${SERIAL_DEV} 3>>${SERIAL_DEV}
+fi
+
+IFS=$'\n'
+if [[ ${DISABLE_ECHO} == "yes" ]]; then
+  stty -echo
+fi
+
+got_all_data=0
+keep_trying=1
+while [[ ${keep_trying} -eq 1 ]]; do
+  echo "GET ${key}" >&3
+  result=""
+
+  # First line will be a status.
+  read -t ${TIMEOUT} status
+  retval=$?
+  if [[ ${retval} -gt 128 ]]; then
+    echo "mdata-get: timeout getting status. (exit code: ${retval})" >&2
+    continue
+  elif [[ ${retval} -ne 0 ]]; then
+    echo "mdata-get: failed to read data from metadata agent. (exit code: ${retval})" >&2
+    exit 2
+  fi
+
+  if [[ ${status} == "NOTFOUND" ]]; then
+    echo "No metadata for ${key}"
+    exit 1
+  elif [[ ${status} != "SUCCESS" ]]; then
+    echo "Error getting metadata for key ${key}: ${status}"
+    exit 2
+  fi
+
+  while read -t ${TIMEOUT} line; do
+  if [[ ${line} == "." ]]; then
+    # response is terminated by '.' on line by itself.
+    got_all_data=1
+    break;
+  fi
+  # If a line begins with a '.' it was escaped, remove that dot.
+  line="${line#.}\n"
+  result="${result}${line}"
+  keep_trying=0
+  done
+done
+
+if [[ ${got_all_data} -ne 1 ]]; then
+   echo "mdata-get: error getting results. Please try again." >&2
+   exit 2
+fi
+
+echo -n -e "${result}"
+exit 0

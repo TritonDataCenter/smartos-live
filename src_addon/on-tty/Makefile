@@ -18,25 +18,15 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011 Joyent Inc.
-#
-# To build everything just run 'gmake' in this directory.
+# Copyright 2012, Joyent, Inc. All rights reserved
 #
 
-PATH=/sbin:/usr/sbin:/usr/bin:/opt/SUNWspro/bin:/opt/local/bin
-BASE=$(PWD)
-DESTDIR=$(BASE)/proto
-SUBDIRS= bind cpp ipmi libreadline libusb on-tty
+all: sdc-on-tty.o
+	cc -o sdc-on-tty sdc-on-tty.o
 
--include Makefile.inc
+install: all
+	mkdir -p $(DESTDIR)/smartdc/lib
+	/usr/sbin/install -m 0755 -f $(DESTDIR)/smartdc/lib sdc-on-tty
 
-$(SUBDIRS): FRC
-	cd $@; $(MAKE) PATH=$(PATH) DESTDIR=$(DESTDIR) install
-
-install: $(SUBDIRS)
-
-clean: $(SUBDIRS)
-	-for dir in $(SUBDIRS); do (cd $$dir; $(MAKE) PATH=$(PATH) DESTDIR=$(DESTDIR) clean); done
-	-rm -rf proto
-
-FRC:
+clean:
+	rm -f  sdc-on-tty *.o

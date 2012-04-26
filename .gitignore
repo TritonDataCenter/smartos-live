@@ -57,6 +57,8 @@ src_addon/cpp/y.tab.o
 src_addon/libreadline/shlib/libhistory.so.5
 src_addon/libreadline/shlib/libreadline.so.5
 src_addon/libusb/wr_libusb.o
+src_addon/on-tty/sdc-on-tty
+src_addon/on-tty/sdc-on-tty.o
 tools/pwgen-2.06/Makefile
 tools/pwgen-2.06/autom4te.cache
 manifest.gen

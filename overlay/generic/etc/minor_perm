@@ -265,3 +265,4 @@ vboxusbmon:'* 0666 root sys'
 blkdev:* 0640 root root
 ibp:* 0666 root sys
 clone:ibp 0666 root sys
+ipmi:ipmi 0600 root sys

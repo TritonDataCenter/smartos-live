@@ -931,7 +931,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         The driver for this NIC [virtio|e1000|rtl8136|...]
 
         type: string (one of ['virtio','e1000','rtl8136'])
-        vmtype: OS,KVM
+        vmtype: KVM
         listable: yes (see above)
         create: yes
         update: yes

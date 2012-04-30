@@ -101,6 +101,8 @@ vm/tests.tar.gz:
 
 clean:
 	@rm -f $(TARGETS) $(SMARTDC_TARGETS)
-	(cd node-kstat && $(NODE_WAF) clean)
-	(cd node-expat && $(NODE_WAF) clean)
-	(cd node-syslog && $(NODE_WAF) clean)
+	if test -f $(NODE_WAF); then \
+		(cd node-kstat && $(NODE_WAF) clean); \
+		(cd node-expat && $(NODE_WAF) clean); \
+		(cd node-syslog && $(NODE_WAF) clean); \
+	fi

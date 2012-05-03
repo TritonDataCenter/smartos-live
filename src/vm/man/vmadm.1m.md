@@ -1340,19 +1340,6 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (live update)
         default: 100
 
-    zfs_storage_pool_name:
-
-        This defines which ZFS pool the VM's zone dataset will be created in
-        For OS VMs, this dataset is where all the data in the zone will live.
-        For KVM VMs, this is only used by the zone shell that the VM runs in.
-
-        type: string (zpool name)
-        vmtype: OS,KVM
-        listable: yes
-        create: yes
-        update: no
-        default: zones
-
     zone_state:
 
         This property will show up when fetching a VMs JSON.  this shows the
@@ -1403,6 +1390,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: yes
         create: no
         update: no
+
+    zpool:
+
+        This defines which ZFS pool the VM's zone dataset will be created in
+        For OS VMs, this dataset is where all the data in the zone will live.
+        For KVM VMs, this is only used by the zone shell that the VM runs in.
+
+        type: string (zpool name)
+        vmtype: OS,KVM
+        listable: yes
+        create: yes
+        update: no
+        default: zones
 
 
 ## EXAMPLES

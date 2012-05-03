@@ -27,7 +27,7 @@ var zone_defaults = {
     'quota': [10],
     'cpu_shares': [100],
     'zfs_io_priority': [100],
-    'zfs_storage_pool_name': ['zones'],
+    'zpool': ['zones'],
     'max_lwps': [2000],
     'tmpfs': ['max_physical_memory', zone_property],
     'max_locked_memory': ['max_physical_memory', zone_property],

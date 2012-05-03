@@ -34,7 +34,6 @@ man/man/man1m/vfsstat.1m
 man/man/man1m/ziostat.1m
 man/man/man1m/vmadm.1m
 man/man/man1m/vmadmd.1m
-src/has_hvx
 src/marco
 src/polo
 src/diskinfo

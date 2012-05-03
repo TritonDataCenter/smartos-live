@@ -7,7 +7,7 @@ TARGETS=bootparams diskinfo disklist removable_disk disk_size \
     node-zsock/build/Release/zsock_bindings.node \
     node-zutil/build/Release/zutil_bindings.node \
 
-SMARTDC_TARGETS=has_hvx qemu-exec
+SMARTDC_TARGETS=qemu-exec
 DESTDIR=../proto
 NODE_WAF=$(PWD)/../proto/usr/bin/node-waf
 
@@ -63,9 +63,6 @@ diskinfo: diskinfo.c
 	$(CC) $(CCFLAGS) -ldladm -ldiskmgt -lnvpair -o $@ $^
 
 disk_size: disk_size.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-has_hvx: has_hvx.c
 	$(CC) $(CFLAGS) -o $@ $^
 
 qemu-exec: qemu-exec.c

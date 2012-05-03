@@ -160,10 +160,13 @@ function get_smartos_cpu_info()
             | wc -l \
             | tr -d ' '`
 
-        if [[ -x /smartdc/bin/has_hvx ]]; then
-            CPU_Virtualization=$(/smartdc/bin/has_hvx)
+        isainfo=$(isainfo -x)
+        if [[ -n $(echo " ${isainfo} " | /usr/bin/grep " vmx ") ]]; then
+            CPU_Virtualization="vmx"
+        elif [[ -n $(echo " ${isainfo} " | /usr/bin/grep " svm ") ]]; then
+            CPU_Virtualization="svm"
         else
-            CPU_Virtualization="unknown"
+            CPU_Virtualization="none"
         fi
     fi
 

@@ -474,7 +474,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: no
         default: always set to current time at VM.create().
 
-    compute_node_uuid:
+    server_uuid:
 
         This is the UUID of the compute node on which the VM currently exists.
         It is most useful when pulled from sources external to the GZ (whether

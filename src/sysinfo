@@ -163,7 +163,7 @@ function get_smartos_cpu_info()
         isainfo=$(isainfo -x)
         if [[ -n $(echo " ${isainfo} " | /usr/bin/grep " vmx ") ]]; then
             CPU_Virtualization="vmx"
-        elif [[ -n $(echo " ${isainfo} " | /usr/bin/grep " svm ") ]]; then
+        elif [[ -n $(echo " ${isainfo} " | /usr/bin/grep " amd_svm ") ]]; then
             CPU_Virtualization="svm"
         else
             CPU_Virtualization="none"

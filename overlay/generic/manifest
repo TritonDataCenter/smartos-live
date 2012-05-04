@@ -65,6 +65,7 @@ f usr/lib/localedef/extensions/UTF-8.x 0444 root bin
 d usr/lib/brand 0755 root bin
 d usr/lib/brand/joyent 0755 root bin
 f usr/lib/brand/joyent/manifests 0444 root root
+f usr/sbin/mdata-get 0555 root bin
 f usr/sbin/zonememstat 0555 root bin
 f usr/bin/ack 0555 root bin
 f usr/bin/json 0555 root bin

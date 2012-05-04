@@ -88,7 +88,7 @@ var LIST_FIELDS = {
     uuid: {header: 'UUID', width: 36},
     vcpus: {header: 'VCPUS', width: 5},
     zfs_io_priority: {header: 'IO_PRIORITY', width: 11},
-    zfs_storage_pool_name: {header: 'ZFS_POOL', width: 12},
+    zpool: {header: 'ZPOOL', width: 12},
     zonename: {header: 'ZONENAME', width: 12},
     zonepath: {header: 'ZONEPATH', width: 40},
     zoneid: {header: 'ZONEID', width: 6}

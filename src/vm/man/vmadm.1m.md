@@ -89,12 +89,17 @@ tab-complete UUIDs rather than having to type them out for every command.
             Information about each device on the virtual PCI bus attached to
             this VM.
 
+        spice:
+            The IP, port and VNC display number for the TCP socket we're
+            listening on for this VM. If spice is enabled.
+
         version:
             Qemu version information.
 
         vnc:
             The IP, port and VNC display number for the TCP socket we're
-            listening on for this VM.
+            listening on for this VM. If VNC is enabled.
+
 
       list [-p] [-H] [-o field,...] [-s field,...] [field=value ...]
 
@@ -469,7 +474,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: no
         default: always set to current time at VM.create().
 
-    compute_node_uuid:
+    server_uuid:
 
         This is the UUID of the compute node on which the VM currently exists.
         It is most useful when pulled from sources external to the GZ (whether
@@ -931,7 +936,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         The driver for this NIC [virtio|e1000|rtl8136|...]
 
         type: string (one of ['virtio','e1000','rtl8136'])
-        vmtype: OS,KVM
+        vmtype: KVM
         listable: yes (see above)
         create: yes
         update: yes
@@ -1060,7 +1065,8 @@ tab-complete UUIDs rather than having to type them out for every command.
         to the hypervisor. This is primarily designed to be used for debugging
         and should not be used beyond that. important: this replaces *all* of
         the options listed, so you need to include those from the default list
-        that you want to keep.
+        that you want to keep. NOTE: setting this also overrides any SPICE
+        options you might have set.
 
         type: string (space-separated options for qemu)
         vmtype: KVM
@@ -1122,6 +1128,53 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: no
         create: yes
         update: yes (but unused after create for OS VMs)
+
+    spice_opts (EXPERIMENTAL):
+
+        This property allows you to add additional -spice options when you are
+        using SPICE. NOTE: SPICE support requires your KVM zone to be using a
+        zone dataset with the zone_dataset_uuid and that dataset must know what
+        to do with these special options.
+
+        type: string (-spice XXX options)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: <unset>
+
+    spice_password (EXPERIMENTAL):
+
+        This property allows you to set a password which will be required when
+        connecting to the SPICE port when SPICE is enabled. NOTE: SPICE support
+        requires your KVM zone to be using a zone dataset with the
+        zone_dataset_uuid and that dataset must know what to do with these
+        special options. IMPORTANT: this password will be visible from the GZ
+        of the CN and anyone with access to the serial port in the guest. Set
+        to an empty string (default) to not require a password at this level.
+
+        type: string (8 chars max)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: <unset>
+
+    spice_port (EXPERIMENTAL):
+
+        This specifies the TCP port to listen on for the SPICE server. By
+        default SPICE is not enabled. NOTE: SPICE support requires your KVM
+        zone to be using a zone dataset with the zone_dataset_uuid and that
+        dataset must know what to do with these special options. If set to
+        zero, a port will be chosen at random. Set to -1 to disable TCP
+        listening for SPICE.
+
+        type: integer (0 for random, -1 for disabled)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes
+        default: <unset>
 
     state:
 
@@ -1287,19 +1340,6 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (live update)
         default: 100
 
-    zfs_storage_pool_name:
-
-        This defines which ZFS pool the VM's zone dataset will be created in
-        For OS VMs, this dataset is where all the data in the zone will live.
-        For KVM VMs, this is only used by the zone shell that the VM runs in.
-
-        type: string (zpool name)
-        vmtype: OS,KVM
-        listable: yes
-        create: yes
-        update: no
-        default: zones
-
     zone_state:
 
         This property will show up when fetching a VMs JSON.  this shows the
@@ -1350,6 +1390,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: yes
         create: no
         update: no
+
+    zpool:
+
+        This defines which ZFS pool the VM's zone dataset will be created in
+        For OS VMs, this dataset is where all the data in the zone will live.
+        For KVM VMs, this is only used by the zone shell that the VM runs in.
+
+        type: string (zpool name)
+        vmtype: OS,KVM
+        listable: yes
+        create: yes
+        update: no
+        default: zones
 
 
 ## EXAMPLES

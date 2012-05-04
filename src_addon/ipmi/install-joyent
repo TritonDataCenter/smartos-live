@@ -19,18 +19,21 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011 Joyent Inc., All rights reserved.
+# Copyright (c) 2012 Joyent Inc., All rights reserved.
 #
 
 VERS=ipmitool-1.8.11
 
 PREFIX=${DESTDIR}/usr
 SBINDIR=${PREFIX}/sbin
+MANDIR=${PREFIX}/man/man1
 
 mkdir -p ${SBINDIR}
+mkdir -p ${MANDIR}
 
 cd ${VERS}
 
 cp src/ipmitool ${SBINDIR}/ipmitool
+cp doc/ipmitool.1 ${MANDIR}/ipmitool.1
 
 exit 0

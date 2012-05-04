@@ -45,9 +45,10 @@ var util = require('util');
 var VMADMD_SOCK = '/tmp/vmadmd.http';
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
 
-var VNC = {};
-var TIMER = {};
 var SDC = {};
+var SPICE = {};
+var TIMER = {};
+var VNC = {};
 
 function sysinfo(callback)
 {
@@ -64,7 +65,7 @@ function sysinfo(callback)
     });
 }
 
-function setVNCPassword(vmobj, password)
+function setRemoteDisplayPassword(vmobj, protocol, password)
 {
     var q;
     var socket;
@@ -73,17 +74,19 @@ function setVNCPassword(vmobj, password)
 
     socket = vmobj.zonepath + '/root/tmp/vm.qmp';
 
-    VM.log('DEBUG', 'setting password to "' + password + '"');
+    VM.log('DEBUG', 'setting "' + protocol + '" password to "' + password
+        + '"');
 
     q.connect(socket, function (err) {
         if (err) {
-            VM.log('WARN', 'Warning: VNC password-set error: ' + err);
+            VM.log('WARN', 'Warning: ' + protocol + ' password-set error: '
+                + err);
         } else {
-            q.command('set_password', {'protocol': 'vnc',
-                'password': vmobj.vnc_password}, function (e, result) {
+            q.command('set_password', {'protocol': protocol,
+                'password': password}, function (e, result) {
 
                 if (e) {
-                    VM.log('WARN', 'failed to set password for VNC', e);
+                    VM.log('WARN', 'failed to set password for ' + protocol, e);
                 } else {
                     VM.log('DEBUG', 'result: '
                         + JSON.stringify(result));
@@ -94,11 +97,13 @@ function setVNCPassword(vmobj, password)
     });
 }
 
-function spawnVNC(vmobj)
+function spawnRemoteDisplay(vmobj)
 {
     var addr;
     var port;
+    var protocol;
     var server;
+    var sockpath;
     var zonepath = vmobj.zonepath;
 
     if (!vmobj.zonepath) {
@@ -106,107 +111,142 @@ function spawnVNC(vmobj)
     }
 
     if (vmobj.state !== 'running' && vmobj.zone_state !== 'running') {
-        VM.log('DEBUG', 'skipping VNC setup for non-running VM ' + vmobj.uuid);
+        VM.log('DEBUG', 'skipping ' + protocol + ' setup for non-running VM '
+            + vmobj.uuid);
         return;
     }
 
-    if (vmobj.hasOwnProperty('vnc_port')) {
-        port = vmobj.vnc_port;
+    // We need to work out which protocol to use since only one will work
+    // (effectively) at any given time. If a spice_port is set then we will use
+    // that, otherwise we default back to VNC.
+    if (vmobj.hasOwnProperty('spice_port') && vmobj.spice_port > 0) {
+        protocol = 'spice';
+        port = vmobj.spice_port;
+        sockpath = '/root/tmp/vm.spice';
     } else {
-        port = 0;
+        protocol = "vnc";
+        if (vmobj.hasOwnProperty('vnc_port')) {
+            port = vmobj.vnc_port;
+        } else {
+            port = 0;
+        }
+        sockpath = '/root/tmp/vm.vnc';
     }
 
     if (port === -1) {
-        VM.log('INFO', 'VNC listener disabled (port === -1) for VM '
+        VM.log('INFO', protocol + ' listener disabled (port === -1) for VM '
             + vmobj.uuid);
         return;
     }
 
     server = net.createServer(function (c) {
-        var vnc = net.Stream();
-        c.pipe(vnc, {end: false});
-        vnc.pipe(c);
+        var dpy = net.Stream();
+        var remote_address = '';
+        c.pipe(dpy);
+        dpy.pipe(c);
 
-        vnc.on('close', function (had_error) {
-            // XXX we need to be able to restart the vnc if this happens,
-            //     but the only case should be when the VM is shutoff, so
-            //     we wouldn't be able to reconnect anyway.
-            VM.log('INFO', 'vnc closed for ' + vmobj.uuid);
-            clearVNC(vmobj.uuid);
+        remote_address = '[' + c.remoteAddress + ']:' + c.remotePort;
+        c.on('close', function (had_error) {
+            VM.log('INFO', protocol + ' connection ended from ' + remote_address);
         });
 
-        vnc.on('end', function (had_error) {
-            // XXX we need to be able to restart the vnc if this happens,
-            //     but the only case should be when the VM is shutoff, so
-            //     we wouldn't be able to reconnect anyway.
-            VM.log('INFO', 'vnc ended for ' + vmobj.uuid);
-            clearVNC(vmobj.uuid);
-
-            if (vmobj.hasOwnProperty('vnc_password')
-                && vmobj.vnc_password.length > 0) {
-                // if we are using VNC passwords then the connection ends for an
-                // incorrect password, so we do need to respawn here, otherwise
-                // we'll be unable to reconnect. We reload first so we skip
-                // respawn if VM is not running.
-                VM.load(vmobj.uuid, function (e, obj) {
-                    if (e) {
-                        VM.log('ERROR', 'Unable to reload VM ' + vmobj.uuid, e);
-                    } else {
-                        spawnVNC(obj);
-                        VM.log('INFO', 'respawned VNC for VM ' + obj.uuid);
-                    }
-                });
-            }
-        });
-
-        vnc.on('error', function () {
-            VM.log('WARN', 'Warning: VNC socket error: '
+        dpy.on('error', function () {
+            VM.log('WARN', 'Warning: ' + protocol + ' socket error: '
                 + JSON.stringify(arguments));
-            clearVNC(vmobj.uuid);
-        });
+         });
 
-        vnc.connect(zonepath + '/root/tmp/vm.vnc');
+        c.on('error', function () {
+            VM.log('WARN', 'Warning: ' + protocol + ' net socket error: '
+                + JSON.stringify(arguments));
+         });
+
+         dpy.connect(path.join(zonepath, sockpath));
     });
 
-    VM.log('INFO', 'spawning VNC listener for ' + vmobj.uuid + ' on '
+    VM.log('INFO', 'spawning ' + protocol + ' listener for ' + vmobj.uuid + ' on '
         + SDC.sysinfo.admin_ip);
 
     // Before we start the listener, set the password if needed.
-    if (vmobj.hasOwnProperty('vnc_password') && vmobj.vnc_password.length > 0) {
-        setVNCPassword(vmobj, vmobj.vnc_password);
-    }
 
-    server.listen(port, SDC.sysinfo.admin_ip, function () {
-        addr = server.address();
-        VNC[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip, 'port': addr.port,
-            'server': server};
-        if (addr.port >= 5900) {
-            // only add the display number when it's non-negative
-            VNC[vmobj.uuid].display = (addr.port - 5900);
-        }
+    if (protocol === 'vnc') {
         if (vmobj.hasOwnProperty('vnc_password')
             && vmobj.vnc_password.length > 0) {
 
-            VNC[vmobj.uuid].password = vmobj.vnc_password;
+            setRemoteDisplayPassword(vmobj, 'vnc', vmobj.vnc_password);
         }
-        VM.log('DEBUG', 'VNC details for ' + vmobj.uuid + ': '
-            + util.inspect(VNC[vmobj.uuid]));
+    } else if (protocol === 'spice') {
+        if (vmobj.hasOwnProperty('spice_password')
+            && vmobj.spice_password.length > 0) {
+
+            setRemoteDisplayPassword(vmobj, 'spice', vmobj.spice_password);
+        }
+    }
+
+    server.on('connection', function(sock) {
+        VM.log('INFO', protocol + ' connection started from ['
+            + sock.remoteAddress + ']:' + sock.remotePort);
+    });
+
+    server.listen(port, SDC.sysinfo.admin_ip, function () {
+        addr = server.address();
+
+        if (protocol == 'vnc') {
+            VNC[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip, 'port': addr.port,
+                'server': server};
+            if (addr.port >= 5900) {
+                // only add the display number when it's non-negative
+                VNC[vmobj.uuid].display = (addr.port - 5900);
+            }
+            if (vmobj.hasOwnProperty('vnc_password')
+                && vmobj.vnc_password.length > 0) {
+
+                VNC[vmobj.uuid].password = vmobj.vnc_password;
+            }
+            VM.log('DEBUG', 'VNC details for ' + vmobj.uuid + ': '
+                + util.inspect(VNC[vmobj.uuid]));
+        } else if (protocol == 'spice') {
+            SPICE[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip, 'port': addr.port,
+                'server': server};
+            if (vmobj.hasOwnProperty('spice_password')
+                && vmobj.spice_password.length > 0) {
+
+                SPICE[vmobj.uuid].password = vmobj.spice_password;
+            }
+            if (vmobj.hasOwnProperty('spice_opts')
+                && vmobj.spice_opts.length > 0) {
+
+                SPICE[vmobj.uuid].spice_opts = vmobj.spice_opts;
+            }
+
+            VM.log('DEBUG', 'SPICE details for ' + vmobj.uuid + ': '
+                + util.inspect(SPICE[vmobj.uuid]));
+        }
     });
 }
 
-function clearVNC(uuid)
+function clearRemoteDisplay(uuid)
 {
+    // We want to clear anything we have active since we may
+    // have changed settings on the fly...§jd
+
+    // Spice...
+    if (SPICE[uuid] && SPICE[uuid].server) {
+        SPICE[uuid].server.close();
+    }
+    delete SPICE[uuid];
+
+    // VNC...
     if (VNC[uuid] && VNC[uuid].server) {
         VNC[uuid].server.close();
     }
     delete VNC[uuid];
 }
 
-function reloadVNC(vmobj)
+function reloadRemoteDisplay(vmobj)
 {
-    VM.log('INFO', 'reloading VNC for ' + vmobj.uuid);
-    clearVNC(vmobj.uuid);
-    spawnVNC(vmobj);
+    VM.log('INFO', 'reloading remote display for ' + vmobj.uuid);
+    clearRemoteDisplay(vmobj.uuid);
+    spawnRemoteDisplay(vmobj);
 }
 
 function clearTimer(uuid)
@@ -219,7 +259,7 @@ function clearTimer(uuid)
 
 function clearVM(uuid)
 {
-    clearVNC(uuid);
+    clearRemoteDisplay(uuid);
     clearTimer(uuid);
 }
 
@@ -269,10 +309,10 @@ function updateZoneStatus(ev)
                     VM.log('DEBUG', 'Ignoring freshly started vm ' + obj.uuid
                         + ' with brand=' + obj.brand);
                 } else {
-                    // clear any old timers or VNC since this vm just came up,
-                    // then spin up a new VNC.
+                    // clear any old timers or VNC/SPICE since this vm just came
+                    // up, then spin up a new VNC.
                     clearVM(obj.uuid);
-                    spawnVNC(obj);
+                    spawnRemoteDisplay(obj);
                 }
             });
         } else if (ev.oldstate === 'running') {
@@ -358,7 +398,7 @@ function handlePost(c, args, response)
     uuid = c[1];
 
     if (!args.hasOwnProperty('action')
-        || ['stop', 'sysrq', 'reset', 'reload_vnc'].indexOf(args.action) === -1
+        || ['stop', 'sysrq', 'reset', 'reload_display'].indexOf(args.action) === -1
         || (args.action === 'sysrq'
             && ['nmi', 'screenshot'].indexOf(args.request) === -1)
         || (args.action === 'stop' && !args.hasOwnProperty('timeout'))) {
@@ -396,7 +436,7 @@ function handlePost(c, args, response)
             }
         });
         break;
-    case 'reload_vnc':
+    case 'reload_display':
         VM.load(uuid, function (err, obj) {
             if (err) {
                 response.writeHead(404);
@@ -404,7 +444,7 @@ function handlePost(c, args, response)
                 response.end();
                 return;
             }
-            reloadVNC(obj);
+            reloadRemoteDisplay(obj);
             response.writeHead(202, { 'Content-Type': 'application/json'});
             response.write('Sent request to reload VNC for ' + uuid);
             response.end();
@@ -526,7 +566,7 @@ function startHTTPHandler()
  * GET /vm/:id[?type=vnc,xxx]
  * POST /vm/:id?action=stop
  * POST /vm/:id?action=reset
- * POST /vm/:id?action=reload_vnc
+ * POST /vm/:id?action=reload_display
  * POST /vm/:id?action=sysrq&request=[nmi|screenshot]
  *
  */
@@ -681,10 +721,27 @@ function infoVM(uuid, types, callback)
                                 res.vnc.password = VNC[obj.uuid].password;
                             }
                         }
-                        callback(null, res);
-                    } else {
-                        callback(null, res);
                     }
+                    if ((types.indexOf('all') !== -1)
+                        || (types.indexOf('spice') !== -1)) {
+
+                        res.spice = {};
+                        if (SPICE.hasOwnProperty(obj.uuid)) {
+                            res.spice.host = SPICE[obj.uuid].host;
+                            res.spice.port = SPICE[obj.uuid].port;
+                            if (SPICE[obj.uuid].hasOwnProperty('password')
+                                && SPICE[obj.uuid].password.length > 0) {
+
+                                res.spice.password = SPICE[obj.uuid].password;
+                            }
+                            if (SPICE[obj.uuid].hasOwnProperty('spice_opts')
+                                && SPICE[obj.uuid].spice_opts.length > 0) {
+
+                                res.spice.spice_opts = SPICE[obj.uuid].spice_opts;
+                            }
+                        }
+                    }
+                    callback(null, res);
                 }
             });
         });
@@ -892,8 +949,8 @@ function loadVM(vmobj, do_autoboot)
             + vmobj.transition_expire);
     }
 
-    // Start VNC
-    spawnVNC(vmobj);
+    // Start Remote Display
+    spawnRemoteDisplay(vmobj);
 }
 
 // kicks everything off

@@ -80,7 +80,6 @@ f usr/lib/amd64/libiostream.so.1 0755 root bin
 # 0-livesrc-stamp
 d smartdc 0555 root bin
 d smartdc/bin 0555 root bin
-f smartdc/bin/has_hvx 0555 root bin
 f smartdc/bin/qemu-exec 0555 root bin
 f usr/bin/sysinfo 0555 root bin
 f usr/bin/bootparams 0555 root bin

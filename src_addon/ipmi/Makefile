@@ -18,22 +18,24 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2011 Joyent Inc., All rights reserved.
+# Copyright (c) 2012 Joyent Inc., All rights reserved.
 #
 
 VER=ipmitool-1.8.11
 BASE=$(PWD)
-DESTDIR=$(BASE)/../proto
-CC=/usr/sfw/bin/gcc
+DESTDIR=$(BASE)/../../proto
+CC=$(DESTDIR)/usr/sfw/bin/gcc
+CFLAGS=-I$(DESTDIR)/usr/include -g $(LARGEFILES)
 LD=/usr/ccs/bin/ld
 MAKE=gmake
 INSTALL=ginstall
-PATH=/opt/SUNWspro/bin:/opt/local/bin:$(PATH)
 
 all: $(VER)/config.status
 	(cd $(VER); env - \
 	    PATH=$(PATH) \
-	    CC=$(CC) "CFLAGS= -g $(LARGEFILES)" LD=$(LD) \
+	    CC=$(CC) \
+	    CFLAGS="$(CFLAGS)" \
+	    LD=$(LD) \
 	    "INSTALL=$(INSTALL) -c" \
 	    MAKE=$(MAKE) $(MAKE))
 	@find . -name core -exec rm -f {} \;
@@ -44,7 +46,7 @@ install: all
 $(VER)/config.status: $(VER)/configure
 	(cd $(VER); env - \
 	    PATH=$(PATH) \
-	    CC=$(CC) CFLAGS=$(CFLAGS) LD=$(LD) \
+	    CC=$(CC) CFLAGS="$(CFLAGS)" LD=$(LD) \
 	    "INSTALL=$(INSTALL) -c" \
 	    "MAKE=$(MAKE)" \
 	    ./configure)

@@ -108,6 +108,7 @@ network/ipsec/ike.xml		disabled
 network/ipsec/ipsecalgs.xml	enabled
 network/ipsec/manual-key.xml	disabled
 network/ipsec/policy.xml	enabled
+network/loadbalancer/ilbd.xml	disabled
 network/login.xml		enabled
 network/network-initial.xml	enabled
 network/network-install.xml	disabled

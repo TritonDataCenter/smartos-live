@@ -24,7 +24,7 @@
 VER=ipmitool-1.8.11
 BASE=$(PWD)
 DESTDIR=$(BASE)/../../proto
-CC=$(DESTDIR)/usr/sfw/bin/gcc
+CC=$(DESTDIR)/usr/bin/gcc
 CFLAGS=-I$(DESTDIR)/usr/include -g $(LARGEFILES)
 LD=/usr/ccs/bin/ld
 MAKE=gmake

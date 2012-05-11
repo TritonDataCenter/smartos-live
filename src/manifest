@@ -29,6 +29,7 @@ d usr/vm/node_modules 0555 root bin
 d usr/vm/sbin 0555 root bin
 d usr/vm/smf 0555 root bin
 d usr/vm/test 0555 root bin
+f usr/vm/sbin/build-user-script 0555 root bin
 f usr/vm/sbin/vmadm 0555 root bin
 f usr/vm/sbin/vmadmd 0555 root bin
 f usr/vm/sbin/zoneevent 0555 root bin

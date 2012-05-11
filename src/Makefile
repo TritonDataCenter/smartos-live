@@ -45,6 +45,7 @@ install: $(TARGETS) sysinfo
 	cp vm/smf/system-metadata.xml $(DESTDIR)/lib/svc/manifest/system/system-metadata.xml
 	mv $(DESTDIR)/usr/vm/sbin/vmadmd.js $(DESTDIR)/usr/vm/sbin/vmadmd
 	mv $(DESTDIR)/usr/vm/sbin/vmadm.js $(DESTDIR)/usr/vm/sbin/vmadm
+	mv $(DESTDIR)/usr/vm/sbin/build-user-script.js $(DESTDIR)/usr/vm/sbin/build-user-script
 	mv $(DESTDIR)/usr/vm/sbin/metadata.js $(DESTDIR)/usr/vm/sbin/metadata
 	cp -PR ds $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/var/db/dsadm

@@ -236,7 +236,6 @@ f usr/share/man/man1m/zonemon.1m 0444 root bin
 f usr/share/man/man1m/zonememstat.1m 0444 root bin
 d usr/share/man/man3lib 0755 root bin
 f usr/share/man/man3lib/libm.3lib 0444 root bin
-f usr/share/man/man3lib/libusb.3lib 0444 root bin
 f usr/share/man/man3lib/libmvec.3lib 0444 root bin
 d usr/share/man/man3mvec 0755 root bin
 f usr/share/man/man3mvec/vsin_.3mvec 0444 root bin

@@ -145,11 +145,6 @@ f lib/svc/manifest/network/nfs/status.xml 0444 root sys
 f lib/svc/manifest/network/forwarding.xml 0444 root sys
 d var/db 0755 root bin
 d var/db/imgadm 0755 root bin
-d var/ld 0755 root bin
-s var/ld/32=.
-s var/ld/64=amd64
-d var/ld/amd64 0755 root bin
-f var/ld/amd64/ld.config 0644 root root
 d var/log 0755 root sys
 f var/log/vmactions.debug 0644 root root
 f var/log/vmactions.log 0644 root root

@@ -31,8 +31,11 @@ shopt -s xpg_echo
 
 upd_arg0=$(basename $0)
 upd_root=$(pwd)
-upd_extra_stamp=$upd_root/0-extra-stamp
-upd_illumos_stamp=$upd_root/0-illumos-stamp
+upd_extra_stamp="$upd_root/0-extra-stamp $upd_root/1-extra-stamp"
+upd_illumos_stamp="$upd_root/0-illumos-stamp $upd_root/1-extra-stamp"
+upd_live_stamp="$upd_root/0-livesrc-sramp $upd_root/0-man-stamp"
+upd_live_stamp="$upd_live_stamp $upd_root/0-tools-stamp $upd_root/0-pwgen-stamp"
+upd_live_stamp="$upd_live_stamp $upd_root/0-builder-stamp"
 
 function fail
 {
@@ -83,7 +86,7 @@ echo "done"
 echo "Updating illumos-live... \c "
 cd $upd_root
 [[ $? -eq 0 ]] || fail "illumos-live repo disappeared"
-git_update
+git_update || rm -f $upd_live_stamp
 echo "done"
 
 exit 0

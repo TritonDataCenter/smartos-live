@@ -183,7 +183,7 @@ void raw_cat(int rfd)
         struct stat sbuf;
 
         if (fstat(wfd, &sbuf) == 0 &&
-            sbuf.st_blksize > sizeof(fb_buf)) {
+	    sbuf.st_blksize > (long)sizeof(fb_buf)) {
             bsize = sbuf.st_blksize;
             buf = malloc(bsize);
         }

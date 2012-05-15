@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/env python2.7
 # vi: expandtab ts=4 sw=4
 #
 # Takes a 'manifest' style file and outputs a sorted version, warning about

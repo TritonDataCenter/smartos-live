@@ -1,0 +1,82 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at COPYING
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at COPYING.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2012, Joyent, Inc.
+#
+
+BASE =		$(PWD)
+DESTDIR =	$(BASE)/../proto
+
+PATH =		$(DESTDIR)/usr/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
+
+MAKE =		gmake
+PARALLEL =	-j128
+GCC =		$(DESTDIR)/usr/bin/gcc
+GXX =		$(DESTDIR)/usr/bin/g++
+
+SYSINCDIRS =	/usr/include
+SYSLIBDIRS =	/usr/lib /lib
+
+CPPFLAGS =	$(SYSINCDIRS:%=-isystem $(DESTDIR)/%)
+LDFLAGS =	$(SYSLIBDIRS:%=-L$(DESTDIR)/%)
+
+PREFIX_NODE =	$(DESTDIR)/usr
+
+DEBUG_FLAGS =	-g
+WARN_FLAGS =	-Wall -Wextra -Werror
+PIC_FLAGS =	-fPIC
+OPT_FLAGS =	-O2
+
+NODE_CFLAGS =	$(DEBUG_FLAGS) $(WARN_FLAGS) $(PIC_FLAGS) $(OPT_FLAGS)
+
+STD_DEFS =	-D_GNU_SOURCE
+NODE_DEFS =	-DBUILDING_NODE_EXTENSION
+LF64_DEFS =	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+PIC_DEFS =	-DPIC
+NODE_INCS =	-isystem $(PREFIX_NODE)/include/node -I.
+
+NODE_CPPFLAGS =	$(STD_DEFS) $(NODE_DEFS) $(LF64_DEFS) $(PIC_DEFS) $(NODE_INCS)
+
+SHARED_FLAGS =	-shared
+ZTEXT =		-Wl,-ztext
+NODE_LIBDIR =	-L$(PREFIX_NODE)/lib
+
+NODE_LDFLAGS =	$(SHARED_FLAGS) $(ZTEXT) $(NODE_LIBDIR)
+
+SUBDIR_CC =		CC="$(GCC)"
+SUBDIR_CXX =		CXX="$(GXX)"
+SUBDIR_CPPFLAGS =	CPPFLAGS="$(CPPFLAGS)"
+SUBDIR_CFLAGS =		CFLAGS="$(CFLAGS)"
+SUBDIR_CXXFLAGS =	CXXFLAGS="$(CXXFLAGS)"
+SUBDIR_LDFLAGS =	LDFLAGS="$(LDFLAGS)"
+SUBDIR_LIBS =		LIBS="$(LIBS)"
+SUBDIR_MAKE =		MAKE="$(MAKE)"
+SUBDIR_DESTDIR =	DESTDIR="$(DESTDIR)"
+
+SUBDIR_ENV = \
+	$(SUBDIR_CC) \
+	$(SUBDIR_CXX) \
+	$(SUBDIR_CPPFLAGS) \
+	$(SUBDIR_CFLAGS) \
+	$(SUBDIR_CXXFLAGS) \
+	$(SUBDIR_LDFLAGS) \
+	$(SUBDIR_LIBS) \
+	$(SUBDIR_MAKE) \
+	$(SUBDIR_DESTDIR)

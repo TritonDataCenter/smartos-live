@@ -13,7 +13,7 @@ usage(char* argv0) {
 int
 main(int argc, char* argv[]) {
 	char* devpath = argv[1];
-    int devnode;
+	int devnode;
 	struct stat buf;
 	int ret;
 	int removable;
@@ -23,11 +23,11 @@ main(int argc, char* argv[]) {
 		return -1;
 	}
 	
-    if ((devnode = open(devpath, O_RDONLY)) < 0 ) {
+	if ((devnode = open(devpath, O_RDONLY)) < 0 ) {
 		printf("Could not open %s\n", devpath);
 		usage(argv[0]);
 		return -1;
-    }
+	}
     
 	if (fstat(devnode, &buf) == -1 || !S_ISCHR(buf.st_mode)) {
 		printf("%s: not a character device\n", devpath);

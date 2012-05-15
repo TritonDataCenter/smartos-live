@@ -14,5 +14,5 @@ ON_CLOSED_BINS_URL="http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins
 ON_CLOSED_BINS_ND_URL="http://dlc.sun.com/osol/on/downloads/20100817/on-closed-bins-nd.i386.tar.bz2"
 GET_ILLUMOS="(git clone http://github.com/joyent/illumos-joyent illumos)"
 GET_ILLUMOS_EXTRA="git clone http://github.com/joyent/illumos-extra illumos-extra"
-ILLUMOS_EXTRA_TARBALL_URL="https://download.joyent.com/pub/build/illumos-extra/"
+ILLUMOS_ADJUNCT_TARBALL_URL="https://download.joyent.com/pub/build/adjuncts/"
 OVERLAYS="smartos generic"

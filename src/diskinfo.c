@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <assert.h>
+#include <ctype.h>
 
 #include <libdiskmgt.h>
 #include <sys/nvpair.h>

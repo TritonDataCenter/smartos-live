@@ -141,14 +141,28 @@ if [ ! -f "projects/illumos/usr/src/tools/env/illumos.sh" ]; then
   fi
 fi
 
-if [[ -n ${ILLUMOS_EXTRA_TARBALL_URL} && -z ${NO_EXTRA_TARBALL} ]]; then
-	EXTRA_TARBALL=$(curl -k ${ILLUMOS_EXTRA_TARBALL_URL} | grep href | tail -n1 | cut -d '"' -f2)
-	curl -k -O ${ILLUMOS_EXTRA_TARBALL_URL}/${EXTRA_TARBALL}
-	if [[ $? != 0 ]]; then
-		EXTRA_TARBALL=""
-	fi
+#
+# The adjunct tarball contains headers and libraries against which runtime
+# dependencies will be encoded into our delivered objects.  It should not
+# exist but is essential until illumos becomes self-contained.
+#
+if [[ -z "${ILLUMOS_ADJUNCT_TARBALL_URL}" ]]; then
+	echo "FATAL: No ILLUMOS_ADJUNCT_TARBALL_URL defined in configure.*"
+	exit 1
 fi
-if [[ ! -f "projects/illumos-extra/Makefile" && -z $EXTRA_TARBALL ]]; then
+ADJUNCT_TARBALL="$(curl -k ${ILLUMOS_ADJUNCT_TARBALL_URL} | \
+    grep href | tail -n1 | cut -d '"' -f2)"
+if [[ -z "${ADJUNCT_TARBALL}" ]]; then
+	echo "FATAL: Unable to list adjunct from ILLUMOS_ADJUNCT_TARBALL_URL"
+	exit 1
+fi
+curl -k -O ${ILLUMOS_ADJUNCT_TARBALL_URL}/${ADJUNCT_TARBALL}
+if [[ $? != 0 ]]; then
+	echo "FATAL: Unable to get adjuncts from ILLUMOS_ADJUNCT_TARBALL_URL"
+	exit 1
+fi
+
+if [[ ! -f "projects/illumos-extra/Makefile" ]]; then
   echo " +--> Getting illumos-extra source tree..."
   if [ -z "${GET_ILLUMOS_EXTRA}" ]; then
     echo "FATAL: No GET_ILLUMOS_EXTRA defined in configure.*, can't get illumos-extra!"
@@ -260,6 +274,8 @@ ON_CLOSED_BINS="\$CODEMGR_WS/closed";            export ON_CLOSED_BINS
 ON_CRYPTO_BINS="\$CODEMGR_WS/on-crypto.\$MACH.tar.bz2"; export ON_CRYPTO_BINS
 REF_PROTO_LIST=\$PARENT_WS/usr/src/proto_list_\${MACH}; export REF_PROTO_LIST
 ROOT="${ROOT}/proto";  export ROOT
+ADJUNCT_PROTO="${ROOT}/proto.strap";	export ADJUNCT_PROTO
+NATIVE_ADJUNCT="/opt/local";		export NATIVE_ADJUNCT
 SRC="\$CODEMGR_WS/usr/src";              export SRC
 VERSION="\$GATE";                        export VERSION
 PARENT_ROOT="${ROOT}/proto"; export PARENT_ROOT

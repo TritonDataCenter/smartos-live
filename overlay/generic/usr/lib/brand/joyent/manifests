@@ -56,7 +56,6 @@
 # network/nfs/cbd.xml
 # network/nfs/mapid.xml
 # network/nfs/status.xml
-# network/smb/client.xml
 # network/ipmievd.xml
 # network/nis/client.xml
 # network/rpc/rex.xml
@@ -130,6 +129,7 @@ network/routing/rdisc.xml	disabled
 network/routing/ripng.xml	disabled
 network/routing/route.xml	disabled
 network/rpc/bind.xml		enabled
+network/smb/client.xml		disabled
 network/shares/group.xml	enabled
 network/shares/reparsed.xml	disabled
 network/shell.xml		disabled

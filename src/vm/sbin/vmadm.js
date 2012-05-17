@@ -690,6 +690,7 @@ function main(callback)
         uuid = getUUID(command, parsed);
         VM.delete(uuid, function (err) {
             if (err) {
+                err.message = 'Failed to delete ' + uuid + ': ' + err.message;
                 callback(err);
             } else {
                 callback(null, 'Successfully deleted ' + uuid);

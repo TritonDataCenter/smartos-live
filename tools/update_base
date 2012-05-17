@@ -21,7 +21,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2011, Joyent, Inc.
+# Copyright (c) 2012, Joyent, Inc.
 #
 
 #
@@ -58,11 +58,20 @@ function git_update
 	return
 }
 
-echo "Updating illumos-extra... \c "
-cd $upd_root/projects/illumos-extra
-[[ $? -eq 0 ]] || fail "can't find illumos-extra directory"
-git_update || rm -f $upd_extra_stamp
-echo "done"
+function update_extra
+{
+	echo "Updating illumos-extra... \c "
+	cd $upd_root/projects/illumos-extra
+	[[ $? -eq 0 ]] || fail "can't find illumos-extra directory"
+	git_update || rm -f $upd_extra_stamp
+	echo "done"
+}
+
+if [[ -d $upd_root/projects/illumos-extra ]]; then
+	update_extra
+else
+	echo "illumos-extra tarball in use. Update illumos-extra manually."
+fi
 
 echo "Updating illumos-joyent... \c "
 cd $upd_root/projects/illumos

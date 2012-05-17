@@ -56,7 +56,6 @@
 # network/nfs/cbd.xml
 # network/nfs/mapid.xml
 # network/nfs/status.xml
-# network/smb/client.xml
 # network/ipmievd.xml
 # network/nis/client.xml
 # network/rpc/rex.xml
@@ -66,7 +65,6 @@
 # system/fm/notify-params.xml
 # system/install/system-config.xml
 # system/pkgserv.xml
-# system/sac.xml
 #
 
 #
@@ -80,6 +78,8 @@
 # system/boot-archive-update.xml
 # system/boot-archive.xml
 # system/boot-config.xml
+# system/fmd.xml
+# system/sac.xml
 #
 
 #
@@ -102,12 +102,13 @@ network/dns/install.xml		disabled
 network/dns/multicast.xml	disabled
 network/forwarding.xml		disabled
 network/inetd-upgrade.xml	enabled
-network/inetd.xml		enabled
+network/inetd.xml		disabled
 network/ipfilter.xml		disabled
 network/ipsec/ike.xml		disabled
 network/ipsec/ipsecalgs.xml	enabled
 network/ipsec/manual-key.xml	disabled
 network/ipsec/policy.xml	enabled
+network/loadbalancer/ilbd.xml	disabled
 network/login.xml		enabled
 network/network-initial.xml	enabled
 network/network-install.xml	disabled
@@ -128,6 +129,7 @@ network/routing/rdisc.xml	disabled
 network/routing/ripng.xml	disabled
 network/routing/route.xml	disabled
 network/rpc/bind.xml		enabled
+network/smb/client.xml		disabled
 network/shares/group.xml	enabled
 network/shares/reparsed.xml	disabled
 network/shell.xml		disabled
@@ -135,7 +137,7 @@ network/slp.xml			disabled
 network/ssh.xml			enabled
 system/auditd.xml		disabled
 system/consadm.xml		disabled
-system/console-login.xml	enabled
+system/console-login.xml	disabled
 system/coreadm.xml		enabled
 system/cron.xml			enabled
 system/cryptosvc.xml		enabled
@@ -150,7 +152,6 @@ system/filesystem/local-fs.xml	enabled
 system/filesystem/minimal-fs.xml	enabled
 system/filesystem/root-fs.xml	enabled
 system/filesystem/usr-fs.xml	enabled
-system/fmd.xml			enabled
 system/hostid.xml		enabled
 system/hotplug.xml		disabled
 system/identity.xml		enabled

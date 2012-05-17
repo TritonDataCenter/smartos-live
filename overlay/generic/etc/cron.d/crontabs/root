@@ -1,6 +1,6 @@
-## Rotate and trim the audit logs nightly at midnight.
+## Rotate and trim the audit logs nightly.
 0 0 * * * /smartdc/bin/sdc-lastcomm -R 30
-## Rotate and trim the regular logs nightly at 10 after midnight.
+## Rotate and trim the regular logs nightly.
 10 0 * * * /usr/sbin/logadm
 
 # NOTE: all entries above are in root's system-defined crontab; see the

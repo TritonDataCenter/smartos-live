@@ -12,7 +12,7 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var dataset_uuid = '47e6af92-daf0-11e0-ac11-473ca1173ab0';
+var dataset_uuid = vmtest.CURRENT_SMARTOS;
 
 test('create VM with 2 nics', {'timeout': 240000}, function(t) {
     var state = {'brand': 'joyent'};

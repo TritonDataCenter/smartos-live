@@ -8,8 +8,10 @@
 #include <sys/nvpair.h>
 
 void sysev_handler(sysevent_t *ev);
-sysevent_handle_t * sysev_register(const char *klass, void (*handler)(sysevent_t *));
-evchan_t * sysev_register_evc(const char *channel, const char *klass, int (*handler)(sysevent_t *, void *));
+sysevent_handle_t * sysev_register(const char *klass,
+    void (*handler)(sysevent_t *));
+evchan_t * sysev_register_evc(const char *channel, const char *klass,
+    int (*handler)(sysevent_t *, void *));
 
 static int
 sysev_evc_handler(sysevent_t *ev, void *cookie)
@@ -26,7 +28,7 @@ sysev_evc_handler(sysevent_t *ev, void *cookie)
 
     if (sysevent_get_attr_list(ev, &nvlist) != 0) {
         // XXX Error
-        return 1;
+        return (1);
     }
 
     curr = nvlist_next_nvpair(nvlist, NULL);
@@ -58,7 +60,9 @@ sysev_evc_handler(sysevent_t *ev, void *cookie)
                 break;
                 break;
             default:
-                (void) fprintf(stderr, "don't know what to do with '%s', type: %d\n", nvpair_name(curr), type);
+                (void) fprintf(stderr,
+                    "don't know what to do with '%s', type: %d\n",
+                    nvpair_name(curr), type);
                 break;
         }
         next = nvlist_next_nvpair(nvlist, curr);
@@ -68,16 +72,16 @@ sysev_evc_handler(sysevent_t *ev, void *cookie)
     printf("\"channel\": \"%s\", \"class\": \"%s\", \"subclass\": \"%s\"}\n",
         (const char *) cookie,
         sysevent_get_class_name(ev),
-        sysevent_get_subclass_name(ev)
-    );
+        sysevent_get_subclass_name(ev));
 
     fflush(stdout);
 
-    return 0;
+    return (0);
 }
 
 evchan_t *
-sysev_register_evc(const char *channel, const char *klass, int (*handler)(sysevent_t *, void *))
+sysev_register_evc(const char *channel, const char *klass,
+    int (*handler)(sysevent_t *, void *))
 {
     int res;
     evchan_t *ch;
@@ -85,17 +89,19 @@ sysev_register_evc(const char *channel, const char *klass, int (*handler)(syseve
 
     if ((res = sysevent_evc_bind(channel, &ch, 0)) != 0) {
         (void) fprintf(stderr, "failed to bind to sysevent channel: %d\n", res);
-        return NULL;
+        return (NULL);
     }
 
     (void) snprintf(subid, sizeof (subid), "node-%ld", getpid());
 
-    if ((res = sysevent_evc_subscribe(ch, subid, klass, handler, (void *)channel, 0)) != 0) {
+    if ((res = sysevent_evc_subscribe(ch, subid, klass, handler,
+        (void *)channel, 0)) != 0) {
+
         (void) fprintf(stderr, "failed to subscribe to channel: %d\n", res);
-        return NULL;
+        return (NULL);
     }
 
-    return ch;
+    return (ch);
 }
 
 int
@@ -107,15 +113,16 @@ main(int argc, char **argv)
     argc = argc;
     argv = argv;
 
-    ch = sysev_register_evc("com.sun:zones:status", "status", sysev_evc_handler);
+    ch = sysev_register_evc("com.sun:zones:status", "status",
+        sysev_evc_handler);
     if (!ch) {
         fprintf(stderr, "failed to register event handler.");
-        exit (1);
+        exit(1);
     }
 
     for (;;) {
         (void) pause();
     }
 
-    exit (0);
+    exit(0);
 }

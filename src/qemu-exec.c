@@ -60,14 +60,15 @@ rotate_logs(void)
     char old_filename[] = LOG_FILE_PATTERN;
     char new_filename[] = LOG_FILE_PATTERN;
 
-    /* rename:
+    /*
+     * rename:
      *
      * log.8 -> log.9
      * ...
      * log.0 -> log.1
      *
      */
-    for (i=9; i>0; i--) {
+    for (i = 9; i > 0; i--) {
         if (snprintf((char *)&old_filename, strlen(LOG_FILE_PATTERN),
             LOG_FILE_PATTERN, i - 1) < 0) {
 
@@ -95,8 +96,6 @@ rotate_logs(void)
     if (rename(LOG_FILE, new_filename)) {
         perror(LOG_FILE);
     }
-
-    return;
 }
 
 void
@@ -113,8 +112,6 @@ redirect_output(void)
             perror("Warning, dup2(stderr) failed");
         }
     }
-
-    return;
 }
 
 void
@@ -134,8 +131,6 @@ dump_privs(void)
             (void) puts(pname);
         }
     }
-
-    return;
 }
 
 void
@@ -147,8 +142,6 @@ dump_args(int argc, char **argv)
     for (i = 0; i < argc; i++) {
         (void) puts(argv[i]);
     }
-
-    return;
 }
 
 void
@@ -160,5 +153,4 @@ exec_next(int argc, char **argv)
     execvp(*argv, argv);
 
     /* if we got here we failed. */
-    return;
 }

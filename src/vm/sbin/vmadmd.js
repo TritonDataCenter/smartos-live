@@ -42,7 +42,7 @@ var qs = require('querystring');
 var url = require('url');
 var util = require('util');
 
-var VMADMD_SOCK = '/tmp/vmadmd.http';
+var VMADMD_PORT = 8080;
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
 
 var SDC = {};
@@ -124,7 +124,7 @@ function spawnRemoteDisplay(vmobj)
         port = vmobj.spice_port;
         sockpath = '/root/tmp/vm.spice';
     } else {
-        protocol = "vnc";
+        protocol = 'vnc';
         if (vmobj.hasOwnProperty('vnc_port')) {
             port = vmobj.vnc_port;
         } else {
@@ -147,24 +147,25 @@ function spawnRemoteDisplay(vmobj)
 
         remote_address = '[' + c.remoteAddress + ']:' + c.remotePort;
         c.on('close', function (had_error) {
-            VM.log('INFO', protocol + ' connection ended from ' + remote_address);
+            VM.log('INFO', protocol + ' connection ended from '
+                + remote_address);
         });
 
         dpy.on('error', function () {
             VM.log('WARN', 'Warning: ' + protocol + ' socket error: '
                 + JSON.stringify(arguments));
-         });
+        });
 
         c.on('error', function () {
             VM.log('WARN', 'Warning: ' + protocol + ' net socket error: '
                 + JSON.stringify(arguments));
-         });
+        });
 
-         dpy.connect(path.join(zonepath, sockpath));
+        dpy.connect(path.join(zonepath, sockpath));
     });
 
-    VM.log('INFO', 'spawning ' + protocol + ' listener for ' + vmobj.uuid + ' on '
-        + SDC.sysinfo.admin_ip);
+    VM.log('INFO', 'spawning ' + protocol + ' listener for ' + vmobj.uuid
+        + ' on ' + SDC.sysinfo.admin_ip);
 
     // Before we start the listener, set the password if needed.
 
@@ -182,7 +183,7 @@ function spawnRemoteDisplay(vmobj)
         }
     }
 
-    server.on('connection', function(sock) {
+    server.on('connection', function (sock) {
         VM.log('INFO', protocol + ' connection started from ['
             + sock.remoteAddress + ']:' + sock.remotePort);
     });
@@ -205,8 +206,8 @@ function spawnRemoteDisplay(vmobj)
             VM.log('DEBUG', 'VNC details for ' + vmobj.uuid + ': '
                 + util.inspect(VNC[vmobj.uuid]));
         } else if (protocol == 'spice') {
-            SPICE[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip, 'port': addr.port,
-                'server': server};
+            SPICE[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip,
+                'port': addr.port, 'server': server};
             if (vmobj.hasOwnProperty('spice_password')
                 && vmobj.spice_password.length > 0) {
 
@@ -398,7 +399,8 @@ function handlePost(c, args, response)
     uuid = c[1];
 
     if (!args.hasOwnProperty('action')
-        || ['stop', 'sysrq', 'reset', 'reload_display'].indexOf(args.action) === -1
+        || ['stop', 'sysrq',
+            'reset', 'reload_display'].indexOf(args.action) === -1
         || (args.action === 'sysrq'
             && ['nmi', 'screenshot'].indexOf(args.request) === -1)
         || (args.action === 'stop' && !args.hasOwnProperty('timeout'))) {
@@ -472,20 +474,11 @@ function handlePost(c, args, response)
 
 }
 
-function handleGet(c, args, response)
+function getInfo(uuid, args, response)
 {
     var t;
     var type;
     var types = [];
-    var uuid = c[1];
-
-    VM.log('DEBUG', 'GET (' + JSON.stringify(c) + ') len: ' + c.length);
-
-    if (c.length !== 2 || c[0] !== 'vm') {
-        response.writeHead(404);
-        response.end();
-        return;
-    }
 
     if (args.hasOwnProperty('types')) {
         t = args.types.split(',');
@@ -505,16 +498,34 @@ function handleGet(c, args, response)
             VM.log('ERROR', err.message, err);
             response.writeHead(500, { 'Content-Type': 'application/json'});
             response.end();
-            return;
+        } else {
+            response.writeHead(200, { 'Content-Type': 'application/json'});
+            response.end(JSON.stringify(res, null, 2), 'utf-8');
         }
-        response.writeHead(200, { 'Content-Type': 'application/json'});
-        response.end(JSON.stringify(res, null, 2), 'utf-8');
+        return;
     });
+}
+
+function handleGet(c, args, response)
+{
+    var uuid = c[1];
+
+    VM.log('DEBUG', 'GET (' + JSON.stringify(c) + ') len: ' + c.length);
+
+    if (c.length === 3 && c[0] === 'vm' && c[2] === 'info') {
+        getInfo(uuid, args, response);
+    } else {
+        response.writeHead(404);
+        response.end();
+    }
 }
 
 function startHTTPHandler()
 {
-    http.createServer(function (request, response) {
+    var ip;
+    var ips = ['127.0.0.1'];
+
+    var handler = function (request, response) {
         var args;
         var c;
         var url_parts;
@@ -559,7 +570,13 @@ function startHTTPHandler()
         } else {
             handleGet(c, args, response);
         }
-    }).listen(VMADMD_SOCK);
+    };
+
+    for (ip in ips) {
+        ip = ips[ip];
+        VM.log('DEBUG', 'LISTENING ON ' + ip + ':' + VMADMD_PORT);
+        http.createServer(handler).listen(VMADMD_PORT, ip);
+    }
 }
 
 /*
@@ -737,7 +754,8 @@ function infoVM(uuid, types, callback)
                             if (SPICE[obj.uuid].hasOwnProperty('spice_opts')
                                 && SPICE[obj.uuid].spice_opts.length > 0) {
 
-                                res.spice.spice_opts = SPICE[obj.uuid].spice_opts;
+                                res.spice.spice_opts =
+                                    SPICE[obj.uuid].spice_opts;
                             }
                         }
                     }
@@ -957,6 +975,8 @@ function loadVM(vmobj, do_autoboot)
 function main()
 {
     // XXX TODO: load fs-ext so we can flock a pid file to be exclusive
+
+    VM.resetLog('vmadmd');
 
     startZoneWatcher(updateZoneStatus);
     startHTTPHandler();

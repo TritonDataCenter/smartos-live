@@ -9,6 +9,8 @@ var path = require('path');
 var VM = require('VM');
 var test = require('tap').test;
 
+exports.CURRENT_SMARTOS = '01b2c898-945f-11e1-a523-af1afbe22822';
+
 exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
 {
     functions = [

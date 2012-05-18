@@ -32,6 +32,9 @@ d usr/vm/test 0555 root bin
 f usr/vm/sbin/build-user-script 0555 root bin
 f usr/vm/sbin/vmadm 0555 root bin
 f usr/vm/sbin/vmadmd 0555 root bin
+f usr/vm/sbin/vmunbundle 0555 root bin
+f usr/vm/sbin/zfs_recv 0555 root bin
+f usr/vm/sbin/zfs_send 0555 root bin
 f usr/vm/sbin/zoneevent 0555 root bin
 f usr/vm/etc/vmadm.completion 0444 root bin
 f usr/vm/node_modules/expat_binding.node 0444 root bin

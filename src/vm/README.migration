@@ -1,0 +1,108 @@
+
+Low Level (ie. the hard way)
+============================
+
+For a KVM VM (brand === kvm):
+
+  vmadm get ${UUID} > ${UUID}.json
+  vmadm get ${UUID} | json disks zfs_filesystem
+     \_ (this gives you the list of datasets you need to copy)
+  vmadm stop ${UUID}
+  (for each of those datasets you found, write to a file, eg:)
+  zfs snapshot zones/${UUID}@sending
+  zfs send -p zones/${UUID}@sending > ${UUID}.zfs
+  zfs destroy zones/${UUID}@sending
+  zfs snapshot zones/${UUID}-disk0@sending
+  zfs send -p zones/${UUID}-disk0@sending > ${UUID}-disk0.zfs
+  zfs destroy zones/${UUID}-disk0@sending
+  zfs snapshot zones/${UUID}-disk1@sending
+  zfs send -p zones/${UUID}-disk1@sending > ${UUID}-disk1.zfs
+  zfs destroy zones/${UUID}-disk1@sending
+  [ copy these 4 files *.zfs, *.json to the target machine, then: ]
+  vmadm receive < ${UUID}.json
+  rm ${UUID}.json
+  zfs receive zones/${UUID} < ${UUID}.zfs
+  zfs destroy zones/${UUID}@sending
+  rm ${UUID}.zfs
+  zfs receive zones/${UUID}-disk0 < ${UUID}-disk0.zfs
+  zfs destroy zones/${UUID}-disk0@sending
+  rm ${UUID}-disk0.zfs
+  zfs receive zones/${UUID}-disk1 < ${UUID}-disk1.zfs
+  zfs destroy zones/${UUID}-disk1@sending
+  rm ${UUID}-disk1.zfs
+  vmadm install ${UUID}
+  [ now go back to the source machine and: ]
+  vmadm delete ${UUID}
+  [ destroy the temp files if you stored them]
+
+For an OS VM (brand === joyent):
+
+  vmadm get ${UUID} > ${UUID}.json
+  vmadm get ${UUID} | json zfs_filesystem datasets filesystems
+     \_ (this gives you the list of datasets you need to copy, or ensure are available)
+  vmadm stop ${UUID}
+  (for each of those datasets you found, write to a file, eg:)
+  zfs snapshot zones/${UUID}@sending
+  zfs send -p zones/${UUID}@sending > ${UUID}.zfs
+  zfs destroy zones/${UUID}@sending
+  zfs snapshot zones/${UUID}/data@sending
+  zfs send -p zones/${UUID}/data@sending > ${UUID}-data.zfs
+  zfs destroy zones/${UUID}/data@sending
+  [ copy these 3 files *.zfs, *.json to the target machine, then: ]
+  vmadm receive < ${UUID}.json
+  rm ${UUID}.json
+  zfs receive zones/${UUID} < ${UUID}.zfs
+  zfs destroy zones/${UUID}@sending
+  rm ${UUID}.zfs
+  zfs receive zones/${UUID}/data < ${UUID}-data.zfs
+  zfs destroy zones/${UUID}/data@sending
+  rm ${UUID}-data.zfs
+  vmadm install ${UUID}
+  [ now go back to the source machine and: ]
+  vmadm delete ${UUID}
+  [ destroy the temp files if you stored them]
+
+
+Higher Level (ie. the recommended way)
+======================================
+
+This internally will do the same thing as the Low Level way described above, it
+just removes much of the error-prone tedium of doing so.
+
+Option 1 (using a file):
+
+  vmadm send ${UUID} | gzip > ${UUID}.backup.tgz   # (this will also stop the VM)
+  [ copy ${UUID}.backup.tgz to the target CN, then on the target: ]
+  gunzip -c ${UUID}.backup.tgz | vmadm receive
+  rm ${UUID}.backup.tgz
+  [ now go back to the source machine and: ]
+  vmadm delete ${UUID}
+  rm ${UUID}.backup.tgz
+
+Option 2 (direct to vmadmd):
+
+  vmadm send ${UUID} ${REMOTE_VMADMD_IP} ${PORT} && vmadm delete ${UUID}
+
+
+[future] Less-downtime non-Live Migration (incremental)
+=======================================================
+
+  vmadm send ${UUID} -I ${REMOTE_VMADMD_IP}:${PORT} && vmadm delete ${UUID}
+
+In this case the VM will not actually be stopped right away, what will happen
+under the hood is that we'll send the current stream of the VM leaving the VM
+running.  When the stream is fully loaded on the target, we'll finally stop
+the VM and send the incremental data again and complete the send.  A further
+optimization would be to send more than one incremental to decrease even further
+the amount of downtime.
+
+
+[future] Live Migration (for KVM only)
+======================================
+
+  vmadm send ${UUID} -L ${REMOTE_VMADMD_IP} ${PORT} && vmadm delete ${UUID}
+
+In this case the VM will never actually be down on both machines, the target
+VM will be created and the data will be migrated 'live'.  Users of the VM should
+experience no downtime.
+

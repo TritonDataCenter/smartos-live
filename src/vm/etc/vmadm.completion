@@ -4,21 +4,22 @@ _vmadm()
     COMPREPLY=()
     # NOTE: we don't want the aliases boot,halt,destroy,etc here because we
     # want people to use the 'proper' commands when they can.
-    COMMANDS="start console create delete stop info get list lookup reboot sysrq update"
+    COMMANDS="console create delete get info list lookup reboot receive send start stop sysrq update"
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    if [[  ${prev} == 'start'
-        || ${prev} == 'boot'
+    if [[  ${prev} == 'boot'
         || ${prev} == 'console'
         || ${prev} == 'delete'
         || ${prev} == 'destroy'
-        || ${prev} == 'stop'
-        || ${prev} == 'halt'
         || ${prev} == 'get'
+        || ${prev} == 'halt'
         || ${prev} == 'json'
-        || ${prev} == 'update'
         || ${prev} == 'reboot'
+        || ${prev} == 'send'
+        || ${prev} == 'start'
+        || ${prev} == 'stop'
+        || ${prev} == 'update'
     ]] && [[ ${COMP_WORDS[COMP_CWORD-2]} == "vmadm" ]]; then
 
         vms_uuids=$(zoneadm list -cp | grep -v ':global:' | cut -d':' -f5 | \

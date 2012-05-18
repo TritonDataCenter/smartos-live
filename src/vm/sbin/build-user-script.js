@@ -12,9 +12,9 @@
  *
  */
 
-var fs=require('fs');
+var fs = require('fs');
 
-function usage ()
+function usage()
 {
     console.log('Usage: ' + process.argv[1] + ' <filename>');
     process.exit(1);

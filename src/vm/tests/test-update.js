@@ -364,11 +364,11 @@ function test_update_ram(ram)
                         t.end();
                     }
 
-                    t.ok((obj.max_physical_memory === ram), 'vm.max_physical_memory: '
+                    t.ok((obj.max_physical_memory === Number(ram)), 'vm.max_physical_memory: '
                         + obj.max_physical_memory + ' expected: ' + ram);
-                    t.ok((obj.max_locked_memory === ram), 'vm.max_locked_memory: '
+                    t.ok((obj.max_locked_memory === Number(ram)), 'vm.max_locked_memory: '
                         + obj.max_locked_memory + ' expected: ' + ram);
-                    t.ok((obj.max_swap === ram), 'vm.max_swap: '
+                    t.ok((obj.max_swap === Number(ram)), 'vm.max_swap: '
                         + obj.max_swap + ' expected: ' + ram);
                     t.end();
                 });
@@ -381,6 +381,10 @@ function test_update_ram(ram)
 test_update_ram(512);
 // Update to a lower value should lower everything...
 test_update_ram(128);
+// test updating with string to higher
+test_update_ram("256");
+// now lower
+test_update_ram("64");
 // Now something bigger
 test_update_ram(1024);
 

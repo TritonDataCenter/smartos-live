@@ -87,7 +87,6 @@ test('import dataset', function(t) {
 
 test('create zone', {'timeout': 240000}, function(t) {
     VM.create(PAYLOADS.create, function (err, vmobj) {
-        console.log('callback');
         if (err) {
             t.ok(false, 'error creating VM: ' + err.message);
         } else {

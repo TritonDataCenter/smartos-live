@@ -35,6 +35,7 @@ var zone_defaults = {
     'billing_id': [dataset_uuid],
     'dataset_uuid': [dataset_uuid],
     'zfs_filesystem': ['uuid', prefix_zones],
+    'zfs_root_recsize': [131072],
     'owner_uuid': ['00000000-0000-0000-0000-000000000000'],
     'uuid': ['uuid', state_property],
     'dns_domain': ['local'],

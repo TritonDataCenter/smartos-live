@@ -20,6 +20,7 @@ var PAYLOADS = {
     }, "add_net0": {
         "add_nics": [
             {
+                "model": "virtio",
                 "ip": "10.254.254.254",
                 "netmask": "255.255.255.0",
                 "nic_tag": "external",
@@ -36,6 +37,7 @@ var PAYLOADS = {
     }, "add_net0_and_net1": {
         "add_nics": [
             {
+                "model": "virtio",
                 "ip": "10.254.254.254",
                 "netmask": "255.255.255.0",
                 "nic_tag": "external",
@@ -44,6 +46,7 @@ var PAYLOADS = {
                 "gateway": "10.254.254.1",
                 "mac": "01:02:03:04:05:06"
             }, {
+                "model": "virtio",
                 "ip": "10.254.254.253",
                 "netmask": "255.255.255.0",
                 "nic_tag": "external",
@@ -77,7 +80,6 @@ simple_properties = [
 
 test('create zone', {'timeout': 240000}, function(t) {
     VM.create(PAYLOADS.create, function (err, vmobj) {
-        console.log('callback');
         if (err) {
             t.ok(false, 'error creating VM: ' + err.message);
         } else {

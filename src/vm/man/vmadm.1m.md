@@ -551,6 +551,23 @@ tab-complete UUIDs rather than having to type them out for every command.
           disks.*.size   # for lookup matching any disk
           disks.0.size   # for list output or lookup of a specific disk
 
+    disks.*.block_size:
+
+        Specifies the block size for the disk. This property can only be set at
+        disk creation time and cannot be changed without destroying the disk and
+        creating a new one.
+
+        Important: this property cannot be set on disks that have an image_uuid
+        parameter as the image being cloned will already have the ZFS
+        volblocksize property set.
+
+        type: integer (block size in bytes, 512 to 131072, must be power of 2)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: no (except when adding new disks)
+        default: 8192
+
     disks.*.boot:
 
         Specifies whether this disk should be bootable (only one disk should).
@@ -633,6 +650,21 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (special, see description in 'update' section above)
         default: the value of the disk_driver parameter for this VM
+
+    disks.*.compression:
+
+        Specifies a compression algorithm used for this disk. This has the same
+        details, warnings and caveats as the global zfs_root_compression option
+        below but only affects a single disk on the VM.
+
+        See zfs_root_compression section below for more details.
+
+        type: string one of: "on,off,lzjb,gzip,gzip-N,zle"
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes (see caveat in zfs_root_compression section below)
+        default: off
 
     disks.*.zpool:
 
@@ -1326,6 +1358,38 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes
         default: 0
 
+    zfs_data_compression:
+
+        Specifies a compression algorithm used for this VM's data dataset. This
+        option affects only the delegated dataset and therefore only makes sense
+        when the VM has been created with the delegate_dataset option.
+
+        The caveats and warnings in the zfs_root_compression section below also
+        apply to this option.
+
+        type: string one of: "on,off,lzjb,gzip,gzip-N,zle"
+        vmtype: OS
+        listable: no
+        create: yes
+        update: yes (see warning in zfs_root_compression section)
+        default: off
+
+    zfs_data_recsize:
+
+        This specifies the suggested block size for files in the delegated
+        dataset's filesystem. It can only be set when your zone has a data
+        dataset as added by the delegate_dataset option.
+
+        The warnings and caveats for zfs_root_recsize also apply to this option.
+        You should read and understand those before using this.
+
+        type: integer (record size in bytes, 512 to 131072, must be power of 2)
+        vmtype: OS (and only with a delegated dataset)
+        listable: no
+        create: yes
+        update: yes (see caveat below under zfs_root_recsize)
+        default: 131072 (128k)
+
     zfs_io_priority:
 
         This sets an IO throttle priority value relative to other VMs. If one
@@ -1339,6 +1403,50 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (live update)
         default: 100
+
+    zfs_root_compression:
+
+        Specifies a compression algorithm used for this VM's root dataset. This
+        option affects only the zoneroot dataset. Setting to 'on' is equivalent
+        to setting to 'lzjb'. If you want more information about the specific
+        compression types, see the man page for zfs(1m).
+
+        WARNING: If you change this value for an existing VM, only *new* data
+        will be compressed. It will not rewrite existing data compress.
+
+        NOTE: to change this property for KVM, see disks.*.zfs_compression
+        above.
+
+        type: string one of: "on,off,lzjb,gzip,gzip-N,zle"
+        vmtype: OS
+        listable: no
+        create: yes
+        update: yes (see warning above)
+        default: off
+
+    zfs_root_recsize:
+
+        Specifies a suggested block size for files in the root file system. This
+        property is designed solely for use with database workloads that access
+        files in fixed-size records. ZFS automatically tunes block sizes
+        according to internal algorithms optimized for typical access patterns.
+        If you have a delegated dataset (with the delegate_dataset option) you
+        should consider leaving this unset and setting zfs_data_recsize instead.
+
+        WARNING: Use this property only if you know exactly what you're doing
+        as it is very possible to have an adverse effect performance when
+        setting this incorrectly. Also, when doing an update, keep in mind that
+        changing the file system's recordsize affects only files created
+        after the setting is changed; existing files are unaffected.
+
+        NOTE: to change this property for KVM, see disks.*.zfs_recsize above.
+
+        type: integer (record size in bytes, 512 to 131072, must be power of 2)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: yes (see caveat above)
+        default: 131072 (128k)
 
     zone_state:
 

@@ -53,6 +53,7 @@ d etc/skel 0755 root sys
 f etc/skel/.bashrc 0644 root other
 f etc/dumpadm.conf 0644 root other
 d etc/zones 0755 root sys
+f etc/zones/Joyent.xml 0444 root bin
 f etc/zones/SUNWdefault.xml 0444 root bin
 f etc/resolv.conf 0644 netadm netadm
 d kernel/drv 0755 root sys

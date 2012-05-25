@@ -118,9 +118,9 @@ check: $(JSLINT)
         zfs_send.c \
         zoneevent.c
 	@$(JSLINT) --conf=$(ROOT)/tools/jsl.node.conf vm/sbin/*.js
-	@$(JSLINT) --conf=$(ROOT)/tools/jsl.node.conf vm/node_modules/{qmp,VM}.js
+	@$(JSLINT) --conf=$(ROOT)/tools/jsl.node.conf vm/node_modules/{qmp,VM,dladm}.js
 	@$(JSSTYLE) -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1 vm/sbin/*.js
-	@$(JSSTYLE) -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1 vm/node_modules/{qmp,VM}.js
+	@$(JSSTYLE) -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1 vm/node_modules/{qmp,VM,dladm}.js
 
 $(JSLINT):
 	(cd $(ROOT); $(MAKE) jsl)

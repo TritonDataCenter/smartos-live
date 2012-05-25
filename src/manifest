@@ -42,6 +42,7 @@ f usr/vm/node_modules/node-expat.js 0444 root bin
 f usr/vm/node_modules/nopt.js 0444 root bin
 f usr/vm/node_modules/qmp.js 0444 root bin
 f usr/vm/node_modules/VM.js 0444 root bin
+f usr/vm/node_modules/dladm.js 0444 root bin
 f usr/vm/smf/system-vmadmd 0555 root bin
 f usr/vm/smf/system-vmadmd.xml 0444 root bin
 # metadata daemon

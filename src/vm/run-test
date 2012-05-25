@@ -18,6 +18,11 @@ if [[ $(id -u) != 0 ]]; then
     exit 1
 fi
 
+if [[ -z "$1" ]]; then
+    echo "FATAL: no test file specified"
+    exit 1
+fi
+
 export TAP=1
 NODE_PATH="/usr/vm/test/node-tap/node_modules:${NODE_PATH}" node $1
 

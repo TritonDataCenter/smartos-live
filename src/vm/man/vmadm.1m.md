@@ -898,6 +898,57 @@ tab-complete UUIDs rather than having to type them out for every command.
           nics.*.ip   # for lookup matching any interface
           nics.0.ip   # for list output or lookup of a specific interface
 
+    nics.*.allow_dhcp_spoofing:
+
+        With this property set to true, this VM will be able to operate as a
+        DHCP server on this interface.  Without this, some of the packets
+        required of a DHCP server will not get through.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: false
+
+    nics.*.allow_ip_spoofing:
+
+        With this property set to true, this VM will be able to send and
+        receive packets over this nic that don't match the IP address
+        specified by the ip property.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: false
+
+    nics.*.allow_mac_spoofing:
+
+        With this property set to true, this VM will be able to send packets
+        from this nic with MAC addresses that don't match the mac property.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: false
+
+    nics.*.allow_restricted_traffic:
+
+        With this property set to true, this VM will be able to send
+        restricted network traffic (packets that are not IPv4, IPv6, or ARP)
+        from this nic.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: false
+
     nics.*.blocked_outgoing_ports:
 
         Array of ports on which this nic is prevented from sending traffic.

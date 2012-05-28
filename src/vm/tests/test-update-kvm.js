@@ -67,7 +67,6 @@ var PAYLOADS = {
 simple_properties = [
     ['alias', 'useless VM'],
     ['billing_id', '9.99'],
-    ['dns_domain', 'fail.foo'],
     ['hostname', 'hamburgerhelper'],
     ['owner_uuid', '36bf401a-28ef-11e1-b4a7-c344deb1a5d6'],
     ['package_name', 'really expensive package'],

@@ -52,6 +52,7 @@ var zone_defaults = {
 // properties that are only for OS VMs
 var zone_only = [
     'tmpfs',
+    'dns_domain',
     'dataset_uuid'
 ];
 

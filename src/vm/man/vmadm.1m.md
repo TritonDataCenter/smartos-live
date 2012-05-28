@@ -413,10 +413,11 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     brand:
 
-        This will be one of 'joyent' for OS virtualization and 'kvm' for full
-        hardware virtualization. This is a required value for VM creation.
+        This will be one of 'joyent' or 'joyent-minimal' for OS virtualization
+        and 'kvm' for full hardware virtualization. This is a required value for
+        VM creation.
 
-        type: string (joyent|kvm)
+        type: string (joyent|joyent-minimal|kvm)
         vmtype: OS,KVM
         listable: yes
         create: yes
@@ -1310,7 +1311,7 @@ tab-complete UUIDs rather than having to type them out for every command.
     type:
 
         This is a virtual field and cannot be updated. It will be 'OS' when the
-        brand=='joyent' and 'KVM' when the brand=='kvm'.
+        brand=='joyent*' and 'KVM' when the brand=='kvm'.
 
         type: string value, one of: ['OS', 'KVM']
         vmtype: OS,KVM
@@ -1653,7 +1654,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         {
           "add_nics": [
             {
-              "physical": "net1",
+              "interface": "net1",
               "nic_tag": "external",
               "mac": "b2:1e:ba:a5:6e:71",
               "ip": "10.2.121.71",

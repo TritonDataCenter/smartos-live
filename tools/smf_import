@@ -40,6 +40,11 @@ ${SVCCFG} -s "system/boot-config:default" setprop config/fastreboot_default=fals
 ${SVCCFG} -s "system/auditd:default" setprop general/enabled=true
 ${SVCCFG} -s "system/coreadm:default" setprop config_params/global_enabled=true
 ${SVCCFG} -s "system/coreadm:default" setprop config_params/global_pattern='/%Z/cores/core.%f.%p'
+
+# These two are only for use in zones.
+${SVCCFG} -s "smartdc/mdata:fetch" setprop general/enabled=false
+${SVCCFG} -s "smartdc/mdata:execute" setprop general/enabled=false
+
 # ${SVCCFG} -s "system/manifest-import" setprop start/exec=:true
 ${SVCCFG} -v apply ${rdmnt}/etc/svc/profile/generic.xml
 ${SVCCFG} -v apply ${rdmnt}/etc/svc/profile/platform.xml

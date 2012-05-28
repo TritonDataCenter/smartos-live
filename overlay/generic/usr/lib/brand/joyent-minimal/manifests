@@ -123,3 +123,4 @@ milestone/multi-user.xml	enabled
 milestone/name-services.xml	enabled
 system/early-manifest-import.xml	disabled
 system/manifest-import.xml	disabled
+system/mdata.xml	enabled

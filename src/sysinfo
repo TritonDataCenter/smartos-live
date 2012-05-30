@@ -23,7 +23,6 @@ CACHE_FILE_JSON="/tmp/.sysinfo.json"
 CACHE="true"
 UNAME_S=$(uname -s)
 ZONENAME=$(zonename)
-DETECT_NICS=
 FORCE=
 PARSABLE=
 UPDATE_ONLY=
@@ -35,14 +34,6 @@ do
         # Force re-running commands (don't read the cached values)
         FORCE="true"
         ;;
-    n)
-        # Doing network discovery, in this mode we can't use the
-        # cached values.  *And* we don't want to cache the output
-        # we create since its non-standard.
-        CACHE=
-        FORCE="true"
-        DETECT_NICS="true"
-        ;;
     p)
         # Output key=value format, not json
         PARSABLE="true"
@@ -53,7 +44,7 @@ do
         UPDATE_ONLY="true"
         ;;
     ?)
-        printf "Usage: %s: [-f] [-n] [-p] [-u]\n"  $0
+        printf "Usage: %s: [-f] [-p] [-u]\n"  $0
         exit 2
     ;;
     esac
@@ -426,26 +417,6 @@ function get_nic_tags()
     done
 }
 
-function detect_nic_tags() {
-    for iface in "${NetworkInterfaces[@]}"; do
-        eval "link_status=\${Network_Interface_${iface}_Link_Status}"
-        if [[ "${link_status}" != "up" ]]; then
-            # polo needs the interface to be plumbed to work
-            /usr/sbin/ifconfig ${iface} plumb
-        fi
-
-        # Leave it at the 30 second timeout for now
-        detected_tag=$(/smartdc/bin/polo ${iface})
-
-        if [[ "${link_status}" != "up" ]]; then
-            /usr/sbin/ifconfig ${iface} unplumb
-        fi
-        if [[ -n "${detected_tag}" ]]; then
-            eval "Network_Interface_${iface}_Detected_Nic_Tag=${detected_tag}"
-        fi
-    done
-}
-
 function get_bootparams()
 {
     WHICH_GREP="/usr/xpg4/bin/grep"
@@ -740,9 +711,6 @@ get_nic_mappings
 get_nic_tags
 get_smartos_network_interfaces
 get_smartos_vnics
-if [[ ${DETECT_NICS} == "true" ]]; then
-    detect_nic_tags
-fi
 
 # whenever we update the cache, update both
 if [[ ${CACHE} == "true" ]]; then

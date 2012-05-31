@@ -137,6 +137,28 @@ test('add net0', function(t) {
     });
 });
 
+test('add KVM-only property to zone', function(t) {
+    VM.update(vm_uuid, PAYLOADS.add_invalid_allow_unfiltered_promisc, function(err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                    t.end();
+                    return;
+                }
+                t.ok(obj.nics.length === 1, 'VM has [' + obj.nics.length + ' vs. 1] nics');
+                if (obj.nics.length === 1) {
+                    t.ok(!obj.nics[0].hasOwnProperty('allow_unfiltered_promisc'), 'allow_unfiltered_promisc is not set');
+                }
+                t.end();
+            });
+        }
+    });
+});
+
 test('remove net0', function(t) {
     VM.update(vm_uuid, PAYLOADS.remove_net0, function(err) {
         if (err) {

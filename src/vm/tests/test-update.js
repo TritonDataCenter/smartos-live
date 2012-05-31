@@ -30,6 +30,13 @@ var PAYLOADS = {
                 "mac": "01:02:03:04:05:06"
             }
         ]
+    }, "add_invalid_allow_unfiltered_promisc": {
+        "update_nics": [
+            {
+                "mac": "01:02:03:04:05:06",
+                "allow_unfiltered_promisc": true
+            }
+        ]
     }, "remove_net0": {
         "remove_nics": [
             "01:02:03:04:05:06"

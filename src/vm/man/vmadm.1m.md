@@ -950,6 +950,21 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes
         default: false
 
+    nics.*.allow_unfiltered_promisc:
+
+        With this property set to true, this VM will be able to have multiple
+        MAC addresses (eg. running SmartOS with VNICs).  Without this option
+        these packets will not be picked up as only those unicast packets
+        destined for the VNIC's MAC will get through.  Warning: do not enable
+        this option unless you fully understand the security implications.
+
+        type: boolean
+        vmtype: KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: false
+
     nics.*.blocked_outgoing_ports:
 
         Array of ports on which this nic is prevented from sending traffic.

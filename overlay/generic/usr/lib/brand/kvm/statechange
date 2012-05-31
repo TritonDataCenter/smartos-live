@@ -116,6 +116,8 @@ setup_net()
 		allow_mac_spoof=$(get_boolean_nic_property ${nic} allow_mac_spoofing)
 		allow_restricted_traffic=$(get_boolean_nic_property ${nic} \
 		    allow_restricted_traffic)
+		allow_unfiltered_promisc=$(get_boolean_nic_property ${nic} \
+		    allow_unfiltered_promisc)
 
 		# If address set, must be a shared stack zone
 		[[ -n $address ]] && exit 0
@@ -285,6 +287,10 @@ setup_net()
 					exit 1
 				fi
 			fi
+		fi
+
+		if [[ ${allow_unfiltered_promisc} == "true" ]]; then
+			dladm set-linkprop -t -z $ZONENAME -p "promisc-filtered=off" ${nic}
 		fi
 
 		if [[ -n $blocked_outgoing_ports ]]; then

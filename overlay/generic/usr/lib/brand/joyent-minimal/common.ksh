@@ -19,22 +19,16 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2011 Joyent, Inc.  All rights reserved.
+# Copyright 2012 Joyent, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 final_setup()
 {
 	# Convert quota to MB and use 10% of that value for the zone core dump
-	# dataset.  The infrastructure zones can use 50%.
+	# dataset.
 	if [ ! -d $ZONEPATH/cores ]; then
-		case $ZONENAME in
-			adminui|assets|atropos|ca|capi|dhcpd|mapi|portal| \
-			pubapi|rabbitmq)
-				CORE_QUOTA=$((($ZQUOTA * 1000) / 2));;
-			*)
-				CORE_QUOTA=$((($ZQUOTA * 1000) / 10));;
-		esac
+		CORE_QUOTA=$((($ZQUOTA * 1000) / 10))
 		zfs create -o quota=${CORE_QUOTA}m -o compression=gzip \
 		   $PDS_NAME/$bname/cores
 	fi

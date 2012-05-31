@@ -44,10 +44,13 @@ var COMMANDS = [
     'stop', 'halt',
     'help',
     'info',
+    'install',
     'get', 'json',
     'list',
     'lookup',
     'reboot',
+    'receive', 'recv',
+    'send',
     'sysrq',
     'update'
 ];
@@ -62,7 +65,7 @@ var LIST_FIELDS = {
     alias: {header: 'ALIAS', width: 10},
     autoboot: {header: 'AUTOBOOT', width: 8},
     billing_id: {header: 'BILLING_ID', width: 36},
-    brand: {header: 'BRAND', width: 6},
+    brand: {header: 'BRAND', width: 14},
     cpu_cap: {header: 'CPU_CAP', width: 7},
     cpu_shares: {header: 'CPU_SHARE', width: 9},
     cpu_type: {header: 'CPU_TYPE', width: 8},
@@ -122,9 +125,12 @@ function usage(message, code)
     out('delete <uuid>');
     out('get <uuid>');
     out('info <uuid> [type,...]');
+    out('install <uuid>');
     out('list [-p] [-H] [-o field,...] [-s field,...] [field=value ...]');
     out('lookup [-j|-1] [field=value ...]');
     out('reboot <uuid> [-F]');
+    out('receive [-f <filename>]');
+    out('send <uuid> [target]');
     out('start <uuid> [option=value ...]');
     out('stop <uuid> [-F]');
     out('sysrq <uuid> <nmi|screenshot>');
@@ -295,15 +301,18 @@ function addCommandOptions(command, opts, shorts)
     shorts.d = ['--debug', 'true'];
 
     switch (command) {
-    case 'start':
     case 'boot':
+    case 'console':
     case 'delete':
     case 'destroy':
-    case 'info':
     case 'get':
-    case 'json':
-    case 'sysrq':
     case 'help':
+    case 'info':
+    case 'install':
+    case 'json':
+    case 'send':
+    case 'start':
+    case 'sysrq':
         // these only take uuid or 'special' args like start order=cd
         break;
     case 'lookup':
@@ -313,6 +322,8 @@ function addCommandOptions(command, opts, shorts)
         shorts['1'] = ['--unique'];
         break;
     case 'create':
+    case 'receive':
+    case 'recv':
     case 'update':
         opts.file = path;
         shorts.f = ['--file'];
@@ -329,8 +340,8 @@ function addCommandOptions(command, opts, shorts)
         shorts.H = ['--header', 'false'];
         break;
     case 'halt':
-    case 'stop':
     case 'reboot':
+    case 'stop':
         opts.force = Boolean;
         shorts.F = ['--force', 'true'];
         break;
@@ -662,6 +673,26 @@ function main(callback)
             });
         }
         break;
+    case 'install':
+        uuid = getUUID(command, parsed);
+        VM.install(uuid, function (err) {
+            if (err) {
+                callback(err);
+                return;
+            }
+            callback(null, 'Successfully installed ' + uuid);
+        });
+        break;
+    case 'recv':
+    case 'receive':
+        VM.receive('-', {}, function (e, info) {
+            if (e) {
+                callback(e);
+            } else {
+                callback(null, 'Successfully received ' + info.uuid);
+            }
+        });
+        break;
     case 'create':
         if (parsed.hasOwnProperty('file') && parsed.file !== '-') {
             filename = parsed.file;
@@ -669,19 +700,30 @@ function main(callback)
             filename = '-';
         }
         if (filename === '-' && tty.isatty(0)) {
-            usage('Will not ' + command + ' from stdin when stdin is a tty.');
+            usage('Will not create from stdin when stdin is a tty.');
         }
         readFile(filename, function (err, payload) {
             if (err) {
                 callback(err);
+                return;
+            }
+
+            VM.create(payload, function (e, info) {
+                if (e) {
+                    callback(e);
+                } else {
+                    callback(null, 'Successfully created ' + info.uuid);
+                }
+            });
+        });
+        break;
+    case 'send':
+        uuid = getUUID(command, parsed);
+        VM.send(uuid, process.stdout, {}, function (e, info) {
+            if (e) {
+                callback(e);
             } else {
-                VM.create(payload, function (e, info) {
-                    if (e) {
-                        callback(e);
-                    } else {
-                        callback(null, 'Successfully created ' + info.uuid);
-                    }
-                });
+                callback(null, 'Successfully sent ' + uuid);
             }
         });
         break;

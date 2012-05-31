@@ -1,0 +1,112 @@
+#!/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2012 Joyent, Inc.  All rights reserved.
+#
+
+#
+# This tool builds a small SMF seed repository for a given brand based on its
+# manifests file which is used by our zones service.
+#
+
+unalias -a
+
+cd "$(dirname $0)/.."
+BASE="$PWD"
+ROOT="$1"
+SVCCFG="$BASE/projects/illumos/usr/src/cmd/svc/svccfg/svccfg-native"
+CONFIGD="$BASE/projects/illumos/usr/src/cmd/svc/configd/svc.configd-native"
+MAN_BASE="$ROOT/lib/svc/manifest"
+TMPFILE="/tmp/$(basename $0).$$"
+
+function fail
+{
+        local msg="$*"
+        [[ -z "$msg" ]] && msg="failed"
+        echo "$msg" >&2
+        exit 1
+}
+
+#
+# XXX We really want to control this in a different way. We'd really rather not
+# have to hardcode machinations on the XML format of a manifest, because really,
+# that's just bad. On the flip side, we can't use libscf, but we can change the
+# file format that we use, which is probably what makes sense in the long run.
+# e.g. because a manifest can deliver more than one instance, we'd need to
+# explicitly call out which instances delivered by the manifest we'd like to
+# enable and disable.
+#
+function import_manifest
+{
+	local svc on
+
+	svc="$MAN_BASE/$1"
+	on=""
+	[[ "$2" == "enabled" ]] && on=$2	
+	[[ ! -f "$svc" ]] && fail "cannot find $svc"
+	nawk -v status=$2 < $svc > $TMPFILE '{
+		if (($1 == "<instance" &&
+		    $2 == "name=\047default\047") ||
+		    $1 == "<create_default_instance") {
+			if (status == "enabled")
+				n=sub("\047false\047", "\047true\047")
+			else
+				n=sub("\047true\047", "\047false\047")
+		}
+
+		print $0
+	}'
+	[[ $? -eq 0 ]] || fail "failed to nawk manifest"
+	$SVCCFG import $TMPFILE || fail "failed to import $svc"
+	rm -f $TMPFILE
+}
+
+function build_database
+{
+	local input output
+	input=$1
+	output=$2
+	export SVCCFG_REPOSITORY=$output
+	export SVCCFG_CONFIGD_PATH=$CONFIGD
+	rm -f $SVCCFG_REPOSITORY
+
+	[[ -f $input ]] || fail "can't read manifest input file: $input"
+	while read service enabled; do
+		[[ -z "$service" ]] && continue
+		[[ "$service" =~ ^\# ]] && continue
+		import_manifest $service $enabled
+		
+		echo $service $enabled
+	done < $input
+}
+
+[[ -z "$ROOT" ]] && fail "missing ROOT argument"
+
+#
+# We need to walk through a few different sources of brands and work through it.
+# For now we only care about doing this for the Joyent minimal zone. Some day we
+# can extend this to everything.
+#
+build_database $ROOT/usr/lib/brand/joyent-minimal/manifests \
+    $ROOT/usr/lib/brand/joyent-minimal/repository.db
+chmod 444 $ROOT/usr/lib/brand/joyent-minimal/repository.db
+chown root:root $ROOT/usr/lib/brand/joyent-minimal/repository.db
+

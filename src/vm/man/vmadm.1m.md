@@ -413,10 +413,11 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     brand:
 
-        This will be one of 'joyent' for OS virtualization and 'kvm' for full
-        hardware virtualization. This is a required value for VM creation.
+        This will be one of 'joyent' or 'joyent-minimal' for OS virtualization
+        and 'kvm' for full hardware virtualization. This is a required value for
+        VM creation.
 
-        type: string (joyent|kvm)
+        type: string (joyent|joyent-minimal|kvm)
         vmtype: OS,KVM
         listable: yes
         create: yes
@@ -551,6 +552,23 @@ tab-complete UUIDs rather than having to type them out for every command.
           disks.*.size   # for lookup matching any disk
           disks.0.size   # for list output or lookup of a specific disk
 
+    disks.*.block_size:
+
+        Specifies the block size for the disk. This property can only be set at
+        disk creation time and cannot be changed without destroying the disk and
+        creating a new one.
+
+        Important: this property cannot be set on disks that have an image_uuid
+        parameter as the image being cloned will already have the ZFS
+        volblocksize property set.
+
+        type: integer (block size in bytes, 512 to 131072, must be power of 2)
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: no (except when adding new disks)
+        default: 8192
+
     disks.*.boot:
 
         Specifies whether this disk should be bootable (only one disk should).
@@ -633,6 +651,21 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (special, see description in 'update' section above)
         default: the value of the disk_driver parameter for this VM
+
+    disks.*.compression:
+
+        Specifies a compression algorithm used for this disk. This has the same
+        details, warnings and caveats as the global zfs_root_compression option
+        below but only affects a single disk on the VM.
+
+        See zfs_root_compression section below for more details.
+
+        type: string one of: "on,off,lzjb,gzip,gzip-N,zle"
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes (see caveat in zfs_root_compression section below)
+        default: off
 
     disks.*.zpool:
 
@@ -865,6 +898,72 @@ tab-complete UUIDs rather than having to type them out for every command.
 
           nics.*.ip   # for lookup matching any interface
           nics.0.ip   # for list output or lookup of a specific interface
+
+    nics.*.allow_dhcp_spoofing:
+
+        With this property set to true, this VM will be able to operate as a
+        DHCP server on this interface.  Without this, some of the packets
+        required of a DHCP server will not get through.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: false
+
+    nics.*.allow_ip_spoofing:
+
+        With this property set to true, this VM will be able to send and
+        receive packets over this nic that don't match the IP address
+        specified by the ip property.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: false
+
+    nics.*.allow_mac_spoofing:
+
+        With this property set to true, this VM will be able to send packets
+        from this nic with MAC addresses that don't match the mac property.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: false
+
+    nics.*.allow_restricted_traffic:
+
+        With this property set to true, this VM will be able to send
+        restricted network traffic (packets that are not IPv4, IPv6, or ARP)
+        from this nic.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: false
+
+    nics.*.allow_unfiltered_promisc:
+
+        With this property set to true, this VM will be able to have multiple
+        MAC addresses (eg. running SmartOS with VNICs).  Without this option
+        these packets will not be picked up as only those unicast packets
+        destined for the VNIC's MAC will get through.  Warning: do not enable
+        this option unless you fully understand the security implications.
+
+        type: boolean
+        vmtype: KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: false
 
     nics.*.blocked_outgoing_ports:
 
@@ -1227,7 +1326,7 @@ tab-complete UUIDs rather than having to type them out for every command.
     type:
 
         This is a virtual field and cannot be updated. It will be 'OS' when the
-        brand=='joyent' and 'KVM' when the brand=='kvm'.
+        brand=='joyent*' and 'KVM' when the brand=='kvm'.
 
         type: string value, one of: ['OS', 'KVM']
         vmtype: OS,KVM
@@ -1326,6 +1425,38 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes
         default: 0
 
+    zfs_data_compression:
+
+        Specifies a compression algorithm used for this VM's data dataset. This
+        option affects only the delegated dataset and therefore only makes sense
+        when the VM has been created with the delegate_dataset option.
+
+        The caveats and warnings in the zfs_root_compression section below also
+        apply to this option.
+
+        type: string one of: "on,off,lzjb,gzip,gzip-N,zle"
+        vmtype: OS
+        listable: no
+        create: yes
+        update: yes (see warning in zfs_root_compression section)
+        default: off
+
+    zfs_data_recsize:
+
+        This specifies the suggested block size for files in the delegated
+        dataset's filesystem. It can only be set when your zone has a data
+        dataset as added by the delegate_dataset option.
+
+        The warnings and caveats for zfs_root_recsize also apply to this option.
+        You should read and understand those before using this.
+
+        type: integer (record size in bytes, 512 to 131072, must be power of 2)
+        vmtype: OS (and only with a delegated dataset)
+        listable: no
+        create: yes
+        update: yes (see caveat below under zfs_root_recsize)
+        default: 131072 (128k)
+
     zfs_io_priority:
 
         This sets an IO throttle priority value relative to other VMs. If one
@@ -1339,6 +1470,50 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (live update)
         default: 100
+
+    zfs_root_compression:
+
+        Specifies a compression algorithm used for this VM's root dataset. This
+        option affects only the zoneroot dataset. Setting to 'on' is equivalent
+        to setting to 'lzjb'. If you want more information about the specific
+        compression types, see the man page for zfs(1m).
+
+        WARNING: If you change this value for an existing VM, only *new* data
+        will be compressed. It will not rewrite existing data compress.
+
+        NOTE: to change this property for KVM, see disks.*.zfs_compression
+        above.
+
+        type: string one of: "on,off,lzjb,gzip,gzip-N,zle"
+        vmtype: OS
+        listable: no
+        create: yes
+        update: yes (see warning above)
+        default: off
+
+    zfs_root_recsize:
+
+        Specifies a suggested block size for files in the root file system. This
+        property is designed solely for use with database workloads that access
+        files in fixed-size records. ZFS automatically tunes block sizes
+        according to internal algorithms optimized for typical access patterns.
+        If you have a delegated dataset (with the delegate_dataset option) you
+        should consider leaving this unset and setting zfs_data_recsize instead.
+
+        WARNING: Use this property only if you know exactly what you're doing
+        as it is very possible to have an adverse effect performance when
+        setting this incorrectly. Also, when doing an update, keep in mind that
+        changing the file system's recordsize affects only files created
+        after the setting is changed; existing files are unaffected.
+
+        NOTE: to change this property for KVM, see disks.*.zfs_recsize above.
+
+        type: integer (record size in bytes, 512 to 131072, must be power of 2)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: yes (see caveat above)
+        default: 131072 (128k)
 
     zone_state:
 
@@ -1494,7 +1669,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         {
           "add_nics": [
             {
-              "physical": "net1",
+              "interface": "net1",
               "nic_tag": "external",
               "mac": "b2:1e:ba:a5:6e:71",
               "ip": "10.2.121.71",

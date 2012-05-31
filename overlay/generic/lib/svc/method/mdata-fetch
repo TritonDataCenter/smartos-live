@@ -1,0 +1,91 @@
+#!/usr/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at http://smartos.org/CDDL
+#
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file.
+#
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2012, Joyent, Inc. All rights reserved.
+#
+
+set -o xtrace
+
+. /lib/svc/share/smf_include.sh
+smf_is_globalzone && exit ${SMF_EXIT_OK}
+
+if [ ! -x /usr/sbin/mdata-get ]; then
+  echo "Metadata mdata-get tool not found."
+  exit ${SMF_EXIT_ERR_FATAL}
+fi
+
+timer=30
+
+while [ $((timer--)) -gt 0 ]; do
+  if [ -e /var/run/smartdc/metadata.sock ]; then break; fi
+
+  # This is an alternate signal to metadata which we enable if the socket isn't
+  # here yet in case something else in smf is messed up. (for debugging)
+  [[ -e /tmp/.ready_for_metadata ]] || touch /tmp/.ready_for_metadata
+
+  sleep 1
+done
+
+if [ ! -e /var/run/smartdc/metadata.sock ]; then
+  echo "No metadata socket file, skipping metadata loading."
+  exit ${SMF_EXIT_OK}
+fi
+
+echo "Retrieving metadata user-data"
+/usr/sbin/mdata-get user-data >/var/db/mdata-user-data.new
+case $? in
+  0)
+    echo "Metadata user-data successfuly retrieved."
+    mv /var/db/mdata-user-data{.new,}
+    ;;
+  1)
+    echo "Metadata user-data not defined."
+    rm -f /var/db/mdata-user-data{,.new}
+    ;;
+  *)
+    echo "Metadata couldn't be retrieved."
+    exit ${SMF_EXIT_ERR_FATAL}
+    ;;
+esac
+
+echo "Retrieving metadata user-script..."
+/usr/sbin/mdata-get user-script >/var/svc/mdata-user-script.new
+case $? in
+  0)
+    echo "Metadata user-script successfuly retrieved."
+    mv /var/svc/mdata-user-script{.new,}
+    chmod +x /var/svc/mdata-user-script
+    svcadm enable smartdc/mdata:execute
+    ;;
+  1)
+    echo "Metadata user-script not defined."
+    svcadm disable -s smartdc/mdata:execute
+    rm -f /var/svc/mdata-user-script{,.new}
+    ;;
+  *)
+    echo "Metadata couldn't be retrieved."
+    exit ${SMF_EXIT_ERR_FATAL}
+    ;;
+esac
+
+exit ${SMF_EXIT_OK}

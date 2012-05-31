@@ -1,107 +1,247 @@
-.\" Generated with Ronnjs/v0.1
-.\" http://github.com/kapouer/ronnjs/
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "JSON" "1" "April 2011" "" ""
+.TH "JSON" "1" "May 2012" "" ""
 .
 .SH "NAME"
-\fBjson\fR \-\- JSON love for your command line
+\fBjson\fR \- JSON love for your command line\. A\.k\.a\. "jsontool"\.
 .
 .SH "SYNOPSIS"
-\fB<something generating JSON on stdout> | json [options] [lookup]\fR
+something\-generating\-JSON\-on\-stdout | \fBjson\fR [OPTIONS] [LOOKUPS]
 .
 .SH "DESCRIPTION"
-Pipe in your JSON for nicer (pretty\-printed) output\. Or supply a \fBlookup\fR to
-extract a subset of the JSON\. HTTP header blocks are skipped by default (as from
-\fBcurl \-i\fR) by default\.
+Pipe in your JSON for pretty\-printing, JSON validation, filtering, and modification\. Supply one or more \fBLOOKUPS\fR to extract a subset of the JSON\. HTTP header blocks are skipped by default\.
 .
-.P
-See a full changelog here \fIhttps://github\.com/trentm/json/blob/master/CHANGES\.md\fR
-.
-.SH "OPTIONS"
-By default \fBjson\fR outputs results in a "flat" format that is intended to be
-of most use to the UNIX command\-line\. Currently the only difference between
-flat and JSON output is that a simple string result is printed \fIwithout\fR JSON\'s
-double\-quotes\. Other output formats:
-.
-.IP "\(bu" 4
-\fB\-i\fR:
-output using node\'s \fBsys\.inspect\fR
-.
-.IP "\(bu" 4
-\fB\-j\fR:
-output using \fBJSON\.stringfy\fR, i\.e\. strict JSON
-.
-.IP "" 0
-.
-.P
-If your JSON output is a REST API response, it migth include the headers
-(e\.g\. when calling with \fBcurl \-i\fR)\. By default \fBjson\fR will pass those headers
-through (without choking on them)\. However if you want then stripped you
-can use:
-.
-.IP "\(bu" 4
-\fB\-H\fR:
-drop a leading HTTP header block, if any
-.
-.IP "" 0
-.
-.P
-Miscellaneous options:
-.
-.IP "\(bu" 4
-\fB\-h, \-\-help\fR:
-print this help info and exit
-.
-.IP "\(bu" 4
-\fB\-\-version\fR:
-print version of this command and exit
-.
-.IP "\(bu" 4
-\fB\-q, \-\-quiet\fR:
-don\'t warn if input isn\'t valid JSON
-.
-.IP "" 0
-.
-.SH "EXAMPLES"
-A REST API:
+.SS "Auto\-arrayification"
+Adjacent objects or arrays separated by no space or by a newline are "arrayified"\. This can be helpful for, e\.g\.:
 .
 .IP "" 4
 .
 .nf
-$ curl \-s http://github\.com/api/v2/json/repos/show/joyent/node
-{"repository":{"has_wiki":true,"forks":597,"language":"C++","pushed_at":"2011/03/18 15:19:24 \-0700","homepage":"http://nodejs\.org/","open_issues":271,"fork":false,"has_issues":true,"url":"https://github\.com/joyent/node","created_at":"2009/05/27 09:29:46 \-0700","size":20984,"private":false,"has_downloads":false,"name":"node","owner":"joyent","organization":"joyent","watchers":5584,"description":"evented I/O for v8 javascript"}}
+
+$ cat *\.json | json \.\.\.
 .
 .fi
 .
 .IP "" 0
 .
 .P
-Nice output by default:
+and similar\.
+.
+.SS "Execution"
+Use the \fB\-e CODE\fR option to execute code on the input JSON\.
 .
 .IP "" 4
 .
 .nf
+
+$ echo \'{"name":"trent","age":38}\' | json \-e \'age++\'
+{
+  "name": "trent",
+  "age": 39
+}
+.
+.fi
+.
+.IP "" 0
+.
+.P
+If input is an array, this will automatically process each item separately\.
+.
+.SS "Conditional filtering"
+Use the \fB\-c CODE\fR option to filter the input JSON\.
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'[{"age":38},{"age":4}]\' | json \-c \'age>21\'
+[{"age":38}]
+.
+.fi
+.
+.IP "" 0
+.
+.P
+If input is an array, this will automatically process each item separately\.
+.
+.SS "Lookups"
+Use lookup arguments to extract particular values:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'{"name":"trent","age":38}\' | json name
+trent
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Use \fB\-a\fR for \fIarray processing\fR of lookups and \fItabular output\fR:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'{"name":"trent","age":38}\' | json name
+trent
+$ echo \'[{"name":"trent","age":38},
+         {"name":"ewan","age":4}]\' | json \-a name age
+trent 38
+ewan 4
+.
+.fi
+.
+.IP "" 0
+.
+.SS "Pretty\-printing"
+Output is "jsony" by default: 2\-space indented JSON with one exception, a single string value is printed without quotes\.
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'{"name": "trent", "age": 38}\' | json
+{
+  "name": "trent",
+  "age": 38
+}
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Use \fB\-o json\fR for explicit JSON, \fB\-o json\-N\fR for N\-space indent:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'{"name": "trent", "age": 38}\' | json \-o json\-0
+{"name":"trent","age":38}
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Use \fB\-H\fR to exclude a leading HTTP header block as from \fBcurl \-i\fR\.
+.
+.SH "OPTIONS"
+.
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print this help info and exit\.
+.
+.TP
+\fB\-\-version\fR
+Print version of this command and exit\.
+.
+.TP
+\fB\-q, \-\-quiet\fR
+Don\'t warn if input isn\'t valid JSON\.
+.
+.P
+If your JSON output is a REST API response, it might include the headers (e\.g\. when calling with \fBcurl \-i\fR)\. By default \fBjson\fR will pass those headers through (without choking on them)\. However if you want then stripped you can use:
+.
+.TP
+\fB\-H\fR
+drop any HTTP header block (as from \fBcurl \-i \.\.\.\fR)
+.
+.P
+You can process elements of an input array separately and generate tabular output:
+.
+.TP
+\fB\-a\fR, \fB\-\-array\fR
+Process input as an array of separate inputs and output in tabular form\.
+.
+.TP
+\fB\-d DELIM\fR
+Delimiter character for tabular output (default is \' \')\.
+.
+.TP
+\fB\-A\fR
+Process input as a single object, i\.e\. stop \fB\-e\fR and \fB\-c\fR automatically processing each item of an input array\.
+.
+.P
+You can execute code on (\fB\-e\fR) and filter (\fB\-c\fR) the input (this is done before LOOKUPS are processed, if any)\. If datum is an object, then a shortcut is \fB<key>\fR\. To remove a key, use \fBthis\.<key> = undefined\fR\. For array items, use \fBthis[<index>] = 42\fR\.
+.
+.TP
+\fB\-e CODE\fR
+Execute the given code on the input\. If input is an array, then each item of the array is processed separately (use \fB\-A\fR to override)\.
+.
+.TP
+\fB\-c CODE\fR
+Filter the input with \fBCODE\fR\. If \fBCODE\fR returns false\-y, then the item is filtered out\. If input is an array, then each item of the array is processed separately (use \fB\-A\fR to override)\.
+.
+.P
+Finally, if \fBLOOKUP\fR arguments are given, these are extracted from the JSON\. By default \fB\.\fR is used as a separator for nested object lookup\. This can be overridden:
+.
+.TP
+\fB\-D DELIM\fR
+Delimiter char between LOOKUPS (default is \'\.\')\. For example: \fB$ echo \'{"a\.b": {"b": 1}}\' | json \-D / a\.b/b\fR
+.
+.P
+By default \fBjson\fR outputs in "jsony" mode\. Basically this is JSON output, with the exception that a single string output value is emitted without the quotes\. The intention here is to be of most use to the UNIX command\-line\. Other output formats are supported:
+.
+.TP
+\fB\-o MODE\fR, \fB\-\-output MODE\fR
+Specify an output mode\. One of \fBjsony\fR (the default; JSON, if a single string then quotes are elided), \fBjson\fR (JSON output, 2\-space indent), \fBjson\-N\fR (JSON output, N\-space indent, e\.g\. \'json\-4\'), or \fBinspect\fR (node\.js \fButil\.inspect\fR output)\.
+.
+.TP
+\fB\-i\fR
+Shortcut for \fB\-o inspect\fR\.
+.
+.TP
+\fB\-j\fR
+Shortcut for \fB\-o json\fR\.
+.
+.SH "EXAMPLES"
+Let\'s use the Github API to look at the node \fIhttps://github/joyent/node\fR project:
+.
+.IP "" 4
+.
+.nf
+
+$ curl \-s http://github\.com/api/v2/json/repos/show/joyent/node
+{"repository":{"organization":"joyent","watchers":15172,\.\.\.
+.
+.fi
+.
+.IP "" 0
+.
+.P
+\fBNice output by default\fR:
+.
+.IP "" 4
+.
+.nf
+
 $ curl \-s http://github\.com/api/v2/json/repos/show/joyent/node | json
 {
   "repository": {
-    "has_wiki": true,
-    "language": "C++",
+    "organization": "joyent",
+    "watchers": 15172,
+    "has_downloads": false,
+    "url": "https://github\.com/joyent/node",
     "homepage": "http://nodejs\.org/",
-    "open_issues": 271,
     "fork": false,
     "has_issues": true,
-    "url": "https://github\.com/joyent/node",
-    "forks": 597,
-    "created_at": "2009/05/27 09:29:46 \-0700",
-    "pushed_at": "2011/03/18 15:19:24 \-0700",
-    "size": 20984,
+    "has_wiki": true,
+    "forks": 1835,
+    "size": 28000,
     "private": false,
-    "has_downloads": false,
     "name": "node",
     "owner": "joyent",
-    "organization": "joyent",
-    "watchers": 5584,
-    "description": "evented I/O for v8 javascript"
+    "open_issues": 443,
+    "description": "evented I/O for v8 javascript",
+    "language": "JavaScript",
+    "created_at": "2009/05/27 09:29:46 \-0700",
+    "pushed_at": "2012/05/24 09:55:29 \-0700"
   }
 }
 .
@@ -110,44 +250,510 @@ $ curl \-s http://github\.com/api/v2/json/repos/show/joyent/node | json
 .IP "" 0
 .
 .P
-Say you just want to extract one value:
+Say you just want to \fBextract one value\fR:
 .
 .IP "" 4
 .
 .nf
-$ curl \-s https://github\.com/api/v2/json/repos/show/joyent/node | json repository\.open_issues
-271
+
+$ curl \-s https://github\.com/api/v2/json/repos/show/joyent/node \e
+  | json repository\.open_issues
+443
 .
 .fi
 .
 .IP "" 0
 .
 .P
-More examples at \fIhttps://github\.com/trentm/json#readme\fR
+If you use \fBcurl \-i\fR to get HTTP headers (because perhaps they contain relevant information), \fBjson will skip the HTTP headers automatically\fR:
 .
-.SH "BUGS"
-\fBjson\fR is written in JavaScript and requires node\.js (\fBnode\fR)\. Report bugs
-to \fIhttps://github\.com/trentm/json\fR\|\.
+.IP "" 4
 .
-.SH "COPYRIGHT"
-json is Copyright (c) 2011 Trent Mick
+.nf
+
+$ curl \-is https://github\.com/api/v2/json/repos/show/joyent/node \e
+  | json repository
+HTTP/1\.1 200 OK
+Server: nginx/1\.0\.13
+Date: Thu, 24 May 2012 17:25:59 GMT
+Content\-Type: application/json; charset=utf\-8
+Connection: keep\-alive
+Status: 200 OK
+X\-RateLimit\-Limit: 60
+ETag: "7e9ae0fd892a197256419a180af28f79"
+X\-Frame\-Options: deny
+X\-RateLimit\-Remaining: 58
+X\-Runtime: 14
+Content\-Length: 439
+Cache\-Control: private, max\-age=0, must\-revalidate
+
+{
+  "organization": "joyent",
+  "watchers": 15172,
+  "has_downloads": false,
+  "url": "https://github\.com/joyent/node",
+  "homepage": "http://nodejs\.org/",
+  "fork": false,
+  "has_issues": true,
+  "has_wiki": true,
+  "forks": 1835,
+  "size": 28000,
+  "private": false,
+  "name": "node",
+  "owner": "joyent",
+  "open_issues": 443,
+  "description": "evented I/O for v8 javascript",
+  "language": "JavaScript",
+  "created_at": "2009/05/27 09:29:46 \-0700",
+  "pushed_at": "2012/05/24 09:55:29 \-0700"
+}
 .
-.SH "SEE ALSO"
-.
-.IP "\(bu" 4
-jsonpipe: \fIhttps://github\.com/dvxhouse/jsonpipe\fR
-.
-.IP "\(bu" 4
-json\-command: \fIhttps://github\.com/zpoley/json\-command\fR
-.
-.IP "\(bu" 4
-JSONPath: \fIhttp://goessner\.net/articles/JsonPath/\fR, \fIhttp://code\.google\.com/p/jsonpath/wiki/Javascript\fR
-.
-.IP "\(bu" 4
-jsawk: \fIhttps://github\.com/micha/jsawk\fR
-.
-.IP "\(bu" 4
-jshon: \fIhttp://kmkeen\.com/jshon/\fR
+.fi
 .
 .IP "" 0
+.
+.P
+Or, say you are stuck with the headers in your pipeline, \fB\'json \-H\' will drop HTTP headers\fR:
+.
+.IP "" 4
+.
+.nf
 
+$ curl \-is https://github\.com/api/v2/json/repos/show/joyent/node \e
+  | json \-H repository\.watchers
+15172
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Here is \fBan example that shows indexing a list\fR\. (The given "lookup" argument is basically JavaScript code appended, with \'\.\' if necessary, to the JSON data and eval\'d\.)
+.
+.IP "" 4
+.
+.nf
+
+$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs \e
+  | json \'repositories[2]\.description\'
+Connect is a middleware layer for Node\.js
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Having the quote to avoid shell interpretation of \'[\' is annoying, so \fBjson\fR allows a special case for an integer lookup:
+.
+.IP "" 4
+.
+.nf
+
+$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs \e
+  | json \'repositories\.2\.description\'
+Connect is a middleware layer for Node\.js
+.
+.fi
+.
+.IP "" 0
+.
+.SS "Array processing with \-a"
+\fBjson\fR includes the \fB\-a\fR (aka \fB\-\-array\fR) option for \fBprocessing each element of an input JSON array independently\fR and \fBusing tabular output\fR\. Continuing our example above, let\'s first get a list of repositories for a "nodejs" search on github:
+.
+.IP "" 4
+.
+.nf
+
+$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs | json repositories
+[
+  {
+    "type": "repo",
+    "followers": 3922,
+    "watchers": 3922,
+    "has_issues": true,
+    "description": "Sinatra inspired web development framework \.\.\.",
+    "url": "https://github\.com/visionmedia/express",
+    "has_downloads": true,
+    "created_at": "2009/06/26 11:56:01 \-0700",
+    "pushed": "2011/09/28 10:27:26 \-0700",
+    "forks": 345,
+\.\.\.
+.
+.fi
+.
+.IP "" 0
+.
+.P
+We can then print a table with just some fields as follows:
+.
+.IP "" 4
+.
+.nf
+
+$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs \e
+    | json repositories | json \-a forks url
+345 https://github\.com/visionmedia/express
+136 https://github\.com/unconed/TermKit
+292 https://github\.com/LearnBoost/socket\.io
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Ultimately this can be useful for then using other command\-line tools\. For example, we could get the list of top\-five most forked "nodejs" github repos:
+.
+.IP "" 4
+.
+.nf
+
+$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs \e
+    | json repositories | json \-a forks url | sort \-n | tail \-5
+269 https://github\.com/visionmedia/jade
+298 https://github\.com/senchalabs/connect
+539 https://github\.com/blueimp/jQuery\-File\-Upload
+552 https://github\.com/LearnBoost/socket\.io
+634 https://github\.com/visionmedia/express
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Or get a breakdown by ISO language code of the recent tweets mentioning "nodejs":
+.
+.IP "" 4
+.
+.nf
+
+$ curl \-s http://search\.twitter\.com/search\.json?q=nodejs\e&rpp=100 \e
+    | json results | json \-a iso_language_code | sort | uniq \-c | sort
+   1 es
+   1 no
+   1 th
+   4 ru
+  12 ja
+  23 pt
+  58 en
+.
+.fi
+.
+.IP "" 0
+.
+.P
+The \fB\fB\-d\fR option can be used to specify a delimiter\fR:
+.
+.IP "" 4
+.
+.nf
+
+$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs \e
+    | json repositories | json \-a forks url \-d,
+
+$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs \e
+    | json repositories | json \-a forks watchers url \-d,
+345,3922,https://github\.com/visionmedia/express
+136,3128,https://github\.com/unconed/TermKit
+292,2777,https://github\.com/LearnBoost/socket\.io
+104,1640,https://github\.com/mishoo/UglifyJS
+\.\.\.
+.
+.fi
+.
+.IP "" 0
+.
+.SS "Auto\-arrayification"
+Adjacent objects or arrays are \'arrayified\'\. To attempt to avoid false positives inside JSON strings, \fIadjacent\fR elements must have either no whitespace separation or at least a newline separation\. Examples:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'{"a":1}{"b":2}\' | json
+[
+  {
+    "a": 1
+  },
+  {
+    "b": 2
+  }
+]
+$ echo \'[1,2][3,4]\' | json
+[
+  1,
+  2,
+  3,
+  4
+]
+.
+.fi
+.
+.IP "" 0
+.
+.P
+This can be useful when processing a number of JSON files, e\.g\.:
+.
+.IP "" 4
+.
+.nf
+
+$ cat my_data/*\.json | json \.\.\.
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Or when composing multiple JSON API response, e\.g\. this somewhat contrived search for node\.js bugs mentioning "tty" or "windows":
+.
+.IP "" 4
+.
+.nf
+
+$ echo tty windows | xargs \-n1 \-I{} curl \-s \e
+    http://github\.com/api/v2/json/issues/search/joyent/node/open/{} \e
+    | json \-a issues | json \-a number title
+623 Non\-userfacing native modules should be prefixed with _
+861 child_process fails after stdin close
+1157 `child_process` module should read / write password prompts
+1180 Ctrl+Shift+BS can\'t be input\.
+\.\.\.
+.
+.fi
+.
+.IP "" 0
+.
+.SS "Output formatting"
+You can use the \'\-o MODE\' option (or \'\-\-output MODE\') to control the output flavour\. By default the output is "jsony" (JSON, except that a simple string is printed \fIwithout the quotes\fR):
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'[{"name": "Trent"},{"name": "Ewan"}]\' | json
+[
+  {
+    "name": "Trent"
+  },
+  {
+    "name": "Ewan"
+  }
+]
+
+$ echo \'[{"name": "Trent"},{"name": "Ewan"}]\' | json \'0\.name\'
+Trent
+
+$ echo \'[{"name": "Trent"},{"name": "Ewan"}]\' | json \'0\.name\' \-o jsony
+Trent
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Or for strict JSON output:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'[{"name": "Trent"},{"name": "Ewan"}]\' | json \-o json
+[
+  {
+    "name": "Trent"
+  },
+  {
+    "name": "Ewan"
+  }
+]
+.
+.fi
+.
+.IP "" 0
+.
+.P
+By default this uses a 2\-space indent\. That can be changed with a "\-N" suffix:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'[{"name": "Trent"},{"name": "Ewan"}]\' | json \-o json\-4
+[
+    {
+        "name": "Trent"
+    },
+    {
+        "name": "Ewan"
+    }
+]
+
+$ echo \'[{"name": "Trent"},{"name": "Ewan"}]\' | json \-o json\-0
+[{"name":"Trent"},{"name":"Ewan"}]
+.
+.fi
+.
+.IP "" 0
+.
+.P
+You can get colored (non\-JSON) output using node\.js\'s \fButil\.inspect\fR \fIhttp://nodejs\.org/docs/latest/api/all\.html#util\.inspect\fR:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'[{"name": "Trent"},{"name": "Ewan"}]\' | json \-o inspect
+[ { name: \'Trent\' },
+  { name: \'Ewan\' } ]
+.
+.fi
+.
+.IP "" 0
+.
+.SS "Validating JSON"
+Since v1\.2\.0 \fBjson\fR will give position information and context for JSON syntax errors (\fBSyntaxError\fR)\. This can be handy for validating data and config files:
+.
+.IP "" 4
+.
+.nf
+
+$ cat config\.json | json
+json: error: input is not JSON: Unexpected \',\' at line 17, column 5:
+            , { "name": "smartos64\-1\.4\.7"
+        \.\.\.\.^
+{
+    "use\-proxy": false
+\.\.\.
+$ echo $?
+1
+.
+.fi
+.
+.IP "" 0
+.
+.SS "Executing code snippets on input"
+You can use the \fB\-e CODE\fR option to execute small code snippets to massage the input data\. Some examples (generally use \fBthis\.<key>\fR to refer to a key):
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'{"foo": "bar"}\' | json \-e \'this\.foo="baz"\'
+{"foo":"baz"}
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Or omit the \fBthis\.\fR as a shortcut:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'{"foo": "bar"}\' | json \-e \'foo="baz"\'
+{"foo":"baz"}
+$ echo \'{"age": 38}\' | json \-e \'age++\'
+{"age":39}
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Set a key to \fBundefined\fR to remove it:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'{"one": 1, "two": 2}\' | json \-e \'this\.one=undefined\'
+{"two":2}
+.
+.fi
+.
+.IP "" 0
+.
+.P
+If the input is an array, then \fB\-e\fR will automatically process each element separately (use \fB\-A\fR to override this):
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'[{"name":"trent", "age":38}, {"name":"ewan", "age":4}]\' \e
+    | json \-e \'age++\'
+[
+  {
+    "name": "trent",
+    "age": 39
+  },
+  {
+    "name": "ewan",
+    "age": 5
+  }
+]
+.
+.fi
+.
+.IP "" 0
+.
+.SS "Filtering with \'\-c\'"
+You can use the \fB\-c CODE\fR option to filter the input:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'{"name":"trent", "age":38}\' | json \-c \'age>21\'
+{
+  "name": "trent",
+  "age": 38
+}
+$ echo \'{"name":"trent", "age":38}\' | json \-c \'age==16\'
+$
+.
+.fi
+.
+.IP "" 0
+.
+.P
+If the input is an array, then \fB\-c\fR will automatically process each element separately (use \fB\-A\fR to override this):
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'[{"name":"trent", "age":38}, {"name":"ewan", "age":4}]\' \e
+    | json \-c \'age>21\'
+[
+  {
+    "name": "trent",
+    "age": 38
+  }
+]
+.
+.fi
+.
+.IP "" 0
+.
+.SH "PROJECT & BUGS"
+\fBjson\fR is written in JavaScript and requires node\.js (\fBnode\fR)\. The project lives at \fIhttps://github\.com/trentm/json\fR and is published to npm as "jsontool" ("json" was already taken, boo)\.
+.
+.IP "\(bu" 4
+README, Install notes: \fIhttps://github\.com/trentm/json#readme\fR
+.
+.IP "\(bu" 4
+Report bugs to \fIhttps://github\.com/trentm/json/issues\fR\.
+.
+.IP "\(bu" 4
+See the full changelog at: \fIhttps://github\.com/trentm/json/blob/master/CHANGES\.md\fR
+.
+.IP "" 0
+.
+.SH "LICENSE"
+MIT License (see \fIhttps://github\.com/trentm/json/blob/master/LICENSE\.txt\fR)
+.
+.SH "COPYRIGHT"
+json is Copyright (c) 2012 Trent Mick

@@ -21,12 +21,13 @@
 #
 
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Copyright 2010, 2011 Joyent, Inc.  All rights reserved.
+# Copyright (c) 2012 Joyent, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 ROOT=`pwd`
 CUSTOMIZE_SCRIPT=${ROOT}/tools/customize
 SMF_IMPORTER=${ROOT}/tools/smf_import
+SMF_SEEDS=${ROOT}/tools/build_seeds
 BUILDER=${ROOT}/tools/builder/builder
 SCANNER=${ROOT}/tools/scanner
 PWGEN=${ROOT}/tools/pwgen
@@ -130,7 +131,7 @@ function cleanup
 function gen_etcrelease
 {
   rdmnt=$1
-  cat <<EOF> ${rdmnt}/etc/release
+  cat <<EOF > ${rdmnt}/etc/release
                        SmartOS ${BUILDSTAMP} x86_64
               Copyright 2010 Sun Microsystems, Inc.  All Rights Reserved.
               Copyright 2010-2012 Joyent, Inc.  All Rights Reserved.
@@ -166,6 +167,8 @@ function create_ufs
     fi
     ${CUSTOMIZE_SCRIPT} ${rdmnt} ${BUILDSTAMP}
     ROOT=${ROOT} ${SMF_IMPORTER} ${rdmnt}
+    echo ${SMF_SEEDS} ${rdmnt}
+    ${SMF_SEEDS} ${rdmnt}
     if [ $? -ne 0 ]; then
 	echo "ERROR: setting up live image SMF repoistory failed"
 	ERROR=1

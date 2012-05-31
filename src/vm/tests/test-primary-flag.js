@@ -12,10 +12,10 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var dataset_uuid = '47e6af92-daf0-11e0-ac11-473ca1173ab0';
+var dataset_uuid = vmtest.CURRENT_SMARTOS;
 
 test('create VM with 2 nics', {'timeout': 240000}, function(t) {
-    var state = {'brand': 'joyent'};
+    var state = {'brand': 'joyent-minimal'};
     vmtest.on_new_vm(t, dataset_uuid,
         {'autoboot': false, 'do_not_inventory': true,
         'alias': 'autozone-' + process.pid, 'nowait': true,
@@ -197,7 +197,7 @@ test('create VM with 2 nics', {'timeout': 240000}, function(t) {
 });
 
 test('create VM with 2 nics (second primary)', {'timeout': 240000}, function(t) {
-    var state = {'brand': 'joyent'};
+    var state = {'brand': 'joyent-minimal'};
     vmtest.on_new_vm(t, dataset_uuid,
         {'autoboot': false, 'do_not_inventory': true,
         'alias': 'autozone-' + process.pid, 'nowait': true,
@@ -233,7 +233,7 @@ test('create VM with 2 nics (second primary)', {'timeout': 240000}, function(t) 
 
 test('create VM with 3 nics (all primary)', {'timeout': 240000}, function(t) {
     var state = {
-        'brand': 'joyent',
+        'brand': 'joyent-minimal',
         'expect_create_failure': true
     };
     vmtest.on_new_vm(t, dataset_uuid,
@@ -246,7 +246,7 @@ test('create VM with 3 nics (all primary)', {'timeout': 240000}, function(t) {
 });
 
 test('create VM with 3 nics (one primary, 2 false)', {'timeout': 240000}, function(t) {
-    var state = { 'brand': 'joyent' };
+    var state = { 'brand': 'joyent-minimal' };
     vmtest.on_new_vm(t, dataset_uuid,
         {
             'autoboot': false,
@@ -290,7 +290,7 @@ test('create VM with 3 nics (one primary, 2 false)', {'timeout': 240000}, functi
 });
 
 test('create VM with 3 nics (all false)', {'timeout': 240000}, function(t) {
-    var state = { 'brand': 'joyent' };
+    var state = { 'brand': 'joyent-minimal' };
     vmtest.on_new_vm(t, dataset_uuid,
         {
             'autoboot': false,

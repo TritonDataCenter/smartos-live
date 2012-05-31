@@ -11,7 +11,7 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var dataset_uuid = '47e6af92-daf0-11e0-ac11-473ca1173ab0';
+var dataset_uuid = vmtest.CURRENT_SMARTOS;
 
 var payload = {
     'do_not_inventory': true,
@@ -48,8 +48,8 @@ should_fail_with_conflict('KVM with same IP',
 );
 
 should_fail_with_conflict('OS with same IP',
-    {'brand': 'joyent', 'dataset_uuid': dataset_uuid, 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172'}]},
-    {'brand': 'joyent', 'dataset_uuid': dataset_uuid, 'nics': [{'mac': '0f:0e:0d:0c:0b:0a', 'ip': '172.17.2.172'}]}
+    {'brand': 'joyent-minimal', 'dataset_uuid': dataset_uuid, 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172'}]},
+    {'brand': 'joyent-minimal', 'dataset_uuid': dataset_uuid, 'nics': [{'mac': '0f:0e:0d:0c:0b:0a', 'ip': '172.17.2.172'}]}
 );
 
 should_fail_with_conflict('KVM with same MAC',
@@ -58,8 +58,8 @@ should_fail_with_conflict('KVM with same MAC',
 );
 
 should_fail_with_conflict('OS with same MAC',
-    {'brand': 'joyent', 'dataset_uuid': dataset_uuid, 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172'}]},
-    {'brand': 'joyent', 'dataset_uuid': dataset_uuid, 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.173'}]}
+    {'brand': 'joyent-minimal', 'dataset_uuid': dataset_uuid, 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172'}]},
+    {'brand': 'joyent-minimal', 'dataset_uuid': dataset_uuid, 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.173'}]}
 );
 
 should_fail_with_conflict('KVM with same IP and MAC',

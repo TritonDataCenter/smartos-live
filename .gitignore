@@ -4,11 +4,15 @@
 /projects
 /proto
 /log
+/src/*.o
 /src/bootparams
 /src/disk_size
 /src/removable_disk
 /src/disklist
 /src/qemu-exec
+/src/vmunbundle
+/src/zfs_recv
+/src/zfs_send
 /src/zoneevent
 /src/vm/tests.tar.gz
 /src/node-kstat/.lock-wscript

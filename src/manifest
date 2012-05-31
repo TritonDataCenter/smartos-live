@@ -29,9 +29,12 @@ d usr/vm/node_modules 0555 root bin
 d usr/vm/sbin 0555 root bin
 d usr/vm/smf 0555 root bin
 d usr/vm/test 0555 root bin
-f usr/vm/sbin/build-user-script 0555 root bin
+f usr/vm/sbin/add-userscript 0555 root bin
 f usr/vm/sbin/vmadm 0555 root bin
 f usr/vm/sbin/vmadmd 0555 root bin
+f usr/vm/sbin/vmunbundle 0555 root bin
+f usr/vm/sbin/zfs_recv 0555 root bin
+f usr/vm/sbin/zfs_send 0555 root bin
 f usr/vm/sbin/zoneevent 0555 root bin
 f usr/vm/etc/vmadm.completion 0444 root bin
 f usr/vm/node_modules/expat_binding.node 0444 root bin
@@ -39,6 +42,7 @@ f usr/vm/node_modules/node-expat.js 0444 root bin
 f usr/vm/node_modules/nopt.js 0444 root bin
 f usr/vm/node_modules/qmp.js 0444 root bin
 f usr/vm/node_modules/VM.js 0444 root bin
+f usr/vm/node_modules/dladm.js 0444 root bin
 f usr/vm/smf/system-vmadmd 0555 root bin
 f usr/vm/smf/system-vmadmd.xml 0444 root bin
 # metadata daemon

@@ -6,10 +6,11 @@ var execFile = require('child_process').execFile;
 var test = require('tap').test;
 var path = require('path');
 var VM = require('VM');
+var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var dataset_uuid = '47e6af92-daf0-11e0-ac11-473ca1173ab0';
+var dataset_uuid = vmtest.CURRENT_SMARTOS;
 var vm_uuid;
 
 var PAYLOADS = {
@@ -27,6 +28,13 @@ var PAYLOADS = {
                 "vlan_id": 0,
                 "gateway": "10.254.254.1",
                 "mac": "01:02:03:04:05:06"
+            }
+        ]
+    }, "add_invalid_allow_unfiltered_promisc": {
+        "update_nics": [
+            {
+                "mac": "01:02:03:04:05:06",
+                "allow_unfiltered_promisc": true
             }
         ]
     }, "remove_net0": {
@@ -70,7 +78,6 @@ var PAYLOADS = {
 simple_properties = [
     ['alias', 'useless VM'],
     ['billing_id', '9.99'],
-    ['dns_domain', 'fail.foo'],
     ['hostname', 'hamburgerhelper'],
     ['owner_uuid', '36bf401a-28ef-11e1-b4a7-c344deb1a5d6'],
     ['package_name', 'really expensive package'],
@@ -86,7 +93,6 @@ test('import dataset', function(t) {
 
 test('create zone', {'timeout': 240000}, function(t) {
     VM.create(PAYLOADS.create, function (err, vmobj) {
-        console.log('callback');
         if (err) {
             t.ok(false, 'error creating VM: ' + err.message);
         } else {
@@ -124,6 +130,28 @@ test('add net0', function(t) {
                 }
                 if (failures === 0) {
                     t.ok(true, 'updated VM: ' + vm_uuid);
+                }
+                t.end();
+            });
+        }
+    });
+});
+
+test('add KVM-only property to zone', function(t) {
+    VM.update(vm_uuid, PAYLOADS.add_invalid_allow_unfiltered_promisc, function(err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                    t.end();
+                    return;
+                }
+                t.ok(obj.nics.length === 1, 'VM has [' + obj.nics.length + ' vs. 1] nics');
+                if (obj.nics.length === 1) {
+                    t.ok(!obj.nics[0].hasOwnProperty('allow_unfiltered_promisc'), 'allow_unfiltered_promisc is not set');
                 }
                 t.end();
             });
@@ -363,11 +391,11 @@ function test_update_ram(ram)
                         t.end();
                     }
 
-                    t.ok((obj.max_physical_memory === ram), 'vm.max_physical_memory: '
+                    t.ok((obj.max_physical_memory === Number(ram)), 'vm.max_physical_memory: '
                         + obj.max_physical_memory + ' expected: ' + ram);
-                    t.ok((obj.max_locked_memory === ram), 'vm.max_locked_memory: '
+                    t.ok((obj.max_locked_memory === Number(ram)), 'vm.max_locked_memory: '
                         + obj.max_locked_memory + ' expected: ' + ram);
-                    t.ok((obj.max_swap === ram), 'vm.max_swap: '
+                    t.ok((obj.max_swap === Number(ram)), 'vm.max_swap: '
                         + obj.max_swap + ' expected: ' + ram);
                     t.end();
                 });
@@ -380,6 +408,10 @@ function test_update_ram(ram)
 test_update_ram(512);
 // Update to a lower value should lower everything...
 test_update_ram(128);
+// test updating with string to higher
+test_update_ram("256");
+// now lower
+test_update_ram("64");
 // Now something bigger
 test_update_ram(1024);
 

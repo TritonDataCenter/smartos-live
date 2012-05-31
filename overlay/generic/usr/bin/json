@@ -1,11 +1,11 @@
 #!/usr/bin/node
 //
-// json -- pipe in your JSON for nicer output and for extracting data bits
+// json -- a 'json' command for massaging JSON on the command line
 //
 // See <https://github.com/trentm/json>.
 //
 
-var VERSION = "2.2.1";
+var VERSION = "3.1.2";
 
 var util = require('util');
 var pathlib = require('path');
@@ -48,10 +48,32 @@ function getVersion() {
   return VERSION;
 }
 
-function isArray(ar) {
-  return ar instanceof Array ||
-         Array.isArray(ar) ||
-         (ar && ar !== Object.prototype && isArray(ar.__proto__));
+/**
+ * Return a *shallow* copy of the given object.
+ *
+ * Only support objects that you get out of JSON, i.e. no functions.
+ */
+function objCopy(obj) {
+  var copy;
+  if (Array.isArray(obj)) {
+    copy = obj.slice();
+  } else if (typeof(obj) === 'object') {
+    copy = {};
+    Object.keys(obj).forEach(function (k) {
+      copy[k] = obj[k];
+    });
+  } else {
+    copy = obj;  // immutable type
+  }
+  return copy;
+}
+
+/**
+ * Parse the given string into a JS string. Basically: handle escapes.
+ */
+function _parseString(s) {
+  var quoted = '"' + s.replace(/\\"/, '"').replace('"', '\\"') + '"';
+  return eval(quoted);
 }
 
 // json_parse.js (<https://github.com/douglascrockford/JSON-js>)
@@ -63,53 +85,83 @@ function printHelp() {
   util.puts("Usage:");
   util.puts("  <something generating JSON on stdout> | json [OPTIONS] [LOOKUPS...]");
   util.puts("");
-  util.puts("Pipe in your JSON for nicer output or supply one or more `LOOKUPS`");
-  util.puts("to extract a subset of the JSON. HTTP header blocks (as from `curl -i`)");
-  util.puts("are skipped by default.");
+  util.puts("Pipe in your JSON for pretty-printing, JSON validation, filtering, ");
+  util.puts("and modification. Supply one or more `LOOKUPS` to extract a ");
+  util.puts("subset of the JSON. HTTP header blocks are skipped by default.");
   util.puts("");
   util.puts("Auto-arrayification:");
-  util.puts("  Adjacent objects or arrays are 'arrayified'. To attempt to avoid");
-  util.puts("  false positives inside JSON strings, *adjacent* elements must");
-  util.puts("  have either no whitespace separation or at least a newline");
-  util.puts("  separation.");
+  util.puts("  Adjacent objects or arrays separated by no space or by a");
+  util.puts("  newline are 'arrayified'. This can be helpful for, e.g.: ");
+  util.puts("     $ cat *.json | json ... ");
+  util.puts("  and similar.");
   util.puts("");
-  util.puts("Examples:");
-  util.puts("  # pretty printing");
-  util.puts("  $ curl -s http://search.twitter.com/search.json?q=node.js | json");
+  util.puts("Execution:");
+  util.puts("  Use the '-e CODE' option to execute code on the input JSON.");
+  util.puts("     $ echo '{\"name\":\"trent\",\"age\":38}' | json -e 'age++'");
+  util.puts("     {");
+  util.puts("       \"name\": \"trent\",");
+  util.puts("       \"age\": 39");
+  util.puts("     }");
+  util.puts("  If input is an array, this will automatically process each");
+  util.puts("  item separately.");
   util.puts("");
-  util.puts("  # lookup fields");
-  util.puts("  $ curl -s http://search.twitter.com/search.json?q=node.js | json results[0]");
-  util.puts("  {");
-  util.puts("    \"created_at\": \"Tue, 08 Nov 2011 19:07:25 +0000\",");
-  util.puts("    \"from_user\": \"im2b\",");
-  util.puts("  ...");
+  util.puts("Conditional filtering:");
+  util.puts("  Use the '-c CODE' option to filter the input JSON.");
+  util.puts("     $ echo '[{\"age\":38},{\"age\":4}]' | json -c 'age>21'");
+  util.puts("     [{\"age\":38}]");
+  util.puts("  If input is an array, this will automatically process each");
+  util.puts("  item separately.");
   util.puts("");
-  util.puts("  # array processing");
-  util.puts("  $ curl -s http://search.twitter.com/search.json?q=node.js | json results \\");
-  util.puts("      json -a from_user");
-  util.puts("  im2b");
-  util.puts("  myalltop_paul");
-  util.puts("  ...");
+  util.puts("Lookups:");
+  util.puts("  Use lookup arguments to extract particular values:");
+  util.puts("     $ echo '{\"name\":\"trent\",\"age\":38}' | json name");
+  util.puts("     trent");
   util.puts("");
-  util.puts("  # auto-arrayification")
-  util.puts("  $ echo '{\"a\":1}{\"b\":2}' | json");
-  util.puts("  [{\"a\":1},{\"b\":2}]");
-  util.puts("  $ echo '[1,2][3,4]' | json");
-  util.puts("  [{\"a\":1},{\"b\":2}]");
+  util.puts("  Use '-a' for *array processing* of lookups and *tabular output*:");
+  util.puts("     $ echo '{\"name\":\"trent\",\"age\":38}' | json name");
+  util.puts("     trent");
+  util.puts("     $ echo '[{\"name\":\"trent\",\"age\":38},");
+  util.puts("              {\"name\":\"ewan\",\"age\":4}]' | json -a name age");
+  util.puts("     trent 38");
+  util.puts("     ewan 4");
+  util.puts("");
+  util.puts("Pretty-printing:");
+  util.puts("  Output is 'jsony' by default: 2-space indented JSON, except a");
+  util.puts("  single string value is printed without quotes.");
+  util.puts("     $ echo '{\"name\": \"trent\", \"age\": 38}' | json");
+  util.puts("     {");
+  util.puts("       \"name\": \"trent\",");
+  util.puts("       \"age\": 38");
+  util.puts("     }");
+  util.puts("");
+  util.puts("  Use '-o json' for explicit JSON, '-o json-N' for N-space indent:");
+  util.puts("     $ echo '{\"name\": \"trent\", \"age\": 38}' | json -o json-0");
+  util.puts("     {\"name\":\"trent\",\"age\":38}");
+  util.puts("");
+  util.puts("  Use '-H' to exclude a leading HTTP header block as from `curl -i`.");
   util.puts("");
   util.puts("Options:");
-  util.puts("  -h, --help    print this help info and exit");
-  util.puts("  --version     print version of this command and exit");
-  util.puts("  -q, --quiet   don't warn if input isn't valid JSON");
+  util.puts("  -h, --help    Print this help info and exit.");
+  util.puts("  --version     Print version of this command and exit.");
+  util.puts("  -q, --quiet   Don't warn if input isn't valid JSON.");
   util.puts("");
-  util.puts("  -H            drop any HTTP header block (as from `curl -i ...`)");
-  util.puts("  -a, --array   process input as an array of separate inputs");
-  util.puts("                and output in tabular form");
-  util.puts("  -d DELIM      delimiter string for tabular output (default is ' ')");
+  util.puts("  -H            Drop any HTTP header block (as from `curl -i ...`).");
+  util.puts("  -a, --array   Process input as an array of separate inputs");
+  util.puts("                and output in tabular form.");
+  util.puts("  -A            Process input as a single object, i.e. stop");
+  util.puts("                '-e' and '-c' automatically processing each");
+  util.puts("                item of an input array.");
+  util.puts("  -d DELIM      Delimiter char for tabular output (default is ' ').");
+  util.puts("  -D DELIM      Delimiter char between lookups (default is '.'). E.g.:");
+  util.puts("                  $ echo '{\"a.b\": {\"b\": 1}}' | json -D / a.b/b");
   util.puts("");
-  util.puts("  -e CODE       execute the given code on input, on each array item");
-  util.puts("                if '-a' is used. This execution is run before ");
-  util.puts("                filtering.");
+  util.puts("  -e CODE       Execute the given code on the input. If input is an");
+  util.puts("                array, then each item of the array is processed");
+  util.puts("                separately (use '-A' to override).");
+  util.puts("  -c CODE       Filter the input with `CODE`. If `CODE` returns");
+  util.puts("                false-y, then the item is filtered out. If input");
+  util.puts("                is an array, then each item of the array is ");
+  util.puts("                processed separately (use '-A' to override).");
   util.puts("");
   util.puts("  -o, --output MODE   Specify an output mode. One of");
   util.puts("                  jsony (default): JSON with string quotes elided");
@@ -141,16 +193,19 @@ function parseArgv(argv) {
     help: false,
     quiet: false,
     dropHeaders: false,
-    executableSnippets: [],
+    exeSnippets: [],
+    condSnippets: [],
     outputMode: OM_JSONY,
     jsonIndent: 2,
-    delim: ' '
+    array: null,
+    delim: ' ',
+    lookupDelim: '.'
   };
-  
+
   // Turn '-iH' into '-i -H', except for argument-accepting options.
   var args = argv.slice(2);  // drop ['node', 'scriptname']
   var newArgs = [];
-  var optTakesArg = {'d': true, 'o': true};
+  var optTakesArg = {'d': true, 'o': true, 'D': true};
   for (var i = 0; i < args.length; i++) {
     if (args[i].charAt(0) === "-" && args[i].charAt(1) !== '-' && args[i].length > 2) {
       var splitOpts = args[i].slice(1).split("");
@@ -194,6 +249,9 @@ function parseArgv(argv) {
       case "-o":
       case "--output":
         var name = args.shift();
+        if (!name) {
+          throw new Error("no argument given for '-o|--output' option");
+        }
         var idx = name.lastIndexOf('-');
         if (idx !== -1) {
           var indent = Number(name.slice(idx+1));
@@ -217,11 +275,25 @@ function parseArgv(argv) {
       case "--array":
         parsed.array = true;
         break;
+      case "-A":
+        parsed.array = false;
+        break;
       case "-d":
-        parsed.delim = args.shift();
+        parsed.delim = _parseString(args.shift());
+        break;
+      case "-D":
+        parsed.lookupDelim = args.shift();
+        if (parsed.lookupDelim.length !== 1) {
+          throw new Error(format(
+            "invalid lookup delim '%s' (must be a single char)",
+            parsed.lookupDelim));
+        }
         break;
       case "-e":
-        parsed.executableSnippets.push(args.shift());
+        parsed.exeSnippets.push(args.shift());
+        break;
+      case "-c":
+        parsed.condSnippets.push(args.shift());
         break;
       default: // arguments
         if (!endOfOptions && arg.length > 0 && arg[0] === '-') {
@@ -229,7 +301,7 @@ function parseArgv(argv) {
         }
         parsed.args.push(arg);
         break;
-    } 
+    }
   }
   //TODO: '--' handling and error on a first arg that looks like an option.
 
@@ -246,14 +318,16 @@ function isInteger(s) {
 // Parse a lookup string into a list of lookup bits. E.g.:
 //    "a.b.c" -> ["a","b","c"]
 //    "b['a']" -> ["b","['a']"]
-function parseLookup(lookup) {
+// Optionally receives an alternative lookup delimiter (other than '.')
+function parseLookup(lookup, lookupDelim) {
   //var debug = console.warn;
   var debug = function () {};
-  
+
   var bits = [];
   debug("\n*** "+lookup+" ***")
 
   bits = [];
+  lookupDelim = lookupDelim || ".";
   var bit = "";
   var states = [null];
   var escaped = false;
@@ -285,7 +359,7 @@ function parseLookup(lookup) {
         }
         bit += ch;
         break;
-      case '.':
+      case lookupDelim:
         if (bit !== "") {
           bits.push(bit);
           bit = ""
@@ -370,7 +444,7 @@ function parseInput(buffer) {
     //    {"one": 1}{"two": 2}
     // and auto-concatenation of unjoined list of arrays:
     //    ["a", "b"]["c", "d"]
-    // 
+    //
     // This can be nice to process a stream of JSON objects generated from
     // multiple calls to another tool or `cat *.json | json`.
     //
@@ -417,7 +491,7 @@ function parseInput(buffer) {
  *
  * @argument datum {Object}
  * @argument lookup {Array} The parsed lookup (from
- *    `parseLookup(<string>)`). Might be empty.
+ *    `parseLookup(<string>, <string>)`). Might be empty.
  * @returns {Object} The result of the lookup.
  */
 function lookupDatum(datum, lookup) {
@@ -430,12 +504,22 @@ function lookupDatum(datum, lookup) {
       lookupCode += bit;
     } else if (! isJSIdentifier.exec(lookup[i])) {
       // Allow a non-JS-indentifier token, e.g. `json foo-bar`.
-      lookupCode += '["' + lookup[i].replace('"', '\\"') + '"]';
+      lookupCode += '["' + lookup[i].replace(/"/g, '\\"') + '"]';
     } else {
       lookupCode += '.' + lookup[i];
     }
   }
-  return vm.runInNewContext("(" + JSON.stringify(datum) + ")" + lookupCode);
+  try {
+    return vm.runInNewContext("(" + JSON.stringify(datum) + ")" + lookupCode);
+  } catch (e) {
+    if (e.name === 'TypeError') {
+      // Skip the following for a lookup 'foo.bar' where 'foo' is undefined:
+      //    TypeError: Cannot read property 'bar' of undefined
+      // TODO: Are there other potential TypeError's in here to avoid?
+      return undefined;
+    }
+    throw e;
+  }
 }
 
 
@@ -460,7 +544,7 @@ function printDatum(datum, opts, sep, alwaysPrintSep) {
     // fit elements on one line as much as reasonable.
     if (datum === undefined) {
       // pass
-    } else if (isArray(datum)) {
+    } else if (Array.isArray(datum)) {
       var bits = ['[\n'];
       datum.forEach(function (d) {
         bits.push('  ')
@@ -555,19 +639,15 @@ function main(argv) {
     return;
   }
   var lookupStrs = opts.args;
-  //XXX ditch this hack
-  if (lookupStrs.length == 0) {
-    lookupStrs.push("");
-  }
-  
+
   var buffer = "";
-  
+
   var stdin = process.openStdin();
   stdin.setEncoding('utf8');
   stdin.on('data', function (chunk) {
       buffer += chunk;
   });
-  
+
   stdin.on('end', function () {
     // Take off a leading HTTP header if any and pass it through.
     while (true) {
@@ -634,53 +714,171 @@ function main(argv) {
       }
       return drainStdoutAndExit(1);
     }
+    var data = input.datum;
 
-    // Process and output the input JSON.
-    var lookups = lookupStrs.map(parseLookup);
-    var results = [];
-    if (opts.array) {
-      if (lookups.length === 0) {
-        results = input.datum;
-      } else {
-        var data = (isArray(input.datum) ? input.datum : [input.datum]);
-        for (var j=0; j < data.length; j++) {
-          var datum = data[j];
-          for (var e=0; e < opts.executableSnippets.length; e++) {
-            var code = opts.executableSnippets[e];
-            vm.runInNewContext(code, datum);
-          }
-          
-          var result = [];
-          for (var i=0; i < lookups.length; i++) {
-            result.push(lookupDatum(datum, lookups[i]));
-          }
-          results.push(result);
+    // Process: executable (-e).
+    var i, j;
+    var exeScripts = [];
+    for (i = 0; i < opts.exeSnippets.length; i++) {
+      exeScripts[i] = vm.createScript(opts.exeSnippets[i]);
+    }
+    if (!exeScripts.length) {
+      /* pass */
+    } else if (opts.array || (opts.array === null && Array.isArray(data))) {
+      var arrayified = false;
+      if (!Array.isArray(data)) {
+        arrayified = true;
+        data = [data];
+      }
+      for (i = 0; i < data.length; i++) {
+        var datum = data[i];
+        for (j = 0; j < exeScripts.length; j++) {
+          exeScripts[j].runInNewContext(datum);
         }
       }
-      results.forEach(function (row) {
-        var c;
-        for (c = 0; c < row.length-1; c++) {
-          printDatum(row[c], opts, opts.delim, true);
-        }
-        printDatum(row[c], opts, '\n', true);
-      });
+      if (arrayified) {
+        data = data[0];
+      }
     } else {
-      var datum = input.datum;
-      for (var e=0; e < opts.executableSnippets.length; e++) {
-        var code = opts.executableSnippets[e];
-        vm.runInNewContext(code, datum);
+      for (j = 0; j < exeScripts.length; j++) {
+        exeScripts[j].runInNewContext(data);
       }
+    }
 
-      if (lookups.length === 0) {
-        results = datum;
-      } else {
-        for (var i=0; i < lookups.length; i++) {
-          results.push(lookupDatum(datum, lookups[i]));
+    // Process: conditionals (-c).
+    var condScripts = [];
+    for (i = 0; i < opts.condSnippets.length; i++) {
+      condScripts[i] = vm.createScript(opts.condSnippets[i]);
+    }
+    if (!condScripts.length) {
+      /* pass */
+    } else if (opts.array || (opts.array === null && Array.isArray(data))) {
+      var arrayified = false;
+      if (!Array.isArray(data)) {
+        arrayified = true;
+        data = [data];
+      }
+      var filtered = [];
+      for (i = 0; i < data.length; i++) {
+        var datum = data[i];
+        var datumCopy = objCopy(datum);
+        var keep = true;
+        for (j = 0; j < condScripts.length; j++) {
+          if (! condScripts[j].runInNewContext(datumCopy)) {
+            keep = false;
+            break;
+          }
+        }
+        if (keep) {
+          filtered.push(datum);
         }
       }
-      results.forEach(function (r) {
-        printDatum(r, opts, '\n', false);
-      });
+      if (arrayified) {
+        data = (filtered.length ? filtered[0] : undefined);
+      } else {
+        data = filtered;
+      }
+    } else {
+      var keep = true;
+      var dataCopy = objCopy(data);
+      for (j = 0; j < condScripts.length; j++) {
+        if (! condScripts[j].runInNewContext(dataCopy)) {
+          keep = false;
+          break;
+        }
+      }
+      if (!keep) {
+        data = undefined;
+      }
+    }
+
+    // Process: lookups
+    var lookupsAreIndeces = false;
+    var lookups = lookupStrs.map(function(lookup) {
+        return parseLookup(lookup, opts.lookupDelim);
+    });
+    if (lookups.length) {
+      if (opts.array) {
+        if (!Array.isArray(data)) data = [data];
+        var table = [];
+        for (j=0; j < data.length; j++) {
+          var datum = data[j];
+          var row = {};
+          for (i=0; i < lookups.length; i++) {
+            var lookup = lookups[i];
+            var value = lookupDatum(datum, lookup);
+            if (value !== undefined) {
+              row[lookup.join('.')] = value;
+            }
+          }
+          table.push(row);
+        }
+        data = table;
+      } else {
+        // Special case handling: Note if the "lookups" are indeces into an
+        // array. This may be used below to change the output representation.
+        if (Array.isArray(data)) {
+          lookupsAreIndeces = true;
+          for (i = 0; i < lookups.length; i++) {
+            if (lookups[i].length !== 1 || isNaN(Number(lookups[i]))) {
+              lookupsAreIndeces = false;
+              break;
+            }
+          }
+        }
+        var row = {};
+        for (i = 0; i < lookups.length; i++) {
+          var lookup = lookups[i];
+          var value = lookupDatum(data, lookup);
+          if (value !== undefined) {
+            row[lookup.join('.')] = value;
+          }
+        }
+        data = row;
+      }
+    }
+
+    // Output
+    if (opts.outputMode === OM_JSON) {
+      if (lookupsAreIndeces) {
+        // Special case: Lookups that are all indeces into an input array
+        // are more likely to be wanted as an array of selected items rather
+        // than a "JSON table" thing that we use otherwise.
+        var flattened = [];
+        for (i = 0; i < lookups.length; i++) {
+          var lookupStr = lookups[i].join('.');
+          if (data.hasOwnProperty(lookupStr)) {
+            flattened.push(data[lookupStr])
+          }
+        }
+        data = flattened;
+      }
+      // If JSON output mode, then always just output full set of data to
+      // ensure valid JSON output.
+      printDatum(data, opts, '\n', false);
+    } else if (lookups.length) {
+      if (opts.array) {
+        // Output `data` as a "table" of lookup results.
+        for (j = 0; j < data.length; j++) {
+          var row = data[j];
+          for (i = 0; i < lookups.length-1; i++) {
+            printDatum(row[lookups[i].join('.')], opts, opts.delim, true);
+          }
+          printDatum(row[lookups[i].join('.')], opts, '\n', true);
+        }
+      } else {
+        for (i = 0; i < lookups.length; i++) {
+          printDatum(data[lookups[i].join('.')], opts, '\n', false);
+        }
+      }
+    } else if (opts.array) {
+      if (!Array.isArray(data)) data = [data];
+      for (j = 0; j < data.length; j++) {
+        printDatum(data[j], opts, '\n', false);
+      }
+    } else {
+      // Output `data` as is.
+      printDatum(data, opts, '\n', false);
     }
   });
 }
@@ -698,6 +896,6 @@ if (require.main === module) {
       /* pass */
     };
   }
-  
+
   main(process.argv);
 }

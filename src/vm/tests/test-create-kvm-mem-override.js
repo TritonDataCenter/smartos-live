@@ -14,17 +14,16 @@ var payload = {
     "brand": "kvm",
     "alias": "autotest-vm" + process.pid,
     "do_not_inventory": true,
-    "ram": 1024,
+    "ram": 256,
     "swap_in_bytes": 2147483648,
     "ram_in_bytes": 1073741824,
-    "max_physical_memory": 1024,
-    "max_swap": 2048
+    "max_physical_memory": 256,
+    "max_swap": 512
 };
 
 
 test('create zone', {'timeout': 240000}, function(t) {
     VM.create(payload, function (err, vmobj) {
-        console.log('callback');
         if (err) {
             t.ok(false, 'error creating VM: ' + err.message);
         } else {
@@ -57,8 +56,8 @@ test('ensure memory values were bumped', {}, function(t) {
             + obj.max_physical_memory + ' > ' + obj.ram);
         t.ok((obj.max_locked_memory > obj.ram), 'max_locked was set properly: '
             + obj.max_locked_memory + ' > ' + obj.ram);
-        t.ok((obj.max_swap > obj.max_physical_memory), 'max_swap was set properly: '
-            + obj.max_swap + ' > ' + obj.max_physical_memory);
+        t.ok((obj.max_swap >= obj.max_physical_memory), 'max_swap was set properly: '
+            + obj.max_swap + ' >= ' + obj.max_physical_memory);
         t.end();
     });
 });

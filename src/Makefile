@@ -6,6 +6,11 @@ TARGETS=bootparams diskinfo disklist removable_disk disk_size \
     node-syslog/build/Release/syslog.node \
     node-zsock/build/Release/zsock_bindings.node \
     node-zutil/build/Release/zutil_bindings.node \
+    vmunbundle zfs_send zfs_recv
+ROOT=$(PWD)/..
+JSSTYLE=$(ROOT)/tools/jsstyle/jsstyle
+JSLINT=$(ROOT)/tools/javascriptlint/build/install/jsl
+CSTYLE=$(ROOT)/tools/cstyle
 
 SMARTDC_TARGETS=qemu-exec
 DESTDIR=../proto
@@ -40,19 +45,18 @@ install: $(TARGETS) sysinfo
         sed -e "s|var expat.*;|var expat = require('expat_binding');|" > \
         $(DESTDIR)/usr/vm/node_modules/node-expat.js
 	cp zoneevent $(DESTDIR)/usr/vm/sbin/zoneevent
+	cp zfs_send $(DESTDIR)/usr/vm/sbin/zfs_send
+	cp zfs_recv $(DESTDIR)/usr/vm/sbin/zfs_recv
+	cp vmunbundle $(DESTDIR)/usr/vm/sbin/vmunbundle
 	mkdir -p $(DESTDIR)/lib/svc/manifest/system
 	cp vm/smf/system-vmadmd.xml $(DESTDIR)/lib/svc/manifest/system/system-vmadmd.xml
 	cp vm/smf/system-metadata.xml $(DESTDIR)/lib/svc/manifest/system/system-metadata.xml
 	mv $(DESTDIR)/usr/vm/sbin/vmadmd.js $(DESTDIR)/usr/vm/sbin/vmadmd
 	mv $(DESTDIR)/usr/vm/sbin/vmadm.js $(DESTDIR)/usr/vm/sbin/vmadm
-	mv $(DESTDIR)/usr/vm/sbin/build-user-script.js $(DESTDIR)/usr/vm/sbin/build-user-script
+	mv $(DESTDIR)/usr/vm/sbin/add-userscript.js $(DESTDIR)/usr/vm/sbin/add-userscript
 	mv $(DESTDIR)/usr/vm/sbin/metadata.js $(DESTDIR)/usr/vm/sbin/metadata
 	cp -PR ds $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/var/db/dsadm
-
-check:
-	@tools/node-lint/bin/node-lint *.js \
-        --config=tools/node-lint.json
 
 bootparams: bootparams.c
 	$(CC) $(CFLAGS) -o $@ $^ -ldevinfo
@@ -68,6 +72,15 @@ disk_size: disk_size.c
 
 qemu-exec: qemu-exec.c
 	$(CC) $(CFLAGS) -o $@ $^
+
+zfs_recv: zfs_recv.c
+	$(CC) $(CFLAGS) -o $@ $^ -lsocket
+
+zfs_send: zfs_send.c
+	$(CC) $(CFLAGS) -o $@ $^ -lsocket
+
+vmunbundle: vmunbundle.c
+	$(CC) $(CFLAGS) -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -o $@ $^
 
 node-kstat/build/Release/kstat.node: node-kstat/kstat.cc $(NODE_WAF)
 	(cd node-kstat && $(NODE_WAF) configure && $(NODE_WAF) build)
@@ -97,8 +110,23 @@ zoneevent: zoneevent.c
 vm/tests.tar.gz:
 	(cd vm && ./tools/build-test-tarball.sh)
 
+check: $(JSLINT)
+	$(CSTYLE) \
+        qemu-exec.c \
+        vmunbundle.c \
+        zfs_recv.c \
+        zfs_send.c \
+        zoneevent.c
+	@$(JSLINT) --conf=$(ROOT)/tools/jsl.node.conf vm/sbin/*.js
+	@$(JSLINT) --conf=$(ROOT)/tools/jsl.node.conf vm/node_modules/{qmp,VM,dladm}.js
+	@$(JSSTYLE) -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1 vm/sbin/*.js
+	@$(JSSTYLE) -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1 vm/node_modules/{qmp,VM,dladm}.js
+
+$(JSLINT):
+	(cd $(ROOT); $(MAKE) jsl)
+
 clean:
-	@rm -f $(TARGETS) $(SMARTDC_TARGETS)
+	@rm -f $(TARGETS) $(SMARTDC_TARGETS) *.o
 	(cd node-kstat && $(NODE_WAF) clean)
 	(cd node-expat && $(NODE_WAF) clean)
 	(cd node-syslog && $(NODE_WAF) clean)

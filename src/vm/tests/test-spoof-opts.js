@@ -17,7 +17,7 @@ var dataset_uuid = vmtest.CURRENT_SMARTOS;
 
 test('antispoof options should update without reboot',
     {'timeout': 240000},function(t) {
-    var state = {'brand': 'joyent'};
+    var state = {'brand': 'joyent-minimal'};
     vmtest.on_new_vm(t, dataset_uuid,
         { 'autoboot': true,
           'do_not_inventory': true,

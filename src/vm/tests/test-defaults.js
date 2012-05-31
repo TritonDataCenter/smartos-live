@@ -117,7 +117,7 @@ function check_property(t, state, prop, expected, transform)
 
 function check_values(t, state)
 {
-    if (state.brand === 'joyent') {
+    if (state.brand === 'joyent-minimal') {
         defaults = zone_defaults;
     } else if (state.brand === 'kvm') {
         defaults = kvm_defaults;
@@ -148,7 +148,7 @@ function check_values(t, state)
 }
 
 test('check default zone properties', {'timeout': 240000}, function(t) {
-    state = {'brand': 'joyent'};
+    state = {'brand': 'joyent-minimal'};
     vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {

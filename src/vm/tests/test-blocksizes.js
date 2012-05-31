@@ -34,7 +34,7 @@ test('import ubuntu dataset', {'timeout': 360000}, function(t) {
 
 test('create zone with root_recsize 64k', {'timeout': 240000}, function(t) {
     var payload = {
-        'brand': 'joyent',
+        'brand': 'joyent-minimal',
         'autoboot': false,
         'dataset_uuid': dataset_uuid,
         'alias': 'test-recsize-' + process.pid,
@@ -244,7 +244,7 @@ test('delete zone', function(t) {
 
 test('create zone with data_recsize 64k', {'timeout': 240000}, function(t) {
     var payload = {
-        'brand': 'joyent',
+        'brand': 'joyent-minimal',
         'autoboot': false,
         'dataset_uuid': dataset_uuid,
         'alias': 'test-recsize-' + process.pid,
@@ -445,7 +445,7 @@ test('delete zone', function(t) {
 
 test('create zone with compression', {'timeout': 240000}, function(t) {
     var payload = {
-        'brand': 'joyent',
+        'brand': 'joyent-minimal',
         'autoboot': false,
         'dataset_uuid': dataset_uuid,
         'alias': 'test-recsize-' + process.pid,

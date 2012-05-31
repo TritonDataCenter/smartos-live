@@ -16,7 +16,7 @@ var bundle_filename;
 var dataset_uuid = vmtest.CURRENT_SMARTOS;
 var vmobj;
 var payload = {
-    'brand': 'joyent',
+    'brand': 'joyent-minimal',
     'dataset_uuid': dataset_uuid,
     'alias': 'test-delegate-' + process.pid,
     'do_not_inventory': true,

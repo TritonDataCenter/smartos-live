@@ -23,7 +23,7 @@ test('create and destroy 50 zones', {'timeout': 240000}, function(t) {
             return i < 50;
         },
         function (callback) {
-            var state = {'brand': 'joyent'};
+            var state = {'brand': 'joyent-minimal'};
             vmtest.on_new_vm(t, dataset_uuid, {'autoboot': false,
                 'do_not_inventory': true, 'alias': 'autozone-' + i,
                 'nowait': true}, state, [

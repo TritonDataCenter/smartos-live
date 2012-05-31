@@ -14,7 +14,7 @@ VM.loglevel = 'DEBUG';
 var dataset_uuid = vmtest.CURRENT_SMARTOS;
 
 test('check autoboot when autoboot=true', {'timeout': 240000}, function(t) {
-    state = {'brand': 'joyent'};
+    state = {'brand': 'joyent-minimal'};
     vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true,
         'autoboot': true}, state, [
         function (cb) {
@@ -40,7 +40,7 @@ test('check autoboot when autoboot=true', {'timeout': 240000}, function(t) {
 });
 
 test('check autoboot when autoboot="true"', {'timeout': 240000}, function(t) {
-    state = {'brand': 'joyent'};
+    state = {'brand': 'joyent-minimal'};
     vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true,
         'autoboot': 'true'}, state, [
         function (cb) {
@@ -66,7 +66,7 @@ test('check autoboot when autoboot="true"', {'timeout': 240000}, function(t) {
 });
 
 test('check autoboot when autoboot=false', {'timeout': 240000}, function(t) {
-    state = {'brand': 'joyent'};
+    state = {'brand': 'joyent-minimal'};
     vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true,
         'autoboot': false}, state, [
         function (cb) {
@@ -92,7 +92,7 @@ test('check autoboot when autoboot=false', {'timeout': 240000}, function(t) {
 });
 
 test('check autoboot when autoboot="false"', {'timeout': 240000}, function(t) {
-    state = {'brand': 'joyent'};
+    state = {'brand': 'joyent-minimal'};
     vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true,
         'autoboot': 'false'}, state, [
         function (cb) {

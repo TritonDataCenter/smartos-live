@@ -25,7 +25,7 @@ test('import joyent dataset', {'timeout': 360000}, function(t) {
 
 test('create zone with fs_allowed', {'timeout': 240000}, function(t) {
     var payload = {
-        'brand': 'joyent',
+        'brand': 'joyent-minimal',
         'autoboot': false,
         'dataset_uuid': dataset_uuid,
         'alias': 'test-fsallowed-' + process.pid,

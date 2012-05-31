@@ -106,7 +106,7 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
     functions = [
         function(cb) {
             // make sure we have dataset, otherwise get it.
-            if (state.brand === 'joyent') {
+            if (state.brand === 'joyent' || state.brand === 'joyent-minimal') {
                 vmtest.ensureDataset(t, '/zones/' + uuid, uuid, function (e) {
                     if (!e) {
                         payload.dataset_uuid = uuid;

@@ -50,8 +50,9 @@ do
 done
 shift OPTIND-1
 
-ZONE_STATE=$(/usr/vm/sbin/vmadm list -p zonename="${ZONENAME}" -o state)
-if [[ ${ZONE_STATE} == "receiving" ]]; then
+if [[ -n $(zonecfg -z "${ZONENAME}" info attr name=transition \
+    | grep "value: receiving:") ]]; then
+
     # Here we're doing an install for a received zone, the dataset should have
     # already been created.
     exit $ZONE_SUBPROC_OK

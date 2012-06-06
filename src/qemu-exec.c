@@ -8,6 +8,7 @@
  */
 
 
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -20,6 +21,7 @@
 #define LOG_FILE "/tmp/vm.log"
 #define LOG_FILE_PATTERN "/tmp/vm.log.%u"
 
+void disable_cores(void);
 void dump_args(int argc, char **argv);
 void dump_privs(void);
 void exec_next(int argc, char **argv);
@@ -36,6 +38,7 @@ main(int argc, char **argv)
 
     rotate_logs();
     redirect_output();
+    disable_cores();
     dump_privs();
     dump_args(argc, argv);
 
@@ -51,6 +54,19 @@ main(int argc, char **argv)
     /* if we got here, we failed */
     (void) fprintf(stderr, "FATAL: execvp() failed.\n");
     exit(1);
+}
+
+void
+disable_cores(void)
+{
+    struct rlimit rlp;
+
+    rlp.rlim_cur = 0;
+    rlp.rlim_max = 0;
+
+    if (setrlimit(RLIMIT_CORE, &rlp) < 0) {
+        perror("Warning, failed to set rlimit for cores");
+    }
 }
 
 void

@@ -3,6 +3,8 @@
 # All tests must pass!
 set -o errexit
 
+start_time=$(date +%s)
+
 if [[ $(uname -s) != 'SunOS' ]]; then
     echo "FATAL: this can only run on SmartOS"
     exit 1
@@ -24,6 +26,33 @@ if [[ -z "$1" ]]; then
 fi
 
 export TAP=1
-NODE_PATH="/usr/vm/test/node-tap/node_modules:${NODE_PATH}" node $1
+NODE_PATH="/usr/vm/test/node-tap/node_modules:${NODE_PATH}" node $1 | tee -a /tmp/test.output.$$
+
+end_time=$(date +%s)
+elapsed=$((${end_time} - ${start_time}))
+
+tests=$(grep "^# tests [0-9]" /tmp/test.output.$$ | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
+passed=$(grep "^# pass  [0-9]" /tmp/test.output.$$ | tr -s ' ' | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
+
+[[ -z ${tests} ]] && tests=0
+[[ -z ${passed} ]] && passed=0
+
+fail=$((${tests} - ${passed}))
+
+if [[ -t 0 ]]; then
+    # We're on a terminal so output the summary
+    echo "#"
+    echo "# $1 TEST COMPLETE IN ${elapsed} SECONDS, SUMMARY:"
+    echo "#"
+    echo -e '# \E[32;40m'"PASS: ${passed} / ${tests}"; tput sgr0
+    if [[ ${fail} -gt 0 ]]; then
+        echo -e '# \E[31;40m'"FAIL: ${fail} / ${tests}"; tput sgr0
+    fi
+    echo "#"
+fi
+
+if [[ ${tests} != ${pass} ]]; then
+    exit 1
+fi
 
 exit 0

@@ -25,12 +25,13 @@
 
 final_setup()
 {
-	# Convert quota to MB and use 10% of that value for the zone core dump
-	# dataset.
+	# The cores quota exists to control run-away zones. As such we make it such
+	# that it will protect the system from a single run-away, but still allow
+	# us to get most cores. 100G seems good enough based on samples from JPC.
 	if [ ! -d $ZONEPATH/cores ]; then
-		CORE_QUOTA=$((($ZQUOTA * 1000) / 10))
+		CORE_QUOTA=102400
 		zfs create -o quota=${CORE_QUOTA}m -o compression=gzip \
-		   $PDS_NAME/$bname/cores
+			$PDS_NAME/$bname/cores
 	fi
 
 	chmod 700 $ZONEPATH

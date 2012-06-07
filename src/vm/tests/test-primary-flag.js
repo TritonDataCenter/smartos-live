@@ -12,11 +12,11 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var dataset_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS;
 
 test('create VM with 2 nics', {'timeout': 240000}, function(t) {
     var state = {'brand': 'joyent-minimal'};
-    vmtest.on_new_vm(t, dataset_uuid,
+    vmtest.on_new_vm(t, image_uuid,
         {'autoboot': false, 'do_not_inventory': true,
         'alias': 'autozone-' + process.pid, 'nowait': true,
         'nics': [{}, {}]}, state, [
@@ -198,7 +198,7 @@ test('create VM with 2 nics', {'timeout': 240000}, function(t) {
 
 test('create VM with 2 nics (second primary)', {'timeout': 240000}, function(t) {
     var state = {'brand': 'joyent-minimal'};
-    vmtest.on_new_vm(t, dataset_uuid,
+    vmtest.on_new_vm(t, image_uuid,
         {'autoboot': false, 'do_not_inventory': true,
         'alias': 'autozone-' + process.pid, 'nowait': true,
         'nics': [{}, {'primary': 1}]}, state, [
@@ -236,7 +236,7 @@ test('create VM with 3 nics (all primary)', {'timeout': 240000}, function(t) {
         'brand': 'joyent-minimal',
         'expect_create_failure': true
     };
-    vmtest.on_new_vm(t, dataset_uuid,
+    vmtest.on_new_vm(t, image_uuid,
         {'autoboot': false, 'do_not_inventory': true,
         'alias': 'autozone-' + process.pid, 'nowait': true,
         'nics': [{'primary': true}, {'primary': true}, {'primary': 1}]}, state, [],
@@ -247,7 +247,7 @@ test('create VM with 3 nics (all primary)', {'timeout': 240000}, function(t) {
 
 test('create VM with 3 nics (one primary, 2 false)', {'timeout': 240000}, function(t) {
     var state = { 'brand': 'joyent-minimal' };
-    vmtest.on_new_vm(t, dataset_uuid,
+    vmtest.on_new_vm(t, image_uuid,
         {
             'autoboot': false,
             'do_not_inventory': true,
@@ -291,7 +291,7 @@ test('create VM with 3 nics (one primary, 2 false)', {'timeout': 240000}, functi
 
 test('create VM with 3 nics (all false)', {'timeout': 240000}, function(t) {
     var state = { 'brand': 'joyent-minimal' };
-    vmtest.on_new_vm(t, dataset_uuid,
+    vmtest.on_new_vm(t, image_uuid,
         {
             'autoboot': false,
             'do_not_inventory': true,

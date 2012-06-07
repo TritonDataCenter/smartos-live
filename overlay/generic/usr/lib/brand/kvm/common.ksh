@@ -19,26 +19,31 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2011 Joyent, Inc.  All rights reserved.
+# Copyright 2012 Joyent, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 final_setup()
 {
-    ZRAM=$(zonecfg -z ${ZONENAME} info attr name=ram | \
-        grep "value: " | cut -d ':' -f2 | tr -d ' ')
+	ZRAM=$(zonecfg -z ${ZONENAME} info attr name=ram | \
+		grep "value: " | cut -d ':' -f2 | tr -d ' ')
 
-    if [[ -z ${ZRAM} ]]; then
-        echo "Unable to find RAM value for VM"
-	exit $ZONE_SUBPROC_FATAL
-    fi
+	if [[ -z ${ZRAM} ]]; then
+		echo "Unable to find RAM value for KVM VM"
+		exit $ZONE_SUBPROC_FATAL
+	fi
 
-    CORE_QUOTA=$(((${ZRAM} * 2) + 256))
+	# 100G unless the VM has 80G or more DRAM, in which case: DRAM + 20G.
+	CORE_QUOTA=102400
+	if [[ ${ZRAM} -gt 81920 ]]; then
+		CORE_QUOTA=$((${ZRAM} + 20480))
+	fi
 
-    # Convert quota to MB and use 10% of that value for the zone core dump
-    # dataset.
-    if [ ! -d $ZONEPATH/cores ]; then
-        zfs create -o quota=${CORE_QUOTA}m -o compression=gzip \
-           $PDS_NAME/$bname/cores
-    fi
+	# The cores quota exists to control run-away zones. As such we make it such
+	# that it will protect the system from a single run-away, but still allow
+	# us to get most cores.
+	if [ ! -d $ZONEPATH/cores ]; then
+		zfs create -o quota=${CORE_QUOTA}m -o compression=gzip \
+			$PDS_NAME/$bname/cores
+	fi
 }

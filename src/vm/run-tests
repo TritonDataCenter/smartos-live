@@ -35,13 +35,17 @@ passed=$(grep "^# pass  [0-9]" /tmp/test.output.$$ | tr -s ' ' | cut -d ' ' -f3 
 
 fail=$((${tests} - ${passed}))
 
-echo ""
-echo "TESTS COMPLETE IN ${elapsed} SECONDS, SUMMARY:"
-echo ""
-echo -e '\E[32;40m'"PASS: ${passed} / ${tests}"; tput sgr0
+echo "#"
+echo "# ALL TESTS COMPLETE IN ${elapsed} SECONDS, SUMMARY:"
+echo "#"
+echo -e '# \E[32;40m'"PASS: ${passed} / ${tests}"; tput sgr0
 if [[ ${fail} -gt 0 ]]; then
-    echo -e '\E[31;40m'"FAIL: ${fail} / ${tests}"; tput sgr0
+    echo -e '# \E[31;40m'"FAIL: ${fail} / ${tests}"; tput sgr0
 fi
-echo ""
+echo "#"
+
+if [[ ${tests} != ${pass} ]]; then
+    exit 1
+fi
 
 exit 0

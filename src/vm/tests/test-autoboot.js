@@ -11,11 +11,11 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var dataset_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS;
 
 test('check autoboot when autoboot=true', {'timeout': 240000}, function(t) {
     state = {'brand': 'joyent-minimal'};
-    vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true,
+    vmtest.on_new_vm(t, image_uuid, {'do_not_inventory': true,
         'autoboot': true}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
@@ -41,7 +41,7 @@ test('check autoboot when autoboot=true', {'timeout': 240000}, function(t) {
 
 test('check autoboot when autoboot="true"', {'timeout': 240000}, function(t) {
     state = {'brand': 'joyent-minimal'};
-    vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true,
+    vmtest.on_new_vm(t, image_uuid, {'do_not_inventory': true,
         'autoboot': 'true'}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
@@ -67,7 +67,7 @@ test('check autoboot when autoboot="true"', {'timeout': 240000}, function(t) {
 
 test('check autoboot when autoboot=false', {'timeout': 240000}, function(t) {
     state = {'brand': 'joyent-minimal'};
-    vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true,
+    vmtest.on_new_vm(t, image_uuid, {'do_not_inventory': true,
         'autoboot': false}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
@@ -93,7 +93,7 @@ test('check autoboot when autoboot=false', {'timeout': 240000}, function(t) {
 
 test('check autoboot when autoboot="false"', {'timeout': 240000}, function(t) {
     state = {'brand': 'joyent-minimal'};
-    vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true,
+    vmtest.on_new_vm(t, image_uuid, {'do_not_inventory': true,
         'autoboot': 'false'}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {

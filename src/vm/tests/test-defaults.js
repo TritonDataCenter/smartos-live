@@ -11,7 +11,7 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var dataset_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS;
 
 // Format:
 // 1. property of the vmobj
@@ -32,8 +32,8 @@ var zone_defaults = {
     'max_locked_memory': ['max_physical_memory', zone_property],
     'max_swap': ['max_physical_memory', zone_property],
     'max_physical_memory': [256],
-    'billing_id': [dataset_uuid],
-    'dataset_uuid': [dataset_uuid],
+    'billing_id': ['00000000-0000-0000-0000-000000000000'],
+    'image_uuid': [image_uuid],
     'zfs_filesystem': ['uuid', prefix_zones],
     'zfs_root_recsize': [131072],
     'owner_uuid': ['00000000-0000-0000-0000-000000000000'],
@@ -49,11 +49,11 @@ var zone_defaults = {
     'internal_metadata': ['<EMPTY-OBJ>']
 };
 
-// properties that are only for OS VMs
+// properties that are only there by default for OS VMs
 var zone_only = [
     'tmpfs',
     'dns_domain',
-    'dataset_uuid'
+    'image_uuid'
 ];
 
 // values specific to KVM
@@ -149,7 +149,7 @@ function check_values(t, state)
 
 test('check default zone properties', {'timeout': 240000}, function(t) {
     state = {'brand': 'joyent-minimal'};
-    vmtest.on_new_vm(t, dataset_uuid, {'do_not_inventory': true}, state, [
+    vmtest.on_new_vm(t, image_uuid, {'do_not_inventory': true}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 if (err) {

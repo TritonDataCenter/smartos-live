@@ -396,7 +396,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: yes
         create: yes
         update: yes
-        default: dataset_uuid if provided, otherwise 00000000-0000-0000-0000-000000000000
+        default: 00000000-0000-0000-0000-000000000000
 
     boot:
 
@@ -500,15 +500,20 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (but see special notes on update command)
         default: {}
 
-    dataset_uuid:
+    image_uuid:
 
         This should be a UUID identifying the image for the VM if a VM was
         created from an image.
 
+        NOTE: when this is passed for KVM VMs, it specifies the *zone root*
+        dataset which is not visible from within the VM. The user-visible
+        dataset will be the one specified through the disks.*.image_uuid.
+        Normally you do *not* want to set this for KVM.
+
         type: string (UUID)
         vmtype: OS,KVM
         listable: yes
-        create: yes (if passed, this sets the default for the billing_id option)
+        create: yes
         update: no
 
     datasets:
@@ -1232,7 +1237,7 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         This property allows you to add additional -spice options when you are
         using SPICE. NOTE: SPICE support requires your KVM zone to be using a
-        zone dataset with the zone_dataset_uuid and that dataset must know what
+        zone dataset with the image_uuid option and that image must know what
         to do with these special options.
 
         type: string (-spice XXX options)
@@ -1246,8 +1251,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         This property allows you to set a password which will be required when
         connecting to the SPICE port when SPICE is enabled. NOTE: SPICE support
-        requires your KVM zone to be using a zone dataset with the
-        zone_dataset_uuid and that dataset must know what to do with these
+        requires your KVM zone to be using a zone root dataset with the
+        image_uuid option and that dataset must know what to do with these
         special options. IMPORTANT: this password will be visible from the GZ
         of the CN and anyone with access to the serial port in the guest. Set
         to an empty string (default) to not require a password at this level.
@@ -1263,7 +1268,7 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         This specifies the TCP port to listen on for the SPICE server. By
         default SPICE is not enabled. NOTE: SPICE support requires your KVM
-        zone to be using a zone dataset with the zone_dataset_uuid and that
+        zone to be using a zone root dataset with the image_uuid option and that
         dataset must know what to do with these special options. If set to
         zero, a port will be chosen at random. Set to -1 to disable TCP
         listening for SPICE.
@@ -1595,7 +1600,7 @@ tab-complete UUIDs rather than having to type them out for every command.
           "brand": "joyent",
           "zfs_io_priority": 30,
           "quota": 20,
-          "dataset_uuid": "47e6af92-daf0-11e0-ac11-473ca1173ab0",
+          "image_uuid": "47e6af92-daf0-11e0-ac11-473ca1173ab0",
           "max_physical_memory": 256,
           "alias": "zone70",
           "nics": [

@@ -14,10 +14,10 @@ VM.loglevel = 'DEBUG';
 var abort = false;
 var vmobj;
 
-var dataset_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS;
 
 test('import joyent dataset', {'timeout': 360000}, function(t) {
-    vmtest.ensureDataset(t, '/zones/' + dataset_uuid, dataset_uuid, function (err) {
+    vmtest.ensureDataset(t, '/zones/' + image_uuid, image_uuid, function (err) {
         t.ok(!err, "joyent dataset exists");
         t.end();
     });
@@ -27,7 +27,7 @@ test('create zone with fs_allowed', {'timeout': 240000}, function(t) {
     var payload = {
         'brand': 'joyent-minimal',
         'autoboot': false,
-        'dataset_uuid': dataset_uuid,
+        'image_uuid': image_uuid,
         'alias': 'test-fsallowed-' + process.pid,
         'do_not_inventory': true,
         "fs_allowed": "ufs,pcfs,tmpfs"

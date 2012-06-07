@@ -109,7 +109,7 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
             if (state.brand === 'joyent' || state.brand === 'joyent-minimal') {
                 vmtest.ensureDataset(t, '/zones/' + uuid, uuid, function (e) {
                     if (!e) {
-                        payload.dataset_uuid = uuid;
+                        payload.image_uuid = uuid;
                     }
                     cb(e);
                 });

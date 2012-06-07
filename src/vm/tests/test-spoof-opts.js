@@ -13,12 +13,12 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var dataset_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS;
 
 test('antispoof options should update without reboot',
     {'timeout': 240000},function(t) {
     var state = {'brand': 'joyent-minimal'};
-    vmtest.on_new_vm(t, dataset_uuid,
+    vmtest.on_new_vm(t, image_uuid,
         { 'autoboot': true,
           'do_not_inventory': true,
           'alias': 'autozone-' + process.pid,

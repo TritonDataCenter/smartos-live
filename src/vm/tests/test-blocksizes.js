@@ -15,18 +15,18 @@ var abort = false;
 var bundle_filename;
 var vmobj;
 
-var dataset_uuid = vmtest.CURRENT_SMARTOS;
-var vm_dataset_uuid = vmtest.CURRENT_UBUNTU;
+var image_uuid = vmtest.CURRENT_SMARTOS;
+var vm_image_uuid = vmtest.CURRENT_UBUNTU;
 
 test('import joyent dataset', {'timeout': 360000}, function(t) {
-    vmtest.ensureDataset(t, '/zones/' + dataset_uuid, dataset_uuid, function (err) {
+    vmtest.ensureDataset(t, '/zones/' + image_uuid, image_uuid, function (err) {
         t.ok(!err, "joyent dataset exists");
         t.end();
     });
 });
 
 test('import ubuntu dataset', {'timeout': 360000}, function(t) {
-    vmtest.ensureDataset(t, '/dev/zvol/rdsk/zones/' + vm_dataset_uuid, vm_dataset_uuid, function (err) {
+    vmtest.ensureDataset(t, '/dev/zvol/rdsk/zones/' + vm_image_uuid, vm_image_uuid, function (err) {
         t.ok(!err, "ubuntu dataset exists");
         t.end();
     });
@@ -36,7 +36,7 @@ test('create zone with root_recsize 64k', {'timeout': 240000}, function(t) {
     var payload = {
         'brand': 'joyent-minimal',
         'autoboot': false,
-        'dataset_uuid': dataset_uuid,
+        'image_uuid': image_uuid,
         'alias': 'test-recsize-' + process.pid,
         'do_not_inventory': true,
         'delegate_dataset': true,
@@ -246,7 +246,7 @@ test('create zone with data_recsize 64k', {'timeout': 240000}, function(t) {
     var payload = {
         'brand': 'joyent-minimal',
         'autoboot': false,
-        'dataset_uuid': dataset_uuid,
+        'image_uuid': image_uuid,
         'alias': 'test-recsize-' + process.pid,
         'do_not_inventory': true,
         'delegate_dataset': true,
@@ -447,7 +447,7 @@ test('create zone with compression', {'timeout': 240000}, function(t) {
     var payload = {
         'brand': 'joyent-minimal',
         'autoboot': false,
-        'dataset_uuid': dataset_uuid,
+        'image_uuid': image_uuid,
         'alias': 'test-recsize-' + process.pid,
         'do_not_inventory': true,
         'delegate_dataset': true,

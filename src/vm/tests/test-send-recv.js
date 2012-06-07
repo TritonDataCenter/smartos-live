@@ -13,11 +13,11 @@ VM.loglevel = 'DEBUG';
 
 var abort = false;
 var bundle_filename;
-var dataset_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS;
 var vmobj;
 var payload = {
     'brand': 'joyent-minimal',
-    'dataset_uuid': dataset_uuid,
+    'image_uuid': image_uuid,
     'alias': 'test-send-recv-' + process.pid,
     'do_not_inventory': true,
     'ram': 256,
@@ -26,7 +26,7 @@ var payload = {
 };
 
 test('import dataset', function(t) {
-    path.exists('/zones/' + dataset_uuid, function (exists) {
+    path.exists('/zones/' + image_uuid, function (exists) {
         t.ok(exists, "dataset exists");
         t.end();
     });

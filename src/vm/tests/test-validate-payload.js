@@ -45,7 +45,7 @@ for (brand in os_brands) {
     });
 
     test('minimal joyent payload', function (t) {
-        VM.validate(brand, 'create', {'brand': brand, 'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a'}, function (errors) {
+        VM.validate(brand, 'create', {'brand': brand, 'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a'}, function (errors) {
             t.ok(!errors, 'creating minimal joyent: ' + JSON.stringify(errors));
             t.end();
         });
@@ -54,7 +54,7 @@ for (brand in os_brands) {
     test('set invalid autoboot parameter', function (t) {
         VM.validate(brand, 'create', {
             'brand': brand,
-            'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+            'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
             'autoboot': 'aardvark'
             }, function (errors) {
 
@@ -69,7 +69,7 @@ for (brand in os_brands) {
     test('set non-string alias', function (t) {
         VM.validate(brand, 'create', {
             'brand': brand,
-            'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+            'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
             'alias': 42
             }, function (errors) {
 
@@ -84,7 +84,7 @@ for (brand in os_brands) {
     test('set non-integer cpu_cap', function (t) {
         VM.validate(brand, 'create', {
             'brand': brand,
-            'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+            'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
             'cpu_cap': 'doogle'
             }, function (errors) {
 
@@ -99,7 +99,7 @@ for (brand in os_brands) {
     test('set non-existent zpool', function (t) {
         VM.validate(brand, 'create', {
             'brand': brand,
-            'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+            'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
             'zpool': 'doogle'
             }, function (errors) {
 
@@ -114,7 +114,7 @@ for (brand in os_brands) {
     test('set zones zpool', function (t) {
         VM.validate(brand, 'create', {
             'brand': brand,
-            'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+            'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
             'zpool': 'zones'
             }, function (errors) {
 
@@ -126,7 +126,7 @@ for (brand in os_brands) {
     test('set bad customer metadata', function (t) {
         VM.validate(brand, 'create', {
             'brand': brand,
-            'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+            'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
             'customer_metadata': {'hello': {'complicated': 'world'}}
             }, function (errors) {
 
@@ -141,7 +141,7 @@ for (brand in os_brands) {
     test('set good customer metadata', function (t) {
         VM.validate(brand, 'create', {
             'brand': brand,
-            'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+            'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
             'customer_metadata': {
                 'hello': 'world',
                 'these keys should be valid': true,
@@ -159,7 +159,7 @@ for (brand in os_brands) {
     test('set good array fs_allowed', function (t) {
         VM.validate(brand, 'create', {
                 'brand': brand,
-                'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+                'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
                 'fs_allowed': ['ufs', 'tmpfs', 'pcfs']
             }, function (errors) {
 
@@ -171,7 +171,7 @@ for (brand in os_brands) {
     test('set good string fs_allowed', function (t) {
         VM.validate(brand, 'create', {
                 'brand': brand,
-                'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+                'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
                 'fs_allowed': 'ufs,tmpfs,pcfs'
             }, function (errors) {
 
@@ -183,7 +183,7 @@ for (brand in os_brands) {
     test('set bad array fs_allowed', function (t) {
         VM.validate(brand, 'create', {
                 'brand': brand,
-                'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+                'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
                 'fs_allowed': ['ufs,tmpfs,pcfs']
             }, function (errors) {
 
@@ -198,7 +198,7 @@ for (brand in os_brands) {
     test('set bad object fs_allowed', function (t) {
         VM.validate(brand, 'create', {
                 'brand': brand,
-                'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+                'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
                 'fs_allowed': {'hello': 'world'}
             }, function (errors) {
 
@@ -213,7 +213,7 @@ for (brand in os_brands) {
     test('set good nic list', function (t) {
         VM.validate(brand, 'create', {
                 'brand': brand,
-                'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+                'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
                 'nics': [{'nic_tag': 'admin', 'ip': 'dhcp'}]
             }, function (errors) {
 
@@ -225,7 +225,7 @@ for (brand in os_brands) {
     test('set bad nic obj', function (t) {
         VM.validate(brand, 'create', {
                 'brand': brand,
-                'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+                'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
                 'nics': {}
             }, function (errors) {
 
@@ -240,7 +240,7 @@ for (brand in os_brands) {
     test('set bad nic string', function (t) {
         VM.validate(brand, 'create', {
                 'brand': brand,
-                'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+                'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
                 'nics': '[{\'nic_tag\': \'admin\', \'ip\': \'dhcp\'}]'
             }, function (errors) {
 
@@ -255,7 +255,7 @@ for (brand in os_brands) {
     test('set update nics good fails on create', function (t) {
         VM.validate(brand, 'create', {
                 'brand': brand,
-                'dataset_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+                'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
                 'update_nics': [{'mac': '01:02:03:0a:0b:0c', 'nic_tag': 'external'}]
             }, function (errors) {
 
@@ -285,7 +285,7 @@ for (brand in os_brands) {
             },
             "zfs_storage_pool_name": "zones",
             "dataset_name": "smartos-1.6.3",
-            "dataset_uuid": "01b2c898-945f-11e1-a523-af1afbe22822",
+            "image_uuid": "01b2c898-945f-11e1-a523-af1afbe22822",
             "cpu_shares": 64,
             "cpu_cap": 100,
             "zfs_io_priority": 10,
@@ -345,7 +345,7 @@ for (brand in os_brands) {
             'cpu_cap': 800,
             'cpu_shares': 20,
             'customer_metadata': {'fancy machine': 'with all options'},
-            'dataset_uuid': '01b2c898-945f-11e1-a523-af1afbe22822',
+            'image_uuid': '01b2c898-945f-11e1-a523-af1afbe22822',
             'delegate_dataset': 'true',
             'do_not_inventory': 'true',
             'dns_domain': 'joyent.com',

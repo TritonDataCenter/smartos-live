@@ -12,7 +12,7 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var dataset_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS;
 
 test('create and destroy 50 zones', {'timeout': 240000}, function(t) {
     var i;
@@ -24,7 +24,7 @@ test('create and destroy 50 zones', {'timeout': 240000}, function(t) {
         },
         function (callback) {
             var state = {'brand': 'joyent-minimal'};
-            vmtest.on_new_vm(t, dataset_uuid, {'autoboot': false,
+            vmtest.on_new_vm(t, image_uuid, {'autoboot': false,
                 'do_not_inventory': true, 'alias': 'autozone-' + i,
                 'nowait': true}, state, [
                 function (cb) {

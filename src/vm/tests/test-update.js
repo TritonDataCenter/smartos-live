@@ -10,12 +10,12 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var dataset_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS;
 var vm_uuid;
 
 var PAYLOADS = {
     "create": {
-        "dataset_uuid": dataset_uuid,
+        "image_uuid": image_uuid,
         "alias": "autotest" + process.pid,
         "do_not_inventory": true
     }, "add_net0": {
@@ -85,7 +85,7 @@ simple_properties = [
 ];
 
 test('import dataset', function(t) {
-    path.exists('/zones/' + dataset_uuid, function (exists) {
+    path.exists('/zones/' + image_uuid, function (exists) {
         t.ok(exists, "dataset exists");
         t.end();
     });

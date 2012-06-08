@@ -122,7 +122,7 @@ function get_smbios_system_info()
 
 function get_nonglobal_info()
 {
-    UUID=$(/usr/sbin/mdata-get sdc:instance_uuid)
+    UUID=$(/usr/sbin/mdata-get sdc:uuid)
     QUOTA=$(/usr/sbin/zfs get -Ho value quota /)
 }
 
@@ -445,11 +445,18 @@ function get_bootparams()
     done
 }
 
+function get_boot_time()
+{
+    # This is all there is to it.
+    Boot_Time=$(/usr/bin/kstat -p -m unix -n system_misc -s boot_time | cut -f2)
+}
+
 function output_parsable()
 {
     cat <<END
 Live_Image='${Live_Image}'
 System_Type='${Uname_System}'
+Boot_Time='${Boot_Time}'
 END
 
     if [[ ${ZONENAME} == "global" ]]; then
@@ -552,6 +559,7 @@ function output_json()
 {
   "Live Image": "${Live_Image}",
   "System Type": "${Uname_System}",
+  "Boot Time": "${Boot_Time}",
 END
 
     if [[ ${ZONENAME} == "global" ]]; then
@@ -711,6 +719,7 @@ get_nic_mappings
 get_nic_tags
 get_smartos_network_interfaces
 get_smartos_vnics
+get_boot_time
 
 # whenever we update the cache, update both
 if [[ ${CACHE} == "true" ]]; then

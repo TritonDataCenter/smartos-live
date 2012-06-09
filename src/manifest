@@ -1,5 +1,6 @@
 # imgadm
 s etc/bash/bash_completion.d/imgadm=/usr/img/etc/imgadm.completion
+s usr/sbin/dsadm=/usr/img/sbin/imgadm
 s usr/sbin/imgadm=/usr/img/sbin/imgadm
 f usr/share/man/man1m/imgadm.1m 0444 root bin
 d usr/img 0555 root bin

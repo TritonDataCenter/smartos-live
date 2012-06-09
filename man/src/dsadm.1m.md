@@ -1,1 +1,0 @@
-../../src/ds/man/dsadm.1m.md

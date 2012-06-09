@@ -55,8 +55,8 @@ install: $(TARGETS) sysinfo
 	mv $(DESTDIR)/usr/vm/sbin/vmadm.js $(DESTDIR)/usr/vm/sbin/vmadm
 	mv $(DESTDIR)/usr/vm/sbin/add-userscript.js $(DESTDIR)/usr/vm/sbin/add-userscript
 	mv $(DESTDIR)/usr/vm/sbin/metadata.js $(DESTDIR)/usr/vm/sbin/metadata
-	cp -PR ds $(DESTDIR)/usr/
-	mkdir -m 0755 -p $(DESTDIR)/var/db/dsadm
+	cp -PR img $(DESTDIR)/usr/
+	mkdir -m 0755 -p $(DESTDIR)/var/db/imgadm
 
 bootparams: bootparams.c
 	$(CC) $(CFLAGS) -o $@ $^ -ldevinfo

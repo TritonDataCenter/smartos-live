@@ -1,11 +1,11 @@
-# DSADM - Dataset Administration Tool
+# IMGADM - Image Administration Tool
 
-dsadm is a tool for managing datasets on a local compute node. It can import 
-and destroy local datasets, present information about how they're being used, 
+imgadm is a tool for managing images on a local compute node. It can import 
+and destroy local images, present information about how they're being used, 
 and you can query the dataset API (https://datasets.joyent.com) for more 
-datasets, or to import them.
+images, or to import them.
 
-dsadm comes with a command line tool, but can also be used quite easily as a 
+imgadm comes with a command line tool, but can also be used quite easily as a 
 library by importing it into your node application.
 
 This repository contains a bash autocompleter in the tools directory It also 

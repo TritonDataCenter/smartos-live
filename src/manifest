@@ -1,22 +1,22 @@
-# dsadm
-s etc/bash/bash_completion.d/dsadm=/usr/ds/etc/dsadm.completion
-s usr/sbin/dsadm=/usr/ds/sbin/dsadm
-f usr/share/man/man1m/dsadm.1m 0444 root bin
-d usr/ds 0555 root bin
-d usr/ds/node_modules 0555 root bin
-d usr/ds/sbin 0555 root bin
-d usr/ds/etc 0555 root bin
-d usr/ds/man 0555 root bin
-f usr/ds/etc/dsadm.completion 0444 root bin
-f usr/ds/etc/sources.list.sample 0444 root bin
-f usr/ds/sbin/dsadm 0555 root bin
-f usr/ds/sbin/dsadm-repair 0555 root bin
-f usr/ds/node_modules/log.js 0444 root bin
-f usr/ds/node_modules/dsadm.js 0444 root bin
-f usr/ds/node_modules/common.js 0444 root bin
-f usr/ds/node_modules/db.js 0444 root bin
-f usr/ds/node_modules/onlyif.js 0444 root bin
-f usr/ds/node_modules/zfs.js 0444 root bin
+# imgadm
+s etc/bash/bash_completion.d/imgadm=/usr/img/etc/imgadm.completion
+s usr/sbin/imgadm=/usr/img/sbin/imgadm
+f usr/share/man/man1m/imgadm.1m 0444 root bin
+d usr/img 0555 root bin
+d usr/img/node_modules 0555 root bin
+d usr/img/sbin 0555 root bin
+d usr/img/etc 0555 root bin
+d usr/img/man 0555 root bin
+f usr/img/etc/imgadm.completion 0444 root bin
+f usr/img/etc/sources.list.sample 0444 root bin
+f usr/img/sbin/imgadm 0555 root bin
+f usr/img/sbin/imgadm-repair 0555 root bin
+f usr/img/node_modules/log.js 0444 root bin
+f usr/img/node_modules/imgadm.js 0444 root bin
+f usr/img/node_modules/common.js 0444 root bin
+f usr/img/node_modules/db.js 0444 root bin
+f usr/img/node_modules/onlyif.js 0444 root bin
+f usr/img/node_modules/zfs.js 0444 root bin
 # new vmadmd
 s etc/bash/bash_completion.d/vmadm=/usr/vm/etc/vmadm.completion
 f lib/svc/manifest/system/system-vmadmd.xml 0444 root bin

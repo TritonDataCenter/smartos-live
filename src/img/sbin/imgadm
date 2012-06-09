@@ -4,7 +4,7 @@
 
 var path = require('path');
 var sprintf = require('sprintf').sprintf;
-var dsadm = require('dsadm');
+var imgadm = require('imgadm');
 var onlyif = require('onlyif');
 var common = require('common');
 var url = require('url');
@@ -26,7 +26,7 @@ log.setWriter(function(message) {
 var printHelp = function(code) {
   var code = code || 0;
   var msg = 
-  [ "Usage: dsadm [pvH] <command> [comment-specific arguments]"
+  [ "Usage: imgadm [pvH] <command> [comment-specific arguments]"
   , ""
   ].join('\n');
 
@@ -102,7 +102,6 @@ onInfo = function(err, dump) {
     _stdout("%-20s  %-30s", k, v);
   }
 
- 
   var fields = [
     'uuid',
     'name',
@@ -130,7 +129,7 @@ onInfo = function(err, dump) {
   _out("snapshots", nsnap);
   _out("clones", nclone);
 
-  _out("size", dump.volume.usedbydataset + "MB");
+  _out("size", dump.volume.usedbyimage + "MB");
       
 }
 
@@ -139,34 +138,34 @@ onDump = function(err, dump) {
   _stdout(JSON.stringify(dump, null, "  "));
 }
 
-onShow = function(err, dataset) {
+onShow = function(err, image) {
   if (err) _fatal(err);
-  _stdout(JSON.stringify(dataset, null, "  "));
+  _stdout(JSON.stringify(image, null, "  "));
 }
 
-onList = function(err, datasets) {
+onList = function(err, images) {
   if (err) _fatal(err);
 
   if (!options.parseable) {
     printHeader();
   }
  
-  for (var i=0; i<datasets.length; i++) {
-    var ds = datasets[i];
-    var date = _toSimpleDate(new Date(ds.published_at));
+  for (var i=0; i<images.length; i++) {
+    var img = images[i];
+    var date = _toSimpleDate(new Date(img.published_at));
     if (options.parseable) {
       _stdout("%s:%s:%s:%s", 
-        ds.uuid,
-        ds.os,
+        img.uuid,
+        img.os,
         date,
-        ds.urn);
+        img.urn);
     }
     else {
       _stdout("%-36s %-7s %-10s %-23s", 
-        ds.uuid,
-        ds.os,
+        img.uuid,
+        img.os,
         date,
-        ds.urn);
+        img.urn);
     }
   }
 }
@@ -218,28 +217,28 @@ var switches = {
  
 var commands = {
   'list': function() {
-    dsadm.listLocal(onList);
+    imgadm.listLocal(onList);
   },
   'info': function() {
     var uuid = _required('uuid');
-    dsadm.dump(uuid, onDump);
+    imgadm.dump(uuid, onDump);
   },
   'avail': function () {
-    dsadm.cacheList(onList);
+    imgadm.cacheList(onList);
   },
   'available': function () {
-    dsadm.cacheList(onList);
+    imgadm.cacheList(onList);
   }, 
   'import': function() {
     var id = _required('uuid', 'url');
-    dsadm.importRemote(id, function(err, uuid) {
+    imgadm.importRemote(id, function(err, uuid) {
       if (err) _fatal(err);
-      _stdout("dataset %s successfully imported", uuid)
+      _stdout("image %s successfully imported", uuid)
     });
   },
   'show': function() {
     var uuid = _required('uuid');
-    dsadm.show(uuid, onShow);
+    imgadm.show(uuid, onShow);
   },
   'install': function() {
     var nextflag = _argv.shift();
@@ -247,31 +246,31 @@ var commands = {
     var manifestFile = _required('path');
     
     var nextflag = _argv.shift();
-    if (nextflag !== '-f') _fatal("dataset file not specified");
-    var datasetFile = _required('path');
+    if (nextflag !== '-f') _fatal("image file not specified");
+    var imageFile = _required('path');
 
     var mfile = path.resolve(manifestFile);
-    var dsfile = path.resolve(datasetFile);
+    var imgfile = path.resolve(imageFile);
 
     if (!path.existsSync(mfile)) _fatal("specified file does not exist: " + mfile);
-    if (!path.existsSync(dsfile)) _fatal("specified file does not exist: " + dsfile);
+    if (!path.existsSync(imgfile)) _fatal("specified file does not exist: " + imgfile);
 
-    dsadm.importLocal(mfile, dsfile, function(err, uuid) {
+    imgadm.importLocal(mfile, imgfile, function(err, uuid) {
       if (err) _fatal(err);
-      _stdout("dataset %s successfully imported", uuid)
+      _stdout("image %s successfully imported", uuid)
     });
   },
   'update': function() {
-    dsadm.cacheUpdate(function(err) {
+    imgadm.cacheUpdate(function(err) {
       if (err) _fatal(err);
       _stdout("database updated");
     });
   },
   'destroy': function() {
     var uuid = _required('uuid');
-    dsadm.destroyDataset(uuid, function(err) {
+    imgadm.destroyImage(uuid, function(err) {
       if (err) _fatal(err);
-      _stdout("dataset %s destroyed", uuid);
+      _stdout("image %s destroyed", uuid);
     });
   },
   'help': function() {

@@ -1,30 +1,30 @@
-# dsadm bash autocompletion
+# imgadm bash autocompletion
 
 set completion-display-width 0 
 
-_dsadm() {
+_imgadm() {
   local cur prev opts base options
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD-1]}"
   options=( list info show available import install update destroy )
   case "$prev" in
-    dsadm)
+    imgadm)
       COMPREPLY=( $(compgen -W '${options[@]}' -- ${cur}) )
       return 0
       ;;
     import)
-      local available=$(dsadm -p avail | cut -d: -f1)
+      local available=$(imgadm -p avail | cut -d: -f1)
       COMPREPLY=( $(compgen -W "${available}" -- ${cur}) )
       return 0
       ;;
     info)
-      local installed=$(dsadm -p list | cut -d: -f1)
+      local installed=$(imgadm -p list | cut -d: -f1)
       COMPREPLY=( $(compgen -W "${installed}" -- ${cur}) )
       return 0
       ;;
     show)
-      local installed=$(dsadm -p list | cut -d: -f1)
+      local installed=$(imgadm -p list | cut -d: -f1)
       COMPREPLY=( $(compgen -W "${installed}" -- ${cur}) )
       return 0
       ;;
@@ -32,10 +32,10 @@ _dsadm() {
 
 }
 
-DSADM=$(which dsadm 2>&1 > /dev/null)
+DSADM=$(which imgadm 2>&1 > /dev/null)
 
 if [[ $? -ne 0 ]] ; then
-  echo "Error: Cannot find dsadm. Won't load autocomple script. Check \$PATH"
+  echo "Error: Cannot find imgadm. Won't load autocomple script. Check \$PATH"
 else
-  complete -F _dsadm dsadm
+  complete -F _imgadm imgadm
 fi

@@ -1,15 +1,15 @@
 #!/usr/bin/bash
 
 # A really brute-force way to scan through the existing
-# zvols and check to see if they're datasets.
+# zvols and check to see if they're images.
 
-# I'm relying pretty much on the chances of a dataset UUID
+# I'm relying pretty much on the chances of a image UUID
 # being the same as the UUID of a machine
 # (the odds of a collision are theoretically ~ 1 in 3x10^38)
 
 # TODO: Set the zfs properties
 
-DBDIR=/var/db/dsadm
+DBDIR=/var/db/imgadm
 
 if [[ ! -d $DBDIR ]] ; then
 	mkdir -p $DBDIR
@@ -24,12 +24,12 @@ for i in ${zvols[@]} ; do
   unset manifest
   unset urn
   echo "Checking for manifest with UUID: $i"
-  manifest=$(dsadm get $i)
+  manifest=$(imgadm get $i)
 
   if [[ ! -z $manifest ]] ; then
     echo "$i - manifest was found. Copying to $DBDIR"
-    echo "${manifest}" > $DBDIR/$i.dsmanifest 
-    urn=$(cat $DBDIR/$i.dsmanifest | json urn)
+    echo "${manifest}" > $DBDIR/$i.json 
+    urn=$(cat $DBDIR/$i.json | json urn)
     echo "$i - urn: $urn"    
   fi
 

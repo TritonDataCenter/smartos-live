@@ -16,9 +16,9 @@ var vmobj;
 
 var image_uuid = vmtest.CURRENT_SMARTOS;
 
-test('import joyent dataset', {'timeout': 360000}, function(t) {
-    vmtest.ensureDataset(t, '/zones/' + image_uuid, image_uuid, function (err) {
-        t.ok(!err, "joyent dataset exists");
+test('import joyent image', {'timeout': 360000}, function(t) {
+    vmtest.ensureImage(t, '/zones/' + image_uuid, image_uuid, function (err) {
+        t.ok(!err, "joyent image exists");
         t.end();
     });
 });

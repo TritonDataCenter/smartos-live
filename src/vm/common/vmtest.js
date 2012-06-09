@@ -17,9 +17,9 @@ var DATASETS_IP = '8.19.41.72';
 exports.CURRENT_SMARTOS = '01b2c898-945f-11e1-a523-af1afbe22822';
 exports.CURRENT_UBUNTU = '56108678-1183-11e1-83c3-ff3185a5b47f';
 
-exports.getDataset = function(t, uuid, callback)
+exports.getImage = function(t, uuid, callback)
 {
-    cp.exec('curl -k -o /var/tmp/' + uuid + '.dsmanifest https://'
+    cp.exec('curl -k -o /var/tmp/' + uuid + '.json https://'
         + DATASETS_IP + '/datasets/' + uuid,
         function (err) {
             if (err) {
@@ -29,15 +29,15 @@ exports.getDataset = function(t, uuid, callback)
             }
             t.ok(true, 'downloaded manifest');
 
-            fs.readFile('/var/tmp/' + uuid + '.dsmanifest',
+            fs.readFile('/var/tmp/' + uuid + '.json',
                 function (error, data) {
 
                 if (error) {
-                    t.ok(false, 'cannot read dsmanifest: ' + error.message);
+                    t.ok(false, 'cannot read manifest: ' + error.message);
                     callback(error);
                     return;
                 } else {
-                    t.ok(true, 'got dsmanifest');
+                    t.ok(true, 'got manifest');
                     data = JSON.parse(data.toString());
                     cp.exec('curl -k -o /var/tmp/' + uuid + '.zvol.gz '
                         + data.files[0].url.replace('datasets.joyent.com',
@@ -50,15 +50,15 @@ exports.getDataset = function(t, uuid, callback)
                         }
                         t.ok(true, 'downloaded zvol');
 
-                        cp.exec('/usr/ds/sbin/dsadm install -m /var/tmp/' + uuid
-                            + '.dsmanifest -f /var/tmp/' + uuid + '.zvol.gz',
-                            function (dsadm_err) {
+                        cp.exec('/usr/img/sbin/imgadm install -m /var/tmp/' + uuid
+                            + '.manifest -f /var/tmp/' + uuid + '.zvol.gz',
+                            function (imgadm_err) {
                                 if (err) {
-                                    t.ok(false, 'failed installing dataset: ' + dsadm_err.message);
+                                    t.ok(false, 'failed installing image: ' + imgadm_err.message);
                                 } else {
-                                    t.ok(true, 'downloaded dataset successfully');
+                                    t.ok(true, 'downloaded image successfully');
                                 }
-                                callback(dsadm_err);
+                                callback(imgadm_err);
                             }
                         );
                     });
@@ -68,26 +68,26 @@ exports.getDataset = function(t, uuid, callback)
     );
 }
 
-exports.ensureDataset = function(t, checkpath, uuid, callback)
+exports.ensureImage = function(t, checkpath, uuid, callback)
 {
     path.exists(checkpath, function (exists) {
         if (exists) {
-            t.ok(true, 'dataset ' + uuid + ' exists');
+            t.ok(true, 'image ' + uuid + ' exists');
             callback();
         } else {
-            vmtest.getDataset(t, uuid, function (err) {
+            vmtest.getImage(t, uuid, function (err) {
                 if (err) {
-                    t.ok(false, 'failed downloading dataset ' + uuid + ': '
+                    t.ok(false, 'failed downloading image ' + uuid + ': '
                         + err.message);
                     callback(err);
                 } else {
-                    t.ok(true, 'downloaded dataset ' + uuid);
+                    t.ok(true, 'downloaded image ' + uuid);
                     path.exists(checkpath, function (exists) {
-                        t.ok(exists, 'now have dataset ' + uuid);
+                        t.ok(exists, 'now have image ' + uuid);
                         if (exists) {
                             callback();
                         } else {
-                            callback(new Error('unable to download dataset '
+                            callback(new Error('unable to download image '
                                 + uuid));
                         }
                     });
@@ -105,22 +105,22 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
 
     functions = [
         function(cb) {
-            // make sure we have dataset, otherwise get it.
+            // make sure we have image, otherwise get it.
             if (state.brand === 'joyent' || state.brand === 'joyent-minimal') {
-                vmtest.ensureDataset(t, '/zones/' + uuid, uuid, function (e) {
+                vmtest.ensureImage(t, '/zones/' + uuid, uuid, function (e) {
                     if (!e) {
                         payload.image_uuid = uuid;
                     }
                     cb(e);
                 });
             } else if (state.brand === 'kvm' && uuid) {
-                vmtest.ensureDataset(t, '/dev/zvol/rdsk/zones/' + uuid, uuid,
+                vmtest.ensureImage(t, '/dev/zvol/rdsk/zones/' + uuid, uuid,
                     function (e) {
                         cb(e);
                     }
                 );
             } else {
-                // skip dataset altogether
+                // skip image altogether
                 cb();
             }
         }, function(cb) {

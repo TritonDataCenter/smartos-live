@@ -12,6 +12,22 @@ JSSTYLE=$(ROOT)/tools/jsstyle/jsstyle
 JSLINT=$(ROOT)/tools/javascriptlint/build/install/jsl
 CSTYLE=$(ROOT)/tools/cstyle
 
+# These files will get run through jsstyle and jslint on 'make check'
+JS_CHECK_TARGETS=\
+     node_modules/{system,onlyif}.js \
+     vm/sbin/*.js \
+     vm/node_modules/{qmp,VM,dladm}.js \
+     img/node_modules/*.js \
+     img/sbin/imgadm
+
+# These files will get run through cstyle on 'make check'
+C_CHECK_TARGETS=\
+       qemu-exec.c \
+       vmunbundle.c \
+       zfs_recv.c \
+       zfs_send.c \
+       zoneevent.c
+
 SMARTDC_TARGETS=qemu-exec
 DESTDIR=../proto
 NODE_WAF=$(PWD)/../proto/usr/bin/node-waf
@@ -111,16 +127,17 @@ vm/tests.tar.gz:
 	(cd vm && ./tools/build-test-tarball.sh)
 
 check: $(JSLINT)
-	$(CSTYLE) \
-        qemu-exec.c \
-        vmunbundle.c \
-        zfs_recv.c \
-        zfs_send.c \
-        zoneevent.c
-	@$(JSLINT) --conf=$(ROOT)/tools/jsl.node.conf vm/sbin/*.js
-	@$(JSLINT) --conf=$(ROOT)/tools/jsl.node.conf vm/node_modules/{qmp,VM,dladm}.js
-	@$(JSSTYLE) -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1 vm/sbin/*.js
-	@$(JSSTYLE) -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1 vm/node_modules/{qmp,VM,dladm}.js
+	@echo "==> Running cstyle..."
+	@(for file in $(C_CHECK_TARGETS); do echo $(PWD)/$$file; done)  # cstyle doesn't echo as it goes
+	@$(CSTYLE) $(C_CHECK_TARGETS)
+	@printf "\nC files ok!\n"
+	@printf "\n==> Running JavaScriptLint...\n"
+	@$(JSLINT) --nologo --conf=$(ROOT)/tools/jsl.node.conf $(JS_CHECK_TARGETS)
+	@printf "\n==> Running jsstyle...\n"
+	@(for file in $(JS_CHECK_TARGETS); do echo $(PWD)/$$file; done)  # jsstyle doesn't echo as it goes
+	@$(JSSTYLE) -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1 \
+       $(JS_CHECK_TARGETS)
+	@printf "\nJS style ok!\n"
 
 $(JSLINT):
 	(cd $(ROOT); $(MAKE) jsl)

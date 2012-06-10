@@ -16,7 +16,6 @@ f usr/img/node_modules/log.js 0444 root bin
 f usr/img/node_modules/imgadm.js 0444 root bin
 f usr/img/node_modules/common.js 0444 root bin
 f usr/img/node_modules/db.js 0444 root bin
-f usr/img/node_modules/onlyif.js 0444 root bin
 f usr/img/node_modules/zfs.js 0444 root bin
 # new vmadmd
 s etc/bash/bash_completion.d/vmadm=/usr/vm/etc/vmadm.completion

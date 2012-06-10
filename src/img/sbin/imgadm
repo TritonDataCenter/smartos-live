@@ -1,326 +1,393 @@
 #!/usr/bin/env node
-/* vim: set ts=2 et sw=2 tw=80 syntax=javascript: */
+/*
+ * vim: set ts=4 et sw=4 tw=80 syntax=javascript:
+ *
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ *
+ */
 
-
+var common = require('common');
+var imgadm = require('imgadm');
+var log = common.log;
+var onlyif = require('onlyif');
 var path = require('path');
 var sprintf = require('sprintf').sprintf;
-var imgadm = require('imgadm');
-var onlyif = require('onlyif');
-var common = require('common');
 var url = require('url');
-var log = common.log;
- 
-var _argv = process.argv;
- 
-var options = {
-  verbose: false,
-  parseable: false,
-  printHeader: true
-}
 
-log.setWriter(function(message) {
-  var _msg = message.message;
-  console.log(_msg);
+var _argv = process.argv;
+
+var options = {
+    parseable: false,
+    printHeader: true,
+    verbose: false
+};
+
+log.setWriter(function (message) {
+    var _msg = message.message;
+    console.log(_msg);
 });
 
-var printHelp = function(code) {
-  var code = code || 0;
-  var msg = 
-  [ "Usage: imgadm [pvH] <command> [comment-specific arguments]"
-  , ""
-  ].join('\n');
+var printHelp = function (code) {
+    var msg = [
+        'Usage: imgadm [pvH] <command> [comment-specific arguments]',
+        ''
+    ].join('\n');
 
-  _stdout(msg);
-  process.exit(code);
+    if (!code) {
+        code = 0;
+    }
+
+    _stdout(msg);
+    process.exit(code);
 };
 
-_stdout = function() {
-  var msg = sprintf.apply(null, arguments);
-  console.log(msg);
-}
-
-_fatal = function() {
-  var msg = "error: " + sprintf.apply(null, arguments);
-  console.log(msg);
-  process.exit(1);
-}
-
-_isUuid = function(obj) {
-  var uuidReg = /[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/;
-  if (typeof(obj) === 'string') {
-    return (uuidReg.test(obj));
-  }  
-  else {
-    return false;
-  }
-}
-
-_isURL = function(obj) {
-  var p = url.parse(obj);
-  if (p.host && p.protocol) {
-    return true;
-  }
-  else {
-    return false;
-  }
-}
-
-printHeader = function() {
-  _stdout("%-36s %-7s %-10s %-23s", 
-    'UUID',
-    'OS',
-    'PUBLISHED',
-    'URN');
-}; 
-
-printInfoHeader = function() {
-  _stdout("%-20s  %-30s", 
-    'PROPERTY',
-    'VALUE');
+var _stdout = function () {
+    var msg = sprintf.apply(null, arguments);
+    console.log(msg);
 };
 
-_toSimpleDate = function(d) {
-  function pad(n) { return n < 10 ? '0'+n : n}
-  var result = [
-    d.getUTCFullYear(),
-    pad(d.getMonth() + 1),
-    pad(d.getDate()),
-  ].join('-');
-  return result;
-
+var _fatal = function () {
+    var msg = 'error: ' + sprintf.apply(null, arguments);
+    console.log(msg);
+    process.exit(1);
 };
 
+var _isUuid = function (obj) {
+    var uuidReg =
+        /[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/;
+    if (typeof (obj) === 'string') {
+        return (uuidReg.test(obj));
+    } else {
+        return false;
+    }
+};
+
+var _isURL = function (obj) {
+    var p = url.parse(obj);
+    if (p.host && p.protocol) {
+        return true;
+    } else {
+        return false;
+    }
+};
+
+var printHeader = function () {
+    _stdout('%-36s %-7s %-10s %-23s',
+        'UUID',
+        'OS',
+        'PUBLISHED',
+        'URN');
+};
+
+var printInfoHeader = function () {
+    _stdout('%-20s  %-30s',
+        'PROPERTY',
+        'VALUE');
+};
+
+var _toSimpleDate = function (d) {
+    function pad(n) {
+        return n < 10 ? '0' + n : n;
+    }
+    var result = [
+        d.getUTCFullYear(),
+        pad(d.getMonth() + 1),
+        pad(d.getDate())
+    ].join('-');
+
+    return result;
+};
 
 // output formatters
 
-onInfo = function(err, dump) {
-  if (err) throw err;
- 
-  printInfoHeader();
+var onInfo = function (err, dump) {
+    var fields = [
+        'uuid',
+        'name',
+        'version',
+        'os',
+        'description',
+        'type',
+        'published_at',
+        'urn'
+    ];
+    var i;
+    var n;
+    var nclone;
+    var nsnap;
+    var _out;
 
-  var _out = function(k, v) {
-    _stdout("%-20s  %-30s", k, v);
-  }
-
-  var fields = [
-    'uuid',
-    'name',
-    'version',
-    'os',
-    'description',
-    'type',
-    'published_at',
-    'urn' 
-  ];
-
-  for (i in fields) {
-    var n = fields[i];
-    _out(n, dump.manifest[n]);
-  }
-
-  // number of snapshots
-  // number of of clones
- 
-  var nsnap, nclone;
-  nsnap = dump.children.snapshots.length;
-  nclone = dump.children.clones.length;
-
-  //_out("children", nsnap + nclone);
-  _out("snapshots", nsnap);
-  _out("clones", nclone);
-
-  _out("size", dump.volume.usedbyimage + "MB");
-      
-}
-
-onDump = function(err, dump) {
-  if (err) _fatal(err);
-  _stdout(JSON.stringify(dump, null, "  "));
-}
-
-onShow = function(err, image) {
-  if (err) _fatal(err);
-  _stdout(JSON.stringify(image, null, "  "));
-}
-
-onList = function(err, images) {
-  if (err) _fatal(err);
-
-  if (!options.parseable) {
-    printHeader();
-  }
- 
-  for (var i=0; i<images.length; i++) {
-    var img = images[i];
-    var date = _toSimpleDate(new Date(img.published_at));
-    if (options.parseable) {
-      _stdout("%s:%s:%s:%s", 
-        img.uuid,
-        img.os,
-        date,
-        img.urn);
+    if (err) {
+        throw err;
     }
-    else {
-      _stdout("%-36s %-7s %-10s %-23s", 
-        img.uuid,
-        img.os,
-        date,
-        img.urn);
+
+    printInfoHeader();
+
+    _out = function (k, v) {
+        _stdout('%-20s  %-30s', k, v);
+    };
+
+    for (i in fields) {
+        n = fields[i];
+        _out(n, dump.manifest[n]);
     }
-  }
-}
 
-var _required = function() {
-  var types = [];
-  var val = _argv.shift();
-  var valid = true ;
-  
-  for (k in arguments) {
-    types.push(arguments[k]);
-  }
+    // number of snapshots
+    nsnap = dump.children.snapshots.length;
+    // number of of clones
+    nclone = dump.children.clones.length;
 
-  var validators = {
-    uuid: function(value) {
-      return _isUuid(value);
-    },
-    url: function(value) {
-      return _isURL(value);
-    },
-    path: function(value) {
-      return true;
+    // _out('children', nsnap + nclone);
+    _out('snapshots', nsnap);
+    _out('clones', nclone);
+    _out('size', dump.volume.usedbyimage + 'MB');
+};
+
+var onDump = function (err, dump) {
+    if (err) {
+        _fatal(err);
     }
-  }
- 
-  if (!val) _fatal("error: missing required <%s> parameter", types.join("|"))
- 
-  for (i in types) {
-    valid = validators[types[i]](val);
-    if (valid) return val;
-  }
+    _stdout(JSON.stringify(dump, null, '  '));
+};
 
-  return false;
-  
-}
+var onShow = function (err, image) {
+    if (err) {
+        _fatal(err);
+    }
+    _stdout(JSON.stringify(image, null, '  '));
+};
+
+var onList = function (err, images) {
+    var date;
+    var i;
+    var img;
+
+    if (err) {
+        _fatal(err);
+    }
+
+    if (!options.parseable) {
+        printHeader();
+    }
+
+    for (i = 0; i < images.length; i++) {
+        img = images[i];
+        date = _toSimpleDate(new Date(img.published_at));
+        if (options.parseable) {
+            _stdout('%s:%s:%s:%s',
+                img.uuid,
+                img.os,
+                date,
+                img.urn);
+        } else {
+            _stdout('%-36s %-7s %-10s %-23s',
+                img.uuid,
+                img.os,
+                date,
+                img.urn);
+        }
+    }
+};
+
+var _required = function () {
+    var i;
+    var k;
+    var types = [];
+    var val = _argv.shift();
+    var valid = true;
+
+    for (k in arguments) {
+        types.push(arguments[k]);
+    }
+
+    var validators = {
+        uuid: function (value) {
+            return _isUuid(value);
+        },
+        url: function (value) {
+            return _isURL(value);
+        },
+        path: function (value) {
+            return true;
+        }
+    };
+
+    if (!val) {
+        _fatal('error: missing required <%s> parameter', types.join('|'));
+    }
+
+    for (i in types) {
+        valid = validators[types[i]](val);
+        if (valid) {
+            return val;
+        }
+    }
+
+    return false;
+};
 
 var switches = {
-  p: function() { 
-    options.parseable = true;
-  },
-  v: function() { 
-    options.verbose = true;
-    log.level('Debug');
-  },
-  H: function() {
-    options.printHeader = false;
-  }
-}
- 
+    p: function () {
+        options.parseable = true;
+    },
+    v: function () {
+        options.verbose = true;
+        log.level('Debug');
+    },
+    H: function () {
+        options.printHeader = false;
+    }
+};
+
 var commands = {
-  'list': function() {
-    imgadm.listLocal(onList);
-  },
-  'info': function() {
-    var uuid = _required('uuid');
-    imgadm.dump(uuid, onDump);
-  },
-  'avail': function () {
-    imgadm.cacheList(onList);
-  },
-  'available': function () {
-    imgadm.cacheList(onList);
-  }, 
-  'import': function() {
-    var id = _required('uuid', 'url');
-    imgadm.importRemote(id, function(err, uuid) {
-      if (err) _fatal(err);
-      _stdout("image %s successfully imported", uuid)
-    });
-  },
-  'show': function() {
-    var uuid = _required('uuid');
-    imgadm.show(uuid, onShow);
-  },
-  'install': function() {
-    var nextflag = _argv.shift();
-    if (nextflag !== '-m') _fatal("manifest not specified");
-    var manifestFile = _required('path');
-    
-    var nextflag = _argv.shift();
-    if (nextflag !== '-f') _fatal("image file not specified");
-    var imageFile = _required('path');
+    'list': function () {
+        imgadm.listLocal(onList);
+    },
+    'info': function () {
+        var uuid = _required('uuid');
+        imgadm.dump(uuid, onDump);
+    },
+    'avail': function () {
+        imgadm.cacheList(onList);
+    },
+    'available': function () {
+        imgadm.cacheList(onList);
+    },
+    'import': function () {
+        var id = _required('uuid', 'url');
+        imgadm.importRemote(id, function (err, uuid) {
+            if (err) {
+                _fatal(err);
+            }
+            _stdout('image %s successfully imported', uuid);
+        });
+    },
+    'show': function () {
+        var uuid = _required('uuid');
+        imgadm.show(uuid, onShow);
+    },
+    'install': function () {
+        var imageFile;
+        var imgfile;
+        var manifestFile;
+        var mfile;
+        var nextflag;
 
-    var mfile = path.resolve(manifestFile);
-    var imgfile = path.resolve(imageFile);
+        nextflag = _argv.shift();
+        if (nextflag !== '-m') {
+            _fatal('manifest not specified');
+        }
+        manifestFile = _required('path');
 
-    if (!path.existsSync(mfile)) _fatal("specified file does not exist: " + mfile);
-    if (!path.existsSync(imgfile)) _fatal("specified file does not exist: " + imgfile);
+        nextflag = _argv.shift();
+        if (nextflag !== '-f') {
+            _fatal('image file not specified');
+        }
+        imageFile = _required('path');
 
-    imgadm.importLocal(mfile, imgfile, function(err, uuid) {
-      if (err) _fatal(err);
-      _stdout("image %s successfully imported", uuid)
-    });
-  },
-  'update': function() {
-    imgadm.cacheUpdate(function(err) {
-      if (err) _fatal(err);
-      _stdout("database updated");
-    });
-  },
-  'destroy': function() {
-    var uuid = _required('uuid');
-    imgadm.destroyImage(uuid, function(err) {
-      if (err) _fatal(err);
-      _stdout("image %s destroyed", uuid);
-    });
-  },
-  'help': function() {
-    printHelp(0);
-  }
+        mfile = path.resolve(manifestFile);
+        imgfile = path.resolve(imageFile);
 
-}
+        if (!path.existsSync(mfile)) {
+            _fatal('specified file does not exist: ' + mfile);
+        }
+        if (!path.existsSync(imgfile)) {
+            _fatal('specified file does not exist: ' + imgfile);
+        }
+        imgadm.importLocal(mfile, imgfile, function (err, uuid) {
+            if (err) {
+                _fatal(err);
+            }
+            _stdout('image %s successfully imported', uuid);
+        });
+    },
+    'update': function () {
+        imgadm.cacheUpdate(function (err) {
+            if (err) {
+                _fatal(err);
+            }
+            _stdout('database updated');
+        });
+    },
+    'destroy': function () {
+        var uuid = _required('uuid');
+        imgadm.destroyImage(uuid, function (err) {
+            if (err) {
+                _fatal(err);
+            }
+            _stdout('image %s destroyed', uuid);
+        });
+    },
+    'help': function () {
+        printHelp(0);
+    }
+};
 
 function main() {
-  
-  SWITCH_REGEX = /^-([a-z])+$/;
-  
-  parseSwitch = function(command) {
-    var s = command.split("");
-    s.shift(); // throw away '-'
+    var command;
+    var i;
+    var parseSwitch;
+    var s;
+    var SWITCH_REGEX = /^-([a-z])+$/;
 
-    for (var i=0; i<s.length; i++) {
-      if (s[i] in switches) {
-        switches[s[i]]();
-      }
+    parseSwitch = function (cmd) {
+        s = cmd.split('');
+        s.shift(); // throw away '-'
+
+        for (i = 0; i < s.length; i++) {
+            if (s[i] in switches) {
+                switches[s[i]]();
+            }
+        }
+    };
+
+    _argv.shift(); // always node
+    _argv.shift(); // always execname
+
+    if (_argv.length === 0) {
+        printHelp(1);
     }
-  } 
- 
-  _argv.shift(); // always node
-  _argv.shift(); // always execname
 
-  if (_argv.length === 0 ) printHelp(1);
-
-  while (command = _argv.shift()) {
-    if (SWITCH_REGEX.test(command)) {
-      parseSwitch(command);
-    } 
-    else if (command in commands) {
-      commands[command]();
-      break; // so extra flags dont get set half-way through
+    command = _argv.shift();
+    while (command) {
+        if (SWITCH_REGEX.test(command)) {
+            parseSwitch(command);
+        } else if (command in commands) {
+            commands[command]();
+            break; // so extra flags dont get set half-way through
+        } else {
+            printHelp(1);
+        }
+        command = _argv.shift();
     }
-    else {
-      printHelp(1);
-    }
-  }
-
 }
 
-onlyif.rootInSmartosGlobal(function(err) {
-  if (err) {
-    _stdout("fatal: cannot run because: %s", err);
-    process.exit(2);
-  }
-  else {
-    main();
-  }
+onlyif.rootInSmartosGlobal(function (err) {
+    if (err) {
+        _stdout('fatal: cannot run because: %s', err);
+        process.exit(2);
+    } else {
+        main();
+    }
 });
-

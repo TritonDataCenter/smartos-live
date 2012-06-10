@@ -14,5 +14,3 @@ local compute node.
 
 DNS is disabled in most Platform images, so this application uses the built-in
 node dns resolver.
-
-This tool uses a different node zfs library

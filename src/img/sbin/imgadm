@@ -51,6 +51,23 @@ log.setWriter(function (message) {
 var printHelp = function (code) {
     var msg = [
         'Usage: imgadm [pvH] <command> [comment-specific arguments]',
+        '',
+        'Commands:',
+        '',
+        'avail                           -- list images available for import ',
+        'destroy <uuid>                  -- remove an image from the local '
+            + 'zpool',
+        'import <uuid>                   -- import the specified image locally',
+        'info <uuid>                     -- information about an imported '
+            + 'image',
+        'install -m <manifest> -f <file> -- install an image from components',
+        'list                            -- lists imported images',
+        'show <uuid>                     -- outputs the manifest for the image '
+            + '<uuid>',
+        'update                          -- update the local cache of images '
+            + 'from sources',
+        '',
+        'For more details see the man page for imgadm(1m).',
         ''
     ].join('\n');
 

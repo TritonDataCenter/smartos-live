@@ -380,6 +380,11 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         write("SUCCESS\n"+towrite+"\n.\n");
         return;
       }
+      else if (!isNaN(val)) {
+        var towrite = val.toString().replace(/^\./mg, "..")
+        write("SUCCESS\n"+towrite+"\n.\n");
+        return;
+      }
       // Non-string value
       else if (val) {
         write("FAILURE\n");

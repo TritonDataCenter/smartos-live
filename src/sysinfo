@@ -451,6 +451,16 @@ function get_boot_time()
     Boot_Time=$(/usr/bin/kstat -p -m unix -n system_misc -s boot_time | cut -f2)
 }
 
+function get_dc_info()
+{
+    if [[ -f /.dcinfo ]]; then
+        Datacenter_Name=$(source /.dcinfo; echo "${SDC_DATACENTER_NAME}")
+        # Headnode ID is only valid if it's an integer.
+        Headnode_ID=$(source /.dcinfo; echo "${SDC_DATACENTER_HEADNODE_ID}" \
+            | grep "^[0-9]*$")
+    fi
+}
+
 function output_parsable()
 {
     cat <<END
@@ -458,6 +468,18 @@ Live_Image='${Live_Image}'
 System_Type='${Uname_System}'
 Boot_Time='${Boot_Time}'
 END
+
+    if [[ -n ${Datacenter_Name} ]]; then
+    cat <<END
+Datacenter_Name='${Datacenter_Name}'
+END
+    fi
+
+    if [[ -n ${Headnode_ID} ]]; then
+    cat <<END
+Headnode_ID=${Headnode_ID}
+END
+    fi
 
     if [[ ${ZONENAME} == "global" ]]; then
         cat <<END
@@ -561,6 +583,18 @@ function output_json()
   "System Type": "${Uname_System}",
   "Boot Time": "${Boot_Time}",
 END
+
+    if [[ -n ${Datacenter_Name} ]]; then
+    cat <<END
+  "Datacenter Name": "${Datacenter_Name}",
+END
+    fi
+
+    if [[ -n ${Headnode_ID} ]]; then
+    cat <<END
+  "Headnode ID": ${Headnode_ID},
+END
+    fi
 
     if [[ ${ZONENAME} == "global" ]]; then
         cat <<END
@@ -720,6 +754,7 @@ get_nic_tags
 get_smartos_network_interfaces
 get_smartos_vnics
 get_boot_time
+get_dc_info
 
 # whenever we update the cache, update both
 if [[ ${CACHE} == "true" ]]; then

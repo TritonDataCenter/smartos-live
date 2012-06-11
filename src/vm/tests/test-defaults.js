@@ -42,6 +42,8 @@ var zone_defaults = {
     'limit_priv': ['default'],
     'last_modified': ['<NON-EMPTY>'],
     'server_uuid': ['<NON-EMPTY>'],
+    'datacenter_name': ['<OPTIONAL-NON-EMPTY>'],
+    'headnode_id': ['<OPTIONAL-NON-EMPTY>'],
     'create_timestamp': ['<NON-EMPTY>'],
     'nics': ['<EMPTY-ARRAY>'],
     'tags': ['<EMPTY-OBJ>'],
@@ -109,6 +111,11 @@ function check_property(t, state, prop, expected, transform)
         t.ok(JSON.stringify(value) === '[]', prop + ' [],' + JSON.stringify(value));
     } else if (expected === '<EMPTY-OBJ>') {
         t.ok(JSON.stringify(value) === '{}', prop + ' {},' + JSON.stringify(value));
+    } else if (expected === '<OPTIONAL-NON-EMPTY>') {
+        if (value !== undefined) {
+            // this is optional, but if it exists it should be non-empty
+            t.ok(value.toString().length > 0, prop + ' [' + expected + ',' + value + ']');
+        }
     } else {
         t.ok(value === expected, prop + ' [' + expected + ':' + typeof(expected)
             + ',' + value + ':' + typeof(value) + ']');

@@ -109,6 +109,8 @@
 	<device match="urandom" />
 	<device match="zero" />
 	<device match="zfs" />
+	<device match="zvol/dsk/%P/%z/*" />
+	<device match="zvol/rdsk/%P/%z/*" />
 
 	<!-- Devices to create in exclusive IP zone only -->
 	<device match="dld" ip-type="exclusive" />

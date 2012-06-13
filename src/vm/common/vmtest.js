@@ -51,7 +51,7 @@ exports.getImage = function(t, uuid, callback)
                         t.ok(true, 'downloaded zvol');
 
                         cp.exec('/usr/img/sbin/imgadm install -m /var/tmp/' + uuid
-                            + '.manifest -f /var/tmp/' + uuid + '.zvol.gz',
+                            + '.json -f /var/tmp/' + uuid + '.zvol.gz',
                             function (imgadm_err) {
                                 if (err) {
                                     t.ok(false, 'failed installing image: ' + imgadm_err.message);

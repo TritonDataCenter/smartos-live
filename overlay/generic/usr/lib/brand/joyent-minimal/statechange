@@ -114,6 +114,16 @@ unlock_file()
 	trap - INT TERM EXIT
 }
 
+get_boolean_nic_property()
+{
+	bool_val=$(eval echo \$_ZONECFG_net_${1}_${2})
+	if [[ "${bool_val}" == "1" ]] || [[ "${bool_val}" == "true" ]]; then
+		echo "true"
+	else
+		echo "false"
+	fi
+}
+
 #
 # Set up the vnic(s) for the zone.
 #
@@ -123,20 +133,18 @@ setup_net()
 	do
 		# Get simplified versions of the network config. variables.
 		address=$(eval echo \$_ZONECFG_net_${nic}_address)
-		dhcp_server=$(eval echo \$_ZONECFG_net_${nic}_dhcp_server)
+		dhcp_server=$(get_boolean_nic_property ${nic} dhcp_server)
 		global_nic=$(eval echo \$_ZONECFG_net_${nic}_global_nic)
 		mac_addr=$(eval echo \$_ZONECFG_net_${nic}_mac_addr)
 		vlan_id=$(eval echo \$_ZONECFG_net_${nic}_vlan_id)
 		blocked_outgoing_ports=$(eval \
 		    echo \$_ZONECFG_net_${nic}_blocked_outgoing_ports)
-		zone_ip=$(eval \
-		    echo \$_ZONECFG_net_${nic}_ip)
-		allow_ip_spoof=$(eval \
-		    echo \$_ZONECFG_net_${nic}_allow_ip_spoofing)
-		allow_mac_spoof=$(eval \
-		    echo \$_ZONECFG_net_${nic}_allow_mac_spoofing)
-		allow_restricted_traffic=$(eval \
-		    echo \$_ZONECFG_net_${nic}_allow_restricted_traffic)
+		zone_ip=$(eval echo \$_ZONECFG_net_${nic}_ip)
+		allow_dhcp_spoof=$(get_boolean_nic_property ${nic} allow_dhcp_spoofing)
+		allow_ip_spoof=$(get_boolean_nic_property ${nic} allow_ip_spoofing)
+		allow_mac_spoof=$(get_boolean_nic_property ${nic} allow_mac_spoofing)
+		allow_restricted_traffic=$(get_boolean_nic_property ${nic} \
+		    allow_restricted_traffic)
 
 		# If address set, must be a shared stack zone
 		[[ -n $address ]] && exit 0
@@ -240,23 +248,23 @@ setup_net()
 
 		# Set up antispoof options
 
-		if [[ $dhcp_server == "1" ]] || [[ $dhcp_server == "true" ]]; then
+		if [[ $dhcp_server == "true" ]] || [[ $allow_dhcp_spoof == "true" ]]; then
 			enable_dhcp="true"
 			# This needs to be off for dhcp server zones
-			allow_ip_spoof=1
+			allow_ip_spoof="true"
 		fi
 
 		comma=""
 		spoof_opts=""
-		if [[ $allow_mac_spoof != "1" ]]; then
+		if [[ $allow_mac_spoof != "true" ]]; then
 			spoof_opts="${spoof_opts}${comma}mac-nospoof"
 			comma=","
 		fi
-		if [[ $allow_ip_spoof != "1" ]]; then
+		if [[ $allow_ip_spoof != "true" ]]; then
 			spoof_opts="${spoof_opts}${comma}ip-nospoof"
 			comma=","
 		fi
-		if [[ $allow_restricted_traffic != "1" ]]; then
+		if [[ $allow_restricted_traffic != "true" ]]; then
 			spoof_opts="${spoof_opts}${comma}restricted"
 			comma=","
 		fi
@@ -293,7 +301,7 @@ setup_net()
 			fi
 		fi
 
-		if [[ -n "${zone_ip}" ]] && [[ $allow_ip_spoof != "1" ]] && \
+		if [[ -n "${zone_ip}" ]] && [[ $allow_ip_spoof != "true" ]] && \
 			    [[ "${zone_ip}" != "dhcp" ]]; then
 			dladm set-linkprop -t -z $ZONENAME \
 			    -p "allowed-ips=${zone_ip}" ${nic}

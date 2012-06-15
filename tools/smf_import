@@ -51,5 +51,8 @@ ${SVCCFG} -v apply ${rdmnt}/etc/svc/profile/platform.xml
 
 # rcap imports with enabled=false, but applying generic.xml enables it.
 ${SVCCFG} -s "rcap:default" setprop general/enabled=false
+# make sure mail svcs enabled after we've applied generic.xml
+${SVCCFG} -s "network/smtp:sendmail" setprop general/enabled=true
+${SVCCFG} -s "network/sendmail-client:default" setprop general/enabled=true
 
 exit 0

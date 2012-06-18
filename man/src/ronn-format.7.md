@@ -22,8 +22,8 @@ ronn-format(7) -- manual authoring format based on Markdown
     Manual references like sh(1), markdown(7), roff(7), etc. are hyperlinked in
     HTML output.
 
-    Link to sections like [STANDARDS][], [SEE ALSO][], or [WITH A DIFFERENT LINK
-    TEXT][#SEE-ALSO].
+    Link to sections like [STANDARDS][], [SEE ALSO][], or [WITH A DIFFERENT
+    LINK TEXT][#SEE-ALSO].
 
     Definition lists:
 
@@ -100,8 +100,8 @@ Ronn uses the following bits of markdown(7) to accomplish this:
     HTML output: `<strong>`.
 
   * `<anglequotes>` (non-compatible markdown extension):
-    User-specified arguments, variables, or user input. Typically displayed with
-    <u>underline</u> in roff output. HTML output: `<var/>`.
+    User-specified arguments, variables, or user input. Typically displayed
+    with <u>underline</u> in roff output. HTML output: `<var/>`.
 
   * `_`_underbars_`_` (markdown compatible):
     Emphasis. May be used for literal option values. Typically displayed with
@@ -119,8 +119,8 @@ Here is grep(1)'s DESCRIPTION section represented in `ronn`:
 The definition list syntax is compatible with markdown's unordered list syntax
 but requires that the first line of each list item be terminated with a colon
 "`:`" character. The contents of the first line is the <term>; subsequent lines
-may be comprised of multiple paragraphs, code blocks, standard lists, and nested
-definition lists.
+may be comprised of multiple paragraphs, code blocks, standard lists, and
+nested definition lists.
 
 An example definition list, taken from BSD test(1)'s *DESCRIPTION* section:
 
@@ -139,7 +139,8 @@ An example definition list, taken from BSD test(1)'s *DESCRIPTION* section:
 
 All markdown(7) linking features are supported.
 
-Markdown reference-style links can be used to link to specific sections by name:
+Markdown reference-style links can be used to link to specific sections by
+name:
 
     ## SECTION 1
 

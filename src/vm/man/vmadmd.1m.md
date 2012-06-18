@@ -43,12 +43,12 @@ vmadmd(1m) -- virtual machine management daemon
 ## KVM VNC Consoles
 
     VMs in a SmartOS system run within zones. The zone in which a VM is running
-    has no network interfaces itself as the vnics for the VM are attached to the
-    qemu process rather than being plumbed in the zone. As such there is no way
-    to have the qemu processes VNC listening on a TCP socket in the zone. To
-    still provide access to the VNC service, VMs run VNC connected to a unix
-    socket inside their zonepath which is then exposed on a TCP socket by vmadmd
-    in the global zone.
+    has no network interfaces itself as the vnics for the VM are attached to
+    the qemu process rather than being plumbed in the zone. As such there is no
+    way to have the qemu processes VNC listening on a TCP socket in the zone.
+    To still provide access to the VNC service, VMs run VNC connected to a unix
+    socket inside their zonepath which is then exposed on a TCP socket by
+    vmadmd in the global zone.
 
     In order to know when to bring the TCP sockets redirecting to the unix
     sockets up and down, vmadmd watches for zone status sysevents. When a 'kvm'
@@ -57,9 +57,9 @@ vmadmd(1m) -- virtual machine management daemon
     a new TCP port that is redirected to this. When a zone is seen coming out
     of the running state, the TCP socket is closed.
 
-    The port chosen for the VNC console is random, but can be discovered through
-    the 'vmadm info' command. Note that this port will change if either the VM
-    or vmadmd are restarted.
+    The port chosen for the VNC console is random, but can be discovered
+    through the 'vmadm info' command. Note that this port will change if either
+    the VM or vmadmd are restarted.
 
 ## Handling of Stop and Reboot
 
@@ -79,8 +79,8 @@ vmadmd(1m) -- virtual machine management daemon
     any which have an expired running transition. If the transition is to
     start the VM is then started. If the transition is not yet expired when the
     VM is loaded, vmadmd sets an internal timer to check again at expire time.
-    Since vmadmd also handles all stop requests, this timer is also set when any
-    new stop request comes in.
+    Since vmadmd also handles all stop requests, this timer is also set when
+    any new stop request comes in.
 
 ## QMP Commands
 
@@ -111,7 +111,8 @@ vmadmd(1m) -- virtual machine management daemon
 
         chardev:
 
-            Information about the special character devices attached to this VM.
+            Information about the special character devices attached to this
+            VM.
 
         cpus:
 

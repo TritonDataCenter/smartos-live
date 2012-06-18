@@ -7,15 +7,15 @@ imgadm(1m) -- Manage SmartOS Virtual Images
 ## DESCRIPTION
 
 The imgadm tool allows you to interact with virtual images on a SmartOS system.
-virtual images (also sometimes referred to as 'datasets') are snapshots of pre-
-installed virtual machines which are preppared for generic and repeated
+virtual images (also sometimes referred to as 'datasets') are snapshots of
+pre-installed virtual machines which are preppared for generic and repeated
 deployments.
 
-Virtual Images are made up of two primary components: A compressed ZFS snapshot,
-and a manifest which describes the contents of that file. A ZFS snapshot may be of
-either a ZFS filesystem, or a ZFS zvol, which correspond to both OS-level and
-HVM-level virtual machine types (Joyent and KVM brands). The manifest is a JSON
-serialized description
+Virtual Images are made up of two primary components: A compressed ZFS
+snapshot, and a manifest which describes the contents of that file. A ZFS
+snapshot may be of either a ZFS filesystem, or a ZFS zvol, which correspond to
+both OS-level and HVM-level virtual machine types (Joyent and KVM brands). The
+manifest is a JSON serialized description
 
 The primary reference for an Image is its UUID. Most commands operate on Images
 by UUID. In SmartOS, there are bash tab-completion rules which are included by
@@ -66,14 +66,14 @@ default, to make using UUIDs easier.
         sources listed in the "sources.list". By default this file exists in
         "/var/db/imgadm/sources.list". An update will retrieve the list of
         manifests from each source and place them into a local cache file. Most
-        operations will use the cache file with the exception of an import or an
-        update.
+        operations will use the cache file with the exception of an import or
+        an update.
 
       destroy <uuid>
 
         Destroys the local image specified by uuid. A destroy can only succeed
-        if the image is not actively in use by a machine. Any dependent children
-        preventing a destroy can be listed using the "show" command.
+        if the image is not actively in use by a machine. Any dependent
+        children preventing a destroy can be listed using the "show" command.
 
 ## EXAMPLES
 

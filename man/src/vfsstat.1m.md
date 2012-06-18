@@ -95,10 +95,10 @@ Specifies the length in seconds to pause between each interval
 report.  If not specified, vfsstat will print a summary since boot
 and exit.
 
-count 
+count
 
 Specifies the number of intervals to report.  Defaults to
-unlimited if not specified. 
+unlimited if not specified.
 
 ## SEE ALSO
     iostat(1m), ziostat(1m), mpstat(1m)

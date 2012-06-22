@@ -19,7 +19,7 @@ ADJUNCT_TARBALL :=	$(shell ls `pwd`/illumos-adjunct*.tgz 2>/dev/null \
 	| tail -n1 && echo $?)
 
 VMTESTS :=	$(ROOT)/src/vm/tests.tar.gz
-BUILDSTAMP :=	$(ROOT)/proto/buildstamp
+STAMPFILE :=	$(ROOT)/proto/buildstamp
 
 WORLD_MANIFESTS := \
 	$(MPROTO)/illumos.manifest \
@@ -39,9 +39,9 @@ live: world manifest
 	(cd $(ROOT) && \
 	    pfexec ./tools/build_live $(ROOT)/$(MANIFEST) $(ROOT)/output \
 	    $(OVERLAYS) $(ROOT)/proto $(ROOT)/man/man)
-	if [[ -f $(VMTESTS) && -f $(BUILDSTAMP) ]]; then \
+	if [[ -f $(VMTESTS) && -f $(STAMPFILE) ]]; then \
 		pfexec cp $(VMTESTS) \
-		    $(ROOT)/output/vmtests-$$(cat $(BUILDSTAMP)).tgz ; \
+		    $(ROOT)/output/vmtests-$$(cat $(STAMPFILE)).tgz ; \
 	fi
 
 #

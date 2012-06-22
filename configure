@@ -107,6 +107,7 @@ if [ ! -f "/opt/SUNWspro/prod/bin/cc" ]; then
     exit 1
  fi
 fi
+[[ -e /opt/SUNWspro/sunstudio12.1 ]] || (cd /opt/SUNWspro && ln -s . sunstudio12.1)
 
 
 if [[ ${GLOBAL_ZONE} -eq 1 ]]; then

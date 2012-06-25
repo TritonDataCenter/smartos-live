@@ -1,12 +1,11 @@
 // Copyright 2012 Joyent, Inc.  All rights reserved.
 
 process.env['TAP'] = 1;
-var async = require('async');
+var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
 var execFile = cp.execFile;
 var test = require('tap').test;
-var path = require('path');
-var VM = require('VM');
+var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';

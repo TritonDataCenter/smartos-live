@@ -1,4 +1,4 @@
-#!/usr/bin/node
+#!/usr/node/bin/node
 /*
  * CDDL HEADER START
  *
@@ -26,11 +26,10 @@
  */
 
 var fs = require('fs');
-var VM = require('VM');
-var nopt = require('nopt');
-var onlyif = require('onlyif');
-var path = require('path');
-var sprintf = require('sprintf').sprintf;
+var VM = require('/usr/vm/node_modules/VM');
+var nopt = require('/usr/vm/node_modules/nopt');
+var onlyif = require('/usr/node/node_modules/onlyif');
+var sprintf = require('/usr/node/node_modules/sprintf').sprintf;
 var tty = require('tty');
 var util = require('util');
 
@@ -325,7 +324,6 @@ function addCommandOptions(command, opts, shorts)
     case 'receive':
     case 'recv':
     case 'update':
-        opts.file = path;
         shorts.f = ['--file'];
         break;
     case 'list':

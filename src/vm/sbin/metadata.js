@@ -1,14 +1,14 @@
-#!/usr/bin/node
+#!/usr/node/bin/node
 
-var async = require('async');
+var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
 var fs = require('fs');
 var net = require('net');
 var path = require('path');
 var util = require('util');
-var zsock = require('zsock');
-var zutil = require('zutil');
-var log4js = require('log4js');
+var zsock = require('/usr/node/node_modules/zsock');
+var zutil = require('/usr/node/node_modules/zutil');
+var log4js = require('/usr/node/node_modules/log4js');
 var tty = require('tty');
 
 var Agent = require('../lib/metadata/agent');

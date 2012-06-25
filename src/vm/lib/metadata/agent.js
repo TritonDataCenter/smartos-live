@@ -1,15 +1,15 @@
-var VM  = require('VM');
+var VM  = require('/usr/vm/node_modules/VM');
 var ZWatch = require('./zwatch');
 var ZoneBootedWatcher = require('./zone_booted_watcher');
 var common = require('./common');
-var async = require('async');
+var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
 var fs = require('fs');
 var net = require('net');
 var path = require('path');
 var util = require('util');
-var zsock = require('zsock');
-var zutil = require('zutil');
+var zsock = require('/usr/node/node_modules/zsock');
+var zutil = require('/usr/node/node_modules/zutil');
 
 var MetadataAgent = module.exports = function (options) {
   var self = this;

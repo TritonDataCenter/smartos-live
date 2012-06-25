@@ -34,7 +34,6 @@ def configure(conf):
                                      '-D_LARGEFILE_SOURCE',
                                      '-D_REENTRANT',
                                      '-D_POSIX_PTHREAD_SEMANTICS',
-                                     '-D_XOPEN_SOURCE_EXTENDED=1',
                                      '-D__EXTENSIONS__',
                                      '-D' + os.uname()[0],
                                      '-std=c++98',

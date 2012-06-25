@@ -4,7 +4,7 @@ process.env['TAP'] = 1;
 var brand;
 var os_brands = ['joyent', 'joyent-minimal'];
 var test = require('tap').test;
-var VM = require('VM');
+var VM = require('/usr/vm/node_modules/VM');
 
 VM.loglevel = 'DEBUG';
 

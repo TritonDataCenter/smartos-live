@@ -4,11 +4,10 @@
 //
 
 process.env['TAP'] = 1;
-var async = require('async');
+var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
 var fs = require('fs');
-var path = require('path');
-var VM = require('VM');
+var VM = require('/usr/vm/node_modules/VM');
 var test = require('tap').test;
 var vmtest = this;
 
@@ -70,7 +69,7 @@ exports.getImage = function(t, uuid, callback)
 
 exports.ensureImage = function(t, checkpath, uuid, callback)
 {
-    path.exists(checkpath, function (exists) {
+    fs.exists(checkpath, function (exists) {
         if (exists) {
             t.ok(true, 'image ' + uuid + ' exists');
             callback();
@@ -82,7 +81,7 @@ exports.ensureImage = function(t, checkpath, uuid, callback)
                     callback(err);
                 } else {
                     t.ok(true, 'downloaded image ' + uuid);
-                    path.exists(checkpath, function (exists) {
+                    fs.exists(checkpath, function (exists) {
                         t.ok(exists, 'now have image ' + uuid);
                         if (exists) {
                             callback();

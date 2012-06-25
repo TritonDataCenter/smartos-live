@@ -4,9 +4,8 @@
 //
 
 process.env['TAP'] = 1;
-var async = require('async');
+var async = require('/usr/node/node_modules/async');
 var test = require('tap').test;
-var path = require('path');
 var VM = require('VM');
 
 var vm_uuid;

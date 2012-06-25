@@ -1,4 +1,4 @@
-#!/usr/bin/node
+#!/usr/node/bin/node
 /*
  * CDDL HEADER START
  *
@@ -25,19 +25,19 @@
  *
  */
 
-var async = require('async');
+var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
 var consts = require('constants');
 var events = require('events');
 var execFile = cp.execFile;
 var fs = require('fs');
 var net = require('net');
-var VM = require('VM');
-var onlyif = require('onlyif');
+var VM = require('/usr/vm/node_modules/VM');
+var onlyif = require('/usr/node/node_modules/onlyif');
 var path = require('path');
 var spawn = cp.spawn;
 var http = require('http');
-var Qmp = require('qmp').Qmp;
+var Qmp = require('/usr/vm/node_modules/qmp').Qmp;
 var qs = require('querystring');
 var url = require('url');
 var util = require('util');
@@ -989,7 +989,7 @@ function main()
             process.exit(2);
         }
 
-        path.exists(VMADMD_AUTOBOOT_FILE, function (exists) {
+        fs.exists(VMADMD_AUTOBOOT_FILE, function (exists) {
             var vmobj;
 
             if (!exists) {

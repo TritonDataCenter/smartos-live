@@ -1,4 +1,4 @@
-#!/usr/bin/node
+#!/usr/node/bin/node
 //
 // json -- a 'json' command for massaging JSON on the command line
 //

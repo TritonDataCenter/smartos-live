@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/node/bin/node
 /*
  * vim: set ts=4 et sw=4 tw=80 syntax=javascript:
  *
@@ -30,9 +30,10 @@
 var common = require('common');
 var imgadm = require('imgadm');
 var log = common.log;
-var onlyif = require('onlyif');
+var onlyif = require('/usr/node/node_modules/onlyif');
+var fs = require('fs');
 var path = require('path');
-var sprintf = require('sprintf').sprintf;
+var sprintf = require('/usr/node/node_modules/sprintf').sprintf;
 var url = require('url');
 
 var _argv = process.argv;
@@ -326,10 +327,10 @@ var commands = {
         mfile = path.resolve(manifestFile);
         imgfile = path.resolve(imageFile);
 
-        if (!path.existsSync(mfile)) {
+        if (!fs.existsSync(mfile)) {
             _fatal('specified file does not exist: ' + mfile);
         }
-        if (!path.existsSync(imgfile)) {
+        if (!fs.existsSync(imgfile)) {
             _fatal('specified file does not exist: ' + imgfile);
         }
         imgadm.importLocal(mfile, imgfile, function (err, uuid) {

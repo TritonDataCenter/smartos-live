@@ -1,4 +1,4 @@
-#!/usr/bin/node
+#!/usr/node/bin/node
 /*
  * Copyright (c) 2012, Joyent, Inc. All rights reserved.
  *

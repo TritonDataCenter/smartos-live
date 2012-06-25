@@ -26,7 +26,8 @@ if [[ -z "$1" ]]; then
 fi
 
 export TAP=1
-NODE_PATH="/usr/vm/test/node-tap/node_modules:${NODE_PATH}" node $1 | tee -a /tmp/test.output.$$
+NODE_PATH="/usr/vm/test/node-tap/node_modules:${NODE_PATH}" \
+    /usr/node/bin/node $1 | tee -a /tmp/test.output.$$
 
 end_time=$(date +%s)
 elapsed=$((${end_time} - ${start_time}))

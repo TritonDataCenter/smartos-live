@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/node/bin/node
 
 var argv = process.argv.slice(2)
   , path = require("path")

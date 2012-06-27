@@ -39,6 +39,7 @@ var COMMANDS = [
     'start', 'boot',
     'console',
     'create',
+    'create-json',
     'delete', 'destroy',
     'stop', 'halt',
     'help',
@@ -120,6 +121,7 @@ function usage(message, code)
     out('Usage: ' + process.argv[1] + ' <command> [options]');
     out('');
     out('create [-f <filename>]');
+    out('create-json -f <filename>');
     out('console <uuid>');
     out('delete <uuid>');
     out('get <uuid>');
@@ -321,6 +323,7 @@ function addCommandOptions(command, opts, shorts)
         shorts['1'] = ['--unique'];
         break;
     case 'create':
+    case 'create-json':
     case 'receive':
     case 'recv':
     case 'update':
@@ -851,6 +854,21 @@ function main(callback)
                 callback(null, 'Succesfully completed ' + command + ' for '
                     + uuid);
             }
+        });
+        break;
+    case 'create-json':
+        if (parsed.hasOwnProperty('file') && parsed.file !== '-') {
+           filename = parsed.file;
+        }
+        else {
+          callback(new Error('Error: no file specified.'));
+        }
+        VM.createJson(filename, function (err) {
+          if (err) {
+            callback(err);
+          } else {
+            callback(null);
+          }
         });
         break;
     default:

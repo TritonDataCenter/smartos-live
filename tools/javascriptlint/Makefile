@@ -27,9 +27,8 @@ ifeq ($(BUILDOS),Darwin)
 else
 	CPPFLAGS += \
 		-I/opt/local/include/db4				\
-		-I/usr/local/include/python2.7				\
-		-I/opt/local/include/ncurses				\
-		-I/opt/local/include/python2.4
+		-I/opt/local/include/python2.6				\
+		-I/opt/local/include/ncurses
 endif
 
 SOFILE = $(BUILDDIR)/pyspidermonkey.so

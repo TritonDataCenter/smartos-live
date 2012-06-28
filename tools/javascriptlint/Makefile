@@ -19,11 +19,11 @@ CPPFLAGS += -DNDEBUG -D_REENTRANT					\
 ifeq ($(BUILDOS),Darwin)
 	PY_PREFIX=$(shell python2.6 -c "import sys; sys.stdout.write(sys.prefix)")
 	PY_FRAMEWORK_PREFIX=$(shell python2.6 -c "import sys,os; sys.stdout.write(os.path.normpath(sys.prefix+'/../../..'))")
-	PY_FIRST_ARCH=$(shell set -x; file `which python2.6` | grep "for architecture" | head -1 | awk '{print $$NF}')
+	SYSTEM_ARCH=$(shell uname -m)
 	CPPFLAGS += -I$(PY_PREFIX)/include/python2.6
 	SOLDFLAGS += -F$(PY_FRAMEWORK_PREFIX) -framework Python
-	LD=gcc -arch $(PY_FIRST_ARCH)
-	CC=gcc -arch $(PY_FIRST_ARCH)
+	LD=gcc -arch $(SYSTEM_ARCH)
+	CC=gcc -arch $(SYSTEM_ARCH)
 else
 	CPPFLAGS += \
 		-I/opt/local/include/db4				\

@@ -39,9 +39,16 @@ CSRCS = \
 
 OBJECTS = $(CSRCS:%.c=$(BUILDDIR)/%.o)
 CFLAGS += -Wall -Wno-format -O
+
+ifeq ($(shell uname -s),Darwin)
+CPPFLAGS += -DXP_UNIX -O -DXP_UNIX	\
+    -DHAVE_LOCALTIME_R -UDEBUG -DNDEBUG -DEDITLINE		\
+    -I$(BUILDDIR)
+else
 CPPFLAGS += -DXP_UNIX -O -DXP_UNIX -DSVR4 -DSYSV -DSOLARIS		\
     -DHAVE_LOCALTIME_R -UDEBUG -DNDEBUG -UDEBUG_dap -DEDITLINE		\
     -I$(BUILDDIR)
+endif
 
 all: $(BUILDDIR)/libjs.a
 

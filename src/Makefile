@@ -15,13 +15,7 @@ CSTYLE =	$(ROOT)/tools/cstyle
 #
 # Tool options
 #
-JSSTYLE_OPTS = \
-	-o indent=4 \
-	-o strict-indent=1 \
-	-o doxygen \
-	-o unparenthesized-return=0 \
-	-o continuation-at-front=1 \
-	-o leading-right-paren-ok=1
+JSSTYLE_OPTS = -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1
 
 #
 # Installation configuration.  Note that DESTDIR in particular is also
@@ -312,8 +306,9 @@ install: all
 
 check: $(JSLINT)
 	@echo "==> Running cstyle..."
+	@# cstyle doesn't echo as it goes so we add an echo to each line below
 	@(for file in $(C_CHECK_TARGETS); do \
-		echo $(PWD)/$$file; \ # cstyle doesn't echo as it goes
+		echo $(PWD)/$$file; \
 		$(CSTYLE) $$file; \
 	done)
 	@printf "\nC files ok!\n"
@@ -321,9 +316,11 @@ check: $(JSLINT)
 	@$(JSLINT) --nologo --conf=$(ROOT)/tools/jsl.node.conf \
 	    $(JS_CHECK_TARGETS)
 	@printf "\n==> Running jsstyle...\n"
+	@# jsstyle doesn't echo as it goes so we add an echo to each line below
 	@(for file in $(JS_CHECK_TARGETS); do \
-		echo $(PWD)/$$file; \ # jsstyle doesn't echo as it goes
+		echo $(PWD)/$$file; \
 		$(JSSTYLE) $(JSSTYLE_OPTS) $$file; \
+		[[ $$? == "0" ]] || exit 1; \
 	done)
 	@printf "\nJS style ok!\n"
 

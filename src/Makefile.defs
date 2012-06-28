@@ -24,9 +24,14 @@
 BASE =		$(PWD)
 DESTDIR =	$(BASE)/../proto
 
-PATH =		$(DESTDIR)/usr/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
-
+ifeq ($(shell uname -s),Darwin)
+MAKE =		make
+PATH =		$(DESTDIR)/usr/bin:/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
+else
 MAKE =		gmake
+PATH =		$(DESTDIR)/usr/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
+endif
+
 PARALLEL =	-j128
 GCC =		$(DESTDIR)/usr/bin/gcc
 GXX =		$(DESTDIR)/usr/bin/g++

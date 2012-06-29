@@ -34,6 +34,12 @@ cm_arg0=$(basename $0)
 cm_root="$(dirname $0)/../.."
 
 #
+# Flags
+#
+cm_mflag=
+cm_sflag=
+
+#
 # Location of the manifest file
 #
 cm_manifest=
@@ -68,13 +74,15 @@ function usage
 	local msg="$*"
 	[[ -z "$msg" ]] && echo "$msg"
 	cat <<USAGE >&2
-Usage: $cm_arg0 -f manifest
+Usage: $cm_arg0 -f manifest [ -m | -s ]
 
 Validate that all binaries mentioned in \`manifest\` have man pages and that they
 are present in \`manifest\`.
 
 	-f manifest	Manifest file to search
 	-h		Show this message
+	-m		Only warn for man pages which don't exist
+	-s		Only warn for man pages which aren't shipped
 USAGE
 	exit 2
 }
@@ -158,13 +166,19 @@ function check_ship
 	[[ -z "$cm_mpages" ]]
 }
 
-while getopts "f:i" c $@; do
+while getopts "f:ims" c $@; do
 	case "$c" in
 	f)
 		cm_manifest=$OPTARG
 		;;
 	h)
 		usage
+		;;
+	m)
+		cm_mflag="y"
+		;;
+	s)
+		cm_sflag="y"
 		;;
 	:)
 		usage "missing required argument -- $OPTARG"
@@ -177,26 +191,33 @@ done
 
 [[ -z "$cm_manifest" ]] && fail "missing manifest file"
 [[ -f "$cm_manifest" ]] || fail "unable to read $cm_manifest"
+[[ ! -z "$cm_mflag" && ! -z "$cm_sflag" ]] && fail "-m and -s are mutually" \
+    "exclusive"
 
 while read mode file rest; do
 	valid_binary $mode $file || continue
 	file=${file%=*}
 	if ! check_man $file; then
-		echo "missing manual page for: /$file"
-		((cm_nenoent++))
+		if [[ -z "$cm_sflag" ]]; then
+			echo "missing manual page for: /$file"
+			((cm_nenoent++))
+		fi
 		continue
 	fi
 	if ! check_ship $cm_mpages; then
-		for p in $cm_mpages; do
-			echo "binary /$file has unshipped manual page: $p"
-			((cm_nenoship++))
-		done
+		if [[ -z "$cm_mflag" ]]; then
+			for p in $cm_mpages; do
+				echo "binary /$file has unshipped manual" \
+				    "page: $p"
+				((cm_nenoship++))
+			done
+		fi
 	fi
 done < $cm_manifest
 
 if [[ $cm_nenoent -gt 0 || $cm_nenoship -gt 0 ]]; then
-	echo "missing manual pages: $cm_nenoent"
-	echo "unshipped manual pages: $cm_nenoship"
+	[[ -z "$cm_sflag" ]] && echo "missing manual pages: $cm_nenoent"
+	[[ -z "$cm_mflag" ]] && echo "unshipped manual pages: $cm_nenoship"
 	exit 1
 fi
 

@@ -163,16 +163,18 @@ function create_ufs
         echo "ERROR: copy onto the image failed"
         echo "(may need to increase the size or manifest file not found)"
         ERROR=1
-	return
+        echo "Failures:"
+            grep "FAILED$" ${LOGFILE}
+        return
     fi
     ${CUSTOMIZE_SCRIPT} ${rdmnt} ${BUILDSTAMP}
     ROOT=${ROOT} ${SMF_IMPORTER} ${rdmnt}
     echo ${SMF_SEEDS} ${rdmnt}
     ${SMF_SEEDS} ${rdmnt}
     if [ $? -ne 0 ]; then
-	echo "ERROR: setting up live image SMF repoistory failed"
-	ERROR=1
-	return
+        echo "ERROR: setting up live image SMF repoistory failed"
+        ERROR=1
+        return
     fi
 
     echo "Setting root password..."
@@ -196,16 +198,16 @@ function create_ufs
     mkdir $rddir/usr
     mount -F ufs -o nologging ${lofiusrdev} "${rddir}/usr"
     (cd ${rddir}/usr && tar cbf 512 - \
-	bin/[ bin/cat bin/head bin/i86/ksh93 bin/ls kernel/sched/amd64/FSS \
-	lib/fm/libfmevent.so lib/fm/libfmevent.so.1 lib/fm/libtopo.so \
-	lib/fm/libtopo.so.1 lib/libast.so lib/libast.so.1 lib/libcmd.so \
-	lib/libcmd.so.1 lib/libdll.so lib/libdll.so.1 lib/libexacct.so \
-	lib/libexacct.so.1 lib/libfstyp.so lib/libfstyp.so.1 lib/libidmap.so \
-	lib/libidmap.so.1 lib/libipmi.so lib/libipmi.so.1 lib/libpkcs11.so \
-	lib/libpkcs11.so.1 lib/libpool.so lib/libpool.so.1 lib/libproject.so \
-	lib/libproject.so.1 lib/libshell.so lib/libshell.so.1 lib/libsmbios.so \
-	lib/libsmbios.so.1 lib/libsum.so lib/libsum.so.1 sbin/lofiadm) | \
-	(cd ${rdmnt}/usr; tar xbf 512 -)
+        bin/[ bin/cat bin/head bin/i86/ksh93 bin/ls kernel/sched/amd64/FSS \
+        lib/fm/libfmevent.so lib/fm/libfmevent.so.1 lib/fm/libtopo.so \
+        lib/fm/libtopo.so.1 lib/libast.so lib/libast.so.1 lib/libcmd.so \
+        lib/libcmd.so.1 lib/libdll.so lib/libdll.so.1 lib/libexacct.so \
+        lib/libexacct.so.1 lib/libfstyp.so lib/libfstyp.so.1 lib/libidmap.so \
+        lib/libidmap.so.1 lib/libipmi.so lib/libipmi.so.1 lib/libpkcs11.so \
+        lib/libpkcs11.so.1 lib/libpool.so lib/libpool.so.1 lib/libproject.so \
+        lib/libproject.so.1 lib/libshell.so lib/libshell.so.1 lib/libsmbios.so \
+        lib/libsmbios.so.1 lib/libsum.so lib/libsum.so.1 sbin/lofiadm) | \
+        (cd ${rdmnt}/usr; tar xbf 512 -)
 
     umount -f "${rddir}/usr"
 

@@ -3,6 +3,17 @@
 # All tests must pass!
 set -o errexit
 
+if [[ ! -f "/lib/sdc/.sdc-test-no-production-data" ]]; then
+    cat <<EOF
+To run this test you must create the file:
+
+    /lib/sdc/.sdc-test-no-production-data
+
+after ensuring you have no production data on this machine.
+EOF
+    exit 2
+fi
+
 start_time=$(date +%s)
 
 if [[ $(uname -s) != 'SunOS' ]]; then

@@ -5,7 +5,7 @@
 
 process.env['TAP'] = 1;
 var test = require('tap').test;
-var VM = require('/usr/node/node_modules/VM');
+var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';

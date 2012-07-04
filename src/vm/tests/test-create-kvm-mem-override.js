@@ -6,7 +6,7 @@
 process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
 var test = require('tap').test;
-var VM = require('VM');
+var VM = require('/usr/vm/node_modules/VM');
 
 var vm_uuid;
 var payload = {

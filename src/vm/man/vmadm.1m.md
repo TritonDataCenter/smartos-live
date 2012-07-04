@@ -596,6 +596,20 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (special, see description in 'update' section above)
         default: no
 
+    disks.*.nocreate:
+
+        This parameter indicates whether or not the disk should be created. It
+        only makes sense for disks with media type 'disk'. For media type
+        'cdrom' the device is not created. It also can only be set when
+        creating a disk.
+
+        type: boolean
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: no (except when adding new disks)
+        default: false (new zvol is created when media type is 'disk')
+
     disks.*.image_name:
 
         Name of dataset from which to clone this VM's disk. You should specify

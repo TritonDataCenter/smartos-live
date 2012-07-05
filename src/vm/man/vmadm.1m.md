@@ -1063,9 +1063,9 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     nics.*.model:
 
-        The driver for this NIC [virtio|e1000|rtl8136|...]
+        The driver for this NIC [virtio|e1000|rtl8139|...]
 
-        type: string (one of ['virtio','e1000','rtl8136'])
+        type: string (one of ['virtio','e1000','rtl8139'])
         vmtype: KVM
         listable: yes (see above)
         create: yes
@@ -1124,7 +1124,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         This specifies the default values for nics.*.model for NICs attached to
         this VM.
 
-        type: string (one of ['virtio','e1000','rtl8136'])
+        type: string (one of ['virtio','e1000','rtl8139'])
         vmtype: KVM
         listable: no
         create: yes

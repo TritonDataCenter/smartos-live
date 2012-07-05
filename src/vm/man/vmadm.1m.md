@@ -1228,6 +1228,8 @@ tab-complete UUIDs rather than having to type them out for every command.
         the quota for the Zone containing the VM, which is not directly
         available to users.
 
+        Set quota to 0 to disable (ie. for no quota).
+
         type: integer (number of GiB)
         vmtype: OS,KVM
         listable: yes

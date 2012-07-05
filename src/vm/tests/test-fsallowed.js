@@ -43,7 +43,7 @@ test('create zone with fs_allowed', {'timeout': 240000}, function(t) {
 
                 t.ok(!err, 'loading VM after create');
                 if (!err) {
-                    console.error(JSON.stringify(o));
+                    // console.error(JSON.stringify(o));
                     allowed = o.fs_allowed.split(',');
                     t.ok(allowed.length === 3,
                         'number of fs_allowed is correct after load ['

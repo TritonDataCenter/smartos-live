@@ -11,7 +11,7 @@
 #
 
 ROOT=$(PWD)
-RONNJS=$(ROOT)/../../tools/ronnjs/bin/ronn.js
+RONNJS=/usr/node/bin/node $(ROOT)/../../tools/ronnjs/bin/ronn.js
 MANDIR=$(ROOT)/../man
 OUTFILE=$(MANDIR)/man$(SECTION)/$(basename $< .md)
 SECTION=$(shell basename $@ .roff | sed -e "s/.*\.//")

@@ -56,7 +56,7 @@ if [ "${HAVE_PKG}" == "true" ]; then
     # nonglobal Zone
     for pkg in gmake binutils autoconf automake \
         bison flex libtool-base python24 p5-XML-Parser \
-        libxslt gcc-compiler sun-jre6 sun-jdk6 gmp mpfr; do
+        libxslt gcc-compiler sun-jre6 sun-jdk6 gmp mpfr nodejs; do
       pkg_info ${pkg} >/dev/null 2>&1 || pkgin -y install ${pkg}
     done
   fi

@@ -15,6 +15,7 @@ var PAYLOADS = {
         "brand": "kvm",
         "ram": 256,
         "alias": "autotest-vm" + process.pid,
+        "disks": [{"size": 1024, "model": "virtio"}],
         "do_not_inventory": true
     }, "add_net0": {
         "add_nics": [
@@ -577,6 +578,87 @@ test('update max_locked_memory', function(t) {
                     t.end();
                 });
             }
+        });
+    });
+});
+
+function zfs(args, callback)
+{
+    var cmd = '/usr/sbin/zfs';
+
+    execFile(cmd, args, function (error, stdout, stderr) {
+        if (error) {
+            callback(error, {'stdout': stdout, 'stderr': stderr});
+        } else {
+            callback(null, {'stdout': stdout, 'stderr': stderr});
+        }
+    });
+}
+
+// VM should at this point be running, so removing the disk should fail.
+// Stopping and removing should succeed.
+// Adding should also succeed at that point.
+test('remove disk', function(t) {
+    VM.load(vm_uuid, function (err, vmobj) {
+        var disk;
+
+        if (err) {
+            t.ok(false, 'error loading VM: ' + err.message);
+            t.end();
+            return;
+        }
+        if (vmobj.state !== 'running') {
+            t.ok(false, 'VM is not running: ' + vmobj.state);
+            t.end();
+            return;
+        }
+        if (!vmobj.hasOwnProperty('disks') || vmobj.disks.length !== 1) {
+            t.ok(false, 'cannot find disk: ' + vmobj.disks);
+            t.end();
+            return;
+        }
+        disk = vmobj.disks[0];
+        t.ok(disk.hasOwnProperty('path'), 'disk has a path: ' + disk.path);
+        VM.update(vmobj.uuid, {'remove_disks': [disk.path]}, function (err) {
+            // expect an error
+            t.ok(err, 'VM.update failed to remove disks: ' + (err ? err.message : err));
+            if (!err) {
+                t.end();
+                return;
+            }
+            VM.stop(vmobj.uuid, {'force': true}, function (err) {
+                t.ok(!err, 'VM.stop');
+                if (!err) {
+                    VM.load(vm_uuid, function (err, obj) {
+                        t.ok(!err, 'loaded VM after stop');
+                        t.ok(obj.state === 'stopped', 'VM is stopped.');
+                        if (obj.state === 'stopped') {
+                            // same update
+                            VM.update(vmobj.uuid, {'remove_disks': [disk.path]}, function (err) {
+                                t.ok(!err, 'removed disk: ' + (err ? err.message : err));
+                                // check that zfs filesystem is gone, also
+                                // reload and check that disk is no longer in list
+                                zfs(['list', disk.zfs_filesystem], function (err, fds) {
+                                    t.ok(err
+                                        && err.hasOwnProperty('message')
+                                        && err.message.match('dataset does not exist'),
+                                        'ensure dataset no longer exists');
+                                    VM.load(vmobj.uuid, function (err, final_obj) {
+                                        t.ok(!err, 'loaded VM after delete');
+                                        t.ok(final_obj.disks.length === 0, 'disks list empty: '
+                                            + JSON.stringify(final_obj.disks));
+                                        t.end();
+                                    });
+                                });
+                            });
+                        } else {
+                            t.end();
+                        }
+                    });
+                } else {
+                    t.end();
+                }
+            });
         });
     });
 });

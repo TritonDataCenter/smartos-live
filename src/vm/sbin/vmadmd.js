@@ -100,6 +100,7 @@ function setRemoteDisplayPassword(vmobj, protocol, password)
 function spawnRemoteDisplay(vmobj)
 {
     var addr;
+    var listen_ip;
     var port;
     var protocol;
     var server;
@@ -188,11 +189,16 @@ function spawnRemoteDisplay(vmobj)
             + sock.remoteAddress + ']:' + sock.remotePort);
     });
 
-    server.listen(port, SDC.sysinfo.admin_ip, function () {
+    if (vmobj.hasOwnProperty('listen_ip')) {
+        listen_ip = vmobj.listen_ip;
+    } else {
+        listen_ip = SDC.sysinfo.admin_ip;
+    }
+    server.listen(port, listen_ip, function () {
         addr = server.address();
 
         if (protocol == 'vnc') {
-            VNC[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip, 'port': addr.port,
+            VNC[vmobj.uuid] = {'host': listen_ip, 'port': addr.port,
                 'server': server};
             if (addr.port >= 5900) {
                 // only add the display number when it's non-negative
@@ -206,7 +212,7 @@ function spawnRemoteDisplay(vmobj)
             VM.log('DEBUG', 'VNC details for ' + vmobj.uuid + ': '
                 + util.inspect(VNC[vmobj.uuid]));
         } else if (protocol == 'spice') {
-            SPICE[vmobj.uuid] = {'host': SDC.sysinfo.admin_ip,
+            SPICE[vmobj.uuid] = {'host': listen_ip,
                 'port': addr.port, 'server': server};
             if (vmobj.hasOwnProperty('spice_password')
                 && vmobj.spice_password.length > 0) {

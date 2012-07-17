@@ -32,6 +32,7 @@ BUILDER=${ROOT}/tools/builder/builder
 SCANNER=${ROOT}/tools/scanner
 PWGEN=${ROOT}/tools/pwgen
 GET_STATUS=${ROOT}/tools/get_status
+CHECK_DIR="${ROOT}/tools/checks"
 
 BUILDSTAMP=$(cat ${ROOT}/proto/buildstamp)
 if [[ -z ${BUILDSTAMP} ]]; then
@@ -293,6 +294,12 @@ function fatal_error
     exit 1
 }
 
+function run_checks
+{
+    ${CHECK_DIR}/mancheck -f ${MANIFEST} -s
+    [[ $? -eq 0 ]] || fatal_error "you are not mancheck -s clean"
+}
+
 # Create tmp dir to do the work in
 rddir="/tmp/create_ramdisk.$$.tmp"
 rm -rf "$rddir"
@@ -300,6 +307,9 @@ mkdir "$rddir" || fatal_error "Could not create temporary directory $rddir"
 
 # Clean up upon exit.
 trap 'cleanup' EXIT
+
+echo "Running pre-flight checks"
+run_checks
 
 rdfile="$rddir/rd.file.32"
 rdmnt="$rddir/rd.mnt.32"

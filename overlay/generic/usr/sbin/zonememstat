@@ -138,7 +138,8 @@ shift OPTIND-1
 [ $SUMMARY == 1 ] && do_proc
 
 kstat -c zone_memory_cap | nawk -v zname=$ZONENAME -v over=$OVER 'BEGIN {
-	printf("%36s %8s %8s %6s %8s\n", "ZONE", "RSS", "CAP", "NOVER", "POUT");
+	printf("%37s %8s %8s %8s %9s\n", \
+	    "ZONE", "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
 	}
 	{
 	if ($1 == "nover") {
@@ -160,10 +161,10 @@ kstat -c zone_memory_cap | nawk -v zname=$ZONENAME -v over=$OVER 'BEGIN {
 			next
 		# If cap is UINT64_MAX / 1048576
 		if (cap >= 2147483000)
-			printf("%36s %6uMB %8s %6s %8s\n",
+			printf("%37s %8u %8s %8s %9s\n",
 			    $2, rss, "-", "-", "-");
 		else
-			printf("%36s %6uMB %6uMB %6u %6uMB\n",
+			printf("%37s %8u %8u %8u %9u\n",
 			    $2, rss, cap, nover, pout);
 	}
 }'

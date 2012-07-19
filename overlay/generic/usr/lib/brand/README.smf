@@ -1,0 +1,121 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2012 Joyent, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+There are a few rather brand specific issues related to how SMF works inside of
+them. This README describes how the different pieces interact and where they are
+defined. Note that this README only applies to the Joyent-style sparse zones. It
+does not apply to the KVM brand or the traditional ipkg and S10 branded zones.
+
+#
+# Per-brand manifests file
+#
+
+Each brand has a file called `manifests`. This file lists the set of manifests
+that the brand cares about being available to the zone. It is formatted as:
+
+<manifest_name> <enabled | disabled> [noimport]
+
+Examples are:
+
+network/smb/client.xml		disabled
+network/ssh.xml			enabled
+system/cron.xml			disabled	noimport
+
+The use of enabled or disabled determines the default disposition of the service
+when it is imported.
+
+The use of `noimport` is optional and has specific meaning for the
+joyent-minimal brand only at this time. Not specifying anything there is the
+equivalent of saying that this manifest should always be imported.
+
+This list is used in various places throughout the rest of the system for
+determining what shows up in the SMF repositories by default and what shows up
+in /lib/svc/manifest.
+
+#
+# Files in /lib/svc/manifest
+#
+
+/lib/svc/manifest is part of the sparse filesystem that gets placed into every
+zone. Unlike /usr, /lib/svc/manifest is brand specific. The zones service
+(svc:/system/zones:default) is responsible for creating the per-brand
+/lib/svc/manifest directories and they live in /zones/manifests/<brand-name>.
+This brand specific directory is lofs-mounted read-only into each zone.
+
+The presence of the enabled and disabled option in the brand's manifests file
+determine whether or not the service is enabled by default when imported. The
+xml file is changed to match the setting.
+
+#
+# Initial SMF repositories
+#
+
+SMF in the minimal brand works differently than it does in the normal Joyent
+Brand when it comes to specifying the initial services that are inside of the
+dataset and what files are in the SMF repository.
+
+SMF has the notion of a `seed repository`. This repository is the initial one
+that is used or copied for new zones. This repository contains various services
+already imported, whether or not they are enabled or disabled, and the various
+service properties.
+
+The traditional `joyent` brand gets this from the dataset itself. In other words,
+the database is already populated with the proper SMF state.
+
+In the `joyent-minimal` brand we handle this differently. We want to be able to
+reuse the datasets that exist but not be stuck with their rather large seed
+repositories that contain many things which are harmful in the minimal context,
+particularly manifest import (both the early and normal kind). To handle this
+the joyent-minimal brand defines a seed repository of its own that gets
+installed at zone creation time and replaces any existing repository.
+
+This seed repository is generated using the `svc.configd-native` and
+`svccfg-native` binaries. Every manifest listed in the brand's manifests file is
+included unless it has the `noimport` option specified. If that is the case, it
+will not be imported into the SMF repository by default, but will still be
+available for manual import in /lib/svc/manifest. With the minimal brand, only
+the bare minimum number of manifests should be imported else that such a zone
+might want should be marked `noimport`.
+
+#
+# Using non-imported manifests
+#
+
+To use one of the manifests that exists but hasn't been imported is pretty easy.
+At some point in time after the initial creation of the zone (during the first
+boot setup script for example), you can import the service. For example, if you
+were going to import the cron service you would run:
+
+svccfg import /var/svc/manifest/system/cron.xml
+
+Next, you need to potentially enable the service depending on the default
+disposition of the service. You enable the service by running:
+
+svcadm enable -s <service>
+
+Adding the `-s` flag causes the enabling to be synchronous. If you do not
+include the flag then it will poke svc.startd to enable the service and return.
+If the service is already enabled by default, then this is safe to run and it
+won't change anything. It is safer to just always enable or disable the service
+after importing it based on your needs.

@@ -132,9 +132,10 @@ set dump_plat_mincpu=0
 set dump_bzip2_level=1
 
 *
-* See OS-717 and OS-718 for dealing with the APIX woes.
+* See OS-717, OS-718, OS-1361 and OS-1444 for dealing with the APIX woes.
 *
 set apix_enable=0
+set pcplusmp:apic_timer_preferred_mode=0
 
 *
 * Want additional crash dump metrics

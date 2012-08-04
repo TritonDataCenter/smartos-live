@@ -101,7 +101,7 @@ function normalize_mac()
 function get_smbios_system_info()
 {
     # This puts the variables we're pulling out into the local environment
-    eval $(smbios -t SMB_TYPE_SYSTEM \
+    eval $(smbios -t SMB_TYPE_SYSTEM | tr -d "\"" \
         | egrep "Manufacturer: |Product: |Serial Number: |UUID: " \
         | sed -e 's/^ *//' \
         | sed -e 's/: /="/' \

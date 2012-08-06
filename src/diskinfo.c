@@ -51,6 +51,7 @@ print_disks(dm_descriptor_t media, di_opts_t *opts)
 
 	char *vid, *pid, *opath, *c, *ctype;
 	boolean_t removable;
+	boolean_t ssd;
 	char device[MAXPATHLEN];
 	size_t len;
 
@@ -68,8 +69,12 @@ print_disks(dm_descriptor_t media, di_opts_t *opts)
 		nvlist_query_string(dattrs, DM_OPATH, &opath);
 
 		removable = B_FALSE;
-		(void) nvlist_lookup_boolean_value(dattrs,
-		    DM_REMOVABLE, &removable);
+		if (nvlist_lookup_boolean(dattrs, DM_REMOVABLE) == 0)
+			removable = B_TRUE;
+
+		ssd = B_FALSE;
+		if (nvlist_lookup_boolean(dattrs, DM_SOLIDSTATE) == 0)
+			ssd = B_TRUE;
 
 		if ((controller = dm_get_associated_descriptors(disk[0],
 		    DM_CONTROLLER, &error)) != NULL) {
@@ -109,13 +114,14 @@ print_disks(dm_descriptor_t media, di_opts_t *opts)
 		}
 
 		if (opts->di_scripted) {
-			printf("%s\t%s\t%s\t%s\t%s\t%s\n",
+			printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			    ctype, device, vid, pid, sizestr,
-			    removable ? "yes" : "no");
+			    removable ? "yes" : "no", ssd ? "yes" : "no");
 		} else {
 			printf("%-4s    %-6s    %-8s    %-16s   "
-			    "%-12s    %-4s\n", ctype, device,
-			    vid, pid, sizestr, removable ? "yes" : "no");
+			    "%-12s    %-4s    %-4s\n", ctype, device,
+			    vid, pid, sizestr, removable ? "yes" : "no",
+			    ssd ? "yes" : "no");
 		}
 
 		nvlist_free(cattrs);
@@ -157,7 +163,7 @@ main(int argc, char *argv[])
 
 	if (!opts.di_scripted) {
 		printf("TYPE    DISK      VID         PID"
-		    "                SIZE            REMV\n");
+		    "                SIZE            REMV    SSD\n");
 	}
 
 	for (ii = 0; media != NULL && media[ii] != NULL; ii++)

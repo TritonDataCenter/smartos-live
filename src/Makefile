@@ -17,6 +17,8 @@ CSTYLE =	$(ROOT)/tools/cstyle
 #
 JSSTYLE_OPTS = -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1
 
+JSSTYLE_OLDSKOOL_OPTS =
+
 #
 # Installation configuration.  Note that DESTDIR in particular is also
 # assumed to contain various build tools, headers, libraries, and other
@@ -63,6 +65,11 @@ JS_CHECK_TARGETS=\
 	vm/node_modules/{qmp,VM,dladm}.js \
 	img/node_modules/*.js \
 	img/sbin/imgadm
+
+JS_CHECK_OLDSKOOL_TARGETS = \
+	disklayout.js \
+	mkzpool.js \
+	node_modules/disklayout.js
 
 # These files will get run through cstyle on 'make check'
 C_CHECK_TARGETS=\
@@ -237,8 +244,10 @@ $(ZUTIL_BINDINGS.NODE) :	LIBS +=		-lzonecfg
 TARGETS = \
 	bootparams \
 	diskinfo \
+	disklayout \
 	disklist \
 	disk_size \
+	mkzpool \
 	removable_disk \
 	vmunbundle \
 	zfs_recv \
@@ -326,12 +335,17 @@ check: $(JSLINT)
 	@printf "\nC files ok!\n"
 	@printf "\n==> Running JavaScriptLint...\n"
 	@$(JSLINT) --nologo --conf=$(ROOT)/tools/jsl.node.conf \
-	    $(JS_CHECK_TARGETS)
+	    $(JS_CHECK_TARGETS) $(JS_CHECK_OLDSKOOL_TARGETS)
 	@printf "\n==> Running jsstyle...\n"
 	@# jsstyle doesn't echo as it goes so we add an echo to each line below
-	@(for file in $(JS_CHECK_TARGETS); do \
+	(for file in $(JS_CHECK_TARGETS); do \
 		echo $(PWD)/$$file; \
 		$(JSSTYLE) $(JSSTYLE_OPTS) $$file; \
+		[[ $$? == "0" ]] || exit 1; \
+	done)
+	(for file in $(JS_CHECK_OLDSKOOL_TARGETS); do \
+		echo $(PWD)/$$file; \
+		$(JSSTYLE) $(JSSTYLE_OLDSKOOL_OPTS) $$file; \
 		[[ $$? == "0" ]] || exit 1; \
 	done)
 	@printf "\nJS style ok!\n"
@@ -358,9 +372,17 @@ include Makefile.targ
 # Custom rules for building our various real targets follow.  Generic rules
 # belong in Makefile.targ.
 #
-disklist:
+disklayout: disklayout.js
+	cp disklayout.js disklayout
+	chmod 0755 disklayout
+
+disklist: disklist.sh
 	cp disklist.sh disklist
 	chmod 0755 disklist
+
+mkzpool: mkzpool.js
+	cp mkzpool.js mkzpool
+	chmod 0755 mkzpool
 
 sysinfo:
 	touch sysinfo

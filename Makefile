@@ -60,7 +60,7 @@ manifest: $(MANIFEST)
 $(MPROTO):
 	mkdir -p $(MPROTO)
 
-$(MPROTO)/live.manifest: $(MPROTO)
+$(MPROTO)/live.manifest: $(MPROTO) src/manifest
 	gmake DESTDIR=$(MPROTO) DESTNAME=live.manifest \
 	    -C src manifest
 

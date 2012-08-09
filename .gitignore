@@ -44,6 +44,8 @@ man/man/man1m/imgadm.1m
 man/man/man1m/vmadm.1m
 man/man/man1m/vmadmd.1m
 src/diskinfo
+src/disklayout
+src/mkzpool
 src/node-sqlite3/build/
 src/node-zsock/.lock-wscript
 src/node-zsock/build/

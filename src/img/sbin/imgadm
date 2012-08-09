@@ -85,24 +85,22 @@ var _stdout = function () {
     console.log(msg);
 };
 
-_fatal = function() {
+var _fatal = function () {
     var args;
     var err = arguments[0];
 
     if (err instanceof Error) {
-        args = [err.message + '\n' + "stack:\n" + err.stack + '\n'];
-    }
-    else if (Array.isArray(err)) {
-        args = [ "\n" + err.join("\n") ];
-    }
-    else {
+        args = [err.message + '\nstack:\n' + err.stack + '\n'];
+    } else if (Array.isArray(err)) {
+        args = [ '\n' + err.join('\n') ];
+    } else {
         args = Array.prototype.slice.apply(arguments, [ 0 ]);
     }
 
-    var msg = "Error: " + sprintf.apply(null, args) + '\n';
+    var msg = 'Error: ' + sprintf.apply(null, args) + '\n';
     process.stderr.write(msg);
     process.exit(1);
-}
+};
 
 var _isUuid = function (obj) {
     var uuidReg =

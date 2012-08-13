@@ -32,7 +32,7 @@ pool = process.argv[2];
 json = fs.readFileSync(process.argv[3], 'utf8');
 config = JSON.parse(json);
 
-zfs.zpool.createExtended(pool, config, function (err) {
+zfs.zpool.create(pool, config, function (err) {
 	if (err) {
 		fatal('pool creation failed: ' + err);
 	}

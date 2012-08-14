@@ -60,6 +60,12 @@ d kernel/drv 0755 root sys
 f kernel/drv/cpqary3.conf 0644 root sys
 f kernel/drv/amd64/cpqary3 0755 root sys
 f kernel/drv/amd64/bnx 0755 root sys
+d smartdc 0555 root bin
+d smartdc/bin 0555 root bin
+f smartdc/bin/sdc-lastcomm 0555 root bin
+d smartdc/man 0555 root bin
+d smartdc/man/man1 0555 root bin
+f smartdc/man/man1/sdc-lastcomm.1 0444 root bin
 d usr/lib/localedef 0755 root bin
 d usr/lib/localedef/extensions 0755 root bin
 f usr/lib/localedef/extensions/UTF-8.x 0444 root bin

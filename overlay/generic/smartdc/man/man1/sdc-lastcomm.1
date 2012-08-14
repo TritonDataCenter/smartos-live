@@ -1,0 +1,106 @@
+'\" te
+.\"  Copyright 2000, Sun Microsystems, Inc. All Rights Reserved
+.\"  Copyright 2012, Joyent, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH sdc-lastcomm 1 "30 Mar 2012" "SDC" "User Commands"
+.SH NAME
+sdc-lastcomm \- display the last commands executed, in reverse order
+.SH SYNOPSIS
+.LP
+.nf
+\fBsdc-lastcomm\fR [\fB-d path\fR] [\fB-R days\fR] [\fB-v\fR] [\fB-x\fR]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBsdc-lastcomm\fR command is similar to the \fBlastcomm\fR command but uses the audit records to give single-line summarized information on commands previously executed in the global zone. \fBsdc-lastcomm\fR with no arguments displays information about all the commands recorded during the current auditing session's lifetime.
+.sp
+.LP
+For each process entry, \fBsdc-lastcomm\fR displays the following items of information:
+
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The date and time the command was run.
+.RE
+
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The port on which the user was logged in.
+.RE
+
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The IP address on which the user was logged in.
+.RE
+
+.RS +4
+.TP
+.ie t \(bu
+.el o
+The command name under which the process was called.
+.RE
+
+.SH OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-d\fR \fBpath\fR\fR 
+.ad
+.RS 11n
+.rt  
+Specifies an alternate path to the directory of audit records.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-R\fR \fBdays\fR\fR 
+.ad
+.RS 11n
+.rt  
+Rotates the audit log and removes any logs older than \fBdays\fR.  This option cannot be used with any other options.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-v\fR\fR
+.ad
+.RS 11n
+.rt  
+Displays the full set of command arguments
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB\fB-x\fR\fR
+.ad
+.RS 11n
+.rt  
+Displays information from all audit files on the system.
+.RE
+
+.SH "COPYRIGHT"
+sdc\-lastcomm Copyright (c) 2012, Joyent Inc\., All rights reserved\.
+
+.SH SEE ALSO
+.sp
+.LP
+\fBlastcomm\fR(1), \fBpraudit\fR(1M)

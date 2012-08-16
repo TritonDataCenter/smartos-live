@@ -1,17 +1,18 @@
 #!/bin/bash
 # Copyright (c) 2011 Joyent, Inc.
 
-# Automates the process of building an iso image of a smartos build. It uses
-# the latest platform file that's been built.
+# Automates the process of building iso and usb images of a smartos build.
+# It uses the latest platform file that's been built.
 #
 
 shopt -s xpg_echo
 set -o pipefail
-export PATH=/usr/bin:/opt/local/bin
+export PATH=/usr/bin:/opt/local/bin:/usr/sbin
 
-bi_tmpdir=/tmp/build_iso-$USER.$$
-bi_output_dir="output-iso"
 bi_arg0=$(basename $0)
+bi_type=${bi_arg0/build_/}
+bi_tmpdir=/tmp/build_$bi_type-$USER.$$
+bi_output_dir="output-$bi_type"
 bi_grub_dir="proto/boot/grub"
 bi_output_grub_dir="$bi_tmpdir/boot/grub"
 bi_grub_files="stage1 stage2 stage2_eltorito"
@@ -23,6 +24,8 @@ bi_platform=
 bi_grub_optstr=
 bi_dont_clean=0
 no_smartos=0
+bi_usbpath=
+bi_lofidev=
 
 function usage
 {
@@ -31,7 +34,7 @@ function usage
 	cat <<USAGE >&2
 Usage: $bi_arg0 [ -o options ] [ -k ]
 
-Generate a bootable iso from the proto area and newest platform directory.
+Generate a bootable $bi_type image from the proto area and newest platform directory.
 
 	-o options	Append all the options to every GRUB menu.lst entry
 	-k		Don't delete temporary files
@@ -44,6 +47,13 @@ USAGE
 
 function fail
 {
+	if [[ x"$bi_lofidev" != x ]]; then
+		#(unmount and) cleanup the lofi device
+		pfexec umount -f ${bi_lofidev}:c
+		pfexec lofiadm -d $bi_lofidev
+	fi
+	# an uncompressed usb file is probably incomplete.  remove it
+	[[ -f $bi_usbpath ]] && rm $bi_usbpath
 	local msg="$*"
 	[[ -z "$msg" ]] && msg="failed"
 	echo "$bi_arg0: $msg" >&2
@@ -93,12 +103,36 @@ function bi_verif_grub
 	echo "done"
 }
 
+function bi_generate_usb_file
+{
+	if [[ ! -d $bi_output_dir ]]; then
+		mkdir -p $bi_output_dir > /dev/null
+		[[ $? -eq 0 ]] || fail "failed to make output directory"
+	fi
+	echo "Generating usb image file... \c "
+	bi_usbpath="$bi_output_dir/$bi_platform_name.usb"
+	rm -f $bi_usbpath
+	mkfile -n 2000000000 $bi_usbpath || fail "failed to generate usb file"
+	bi_lofidev=$(pfexec lofiadm -a $bi_usbpath) || fail "failed to create lofi device"
+	pfexec fdisk -F $(dirname $0)/usb_fdisk_table ${bi_lofidev/lofi/rlofi}
+	[[ $? -eq 0 ]] || fail "failed to partition ${bi_lofidev/lofi/rlofi}"
+	echo "y" | pfexec mkfs -F pcfs -o fat=32 ${bi_lofidev/lofi/rlofi}:c
+	[[ $? -eq 0 ]] || fail "failed to format the usb image"
+	echo "done"
+	echo "Mounting usb image file... \c "
+	pfexec mount -F pcfs ${bi_lofidev}:c $bi_tmpdir || fail "failed to mount usb image"
+	echo "done"
+}
+
 function bi_setup_work_dir
 {
 	echo "Creating temporary directory... \c "
 	mkdir $bi_tmpdir >/dev/null
 	[[ $? -eq 0 ]] || fail "failed to make temporary directory"
 	echo "done"
+	if [[ $bi_type == usb ]]; then
+		bi_generate_usb_file
+	fi
 }
 
 function bi_cleanup_work_dir
@@ -184,10 +218,31 @@ function bi_generate_iso
 	echo "iso is available at $(pwd)/$isopath"
 }
 
+
+function bi_generate_usb
+{
+	echo "Installing grub... \c "
+	grub --batch <<____ENDOFGRUBCOMMANDS
+device (hd0) $bi_usbpath
+root (hd0,0)
+setup (hd0)
+quit
+____ENDOFGRUBCOMMANDS
+	[[ $? -eq 0 ]] || fail "failed to install grub"
+	echo "done"
+	pfexec umount ${bi_lofidev}:c || fail "failed to unmount ${bi_lofidev}:c"
+	pfexec lofiadm -d $bi_lofidev || fail "failed to remove lofi device $bi_lofidev"
+	bi_lofidev= #unset that variable so fail won't try to clean it up again
+	echo "Compressing usb image... \c "
+	pbzip2 $bi_usbpath || fail "failed to compress $bi_usbpath"
+	echo "done"
+	echo "usb image is available at $(pwd)/${bi_usbpath}.bz2"
+}
+
 while getopts "ko:nh" c $@; do
 	case "$c" in
 	o)
-		echo "Building iso with additional options: $OPTARG"
+		echo "Building $bi_type image with additional options: $OPTARG"
 		bi_grub_optstr=",$OPTARG"
 		;;
 	k)
@@ -220,5 +275,12 @@ bi_verif_platform
 bi_setup_work_dir
 bi_copy_contents
 bi_generate_grub_conf
-bi_generate_iso
+case "$bi_type" in
+	iso)
+		bi_generate_iso
+		;;
+	usb)
+		bi_generate_usb
+		;;
+esac
 bi_cleanup_work_dir

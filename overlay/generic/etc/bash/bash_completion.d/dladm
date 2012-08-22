@@ -22,6 +22,12 @@ _dladm()
     elif [[ ${prev} =~ -.*z$ ]]; then
         local zones=$(zoneadm list -c | grep -v '^global$')
         COMPREPLY=( $(compgen -W "${zones}" -- ${cur}) )
+    elif [[ ${prev} =~ 'delete-vnic' ]]; then
+        local vnics=$(dladm show-vnic -p -o link)
+        COMPREPLY=( $(compgen -W "${vnics}" -- ${cur}) )
+    elif [[ ${prev} =~ 'delete-etherstub' ]]; then
+        local stubs=$(dladm show-etherstub -p)
+        COMPREPLY=( $(compgen -W "${stubs}" -- ${cur}) )
     fi
 }
 

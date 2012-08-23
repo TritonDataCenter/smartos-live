@@ -3,8 +3,8 @@
 tar -zcvf tests.tar.gz \
     node-tap \
     tests \
-    run-test \
-    run-tests \
+    runtest \
+    runtests \
     common
 
 exit 0

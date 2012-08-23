@@ -125,6 +125,7 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
         }, function(cb) {
             VM.create(payload, function (err, obj) {
                 if (err) {
+                    state.create_err = err;
                     if (state.expect_create_failure) {
                         t.ok(true, 'failed to create VM: ' + err.message);
                         cb();

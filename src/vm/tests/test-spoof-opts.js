@@ -29,7 +29,6 @@ test('antispoof options should update without reboot',
         }, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
-                var has_primary = 0;
                 var n;
 
                 if (err) {

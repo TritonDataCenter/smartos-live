@@ -13,9 +13,11 @@ VM.loglevel = 'DEBUG';
 // This tests both that the txtimer + txburst can be set, but also a payload
 // typical of one that might be used for installing a new OS. Two cdrom devices
 // and a blank zvol. We don't boot it because the ISOs don't exist.
+// With the passed-in UUID we also test for smartos-live#112
 var payload = {
     'autoboot': false,
     'brand': 'kvm',
+    'uuid': '3f5592c4-edb1-11e1-a15f-e72adbb11c67',
     'do_not_inventory': true,
     'virtio_txtimer': 123000,
     'virtio_txburst': 123,

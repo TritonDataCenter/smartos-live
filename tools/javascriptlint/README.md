@@ -55,8 +55,8 @@ Supported Platforms
 
 This branch of JSL has been tested on:
 
-- SmartOS (Illumos-based) with Python 2.4
-- Mac OSX 10.6.8 with Python 2.6
+- SmartOS (Illumos-based) with Python 2.6.
+- Mac OS X >=10.6 with Python 2.6. I.e. does `which python2.6` return something?
 
 
 History

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # vim: ts=4 sw=4 expandtab
 import os.path
 import re
@@ -18,7 +18,7 @@ _newline_kinds = (
     'eof', 'comma', 'dot', 'semi', 'colon', 'lc', 'rc', 'lp', 'rb', 'assign',
     'relop', 'hook', 'plus', 'minus', 'star', 'divop', 'eqop', 'shop', 'or',
     'and', 'bitor', 'bitxor', 'bitand', 'else', 'try'
-) 
+)
 
 _globals = frozenset([
     'Array', 'Boolean', 'Math', 'Number', 'String', 'RegExp', 'Script', 'Date',
@@ -26,7 +26,7 @@ _globals = frozenset([
     'eval', 'NaN', 'Infinity',
     'escape', 'unescape', 'uneval',
     'decodeURI', 'encodeURI', 'decodeURIComponent', 'encodeURIComponent',
-    'Function', 'Object', 
+    'Function', 'Object',
     'Error', 'InternalError', 'EvalError', 'RangeError', 'ReferenceError',
     'SyntaxError', 'TypeError', 'URIError',
     'arguments', 'undefined'
@@ -47,10 +47,12 @@ def _find_functions(node):
 
 def _parse_control_comment(comment):
     """ Returns None or (keyword, parms) """
-    if comment.atom.lower().startswith('jsl:'):
-        control_comment = comment.atom[4:]
-    elif comment.atom.startswith('@') and comment.atom.endswith('@'):
-        control_comment = comment.atom[1:-1]
+    atom = comment.atom.strip()
+    atom_lower = atom.lower()
+    if atom_lower.startswith('jsl:'):
+        control_comment = atom[4:]
+    elif atom.startswith('@') and atom.endswith('@'):
+        control_comment = atom[1:-1]
     else:
         return None
 
@@ -709,4 +711,3 @@ ok&amp;
         script = parsetag('<script type="" language="mocha">',
                               util.JSVersion('1.2', False))
         self.assertEquals(script['jsversion'], util.JSVersion.default())
-

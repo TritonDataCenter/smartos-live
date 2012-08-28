@@ -39,16 +39,9 @@ CSRCS = \
 
 OBJECTS = $(CSRCS:%.c=$(BUILDDIR)/%.o)
 CFLAGS += -Wall -Wno-format -O
-
-ifeq ($(shell uname -s),Darwin)
-CPPFLAGS += -DXP_UNIX -O -DXP_UNIX	\
-    -DHAVE_LOCALTIME_R -UDEBUG -DNDEBUG -DEDITLINE		\
-    -I$(BUILDDIR)
-else
 CPPFLAGS += -DXP_UNIX -O -DXP_UNIX -DSVR4 -DSYSV -DSOLARIS		\
     -DHAVE_LOCALTIME_R -UDEBUG -DNDEBUG -UDEBUG_dap -DEDITLINE		\
     -I$(BUILDDIR)
-endif
 
 all: $(BUILDDIR)/libjs.a
 
@@ -59,19 +52,19 @@ $(BUILDDIR)/libjs.a: $(BUILDDIR)/jsautocfg.h $(BUILDDIR)/jsautokw.h $(OBJECTS)
 	$(AR) rv $@ $(OBJECTS)
 
 $(BUILDDIR)/%.o: %.c | $(BUILDDIR)
-	$(CC) -o $@ -c $(CFLAGS) $(CPPFLAGS) $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ -c $^
 
 clean:
 	-rm -rf $(BUILDDIR)
 
 $(BUILDDIR)/jscpucfg: $(BUILDDIR)/jscpucfg.o
-	$(CC) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^
 
 $(BUILDDIR)/jsautocfg.h: $(BUILDDIR)/jscpucfg
 	$(BUILDDIR)/jscpucfg > $@
 
 $(BUILDDIR)/jskwgen: $(BUILDDIR)/jskwgen.o
-	$(CC) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^
 
 $(BUILDDIR)/jsautokw.h: $(BUILDDIR)/jskwgen
 	$(BUILDDIR)/jskwgen > $@

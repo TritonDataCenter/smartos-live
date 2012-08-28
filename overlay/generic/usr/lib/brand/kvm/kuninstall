@@ -68,7 +68,7 @@ done
 
 ORIGIN=`zfs get -H -ovalue  origin $PDS_NAME/$bname`
 
-zfs destroy -rF $PDS_NAME/$bname/cores
+zfs destroy -rF zones/cores/$bname
 zfs destroy -rF $PDS_NAME/$bname
 [ "$ORIGIN" != "-" ] && zfs destroy -F $ORIGIN
 

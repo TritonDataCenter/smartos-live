@@ -31,8 +31,8 @@ final_setup()
 	# samples from JPC.
 	rm -rf $ZONEPATH/cores
 	CORE_QUOTA=102400
-	zfs create -o quota=${CORE_QUOTA}m -o compression=gzip \
-	    $PDS_NAME/$bname/cores
+	zfs create -o quota=${CORE_QUOTA}m -o mountpoint=/zones/$bname/cores \
+	    zones/cores/$bname
 
 	chmod 700 $ZONEPATH
 

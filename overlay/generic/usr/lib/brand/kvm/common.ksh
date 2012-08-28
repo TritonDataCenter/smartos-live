@@ -39,11 +39,10 @@ final_setup()
 		CORE_QUOTA=$((${ZRAM} + 20480))
 	fi
 
-	# The cores quota exists to control run-away zones. As such we make it such
-	# that it will protect the system from a single run-away, but still allow
-	# us to get most cores.
-	if [ ! -d $ZONEPATH/cores ]; then
-		zfs create -o quota=${CORE_QUOTA}m -o compression=gzip \
-			$PDS_NAME/$bname/cores
-	fi
+	# The cores quota exists to control run-away zones. As such we make it
+	# such that it will protect the system from a single run-away, but
+	# still allow us to get most cores.
+	rm -rf $ZONEPATH/cores
+	zfs create -o quota=${CORE_QUOTA}m -o compression=gzip \
+	    $PDS_NAME/$bname/cores
 }

@@ -20,18 +20,17 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 1989, 2010, Oracle and/or its affiliates. All rights reserved.
-#
-# Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T.
-# All rights reserved.
-#
+# Copyright 2012, Joyent, Inc. All rights reserved.
 #
 . /lib/svc/share/smf_include.sh
 
 mount /dev/fd
 
-# svc.startd makes a backup of the repo on boot.  Since this is a live-image,
-# the backup takes up an unnecessary 4MB in memory, so remove it now.
-rm -f /etc/svc/repository-*
+if smf_is_globalzone; then
+    # svc.startd makes a backup of the repo on boot.  Since this is a
+    # live-image, the backup takes up an unnecessary 4MB in memory, so remove
+    # it now.
+    rm -f /etc/svc/repository-*
+fi
 
 exit $SMF_EXIT_OK

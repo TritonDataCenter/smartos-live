@@ -61,6 +61,14 @@ if [ "$val" = "/dev/vt/1" ]; then
 	exit $SMF_EXIT_ERR_CONFIG
 fi
 
+# In SmartOS we use ttyb for metadata so we set to a non-existent device here
+# to disable the service and exit.
+if [[ ${val} == "/dev/term/b" && \
+    $(sysinfo | json "Product") == "SmartDC HVM" ]]; then
+
+    val=/dev/do_not_use_ttyb_in_a_vm
+fi
+
 if [[ ! -e $val ]]; then
     # This device doesn't exist, can't run a tty on it.
     /usr/sbin/svcadm disable $SMF_FMRI

@@ -25,3 +25,4 @@ ata	dada
 ata	scsi
 qlc	fibre-channel
 si3124	scsi-self-identifying
+dr_sas	scsi-self-identifying

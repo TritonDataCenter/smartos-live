@@ -72,6 +72,7 @@ var LIST_FIELDS = {
     dns_domain: {header: 'DOMAIN', width: 32},
     do_not_inventory: {header: 'DNI', width: 5},
     hostname: {header: 'HOSTNAME', width: 32},
+    image_uuid: {header: 'IMAGE_UUID', width: 36},
     ram: {header: 'RAM', width: 7},
     max_locked_memory: {header: 'MAX_LOCKED', width: 10},
     max_lwps: {header: 'MAX_LWP', width: 7},

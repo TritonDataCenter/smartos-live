@@ -82,18 +82,6 @@ if [ "${HAVE_PKG}" == "true" ]; then
   fi
 fi
 
-echo "==> Checking for /opt/gcc/4.4.4/bin/gcc"
-if [ ! -f "/opt/gcc/4.4.4/bin/gcc" ]; then
-  if [ ! -z "${GCC44_URL}" ]; then
-    cd /opt
-    curl -k ${GCC44_URL} | bzcat | ${ROOTCMD} tar -xf -
-    cd - >/dev/null
-  else
-    echo "FATAL: unable to download gcc 4.4.4, no URL is set. Please set GCC44_URL in configure."
-    exit 1
-  fi
-fi
-
 echo "==> Checking for /opt/SUNWspro/bin/cc..."
 
 echo " +--> Ensuring SUNWspro installed in /opt/SUNWspro..."
@@ -288,8 +276,10 @@ UT_NO_USAGE_TRACKING="1"; export UT_NO_USAGE_TRACKING
 CW_NO_SHADOW="1"; export CW_NO_SHADOW
 BUILD_TOOLS="\${CODEMGR_WS}/usr/src/tools/proto/root_\${MACH}-nd/opt"; export BUILD_TOOLS
 SPRO_ROOT=/opt/SUNWspro;                        export SPRO_ROOT
-SPRO_VROOT=\$SPRO_ROOT;                          export SPRO_VROOT
-export GCC_ROOT=/opt/gcc/4.4.4;     # Where to find GCC4.x
+SPRO_VROOT=\$SPRO_ROOT;                         export SPRO_VROOT
+AW_AS="${ROOT}/proto.strap/usr/gnu/bin/as";	export AW_AS
+AW_AS64="${ROOT}/proto.strap/usr/gnu/bin/as";	export AW_AS64
+export GCC_ROOT=${ROOT}/proto.strap/usr;     # Where to find GCC4.x
 export CW_GCC_DIR=\${GCC_ROOT}/bin;  # A temporary hack to allow bootstrap of cw(1)
 export __GNUC="";           # Use GCC as the primary compiler
 export __GNUC4="";          # Use GCC4 specific flags

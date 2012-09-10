@@ -1,0 +1,21 @@
+'\" te
+.\"  Copyright 2011, Joyent, Inc. All Rights Reserved
+.\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
+.\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
+.TH fssstat 1M "10 Sep 2012" "SunOS 5.11" "System Administration Commands"
+.SH NAME
+fssstat \- display internal FSS statistics
+.SH SYNOPSIS
+.LP
+.nf
+\fBfssstat\fR [count]
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The \fBfssstat\fR command prints a summary of per-runnable process \fBFSS(7)\fR
+scheduling statistics every second. An optional count, specifying the number
+of iterations, can be provided.  This data is primarily used to diagnose FSS.
+.sp

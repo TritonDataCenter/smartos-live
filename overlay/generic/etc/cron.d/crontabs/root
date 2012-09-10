@@ -3,7 +3,7 @@
 ## Rotate and trim the regular logs nightly.
 10 0 * * * /usr/sbin/logadm
 ## Delete saved core dumps over 7 days old
-15 0 * * * find /zones/*/cores -mtime +7 -exec rm -f "{}" \;
+15 0 * * * find /zones/*/cores/* -mtime +7 -exec rm -f "{}" \;
 
 # NOTE: all entries above are in root's system-defined crontab; see the
 # crontab(1) man page.

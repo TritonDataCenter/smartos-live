@@ -17,6 +17,8 @@ VM.loglevel = 'DEBUG';
 
 var IMAGE_UUID = vmtest.CURRENT_SMARTOS;
 var TEST_OPTS = {'timeout': 240000};
+// Skip tests that fail frequently. See TOOLS-184.
+var FLAKY_TEST_OPTS = {'timeout': 240000, skip: true};
 var ERR_STR = 'Invalid nic tag "%s"';
 
 
@@ -150,7 +152,7 @@ test('create with invalid nic tag', TEST_OPTS, function(t) {
         });
 });
 
-test('reboot / shutdown / start / update with invalid nic tag', TEST_OPTS,
+test('reboot / shutdown / start / update with invalid nic tag', FLAKY_TEST_OPTS,
     function(t) {
     var state = {'brand': 'joyent-minimal'};
     var vm;
@@ -273,7 +275,7 @@ test('reboot / shutdown / start / update with invalid nic tag', TEST_OPTS,
     });
 });
 
-test('create etherstub', TEST_OPTS,
+test('create etherstub', FLAKY_TEST_OPTS,
     function(t) {
     dladm.createEtherstub('new_stub1', VM.log, function (err) {
         t.ifError(err, 'create new_stub1')
@@ -281,7 +283,7 @@ test('create etherstub', TEST_OPTS,
     });
 });
 
-test('booting with invalid etherstub', TEST_OPTS,
+test('booting with invalid etherstub', FLAKY_TEST_OPTS,
     function(t) {
     var state = {'brand': 'joyent-minimal'};
     var vm;

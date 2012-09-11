@@ -45,25 +45,30 @@ elapsed=$((${end_time} - ${start_time}))
 
 tests=$(grep "^# tests [0-9]" /tmp/test.output.$$ | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
 passed=$(grep "^# pass  [0-9]" /tmp/test.output.$$ | tr -s ' ' | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
+skipped=$(grep "^# skip  [0-9]" /tmp/test.output.$$ | tr -s ' ' | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
 
 [[ -z ${tests} ]] && tests=0
 [[ -z ${passed} ]] && passed=0
+[[ -z ${skipped} ]] && skipped=0
 
-fail=$((${tests} - ${passed}))
+fail=$((${tests} - ${passed} - ${skipped}))
 
 if [[ -t 0 ]]; then
     # We're on a terminal so output the summary
     echo "#"
     echo "# $1 TEST COMPLETE IN ${elapsed} SECONDS, SUMMARY:"
     echo "#"
-    echo -e '# \E[32;40m'"PASS: ${passed} / ${tests}"; tput sgr0
+    echo -e "# \033[32mPASS: ${passed} / ${tests}\033[39m"
+    if [[ ${skipped} -gt 0 ]]; then
+        echo -e "# \033[31mSKIP: ${skipped} / ${tests}\033[39m"
+    fi
     if [[ ${fail} -gt 0 ]]; then
-        echo -e '# \E[31;40m'"FAIL: ${fail} / ${tests}"; tput sgr0
+        echo -e "# \033[31mFAIL: ${fail} / ${tests}\033[39m"
     fi
     echo "#"
 fi
 
-if [[ ${tests} != ${pass} ]]; then
+if [[ ${fail} -gt 0 ]]; then
     exit 1
 fi
 

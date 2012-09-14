@@ -121,11 +121,13 @@ do_proc()
 
 OVER=0
 SUMMARY=0
+SHOW_ALIAS=0
 ZONENAME="ALL"
 
-while getopts "opz:" opt
+while getopts "aopz:" opt
 do
 	case "$opt" in
+	a)	SHOW_ALIAS=1;;
 	p)	SUMMARY=1;;
 	o)	OVER=1;;
 	z)	ZONENAME=$OPTARG;;
@@ -137,11 +139,19 @@ shift OPTIND-1
 
 [ $SUMMARY == 1 ] && do_proc
 
-kstat -c zone_memory_cap | nawk -v zname=$ZONENAME -v over=$OVER 'BEGIN {
-	printf("%37s %8s %8s %8s %9s\n", \
-	    "ZONE", "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
+kstat -c zone_memory_cap \
+    | nawk -v show_alias=${SHOW_ALIAS} -v zname=$ZONENAME -v over=$OVER 'BEGIN {
+	if (show_alias == 1) {
+		printf("%37s %12s %8s %8s %8s %9s\n", \
+		    "ZONE", "ALIAS", "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
+		while ("vmadm list -o zonename,alias -H" | getline)
+		    zone_alias[$1] = $2
+	} else {
+		printf("%37s %8s %8s %8s %9s\n", \
+		    "ZONE", "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
 	}
-	{
+    }
+    {
 	if ($1 == "nover") {
 		nover = $2
 	} else if ($1 == "pagedout") {
@@ -159,12 +169,24 @@ kstat -c zone_memory_cap | nawk -v zname=$ZONENAME -v over=$OVER 'BEGIN {
 			next
 		if (over == 1 && nover == 0)
 			next
+		alias=zone_alias[$2]
+		if (length(alias) == 0)
+		    alias = "-"
 		# If cap is UINT64_MAX / 1048576
-		if (cap >= 2147483000)
-			printf("%37s %8u %8s %8s %9s\n",
-			    $2, rss, "-", "-", "-");
-		else
-			printf("%37s %8u %8u %8u %9u\n",
-			    $2, rss, cap, nover, pout);
+		if (cap >= 2147483000) {
+			if (show_alias == 1)
+				printf("%37s %12s %8u %8s %8s %9s\n",
+				    $2, alias, rss, "-", "-", "-");
+			else
+				printf("%37s %8u %8s %8s %9s\n",
+				    $2, rss, "-", "-", "-");
+		} else {
+			if (show_alias == 1)
+				printf("%37s %12s %8u %8u %8u %9u\n",
+				    $2, alias, rss, cap, nover, pout);
+			else
+				printf("%37s %8u %8u %8u %9u\n",
+				    $2, rss, cap, nover, pout);
+		}
 	}
 }'

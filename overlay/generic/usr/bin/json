@@ -5,11 +5,12 @@
 // See <https://github.com/trentm/json>.
 //
 
-var VERSION = "3.1.2";
+var VERSION = "5.0.0";
 
 var util = require('util');
 var pathlib = require('path');
 var vm = require('vm');
+var fs = require('fs');
 var warn = console.warn;
 
 
@@ -68,6 +69,44 @@ function objCopy(obj) {
   return copy;
 }
 
+if (util.format) {
+  format = util.format;
+} else {
+  // From <https://github.com/joyent/node/blob/master/lib/util.js#L22>:
+  var formatRegExp = /%[sdj%]/g;
+  function format(f) {
+    if (typeof f !== 'string') {
+      var objects = [];
+      for (var i = 0; i < arguments.length; i++) {
+        objects.push(util.inspect(arguments[i]));
+      }
+      return objects.join(' ');
+    }
+    var i = 1;
+    var args = arguments;
+    var len = args.length;
+    var str = String(f).replace(formatRegExp, function(x) {
+      if (i >= len) return x;
+      switch (x) {
+        case '%s': return String(args[i++]);
+        case '%d': return Number(args[i++]);
+        case '%j': return JSON.stringify(args[i++]);
+        case '%%': return '%';
+        default:
+          return x;
+      }
+    });
+    for (var x = args[i]; i < len; x = args[++i]) {
+      if (x === null || typeof x !== 'object') {
+        str += ' ' + x;
+      } else {
+        str += ' ' + util.inspect(x);
+      }
+    }
+    return str;
+  };
+}
+
 /**
  * Parse the given string into a JS string. Basically: handle escapes.
  */
@@ -84,15 +123,17 @@ var json_parse=function(){"use strict";var a,b,c={'"':'"',"\\":"\\","/":"/",b:"\
 function printHelp() {
   util.puts("Usage:");
   util.puts("  <something generating JSON on stdout> | json [OPTIONS] [LOOKUPS...]");
+  util.puts("  json -f FILE [OPTIONS] [LOOKUPS...]");
   util.puts("");
   util.puts("Pipe in your JSON for pretty-printing, JSON validation, filtering, ");
   util.puts("and modification. Supply one or more `LOOKUPS` to extract a ");
   util.puts("subset of the JSON. HTTP header blocks are skipped by default.");
+  util.puts("Roughly in order of processing, features are:");
   util.puts("");
-  util.puts("Auto-arrayification:");
-  util.puts("  Adjacent objects or arrays separated by no space or by a");
-  util.puts("  newline are 'arrayified'. This can be helpful for, e.g.: ");
-  util.puts("     $ cat *.json | json ... ");
+  util.puts("Grouping:");
+  util.puts("  Use '-g' or '--group' to group objects or arrays separated ");
+  util.puts("  by no space or by a newline. This can be helpful for, e.g.: ");
+  util.puts("     $ cat *.json | json -g ... ");
   util.puts("  and similar.");
   util.puts("");
   util.puts("Execution:");
@@ -118,8 +159,9 @@ function printHelp() {
   util.puts("     trent");
   util.puts("");
   util.puts("  Use '-a' for *array processing* of lookups and *tabular output*:");
-  util.puts("     $ echo '{\"name\":\"trent\",\"age\":38}' | json name");
+  util.puts("     $ echo '{\"name\":\"trent\",\"age\":38}' | json name age");
   util.puts("     trent");
+  util.puts("     38");
   util.puts("     $ echo '[{\"name\":\"trent\",\"age\":38},");
   util.puts("              {\"name\":\"ewan\",\"age\":4}]' | json -a name age");
   util.puts("     trent 38");
@@ -133,19 +175,27 @@ function printHelp() {
   util.puts("       \"name\": \"trent\",");
   util.puts("       \"age\": 38");
   util.puts("     }");
+  util.puts("     $ echo '{\"name\": \"trent\", \"age\": 38}' | json name");
+  util.puts("     trent");
   util.puts("");
-  util.puts("  Use '-o json' for explicit JSON, '-o json-N' for N-space indent:");
+  util.puts("  Use '-j' or '-o json' for explicit JSON, '-o json-N' for N-space indent:");
   util.puts("     $ echo '{\"name\": \"trent\", \"age\": 38}' | json -o json-0");
   util.puts("     {\"name\":\"trent\",\"age\":38}");
-  util.puts("");
-  util.puts("  Use '-H' to exclude a leading HTTP header block as from `curl -i`.");
   util.puts("");
   util.puts("Options:");
   util.puts("  -h, --help    Print this help info and exit.");
   util.puts("  --version     Print version of this command and exit.");
   util.puts("  -q, --quiet   Don't warn if input isn't valid JSON.");
   util.puts("");
+  util.puts("  -f FILE       Path to a file to process. If not given, then");
+  util.puts("                stdin is used.");
+  util.puts("");
   util.puts("  -H            Drop any HTTP header block (as from `curl -i ...`).");
+  util.puts("  -g, --group   Group adjacent objects or arrays into an array.");
+  util.puts("  --merge       Merge adjacent objects into one. Keys in last ");
+  util.puts("                object win.");
+  util.puts("  --deep-merge  Same as '--merge', but will recurse into objects ");
+  util.puts("                under the same key in both.")
   util.puts("  -a, --array   Process input as an array of separate inputs");
   util.puts("                and output in tabular form.");
   util.puts("  -A            Process input as a single object, i.e. stop");
@@ -163,6 +213,10 @@ function printHelp() {
   util.puts("                is an array, then each item of the array is ");
   util.puts("                processed separately (use '-A' to override).");
   util.puts("");
+  util.puts("  -k, --keys    Output the input object's keys.");
+  util.puts("  --validate    Just validate the input (no processing or output).");
+  util.puts("                Use with '-q' for silent validation (exit status).");
+  util.puts("");
   util.puts("  -o, --output MODE   Specify an output mode. One of");
   util.puts("                  jsony (default): JSON with string quotes elided");
   util.puts("                  json: JSON output, 2-space indent");
@@ -171,7 +225,8 @@ function printHelp() {
   util.puts("  -i            shortcut for `-o inspect`");
   util.puts("  -j            shortcut for `-o json`");
   util.puts("");
-  util.puts("See <https://github.com/trentm/json> for more complete docs.");
+  util.puts("See <https://trentm.com/json> for more docs and ");
+  util.puts("<https://github.com/trentm/json> for project details.");
 }
 
 
@@ -199,7 +254,12 @@ function parseArgv(argv) {
     jsonIndent: 2,
     array: null,
     delim: ' ',
-    lookupDelim: '.'
+    lookupDelim: '.',
+    outputKeys: false,
+    group: false,
+    merge: null,    // --merge -> "shallow", --deep-merge -> "deep"
+    inputFiles: [],
+    validate: false
   };
 
   // Turn '-iH' into '-i -H', except for argument-accepting options.
@@ -295,6 +355,26 @@ function parseArgv(argv) {
       case "-c":
         parsed.condSnippets.push(args.shift());
         break;
+      case "-k":
+      case "--keys":
+        parsed.outputKeys = true;
+        break;
+      case "-g":
+      case "--group":
+        parsed.group = true;
+        break;
+      case "--merge":
+        parsed.merge = "shallow";
+        break;
+      case "--deep-merge":
+        parsed.merge = "deep";
+        break;
+      case "-f":
+        parsed.inputFiles.push(args.shift());
+        break;
+      case "--validate":
+        parsed.validate = true;
+        break;
       default: // arguments
         if (!endOfOptions && arg.length > 0 && arg[0] === '-') {
           throw new Error("unknown option '"+arg+"'");
@@ -303,11 +383,54 @@ function parseArgv(argv) {
         break;
     }
   }
-  //TODO: '--' handling and error on a first arg that looks like an option.
+
+  if (parsed.group && parsed.merge) {
+    throw new Error("cannot use -g|--group and --merge options together");
+  }
+  if (parsed.outputKeys && parsed.args.length > 0) {
+    throw new Error("cannot use -k|--keys option and lookup arguments together");
+  }
 
   return parsed;
 }
 
+
+/**
+ * Get input from either given file paths or stdin.
+ *
+ * @param opts {Object} Parsed options.
+ * @param callback {Function} `function (err, callback)` where err is an
+ *    error string if there was a problem.
+ */
+function getInput(opts, callback) {
+  if (opts.inputFiles.length === 0) {
+    // Read from stdin.
+    var chunks = [];
+
+    var stdin = process.openStdin();
+    stdin.setEncoding('utf8');
+    stdin.on('data', function (chunk) {
+      chunks.push(chunk);
+    });
+
+    stdin.on('end', function () {
+      callback(null, chunks.join(''));
+    });
+  } else {
+    // Read input files.
+    var i = 0;
+    var chunks = [];
+    try {
+      for (; i < opts.inputFiles.length; i++) {
+        chunks.push(fs.readFileSync(opts.inputFiles[i], 'utf8'));
+      }
+    } catch (e) {
+      return callback(
+        format('could not read "%s": %s', opts.inputFiles[i], e));
+    }
+    callback(null, chunks.join(''));
+  }
+}
 
 
 function isInteger(s) {
@@ -435,12 +558,18 @@ function parseLookup(lookup, lookupDelim) {
  *    "error": ... error object if there was an error ...,
  *    "datum": ... parsed object if content was JSON ...
  *   }
+ *
+ * @param buffer {String} The text to parse as JSON.
+ * @param group {Boolean} Default false. If true, then non-JSON input
+ *    will be attempted to be "arrayified" (see inline comment).
+ * @param merge {Boolean} Default null. Can be "shallow" or "deep". An
+ *    attempt will be made to interpret the input as adjacent objects to
+ *    be merged, last key wins. See inline comment for limitations.
  */
-function parseInput(buffer) {
-  try {
-    return {datum: JSON.parse(buffer)};
-  } catch(e) {
-    // Special case: Auto-arrayification of unjoined list of objects:
+function parseInput(buffer, group, merge) {
+  if (group) {
+    // Special case: Grouping (previously called auto-arrayification)
+    // of unjoined list of objects:
     //    {"one": 1}{"two": 2}
     // and auto-concatenation of unjoined list of arrays:
     //    ["a", "b"]["c", "d"]
@@ -467,21 +596,64 @@ function parseInput(buffer) {
     [/(\])\s*\n\s*(\[)/g, /(\])(\[)/g].forEach(function (pat) {
       newBuffer = newBuffer.replace(pat, ",\n");
     });
-    if (buffer !== newBuffer) {
-      newBuffer = newBuffer.trim();
-      if (newBuffer[0] !== '[') {
-        newBuffer = '[\n' + newBuffer;
-      }
-      if (newBuffer.slice(-1) !== ']') {
-        newBuffer = newBuffer + '\n]\n';
-      }
-      try {
-        return {datum: JSON.parse(newBuffer)};
-      } catch (e2) {
-      }
+    newBuffer = newBuffer.trim();
+    if (newBuffer[0] !== '[') {
+      newBuffer = '[\n' + newBuffer;
     }
-
-    return {error: e}
+    if (newBuffer.slice(-1) !== ']') {
+      newBuffer = newBuffer + '\n]\n';
+    }
+    try {
+      return {datum: JSON.parse(newBuffer)};
+    } catch (e2) {
+      return {error: e2};
+    }
+  } else if (merge) {
+    // See the "Rules" above for limitations on boundaries for "adjacent"
+    // objects: KISS.
+    var newBuffer = buffer;
+    [/(})\s*\n\s*({)/g, /(})({")/g].forEach(function (pat) {
+      newBuffer = newBuffer.replace(pat, "$1,\n$2");
+    });
+    newBuffer = '[\n' + newBuffer + '\n]\n';
+    var objs;
+    try {
+      objs = JSON.parse(newBuffer);
+    } catch(e) {
+      return {error: e};
+    }
+    var merged = objs[0];
+    if (merge === "shallow") {
+      for (var i = 1; i < objs.length; i++) {
+        var obj = objs[i];
+        Object.keys(obj).forEach(function (k) {
+          merged[k] = obj[k];
+        });
+      }
+    } else if (merge === "deep") {
+      function deepExtend(a, b) {
+        Object.keys(b).forEach(function (k) {
+          if (a[k] && b[k] && toString.call(a[k]) === '[object Object]'
+              && toString.call(b[k]) === '[object Object]') {
+            deepExtend(a[k], b[k])
+          } else {
+            a[k] = b[k];
+          }
+        });
+      }
+      for (var i = 1; i < objs.length; i++) {
+        deepExtend(merged, objs[i]);
+      }
+    } else {
+      throw new Error(format('unknown value for "merge": "%s"', merge));
+    }
+    return {datum: merged};
+  } else {
+    try {
+      return {datum: JSON.parse(buffer)};
+    } catch(e) {
+      return {error: e};
+    }
   }
 }
 
@@ -498,15 +670,22 @@ function lookupDatum(datum, lookup) {
   // Put it back together with some convenience transformations.
   var lookupCode = "";
   var isJSIdentifier = /^[$A-Za-z_][0-9A-Za-z_]*$/;
+  var isNegArrayIndex = /^-\d+$/;
   for (var i=0; i < lookup.length; i++) {
     var bit = lookup[i];
     if (bit[0] === '[') {
       lookupCode += bit;
-    } else if (! isJSIdentifier.exec(lookup[i])) {
-      // Allow a non-JS-indentifier token, e.g. `json foo-bar`.
-      lookupCode += '["' + lookup[i].replace(/"/g, '\\"') + '"]';
+    // Support Python-style negative array indexing.
+    } else if (bit === '-1') {
+      lookupCode += '.slice(-1)[0]';
+    } else if (isNegArrayIndex.test(bit)) {
+      lookupCode += format('.slice(%s, %d)[0]', bit, Number(bit) + 1);
+    } else if (! isJSIdentifier.test(bit)) {
+      // Allow a non-JS-indentifier token, e.g. `json foo-bar`. This also
+      // works for array index lookups: `json 0` becomes a `["0"]` lookup.
+      lookupCode += '["' + bit.replace(/"/g, '\\"') + '"]';
     } else {
-      lookupCode += '.' + lookup[i];
+      lookupCode += '.' + bit;
     }
   }
   try {
@@ -531,7 +710,7 @@ function printDatum(datum, opts, sep, alwaysPrintSep) {
   var output = null;
   switch (opts.outputMode) {
   case OM_INSPECT:
-    output = util.inspect(datum, false, Infinity, true);
+    output = util.inspect(datum, false, Infinity, process.stdout.isTTY);
     break;
   case OM_JSON:
     if (typeof datum !== 'undefined') {
@@ -619,6 +798,7 @@ function drainStdoutAndExit(code) {
 
 
 
+
 //---- mainline
 
 function main(argv) {
@@ -640,15 +820,12 @@ function main(argv) {
   }
   var lookupStrs = opts.args;
 
-  var buffer = "";
+  getInput(opts, function (err, buffer) {
+    if (err) {
+      warn("json: error: %s", err)
+      return drainStdoutAndExit(1);
+    }
 
-  var stdin = process.openStdin();
-  stdin.setEncoding('utf8');
-  stdin.on('data', function (chunk) {
-      buffer += chunk;
-  });
-
-  stdin.on('end', function () {
     // Take off a leading HTTP header if any and pass it through.
     while (true) {
       if (buffer.slice(0,5) === "HTTP/") {
@@ -676,7 +853,8 @@ function main(argv) {
     if (! buffer.length) {
       return;
     }
-    var input = parseInput(buffer); // -> {datum: <input object>, error: <error object>}
+    // parseInput() -> {datum: <input object>, error: <error object>}
+    var input = parseInput(buffer, opts.group, opts.merge);
     if (input.error) {
       // Doesn't look like JSON. Just print it out and move on.
       if (! opts.quiet) {
@@ -704,15 +882,20 @@ function main(argv) {
             spaces += '.';
           }
           details = err.message+" at line "+(line+1)+", column "+(col+1)
-            + ":\n\t"+lines[line]+"\n\t"+spaces+"^";
+            + ":\n        "+lines[line]+"\n        "+spaces+"^";
         }
         warn("json: error: input is not JSON: %s", details);
       }
-      emit(buffer);
-      if (buffer.length && buffer[buffer.length-1] !== "\n") {
-        emit('\n');
+      if (!opts.validate) {
+        emit(buffer);
+        if (buffer.length && buffer[buffer.length-1] !== "\n") {
+          emit('\n');
+        }
       }
       return drainStdoutAndExit(1);
+    }
+    if (opts.validate) {
+      return drainStdoutAndExit(0);
     }
     var data = input.datum;
 
@@ -838,9 +1021,24 @@ function main(argv) {
       }
     }
 
+    // --keys
+    if (opts.outputKeys) {
+      var data = Object.keys(data);
+    }
+
     // Output
     if (opts.outputMode === OM_JSON) {
-      if (lookupsAreIndeces) {
+      if (lookups.length === 1 && !opts.array) {
+        // Special case: For JSON output of a *single* lookup, *don't* use
+        // the full table structure, else there is no way to get string
+        // quoting for a single value:
+        //      $ echo '{"a": [], "b": "[]"}' | json -j a
+        //      []
+        //      $ echo '{"a": [], "b": "[]"}' | json -j b
+        //      "[]"
+        // See <https://github.com/trentm/json/issues/35> for why.
+        data = data[lookups[0].join('.')];
+      } else if (lookupsAreIndeces) {
         // Special case: Lookups that are all indeces into an input array
         // are more likely to be wanted as an array of selected items rather
         // than a "JSON table" thing that we use otherwise.

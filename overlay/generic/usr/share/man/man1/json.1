@@ -1,25 +1,28 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "JSON" "1" "May 2012" "" ""
+.TH "JSON" "1" "July 2012" "" "json tool manual"
 .
 .SH "NAME"
-\fBjson\fR \- JSON love for your command line\. A\.k\.a\. "jsontool"\.
+\fBjson\fR \- (aka "jsontool") JSON love for your command line\.
 .
 .SH "SYNOPSIS"
 something\-generating\-JSON\-on\-stdout | \fBjson\fR [OPTIONS] [LOOKUPS]
 .
+.P
+\fBjson\fR \-f FILE [OPTIONS] [LOOKUPS\.\.\.]
+.
 .SH "DESCRIPTION"
 Pipe in your JSON for pretty\-printing, JSON validation, filtering, and modification\. Supply one or more \fBLOOKUPS\fR to extract a subset of the JSON\. HTTP header blocks are skipped by default\.
 .
-.SS "Auto\-arrayification"
-Adjacent objects or arrays separated by no space or by a newline are "arrayified"\. This can be helpful for, e\.g\.:
+.SS "Grouping"
+(Added in json v4\.) Use \'\-g\' or \'\-\-group\' to group objects (into an array of objects) or concatenate arrays (into a single array) separated by no space or by a newline\. This can be helpful for, e\.g\.:
 .
 .IP "" 4
 .
 .nf
 
-$ cat *\.json | json \.\.\.
+$ cat *\.json | json \-g \.\.\.
 .
 .fi
 .
@@ -27,6 +30,44 @@ $ cat *\.json | json \.\.\.
 .
 .P
 and similar\.
+.
+.P
+In json v3 and earlier, this used to be called "auto\-arrayification" and was implicit\. See the \fICOMPATIBILITY\fR section below\.
+.
+.SS "Merging"
+(Added in json v4\.) Use \'\-\-merge\' or \'\-\-deep\-merge\' to merge adjacent JSON objects in the input\. Keys in the last object win\.
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'{"one":"un","two":"deux"}
+{"one":"uno","three":"tres"}\' | json \-\-merge
+{
+  "one": "uno",
+  "two": "deux",
+  "three": "tres"
+}
+.
+.fi
+.
+.IP "" 0
+.
+.P
+This could be useful for merging multiple config files, e\.g\.:
+.
+.IP "" 4
+.
+.nf
+
+$ cat /opt/app/etc/defaults\.json \e
+    /etc/app/config\.json \e
+    ~/\.app/config\.json | json \-\-merge
+\.\.\.
+.
+.fi
+.
+.IP "" 0
 .
 .SS "Execution"
 Use the \fB\-e CODE\fR option to execute code on the input JSON\.
@@ -97,6 +138,36 @@ ewan 4
 .
 .IP "" 0
 .
+.P
+Integral values work for array index lookups:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'["a", "b", "c"]\' | json 1
+b
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Negative array indeces are also supported:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'["a", "b", "c"]\' | json \-1
+c
+$ echo \'["a", "b", "c"]\' | json \-2
+b
+.
+.fi
+.
+.IP "" 0
+.
 .SS "Pretty\-printing"
 Output is "jsony" by default: 2\-space indented JSON with one exception, a single string value is printed without quotes\.
 .
@@ -131,6 +202,26 @@ $ echo \'{"name": "trent", "age": 38}\' | json \-o json\-0
 .P
 Use \fB\-H\fR to exclude a leading HTTP header block as from \fBcurl \-i\fR\.
 .
+.SS "Listing keys"
+Sometimes you want the list of keys for an object\. Use \fB\-k\fR or \fB\-\-keys\fR for that:
+.
+.IP "" 4
+.
+.nf
+
+$ echo \'{"name": "trent", "age": 38}\' | json \-k
+[
+  "name",
+  "age"
+]
+$ echo \'{"name": "trent", "age": 38}\' | json \-ka
+name
+age
+.
+.fi
+.
+.IP "" 0
+.
 .SH "OPTIONS"
 .
 .TP
@@ -146,11 +237,29 @@ Print version of this command and exit\.
 Don\'t warn if input isn\'t valid JSON\.
 .
 .P
-If your JSON output is a REST API response, it might include the headers (e\.g\. when calling with \fBcurl \-i\fR)\. By default \fBjson\fR will pass those headers through (without choking on them)\. However if you want then stripped you can use:
+By default \fBjson\fR will process input from stdin\. Alternative, an input file (or files) can be specified:
+.
+.TP
+\fB\-f FILE\fR
+Specify an input file (instead of stdin)\.
+.
+.P
+If your JSON output is a REST API response, it might include the headers (e\.g\. when calling with \fBcurl \-i\fR)\. By default \fBjson\fR will pass those headers through (without choking on them)\. However if you want them stripped you can use:
 .
 .TP
 \fB\-H\fR
 drop any HTTP header block (as from \fBcurl \-i \.\.\.\fR)
+.
+.P
+Other pre\-JSON input handling:
+.
+.TP
+\fB\-g\fR, \fB\-\-group\fR
+Group adjacent objects into an array of objects, or concatenate adjacent arrays into a single array\.
+.
+.TP
+\fB\-\-merge\fR, \fB\-\-deep\-merge\fR
+Merge adjacent objects into a single object with merged keys\. Values in later objects win\. Use \fB\-\-deep\-merge\fR to recursively merge keys in objects\.
 .
 .P
 You can process elements of an input array separately and generate tabular output:
@@ -186,6 +295,20 @@ Finally, if \fBLOOKUP\fR arguments are given, these are extracted from the JSON\
 Delimiter char between LOOKUPS (default is \'\.\')\. For example: \fB$ echo \'{"a\.b": {"b": 1}}\' | json \-D / a\.b/b\fR
 .
 .P
+An alternative to lookups is to output the keys of the input object:
+.
+.TP
+\fB\-k\fR, \fB\-\-keys\fR
+Output the input object\'s keys\.
+.
+.P
+\fBjson\fR can be restricting to just validating its input, i\.e\. processing and output of the input is skipped:
+.
+.TP
+\fB\-\-validate\fR
+Just validate the input, no processing or output of the JSON content\.
+.
+.P
 By default \fBjson\fR outputs in "jsony" mode\. Basically this is JSON output, with the exception that a single string output value is emitted without the quotes\. The intention here is to be of most use to the UNIX command\-line\. Other output formats are supported:
 .
 .TP
@@ -201,14 +324,14 @@ Shortcut for \fB\-o inspect\fR\.
 Shortcut for \fB\-o json\fR\.
 .
 .SH "EXAMPLES"
-Let\'s use the Github API to look at the node \fIhttps://github/joyent/node\fR project:
+A typical JSON REST API response:
 .
 .IP "" 4
 .
 .nf
 
-$ curl \-s http://github\.com/api/v2/json/repos/show/joyent/node
-{"repository":{"organization":"joyent","watchers":15172,\.\.\.
+$ curl \-s http://ifconfig\.me/all\.json
+{"connection":"","ip_addr":"216\.57\.203\.67","lang":"","remote_host":\.\.\.
 .
 .fi
 .
@@ -221,28 +344,20 @@ $ curl \-s http://github\.com/api/v2/json/repos/show/joyent/node
 .
 .nf
 
-$ curl \-s http://github\.com/api/v2/json/repos/show/joyent/node | json
+$ curl \-s http://ifconfig\.me/all\.json | json
 {
-  "repository": {
-    "organization": "joyent",
-    "watchers": 15172,
-    "has_downloads": false,
-    "url": "https://github\.com/joyent/node",
-    "homepage": "http://nodejs\.org/",
-    "fork": false,
-    "has_issues": true,
-    "has_wiki": true,
-    "forks": 1835,
-    "size": 28000,
-    "private": false,
-    "name": "node",
-    "owner": "joyent",
-    "open_issues": 443,
-    "description": "evented I/O for v8 javascript",
-    "language": "JavaScript",
-    "created_at": "2009/05/27 09:29:46 \-0700",
-    "pushed_at": "2012/05/24 09:55:29 \-0700"
-  }
+  "connection": "",
+  "ip_addr": "201\.73\.103\.12",
+  "lang": "",
+  "remote_host": "",
+  "user_agent": "curl/7\.23\.1 (i386\-sun\-solaris2\.11) libcurl/7\.23\.1 OpenSSL/0\.9\.8w zlib/1\.2\.3 libidn/1\.23 libssh2/1\.2\.2",
+  "charset": "",
+  "port": "63713",
+  "via": "",
+  "forwarded": "",
+  "mime": "*/*",
+  "keep_alive": "",
+  "encoding": ""
 }
 .
 .fi
@@ -256,9 +371,22 @@ Say you just want to \fBextract one value\fR:
 .
 .nf
 
-$ curl \-s https://github\.com/api/v2/json/repos/show/joyent/node \e
-  | json repository\.open_issues
-443
+$ curl \-s http://ifconfig\.me/all\.json | json ip_addr
+201\.73\.103\.12
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Or, looking at the node\.js project \fIhttps://github\.com/joyent/node\fR using the Github API:
+.
+.IP "" 4
+.
+.nf
+
+$ curl \-s https://api\.github\.com/repos/joyent/node | json open_issues
+517
 .
 .fi
 .
@@ -271,42 +399,28 @@ If you use \fBcurl \-i\fR to get HTTP headers (because perhaps they contain rele
 .
 .nf
 
-$ curl \-is https://github\.com/api/v2/json/repos/show/joyent/node \e
-  | json repository
+$ curl \-is https://api\.github\.com/repos/joyent/node | json
 HTTP/1\.1 200 OK
 Server: nginx/1\.0\.13
-Date: Thu, 24 May 2012 17:25:59 GMT
+Date: Tue, 24 Jul 2012 04:01:08 GMT
 Content\-Type: application/json; charset=utf\-8
 Connection: keep\-alive
 Status: 200 OK
-X\-RateLimit\-Limit: 60
-ETag: "7e9ae0fd892a197256419a180af28f79"
-X\-Frame\-Options: deny
-X\-RateLimit\-Remaining: 58
-X\-Runtime: 14
-Content\-Length: 439
-Cache\-Control: private, max\-age=0, must\-revalidate
+ETag: "1a21d980a01768dde42145ce2b58694c"
+X\-RateLimit\-Remaining: 4997
+Content\-Length: 1513
+Cache\-Control: public, max\-age=60
+Vary: Accept
+X\-RateLimit\-Limit: 5000
+Last\-Modified: Tue, 24 Jul 2012 03:50:11 GMT
 
 {
-  "organization": "joyent",
-  "watchers": 15172,
-  "has_downloads": false,
-  "url": "https://github\.com/joyent/node",
-  "homepage": "http://nodejs\.org/",
-  "fork": false,
+  "master_branch": "master",
   "has_issues": true,
-  "has_wiki": true,
-  "forks": 1835,
-  "size": 28000,
-  "private": false,
-  "name": "node",
-  "owner": "joyent",
-  "open_issues": 443,
-  "description": "evented I/O for v8 javascript",
-  "language": "JavaScript",
-  "created_at": "2009/05/27 09:29:46 \-0700",
-  "pushed_at": "2012/05/24 09:55:29 \-0700"
-}
+  "has_downloads": false,
+  "homepage": "http://nodejs\.org/",
+  "html_url": "https://github\.com/joyent/node",
+\.\.\.
 .
 .fi
 .
@@ -319,9 +433,8 @@ Or, say you are stuck with the headers in your pipeline, \fB\'json \-H\' will dr
 .
 .nf
 
-$ curl \-is https://github\.com/api/v2/json/repos/show/joyent/node \e
-  | json \-H repository\.watchers
-15172
+$ curl \-is https://api\.github\.com/repos/joyent/node | json \-H forks
+2158
 .
 .fi
 .
@@ -334,9 +447,9 @@ Here is \fBan example that shows indexing a list\fR\. (The given "lookup" argume
 .
 .nf
 
-$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs \e
-  | json \'repositories[2]\.description\'
-Connect is a middleware layer for Node\.js
+$ curl \-s https://api\.github\.com/legacy/repos/search/nodejs \e
+    | json \'repositories[2]\.name\'
+socket\.io
 .
 .fi
 .
@@ -349,34 +462,32 @@ Having the quote to avoid shell interpretation of \'[\' is annoying, so \fBjson\
 .
 .nf
 
-$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs \e
-  | json \'repositories\.2\.description\'
-Connect is a middleware layer for Node\.js
+$ curl \-s https://api\.github\.com/legacy/repos/search/nodejs \e
+    | json \'repositories\.2\.name\'
+socket\.io
 .
 .fi
 .
 .IP "" 0
 .
 .SS "Array processing with \-a"
-\fBjson\fR includes the \fB\-a\fR (aka \fB\-\-array\fR) option for \fBprocessing each element of an input JSON array independently\fR and \fBusing tabular output\fR\. Continuing our example above, let\'s first get a list of repositories for a "nodejs" search on github:
+\fBjson\fR includes the \fB\-a\fR (aka \fB\-\-array\fR) option for \fBprocessing each element of an input JSON array independently\fR and \fBusing tabular output\fR\. Let\'s first get a list of open node\.js issues (note that this is a subset because of GH API pagination \fIhttp://developer\.github\.com/v3/#pagination\fR):
 .
 .IP "" 4
 .
 .nf
 
-$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs | json repositories
+$ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open\e&per_page=100
 [
   {
-    "type": "repo",
-    "followers": 3922,
-    "watchers": 3922,
-    "has_issues": true,
-    "description": "Sinatra inspired web development framework \.\.\.",
-    "url": "https://github\.com/visionmedia/express",
-    "has_downloads": true,
-    "created_at": "2009/06/26 11:56:01 \-0700",
-    "pushed": "2011/09/28 10:27:26 \-0700",
-    "forks": 345,
+    "number": 3757,
+    "html_url": "https://github\.com/joyent/node/issues/3757",
+    "body": "Fix #3756\.\en\enReview, please: @TooTallNate",
+    "milestone": null,
+    "user": {
+      "gravatar_id": "73a2b24daecb976af81e010b7a3ce3c6",
+      "login": "isaacs",
+      "avatar_url": "https://secure\.gravatar\.com/avatar/73a2b24dae\.\.\.
 \.\.\.
 .
 .fi
@@ -390,30 +501,35 @@ We can then print a table with just some fields as follows:
 .
 .nf
 
-$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs \e
-    | json repositories | json \-a forks url
-345 https://github\.com/visionmedia/express
-136 https://github\.com/unconed/TermKit
-292 https://github\.com/LearnBoost/socket\.io
+$ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open\e&per_page=100 \e
+    | json \-a comments number title
+0 3757 readline: Remove event listeners on close
+0 3756 readline: No way to completely unhook interface from input/output
+1 3755 node\-v0\.6\.20 hello example segfaults on RaspberryPi (w/Arch + bash)
+0 3753 Prohibit same listeners in EventEmitter\. Closes #964\.
+1 3752 Auto\-detect hardfloat eabi and armv7 variables on ARM based on compiler
+3 3751 persistent REPL history
+0 3749 glibc errors on SheevaPlug / Debian Squeeze
+\.\.\.
 .
 .fi
 .
 .IP "" 0
 .
 .P
-Ultimately this can be useful for then using other command\-line tools\. For example, we could get the list of top\-five most forked "nodejs" github repos:
+Ultimately this can be useful for then using other command\-line tools\. For example, we could get the list of top\-five most commented open node issues:
 .
 .IP "" 4
 .
 .nf
 
-$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs \e
-    | json repositories | json \-a forks url | sort \-n | tail \-5
-269 https://github\.com/visionmedia/jade
-298 https://github\.com/senchalabs/connect
-539 https://github\.com/blueimp/jQuery\-File\-Upload
-552 https://github\.com/LearnBoost/socket\.io
-634 https://github\.com/visionmedia/express
+$ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open\e&per_page=100 \e
+    | json \-a comments number title | sort \-n  | tail \-5
+9 3510 Automatically `\.toString()` functions in REPL\.
+11 3668 JSON documentation index listing
+12 3624 Add a return value to Buffer\.write* methods that returns the \.\.\.
+12 3655 defer dgram listening event
+14 3613 Connections closed by node stay permanently in FIN_WAIT2
 .
 .fi
 .
@@ -447,29 +563,26 @@ The \fB\fB\-d\fR option can be used to specify a delimiter\fR:
 .
 .nf
 
-$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs \e
-    | json repositories | json \-a forks url \-d,
-
-$ curl \-s http://github\.com/api/v2/json/repos/search/nodejs \e
-    | json repositories | json \-a forks watchers url \-d,
-345,3922,https://github\.com/visionmedia/express
-136,3128,https://github\.com/unconed/TermKit
-292,2777,https://github\.com/LearnBoost/socket\.io
-104,1640,https://github\.com/mishoo/UglifyJS
-\.\.\.
+$ curl \-s https://api\.github\.com/repos/joyent/node/issues?state=open \e
+        | json \-a created_at number title \-d,
+2012\-07\-24T03:45:03Z,3757,readline: Remove event listeners on close
+2012\-07\-24T03:32:10Z,3756,readline: No way to completely unhook inte\.\.\.
+2012\-07\-23T21:17:50Z,3755,node\-v0\.6\.20 hello example segfaults on Ra\.\.\.
+2012\-07\-22T16:17:49Z,3753,Prohibit same listeners in EventEmitter\. C\.\.\.
+2012\-07\-22T13:43:40Z,3752,Auto\-detect hardfloat eabi and armv7 varia\.\.\.
 .
 .fi
 .
 .IP "" 0
 .
-.SS "Auto\-arrayification"
-Adjacent objects or arrays are \'arrayified\'\. To attempt to avoid false positives inside JSON strings, \fIadjacent\fR elements must have either no whitespace separation or at least a newline separation\. Examples:
+.SS "Grouping"
+You can use the \fB\'\-g\' or \'\-\-group\' option to group adjacent objects\fR into an array of those objects; or to concatenate adjacent arrays into a single array\. To attempt to avoid false positives inside JSON strings, \fIadjacent\fR elements must have either no whitespace separation or at least a newline separation\. Examples:
 .
 .IP "" 4
 .
 .nf
 
-$ echo \'{"a":1}{"b":2}\' | json
+$ echo \'{"a":1}{"b":2}\' | json \-g       # group into array of objects
 [
   {
     "a": 1
@@ -478,7 +591,7 @@ $ echo \'{"a":1}{"b":2}\' | json
     "b": 2
   }
 ]
-$ echo \'[1,2][3,4]\' | json
+$ echo \'[1,2][3,4]\' | json \-g           # concantenate into one array
 [
   1,
   2,
@@ -497,7 +610,7 @@ This can be useful when processing a number of JSON files, e\.g\.:
 .
 .nf
 
-$ cat my_data/*\.json | json \.\.\.
+$ cat my_data/*\.json | json \-g \.\.\.
 .
 .fi
 .
@@ -511,8 +624,8 @@ Or when composing multiple JSON API response, e\.g\. this somewhat contrived sea
 .nf
 
 $ echo tty windows | xargs \-n1 \-I{} curl \-s \e
-    http://github\.com/api/v2/json/issues/search/joyent/node/open/{} \e
-    | json \-a issues | json \-a number title
+    https://api\.github\.com/legacy/issues/search/joyent/node/open/{} \e
+    | json \-g \-a issues | json \-g \-a number title
 623 Non\-userfacing native modules should be prefixed with _
 861 child_process fails after stdin close
 1157 `child_process` module should read / write password prompts
@@ -610,7 +723,7 @@ $ echo \'[{"name": "Trent"},{"name": "Ewan"}]\' | json \-o inspect
 .
 .IP "" 0
 .
-.SS "Validating JSON"
+.SS "Validation"
 Since v1\.2\.0 \fBjson\fR will give position information and context for JSON syntax errors (\fBSyntaxError\fR)\. This can be handy for validating data and config files:
 .
 .IP "" 4
@@ -624,6 +737,37 @@ json: error: input is not JSON: Unexpected \',\' at line 17, column 5:
 {
     "use\-proxy": false
 \.\.\.
+$ echo $?
+1
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Processing and output of the input JSON can be suppressed with the \fB\-\-validate\fR option:
+.
+.IP "" 4
+.
+.nf
+
+$ cat config\.json | json \-\-validate
+json: error: input is not JSON: Unexpected \',\' at line 17, column 5:
+            , { "name": "smartos64\-1\.4\.7"
+        \.\.\.\.^
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Together with the \fB\-q\fR you can get silent, exit\-status\-only, JSON validation:
+.
+.IP "" 4
+.
+.nf
+
+$ cat config\.json | json \-\-validate \-q
 $ echo $?
 1
 .
@@ -737,6 +881,20 @@ $ echo \'[{"name":"trent", "age":38}, {"name":"ewan", "age":4}]\' \e
 .fi
 .
 .IP "" 0
+.
+.SH "COMPATIBILITY"
+This is json version 4\. The major version is incremented when there is a backward incompatible change\.
+.
+.IP "\(bu" 4
+v4: Made "auto\-arrayification" require an explicit \'\-g\' or \'\-\-group\' option to prefer that implicit processing never magically fix otherwise invalid JSON\. The feature is now called grouping\.
+.
+.IP "\(bu" 4
+v3: Cleaned up json and "jsony" output formatting to be more consistent, especially for array processing\.
+.
+.IP "" 0
+.
+.P
+See the changelog \fIhttps://github\.com/trentm/json/blob/master/CHANGES\.md\fR for full compatibility and change details\.
 .
 .SH "PROJECT & BUGS"
 \fBjson\fR is written in JavaScript and requires node\.js (\fBnode\fR)\. The project lives at \fIhttps://github\.com/trentm/json\fR and is published to npm as "jsontool" ("json" was already taken, boo)\.

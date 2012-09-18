@@ -39,23 +39,23 @@ show_kernel()
     echo "Kernel state:"
     echo "::zone" | mdb -k | nawk '{
 	print $0
-	if ($3 == "shutting_down" || $3 == "down")
+	if ($3 != "running")
 		hung[$1]=$2
     } END {
 	for (i in hung) {
-		printf("Zone %d shutting down - references\n", hung[i]);
+		printf("Zone %d hung - references\n", hung[i]);
 		cmd = "echo \"" i "::zone -rv\" | mdb -k"
 		system(cmd);
 	}
         for (i in hung) {
-		printf("Zone %d shutting down - zsd\n", hung[i]);
+		printf("Zone %d hung - zsd\n", hung[i]);
 		cmd = "echo \"" i "::walk zsd | ::print struct zsd_entry\"" \
 		    "| mdb -k"
 		system(cmd);
 	}
 
 	for (i in hung) {
-		printf("Zone %d shutting down - processes\n", hung[i]);
+		printf("Zone %d hung - processes\n", hung[i]);
 		cmd = "echo \"::ps -z\" | mdb -k | nawk -v zid=" hung[i] \
 		    " \047{if ($6 == zid) print $0}\047"
 		system(cmd);

@@ -43,21 +43,20 @@ dtrace:::BEGIN
 
 fbt::fss_update:entry
 {
-	/*      pid tid zid   O tks opr npr prq zs% zrq zrt  shu  fssp */
-	printf("%5s %6s %3s %1s %3s %3s %3s %3s %3s %3s %5s %12s %14s\n",
+	/*      pid tid zid prd tks opr npr prn ps% zrt  shu  fssp */
+	printf("%5s %6s %3s %3s %3s %3s %3s %3s %3s %5s %12s %14s\n",
 	    "pid",
 	    "tid",
 	    "zid",
-	    "O",
+	    "prd",
 	    "tks",
 	    "opr",
 	    "npr",
-	    "prq",
-	    "zs%",
-	    "zrq",
+	    "prn",
+	    "ps%",
 	    "zrtck",
 	    "shusage",
-	    "fsspri");
+	    "prjuse");
         self->t = 1;
 	cnt++;
 }
@@ -76,28 +75,30 @@ fbt::fss_update:return
 fbt::fss_newpri:entry
 /self->t/
 {
-	self->org_pri = ((fssproc_t *)arg0)->fss_umdpri;
-	self->org_ticks = ((fssproc_t *)arg0)->fss_ticks;
 	self->fpp = (fssproc_t *)arg0;
+	self->org_pri = self->fpp->fss_umdpri;
+	self->org_ticks = self->fpp->fss_ticks;
 }
 
 fbt::fss_newpri:return
 /self->t/
 {
-	/*      pid tid zid O tks opr npr prq zs% zrq zrt    shu  fssp */
-	printf("%5d %6d %3d - %3d %3d %3d %3d %3d %3d %5d %12llu %14llu\n",
+	/*      pid tid zid prd tks opr npr prn ps% zrt    shu  fssp */
+	printf("%5d %6d %3d %3d %3d %3d %3d %3d %3d %5d %12llu %14llu\n",
 	    self->fpp->fss_tp->t_procp->p_pidp->pid_id,
 	    self->fpp->fss_tp->t_did,
 	    self->fpp->fss_proj->fssp_fsszone->fssz_zone->zone_id,
+	    self->fpp->fss_proj->fssp_proj->kpj_id,
 	    self->org_ticks,
 	    self->org_pri,
 	    self->fpp->fss_umdpri,
 	    self->fpp->fss_proj->fssp_runnable,
-	    self->fpp->fss_proj->fssp_fsszone->fssz_zone->zone_fss_shr_pct / 10,
-	    self->fpp->fss_proj->fssp_fsszone->fssz_zone->zone_runq_cntr,
+	    self->fpp->fss_proj->fssp_shr_pct / 10,
 	    self->fpp->fss_proj->fssp_fsszone->fssz_zone->zone_run_ticks,
 	    (unsigned long long)self->fpp->fss_proj->fssp_shusage,
-	    (unsigned long long)self->fpp->fss_fsspri);
+	    (unsigned long long)self->fpp->fss_proj->fssp_usage);
+
+	    /* (unsigned long long)self->fpp->fss_fsspri); */
 
 	self->org_pri = 0;
 	self->org_ticks = 0;
@@ -108,18 +109,20 @@ sdt:::fss-onproc
 {
 	this->fpp = (fssproc_t *)arg0;
 
-	/*      pid tid zid O tks opr npr prq zs% zrq zrt    shu  fssp */
-	printf("%5d %6d %3d * %3d %3d   * %3d %3d %3d %5d %12llu %14llu\n",
+	/*      pid tid zid prd tks opr npr prn ps% zrt    shu  fssp */
+	printf("%5d %6d %3d %3d %3d %3d   * %3d %3d %5d %12llu %14llu\n",
 	    this->fpp->fss_tp->t_procp->p_pidp->pid_id,
 	    this->fpp->fss_tp->t_did,
 	    this->fpp->fss_proj->fssp_fsszone->fssz_zone->zone_id,
-	    this->fpp->fss_proj->fssp_ticks,
+	    this->fpp->fss_proj->fssp_proj->kpj_id,
+	    this->fpp->fss_ticks,
 	    this->fpp->fss_umdpri,
 	    this->fpp->fss_proj->fssp_runnable,
-	    this->fpp->fss_proj->fssp_fsszone->fssz_zone->zone_fss_shr_pct / 10,
-	    this->fpp->fss_proj->fssp_fsszone->fssz_zone->zone_runq_cntr,
+	    this->fpp->fss_proj->fssp_shr_pct / 10,
 	    this->fpp->fss_proj->fssp_fsszone->fssz_zone->zone_run_ticks,
 	    (unsigned long long)this->fpp->fss_proj->fssp_shusage,
-	    (unsigned long long)this->fpp->fss_fsspri);
+	    (unsigned long long)this->fpp->fss_proj->fssp_usage);
+
+	    /* (unsigned long long)this->fpp->fss_fsspri); */
 }
 '

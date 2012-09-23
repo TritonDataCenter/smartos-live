@@ -23,8 +23,12 @@ test('antispoof options should update without reboot',
           'alias': 'autozone-' + process.pid,
           'nowait': false,
           'nics': [
-            { 'nic_tag': 'admin', 'ip': 'dhcp' },
-            { 'nic_tag': 'external', 'ip': 'dhcp' }
+            { 'nic_tag': 'admin',
+              'ip': '10.3.0.200',
+              'netmask': '255.255.255.0' },
+            { 'nic_tag': 'external',
+              'ip': '10.4.0.200',
+              'netmask': '255.255.255.0' }
           ]
         }, state, [
         function (cb) {
@@ -173,7 +177,7 @@ test('antispoof options should update without reboot',
                         + err.message);
                     return cb(err);
                 }
-                t.deepEqual(props.protection, '--',
+                t.deepEqual(props.protection, ['--'],
                   'net1: No antispoof options set');
                 cb();
             });
@@ -259,7 +263,7 @@ test('antispoof options should update without reboot',
                         + err.message);
                     return cb(err);
                 }
-                t.deepEqual(props.protection, 'dhcp-nospoof',
+                t.deepEqual(props.protection, ['dhcp-nospoof'],
                   'net1: No antispoof options set');
                 cb();
             });
@@ -339,7 +343,7 @@ test('antispoof options should update without reboot',
                         + err.message);
                     return cb(err);
                 }
-                t.deepEqual(props.protection, 'dhcp-nospoof',
+                t.deepEqual(props.protection, ['dhcp-nospoof'],
                   'net1: No antispoof options set');
                 cb();
             });

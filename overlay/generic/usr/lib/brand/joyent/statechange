@@ -145,6 +145,9 @@ setup_net()
 		allow_mac_spoof=$(get_boolean_nic_property ${nic} allow_mac_spoofing)
 		allow_restricted_traffic=$(get_boolean_nic_property ${nic} \
 		    allow_restricted_traffic)
+		vrid=$(eval echo \$_ZONECFG_net_${nic}_vrrp_vrid)
+		vrrp_primary_ip=$(eval \
+		    echo \$_ZONECFG_net_${nic}_vrrp_primary_ip)
 
 		# If address set, must be a shared stack zone
 		[[ -n $address ]] && exit 0
@@ -185,6 +188,12 @@ setup_net()
 		#
 
 		opt_str="-p zone=$ZONENAME"
+		if [[ -n $vrid ]]; then
+			# MAC addresses for VRRP vnics are determined by the VRID
+			mac_addr="vrrp"
+			opt_str="$opt_str -V $vrid -A inet"
+		fi
+
 		[[ -n $mac_addr ]] && opt_str="$opt_str -m $mac_addr"
 
 		[[ -n $vlan_id && $vlan_id != 0 ]] && \
@@ -303,14 +312,18 @@ setup_net()
 
 		if [[ -n "${zone_ip}" ]] && [[ $allow_ip_spoof != "true" ]] && \
 			    [[ "${zone_ip}" != "dhcp" ]]; then
+			allowed_ips="${zone_ip}"
+			[[ -n $vrrp_primary_ip ]] && \
+			    allowed_ips="${allowed_ips},${vrrp_primary_ip}"
+
 			dladm set-linkprop -t -z $ZONENAME \
-			    -p "allowed-ips=${zone_ip}" ${nic}
+			    -p "allowed-ips=${allowed_ips}" ${nic}
 			if (( $? != 0 )); then
-				echo "error setting VNIC allowed-ip " \
-				    "$nic $zone_ip"
+				echo "error setting VNIC allowed-ips " \
+				    "$nic $allowed_ips"
 				logger -p daemon.err "zone $ZONENAME " \
-				    "error setting VNIC allowed-ip " \
-				    "$nic $zone_ip"
+				    "error setting VNIC allowed-ips " \
+				    "$nic $allowed_ips"
 				exit 1
 			fi
 		fi

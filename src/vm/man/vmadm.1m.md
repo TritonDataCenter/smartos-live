@@ -1119,6 +1119,29 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes
         default: 0
 
+    nics.*.vrrp_primary_ip:
+
+        The source IP that will be used to transmit the VRRP keepalive packets
+        for this nic.  The IP must be the IP address of one of the other non-
+        VRRP nics in this VM.
+
+        type: string (IPv4 address)
+        vmtype: OS
+        listable: yes (see above)
+        create: yes
+        update: yes
+
+    nics.*.vrrp_vrid:
+
+        The VRRP Virtual Router ID for this nic.  This sets the MAC address
+        of this nic to one based on the VRID.
+
+        type: integer (0-255)
+        vmtype: OS
+        listable: yes (see above)
+        create: yes
+        update: yes
+
     nic_driver:
 
         This specifies the default values for nics.*.model for NICs attached to

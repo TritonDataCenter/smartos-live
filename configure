@@ -235,6 +235,8 @@ fi
 [[ $ENABLE_DEBUG -eq 1 ]] && NIGHTLY_EXTRA=$NIGHTLY_EXTRA"D"
 [[ $ENABLE_DEBUG -eq 2 ]] && NIGHTLY_EXTRA=$NIGHTLY_EXTRA"DF"
 
+LOCKUNIQ=$(echo ${ROOT} | tr / _)
+
 cat <<EOF> illumos.sh
 NIGHTLY_OPTIONS="$NIGHTLY_OPTIONS_BASE$NIGHTLY_EXTRA"; export NIGHTLY_OPTIONS
 GATE="${RELEASE_VER}"; export GATE
@@ -252,11 +254,7 @@ export CLONE_WS
 STAFFER=nobody;                         export STAFFER
 MAILTO=$STAFFER;                        export MAILTO
 BUILD_PROJECT=;                         export BUILD_PROJECT
-if [[ -z "${HUDSON_SERVER_COOKIE}" ]]; then
-LOCKNAME="\`whoami\`_\`basename \$CODEMGR_WS\`_nightly.lock"; export LOCKNAME
-else
-LOCKNAME="\`whoami\`_\`basename \$CODEMGR_WS\`_nightly-${HUDSON_SERVER_COOKIE}.lock"; export LOCKNAME
-fi
+LOCKNAME="\`whoami\`_${LOCKUNIQ}_nightly.lock"; export LOCKNAME
 ATLOG="\$CODEMGR_WS/log";                        export ATLOG
 LOGFILE="\$ATLOG/nightly.log";                   export LOGFILE
 MACH=\`uname -p\`;                                export MACH

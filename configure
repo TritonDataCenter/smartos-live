@@ -57,7 +57,7 @@ if [ "${HAVE_PKG}" == "true" ]; then
     for pkg in gmake binutils autoconf automake \
         bison flex libtool-base python24 p5-XML-Parser \
         libxslt gcc-compiler sun-jre6 sun-jdk6 gmp mpfr nodejs; do
-      pkg_info -qe ${pkg} || pkgin -y install ${pkg}
+      pkg_info -qe ${pkg} || ${ROOTCMD} pkgin -y install ${pkg}
     done
   fi
 fi
@@ -95,7 +95,7 @@ if [ ! -f "/opt/SUNWspro/prod/bin/cc" ]; then
     exit 1
  fi
 fi
-[[ -e /opt/SUNWspro/sunstudio12.1 ]] || (cd /opt/SUNWspro && ln -s . sunstudio12.1)
+[[ -e /opt/SUNWspro/sunstudio12.1 ]] || (cd /opt/SUNWspro && ${ROOTCMD} ln -s . sunstudio12.1)
 
 
 if [[ ${GLOBAL_ZONE} -eq 1 ]]; then

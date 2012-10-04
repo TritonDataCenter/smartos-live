@@ -324,24 +324,6 @@ MetadataAgent.prototype.createZoneSocket = function (zopts, callback) {
     server._handle = p;
     
     server.listen();
-
-    /*
-     var Pipe = process.binding("pipe_wrap").Pipe;
-       var p = new Pipe(true);
-       p.open(0);
-       p.onread = function(pool, offset, length, handle) {
-               if(handle) {
-                       handle.onconnection = function(client) {
-                       };
-                       handle.listen();
-                       p.onread = function() {};
-                       p.close();
-               }
-       }
-       p.readStart();
-      */
-
-
   });
 
   callback();
@@ -361,12 +343,47 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
   };
 
   return function (data) {
-    var parts = rtrim(data.toString()).replace(/\n$/,'').split(/^GET\s+/);
-    var want = parts[1];
-    if (!want) {
+    var parts =
+      rtrim(data.toString()).replace(/\n$/,'').match(/^([^\s]+)\s?(.*)/);
+
+    if (!parts) {
       write("invalid command\n");
       return;
     }
+
+    var cmd = parts[1];
+    var want = parts[2];
+
+    if (cmd === 'GET' && !want) {
+        write("invalid command\n");
+        return;
+    }
+
+    VM.lookup({ zonename: zone }, { full: true }, function (error, rows) {
+      if (error) {
+        zlog.error("Error looking up zone: " + error.message);
+        zlog.error(error.stack);
+        return returnit(new Error("Error looking up zone"));
+      }
+
+      if (cmd === 'KEYS') {
+        var metadata = rows.length ? rows[0] : {};
+        return returnit(null,
+          Object.keys(metadata.customer_metadata).join("\n"));
+      } else if (cmd === 'GET') {
+        var metadata = rows.length ? rows[0] : {};
+
+        zlog.info("Serving " + want);
+        if (want.slice(0, 4) === 'sdc:') {
+          want = want.slice(4);
+          var val = VM.flatten(metadata, want);
+          return returnit(null, val);
+        }
+        else {
+          return returnit(null, metadata.customer_metadata[want]);
+        }
+      }
+    });
 
     function returnit (error, val) {
       if (error) {
@@ -396,26 +413,6 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         return;
       }
     }
-
-    VM.lookup({ zonename: zone }, { full: true }, function (error, rows) {
-      if (error) {
-        zlog.error("Error looking up zone: " + error.message);
-        zlog.error(error.stack);
-        return returnit(new Error("Error looking up zone"));
-      }
-
-      var metadata = rows.length ? rows[0] : {};
-
-      zlog.info("Serving " + want);
-      if (want.slice(0, 4) === 'sdc:') {
-        want = want.slice(4);
-        var val = VM.flatten(metadata, want);
-        return returnit(null, val);
-      }
-      else {
-        return returnit(null, metadata.customer_metadata[want]);
-      }
-    });
   };
 }
 

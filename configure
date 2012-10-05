@@ -56,7 +56,6 @@ if [ "${HAVE_PKG}" == "true" ]; then
     # nonglobal Zone
     for pkg in gmake binutils autoconf automake \
         bison flex libtool-base python24 p5-XML-Parser \
-        docbook-xsl docbook-xml \
         libxslt gcc-compiler sun-jre6 sun-jdk6 gmp mpfr nodejs; do
       pkg_info -qe ${pkg} || pkgin -y install ${pkg}
     done
@@ -282,7 +281,8 @@ export CW_GCC_DIR=\${GCC_ROOT}/bin;  # A temporary hack to allow bootstrap of cw
 export __GNUC="";           # Use GCC as the primary compiler
 export __GNUC4="";          # Use GCC4 specific flags
 JAVA_ROOT=/opt/local/java/sun6;			export JAVA_ROOT
-DOCBOOK_XSL_ROOT=/opt/local/share/xsl/docbook/; export DOCBOOK_XSL_ROOT
+FLEX=/opt/local/bin/flex;			export FLEX
+
 
 EOF
 

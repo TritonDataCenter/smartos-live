@@ -256,6 +256,30 @@ function get_disks()
     IFS=$ORIGIFS
 }
 
+function get_aggregation_mappings()
+{
+    count=1
+    for line in $(/usr/bin/bootparams 2>/dev/null \
+        | grep "^[a-zA-Z0-9_]*_aggr=" \
+        ; grep "^[a-zA-Z0-9_]*_aggr=" ${configfile} 2>/dev/null); do
+        fields=(${line//=/ })
+        key=${fields[0]}
+        val=${fields[1]}
+
+        Aggrs[${count}]=$(echo ${key} | sed -e 's/_aggr$//')
+        AggrInterfaceList[${count}]=${val}
+        ((count++))
+    done
+}
+
+function is_aggr() {
+    for aggr in "${Aggrs[@]}"; do
+        if [[ "$aggr" == "$1" ]]; then
+            return 0
+        fi
+    done
+}
+
 function get_nic_mappings()
 {
     admin_nic=`/usr/bin/bootparams 2>/dev/null | grep "^admin_nic=" | cut -d '=' -f2-`
@@ -263,24 +287,39 @@ function get_nic_mappings()
         admin_nic=`grep "^admin_nic=" ${configfile} | cut -f2- -d'='`
     fi
     if [[ -n ${admin_nic} ]]; then
-        normalize_mac ${admin_nic}
-        ADMIN_NIC=${normalized}
+        if is_aggr ${admin_nic}; then
+            NIC_admin=${admin_nic}
+            ADMIN_NIC=${admin_nic}
+        else
+            normalize_mac ${admin_nic}
+            ADMIN_NIC=${normalized}
+        fi
     fi
     external_nic=`/usr/bin/bootparams 2>/dev/null | grep "^external_nic=" | cut -d '=' -f2-`
     if [[ -z ${external_nic} ]] && [[ -f ${configfile} ]]; then
         external_nic=`grep "^external_nic=" ${configfile} | cut -f2- -d'='`
     fi
     if [[ -n ${external_nic} ]]; then
-        normalize_mac ${external_nic}
-        EXTERNAL_NIC=${normalized}
+        if is_aggr ${external_nic}; then
+            NIC_external=${external_nic}
+            EXTERNAL_NIC=${external_nic}
+        else
+            normalize_mac ${external_nic}
+            EXTERNAL_NIC=${normalized}
+        fi
     fi
     internal_nic=`/usr/bin/bootparams 2>/dev/null | grep "^internal_nic=" | cut -d '=' -f2-`
     if [[ -z ${internal_nic} ]] && [[ -f ${configfile} ]]; then
         internal_nic=`grep "^internal_nic=" ${configfile} | cut -f2- -d'='`
     fi
     if [[ -n ${internal_nic} ]]; then
-        normalize_mac ${internal_nic}
-        INTERNAL_NIC=${normalized}
+        if is_aggr ${internal_nic}; then
+            NIC_internal=${internal_nic}
+            INTERNAL_NIC=${internal_nic}
+        else
+            normalize_mac ${internal_nic}
+            INTERNAL_NIC=${normalized}
+        fi
     fi
 
     #echo "${ADMIN_NIC}"
@@ -327,6 +366,9 @@ function get_smartos_network_interfaces()
         for tag in "${NicTagsMacs[@]}"; do
             tag_fields=(${tag//=/ })
             tag_name=${tag_fields[0]}
+            if is_aggr ${tag_fields[1]}; then
+                continue
+            fi
             normalize_mac ${tag_fields[1]}
             tag_mac=${normalized}
             if [[ "${tag_mac}" == "${mac}" ]]; then
@@ -350,6 +392,14 @@ function get_smartos_network_interfaces()
         if [[ -n ${nicnames} ]]; then
             eval "Network_Interface_${iface}_NIC_Names=${nicnames}"
         fi
+
+        # Update interface list with the nic's interface name
+        ag_count=1
+        for list in "${AggrInterfaceList[@]}"; do
+            AggrInterfaceList[${ag_count}]=${list//${mac}/${iface}}
+            ((ag_count++))
+        done
+
         ((count++))
     done
 
@@ -359,6 +409,96 @@ function get_smartos_network_interfaces()
         link_status=${fields[1]}
         eval "Network_Interface_${iface}_Link_Status=${link_status}"
 
+    done
+
+    up_count=1
+
+    for line in $(pfexec /sbin/dladm show-aggr -x -p \
+        -o link,address,state,port | sed -e 's/\\:/|/g'); do
+        nicnames=
+        fields=(${line//:/ })
+        iface=${fields[0]}
+        mac=${fields[1]}
+        state=${fields[2]}
+        port=${fields[3]}
+
+        # if the show-aggr line contains a port, use this to update the
+        # list of interfaces that are actually on the aggr, rather than
+        # what's defined in the config file
+        if [[ -n ${port} ]]; then
+            ag_count=1
+            for aggr in "${Aggrs[@]}"; do
+                if [[ "${aggr}" == "${iface}" ]]; then
+                    eval "seen=\${seen_${aggr}}"
+                    if [[ -z "${seen}" ]]; then
+                        AggrInterfaceList[${ag_count}]=${port}
+                        eval "seen_${aggr}=true"
+                        echo "- seen ${aggr}: ${port}" >&2
+                    else
+                        AggrInterfaceList[${ag_count}]=${AggrInterfaceList[${ag_count}]},${port}
+                        echo "- adding ${port} to ${aggr}" >&2
+                    fi
+
+                    break
+                fi
+                ((ag_count++))
+            done
+
+            continue
+        fi
+
+        ip4addr=$(ifconfig ${iface} 2>/dev/null \
+            | grep "inet " | awk '{ print $2 }')
+
+        if [[ -n "${ADMIN_NIC}" ]] && [[ "${ADMIN_NIC}" == "${iface}" ]]; then
+            nicnames="admin"
+            NIC_admin=${iface}
+        fi
+        if [[ -n "${EXTERNAL_NIC}" ]] && [[ "${EXTERNAL_NIC}" == "${iface}" ]]; then
+            [[ -n ${nicnames} ]] && nicnames="${nicnames},"
+            nicnames="${nicnames}external"
+            NicTagList="${NicTagList},external"
+            NIC_external=${iface}
+        fi
+        if [[ -n "${INTERNAL_NIC}" ]] && [[ "${INTERNAL_NIC}" == "${iface}" ]]; then
+            [[ -n ${nicnames} ]] && nicnames="${nicnames},"
+            nicnames="${nicnames}internal"
+            NicTagList="${NicTagList},internal"
+            NIC_internal=${iface}
+        fi
+
+        for tag in "${NicTagsMacs[@]}"; do
+            tag_fields=(${tag//=/ })
+            tag_name=${tag_fields[0]}
+
+            if is_aggr ${tag_fields[1]} && \
+                [[ "${tag_fields[1]}" == "${iface}" ]]; then
+                [[ -n ${nicnames} ]] && nicnames="${nicnames},"
+                nicnames="${nicnames}${tag_name}"
+                NicTags[${nic_tag_count}]="${tag_name}=${iface}"
+                ((nic_tag_count++))
+            fi
+
+            # Build up the list of tags
+            eval "seen_nic_tag=\${seen_nic_tag_${tag_name}}"
+            if [[ -z "${seen_nic_tag}" ]]; then
+                NicTagList="${NicTagList},${tag_name}"
+                eval "seen_nic_tag_${tag_name}=true"
+            fi
+        done
+
+        NetworkInterfaces[${count}]=${iface}
+        normalize_mac $(echo ${mac} | sed 's/\|/:/g')
+        eval "Network_Interface_${iface}_MAC_Address=${normalized}"
+        eval "Network_Interface_${iface}_IPv4_Address=${ip4addr}"
+        if [[ -n ${nicnames} ]]; then
+            eval "Network_Interface_${iface}_NIC_Names=${nicnames}"
+        fi
+
+        eval "Network_Interface_${iface}_Link_Status=${state}"
+        UpAggrs[${up_count}]="${iface}"
+        ((count++))
+        ((up_count++))
     done
 
     #echo "${NIC_admin}"
@@ -415,6 +555,37 @@ function get_nic_tags()
             ((count++))
         fi
     done
+}
+
+function get_aggr_params()
+{
+    ag=1
+    c=1
+    for aggr in "${Aggrs[@]}"; do
+        list=${AggrInterfaceList[${ag}]}
+        if [[ ! $list =~ ":" ]]; then
+            if [[ -z "${CompleteAggrs}" ]]; then
+                CompleteAggrs="${aggr}"
+            else
+                CompleteAggrs="${CompleteAggrs},${aggr}"
+            fi
+            CompleteAggrList[${c}]="Aggregation_${aggr}_Interfaces=${list}"
+            lacp_val=$(/usr/bin/bootparams | grep "^${aggr}_lacp_mode=" | cut -f2 -d'=')
+            if [[ -z ${lacp_val} ]] && [[ -f ${configfile} ]]; then
+                lacp_val=`grep "^${aggr}_lacp_mode=" ${configfile} | cut -f2- -d'='`
+            fi
+
+            if [[ -z "${lacp_val}" ]]; then
+                lacp_val="off"
+            fi
+            eval "Aggregation_${aggr}_LACP_mode=${lacp_val}"
+            eval "Aggregation_${aggr}_Interfaces=${list}"
+
+            ((c++))
+        fi
+        ((ag++))
+    done
+
 }
 
 function get_bootparams()
@@ -573,6 +744,19 @@ END
         val=${fields[1]}
         echo "Bootparam_${key}='${val}'"
     done
+
+    if [[ -n "$CompleteAggrs" ]]; then
+        echo "Aggregations=$CompleteAggrs"
+        for aggr in $(echo "${CompleteAggrs}" | sed -e "s/,/ /g"); do
+            lacp_var="Aggregation_${aggr}_LACP_mode"
+            eval "lacp=\${${lacp_var}}"
+            echo "${lacp_var}=${lacp}"
+        done
+    fi
+
+    for aggr in "${CompleteAggrList[@]}"; do
+        echo $aggr
+    done
 }
 
 function output_json()
@@ -730,6 +914,23 @@ END
     done
 
     cat <<END
+  },
+  "Link Aggregations": {
+END
+    printed=0
+    for aggr in "${UpAggrs[@]}"; do
+        ((printed++))
+        trailing_comma=","
+        [[ ${printed} -eq ${#UpAggrs[*]} ]] && trailing_comma=''
+        eval "lacp_mode=\${Aggregation_${aggr}_LACP_mode}"
+        eval "links=\${Aggregation_${aggr}_Interfaces}"
+        echo -n "    \"${aggr}\": {"
+        echo -n "\"LACP mode\": \"${lacp_mode}\", "
+        echo -n "\"Interfaces\": [\"$(echo ${links} | sed -e "s/,/\", \"/g")\"]"
+        echo -n "}"
+        echo "${trailing_comma}"
+    done
+    cat <<END
   }
 }
 END
@@ -749,10 +950,12 @@ get_smartos_cpu_info
 get_live_image_buildstamp
 get_system_type
 get_hostname
+get_aggregation_mappings
 get_nic_mappings
 get_nic_tags
 get_smartos_network_interfaces
 get_smartos_vnics
+get_aggr_params
 get_boot_time
 get_dc_info
 

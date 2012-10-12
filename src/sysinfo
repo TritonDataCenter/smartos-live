@@ -267,7 +267,15 @@ function get_aggregation_mappings()
         val=${fields[1]}
 
         Aggrs[${count}]=$(echo ${key} | sed -e 's/_aggr$//')
-        AggrInterfaceList[${count}]=${val}
+        macs=(${val//,/ })
+        for mac in "${macs[@]}"; do
+            normalize_mac ${mac}
+            if [[ -z ${AggrInterfaceList[${count}]} ]]; then
+                AggrInterfaceList[${count}]=${normalized}
+            else
+                AggrInterfaceList[${count}]="${AggrInterfaceList[${count}]},${normalized}"
+            fi
+        done
         ((count++))
     done
 }
@@ -278,6 +286,7 @@ function is_aggr() {
             return 0
         fi
     done
+    return 1
 }
 
 function get_nic_mappings()
@@ -433,10 +442,8 @@ function get_smartos_network_interfaces()
                     if [[ -z "${seen}" ]]; then
                         AggrInterfaceList[${ag_count}]=${port}
                         eval "seen_${aggr}=true"
-                        echo "- seen ${aggr}: ${port}" >&2
                     else
                         AggrInterfaceList[${ag_count}]=${AggrInterfaceList[${ag_count}]},${port}
-                        echo "- adding ${port} to ${aggr}" >&2
                     fi
 
                     break

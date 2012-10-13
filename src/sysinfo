@@ -123,7 +123,24 @@ function get_smbios_system_info()
 function get_nonglobal_info()
 {
     UUID=$(/usr/sbin/mdata-get sdc:uuid)
-    QUOTA=$(/usr/sbin/zfs get -Ho value quota /)
+    if [[ $? != 0 ]]; then
+        UUID=${ZONENAME}
+    fi
+    QUOTA=$(/usr/sbin/mdata-get sdc:quota)
+    if [[ $? != 0 ]]; then
+        QUOTA="unknown"
+        if [[ $(/usr/sbin/zfs list -H | wc -l) != 0 ]]; then
+            ROOTQUOTA=$(($(/usr/sbin/zfs get -pHo value quota / | tr -d 'GMT') / (1024 * 1024 * 1024)))
+            if [[ $? == 0 && ${ROOTQUOTA} != "0" ]]; then
+                QUOTA="${ROOTQUOTA}G"
+            fi
+        fi
+    fi
+    if [[ ${QUOTA} == "0" ]]; then
+        QUOTA="none"
+    else
+        QUOTA="${QUOTA}G"
+    fi
 }
 
 function get_memory_mib()
@@ -145,6 +162,9 @@ function get_smartos_cpu_info()
             | tr -s ' ' \
             | sed -e 's/^ *Version: //' \
             | sed -e 's/ *$//'`
+        if [[ -z ${CPU_Version} ]]; then
+            CPU_Version="Unknown"
+        fi
 
         CPU_Count=`smbios -t SMB_TYPE_PROCESSOR | grep -v "Version: 0000000000" \
             | grep "Version: " \
@@ -920,6 +940,7 @@ END
         echo "${trailing_comma}"
     done
 
+if [[ ${ZONENAME} == "global" ]]; then
     cat <<END
   },
   "Link Aggregations": {
@@ -937,6 +958,8 @@ END
         echo -n "}"
         echo "${trailing_comma}"
     done
+fi
+
     cat <<END
   }
 }

@@ -51,7 +51,7 @@ for i in ${zvols[@]} ; do
     echo "Checking for manifest with UUID: $i"
     manifest=$(imgadm show $i)
 
-    if [[ -n $manifest ]] ; then
+    if [[ "$?" == "0" && -n $manifest ]] ; then
         echo "$i - manifest was found. Copying to $DBDIR"
         echo "${manifest}" > $DBDIR/$i.json
         urn=$(cat $DBDIR/$i.json | json urn)

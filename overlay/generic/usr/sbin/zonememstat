@@ -142,10 +142,16 @@ shift OPTIND-1
 kstat -c zone_memory_cap \
     | nawk -v show_alias=${SHOW_ALIAS} -v zname=$ZONENAME -v over=$OVER 'BEGIN {
 	if (show_alias == 1) {
-		printf("%37s %12s %8s %8s %8s %9s\n", \
-		    "ZONE", "ALIAS", "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
-		while ("vmadm list -o zonename,alias -H" | getline)
+		alias_len = 12
+		while ("vmadm list -o zonename,alias -H" | getline) {
 		    zone_alias[$1] = $2
+		    if (length($2) > alias_len) {
+			alias_len = length($2);
+		    }
+                }
+		printf("%37s %*s %8s %8s %8s %9s\n", \
+		    "ZONE", alias_len, "ALIAS", \
+		    "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
 	} else {
 		printf("%37s %8s %8s %8s %9s\n", \
 		    "ZONE", "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
@@ -175,15 +181,15 @@ kstat -c zone_memory_cap \
 		# If cap is UINT64_MAX / 1048576
 		if (cap >= 2147483000) {
 			if (show_alias == 1)
-				printf("%37s %12s %8u %8s %8s %9s\n",
-				    $2, alias, rss, "-", "-", "-");
+				printf("%37s %*s %8u %8s %8s %9s\n",
+				    $2, alias_len, alias, rss, "-", "-", "-");
 			else
 				printf("%37s %8u %8s %8s %9s\n",
 				    $2, rss, "-", "-", "-");
 		} else {
 			if (show_alias == 1)
-				printf("%37s %12s %8u %8u %8u %9u\n",
-				    $2, alias, rss, cap, nover, pout);
+				printf("%37s %*s %8u %8u %8u %9u\n",
+				    $2, alias_len, alias, rss, cap, nover, pout);
 			else
 				printf("%37s %8u %8u %8u %9u\n",
 				    $2, rss, cap, nover, pout);

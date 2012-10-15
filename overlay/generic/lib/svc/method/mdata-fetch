@@ -51,6 +51,9 @@ if [ ! -e /var/run/smartdc/metadata.sock ]; then
   exit ${SMF_EXIT_OK}
 fi
 
+# Update sysinfo to ensure values that come from metadata are populated.
+/usr/bin/sysinfo -fu
+
 echo "Retrieving metadata user-data"
 /usr/sbin/mdata-get user-data >/var/db/mdata-user-data.new
 case $? in

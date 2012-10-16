@@ -72,6 +72,7 @@ f usr/vm/sbin/zfs_recv 0555 root bin
 f usr/vm/sbin/zfs_send 0555 root bin
 f usr/vm/sbin/zoneevent 0555 root bin
 f usr/vm/etc/vmadm.completion 0444 root bin
+f usr/node/0.8/node_modules/bunyan.js 0444 root bin
 f usr/node/0.8/node_modules/expat_binding.node 0444 root bin
 f usr/node/0.8/node_modules/node-expat.js 0444 root bin
 f usr/vm/node_modules/nopt.js 0444 root bin

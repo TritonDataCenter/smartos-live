@@ -322,6 +322,7 @@ install: all
 	mv $(DESTDIR)/usr/vm/sbin/add-userscript.js \
 	    $(DESTDIR)/usr/vm/sbin/add-userscript
 	mv $(DESTDIR)/usr/vm/sbin/metadata.js $(DESTDIR)/usr/vm/sbin/metadata
+	cp node-bunyan/lib/bunyan.js $(PREFIX_NODE)/node_modules/bunyan.js
 	cp -PR img $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/var/db/imgadm
 

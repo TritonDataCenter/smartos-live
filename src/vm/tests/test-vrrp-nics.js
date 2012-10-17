@@ -185,7 +185,7 @@ test('vrrp vnics: updating', TEST_OPTS,
                 t.ok(err, 'error updating to conflicting VRID');
                 if (err) {
                     t.equal(err.message,
-                      'Cannot add multiple NICs with the same VRID.',
+                      'Cannot add multiple NICs with the same VRID: 2',
                       'update error message');
                 }
 
@@ -666,7 +666,7 @@ test('create: 2 nics with same VRID', TEST_OPTS,
             },
         ],
         t: t,
-        err: 'Cannot add multiple NICs with the same VRID.',
+        err: 'Cannot add multiple NICs with the same VRID: 27',
         desc: 'create: 2 nics with same VRID'
     });
 });

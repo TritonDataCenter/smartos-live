@@ -1,0 +1,422 @@
+#!/usr/bin/ksh93
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T. All rights reserved.
+# Copyright (c) 1999, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011 Joyent Inc., All rights reserved.
+#
+
+. /lib/svc/share/smf_include.sh
+. /lib/sdc/config.sh
+. /lib/sdc/network.sh
+
+set -o errexit
+set -o xtrace
+
+#
+# In a shared-IP zone we need this service to be up, but all of the work
+# it tries to do is irrelevant (and will actually lead to the service
+# failing if we try to do it), so just bail out.
+# In the global zone and exclusive-IP zones we proceed.
+#
+smf_configure_ip || exit ${SMF_EXIT_OK}
+
+# Make sure that the libraries essential to this stage of booting can be found.
+LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
+
+smf_netstrategy
+
+function log_if_state
+{
+    echo "== debug start: $1 =="
+    if ! /usr/sbin/dladm show-phys; then
+        echo "WARNING: 'dladm show-phys' failed"
+    fi
+    # NOTE: DO NOT do a 'dladm show-linkprop' when using the bnx driver,
+    # as it puts it into an unusable state!
+    if ! /sbin/ifconfig -a; then
+        echo "WARNING: 'ifconfig -a' failed"
+    fi
+    echo "== debug end: $1 =="
+}
+
+# Gets the link state for the given interface
+function get_link_state
+{
+    link_state=$(/usr/sbin/dladm show-phys -po state $1 2>/dev/null)
+}
+
+# Waits for up to 10 seconds for the link state to change to the given value
+function wait_for_admin_nic_state
+{
+    echo "wait_for_admin_nic_state: waiting for state '$1'"
+    i=0
+    get_link_state ${SYSINFO_NIC_admin}
+    while [[ "$link_state" != "$1" ]] && [[ $i -ne 10 ]]; do
+        sleep 1
+        echo "  $i: link_state=$link_state"
+        ((i++))
+        get_link_state ${SYSINFO_NIC_admin}
+    done
+    echo "wait_for_admin_nic_state: finished in state '$link_state'"
+}
+
+# Plumbs the admin interface, and attempts to work around poorly-behaved
+# drivers that can't handle plumb commands too quickly after one another
+function plumb_admin
+{
+    driver=${SYSINFO_NIC_admin%%[0-9]*}
+    get_link_state ${SYSINFO_NIC_admin}
+    if [[ "$link_state" == "down" ]]; then
+        echo "admin nic '${SYSINFO_NIC_admin}' is down: unplumbing"
+        /sbin/ifconfig ${SYSINFO_NIC_admin} down unplumb
+        wait_for_admin_nic_state "unknown"
+    fi
+
+    # There's some sort of race condition in the bnx driver: if the plumb
+    # command comes too soon after the unplumb, the interface can come up
+    # in a state where it never fires interrupts for link state changes.
+    if [[ "$driver" == "bnx" ]]; then
+        sleep 5
+    fi
+    /sbin/ifconfig ${SYSINFO_NIC_admin} plumb
+    wait_for_admin_nic_state "up"
+}
+
+# Creates, plumbs and brings up a vnic with the specified parameters
+function vnic_up
+{
+    typeset link="$1"
+    typeset iface="$2"
+    typeset ip="$3"
+    typeset netmask="$4"
+    typeset vlan_id="$5"
+    typeset mac_addr="$6"
+    typeset dhcp_primary="$7"
+    typeset details="link='${link}', iface='${iface}', ip='${ip}', netmask='${netmask}, vlan_id='${vlan_id}'"
+    typeset vlan_opt=
+    typeset mac_addr_opt=
+
+    if [[ -z ${link} ]] || [[ -z ${iface} ]] || [[ -z ${ip} ]] || [[ -z ${netmask} ]]; then
+        echo "WARNING: not bringing up nic (insufficient configuration): $details"
+        return
+    fi
+
+    eval "vnic_already_up=\${vnic_${iface}_up}"
+    if [[ -n "${vnic_already_up}" ]]; then
+        echo "vnic already up: $details"
+        return
+    fi
+    echo "Bringing up nic: $details"
+
+    if [[ -n ${vlan_id} ]] && [[ ${vlan_id} != 0 ]]; then
+        vlan_opt="-v ${vlan_id}"
+    fi
+
+    if [[ -n ${mac_addr} ]]; then
+        mac_addr_opt="-m ${mac_addr}"
+    fi
+
+    /usr/sbin/dladm create-vnic -l ${link} ${vlan_opt} ${mac_addr_opt} ${iface}
+    /sbin/ifconfig ${iface} plumb
+
+    if [[ ${ip} == "dhcp" ]]; then
+        # We ignore errors here because the most common one is that DHCP
+        # is already running.
+
+        if [[ -n ${dhcp_primary} ]]; then
+            /sbin/ifconfig ${iface} dhcp primary || /bin/true
+        else
+            /sbin/ifconfig ${iface} dhcp || /bin/true
+        fi
+    else
+        /sbin/ifconfig ${iface} inet ${ip} netmask ${netmask} up
+    fi
+    eval "vnic_${iface}_up=true"
+}
+
+# If there are aggregations in sysinfo, set them up.
+function create_aggrs
+{
+    if [[ -z "${SYSINFO_Aggregations}" ]]; then
+        return 0
+    fi
+
+    aggrs=(${SYSINFO_Aggregations//,/ })
+    for aggr in "${aggrs[@]}"; do
+        eval "links=\${SYSINFO_Aggregation_${aggr}_Interfaces}"
+        eval "mode=\${SYSINFO_Aggregation_${aggr}_LACP_mode}"
+        [[ -z "$mode" ]] && mode="off"
+
+        echo "Creating aggr: ${aggr} (mode=${mode}, links=${links})"
+        dladm create-aggr -l $(echo ${links} | sed -e "s/,/ -l /g") \
+            -L ${mode} ${aggr}
+    done
+}
+
+if smf_is_globalzone; then
+
+    /usr/sbin/dladm init-phys
+
+    # The next command is for logging purposes only
+    log_if_state before
+
+    # Load sysinfo variables with SYSINFO_ prefix
+    load_sdc_sysinfo
+    # Load config variables with CONFIG_ prefix, and sets the headnode variable
+    load_sdc_config
+    # Load boot params with BOOT_ prefix
+    load_sdc_bootparams
+
+    # Set up etherstubs
+    for stub in $(echo "${CONFIG_etherstub}" | sed -e "s/,/ /g"); do
+        /usr/sbin/dladm create-etherstub -t $stub || echo "ERROR: could not create etherstub ${stub}."
+    done
+
+    # Create aggregations
+    create_aggrs
+
+    # Setup admin NIC
+    if [[ -n ${SYSINFO_NIC_admin} ]]; then
+        plumb_admin
+        if [[ ${headnode} == "true" ]]; then
+            if [[ -n ${CONFIG_admin_ip} ]] && [[ -n ${CONFIG_admin_netmask} ]];
+            then
+                /sbin/ifconfig ${SYSINFO_NIC_admin} inet ${CONFIG_admin_ip} \
+                    netmask ${CONFIG_admin_netmask} up
+                ADMIN_NIC_UP=true
+
+                # also setup resolv.conf if we can
+                if [[ -n ${CONFIG_dns_domain} ]] && [[ -n ${CONFIG_dns_resolvers} ]]; then
+                    echo "search ${CONFIG_dns_domain}" > /etc/resolv.conf
+                    for serv in $(echo "${CONFIG_dns_resolvers}" | sed -e "s/,/ /g"); do
+                        echo "nameserver ${serv}" >> /etc/resolv.conf
+                    done
+                fi
+            else
+                echo "ERROR: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
+                # Set a flag, but try to plumb the other interfaces anyway
+                ADMIN_NIC_MISCONFIGURED=true
+            fi
+         elif [[ -n $(/usr/bin/bootparams | grep "^smartos") ]]; then
+            if [[ -n ${CONFIG_admin_ip} ]] && [[ -n ${CONFIG_admin_netmask} ]]; then
+                /sbin/ifconfig ${SYSINFO_NIC_admin} inet ${CONFIG_admin_ip} \
+                    netmask ${CONFIG_admin_netmask} up
+                ADMIN_NIC_UP=true
+
+                # also setup resolv.conf if we can
+                if [[ -n ${CONFIG_dns_domain} ]] && [[ -n ${CONFIG_dns_resolvers} ]]; then
+                    echo "search ${CONFIG_dns_domain}" > /etc/resolv.conf
+                    for serv in $(echo "${CONFIG_dns_resolvers}" | sed -e "s/,/ /g"); do
+                        echo "nameserver ${serv}" >> /etc/resolv.conf
+                    done
+                fi
+            else
+                /sbin/ifconfig ${SYSINFO_NIC_admin} dhcp || /bin/true
+                ADMIN_NIC_UP=true
+            fi
+
+        else
+            # We ignore errors here because the most common one is that DHCP is
+            # already running.
+            /sbin/ifconfig ${SYSINFO_NIC_admin} dhcp || /bin/true
+            ADMIN_NIC_UP=true
+
+            # also setup resolv.conf if we can
+            if [[ -n ${CONFIG_dns_domain} ]] && [[ -n ${CONFIG_dns_resolvers} ]]; then
+                echo "search ${CONFIG_dns_domain}" > /etc/resolv.conf
+                for serv in $(echo "${CONFIG_dns_resolvers}" | sed -e "s/,/ /g"); do
+                    echo "nameserver ${serv}" >> /etc/resolv.conf
+                done
+            fi
+        fi
+
+        # If on VMWare or Parallels or VirtualBox, create a bridge which
+        # allows traffic to flow correctly to the host-only network
+        if [[ "${ADMIN_NIC_UP}" == "true" ]] \
+            && [[ ${SYSINFO_Product} == "VMware Virtual Platform" \
+                  || ${SYSINFO_Product} == "Parallels Virtual Platform" \
+                  || ${SYSINFO_Product} == "VirtualBox" ]] \
+            && [[ -z $(/usr/sbin/dladm show-bridge -p vmwarebr) ]]; then
+            /usr/sbin/dladm create-bridge -l ${SYSINFO_NIC_admin} vmwarebr
+        fi
+    else
+        echo "ERROR: admin NIC not found, unable to bring up admin network."
+        exit ${SMF_EXIT_ERR_CONFIG}
+    fi
+
+    # Setup external NIC
+    if [[ -n ${SYSINFO_NIC_external} ]] && [[ -n "${CONFIG_external_ip}" ]]; then
+        vnic_up "${SYSINFO_NIC_external}" "external0" "${CONFIG_external_ip}" \
+            "${CONFIG_external_netmask}" "${CONFIG_external_vlan_id}" "" "primary"
+    fi
+
+    # Set up the GZ to NAT for Coal
+    if [[ -n ${SYSINFO_NIC_external} ]] && [[ -n "${CONFIG_external_ip}" ]] &&
+        [[ "${CONFIG_coal}" == "true" ]]; then
+
+        # Convert the admin IP and netmask to CIDR notation
+        CIDR=$(ip_netmask_to_cidr ${CONFIG_admin_ip} ${CONFIG_admin_netmask})
+
+        # Allow zones to reach the internet using the global zone as a router
+        cat >> /etc/ipf/ipnat.conf <<IPNAT
+map external0 ${CIDR} -> 0.0.0.0/32
+map external0 ${CIDR} -> 0.0.0.0/32 portmap tcp/udp auto
+IPNAT
+    fi
+
+    # Use headnode_default_gateway if set, otherwise fall back to admin_gateway
+    # if that's set.
+    if [[ -n "${CONFIG_headnode_default_gateway}" ]]; then
+        echo "${CONFIG_headnode_default_gateway}" > /etc/defaultrouter
+    elif [[ -n ${CONFIG_admin_gateway} ]]; then
+        echo "${CONFIG_admin_gateway}" > /etc/defaultrouter
+    fi
+
+    # Setup extra nics, if specified in the config file
+    nic_tags="${SYSINFO_Nic_Tags}"
+    if [[ -n "${nic_tags}" ]]; then
+        tags=(${nic_tags//,/ })
+
+        bootparam_ip_keys=$(sdc_bootparams_keys | grep -- "-ip$" || true)
+        config_ip_keys=$(sdc_config_keys | grep "_ip$" || true)
+        for tag in "${tags[@]}"; do
+
+            eval "link=\${SYSINFO_NIC_${tag}}"
+            if [[ -z "${link}" ]]; then
+                echo "WARNING: No link found with tag '${tag}'"
+                continue
+            fi
+
+            for key in ${config_ip_keys}; do
+                if [[ ${key} == ${tag}[0-9]_ip ]] || [[ ${key} == ${tag}[0-9][0-9]_ip ]]; then
+                    iface=${key//_ip/}
+                    #echo "   iface=$iface"
+                    eval "ip=\${CONFIG_${iface}_ip}"
+                    eval "netmask=\${CONFIG_${iface}_netmask}"
+                    eval "vlan=\${CONFIG_${iface}_vlan_id}"
+                    eval "macaddr=\${CONFIG_${iface}_mac}"
+
+                    echo vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}"
+                    vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}"
+                fi
+            done
+
+            for key in ${bootparam_ip_keys}; do
+                if [[ ${key} == ${tag}[0-9]-ip ]] || [[ ${key} == ${tag}[0-9][0-9]-ip ]]; then
+                    iface=${key//-ip/}
+                    eval "ip=\${BOOT_${iface}_ip}"
+                    eval "netmask=\${BOOT_${iface}_netmask}"
+                    eval "vlan=\${BOOT_${iface}_vlan_id}"
+                    eval "macaddr=\${BOOT_${iface}_mac}"
+                    echo vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}"
+                    vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}"
+                fi
+            done
+
+        done
+    fi
+else
+    # Non-global zones
+
+    # Bring up statically assigned interfaces, and find the primary DHCP
+    # interface, if it exists
+    while IFS=: read -r iface addrtype; do
+        if [[ -f /etc/hostname.${iface} ]]; then
+            /sbin/ifconfig ${iface} plumb
+            # vrrp interfaces can't be brought up with ifconfig: vrrpadm
+            # handles that instead
+            if [[ "${addrtype}" =~ "^vrrp" ]]; then
+                /sbin/ifconfig ${iface} inet `cat /etc/hostname.${iface} \
+                    | sed -e 's/ up//'`
+            else
+                /sbin/ifconfig ${iface} inet `cat /etc/hostname.${iface}` up
+            fi
+        else
+            if [[ -z "${first_iface}" ]]; then
+                first_iface=${iface}
+            fi
+            if [[ -z "${primary}" && -f /etc/dhcp.${iface} ]]; then
+                primary=${iface}
+            fi
+        fi
+    done < <(/usr/sbin/dladm show-vnic -p -o link,macaddrtype 2>/dev/null)
+
+    if [[ -z "${primary}" && -n "${first_iface}" ]]; then
+        primary=${first_iface}
+    fi
+
+    if [[ -n "${primary}" ]]; then
+        /sbin/ifconfig ${primary} plumb
+        /sbin/ifconfig ${primary} auto-dhcp primary
+    fi
+
+    for iface in `/usr/sbin/dladm show-vnic -p -o link`; do
+        if [[ "${iface}" == "${primary}" ]]; then
+            continue
+        fi
+        /sbin/ifconfig ${iface} plumb
+        if [[ ! -f /etc/hostname.${iface} ]]; then
+            /sbin/ifconfig ${iface} dhcp start wait 0
+        fi
+    done
+fi
+
+log_if_state after
+
+# Since we hopefully made networking changes here, update the sysinfo cache
+if smf_is_globalzone; then
+    /usr/bin/sysinfo -u
+fi
+
+# Enable symmetric routing: when there are multiple nics configured, always
+# take into account the interface a packet is being sent over when
+# selecting a route. This prevents packets being sent with another nic's
+# source IP.
+/usr/sbin/ndd -set /dev/ip ip_strict_src_multihoming 1
+
+# If the admin nic was missing config options, exit with a config error
+if [[ -n "${ADMIN_NIC_MISCONFIGURED}" ]]; then
+    exit ${SMF_EXIT_ERR_CONFIG}
+fi
+
+# Any non-loopback IPv4 interfaces with usable addresses up?
+if [[ -n "`/sbin/ifconfig -a4u`" ]]; then
+    /sbin/ifconfig -a4u | while read intf addr rest; do
+        [[ ${intf} == "inet" ]] && [[ ${addr} != "127.0.0.1" ]] &&
+        [[ ${addr} != "0.0.0.0" ]] && exit ${SMF_EXIT_OK}
+    done && exit ${SMF_EXIT_OK}
+fi
+
+# Any DHCP interfaces started?
+[[ -n "`/sbin/ifconfig -a4 dhcp status 2>/dev/null`" ]] && exit ${SMF_EXIT_OK}
+
+# Any non-loopback IPv6 interfaces up?
+if [[ -n "`/sbin/ifconfig -au6`" ]]; then
+    /sbin/ifconfig -au6 | while read intf addr rest; do
+        [[ ${intf} = "inet6" ]] && [[ ${addr} != "::1/128" ]] && exit ${SMF_EXIT_OK}
+    done && exit ${SMF_EXIT_OK}
+fi
+
+# This service was supposed to configure something yet didn't.  Exit
+# with config error.
+exit ${SMF_EXIT_ERR_CONFIG}

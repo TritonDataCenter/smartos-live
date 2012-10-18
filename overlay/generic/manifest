@@ -130,6 +130,7 @@ f lib/svc/method/fs-usr 0555 root bin
 f lib/svc/method/identity-node 0555 root bin
 f lib/svc/method/manifest-import 0555 root bin
 f lib/svc/method/mdata-fetch 0555 root bin
+f lib/svc/method/net-physical 0555 root sys
 f lib/svc/method/console-login 0555 root bin
 f lib/svc/method/sysidtool-net 0555 root bin
 f lib/svc/method/sysidtool-system 0555 root bin
@@ -147,6 +148,7 @@ f lib/svc/manifest/system/smartdc-config.xml 0444 root sys
 f lib/svc/manifest/system/coreadm.xml 0444 root sys
 f lib/svc/manifest/system/console-login.xml 0444 root sys
 f lib/svc/manifest/network/ipfilter.xml 0444 root sys
+f lib/svc/manifest/network/network-physical.xml 0444 root sys
 d lib/svc/manifest/network/nfs 0755 root sys
 f lib/svc/manifest/network/nfs/client.xml 0444 root sys
 f lib/svc/manifest/network/nfs/nlockmgr.xml 0444 root sys

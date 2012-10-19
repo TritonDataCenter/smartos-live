@@ -42,7 +42,6 @@ if [[ ${DISABLE_ECHO} == "yes" ]]; then
 fi
 
 echo "GET ${key}" >&3
-result=""
 
 # First line will be a status.
 read status
@@ -54,15 +53,7 @@ elif [[ ${status} != "SUCCESS" ]]; then
     exit 2
 fi
 
-while read line; do
-    if [[ ${line} == "." ]]; then
-        # response is terminated by '.' on line by itself.
-        break;
-    fi
-    # If a line begins with a '.' it was escaped, remove that dot.
-    line="${line#.}\n"
-    result="${result}${line}"
-done
-echo -n -e "${result}"
+export PATH=$PATH:/usr/perl5/bin:/opt/local/bin:/usr/local/bin:/usr/local/perl5/bin
+perl -ne 'chomp; if (/^.$/) { exit 0 }; if (/^\./) { s/^.//; } print "\$_\n"'
 
 exit 0

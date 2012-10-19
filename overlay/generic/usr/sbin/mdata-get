@@ -54,6 +54,6 @@ elif [[ ${status} != "SUCCESS" ]]; then
 fi
 
 export PATH=$PATH:/usr/perl5/bin:/opt/local/bin:/usr/local/bin:/usr/local/perl5/bin
-perl -ne 'chomp; if (/^.$/) { exit 0 }; if (/^\./) { s/^.//; } print "\$_\n"'
+perl -ne 'chomp; if (/^\.$/) { exit 0 }; if (/^\./) { s/^.//; } print "$_\n"'
 
 exit 0

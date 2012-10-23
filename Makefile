@@ -136,7 +136,7 @@ update-base:
 
 0-extra-stamp:
 	(cd $(ROOT)/projects/illumos-extra && \
-	    gmake DESTDIR=$(STRAP_PROTO) install_strap)
+	    gmake STRAP=strap DESTDIR=$(STRAP_PROTO) install_strap)
 	(cd $(STRAP_PROTO) && gtar xzf $(ADJUNCT_TARBALL))
 	touch $@
 

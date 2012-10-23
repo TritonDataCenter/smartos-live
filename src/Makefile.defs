@@ -40,7 +40,8 @@ SYSINCDIRS =	/usr/include
 SYSLIBDIRS =	/usr/lib /lib
 
 CPPFLAGS =	$(SYSINCDIRS:%=-isystem $(DESTDIR)/%)
-LDFLAGS =	$(SYSLIBDIRS:%=-L$(DESTDIR)/%)
+LDFLAGS =	$(SYSLIBDIRS:%=-L$(DESTDIR)/%) -Wl,-zassert-deflib \
+		    -Wl,-zfatal-warnings
 
 PREFIX_NODE =	$(DESTDIR)/usr/node/0.8
 

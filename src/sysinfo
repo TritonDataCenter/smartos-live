@@ -131,8 +131,8 @@ function get_nonglobal_info()
         QUOTA="unknown"
         if [[ $(/usr/sbin/zfs list -H | wc -l) != 0 ]]; then
             ROOTQUOTA=$(($(/usr/sbin/zfs get -pHo value quota / | tr -d 'GMT') / (1024 * 1024 * 1024)))
-            if [[ $? == 0 && ${ROOTQUOTA} != "0" ]]; then
-                QUOTA="${ROOTQUOTA}G"
+            if [[ $? == 0 ]]; then
+                QUOTA="${ROOTQUOTA}"
             fi
         fi
     fi

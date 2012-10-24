@@ -1,5 +1,26 @@
 # bunyan Changelog
 
+## bunyan 0.14.6
+
+- Export `bunyan.safeCycles()`. This may be useful for custom `type == "raw"`
+  streams that may do JSON stringification of log records themselves. Usage:
+
+        var str = JSON.stringify(rec, bunyan.safeCycles());
+
+- [issue #49] Allow a `log.child()` to specify the level of inherited streams.
+  For example:
+
+        # Before
+        var childLog = log.child({...});
+        childLog.level('debug');
+
+        # After
+        var childLog = log.child({..., level: 'debug'});
+
+- Improve the crash message to make it easier to provide relevant details in a
+  bug report.
+
+
 ## bunyan 0.14.5
 
 - Fix a bug in the long-stack-trace error serialization added in 0.14.4. The
@@ -15,6 +36,7 @@
 
 ## bunyan 0.14.4
 
+- **Bad release. Use 0.14.5 instead.**
 - Improve error serialization to walk the chain of `.cause()` errors
   from the likes of `WError` or `VError` error classes from
   [verror](https://github.com/davepacheco/node-verror) and

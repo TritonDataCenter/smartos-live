@@ -4,7 +4,7 @@
  * The bunyan logging library for node.js.
  */
 
-var VERSION = '0.14.5';
+var VERSION = '0.14.6';
 
 // Bunyan log format version. This becomes the 'v' field on all log records.
 // `0` is until I release a version '1.0.0' of node-bunyan. Thereafter,
@@ -238,9 +238,8 @@ function Logger(options, _childOptions, _childSimple) {
       throw new TypeError('invalid options.name: child cannot set logger name');
     }
   }
-  if ((options.stream || options.level) && options.streams) {
-    throw new TypeError(
-      'cannot mix "streams" with "stream" or "level" options');
+  if (options.stream && options.streams) {
+    throw new TypeError('cannot mix "streams" and "stream" options');
   }
   if (options.streams && !Array.isArray(options.streams)) {
     throw new TypeError('invalid options.streams: must be an array')
@@ -289,6 +288,9 @@ function Logger(options, _childOptions, _childSimple) {
     this.serializers = objCopy(parent.serializers);
     this.src = parent.src;
     this.fields = objCopy(parent.fields);
+    if (options.level) {
+      this.level(options.level);
+    }
   } else {
     this._level = Number.POSITIVE_INFINITY;
     this.streams = [];
@@ -314,6 +316,8 @@ function Logger(options, _childOptions, _childSimple) {
 
     if (s.level) {
       s.level = resolveLevel(s.level);
+    } else if (options.level) {
+      s.level = resolveLevel(options.level);
     } else {
       s.level = INFO;
     }
@@ -370,7 +374,8 @@ function Logger(options, _childOptions, _childSimple) {
     });
   }
 
-  // Handle *config* options.
+  // Handle *config* options (i.e. options that are not just plain data
+  // for log records).
   if (options.stream) {
     addStream({
       type: 'stream',
@@ -380,6 +385,8 @@ function Logger(options, _childOptions, _childSimple) {
     });
   } else if (options.streams) {
     options.streams.forEach(addStream);
+  } else if (parent && options.level) {
+    this.level(options.level);
   } else if (!parent) {
     addStream({
       type: 'stream',
@@ -439,9 +446,12 @@ util.inherits(Logger, EventEmitter);
  * @param options {Object} Optional. Set of options to apply to the child.
  *    All of the same options for a new Logger apply here. Notes:
  *      - The parent's streams are inherited and cannot be removed in this
- *        call.
+ *        call. Any given `streams` are *added* to the set inherited from
+ *        the parent.
  *      - The parent's serializers are inherited, though can effectively be
  *        overwritten by using duplicate keys.
+ *      - Can use `level` to set the level of the streams inherited from
+ *        the parent. The level for the parent is NOT affected.
  * @param simple {Boolean} Optional. Set to true to assert that `options`
  *    (a) only add fields (no config) and (b) no serialization handling is
  *    required for them. IOW, this is a fast path for frequent child
@@ -687,268 +697,66 @@ Logger.prototype._emit = function (rec) {
 
 
 /**
- * Log a record at TRACE level.
- *
- * Usages:
- *    log.trace()  -> boolean is-trace-enabled
- *    log.trace(<Error> err, [<string> msg, ...])
- *    log.trace(<string> msg, ...)
- *    log.trace(<object> fields, <string> msg, ...)
- *
- * @params fields {Object} Optional set of additional fields to log.
- * @params msg {String} Log message. This can be followed by additional
- *    arguments that are handled like
- *    [util.format](http://nodejs.org/docs/latest/api/all.html#util.format).
+ * Build a log emitter function for level minLevel. I.e. this is the
+ * creator of `log.info`, `log.error`, etc.
  */
-Logger.prototype.trace = function () {
-  var fields = null, msgArgs = null;
-  if (arguments.length === 0) {   // `log.trace()`
-    return (this._level <= TRACE);
-  } else if (this._level > TRACE) {
-    return;
-  } else if (arguments[0] instanceof Error) {
-    // `log.trace(err, ...)`
-    fields = {err: errSerializer(arguments[0])};
-    if (arguments.length === 1) {
-      msgArgs = [fields.err.message];
-    } else {
+function mkLogEmitter(minLevel) {
+  return function () {
+    var fields = null, msgArgs = null;
+    if (arguments.length === 0) {   // `log.<level>()`
+      return (this._level <= minLevel);
+    } else if (this._level > minLevel) {
+      return;
+    } else if (arguments[0] instanceof Error) {
+      // `log.<level>(err, ...)`
+      fields = {err: errSerializer(arguments[0])};
+      if (arguments.length === 1) {
+        msgArgs = [fields.err.message];
+      } else {
+        msgArgs = Array.prototype.slice.call(arguments, 1);
+      }
+    } else if (typeof (arguments[0]) === 'string') {  // `log.<level>(msg, ...)`
+      fields = null;
+      msgArgs = Array.prototype.slice.call(arguments);
+    } else if (Buffer.isBuffer(arguments[0])) {  // `log.<level>(buf, ...)`
+      // Almost certainly an error, show `inspect(buf)`. See bunyan issue #35.
+      fields = null;
+      msgArgs = Array.prototype.slice.call(arguments);
+      msgArgs[0] = util.inspect(msgArgs[0]);
+    } else {  // `log.<level>(fields, msg, ...)`
+      fields = arguments[0];
       msgArgs = Array.prototype.slice.call(arguments, 1);
     }
-  } else if (typeof (arguments[0]) === 'string') {  // `log.trace(msg, ...)`
-    fields = null;
-    msgArgs = Array.prototype.slice.call(arguments);
-  } else if (Buffer.isBuffer(arguments[0])) {  // `log.trace(buf, ...)`
-    // Almost certainly an error, show `inspect(buf)`. See bunyan issue #35.
-    fields = null;
-    msgArgs = Array.prototype.slice.call(arguments);
-    msgArgs[0] = util.inspect(msgArgs[0]);
-  } else {  // `log.trace(fields, msg, ...)`
-    fields = arguments[0];
-    msgArgs = Array.prototype.slice.call(arguments, 1);
+    var rec = this._mkRecord(fields, minLevel, msgArgs);
+    this._emit(rec);
   }
-  var rec = this._mkRecord(fields, TRACE, msgArgs);
-  this._emit(rec);
 }
 
-/**
- * Log a record at DEBUG level.
- *
- * Usages:
- *    log.debug()  -> boolean is-debug-enabled
- *    log.debug(<Error> err, [<string> msg, ...])
- *    log.debug(<string> msg, ...)
- *    log.debug(<object> fields, <string> msg, ...)
- *
- * @params fields {Object} Optional set of additional fields to log.
- * @params msg {String} Log message. This can be followed by additional
- *    arguments that are handled like
- *    [util.format](http://nodejs.org/docs/latest/api/all.html#util.format).
- */
-Logger.prototype.debug = function () {
-  var fields = null, msgArgs = null;
-  if (arguments.length === 0) {   // `log.debug()`
-    return (this._level <= DEBUG);
-  } else if (this._level > DEBUG) {
-    return;
-  } else if (arguments[0] instanceof Error) {
-    // `log.debug(err, ...)`
-    fields = {err: errSerializer(arguments[0])};
-    if (arguments.length === 1) {
-      msgArgs = [fields.err.message];
-    } else {
-      msgArgs = Array.prototype.slice.call(arguments, 1);
-    }
-  } else if (typeof (arguments[0]) === 'string') {  // `log.debug(msg, ...)`
-    fields = null;
-    msgArgs = Array.prototype.slice.call(arguments);
-  } else if (Buffer.isBuffer(arguments[0])) {  // `log.debug(buf, ...)`
-    // Almost certainly an error, show `inspect(buf)`. See bunyan issue #35.
-    fields = null;
-    msgArgs = Array.prototype.slice.call(arguments);
-    msgArgs[0] = util.inspect(msgArgs[0]);
-  } else {  // `log.debug(fields, msg, ...)`
-    fields = arguments[0];
-    msgArgs = Array.prototype.slice.call(arguments, 1);
-  }
-  var rec = this._mkRecord(fields, DEBUG, msgArgs);
-  this._emit(rec);
-}
 
 /**
- * Log a record at INFO level.
+ * The functions below log a record at a specific level.
  *
  * Usages:
- *    log.info()  -> boolean is-info-enabled
- *    log.info(<Error> err, [<string> msg, ...])
- *    log.info(<string> msg, ...)
- *    log.info(<object> fields, <string> msg, ...)
+ *    log.<level>()  -> boolean is-trace-enabled
+ *    log.<level>(<Error> err, [<string> msg, ...])
+ *    log.<level>(<string> msg, ...)
+ *    log.<level>(<object> fields, <string> msg, ...)
+ *
+ * where <level> is the lowercase version of the log level. E.g.:
+ *
+ *    log.info()
  *
  * @params fields {Object} Optional set of additional fields to log.
  * @params msg {String} Log message. This can be followed by additional
  *    arguments that are handled like
  *    [util.format](http://nodejs.org/docs/latest/api/all.html#util.format).
  */
-Logger.prototype.info = function () {
-  var fields = null, msgArgs = null;
-  if (arguments.length === 0) {   // `log.info()`
-    return (this._level <= INFO);
-  } else if (this._level > INFO) {
-    return;
-  } else if (arguments[0] instanceof Error) {
-    // `log.info(err, ...)`
-    fields = {err: errSerializer(arguments[0])};
-    if (arguments.length === 1) {
-      msgArgs = [fields.err.message];
-    } else {
-      msgArgs = Array.prototype.slice.call(arguments, 1);
-    }
-  } else if (typeof (arguments[0]) === 'string') {  // `log.info(msg, ...)`
-    fields = null;
-    msgArgs = Array.prototype.slice.call(arguments);
-  } else if (Buffer.isBuffer(arguments[0])) {  // `log.info(buf, ...)`
-    // Almost certainly an error, show `inspect(buf)`. See bunyan issue #35.
-    fields = null;
-    msgArgs = Array.prototype.slice.call(arguments);
-    msgArgs[0] = util.inspect(msgArgs[0]);
-  } else {  // `log.info(fields, msg, ...)`
-    fields = arguments[0];
-    msgArgs = Array.prototype.slice.call(arguments, 1);
-  }
-  var rec = this._mkRecord(fields, INFO, msgArgs);
-  this._emit(rec);
-}
-
-/**
- * Log a record at WARN level.
- *
- * Usages:
- *    log.warn()  -> boolean is-warn-enabled
- *    log.warn(<Error> err, [<string> msg, ...])
- *    log.warn(<string> msg, ...)
- *    log.warn(<object> fields, <string> msg, ...)
- *
- * @params fields {Object} Optional set of additional fields to log.
- * @params msg {String} Log message. This can be followed by additional
- *    arguments that are handled like
- *    [util.format](http://nodejs.org/docs/latest/api/all.html#util.format).
- */
-Logger.prototype.warn = function () {
-  var fields = null, msgArgs = null;
-  if (arguments.length === 0) {   // `log.warn()`
-    return (this._level <= WARN);
-  } else if (this._level > WARN) {
-    return;
-  } else if (arguments[0] instanceof Error) {
-    // `log.warn(err, ...)`
-    fields = {err: errSerializer(arguments[0])};
-    if (arguments.length === 1) {
-      msgArgs = [fields.err.message];
-    } else {
-      msgArgs = Array.prototype.slice.call(arguments, 1);
-    }
-  } else if (typeof (arguments[0]) === 'string') {  // `log.warn(msg, ...)`
-    fields = null;
-    msgArgs = Array.prototype.slice.call(arguments);
-  } else if (Buffer.isBuffer(arguments[0])) {  // `log.warn(buf, ...)`
-    // Almost certainly an error, show `inspect(buf)`. See bunyan issue #35.
-    fields = null;
-    msgArgs = Array.prototype.slice.call(arguments);
-    msgArgs[0] = util.inspect(msgArgs[0]);
-  } else {  // `log.warn(fields, msg, ...)`
-    fields = arguments[0];
-    msgArgs = Array.prototype.slice.call(arguments, 1);
-  }
-  var rec = this._mkRecord(fields, WARN, msgArgs);
-  this._emit(rec);
-}
-
-/**
- * Log a record at ERROR level.
- *
- * Usages:
- *    log.error()  -> boolean is-error-enabled
- *    log.error(<Error> err, [<string> msg, ...])
- *    log.error(<string> msg, ...)
- *    log.error(<object> fields, <string> msg, ...)
- *
- * @params fields {Object} Optional set of additional fields to log.
- * @params msg {String} Log message. This can be followed by additional
- *    arguments that are handled like
- *    [util.format](http://nodejs.org/docs/latest/api/all.html#util.format).
- */
-Logger.prototype.error = function () {
-  var fields = null, msgArgs = null;
-  if (arguments.length === 0) {   // `log.error()`
-    return (this._level <= ERROR);
-  } else if (this._level > ERROR) {
-    return;
-  } else if (arguments[0] instanceof Error) {
-    // `log.error(err, ...)`
-    fields = {err: errSerializer(arguments[0])};
-    if (arguments.length === 1) {
-      msgArgs = [fields.err.message];
-    } else {
-      msgArgs = Array.prototype.slice.call(arguments, 1);
-    }
-  } else if (typeof (arguments[0]) === 'string') {  // `log.error(msg, ...)`
-    fields = null;
-    msgArgs = Array.prototype.slice.call(arguments);
-  } else if (Buffer.isBuffer(arguments[0])) {  // `log.error(buf, ...)`
-    // Almost certainly an error, show `inspect(buf)`. See bunyan issue #35.
-    fields = null;
-    msgArgs = Array.prototype.slice.call(arguments);
-    msgArgs[0] = util.inspect(msgArgs[0]);
-  } else {  // `log.error(fields, msg, ...)`
-    fields = arguments[0];
-    msgArgs = Array.prototype.slice.call(arguments, 1);
-  }
-  var rec = this._mkRecord(fields, ERROR, msgArgs);
-  this._emit(rec);
-}
-
-/**
- * Log a record at FATAL level.
- *
- * Usages:
- *    log.fatal()  -> boolean is-fatal-enabled
- *    log.fatal(<Error> err, [<string> msg, ...])
- *    log.fatal(<string> msg, ...)
- *    log.fatal(<object> fields, <string> msg, ...)
- *
- * @params fields {Object} Optional set of additional fields to log.
- * @params msg {String} Log message. This can be followed by additional
- *    arguments that are handled like
- *    [util.format](http://nodejs.org/docs/latest/api/all.html#util.format).
- */
-Logger.prototype.fatal = function () {
-  var fields = null, msgArgs = null;
-  if (arguments.length === 0) {   // `log.fatal()`
-    return (this._level <= FATAL);
-  } else if (this._level > FATAL) {
-    return;
-  } else if (arguments[0] instanceof Error) {
-    // `log.fatal(err, ...)`
-    fields = {err: errSerializer(arguments[0])};
-    if (arguments.length === 1) {
-      msgArgs = [fields.err.message];
-    } else {
-      msgArgs = Array.prototype.slice.call(arguments, 1);
-    }
-  } else if (typeof (arguments[0]) === 'string') {  // `log.fatal(msg, ...)`
-    fields = null;
-    msgArgs = Array.prototype.slice.call(arguments);
-  } else if (Buffer.isBuffer(arguments[0])) {  // `log.fatal(buf, ...)`
-    // Almost certainly an error, show `inspect(buf)`. See bunyan issue #35.
-    fields = null;
-    msgArgs = Array.prototype.slice.call(arguments);
-    msgArgs[0] = util.inspect(msgArgs[0]);
-  } else {  // `log.fatal(fields, msg, ...)`
-    fields = arguments[0];
-    msgArgs = Array.prototype.slice.call(arguments, 1);
-  }
-  var rec = this._mkRecord(fields, FATAL, msgArgs);
-  this._emit(rec);
-}
+Logger.prototype.trace = mkLogEmitter(TRACE);
+Logger.prototype.debug = mkLogEmitter(DEBUG);
+Logger.prototype.info = mkLogEmitter(INFO);
+Logger.prototype.warn = mkLogEmitter(WARN);
+Logger.prototype.error = mkLogEmitter(ERROR);
+Logger.prototype.fatal = mkLogEmitter(FATAL);
 
 
 
@@ -1109,3 +917,8 @@ module.exports.createLogger = function createLogger(options) {
 };
 
 module.exports.RingBuffer = RingBuffer;
+
+// Useful for custom `type == "raw"` streams that may do JSON stringification
+// of log records themselves. Usage:
+//    var str = JSON.stringify(rec, bunyan.safeCycles());
+module.exports.safeCycles = safeCycles;

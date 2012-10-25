@@ -33,6 +33,8 @@ var sprintf = require('/usr/node/node_modules/sprintf').sprintf;
 var tty = require('tty');
 var util = require('util');
 
+VM.logname = 'vmadm';
+
 // VM.DEBUG=true;
 
 var COMMANDS = [
@@ -644,9 +646,9 @@ function main(callback)
     // console.log("parsed =\n"+ require("util").inspect(parsed));
 
     if (parsed.debug) {
-        VM.loglevel = 'DEBUG';
+        VM.loglevel = 'debug';
     } else {
-        VM.loglevel = 'INFO';
+        VM.loglevel = 'info';
     }
 
     switch (command) {

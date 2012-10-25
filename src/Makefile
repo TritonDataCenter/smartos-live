@@ -114,17 +114,6 @@ $(KSTAT.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 $(KSTAT.NODE) :	LIBS +=		-lkstat
 
 #
-# Likewise the syslog add-on.
-#
-SYSLOG_OBJDIR =	node-syslog/build/Release
-SYSLOG.NODE =	$(SYSLOG_OBJDIR)/syslog.node
-
-$(SYSLOG.NODE) :	WARN_FLAGS +=	-Wno-unused
-$(SYSLOG.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
-$(SYSLOG.NODE) :	CXXFLAGS +=	$(NODE_CFLAGS)
-$(SYSLOG.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
-
-#
 # The sqlite3 add-on uses a combination of C + C++ files in multiple
 # directories, and has multiple header directories as well.
 #
@@ -278,7 +267,6 @@ install: all
 	mkdir -m 0755 -p $(PREFIX_NODE)/node_modules
 	cp -Pr node_modules/* $(PREFIX_NODE)/node_modules
 	cp $(KSTAT.NODE) $(PREFIX_NODE)/node_modules/
-	cp $(SYSLOG.NODE) $(PREFIX_NODE)/node_modules/syslog.node
 	rm -rf $(DESTDIR)/usr/vm
 	cp -PR vm $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/usr/vm/node_modules
@@ -322,7 +310,13 @@ install: all
 	mv $(DESTDIR)/usr/vm/sbin/add-userscript.js \
 	    $(DESTDIR)/usr/vm/sbin/add-userscript
 	mv $(DESTDIR)/usr/vm/sbin/metadata.js $(DESTDIR)/usr/vm/sbin/metadata
+	mkdir -p $(DESTDIR)/usr/share/man/man1
 	cp node-bunyan/lib/bunyan.js $(PREFIX_NODE)/node_modules/bunyan.js
+	cp node-bunyan/docs/bunyan.1 $(DESTDIR)/usr/share/man/man1/bunyan.1
+	mkdir -p $(DESTDIR)/usr/bin
+	sed -e 's|^#!/usr/bin/env node.*$$|#!/usr/node/bin/node|' \
+	    < node-bunyan/bin/bunyan \
+	    > $(DESTDIR)/usr/bin/bunyan
 	cp -PR img $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/var/db/imgadm
 
@@ -398,10 +392,6 @@ $(EXPAT.NODE): node-expat/node-expat.cc
 
 $(KSTAT.NODE): node-kstat/kstat.cc
 	@mkdir -p $(KSTAT_OBJDIR)
-	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
-
-$(SYSLOG.NODE): node-syslog/syslog.cc
-	@mkdir -p $(SYSLOG_OBJDIR)
 	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
 
 $(SQLITE3_OBJDIR)/%.o: $(SQLITE3_SRCDIR)/%.cc $(SQLITE3_HDRS)

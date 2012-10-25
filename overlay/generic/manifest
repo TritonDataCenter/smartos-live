@@ -158,5 +158,4 @@ f lib/svc/manifest/network/forwarding.xml 0444 root sys
 d var/db 0755 root bin
 d var/db/imgadm 0755 root bin
 d var/log 0755 root sys
-f var/log/vmactions.debug 0644 root root
-f var/log/vmactions.log 0644 root root
+d var/log/vm 0755 root sys

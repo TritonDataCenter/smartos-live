@@ -20,6 +20,8 @@ f usr/img/node_modules/zfs.js 0444 root bin
 # new vmadmd
 s etc/bash/bash_completion.d/vmadm=/usr/vm/etc/vmadm.completion
 f lib/svc/manifest/system/system-vmadmd.xml 0444 root bin
+f usr/bin/bunyan 0555 root bin
+f usr/share/man/man1/bunyan.1 0444 root bin
 f usr/share/man/man1m/vmadmd.1m 0444 root bin
 f usr/share/man/man1m/vmadm.1m 0444 root bin
 d usr/vm 0555 root bin
@@ -143,7 +145,6 @@ f usr/node/0.8/node_modules/sprintf.js 0444 root bin
 f usr/node/0.8/node_modules/sqlite3.js 0444 root bin
 f usr/node/0.8/node_modules/sqlite3_trace.js 0444 root bin
 f usr/node/0.8/node_modules/node_sqlite3.node 0444 root bin
-f usr/node/0.8/node_modules/syslog.node 0444 root bin
 f usr/node/0.8/node_modules/system.js 0444 root bin
 f usr/node/0.8/node_modules/zfs.js 0444 root bin
 d usr/node/0.8/node_modules/log4js 0555 root bin

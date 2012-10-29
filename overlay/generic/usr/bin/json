@@ -226,7 +226,7 @@ function printHelp() {
   util.puts("  -i            shortcut for `-o inspect`");
   util.puts("  -j            shortcut for `-o json`");
   util.puts("");
-  util.puts("See <https://trentm.com/json> for more docs and ");
+  util.puts("See <http://trentm.com/json> for more docs and ");
   util.puts("<https://github.com/trentm/json> for project details.");
 }
 

@@ -14,7 +14,7 @@ endif
 UNAME = $(shell uname -s)
 
 ifeq ($(UNAME), SunOS)
-RANLIB=granlib
+RANLIB=/bin/true
 PATH +=:/usr/perl5/5.10.0/bin:/usr/perl5/5.12/bin
 CFLAGS += -fPIC
 

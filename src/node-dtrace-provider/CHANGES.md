@@ -3,6 +3,15 @@ dtrace-provider - Changes
 
 ## HISTORY
 
+ * 0.2.3:
+   libusdt update - don't invoke ranlib on SunOS-derived systems
+   Disambiguate module name in probe tuple, and optionally allow it to be
+   specified when creating a provider. (Bryan Cantrill bcantrill@acm.org)
+
+ * 0.2.2:
+   libusdt update for build fixes
+   Respect MAKE variable in build script
+
  * 0.2.1:
    Update binding.gyp for clang on Snow Leopard - no space after -L.
 

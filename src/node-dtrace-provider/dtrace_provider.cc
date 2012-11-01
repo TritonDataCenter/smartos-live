@@ -32,17 +32,35 @@ namespace node {
   Handle<Value> DTraceProvider::New(const Arguments& args) {
     HandleScope scope;
     DTraceProvider *p = new DTraceProvider();
+    char module[128];
 
     p->Wrap(args.This());
 
-    if (args.Length() != 1 || !args[0]->IsString()) {
+    if (args.Length() < 1 || !args[0]->IsString()) {
       return ThrowException(Exception::Error(String::New(
         "Must give provider name as argument")));
     }
 
     String::AsciiValue name(args[0]->ToString());
 
-    if ((p->provider = usdt_create_provider(*name, "modname")) == NULL) {
+    if (args.Length() == 2) {
+      if (!args[1]->IsString()) {
+        return ThrowException(Exception::Error(String::New(
+          "Must give module name as argument")));
+      }
+
+      String::AsciiValue mod(args[1]->ToString());
+      (void) snprintf(module, sizeof (module), "%s", *mod);
+    } else if (args.Length() == 1) {
+      // If no module name is provided, develop a synthetic module name based
+      // on our address
+      (void) snprintf(module, sizeof (module), "mod-%p", p);
+    } else {
+      return ThrowException(Exception::Error(String::New(
+        "Expected only provider name and module as arguments")));
+    }
+
+    if ((p->provider = usdt_create_provider(*name, module)) == NULL) {
       return ThrowException(Exception::Error(String::New(
         "usdt_create_provider failed")));
     }

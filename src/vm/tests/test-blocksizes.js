@@ -75,6 +75,12 @@ function testInvalidRootRecsize(t, size, vmobj, callback)
     };
     var prev_size = vmobj.zfs_root_recsize;
 
+    if (abort) {
+        t.ok(false, 'skipping update as test run is aborted.');
+        callback();
+        return;
+    }
+
     VM.update(vmobj.uuid, payload, function (e) {
         // we expect this to fail
         if (e) {
@@ -103,6 +109,12 @@ function testValidRootRecsize(t, size, vmobj, callback)
         'zfs_root_recsize': size
     };
     var prev_size = vmobj.zfs_root_recsize;
+
+    if (abort) {
+        t.ok(false, 'skipping update as test run is aborted.');
+        callback();
+        return;
+    }
 
     VM.update(vmobj.uuid, payload, function (e) {
         // we expect this to succeed
@@ -281,6 +293,12 @@ function testInvalidDataRecsize(t, size, vmobj, callback)
     };
     var prev_size = vmobj.zfs_data_recsize;
 
+    if (abort) {
+        t.ok(false, 'skipping send as test run is aborted.');
+        callback();
+        return;
+    }
+
     VM.update(vmobj.uuid, payload, function (e) {
         // we expect this to fail
         if (e) {
@@ -309,6 +327,12 @@ function testValidDataRecsize(t, size, vmobj, callback)
         'zfs_data_recsize': size
     };
     var prev_size = vmobj.zfs_data_recsize;
+
+    if (abort) {
+        t.ok(false, 'skipping send as test run is aborted.');
+        callback();
+        return;
+    }
 
     VM.update(vmobj.uuid, payload, function (e) {
         // we expect this to succeed
@@ -483,6 +507,12 @@ test('update zone with compression off', {'timeout': 240000}, function(t) {
         'zfs_root_compression': 'off'
     };
 
+    if (abort) {
+        t.ok(false, 'skipping send as test run is aborted.');
+        t.end();
+        return;
+    }
+
     VM.update(vmobj.uuid, payload, function (e) {
         if (e) {
             t.ok(false, 'failed to update: ' + e.message);
@@ -511,6 +541,12 @@ test('update zone with compression gzip-2 for data', {'timeout': 240000}, functi
     var payload = {
         'zfs_data_compression': 'gzip-2'
     };
+
+    if (abort) {
+        t.ok(false, 'skipping send as test run is aborted.');
+        t.end();
+        return;
+    }
 
     VM.update(vmobj.uuid, payload, function (e) {
         if (e) {
@@ -606,6 +642,12 @@ function testAddDiskInvalidBlockSize(t, size, vmobj, callback)
         'add_disks': [{'size': size, 'model': 'virtio', 'block_size': size}]
     };
     var prev_count = vmobj.disks.length;
+
+    if (abort) {
+        t.ok(false, 'skipping send as test run is aborted.');
+        callback();
+        return;
+    }
 
     VM.update(vmobj.uuid, payload, function (e) {
         // we expect this to fail
@@ -739,6 +781,12 @@ test('update kvm with compression off', {'timeout': 240000}, function(t) {
             {'path': vmobj.disks[0].path, 'compression': 'off'}
         ]
     };
+
+    if (abort) {
+        t.ok(false, 'skipping send as test run is aborted.');
+        t.end();
+        return;
+    }
 
     VM.update(vmobj.uuid, payload, function (e) {
         if (e) {

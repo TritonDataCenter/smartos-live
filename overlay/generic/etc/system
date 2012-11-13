@@ -118,6 +118,7 @@ set ip:ip_squeue_fanout=1
 * Machines should take a crash dump and reboot when receiving an NMI
 *
 set pcplusmp:apic_panic_on_nmi=1
+set apix:apic_panic_on_nmi=1
 
 *
 * Don't use multi-threaded fast crash dump or a high compression level
@@ -126,10 +127,10 @@ set dump_plat_mincpu=0
 set dump_bzip2_level=1
 
 *
-* See OS-717, OS-718, OS-1361 and OS-1444 for dealing with the APIX woes.
+* See OS-1361 for dealing with the timer woes.
 *
-set apix_enable=0
 set pcplusmp:apic_timer_preferred_mode=0
+set apix:apic_timer_preferred_mode=0
 
 *
 * Want additional crash dump metrics

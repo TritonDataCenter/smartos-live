@@ -11,7 +11,7 @@ var VM = require('/usr/vm/node_modules/VM');
 var test = require('tap').test;
 var vmtest = this;
 
-var DATASETS_IP = '8.19.41.72';
+var DATASETS_IP = '165.225.154.107';
 
 exports.CURRENT_SMARTOS = '01b2c898-945f-11e1-a523-af1afbe22822';
 exports.CURRENT_UBUNTU = '56108678-1183-11e1-83c3-ff3185a5b47f';

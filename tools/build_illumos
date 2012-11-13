@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2010 Joyent Inc.
+# Copyright (c) 2012 Joyent Inc.
 #
 
 # Setup for building stuff!
@@ -30,13 +30,8 @@ ksh93 ./usr/src/tools/scripts/bldenv.sh illumos.sh \
     'cd $CODEMGR_WS/usr/src && export PATH="$PATH:/opt/local/bin" && \
     dmake setup && cd tools && dmake install'
 
-if [[ -n ${BUILD_ILLUMOS_CLEAN} ]]; then
-  time ./nightly illumos.sh
-  res=$?
-else
-  time ./nightly -i illumos.sh
-  res=$?
-fi
+time ./nightly illumos.sh
+res=$?
 # Post-build joyent specific changes to the proto area
 
 # "has bin" man pages are put under usr/has which we don't deliver.  Move

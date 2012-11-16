@@ -331,6 +331,8 @@ lofiadm -d "$lofidev32" 2>/dev/null
 
 if [ $ERROR -eq 0 ]; then
     chmod 0644 ${OUT_DIR}/${BOOT_ARCHIVE_64}
+    digest -a sha1 ${OUT_DIR}/${BOOT_ARCHIVE_64} \
+      > ${OUT_DIR}/${BOOT_ARCHIVE_64}.hash
     echo "${BUILDSTAMP}" > ${OUT_DIR}/buildstamp
     (cd ${OUT_DIR} && gtar -zcf ${PREFIX}.tgz ${PREFIX})
 fi

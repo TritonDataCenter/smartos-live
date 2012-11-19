@@ -659,6 +659,15 @@ function get_dc_info()
     fi
 }
 
+function get_sdc_version()
+{
+    if [[ -f /.smartdc_version ]]; then
+        SMARTDC_VERSION=$(cat /.smartdc_version)
+    else
+        SMARTDC_VERSION=
+    fi
+}
+
 function output_parsable()
 {
     cat <<END
@@ -680,6 +689,11 @@ END
     fi
 
     if [[ ${ZONENAME} == "global" ]]; then
+
+        if [[ -n ${SMARTDC_VERSION} ]]; then
+            echo "SDC_Version='${SMARTDC_VERSION}'"
+        fi
+
         cat <<END
 Manufacturer='${Manufacturer}'
 Product='${Product}'
@@ -808,6 +822,10 @@ END
     fi
 
     if [[ ${ZONENAME} == "global" ]]; then
+        if [[ -n ${SMARTDC_VERSION} ]]; then
+            echo "  \"SDC Version\": \"${SMARTDC_VERSION}\","
+        fi
+
         cat <<END
   "Manufacturer": "${Manufacturer}",
   "Product": "${Product}",
@@ -972,6 +990,7 @@ if [[ ${ZONENAME} == "global" ]]; then
     get_zpool
     get_disks
     get_bootparams
+    get_sdc_version
 else
     get_nonglobal_info
 fi

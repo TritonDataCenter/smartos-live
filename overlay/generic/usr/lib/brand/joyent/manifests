@@ -160,6 +160,7 @@ system/idmap.xml		disabled
 system/keymap.xml		enabled
 system/logadm-upgrade.xml	enabled
 system/manifest-import.xml	enabled
+system/mdata.xml		disabled
 system/name-service-cache.xml	enabled
 system/pfexecd.xml		enabled
 system/rbac.xml			enabled

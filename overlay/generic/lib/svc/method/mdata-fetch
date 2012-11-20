@@ -78,11 +78,9 @@ case $? in
     echo "Metadata user-script successfuly retrieved."
     mv /var/svc/mdata-user-script{.new,}
     chmod +x /var/svc/mdata-user-script
-    svcadm enable smartdc/mdata:execute
     ;;
   1)
     echo "Metadata user-script not defined."
-    svcadm disable -s smartdc/mdata:execute
     rm -f /var/svc/mdata-user-script{,.new}
     ;;
   *)
@@ -90,5 +88,10 @@ case $? in
     exit ${SMF_EXIT_ERR_FATAL}
     ;;
 esac
+
+# Unconditionally enable mdata:execute, so that the last provisioning step
+# is always taken (regardless of whether user-script exists or not)
+
+svcadm enable smartdc/mdata:execute
 
 exit ${SMF_EXIT_OK}

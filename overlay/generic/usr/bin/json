@@ -5,7 +5,7 @@
 // See <https://github.com/trentm/json>.
 //
 
-var VERSION = "5.1.0";
+var VERSION = "5.1.1";
 
 var util = require('util');
 var pathlib = require('path');
@@ -1184,7 +1184,7 @@ function main(argv) {
         }
       }
       if (arrayified) {
-        data = (filtered.length ? filtered[0] : undefined);
+        data = (filtered.length ? filtered[0] : []);
       } else {
         data = filtered;
       }

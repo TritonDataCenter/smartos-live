@@ -26,6 +26,13 @@ conf_root=$PWD
 conf_ips=
 conf_priv="pfexec"
 
+function warn
+{
+	local msg="$*"
+	[[ -z "$msg" ]] && msg="failed"
+	echo "$conf_arg0: $msg" >&2
+}
+
 function fatal
 {
 	local msg="$*"
@@ -279,6 +286,12 @@ function update_branches
 	[[ ! -f "configure-branches" ]] && return
 
 	while read line; do
+		line=$(echo $line | sed -e 's/#.*$//')
+		[[ $? -eq 0 ]] || fatal \
+		    "failed to remove comments in configure-branches"
+
+		[[ -z "$line" ]] && continue
+
 		repo=${line%%:*}
 		branch=${line##*:}
 
@@ -290,9 +303,12 @@ function update_branches
 		#
 		# Handle the legacy name of smartos-live
 		#
-		[[ "$repo" == "smartos-live" || \
-		    "$repo" == "illumos-live" ]] && fatal \
-		    "configure-branches cannot be used to update smartos-live"
+		if [[ "$repo" == "smartos-live" || \
+		    "$repo" == "illumos-live" ]]; then
+			warn "configure-branches can't update smartos-live"
+			warn "ignoring and continuing on..."	
+			continue
+		fi
 		if [[ "$repo" == "illumos-joyent" || \
 		    "$repo" == "illumos" ]]; then
 			update_git "projects/illumos" $branch && continue

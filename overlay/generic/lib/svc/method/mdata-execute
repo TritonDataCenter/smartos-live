@@ -29,23 +29,16 @@ set -o xtrace
 . /lib/svc/share/smf_include.sh
 smf_is_globalzone && exit ${SMF_EXIT_OK}
 
-  user_script_exit=${SMF_EXIT_OK}
-  if [ -x /var/svc/mdata-user-script ]; then
+# If we got as far as running the user-script the 'provision' was a success
+# from here out a failure will leave the zone running.
+if [ -f /var/svc/provisioning ]; then
+    mv /var/svc/provision{ing,_success}
+fi
+
+user_script_exit=${SMF_EXIT_OK}
+if [ -x /var/svc/mdata-user-script ]; then
     /var/svc/mdata-user-script
     [ $? -gt 0 ] && user_script_exit=${SMF_EXIT_ERR_FATAL}
-  fi
-
-  # Finish the provisioning process (if the case)
-
-  if [ -f /var/svc/provisioning ]; then
-    if [ ${user_script_exit} -eq 0 ]; then
-      # If 'provision_ongoing' exists, we assume the user wants to control
-      # the final 'success' flag himself and will rename the 'provisioning'
-      # file as appropriate. Otherwise, announce success ourselves.
-      [ -f /var/svc/provision_ongoing ] || mv /var/svc/provision{ing,_success}
-    else
-      mv /var/svc/provision{ing,_failure}
-    fi
-  fi
+fi
 
 exit ${user_script_exit}

@@ -913,6 +913,22 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (live update)
         default: value of max_physical_memory
 
+    mdata_exec_timeout:
+
+        For OS VMs this parameter adjusts the timeout on the start method of
+        the svc:/smartdc/mdata:execute service running in the zone. This is the
+        service which runs user-script scripts.
+
+        This parameter only makes sense when creating a VM and is ignored
+        in other cases.
+
+        type: integer (0 for unlimited, >0 number of seconds)
+        vmtype: OS
+        listable: no
+        create: yes
+        update: no
+        default: 300
+
     nics:
 
         When creating a KVM VM or getting a KVM VM's JSON, you will use this
@@ -1373,9 +1389,11 @@ tab-complete UUIDs rather than having to type them out for every command.
         When a KVM VM is in transition from running to either 'off' (in the
         case of stop) or 'start' (in the case of reboot), the transition_to
         field will be set to indicate which state the VM is transitioning to.
+        Additionally when a VM is provisioning you may see this with a value
+        of 'running'.
 
-        type: string value, one of: ['stopped', 'start']
-        vmtype: KVM
+        type: string value, one of: ['stopped', 'start', 'running']
+        vmtype: OS,KVM
         listable: no
         create: no
         update: no

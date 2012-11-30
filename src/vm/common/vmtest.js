@@ -173,6 +173,8 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
     });
 
     async.series(functions, function (err) {
+        var openThingies;
+
         if (err) {
             t.ok(false, err.message);
         }
@@ -180,7 +182,15 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
             // up to caller to call t.end!
             return callback();
         } else {
-             t.end();
+            t.end();
+
+            /*
+
+            // Helpful bit from Isaac that tells what's still open.
+            openThingies = process._getActiveHandles();
+            console.dir(openThingies);
+
+            */
         }
     });
 };

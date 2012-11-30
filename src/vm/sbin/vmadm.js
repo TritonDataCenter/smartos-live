@@ -895,19 +895,34 @@ function main(callback)
     }
 }
 
+function flushLogs()
+{
+    var idx;
+
+    // see also https://github.com/trentm/node-bunyan/issues/37
+    for (idx in VM.log.streams) {
+        if (VM.log.streams[idx] && VM.log.streams[idx].stream) {
+            VM.log.streams[idx].stream.end();
+        }
+    }
+}
+
 onlyif.rootInSmartosGlobal(function (err) {
     if (err) {
         console.error('FATAL: cannot run because: ' + err);
         process.exit(2);
+        return;
     }
     main(function (e, message) {
         if (e) {
             console.error(e.message);
+            flushLogs();
             process.exit(1);
         }
         if (message) {
             console.error(message);
         }
+        flushLogs();
         process.exit(0);
     });
 });

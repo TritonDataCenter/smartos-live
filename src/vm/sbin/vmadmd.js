@@ -116,12 +116,6 @@ function spawnRemoteDisplay(vmobj)
         zonepath = '/zones/' + vmobj.uuid;
     }
 
-    if (vmobj.state !== 'running' && vmobj.zone_state !== 'running') {
-        log.debug('skipping ' + protocol + ' setup for non-running VM '
-            + vmobj.uuid);
-        return;
-    }
-
     // We need to work out which protocol to use since only one will work
     // (effectively) at any given time. If a spice_port is set then we will use
     // that, otherwise we default back to VNC.
@@ -137,6 +131,12 @@ function spawnRemoteDisplay(vmobj)
             port = 0;
         }
         sockpath = '/root/tmp/vm.vnc';
+    }
+
+    if (vmobj.state !== 'running' && vmobj.zone_state !== 'running') {
+        log.debug('skipping ' + protocol + ' setup for non-running VM '
+            + vmobj.uuid);
+        return;
     }
 
     if (port === -1) {
@@ -342,6 +342,24 @@ function updateZoneStatus(ev)
             // wait for /var/svc/provisioning to disappear
             VM.waitForProvisioning(vmobj, function (wait_err) {
                 VM.log.debug(wait_err, 'waited for provisioning');
+                if (!wait_err && vmobj.brand === 'kvm') {
+                    // reload the VM to see if we should setup VNC, etc.
+                    VM.load(vmobj.uuid, function (load_err, obj) {
+                        if (load_err) {
+                            log.error(load_err, 'unable to load VM after '
+                                + 'waiting for provision: ' + load_err.message);
+                            return;
+                        }
+                        log.debug('VM state is ' + obj.state
+                            + ' after provisioning');
+                        if (obj.state === 'running') {
+                            // clear any old timers or VNC/SPICE since this vm
+                            // just came up, then spin up a new VNC.
+                            clearVM(obj.uuid);
+                            spawnRemoteDisplay(obj);
+                        }
+                    });
+                }
                 delete PROV_IVAL[vmobj.uuid];
             });
             return;

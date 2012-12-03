@@ -5,7 +5,7 @@
 
 key=$1
 if [[ -z ${key} ]]; then
-    echo "Usage: $0 <key>"
+    echo "Usage: $0 <key>" >&2
     exit 1
 fi
 
@@ -24,7 +24,7 @@ case $(uname -s) in
         DISABLE_ECHO="no"
     ;;
     *)
-        echo "Don't know which serial to use for $(uname -s)"
+        echo "Don't know which serial to use for $(uname -s)" >&2
         exit 1
     ;;
 esac
@@ -46,10 +46,10 @@ echo "GET ${key}" >&3
 # First line will be a status.
 read status
 if [[ ${status} == "NOTFOUND" ]]; then
-    echo "No metadata for ${key}"
+    echo "No metadata for ${key}" >&2
     exit 1
 elif [[ ${status} != "SUCCESS" ]]; then
-    echo "Error getting metadata for key ${key}: ${status}"
+    echo "Error getting metadata for key ${key}: ${status}" >&2
     exit 2
 fi
 

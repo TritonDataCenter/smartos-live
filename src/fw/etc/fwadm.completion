@@ -1,0 +1,41 @@
+_fwadm()
+{
+    local cur prev opts base
+    COMPREPLY=()
+    COMMANDS="list get add update enable disable start stop status rules"
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    if [[  ${prev} == 'start'
+        || ${prev} == 'stop'
+        || ${prev} == 'status'
+        || ${prev} == 'rules'
+    ]] && [[ ${COMP_WORDS[COMP_CWORD-2]} == "fwadm" ]]; then
+
+        vms_uuids=$(zoneadm list -cp | grep -v ':global:' | cut -d':' -f5 | \
+            sort | uniq)
+        COMPREPLY=( $(compgen -W "${vms_uuids}" -- ${cur}) )
+
+    elif [[ ${prev} == 'enable'
+          || ${prev} == 'disable'
+          || ${prev} == 'get' ]]; then
+
+        rule_uuids=$(/usr/bin/ls -1 /var/fw/rules/*.json | \
+            sed -e 's,/var/fw/,,' -e 's/.json//')
+        COMPREPLY=( $(compgen -W "${rule_uuids}" -- ${cur}) )
+
+    elif [[ ${prev} == 'fwadm' ]]; then
+
+        COMPREPLY=( $(compgen -W "${COMMANDS}" -- ${cur}) )
+
+    elif [[ ${prev} == '-f' ]]; then
+
+        # Just expand files by default
+        COMPREPLY=( $(compgen -f -- ${cur}) )
+
+    fi
+
+    return 0
+}
+
+complete -F _fwadm fwadm

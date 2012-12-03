@@ -1,0 +1,29 @@
+{
+  "name": "fwadm",
+  "description": "administrative tool for managing VM firewalls",
+  "version": "1.0.0",
+  "author": "Joyent (joyent.com)",
+  "private": true,
+  "devDependencies": {
+    "jison": "0.3.12",
+    "mockery": "1.2.0",
+    "nodeunit": "0.7.4"
+  },
+  "dependencies": {
+    "assert-plus": "0.1.2",
+    "bunyan": "0.14.6",
+    "clone": "0.1.4",
+    "extsprintf": "1.0.1",
+    "mkdirp": "0.3.4",
+    "node-uuid": "1.2.0",
+    "nopt": "1.0.10",
+    "vasync": "1.3.2",
+    "verror": "1.3.4"
+  },
+  "scripts": {
+    "test": "make test"
+  },
+  "engines": {
+    "node": ">=0.6"
+  }
+}

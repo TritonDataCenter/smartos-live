@@ -363,6 +363,12 @@ install: all
 	    > $(DESTDIR)/usr/bin/bunyan
 	cp -PR img $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/var/db/imgadm
+	rm -rf $(DESTDIR)/usr/fw
+	mkdir -m 0755 -p $(DESTDIR)/usr/fw
+	cp -PR fw/etc $(DESTDIR)/usr/fw/
+	cp -PR fw/lib $(DESTDIR)/usr/fw/
+	cp -PR fw/node_modules $(DESTDIR)/usr/fw/
+	cp -PR fw/sbin $(DESTDIR)/usr/fw/
 
 check: $(JSLINT)
 	@echo "==> Running cstyle..."

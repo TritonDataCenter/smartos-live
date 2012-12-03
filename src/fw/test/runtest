@@ -1,0 +1,36 @@
+#!/bin/bash
+
+NODE=node
+NODEUNIT="test/node_modules/nodeunit/bin/nodeunit"
+
+function usage
+{
+    echo "Usage:"
+    echo "  runtest [OPTIONS...]"
+    echo ""
+    echo "Options:"
+    echo "  -r REPORTER  Nodeunit test reporter to use (default is 'tap')."
+}
+
+# Options
+opt_reporter=tap
+
+while getopts "hr:" opt
+do
+    case "$opt" in
+        h)
+            usage
+            exit 0
+            ;;
+        r)
+            opt_reporter=$OPTARG
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+shift $(($OPTIND - 1))
+$NODE $NODEUNIT --reporter $opt_reporter $1

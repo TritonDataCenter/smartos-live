@@ -21,7 +21,7 @@ _fwadm()
           || ${prev} == 'get' ]]; then
 
         rule_uuids=$(/usr/bin/ls -1 /var/fw/rules/*.json | \
-            sed -e 's,/var/fw/,,' -e 's/.json//')
+            sed -e 's,/var/fw/rules/,,' -e 's/.json//')
         COMPREPLY=( $(compgen -W "${rule_uuids}" -- ${cur}) )
 
     elif [[ ${prev} == 'fwadm' ]]; then

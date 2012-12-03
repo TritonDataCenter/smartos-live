@@ -83,6 +83,38 @@ f usr/vm/node_modules/VM.js 0444 root bin
 f usr/vm/node_modules/dladm.js 0444 root bin
 f usr/vm/smf/system-vmadmd 0555 root bin
 f usr/vm/smf/system-vmadmd.xml 0444 root bin
+# fwadm
+s etc/bash/bash_completion.d/fwadm=/usr/fw/etc/fwadm.completion
+d usr/fw 0555 root bin
+d usr/fw/etc 0555 root bin
+d usr/fw/lib 0555 root bin
+d usr/fw/lib/parser 0555 root bin
+d usr/fw/lib/util 0555 root bin
+d usr/fw/node_modules 0555 root bin
+d usr/fw/node_modules/clone 0555 root bin
+d usr/fw/sbin 0555 root bin
+f usr/fw/etc/fwadm.completion 0444 root bin
+f usr/fw/lib/cli.js 0444 root bin
+f usr/fw/lib/fw.js 0444 root bin
+f usr/fw/lib/fwadm.js 0444 root bin
+f usr/fw/lib/ipf.js 0444 root bin
+f usr/fw/lib/parser/index.js 0444 root bin
+f usr/fw/lib/parser/parser.js 0444 root bin
+f usr/fw/lib/parser/validators.js 0444 root bin
+f usr/fw/lib/pipeline.js 0444 root bin
+f usr/fw/lib/rule.js 0444 root bin
+f usr/fw/lib/util/obj.js 0444 root bin
+f usr/fw/lib/util/vm.js 0444 root bin
+f usr/fw/node_modules/assert-plus.js 0444 root bin
+f usr/fw/node_modules/clone/LICENSE 0444 root bin
+f usr/fw/node_modules/clone/clonePrototype.js 0444 root bin
+f usr/fw/node_modules/clone/index.js 0444 root bin
+f usr/fw/node_modules/extsprintf.js 0444 root bin
+f usr/fw/node_modules/mkdirp.js 0444 root bin
+f usr/fw/node_modules/node-uuid.js 0444 root bin
+f usr/fw/node_modules/vasync.js 0444 root bin
+f usr/fw/node_modules/verror.js 0444 root bin
+f usr/fw/sbin/fwadm 0555 root bin
 # metadata daemon
 d usr/vm/lib 0555 root bin
 d usr/vm/lib/metadata 0555 root bin
@@ -132,6 +164,7 @@ f usr/bin/disklist 0555 root bin
 f usr/bin/disk_size 0555 root bin
 f usr/bin/removable_disk 0555 root bin
 f usr/bin/mkzpool 0555 root bin
+s usr/sbin/fwadm=../fw/sbin/fwadm
 s usr/sbin/vmadm=../vm/sbin/vmadm
 d usr/node 0555 root bin
 d usr/node/0.8 0555 root bin

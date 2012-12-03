@@ -31,6 +31,7 @@ var cli = require('./cli');
 var clone = require('clone');
 var fw = require('../lib/fw');
 var nopt = require('/usr/vm/node_modules/nopt');
+var onlyif = require('/usr/node/node_modules/onlyif');
 var path = require('path');
 var pipeline = require('./pipeline').pipeline;
 var util = require('util');
@@ -415,47 +416,54 @@ function main() {
   var parsedOpts = nopt(LONG_OPTS, SHORT_OPTS, process.argv, 2);
   var command = parsedOpts.argv.remain[0];
 
-  switch (command) {
-  case 'add':
-    add(parsedOpts);
-    break;
-  case 'delete':
-    del(parsedOpts, false);
-    break;
-  case 'disable':
-    enable(parsedOpts, false);
-    break;
-  case 'enable':
-    enable(parsedOpts, true);
-    break;
-  case 'get':
-    get(parsedOpts, true);
-    break;
-  case 'list':
-    list(parsedOpts);
-    break;
-  case 'rules':
-    zoneRules(parsedOpts);
-    break;
-  case 'start':
-    start(parsedOpts);
-    break;
-  case 'stats':
-    stats(parsedOpts);
-    break;
-  case 'status':
-    status(parsedOpts);
-    break;
-  case 'stop':
-    stop(parsedOpts);
-    break;
-  case 'update':
-    update(parsedOpts);
-    break;
-  default:
-    usage();
-    break;
-  }
+  onlyif.rootInSmartosGlobal(function (err) {
+    if (err) {
+      console.error('FATAL: cannot run: %s', err);
+      return process.exit(2);
+    }
+
+    switch (command) {
+    case 'add':
+      add(parsedOpts);
+      break;
+    case 'delete':
+      del(parsedOpts, false);
+      break;
+    case 'disable':
+      enable(parsedOpts, false);
+      break;
+    case 'enable':
+      enable(parsedOpts, true);
+      break;
+    case 'get':
+      get(parsedOpts, true);
+      break;
+    case 'list':
+      list(parsedOpts);
+      break;
+    case 'rules':
+      zoneRules(parsedOpts);
+      break;
+    case 'start':
+      start(parsedOpts);
+      break;
+    case 'stats':
+      stats(parsedOpts);
+      break;
+    case 'status':
+      status(parsedOpts);
+      break;
+    case 'stop':
+      stop(parsedOpts);
+      break;
+    case 'update':
+      update(parsedOpts);
+      break;
+    default:
+      usage();
+      break;
+    }
+  });
 }
 
 

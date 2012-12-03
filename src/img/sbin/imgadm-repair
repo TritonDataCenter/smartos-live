@@ -48,13 +48,13 @@ zvols=$(zfs list -pH -o name -t snapshot \
 for i in ${zvols[@]} ; do
     unset manifest
     unset urn
-    echo 'Checking for manifest with UUID: $i'
-    manifest=$(imgadm get $i)
+    echo "Checking for manifest with UUID: $i"
+    manifest=$(imgadm show $i)
 
-    if [[ -n $manifest ]] ; then
-        echo '$i - manifest was found. Copying to $DBDIR'
-        echo '${manifest}' > $DBDIR/$i.json
+    if [[ "$?" == "0" && -n $manifest ]] ; then
+        echo "$i - manifest was found. Copying to $DBDIR"
+        echo "${manifest}" > $DBDIR/$i.json
         urn=$(cat $DBDIR/$i.json | json urn)
-        echo '$i - urn: $urn'
+        echo "$i - urn: $urn"
     fi
 done

@@ -176,6 +176,22 @@ function validFilterKey(key)
     return false;
 }
 
+// just rules out some confusing options that work for lookup but don't make
+// sense in list form.
+function validColumnKey(key)
+{
+    var bad_re;
+
+    // when we have a .*. we won't know which one to show
+    bad_re = new RegExp('^(disks|filesystems|nics)\.\\*\.*');
+
+    if (key.match(bad_re)) {
+        return false;
+    }
+
+    return true;
+}
+
 function getListProperties(field)
 {
     var fields = [];
@@ -625,9 +641,11 @@ function main(callback)
     var key;
     var knownOpts = {};
     var order;
+    var order_list;
     var parsed;
     var shortHands = {};
     var sortby;
+    var sortby_list;
     var type;
     var types;
     var uuid;
@@ -869,6 +887,24 @@ function main(callback)
             }
         }
 
+        order_list = order.split(',');
+        for (key in order_list) {
+            if (!validColumnKey(order_list[key])) {
+                callback(new Error('Invalid order key: "' + order_list[key]
+                    + '"'));
+                return;
+            }
+        }
+
+        sortby_list = sortby.split(',');
+        for (key in sortby_list) {
+            if (!validColumnKey(sortby_list[key])) {
+                callback(new Error('Invalid sort key: "' + sortby_list[key]
+                    + '"'));
+                return;
+            }
+        }
+
         listVM(extra, order, sortby, options, callback);
         break;
     case 'halt':
@@ -900,6 +936,9 @@ function flushLogs()
     var idx;
 
     // see also https://github.com/trentm/node-bunyan/issues/37
+    if (!VM.log) {
+        return;
+    }
     for (idx in VM.log.streams) {
         if (VM.log.streams[idx] && VM.log.streams[idx].stream) {
             VM.log.streams[idx].stream.end();

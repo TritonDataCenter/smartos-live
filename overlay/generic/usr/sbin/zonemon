@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2011 Joyent, Inc.  All rights reserved.
+# Copyright 2012 Joyent, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -39,6 +39,7 @@ show_kernel()
     echo "Kernel state:"
     echo "::zone" | mdb -k | nawk '{
 	print $0
+	if ($3 == "STATUS") next
 	if ($3 != "running")
 		hung[$1]=$2
     } END {

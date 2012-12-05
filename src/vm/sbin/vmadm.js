@@ -25,6 +25,7 @@
  *
  */
 
+var async = require('/usr/node/node_modules/async');
 var fs = require('fs');
 var VM = require('/usr/vm/node_modules/VM');
 var nopt = require('/usr/vm/node_modules/nopt');
@@ -931,19 +932,37 @@ function main(callback)
     }
 }
 
-function flushLogs()
+function flushLogs(callback)
 {
-    var idx;
-
-    // see also https://github.com/trentm/node-bunyan/issues/37
     if (!VM.log) {
+        callback();
         return;
     }
-    for (idx in VM.log.streams) {
-        if (VM.log.streams[idx] && VM.log.streams[idx].stream) {
-            VM.log.streams[idx].stream.end();
+
+    async.forEach(VM.log.streams, function (str, cb) {
+        var returned = false;
+
+        if (!str || !str.stream) {
+            cb();
+            return;
         }
-    }
+
+        str.stream.once('drain', function () {
+            if (!returned) {
+                cb();
+            }
+            return;
+        });
+
+        if (str.stream.write('')) {
+            returned = true;
+            cb();
+            return;
+        }
+    }, function () {
+        callback();
+        return;
+    });
 }
 
 onlyif.rootInSmartosGlobal(function (err) {
@@ -955,13 +974,15 @@ onlyif.rootInSmartosGlobal(function (err) {
     main(function (e, message) {
         if (e) {
             console.error(e.message);
-            flushLogs();
-            process.exit(1);
+            flushLogs(function () {
+                process.exit(1);
+            });
         }
         if (message) {
             console.error(message);
         }
-        flushLogs();
-        process.exit(0);
+        flushLogs(function () {
+            process.exit(0);
+        });
     });
 });

@@ -75,6 +75,9 @@ MetadataAgent.prototype.createServersOnExistingZones = function (callback) {
           if (zone.brand === 'kvm') {
             self.startKVMSocketServer(zone.zonename, callback);
           }
+          else if (zone.force_metadata_socket) {
+            self.startZoneSocketServer(zone.zonename, false, callback);
+          }
           else {
             self.startZoneSocketServer(zone.zonename, true, callback);
           }
@@ -102,6 +105,9 @@ MetadataAgent.prototype.start = function () {
         }
         if (self.zones[msg.zonename].brand === 'kvm') {
           self.startKVMSocketServer(msg.zonename);
+        }
+        else if (self.zones[msg.zonename].force_metadata_socket) {
+          self.startZoneSocketServer(msg.zonename, false);
         }
         else {
           self.startZoneSocketServer(msg.zonename, true);

@@ -46,7 +46,7 @@ var util = require('util');
 var VMADMD_PORT = 8080;
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
 
-var PROV_IVAL = {};
+var PROV_WAIT = {};
 var SDC = {};
 var SPICE = {};
 var TIMER = {};
@@ -300,6 +300,109 @@ function loadConfig(callback)
     });
 }
 
+/*
+ * This calls cb when either the VM has finished provisioning or there was an
+ * urecoverable error.
+ *
+ * cb() will be called with:
+ *
+ *  (err) -- an error object when we can't continue
+ *  (null, 'success') -- when the provision succeeded
+ *  (null, 'failure') -- when the provision failed or timed out
+ *
+ * NOTE:
+ *  - when the provision succeeds for KVM: this will start the VNC
+ *  - when the provision fails: calls VM.markVMFailrure() to put it in 'failed'
+ *
+ */
+function handleProvisioning(vmobj, cb)
+{
+    var provision_fail_fn;
+    var provision_ok_fn;
+    var provisioning_fn;
+
+    // assert vmobj.state === 'provisioning'
+
+    function success() {
+        if (vmobj.brand === 'kvm') {
+            // reload the VM to see if we should setup VNC, etc.
+            VM.load(vmobj.uuid, function (load_err, obj) {
+                if (load_err) {
+                    log.error(load_err, 'unable to load VM after '
+                        + 'waiting for provision: ' + load_err.message);
+                    cb(load_err);
+                    return;
+                }
+                log.debug('VM state is ' + obj.state + ' after provisioning');
+                if (obj.state === 'running') {
+                    // clear any old timers or VNC/SPICE since this vm just came
+                    // up (state was provisioning), then spin up a new VNC.
+                    clearVM(obj.uuid);
+                    spawnRemoteDisplay(obj);
+                }
+                cb(null, 'success');
+            });
+        } else {
+            cb(null, 'success');
+        }
+    }
+
+    function failure() {
+        VM.markVMFailure(vmobj, function (mark_err) {
+            VM.log.warn(mark_err, 'provisioning failed, zone is being stopped '
+                + 'for manual investigation.');
+            cb(null, 'failure');
+        });
+    }
+
+    provision_fail_fn = path.join(vmobj.zonepath,
+        'root/var/svc/provision_failure');
+    provision_ok_fn = path.join(vmobj.zonepath,
+        'root/var/svc/provision_success');
+    provisioning_fn = path.join(vmobj.zonepath,
+        'root/var/svc/provisioning');
+
+    if (fs.existsSync(provisioning_fn)) {
+        // wait for /var/svc/provisioning to disappear
+        VM.waitForProvisioning(vmobj, function (wait_err) {
+            VM.log.debug(wait_err, 'waited for provisioning');
+            if (wait_err) {
+                cb(wait_err);
+                return;
+            }
+            success();
+        });
+    } else if (fs.existsSync(provision_ok_fn)) {
+        // no /var/svc/provisioning file, but we have success file
+        VM.unsetTransition(vmobj, function (unset_err) {
+            if (unset_err) {
+                cb(unset_err);
+                return;
+            }
+            log.info(unset_err, 'unset "provisioning" because we saw '
+                + 'provision_success for ' + vmobj.uuid);
+            success();
+        });
+    } else if (fs.existsSync(provision_fail_fn)) {
+        // we failed but someone forgot to set the flag (state==provisioning)
+        VM.log.warn('Marking VM ' + vmobj.uuid + ' as a "failure" because '
+            + provision_fail_fn + ' exists.');
+        failure();
+    } else {
+        // none of the provisioning files exist and we only support zones which
+        // are going to handle these, so we must have succeeded and just missed
+        // clearing the provisioning state.
+        log.warn('all provisioning files missing, assuming provision success.');
+        VM.unsetTransition(vmobj, function (unset_err) {
+            if (unset_err) {
+                cb(unset_err);
+                return;
+            }
+            success();
+        });
+    }
+}
+
 // NOTE: nobody's paying attention to whether this completes or not.
 function updateZoneStatus(ev)
 {
@@ -329,40 +432,26 @@ function updateZoneStatus(ev)
 
         if (vmobj.state === 'provisioning') {
             // check that we're not already waiting.
-            if (PROV_IVAL.hasOwnProperty(vmobj.uuid)) {
-                log.trace('already looping for ' + vmobj.uuid);
+            if (PROV_WAIT.hasOwnProperty(vmobj.uuid)) {
+                log.trace('already waiting for ' + vmobj.uuid
+                    + ' to leave "provisioning"');
                 return;
             }
 
-            // this just tells us that we've already got a watcher running
-            // waiting for the /var/svc/provisioning to go away so we don't
-            // start another one.
-            PROV_IVAL[vmobj.uuid] = true;
-
-            // wait for /var/svc/provisioning to disappear
-            VM.waitForProvisioning(vmobj, function (wait_err) {
-                VM.log.debug(wait_err, 'waited for provisioning');
-                if (!wait_err && vmobj.brand === 'kvm') {
-                    // reload the VM to see if we should setup VNC, etc.
-                    VM.load(vmobj.uuid, function (load_err, obj) {
-                        if (load_err) {
-                            log.error(load_err, 'unable to load VM after '
-                                + 'waiting for provision: ' + load_err.message);
-                            return;
-                        }
-                        log.debug('VM state is ' + obj.state
-                            + ' after provisioning');
-                        if (obj.state === 'running') {
-                            // clear any old timers or VNC/SPICE since this vm
-                            // just came up, then spin up a new VNC.
-                            clearVM(obj.uuid);
-                            spawnRemoteDisplay(obj);
-                        }
-                    });
+            PROV_WAIT[vmobj.uuid] = true;
+            handleProvisioning(vmobj, function (prov_err, result) {
+                // this waiter finishd so we're ok with another being started.
+                delete PROV_WAIT[vmobj.uuid];
+                if (prov_err) {
+                    log.error(prov_err, 'error handling provisioning state for'
+                        + ' ' + vmobj.uuid + ': ' + prov_err.message);
+                    return;
                 }
-                delete PROV_IVAL[vmobj.uuid];
+                log.debug('handleProvision() for ' + vmobj.uuid + ' returned: '
+                    +  result);
+                return;
             });
-            return;
+
         }
 
         // don't handle transitions other than provisioning for non-kvm
@@ -1052,21 +1141,29 @@ function main()
                     if (vmobj.state === 'failed') {
                         log.debug('skipping failed VM ' + vmobj.uuid);
                     } else if (vmobj.state === 'provisioning') {
-                        log.debug('VM ' + vmobj.uuid + ' is in state '
-                            + '"provisioning"');
+                        log.debug('at vmadmd startup, VM ' + vmobj.uuid + ' is '
+                            + 'in state "provisioning"');
 
-                        // only start a provisioning watcher if we're not
-                        // already waiting.
-                        if (!PROV_IVAL.hasOwnProperty(vmobj.uuid)) {
-                            PROV_IVAL[vmobj.uuid] = true;
-
-                            // wait for /var/svc/provisioning to disappear
-                            VM.waitForProvisioning(vmobj, function (wait_err) {
-                                VM.log.debug(wait_err,
-                                    'waited for provisioning');
-                                delete PROV_IVAL[vmobj.uuid];
-                            });
+                        if (PROV_WAIT.hasOwnProperty(vmobj.uuid)) {
+                            log.warn('at vmadmd startup, already waiting for '
+                                + '"provisioning" for ' + vmobj.uuid);
+                            return;
                         }
+
+                        PROV_WAIT[vmobj.uuid] = true;
+                        // this calls the callback when we go out of
+                        // provisioning one way or another.
+                        handleProvisioning(vmobj, function (prov_err, result) {
+                            delete PROV_WAIT[vmobj.uuid];
+                            if (prov_err) {
+                                log.error(prov_err, 'error handling '
+                                    + 'provisioning state for ' + vmobj.uuid
+                                    + ': ' + prov_err.message);
+                                return;
+                            }
+                            log.debug('at vmadmd startup, handleProvision() for'
+                                + ' ' + vmobj.uuid + ' returned: ' +  result);
+                        });
                     } else if (vmobj.brand === 'kvm') {
                         log.debug('calling loadVM(' + vmobj.uuid + ')');
                         loadVM(vmobj, do_autoboot);

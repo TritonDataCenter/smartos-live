@@ -42,7 +42,9 @@ var COMMANDS = [
     'start', 'boot',
     'console',
     'create',
+    'create-snapshot',
     'delete', 'destroy',
+    'delete-snapshot',
     'stop', 'halt',
     'help',
     'info',
@@ -52,6 +54,7 @@ var COMMANDS = [
     'lookup',
     'reboot',
     'receive', 'recv',
+    'rollback-snapshot',
     'send',
     'sysrq',
     'update'
@@ -124,8 +127,10 @@ function usage(message, code)
     out('Usage: ' + process.argv[1] + ' <command> [options]');
     out('');
     out('create [-f <filename>]');
+    out('create-snapshot <uuid> <snapname>');
     out('console <uuid>');
     out('delete <uuid>');
+    out('delete-snapshot <uuid> <snapname>');
     out('get <uuid>');
     out('info <uuid> [type,...]');
     out('install <uuid>');
@@ -133,6 +138,7 @@ function usage(message, code)
     out('lookup [-j|-1] [field=value ...]');
     out('reboot <uuid> [-F]');
     out('receive [-f <filename>]');
+    out('rollback-snapshot <uuid> <snapname>');
     out('send <uuid> [target]');
     out('start <uuid> [option=value ...]');
     out('stop <uuid> [-F]');
@@ -354,14 +360,17 @@ function addCommandOptions(command, opts, shorts)
 
     switch (command) {
     case 'boot':
+    case 'create-snapshot':
     case 'console':
     case 'delete':
+    case 'delete-snapshot':
     case 'destroy':
     case 'get':
     case 'help':
     case 'info':
     case 'install':
     case 'json':
+    case 'rollback-snapshot':
     case 'send':
     case 'start':
     case 'sysrq':
@@ -645,6 +654,7 @@ function main(callback)
     var order_list;
     var parsed;
     var shortHands = {};
+    var snapname;
     var sortby;
     var sortby_list;
     var type;
@@ -769,6 +779,54 @@ function main(callback)
                 }
             });
         });
+        break;
+    case 'create-snapshot':
+        uuid = getUUID(command, parsed);
+        if (!parsed.argv.remain || parsed.argv.remain.length !== 1) {
+            usage('Wrong number of parameters to "create-snapshot"');
+        } else {
+            snapname = parsed.argv.remain[0];
+            VM.create_snapshot(uuid, snapname, {}, function (err) {
+                if (err) {
+                    callback(err);
+                } else {
+                    callback(null, 'Created snapshot ' + snapname + ' for '
+                        + uuid);
+                }
+            });
+        }
+        break;
+    case 'delete-snapshot':
+        uuid = getUUID(command, parsed);
+        if (!parsed.argv.remain || parsed.argv.remain.length !== 1) {
+            usage('Wrong number of parameters to "delete-snapshot"');
+        } else {
+            snapname = parsed.argv.remain[0];
+            VM.delete_snapshot(uuid, snapname, {}, function (err) {
+                if (err) {
+                    callback(err);
+                } else {
+                    callback(null, 'Deleted snapshot ' + snapname + ' for '
+                        + uuid);
+                }
+            });
+        }
+        break;
+    case 'rollback-snapshot':
+        uuid = getUUID(command, parsed);
+        if (!parsed.argv.remain || parsed.argv.remain.length !== 1) {
+            usage('Wrong number of parameters to "rollback-snapshot"');
+        } else {
+            snapname = parsed.argv.remain[0];
+            VM.rollback_snapshot(uuid, snapname, {}, function (err) {
+                if (err) {
+                    callback(err);
+                } else {
+                    callback(null, 'Rolled back snapshot ' + snapname + ' for '
+                        + uuid);
+                }
+            });
+        }
         break;
     case 'send':
         uuid = getUUID(command, parsed);

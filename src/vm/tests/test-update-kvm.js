@@ -14,13 +14,14 @@ var PAYLOADS = {
     "create": {
         "brand": "kvm",
         "ram": 256,
+        "autoboot": false,
         "alias": "autotest-vm" + process.pid,
-        "disks": [{"size": 1024, "model": "virtio"}],
+        "disks": [{"size": 1024, "model": "ide"}],
         "do_not_inventory": true
     }, "add_net0": {
         "add_nics": [
             {
-                "model": "virtio",
+                "model": "e1000",
                 "ip": "10.254.254.254",
                 "netmask": "255.255.255.0",
                 "nic_tag": "external",
@@ -89,7 +90,48 @@ test('create zone', {'timeout': 240000}, function(t) {
     });
 });
 
-test('add net0', function(t) {
+test('update disk model', {'timeout': 60000}, function(t) {
+
+    VM.load(vm_uuid, function (err, before_obj) {
+        var path;
+
+        if (err) {
+            t.ok(false, 'error loading existing VM: ' + err.message);
+            t.end();
+            return;
+        }
+
+        path = before_obj.disks[0].path;
+
+        VM.update(vm_uuid, {'update_disks': [{'path': path, 'model': 'virtio'}]}, function(err) {
+            if (err) {
+                t.ok(false, 'error updating VM: ' + err.message);
+                t.end();
+            } else {
+                VM.load(vm_uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'failed reloading VM');
+                        t.end();
+                        return;
+                    }
+                    t.ok((obj.disks[0].model === 'virtio'), 'obj.disks[0].model: '
+                        + obj.disks[0].model + ' expected: virtio');
+                    t.end();
+                });
+            }
+        });
+    });
+});
+
+test('boot zone', function(t) {
+    VM.start(vm_uuid, {}, function (err) {
+        t.ok(!err, 'error starting VM' + (err ? ': ' + err.message : ''));
+        t.end();
+    });
+});
+
+test('add net0', {'timeout': 60000}, function(t) {
+    console.log('boarg');
     VM.update(vm_uuid, PAYLOADS.add_net0, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -120,6 +162,47 @@ test('add net0', function(t) {
                 t.end();
             });
         }
+    });
+});
+
+test('update nic model', {'timeout': 60000}, function(t) {
+
+    VM.load(vm_uuid, function (err, before_obj) {
+        var mac;
+
+        if (err) {
+            t.ok(false, 'error loading existing VM: ' + err.message);
+            t.end();
+            return;
+        }
+
+        if (!before_obj || !before_obj.hasOwnProperty('nics')
+            || before_obj.nics.length < 1) {
+
+            t.ok(false, 'VM is in a broken state before NIC update');
+            t.end();
+            return;
+        }
+
+        mac = before_obj.nics[0].mac;
+
+        VM.update(vm_uuid, {'update_nics': [{'mac': mac, 'model': 'virtio'}]}, function(err) {
+            if (err) {
+                t.ok(false, 'error updating VM: ' + err.message);
+                t.end();
+            } else {
+                VM.load(vm_uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'failed reloading VM');
+                        t.end();
+                        return;
+                    }
+                    t.ok((obj.nics[0].model === 'virtio'), 'obj.nics[0].model: '
+                        + obj.nics[0].model + ' expected: virtio');
+                    t.end();
+                });
+            }
+        });
     });
 });
 
@@ -199,7 +282,7 @@ test('remove net0 and net1', function(t) {
     });
 });
 
-test('set then unset simple properties', function(t) {
+test('set then unset simple properties', {'timeout': 240000}, function(t) {
     async.forEachSeries(simple_properties,
         function (item, cb) {
             var prop = item[0];

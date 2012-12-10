@@ -884,6 +884,20 @@ END
     done
     cat <<END
   },
+END
+
+    if [[ ${ZONENAME} == "global" && -f /.smartdc_version \
+        && -d /opt/smartdc/agents/lib/node_modules ]]; then
+
+        # on SDC we also want to output the agents versions
+        find /opt/smartdc/agents/lib/node_modules/ -maxdepth 2 \
+            -name package.json -exec cat {} \; \
+            | json -g -o json -a name version \
+            | sed -e "s/^\[/\"SDC Agents\": \[/" \
+            | sed -e "s/^/  /" | sed -e "s/\]$/\],/"
+    fi
+
+    cat <<END
   "Network Interfaces": {
 END
 

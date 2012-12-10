@@ -258,6 +258,34 @@ test('create normal zone', {'timeout': 240000}, function(t) {
     });
 });
 
+test('create snapshot without vmsnap name and it should not show up', {'timeout': 240000}, function(t) {
+
+    var dataset = vmobj.zfs_filesystem;
+    var snapshot = dataset + '@manual-snapshot';
+
+    execFile('/usr/sbin/zfs', ['snapshot', snapshot], function (error) {
+        t.ok(!error, 'created manual snapshot' + (error ? ': ' + error.message : ''));
+        if (!error) {
+            execFile('/usr/sbin/zfs', ['list', '-t', 'snapshot', snapshot], function (err) {
+                t.ok(!err, 'manual snapshot exists' + (err ? ': ' + err.message : ''));
+                if (!err) {
+                    VM.load(vmobj.uuid, function (e, o) {
+                        t.ok(!e, 'reload VM after snap' + (e ? ': ' + e.message : ''));
+                        if (!e) {
+                            t.ok(o.snapshots.length === 0, 'have ' + o.snapshots.length + ' snapshots, expected: 0');
+                        }
+                        t.end();
+                    });
+                } else {
+                    t.end();
+                }
+            });
+        } else {
+            t.end();
+        }
+    });
+});
+
 // try to create bad snapshot names
 
 function createBadSnapshot(t, uuid, name, callback)

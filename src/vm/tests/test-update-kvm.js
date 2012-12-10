@@ -582,6 +582,36 @@ test('update max_locked_memory', function(t) {
     });
 });
 
+// setting vnc_port=-1 should disable VNC
+test('set vnc_port=-1', function(t) {
+    var test_value;
+
+    VM.load(vm_uuid, function (err, before_obj) {
+        if (err) {
+            t.ok(false, 'error loading existing VM: ' + err.message);
+            t.end();
+            return;
+        }
+        VM.update(vm_uuid, {'vnc_port': -1}, function(err) {
+            if (err) {
+                t.ok(false, 'error updating VM: ' + err.message);
+                t.end();
+            } else {
+                VM.load(vm_uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'failed reloading VM');
+                        t.end();
+                        return;
+                    }
+                    t.ok((obj.vnc_port === -1), 'vm.vnc_port: ' + obj.vnc_port
+                        + ' expected: ' + -1);
+                    t.end();
+                });
+            }
+        });
+    });
+});
+
 function zfs(args, callback)
 {
     var cmd = '/usr/sbin/zfs';

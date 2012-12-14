@@ -1,5 +1,6 @@
 var execFile = require('child_process').execFile;
 var path = require('path');
+var fs = require('fs');
 
 var ZoneBootedWatcher = module.exports = function (delay, allZones) {
   this.delay = delay;
@@ -33,7 +34,7 @@ ZoneBootedWatcher.prototype.startExecutingSvcs = function () {
               && self.zones.hasOwnProperty(zone)) {
 
               zoneObj = self.allZones[zone];
-              if (path.existsSync(path.join(zoneObj.zonepath,
+              if (fs.existsSync(path.join(zoneObj.zonepath,
                 '/root/tmp/.ready_for_metadata'))) {
 
                 var fn = (self.zones[zone]);

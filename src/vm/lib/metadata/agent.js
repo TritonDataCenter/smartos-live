@@ -29,16 +29,8 @@ MetadataAgent.prototype.createZoneLog = function (type, zonename) {
   ['info', 'debug', 'trace', 'warn', 'error', 'fatal']
     .forEach(function (l) {
       zlog[l] = function () {
-        if (l === 'debug') {
-          self.log[l].debug(zonename+":");
-          self.log[l].apply(self.log, arguments);
-        }
-        else {
-          self.log[l].call
-            ( self.log
-            , type + ":" + zonename + " - " + arguments[0]
-            );
-        }
+        self.log[l].call(
+          self.log, type + ":" + zonename + " - " + arguments[0]);
       }
     });
   return zlog;
@@ -132,7 +124,7 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
   var self = this;
   var zlog = self.createZoneLog('vm', zonename);
   var zonePath = self.zones[zonename].zonepath;
-  var localpath = path.join('/var/run/smartdc');
+  var localpath = '/var/run/smartdc';
   var smartdcpath = path.join(zonePath, 'root', localpath);
   var sockpath = path.join(self.zones[zonename].zonepath, '/root/tmp/vm.ttyb');
 
@@ -144,7 +136,7 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
             ( 2000
             , 120000
             , function (callback) {
-                path.exists(sockpath, function (exists) {
+                fs.exists(sockpath, function (exists) {
                   setTimeout(function () {
                     callback(null, exists);
                   }, 1000);
@@ -246,7 +238,7 @@ function (zonename, checkService, callback) {
         });
       }
     , function (callback) {
-        path.exists(smartdcpath, function (exists) {
+        fs.exists(smartdcpath, function (exists) {
           if (exists)  {
             return callback();
           }
@@ -295,10 +287,21 @@ MetadataAgent.prototype.createZoneSocket = function (zopts, callback) {
       });
 
       socket.on('error', function (e) {
-        zlog.error("Socket error");
-        zlog.error(e.message);
+        zlog.error('ZSocket error: ' + e.message);
         zlog.error(e.stack);
-        zlog.debug(e);
+        zlog.info(
+          'Attempting to recover;'
+          + ' closing and recreating zone socket and server.');
+        try {
+            server.close();
+        }
+        catch (e) {
+            zlog.error('Caught exception closing server: ' + e.message);
+            zlog.error(e.stack);
+        }
+
+        socket.end();
+        self.createZoneSocket(zopts);
       });
     });
 
@@ -330,7 +333,9 @@ MetadataAgent.prototype.createZoneSocket = function (zopts, callback) {
     server.listen();
   });
 
-  callback();
+  if (callback) {
+    callback();
+  }
 }
 
 MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {

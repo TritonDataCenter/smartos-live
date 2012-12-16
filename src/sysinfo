@@ -16,7 +16,7 @@
 
 #set -o xtrace
 
-PATH=/bin:/usr/bin:/sbin:/usr/sbin:/smartdc/bin:/opt/local/bin:/opt/local/sbin
+PATH=/system/usr/bin:/usr/bin:/sbin:/usr/sbin:/smartdc/bin:/opt/local/bin:/opt/local/sbin
 
 CACHE_FILE_PARSABLE="/tmp/.sysinfo.parsable"
 CACHE_FILE_JSON="/tmp/.sysinfo.json"
@@ -129,16 +129,18 @@ function get_nonglobal_info()
     QUOTA=$(/usr/sbin/mdata-get sdc:quota)
     if [[ $? != 0 ]]; then
         QUOTA="unknown"
-        if [[ $(/usr/sbin/zfs list -H | wc -l) != 0 ]]; then
+        if [[ $(/usr/sbin/zfs list -H | wc -l | tr -d ' ') != 0 ]]; then
             ROOTQUOTA=$(($(/usr/sbin/zfs get -pHo value quota / | tr -d 'GMT') / (1024 * 1024 * 1024)))
             if [[ $? == 0 ]]; then
                 QUOTA="${ROOTQUOTA}"
             fi
+        else
+            QUOTA=$(($(df -k / | tail -1 | awk '{ print $2 }') / (1024 * 1024)))
         fi
     fi
     if [[ ${QUOTA} == "0" ]]; then
         QUOTA="none"
-    else
+    elif [[ ${QUOTA} != "unknown" ]]; then
         QUOTA="${QUOTA}G"
     fi
 }

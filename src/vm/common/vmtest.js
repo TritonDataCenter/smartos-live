@@ -148,7 +148,7 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
         }
     ];
 
-    if (fnlist) {
+    if (fnlist && fnlist.length > 0) {
         functions = functions.concat(fnlist);
     }
 

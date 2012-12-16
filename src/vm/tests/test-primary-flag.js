@@ -18,7 +18,8 @@ test('create VM with 2 nics', {'timeout': 240000}, function(t) {
     vmtest.on_new_vm(t, image_uuid,
         {'autoboot': false, 'do_not_inventory': true,
         'alias': 'autozone-' + process.pid, 'nowait': true,
-        'nics': [{}, {}]}, state, [
+        'nics': [{'nic_tag': 'admin', 'ip': 'dhcp'},
+        {'nic_tag': 'admin', 'ip': 'dhcp'}]}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 var has_primary = 0;
@@ -159,7 +160,7 @@ test('create VM with 2 nics', {'timeout': 240000}, function(t) {
                     existing_macs.push(n.mac);
                 }
 
-                VM.update(state.uuid, {'add_nics': [{'primary': true}]},
+                VM.update(state.uuid, {'add_nics': [{'primary': true, 'nic_tag': 'admin', 'ip': 'dhcp'}]},
                     function (e) {
 
                     t.ok(!e, 'add nic failed');
@@ -200,7 +201,7 @@ test('create VM with 2 nics (second primary)', {'timeout': 240000}, function(t) 
     vmtest.on_new_vm(t, image_uuid,
         {'autoboot': false, 'do_not_inventory': true,
         'alias': 'autozone-' + process.pid, 'nowait': true,
-        'nics': [{}, {'primary': 1}]}, state, [
+        'nics': [{'nic_tag': 'admin', 'ip': 'dhcp'}, {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': 1}]}, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 var has_primary = 0;
@@ -238,7 +239,9 @@ test('create VM with 3 nics (all primary)', {'timeout': 240000}, function(t) {
     vmtest.on_new_vm(t, image_uuid,
         {'autoboot': false, 'do_not_inventory': true,
         'alias': 'autozone-' + process.pid, 'nowait': true,
-        'nics': [{'primary': true}, {'primary': true}, {'primary': 1}]}, state, [],
+        'nics': [{'nic_tag': 'admin', 'ip': 'dhcp', 'primary': true},
+        {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': true},
+        {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': 1}]}, state, [],
     function (err) {
         t.end();
     });
@@ -253,9 +256,9 @@ test('create VM with 3 nics (one primary, 2 false)', {'timeout': 240000}, functi
             'alias': 'autozone-' + process.pid,
             'nowait': true,
             'nics': [
-                {'primary': true},
-                {'primary': false},
-                {'primary': false}
+                {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': true},
+                {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': false},
+                {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': false}
             ]}, state,
     [
         function (cb) {
@@ -297,9 +300,9 @@ test('create VM with 3 nics (all false)', {'timeout': 240000}, function(t) {
             'alias': 'autozone-' + process.pid,
             'nowait': true,
             'nics': [
-                {'primary': false},
-                {'primary': false},
-                {'primary': false}
+                {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': false},
+                {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': false},
+                {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': false}
             ]}, state, [
                 function (cb) {
                     VM.load(state.uuid, function(err, obj) {

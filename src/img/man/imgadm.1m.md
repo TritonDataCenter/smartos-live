@@ -42,7 +42,7 @@ default, to make using UUIDs easier.
 
         Lists all the available images from the list of servers in the
         sources.list file. The results from these servers are queried from the
-        local cache. To upload the local cache, run 'imgadm update'
+        local cache. To update the local cache, run 'imgadm update'
 
       import <uuid>
 

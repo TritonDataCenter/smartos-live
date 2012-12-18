@@ -42,29 +42,29 @@ function should_fail_with_conflict(name, payloadA, payloadB)
 }
 
 should_fail_with_conflict('KVM with same IP',
-    {'brand': 'kvm', 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'netmask': '255.255.255.0', 'model': 'virtio'}]},
-    {'brand': 'kvm', 'nics': [{'mac': '0f:0e:0d:0c:0b:0a', 'ip': '172.17.2.172', 'netmask': '255.255.255.0', 'model': 'virtio'}]}
+    {'brand': 'kvm', 'nics': [{'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'netmask': '255.255.255.0', 'model': 'virtio'}]},
+    {'brand': 'kvm', 'nics': [{'nic_tag': 'admin', 'mac': '0f:0e:0d:0c:0b:0a', 'ip': '172.17.2.172', 'netmask': '255.255.255.0', 'model': 'virtio'}]}
 );
 
 should_fail_with_conflict('OS with same IP',
-    {'brand': 'joyent-minimal', 'image_uuid': image_uuid, 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'netmask': '255.255.255.0'}]},
-    {'brand': 'joyent-minimal', 'image_uuid': image_uuid, 'nics': [{'mac': '0f:0e:0d:0c:0b:0a', 'ip': '172.17.2.172', 'netmask': '255.255.255.0'}]}
+    {'brand': 'joyent-minimal', 'image_uuid': image_uuid, 'nics': [{'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'netmask': '255.255.255.0'}]},
+    {'brand': 'joyent-minimal', 'image_uuid': image_uuid, 'nics': [{'nic_tag': 'admin', 'mac': '0f:0e:0d:0c:0b:0a', 'ip': '172.17.2.172', 'netmask': '255.255.255.0'}]}
 );
 
 should_fail_with_conflict('KVM with same MAC',
-    {'brand': 'kvm', 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'}]},
-    {'brand': 'kvm', 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.173', 'model': 'virtio', 'netmask': '255.255.255.0'}]}
+    {'brand': 'kvm', 'nics': [{'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'}]},
+    {'brand': 'kvm', 'nics': [{'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.173', 'model': 'virtio', 'netmask': '255.255.255.0'}]}
 );
 
 should_fail_with_conflict('OS with same MAC',
-    {'brand': 'joyent-minimal', 'image_uuid': image_uuid, 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'netmask': '255.255.255.0'}]},
-    {'brand': 'joyent-minimal', 'image_uuid': image_uuid, 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.173', 'netmask': '255.255.255.0'}]}
+    {'brand': 'joyent-minimal', 'image_uuid': image_uuid, 'nics': [{'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'netmask': '255.255.255.0'}]},
+    {'brand': 'joyent-minimal', 'image_uuid': image_uuid, 'nics': [{'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.173', 'netmask': '255.255.255.0'}]}
 );
 
 should_fail_with_conflict('KVM with same IP and MAC',
-    {'brand': 'kvm', 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'},
-        {'mac': '0f:0e:0d:0c:0b:0a', 'ip': '172.17.2.173', 'model': 'virtio', 'netmask': '255.255.255.0'}]},
-    {'brand': 'kvm', 'nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'}]}
+    {'brand': 'kvm', 'nics': [{'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'},
+        {'nic_tag': 'admin', 'mac': '0f:0e:0d:0c:0b:0a', 'ip': '172.17.2.173', 'model': 'virtio', 'netmask': '255.255.255.0'}]},
+    {'brand': 'kvm', 'nics': [{'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'}]}
 );
 
 // test that we can't have two nics with the same IP or MAC
@@ -75,8 +75,8 @@ test('2 nics with same MAC', {'timeout': 240000}, function(t) {
     }
     input.brand = 'kvm';
     input.nics = [
-        {'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'},
-        {'mac': '01:02:03:04:05:06', 'ip': '172.17.2.173', 'model': 'virtio', 'netmask': '255.255.255.0'},
+        {'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'},
+        {'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.173', 'model': 'virtio', 'netmask': '255.255.255.0'},
     ];
     state = {'brand': 'kvm', 'expect_create_failure': true};
     vmtest.on_new_vm(t, null, input, state, []);
@@ -89,8 +89,8 @@ test('2 nics with same IP', {'timeout': 240000}, function(t) {
     }
     input.brand = 'kvm';
     input.nics = [
-        {'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'},
-        {'mac': '0f:0e:0d:0c:0b:0a', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'},
+        {'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'},
+        {'nic_tag': 'admin', 'mac': '0f:0e:0d:0c:0b:0a', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'},
     ];
     state = {'brand': 'kvm', 'expect_create_failure': true};
     vmtest.on_new_vm(t, null, input, state, []);
@@ -106,14 +106,14 @@ test('add additional nic with same IP', {'timeout': 240000}, function(t) {
     }
     input.brand = 'kvm';
     input.nics = [
-        {'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'}
+        {'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'}
     ];
     state = {'brand': 'kvm'};
     vmtest.on_new_vm(t, null, input, state, [
         function (cb) {
             VM.update(state.uuid,
                 {
-                    'add_nics': [{'mac': '0f:0e:0d:0c:0b:0a', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'}]
+                    'add_nics': [{'nic_tag': 'admin', 'mac': '0f:0e:0d:0c:0b:0a', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'}]
                 },
                 function (err) {
                     t.ok(err, 'updating to add another NIC with the same IP (should fail): ' + (err.message ? err.message : 'succeeded'));
@@ -134,14 +134,14 @@ test('add additional nic with same MAC', {'timeout': 240000}, function(t) {
     }
     input.brand = 'kvm';
     input.nics = [
-        {'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'}
+        {'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.172', 'model': 'virtio', 'netmask': '255.255.255.0'}
     ];
     state = {'brand': 'kvm'};
     vmtest.on_new_vm(t, null, input, state, [
         function (cb) {
             VM.update(state.uuid,
                 {
-                    'add_nics': [{'mac': '01:02:03:04:05:06', 'ip': '172.17.2.173', 'model': 'virtio', 'netmask': '255.255.255.0'}]
+                    'add_nics': [{'nic_tag': 'admin', 'mac': '01:02:03:04:05:06', 'ip': '172.17.2.173', 'model': 'virtio', 'netmask': '255.255.255.0'}]
                 },
                 function (err) {
                     t.ok(err, 'updating to add another NIC with the same MAC (should fail): ' + (err.message ? err.message : 'succeeded'));

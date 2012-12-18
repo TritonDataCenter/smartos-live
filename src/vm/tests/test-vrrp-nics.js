@@ -248,6 +248,7 @@ test('vrrp vnics: updating', TEST_OPTS,
                     'add_nics': [
                         {
                             mac: '52:31:98:52:5d:07:d0',
+                            nic_tag: 'external',
                             ip: 'dhcp',
                             vrrp_vrid: 4
                         }
@@ -304,6 +305,7 @@ test('vrrp vnics: updating', TEST_OPTS,
                     'add_nics': [
                         {
                             ip: 'dhcp',
+                            nic_tag: 'external',
                             vrrp_vrid: 15,
                             vrrp_primary_ip: '172.18.1.101'
                         }
@@ -322,6 +324,7 @@ test('vrrp vnics: updating', TEST_OPTS,
                 payload: {
                     'add_nics': [
                         {
+                            nic_tag: 'external',
                             ip: '172.18.1.117',
                             netmask: '255.255.255.0',
                             vrrp_vrid: 16,
@@ -342,6 +345,7 @@ test('vrrp vnics: updating', TEST_OPTS,
                 payload: {
                     'add_nics': [
                         {
+                            nic_tag: 'external',
                             ip: '172.18.1.118',
                             netmask: '255.255.255.0',
                             vrrp_vrid: 17
@@ -560,10 +564,12 @@ test('create with vrrp_primary_ip set to a VRRP nic', TEST_OPTS, function(t) {
     expectCreateError({
         nics: [
             { 'ip': '172.18.1.110',
+              'nic_tag': 'external',
               'netmask': '255.255.255.0',
               'vrrp_vrid': 31
             },
             { 'ip': 'dhcp',
+              'nic_tag': 'external',
               'vrrp_vrid': 32,
               'vrrp_primary_ip': '172.18.1.110'
             }
@@ -598,6 +604,7 @@ test('create with vrrp_primary_ip set to self', TEST_OPTS, function(t) {
     expectCreateError({
         nics: [
             {
+                'nic_tag': 'external',
                 'ip': '172.18.1.127',
                 'netmask': '255.255.255.0',
                 'vrrp_vrid': 26,
@@ -619,6 +626,7 @@ test('create with vrrp_vrid set but not vrrp_primary_ip', TEST_OPTS,
     expectCreateError({
         nics: [
             {
+                'nic_tag': 'external',
                 'ip': '172.18.1.127',
                 'netmask': '255.255.255.0',
                 'vrrp_vrid': 27
@@ -639,6 +647,7 @@ test('create with only a VRRP nic', TEST_OPTS,
     expectCreateError({
         nics: [
             {
+                'nic_tag': 'external',
                 'ip': '172.18.1.127',
                 'netmask': '255.255.255.0',
                 'vrrp_vrid': 27,

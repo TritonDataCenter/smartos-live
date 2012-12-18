@@ -24,6 +24,20 @@ var payload_missing_netmask = {
     ]
 };
 
+var payload_missing_nic_tag = {
+    'autoboot': false,
+    'brand': 'joyent-minimal',
+    'alias': 'autotest-' + process.pid,
+    'do_not_inventory': true,
+    'nics': [
+        {
+            'ip': '10.99.99.222',
+            'netmask': '255.255.255.0',
+            'gateway': '10.99.99.1'
+        }
+    ]
+};
+
 var payload_good = {
     'autoboot': false,
     'brand': 'joyent-minimal',
@@ -200,6 +214,18 @@ test('test create without netmask', {'timeout': 240000}, function(t) {
     );
 });
 
+test('test create without nic_tag', {'timeout': 240000}, function(t) {
+
+    p = JSON.parse(JSON.stringify(payload_missing_nic_tag));
+    state = {'brand': p.brand, 'expect_create_failure': true};
+
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS, p, state, [],
+        function (err) {
+            t.end();
+        }
+    );
+});
+
 test('test create KVM without netmask', {'timeout': 240000}, function(t) {
 
     p = JSON.parse(JSON.stringify(payload_kvm_missing_netmask));
@@ -243,6 +269,28 @@ test('test create with netmask then add nic with no netmask', {'timeout': 240000
                             t.ok((nic.netmask && nic.netmask.match(/^[0-9\.]+$/)), 'Valid netmask: ' + nic.netmask);
                         }
                     }
+                    cb();
+                });
+            });
+        }
+    ], function (err) {
+        t.end();
+    });
+});
+
+test('test create machine then add nic with no nic_tag', {'timeout': 240000}, function(t) {
+
+    p = JSON.parse(JSON.stringify(payload_good));
+    state = {'brand': p.brand};
+
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS, p, state, [
+        function (cb) {
+            t.ok(true, 'state: ' + JSON.stringify(state));
+            VM.update(state.uuid, {'add_nics': [{'ip': '10.99.99.223', 'netmask': '255.255.255.0', 'gateway': '10.99.99.1'}]}, function (err) {
+                t.ok(err, 'update VM should fail' + (err ? ': ' + err.message : ''));
+                VM.load(state.uuid, function(err, obj) {
+                    t.ok(!err, 'load VM' + state.uuid + (err ? ': ' + err.message : ''));
+                    t.ok(obj && obj.nics && obj.nics.length === 1, 'VM should have 1 NIC: ' + obj.nics.length);
                     cb();
                 });
             });

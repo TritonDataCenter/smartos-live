@@ -43,6 +43,6 @@ final_setup()
 	# such that it will protect the system from a single run-away, but
 	# still allow us to get most cores.
 	rm -rf $ZONEPATH/cores
-	zfs create -o quota=${CORE_QUOTA}m -o mountpoint=/zones/$bname/cores \
-	    zones/cores/$bname
+	zfs create -o quota=${CORE_QUOTA}m -o mountpoint=/${PDS_NAME}/$bname/cores \
+	    ${PDS_NAME}/cores/$bname
 }

@@ -979,7 +979,7 @@ function main(callback)
             if (err) {
                 callback(err);
             } else {
-                callback(null, 'Succesfully completed ' + command + ' for '
+                callback(null, 'Successfully completed ' + command + ' for '
                     + uuid);
             }
         });

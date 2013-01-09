@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2012 Joyent, Inc.  All rights reserved.
+# Copyright 2013 Joyent, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -596,6 +596,14 @@ cleanup_mount()
 			echo "Error: GZ process $i under $1 blocking shutdown"
 			logger -p daemon.err "Error: zone $ZONENAME:" \
 			    "GZ process $i under $1 blocking shutdown"
+
+			local args="pargs: `pargs $i`"
+			echo "$args"
+			logger -p daemon.err "$args"
+
+			local tree="ptree: `ptree $i`"
+			echo "$tree"
+			logger -p daemon.err "$tree"
 		fi
 	done
 

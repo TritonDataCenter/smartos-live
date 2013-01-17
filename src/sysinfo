@@ -670,6 +670,15 @@ function get_sdc_version()
     fi
 }
 
+function get_setup()
+{
+    if [[ ! -e /var/lib/setup.json ]]; then
+        Setup_complete=false
+    else
+        Setup_complete=$(json -f /var/lib/setup.json complete)
+    fi
+}
+
 function output_parsable()
 {
     cat <<END
@@ -713,6 +722,7 @@ END
     cat <<END
 UUID='${UUID}'
 Hostname='${Hostname}'
+Setup='${Setup_complete}'
 CPU_Total_Cores=${CPU_Cores}
 MiB_of_Memory=${Memory_in_MiB}
 END
@@ -844,6 +854,7 @@ END
 cat <<END
   "UUID": "${UUID}",
   "Hostname": "${Hostname}",
+  "Setup": "${Setup_complete}",
   "CPU Total Cores": ${CPU_Cores},
   "MiB of Memory": "${Memory_in_MiB}",
 END
@@ -1023,6 +1034,7 @@ get_smartos_vnics
 get_aggr_params
 get_boot_time
 get_dc_info
+get_setup
 
 # whenever we update the cache, update both
 if [[ ${CACHE} == "true" ]]; then

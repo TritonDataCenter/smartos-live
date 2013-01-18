@@ -20,6 +20,9 @@
 shopt -s xpg_echo
 unalias -a
 
+PATH=/usr/bin:/usr/sbin:/sbin:/opt/local/bin:/opt/local/sbin
+export PATH
+
 conf_arg0=$(basename $0)
 conf_arg0_dir=$(dirname $0)
 conf_root=$PWD
@@ -101,7 +104,7 @@ function fetch_studio
 	[[ -f "/opt/SUNWspro/prod/bin/cc" ]] && return
 	[[ -z "$SUNW_SPRO12_URL" ]] && fatal \
 	    "SUNW_SPRO12_URL not set in configure.*"
-	curl -k "$SUNW_SPRO12_URL" | $conf_priv tar jxf - -C /opt
+	curl -k "$SUNW_SPRO12_URL" | bzcat | $conf_priv tar xf - -C /opt
 	[[ $? -eq 0 ]] || fatal "failed to fetch Studio"
 	[[ -e /opt/SUNspro/sunstudio12.1 ]] && return
 	$conf_priv ln -s /opt/SUNWspro /opt/SUNWspro/sunstudio12.1 || fatal \

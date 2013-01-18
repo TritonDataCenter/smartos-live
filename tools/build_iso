@@ -179,6 +179,10 @@ title Live 64-bit (text)
    kernel /platform/i86pc/kernel/amd64/unix -B console=text,root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive
 
+title Live 64-bit (noinstall)
+   kernel /platform/i86pc/kernel/amd64/unix -B console=text,root_shadow='$shadow',standalone=true,noimport=true
+   module /platform/i86pc/amd64/boot_archive
+
 title Live 64-bit (text) +kmdb
    kernel /platform/i86pc/kernel/amd64/unix -kd -B console=text,root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive

@@ -674,11 +674,8 @@ function main(callback)
 
     // console.log("parsed =\n"+ require("util").inspect(parsed));
 
-    if (parsed.debug) {
-        VM.loglevel = 'debug';
-    } else {
-        VM.loglevel = 'info';
-    }
+    // always set log level to debug
+    VM.loglevel = 'debug';
 
     switch (command) {
     case 'start':

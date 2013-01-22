@@ -312,7 +312,7 @@ function loadConfig(callback)
  *
  * NOTE:
  *  - when the provision succeeds for KVM: this will start the VNC
- *  - when the provision fails: calls VM.markVMFailrure() to put it in 'failed'
+ *  - when the provision fails: calls VM.markVMFailure() to put it in 'failed'
  *
  */
 function handleProvisioning(vmobj, cb)

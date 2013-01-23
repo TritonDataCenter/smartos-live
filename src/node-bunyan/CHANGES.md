@@ -1,5 +1,227 @@
 # bunyan Changelog
 
+Known issues:
+
+- [issue #58] Can't install to a dir with spaces. This is [this node-gyp
+  bug](https://github.com/TooTallNate/node-gyp/issues/65).
+
+
+## bunyan 0.18.1
+
+- Get the `bunyan` CLI to **not** automatically page (i.e. pipe to `less`)
+  if stdin isn't a TTY, or if following dtrace probe output (via `-p PID`),
+  or if not given log file arguments.
+
+
+## bunyan 0.18.0
+
+- Automatic paging support in the `bunyan` CLI (similar to `git log` et al).
+  IOW, `bunyan` will open your pager (by default `less`) and pipe rendered
+  log output through it. A main benefit of this is getting colored logs with
+  a pager without the pain. Before you had to explicit use `--color` to tell
+  bunyan to color output when the output was not a TTY:
+
+        bunyan foo.log --color | less -R        # before
+        bunyan foo.log                          # now
+
+  Disable with the `--no-pager` option or the `BUNYAN_NO_PAGER=1` environment
+  variable.
+
+  Limitations: Only supported for node >=0.8. Windows is not supported (at
+  least not yet).
+
+- Switch test suite to nodeunit (still using a node-tap'ish API via
+  a helper).
+
+
+## bunyan 0.17.0
+
+- [issue #33] Log rotation support:
+
+        var bunyan = require('bunyan');
+        var log = bunyan.createLogger({
+            name: 'myapp',
+            streams: [{
+                type: 'rotating-file',
+                path: '/var/log/myapp.log',
+                count: 7,
+                period: 'daily'
+            }]
+        });
+
+
+- Tweak to CLI default pretty output: don't special case "latency" field.
+  The special casing was perhaps nice, but less self-explanatory.
+  Before:
+
+        [2012-12-27T21:17:38.218Z]  INFO: audit/45769 on myserver: handled: 200 (15ms, audit=true, bar=baz)
+          GET /foo
+          ...
+
+  After:
+
+        [2012-12-27T21:17:38.218Z]  INFO: audit/45769 on myserver: handled: 200 (audit=true, bar=baz, latency=15)
+          GET /foo
+          ...
+
+- *Exit* CLI on EPIPE, otherwise we sit there useless processing a huge log
+  file with, e.g.  `bunyan huge.log | head`.
+
+
+## bunyan 0.16.8
+
+- Guards on `-c CONDITION` usage to attempt to be more user friendly.
+  Bogus JS code will result in this:
+
+        $ bunyan portal.log -c 'this.req.username==boo@foo'
+        bunyan: error: illegal CONDITION code: SyntaxError: Unexpected token ILLEGAL
+          CONDITION script:
+            Object.prototype.TRACE = 10;
+            Object.prototype.DEBUG = 20;
+            Object.prototype.INFO = 30;
+            Object.prototype.WARN = 40;
+            Object.prototype.ERROR = 50;
+            Object.prototype.FATAL = 60;
+            this.req.username==boo@foo
+          Error:
+            SyntaxError: Unexpected token ILLEGAL
+                at new Script (vm.js:32:12)
+                at Function.Script.createScript (vm.js:48:10)
+                at parseArgv (/Users/trentm/tm/node-bunyan-0.x/bin/bunyan:465:27)
+                at main (/Users/trentm/tm/node-bunyan-0.x/bin/bunyan:1252:16)
+                at Object.<anonymous> (/Users/trentm/tm/node-bunyan-0.x/bin/bunyan:1330:3)
+                at Module._compile (module.js:449:26)
+                at Object.Module._extensions..js (module.js:467:10)
+                at Module.load (module.js:356:32)
+                at Function.Module._load (module.js:312:12)
+                at Module.runMain (module.js:492:10)
+
+  And all CONDITION scripts will be run against a minimal valid Bunyan
+  log record to ensure they properly guard against undefined values
+  (at least as much as can reasonably be checked). For example:
+
+        $ bunyan portal.log -c 'this.req.username=="bob"'
+        bunyan: error: CONDITION code cannot safely filter a minimal Bunyan log record
+          CONDITION script:
+            Object.prototype.TRACE = 10;
+            Object.prototype.DEBUG = 20;
+            Object.prototype.INFO = 30;
+            Object.prototype.WARN = 40;
+            Object.prototype.ERROR = 50;
+            Object.prototype.FATAL = 60;
+            this.req.username=="bob"
+          Minimal Bunyan log record:
+            {
+              "v": 0,
+              "level": 30,
+              "name": "name",
+              "hostname": "hostname",
+              "pid": 123,
+              "time": 1355514346206,
+              "msg": "msg"
+            }
+          Filter error:
+            TypeError: Cannot read property 'username' of undefined
+                at bunyan-condition-0:7:9
+                at Script.Object.keys.forEach.(anonymous function) [as runInNewContext] (vm.js:41:22)
+                at parseArgv (/Users/trentm/tm/node-bunyan-0.x/bin/bunyan:477:18)
+                at main (/Users/trentm/tm/node-bunyan-0.x/bin/bunyan:1252:16)
+                at Object.<anonymous> (/Users/trentm/tm/node-bunyan-0.x/bin/bunyan:1330:3)
+                at Module._compile (module.js:449:26)
+                at Object.Module._extensions..js (module.js:467:10)
+                at Module.load (module.js:356:32)
+                at Function.Module._load (module.js:312:12)
+                at Module.runMain (module.js:492:10)
+
+  A proper way to do that condition would be:
+
+        $ bunyan portal.log -c 'this.req && this.req.username=="bob"'
+
+
+
+## bunyan 0.16.7
+
+- [issue #59] Clear a possibly interrupted ANSI color code on signal
+  termination.
+
+
+## bunyan 0.16.6
+
+- [issue #56] Support `bunyan -p NAME` to dtrace all PIDs matching 'NAME' in
+  their command and args (using `ps -A -o pid,command | grep NAME` or, on SunOS
+  `pgrep -lf NAME`). E.g.:
+
+        bunyan -p myappname
+
+  This is useful for usage of node's [cluster
+  module](http://nodejs.org/docs/latest/api/all.html#all_cluster) where you'll
+  have multiple worker processes.
+
+
+## bunyan 0.16.5
+
+- Allow `bunyan -p '*'` to capture bunyan dtrace probes from **all** processes.
+- issue #55: Add support for `BUNYAN_NO_COLOR` environment variable to
+  turn off all output coloring. This is still overridden by the `--color`
+  and `--no-color` options.
+
+
+## bunyan 0.16.4
+
+- issue #54: Ensure (again, see 0.16.2) that stderr from the dtrace child
+  process (when using `bunyan -p PID`) gets through. There had been a race
+  between exiting bunyan and the flushing of the dtrace process' stderr.
+
+
+## bunyan 0.16.3
+
+- Drop 'trentm-dtrace-provider' fork dep now that
+  <https://github.com/chrisa/node-dtrace-provider/pull/24> has been resolved.
+  Back to dtrace-provider.
+
+
+## bunyan 0.16.2
+
+- Ensure that stderr from the dtrace child process (when using `bunyan -p PID`)
+  gets through. The `pipe` usage wasn't working on SmartOS. This is important
+  to show the user if they need to 'sudo'.
+
+
+## bunyan 0.16.1
+
+- Ensure that a possible dtrace child process (with using `bunyan -p PID`) is
+  terminated on signal termination of the bunyan CLI (at least for SIGINT,
+  SIGQUIT, SIGTERM, SIGHUP).
+
+
+## bunyan 0.16.0
+
+- Add `bunyan -p PID` support. This is a convenience wrapper that effectively
+  calls:
+
+        dtrace -x strsize=4k -qn 'bunyan$PID:::log-*{printf("%s", copyinstr(arg0))}' | bunyan
+
+
+## bunyan 0.15.0
+
+- issue #48: Dtrace support! The elevator pitch is you can watch all logging
+  from all Bunyan-using process with something like this:
+
+        dtrace -x strsize=4k -qn 'bunyan*:::log-*{printf("%d: %s: %s", pid, probefunc, copyinstr(arg0))}'
+
+  And this can include log levels *below* what the service is actually configured
+  to log. E.g. if the service is only logging at INFO level and you need to see
+  DEBUG log messages, with this you can. Obviously this only works on dtrace-y
+  platforms: Illumos derivatives of SunOS (e.g. SmartOS, OmniOS), Mac, FreeBSD.
+
+  Or get the bunyan CLI to render logs nicely:
+
+        dtrace -x strsize=4k -qn 'bunyan*:::log-*{printf("%s", copyinstr(arg0))}' | bunyan
+
+  See <https://github.com/trentm/node-bunyan#dtrace-support> for details. By
+  Bryan Cantrill.
+
+
 ## bunyan 0.14.6
 
 - Export `bunyan.safeCycles()`. This may be useful for custom `type == "raw"`
@@ -17,8 +239,8 @@
         # After
         var childLog = log.child({..., level: 'debug'});
 
-- Improve the crash message to make it easier to provide relevant details in a
-  bug report.
+- Improve the Bunyan CLI crash message to make it easier to provide relevant
+  details in a bug report.
 
 
 ## bunyan 0.14.5

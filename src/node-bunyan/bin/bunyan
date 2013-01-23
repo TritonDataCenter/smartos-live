@@ -5,7 +5,7 @@
 // See <https://github.com/trentm/node-bunyan>.
 //
 
-var VERSION = "0.14.6";
+var VERSION = "0.18.1";
 
 var util = require('util');
 var pathlib = require('path');
@@ -13,10 +13,22 @@ var vm = require('vm');
 var http = require('http');
 var fs = require('fs');
 var warn = console.warn;
+var child_process = require('child_process'),
+  spawn = child_process.spawn,
+  exec = child_process.exec,
+  execFile = child_process.execFile;
+var assert = require('assert');
+
+var nodeSpawnSupportsStdio = (
+  Number(process.version.split('.')[0]) >= 0
+  || Number(process.version.split('.')[1]) >= 8);
 
 
 
 //---- globals and constants
+
+// Internal debug logging via `console.warn`.
+var _DEBUG = false;
 
 // Output modes.
 var OM_PAUL = 1;
@@ -63,6 +75,19 @@ Object.keys(levelFromName).forEach(function (name) {
 
 // The current raw input line being processed. Used for `uncaughtException`.
 var currLine = null;
+
+// Child dtrace process, if any. Used for signal-handling.
+var child = null;
+
+// Whether ANSI codes are being used. Used for signal-handling.
+var usingAnsiCodes = false;
+
+// Global ref to options used only by 'uncaughtException' handler.
+var gOptsForUncaughtException;
+
+// Pager child process, and output stream to which to write.
+var pager = null;
+var stdout = process.stdout;
 
 
 
@@ -134,6 +159,8 @@ function objCopy(obj) {
 function printHelp() {
   console.log("Usage:");
   console.log("  bunyan [OPTIONS] [FILE ...]");
+  console.log("  ... | bunyan [OPTIONS]");
+  console.log("  bunyan [OPTIONS] -p PID");
   console.log("");
   console.log("Filter and pretty-print Bunyan log file content.");
   console.log("");
@@ -141,20 +168,35 @@ function printHelp() {
   console.log("  -h, --help    print this help info and exit");
   console.log("  --version     print version of this command and exit");
   console.log("");
+  console.log("Dtrace options (only on dtrace-supporting platforms):");
+  console.log("  -p PID        Process bunyan:log-* probes from the process");
+  console.log("                with the given PID. Can be used multiple times,");
+  console.log("                or specify all processes with '*', or a set of");
+  console.log("                processes whose command & args match a pattern");
+  console.log("                with '-p NAME'.");
+  console.log("");
   console.log("Filtering options:");
   console.log("  -l, --level LEVEL");
   console.log("                Only show messages at or above the specified level.");
   console.log("                You can specify level *names* or numeric values.");
   console.log("                (See 'Log Levels' below.)");
   console.log("  -c, --condition CONDITION");
-  console.log("                Run each log message through the condition");
-  console.log("                and only show those that resolve to a truish value.");
-  console.log("                E.g. `-c 'pid == 123'`, `-c 'level == 50'`. You must");
-  console.log("                use the numeric values for filtering by level.");
+  console.log("                Run each log message through the condition and");
+  console.log("                only show those that return truish. E.g.:");
+  console.log("                    -c 'this.pid == 123'");
+  console.log("                    -c 'this.level == DEBUG'");
+  console.log("                    -c 'this.msg.indexOf(\"boom\") != -1'");
+  console.log("                'CONDITION' must be legal JS code. `this` holds");
+  console.log("                the log record. The TRACE, DEBUG, ... FATAL values");
+  console.log("                are defined to help with comparing `this.level`.");
   console.log("  --strict      Suppress all but legal Bunyan JSON log lines. By default");
   console.log("                non-JSON, and non-Bunyan lines are passed through.");
   console.log("");
   console.log("Output options:");
+  console.log("  --pager       Pipe output into `less` (or $PAGER if set), if");
+  console.log("                stdout is a TTY. This overrides $BUNYAN_NO_PAGER.");
+  console.log("                Note: Paging is only supported on node >=0.8.");
+  console.log("  --no-pager    Do not pipe output into a pager.");
   console.log("  --color       Colorize output. Defaults to try if output");
   console.log("                stream is a TTY.");
   console.log("  --no-color    Force no coloring (e.g. terminal doesn't support it)");
@@ -178,6 +220,12 @@ function printHelp() {
       n += " ";
     console.log("    %s %d", n, levelFromName[name]);
   });
+  console.log("");
+  console.log("Environment Variables:");
+  console.log("  BUNYAN_NO_COLOR    Set to a non-empty value to force no output ");
+  console.log("                     coloring. See '--no-color'.");
+  console.log("  BUNYAN_NO_PAGER    Disable piping output to a pager. ");
+  console.log("                     See '--no-pager'.");
   console.log("");
   console.log("See <https://github.com/trentm/node-bunyan> for more complete docs.");
   console.log("Please report bugs to <https://github.com/trentm/node-bunyan/issues>.");
@@ -302,18 +350,21 @@ function parseArgv(argv) {
   var parsed = {
     args: [],
     help: false,
-    color: process.stdout.isTTY,
+    color: null,
+    paginate: null,
     outputMode: OM_PAUL,
     jsonIndent: 2,
     level: null,
     conditions: null,
-    strict: false
+    strict: false,
+    pids: null,
+    pidsType: null
   };
 
   // Turn '-iH' into '-i -H', except for argument-accepting options.
   var args = argv.slice(2);  // drop ['node', 'scriptname']
   var newArgs = [];
-  var optTakesArg = {'d': true, 'o': true, 'c': true, 'l': true};
+  var optTakesArg = {'d': true, 'o': true, 'c': true, 'l': true, 'p': true};
   for (var i = 0; i < args.length; i++) {
     if (args[i].charAt(0) === "-" && args[i].charAt(1) !== '-' && args[i].length > 2) {
       var splitOpts = args[i].slice(1).split("");
@@ -363,14 +414,20 @@ function parseArgv(argv) {
       case "--no-color":
         parsed.color = false;
         break;
+      case "--pager":
+        parsed.paginate = true;
+        break;
+      case "--no-pager":
+        parsed.paginate = false;
+        break;
       case "-o":
       case "--output":
         var name = args.shift();
         var idx = name.lastIndexOf('-');
         if (idx !== -1) {
-          var indent = Number(name.slice(idx+1));
-          if (! isNaN(indent)) {
-            parsed.jsonIndent = indent;
+          var indentation = Number(name.slice(idx+1));
+          if (! isNaN(indentation)) {
+            parsed.jsonIndent = indentation;
             name = name.slice(0, idx);
           }
         }
@@ -381,6 +438,31 @@ function parseArgv(argv) {
         break;
       case "-j": // output with JSON.stringify
         parsed.outputMode = OM_JSON;
+        break;
+      case "-p":
+        if (!parsed.pids) {
+          parsed.pids = [];
+        }
+        var pidArg = args.shift();
+        var pid = +(pidArg);
+        if (!isNaN(pid) || pidArg === '*') {
+          if (parsed.pidsType && parsed.pidsType !== 'num') {
+            throw new Error(format(
+              'cannot mix PID name and number arguments: "%s"', pidArg));
+          }
+          parsed.pidsType = 'num';
+          if (!parsed.pids) {
+            parsed.pids = [];
+          }
+          parsed.pids.push(isNaN(pid) ? pidArg : pid);
+        } else {
+          if (parsed.pidsType && parsed.pidsType !== 'name') {
+            throw new Error(format(
+              'cannot mix PID name and number arguments: "%s"', pidArg));
+          }
+          parsed.pidsType = 'name';
+          parsed.pids = pidArg;
+        }
         break;
       case "-l":
       case "--level":
@@ -399,7 +481,36 @@ function parseArgv(argv) {
         var condition = args.shift();
         parsed.conditions = parsed.conditions || [];
         var scriptName = 'bunyan-condition-'+parsed.conditions.length;
-        var script = vm.createScript(condDefines + condition, scriptName);
+        var code = condDefines + condition;
+        try {
+          var script = vm.createScript(code, scriptName);
+        } catch (compileErr) {
+          throw new Error(format('illegal CONDITION code: %s\n'
+            + '  CONDITION script:\n'
+            + '%s\n'
+            + '  Error:\n'
+            + '%s',
+            compileErr, indent(code), indent(compileErr.stack)));
+        }
+
+        // Ensure this is a reasonably safe CONDITION.
+        try {
+          script.runInNewContext(minValidRecord);
+        } catch (condErr) {
+          throw new Error(format(
+            'CONDITION code cannot safely filter a minimal Bunyan log record\n'
+            + '  CONDITION script:\n'
+            + '%s\n'
+            + '  Minimal Bunyan log record:\n'
+            + '%s\n'
+            + '  Filter error:\n'
+            + '%s',
+            indent(code),
+            indent(JSON.stringify(minValidRecord, null, 2)),
+            indent(condErr.stack)
+            ));
+        }
+
         parsed.conditions.push(script);
         break;
       default: // arguments
@@ -475,6 +586,15 @@ function isValidRecord(rec) {
     return true;
   }
 }
+var minValidRecord = {
+  v: 0,   //TODO: get this from bunyan.LOG_VERSION
+  level: INFO,
+  name: 'name',
+  hostname: 'hostname',
+  pid: 123,
+  time: Date.now(),
+  msg: 'msg'
+};
 
 
 /**
@@ -502,7 +622,7 @@ function handleLogLine(file, line, opts, stylize) {
   }
 
   if (!isValidRecord(rec)) {
-    if (!opts.strict) emitRecord(rec, line, opts, stylize);
+    if (!opts.strict) emit(line + '\n');
     return;
   }
 
@@ -603,11 +723,6 @@ function emitRecord(rec, line, opts, stylize) {
       extras.push("req_id=" + rec.req_id);
     }
     delete rec.req_id;
-
-    if (rec.latency) {
-      extras.push(rec.latency + "ms");
-    }
-    delete rec.latency;
 
     var onelineMsg;
     if (rec.msg.indexOf('\n') !== -1) {
@@ -799,23 +914,12 @@ function emitRecord(rec, line, opts, stylize) {
 
 var stdoutFlushed = true;
 function emit(s) {
-  // TODO:PERF If this is try/catch is too slow (too granular): move up to
-  //    mainline and be sure to only catch this particular error.
   try {
-    stdoutFlushed = process.stdout.write(s);
+    stdoutFlushed = stdout.write(s);
   } catch (e) {
-    // Handle any exceptions in stdout writing in the "error" event above.
+    // Handle any exceptions in stdout writing in `stdout.on("error", ...)`.
   }
 }
-
-process.stdout.on("error", function (err) {
-  if (err.code === "EPIPE") {
-    // Pass. See <https://github.com/trentm/json/issues/9>.
-  } else {
-    warn(err);
-    drainStdoutAndExit(1);
-  }
-});
 
 
 /**
@@ -829,11 +933,12 @@ process.stdout.on("error", function (err) {
  * still be necessary in a shell pipeline.
  */
 function drainStdoutAndExit(code) {
-  process.stdout.on('drain', function () {
-    process.exit(code);
+  if (_DEBUG) warn('(drainStdoutAndExit(%d))', code);
+  stdout.on('drain', function () {
+    cleanupAndExit(code);
   });
   if (stdoutFlushed) {
-    process.exit(code);
+    cleanupAndExit(code);
   }
 }
 
@@ -873,6 +978,137 @@ function processStdin(opts, stylize, callback) {
       leftover = '';
     }
     callback();
+  });
+}
+
+
+/**
+ * Process bunyan:log-* probes from the given pid.
+ *
+ * @params opts {Object} Bunyan options object.
+ * @param stylize {Function} Output stylize function to use.
+ * @param callback {Function} `function (code)`
+ */
+function processPids(opts, stylize, callback) {
+  var leftover = "";  // Left-over partial line from last chunk.
+
+  /**
+   * Get the PIDs to dtrace.
+   *
+   * @param cb {Function} `function (errCode, pids)`
+   */
+  function getPids(cb) {
+    if (opts.pidsType === 'num') {
+      return cb(null, opts.pids);
+    }
+    if (process.platform === 'sunos') {
+      execFile('/bin/pgrep', ['-lf', opts.pids],
+        function (pidsErr, stdout, stderr) {
+          if (pidsErr) {
+            warn('bunyan: error getting PIDs for "%s": %s\n%s\n%s',
+              opts.pids, pidsErr.message, stdout, stderr);
+            return cb(1);
+          }
+          var pids = stdout.trim().split('\n')
+            .map(function (line) { return line.trim().split(/\s+/)[0] })
+            .filter(function (pid) { return Number(pid) !== process.pid });
+          if (pids.length === 0) {
+            warn('bunyan: error: no matching PIDs found for "%s"', opts.pids);
+            return cb(2);
+          }
+          cb(null, pids);
+        }
+      );
+    } else {
+      var regex = opts.pids;
+      if (regex && /[a-zA-Z0-9_]/.test(regex[0])) {
+        // 'foo' -> '[f]oo' trick to exclude the 'grep' PID from its own
+        // search.
+        regex = '[' + regex[0] + ']' + regex.slice(1);
+      }
+      exec(format('ps -A -o pid,command | grep \'%s\'', regex),
+        function (pidsErr, stdout, stderr) {
+          if (pidsErr) {
+            warn('bunyan: error getting PIDs for "%s": %s\n%s\n%s',
+              opts.pids, pidsErr.message, stdout, stderr);
+            return cb(1);
+          }
+          var pids = stdout.trim().split('\n')
+            .map(function (line) { return line.trim().split(/\s+/)[0] })
+            .filter(function (pid) { return Number(pid) !== process.pid });
+          if (pids.length === 0) {
+            warn('bunyan: error: no matching PIDs found for "%s"', opts.pids);
+            return cb(2);
+          }
+          cb(null, pids);
+        }
+      );
+    }
+  }
+
+  getPids(function (errCode, pids) {
+    if (errCode) {
+      return callback(errCode);
+    }
+
+    var probes = pids.map(function (pid) {
+      return format('bunyan%s:::log-*', pid);
+    }).join(',');
+    var argv = ['dtrace', '-Z', '-x', 'strsize=4k', '-qn',
+      format('%s{printf("%s", copyinstr(arg0))}', probes)];
+    //console.log('dtrace argv: %s', argv);
+    var dtrace = spawn(argv[0], argv.slice(1),
+      // Share the stderr handle to have error output come
+      // straight through. Only supported in v0.8+.
+      {stdio: ['pipe', 'pipe', process.stderr]});
+    child = dtrace; // intentionally global
+
+    function finish(code) {
+      if (leftover) {
+        handleLogLine(null, leftover, opts, stylize);
+        leftover = '';
+      }
+      callback(returnCode);
+    }
+
+    dtrace.stdout.setEncoding('utf8');
+    dtrace.stdout.on('data', function (chunk) {
+      var lines = chunk.split(/\r\n|\n/);
+      var length = lines.length;
+      if (length === 1) {
+        leftover += lines[0];
+        return;
+      }
+      if (length > 1) {
+        handleLogLine(null, leftover + lines[0], opts, stylize);
+      }
+      leftover = lines.pop();
+      length -= 1;
+      for (var i=1; i < length; i++) {
+        handleLogLine(null, lines[i], opts, stylize);
+      }
+    });
+
+    if (nodeSpawnSupportsStdio) {
+      dtrace.on('exit', finish);
+    } else {
+      // Fallback (for < v0.8) to pipe the dtrace process' stderr to this stderr.
+      // Wait for all of (1) process 'exit', (2) stderr 'end', and (2) stdout
+      // 'end' before returning to ensure all stderr is flushed (issue #54).
+      var returnCode = null;
+      var eventsRemaining = 3;
+      function countdownToFinish(code) {
+        returnCode = code;
+        eventsRemaining--;
+        if (eventsRemaining == 0) {
+          finish(returnCode);
+        }
+      }
+      dtrace.stderr.pipe(process.stderr);
+      dtrace.stderr.on('end', countdownToFinish);
+      dtrace.stderr.on('end', countdownToFinish);
+      dtrace.on('exit', countdownToFinish);
+    }
   });
 }
 
@@ -963,10 +1199,61 @@ function asyncForEach(arr, iterator, callback) {
 
 
 
+/**
+ * Cleanup and exit properly.
+ *
+ * Warning: this doesn't stop processing, i.e. process exit might be delayed.
+ * It is up to the caller to ensure that no subsequent bunyan processing
+ * is done after calling this.
+ *
+ * @param code {Number} exit code.
+ * @param signal {String} Optional signal name, if this was exitting because
+ *    of a signal.
+ */
+var cleanedUp = false;
+function cleanupAndExit(code, signal) {
+  // Guard one call.
+  if (cleanedUp) {
+    return;
+  }
+  cleanedUp = true;
+  if (_DEBUG) warn('(bunyan: cleanupAndExit)');
+
+  // Clear possibly interrupted ANSI code (issue #59).
+  if (usingAnsiCodes) {
+    stdout.write('\033[0m');
+  }
+
+  // Kill possible dtrace child.
+  if (child) {
+    child.kill(signal);
+  }
+
+  if (pager) {
+    // Let pager know that output is done, then wait for pager to exit.
+    stdout.end();
+    pager.on('exit', function (pagerCode) {
+      if (_DEBUG)
+        warn('(bunyan: pager exit -> process.exit(%s))', pagerCode || code);
+      process.exit(pagerCode || code);
+    });
+  } else {
+    if (_DEBUG) warn('(bunyan: process.exit(%s))', code);
+    process.exit(code);
+  }
+}
+
+
+
 //---- mainline
 
+process.on('SIGINT', function () { cleanupAndExit(1, 'SIGINT'); });
+process.on('SIGQUIT', function () { cleanupAndExit(1, 'SIGQUIT'); });
+process.on('SIGTERM', function () { cleanupAndExit(1, 'SIGTERM'); });
+process.on('SIGHUP', function () { cleanupAndExit(1, 'SIGHUP'); });
+
 process.on('uncaughtException', function (err) {
-  function indent(s) {
+  function _indent(s) {
     var lines = s.split(/\r?\n/);
     for (var i = 0; i < lines.length; i++) {
       lines[i] = '*     ' + lines[i];
@@ -975,10 +1262,17 @@ process.on('uncaughtException', function (err) {
   }
 
   var title = encodeURIComponent(format(
-    "Bunyan %s crashed: %s", getVersion(), err.message));
+    "Bunyan %s crashed: %s", getVersion(), String(err)));
   console.error('* * *');
-  console.error('* The Bunyan CLI crashed! Please report this issue and');
-  console.error('* include the details below:');
+  console.error('* The Bunyan CLI crashed!');
+  console.error('*');
+  if (err.name === 'ReferenceError' && gOptsForUncaughtException.conditions) {
+    console.error('* A "ReferenceError" is often the result of given');
+    console.error('* `-c CONDITION` code that doesn\'t guard against undefined');
+    console.error('* values. If that is not the problem:');
+    console.error('*');
+  }
+  console.error('* Please report this issue and include the details below:');
   console.error('*');
   console.error('*    https://github.com/trentm/node-bunyan/issues/new?title=%s', title);
   console.error('*');
@@ -988,19 +1282,20 @@ process.on('uncaughtException', function (err) {
   console.error('* argv: %j', process.argv);
   console.error('* log line: %j', currLine);
   console.error('* stack:');
-  console.error(indent(err.stack));
+  console.error(_indent(err.stack));
   console.error('* * *');
   process.exit(1);
 });
 
+
 function main(argv) {
-  var opts;
   try {
-    opts = parseArgv(argv);
+    var opts = parseArgv(argv);
   } catch (e) {
     warn("bunyan: error: %s", e.message);
     return drainStdoutAndExit(1);
   }
+  gOptsForUncaughtException = opts; // intentionally global
   if (opts.help) {
     printHelp();
     return;
@@ -1009,10 +1304,87 @@ function main(argv) {
     console.log("bunyan " + getVersion());
     return;
   }
+  if (opts.pid && opts.args.length > 0) {
+    warn("bunyan: error: can't use both '-p PID' (%s) and file (%s) args",
+      opts.pid, opts.args.join(' '));
+    return drainStdoutAndExit(1);
+  }
+  if (opts.color === null) {
+    if (process.env.BUNYAN_NO_COLOR &&
+        process.env.BUNYAN_NO_COLOR.length > 0) {
+      opts.color = false;
+    } else {
+      opts.color = process.stdout.isTTY;
+    }
+  }
+  usingAnsiCodes = opts.color; // intentionally global
   var stylize = (opts.color ? stylizeWithColor : stylizeWithoutColor);
 
+  // Pager.
+  var nodeVer = process.versions.node.split('.').map(Number);
+  var paginate = (
+    process.stdout.isTTY
+    && process.stdin.isTTY
+    && !opts.pids   // Don't page if following process output.
+    && opts.args.length > 0  // Don't page if no file args to process.
+    && process.platform !== 'win32'
+    && nodeVer >= [0,8,0]
+    && (opts.paginate === true
+        || (opts.paginate !== false
+            && (!process.env.BUNYAN_NO_PAGER
+                || process.env.BUNYAN_NO_PAGER.length === 0))));
+  if (paginate) {
+    var pagerCmd = process.env.PAGER || 'less';
+    assert.ok(pagerCmd.indexOf('"') === -1 && pagerCmd.indexOf("'") === -1,
+      'cannot parse PAGER quotes yet');
+    var argv = pagerCmd.split(/\s+/g);
+    var env = objCopy(process.env);
+    if (env.LESS === undefined) {
+      // git's default is LESS=FRSX. I don't like the 'S' here because lines
+      // are *typically* wide with bunyan output and scrolling horizontally
+      // is a royal pain.
+      // Note a bug in Mac's `less -F`, such that SIGWINCH can kill it.
+      // If that rears too much then I'll remove 'F' from here.
+      env.LESS = 'FRX';
+    }
+    if (_DEBUG) warn("(pager: argv=%j, env.LESS=%j)", argv, env.LESS);
+    // `pager` and `stdout` intentionally global.
+    pager = spawn(argv[0], argv.slice(1),
+      // Share the stderr handle to have error output come
+      // straight through. Only supported in v0.8+.
+      {env: env, stdio: ['pipe',1,2]});
+    stdout = pager.stdin;
+
+    // Early termination of the pager: just stop.
+    pager.on('exit', function (pagerCode) {
+      if (_DEBUG) warn('(bunyan: pager exit)');
+      pager = null;
+      stdout.end()
+      stdout = process.stdout;
+      cleanupAndExit(pagerCode);
+    });
+  }
+
+  // Stdout error handling. (Couldn't setup until `stdout` was determined.)
+  stdout.on("error", function (err) {
+    if (_DEBUG) warn('(stdout error event: %s)', err);
+    if (err.code === "EPIPE") {
+      drainStdoutAndExit(0);
+    } else if (err.toString() === 'Error: This socket is closed.') {
+      // Could get this if the pager closes its stdin, but hasn't exited yet.
+      drainStdoutAndExit(1);
+    } else {
+      warn(err);
+      drainStdoutAndExit(1);
+    }
+  });
+
   var retval = 0;
-  if (opts.args.length > 0) {
+  if (opts.pids) {
+    processPids(opts, stylize, function (code) {
+      cleanupAndExit(code);
+    });
+  } else if (opts.args.length > 0) {
     var files = opts.args;
     files.forEach(function (file) {
       streams[file] = { stream: null, records: [], done: false }
@@ -1032,12 +1404,12 @@ function main(argv) {
           warn("bunyan: unexpected error: %s", err.stack || err);
           return drainStdoutAndExit(1);
         }
-        process.exit(retval);
+        cleanupAndExit(retval);
       }
     );
   } else {
     processStdin(opts, stylize, function () {
-      process.exit(retval);
+      cleanupAndExit(retval);
     });
   }
 }

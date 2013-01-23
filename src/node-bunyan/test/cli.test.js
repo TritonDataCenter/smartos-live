@@ -6,9 +6,18 @@
 
 var path = require('path');
 var exec = require('child_process').exec;
-var format = require('util').format;
-var test = require('tap').test;
+var _ = require('util').format;
 var debug = console.warn;
+
+// node-tap API
+if (require.cache[__dirname + '/tap4nodeunit.js'])
+    delete require.cache[__dirname + '/tap4nodeunit.js'];
+var tap4nodeunit = require('./tap4nodeunit.js');
+var after = tap4nodeunit.after;
+var before = tap4nodeunit.before;
+var test = tap4nodeunit.test;
+
+
 
 var BUNYAN = path.resolve(__dirname, '../bin/bunyan');
 
@@ -24,7 +33,7 @@ var BUNYAN = path.resolve(__dirname, '../bin/bunyan');
 test('--version', function (t) {
   var version = require('../package.json').version;
   exec(BUNYAN + ' --version', function (err, stdout, stderr) {
-    t.error(err)
+    t.ifError(err)
     t.equal(stdout, 'bunyan ' + version + '\n');
     t.end();
   });
@@ -32,7 +41,7 @@ test('--version', function (t) {
 
 test('--help', function (t) {
   exec(BUNYAN + ' --help', function (err, stdout, stderr) {
-    t.error(err)
+    t.ifError(err)
     t.ok(stdout.indexOf('General options:') !== -1);
     t.end();
   });
@@ -40,7 +49,7 @@ test('--help', function (t) {
 
 test('-h', function (t) {
   exec(BUNYAN + ' -h', function (err, stdout, stderr) {
-    t.error(err)
+    t.ifError(err)
     t.ok(stdout.indexOf('General options:') !== -1);
     t.end();
   });
@@ -55,8 +64,9 @@ test('--bogus', function (t) {
 });
 
 test('simple.log', function (t) {
-  exec(BUNYAN + ' corpus/simple.log', function (err, stdout, stderr) {
-    t.error(err)
+  exec(_('%s %s/corpus/simple.log', BUNYAN, __dirname),
+       function (err, stdout, stderr) {
+    t.ifError(err)
     t.equal(stdout,
       '[2012-02-08T22:56:52.856Z]  INFO: myservice/123 on example.com: '
       + 'My message\n');
@@ -64,9 +74,9 @@ test('simple.log', function (t) {
   });
 });
 test('cat simple.log', function (t) {
-  exec(format('cat corpus/simple.log | %s', BUNYAN),
+  exec(_('cat %s/corpus/simple.log | %s', __dirname, BUNYAN),
     function (err, stdout, stderr) {
-      t.error(err)
+      t.ifError(err)
       t.equal(stdout,
         '[2012-02-08T22:56:52.856Z]  INFO: myservice/123 on example.com: '
         + 'My message\n');
@@ -75,18 +85,20 @@ test('cat simple.log', function (t) {
   );
 });
 test('simple.log with color', function (t) {
-  exec(BUNYAN + ' --color corpus/simple.log', function (err, stdout, stderr) {
-    t.error(err)
+  exec(_('%s --color %s/corpus/simple.log', BUNYAN, __dirname),
+    function (err, stdout, stderr) {
+    t.ifError(err)
     t.equal(stdout,
       '[2012-02-08T22:56:52.856Z] \u001b[36m INFO\u001b[39m: myservice/123 '
-      + 'on example.com: \u001b[36mMy message\u001b[39m\n');
+      + 'on example.com: \u001b[36mMy message\u001b[39m\n\u001b[0m');
     t.end();
   });
 });
 
 test('extrafield.log', function (t) {
-  exec(BUNYAN + ' corpus/extrafield.log', function (err, stdout, stderr) {
-    t.error(err)
+  exec(_('%s %s/corpus/extrafield.log', BUNYAN, __dirname),
+       function (err, stdout, stderr) {
+    t.ifError(err)
     t.equal(stdout,
       '[2012-02-08T22:56:52.856Z]  INFO: myservice/123 on example.com: '
       + 'My message (extra=field)\n');
@@ -94,43 +106,47 @@ test('extrafield.log', function (t) {
   });
 });
 test('extrafield.log with color', function (t) {
-  exec(BUNYAN + ' --color corpus/extrafield.log',
+  exec(_('%s --color %s/corpus/extrafield.log', BUNYAN, __dirname),
        function (err, stdout, stderr) {
-    t.error(err)
+    t.ifError(err)
     t.equal(stdout,
       '[2012-02-08T22:56:52.856Z] \u001b[36m INFO\u001b[39m: myservice/123 '
       + 'on example.com: \u001b[36mMy message\u001b[39m'
-      + '\u001b[90m (extra=field)\u001b[39m\n');
+      + '\u001b[90m (extra=field)\u001b[39m\n\u001b[0m');
     t.end();
   });
 });
 
 test('bogus.log', function (t) {
-  exec(BUNYAN + ' corpus/bogus.log', function (err, stdout, stderr) {
-    t.error(err)
+  exec(_('%s %s/corpus/bogus.log', BUNYAN, __dirname),
+       function (err, stdout, stderr) {
+    t.ifError(err)
     t.equal(stdout, 'not a JSON line\n{"hi": "there"}\n');
     t.end();
   });
 });
 
 test('bogus.log -j', function (t) {
-  exec(BUNYAN + ' -j corpus/bogus.log', function (err, stdout, stderr) {
-    t.error(err)
-    t.equal(stdout, 'not a JSON line\n{\n  "hi": "there"\n}\n');
+  exec(_('%s -j %s/corpus/bogus.log', BUNYAN, __dirname),
+       function (err, stdout, stderr) {
+    t.ifError(err)
+    t.equal(stdout, 'not a JSON line\n{"hi": "there"}\n');
     t.end();
   });
 });
 
 test('all.log', function (t) {
-  exec(BUNYAN + ' corpus/all.log', function (err, stdout, stderr) {
+  exec(_('%s %s/corpus/all.log', BUNYAN, __dirname),
+       function (err, stdout, stderr) {
     // Just make sure don't blow up on this.
-    t.error(err)
+    t.ifError(err)
     t.end();
   });
 });
 
 test('simple.log doesnotexist1.log doesnotexist2.log', function (t) {
-  exec(BUNYAN + ' corpus/simple.log doesnotexist1.log doesnotexist2.log',
+  exec(_('%s %s/corpus/simple.log doesnotexist1.log doesnotexist2.log',
+         BUNYAN, __dirname),
     function (err, stdout, stderr) {
       t.ok(err)
       t.equal(err.code, 2)
@@ -151,9 +167,9 @@ test('simple.log doesnotexist1.log doesnotexist2.log', function (t) {
 });
 
 test('multiple logs', function (t) {
-  exec(BUNYAN + ' corpus/log1.log corpus/log2.log',
+  exec(_('%s %s/corpus/log1.log %s/corpus/log2.log', BUNYAN, __dirname, __dirname),
       function (err, stdout, stderr) {
-    t.error(err);
+    t.ifError(err);
     t.equal(stdout, [
       '[2012-05-08T16:57:55.586Z]  INFO: agent1/73267 on headnode: message\n',
       '[2012-05-08T16:58:55.586Z]  INFO: agent2/73267 on headnode: message\n',
@@ -170,8 +186,9 @@ test('multiple logs', function (t) {
 });
 
 test('log1.log.gz', function (t) {
-  exec(BUNYAN + ' corpus/log1.log.gz', function (err, stdout, stderr) {
-    t.error(err);
+  exec(_('%s %s/corpus/log1.log.gz', BUNYAN, __dirname),
+       function (err, stdout, stderr) {
+    t.ifError(err);
     t.equal(stdout, [
       '[2012-05-08T16:57:55.586Z]  INFO: agent1/73267 on headnode: message\n',
       '[2012-05-08T17:02:49.339Z]  INFO: agent1/73267 on headnode: message\n',
@@ -183,9 +200,9 @@ test('log1.log.gz', function (t) {
 });
 
 test('mixed text and gzip logs', function (t) {
-  exec(BUNYAN + ' corpus/log1.log.gz corpus/log2.log',
+  exec(_('%s %s/corpus/log1.log.gz %s/corpus/log2.log', BUNYAN, __dirname, __dirname),
       function (err, stdout, stderr) {
-    t.error(err);
+    t.ifError(err);
     t.equal(stdout, [
       '[2012-05-08T16:57:55.586Z]  INFO: agent1/73267 on headnode: message\n',
       '[2012-05-08T16:58:55.586Z]  INFO: agent2/73267 on headnode: message\n',
@@ -215,11 +232,13 @@ test('--level 40', function (t) {
     'not a JSON line\n',
     '{"hi": "there"}\n'
   ].join('');
-  exec(BUNYAN + ' -l 40 corpus/all.log', function (err, stdout, stderr) {
-    t.error(err);
+  exec(_('%s -l 40 %s/corpus/all.log', BUNYAN, __dirname),
+       function (err, stdout, stderr) {
+    t.ifError(err);
     t.equal(stdout, expect);
-    exec(BUNYAN + ' --level 40 corpus/all.log', function (err, stdout, stderr) {
-      t.error(err);
+    exec(_('%s --level 40 %s/corpus/all.log', BUNYAN, __dirname),
+         function (err, stdout, stderr) {
+      t.ifError(err);
       t.equal(stdout, expect);
       t.end();
     });
@@ -237,13 +256,13 @@ test('--condition "level === 10 && pid === 123"', function (t) {
     'not a JSON line\n',
     '{"hi": "there"}\n'
   ].join('');
-  exec(BUNYAN + ' -c "level === 10 && pid === 123" corpus/all.log',
+  exec(_('%s -c "level === 10 && pid === 123" %s/corpus/all.log', BUNYAN, __dirname),
        function (err, stdout, stderr) {
-    t.error(err);
+    t.ifError(err);
     t.equal(stdout, expect);
-    exec(BUNYAN + ' --condition "level === 10 && pid === 123" corpus/all.log',
+    exec(_('%s --condition "level === 10 && pid === 123" %s/corpus/all.log', BUNYAN, __dirname),
          function (err, stdout, stderr) {
-      t.error(err);
+      t.ifError(err);
       t.equal(stdout, expect);
       t.end();
     });
@@ -263,10 +282,11 @@ test('multiple --conditions', function (t) {
     'not a JSON line\n',
     '{"hi": "there"}\n'
   ].join('');
-  exec(BUNYAN + ' corpus/all.log ' +
-       '-c "if (level === 40) pid = 1; true" ' +
-       '-c "pid === 1"', function (err, stdout, stderr) {
-    t.error(err);
+  exec(_('%s %s/corpus/all.log ' +
+         '-c "if (level === 40) pid = 1; true" ' +
+         '-c "pid === 1"', BUNYAN, __dirname),
+       function (err, stdout, stderr) {
+    t.ifError(err);
     t.equal(stdout, expect);
     t.end();
   });
@@ -279,7 +299,7 @@ test('multiple --conditions', function (t) {
 test('robust req handling', function (t) {
   var expect = [
     '[2012-08-08T10:25:47.636Z] DEBUG: amon-master/12859 on 9724a190-27b6-4fd8-830b-a574f839c67d: headAgentProbes respond (req_id=cce79d15-ffc2-487c-a4e4-e940bdaac31e, route=HeadAgentProbes, contentMD5=11FxOYiYfpMxmANj4kGJzg==)',
-    '[2012-08-08T10:25:47.637Z]  INFO: amon-master/12859 on 9724a190-27b6-4fd8-830b-a574f839c67d: HeadAgentProbes handled: 200 (req_id=cce79d15-ffc2-487c-a4e4-e940bdaac31e, 3ms, audit=true, remoteAddress=10.2.207.2, remotePort=50394, secure=false, _audit=true, req.version=*)',
+    '[2012-08-08T10:25:47.637Z]  INFO: amon-master/12859 on 9724a190-27b6-4fd8-830b-a574f839c67d: HeadAgentProbes handled: 200 (req_id=cce79d15-ffc2-487c-a4e4-e940bdaac31e, audit=true, remoteAddress=10.2.207.2, remotePort=50394, latency=3, secure=false, _audit=true, req.version=*)',
     '    HEAD /agentprobes?agent=ccf92af9-0b24-46b6-ab60-65095fdd3037 HTTP/1.1',
     '    accept: application/json',
     '    content-type: application/json',
@@ -302,7 +322,7 @@ test('robust req handling', function (t) {
     '      "name": "HeadAgentProbes",',
     '      "version": false',
     '    }',
-    '[2012-08-08T10:25:47.637Z]  INFO: amon-master/12859 on 9724a190-27b6-4fd8-830b-a574f839c67d: HeadAgentProbes handled: 200 (req_id=cce79d15-ffc2-487c-a4e4-e940bdaac31e, 3ms, audit=true, remoteAddress=10.2.207.2, remotePort=50394, secure=false, _audit=true, req.version=*)',
+    '[2012-08-08T10:25:47.637Z]  INFO: amon-master/12859 on 9724a190-27b6-4fd8-830b-a574f839c67d: HeadAgentProbes handled: 200 (req_id=cce79d15-ffc2-487c-a4e4-e940bdaac31e, audit=true, remoteAddress=10.2.207.2, remotePort=50394, latency=3, secure=false, _audit=true, req.version=*)',
     '    HEAD /agentprobes?agent=ccf92af9-0b24-46b6-ab60-65095fdd3037 HTTP/1.1',
     '    --',
     '    route: {',
@@ -310,19 +330,10 @@ test('robust req handling', function (t) {
     '      "version": false',
     '    }'
   ].join('\n') + '\n';
-  exec(BUNYAN + ' corpus/withreq.log', function (err, stdout, stderr) {
-    t.error(err);
+  exec(_('%s %s/corpus/withreq.log', BUNYAN, __dirname),
+       function (err, stdout, stderr) {
+    t.ifError(err);
     t.equal(stdout, expect);
     t.end();
   });
 });
-
-test('non-object res field', function (t) {
-  var expect = '[2012-10-10T16:14:07.610Z]  INFO: cnapi.get_existing_nics/24440 on 710c784f-6aa5-428c-9074-e046c3af884e: got existing: 02:08:20:d7:53:e0 (job_uuid=3499b13e-dbca-4331-b13a-f164c0da320a, nic=<unknown>, res="error: Unknown nic \\"020820d753e0\\"")\n';
-  exec(BUNYAN + ' corpus/non-object-res.log', function (err, stdout, stderr) {
-    t.error(err);
-    t.equal(stdout, expect);
-    t.end();
-  });
-});
-

@@ -171,6 +171,7 @@ d usr/node/0.8 0555 root bin
 d usr/node/0.8/node_modules 0555 root bin
 f usr/node/0.8/node_modules/async.js 0444 root bin
 f usr/node/0.8/node_modules/disklayout.js 0444 root bin
+f usr/node/0.8/node_modules/dtrace-provider.js 0444 root bin
 f usr/node/0.8/node_modules/dtrace-provider.node 0444 root bin
 f usr/node/0.8/node_modules/getopt.js 0444 root bin
 f usr/node/0.8/node_modules/kstat.node 0444 root bin

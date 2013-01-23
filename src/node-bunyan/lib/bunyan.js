@@ -4,7 +4,7 @@
  * The bunyan logging library for node.js.
  */
 
-var VERSION = '0.14.6';
+var VERSION = '0.18.1';
 
 // Bunyan log format version. This becomes the 'v' field on all log records.
 // `0` is until I release a version '1.0.0' of node-bunyan. Thereafter,
@@ -25,7 +25,19 @@ var os = require('os');
 var fs = require('fs');
 var util = require('util');
 var assert = require('assert');
+try {
+  var dtrace = require('dtrace-provider');
+} catch (e) {
+  dtrace = null;
+}
 var EventEmitter = require('events').EventEmitter;
+
+// The 'mv' module is required for rotating-file stream support.
+try {
+  var mv = require('mv');
+} catch (e) {
+  mv = null;
+}
 
 
 
@@ -47,7 +59,7 @@ function objCopy(obj) {
 
 var format = util.format;
 if (!format) {
-  // If not node 0.6, then use its `util.format`:
+  // If node < 0.6, then use its `util.format`:
   // <https://github.com/joyent/node/blob/master/lib/util.js#L22>:
   var inspect = util.inspect;
   var formatRegExp = /%[sdj%]/g;
@@ -156,6 +168,9 @@ var levelFromName = {
   'fatal': FATAL
 };
 
+// Dtrace probes.
+var dtp = undefined;
+var probes = dtrace && {};
 
 /**
  * Resolve a level number, name (upper or lowercase) to a level number value.
@@ -299,6 +314,22 @@ function Logger(options, _childOptions, _childSimple) {
     this.fields = {};
   }
 
+  if (!dtp && dtrace) {
+    dtp = dtrace.createDTraceProvider('bunyan');
+
+    for (var level in levelFromName) {
+      var probe;
+
+      probes[levelFromName[level]] = probe =
+        dtp.addProbe('log-' + level, 'char *');
+
+      // Explicitly add a reference to dtp to prevent it from being GC'd
+      probe.dtp = dtp;
+    }
+
+    dtp.enable();
+  }
+
   // Helpers
   function addStream(s) {
     s = objCopy(s);
@@ -345,6 +376,16 @@ function Logger(options, _childOptions, _childSimple) {
         if (!s.closeOnExit) {
           s.closeOnExit = false;
         }
+      }
+      break;
+    case 'rotating-file':
+      assert.ok(!s.stream, '"rotating-file" stream should not give a "stream"');
+      assert.ok(s.path);
+      assert.ok(mv,
+        '"rotating-file" stream type is not supported: missing "mv" module');
+      s.stream = new RotatingFileStream(s);
+      if (!s.closeOnExit) {
+        s.closeOnExit = true;
       }
       break;
     case 'raw':
@@ -641,31 +682,11 @@ Logger.prototype._mkRecord = function (fields, level, msgArgs) {
  * Emit a log record.
  *
  * @param rec {log record}
+ * @param noemit {Boolean} Optional. Set to true to skip emission
+ *      and just return the JSON string.
  */
-Logger.prototype._emit = function (rec) {
+Logger.prototype._emit = function (rec, noemit) {
   var i;
-
-  var obj = objCopy(rec[0]);
-  var level = obj.level = rec[2];
-  var recFields = rec[1];
-  if (recFields) {
-    if (this.serializers) {
-      this._applySerializers(recFields);
-    }
-    Object.keys(recFields).forEach(function (k) {
-      obj[k] = recFields[k];
-    });
-  }
-  xxx('Record:', rec)
-  obj.msg = format.apply(this, rec[3]);
-  if (!obj.time) {
-    obj.time = (new Date());
-  }
-  // Get call source info
-  if (this.src && !obj.src) {
-    obj.src = getCaller3Info()
-  }
-  obj.v = LOG_VERSION;
 
   // Lazily determine if this Logger has non-"raw" streams. If there are
   // any, then we need to stringify the log record.
@@ -681,18 +702,24 @@ Logger.prototype._emit = function (rec) {
 
   // Stringify the object. Attempt to warn/recover on error.
   var str;
-  if (this.haveNonRawStreams) {
-    str = JSON.stringify(obj, safeCycles()) + '\n';
+  if (noemit || this.haveNonRawStreams) {
+    str = JSON.stringify(rec, safeCycles()) + '\n';
   }
 
+  if (noemit)
+    return str;
+
+  var level = rec.level;
   for (i = 0; i < this.streams.length; i++) {
     var s = this.streams[i];
     if (s.level <= level) {
       xxx('writing log rec "%s" to "%s" stream (%d <= %d): %j',
-        obj.msg, s.type, s.level, level, obj);
-      s.stream.write(s.raw ? obj : str);
+        rec.msg, s.type, s.level, level, rec);
+      s.stream.write(s.raw ? rec : str);
     }
   };
+
+  return str;
 }
 
 
@@ -702,33 +729,72 @@ Logger.prototype._emit = function (rec) {
  */
 function mkLogEmitter(minLevel) {
   return function () {
-    var fields = null, msgArgs = null;
+    var log = this;
+
+    function mkRecord(args) {
+      if (args[0] instanceof Error) {
+        // `log.<level>(err, ...)`
+        fields = {err: errSerializer(args[0])};
+        if (args.length === 1) {
+          msgArgs = [fields.err.message];
+        } else {
+          msgArgs = Array.prototype.slice.call(args, 1);
+        }
+      } else if (typeof (args[0]) === 'string') {  // `log.<level>(msg, ...)`
+        fields = null;
+        msgArgs = Array.prototype.slice.call(args);
+      } else if (Buffer.isBuffer(args[0])) {  // `log.<level>(buf, ...)`
+        // Almost certainly an error, show `inspect(buf)`. See bunyan issue #35.
+        fields = null;
+        msgArgs = Array.prototype.slice.call(args);
+        msgArgs[0] = util.inspect(msgArgs[0]);
+      } else {  // `log.<level>(fields, msg, ...)`
+        fields = args[0];
+        msgArgs = Array.prototype.slice.call(args, 1);
+      }
+
+      // Build up the record object.
+      var rec = objCopy(log.fields);
+      var level = rec.level = minLevel;
+      var recFields = (fields ? objCopy(fields) : null);
+      if (recFields) {
+        if (log.serializers) {
+          log._applySerializers(recFields);
+        }
+        Object.keys(recFields).forEach(function (k) {
+          rec[k] = recFields[k];
+        });
+      }
+      rec.msg = format.apply(log, msgArgs);
+      if (!rec.time) {
+        rec.time = (new Date());
+      }
+      // Get call source info
+      if (log.src && !rec.src) {
+        rec.src = getCaller3Info()
+      }
+      rec.v = LOG_VERSION;
+
+      return rec;
+    };
+
+    var fields = null;
+    var msgArgs = arguments;
+    var str = null;
+    var rec = null;
     if (arguments.length === 0) {   // `log.<level>()`
       return (this._level <= minLevel);
     } else if (this._level > minLevel) {
-      return;
-    } else if (arguments[0] instanceof Error) {
-      // `log.<level>(err, ...)`
-      fields = {err: errSerializer(arguments[0])};
-      if (arguments.length === 1) {
-        msgArgs = [fields.err.message];
-      } else {
-        msgArgs = Array.prototype.slice.call(arguments, 1);
-      }
-    } else if (typeof (arguments[0]) === 'string') {  // `log.<level>(msg, ...)`
-      fields = null;
-      msgArgs = Array.prototype.slice.call(arguments);
-    } else if (Buffer.isBuffer(arguments[0])) {  // `log.<level>(buf, ...)`
-      // Almost certainly an error, show `inspect(buf)`. See bunyan issue #35.
-      fields = null;
-      msgArgs = Array.prototype.slice.call(arguments);
-      msgArgs[0] = util.inspect(msgArgs[0]);
-    } else {  // `log.<level>(fields, msg, ...)`
-      fields = arguments[0];
-      msgArgs = Array.prototype.slice.call(arguments, 1);
+      /* pass through */
+    } else {
+      rec = mkRecord(msgArgs);
+      str = this._emit(rec);
     }
-    var rec = this._mkRecord(fields, minLevel, msgArgs);
-    this._emit(rec);
+    probes && probes[minLevel].fire(function () {
+        return [ str ||
+          (rec && log._emit(rec, true)) ||
+          log._emit(mkRecord(msgArgs), true) ];
+    });
   }
 }
 
@@ -851,6 +917,252 @@ function safeCycles() {
     return val;
   };
 }
+
+
+/**
+ * XXX
+ */
+if (mv) {
+
+function RotatingFileStream(options) {
+  assert.ok(options.period, 'need a period');
+  this.path = options.path;
+  this.stream = fs.createWriteStream(this.path,
+    {flags: 'a', encoding: 'utf8'});
+  this.count = (options.count == null ? 10 : options.count);
+  assert.ok(typeof(this.count) === 'number' && this.count >= 0);
+
+  // Parse `options.period`.
+  if (options.period) {
+    // <number><scope> where scope is:
+    //    h   hours (at the start of the hour)
+    //    d   days (at the start of the day, i.e. just after midnight)
+    //    w   weeks (at the start of Sunday)
+    //    m   months (on the first of the month)
+    //    y   years (at the start of Jan 1st)
+    // with special values "hourly" (1h), "daily" (1d), "weekly" (1w),
+    // "monthly" (1m) and "yearly" (1y)
+    var period = {
+      'hourly': '1h',
+      'daily': '1d',
+      'weekly': '1w',
+      'monthly': '1m',
+      'yearly': '1y'
+    }[options.period] || options.period;
+    var m = /^([1-9][0-9]*)([hdwmy]|ms)$/.exec(period);
+    if (!m) {
+      throw new Error(format('invalid period: "%s"', options.period));
+    }
+    this.periodNum = Number(m[1]);
+    this.periodScope = m[2];
+  } else {
+    this.periodNum = 1;
+    this.periodScope = 'd';
+  }
+
+  // TODO: template support for backup files
+  // template: <path to which to rotate>
+  //      default is %P.%n
+  //      '/var/log/archive/foo.log'  -> foo.log.%n
+  //      '/var/log/archive/foo.log.%n'
+  //      codes:
+  //          XXX support strftime codes (per node version of those)
+  //              or whatever module. Pick non-colliding for extra
+  //              codes
+  //          %P      `path` base value
+  //          %n      integer number of rotated log (1,2,3,...)
+  //          %d      datetime in YYYY-MM-DD_HH-MM-SS
+  //                      XXX what should default date format be?
+  //                          prior art? Want to avoid ':' in
+  //                          filenames (illegal on Windows for one).
+
+  this.rotQueue = [];
+  this.rotating = false;
+  this._setupNextRot();
+}
+
+util.inherits(RotatingFileStream, EventEmitter);
+
+RotatingFileStream.prototype._setupNextRot = function () {
+  var self = this;
+  this.rotAt = this._nextRotTime();
+  this.timeout = setTimeout(
+    function () { self.rotate(); },
+    this.rotAt - Date.now());
+}
+
+RotatingFileStream.prototype._nextRotTime = function _nextRotTime(first) {
+  var DEBUG = true;
+  if (DEBUG) console.log('-- _nextRotTime: %s%s', this.periodNum, this.periodScope);
+  var d = new Date();
+
+  if (DEBUG) console.log('  now local: %s', d);
+  if (DEBUG) console.log('    now utc: %s', d.toISOString());
+  var rotAt;
+  switch (this.periodScope) {
+  case 'ms':
+    // Hidden millisecond period for debugging.
+    if (this.rotAt) {
+      rotAt = this.rotAt + this.periodNum;
+    } else {
+      rotAt = Date.now() + this.periodNum;
+    }
+    break;
+  case 'h':
+    if (this.rotAt) {
+      rotAt = this.rotAt + this.periodNum * 60 * 60 * 1000;
+    } else {
+      // First time: top of the next hour.
+      rotAt = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(),
+        d.getUTCHours() + 1);
+    }
+    break;
+  case 'd':
+    if (this.rotAt) {
+      rotAt = this.rotAt + this.periodNum * 24 * 60 * 60 * 1000;
+    } else {
+      // First time: start of tomorrow (i.e. at the coming midnight) UTC.
+      rotAt = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
+    }
+    break;
+  case 'w':
+    // Currently, always on Sunday morning at 00:00:00 (UTC).
+    if (this.rotAt) {
+      rotAt = this.rotAt + this.periodNum * 7 * 24 * 60 * 60 * 1000;
+    } else {
+      // First time: this coming Sunday.
+      rotAt = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(),
+        d.getUTCDate() + (7 - d.getUTCDay()));
+    }
+    break;
+  case 'm':
+    if (this.rotAt) {
+      rotAt = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + this.periodNum, 1);
+    } else {
+      // First time: the start of the next month.
+      rotAt = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+    }
+    break;
+  case 'y':
+    if (this.rotAt) {
+      rotAt = Date.UTC(d.getUTCFullYear() + this.periodNum, 0, 1);
+    } else {
+      // First time: the start of the next year.
+      rotAt = Date.UTC(d.getUTCFullYear() + 1, 0, 1);
+    }
+    break;
+  default:
+    assert.fail(format('invalid period scope: "%s"', this.periodScope));
+  }
+
+  if (DEBUG) {
+    console.log('  **rotAt**: %s (utc: %s)', rotAt,
+      new Date(rotAt).toUTCString());
+    var now = Date.now();
+    console.log('        now: %s (%sms == %smin == %sh to go)',
+      now,
+      rotAt - now,
+      (rotAt-now)/1000/60,
+      (rotAt-now)/1000/60/60);
+  }
+  return rotAt;
+};
+
+RotatingFileStream.prototype.rotate = function rotate() {
+  // XXX What about shutdown?
+  var self = this;
+  var DEBUG = true;
+
+  if (DEBUG) console.log('-- [%s] rotating %s', new Date(), self.path);
+  if (self.rotating) {
+    throw new TypeError('cannot start a rotation when already rotating');
+  }
+  self.rotating = true;
+
+  self.stream.end();  // XXX can do moves sync after this? test at high rate
+
+  function del() {
+    var toDel = self.path + '.' + String(n - 1);
+    if (n === 0) {
+      toDel = self.path;
+    }
+    n -= 1;
+    if (DEBUG) console.log('rm %s', toDel);
+    fs.unlink(toDel, function (delErr) {
+      //XXX handle err other than not exists
+      moves();
+    });
+  }
+
+  function moves() {
+    if (self.count === 0 || n < 0) {
+      return finish();
+    }
+    var before = self.path;
+    var after = self.path + '.' + String(n);
+    if (n > 0) {
+      before += '.' + String(n - 1);
+    }
+    n -= 1;
+    fs.exists(before, function (exists) {
+      if (!exists) {
+        moves();
+      } else {
+        if (DEBUG) console.log('mv %s %s', before, after);
+        mv(before, after, function (mvErr) {
+          if (mvErr) {
+            self.emit('error', mvErr);
+            finish(); // XXX finish here?
+          } else {
+            moves();
+          }
+        });
+      }
+    })
+  }
+
+  function finish() {
+    if (DEBUG) console.log('open %s', self.path);
+    self.stream = fs.createWriteStream(self.path,
+      {flags: 'a', encoding: 'utf8'});
+    var q = self.rotQueue, len = q.length;
+    for (var i = 0; i < len; i++) {
+      self.stream.write(q[i]);
+    }
+    self.rotQueue = [];
+    self.rotating = false;
+    self.emit('drain');
+    self._setupNextRot();
+  }
+
+  var n = this.count;
+  del();
+};
+
+RotatingFileStream.prototype.write = function write(s) {
+  if (this.rotating) {
+    this.rotQueue.push(s);
+    return false;
+  } else {
+    return this.stream.write(s);
+  }
+};
+
+RotatingFileStream.prototype.end = function end(s) {
+  this.stream.end();
+};
+
+RotatingFileStream.prototype.destroy = function destroy(s) {
+  this.stream.destroy();
+};
+
+RotatingFileStream.prototype.destroySoon = function destroySoon(s) {
+  this.stream.destroySoon();
+};
+
+} /* if (mv) */
+
+
 
 /**
  * RingBuffer is a Writable Stream that just stores the last N records in

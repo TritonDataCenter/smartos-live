@@ -337,6 +337,9 @@ install: all
 	    $(PREFIX_NODE)/node_modules/zutil/build/Release
 	cp $(EXPAT.NODE) $(PREFIX_NODE)/node_modules/expat_binding.node
 	cp $(DTRACE_PROVIDER.NODE) $(PREFIX_NODE)/node_modules/dtrace-provider.node
+	sed -e "s|require('./build*DTraceProviderBindings')|require('/usr/node/node_modules/dtrace-provider.node')|" \
+	    < $(DTRACE_PROVIDER_SRCDIR)/dtrace-provider.js \
+	    > $(PREFIX_NODE)/node_modules/dtrace-provider.js
 	sed -e "s|var expat.*;|var expat = require('./expat_binding');|" \
 	    < node-expat/lib/node-expat.js \
 	    > $(PREFIX_NODE)/node_modules/node-expat.js
@@ -355,7 +358,9 @@ install: all
 	    $(DESTDIR)/usr/vm/sbin/add-userscript
 	mv $(DESTDIR)/usr/vm/sbin/metadata.js $(DESTDIR)/usr/vm/sbin/metadata
 	mkdir -p $(DESTDIR)/usr/share/man/man1
-	cp node-bunyan/lib/bunyan.js $(PREFIX_NODE)/node_modules/bunyan.js
+	sed -e "s|require('dtrace-provider')|require('/usr/node/node_modules/dtrace-provider')|" \
+	    < node-bunyan/lib/bunyan.js \
+	    > $(PREFIX_NODE)/node_modules/bunyan.js
 	cp node-bunyan/docs/bunyan.1 $(DESTDIR)/usr/share/man/man1/bunyan.1
 	mkdir -p $(DESTDIR)/usr/bin
 	sed -e 's|^#!/usr/bin/env node.*$$|#!/usr/node/bin/node|' \

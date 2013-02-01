@@ -307,6 +307,7 @@ function createBadSnapshot(t, uuid, name, callback)
 test('create snapshot with bad name', {'timeout': 240000}, function(t) {
 
     var bad_names = [
+        'thisisareallylongsnapshotnamethatshouldbreakthingsbecauseitiswaytoolongforthemaxsnapshotnamevalue',
         '01234567890123456789012345678901234567890123456789012345678901234567890123456789',
         '!@#)!%*#^@)^#%$@U^@#)$*#@$!@#!@#',
         '\n',
@@ -545,6 +546,34 @@ test('delete snapshot1', {'timeout': 240000}, function(t) {
     });
 });
 
+test('create snapshot with numeric name that should succeed', {'timeout': 240000}, function(t) {
+    if (abort) {
+        t.ok(false, 'skipping snapshot as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    VM.create_snapshot(vmobj.uuid, '20130131180505', {}, function (err) {
+        t.ok(!err, 'no error creating 20130131180505 snapshot of ' + vmobj.uuid);
+        VM.load(vmobj.uuid, function (e, o) {
+            t.ok(!e, 'loading VM after create');
+            if (e) {
+                abort=true;
+                t.end();
+                return;
+            }
+            t.ok(hasSnapshot(o.snapshots, '20130131180505'), '20130131180505 after create');
+            deleteSnapshot(t, vmobj.uuid, '20130131180505', 0, function(err) {
+                t.ok(!err, 'no error deleting 20130131180505 of ' + vmobj.uuid + (err ? ' ' + err.message : ''));
+                if (err) {
+                    abort = true;
+                }
+                t.end();
+            });
+        });
+    });
+});
+
 function createSnapshot(t, uuid, snapname, expected_count, cb) {
     if (abort) {
         t.ok(false, 'skipping create as test run is aborted.');
@@ -582,7 +611,7 @@ function deleteSnapshot(t, uuid, snapname, expected_remaining, cb) {
                 return;
             }
             // snapshot3 should have been deleted since it's newer
-            t.ok(o.snapshots.length === expected_remaining, expected_remaining
+            t.ok(o.snapshots.length === expected_remaining, o.snapshots.length
                 + ' snapshots remain after rollback: [expected: '
                 + expected_remaining + ']');
             cb();

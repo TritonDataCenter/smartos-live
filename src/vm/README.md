@@ -1,17 +1,20 @@
 How to use the tests.
 =====================
 
-The tests here run in the GZ as they need to be able to manage VMs.  In order to
-run the tests run:
+The tests here run in the GZ as they need to be able to manage VMs.  Tests are
+now bundled into the platform at build time.  To run all tests you can go to
+/usr/vm/test in the platform and run:
 
-    ./tools/build-test-tarball.sh
+    touch /lib/sdc/.sdc-test-no-production-data
+    ./runtests
 
-which will generate a tests.tar.gz file which you can unpack on your system in
-/usr/vm/test and then run:
+This will take some time and run them all.  If you want to run a single test, go
+to /usr/vm/test and run:
 
-    (cd /usr/vm/test; ./run-tests)
+    touch /lib/sdc/.sdc-test-no-production-data
+    ./runtest tests/test-<testname>.js
 
-to run all the tests.
+which will run only that test.
 
 How to update the test framework (node-tap) from upstream.
 ==========================================================

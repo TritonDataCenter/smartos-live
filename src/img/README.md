@@ -1,16 +1,36 @@
-# IMGADM - Image Administration Tool
+# imgadm -- manage VM images
 
-imgadm is a tool for managing images on a local compute node. It can import 
-and destroy local images, present information about how they're being used, 
-and you can query the dataset API (https://datasets.joyent.com) for more 
-images, or to import them.
+`imgadm` is a tool for managing images on a local headnode or compute node. It
+can import and destroy local images, present information about how they're
+being used.  To find and install new images, imgadm speaks to a server
+implementing the IMGAPI. The default and canonical IMGAPI server is the Joyent
+Images repository at <https://images.joyent.com>.
 
-imgadm comes with a command line tool, but can also be used quite easily as a 
-library by importing it into your node application.
 
-This repository contains a bash autocompleter in the tools directory It also 
-contains a "repair.sh" script for fixing up the "database" of manifests on a 
-local compute node.
+# Test Suite
 
-DNS is disabled in most Platform images, so this application uses the built-in
-node dns resolver.
+    /usr/img/test/runtests
+
+
+# Development
+
+    git clone git@github.com:joyent/smartos-live.git
+    cd src/img
+    # edit
+    # build
+    # test
+
+In a SmartOS build "/usr/img/..." where this installs is read-only. You can
+get a read/write "/usr" as follows:
+
+    /usbkey/scripts/mount-image.sh -w
+
+This will create a writeable copy of the platform in "/image". Make your
+edits in "/image/usr/img/..." then re-package the platform and reboot
+into it:
+
+    /usbkey/scripts/umount-image.sh && reboot
+
+
+Before commiting/pushing run `make prepush` and, if possible, get a code
+review.

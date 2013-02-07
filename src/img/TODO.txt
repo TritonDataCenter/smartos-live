@@ -1,0 +1,35 @@
+
+- imgadm2 publish SNAPSHOT (or some other name) to zfs send a prepared
+  snapshot and manifest info to IMGAPI. This is for customer image
+  creation. This then needs to take auth info optionally? Check with /ping
+  if need to auth.
+
+- remove binary parts of sdc-clients dep.
+
+- CDDL header
+
+- review/integrate
+
+- rm TODO.txt
+
+
+# someday/maybe
+
+- pimped out logging a la vmadm
+- switch to optimist or better option processing
+  https://github.com/nodeca/argparse
+  I hate nopt's decision to allow "imgadm -v|--ve|--ver|...|--version"
+- separate node-cmdln
+- HTTP caching when talking to sources.
+
+# compatibility docs
+
+COMPATIBILITY section in man page.
+
+- 'imgadm show UUID' no longer includes the non-IMGAPI "_url" field. The
+  equivalent data is now in the "source" field of 'imgadm info UUID'.
+- 'imgadm update' differences
+- /var/db/imgadm -> /var/imgadm   Though this is internal details.
+- /var/db/imgadm/sources.list -> `imgadm sources ...`
+- 'imgadm info UUID' changes: dropped the 'children' and 'volume' keys. They
+  were undocumented/unspecified. Added the 'source'.

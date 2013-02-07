@@ -63,7 +63,7 @@ JS_CHECK_TARGETS=\
 	node_modules/{system,onlyif}.js \
 	vm/sbin/*.js \
 	vm/node_modules/{qmp,VM,dladm}.js \
-	img/node_modules/*.js \
+	img/lib/*.js \
 	img/sbin/imgadm
 
 JS_CHECK_OLDSKOOL_TARGETS = \
@@ -366,8 +366,14 @@ install: all
 	sed -e 's|^#!/usr/bin/env node.*$$|#!/usr/node/bin/node|' \
 	    < node-bunyan/bin/bunyan \
 	    > $(DESTDIR)/usr/bin/bunyan
-	cp -PR img $(DESTDIR)/usr/
-	mkdir -m 0755 -p $(DESTDIR)/var/db/imgadm
+	rm -rf $(DESTDIR)/usr/img
+	mkdir -m 0755 -p $(DESTDIR)/usr/img
+	cp -PR img/etc $(DESTDIR)/usr/img/
+	cp -PR img/lib $(DESTDIR)/usr/img/
+	cp -PR img/man $(DESTDIR)/usr/img/
+	cp -PR img/node_modules $(DESTDIR)/usr/img/
+	cp -PR img/sbin $(DESTDIR)/usr/img/
+	cp -PR img/test $(DESTDIR)/usr/img/
 	rm -rf $(DESTDIR)/usr/fw
 	mkdir -m 0755 -p $(DESTDIR)/usr/fw
 	cp -PR fw/etc $(DESTDIR)/usr/fw/

@@ -1,41 +1,87 @@
-# imgadm bash autocompletion
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2013, Joyent, Inc. All rights reserved.
+#
+# imgadm bash completions
+#
 
-set completion-display-width 0 
+_imgadm()
+{
+    local cmdIdx cur prev len cmd
+    COMPREPLY=()
+    # NOTE: We exclude aliases here to encourage usage of the 'proper' cmds.
+    COMMANDS="help sources avail show import install list get update delete publish"
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    len="${#COMP_WORDS[@]}"
+    cmd="${COMP_WORDS[1]}"
 
-_imgadm() {
-  local cur prev opts base options
-  COMPREPLY=()
-  cur="${COMP_WORDS[COMP_CWORD]}"
-  prev="${COMP_WORDS[COMP_CWORD-1]}"
-  options=( list info show available import install update destroy )
-  case "$prev" in
-    imgadm)
-      COMPREPLY=( $(compgen -W '${options[@]}' -- ${cur}) )
-      return 0
-      ;;
-    import)
-      local available=$(imgadm -p avail | cut -d: -f1)
-      COMPREPLY=( $(compgen -W "${available}" -- ${cur}) )
-      return 0
-      ;;
-    info)
-      local installed=$(imgadm -p list | cut -d: -f1)
-      COMPREPLY=( $(compgen -W "${installed}" -- ${cur}) )
-      return 0
-      ;;
-    show)
-      local installed=$(imgadm -p list | cut -d: -f1)
-      COMPREPLY=( $(compgen -W "${installed}" -- ${cur}) )
-      return 0
-      ;;
-  esac
+    # The subcommand isn't just the second arg if top-level options are used,
+    # e.g. 'imgadm -v list'.
+    cmdIdx=1
+    while [[ $i -lt $len ]]; do
+        cmd=${COMP_WORDS[$cmdIdx]}
+        [[ "${cmd:0:1}" != "-" ]] && break;
+        cmdIdx=$(( $cmdIdx + 1 ))
+    done
 
+    if [[ $(( $cmdIdx + 1 )) == $len ]]; then
+        # Complete a subcommand.
+        COMPREPLY=( $(compgen -W "${COMMANDS}" -- ${cur}) )
+
+    elif [[ ${cmd} == "help" ]]; then
+        # Complete a subcommand.
+        COMPREPLY=( $(compgen -W "${COMMANDS}" -- ${cur}) )
+
+    elif [[ ${prev} == '-P' ]] && [[ ${cmd} == 'import'
+            || ${cmd} == 'install'
+            || ${cmd} == 'get'
+            || ${cmd} == 'info'
+            || ${cmd} == 'delete'
+            || ${cmd} == 'destroy' ]]; then
+        # Available <pool> expansion.
+        local zpool_names=$(zpool list -Ho name)
+        COMPREPLY=( $(compgen -W "${zpool_names}" -- ${cur}) )
+
+    elif [[ ${cmd} == 'show'
+            || ${cmd} == 'import' ]]; then
+        # Available <uuid> expansion.
+        local avail_uuids=$(imgadm avail -H -o uuid)
+        COMPREPLY=( $(compgen -W "${avail_uuids}" -- ${cur}) )
+
+    elif [[ ${cmd} == 'get'
+            || ${cmd} == 'info'
+            || ${cmd} == 'delete'
+            || ${cmd} == 'destroy' ]]; then
+        # Install image UUIDs.
+        local installed_uuids=$(imgadm list -H -o uuid)
+        COMPREPLY=( $(compgen -W "${installed_uuids}" -- ${cur}) )
+
+    else
+        # Just expand files by default.
+        COMPREPLY=( $(compgen -f -- ${cur}) )
+
+    fi
+
+    return 0
 }
 
-DSADM=$(which imgadm 2>&1 > /dev/null)
-
-if [[ $? -ne 0 ]] ; then
-  echo "Error: Cannot find imgadm. Won't load autocomple script. Check \$PATH"
-else
-  complete -F _imgadm imgadm
-fi
+complete -F _imgadm imgadm

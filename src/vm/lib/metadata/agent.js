@@ -380,7 +380,16 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         return returnit(null,
           Object.keys(metadata.customer_metadata).join("\n"));
       } else if (cmd === 'GET') {
+        if (!rows || !rows.length) {
+          returnit(new Error('Zone lookup did not return row data'));
+          return;
+        }
+
         var metadata = rows.length ? rows[0] : {};
+        if (!metadata) {
+          returnit(new Error('Zone lookup did not return data'));
+          return;
+        }
 
         zlog.info("Serving " + want);
         if (want.slice(0, 4) === 'sdc:') {
@@ -389,13 +398,20 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
           return returnit(null, val);
         }
         else {
-          return returnit(null, metadata.customer_metadata[want]);
+          if (metadata.hasOwnProperty('customer_metadata')) {
+            returnit(null, metadata.customer_metadata[want]);
+            return;
+          } else {
+            returnit(new Error('Zone did not contain customer_metadata'));
+            return;
+          }
         }
       }
     });
 
     function returnit (error, val) {
       if (error) {
+        zlog.error(error.message);
         write("FAILURE\n");
         return;
       }

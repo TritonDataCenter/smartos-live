@@ -120,7 +120,7 @@ f usr/img/node_modules/sdc-clients/node_modules/backoff/index.js 0444 root bin
 d usr/img/node_modules/sdc-clients/node_modules/backoff/lib 0555 root bin
 f usr/img/node_modules/sdc-clients/node_modules/backoff/lib/backoff.js 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/backoff/lib/function_call.js 0444 root bin
-f usr/img/node_modules/sdc-clients/node_modules/backoff/lib/strategy 0444 root bin
+d usr/img/node_modules/sdc-clients/node_modules/backoff/lib/strategy 0555 root bin
 f usr/img/node_modules/sdc-clients/node_modules/backoff/lib/strategy/exponential.js 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/backoff/lib/strategy/fibonacci.js 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/backoff/lib/strategy/strategy.js 0444 root bin

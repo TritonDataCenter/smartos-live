@@ -55,7 +55,7 @@ trap 'cleanup' EXIT
 start_time=$(date +%s)
 
 TOP=$(cd $(dirname $0)/../; pwd)
-NODEUNIT="/usr/node/bin/node $TOP/node_modules/.bin/nodeunit"
+NODEUNIT="/usr/node/bin/node $TOP/node_modules/nodeunit/bin/nodeunit"
 
 
 # Options.

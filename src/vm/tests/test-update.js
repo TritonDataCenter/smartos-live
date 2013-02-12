@@ -30,6 +30,17 @@ var PAYLOADS = {
                 "mac": "01:02:03:04:05:06"
             }
         ]
+    }, "add_net1": {
+        "add_nics": [
+            {
+                "ip": "10.99.99.12,10.99.99.33,10.99.99.34",
+                "netmask": "255.255.255.0",
+                "nic_tag": "external",
+                "interface": "net1",
+                "vlan_id": 0,
+                "gateway": "10.254.254.1"
+            }
+        ]
     }, "add_invalid_allow_unfiltered_promisc": {
         "update_nics": [
             {
@@ -136,6 +147,13 @@ test('add net0', function(t) {
                 t.end();
             });
         }
+    });
+});
+
+test('add net1 -- bad IP', function(t) {
+    VM.update(vm_uuid, PAYLOADS.add_net1, function (err) {
+        t.ok(err, 'failed to add nic with invalid IP: ' + (err ? err.message : ''));
+        t.end();
     });
 });
 

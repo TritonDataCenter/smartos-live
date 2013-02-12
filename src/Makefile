@@ -370,6 +370,8 @@ install: all
 	cp node-panic/lib/subr.js $(PREFIX_NODE)/node_modules/subr.js
 	rm -rf $(DESTDIR)/usr/img
 	mkdir -m 0755 -p $(DESTDIR)/usr/img
+	cp img/README.md $(DESTDIR)/usr/img/README.md
+	cp img/package.json $(DESTDIR)/usr/img/package.json
 	cp -PR img/etc $(DESTDIR)/usr/img/
 	cp -PR img/lib $(DESTDIR)/usr/img/
 	cp -PR img/man $(DESTDIR)/usr/img/

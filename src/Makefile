@@ -368,6 +368,8 @@ install: all
 	    > $(DESTDIR)/usr/bin/bunyan
 	rm -rf $(DESTDIR)/usr/img
 	mkdir -m 0755 -p $(DESTDIR)/usr/img
+	cp img/README.md $(DESTDIR)/usr/img/README.md
+	cp img/package.json $(DESTDIR)/usr/img/package.json
 	cp -PR img/etc $(DESTDIR)/usr/img/
 	cp -PR img/lib $(DESTDIR)/usr/img/
 	cp -PR img/man $(DESTDIR)/usr/img/

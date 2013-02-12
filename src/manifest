@@ -12,7 +12,6 @@ f usr/img/lib/common.js 0444 root bin
 f usr/img/lib/errors.js 0444 root bin
 f usr/img/lib/imgadm.js 0444 root bin
 f usr/img/lib/upgrade.js 0444 root bin
-f usr/img/Makefile 0444 root bin
 d usr/img/man 0555 root bin
 f usr/img/man/imgadm.1m.md 0444 root bin
 d usr/img/node_modules 0555 root bin

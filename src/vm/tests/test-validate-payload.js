@@ -81,6 +81,21 @@ for (brand in os_brands) {
         });
     });
 
+    test('set invalid max_swap', function (t) {
+        VM.validate(brand, 'create', {
+            'brand': brand,
+            'image_uuid': '1c508270-a63a-11e1-bba4-f3ec226f563a',
+            'max_swap': 128
+            }, function (errors) {
+
+            t.ok(errors, 'invalid payload');
+            if (errors) {
+                t.ok(errors.bad_values.indexOf('max_swap') !== -1, 'confirm that it is bad values breaking: ' + JSON.stringify(errors));
+            }
+            t.end();
+        });
+    });
+
     test('set non-integer cpu_cap', function (t) {
         VM.validate(brand, 'create', {
             'brand': brand,

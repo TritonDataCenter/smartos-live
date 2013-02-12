@@ -397,8 +397,13 @@ function test_update_ram(ram)
                         + obj.max_physical_memory + ' expected: ' + ram);
                     t.ok((obj.max_locked_memory === Number(ram)), 'vm.max_locked_memory: '
                         + obj.max_locked_memory + ' expected: ' + ram);
-                    t.ok((obj.max_swap === Number(ram)), 'vm.max_swap: '
-                        + obj.max_swap + ' expected: ' + ram);
+                    if (ram > 256) {
+                        t.ok((obj.max_swap === Number(ram)), 'vm.max_swap: '
+                            + obj.max_swap + ' expected: ' + ram);
+                    } else {
+                        t.ok((obj.max_swap === 256), 'vm.max_swap: '
+                            + obj.max_swap + ' expected: ' + 256);
+                    }
                     t.end();
                 });
             }

@@ -216,7 +216,7 @@ d usr/img/sbin 0555 root bin
 f usr/img/sbin/imgadm 0555 root bin
 d usr/img/test 0555 root bin
 f usr/img/test/basics.test.js 0444 root bin
-f usr/img/test/runtests 0444 root bin
+f usr/img/test/runtests 0555 root bin
 f usr/img/test/tap4nodeunit.js 0444 root bin
 # new vmadmd
 s etc/bash/bash_completion.d/vmadm=/usr/vm/etc/vmadm.completion

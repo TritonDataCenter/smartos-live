@@ -978,14 +978,14 @@ tab-complete UUIDs rather than having to type them out for every command.
     max_swap:
 
         The maximum amount of virtual memory the VM is allowed to use.  This
-        cannot be lower than max_physical_memory.
+        cannot be lower than max_physical_memory, nor can it be lower than 256.
 
         type: integer (number of MiB)
         vmtype: OS,KVM
         listable: yes
         create: yes
         update: yes (live update)
-        default: value of max_physical_memory
+        default: value of max_physical_memory or 256, whichever is higher.
 
     mdata_exec_timeout:
 
@@ -1453,7 +1453,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: yes
         create: yes
         update: yes
-        default: 256
+        default: max_swap
 
     transition_expire:
 

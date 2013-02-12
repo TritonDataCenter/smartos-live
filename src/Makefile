@@ -337,7 +337,7 @@ install: all
 	    $(PREFIX_NODE)/node_modules/zutil/build/Release
 	cp $(EXPAT.NODE) $(PREFIX_NODE)/node_modules/expat_binding.node
 	cp $(DTRACE_PROVIDER.NODE) $(PREFIX_NODE)/node_modules/dtrace-provider.node
-	sed -e "s|require('./build*DTraceProviderBindings')|require('/usr/node/node_modules/dtrace-provider.node')|" \
+	sed -e "s|require('./build.*DTraceProviderBindings')|require('/usr/node/node_modules/dtrace-provider.node')|" \
 	    < $(DTRACE_PROVIDER_SRCDIR)/dtrace-provider.js \
 	    > $(PREFIX_NODE)/node_modules/dtrace-provider.js
 	sed -e "s|var expat.*;|var expat = require('./expat_binding');|" \

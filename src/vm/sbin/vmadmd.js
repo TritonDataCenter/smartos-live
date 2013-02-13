@@ -370,7 +370,16 @@ function handleProvisioning(vmobj, cb)
                 cb(wait_err);
                 return;
             }
-            success();
+            VM.unsetTransition(vmobj, function (unset_err) {
+                if (unset_err) {
+                    VM.log.debug(unset_err, 'failed to unset transition');
+                    failure();
+                } else {
+                    VM.log.debug('unset provision transition for '
+                        + vmobj.uuid);
+                    success();
+                }
+            });
         });
     } else if (fs.existsSync(provision_ok_fn)) {
         // no /var/svc/provisioning file, but we have success file

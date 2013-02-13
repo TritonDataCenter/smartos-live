@@ -1117,6 +1117,22 @@ function loadVM(vmobj, do_autoboot)
     spawnRemoteDisplay(vmobj);
 }
 
+// To help diagnose problems we write the keys we're watching to the TRACE log
+// which can be viewed using dtrace.
+function startTraceLoop() {
+    setInterval(function () {
+        var prov_wait_keys = Object.keys(PROV_WAIT);
+        var timer_keys = Object.keys(TIMER);
+
+        if (prov_wait_keys.length > 0) {
+            log.trace('PROV_WAIT keys: ' + JSON.stringify(prov_wait_keys));
+        }
+        if (timer_keys.length > 0) {
+            log.trace('TIMER keys: ' + JSON.stringify(timer_keys));
+        }
+    }, 5000);
+}
+
 // kicks everything off
 function main()
 {
@@ -1124,6 +1140,7 @@ function main()
 
     startZoneWatcher(updateZoneStatus);
     startHTTPHandler();
+    startTraceLoop();
 
     loadConfig(function (err) {
         var do_autoboot = false;

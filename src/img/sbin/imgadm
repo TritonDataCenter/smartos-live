@@ -9,12 +9,12 @@ var format = require('util').format;
 var CLI = require('../lib/cli');
 
 
-//---- globals
+// ---- globals
 
 var NAME = 'imgadm';
 
 
-//---- support stuff
+// ---- support stuff
 
 function logerror(err, verbose) {
     if (err.code) {
@@ -29,7 +29,7 @@ function logerror(err, verbose) {
 }
 
 
-//---- mainline
+// ---- mainline
 
 function main(argv) {
     var cli = new CLI();

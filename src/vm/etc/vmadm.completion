@@ -4,7 +4,8 @@ _vmadm()
     COMPREPLY=()
     # NOTE: we don't want the aliases boot,halt,destroy,etc here because we
     # want people to use the 'proper' commands when they can.
-    COMMANDS="console create create-snapshot delete delete-snapshot get info list lookup reboot receive rollback-snapshot send start stop sysrq update"
+    COMMANDS="console create create-snapshot delete delete-snapshot get info list lookup reboot receive rollback-snapshot send start stop sysrq update validate"
+    BRANDS="joyent joyent-minimal kvm sngl"
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
@@ -42,6 +43,14 @@ _vmadm()
         vms_uuids=$(zoneadm list -cp | grep -v ':global:' \
             | grep -v ":kvm:excl:" | cut -d':' -f5 | sort | uniq)
         COMPREPLY=( $(compgen -W "${vms_uuids}" -- ${cur}) )
+
+    elif [[ ${prev} == 'validate' ]]; then
+
+        COMPREPLY=( $(compgen -W "create update" -- ${cur}) )
+
+    elif [[ ${prev} == 'update' && ${COMP_WORDS[COMP_CWORD-2]} == 'validate' ]]; then
+
+        COMPREPLY=( $(compgen -W "${BRANDS}" -- ${cur}) )
 
     elif [[ ${prev} == 'vmadm' ]]; then
 

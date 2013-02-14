@@ -57,7 +57,8 @@ var COMMANDS = [
     'rollback-snapshot',
     'send',
     'sysrq',
-    'update'
+    'update',
+    'validate'
 ];
 
 /*
@@ -145,6 +146,8 @@ function usage(message, code)
     out('sysrq <uuid> <nmi|screenshot>');
     out('update <uuid> [-f <filename>]');
     out(' -or- update <uuid> property=value [property=value ...]');
+    out('validate create [-f <filename>]');
+    out('validate update brand [-f <filename>]');
     out('');
     out('For more detailed information on the use of this command,'
         + 'type \'man vmadm\'.');
@@ -386,6 +389,7 @@ function addCommandOptions(command, opts, shorts)
     case 'receive':
     case 'recv':
     case 'update':
+    case 'validate':
         shorts.f = ['--file'];
         break;
     case 'list':
@@ -864,6 +868,46 @@ function main(callback)
         types = parseInfoArgs(parsed.argv.remain);
         getInfo(uuid, types, callback);
         break;
+    case 'validate':
+        if (parsed.hasOwnProperty('file') && parsed.file !== '-') {
+            filename = parsed.file;
+        } else {
+            filename = '-';
+        }
+        if (filename === '-' && tty.isatty(0)) {
+            usage('Will not ' + command + ' from stdin when stdin is a '
+                + 'tty.');
+        }
+        if (!parsed.argv.remain || parsed.argv.remain.length < 1) {
+            usage('Will not ' + command + ' without a valid action.');
+        }
+        if (parsed.argv.remain[0] === 'update' && parsed.argv.remain.length !== 2) {
+            usage('Will not ' + command + ' without a valid action and brand.');
+        }
+        readFile(filename, function (err, payload) {
+            if (err) {
+                callback(err);
+                return;
+            }
+
+            var brand;
+            var action = parsed.argv.remain[0];
+
+            if (action === 'update') {
+                brand = parsed.argv.remain[1];
+            } else {
+                brand = payload.brand;
+            }
+
+            VM.validate(brand, action, payload, function (e) {
+                if (e) {
+                    callback({'message': e});
+                } else {
+                    callback(null, 'JSON is valid.');
+                }
+            });
+        });
+        break;
     case 'help':
         usage(null, 0);
         break;
@@ -1032,12 +1076,13 @@ onlyif.rootInSmartosGlobal(function (err) {
             flushLogs(function () {
                 process.exit(1);
             });
+        } else {
+            if (message) {
+                console.error(message);
+            }
+            flushLogs(function () {
+                process.exit(0);
+            });
         }
-        if (message) {
-            console.error(message);
-        }
-        flushLogs(function () {
-            process.exit(0);
-        });
     });
 });

@@ -395,6 +395,48 @@ tab-complete UUIDs rather than having to type them out for every command.
         restarted. Other properties will require a reboot in order to take
         effect.
 
+     validate create [-f <filename>]
+     validate update <brand> [-f <filename>]
+
+       This command allows you to validate your JSON payloads before calling
+       create or update.  You must specify the action for which your payload is
+       intended (create or update) as the validation rules are different.  In
+       addition, when validating an update payload, you must pass the brand
+       parameter as validation rules vary based on brand.
+
+       If no -f <filename> is specified the payload is expected to be passed
+       on stdin.  If -f <filename> is specfied, the payload to validate will
+       be read from the file with that name.  Output from this command in the
+       case the payload is valid will be something like:
+
+         "VALID create payload for joyent brand VMs."
+
+       and the exit code will be 0.  When the payload is not valid the exit code
+       will be 1 and you will get back a json object which will have at least
+       one of the following members:
+
+         'bad_brand'
+
+            The brand argument you passed to validate is invalid.
+
+         'bad_properties'
+
+           This is an array of payload properties which are not valid for the
+           specified action.
+
+         'bad_values'
+
+           This is an array of payload properties which had unacceptable values.
+
+         'missing_properties'
+
+           This is an array of the payload properties which are required for the
+           given action but are missing from the specified payload.
+
+       consult the PROPERTIES section below for help correcting errors in your
+       payload.
+
+
 ## SNAPSHOTS
 
     Snapshots are currently only implemented for OS VMs, and only for those

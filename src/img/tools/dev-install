@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+# Install (rsync) this local imgadm install image to the given
+# smartos node. The node global zone must have been prepared with
+# a writeable /usr/img and /usr/man/man1m for testing like this:
+#
+#       rm -rf /var/tmp/img \
+#           && cp -RP /usr/img /var/tmp/img \
+#           && mount -O -F lofs /var/tmp/img /usr/img \
+#           && rm -rf /var/tmp/man1m \
+#           && cp -RP /usr/man/man1m /var/tmp/man1m \
+#           && mount -O -F lofs /var/tmp/man1m /usr/man/man1m
+#
+
+if [[ -n "$TRACE" ]]; then
+    export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -o xtrace
+fi
+set -o errexit
+set -o pipefail
+
+
+#---- support stuff
+
+function fatal {
+    echo "$0: fatal error: $*"
+    exit 1
+}
+
+
+#---- mainline
+
+TOP=$(cd $(dirname $0)/../; pwd)
+NODE=$1
+if [[ -z "$NODE" ]]; then
+    echo "error: no NODE argument given"
+    echo ""
+    echo "Usage:"
+    echo "    ./tools/dev-install NODE"
+    exit 1
+fi
+SSH_OPTIONS="-q -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+SSH="ssh $SSH_OPTIONS"
+
+
+(cd $TOP && make dev-install-image)
+
+INSTALLIMAGE=/var/tmp/img-install-image
+[[ -d "$INSTALLIMAGE" ]] \
+    || fatal "no $INSTALLIMAGE, did 'make dev-install-image' fail?"
+
+rsync -av -e "$SSH" --delete $INSTALLIMAGE/ $NODE:/usr/img/
+
+$SSH $NODE 'cd /usr/man/man1m && rm -f imgadm.1m && ln -s /usr/img/man/imgadm.1m'
+

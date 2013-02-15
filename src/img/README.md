@@ -11,26 +11,39 @@ Images repository at <https://images.joyent.com>.
 
     /usr/img/test/runtests
 
+This can only be run in the global zone (GZ).
+
 
 # Development
 
+The src/img tree has not binary components, so you can get away
+with faster edit/test cycle than having to do a full smartos platform
+build and rebooting on it. Here is how:
+
+    # On the target SmartOS GZ (e.g. MY-SMARTOS-BOX), make /usr/img
+    # and /usr/man/man1m writeable for testing:
+    ssh root@MY-SMARTOS-BOX
+    rm -rf /var/tmp/img \
+        && cp -RP /usr/img /var/tmp/img \
+        && mount -O -F lofs /var/tmp/img /usr/img
+        && rm -rf /var/tmp/man1m \
+        && cp -RP /usr/man/man1m /var/tmp/man1m \
+        && mount -O -F lofs /var/tmp/man1m /usr/man/man1m
+
+    # On a dev machine:
+    # Get a clone of the repo.
     git clone git@github.com:joyent/smartos-live.git
     cd src/img
-    # edit
-    # build
-    # test
 
-In a SmartOS build "/usr/img/..." where this installs is read-only. You can
-get a read/write "/usr" as follows:
+    # Make edits, e.g. change the version:
+    vi package.json
 
-    /usbkey/scripts/mount-image.sh -w
+    # Build a dev install image (in /var/tmp/img-install-image)
+    # and rsync that to the target node.
+    ./tools/dev-install root@MY-SMARTOS-BOX
 
-This will create a writeable copy of the platform in "/image". Make your
-edits in "/image/usr/img/..." then re-package the platform and reboot
-into it:
+    # Test that it worked by checking for the version change:
+    ssh root@MY-SMARTOS-BOX imgadm --version
 
-    /usbkey/scripts/umount-image.sh && reboot
-
-
-Before commiting/pushing run `make prepush` and, if possible, get a code
-review.
+    # Or run the test suite:
+    ssh root@MY-SMARTOS-BOX /var/img/test/runtests

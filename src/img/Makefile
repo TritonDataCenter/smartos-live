@@ -26,19 +26,14 @@
 # imgadm Makefile
 #
 
-#
-# Files & Tools
-#
-NODEUNIT	:= ./node_modules/.bin/nodeunit
-
 
 #
 # Targets
 #
 
 .PHONY: test
-test: | $(NODEUNIT)
-	$(NODEUNIT) test/*.test.js
+test:
+	./test/runtests
 
 .PHONY: update_modules
 update_modules:
@@ -64,9 +59,9 @@ update_modules:
 		find node_modules/$$dep -name tests | xargs rm -rf; \
 	done;
 
-INSTALLIMAGE = $(TOP)/build/installimage
-.PHONY: installimage
-installimage:
+INSTALLIMAGE=/var/tmp/img-install-image
+.PHONY: dev-install-image
+dev-install-image:
 	rm -rf $(INSTALLIMAGE)
 	mkdir -p $(INSTALLIMAGE)
 	cp package.json $(INSTALLIMAGE)/
@@ -77,4 +72,5 @@ installimage:
 	cp -PR lib $(INSTALLIMAGE)/lib
 	cp -PR node_modules $(INSTALLIMAGE)/node_modules
 	cp -PR test $(INSTALLIMAGE)/test
-	# TODO: built man pages
+	mkdir -p $(INSTALLIMAGE)/man
+	node ../../tools/ronnjs/bin/ronn.js man/imgadm.1m.md > $(INSTALLIMAGE)/man/imgadm.1m

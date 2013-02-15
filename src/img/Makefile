@@ -35,6 +35,10 @@
 test:
 	./test/runtests
 
+.PHONY: check
+check:
+	cd ../.. && make check
+
 .PHONY: update_modules
 update_modules:
 	./tools/mk-sdc-clients-light.sh $(shell json -f package.json dependencies.sdc-clients | cut -d'#' -f2)

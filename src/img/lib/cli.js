@@ -1148,7 +1148,7 @@ CLI.prototype.do_install.description = (
     + '    -m MANIFEST        Required. Path to the image manifest file to import.\n'
     + '    -f FILE            Required. Path to the image file to import.\n'
     + '    -P <pool>          Name of zpool in which to import the image.\n'
-    + '                       Default is "' + common.DEFAULT_ZPOOL + + '".\n'
+    + '                       Default is "' + common.DEFAULT_ZPOOL + '".\n'
     + '    -q, --quiet        Disable progress bar.\n'
     /* END JSSTYLED */
 );
@@ -1180,7 +1180,7 @@ CLI.prototype.do_update = function do_update(subcmd, opts, args, callback) {
 CLI.prototype.do_update.description = (
     'Gather info on unknown images.\n'
     + '\n'
-    + 'Images that are installed (e.g. via "zfs recv") without "imgadm" will.\n'
+    + 'Images that are installed without "imgadm" (e.g. via "zfs recv")\n'
     + 'not have cached image manifest information. This command will attempt\n'
     + 'to retrieve this information from current image sources based on image\n'
     + 'UUID.\n'

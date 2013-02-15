@@ -47,3 +47,7 @@ build and rebooting on it. Here is how:
 
     # Or run the test suite:
     ssh root@MY-SMARTOS-BOX /var/img/test/runtests
+
+
+Before commits, please (a) run the test suite on a test box per the notes
+above and (b) maintain style by running `make check`.

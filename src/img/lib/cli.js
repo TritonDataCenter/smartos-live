@@ -25,7 +25,7 @@
  * * *
  * The main entry point for an the imgadm CLI.
  */
-    
+
 var util = require('util'),
     format = util.format;
 var warn = console.warn;

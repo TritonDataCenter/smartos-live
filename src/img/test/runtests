@@ -104,6 +104,19 @@ do
 done
 
 
+if [[ $(uname -s) != 'SunOS' ]]; then
+    fatal "this can only run on SmartOS"
+fi
+
+if [[ $(zonename) != 'global' ]]; then
+    fatal "this can only run in the GZ"
+fi
+
+if [[ $(id -u) != 0 ]]; then
+    fatal "this can only run as root"
+fi
+
+
 # Guard from running in production.
 if [[ -z "$opt_local" ]]; then
 if [[ ! -f "/lib/sdc/.sdc-test-no-production-data" ]]; then
@@ -117,7 +130,6 @@ EOF
     exit 2
 fi
 fi
-
 
 # Setup a clean output dir.
 OUTPUT_DIR=/var/tmp/imgadmtest

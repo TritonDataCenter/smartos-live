@@ -861,7 +861,7 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
  * Load info on the given locally installed image uuid.
  *
  * We don't just load "$uuid.json" from the imgadm db, because there might
- * be zombies (i.e. if the image was destroy behind imgadm's back).
+ * be zombies (i.e. if the image was destroyed behind imgadm's back).
  *
  * @param options {Object} with:
  *      - @param uuid {String}

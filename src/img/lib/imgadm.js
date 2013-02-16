@@ -282,7 +282,8 @@ IMGADM.prototype.init = function init(callback) {
 
     function addSources(next) {
         self.sources = [];
-        var sources = self.config.sources || common.DEFAULT_SOURCE;
+        var sources = self.config.sources || [common.DEFAULT_SOURCE];
+        self.log.trace({sources: sources}, 'init: add sources');
         async.forEachSeries(
             sources,
             function oneSource(source, nextSource) {
@@ -581,6 +582,9 @@ IMGADM.prototype.saveConfig = function saveConfig(callback) {
 
 
 IMGADM.prototype.sourceFromUrl = function sourceFromUrl(sourceUrl) {
+    if (!this.sources) {
+        return null;
+    }
     return this.sources.filter(
         function (s) { return s.url === sourceUrl; })[0];
 };
@@ -728,7 +732,7 @@ IMGADM.prototype.dbAddImage = function dbAddImage(imageInfo, callback) {
         var dbData = {
             manifest: imageInfo.manifest,
             zpool: imageInfo.zpool,
-            sources: (imageInfo.source ? imageInfo.source.url : undefined)
+            source: (imageInfo.source ? imageInfo.source.url : undefined)
         };
         var content = JSON.stringify(dbData, null, 2) + '\n';
         fs.writeFile(dbImagePath, content, 'utf8', callback);
@@ -1170,7 +1174,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
     var uuid = options.manifest.uuid;
     assertUuid(uuid, 'options.manifest.uuid');
     var log = self.log;
-    log.debug(options, 'importImage');
+    log.debug(options, '_installImage');
 
     // Upgrade manifest if required.
     try {

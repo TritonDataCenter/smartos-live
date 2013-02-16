@@ -114,10 +114,12 @@ function upgradeTo200(tool, callback) {
         // TODO:XXX handle validation failure -> warning, skip it
         var imageInfo = {
             manifest: manifest,
-            zpool: ii.zpool,
-            // The old imgadm would cache the source URL here.
-            source: oldManifest._url
+            zpool: ii.zpool
         };
+        // The old imgadm would cache the source URL here.
+        if (oldManifest._url) {
+            imageInfo.source = {url: oldManifest._url};
+        }
         tool.dbAddImage(imageInfo, function (err) {
             if (err) {
                 next(err);

@@ -481,3 +481,175 @@ test('man page kvm add nic payload', function (t) {
         t.end();
     });
 });
+
+test('add disk with both size and image_uuid should fail', function (t) {
+    var payload = {
+       "add_disks": [
+         {
+           'model': 'virtio',
+           'image_uuid': '71101322-43a5-11e1-8f01-cf2a3031a7f4',
+           'size': 5120
+         }
+       ]
+    };
+    VM.validate('kvm', 'update', payload, function (errors) {
+        t.ok(errors, 'add disk with size and image_uuid should fail: ' + JSON.stringify(errors));
+        t.end();
+    });
+});
+
+test('kvm create with bad disk (image_uuid + size)', function (t) {
+    var payload = {
+       'brand': 'kvm',
+       'vcpus': 1,
+       'ram': 256,
+       'disks': [
+         {
+           'boot': true,
+           'model': 'virtio',
+           'image_uuid': 'e173ecd7-4809-4429-af12-5d11bcc29fd8',
+           'image_name': 'ubuntu-10.04.2.7',
+           'size': 5120
+         }
+       ],
+       'nics': [
+         {
+           'nic_tag': 'external',
+           'model': 'virtio',
+           'ip': '10.88.88.51',
+           'netmask': '255.255.255.0',
+           'gateway': '10.88.88.2',
+           'primary': true
+         }
+       ]
+    };
+    VM.validate('kvm', 'create', payload, function (errors) {
+        t.ok(errors, 'create with bad disk (image_uuid + size): ' + JSON.stringify(errors));
+        t.end();
+    });
+});
+
+test('kvm create with bad disk (image_uuid + block_size)', function (t) {
+    var payload = {
+       'brand': 'kvm',
+       'vcpus': 1,
+       'ram': 256,
+       'disks': [
+         {
+           'boot': true,
+           'model': 'virtio',
+           'image_uuid': 'e173ecd7-4809-4429-af12-5d11bcc29fd8',
+           'image_name': 'ubuntu-10.04.2.7',
+           'image_size': 5120,
+           'block_size': 8192
+         }
+       ],
+       'nics': [
+         {
+           'nic_tag': 'external',
+           'model': 'virtio',
+           'ip': '10.88.88.51',
+           'netmask': '255.255.255.0',
+           'gateway': '10.88.88.2',
+           'primary': true
+         }
+       ]
+    };
+    VM.validate('kvm', 'create', payload, function (errors) {
+        t.ok(errors, 'create with bad disk (image_uuid + block_size): ' + JSON.stringify(errors));
+        t.end();
+    });
+});
+
+
+test('add disk with both image_size and image_uuid should succeed', function (t) {
+    var payload = {
+       "add_disks": [
+         {
+           'model': 'virtio',
+           'image_uuid': '71101322-43a5-11e1-8f01-cf2a3031a7f4',
+           'image_size': 5120
+         }
+       ]
+    };
+    VM.validate('kvm', 'update', payload, function (errors) {
+        t.ok(!errors, 'add disk with image_size and image_uuid: ' + JSON.stringify(errors));
+        t.end();
+    });
+});
+
+test('kvm create with good disk (image_uuid + image_size)', function (t) {
+    var payload = {
+       'brand': 'kvm',
+       'vcpus': 1,
+       'ram': 256,
+       'disks': [
+         {
+           'boot': true,
+           'model': 'virtio',
+           'image_uuid': 'e173ecd7-4809-4429-af12-5d11bcc29fd8',
+           'image_name': 'ubuntu-10.04.2.7',
+           'image_size': 5120
+         }
+       ],
+       'nics': [
+         {
+           'nic_tag': 'external',
+           'model': 'virtio',
+           'ip': '10.88.88.51',
+           'netmask': '255.255.255.0',
+           'gateway': '10.88.88.2',
+           'primary': true
+         }
+       ]
+    };
+    VM.validate('kvm', 'create', payload, function (errors) {
+        t.ok(!errors, 'create with good disk (image_uuid + image_size): ' + JSON.stringify(errors));
+        t.end();
+    });
+});
+
+test('add disk with just size should succeed', function (t) {
+    var payload = {
+       "add_disks": [
+         {
+           'model': 'virtio',
+           'size': 5120
+         }
+       ]
+    };
+    VM.validate('kvm', 'update', payload, function (errors) {
+        t.ok(!errors, 'add disk with just size: ' + JSON.stringify(errors));
+        t.end();
+    });
+});
+
+test('kvm create with good disk (just size)', function (t) {
+    var payload = {
+       'brand': 'kvm',
+       'vcpus': 1,
+       'ram': 256,
+       'disks': [
+         {
+           'boot': true,
+           'model': 'virtio',
+           'size': 5120
+         }
+       ],
+       'nics': [
+         {
+           'nic_tag': 'external',
+           'model': 'virtio',
+           'ip': '10.88.88.51',
+           'netmask': '255.255.255.0',
+           'gateway': '10.88.88.2',
+           'primary': true
+         }
+       ]
+    };
+    VM.validate('kvm', 'create', payload, function (errors) {
+        t.ok(!errors, 'create with good disk (just size): ' + JSON.stringify(errors));
+        t.end();
+    });
+});
+

@@ -742,6 +742,9 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         The size of the image from which we will create this disk.
 
+        Important: image_size is required when you include image_uuid for a disk
+        and not allowed when you don't.
+
         type: integer (size in MiB)
         vmtype: KVM
         listable: yes (see above)
@@ -767,6 +770,9 @@ tab-complete UUIDs rather than having to type them out for every command.
         for all disks whether you've specified or not as a means to determine
         the size of the zvol.
 
+        Important: size is required when you don't include image_uuid for a disk
+        and not allowed when you do.
+
         type: integer (size in MiB)
         vmtype: KVM
         listable: yes (see above)
@@ -783,7 +789,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
-        default: no
+        default: disk
 
     disks.*.model:
 

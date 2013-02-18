@@ -99,7 +99,6 @@ f usr/fw/lib/fw.js 0444 root bin
 f usr/fw/lib/fwadm.js 0444 root bin
 f usr/fw/lib/ipf.js 0444 root bin
 f usr/fw/lib/pipeline.js 0444 root bin
-f usr/fw/lib/rule.js 0444 root bin
 f usr/fw/lib/util/log.js 0444 root bin
 f usr/fw/lib/util/obj.js 0444 root bin
 f usr/fw/lib/util/vm.js 0444 root bin

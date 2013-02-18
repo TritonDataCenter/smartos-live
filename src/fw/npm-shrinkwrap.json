@@ -52,25 +52,6 @@
     "mockery": {
       "version": "1.2.0"
     },
-    "jison": {
-      "version": "0.3.12",
-      "dependencies": {
-        "JSONSelect": {
-          "version": "0.4.0"
-        },
-        "reflect": {
-          "version": "0.0.7"
-        },
-        "nomnom": {
-          "version": "0.4.3",
-          "dependencies": {
-            "underscore": {
-              "version": "1.4.2"
-            }
-          }
-        }
-      }
-    },
     "nodeunit": {
       "version": "0.7.4",
       "dependencies": {

@@ -98,9 +98,8 @@ function preparePayload(opts, payload) {
     newOpts = clone(payload);
 
     if (newOpts.hasOwnProperty('rule')) {
-      // This is a single rule, not a list
-      newOpts.rules = [ newOpts.rule ];
-      delete newOpts.rule;
+      // Trying to add a single rule, and nothing else
+      newOpts = { rules: [ newOpts ] };
     }
   }
 
@@ -118,7 +117,7 @@ function preparePayload(opts, payload) {
  */
 function ruleOutput(err, res, opts, action) {
   if (err) {
-    return cli.outputError(err, opts);
+    return cli.exitWithErr(err, opts);
   }
 
   if (opts.json) {
@@ -155,7 +154,7 @@ function doUpdate(opts, action) {
     assert.object(opts, 'opts');
     assert.string(action, 'action');
   } catch (err) {
-    return cli.outputError(err);
+    return cli.exitWithErr(err);
   }
 
   pipeline({
@@ -179,7 +178,7 @@ function startStop(opts, enabled) {
 
   VM.update(uuid, { firewall_enabled: enabled }, function _afterUpdate(err) {
     if (err) {
-      return cli.outputError(err, opts);
+      return cli.exitWithErr(err, opts);
     }
 
     if (opts.json) {
@@ -240,7 +239,7 @@ function del(opts) {
       }
     ]}, function _afterDel(err, results) {
       if (err) {
-        return cli.outputError(err);
+        return cli.exitWithErr(err);
       }
       var res = results.state.delRules;
 
@@ -284,7 +283,7 @@ function get(opts) {
   var uuid = cli.validateUUID(opts.argv.remain[1]);
   return fw.get({ uuid: uuid }, function (err, rule) {
     if (err) {
-      return cli.outputError(err, opts);
+      return cli.exitWithErr(err, opts);
     }
 
     if (opts.json) {
@@ -314,7 +313,7 @@ function zoneRules(opts) {
   var uuid = cli.validateUUID(opts.argv.remain[1]);
   return VM.lookup({}, { 'full': true }, function (err, vms) {
     if (err) {
-      return cli.outputError(err, opts);
+      return cli.exitWithErr(err, opts);
     }
 
     return fw.rules({ vm: uuid, vms: vms }, function (err2, res) {
@@ -340,7 +339,7 @@ function status(opts) {
   var uuid = cli.validateUUID(opts.argv.remain[1]);
   fw.status({ uuid: uuid }, function (err, res) {
     if (err) {
-      return cli.outputError(err, opts);
+      return cli.exitWithErr(err, opts);
     }
 
     if (opts.json) {
@@ -366,7 +365,7 @@ function stats(opts) {
   var uuid = cli.validateUUID(opts.argv.remain[1]);
   fw.stats({ uuid: uuid }, function (err, res) {
     if (err) {
-      return cli.outputError(err, opts);
+      return cli.exitWithErr(err, opts);
     }
 
     if (opts.json) {
@@ -396,10 +395,18 @@ function stop(opts) {
 function update(opts) {
   return cli.getPayload(opts, function (err, payload) {
     if (err) {
-      return cli.outputError(err, opts);
+      return cli.exitWithErr(err, opts);
     }
 
     var updateOpts = preparePayload(opts, payload);
+
+    // Allow doing an 'update <uuid>' instead of requiring the UUID be in
+    // the payload:
+    if (opts.argv.remain[1] && updateOpts.hasOwnProperty('rules') &&
+      updateOpts.rules.length === 1) {
+      updateOpts.rules[0].uuid = cli.validateUUID(opts.argv.remain[1]);
+    }
+
     return doUpdate(updateOpts, 'Updated');
   });
 }

@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * mocks for tests
  */
 
+var fwrule = require('fwrule');
 var mod_obj = require('../../lib/util/obj');
 var mocks = require('./mocks');
 var mod_uuid = require('node-uuid');
@@ -95,10 +96,12 @@ function fillInRuleBlanks(res, incomplete) {
  * Finds a rule in the list by rule text
  */
 function findRuleInList(findRule, list) {
+  var findRuleObj = fwrule.create(findRule);
+
   for (var r in list) {
-    var rule = list[r];
-    if (findRule.rule == rule.rule) {
-      return rule;
+    var ruleObj = fwrule.create(list[r]);
+    if (findRuleObj.text() == ruleObj.text()) {
+      return list[r];
     }
   }
 
@@ -229,8 +232,7 @@ function generateVM(override) {
     owner_uuid: '00000000-0000-0000-0000-000000000000',
     state: 'running',
     tags: {},
-    uuid: uuid,
-    zonepath: util.format('/zones/%s', uuid)
+    uuid: uuid
   };
 
   if (override) {
@@ -241,6 +243,10 @@ function generateVM(override) {
         vm[o] = override[o];
       }
     }
+  }
+
+  if (!vm.hasOwnProperty('zonepath')) {
+    vm.zonepath = util.format('/zones/%s', vm.uuid);
   }
 
   return vm;
@@ -309,7 +315,7 @@ function sortRes(res) {
  * Sort by rule UUID
  */
 function uuidSort(a, b) {
-  return (a.uuid < b.uuid);
+  return (a.uuid > b.uuid) ? 1 : -1;
 }
 
 

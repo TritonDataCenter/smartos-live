@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * fwadm tests
  */
@@ -65,12 +65,12 @@ exports['local VM to remote VM'] = function (t) {
     remoteVMs: [rvm],
     rules: [
       {
-        rule: util.format('FROM machine %s TO machine %s ALLOW tcp PORT 80',
+        rule: util.format('FROM vm %s TO vm %s ALLOW tcp PORT 80',
                 vm.uuid, rvm.uuid),
         enabled: true
       },
       {
-        rule: util.format('FROM machine %s TO machine %s ALLOW tcp PORT 80',
+        rule: util.format('FROM vm %s TO vm %s ALLOW tcp PORT 80',
                 rvm.uuid, vm.uuid),
         enabled: true
       }
@@ -132,7 +132,7 @@ exports['local VM to remote VM'] = function (t) {
     // Add another rule referencing rvm
     rule3 = {
       enabled: true,
-      rule: util.format('FROM machine %s TO machine %s ALLOW udp PORT 161',
+      rule: util.format('FROM vm %s TO vm %s ALLOW udp PORT 161',
               rvm.uuid, vm.uuid)
     };
     payload.rules = [ clone(rule3) ];
@@ -220,12 +220,12 @@ exports['local VM to remote tag'] = function (t) {
     remoteVMs: [rvm],
     rules: [
       {
-        rule: util.format('FROM machine %s TO tag other ALLOW tcp PORT 80',
+        rule: util.format('FROM vm %s TO tag other ALLOW tcp PORT 80',
                 vm.uuid),
         enabled: true
       },
       {
-        rule: util.format('FROM tag other TO machine %s ALLOW tcp PORT 80',
+        rule: util.format('FROM tag other TO vm %s ALLOW tcp PORT 80',
                 vm.uuid),
         enabled: true
       }
@@ -287,7 +287,7 @@ exports['local VM to remote tag'] = function (t) {
     // Add another rule referencing rvm
     rule3 = {
       enabled: true,
-      rule: util.format('FROM machine %s TO machine %s ALLOW udp PORT 161',
+      rule: util.format('FROM vm %s TO vm %s ALLOW udp PORT 161',
               rvm.uuid, vm.uuid)
     };
     payload.rules = [ clone(rule3) ];
@@ -363,8 +363,9 @@ exports['local VM to remote tag'] = function (t) {
 
 
 exports['local VM and remote VM to IP'] = function (t) {
-  var vm = helpers.generateVM();
-  var rvm = helpers.generateVM();
+  var vm = helpers.generateVM({ uuid: '5293cc31-189c-4b10-be90-7c74c78de927' });
+  var rvm = helpers.generateVM({
+    uuid: 'da08034b-37a0-4788-9c97-e84f685b6561' });
 
   var expRules;
   var expRulesOnDisk = {};
@@ -375,12 +376,12 @@ exports['local VM and remote VM to IP'] = function (t) {
     remoteVMs: [rvm],
     rules: [
       {
-        rule: util.format('FROM (machine %s OR machine %s) TO ip 10.0.0.1 '
+        rule: util.format('FROM (vm %s OR vm %s) TO ip 10.0.0.1 '
           + 'ALLOW tcp PORT 80', vm.uuid, rvm.uuid),
         enabled: true
       },
       {
-        rule: util.format('FROM ip 10.0.0.1 TO (machine %s OR machine %s) '
+        rule: util.format('FROM ip 10.0.0.1 TO (vm %s OR vm %s) '
           + 'ALLOW tcp PORT 80', vm.uuid, rvm.uuid),
         enabled: true
       }

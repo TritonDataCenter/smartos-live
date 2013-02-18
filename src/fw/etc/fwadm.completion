@@ -7,8 +7,9 @@ _fwadm()
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     if [[  ${prev} == 'start'
-        || ${prev} == 'stop'
+        || ${prev} == 'stats'
         || ${prev} == 'status'
+        || ${prev} == 'stop'
         || ${prev} == 'rules'
     ]] && [[ ${COMP_WORDS[COMP_CWORD-2]} == "fwadm" ]]; then
 

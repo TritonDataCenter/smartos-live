@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * fwadm tests
  */
@@ -57,7 +57,7 @@ exports['tag to IP (filter by owner_uuid)'] = function (t) {
   var payload = {
     rules: [
       {
-        rule: 'FROM tag foo TO ip 10.99.99.254 BLOCK tcp port 25',
+        rule: 'FROM tag foo TO ip 10.99.99.254 BLOCK tcp PORT 25',
         enabled: true,
         owner_uuid: owner
       }
@@ -124,7 +124,7 @@ exports['tag to IP (filter by owner_uuid)'] = function (t) {
     var payload2 = {
       rules: [
         {
-          rule: 'FROM tag foo TO ip 10.99.99.254 BLOCK tcp port 250',
+          rule: 'FROM tag foo TO ip 10.99.99.254 BLOCK tcp PORT 250',
           enabled: true
         }
       ],

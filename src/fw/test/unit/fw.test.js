@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * fwadm tests
  */
@@ -62,13 +62,13 @@ exports['add: no rules or VMs'] = function (t) {
   });
 };
 
-exports['add / update: machine to IP: BLOCK'] = function (t) {
+exports['add / update: vm to IP: BLOCK'] = function (t) {
   var vm = helpers.generateVM();
   var payload = {
     rules: [
       {
-        rule: util.format('FROM machine %s TO ip 10.99.99.254 BLOCK tcp '
-                + 'port 8080', vm.uuid),
+        rule: util.format('FROM vm %s TO ip 10.99.99.254 BLOCK tcp '
+                + 'PORT 8080', vm.uuid),
         enabled: true
       }
     ],
@@ -126,8 +126,8 @@ exports['add / update: machine to IP: BLOCK'] = function (t) {
         {
           enabled: true,
           rule: util.format(
-            'FROM machine %s TO (ip 10.99.99.254 OR ip 10.88.88.2) BLOCK tcp '
-                  + 'port 8080', vm.uuid),
+            'FROM vm %s TO (ip 10.88.88.2 OR ip 10.99.99.254) BLOCK tcp '
+                  + 'PORT 8080', vm.uuid),
           uuid: expRule.uuid
         }
       ],
@@ -213,13 +213,13 @@ exports['add / update: machine to IP: BLOCK'] = function (t) {
 };
 
 
-exports['add / update: machine to IP: ALLOW'] = function (t) {
+exports['add / update: vm to IP: ALLOW'] = function (t) {
   var vm = helpers.generateVM();
   var payload = {
     rules: [
       {
-        rule: util.format('FROM machine %s TO ip 10.99.99.254 ALLOW tcp '
-                + 'port 8080', vm.uuid),
+        rule: util.format('FROM vm %s TO ip 10.99.99.254 ALLOW tcp '
+                + 'PORT 8080', vm.uuid),
         enabled: true
       }
     ],
@@ -273,7 +273,7 @@ exports['add: tag to IP'] = function (t) {
   var payload = {
     rules: [
       {
-        rule: 'FROM tag foo TO ip 10.99.99.254 BLOCK tcp port 25',
+        rule: 'FROM tag foo TO ip 10.99.99.254 BLOCK tcp PORT 25',
         enabled: true
       }
     ],
@@ -343,11 +343,11 @@ exports['add: tag to subnet'] = function (t) {
   var payload = {
     rules: [
       {
-        rule: 'FROM tag foo TO subnet 10.99.99.0/24 BLOCK tcp port 25',
+        rule: 'FROM tag foo TO subnet 10.99.99.0/24 BLOCK tcp PORT 25',
         enabled: true
       },
       {
-        rule: 'FROM subnet 10.99.99.0/24 TO tag foo ALLOW tcp port 80',
+        rule: 'FROM subnet 10.99.99.0/24 TO tag foo ALLOW tcp PORT 80',
         enabled: true
       }
     ],
@@ -421,7 +421,7 @@ exports['add: tag to subnet'] = function (t) {
 };
 
 
-exports['add: machine to subnet'] = function (t) {
+exports['add: vm to subnet'] = function (t) {
   var vm1 = helpers.generateVM({ tags: { foo : true } });
   // Not the target of the rule:
   var vm2 = helpers.generateVM({ tags: { foo : true } });
@@ -429,13 +429,13 @@ exports['add: machine to subnet'] = function (t) {
     rules: [
       {
         rule: util.format(
-          'FROM machine %s TO subnet 10.99.99.0/24 BLOCK tcp port 25',
+          'FROM vm %s TO subnet 10.99.99.0/24 BLOCK tcp PORT 25',
           vm1.uuid),
         enabled: true
       },
       {
         rule: util.format(
-          'FROM subnet 10.99.99.0/24 TO machine %s ALLOW tcp port 80',
+          'FROM subnet 10.99.99.0/24 TO vm %s ALLOW tcp PORT 80',
           vm1.uuid),
         enabled: true
       }

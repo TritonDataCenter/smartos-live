@@ -65,6 +65,15 @@ function displayRules(err, res, opts) {
 
 
 /**
+ * Output an error and then exit
+ */
+function exitWithErr(err, opts) {
+  outputError(err, opts);
+  return process.exit(1);
+}
+
+
+/**
  * Reads the payload from one of: a file, stdin, a text argument
  */
 function getPayload(opts, callback) {
@@ -166,6 +175,7 @@ function validateUUID(arg) {
 
 module.exports = {
   displayRules: displayRules,
+  exitWithErr: exitWithErr,
   getPayload: getPayload,
   json: json,
   outputError: outputError,

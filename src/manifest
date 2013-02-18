@@ -92,6 +92,7 @@ d usr/fw/lib/parser 0555 root bin
 d usr/fw/lib/util 0555 root bin
 d usr/fw/node_modules 0555 root bin
 d usr/fw/node_modules/clone 0555 root bin
+d usr/fw/node_modules/fwrule 0555 root bin
 d usr/fw/sbin 0555 root bin
 f usr/fw/etc/fwadm.completion 0444 root bin
 f usr/fw/lib/cli.js 0444 root bin
@@ -103,12 +104,17 @@ f usr/fw/lib/parser/parser.js 0444 root bin
 f usr/fw/lib/parser/validators.js 0444 root bin
 f usr/fw/lib/pipeline.js 0444 root bin
 f usr/fw/lib/rule.js 0444 root bin
+f usr/fw/lib/util/log.js 0444 root bin
 f usr/fw/lib/util/obj.js 0444 root bin
 f usr/fw/lib/util/vm.js 0444 root bin
 f usr/fw/node_modules/assert-plus.js 0444 root bin
 f usr/fw/node_modules/clone/LICENSE 0444 root bin
 f usr/fw/node_modules/clone/clonePrototype.js 0444 root bin
 f usr/fw/node_modules/clone/index.js 0444 root bin
+f usr/fw/node_modules/fwrule/index.js 0444 root bin
+f usr/fw/node_modules/fwrule/parser.js 0444 root bin
+f usr/fw/node_modules/fwrule/rule.js 0444 root bin
+f usr/fw/node_modules/fwrule/validators.js 0444 root bin
 f usr/fw/node_modules/extsprintf.js 0444 root bin
 f usr/fw/node_modules/mkdirp.js 0444 root bin
 f usr/fw/node_modules/node-uuid.js 0444 root bin

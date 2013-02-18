@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * mocks for tests
  */
@@ -65,6 +65,15 @@ function createLogger() {
     warn: function () { return _log('warn', arguments); },
     info: function () { return _log('info', arguments); }
   };
+}
+
+function errSerializer(err) {
+  return err;
+}
+
+
+function mockRingBuffer(opts) {
+  this.opts = opts;
 }
 
 
@@ -290,7 +299,11 @@ function setup() {
   mockery.enable();
   var modules = {
     '/usr/node/node_modules/bunyan': {
-      createLogger: createLogger
+      createLogger: createLogger,
+      RingBuffer: mockRingBuffer,
+      stdSerializers: {
+        err: errSerializer
+      }
     },
     child_process: {
       execFile: execFile
@@ -316,6 +329,7 @@ function setup() {
     'assert-plus',
     'clone',
     'extsprintf',
+    'fwrule',
     'node-uuid',
     'net',
     'stream',
@@ -328,6 +342,7 @@ function setup() {
     './parser',
     './pipeline',
     './rule',
+    './util/log',
     './util/obj',
     './util/vm',
     './validators',

@@ -74,13 +74,13 @@ exports['single rules'] = function (t) {
 
   var rules = [
     {
-      name: 'machine to ip: valid',
-      rule: util.format('FROM machine %s TO ip 1.2.3.4 BLOCK tcp PORT 25',
+      name: 'vm to ip: valid',
+      rule: util.format('FROM vm %s TO ip 1.2.3.4 BLOCK tcp PORT 25',
               vm.uuid)
     },
     {
-      name: 'machine to ip: missing machine',
-      rule: util.format('FROM machine %s TO ip 1.2.3.4 BLOCK tcp PORT 25',
+      name: 'vm to ip: missing vm',
+      rule: util.format('FROM vm %s TO ip 1.2.3.4 BLOCK tcp PORT 25',
               mod_uuid.v4()),
       errors: [ 'No VMs found that match rule: %r' ]
     },
@@ -94,18 +94,18 @@ exports['single rules'] = function (t) {
       errors: [ 'No VMs found that match rule: %r' ]
     },
     {
-      name: 'machine to missing tag',
-      rule: util.format('FROM machine %s TO tag two BLOCK tcp PORT 25',
+      name: 'vm to missing tag',
+      rule: util.format('FROM vm %s TO tag two BLOCK tcp PORT 25',
               vm.uuid),
       errors: [ 'Missing tag two for rule: %r' ]
     },
     {
-      name: 'machine to missing tag and missing machine',
+      name: 'vm to missing tag and missing vm',
       rule: util.format(
-        'FROM machine %s TO (tag blue OR machine %s) BLOCK tcp PORT 25',
+        'FROM vm %s TO (tag blue OR vm %s) BLOCK tcp PORT 25',
         vm.uuid, uuid1),
       errors: [ 'Missing tag blue for rule: %r',
-                util.format('Missing machine %s for rule: %r', uuid1) ]
+                util.format('Missing vm %s for rule: %r', uuid1) ]
     }
   ];
 

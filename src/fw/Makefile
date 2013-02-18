@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2012, Joyent, Inc. All rights reserved.
+# Copyright (c) 2013, Joyent, Inc. All rights reserved.
 #
 
 
@@ -17,7 +17,6 @@ TEST_MODULES := test/node_modules
 # Tools
 #
 NODEUNIT := $(TEST_MODULES)/nodeunit/bin/nodeunit
-JISON	:= ./tools/jison/lib/jison/cli-wrapper.js
 JSSTYLE =	$(ROOT)/tools/jsstyle/jsstyle
 JSLINT =	$(ROOT)/tools/javascriptlint/build/install/jsl
 
@@ -27,8 +26,6 @@ JSLINT =	$(ROOT)/tools/javascriptlint/build/install/jsl
 JS_CHECK_TARGETS=\
 	lib/*.js \
 	lib/util/*.js \
-	lib/parser/index.js \
-	lib/parser/validators.js \
 	sbin/* \
 	test/unit/*.js \
 	test/lib/*.js
@@ -44,10 +41,6 @@ JSSTYLE_OPTS = -o indent=2,strict-indent=1,doxygen,unparenthesized-return=0,cont
 .PHONY: test
 test:
 	$(NODEUNIT) --reporter tap test/unit/*.js
-
-.PHONY: parser
-parser: $(JISON)
-	$(JISON)  -o lib/parser/parser.js ./src/fwrule.jison
 
 # Create a node modules suitable for installing in the platform
 $(NM):
@@ -66,35 +59,8 @@ $(NM):
 	@mkdir $(NM)/clone
 	@cp $(NM_ORIG)/clone/clone.js $(NM)/clone/index.js
 	@cp $(NM_ORIG)/clone/{LICENSE,clonePrototype.js} $(NM)/clone/
-
-#
-# Re-adding Jison source files
-#
-JISON_FILES = lib package.json
-JISON_NM = tools/jison/node_modules
-JISON_NM_ORIG = $(NM_ORIG)/jison/node_modules
-
-$(JISON):
-	@rm -rf tools/jison
-	@mkdir tools/jison
-	@(for F in $(JISON_FILES); do \
-		cp -r $(NM_ORIG)/jison/$$F tools/jison/; \
-	done)
-	@mkdir -p $(JISON_NM)/JSONSelect
-	@cp $(JISON_NM_ORIG)/JSONSelect/src/jsonselect.js \
-		$(JISON_NM)/JSONSelect/index.js
-	@cp $(JISON_NM_ORIG)/JSONSelect/LICENSE \
-		$(JISON_NM)/JSONSelect/
-	@mkdir -p $(JISON_NM)/nomnom
-	@cp $(JISON_NM_ORIG)/nomnom/nomnom.js \
-		$(JISON_NM)/nomnom/index.js
-	@mkdir -p $(JISON_NM)/underscore
-	@cp $(JISON_NM_ORIG)/nomnom/node_modules/underscore/{index.js,underscore.js,LICENSE} \
-		$(JISON_NM)/underscore/
-	@mkdir -p $(JISON_NM)/reflect
-	@cp -r $(JISON_NM_ORIG)/reflect/{package.json,dist} \
-		$(JISON_NM)/reflect
-
+	@mkdir $(NM)/fwrule
+	@cp tools/fwrule/lib/* $(NM)/fwrule/
 
 #
 # Re-adding nodeunit and test-related source files
@@ -167,7 +133,7 @@ jslint:
 jsstyle:
 	@printf "\n==> Running jsstyle...\n"
 	@# jsstyle doesn't echo as it goes so we add an echo to each line below
-	(for file in $(JS_CHECK_TARGETS); do \
+	@(for file in $(JS_CHECK_TARGETS); do \
 		echo $(PWD)/$$file; \
 		$(JSSTYLE) $(JSSTYLE_OPTS) $$file; \
 		[[ $$? == "0" ]] || exit 1; \

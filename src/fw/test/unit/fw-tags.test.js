@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * fwadm tests
  */
@@ -117,7 +117,7 @@ exports['add / update: tag to tag'] = function (t) {
   var payload = {
     rules: [
       {
-        rule: 'FROM tag one TO tag one ALLOW tcp port 80',
+        rule: 'FROM tag one TO tag one ALLOW tcp PORT 80',
         enabled: true
       }
     ],
@@ -499,11 +499,11 @@ exports['add / update: tag to tag'] = function (t) {
     var addPayload = {
       rules: [
         {
-          rule: 'FROM tag red TO tag one ALLOW udp port 1000',
+          rule: 'FROM tag red TO tag one ALLOW udp PORT 1000',
           enabled: true
         },
         {
-          rule: 'FROM tag red TO tag one ALLOW udp port 1001',
+          rule: 'FROM tag red TO tag one ALLOW udp PORT 1001',
           enabled: true
         }
       ],
@@ -555,7 +555,7 @@ exports['add / update: tag to tag'] = function (t) {
     var addPayload = {
       rules: [
         {
-          rule: 'FROM tag one TO tag red ALLOW tcp port 25',
+          rule: 'FROM tag one TO tag red ALLOW tcp PORT 25',
           enabled: true
         }
       ],
@@ -598,8 +598,8 @@ exports['add / update: tag to tag'] = function (t) {
     // Update rule 2 to include tag blue (remote VM 12 has this tag):
     // - tag one VMs should have firewalls updated
 
-    rule2.rule = 'FROM (tag red OR tag blue) TO tag one '
-      + 'ALLOW udp (port 1000 AND port 1050)';
+    rule2.rule = 'FROM (tag blue OR tag red) TO tag one '
+      + 'ALLOW udp (PORT 1000 AND PORT 1050)';
 
     var updatePayload = {
       rules: [
@@ -716,17 +716,17 @@ exports['add / update: tag to tag'] = function (t) {
     });
 
   }, function (cb) {
-    // Add machine to tag rules
+    // Add vm to tag rules
 
     var addPayload = {
       rules: [
         {
-          rule: util.format('FROM machine %s to tag one ALLOW tcp port 8080',
+          rule: util.format('FROM vm %s TO tag one ALLOW tcp PORT 8080',
             vm4.uuid),
           enabled: true
         },
         {
-          rule: util.format('FROM tag one to machine %s ALLOW tcp port 8080',
+          rule: util.format('FROM tag one TO vm %s ALLOW tcp PORT 8080',
             vm4.uuid),
           enabled: true
         }
@@ -789,7 +789,7 @@ exports['add / update: tag to tag'] = function (t) {
     var addPayload = {
       rules: [
         {
-          rule: 'FROM tag one TO tag two ALLOW tcp port 125',
+          rule: 'FROM tag one TO tag two ALLOW tcp PORT 125',
           enabled: true
         }
       ],

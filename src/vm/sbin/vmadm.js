@@ -27,6 +27,7 @@
 
 var async = require('/usr/node/node_modules/async');
 var fs = require('fs');
+var fwLog = require('/usr/fw/lib/util/log');
 var VM = require('/usr/vm/node_modules/VM');
 var nopt = require('/usr/vm/node_modules/nopt');
 var onlyif = require('/usr/node/node_modules/onlyif');
@@ -1039,7 +1040,7 @@ function flushLogs(callback)
     var streams;
 
     if (!VM.log) {
-        callback();
+        fwLog.flush(callback);
         return;
     }
 
@@ -1054,7 +1055,7 @@ function flushLogs(callback)
         cb();
         return;
     }, function () {
-        callback();
+        fwLog.flush(callback);
         return;
     });
 }

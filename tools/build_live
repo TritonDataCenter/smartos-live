@@ -21,7 +21,7 @@
 #
 
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Copyright (c) 2012 Joyent, Inc.  All rights reserved.
+# Copyright (c) 2013 Joyent, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 ROOT=`pwd`
@@ -150,7 +150,7 @@ function create_ufs
     lofiusrdev=$3
     usrfile=$4
 
-    newfs -o space -m 0 -i 50000 -b 4096 ${lofidev} < /dev/null 2> /dev/null
+    newfs -o space -m 0 -i 12248 -b 4096 ${lofidev} < /dev/null 2> /dev/null
     mkdir "${rdmnt}"
     mount -F ufs -o nologging ${lofidev} "${rdmnt}"
 

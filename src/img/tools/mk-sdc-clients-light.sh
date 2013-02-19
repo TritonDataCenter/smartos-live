@@ -28,10 +28,18 @@
 #
 #
 # Usage:
-#       ./mk-sdc-clients-light.sh [SHA [TARGET-DIR]]
+#       ./mk-sdc-clients-light.sh [SHA] [TARGET-DIR] [LIBS...]
 #
 # By default SHA is "master". It is the version of node-sdc-clients.git to use.
 # By default TARGET-DIR is "./node_modules/sdc-clients".
+# By default if LIBS is excluded, then all sdc-clients/lib/*.js API modules
+#       are included. Note that UFDS-direct "APIs" are always excluded
+#       (ufds.js, etc.) If any LIBS are specified, then only those are
+#       kept.
+#
+#
+# Examples:
+#       ./mk-sdc-clients-light.sh master node_modules/sdc-clients imgapi.js amon.js
 #
 
 if [ "$TRACE" != "" ]; then
@@ -67,11 +75,15 @@ SHA=$1
 if [[ -z "$SHA" ]]; then
     SHA=master
 fi
+shift
 
-D=$2
+D=$1
 if [[ -z "$D" ]]; then
     D=node_modules/sdc-clients
 fi
+shift
+
+LIBS=$*
 
 rm -rf $D
 mkdir -p $D
@@ -83,6 +95,14 @@ mkdir _repos
 (cd _repos/node-sdc-clients && git checkout $SHA)
 mv _repos/node-sdc-clients/{package.json,lib} .
 (cd lib && rm -f config.js package.js ufds.js mapi.javascript assertions.js)
+
+if [[ -n "$LIBS" ]]; then
+    for LIB in $(cd lib && ls -1 *api.js) amon.js ca.js; do
+        if [[ -z $(echo "$LIBS" | grep $LIB) ]]; then
+            rm -f lib/$LIB
+        fi
+    done
+fi
 
 # restify (stripped down just for client usage)
 (cd _repos && git clone git://github.com/mcavage/node-restify.git)

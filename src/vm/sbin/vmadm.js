@@ -165,7 +165,8 @@ function validFilterKey(key)
     disk_re = new RegExp('^disks\.[\*0-9]*\.'
         + '(boot|image_name|image_size|image_uuid|size|media|model|zpool)$');
     nic_re = new RegExp('nics\.[\*0-9]*\.'
-        + '(dhcp_server|gateway|interface|ip|mac|model|netmask|vlan_id)$');
+        + '(dhcp_server|gateway|interface|ip|mac|model|netmask|nic_tag'
+        + '|vlan_id)$');
 
     if (LIST_FIELDS.hasOwnProperty(key)) {
         return true;

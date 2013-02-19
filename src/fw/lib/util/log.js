@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * fwadm: logging and associated utils
  */
@@ -298,7 +298,7 @@ function logEntry(opts, action) {
  */
 function flushLogs(callback) {
   if (!LOG) {
-    return;
+    return callback();
   }
 
   vasync.forEachParallel({

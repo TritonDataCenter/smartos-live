@@ -41,12 +41,14 @@ check:
 
 .PHONY: update_modules
 update_modules:
-	./tools/mk-sdc-clients-light.sh $(shell json -f package.json dependencies.sdc-clients | cut -d'#' -f2)
+	rm -rf node_modules
+	./tools/mk-sdc-clients-light.sh \
+		$(shell json -f package.json dependencies.sdc-clients | cut -d'#' -f2) \
+		node_modules/sdc-clients imgapi.js dsapi.js
 	./tools/mk-nodeunit-light.sh $(shell json -f package.json devDependencies.nodeunit)
+	npm install
 	for dep in $(shell json -f package.json dependencies | json --keys -a | grep -v sdc-clients); do \
-		echo "# update $$dep dependency"; \
-		rm -rf node_modules/$$dep; \
-		npm install $$dep; \
+		echo "# trim $$dep dependency"; \
 		find node_modules/$$dep -name .gitmodules | xargs rm; \
 		find node_modules/$$dep -name .npmignore | xargs rm; \
 		find node_modules/$$dep -name .travis.yml | xargs rm; \

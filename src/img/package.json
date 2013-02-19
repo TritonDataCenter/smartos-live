@@ -16,8 +16,7 @@
     "imgmanifest": "git+ssh://git@git.joyent.com:node-imgmanifest.git#d4fef3a"
   },
   "devDependencies": {
-    "nodeunit": "0.7.4",
-    "jshint": "0.5"
+    "nodeunit": "0.7.4"
   },
   "engines": {
     "node": ">=0.8"

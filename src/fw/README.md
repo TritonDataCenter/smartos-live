@@ -18,8 +18,6 @@ fwadm is an adminstrative tool for managing VM firewalls.
     lib/            Source files.
     node_modules/   Committed node.js dependencies
     sbin/           Executables that are runnable as root
-    src/            Contains the jison grammar for creating the firewall rule
-                    parser
     test/           Test suite (using nodeunit)
     tools/          Dev tools, including jison for generating the rule parser
 

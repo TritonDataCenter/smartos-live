@@ -2222,7 +2222,7 @@ function validatePayload(opts, callback) {
       }
     ]}, function (err, res) {
       if (err) {
-        LOG.debug(err, 'validatePayload: return');
+        LOG.error(err, 'validatePayload: return');
         return callback(err);
       }
 

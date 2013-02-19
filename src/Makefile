@@ -366,6 +366,8 @@ install: all
 	sed -e 's|^#!/usr/bin/env node.*$$|#!/usr/node/bin/node|' \
 	    < node-bunyan/bin/bunyan \
 	    > $(DESTDIR)/usr/bin/bunyan
+	cp node-panic/lib/panic.js $(PREFIX_NODE)/node_modules/panic.js
+	cp node-panic/lib/subr.js $(PREFIX_NODE)/node_modules/subr.js
 	cp -PR img $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/var/db/imgadm
 	rm -rf $(DESTDIR)/usr/fw

@@ -35,6 +35,7 @@ var fs = require('fs');
 var net = require('net');
 var VM = require('/usr/vm/node_modules/VM');
 var onlyif = require('/usr/node/node_modules/onlyif');
+var panic = require('/usr/node/node_modules/panic');
 var path = require('path');
 var spawn = cp.spawn;
 var http = require('http');
@@ -1224,6 +1225,12 @@ onlyif.rootInSmartosGlobal(function (err) {
         log.error(err, 'Fatal: cannot run because: ' + err.message);
         process.exit(1);
     }
+
+    panic.enablePanicOnCrash({
+        'skipDump': true,
+        'abortOnPanic': true
+    });
+
     log.info('Starting vmadmd');
     main();
 });

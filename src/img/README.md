@@ -25,7 +25,7 @@ build and rebooting on it. Here is how:
     ssh root@MY-SMARTOS-BOX
     rm -rf /var/tmp/img \
         && cp -RP /usr/img /var/tmp/img \
-        && mount -O -F lofs /var/tmp/img /usr/img
+        && mount -O -F lofs /var/tmp/img /usr/img \
         && rm -rf /var/tmp/man1m \
         && cp -RP /usr/man/man1m /var/tmp/man1m \
         && mount -O -F lofs /var/tmp/man1m /usr/man/man1m

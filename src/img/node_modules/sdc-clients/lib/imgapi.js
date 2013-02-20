@@ -56,6 +56,7 @@ var SSHAgentClient = require('ssh-agent');
 // ---- client errors
 
 function ChecksumError(cause, actual, expected) {
+    this.code = 'ChecksumError';
     if (expected === undefined) {
         actual = cause;
         expected = actual;
@@ -72,6 +73,19 @@ function ChecksumError(cause, actual, expected) {
     WError.apply(this, args);
 }
 util.inherits(ChecksumError, WError);
+
+/**
+ * An error signing a request.
+ */
+function SigningError(cause) {
+    this.code = 'SigningError';
+    assert.optionalObject(cause);
+    var msg = 'error signing request';
+    var args = (cause ? [cause, msg] : [msg]);
+    WError.apply(this, args);
+}
+util.inherits(SigningError, WError);
+
 
 
 
@@ -199,6 +213,11 @@ IMGAPI.prototype._getAuthHeaders = function _getAuthHeaders(callback) {
     var str = headers.date;
 
     self.sign(str, function (err, signature) {
+        if (err || !signature) {
+            callback(new SigningError(err));
+            return;
+        }
+
         // Note that are using the *user* for the "keyId" in the HTTP-Signature
         // scheme. This is because on the server-side (IMGAPI) only the
         // username is used to determine relevant keys with which to verify.
@@ -239,6 +258,10 @@ IMGAPI.prototype.ping = function ping(error, callback) {
         path += '?' + qs.stringify({error: error});
     }
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -265,6 +288,10 @@ IMGAPI.prototype.adminGetState = function adminGetState(callback) {
 
     var path = '/state';
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -303,6 +330,10 @@ IMGAPI.prototype.listImages = function listImages(filters, callback) {
         path += '?' + query;
     }
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -342,6 +373,10 @@ IMGAPI.prototype.getImage = function getImage(uuid, account, callback) {
         path += '?' + qs.stringify({account: account});
     }
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -381,6 +416,10 @@ IMGAPI.prototype.createImage = function createImage(data, account, callback) {
         path += '?' + qs.stringify({account: account});
     }
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -414,6 +453,10 @@ IMGAPI.prototype.adminImportImage = function adminImportImage(data, callback) {
 
     var path = format('/images/%s?action=import', data.uuid);
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -491,6 +534,10 @@ IMGAPI.prototype.addImageFile = function addImageFile(options, account,
         }
 
         self._getAuthHeaders(function (hErr, headers) {
+            if (hErr) {
+                callback(hErr);
+                return;
+            }
             headers['Content-Type'] = 'application/octet-stream';
             headers['Content-Length'] = size;
             headers['Accept'] = 'application/json';
@@ -571,6 +618,10 @@ IMGAPI.prototype.getImageFile = function getImageFile(uuid, filePath, account,
         path += '?' + qs.stringify({account: account});
     }
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -651,6 +702,10 @@ IMGAPI.prototype.getImageFileStream = function getImageFileStream(
         path += '?' + qs.stringify({account: account});
     }
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -753,6 +808,10 @@ IMGAPI.prototype.addImageIcon = function addImageIcon(options, account,
         }
 
         self._getAuthHeaders(function (hErr, headers) {
+            if (hErr) {
+                callback(hErr);
+                return;
+            }
             headers['Content-Type'] = options.contentType;
             headers['Content-Length'] = size;
             headers['Accept'] = 'application/json';
@@ -833,6 +892,10 @@ IMGAPI.prototype.getImageIcon = function getImageIcon(uuid, filePath, account,
         path += '?' + qs.stringify({account: account});
     }
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -913,6 +976,10 @@ IMGAPI.prototype.getImageIconStream = function getImageIconStream(
         path += '?' + qs.stringify({account: account});
     }
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -978,6 +1045,10 @@ function deleteImageIcon(uuid, account, callback) {
         path += '?' + qs.stringify({account: account});
     }
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -1020,6 +1091,10 @@ IMGAPI.prototype.activateImage = function activateImage(uuid, account,
     }
     path += '?' + qs.stringify(query);
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -1062,6 +1137,10 @@ IMGAPI.prototype.disableImage = function disableImage(uuid, account,
     }
     path += '?' + qs.stringify(query);
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -1104,6 +1183,10 @@ IMGAPI.prototype.enableImage = function enableImage(uuid, account,
     }
     path += '?' + qs.stringify(query);
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -1148,6 +1231,10 @@ IMGAPI.prototype.addImageAcl = function addImageAcl(uuid, acl, account,
     }
     path += '?' + qs.stringify(query);
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -1192,6 +1279,10 @@ IMGAPI.prototype.removeImageAcl = function removeImageAcl(uuid, acl, account,
     }
     path += '?' + qs.stringify(query);
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -1236,6 +1327,10 @@ IMGAPI.prototype.updateImage = function updateImage(uuid, data, account,
     }
     path += '?' + qs.stringify(query);
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         var opts = {
             path: path,
             headers: headers
@@ -1275,6 +1370,10 @@ IMGAPI.prototype.deleteImage = function deleteImage(uuid, account, callback) {
         path += '?' + qs.stringify({account: account});
     }
     self._getAuthHeaders(function (hErr, headers) {
+        if (hErr) {
+            callback(hErr);
+            return;
+        }
         if (!headers['content-length']) {
             headers['content-length'] = 0;
         }
@@ -1621,6 +1720,9 @@ function cliSigner(options) {
 // ---- exports
 
 module.exports = IMGAPI;
+
+module.exports.ChecksumError = ChecksumError;
+module.exports.SigningError = SigningError;
 
 module.exports.createClient = function createClient(options) {
     return new IMGAPI(options);

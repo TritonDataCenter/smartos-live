@@ -95,7 +95,6 @@ f usr/img/node_modules/sdc-clients/lib/dsapi.js 0444 root bin
 f usr/img/node_modules/sdc-clients/lib/imgapi.js 0444 root bin
 f usr/img/node_modules/sdc-clients/lib/index.js 0444 root bin
 f usr/img/node_modules/sdc-clients/lib/restifyclient.js 0444 root bin
-f usr/img/node_modules/sdc-clients/lib/sapi.js 0444 root bin
 d usr/img/node_modules/sdc-clients/node_modules 0555 root bin
 d usr/img/node_modules/sdc-clients/node_modules/assert-plus 0555 root bin
 f usr/img/node_modules/sdc-clients/node_modules/assert-plus/assert.js 0444 root bin

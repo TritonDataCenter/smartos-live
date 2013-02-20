@@ -98,7 +98,7 @@ mv _repos/node-sdc-clients/{package.json,lib} .
 
 if [[ -n "$LIBS" ]]; then
     for LIB in $(cd lib && ls -1 *api.js) amon.js ca.js; do
-        if [[ -z $(echo "$LIBS" | grep $LIB) ]]; then
+        if [[ -z $(echo "$LIBS" | grep "\<$LIB\>") ]]; then
             rm -f lib/$LIB
         fi
     done

@@ -125,7 +125,7 @@ To run this test you must create the file:
 
     /lib/sdc/.sdc-test-no-production-data
 
-after ensuring you have no production data on this SDC.
+after ensuring you have no production data on this node.
 EOF
     exit 2
 fi

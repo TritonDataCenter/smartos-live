@@ -1,4 +1,4 @@
-#!/usr/node/bin/node
+#!/usr/node/bin/node --abort_on_uncaught_exception
 
 var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;

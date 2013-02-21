@@ -1,0 +1,194 @@
+#!/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at http://smartos.org/CDDL
+#
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file.
+#
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright (c) 2013, Joyent, Inc. All rights reserved.
+#
+#
+# Run the imgadm tests. This is expected to be run from a SmartOS GZ.
+#
+# This creates .tap files in the OUTPUT_DIR (/var/tmp/imgadmtest) that
+# can be processed by a TAP reader. Testing config and log files are
+# also placed in this dir.
+#
+# Run `./runtests -h` for usage info.
+#
+
+if [ "$TRACE" != "" ]; then
+    export PS4='${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -o xtrace
+fi
+set -o errexit
+set -o pipefail
+
+
+
+#---- support functions
+
+function fatal
+{
+    echo "$(basename $0): fatal error: $*"
+    exit 1
+}
+
+function cleanup () {
+    local status=$?
+    if [[ $status -ne 0 ]]; then
+        echo "error $status (run 'TRACE=1 $0' for more info)"
+    fi
+}
+
+function usage
+{
+    echo "Usage:"
+    echo "  runtests [OPTIONS...]"
+    echo ""
+    echo "Options:"
+    echo "  -h           Print this help and exit."
+    echo "  -f FILTER    Filter pattern (substring match) for test files to run."
+    echo "  -r REPORTER  Use an alternate nodeunit reporter. Default 'tap'."
+}
+
+
+
+#---- mainline
+
+trap 'cleanup' EXIT
+
+start_time=$(date +%s)
+
+TOP=$(cd $(dirname $0)/../; pwd)
+NODEUNIT="/usr/node/bin/node $TOP/node_modules/nodeunit/bin/nodeunit"
+
+
+# Options.
+opt_test_pattern=
+opt_reporter=default
+while getopts "hf:" opt
+do
+    case "$opt" in
+        h)
+            usage
+            exit 0
+            ;;
+        f)
+            opt_test_pattern=$OPTARG
+            ;;
+        r)
+            opt_reporter=$OPTARG
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+
+if [[ $(uname -s) != 'SunOS' ]]; then
+    fatal "this can only run on SmartOS"
+fi
+
+if [[ $(zonename) != 'global' ]]; then
+    fatal "this can only run in the GZ"
+fi
+
+if [[ $(id -u) != 0 ]]; then
+    fatal "this can only run as root"
+fi
+
+
+# Guard from running in production.
+if [[ -z "$opt_local" ]]; then
+if [[ ! -f "/lib/sdc/.sdc-test-no-production-data" ]]; then
+    cat <<EOF
+To run this test you must create the file:
+
+    /lib/sdc/.sdc-test-no-production-data
+
+after ensuring you have no production data on this node.
+EOF
+    exit 2
+fi
+fi
+
+# Setup a clean output dir.
+OUTPUT_DIR=/var/tmp/imgadmtest
+echo "# Setup a clean output dir ($OUTPUT_DIR)."
+rm -rf $OUTPUT_DIR
+mkdir -p $OUTPUT_DIR
+
+
+# Simplify: just run everything from $TOP.
+cd $TOP
+
+
+# Run the tests.
+echo ""
+retval=0
+test_files=$(ls -1 test/*.test.js)
+if [[ -n "$opt_test_pattern" ]]; then
+    test_files=$(echo "$test_files" | grep "$opt_test_pattern" || true)
+    echo "# Running filtered set of test files: $test_files"
+fi
+if [[ -n "$test_files" ]]; then
+    if [[ $opt_reporter == "tap" ]]; then
+        $NODEUNIT --reporter $opt_reporter $test_files \
+            | tee $OUTPUT_DIR/imgadm.tap
+    else
+        $NODEUNIT --reporter $opt_reporter $test_files
+        retval=$?
+    fi
+fi
+
+
+if [[ $opt_reporter == "tap" ]]; then
+    echo ""
+    echo "# test output:"
+    ls $OUTPUT_DIR/*.tap
+
+    # Colored summary of results (borrowed from smartos-live.git/src/vm/run-tests).
+    echo ""
+    echo "# test results:"
+
+    end_time=$(date +%s)
+    elapsed=$((${end_time} - ${start_time}))
+
+    tests=$(grep "^# tests [0-9]" $OUTPUT_DIR/*.tap | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
+    passed=$(grep "^# pass  [0-9]" $OUTPUT_DIR/*.tap | tr -s ' ' | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
+    [[ -z ${tests} ]] && tests=0
+    [[ -z ${passed} ]] && passed=0
+    fail=$((${tests} - ${passed}))
+
+    echo "# Completed in ${elapsed} seconds."
+    echo -e "# \033[32mPASS: ${passed} / ${tests}\033[39m"
+    if [[ ${fail} -gt 0 ]]; then
+        echo -e "# \033[31mFAIL: ${fail} / ${tests}\033[39m"
+    fi
+    echo ""
+
+    if [[ ${tests} != ${passed} ]]; then
+        exit 1
+    fi
+else
+    exit $retval
+fi

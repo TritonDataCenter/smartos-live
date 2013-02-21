@@ -1,0 +1,25 @@
+{
+  "name": "sdc-clients",
+  "description": "Contains node.js client libraries for SDC REST APIs.",
+  "version": "8.0.0",
+  "homepage": "http://www.joyent.com",
+  "private": true,
+  "main": "./lib/index.js",
+  "dependencies": {
+    "http-signature": "0.9.9",
+    "ldapjs": "0.6.1",
+    "lru-cache": "2.1.0",
+    "node-uuid": "1.4.0",
+    "restify": "git://github.com/mcavage/node-restify.git#ce7e75",
+    "clone": "0.1.5",
+    "assert-plus": "0.1.2",
+    "bunyan": "0.18.2",
+    "vasync": "1.3.3",
+    "verror": "1.3.5",
+    "ssh-agent": "0.2.1",
+    "async": "0.1.22"
+  },
+  "devDependencies": {
+    "nodeunit": "0.7.4"
+  }
+}

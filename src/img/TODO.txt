@@ -1,0 +1,11 @@
+- imgadm2 publish SNAPSHOT (or some other name) to zfs send a prepared
+  snapshot and manifest info to IMGAPI. This is for customer image
+  creation. This then needs to take auth info optionally? Check with /ping
+  if need to auth.
+
+# someday/maybe
+
+- improved logging a la vmadm
+- node-cmdln
+- HTTP caching when talking to sources.
+

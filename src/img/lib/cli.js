@@ -710,6 +710,10 @@ CLI.prototype.do_avail = function do_avail(subcmd, opts, args, callback) {
         return;
     }
     self.tool.sourcesList(function (err, imagesInfo) {
+        if (err) {
+            callback(err);
+            return;
+        }
         if (opts.json) {
             console.log(JSON.stringify(imagesInfo, null, 2));
         } else {
@@ -737,7 +741,7 @@ CLI.prototype.do_avail = function do_avail(subcmd, opts, args, callback) {
                 return;
             }
         }
-        callback(err);
+        callback();
     });
 };
 CLI.prototype.do_avail.description = (

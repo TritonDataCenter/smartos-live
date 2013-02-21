@@ -238,6 +238,92 @@ function getZfsDataset(name, properties, callback) {
 }
 
 
+
+// ---- Source class
+
+
+/**
+ * A light wrapper around an image source repository. A source has a
+ * `url` and a `type` ("dsapi" or "imgapi"). `getNormUrl()` handles (lazy)
+ * DNS resolution.
+ *
+ * @param options {Object} with these keys
+ *      - url {String}
+ *      - type {String} Optional. One of 'dsapi' or 'imgapi'. If not given
+ *        it is (imperfectly) inferred from the URL.
+ *      - log {Bunyan Logger}
+ */
+function Source(options) {
+    assert.object(options, 'options');
+    assert.string(options.url, 'options.url');
+    assert.optionalString(options.type, 'options.type');
+    assert.object(options.log, 'options.log');
+    this.url = options.url;
+    this.log = options.log;
+
+    // Figure out `type` if necessary.
+    this.type = options.type;
+    if (!this.type) {
+        // Per the old imgadm (v1) the old source URL includes the
+        // "datasets/" subpath. That's not a completely reliable marker, but
+        // we'll use that.
+        var isDsapiUrl = /datasets\/?$/;
+        if (isDsapiUrl.test(this.url)) {
+            this.type = 'dsapi';
+        } else {
+            this.type = 'imgapi';
+        }
+    }
+}
+
+/**
+ * Return a normalized URL: no trailing slash, DNS-resolved host
+ *
+ * @params callback {Function} `function (err, normUrl)`
+ */
+Source.prototype.getNormUrl = function getNormUrl(callback) {
+    assert.func(callback, 'callback');
+
+    var self = this;
+    if (this._normUrl) {
+        callback(null, this._normUrl);
+        return;
+    }
+
+    var parsed = url.parse(this.url);
+    if (parsed.pathname === '/') {
+        parsed.pathname = ''; // Don't want trailing '/'.
+    }
+
+    self.log.trace({host: parsed.host}, 'DNS resolve source host');
+    ipFromHost(parsed.host, function (dnsErr, ip) {
+        if (dnsErr) {
+            callback(dnsErr);
+            return;
+        }
+        parsed.host = ip;
+        self._normUrl = url.format(parsed);
+        callback(null, self._normUrl);
+        return;
+    });
+};
+
+
+/**
+ * Ping check against the source server.
+ *
+ * @param callback {Function} `function (pingErr)`
+ */
+Source.prototype.pingCheck = function pingCheck(callback) {
+    assert.func(callback, 'callback');
+
+    var self = this;
+    sourcePingCheck
+};
+
+
+
+
 // ---- IMGADM tool
 
 function IMGADM(options) {
@@ -294,10 +380,6 @@ IMGADM.prototype.init = function init(callback) {
                     next(err);
                     return;
                 }
-                if (self.sources.length === 0) {
-                    next(new errors.NoSourcesError());
-                    return;
-                }
                 next();
             }
         );
@@ -313,12 +395,14 @@ IMGADM.prototype.init = function init(callback) {
  *
  * Note that this does *not* update the IMGADM config file.
  *
- * @param source {Object} Image source object with these keys:
+ * @param source {Source|Object} A `Source` instance or an object describing
+ *      the image source with these keys:
  *      - url {String}
  *      - type {String} Optional. One of 'dsapi' or 'imgapi'. If not given
  *        it is (imperfectly) inferred from the URL.
  * @param skipPingCheck {Boolean} Whether to do a ping check on the new
- *      source URL.
+ *      source URL. Default false. However, a ping check is not done for
+ *      an existing source (i.e. if `source` is already a Source instance).
  * @param callback {Function} `function (err, changed)` where `changed` is
  *      a boolean indicating if the config changed as a result.
  */
@@ -337,16 +421,23 @@ IMGADM.prototype._addSource = function _addSource(
             next();
             return;
         }
-        var client = self.clientFromSource(s);
-        client.ping(function (err, pong, res) {
-            if (err
-                || res.statusCode !== 200
-                || (s.type === 'imgapi' && !pong.imgapi))
-            {
-                next(new errors.SourcePingError(err, s));
+
+        self.log.trace({source: s.url}, 'sourcePingCheck');
+        self.clientFromSource(s, function (cErr, client) {
+            if (cErr) {
+                next(cErr);
                 return;
             }
-            next();
+            client.ping(function (err, pong, res) {
+                if (err
+                    || res.statusCode !== 200
+                    || (s.type === 'imgapi' && !pong.imgapi))
+                {
+                    next(new errors.SourcePingError(err, s));
+                    return;
+                }
+                next();
+            });
         });
     }
 
@@ -357,39 +448,28 @@ IMGADM.prototype._addSource = function _addSource(
             return callback(null, false);
     }
 
-    // Figure out `type` if necessary.
-    if (!source.type) {
-        // Per the old imgadm (v1) the old source URL includes the
-        // "datasets/" subpath. That's not a completely reliable marker, but
-        // we'll use that.
-        var isDsapiUrl = /datasets\/?$/;
-        if (isDsapiUrl.test(source.url)) {
-            source.type = 'dsapi';
-        } else {
-            source.type = 'imgapi';
-        }
+    // If already a source, then just add it.
+    if (source.constructor.name === 'Source') {
+        self.sources.push(source);
+        callback(null, true);
+        return;
     }
 
-    var parsed = url.parse(source.url);
-    if (parsed.pathname === '/') {
-        parsed.pathname = ''; // Don't want trailing '/'.
-    }
-    ipFromHost(parsed.host, function (err, ip) {
-        if (err) {
-            callback(err);
-            return;
-        }
-        parsed.host = ip;
-        source.normUrl = url.format(parsed);
-        sourcePingCheck(source, function (pingErr) {
+    // Else make a new Source instance.
+    var s = new Source({url: source.url, type: source.type, log: self.log});
+    if (skipPingCheck) {
+        self.sources.push(s);
+        callback(null, true);
+    } else {
+        sourcePingCheck(s, function (pingErr) {
             if (pingErr) {
                 callback(pingErr);
                 return;
             }
-            self.sources.push(source);
+            self.sources.push(s);
             callback(null, true);
         });
-    });
+    }
 };
 
 
@@ -421,7 +501,7 @@ IMGADM.prototype._delSource = function _delSource(sourceUrl, callback) {
  *      - type {String} Optional. One of 'dsapi' or 'imgapi'. If not given
  *        it is (imperfectly) inferred from the URL.
  * @param skipPingCheck {Boolean} Whether to do a ping check on the new
- *      source URL.
+ *      source URL. Default false.
  * @param callback {Function} `function (err, changed)`
  */
 IMGADM.prototype.configAddSource = function configAddSource(
@@ -438,7 +518,8 @@ IMGADM.prototype.configAddSource = function configAddSource(
             callback(addErr);
         } else if (changed) {
             if (!self.config.sources) {
-                self.config.sources = [];
+                // Was implicitly getting the default source. Let's keep it.
+                self.config.sources = [common.DEFAULT_SOURCE];
             }
             self.config.sources.push({url: source.url, type: source.type});
             self.saveConfig(function (saveErr) {
@@ -497,7 +578,8 @@ IMGADM.prototype.configDelSourceUrl = function configDelSourceUrl(
  *
  * @param sourceUrls {Array}
  * @param skipPingCheck {Boolean} Whether to do a ping check on the new
- *      source URL.
+ *      source URL. Default false. However, a ping check is not done
+ *      on already existing sources.
  * @param callback {Function} `function (err, changes)` where `changes` is
  *      a list of changes of the form `{type: <type>, url: <url>}` where
  *      `type` is one of 'reorder', 'add', 'del'.
@@ -535,12 +617,7 @@ IMGADM.prototype.updateSourceUrls = function updateSourceUrls(
     async.forEachSeries(
         newSources,
         function oneSource(s, next) {
-            if (!s.normUrl) {
-                self._addSource(s, skipPingCheck, next);
-            } else {
-                self.sources.push(s);
-                next();
-            }
+            self._addSource(s, skipPingCheck, next)
         },
         function doneSources(err) {
             if (err) {
@@ -590,27 +667,50 @@ IMGADM.prototype.sourceFromUrl = function sourceFromUrl(sourceUrl) {
 };
 
 
-IMGADM.prototype.clientFromSource = function clientFromSource(source) {
-    if (this._clientCache === undefined) {
-        this._clientCache = {};
+/**
+ * Return an API client for the given source.
+ *
+ * @param source {Source}
+ * @param callback {Function} `function (err, client)`
+ */
+IMGADM.prototype.clientFromSource = function clientFromSource(source, callback) {
+    var self = this;
+    assert.object(source, 'source');
+    assert.func(callback, 'callback');
+
+    if (self._clientCache === undefined) {
+        self._clientCache = {};
     }
-    if (this._clientCache[source.url] === undefined) {
+    var client = self._clientCache[source.url];
+    if (client) {
+        callback(null, client);
+        return;
+    }
+
+    source.getNormUrl(function (normErr, normUrl) {
+        if (normErr) {
+            callback(normErr);
+            return;
+        }
         if (source.type === 'dsapi') {
             var baseUrl = path.dirname(source.url); // drop 'datasets/' tail
-            var baseNormUrl = path.dirname(source.normUrl);
-            this._clientCache[source.url] = dsapi.createClient({
+            var baseNormUrl = path.dirname(normUrl);
+            self._clientCache[source.url] = dsapi.createClient({
+                agent: false,
                 url: baseNormUrl,
-                log: this.log.child({component: 'api', source: baseUrl}, true)
+                log: self.log.child({component: 'api', source: baseUrl}, true)
             });
         } else {
-            this._clientCache[source.url] = imgapi.createClient({
-                url: source.normUrl,
-                log: this.log.child(
+            self._clientCache[source.url] = imgapi.createClient({
+                agent: false,
+                url: normUrl,
+                log: self.log.child(
                     {component: 'api', source: source.url}, true)
             });
         }
-    }
-    return this._clientCache[source.url];
+        callback(null, self._clientCache[source.url]);
+        return;
+    });
 };
 
 
@@ -924,16 +1024,25 @@ IMGADM.prototype.sourcesList = function sourcesList(callback) {
     var errs = [];
     var imageSetFromSourceUrl = {};
 
+    if (self.sources.length === 0) {
+        callback(new errors.NoSourcesError());
+        return;
+    }
     async.forEach(
         self.sources,
         function oneSource(source, next) {
-            var client = self.clientFromSource(source);
-            client.listImages(function (cErr, images) {
+            self.clientFromSource(source, function (cErr, client) {
                 if (cErr) {
-                    errs.push(self._errorFromClientError(source, cErr));
+                    next(cErr);
+                    return;
                 }
-                imageSetFromSourceUrl[source.url] = images || [];
-                next();
+                client.listImages(function (listErr, images) {
+                    if (listErr) {
+                        errs.push(self._errorFromClientError(source, listErr));
+                    }
+                    imageSetFromSourceUrl[source.url] = images || [];
+                    next();
+                });
             });
         },
         function done(err) {
@@ -974,6 +1083,11 @@ IMGADM.prototype.sourcesGet = function sourcesGet(uuid, callback) {
     var self = this;
     var errs = [];
 
+    if (self.sources.length === 0) {
+        callback(new errors.NoSourcesError());
+        return;
+    }
+
     var imageInfo = null;
     async.forEachSeries(
         self.sources,
@@ -982,15 +1096,20 @@ IMGADM.prototype.sourcesGet = function sourcesGet(uuid, callback) {
                 next();
                 return;
             }
-            var client = self.clientFromSource(source);
-            client.getImage(uuid, function (cErr, manifest) {
-                if (cErr && cErr.statusCode !== 404) {
-                    errs.push(self._errorFromClientError(source, cErr));
+            self.clientFromSource(source, function (cErr, client) {
+                if (cErr) {
+                    next(cErr);
+                    return;
                 }
-                if (manifest) {
-                    imageInfo = {manifest: manifest, source: source};
-                }
-                next();
+                client.getImage(uuid, function (getErr, manifest) {
+                    if (getErr && getErr.statusCode !== 404) {
+                        errs.push(self._errorFromClientError(source, getErr));
+                    }
+                    if (manifest) {
+                        imageInfo = {manifest: manifest, source: source};
+                    }
+                    next();
+                });
             });
         },
         function done(err) {
@@ -1019,8 +1138,13 @@ IMGADM.prototype.sourceGetFileStream = function sourceGetFileStream(
     assert.object(imageInfo.source, 'imageInfo.source');
     assert.func(callback, 'callback');
 
-    var client = this.clientFromSource(imageInfo.source);
-    client.getImageFileStream(imageInfo.manifest.uuid, callback);
+    self.clientFromSource(imageInfo.source, function (cErr, client) {
+        if (cErr) {
+            callback(cErr);
+            return;
+        }
+        client.getImageFileStream(imageInfo.manifest.uuid, callback);
+    });
 };
 
 

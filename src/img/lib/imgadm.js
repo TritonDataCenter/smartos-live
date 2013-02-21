@@ -309,20 +309,6 @@ Source.prototype.getNormUrl = function getNormUrl(callback) {
 };
 
 
-/**
- * Ping check against the source server.
- *
- * @param callback {Function} `function (pingErr)`
- */
-Source.prototype.pingCheck = function pingCheck(callback) {
-    assert.func(callback, 'callback');
-
-    var self = this;
-    sourcePingCheck
-};
-
-
-
 
 // ---- IMGADM tool
 
@@ -416,14 +402,14 @@ IMGADM.prototype._addSource = function _addSource(
     var self = this;
 
     // Ping-test against the new URL
-    function sourcePingCheck(s, next) {
+    function sourcePingCheck(sourceToPing, next) {
         if (skipPingCheck) {
             next();
             return;
         }
 
-        self.log.trace({source: s.url}, 'sourcePingCheck');
-        self.clientFromSource(s, function (cErr, client) {
+        self.log.trace({source: sourceToPing.url}, 'sourcePingCheck');
+        self.clientFromSource(sourceToPing, function (cErr, client) {
             if (cErr) {
                 next(cErr);
                 return;
@@ -431,9 +417,9 @@ IMGADM.prototype._addSource = function _addSource(
             client.ping(function (err, pong, res) {
                 if (err
                     || res.statusCode !== 200
-                    || (s.type === 'imgapi' && !pong.imgapi))
+                    || (sourceToPing.type === 'imgapi' && !pong.imgapi))
                 {
-                    next(new errors.SourcePingError(err, s));
+                    next(new errors.SourcePingError(err, sourceToPing));
                     return;
                 }
                 next();
@@ -617,7 +603,7 @@ IMGADM.prototype.updateSourceUrls = function updateSourceUrls(
     async.forEachSeries(
         newSources,
         function oneSource(s, next) {
-            self._addSource(s, skipPingCheck, next)
+            self._addSource(s, skipPingCheck, next);
         },
         function doneSources(err) {
             if (err) {
@@ -673,7 +659,8 @@ IMGADM.prototype.sourceFromUrl = function sourceFromUrl(sourceUrl) {
  * @param source {Source}
  * @param callback {Function} `function (err, client)`
  */
-IMGADM.prototype.clientFromSource = function clientFromSource(source, callback) {
+IMGADM.prototype.clientFromSource = function clientFromSource(
+        source, callback) {
     var self = this;
     assert.object(source, 'source');
     assert.func(callback, 'callback');
@@ -1133,6 +1120,7 @@ IMGADM.prototype.sourcesGet = function sourcesGet(uuid, callback) {
  */
 IMGADM.prototype.sourceGetFileStream = function sourceGetFileStream(
         imageInfo, callback) {
+    var self = this;
     assert.object(imageInfo, 'imageInfo');
     assert.object(imageInfo.manifest, 'imageInfo.manifest');
     assert.object(imageInfo.source, 'imageInfo.source');

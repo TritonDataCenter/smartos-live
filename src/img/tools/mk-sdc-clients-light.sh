@@ -112,7 +112,7 @@ SHA=$(json -f package.json dependencies.restify | cut -d'#' -f2)
 mkdir -p node_modules/restify
 mv _repos/node-restify/{LICENSE,package.json,lib} node_modules/restify
 (cd node_modules/restify/lib \
-    && rm -rf dtrace.js formatters plugins request.js response.js \
+    && rm -rf formatters plugins request.js response.js \
         router.js server.js)
 
 # assert-plus
@@ -239,6 +239,16 @@ patch -p0 <<PATCH
  function createClient(options) {
          var assert = require('assert-plus');
          var bunyan = require('./bunyan_helper');
+--- node_modules/restify/lib/dtrace.js
++++ node_modules/restify/lib/dtrace.js
+@@ -1,6 +1,6 @@
+ // Copyright 2012 Mark Cavage, Inc.  All rights reserved.
+
+-var dtrace = require('dtrace-provider');
++var dtrace = require('/usr/node/node_modules/dtrace-provider');
+
+
+
 PATCH
 
 

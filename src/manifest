@@ -171,6 +171,7 @@ f usr/img/node_modules/sdc-clients/node_modules/restify/lib/clients/http_client.
 f usr/img/node_modules/sdc-clients/node_modules/restify/lib/clients/index.js 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/restify/lib/clients/json_client.js 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/restify/lib/clients/string_client.js 0444 root bin
+f usr/img/node_modules/sdc-clients/node_modules/restify/lib/dtrace.js 0444 root bin
 d usr/img/node_modules/sdc-clients/node_modules/restify/lib/errors 0555 root bin
 f usr/img/node_modules/sdc-clients/node_modules/restify/lib/errors/http_error.js 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/restify/lib/errors/index.js 0444 root bin

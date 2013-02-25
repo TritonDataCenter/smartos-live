@@ -28,6 +28,7 @@
  */
 
 var format = require('util').format;
+var onlyif = require('/usr/node/node_modules/onlyif');
 var CLI = require('../lib/cli');
 
 
@@ -43,7 +44,7 @@ function logerror(err, verbose) {
         console.error(format('%s: error (%s): %s', NAME, err.code,
             err.message));
     } else {
-        console.error(format('%s: error: %s', NAME, err.message));
+        console.error(format('%s: error: %s', NAME, err.message || err));
     }
     if (verbose && err.stack) {
         console.error('\n' + err.stack);
@@ -54,13 +55,19 @@ function logerror(err, verbose) {
 // ---- mainline
 
 function main(argv) {
-    var cli = new CLI();
-    cli.main(argv, function (err, verbose) {
-        if (err) {
-            logerror(err, verbose);
-            process.exit(err.exitStatus || 1);
+    onlyif.rootInSmartosGlobal(function (onlyifErr) {
+        if (onlyifErr) {
+            logerror('cannot run: ' + onlyifErr);
+            process.exit(2);
         }
-        process.exit(0);
+        var cli = new CLI();
+        cli.main(argv, function (err, verbose) {
+            if (err) {
+                logerror(err, verbose);
+                process.exit(err.exitStatus || 1);
+            }
+            process.exit(0);
+        });
     });
 }
 

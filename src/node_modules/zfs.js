@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Joyent, Inc.  All rights reserved.
+ * Copyright 2013 Joyent, Inc.  All rights reserved.
  */
 
 var cp = require('child_process'),
@@ -19,7 +19,7 @@ exports.paths = {
 var zpool = exports.zpool = function () { };
 
 // if zfs commands take longer than timeoutDuration it's an error
-var timeoutDuration = exports.timeoutDuration = 60*1000;
+var timeoutDuration = exports.timeoutDuration = 10 * 60 * 1000;
 
 function zfsErrorStr(error, stderr) {
 	if (!error)

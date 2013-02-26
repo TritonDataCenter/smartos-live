@@ -40,11 +40,12 @@ var test = tap4nodeunit.test;
 
 
 var IMGADM = 'imgadm';
-//IMGADM = '/image/usr/img/sbin/imgadm';
+
 
 before(function (next) {
     next();
 });
+
 
 test('imgadm --version', function (t) {
     exec(IMGADM + ' --version', function (err, stdout, stderr) {
@@ -52,6 +53,42 @@ test('imgadm --version', function (t) {
         t.equal(stderr, '', 'stderr');
         t.ok(/^imgadm \d+\.\d+\.\d+/.test(stdout),
             format('stdout is a version: "%s"', stdout.trim()));
+        t.end();
+    });
+});
+
+['', ' --help', ' -h', ' help'].forEach(function (args) {
+    test('imgadm' + args, function (t) {
+        exec(IMGADM + args, function (err, stdout, stderr) {
+            t.ifError(err, err);
+            t.equal(stderr, '', 'stderr');
+            t.ok(/\nUsage:/.test(stdout), 'stdout has help');
+            t.end();
+        });
+    });
+});
+
+test('imgadm help sources', function (t) {
+    exec(IMGADM + ' help sources', function (err, stdout, stderr) {
+        t.ifError(err, err);
+        t.equal(stderr, '', 'stderr');
+        t.ok(/imgadm sources/.test(stdout),
+            format('stdout is imgadm sources help: "%s..."',
+                   stdout.trim().split(/\n/, 1)[0]));
+        t.end();
+    });
+});
+
+
+var BOGUS_UUID = '29fa922a-7fa7-11e2-bffa-5b6fe63a8d5e';
+test('`imgadm info BOGUS_UUID` ImageNotInstalled error', function (t) {
+    exec(IMGADM + ' info ' + BOGUS_UUID, function (err, stdout, stderr) {
+        t.ok(err, err);
+        t.equal(err.code, 3);
+        t.ok(/ImageNotInstalled/.test(stderr),
+            'ImageNotInstalled error code on stderr');
+        t.equal(stdout, '', 'no stdout');
+
         t.end();
     });
 });

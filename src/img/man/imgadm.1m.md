@@ -203,6 +203,13 @@ The following exit values are returned:
     1
         An error occurred.
 
+    2
+        Usage error.
+
+    3
+        "ImageNotInstalled" error. Returned when an operation is requested
+        on an image UUID that needs to be installed, but is not.
+
 
 ## SEE ALSO
 

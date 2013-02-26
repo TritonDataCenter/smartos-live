@@ -136,7 +136,7 @@ function ImageNotInstalledError(cause, zpool, uuid) {
         cause: cause,
         message: sprintf('image "%s" was not found on zpool "%s"', uuid, zpool),
         code: 'ImageNotInstalled',
-        exitStatus: 1
+        exitStatus: 3
     });
 }
 util.inherits(ImageNotInstalledError, ImgadmError);

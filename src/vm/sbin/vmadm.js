@@ -1048,13 +1048,30 @@ function flushLogs(callback)
 
     streams = VM.log.streams;
     async.forEachSeries(streams, function (str, cb) {
+        var called_back = false;
+
         if (!str || !str.stream) {
             cb();
             return;
         }
 
-        str.stream.end();
-        cb();
+        str.stream.once('drain', function () {
+            if (!called_back) {
+                called_back = true;
+                cb();
+            }
+        });
+
+        if (str.stream.write('')) {
+            // according to node docs true here means we're done
+            if (!called_back) {
+                called_back = true;
+                cb();
+            }
+        } else {
+            // false means: wait for 'drain' to call cb();
+            /*jsl:pass*/
+        }
         return;
     }, function () {
         fwLog.flush(callback);

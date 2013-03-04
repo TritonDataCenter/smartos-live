@@ -28,6 +28,7 @@ JS_CHECK_TARGETS=\
 	lib/util/*.js \
 	sbin/* \
 	test/unit/*.js \
+	test/integration/*.js \
 	test/lib/*.js
 
 #

@@ -402,8 +402,8 @@ function update(opts) {
 
     // Allow doing an 'update <uuid>' instead of requiring the UUID be in
     // the payload:
-    if (opts.argv.remain[1] && updateOpts.hasOwnProperty('rules') &&
-      updateOpts.rules.length === 1) {
+    if (opts.argv.remain[1] && updateOpts.hasOwnProperty('rules')
+      && updateOpts.rules.length === 1) {
       updateOpts.rules[0].uuid = cli.validateUUID(opts.argv.remain[1]);
     }
 

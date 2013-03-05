@@ -57,6 +57,12 @@ var VNC = {};
 // Global bunyan logger object for use here in vmadmd
 var log;
 
+// Used to track which VMs we've seen so that we can update new ones the first
+// time we see them regardless of which zone transition we see for them.  Also
+// stores basic information so we don't have to VM.load() as often.
+var seen_vms = {};
+
+
 function sysinfo(callback)
 {
     log.debug('/usr/bin/sysinfo');
@@ -423,8 +429,62 @@ function updateZoneStatus(ev)
         return;
     }
 
-    log.info('' + ev.zonename + ' went from ' + ev.oldstate
-        + ' to ' + ev.newstate + ' at ' + ev.when);
+    /*
+     * State changes we care about:
+     *
+     * running -> <anystate> (KVM ONLY)
+     *   - zone is stopping, stop VNC
+     *   - remove stop timer/timeout
+     *
+     * <anystate> -> uninitialized (KVM ONLY)
+     *   - zone stopped
+     *   - clear the 'stopping' transition
+     *
+     * <anystate> -> running (KVM ONLY)
+     *    - setup VNC / SPICE
+     *
+     * <any transitions>
+     *    - first time we see a VM (any brand), we'll wait for it to go
+     *      provisioning -> X
+     */
+
+    // if we've never seen this VM before, we always load once.
+    if (!seen_vms.hasOwnProperty(ev.zonename)) {
+        log.debug(ev.zonename + ' is a VM we haven\'t seen before and went '
+            + 'from ' + ev.oldstate + ' to ' + ev.newstate + ' at ' + ev.when);
+        seen_vms[ev.zonename] = {};
+        // We'll continue on to load this VM below with VM.load()
+    } else if (!seen_vms[ev.zonename].hasOwnProperty('uuid')) {
+        // We just saw this machine and haven't finished loading it the first
+        // time.
+        log.debug('Already loading VM ' + ev.zonename + ' ignoring transition'
+            + ' from ' + ev.oldstate + ' to ' + ev.newstate + ' at ' + ev.when);
+        return;
+    } else if (PROV_WAIT[seen_vms[ev.zonename].uuid]) {
+        // We're already waiting for this machine to provision, other
+        // transitions are ignored in this state because we don't start VNC
+        // until after provisioning anyway.
+        log.debug('still waiting for ' + seen_vms[ev.zonename].uuid
+            + ' to complete provisioning, nothing to do.');
+        return;
+    } else if (!(seen_vms[ev.zonename].provisioned)) {
+        log.debug('VM ' + seen_vms[ev.zonename].uuid + ' is not provisioned'
+            + ' and not provisioning, doing VM.load().');
+        // Continue on to VM.load()
+    } else if (seen_vms[ev.zonename].brand === 'kvm'
+        && (ev.newstate === 'running'
+        || ev.oldstate === 'running'
+        || ev.newstate === 'uninitialized')) {
+
+        log.info('' + ev.zonename + ' (kvm) went from ' + ev.oldstate
+            + ' to ' + ev.newstate + ' at ' + ev.when);
+        // Continue on to VM.load()
+    } else {
+        log.trace('ignoring transition for ' + ev.zonename + ' ('
+            + seen_vms[ev.zonename].brand + ') from ' + ev.oldstate + ' to '
+            + ev.newstate + ' at ' + ev.when);
+        return;
+    }
 
     VM.load(ev.zonename, function (err, vmobj) {
 
@@ -440,6 +500,16 @@ function updateZoneStatus(ev)
             return;
         }
 
+        // keep track of a few things about this zone that won't change so that
+        // we don't have to VM.load() every time.
+        if (!seen_vms.hasOwnProperty(ev.zonename)) {
+            seen_vms[ev.zonename] = {};
+        }
+        if (!seen_vms[ev.zonename].hasOwnProperty('uuid')) {
+            seen_vms[ev.zonename].uuid = vmobj.uuid;
+            seen_vms[ev.zonename].brand = vmobj.brand;
+        }
+
         if (vmobj.state === 'provisioning') {
             // check that we're not already waiting.
             if (PROV_WAIT.hasOwnProperty(vmobj.uuid)) {
@@ -450,8 +520,12 @@ function updateZoneStatus(ev)
 
             PROV_WAIT[vmobj.uuid] = true;
             handleProvisioning(vmobj, function (prov_err, result) {
-                // this waiter finishd so we're ok with another being started.
-                delete PROV_WAIT[vmobj.uuid];
+                delete PROV_WAIT[vmobj.uuid]; // this waiter finished
+
+                // We assume that by getting here we've either succeeded or
+                // failed at provisioning, but either way we're done.
+                seen_vms[ev.zonename].provisioned = true;
+
                 if (prov_err) {
                     log.error(prov_err, 'error handling provisioning state for'
                         + ' ' + vmobj.uuid + ': ' + prov_err.message);
@@ -461,7 +535,9 @@ function updateZoneStatus(ev)
                     +  result);
                 return;
             });
-
+        } else {
+            // This zone finished provisioning some time in the past
+            seen_vms[ev.zonename].provisioned = true;
         }
 
         // don't handle transitions other than provisioning for non-kvm
@@ -486,8 +562,8 @@ function updateZoneStatus(ev)
             // XXX we're running stop so it will clear the transition marker
 
             VM.stop(ev.zonename, {'force': true}, function (e) {
-                if (e) {
-                    log.error('stop failed', e);
+                if (e && e.code !== 'ENOTRUNNING') {
+                    log.error(e, 'stop failed');
                 }
             });
         }
@@ -1110,8 +1186,11 @@ function loadVM(vmobj, do_autoboot)
             setStopTimer(vmobj.uuid, expire);
         }
     } else {
-        log.debug('state: ' + vmobj.state + ' expire: '
-            + vmobj.transition_expire);
+        log.debug('VM ' + vmobj.uuid + ' state: ' + vmobj.state);
+        if (vmobj.transition_expire) {
+            log.debug('VM ' + vmobj.uuid + ' expire: '
+                + vmobj.transition_expire);
+        }
     }
 
     // Start Remote Display
@@ -1134,6 +1213,39 @@ function startTraceLoop() {
     }, 5000);
 }
 
+// This checks zoneadm periodically to ensure that zones in 'seen_vms' all
+// still exist, if not: collect garbage.
+function startSeenCleaner() {
+    setInterval(function () {
+        execFile('/usr/sbin/zoneadm', ['list', '-c'],
+            function (error, stdout, stderr) {
+                var current_vms = {};
+
+                if (error) {
+                    log.error(error);
+                    return;
+                }
+
+                stdout.split('\n').forEach(function (vm) {
+                    if (vm.length > 0 && vm !== 'global') {
+                        current_vms[vm] = true;
+                    }
+                });
+
+                Object.keys(seen_vms).forEach(function (vm) {
+                    if (current_vms.hasOwnProperty(vm)) {
+                        log.trace('VM ' + vm + ' still exists, leaving "seen"');
+                    } else {
+                        // no longer exists
+                        log.info('VM ' + vm + ' is gone, removing from "seen"');
+                        delete seen_vms[vm];
+                    }
+                });
+            }
+        );
+    }, (5 * 60) * 1000);
+}
+
 // kicks everything off
 function main()
 {
@@ -1142,6 +1254,7 @@ function main()
     startZoneWatcher(updateZoneStatus);
     startHTTPHandler();
     startTraceLoop();
+    startSeenCleaner();
 
     loadConfig(function (err) {
         var do_autoboot = false;
@@ -1165,6 +1278,17 @@ function main()
             VM.lookup({}, {'full': true}, function (e, vmobjs) {
                 for (vmobj in vmobjs) {
                     vmobj = vmobjs[vmobj];
+
+                    if (!seen_vms.hasOwnProperty(vmobj.zonename)) {
+                        seen_vms[vmobj.zonename] = {
+                            uuid: vmobj.uuid,
+                            brand: vmobj.brand
+                        };
+                    }
+                    if (vmobj.state !== 'provisioning') {
+                        seen_vms[vmobj.zonename].provisioned = true;
+                    }
+
                     if (vmobj.state === 'failed') {
                         log.debug('skipping failed VM ' + vmobj.uuid);
                     } else if (vmobj.state === 'provisioning') {
@@ -1182,6 +1306,7 @@ function main()
                         // provisioning one way or another.
                         handleProvisioning(vmobj, function (prov_err, result) {
                             delete PROV_WAIT[vmobj.uuid];
+                            seen_vms[vmobj.zonename].provisioned = true;
                             if (prov_err) {
                                 log.error(prov_err, 'error handling '
                                     + 'provisioning state for ' + vmobj.uuid

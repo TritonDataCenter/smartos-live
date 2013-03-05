@@ -901,7 +901,8 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
                         imageNames.push(name);
                     }
                 } else {
-                    // This is a filesystem using an image.
+                    // This *may* be a filesystem using an image. See
+                    // joyent/smartos-live#180 for a counter-example.
                     name = origin.split('@')[0];
                     if (usageFromImageName[name] === undefined) {
                         usageFromImageName[name] = 1;
@@ -910,14 +911,6 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
                     }
                 }
             }
-
-            // Sanity check that for every image name for which there is usage
-            // there is an image filesystem.
-            Object.keys(usageFromImageName).forEach(function (imageName) {
-                assert.ok(imageNames.indexOf(imageName) !== -1,
-                    format('"%s" image name is an origin for a zfs fs, but '
-                        + 'that image fs is not found', imageName));
-            });
 
             var imagesInfo = [];
             async.forEachSeries(

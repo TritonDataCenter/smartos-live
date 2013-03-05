@@ -113,7 +113,7 @@ function usage(message, code)
 {
     var out;
 
-    if (code === null) {
+    if (!code) {
         code = 2;
     }
 
@@ -1024,7 +1024,13 @@ function main(callback)
         }
         VM[command](uuid, extra, function (err) {
             if (err) {
-                callback(err);
+                // if the error was because zone is not running (returned by
+                // VM.stop()), we'll treat as noop and exit 0.
+                if (err.code === 'ENOTRUNNING') {
+                    callback(null, err.message);
+                } else {
+                    callback(err);
+                }
             } else {
                 callback(null, 'Successfully completed ' + command + ' for '
                     + uuid);

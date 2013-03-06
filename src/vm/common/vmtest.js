@@ -1,6 +1,7 @@
-// Copyright 2011 Joyent, Inc.  All rights reserved.
+// Copyright 2013 Joyent, Inc.  All rights reserved.
 //
-// These tests ensure that default values don't change accidentally.
+// This is the common set of functions for things like ensuring we have a
+// SmartOS and Ubuntu image to work with.
 //
 
 process.env['TAP'] = 1;
@@ -11,90 +12,74 @@ var VM = require('/usr/vm/node_modules/VM');
 var test = require('tap').test;
 var vmtest = this;
 
-var DATASETS_IP = '165.225.154.107';
+var IMAGES_SOURCE = 'https://images.joyent.com/';
 
-exports.CURRENT_SMARTOS = '01b2c898-945f-11e1-a523-af1afbe22822';
-exports.CURRENT_UBUNTU = '71101322-43a5-11e1-8f01-cf2a3031a7f4';
+exports.CURRENT_SMARTOS_UUID = '01b2c898-945f-11e1-a523-af1afbe22822';
+exports.CURRENT_UBUNTU_UUID = '71101322-43a5-11e1-8f01-cf2a3031a7f4';
+exports.CURRENT_UBUNTU_NAME = 'ubuntu-10.04';
+exports.CURRENT_UBUNTU_SIZE = 5120;
 
-exports.getImage = function(t, uuid, callback)
+// will be set to true the first time we've run ensureCurrentImags() so we
+// don't run twice.
+var ensured_images = false;
+
+
+function ensureSources(t, callback)
 {
-    cp.exec('curl -k -o /var/tmp/' + uuid + '.json https://'
-        + DATASETS_IP + '/datasets/' + uuid,
-        function (err) {
-            if (err) {
-                t.ok(false, 'failed downloading manifest: ' + err.message)
-                callback(err);
-                return;
-            }
-            t.ok(true, 'downloaded manifest');
+    var cmd = '/usr/sbin/imgadm';
 
-            fs.readFile('/var/tmp/' + uuid + '.json',
-                function (error, data) {
-
-                if (error) {
-                    t.ok(false, 'cannot read manifest: ' + error.message);
-                    callback(error);
-                    return;
-                } else {
-                    t.ok(true, 'got manifest');
-                    data = JSON.parse(data.toString());
-                    cp.exec('curl -k -o /var/tmp/' + uuid + '.zvol.gz '
-                        + data.files[0].url.replace('datasets.joyent.com',
-                            DATASETS_IP), function (e) {
-
-                        if (e) {
-                            t.ok(false, 'failed downloading zvol: ' + e.message);
-                            callback(e);
-                            return;
-                        }
-                        t.ok(true, 'downloaded zvol');
-
-                        cp.exec('/usr/img/sbin/imgadm install -m /var/tmp/' + uuid
-                            + '.json -f /var/tmp/' + uuid + '.zvol.gz',
-                            function (imgadm_err) {
-                                if (err) {
-                                    t.ok(false, 'failed installing image: ' + imgadm_err.message);
-                                } else {
-                                    t.ok(true, 'downloaded image successfully');
-                                }
-                                callback(imgadm_err);
-                            }
-                        );
-                    });
-                }
-            });
-        }
-    );
-}
-
-exports.ensureImage = function(t, checkpath, uuid, callback)
-{
-    fs.exists(checkpath, function (exists) {
-        if (exists) {
-            t.ok(true, 'image ' + uuid + ' exists');
-            callback();
-        } else {
-            vmtest.getImage(t, uuid, function (err) {
-                if (err) {
-                    t.ok(false, 'failed downloading image ' + uuid + ': '
-                        + err.message);
-                    callback(err);
-                } else {
-                    t.ok(true, 'downloaded image ' + uuid);
-                    fs.exists(checkpath, function (exists) {
-                        t.ok(exists, 'now have image ' + uuid);
-                        if (exists) {
-                            callback();
-                        } else {
-                            callback(new Error('unable to download image '
-                                + uuid));
-                        }
-                    });
-                }
-            });
-        }
+    cp.execFile(cmd, ['sources', '-a', IMAGES_SOURCE], function (err, stdout, stderr) {
+        t.ok(!err, 'added source ' + IMAGES_SOURCE + ': ' + JSON.stringify({err: err, stdout: stdout, stderr: stderr}));
+        callback();
     });
 }
+
+exports.ensureCurrentImages = function(passed_t, callback) {
+    var cmd = '/usr/sbin/imgadm';
+
+    if (ensured_images) {
+        // We've already confirmed images are installed.
+        if (callback) {
+            callback();
+        }
+        return;
+    }
+
+    function ensure(t, do_end, cb) {
+        ensureSources(t, function () {
+            async.forEachSeries([vmtest.CURRENT_SMARTOS_UUID, vmtest.CURRENT_UBUNTU_UUID], function (image, cb) {
+                // ensure this image is installed
+                t.ok(true, 'importing: ' + image);
+                cp.execFile(cmd, ['import', image], function (err, stdout, stderr) {
+                    // fix some sillyness where it's an error to already exist instead of NOOP
+                    if (err && err.message.match(/ImageAlreadyInstalled/)) {
+                        err = undefined;
+                    }
+                    t.ok(!err, 'installed ' + image + ': ' + JSON.stringify({err: err, stdout: stdout, stderr: stderr}));
+                    cb(err);
+                });
+            }, function (err) {
+                if (!err) {
+                    ensured_images = true;
+                }
+                if (do_end) {
+                    t.end();
+                }
+                if (cb) {
+                    cb();
+                }
+            });
+        });
+    }
+
+    if (!passed_t) {
+        test('ensure current images installed', {'timeout': 600000}, function (t) {
+            ensure(t, true, callback);
+        });
+    } else {
+        ensure(passed_t, false, callback);
+    }
+};
 
 exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
 {
@@ -102,26 +87,15 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
         state.brand = payload.brand;
     }
 
+    if ((['joyent', 'joyent-minimal', 'sngl'].indexOf(state.brand) !== -1)
+        && (!payload.hasOwnProperty('image_uuid'))) {
+
+        payload.image_uuid = uuid;
+    }
+
     functions = [
-        function(cb) {
-            // make sure we have image, otherwise get it.
-            if (state.brand === 'joyent' || state.brand === 'joyent-minimal') {
-                vmtest.ensureImage(t, '/zones/' + uuid, uuid, function (e) {
-                    if (!e) {
-                        payload.image_uuid = uuid;
-                    }
-                    cb(e);
-                });
-            } else if (state.brand === 'kvm' && uuid) {
-                vmtest.ensureImage(t, '/dev/zvol/rdsk/zones/' + uuid, uuid,
-                    function (e) {
-                        cb(e);
-                    }
-                );
-            } else {
-                // skip image altogether
-                cb();
-            }
+        function (cb) {
+            vmtest.ensureCurrentImages(t, cb);
         }, function(cb) {
             VM.create(payload, function (err, obj) {
                 if (err) {

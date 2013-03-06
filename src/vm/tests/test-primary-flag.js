@@ -11,7 +11,7 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var image_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 
 test('create VM with 2 nics', {'timeout': 240000}, function(t) {
     var state = {'brand': 'joyent-minimal'};

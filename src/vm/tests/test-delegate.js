@@ -13,7 +13,7 @@ VM.loglevel = 'DEBUG';
 
 var abort = false;
 var bundle_filename;
-var image_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var vmobj;
 var payload = {
     'brand': 'joyent-minimal',

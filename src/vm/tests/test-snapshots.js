@@ -20,8 +20,8 @@ var MAGIC_STRING1 = 'snapshots are so much fun for everyone!';
 var MAGIC_STRING2 = 'snapshots get more fun the more you do!';
 var MAGIC_STRING3 = 'the third snapshot is yet even more fun!';
 
-var image_uuid = vmtest.CURRENT_SMARTOS;
-var vm_image_uuid = vmtest.CURRENT_UBUNTU;
+var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
+var vm_image_uuid = vmtest.CURRENT_UBUNTU_UUID;
 
 // TODO: test that order is correct on resulting .snapshots member
 
@@ -38,19 +38,8 @@ function hasSnapshot(snapshots, snapname)
     return false;
 }
 
-test('import joyent image', {'timeout': 360000}, function(t) {
-    vmtest.ensureImage(t, '/zones/' + image_uuid, image_uuid, function (err) {
-        t.ok(!err, "joyent image exists");
-        t.end();
-    });
-});
-
-test('import ubuntu image', {'timeout': 360000}, function(t) {
-    vmtest.ensureImage(t, '/dev/zvol/rdsk/zones/' + vm_image_uuid, vm_image_uuid, function (err) {
-        t.ok(!err, "ubuntu image exists");
-        t.end();
-    });
-});
+// This will ensure vmtest.CURRENT_* are installed
+vmtest.ensureCurrentImages();
 
 // create VM try to snapshot, should fail
 
@@ -131,7 +120,7 @@ test('delete zone', function(t) {
     }
 });
 
-// create zone with delegated dataset try to snapshot, should faile
+// create zone with delegated dataset try to snapshot, should fail
 
 test('create KVM VM', {'timeout': 240000}, function(t) {
     var payload = {

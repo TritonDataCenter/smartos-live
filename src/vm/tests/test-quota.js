@@ -10,7 +10,7 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var smartos_image_uuid = vmtest.CURRENT_SMARTOS;
+var smartos_image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var test_case;
 
 //
@@ -30,12 +30,8 @@ var test_cases = [
     [{'brand': 'kvm', 'quota': 10, 'image_uuid': smartos_image_uuid}, 10],
 ];
 
-test('import joyent image', {'timeout': 360000}, function(t) {
-    vmtest.ensureImage(t, '/zones/' + smartos_image_uuid, smartos_image_uuid, function (err) {
-        t.ok(!err, "joyent image exists");
-        t.end();
-    });
-});
+// This will ensure vmtest.CURRENT_* are installed
+vmtest.ensureCurrentImages();
 
 function do_test(payload, expected_result)
 {

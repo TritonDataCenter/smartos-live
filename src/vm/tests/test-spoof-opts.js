@@ -12,7 +12,7 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var image_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 
 test('antispoof options should update without reboot',
     {'timeout': 240000},function(t) {

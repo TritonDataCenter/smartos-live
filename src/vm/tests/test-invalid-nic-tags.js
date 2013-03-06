@@ -15,7 +15,7 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var IMAGE_UUID = vmtest.CURRENT_SMARTOS;
+var IMAGE_UUID = vmtest.CURRENT_SMARTOS_UUID;
 var TEST_OPTS = {'timeout': 240000};
 // Skip tests that fail frequently. See TOOLS-184.
 var FLAKY_TEST_OPTS = {'timeout': 240000, skip: true};

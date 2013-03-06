@@ -30,7 +30,7 @@ test('test create with invalid IP', {'timeout': 240000}, function(t) {
     p = JSON.parse(JSON.stringify(payload_invalid_ip));
     state = {'brand': p.brand, 'expect_create_failure': true};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS, p, state, [],
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, p, state, [],
         function (err) {
             t.end();
         }

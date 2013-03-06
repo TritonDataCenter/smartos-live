@@ -14,22 +14,11 @@ var abort = false;
 var bundle_filename;
 var vmobj;
 
-var image_uuid = vmtest.CURRENT_SMARTOS;
-var vm_image_uuid = vmtest.CURRENT_UBUNTU;
+var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
+var vm_image_uuid = vmtest.CURRENT_UBUNTU_UUID;
 
-test('import joyent image', {'timeout': 360000}, function(t) {
-    vmtest.ensureImage(t, '/zones/' + image_uuid, image_uuid, function (err) {
-        t.ok(!err, "joyent image exists");
-        t.end();
-    });
-});
-
-test('import ubuntu image', {'timeout': 360000}, function(t) {
-    vmtest.ensureImage(t, '/dev/zvol/rdsk/zones/' + vm_image_uuid, vm_image_uuid, function (err) {
-        t.ok(!err, "ubuntu image exists");
-        t.end();
-    });
-});
+// This will ensure vmtest.CURRENT_* are installed
+vmtest.ensureCurrentImages();
 
 test('create zone with root_recsize 64k', {'timeout': 240000}, function(t) {
     var payload = {

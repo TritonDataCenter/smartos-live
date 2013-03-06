@@ -12,7 +12,7 @@ var vmtest = require('../common/vmtest.js');
 VM.loglevel = 'DEBUG';
 
 var abort = false;
-var image_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var loops = 10;
 
 test('create zone', {'timeout': 240000}, function(t) {

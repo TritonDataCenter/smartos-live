@@ -78,9 +78,9 @@ var payload_kvm_missing_netmask = {
       {
         'boot': true,
         'model': 'virtio',
-        'image_uuid': vmtest.CURRENT_UBUNTU,
-        'image_name': 'ubuntu',
-        'image_size': 5120
+        'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
+        'image_name': vmtest.CURRENT_UBUNTU_NAME,
+        'image_size': vmtest.CURRENT_UBUNTU_SIZE
       }
     ],
     'nics': [
@@ -104,9 +104,9 @@ var payload_kvm_missing_model = {
       {
         'boot': true,
         'model': 'virtio',
-        'image_uuid': vmtest.CURRENT_UBUNTU,
-        'image_name': 'ubuntu',
-        'image_size': 5120
+        'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
+        'image_name': vmtest.CURRENT_UBUNTU_NAME,
+        'image_size': vmtest.CURRENT_UBUNTU_SIZE
       }
     ],
     'nics': [
@@ -131,9 +131,9 @@ var payload_kvm_missing_model_but_have_driver = {
       {
         'boot': true,
         'model': 'virtio',
-        'image_uuid': vmtest.CURRENT_UBUNTU,
-        'image_name': 'ubuntu',
-        'image_size': 5120
+        'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
+        'image_name': vmtest.CURRENT_UBUNTU_NAME,
+        'image_size': vmtest.CURRENT_UBUNTU_SIZE
       }
     ],
     'nics': [
@@ -158,9 +158,9 @@ var payload_kvm_good = {
         'mac': '01:02:03:04:05:06',
         'boot': true,
         'model': 'virtio',
-        'image_uuid': vmtest.CURRENT_UBUNTU,
-        'image_name': 'ubuntu',
-        'image_size': 5120
+        'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
+        'image_name': vmtest.CURRENT_UBUNTU_NAME,
+        'image_size': vmtest.CURRENT_UBUNTU_SIZE
       }
     ],
     'nics': [
@@ -187,9 +187,9 @@ var payload_kvm_good_dhcp = {
         'mac': '01:02:03:04:05:06',
         'boot': true,
         'model': 'virtio',
-        'image_uuid': vmtest.CURRENT_UBUNTU,
-        'image_name': 'ubuntu',
-        'image_size': 5120
+        'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
+        'image_name': vmtest.CURRENT_UBUNTU_NAME,
+        'image_size': vmtest.CURRENT_UBUNTU_SIZE
       }
     ],
     'nics': [
@@ -207,7 +207,7 @@ test('test create without netmask', {'timeout': 240000}, function(t) {
     p = JSON.parse(JSON.stringify(payload_missing_netmask));
     state = {'brand': p.brand, 'expect_create_failure': true};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS, p, state, [],
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, p, state, [],
         function (err) {
             t.end();
         }
@@ -219,7 +219,7 @@ test('test create without nic_tag', {'timeout': 240000}, function(t) {
     p = JSON.parse(JSON.stringify(payload_missing_nic_tag));
     state = {'brand': p.brand, 'expect_create_failure': true};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS, p, state, [],
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, p, state, [],
         function (err) {
             t.end();
         }
@@ -231,7 +231,7 @@ test('test create KVM without netmask', {'timeout': 240000}, function(t) {
     p = JSON.parse(JSON.stringify(payload_kvm_missing_netmask));
     state = {'brand': p.brand, 'expect_create_failure': true};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU, p, state, [],
+    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [],
         function (err) {
             t.end();
         }
@@ -243,7 +243,7 @@ test('test create KVM without model', {'timeout': 240000}, function(t) {
     p = JSON.parse(JSON.stringify(payload_kvm_missing_model));
     state = {'brand': p.brand, 'expect_create_failure': true};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU, p, state, [],
+    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [],
         function (err) {
             t.end();
         }
@@ -255,7 +255,7 @@ test('test create with netmask then add nic with no netmask', {'timeout': 240000
     p = JSON.parse(JSON.stringify(payload_good));
     state = {'brand': p.brand};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS, p, state, [
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, p, state, [
         function (cb) {
             t.ok(true, 'state: ' + JSON.stringify(state));
             VM.update(state.uuid, {'add_nics': [{'ip': '10.99.99.223', 'nic_tag': 'admin', 'gateway': '10.99.99.1'}]}, function (err) {
@@ -283,7 +283,7 @@ test('test create machine then add nic with no nic_tag', {'timeout': 240000}, fu
     p = JSON.parse(JSON.stringify(payload_good));
     state = {'brand': p.brand};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS, p, state, [
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, p, state, [
         function (cb) {
             t.ok(true, 'state: ' + JSON.stringify(state));
             VM.update(state.uuid, {'add_nics': [{'ip': '10.99.99.223', 'netmask': '255.255.255.0', 'gateway': '10.99.99.1'}]}, function (err) {
@@ -305,7 +305,7 @@ test('test create good KVM then add nic with no netmask', {'timeout': 240000}, f
     p = JSON.parse(JSON.stringify(payload_kvm_good));
     state = {'brand': p.brand};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU, p, state, [
+    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [
         function (cb) {
             VM.update(state.uuid, {'add_nics': [{'ip': '10.99.99.223', 'model': 'virtio', 'nic_tag': 'admin', 'gateway': '10.99.99.1'}]}, function (err) {
                 t.ok(err, 'update VM should fail' + (err ? ': ' + err.message : ''));
@@ -331,7 +331,7 @@ test('test create good KVM then add nic with no model', {'timeout': 240000}, fun
     p = JSON.parse(JSON.stringify(payload_kvm_good));
     state = {'brand': p.brand};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU, p, state, [
+    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [
         function (cb) {
             VM.update(state.uuid, {'add_nics': [{'ip': '10.99.99.223', 'netmask': '255.255.255.0', 'nic_tag': 'admin', 'gateway': '10.99.99.1'}]}, function (err) {
                 t.ok(err, 'update VM should fail' + (err ? ': ' + err.message : ''));
@@ -357,7 +357,7 @@ test('test create with netmask add update to empty netmask', {'timeout': 240000}
     p = JSON.parse(JSON.stringify(payload_good));
     state = {'brand': p.brand};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS, p, state, [
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, p, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 t.ok((obj.nics.length == 1), 'Have nic after create: ' + JSON.stringify(obj.nics));
@@ -388,7 +388,7 @@ test('test create good KVM then update to empty netmask', {'timeout': 240000}, f
     p = JSON.parse(JSON.stringify(payload_kvm_good));
     state = {'brand': p.brand};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU, p, state, [
+    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 t.ok((obj.nics.length == 1), 'Have nic after create: ' + JSON.stringify(obj.nics));
@@ -419,7 +419,7 @@ test('test create good KVM then update to empty model', {'timeout': 240000}, fun
     p = JSON.parse(JSON.stringify(payload_kvm_good));
     state = {'brand': p.brand};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU, p, state, [
+    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 t.ok((obj.nics.length == 1), 'Have nic after create: ' + JSON.stringify(obj.nics));
@@ -450,7 +450,7 @@ test('test create good OS w/ dhcp', {'timeout': 240000}, function(t) {
     p = JSON.parse(JSON.stringify(payload_good_dhcp));
     state = {'brand': p.brand};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS, p, state, [
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, p, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 t.ok(!err, 'load VM' + state.uuid + (err ? ': ' + err.message : ''));
@@ -468,7 +468,7 @@ test('test create good KVM w/ dhcp', {'timeout': 240000}, function(t) {
     p = JSON.parse(JSON.stringify(payload_kvm_good_dhcp));
     state = {'brand': p.brand};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU, p, state, [
+    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 t.ok(!err, 'load VM' + state.uuid + (err ? ': ' + err.message : ''));
@@ -486,7 +486,7 @@ test('test create good KVM w/o model but with nic_driver', {'timeout': 240000}, 
     p = JSON.parse(JSON.stringify(payload_kvm_missing_model_but_have_driver));
     state = {'brand': p.brand};
 
-    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU, p, state, [
+    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 t.ok(!err, 'load VM' + state.uuid + (err ? ': ' + err.message : ''));

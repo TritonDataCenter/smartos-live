@@ -14,7 +14,7 @@ var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
-var IMAGE_UUID = vmtest.CURRENT_SMARTOS;
+var IMAGE_UUID = vmtest.CURRENT_SMARTOS_UUID;
 var TEST_OPTS = {'timeout': 240000};
 var VM_NUM = 0;
 

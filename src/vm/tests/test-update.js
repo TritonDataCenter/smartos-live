@@ -10,7 +10,7 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var image_uuid = vmtest.CURRENT_SMARTOS;
+var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var vm_uuid;
 
 var PAYLOADS = {
@@ -97,12 +97,8 @@ simple_properties = [
     ['package_version', 'XP']
 ];
 
-test('import dataset', function(t) {
-    fs.exists('/zones/' + image_uuid, function (exists) {
-        t.ok(exists, "dataset exists");
-        t.end();
-    });
-});
+// This will ensure vmtest.CURRENT_* are installed
+vmtest.ensureCurrentImages();
 
 test('create zone', {'timeout': 240000}, function(t) {
     VM.create(PAYLOADS.create, function (err, vmobj) {

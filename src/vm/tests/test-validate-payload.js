@@ -653,3 +653,45 @@ test('kvm create with good disk (just size)', function (t) {
     });
 });
 
+test('create OS VM with non-existent image_uuid', function (t) {
+    VM.validate('joyent-minimal', 'create', {
+        'brand': 'joyent-minimal',
+        'image_uuid': 'a1fac27c-85fb-11e2-ae84-276612e8990c',
+        'ram': 256
+        }, function (errors) {
+
+        t.ok(errors, 'invalid payload');
+        if (errors) {
+            t.ok(errors.bad_values.indexOf('image_uuid') !== -1, 'confirm that it is image_uuid breaking: ' + JSON.stringify(errors));
+        }
+        t.end();
+    });
+});
+
+test('create KVM VM with non-existent image_uuid', function (t) {
+    VM.validate('kvm', 'create', {
+        'brand': 'kvm',
+        'disks': [{'image_uuid': 'a1fac27c-85fb-11e2-ae84-276612e8990c', 'image_size': 5120, 'model': 'virtio'}],
+        'ram': 256
+        }, function (errors) {
+
+        t.ok(errors, 'invalid payload');
+        if (errors) {
+            t.ok(errors.bad_values.indexOf('disks.0.image_uuid') !== -1, 'confirm that it is image_uuid breaking: ' + JSON.stringify(errors));
+        }
+        t.end();
+    });
+});
+
+test('add disk to KVM VM with non-existent image_uuid', function (t) {
+    VM.validate('kvm', 'update', {
+        'add_disks': [{'image_uuid': 'a1fac27c-85fb-11e2-ae84-276612e8990c', 'image_size': 5120, 'model': 'virtio'}],
+        }, function (errors) {
+
+        t.ok(errors, 'invalid payload');
+        if (errors) {
+            t.ok(errors.bad_values.indexOf('add_disks.0.image_uuid') !== -1, 'confirm that it is image_uuid breaking: ' + JSON.stringify(errors));
+        }
+        t.end();
+    });
+});

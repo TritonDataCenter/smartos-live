@@ -73,6 +73,7 @@ var payload_kvm_missing_netmask = {
     'vcpus': 1,
     'ram': 256,
     'alias': 'autotest-' + process.pid,
+    'do_not_inventory': true,
     'autoboot': false,
     'disks': [
       {
@@ -99,6 +100,7 @@ var payload_kvm_missing_model = {
     'vcpus': 1,
     'ram': 256,
     'autoboot': false,
+    'do_not_inventory': true,
     'alias': 'autotest-' + process.pid,
     'disks': [
       {
@@ -125,6 +127,7 @@ var payload_kvm_missing_model_but_have_driver = {
     'vcpus': 1,
     'ram': 256,
     'autoboot': false,
+    'do_not_inventory': true,
     'alias': 'autotest-' + process.pid,
     'nic_driver': 'virtio',
     'disks': [
@@ -152,6 +155,7 @@ var payload_kvm_good = {
     'vcpus': 1,
     'ram': 256,
     'alias': 'autotest-' + process.pid,
+    'do_not_inventory': true,
     'autoboot': false,
     'disks': [
       {
@@ -181,6 +185,7 @@ var payload_kvm_good_dhcp = {
     'vcpus': 1,
     'ram': 256,
     'alias': 'autotest-' + process.pid,
+    'do_not_inventory': true,
     'autoboot': false,
     'disks': [
       {

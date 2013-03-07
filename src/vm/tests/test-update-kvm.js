@@ -131,7 +131,6 @@ test('boot zone', function(t) {
 });
 
 test('add net0', {'timeout': 60000}, function(t) {
-    console.log('boarg');
     VM.update(vm_uuid, PAYLOADS.add_net0, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);

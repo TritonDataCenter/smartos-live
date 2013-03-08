@@ -4,6 +4,7 @@
  * mocks for tests
  */
 
+var assert = require('assert-plus');
 var fwrule = require('fwrule');
 var mod_obj = require('../../lib/util/obj');
 var mocks = require('./mocks');
@@ -132,6 +133,81 @@ function fwListEquals(fw, t, rules, callback) {
     t.deepEqual(res.sort(uuidSort), rules.sort(uuidSort),
       'rule list is equal');
     return callback();
+  });
+}
+
+
+/**
+ * Does a fw.rules() for a VM and a deepEqual to confirm the retrieved
+ * list is the same
+ */
+function fwRulesEqual(opts, callback) {
+  assert.object(opts, 'opts');
+  assert.object(opts.fw, 'opts.fw');
+  assert.arrayOfObject(opts.rules, 'opts.rules');
+  assert.object(opts.t, 'opts.t');
+  assert.object(opts.vm, 'opts.vm');
+  assert.arrayOfObject(opts.vms, 'opts.vms');
+
+  opts.fw.rules({ vm: opts.vm.uuid, vms: opts.vms }, function (err, res) {
+    opts.t.ifError(err);
+    if (err) {
+      return callback();
+    }
+
+    opts.t.deepEqual(res.sort(uuidSort), opts.rules.sort(uuidSort),
+      'fw.rules() correct');
+
+    return callback();
+  });
+}
+
+
+function testEnableDisable(opts, callback) {
+  assert.object(opts, 'opts');
+  assert.object(opts.fw, 'opts.fw');
+  assert.object(opts.t, 'opts.t');
+  assert.object(opts.vm, 'opts.vm');
+  assert.arrayOfObject(opts.vms, 'opts.vms');
+
+  var vmsEnabled;
+  var rvmsBefore = remoteVMsOnDisk();
+  var rulesBefore = rulesOnDisk();
+  var t = opts.t;
+  var zoneRules = getZoneRulesWritten();
+
+  opts.fw.disable({ vm: opts.vm }, function (err, res) {
+    t.ifError(err);
+    if (err) {
+      return callback(err);
+    }
+
+    // Disabling the firewall should have moved ipf.conf:
+    t.deepEqual(getZoneRulesWritten()[opts.vm.uuid], undefined,
+      'no firewall rules after disable');
+
+    vmsEnabled = getIPFenabled();
+    t.deepEqual(vmsEnabled[opts.vm.uuid], false, 'firewall not enabled');
+
+    opts.fw.enable({ vm: opts.vm, vms: opts.vms }, function (err2, res2) {
+      t.ifError(err2);
+      if (err2) {
+        return callback(err2);
+      }
+
+      t.deepEqual(getZoneRulesWritten(), zoneRules,
+        'firewall rules the same after enable');
+
+      vmsEnabled = getIPFenabled();
+      t.deepEqual(vmsEnabled[opts.vm.uuid], true, 'firewall enabled');
+
+      t.deepEqual(remoteVMsOnDisk(), rvmsBefore,
+        'remote VMs on disk the same');
+
+      t.deepEqual(rulesOnDisk(), rulesBefore, 'rules on disk the same');
+
+      return callback();
+    });
   });
 }
 
@@ -326,11 +402,13 @@ module.exports = {
   findRuleInList: findRuleInList,
   fwGetEquals: fwGetEquals,
   fwListEquals: fwListEquals,
+  fwRulesEqual: fwRulesEqual,
   getIPFenabled: getIPFenabled,
   getZoneRulesWritten: getZoneRulesWritten,
   generateVM: generateVM,
-  sortRes: sortRes,
   remoteVMsOnDisk: remoteVMsOnDisk,
   rulesOnDisk: rulesOnDisk,
+  sortRes: sortRes,
+  testEnableDisable: testEnableDisable,
   uuidSort: uuidSort
 };

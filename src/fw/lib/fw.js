@@ -687,6 +687,44 @@ function saveRemoteVMs(vms, callback) {
 
 
 /**
+ * Loads rules and remote VMs from disk
+ */
+function loadDataFromDisk(callback) {
+  var onDisk = {};
+
+  vasync.parallel({
+    funcs: [
+      function _diskRules(cb) {
+        loadAllRules(function (err, res) {
+          if (res) {
+            onDisk.rules = res;
+          }
+
+          return cb(err);
+        });
+      },
+
+      function _diskRemoteVMs(cb) {
+        loadAllRemoteVMs(function (err, res) {
+          if (res) {
+            onDisk.remoteVMs = res;
+          }
+
+          return cb(err);
+        });
+      }
+    ]
+  }, function (err) {
+    if (err) {
+      return callback(err);
+    }
+
+    return callback(null, onDisk);
+  });
+}
+
+
+/**
  * Finds rules in the list, returning an error if they can't be found
  */
 function findRules(allRules, rules, callback) {
@@ -863,6 +901,7 @@ function filterRulesByUUIDs(rules, uuids, callback) {
 function filterRulesByVMs(allVMs, vms, rules, callback) {
   LOG.debug({ vms: vms }, 'filterRulesByVMs: entry');
   var matchingRules = [];
+  var matchingUUIDs = {};
 
   ruleTypeWalk(rules, function _filterByVM(rule, type, t) {
     LOG.trace('filterRulesByVMs: type=%s, t=%s, rule=%s',
@@ -885,7 +924,11 @@ function filterRulesByVMs(allVMs, vms, rules, callback) {
         continue;
       }
 
-      matchingRules.push(rule);
+      if (!matchingUUIDs[rule.uuid]) {
+        matchingRules.push(rule);
+        matchingUUIDs[rule.uuid] = true;
+      }
+
       return;
     }
   });
@@ -1459,6 +1502,109 @@ function createRemoteVMs(allVMs, vms, callback) {
 }
 
 
+/**
+ * Applies firewall changes:
+ * - saves / deletes rule files as needed
+ * - writes out ipf conf files
+ * - starts or restarts ipf in VMs
+ *   - allVMs {Array of Objects} : all local VMs
+ *   - vms {Object} : Mapping of UUID to VM object - VMs to write out
+ *     firewalls for
+ *
+ * @param {Object} opts : options
+ */
+function applyChanges(opts, callback) {
+  assert.object(opts, 'opts');
+  assert.optionalObject(opts.allVMs, 'opts.allVMs');
+  assert.optionalObject(opts.allRemoteVMs, 'opts.allRemoteVMs');
+  assert.optionalArrayOfObject(opts.rules, 'opts.rules');
+  assert.optionalObject(opts.vms, 'opts.vms');
+  assert.optionalObject(opts.save, 'opts.save');
+
+  pipeline({
+    funcs: [
+      // Generate the ipf files for each VM
+      function ipfData(res, cb) {
+        prepareIPFdata({
+          allVMs: opts.allVMs,
+          remoteVMs: opts.allRemoteVMs,
+          rules: opts.rules,
+          vms: opts.vms
+        }, cb);
+      },
+
+      // Save the remote VMs
+      function saveVMs(res, cb) {
+        if (opts.dryrun || !opts.save || !opts.save.remoteVMs
+          || objEmpty(opts.save.remoteVMs)) {
+          return cb(null);
+        }
+        saveRemoteVMs(opts.save.remoteVMs, cb);
+      },
+
+      // Save rule files (if specified)
+      function save(res, cb) {
+        if (opts.dryrun || !opts.save || !opts.save.rules
+          || opts.save.rules.length === 0) {
+          return cb(null);
+        }
+        saveRules(opts.save.rules, cb);
+      },
+
+      // Delete rule files (if specified)
+      function delRules(res, cb) {
+        if (opts.dryrun || !opts.del || !opts.del.rules
+          || opts.del.rules.length === 0) {
+          return cb(null);
+        }
+        deleteRules(opts.del.rules, cb);
+      },
+
+      // Write the new ipf files to disk
+      function writeIPF(res, cb) {
+        if (opts.dryrun) {
+          return cb(null);
+        }
+        saveIPFfiles(res.ipfData.files, cb);
+      },
+
+      // Restart the firewalls for all of the affected VMs
+      function restart(res, cb) {
+        if (opts.dryrun) {
+          return cb(null);
+        }
+        restartFirewalls(opts.allVMs, res.ipfData.vms, cb);
+      }
+    ]
+  }, function (err, res) {
+    if (err) {
+      return callback(err);
+    }
+
+    var toReturn = {
+      vms: res.state.ipfData.vms
+    };
+
+    if (opts.save && opts.save.rules) {
+      toReturn.rules = opts.save.rules.map(function (r) {
+        return r.serialize();
+      });
+    }
+
+    if (opts.del && opts.del.rules) {
+      toReturn.rules = opts.del.rules.map(function (r) {
+        return r.serialize();
+      });
+    }
+
+    if (opts.filecontents) {
+      toReturn.files = res.state.ipfData.files;
+    }
+    return callback(null, toReturn);
+  });
+}
+
+
 
 // --- Exported functions
 
@@ -1500,10 +1646,7 @@ function add(opts, callback) {
 
       function vms(_, cb) { createVMlookup(opts.vms, cb); },
 
-      function allRules(_, cb) { loadAllRules(cb); },
-
-      // Load remote VMs from disk
-      function diskRemoteVMs(_, cb) { loadAllRemoteVMs(cb); },
+      function disk(_, cb) { loadDataFromDisk(cb); },
 
       function newRemoteVMs(res, cb) {
         createRemoteVMs(res.vms, opts.remoteVMs, cb);
@@ -1517,12 +1660,12 @@ function add(opts, callback) {
       // Create a combined remote VM lookup of remote VMs on disk plus
       // new remote VMs in the payload
       function allRemoteVMs(res, cb) {
-        createRemoteVMlookup([res.diskRemoteVMs, res.newRemoteVMs], cb);
+        createRemoteVMlookup([res.disk.remoteVMs, res.newRemoteVMs], cb);
       },
 
       // Get any rules that the remote VMs target
       function remoteVMrules(res, cb) {
-        filterRulesByRemoteVMs(res.remoteVMs, res.allRules, cb);
+        filterRulesByRemoteVMs(res.remoteVMs, res.disk.rules, cb);
       },
 
       // Get VMs the rules affect
@@ -1540,49 +1683,22 @@ function add(opts, callback) {
 
       // Now find all rules that apply to those VMs
       function vmRules(res, cb) {
-        filterRulesByVMs(res.vms, res.mergedVMs, res.allRules, cb);
+        filterRulesByVMs(res.vms, res.mergedVMs, res.disk.rules, cb);
       },
 
-      // XXX: can probably move everything after here into its own function
-
-      // Generate the ipf files for each VM
-      function ipfData(res, cb) {
-        prepareIPFdata({
+      function apply(res, cb) {
+        applyChanges({
           allVMs: res.vms,
-          remoteVMs: res.allRemoteVMs,
+          dryrun: opts.dryrun,
+          filecontents: opts.filecontents,
+          allRemoteVMs: res.allRemoteVMs,
           rules: res.rules.concat(res.vmRules),
+          save: {
+            rules: res.rules,
+            remoteVMs: res.newRemoteVMs
+          },
           vms: res.mergedVMs
         }, cb);
-      },
-
-      // Save the remote VMs
-      function saveVMs(res, cb) {
-        if (opts.dryrun) {
-          return cb(null);
-        }
-        saveRemoteVMs(res.newRemoteVMs, cb);
-      },
-
-      // Save the rule files
-      function save(res, cb) {
-        if (opts.dryrun || res.rules.length === 0) {
-          return cb(null);
-        }
-        saveRules(res.rules, cb);
-      },
-      // Write the new ipf files to disk
-      function writeIPF(res, cb) {
-        if (opts.dryrun) {
-          return cb(null);
-        }
-        saveIPFfiles(res.ipfData.files, cb);
-      },
-      // Restart the firewalls for all of the affected VMs
-      function restart(res, cb) {
-        if (opts.dryrun) {
-          return cb(null);
-        }
-        restartFirewalls(res.vms, res.ipfData.vms, cb);
       }
     ]}, function (err, res) {
       if (err) {
@@ -1590,14 +1706,7 @@ function add(opts, callback) {
         return callback(err);
       }
 
-      var toReturn = {
-        vms: res.state.ipfData.vms,
-        rules: res.state.rules.map(function (r) { return r.serialize(); })
-      };
-      if (opts.filecontents) {
-        toReturn.files = res.state.ipfData.files;
-      }
-
+      var toReturn = res.state.apply;
       LOG.debug({ vms: toReturn.vms, serializedRules: toReturn.rules },
         'add: return');
       return callback(err, toReturn);
@@ -1626,14 +1735,15 @@ function del(opts, callback) {
   pipeline({
     funcs: [
       function vms(_, cb) { createVMlookup(opts.vms, cb); },
-      function allRules(_, cb) { loadAllRules(cb); },
-      function remoteVMs(_, cb) { loadAllRemoteVMs(cb); },
+
+      function disk(_, cb) { loadDataFromDisk(cb); },
+
       function allRemoteVMs(state, cb) {
-        createRemoteVMlookup(state.remoteVMs, cb);
+        createRemoteVMlookup(state.disk.remoteVMs, cb);
       },
 
       function rules(res, cb) {
-        filterRulesByUUIDs(res.allRules, opts.uuids, cb);
+        filterRulesByUUIDs(res.disk.rules, opts.uuids, cb);
       },
 
       // Get VMs the rules affect
@@ -1647,45 +1757,26 @@ function del(opts, callback) {
           res.rules.notMatching, cb);
       },
 
-      // Generate the ipf files for each VM
-      function ipfData(res, cb) {
-        prepareIPFdata({
+      function apply(res, cb) {
+        applyChanges({
           allVMs: res.vms,
+          dryrun: opts.dryrun,
+          filecontents: opts.filecontents,
+          allRemoteVMs: res.allRemoteVMs,
           rules: res.vmRules,
-          remoteVMs: res.allRemoteVMs,
+          del: {
+            rules: res.rules.matching
+          },
           vms: res.matchingVMs
         }, cb);
-      },
-      // Delete the rule files
-      function delRules(res, cb) {
-        if (opts.dryrun) {
-          return cb(null);
-        }
-        deleteRules(res.rules.matching, cb);
-      },
-      // Write the new ipf files to disk
-      function writeIPF(res, cb) {
-        if (opts.dryrun) {
-          return cb(null);
-        }
-        saveIPFfiles(res.ipfData.files, cb);
-      },
-      // Restart the firewalls for all of the affected VMs
-      function restart(res, cb) {
-        if (opts.dryrun) {
-          return cb(null);
-        }
-        restartFirewalls(res.vms, res.ipfData.vms, cb);
       }
     ]}, function (err, res) {
-      var toReturn = {
-        vms: res.state.ipfData.vms,
-        rules: res.state.rules.matching.map(function (r) { return r.uuid; })
-      };
-      if (opts.filecontents) {
-        toReturn.files = res.state.ipfData.files;
+      if (err) {
+        LOG.error(err, 'del: return');
+        return callback(err);
       }
 
+      var toReturn = res.state.apply;
       LOG.debug(toReturn, 'del: return');
       return callback(err, toReturn);
     });
@@ -1784,44 +1875,26 @@ function enableVM(opts, callback) {
   pipeline({
     funcs: [
       function vms(_, cb) { createVMlookup(opts.vms, cb); },
-      function allRules(_, cb) { loadAllRules(cb); },
+
+      function disk(_, cb) { loadDataFromDisk(cb); },
+
       // Find all rules that apply to the VM
       function vmRules(res, cb) {
-        filterRulesByVMs(res.vms, vmFilter, res.allRules, cb);
+        filterRulesByVMs(res.vms, vmFilter, res.disk.rules, cb);
       },
-      // XXX: load 'remote' tags and vms from disk
 
-      // XXX: can probably move everything after here into its own function
-      // XXX: seriously
+      function allRemoteVMs(res, cb) {
+        createRemoteVMlookup(res.disk.remoteVMs, cb);
+      },
 
-      // Generate the ipf files for the VM
-      function ipfData(res, cb) {
-        prepareIPFdata({
+      function apply(res, cb) {
+        applyChanges({
           allVMs: res.vms,
+          dryrun: opts.dryrun,
+          filecontents: opts.filecontents,
+          allRemoteVMs: res.allRemoteVMs,
           rules: res.vmRules
         }, cb);
-      },
-      // Write the new ipf files to disk
-      function writeIPF(res, cb) {
-        if (opts.dryrun) {
-          return cb(null);
-        }
-        saveIPFfiles(res.ipfData.files, cb);
-      },
-      function start(res, cb) {
-        if (opts.vm.state !== 'running') {
-          LOG.debug('enableVM: VM "%s" not stopping ipf (state=%s)',
-            opts.vm.uuid, opts.vm.state);
-          return callback(null);
-        }
-
-        if (opts.dryrun) {
-          return callback(null);
-        }
-
-        LOG.debug('enableVM: starting ipf for VM "%s"', opts.vm.uuid);
-        return startIPF({ vm: opts.vm.uuid, zonepath: opts.vm.zonepath },
-          callback);
       }
     ]}, function _afterEnable(err, res) {
       if (err) {
@@ -2000,11 +2073,11 @@ function update(opts, callback) {
 
   pipeline({
     funcs: [
-      function allRules(_, cb) { loadAllRules(cb); },
+      function disk(_, cb) { loadDataFromDisk(cb); },
 
-      // Make sure the rules exist
+      // Make sure the rules exist: might want to relax this restriction?
       function originalRules(res, cb) {
-        findRules(res.allRules, opts.rules, cb);
+        findRules(res.disk.rules, opts.rules, cb);
       },
 
       // Apply updates to the found rules
@@ -2014,9 +2087,6 @@ function update(opts, callback) {
 
       // Create the VM lookup
       function vms(_, cb) { createVMlookup(opts.vms, cb); },
-
-      // Load remote VMs from disk
-      function allRemoteVMs(_, cb) { loadAllRemoteVMs(cb); },
 
       // Create remote VMs (if any) from payload
       function newRemoteVMs(res, cb) {
@@ -2028,8 +2098,8 @@ function update(opts, callback) {
         createRemoteVMlookup(res.newRemoteVMs, cb);
       },
 
-      function remoteVMs(res, cb) {
-        createRemoteVMlookup([res.allRemoteVMs, res.newRemoteVMs], cb);
+      function allRemoteVMs(res, cb) {
+        createRemoteVMlookup([res.disk.remoteVMs, res.newRemoteVMs], cb);
       },
 
       // Lookup any local VMs in the payload
@@ -2054,12 +2124,12 @@ function update(opts, callback) {
 
       // Get any rules that the added remote VMs target
       function remoteVMrules(res, cb) {
-        filterRulesByRemoteVMs(res.newRemoteVMsLookup, res.allRules, cb);
+        filterRulesByRemoteVMs(res.newRemoteVMsLookup, res.disk.rules, cb);
       },
 
       // Replace the rules with their updated versions
       function dedupedRules(res, cb) {
-        return cb(null, dedupRules(res.rules, res.allRules));
+        return cb(null, dedupRules(res.rules, res.disk.rules));
       },
 
       // Get the rules that need to be written out for all VMs, before and
@@ -2068,55 +2138,27 @@ function update(opts, callback) {
         filterRulesByVMs(res.vms, res.mergedVMs, res.dedupedRules, cb);
       },
 
-      function ipfData(res, cb) {
-        prepareIPFdata({
+      function apply(res, cb) {
+        applyChanges({
           allVMs: res.vms,
-          remoteVMs: res.remoteVMs,
-          // XXX: should probably dedup these
+          dryrun: opts.dryrun,
+          filecontents: opts.filecontents,
+          allRemoteVMs: res.allRemoteVMs,
           rules: res.vmRules.concat(res.remoteVMrules),
+          save: {
+            rules: res.rules,
+            remoteVMs: res.newRemoteVMs
+          },
           vms: res.mergedVMs
         }, cb);
-      },
-
-      // Save the remote VMs
-      function saveVMs(res, cb) {
-        if (opts.dryrun) {
-          return cb(null);
-        }
-        saveRemoteVMs(res.newRemoteVMs, cb);
-      },
-
-      function save(res, cb) {
-        if (opts.dryrun) {
-          return cb(null);
-        }
-        saveRules(res.rules, cb);
-      },
-      function writeIPF(res, cb) {
-        if (opts.dryrun) {
-          return cb(null);
-        }
-        saveIPFfiles(res.ipfData.files, cb);
-      },
-      function restart(res, cb) {
-        if (opts.dryrun) {
-          return cb(null);
-        }
-        restartFirewalls(res.vms, res.ipfData.vms, cb);
       }
     ]}, function (err, res) {
       if (err) {
         LOG.error(err, 'update: return');
         return callback(err);
       }
-      var toReturn = {
-        vms: res.state.ipfData.vms,
-        rules: res.state.rules.map(function (r) { return r.serialize(); })
-      };
-      if (opts.filecontents) {
-        toReturn.files = res.state.ipfData.files;
-      }
 
+      var toReturn = res.state.apply;
       LOG.debug({ vms: toReturn.vms, serializedRules: toReturn.rules },
         'update: return');
       return callback(err, toReturn);

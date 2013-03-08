@@ -5,9 +5,8 @@
   "author": "Joyent (joyent.com)",
   "private": true,
   "devDependencies": {
-    "jison": "0.3.12",
     "mockery": "1.2.0",
-    "nodeunit": "0.7.4"
+    "nodeunit": "git://github.com/rgulewich/nodeunit.git#80a3876"
   },
   "dependencies": {
     "assert-plus": "0.1.2",

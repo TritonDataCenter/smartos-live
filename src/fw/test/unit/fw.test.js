@@ -62,6 +62,7 @@ exports['add: no rules or VMs'] = function (t) {
   });
 };
 
+
 exports['add / update: vm to IP: BLOCK'] = function (t) {
   var vm = helpers.generateVM();
   var payload = {
@@ -174,6 +175,24 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
     helpers.fwListEquals(fw, t, [expRule], cb);
 
   }, function (cb) {
+    helpers.fwRulesEqual({
+      fw: fw,
+      t: t,
+      rules: [ expRule ],
+      vm: vm,
+      vms: [vm]
+    }, cb);
+
+  }, function (cb) {
+    // Disabling and re-enabling the firewall should have no effect on the
+    // zone rules
+    helpers.testEnableDisable({
+      fw: fw,
+      t: t,
+      vm: vm,
+      vms: [vm]
+    }, cb);
+  }, function (cb) {
     // Delete the rule - the firewall should remain running, but only the
     // default rules should remain
 
@@ -190,7 +209,7 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
 
       t.deepEqual(res, {
         vms: [ vm.uuid ],
-        rules: [ expRule.uuid ]
+        rules: [ expRule ]
       }, 'results returned');
 
       var zoneRules = helpers.getZoneRulesWritten();
@@ -205,6 +224,15 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
 
       cb();
     });
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      fw: fw,
+      t: t,
+      rules: [ ],
+      vm: vm,
+      vms: [vm]
+    }, cb);
   }
 
   ], function () {
@@ -259,6 +287,15 @@ exports['add / update: vm to IP: ALLOW'] = function (t) {
 
   }, function (cb) {
     helpers.fwListEquals(fw, t, [expRule], cb);
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      fw: fw,
+      t: t,
+      rules: [expRule],
+      vm: vm,
+      vms: [vm]
+    }, cb);
   }
 
   ], function () {
@@ -330,6 +367,24 @@ exports['add: tag to IP'] = function (t) {
 
   }, function (cb) {
     helpers.fwListEquals(fw, t, [expRule], cb);
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      fw: fw,
+      t: t,
+      rules: [expRule],
+      vm: vm1,
+      vms: [vm1, vm2]
+    }, cb);
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      fw: fw,
+      t: t,
+      rules: [expRule],
+      vm: vm2,
+      vms: [vm1, vm2]
+    }, cb);
   }
   ], function () {
       t.done();
@@ -414,6 +469,32 @@ exports['add: tag to subnet'] = function (t) {
 
   }, function (cb) {
     helpers.fwListEquals(fw, t, [rule1, rule2].sort(helpers.uuidSort), cb);
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      fw: fw,
+      t: t,
+      rules: [rule1, rule2],
+      vm: vm1,
+      vms: [vm1, vm2]
+    }, cb);
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      fw: fw,
+      t: t,
+      rules: [rule1, rule2],
+      vm: vm2,
+      vms: [vm1, vm2]
+    }, cb);
+
+  }, function (cb) {
+    helpers.testEnableDisable({
+      fw: fw,
+      t: t,
+      vm: vm1,
+      vms: [vm1, vm2]
+    }, cb);
   }
   ], function () {
       t.done();
@@ -501,6 +582,24 @@ exports['add: vm to subnet'] = function (t) {
 
   }, function (cb) {
     helpers.fwListEquals(fw, t, [rule1, rule2].sort(helpers.uuidSort), cb);
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      fw: fw,
+      t: t,
+      rules: [rule1, rule2],
+      vm: vm1,
+      vms: [vm1, vm2]
+    }, cb);
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      fw: fw,
+      t: t,
+      rules: [ ],
+      vm: vm2,
+      vms: [vm1, vm2]
+    }, cb);
   }
   ], function () {
       t.done();

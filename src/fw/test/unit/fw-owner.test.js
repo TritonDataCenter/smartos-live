@@ -240,7 +240,7 @@ exports['tag to IP (filter by owner_uuid)'] = function (t) {
 
       t.deepEqual(res, {
         vms: [ vm2.uuid ],
-        rules: [ expRule2.uuid ]
+        rules: [ expRule2 ]
       }, 'results returned');
 
       var zoneRules = helpers.getZoneRulesWritten();

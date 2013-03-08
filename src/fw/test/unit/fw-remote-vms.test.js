@@ -199,6 +199,15 @@ exports['local VM to remote VM'] = function (t) {
       return cb();
     });
 
+  }, function (cb) {
+    // Disabling and re-enabling the firewall should have no effect on the
+    // zone rules
+    helpers.testEnableDisable({
+      fw: fw,
+      t: t,
+      vm: vm,
+      vms: [vm]
+    }, cb);
   }
 
   ], function () {

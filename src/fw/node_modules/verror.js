@@ -61,8 +61,8 @@ VError.prototype.name = 'VError';
 
 VError.prototype.toString = function ve_toString()
 {
-	// If ctor is an anon function, then allow setting `.prototype.name`.
-	var str = this.constructor.name || this.constructor.prototype.name;
+	var str = (this.hasOwnProperty('name') && this.name ||
+		this.constructor.name || this.constructor.prototype.name);
 	if (this.message)
 		str += ': ' + this.message;
 
@@ -138,8 +138,8 @@ WError.prototype.name = 'WError';
 
 WError.prototype.toString = function we_toString()
 {
-	// If ctor is an anon function, then allow setting `.prototype.name`.
-	var str = this.constructor.name || this.constructor.prototype.name;
+	var str = (this.hasOwnProperty('name') && this.name ||
+		this.constructor.name || this.constructor.prototype.name);
 	if (this.message)
 		str += ': ' + this.message;
 	if (this.we_cause && this.we_cause.message)

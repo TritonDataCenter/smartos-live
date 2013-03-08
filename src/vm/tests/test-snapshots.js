@@ -683,8 +683,73 @@ test('delete 50 snapshots', {'timeout': 240000}, function(t) {
     });
 });
 
+test('create/delete snapshot should update last_modified', {'timeout': 240000}, function(t) {
+
+    var pre_snap_timestamp;
+    var post_snap_timestamp;
+    var post_delete_timestamp;
+
+    if (abort) {
+        t.ok(false, 'skipping create-delete last_modified test as test run is aborted.');
+        cb();
+        return;
+    }
+
+    async.series([
+        function (cb) {
+            VM.load(vmobj.uuid, function (err, obj) {
+                t.ok(!err, 'loading VM before last_modified snapshot');
+                if (!err) {
+                    pre_snap_timestamp = obj.last_modified;
+                }
+                cb(err);
+            });
+        }, function (cb) {
+            setTimeout(function () {
+                createSnapshot(t, vmobj.uuid, 'modifyme', 1, function (err) {
+                    t.ok(!err, 'created snapshot for last_modified test');
+                    cb(err);
+                });
+            }, 1000);
+        }, function (cb) {
+            VM.load(vmobj.uuid, function (err, obj) {
+                t.ok(!err, 'loaded VM after snapshot');
+                if (!err) {
+                    post_snap_timestamp = obj.last_modified;
+                }
+                cb(err);
+            });
+        }, function (cb) {
+            setTimeout(function () {
+                deleteSnapshot(t, vmobj.uuid, 'modifyme', 0, function (err) {
+                    t.ok(!err, 'deleted snapshot for last_modified test');
+                    cb(err);
+                });
+            }, 1000);
+        }, function (cb) {
+            VM.load(vmobj.uuid, function (err, obj) {
+                t.ok(!err, 'loaded VM after delete snapshot');
+                if (!err) {
+                    post_delete_timestamp = obj.last_modified;
+                }
+                cb(err);
+            });
+        }
+    ], function (err) {
+        if (!err) {
+            t.ok((Date.parse(pre_snap_timestamp) < Date.parse(post_snap_timestamp)),
+                'create snapshot should have bumped last modified ['
+                + pre_snap_timestamp  + ' < ' + post_snap_timestamp + ']');
+            t.ok((Date.parse(post_snap_timestamp) < Date.parse(post_delete_timestamp)),
+                'delete snapshot should have bumped last modified ['
+                + post_snap_timestamp  + ' < ' + post_delete_timestamp + ']');
+        }
+        t.end();
+    });
+});
+
 // create 10 snapshots (to test that deleting a VM with snapshots works)
-test('create 10 snapshots', {'timeout': 240000}, function(t) {
+test('create 10 more snapshots', {'timeout': 240000}, function(t) {
 
     createXSnapshots(t, 10, function (err) {
         t.end();

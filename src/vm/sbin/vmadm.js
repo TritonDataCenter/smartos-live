@@ -642,8 +642,13 @@ function readFile(filename, callback)
                     + ' ' + JSON.stringify(err)));
             }
         } else {
-            payload = JSON.parse(data.toString());
-            callback(null, payload);
+            try {
+                payload = JSON.parse(data.toString());
+                callback(null, payload);
+            } catch (e) {
+                e.message = 'Invalid JSON payload: ' + e.message;
+                callback(e);
+            }
         }
     });
 }

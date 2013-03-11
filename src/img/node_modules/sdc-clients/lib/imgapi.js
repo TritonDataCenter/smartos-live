@@ -726,7 +726,14 @@ IMGAPI.prototype.getImageFileStream = function getImageFileStream(
                                 return;
                             finished = true;
                             if (!resultErr.body.message && errMessage) {
-                                resultErr.body.message = errMessage;
+                                var msg = errMessage;
+                                try {
+                                    msg = JSON.parse(errMessage).message;
+                                } catch (e) {
+                                    /* pass through */
+                                }
+                                resultErr.message = msg;
+                                resultErr.body.message = msg;
                             }
                             callback(resultErr, res);
                         }

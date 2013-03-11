@@ -123,6 +123,36 @@ function ImageNotFoundError(cause, uuid) {
 }
 util.inherits(ImageNotFoundError, ImgadmError);
 
+function ActiveImageNotFoundError(cause, uuid) {
+    if (uuid === undefined) {
+        uuid = cause;
+        cause = undefined;
+    }
+    assert.string(uuid);
+    ImgadmError.call(this, {
+        cause: cause,
+        message: sprintf('an active image "%s" was not found', uuid),
+        code: 'ActiveImageNotFound',
+        exitStatus: 1
+    });
+}
+util.inherits(ActiveImageNotFoundError, ImgadmError);
+
+function ImageNotActiveError(cause, uuid) {
+    if (uuid === undefined) {
+        uuid = cause;
+        cause = undefined;
+    }
+    assert.string(uuid);
+    ImgadmError.call(this, {
+        cause: cause,
+        message: sprintf('image "%s" is not active', uuid),
+        code: 'ImageNotActive',
+        exitStatus: 1
+    });
+}
+util.inherits(ImageNotActiveError, ImgadmError);
+
 function ImageNotInstalledError(cause, zpool, uuid) {
     if (uuid === undefined) {
         // `cause` was not provided.
@@ -373,6 +403,8 @@ module.exports = {
     NoSourcesError: NoSourcesError,
     SourcePingError: SourcePingError,
     ImageNotFoundError: ImageNotFoundError,
+    ActiveImageNotFoundError: ActiveImageNotFoundError,
+    ImageNotActiveError: ImageNotActiveError,
     ImageNotInstalledError: ImageNotInstalledError,
     ImageAlreadyInstalledError: ImageAlreadyInstalledError,
     ImageHasDependentClonesError: ImageHasDependentClonesError,

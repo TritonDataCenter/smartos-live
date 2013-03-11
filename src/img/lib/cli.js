@@ -889,7 +889,7 @@ CLI.prototype.do_show = function do_show(subcmd, opts, args, callback) {
     }
     var uuid = args[0];
     assertUuid(uuid);
-    self.tool.sourcesGet(uuid, function (err, imageInfo) {
+    self.tool.sourcesGet(uuid, false, function (err, imageInfo) {
         if (err) {
             callback(err);
             return;
@@ -1039,12 +1039,12 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, callback) {
         }
 
         // 2. Find this image in the sources.
-        self.tool.sourcesGet(uuid, function (sGetErr, imageInfo) {
+        self.tool.sourcesGet(uuid, true, function (sGetErr, imageInfo) {
             if (sGetErr) {
                 callback(sGetErr);
                 return;
             } else if (!imageInfo) {
-                callback(new errors.ImageNotFoundError(uuid));
+                callback(new errors.ActiveImageNotFoundError(uuid));
                 return;
             }
             self.log.trace({imageInfo: imageInfo},

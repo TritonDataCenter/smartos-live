@@ -1054,11 +1054,13 @@ IMGADM.prototype.sourcesList = function sourcesList(callback) {
  * Get info (mainly manifest data) on the given image UUID from sources.
  *
  * @param uuid {String}
+ * @param ensureActive {Boolean} Set to true to skip inactive images.
  * @param callback {Function} `function (err, imageInfo)` where `imageInfo`
  *      is `{manifest: <manifest>, source: <source>}`
  */
-IMGADM.prototype.sourcesGet = function sourcesGet(uuid, callback) {
+IMGADM.prototype.sourcesGet = function sourcesGet(uuid, ensureActive, callback) {
     assert.string(uuid, 'uuid');
+    assert.bool(ensureActive, 'ensureActive');
     assert.func(callback, 'callback');
     var self = this;
     var errs = [];
@@ -1085,7 +1087,9 @@ IMGADM.prototype.sourcesGet = function sourcesGet(uuid, callback) {
                     if (getErr && getErr.statusCode !== 404) {
                         errs.push(self._errorFromClientError(source, getErr));
                     }
-                    if (manifest) {
+                    if (manifest &&
+                        (!ensureActive || manifest.state === 'active'))
+                    {
                         imageInfo = {manifest: manifest, source: source};
                     }
                     next();
@@ -1231,6 +1235,10 @@ IMGADM.prototype.importImage = function importImage(options, callback) {
     assert.object(options.source, 'options.source');
     assert.optionalBool(options.quiet, 'options.quiet');
 
+    if (options.manifest.state !== 'active') {
+        callback(new errors.ImageNotActiveError(options.manifest.uuid));
+        return;
+    }
     this._installImage(options, callback);
 };
 
@@ -1295,7 +1303,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         source: options.source
     };
     var dsName = format('%s/%s', options.zpool, uuid);
-    var tmpDsName = dsName + '-partial';
+    var tmpDsName;  // set when the 'zfs receive' begins
     var bar = null;  // progress-bar object
     var md5Hash = null;
     var sha1Hash = null;
@@ -1303,15 +1311,19 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
     var finished = false;
 
     function cleanupAndExit(cleanDsName, err) {
-        var cmd = format('/usr/sbin/zfs destroy -r %s', cleanDsName);
-        exec(cmd, function (error, stdout, stderr) {
-            if (error) {
-                log.error({cmd: cmd, error: error, stdout: stdout,
-                    stderr: stderr, cleanDsName: cleanDsName},
-                    'error destroying tmp dataset while cleaning up');
-            }
+        if (cleanDsName) {
+            var cmd = format('/usr/sbin/zfs destroy -r %s', cleanDsName);
+            exec(cmd, function (error, stdout, stderr) {
+                if (error) {
+                    log.error({cmd: cmd, error: error, stdout: stdout,
+                        stderr: stderr, cleanDsName: cleanDsName},
+                        'error destroying tmp dataset while cleaning up');
+                }
+                callback(err);
+            });
+        } else {
             callback(err);
-        });
+        }
     }
 
     function destroyChildSnapshots(parentDsName, next) {
@@ -1445,10 +1457,14 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
     }
 
     getImageFileInfo(function (err, info) {
+        if (err) {
+            finish(err);
+            return;
+        }
+
         // image file stream                [A]
         //      | inflator (if necessary)   [B]
         //      | zfs recv                  [C]
-
         // [A]
         if (!options.quiet && process.stderr.isTTY) {
             bar = new ProgressBar(
@@ -1499,6 +1515,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         }
 
         // [C]
+        tmpDsName = dsName + '-partial';
         var zfsRecv = spawn('/usr/sbin/zfs', ['receive', tmpDsName]);
         zfsRecv.stderr.on('data', function (chunk) {
             console.error('Stderr from zfs receive: %s',

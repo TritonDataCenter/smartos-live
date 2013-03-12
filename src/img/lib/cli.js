@@ -1034,7 +1034,14 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, callback) {
             return;
         }
         if (ii) {
-            callback(new errors.ImageAlreadyInstalledError(uuid));
+            var extra = '';
+            if (ii.manifest.name) {
+                extra = format(' (%s %s)', ii.manifest.name,
+                               ii.manifest.version);
+            }
+            console.log('Image %s%s is already installed, skipping',
+                ii.manifest.uuid, extra);
+            callback();
             return;
         }
 
@@ -1140,7 +1147,14 @@ CLI.prototype.do_install = function do_install(subcmd, opts, args, callback) {
             return;
         }
         if (ii) {
-            callback(new errors.ImageAlreadyInstalledError(uuid));
+            var extra = '';
+            if (ii.manifest.name) {
+                extra = format(' (%s %s)', ii.manifest.name,
+                               ii.manifest.version);
+            }
+            console.log('Image %s%s is already installed, skipping',
+                ii.manifest.uuid, extra);
+            callback();
             return;
         }
 

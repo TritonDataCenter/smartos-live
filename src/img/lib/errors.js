@@ -175,21 +175,6 @@ function ImageNotInstalledError(cause, zpool, uuid) {
 }
 util.inherits(ImageNotInstalledError, ImgadmError);
 
-function ImageAlreadyInstalledError(cause, uuid) {
-    if (uuid === undefined) {
-        uuid = cause;
-        cause = undefined;
-    }
-    assert.string(uuid);
-    ImgadmError.call(this, {
-        cause: cause,
-        message: sprintf('image is already installed: "%s"', uuid),
-        code: 'ImageAlreadyInstalled',
-        exitStatus: 1
-    });
-}
-util.inherits(ImageAlreadyInstalledError, ImgadmError);
-
 function ImageHasDependentClonesError(cause, imageInfo) {
     if (imageInfo === undefined) {
         imageInfo = cause;
@@ -410,7 +395,6 @@ module.exports = {
     ActiveImageNotFoundError: ActiveImageNotFoundError,
     ImageNotActiveError: ImageNotActiveError,
     ImageNotInstalledError: ImageNotInstalledError,
-    ImageAlreadyInstalledError: ImageAlreadyInstalledError,
     ImageHasDependentClonesError: ImageHasDependentClonesError,
     InvalidManifestError: InvalidManifestError,
     UsageError: UsageError,

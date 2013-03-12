@@ -244,13 +244,32 @@ function getZfsDataset(name, properties, callback) {
 }
 
 
+function normUrlFromUrl(u) {
+    var parsed = url.parse(u);
+
+    // Don't want trailing '/'.
+    if (parsed.pathname.slice(-1) === '/') {
+        parsed.pathname = parsed.pathname.slice(0, -1);
+    }
+
+    // Drop redundant ports.
+    if (parsed.port
+        && ((parsed.protocol === 'https:' && parsed.port === '443')
+        || (parsed.protocol === 'http:' && parsed.port === '80'))) {
+        parsed.port = '';
+        parsed.host = parsed.hostname;
+    }
+
+    return url.format(parsed);
+}
+
+
 
 // ---- Source class
 
-
 /**
  * A light wrapper around an image source repository. A source has a
- * `url` and a `type` ("dsapi" or "imgapi"). `getNormUrl()` handles (lazy)
+ * `url` and a `type` ("dsapi" or "imgapi"). `getResolvedUrl()` handles (lazy)
  * DNS resolution.
  *
  * @param options {Object} with these keys
@@ -265,6 +284,7 @@ function Source(options) {
     assert.optionalString(options.type, 'options.type');
     assert.object(options.log, 'options.log');
     this.url = options.url;
+    this.normUrl = normUrlFromUrl(this.url);
     this.log = options.log;
 
     // Figure out `type` if necessary.
@@ -282,34 +302,32 @@ function Source(options) {
     }
 }
 
+
 /**
- * Return a normalized URL: no trailing slash, DNS-resolved host
+ * Return a URL with DNS-resolved host
  *
  * @params callback {Function} `function (err, normUrl)`
  */
-Source.prototype.getNormUrl = function getNormUrl(callback) {
+Source.prototype.getResolvedUrl = function getResolvedUrl(callback) {
     assert.func(callback, 'callback');
 
     var self = this;
-    if (this._normUrl) {
-        callback(null, this._normUrl);
+    if (this._resolvedUrl) {
+        callback(null, this._resolvedUrl);
         return;
     }
 
-    var parsed = url.parse(this.url);
-    if (parsed.pathname === '/') {
-        parsed.pathname = ''; // Don't want trailing '/'.
-    }
-
-    self.log.trace({host: parsed.host}, 'DNS resolve source host');
-    ipFromHost(parsed.host, function (dnsErr, ip) {
+    var parsed = url.parse(this.normUrl);
+    self.log.trace({hostname: parsed.hostname}, 'DNS resolve source host');
+    ipFromHost(parsed.hostname, function (dnsErr, ip) {
         if (dnsErr) {
             callback(dnsErr);
             return;
         }
-        parsed.host = ip;
-        self._normUrl = url.format(parsed);
-        callback(null, self._normUrl);
+        parsed.hostname = ip;
+        parsed.host = ip + (parsed.port ? ':' + parsed.port : '');
+        self._resolvedUrl = url.format(parsed);
+        callback(null, self._resolvedUrl);
         return;
     });
 };
@@ -428,9 +446,13 @@ IMGADM.prototype._addSource = function _addSource(
                     if (res
                         && res.headers['content-type'] !== 'application/json')
                     {
+                        var body = res.body;
+                        if (body && body.length > 1024) {
+                            body = body.slice(0, 1024) + '...';
+                        }
                         err = new Error(format(
                             'statusCode %s, response not JSON:\n%s',
-                            res.statusCode, _indent(res.body)));
+                            res.statusCode, _indent(body)));
                     }
                     next(new errors.SourcePingError(err, sourceToPing));
                     return;
@@ -440,10 +462,10 @@ IMGADM.prototype._addSource = function _addSource(
         });
     }
 
-
     // No-op if already have this URL.
+    var normUrl = normUrlFromUrl(source.url);
     for (var i = 0; i < self.sources.length; i++) {
-        if (self.sources[i].url === source.url)
+        if (self.sources[i].normUrl === normUrl)
             return callback(null, false);
     }
 
@@ -484,8 +506,9 @@ IMGADM.prototype._addSource = function _addSource(
 IMGADM.prototype._delSource = function _delSource(sourceUrl, callback) {
     assert.string(sourceUrl, 'sourceUrl');
     var lenBefore = this.sources.length;
+    var normSourceUrl = normUrlFromUrl(sourceUrl);
     this.sources = this.sources.filter(function (s) {
-        return s.url !== sourceUrl;
+        return s.normUrl !== normSourceUrl;
     });
     var changed = (lenBefore !== this.sources.length);
     callback(null, changed);
@@ -687,7 +710,7 @@ IMGADM.prototype.clientFromSource = function clientFromSource(
         return;
     }
 
-    source.getNormUrl(function (normErr, normUrl) {
+    source.getResolvedUrl(function (normErr, normUrl) {
         if (normErr) {
             callback(normErr);
             return;

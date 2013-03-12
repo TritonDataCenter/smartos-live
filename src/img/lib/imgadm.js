@@ -79,6 +79,12 @@ var IP_RE = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
 
 // ---- internal support stuff
 
+function _indent(s, indent) {
+    if (!indent) indent = '    ';
+    var lines = s.split(/\r?\n/g);
+    return indent + lines.join('\n' + indent);
+}
+
 function ipFromHost(host, callback) {
     if (IP_RE.test(host)) {
         callback(null, host);
@@ -419,6 +425,13 @@ IMGADM.prototype._addSource = function _addSource(
                     || res.statusCode !== 200
                     || (sourceToPing.type === 'imgapi' && !pong.imgapi))
                 {
+                    if (res
+                        && res.headers['content-type'] !== 'application/json')
+                    {
+                        err = new Error(format(
+                            'statusCode %s, response not JSON:\n%s',
+                            res.statusCode, _indent(res.body)));
+                    }
                     next(new errors.SourcePingError(err, sourceToPing));
                     return;
                 }
@@ -1058,7 +1071,8 @@ IMGADM.prototype.sourcesList = function sourcesList(callback) {
  * @param callback {Function} `function (err, imageInfo)` where `imageInfo`
  *      is `{manifest: <manifest>, source: <source>}`
  */
-IMGADM.prototype.sourcesGet = function sourcesGet(uuid, ensureActive, callback) {
+IMGADM.prototype.sourcesGet
+        = function sourcesGet(uuid, ensureActive, callback) {
     assert.string(uuid, 'uuid');
     assert.bool(ensureActive, 'ensureActive');
     assert.func(callback, 'callback');
@@ -1087,8 +1101,8 @@ IMGADM.prototype.sourcesGet = function sourcesGet(uuid, ensureActive, callback) 
                     if (getErr && getErr.statusCode !== 404) {
                         errs.push(self._errorFromClientError(source, getErr));
                     }
-                    if (manifest &&
-                        (!ensureActive || manifest.state === 'active'))
+                    if (manifest
+                        && (!ensureActive || manifest.state === 'active'))
                     {
                         imageInfo = {manifest: manifest, source: source};
                     }

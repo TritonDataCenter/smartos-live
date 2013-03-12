@@ -264,7 +264,8 @@ IMGAPI.prototype.ping = function ping(error, callback) {
         }
         var opts = {
             path: path,
-            headers: headers
+            headers: headers,
+            connectTimeout: 15000 // long default for spotty internet
         };
         self.client.get(opts, function (err, req, res, pong) {
             if (err) {

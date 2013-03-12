@@ -98,10 +98,14 @@ function SourcePingError(cause, source) {
         cause = undefined;
     }
     assert.object(source, 'source');
+    var details = '';
+    if (cause) {
+        details = ': ' + cause.toString();
+    }
     ImgadmError.call(this, {
         cause: cause,
-        message: sprintf('unexpected ping error with image source "%s" (%s)',
-            source.url, source.type),
+        message: sprintf('unexpected ping error with image source "%s" (%s)%s',
+            source.url, source.type, details),
         code: 'SourcePing',
         exitStatus: 1
     });

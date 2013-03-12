@@ -13,7 +13,7 @@ VM.loglevel = 'DEBUG';
 
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 
-test('create and destroy 50 zones', {'timeout': 240000}, function(t) {
+test('create and destroy 50 zones', {'timeout': 600000}, function(t) {
     var i;
 
     i = 0;

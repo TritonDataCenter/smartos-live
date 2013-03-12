@@ -105,12 +105,19 @@ if [[ -n "$LIBS" ]]; then
 fi
 
 # restify (stripped down just for client usage)
-(cd _repos && git clone git://github.com/mcavage/node-restify.git)
-SHA=$(json -f package.json dependencies.restify | cut -d'#' -f2)
-[[ -n "$SHA" ]] || fatal "error finding restify dep git sha"
-(cd _repos/node-restify && git checkout $SHA)
-mkdir -p node_modules/restify
-mv _repos/node-restify/{LICENSE,package.json,lib} node_modules/restify
+DEP=$(json -f package.json dependencies.restify)
+if [[ ${DEP:0:6} == "git://" ]]; then
+    (cd _repos && git clone git://github.com/mcavage/node-restify.git)
+    SHA=$(json -f package.json dependencies.restify | cut -d'#' -f2)
+    [[ -n "$SHA" ]] || fatal "error finding restify dep git sha"
+    (cd _repos/node-restify && git checkout $SHA)
+    mkdir -p node_modules/restify
+    mv _repos/node-restify/{LICENSE,package.json,lib} node_modules/restify
+else
+    npm install restify@$DEP
+    (cd node_modules/restify \
+        && rm -rf node_modules bin README.md CHANGES.md .npmignore)
+fi
 (cd node_modules/restify/lib \
     && rm -rf formatters plugins request.js response.js \
         router.js server.js)
@@ -241,14 +248,15 @@ patch -p0 <<PATCH
          var bunyan = require('./bunyan_helper');
 --- node_modules/restify/lib/dtrace.js
 +++ node_modules/restify/lib/dtrace.js
-@@ -1,6 +1,6 @@
- // Copyright 2012 Mark Cavage, Inc.  All rights reserved.
-
--var dtrace = require('dtrace-provider');
-+var dtrace = require('/usr/node/node_modules/dtrace-provider');
-
-
-
+@@ -38,7 +38,7 @@
+ module.exports = function exportStaticProvider() {
+         if (!PROVIDER) {
+                 try {
+-                        var dtrace = require('dtrace-provider');
++                        var dtrace = require('/usr/node/node_modules/dtrace-provider');
+                         PROVIDER = dtrace.createDTraceProvider('restify');
+                 } catch (e) {
+                         PROVIDER = {
 PATCH
 
 

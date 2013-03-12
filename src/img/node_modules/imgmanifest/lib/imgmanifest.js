@@ -99,6 +99,11 @@ function upgradeTo2(oldManifest) {
         delete file.url;
     });
 
+    // IMGAPI-104: image_size should be a number
+    if (manifest.image_size) {
+        manifest.image_size = Number(manifest.image_size);
+    }
+
     // Deprecated long ago, now dropped.
     delete manifest.platform_type;
     delete manifest.created_at;

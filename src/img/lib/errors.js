@@ -228,6 +228,21 @@ function InvalidManifestError(cause) {
 }
 util.inherits(InvalidManifestError, ImgadmError);
 
+function UncompressionError(cause, message) {
+    if (message === undefined) {
+        message = cause;
+        cause = undefined;
+    }
+    assert.string(message);
+    ImgadmError.call(this, {
+        cause: cause,
+        message: message,
+        code: 'UncompressionError',
+        exitStatus: 1
+    });
+}
+util.inherits(UncompressionError, ImgadmError);
+
 function UsageError(cause, message) {
     if (message === undefined) {
         message = cause;
@@ -397,6 +412,7 @@ module.exports = {
     ImageNotInstalledError: ImageNotInstalledError,
     ImageHasDependentClonesError: ImageHasDependentClonesError,
     InvalidManifestError: InvalidManifestError,
+    UncompressionError: UncompressionError,
     UsageError: UsageError,
     UnknownOptionError: UnknownOptionError,
     UnknownCommandError: UnknownCommandError,

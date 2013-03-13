@@ -1544,9 +1544,18 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             });
             uncompressor.on('exit', function (code) {
                 if (code !== 0) {
-                    finish(new errors.InternalError({message: format(
-                        'uncompression error while importing: '
-                        + 'exit code %s', code)}));
+                    var msg;
+                    if (compression === 'bzip2' && code === 2) {
+                        msg = format('%s uncompression error while '
+                            + 'importing: exit code %s (corrupt compressed '
+                            + 'file): usually indicates a network error '
+                            + 'while downloading, try again',
+                            compression, code);
+                    } else {
+                        msg = format('%s uncompression error while '
+                            + 'importing: exit code %s', compression, code);
+                    }
+                    finish(new errors.UncompressionError(msg));
                 }
             });
         }

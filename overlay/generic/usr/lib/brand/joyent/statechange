@@ -63,6 +63,7 @@ cmd=$5
 
 LOCKFILE=/etc/dladm/zone.lck
 SNAPSHOT_DIR=root/checkpoints
+PSRSET=/usr/sbin/psrset
 
 #
 # Create a lock file which we use to serialize datalink operations across zones.
@@ -636,6 +637,79 @@ cleanup_mount()
 }
 
 #
+# Set up the processor set that we will bind to later.
+#
+setup_psrset()
+{
+	for cpu in $_ZONECFG_attr_sdc_psrset; do
+		set=$($PSRSET -p $cpu | cut -f3- -d' ')
+		if [[ $? -ne 0 ]]; then
+			logger -p daemon.err "zone $ZONENAME" \
+			    "failed to get psrset for cpu " \
+			    "$cpu."
+			exit 1
+		fi
+
+		#
+		# We have no way to distinguish bound status as
+		# a funciton of error value, which is really
+		# unfortunate.
+		#
+		if [[ "$set" != "not assigned" ]]; then
+			logger -p daemon.err "zone $ZONENAME" \
+			    "cpu $cpu already bound, cannot boot zone."
+			exit 1
+		fi
+	done
+
+	$PSRSET -c $_ZONECFG_attr_sdc_psrset > /dev/null
+	if [[ $? -ne 0 ]]; then
+		logger -p daemon.err "zone $ZONENAME" \
+		    "failed to create cpu set, aborting"
+		exit 1
+	fi
+}
+
+#
+# Do the work of binding the zone to the group we created.
+#
+bind_zone()
+{
+	cpu=$(echo $_ZONECFG_attr_sdc_psrset | awk '{ print $1 }')
+	pset=$($PSRSET -p $cpu | awk '{ print $3 }')
+	if [[ -z "$pset" ]]; then
+		logger -p daemon.warn "zone $ZONENAME failed to find psrset " \
+		    "to bind."
+		return
+	fi
+
+	$PSRSET -b -z $ZONENAME $pset >/dev/null
+	if [[ $? -ne 0 ]]; then
+		logger -p daemon.warn "zone $ZONENAME failed to " \
+		    "bind to psrset $pset"
+	fi
+}
+
+#
+#
+#
+cleanup_psrset()
+{
+	cpu=$(echo $_ZONECFG_attr_sdc_psrset | awk '{ print $1 }')
+	pset=$($PSRSET -p $cpu | awk '{ print $3 }')
+	if [[ -z "$pset" ]]; then
+		logger -p daemon.warn "zone $ZONENAME failed to find psrset" \
+		    "to cleanup."
+		return
+	fi
+
+	$PSRSET -d $pset > /dev/null
+	[[ $? -eq 0 ]] || logger -p daemon.warn "failed to destroy psrset " \
+	    "$pset"
+}
+
+
+#
 # Main
 #
 
@@ -644,7 +718,10 @@ load_sdc_sysinfo
 # Load config variables with CONFIG_ prefix, and sets the headnode variable
 load_sdc_config
 
-[[ "$subcommand" == "pre" && $cmd == 0 ]] && setup_fs
+if [[ "$subcommand" == "pre" && $cmd == 0 ]]; then
+	setup_fs
+	[[ -z "$_ZONECFG_attr_sdc_psrset" ]] || setup_psrset
+fi
 
 if [[ "$subcommand" == "post" && $cmd == 0 ]]; then
 	setup_snapshots
@@ -653,7 +730,10 @@ if [[ "$subcommand" == "post" && $cmd == 0 ]]; then
 fi
 
 # We can't set a rctl until we have a process in the zone to grab
-[[ "$subcommand" == "post" && $cmd == 1 ]] && setup_cpu_baseline
+if [[ "$subcommand" == "post" && $cmd == 1 ]]; then
+	[[ -z "$_ZONECFG_attr_sdc_psrset" ]] && setup_cpu_baseline
+	[[ -z "$_ZONECFG_attr_sdc_psrset" ]] || bind_zone
+fi
 
 # Zone halt is hung unmounting, try to recover
 [[ "$subcommand" == "post" && $state == 6 && $cmd == 8 ]] && \
@@ -662,6 +742,7 @@ fi
 if [[ "$subcommand" == "pre" && $cmd == 4 ]]; then
 	cleanup_snapshots
 	cleanup_net
+	[[ -z "$_ZONECFG_attr_sdc_psrset" ]] || cleanup_psrset
 fi
 
 exit 0

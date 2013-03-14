@@ -714,6 +714,7 @@ CPU_Type='${CPU_Version}'
 CPU_Virtualization='${CPU_Virtualization}'
 CPU_Physical_Cores=${CPU_Count}
 Nic_Tags=${NicTagList}
+Setup='${Setup_complete}'
 END
     else
         echo "Zfs_Quota='${QUOTA}'"
@@ -722,7 +723,6 @@ END
     cat <<END
 UUID='${UUID}'
 Hostname='${Hostname}'
-Setup='${Setup_complete}'
 CPU_Total_Cores=${CPU_Cores}
 MiB_of_Memory=${Memory_in_MiB}
 END
@@ -842,6 +842,7 @@ END
   "Manufacturer": "${Manufacturer}",
   "Product": "${Product}",
   "Serial Number": "${Serial_Number}",
+  "Setup": "${Setup_complete}",
   "VM Capable": ${VM_Capable},
   "CPU Type": "${CPU_Version}",
   "CPU Virtualization": "${CPU_Virtualization}",
@@ -854,7 +855,6 @@ END
 cat <<END
   "UUID": "${UUID}",
   "Hostname": "${Hostname}",
-  "Setup": "${Setup_complete}",
   "CPU Total Cores": ${CPU_Cores},
   "MiB of Memory": "${Memory_in_MiB}",
 END
@@ -1018,6 +1018,10 @@ if [[ ${ZONENAME} == "global" ]]; then
     get_disks
     get_bootparams
     get_sdc_version
+    if [[ -n ${SMARTDC_VERSION} ]]; then
+        # Setup is SDC specific
+        get_setup
+    fi
 else
     get_nonglobal_info
 fi
@@ -1034,7 +1038,6 @@ get_smartos_vnics
 get_aggr_params
 get_boot_time
 get_dc_info
-get_setup
 
 # whenever we update the cache, update both
 if [[ ${CACHE} == "true" ]]; then

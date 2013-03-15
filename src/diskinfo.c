@@ -41,7 +41,7 @@ static void
 print_disks(dm_descriptor_t media, di_opts_t *opts)
 {
 	dm_descriptor_t *disk, *controller;
-	nvlist_t *mattrs, *dattrs, *cattrs;
+	nvlist_t *mattrs, *dattrs, *cattrs = NULL;
 	int error;
 
 	uint64_t size, total;
@@ -49,7 +49,7 @@ print_disks(dm_descriptor_t media, di_opts_t *opts)
 	double total_in_GiB;
 	char sizestr[32];
 
-	char *vid, *pid, *opath, *c, *ctype;
+	char *vid, *pid, *opath, *c, *ctype = NULL;
 	boolean_t removable;
 	boolean_t ssd;
 	char device[MAXPATHLEN];
@@ -80,6 +80,7 @@ print_disks(dm_descriptor_t media, di_opts_t *opts)
 		    DM_CONTROLLER, &error)) != NULL) {
 			cattrs = dm_get_attributes(controller[0], &error);
 			nvlist_query_string(cattrs, DM_CTYPE, &ctype);
+			ctype = strdup(ctype);
 			for (c = ctype; *c != '\0'; c++)
 				*c = toupper(*c);
 		}
@@ -124,6 +125,7 @@ print_disks(dm_descriptor_t media, di_opts_t *opts)
 			    ssd ? "yes" : "no");
 		}
 
+		free(ctype);
 		nvlist_free(cattrs);
 		nvlist_free(dattrs);
 		dm_free_descriptors(controller);

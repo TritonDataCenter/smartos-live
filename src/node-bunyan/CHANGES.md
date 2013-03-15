@@ -6,6 +6,78 @@ Known issues:
   bug](https://github.com/TooTallNate/node-gyp/issues/65).
 
 
+## bunyan 0.19.0
+
+- [Slight backward incompatibility] Change the default error serialization
+  (a.k.a. `bunyan.stdSerializers.err`) to *not* serialize all additional
+  attributes of the given error object. This is an open door to unsafe logging
+  and logging should always be safe. With this change, error serialization
+  will log these attributes: message, name, stack, code, signal. The latter
+  two are added because some core node APIs include those fields (e.g.
+  `child_process.exec`).
+
+  Concrete examples where this has hurt have been the "domain" change
+  necessitating 0.18.3 and a case where
+  [node-restify](https://github.com/mcavage/node-restify) uses an error object
+  as the response object. When logging the `err` and `res` in the same log
+  statement (common for restify audit logging), the `res.body` would be JSON
+  stringified as '[Circular]' as it had already been emitted for the `err` key.
+  This results in a WTF with the bunyan CLI because the `err.body` is not
+  rendered.
+
+  If you need the old behaviour back you will need to do this:
+
+        var bunyan = require('bunyan');
+        var errSkips = {
+            // Skip domain keys. `domain` especially can have huge objects that can
+            // OOM your app when trying to JSON.stringify.
+            domain: true,
+            domain_emitter: true,
+            domain_bound: true,
+            domain_thrown: true
+        };
+        bunyan.stdSerializers.err = function err(err) {
+           if (!err || !err.stack)
+               return err;
+           var obj = {
+               message: err.message,
+               name: err.name,
+               stack: getFullErrorStack(err)
+           }
+           Object.keys(err).forEach(function (k) {
+               if (err[k] !== undefined && !errSkips[k]) {
+                   obj[k] = err[k];
+               }
+           });
+           return obj;
+         };
+
+- "long" and "bunyan" output formats for the CLI. `bunyan -o long` is the default
+  format, the same as before, just called "long" now instead of the cheesy "paul"
+  name. The "bunyan" output format is the same as "json-0", just with a more
+  convenient name.
+
+
+## bunyan 0.18.3
+
+- Change the `bunyan.stdSerializers.err` serializer for errors to *exclude*
+  [the "domain*" keys](http://nodejs.org/docs/latest/api/all.html#all_additions_to_error_objects).
+  `err.domain` will include its assigned members which can arbitrarily large
+  objects that are not intended for logging.
+
+- Make the "dtrace-provider" dependency optional. I hate to do this, but
+  installing bunyan on Windows is made very difficult with this as a required
+  dep.  Even though "dtrace-provider" stubs out for non-dtrace-y platforms,
+  without a compiler and Python around, node-gyp just falls over.
+
+
+## bunyan 0.18.2
+
+- [pull #67] Remove debugging prints in rotating-file support.
+  (by github.com/chad3814).
+- Update to dtrace-provider@0.2.7.
+
+
 ## bunyan 0.18.1
 
 - Get the `bunyan` CLI to **not** automatically page (i.e. pipe to `less`)

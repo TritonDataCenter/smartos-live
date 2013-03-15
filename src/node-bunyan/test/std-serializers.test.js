@@ -66,6 +66,7 @@ test('req serializer', function (t) {
   })
   server.listen(8765, function () {
     http.get({host: '127.0.0.1', port: 8765, path: '/'}, function(res) {
+      res.resume();
       log.info({req: theReq}, 'the request');
       var lastRecord = records[records.length-1];
       t.equal(lastRecord.req.method, 'GET');
@@ -123,6 +124,7 @@ test('res serializer', function (t) {
   })
   server.listen(8765, function () {
     http.get({host: '127.0.0.1', port: 8765, path: '/'}, function(res) {
+      res.resume();
       log.info({res: theRes}, 'the response');
       var lastRecord = records[records.length-1];
       t.equal(lastRecord.res.statusCode, theRes.statusCode);
@@ -198,37 +200,37 @@ test('err serializer: long stack', function (t) {
   topErr = new verror.VError('top err');
   log.info(topErr, 'the error');
   var lastRecord = records[records.length-1];
-  t.equal(lastRecord.err.message, topErr.message);
-  t.equal(lastRecord.err.name, topErr.name);
-  t.equal(lastRecord.err.stack, topErr.stack);
+  t.equal(lastRecord.err.message, topErr.message, 'Just a VError');
+  t.equal(lastRecord.err.name, topErr.name, 'Just a VError');
+  t.equal(lastRecord.err.stack, topErr.stack, 'Just a VError');
 
   // Just a WError.
   topErr = new verror.WError('top err');
   log.info(topErr, 'the error');
   var lastRecord = records[records.length-1];
-  t.equal(lastRecord.err.message, topErr.message);
-  t.equal(lastRecord.err.name, topErr.name);
-  t.equal(lastRecord.err.stack, topErr.stack);
+  t.equal(lastRecord.err.message, topErr.message, 'Just a WError');
+  t.equal(lastRecord.err.name, topErr.name, 'Just a WError');
+  t.equal(lastRecord.err.stack, topErr.stack, 'Just a WError');
 
   // WError <- TypeError
   bottomErr = new TypeError('bottom err');
   topErr = new verror.WError(bottomErr, 'top err');
   log.info(topErr, 'the error');
   var lastRecord = records[records.length-1];
-  t.equal(lastRecord.err.message, topErr.message);
-  t.equal(lastRecord.err.name, topErr.name);
+  t.equal(lastRecord.err.message, topErr.message, 'WError <- TypeError');
+  t.equal(lastRecord.err.name, topErr.name, 'WError <- TypeError');
   var expectedStack = topErr.stack + '\nCaused by: ' + bottomErr.stack;
-  t.equal(lastRecord.err.stack, expectedStack);
+  t.equal(lastRecord.err.stack, expectedStack, 'WError <- TypeError');
 
   // WError <- WError
   bottomErr = new verror.WError('bottom err');
   topErr = new verror.WError(bottomErr, 'top err');
   log.info(topErr, 'the error');
   var lastRecord = records[records.length-1];
-  t.equal(lastRecord.err.message, topErr.message);
-  t.equal(lastRecord.err.name, topErr.name);
+  t.equal(lastRecord.err.message, topErr.message, 'WError <- WError');
+  t.equal(lastRecord.err.name, topErr.name, 'WError <- WError');
   var expectedStack = topErr.stack + '\nCaused by: ' + bottomErr.stack;
-  t.equal(lastRecord.err.stack, expectedStack);
+  t.equal(lastRecord.err.stack, expectedStack, 'WError <- WError');
 
   // WError <- WError <- TypeError
   bottomErr = new TypeError('bottom err');
@@ -236,12 +238,12 @@ test('err serializer: long stack', function (t) {
   topErr = new verror.WError(midErr, 'top err');
   log.info(topErr, 'the error');
   var lastRecord = records[records.length-1];
-  t.equal(lastRecord.err.message, topErr.message);
-  t.equal(lastRecord.err.name, topErr.name);
+  t.equal(lastRecord.err.message, topErr.message, 'WError <- WError <- TypeError');
+  t.equal(lastRecord.err.name, topErr.name, 'WError <- WError <- TypeError');
   var expectedStack = (topErr.stack
     + '\nCaused by: ' + midErr.stack
     + '\nCaused by: ' + bottomErr.stack);
-  t.equal(lastRecord.err.stack, expectedStack);
+  t.equal(lastRecord.err.stack, expectedStack, 'WError <- WError <- TypeError');
 
   // WError <- WError <- WError
   bottomErr = new verror.WError('bottom err');
@@ -249,12 +251,12 @@ test('err serializer: long stack', function (t) {
   topErr = new verror.WError(midErr, 'top err');
   log.info(topErr, 'the error');
   var lastRecord = records[records.length-1];
-  t.equal(lastRecord.err.message, topErr.message);
-  t.equal(lastRecord.err.name, topErr.name);
+  t.equal(lastRecord.err.message, topErr.message, 'WError <- WError <- WError');
+  t.equal(lastRecord.err.name, topErr.name, 'WError <- WError <- WError');
   var expectedStack = (topErr.stack
     + '\nCaused by: ' + midErr.stack
     + '\nCaused by: ' + bottomErr.stack);
-  t.equal(lastRecord.err.stack, expectedStack);
+  t.equal(lastRecord.err.stack, expectedStack, 'WError <- WError <- WError');
 
 
   t.end();

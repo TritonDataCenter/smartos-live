@@ -1,10 +1,10 @@
 /*
- * Copyright (c) 2012 Trent Mick. All rights reserved.
+ * Copyright (c) 2013 Trent Mick. All rights reserved.
  *
  * The bunyan logging library for node.js.
  */
 
-var VERSION = '0.18.1';
+var VERSION = '0.19.0';
 
 // Bunyan log format version. This becomes the 'v' field on all log records.
 // `0` is until I release a version '1.0.0' of node-bunyan. Thereafter,
@@ -627,26 +627,18 @@ Logger.prototype.levels = function levels(name, value) {
  * Pre-condition: This is only called if there is at least one serializer.
  *
  * @param fields (Object) The log record fields.
- * @param keys (Array) Optional array of keys to which to limit processing.
+ * @param excludeFields (Object) Optional mapping of keys to `true` for
+ *    keys to NOT apply a serializer.
  */
-Logger.prototype._applySerializers = function (fields, keys) {
+Logger.prototype._applySerializers = function (fields, excludeFields) {
   var self = this;
 
-  // Mapping of keys to potentially serialize.
-  var applyKeys = fields;
-  if (keys) {
-    applyKeys = {};
-    for (var i = 0; i < keys.length; i++) {
-      applyKeys[keys[i]] = true;
-    }
-  }
-
-  xxx('_applySerializers: applyKeys', applyKeys);
+  xxx('_applySerializers: excludeFields', excludeFields);
 
   // Check each serializer against these (presuming number of serializers
   // is typically less than number of fields).
   Object.keys(this.serializers).forEach(function (name) {
-    if (applyKeys[name]) {
+    if (!excludeFields || !excludeFields[name]) {
       xxx('_applySerializers; apply to "%s" key', name)
       try {
         fields[name] = self.serializers[name](fields[name]);
@@ -732,9 +724,11 @@ function mkLogEmitter(minLevel) {
     var log = this;
 
     function mkRecord(args) {
+      var excludeFields;
       if (args[0] instanceof Error) {
         // `log.<level>(err, ...)`
         fields = {err: errSerializer(args[0])};
+        excludeFields = {err: true};
         if (args.length === 1) {
           msgArgs = [fields.err.message];
         } else {
@@ -759,7 +753,7 @@ function mkLogEmitter(minLevel) {
       var recFields = (fields ? objCopy(fields) : null);
       if (recFields) {
         if (log.serializers) {
-          log._applySerializers(recFields);
+          log._applySerializers(recFields, excludeFields);
         }
         Object.keys(recFields).forEach(function (k) {
           rec[k] = recFields[k];
@@ -891,13 +885,10 @@ var errSerializer = Logger.stdSerializers.err = function err(err) {
   var obj = {
     message: err.message,
     name: err.name,
-    stack: getFullErrorStack(err)
+    stack: getFullErrorStack(err),
+    code: err.code,
+    signal: err.signal
   }
-  Object.keys(err).forEach(function (k) {
-    if (err[k] !== undefined) {
-      obj[k] = err[k];
-    }
-  });
   return obj;
 };
 
@@ -992,12 +983,12 @@ RotatingFileStream.prototype._setupNextRot = function () {
 }
 
 RotatingFileStream.prototype._nextRotTime = function _nextRotTime(first) {
-  var DEBUG = true;
-  if (DEBUG) console.log('-- _nextRotTime: %s%s', this.periodNum, this.periodScope);
+  var _DEBUG = false;
+  if (_DEBUG) console.log('-- _nextRotTime: %s%s', this.periodNum, this.periodScope);
   var d = new Date();
 
-  if (DEBUG) console.log('  now local: %s', d);
-  if (DEBUG) console.log('    now utc: %s', d.toISOString());
+  if (_DEBUG) console.log('  now local: %s', d);
+  if (_DEBUG) console.log('    now utc: %s', d.toISOString());
   var rotAt;
   switch (this.periodScope) {
   case 'ms':
@@ -1055,7 +1046,7 @@ RotatingFileStream.prototype._nextRotTime = function _nextRotTime(first) {
     assert.fail(format('invalid period scope: "%s"', this.periodScope));
   }
 
-  if (DEBUG) {
+  if (_DEBUG) {
     console.log('  **rotAt**: %s (utc: %s)', rotAt,
       new Date(rotAt).toUTCString());
     var now = Date.now();
@@ -1071,9 +1062,9 @@ RotatingFileStream.prototype._nextRotTime = function _nextRotTime(first) {
 RotatingFileStream.prototype.rotate = function rotate() {
   // XXX What about shutdown?
   var self = this;
-  var DEBUG = true;
+  var _DEBUG = false;
 
-  if (DEBUG) console.log('-- [%s] rotating %s', new Date(), self.path);
+  if (_DEBUG) console.log('-- [%s] rotating %s', new Date(), self.path);
   if (self.rotating) {
     throw new TypeError('cannot start a rotation when already rotating');
   }
@@ -1087,7 +1078,7 @@ RotatingFileStream.prototype.rotate = function rotate() {
       toDel = self.path;
     }
     n -= 1;
-    if (DEBUG) console.log('rm %s', toDel);
+    if (_DEBUG) console.log('rm %s', toDel);
     fs.unlink(toDel, function (delErr) {
       //XXX handle err other than not exists
       moves();
@@ -1108,7 +1099,7 @@ RotatingFileStream.prototype.rotate = function rotate() {
       if (!exists) {
         moves();
       } else {
-        if (DEBUG) console.log('mv %s %s', before, after);
+        if (_DEBUG) console.log('mv %s %s', before, after);
         mv(before, after, function (mvErr) {
           if (mvErr) {
             self.emit('error', mvErr);
@@ -1122,7 +1113,7 @@ RotatingFileStream.prototype.rotate = function rotate() {
   }
 
   function finish() {
-    if (DEBUG) console.log('open %s', self.path);
+    if (_DEBUG) console.log('open %s', self.path);
     self.stream = fs.createWriteStream(self.path,
       {flags: 'a', encoding: 'utf8'});
     var q = self.rotQueue, len = q.length;

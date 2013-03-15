@@ -58,8 +58,8 @@ var SSHAgentClient = require('ssh-agent');
 function ChecksumError(cause, actual, expected) {
     this.code = 'ChecksumError';
     if (expected === undefined) {
-        actual = cause;
         expected = actual;
+        actual = cause;
         cause = undefined;
     }
     assert.optionalObject(cause);

@@ -10,7 +10,7 @@
     "ldapjs": "git://github.com/mcavage/node-ldapjs.git#17f5518",
     "lru-cache": "2.2.2",
     "node-uuid": "1.4.0",
-    "restify": "2.3.4",
+    "restify": "git+ssh://git@github.com:mcavage/node-restify.git#9f5e573",
     "clone": "0.1.5",
     "assert-plus": "0.1.2",
     "bunyan": "0.19.0",

@@ -5,7 +5,7 @@
   "author": "Joyent (joyent.com)",
   "private": true,
   "dependencies": {
-    "sdc-clients": "git+ssh://git@git.joyent.com:node-sdc-clients.git#17f2897",
+    "sdc-clients": "git+ssh://git@git.joyent.com:node-sdc-clients.git#ab9f935",
     "assert-plus": "0.1.2",
     "mkdirp": "0.3.4",
     "nopt": "2.1.1",

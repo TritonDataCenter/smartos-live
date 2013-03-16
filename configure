@@ -263,6 +263,12 @@ JAVA_ROOT=/opt/local/java/sun6;			export JAVA_ROOT
 FLEX=/opt/local/bin/flex;			export FLEX
 GNUXGETTEXT=/opt/local/bin/xgettext;		export GNUXGETTEXT
 PYTHON_26=/opt/local/bin/python2.6;		export PYTHON_26
+ELFDUMP=/usr/bin/elfdump;			export ELFDUMP
+LORDER=/usr/bin/lorder;				export LORDER
+MCS=/usr/bin/mcs;				export MCS
+NM=/usr/bin/nm;					export NM
+STRIP=/usr/bin/strip;				export STRIP
+TSORT=/usr/bin/tsort;				export TSORT
 EOF
 	[[ $? -eq 0 ]] || fatal "failed to write illumos nightly env file"
 }

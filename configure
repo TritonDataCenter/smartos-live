@@ -269,6 +269,7 @@ MCS=/usr/bin/mcs;				export MCS
 NM=/usr/bin/nm;					export NM
 STRIP=/usr/bin/strip;				export STRIP
 TSORT=/usr/bin/tsort;				export TSORT
+AR=/usr/bin/ar;					export AR
 EOF
 	[[ $? -eq 0 ]] || fatal "failed to write illumos nightly env file"
 }

@@ -1,0 +1,3 @@
+bin/rpcgen
+@src share 
+man/man1/rpcgen.1

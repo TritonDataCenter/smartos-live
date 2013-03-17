@@ -1,0 +1,13 @@
+bin/lex
+bin/yacc
+lib/amd64/liby.so
+lib/amd64/liby.so.1
+lib/liby.so
+lib/liby.so.1
+share/lib/ccs/yaccpar
+share/lib/ccs/ncform
+share/lib/ccs/nceucform
+@src share 
+man/man1/lex.1
+@comment Until we deprecate building 1.3.18 we can't ship the yacc manual page
+@comment man/man1/yacc.1

@@ -1,0 +1,5 @@
+Make is a tool which controls the generation of executables and
+other non-source files of a program from the program's source files.
+
+dmake is the open source version of Sun's make(1) utility maintained by
+illumos.

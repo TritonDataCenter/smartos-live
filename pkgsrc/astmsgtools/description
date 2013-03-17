@@ -1,0 +1,7 @@
+This package contains the illumos message generation tools that are used as a
+part of the illumos build process. This contains the following commands:
+  o msgget
+  o msgcvt
+  o msgcpp
+  o msggen
+  o msgcc

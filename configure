@@ -15,7 +15,7 @@
 #
 
 #
-# Copyright (c) 2012 Joyent, Inc.
+# Copyright (c) 2013 Joyent, Inc.
 #
 shopt -s xpg_echo
 unalias -a
@@ -28,6 +28,7 @@ conf_arg0_dir=$(dirname $0)
 conf_root=$PWD
 conf_ips=
 conf_priv="pfexec"
+conf_pkgsrcurl="https://download.joyent.com/pub/build/pkgsrc"
 
 function warn
 {
@@ -74,12 +75,27 @@ function source_vars
 
 function install_pkgin
 {
+	pkgin -f update || fatal "failed to update pkgsrc repository"
 	for pkg in gmake binutils autoconf automake bison flex libtool-base \
 	    python26 py26-expat libxslt gcc-compiler sun-jre6 sun-jdk6 gmp \
 	    mpfr nodejs p5-XML-Parser gettext; do
 		if ! pkg_info -qe $pkg; then
 			$conf_priv pkgin -y install $pkg || fatal \
 		    "failed to install $pkg"
+		fi
+	done
+
+	#
+	# Packages not in pkgsrc
+	#
+	for pkg in dmake sgstools rpcgen astmsgtools; do
+		if ! pkg_info -qe $pkg; then
+			curl -k "$conf_pkgsrcurl/$pkg.tgz" -o \
+			    /var/tmp/$pkg.tgz || fatal \
+			    "failed to fetch $pkg.tgz"
+			$conf_priv pkg_add /var/tmp/$pkg.tgz || fatal \
+			    "failed to pkg_add $pkg"
+			rm -f /var/tmp/$pkg.tgz
 		fi
 	done
 }
@@ -270,6 +286,11 @@ NM=/usr/bin/nm;					export NM
 STRIP=/usr/bin/strip;				export STRIP
 TSORT=/usr/bin/tsort;				export TSORT
 AR=/usr/bin/ar;					export AR
+MAKE="$conf_root/proto.strap/usr/bin/dmake";	export MAKE
+LEX=/opt/local/bin/lex;				export LEX
+YACC=/opt/local/bin/yacc;			export YACC
+RPCGEN=/opt/local/bin/rpcgen;			export RPCGEN
+ASTBINDIR=/opt/local/ast/bin;			export ASTBINDIR
 EOF
 	[[ $? -eq 0 ]] || fatal "failed to write illumos nightly env file"
 }

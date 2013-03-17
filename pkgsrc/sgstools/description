@@ -1,0 +1,5 @@
+This package contains the illumos version of several tools from the software
+generation suite that dates back to System V. This package includes the
+following tools:
+  o Lex
+  o Yacc

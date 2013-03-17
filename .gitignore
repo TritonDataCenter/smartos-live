@@ -63,3 +63,4 @@ boot.manifest.d/
 manifest.d/
 overlay/order
 overlay/sdc
+pkgsrc/*.tgz

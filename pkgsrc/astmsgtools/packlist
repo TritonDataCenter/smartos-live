@@ -1,0 +1,11 @@
+ast/bin/msgget
+ast/bin/msgcvt
+ast/bin/msgcpp
+ast/bin/msggen
+ast/bin/msgcc
+@src share
+man/man1/msgget.1
+man/man1/msgcvt.1
+man/man1/msgcpp.1
+man/man1/msggen.1
+man/man1/msgcc.1

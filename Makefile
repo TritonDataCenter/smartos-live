@@ -13,6 +13,7 @@ PATH =		/usr/bin:/usr/sbin:/sbin:/opt/local/bin
 
 LOCAL_SUBDIRS :=	$(shell ls projects/local)
 OVERLAYS :=	$(shell cat overlay/order)
+PKGSRC =	$(ROOT)/pkgsrc
 MANIFEST =	manifest.gen
 BOOT_MANIFEST =	boot.manifest.gen
 JSSTYLE =	$(ROOT)/tools/jsstyle/jsstyle
@@ -51,6 +52,10 @@ live: world manifest boot
 	    $(OVERLAYS) $(ROOT)/proto $(ROOT)/man/man)
 
 boot: $(BOOT_TARBALL)
+
+.PHONY: pkgsrc
+pkgsrc:
+	cd $(PKGSRC) && gmake install
 
 $(BOOT_TARBALL): world manifest
 	pfexec rm -rf $(BOOT_PROTO)
@@ -217,9 +222,11 @@ clean:
 			gmake clean; \
 		fi; \
 	done
+	(cd $(PKGSRC) && gmake clean)
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && rm -rf $(STRAP_PROTO))
-	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO))
+	(cd $(ROOT) && rm -rf $(BOOT_PROTO))
+	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO))
 	rm -f 0-*-stamp 1-*-stamp
 
 .PHONY: manifest check jsl

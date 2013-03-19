@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2011, Joyent, Inc.
+# Copyright 2013 Joyent, Inc.  All rights reserved.
 
 shopt -s xpg_echo
 
@@ -29,9 +29,6 @@ shopt -s xpg_echo
 unalias -a
 
 bm_arg0=$(basename $0)
-bm_root=$(dirname $0)/..
-bm_mdir=$bm_root/manifest.d
-bm_man=$bm_root/manifest.gen
 
 function fail
 {
@@ -44,8 +41,6 @@ function fail
 function validate
 {
 	local count
-	[[ -f $bm_man ]] && \
-	    fail "manifest file already exists: $bm_man"
 	[[ ! -d $bm_mdir ]] && \
 	    fail "manifest snippet directory doesn't exist: $bm_mdir"
 
@@ -56,17 +51,20 @@ function validate
 
 function build
 {
-	touch $bm_man || fail "failed to create $bm_man"	
 	for file in $bm_mdir/*; do
-		echo "Adding manifest files from $file... \c "
-		cat $file >> $bm_man
+		echo "Adding manifest files from $file... \c " >&2
+		grep -v "^#" $file
 		[[ $? -eq 0 ]] || fail "failed to append to manifest"
-		echo "done"
+		echo "done" >&2
 	done
-	grep -v "^#" < $bm_man > $bm_man.tmp
 	[[ $? -eq 0 ]] || fail "failed to remove comments from manifest"
-	mv -f $bm_man.tmp $bm_man
 }
+
+if [[ -z "$1" ]]; then
+	fail "Manifest directory is required"
+fi
+
+bm_mdir=$1
 
 validate
 build

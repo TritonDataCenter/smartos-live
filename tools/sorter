@@ -9,13 +9,8 @@ import os
 import sys
 
 files = {}
-filename = 'manifest'
 
-# if filename is passed as first argument, use that file instead
-if len(sys.argv) >= 2 and os.path.isfile(sys.argv[1]):
-    filename = sys.argv[1]
-
-for line in open(filename).readlines():
+for line in sys.stdin.readlines():
     line = line.strip()
     if len(line) == 0 or line[0] == '#':
         continue

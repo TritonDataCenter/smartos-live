@@ -1,11 +1,13 @@
 #
-# Copyright (c) 2012, Joyent, Inc.  All rights reserved.
+# Copyright (c) 2013, Joyent, Inc.  All rights reserved.
 #
 
 ROOT =		$(PWD)
 PROTO =		$(ROOT)/proto
 STRAP_PROTO =	$(ROOT)/proto.strap
 MPROTO =	$(ROOT)/manifest.d
+BOOT_MPROTO =	$(ROOT)/boot.manifest.d
+BOOT_PROTO =	$(ROOT)/proto.boot
 
 ifeq ($(shell uname -s),Darwin)
 PATH =		/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
@@ -16,6 +18,7 @@ endif
 LOCAL_SUBDIRS :=	$(shell ls projects/local)
 OVERLAYS :=	$(shell cat overlay/order)
 MANIFEST =	manifest.gen
+BOOT_MANIFEST =	boot.manifest.gen
 JSSTYLE =	$(ROOT)/tools/jsstyle/jsstyle
 JSLINT =	$(ROOT)/tools/javascriptlint/build/install/jsl
 CSTYLE =	$(ROOT)/tools/cstyle
@@ -30,19 +33,35 @@ WORLD_MANIFESTS := \
 	$(MPROTO)/live.manifest \
 	$(MPROTO)/illumos-extra.manifest
 
+BOOT_MANIFESTS := \
+	$(BOOT_MPROTO)/illumos.manifest
+
 SUBDIR_MANIFESTS :=	$(LOCAL_SUBDIRS:%=$(MPROTO)/%.sd.manifest)
 OVERLAY_MANIFESTS :=	$(OVERLAYS:$(ROOT)/overlay/%=$(MPROTO)/%.ov.manifest)
+
+BOOT_VERSION :=	boot-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
+    echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
+BOOT_TARBALL :=	output/$(BOOT_VERSION).tgz
 
 world: 0-extra-stamp 0-illumos-stamp 1-extra-stamp 0-livesrc-stamp \
 	0-local-stamp 0-tools-stamp 0-man-stamp 0-devpro-stamp
 
-live: world manifest
+live: world manifest boot
 	@echo $(OVERLAY_MANIFESTS)
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
 	(cd $(ROOT) && \
 	    pfexec ./tools/build_live $(ROOT)/$(MANIFEST) $(ROOT)/output \
 	    $(OVERLAYS) $(ROOT)/proto $(ROOT)/man/man)
+
+boot: $(BOOT_TARBALL)
+
+$(BOOT_TARBALL): world manifest
+	pfexec rm -rf $(BOOT_PROTO)
+	mkdir -p $(BOOT_PROTO)
+	pfexec ./tools/builder/builder $(ROOT)/$(BOOT_MANIFEST) \
+	    $(BOOT_PROTO) $(ROOT)/proto
+	(cd $(BOOT_PROTO) && pfexec gtar cf $(ROOT)/$@ .)
 
 #
 # Manifest construction.  There are 5 sources for manifests we need to collect
@@ -53,21 +72,27 @@ live: world manifest
 # These all end up in $(MPROTO), where we tell tools/build_manifest to look;
 # it will pick up every file in that directory and treat it as a manifest.
 #
+# In addition, a separate manifest is generated in similar manner for the
+# boot tarball.
+#
 # Look ma, no for loops in these shell fragments!
 #
-manifest: $(MANIFEST)
+manifest: $(MANIFEST) $(BOOT_MANIFEST)
 
-$(MPROTO):
-	mkdir -p $(MPROTO)
+$(MPROTO) $(BOOT_MPROTO):
+	mkdir -p $@
 
-$(MPROTO)/live.manifest: $(MPROTO) src/manifest
+$(MPROTO)/live.manifest: src/manifest | $(MPROTO)
 	gmake DESTDIR=$(MPROTO) DESTNAME=live.manifest \
 	    -C src manifest
 
-$(MPROTO)/illumos.manifest: $(MPROTO) projects/illumos/manifest
+$(MPROTO)/illumos.manifest: projects/illumos/manifest | $(MPROTO)
 	cp projects/illumos/manifest $(MPROTO)/illumos.manifest
 
-$(MPROTO)/illumos-extra.manifest: $(MPROTO) 1-extra-stamp
+$(BOOT_MPROTO)/illumos.manifest: projects/illumos/manifest | $(BOOT_MPROTO)
+	cp projects/illumos/boot.manifest $(BOOT_MPROTO)/illumos.manifest
+
+$(MPROTO)/illumos-extra.manifest: 1-extra-stamp | $(MPROTO)
 	gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest \
 	    -C projects/illumos-extra manifest; \
 
@@ -86,10 +111,12 @@ $(MPROTO)/%.ov.manifest: $(MPROTO) $(ROOT)/overlay/%/manifest
 	cp $(ROOT)/overlay/$*/manifest $@
 
 $(MANIFEST): $(WORLD_MANIFESTS) $(SUBDIR_MANIFESTS) $(OVERLAY_MANIFESTS)
-	-rm -f $(MANIFEST)
-	./tools/build_manifest
-	./tools/sorter manifest.gen > manifest.gen.sorted && \
-	    mv manifest.gen.sorted $@
+	-rm -f $@
+	./tools/build_manifest $(MPROTO) | ./tools/sorter > $@
+
+$(BOOT_MANIFEST): $(BOOT_MANIFESTS)
+	-rm -f $@
+	./tools/build_manifest $(BOOT_MPROTO) | ./tools/sorter > $@
 
 #
 # Update source code from parent repositories.  We do this for each local

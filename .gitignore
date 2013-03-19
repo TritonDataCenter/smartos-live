@@ -3,6 +3,7 @@
 /output
 /projects
 /proto
+/proto.boot
 /proto.strap
 /log
 /src/*.o
@@ -43,6 +44,7 @@ man/man/man1m/dsadm.1m
 man/man/man1m/imgadm.1m
 man/man/man1m/vmadm.1m
 man/man/man1m/vmadmd.1m
+man/man/man1m/sysinfo.1m
 src/diskinfo
 src/disklayout
 src/mkzpool
@@ -55,7 +57,9 @@ src/node-zutil/build/
 src/sdc-on-tty
 tools/pwgen-2.06/Makefile
 tools/pwgen-2.06/autom4te.cache
+boot.manifest.gen
 manifest.gen
+boot.manifest.d/
 manifest.d/
 overlay/order
 overlay/sdc

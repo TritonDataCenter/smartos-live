@@ -1115,9 +1115,9 @@ CLI.prototype.do_install = function do_install(subcmd, opts, args, callback) {
             args.length, args.join(' '))));
         return;
     }
-    assert.string(opts.manifest, 'opts.manifest');
-    assert.string(opts.file, 'opts.file');
-    assert.optionalString(opts.zpool, 'opts.zpool');
+    assert.string(opts.manifest, '-m MANIFEST');
+    assert.string(opts.file, '-f FILE');
+    assert.optionalString(opts.zpool, '-P ZPOOL');
     var zpool = opts.zpool || common.DEFAULT_ZPOOL;
 
     // 1. Validate args.

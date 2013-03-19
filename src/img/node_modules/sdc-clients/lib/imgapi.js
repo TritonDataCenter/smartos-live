@@ -38,6 +38,7 @@
  * example of the latter.
  */
 
+var p = console.log;
 var util = require('util'),
     format = util.format;
 var qs = require('querystring');
@@ -46,6 +47,7 @@ var crypto = require('crypto');
 
 var vasync = require('vasync');
 var async = require('async');
+var once = require('once');
 var WError = require('verror').WError;
 var assert = require('assert-plus');
 var restify = require('restify');
@@ -146,6 +148,37 @@ function pauseStream(stream) {
             stream.emit('end');
     };
 }
+
+
+function extendErrFromRawBody(err, res, callback) {
+    if (!res) {
+        callback(err);
+        return;
+    }
+
+    function finish_() {
+        if (errBody && (!err.body.message || !err.body.code)) {
+            var msg = errBody;
+            try {
+                var data = JSON.parse(errBody);
+                err.message = data.message;
+                err.body.message = data.message;
+                err.body.code = data.code;
+            } catch (e) {
+                err.message = errBody;
+                err.body.message = errBody;
+            }
+        }
+        callback(err);
+    }
+    var finish = once(finish_);
+
+    var errBody = '';
+    res.on('data', function (chunk) { errBody += chunk; });
+    res.on('error', finish);
+    res.on('end', finish);
+}
+
 
 
 // ---- client API
@@ -563,7 +596,9 @@ IMGAPI.prototype.addImageFile = function addImageFile(options, account,
 
                 req.on('result', function (resultErr, res) {
                     if (resultErr) {
-                        callback(resultErr, null, res);
+                        extendErrFromRawBody(resultErr, res, function () {
+                            callback(resultErr, null, res);
+                        });
                         return;
                     }
 
@@ -633,41 +668,30 @@ IMGAPI.prototype.getImageFile = function getImageFile(uuid, filePath, account,
                 return;
             }
             req.on('result', function (resultErr, res) {
-                if (resultErr && !res) {
-                    callback(resultErr);
+                if (resultErr) {
+                    extendErrFromRawBody(resultErr, res, function () {
+                        callback(resultErr, res);
+                    });
                     return;
                 }
 
                 var hash = null;
-                var errMessage = '';
-                if (resultErr) {
-                    // Still read the result data to get the body, which
-                    // has the error message.
-                    res.on('data', function (chunk) { errMessage += chunk; });
-                } else {
-                    res.pipe(fs.createWriteStream(filePath));
-                    hash = crypto.createHash('md5');
-                    res.on('data', function (chunk) { hash.update(chunk); });
-                }
+                res.pipe(fs.createWriteStream(filePath));
+                hash = crypto.createHash('md5');
+                res.on('data', function (chunk) { hash.update(chunk); });
 
-                var finished = false;
-                function finish(err) {
-                    if (!finished) {
-                        if (!(resultErr || err)) {
-                            var md5_expected = res.headers['content-md5'];
-                            var md5_actual = hash.digest('base64');
-                            if (md5_actual !== md5_expected) {
-                                err = new ChecksumError(md5_actual,
-                                                        md5_expected);
-                            }
+                function finish_(err) {
+                    if (!err) {
+                        var md5_expected = res.headers['content-md5'];
+                        var md5_actual = hash.digest('base64');
+                        if (md5_actual !== md5_expected) {
+                            err = new ChecksumError(md5_actual,
+                                                    md5_expected);
                         }
-                        if (resultErr && !resultErr.body.message) {
-                            resultErr.body.message = errMessage;
-                        }
-                        callback((resultErr || err), res);
-                        finished = true;
                     }
+                    callback(err, res);
                 }
+                var finish = once(finish_);
                 res.on('error', finish);
                 res.on('end', finish);
             });
@@ -718,33 +742,9 @@ IMGAPI.prototype.getImageFileStream = function getImageFileStream(
             }
             req.on('result', function (resultErr, res) {
                 if (resultErr) {
-                    if (!res) {
-                        callback(resultErr);
-                    } else {
-                        var finished = false;
-                        function finish(err) {
-                            if (finished)
-                                return;
-                            finished = true;
-                            if (!resultErr.body.message && errMessage) {
-                                var msg = errMessage;
-                                try {
-                                    msg = JSON.parse(errMessage).message;
-                                } catch (e) {
-                                    /* pass through */
-                                }
-                                resultErr.message = msg;
-                                resultErr.body.message = msg;
-                            }
-                            callback(resultErr, res);
-                        }
-                        var errMessage = '';
-                        res.on('data', function (chunk) {
-                            errMessage += chunk;
-                        });
-                        res.on('error', finish);
-                        res.on('end', finish);
-                    }
+                    extendErrFromRawBody(resultErr, res, function () {
+                        callback(resultErr, res);
+                    });
                     return;
                 }
                 callback(null, res);
@@ -844,7 +844,9 @@ IMGAPI.prototype.addImageIcon = function addImageIcon(options, account,
 
                 req.on('result', function (resultErr, res) {
                     if (resultErr) {
-                        callback(resultErr, null, res);
+                        extendErrFromRawBody(resultErr, res, function () {
+                            callback(resultErr, null, res);
+                        });
                         return;
                     }
 
@@ -914,41 +916,31 @@ IMGAPI.prototype.getImageIcon = function getImageIcon(uuid, filePath, account,
                 return;
             }
             req.on('result', function (resultErr, res) {
-                if (resultErr && !res) {
-                    callback(resultErr);
+                if (resultErr) {
+                    extendErrFromRawBody(resultErr, res, function () {
+                        callback(resultErr, res);
+                    });
                     return;
                 }
 
                 var hash = null;
-                var errMessage = '';
-                if (resultErr) {
-                    // Still read the result data to get the body, which
-                    // has the error message.
-                    res.on('data', function (chunk) { errMessage += chunk; });
-                } else {
-                    res.pipe(fs.createWriteStream(filePath));
-                    hash = crypto.createHash('md5');
-                    res.on('data', function (chunk) { hash.update(chunk); });
-                }
+                res.pipe(fs.createWriteStream(filePath));
+                hash = crypto.createHash('md5');
+                res.on('data', function (chunk) { hash.update(chunk); });
 
-                var finished = false;
-                function finish(err) {
-                    if (!finished) {
-                        if (!(resultErr || err)) {
-                            var md5_expected = res.headers['content-md5'];
-                            var md5_actual = hash.digest('base64');
-                            if (md5_actual !== md5_expected) {
-                                err = new ChecksumError(md5_actual,
-                                                        md5_expected);
-                            }
+                function finish_(err) {
+                    if (!err) {
+                        var md5_expected = res.headers['content-md5'];
+                        var md5_actual = hash.digest('base64');
+                        if (md5_actual !== md5_expected) {
+                            err = new ChecksumError(md5_actual,
+                                                    md5_expected);
                         }
-                        if (resultErr && !resultErr.body.message) {
-                            resultErr.body.message = errMessage;
-                        }
-                        callback((resultErr || err), res);
-                        finished = true;
                     }
+                    callback(err, res);
                 }
+                var finish = once(finish_);
+
                 res.on('error', finish);
                 res.on('end', finish);
             });
@@ -999,26 +991,9 @@ IMGAPI.prototype.getImageIconStream = function getImageIconStream(
             }
             req.on('result', function (resultErr, res) {
                 if (resultErr) {
-                    if (!res) {
-                        callback(resultErr);
-                    } else {
-                        var finished = false;
-                        function finish(err) {
-                            if (finished)
-                                return;
-                            finished = true;
-                            if (!resultErr.body.message && errMessage) {
-                                resultErr.body.message = errMessage;
-                            }
-                            callback(resultErr, res);
-                        }
-                        var errMessage = '';
-                        res.on('data', function (chunk) {
-                            errMessage += chunk;
-                        });
-                        res.on('error', finish);
-                        res.on('end', finish);
-                    }
+                    extendErrFromRawBody(resultErr, res, function () {
+                        callback(resultErr, res);
+                    });
                     return;
                 }
                 callback(null, res);

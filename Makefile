@@ -59,6 +59,7 @@ boot: $(BOOT_TARBALL)
 $(BOOT_TARBALL): world manifest
 	pfexec rm -rf $(BOOT_PROTO)
 	mkdir -p $(BOOT_PROTO)
+	mkdir -p $(ROOT)/output
 	pfexec ./tools/builder/builder $(ROOT)/$(BOOT_MANIFEST) \
 	    $(BOOT_PROTO) $(ROOT)/proto
 	(cd $(BOOT_PROTO) && pfexec gtar cf $(ROOT)/$@ .)

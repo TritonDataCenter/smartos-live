@@ -9,11 +9,7 @@ MPROTO =	$(ROOT)/manifest.d
 BOOT_MPROTO =	$(ROOT)/boot.manifest.d
 BOOT_PROTO =	$(ROOT)/proto.boot
 
-ifeq ($(shell uname -s),Darwin)
-PATH =		/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
-else
 PATH =		/usr/bin:/usr/sbin:/sbin:/opt/local/bin
-endif
 
 LOCAL_SUBDIRS :=	$(shell ls projects/local)
 OVERLAYS :=	$(shell cat overlay/order)
@@ -62,7 +58,7 @@ $(BOOT_TARBALL): world manifest
 	mkdir -p $(ROOT)/output
 	pfexec ./tools/builder/builder $(ROOT)/$(BOOT_MANIFEST) \
 	    $(BOOT_PROTO) $(ROOT)/proto
-	(cd $(BOOT_PROTO) && pfexec gtar cf $(ROOT)/$@ .)
+	(cd $(BOOT_PROTO) && pfexec gtar czf $(ROOT)/$@ .)
 
 #
 # Manifest construction.  There are 5 sources for manifests we need to collect

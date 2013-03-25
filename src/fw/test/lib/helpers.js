@@ -5,6 +5,7 @@
  */
 
 var assert = require('assert-plus');
+var clone = require('clone');
 var fwrule = require('fwrule');
 var mod_obj = require('../../lib/util/obj');
 var mocks = require('./mocks');
@@ -130,7 +131,9 @@ function fwGetEquals(fw, t, rule, callback) {
 function fwListEquals(fw, t, rules, callback) {
   fw.list({ }, function (err, res) {
     t.ifError(err);
-    t.deepEqual(res.sort(uuidSort), rules.sort(uuidSort),
+
+    // clone the input rules in case order is important to the caller:
+    t.deepEqual(res.sort(uuidSort), clone(rules).sort(uuidSort),
       'rule list is equal');
     return callback();
   });
@@ -155,7 +158,8 @@ function fwRulesEqual(opts, callback) {
       return callback();
     }
 
-    opts.t.deepEqual(res.sort(uuidSort), opts.rules.sort(uuidSort),
+    // clone the input rules in case order is important to the caller:
+    opts.t.deepEqual(res.sort(uuidSort), clone(opts.rules).sort(uuidSort),
       'fw.rules() correct');
 
     return callback();
@@ -174,7 +178,7 @@ function testEnableDisable(opts, callback) {
   var rvmsBefore = remoteVMsOnDisk();
   var rulesBefore = rulesOnDisk();
   var t = opts.t;
-  var zoneRules = getZoneRulesWritten();
+  var zoneRules = zoneIPFconfigs();
 
   opts.fw.disable({ vm: opts.vm }, function (err, res) {
     t.ifError(err);
@@ -183,7 +187,7 @@ function testEnableDisable(opts, callback) {
     }
 
     // Disabling the firewall should have moved ipf.conf:
-    t.deepEqual(getZoneRulesWritten()[opts.vm.uuid], undefined,
+    t.deepEqual(zoneIPFconfigs()[opts.vm.uuid], undefined,
       'no firewall rules after disable');
 
     vmsEnabled = getIPFenabled();
@@ -195,7 +199,7 @@ function testEnableDisable(opts, callback) {
         return callback(err2);
       }
 
-      t.deepEqual(getZoneRulesWritten(), zoneRules,
+      t.deepEqual(zoneIPFconfigs(), zoneRules,
         'firewall rules the same after enable');
 
       vmsEnabled = getIPFenabled();
@@ -213,10 +217,10 @@ function testEnableDisable(opts, callback) {
 
 
 /**
- * Extracts the firewall data from the mock fs module and presents it in
- * a hash
+ * Returns the ipf.conf data for all zones from the mock fs module as a
+ * an object keyed by zone UUID
  */
-function getZoneRulesWritten() {
+function zoneIPFconfigs() {
   var root = mocks.values.fs;
   var firewalls = {};
 
@@ -229,7 +233,7 @@ function getZoneRulesWritten() {
     }
 
     if (DEBUG_FILES) {
-      console.log('%s:\n--', dir);
+      console.log('%s:\n+-', dir);
     }
     root[dir]['ipf.conf'].split('\n').forEach(function (l) {
       if (DEBUG_FILES) {
@@ -254,8 +258,15 @@ function getZoneRulesWritten() {
       }
 
       var proto = tok[4];
-      var dest = action == 'block' ? tok[8] : tok[6];
+      var dest = action === 'block' ? tok[8] : tok[6];
       var port = Number(tok[11]);
+
+      // block out quick proto tcp to any port = 8080
+      if (tok[6] === 'any' && tok.length < 12) {
+        dest = 'any';
+        port = Number(tok[9]);
+      }
+
       // console.log('%s > %s %s %s %s %s', zone, action, d, proto, dest, port);
 
       var dests = createSubObjects(firewalls, zone, d, action, proto);
@@ -270,7 +281,7 @@ function getZoneRulesWritten() {
     });
 
     if (DEBUG_FILES) {
-      console.log('--');
+      console.log('+-');
     }
   }
 
@@ -289,6 +300,15 @@ function getIPFenabled() {
     res[z] = ipfZones[z].enabled || false;
   }
   return res;
+}
+
+
+/**
+ * Returns an easily identifiable UUID based on the number
+ */
+function uuidNum(num) {
+  return '00000000-0000-0000-0000-0000000000'
+    + (Number(num) < 9 ? '0' + num : num);
 }
 
 
@@ -376,11 +396,11 @@ function rulesOnDisk(fw) {
  */
 function sortRes(res) {
   if (res.hasOwnProperty('vms')) {
-    res.vms = res.vms.sort();
+    res.vms.sort();
   }
 
   if (res.hasOwnProperty('rules')) {
-    res.rules = res.rules.sort(uuidSort);
+    res.rules.sort(uuidSort);
   }
 
   return res;
@@ -404,11 +424,12 @@ module.exports = {
   fwListEquals: fwListEquals,
   fwRulesEqual: fwRulesEqual,
   getIPFenabled: getIPFenabled,
-  getZoneRulesWritten: getZoneRulesWritten,
   generateVM: generateVM,
   remoteVMsOnDisk: remoteVMsOnDisk,
   rulesOnDisk: rulesOnDisk,
   sortRes: sortRes,
   testEnableDisable: testEnableDisable,
-  uuidSort: uuidSort
+  uuidNum: uuidNum,
+  uuidSort: uuidSort,
+  zoneIPFconfigs: zoneIPFconfigs
 };

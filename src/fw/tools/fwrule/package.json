@@ -1,5 +1,5 @@
 {
-  "name": "fwrule-parser",
+  "name": "fwrule",
   "description": "Parser for Joyent firewall rules",
   "version": "1.0.0",
   "author": "Joyent (joyent.com)",

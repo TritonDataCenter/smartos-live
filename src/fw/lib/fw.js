@@ -1186,7 +1186,10 @@ function prepareIPFdata(opts, callback) {
       '',
       '# fwadm fallbacks',
       'block in all',
-      'pass out all keep state']).join('\n') + '\n';
+      'pass out quick proto tcp from any to any flags S/SA keep state',
+      'pass out proto tcp from any to any',
+      'pass out proto udp from any to any keep state',
+      'pass out proto icmp from any to any keep state']).join('\n') + '\n';
   }
 
   return callback(null, toReturn);

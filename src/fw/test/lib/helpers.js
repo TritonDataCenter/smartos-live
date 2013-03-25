@@ -21,7 +21,7 @@ var createSubObjects = mod_obj.createSubObjects;
 
 var DEBUG_FILES = false;
 var IP_NUM = 2;
-
+var SYN_LINE = 'pass out quick proto tcp from any to any flags S/SA keep state';
 
 
 // --- Internal functions
@@ -53,8 +53,8 @@ function endsWith(str, suffix)
 function defaultZoneRules(uuids) {
   var toReturn = {};
   if (!uuids) {
-    createSubObjects(toReturn, 'out', 'pass', { all: true });
-    createSubObjects(toReturn, 'in', 'block', { all: true });
+    createSubObjects(toReturn, 'out', 'pass', { any: 'any' });
+    createSubObjects(toReturn, 'in', 'block', { any: 'any' });
     return toReturn;
   }
 
@@ -63,8 +63,8 @@ function defaultZoneRules(uuids) {
   }
 
   uuids.forEach(function (uuid) {
-    createSubObjects(toReturn, uuid, 'out', 'pass', { all: true });
-    createSubObjects(toReturn, uuid, 'in', 'block', { all: true });
+    createSubObjects(toReturn, uuid, 'out', 'pass', { any: 'any' });
+    createSubObjects(toReturn, uuid, 'in', 'block', { any: 'any' });
   });
 
   return toReturn;
@@ -251,9 +251,11 @@ function zoneIPFconfigs() {
       var action = tok[0];
       var d = tok[1];
 
-      if (l == 'block in all' || l == 'pass out all keep state') {
+      if (l === 'block in all'
+        || l === SYN_LINE
+        || /^pass out proto \w+ from any to any/.test(l)) {
         var act = createSubObjects(firewalls, zone, d, action);
-        act.all = true;
+        act.any = 'any';
         return;
       }
 

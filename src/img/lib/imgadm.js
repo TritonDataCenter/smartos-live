@@ -36,7 +36,7 @@
  *      });
  */
 
-var warn = console.warn;
+var p = console.warn;
 var path = require('path');
 var fs = require('fs');
 var format = require('util').format;
@@ -1610,7 +1610,7 @@ IMGADM.prototype.updateImages = function updateImages(callback) {
             return;
         }
         var uuid = ii.manifest.uuid;
-        self.sourcesGet(uuid, function (sGetErr, imageInfo) {
+        self.sourcesGet(uuid, true, function (sGetErr, imageInfo) {
             if (sGetErr) {
                 next(sGetErr);
                 return;

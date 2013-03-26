@@ -85,13 +85,14 @@ function _indent(s, indent) {
     return indent + lines.join('\n' + indent);
 }
 
-function ipFromHost(host, callback) {
+function ipFromHost(host, log, callback) {
     if (IP_RE.test(host)) {
         callback(null, host);
         return;
     }
     // No DNS in SmartOS GZ by default, so handle DNS ourself.
     var cmd = format('/usr/sbin/dig %s +short', host);
+    log.trace({cmd: cmd}, 'run dig');
     exec(cmd, function (error, stdout, stderr) {
         if (error) {
             callback(new errors.InternalError(
@@ -245,6 +246,12 @@ function getZfsDataset(name, properties, callback) {
 
 
 function normUrlFromUrl(u) {
+    // `url.parse('example.com:9999')` is not what you expect. Make sure we
+    // have a protocol.
+    if (! /^\w+:\/\//.test(u)) {
+        u = 'http://' + u;
+    }
+
     var parsed = url.parse(u);
 
     // Don't want trailing '/'.
@@ -293,8 +300,8 @@ function Source(options) {
         // Per the old imgadm (v1) the old source URL includes the
         // "datasets/" subpath. That's not a completely reliable marker, but
         // we'll use that.
-        var isDsapiUrl = /datasets\/?$/;
-        if (isDsapiUrl.test(this.url)) {
+        var isDsapiUrl = /datasets$/;
+        if (isDsapiUrl.test(this.normUrl)) {
             this.type = 'dsapi';
         } else {
             this.type = 'imgapi';
@@ -318,8 +325,8 @@ Source.prototype.getResolvedUrl = function getResolvedUrl(callback) {
     }
 
     var parsed = url.parse(this.normUrl);
-    self.log.trace({hostname: parsed.hostname}, 'DNS resolve source host');
-    ipFromHost(parsed.hostname, function (dnsErr, ip) {
+    self.log.trace({resolve: parsed.hostname}, 'DNS resolve source host');
+    ipFromHost(parsed.hostname, self.log, function (dnsErr, ip) {
         if (dnsErr) {
             callback(dnsErr);
             return;
@@ -680,14 +687,6 @@ IMGADM.prototype.saveConfig = function saveConfig(callback) {
 };
 
 
-IMGADM.prototype.sourceFromUrl = function sourceFromUrl(sourceUrl) {
-    if (!this.sources) {
-        return null;
-    }
-    return this.sources.filter(
-        function (s) { return s.url === sourceUrl; })[0];
-};
-
 
 /**
  * Return an API client for the given source.
@@ -704,7 +703,7 @@ IMGADM.prototype.clientFromSource = function clientFromSource(
     if (self._clientCache === undefined) {
         self._clientCache = {};
     }
-    var client = self._clientCache[source.url];
+    var client = self._clientCache[source.normUrl];
     if (client) {
         callback(null, client);
         return;
@@ -716,23 +715,22 @@ IMGADM.prototype.clientFromSource = function clientFromSource(
             return;
         }
         if (source.type === 'dsapi') {
-            var baseUrl = path.dirname(source.url); // drop 'datasets/' tail
-            var baseNormUrl = path.dirname(normUrl);
-            self._clientCache[source.url] = dsapi.createClient({
+            var baseNormUrl = path.dirname(normUrl); // drop 'datasets/' tail
+            self._clientCache[source.normUrl] = dsapi.createClient({
                 agent: false,
                 url: baseNormUrl,
-                log: self.log.child({component: 'api', source: baseUrl}, true)
+                log: self.log.child(
+                    {component: 'api', source: source.url}, true)
             });
         } else {
-            self._clientCache[source.url] = imgapi.createClient({
+            self._clientCache[source.normUrl] = imgapi.createClient({
                 agent: false,
                 url: normUrl,
                 log: self.log.child(
                     {component: 'api', source: source.url}, true)
             });
         }
-        callback(null, self._clientCache[source.url]);
-        return;
+        callback(null, self._clientCache[source.normUrl]);
     });
 };
 
@@ -1123,11 +1121,22 @@ IMGADM.prototype.sourcesGet
                 client.getImage(uuid, function (getErr, manifest) {
                     if (getErr && getErr.statusCode !== 404) {
                         errs.push(self._errorFromClientError(source, getErr));
+                        next();
+                        return;
                     }
-                    if (manifest
-                        && (!ensureActive || manifest.state === 'active'))
-                    {
-                        imageInfo = {manifest: manifest, source: source};
+                    if (manifest) {
+                        if (ensureActive) {
+                            try {
+                                manifest = imgmanifest.upgradeManifest(manifest);
+                            } catch (err) {
+                                errs.push(new errors.InvalidManifestError(err));
+                                next();
+                                return;
+                            }
+                        }
+                        if (!ensureActive || manifest.state === 'active') {
+                            imageInfo = {manifest: manifest, source: source};
+                        }
                     }
                     next();
                 });
@@ -1272,10 +1281,18 @@ IMGADM.prototype.importImage = function importImage(options, callback) {
     assert.object(options.source, 'options.source');
     assert.optionalBool(options.quiet, 'options.quiet');
 
+    // Ensure this image is active (upgrading manifest if required).
+    try {
+        options.manifest = imgmanifest.upgradeManifest(options.manifest);
+    } catch (err) {
+        callback(new errors.InvalidManifestError(err));
+        return;
+    }
     if (options.manifest.state !== 'active') {
         callback(new errors.ImageNotActiveError(options.manifest.uuid));
         return;
     }
+
     this._installImage(options, callback);
 };
 

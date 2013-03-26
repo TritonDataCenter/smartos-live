@@ -76,6 +76,9 @@ function upgradeTo2(oldManifest) {
     delete manifest.restricted_to_uuid;
     delete manifest.owner_uuid;
 
+    manifest.state = 'active';
+    manifest.disabled = false;
+
     if (!manifest.published_at && manifest.created_at) {
         manifest.published_at = manifest.created_at;
     }

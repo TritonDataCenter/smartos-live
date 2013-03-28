@@ -8,46 +8,68 @@
 
 digit                   [0-9]
 t                       {digit}{1,3}
-T                       [-a-zA-Z0-9_]
-H                       [a-f0-9]
 
 %%
+
 \s+                     /* skip whitespace */
 <<EOF>>                 return 'EOF';
 
-[Ff][Rr][Oo][Mm]        return 'FROM';
-[Tt][Oo]                return 'TO';
+"FROM"                  return 'FROM';
+"from"                  return 'FROM';
+"TO"                    return 'TO';
+"to"                    return 'TO';
 
+"IP"                    return 'IP';
 "ip"                    return 'IP';
+"SUBNET"                return 'SUBNET';
 "subnet"                return 'SUBNET';
+"ANY"                   return 'ANY';
 "any"                   return 'ANY';
+"ALL"                   return 'ALL';
 "all"                   return 'ALL';
+"TAG"                   return 'TAG';
 "tag"                   return 'TAG';
-[Vv][Mm]                return 'VM';
+"VM"                    return 'VM';
+"vm"                    return 'VM';
+"VMS"                   return 'VMS';
+"vms"                   return 'VMS';
 
 '('                     return '(';
 ')'                     return ')';
-[Oo][Rr]                return 'OR';
-[Aa][Nn][Dd]            return 'AND';
+"OR"                    return 'OR';
+"or"                    return 'OR';
+"AND"                   return 'AND';
+"and"                   return 'AND';
 
-[Bb][Ll][Oo][Cc][Kk]    return 'BLOCK';
-[Aa][Ll][Ll][Oo][Ww]    return 'ALLOW';
-[Pp][Oo][Rr][Tt]        return 'PORT';
-[Tt][Cc][Pp]            return 'TCP';
-[Uu][Dd][Pp]            return 'UDP';
+"BLOCK"                 return 'BLOCK';
+"block"                 return 'BLOCK';
+"ALLOW"                 return 'ALLOW';
+"allow"                 return 'ALLOW';
+"PORT"                  return 'PORT';
+"port"                  return 'PORT';
+"TCP"                   return 'TCP';
+"tcp"                   return 'TCP';
+"UDP"                   return 'UDP';
+"udp"                   return 'UDP';
+"ICMP"                  return 'ICMP';
+"icmp"                  return 'ICMP';
+"TYPE"                  return 'TYPE';
+"type"                  return 'TYPE';
+"CODE"                  return 'CODE';
+"code"                  return 'CODE';
 
 {t}'.'{t}'.'{t}'.'{t}   return 'IPADDR';
 '/'{digit}{digit}       return 'CIDRSUFFIX'
 
-{T}+                    { return yy.tagOrPortOrUUID(this); }
+[-a-zA-Z0-9_]+          return 'WORD'
 
 /lex
 
 %%      /* Language grammar */
 
 start
-    : FROM target_list TO target_list action protocol port_list EOF
-        { return { 'from': $2, 'to': $4, 'action': $5, 'protocol': $6, ports: $7 }; }
+    : FROM target_list TO target_list action protocol EOF
+        { return { 'from': $2, 'to': $4, 'action': $5, 'protocol': $6 }; }
     ;
 
 
@@ -76,17 +98,17 @@ target
 
 /* Targets for 'FROM' and 'TO' */
 all
-    : ALL
-        { $$ = [ ['wildcard', $1] ]; }
-    | '(' ALL ')'
-        { $$ = [ ['wildcard', $2] ]; }
+    : ALL VMS
+        { $$ = [ ['wildcard', 'vmall'] ]; }
+    | '(' ALL VMS ')'
+        { $$ = [ ['wildcard', 'vmall'] ]; }
     ;
 
 any
     : ANY
-        { $$ = [ ['wildcard', $1] ]; }
+        { $$ = [ ['wildcard', 'any'] ]; }
     | '(' ANY ')'
-        { $$ = [ ['wildcard', $2] ]; }
+        { $$ = [ ['wildcard', 'any'] ]; }
     ;
 
 ip
@@ -102,12 +124,18 @@ subnet
     ;
 
 vm
-    : VM UUID
+    : VM uuid
         { $$ = [ ['vm', $2] ]; }
     ;
 
+uuid
+    : WORD
+        { yy.validateUUID($1);
+          $$ = $1; }
+    ;
+
 tag
-    : TAG TAGTXT
+    : TAG WORD
         { $$ = [ ['tag', $2] ]; }
     ;
 
@@ -121,27 +149,66 @@ action
 
 
 protocol
-    : TCP
-        { $$ = $1.toLowerCase() }
-    | UDP
-        { $$ = $1.toLowerCase() }
+    : TCP port_list
+        { $$ = { 'name': $1.toLowerCase(), 'targets': $2 } }
+    | UDP port_list
+        { $$ = { 'name': $1.toLowerCase(), 'targets': $2 } }
+    | ICMP type_list
+        { $$ = { 'name': $1.toLowerCase(), 'targets': $2 } }
     ;
 
 
+/* TCP / UDP port list */
 port_list
     : '(' port_and_list ')'
-        {$$ = $2;}
+        { $$ = $2; }
     | port
     ;
 
 port_and_list
     : port
-    | port_and_list 'AND' port
+    | port_and_list AND port
         { $$ = $1.concat(Number($3)); }
     ;
 
 port
-    : PORT PORTNUM
-        { $$ = [ Number($2) ]; }
+    : PORT portnumber
+        { $$ = [ $2 ]; }
     ;
 
+portnumber
+    : WORD
+        { yy.validatePortNumber($1);
+          $$ = Number($1); }
+    ;
+
+type_list
+    : '(' type_and_list ')'
+        { $$ = $2; }
+    | type
+    ;
+
+type_and_list
+    : type
+    | type_and_list AND type
+        { $$ = $1.concat($3); }
+    ;
+
+type
+    : TYPE icmptype CODE icmpcode
+        { $$ = [ $2 + ':' + $4 ]; }
+    | TYPE icmptype
+        { $$ = [ $2 ]; }
+    ;
+
+icmptype
+    : WORD
+        { yy.validateICMPtype($1);
+          $$ = Number($1); }
+    ;
+
+icmpcode
+    : WORD
+        { yy.validateICMPcode($1);
+          $$ = Number($1); }
+    ;

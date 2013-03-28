@@ -1081,6 +1081,75 @@ function validateRules(vms, rvms, rules, callback) {
 
 
 /**
+ * Returns the appropriate target string based on the rule's protocol
+ * (eg: code for ICMP, port for TCP / UDP)
+ */
+function protoTarget(rule, target) {
+  if (rule.protocol === 'icmp') {
+    var typeArr = target.split(':');
+    return 'icmp-type ' + typeArr[0]
+      + (typeArr.length === 1 ? '' : ' code ' + typeArr[1]);
+  } else {
+    return 'port = ' + target;
+  }
+}
+
+
+/**
+ * Returns an object containing ipf rule text and enough data to sort on
+ */
+function ipfRuleObj(opts) {
+  var dir = opts.direction;
+  var rule = opts.rule;
+
+  var sortObj = {
+    action: rule.action,
+    direction: dir,
+    protocol: rule.protocol,
+    text: [ '', util.format('# rule=%s, version=%s, %s=%s',
+      rule.uuid, rule.version, opts.type, opts.value)
+    ],
+    type: opts.type,
+    uuid: rule.uuid,
+    value: opts.value,
+    version: rule.version
+  };
+
+  if (opts.type === 'wildcard' && opts.value === 'any') {
+    rule.protoTargets.sort().forEach(function (t) {
+      sortObj.text.push(
+        util.format('%s %s quick proto %s %s any %s',
+          rule.action === 'allow' ? 'pass' : 'block',
+          dir === 'from' ? 'out' : 'in',
+          rule.protocol,
+          dir === 'from' ? 'to' : 'from',
+          protoTarget(rule, t)));
+    });
+
+    return sortObj;
+  }
+
+  var targets = mod_obj.isArray(opts.targets) ? opts.targets : [ opts.targets ];
+
+  targets.forEach(function (target) {
+    // XXX: need to do Number() on these before sorting?
+    rule.protoTargets.sort().forEach(function (t) {
+      sortObj.text.push(
+        util.format('%s %s quick proto %s from %s to %s %s',
+          rule.action === 'allow' ? 'pass' : 'block',
+          dir === 'from' ? 'out' : 'in',
+          rule.protocol,
+          dir === 'to' ? target : 'any',
+          dir === 'to' ? 'any' : target,
+          protoTarget(rule, t)));
+    });
+  });
+
+  return sortObj;
+}
+
+
+/**
  * Returns an object containing all ipf files to be written to disk, based
  * on the given rules
  *
@@ -1189,7 +1258,8 @@ function prepareIPFdata(opts, callback) {
       'pass out quick proto tcp from any to any flags S/SA keep state',
       'pass out proto tcp from any to any',
       'pass out proto udp from any to any keep state',
-      'pass out proto icmp from any to any keep state']).join('\n') + '\n';
+      'pass out quick proto icmp from any to any keep state']).join('\n')
+      + '\n';
   }
 
   return callback(null, toReturn);
@@ -1234,33 +1304,15 @@ function vmsOnSide(allVMs, rule, dir) {
 function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
   var otherSide = dir === 'from' ? 'to' : 'from';
   var ipfRules = [];
-  var sortObj;
 
   if (rule[otherSide].wildcards.indexOf('any') !== -1) {
-    sortObj = {
-      action: rule.action,
-      direction: dir,
-      protocol: rule.protocol,
-      text: [ util.format('# rule=%s, version=%s, wildcard=any',
-        rule.uuid, rule.version)
-      ],
-      type: 'wildcard',
-      uuid: rule.uuid,
-      value: 'any',
-      version: rule.version
-    };
+      ipfRules.push(ipfRuleObj({
+        rule: rule,
+        direction: dir,
+        type: 'wildcard',
+        value: 'any'
+      }));
 
-    rule.ports.sort().forEach(function (p) {
-      sortObj.text.push(
-        util.format('%s %s quick proto %s %s any port = %d',
-          rule.action === 'allow' ? 'pass' : 'block',
-          dir === 'from' ? 'out' : 'in',
-          rule.protocol,
-          otherSide,
-          Number(p)));
-    });
-
-    ipfRules.push(sortObj);
     return ipfRules;
   }
 
@@ -1268,32 +1320,13 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
   // lookup objects, so just them as-is
   ['ip', 'subnet'].forEach(function (type) {
     rule[otherSide][type + 's'].forEach(function (value) {
-      sortObj = {
-        action: rule.action,
+      ipfRules.push(ipfRuleObj({
+        rule: rule,
         direction: dir,
-        protocol: rule.protocol,
-        text: [ util.format('# rule=%s, version=%s, %s=%s',
-          rule.uuid, rule.version, type, value)
-        ],
+        targets: value,
         type: type,
-        uuid: rule.uuid,
-        value: value,
-        version: rule.version
-      };
-
-      // XXX: need to do Number() on these before sorting?
-      rule.ports.sort().forEach(function (p) {
-        sortObj.text.push(
-          util.format('%s %s quick proto %s from %s to %s port = %d',
-            rule.action === 'allow' ? 'pass' : 'block',
-            dir === 'from' ? 'out' : 'in',
-            rule.protocol,
-            dir === 'to' ? value : 'any',
-            dir === 'to' ? 'any' : value,
-            Number(p)));
-      });
-
-      ipfRules.push(sortObj);
+        value: value
+      }));
     });
   });
 
@@ -1319,33 +1352,13 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
             return;
           }
 
-          sortObj = {
-            action: rule.action,
+          ipfRules.push(ipfRuleObj({
+            rule: rule,
             direction: dir,
-            protocol: rule.protocol,
-            text: [ '', util.format('# rule=%s, version=%s, %s=%s',
-              rule.uuid, rule.version, type, value)
-            ],
+            targets: vm.ips,
             type: type,
-            uuid: rule.uuid,
-            value: value,
-            version: rule.version
-          };
-
-          vm.ips.forEach(function (ip) {
-            rule.ports.sort().forEach(function (p) {
-              sortObj.text.push(
-                util.format('%s %s quick proto %s from %s to %s port = %d',
-                  rule.action === 'allow' ? 'pass' : 'block',
-                  dir === 'from' ? 'out' : 'in',
-                  rule.protocol,
-                  dir === 'to' ? ip : 'any',
-                  dir === 'to' ? 'any' : ip,
-                  Number(p)));
-            });
-          });
-
-          ipfRules.push(sortObj);
+            value: value
+          }));
         });
       });
 

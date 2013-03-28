@@ -19,7 +19,7 @@ var createSubObjects = mod_obj.createSubObjects;
 
 
 
-var DEBUG_FILES = false;
+var DEBUG_FILES = process.env.PRINT_IPF_CONFS;
 var IP_NUM = 2;
 var SYN_LINE = 'pass out quick proto tcp from any to any flags S/SA keep state';
 
@@ -253,6 +253,7 @@ function zoneIPFconfigs() {
 
       if (l === 'block in all'
         || l === SYN_LINE
+        || l === 'pass out quick proto icmp from any to any keep state'
         || /^pass out proto \w+ from any to any/.test(l)) {
         var act = createSubObjects(firewalls, zone, d, action);
         act.any = 'any';
@@ -261,12 +262,22 @@ function zoneIPFconfigs() {
 
       var proto = tok[4];
       var dest = action === 'block' ? tok[8] : tok[6];
-      var port = Number(tok[11]);
+      var port;
+      if (proto === 'icmp') {
+        /* JSSTYLED */
+        port = l.match(/icmp-type (\d+)/)[1];
+        /* JSSTYLED */
+        var code = l.match(/code (\d+)/);
+        if (code) {
+          port = port + ':' + code[1];
+        }
+      } else {
+        port = l.match(/port = (\d+)/)[1];
+      }
 
       // block out quick proto tcp to any port = 8080
       if (tok[6] === 'any' && tok.length < 12) {
         dest = 'any';
-        port = Number(tok[9]);
       }
 
       // console.log('%s > %s %s %s %s %s', zone, action, d, proto, dest, port);

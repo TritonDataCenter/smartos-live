@@ -36,10 +36,8 @@ function translateParserNames(name) {
     case '\'SUBNET\'':
     case '\'TAG\'':
     case '\'VM\'':
+    case 'WORD':
       translated = name.toLowerCase();
-      break;
-    case 'TAGTXT':
-      translated = 'tag text';
       break;
     default:
       translated = name;
@@ -55,25 +53,6 @@ function translateParserNames(name) {
 
 
 
-parser.yy.tagOrPortOrUUID = function tagOrPortOrUUID(lexer) {
-  if (uuidRE.exec(lexer.yytext)) {
-    return 'UUID';
-  }
-
-  if (portRE.exec(lexer.yytext)) {
-    var portNum = Number(lexer.yytext);
-    if (portNum > 65535 || portNum < 1) {
-      throw new validators.InvalidParamError('rule',
-        'Invalid port number "%s"', lexer.yytext);
-    }
-
-    return 'PORTNUM';
-  }
-
-  return 'TAGTXT';
-};
-
-
 parser.yy.validateIPv4address = function validateIPv4address(ip) {
   if (!validators.validateIPv4address(ip)) {
     throw new validators.InvalidParamError('rule',
@@ -86,6 +65,38 @@ parser.yy.validateIPv4subnet = function validateIPv4subnet(subnet) {
   if (!validators.validateIPv4subnet(subnet)) {
     throw new validators.InvalidParamError('rule',
       'Subnet "%s" is invalid (must be in CIDR format)', subnet);
+  }
+};
+
+
+parser.yy.validatePortNumber = function validatePortNumber(num) {
+  if (isNaN(num) || Number(num) < 1 || Number(num) > 65536) {
+    throw new validators.InvalidParamError('rule',
+      'Port number "%s" is invalid', num);
+  }
+};
+
+
+parser.yy.validateICMPcode = function validateICMPcode(num) {
+  if (isNaN(num) || Number(num) < 0 || Number(num) > 255) {
+    throw new validators.InvalidParamError('rule',
+      'ICMP code "%s" is invalid', num);
+  }
+};
+
+
+parser.yy.validateICMPtype = function validateICMPtype(num) {
+  if (isNaN(num) || Number(num) < 0 || Number(num) > 255) {
+    throw new validators.InvalidParamError('rule',
+      'ICMP type "%s" is invalid', num);
+  }
+};
+
+
+parser.yy.validateUUID = function validateUUID(text) {
+  if (!uuidRE.test(text)) {
+    throw new validators.InvalidParamError('rule',
+      'UUID "%s" is invalid', text);
   }
 };
 
@@ -130,8 +141,8 @@ parser.yy.parseError = function parseError(str, details) {
 
 function parse() {
   return parser.parse.apply(parser, arguments);
-  // XXX: more validation here, now that we have all of the args
 }
+
 
 
 module.exports = {

@@ -68,6 +68,22 @@ function forEachTarget(obj, callback) {
 }
 
 
+/**
+ * Sorts a list of ICMP types (with optional codes)
+ */
+function icmpTypeSort(types) {
+  return types.map(function (type) {
+    return type.toString().split(':');
+  }).sort(function (a, b) {
+    var aTot = (Number(a[0]) << 8) + (a.length === 1 ? 0 : Number(a[1]));
+    var bTot = (Number(b[0]) << 8) + (a.length === 1 ? 0 : Number(b[1]));
+    return aTot - bTot;
+  }).map(function (typeArr) {
+    return typeArr.join(':');
+  });
+}
+
+
 
 // --- Firewall object and methods
 
@@ -138,9 +154,19 @@ function FwRule(data) {
   var d;
   var dir;
 
-  this.ports = parsed.ports;
   this.action = parsed.action;
-  this.protocol = parsed.protocol;
+  this.protocol = parsed.protocol.name;
+
+  if (this.protocol === 'icmp') {
+    this.types = icmpTypeSort(parsed.protocol.targets);
+    this.protoTargets = this.types;
+  } else {
+    this.ports = parsed.protocol.targets.sort(function (a, b) {
+      return Number(a) - Number(b);
+    });
+    this.protoTargets = this.ports;
+  }
+
   this.from = {};
   this.to = {};
 
@@ -199,16 +225,27 @@ function FwRule(data) {
  * Returns the internal representation of the rule
  */
 FwRule.prototype.raw = function () {
-  return {
+  var raw = {
     'action': this.action,
     'enabled': this.enabled,
     'from': this.from,
-    'ports': this.ports,
     'protocol': this.protocol,
     'to': this.to,
     'uuid': this.uuid,
     'version': this.version
   };
+
+  if (this.owner_uuid) {
+    raw.owner_uuid = this.owner_uuid;
+  }
+
+  if (this.protocol === 'icmp') {
+    raw.types = this.types;
+  } else {
+    raw.ports = this.ports;
+  }
+
+  return raw;
 };
 
 
@@ -235,6 +272,7 @@ FwRule.prototype.serialize = function () {
  * Returns the text of the rule
  */
 FwRule.prototype.text = function () {
+  var protoTxt;
   var targets = {
     from: [],
     to: []
@@ -250,7 +288,26 @@ FwRule.prototype.text = function () {
     }
   });
 
-  return util.format('FROM %s%s%s TO %s%s%s %s %s %sPORT %s%s',
+  // Protocol-specific text: different for ICMP rather than TCP/UDP
+  if (this.protocol === 'icmp') {
+    protoTxt = util.format('%sTYPE %s%s',
+      this.types.length > 1 ? '(' : '',
+      this.types.map(function (type) {
+        return type.toString().split(':');
+      }).map(function (code) {
+        return code[0] + (code.length === 1 ? '' : ' CODE ' + code[1]);
+      }).join(' AND TYPE '),
+      this.types.length > 1 ? ')' : ''
+    );
+  } else {
+    protoTxt = util.format('%sPORT %s%s',
+      this.ports.length > 1 ? '(' : '',
+      this.ports.join(' AND PORT '),
+      this.ports.length > 1 ? ')' : ''
+    );
+  }
+
+  return util.format('FROM %s%s%s TO %s%s%s %s %s',
       targets.from.length > 1 ? '(' : '',
       targets.from.join(' OR '),
       targets.from.length > 1 ? ')' : '',
@@ -259,9 +316,7 @@ FwRule.prototype.text = function () {
       targets.to.length > 1 ? ')' : '',
       this.action.toUpperCase(),
       this.protocol.toLowerCase(),
-      this.ports.length > 1 ? '(' : '',
-      this.ports.sort().join(' AND PORT '),
-      this.ports.length > 1 ? ')' : ''
+      protoTxt
   );
 };
 

@@ -70,6 +70,12 @@ $(NM):
 	@cp $(NM_ORIG)/clone/{LICENSE,clonePrototype.js} $(NM)/clone/
 	@mkdir $(NM)/fwrule
 	@cp tools/fwrule/lib/* $(NM)/fwrule/
+	@mkdir $(NM)/cmdln
+	@cp $(NM_ORIG)/cmdln/lib/cmdln.js $(NM)/cmdln/index.js
+	@cp $(NM_ORIG)/cmdln/LICENSE.txt $(NM)/cmdln/
+	@mkdir $(NM)/dashdash
+	@cp $(NM_ORIG)/cmdln/node_modules/dashdash/lib/dashdash.js $(NM)/dashdash/index.js
+	@cp $(NM_ORIG)/cmdln/node_modules/dashdash/LICENSE.txt $(NM)/dashdash/LICENSE.txt
 
 #
 # Re-adding nodeunit and test-related source files

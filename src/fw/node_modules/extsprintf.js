@@ -155,11 +155,12 @@ function dumpException(ex)
 	/* Note that V8 prepends "ex.stack" with ex.toString(). */
 	ret = 'EXCEPTION: ' + ex.constructor.name + ': ' + ex.stack;
 
-	if (!ex.cause)
-		return (ret);
-
-	for (ex = ex.cause(); ex; ex = ex.cause ? ex.cause() : null)
-		ret += '\nCaused by: ' + dumpException(ex);
+	if (ex.cause && typeof (ex.cause) === 'function') {
+		var cex = ex.cause();
+		if (cex) {
+			ret += '\nCaused by: ' + dumpException(cex);
+		}
+	}
 
 	return (ret);
 }

@@ -285,6 +285,8 @@ d usr/fw/lib 0555 root bin
 d usr/fw/lib/util 0555 root bin
 d usr/fw/node_modules 0555 root bin
 d usr/fw/node_modules/clone 0555 root bin
+d usr/fw/node_modules/cmdln 0555 root bin
+d usr/fw/node_modules/dashdash 0555 root bin
 d usr/fw/node_modules/fwrule 0555 root bin
 d usr/fw/sbin 0555 root bin
 f usr/fw/etc/fwadm.completion 0444 root bin
@@ -300,6 +302,10 @@ f usr/fw/node_modules/assert-plus.js 0444 root bin
 f usr/fw/node_modules/clone/LICENSE 0444 root bin
 f usr/fw/node_modules/clone/clonePrototype.js 0444 root bin
 f usr/fw/node_modules/clone/index.js 0444 root bin
+f usr/fw/node_modules/cmdln/index.js 0444 root bin
+f usr/fw/node_modules/cmdln/LICENSE.txt 0444 root bin
+f usr/fw/node_modules/dashdash/index.js 0444 root bin
+f usr/fw/node_modules/dashdash/LICENSE.txt 0444 root bin
 f usr/fw/node_modules/fwrule/index.js 0444 root bin
 f usr/fw/node_modules/fwrule/parser.js 0444 root bin
 f usr/fw/node_modules/fwrule/rule.js 0444 root bin

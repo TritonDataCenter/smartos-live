@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * fwadm: CLI shared logic
  */
@@ -53,7 +53,7 @@ function displayRules(err, res, opts) {
     return outputError(err, opts);
   }
 
-  if (opts.json) {
+  if (opts && opts.json) {
     return console.log(json(res));
   }
 
@@ -76,27 +76,41 @@ function exitWithErr(err, opts) {
 /**
  * Reads the payload from one of: a file, stdin, a text argument
  */
-function getPayload(opts, callback) {
-  if (!opts.file && !tty.isatty(0)) {
-    opts.file = '-';
+function getPayload(opts, args, callback) {
+  var file;
+  if (opts && opts.file) {
+    file = opts.file;
   }
 
-  if (!opts.file) {
+  // If no file specified, try to find the rule from the commandline args
+  if (!file && args.length > 0) {
+    var payload = {
+      rule: args.join(' ')
+    };
+
+    return callback(null, payload);
+  }
+
+  if (!file && !tty.isatty(0)) {
+    file = '-';
+  }
+
+  if (!file) {
     return callback(new verror.VError('Must supply file!'));
   }
 
-  if (opts.file === '-') {
-      opts.file = '/dev/stdin';
+  if (file === '-') {
+      file = '/dev/stdin';
   }
 
-  fs.readFile(opts.file, function (err, data) {
+  fs.readFile(file, function (err, data) {
     if (err) {
       if (err.code === 'ENOENT') {
           return callback(new verror.VError(
-            'File "%s" does not exist.', opts.file));
+            'File "%s" does not exist.', file));
       }
       return callback(new verror.VError(
-        'Error reading "%s": %s', opts.file, err.message));
+        'Error reading "%s": %s', file, err.message));
     }
 
     return callback(null, JSON.parse(data.toString()));
@@ -140,7 +154,7 @@ function outputError(err, opts) {
 
   errs.forEach(function (e) {
     console.error(e.message);
-    if (opts.verbose) {
+    if (opts && opts.verbose) {
       console.error(e.stack);
     }
   });

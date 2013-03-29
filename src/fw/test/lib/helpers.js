@@ -272,7 +272,12 @@ function zoneIPFconfigs() {
           port = port + ':' + code[1];
         }
       } else {
-        port = l.match(/port = (\d+)/)[1];
+        var portMatch = l.match(/port = (\d+)/);
+        if (portMatch) {
+          port = portMatch[1];
+        } else {
+          port = 'all';
+        }
       }
 
       // block out quick proto tcp to any port = 8080

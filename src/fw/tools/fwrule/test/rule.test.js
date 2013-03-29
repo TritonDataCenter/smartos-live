@@ -521,6 +521,52 @@ exports['sorting: ports'] = function (t) {
 };
 
 
+exports['port ALL'] = function (t) {
+  var inRule = {
+    rule: 'FROM ip 10.88.88.1 TO tag tag2 ALLOW tcp PORT all',
+    enabled: true,
+    version: fwrule.generateVersion()
+  };
+
+  var rule = fwrule.create(inRule);
+  var raw = {
+    action: 'allow',
+    enabled: inRule.enabled,
+    from: {
+      ips: [ '10.88.88.1' ],
+      vms: [],
+      subnets: [],
+      tags: [],
+      wildcards: []
+    },
+    protocol: 'tcp',
+    ports: [ 'all' ],
+    to: {
+      ips: [],
+      vms: [],
+      subnets: [],
+      tags: [ 'tag2' ],
+      wildcards: []
+    },
+    uuid: rule.uuid,
+    version: rule.version
+  };
+
+  t.deepEqual(rule.raw(), raw, 'rule.raw()');
+  t.deepEqual(rule.ports, raw.ports, 'rule.ports');
+  t.deepEqual(rule.protoTargets, raw.ports, 'rule.protoTargets');
+
+  t.deepEqual(rule.serialize(), {
+    enabled: true,
+    rule: inRule.rule,
+    uuid: rule.uuid,
+    version: rule.version
+  }, 'rule.serialize()');
+
+  t.done();
+};
+
+
 
 // Use to run only one test in this file:
 if (runOne) {

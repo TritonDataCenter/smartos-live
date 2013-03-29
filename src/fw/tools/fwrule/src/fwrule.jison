@@ -163,6 +163,8 @@ port_list
     : '(' port_and_list ')'
         { $$ = $2; }
     | port
+    | '(' port_all ')'
+    | port_all
     ;
 
 port_and_list
@@ -174,6 +176,11 @@ port_and_list
 port
     : PORT portnumber
         { $$ = [ $2 ]; }
+    ;
+
+port_all
+    : PORT ALL
+        { $$ = [ $2.toLowerCase() ]; }
     ;
 
 portnumber

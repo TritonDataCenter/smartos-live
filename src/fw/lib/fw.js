@@ -1090,6 +1090,10 @@ function protoTarget(rule, target) {
     return 'icmp-type ' + typeArr[0]
       + (typeArr.length === 1 ? '' : ' code ' + typeArr[1]);
   } else {
+    if (target === 'all') {
+      return '';
+    }
+
     return 'port = ' + target;
   }
 }

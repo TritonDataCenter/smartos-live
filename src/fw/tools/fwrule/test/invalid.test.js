@@ -68,7 +68,16 @@ var INVALID = [
 
   [ 'any with other targets on TO side',
     { rule: 'FROM ip 10.0.0.1 TO (any OR tag one) ALLOW udp port 53' },
-    'rule', 'Error at character 24: \'OR\', expected: \')\', found: OR' ]
+    'rule', 'Error at character 24: \'OR\', expected: \')\', found: OR' ],
+
+  [ 'other ports listed with ALL first',
+    { rule: 'FROM ip 10.0.0.1 TO all vms ALLOW TCP (port ALL AND port 53)' },
+    'rule',
+    'Error at character 47: \'AND\', expected: \'EOF\', \')\', found: AND' ],
+
+  [ 'other ports listed with ALL second',
+    { rule: 'FROM ip 10.0.0.1 TO all vms ALLOW TCP (port 53 AND port ALL)' },
+    'rule', 'Error at character 55: \'ALL\', expected: \'WORD\', found: ALL' ]
 ];
 
 

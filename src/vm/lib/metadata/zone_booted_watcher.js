@@ -11,9 +11,11 @@ var ZoneBootedWatcher = module.exports = function (delay, allZones) {
 ZoneBootedWatcher.prototype.startExecutingSvcs = function () {
   var self = this;
   self.interval = setInterval(function () {
+    // NOTE: we wait for system/filesystem/minimal here because that's what
+    // ensures /var is mounted and we're going to write our socket into /var/run
     execFile
       ( '/usr/bin/svcs'
-      , [ '-o', 'zone,state', '-HpZ', 'milestone/multi-user' ]
+      , [ '-o', 'zone,state', '-HpZ', 'system/filesystem/minimal' ]
       , {}
       , function (error, stdout, stderr) {
           console.log("Executed svcs.");

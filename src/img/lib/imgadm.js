@@ -248,7 +248,7 @@ function getZfsDataset(name, properties, callback) {
 function normUrlFromUrl(u) {
     // `url.parse('example.com:9999')` is not what you expect. Make sure we
     // have a protocol.
-    if (! /^\w+:\/\//.test(u)) {
+    if (! /^\w+:\/\// .test(u)) {
         u = 'http://' + u;
     }
 
@@ -1127,7 +1127,8 @@ IMGADM.prototype.sourcesGet
                     if (manifest) {
                         if (ensureActive) {
                             try {
-                                manifest = imgmanifest.upgradeManifest(manifest);
+                                manifest
+                                    = imgmanifest.upgradeManifest(manifest);
                             } catch (err) {
                                 errs.push(new errors.InvalidManifestError(err));
                                 next();

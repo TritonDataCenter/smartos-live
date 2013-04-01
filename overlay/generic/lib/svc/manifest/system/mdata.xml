@@ -2,11 +2,8 @@
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <service_bundle type="manifest" name="mdata">
   <service name="smartdc/mdata" type="service" version="1">
-    <dependency name="network" grouping="require_all" restart_on="error" type="service">
-      <service_fmri value="svc:/milestone/multi-user:default" />
-    </dependency>
     <dependency name="filesystem" grouping="require_all" restart_on="error" type="service">
-      <service_fmri value="svc:/system/filesystem/local" />
+      <service_fmri value="svc:/system/filesystem/minimal" />
     </dependency>
     <property_group name="startd" type="framework">
       <propval name="duration" type="astring" value="transient" />
@@ -20,6 +17,9 @@
       <exec_method type="method" name="stop" exec=":true" timeout_seconds="60" />
     </instance>
     <instance name="execute" enabled="false">
+      <dependency name="network" grouping="require_all" restart_on="error" type="service">
+        <service_fmri value="svc:/milestone/multi-user:default" />
+      </dependency>
       <dependency name="mdata" grouping="require_all" restart_on="error" type="service">
         <service_fmri value="svc:/smartdc/mdata:fetch" />
       </dependency>

@@ -21,7 +21,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2012, Joyent, Inc. All rights reserved.
+# Copyright (c) 2013, Joyent, Inc. All rights reserved.
 #
 
 set -o xtrace
@@ -37,7 +37,18 @@ fi
 timer=30
 
 while [ $((timer--)) -gt 0 ]; do
-  if [ -e /var/run/smartdc/metadata.sock ]; then break; fi
+
+  if [[ -e /var/run/smartdc/metadata.sock ]]; then
+    /usr/sbin/mdata-get sdc:uuid
+    result=$?
+    if [[ ${result} -lt 10 ]]; then
+      # exit 10 means problem talking to socket. We assume errors 10 or
+      # higher (I've seen 141 from something in here getting SIGPIPE too)
+      # is something we'll just retry on for now.  <10 we assume is a
+      # problem retrying won't fix (eg. not found) or is success (0)
+      break;
+    fi
+  fi
 
   # This is an alternate signal to metadata which we enable if the socket isn't
   # here yet in case something else in smf is messed up. (for debugging)
@@ -89,9 +100,71 @@ case $? in
     ;;
 esac
 
+echo "Retrieving tmpfs value..."
+tmpfs=$(/usr/sbin/mdata-get sdc:tmpfs)
+if [[ $? == 0 && -n ${tmpfs} && -f /etc/vfstab ]]; then
+  check="swap        -   /tmp                tmpfs";
+  new="swap        -   /tmp                tmpfs    -   yes    size=${tmpfs}m";
+  if ! /usr/bin/grep "^${new}" /etc/vfstab; then
+    if ! /usr/bin/grep "^${check}" /etc/vfstab; then
+      # no tmpfs line. add it.
+      echo "${new}" >> /etc/vfstab
+    else
+      # existing tmpfs line, but wrong value. fix it.
+      /usr/bin/sed -i "" -e "s|^swap.*/tmp.*tmpfs.*$|${new}|" /etc/vfstab
+      echo $?
+    fi
+    # also fix current size, since /etc/vfstab didn't have our correct line
+    /usr/sbin/mount -F tmpfs -o remount,size=${tmpfs}m /tmp
+  fi
+fi
+
+# We use the special sdc:nics value here though this is not an interface for
+# use elsewhere.  If this is changed please also update agent.js in the metadata
+# agent.
+#
+# We run this every startup in case nics have changed since last boot. As
+# network/physical has an optional_all dependency on this service, we'll have
+# had our chance to write these files out before networking comes up. This
+# might eventually be replaced by network/physical grabbing data directly.
+echo "Retrieving nics data..."
+while IFS="|" read -r iface ip netmask primary gateway; do
+
+  # so it shows up in the logs
+  echo "iface[${iface}] ip[${ip}] netmask[${netmask}]" \
+    "primary[${primary}] gateway[${gateway}]"
+
+  # if we don't have interface name, we don't know what files to write out.
+  if [[ -z ${iface} ]]; then
+    continue;
+  fi
+
+  if [[ ${ip} != "dhcp" && -n ${ip} && -n ${netmask} ]]; then
+    echo "${ip} netmask ${netmask} up" > /etc/hostname.${iface}
+  else
+    rm -f /etc/hostname.${iface}
+  fi
+
+  # remove any existing dhcp.${iface} file, we'll create one if it belongs later
+  rm -f /etc/dhcp.${iface}
+
+  if [[ -n ${primary} && ${primary} == "true" ]]; then
+    if [[ -n ${gateway} ]]; then
+      echo "${gateway}" > /etc/defaultrouter
+    fi
+    if [[ ${ip} == "dhcp" ]]; then
+      touch /etc/dhcp.${iface}
+    fi
+  fi
+
+  # XXX we leave old hostname.netX files around and just replace when we have
+  # one next.
+
+done < <(/usr/sbin/mdata-get sdc:nics \
+    | /usr/bin/json -d '|' -a interface ip netmask primary gateway)
+
 # Unconditionally enable mdata:execute, so that the last provisioning step
 # is always taken (regardless of whether user-script exists or not)
-
 svcadm enable smartdc/mdata:execute
 
 exit ${SMF_EXIT_OK}

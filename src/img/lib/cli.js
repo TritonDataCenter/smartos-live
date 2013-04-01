@@ -1037,7 +1037,7 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, callback) {
             var extra = '';
             if (ii.manifest.name) {
                 extra = format(' (%s %s)', ii.manifest.name,
-                               ii.manifest.version);
+                    ii.manifest.version);
             }
             console.log('Image %s%s is already installed, skipping',
                 ii.manifest.uuid, extra);
@@ -1150,7 +1150,7 @@ CLI.prototype.do_install = function do_install(subcmd, opts, args, callback) {
             var extra = '';
             if (ii.manifest.name) {
                 extra = format(' (%s %s)', ii.manifest.name,
-                               ii.manifest.version);
+                    ii.manifest.version);
             }
             console.log('Image %s%s is already installed, skipping',
                 ii.manifest.uuid, extra);

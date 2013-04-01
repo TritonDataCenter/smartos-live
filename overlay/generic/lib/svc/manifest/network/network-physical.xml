@@ -52,6 +52,14 @@
 		type='service'>
 		<service_fmri value='svc:/system/filesystem/smartdc' />
 	</dependency>
+
+	<dependency
+		name='mdata-fetch'
+		grouping='optional_all'
+		restart_on='none'
+		type='service'>
+		<service_fmri value='svc:/smartdc/mdata:fetch' />
+	</dependency>
 	
 	<instance name='default' enabled='true'>
 

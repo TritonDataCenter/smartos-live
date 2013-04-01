@@ -1,12 +1,20 @@
 #!/bin/bash
 #
-# Copyright (c) 2011 Joyent Inc., All rights reserved.
+# Copyright (c) 2013 Joyent Inc., All rights reserved.
+#
+# EXIT CODES:
+#
+#  0 - successfully grabbed data (dumped to stdout)
+#  1 - not found: we talked to metadata agent but it didn't have a value for key
+#  2 - error: we talked to metadata agent but it responded with an error
+#  3 - usage problem: fix your cmdline and try again
+# 10 - unable to talk to socket (try again)
 #
 
 key=$1
 if [[ -z ${key} ]]; then
     echo "Usage: $0 <key>" >&2
-    exit 1
+    exit 3
 fi
 
 NC_SOCK=
@@ -42,14 +50,22 @@ if [[ ${DISABLE_ECHO} == "yes" ]]; then
 fi
 
 echo "GET ${key}" >&3
+if [[ $? != 0 ]]; then
+    echo "Error getting metadata for key '${key}': failed write" >&2
+    exit 10
+fi
 
 # First line will be a status.
 read status
+read_result=$?
 if [[ ${status} == "NOTFOUND" ]]; then
-    echo "No metadata for ${key}" >&2
+    echo "No metadata for '${key}'" >&2
     exit 1
+elif [[ ${read_result} != 0 ]]; then
+    echo "Error getting metadata for key '${key}': failed read" >&2
+    exit 10
 elif [[ ${status} != "SUCCESS" ]]; then
-    echo "Error getting metadata for key ${key}: ${status}" >&2
+    echo "Error getting metadata for key '${key}': ${status}" >&2
     exit 2
 fi
 

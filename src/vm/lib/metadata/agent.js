@@ -226,8 +226,8 @@ function (zonename, checkService, callback) {
 
         var timeoutAfterSeconds = 60 * 60;
         var timeout = setTimeout(function () {
-          zlog.info("Timed out waiting for zone multi-user milestone after "
-            + timeoutAfterSeconds + " seconds.");
+          zlog.info("Timed out waiting for zone system/filesystem/minimal after"
+            + " " + timeoutAfterSeconds + " seconds.");
           self.servicesWatcher.unwatch(zonename);
         }, timeoutAfterSeconds * 1000)
 
@@ -394,8 +394,17 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         zlog.info("Serving " + want);
         if (want.slice(0, 4) === 'sdc:') {
           want = want.slice(4);
-          var val = VM.flatten(metadata, want);
-          return returnit(null, val);
+          if (want === 'nics' && metadata.hasOwnProperty('nics')) {
+            // NOTE: sdc:nics is not a committed interface, do not rely on it.
+            // At this point it should only be used by mdata-fetch, if you add
+            // a consumer that depends on it, please add a note about that here
+            // otherwise expect it will be removed on you sometime.
+            var val = JSON.stringify(metadata.nics);
+            return returnit(null, val);
+          } else {
+            var val = VM.flatten(metadata, want);
+            return returnit(null, val);
+          }
         }
         else {
           if (metadata.hasOwnProperty('customer_metadata')) {

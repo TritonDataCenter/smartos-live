@@ -63,13 +63,13 @@ making changes.
 
   "CPU Physical Cores"
 
-    Number of physical CPU cores in this host.
+    Number of physical CPUs in this host.
 
     GZ only
 
   "CPU Total Cores"
 
-    The number of CPU cores counting hyperthreading.
+    The number of CPU cores in this host.
 
     GZ only
 

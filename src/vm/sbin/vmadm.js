@@ -435,10 +435,16 @@ function getInfo(uuid, types, callback)
 function startVM(uuid, extra, callback)
 {
     VM.start(uuid, extra, function (err, result) {
+        var new_err;
+
         if (err) {
             // Our error message here gets shown to the user.
-            callback(new Error('Unable to start VM ' + uuid
-                + ': ' + err.message));
+            new_err = new Error('Unable to start VM ' + uuid
+                + ': ' + err.message);
+            if (err.hasOwnProperty('code')) {
+                new_err.code = err.code;
+            }
+            callback(new_err);
         } else {
             callback();
         }
@@ -696,7 +702,13 @@ function main(callback)
         extra = parseStartArgs(parsed.argv.remain);
         startVM(uuid, extra, function (err) {
             if (err) {
-                callback(err);
+                // if the error was because zone is already running (returned by
+                // VM.start()), we'll treat as noop and exit 0.
+                if (err.code === 'EALREADYRUNNING') {
+                    callback(null, err.message);
+                } else {
+                    callback(err);
+                }
             } else {
                 callback(null, 'Successfully started ' + uuid);
             }

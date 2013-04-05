@@ -31,7 +31,7 @@ SMF_SEEDS=${ROOT}/tools/build_seeds
 BUILDER=${ROOT}/tools/builder/builder
 SCANNER=${ROOT}/tools/scanner
 PWGEN=${ROOT}/tools/pwgen
-GET_STATUS=${ROOT}/tools/get_status
+GET_STATUS=${ROOT}/tools/build_etcrelease
 CHECK_DIR="${ROOT}/tools/checks"
 
 BUILDSTAMP=$(cat ${ROOT}/proto/buildstamp)

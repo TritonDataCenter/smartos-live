@@ -75,7 +75,7 @@ function source_vars
 
 function install_pkgin
 {
-	pkgin -f update || fatal "failed to update pkgsrc repository"
+	$conf_priv pkgin -f update || fatal "failed to update pkgsrc repository"
 	for pkg in gmake binutils autoconf automake bison flex libtool-base \
 	    python26 py26-expat libxslt gcc-compiler sun-jre6 sun-jdk6 gmp \
 	    mpfr nodejs p5-XML-Parser gettext; do

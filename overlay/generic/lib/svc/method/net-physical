@@ -171,6 +171,10 @@ function create_aggrs
         dladm create-aggr -l $(echo ${links} | sed -e "s/,/ -l /g") \
             -L ${mode} ${aggr}
     done
+
+    # Creating the aggregations may affect the nic tags in sysinfo, so update:
+    /usr/bin/sysinfo -u
+    load_sdc_sysinfo
 }
 
 if smf_is_globalzone; then

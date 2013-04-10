@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2012 Joyent Inc., All rights reserved.
+# Copyright (c) 2013 Joyent Inc., All rights reserved.
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -311,59 +311,9 @@ function is_aggr() {
     return 1
 }
 
-function get_nic_mappings()
-{
-    admin_nic=`/usr/bin/bootparams 2>/dev/null | grep "^admin_nic=" | cut -d '=' -f2-`
-    if [[ -z ${admin_nic} ]] && [[ -f ${configfile} ]]; then
-        admin_nic=`grep "^admin_nic=" ${configfile} | cut -f2- -d'='`
-    fi
-    if [[ -n ${admin_nic} ]]; then
-        if is_aggr ${admin_nic}; then
-            NIC_admin=${admin_nic}
-            ADMIN_NIC=${admin_nic}
-        else
-            normalize_mac ${admin_nic}
-            ADMIN_NIC=${normalized}
-        fi
-    fi
-    external_nic=`/usr/bin/bootparams 2>/dev/null | grep "^external_nic=" | cut -d '=' -f2-`
-    if [[ -z ${external_nic} ]] && [[ -f ${configfile} ]]; then
-        external_nic=`grep "^external_nic=" ${configfile} | cut -f2- -d'='`
-    fi
-    if [[ -n ${external_nic} ]]; then
-        if is_aggr ${external_nic}; then
-            NIC_external=${external_nic}
-            EXTERNAL_NIC=${external_nic}
-        else
-            normalize_mac ${external_nic}
-            EXTERNAL_NIC=${normalized}
-        fi
-    fi
-    internal_nic=`/usr/bin/bootparams 2>/dev/null | grep "^internal_nic=" | cut -d '=' -f2-`
-    if [[ -z ${internal_nic} ]] && [[ -f ${configfile} ]]; then
-        internal_nic=`grep "^internal_nic=" ${configfile} | cut -f2- -d'='`
-    fi
-    if [[ -n ${internal_nic} ]]; then
-        if is_aggr ${internal_nic}; then
-            NIC_internal=${internal_nic}
-            INTERNAL_NIC=${internal_nic}
-        else
-            normalize_mac ${internal_nic}
-            INTERNAL_NIC=${normalized}
-        fi
-    fi
-
-    #echo "${ADMIN_NIC}"
-    #echo "${EXTERNAL_NIC}"
-    #echo "${INTERNAL_NIC}"
-}
-
 function get_smartos_network_interfaces()
 {
     count=1
-    nic_tag_count=1
-    NicTagList="admin"
-    seen_nic_tag_admin="true"
 
     # ignore 'LINK SLOT ADDRESS INUSE CLIENT' line
     for line in $(pfexec /sbin/dladm show-phys -m \
@@ -377,43 +327,18 @@ function get_smartos_network_interfaces()
         ip4addr=$(ifconfig ${iface} 2>/dev/null \
             | grep "inet " | awk '{ print $2 }')
 
-        if [[ -n "${ADMIN_NIC}" ]] && [[ "${ADMIN_NIC}" == "${mac}" ]]; then
-            nicnames="admin"
-            NIC_admin=${iface}
-        fi
-        if [[ -n "${EXTERNAL_NIC}" ]] && [[ "${EXTERNAL_NIC}" == "${mac}" ]]; then
-            [[ -n ${nicnames} ]] && nicnames="${nicnames},"
-            nicnames="${nicnames}external"
-            NicTagList="${NicTagList},external"
-            NIC_external=${iface}
-        fi
-        if [[ -n "${INTERNAL_NIC}" ]] && [[ "${INTERNAL_NIC}" == "${mac}" ]]; then
-            [[ -n ${nicnames} ]] && nicnames="${nicnames},"
-            nicnames="${nicnames}internal"
-            NicTagList="${NicTagList},internal"
-            NIC_internal=${iface}
-        fi
+        nic_tag_count=0
+        while [[ ${nic_tag_count} -lt ${NicTagCount} ]]; do
+            tag_name=${NicTagNames[${nic_tag_count}]}
+            tag_mac=${NicTagMacs[${nic_tag_count}]}
+            ((nic_tag_count++))
 
-        for tag in "${NicTagsMacs[@]}"; do
-            tag_fields=(${tag//=/ })
-            tag_name=${tag_fields[0]}
-            if is_aggr ${tag_fields[1]}; then
-                continue
-            fi
-            normalize_mac ${tag_fields[1]}
-            tag_mac=${normalized}
+            # Aggregations in this list will have a MAC address of "-",
+            # so this won't match
             if [[ "${tag_mac}" == "${mac}" ]]; then
                 [[ -n ${nicnames} ]] && nicnames="${nicnames},"
                 nicnames="${nicnames}${tag_name}"
                 NicTags[${nic_tag_count}]="${tag_name}=${iface}"
-                ((nic_tag_count++))
-            fi
-
-            # Build up the list of tags
-            eval "seen_nic_tag=\${seen_nic_tag_${tag_name}}"
-            if [[ -z "${seen_nic_tag}" ]]; then
-                NicTagList="${NicTagList},${tag_name}"
-                eval "seen_nic_tag_${tag_name}=true"
             fi
         done
 
@@ -479,40 +404,18 @@ function get_smartos_network_interfaces()
         ip4addr=$(ifconfig ${iface} 2>/dev/null \
             | grep "inet " | awk '{ print $2 }')
 
-        if [[ -n "${ADMIN_NIC}" ]] && [[ "${ADMIN_NIC}" == "${iface}" ]]; then
-            nicnames="admin"
-            NIC_admin=${iface}
-        fi
-        if [[ -n "${EXTERNAL_NIC}" ]] && [[ "${EXTERNAL_NIC}" == "${iface}" ]]; then
-            [[ -n ${nicnames} ]] && nicnames="${nicnames},"
-            nicnames="${nicnames}external"
-            NicTagList="${NicTagList},external"
-            NIC_external=${iface}
-        fi
-        if [[ -n "${INTERNAL_NIC}" ]] && [[ "${INTERNAL_NIC}" == "${iface}" ]]; then
-            [[ -n ${nicnames} ]] && nicnames="${nicnames},"
-            nicnames="${nicnames}internal"
-            NicTagList="${NicTagList},internal"
-            NIC_internal=${iface}
-        fi
+        nic_tag_count=0
+        while [[ ${nic_tag_count} -lt ${NicTagCount} ]]; do
+            tag_name=${NicTagNames[${nic_tag_count}]}
+            tag_mac=${NicTagMacs[${nic_tag_count}]}
+            tag_link=${NicTagLinks[${nic_tag_count}]}
+            ((nic_tag_count++))
 
-        for tag in "${NicTagsMacs[@]}"; do
-            tag_fields=(${tag//=/ })
-            tag_name=${tag_fields[0]}
-
-            if is_aggr ${tag_fields[1]} && \
-                [[ "${tag_fields[1]}" == "${iface}" ]]; then
+            if [[ "${tag_mac}" == "-" ]] && \
+                [[ "${tag_link}" == "${iface}" ]]; then
                 [[ -n ${nicnames} ]] && nicnames="${nicnames},"
                 nicnames="${nicnames}${tag_name}"
                 NicTags[${nic_tag_count}]="${tag_name}=${iface}"
-                ((nic_tag_count++))
-            fi
-
-            # Build up the list of tags
-            eval "seen_nic_tag=\${seen_nic_tag_${tag_name}}"
-            if [[ -z "${seen_nic_tag}" ]]; then
-                NicTagList="${NicTagList},${tag_name}"
-                eval "seen_nic_tag_${tag_name}=true"
             fi
         done
 
@@ -530,9 +433,6 @@ function get_smartos_network_interfaces()
         ((up_count++))
     done
 
-    #echo "${NIC_admin}"
-    #echo "${NIC_external}"
-    #echo "${NIC_internal}"
     #for iface in "${NetworkInterfaces[@]}"
     #do
     #  eval "mac=\${Network_Interface_${iface}_MAC_Address}"
@@ -570,19 +470,18 @@ function get_smartos_vnics()
 
 function get_nic_tags()
 {
-    count=1
-    for line in $(/usr/bin/bootparams 2>/dev/null \
-        | grep "^[a-zA-Z0-9_]*_nic=" \
-        ; grep "^[a-zA-Z0-9_]*_nic=" ${configfile} 2>/dev/null); do
+    NicTagCount=0
+    NicTagList=
+    for line in $(nictagadm list -d '=' -p -L 2>/dev/null); do
         fields=(${line//=/ })
-        key=${fields[0]}
-        if [[ $key != "admin_nic" ]] \
-            && [[ $key != "external_nic" ]] \
-            && [[ $key != "internal_nic" ]]; then
 
-            NicTagsMacs[${count}]=$(echo ${line} | sed -e 's/_nic//')
-            ((count++))
-        fi
+        NicTagNames[${NicTagCount}]=${fields[0]}
+        NicTagMacs[${NicTagCount}]=${fields[1]}
+        NicTagLinks[${NicTagCount}]=${fields[2]}
+
+        [[ -n $NicTagList ]] && NicTagList=${NicTagList},
+        NicTagList=${NicTagList}${fields[0]}
+        ((NicTagCount++))
     done
 }
 
@@ -734,10 +633,6 @@ END
         gb_size=$((${size} / 1000000000))
         echo "Disk_${disk}_size_in_GB=${gb_size}"
     done
-
-    [[ -n ${NIC_admin} ]] && echo "NIC_admin='${NIC_admin}'"
-    [[ -n ${NIC_external} ]] && echo "NIC_external='${NIC_external}'"
-    [[ -n ${NIC_internal} ]] && echo "NIC_internal='${NIC_internal}'"
 
     for tag in "${NicTags[@]}"; do
         tag_fields=(${tag//=/ })
@@ -1031,7 +926,6 @@ get_live_image_buildstamp
 get_system_type
 get_hostname
 get_aggregation_mappings
-get_nic_mappings
 get_nic_tags
 get_smartos_network_interfaces
 get_smartos_vnics

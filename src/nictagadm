@@ -1,0 +1,717 @@
+#!/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at http://smartos.org/CDDL
+#
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file.
+#
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright (c) 2013, Joyent, Inc. All rights reserved.
+#
+# Command-line tool for managing nic tags
+#
+
+PATH=/usr/bin:/usr/sbin
+. /lib/sdc/config.sh
+
+
+CONF=
+CONF_FILES=
+DELIM=":"
+HAVE_USB=
+LIST_LINE="%-14s %-18s %-14s\n"
+LOCAL=
+NO_LIST_STUBS=
+PARSABLE=
+TAG_TYPE=
+TMP_CONF="/tmp/.nic-tags"
+VERBOSE=
+
+
+
+# --- helpers
+
+
+
+function fatal()
+{
+    echo "Error: $*" >&2
+    exit 1
+}
+
+
+function verbose()
+{
+    [[ -n "${VERBOSE}" ]] && echo "+ $*" >&2
+}
+
+
+function usage()
+{
+    me=$(basename $0)
+cat - >&2 <<USAGE
+Manage nic tags
+
+Usage:
+    $me [OPTIONS] <command> [ARGS...]
+
+Options:
+    -v                      Verbose output
+
+Commands:
+    list                    List nic tags.
+    list -l                 List local nic tags (etherstubs) only.
+    list -L                 List non-local nic tags only.
+    add <name> <MAC>        Add a nic tag to a physical nic.
+    add -l <name>           Add a local-only nic tag (etherstub).
+    update <name> <MAC>     Update the physical nic associated with a nic tag.
+    delete <name>           Delete a nic tag.
+    vms <name>              List VM UUIDs using a nic tag.
+USAGE
+    exit 2
+}
+
+
+# Clean up any temp files left around
+function cleanup()
+{
+    for conf in ${CONF_FILES}; do
+        [[ -f ${conf}.$$ ]] && rm ${conf}.$$
+    done
+}
+
+
+# Returns non-zero if the MAC is invalid
+function valid_mac()
+{
+    echo "${1}" | grep "[a-fA-F0-9]\{1,2\}\:[a-fA-F0-9]\{1,2\}\:[a-fA-F0-9]\{1,2\}\:[a-fA-F0-9]\{1,2\}\:[a-fA-F0-9]\{1,2\}\:[a-fA-F0-9]\{1,2\}" >/dev/null 2>&1
+}
+
+
+# Returns zero for valid nic tag names, non-zero otherwise. Valid names:
+# * Have the same valid characters as vnics and etherstubs
+#   (alphanumeric plus _)
+# * < 31 characters long, to allow for vnics to be brought up
+#   named after those tags (eg: external0, external1, etc)
+function valid_name()
+{
+    local res=$(echo $1 | tr -d '[a-zA-Z0-9_]')
+    [[ -n $res ]] && return 1
+    [[ $(echo ${1} | wc -c) -gt 31 ]] && return 1
+    return 0
+}
+
+
+# Returns zero for valid etherstub names, non-zero otherwise. Valid names:
+# * Consist only of alphanumeric characters plus _
+# * <= 32 characters
+# * Have a number at the end (in order to be a valid link name)
+function valid_stub_name()
+{
+    local res=$(echo $1 | tr -d '[a-zA-Z0-9_]')
+    [[ -n $res ]] && return 1
+
+    echo "${1}" | grep '[0-9]$' > /dev/null 2>&1
+    [[ $? != "0" ]] && return 1
+
+    [[ $(echo ${1} | wc -c) -gt 32 ]] && return 1
+    return 0
+}
+
+
+# Returns non-zero if the MAC address does not belong to a physical nic on the
+# system
+function nic_exists()
+{
+    macs=$(dladm show-phys -m -o address | grep -v ADDRESS)
+    for mac in ${macs}; do
+        normalize_mac ${mac}
+        [[ ${normalized} == $1 ]] && return 0
+    done
+
+    return 1
+}
+
+
+# Returns non-zero if the aggregation does not exist in the config file
+function aggr_exists()
+{
+    conf_match=$(sdc_config_keys_contain "^${1}_aggr$")
+    [[ "${conf_match}" == "true" ]] && return 0
+    sdc_bootparams_keys | grep "^${1}_aggr" > /dev/null 2>&1
+}
+
+
+function get_link_names()
+{
+    for line in $(dladm show-phys -m -o address,link | \
+        grep -v ADDRESS | awk '{ print $1, $2 }' | tr ' ' ','); do
+        fields=(${line//,/ })
+        normalize_mac ${fields[0]}
+        [[ ${normalized} == $1 ]] && return 0
+		eval "link_${normalized//:/_}=${fields[1]}"
+    done
+}
+
+
+# helper to set global "normalized" to the expanded version of MAC ($1)
+function normalize_mac()
+{
+    local mac=$1
+    [[ -z "${mac}" ]] && fatal "unable to normalize empty mac!"
+
+    normalized=`echo ${mac} | awk -F':' '{ print $1, $2, $3, $4, $5, $6 }' | { read o1 o2 o3 o4 o5 o6 junk
+        printf "%02x:%02x:%02x:%02x:%02x:%02x" 0x${o1} 0x${o2} 0x${o3} 0x${o4} 0x${o5} 0x${o6}
+    }`
+
+    # ensure results are 'normal'
+    echo "${normalized}" | grep "[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}" >/dev/null 2>&1
+    [[ "$?" != "0" ]] && fatal "failed to normalize MAC '${mac}'"
+}
+
+
+function find_config_paths()
+{
+    [[ -n ${CONF} ]] && return 0
+
+    USB_CONFIG_COPY="$(svcprop -p 'joyentfs/usb_copy_path' \
+        svc:/system/filesystem/smartdc:default)/config"
+    USB_MNT="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' \
+        svc:/system/filesystem/smartdc:default)"
+    USB_CONFIG="${USB_MNT}/config"
+
+    if [[ -f ${USB_CONFIG_COPY} ]]; then
+        HAVE_USB=true
+        CONF_FILES="${USB_CONFIG_COPY} ${USB_CONFIG}"
+        CONF=${USB_CONFIG_COPY}
+        verbose "Using config files: ${CONF_FILES}"
+    else
+        CONF_FILES=${TMP_CONF}
+        CONF=${TMP_CONF}
+        verbose "Using config file: ${CONF_FILES}"
+    fi
+}
+
+
+function mount_usb()
+{
+    if [[ -z "${HAVE_USB}" ]]; then
+        verbose "USB copy not present: not mounting USB key"
+        return 0
+    fi
+
+    mount | grep "^${USB_MNT}" >/dev/null 2>&1
+    if [[ $? == "0" ]]; then
+        USB_ALREADY_MOUNTED=true
+        verbose "USB key already mounted at: ${USB_MNT}"
+        return 0
+    fi
+
+    USBKEYS=$(disklist -a)
+    for key in ${USBKEYS}; do
+        if [[ `fstyp /dev/dsk/${key}p0:1` == 'pcfs' ]]; then
+            mount -F pcfs -o foldcase,noatime /dev/dsk/${key}p0:1 \
+                ${USB_MNT};
+            if [[ $? == "0" ]]; then
+                if [[ ! -f ${USB_MNT}/.joyliveusb ]]; then
+                    umount ${USB_MNT};
+                else
+                    break;
+                fi
+            fi
+        fi
+    done
+
+    mount | grep "^${USB_MNT}" >/dev/null 2>&1
+    if [[ $? == "0" ]]; then
+        verbose "Could not mount ${USB_MNT}"
+        return 0
+    fi
+
+    if [[ ! -f "${USB_CONFIG}" ]]; then
+        verbose "${USB_CONFIG} does not exist"
+        return 0
+    fi
+}
+
+
+function umount_usb()
+{
+    if [[ -z "${HAVE_USB}" ]]; then
+        verbose "USB copy not present: not unmounting USB key"
+        return 0
+    fi
+
+    if [[ -n "${USB_ALREADY_MOUNTED}" ]]; then
+        verbose "USB key mounted before script was run: not unmounting"
+        return 0
+    fi
+
+    mount | grep "^${USB_MNT}" >/dev/null 2>&1
+    if [[ $? == "0" ]]; then
+        verbose "USB key no longer mounted: not unmounting"
+        return 0
+    fi
+
+    umount ${USB_MNT}
+}
+
+
+# For nodes without /usbkey, initialize TMP_CONF with the nic and etherstub
+# values from bootparams
+function tag_conf_init()
+{
+    [[ -e ${TMP_CONF} ]] && return 0
+    bootparams | egrep '^.*_nic=|^etherstub=' > ${TMP_CONF}
+    chmod 644 ${TMP_CONF}
+}
+
+
+# Check if a tag exists, and return 0 if it does.
+function tag_exists()
+{
+    cmd_tag_list > /dev/null
+	eval "seen=\${seen_${1}}"
+    [[ -n "${seen}" ]] && return 0
+    return 1
+}
+
+
+function tag_in_use()
+{
+    [[ $(cmd_tags_used_by ${1} | wc -l) -ne 0 ]]
+}
+
+
+# Moves any temp files over top of the original files they're
+# meant to replace
+function move_files()
+{
+    for conf in ${CONF_FILES}; do
+        [[ ! -f ${conf} ]] && continue
+        [[ ! -f ${conf}.$$ ]] && continue
+
+        mv ${conf}.$$ ${conf}
+        [[ $? != 0 ]] && fatal "Error moving '${conf}.$$' to '${conf}"
+    done
+}
+
+
+# Adds an etherstub config item to all conf files
+function conf_add_etherstub()
+{
+    verbose "Adding etherstub: $1"
+
+    for conf in ${CONF_FILES}; do
+        if [[ ! -f ${conf} ]]; then
+            verbose "config file '$conf' does not exist: not adding etherstub"
+            continue
+        fi
+        verbose "Adding etherstub '$1' to '$conf'"
+
+        stub_line=$(grep '^etherstub=' ${conf} | tail -n 1)
+        cat $conf | grep -v '^etherstub=' > ${conf}.$$
+
+        # If the value of the etherstub line is empty, just replace the
+        # whole line
+        echo "${stub_line}" | grep '^etherstub=\s*$' > /dev/null 2>&1
+        [[ $? == "0" ]] && stub_line=""
+
+        if [[ -n ${stub_line} ]]; then
+            echo "${stub_line},$1" >> ${conf}.$$
+        else
+            echo "etherstub=$1" >> ${conf}.$$
+        fi
+        [[ $? != 0 ]] && fatal "could not write to '${conf}.$$'"
+    done
+
+    move_files
+}
+
+# Adds a nic tag item to all conf files
+function conf_add_tag()
+{
+    for conf in ${CONF_FILES}; do
+        if [[ ! -f ${conf} ]]; then
+            verbose "File '${conf}' does not exist: not adding tag"
+            continue
+        fi
+        verbose "Adding nic tag: $1=$2 to '$conf'"
+
+        echo "${1}_nic=${2}" >> $conf
+        [[ $? != 0 ]] && fatal "could not write to '$conf'"
+    done
+}
+
+
+# Updates a nic tag item in all conf files
+function conf_update_tag()
+{
+    for conf in ${CONF_FILES}; do
+        if [[ ! -f ${conf} ]]; then
+            verbose "File '${conf}' does not exist: not updating tag"
+            continue
+        fi
+        verbose "Updating nic tag: $1=$2 in '$conf'"
+
+        cat $conf | grep -v "^${1}_nic=" > ${conf}.$$
+        echo "${1}_nic=${2}" >> ${conf}.$$
+        [[ $? != 0 ]] && fatal "could not write to '$conf'"
+    done
+
+    move_files
+}
+
+
+# Deletes a nic tag line from all conf files
+function conf_delete_tag()
+{
+    for conf in ${CONF_FILES}; do
+        if [[ ! -f ${conf} ]]; then
+            verbose "File '${conf}' does not exist: not deleting tag"
+            continue
+        fi
+        verbose "Deleting nic tag '$1' from '$conf'"
+
+        cat $conf | grep -v "^${1}_nic=" > ${conf}.$$
+        [[ $? != 0 ]] && fatal "could not write to '$conf'"
+    done
+
+    move_files
+}
+
+
+# Deletes an etherstub from all conf files
+function conf_delete_etherstub()
+{
+    for conf in ${CONF_FILES}; do
+        if [[ ! -f ${conf} ]]; then
+            verbose "File '${conf}' does not exist: not deleting etherstub"
+            continue
+        fi
+        verbose "Deleting etherstub '$1' from '$conf'"
+
+        stub_line=$(grep '^etherstub=' ${conf} | tail -n 1)
+        cat $conf | grep -v '^etherstub=' > ${conf}.$$
+
+        # If there are no more etherstubs left in the line, just omit it
+        # from the file
+        echo "${stub_line}" | grep '^etherstub=\s*$' > /dev/null 2>&1
+        [[ $? == "0" ]] && stub_line=""
+
+        if [[ -n ${stub_line} ]]; then
+            echo "${stub_line}" | sed -e s/${1},*// | \
+                sed -e s/,$// >> ${conf}.$$
+        fi
+    done
+
+    move_files
+}
+
+
+# prints one tag / mac / link line, optionally formatted to be parseable
+function print_line()
+{
+	tag=$1
+	mac=$2
+    link=$3
+
+	eval "seen=\${seen_${1}}"
+    # Try to see if we have a link name from get_link_names():
+    [[ -z ${link} ]] && eval "link=\${link_${mac//:/_}}"
+    [[ -z ${link} ]] && link="-"
+
+	# Don't print out duplicates
+	if [[ -z "${seen}" ]]; then
+		eval "seen_${tag}=true"
+
+		if [[ -n "${PARSABLE}" ]]; then
+			[[ "${DELIM}" == ":" ]] && mac=${mac//:/\\:}
+			echo "${tag}${DELIM}${mac}${DELIM}${link}"
+		else
+			printf "${LIST_LINE}" ${tag} ${mac} ${link}
+		fi
+	fi
+}
+
+
+# Sets a variable indicating the tag's type. Must be run before print_line()
+# for that stub, since it uses the seen_ variable to filter out duplicates
+function set_tag_type()
+{
+    eval "seen_stub=\${seen_${1}}"
+    if [[ -z "${seen_stub}" ]]; then
+        eval "type_${1}=${2}"
+    fi
+}
+
+
+function get_tag_type()
+{
+    eval "get_type=\${type_${1}}"
+    [[ -z "${get_type}" ]] && get_type="-"
+    echo ${get_type}
+}
+
+
+
+# --- commands
+
+
+
+function cmd_tag_exists()
+{
+    if [[ -z "${1}" ]]; then
+        fatal "tag_exists: no tag specified"
+    fi
+
+    tag_exists $1
+}
+
+
+function cmd_tag_list()
+{
+    [[ -z ${PARSABLE} ]] && printf "${LIST_LINE}" \
+        "NAME" "MACADDRESS" "LINK"
+    get_link_names
+
+    if [[ -z ${LOCAL} ]]; then
+        # go through lines in reverse order, since later lines will take
+        # precedence when evaluated with bash
+        for line in $(cat ${CONF} | grep "^.*_nic=" | tail -r); do
+            fields=(${line//=/ })
+            tag=${fields[0]/_nic/}
+            val=${fields[1]}
+
+            if valid_stub_name ${val}; then
+                set_tag_type ${tag} "aggr"
+                print_line ${tag} "-" ${val}
+            else
+                set_tag_type ${tag} "normal"
+                normalize_mac ${val}
+                print_line ${tag} ${normalized}
+            fi
+        done
+    fi
+
+	[[ -n "${NO_LIST_STUBS}" ]] && return 0
+
+    for key in $(dladm show-etherstub -p); do
+        eval "etherstub_up_${key}=true"
+        set_tag_type ${key} "etherstub"
+		print_line ${key} "-"
+    done
+
+    # Catch tags that are in the config etherstub list but are not up
+    stub_line=$(grep '^etherstub=' ${CONF} | tail -n 1)
+    echo "${stub_line}" | grep '^etherstub=\s*$' > /dev/null 2>&1
+    [[ $? == "0" ]] && stub_line=""
+
+    if [[ -n ${stub_line} ]]; then
+        fields=(${stub_line//=/ })
+        for key in "${fields[1]/,/ }"; do
+            set_tag_type ${key} "etherstub"
+			print_line ${key} "-"
+        done
+    fi
+}
+
+
+function cmd_tag_add()
+{
+    [[ -z "$1" ]] && usage
+    [[ -z "$2" ]] && [[ -z "$LOCAL" ]] && usage
+    [[ -n "$2" ]] && [[ -n "$LOCAL" ]] && \
+        fatal "cannot specify a local tag with a MAC address"
+
+
+    tag_exists $1 && fatal "nic tag '$1' already exists"
+    if [[ -n "$2" ]]; then
+        if valid_stub_name "$2"; then
+            aggr_exists $2 || fatal "aggregation '$2' does not exist"
+            mac=$2
+        else
+            valid_mac $2 || fatal "MAC address '$2' is invalid"
+            normalize_mac $2
+            nic_exists ${normalized} || \
+                fatal "No physical nic found with MAC address '$2'"
+            mac=${normalized}
+        fi
+
+        valid_name $1 || "nic tag name is invalid"
+    else
+        valid_stub_name $1 || fatal "nic tag name is invalid"
+    fi
+
+    verbose "adding nic tag: name='$1', mac='${mac}', local='$LOCAL'"
+
+    mount_usb
+    if [[ -n $LOCAL ]]; then
+        conf_add_etherstub $1
+        dladm create-etherstub -t $1
+        [[ $? != 0 ]] && fatal "Could not create etherstub '$1'"
+    else
+        conf_add_tag $1 ${mac}
+    fi
+
+    sysinfo -u
+    umount_usb
+}
+
+
+function cmd_tag_update()
+{
+    [[ -z "$1" ]] && usage
+    [[ -z "$2" ]] && usage
+    [[ -n "$LOCAL" ]] && fatal "cannot update a local tag"
+
+    tag_exists $1 || fatal "nic tag '$1' does not exist"
+
+    if valid_stub_name "$2"; then
+        aggr_exists $2 || fatal "aggregation '$2' does not exist"
+        mac=$2
+    else
+        valid_mac $2 || fatal "MAC address '$2' is invalid"
+        normalize_mac $2
+        nic_exists ${normalized} || fatal "No physical nic found with MAC address '$2'"
+        mac=${normalized}
+    fi
+
+    verbose "updating nic tag: name='$1', mac='${mac}', local='$LOCAL'"
+
+    mount_usb
+    conf_update_tag $1 ${mac}
+
+    sysinfo -u
+    umount_usb
+}
+
+
+function cmd_tag_delete()
+{
+    [[ -z "$1" ]] && usage
+    [[ -n "$LOCAL" ]] && usage
+
+    tag_exists $1 "true" || fatal "nic tag '$1' does not exist"
+    tag_in_use $1 && fatal "nic tag '$1' is in use"
+    verbose "deleting nic tag: $1"
+
+    mount_usb
+
+    tag_type=$(get_tag_type ${1})
+    if [[ ${tag_type} == "etherstub" ]]; then
+        conf_delete_etherstub $1
+    else
+        conf_delete_tag $1
+    fi
+
+    eval "etherstub_up=\${etherstub_up_${1}}"
+    if [[ -n "${etherstub_up}" ]]; then
+        verbose "bringing down etherstub: $1"
+        dladm delete-etherstub $1
+        [[ $? != "0" ]] && fatal "could not remove etherstub '$1'"
+    fi
+
+    sysinfo -u
+    umount_usb
+}
+
+
+function cmd_tags_used_by()
+{
+    [[ -z "$1" ]] && usage
+    vmadm list -p -o uuid nics.*.nic_tag=${1}
+}
+
+
+
+# --- main
+
+
+
+[[ $(zonename) != "global" ]] && \
+    fatal "This program can only be run in the global zone."
+[[ ${EUID} != 0 ]] && \
+    fatal "This program can only be run as root."
+
+# -v goes before the command
+while getopts vh? opt
+do
+    case $opt in
+    v)
+        VERBOSE="true"
+        ;;
+    esac
+done
+shift $(($OPTIND - 1))
+OPTIND=1
+
+# Wait until after the VERBOSE has been set:
+load_sdc_config
+find_config_paths
+trap cleanup EXIT
+
+# If we netbooted, ensure that the tags conf file is initialized
+[[ -z ${HAVE_USB} ]] && tag_conf_init
+
+case "$1" in
+    add) CMD="add" ;;
+    delete) CMD="delete" ;;
+    exists) CMD="exists" ;;
+    list) CMD="list" ;;
+    update) CMD="update" ;;
+    vms) CMD="vms" ;;
+    *) usage ;;
+esac
+shift
+
+while getopts d:lLp opt
+do
+    case $opt in
+    d)
+        DELIM=${OPTARG}
+        delim_flag=true
+        ;;
+    l)
+        LOCAL="true"
+        ;;
+    L)
+        NO_LIST_STUBS="true"
+        ;;
+    p)
+        PARSABLE="true"
+        ;;
+    esac
+done
+shift $(($OPTIND - 1))
+
+[[ -n $LOCAL ]] && [[ -n $NO_LIST_STUBS ]] && \
+    fatal "Cannot specify both local and non-local options"
+
+[[ -n "${delim_flag}" ]] && [[ -z $PARSABLE ]] && \
+    fatal "Delimiter option requires parsable option to be set"
+
+case ${CMD} in
+    add) cmd_tag_add "$1" "$2";;
+    delete) cmd_tag_delete "$1";;
+    exists) cmd_tag_exists "$1";;
+    list) cmd_tag_list ;;
+    update) cmd_tag_update "$1" "$2";;
+    vms) cmd_tags_used_by "$1";;
+esac

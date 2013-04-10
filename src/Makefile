@@ -298,11 +298,11 @@ SMARTDC_TARGETS = \
 SMARTDC_LIB_TARGETS = \
 	sdc-on-tty
 
-all: $(TARGETS) sysinfo $(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS)
+all: $(TARGETS) sysinfo nictagadm $(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS)
 
 install: all
 	mkdir -p $(DESTDIR)/usr/bin
-	cp -p $(TARGETS) sysinfo $(DESTDIR)/usr/bin
+	cp -p $(TARGETS) sysinfo nictagadm $(DESTDIR)/usr/bin
 	mkdir -p $(DESTDIR)/smartdc/bin
 	cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin
 	mkdir -p $(DESTDIR)/smartdc/lib
@@ -446,6 +446,9 @@ mkzpool: mkzpool.js
 
 sysinfo:
 	touch sysinfo
+
+nictagadm:
+	touch nictagadm
 
 #
 # Node native add-on target patterns.  Follow these patterns when adding a new

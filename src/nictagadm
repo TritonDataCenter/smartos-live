@@ -201,6 +201,11 @@ function find_config_paths()
         CONF_FILES="${USB_CONFIG_COPY} ${USB_CONFIG}"
         CONF=${USB_CONFIG_COPY}
         verbose "Using config files: ${CONF_FILES}"
+    elif [[ -f ${USB_CONFIG} ]]; then
+        HAVE_USB=true
+        CONF_FILES="${USB_CONFIG_COPY} ${USB_CONFIG}"
+        CONF=${USB_CONFIG}
+        verbose "Using config files: ${CONF_FILES}"
     else
         CONF_FILES=${TMP_CONF}
         CONF=${TMP_CONF}

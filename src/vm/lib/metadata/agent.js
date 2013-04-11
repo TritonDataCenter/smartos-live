@@ -352,6 +352,8 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
   };
 
   return function (data) {
+    var lookup_fields = [];
+    var matches;
     var parts =
       rtrim(data.toString()).replace(/\n$/,'').match(/^([^\s]+)\s?(.*)/);
 
@@ -368,7 +370,20 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         return;
     }
 
-    VM.lookup({ zonename: zone }, { full: true }, function (error, rows) {
+    if (cmd === 'GET' && want.slice(0, 4) === 'sdc:') {
+        matches = want.slice(4).match(/^([^\.]*)\./);
+        if (matches) {
+            lookup_fields.push(matches[1]);
+        } else {
+            lookup_fields.push(want.slice(4));
+        }
+    } else {
+        lookup_fields.push('customer_metadata');
+    }
+
+    VM.lookup({ zonename: zone }, { fields: lookup_fields },
+      function (error, rows) {
+
       if (error) {
         zlog.error("Error looking up zone: " + error.message);
         zlog.error(error.stack);
@@ -376,17 +391,17 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
       }
 
       if (cmd === 'KEYS') {
-        var metadata = rows.length ? rows[0] : {};
+        var vmobj = rows.length ? rows[0] : {};
         return returnit(null,
-          Object.keys(metadata.customer_metadata).join("\n"));
+          Object.keys(vmobj.customer_metadata).join("\n"));
       } else if (cmd === 'GET') {
         if (!rows || !rows.length) {
           returnit(new Error('Zone lookup did not return row data'));
           return;
         }
 
-        var metadata = rows.length ? rows[0] : {};
-        if (!metadata) {
+        var vmobj = rows.length ? rows[0] : {};
+        if (!vmobj) {
           returnit(new Error('Zone lookup did not return data'));
           return;
         }
@@ -394,21 +409,21 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         zlog.info("Serving " + want);
         if (want.slice(0, 4) === 'sdc:') {
           want = want.slice(4);
-          if (want === 'nics' && metadata.hasOwnProperty('nics')) {
+          if (want === 'nics' && vmobj.hasOwnProperty('nics')) {
             // NOTE: sdc:nics is not a committed interface, do not rely on it.
             // At this point it should only be used by mdata-fetch, if you add
             // a consumer that depends on it, please add a note about that here
             // otherwise expect it will be removed on you sometime.
-            var val = JSON.stringify(metadata.nics);
+            var val = JSON.stringify(vmobj.nics);
             return returnit(null, val);
           } else {
-            var val = VM.flatten(metadata, want);
+            var val = VM.flatten(vmobj, want);
             return returnit(null, val);
           }
         }
         else {
-          if (metadata.hasOwnProperty('customer_metadata')) {
-            returnit(null, metadata.customer_metadata[want]);
+          if (vmobj.hasOwnProperty('customer_metadata')) {
+            returnit(null, vmobj.customer_metadata[want]);
             return;
           } else {
             returnit(new Error('Zone did not contain customer_metadata'));

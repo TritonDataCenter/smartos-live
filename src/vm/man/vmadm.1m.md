@@ -173,7 +173,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         You can see several examples using order, sort and selection in the
         EXAMPLES section below.
 
-      lookup [-j|-1] [field=value ...]
+      lookup [-j|-1] [-o field,field,..] [field=value ...]
 
         The lookup command is designed to help you find VMs. It takes a set of
         filter options in the same format as the list command. This means you
@@ -193,6 +193,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         the -j parameter. With that flag set, the output will be a JSON array
         of VM objects containing the same JSON data as the 'get' command for
         each VM matched.
+
+        When the -j flag is passed, you can also limit the fields in the objects
+        of the output array. To do so, use the -o option. For example if you
+        use:
+
+            vmadm lookup -j -o uuid,brand,quota
+
+        the objects in the output array will only have the uuid, brand and quota
+        members. Where possible vmadm optimizes the lookups such that not
+        including fields in the output means it won't have to do the potentially
+        expensive operations to look them up. By default (without -o) all fields
+        are included in the objects.
 
         If you pass the -1 parameter, lookup should only return 1 result. If
         multiple results are matched or 0 results are matched, an error will

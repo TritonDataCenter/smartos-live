@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  */
 
@@ -138,7 +138,7 @@ function usage(message, code)
     out('info <uuid> [type,...]');
     out('install <uuid>');
     out('list [-p] [-H] [-o field,...] [-s field,...] [field=value ...]');
-    out('lookup [-j|-1] [field=value ...]');
+    out('lookup [-j|-1] [-o field,...] [field=value ...]');
     out('reboot <uuid> [-F]');
     out('receive [-f <filename>]');
     out('rollback-snapshot <uuid> <snapname>');
@@ -385,6 +385,8 @@ function addCommandOptions(command, opts, shorts)
     case 'lookup':
         opts.json = Boolean;
         shorts.j = ['--json'];
+        opts.output = String;
+        shorts.o = ['--output'];
         opts.unique = Boolean;
         shorts['1'] = ['--unique'];
         break;
@@ -616,11 +618,42 @@ function formatVMList(vmobjs, order, sortby, options, callback)
 
 function listVM(spec, order, sortby, options, callback)
 {
+    var fields;
+    var lookup_fields = [];
+
     if (!spec) {
         spec = {};
     }
 
-    VM.lookup(spec, {full: true, transform: addFakeFields},
+    fields = order.split(',');
+
+    // some fields are added by addFakeFields and not real lookup fields
+    // lookup will return these because of the transform we pass in, but
+    // we need to also add the stuff transform needs to get these.
+    if (fields.indexOf('type') !== -1) {
+        if (fields.indexOf('brand') === -1) {
+            fields.push('brand');
+        }
+    }
+    if (fields.indexOf('ram') !== -1) {
+        fields.push('max_physical_memory');
+    }
+
+    // not all fields we're passed as order are looked up directly. When you
+    // want nics.0.ip for example, we just request the whole .nics object.
+    fields.forEach(function (field) {
+        if (field.match(/\./)) {
+            if (lookup_fields.indexOf(field.split('.')[0]) === -1) {
+                lookup_fields.push(field.split('.')[0]);
+            }
+        } else {
+            if (lookup_fields.indexOf(field) === -1) {
+                lookup_fields.push(field);
+            }
+        }
+    });
+
+    VM.lookup(spec, {fields: lookup_fields, transform: addFakeFields},
         function (err, vmobjs) {
             if (err) {
                 callback(err);
@@ -666,6 +699,7 @@ function main(callback)
     var filename;
     var extra = {};
     var options = {};
+    var out_fields = [];
     var key;
     var knownOpts = {};
     var order;
@@ -937,9 +971,19 @@ function main(callback)
     case 'lookup':
         extra = parseKeyEqualsValue(parsed.argv.remain);
         options = {transform: addFakeFields};
+
         if (parsed.json) {
-            options.full = true;
+            if (parsed.hasOwnProperty('output')) {
+                out_fields = parsed.output.split(',');
+                options.fields = out_fields;
+            } else {
+                options.full = true;
+            }
+        } else if (parsed.hasOwnProperty('output')) {
+            callback(new Error('Cannot specify -o without -j'));
+            return;
         }
+
         for (key in extra) {
             if (!validFilterKey(key)) {
                 callback(new Error('Invalid lookup key: "' + key + '"'));
@@ -949,6 +993,7 @@ function main(callback)
 
         VM.lookup(extra, options, function (err, results) {
             var m;
+
             if (err) {
                 callback(err);
             } else if (parsed.unique && results.length !== 1) {
@@ -957,6 +1002,8 @@ function main(callback)
             } else if (parsed.json) {
                 console.log(JSON.stringify(results, null, 2));
             } else {
+                // Here we're just looking for the list, results is an array
+                // of uuids.
                 for (m in results) {
                     m = results[m];
                     console.log(m);

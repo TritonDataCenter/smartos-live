@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  */
 
@@ -78,6 +78,10 @@ function sysinfo(callback)
     });
 }
 
+// vmobj needs:
+//
+// zonepath
+//
 function setRemoteDisplayPassword(vmobj, protocol, password)
 {
     var q;
@@ -110,6 +114,18 @@ function setRemoteDisplayPassword(vmobj, protocol, password)
     });
 }
 
+// vmobj needs:
+//
+// spice_opts
+// spice_password
+// spice_port
+// state
+// uuid
+// vnc_password
+// vnc_port
+// zone_state
+// zonepath
+//
 function spawnRemoteDisplay(vmobj)
 {
     var addr;
@@ -321,6 +337,16 @@ function loadConfig(callback)
  *  - when the provision succeeds for KVM: this will start the VNC
  *  - when the provision fails: calls VM.markVMFailure() to put it in 'failed'
  *
+ * vmobj should have:
+ *
+ *  brand
+ *  state
+ *  transition_expire
+ *  transition_to
+ *  uuid
+ *  zonename
+ *  zonepath
+ *
  */
 function handleProvisioning(vmobj, cb)
 {
@@ -331,9 +357,23 @@ function handleProvisioning(vmobj, cb)
     // assert vmobj.state === 'provisioning'
 
     function success() {
+        var load_fields = [
+            'spice_opts',
+            'spice_password',
+            'spice_port',
+            'state',
+            'uuid',
+            'vnc_password',
+            'vnc_port',
+            'zone_state',
+            'zonepath'
+        ];
+
         if (vmobj.brand === 'kvm') {
             // reload the VM to see if we should setup VNC, etc.
-            VM.load(vmobj.uuid, function (load_err, obj) {
+            VM.load(vmobj.uuid, {fields: load_fields},
+                function (load_err, obj) {
+
                 if (load_err) {
                     log.error(load_err, 'unable to load VM after '
                         + 'waiting for provision: ' + load_err.message);
@@ -422,6 +462,8 @@ function handleProvisioning(vmobj, cb)
 // NOTE: nobody's paying attention to whether this completes or not.
 function updateZoneStatus(ev)
 {
+    var load_fields;
+
     if (! ev.hasOwnProperty('zonename') || ! ev.hasOwnProperty('oldstate')
         || ! ev.hasOwnProperty('newstate') || ! ev.hasOwnProperty('when')) {
 
@@ -486,7 +528,25 @@ function updateZoneStatus(ev)
         return;
     }
 
-    VM.load(ev.zonename, function (err, vmobj) {
+    load_fields = [
+        'brand',
+        'failed',
+        'spice_opts',
+        'spice_password',
+        'spice_port',
+        'state',
+        'transition_expire',
+        'transition_to',
+        'uuid',
+        'vnc_password',
+        'vnc_port',
+        'zone_state',
+        'zonename',
+        'zonepath'
+    ];
+
+    // XXX won't work if ev.zonename != uuid, use lookup instead?
+    VM.load(ev.zonename, {fields: load_fields}, function (err, vmobj) {
 
         if (err) {
             log.warn(err, 'unable to load zone: ' + err.message);
@@ -604,6 +664,7 @@ function startZoneWatcher(callback)
 
 function handlePost(c, args, response)
 {
+    var load_fields;
     var uuid;
 
     log.debug('POST len: ' + c + args);
@@ -658,7 +719,19 @@ function handlePost(c, args, response)
         });
         break;
     case 'reload_display':
-        VM.load(uuid, function (err, obj) {
+        load_fields = [
+            'spice_opts',
+            'spice_password',
+            'spice_port',
+            'state',
+            'uuid',
+            'vnc_password',
+            'vnc_port',
+            'zone_state',
+            'zonepath'
+        ];
+
+        VM.load(uuid, {fields: load_fields}, function (err, obj) {
             if (err) {
                 response.writeHead(404);
                 response.write('Unable to load VM ' + uuid);
@@ -817,7 +890,7 @@ function stopVM(uuid, timeout, callback)
     }
 
     /* We load here to get the zonepath and ensure it exists. */
-    VM.load(uuid, function (err, obj) {
+    VM.load(uuid, {fields: ['brand', 'zonepath']}, function (err, vmobj) {
         var socket;
         var q;
 
@@ -829,13 +902,13 @@ function stopVM(uuid, timeout, callback)
 
         q = new Qmp(log);
 
-        if (obj.brand !== 'kvm') {
+        if (vmobj.brand !== 'kvm') {
             callback(new Error('vmadmd only handles "stop" for kvm ('
-                + 'your brand is: ' + obj.brand + ')'));
+                + 'your brand is: ' + vmobj.brand + ')'));
             return;
         }
 
-        socket = obj.zonepath + '/root/tmp/vm.qmp';
+        socket = vmobj.zonepath + '/root/tmp/vm.qmp';
         q.connect(socket, function (error) {
             if (error) {
                 callback(error);
@@ -858,6 +931,7 @@ function stopVM(uuid, timeout, callback)
 // sends several query-* commands to QMP to get details for a VM
 function infoVM(uuid, types, callback)
 {
+    var load_fields;
     var res = {};
     var commands = [
         'query-status',
@@ -872,7 +946,14 @@ function infoVM(uuid, types, callback)
 
     log.debug('LOADING: ' + uuid);
 
-    VM.load(uuid, function (err, obj) {
+    load_fields = [
+        'brand',
+        'state',
+        'uuid',
+        'zonepath'
+    ];
+
+    VM.load(uuid, {fields: load_fields}, function (err, vmobj) {
         var q;
         var socket;
         var type;
@@ -882,15 +963,15 @@ function infoVM(uuid, types, callback)
             return;
         }
 
-        if (obj.brand !== 'kvm') {
+        if (vmobj.brand !== 'kvm') {
             callback(new Error('vmadmd only handles "info" for kvm ('
-                + 'your brand is: ' + obj.brand + ')'));
+                + 'your brand is: ' + vmobj.brand + ')'));
             return;
         }
 
-        if (obj.state !== 'running' && obj.state !== 'stopping') {
+        if (vmobj.state !== 'running' && vmobj.state !== 'stopping') {
             callback(new Error('Unable to get info for vm from state "'
-                + obj.state + '", must be "running" or "stopping".'));
+                + vmobj.state + '", must be "running" or "stopping".'));
             return;
         }
 
@@ -908,7 +989,7 @@ function infoVM(uuid, types, callback)
             }
         }
 
-        socket = obj.zonepath + '/root/tmp/vm.qmp';
+        socket = vmobj.zonepath + '/root/tmp/vm.qmp';
 
         q.connect(socket, function (error) {
             if (error) {
@@ -946,16 +1027,16 @@ function infoVM(uuid, types, callback)
                         || (types.indexOf('vnc') !== -1)) {
 
                         res.vnc = {};
-                        if (VNC.hasOwnProperty(obj.uuid)) {
-                            res.vnc.host = VNC[obj.uuid].host;
-                            res.vnc.port = VNC[obj.uuid].port;
-                            if (VNC[obj.uuid].hasOwnProperty('display')) {
-                                res.vnc.display = VNC[obj.uuid].display;
+                        if (VNC.hasOwnProperty(vmobj.uuid)) {
+                            res.vnc.host = VNC[vmobj.uuid].host;
+                            res.vnc.port = VNC[vmobj.uuid].port;
+                            if (VNC[vmobj.uuid].hasOwnProperty('display')) {
+                                res.vnc.display = VNC[vmobj.uuid].display;
                             }
-                            if (VNC[obj.uuid].hasOwnProperty('password')
-                                && VNC[obj.uuid].password.length > 0) {
+                            if (VNC[vmobj.uuid].hasOwnProperty('password')
+                                && VNC[vmobj.uuid].password.length > 0) {
 
-                                res.vnc.password = VNC[obj.uuid].password;
+                                res.vnc.password = VNC[vmobj.uuid].password;
                             }
                         }
                     }
@@ -963,19 +1044,19 @@ function infoVM(uuid, types, callback)
                         || (types.indexOf('spice') !== -1)) {
 
                         res.spice = {};
-                        if (SPICE.hasOwnProperty(obj.uuid)) {
-                            res.spice.host = SPICE[obj.uuid].host;
-                            res.spice.port = SPICE[obj.uuid].port;
-                            if (SPICE[obj.uuid].hasOwnProperty('password')
-                                && SPICE[obj.uuid].password.length > 0) {
+                        if (SPICE.hasOwnProperty(vmobj.uuid)) {
+                            res.spice.host = SPICE[vmobj.uuid].host;
+                            res.spice.port = SPICE[vmobj.uuid].port;
+                            if (SPICE[vmobj.uuid].hasOwnProperty('password')
+                                && SPICE[vmobj.uuid].password.length > 0) {
 
-                                res.spice.password = SPICE[obj.uuid].password;
+                                res.spice.password = SPICE[vmobj.uuid].password;
                             }
-                            if (SPICE[obj.uuid].hasOwnProperty('spice_opts')
-                                && SPICE[obj.uuid].spice_opts.length > 0) {
+                            if (SPICE[vmobj.uuid].hasOwnProperty('spice_opts')
+                                && SPICE[vmobj.uuid].spice_opts.length > 0) {
 
                                 res.spice.spice_opts =
-                                    SPICE[obj.uuid].spice_opts;
+                                    SPICE[vmobj.uuid].spice_opts;
                             }
                         }
                     }
@@ -988,10 +1069,16 @@ function infoVM(uuid, types, callback)
 
 function resetVM(uuid, callback)
 {
+    var load_fields = [
+        'brand',
+        'state',
+        'zonepath'
+    ];
+
     log.debug('reset(' + uuid + ')');
 
     /* We load here to get the zonepath and ensure the vm exists. */
-    VM.load(uuid, function (err, obj) {
+    VM.load(uuid, {fields: load_fields}, function (err, vmobj) {
         var q;
         var socket;
 
@@ -1001,21 +1088,21 @@ function resetVM(uuid, callback)
             return;
         }
 
-        if (obj.brand !== 'kvm') {
+        if (vmobj.brand !== 'kvm') {
             callback(new Error('vmadmd only handles "reset" for kvm ('
-                + 'your brand is: ' + obj.brand + ')'));
+                + 'your brand is: ' + vmobj.brand + ')'));
             return;
         }
 
-        if (obj.state !== 'running') {
+        if (vmobj.state !== 'running') {
             callback(new Error('Unable to reset vm from state "'
-                + obj.state + '", must be "running".'));
+                + vmobj.state + '", must be "running".'));
             return;
         }
 
         q = new Qmp(log);
 
-        socket = obj.zonepath + '/root/tmp/vm.qmp';
+        socket = vmobj.zonepath + '/root/tmp/vm.qmp';
         q.connect(socket, function (error) {
             if (error) {
                 callback(error);
@@ -1032,12 +1119,13 @@ function resetVM(uuid, callback)
 
 function sysrqVM(uuid, req, callback)
 {
+    var load_fields = ['brand', 'state', 'zonepath'];
     var SUPPORTED_REQS = ['screenshot', 'nmi'];
 
     log.debug('sysrq(' + uuid + ',' + req + ')');
 
     /* We load here to ensure this vm exists. */
-    VM.load(uuid, function (err, obj) {
+    VM.load(uuid, {fields: load_fields}, function (err, vmobj) {
         var q;
         var socket;
 
@@ -1047,15 +1135,15 @@ function sysrqVM(uuid, req, callback)
             return;
         }
 
-        if (obj.brand !== 'kvm') {
+        if (vmobj.brand !== 'kvm') {
             callback(new Error('vmadmd only handles "reset" for kvm ('
-                + 'your brand is: ' + obj.brand + ')'));
+                + 'your brand is: ' + vmobj.brand + ')'));
             return;
         }
 
-        if (obj.state !== 'running' && obj.state !== 'stopping') {
+        if (vmobj.state !== 'running' && vmobj.state !== 'stopping') {
             callback(new Error('Unable to send request to vm from "'
-                + 'state "' + obj.state + '", must be "running" or '
+                + 'state "' + vmobj.state + '", must be "running" or '
                 + '"stopping".'));
             return;
         }
@@ -1068,7 +1156,7 @@ function sysrqVM(uuid, req, callback)
 
         q = new Qmp(log);
 
-        socket = obj.zonepath + '/root/tmp/vm.qmp';
+        socket = vmobj.zonepath + '/root/tmp/vm.qmp';
         q.connect(socket, function (error) {
 
             if (error) {
@@ -1123,26 +1211,33 @@ function sysrqVM(uuid, req, callback)
 
 function setStopTimer(uuid, expire)
 {
+    var load_fields = [
+        'state',
+        'transition_expire',
+        'uuid'
+    ];
+
     log.debug('Clearing existing timer');
     clearTimer(uuid);
     log.debug('Setting stop timer for ' + expire);
     TIMER[uuid] = setTimeout(function () {
         log.info('Timed out for ' + uuid + ' forcing stop.');
         // reload and make sure we still need to kill.
-        VM.load(uuid, function (e, obj) {
+        VM.load(uuid, {fields: load_fields}, function (e, vmobj) {
             if (e) {
                 log.error('expire(): Unable to load vm: ' + e.message, e);
                 return;
             }
-            log.debug('now ' + Date.now() + ' expire ' + obj.transition_expire);
+            log.debug('now ' + Date.now() + ' expire '
+                + vmobj.transition_expire);
             // ensure we've not started and started stopping again since we
             // checked.
-            if (obj.state === 'stopping' && obj.transition_expire
-                && (Date.now() >= obj.transition_expire)) {
+            if (vmobj.state === 'stopping' && vmobj.transition_expire
+                && (Date.now() >= vmobj.transition_expire)) {
 
                 // We assume kill will clear the transition even if the
                 // vm is already stopped.
-                VM.stop(obj.uuid, {'force': true}, function (err) {
+                VM.stop(vmobj.uuid, {'force': true}, function (err) {
                     if (err) {
                         log.debug(err, 'timeout VM.stop(force): '
                             + err.message);
@@ -1155,6 +1250,14 @@ function setStopTimer(uuid, expire)
     }, expire);
 }
 
+// vmobj should have:
+//
+// never_booted
+// autoboot
+// uuid
+// state
+// transition_expire
+// transition_to
 function loadVM(vmobj, do_autoboot)
 {
     var expire;
@@ -1265,6 +1368,7 @@ function main()
         }
 
         fs.exists(VMADMD_AUTOBOOT_FILE, function (exists) {
+            var lookup_fields;
             var vmobj;
 
             if (!exists) {
@@ -1275,7 +1379,23 @@ function main()
                 fs.writeFileSync(VMADMD_AUTOBOOT_FILE, 'booted');
             }
 
-            VM.lookup({}, {'full': true}, function (e, vmobjs) {
+            lookup_fields = [
+                'brand',
+                'spice_opts',
+                'spice_password',
+                'spice_port',
+                'state',
+                'transition_expire',
+                'transition_to',
+                'uuid',
+                'vnc_password',
+                'vnc_port',
+                'zone_state',
+                'zonename',
+                'zonepath'
+            ];
+
+            VM.lookup({}, {fields: lookup_fields}, function (e, vmobjs) {
                 for (vmobj in vmobjs) {
                     vmobj = vmobjs[vmobj];
 

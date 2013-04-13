@@ -28,13 +28,13 @@ test('create and destroy 50 zones', {'timeout': 600000}, function(t) {
                 'nowait': true}, state, [
                 function (cb) {
                     VM.load(state.uuid, function(err, obj) {
+                        i++;
                         if (err) {
                             t.ok(false, 'load obj from new VM: ' + err.message);
                             return cb(err);
                         }
                         t.ok(true, 'loaded obj for new VM');
                         cb();
-                        i++;
                     });
                 }
             ], callback);

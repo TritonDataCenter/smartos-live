@@ -425,7 +425,7 @@ function getInfo(uuid, types, callback)
     VM.info(uuid, types, function (err, data) {
         if (err) {
             // Our error message here gets shown to the user.
-            callback(new Error('Unable to get VM info for ' + uuid
+            callback(new Error('Unable to get VM info for VM ' + uuid
                 + ': ' + err.message));
         } else {
             console.log(JSON.stringify(data, null, 2));
@@ -744,7 +744,7 @@ function main(callback)
                     callback(err);
                 }
             } else {
-                callback(null, 'Successfully started ' + uuid);
+                callback(null, 'Successfully started VM ' + uuid);
             }
         });
         break;
@@ -768,7 +768,7 @@ function main(callback)
                 if (err) {
                     callback(err);
                 } else {
-                    callback(null, 'Successfully updated ' + uuid);
+                    callback(null, 'Successfully updated VM ' + uuid);
                 }
             });
         } else {
@@ -784,7 +784,7 @@ function main(callback)
                         if (e) {
                             callback(e);
                         } else {
-                            callback(null, 'Successfully updated ' + uuid);
+                            callback(null, 'Successfully updated VM ' + uuid);
                         }
                     });
                 }
@@ -798,7 +798,7 @@ function main(callback)
                 callback(err);
                 return;
             }
-            callback(null, 'Successfully installed ' + uuid);
+            callback(null, 'Successfully installed VM ' + uuid);
         });
         break;
     case 'recv':
@@ -807,7 +807,7 @@ function main(callback)
             if (e) {
                 callback(e);
             } else {
-                callback(null, 'Successfully received ' + info.uuid);
+                callback(null, 'Successfully received VM ' + info.uuid);
             }
         });
         break;
@@ -830,7 +830,7 @@ function main(callback)
                 if (e) {
                     callback(e);
                 } else {
-                    callback(null, 'Successfully created ' + info.uuid);
+                    callback(null, 'Successfully created VM ' + info.uuid);
                 }
             });
         });
@@ -845,7 +845,7 @@ function main(callback)
                 if (err) {
                     callback(err);
                 } else {
-                    callback(null, 'Created snapshot ' + snapname + ' for '
+                    callback(null, 'Created snapshot ' + snapname + ' for VM '
                         + uuid);
                 }
             });
@@ -861,7 +861,7 @@ function main(callback)
                 if (err) {
                     callback(err);
                 } else {
-                    callback(null, 'Deleted snapshot ' + snapname + ' for '
+                    callback(null, 'Deleted snapshot ' + snapname + ' for VM '
                         + uuid);
                 }
             });
@@ -877,8 +877,8 @@ function main(callback)
                 if (err) {
                     callback(err);
                 } else {
-                    callback(null, 'Rolled back snapshot ' + snapname + ' for '
-                        + uuid);
+                    callback(null, 'Rolled back snapshot ' + snapname
+                        + ' for VM ' + uuid);
                 }
             });
         }
@@ -889,7 +889,7 @@ function main(callback)
             if (e) {
                 callback(e);
             } else {
-                callback(null, 'Successfully sent ' + uuid);
+                callback(null, 'Successfully sent VM ' + uuid);
             }
         });
         break;
@@ -898,10 +898,11 @@ function main(callback)
         uuid = getUUID(command, parsed);
         VM.delete(uuid, function (err) {
             if (err) {
-                err.message = 'Failed to delete ' + uuid + ': ' + err.message;
+                err.message = 'Failed to delete VM ' + uuid + ': '
+                    + err.message;
                 callback(err);
             } else {
-                callback(null, 'Successfully deleted ' + uuid);
+                callback(null, 'Successfully deleted VM ' + uuid);
             }
         });
         break;
@@ -1024,7 +1025,7 @@ function main(callback)
                     if (err) {
                         callback(err);
                     } else {
-                        callback(null, 'Sent ' + type + ' sysrq to ' + uuid);
+                        callback(null, 'Sent ' + type + ' sysrq to VM ' + uuid);
                     }
                 });
             }
@@ -1096,7 +1097,7 @@ function main(callback)
                     callback(err);
                 }
             } else {
-                callback(null, 'Successfully completed ' + command + ' for '
+                callback(null, 'Successfully completed ' + command + ' for VM '
                     + uuid);
             }
         });

@@ -670,8 +670,14 @@ tab-complete UUIDs rather than having to type them out for every command.
     delegate_dataset:
 
         This property indicates whether we should delegate a ZFS dataset to an
-        OS VM. If true, the VM will get a dataset /data which it will be able
-        to manage.
+        OS VM. If true, the VM will get a dataset <zoneroot dataset>/data (by
+        default: zones/<uuid>/data) added to it. This dataset will be also be
+        mounted on /<zoneroot dataset>/data inside the zone (again by default:
+        /zones/<uuid>/data) but you can change this by setting the mountpoint
+        option on the dataset from within the zone with zfs(1M). When using
+        this option, sub-datasets can be created, snapshots can be taken and
+        many other options can be performed on this dataset from within the
+        VM.
 
         type: boolean
         vmtype: OS

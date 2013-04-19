@@ -40,6 +40,59 @@ var payload = {
     ]
 };
 
+test('test create with bad image_size', {'timeout': 240000}, function(t) {
+
+    p = {
+        'brand': 'kvm',
+        'vcpus': 1,
+        'ram': 256,
+        'alias': 'autotest-' + process.pid,
+        'do_not_inventory': true,
+        'autoboot': false,
+        'disks': [
+          {
+            'boot': true,
+            'model': 'virtio',
+            'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
+            'image_size': 31337
+          }
+        ]
+    };
+    state = {'brand': p.brand, 'expect_create_failure': true};
+
+    vmtest.on_new_vm(t, null, p, state, [],
+        function (err) {
+            t.end();
+        }
+    );
+});
+
+test('test create with missing image_size', {'timeout': 240000}, function(t) {
+
+    p = {
+        'brand': 'kvm',
+        'vcpus': 1,
+        'ram': 256,
+        'alias': 'autotest-' + process.pid,
+        'do_not_inventory': true,
+        'autoboot': false,
+        'disks': [
+          {
+            'boot': true,
+            'model': 'virtio',
+            'image_uuid': vmtest.CURRENT_UBUNTU_UUID
+          }
+        ]
+    };
+    state = {'brand': p.brand};
+
+    vmtest.on_new_vm(t, null, p, state, [],
+        function (err) {
+            t.end();
+        }
+    );
+});
+
 test('test create with virtio_tx*', {'timeout': 240000}, function(t) {
     state = {'brand': 'kvm'};
     vmtest.on_new_vm(t, null, payload, state, [

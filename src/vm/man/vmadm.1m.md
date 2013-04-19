@@ -758,21 +758,25 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     disks.*.image_size:
 
-        The size of the image from which we will create this disk.
+        The size of the image from which we will create this disk. When neither
+        size nor image_size is passed for a disk but an image_uuid is, and that
+        image is available through imgadm, the image_size value from the
+        manifest will be set as image_size.
 
-        Important: image_size is required when you include image_uuid for a disk
-        and not allowed when you don't.
+        Important: image_size is required (unless you rely on imgadm) when you
+        include image_uuid for a disk and not allowed when you don't.
 
         type: integer (size in MiB)
         vmtype: KVM
         listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
-        default: no
+        default: no (loaded from imgadm if possible)
 
     disks.*.image_uuid:
 
-        UUID of dataset from which to clone this VM's disk.
+        UUID of dataset from which to clone this VM's disk. Note: this image's
+        UUID must show up in the 'imgadm list' output in order to be valid.
 
         type: string (UUID)
         vmtype: KVM

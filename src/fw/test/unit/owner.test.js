@@ -368,13 +368,13 @@ exports['all vms (local and remote)'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[0], cb);
+    helpers.fwGetEquals(t, expRules[0], cb);
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[1], cb);
+    helpers.fwGetEquals(t, expRules[1], cb);
 
   }, function (cb) {
-    helpers.fwListEquals(fw, t, expRules, cb);
+    helpers.fwListEquals(t, expRules, cb);
 
   }, function (cb) {
     var addPayload = {
@@ -433,7 +433,6 @@ exports['all vms (local and remote)'] = function (t) {
 
   }, function (cb) {
     helpers.testEnableDisable({
-      fw: fw,
       t: t,
       vm: vm1,
       vms: [vm1, vm2, vm3]
@@ -491,7 +490,6 @@ exports['all vms (local and remote)'] = function (t) {
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: expRules,
       vm: vm1,
@@ -534,7 +532,6 @@ exports['all vms (local and remote)'] = function (t) {
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: expRules,
       vm: vm1,
@@ -634,11 +631,10 @@ exports['remote vms: tags'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[0], cb);
+    helpers.fwGetEquals(t, expRules[0], cb);
 
   }, function (cb) {
     helpers.testEnableDisable({
-      fw: fw,
       t: t,
       vm: vm1,
       vms: [vm1, vm2, vm3]
@@ -725,11 +721,10 @@ exports['remote vms: vms'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[0], cb);
+    helpers.fwGetEquals(t, expRules[0], cb);
 
   }, function (cb) {
     helpers.testEnableDisable({
-      fw: fw,
       t: t,
       vm: vm1,
       vms: [vm1, vm2]

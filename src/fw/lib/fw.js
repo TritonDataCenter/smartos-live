@@ -145,7 +145,11 @@ function ruleTypeWalk(rules, types, cb) {
   rules.forEach(function (rule) {
     types.forEach(function (type) {
       rule[type].forEach(function (t) {
-        cb(rule, type, t);
+        if (typeof (t) === 'string') {
+          cb(rule, type, t);
+        } else {
+          cb(rule, type, t[0], t[1]);
+        }
       });
     });
   });
@@ -263,27 +267,34 @@ function createRules(inRules, callback) {
  * Merge updates from the rules in payload, and return the updated
  * rule objects
  */
-function createUpdatedRules(rules, payload, callback) {
+function createUpdatedRules(opts, callback) {
   LOG.trace('createUpdatedRules: entry');
-  if (!payload.rules || payload.rules.length === 0) {
+  var originalRules = opts.originalRules;
+  var updatedRules = opts.updatedRules;
+
+  if (!updatedRules || updatedRules.length === 0) {
     return callback(null, []);
   }
 
-  var updates = {};
+  var originals = {};
+  var updated = [];
 
-  payload.rules.forEach(function (r) {
-    updates[r.uuid] = r;
+  originalRules.forEach(function (r) {
+    originals[r.uuid] = r;
   });
 
-  LOG.debug({payloadRules: updates, rules: rules },
-    'createUpdatedRules: merging rules');
-
-  var updatedRules = rules.map(function (rule) {
-    return mergeObjects(updates[rule.uuid], rule.serialize());
+  updatedRules.forEach(function (rule) {
+    // Assume that we're allowed to do adds - findRules() would have errored
+    // out if allowAdds was unset and an add was attempted
+    if (originals.hasOwnProperty(rule.uuid)) {
+      updated.push(mergeObjects(rule, originals[rule.uuid].serialize()));
+    } else {
+      updated.push(rule);
+    }
   });
 
-  LOG.debug(updatedRules, 'createUpdatedRules: rules merged');
-  return createRules(updatedRules, callback);
+  LOG.debug(updated, 'createUpdatedRules: rules merged');
+  return createRules(updated, callback);
 }
 
 
@@ -320,7 +331,7 @@ function createVMlookup(vms, callback) {
         function (i) { return (i !== 'dhcp'); }),
       owner_uuid: fullVM.owner_uuid,
       state: fullVM.state,
-      tags: Object.keys(fullVM.tags),
+      tags: fullVM.tags,
       uuid: fullVM.uuid,
       zonepath: fullVM.zonepath
     };
@@ -329,12 +340,15 @@ function createVMlookup(vms, callback) {
     vmStore.all[vm.uuid] = vm;
     addToHash3(vmStore, 'vms', vm.uuid, vm.uuid, vm);
 
-    vm.tags.forEach(function (tag) {
-      addToHash3(vmStore, 'tags', tag, vm.uuid, vm);
+    forEachKey(vm.tags, function (tag, val) {
+      createSubObjects(vmStore, 'tags', tag, vm.uuid, vm);
+      createSubObjects(vmStore, 'tagValues', tag, val, vm.uuid, vm);
     });
+
     vm.ips.forEach(function (ip) {
       addToHash3(vmStore, 'ips', ip, vm.uuid, vm);
     });
+
     // XXX: subnet
   });
 
@@ -389,9 +403,10 @@ function createRemoteVMlookup(remoteVMs, callback) {
       rvmLookup.vms[uuid][uuid] = rvm;
 
       if (rvm.hasOwnProperty('tags')) {
-        for (var t in rvm.tags) {
-          createSubObjects(rvmLookup.tags, t, uuid, rvm);
-        }
+        forEachKey(rvm.tags, function (tag, val) {
+          createSubObjects(rvmLookup.tags, tag, uuid, rvm);
+          createSubObjects(rvmLookup, 'tagValues', tag, val, uuid, rvm);
+        });
       }
 
       rvm.ips.forEach(function (ip) {
@@ -739,8 +754,11 @@ function loadDataFromDisk(callback) {
 /**
  * Finds rules in the list, returning an error if they can't be found
  */
-function findRules(allRules, rules, callback) {
+function findRules(opts, callback) {
   LOG.trace('findRules: entry');
+  var allowAdds = opts.allowAdds || false;
+  var allRules = opts.allRules;
+  var rules = opts.rules;
 
   if (!rules || rules.length === 0) {
     return callback(null, []);
@@ -769,15 +787,21 @@ function findRules(allRules, rules, callback) {
     }
   });
 
-  if (!objEmpty(uuids)) {
+  // If we're allowing adds, missing rules aren't an error
+  if (!allowAdds && !objEmpty(uuids)) {
     Object.keys(uuids).forEach(function (uuid) {
       errs.push(new verror.VError('Unknown rule: %s', uuid));
     });
   }
 
   if (LOG.debug()) {
-    LOG.debug({ rules: found, missing: Object.keys(uuids) },
-      'findRules: return');
+    var ret = { rules: found };
+    if (allowAdds) {
+      ret.adds = Object.keys(uuids);
+    } else {
+      ret.missing = Object.keys(uuids);
+    }
+    LOG.debug(ret, 'findRules: return');
   }
 
   if (errs.length !== 0) {
@@ -801,7 +825,11 @@ function filterVMsByRules(vms, rules, callback) {
   LOG.debug({ rules: rules }, 'filterVMsByRules: entry');
   var matchingVMs = {};
 
-  ruleTypeWalk(rules, function _matchingVMs(rule, type, t) {
+  ruleTypeWalk(rules, function _matchingVMs(rule, type, t, val) {
+    if (val !== undefined) {
+      type = 'tagValues';
+    }
+
     if (type === 'wildcards' && t === 'any') {
       return;
     }
@@ -812,10 +840,18 @@ function filterVMsByRules(vms, rules, callback) {
       return;
     }
 
+    var vmList = vms[type][t];
+    if (val) {
+      if (!vms[type][t].hasOwnProperty(val)) {
+        return;
+      }
+      vmList = vms[type][t][val];
+    }
+
     var owner_uuid = rule.owner_uuid;
 
-    Object.keys(vms[type][t]).forEach(function (uuid) {
-      var vm = vms[type][t][uuid];
+    Object.keys(vmList).forEach(function (uuid) {
+      var vm = vmList[uuid];
       if (owner_uuid && vm.owner_uuid != owner_uuid) {
         LOG.debug('filterVMsByRules: type=%s, t=%s, VM=%s: rule owner uuid'
           + ' (%s) did not match VM owner uuid (%s): %s',
@@ -932,23 +968,37 @@ function filterRulesByVMs(allVMs, vms, rules, callback) {
   var matchingRules = [];
   var matchingUUIDs = {};
 
-  ruleTypeWalk(rules, function _filterByVM(rule, type, t) {
+  ruleTypeWalk(rules, function _filterByVM(rule, type, t, val) {
+    if (val !== undefined) {
+      type = 'tagValues';
+    }
+
     LOG.trace('filterRulesByVMs: type=%s, t=%s, rule=%s',
       type, t, rule);
+
     if (!allVMs[type].hasOwnProperty(t)) {
       return;
     }
 
+    var vmList = allVMs[type][t];
+
+    if (val) {
+      if (!allVMs[type][t].hasOwnProperty(val)) {
+        return;
+      }
+      vmList = allVMs[type][t][val];
+    }
+
     var owner_uuid = rule.owner_uuid;
 
-    for (var uuid in allVMs[type][t]) {
+    for (var uuid in vmList) {
       if (!vms.hasOwnProperty(uuid)) {
         continue;
       }
 
-      if (owner_uuid && allVMs[type][t][uuid].owner_uuid != owner_uuid) {
+      if (owner_uuid && vmList[uuid].owner_uuid != owner_uuid) {
         LOG.trace('filterRulesByVMs: VM %s owner_uuid=%s does not match '
-          + 'rule owner_uuid=%s: %s', allVMs[type][t][uuid].owner_uuid,
+          + 'rule owner_uuid=%s: %s', vmList[uuid].owner_uuid,
           owner_uuid, rule);
         continue;
       }
@@ -1278,18 +1328,33 @@ function vmsOnSide(allVMs, rule, dir) {
 
   ['vms', 'tags', 'wildcards'].forEach(function (type) {
     rule[dir][type].forEach(function (t) {
+      var value;
+      if (typeof (t) !== 'string') {
+        value = t[1];
+        t = t[0];
+        type = 'tagValues';
+      }
+
       if (type === 'wildcards' && t === 'any') {
         return;
       }
 
-      if (!allVMs[type].hasOwnProperty(t)) {
+      if (!allVMs[type] || !allVMs[type].hasOwnProperty(t)) {
         LOG.debug('No matching VMs found in lookup for %s=%s', type, t);
         return;
       }
 
-      Object.keys(allVMs[type][t]).forEach(function (uuid) {
+      var vmList = allVMs[type][t];
+      if (value !== undefined) {
+        if (!vmList.hasOwnProperty(value)) {
+          return;
+        }
+        vmList = vmList[value];
+      }
+
+      Object.keys(vmList).forEach(function (uuid) {
         if (rule.hasOwnProperty('owner_uuid')
-          && (rule.owner_uuid != allVMs[type][t][uuid].owner_uuid)) {
+          && (rule.owner_uuid != vmList[uuid].owner_uuid)) {
           return;
         }
 
@@ -1339,18 +1404,33 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
   ['tag', 'vm', 'wildcard'].forEach(function (type) {
     var typePlural = type + 's';
     rule[otherSide][typePlural].forEach(function (value) {
+      var t;
+      if (typeof (value) !== 'string') {
+        t = value[1];
+        value = value[0];
+        type = 'tagValue';
+        typePlural = 'tagValues';
+      }
+
       if (type === 'wildcards' && value === 'any') {
         return;
       }
 
       [localVMs, remoteVMs].forEach(function (lookup) {
-
         if (!lookup.hasOwnProperty(typePlural)
           || !lookup[typePlural].hasOwnProperty(value)) {
           return;
         }
 
-        forEachKey(lookup[typePlural][value], function (uuid, vm) {
+        var vmList = lookup[typePlural][value];
+        if (t !== undefined) {
+          if (!vmList.hasOwnProperty(t)) {
+            return;
+          }
+          vmList = vmList[t];
+        }
+
+        forEachKey(vmList, function (uuid, vm) {
           if (rule.owner_uuid && vm.owner_uuid
             && vm.owner_uuid != rule.owner_uuid) {
             return;
@@ -2089,14 +2169,21 @@ function update(opts, callback) {
     funcs: [
       function disk(_, cb) { loadDataFromDisk(cb); },
 
-      // Make sure the rules exist: might want to relax this restriction?
+      // Make sure the rules exist
       function originalRules(res, cb) {
-        findRules(res.disk.rules, opts.rules, cb);
+        findRules({
+          allRules: res.disk.rules,
+          allowAdds: opts.allowAdds,
+          rules: opts.rules
+        }, cb);
       },
 
       // Apply updates to the found rules
       function rules(res, cb) {
-        createUpdatedRules(res.originalRules, opts, cb);
+        createUpdatedRules({
+          originalRules: res.originalRules,
+          updatedRules: opts.rules
+        }, cb);
       },
 
       // Create the VM lookup

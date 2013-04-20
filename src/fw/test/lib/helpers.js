@@ -115,8 +115,8 @@ function findRuleInList(findRule, list) {
  * Does a fw.get() for rule and a deepEqual to confirm the retrieved
  * rule is the same
  */
-function fwGetEquals(fw, t, rule, callback) {
-  return fw.get({ uuid: rule.uuid }, function (err, res) {
+function fwGetEquals(t, rule, callback) {
+  return mocks.fw.get({ uuid: rule.uuid }, function (err, res) {
     t.ifError(err);
     t.deepEqual(res, rule, 'get returned the same rule');
     return callback();
@@ -128,8 +128,8 @@ function fwGetEquals(fw, t, rule, callback) {
  * Does a fw.list() for rules and a deepEqual to confirm the retrieved
  * list is the same
  */
-function fwListEquals(fw, t, rules, callback) {
-  fw.list({ }, function (err, res) {
+function fwListEquals(t, rules, callback) {
+  mocks.fw.list({ }, function (err, res) {
     t.ifError(err);
 
     // clone the input rules in case order is important to the caller:
@@ -146,13 +146,12 @@ function fwListEquals(fw, t, rules, callback) {
  */
 function fwRulesEqual(opts, callback) {
   assert.object(opts, 'opts');
-  assert.object(opts.fw, 'opts.fw');
   assert.arrayOfObject(opts.rules, 'opts.rules');
   assert.object(opts.t, 'opts.t');
   assert.object(opts.vm, 'opts.vm');
   assert.arrayOfObject(opts.vms, 'opts.vms');
 
-  opts.fw.rules({ vm: opts.vm.uuid, vms: opts.vms }, function (err, res) {
+  mocks.fw.rules({ vm: opts.vm.uuid, vms: opts.vms }, function (err, res) {
     opts.t.ifError(err);
     if (err) {
       return callback();
@@ -160,7 +159,7 @@ function fwRulesEqual(opts, callback) {
 
     // clone the input rules in case order is important to the caller:
     opts.t.deepEqual(res.sort(uuidSort), clone(opts.rules).sort(uuidSort),
-      'fw.rules() correct');
+      'fw.rules() correct for ' + opts.vm.uuid);
 
     return callback();
   });
@@ -169,7 +168,6 @@ function fwRulesEqual(opts, callback) {
 
 function testEnableDisable(opts, callback) {
   assert.object(opts, 'opts');
-  assert.object(opts.fw, 'opts.fw');
   assert.object(opts.t, 'opts.t');
   assert.object(opts.vm, 'opts.vm');
   assert.arrayOfObject(opts.vms, 'opts.vms');
@@ -180,7 +178,7 @@ function testEnableDisable(opts, callback) {
   var t = opts.t;
   var zoneRules = zoneIPFconfigs();
 
-  opts.fw.disable({ vm: opts.vm }, function (err, res) {
+  mocks.fw.disable({ vm: opts.vm }, function (err, res) {
     t.ifError(err);
     if (err) {
       return callback(err);
@@ -193,7 +191,7 @@ function testEnableDisable(opts, callback) {
     vmsEnabled = getIPFenabled();
     t.deepEqual(vmsEnabled[opts.vm.uuid], false, 'firewall not enabled');
 
-    opts.fw.enable({ vm: opts.vm, vms: opts.vms }, function (err2, res2) {
+    mocks.fw.enable({ vm: opts.vm, vms: opts.vms }, function (err2, res2) {
       t.ifError(err2);
       if (err2) {
         return callback(err2);

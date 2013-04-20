@@ -104,10 +104,10 @@ exports['add / update'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRule, cb);
+    helpers.fwGetEquals(t, expRule, cb);
 
   }, function (cb) {
-    helpers.fwListEquals(fw, t, [expRule], cb);
+    helpers.fwListEquals(t, [expRule], cb);
 
   }, function (cb) {
     var updatePayload = {
@@ -146,14 +146,13 @@ exports['add / update'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRule, cb);
+    helpers.fwGetEquals(t, expRule, cb);
 
   }, function (cb) {
-    helpers.fwListEquals(fw, t, [expRule], cb);
+    helpers.fwListEquals(t, [expRule], cb);
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: [ expRule ],
       vm: vm,
@@ -164,7 +163,6 @@ exports['add / update'] = function (t) {
     // Disabling and re-enabling the firewall should have no effect on the
     // zone rules
     helpers.testEnableDisable({
-      fw: fw,
       t: t,
       vm: vm,
       vms: [vm]
@@ -201,7 +199,6 @@ exports['add / update'] = function (t) {
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: [ ],
       vm: vm,

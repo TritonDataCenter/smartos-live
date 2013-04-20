@@ -137,3 +137,102 @@ exports['icmp with code'] = function (t) {
 
   t.done();
 };
+
+
+exports['tag with value'] = function (t) {
+  var ruleTxt = 'FROM tag foo = bar TO ip 8.8.8.8 BLOCK udp PORT 53';
+
+  t.deepEqual(parser.parse(ruleTxt),
+    { from: [ [ 'tag', [ 'foo', 'bar' ] ] ],
+      to: [ [ 'ip', '8.8.8.8' ] ],
+      action: 'block',
+      protocol: {
+        name: 'udp',
+        targets: [ 53 ]
+      }
+    }, 'tag = value');
+
+  t.done();
+};
+
+
+exports['multiple tags with values'] = function (t) {
+  var ruleTxt = 'FROM (tag foo = bar OR tag some = value) TO '
+    + 'ip 8.8.8.8 BLOCK udp PORT 53';
+
+  t.deepEqual(parser.parse(ruleTxt),
+    { from: [
+      [ 'tag', [ 'foo', 'bar' ] ],
+      [ 'tag', [ 'some', 'value' ] ]
+    ],
+      to: [ [ 'ip', '8.8.8.8' ] ],
+      action: 'block',
+      protocol: {
+        name: 'udp',
+        targets: [ 53 ]
+      }
+    }, 'tag = value');
+
+  t.done();
+};
+
+
+exports['tag with quoted value'] = function (t) {
+  var ruleTxt = 'FROM tag foo = "some value" TO ip 8.8.8.8 BLOCK udp PORT 53';
+
+  t.deepEqual(parser.parse(ruleTxt),
+    { from: [ [ 'tag', [ 'foo', 'some value' ] ] ],
+      to: [ [ 'ip', '8.8.8.8' ] ],
+      action: 'block',
+      protocol: {
+        name: 'udp',
+        targets: [ 53 ]
+      }
+    }, 'tag = value');
+
+  t.done();
+};
+
+
+exports['tags with quoted name and value'] = function (t) {
+  var ruleTxt = 'FROM (tag "tag one" = "some value" OR '
+    + 'tag "tag two" = "another value")'
+    + 'TO ip 8.8.8.8 BLOCK udp PORT 53';
+
+  t.deepEqual(parser.parse(ruleTxt),
+    { from: [
+        [ 'tag', [ 'tag one', 'some value' ] ],
+        [ 'tag', [ 'tag two', 'another value' ] ]
+      ],
+      to: [ [ 'ip', '8.8.8.8' ] ],
+      action: 'block',
+      protocol: {
+        name: 'udp',
+        targets: [ 53 ]
+      }
+    }, 'tag = value');
+
+  t.done();
+};
+
+
+exports['tags with unicode characters'] = function (t) {
+  var ruleTxt = 'FROM (tag "☂" = "ທ" OR '
+    + 'tag "삼겹살" = "불고기")'
+    + 'TO ip 8.8.8.8 BLOCK udp PORT 53';
+
+  t.deepEqual(parser.parse(ruleTxt),
+    { from: [
+        [ 'tag', [ '☂', 'ທ' ] ],
+        [ 'tag', [ '삼겹살', '불고기' ] ]
+      ],
+      to: [ [ 'ip', '8.8.8.8' ] ],
+      action: 'block',
+      protocol: {
+        name: 'udp',
+        targets: [ 53 ]
+      }
+    }, 'tag = value');
+
+  t.done();
+};

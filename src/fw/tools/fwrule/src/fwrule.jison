@@ -7,6 +7,7 @@
 %lex
 
 digit                   [0-9]
+esc                     "\\"
 t                       {digit}{1,3}
 
 %%
@@ -34,6 +35,7 @@ t                       {digit}{1,3}
 "VMS"                   return 'VMS';
 "vms"                   return 'VMS';
 
+'='                     return '=';
 '('                     return '(';
 ')'                     return ')';
 "OR"                    return 'OR';
@@ -58,6 +60,7 @@ t                       {digit}{1,3}
 "CODE"                  return 'CODE';
 "code"                  return 'CODE';
 
+\"(?:{esc}["bfnrt/{esc}]|{esc}"u"[a-fA-F0-9]{4}|[^"{esc}])*\"  yytext = yytext.substr(1,yyleng-2); return 'STRING';
 {t}'.'{t}'.'{t}'.'{t}   return 'IPADDR';
 '/'{digit}{digit}       return 'CIDRSUFFIX'
 
@@ -135,10 +138,18 @@ uuid
     ;
 
 tag
-    : TAG WORD
+    : TAG tag_string
         { $$ = [ ['tag', $2] ]; }
+    | TAG tag_string '=' tag_string
+        { $$ = [ ['tag', [ $2, $4 ] ] ]; }
     ;
 
+tag_string
+    : STRING
+        { $$ = yytext; }
+    | WORD
+        { $$ = $1; }
+    ;
 
 action
     : BLOCK

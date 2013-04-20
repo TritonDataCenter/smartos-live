@@ -182,10 +182,10 @@ exports['add / update: tag to tag'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, rule1, cb);
+    helpers.fwGetEquals(t, rule1, cb);
 
   }, function (cb) {
-    helpers.fwListEquals(fw, t, [rule1], cb);
+    helpers.fwListEquals(t, [rule1], cb);
 
   }, function (cb) {
     // Simulate creating a new local VM with tag one
@@ -845,6 +845,313 @@ exports['add / update: tag to tag'] = function (t) {
   });
 };
 
+
+exports['tags with values'] = function (t) {
+  var vm1 = helpers.generateVM({ uuid: helpers.uuidNum(1) });
+  var vm2 = helpers.generateVM({ uuid: helpers.uuidNum(2),
+    tags: { role: 'web' } });
+  var vm3 = helpers.generateVM({ uuid: helpers.uuidNum(3),
+    tags: { role: 'db' } });
+  var vm4 = helpers.generateVM({ uuid: helpers.uuidNum(4),
+    tags: { role: 'web' } });
+  var vm5 = helpers.generateVM({ uuid: helpers.uuidNum(5),
+    tags: { role: 'mon' } });
+
+  var rvm1 = helpers.generateVM({ uuid: helpers.uuidNum(11) });
+  var rvm2 = helpers.generateVM({ uuid: helpers.uuidNum(12),
+    tags: { role: 'web' } });
+  var rvm3 = helpers.generateVM({ uuid: helpers.uuidNum(13),
+    tags: { role: 'db' } });
+  var rvm4 = helpers.generateVM({ uuid: helpers.uuidNum(14),
+    tags: { role: 'web' } });
+
+  var allVMs = [ vm1, vm2, vm3, vm4, vm5 ];
+  var payload = {
+    remoteVMs: [rvm1, rvm2, rvm3],
+    rules: [
+      {
+        rule: 'FROM any TO tag role = web ALLOW tcp PORT 80',
+        enabled: true
+      }
+    ],
+    vms: allVMs
+  };
+
+  var expRules = [clone(payload.rules[0])];
+  var vmsEnabled = {};
+  var remoteVMsOnDisk = {};
+  var zoneRules;
+
+  async.series([
+  function (cb) {
+    fw.add(payload, function (err, res) {
+      t.ifError(err);
+      if (err) {
+        return cb();
+      }
+
+      t.ok(res.rules[0].uuid, 'rule has a uuid');
+      expRules[0].uuid = res.rules[0].uuid;
+
+      t.ok(res.rules[0].version, 'rule has a version');
+      expRules[0].version = res.rules[0].version;
+
+      t.deepEqual(helpers.sortRes(res), {
+        rules: expRules,
+        vms: [ vm2.uuid, vm4.uuid ].sort()
+      }, 'rules returned');
+
+      zoneRules = helpers.defaultZoneRules([vm2.uuid, vm4.uuid]);
+      [vm2, vm4].forEach(function (vm) {
+        createSubObjects(zoneRules, vm.uuid, 'in', 'pass', 'tcp',
+          {
+            any: [ 80 ]
+          });
+      });
+
+      t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
+        'firewall rules correct');
+
+      vmsEnabled[vm2.uuid] = true;
+      vmsEnabled[vm4.uuid] = true;
+      t.deepEqual(helpers.getIPFenabled(), vmsEnabled, 'ipf enabled in VMs');
+
+      remoteVMsOnDisk[rvm1.uuid] = util_vm.createRemoteVM(rvm1);
+      remoteVMsOnDisk[rvm2.uuid] = util_vm.createRemoteVM(rvm2);
+      remoteVMsOnDisk[rvm3.uuid] = util_vm.createRemoteVM(rvm3);
+      t.deepEqual(helpers.remoteVMsOnDisk(), remoteVMsOnDisk,
+        'remote VMs on disk');
+
+      cb();
+    });
+
+  }, function (cb) {
+    helpers.fwGetEquals(t, expRules[0], cb);
+
+  }, function (cb) {
+    helpers.fwListEquals(t, expRules, cb);
+
+  }, function (cb) {
+
+    var addPayload = {
+      rules: [
+        {
+          rule: 'FROM tag role = web TO tag role = mon ALLOW udp PORT 514',
+          enabled: true
+        }
+      ],
+      vms: allVMs
+    };
+    expRules.push(addPayload.rules[0]);
+
+    fw.add(addPayload, function (err, res) {
+      t.ifError(err);
+      if (err) {
+        return cb();
+      }
+
+      t.ok(res.rules[0].uuid, 'rule has a uuid');
+      expRules[1].uuid = res.rules[0].uuid;
+
+      t.ok(res.rules[0].version, 'rule has a version');
+      expRules[1].version = res.rules[0].version;
+
+      t.deepEqual(helpers.sortRes(res), {
+        vms: [ vm2.uuid, vm4.uuid, vm5.uuid ].sort(),
+        rules: [ expRules[1] ]
+      }, 'rules returned');
+
+      zoneRules[vm5.uuid] = helpers.defaultZoneRules();
+      var udpPorts = {};
+      udpPorts[vm2.nics[0].ip] = [ 514 ];
+      udpPorts[vm4.nics[0].ip] = [ 514 ];
+      udpPorts[rvm2.nics[0].ip] = [ 514 ];
+
+      createSubObjects(zoneRules, vm5.uuid, 'in', 'pass', 'udp', udpPorts);
+
+      t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
+        'firewall rules correct');
+
+      vmsEnabled[vm5.uuid] = true;
+      t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
+        'ipf enabled in VMs');
+
+      cb();
+    });
+
+  }, function (cb) {
+    helpers.fwGetEquals(t, expRules[1], cb);
+
+  }, function (cb) {
+    helpers.fwListEquals(t, expRules, cb);
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      t: t,
+      rules: [ expRules[1] ],
+      vm: vm5,
+      vms: allVMs
+    }, cb);
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      t: t,
+      rules: expRules,
+      vm: vm2,
+      vms: allVMs
+    }, cb);
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      t: t,
+      rules: expRules,
+      vm: vm4,
+      vms: allVMs
+    }, cb);
+
+  }, function (cb) {
+
+    var updatePayload = {
+      rules: [
+        {
+          uuid: expRules[0].uuid,
+          rule: 'FROM any TO (tag role = db OR tag role = web) ALLOW '
+            + 'tcp PORT 80'
+        }
+      ],
+      vms: allVMs
+    };
+    expRules[0].rule = updatePayload.rules[0].rule;
+
+    fw.update(updatePayload, function (err, res) {
+      t.ifError(err);
+      if (err) {
+        return cb();
+      }
+
+      t.ok(res.rules[0].version, 'rule has a version');
+      expRules[0].version = res.rules[0].version;
+
+      t.deepEqual(helpers.sortRes(res), {
+        vms: [ vm2.uuid, vm3.uuid, vm4.uuid ].sort(),
+        rules: [ expRules[0] ]
+      }, 'rules returned');
+
+      zoneRules[vm3.uuid] = helpers.defaultZoneRules();
+      createSubObjects(zoneRules, vm3.uuid, 'in', 'pass', 'tcp',
+        {
+          any: [ 80 ]
+        });
+
+      t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
+        'firewall rules correct');
+
+      vmsEnabled[vm3.uuid] = true;
+      t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
+        'ipf enabled in VMs');
+
+      cb();
+    });
+
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      t: t,
+      rules: [ expRules[0] ],
+      vm: vm3,
+      vms: allVMs
+    }, cb);
+
+  }, function (cb) {
+    // Disabling and re-enabling the firewall should have no effect on the
+    // zone rules
+    helpers.testEnableDisable({
+      t: t,
+      vm: vm2,
+      vms: allVMs
+    }, cb);
+
+  }, function (cb) {
+    helpers.testEnableDisable({
+      t: t,
+      vm: vm5,
+      vms: allVMs
+    }, cb);
+
+  }, function (cb) {
+    // Add a remote VM
+    var addPayload = {
+      remoteVMs: [ rvm4 ],
+      vms: allVMs
+    };
+
+    fw.add(addPayload, function (err, res) {
+      t.ifError(err);
+      if (err) {
+        return cb();
+      }
+
+      t.deepEqual(helpers.sortRes(res), {
+        vms: [ vm2.uuid, vm3.uuid, vm4.uuid, vm5.uuid ].sort(),
+        rules: [ ]
+      }, 'rules returned');
+
+      zoneRules[vm5.uuid].in.pass.udp[rvm4.nics[0].ip] = [ 514 ];
+      t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
+        'firewall rules correct');
+
+      remoteVMsOnDisk[rvm4.uuid] = util_vm.createRemoteVM(rvm4);
+      t.deepEqual(helpers.remoteVMsOnDisk(), remoteVMsOnDisk,
+        'remote VMs on disk');
+
+      cb();
+    });
+
+  }, function (cb) {
+    // Delete the rule
+
+    var delPayload = {
+      uuids: [ expRules[0].uuid ],
+      vms: allVMs
+    };
+
+    fw.del(delPayload, function (err, res) {
+      t.ifError(err);
+      if (err) {
+        return cb();
+      }
+
+      t.deepEqual(helpers.sortRes(res), {
+        vms: [ vm2.uuid, vm3.uuid, vm4.uuid ],
+        rules: [ expRules[0] ]
+      }, 'results returned');
+
+      [vm2, vm3, vm4].forEach(function (vm) {
+        delete zoneRules[vm.uuid].in.pass;
+      });
+
+      t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
+        'firewall rules correct');
+
+      t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
+        'ipf still enabled in VMs');
+
+      cb();
+    });
+
+  }, function (cb) {
+    helpers.fwRulesEqual({
+      t: t,
+      rules: [ expRules[1] ],
+      vm: vm2,
+      vms: allVMs
+    }, cb);
+  }
+
+  ], function () {
+      t.done();
+  });
+};
 
 
 // --- Teardown

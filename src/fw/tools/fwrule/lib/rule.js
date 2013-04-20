@@ -84,6 +84,58 @@ function icmpTypeSort(types) {
 }
 
 
+/**
+ * Adds a tag to an object
+ */
+function addTag(obj, tag, val) {
+  if (!obj.hasOwnProperty(tag)) {
+    obj[tag] = {};
+  }
+
+  if (val === undefined || val === null) {
+    obj[tag].all = true;
+    return;
+  }
+
+  if (!obj[tag].hasOwnProperty('values')) {
+    obj[tag].values = {};
+  }
+
+  obj[tag].values[val] = true;
+}
+
+
+/**
+ * Creates a list of tags based on an object populated by addTag() above
+ */
+function tagList(obj) {
+  var tags = [];
+  Object.keys(obj).sort().forEach(function (tag) {
+    if (obj[tag].hasOwnProperty('all')) {
+      tags.push(tag);
+    } else {
+      Object.keys(obj[tag].values).sort().forEach(function (val) {
+        tags.push([tag, val]);
+      });
+    }
+  });
+  return tags;
+}
+
+
+/**
+ * Quotes a string if it contains non-alphanumeric characters
+ */
+function quote(str) {
+  var WORD_RE = /[^-a-zA-Z0-9_]/;
+  if (str.search(WORD_RE) !== -1) {
+    return '"' + str + '"';
+  }
+
+  return str;
+}
+
+
 
 // --- Firewall object and methods
 
@@ -186,13 +238,29 @@ function FwRule(data) {
     dir = DIRECTIONS[d];
     for (var j in parsed[dir]) {
       var target = parsed[dir][j];
+      var targetName;
       var name = target[0] + 's';
       if (!dirs[dir].hasOwnProperty(name)) {
         dirs[dir][name] = {};
       }
 
-      this[name][target[1]] = 1;
-      dirs[dir][name][target[1]] = 1;
+      if (name === 'tags') {
+        var targetVal = null;
+        if (typeof (target[1]) === 'string') {
+          targetName = target[1];
+        } else {
+          targetName = target[1][0];
+          targetVal = target[1][1];
+        }
+
+        addTag(this[name], targetName, targetVal);
+        addTag(dirs[dir][name], targetName, targetVal);
+
+      } else {
+        targetName = target[1];
+        this[name][targetName] = target[1];
+        dirs[dir][name][targetName] = target[1];
+      }
     }
   }
 
@@ -202,7 +270,12 @@ function FwRule(data) {
     for (var t in TARGET_TYPES) {
       var type = TARGET_TYPES[t] + 's';
       if (dirs[dir].hasOwnProperty(type)) {
-        this[dir][type] = Object.keys(dirs[dir][type]).sort();
+        if (type === 'tags') {
+          this[dir][type] = tagList(dirs[dir][type]);
+
+        } else {
+          this[dir][type] = Object.keys(dirs[dir][type]).sort();
+        }
       } else {
         this[dir][type] = [];
       }
@@ -210,7 +283,7 @@ function FwRule(data) {
   }
 
   this.ips = Object.keys(this.ips).sort();
-  this.tags = Object.keys(this.tags).sort();
+  this.tags = tagList(this.tags);
   this.vms = Object.keys(this.vms).sort();
   this.subnets = Object.keys(this.subnets).sort();
   this.wildcards = Object.keys(this.wildcards).sort();
@@ -280,8 +353,16 @@ FwRule.prototype.text = function () {
 
   forEachTarget(this, function (dir, type, name, arr) {
     for (var i in arr) {
-      var txt = util.format('%s %s', type, arr[i]);
-      if (type == 'wildcard') {
+      var txt;
+      if (type === 'tag') {
+        txt = util.format('%s %s', type,
+          typeof (arr[i]) === 'string' ? quote(arr[i])
+          : (quote(arr[i][0]) + ' = ' + quote(arr[i][1])));
+      } else {
+        txt = util.format('%s %s', type, arr[i]);
+      }
+
+      if (type === 'wildcard') {
         txt = arr[i] === 'vmall' ? 'all vms' : arr[i];
       }
       targets[dir].push(txt);

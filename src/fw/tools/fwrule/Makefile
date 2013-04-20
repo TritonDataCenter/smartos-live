@@ -48,7 +48,8 @@ JSSTYLE_FLAGS    = -o indent=2,strict-indent=1,doxygen,unparenthesized-return=0,
 
 .PHONY: parser
 parser: $(JISON)
-	$(JISON)  -o lib/parser.js ./src/fwrule.jison
+	@cp ./src/header.js ./lib/parser.js
+	@cat ./src/fwrule.jison | $(JISON)  >> ./lib/parser.js
 
 $(NODEUNIT):
 	$(NPM) install

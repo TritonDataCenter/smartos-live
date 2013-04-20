@@ -217,7 +217,7 @@ exports['multiple ports and owner_uuid'] = function (t) {
   var inRule = {
     rule: 'FROM ip 10.88.88.1 TO tag tag2 ALLOW tcp (PORT 1002 AND PORT 1052)',
     enabled: true,
-    owner_uuid: '00000000-0000-0000-0000-000000000000',
+    owner_uuid: '930896af-bf8c-48d4-885c-6573a94b1853',
     version: fwrule.generateVersion()
   };
 
@@ -562,6 +562,211 @@ exports['port ALL'] = function (t) {
     uuid: rule.uuid,
     version: rule.version
   }, 'rule.serialize()');
+
+  t.done();
+};
+
+
+exports['tags: equal'] = function (t) {
+  var ruleTxt =
+    'FROM ip 1.2.3.4 TO tag some-tag = value ALLOW tcp PORT 80';
+  var rule = new fwrule.create({
+    rule: ruleTxt,
+    version: fwrule.generateVersion()
+  });
+
+  var raw = {
+    action: 'allow',
+    enabled: false,
+    from: {
+      ips: [ '1.2.3.4' ],
+      vms: [],
+      subnets: [],
+      tags: [],
+      wildcards: []
+    },
+    protocol: 'tcp',
+    ports: [ 80 ],
+    to: {
+      ips: [],
+      vms: [],
+      subnets: [],
+      tags: [ [ 'some-tag', 'value' ] ],
+      wildcards: []
+    },
+    uuid: rule.uuid,
+    version: rule.version
+  };
+  t.deepEqual(rule.raw(), raw, 'rule.raw()');
+
+  t.deepEqual(rule.serialize(), {
+    enabled: false,
+    rule: ruleTxt,
+    uuid: rule.uuid,
+    version: rule.version
+  }, 'rule.serialize()');
+
+  t.ok(!rule.allVMs, 'rule.allVMs');
+  t.deepEqual(rule.tags, raw.to.tags, 'rule.tags');
+
+  t.done();
+};
+
+
+exports['multiple tags: equal'] = function (t) {
+  var ruleTxt = 'FROM ip 1.2.3.4 TO '
+    + '(tag some-tag = value OR tag some-tag = value2) ALLOW tcp PORT 80';
+  var rule = new fwrule.create({
+    rule: ruleTxt,
+    version: fwrule.generateVersion()
+  });
+
+  var raw = {
+    action: 'allow',
+    enabled: false,
+    from: {
+      ips: [ '1.2.3.4' ],
+      vms: [],
+      subnets: [],
+      tags: [],
+      wildcards: []
+    },
+    protocol: 'tcp',
+    ports: [ 80 ],
+    to: {
+      ips: [],
+      vms: [],
+      subnets: [],
+      tags: [
+        [ 'some-tag', 'value' ],
+        [ 'some-tag', 'value2' ]
+      ],
+      wildcards: []
+    },
+    uuid: rule.uuid,
+    version: rule.version
+  };
+  t.deepEqual(rule.raw(), raw, 'rule.raw()');
+
+  t.deepEqual(rule.serialize(), {
+    enabled: false,
+    rule: ruleTxt,
+    uuid: rule.uuid,
+    version: rule.version
+  }, 'rule.serialize()');
+
+  t.ok(!rule.allVMs, 'rule.allVMs');
+  t.deepEqual(rule.tags, raw.to.tags, 'rule.tags');
+
+  t.done();
+};
+
+
+exports['multiple tags: multiple values'] = function (t) {
+  var rule = new fwrule.create({
+    rule: 'FROM (tag some-tag OR tag some-tag = value0) TO '
+      + '(tag some-tag = value OR tag some-tag = value2) ALLOW tcp PORT 80',
+    version: fwrule.generateVersion()
+  });
+
+  var raw = {
+    action: 'allow',
+    enabled: false,
+    from: {
+      ips: [],
+      vms: [],
+      subnets: [],
+      tags: [ 'some-tag' ],
+      wildcards: []
+    },
+    protocol: 'tcp',
+    ports: [ 80 ],
+    to: {
+      ips: [],
+      vms: [],
+      subnets: [],
+      tags: [
+        [ 'some-tag', 'value' ],
+        [ 'some-tag', 'value2' ]
+      ],
+      wildcards: []
+    },
+    uuid: rule.uuid,
+    version: rule.version
+  };
+  t.deepEqual(rule.raw(), raw, 'rule.raw()');
+
+  t.deepEqual(rule.serialize(), {
+    enabled: false,
+    // 'some-tag = value0' is a subset of 'tag some-tag', so it is not
+    // included in the rule text
+    rule: 'FROM tag some-tag TO '
+      + '(tag some-tag = value OR tag some-tag = value2) ALLOW tcp PORT 80',
+    uuid: rule.uuid,
+    version: rule.version
+  }, 'rule.serialize()');
+
+  t.ok(!rule.allVMs, 'rule.allVMs');
+  t.deepEqual(rule.tags, raw.from.tags, 'rule.tags');
+
+  t.done();
+};
+
+
+exports['multiple tags: multiple quoted values'] = function (t) {
+  var rule = new fwrule.create({
+    rule: 'FROM (tag "김치" = "백김치" OR tag "김치" = "白김치") TO '
+      + '(tag "some tag" = value OR tag some-tag = "another value") '
+      + 'ALLOW tcp PORT 80',
+    version: fwrule.generateVersion()
+  });
+
+  var raw = {
+    action: 'allow',
+    enabled: false,
+    from: {
+      ips: [],
+      vms: [],
+      subnets: [],
+      tags: [
+        [ '김치', '白김치' ],
+        [ '김치', '백김치' ]
+      ],
+      wildcards: []
+    },
+    protocol: 'tcp',
+    ports: [ 80 ],
+    to: {
+      ips: [],
+      vms: [],
+      subnets: [],
+      tags: [
+        [ 'some tag', 'value' ],
+        [ 'some-tag', 'another value' ]
+      ],
+      wildcards: []
+    },
+    uuid: rule.uuid,
+    version: rule.version
+  };
+  t.deepEqual(rule.raw(), raw, 'rule.raw()');
+
+  t.deepEqual(rule.serialize(), {
+    enabled: false,
+    rule: 'FROM (tag "김치" = "白김치" OR tag "김치" = "백김치") TO '
+      + '(tag "some tag" = value OR tag some-tag = "another value") '
+      + 'ALLOW tcp PORT 80',
+    uuid: rule.uuid,
+    version: rule.version
+  }, 'rule.serialize()');
+
+  t.ok(!rule.allVMs, 'rule.allVMs');
+  t.deepEqual(rule.tags, [
+        [ 'some tag', 'value' ],
+        [ 'some-tag', 'another value' ],
+        [ '김치', '白김치' ],
+        [ '김치', '백김치' ]
+    ], 'rule.tags');
 
   t.done();
 };

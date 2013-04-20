@@ -108,10 +108,10 @@ exports['any <-> vm: add / update'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[0], cb);
+    helpers.fwGetEquals(t, expRules[0], cb);
 
   }, function (cb) {
-    helpers.fwListEquals(fw, t, expRules, cb);
+    helpers.fwListEquals(t, expRules, cb);
 
   }, function (cb) {
 
@@ -155,14 +155,13 @@ exports['any <-> vm: add / update'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[1], cb);
+    helpers.fwGetEquals(t, expRules[1], cb);
 
   }, function (cb) {
-    helpers.fwListEquals(fw, t, expRules, cb);
+    helpers.fwListEquals(t, expRules, cb);
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: expRules,
       vm: vm,
@@ -213,14 +212,13 @@ exports['any <-> vm: add / update'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[1], cb);
+    helpers.fwGetEquals(t, expRules[1], cb);
 
   }, function (cb) {
-    helpers.fwListEquals(fw, t, expRules, cb);
+    helpers.fwListEquals(t, expRules, cb);
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: expRules,
       vm: vm,
@@ -229,7 +227,6 @@ exports['any <-> vm: add / update'] = function (t) {
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: [ expRules[1] ],
       vm: vm2,
@@ -240,7 +237,6 @@ exports['any <-> vm: add / update'] = function (t) {
     // Disabling and re-enabling the firewall should have no effect on the
     // zone rules
     helpers.testEnableDisable({
-      fw: fw,
       t: t,
       vm: vm,
       vms: [vm, vm2]
@@ -277,7 +273,6 @@ exports['any <-> vm: add / update'] = function (t) {
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: [ expRules[1] ],
       vm: vm,
@@ -385,16 +380,16 @@ exports['any <-> all vms: add / update'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[0], cb);
+    helpers.fwGetEquals(t, expRules[0], cb);
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[1], cb);
+    helpers.fwGetEquals(t, expRules[1], cb);
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[2], cb);
+    helpers.fwGetEquals(t, expRules[2], cb);
 
   }, function (cb) {
-    helpers.fwListEquals(fw, t, expRules, cb);
+    helpers.fwListEquals(t, expRules, cb);
 
   }, function (cb) {
     var addPayload = {
@@ -426,7 +421,6 @@ exports['any <-> all vms: add / update'] = function (t) {
 
   }, function (cb) {
     helpers.testEnableDisable({
-      fw: fw,
       t: t,
       vm: vm1,
       vms: [vm1, vm2]
@@ -476,7 +470,6 @@ exports['any <-> all vms: add / update'] = function (t) {
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: expRules,
       vm: vm1,
@@ -525,7 +518,6 @@ exports['any <-> all vms: add / update'] = function (t) {
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: expRules,
       vm: vm1,
@@ -540,7 +532,7 @@ exports['any <-> all vms: add / update'] = function (t) {
 
 
 
-runOne = exports['add / update: all ports'] = function (t) {
+exports['add / update: all ports'] = function (t) {
   var vm = helpers.generateVM();
   var vm2 = helpers.generateVM({ tags: { one: true } });
 
@@ -593,10 +585,10 @@ runOne = exports['add / update: all ports'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[0], cb);
+    helpers.fwGetEquals(t, expRules[0], cb);
 
   }, function (cb) {
-    helpers.fwListEquals(fw, t, expRules, cb);
+    helpers.fwListEquals(t, expRules, cb);
 
   }, function (cb) {
 
@@ -640,14 +632,13 @@ runOne = exports['add / update: all ports'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[1], cb);
+    helpers.fwGetEquals(t, expRules[1], cb);
 
   }, function (cb) {
-    helpers.fwListEquals(fw, t, expRules, cb);
+    helpers.fwListEquals(t, expRules, cb);
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: expRules,
       vm: vm,
@@ -699,14 +690,13 @@ runOne = exports['add / update: all ports'] = function (t) {
     });
 
   }, function (cb) {
-    helpers.fwGetEquals(fw, t, expRules[1], cb);
+    helpers.fwGetEquals(t, expRules[1], cb);
 
   }, function (cb) {
-    helpers.fwListEquals(fw, t, expRules, cb);
+    helpers.fwListEquals(t, expRules, cb);
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: expRules,
       vm: vm,
@@ -715,7 +705,6 @@ runOne = exports['add / update: all ports'] = function (t) {
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: [ expRules[1] ],
       vm: vm2,
@@ -726,7 +715,6 @@ runOne = exports['add / update: all ports'] = function (t) {
     // Disabling and re-enabling the firewall should have no effect on the
     // zone rules
     helpers.testEnableDisable({
-      fw: fw,
       t: t,
       vm: vm,
       vms: [vm, vm2]
@@ -763,7 +751,6 @@ runOne = exports['add / update: all ports'] = function (t) {
 
   }, function (cb) {
     helpers.fwRulesEqual({
-      fw: fw,
       t: t,
       rules: [ expRules[1] ],
       vm: vm,

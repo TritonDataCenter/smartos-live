@@ -155,9 +155,10 @@ function ruleOutput(err, res, opts, action) {
 /**
  * Performs an update
  */
-function doUpdate(opts, action) {
+function doUpdate(opts, payload, action) {
   try {
     assert.object(opts, 'opts');
+    assert.object(payload, 'payload');
     assert.string(action, 'action');
   } catch (err) {
     return cli.exitWithErr(err);
@@ -167,8 +168,8 @@ function doUpdate(opts, action) {
     funcs: [
       function vms(_, cb) { VM.lookup({}, { 'full': true }, cb); },
       function updateRules(state, cb) {
-        opts.vms = state.vms;
-        return fw.update(opts, cb);
+        payload.vms = state.vms;
+        return fw.update(payload, cb);
       }
     ]}, function _afterUpdate(err, res) {
       return ruleOutput(err, res.state.updateRules, opts, action);
@@ -281,16 +282,16 @@ Fwadm.prototype.do_update = function (subcmd, opts, args, callback) {
       return cli.exitWithErr(err, opts);
     }
 
-    var updateOpts = preparePayload(opts, payload);
+    var updatePayload = preparePayload(opts, payload);
 
     // Allow doing an 'update <uuid>' instead of requiring the UUID be in
     // the payload:
-    if (id && updateOpts.hasOwnProperty('rules')
-      && updateOpts.rules.length === 1) {
-      updateOpts.rules[0].uuid = cli.validateUUID(id);
+    if (id && updatePayload.hasOwnProperty('rules')
+      && updatePayload.rules.length === 1) {
+      updatePayload.rules[0].uuid = cli.validateUUID(id);
     }
 
-    return doUpdate(updateOpts, 'Updated');
+    return doUpdate(opts, updatePayload, 'Updated');
   });
 };
 
@@ -328,8 +329,8 @@ function enableDisable(subcmd, opts, args, callback) {
     return { uuid: cli.validateUUID(uuid), enabled: enabled };
   });
 
-  var updateOpts = preparePayload(opts, { rules: rules });
-  return doUpdate(updateOpts, enabled ? 'Enabled' : 'Disabled');
+  return doUpdate(opts, preparePayload(opts, { rules: rules }),
+    enabled ? 'Enabled' : 'Disabled');
 }
 
 
@@ -407,7 +408,6 @@ Fwadm.prototype.do_stop = function (subcmd, opts, args, callback) {
  * the verbose flag is set)
  */
 Fwadm.prototype.do_status = function (subcmd, opts, args, callback) {
-  console.log(JSON.stringify(opts));
   var uuid = cli.validateUUID(args[0]);
   fw.status({ uuid: uuid }, function (err, res) {
     if (err) {

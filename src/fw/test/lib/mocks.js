@@ -370,11 +370,13 @@ function teardown() {
 
 
 module.exports = {
+  get fw() {
+    return fw;
+  },
+  get values() {
+    return VALUES;
+  },
   reset: resetValues,
   setup: setup,
   teardown: teardown
 };
-
-module.exports.__defineGetter__('values', function () {
-  return VALUES;
-});

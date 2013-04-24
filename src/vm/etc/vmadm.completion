@@ -4,7 +4,7 @@ _vmadm()
     COMPREPLY=()
     # NOTE: we don't want the aliases boot,halt,destroy,etc here because we
     # want people to use the 'proper' commands when they can.
-    COMMANDS="console create create-snapshot delete delete-snapshot get info list lookup reboot receive rollback-snapshot send start stop sysrq update validate"
+    COMMANDS="console create create-snapshot delete delete-snapshot get info list lookup reboot receive reprovision rollback-snapshot send start stop sysrq update validate"
     BRANDS="joyent joyent-minimal kvm sngl"
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -17,6 +17,7 @@ _vmadm()
         || ${prev} == 'halt'
         || ${prev} == 'json'
         || ${prev} == 'reboot'
+        || ${prev} == 'reprovision'
         || ${prev} == 'send'
         || ${prev} == 'start'
         || ${prev} == 'stop'

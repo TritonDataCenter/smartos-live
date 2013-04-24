@@ -56,6 +56,7 @@ var COMMANDS = [
     'lookup',
     'reboot',
     'receive', 'recv',
+    'reprovision',
     'rollback-snapshot',
     'send',
     'sysrq',
@@ -141,6 +142,7 @@ function usage(message, code)
     out('lookup [-j|-1] [-o field,...] [field=value ...]');
     out('reboot <uuid> [-F]');
     out('receive [-f <filename>]');
+    out('reprovision [-f <filename>]');
     out('rollback-snapshot <uuid> <snapname>');
     out('send <uuid> [target]');
     out('start <uuid> [option=value ...]');
@@ -393,6 +395,7 @@ function addCommandOptions(command, opts, shorts)
     case 'create':
     case 'receive':
     case 'recv':
+    case 'reprovision':
     case 'update':
     case 'validate':
         shorts.f = ['--file'];
@@ -752,6 +755,31 @@ function main(callback)
         uuid = getUUID(command, parsed);
         VM.console(uuid, function (err) {
             callback(err);
+        });
+        break;
+    case 'reprovision':
+        uuid = getUUID(command, parsed);
+        if (parsed.hasOwnProperty('file') && parsed.file !== '-') {
+            filename = parsed.file;
+        } else {
+            filename = '-';
+        }
+        if (filename === '-' && tty.isatty(0)) {
+            usage('Will not take payload from stdin when stdin is a tty.');
+        }
+        readFile(filename, function (err, payload) {
+            if (err) {
+                callback(err);
+                return;
+            }
+
+            VM.reprovision(uuid, payload, function (e) {
+                if (e) {
+                    callback(e);
+                } else {
+                    callback(null, 'Successfully reprovisioned VM ' + uuid);
+                }
+            });
         });
         break;
     case 'update':

@@ -463,6 +463,7 @@ function handleProvisioning(vmobj, cb)
 function updateZoneStatus(ev)
 {
     var load_fields;
+    var reprovisioning = false;
 
     if (! ev.hasOwnProperty('zonename') || ! ev.hasOwnProperty('oldstate')
         || ! ev.hasOwnProperty('newstate') || ! ev.hasOwnProperty('when')) {
@@ -488,6 +489,8 @@ function updateZoneStatus(ev)
      * <any transitions>
      *    - first time we see a VM (any brand), we'll wait for it to go
      *      provisioning -> X
+     *    - if <zonepath>/root/var/svc/provisioning shows up check for
+     *      reprovisioning
      */
 
     // if we've never seen this VM before, we always load once.
@@ -507,7 +510,7 @@ function updateZoneStatus(ev)
         // transitions are ignored in this state because we don't start VNC
         // until after provisioning anyway.
         log.debug('still waiting for ' + seen_vms[ev.zonename].uuid
-            + ' to complete provisioning, nothing to do.');
+            + ' to complete provisioning, ignoring additional transition.');
         return;
     } else if (!(seen_vms[ev.zonename].provisioned)) {
         log.debug('VM ' + seen_vms[ev.zonename].uuid + ' is not provisioned'
@@ -522,10 +525,26 @@ function updateZoneStatus(ev)
             + ' to ' + ev.newstate + ' at ' + ev.when);
         // Continue on to VM.load()
     } else {
-        log.trace('ignoring transition for ' + ev.zonename + ' ('
-            + seen_vms[ev.zonename].brand + ') from ' + ev.oldstate + ' to '
-            + ev.newstate + ' at ' + ev.when);
-        return;
+        try {
+            if (fs.existsSync(seen_vms[ev.zonename].zonepath
+                + '/root/var/svc/provisioning')) {
+
+                log.info('/var/svc/provisioning exists for VM '
+                    + seen_vms[ev.zonename].uuid + ' assuming reprovisioning');
+                reprovisioning = true;
+            }
+        } catch (e) {
+            if (e.code !== 'ENOENT') {
+                log.warn(e, 'Unable to check for /var/svc/provisioning for '
+                    + 'VM ' + seen_vms[ev.zonename].uuid);
+            }
+        }
+        if (!reprovisioning) {
+            log.trace('ignoring transition for ' + ev.zonename + ' ('
+                + seen_vms[ev.zonename].brand + ') from ' + ev.oldstate + ' to '
+                + ev.newstate + ' at ' + ev.when);
+            return;
+        }
     }
 
     load_fields = [
@@ -568,6 +587,7 @@ function updateZoneStatus(ev)
         if (!seen_vms[ev.zonename].hasOwnProperty('uuid')) {
             seen_vms[ev.zonename].uuid = vmobj.uuid;
             seen_vms[ev.zonename].brand = vmobj.brand;
+            seen_vms[ev.zonename].zonepath = vmobj.zonepath;
         }
 
         if (vmobj.state === 'provisioning') {
@@ -576,6 +596,11 @@ function updateZoneStatus(ev)
                 log.trace('already waiting for ' + vmobj.uuid
                     + ' to leave "provisioning"');
                 return;
+            }
+
+            if (reprovisioning && seen_vms[ev.zonename].provisioned) {
+                // we're reprovisioning so consider ! provisioned
+                seen_vms[ev.zonename].provisioned = false;
             }
 
             PROV_WAIT[vmobj.uuid] = true;
@@ -603,7 +628,7 @@ function updateZoneStatus(ev)
         // don't handle transitions other than provisioning for non-kvm
         if (vmobj.brand !== 'kvm') {
             log.trace('doing nothing for ' + ev.zonename + ' transition '
-                + 'because  brand != "kvm"');
+                + 'because brand != "kvm"');
             return;
         }
 
@@ -1401,8 +1426,9 @@ function main()
 
                     if (!seen_vms.hasOwnProperty(vmobj.zonename)) {
                         seen_vms[vmobj.zonename] = {
+                            brand: vmobj.brand,
                             uuid: vmobj.uuid,
-                            brand: vmobj.brand
+                            zonepath: vmobj.zonepath
                         };
                     }
                     if (vmobj.state !== 'provisioning') {

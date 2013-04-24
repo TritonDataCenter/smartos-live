@@ -83,7 +83,7 @@ function install_pkgin
 	# it allows us to not worry about things like gcc46 vs. gcc47 etc.
 	#
 	$conf_priv pkgin -f update || fatal "failed to update pkgsrc repository"
-	if pkgin se build-essential | grep build-essential >/dev/null; then
+	if pkgin av build-essential | grep ^build-essential >/dev/null; then
 		pkglist="build-essential"
 	else
 		pkglist="gmake binutils autoconf automake bison"

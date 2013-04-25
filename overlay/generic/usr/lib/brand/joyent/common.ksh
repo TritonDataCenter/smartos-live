@@ -25,16 +25,18 @@
 
 final_setup()
 {
-	# The cores quota exists to control run-away zones. As such we make it
-	# such that it will protect the system from a single run-away, but
-	# still allow us to get most cores. 100G seems good enough based on
-	# samples from JPC.
-	rm -rf $ZONEPATH/cores
-	CORE_QUOTA=102400
-	zfs create -o quota=${CORE_QUOTA}m -o mountpoint=/${PDS_NAME}/$bname/cores \
-	    ${PDS_NAME}/cores/$bname
+	if [[ -z ${REPROVISIONING} ]]; then
+		# The cores quota exists to control run-away zones. As such we make it
+		# such that it will protect the system from a single run-away, but
+		# still allow us to get most cores. 100G seems good enough based on
+		# samples from JPC.
+		rm -rf $ZONEPATH/cores
+		CORE_QUOTA=102400
+		zfs create -o quota=${CORE_QUOTA}m -o mountpoint=/${PDS_NAME}/$bname/cores \
+		    ${PDS_NAME}/cores/$bname
 
-	chmod 700 $ZONEPATH
+		chmod 700 $ZONEPATH
+	fi
 
 	egrep -s "netcfg:" $ZROOT/etc/passwd
 	if (( $? != 0 )); then

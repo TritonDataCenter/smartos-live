@@ -96,7 +96,7 @@ function ipFromHost(host, log, callback) {
     dns.lookup(host, function (err, ip) {
         if (err) {
             callback(new errors.InternalError(
-                {message: format('error DNS resolving %s: %s', host, error)}));
+                {message: format('error DNS resolving %s: %s', host, err)}));
             return;
         }
         callback(null, ip);

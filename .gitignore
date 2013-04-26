@@ -7,6 +7,7 @@
 /proto.strap
 /log
 /src/*.o
+/src/measure_terminal
 /src/bootparams
 /src/disk_size
 /src/removable_disk

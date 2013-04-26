@@ -292,17 +292,22 @@ TARGETS = \
 	$(ZSOCK_BINDINGS.NODE) \
 	$(ZUTIL_BINDINGS.NODE)
 
+USR_LIB_TARGETS = \
+	measure_terminal
+
 SMARTDC_TARGETS = \
 	qemu-exec
 
 SMARTDC_LIB_TARGETS = \
 	sdc-on-tty
 
-all: $(TARGETS) sysinfo nictagadm $(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS)
+all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm $(SMARTDC_TARGETS) \
+	$(SMARTDC_LIB_TARGETS)
 
 install: all
 	mkdir -p $(DESTDIR)/usr/bin
 	cp -p $(TARGETS) sysinfo nictagadm $(DESTDIR)/usr/bin
+	cp -p $(USR_LIB_TARGETS) $(DESTDIR)/usr/lib
 	mkdir -p $(DESTDIR)/smartdc/bin
 	cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin
 	mkdir -p $(DESTDIR)/smartdc/lib

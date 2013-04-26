@@ -136,7 +136,7 @@
 		<propval name='prompt' type='astring'
 			value='`uname -n` ttya login:' />
 		<propval name='terminal_type' type='astring'
-			value='' />
+			value='xterm' />
 	</property_group>
 </instance>
 
@@ -163,7 +163,7 @@
 		<propval name='prompt' type='astring'
 			value='`uname -n` ttyb login:' />
 		<propval name='terminal_type' type='astring'
-			value='' />
+			value='xterm' />
 	</property_group>
 </instance>
 

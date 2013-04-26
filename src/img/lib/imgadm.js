@@ -41,6 +41,7 @@ var path = require('path');
 var fs = require('fs');
 var format = require('util').format;
 var assert = require('assert-plus');
+var dns = require('dns');
 var crypto = require('crypto');
 var async = require('async');
 var child_process = require('child_process'),
@@ -91,15 +92,14 @@ function ipFromHost(host, log, callback) {
         return;
     }
     // No DNS in SmartOS GZ by default, so handle DNS ourself.
-    var cmd = format('/usr/sbin/dig %s +short', host);
-    log.trace({cmd: cmd}, 'run dig');
-    exec(cmd, function (error, stdout, stderr) {
-        if (error) {
+    log.trace({host: host}, 'dns lookup');
+    dns.lookup(host, function (err, ip) {
+        if (err) {
             callback(new errors.InternalError(
                 {message: format('error DNS resolving %s: %s', host, error)}));
             return;
         }
-        callback(null, stdout.trim());
+        callback(null, ip);
     });
 }
 

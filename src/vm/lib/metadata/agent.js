@@ -416,6 +416,13 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
             // otherwise expect it will be removed on you sometime.
             var val = JSON.stringify(vmobj.nics);
             return returnit(null, val);
+          } else if (want === 'resolvers'
+            && vmobj.hasOwnProperty('resolvers')) {
+
+            // See NOTE above about nics, same applies to resolvers. It's here
+            // solely for the use of mdata-fetch.
+            var val = JSON.stringify(vmobj.resolvers);
+            return returnit(null, val);
           } else {
             var val = VM.flatten(vmobj, want);
             return returnit(null, val);

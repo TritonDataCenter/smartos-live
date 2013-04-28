@@ -163,6 +163,20 @@ while IFS="|" read -r iface ip netmask primary gateway; do
 done < <(/usr/sbin/mdata-get sdc:nics \
     | /usr/bin/json -d '|' -a interface ip netmask primary gateway)
 
+
+# rebuild resolv.conf
+rm -f /etc/.resolv.conf.tmp
+(mdata-get sdc:dns_domain \
+    | sed -e "s/^/search /"; mdata-get sdc:resolvers \
+    | json -a \
+    | sed -e "s/^/nameserver /") \
+    > /etc/.resolv.conf.tmp
+# cp the file instead of moving so we keep perms
+grep "^nameserver" /etc/.resolv.conf.tmp >/dev/null \
+    && cp /etc/.resolv.conf.tmp /etc/resolv.conf \
+    && cat /etc/.resolv.conf.tmp >&2 \
+    && rm -f /etc/.resolv.conf.tmp
+
 # Unconditionally enable mdata:execute, so that the last provisioning step
 # is always taken (regardless of whether user-script exists or not)
 svcadm enable smartdc/mdata:execute

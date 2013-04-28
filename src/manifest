@@ -261,6 +261,7 @@ f usr/vm/test/node-tap/bin/tap 0555 root bin
 f usr/vm/test/runtest 0555 root bin
 f usr/vm/test/runtests 0555 root bin
 f usr/vm/sbin/add-userscript 0555 root bin
+f usr/vm/sbin/rotate-logs.sh 0555 root bin
 f usr/vm/sbin/vmadm 0555 root bin
 f usr/vm/sbin/vmadmd 0555 root bin
 f usr/vm/sbin/vmunbundle 0555 root bin

@@ -1,7 +1,7 @@
 ## Rotate and trim the audit logs nightly.
 0 0 * * * /smartdc/bin/sdc-lastcomm -R 30
-## Rotate and trim the regular logs nightly.
-10 0 * * * /usr/sbin/logadm
+## Run logadm hourly so that the minimum rotate interval is 1h
+0 * * * * /usr/sbin/logadm
 ## Delete saved core dumps over 7 days old
 15 0 * * * find /zones/*/cores -type f -mtime +7 -exec rm -f "{}" \;
 

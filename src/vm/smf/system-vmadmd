@@ -33,7 +33,10 @@ case "$1" in
 'start')
 
     # ensure /var/log/vm exists for VM.log logs
-    mkdir -p /var/log/vm
+    mkdir -p /var/log/vm/logs
+
+    # need to create this file so rotation works
+    touch /var/log/vm/vm.log
 
     if [[ $(zpool list -H | wc -l | tr -d '[:space:]') == "0" ]]; then
         # no zpool yet, can't manage vms on an unsetup compute node.

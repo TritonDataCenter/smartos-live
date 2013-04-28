@@ -56,6 +56,10 @@ if smf_is_globalzone && [ -n "$(bootparams | grep '^headnode=true')" ]; then
 			print $0
 			next
 		}
+		if (substr($2, 1, 1) == "*") {
+			print $0
+			next
+		}
 		if (length($0) == 0) {
 			print $0
 			next

@@ -376,6 +376,11 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
             lookup_fields.push(matches[1]);
         } else {
             lookup_fields.push(want.slice(4));
+            if (want.slice(4) === 'routes') {
+              // We require nics data for routes to determine the IPs for
+              // link-local routes
+              lookup_fields.push('nics');
+            }
         }
     } else {
         lookup_fields.push('customer_metadata');
@@ -409,11 +414,13 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         zlog.info("Serving " + want);
         if (want.slice(0, 4) === 'sdc:') {
           want = want.slice(4);
+
+          // NOTE: sdc:nics, sdc:resolvers and sdc:routes are not a committed
+          // interface, do not rely on it.
+          // At this point it should only be used by mdata-fetch, if you add
+          // a consumer that depends on it, please add a note about that here
+          // otherwise expect it will be removed on you sometime.
           if (want === 'nics' && vmobj.hasOwnProperty('nics')) {
-            // NOTE: sdc:nics is not a committed interface, do not rely on it.
-            // At this point it should only be used by mdata-fetch, if you add
-            // a consumer that depends on it, please add a note about that here
-            // otherwise expect it will be removed on you sometime.
             var val = JSON.stringify(vmobj.nics);
             return returnit(null, val);
           } else if (want === 'resolvers'
@@ -423,6 +430,36 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
             // solely for the use of mdata-fetch.
             var val = JSON.stringify(vmobj.resolvers);
             return returnit(null, val);
+          } else if (want === 'routes' && vmobj.hasOwnProperty('routes')) {
+            var vmRoutes = [];
+
+            // The NOTE above also applies to routes. It's here solely for
+            // the use of mdata-fetch.
+            for (var r in vmobj.routes) {
+              var route = { linklocal: false, dst: r };
+              var nicIdx = vmobj.routes[r].match(/nics\[(\d+)\]/);
+              if (!nicIdx) {
+                // Non link-local route: we have all the information we
+                // need already
+                route.gateway = vmobj.routes[r];
+                vmRoutes.push(route);
+                continue;
+              }
+              nicIdx = Number(nicIdx[1]);
+
+              // Link-local route: we need the IP of the local nic
+              if (!vmobj.hasOwnProperty('nics') || !vmobj.nics[nicIdx]
+                || !vmobj.nics[nicIdx].hasOwnProperty('ip')
+                || vmobj.nics[nicIdx].ip === 'dhcp') {
+                continue;
+              }
+
+              route.gateway = vmobj.nics[nicIdx].ip;
+              route.linklocal = true;
+              vmRoutes.push(route);
+            }
+
+            return returnit(null, JSON.stringify(vmRoutes));
           } else {
             var val = VM.flatten(vmobj, want);
             return returnit(null, val);

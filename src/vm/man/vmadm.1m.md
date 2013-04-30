@@ -356,12 +356,15 @@ tab-complete UUIDs rather than having to type them out for every command.
         If you pass in a JSON object, that object should be formatted in the
         same manner as a create payload. The only exception is with fields
         that are themselves objects: VM NICs, KVM VM disks, customer_metadata,
-        internal_metadata, tags.  In the the case of the "simple" properties
-        'tags', 'customer_metadata' and 'internal_metadata' which are key-value
-        pairs, there are 2 special payload members:
+        internal_metadata, tags and routes.  In the the case of the "simple"
+        properties 'tags', 'customer_metadata', 'internal_metadata' and
+        'routes' which are key-value pairs, there are 2 special payload members:
 
-          set_tags || set_customer_metadata || set_internal_metadata
-          remove_tags || remove_customer_metadata || remove_internal_metadata
+          set_tags || set_customer_metadata
+          || set_internal_metadata || set_routes
+
+          remove_tags || remove_customer_metadata ||
+          remove_internal_metadata || remove_routes
 
         which can add/update or remove entries from key/value sets. To add an
         entry, include it in the set_X object with a simple string value. To
@@ -379,7 +382,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
           {"remove_tags": ["hello"]}
 
-        The same pattern is used for customer_metadata and internal_metadata.
+        The same pattern is used for customer_metadata, internal_metadata and
+        routes.
 
         In the case of nics and disks, there are 3 special objects:
 
@@ -1434,15 +1438,39 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     resolvers:
 
-        For OS VMs, this value sets the initial resolvers which get put into
-        the config files on first boot. For KVM VMs these will get passed as
-        the resolvers with DHCP responses.
+        For OS VMs, this value sets the resolvers which get put into
+        /etc/resolv.conf. For KVM VMs these will get passed as the resolvers
+        with DHCP responses.
 
         type: array
         vmtype: OS,KVM
         listable: no
         create: yes
-        update: yes (but unused after create for OS VMs)
+        update: yes
+
+    routes:
+
+        This is a key-value object that maps destinations to gateways. These
+        will be set as static routes in the VM. The destinations can be either
+        IPs or subnets in CIDR form. The gateways can either be IP addresses, or
+        can be of the form "nics[0]", which specifies a link-local route on the
+        numbered nic in that VM's nics array (the first nic is 0).  As an
+        example:
+
+            {
+                "10.2.2.0/24": "10.2.1.1",
+                "10.3.0.1": "nics[1]"
+            }
+
+        This sets two static routes: to the 10.2.2.0/24 subnet with a gateway
+        of 10.2.1.1, and a link-local route to the host 10.3.0.1 over the VM's
+        second nic.
+
+        type: object
+        vmtype: OS
+        listable: no
+        create: yes
+        update: yes
 
     snapshots (EXPERIMENTAL):
 

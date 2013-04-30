@@ -46,6 +46,7 @@ var zone_defaults = {
     'headnode_id': ['<OPTIONAL-NON-EMPTY>'],
     'create_timestamp': ['<NON-EMPTY>'],
     'nics': ['<EMPTY-ARRAY>'],
+    'routes': ['<EMPTY-OBJ>'],
     'tags': ['<EMPTY-OBJ>'],
     'customer_metadata': ['<EMPTY-OBJ>'],
     'internal_metadata': ['<EMPTY-OBJ>']

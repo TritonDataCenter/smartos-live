@@ -1,5 +1,10 @@
 # imgadm changelog
 
+## 2.0.3
+
+- [IMGAPI-152, smartos-live#204] Ensure that there is a '@final' snapshot
+  of an imported image.
+
 ## 2.0.2
 
 - `NoSourcesError: imgadm has no configured sources` now only raised for commands

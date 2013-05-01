@@ -228,6 +228,23 @@ function InvalidManifestError(cause) {
 }
 util.inherits(InvalidManifestError, ImgadmError);
 
+function UnexpectedNumberOfSnapshotsError(uuid, snapnames) {
+    assert.string(uuid, 'uuid');
+    assert.arrayOfString(snapnames, 'snapnames');
+    var extra = '';
+    if (snapnames.length) {
+        extra = ': ' + snapnames.join(', ');
+    }
+    ImgadmError.call(this, {
+        message: format(
+            'image "%s" has an unexpected number of snapshots (%d)%s',
+            uuid, snapnames.length, extra),
+        code: 'UnexpectedNumberOfSnapshots',
+        exitStatus: 1
+    });
+}
+util.inherits(UnexpectedNumberOfSnapshotsError, ImgadmError);
+
 function UncompressionError(cause, message) {
     if (message === undefined) {
         message = cause;
@@ -412,6 +429,7 @@ module.exports = {
     ImageNotInstalledError: ImageNotInstalledError,
     ImageHasDependentClonesError: ImageHasDependentClonesError,
     InvalidManifestError: InvalidManifestError,
+    UnexpectedNumberOfSnapshotsError: UnexpectedNumberOfSnapshotsError,
     UncompressionError: UncompressionError,
     UsageError: UsageError,
     UnknownOptionError: UnknownOptionError,

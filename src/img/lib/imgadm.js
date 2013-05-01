@@ -120,6 +120,36 @@ function zfsDestroy(dataset, log, callback) {
 }
 
 /**
+ * Call `zfs rename -r SNAPSHOT SNAPSHOT`.
+ *
+ * @param a {String} The current snapshot name.
+ * @param b {String} The snapshot name to which to rename.
+ * @param options {Object}
+ *      - recursive {Boolean} Optional. Use '-r' arg to 'zfs rename'.
+ *      - log {Bunyan Logger}
+ * @param callback {Function} `function (err)`
+ */
+function zfsRenameSnapshot(a, b, options, callback) {
+    assert.string(a, 'a');
+    assert.string(b, 'b');
+    assert.object(options, 'options');
+    assert.optionalBool(options.recursive, 'options.recursive');
+    assert.object(options.log, 'options.log');
+    assert.func(callback);
+    var optStr = '';
+    if (options.recursive) {
+        optStr += ' -r';
+    }
+    var cmd = format('/usr/sbin/zfs rename%s %s', optStr, a, b);
+    options.log.trace({cmd: cmd}, 'start zfsRenameSnapshot')
+    exec(cmd, function (err, stdout, stderr) {
+        options.log.trace({cmd: cmd, err: err, stdout: stdout, stderr: stderr},
+            'finish zfsRenameSnapshot');
+        callback(err);
+    });
+}
+
+/**
  * Get details on a ZFS dataset.
  *
  * @param name {String} The zfs dataset name, "$pool/$uuid".
@@ -1381,26 +1411,26 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         }
     }
 
-    function destroyChildSnapshots(parentDsName, next) {
+    function ensureFinalSnapshot(parentDsName, next) {
         getZfsDataset(parentDsName, ['name', 'children'], function (zErr, ds) {
             if (zErr) {
                 next(zErr);
                 return;
             }
             var snapshots = ds.children.snapshots;
-            if (snapshots.length === 0) {
+            var snapnames = snapshots.map(
+                function (n) { return '@' + n.split(/@/g).slice(-1)[0] });
+            if (snapshots.length !== 1) {
+                next(new errors.UnexpectedNumberOfSnapshotsError(
+                    uuid, snapnames));
+            } else if (snapnames[0] !== "@final") {
+                var curr = snapshots[0];
+                var final = curr.split(/@/)[0] + '@final';
+                zfsRenameSnapshot(curr, final,
+                    {recursive: true, log: log}, next);
+            } else {
                 next();
-                return;
             }
-            async.forEachSeries(
-                snapshots,
-                function oneSnapshot(snapshot, nextSnapshot) {
-                    zfsDestroy(snapshot, log, nextSnapshot);
-                },
-                function doneSnapshots(snapErr) {
-                    next(snapErr);
-                }
-            );
         });
     }
 
@@ -1434,12 +1464,9 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             return;
         }
 
-        // Remove any child snapshots. (Per DATASET-666) There will always
-        // be the one snapshot sent with 'zfs send' and might be more if
-        // 'zfs send -r|-R' was used. This is just to be clean... because
-        // 'imgadm delete' is *still* going to use "zfs destroy -r" to get
-        // dependent snapshots of the image.
-        destroyChildSnapshots(tmpDsName, function (snapErr) {
+        // Ensure that we have a snapshot named "@final" for use by
+        // `vmadm create`. See IMGAPI-152, smartos-live#204.
+        ensureFinalSnapshot(tmpDsName, function (snapErr) {
             if (snapErr) {
                 cleanupAndExit(tmpDsName, snapErr);
                 return;
@@ -1448,6 +1475,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             // Rename.
             var cmd = format('/usr/sbin/zfs rename %s %s',
                 tmpDsName, dsName);
+            log.trace({cmd: cmd}, 'rename tmp image');
             exec(cmd, function (error, stdout, stderr) {
                 if (error) {
                     log.error({cmd: cmd, error: error, stdout: stdout,

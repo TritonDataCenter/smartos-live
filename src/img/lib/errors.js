@@ -236,7 +236,7 @@ function UnexpectedNumberOfSnapshotsError(uuid, snapnames) {
         extra = ': ' + snapnames.join(', ');
     }
     ImgadmError.call(this, {
-        message: format(
+        message: sprintf(
             'image "%s" has an unexpected number of snapshots (%d)%s',
             uuid, snapnames.length, extra),
         code: 'UnexpectedNumberOfSnapshots',

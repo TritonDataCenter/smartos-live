@@ -141,7 +141,7 @@ function zfsRenameSnapshot(a, b, options, callback) {
         optStr += ' -r';
     }
     var cmd = format('/usr/sbin/zfs rename%s %s', optStr, a, b);
-    options.log.trace({cmd: cmd}, 'start zfsRenameSnapshot')
+    options.log.trace({cmd: cmd}, 'start zfsRenameSnapshot');
     exec(cmd, function (err, stdout, stderr) {
         options.log.trace({cmd: cmd, err: err, stdout: stdout, stderr: stderr},
             'finish zfsRenameSnapshot');
@@ -1419,14 +1419,14 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             }
             var snapshots = ds.children.snapshots;
             var snapnames = snapshots.map(
-                function (n) { return '@' + n.split(/@/g).slice(-1)[0] });
+                function (n) { return '@' + n.split(/@/g).slice(-1)[0]; });
             if (snapshots.length !== 1) {
                 next(new errors.UnexpectedNumberOfSnapshotsError(
                     uuid, snapnames));
-            } else if (snapnames[0] !== "@final") {
+            } else if (snapnames[0] !== '@final') {
                 var curr = snapshots[0];
-                var final = curr.split(/@/)[0] + '@final';
-                zfsRenameSnapshot(curr, final,
+                var finalSnap = curr.split(/@/)[0] + '@final';
+                zfsRenameSnapshot(curr, finalSnap,
                     {recursive: true, log: log}, next);
             } else {
                 next();

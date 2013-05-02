@@ -17,6 +17,7 @@ var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 // 2. expected value (or parameter to transform function)
 // 3. transform function (optional)
 var zone_defaults = {
+    'v': [1],
     'zonename': ['uuid', state_property],
     'autoboot': [true],
     'zonepath': ['uuid', prefix_zones_slash],

@@ -112,6 +112,27 @@ test('create zone', {'timeout': 240000}, function(t) {
     });
 });
 
+/* update ignores values you can't update so this test always fails for now
+test('update v: should fail', {'timeout': 240000}, function(t) {
+    VM.update(vm_uuid, {v: 31337}, function (err) {
+        t.ok(err, 'failed: ' + (err ? err.message : 'NO!'));
+        if (err) {
+            t.end();
+            return;
+        }
+        VM.load(vm_uuid, {fields: ['v']}, function (err, obj) {
+            t.ok(!err, 'reloaded VM after update');
+            if (err) {
+                t.end();
+                return;
+            }
+            t.ok((obj.v === 1), 'version(' + obj.v + ') == 1');
+            t.end();
+        });
+    });
+});
+*/
+
 test('add net0', function(t) {
     VM.update(vm_uuid, PAYLOADS.add_net0, function (err) {
         if (err) {

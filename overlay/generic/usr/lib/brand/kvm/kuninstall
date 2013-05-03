@@ -58,19 +58,14 @@ if [[ -z "$PDS_NAME" ]]; then
 	exit $ZONE_SUBPROC_USAGE
 fi
 
-# Destroy snapshots we took when creating disks
-for origin in $(zfs list -H -o name,origin -t volume \
-    | grep "^${PDS_NAME}/${bname}-disk" \
-    | grep -v '\-$' | cut -f2); do
-
-    zfs destroy -rF ${origin} >/dev/null 2>&1
-done
-
-ORIGIN=`zfs get -H -ovalue  origin $PDS_NAME/$bname`
+# check if the origin is not an @final dataset, if not, we'll destroy it
+ORIGIN=`zfs get -H -ovalue origin $PDS_NAME/$bname | grep -v "@final$"`
 
 zfs destroy -rF $PDS_NAME/cores/$bname
 zfs destroy -rF $PDS_NAME/$bname
-[ "$ORIGIN" != "-" ] && zfs destroy -F $ORIGIN
+(( $? != 0 )) && (echo "processes in zone: " && fuser $ZONEPATH)
+
+[[ -n ${ORIGIN} && ${ORIGIN} != "-" ]] && zfs destroy -F $ORIGIN
 
 rm -rf $ZONEPATH
 

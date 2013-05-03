@@ -107,9 +107,21 @@ if [[ -z ${REPROVISIONING} ]]; then
 		QUOTA_ARG="-o quota=${ZQUOTA}g"
 	fi
 
-	zfs snapshot $PDS_NAME/${TMPLZONE}@${bname}
-	zfs clone -F ${QUOTA_ARG} $PDS_NAME/${TMPLZONE}@${bname} \
-	    $PDS_NAME/$bname || fatal "failed to clone zone dataset"
+	# New imgadm renames the dataset's snapshot at import to @final for us
+	# and when it exists, we use that. However, when it does not exist we
+	# still use the old method of creating a zones/<uuid>@<uuid> snapshot
+	# so we can support old datasets.
+	exists=$(zfs list -Ho name ${PDS_NAME}/${TMPLZONE}@final 2>&1)
+	if [[ $? == 0 && ${exists} == "${PDS_NAME}/${TMPLZONE}@final" ]]; then
+		zfs clone -F ${QUOTA_ARG} ${PDS_NAME}/${TMPLZONE}@final \
+		    ${PDS_NAME}/${bname} || fatal "failed to clone zone dataset"
+	elif [[ ${exists} =~ "dataset does not exist" ]]; then
+		zfs snapshot ${PDS_NAME}/${TMPLZONE}@${bname}
+		zfs clone -F ${QUOTA_ARG} ${PDS_NAME}/${TMPLZONE}@${bname} \
+		    ${PDS_NAME}/${bname} || fatal "failed to clone zone dataset"
+	else
+		fatal "Unable to determine snapshot for ${PDS_NAME}/${TMPLZONE}"
+	fi
 fi
 
 # The rest should be run when REPROVISIONING is set as well.

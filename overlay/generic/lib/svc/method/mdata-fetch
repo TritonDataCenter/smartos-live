@@ -163,20 +163,37 @@ while IFS="|" read -r iface ip netmask primary gateway; do
 done < <(/usr/sbin/mdata-get sdc:nics \
     | /usr/bin/json -d '|' -a interface ip netmask primary gateway)
 
-
 # rebuild resolv.conf
-rm -f /etc/.resolv.conf.tmp
-(mdata-get sdc:dns_domain \
-    | sed -e "s/^/search /"; mdata-get sdc:resolvers \
-    | json -a \
-    | sed -e "s/^/nameserver /") \
-    > /etc/.resolv.conf.tmp
-# cp the file instead of moving so we keep perms
-grep "^nameserver" /etc/.resolv.conf.tmp >/dev/null \
-    && cp /etc/.resolv.conf.tmp /etc/resolv.conf \
-    && cat /etc/.resolv.conf.tmp >&2 \
-    && rm -f /etc/.resolv.conf.tmp
+resolvers=$(mdata-get sdc:resolvers)
+result=$?
+if [[ ${result} == 0 ]]; then
 
+    # if dns_domain is missing or broken, we still write out, just w/o search
+    search="search $(mdata-get sdc:dns_domain)"
+    if [[ $? != 0 ]]; then
+        search=
+    fi
+
+    if [[ ${resolvers} == "[]" ]]; then
+        nameservers=
+    else
+        nameservers=$(echo ${resolvers} | json -a | sed -e "s/^/nameserver /")
+    fi
+
+    rm -f /etc/.resolv.conf.tmp
+    if [[ -n ${search} ]]; then
+        echo "${search}" > /etc/.resolv.conf.tmp
+    fi
+    if [[ -n ${nameservers} ]]; then
+        echo "${nameservers}" >> /etc/.resolv.conf.tmp
+    fi
+
+    cp /etc/.resolv.conf.tmp /etc/resolv.conf \
+        && cat /etc/.resolv.conf.tmp >&2 \
+        && rm -f /etc/.resolv.conf.tmp
+else
+    echo "Error getting resolvers, code: ${result}"
+fi
 
 # Fetch routes
 

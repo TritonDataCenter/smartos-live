@@ -46,6 +46,7 @@ var zone_defaults = {
     'datacenter_name': ['<OPTIONAL-NON-EMPTY>'],
     'headnode_id': ['<OPTIONAL-NON-EMPTY>'],
     'create_timestamp': ['<NON-EMPTY>'],
+    'resolvers': ['<EMPTY-ARRAY>'],
     'nics': ['<EMPTY-ARRAY>'],
     'routes': ['<EMPTY-OBJ>'],
     'tags': ['<EMPTY-OBJ>'],

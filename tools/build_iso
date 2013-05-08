@@ -1,6 +1,17 @@
 #!/bin/bash
-# Copyright (c) 2011 Joyent, Inc.
+# Copyright (c) 2013 Joyent, Inc.
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
 
+#
 # Automates the process of building iso and usb images of a smartos build.
 # It uses the latest platform file that's been built.
 #
@@ -272,7 +283,13 @@ done
 #
 cd $(dirname $0)
 cd ..
-bi_verif_mkisofs
+case "$bi_type" in
+	iso)
+		bi_verif_mkisofs
+		;;
+	usb)
+		;;
+esac
 bi_verif_grub
 bi_get_build
 bi_verif_platform

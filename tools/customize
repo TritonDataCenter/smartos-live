@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2010,2011 Joyent Inc., All Rights Reserved.
+# Copyright (c) 2013 Joyent Inc., All Rights Reserved.
 #
 
 BUILDSTAMP=$2
@@ -19,20 +19,16 @@ pfexec cp /dev/null ${rdmnt}/etc/mnttab
 pfexec cp /dev/null ${rdmnt}/var/log/syslog
 pfexec cp /dev/null ${rdmnt}/var/adm/wtmpx
 
-# This rebuilds the man index but needs to work around the fact that
-# isaexec binaries don't work properly in a chroot.
-(cd ${rdmnt}/usr/bin && pfexec mv sh sh.$$ && ln -s bash sh)
 pfexec mount -F lofs /dev ${rdmnt}/dev
 # If we're in a GZ there will be a /devices we need to
 if [[ -d /devices ]]; then
     pfexec mount -F lofs /devices ${rdmnt}/devices
 fi
-pfexec chroot ${rdmnt} /usr/bin/catman -M /usr/share/man:/opt/local/man:/smartdc/man -T /usr/share/lib/tmac/ansun
+pfexec /usr/bin/catman -M ${rdmnt}/usr/share/man:${rdmnt}/smartdc/man -T ${rdmnt}/usr/share/lib/tmac/ansun
 if [[ -d /devices ]]; then
     pfexec umount ${rdmnt}/devices
 fi
 pfexec umount ${rdmnt}/dev
-(cd ${rdmnt}/usr/bin && pfexec rm sh && pfexec mv sh.$$ sh)
 
 pfexec chown root:root ${rdmnt}
 pfexec gsed -i -e "s/ [0-9]\{8\}T[0-9]\{6\}Z/ ${BUILDSTAMP}/" ${rdmnt}/etc/motd

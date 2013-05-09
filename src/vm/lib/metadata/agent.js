@@ -252,15 +252,31 @@ function (zonename, checkService, callback) {
     ]
   , function (error) {
       var sockpath = path.join(localpath, 'metadata.sock');
+      var gzsockpath = path.join(smartdcpath, 'metadata.sock');
+
       var zopts
         = { zone: zonename
           , path: sockpath
           };
-      self.createZoneSocket(zopts, function () {
-        zlog.info("Zone socket created.");
-        if (callback) {
-          return callback();
+      self.createZoneSocket(zopts, function (createErr) {
+        if (createErr) {
+          zlog.error('createZoneSocket Error: ' + createErr.message);
+          zlog.error(createErr.stack);
         }
+
+        fs.chmod(
+          gzsockpath,
+          parseInt('0700', 8),
+          function (chownErr) {
+            if (chownErr) {
+              zlog.error('chown Error: ' + chownErr.message);
+              zlog.error(chownErr.stack);
+            }
+            zlog.info("Zone socket created.");
+            if (callback) {
+              return callback();
+            }
+          });
       });
     }
   );

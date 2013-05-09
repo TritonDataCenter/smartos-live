@@ -1172,11 +1172,10 @@ function ipfRuleObj(opts) {
   if (opts.type === 'wildcard' && opts.value === 'any') {
     rule.protoTargets.sort().forEach(function (t) {
       sortObj.text.push(
-        util.format('%s %s quick proto %s %s any %s',
+        util.format('%s %s quick proto %s from any to any %s',
           rule.action === 'allow' ? 'pass' : 'block',
           dir === 'from' ? 'out' : 'in',
           rule.protocol,
-          dir === 'from' ? 'to' : 'from',
           protoTarget(rule, t)));
     });
 

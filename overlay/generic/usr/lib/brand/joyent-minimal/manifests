@@ -125,3 +125,8 @@ system/early-manifest-import.xml	disabled
 system/manifest-import.xml	disabled
 system/mdata.xml	enabled
 system/cron.xml			disabled	noimport	
+network/forwarding.xml		disabled	noimport
+network/ipfilter.xml		disabled	noimport
+network/routing/legacy-routing.xml	disabled	noimport
+network/routing/ripng.xml	disabled	noimport
+network/routing/route.xml	disabled	noimport

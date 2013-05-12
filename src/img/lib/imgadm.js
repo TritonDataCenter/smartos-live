@@ -903,9 +903,17 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
 
     // Get a list of provisionable images. Here 'provisionable' means that
     // we are also constrained by 'vmadm create' rules. That means a
-    // zfs "filesystem" (for zones) or "volume" (for VMs) named
-    // "$zpoolname/$uuid" with no origin. Also need to exclude filesystems
-    // with a zone root -- which is how kvm VMs are handled.
+    // zfs "filesystem" (for zones) or "volume" (for KVM VMs) named
+    // "$zpoolname/$uuid" whose mountpoint is not a zone root. Full images
+    // won't have an origin, incremental images will.
+    //
+    // These conditions can conceivably include non-images: any clone not a
+    // zone and named "ZPOOL/UUID". For this reason, any zfs dataset with
+    // the property imgadm:ignore=true will be excluded, as an out.
+    //
+    // If necessary we could consider only include those with an origin
+    // (i.e. incremental images) that also have a "@final" snapshot, as
+    // recent imgadm guarantees on import.
     //
     // We also count the usages of these images: zfs filesystems with the
     // image as an origin.
@@ -932,7 +940,7 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
         });
 
         var cmd = '/usr/sbin/zfs list -t filesystem,volume -pH '
-            + '-o name,origin,mountpoint';
+            + '-o name,origin,mountpoint,imgadm:ignore';
         exec(cmd, function (error, stdout, stderr) {
             if (error) {
                 callback(new errors.InternalError(
@@ -947,24 +955,38 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
                 if (line.length === 0)
                     continue;
                 var parts = line.split('\t');
-                assert.equal(parts.length, 3);
+                assert.equal(parts.length, 4);
                 var name = parts[0];
                 var origin = parts[1];
                 var mountpoint = parts[2];
+                var ignore = parts[3];
                 if (!VMADM_FS_NAME_RE.test(name))
                     continue;
-                if (origin === '-') {
-                    if (// If it has a mountpoint from `zoneadm list` it is
-                        // a zone, not an image.
-                        !zoneRoots[mountpoint]
-                        // If it doesn't match `VMADM_IMG_NAME_RE` it is
-                        // a KVM disk volume, e.g.
-                        // "zones/7970c690-1738-4e58-a04f-8ce4ea8ebfca-disk0".
-                        && VMADM_IMG_NAME_RE.test(name))
-                    {
+                if (// If it has a mountpoint from `zoneadm list` it is
+                    // a zone, not an image.
+                    !zoneRoots[mountpoint]
+                    // If it doesn't match `VMADM_IMG_NAME_RE` it is
+                    // a KVM disk volume, e.g.
+                    // "zones/7970c690-1738-4e58-a04f-8ce4ea8ebfca-disk0".
+                    && VMADM_IMG_NAME_RE.test(name))
+                {
+                    // Gracefully handle 'imgadm:ignore' boolean property.
+                    if (ignore !== '-') {
+                        try {
+                            ignore = common.boolFromString(ignore, false,
+                                '"imgadm:ignore" zfs property');
+                        } catch (e) {
+                            self.log.warn('dataset %s: %s', name, e);
+                            ignore = false;
+                        }
+                    } else {
+                        ignore = false;
+                    }
+                    if (!ignore) {
                         imageNames.push(name);
                     }
-                } else {
+                }
+                if (origin !== '-') {
                     // This *may* be a filesystem using an image. See
                     // joyent/smartos-live#180 for a counter-example.
                     name = origin.split('@')[0];

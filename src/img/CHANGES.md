@@ -1,5 +1,10 @@
 # imgadm changelog
 
+## 2.0.4
+
+- [OS-2218] Correct `imgadm list` to be able to list images with an origin,
+  i.e. incremental images.
+
 ## 2.0.3
 
 - [IMGAPI-152, smartos-live#204] Ensure that there is a '@final' snapshot

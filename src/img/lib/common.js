@@ -26,6 +26,7 @@
  * Dump for shared stuff for this package.
  */
 
+var format = require('util').format;
 var errors = require('./errors');
 
 
@@ -57,6 +58,31 @@ function assertUuid(uuid) {
 }
 
 
+/**
+ * Convert a boolean or string representation into a boolean, or raise
+ * TypeError trying.
+ *
+ * @param value {Boolean|String} The input value to convert.
+ * @param default_ {Boolean} The default value is `value` is undefined.
+ * @param errName {String} The name to include in the possibly
+ *      raised TypeError.
+ */
+function boolFromString(value, default_, errName) {
+    if (value === undefined) {
+        return default_;
+    } else if (value === 'false' || value === 'no') {
+        return false;
+    } else if (value === 'true' || value === 'yes') {
+        return true;
+    } else if (typeof (value) === 'boolean') {
+        return value;
+    } else {
+        throw new TypeError(
+            format('invalid value for %s: %j', errName, value));
+    }
+}
+
+
 
 // ---- exports
 
@@ -66,5 +92,6 @@ module.exports = {
     DEFAULT_SOURCE: DEFAULT_SOURCE,
     getVersion: getVersion,
     objCopy: objCopy,
-    assertUuid: assertUuid
+    assertUuid: assertUuid,
+    boolFromString: boolFromString
 };

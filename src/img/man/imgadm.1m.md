@@ -131,6 +131,11 @@ UUID.
             -s field1,...      Sort on the given fields. Default is
                                "published_at,name".
 
+        A heuristic is used to determine which ZFS datasets are images
+        (any filesystem or volume named 'POOL/UUID' whose mountpoint is not
+        a zoneroot). If this includes datasets that it should not, you can
+        tell imgadm to ignore them via: `zfs set imgadm:ignore=true DATASET`.
+
         Valid fields for "-o" and "-s" are: source, uuid, owner, name,
         version, state, disabled, public, published, published_at, type, os,
         urn, nic_driver, disk_driver, cpu_type, image_size,

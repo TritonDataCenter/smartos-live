@@ -636,6 +636,9 @@ tab-complete UUIDs rather than having to type them out for every command.
         This field allows metadata to be set and associated with this VM. The
         value should be an object with only top-level key=value pairs.
 
+        NOTE: for historical reasons, do not put keys in here that match the
+        pattern *_pw. Those keys should go in internal_metadata instead.
+
         type: JSON Object (key: value)
         vmtype: OS,KVM
         listable: no
@@ -991,6 +994,13 @@ tab-complete UUIDs rather than having to type them out for every command.
         value should be an object with only top-level key=value pairs. The
         intention is that customer_metadata contain customer modifiable keys
         whereas internal_metadata is for operator generated keys.
+
+        NOTE: for historical reasons, when a user in a zone does:
+
+            mdata-get name_pw
+
+        where the key ends with '_pw', the key is looked up in internal_metadata
+        instead of customer_metadata.
 
         type: JSON Object (key: value)
         vmtype: OS,KVM

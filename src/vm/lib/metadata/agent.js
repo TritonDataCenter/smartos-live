@@ -243,7 +243,7 @@ function (zonename, checkService, callback) {
             return callback();
           }
           else {
-            fs.mkdir(smartdcpath, parseInt('0755', 8), function (error) {
+            fs.mkdir(smartdcpath, parseInt('700', 8), function (error) {
               callback(error);
             });
           }
@@ -258,25 +258,20 @@ function (zonename, checkService, callback) {
         = { zone: zonename
           , path: sockpath
           };
+
+      var oldUmask = process.umask(parseInt('077', 8));
+
       self.createZoneSocket(zopts, function (createErr) {
         if (createErr) {
           zlog.error('createZoneSocket Error: ' + createErr.message);
           zlog.error(createErr.stack);
         }
 
-        fs.chmod(
-          gzsockpath,
-          parseInt('0700', 8),
-          function (chownErr) {
-            if (chownErr) {
-              zlog.error('chown Error: ' + chownErr.message);
-              zlog.error(chownErr.stack);
-            }
-            zlog.info("Zone socket created.");
-            if (callback) {
-              return callback();
-            }
-          });
+        zlog.info("Zone socket created.");
+
+        if (callback) {
+          return callback();
+        }
       });
     }
   );

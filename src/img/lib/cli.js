@@ -233,31 +233,137 @@ function CLI() {
 }
 
 
+/* BEGIN JSSTYLED */
+/**
+ * If an `err` is given, then log and print the error.
+ *
+ * By default a single line for an error is printed:
+ *      imgadm: error (UnknownCommand): unknown command: "bogus"
+ *
+ * With one or more '-v' options a traceback is printed:
+ *      imgadm: error (UnknownCommand): unknown command: "bogus"
+ *
+ *      UnknownCommandError: unknown command: "bogus"
+ *          at CLI.dispatch (/usr/img/lib/cli.js:456:18)
+ *          at CLI.main (/usr/img/lib/cli.js:319:22)
+ *          at /usr/img/lib/imgadm.js:1732:9
+ *          at _asyncMap (/usr/img/node_modules/async/lib/async.js:190:13)
+ *          at async.forEachSeries.iterate (/usr/img/node_modules/async/lib/async.js:116:25)
+ *          at _asyncMap (/usr/img/node_modules/async/lib/async.js:187:17)
+ *          at async.series.results (/usr/img/node_modules/async/lib/async.js:491:34)
+ *          at doneSources (/usr/img/lib/imgadm.js:430:17)
+ *          at async.forEachSeries.iterate (/usr/img/node_modules/async/lib/async.js:116:25)
+ *          at IMGADM._addSource (/usr/img/lib/imgadm.js:520:9)
+ *
+ * If '-E' is specified the error will be a Bunyan log record (single-line
+ * of JSON) with an `err` field.
+ */
+/* END JSSTYLED */
+CLI.prototype.printErr = function printErr(err, msg) {
+    var self = this;
+    if (err) {
+        if (self.structuredErr) {
+            self.log.error(err, msg);
+        } else {
+            if (err.code) {
+                console.error(format('%s: error (%s): %s', self.name,
+                    err.code, err.message));
+            } else {
+                console.error(format('%s: error: %s', self.name,
+                    err.message || err));
+            }
+            if (self.verbose && err.stack) {
+                console.error('\n' + err.stack);
+            }
+        }
+    }
+};
+
+
 /**
  * CLI mainline.
  *
  * @param argv {Array}
- * @param callback {Function} `function (helpErr, verbose)`
+ * @param options {Object}
+ *      - `log` {Bunyan Logger}
+ * @param callback {Function} `function (err, printErr)`
+ *      Where `printErr` indicates whether and how to print a possible `err`.
+ *      It is one of `false` (don't print it), `true` (print it), or
  *      Where `verbose` is a boolean indicating if verbose output was
  *      requested by user options.
  */
-CLI.prototype.main = function main(argv, callback) {
+CLI.prototype.main = function main(argv, options, callback) {
     var self = this;
+    assert.arrayOfString(argv, 'argv');
+    assert.object(options, 'options');
+    assert.optionalObject(options.log, 'options.log');
+    assert.func(callback, 'callback');
+
     this.handleArgv(argv, this.envopts, function (argvErr, opts) {
         if (argvErr) {
             callback(argvErr);
             return;
         }
 
-        var verbose = Boolean(opts.verbose);
+        /*
+         * Logging setup.
+         *
+         * - If no `options.log` is given, we log to stderr.
+         * - By default we log at the 'warn' level. Intentionally that is
+         *   almost no logging
+         * - '-v|--verbose' to increase the logging level:
+         *      - 1: info
+         *      - 2: debug
+         *      - 3: trace and enable 'src' (source file location information)
+         * - '-E' to have a possible error be logged as the last single line
+         *   of stderr as a Bunyan log record with an 'err'. I.e. in a
+         *   structured format more useful to automation tooling.
+         *
+         * Logging is in Bunyan (JSON) format so one needs to pipe via
+         * `bunyan` for readable output (at least until bunyan.js supports
+         * doing it inline). Admittedly this is a bit of a pain:
+         *
+         *      imgadm -vvv ... 2>&1 | bunyan
+         */
+        var log = options.log || bunyan.createLogger({
+            name: self.name,
+            streams: [
+                {
+                    stream: process.stderr,
+                    level: 'warn'
+                }
+            ],
+            serializers: bunyan.stdSerializers
+        });
+        if (opts.verbose) {
+            var level;
+            if (opts.verbose.length === 1) {
+                level = 'info';
+            } else if (opts.verbose.length === 2) {
+                level = 'debug';
+            } else {
+                level = 'trace';
+                log = log.child({src: true});
+            }
+            log.level(level);
+        }
+        self.log = log;
+        self.verbose = Boolean(opts.verbose);
+        self.structuredErr = opts.E;
+
+        // Handle top-level args and opts.
+        self.log.debug({opts: opts, argv: argv}, 'parsed argv');
         var args = opts.argv.remain;
         if (opts.version) {
             console.log(self.name + ' ' + common.getVersion());
-            callback(null, verbose);
+            callback(null);
             return;
         }
         if (args.length === 0) {
-            self.printHelp(function (helpErr) { callback(helpErr, verbose); });
+            self.printHelp(function (helpErr) {
+                self.printErr(helpErr, 'help error');
+                callback(helpErr);
+            });
             return;
         } else if (opts.help) {
             // We want `cli foo -h` to show help for the 'foo' subcmd.
@@ -267,46 +373,7 @@ CLI.prototype.main = function main(argv, callback) {
             }
         }
 
-        /*
-         * Logging is to stderr. By default we log at the 'warn' level -- but
-         * that is almost nothing. Logging is in Bunyan format (hence very
-         * limited default logging), so need to pipe via `bunyan` for readable
-         * output (at least until bunyan.js supports doing it inline).
-         *
-         * Admittedly this is a bit of a pain:
-         *
-         *      cli foo -vvv 2>&1 | bunyan
-         *
-         * Use -v|--verbose to increase the logging:
-         * - 1: info
-         * - 2: debug
-         * - 3: trace and enable 'src' (source file location information)
-         */
-        var level = 'warn';
-        var src = false;
-        if (opts.verbose) {
-            if (opts.verbose.length === 1) {
-                level = 'info';
-            } else if (opts.verbose.length === 2) {
-                level = 'debug';
-            } else {
-                level = 'trace';
-                src = true;
-            }
-        }
-        self.log = bunyan.createLogger({
-            name: self.name,
-            streams: [
-                {
-                    stream: process.stderr,
-                    level: level
-                }
-            ],
-            src: src,
-            serializers: bunyan.stdSerializers
-        });
-        self.log.debug({opts: opts, argv: argv}, 'parsed argv');
-
+        // Dispatch subcommands.
         imgadm.createTool({log: self.log}, function (createErr, tool) {
             if (createErr) {
                 callback(createErr);
@@ -316,10 +383,14 @@ CLI.prototype.main = function main(argv, callback) {
 
             var subcmd = args.shift();
             try {
-                self.dispatch(subcmd, argv,
-                    function (dispErr) { callback(dispErr, verbose); });
+                self.dispatch(subcmd, argv, function (dispErr) {
+                    self.printErr(dispErr,
+                        'error with "' + subcmd + '" subcmd');
+                    callback(dispErr);
+                });
             } catch (ex) {
-                callback(ex, verbose);
+                self.printErr(ex, subcmd + ' exception');
+                callback(ex);
             }
         });
     });
@@ -338,7 +409,8 @@ CLI.prototype.handleArgv = function handleArgv(argv, envopts, callback) {
     var longOpts = this.longOpts = {
         'help': Boolean,
         'version': Boolean,
-        'verbose': [Boolean, Array]
+        'verbose': [Boolean, Array],
+        'E': Boolean
     };
     var shortOpts = this.shortOpts = {
         'h': ['--help'],

@@ -27,46 +27,23 @@
  * imgadm -- manage images on SmartOS
  */
 
-var format = require('util').format;
 var onlyif = require('/usr/node/node_modules/onlyif');
 var CLI = require('../lib/cli');
 
 
-// ---- globals
-
-var NAME = 'imgadm';
-
-
-// ---- support stuff
-
-function logerror(err, verbose) {
-    if (err.code) {
-        console.error(format('%s: error (%s): %s', NAME, err.code,
-            err.message));
-    } else {
-        console.error(format('%s: error: %s', NAME, err.message || err));
-    }
-    if (verbose && err.stack) {
-        console.error('\n' + err.stack);
-    }
-}
-
-
-// ---- mainline
-
 function main(argv) {
     onlyif.rootInSmartosGlobal(function (onlyifErr) {
         if (onlyifErr) {
-            logerror('cannot run: ' + onlyifErr);
+            console.error('imgadm: error: cannot run: ' + onlyifErr);
             process.exit(2);
         }
         var cli = new CLI();
-        cli.main(argv, function (err, verbose) {
+        cli.main(argv, {}, function (err) {
             if (err) {
-                logerror(err, verbose);
                 process.exit(err.exitStatus || 1);
+            } else {
+                process.exit(0);
             }
-            process.exit(0);
         });
     });
 }

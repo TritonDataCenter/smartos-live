@@ -53,6 +53,9 @@ test('imgadm --version', function (t) {
         t.equal(stderr, '', 'stderr');
         t.ok(/^imgadm \d+\.\d+\.\d+/.test(stdout),
             format('stdout is a version: "%s"', stdout.trim()));
+        version = stdout.split(/\s+/g)[1];
+        var expectedVersion = require('/usr/img/package.json').version;
+        t.equal(version, expectedVersion);
         t.end();
     });
 });
@@ -68,6 +71,61 @@ test('imgadm --version', function (t) {
     });
 });
 
+
+test('imgadm -vv   # bunyan debug log on stderr', function (t) {
+    exec(IMGADM + ' -vv bogus', function (err, stdout, stderr) {
+        t.ok(err);
+        t.equal(err.code, 1);
+        t.equal(stdout, '', 'stdout');
+        t.ok(stderr);
+        var firstLine = stderr.split(/\n/g)[0];
+        var record = JSON.parse(firstLine);
+        t.equal(record.name, 'imgadm',
+            'first line of stderr is a bunyan log record');
+        t.end();
+    });
+});
+
+test('imgadm -vvv   # bunyan "src" log on stderr', function (t) {
+    exec(IMGADM + ' -vvv bogus', function (err, stdout, stderr) {
+        t.ok(err);
+        t.equal(err.code, 1);
+        t.equal(stdout, '', 'stdout');
+        t.ok(stderr);
+        var firstLine = stderr.split(/\n/g)[0];
+        var record = JSON.parse(firstLine);
+        t.equal(record.name, 'imgadm',
+            'first line of stderr is a bunyan log record');
+        t.ok(record.src, 'have "src" info in logging');
+        t.ok(!isNaN(record.src.line), '"src.line" is a number');
+        t.end();
+    });
+});
+
+
+test('imgadm -E -vv   # structured error last line', function (t) {
+    exec(IMGADM + ' -E -vv bogus', function (err, stdout, stderr) {
+        t.ok(err);
+        t.equal(err.code, 1);
+        t.equal(stdout, '', 'stdout');
+        t.ok(stderr);
+        var lastLine = stderr.trim().split(/\n/g).slice(-1);
+        try {
+            var record = JSON.parse(lastLine);
+        } catch (e) {
+            t.ok(false, 'could not parse last line of stderr: ' + lastLine);
+        }
+        if (record) {
+            t.equal(record.name, 'imgadm',
+                'last line of stderr is a bunyan log record');
+            t.ok(record.err, 'last line has error info');
+            t.equal(record.err.code, 'UnknownCommand');
+        }
+        t.end();
+    });
+});
+
+
 test('imgadm help sources', function (t) {
     exec(IMGADM + ' help sources', function (err, stdout, stderr) {
         t.ifError(err, err);
@@ -81,7 +139,7 @@ test('imgadm help sources', function (t) {
 
 
 var BOGUS_UUID = '29fa922a-7fa7-11e2-bffa-5b6fe63a8d5e';
-test('`imgadm info BOGUS_UUID` ImageNotInstalled error', function (t) {
+test('`imgadm info BOGUS_UUID` ImageNotInstalled error, rv 3', function (t) {
     exec(IMGADM + ' info ' + BOGUS_UUID, function (err, stdout, stderr) {
         t.ok(err, err);
         t.equal(err.code, 3);

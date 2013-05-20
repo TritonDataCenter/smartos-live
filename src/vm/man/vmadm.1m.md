@@ -1631,15 +1631,15 @@ tab-complete UUIDs rather than having to type them out for every command.
     vga:
 
         This property allows one to specify the VGA emulation to be used by
-        KVM VMs. The default is 'cirrus'. NOTE: with the Qemu bundled in
-        SmartOS qxl and xenfb do not work.
+        KVM VMs. The default is 'std'. NOTE: with the Qemu bundled in SmartOS
+        qxl and xenfb do not work.
 
         type: string (one of: 'cirrus','std','vmware','qxl','xenfb')
         vmtype: KVM
         listable: no
         create: yes
         update: yes
-        default: 'cirrus'
+        default: 'std'
 
     virtio_txburst:
 

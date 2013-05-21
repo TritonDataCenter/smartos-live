@@ -57,11 +57,19 @@ var RULE_PATH = '/var/fw/rules';
 var VM_PATH = '/var/fw/vms';
 var IPF_CONF = '%s/config/ipf.conf';
 var IPF_CONF_OLD = '%s/config/ipf.conf.old';
-// List of VM fields required to filter VMs for firewall rules.
+// VM fields that affect filtering
 var VM_FIELDS = [
   'firewall_enabled',
   'nics',
   'owner_uuid',
+  'state',
+  'tags',
+  'uuid',
+  'zonepath'
+];
+// VM fields required for filtering
+var VM_FIELDS_REQUIRED = [
+  'nics',
   'state',
   'tags',
   'uuid',
@@ -337,12 +345,7 @@ function createVMlookup(vms, callback) {
 
   vms.forEach(function (fullVM) {
     var missing = [];
-    VM_FIELDS.forEach(function (field) {
-      // firewall_enabled may be unset in the VM object
-      if (field === 'firewall_enabled') {
-        return;
-      }
-
+    VM_FIELDS_REQUIRED.forEach(function (field) {
       if (!fullVM.hasOwnProperty(field)) {
         missing.push(field);
       }

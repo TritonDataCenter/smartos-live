@@ -34,8 +34,13 @@ function ensureSources(t, callback)
     });
 }
 
-exports.ensureCurrentImages = function(passed_t, callback) {
+exports.ensureCurrentImages = function(passed_t, to_ensure, callback) {
     var cmd = '/usr/sbin/imgadm';
+
+    if (to_ensure && !callback) {
+        callback = to_ensure;
+        to_ensure = null;
+    }
 
     if (ensured_images) {
         // We've already confirmed images are installed.
@@ -45,9 +50,13 @@ exports.ensureCurrentImages = function(passed_t, callback) {
         return;
     }
 
+    if (!to_ensure) {
+        to_ensure = [vmtest.CURRENT_SMARTOS_UUID, vmtest.CURRENT_UBUNTU_UUID];
+    }
+
     function ensure(t, do_end, cb) {
         ensureSources(t, function () {
-            async.forEachSeries([vmtest.CURRENT_SMARTOS_UUID, vmtest.CURRENT_UBUNTU_UUID], function (image, cb) {
+            async.forEachSeries(to_ensure, function (image, cb) {
                 // ensure this image is installed
                 t.ok(true, 'importing: ' + image);
                 cp.execFile(cmd, ['import', image], function (err, stdout, stderr) {
@@ -95,7 +104,11 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
 
     functions = [
         function (cb) {
-            vmtest.ensureCurrentImages(t, cb);
+            if (state.hasOwnProperty('ensure_images')) {
+                vmtest.ensureCurrentImages(t, state.ensure_images, cb);
+            } else {
+                vmtest.ensureCurrentImages(t, cb);
+            }
         }, function(cb) {
             VM.create(payload, function (err, obj) {
                 if (err) {

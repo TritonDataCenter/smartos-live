@@ -18,7 +18,7 @@ var vmtest = require('/usr/vm/test/common/vmtest');
 
 
 VM.loglevel = 'DEBUG';
-var IMAGE_UUID = vmtest.CURRENT_SMARTOS;
+var IMAGE_UUID = vmtest.CURRENT_SMARTOS_UUID;
 var TEST_OPTS = { timeout: 240000 };
 
 
@@ -28,7 +28,11 @@ var TEST_OPTS = { timeout: 240000 };
 
 
 test('enable / disable', TEST_OPTS, function (t) {
-    var state = {'brand': 'joyent-minimal'};
+    var state = {
+        brand: 'joyent-minimal',
+        // We don't need the ubuntu image for these tests:
+        ensure_images: [ IMAGE_UUID ]
+    };
     var vm;
     var vm_params = {
         alias: 'fw-enable' + process.pid,

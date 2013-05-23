@@ -252,6 +252,7 @@ function zoneIPFconfigs() {
       if (l === 'block in all'
         || l === SYN_LINE
         || l === 'pass out quick proto icmp from any to any keep state'
+        || l === 'pass out proto icmp from any to any'
         || /^pass out proto \w+ from any to any/.test(l)) {
         var act = createSubObjects(firewalls, zone, d, action);
         act.any = 'any';

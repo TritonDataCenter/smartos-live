@@ -1351,7 +1351,8 @@ function prepareIPFdata(opts, callback) {
       'pass out quick proto tcp from any to any flags S/SA keep state',
       'pass out proto tcp from any to any',
       'pass out proto udp from any to any keep state',
-      'pass out quick proto icmp from any to any keep state']).join('\n')
+      'pass out quick proto icmp from any to any keep state',
+      'pass out proto icmp from any to any']).join('\n')
       + '\n';
   }
 

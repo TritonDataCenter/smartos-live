@@ -638,26 +638,27 @@ The /fBsmtools/fR package can be installed with.
 # pkgin in smtools
 .P
 This provides a number of helpful utilities and scripts, man pages not yet specified.
+These are provided for the Joyent Cloud SmartMachines, ymmv on SmartOS Zones.
 .P
-.B SYSTEM MANAGEMENT SCRIPTS
+.B SMARTMACHINE SYSTEM MANAGEMENT SCRIPTS
 .P
-sm-summary          Provides SmartMachine summary of information.
+sm-summary          Provides summary of information.
 .P
-sm-set-hostname     Set the hostname of a SmartMachine.
+sm-set-hostname     Set the hostname.
 .P   
-sm-cpuinfo          Provides SmartMachine cpu utilization information.
+sm-cpuinfo          Provides cpu utilization information.
 .P
-sm-meminfo          Provides SmartMachine memory utilization information.  
+sm-meminfo          Provides memory utilization information.  
 .P
-sm-set-timezone     Set the timezone of a SmartMachine.
+sm-set-timezone     Set the timezone.
 .P
-sm-list-timezones   List timezones available to a SmartMachine.
+sm-list-timezones   List timezones available.
 .P
-sm-reboot           Reboot a SmartMachine.
+sm-reboot           Reboot.
 .P
-sm-shutdown         Shuts down a SmartMachine.
+sm-shutdown         Shuts down.
 .P
-sm-lsof             lsof command for files or ports.
+sm-lsof             lsof command equivalent script for files or ports.
 .P
 sm-rebuild-pkgsrc   Reconstructs the pkgsrc software by re-installing all packages from a new package set.
 .P
@@ -665,32 +666,35 @@ sm-pkghelp          Reminds you that unknown commands may be obtained via pkgin.
 .P
 
 
-.B DATABASE  - MySQL/PostgreSQL MANAGMENT
-sm-create-dbuser      Create a MySQL/PostgreSQL database user for a SmartMachine.
+.B SMARTMACHINE DATABASE  - MySQL/PostgreSQL MANAGMENT
 .P
-sm-list-dbs           List MySQL/PostgreSQL databases for a SmartMachine.     
+sm-create-dbuser      Create a MySQL/PostgreSQL database user.
 .P
-sm-create-db          Create a MySQL/PostgreSQL database for a SmartMachine.
+sm-list-dbs           List MySQL/PostgreSQL databases.     
 .P
-sm-remove-db          Remove a MySQL/PostgreSQL database for a SmartMachine.
+sm-create-db          Create a MySQL/PostgreSQL database.
 .P
-sm-list-dbusers       List MySQL/PostgreSQL database users for a SmartMachine.
+sm-remove-db          Remove a MySQL/PostgreSQL database.
 .P
-sm-remove-dbuser      Remove a MySQL/PostgreSQL database for a SmartMachine.
+sm-list-dbusers       List MySQL/PostgreSQL database users.
+.P
+sm-remove-dbuser      Remove a MySQL/PostgreSQL database.
 .P
 
-.B WEB SERVICES 
-sm-create-vhost        Creates simple Apache/Nginx configurations for SmartMachines.
+.B SMARTMACHINE WEB SERVICES INSTALLATION SCRIPTS
+.P
+sm-create-vhost        Creates simple Apache/Nginx configurations.
 .P
 sm-install-drupal      Installs drupal in destination directory after vhost setup.
 .P
 sm-install-wordpress   Installs wordpress in destination directory after vhost setup.
 .P
 
-.B VM IMAGE PREPARATION
+.B VM IMAGE PREPARATION SCRIPT
+.P
 .B USE WITH CAUTION - MAKES IRREVERSIBLE CHANGES!
 .P
-sm-prepare-image       Clean up the file system of an existing SmartMachine for image 
+sm-prepare-image       Clean up the file system of an existing SM for image 
 .P
 
 

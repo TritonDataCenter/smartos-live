@@ -59,9 +59,9 @@ generally fall in two categories:
 .P
 Many commands available on Linux are also available on SmartOS.
 .P
-For instance, you can use the pkgin package manager to install top(1).
+For instance, you can use the \fBpkgin\fR package manager to install \fBtop\fR(1).
 .P
-# pkgin install top
+\fB# pkgin install top\fR
 
 
 .SH EXAMPLES OF DIFFERENT USE CONTEXT IN SmartOS
@@ -77,29 +77,29 @@ the package management system pkgin, but the illumOS versions are reccommended.
 Linux    |   SmartOS
 Command  |   Difference
 ---------|------------------------------------------------------
-df(1)    |   df(1M)
+df(1)    |   \fBdf\fR(1M)
          |   Native illumOS version is /usr/bin/df    
-         | # df -t /usr  (Prints free and totals)
+         | # \fBdf -t /usr\fR  (Prints free and totals)
 ---------|------------------------------------------------------
-ping(8)  |   ping(1M)
+ping(8)  |   \fBping\fR(1M)
          |   Returns whether a host responds or not.
-         | # ping -s   (Returns a coninuous response)
+         | # \fBping -s\fR   (Returns a coninuous response)
 ----------------------------------------------------------------
 lsof(8)  |   lsof -  list of open files - command not provided.
-         |   proc(1) has commands like pfiles to show files
+         |   \fBproc\fR(1) has commands like pfiles to show files
          |   open for a list of process IDs.
-         | # pfiles $(pgrep bash)   (Files associated with bash)
-         |   See ADDITIONAL TOOLS AND SCRIPTS for sm-lsof
+         | # \fBpfiles $(pgrep bash)\fR   (Files associated with bash)
+         |   See ADDITIONAL TOOLS AND SCRIPTS for \fBsm-lsof\fR
 ---------|------------------------------------------------------
-top(1)   |   prstat(1M) is zone aware and more accurate.
+top(1)   |   \fBprstat\fR(1M) is zone aware and more accurate.
          |   top is available via pkgin
-         | # pkgin -y install top   (Installs top)
+         | # \fBpkgin -y install top\fR   (Installs top)
 -----------------------------------------------------------------        
 .fi
 
 
 .SH SmartOS PROCESS TOOLS PROC(1)
-The SmartOS proc(1) man page 
+The SmartOS \fBproc\fR(1) man page 
 describes the suite of tools used to examine processes.
 .PP
 .nf
@@ -107,36 +107,36 @@ describes the suite of tools used to examine processes.
 SmartOS
 Tool     |  Description
 ---------|---------------------------------------------------------------
-prstat   |  Displays active processes - like top
-         |# prstat -Z   (Prints summary of status)
-         |# prstat -p $(pgrep -d ',' login)  (Displays 'login' processes)
-         |# prstat -P 0  (Displays processes on cpu0)
+\fBprstat\fR   |  Displays active processes - like top
+         |# \fBprstat -Z\fR   (Prints summary of status)
+         |# \fBprstat -p $(pgrep -d ',' login)\fR  (Displays 'login' processes)
+         |# \fBprstat -P 0\fR  (Displays processes on cpu0)
 ---------|---------------------------------------------------------------
-pgrep    |  Returns a list of process IDs (PIDs) that match 
+\fBpgrep\fR    |  Returns a list of process IDs (PIDs) that match 
          |  a pattern or meet certain conditions
-         |# pgrep -G root  (Displays PIDs owned by root group)
+         |# \fBpgrep -G root\fR  (Displays PIDs owned by root group)
 ---------|---------------------------------------------------------------
-pkill    |  Kills processes that match a pattern or meet
+\fBpkill\fR    |  Kills processes that match a pattern or meet
          |  certain conditions
 ---------|---------------------------------------------------------------
-pfiles   |  Returns a list of all the open files that belong 
+\fBpfiles\fR   |  Returns a list of all the open files that belong 
          |  to a process
 ---------|---------------------------------------------------------------
-pstack   |  Displays a stack trace of the specified process
+\fBpstack\fR   |  Displays a stack trace of the specified process
          |
 ---------|---------------------------------------------------------------
-ptree    |  Displays a process tree for all processes of a given 
+\fBptree\fR    |  Displays a process tree for all processes of a given 
          |  process
 ---------|---------------------------------------------------------------
-ls /proc |  Lists the PIDs of all running processes
+\fBls /proc\fR |  Lists the PIDs of all running processes
          |
 ---------|---------------------------------------------------------------
 
 .fi
 .B Note:
-If prstat display changes your terminal settings,
+If \fBprstat\fR display changes your terminal settings,
 use the
-.B reset
+.B \fBreset\fR
 command to return them to normal.
 
 
@@ -148,31 +148,31 @@ Over 10,000 software packages are available.
 .P
 Packages are retrieved from the Joyent pkgsrc repository at:
 .P
-pkgsrc.joyent.com/packages/
+.B pkgsrc.joyent.com/packages/
 .nf
 
 Linux                  |   SmartOS
 -----------------------|----------------
-apt-get(8) (deb, ub)   |   pkgin(1)
+apt-get(8) (deb, ub)   |   \fBpkgin\fR(1)
 yum(8)  (rh, fed)      |   
 rpm(8)   (rh, fed)     |
 dpkg(1) (deb, ub)      |
 dselect (deb)          |
 
 
-pkgin                          Show all pkgin commands 
-pkgin update (Do this first)   Update current packages  
-pkgin list                     Show installed software
-pkgin avail                    List available software       
-pkgin search ...               Search for software ...      
-pkgin install ...              Install software ...         
-pkgin in -y ...                Install with prejudice ...  
+\fBpkgin\fR                          Show all pkgin commands 
+\fBpkgin update\fR (Do this first)   Update current packages  
+\fBpkgin list\fR                     Show installed software
+\fBpkgin avail\fR                    List available software       
+\fBpkgin search \fR...               Search for software ...      
+\fBpkgin install \fR...              Install software ...         
+\fBpkgin in -y \fR...                Install with prejudice ...  
 
 .fi
 
 
 .SH MANAGING SmartOS SERVICES WITH THE SERVICE MANAGEMENT FACILITY
-The Service Management Facility (SMF) is the SmartOS way to start and stop 
+The Service Management Facility (\fBSMF\fR) is the SmartOS way to start and stop 
 services (web, database, email, and so on) and provides two advantages:
 .P
 - It monitors services and restarts them automatically if they stop running.
@@ -180,35 +180,35 @@ services (web, database, email, and so on) and provides two advantages:
 - It understands the dependencies between services. For example, SMF will not 
 attempt to start your webserver if your network is down.
 .P
-The SMF facility in SmartOS is used to manage long running daemon processes like 
-Apache and MySQL. Most of the relevant packages from the pkgin repository 
+The \fBSMF\fR facility in SmartOS is used to manage long running daemon processes like 
+\fBApache and MySQL\fR. Most of the relevant packages from the pkgin repository 
 (pkgsrc) will come with a corresponding SMF manifest and do not require any 
 interaction on your part other than enabling the service for the installed 
 package (see svcadm). However, you may find a need for importing a manifest that 
 manages a service you have custom compiled or created yourself.
 .P
-SMF consists of four command-line utilities:
+.B SMF consists of four command-line utilities:
 .nf
 
-svcs(1)       Examine the state of your services
-svcadm(1M)    Enable, disable, and restart a service
-svccfg(1M)    Load XML manifest file with service configuration data
-svcprop(1)    Retrieves service properties (use for custom scripts)
+\fBsvcs\fR(1)       Examine the state of your services
+\fBsvcadm\fR(1M)    Enable, disable, and restart a service
+\fBsvccfg\fR(1M)    Load XML manifest file with service configuration data
+\fBsvcprop\fR(1)    Retrieves service properties (use for custom scripts)
 .fi
 .P
 For more details visit: 
 .P
-http://wiki.smartos.org/display/DOC/Using+the+Service+Management+Facility
+.B http://wiki.smartos.org/display/DOC/Using+the+Service+Management+Facility
 
 
 .SH STARTUP SCRIPTS
 .nf
 Linux              |   SmartOS
 -------------------|--------------
-/etc/rc* (varies)  | smf(5)
-                   | svcadm(1M)
-                   | svcs(1)
-init(8)            | init(1M)
+/etc/rc* (varies)  | \fBsmf\fR(5)
+                   | \fBsvcadm\fR(1M)
+                   | \fBsvcs\fR(1)
+init(8)            | \fBinit\fR(1M)
 /etc/init.d/       | /etc/rc*
                    | /etc/init.d
 .fi
@@ -217,30 +217,30 @@ init(8)            | init(1M)
 .nf
 Linux                |   SmartOS
 ---------------------|---------------
-service(8) (rh,ub)   |   svcs(1)
+service(8) (rh,ub)   |   \fBsvcs\fR(1)
 chkconfig (rh)       |
-invoke-rc.d(8)       |   svcadm(1M)
+invoke-rc.d(8)       |   \fBsvcadm\fR(1M)
 sysv-rc-conf (deb)   |   
-update-rc.d(8) (ub)  |   svccfg(1M) 
+update-rc.d(8) (ub)  |   \fBsvccfg\fR(1M) 
 .fi
 
 
 .SH MANAGING PRROCESS RESOURCE USE AND AUTHENTICATION WITH PROJECTS(1)
 A facility in illumOS/OpenSolaris allows grouping of processes for the purpose of controlling
 and limiting their access to resources like CPU, memory and storage. Users and groups can be
-specified for project membership. The man page for resource_controls(5) describes the specific
-resources that can be controlled under the projects(1) facility.
+specified for project membership. The man page for \fBresource_controls\fR(5) describes the specific
+resources that can be controlled under the \fBprojects\fR(1) facility.
 .P
-The projects(1) facility involves command-line tools required to operate on the local project 
-file at /etc/project as described in project(4). 
+The \fBprojects\fR(1) facility involves command-line tools required to operate on the local project 
+file at /etc/project as described in \fBproject\fR(4). 
 .P
 .nf 
 
-projadd(1M) Adds a project to the system project database
-projdel(1M) Deletes a project from the system    
-projmod(1M) Modifies project resource and authentication, with examples
-newtask(1)  Sets, associates and launches processes within projects
-prctl(1)    Get, set resources of running processes, tasks or projects
+\fBprojadd\fR(1M) Adds a project to the system project database
+\fBprojdel\fR(1M) Deletes a project from the system    
+\fBprojmod\fR(1M) Modifies project resource and authentication, with examples
+\fBnewtask\fR(1)  Sets, associates and launches processes within projects
+\fBprctl\fR(1)    Get, set resources of running processes, tasks or projects
 
 .fi
 
@@ -249,14 +249,14 @@ prctl(1)    Get, set resources of running processes, tasks or projects
 
 Linux        |   SmartOS
 -------------|---------------
-useradd(8)   |   useradd(1M)
-usermod(8)   |   usermod(1M)
-userdel(8)   |   userdel(1M)
-adduser(8)   |   getent(1M)
-chage(1)     |   logins(1M)
-getent(1)    |   groupadd(1M)
-             |   groupdel(1M)
-             |   groupmod(1M)
+useradd(8)   |   \fBuseradd\fR(1M)
+usermod(8)   |   \fBusermod\fR(1M)
+userdel(8)   |   \fBuserdel\fR(1M)
+adduser(8)   |   \fBgetent\fR(1M)
+chage(1)     |   \fBlogins\fR(1M)
+getent(1)    |   \fBgroupadd\fR(1M)
+             |   \fBgroupdel\fR(1M)
+             |   \fBgroupmod\fR(1M)
 .fi
 
 .SH LIST HARDWARE CONFIGURATION
@@ -264,12 +264,12 @@ getent(1)    |   groupadd(1M)
 
 Linux              |   SmartOS
 -------------------|--------------
-arch(1)            |   arch(1)
-uname(1)           |   uname(1) 
-dmesg(1)           |   psrinfo(1M) [-v]
-cat /var/log/dmesg |   isainfo(1)  [-v]
-/proc/*            |   dmesg(1M)
-lshw(1)            |   iostat(1M)  [-En]
+arch(1)            |   \fBarch\fR(1)
+uname(1)           |   \fBuname\fR(1) 
+dmesg(1)           |   \fBpsrinfo\fR(1M) [-v]
+cat /var/log/dmesg |   \fBisainfo\fR(1)  [-v]
+/proc/*            |   \fBdmesg\fR(1M)
+lshw(1)            |   \fBiostat\fR(1M)  [-En]
 dmidecode(8)       |
 lspci(8)           |
 lspnp(8)           |
@@ -287,29 +287,29 @@ lilo, grub, /boot/* are not accessible.
 
 Linux           |   SmartOS
 ----------------|--------------
-proc(5) /proc/* |   sysdef(1M)
-/proc/sys/*     |   getconf(1)
-sysctl(8)       |   ndd(1M)
-lsmod(8)        |   modinfo(1M)
+proc(5) /proc/* |   \fBsysdef\fR(1M)
+/proc/sys/*     |   \fBgetconf\fR(1)
+sysctl(8)       |   \fBndd\fR(1M)
+lsmod(8)        |   \fBmodinfo\fR(1M)
 .fi
 
 .SH TYPICAL $PATH FOR ROOT
 .P
 Linux (ub):
 .P
-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:
+ /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:
 .P
 SmartOS:
 .P
-/opt/local/bin:/opt/local/sbin:/usr/bin:/usr/sbin:
+.B /opt/local/bin:/opt/local/sbin:/usr/bin:/usr/sbin:
 .P
 
 .SH KILL PROCESS
 .nf
 Linux        |   SmartOS
 -------------|--------------
-kill(1)      |   kill(1)
-killall(1)   |   pkill(1)
+kill(1)      |   \fBkill\fR(1)
+killall(1)   |   \fBpkill\fR(1)
              |   killall(1) <- tries to kill everything - DO NOT USE THIS
 .fi
 
@@ -317,9 +317,9 @@ killall(1)   |   pkill(1)
 .nf
 Linux                 |   SmartOS
 ----------------------|--------------
-shutdown(8) [-PH now] | shutdown(1M) [-y -g0 -i5]
-shutdown -y -g0 -i0   | halt(1M)
-halt                  | reboot(1M)
+shutdown(8) [-PH now] | \fBshutdown\fR(1M) [\fB-y -g0 -i5\fR]
+shutdown -y -g0 -i0   | \fBhalt\fR(1M)
+halt                  | \fBreboot\fR(1M)
 reboot(8)             |
 poweroff              | 
 .fi
@@ -328,16 +328,16 @@ poweroff              |
 .nf
 Linux                    |   SmartOS
 -------------------------|--------------
-who(1)                   | who(1)
-/sbin/runlevel           | who -r  ** Does not show zone runlevel 
+who(1)                   | \fBwho\fR(1)
+/sbin/runlevel           | \fBwho -r\fR  ** Does not show zone runlevel 
 ----------------------------------------
-(set in /etc/inittab)    | s,S: single-user
-0: halt                  | 1:   sys admin
-s,S,1: vendor-dependent  | 2:   multi-user
-1: single-user           | 3*:  share NFS
-2-5*: multiuser          | 4*:  user-defined
-6: reboot                | 5:   power-down if possible
-                         | 6:   reboot
+(set in /etc/inittab)    | \fBs,S: single-user\fR
+0: halt                  | \fB1:   sys admin\fR
+s,S,1: vendor-dependent  | \fB2:   multi-user\fR
+1: single-user           | \fB3*:  share NFS\fR
+2-5*: multiuser          | \fB4*:  user-defined\fR
+6: reboot                | \fB5:   power-down if possible\fR
+                         | \fB6:   reboot\fR
 .fi
 
 
@@ -345,8 +345,8 @@ s,S,1: vendor-dependent  | 2:   multi-user
 .nf
 Linux                 |   SmartOS
 ----------------------|--------------
-/usr/share/zoneinfo/  |   /usr/share/lib/zoneinfo
-/etc/localtime        |   TIMEZONE(4)
+/usr/share/zoneinfo/  |   \fB/usr/share/lib/zoneinfo\fR
+/etc/localtime        |   \fBTIMEZONE\fR(4)
 .fi
 
 
@@ -354,8 +354,8 @@ Linux                 |   SmartOS
 .nf
 Linux        |   SmartOS
 -------------|--------------
-ntpdate(8)   | ntpdate(1M)
-rdate        | rdate(1M)
+ntpdate(8)   | \fBntpdate\fR(1M)
+rdate        | \fBrdate\fR(1M)
 netdate      |
 .fi
 
@@ -365,8 +365,8 @@ netdate      |
 .nf
 Linux                        |   SmartOS
 -----------------------------|--------------
-iptables(8)                  |   ipf(1M)
-ipchains                     |   /etc/ipf/ipf.conf
+iptables(8)                  |   \fBipf\fR(1M)
+ipchains                     |   \fB/etc/ipf/ipf.conf\fR
 ipfwadm                      |
 redhat-config-securitylevel  |
 
@@ -376,9 +376,9 @@ redhat-config-securitylevel  |
 .nf
 Linux             |   SmartOS
 ------------------|--------------
-swapon(8)         |   swap(1M)
-cat /proc/meminfo |   swap -s[h]
-cat /proc/swaps   |   swap -l[h]
+swapon(8)         |   \fBswap\fR(1M)
+cat /proc/meminfo |   \fBswap -s\fR[h]
+cat /proc/swaps   |   \fBswap -l\fR[h]
 free(1)           |
 .fi
 
@@ -386,23 +386,23 @@ free(1)           |
 .nf
 Linux        |   SmartOS
 -------------|--------------
-taskset(1)   |   pbind(1M)
-             |   psrset(1M)
+taskset(1)   |   \fBpbind\fR(1M)
+             |   \fBpsrset\fR(1M)
 .fi
 
 .SH MEMORY
 .nf
 Linux        |   SmartOS
 -------------|--------------
-free(1)      |   prtconf(1M)
-freemem      |   zonememstat(1M)
+free(1)      |   \fBprtconf\fR(1M)
+freemem      |   \fBzonememstat\fR(1M)
 .fi
 
 .SH NORMAL FILESYSTEM
 .nf
 Linux        |   SmartOS
 -------------|--------------
-ext2         |   zfs(1M)
+ext2         |   \fBzfs\fR(1M)
 ext3         |
 ReiserFS     |
 .fi
@@ -411,7 +411,7 @@ ReiserFS     |
 .nf
 Linux        |   SmartOS
 -------------|--------------
-/etc/fstab   |   /etc/vfstab
+/etc/fstab   |   \fB/etc/vfstab\fR
 .fi
 
 
@@ -419,15 +419,15 @@ Linux        |   SmartOS
 .nf
 Linux                                            |   SmartOS
 -------------------------------------------------|--------------
-dd if=/dev/zero of=filename bs=1024 count=size   | mkfile(1M)
+dd if=/dev/zero of=filename bs=1024 count=size   | \fBmkfile\fR(1M)
 .fi
 
 .SH ACL MANAGEMENT
 .nf
 Linux        |   SmartOS
 -------------|--------------
-getfacl(1)   |  getfacl(1)
-setfacl(1)   |  setfacl(1)
+getfacl(1)   |  \fBgetfacl\fR(1)
+setfacl(1)   |  \fBsetfacl\fR(1)
 
 .fi
 
@@ -439,7 +439,7 @@ They can mount NFS shares.
 .nf
 Linux            |    SmartOS
 -----------------|------------
-cat /proc/mounts |    nfsstat(1M)
+cat /proc/mounts |    \fBnfsstat\fR(1M)
 .fi
 
 
@@ -447,8 +447,8 @@ cat /proc/mounts |    nfsstat(1M)
 .nf
 Linux              |   SmartOS
 -------------------|--------------
-/etc/nsswitch.conf |  /etc/nsswitch.conf
-/etc/resolv.conf   |  getent(1M)
+/etc/nsswitch.conf |  \fB/etc/nsswitch.conf\fR
+/etc/resolv.conf   |  \fBgetent\fR(1M)
 .fi
 
 
@@ -460,10 +460,10 @@ Cloud Management Portal, SmartOS Zone IPs are set in the Global Zone.
 .nf
 Linux        |   SmartOS
 -------------|--------------
-ifconfig(8)  |   dladm(1M)
-ethtool      |   ndd(1M)
-             |   ifconfig(1M) [-a]
-             |   netstat(1M) [-in]
+ifconfig(8)  |   \fBdladm\fR(1M)
+ethtool      |   \fBndd\fR(1M)
+             |   \fBifconfig\fR(1M) [-a]
+             |   \fBnetstat\fR(1M) [-in]
 .fi
 
 
@@ -471,9 +471,9 @@ ethtool      |   ndd(1M)
 .nf
 Linux        |   SmartOS
 -------------|--------------
-etherfind    |   snoop(1M)
-tcpdump(8)   |   tcpdump (Install with pkgin)
-wireshark    |   dtrace(1M)
+etherfind    |   \fBsnoop\fR(1M)
+tcpdump(8)   |   \fBtcpdump\fR (Install with pkgin)
+wireshark    |   \fBdtrace\fR(1M)
 etherape     |
 .fi
 
@@ -482,12 +482,12 @@ etherape     |
 .nf
 Linux                                     |   SmartOS
 ------------------------------------------|--------------
-route(8)                                  |   route(1M)
-/etc/sysconfig/network (rh,fed)           |   /etc/defaultrouter
-/etc/sysconfig/static-routes (rh,fed)     |   /etc/notrouter
-/etc/init.d/network (ub,deb)              |   /etc/gateways
-/etc/network (ub,deb)                     |   in.routed
-                                          |   netstat -r
+route(8)                                  |   \fBroute\fR(1M)
+/etc/sysconfig/network (rh,fed)           |   \fB/etc/defaultrouter\fR
+/etc/sysconfig/static-routes (rh,fed)     |   \fB/etc/notrouter\fR
+/etc/init.d/network (ub,deb)              |   \fB/etc/gateways\fR
+/etc/network (ub,deb)                     |   \fBin.routed\fR
+                                          |   \fBnetstat -r\fR
 
 .fi
 
@@ -496,10 +496,10 @@ route(8)                                  |   route(1M)
 .nf
 Linux            |   SmartOS
 -----------------|--------------
-auditd           |   audit(1M)
-/var/log/faillog |   auditd(1M)
-                 |   auditreduce(1M)
-                 |   praudit(1M)
+auditd           |   \fBaudit\fR(1M)
+/var/log/faillog |   \fBauditd\fR(1M)
+                 |   \fBauditreduce\fR(1M)
+                 |   \fBpraudit\fR(1M)
 .fi
 
 
@@ -507,7 +507,7 @@ auditd           |   audit(1M)
 .nf
 Linux                   |   SmartOS
 ------------------------|--------------
-/etc/pam.d/system-auth  |   /etc/default.login
+/etc/pam.d/system-auth  |   \fB/etc/default.login\fR
 .fi
 
 
@@ -515,7 +515,7 @@ Linux                   |   SmartOS
 .nf
 Linux        |   SmartOS
 -------------|--------------
-gcc          |   gcc (Install with pkgin)
+gcc          |   \fBgcc\fR (Install with pkgin)
 .fi
 
 .SH CONFIGURE/SHOW RUNTIME LINKING
@@ -523,13 +523,13 @@ SmartOS supports both 32-bit and 64-bit compiled executables.
 .nf
 Linux        |   SmartOS
 -------------|--------------
-ldconfig(8)  |   crle(1)
-ldd(1)       |   ldd(1)
-readelf(1)   |   elfdump(1)
-lsmod (8)    |   dump(1)
-             |   pldd(1)
-             |   modinfo(1M)
-             |   LD_PRELOAD
+ldconfig(8)  |   \fBcrle\fr(1)
+ldd(1)       |   \fBldd\fR(1)
+readelf(1)   |   \fBelfdump\fR(1)
+lsmod (8)    |   \fBdump\fR(1)
+             |   \fBpldd\fR(1)
+             |   \fBmodinfo\fR(1M)
+             |   \fBLD_PRELOAD\fR
 .fi
 
 
@@ -537,7 +537,7 @@ lsmod (8)    |   dump(1)
 .nf
 Linux             |   SmartOS
 ------------------|--------------
-$LD_LIBRARY_PATH  |   $LD_LIBRARY_PATH
+$LD_LIBRARY_PATH  |   \fB$LD_LIBRARY_PATH\fR
 /etc/ld.so.conf   | 
 
 .fi
@@ -547,9 +547,9 @@ $LD_LIBRARY_PATH  |   $LD_LIBRARY_PATH
 .nf
 Linux        |   SmartOS
 -------------|--------------
-strace(1)    |   dtrace(1M)
-ltrace(1)    |   truss(1)
-             |   sotruss(1)
+strace(1)    |   \fBdtrace\fR(1M)
+ltrace(1)    |   \fBtruss\fR(1)
+             |   \fBsotruss\fR(1)
 .fi
 
 
@@ -557,9 +557,9 @@ ltrace(1)    |   truss(1)
 .nf
 Linux               |   SmartOS
 --------------------|--------------
-/etc/profile        |   /etc/default/login
-/etc/security/      |   /etc/profile
-/etc/skel/          |   /etc/security/
+/etc/profile        |   \fB/etc/default/login\fR
+/etc/security/      |   \fB/etc/profile\fR
+/etc/skel/          |   \fB/etc/security/\fR
 /etc/profile.d/*    |
 
 .fi
@@ -569,7 +569,7 @@ Linux               |   SmartOS
 .nf
 Linux            |   SmartOS
 -----------------|--------------
-/etc/csh.login   |   /etc/.login  
+/etc/csh.login   |   \fB/etc/.login\fR 
 .fi
 
 
@@ -578,8 +578,8 @@ Linux            |   SmartOS
 .nf
 Linux               |   SmartOS
 --------------------|--------------
-/var/log/syslog     |   /var/adm/messages 
-/var/log/messages   |   /var/log/syslog
+/var/log/syslog     |   \fB/var/adm/messages\fR
+/var/log/messages   |   \fB/var/log/syslog\fR
 /usr/adm/messages   | 
 /var/log/maillog    |
 .fi
@@ -589,8 +589,8 @@ Linux               |   SmartOS
 .nf
 Linux        |   SmartOS
 -------------|--------------
-dmesg (deb)  |   fmadm(1M)    Fault Management Administration
-reportbug    |   fmdump(1M)   Fault Management Dump
+dmesg (deb)  |   \fBfmadm\fR(1M)    Fault Management Administration
+reportbug    |   \fBfmdump\fR(1M)   Fault Management Dump
 .fi
 
 
@@ -598,18 +598,18 @@ reportbug    |   fmdump(1M)   Fault Management Dump
 .nf
 Linux        |   SmartOS
 -------------|--------------
-vmstat(8)    |   dtrace(1M)    Dynamic tracing compiler and utility
-procinfo -D  |   prstat(1M)    Process Statistics
+vmstat(8)    |   \fBdtrace\fR(1M)    Dynamic tracing compiler and utility
+procinfo -D  |   \fBprstat\fR(1M)    Process Statistics
 top(1)       |   
 htop         |   
-pstree(1)    |   ptree(1)
-             |   kstat(1M)     Kernel Statistics
-             |   mpstat(1M)    CPU Statistics
-             |   netstat(1M)   Network Status
-             |   nfsstat(1M)   NFS Statistics
-             |   vmstat(1M)    Memory Statistics
-             |   plockstat(1M) User-Level Lock/Contention Statistics
-             |   vfsstat(1M)   Virtual FileSystem Statistics
+pstree(1)    |   \fBptree\fR(1)
+             |   \fBkstat\fR(1M)     Kernel Statistics
+             |   \fBmpstat\fR(1M)    CPU Statistics
+             |   \fBnetstat\fR(1M)   Network Status
+             |   \fBnfsstat\fR(1M)   NFS Statistics
+             |   \fBvmstat\fR(1M)    Memory Statistics
+             |   \fBplockstat\fR(1M) User-Level Lock/Contention Statistics
+             |   \fBvfsstat\fR(1M)   Virtual FileSystem Statistics
 
 .fi
 
@@ -619,8 +619,8 @@ pstree(1)    |   ptree(1)
 .nf
 Linux              |   SmartOS
 -------------------|--------------
-lsof(8)            |   pfiles(1)
-netstat(8) -atup   |   fuser(1M)
+lsof(8)            |   \fBpfiles\fR(1)
+netstat(8) -atup   |   \fBfuser\fR(1M)
 
 .fi
 
@@ -636,45 +636,45 @@ These are provided for the Joyent Cloud SmartMachines, ymmv on SmartOS Zones.
 .P
 .B SMARTMACHINE SYSTEM MANAGEMENT SCRIPTS
 .nf
-sm-summary        Provides summary of information
-sm-set-hostname   Set the hostname
-sm-cpuinfo        Provides cpu utilization information
-sm-meminfo        Provides memory utilization information
-sm-set-timezone   Set the timezone
-sm-list-timezones List timezones available
-sm-reboot         Reboot
-sm-shutdown       Shuts down
-sm-lsof           lsof command equivalent script for files or ports
-sm-rebuild-pkgsrc Re-installs pkgsrc with packages from new package set
-sm-pkghelp        Reminder - unknown commands may be obtained via pkgin
+\fBsm-summary\fR        Provides summary of information
+\fBsm-set-hostname\fR   Set the hostname
+\fBsm-cpuinfo\fR        Provides cpu utilization information
+\fBsm-meminfo\fR        Provides memory utilization information
+\fBsm-set-timezone\fR   Set the timezone
+\fBsm-list-timezones\fR List timezones available
+\fBsm-reboot\fR         Reboot
+\fBsm-shutdown\fR       Shuts down
+\fBsm-lsof\fR           lsof command equivalent script for files or ports
+\fBsm-rebuild-pkgsrc\fR Re-installs pkgsrc with packages from new package set
+\fBsm-pkghelp\fR        Reminder - unknown commands may be obtained via pkgin
 .fi
 
 
 .B SMARTMACHINE DATABASE  - MySQL/PostgreSQL MANAGMENT
 .nf
-sm-create-dbuser  Create a MySQL/PostgreSQL database user
-sm-list-dbs       List MySQL/PostgreSQL databases    
-sm-create-db      Create a MySQL/PostgreSQL database
-sm-remove-db      Remove a MySQL/PostgreSQL database
-sm-list-dbusers   List MySQL/PostgreSQL database users
-sm-remove-dbuser  Remove a MySQL/PostgreSQL database
+\fBsm-create-dbuser\fR  Create a MySQL/PostgreSQL database user
+\fBsm-list-dbs\fR       List MySQL/PostgreSQL databases    
+\fBsm-create-db\fR      Create a MySQL/PostgreSQL database
+\fBsm-remove-db\fR      Remove a MySQL/PostgreSQL database
+\fBsm-list-dbusers\fR   List MySQL/PostgreSQL database users
+\fBsm-remove-dbuser\fR  Remove a MySQL/PostgreSQL database
 .fi
 
 .B SMARTMACHINE WEB SERVICES INSTALLATION SCRIPTS
 .P
-sm-create-vhost       Creates simple Apache/Nginx configurations
+\fBsm-create-vhost\fR       Creates simple Apache/Nginx configurations
 .P
 Commands dependent on sm-create-vhost:
 .nf
-sm-install-drupal     Installs drupal in destination directory
-sm-install-wordpress  Installs wordpress in destination directory
+\fBsm-install-drupal\fR     Installs drupal in destination directory
+\fBsm-install-wordpress\fR  Installs wordpress in destination directory
 .fi
 
 .B VM IMAGE PREPARATION SCRIPT
 .P
 .B USE WITH CAUTION - MAKES IRREVERSIBLE CHANGES!
 .P
-sm-prepare-image   Clean up the filesystem for SmartMachine image 
+\fBsm-prepare-image\fR   Clean up the filesystem for SmartMachine image 
 .P
 
 
@@ -690,4 +690,4 @@ http://bhami.com/rosetta.html
 .P
 
 .SH AUTHORS
-Jason Davis, Max Bruning, Christopher Hogue  
+.B Jason Davis, Max Bruning, Christopher Hogue  

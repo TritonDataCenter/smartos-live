@@ -1,5 +1,5 @@
 .\" te
-.\"  Copyright (c) 2011, Joyent, Inc. All Rights Reserved
+.\"  Copyright (c) 2013, Joyent, Inc. All Rights Reserved
 .\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License"). You may not use this file except in compliance with the License.
 .\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing. See the License for the specific language governing permissions and limitations under the License.
 .\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE. If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
@@ -33,7 +33,9 @@ Linux Specific Key
 .fi
 
 Linux man section (1) are executable or shell commands, whereas section (8) specifies 
-system administration commands that are run by root. SmartOS man pages are (1) or (1M).
+system administration commands that are run by root. SmartOS man pages are (1) for general
+commands or (1M) for commands and daemons that are primarily used for system maintenance 
+and administrative purposes.
 
 
 .SH DESCRIPTION
@@ -83,10 +85,11 @@ ping(8)  |   ping(1M)
          |   Returns whether a host responds or not.
          | # ping -s   (Returns a coninuous response)
 ----------------------------------------------------------------
-lsof(8)  |   lsof -  list of open files - command not supported.
+lsof(8)  |   lsof -  list of open files - command not provided.
          |   proc(1) has commands like pfiles to show files
          |   open for a list of process IDs.
          | # pfiles $(pgrep bash)   (Files associated with bash)
+         |   See ADDITIONAL TOOLS AND SCRIPTS for sm-lsof
 ---------|------------------------------------------------------
 top(1)   |   prstat(1M) is zone aware and more accurate.
          |   top is available via pkgin
@@ -226,7 +229,27 @@ update-rc.d(8) (ub)  |   svccfg(1M)
 .fi
 
 
-.SH MANAGING USERS
+.SH MANAGING PRROCESS RESOURCE USE AND AUTHENTICATION WITH PROJECTS(1)
+A facility in illumOS/OpenSolaris allows grouping of processes for the purpose of controlling
+and limiting their access to resources like CPU, memory and storage. Users and groups can be
+specified for project membership. The man page for resource_controls(5) describes the specific
+resources that can be controlled under the projects(1) facility.
+.P
+The projects(1) facility involves command-line tools required to operate on the local project 
+file at /etc/project as described in project(4). 
+.P 
+projadd(1M) Adds a project to the system project database
+.P
+projdel(1M) Deletes a project from the system    
+.P
+projmod(1M) Modifies project resource and authentication. Examples in man page.
+.P
+newtask(1)  Sets, associates and launches processes within projects
+.P
+prctl(1)    Get or set the resource controls of running processes, tasks or projects
+.P
+
+.SH MANAGING USERS AND GROUPS
 .nf
 
 Linux        |   SmartOS
@@ -237,7 +260,10 @@ userdel(8)   |   userdel(1M)
 adduser(8)   |   getent(1M)
 chage(1)     |   logins(1M)
 getent(1)    |   groupadd(1M)
+             |   groupdel(1M)
+             |   groupmod(1M)
 .fi
+
 .SH LIST HARDWARE CONFIGURATION
 .nf
 
@@ -272,6 +298,16 @@ sysctl(8)       |   ndd(1M)
 lsmod(8)        |   modinfo(1M)
 .fi
 
+.SH TYPICAL $PATH FOR ROOT
+.P
+Linux (ub):
+.P
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:
+.P
+SmartOS:
+.P
+/opt/local/bin:/opt/local/sbin:/usr/bin:/usr/sbin:
+.P
 
 .SH KILL PROCESS
 .nf
@@ -593,6 +629,69 @@ lsof(8)            |   pfiles(1)
 netstat(8) -atup   |   fuser(1M)
 
 .fi
+
+
+
+.SH ADDITIONAL TOOLS AND SCRIPTS FROM PKGIN
+The /fBsmtools/fR package can be installed with.
+.P
+# pkgin in smtools
+.P
+This provides a number of helpful utilities and scripts, man pages not yet specified.
+.P
+.B SYSTEM MANAGEMENT SCRIPTS
+.P
+sm-summary          Provides SmartMachine summary of information.
+.P
+sm-set-hostname     Set the hostname of a SmartMachine.
+.P   
+sm-cpuinfo          Provides SmartMachine cpu utilization information.
+.P
+sm-meminfo          Provides SmartMachine memory utilization information.  
+.P
+sm-set-timezone     Set the timezone of a SmartMachine.
+.P
+sm-list-timezones   List timezones available to a SmartMachine.
+.P
+sm-reboot           Reboot a SmartMachine.
+.P
+sm-shutdown         Shuts down a SmartMachine.
+.P
+sm-lsof             lsof command for files or ports.
+.P
+sm-rebuild-pkgsrc   Reconstructs the pkgsrc software by re-installing all packages from a new package set.
+.P
+sm-pkghelp          Reminds you that unknown commands may be obtained via pkgin.
+.P
+
+
+.B DATABASE  - MySQL/PostgreSQL MANAGMENT
+sm-create-dbuser      Create a MySQL/PostgreSQL database user for a SmartMachine.
+.P
+sm-list-dbs           List MySQL/PostgreSQL databases for a SmartMachine.     
+.P
+sm-create-db          Create a MySQL/PostgreSQL database for a SmartMachine.
+.P
+sm-remove-db          Remove a MySQL/PostgreSQL database for a SmartMachine.
+.P
+sm-list-dbusers       List MySQL/PostgreSQL database users for a SmartMachine.
+.P
+sm-remove-dbuser      Remove a MySQL/PostgreSQL database for a SmartMachine.
+.P
+
+.B WEB SERVICES 
+sm-create-vhost        Creates simple Apache/Nginx configurations for SmartMachines.
+.P
+sm-install-drupal      Installs drupal in destination directory after vhost setup.
+.P
+sm-install-wordpress   Installs wordpress in destination directory after vhost setup.
+.P
+
+.B VM IMAGE PREPARATION
+.B USE WITH CAUTION - MAKES IRREVERSIBLE CHANGES!
+.P
+sm-prepare-image       Clean up the file system of an existing SmartMachine for image 
+.P
 
 
 

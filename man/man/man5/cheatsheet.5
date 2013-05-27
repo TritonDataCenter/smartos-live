@@ -159,13 +159,14 @@ rpm(8)   (rh, fed)     |
 dpkg(1) (deb, ub)      |
 dselect (deb)          |
 
-Show all pkgin commands:  pkgin
-Update current packages:  pkgin update (Do this first)
-Show installed software:  pkgin list
-Available software:       pkgin avail
-Search for software:      pkgin search ...
-Install software:         pkgin install ... 
-Install with prejudice:   pkgin in -y 
+
+pkgin                          Show all pkgin commands 
+pkgin update (Do this first)   Update current packages  
+pkgin list                     Show installed software
+pkgin avail                    List available software       
+pkgin search ...               Search for software ...      
+pkgin install ...              Install software ...         
+pkgin in -y ...                Install with prejudice ...  
 
 .fi
 
@@ -188,17 +189,13 @@ manages a service you have custom compiled or created yourself.
 .P
 SMF consists of four command-line utilities:
 .P
-svcs(1): allows you to examine the state of your services and determine what 
-went 
-wrong.
+svcs(1)       Examine the state of your services
 .P
-svcadm(1M): enable, disable, and restart a service.
+svcadm(1M)    Enable, disable, and restart a service
 .P
-svccfg(1M): load manifest files (XML) that maintain configurations for each 
-service.
+svccfg(1M)    Load XML manifest file with service configuration data
 .P
-svcprop(1): retrieves properties on a service (useful when writing custom 
-scripts)
+svcprop(1)    Retrieves service properties (use for custom scripts)
 .P
 For more details visit: 
 .P
@@ -633,7 +630,7 @@ netstat(8) -atup   |   fuser(1M)
 
 
 .SH ADDITIONAL TOOLS AND SCRIPTS FROM PKGIN
-The /fBsmtools/fR package can be installed with.
+The \fBsmtools\fR package can be installed with.
 .P
 # pkgin in smtools
 .P
@@ -642,59 +639,61 @@ These are provided for the Joyent Cloud SmartMachines, ymmv on SmartOS Zones.
 .P
 .B SMARTMACHINE SYSTEM MANAGEMENT SCRIPTS
 .P
-sm-summary          Provides summary of information
+sm-summary        Provides summary of information
 .P
-sm-set-hostname     Set the hostname
+sm-set-hostname   Set the hostname
 .P   
-sm-cpuinfo          Provides cpu utilization information
+sm-cpuinfo        Provides cpu utilization information
 .P
-sm-meminfo          Provides memory utilization information
+sm-meminfo        Provides memory utilization information
 .P
-sm-set-timezone     Set the timezone
+sm-set-timezone   Set the timezone
 .P
-sm-list-timezones   List timezones available
+sm-list-timezones List timezones available
 .P
-sm-reboot           Reboot
+sm-reboot         Reboot
 .P
-sm-shutdown         Shuts down
+sm-shutdown       Shuts down
 .P
-sm-lsof             lsof command equivalent script for files or ports
+sm-lsof           lsof command equivalent script for files or ports
 .P
-sm-rebuild-pkgsrc   Reconstructs the pkgsrc software by re-installing all packages from a new package set
+sm-rebuild-pkgsrc Re-installs pkgsrc with all packages from a new package set
 .P
-sm-pkghelp          Reminds you that unknown commands may be obtained via pkgin
+sm-pkghelp        Reminder - unknown commands may be obtained via pkgin
 .P
 
 
 .B SMARTMACHINE DATABASE  - MySQL/PostgreSQL MANAGMENT
 .P
-sm-create-dbuser      Create a MySQL/PostgreSQL database user
+sm-create-dbuser  Create a MySQL/PostgreSQL database user
 .P
-sm-list-dbs           List MySQL/PostgreSQL databases    
+sm-list-dbs       List MySQL/PostgreSQL databases    
 .P
-sm-create-db          Create a MySQL/PostgreSQL database
+sm-create-db      Create a MySQL/PostgreSQL database
 .P
-sm-remove-db          Remove a MySQL/PostgreSQL database
+sm-remove-db      Remove a MySQL/PostgreSQL database
 .P
-sm-list-dbusers       List MySQL/PostgreSQL database users
+sm-list-dbusers   List MySQL/PostgreSQL database users
 .P
-sm-remove-dbuser      Remove a MySQL/PostgreSQL database
+sm-remove-dbuser  Remove a MySQL/PostgreSQL database
 .P
 
 .B SMARTMACHINE WEB SERVICES INSTALLATION SCRIPTS
 .P
-sm-create-vhost        Creates simple Apache/Nginx configurations
+sm-create-vhost       Creates simple Apache/Nginx configurations
 .P
-sm-install-drupal      Installs drupal in destination directory after vhost setup
+Commands dependent on sm-create-vhost:
 .P
-sm-install-wordpress   Installs wordpress in destination directory after vhost setup
+sm-install-drupal     Installs drupal in destination directory
+.P
+sm-install-wordpress  Installs wordpress in destination directory
 .P
 
 .B VM IMAGE PREPARATION SCRIPT
 .P
 .B USE WITH CAUTION - MAKES IRREVERSIBLE CHANGES!
 .P
-sm-prepare-image       Clean up the file system of an existing SM for image 
+sm-prepare-image       Clean up the filesystem for SmartMachine image 
 .P
 
 

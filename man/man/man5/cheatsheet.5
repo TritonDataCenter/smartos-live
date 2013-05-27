@@ -20,7 +20,7 @@ commands
 Applies Within A SmartOS Zone 
 .B = SmartMachine Virtual Instance
 .P
-This CheatSheet does not apply to the SmartOS Global Zone.
+This CheatSheet \fBdoes not apply to the SmartOS Global Zone\fR.
 .nf
 
 Linux Specific Key
@@ -298,7 +298,7 @@ poweroff              |
 Linux                    |   SmartOS
 -------------------------|--------------
 who(1)                   | who(1)
-/sbin/runlevel           | who -r  ** not showing zone runlevel 
+/sbin/runlevel           | who -r  ** Does not show zone runlevel 
 ----------------------------------------
 (set in /etc/inittab)    | s,S: single-user
 0: halt                  | 1:   sys admin
@@ -380,7 +380,7 @@ ReiserFS     |
 .nf
 Linux        |   SmartOS
 -------------|--------------
-/etc/fstab   |   /ect/vfstab
+/etc/fstab   |   /etc/vfstab
 .fi
 
 
@@ -423,8 +423,8 @@ Linux              |   SmartOS
 
 .SH SHOW NETWORK INTERFACE INFO
 
-Note that Joyent Public Cloud IP addresses are set in the
-Cloud Management Portal, or at the Global Zone level.
+Joyent Public Cloud, IP addresses are set in the
+Cloud Management Portal, SmartOS Zone IPs are set in the Global Zone.
 
 .nf
 Linux        |   SmartOS
@@ -488,7 +488,7 @@ gcc          |   gcc (Install with pkgin)
 .fi
 
 .SH CONFIGURE/SHOW RUNTIME LINKING
-SmartOS supports both 32-bit and 64-bit compiled executables
+SmartOS supports both 32-bit and 64-bit compiled executables.
 .nf
 Linux        |   SmartOS
 -------------|--------------

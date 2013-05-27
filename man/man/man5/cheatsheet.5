@@ -188,14 +188,12 @@ package (see svcadm). However, you may find a need for importing a manifest that
 manages a service you have custom compiled or created yourself.
 .P
 SMF consists of four command-line utilities:
-.P
+.nf
 svcs(1)       Examine the state of your services
-.P
 svcadm(1M)    Enable, disable, and restart a service
-.P
 svccfg(1M)    Load XML manifest file with service configuration data
-.P
 svcprop(1)    Retrieves service properties (use for custom scripts)
+.fi
 .P
 For more details visit: 
 .P
@@ -234,17 +232,13 @@ resources that can be controlled under the projects(1) facility.
 .P
 The projects(1) facility involves command-line tools required to operate on the local project 
 file at /etc/project as described in project(4). 
-.P 
+.nf 
 projadd(1M) Adds a project to the system project database
-.P
 projdel(1M) Deletes a project from the system    
-.P
-projmod(1M) Modifies project resource and authentication, with examples.
-.P
+projmod(1M) Modifies project resource and authentication, with examples
 newtask(1)  Sets, associates and launches processes within projects
-.P
-prctl(1)    Get or set the resource controls of running processes, tasks or projects
-.P
+prctl(1)    Get/set resource controls of running processes, tasks or projects
+.fi
 
 .SH MANAGING USERS AND GROUPS
 .nf
@@ -637,62 +631,46 @@ This provides a number of helpful utilities and scripts, man pages not yet speci
 These are provided for the Joyent Cloud SmartMachines, ymmv on SmartOS Zones.
 .P
 .B SMARTMACHINE SYSTEM MANAGEMENT SCRIPTS
-.P
+.nf
 sm-summary        Provides summary of information
-.P
 sm-set-hostname   Set the hostname
-.P   
 sm-cpuinfo        Provides cpu utilization information
-.P
 sm-meminfo        Provides memory utilization information
-.P
 sm-set-timezone   Set the timezone
-.P
 sm-list-timezones List timezones available
-.P
 sm-reboot         Reboot
-.P
 sm-shutdown       Shuts down
-.P
 sm-lsof           lsof command equivalent script for files or ports
-.P
 sm-rebuild-pkgsrc Re-installs pkgsrc with all packages from a new package set
-.P
 sm-pkghelp        Reminder - unknown commands may be obtained via pkgin
-.P
+.fi
 
 
 .B SMARTMACHINE DATABASE  - MySQL/PostgreSQL MANAGMENT
-.P
+.nf
 sm-create-dbuser  Create a MySQL/PostgreSQL database user
-.P
 sm-list-dbs       List MySQL/PostgreSQL databases    
-.P
 sm-create-db      Create a MySQL/PostgreSQL database
-.P
 sm-remove-db      Remove a MySQL/PostgreSQL database
-.P
 sm-list-dbusers   List MySQL/PostgreSQL database users
-.P
 sm-remove-dbuser  Remove a MySQL/PostgreSQL database
-.P
+.fi
 
 .B SMARTMACHINE WEB SERVICES INSTALLATION SCRIPTS
 .P
 sm-create-vhost       Creates simple Apache/Nginx configurations
 .P
 Commands dependent on sm-create-vhost:
-.P
+.nf
 sm-install-drupal     Installs drupal in destination directory
-.P
 sm-install-wordpress  Installs wordpress in destination directory
-.P
+.fi
 
 .B VM IMAGE PREPARATION SCRIPT
 .P
 .B USE WITH CAUTION - MAKES IRREVERSIBLE CHANGES!
 .P
-sm-prepare-image       Clean up the filesystem for SmartMachine image 
+sm-prepare-image   Clean up the filesystem for SmartMachine image 
 .P
 
 

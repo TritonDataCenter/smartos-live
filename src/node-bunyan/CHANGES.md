@@ -6,6 +6,45 @@ Known issues:
   bug](https://github.com/TooTallNate/node-gyp/issues/65).
 
 
+## bunyan 0.21.3
+
+- [issue #90] Fix `bunyan -p '*'` breakage in version 0.21.2.
+
+
+## bunyan 0.21.2
+
+**Note: Bad release. The switchrate change below broke `bunyan -p '*'` usage
+(see issue #90). Use 0.21.3 or later.**
+
+- [issue #88] Should be able to efficiently combine "-l" with "-p *".
+
+- Avoid DTrace buffer filling up, e.g. like this:
+
+        $ bunyan -p 42241 > /tmp/all.log
+        dtrace: error on enabled probe ID 3 (ID 75795: bunyan42241:mod-87ea640:log-trace:log-trace): out of scratch space in action #1 at DIF offset 12
+        dtrace: error on enabled probe ID 3 (ID 75795: bunyan42241:mod-87ea640:log-trace:log-trace): out of scratch space in action #1 at DIF offset 12
+        dtrace: 138 drops on CPU 4
+        ...
+
+  From Bryan: "the DTrace buffer is filling up because the string size is so
+  large... by increasing the switchrate, you're increasing the rate at
+  which that buffer is emptied."
+
+
+## bunyan 0.21.1
+
+- [pull #83] Support rendering 'client_res' key in bunyan CLI (by
+  github.com/mcavage).
+
+
+## bunyan 0.21.0
+
+- 'make check' clean, 4-space indenting. No functional change here, just
+  lots of code change.
+- [issue #80, #82] Drop assert that broke using 'rotating-file' with
+  a default `period` (by github.com/ricardograca).
+
+
 ## bunyan 0.20.0
 
 - [Slight backward incompatibility] Fix serializer bug introduced in 0.18.3

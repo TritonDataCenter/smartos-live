@@ -1593,7 +1593,8 @@ function createRemoteVMs(allVMs, vms, callback) {
       var rvm = util_vm.createRemoteVM(vm);
       if (allVMs.all.hasOwnProperty(rvm.uuid)) {
         var err = new verror.VError(
-          'Remote VM "%s" must not have the same UUID as a local VM');
+          'Remote VM "%s" must not have the same UUID as a local VM',
+          rvm.uuid);
         err.details = vm;
         throw err;
       }

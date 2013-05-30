@@ -711,6 +711,59 @@ exports['owner_uuid filtering'] = function (t) {
 };
 
 
+exports['remote VM with same UUID as local VM'] = function (t) {
+  var vm = helpers.generateVM({ uuid: mod_uuid.v4() });
+  var rvm = helpers.generateVM({ uuid: vm.uuid });
+
+  var payload = {
+    remoteVMs: [rvm],
+    vms: [vm]
+  };
+
+  var errMsg = util.format(
+      'Remote VM "%s" must not have the same UUID as a local VM', vm.uuid);
+
+  async.series([
+  function (cb) {
+    fw.validatePayload(payload, function (err, res) {
+      t.ok(err, 'Error returned');
+      if (!err) {
+        return cb();
+      }
+
+      t.equal(err.message, errMsg, 'Error message');
+      return cb();
+    });
+
+  }, function (cb) {
+    fw.add(payload, function (err, res) {
+      t.ok(err, 'Error returned');
+      if (!err) {
+        return cb();
+      }
+
+      t.equal(err.message, errMsg, 'Error message');
+      return cb();
+    });
+
+  }, function (cb) {
+    fw.update(payload, function (err, res) {
+      t.ok(err, 'Error returned');
+      if (!err) {
+        return cb();
+      }
+
+      t.equal(err.message, errMsg, 'Error message');
+      return cb();
+    });
+
+  }
+
+  ], function () {
+      t.done();
+  });
+};
+
 
 // --- Teardown
 

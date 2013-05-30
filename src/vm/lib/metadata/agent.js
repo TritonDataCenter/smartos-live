@@ -382,6 +382,10 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
     }
 
     if (cmd === 'GET' && want.slice(0, 4) === 'sdc:') {
+	if (want.slice(0, 21) === 'sdc:internal_metadata') {
+            return returnit();
+        }
+
         matches = want.slice(4).match(/^([^\.]*)\./);
         if (matches) {
             lookup_fields.push(matches[1]);

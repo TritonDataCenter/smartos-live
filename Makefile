@@ -9,7 +9,12 @@ MPROTO =	$(ROOT)/manifest.d
 BOOT_MPROTO =	$(ROOT)/boot.manifest.d
 BOOT_PROTO =	$(ROOT)/proto.boot
 
+# On Darwin/OS X we support running 'make check'
+ifeq ($(shell uname -s),Darwin)
+PATH =		/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
+else
 PATH =		/usr/bin:/usr/sbin:/sbin:/opt/local/bin
+endif
 
 LOCAL_SUBDIRS :=	$(shell ls projects/local)
 OVERLAYS :=	$(shell cat overlay/order)

@@ -1405,7 +1405,9 @@ function main()
             }
 
             lookup_fields = [
+                'autoboot',
                 'brand',
+                'never_booted',
                 'spice_opts',
                 'spice_password',
                 'spice_port',

@@ -25,6 +25,7 @@
  *
  */
 
+var assert = require('assert');
 var async = require('/usr/node/node_modules/async');
 var bunyan = require('/usr/node/node_modules/bunyan');
 var cp = require('child_process');
@@ -44,6 +45,7 @@ var qs = require('querystring');
 var url = require('url');
 var util = require('util');
 
+var UPGRADE_SCRIPT = '/smartdc/vm-upgrade/001_upgrade';
 var VMADMD_PORT = 8080;
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
 
@@ -77,6 +79,58 @@ function sysinfo(callback)
         }
     });
 }
+
+// copied from VM.js, should DRY this eventually.
+function zfs(args, callback)
+{
+    var cmd = '/usr/sbin/zfs';
+
+    assert(log, 'no logger passed to zfs()');
+
+    log.debug(cmd + ' ' + args.join(' '));
+    execFile(cmd, args, function (error, stdout, stderr) {
+        if (error) {
+            callback(error, {'stdout': stdout, 'stderr': stderr});
+        } else {
+            callback(null, {'stdout': stdout, 'stderr': stderr});
+        }
+    });
+}
+
+function zonecfg(args, callback)
+{
+    var cmd = '/usr/sbin/zonecfg';
+
+    log.debug(cmd + ' ' + args.join(' '));
+    execFile(cmd, args, function (error, stdout, stderr) {
+        if (error) {
+            callback(error, {'stdout': stdout, 'stderr': stderr});
+        } else {
+            callback(null, {'stdout': stdout, 'stderr': stderr});
+        }
+    });
+}
+
+// trim functions also copied from VM.js
+function ltrim(str, chars)
+{
+    chars = chars || '\\s';
+    str = str || '';
+    return str.replace(new RegExp('^[' + chars + ']+', 'g'), '');
+}
+
+function rtrim(str, chars)
+{
+    chars = chars || '\\s';
+    str = str || '';
+    return str.replace(new RegExp('[' + chars + ']+$', 'g'), '');
+}
+
+function trim(str, chars)
+{
+    return ltrim(rtrim(str, chars), chars);
+}
+
 
 // vmobj needs:
 //
@@ -1374,6 +1428,458 @@ function startSeenCleaner() {
     }, (5 * 60) * 1000);
 }
 
+// Remember to add any fields you need in vmobj to lookup_fields in main()
+function upgradeVM(vmobj, fields, callback)
+{
+    var have_old_cores = false;
+    var have_new_cores = false;
+    var old_cores;
+    var new_cores;
+    var upgrade_payload = {};
+
+    if (vmobj.v === 1) {
+        log.debug('VM ' + vmobj.uuid + ' already at version 1, skipping '
+            + 'upgrade.');
+        callback(null, vmobj);
+        return;
+    }
+
+    if (vmobj.v > 1) {
+        log.warn('VM ' + vmobj.uuid + ' is from the future, cannot downgrade.');
+        callback(null, vmobj);
+        return;
+    }
+
+    old_cores = vmobj.zfs_filesystem + '/cores';
+    new_cores = vmobj.zpool + '/cores/' + vmobj.zonename;
+
+    // here we need to run through upgrade procedure
+    log.info('Upgrading VM ' + vmobj.uuid + ' to v: 1');
+
+    async.series([
+        function (cb) {
+            // 256 is the new minimum per OS-1881
+            if (vmobj.hasOwnProperty('max_swap') && vmobj.max_swap < 256) {
+                log.info('Updating max_swap to 256 (was: ' + vmobj.max_swap
+                    + ')');
+                upgrade_payload.max_swap = 256;
+            } else {
+                log.info('max_swap is ok: ' + vmobj.max_swap);
+            }
+            cb();
+        }, function (cb) {
+            // determine which cores dataset(s) we have
+            var args = [
+                'list', '-H',
+                '-t', 'filesystem',
+                '-o', 'name',
+                old_cores,
+                new_cores
+            ];
+            var datasets = [];
+
+            log.info('checking cores datasets');
+            zfs(args, function (err, fds) {
+                if (err && ! err.message.match(/ dataset does not exist/)) {
+                    log.error(err);
+                    cb(err);
+                    return;
+                }
+                datasets = trim(fds.stdout).split(/\n/);
+                log.info('found datasets: ' + JSON.stringify(datasets));
+                if (datasets.indexOf(old_cores) !== -1) {
+                    have_old_cores = true;
+                }
+                if (datasets.indexOf(new_cores) !== -1) {
+                    have_new_cores = true;
+                }
+                cb();
+            });
+        }, function (cb) {
+            var args = [];
+
+            if (have_old_cores && ! have_new_cores) {
+                // we only have old cores, we rename to new name
+                args = ['rename', old_cores, new_cores];
+                zfs(args, function (err, fds) {
+                    if (err) {
+                        err.stderr = fds.stderr;
+                        err.stdout = fds.stdout;
+                        log.error(err);
+                        cb(err);
+                        return;
+                    }
+                    log.info('renamed ' + old_cores + ' to ' + new_cores);
+                    cb();
+                });
+            } else if (have_old_cores && have_new_cores) {
+                // we have both old and new cores datasets, delete old one
+                args = ['destroy', old_cores];
+                zfs(args, function (err, fds) {
+                    if (err) {
+                        err.stderr = fds.stderr;
+                        err.stdout = fds.stdout;
+                        log.error(err);
+                        cb(err);
+                        return;
+                    }
+                    log.info('destroyed ' + old_cores);
+                    cb();
+                });
+            } else if (! have_old_cores && ! have_new_cores) {
+                // we don't have either old or new, create a cores dataset
+                // the next step will set correct size.
+                args = ['create', '-o', 'mountpoint=' + vmobj.zonepath
+                    + '/cores', new_cores];
+                zfs(args, function (err, fds) {
+                    if (err) {
+                        err.stderr = fds.stderr;
+                        err.stdout = fds.stdout;
+                        log.error(err);
+                        cb(err);
+                        return;
+                    }
+                    log.info('created ' + new_cores);
+                    cb();
+                });
+            } else {
+                // we already have only the new cores, do nothing
+                log.info('cores dataset is already correct.');
+                cb();
+            }
+        }, function (cb) {
+            // check quota on new_cores, should be MAX(100GiB, ram + 20GiB)
+            // otherwise: fix
+            var args = ['get', '-Hpo', 'value', 'quota', new_cores];
+            var quota_mib;
+            var expected_quota_mib;
+
+            log.info('checking cores quota');
+            zfs(args, function (err, fds) {
+                if (err) {
+                    err.stderr = fds.stderr;
+                    err.stdout = fds.stdout;
+                    log.error(err);
+                    cb(err);
+                    return;
+                }
+
+                quota_mib = Number(trim(fds.stdout)) / (1024 * 1024);
+                log.debug('Existing quota for ' + new_cores + ' is ' + quota_mib
+                    + 'MiB');
+
+                /*
+                 * cores quota is supposed to be 100GiB or RAM + 20GiB,
+                 * whichever is larger.
+                 */
+                expected_quota_mib = 100 * 1024; // 100 GiB
+                if (vmobj.brand === 'kvm') {
+                    if ((vmobj.ram + (20 * 1024)) > expected_quota_mib) {
+                        expected_quota_mib = (vmobj.ram + (20 * 1024));
+                    }
+                } else if ((vmobj.max_physical_memory + (20 * 1024))
+                    > expected_quota_mib) {
+
+                    expected_quota_mib = (vmobj.max_physical_memory
+                        + (20 * 1024));
+                }
+
+                log.debug('Expected quota for ' + new_cores + ' is '
+                    + expected_quota_mib + 'MiB');
+
+                if (expected_quota_mib !== quota_mib) {
+                    log.info('changing ' + new_cores + ' quota to '
+                        + expected_quota_mib + 'MiB');
+                    args = ['set', 'quota=' + expected_quota_mib + 'M',
+                        new_cores];
+                    zfs(args, function (set_err, set_fds) {
+                        if (err) {
+                            set_err.stderr = set_fds.stderr;
+                            set_err.stdout = set_fds.stdout;
+                            log.error(set_err);
+                            cb(set_err);
+                            return;
+                        }
+                        log.info('set quota for ' + new_cores);
+                        cb();
+                    });
+                } else {
+                    // quota's already as expected
+                    cb();
+                }
+            });
+        }, function (cb) {
+            var args = [];
+
+            if (vmobj.image_uuid || vmobj.brand === 'kvm') {
+                // already have image_uuid, no problem
+                cb();
+                return;
+            }
+
+            // no image_uuid, try to get from zfs origin (minus snapshot)
+            log.info('No image_uuid, checking origin.');
+
+            args = ['get', '-Hpo', 'value', 'origin', vmobj.zfs_filesystem];
+            zfs(args, function (err, fds) {
+                var image_uuid;
+                var origin;
+
+                if (err) {
+                    err.stderr = fds.stderr;
+                    err.stdout = fds.stdout;
+                    log.error(err);
+                    cb(err);
+                    return;
+                }
+                origin = trim(fds.stdout);
+                log.info('origin is: ' + origin);
+
+                if (origin === '-') {
+                    log.error('VM ' + vmobj.uuid + ' has no image_uuid and '
+                        + 'dataset has no origin, must be fixed manually.');
+                    cb();
+                    return;
+                }
+
+                image_uuid = origin.split('@')[0].split('/').pop();
+                log.info('setting new image_uuid: ' + image_uuid);
+                zonecfg(['-z', vmobj.zonename, 'add attr; '
+                    + 'set name=dataset-uuid; set type=string; set value="'
+                    + image_uuid + '"; end'],
+                    function (add_err, add_fds) {
+                        if (add_err) {
+                            log.error(add_err);
+                            cb(add_err);
+                            return;
+                        }
+                        log.info('set dataset-uuid = ' + image_uuid);
+                        cb();
+                    }
+                );
+            });
+        }, function (cb) {
+            if (vmobj.brand !== 'kvm') {
+                cb();
+                return;
+            }
+
+            if (!vmobj.disks) {
+                cb(new Error('KVM VM ' + vmobj.uuid + ' is missing disks'));
+                return;
+            }
+
+            log.info(JSON.stringify(vmobj.disks));
+
+            async.eachSeries(vmobj.disks, function (d, c) {
+                var args;
+
+                if (d.size) {
+                    args = ['set', 'refreservation=' + d.size + 'M',
+                        d.zfs_filesystem];
+                    zfs(args, function (err, fds) {
+                        if (err) {
+                            log.error(err);
+                            c(err);
+                            return;
+                        }
+
+                        log.info('set refreservation=' + d.size + 'M for '
+                            + d.zfs_filesystem);
+                        c();
+                    });
+                } else {
+                    log.warn('VM ' + vmobj.uuid + ' has no d.size on disk: '
+                        + JSON.stringify(d));
+                    c();
+                }
+            }, function (err) {
+                cb(err);
+            });
+        }, function (cb) {
+            var default_gateway;
+            var primary_nic;
+            var potential_primary;
+
+            if (!vmobj.nics || !Array.isArray(vmobj.nics)
+                || vmobj.nics.length < 1) {
+
+                log.error('VM ' + vmobj.uuid + ' has no NICs! skipping update');
+                cb();
+                return;
+            }
+
+            if (!vmobj.hasOwnProperty('default_gateway')) {
+                log.info('VM ' + vmobj.uuid + ' has no default_gateway, will '
+                    + 'assume first nic is primary if not set');
+            } else {
+                default_gateway = vmobj.default_gateway;
+            }
+
+            async.eachSeries(vmobj.nics, function (n, c) {
+                if (n.gateway && n.gateway === default_gateway) {
+                    potential_primary = n;
+                } else if (n.primary) {
+                    primary_nic = n;
+                }
+                c();
+            }, function (err) {
+                if (!primary_nic && potential_primary) {
+                    log.info('no primary nic found, setting '
+                        + potential_primary.mac +  ' as primary '
+                        + '(default_gateway match)');
+                    upgrade_payload.update_nics = [ {
+                        mac: potential_primary.mac,
+                        primary: true
+                    } ];
+                } else if (primary_nic) {
+                    log.info('primary is: ' + primary_nic.mac + ' value: '
+                        + primary_nic.primary + ' ('
+                        + typeof (primary_nic.primary) + ')');
+                    // the vmobj value 'true' can also mean the value in zonecfg
+                    // is '1' instead of 'true'. We update here to ensure it's
+                    // 'true'.
+                    upgrade_payload.update_nics = [ {
+                        mac: primary_nic.mac,
+                        primary: true
+                    } ];
+                } else {
+                    // don't have a primary nic and can't figure out from
+                    // default_gateway, use nics[0] as primary
+                    upgrade_payload.update_nics = [ { mac: vmobj.nics[0].mac,
+                        primary: true } ];
+                    log.info('no primary nic found, setting '
+                        + vmobj.nics[0].mac +  ' as primary (nics[0])');
+                }
+                cb();
+            });
+        }, function (cb) {
+            if (vmobj.hasOwnProperty('default_gateway')) {
+                zonecfg(['-z', vmobj.zonename,
+                    'remove attr name=default-gateway'],
+                    function (err, fds) {
+                        if (err) {
+                            log.error(err);
+                            cb(err);
+                            return;
+                        }
+                        log.info('removed default-gateway');
+                        cb();
+                    }
+                );
+            } else {
+                cb();
+            }
+        }, function (cb) {
+            // for KVM we always want 10G zoneroot quota
+            if (vmobj.brand === 'kvm' && vmobj.quota !== 10) {
+                log.info('fixing KVM quota to 10 (was ' + vmobj.quota + ')');
+                upgrade_payload.quota = 10;
+            }
+            cb();
+        }, function (cb) {
+            // in SDC7 *_pw keys do not work in customer_metadata and must be in
+            // internal_metadata.
+            if (!vmobj.hasOwnProperty('customer_metadata')) {
+                log.info('no customer_metadata for ' + vmobj.uuid);
+                cb();
+                return;
+            }
+
+            Object.keys(vmobj.customer_metadata).forEach(function (k) {
+                log.info('KEY: ' + k);
+                if (k.match(/_pw$/)) {
+                    if (vmobj.internal_metadata
+                        && vmobj.internal_metadata.hasOwnProperty(k)) {
+
+                        log.warn('leaving ' + k + ' in customer_metadata as '
+                            + 'conflicting key already exists in '
+                            + 'internal_metadata');
+                    } else {
+                        if (!upgrade_payload
+                            .hasOwnProperty('set_internal_metadata')) {
+
+                            upgrade_payload.set_internal_metadata = {};
+                        }
+                        if (!upgrade_payload
+                            .hasOwnProperty('remove_customer_metadata')) {
+
+                            upgrade_payload.remove_customer_metadata = [];
+                        }
+                        upgrade_payload.set_internal_metadata[k]
+                            = vmobj.customer_metadata[k];
+                        upgrade_payload.remove_customer_metadata.push(k);
+                    }
+                }
+            });
+            cb();
+        }, function (cb) {
+            log.info('updating ' + vmobj.uuid + ' with: '
+                + JSON.stringify(upgrade_payload));
+            VM.update(vmobj.uuid, upgrade_payload, {log: log}, function (err) {
+                if (err) {
+                    log.error({err: err, payload: upgrade_payload});
+                    cb(err);
+                    return;
+                }
+                log.info({payload: upgrade_payload}, 'performed VM.update');
+                cb();
+            });
+        }, function (cb) {
+            fs.exists(UPGRADE_SCRIPT, function (exists) {
+                if (exists) {
+                    execFile(UPGRADE_SCRIPT, [vmobj.uuid],
+                        function (err, stdout, stderr) {
+                            log.debug({err: err, stdout: stdout,
+                                stderr: stderr}, 'upgrade output');
+                            if (err) {
+                                log.error(err);
+                                cb(err);
+                                return;
+                            }
+                            log.info('successfully ran 001_upgrade');
+                            cb();
+                        }
+                    );
+                } else {
+                    log.warn('No ' + UPGRADE_SCRIPT + ', skipping');
+                    cb();
+                }
+            });
+        }, function (cb) {
+            // zonecfg update vm-version = 1
+            log.debug('setting vm-version = 1');
+            zonecfg(['-z', vmobj.zonename, 'add attr; set name=vm-version; '
+                + 'set type=string; set value=1; end'],
+                function (err, fds) {
+                    if (err) {
+                        log.error(err);
+                        cb(err);
+                        return;
+                    }
+                    log.info('set vm-version = 1');
+                    cb();
+                }
+            );
+        }, function (cb) {
+            // reload VM so we get all the updated properties
+            VM.load(vmobj.uuid, {fields: fields, log: log},
+                function (err, obj) {
+
+                if (err) {
+                    log.error(err);
+                    cb(err);
+                    return;
+                }
+                vmobj = obj;
+                cb();
+            });
+        }
+    ], function (err) {
+        callback(err, vmobj);
+    });
+}
+
 // kicks everything off
 function main()
 {
@@ -1394,7 +1900,6 @@ function main()
 
         fs.exists(VMADMD_AUTOBOOT_FILE, function (exists) {
             var lookup_fields;
-            var vmobj;
 
             if (!exists) {
                 do_autoboot = true;
@@ -1407,7 +1912,16 @@ function main()
             lookup_fields = [
                 'autoboot',
                 'brand',
+                'customer_metadata',
+                'default_gateway',
+                'disks',
+                'image_uuid',
+                'internal_metadata',
+                'max_physical_memory',
+                'max_swap',
                 'never_booted',
+                'nics',
+                'ram',
                 'spice_opts',
                 'spice_password',
                 'spice_port',
@@ -1415,61 +1929,77 @@ function main()
                 'transition_expire',
                 'transition_to',
                 'uuid',
+                'v',
                 'vnc_password',
                 'vnc_port',
+                'zfs_filesystem',
                 'zone_state',
                 'zonename',
-                'zonepath'
+                'zonepath',
+                'zpool'
             ];
 
             VM.lookup({}, {fields: lookup_fields}, function (e, vmobjs) {
-                for (vmobj in vmobjs) {
-                    vmobj = vmobjs[vmobj];
+                var obj;
 
-                    if (!seen_vms.hasOwnProperty(vmobj.zonename)) {
-                        seen_vms[vmobj.zonename] = {
-                            brand: vmobj.brand,
-                            uuid: vmobj.uuid,
-                            zonepath: vmobj.zonepath
-                        };
-                    }
-                    if (vmobj.state !== 'provisioning') {
-                        seen_vms[vmobj.zonename].provisioned = true;
-                    }
+                for (obj in vmobjs) {
+                    obj = vmobjs[obj];
 
-                    if (vmobj.state === 'failed') {
-                        log.debug('skipping failed VM ' + vmobj.uuid);
-                    } else if (vmobj.state === 'provisioning') {
-                        log.debug('at vmadmd startup, VM ' + vmobj.uuid + ' is '
-                            + 'in state "provisioning"');
+                    upgradeVM(obj, lookup_fields, function (upg_err, vmobj) {
 
-                        if (PROV_WAIT.hasOwnProperty(vmobj.uuid)) {
-                            log.warn('at vmadmd startup, already waiting for '
-                                + '"provisioning" for ' + vmobj.uuid);
-                            return;
+                        if (upg_err) {
+                            log.error(upg_err, 'failed to upgrade VM '
+                                + vmobj.uuid);
                         }
 
-                        PROV_WAIT[vmobj.uuid] = true;
-                        // this calls the callback when we go out of
-                        // provisioning one way or another.
-                        handleProvisioning(vmobj, function (prov_err, result) {
-                            delete PROV_WAIT[vmobj.uuid];
+                        if (!seen_vms.hasOwnProperty(vmobj.zonename)) {
+                            seen_vms[vmobj.zonename] = {
+                                brand: vmobj.brand,
+                                uuid: vmobj.uuid,
+                                zonepath: vmobj.zonepath
+                            };
+                        }
+                        if (vmobj.state !== 'provisioning') {
                             seen_vms[vmobj.zonename].provisioned = true;
-                            if (prov_err) {
-                                log.error(prov_err, 'error handling '
-                                    + 'provisioning state for ' + vmobj.uuid
-                                    + ': ' + prov_err.message);
+                        }
+
+                        if (vmobj.state === 'failed') {
+                            log.debug('skipping failed VM ' + vmobj.uuid);
+                        } else if (vmobj.state === 'provisioning') {
+                            log.debug('at vmadmd startup, VM ' + vmobj.uuid
+                                + ' is in state "provisioning"');
+
+                            if (PROV_WAIT.hasOwnProperty(vmobj.uuid)) {
+                                log.warn('at vmadmd startup, already waiting '
+                                    + 'for "provisioning" for ' + vmobj.uuid);
                                 return;
                             }
-                            log.debug('at vmadmd startup, handleProvision() for'
-                                + ' ' + vmobj.uuid + ' returned: ' +  result);
-                        });
-                    } else if (vmobj.brand === 'kvm') {
-                        log.debug('calling loadVM(' + vmobj.uuid + ')');
-                        loadVM(vmobj, do_autoboot);
-                    } else {
-                        log.debug('ignoring non-kvm VM ' + vmobj.uuid);
-                    }
+
+                            PROV_WAIT[vmobj.uuid] = true;
+                            // this calls the callback when we go out of
+                            // provisioning one way or another.
+                            handleProvisioning(vmobj,
+                                function (prov_err, result) {
+
+                                delete PROV_WAIT[vmobj.uuid];
+                                seen_vms[vmobj.zonename].provisioned = true;
+                                if (prov_err) {
+                                    log.error(prov_err, 'error handling '
+                                        + 'provisioning state for ' + vmobj.uuid
+                                        + ': ' + prov_err.message);
+                                    return;
+                                }
+                                log.debug('at vmadmd startup, handleProvision()'
+                                    + 'for ' + vmobj.uuid + ' returned: '
+                                    + result);
+                            });
+                        } else if (vmobj.brand === 'kvm') {
+                            log.debug('calling loadVM(' + vmobj.uuid + ')');
+                            loadVM(vmobj, do_autoboot);
+                        } else {
+                            log.debug('ignoring non-kvm VM ' + vmobj.uuid);
+                        }
+                    });
                 }
             });
         });

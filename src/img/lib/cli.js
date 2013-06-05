@@ -782,10 +782,8 @@ CLI.prototype.do_avail = function do_avail(subcmd, opts, args, callback) {
         return;
     }
     self.tool.sourcesList(function (err, imagesInfo) {
-        if (err) {
-            callback(err);
-            return;
-        }
+        // Even if there was an err, we still attempt to return results
+        // for working sources.
         if (opts.json) {
             console.log(JSON.stringify(imagesInfo, null, 2));
         } else {
@@ -813,7 +811,7 @@ CLI.prototype.do_avail = function do_avail(subcmd, opts, args, callback) {
                 return;
             }
         }
-        callback();
+        callback(err);
     });
 };
 CLI.prototype.do_avail.description = (

@@ -1099,7 +1099,8 @@ IMGADM.prototype.sourcesList = function sourcesList(callback) {
         function oneSource(source, next) {
             self.clientFromSource(source, function (cErr, client) {
                 if (cErr) {
-                    next(cErr);
+                    errs.push(cErr);
+                    next();
                     return;
                 }
                 client.listImages(function (listErr, images) {
@@ -1118,9 +1119,14 @@ IMGADM.prototype.sourcesList = function sourcesList(callback) {
             }
             var imagesInfo = [];
             var imageFromUuid = {};
+            self.log.trace({imageSetFromSourceUrl: imageSetFromSourceUrl},
+                'image sets from each source');
             for (var i = 0; i < self.sources.length; i++) {
                 var sourceUrl = self.sources[i].url;
                 var imageSet = imageSetFromSourceUrl[sourceUrl];
+                if (!imageSet) {
+                    continue;
+                }
                 for (var j = 0; j < imageSet.length; j++) {
                     var image = imageSet[j];
                     var uuid = image.uuid;

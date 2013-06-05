@@ -13,6 +13,9 @@
       <dependency name="boot-file" grouping="exclude_all" restart_on="refresh" type="path">
         <service_fmri value="file://localhost/tmp/.FIRST_REBOOT_NOT_YET_COMPLETE"/>
       </dependency>
+      <dependency name="rmtmpfiles" grouping="optional_all" restart_on="error" type="service">
+        <service_fmri value="svc:/system/rmtmpfiles" />
+      </dependency>
       <exec_method type="method" name="start" exec="/lib/svc/method/mdata-fetch" timeout_seconds="60" />
       <exec_method type="method" name="stop" exec=":true" timeout_seconds="60" />
     </instance>

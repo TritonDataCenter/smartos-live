@@ -57,6 +57,7 @@ exports.ensureCurrentImages = function(passed_t, to_ensure, callback) {
     function ensure(t, do_end, cb) {
         ensureSources(t, function () {
             async.forEachSeries(to_ensure, function (image, cb) {
+                console.error('# Importing image: ' + image);
                 // ensure this image is installed
                 t.ok(true, 'importing: ' + image);
                 cp.execFile(cmd, ['import', image], function (err, stdout, stderr) {

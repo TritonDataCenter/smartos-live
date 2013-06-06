@@ -1256,6 +1256,16 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    nics.*.network_uuid
+
+        UUID for allowing nics to be tracked in an external system
+
+        type: string (UUID)
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+
     nics.*.nic_tag
 
         This option for a NIC determines which host NIC the VMs nic will be

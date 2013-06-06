@@ -207,6 +207,38 @@ var payload_kvm_good_dhcp = {
     ]
 };
 
+var payload_network_uuid = {
+    'autoboot': false,
+    'brand': 'joyent-minimal',
+    'alias': 'autotest-' + process.pid,
+    'do_not_inventory': true,
+    'nics': [
+        {
+            'mac': '01:02:01:01:01:02',
+            'nic_tag': 'admin',
+            'network_uuid': '6e868da4-ce12-11e2-bf66-27709b9e398b',
+            'ip': '10.99.99.226',
+            'netmask': '255.255.255.0'
+        }
+    ]
+};
+
+var payload_network_uuid_invalid = {
+    'autoboot': false,
+    'brand': 'joyent-minimal',
+    'alias': 'autotest-' + process.pid,
+    'do_not_inventory': true,
+    'nics': [
+        {
+            'mac': '01:02:01:01:01:03',
+            'nic_tag': 'admin',
+            'network_uuid': 'asdf',
+            'ip': '10.99.99.227',
+            'netmask': '255.255.255.0'
+        }
+    ]
+};
+
 test('test create without netmask', {'timeout': 240000}, function(t) {
 
     p = JSON.parse(JSON.stringify(payload_missing_netmask));
@@ -505,4 +537,95 @@ test('test create good KVM w/o model but with nic_driver', {'timeout': 240000}, 
     ], function (err) {
         t.end();
     });
+});
+
+test('test create good OS w/ network_uuid', {'timeout': 240000}, function(t) {
+
+    p = JSON.parse(JSON.stringify(payload_network_uuid));
+    state = {'brand': p.brand};
+
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, p, state, [
+        function (cb) {
+            VM.load(state.uuid, function(err, obj) {
+                t.ok(!err, 'load VM' + state.uuid
+                    + (err ? ': ' + err.message : ''));
+                t.ok(obj.nics.length === 1, 'NIC was added');
+                t.equal(obj.nics[0].network_uuid,
+                    payload_network_uuid.nics[0].network_uuid,
+                    'network_uuid was added');
+
+                cb();
+            });
+
+        }, function (cb) {
+            var uuid2 = '8231fca4-ce34-11e2-a865-bbf227a0fb8d';
+            VM.update(state.uuid, {'update_nics': [
+                {'mac': payload_network_uuid.nics[0].mac, 'network_uuid': uuid2}
+                ]}, function (err, obj) {
+
+                t.ifErr(err, 'error updating network_uuid');
+                VM.load(state.uuid, function(err, obj) {
+                    t.ok(!err, 'load VM' + state.uuid
+                        + (err ? ': ' + err.message : ''));
+
+                    t.equal(obj.nics[0].network_uuid, uuid2,
+                        'network_uuid was added');
+
+                    cb();
+                });
+            });
+
+        }, function (cb) {
+            var uuid3 = '1ce9deee-ce38-11e2-8c7c-7f348665d851';
+            VM.update(state.uuid, {'add_nics': [ {
+                    'ip': '10.99.99.228',
+                    'nic_tag': 'admin',
+                    'netmask': '255.255.255.0',
+                    'network_uuid': uuid3
+                } ]},
+                function (err, obj) {
+
+                t.ifErr(err, 'error adding nic');
+                VM.load(state.uuid, function(err, obj) {
+                    t.ok(!err, 'load VM' + state.uuid
+                        + (err ? ': ' + err.message : ''));
+                    if (err) {
+                        cb();
+                        return;
+                    }
+
+                    t.ok(obj.nics.length === 2, 'NIC was added');
+                    t.equal(obj.nics[1].network_uuid, uuid3,
+                        'network_uuid is correct');
+
+                    cb();
+                });
+            });
+
+        }, function (cb) {
+            VM.update(state.uuid, {'update_nics': [
+                {'mac': payload_network_uuid.nics[0].mac, 'network_uuid': 'asdf'}
+                ]}, function (err) {
+
+                t.ok(err, 'update VM should fail'
+                    + (err ? ': ' + err.message : ''));
+
+                cb();
+            });
+        }
+    ], function () {
+        t.end();
+    });
+});
+
+test('test create w/ invalid network_uuid', {'timeout': 240000}, function(t) {
+
+    p = JSON.parse(JSON.stringify(payload_network_uuid_invalid));
+    state = {'brand': p.brand, 'expect_create_failure': true};
+
+    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [],
+        function (err) {
+            t.end();
+        }
+    );
 });

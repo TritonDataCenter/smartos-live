@@ -31,8 +31,9 @@ if [[ $(id -u) != 0 ]]; then
     exit 1
 fi
 
-for test in $(ls $(pwd)/tests/); do
-    /usr/vm/test/runtest $(pwd)/tests/${test} | tee -a /tmp/test.output.$$
+pwd=$(unset CDPATH; cd $(dirname $0); pwd)
+for test in $(ls $pwd/tests/); do
+    /usr/vm/test/runtest $pwd/tests/${test} | tee -a /tmp/test.output.$$
 done
 
 end_time=$(date +%s)

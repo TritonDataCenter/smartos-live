@@ -38,13 +38,9 @@ The set of mechanisms available depends on installed Crypto Framework providers.
 Due to requirements of the PKCS#11 standard regarding \fBfork\fR(2) behavior, some applications that use the OpenSSL EVP interfaces and \fBfork()\fR with active crypto contexts might experience unexpected behavior.
 .sp
 .LP
-To build an OpenSSL application, use the following \fBcc\fR command line options:
-.sp
-.in +2
-.nf
-cc [ \fIflag\fR... ] \fIfile\fR... -lcrypto -lssl [ \fIlibrary\fR... ]
-.fi
-.in -2
+To build an OpenSSL application, install and use the OpenSSL in \fBpkgsrc\fR(7).
+Compilation symlinks and headers are not provided for the platform OpenSSL
+to avoid library symbol conflicts.
 
 .sp
 .LP

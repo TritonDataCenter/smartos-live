@@ -962,6 +962,20 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: no
 
+    firewall_enabled:
+
+        This enables the firewall for this VM, allowing firewall rules set
+        by fwadm(1m) to be applied.
+
+        Note: this property will only show up in a 'vmadm get' when it's set
+        true. When set false the property will not appear.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: no
+        create: yes
+        update: yes
+
     fs_allowed:
 
         This option allows you to specify filesystem types this zone is allowed

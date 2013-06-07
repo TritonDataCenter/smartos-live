@@ -9,7 +9,7 @@
     nictagadm [-v] add <tag name> <MAC>
     nictagadm [-v] add -l <tag name>
     nictagadm [-v] update <tag name> <MAC>
-    nictagadm [-v] delete <tag name>
+    nictagadm [-v] delete [-f] <tag name>
     nictagadm [-v] vms <tag name>
 
 
@@ -57,6 +57,9 @@ reboot.
       delete <tag name>
 
         Deletes an existing tag on the system, unless it's in use by any VMs.
+
+        Options:
+            -f          Force delete - do not check if it is in use by VMs.
 
 
       list [<options>]

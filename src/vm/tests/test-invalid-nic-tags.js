@@ -15,37 +15,17 @@ var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
 
-var IMAGE_UUID = vmtest.CURRENT_SMARTOS_UUID;
-var TEST_OPTS = {'timeout': 240000};
-// Skip tests that fail frequently. See TOOLS-184.
-var FLAKY_TEST_OPTS = {'timeout': 240000, skip: true};
 var ERR_STR = 'Invalid nic tag "%s"';
+var IMAGE_UUID = vmtest.CURRENT_SMARTOS_UUID;
+var NICTAGADM = '/usr/bin/nictagadm';
+var TAGS_ADDED = [];
+var TEST_OPTS = {'timeout': 240000};
 
 
-function admin_nic_from_sysinfo(sysinfo) {
-    var admin_nic = null;
-    var nic_name;
-    for (nic_name in sysinfo["Network Interfaces"]) {
-        var nic = sysinfo["Network Interfaces"][nic_name];
-        if (nic["NIC Names"].indexOf('admin')) {
-            admin_nic = nic;
-            break;
-        }
-    }
-    return {name: nic_name, nic: admin_nic};
-}
 
-function reset_nic_tags(callback) {
-    try {
-        fs.unlinkSync('/tmp/bootparams');
-    } catch (err) {
-        if (e.code !== 'ENOENT') {
-            callback(e);
-            return;
-        }
-    }
-    VM.getSysinfo(['-f'], callback);
-}
+// --- VM-related helpers
+
+
 
 // Stop a VM (and wait for it to actually be stopped)
 function stopVM(t, vm, uuid, callback) {
@@ -69,68 +49,156 @@ function stopVM(t, vm, uuid, callback) {
     });
 }
 
-// Assigns the nic tags in names to the admin nic: afterward, the
-// admin nic has tags of ['admin'].concat(names)
-function set_admin_nic_tags(t, names, callback) {
-    VM.getSysinfo(function (err, sysinfo) {
-        var admin_nic_info = admin_nic_from_sysinfo(sysinfo);
-        var admin_nic = admin_nic_info.nic;
-        var nic_name = admin_nic_info.name;
 
-        t.ok(admin_nic, util.format('Found admin nic %s: %j', nic_name, admin_nic));
-        if (!admin_nic) {
-            callback(new Error('could not find admin nic'));
+
+// --- nic tag-related helpers
+
+
+
+// List all nic tags on the system, returning an object mapping tag names
+// to MAC addresses
+function listTags(callback) {
+    // list output looks like:
+    //   external|00:50:56:3d:a7:95
+    cp.execFile(NICTAGADM, ['list', '-p', '-d', '|'],
+        function (err, stdout, stderr) {
+        if (err) {
+            return callback(err);
+        }
+
+        var tags = {};
+
+        stdout.split('\n').forEach(function (line) {
+            var tagData = line.split('|');
+            if (tagData[1] === '-') {
+                return;
+            }
+
+            tags[tagData[0]] = tagData[1];
+        });
+
+        return callback(null, tags);
+    });
+}
+
+
+// Assigns the nic tags in names to the admin nic: afterward,
+// the admin nic has tags of:
+//     ['admin', <any other tags it had before>].concat(names)
+function add_admin_nic_tags(t, names, callback) {
+    listTags(function (err, tags) {
+        t.ifErr(err, 'error listing nic tags');
+        if (err) {
+            callback(err);
             return;
         }
 
-        // Undo any changes we may have already made to the bootparams:
-        try {
-            fs.unlinkSync('/tmp/bootparams');
-        } catch (e) {
-            if (e.code !== 'ENOENT') {
-                callback(e);
-                return;
-            }
+        var admin_nic = tags.admin;
+        if (!tags.admin) {
+            var msg = 'Could not find admin nic!';
+            t.ok(false, msg);
+            callback(new Error(msg));
+            return;
         }
 
-        cp.execFile('/usr/bin/bootparams', function (e, stdout, stderr) {
-            var new_bootparams = stdout;
-            if (e) {
-                t.ok(false, 'error running bootparams: ' + e.message);
-                callback(e);
+        async.forEachSeries(names, function _addTag(name, cb) {
+            // Record so we can reset at the end of the test
+            TAGS_ADDED.push(name);
+
+            if (tags.hasOwnProperty(name)) {
+                if (tags[name] !== admin_nic) {
+                    cb(new Error('tag "' + name
+                        + '" is already assigned to non-admin nic "'
+                        + tags[name] + '"'));
+                    return;
+                }
+
+                t.ok(true, 'Skipping adding nic tag "' + name +
+                    '", since it is already assigned');
+                cb();
                 return;
             }
 
-            for (var name in names) {
-                new_bootparams += util.format("%s_nic=%s\n", names[name],
-                    admin_nic["MAC Address"]);
-            }
-            fs.writeFileSync('/tmp/bootparams', new_bootparams);
-
-            VM.getSysinfo(['-f'], function (er, new_sysinfo) {
-                var tag_list;
-
-                if (er) {
-                  t.ok(false, 'error running sysinfo: ' + e.message);
-                  callback(e);
-                  return;
+            cp.execFile(NICTAGADM, ['add', name, admin_nic],
+                function (err2, stdout, stderr) {
+                t.ifErr(err2, 'nictagadm add ' + name + ' ' + admin_nic);
+                if (err2) {
+                    return cb(err2);
                 }
 
-                tag_list = new_sysinfo["Network Interfaces"][nic_name]["NIC Names"];
-                t.ok(tag_list,
-                  util.format("got tag list for new admin nic: %j",
-                  tag_list));
-                for (var n in names) {
-                    t.notEqual(tag_list.indexOf(names[n]), -1,
-                        "admin nic now tagged with " + names[n]);
-                }
-
-                callback(null, new_sysinfo);
-                return;
+                return cb();
             });
-        });
+        }, callback);
     });
 }
+
+// Assigns the nic tags in names to the admin nic: afterward,
+// the admin nic has tags of:
+//     ['admin', <any other tags it had before>].concat(names)
+function remove_admin_nic_tags(t, names, force, callback) {
+    if (typeof (names) !== 'object') {
+        names = [ names ];
+    }
+
+    listTags(function (err, tags) {
+        t.ifErr(err, 'error listing nic tags');
+        if (err) {
+            callback(err);
+            return;
+        }
+
+        var admin_nic = tags.admin;
+        if (!tags.admin) {
+            var msg = 'Could not find admin nic!';
+            t.ok(false, msg);
+            callback(new Error(msg));
+            return;
+        }
+
+        if (!names || names.length === 0) {
+            callback();
+            return;
+        }
+
+        async.forEachSeries(names, function _rmTag(name, cb) {
+            if (!tags.hasOwnProperty(name)) {
+                t.ok(true, 'Skipping removing nic tag "' + name +
+                    '", since it is not assigned');
+                cb();
+                return;
+            }
+
+            var args = ['delete'];
+            if (force) {
+                args.push('-f');
+            }
+            args.push(name);
+
+            cp.execFile(NICTAGADM, args, function (err2, stdout, stderr) {
+                t.ifErr(err2, 'nictagadm delete ' + name);
+                if (err2) {
+                    return cb(err2);
+                }
+
+                return cb();
+            });
+
+        }, callback);
+    });
+}
+
+
+// Resets the nic tags for the admin nic to their state before the
+// test was run
+function reset_nic_tags(t, callback) {
+    remove_admin_nic_tags(t, TAGS_ADDED, false, callback);
+}
+
+
+
+// --- Tests
+
+
 
 test('create with invalid nic tag', TEST_OPTS, function(t) {
     var state = {'brand': 'joyent-minimal', 'expect_create_failure': true };
@@ -152,12 +220,12 @@ test('create with invalid nic tag', TEST_OPTS, function(t) {
         });
 });
 
-test('reboot / shutdown / start / update with invalid nic tag', FLAKY_TEST_OPTS,
+test('reboot / shutdown / start / update with invalid nic tag', TEST_OPTS,
     function(t) {
     var state = {'brand': 'joyent-minimal'};
     var vm;
 
-    set_admin_nic_tags(t, ['new_tag1', 'new_tag2'], function (err) {
+    add_admin_nic_tags(t, ['new_tag1', 'new_tag2'], function (err) {
         if (err) {
             t.end();
             return;
@@ -169,9 +237,11 @@ test('reboot / shutdown / start / update with invalid nic tag', FLAKY_TEST_OPTS,
               'do_not_inventory': true,
               'alias': 'autozone-' + process.pid,
               'nowait': false,
-              'nics': [
-                { 'nic_tag': 'new_tag1', 'ip': 'dhcp' }
-              ]
+              'nics': [ {
+                  'nic_tag': 'new_tag1',
+                  'ip': '10.11.12.13',
+                  'netmask': '255.255.255.0'
+              } ]
             }, state, [
                 function (cb) {
                     // Verify that the nic has new_tag1
@@ -187,21 +257,24 @@ test('reboot / shutdown / start / update with invalid nic tag', FLAKY_TEST_OPTS,
                     });
                 }, function (cb) {
                     // Remove new_tag1
-                    set_admin_nic_tags(t, ['new_tag2'],
-                        function (err, sysinfo) {
-                        var admin_nic_info;
-
+                    remove_admin_nic_tags(t, 'new_tag1', true, function (err) {
                         t.ifErr(err, 'removing new_tag1');
-
-                        if (sysinfo) {
-                            admin_nic_info = admin_nic_from_sysinfo(sysinfo);
-                            t.equal(
-                                admin_nic_info.nic['NIC Names'].indexOf(
-                                'new_tag1'), -1,
-                                'admin nic not tagged with new_tag1');
+                        if (err) {
+                            cb(err);
+                            return;
                         }
 
-                        cb(err);
+                        listTags(function (err2, tags) {
+                            if (err2) {
+                                cb(err2);
+                                return;
+                            }
+
+                            t.equal(tags.new_tag1, undefined,
+                                'new_tag1 deleted');
+
+                            cb();
+                        });
                     });
                 }, function (cb) {
                     // VM should refuse to reboot due to missing nic tag
@@ -267,7 +340,7 @@ test('reboot / shutdown / start / update with invalid nic tag', FLAKY_TEST_OPTS,
             function (err) {
                 t.ifErr(err, 'Error during chain');
 
-                reset_nic_tags(function (e) {
+                reset_nic_tags(t, function (e) {
                     t.notOk(e, "reset nic tags: " + (e ? e.message : "ok"));
                     t.end();
                 });
@@ -275,16 +348,14 @@ test('reboot / shutdown / start / update with invalid nic tag', FLAKY_TEST_OPTS,
     });
 });
 
-test('create etherstub', FLAKY_TEST_OPTS,
-    function(t) {
+test('create etherstub', TEST_OPTS, function(t) {
     dladm.createEtherstub('new_stub1', VM.log, function (err) {
         t.ifError(err, 'create new_stub1')
         t.end();
     });
 });
 
-test('booting with invalid etherstub', FLAKY_TEST_OPTS,
-    function(t) {
+test('booting with invalid etherstub', TEST_OPTS, function(t) {
     var state = {'brand': 'joyent-minimal'};
     var vm;
 

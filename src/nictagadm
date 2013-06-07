@@ -81,7 +81,7 @@ Commands:
     add <name> <MAC>        Add a nic tag to a physical nic.
     add -l <name>           Add a local-only nic tag (etherstub).
     update <name> <MAC>     Update the physical nic associated with a nic tag.
-    delete <name>           Delete a nic tag.
+    delete [-f] <name>      Delete a nic tag.
     vms <name>              List VM UUIDs using a nic tag.
 USAGE
     exit 2
@@ -614,7 +614,7 @@ function cmd_tag_delete()
     [[ -n "$LOCAL" ]] && usage
 
     tag_exists $1 "true" || fatal "nic tag '$1' does not exist"
-    tag_in_use $1 && fatal "nic tag '$1' is in use"
+    [[ -z "$FORCE" ]] && tag_in_use $1 && fatal "nic tag '$1' is in use"
     verbose "deleting nic tag: $1"
 
     mount_usb
@@ -686,12 +686,15 @@ case "$1" in
 esac
 shift
 
-while getopts d:lLp opt
+while getopts d:flLp opt
 do
     case $opt in
     d)
         DELIM=${OPTARG}
         delim_flag=true
+        ;;
+    f)
+        FORCE="true"
         ;;
     l)
         LOCAL="true"

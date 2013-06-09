@@ -116,7 +116,7 @@ function vnic_up
     typeset vlan_opt=
     typeset mac_addr_opt=
 
-    if [[ -z ${link} ]] || [[ -z ${iface} ]] || [[ -z ${ip} ]] || [[ -z ${netmask} ]]; then
+    if [[ -z ${link} ]] || [[ -z ${iface} ]] || [[ -z ${ip} ]] || ([[ ${ip} != "dhcp" ]] && [[ -z ${netmask} ]]); then
         echo "WARNING: not bringing up nic (insufficient configuration): $details"
         return
     fi

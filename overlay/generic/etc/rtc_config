@@ -1,12 +1,2 @@
-#
-#	This file (/etc/rtc_config) contains information used to manage the
-#	x86 real time clock hardware.  The hardware is kept in
-#	the machine's local time for compatibility with other x86
-#	operating systems.  This file is read by the kernel at
-#	boot time.  It is set and updated by the /usr/sbin/rtc
-#	command.  The 'zone_info' field designates the local
-#	time zone.  The 'zone_lag' field indicates the number
-#	of seconds between local time and Greenwich Mean Time.
-#
-zone_info=Canada/Pacific
-zone_lag=25200
+zone_info=UTC
+zone_lag=0

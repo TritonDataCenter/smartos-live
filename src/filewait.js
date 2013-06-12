@@ -31,8 +31,6 @@ if (process.argv.length !== 3) {
 filename = process.argv[2];
 dir = path.dirname(filename);
 
-console.log('filename: ' + filename);
-
 function exitIfExists(fn) {
     fs.exists(fn, function (exists) {
         if (exists) {

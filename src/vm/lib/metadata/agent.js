@@ -508,45 +508,58 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 } else if (want === 'resolvers'
                     && vmobj.hasOwnProperty('resolvers')) {
 
-                    // See NOTE above about nics, same applies to resolvers.
-                    // It's here solely for the use of mdata-fetch.
-                    val = JSON.stringify(vmobj.resolvers);
-                    returnit(null, val);
-                    return;
+                    // resolvers and routes are special because we might reload
+                    // metadata trying to get the new ones w/o zone reboot. To
+                    // ensure these are fresh we always run updateZone which
+                    // reloads the data if stale.
+                    self.updateZone(zone, function () {
+                        // See NOTE above about nics, same applies to resolvers.
+                        // It's here solely for the use of mdata-fetch.
+                        val = JSON.stringify(self.zones[zone].resolvers);
+                        returnit(null, val);
+                        return;
+                    });
                 } else if (want === 'routes'
                     && vmobj.hasOwnProperty('routes')) {
 
                     var vmRoutes = [];
 
-                    // The NOTE above also applies to routes. It's here solely
-                    // for the use of mdata-fetch.
-                    for (var r in vmobj.routes) {
-                        var route = { linklocal: false, dst: r };
-                        var nicIdx = vmobj.routes[r].match(/nics\[(\d+)\]/);
-                        if (!nicIdx) {
-                            // Non link-local route: we have all the information
-                            // we need already
-                            route.gateway = vmobj.routes[r];
+                    self.updateZone(zone, function () {
+
+                        vmobj = self.zones[zone];
+
+                        // The notes above about resolvers also to routes. It's
+                        // here solely for the use of mdata-fetch, and we need
+                        // to do the updateZone here so that we have latest
+                        // data.
+                        for (var r in vmobj.routes) {
+                            var route = { linklocal: false, dst: r };
+                            var nicIdx = vmobj.routes[r].match(/nics\[(\d+)\]/);
+                            if (!nicIdx) {
+                                // Non link-local route: we have all the information
+                                // we need already
+                                route.gateway = vmobj.routes[r];
+                                vmRoutes.push(route);
+                                continue;
+                            }
+                            nicIdx = Number(nicIdx[1]);
+
+                            // Link-local route: we need the IP of the local nic
+                            if (!vmobj.hasOwnProperty('nics') || !vmobj.nics[nicIdx]
+                                || !vmobj.nics[nicIdx].hasOwnProperty('ip')
+                                || vmobj.nics[nicIdx].ip === 'dhcp') {
+
+                                continue;
+                            }
+
+                            route.gateway = vmobj.nics[nicIdx].ip;
+                            route.linklocal = true;
                             vmRoutes.push(route);
-                            continue;
-                        }
-                        nicIdx = Number(nicIdx[1]);
-
-                        // Link-local route: we need the IP of the local nic
-                        if (!vmobj.hasOwnProperty('nics') || !vmobj.nics[nicIdx]
-                            || !vmobj.nics[nicIdx].hasOwnProperty('ip')
-                            || vmobj.nics[nicIdx].ip === 'dhcp') {
-
-                            continue;
                         }
 
-                        route.gateway = vmobj.nics[nicIdx].ip;
-                        route.linklocal = true;
-                        vmRoutes.push(route);
-                    }
-
-                    returnit(null, JSON.stringify(vmRoutes));
-                    return;
+                        returnit(null, JSON.stringify(vmRoutes));
+                        return;
+                    });
                 } else {
                     addTags(function (err) {
                         if (!err) {

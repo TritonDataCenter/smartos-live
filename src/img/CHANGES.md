@@ -1,5 +1,10 @@
 # imgadm changelog
 
+## 2.0.6
+
+- Change to node-progbar for progress bars.
+
+
 ## 2.0.5
 
 - [OS-2274] Fix `imgadm avail` to not crash if there was a problem accessing

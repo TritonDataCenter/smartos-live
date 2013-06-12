@@ -49,7 +49,7 @@ var child_process = require('child_process'),
     exec = child_process.exec;
 var url = require('url');
 var mkdirp = require('mkdirp');
-var ProgressBar = require('progress');
+var ProgressBar = require('progbar').ProgressBar;
 var imgapi = require('sdc-clients/lib/imgapi');
 var dsapi = require('sdc-clients/lib/dsapi');
 
@@ -1468,7 +1468,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         }
         finished = true;
         if (bar) {
-            process.stderr.write('\n');
+            bar.end();
         }
         if (!err && md5Expected) {
             var md5Actual = md5Hash.digest('base64');
@@ -1578,22 +1578,17 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         //      | zfs recv                  [C]
         // [A]
         if (!options.quiet && process.stderr.isTTY) {
-            bar = new ProgressBar(
-                ':percent [:bar]  time :elapseds  eta :etas',
-                {
-                    complete: '=',
-                    incomplete: ' ',
-                    width: 30,
-                    total: info.size,
-                    stream: process.stderr
-                });
+            bar = new ProgressBar({
+                size: info.size,
+                filename: uuid
+            });
         }
         md5Expected = info.contentMd5;
         md5Hash = crypto.createHash('md5');
         sha1Hash = crypto.createHash('sha1');
         info.stream.on('data', function (chunk) {
             if (bar)
-                bar.tick(chunk.length);
+                bar.advance(chunk.length);
             md5Hash.update(chunk);
             sha1Hash.update(chunk);
         });

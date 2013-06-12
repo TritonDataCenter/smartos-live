@@ -1,7 +1,7 @@
 {
   "name": "imgadm",
   "description": "Tool to manage virtual images on SmartOS",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "author": "Joyent (joyent.com)",
   "private": true,
   "dependencies": {
@@ -12,7 +12,7 @@
     "async": "0.1.22",
     "extsprintf": "1.0.2",
     "verror": "1.3.6",
-    "progress": "0.1.0",
+    "progbar": "0.0.2",
     "imgmanifest": "git+ssh://git@git.joyent.com:node-imgmanifest.git#48900a3"
   },
   "devDependencies": {

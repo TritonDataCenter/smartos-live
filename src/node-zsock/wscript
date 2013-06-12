@@ -30,13 +30,8 @@ def configure(conf):
 
   conf.env['USE_DEBUG'] = o.debug
 
-  conf.env.append_value('CXXFLAGS', ['-D_FILE_OFFSET_BITS=64',
-                                     '-D_LARGEFILE_SOURCE',
-                                     '-D_REENTRANT',
-                                     '-D_POSIX_PTHREAD_SEMANTICS',
-                                     '-D__EXTENSIONS__',
+  conf.env.append_value('CXXFLAGS', ['-D_POSIX_C_SOURCE=200112L',
                                      '-D' + os.uname()[0],
-                                     '-std=c++98',
                                      '-Wall',
                                      '-fPIC',
                                      '-Werror'])

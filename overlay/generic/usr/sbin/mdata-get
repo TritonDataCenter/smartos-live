@@ -28,7 +28,7 @@ case $(uname -s) in
         SERIAL_DEV="/dev/cuau1"
     ;;
     SunOS)
-        NC_SOCK="/var/run/smartdc/metadata.sock"
+        NC_SOCK="/.zonecontrol/metadata.sock"
         DISABLE_ECHO="no"
     ;;
     *)

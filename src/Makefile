@@ -60,11 +60,13 @@ zoneevent :	LIBS +=		-lnvpair -lsysevent
 
 # These files will get run through jsstyle and jslint on 'make check'
 JS_CHECK_TARGETS=\
+  filewait.js \
 	node_modules/{system,onlyif}.js \
 	vm/sbin/*.js \
 	vm/node_modules/{qmp,VM,dladm}.js \
 	img/lib/*.js \
-	img/sbin/imgadm
+	img/sbin/imgadm \
+	vm/lib/metadata/*.js
 
 JS_CHECK_OLDSKOOL_TARGETS = \
 	disklayout.js \
@@ -352,6 +354,7 @@ install: all
 	cp zfs_send $(DESTDIR)/usr/vm/sbin/zfs_send
 	cp zfs_recv $(DESTDIR)/usr/vm/sbin/zfs_recv
 	cp vmunbundle $(DESTDIR)/usr/vm/sbin/vmunbundle
+	cp filewait.js $(DESTDIR)/usr/vm/sbin/filewait
 	mkdir -p $(DESTDIR)/lib/svc/manifest/system
 	cp vm/smf/system-vmadmd.xml \
 	    $(DESTDIR)/lib/svc/manifest/system/system-vmadmd.xml

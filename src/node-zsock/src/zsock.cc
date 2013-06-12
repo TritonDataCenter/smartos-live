@@ -265,6 +265,7 @@ static int zsocket(zoneid_t zoneid, const char *path) {
   int sockfd[2] = {0};
   int stat = 0;
   int tmpl_fd = 0;
+  int flags;
   struct sockaddr_un addr = {0};
   size_t addr_len = 0;
 
@@ -370,6 +371,11 @@ static int zsocket(zoneid_t zoneid, const char *path) {
   if (sock_fd < 0) {
     errno = _errno;
   } else {
+    if ((flags = fcntl(sock_fd, F_GETFD)) != -1) {
+      flags |= FD_CLOEXEC;
+      (void) fcntl(sock_fd, F_SETFD, flags);
+    }
+
     errno = 0;
   }
   debug("zsocket returning fd=%d, errno=%d\n", sock_fd, errno);
@@ -423,7 +429,7 @@ class eio_baton_t {
   eio_baton_t &operator=(const eio_baton_t &);
 };
 
-static void EIO_ZSocket(eio_req *req) {
+static void EIO_ZSocket(uv_work_t *req) {
   eio_baton_t *baton = static_cast<eio_baton_t *>(req->data);
 
   zoneid_t zoneid = getzoneidbyname(baton->_zone);
@@ -436,7 +442,7 @@ static void EIO_ZSocket(eio_req *req) {
   do {
     // This call suffers from EINTR, so just retry
     sock_fd = zsocket(zoneid, baton->_path);
-	} while (attempts++ < 3 && sock_fd < 0);
+  } while (attempts++ < 3 && sock_fd < 0);
   if (sock_fd < 0) {
     baton->setErrno("zsocket", errno);
     return;
@@ -452,10 +458,10 @@ static void EIO_ZSocket(eio_req *req) {
   return;
 }
 
-static int EIO_After(eio_req *req) {
+static void EIO_After(uv_work_t *req) {
   v8::HandleScope scope;
   eio_baton_t *baton = static_cast<eio_baton_t *>(req->data);
-  ev_unref(EV_DEFAULT_UC);
+  delete (req);
 
   int argc = 1;
   v8::Local<v8::Value> argv[2];
@@ -477,8 +483,6 @@ static int EIO_After(eio_req *req) {
   }
 
   delete baton;
-
-  return 0;
 }
 
 static v8::Handle<v8::Value> ZSocket(const v8::Arguments& args) {
@@ -505,8 +509,9 @@ static v8::Handle<v8::Value> ZSocket(const v8::Arguments& args) {
   baton->_backlog = backlog;
   baton->_callback = v8::Persistent<v8::Function>::New(callback);
 
-  eio_custom(EIO_ZSocket, EIO_PRI_DEFAULT, EIO_After, baton);
-  ev_ref(EV_DEFAULT_UC);
+  uv_work_t *req = new uv_work_t;
+  req->data = baton;
+  uv_queue_work(uv_default_loop(), req, EIO_ZSocket, EIO_After);
 
   return v8::Undefined();
 }

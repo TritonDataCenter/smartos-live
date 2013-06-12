@@ -1,31 +1,16 @@
 #!/usr/node/bin/node --abort_on_uncaught_exception
 
-var async = require('/usr/node/node_modules/async');
-var execFile = require('child_process').execFile;
-var fs = require('fs');
-var net = require('net');
-var path = require('path');
-var util = require('util');
-var zsock = require('/usr/node/node_modules/zsock');
-var zutil = require('/usr/node/node_modules/zutil');
-var log4js = require('/usr/node/node_modules/log4js');
-var tty = require('tty');
+var bunyan = require('/usr/node/node_modules/bunyan');
 
 var Agent = require('../lib/metadata/agent');
 
-log4js.clearAppenders();
-var isatty = tty.isatty(process.stdout.fd);
-log4js.addAppender
-    (log4js.consoleAppender
-        (isatty
-            ? log4js.colouredLayout
-            : log4js.basicLayout
-        )
-    );
+var log = bunyan.createLogger({
+    name: 'metadata',
+    level: 'debug',
+    serializers: bunyan.stdSerializers
+});
 
-var log = log4js.getLogger('process');
-
-var options = { log4js: log4js };
+var options = { log: log };
 var agent = new Agent(options);
 agent.start();
 

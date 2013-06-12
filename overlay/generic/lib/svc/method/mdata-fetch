@@ -24,6 +24,8 @@
 # Copyright (c) 2013, Joyent, Inc. All rights reserved.
 #
 
+export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+
 set -o xtrace
 
 . /lib/svc/share/smf_include.sh
@@ -34,32 +36,25 @@ if [ ! -x /usr/sbin/mdata-get ]; then
   exit ${SMF_EXIT_ERR_FATAL}
 fi
 
-timer=30
+# For old zones that were created prior to OS-2253 and bumping the mdata:fetch
+# start timeout, we need to fix this otherwise we could timeout waiting for the
+# socket.
+cur_timeout=$(svcprop -p start/timeout_seconds svc:/smartdc/mdata:fetch)
+if [[ -z ${cur_timeout} || ${cur_timeout} -lt 1800 ]]; then
+    # The current manifest has an old timeout value, fix in case we timeout
+    # here.  XXX we can still hit OS-2296 here where smf will forget that we
+    # set this.
+    svccfg -s svc:/smartdc/mdata:fetch 'setprop start/timeout_seconds = 1800'
+    svcadm refresh svc:/smartdc/mdata:fetch
+fi
 
-while [ $((timer--)) -gt 0 ]; do
+# This waits until /.zonecontrol/metadata.sock exists then exits 0
+/usr/vm/sbin/filewait /.zonecontrol/metadata.sock
 
-  if [[ -e /var/run/smartdc/metadata.sock ]]; then
-    /usr/sbin/mdata-get sdc:uuid
-    result=$?
-    if [[ ${result} -lt 10 ]]; then
-      # exit 10 means problem talking to socket. We assume errors 10 or
-      # higher (I've seen 141 from something in here getting SIGPIPE too)
-      # is something we'll just retry on for now.  <10 we assume is a
-      # problem retrying won't fix (eg. not found) or is success (0)
-      break;
-    fi
-  fi
-
-  # This is an alternate signal to metadata which we enable if the socket isn't
-  # here yet in case something else in smf is messed up. (for debugging)
-  [[ -e /tmp/.ready_for_metadata ]] || touch /tmp/.ready_for_metadata
-
-  sleep 1
-done
-
-if [ ! -e /var/run/smartdc/metadata.sock ]; then
-  echo "No metadata socket file, skipping metadata loading."
-  exit ${SMF_EXIT_OK}
+if [[ ! -e /.zonecontrol/metadata.sock ]]; then
+    # this is a bug since filewait should not have returned until file existed.
+    echo "missing /.zonecontrol/metadata.sock, Unable to start mdata:fetch"
+    exit ${SMF_EXIT_ERR_FATAL}
 fi
 
 # Update sysinfo to ensure values that come from metadata are populated.

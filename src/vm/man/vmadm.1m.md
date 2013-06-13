@@ -1193,6 +1193,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    nics.*.allowed_ips:
+
+        This sets additional IP addresses from which this nic is allowed to
+        send traffic, in addition to the IPs in the ip and vrrp_primary_ip
+        properties (if set).
+
+        type: array (of IP addresses)
+        vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+
     nics.*.dhcp_server:
 
         With this property set to true, this VM will be able to operate as a

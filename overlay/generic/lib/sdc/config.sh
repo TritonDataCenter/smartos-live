@@ -7,8 +7,10 @@
 #
 # bash config.sh -json
 #
-# Copyright (c) 2010,2011 Joyent Inc., All rights reserved.
+# Copyright (c) 2013 Joyent Inc., All rights reserved.
 #
+
+CACHE_FILE_JSON="/tmp/.config.json"
 
 # Loads sysinfo variables with prefix (default: SYSINFO_)
 function load_sdc_sysinfo {
@@ -61,8 +63,8 @@ function sdc_config_keys_contain {
 
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
         matches=$((cat ${GEN_FILE} ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
-	    sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
-	    sed -e "s/=.*//" | grep $search | wc -l)
+            sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
+            sed -e "s/=.*//" | grep $search | wc -l)
         if [[ $matches -eq 0 ]]; then
             echo false
         else
@@ -84,8 +86,8 @@ function sdc_config_keys {
 
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
         keys=$((cat ${GEN_FILE} ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
-	    sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
-	    sed -e "s/=.*//")
+            sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
+            sed -e "s/=.*//")
     fi
     echo "${keys}"
 }
@@ -113,8 +115,8 @@ function load_sdc_config {
     # start with a letter.
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
         eval $((cat ${GEN_FILE} ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
-	    sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
-	    sed -e "s/^/${prefix}/")
+            sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
+            sed -e "s/^/${prefix}/")
     elif [[ ${headnode} == "true" ]]; then
         echo "FATAL: Unable to load headnode config."
         exit 1
@@ -144,23 +146,50 @@ function sdc_bootparams_keys {
 }
 
 if [[ $1 == "-json" ]]; then
-    # If called to output config as JSON, we'll do that.
-    (
-        echo "{"
-        load_sdc_config
-        first_key=1
-        keys=$(sdc_config_keys)
-        for key in ${keys}; do
-            value=$(eval "echo \${CONFIG_${key}}")
-            # too bad we can't use extra commas
-            if [[ ${first_key} -eq 1 ]]; then
-                echo "    \"${key}\": \"${value}\""
-                first_key=0
-            else
-                echo "  , \"${key}\": \"${value}\""
-            fi
-        done
-        echo "}"
-    )
-    exit 0
+
+    update_cache=0
+
+    load_sdc_config_filename
+    if [[ ! -f ${CACHE_FILE_JSON} ]]; then
+        # no cache file, need update
+        update_cache=1
+
+    elif [[ -f ${SDC_CONFIG_FILENAME}
+        && ${SDC_CONFIG_FILENAME} -nt ${CACHE_FILE_JSON} ]]; then
+
+        # /usbkey/config (or CN config) is newer, need update
+        update_cache=1
+
+    elif [[ -f ${SDC_CONFIG_INC_DIR}/generic
+        && ${SDC_CONFIG_INC_DIR}/generic -nt ${CACHE_FILE_JSON} ]]; then
+
+        # /usbkey/config.inc/generic (or CN config) is newer, need update
+        update_cache=1
+    fi
+
+    if [[ ${update_cache} == 1 ]]; then
+
+        # If called to output config as JSON, we'll do that.
+        (
+            echo "{"
+            load_sdc_config
+            first_key=1
+            keys=$(sdc_config_keys)
+            for key in ${keys}; do
+                value=$(eval "echo \${CONFIG_${key}}")
+                # too bad we can't use extra commas
+                if [[ ${first_key} -eq 1 ]]; then
+                    echo "    \"${key}\": \"${value}\""
+                    first_key=0
+                else
+                    echo "  , \"${key}\": \"${value}\""
+                fi
+            done
+            echo "}"
+        ) >${CACHE_FILE_JSON}.new.$$ \
+        && mv ${CACHE_FILE_JSON}.new.$$ ${CACHE_FILE_JSON}
+    fi
+
+    # either we recreated the cache or it already exists
+    exec cat ${CACHE_FILE_JSON}
 fi

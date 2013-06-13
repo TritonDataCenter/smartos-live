@@ -40,7 +40,7 @@ var vasync = require('vasync');
 
 var LOG;
 var LOG_TO_FILE = false;
-var LOG_DIR = '/var/log/fw';
+var LOG_DIR = '/var/log/fw/logs';
 // keep the last 50 messages just in case we end up wanting them.
 var RINGBUFFER = new bunyan.RingBuffer({ limit: 50 });
 

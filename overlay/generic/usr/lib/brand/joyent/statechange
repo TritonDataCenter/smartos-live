@@ -146,6 +146,7 @@ setup_net()
 		allow_mac_spoof=$(get_boolean_nic_property ${nic} allow_mac_spoofing)
 		allow_restricted_traffic=$(get_boolean_nic_property ${nic} \
 		    allow_restricted_traffic)
+		allowed_ips=$(eval echo \$_ZONECFG_net_${nic}_allowed_ips)
 		vrid=$(eval echo \$_ZONECFG_net_${nic}_vrrp_vrid)
 		vrrp_primary_ip=$(eval \
 		    echo \$_ZONECFG_net_${nic}_vrrp_primary_ip)
@@ -262,6 +263,8 @@ setup_net()
 			enable_dhcp="true"
 			# This needs to be off for dhcp server zones
 			allow_ip_spoof="true"
+		else
+			enable_dhcp="false"
 		fi
 
 		comma=""
@@ -278,7 +281,7 @@ setup_net()
 			spoof_opts="${spoof_opts}${comma}restricted"
 			comma=","
 		fi
-		if [[ -z "${enable_dhcp}" ]]; then
+		if [[ ${enable_dhcp} == "false" ]]; then
 			spoof_opts="${spoof_opts}${comma}dhcp-nospoof"
 			comma=","
 		fi
@@ -313,19 +316,18 @@ setup_net()
 
 		if [[ -n "${zone_ip}" ]] && [[ $allow_ip_spoof != "true" ]] && \
 			    [[ "${zone_ip}" != "dhcp" ]]; then
-			allowed_ips="${zone_ip}"
+			allowed_ip_list="${zone_ip}"
 			[[ -n $vrrp_primary_ip ]] && \
-			    allowed_ips="${allowed_ips},${vrrp_primary_ip}"
+			    allowed_ip_list="${allowed_ip_list},${vrrp_primary_ip}"
+
+			[[ -n $allowed_ips ]] && \
+			    allowed_ip_list="${allowed_ip_list},${allowed_ips}"
 
 			dladm set-linkprop -t -z $ZONENAME \
-			    -p "allowed-ips=${allowed_ips}" ${nic}
+			    -p "allowed-ips=${allowed_ip_list}" ${nic}
 			if (( $? != 0 )); then
-				echo "error setting VNIC allowed-ips " \
-				    "$nic $allowed_ips"
-				logger -p daemon.err "zone $ZONENAME " \
-				    "error setting VNIC allowed-ips " \
-				    "$nic $allowed_ips"
-				exit 1
+				log_and_exit
+				    "error setting VNIC allowed-ips $nic $allowed_ip_list"
 			fi
 		fi
 

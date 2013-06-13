@@ -118,6 +118,7 @@ setup_net()
 		    allow_restricted_traffic)
 		allow_unfiltered_promisc=$(get_boolean_nic_property ${nic} \
 		    allow_unfiltered_promisc)
+		allowed_ips=$(eval echo \$_ZONECFG_net_${nic}_allowed_ips)
 
 		# If address set, must be a shared stack zone
 		[[ -n $address ]] && exit 0
@@ -225,6 +226,8 @@ setup_net()
 			enable_dhcp="true"
 			# This needs to be off for dhcp server zones
 			allow_ip_spoof="true"
+		else
+			enable_dhcp="false"
 		fi
 
 		comma=""
@@ -241,7 +244,7 @@ setup_net()
 			spoof_opts="${spoof_opts}${comma}restricted"
 			comma=","
 		fi
-		if [[ -z "${enable_dhcp}" ]]; then
+		if [[ ${enable_dhcp} == "false" ]]; then
 			spoof_opts="${spoof_opts}${comma}dhcp-nospoof"
 			comma=","
 		fi
@@ -259,15 +262,16 @@ setup_net()
 
 		if [[ -n "${zone_ip}" ]] && [[ $allow_ip_spoof != "true" ]] && \
 			    [[ "${zone_ip}" != "dhcp" ]]; then
+			allowed_ip_list="${zone_ip}"
+
+			[[ -n $allowed_ips ]] && \
+			    allowed_ip_list="${allowed_ip_list},${allowed_ips}"
+
 			dladm set-linkprop -t -z $ZONENAME \
-			    -p "allowed-ips=${zone_ip}" ${nic}
+			    -p "allowed-ips=${allowed_ip_list}" ${nic}
 			if (( $? != 0 )); then
-				echo "error setting VNIC allowed-ip " \
-				    "$nic $zone_ip"
-				logger -p daemon.err "zone $ZONENAME " \
-				    "error setting VNIC allowed-ip " \
-				    "$nic $zone_ip"
-				exit 1
+				log_and_exit
+				    "error setting VNIC allowed-ips $nic $allowed_ip_list"
 			fi
 		fi
 
@@ -321,6 +325,16 @@ setup_net()
 
 		unlock_file
 	done
+}
+
+#
+# Log a message, then exit
+#
+log_and_exit()
+{
+	echo "$1"
+	logger -p daemon.err "zone $ZONENAME $1"
+	exit 1
 }
 
 #

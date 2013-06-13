@@ -656,6 +656,29 @@ test('update max_locked_memory', function(t) {
     });
 });
 
+function zonecfg(args, callback)
+{
+    var cmd = '/usr/sbin/zonecfg';
+
+    execFile(cmd, args, function (error, stdout, stderr) {
+        if (error) {
+            callback(error, {'stdout': stdout, 'stderr': stderr});
+        } else {
+            callback(null, {'stdout': stdout, 'stderr': stderr});
+        }
+    });
+}
+
+test('update resolvers when no resolvers', function (t) {
+
+    zonecfg(['-z', vm_uuid, 'remove attr name=resolvers;'], function (err, fds) {
+        VM.update(vm_uuid, {resolvers: ['4.2.2.1', '4.2.2.2']}, function (err) {
+            t.ok(!err, 'no error adding resolvers: ' + (err ? err.message : 'ok'));
+            t.end();
+        });
+    });
+});
+
 test('delete zone', function(t) {
     if (vm_uuid) {
         VM.delete(vm_uuid, function (err) {

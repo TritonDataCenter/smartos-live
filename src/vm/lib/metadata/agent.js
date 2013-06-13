@@ -536,8 +536,8 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                             var route = { linklocal: false, dst: r };
                             var nicIdx = vmobj.routes[r].match(/nics\[(\d+)\]/);
                             if (!nicIdx) {
-                                // Non link-local route: we have all the information
-                                // we need already
+                                // Non link-local route: we have all the
+                                // information we need already
                                 route.gateway = vmobj.routes[r];
                                 vmRoutes.push(route);
                                 continue;
@@ -545,7 +545,8 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                             nicIdx = Number(nicIdx[1]);
 
                             // Link-local route: we need the IP of the local nic
-                            if (!vmobj.hasOwnProperty('nics') || !vmobj.nics[nicIdx]
+                            if (!vmobj.hasOwnProperty('nics')
+                                || !vmobj.nics[nicIdx]
                                 || !vmobj.nics[nicIdx].hasOwnProperty('ip')
                                 || vmobj.nics[nicIdx].ip === 'dhcp') {
 

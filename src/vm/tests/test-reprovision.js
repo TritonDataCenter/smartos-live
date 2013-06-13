@@ -155,7 +155,8 @@ vmtest.ensureCurrentImages();
             fs.readFile(vmobj.zonepath + '/root/zones/' + vmobj.zonename + '/data/hello.txt', function (err, data) {
                 t.ok(!err, 'read ' + vmobj.zonepath + '/root/zones/' + vmobj.zonename + '/data/hello.txt: '
                     + (err ? err.message : 'success'));
-                t.ok(trim(data) === 'hello world', 'data is: "' + trim(data) + '" expected: "hello world"');
+                t.ok(trim(data.toString()) === 'hello world', 'data is: "'
+                    + trim(data.toString()) + '" expected: "hello world"');
                 t.end();
             });
         });

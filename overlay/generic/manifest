@@ -157,5 +157,6 @@ f lib/svc/manifest/network/nfs/server.xml 0444 root sys
 f lib/svc/manifest/network/nfs/status.xml 0444 root sys
 d var/db 0755 root bin
 d var/db/imgadm 0755 root bin
+d var/fw 0755 root bin
 d var/log 0755 root sys
 d var/log/vm 0755 root sys

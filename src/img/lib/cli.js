@@ -28,7 +28,7 @@
 
 var util = require('util'),
     format = util.format;
-var warn = console.warn;
+var p = console.warn;
 var child_process = require('child_process'),
     spawn = child_process.spawn,
     exec = child_process.exec;
@@ -36,8 +36,10 @@ var os = require('os');
 var path = require('path');
 var fs = require('fs');
 var assert = require('assert-plus');
+var async = require('async');
 var nopt = require('nopt');
 var sprintf = require('extsprintf').sprintf;
+var rimraf = require('rimraf');
 var bunyan;
 if (process.platform === 'sunos') {
     bunyan = require('/usr/node/node_modules/bunyan');
@@ -48,7 +50,9 @@ if (process.platform === 'sunos') {
 var imgadm = require('./imgadm');
 var common = require('./common'),
     objCopy = common.objCopy,
+    objMerge = common.objMerge,
     NAME = common.NAME,
+    pathSlugify = common.pathSlugify,
     assertUuid = common.assertUuid;
 var errors = require('./errors');
 
@@ -449,7 +453,7 @@ CLI.prototype.printHelp = function printHelp(callback) {
         'Options:',
         '    -h, --help          Show this help message and exit.',
         '    --version           Show version and exit.',
-        '    -v, --verbose       Debug logging. Multiple times for more.'
+        '    -v, --verbose       Verbose logging. Multiple times for more.'
     ]);
 
     if (self.envopts && self.envopts.length) {
@@ -504,8 +508,13 @@ CLI.prototype.printHelp = function printHelp(callback) {
             '    imgadm list                            list installed images',
             '    imgadm get [-P <pool>] <uuid>          info on an installed image',
             '    imgadm update                          gather info on unknown images',
-            '    imgadm delete [-P <pool>] <uuid>       remove an installed image'
-            // '    imgadm publish -m <manifest> <snap>    publish (XXX:NYI)'
+            '    imgadm delete [-P <pool>] <uuid>       remove an installed image',
+            '',
+            '    # Experimental',
+            '    imgadm create <uuid> [<manifest-field>=<value> ...]',
+            '                                           create an image from a prepared VM',
+            '    imgadm publish -m <manifest> -f <file> <imgapi-url>',
+            '                                           publish an image to an image repo'
         ]);
         /* END JSSTYLED */
     }
@@ -1055,7 +1064,7 @@ CLI.prototype.do_delete = function do_delete(subcmd, opts, args, callback) {
             callback(err);
             return;
         }
-        console.log('Deleted image %s/%s', zpool, uuid);
+        console.log('Deleted image %s', uuid);
     });
 };
 CLI.prototype.do_delete.description = (
@@ -1185,12 +1194,15 @@ CLI.prototype.do_install = function do_install(subcmd, opts, args, callback) {
             args.length, args.join(' '))));
         return;
     }
-    assert.string(opts.manifest, '-m MANIFEST');
-    assert.string(opts.file, '-f FILE');
-    assert.optionalString(opts.zpool, '-P ZPOOL');
+    assert.string(opts.manifest, '-m <manifest>');
+    assert.string(opts.file, '-f <file>');
+    assert.optionalString(opts.zpool, '-P <zpool>');
     var zpool = opts.zpool || common.DEFAULT_ZPOOL;
 
     // 1. Validate args.
+    //    If `published_at` is not defined in the manifest (e.g. if from
+    //    `imgadm create ...`) then they are generated as part of the
+    //    install.
     if (!fs.existsSync(opts.manifest)) {
         callback(new errors.UsageError(format(
             'manifest path does not exist: "%s"', opts.manifest)));
@@ -1209,6 +1221,9 @@ CLI.prototype.do_install = function do_install(subcmd, opts, args, callback) {
     }
     var uuid = manifest.uuid;
     assertUuid(uuid, 'manifest.uuid');
+    if (!manifest.published_at) {
+        manifest.published_at = (new Date()).toISOString();
+    }
 
     // 2. Ensure we don't already have this UUID installed.
     self.tool.getImage({uuid: uuid, zpool: zpool}, function (getErr, ii) {
@@ -1255,8 +1270,8 @@ CLI.prototype.do_install.description = (
     + '\n'
     + 'Options:\n'
     + '    -h, --help         Print this help and exit.\n'
-    + '    -m MANIFEST        Required. Path to the image manifest file to import.\n'
-    + '    -f FILE            Required. Path to the image file to import.\n'
+    + '    -m <manifest>      Required. Path to the image manifest file to import.\n'
+    + '    -f <file>          Required. Path to the image file to import.\n'
     + '    -P <pool>          Name of zpool in which to import the image.\n'
     + '                       Default is "' + common.DEFAULT_ZPOOL + '".\n'
     + '    -q, --quiet        Disable progress bar.\n'
@@ -1301,6 +1316,324 @@ CLI.prototype.do_update.description = (
     + 'Options:\n'
     + '    -h, --help         Print this help and exit.\n'
 );
+
+
+/**
+ * `imgadm create [<options>] <uuid> [<manifest-field>=<value> ...]`
+ */
+CLI.prototype.do_create = function do_create(subcmd, opts, args, callback) {
+    var self = this;
+    if (args.length < 1) {
+        callback(new errors.UsageError(format(
+            'incorrect number of args (%d): "%s"',
+            args.length, args.join(' '))));
+        return;
+    }
+    var uuid = args[0];
+    assertUuid(uuid);
+    if (opts.compression
+        && !~common.VALID_COMPRESSIONS.indexOf(opts.compression))
+    {
+        callback(new errors.UsageError(format(
+            'invalid -c|--compression "%s": must be one of "%s"',
+            opts.compression, common.VALID_COMPRESSIONS.join('", "'))));
+        return;
+    }
+    if (opts['output-template'] && opts.publish) {
+        callback(new errors.UsageError(
+            'cannot specify both -o/--output-template and -p/--publish'));
+        return;
+    }
+
+    function gatherManifestData(next) {
+        // Pick up fields from the CLI argv.
+        var argFields = {};
+        for (var i = 1; i < args.length; i++) {
+            var arg = args[i];
+            var idx = arg.indexOf('=');
+            if (idx === -1) {
+                return next(new errors.UsageError(format(
+                    'invalid manifest field arg "%s": must match '
+                    + '"<field>=<value>"', arg)));
+            }
+            var key = arg.slice(0, idx);
+            var value = arg.slice(idx + 1);
+            // TODO: imgmanifest.FIELDS should define those for this a JSON
+            // parse is reasonable. Exclude string fields from this.
+            try {
+                value = JSON.parse(value);
+            } catch (e) {}
+            argFields[key] = value;
+        }
+
+        var manifest;
+        if (!opts.manifest) {
+            manifest = {};
+            next(null, objMerge(manifest, argFields));
+        } else if (opts.manifest === '-') {
+            var stdin = '';
+            process.stdin.resume();
+            process.stdin.on('data', function (chunk) {
+                stdin += chunk;
+            });
+            process.stdin.on('end', function () {
+                try {
+                    manifest = JSON.parse(stdin);
+                } catch (ex) {
+                    next(new errors.UsageError(
+                        format('invalid manifest JSON on stdin: %s', ex)));
+                    return;
+                }
+                next(null, objMerge(manifest, argFields));
+            });
+        } else {
+            var input = fs.readFileSync(opts.manifest);
+            try {
+                manifest = JSON.parse(input);
+            } catch (ex) {
+                next(new errors.UsageError(format(
+                    'invalid manifest JSON in "%s": %s', opts.manifest, ex)));
+                return;
+            }
+            next(null, objMerge(manifest, argFields));
+        }
+    }
+
+    gatherManifestData(function (manErr, manifest) {
+        if (manErr) {
+            callback(manErr);
+            return;
+        }
+        self.log.debug({manifest: manifest}, 'gathered manifest data');
+
+        // Choose the dir/file-prefix to which to save.
+        var savePrefix = '';
+        if (opts.publish) {
+            savePrefix = format('/var/tmp/.imgadm-create-%s-%s',
+                Date.now(), process.pid);
+        } else if (!opts['output-template']) {
+            savePrefix = format('%s-%s', pathSlugify(String(manifest.name)),
+                pathSlugify(String(manifest.version)));
+        } else {
+            var stats;
+            try {
+                stats = fs.statSync(opts['output-template']);
+            } catch (e) {}
+            if (stats && stats.isDirectory()) {
+                savePrefix = path.join(opts['output-template'],
+                    format('%s-%s', pathSlugify(String(manifest.name)),
+                        pathSlugify(String(manifest.version))));
+            } else {
+                savePrefix = opts['output-template'];
+            }
+        }
+
+        var createOpts = {
+            uuid: uuid,
+            manifest: manifest,
+            compression: opts.compression,
+            savePrefix: savePrefix,
+            logCb: console.log,
+            quiet: opts.quiet
+        };
+        self.tool.createImage(createOpts, function (createErr, imageInfo) {
+            if (createErr) {
+                callback(createErr);
+            } else if (opts.publish) {
+                // If '-p URL' given, publish and delete the temp created
+                // image and manifest files.
+                var pOpts = {
+                    manifest: imageInfo.manifestPath,
+                    file: imageInfo.filePath,
+                    url: opts.publish,
+                    quiet: opts.quiet
+                };
+                var pArgs = [opts.publish];
+                self.do_publish('publish', pOpts, pArgs, function (pErr) {
+                    async.forEach(
+                        [imageInfo.manifestPath, imageInfo.filePath],
+                        rimraf,
+                        function (rmErr) {
+                            if (rmErr) {
+                                console.warn('Error removing temporary '
+                                    + 'created image file: %s', rmErr);
+                            }
+                            callback(pErr);
+                        }
+                    );
+                });
+            } else {
+                callback();
+            }
+        });
+    });
+};
+CLI.prototype.do_create.description = (
+    /* BEGIN JSSTYLED */
+    '**Experimental. This command currently does not work on KVM zones.**\n'
+    + 'Create a new image from a prepared and stopped VM.\n'
+    + '\n'
+    + 'To create a new virtual image, one first creates a VM from an existing\n'
+    + 'image, customizes it, runs "sm-prepare-image", shuts it down, and\n'
+    + 'then runs this "imgadm create" to create the image file and manifest.\n'
+    + '\n'
+    + 'This will snapshot the VM, create a manifest and image file and\n'
+    + 'delete the snapshot. Optionally the image can be published directly\n'
+    + 'to a given image repository (IMGAPI) via "-p URL" (or that can be\n'
+    + 'done separately via "imgadm publish").\n'
+    + '\n'
+    + 'Usage:\n'
+    + '    $NAME create [<options>] <uuid> [<manifest-field>=<value> ...]\n'
+    + '\n'
+    + 'Options:\n'
+    + '    -h, --help     Print this help and exit.\n'
+    + '    -m <manifest>  Path to image manifest data (as JSON) to\n'
+    + '                   include in the created manifest. Specify "-"\n'
+    + '                   to read manifest JSON from stdin.\n'
+    + '    -o PATH, --output-template PATH\n'
+    + '                   Path prefix to which to save the created manifest\n'
+    + '                   and image file. By default "NAME-VER.imgmanifest\n'
+    + '                   and "NAME-VER.zfs[.EXT]" are saved to the current\n'
+    + '                   dir. If "PATH" is a dir, then the files are saved\n'
+    + '                   to it. If the basename of "PATH" is not a dir,\n'
+    + '                   then "PATH.imgmanifest" and "PATH.zfs[.EXT]" are\n'
+    + '                   created.\n'
+    + '    -c COMPRESSION One of "none", "gz" or "bzip2" for the compression\n'
+    + '                   to use on the image file, if any. Default is "none".\n'
+    + '\n'
+    + '    -p URL, --publish URL\n'
+    + '                   Publish directly to the given image source\n'
+    + '                   (an IMGAPI server). You may not specify both\n'
+    + '                   "-p" and "-o".\n'
+    + '    -q, --quiet    Disable progress bar in upload.\n'
+    + '\n'
+    + 'Arguments:\n'
+    + '    <uuid>         The UUID of the prepared and shutdown VM\n'
+    + '                   from which to create the image.\n'
+    + '    <manifest-field>=<value>\n'
+    + '                   Zero or more manifest fields to include in\n'
+    + '                   in the created manifest. The "<value>" is\n'
+    + '                   first interpreted as JSON, else as a string.\n'
+    + '                   E.g. \'disabled=true\' will be a boolean true\n'
+    + '                   and both \'name=foo\' and \'name="true"\'\n'
+    + '                   will be strings.\n'
+    + '\n'
+    + 'Examples:\n'
+    + '    # Create an image from the prepared and shutdown VM\n'
+    + '    # 5f7a53e9-fc4d-d94b-9205-9ff110742aaf, using some manifest JSON\n'
+    + '    # data from stdin.\n'
+    + '    echo \'{"name": "foo", "version": "1.0.0"}\' \\\n'
+    + '        | imgadm create -m - 5f7a53e9-fc4d-d94b-9205-9ff110742aaf\n'
+    + '    \n'
+    + '    # Specify manifest data as arguments.\n'
+    + '    imgadm create 5f7a53e9-fc4d-d94b-9205-9ff110742aaf \\\n'
+    + '        name=foo version=1.0.0\n'
+    + '    \n'
+    + '    # Write the manifest and image file to "/var/tmp".\n'
+    + '    imgadm create 5f7a53e9-fc4d-d94b-9205-9ff110742aaf \\\n'
+    + '        name=foo version=1.0.0 -o /var/tmp\n'
+    + '    \n'
+    + '    # Publish directly to an image repository (IMGAPI server).\n'
+    + '    imgadm create 5f7a53e9-fc4d-d94b-9205-9ff110742aaf \\\n'
+    + '        name=foo version=1.0.0 --publish https://images.example.com\n'
+    /* END JSSTYLED */
+);
+CLI.prototype.do_create.longOpts = {
+    'manifest': String,
+    'compression': String,
+    'output-template': String,
+    'publish': String,
+    'quiet': Boolean
+};
+CLI.prototype.do_create.shortOpts = {
+    'm': ['--manifest'],
+    'c': ['--compression'],
+    'o': ['--output-template'],
+    'p': ['--publish'],
+    'q': ['--quiet']
+};
+
+
+/**
+ * `imgadm publish -m <manifest> -f <file> <imgapi-url>`
+ */
+CLI.prototype.do_publish = function do_publish(subcmd, opts, args, callback) {
+    var self = this;
+    if (args.length !== 1) {
+        callback(new errors.UsageError(format(
+            'incorrect number of args (%d): "%s"',
+            args.length, args.join(' '))));
+        return;
+    }
+    assert.string(opts.manifest, '-m <manifest>');
+    assert.string(opts.file, '-f <file>');
+    assert.optionalBool(opts.quiet, '-q');
+    var url = args[0];
+    assert.string(url, '<imgapi-url>');
+
+    // 1. Validate args.
+    if (!fs.existsSync(opts.manifest)) {
+        callback(new errors.UsageError(format(
+            'manifest path does not exist: "%s"', opts.manifest)));
+        return;
+    }
+    if (!fs.existsSync(opts.file)) {
+        callback(new errors.UsageError(format(
+            'file path does not exist: "%s"', opts.file)));
+        return;
+    }
+    try {
+        var manifest = JSON.parse(fs.readFileSync(opts.manifest, 'utf8'));
+    } catch (err) {
+        callback(new errors.InvalidManifestError(err));
+        return;
+    }
+
+    var pubOpts = {
+        file: opts.file,
+        manifest: manifest,
+        url: url,
+        quiet: opts.quiet
+    };
+    self.tool.publishImage(pubOpts, function (pubErr) {
+        if (pubErr) {
+            callback(pubErr);
+        } else {
+            console.log('Successfully published image %s to %s',
+                manifest.uuid, url);
+            callback();
+        }
+    });
+};
+CLI.prototype.do_publish.description = (
+    /* BEGIN JSSTYLED */
+    '**Experimental.** Publish an image from local manifest and image\n'
+    + 'data files.\n'
+    + '\n'
+    + 'Typically the local manifest and image file are created with\n'
+    + '"imgadm create ...". Note that "imgadm create" supports a\n'
+    + '"-p/--publish" option to publish directly in one step.\n'
+    + '\n'
+    + 'Usage:\n'
+    + '    $NAME publish [<options>] -m <manifest> -f <file> <imgapi-url>\n'
+    + '\n'
+    + 'Options:\n'
+    + '    -h, --help         Print this help and exit.\n'
+    + '    -m <manifest>      Required. Path to the image manifest to import.\n'
+    + '    -f <file>          Required. Path to the image file to import.\n'
+    + '    -q, --quiet        Disable progress bar.\n'
+    /* END JSSTYLED */
+);
+CLI.prototype.do_publish.longOpts = {
+    'manifest': String,
+    'file': String,
+    'quiet': Boolean
+};
+CLI.prototype.do_publish.shortOpts = {
+    'm': ['--manifest'],
+    'f': ['--file'],
+    'q': ['--quiet']
+};
 
 
 

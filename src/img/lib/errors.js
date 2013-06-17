@@ -26,9 +26,9 @@
  * Error classes that imgadm may produce.
  */
 
-var util = require('util');
+var util = require('util'),
+    format = util.format;
 var assert = require('assert-plus');
-var sprintf = require('extsprintf').sprintf;
 var verror = require('verror'),
     WError = verror.WError,
     VError = verror.VError;
@@ -83,9 +83,40 @@ function InternalError(options) {
 }
 util.inherits(InternalError, ImgadmError);
 
+/**
+ * Usage:
+ *      new ManifestValidationError(errors)
+ *      new ManifestValidationError(cause, errors)
+ *
+ * I.e. optional *first* arg "cause", per WError style.
+ */
+function ManifestValidationError(cause, errors) {
+    if (errors === undefined) {
+        errors = cause;
+        cause = undefined;
+    }
+    assert.arrayOfObject(errors, 'errors');
+    var message = errors.map(function (e) {
+        if (e.message) {
+            return format('%s (%s)', e.field, e.message);
+        } else if (e.code === 'Invalid') {
+            return e.field;
+        } else {
+            return format('%s (%s)', e.field, e.code);
+        }
+    });
+    message = format('invalid manifest: %s', message.join(', '));
+    ImgadmError.call(this, {
+        cause: cause,
+        message: message,
+        code: 'ManifestValidation'
+    });
+}
+util.inherits(ManifestValidationError, ImgadmError);
+
 function NoSourcesError() {
     ImgadmError.call(this, {
-        message: sprintf('imgadm has no configured sources'),
+        message: 'imgadm has no configured sources',
         code: 'NoSources',
         exitStatus: 1
     });
@@ -104,7 +135,7 @@ function SourcePingError(cause, source) {
     }
     ImgadmError.call(this, {
         cause: cause,
-        message: sprintf('unexpected ping error with image source "%s" (%s)%s',
+        message: format('unexpected ping error with image source "%s" (%s)%s',
             source.url, source.type, details),
         code: 'SourcePing',
         exitStatus: 1
@@ -120,12 +151,43 @@ function ImageNotFoundError(cause, uuid) {
     assert.string(uuid);
     ImgadmError.call(this, {
         cause: cause,
-        message: sprintf('image "%s" was not found', uuid),
+        message: format('image "%s" was not found', uuid),
         code: 'ImageNotFound',
         exitStatus: 1
     });
 }
 util.inherits(ImageNotFoundError, ImgadmError);
+
+function VmNotFoundError(cause, uuid) {
+    if (uuid === undefined) {
+        uuid = cause;
+        cause = undefined;
+    }
+    assert.string(uuid);
+    ImgadmError.call(this, {
+        cause: cause,
+        message: format('vm "%s" was not found', uuid),
+        code: 'VmNotFound',
+        exitStatus: 1
+    });
+}
+util.inherits(VmNotFoundError, ImgadmError);
+
+// A VM must be prepared and stopped before it can be used by 'imgadm create'.
+function VmNotStoppedError(cause, uuid) {
+    if (uuid === undefined) {
+        uuid = cause;
+        cause = undefined;
+    }
+    assert.string(uuid);
+    ImgadmError.call(this, {
+        cause: cause,
+        message: format('vm "%s" is not stopped', uuid),
+        code: 'VmNotStopped',
+        exitStatus: 1
+    });
+}
+util.inherits(VmNotStoppedError, ImgadmError);
 
 function ActiveImageNotFoundError(cause, uuid) {
     if (uuid === undefined) {
@@ -135,7 +197,7 @@ function ActiveImageNotFoundError(cause, uuid) {
     assert.string(uuid);
     ImgadmError.call(this, {
         cause: cause,
-        message: sprintf('an active image "%s" was not found', uuid),
+        message: format('an active image "%s" was not found', uuid),
         code: 'ActiveImageNotFound',
         exitStatus: 1
     });
@@ -150,7 +212,7 @@ function ImageNotActiveError(cause, uuid) {
     assert.string(uuid);
     ImgadmError.call(this, {
         cause: cause,
-        message: sprintf('image "%s" is not active', uuid),
+        message: format('image "%s" is not active', uuid),
         code: 'ImageNotActive',
         exitStatus: 1
     });
@@ -168,7 +230,7 @@ function ImageNotInstalledError(cause, zpool, uuid) {
     assert.string(uuid, 'uuid');
     ImgadmError.call(this, {
         cause: cause,
-        message: sprintf('image "%s" was not found on zpool "%s"', uuid, zpool),
+        message: format('image "%s" was not found on zpool "%s"', uuid, zpool),
         code: 'ImageNotInstalled',
         exitStatus: 3
     });
@@ -184,10 +246,10 @@ function ImageHasDependentClonesError(cause, imageInfo) {
     assert.string(imageInfo.manifest.uuid, 'imageInfo.manifest.uuid');
     var clones = imageInfo.children.clones;
     assert.arrayOfString(clones, 'imageInfo.children.clones');
-    var message = sprintf('image "%s" has dependent clones: %s',
+    var message = format('image "%s" has dependent clones: %s',
         imageInfo.manifest.uuid, clones[0]);
     if (clones.length > 1) {
-        message += sprintf(' and %d others...', clones.length - 1);
+        message += format(' and %d others...', clones.length - 1);
     }
     ImgadmError.call(this, {
         cause: cause,
@@ -203,10 +265,9 @@ function InvalidUUIDError(cause, uuid) {
         uuid = cause;
         cause = undefined;
     }
-    assert.string(uuid);
     ImgadmError.call(this, {
         cause: cause,
-        message: sprintf('invalid uuid: "%s"', uuid),
+        message: format('invalid uuid: "%s"', uuid),
         code: 'InvalidUUID',
         exitStatus: 1
     });
@@ -236,7 +297,7 @@ function UnexpectedNumberOfSnapshotsError(uuid, snapnames) {
         extra = ': ' + snapnames.join(', ');
     }
     ImgadmError.call(this, {
-        message: sprintf(
+        message: format(
             'image "%s" has an unexpected number of snapshots (%d)%s',
             uuid, snapnames.length, extra),
         code: 'UnexpectedNumberOfSnapshots',
@@ -244,6 +305,21 @@ function UnexpectedNumberOfSnapshotsError(uuid, snapnames) {
     });
 }
 util.inherits(UnexpectedNumberOfSnapshotsError, ImgadmError);
+
+function FileSystemError(cause, message) {
+    if (message === undefined) {
+        message = cause;
+        cause = undefined;
+    }
+    assert.string(message);
+    ImgadmError.call(this, {
+        cause: cause,
+        message: message,
+        code: 'FileSystem',
+        exitStatus: 1
+    });
+}
+util.inherits(FileSystemError, ImgadmError);
 
 function UncompressionError(cause, message) {
     if (message === undefined) {
@@ -283,7 +359,7 @@ function UnknownOptionError(cause, option) {
     assert.string(option);
     ImgadmError.call(this, {
         cause: cause,
-        message: sprintf('unknown option: "%s"', option),
+        message: format('unknown option: "%s"', option),
         code: 'UnknownOption',
         exitStatus: 1
     });
@@ -298,7 +374,7 @@ function UnknownCommandError(cause, command) {
     assert.string(command);
     ImgadmError.call(this, {
         cause: cause,
-        message: sprintf('unknown command: "%s"', command),
+        message: format('unknown command: "%s"', command),
         code: 'UnknownCommand',
         exitStatus: 1
     });
@@ -310,7 +386,7 @@ function ClientError(source, cause) {
     assert.object(cause, 'cause');
     ImgadmError.call(this, {
         cause: cause,
-        message: sprintf('%s: %s', source, cause),
+        message: format('%s: %s', source, cause),
         code: 'ClientError',
         exitStatus: 1
     });
@@ -328,7 +404,7 @@ function APIError(source, cause) {
     var message = cause.body.message;
     if (cause.body.errors) {
         cause.body.errors.forEach(function (e) {
-            message += sprintf('\n    %s: %s', e.field, e.code);
+            message += format('\n    %s: %s', e.field, e.code);
             if (e.message) {
                 message += ': ' + e.message;
             }
@@ -336,7 +412,7 @@ function APIError(source, cause) {
     }
     ImgadmError.call(this, {
         cause: cause,
-        message: sprintf('%s: %s', source, message),
+        message: format('%s: %s', source, message),
         code: cause.body.code,
         statusCode: cause.statusCode,
         exitStatus: 1
@@ -360,6 +436,21 @@ function DownloadError(cause, message) {
     });
 }
 util.inherits(DownloadError, ImgadmError);
+
+function UploadError(cause, message) {
+    if (message === undefined) {
+        message = cause;
+        cause = undefined;
+    }
+    assert.optionalObject(cause);
+    assert.string(message);
+    ImgadmError.call(this, {
+        cause: cause,
+        message: message,
+        code: 'UploadError'
+    });
+}
+util.inherits(UploadError, ImgadmError);
 
 function ConfigError(cause, message) {
     if (message === undefined) {
@@ -398,10 +489,10 @@ util.inherits(UpgradeError, ImgadmError);
  */
 function MultiError(errs) {
     assert.arrayOfObject(errs, 'errs');
-    var lines = [sprintf('multiple (%d) API errors', errs.length)];
+    var lines = [format('multiple (%d) API errors', errs.length)];
     for (var i = 0; i < errs.length; i++) {
         var err = errs[i];
-        lines.push(sprintf('    error (%s): %s', err.code, err.message));
+        lines.push(format('    error (%s): %s', err.code, err.message));
     }
     ImgadmError.call(this, {
         cause: errs[0],
@@ -424,12 +515,16 @@ module.exports = {
     NoSourcesError: NoSourcesError,
     SourcePingError: SourcePingError,
     ImageNotFoundError: ImageNotFoundError,
+    VmNotFoundError: VmNotFoundError,
+    VmNotStoppedError: VmNotStoppedError,
+    ManifestValidationError: ManifestValidationError,
     ActiveImageNotFoundError: ActiveImageNotFoundError,
     ImageNotActiveError: ImageNotActiveError,
     ImageNotInstalledError: ImageNotInstalledError,
     ImageHasDependentClonesError: ImageHasDependentClonesError,
     InvalidManifestError: InvalidManifestError,
     UnexpectedNumberOfSnapshotsError: UnexpectedNumberOfSnapshotsError,
+    FileSystemError: FileSystemError,
     UncompressionError: UncompressionError,
     UsageError: UsageError,
     UnknownOptionError: UnknownOptionError,
@@ -437,6 +532,7 @@ module.exports = {
     ClientError: ClientError,
     APIError: APIError,
     DownloadError: DownloadError,
+    UploadError: UploadError,
     ConfigError: ConfigError,
     UpgradeError: UpgradeError,
     MultiError: MultiError

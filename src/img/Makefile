@@ -47,11 +47,14 @@ update_modules:
 		node_modules/sdc-clients imgapi.js dsapi.js
 	./tools/mk-nodeunit-light.sh $(shell json -f package.json devDependencies.nodeunit)
 	npm install
-	for dep in $(shell json -f package.json dependencies | json --keys -a | grep -v sdc-clients); do \
+	for dep in $(shell json -f package.json dependencies devDependencies \
+			| json --keys -a --merge \
+			| grep -v sdc-clients | grep -v nodeunit); do \
 		echo "# trim $$dep dependency"; \
 		find node_modules/$$dep -name .gitmodules | xargs rm; \
 		find node_modules/$$dep -name .npmignore | xargs rm; \
 		find node_modules/$$dep -name .travis.yml | xargs rm; \
+		find node_modules/$$dep -name AUTHORS | xargs rm; \
 		find node_modules/$$dep -name README.md | xargs rm; \
 		find node_modules/$$dep -name Readme.md | xargs rm; \
 		find node_modules/$$dep -name History.md | xargs rm; \
@@ -63,6 +66,7 @@ update_modules:
 		find node_modules/$$dep -name tst | xargs rm -rf; \
 		find node_modules/$$dep -name test | xargs rm -rf; \
 		find node_modules/$$dep -name tests | xargs rm -rf; \
+		find node_modules/$$dep -name benchmark | xargs rm -rf; \
 	done;
 
 INSTALLIMAGE=/var/tmp/img-install-image

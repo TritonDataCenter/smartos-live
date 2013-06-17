@@ -28,7 +28,7 @@ _imgadm()
     local cmdIdx cur prev len cmd
     COMPREPLY=()
     # NOTE: We exclude aliases here to encourage usage of the 'proper' cmds.
-    COMMANDS="help sources avail show import install list get update delete publish"
+    COMMANDS="help sources avail show import install list get update delete create publish"
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     len="${#COMP_WORDS[@]}"
@@ -71,9 +71,14 @@ _imgadm()
             || ${cmd} == 'info'
             || ${cmd} == 'delete'
             || ${cmd} == 'destroy' ]]; then
-        # Install image UUIDs.
+        # Installed image UUIDs.
         local installed_uuids=$(imgadm list -H -o uuid)
         COMPREPLY=( $(compgen -W "${installed_uuids}" -- ${cur}) )
+
+    elif [[ ${cmd} == 'create' ]]; then
+        # Stopped VM UUIDs.
+        local stopped_vm_uuids=$(vmadm list -H -o uuid state=stopped)
+        COMPREPLY=( $(compgen -W "${stopped_vm_uuids}" -- ${cur}) )
 
     else
         # Just expand files by default.

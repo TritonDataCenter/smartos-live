@@ -1,5 +1,17 @@
 # imgadm changelog
 
+## 2.1.0
+
+- [IMGAPI-95] Add 'imgadm publish' to publish a created image to an image
+  repository (an IMGAPI). This command is currently *experimental* because
+  it is incomplete and not fully vetted.
+
+- [IMGAPI-95] Add 'imgadm create' to create a virtual image from a prepared
+  VM. This is still not finalized. Creation of zvol images (i.e. for KVM VMs)
+  is not yet supported. This command is currently *experimental* because
+  it is incomplete and not fully vetted.
+
+
 ## 2.0.6
 
 - Change to node-progbar for progress bars.

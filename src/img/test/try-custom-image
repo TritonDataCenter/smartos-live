@@ -1,0 +1,88 @@
+#!/bin/bash
+#
+# Try/test out a custom virtual image.
+#
+# Usage:
+#   ./try-custom-image MANIFEST-PATH FILE-PATH
+#
+# Example:
+#   ./try-custom-image /var/tmp/i.imgmanifest /var/tmp/i.zfs
+#
+# This will:
+# - install the image
+# - vmadm create a zone based on it
+# - verify that the zone has the expected mods from `mk-custom-image`
+# - delete the zone and the image
+#
+
+if [[ -n "$TRACE" ]]; then
+    export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -o xtrace
+fi
+set -o errexit
+set -o pipefail
+
+TESTDIR=$(cd $(dirname $0)/ >/dev/null; pwd)
+
+
+#---- support stuff
+
+function cleanup {
+    if [[ -n "$vm_uuid" ]]; then
+        vmadm delete $vm_uuid
+    fi
+    if [[ -n "$MANIFEST_PATH" ]]; then
+        local uuid=$(json -f $MANIFEST_PATH uuid)
+        imgadm get $uuid >/dev/null 2>/dev/null && imgadm delete $uuid || true
+    fi
+}
+
+function fatal {
+    cleanup
+    echo "$0: fatal error: $*"
+    exit 1
+}
+
+function errexit {
+    cleanup
+    [[ $1 -ne 0 ]] || exit 0
+    fatal "error exit status $1"
+}
+
+
+#---- mainline
+
+trap 'errexit $?' EXIT
+START=$(date +%s)
+
+MANIFEST_PATH=$1
+FILE_PATH=$2
+[[ -z "$MANIFEST_PATH" ]] && fatal "no MANIFEST_PATH given"
+[[ -z "$FILE_PATH" ]] && fatal "no FILE_PATH given"
+
+echo "Try out custom image at $MANIFEST_PATH ($FILE_PATH)"
+
+imgadm install -m $MANIFEST_PATH -f $FILE_PATH
+image_uuid=$(json -f $MANIFEST_PATH uuid)
+
+vm_uuid=$(uuid)
+echo "Create vm $vm_uuid from custom image"
+vmadm create <<EOM
+{
+  "uuid": "$vm_uuid",
+  "brand": "joyent",
+  "zfs_io_priority": 30,
+  "quota": 20,
+  "image_uuid": "$image_uuid",
+  "max_physical_memory": 256,
+  "alias": "try-custom-image-$$"
+}
+EOM
+
+echo "Test vm has expected customizations:"
+echo -n "    "
+zlogin $vm_uuid 'cat /etc/motd' </dev/null | grep 'hi from mk-custom-image'
+
+
+END=$(date +%s)
+echo "$0 finished in $(($END - $START)) seconds"

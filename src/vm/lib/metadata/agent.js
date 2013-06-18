@@ -19,6 +19,7 @@ var sdc_fields = [
     'create_timestamp',
     'server_uuid',
     'image_uuid',
+    'datacenter_name',
     'do_not_inventory',
     'dns_domain',
     'force_metadata_socket',

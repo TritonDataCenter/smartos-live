@@ -276,27 +276,35 @@ UUID.
 
 ## COMPATIBILITY NOTES
 
-    The imgadm tool was re-written for version 2. There are a few minor
-    compatibility differences with earlier imgadm. These are:
+The imgadm tool was re-written for version 2. There are a few minor
+compatibility differences with earlier imgadm. These are:
 
-    - "imgadm show <uuid>" no longer includes the non-standard "_url" field.
-      The equivalent data is now in the "source" field of "imgadm info
-      <uuid>".
-    - "imgadm update" used to be required to fetch current available image
-      manifests from the image source(s). That is no longer required.
-      However, "imgadm update" remains (for backwards compat) and now fetches
-      image manifests for **locally install images that were not installed by
-      imgadm**. If there are none, then "imgadm update" is a no-op.
-    - "imgadm list" default output columns have changed from
-      "UUID, OS, PUBLISHED, URN" to "UUID, NAME, VERSION, OS, PUBLISHED".
-      The image "urn" field is now deprecated, hence the change. The old
-      output can be achieved via: "imgadm list -o uuid,os,published,urn"
-    - The internal database dir has changed from "/var/db/imgadm" to
-      "/var/imgadm". One side-effect of this is that one can no longer edit
-      image sources by editing "/var/db/imgadm/sources.list". The "imgadm
-      sources" command should now be used for this.
-    - "imgadm info <uuid>" output no longer includes the (previously
-      undocumented) "volume" key.
+- "imgadm show <uuid>" no longer includes the non-standard "_url" field.
+  The equivalent data is now in the "source" field of "imgadm info
+  <uuid>".
+- "imgadm update" used to be required to fetch current available image
+  manifests from the image source(s). That is no longer required.
+  However, "imgadm update" remains (for backwards compat) and now fetches
+  image manifests for **locally install images that were not installed by
+  imgadm**. If there are none, then "imgadm update" is a no-op.
+- "imgadm list" default output columns have changed from
+  "UUID, OS, PUBLISHED, URN" to "UUID, NAME, VERSION, OS, PUBLISHED".
+  The image "urn" field is now deprecated, hence the change. The old
+  output can be achieved via: "imgadm list -o uuid,os,published,urn"
+- The internal database dir has changed from "/var/db/imgadm" to
+  "/var/imgadm". One side-effect of this is that one can no longer edit
+  image sources by editing "/var/db/imgadm/sources.list". The "imgadm
+  sources" command should now be used for this.
+- "imgadm info <uuid>" output no longer includes the (previously
+  undocumented) "volume" key.
+
+
+## ENVIRONMENT
+
+    IMGADM_INSECURE
+
+        Set to 1 to allow an imgadm source URL that uses HTTPS to a server
+        without a valid SSL certificate.
 
 
 ## EXIT STATUS

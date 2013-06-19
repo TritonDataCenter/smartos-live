@@ -42,7 +42,6 @@ var fs = require('fs');
 var util = require('util'),
     format = util.format;
 var assert = require('assert-plus');
-var dns = require('dns');
 var crypto = require('crypto');
 var async = require('async');
 var child_process = require('child_process'),
@@ -77,7 +76,6 @@ var DEFAULT_CONFIG = {};
 var VMADM_FS_NAME_RE = /^([a-zA-Z][a-zA-Z\._-]*)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(-disk\d+)?$/;
 var VMADM_IMG_NAME_RE = /^([a-zA-Z][a-zA-Z\._-]*)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-var IP_RE = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
 /* END JSSTYLED */
 
 
@@ -88,23 +86,6 @@ function _indent(s, indent) {
     if (!indent) indent = '    ';
     var lines = s.split(/\r?\n/g);
     return indent + lines.join('\n' + indent);
-}
-
-function ipFromHost(host, log, callback) {
-    if (IP_RE.test(host)) {
-        callback(null, host);
-        return;
-    }
-    // No DNS in SmartOS GZ by default, so handle DNS ourself.
-    log.trace({host: host}, 'dns lookup');
-    dns.lookup(host, function (err, ip) {
-        if (err) {
-            callback(new errors.InternalError(
-                {message: format('error DNS resolving %s: %s', host, err)}));
-            return;
-        }
-        callback(null, ip);
-    });
 }
 
 
@@ -314,8 +295,7 @@ function normUrlFromUrl(u) {
 
 /**
  * A light wrapper around an image source repository. A source has a
- * `url` and a `type` ("dsapi" or "imgapi"). `getResolvedUrl()` handles (lazy)
- * DNS resolution.
+ * `url` and a `type` ("dsapi" or "imgapi").
  *
  * @param options {Object} with these keys
  *      - url {String}
@@ -346,36 +326,6 @@ function Source(options) {
         }
     }
 }
-
-
-/**
- * Return a URL with DNS-resolved host
- *
- * @params callback {Function} `function (err, normUrl)`
- */
-Source.prototype.getResolvedUrl = function getResolvedUrl(callback) {
-    assert.func(callback, 'callback');
-
-    var self = this;
-    if (this._resolvedUrl) {
-        callback(null, this._resolvedUrl);
-        return;
-    }
-
-    var parsed = url.parse(this.normUrl);
-    self.log.trace({resolve: parsed.hostname}, 'DNS resolve source host');
-    ipFromHost(parsed.hostname, self.log, function (dnsErr, ip) {
-        if (dnsErr) {
-            callback(dnsErr);
-            return;
-        }
-        parsed.hostname = ip;
-        parsed.host = ip + (parsed.port ? ':' + parsed.port : '');
-        self._resolvedUrl = url.format(parsed);
-        callback(null, self._resolvedUrl);
-        return;
-    });
-};
 
 
 
@@ -747,29 +697,24 @@ IMGADM.prototype.clientFromSource = function clientFromSource(
         return;
     }
 
-    source.getResolvedUrl(function (normErr, normUrl) {
-        if (normErr) {
-            callback(normErr);
-            return;
-        }
-        if (source.type === 'dsapi') {
-            var baseNormUrl = path.dirname(normUrl); // drop 'datasets/' tail
-            self._clientCache[source.normUrl] = dsapi.createClient({
-                agent: false,
-                url: baseNormUrl,
-                log: self.log.child(
-                    {component: 'api', source: source.url}, true)
-            });
-        } else {
-            self._clientCache[source.normUrl] = imgapi.createClient({
-                agent: false,
-                url: normUrl,
-                log: self.log.child(
-                    {component: 'api', source: source.url}, true)
-            });
-        }
-        callback(null, self._clientCache[source.normUrl]);
-    });
+    var normUrl = source.normUrl;
+    if (source.type === 'dsapi') {
+        var baseNormUrl = path.dirname(normUrl); // drop 'datasets/' tail
+        self._clientCache[normUrl] = dsapi.createClient({
+            agent: false,
+            url: baseNormUrl,
+            log: self.log.child({component: 'api', source: source.url}, true),
+            rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1')
+        });
+    } else {
+        self._clientCache[normUrl] = imgapi.createClient({
+            agent: false,
+            url: normUrl,
+            log: self.log.child({component: 'api', source: source.url}, true),
+            rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1')
+        });
+    }
+    callback(null, self._clientCache[normUrl]);
 };
 
 

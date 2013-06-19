@@ -27,15 +27,12 @@
  */
 
 var format = require('util').format;
-var assert = require('assert-plus');
 var errors = require('./errors');
 
+
 var NAME = 'imgadm';
-var MANIFEST_V = 2;
 var DEFAULT_ZPOOL = 'zones';
 var DEFAULT_SOURCE = {type: 'imgapi', url: 'https://images.joyent.com'};
-
-var VALID_COMPRESSIONS = ['none', 'bzip2', 'gzip'];
 
 
 var _versionCache = null;
@@ -45,26 +42,12 @@ function getVersion() {
     return _versionCache;
 }
 
-function objCopy(obj, target) {
-    if (!target) {
-        target = {};
-    }
+function objCopy(obj) {
+    var copy = {};
     Object.keys(obj).forEach(function (k) {
-        target[k] = obj[k];
+        copy[k] = obj[k];
     });
-    return target;
-}
-
-/**
- * Merge the second object's keys into the first and return the first.
- *
- * Note: The first given object is modified in-place.
- */
-function objMerge(a, b) {
-    Object.keys(b).forEach(function (k) {
-        a[k] = b[k];
-    });
-    return a;
+    return copy;
 }
 
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -99,32 +82,16 @@ function boolFromString(value, default_, errName) {
     }
 }
 
-/**
- * Return a string suitable and convenient for a file name.
- */
-var _pathSlugifyString = /[^\w\s\._-]/g;
-var _pathSlugifyHyphenate = /[-\s]+/g;
-function pathSlugify(s) {
-    assert.string(s, 's');
-    s = s.replace(_pathSlugifyString, '').trim().toLowerCase();
-    s = s.replace(_pathSlugifyHyphenate, '-');
-    return s;
-}
-
 
 
 // ---- exports
 
 module.exports = {
     NAME: NAME,
-    MANIFEST_V: MANIFEST_V,
     DEFAULT_ZPOOL: DEFAULT_ZPOOL,
     DEFAULT_SOURCE: DEFAULT_SOURCE,
-    VALID_COMPRESSIONS: VALID_COMPRESSIONS,
     getVersion: getVersion,
     objCopy: objCopy,
-    objMerge: objMerge,
     assertUuid: assertUuid,
-    boolFromString: boolFromString,
-    pathSlugify: pathSlugify
+    boolFromString: boolFromString
 };

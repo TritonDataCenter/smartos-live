@@ -40,29 +40,29 @@ var vasync = require('vasync');
  * steps of the pipeline, keyed by function name.
  */
 function pipeline(opts, callback) {
-  var state = {};
-  var funcs = [];
+    var state = {};
+    var funcs = [];
 
-  opts['funcs'].forEach(function (fn, i) {
-    funcs.push(function (_, cb) {
-      var name = fn.name || 'func' + i;
+    opts['funcs'].forEach(function (fn, i) {
+        funcs.push(function (_, cb) {
+            var name = fn.name || 'func' + i;
 
-      fn(state, function (e, r) {
-        state[name] = r;
-        return cb(e, r);
-      });
+            fn(state, function (e, r) {
+                state[name] = r;
+                return cb(e, r);
+            });
+        });
     });
-  });
 
-  vasync.pipeline({
-    funcs: funcs
-  }, function (err, res) {
-    return callback(err, { results: res, state: state });
-  });
+    vasync.pipeline({
+        funcs: funcs
+    }, function (err, res) {
+        return callback(err, { results: res, state: state });
+    });
 }
 
 
 
 module.exports = {
-  pipeline: pipeline
+    pipeline: pipeline
 };

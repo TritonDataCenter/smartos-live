@@ -35,18 +35,18 @@ var printVMs = false;
 
 
 exports['setup'] = function (t) {
-  fw = mocks.setup();
-  t.ok(fw, 'fw loaded');
-  t.done();
+    fw = mocks.setup();
+    t.ok(fw, 'fw loaded');
+    t.done();
 };
 
 
 // run before every test
 exports.setUp = function (cb) {
-  if (fw) {
-    mocks.reset();
-  }
-  cb();
+    if (fw) {
+        mocks.reset();
+    }
+    cb();
 };
 
 
@@ -56,71 +56,73 @@ exports.setUp = function (cb) {
 
 
 exports['update non-existent rule'] = function (t) {
-  var vm = helpers.generateVM();
+    var vm = helpers.generateVM();
 
-  var payload = {
-    rules: [
-      {
-        rule: util.format('FROM vm %s TO any BLOCK tcp PORT 8080', vm.uuid),
-        uuid: mod_uuid.v4(),
-        enabled: true
-      }
-    ],
-    vms: [vm]
-  };
+    var payload = {
+        rules: [
+            {
+                rule: util.format('FROM vm %s TO any BLOCK tcp PORT 8080',
+                    vm.uuid),
+                uuid: mod_uuid.v4(),
+                enabled: true
+            }
+        ],
+        vms: [vm]
+    };
 
-  var expRules = [clone(payload.rules[0])];
-  var vmsEnabled = {};
-  var zoneRules;
+    var expRules = [clone(payload.rules[0])];
+    var vmsEnabled = {};
+    var zoneRules;
 
-  async.series([
-  function (cb) {
-    fw.update(payload, function (err) {
-      t.ok(err, 'Error returned');
-      return cb();
-    });
-
-  }, function (cb) {
-    payload.allowAdds = true;
-    fw.update(payload, function (err, res) {
-      t.ifError(err);
-      if (err) {
-        return cb();
-      }
-
-      t.ok(res.rules[0].uuid, 'rule has a uuid');
-      expRules[0].uuid = res.rules[0].uuid;
-
-      t.ok(res.rules[0].version, 'rule has a version');
-      expRules[0].version = res.rules[0].version;
-
-      t.deepEqual(res, {
-        rules: expRules,
-        vms: [ vm.uuid ]
-      }, 'rules returned');
-
-      zoneRules = helpers.defaultZoneRules(vm.uuid);
-      createSubObjects(zoneRules, vm.uuid, 'out', 'block', 'tcp',
-        {
-          any: [ 8080 ]
+    async.series([
+    function (cb) {
+        fw.update(payload, function (err) {
+            t.ok(err, 'Error returned');
+            return cb();
         });
 
-      t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
-        'firewall rules correct');
+    }, function (cb) {
+        payload.allowAdds = true;
+        fw.update(payload, function (err, res) {
+            t.ifError(err);
+            if (err) {
+                return cb();
+            }
 
-      vmsEnabled[vm.uuid] = true;
-      t.deepEqual(helpers.getIPFenabled(), vmsEnabled, 'ipf enabled in VMs');
+            t.ok(res.rules[0].uuid, 'rule has a uuid');
+            expRules[0].uuid = res.rules[0].uuid;
 
-      cb();
+            t.ok(res.rules[0].version, 'rule has a version');
+            expRules[0].version = res.rules[0].version;
+
+            t.deepEqual(res, {
+                rules: expRules,
+                vms: [ vm.uuid ]
+            }, 'rules returned');
+
+            zoneRules = helpers.defaultZoneRules(vm.uuid);
+            createSubObjects(zoneRules, vm.uuid, 'out', 'block', 'tcp',
+                {
+                    any: [ 8080 ]
+                });
+
+            t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
+                'firewall rules correct');
+
+            vmsEnabled[vm.uuid] = true;
+            t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
+                'ipf enabled in VMs');
+
+            cb();
+        });
+
+    }, function (cb) {
+        helpers.fwGetEquals(t, expRules[0], cb);
+    }
+
+    ], function () {
+            t.done();
     });
-
-  }, function (cb) {
-    helpers.fwGetEquals(t, expRules[0], cb);
-  }
-
-  ], function () {
-      t.done();
-  });
 };
 
 
@@ -130,17 +132,17 @@ exports['update non-existent rule'] = function (t) {
 
 
 exports['teardown'] = function (t) {
-  mocks.teardown();
-  t.done();
+    mocks.teardown();
+    t.done();
 };
 
 
 // Use to run only one test in this file:
 if (runOne) {
-  module.exports = {
-    setup: exports.setup,
-    setUp: exports.setUp,
-    oneTest: runOne,
-    teardown: exports.teardown
-  };
+    module.exports = {
+        setup: exports.setup,
+        setUp: exports.setUp,
+        oneTest: runOne,
+        teardown: exports.teardown
+    };
 }

@@ -47,7 +47,7 @@ var IPFSTAT = '/usr/sbin/ipfstat';
  * Trims spaces from both sides of a string
  */
 function trim(str) {
-  return str.replace(/^\s+/, '').replace(/\s+$/, '');
+    return str.replace(/^\s+/, '').replace(/\s+$/, '');
 }
 
 
@@ -55,14 +55,14 @@ function trim(str) {
  * Actually runs the ipfilter executable, logging as appropriate
  */
 function ipf(args, log, callback) {
-  return execFile(IPF, args, function (err, stdout, stderr) {
-    var res = { stdout: stdout, stderr: stderr };
-    if (log) {
-      log.debug(res, 'ipf: "%s %s"', IPF, args.join(' '));
-    }
+    return execFile(IPF, args, function (err, stdout, stderr) {
+        var res = { stdout: stdout, stderr: stderr };
+        if (log) {
+            log.debug(res, 'ipf: "%s %s"', IPF, args.join(' '));
+        }
 
-    return callback(err, res);
-  });
+        return callback(err, res);
+    });
 }
 
 
@@ -70,14 +70,14 @@ function ipf(args, log, callback) {
  * Actually runs the ipfstat executable, logging as appropriate
  */
 function ipfstat(args, log, callback) {
-  return execFile(IPFSTAT, args, function (err, stdout, stderr) {
-    var res = { stdout: stdout, stderr: stderr };
-    if (log) {
-      log.debug(res, 'ipfstat: "%s %s"', IPFSTAT, args.join(' '));
-    }
+    return execFile(IPFSTAT, args, function (err, stdout, stderr) {
+        var res = { stdout: stdout, stderr: stderr };
+        if (log) {
+            log.debug(res, 'ipfstat: "%s %s"', IPFSTAT, args.join(' '));
+        }
 
-    return callback(err, res);
-  });
+        return callback(err, res);
+    });
 }
 
 
@@ -95,28 +95,28 @@ function ipfstat(args, log, callback) {
  * @param callback {Function} : `function (err, res)`
  */
 function zoneReload(uuid, conf, log, callback) {
-  assert.string(uuid, 'uuid');
-  assert.string(conf, 'conf');
-  assert.object(log, 'log');
-  assert.func(callback, 'callback');
+    assert.string(uuid, 'uuid');
+    assert.string(conf, 'conf');
+    assert.object(log, 'log');
+    assert.func(callback, 'callback');
 
-  // Flush (-F) all (-a) rules from the inactive list (-I)
-  return ipf(['-IFa', uuid], log, function (err, res) {
-    if (err) {
-      return callback(err, res);
-    }
+    // Flush (-F) all (-a) rules from the inactive list (-I)
+    return ipf(['-IFa', uuid], log, function (err, res) {
+        if (err) {
+            return callback(err, res);
+        }
 
-    // Load rules from conf (-f) into the inactive list (-I)
-    return ipf(['-I', '-f', conf, uuid], log, function (err2, res2) {
-      if (err2) {
-        return callback(err2, res2);
-      }
+        // Load rules from conf (-f) into the inactive list (-I)
+        return ipf(['-I', '-f', conf, uuid], log, function (err2, res2) {
+            if (err2) {
+                return callback(err2, res2);
+            }
 
-      // Swap (-s) the active and inactive lists, and update the interface
-      // list (-y)
-      return ipf(['-s', '-y', uuid], log, callback);
+            // Swap (-s) the active and inactive lists, and update the interface
+            // list (-y)
+            return ipf(['-s', '-y', uuid], log, callback);
+        });
     });
-  });
 }
 
 
@@ -128,30 +128,30 @@ function zoneReload(uuid, conf, log, callback) {
  * @param callback {Function} : `function (err, res)`
  */
 function zoneRuleStats(uuid, log, callback) {
-  assert.string(uuid, 'uuid');
-  assert.object(log, 'log');
-  assert.func(callback, 'callback');
+    assert.string(uuid, 'uuid');
+    assert.object(log, 'log');
+    assert.func(callback, 'callback');
 
-  return ipfstat(['-hoi', '-z', uuid], log, function (err, res) {
-    if (!res.stdout) {
-      return callback(new Error('No output from ipfstat'), res);
-    }
+    return ipfstat(['-hoi', '-z', uuid], log, function (err, res) {
+        if (!res.stdout) {
+            return callback(new Error('No output from ipfstat'), res);
+        }
 
-    var results = [];
-    res.stdout.split('\n').forEach(function (line) {
-      if (line === '') {
-        return;
-      }
+        var results = [];
+        res.stdout.split('\n').forEach(function (line) {
+            if (line === '') {
+                return;
+            }
 
-      var idx = line.indexOf(' ');
-      results.push({
-        hits: line.substring(0, idx),
-        rule: line.substring(idx + 1)
-      });
+            var idx = line.indexOf(' ');
+            results.push({
+                hits: line.substring(0, idx),
+                rule: line.substring(idx + 1)
+            });
+        });
+
+        return callback(null, results);
     });
-
-    return callback(null, results);
-  });
 }
 
 
@@ -163,54 +163,54 @@ function zoneRuleStats(uuid, log, callback) {
  * @param callback {Function} : `function (err, res)`
  */
 function zoneStatus(uuid, log, callback) {
-  assert.string(uuid, 'uuid');
-  assert.object(log, 'log');
-  assert.func(callback, 'callback');
+    assert.string(uuid, 'uuid');
+    assert.object(log, 'log');
+    assert.func(callback, 'callback');
 
-  return ipf(['-V', uuid], log, function (err, res) {
-    if (err) {
-      return callback(err, res);
-    }
-
-    if (!res.stdout) {
-      return callback(new Error('No output from ipf'), res);
-    }
-
-    var i;
-    var results = {};
-    var lines = res.stdout.split('\n');
-    for (i in lines) {
-      var idx = lines[i].indexOf(':');
-      var key = lines[i].substr(0, idx).toLowerCase();
-      var val = trim(lines[i].substr(idx + 1));
-      if (!key) {
-        continue;
-      }
-
-      switch (key) {
-      case 'ipf':
-      case 'kernel':
-        val = val.replace('IP Filter: ', '');
-        break;
-      case 'running':
-        if (val == 'no') {
-          val = false;
-        } else {
-          val = true;
+    return ipf(['-V', uuid], log, function (err, res) {
+        if (err) {
+            return callback(err, res);
         }
-        break;
-      case 'active list':
-        val = Number(val);
-        break;
-      default:
-        break;
-      }
 
-      results[key] = val;
-    }
+        if (!res.stdout) {
+            return callback(new Error('No output from ipf'), res);
+        }
 
-    return callback(null, results);
-  });
+        var i;
+        var results = {};
+        var lines = res.stdout.split('\n');
+        for (i in lines) {
+            var idx = lines[i].indexOf(':');
+            var key = lines[i].substr(0, idx).toLowerCase();
+            var val = trim(lines[i].substr(idx + 1));
+            if (!key) {
+                continue;
+            }
+
+            switch (key) {
+            case 'ipf':
+            case 'kernel':
+                val = val.replace('IP Filter: ', '');
+                break;
+            case 'running':
+                if (val == 'no') {
+                    val = false;
+                } else {
+                    val = true;
+                }
+                break;
+            case 'active list':
+                val = Number(val);
+                break;
+            default:
+                break;
+            }
+
+            results[key] = val;
+        }
+
+        return callback(null, results);
+    });
 }
 
 
@@ -222,11 +222,11 @@ function zoneStatus(uuid, log, callback) {
  * @param callback {Function} : `function (err, res)`
  */
 function zoneStart(uuid, log, callback) {
-  assert.string(uuid, 'uuid');
-  assert.object(log, 'log');
-  assert.func(callback, 'callback');
+    assert.string(uuid, 'uuid');
+    assert.object(log, 'log');
+    assert.func(callback, 'callback');
 
-  return ipf(['-E', uuid], log, callback);
+    return ipf(['-E', uuid], log, callback);
 }
 
 
@@ -238,21 +238,21 @@ function zoneStart(uuid, log, callback) {
  * @param callback {Function} : `function (err, res)`
  */
 function zoneStop(uuid, log, callback) {
-  assert.string(uuid, 'uuid');
-  assert.object(log, 'log');
-  assert.func(callback, 'callback');
+    assert.string(uuid, 'uuid');
+    assert.object(log, 'log');
+    assert.func(callback, 'callback');
 
-  return ipf(['-D', uuid], log, callback);
+    return ipf(['-D', uuid], log, callback);
 }
 
 
 
 module.exports = {
-  ipf: ipf,
-  ipfstat: ipfstat,
-  reload: zoneReload,
-  ruleStats: zoneRuleStats,
-  status: zoneStatus,
-  start: zoneStart,
-  stop: zoneStop
+    ipf: ipf,
+    ipfstat: ipfstat,
+    reload: zoneReload,
+    ruleStats: zoneRuleStats,
+    status: zoneStatus,
+    start: zoneStart,
+    stop: zoneStop
 };

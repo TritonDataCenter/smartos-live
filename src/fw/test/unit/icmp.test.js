@@ -34,18 +34,18 @@ var runOne;
 
 
 exports['setup'] = function (t) {
-  fw = mocks.setup();
-  t.ok(fw, 'fw loaded');
-  t.done();
+    fw = mocks.setup();
+    t.ok(fw, 'fw loaded');
+    t.done();
 };
 
 
 // run before every test
 exports.setUp = function (cb) {
-  if (fw) {
-    mocks.reset();
-  }
-  cb();
+    if (fw) {
+        mocks.reset();
+    }
+    cb();
 };
 
 
@@ -55,160 +55,163 @@ exports.setUp = function (cb) {
 
 
 exports['add / update'] = function (t) {
-  var vm = helpers.generateVM();
-  var payload = {
-    rules: [
-      {
-        rule: util.format('FROM ip 10.99.99.254 TO vm %s ALLOW icmp '
-                + 'TYPE 8', vm.uuid),
-        enabled: true
-      }
-    ],
-    vms: [vm]
-  };
+    var vm = helpers.generateVM();
+    var payload = {
+        rules: [
+            {
+                rule: util.format('FROM ip 10.99.99.254 TO vm %s ALLOW icmp '
+                                + 'TYPE 8', vm.uuid),
+                enabled: true
+            }
+        ],
+        vms: [vm]
+    };
 
-  var expRule = clone(payload.rules[0]);
-  var vmsEnabled = {};
-  var zoneIPFrules = helpers.defaultZoneRules(vm.uuid);
+    var expRule = clone(payload.rules[0]);
+    var vmsEnabled = {};
+    var zoneIPFrules = helpers.defaultZoneRules(vm.uuid);
 
-  async.series([
-  function (cb) {
-    fw.add(payload, function (err, res) {
-      t.ifError(err);
-      if (err) {
-        return cb();
-      }
+    async.series([
+    function (cb) {
+        fw.add(payload, function (err, res) {
+            t.ifError(err);
+            if (err) {
+                return cb();
+            }
 
-      t.ok(res.rules[0].uuid, 'rule has a uuid');
-      expRule.uuid = res.rules[0].uuid;
-      t.ok(res.rules[0].version, 'rule has a version');
-      expRule.version = res.rules[0].version;
+            t.ok(res.rules[0].uuid, 'rule has a uuid');
+            expRule.uuid = res.rules[0].uuid;
+            t.ok(res.rules[0].version, 'rule has a version');
+            expRule.version = res.rules[0].version;
 
-      t.deepEqual(res, {
-        vms: [ vm.uuid ],
-        rules: [ expRule ]
-      }, 'rules returned');
+            t.deepEqual(res, {
+                vms: [ vm.uuid ],
+                rules: [ expRule ]
+            }, 'rules returned');
 
-      createSubObjects(zoneIPFrules, vm.uuid, 'in', 'pass', 'icmp',
-        {
-          '10.99.99.254': [ '8' ]
+            createSubObjects(zoneIPFrules, vm.uuid, 'in', 'pass', 'icmp',
+                {
+                    '10.99.99.254': [ '8' ]
+                });
+
+            t.deepEqual(helpers.zoneIPFconfigs(), zoneIPFrules,
+                'zone ipf.conf files correct');
+
+            vmsEnabled[vm.uuid] = true;
+            t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
+                'ipf enabled in VMs');
+
+            cb();
         });
 
-      t.deepEqual(helpers.zoneIPFconfigs(), zoneIPFrules,
-        'zone ipf.conf files correct');
+    }, function (cb) {
+        helpers.fwGetEquals(t, expRule, cb);
 
-      vmsEnabled[vm.uuid] = true;
-      t.deepEqual(helpers.getIPFenabled(), vmsEnabled, 'ipf enabled in VMs');
+    }, function (cb) {
+        helpers.fwListEquals(t, [expRule], cb);
 
-      cb();
+    }, function (cb) {
+        var updatePayload = {
+            rules: [
+                {
+                    rule: util.format('FROM ip 10.99.99.254 TO vm %s ALLOW '
+                                    + 'icmp TYPE 8 CODE 0', vm.uuid),
+                    uuid: expRule.uuid
+                }
+            ],
+            vms: [vm]
+        };
+
+        fw.update(updatePayload, function (err, res) {
+            t.ifError(err);
+            if (err) {
+                return cb();
+            }
+
+            t.ok(res.rules[0].version, 'rule has a version');
+            expRule.version = res.rules[0].version;
+            expRule.rule = res.rules[0].rule;
+
+            t.deepEqual(res, {
+                vms: [ vm.uuid ],
+                rules: [ expRule ]
+            }, 'rules returned');
+
+            zoneIPFrules[vm.uuid].in.pass.icmp['10.99.99.254'] = [ '8:0' ];
+            t.deepEqual(helpers.zoneIPFconfigs(), zoneIPFrules,
+                'zone ipf.conf files correct');
+
+            t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
+                'ipf still enabled');
+
+            cb();
+        });
+
+    }, function (cb) {
+        helpers.fwGetEquals(t, expRule, cb);
+
+    }, function (cb) {
+        helpers.fwListEquals(t, [expRule], cb);
+
+    }, function (cb) {
+        helpers.fwRulesEqual({
+            t: t,
+            rules: [ expRule ],
+            vm: vm,
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
+        // Disabling and re-enabling the firewall should have no effect on the
+        // zone rules
+        helpers.testEnableDisable({
+            t: t,
+            vm: vm,
+            vms: [vm]
+        }, cb);
+    }, function (cb) {
+        // Delete the rule - the firewall should remain running, but only the
+        // default rules should remain
+
+        var delPayload = {
+            uuids: [ expRule.uuid ],
+            vms: [vm]
+        };
+
+        fw.del(delPayload, function (err, res) {
+            t.ifError(err);
+            if (err) {
+                return cb();
+            }
+
+            t.deepEqual(res, {
+                vms: [ vm.uuid ],
+                rules: [ expRule ]
+            }, 'results returned');
+
+            t.deepEqual(helpers.zoneIPFconfigs(),
+                helpers.defaultZoneRules(vm.uuid),
+                'only default firewall rules left in zone');
+
+            vmsEnabled[vm.uuid] = true;
+            t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
+                'ipf still enabled in VM');
+
+            cb();
+        });
+
+    }, function (cb) {
+        helpers.fwRulesEqual({
+            t: t,
+            rules: [ ],
+            vm: vm,
+            vms: [vm]
+        }, cb);
+    }
+
+    ], function () {
+            t.done();
     });
-
-  }, function (cb) {
-    helpers.fwGetEquals(t, expRule, cb);
-
-  }, function (cb) {
-    helpers.fwListEquals(t, [expRule], cb);
-
-  }, function (cb) {
-    var updatePayload = {
-      rules: [
-        {
-          rule: util.format('FROM ip 10.99.99.254 TO vm %s ALLOW icmp '
-                  + 'TYPE 8 CODE 0', vm.uuid),
-          uuid: expRule.uuid
-        }
-      ],
-      vms: [vm]
-    };
-
-    fw.update(updatePayload, function (err, res) {
-      t.ifError(err);
-      if (err) {
-        return cb();
-      }
-
-      t.ok(res.rules[0].version, 'rule has a version');
-      expRule.version = res.rules[0].version;
-      expRule.rule = res.rules[0].rule;
-
-      t.deepEqual(res, {
-        vms: [ vm.uuid ],
-        rules: [ expRule ]
-      }, 'rules returned');
-
-      zoneIPFrules[vm.uuid].in.pass.icmp['10.99.99.254'] = [ '8:0' ];
-      t.deepEqual(helpers.zoneIPFconfigs(), zoneIPFrules,
-        'zone ipf.conf files correct');
-
-      t.deepEqual(helpers.getIPFenabled(), vmsEnabled, 'ipf still enabled');
-
-      cb();
-    });
-
-  }, function (cb) {
-    helpers.fwGetEquals(t, expRule, cb);
-
-  }, function (cb) {
-    helpers.fwListEquals(t, [expRule], cb);
-
-  }, function (cb) {
-    helpers.fwRulesEqual({
-      t: t,
-      rules: [ expRule ],
-      vm: vm,
-      vms: [vm]
-    }, cb);
-
-  }, function (cb) {
-    // Disabling and re-enabling the firewall should have no effect on the
-    // zone rules
-    helpers.testEnableDisable({
-      t: t,
-      vm: vm,
-      vms: [vm]
-    }, cb);
-  }, function (cb) {
-    // Delete the rule - the firewall should remain running, but only the
-    // default rules should remain
-
-    var delPayload = {
-      uuids: [ expRule.uuid ],
-      vms: [vm]
-    };
-
-    fw.del(delPayload, function (err, res) {
-      t.ifError(err);
-      if (err) {
-        return cb();
-      }
-
-      t.deepEqual(res, {
-        vms: [ vm.uuid ],
-        rules: [ expRule ]
-      }, 'results returned');
-
-      t.deepEqual(helpers.zoneIPFconfigs(), helpers.defaultZoneRules(vm.uuid),
-        'only default firewall rules left in zone');
-
-      vmsEnabled[vm.uuid] = true;
-      t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
-        'ipf still enabled in VM');
-
-      cb();
-    });
-
-  }, function (cb) {
-    helpers.fwRulesEqual({
-      t: t,
-      rules: [ ],
-      vm: vm,
-      vms: [vm]
-    }, cb);
-  }
-
-  ], function () {
-      t.done();
-  });
 };
 
 
@@ -218,17 +221,17 @@ exports['add / update'] = function (t) {
 
 
 exports['teardown'] = function (t) {
-  mocks.teardown();
-  t.done();
+    mocks.teardown();
+    t.done();
 };
 
 
 // Use to run only one test in this file:
 if (runOne) {
-  module.exports = {
-    setup: exports.setup,
-    setUp: exports.setUp,
-    oneTest: runOne,
-    teardown: exports.teardown
-  };
+    module.exports = {
+        setup: exports.setup,
+        setUp: exports.setUp,
+        oneTest: runOne,
+        teardown: exports.teardown
+    };
 }

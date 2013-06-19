@@ -54,14 +54,14 @@ var RINGBUFFER = new bunyan.RingBuffer({ limit: 50 });
  * Bunyan serializer for a firewall rule
  */
 function fullRuleSerializer(rules) {
-  var res = {};
-  for (var r in rules) {
-    res[rules[r].uuid] = rules[r].toString();
-  }
+    var res = {};
+    for (var r in rules) {
+        res[rules[r].uuid] = rules[r].toString();
+    }
 
-  return Object.keys(res).map(function (u) {
-    return res[u];
-  });
+    return Object.keys(res).map(function (u) {
+        return res[u];
+    });
 }
 
 
@@ -69,12 +69,12 @@ function fullRuleSerializer(rules) {
  * Bunyan serializer for just the rule UUID
  */
 function ruleSerializer(rules) {
-  var res = {};
-  for (var r in rules) {
-    res[rules[r].uuid] = rules[r].toString();
-  }
+    var res = {};
+    for (var r in rules) {
+        res[rules[r].uuid] = rules[r].toString();
+    }
 
-  return Object.keys(res);
+    return Object.keys(res);
 }
 
 
@@ -82,12 +82,13 @@ function ruleSerializer(rules) {
  * Bunyan serializer for just the VM UUID
  */
 function vmSerializer(vms) {
-  // Returning from add, update, etc, vms is a list of VM UUIDs
-  if (typeof (vms) === 'object' && vms.length && typeof (vms[0]) === 'string') {
-    return vms;
-  }
+    // Returning from add, update, etc, vms is a list of VM UUIDs
+    if (typeof (vms) === 'object' && vms.length
+        && typeof (vms[0]) === 'string') {
+        return vms;
+    }
 
-  return Object.keys(vms);
+    return Object.keys(vms);
 }
 
 
@@ -95,73 +96,73 @@ function vmSerializer(vms) {
  * Create logger
  */
 function createLogger(opts) {
-  if (!opts) {
-    opts = {};
-  }
+    if (!opts) {
+        opts = {};
+    }
 
-  // XXX: allow upgrading from readOnly to writing
+    // XXX: allow upgrading from readOnly to writing
 
-  if (LOG) {
-    return LOG;
-  }
+    if (LOG) {
+        return LOG;
+    }
 
-  var logName = 'fwadm';
-  var logLevel = 'debug';
-  var streams = [];
+    var logName = 'fwadm';
+    var logLevel = 'debug';
+    var streams = [];
 
-  // XXX: allow logging to stderr
-  if (opts.action) {
-    logName = opts.action;
-  }
+    // XXX: allow logging to stderr
+    if (opts.action) {
+        logName = opts.action;
+    }
 
-  if (opts.logName) {
-    logName = opts.logName;
-  }
+    if (opts.logName) {
+        logName = opts.logName;
+    }
 
-  if (opts.logLevel) {
-    logLevel = opts.logLevel;
-  }
+    if (opts.logLevel) {
+        logLevel = opts.logLevel;
+    }
 
-  var filename = util.format('%s/%s-%s-%s.log',
-      LOG_DIR, Date.now(0), sprintf('%06d', process.pid), logName);
+    var filename = util.format('%s/%s-%s-%s.log',
+            LOG_DIR, Date.now(0), sprintf('%06d', process.pid), logName);
 
-  if (opts.readOnly) {
+    if (opts.readOnly) {
+        streams.push({
+            type: 'raw',
+            stream: new OpenOnErrorFileStream(filename),
+            level: logLevel
+        });
+    } else {
+        streams.push({ level: logLevel, path: filename });
+    }
+
+    // Add the ringbuffer which we'll dump if we switch from not writing to
+    // writing, and so that they'll show up in dumps.
     streams.push({
-      type: 'raw',
-      stream: new OpenOnErrorFileStream(filename),
-      level: logLevel
+            level: 'trace',
+            type: 'raw',
+            stream: RINGBUFFER
     });
-  } else {
-    streams.push({ level: logLevel, path: filename });
-  }
 
-  // Add the ringbuffer which we'll dump if we switch from not writing to
-  // writing, and so that they'll show up in dumps.
-  streams.push({
-      level: 'trace',
-      type: 'raw',
-      stream: RINGBUFFER
-  });
+    mkdirp.sync(LOG_DIR);
 
-  mkdirp.sync(LOG_DIR);
+    if (opts.log) {
+        LOG = opts.log.child({ component: 'fw', streams: streams });
+        return;
+    }
 
-  if (opts.log) {
-    LOG = opts.log.child({ component: 'fw', streams: streams });
-    return;
-  }
+    LOG = bunyan.createLogger({
+        name: 'fw',
+        serializers: {
+            err: bunyan.stdSerializers.err,
+            fullRules: fullRuleSerializer,
+            rules: ruleSerializer,
+            vms: vmSerializer
+        },
+        streams: streams
+    });
 
-  LOG = bunyan.createLogger({
-    name: 'fw',
-    serializers: {
-      err: bunyan.stdSerializers.err,
-      fullRules: fullRuleSerializer,
-      rules: ruleSerializer,
-      vms: vmSerializer
-    },
-    streams: streams
-  });
-
-  return LOG;
+    return LOG;
 }
 
 
@@ -208,7 +209,7 @@ OpenOnErrorFileStream.prototype.write1 = function (rec) {
 
     if (rec.level >= bunyan.ERROR || LOG_TO_FILE) {
         this.stream = fs.createWriteStream(this.path,
-            {flags: 'a', encoding: 'utf8'});
+                {flags: 'a', encoding: 'utf8'});
         this.end = this.stream.end;
         this.on = this.stream.on;
         this.once = this.stream.once;
@@ -216,10 +217,10 @@ OpenOnErrorFileStream.prototype.write1 = function (rec) {
         // dump out logs from ringbuffer too since there was an error so we can
         // figure out what's going on.
         for (r in RINGBUFFER.records) {
-            r = RINGBUFFER.records[r];
-            if (r != rec) {
-                this.write(r);
-            }
+                r = RINGBUFFER.records[r];
+                if (r != rec) {
+                        this.write(r);
+                }
         }
 
         this.write(rec);
@@ -244,52 +245,54 @@ OpenOnErrorFileStream.prototype.write2 = function (rec) {
  * properties in opts that we know to be too big to log (eg: VMs).
  */
 function logEntry(opts, action) {
-  opts.action = action;
+    opts.action = action;
 
-  var localVMs;
-  var log;
-  var rules;
-  var vms;
+    var localVMs;
+    var log;
+    var rules;
+    var vms;
 
-  if (opts.localVMs) {
-    localVMs = opts.localVMs;
-    opts.localVMs = opts.localVMs.map(function (vm) {
-      return vm.uuid || '<unknown>'; });
-  }
+    if (opts.localVMs) {
+        localVMs = opts.localVMs;
+        opts.localVMs = opts.localVMs.map(function (vm) {
+            return vm.uuid || '<unknown>'; });
+    }
 
-  if (opts.log) {
-    log = opts.log;
-    delete opts.log;
-  }
+    if (opts.log) {
+        log = opts.log;
+        delete opts.log;
+    }
 
-  if (opts.rules) {
-    rules = opts.rules;
-    opts.inputRules = opts.rules;
-    delete opts.rules;
-  }
+    if (opts.rules) {
+        rules = opts.rules;
+        opts.inputRules = opts.rules;
+        delete opts.rules;
+    }
 
-  if (opts.vms) {
-    vms = opts.vms;
-    opts.vms = opts.vms.map(function (vm) { return vm.uuid || '<unknown>'; });
-  }
+    if (opts.vms) {
+        vms = opts.vms;
+        opts.vms = opts.vms.map(function (vm) {
+            return vm.uuid || '<unknown>';
+        });
+    }
 
-  createLogger(opts);
-  LOG.debug(opts, '%s: entry', action);
+    createLogger(opts);
+    LOG.debug(opts, '%s: entry', action);
 
-  if (localVMs) {
-    opts.localVMs = localVMs;
-  }
-  if (log) {
-    opts.log = log;
-  }
-  if (rules) {
-    opts.rules = rules;
-  }
-  if (vms) {
-    opts.vms = vms;
-  }
+    if (localVMs) {
+        opts.localVMs = localVMs;
+    }
+    if (log) {
+        opts.log = log;
+    }
+    if (rules) {
+        opts.rules = rules;
+    }
+    if (vms) {
+        opts.vms = vms;
+    }
 
-  return LOG;
+    return LOG;
 }
 
 
@@ -297,37 +300,37 @@ function logEntry(opts, action) {
  * Flush all open log streams
  */
 function flushLogs(callback) {
-  if (!LOG) {
-    return callback();
-  }
-
-  vasync.forEachParallel({
-    inputs: LOG.streams,
-    func: function _closeStream(str, cb) {
-      if (!str || !str.stream) {
-        return cb();
-      }
-
-      var returned = false;
-      str.stream.once('drain', function () {
-        if (!returned) {
-          return cb();
-        }
-      });
-
-      if (str.stream.write('')) {
-        returned = true;
-        return cb();
-      }
+    if (!LOG) {
+        return callback();
     }
-  }, function _doneClose(err) {
-    return callback(err);
-  });
+
+    vasync.forEachParallel({
+        inputs: LOG.streams,
+        func: function _closeStream(str, cb) {
+            if (!str || !str.stream) {
+                return cb();
+            }
+
+            var returned = false;
+            str.stream.once('drain', function () {
+                if (!returned) {
+                    return cb();
+                }
+            });
+
+            if (str.stream.write('')) {
+                returned = true;
+                return cb();
+            }
+        }
+    }, function _doneClose(err) {
+        return callback(err);
+    });
 }
 
 
 
 module.exports = {
-  entry: logEntry,
-  flush: flushLogs
+    entry: logEntry,
+    flush: flushLogs
 };

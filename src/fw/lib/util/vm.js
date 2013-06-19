@@ -39,57 +39,57 @@ var VError = require('verror').VError;
  * Creates a remote VM object based on a VM.js VM object
  */
 function createRemoteVM(vm) {
-  var err;
-  var ips = {};
-  var rvm = {};
-  var uuid = vm.uuid;
+    var err;
+    var ips = {};
+    var rvm = {};
+    var uuid = vm.uuid;
 
-  if (!uuid) {
-    err = new VError('Remote VM must have UUID');
-    err.details = vm;
-    throw err;
-  }
-  rvm.uuid = uuid;
-
-  if (vm.hasOwnProperty('nics')) {
-    vm.nics.forEach(function (nic) {
-      if (nic.hasOwnProperty('ip') && nic.ip !== 'dhcp') {
-        ips[nic.ip] = 1;
-      }
-    });
-  }
-
-  if (vm.hasOwnProperty('ips')) {
-    vm.ips.forEach(function (ip) {
-      ips[ip] = 1;
-    });
-  }
-
-  if (objEmpty(ips)) {
-    err = new VError(
-      'Remote VM "%s": missing IPs', uuid);
-    err.details = vm;
-    throw err;
-  }
-
-  rvm.ips = Object.keys(ips).sort();
-
-  if (vm.hasOwnProperty('tags') && !objEmpty(vm.tags)) {
-    rvm.tags = {};
-    for (var t in vm.tags) {
-      rvm.tags[t] = vm.tags[t];
+    if (!uuid) {
+        err = new VError('Remote VM must have UUID');
+        err.details = vm;
+        throw err;
     }
-  }
+    rvm.uuid = uuid;
 
-  if (vm.hasOwnProperty('owner_uuid')) {
-    // XXX: validate UUID
-    rvm.owner_uuid = vm.owner_uuid;
-  }
+    if (vm.hasOwnProperty('nics')) {
+        vm.nics.forEach(function (nic) {
+            if (nic.hasOwnProperty('ip') && nic.ip !== 'dhcp') {
+                ips[nic.ip] = 1;
+            }
+        });
+    }
 
-  return rvm;
+    if (vm.hasOwnProperty('ips')) {
+        vm.ips.forEach(function (ip) {
+            ips[ip] = 1;
+        });
+    }
+
+    if (objEmpty(ips)) {
+        err = new VError(
+            'Remote VM "%s": missing IPs', uuid);
+        err.details = vm;
+        throw err;
+    }
+
+    rvm.ips = Object.keys(ips).sort();
+
+    if (vm.hasOwnProperty('tags') && !objEmpty(vm.tags)) {
+        rvm.tags = {};
+        for (var t in vm.tags) {
+            rvm.tags[t] = vm.tags[t];
+        }
+    }
+
+    if (vm.hasOwnProperty('owner_uuid')) {
+        // XXX: validate UUID
+        rvm.owner_uuid = vm.owner_uuid;
+    }
+
+    return rvm;
 }
 
 
 module.exports = {
-  createRemoteVM: createRemoteVM
+    createRemoteVM: createRemoteVM
 };

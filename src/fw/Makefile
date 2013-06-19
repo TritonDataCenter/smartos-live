@@ -34,7 +34,7 @@ JS_CHECK_TARGETS=\
 #
 # Tool options
 #
-JSSTYLE_OPTS = -o indent=2,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1
+JSSTYLE_OPTS = -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1
 
 #
 # Repo-specific targets

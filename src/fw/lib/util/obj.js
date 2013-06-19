@@ -39,21 +39,21 @@
  * for the value of the most deeply nested object.
  */
 function createSubObjects() {
-  var h = arguments[0];
-  var prev = {};
-  for (var i = 1; i < arguments.length; i++) {
-    if (typeof (arguments[i]) === 'object') {
-      prev[arguments[i - 1]] = arguments[i];
-      return;
-    }
+    var h = arguments[0];
+    var prev = {};
+    for (var i = 1; i < arguments.length; i++) {
+        if (typeof (arguments[i]) === 'object') {
+            prev[arguments[i - 1]] = arguments[i];
+            return;
+        }
 
-    if (!h.hasOwnProperty(arguments[i])) {
-      h[arguments[i]] = {};
+        if (!h.hasOwnProperty(arguments[i])) {
+            h[arguments[i]] = {};
+        }
+        prev = h;
+        h = h[arguments[i]];
     }
-    prev = h;
-    h = h[arguments[i]];
-  }
-  return h;
+    return h;
 }
 
 
@@ -61,9 +61,9 @@ function createSubObjects() {
  * For object obj, calls callback(key, val)
  */
 function forEachKey(obj, callback) {
-  for (var key in obj) {
-    callback(key, obj[key]);
-  }
+    for (var key in obj) {
+        callback(key, obj[key]);
+    }
 }
 
 
@@ -71,11 +71,11 @@ function forEachKey(obj, callback) {
  * Returns true if the object is an array
  */
 function isArray(obj) {
-  if (typeof (obj) == 'object' && obj.hasOwnProperty('length')) {
-    return true;
-  }
+    if (typeof (obj) == 'object' && obj.hasOwnProperty('length')) {
+        return true;
+    }
 
-  return false;
+    return false;
 }
 
 
@@ -84,13 +84,13 @@ function isArray(obj) {
  * conflict, obj1 wins.
  */
 function mergeObjects(obj1, obj2) {
-  var newObj = {};
-  [obj2, obj1].forEach(function (h) {
-    for (var k in h) {
-      newObj[k] = h[k];
-    }
-  });
-  return newObj;
+    var newObj = {};
+    [obj2, obj1].forEach(function (h) {
+        for (var k in h) {
+            newObj[k] = h[k];
+        }
+    });
+    return newObj;
 }
 
 
@@ -98,23 +98,23 @@ function mergeObjects(obj1, obj2) {
  * Returns true if the object has no keys
  */
 function objEmpty(obj) {
-  /* JSSTYLED */
-  /*jsl:ignore*/
-  for (var k in obj) {
-    return false;
-  }
-  /* JSSTYLED */
-  /*jsl:end*/
+    /* JSSTYLED */
+    /*jsl:ignore*/
+    for (var k in obj) {
+        return false;
+    }
+    /* JSSTYLED */
+    /*jsl:end*/
 
-  return true;
+    return true;
 }
 
 
 
 module.exports = {
-  createSubObjects: createSubObjects,
-  forEachKey: forEachKey,
-  isArray: isArray,
-  mergeObjects: mergeObjects,
-  objEmpty: objEmpty
+    createSubObjects: createSubObjects,
+    forEachKey: forEachKey,
+    isArray: isArray,
+    mergeObjects: mergeObjects,
+    objEmpty: objEmpty
 };

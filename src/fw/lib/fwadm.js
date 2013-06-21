@@ -308,11 +308,7 @@ Fwadm.prototype.do_get = function (subcmd, opts, args, callback) {
             return cli.exitWithErr(err, opts);
         }
 
-        if (opts && opts.json) {
-            return console.log(cli.json(rule));
-        }
-
-        return console.log(cli.ruleLine(rule));
+        return console.log(cli.json(rule));
     });
 };
 

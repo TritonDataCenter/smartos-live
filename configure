@@ -232,6 +232,8 @@ function generate_env
 		debug=2
 	elif [[ "$ILLUMOS_ENABLE_DEBUG" == "yes" ]]; then
 		debug=1
+	elif [[ "$ILLUMOS_ENABLE_DEBUG" == "no" ]]; then
+		debug=
 	elif [[ -n "$ILLUMOS_ENABLE_DEBUG" ]]; then
 		fatal "Unknown value for $ILLUMOS_ENABLE_DEBUG"
 	fi

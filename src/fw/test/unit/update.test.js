@@ -126,6 +126,22 @@ exports['update non-existent rule'] = function (t) {
 };
 
 
+exports['localVM not in list'] = function (t) {
+    var vm = helpers.generateVM();
+    var payload = {
+        localVMs: [ vm ],
+        vms: [ ]
+    };
+
+    fw.update(payload, function (err, res) {
+        t.ok(err, 'error returned');
+        t.equal(err.message, util.format('Could not find VM "%s" in VM list',
+            vm.uuid), 'error message');
+        t.done();
+    });
+};
+
+
 
 // --- Teardown
 

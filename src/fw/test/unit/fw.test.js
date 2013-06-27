@@ -63,6 +63,22 @@ exports['add: no rules or VMs'] = function (t) {
 };
 
 
+exports['add: localVM not in list'] = function (t) {
+    var vm = helpers.generateVM();
+    var payload = {
+        localVMs: [ vm ],
+        vms: [ ]
+    };
+
+    fw.add(payload, function (err, res) {
+        t.ok(err, 'error returned');
+        t.equal(err.message, util.format('Could not find VM "%s" in VM list',
+            vm.uuid), 'error message');
+        t.done();
+    });
+};
+
+
 exports['add / update: vm to IP: BLOCK'] = function (t) {
     var vm = helpers.generateVM();
     var payload = {

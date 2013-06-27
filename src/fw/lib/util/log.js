@@ -83,9 +83,14 @@ function ruleSerializer(rules) {
  */
 function vmSerializer(vms) {
     // Returning from add, update, etc, vms is a list of VM UUIDs
-    if (typeof (vms) === 'object' && vms.length
-        && typeof (vms[0]) === 'string') {
-        return vms;
+    if (util.isArray(vms)) {
+        if (typeof (vms[0]) === 'string') {
+            return vms;
+        }
+
+        return vms.map(function (v) {
+            return v.hasOwnProperty('uuid') ? v.uuid : v;
+        });
     }
 
     return Object.keys(vms);

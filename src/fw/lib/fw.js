@@ -1082,7 +1082,8 @@ function lookupVMs(allVMs, vms, callback) {
             return;
         }
         if (!allVMs.all.hasOwnProperty(vm.uuid)) {
-            errs.push(new verror.VError('Could not find VM "%s" in VM list'));
+            errs.push(new verror.VError('Could not find VM "%s" in VM list',
+                vm.uuid));
             return;
         }
         toReturn[vm.uuid] = allVMs.all[vm.uuid];

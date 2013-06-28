@@ -36,9 +36,14 @@ if [[ -z "$1" ]]; then
     exit 1
 fi
 
+set +o errexit
+set -o pipefail
 export TAP=1
 NODE_PATH="/usr/vm/test/node-tap/node_modules:${NODE_PATH}" \
     /usr/node/bin/node $1 | tee -a /tmp/test.output.$$
+TEST_EXIT_CODE=$?
+set +o pipefail
+set -o errexit
 
 end_time=$(date +%s)
 elapsed=$((${end_time} - ${start_time}))
@@ -53,12 +58,19 @@ skipped=$(grep "^# skip  [0-9]" /tmp/test.output.$$ | tr -s ' ' | cut -d ' ' -f3
 
 fail=$((${tests} - ${passed} - ${skipped}))
 
+if [[ ${TEST_EXIT_CODE} != 0 ]]; then
+    fail=$((${fail} + 1))
+    tests="?"
+fi
+
 if [[ -t 0 ]]; then
     # We're on a terminal so output the summary
     echo "#"
     echo "# $1 TEST COMPLETE IN ${elapsed} SECONDS, SUMMARY:"
     echo "#"
-    echo -e "# \033[32mPASS: ${passed} / ${tests}\033[39m"
+    if [[ ${tests} != "?" ]]; then
+        echo -e "# \033[32mPASS: ${passed} / ${tests}\033[39m"
+    fi
     if [[ ${skipped} -gt 0 ]]; then
         echo -e "# \033[31mSKIP: ${skipped} / ${tests}\033[39m"
     fi

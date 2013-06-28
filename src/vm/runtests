@@ -31,9 +31,21 @@ if [[ $(id -u) != 0 ]]; then
     exit 1
 fi
 
+test_errors=0
+failed_tests=
+
 pwd=$(unset CDPATH; cd $(dirname $0); pwd)
 for test in $(ls $pwd/tests/); do
+    set +o errexit
+    set -o pipefail
     /usr/vm/test/runtest $pwd/tests/${test} | tee -a /tmp/test.output.$$
+    TEST_EXIT_CODE=$?
+    set +o pipefail
+    set -o errexit
+    if [[ ${TEST_EXIT_CODE} != 0 ]]; then
+        test_errors=$((${test_errors} + 1))
+        failed_tests=$(printf "${pwd}/tests/${test}\n${failed_tests}")
+    fi
 done
 
 end_time=$(date +%s)
@@ -61,10 +73,17 @@ if [[ -t 0 ]]; then
     if [[ ${fail} -gt 0 ]]; then
         echo -e "# \033[31mFAIL: ${fail} / ${tests}\033[39m"
     fi
+    if [[ -n ${failed_tests} ]]; then
+        echo "#"
+        echo "#  ** FAILED TESTS **"
+        for test in ${failed_tests}; do
+            echo -e "#  \033[31m${test}\033[39m"
+        done
+    fi
     echo "#"
 fi
 
-if [[ ${fail} -gt 0 ]]; then
+if [[ ${fail} -gt 0 || ${test_errors} -gt 0 ]]; then
     exit 1
 fi
 

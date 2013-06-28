@@ -39,9 +39,9 @@
 var p = console.warn;
 var path = require('path');
 var fs = require('fs');
-var format = require('util').format;
+var util = require('util'),
+    format = util.format;
 var assert = require('assert-plus');
-var dns = require('dns');
 var crypto = require('crypto');
 var async = require('async');
 var child_process = require('child_process'),
@@ -52,8 +52,11 @@ var mkdirp = require('mkdirp');
 var ProgressBar = require('progbar').ProgressBar;
 var imgapi = require('sdc-clients/lib/imgapi');
 var dsapi = require('sdc-clients/lib/dsapi');
-
+var VM = require('/usr/vm/node_modules/VM.js');
+var zfs = require('/usr/node/node_modules/zfs.js').zfs;
 var imgmanifest = require('imgmanifest');
+var genUuid = require('node-uuid');
+
 var common = require('./common'),
     NAME = common.NAME,
     objCopy = common.objCopy,
@@ -73,7 +76,6 @@ var DEFAULT_CONFIG = {};
 var VMADM_FS_NAME_RE = /^([a-zA-Z][a-zA-Z\._-]*)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(-disk\d+)?$/;
 var VMADM_IMG_NAME_RE = /^([a-zA-Z][a-zA-Z\._-]*)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-var IP_RE = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
 /* END JSSTYLED */
 
 
@@ -86,26 +88,11 @@ function _indent(s, indent) {
     return indent + lines.join('\n' + indent);
 }
 
-function ipFromHost(host, log, callback) {
-    if (IP_RE.test(host)) {
-        callback(null, host);
-        return;
-    }
-    // No DNS in SmartOS GZ by default, so handle DNS ourself.
-    log.trace({host: host}, 'dns lookup');
-    dns.lookup(host, function (err, ip) {
-        if (err) {
-            callback(new errors.InternalError(
-                {message: format('error DNS resolving %s: %s', host, err)}));
-            return;
-        }
-        callback(null, ip);
-    });
-}
-
 
 /**
  * Call `zfs destroy -r` on the given dataset name.
+ *
+ * TODO: use zfs.js (OS-1919).
  */
 function zfsDestroy(dataset, log, callback) {
     assert.string(dataset, 'dataset');
@@ -158,6 +145,8 @@ function zfsRenameSnapshot(a, b, options, callback) {
  *      to gather the list of child snapshots and dependent clones.
  * @param callback {Function} `function (err, dataset)`
  *      Returns `callback(null, null)` if the dataset name doesn't exist.
+ *
+ * TODO: use zfs.js (OS-1919).
  */
 function getZfsDataset(name, properties, callback) {
     assert.string(name, 'name');
@@ -306,8 +295,7 @@ function normUrlFromUrl(u) {
 
 /**
  * A light wrapper around an image source repository. A source has a
- * `url` and a `type` ("dsapi" or "imgapi"). `getResolvedUrl()` handles (lazy)
- * DNS resolution.
+ * `url` and a `type` ("dsapi" or "imgapi").
  *
  * @param options {Object} with these keys
  *      - url {String}
@@ -338,36 +326,6 @@ function Source(options) {
         }
     }
 }
-
-
-/**
- * Return a URL with DNS-resolved host
- *
- * @params callback {Function} `function (err, normUrl)`
- */
-Source.prototype.getResolvedUrl = function getResolvedUrl(callback) {
-    assert.func(callback, 'callback');
-
-    var self = this;
-    if (this._resolvedUrl) {
-        callback(null, this._resolvedUrl);
-        return;
-    }
-
-    var parsed = url.parse(this.normUrl);
-    self.log.trace({resolve: parsed.hostname}, 'DNS resolve source host');
-    ipFromHost(parsed.hostname, self.log, function (dnsErr, ip) {
-        if (dnsErr) {
-            callback(dnsErr);
-            return;
-        }
-        parsed.hostname = ip;
-        parsed.host = ip + (parsed.port ? ':' + parsed.port : '');
-        self._resolvedUrl = url.format(parsed);
-        callback(null, self._resolvedUrl);
-        return;
-    });
-};
 
 
 
@@ -739,43 +697,38 @@ IMGADM.prototype.clientFromSource = function clientFromSource(
         return;
     }
 
-    source.getResolvedUrl(function (normErr, normUrl) {
-        if (normErr) {
-            callback(normErr);
-            return;
-        }
-        if (source.type === 'dsapi') {
-            var baseNormUrl = path.dirname(normUrl); // drop 'datasets/' tail
-            self._clientCache[source.normUrl] = dsapi.createClient({
-                agent: false,
-                url: baseNormUrl,
-                log: self.log.child(
-                    {component: 'api', source: source.url}, true)
-            });
-        } else {
-            self._clientCache[source.normUrl] = imgapi.createClient({
-                agent: false,
-                url: normUrl,
-                log: self.log.child(
-                    {component: 'api', source: source.url}, true)
-            });
-        }
-        callback(null, self._clientCache[source.normUrl]);
-    });
+    var normUrl = source.normUrl;
+    if (source.type === 'dsapi') {
+        var baseNormUrl = path.dirname(normUrl); // drop 'datasets/' tail
+        self._clientCache[normUrl] = dsapi.createClient({
+            agent: false,
+            url: baseNormUrl,
+            log: self.log.child({component: 'api', source: source.url}, true),
+            rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1')
+        });
+    } else {
+        self._clientCache[normUrl] = imgapi.createClient({
+            agent: false,
+            url: normUrl,
+            log: self.log.child({component: 'api', source: source.url}, true),
+            rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1')
+        });
+    }
+    callback(null, self._clientCache[normUrl]);
 };
 
 
 IMGADM.prototype._errorFromClientError = function _errorFromClientError(
-        source, err) {
-    assert.string(source.url, 'source');
+        clientUrl, err) {
+    assert.string(clientUrl, 'clientUrl');
     assert.object(err, 'err');
     if (err.body && err.body.code) {
-        return new errors.APIError(source.url, err);
+        return new errors.APIError(clientUrl, err);
     } else if (err.errno) {
-        return new errors.ClientError(source.url, err);
+        return new errors.ClientError(clientUrl, err);
     } else {
         return new errors.InternalError({message: err.message,
-            source: source.url, cause: err});
+            clientUrl: clientUrl, cause: err});
     }
 };
 
@@ -1105,7 +1058,8 @@ IMGADM.prototype.sourcesList = function sourcesList(callback) {
                 }
                 client.listImages(function (listErr, images) {
                     if (listErr) {
-                        errs.push(self._errorFromClientError(source, listErr));
+                        errs.push(self._errorFromClientError(
+                            source.url, listErr));
                     }
                     imageSetFromSourceUrl[source.url] = images || [];
                     next();
@@ -1178,7 +1132,8 @@ IMGADM.prototype.sourcesGet
                 }
                 client.getImage(uuid, function (getErr, manifest) {
                     if (getErr && getErr.statusCode !== 404) {
-                        errs.push(self._errorFromClientError(source, getErr));
+                        errs.push(self._errorFromClientError(
+                            source.url, getErr));
                         next();
                         return;
                     }
@@ -1481,7 +1436,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         if (!err) {
             var sha1Expected = manifest.files[0].sha1;
             var sha1Actual = sha1Hash.digest('hex');
-            if (sha1Actual !== sha1Expected) {
+            if (sha1Expected && sha1Actual !== sha1Expected) {
                 err = new errors.DownloadError(format(
                     'image file sha1 expected to be %s, but was %s',
                     sha1Expected, sha1Actual));
@@ -1711,6 +1666,412 @@ IMGADM.prototype.updateImages = function updateImages(callback) {
     });
 };
 
+
+/**
+ * Create an image from the given (prepared and shutdown) VM and manifest
+ * data.
+ *
+ * @param options {Object}
+ *      - @param uuid {String} UUID of the VM from which to create the image.
+ *      - @param manifest {Object} Data to include in the created manifest.
+ *      - @param logCb {Function} Optional. A function that is called
+ *        with progress messages. Called as `logCb(<string>)`. E.g. passing
+ *        console.log is legal.
+ *      - @param compression {String} Optional compression type for the image
+ *        file. Default is 'none'.
+ *      - @param savePrefix {String} Optional. The file path prefix to which
+ *        to save the manifest and image files.
+ * @param callback {Function} `function (err, imageInfo)` where imageInfo
+ *      has `manifest` (the manifest object), `manifestPath` (the saved
+ *      manifest path) and `filePath` (the saved image file path) keys.
+ */
+IMGADM.prototype.createImage = function createImage(options, callback) {
+    var self = this;
+    assert.object(options, 'options');
+    assert.string(options.uuid, 'options.uuid');
+    assert.object(options.manifest, 'options.manifest');
+    assert.optionalFunc(options.logCb, 'options.logCb');
+    assert.optionalString(options.compression, 'options.compression');
+    var uuid = options.uuid;
+    var logCb = options.logCb || function () {};
+
+    /**
+     * Clean up the given todos.
+     *
+     * @param todos {Array} of 2-tuples [<type>, <path>].
+     */
+    function cleanup(todos, cb) {
+        async.forEachSeries(todos,
+            function (todo, next) {
+                var type = todo[0];
+                if (type === 'snapshot') {
+                    zfsDestroy(todo[1], self.log, next);
+                } else {
+                    next(new Error(format(
+                        'unknown cleanup type: "%s"', todo[0])));
+                }
+            },
+            cb
+        );
+    }
+
+    var vmInfo;
+    var vmZfsFilesystem;
+    var originManifest = {};
+    var imageInfo = {};
+    var snapshot;
+    var toCleanup = [];
+    async.waterfall([
+        // Validate this is a stopped VM.
+        function validateVm(next) {
+            // Note: Don't pass `self.log` to VM.js because we don't want
+            // any logging on our stderr right now for a cli -- that is
+            // until imgadm has a better logging story.
+            VM.load(uuid, /* { log: self.log }, */ function (loadErr, vm) {
+                if (loadErr) {
+                    if (loadErr.code === 'ENOENT') {
+                        next(new errors.VmNotFoundError(uuid));
+                    } else {
+                        next(new errors.InternalError(loadErr));
+                    }
+                    return;
+                }
+                if (vm.brand === 'kvm') {
+                    next(new errors.InternalError({ message:
+                        'image creation is not yet supported for KVM VMs'}));
+                    return;
+                }
+                if (vm.state !== 'stopped') {
+                    next(new errors.VmNotStoppedError(uuid));
+                    return;
+                }
+                vmInfo = vm;
+                next();
+            });
+        },
+        function getVmInfo(next) {
+            var opts;
+            if (vmInfo.brand === 'kvm') {
+                if (vmInfo.disks) {
+                    for (var i = 0; i < vmInfo.disks; i++) {
+                        if (vmInfo.disks[i].image_uuid) {
+                            var disk = vmInfo.disks[i];
+                            opts = {uuid: disk.image_uuid, zpool: disk.zpool};
+                            vmZfsFilesystem = disk.zfs_filesystem;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                opts = {uuid: vmInfo.image_uuid, zpool: vmInfo.zpool};
+                vmZfsFilesystem = vmInfo.zfs_filesystem;
+            }
+            if (!opts) {
+                // Couldn't find an origin image.
+                self.log.debug('no origin image found');
+                next();
+                return;
+            }
+            self.getImage(opts, function (getErr, ii) {
+                if (getErr) {
+                    next(getErr);
+                    return;
+                }
+                self.log.debug({imageInfo: ii}, 'origin image');
+                originManifest = ii.manifest;
+                next();
+            });
+        },
+        function gatherManifest(next) {
+            var m = {
+                v: common.MANIFEST_V,
+                uuid: genUuid()
+            };
+            m = imageInfo.manifest = objCopy(options.manifest, m);
+            if (originManifest) {
+                logCb(format('Inheriting from origin image %s (%s %s)',
+                    originManifest.uuid, originManifest.name,
+                    originManifest.version));
+                // IMGAPI-227 TODO: document these and note them in the
+                // imgapi docs. These should come from imgmanifest constant.
+                var INHERITED_FIELDS = ['type', 'os', 'requirements',
+                    'users', 'billing_tags', 'traits', 'generate_passwords',
+                    'inherited_directories', 'nic_driver', 'disk_driver',
+                    'cpu_type', 'image_size'];
+                INHERITED_FIELDS.forEach(function (field) {
+                    if (!m.hasOwnProperty(field)
+                        && originManifest.hasOwnProperty(field))
+                    {
+                        var val = originManifest[field];
+                        // Drop empty arrays, e.g. `billing_tags`, just to
+                        // be leaner/cleaner.
+                        if (!Array.isArray(val) || val.length > 0) {
+                            m[field] = val;
+                        }
+                    }
+                });
+            }
+            logCb(format('Manifest:\n%s',
+                _indent(JSON.stringify(m, null, 2))));
+            next();
+        },
+        function validateManifest(next) {
+            var errs = imgmanifest.validateMinimalManifest(imageInfo.manifest);
+            if (errs) {
+                next(new errors.ManifestValidationError(errs));
+            } else {
+                next();
+            }
+        },
+        function snapshotVm(next) {
+            snapshot = format('%s@tmp-imgadm-%s-%s', vmZfsFilesystem,
+                Date.now(), process.pid);
+            logCb(format('Snapshotting to "%s"', snapshot));
+            zfs.snapshot(snapshot, function (zfsErr) {
+                if (zfsErr) {
+                    next(new errors.InternalError(zfsErr));
+                    return;
+                }
+                toCleanup.push(['snapshot', snapshot]);
+                next();
+            });
+        },
+        function sendImageFile(next) {
+            // 'zfs send' the image snapshot to a local file. We *could*
+            // stream directly to an optional IMGAPI target, but that makes
+            // it more difficult to do (a) sha1 pre-caculation for upload
+            // checking and (b) eventual re-upload support.
+
+            var filePath = imageInfo.filePath = options.savePrefix + '.zfs';
+
+            // Compression
+            var compression = options.compression || 'none';
+            var compressor;
+            if (compression === 'none') {
+                /* pass through */
+                compressor = null;
+            } else if (compression === 'bzip2') {
+                compressor = spawn('/usr/bin/bzip2', ['-cfq']);
+                filePath += '.bz2';
+            } else if (compression === 'gzip') {
+                compressor = spawn('/usr/bin/gzip', ['-cfq']);
+                filePath += '.gz';
+            } else {
+                next(new errors.UsageError(format(
+                    'unknown compression "%s"', compression)));
+                return;
+            }
+
+            logCb(format('Sending image file to "%s"', filePath));
+            // Don't want '-p' or '-r' options to 'zfs send'.
+            var zfsSend = spawn('/usr/sbin/zfs', ['send', snapshot]);
+            zfsSend.stderr.on('data', function (chunk) {
+                logCb(format('Stderr from zfs send: %s', chunk.toString()));
+            });
+
+            var size = 0;
+            var sha1Hash = crypto.createHash('sha1');
+            (compressor || zfsSend).stdout.on('data', function (chunk) {
+                size += chunk.length;
+                sha1Hash.update(chunk);
+            });
+            (compressor || zfsSend).on('exit', function (code) {
+                if (code !== 0) {
+                    next(new errors.InternalError({message: format(
+                        'zfs send error: exit code %s', code)}));
+                } else {
+                    imageInfo.manifest.files = [ {
+                        size: size,
+                        compression: compression,
+                        sha1: sha1Hash.digest('hex')
+                    } ];
+                    next();
+                }
+            });
+
+            var out = fs.createWriteStream(filePath);
+            if (compressor) {
+                // zfs send -> bzip2/gzip -> filePath
+                zfsSend.stdout.pipe(compressor.stdin);
+                compressor.stdout.pipe(out);
+            } else {
+                // zfs send -> filePath
+                zfsSend.stdout.pipe(out);
+            }
+        },
+        function saveManifest(next) {
+            var manifestPath = imageInfo.manifestPath
+                = options.savePrefix + '.imgmanifest';
+            logCb(format('Saving manifest to "%s"', manifestPath));
+            var manifestStr = JSON.stringify(imageInfo.manifest, null, 2);
+            fs.writeFile(manifestPath, manifestStr, 'utf8', function (wErr) {
+                if (wErr) {
+                    next(new errors.FileSystemError(wErr, format(
+                        'error saving manifest to "%s": %s', manifestPath,
+                        wErr)));
+                    return;
+                }
+                next();
+            });
+        }
+    ], function (err) {
+        cleanup(toCleanup, function (cleanErr) {
+            if (cleanErr) {
+                self.log.warn(cleanErr,
+                    'error cleaning up during image creation');
+            }
+            callback(err, imageInfo);
+        });
+    });
+};
+
+
+/**
+ * Publish the given image to the given IMGAPI.
+ *
+ * @param options {Object}
+ *      - @param manifest {Object} The manifest to import.
+ *      - @param file {String} The image file path to import.
+ *      - @param url {String} The IMGAPI URL to which to publish.
+ *      - @param quiet {Boolean} Optional. Default false. Set to true
+ *        to not have a progress bar for the file upload.
+ * @param callback {Function} `function (err, image)`
+ */
+IMGADM.prototype.publishImage = function publishImage(opts, callback) {
+    assert.object(opts, 'options');
+    assert.object(opts.manifest, 'options.manifest');
+    var manifest = opts.manifest;
+    assert.string(opts.file, 'options.file');
+    assert.string(opts.url, 'options.url');
+    assert.optionalBool(opts.quiet, 'options.quiet');
+    // At least currently we require the manifest to have the file info
+    // (as it does if created by 'imgadm create').
+    assert.arrayOfObject(manifest.files, 'options.manifest.files');
+    var manifestFile = manifest.files[0];
+    assert.object(manifestFile, 'options.manifest.files[0]');
+    assert.string(manifestFile.compression,
+        'options.manifestFile.files[0].compression');
+    var self = this;
+
+    var client = imgapi.createClient({
+        agent: false,
+        url: opts.url,
+        log: self.log.child({component: 'api', url: opts.url}, true)
+    });
+    var uuid = manifest.uuid;
+    var rollbackImage;
+    var activatedImage;
+
+    async.series([
+        function importIt(next) {
+            client.adminImportImage(manifest, {}, function (err, image, res) {
+                self.log.trace({err: err, image: image, res: res},
+                    'AdminImportImage');
+                if (err) {
+                    next(self._errorFromClientError(opts.url, err));
+                    return;
+                }
+                console.log('Imported image %s (%s, %s, state=%s)',
+                    image.uuid, image.name, image.version, image.state);
+                rollbackImage = image;
+                next();
+            });
+        },
+        function addFile(next) {
+            var stream = fs.createReadStream(opts.file);
+            imgapi.pauseStream(stream);
+
+            var bar;
+            if (!opts.quiet && process.stderr.isTTY) {
+                bar = new ProgressBar({
+                    size: manifestFile.size,
+                    filename: uuid
+                });
+            }
+            stream.on('data', function (chunk) {
+                if (bar)
+                    bar.advance(chunk.length);
+            });
+            stream.on('end', function () {
+                if (bar)
+                    bar.end();
+            });
+
+            var fopts = {
+                uuid: uuid,
+                file: stream,
+                size: manifestFile.size,
+                compression: manifestFile.compression,
+                sha1: manifestFile.sha1
+            };
+            client.addImageFile(fopts, function (err, image, res) {
+                self.log.trace({err: err, image: image, res: res},
+                    'AddImageFile');
+                if (err) {
+                    if (bar)
+                        bar.end();
+                    next(self._errorFromClientError(opts.url, err));
+                    return;
+                }
+
+                console.log('Added file "%s" (compression "%s") to image %s',
+                    opts.file, manifestFile.compression, uuid);
+
+                // Verify uploaded size and sha1.
+                var expectedSha1 = manifestFile.sha1;
+                if (expectedSha1 !== image.files[0].sha1) {
+                    next(new errors.UploadError(format(
+                        'sha1 expected to be %s, but was %s',
+                        expectedSha1, image.files[0].sha1)));
+                    return;
+                }
+                var expectedSize = manifestFile.size;
+                if (expectedSize !== image.files[0].size) {
+                    next(new errors.UploadError(format(
+                        'size expected to be %s, but was %s',
+                        expectedSize, image.files[0].size)));
+                    return;
+                }
+
+                next();
+            });
+        },
+        function activateIt(next) {
+            client.activateImage(uuid, function (err, image, res) {
+                self.log.trace({err: err, image: image, res: res},
+                    'ActivateImage');
+                if (err) {
+                    next(self._errorFromClientError(opts.url, err));
+                    return;
+                }
+                activatedImage = image;
+                console.log('Activated image %s', uuid);
+                next();
+            });
+        }
+    ], function (err) {
+        if (err) {
+            if (rollbackImage) {
+                self.log.debug({err: err, rollbackImage: rollbackImage},
+                    'rollback partially imported image');
+                var delUuid = rollbackImage.uuid;
+                client.deleteImage(uuid, function (delErr, res) {
+                    self.log.trace({err: delErr, res: res}, 'DeleteImage');
+                    if (delErr) {
+                        self.log.debug({err: delErr}, 'error rolling back');
+                        console.log('Warning: Could not delete partially '
+                            + 'published image %s: %s', delUuid, delErr);
+                    }
+                    callback(err);
+                });
+            } else {
+                callback(err);
+            }
+        } else {
+            callback(null, activatedImage);
+        }
+    });
+};
 
 
 // ---- exports

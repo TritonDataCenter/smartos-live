@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * Simple flat clone using prototype, accepts only objects, usefull for property
  * override on FLAT configuration object (no nested props).

@@ -21,7 +21,7 @@
 # - This *does* involve taking liberties with specified dependency
 #   versions. E.g. You get the version of the shared dtrace-provider already
 #   in "/usr/node/node_modules/dtrace-provider".
-# - This will start with the node-sdc-clients.git#master and attempt to get
+# - This will start with the node-sdc-clients.git#SHA and attempt to get
 #   the version of deps that its package.json specifies. However, you need
 #   to worry about recursive version mismatches and new/removed module
 #   deps manually.
@@ -125,14 +125,14 @@ fi
 # assert-plus
 npm install assert-plus
 
-# backoff (used by restify)
-VER=$(json -f node_modules/restify/package.json dependencies.backoff)
+# backoff
+VER=$(json -f package.json dependencies.backoff)
 npm install backoff@$VER
 (cd node_modules/backoff \
-    && rm -rf .[a-z]* examples README.md tests)
+    && rm -rf .[a-z]* examples README.md tests doc CHANGES.md)
 
-# clone (used by restify)
-VER=$(json -f node_modules/restify/package.json dependencies.clone)
+# clone
+VER=$(json -f package.json dependencies.clone)
 npm install clone@$VER
 (cd node_modules/clone \
     && rm -rf .[a-z]* README.md test.js)
@@ -188,8 +188,8 @@ npm install mime@$VER
 (cd node_modules/mime \
     && rm -rf .[a-z]* node_modules README.md test.js)
 
-# once (used by restify)
-VER=$(json -f node_modules/restify/package.json dependencies.once)
+# once
+VER=$(json -f package.json dependencies.once)
 npm install once@$VER
 (cd node_modules/once \
     && rm -rf .[a-z]* node_modules README.md test)
@@ -211,10 +211,6 @@ VER=$(json -f node_modules/ssh-agent/package.json dependencies.ctype)
 npm install ctype@$VER
 (cd node_modules/ctype \
     && rm -rf .[a-z]* node_modules README* tools man tst CHANGELOG)
-
-# Drop this hack when <https://github.com/mcavage/node-restify/pull/313>
-# is pulled.
-touch node_modules/semver.js
 
 # bunyan
 # Patch bunyan usages to use the platform one, because it has dtrace-provider
@@ -260,5 +256,6 @@ patch -p0 <<PATCH
 PATCH
 
 
+rm -f node_modules/restify/lib/index.js.orig
 rm -rf node_modules/.bin
 rm -rf _repos

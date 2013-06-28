@@ -41,6 +41,10 @@ f usr/img/node_modules/mkdirp/index.js 0444 root bin
 f usr/img/node_modules/mkdirp/LICENSE 0444 root bin
 f usr/img/node_modules/mkdirp/package.json 0444 root bin
 f usr/img/node_modules/mkdirp/README.markdown 0444 root bin
+d usr/img/node_modules/node-uuid 0555 root bin
+f usr/img/node_modules/node-uuid/LICENSE.md 0444 root bin
+f usr/img/node_modules/node-uuid/package.json 0444 root bin
+f usr/img/node_modules/node-uuid/uuid.js 0444 root bin
 d usr/img/node_modules/nodeunit 0555 root bin
 d usr/img/node_modules/nodeunit/bin 0555 root bin
 f usr/img/node_modules/nodeunit/bin/nodeunit 0444 root bin
@@ -93,6 +97,15 @@ d usr/img/node_modules/progbar/node_modules/sprintf/lib 0555 root bin
 f usr/img/node_modules/progbar/node_modules/sprintf/lib/sprintf.js 0444 root bin
 f usr/img/node_modules/progbar/node_modules/sprintf/package.json 0444 root bin
 f usr/img/node_modules/progbar/package.json 0444 root bin
+d usr/img/node_modules/rimraf 0555 root bin
+f usr/img/node_modules/rimraf/LICENSE 0444 root bin
+d usr/img/node_modules/rimraf/node_modules 0555 root bin
+d usr/img/node_modules/rimraf/node_modules/graceful-fs 0555 root bin
+f usr/img/node_modules/rimraf/node_modules/graceful-fs/LICENSE 0444 root bin
+f usr/img/node_modules/rimraf/node_modules/graceful-fs/graceful-fs.js 0444 root bin
+f usr/img/node_modules/rimraf/node_modules/graceful-fs/package.json 0444 root bin
+f usr/img/node_modules/rimraf/package.json 0444 root bin
+f usr/img/node_modules/rimraf/rimraf.js 0444 root bin
 d usr/img/node_modules/sdc-clients 0555 root bin
 d usr/img/node_modules/sdc-clients/lib 0555 root bin
 f usr/img/node_modules/sdc-clients/lib/cache.js 0444 root bin
@@ -186,7 +199,6 @@ f usr/img/node_modules/sdc-clients/node_modules/restify/lib/index.js 0444 root b
 f usr/img/node_modules/sdc-clients/node_modules/restify/lib/utils.js 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/restify/LICENSE 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/restify/package.json 0444 root bin
-f usr/img/node_modules/sdc-clients/node_modules/semver.js 0444 root bin
 d usr/img/node_modules/sdc-clients/node_modules/ssh-agent 0555 root bin
 d usr/img/node_modules/sdc-clients/node_modules/ssh-agent/lib 0555 root bin
 f usr/img/node_modules/sdc-clients/node_modules/ssh-agent/lib/ssh_agent_client.js 0444 root bin
@@ -214,8 +226,11 @@ d usr/img/sbin 0555 root bin
 f usr/img/sbin/imgadm 0555 root bin
 d usr/img/test 0555 root bin
 f usr/img/test/basics.test.js 0444 root bin
+f usr/img/test/create.test.js 0444 root bin
+f usr/img/test/mk-custom-image 0555 root bin
 f usr/img/test/runtests 0555 root bin
 f usr/img/test/tap4nodeunit.js 0444 root bin
+f usr/img/test/try-custom-image 0555 root bin
 # new vmadmd
 s etc/bash/bash_completion.d/vmadm=/usr/vm/etc/vmadm.completion
 f lib/svc/manifest/system/system-vmadmd.xml 0444 root bin

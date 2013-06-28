@@ -1,0 +1,121 @@
+#!/bin/bash
+#
+# Make a SmartOS custom virtual image for testing.
+#
+# Usage:
+#   ./mk-custom-image BASE-IMAGE-UUID OUTPUT-TEMPLATE COMPRESSION
+#
+# Example:
+#   ./mk-custom-image f669428c-a939-11e2-a485-b790efc0f0c1 /var/tmp/custom-image none
+#
+# This will:
+# - install the base image, if necessary (from images.joyent.com)
+# - vmadm create a basis zone
+# - customize it (just set /etc/motd)
+# - prepare and stop the basis zone
+# - imgadm create ... -o OUTPUT-TEMPLATE -c none
+#
+
+if [[ -n "$TRACE" ]]; then
+    export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -o xtrace
+fi
+set -o errexit
+set -o pipefail
+
+TESTDIR=$(cd $(dirname $0)/ >/dev/null; pwd)
+WRKDIR=/var/tmp/mk-custom-image.$$
+
+
+#---- support stuff
+
+function fatal {
+    echo "$0: fatal error: $*"
+    exit 1
+}
+
+function cleanup {
+    cd $(dirname $WRKDIR)
+    rm -rf $WRKDIR
+}
+
+function errexit {
+    cleanup
+    [[ $1 -ne 0 ]] || exit 0
+    fatal "error exit status $1"
+}
+
+function install_image {
+    local uuid=$1
+
+    imgadm get $uuid >/dev/null 2>/dev/null && return
+
+    echo "Installing image $uuid"
+    curl -ksS https://images.joyent.com/images/$uuid > $uuid.manifest
+    curl -ksS https://images.joyent.com/images/$uuid/file > $uuid.file
+    imgadm install -m $uuid.manifest -f $uuid.file -q
+}
+
+function create_basis_zone {
+    local image_uuid=$1
+    local vm_uuid=$2
+    vmadm create <<EOM
+{
+  "uuid": "$vm_uuid",
+  "brand": "joyent",
+  "zfs_io_priority": 30,
+  "quota": 20,
+  "image_uuid": "$image_uuid",
+  "max_physical_memory": 256,
+  "alias": "mk-custom-image-$$"
+}
+EOM
+}
+
+
+#---- mainline
+
+trap 'errexit $?' EXIT
+START=$(date +%s)
+
+BASE_IMAGE_UUID=$1
+shift
+OUTPUT_TEMPLATE=$1
+shift
+COMPRESSION=$1
+shift
+EXTRA_ARGS="$*"
+[[ -z "$BASE_IMAGE_UUID" ]] && fatal "no BASE-IMAGE-UUID given"
+[[ -z "$OUTPUT_TEMPLATE" ]] && fatal "no OUTPUT-TEMPLATE given"
+[[ -z "$COMPRESSION" ]] && fatal "no COMPRESSION given"
+
+echo "Make custom image from image $BASE_IMAGE_UUID (to $OUTPUT_TEMPLATE)"
+
+rm -rf $WRKDIR
+mkdir -p $WRKDIR
+cd $WRKDIR
+
+install_image $BASE_IMAGE_UUID
+
+vm_uuid=$(uuid)
+echo "Make basis zone $vm_uuid"
+create_basis_zone $BASE_IMAGE_UUID $vm_uuid
+
+echo "Customize basis zone"
+zlogin $vm_uuid 'echo "hi from mk-custom-image" > /etc/motd'  </dev/null
+
+echo "Prepare and stop basis zone"
+#cp $TESTDIR/prepare-image.sh /zones/$vm_uuid/root/tmp/
+zlogin $vm_uuid 'sm-prepare-image -y >/dev/null' </dev/null
+vmadm stop $vm_uuid
+
+echo "Create the custom image"
+imgadm create $vm_uuid -o $OUTPUT_TEMPLATE -c $COMPRESSION \
+    name=custom-image version=1.0.0 $EXTRA_ARGS
+
+echo "Delete basis zone $vm_uuid"
+vmadm delete $vm_uuid
+
+
+END=$(date +%s)
+echo "$0 finished in $(($END - $START)) seconds"

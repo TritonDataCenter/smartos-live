@@ -1611,6 +1611,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         } else {
             info.stream.pipe(zfsRecv.stdin);
         }
+        info.stream.resume();
     });
 };
 

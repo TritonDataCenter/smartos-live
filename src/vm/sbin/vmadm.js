@@ -1011,6 +1011,9 @@ function main(callback)
         } else if (parsed.hasOwnProperty('output')) {
             callback(new Error('Cannot specify -o without -j'));
             return;
+        } else {
+            // not JSON output, just a list of uuids.
+            options.fields = ['uuid'];
         }
 
         for (key in extra) {
@@ -1035,7 +1038,7 @@ function main(callback)
                 // of uuids.
                 for (m in results) {
                     m = results[m];
-                    console.log(m);
+                    console.log(m.uuid);
                 }
             }
         });

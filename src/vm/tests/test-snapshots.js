@@ -748,6 +748,56 @@ test('create/delete snapshot should update last_modified', {'timeout': 240000}, 
     });
 });
 
+test('create/delete snapshot should handle mounting /checkpoints', {'timeout': 240000}, function(t) {
+    var snapname = 'mountie';
+    var checkpoint_dir = path.join(vmobj.zonepath, 'root', 'checkpoints', snapname);
+
+    if (abort) {
+        t.ok(false, 'skipping checkpoints tests');
+        cb();
+        return;
+    }
+
+    async.series([
+        function (cb) {
+            createSnapshot(t, vmobj.uuid, snapname, vmobj.snapshots.length + 1, function (err) {
+                t.ok(!err, 'created snapshot for last_modified test');
+                cb(err);
+            });
+        }, function (cb) {
+            var passwd_file = path.join(checkpoint_dir + '/etc/passwd');
+
+            fs.exists(passwd_file, function (exists) {
+                var err;
+                t.ok(exists, passwd_file + ' exists? ' + exists);
+                if (!exists) {
+                    err = new Error('unable to find /etc/passwd in ' + checkpoint_dir);
+                }
+                cb(err);
+            });
+        }, function (cb) {
+            deleteSnapshot(t, vmobj.uuid, snapname, 0, function (err) {
+                t.ok(!err, 'deleted ' + snapname + ' snapshot for ' + vmobj.uuid);
+                cb(err);
+            });
+        }, function (cb) {
+
+            fs.exists(checkpoint_dir, function (exists) {
+                var err;
+                t.ok(!exists, checkpoint_dir + ' exists? ' + exists);
+                if (exists) {
+                    err = new Error(checkpoint_dir + ' still exists after snapshot deletion');
+                }
+                cb(err);
+            });
+        }
+    ], function (err) {
+        t.ok(!err, 'testing /checkpoints: ' + (err ? err.message : 'success'));
+        t.end();
+    });
+});
+
+
 // create 10 snapshots (to test that deleting a VM with snapshots works)
 test('create 10 more snapshots', {'timeout': 240000}, function(t) {
 

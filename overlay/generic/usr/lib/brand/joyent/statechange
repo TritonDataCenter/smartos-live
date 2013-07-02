@@ -455,7 +455,7 @@ setup_snapshots()
 	# separately.
 	#
 	for snap in $(ls -1 $ZONEPATH/.zfs/snapshot); do
-		snapdir=$ZONEPATH/$SNAPSHOT_DIR/${snap}
+		snapdir=$ZONEPATH/$SNAPSHOT_DIR/$(echo ${snap} | sed -e "s/^vmsnap-//")
 		mkdir -p ${snapdir}
 		mount -F lofs -o ro,setuid,nodevices \
 		    $ZONEPATH/.zfs/snapshot/${snap}/root ${snapdir}
@@ -534,7 +534,7 @@ cleanup_snapshots()
 	snaps=$(ls -1 $ZONEPATH/$SNAPSHOT_DIR)
 
 	for snap in ${snaps}; do
-		snapdir=$ZONEPATH/$SNAPSHOT_DIR/${snap}
+		snapdir=$ZONEPATH/$SNAPSHOT_DIR/$(echo ${snap} | sed -e "s/^vmsnap-//")
 		umount ${snapdir}
 		rmdir ${snapdir}
 	done

@@ -92,6 +92,7 @@ var PAYLOADS = {
         "alias": "autotest-vm" + process.pid,
         "nics": [
             {
+                "model": "virtio",
                 "ip": "10.254.254.254",
                 "netmask": "255.255.255.0",
                 "nic_tag": "external",
@@ -99,8 +100,19 @@ var PAYLOADS = {
                 "mac": "00:02:03:04:05:06"
             }
         ],
-        "disks": [{"size": 1024}],
+        "disks": [{"size": 1024, "model": "virtio"}],
         "do_not_inventory": true
+    }, "add_nic_and_disk_wo_model": {
+        "add_disks": [{"size": 1024}],
+        "add_nics": [{
+            "ip": "10.254.254.253",
+            "netmask": "255.255.255.0",
+            "nic_tag": "external",
+            "interface": "net1",
+            "vlan_id": 253,
+            "gateway": "10.254.254.1",
+            "mac": "02:03:04:05:06:07"
+        }]
     }
 };
 
@@ -908,15 +920,35 @@ test('create KVM VM w/ *_drivers', {'timeout': 240000}, function(t) {
                     return cb(err);
                 }
 
-                // ensure nic_driver + disk_driver properties are set
+                // ensure nic_driver + disk_driver properties are set, we expect
+                // model to be virtio since we explicitly set, when we add
+                // another it should be the *_driver value
                 t.ok(obj.nic_driver === 'e1000', 'VM has nic_driver');
                 t.ok(obj.disk_driver === 'ide', 'VM has disk_driver');
-                t.ok(obj.nics[0].model === 'e1000', 'VM has correct nic.model');
-                t.ok(obj.disks[0].model === 'ide', 'VM has correct disk.model');
-
-                // TODO: add a disk and a nic and ensure they've also got the correct.model
+                t.ok(obj.nics[0].model === 'virtio', 'VM has correct nic.model');
+                t.ok(obj.disks[0].model === 'virtio', 'VM has correct disk.model');
 
                 cb();
+            });
+        }, function (cb) {
+
+            // add a disk and a nic w/o model and ensure they've also got the correct.model
+            // matching *_driver not the first nic.
+            VM.update(state.uuid, PAYLOADS['add_nic_and_disk_wo_model'], function(err) {
+                t.ok(!err, 'updating VM: ' + (err ? err.message : 'success'));
+                if (err) {
+                    return cb();
+                }
+                VM.load(state.uuid, function(err, obj) {
+                    t.ok(!err, 'load VM: ' + (err ? err.message : 'success'));
+                    if (err) {
+                        return cb(err);
+                    }
+                    t.ok(obj.disks[1].model === obj.disk_driver, 'disk1 model is ' + obj.disks[1].model + ' expected ' + obj.disk_driver);
+                    t.ok(obj.nics[1].model === obj.nic_driver, 'nic1 model is ' + obj.nics[1].model + ' expected ' + obj.nic_driver);
+
+                    cb();
+                });
             });
         }
     ], function (err) {

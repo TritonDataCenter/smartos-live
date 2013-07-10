@@ -371,7 +371,7 @@ test('test create good KVM then add nic with no model', {'timeout': 240000}, fun
     vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [
         function (cb) {
             VM.update(state.uuid, {'add_nics': [{'ip': '10.99.99.223', 'netmask': '255.255.255.0', 'nic_tag': 'admin', 'gateway': '10.99.99.1'}]}, function (err) {
-                t.ok(err, 'update VM should fail' + (err ? ': ' + err.message : ''));
+                t.ok(!err, 'update VM should succeed: ' + (err ? ': ' + err.message : ''));
                 VM.load(state.uuid, function(err, obj) {
                     t.ok(!err, 'load VM' + state.uuid + (err ? ': ' + err.message : ''));
                     if (obj && obj.nics) {

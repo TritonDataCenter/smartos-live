@@ -166,7 +166,7 @@ function doUpdate(opts, payload, action) {
 
     pipeline({
     funcs: [
-        function vms(_, cb) { VM.lookup({}, { 'full': true }, cb); },
+        function vms(_, cb) { VM.lookup({}, { fields: fw.VM_FIELDS }, cb); },
         function updateRules(state, cb) {
             payload.vms = state.vms;
             return fw.update(payload, cb);

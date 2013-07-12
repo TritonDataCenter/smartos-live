@@ -1503,6 +1503,70 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
 
 
 /**
+ * Gets remote targets from the other side of the rule and adds them to
+ * the targets object
+ */
+function addOtherSideRemoteTargets(vms, rule, targets, dir) {
+    var matching = vmsOnSide(vms, rule, dir);
+    if (matching.length === 0) {
+        return;
+    }
+
+    var otherSide = dir === 'from' ? 'to' : 'from';
+    if (rule[otherSide].tags.length !== 0) {
+        if (!targets.hasOwnProperty('tags')) {
+            targets.tags = {};
+        }
+
+        // All tags (no value) wins out over tags with
+        // a value. If multiple values for the same tag
+        // are present, return them as an array
+        rule[otherSide].tags.forEach(function (tag) {
+            var key = tag;
+            var val = true;
+            if (typeof (tag) !== 'string') {
+                key = tag[0];
+                val = tag[1];
+            }
+
+            if (!targets.tags.hasOwnProperty(key)) {
+                targets.tags[key] = val;
+            } else {
+                if (targets.tags[key] !== true) {
+                    if (val === true) {
+                        targets.tags[key] = val;
+                    } else {
+                        if (!util.isArray(targets.tags[key])) {
+                            targets.tags[key] = [ targets.tags[key] ];
+                        }
+
+                        targets.tags[key].push(val);
+                    }
+                }
+            }
+        });
+    }
+
+    if (rule[otherSide].vms.length !== 0) {
+        if (!targets.hasOwnProperty('vms')) {
+            targets.vms = {};
+        }
+
+        rule[otherSide].vms.forEach(function (vm) {
+            // Don't add if it's a local VM
+            if (!vms.all.hasOwnProperty(vm)) {
+                targets.vms[vm] = true;
+            }
+        });
+    }
+
+    if (rule[otherSide].wildcards.indexOf('vmall') !== -1) {
+        targets.allVMs = true;
+    }
+}
+
+
+/**
  * Saves all of the files in ipfData to disk
  */
 function saveIPFfiles(ipfData, callback) {
@@ -2336,6 +2400,72 @@ function update(opts, callback) {
 
 
 /**
+ * Given the list of local VMs and a list of rules, return an object with
+ * the non-local targets on the other side of the rules.
+ *
+ * @param opts {Object} : options:
+ * - vms {Array} : array of VM objects (as per VM.js)
+ * - rules {Array of Objects} : firewall rules
+ * @param callback {Function} `function (err, targets)`
+ * - Where targets is an object like:
+ *   {
+ *     tags: { some: ['one', 'two'], other: true },
+ *     vms: [ '<UUID>' ],
+ *     allVMs: true
+ *   }
+ */
+function getRemoteTargets(opts, callback) {
+    try {
+        assert.object(opts, 'opts');
+        assert.arrayOfObject(opts.vms, 'opts.vms');
+        assert.arrayOfObject(opts.rules, 'opts.rules');
+
+        if (opts.rules.length === 0) {
+            throw new Error('Must specify rules');
+        }
+
+    } catch (err) {
+        return callback(err);
+    }
+    logEntry(opts, 'remoteTargets');
+
+    createRules(opts.rules, function (err, rules) {
+        if (err) {
+            LOG.error(err, 'getRemoteTargets: createRules');
+            return callback(err);
+        }
+
+        createVMlookup(opts.vms, function (err2, vms) {
+            if (err2) {
+                LOG.error(err2, 'getRemoteTargets: createVMlookup');
+                return callback(err2);
+            }
+
+            var targets = {};
+
+            for (var r in rules) {
+                var rule = rules[r];
+
+                for (var d in DIRECTIONS) {
+                    var dir = DIRECTIONS[d];
+                    addOtherSideRemoteTargets(vms, rule, targets, dir);
+                }
+            }
+
+            if (targets.hasOwnProperty('vms')) {
+                targets.vms = Object.keys(targets.vms);
+                if (targets.vms.length === 0) {
+                    delete targets.vms;
+                }
+            }
+
+            return callback(null, targets);
+        });
+    });
+}
+
+
+/**
  * Gets rules that apply to a VM
  *
  * @param opts {Object} : options:
@@ -2451,6 +2581,7 @@ module.exports = {
     enable: enableVM,
     get: getRule,
     list: listRules,
+    remoteTargets: getRemoteTargets,
     rules: getVMrules,
     stats: vmStats,
     status: vmStatus,

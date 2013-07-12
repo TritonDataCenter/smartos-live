@@ -158,6 +158,18 @@ $(DTRACE_PROVIDER.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 CLEANFILES +=	$(DTRACE_PROVIDER.NODE) $(DTRACE_PROVIDER_OBJS)
 
 #
+# The microtime Node add-on follows the same pattern as EXPAT.NODE.
+#
+MICROTIME_OBJDIR =	node-microtime/build/Release
+MICROTIME.NODE =	$(MICROTIME_OBJDIR)/microtime.node
+
+$(MICROTIME.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-write-strings -Wno-sign-compare
+$(MICROTIME.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
+$(MICROTIME.NODE) :	CXXFLAGS +=	$(NODE_CFLAGS)
+$(MICROTIME.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
+
+
+#
 # The sqlite3 add-on uses a combination of C + C++ files in multiple
 # directories, and has multiple header directories as well.
 #
@@ -289,6 +301,7 @@ TARGETS = \
 	$(EXPAT.NODE) \
 	$(DTRACE_PROVIDER.NODE) \
 	$(KSTAT.NODE) \
+	$(MICROTIME.NODE) \
 	$(SYSLOG.NODE) \
 	$(SQLITE3_BINDINGS.NODE) \
 	$(ZSOCK_BINDINGS.NODE) \
@@ -317,6 +330,7 @@ install: all
 	mkdir -m 0755 -p $(PREFIX_NODE)/node_modules
 	cp -Pr node_modules/* $(PREFIX_NODE)/node_modules
 	cp $(KSTAT.NODE) $(PREFIX_NODE)/node_modules/
+	cp $(MICROTIME.NODE) $(PREFIX_NODE)/node_modules/
 	rm -rf $(DESTDIR)/usr/vm
 	cp -PR vm $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/usr/vm/node_modules
@@ -490,6 +504,10 @@ $(DTRACE_PROVIDER.NODE): $(DTRACE_PROVIDER_OBJS)
 
 $(KSTAT.NODE): node-kstat/kstat.cc
 	@mkdir -p $(KSTAT_OBJDIR)
+	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
+
+$(MICROTIME.NODE): node-microtime/src/microtime.cc
+	@mkdir -p $(MICROTIME_OBJDIR)
 	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
 
 $(SQLITE3_OBJDIR)/%.o: $(SQLITE3_SRCDIR)/%.cc $(SQLITE3_HDRS)

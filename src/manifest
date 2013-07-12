@@ -399,6 +399,7 @@ f usr/node/0.8/node_modules/dtrace-provider.js 0444 root bin
 f usr/node/0.8/node_modules/dtrace-provider.node 0444 root bin
 f usr/node/0.8/node_modules/getopt.js 0444 root bin
 f usr/node/0.8/node_modules/kstat.node 0444 root bin
+f usr/node/0.8/node_modules/microtime.node 0444 root bin
 f usr/node/0.8/node_modules/onlyif.js 0444 root bin
 f usr/node/0.8/node_modules/sprintf.js 0444 root bin
 f usr/node/0.8/node_modules/sqlite3.js 0444 root bin

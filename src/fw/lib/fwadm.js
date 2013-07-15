@@ -246,7 +246,7 @@ Fwadm.prototype.do_add = function (subcmd, opts, args, callback) {
     pipeline({
     funcs: [
         function payload(_, cb) { cli.getPayload(opts, args, cb); },
-        function vms(_, cb) { VM.lookup({}, { 'full': true }, cb); },
+        function vms(_, cb) { VM.lookup({}, { fields: fw.VM_FIELDS }, cb); },
         function addRules(state, cb) {
             var addOpts = preparePayload(opts, state.payload);
             addOpts.vms = state.vms;
@@ -354,7 +354,7 @@ Fwadm.prototype.do_delete = function (subcmd, opts, args, callback) {
 
     pipeline({
     funcs: [
-        function vms(_, cb) { VM.lookup({}, { 'full': true }, cb); },
+        function vms(_, cb) { VM.lookup({}, { fields: fw.VM_FIELDS }, cb); },
         function delRules(state, cb) {
             var delOpts = preparePayload(opts);
             delOpts.vms = state.vms;
@@ -372,7 +372,7 @@ Fwadm.prototype.do_delete = function (subcmd, opts, args, callback) {
  */
 Fwadm.prototype.do_rules = function (subcmd, opts, args, callback) {
     var uuid = cli.validateUUID(args[0]);
-    return VM.lookup({}, { 'full': true }, function (err, vms) {
+    return VM.lookup({}, { fields: fw.VM_FIELDS }, function (err, vms) {
         if (err) {
             return cli.exitWithErr(err, opts);
         }
@@ -450,6 +450,31 @@ Fwadm.prototype.do_stats = function (subcmd, opts, args, callback) {
 };
 
 
+/**
+ * Gets the VMs that are affected by a rule
+ */
+Fwadm.prototype.do_vms = function (subcmd, opts, args, callback) {
+    var uuid = cli.validateUUID(args[0]);
+    return VM.lookup({}, { fields: fw.VM_FIELDS }, function (err, vms) {
+        if (err) {
+            return cli.exitWithErr(err, opts);
+        }
+
+        return fw.vms({ rule: uuid, vms: vms }, function (err2, res) {
+            if (err2) {
+                return cli.exitWithErr(err2, opts);
+            }
+
+            if (opts && opts.json) {
+                return console.log(cli.json(res));
+            }
+
+            console.log(res.join('\n'));
+        });
+    });
+};
+
+
 
 // --- Help text and other cmdln options
 
@@ -464,10 +489,11 @@ var HELP = {
     list: 'List rules.',
     rules: 'List rules that apply to a VM.',
     start: 'Starts a VM\'s firewall.',
-    status: 'Get the status of a VM\'s firewall',
-    stats: 'Get rule statistics for a VM\'s firewall',
+    status: 'Get the status of a VM\'s firewall.',
+    stats: 'Get rule statistics for a VM\'s firewall.',
     stop: 'Stops a VM\'s firewall.',
-    update: 'Updates firewall rules or data.'
+    update: 'Updates firewall rules or data.',
+    vms: 'Get the VMs affected by a rule'
 };
 
 var EXTRA_OPTS = {

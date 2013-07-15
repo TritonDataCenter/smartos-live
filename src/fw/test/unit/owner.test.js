@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
- * fwadm tests
+ * test rules with owner_uuid set
  */
 
 var async = require('async');
@@ -189,7 +189,8 @@ exports['tag to IP'] = function (t) {
             rules: [
                 {
                     uuid: expRule2.uuid,
-                    owner_uuid: owner
+                    owner_uuid: owner,
+                    version: expRule2.version
                 }
             ],
             vms: [vm1, vm2]
@@ -463,8 +464,9 @@ exports['all vms (local and remote)'] = function (t) {
                 return cb();
             }
 
-            t.ok(res.rules[0].version, 'rule has a version');
-            expRules[1].version = res.rules[0].version;
+            t.notEqual(res.rules[0].version, expRules[0].version,
+                'rule version changed');
+            expRules[0].version = res.rules[0].version;
 
             t.deepEqual(helpers.sortRes(res), {
                 vms: [ vm1.uuid, vm2.uuid ].sort(),

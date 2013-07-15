@@ -296,6 +296,7 @@ function createUpdatedRules(opts, callback) {
 
     var originals = {};
     var updated = [];
+    var ver = mod_rule.generateVersion();
 
     originalRules.forEach(function (r) {
         originals[r.uuid] = r;
@@ -304,6 +305,10 @@ function createUpdatedRules(opts, callback) {
     updatedRules.forEach(function (rule) {
         // Assume that we're allowed to do adds - findRules() would have errored
         // out if allowAdds was unset and an add was attempted
+        if (!rule.hasOwnProperty('version')) {
+            rule.version = ver;
+        }
+
         if (originals.hasOwnProperty(rule.uuid)) {
             updated.push(mergeObjects(rule, originals[rule.uuid].serialize()));
         } else {
@@ -466,16 +471,23 @@ function createRemoteVMlookup(remoteVMs, callback) {
 /**
  * Load a single rule from disk, returning a rule object
  *
- * @param {String} file : file to load the rule from
+ * @param {String} uuid : UUID of the rule to load
  * @param {Function} callback : of the form f(err, rule)
  * - Where vm is a rule object
  */
-function loadRule(file, callback) {
+function loadRule(uuid, callback) {
+    var file = util.format('%s/%s.json', RULE_PATH, uuid);
     LOG.debug('loadRule: loading rule file "%s"', file);
+
     return fs.readFile(file, function (err, raw) {
         if (err) {
+            if (err.code == 'ENOENT') {
+                return callback(new verror.VError('Unknown rule "%s"', uuid));
+            }
+
             return callback(err);
         }
+
         var rule;
 
         try {
@@ -518,8 +530,8 @@ function loadAllRules(callback) {
                     return cb(null);
                 }
 
-                var rpath = util.format('%s/%s', RULE_PATH, file);
-                return loadRule(rpath, function (err2, rule) {
+                return loadRule(file.substring(0, file.length - 5),
+                    function (err2, rule) {
                     if (rule) {
                         rules.push(rule);
                     }
@@ -2004,14 +2016,8 @@ function getRule(opts, callback) {
     opts.readOnly = true;
     logEntry(opts, 'get');
 
-    var file = util.format('%s/%s.json', RULE_PATH, opts.uuid);
-    return loadRule(file, function (err, rule) {
+    return loadRule(opts.uuid, function (err, rule) {
         if (err) {
-            if (err.code == 'ENOENT') {
-                return callback(new verror.VError('Unknown rule "%s"',
-                    opts.uuid));
-            }
-
             LOG.error(err, 'getRule: return');
             return callback(err);
         }
@@ -2466,6 +2472,61 @@ function getRemoteTargets(opts, callback) {
 
 
 /**
+ * Gets VMs that are affected by a rule
+ *
+ * @param opts {Object} : options:
+ * - vms {Array} : array of VM objects (as per VM.js)
+ * - rule {UUID or Object} : UUID of pre-existing rule, or a rule object
+ * @param callback {Function} `function (err, vms)`
+ * - Where vms is an array of VMs that are affected by that rule
+ */
+function getRuleVMs(opts, callback) {
+    try {
+        assert.object(opts, 'opts');
+        assert.arrayOfObject(opts.vms, 'opts.vms');
+        if (typeof (opts.rule) !== 'string'
+            && typeof (opts.rule) !== 'object') {
+            assert.true(false, 'opts.rule (string or object)');
+        }
+    } catch (err) {
+        return callback(err);
+    }
+    opts.readOnly = true;
+    logEntry(opts, 'vms');
+
+    var toFind = {};
+    toFind[opts.vm] = opts.vm;
+
+    pipeline({
+    funcs: [
+        function rules(_, cb) {
+            if (typeof (opts.rule) === 'string') {
+                return loadRule(opts.rule, cb);
+            }
+
+            createRules([ opts.rule ], cb);
+        },
+        function vms(_, cb) { createVMlookup(opts.vms, cb); },
+        function ruleVMs(state, cb) {
+            if (!util.isArray(state.rules)) {
+                state.rules = [ state.rules ];
+            }
+
+            filterVMsByRules(state.vms, state.rules, cb);
+        }
+    ]}, function (err, res) {
+        if (err) {
+            return callback(err);
+        }
+
+        var matched = Object.keys(res.state.ruleVMs);
+        LOG.debug(matched, 'getRuleVMs: return (vm=%s)', opts.vm);
+        return callback(null, matched);
+    });
+}
+
+
+/**
  * Gets rules that apply to a VM
  *
  * @param opts {Object} : options:
@@ -2587,5 +2648,6 @@ module.exports = {
     status: vmStatus,
     update: update,
     validatePayload: validatePayload,
-    VM_FIELDS: VM_FIELDS
+    VM_FIELDS: VM_FIELDS,
+    vms: getRuleVMs
 };

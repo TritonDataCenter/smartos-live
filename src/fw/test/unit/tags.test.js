@@ -634,6 +634,10 @@ exports['add / update: tag to tag'] = function (t) {
                 return cb();
             }
 
+            t.notEqual(res.rules[0].version, rule2.version,
+                'rule version changed');
+            rule2.version = res.rules[0].version;
+
             t.deepEqual(helpers.sortRes(res), {
                 rules: [rule2],
                 vms: tagOneVMs.map(function (vm) { return vm.uuid; }).sort()

@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
- * mocks for tests
+ * Unit test helper functions
  */
 
 var assert = require('assert-plus');
@@ -15,6 +15,7 @@ var util = require('util');
 var createSubObjects = mod_obj.createSubObjects;
 
 
+
 // --- Globals
 
 
@@ -22,6 +23,7 @@ var createSubObjects = mod_obj.createSubObjects;
 var DEBUG_FILES = process.env.PRINT_IPF_CONFS;
 var IP_NUM = 2;
 var SYN_LINE = 'pass out quick proto tcp from any to any flags S/SA keep state';
+
 
 
 // --- Internal functions
@@ -430,6 +432,24 @@ function uuidSort(a, b) {
 }
 
 
+/**
+ * Test that fw.vms() returns the correct VMs affected
+ */
+function vmsAffected(opts, callback) {
+    mocks.fw.vms({ rule: opts.rule, vms: opts.allVMs }, function (err, res) {
+        opts.t.ifError(err, 'vmsAffected error');
+        if (err) {
+            return callback();
+        }
+
+        opts.t.deepEqual(res.sort(), opts.vms.map(function (vm) {
+            return vm.uuid;
+        }).sort(), opts.vms.length + ' vms affected');
+        return callback();
+    });
+}
+
+
 
 module.exports = {
     defaultZoneRules: defaultZoneRules,
@@ -446,5 +466,6 @@ module.exports = {
     testEnableDisable: testEnableDisable,
     uuidNum: uuidNum,
     uuidSort: uuidSort,
+    vmsAffected: vmsAffected,
     zoneIPFconfigs: zoneIPFconfigs
 };

@@ -19,6 +19,8 @@ var createSubObjects = mod_obj.createSubObjects;
 var IPF = '/usr/sbin/ipf';
 var VALUES = {};
 var LOG = false;
+var ORIG_PROCESS;
+var PID;
 
 
 
@@ -293,6 +295,24 @@ function resetValues() {
 function setup() {
     if (fw) {
         return fw;
+    }
+
+    // Mock out process.pid, but keep the rest of the process
+    // object the same
+    if (!ORIG_PROCESS) {
+        ORIG_PROCESS = process;
+        PID = process.pid;
+        process = {
+            get pid() {
+                return PID++;
+            }
+        };
+        for (var p in ORIG_PROCESS) {
+            if (p.name === 'pid') {
+                continue;
+            }
+            process[p] = ORIG_PROCESS[p];
+        }
     }
 
     resetValues();

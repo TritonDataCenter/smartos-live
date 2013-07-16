@@ -499,7 +499,8 @@ function cmd_tag_list()
     if [[ -z ${LOCAL} ]]; then
         # go through lines in reverse order, since later lines will take
         # precedence when evaluated with bash
-        for line in $(cat ${CONF} | grep "^.*_nic=" | tail -r); do
+        for line in $(cat ${CONF} | grep "^.*_nic=" | grep -v "^[ 	]*#" \
+            | tail -r); do
             fields=(${line//=/ })
             tag=${fields[0]/_nic/}
             val=${fields[1]}

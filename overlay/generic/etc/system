@@ -138,14 +138,6 @@ set apix:apic_timer_preferred_mode=0
 set dump_metrics_on=1
 
 *
-* With lots of zones, each with a large limit on lwps, we need more pids.  We
-* could go to 999999, but for now stick with 5 digits to match the existing
-* default of 30000.  This is mostly being conservative, so we can bump higher
-* if necessary.
-*
-set pidmax=99999
-
-*
 * The traditional (and essentially entirely brain dead) cfgadm(1M)-centric
 * model of hotpluggin' appears to be basically unnecessary.  This tunable
 * enables the system to create device nodes for newly inserted devices

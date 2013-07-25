@@ -342,6 +342,7 @@ function createVMlookup(vms, callback) {
         ips: {},
         subnets: {},
         tags: {},
+        tagValues: {},
         vms: {},
         wildcards: {}
     };
@@ -2486,7 +2487,7 @@ function getRuleVMs(opts, callback) {
         assert.arrayOfObject(opts.vms, 'opts.vms');
         if (typeof (opts.rule) !== 'string'
             && typeof (opts.rule) !== 'object') {
-            assert.true(false, 'opts.rule (string or object)');
+            assert.ok(false, 'opts.rule ([string] or [object]) required');
         }
     } catch (err) {
         return callback(err);

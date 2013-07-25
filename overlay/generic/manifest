@@ -151,11 +151,6 @@ f lib/svc/manifest/system/coreadm.xml 0444 root sys
 f lib/svc/manifest/system/console-login.xml 0444 root sys
 f lib/svc/manifest/network/ipfilter.xml 0444 root sys
 f lib/svc/manifest/network/network-physical.xml 0444 root sys
-d lib/svc/manifest/network/nfs 0755 root sys
-f lib/svc/manifest/network/nfs/client.xml 0444 root sys
-f lib/svc/manifest/network/nfs/nlockmgr.xml 0444 root sys
-f lib/svc/manifest/network/nfs/server.xml 0444 root sys
-f lib/svc/manifest/network/nfs/status.xml 0444 root sys
 d var/db 0755 root bin
 d var/db/imgadm 0755 root bin
 d var/fw 0755 root bin

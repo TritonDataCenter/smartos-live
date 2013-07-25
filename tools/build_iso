@@ -220,7 +220,7 @@ function bi_generate_iso
 	fi
 	echo "Generating iso... \c "
 	isopath="$bi_output_dir/$bi_platform_name.iso"
-	mkisofs -R -b 			\
+	LC_ALL=C mkisofs -R -b 		\
 	    boot/grub/stage2_eltorito	\
 	    -no-emul-boot 		\
 	    -boot-load-size 4		\

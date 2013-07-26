@@ -23,6 +23,7 @@
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * * *
+ *
  * Testing 'imgadm create'.
  */
 
@@ -44,7 +45,7 @@ var before = tap4nodeunit.before;
 var test = tap4nodeunit.test;
 
 
-var WRKDIR = '/var/tmp/imgadm-test-create'
+var WRKDIR = '/var/tmp/img-test-create'
 var TESTDIR = __dirname;
 
 // Base image from which we'll be creating a custom images.
@@ -53,7 +54,7 @@ var BASE_UUID = 'f669428c-a939-11e2-a485-b790efc0f0c1'; // base 13.1.0
 
 // ---- setup
 
-test('setup: clean WRKDIR', function (t) {
+test('setup: clean WRKDIR (' + WRKDIR + ')', function (t) {
     rimraf(WRKDIR, function (err) {
         t.ifError(err);
         mkdirp(WRKDIR, function (err2) {
@@ -83,6 +84,23 @@ test('custom image (compression=none)', function (t) {
     });
 });
 
+test('custom image (incremental, compression=none)', function (t) {
+    var cmd = format('%s/mk-custom-image %s %s/1i none -i',
+        TESTDIR, BASE_UUID, WRKDIR);
+    exec(cmd, function (err, stdout, stderr) {
+        t.ifError(err, format('error running "%s": %s', cmd, err));
+        var cmd = format('%s/try-custom-image %s/1i.imgmanifest %s/1i.zfs',
+            TESTDIR, WRKDIR, WRKDIR);
+        exec(cmd, function (err, stdout, stderr) {
+            t.ifError(err, format('error running "%s": %s', cmd, err));
+            t.ok(stdout.indexOf('hi from mk-custom-image') !== -1,
+                format('could not find expected marker in stdout:\n--\n%s\n--\n',
+                    stdout));
+            t.end();
+        });
+    });
+});
+
 test('custom image (compression=gzip)', function (t) {
     var cmd = format('%s/mk-custom-image %s %s/2 gzip',
         TESTDIR, BASE_UUID, WRKDIR);
@@ -100,11 +118,29 @@ test('custom image (compression=gzip)', function (t) {
     });
 });
 
-test('custom image (compression=bzip2)', function (t) {
-    var cmd = format('%s/mk-custom-image %s %s/3 bzip2', TESTDIR, BASE_UUID, WRKDIR);
+test('custom image (incremental, compression=gzip)', function (t) {
+    var cmd = format('%s/mk-custom-image %s %s/2i gzip -i',
+        TESTDIR, BASE_UUID, WRKDIR);
     exec(cmd, function (err, stdout, stderr) {
         t.ifError(err, format('error running "%s": %s', cmd, err));
-        var cmd = format('%s/try-custom-image %s/3.imgmanifest %s/3.zfs.bz2',
+        var cmd = format('%s/try-custom-image %s/2i.imgmanifest %s/2i.zfs.gz',
+            TESTDIR, WRKDIR, WRKDIR);
+        exec(cmd, function (err, stdout, stderr) {
+            t.ifError(err, format('error running "%s": %s', cmd, err));
+            t.ok(stdout.indexOf('hi from mk-custom-image') !== -1,
+                format('could not find expected marker in stdout:\n--\n%s\n--\n',
+                    stdout));
+            t.end();
+        });
+    });
+});
+
+test('custom image (incremental compression=bzip2)', function (t) {
+    var cmd = format('%s/mk-custom-image %s %s/3i bzip2 -i',
+        TESTDIR, BASE_UUID, WRKDIR);
+    exec(cmd, function (err, stdout, stderr) {
+        t.ifError(err, format('error running "%s": %s', cmd, err));
+        var cmd = format('%s/try-custom-image %s/3i.imgmanifest %s/3i.zfs.bz2',
             TESTDIR, WRKDIR, WRKDIR);
         exec(cmd, function (err, stdout, stderr) {
             t.ifError(err, format('error running "%s": %s', cmd, err));

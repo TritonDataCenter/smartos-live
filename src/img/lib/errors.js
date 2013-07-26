@@ -189,6 +189,23 @@ function VmNotStoppedError(cause, uuid) {
 }
 util.inherits(VmNotStoppedError, ImgadmError);
 
+// A VM must have an origin image to 'imgadm create' an *incremental* image.
+function VmHasNoOriginError(cause, vmUuid) {
+    if (vmUuid === undefined) {
+        vmUuid = cause;
+        cause = undefined;
+    }
+    assert.string(vmUuid, 'vmUuid');
+    ImgadmError.call(this, {
+        cause: cause,
+        message: format('cannot create an incremental image: vm "%s" has '
+            + 'no origin', vmUuid),
+        code: 'VmHasNoOrigin',
+        exitStatus: 1
+    });
+}
+util.inherits(VmHasNoOriginError, ImgadmError);
+
 function ActiveImageNotFoundError(cause, uuid) {
     if (uuid === undefined) {
         uuid = cause;
@@ -259,6 +276,25 @@ function ImageHasDependentClonesError(cause, imageInfo) {
     });
 }
 util.inherits(ImageHasDependentClonesError, ImgadmError);
+
+function OriginNotInstalledError(cause, zpool, uuid) {
+    if (uuid === undefined) {
+        // `cause` was not provided.
+        uuid = zpool;
+        zpool = cause;
+        cause = undefined;
+    }
+    assert.string(zpool, 'zpool');
+    assert.string(uuid, 'uuid');
+    ImgadmError.call(this, {
+        cause: cause,
+        message: format('origin image "%s" was not found on zpool "%s"',
+            uuid, zpool),
+        code: 'OriginNotInstalled',
+        exitStatus: 3
+    });
+}
+util.inherits(OriginNotInstalledError, ImgadmError);
 
 function InvalidUUIDError(cause, uuid) {
     if (uuid === undefined) {
@@ -517,11 +553,13 @@ module.exports = {
     ImageNotFoundError: ImageNotFoundError,
     VmNotFoundError: VmNotFoundError,
     VmNotStoppedError: VmNotStoppedError,
+    VmHasNoOriginError: VmHasNoOriginError,
     ManifestValidationError: ManifestValidationError,
     ActiveImageNotFoundError: ActiveImageNotFoundError,
     ImageNotActiveError: ImageNotActiveError,
     ImageNotInstalledError: ImageNotInstalledError,
     ImageHasDependentClonesError: ImageHasDependentClonesError,
+    OriginNotInstalledError: OriginNotInstalledError,
     InvalidManifestError: InvalidManifestError,
     UnexpectedNumberOfSnapshotsError: UnexpectedNumberOfSnapshotsError,
     FileSystemError: FileSystemError,

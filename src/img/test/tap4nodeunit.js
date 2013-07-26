@@ -12,6 +12,10 @@
  *      var test = tap4nodeunit.test;
  */
 
+var p = console.log;
+// Set to `true` for verbose output on `t.exec` usage.
+var verbose = false ? console.warn : function () {};
+
 
 
 // ---- Exports
@@ -51,6 +55,32 @@ module.exports = {
             };
             t.notOk = function notOk(ok, message) {
                 return (t.ok(!ok, message));
+            };
+
+            // ---- Custom (to the img test suite) helpers.
+
+            /**
+             * Exec a command and assert it exitted zero.
+             *
+             * @param cmd {String} The command to run.
+             * @param opts {Object} `child_process.exec` options. Optional.
+             * @param cb {Function} Callback called as
+             *      `function (err, stdout, stderr)`.
+             */
+            t.exec = function exec(cmd, opts, cb) {
+                if (cb === undefined) {
+                    cb = opts;
+                    opts = undefined;
+                }
+                var exec = require('child_process').exec;
+                verbose('cmd:', cmd);
+                exec(cmd, function (err, stdout, stderr) {
+                    verbose('err:', err);
+                    verbose('stdout: %j', stdout);
+                    verbose('stderr: %j', stderr);
+                    t.ifError(err);
+                    cb();
+                });
             };
 
             tester.call(this, t);

@@ -1144,7 +1144,8 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, callback) {
                 manifest: imageInfo.manifest,
                 source: imageInfo.source,
                 zpool: zpool,
-                quiet: opts.quiet
+                quiet: opts.quiet,
+                logCb: console.log
             };
             self.tool.importImage(importOpts, function (importErr) {
                 if (importErr) {
@@ -1249,7 +1250,8 @@ CLI.prototype.do_install = function do_install(subcmd, opts, args, callback) {
         var installOpts = {
             manifest: manifest,
             zpool: zpool,
-            file: opts.file
+            file: opts.file,
+            logCb: console.log
         };
         self.tool.installImage(installOpts, function (installErr) {
             if (installErr) {
@@ -1329,8 +1331,8 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, callback) {
             args.length, args.join(' '))));
         return;
     }
-    var uuid = args[0];
-    assertUuid(uuid);
+    var vmUuid = args[0];
+    assertUuid(vmUuid);
     if (opts.compression
         && !~common.VALID_COMPRESSIONS.indexOf(opts.compression))
     {
@@ -1429,9 +1431,10 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, callback) {
         }
 
         var createOpts = {
-            uuid: uuid,
+            vmUuid: vmUuid,
             manifest: manifest,
             compression: opts.compression,
+            incremental: opts.incremental,
             savePrefix: savePrefix,
             logCb: console.log,
             quiet: opts.quiet
@@ -1483,7 +1486,7 @@ CLI.prototype.do_create.description = (
     + 'done separately via "imgadm publish").\n'
     + '\n'
     + 'Usage:\n'
-    + '    $NAME create [<options>] <uuid> [<manifest-field>=<value> ...]\n'
+    + '    $NAME create [<options>] <vm-uuid> [<manifest-field>=<value> ...]\n'
     + '\n'
     + 'Options:\n'
     + '    -h, --help     Print this help and exit.\n'
@@ -1500,6 +1503,8 @@ CLI.prototype.do_create.description = (
     + '                   created.\n'
     + '    -c COMPRESSION One of "none", "gz" or "bzip2" for the compression\n'
     + '                   to use on the image file, if any. Default is "none".\n'
+    + '    -i             Build an incremental image (based on the "@final"\n'
+    + '                   snapshot of the source image for VM.\n'
     + '\n'
     + '    -p URL, --publish URL\n'
     + '                   Publish directly to the given image source\n'
@@ -1542,6 +1547,7 @@ CLI.prototype.do_create.longOpts = {
     'manifest': String,
     'compression': String,
     'output-template': String,
+    'incremental': Boolean,
     'publish': String,
     'quiet': Boolean
 };
@@ -1549,6 +1555,7 @@ CLI.prototype.do_create.shortOpts = {
     'm': ['--manifest'],
     'c': ['--compression'],
     'o': ['--output-template'],
+    'i': ['--incremental'],
     'p': ['--publish'],
     'q': ['--quiet']
 };

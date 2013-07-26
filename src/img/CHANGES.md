@@ -1,5 +1,17 @@
 # imgadm changelog
 
+## 2.2.0
+
+- [IMGAPI-124] Incremental image support. `imgadm create -i ...` will create
+  an incremental image, i.e. an image that depends on the image used to
+  create the source VM. This is called the "origin" and is stored on the
+  `origin` field in the created image manifest.
+
+  `imgadm import` and `imgadm install` now ensure that an image's origin is
+  installed before the image itself is installed. `imgadm import` will attempt
+  to automatically fetch the origin from current image sources.
+
+
 ## 2.1.1
 
 - [OS-2315] Change from manually DNS resolving source URL hostnames and not

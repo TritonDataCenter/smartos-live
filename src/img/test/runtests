@@ -65,7 +65,7 @@ function usage
     echo "Options:"
     echo "  -h           Print this help and exit."
     echo "  -f FILTER    Filter pattern (substring match) for test files to run."
-    echo "  -r REPORTER  Use an alternate nodeunit reporter. Default 'tap'."
+    echo "  -r REPORTER  Use an alternate nodeunit reporter. Default 'default'."
 }
 
 
@@ -83,7 +83,7 @@ NODEUNIT="/usr/node/bin/node $TOP/node_modules/nodeunit/bin/nodeunit"
 # Options.
 opt_test_pattern=
 opt_reporter=default
-while getopts "hf:" opt
+while getopts "hf:r:" opt
 do
     case "$opt" in
         h)

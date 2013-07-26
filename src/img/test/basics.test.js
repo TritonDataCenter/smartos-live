@@ -26,6 +26,7 @@
  * Some base imgadm tests.
  */
 
+var p = console.log;
 var format = require('util').format;
 var exec = require('child_process').exec;
 
@@ -39,16 +40,8 @@ var before = tap4nodeunit.before;
 var test = tap4nodeunit.test;
 
 
-var IMGADM = 'imgadm';
-
-
-before(function (next) {
-    next();
-});
-
-
 test('imgadm --version', function (t) {
-    exec(IMGADM + ' --version', function (err, stdout, stderr) {
+    exec('imgadm --version', function (err, stdout, stderr) {
         t.ifError(err, err);
         t.equal(stderr, '', 'stderr');
         t.ok(/^imgadm \d+\.\d+\.\d+/.test(stdout),
@@ -62,7 +55,7 @@ test('imgadm --version', function (t) {
 
 ['', ' --help', ' -h', ' help'].forEach(function (args) {
     test('imgadm' + args, function (t) {
-        exec(IMGADM + args, function (err, stdout, stderr) {
+        exec('imgadm' + args, function (err, stdout, stderr) {
             t.ifError(err, err);
             t.equal(stderr, '', 'stderr');
             t.ok(/\nUsage:/.test(stdout), 'stdout has help');
@@ -73,7 +66,7 @@ test('imgadm --version', function (t) {
 
 
 test('imgadm -vv   # bunyan debug log on stderr', function (t) {
-    exec(IMGADM + ' -vv bogus', function (err, stdout, stderr) {
+    exec('imgadm -vv bogus', function (err, stdout, stderr) {
         t.ok(err);
         t.equal(err.code, 1);
         t.equal(stdout, '', 'stdout');
@@ -87,7 +80,7 @@ test('imgadm -vv   # bunyan debug log on stderr', function (t) {
 });
 
 test('imgadm -vvv   # bunyan "src" log on stderr', function (t) {
-    exec(IMGADM + ' -vvv bogus', function (err, stdout, stderr) {
+    exec('imgadm -vvv bogus', function (err, stdout, stderr) {
         t.ok(err);
         t.equal(err.code, 1);
         t.equal(stdout, '', 'stdout');
@@ -104,7 +97,7 @@ test('imgadm -vvv   # bunyan "src" log on stderr', function (t) {
 
 
 test('imgadm -E -vv   # structured error last line', function (t) {
-    exec(IMGADM + ' -E -vv bogus', function (err, stdout, stderr) {
+    exec('imgadm -E -vv bogus', function (err, stdout, stderr) {
         t.ok(err);
         t.equal(err.code, 1);
         t.equal(stdout, '', 'stdout');
@@ -127,7 +120,7 @@ test('imgadm -E -vv   # structured error last line', function (t) {
 
 
 test('imgadm help sources', function (t) {
-    exec(IMGADM + ' help sources', function (err, stdout, stderr) {
+    exec('imgadm help sources', function (err, stdout, stderr) {
         t.ifError(err, err);
         t.equal(stderr, '', 'stderr');
         t.ok(/imgadm sources/.test(stdout),
@@ -140,7 +133,7 @@ test('imgadm help sources', function (t) {
 
 var BOGUS_UUID = '29fa922a-7fa7-11e2-bffa-5b6fe63a8d5e';
 test('`imgadm info BOGUS_UUID` ImageNotInstalled error, rv 3', function (t) {
-    exec(IMGADM + ' info ' + BOGUS_UUID, function (err, stdout, stderr) {
+    exec('imgadm info ' + BOGUS_UUID, function (err, stdout, stderr) {
         t.ok(err, err);
         t.equal(err.code, 3);
         t.ok(/ImageNotInstalled/.test(stderr),

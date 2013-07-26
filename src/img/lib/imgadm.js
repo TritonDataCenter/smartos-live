@@ -1286,6 +1286,9 @@ IMGADM.prototype.deleteImage = function deleteImage(options, callback) {
  *      - @param source {Object} The source object from which to import.
  *      - @param quiet {Boolean} Optional. Default false. Set to true
  *        to not have a progress bar for the install.
+ *      - @param logCb {Function} Optional. A function that is called
+ *        with progress messages. Called as `logCb(<string>)`. E.g. passing
+ *        console.log is legal.
  * @param callback {Function} `function (err)`
  */
 IMGADM.prototype.importImage = function importImage(options, callback) {
@@ -1294,6 +1297,7 @@ IMGADM.prototype.importImage = function importImage(options, callback) {
     assert.string(options.zpool, 'options.zpool');
     assert.object(options.source, 'options.source');
     assert.optionalBool(options.quiet, 'options.quiet');
+    assert.optionalFunc(options.logCb, 'options.logCb');
 
     // Ensure this image is active (upgrading manifest if required).
     try {
@@ -1323,6 +1327,9 @@ IMGADM.prototype.importImage = function importImage(options, callback) {
  *      - @param file {String} Path to the image file.
  *      - @param quiet {Boolean} Optional. Default false. Set to true
  *        to not have a progress bar for the install.
+ *      - @param logCb {Function} Optional. A function that is called
+ *        with progress messages. Called as `logCb(<string>)`. E.g. passing
+ *        console.log is legal.
  * @param callback {Function} `function (err)`
  */
 IMGADM.prototype.installImage = function installImage(options, callback) {
@@ -1331,9 +1338,11 @@ IMGADM.prototype.installImage = function installImage(options, callback) {
     assert.string(options.zpool, 'options.zpool');
     assert.string(options.file, 'options.file');
     assert.optionalBool(options.quiet, 'options.quiet');
+    assert.optionalFunc(options.logCb, 'options.logCb');
 
     this._installImage(options, callback);
 };
+
 
 
 /**
@@ -1351,6 +1360,8 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         && !(options.file && options.source),
         'must specify exactly *one* of options.file or options.source');
     assert.optionalBool(options.quiet, 'options.quiet');
+    assert.optionalFunc(options.logCb, 'options.logCb');
+    var logCb = options.logCb || function () {};
     assert.func(callback, 'callback');
     var uuid = options.manifest.uuid;
     assertUuid(uuid, 'options.manifest.uuid');
@@ -1365,75 +1376,216 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         return;
     }
 
+    // Data processed in the waterfall below.
     var imageInfo = {
         manifest: manifest,
         zpool: options.zpool,
         source: options.source
     };
     var dsName = format('%s/%s', options.zpool, uuid);
-    var tmpDsName;  // set when the 'zfs receive' begins
+    var partialDsName;  // set when the 'zfs receive' begins
     var bar = null;  // progress-bar object
     var md5Hash = null;
     var sha1Hash = null;
     var md5Expected = null;
     var finished = false;
 
-    function cleanupAndExit(cleanDsName, err) {
-        if (cleanDsName) {
-            var cmd = format('/usr/sbin/zfs destroy -r %s', cleanDsName);
-            exec(cmd, function (error, stdout, stderr) {
-                if (error) {
-                    log.error({cmd: cmd, error: error, stdout: stdout,
-                        stderr: stderr, cleanDsName: cleanDsName},
-                        'error destroying tmp dataset while cleaning up');
-                }
-                callback(err);
-            });
-        } else {
-            callback(err);
-        }
-    }
-
-    function ensureFinalSnapshot(parentDsName, next) {
-        getZfsDataset(parentDsName, ['name', 'children'], function (zErr, ds) {
-            if (zErr) {
-                next(zErr);
+    async.waterfall([
+        /**
+         * If this image has an origin, need to ensure it is installed first.
+         * If we're streaming from a given IMGAPI `source` then we can try
+         * to get the origin as well. If we're just given a file, then nothing
+         * we can do.
+         */
+        function getOrigin(next) {
+            if (!manifest.origin) {
+                next(null, null);
                 return;
             }
-            var snapshots = ds.children.snapshots;
-            var snapnames = snapshots.map(
-                function (n) { return '@' + n.split(/@/g).slice(-1)[0]; });
-            if (snapshots.length !== 1) {
-                next(new errors.UnexpectedNumberOfSnapshotsError(
-                    uuid, snapnames));
-            } else if (snapnames[0] !== '@final') {
-                var curr = snapshots[0];
-                var finalSnap = curr.split(/@/)[0] + '@final';
-                zfsRenameSnapshot(curr, finalSnap,
-                    {recursive: true, log: log}, next);
-            } else {
+            var getOpts = {
+                uuid: manifest.origin,
+                zpool: options.zpool
+            };
+            self.getImage(getOpts, next);
+        },
+        function ensureOrigin(localOriginInfo, next) {
+            if (!manifest.origin) {
                 next();
+                return;
             }
-        });
-    }
+            if (localOriginInfo) {
+                next();
+            } else if (options.file) {
+                next(new errors.OriginNotInstalledError(options.zpool,
+                    manifest.origin));
+            } else {
+                assert.ok(options.source);
 
-    function finish(err) {
-        if (finished) {
-            return;
-        }
-        finished = true;
-        if (bar) {
-            bar.end();
-        }
-        if (!err && md5Expected) {
-            var md5Actual = md5Hash.digest('base64');
-            if (md5Actual !== md5Expected) {
-                err = new errors.DownloadError(format(
-                    'Content-MD5 expected to be %s, but was %s',
-                    md5Expected, md5Actual));
+                logCb(format('Origin image %s is not installed: '
+                    + 'searching sources', manifest.origin));
+                self.sourcesGet(manifest.origin, true,
+                        function (err, originInfo) {
+                    if (err) {
+                        next(err);
+                        return;
+                    }
+                    logCb(format('Importing origin image %s (%s %s) from "%s"',
+                        originInfo.manifest.uuid, originInfo.manifest.name,
+                        originInfo.manifest.version, originInfo.source.url));
+                    var impOpts = {
+                        manifest: originInfo.manifest,
+                        zpool: options.zpool,
+                        source: originInfo.source,
+                        logCb: options.logCb
+                    };
+                    self.importImage(impOpts, next);
+                });
             }
-        }
-        if (!err) {
+        },
+
+        function getImageFileInfo(next) {
+            if (options.file) {
+                fs.stat(options.file, function (statErr, stats) {
+                    if (statErr) {
+                        next(statErr);
+                        return;
+                    }
+                    var stream = fs.createReadStream(options.file);
+                    next(null, {
+                        stream: stream,
+                        size: stats.size
+                    });
+                });
+            } else {
+                assert.ok(options.source);
+                self.sourceGetFileStream(imageInfo, function (err, stream) {
+                    if (err) {
+                        next(err);
+                        return;
+                    }
+                    if (imageInfo.source.type !== 'dsapi'
+                        && !stream.headers['content-md5'])
+                    {
+                        next(new errors.DownloadError('image file headers '
+                            + 'did not include a "Content-MD5"'));
+                        return;
+                    }
+                    next(null, {
+                        stream: stream,
+                        size: Number(stream.headers['content-length']),
+                        contentMd5: stream.headers['content-md5']
+                    });
+                });
+            }
+        },
+
+        /**
+         * image file stream \                  [A]
+         *      | inflator (if necessary) \     [B]
+         *      | zfs recv                      [C]
+         */
+        function recvTheDataset(fileInfo, next) {
+            if (!options.quiet && process.stderr.isTTY) {
+                bar = new ProgressBar({
+                    size: fileInfo.size,
+                    filename: uuid
+                });
+            }
+
+            // [A]
+            md5Expected = fileInfo.contentMd5;
+            md5Hash = crypto.createHash('md5');
+            sha1Hash = crypto.createHash('sha1');
+            fileInfo.stream.on('data', function (chunk) {
+                if (bar)
+                    bar.advance(chunk.length);
+                md5Hash.update(chunk);
+                sha1Hash.update(chunk);
+            });
+            fileInfo.stream.on('error', next);
+
+            // [B]
+            var compression = manifest.files[0].compression;
+            var uncompressor;
+            if (compression === 'bzip2') {
+                uncompressor = spawn('/usr/bin/bzip2', ['-cdfq']);
+            } else if (compression === 'gzip') {
+                uncompressor = spawn('/usr/bin/gzip', ['-cdfq']);
+            } else {
+                assert.equal(compression, 'none',
+                    format('image %s file compression: %s', uuid, compression));
+                uncompressor = null;
+            }
+            if (uncompressor) {
+                uncompressor.stderr.on('data', function (chunk) {
+                    console.error('Stderr from uncompression: %s',
+                        chunk.toString());
+                });
+                uncompressor.on('exit', function (code) {
+                    if (code !== 0) {
+                        var msg;
+                        if (compression === 'bzip2' && code === 2) {
+                            msg = format('%s uncompression error while '
+                                + 'importing: exit code %s (corrupt compressed '
+                                + 'file): usually indicates a network error '
+                                + 'while downloading, try again',
+                                compression, code);
+                        } else {
+                            msg = format('%s uncompression error while '
+                                + 'importing: exit code %s', compression, code);
+                        }
+                        next(new errors.UncompressionError(msg));
+                    }
+                });
+            }
+
+            // [C]
+            partialDsName = dsName + '-partial';
+            var zfsRecv = spawn('/usr/sbin/zfs', ['receive', partialDsName]);
+            zfsRecv.stderr.on('data', function (chunk) {
+                console.error('Stderr from zfs receive: %s',
+                    chunk.toString());
+            });
+            zfsRecv.stdout.on('data', function (chunk) {
+                console.error('Stdout from zfs receive: %s',
+                    chunk.toString());
+            });
+            zfsRecv.on('exit', function (code) {
+                if (code !== 0) {
+                    next(new errors.InternalError({message: format(
+                        'zfs receive error while importing: '
+                        + 'exit code %s', code)}));
+                } else {
+                    next();
+                }
+            });
+
+            if (uncompressor) {
+                uncompressor.stdout.pipe(zfsRecv.stdin);
+                fileInfo.stream.pipe(uncompressor.stdin);
+            } else {
+                fileInfo.stream.pipe(zfsRecv.stdin);
+            }
+            fileInfo.stream.resume();
+        },
+
+        /**
+         * Ensure the streamed image data matches expected checksums.
+         */
+        function checksum(next) {
+            var err;
+
+            // We have a content-md5 from the headers if the is was streamed
+            // from an IMGAPI.
+            if (md5Expected) {
+                var md5Actual = md5Hash.digest('base64');
+                if (md5Actual !== md5Expected) {
+                    err = new errors.DownloadError(format(
+                        'Content-MD5 expected to be %s, but was %s',
+                        md5Expected, md5Actual));
+                }
+            }
+
             var sha1Expected = manifest.files[0].sha1;
             var sha1Actual = sha1Hash.digest('hex');
             if (sha1Expected && sha1Actual !== sha1Expected) {
@@ -1441,179 +1593,110 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                     'image file sha1 expected to be %s, but was %s',
                     sha1Expected, sha1Actual));
             }
-        }
-        if (err) {
-            cleanupAndExit(tmpDsName, err);
-            return;
-        }
 
-        // Ensure that we have a snapshot named "@final" for use by
-        // `vmadm create`. See IMGAPI-152, smartos-live#204.
-        ensureFinalSnapshot(tmpDsName, function (snapErr) {
-            if (snapErr) {
-                cleanupAndExit(tmpDsName, snapErr);
-                return;
-            }
+            next(err);
+        },
 
-            // Rename.
+        /**
+         * As a rule, we want all installed images on SmartOS to have their
+         * single base snapshot (from which VMs are cloned) called "@final".
+         * `vmadm` presumes this (tho allows for it not to be there for
+         * bwcompat). This "@final" snapshot is also necessary for
+         * `imgadm create -i` (i.e. incremental images).
+         *
+         * Here we ensure that the snapshot for this image is called "@final",
+         * renaming it if necessary.
+         */
+        function ensureFinalSnapshot(next) {
+            var properties = ['name', 'children'];
+            getZfsDataset(partialDsName, properties, function (zErr, ds) {
+                if (zErr) {
+                    next(zErr);
+                    return;
+                }
+                var snapshots = ds.children.snapshots;
+                var snapnames = snapshots.map(
+                    function (n) { return '@' + n.split(/@/g).slice(-1)[0]; });
+                if (snapshots.length !== 1) {
+                    next(new errors.UnexpectedNumberOfSnapshotsError(
+                        uuid, snapnames));
+                } else if (snapnames[0] !== '@final') {
+                    var curr = snapshots[0];
+                    var finalSnap = curr.split(/@/)[0] + '@final';
+                    zfsRenameSnapshot(curr, finalSnap,
+                        {recursive: true, log: log}, next);
+                } else {
+                    next();
+                }
+            });
+        },
+
+        /**
+         * We recv'd the dataset to a "...-partial" temporary name. Rename it to
+         * the final name.
+         */
+        function renameToFinalDsName(next) {
             var cmd = format('/usr/sbin/zfs rename %s %s',
-                tmpDsName, dsName);
+                partialDsName, dsName);
             log.trace({cmd: cmd}, 'rename tmp image');
-            exec(cmd, function (error, stdout, stderr) {
-                if (error) {
-                    log.error({cmd: cmd, error: error, stdout: stdout,
-                        stderr: stderr, dsName: dsName},
-                        'error renaming imported image');
-                    cleanupAndExit(tmpDsName,
-                        new errors.InternalError(
-                            {message: 'error importing'}));
-                    return;
-                }
-
-                // Save manifest to db.
-                self.dbAddImage(imageInfo, function (addErr) {
-                    if (addErr) {
-                        log.error({err: addErr, imageInfo: imageInfo},
-                            'error saving image to the database');
-                        cleanupAndExit(dsName,
-                            new errors.InternalError(
-                                {message: 'error saving image manifest'}));
-                    } else {
-                        callback();
-                    }
-                });
-            });
-        });
-    }
-
-    function getImageFileInfo(next) {
-        if (options.file) {
-            fs.stat(options.file, function (statErr, stats) {
-                if (statErr) {
-                    next(statErr);
-                    return;
-                }
-                var stream = fs.createReadStream(options.file);
-                next(null, {
-                    stream: stream,
-                    size: stats.size
-                });
-            });
-        } else {
-            assert.ok(options.source);
-            self.sourceGetFileStream(imageInfo, function (err, stream) {
+            exec(cmd, function (err, stdout, stderr) {
                 if (err) {
-                    next(err);
-                    return;
+                    log.error({cmd: cmd, err: err, stdout: stdout,
+                        stderr: stderr, partialDsName: partialDsName,
+                        dsName: dsName}, 'error renaming imported image');
+                    next(new errors.InternalError(
+                        {message: 'error importing'}));
+                } else {
+                    next();
                 }
-                if (imageInfo.source.type !== 'dsapi'
-                    && !stream.headers['content-md5'])
-                {
-                    next(new errors.DownloadError(
-                        'image file headers did not include a "Content-MD5"'));
-                    return;
+            });
+        },
+
+        function saveManifestToDb(next) {
+            // On error, rollback uses `partialDsName`. Now that we've renamed
+            // the dataset, make sure that *it* gets cleaned if saving the
+            // manifest fails.
+            partialDsName = dsName;
+
+            self.dbAddImage(imageInfo, function (addErr) {
+                if (addErr) {
+                    log.error({err: addErr, imageInfo: imageInfo},
+                        'error saving image to the database');
+                    next(new errors.InternalError(
+                        {message: 'error saving image manifest'}));
+                } else {
+                    next();
                 }
-                next(null, {
-                    stream: stream,
-                    size: Number(stream.headers['content-length']),
-                    contentMd5: stream.headers['content-md5']
-                });
             });
         }
-    }
-
-    getImageFileInfo(function (err, info) {
-        if (err) {
-            finish(err);
+    ], function finish(err) {
+        // Guard so only called once.
+        if (finished) {
             return;
         }
+        finished = true;
 
-        // image file stream                [A]
-        //      | inflator (if necessary)   [B]
-        //      | zfs recv                  [C]
-        // [A]
-        if (!options.quiet && process.stderr.isTTY) {
-            bar = new ProgressBar({
-                size: info.size,
-                filename: uuid
-            });
+        if (bar) {
+            bar.end();
         }
-        md5Expected = info.contentMd5;
-        md5Hash = crypto.createHash('md5');
-        sha1Hash = crypto.createHash('sha1');
-        info.stream.on('data', function (chunk) {
-            if (bar)
-                bar.advance(chunk.length);
-            md5Hash.update(chunk);
-            sha1Hash.update(chunk);
-        });
-        info.stream.on('error', finish);
 
-        // [B]
-        var compression = manifest.files[0].compression;
-        var uncompressor;
-        if (compression === 'bzip2') {
-            uncompressor = spawn('/usr/bin/bzip2', ['-cdfq']);
-        } else if (compression === 'gzip') {
-            uncompressor = spawn('/usr/bin/gzip', ['-cdfq']);
-        } else {
-            assert.equal(compression, 'none',
-                format('image %s file compression: %s', uuid, compression));
-            uncompressor = null;
-        }
-        if (uncompressor) {
-            uncompressor.stderr.on('data', function (chunk) {
-                console.error('Stderr from uncompression: %s',
-                    chunk.toString());
-            });
-            uncompressor.on('exit', function (code) {
-                if (code !== 0) {
-                    var msg;
-                    if (compression === 'bzip2' && code === 2) {
-                        msg = format('%s uncompression error while '
-                            + 'importing: exit code %s (corrupt compressed '
-                            + 'file): usually indicates a network error '
-                            + 'while downloading, try again',
-                            compression, code);
-                    } else {
-                        msg = format('%s uncompression error while '
-                            + 'importing: exit code %s', compression, code);
-                    }
-                    finish(new errors.UncompressionError(msg));
+        if (err && partialDsName) {
+            // Rollback the currently installed dataset, if necessary.
+            var cmd = format('/usr/sbin/zfs destroy -r %s', partialDsName);
+            exec(cmd, function (rollbackErr, stdout, stderr) {
+                if (rollbackErr) {
+                    log.error({cmd: cmd, err: rollbackErr, stdout: stdout,
+                        stderr: stderr, rollbackDsName: partialDsName},
+                        'error destroying dataset while rolling back');
                 }
+                callback(err);
             });
-        }
-
-        // [C]
-        tmpDsName = dsName + '-partial';
-        var zfsRecv = spawn('/usr/sbin/zfs', ['receive', tmpDsName]);
-        zfsRecv.stderr.on('data', function (chunk) {
-            console.error('Stderr from zfs receive: %s',
-                chunk.toString());
-        });
-        zfsRecv.stdout.on('data', function (chunk) {
-            console.error('Stdout from zfs receive: %s',
-                chunk.toString());
-        });
-        zfsRecv.on('exit', function (code) {
-            if (code !== 0) {
-                finish(new errors.InternalError({message: format(
-                    'zfs receive error while importing: '
-                    + 'exit code %s', code)}));
-            } else {
-                finish();
-            }
-        });
-
-        if (uncompressor) {
-            uncompressor.stdout.pipe(zfsRecv.stdin);
-            info.stream.pipe(uncompressor.stdin);
         } else {
-            info.stream.pipe(zfsRecv.stdin);
+            callback(err);
         }
-        info.stream.resume();
     });
 };
+
 
 
 /**
@@ -1673,7 +1756,7 @@ IMGADM.prototype.updateImages = function updateImages(callback) {
  * data.
  *
  * @param options {Object}
- *      - @param uuid {String} UUID of the VM from which to create the image.
+ *      - @param vmUuid {String} UUID of the VM from which to create the image.
  *      - @param manifest {Object} Data to include in the created manifest.
  *      - @param logCb {Function} Optional. A function that is called
  *        with progress messages. Called as `logCb(<string>)`. E.g. passing
@@ -1682,6 +1765,8 @@ IMGADM.prototype.updateImages = function updateImages(callback) {
  *        file. Default is 'none'.
  *      - @param savePrefix {String} Optional. The file path prefix to which
  *        to save the manifest and image files.
+ *      - @param incremental {Boolean} Optional. Default false. Create an
+ *        incremental image.
  * @param callback {Function} `function (err, imageInfo)` where imageInfo
  *      has `manifest` (the manifest object), `manifestPath` (the saved
  *      manifest path) and `filePath` (the saved image file path) keys.
@@ -1689,12 +1774,15 @@ IMGADM.prototype.updateImages = function updateImages(callback) {
 IMGADM.prototype.createImage = function createImage(options, callback) {
     var self = this;
     assert.object(options, 'options');
-    assert.string(options.uuid, 'options.uuid');
+    assert.string(options.vmUuid, 'options.vmUuid');
     assert.object(options.manifest, 'options.manifest');
     assert.optionalFunc(options.logCb, 'options.logCb');
     assert.optionalString(options.compression, 'options.compression');
-    var uuid = options.uuid;
+    assert.optionalBool(options.incremental, 'options.incremental');
+    var vmUuid = options.vmUuid;
+    var incremental = options.incremental || false;
     var logCb = options.logCb || function () {};
+
 
     /**
      * Clean up the given todos.
@@ -1718,7 +1806,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
 
     var vmInfo;
     var vmZfsFilesystem;
-    var originManifest = {};
+    var originInfo;
     var imageInfo = {};
     var snapshot;
     var toCleanup = [];
@@ -1728,10 +1816,10 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             // Note: Don't pass `self.log` to VM.js because we don't want
             // any logging on our stderr right now for a cli -- that is
             // until imgadm has a better logging story.
-            VM.load(uuid, /* { log: self.log }, */ function (loadErr, vm) {
+            VM.load(vmUuid, /* { log: self.log }, */ function (loadErr, vm) {
                 if (loadErr) {
                     if (loadErr.code === 'ENOENT') {
-                        next(new errors.VmNotFoundError(uuid));
+                        next(new errors.VmNotFoundError(vmUuid));
                     } else {
                         next(new errors.InternalError(loadErr));
                     }
@@ -1743,7 +1831,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     return;
                 }
                 if (vm.state !== 'stopped') {
-                    next(new errors.VmNotStoppedError(uuid));
+                    next(new errors.VmNotStoppedError(vmUuid));
                     return;
                 }
                 vmInfo = vm;
@@ -1779,7 +1867,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     return;
                 }
                 self.log.debug({imageInfo: ii}, 'origin image');
-                originManifest = ii.manifest;
+                originInfo = ii;
                 next();
             });
         },
@@ -1789,7 +1877,8 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 uuid: genUuid()
             };
             m = imageInfo.manifest = objCopy(options.manifest, m);
-            if (originManifest) {
+            if (originInfo) {
+                var originManifest = originInfo.manifest;
                 logCb(format('Inheriting from origin image %s (%s %s)',
                     originManifest.uuid, originManifest.name,
                     originManifest.version));
@@ -1811,6 +1900,13 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                         }
                     }
                 });
+            }
+            if (incremental) {
+                if (!originInfo) {
+                    next(new errors.VmHasNoOriginError(vmUuid));
+                    return;
+                }
+                m.origin = originInfo.manifest.uuid;
             }
             logCb(format('Manifest:\n%s',
                 _indent(JSON.stringify(m, null, 2))));
@@ -1865,7 +1961,14 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
 
             logCb(format('Sending image file to "%s"', filePath));
             // Don't want '-p' or '-r' options to 'zfs send'.
-            var zfsSend = spawn('/usr/sbin/zfs', ['send', snapshot]);
+            var zfsArgs = ['send'];
+            if (incremental) {
+                zfsArgs.push('-i');
+                zfsArgs.push(format('%s/%s@final', originInfo.zpool,
+                    originInfo.manifest.uuid));
+            }
+            zfsArgs.push(snapshot);
+            var zfsSend = spawn('/usr/sbin/zfs', zfsArgs);
             zfsSend.stderr.on('data', function (chunk) {
                 logCb(format('Stderr from zfs send: %s', chunk.toString()));
             });
@@ -1874,7 +1977,14 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             var sha1Hash = crypto.createHash('sha1');
             (compressor || zfsSend).stdout.on('data', function (chunk) {
                 size += chunk.length;
-                sha1Hash.update(chunk);
+                try {
+                    sha1Hash.update(chunk);
+                } catch (e) {
+                    console.error('hash update error:', e);
+                    console.error('chunk.length:', chunk.length);
+                    console.error('chunk:', chunk);
+                    throw e;
+                }
             });
             (compressor || zfsSend).on('exit', function (code) {
                 if (code !== 0) {

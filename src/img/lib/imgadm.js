@@ -1939,7 +1939,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             // it more difficult to do (a) sha1 pre-caculation for upload
             // checking and (b) eventual re-upload support.
 
-            var filePath = imageInfo.filePath = options.savePrefix + '.zfs';
+            imageInfo.filePath = options.savePrefix + '.zfs';
 
             // Compression
             var compression = options.compression || 'none';
@@ -1949,17 +1949,17 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 compressor = null;
             } else if (compression === 'bzip2') {
                 compressor = spawn('/usr/bin/bzip2', ['-cfq']);
-                filePath += '.bz2';
+                imageInfo.filePath += '.bz2';
             } else if (compression === 'gzip') {
                 compressor = spawn('/usr/bin/gzip', ['-cfq']);
-                filePath += '.gz';
+                imageInfo.filePath += '.gz';
             } else {
                 next(new errors.UsageError(format(
                     'unknown compression "%s"', compression)));
                 return;
             }
 
-            logCb(format('Sending image file to "%s"', filePath));
+            logCb(format('Sending image file to "%s"', imageInfo.filePath));
             // Don't want '-p' or '-r' options to 'zfs send'.
             var zfsArgs = ['send'];
             if (incremental) {
@@ -2000,7 +2000,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 }
             });
 
-            var out = fs.createWriteStream(filePath);
+            var out = fs.createWriteStream(imageInfo.filePath);
             if (compressor) {
                 // zfs send -> bzip2/gzip -> filePath
                 zfsSend.stdout.pipe(compressor.stdin);

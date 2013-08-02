@@ -39,7 +39,7 @@ JSL_FILES_NODE   = $(JS_FILES)
 JSL_FLAGS  	?= --nologo --nosummary
 JSL_FLAGS_NODE 	 = --conf=$(JSL_CONF_NODE)
 JSSTYLE_FILES	 = $(JS_FILES)
-JSSTYLE_FLAGS    = -o indent=2,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1
+JSSTYLE_FLAGS    = -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1
 
 
 #
@@ -70,6 +70,13 @@ test: $(NODEUNIT)
 check: check-jsl check-jsstyle
 	@echo check ok
 
+#
+# This rule enables other rules that use files from a git submodule to have
+# those files depend on deps/module/.git and have "make" automatically check
+# out the submodule as needed.
+#
+deps/%/.git:
+	git submodule update --init deps/$*
 
 #
 # javascriptlint

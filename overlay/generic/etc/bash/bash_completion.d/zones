@@ -34,3 +34,8 @@ complete -F _dash_z_zone zonecfg
 complete -F _dash_z_zone svcs
 complete -F _dash_z_zone svcadm
 complete -F _dash_z_zone svcprop
+complete -F _dash_z_zone pgrep
+complete -F _dash_z_zone pkill
+complete -F _dash_z_zone ps
+complete -F _dash_z_zone ptree
+complete -F _dash_z_zone wall

@@ -1,5 +1,14 @@
 # imgadm changelog
 
+## 2.3.0
+
+- [OS-2410] KVM support for 'imgadm create'.
+
+- Drop the need for multiple '-v|--verbose' options to increase levels of
+  verbosity. There is now the default logging output and verbose output (one or
+  any number of '-v').
+
+
 ## 2.2.0
 
 - [IMGAPI-124] Incremental image support. `imgadm create -i ...` will create

@@ -19,7 +19,7 @@
     imgadm delete [-P <pool>] <uuid>    remove an installed image
 
     # Experimental.
-    imgadm create [-p <url>] <uuid> [<manifest-field>=<value> ...]
+    imgadm create [-p <url>] <vm-uuid> [<manifest-field>=<value> ...]
                                         create an image from a prepared VM
     imgadm publish -m <manifest> -f <file> <imgapi-url>
                                         publish an image to an image repo
@@ -186,9 +186,8 @@ UUID.
                                Default is "zones".
 
 
-    imgadm create [-p <url>] <uuid> [<manifest-field>=<value> ...]
+    imgadm create [-p <url>] <vm-uuid> [<manifest-field>=<value> ...]
 
-        **Experimental. This command currently does not work on KVM zones.**
         Create a new image from a prepared and stopped VM.
 
         To create a new virtual image, one first creates a VM from an existing
@@ -201,7 +200,7 @@ UUID.
         done separately via "imgadm publish").
 
         Usage:
-            imgadm create [<options>] <uuid> [<manifest-field>=<value> ...]
+            imgadm create [<options>] <vm-uuid> [<manifest-field>=<value> ...]
 
         Options:
             -h, --help     Print this help and exit.
@@ -218,6 +217,8 @@ UUID.
                            created.
             -c COMPRESSION One of "none", "gz" or "bzip2" for the compression
                            to use on the image file, if any. Default is "none".
+            -i             Build an incremental image (based on the "@final"\n'
+                           snapshot of the source image for the VM).\n'
 
             -p URL, --publish URL
                            Publish directly to the given image source

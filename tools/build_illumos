@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2012 Joyent Inc.
+# Copyright (c) 2013 Joyent Inc.
 #
 
 # Setup for building stuff!
@@ -29,6 +29,9 @@ gsed -i -e "s|^GATE=.*$|GATE=\"joyent_${BUILDSTAMP}\"; export GATE|" illumos.sh
 ksh93 ./usr/src/tools/scripts/bldenv.sh illumos.sh \
     'cd $CODEMGR_WS/usr/src && export PATH="$PATH:/opt/local/bin" && \
     dmake setup && cd tools && dmake install'
+
+printf "\nRunning illumos nightly(1).\n"
+printf "This will take a while.\n"
 
 time ./nightly illumos.sh
 res=$?

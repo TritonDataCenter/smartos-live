@@ -1916,8 +1916,10 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             }
         },
         function snapshotVm(next) {
-            snapshot = format('%s@tmp-imgadm-%s-%s', vmZfsFilesystem,
-                Date.now(), process.pid);
+            // This has the potential to fail on an existing snapshot named
+            // 'final'. However we want '@final' to be the snapshot in the
+            // created image -- see the notes in _installImage.
+            snapshot = format('%s@final', vmZfsFilesystem);
             logCb(format('Snapshotting to "%s"', snapshot));
             zfs.snapshot(snapshot, function (zfsErr) {
                 if (zfsErr) {

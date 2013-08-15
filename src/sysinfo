@@ -102,11 +102,14 @@ function get_smbios_system_info()
 {
     # This puts the variables we're pulling out into the local environment
     eval $(smbios -t SMB_TYPE_SYSTEM | tr -d "\"" \
-        | egrep "Manufacturer: |Product: |Serial Number: |UUID: " \
+        | egrep "Manufacturer: |Product: |Serial Number: |UUID: |SKU Number: |Version: |Family: " \
         | sed -e 's/^ *//' \
-        | sed -e 's/: /="/' \
-        | sed -e 's/ *$/"/' \
-        | sed -e 's/Serial Number/Serial_Number/')
+        -e 's/: /="/' \
+        -e 's/ *$/"/' \
+        -e 's/Serial Number/Serial_Number/' \
+        -e 's/SKU Number/SKU_Number/' \
+        -e 's/Version/HW_Version/' \
+        -e 's/Family/HW_Family/')
 
     # overwrite UUID if config dictates otherwise
     tmp_uuid=$(/usr/bin/bootparams | grep "^override_uuid=" | cut -f2 -d'=')
@@ -609,6 +612,9 @@ END
 Manufacturer='${Manufacturer}'
 Product='${Product}'
 Serial_Number='${Serial_Number}'
+SKU_Number='${SKU_Number}'
+HW_Version='${HW_Version}'
+HW_Family='${HW_Family}'
 VM_Capable='${VM_Capable}'
 CPU_Type='${CPU_Version}'
 CPU_Virtualization='${CPU_Virtualization}'
@@ -738,6 +744,9 @@ END
   "Manufacturer": "${Manufacturer}",
   "Product": "${Product}",
   "Serial Number": "${Serial_Number}",
+  "SKU Number": "${SKU_Number}",
+  "HW Version": "${HW_Version}",
+  "HW Family": "${HW_Family}",
   "Setup": "${Setup_complete}",
   "VM Capable": ${VM_Capable},
   "CPU Type": "${CPU_Version}",

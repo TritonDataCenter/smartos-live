@@ -737,6 +737,21 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (special, see description in 'update' section above)
         default: no
 
+    disks.*.compression:
+
+        Specifies a compression algorithm used for this disk. This has the same
+        details, warnings and caveats as the global zfs_root_compression option
+        below but only affects a single disk on the VM.
+
+        See zfs_root_compression section below for more details.
+
+        type: string one of: "on,off,lzjb,gzip,gzip-N,zle"
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes (see caveat in zfs_root_compression section below)
+        default: off
+
     disks.*.nocreate:
 
         This parameter indicates whether or not the disk should be created. It
@@ -792,6 +807,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (special, see description in 'update' section above)
         default: no
 
+    disks.*.refreservation:
+
+        Specifies a refreservation for this disk. This property controls the
+        minimum amount of space reserved for a given disk.  See also the zfs(1)
+        man page's description of refreservation.
+
+        type: integer number of MiB
+        vmtype: KVM
+        listable: no
+        create: yes
+        update: yes (special, see description in 'update' section above)
+        default: size of the disk
+
     disks.*.size:
 
         Size of disk in MiB. You should only specify this parameter if you've
@@ -832,21 +860,6 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (special, see description in 'update' section above)
         default: the value of the disk_driver parameter for this VM
-
-    disks.*.compression:
-
-        Specifies a compression algorithm used for this disk. This has the same
-        details, warnings and caveats as the global zfs_root_compression option
-        below but only affects a single disk on the VM.
-
-        See zfs_root_compression section below for more details.
-
-        type: string one of: "on,off,lzjb,gzip,gzip-N,zle"
-        vmtype: KVM
-        listable: no
-        create: yes
-        update: yes (see caveat in zfs_root_compression section below)
-        default: off
 
     disks.*.zpool:
 

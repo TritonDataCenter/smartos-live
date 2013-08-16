@@ -482,6 +482,8 @@ test ('check properties after upgrade', {'timeout': 240000}, function(t) {
     }
 
     VM.load(vmobj.uuid, {}, function (err, newobj) {
+        var disk_idx;
+
         t.ok(!err, 'reloaded VM after upgrade: ' + JSON.stringify(newobj));
 
         if (err) {
@@ -491,8 +493,10 @@ test ('check properties after upgrade', {'timeout': 240000}, function(t) {
 
         t.ok(newobj.quota === 10, 'quota expected: 10, actual: ' + newobj.quota);
         t.ok(newobj.v === 1, 'v expected: 1, actual: ' + newobj.v);
+        t.ok(vmobj.disks.length === 2, 'vmobj has 2 disks: ' + vmobj.disks.length);
 
-        // check that refreservation is set to size for both disks.
+        // check that refreservation is set to size for first disk.
+        disk_idx = 0;
         async.eachSeries(vmobj.disks, function (d, cb) {
             var refreserv;
 
@@ -500,8 +504,13 @@ test ('check properties after upgrade', {'timeout': 240000}, function(t) {
                 t.ok(!err, 'got refreservation for ' + d.zfs_filesystem);
                 if (!err) {
                     refreserv = Number(trim(fds.stdout)) / (1024 * 1024);
-                    t.ok(refreserv === d.size, 'refreserv is: ' + refreserv + ' expected: ' + d.size);
+                    if (disk_idx === 0) {
+                        t.ok(refreserv === d.size, 'refreserv is: ' + refreserv + ' expected: ' + d.size);
+                    } else {
+                        t.ok(refreserv === 0, 'refreserv is: ' + refreserv + ' expected: 0');
+                    }
                 }
+                disk_idx++;
                 cb();
             });
         }, function (err) {

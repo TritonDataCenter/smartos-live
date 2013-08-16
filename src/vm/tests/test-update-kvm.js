@@ -820,6 +820,73 @@ function zfs(args, callback)
     });
 }
 
+test('enable / disable compression', function(t) {
+    VM.load(vm_uuid, function (err, vmobj) {
+        var disk0;
+        var disk1;
+
+        if (err) {
+            t.ok(false, 'error loading VM: ' + err.message);
+            t.end();
+            return;
+        }
+        if (!vmobj.hasOwnProperty('disks') || vmobj.disks.length !== 2) {
+            t.ok(false, 'cannot find disk: ' + vmobj.disks);
+            t.end();
+            return;
+        }
+        disk0 = vmobj.disks[0];
+        disk1 = vmobj.disks[1];
+
+        t.ok(disk0.compression === 'off', 'disk0 has compression off: ' + disk0.compression);
+        t.ok(disk1.compression === 'off', 'disk1 has compression off: ' + disk1.compression);
+        VM.update(vmobj.uuid, {'update_disks': [{path: disk0.path, compression: 'gzip'}, {path: disk1.path, compression: 'gzip'}]}, function (err) {
+            if (err) {
+                t.ok(false, 'VM.update failed to update disks: ' + err.message);
+                t.end();
+                return;
+            }
+
+            VM.load(vm_uuid, function (err, vmobj_disabled) {
+                if (err) {
+                    t.ok(false, 'error loading VM: ' + err.message);
+                    t.end();
+                    return;
+                }
+
+                disk0 = vmobj_disabled.disks[0];
+                disk1 = vmobj_disabled.disks[1];
+
+                t.ok(disk0.compression === 'gzip', 'disk0 has compression=gzip: ' + disk0.compression);
+                t.ok(disk1.compression === 'gzip', 'disk1 has compression=gzip: ' + disk1.compression);
+                VM.update(vmobj.uuid, {'update_disks': [{path: disk0.path, compression: 'off'}, {path: disk1.path, compression: 'off'}]}, function (err) {
+                    if (err) {
+                        t.ok(false, 'VM.update failed to update disks: ' + err.message);
+                        t.end();
+                        return;
+                    }
+
+                    VM.load(vm_uuid, function (err, vmobj_enabled) {
+                        if (err) {
+                            t.ok(false, 'error loading VM: ' + err.message);
+                            t.end();
+                            return;
+                        }
+
+                        disk0 = vmobj_enabled.disks[0];
+                        disk1 = vmobj_enabled.disks[1];
+
+                        t.ok(disk0.compression === 'off', 'disk0 has compression=off: ' + disk0.compression);
+                        t.ok(disk1.compression === 'off', 'disk1 has compression=off: ' + disk1.compression);
+
+                        t.end();
+                    });
+                });
+            });
+        });
+    });
+});
+
 // VM should at this point be running, so removing the disk should fail.
 // Stopping and removing should succeed.
 // Adding should also succeed at that point.
@@ -955,3 +1022,62 @@ test('create KVM VM w/ *_drivers', {'timeout': 240000}, function(t) {
         t.end();
     });
 });
+
+test('test 100%/10% refreservation, change to 50%/75%', {'timeout': 240000}, function(t) {
+    p = {
+        'brand': 'kvm',
+        'vcpus': 1,
+        'ram': 256,
+        'alias': 'autotest-' + process.pid,
+        'do_not_inventory': true,
+        'autoboot': false,
+        'disk_driver': 'virtio',
+        'disks': [
+          {
+            'boot': true,
+            'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
+            'image_size': vmtest.CURRENT_UBUNTU_SIZE,
+            'refreservation': vmtest.CURRENT_UBUNTU_SIZE
+          }, {
+            'size': 1024,
+            'refreservation': 10
+          }
+        ]
+    };
+    state = {'brand': p.brand};
+    vmtest.on_new_vm(t, null, p, state, [
+        function (cb) {
+            VM.load(state.uuid, function(err, vmobj) {
+                if (err) {
+                    t.ok(false, 'load obj from new VM: ' + err.message);
+                    return cb(err);
+                }
+
+                VM.update(state.uuid, {update_disks: [
+                    {path: vmobj.disks[0].path, refreservation: (vmobj.disks[0].size * 0.5)},
+                    {path: vmobj.disks[1].path, refreservation: (vmobj.disks[1].size * 0.75)}
+                    ]}, function(err) {
+
+                    t.ok(!err, 'updating VM: ' + (err ? err.message : 'success'));
+                    if (err) {
+                        return cb();
+                    }
+                    VM.load(state.uuid, function(err, obj) {
+                        var disks;
+                        t.ok(!err, 'load VM: ' + (err ? err.message : 'success'));
+                        if (err) {
+                            return cb(err);
+                        }
+
+                        disks = obj.disks;
+                        t.ok(disks[0].refreservation === (disks[0].size * 0.5), 'disk 0 has correct refreservation: ' + disks[0].refreservation + '/' + (disks[0].size * 0.5));
+                        t.ok(disks[1].refreservation === (disks[1].size * 0.75), 'disk 1 has correct refreservation: ' + disks[1].refreservation + '/' + (disks[1].size * 0.75));
+                        state.vmobj = obj;
+                        cb();
+                    });
+                });
+            });
+        }
+    ]);
+});
+

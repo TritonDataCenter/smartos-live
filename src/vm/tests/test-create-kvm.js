@@ -123,3 +123,127 @@ test('test create with virtio_tx*', {'timeout': 240000}, function(t) {
         }
     ]);
 });
+
+test('test normalish refreservation', {'timeout': 240000}, function(t) {
+    p = {
+        'brand': 'kvm',
+        'vcpus': 1,
+        'ram': 256,
+        'alias': 'autotest-' + process.pid,
+        'do_not_inventory': true,
+        'autoboot': false,
+        'disk_driver': 'virtio',
+        'disks': [
+          {
+            'boot': true,
+            'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
+            'image_size': vmtest.CURRENT_UBUNTU_SIZE,
+            'refreservation': vmtest.CURRENT_UBUNTU_SIZE
+          }, {
+            'size': 1024,
+            'refreservation': 10
+          }
+        ]
+    };
+    state = {'brand': p.brand};
+    vmtest.on_new_vm(t, null, p, state, [
+        function (cb) {
+            VM.load(state.uuid, function(err, obj) {
+                var disks;
+
+                if (err) {
+                    t.ok(false, 'load obj from new VM: ' + err.message);
+                    return cb(err);
+                }
+                disks = obj.disks;
+                t.ok(disks.length === 2, 'VM has 2 disks');
+                t.ok(disks[0].refreservation === disks[0].image_size, 'disk 0 has correct refreservation: ' + disks[0].refreservation + '/' + disks[0].image_size);
+                t.ok(disks[1].refreservation === 10, 'disk 1 has correct refreservation: ' + disks[1].refreservation + '/10');
+                state.vmobj = obj;
+                cb();
+            });
+        }
+    ]);
+});
+
+test('test 0 refreservation', {'timeout': 240000}, function(t) {
+    p = {
+        'brand': 'kvm',
+        'vcpus': 1,
+        'ram': 256,
+        'alias': 'autotest-' + process.pid,
+        'do_not_inventory': true,
+        'autoboot': false,
+        'disk_driver': 'virtio',
+        'disks': [
+          {
+            'boot': true,
+            'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
+            'image_size': vmtest.CURRENT_UBUNTU_SIZE,
+            'refreservation': 0
+          }, {
+            'size': 1024,
+            'refreservation': 0
+          }
+        ]
+    };
+    state = {'brand': p.brand};
+    vmtest.on_new_vm(t, null, p, state, [
+        function (cb) {
+            VM.load(state.uuid, function(err, obj) {
+                var disks;
+
+                if (err) {
+                    t.ok(false, 'load obj from new VM: ' + err.message);
+                    return cb(err);
+                }
+                disks = obj.disks;
+                t.ok(disks.length === 2, 'VM has 2 disks');
+                t.ok(disks[0].refreservation === 0, 'disk 0 has correct refreservation: ' + disks[0].refreservation + '/0');
+                t.ok(disks[1].refreservation === 0, 'disk 1 has correct refreservation: ' + disks[1].refreservation + '/0');
+                state.vmobj = obj;
+                cb();
+            });
+        }
+    ]);
+});
+
+test('test default refreservation', {'timeout': 240000}, function(t) {
+    p = {
+        'brand': 'kvm',
+        'vcpus': 1,
+        'ram': 256,
+        'alias': 'autotest-' + process.pid,
+        'do_not_inventory': true,
+        'autoboot': false,
+        'disk_driver': 'virtio',
+        'disks': [
+          {
+            'boot': true,
+            'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
+            'image_size': vmtest.CURRENT_UBUNTU_SIZE
+          }, {
+            'size': 1024
+          }
+        ]
+    };
+    state = {'brand': p.brand};
+    vmtest.on_new_vm(t, null, p, state, [
+        function (cb) {
+            VM.load(state.uuid, function(err, obj) {
+                var disks;
+
+                if (err) {
+                    t.ok(false, 'load obj from new VM: ' + err.message);
+                    return cb(err);
+                }
+                disks = obj.disks;
+                t.ok(disks.length === 2, 'VM has 2 disks');
+                t.ok(disks[0].refreservation === disks[0].size, 'disk 0 has correct refreservation: ' + disks[0].refreservation + '/' + disks[0].size);
+                t.ok(disks[1].refreservation === disks[1].size, 'disk 1 has correct refreservation: ' + disks[1].refreservation + '/' + disks[1].size);
+                state.vmobj = obj;
+                cb();
+            });
+        }
+    ]);
+});

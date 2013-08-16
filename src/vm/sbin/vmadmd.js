@@ -1659,43 +1659,41 @@ function upgradeVM(vmobj, fields, callback)
                 );
             });
         }, function (cb) {
+            var args;
+            var d;
+
             if (vmobj.brand !== 'kvm') {
                 cb();
                 return;
             }
 
-            if (!vmobj.disks) {
+            if (!vmobj.disks || vmobj.disks.length < 1) {
                 cb(new Error('KVM VM ' + vmobj.uuid + ' is missing disks'));
                 return;
             }
 
             log.info(JSON.stringify(vmobj.disks));
+            d = vmobj.disks[0];
 
-            async.eachSeries(vmobj.disks, function (d, c) {
-                var args;
+            if (d.size) {
+                args = ['set', 'refreservation=' + d.size + 'M',
+                    d.zfs_filesystem];
+                zfs(args, function (err, fds) {
+                    if (err) {
+                        log.error(err);
+                        cb(err);
+                        return;
+                    }
 
-                if (d.size) {
-                    args = ['set', 'refreservation=' + d.size + 'M',
-                        d.zfs_filesystem];
-                    zfs(args, function (err, fds) {
-                        if (err) {
-                            log.error(err);
-                            c(err);
-                            return;
-                        }
-
-                        log.info('set refreservation=' + d.size + 'M for '
-                            + d.zfs_filesystem);
-                        c();
-                    });
-                } else {
-                    log.warn('VM ' + vmobj.uuid + ' has no d.size on disk: '
-                        + JSON.stringify(d));
-                    c();
-                }
-            }, function (err) {
-                cb(err);
-            });
+                    log.info('set refreservation=' + d.size + 'M for '
+                        + d.zfs_filesystem);
+                    cb();
+                });
+            } else {
+                log.warn('VM ' + vmobj.uuid + ' has no d.size on disk: '
+                    + JSON.stringify(d));
+                cb();
+            }
         }, function (cb) {
             var default_gateway;
             var primary_nic;

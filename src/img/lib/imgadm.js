@@ -1936,7 +1936,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             // it more difficult to do (a) sha1 pre-caculation for upload
             // checking and (b) eventual re-upload support.
 
-            imageInfo.filePath = options.savePrefix
+            imageInfo.filePath = options.savePrefix;
             if (imageInfo.manifest.type === 'zvol') {
                 imageInfo.filePath += '.zvol';
             } else {

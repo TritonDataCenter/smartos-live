@@ -1806,10 +1806,10 @@ function upgradeVM(vmobj, fields, callback)
                 zonecfg(['-z', vmobj.zonename, 'add attr; '
                     + 'set name=create-timestamp; set type=string; '
                     + 'set value="' + creation_timestamp + '"; end'],
-                    function (err, fds) {
-                        if (err) {
-                            log.error(err);
-                            cb(err);
+                    function (zcfg_err, zcfg_fds) {
+                        if (zcfg_err) {
+                            log.error(zcfg_err);
+                            cb(zcfg_err);
                             return;
                         }
                         log.info('set create-timestamp: ' + creation_timestamp);

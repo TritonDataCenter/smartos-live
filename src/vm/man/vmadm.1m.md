@@ -1210,9 +1210,10 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         This sets additional IP addresses from which this nic is allowed to
         send traffic, in addition to the IPs in the ip and vrrp_primary_ip
-        properties (if set).
+        properties (if set). Values can be either single IPv4 Addresses or
+        CIDR ranges in the form 192.168.1.0/24.
 
-        type: array (of IP addresses)
+        type: array (of IP addresses or CIDR ranges)
         vmtype: OS,KVM
         listable: yes (see above)
         create: yes

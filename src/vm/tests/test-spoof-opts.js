@@ -60,7 +60,7 @@ function brand_test(brand, image, t) {
             'netmask': '255.255.255.0',
             'allow_dhcp_spoofing': true,
             'allow_mac_spoofing': true,
-            'allowed_ips': [ '10.6.0.201', '10.6.0.202' ]
+            'allowed_ips': [ '10.6.0.201', '10.6.0.202', '10.6.0.0/25' ]
           }
         ]
     };
@@ -119,7 +119,7 @@ function brand_test(brand, image, t) {
                   'net3: mac spoofing enabled');
 
                 t.deepEqual(obj.nics[3].allowed_ips,
-                    [ '10.6.0.201', '10.6.0.202' ],
+                    [ '10.6.0.201', '10.6.0.202', '10.6.0.0/25' ],
                     'net3: allowed_ips set correctly');
 
                 cb();

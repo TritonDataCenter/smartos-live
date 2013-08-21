@@ -169,6 +169,13 @@ test('time machine', function(t) {
                 cb();
             });
         }, function (cb) {
+            // remove create-timestamp property at top level, upgrade should add back
+            // using the value from the dataset creation time.
+            zonecfg(['-z', vmobj.zonename, 'remove attr name=create-timestamp'], function (err, fds) {
+                t.ok(!err, 'removed create-timestamp: ' + JSON.stringify(fds));
+                cb();
+            });
+        }, function (cb) {
             // remove primary property from nic, upgrade should add back
             zonecfg(['-z', vmobj.zonename, 'select net physical=net0; remove property (name=primary,value="true"); end'], function (err, fds) {
                 t.ok(!err, 'removed net0.primary: ' + JSON.stringify(fds));
@@ -236,13 +243,28 @@ test ('check properties after upgrade', {'timeout': 240000}, function(t) {
             return;
         }
 
-        t.ok(newobj.max_swap === 256, 'max_swap expected: 256, actual: ' + newobj.max_swap);
-        t.ok(newobj.image_uuid === image_uuid, 'image_uuid expected: ' + image_uuid + ', actual: ' + newobj.image_uuid);
-        t.ok(newobj.v === 1, 'v expected: 1, actual: ' + newobj.v);
-        t.ok(newobj.nics[0].primary === true, 'nics[0].primary expected: true, actual: ' + newobj.nics[0].primary);
-        t.ok(!newobj.hasOwnProperty('default_gateway'), 'default_gateway expected: undefined, actual: ' + newobj.default_gateway);
+        console.log(vmobj.zfs_filesystem);
+        zfs(['get', '-pHo', 'value', 'creation', vmobj.zfs_filesystem], function (err, fds) {
+            var create_timestamp;
+            var expected_create_timestamp;
 
-        t.end();
+            if (err) {
+                t.ok(false, 'zfs checking datasets error: ' + err.message);
+                t.end();
+                return;
+            }
+            create_timestamp = trim(fds.stdout);
+            expected_create_timestamp = (new Date(create_timestamp * 1000)).toISOString();
+
+            t.ok(newobj.create_timestamp === expected_create_timestamp, 'create_timestamp expected: ' + expected_create_timestamp + ', actual: ' + newobj.create_timestamp);
+            t.ok(newobj.max_swap === 256, 'max_swap expected: 256, actual: ' + newobj.max_swap);
+            t.ok(newobj.image_uuid === image_uuid, 'image_uuid expected: ' + image_uuid + ', actual: ' + newobj.image_uuid);
+            t.ok(newobj.v === 1, 'v expected: 1, actual: ' + newobj.v);
+            t.ok(newobj.nics[0].primary === true, 'nics[0].primary expected: true, actual: ' + newobj.nics[0].primary);
+            t.ok(!newobj.hasOwnProperty('default_gateway'), 'default_gateway expected: undefined, actual: ' + newobj.default_gateway);
+
+            t.end();
+        });
     });
 });
 
@@ -445,6 +467,12 @@ test('kvm time machine', function(t) {
                 cb();
             });
         }, function (cb) {
+            // remove create-timestamp to simulate old zone
+            zonecfg(['-z', vmobj.zonename, 'remove attr name=create-timestamp;'], function (err, fds) {
+                t.ok(!err, 'removed create-timestamp: ' + JSON.stringify(fds));
+                cb();
+            });
+        }, function (cb) {
             zfs(['set', 'refreservation=none', vmobj.disks[0].zfs_filesystem], function (err, fds) {
                 t.ok(!err, 'removed refreservation on disks[0]: ' + JSON.stringify(fds));
                 cb();
@@ -491,32 +519,47 @@ test ('check properties after upgrade', {'timeout': 240000}, function(t) {
             return;
         }
 
-        t.ok(newobj.quota === 10, 'quota expected: 10, actual: ' + newobj.quota);
-        t.ok(newobj.v === 1, 'v expected: 1, actual: ' + newobj.v);
-        t.ok(vmobj.disks.length === 2, 'vmobj has 2 disks: ' + vmobj.disks.length);
+        console.log(vmobj.zfs_filesystem);
+        zfs(['get', '-pHo', 'value', 'creation', vmobj.zfs_filesystem], function (err, fds) {
+            var create_timestamp;
+            var expected_create_timestamp;
 
-        // check that refreservation is set to size for first disk.
-        disk_idx = 0;
-        async.eachSeries(vmobj.disks, function (d, cb) {
-            var refreserv;
+            if (err && ! err.message.match(/ dataset does not exist/)) {
+                t.ok(false, 'zfs checking datasets error: ' + err.message);
+                return;
+            }
+            create_timestamp = trim(fds.stdout);
+            expected_create_timestamp = (new Date(create_timestamp * 1000)).toISOString();
 
-            zfs(['get', '-Hpo', 'value', 'refreservation', d.zfs_filesystem], function (err, fds) {
-                t.ok(!err, 'got refreservation for ' + d.zfs_filesystem);
-                if (!err) {
-                    refreserv = Number(trim(fds.stdout)) / (1024 * 1024);
-                    if (disk_idx === 0) {
-                        t.ok(refreserv === d.size, 'refreserv is: ' + refreserv + ' expected: ' + d.size);
-                    } else {
-                        t.ok(refreserv === 0, 'refreserv is: ' + refreserv + ' expected: 0');
+            t.ok(newobj.create_timestamp === expected_create_timestamp, 'create_timestamp expected: ' + expected_create_timestamp + ', actual: ' + newobj.create_timestamp);
+            t.ok(newobj.quota === 10, 'quota expected: 10, actual: ' + newobj.quota);
+            t.ok(newobj.v === 1, 'v expected: 1, actual: ' + newobj.v);
+            t.ok(vmobj.disks.length === 2, 'vmobj has 2 disks: ' + vmobj.disks.length);
+
+            // check that refreservation is set to size for first disk.
+            disk_idx = 0;
+            async.eachSeries(vmobj.disks, function (d, cb) {
+                var refreserv;
+
+                zfs(['get', '-Hpo', 'value', 'refreservation', d.zfs_filesystem], function (err, fds) {
+                    t.ok(!err, 'got refreservation for ' + d.zfs_filesystem);
+                    if (!err) {
+                        refreserv = Number(trim(fds.stdout)) / (1024 * 1024);
+                        if (disk_idx === 0) {
+                            t.ok(refreserv === d.size, 'refreserv is: ' + refreserv + ' expected: ' + d.size);
+                        } else {
+                            t.ok(refreserv === 0, 'refreserv is: ' + refreserv + ' expected: 0');
+                        }
                     }
-                }
-                disk_idx++;
-                cb();
+                    disk_idx++;
+                    cb();
+                });
+            }, function (err) {
+                t.end();
             });
-        }, function (err) {
-            t.end();
         });
     });
+
 });
 
 test('delete kvm', function(t) {

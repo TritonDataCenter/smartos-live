@@ -4,6 +4,7 @@
 //
 
 process.env['TAP'] = 1;
+var execFile = require('child_process').execFile;
 var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
@@ -100,6 +101,51 @@ function prefix_zones(state, property)
     return 'zones/' + state[property];
 }
 
+// trim functions also copied from VM.js
+function ltrim(str, chars)
+{
+    chars = chars || '\\s';
+    str = str || '';
+    return str.replace(new RegExp('^[' + chars + ']+', 'g'), '');
+}
+
+function rtrim(str, chars)
+{
+    chars = chars || '\\s';
+    str = str || '';
+    return str.replace(new RegExp('[' + chars + ']+$', 'g'), '');
+}
+
+function trim(str, chars)
+{
+    return ltrim(rtrim(str, chars), chars);
+}
+
+function zfs(args, callback)
+{
+    var cmd = '/usr/sbin/zfs';
+
+    execFile(cmd, args, function (error, stdout, stderr) {
+        if (error) {
+            callback(error, {'stdout': stdout, 'stderr': stderr});
+        } else {
+            callback(null, {'stdout': stdout, 'stderr': stderr});
+        }
+    });
+}
+
+function zonecfg(args, callback)
+{
+    var cmd = '/usr/sbin/zonecfg';
+
+    execFile(cmd, args, function (error, stdout, stderr) {
+        if (error) {
+            callback(error, {'stdout': stdout, 'stderr': stderr});
+        } else {
+            callback(null, {'stdout': stdout, 'stderr': stderr});
+        }
+    });
+}
 function check_property(t, state, prop, expected, transform)
 {
     var vmobj = state.vmobj;
@@ -189,6 +235,55 @@ test('check default kvm properties', {'timeout': 240000}, function(t) {
                 state.vmobj = obj;
                 check_values(t, state);
                 cb();
+            });
+        }
+    ]);
+});
+
+test('check default create_timestamp', {'timeout': 240000}, function(t) {
+    state = {'brand': 'joyent-minimal'};
+    var vmobj;
+
+    vmtest.on_new_vm(t, image_uuid, {'do_not_inventory': true}, state, [
+        function (cb) {
+            zonecfg(['-z', state.uuid, 'remove attr name=create-timestamp;'], function (err, fds) {
+                t.ok(!err, 'removing create-timestamp: ' + (err ? err.message : 'ok'));
+                cb(err);
+            });
+        }, function (cb) {
+            VM.load(state.uuid, function(err, obj) {
+                if (err) {
+                    t.ok(false, 'load obj from new VM: ' + err.message);
+                    return cb(err);
+                }
+                vmobj = obj;
+                cb();
+            });
+        }, function (cb) {
+            zfs(['get', '-pHo', 'value', 'creation', vmobj.zfs_filesystem],
+                function (err, fds) {
+
+                var creation_timestamp = trim(fds.stdout);
+                var dataset_creation_time;
+
+                if (!err && !creation_timestamp) {
+                   err = new Error('Unable to find creation timestamp in zfs '
+                        + 'output');
+                }
+
+                if (err) {
+                    cb(err);
+                   return;
+                }
+
+                dataset_creation_time =
+                    (new Date(creation_timestamp * 1000)).toISOString();
+
+                t.ok(vmobj.create_timestamp === dataset_creation_time, 'VM has create_timestamp, expected: '
+                    + dataset_creation_time + ', actual: ' + vmobj.create_timestamp);
+
+                cb();
+
             });
         }
     ]);

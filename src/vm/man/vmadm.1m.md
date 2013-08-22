@@ -914,12 +914,12 @@ tab-complete UUIDs rather than having to type them out for every command.
     filesystems:
 
         This property can be used to mount additional filesystems into an OS
-        VM. It is primarily intended for SDC special VMs.  The value is an
-        array of objects. Those objects can have the following properties:
-        source, target, raw (optional), type and options.  These are described
-        below:
+        VM. It is primarily intended for SDC special VMs. The value is an
+        array of objects. The properties available are listed below under the 
+        filesystems.*.<property> options. Those objects can have the following
+        properties: source, target, raw (optional), type and options.
 
-    filesystem.type:
+    filesystems.*.type:
 
         For OS VMs this specifies the type of the filesystem being mounted in.
         Example: lofs
@@ -930,7 +930,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: no
 
-    filesystem.source:
+    filesystems.*.source:
 
         For OS VMs this specifies the directory in the global zone of the
         filesystem being mounted in.  Example: /pool/somedirectory
@@ -941,7 +941,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: no
 
-    filesystem.target:
+    filesystems.*.target:
 
         For OS VMs this specifies the directory inside the Zone where this
         filesystem should be mounted.  Example: /somedirectory
@@ -952,7 +952,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: no
 
-    filesystem.raw:
+    filesystems.*.raw:
 
         For OS VMs this specifies the additional raw device that should be
         associated with the source filesystem.  Example: /dev/rdsk/somedisk
@@ -963,7 +963,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: no
 
-    filesystem.options:
+    filesystems.*.options:
 
         For OS VMs this specifies the array of mount options for this file
         system when it is mounted into the zone.  Examples of options include:

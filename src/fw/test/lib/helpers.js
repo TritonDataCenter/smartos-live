@@ -143,7 +143,7 @@ function fwListEquals(t, rules, callback) {
 
 
 /**
- * Does a fw.rules() for a VM and a deepEqual to confirm the retrieved
+ * Does a fw.vmRules() for a VM and a deepEqual to confirm the retrieved
  * list is the same
  */
 function fwRulesEqual(opts, callback) {
@@ -153,7 +153,7 @@ function fwRulesEqual(opts, callback) {
     assert.object(opts.vm, 'opts.vm');
     assert.arrayOfObject(opts.vms, 'opts.vms');
 
-    mocks.fw.rules({ vm: opts.vm.uuid, vms: opts.vms }, function (err, res) {
+    mocks.fw.vmRules({ vm: opts.vm.uuid, vms: opts.vms }, function (err, res) {
         opts.t.ifError(err);
         if (err) {
             return callback();
@@ -161,7 +161,35 @@ function fwRulesEqual(opts, callback) {
 
         // clone the input rules in case order is important to the caller:
         opts.t.deepEqual(res.sort(uuidSort), clone(opts.rules).sort(uuidSort),
-            'fw.rules() correct for ' + opts.vm.uuid);
+            'fw.vmRules() correct for ' + opts.vm.uuid);
+
+        return callback();
+    });
+}
+
+
+/**
+ * Does a fw.rvmRules() for a VM and a deepEqual to confirm the retrieved
+ * list is the same
+ */
+function fwRvmRulesEqual(opts, callback) {
+    assert.object(opts, 'opts');
+    assert.arrayOfObject(opts.rules, 'opts.rules');
+    assert.object(opts.t, 'opts.t');
+    assert.ok(opts.rvm, 'opts.rvm');
+    assert.arrayOfObject(opts.vms, 'opts.vms');
+
+    mocks.fw.rvmRules({ remoteVM: opts.rvm, vms: opts.vms },
+        function (err, res) {
+        opts.t.ifError(err);
+        if (err) {
+            return callback();
+        }
+
+        // clone the input rules in case order is important to the caller:
+        opts.t.deepEqual(res.sort(uuidSort), clone(opts.rules).sort(uuidSort),
+            'fw.rvmRules() correct for '
+            + typeof (opts.rvm) === 'object' ?  opts.rvm.uuid : opts.rvm);
 
         return callback();
     });
@@ -458,6 +486,7 @@ module.exports = {
     fwGetEquals: fwGetEquals,
     fwListEquals: fwListEquals,
     fwRulesEqual: fwRulesEqual,
+    fwRvmRulesEqual: fwRvmRulesEqual,
     getIPFenabled: getIPFenabled,
     generateVM: generateVM,
     remoteVMsOnDisk: remoteVMsOnDisk,

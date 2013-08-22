@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
- * fwadm tests: tags
+ * fwadm test: tags
  */
 
 var async = require('async');

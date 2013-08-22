@@ -314,6 +314,22 @@ Fwadm.prototype.do_get = function (subcmd, opts, args, callback) {
 
 
 /**
+ * Gets a remote VM
+ */
+Fwadm.prototype['do_get-rvm'] = function (subcmd, opts, args, callback) {
+    var uuid = cli.validateUUID(args[0]);
+
+    return fw.getRVM({ remoteVM: uuid }, function (err, rvm) {
+        if (err) {
+            return cli.exitWithErr(err, opts);
+        }
+
+        return console.log(cli.json(rvm));
+    });
+};
+
+
+/**
  * Enables or disables firewall rules
  */
 function enableDisable(subcmd, opts, args, callback) {
@@ -368,6 +384,23 @@ Fwadm.prototype.do_delete = function (subcmd, opts, args, callback) {
 
 
 /**
+ * Gets the rules that apply to a remote VM
+ */
+Fwadm.prototype['do_rvm-rules'] = function (subcmd, opts, args, callback) {
+    var uuid = cli.validateUUID(args[0]);
+    return VM.lookup({}, { fields: fw.VM_FIELDS }, function (err, vms) {
+        if (err) {
+            return cli.exitWithErr(err, opts);
+        }
+
+        return fw.rvmRules({ remoteVM: uuid, vms: vms }, function (err2, res) {
+            return cli.displayRules(err2, res, opts);
+        });
+    });
+};
+
+
+/**
  * Gets the rules that apply to a zone
  */
 Fwadm.prototype.do_rules = function (subcmd, opts, args, callback) {
@@ -377,7 +410,7 @@ Fwadm.prototype.do_rules = function (subcmd, opts, args, callback) {
             return cli.exitWithErr(err, opts);
         }
 
-        return fw.rules({ vm: uuid, vms: vms }, function (err2, res) {
+        return fw.vmRules({ vm: uuid, vms: vms }, function (err2, res) {
             return cli.displayRules(err2, res, opts);
         });
     });
@@ -486,8 +519,10 @@ var HELP = {
     disable: 'Disable a rule.',
     enable: 'Enable a rule.',
     get: 'Get a rule.',
+    'get-rvm': 'Get a remote VM.',
     list: 'List rules.',
     rules: 'List rules that apply to a VM.',
+    'rvm-rules': 'List rules that apply to a remote VM.',
     start: 'Starts a VM\'s firewall.',
     status: 'Get the status of a VM\'s firewall.',
     stats: 'Get rule statistics for a VM\'s firewall.',

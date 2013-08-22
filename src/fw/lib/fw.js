@@ -83,6 +83,16 @@ var VM_FIELDS_REQUIRED = [
 
 
 /**
+ * Assert that this is either a string or an object
+ */
+function assertStringOrObject(obj, name) {
+    if (typeof (obj) !== 'string' && typeof (obj) !== 'object') {
+        assert.ok(false, name + ' ([string] or [object]) required');
+    }
+}
+
+
+/**
  * Initialize the fw.js logger. This is intended to be called at every API
  * entry point.
  */
@@ -640,11 +650,17 @@ function deleteRules(rules, callback) {
  * @param {Function} callback : of the form f(err, vm)
  * - Where vm is a remote VM object
  */
-function loadRemoteVM(file, callback) {
+function loadRemoteVM(uuid, callback) {
+    var file = util.format('%s/%s.json', VM_PATH, uuid);
     LOG.trace('loadRemoteVM: loading file "%s"', file);
 
     return fs.readFile(file, function (err, raw) {
         if (err) {
+            if (err.code == 'ENOENT') {
+                return callback(new verror.VError('Unknown remote VM "%s"',
+                    uuid));
+            }
+
             return callback(err);
         }
         var parsed;
@@ -692,8 +708,7 @@ function loadAllRemoteVMs(callback) {
                 }
                 var uuid = file.split('.')[0];
 
-                var path = util.format('%s/%s', VM_PATH, file);
-                return loadRemoteVM(path, function (err2, rvm) {
+                return loadRemoteVM(uuid, function (err2, rvm) {
                     if (rvm) {
                         vms[uuid] = rvm;
                     }
@@ -2001,6 +2016,34 @@ function del(opts, callback) {
 
 
 /**
+ * Returns a remote VM
+ *
+ * @param opts {Object} : options:
+ * - remoteVM {String} : UUID of remote VM to get
+ * @param callback {Function} : `function (err, rvm)`
+ */
+function getRemoteVM(opts, callback) {
+    try {
+        assert.object(opts, 'opts');
+        assert.string(opts.remoteVM, 'opts.remoteVM');
+    } catch (err) {
+        return callback(err);
+    }
+    opts.readOnly = true;
+    logEntry(opts, 'getRemoteVM');
+
+    return loadRemoteVM(opts.remoteVM, function (err, rvm) {
+        if (err) {
+            LOG.error(err, 'getRemoteVM: return');
+            return callback(err);
+        }
+
+        return callback(null, rvm);
+    });
+}
+
+
+/**
  * Returns a rule
  *
  * @param opts {Object} : options:
@@ -2485,10 +2528,7 @@ function getRuleVMs(opts, callback) {
     try {
         assert.object(opts, 'opts');
         assert.arrayOfObject(opts.vms, 'opts.vms');
-        if (typeof (opts.rule) !== 'string'
-            && typeof (opts.rule) !== 'object') {
-            assert.ok(false, 'opts.rule ([string] or [object]) required');
-        }
+        assertStringOrObject(opts.rule, 'opts.rule');
     } catch (err) {
         return callback(err);
     }
@@ -2523,6 +2563,65 @@ function getRuleVMs(opts, callback) {
         var matched = Object.keys(res.state.ruleVMs);
         LOG.debug(matched, 'getRuleVMs: return (vm=%s)', opts.vm);
         return callback(null, matched);
+    });
+}
+
+
+/**
+ * Gets rules that apply to a Remote VM
+ *
+ * @param opts {Object} : options:
+ * - vms {Array} : array of VM objects (as per VM.js)
+ * - vm {UUID} : UUID of VM to get the rules for
+ * @param callback {Function} `function (err, rules)`
+ * - Where rules is an array of rules that apply to the VM
+ */
+function getRemoteVMrules(opts, callback) {
+    try {
+        assert.object(opts, 'opts');
+        assertStringOrObject(opts.remoteVM, 'opts.remoteVM');
+        assert.arrayOfObject(opts.vms, 'opts.vms');
+    } catch (err) {
+        return callback(err);
+    }
+    opts.readOnly = true;
+    logEntry(opts, 'rules');
+
+    pipeline({
+    funcs: [
+        function allRules(_, cb) { loadAllRules(cb); },
+        function vms(_, cb) { createVMlookup(opts.vms, cb); },
+        function rvm(_, cb) {
+            if (typeof (opts.remoteVM) === 'object') {
+                return cb(null, opts.remoteVM);
+            }
+
+            return loadRemoteVM(opts.remoteVM, cb);
+        },
+        function rvms(state, cb) {
+            return createRemoteVMs(state.vms, [ state.rvm ],
+                function (e, rvmList) {
+                if (e) {
+                    return cb(e);
+                }
+
+                createRemoteVMlookup(rvmList, cb);
+            });
+        },
+        function rvmRules(state, cb) {
+            filterRulesByRemoteVMs(state.rvms, state.allRules, cb);
+        }
+    ]}, function (err, res) {
+        if (err) {
+            return callback(err);
+        }
+
+        var toReturn = res.state.rvmRules.map(function (r) {
+            return r.serialize();
+        });
+
+        LOG.debug(toReturn, 'getRemoteVMrules: return (vm=%s)', opts.remoteVM);
+        return callback(null, toReturn);
     });
 }
 
@@ -2642,13 +2741,15 @@ module.exports = {
     disable: disableVM,
     enable: enableVM,
     get: getRule,
+    getRVM: getRemoteVM,
     list: listRules,
     remoteTargets: getRemoteTargets,
-    rules: getVMrules,
+    rvmRules: getRemoteVMrules,
     stats: vmStats,
     status: vmStatus,
     update: update,
     validatePayload: validatePayload,
     VM_FIELDS: VM_FIELDS,
+    vmRules: getVMrules,
     vms: getRuleVMs
 };

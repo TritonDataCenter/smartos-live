@@ -143,6 +143,11 @@ exports['matches'] = function (t) {
             rule: util.format('FROM all vms TO vm %s ALLOW tcp PORT 22',
                 vms[0].uuid),
             res: { allVMs: true }
+        },
+        {
+            rule: util.format('FROM all vms TO vm %s BLOCK tcp PORT 22',
+                vms[0].uuid),
+            res: { allVMs: true }
         }
 
     ], function (data, cb) {

@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
- * fwadm tests
+ * fwadm test: remote VMs
  */
 
 var async = require('async');
@@ -97,6 +97,16 @@ exports['local VM to remote VM'] = function (t) {
         });
 
     }, function (cb) {
+        // There are no rules yet, so the new rvm should not be the
+        // target of any of them
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [],
+            rvm: rvm,
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
         fw.add(payload, function (err, res) {
             t.ifError(err);
             if (err) {
@@ -104,6 +114,10 @@ exports['local VM to remote VM'] = function (t) {
             }
 
             helpers.fillInRuleBlanks(res.rules, [rule1, rule2]);
+            t.deepEqual(helpers.sortRes(res), {
+                vms: [ vm.uuid ],
+                rules: [ rule1, rule2 ].sort(helpers.uuidSort)
+            }, 'rules returned');
 
             expRules = helpers.defaultZoneRules(vm.uuid);
             createSubObjects(expRules, vm.uuid, 'in', 'pass', 'tcp');
@@ -127,6 +141,31 @@ exports['local VM to remote VM'] = function (t) {
             expRulesOnDisk[rule2.uuid] = clone(rule2);
 
             t.deepEqual(helpers.rulesOnDisk(), expRulesOnDisk, 'rules on disk');
+
+            return cb();
+        });
+
+    }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [rule1, rule2],
+            rvm: rvm,
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [rule1, rule2],
+            rvm: rvm.uuid,
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
+        fw.getRVM({ remoteVM: rvm.uuid }, function (err, res) {
+            t.ifError(err);
+            t.deepEqual(res, util_vm.createRemoteVM(rvm),
+                'Remote VM returned');
 
             return cb();
         });
@@ -174,6 +213,32 @@ exports['local VM to remote VM'] = function (t) {
         });
 
     }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [rule1, rule2, rule3],
+            rvm: rvm,
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [rule1, rule2, rule3],
+            rvm: rvm.uuid,
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
+        // Make sure a completely different remote VM doesn't pick up any of
+        // the rules
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [],
+            rvm: helpers.generateVM(),
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
         // Delete rule 3
 
         var delPayload = {
@@ -204,6 +269,22 @@ exports['local VM to remote VM'] = function (t) {
         });
 
     }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [rule1, rule2],
+            rvm: rvm,
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [rule1, rule2],
+            rvm: rvm.uuid,
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
         // Disabling and re-enabling the firewall should have no effect on the
         // zone rules
         helpers.testEnableDisable({
@@ -214,7 +295,7 @@ exports['local VM to remote VM'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -296,6 +377,14 @@ exports['local VM to remote tag'] = function (t) {
         });
 
     }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [rule1, rule2],
+            rvm: rvm.uuid,
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
         // Add another rule referencing rvm
         rule3 = {
             enabled: true,
@@ -337,6 +426,24 @@ exports['local VM to remote tag'] = function (t) {
         });
 
     }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [rule1, rule2, rule3],
+            rvm: rvm.uuid,
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
+        // Make sure a completely different remote VM doesn't pick up any of
+        // the rules
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [],
+            rvm: helpers.generateVM(),
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
         // Delete rule 3
 
         var delPayload = {
@@ -366,10 +473,17 @@ exports['local VM to remote tag'] = function (t) {
             return cb();
         });
 
+    }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [rule1, rule2],
+            rvm: rvm.uuid,
+            vms: [vm]
+        }, cb);
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -450,6 +564,24 @@ exports['local VM and remote VM to IP'] = function (t) {
 
             return cb();
         });
+
+    }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [rule1, rule2],
+            rvm: rvm.uuid,
+            vms: [vm]
+        }, cb);
+
+    }, function (cb) {
+        // Make sure a completely different remote VM doesn't pick up any of
+        // the rules
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [],
+            rvm: helpers.generateVM(),
+            vms: [vm]
+        }, cb);
     }
 
     ], function () {

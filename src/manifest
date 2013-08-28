@@ -87,6 +87,10 @@ f usr/img/node_modules/nopt/node_modules/abbrev/lib/abbrev.js 0444 root bin
 f usr/img/node_modules/nopt/node_modules/abbrev/LICENSE 0444 root bin
 f usr/img/node_modules/nopt/node_modules/abbrev/package.json 0444 root bin
 f usr/img/node_modules/nopt/package.json 0444 root bin
+d usr/img/node_modules/once 0555 root bin
+f usr/img/node_modules/once/LICENSE 0444 root bin
+f usr/img/node_modules/once/once.js 0444 root bin
+f usr/img/node_modules/once/package.json 0444 root bin
 d usr/img/node_modules/progbar 0555 root bin
 d usr/img/node_modules/progbar/lib 0555 root bin
 f usr/img/node_modules/progbar/lib/progbar.js 0444 root bin
@@ -177,10 +181,6 @@ d usr/img/node_modules/sdc-clients/node_modules/node-uuid 0555 root bin
 f usr/img/node_modules/sdc-clients/node_modules/node-uuid/LICENSE.md 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/node-uuid/package.json 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/node-uuid/uuid.js 0444 root bin
-d usr/img/node_modules/sdc-clients/node_modules/once 0555 root bin
-f usr/img/node_modules/sdc-clients/node_modules/once/LICENSE 0444 root bin
-f usr/img/node_modules/sdc-clients/node_modules/once/once.js 0444 root bin
-f usr/img/node_modules/sdc-clients/node_modules/once/package.json 0444 root bin
 d usr/img/node_modules/sdc-clients/node_modules/restify 0555 root bin
 d usr/img/node_modules/sdc-clients/node_modules/restify/lib 0555 root bin
 f usr/img/node_modules/sdc-clients/node_modules/restify/lib/bunyan_helper.js 0444 root bin

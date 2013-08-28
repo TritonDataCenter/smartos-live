@@ -49,6 +49,7 @@ var child_process = require('child_process'),
     exec = child_process.exec;
 var url = require('url');
 var mkdirp = require('mkdirp');
+var once = require('once');
 var ProgressBar = require('progbar').ProgressBar;
 var imgapi = require('sdc-clients/lib/imgapi');
 var dsapi = require('sdc-clients/lib/dsapi');
@@ -1783,33 +1784,12 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
     var incremental = options.incremental || false;
     var logCb = options.logCb || function () {};
 
-
-    /**
-     * Clean up the given todos.
-     *
-     * @param todos {Array} of 2-tuples [<type>, <path>].
-     */
-    function cleanup(todos, cb) {
-        async.forEachSeries(todos,
-            function (todo, next) {
-                var type = todo[0];
-                if (type === 'snapshot') {
-                    zfsDestroy(todo[1], self.log, next);
-                } else {
-                    next(new Error(format(
-                        'unknown cleanup type: "%s"', todo[0])));
-                }
-            },
-            cb
-        );
-    }
-
     var vmInfo;
     var vmZfsFilesystem;
     var originInfo;
     var imageInfo = {};
     var snapshot;
-    var toCleanup = [];
+    var toCleanup = {};
     async.waterfall([
         // Validate this is a stopped VM.
         function validateVm(next) {
@@ -1915,6 +1895,30 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 next();
             }
         },
+        function renameFinalSnapshotOutOfTheWay(next) {
+            // We use a snapshot named '@final'. If there is an existing one,
+            // rename it to '@final-$timestamp'.
+            var properties = ['name', 'children'];
+            getZfsDataset(vmZfsFilesystem, properties, function (zErr, ds) {
+                if (zErr) {
+                    next(zErr);
+                    return;
+                }
+                var snapshots = ds.children.snapshots;
+                var snapnames = snapshots.map(
+                    function (n) { return '@' + n.split(/@/g).slice(-1)[0]; });
+                if (snapnames.indexOf('@final') == -1) {
+                    next();
+                    return;
+                }
+                var curr = vmZfsFilesystem + '@final';
+                var outofway = curr + '-' + Date.now();
+                logCb(format('Moving existing @final snapshot out of the '
+                    + 'way to "%s"', outofway));
+                zfsRenameSnapshot(curr, outofway,
+                    {recursive: true, log: self.log}, next);
+            });
+        },
         function snapshotVm(next) {
             // This has the potential to fail on an existing snapshot named
             // 'final'. However we want '@final' to be the snapshot in the
@@ -1926,15 +1930,16 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     next(new errors.InternalError(zfsErr));
                     return;
                 }
-                toCleanup.push(['snapshot', snapshot]);
+                toCleanup.snapshot = snapshot;
                 next();
             });
         },
-        function sendImageFile(next) {
+        function sendImageFile(next_) {
             // 'zfs send' the image snapshot to a local file. We *could*
             // stream directly to an optional IMGAPI target, but that makes
             // it more difficult to do (a) sha1 pre-caculation for upload
             // checking and (b) eventual re-upload support.
+            var next = once(next_);
 
             imageInfo.filePath = options.savePrefix;
             if (imageInfo.manifest.type === 'zvol') {
@@ -1960,6 +1965,12 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     'unknown compression "%s"', compression)));
                 return;
             }
+            if (compressor) {
+                toCleanup.compressor = compressor;
+                compressor.on('exit', function () {
+                    delete toCleanup.compressor;
+                });
+            }
 
             logCb(format('Sending image file to "%s"', imageInfo.filePath));
             // Don't want '-p' or '-r' options to 'zfs send'.
@@ -1974,6 +1985,10 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             zfsSend.stderr.on('data', function (chunk) {
                 logCb(format('Stderr from zfs send: %s', chunk.toString()));
             });
+            toCleanup.zfsSend = zfsSend;
+            zfsSend.on('exit', function () {
+                delete toCleanup.zfsSend;
+            });
 
             var size = 0;
             var sha1Hash = crypto.createHash('sha1');
@@ -1985,7 +2000,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     console.error('hash update error:', e);
                     console.error('chunk.length:', chunk.length);
                     console.error('chunk:', chunk);
-                    throw e;
+                    next(e);
                 }
             });
             (compressor || zfsSend).on('exit', function (code) {
@@ -2028,7 +2043,39 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             });
         }
     ], function (err) {
-        cleanup(toCleanup, function (cleanErr) {
+        async.series([
+            function cleanupZfsSend(next) {
+                if (!toCleanup.zfsSend) {
+                    next();
+                    return;
+                }
+                self.log.debug('killing zfsSend process');
+                toCleanup.zfsSend.on('exit', function () {
+                    self.log.debug('zfsSend process exited');
+                    next();
+                });
+                toCleanup.zfsSend.kill('SIGKILL');
+            },
+            function cleanupCompressor(next) {
+                if (!toCleanup.compressor) {
+                    next();
+                    return;
+                }
+                self.log.debug('killing compressor process');
+                toCleanup.compressor.on('exit', function () {
+                    self.log.debug('compressor process exited');
+                    next();
+                });
+                toCleanup.compressor.kill('SIGKILL');
+            },
+            function cleanupSnapshot(next) {
+                if (!toCleanup.snapshot) {
+                    next();
+                    return;
+                }
+                zfsDestroy(toCleanup.snapshot, self.log, next);
+            }
+        ], function (cleanErr) {
             if (cleanErr) {
                 self.log.warn(cleanErr,
                     'error cleaning up during image creation');

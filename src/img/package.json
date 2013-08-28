@@ -12,6 +12,8 @@
     "nopt": "2.1.1",
     "async": "0.1.22",
     "extsprintf": "1.0.2",
+    "once": "1.1.1",
+    "dashdash": "1.3.2",
     "verror": "1.3.6",
     "progbar": "0.0.2",
     "node-uuid": "1.4.0",

@@ -188,12 +188,6 @@ npm install mime@$VER
 (cd node_modules/mime \
     && rm -rf .[a-z]* node_modules README.md test.js)
 
-# once
-VER=$(json -f package.json dependencies.once)
-npm install once@$VER
-(cd node_modules/once \
-    && rm -rf .[a-z]* node_modules README.md test)
-
 # node-uuid
 VER=$(json -f package.json dependencies.node-uuid)
 npm install node-uuid@$VER

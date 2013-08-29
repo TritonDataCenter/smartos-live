@@ -144,3 +144,14 @@ set dump_metrics_on=1
 * automatically.  See: usr/src/uts/common/io/sata/impl/sata.c:97
 *
 set sata:sata_auto_online=1
+
+#
+# We want to limit the time spent in any one I/O to 10 seconds for targets
+# that are not optical.  This is still a very long time; our queue depth is
+# typically 10 or less, and disks will usually fail a command after 2-3s.
+# So we'd have to have multiple reads of bad sectors queued up to have any
+# chance of timing out.  In practice, timeouts occur because of problems with
+# disk controllers or firmware, not media errors, and in those cases it will
+# not help at all to wait longer.
+#
+set sd:sd_io_time=10

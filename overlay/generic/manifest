@@ -60,6 +60,7 @@ f etc/zones/SUNWdefault.xml 0444 root bin
 f etc/resolv.conf 0644 netadm netadm
 d kernel/drv 0755 root sys
 f kernel/drv/cpqary3.conf 0644 root sys
+f kernel/drv/mpt_sas.conf 0644 root sys
 f kernel/drv/sd.conf 0644 root sys
 f kernel/drv/amd64/cpqary3 0755 root sys
 f kernel/drv/amd64/bnx 0755 root sys

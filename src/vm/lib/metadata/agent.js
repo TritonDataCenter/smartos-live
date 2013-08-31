@@ -363,8 +363,6 @@ function (zonename, callback) {
 
         self.createZoneSocket(zopts, function (createErr) {
             if (createErr) {
-                zlog.error({err: createErr}, 'createZoneSocket Error: '
-                    + createErr.message);
                 // We call callback here, but don't include the error because
                 // this is running in async.forEach and we don't want to fail
                 // the others and there's nothing we can do to recover anyway.
@@ -383,13 +381,25 @@ function (zonename, callback) {
     });
 };
 
-MetadataAgent.prototype.createZoneSocket = function (zopts, callback) {
+MetadataAgent.prototype.createZoneSocket =
+function (zopts, callback, waitSecs) {
     var self = this;
     var zlog = self.zlog[zopts.zone];
+    waitSecs = waitSecs || 1;
 
     zsock.createZoneSocket(zopts, function (error, fd) {
         if (error) {
-            throw error;
+            // If we get errors trying to create the zone socket, wait and then
+            // keep retrying.
+            waitSecs = waitSecs * 2;
+            zlog.error(
+                { err: error },
+                'createZoneSocket error, %s seconds before next attempt',
+                waitSecs);
+            setTimeout(function () {
+                self.createZoneSocket(zopts, function () {}, waitSecs);
+            }, waitSecs * 1000);
+            return;
         }
 
         var server = net.createServer(function (socket) {

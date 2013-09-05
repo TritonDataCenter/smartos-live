@@ -572,6 +572,18 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                         returnit(null, JSON.stringify(vmRoutes));
                         return;
                     });
+                } else if (want === 'operator-script') {
+                    addMetadata(function (err) {
+                        if (err) {
+                            returnit(new Error('Unable to load metadata: '
+                                + err.message));
+                            return;
+                        }
+
+                        returnit(null,
+                            vmobj.internal_metadata['operator-script']);
+                        return;
+                    });
                 } else {
                     addTags(function (err) {
                         if (!err) {

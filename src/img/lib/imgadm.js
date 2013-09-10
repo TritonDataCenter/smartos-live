@@ -1992,6 +1992,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
 
             var size = 0;
             var sha1Hash = crypto.createHash('sha1');
+            var hashErr = null;
             (compressor || zfsSend).stdout.on('data', function (chunk) {
                 size += chunk.length;
                 try {
@@ -2000,10 +2001,10 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     console.error('hash update error:', e);
                     console.error('chunk.length:', chunk.length);
                     console.error('chunk:', chunk);
-                    next(e);
+                    hashErr = e;
                 }
             });
-            (compressor || zfsSend).on('exit', function (code) {
+            (compressor || zfsSend).on('close', function (code) {
                 if (code !== 0) {
                     next(new errors.InternalError({message: format(
                         'zfs send error: exit code %s', code)}));
@@ -2013,7 +2014,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                         compression: compression,
                         sha1: sha1Hash.digest('hex')
                     } ];
-                    next();
+                    next(hashErr);
                 }
             });
 

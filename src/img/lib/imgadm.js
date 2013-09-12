@@ -1954,7 +1954,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             function finish(err) {
                 numFinishes++;
                 if (finished) {
-                    /* ignore */
+                    /* jsl:pass */
                 } else if (err) {
                     finished = true;
                     self.log.trace({err: err}, 'sendImageFile err');
@@ -2026,7 +2026,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             }
             zfsArgs.push(snapshot);
             self.log.debug({cmd: ['/usr/sbin/zfs'].concat(zfsArgs)},
-                'spawn zfs send')
+                'spawn zfs send');
             var zfsSend = spawn('/usr/sbin/zfs', zfsArgs);
             var zfsStderrChunks = [];
             zfsSend.stderr.on('data', function (chunk) {
@@ -2067,11 +2067,11 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 }
             });
             (compressor || zfsSend).on('close', function () {
-                imageInfo.manifest.files = [{
+                imageInfo.manifest.files = [ {
                     size: size,
                     compression: compression,
                     sha1: sha1Hash.digest('hex')
-                }];
+                } ];
 
                 // This is our successful exit point from this step.
                 self.log.trace('image file send pipeline closed successfully');

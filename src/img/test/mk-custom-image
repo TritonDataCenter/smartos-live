@@ -110,8 +110,13 @@ zlogin $vm_uuid 'sm-prepare-image -y >/dev/null' </dev/null
 vmadm stop $vm_uuid
 
 echo "Create the custom image"
-imgadm create $vm_uuid -o $OUTPUT_TEMPLATE -c $COMPRESSION \
-    name=custom-image version=1.0.0 $EXTRA_ARGS
+if [[ -n "$TRACE" ]]; then
+    imgadm -v create $vm_uuid -o $OUTPUT_TEMPLATE -c $COMPRESSION \
+        name=custom-image version=1.0.0 $EXTRA_ARGS
+else
+    imgadm create $vm_uuid -o $OUTPUT_TEMPLATE -c $COMPRESSION \
+        name=custom-image version=1.0.0 $EXTRA_ARGS
+fi
 
 echo "Delete basis zone $vm_uuid"
 vmadm delete $vm_uuid

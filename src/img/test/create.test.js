@@ -51,6 +51,23 @@ var TESTDIR = __dirname;
 // Base image from which we'll be creating a custom images.
 var BASE_UUID = 'f669428c-a939-11e2-a485-b790efc0f0c1'; // base 13.1.0
 
+var envWithTrace = objCopy(process.env);
+envWithTrace.TRACE = '1';
+
+
+
+// ---- internal support stuff
+
+function objCopy(obj, target) {
+    if (!target) {
+        target = {};
+    }
+    Object.keys(obj).forEach(function (k) {
+        target[k] = obj[k];
+    });
+    return target;
+}
+
 
 // ---- setup
 
@@ -68,86 +85,97 @@ test('setup: clean WRKDIR (' + WRKDIR + ')', function (t) {
 // ---- tests
 
 test('custom image (compression=none)', function (t) {
-    var cmd = format('%s/mk-custom-image %s %s/1 none',
-        TESTDIR, BASE_UUID, WRKDIR);
-    exec(cmd, function (err, stdout, stderr) {
+    var cmd = format('%s/mk-custom-image %s %s/1 none >%s/mk-custom-image.1.log 2>&1',
+        TESTDIR, BASE_UUID, WRKDIR, WRKDIR);
+    exec(cmd, {env: envWithTrace}, function (err, stdout, stderr) {
         t.ifError(err, format('error running "%s": %s', cmd, err));
-        var cmd = format('%s/try-custom-image %s/1.imgmanifest %s/1.zfs',
-            TESTDIR, WRKDIR, WRKDIR);
-        exec(cmd, function (err, stdout, stderr) {
+        var logfile = WRKDIR + '/try-custom-image.1.log';
+        var cmd = format('%s/try-custom-image %s/1.imgmanifest %s/1.zfs >%s 2>&1',
+            TESTDIR, WRKDIR, WRKDIR, logfile);
+        exec(cmd, function (err) {
             t.ifError(err, format('error running "%s": %s', cmd, err));
-            t.ok(stdout.indexOf('hi from mk-custom-image') !== -1,
-                format('could not find expected marker in stdout:\n--\n%s\n--\n',
-                    stdout));
+            var output = fs.readFileSync(logfile, 'utf8');
+            t.ok(output.indexOf('hi from mk-custom-image') !== -1,
+                format('could not find expected marker in output:\n--\n%s\n--\n',
+                    output));
             t.end();
         });
     });
 });
 
 test('custom image (incremental, compression=none)', function (t) {
-    var cmd = format('%s/mk-custom-image %s %s/1i none -i',
-        TESTDIR, BASE_UUID, WRKDIR);
-    exec(cmd, function (err, stdout, stderr) {
+    var cmd = format('%s/mk-custom-image %s %s/1i none -i >%s/mk-custom-image.1i.log 2>&1',
+        TESTDIR, BASE_UUID, WRKDIR, WRKDIR);
+    exec(cmd, {env: envWithTrace}, function (err, stdout, stderr) {
         t.ifError(err, format('error running "%s": %s', cmd, err));
-        var cmd = format('%s/try-custom-image %s/1i.imgmanifest %s/1i.zfs',
-            TESTDIR, WRKDIR, WRKDIR);
-        exec(cmd, function (err, stdout, stderr) {
+        var logfile = WRKDIR + '/try-custom-image.1i.log';
+        var cmd = format('%s/try-custom-image %s/1i.imgmanifest %s/1i.zfs >%s 2>&1',
+            TESTDIR, WRKDIR, WRKDIR, logfile);
+        exec(cmd, function (err) {
             t.ifError(err, format('error running "%s": %s', cmd, err));
-            t.ok(stdout.indexOf('hi from mk-custom-image') !== -1,
-                format('could not find expected marker in stdout:\n--\n%s\n--\n',
-                    stdout));
+            var output = fs.readFileSync(logfile, 'utf8');
+            t.ok(output.indexOf('hi from mk-custom-image') !== -1,
+                format('could not find expected marker in output:\n--\n%s\n--\n',
+                    output));
             t.end();
         });
     });
 });
 
 test('custom image (compression=gzip)', function (t) {
-    var cmd = format('%s/mk-custom-image %s %s/2 gzip',
-        TESTDIR, BASE_UUID, WRKDIR);
-    exec(cmd, function (err, stdout, stderr) {
+    var cmd = format('%s/mk-custom-image %s %s/2 gzip >%s/mk-custom-image.2.log 2>&1',
+        TESTDIR, BASE_UUID, WRKDIR, WRKDIR);
+    exec(cmd, {env: envWithTrace}, function (err, stdout, stderr) {
         t.ifError(err, format('error running "%s": %s', cmd, err));
-        var cmd = format('%s/try-custom-image %s/2.imgmanifest %s/2.zfs.gz',
-            TESTDIR, WRKDIR, WRKDIR);
-        exec(cmd, function (err, stdout, stderr) {
+        var logfile = WRKDIR + '/try-custom-image.2.log';
+        var cmd = format('%s/try-custom-image %s/2.imgmanifest %s/2.zfs.gz >%s 2>&1',
+            TESTDIR, WRKDIR, WRKDIR, logfile);
+        exec(cmd, function (err) {
             t.ifError(err, format('error running "%s": %s', cmd, err));
-            t.ok(stdout.indexOf('hi from mk-custom-image') !== -1,
-                format('could not find expected marker in stdout:\n--\n%s\n--\n',
-                    stdout));
+            var output = fs.readFileSync(logfile, 'utf8');
+            t.ok(output.indexOf('hi from mk-custom-image') !== -1,
+                format('could not find expected marker in output:\n--\n%s\n--\n',
+                    output));
             t.end();
         });
     });
 });
 
 test('custom image (incremental, compression=gzip)', function (t) {
-    var cmd = format('%s/mk-custom-image %s %s/2i gzip -i',
-        TESTDIR, BASE_UUID, WRKDIR);
-    exec(cmd, function (err, stdout, stderr) {
+    var cmd = format('%s/mk-custom-image %s %s/2i gzip -i >%s/mk-custom-image.2i.log 2>&1',
+        TESTDIR, BASE_UUID, WRKDIR, WRKDIR);
+    exec(cmd, {env: envWithTrace}, function (err, stdout, stderr) {
         t.ifError(err, format('error running "%s": %s', cmd, err));
-        var cmd = format('%s/try-custom-image %s/2i.imgmanifest %s/2i.zfs.gz',
-            TESTDIR, WRKDIR, WRKDIR);
-        exec(cmd, function (err, stdout, stderr) {
+        var logfile = WRKDIR + '/try-custom-image.2i.log';
+        var cmd = format('%s/try-custom-image %s/2i.imgmanifest %s/2i.zfs.gz >%s 2>&1',
+            TESTDIR, WRKDIR, WRKDIR, logfile);
+        exec(cmd, function (err) {
             t.ifError(err, format('error running "%s": %s', cmd, err));
-            t.ok(stdout.indexOf('hi from mk-custom-image') !== -1,
-                format('could not find expected marker in stdout:\n--\n%s\n--\n',
-                    stdout));
+            var output = fs.readFileSync(logfile, 'utf8');
+            t.ok(output.indexOf('hi from mk-custom-image') !== -1,
+                format('could not find expected marker in output:\n--\n%s\n--\n',
+                    output));
             t.end();
         });
     });
 });
 
-test('custom image (incremental compression=bzip2)', function (t) {
-    var cmd = format('%s/mk-custom-image %s %s/3i bzip2 -i',
-        TESTDIR, BASE_UUID, WRKDIR);
-    exec(cmd, function (err, stdout, stderr) {
+test('custom image (incremental, compression=bzip2)', function (t) {
+    var cmd = format('%s/mk-custom-image %s %s/3i bzip2 -i >%s/mk-custom-image.3i.log 2>&1',
+        TESTDIR, BASE_UUID, WRKDIR, WRKDIR);
+    exec(cmd, {env: envWithTrace}, function (err, stdout, stderr) {
         t.ifError(err, format('error running "%s": %s', cmd, err));
-        var cmd = format('%s/try-custom-image %s/3i.imgmanifest %s/3i.zfs.bz2',
-            TESTDIR, WRKDIR, WRKDIR);
-        exec(cmd, function (err, stdout, stderr) {
+        var logfile = WRKDIR + '/try-custom-image.3i.log';
+        var cmd = format('%s/try-custom-image %s/3i.imgmanifest %s/3i.zfs.bz2 >%s 2>&1',
+            TESTDIR, WRKDIR, WRKDIR, logfile);
+        exec(cmd, function (err) {
             t.ifError(err, format('error running "%s": %s', cmd, err));
-            t.ok(stdout.indexOf('hi from mk-custom-image') !== -1,
-                format('could not find expected marker in stdout:\n--\n%s\n--\n',
-                    stdout));
+            var output = fs.readFileSync(logfile, 'utf8');
+            t.ok(output.indexOf('hi from mk-custom-image') !== -1,
+                format('could not find expected marker in output:\n--\n%s\n--\n',
+                    output));
             t.end();
         });
     });
 });
+

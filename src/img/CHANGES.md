@@ -1,5 +1,11 @@
 # imgadm changelog
 
+## 2.3.1
+
+- [OS-2489] `imgadm create` will now properly fail (exit non-zero) on a failure
+  of the `zfs send` command it is using internally. Previously in some cases it
+  would not.
+
 ## 2.3.0
 
 - [OS-2410] KVM support for 'imgadm create'.

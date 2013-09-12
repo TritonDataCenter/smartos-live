@@ -49,7 +49,6 @@ var child_process = require('child_process'),
     exec = child_process.exec;
 var url = require('url');
 var mkdirp = require('mkdirp');
-var once = require('once');
 var ProgressBar = require('progbar').ProgressBar;
 var imgapi = require('sdc-clients/lib/imgapi');
 var dsapi = require('sdc-clients/lib/dsapi');
@@ -57,6 +56,7 @@ var VM = require('/usr/vm/node_modules/VM.js');
 var zfs = require('/usr/node/node_modules/zfs.js').zfs;
 var imgmanifest = require('imgmanifest');
 var genUuid = require('node-uuid');
+var rimraf = require('rimraf');
 
 var common = require('./common'),
     NAME = common.NAME,
@@ -1895,6 +1895,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 next();
             }
         },
+        // TODO: ensureOriginFinalSnapshot
         function renameFinalSnapshotOutOfTheWay(next) {
             // We use a snapshot named '@final'. If there is an existing one,
             // rename it to '@final-$timestamp'.
@@ -1934,12 +1935,35 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 next();
             });
         },
-        function sendImageFile(next_) {
+        function sendImageFile(next) {
             // 'zfs send' the image snapshot to a local file. We *could*
             // stream directly to an optional IMGAPI target, but that makes
             // it more difficult to do (a) sha1 pre-caculation for upload
             // checking and (b) eventual re-upload support.
-            var next = once(next_);
+
+            // To complete this stage we want to wait for all of:
+            // 1. the 'zfs send' process to 'exit'.
+            // 2. the compressor process to 'exit' (if we are compressing)
+            // 3. the pipeline's std handles to 'close'
+            //
+            // If we get an error we "finish" right away. This `finish` stuff
+            // coordinates that.
+            var numToFinish = 2;  // 1 is added below if compressing.
+            var numFinishes = 0;
+            var finished = false;
+            function finish(err) {
+                numFinishes++;
+                if (finished) {
+                    /* ignore */
+                } else if (err) {
+                    finished = true;
+                    self.log.trace({err: err}, 'sendImageFile err');
+                    next(err);
+                } else if (numFinishes >= numToFinish) {
+                    finished = true;
+                    next();
+                }
+            }
 
             imageInfo.filePath = options.savePrefix;
             if (imageInfo.manifest.type === 'zvol') {
@@ -1947,6 +1971,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             } else {
                 imageInfo.filePath += '.zfs';
             }
+            logCb(format('Sending image file to "%s"', imageInfo.filePath));
 
             // Compression
             var compression = options.compression || 'none';
@@ -1957,22 +1982,41 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             } else if (compression === 'bzip2') {
                 compressor = spawn('/usr/bin/bzip2', ['-cfq']);
                 imageInfo.filePath += '.bz2';
+                numToFinish++;
             } else if (compression === 'gzip') {
                 compressor = spawn('/usr/bin/gzip', ['-cfq']);
                 imageInfo.filePath += '.gz';
+                numToFinish++;
             } else {
-                next(new errors.UsageError(format(
+                finish(new errors.UsageError(format(
                     'unknown compression "%s"', compression)));
                 return;
             }
             if (compressor) {
                 toCleanup.compressor = compressor;
-                compressor.on('exit', function () {
+                var compStderrChunks = [];
+                compressor.stderr.on('data', function (chunk) {
+                    compStderrChunks.push(chunk);
+                });
+                compressor.on('exit', function (code) {
                     delete toCleanup.compressor;
+                    if (code !== 0) {
+                        toCleanup.filePath = imageInfo.filePath;
+                        var msg = format(
+                            'error compressing zfs stream: exit code %s\n'
+                            + '    compression: %s\n'
+                            + '    stderr:\n%s', code, compression,
+                            _indent(compStderrChunks.join(''), '        '));
+                        self.log.debug(msg);
+                        finish(new errors.InternalError({message: msg}));
+                    } else {
+                        self.log.trace({compression: compression},
+                            'compressor exited successfully');
+                        finish();
+                    }
                 });
             }
 
-            logCb(format('Sending image file to "%s"', imageInfo.filePath));
             // Don't want '-p' or '-r' options to 'zfs send'.
             var zfsArgs = ['send'];
             if (incremental) {
@@ -1981,41 +2025,57 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     originInfo.manifest.uuid));
             }
             zfsArgs.push(snapshot);
+            self.log.debug({cmd: ['/usr/sbin/zfs'].concat(zfsArgs)},
+                'spawn zfs send')
             var zfsSend = spawn('/usr/sbin/zfs', zfsArgs);
+            var zfsStderrChunks = [];
             zfsSend.stderr.on('data', function (chunk) {
-                logCb(format('Stderr from zfs send: %s', chunk.toString()));
+                zfsStderrChunks.push(chunk);
             });
             toCleanup.zfsSend = zfsSend;
-            zfsSend.on('exit', function () {
+            zfsSend.on('exit', function (code) {
                 delete toCleanup.zfsSend;
+                if (code !== 0) {
+                    toCleanup.filePath = imageInfo.filePath;
+                    var msg = format('zfs send error: exit code %s\n'
+                        + '    cmd: /usr/sbin/zfs %s\n'
+                        + '    stderr:\n%s', code,
+                        zfsArgs.join(' '),
+                        _indent(zfsStderrChunks.join(''), '        '));
+                    self.log.debug(msg);
+                    finish(new errors.InternalError({message: msg}));
+                } else {
+                    self.log.trace({zfsArgs: zfsArgs},
+                        'zfs send exited successfully');
+                    finish();
+                }
             });
 
             var size = 0;
             var sha1Hash = crypto.createHash('sha1');
-            var hashErr = null;
             (compressor || zfsSend).stdout.on('data', function (chunk) {
                 size += chunk.length;
                 try {
                     sha1Hash.update(chunk);
                 } catch (e) {
-                    console.error('hash update error:', e);
-                    console.error('chunk.length:', chunk.length);
-                    console.error('chunk:', chunk);
-                    hashErr = e;
+                    self.log.debug({err: e}, 'hash update error');
+                    finish(new errors.InternalError({
+                        cause: e,
+                        message: format(
+                            'hash error calculating image file sha1: %s', e)
+                    }));
                 }
             });
-            (compressor || zfsSend).on('close', function (code) {
-                if (code !== 0) {
-                    next(new errors.InternalError({message: format(
-                        'zfs send error: exit code %s', code)}));
-                } else {
-                    imageInfo.manifest.files = [ {
-                        size: size,
-                        compression: compression,
-                        sha1: sha1Hash.digest('hex')
-                    } ];
-                    next(hashErr);
-                }
+            (compressor || zfsSend).on('close', function () {
+                imageInfo.manifest.files = [{
+                    size: size,
+                    compression: compression,
+                    sha1: sha1Hash.digest('hex')
+                }];
+
+                // This is our successful exit point from this step.
+                self.log.trace('image file send pipeline closed successfully');
+                finish();
             });
 
             var out = fs.createWriteStream(imageInfo.filePath);
@@ -2075,6 +2135,15 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     return;
                 }
                 zfsDestroy(toCleanup.snapshot, self.log, next);
+            },
+            function cleanupImageFile(next) {
+                if (!toCleanup.filePath) {
+                    next();
+                    return;
+                }
+                self.log.debug('remove incomplete image file "%s"',
+                    toCleanup.filePath);
+                rimraf(toCleanup.filePath, next);
             }
         ], function (cleanErr) {
             if (cleanErr) {

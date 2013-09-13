@@ -1895,7 +1895,23 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 next();
             }
         },
-        // TODO: ensureOriginFinalSnapshot
+        function ensureOriginFinalSnapshot(next) {
+            if (!incremental) {
+                return next();
+            }
+            originFinalSnap = format('%s/%s@final', originInfo.zpool,
+                originInfo.manifest.uuid);
+            getZfsDataset(originFinalSnap, function (err, ds) {
+                if (err) {
+                    next(err);
+                } else if (!ds) {
+                    next(new errors.OriginHasNoFinalSnapshotError(
+                        originInfo.manifest.uuid));
+                } else {
+                    next();
+                }
+            });
+        },
         function renameFinalSnapshotOutOfTheWay(next) {
             // We use a snapshot named '@final'. If there is an existing one,
             // rename it to '@final-$timestamp'.

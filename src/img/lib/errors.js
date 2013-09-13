@@ -206,6 +206,27 @@ function VmHasNoOriginError(cause, vmUuid) {
 }
 util.inherits(VmHasNoOriginError, ImgadmError);
 
+// For *incremental* image creation the origin image must have a '@final'
+// snapshot from which the incr zfs send is taken. '@final' is what 'imgadm
+// install' ensures, but imported datasets from earlier 'imgadm' or pre-imgadm
+// might not have one.
+function OriginHasNoFinalSnapshotError(cause, originUuid) {
+    if (originUuid === undefined) {
+        originUuid = cause;
+        cause = undefined;
+    }
+    assert.string(originUuid, 'originUuid');
+    ImgadmError.call(this, {
+        cause: cause,
+        message: format('cannot create an incremental image: origin image "%s" '
+            + 'has no "@final" snapshot (sometimes this can be fixed by '
+            + '"imgadm update")', originUuid),
+        code: 'OriginHasNoFinalSnapshot',
+        exitStatus: 1
+    });
+}
+util.inherits(OriginHasNoFinalSnapshotError, ImgadmError);
+
 function ActiveImageNotFoundError(cause, uuid) {
     if (uuid === undefined) {
         uuid = cause;
@@ -554,6 +575,7 @@ module.exports = {
     VmNotFoundError: VmNotFoundError,
     VmNotStoppedError: VmNotStoppedError,
     VmHasNoOriginError: VmHasNoOriginError,
+    OriginHasNoFinalSnapshotError: OriginHasNoFinalSnapshotError,
     ManifestValidationError: ManifestValidationError,
     ActiveImageNotFoundError: ActiveImageNotFoundError,
     ImageNotActiveError: ImageNotActiveError,

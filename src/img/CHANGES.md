@@ -2,6 +2,11 @@
 
 ## 2.3.1
 
+- [OS-2488] Incremental imgadm creation (`imgadm create -i`) will not explcitly
+  fail if the origin image does not have a '@final' snapshot on the origin image.
+  Images installed with imgadm v2.0.3 or later will have this but images installed
+  prior to that may not.
+
 - [OS-2489] `imgadm create` will now properly fail (exit non-zero) on a failure
   of the `zfs send` command it is using internally. Previously in some cases it
   would not.

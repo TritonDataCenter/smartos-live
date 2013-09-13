@@ -15,6 +15,7 @@ var vmtest = this;
 var IMAGES_SOURCE = 'https://images.joyent.com/';
 
 exports.CURRENT_SMARTOS_UUID = '01b2c898-945f-11e1-a523-af1afbe22822';
+exports.CURRENT_SNGL_UUID = '4bf9530a-7ae5-11e2-bb4e-3bad5fbc3de9';
 exports.CURRENT_UBUNTU_UUID = '71101322-43a5-11e1-8f01-cf2a3031a7f4';
 exports.CURRENT_UBUNTU_NAME = 'ubuntu-10.04';
 exports.CURRENT_UBUNTU_SIZE = 5120;
@@ -51,7 +52,7 @@ exports.ensureCurrentImages = function(passed_t, to_ensure, callback) {
     }
 
     if (!to_ensure) {
-        to_ensure = [vmtest.CURRENT_SMARTOS_UUID, vmtest.CURRENT_UBUNTU_UUID];
+        to_ensure = [vmtest.CURRENT_SMARTOS_UUID, vmtest.CURRENT_UBUNTU_UUID, vmtest.CURRENT_SNGL_UUID];
     }
 
     function ensure(t, do_end, cb) {

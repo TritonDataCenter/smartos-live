@@ -61,15 +61,20 @@ var OPTS = {
         type: 'string',
         help: 'Input file.'
     },
+    help: {
+        names: ['help', 'h'],
+        type: 'bool',
+        help: 'Print help and exit.'
+    },
     json: {
         names: ['json', 'j'],
         type: 'bool',
         help: 'Output JSON.'
     },
-    help: {
-        names: ['help', 'h'],
-        type: 'bool',
-        help: 'Print help and exit.'
+    owner_uuid: {
+        names: ['owner_uuid', 'O'],
+        type: 'string',
+        help: 'Owner UUID'
     },
     stdout: {
         names: ['stdout'],
@@ -103,15 +108,24 @@ function preparePayload(opts, payload) {
         }
     }
 
-    if (opts && opts.enable) {
-        newOpts.rules.forEach(function (r) {
-            r.enabled = true;
-        });
-    }
+    if (opts) {
+        newOpts.dryrun = opts.dryrun || false;
 
-    newOpts.dryrun = (opts && opts.dryrun) || false;
-    if (opts && opts.stdout) {
-        newOpts.filecontents = true;
+        if (opts.enable) {
+            newOpts.rules.forEach(function (r) {
+                r.enabled = true;
+            });
+        }
+
+        if (opts.owner_uuid && newOpts.rules) {
+            newOpts.rules.forEach(function (r) {
+                r.owner_uuid = opts.owner_uuid;
+            });
+        }
+
+        if (opts.stdout) {
+            newOpts.filecontents = true;
+        }
     }
 
     return newOpts;
@@ -138,10 +152,19 @@ function ruleOutput(err, res, opts, action) {
         }
     }
 
-    var out = [util.format('%s rules:', action)];
-    res.rules.forEach(function (r) {
-        out.push(cli.ruleLine(r));
-    });
+    var out = [];
+
+    if (res.rules && res.rules.length !== 0) {
+        out.push(util.format('%s rules:', action));
+        res.rules.forEach(function (r) {
+            out.push(cli.ruleLine(r));
+        });
+    }
+
+    if (res.remoteVMs && res.remoteVMs.length !== 0) {
+        out.push(util.format('%s remote VMs:', action));
+        out = out.concat(res.remoteVMs);
+    }
 
     if (opts && opts.verbose) {
         out.push('');
@@ -265,6 +288,21 @@ Fwadm.prototype.do_list = function (subcmd, opts, args, callback) {
     // XXX: support filtering, sorting
     return fw.list({}, function (err, res) {
         return cli.displayRules(err, res, opts);
+    });
+};
+
+
+/**
+ * Lists remote VMs
+ */
+Fwadm.prototype['do_list-rvms'] = function (subcmd, opts, args, callback) {
+    // XXX: support filtering, sorting
+    return fw.listRVMs({}, function (err, res) {
+        if (err) {
+            return cli.exitWithErr(err, opts);
+        }
+
+        return console.log(cli.json(res));
     });
 };
 
@@ -521,6 +559,7 @@ var HELP = {
     get: 'Get a rule.',
     'get-rvm': 'Get a remote VM.',
     list: 'List rules.',
+    'list-rvms': 'List remote VMs.',
     rules: 'List rules that apply to a VM.',
     'rvm-rules': 'List rules that apply to a remote VM.',
     start: 'Starts a VM\'s firewall.',
@@ -532,8 +571,8 @@ var HELP = {
 };
 
 var EXTRA_OPTS = {
-    add: [ OPTS.enable, OPTS.file ],
-    update: [ OPTS.enable, OPTS.file ]
+    add: [ OPTS.enable, OPTS.file, OPTS.owner_uuid ],
+    update: [ OPTS.enable, OPTS.file, OPTS.owner_uuid ]
 };
 
 // Help text and options for all commands

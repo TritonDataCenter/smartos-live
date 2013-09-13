@@ -25,6 +25,7 @@ var createSubObjects = mod_obj.createSubObjects;
 // Set this to any of the exports in this file to only run that test,
 // plus setup and teardown
 var runOne;
+// Print out UUIDs of VMs in this test (for debugging):
 var printVMs = false;
 
 
@@ -116,7 +117,8 @@ exports['local VM to remote VM'] = function (t) {
             helpers.fillInRuleBlanks(res.rules, [rule1, rule2]);
             t.deepEqual(helpers.sortRes(res), {
                 vms: [ vm.uuid ],
-                rules: [ rule1, rule2 ].sort(helpers.uuidSort)
+                rules: [ rule1, rule2 ].sort(helpers.uuidSort),
+                remoteVMs: [ rvm.uuid ]
             }, 'rules returned');
 
             expRules = helpers.defaultZoneRules(vm.uuid);
@@ -292,6 +294,12 @@ exports['local VM to remote VM'] = function (t) {
             vm: vm,
             vms: [vm]
         }, cb);
+
+    }, function (cb) {
+        helpers.testRVMlist({
+            t: t,
+            rvms: [rvm]
+        }, cb);
     }
 
     ], function () {
@@ -382,6 +390,12 @@ exports['local VM to remote tag'] = function (t) {
             rules: [rule1, rule2],
             rvm: rvm.uuid,
             vms: [vm]
+        }, cb);
+
+    }, function (cb) {
+        helpers.testRVMlist({
+            t: t,
+            rvms: [rvm]
         }, cb);
 
     }, function (cb) {
@@ -794,7 +808,8 @@ exports['owner_uuid filtering'] = function (t) {
 
             t.deepEqual(helpers.sortRes(res), {
                 rules: [ ],
-                vms: [ vm.uuid ]
+                vms: [ vm.uuid ],
+                remoteVMs: [ rvm1.uuid ]
             }, 'rules returned');
 
             ipfRules[vm.uuid]['in'].pass.tcp[rvm1.nics[0].ip] = [ 25 ];
@@ -813,6 +828,12 @@ exports['owner_uuid filtering'] = function (t) {
         });
 
     }, function (cb) {
+        helpers.testRVMlist({
+            t: t,
+            rvms: [rvm1]
+        }, cb);
+
+    }, function (cb) {
         // Add rvm2 - since it has a different owner_uuid, no rules should
         // change
         fw.add({ vms: [ vm ], remoteVMs: [ rvm2 ] }, function (err, res) {
@@ -823,7 +844,8 @@ exports['owner_uuid filtering'] = function (t) {
 
             t.deepEqual(helpers.sortRes(res), {
                 rules: [ ],
-                vms: [ ]
+                vms: [ ],
+                remoteVMs: [ rvm2.uuid ]
             }, 'rules returned');
 
             t.deepEqual(helpers.zoneIPFconfigs(), ipfRules, 'firewall rules');
@@ -839,6 +861,11 @@ exports['owner_uuid filtering'] = function (t) {
             return cb();
         });
 
+    }, function (cb) {
+        helpers.testRVMlist({
+            t: t,
+            rvms: [rvm1, rvm2]
+        }, cb);
     }
 
     ], function () {

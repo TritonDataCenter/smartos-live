@@ -1796,10 +1796,16 @@ function applyChanges(opts, callback) {
             vms: res.state.ipfData.vms
         };
 
-        if (opts.save && opts.save.rules) {
-            toReturn.rules = opts.save.rules.map(function (r) {
-                return r.serialize();
-            });
+        if (opts.save) {
+            if (opts.save.rules) {
+                toReturn.rules = opts.save.rules.map(function (r) {
+                    return r.serialize();
+                });
+            }
+
+            if (opts.save.remoteVMs) {
+                toReturn.remoteVMs = Object.keys(opts.save.remoteVMs).sort();
+            }
         }
 
         if (opts.del && opts.del.rules) {
@@ -1937,10 +1943,8 @@ function add(opts, callback) {
             return callback(err);
         }
 
-        var toReturn = res.state.apply;
-        LOG.debug({ vms: toReturn.vms, serializedRules: toReturn.rules },
-            'add: return');
-        return callback(err, toReturn);
+        LOG.debug(res.state.apply, 'add: return');
+        return callback(err, res.state.apply);
     });
 }
 
@@ -2067,6 +2071,36 @@ function getRule(opts, callback) {
         }
 
         return callback(null, rule.serialize());
+    });
+}
+
+
+/**
+ * List remote VMs
+ */
+function listRemoteVMs(opts, callback) {
+    try {
+        assert.object(opts, 'opts');
+    } catch (err) {
+        return callback(err);
+    }
+    opts.readOnly = true;
+    logEntry(opts, 'listRemoteVMs');
+
+    loadAllRemoteVMs(function (err, res) {
+        if (err) {
+            LOG.error(err, 'listRemoteVMs: return');
+            return callback(err);
+        }
+
+        // XXX: support sorting by other fields, filtering
+        var sortFn = function _sort(a, b) {
+            return (a.uuid > b.uuid) ? 1: -1;
+        };
+
+        return callback(null, Object.keys(res).map(function (r) {
+            return res[r];
+        }).sort(sortFn));
     });
 }
 
@@ -2441,10 +2475,8 @@ function update(opts, callback) {
             return callback(err);
         }
 
-        var toReturn = res.state.apply;
-        LOG.debug({ vms: toReturn.vms, serializedRules: toReturn.rules },
-            'update: return');
-        return callback(err, toReturn);
+        LOG.debug(res.state.apply, 'update: return');
+        return callback(err, res.state.apply);
     });
 }
 
@@ -2743,6 +2775,7 @@ module.exports = {
     get: getRule,
     getRVM: getRemoteVM,
     list: listRules,
+    listRVMs: listRemoteVMs,
     remoteTargets: getRemoteTargets,
     rvmRules: getRemoteVMrules,
     stats: vmStats,

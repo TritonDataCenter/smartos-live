@@ -349,6 +349,7 @@ exports['add / update: tag to tag'] = function (t) {
             }
 
             t.deepEqual(helpers.sortRes(res), {
+                remoteVMs: [vm9.uuid],
                 rules: [],
                 vms: tagOneVMs.map(function (vm) { return vm.uuid; }).sort()
             }, 'result returned');
@@ -423,6 +424,7 @@ exports['add / update: tag to tag'] = function (t) {
             }
 
             t.deepEqual(helpers.sortRes(res), {
+                remoteVMs: [vm10.uuid],
                 rules: [],
                 vms: []
             }, 'result returned');
@@ -456,6 +458,7 @@ exports['add / update: tag to tag'] = function (t) {
             }
 
             t.deepEqual(helpers.sortRes(res), {
+                remoteVMs: [vm10.uuid],
                 rules: [],
                 vms: tagOneVMs.map(function (vm) { return vm.uuid; }).sort()
             }, 'result returned');
@@ -491,6 +494,7 @@ exports['add / update: tag to tag'] = function (t) {
             }
 
             t.deepEqual(helpers.sortRes(res), {
+                remoteVMs: helpers.sortedUUIDs([vm11, vm12]),
                 rules: [],
                 vms: []
             }, 'result returned');
@@ -918,6 +922,7 @@ exports['tags with values'] = function (t) {
             expRules[0].version = res.rules[0].version;
 
             t.deepEqual(helpers.sortRes(res), {
+                remoteVMs: helpers.sortedUUIDs([rvm1, rvm2, rvm3]),
                 rules: expRules,
                 vms: [ vm2.uuid, vm4.uuid ].sort()
             }, 'rules returned');
@@ -1116,6 +1121,7 @@ exports['tags with values'] = function (t) {
             }
 
             t.deepEqual(helpers.sortRes(res), {
+                remoteVMs: [ rvm4.uuid ],
                 vms: [ vm2.uuid, vm3.uuid, vm4.uuid, vm5.uuid ].sort(),
                 rules: [ ]
             }, 'rules returned');

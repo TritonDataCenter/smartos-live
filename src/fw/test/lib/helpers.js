@@ -11,6 +11,7 @@ var mod_obj = require('../../lib/util/obj');
 var mocks = require('./mocks');
 var mod_uuid = require('node-uuid');
 var util = require('util');
+var util_vm = require('../../lib/util/vm');
 
 var createSubObjects = mod_obj.createSubObjects;
 
@@ -245,6 +246,31 @@ function testEnableDisable(opts, callback) {
 
 
 /**
+ * Tests that fw.listRVMs() returns only the given set of remote VMs
+ */
+function testRVMlist(opts, callback) {
+    assert.object(opts, 'opts');
+    assert.object(opts.t, 'opts.t');
+    assert.object(opts.rvms, 'opts.rvms');
+
+    var t = opts.t;
+
+    mocks.fw.listRVMs({}, function (err, res) {
+        t.ifError(err);
+        if (err) {
+            return callback(err);
+        }
+
+        t.deepEqual(res, opts.rvms.map(function (rvm) {
+            return util_vm.createRemoteVM(rvm);
+        }).sort(uuidSort), 'listRVMs: result correct');
+
+        return callback();
+    });
+}
+
+
+/**
  * Returns the ipf.conf data for all zones from the mock fs module as a
  * an object keyed by zone UUID
  */
@@ -453,6 +479,16 @@ function sortRes(res) {
 
 
 /**
+ * Return the sorted list of each array element's .uuid property
+ */
+function sortedUUIDs(arr) {
+    return arr.map(function (el) {
+        return el.uuid;
+    }).sort();
+}
+
+
+/**
  * Sort by rule UUID
  */
 function uuidSort(a, b) {
@@ -492,7 +528,9 @@ module.exports = {
     remoteVMsOnDisk: remoteVMsOnDisk,
     rulesOnDisk: rulesOnDisk,
     sortRes: sortRes,
+    sortedUUIDs: sortedUUIDs,
     testEnableDisable: testEnableDisable,
+    testRVMlist: testRVMlist,
     uuidNum: uuidNum,
     uuidSort: uuidSort,
     vmsAffected: vmsAffected,

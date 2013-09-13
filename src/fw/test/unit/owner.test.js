@@ -336,8 +336,9 @@ exports['all vms (local and remote)'] = function (t) {
 
             helpers.fillInRuleBlanks(res.rules, expRules);
             t.deepEqual(helpers.sortRes(res), {
+                remoteVMs: helpers.sortedUUIDs([ rvm1, rvm2, rvm3 ]),
                 rules: clone(expRules).sort(helpers.uuidSort),
-                vms: [ vm1.uuid, vm2.uuid ].sort()
+                vms: helpers.sortedUUIDs([ vm1, vm2 ])
             }, 'rules returned');
 
             zoneRules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
@@ -398,7 +399,7 @@ exports['all vms (local and remote)'] = function (t) {
 
             helpers.fillInRuleBlanks(res.rules, expRules[2]);
             t.deepEqual(helpers.sortRes(res), {
-                vms: [ vm1.uuid, vm2.uuid, vm3.uuid ].sort(),
+                vms: helpers.sortedUUIDs([ vm1, vm2, vm3 ]),
                 rules: [ expRules[2] ]
             }, 'rules returned');
 
@@ -469,7 +470,7 @@ exports['all vms (local and remote)'] = function (t) {
             expRules[0].version = res.rules[0].version;
 
             t.deepEqual(helpers.sortRes(res), {
-                vms: [ vm1.uuid, vm2.uuid ].sort(),
+                vms: helpers.sortedUUIDs([ vm1, vm2 ]),
                 rules: [ expRules[0] ]
             }, 'rules returned');
 
@@ -515,7 +516,7 @@ exports['all vms (local and remote)'] = function (t) {
             }
 
             t.deepEqual(helpers.sortRes(res), {
-                vms: [ vm1.uuid, vm2.uuid ].sort(),
+                vms: helpers.sortedUUIDs([ vm1, vm2 ]),
                 rules: [ expRules[1] ]
             }, 'results returned');
 
@@ -615,8 +616,9 @@ exports['remote vms: tags'] = function (t) {
 
             helpers.fillInRuleBlanks(res.rules, expRules);
             t.deepEqual(helpers.sortRes(res), {
+                remoteVMs: helpers.sortedUUIDs([ rvm1, rvm2, rvm3 ]),
                 rules: clone(expRules).sort(helpers.uuidSort),
-                vms: [ vm1.uuid ].sort()
+                vms: [ vm1.uuid ]
             }, 'rules returned');
 
             zoneRules = helpers.defaultZoneRules(vm1.uuid);
@@ -707,8 +709,9 @@ exports['remote vms: vms'] = function (t) {
 
             helpers.fillInRuleBlanks(res.rules, expRules);
             t.deepEqual(helpers.sortRes(res), {
+                remoteVMs: helpers.sortedUUIDs([ rvm1, rvm2 ]),
                 rules: clone(expRules).sort(helpers.uuidSort),
-                vms: [ vm1.uuid ].sort()
+                vms: [ vm1.uuid ]
             }, 'rules returned');
 
             zoneRules = helpers.defaultZoneRules(vm1.uuid);

@@ -342,6 +342,7 @@ exports['any <-> all vms: add / update'] = function (t) {
 
             helpers.fillInRuleBlanks(res.rules, expRules);
             t.deepEqual(helpers.sortRes(res), {
+                remoteVMs: [ rvm1.uuid ],
                 rules: clone(expRules).sort(helpers.uuidSort),
                 vms: [ vm1.uuid, vm2.uuid ].sort()
             }, 'rules returned');
@@ -410,6 +411,7 @@ exports['any <-> all vms: add / update'] = function (t) {
             }
 
             t.deepEqual(res, {
+                remoteVMs: [ rvm2.uuid ],
                 vms: [ vm1.uuid, vm2.uuid ].sort(helpers.uuidSort),
                 rules: [ ]
             }, 'rules returned');

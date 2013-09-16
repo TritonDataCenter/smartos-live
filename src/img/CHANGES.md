@@ -2,6 +2,10 @@
 
 ## 2.3.1
 
+- [OS-2487] 'imgadm import' will now not complain about not being able to
+  delete -partial dataset on rollback (because sometimes it really isn't
+  there yet).
+
 - [OS-2488] Incremental imgadm creation (`imgadm create -i`) will not explcitly
   fail if the origin image does not have a '@final' snapshot on the origin image.
   Images installed with imgadm v2.0.3 or later will have this but images installed

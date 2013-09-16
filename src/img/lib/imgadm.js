@@ -1389,7 +1389,6 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
     var md5Hash = null;
     var sha1Hash = null;
     var md5Expected = null;
-    var finished = false;
 
     async.waterfall([
         /**
@@ -1486,6 +1485,30 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
          *      | zfs recv                      [C]
          */
         function recvTheDataset(fileInfo, next) {
+            // To complete this stage we want to wait for all of:
+            // 1. the 'zfs receive' process to 'exit'.
+            // 2. the compressor process to 'exit' (if we are compressing)
+            // 3. the pipeline's std handles to 'close'
+            //
+            // If we get an error we "finish" right away. This `finish` stuff
+            // coordinates that.
+            var numToFinish = 2;  // 1 is added below if compressing.
+            var numFinishes = 0;
+            var finished = false;
+            function finish(err) {
+                numFinishes++;
+                if (finished) {
+                    /* jsl:pass */
+                } else if (err) {
+                    finished = true;
+                    self.log.trace({err: err}, 'recvTheDataset err');
+                    next(err);
+                } else if (numFinishes >= numToFinish) {
+                    finished = true;
+                    next();
+                }
+            }
+
             if (!options.quiet && process.stderr.isTTY) {
                 bar = new ProgressBar({
                     size: fileInfo.size,
@@ -1503,15 +1526,17 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                 md5Hash.update(chunk);
                 sha1Hash.update(chunk);
             });
-            fileInfo.stream.on('error', next);
+            fileInfo.stream.on('error', finish);
 
             // [B]
             var compression = manifest.files[0].compression;
             var uncompressor;
             if (compression === 'bzip2') {
                 uncompressor = spawn('/usr/bin/bzip2', ['-cdfq']);
+                numToFinish++;
             } else if (compression === 'gzip') {
                 uncompressor = spawn('/usr/bin/gzip', ['-cdfq']);
+                numToFinish++;
             } else {
                 assert.equal(compression, 'none',
                     format('image %s file compression: %s', uuid, compression));
@@ -1535,7 +1560,9 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                             msg = format('%s uncompression error while '
                                 + 'importing: exit code %s', compression, code);
                         }
-                        next(new errors.UncompressionError(msg));
+                        finish(new errors.UncompressionError(msg));
+                    } else {
+                        finish();
                     }
                 });
             }
@@ -1553,12 +1580,17 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             });
             zfsRecv.on('exit', function (code) {
                 if (code !== 0) {
-                    next(new errors.InternalError({message: format(
+                    finish(new errors.InternalError({message: format(
                         'zfs receive error while importing: '
                         + 'exit code %s', code)}));
                 } else {
-                    next();
+                    finish();
                 }
+            });
+
+            (uncompressor || zfsRecv).on('close', function () {
+                self.log.trace('image file receive pipeline closed');
+                finish();
             });
 
             if (uncompressor) {
@@ -1670,23 +1702,20 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                 }
             });
         }
-    ], function finish(err) {
-        // Guard so only called once.
-        if (finished) {
-            return;
-        }
-        finished = true;
-
+    ], function doneImport(err) {
         if (bar) {
             bar.end();
         }
 
         if (err && partialDsName) {
             // Rollback the currently installed dataset, if necessary.
+            // Silently fail here (i.e. only log at trace level) because
+            // it is possible we errored out before the -partial dataset
+            // was created.
             var cmd = format('/usr/sbin/zfs destroy -r %s', partialDsName);
             exec(cmd, function (rollbackErr, stdout, stderr) {
                 if (rollbackErr) {
-                    log.error({cmd: cmd, err: rollbackErr, stdout: stdout,
+                    log.trace({cmd: cmd, err: rollbackErr, stdout: stdout,
                         stderr: stderr, rollbackDsName: partialDsName},
                         'error destroying dataset while rolling back');
                 }
@@ -1937,9 +1966,8 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             });
         },
         function snapshotVm(next) {
-            // This has the potential to fail on an existing snapshot named
-            // 'final'. However we want '@final' to be the snapshot in the
-            // created image -- see the notes in _installImage.
+            // We want '@final' to be the snapshot in the created image -- see
+            // the notes in _installImage.
             snapshot = format('%s@final', vmZfsFilesystem);
             logCb(format('Snapshotting to "%s"', snapshot));
             zfs.snapshot(snapshot, function (zfsErr) {

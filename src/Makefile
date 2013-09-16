@@ -231,6 +231,19 @@ $(SQLITE3_BINDINGS.NODE) :	LDFLAGS += \
 $(SQLITE3_BINDINGS.NODE) :	LIBS += -lpthread
 
 #
+# The libuuid Node add-on follows the same pattern as EXPAT.NODE.
+#
+UUID_OBJDIR =	node-libuuid/build/Release
+UUID_SRCDIR =	node-libuuid/src
+UUID.NODE =	$(UUID_OBJDIR)/uuid.node
+
+$(UUID.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-write-strings -Wno-sign-compare
+$(UUID.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
+$(UUID.NODE) :	CXXFLAGS +=	$(NODE_CFLAGS)
+$(UUID.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
+$(UUID.NODE) :	LIBS +=		-luuid
+
+#
 # The zsock add-on places its single source file in a subdirectory.
 #
 ZSOCK_OBJDIR =	node-zsock/build/Release
@@ -304,6 +317,7 @@ TARGETS = \
 	$(MICROTIME.NODE) \
 	$(SYSLOG.NODE) \
 	$(SQLITE3_BINDINGS.NODE) \
+	$(UUID.NODE) \
 	$(ZSOCK_BINDINGS.NODE) \
 	$(ZUTIL_BINDINGS.NODE)
 
@@ -357,6 +371,7 @@ install: all
 	cp $(ZUTIL_BINDINGS.NODE) \
 	    $(PREFIX_NODE)/node_modules/zutil/build/Release
 	cp $(EXPAT.NODE) $(PREFIX_NODE)/node_modules/expat_binding.node
+	cp $(UUID.NODE) $(PREFIX_NODE)/node_modules/uuid.node
 	cp $(DTRACE_PROVIDER.NODE) $(PREFIX_NODE)/node_modules/dtrace-provider.node
 	sed -e "s|require('./build.*DTraceProviderBindings')|require('/usr/node/node_modules/dtrace-provider.node')|" \
 	    < $(DTRACE_PROVIDER_SRCDIR)/dtrace-provider.js \
@@ -520,6 +535,10 @@ $(SQLITE3_OBJDIR)/%.o: $(SQLITE3_LIBSRCDIR)/%.c $(SQLITE3_HDRS)
 
 $(SQLITE3_BINDINGS.NODE): $(SQLITE3_OBJS)
 	$(GXX) $(LDFLAGS) -o $@ $(SQLITE3_OBJS) $(LIBS)
+
+$(UUID.NODE): $(UUID_SRCDIR)/uuid.cc
+	@mkdir -p $(UUID_OBJDIR)
+	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
 
 $(ZSOCK_BINDINGS.NODE): $(ZSOCK_SRCDIR)/zsock.cc
 	@mkdir -p $(ZSOCK_OBJDIR)

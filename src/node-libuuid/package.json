@@ -1,0 +1,18 @@
+{ "name" : "libuuid"
+, "description" : "link out to operating systems uuid_generate"
+, "keywords" : [ "libuuid", "uuid" ]
+, "version" : "0.1.2"
+, "author" : { "name" : "Theo Schlossnagle" }
+, "directories": { "lib": "." }
+, "repository" :
+  { "type" : "git"
+  , "url" : "git://github.com/postwait/node-libuuid.git"
+  }
+, "bugs" :
+  { "url" : "http://github.com/postwait/node-libuuid/issues"
+  }
+, "main" : "./build/Release/uuid.node"
+, "engines" : { "node" : "0.2 || 0.4 || 0.5 || 0.6 || 0.8 || 0.10" }
+, "licenses" :
+  [ { "type" : "BSD" } ]
+}

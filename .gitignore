@@ -51,7 +51,9 @@ src/diskinfo
 src/disklayout
 src/mkzpool
 src/node-dtrace-provider/build
+src/node-microtime/build
 src/node-sqlite3/build/
+src/node-uuid/build
 src/node-zsock/.lock-wscript
 src/node-zsock/build/
 src/node-zutil/.lock-wscript

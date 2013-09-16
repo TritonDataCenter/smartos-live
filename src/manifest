@@ -409,6 +409,7 @@ f usr/node/0.8/node_modules/node_sqlite3.node 0444 root bin
 f usr/node/0.8/node_modules/panic.js 0444 root bin
 f usr/node/0.8/node_modules/subr.js 0444 root bin
 f usr/node/0.8/node_modules/system.js 0444 root bin
+f usr/node/0.8/node_modules/uuid.node 0444 root bin
 f usr/node/0.8/node_modules/zfs.js 0444 root bin
 # 0-man-stamp
 d usr/share/man/man3m 0755 root bin

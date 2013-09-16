@@ -1926,9 +1926,10 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
         },
         function ensureOriginFinalSnapshot(next) {
             if (!incremental) {
-                return next();
+                next();
+                return;
             }
-            originFinalSnap = format('%s/%s@final', originInfo.zpool,
+            var originFinalSnap = format('%s/%s@final', originInfo.zpool,
                 originInfo.manifest.uuid);
             getZfsDataset(originFinalSnap, function (err, ds) {
                 if (err) {

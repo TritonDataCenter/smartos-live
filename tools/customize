@@ -3,15 +3,17 @@
 # Copyright (c) 2013 Joyent Inc., All Rights Reserved.
 #
 
+status=0
+
 BUILDSTAMP=$2
-if [ -z "${BUILDSTAMP}" ]; then
-  BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`
+if [[ -z "${BUILDSTAMP}" ]]; then
+	BUILDSTAMP=$(TZ=UTC date "+%Y%m%dT%H%M%SZ")
 fi
 
 rdmnt=$1
-if [ -z "${rdmnt}" ]; then
-  echo "Usage: $0 <rdmnt directory> [buildstamp]"
-  exit 1
+if [[ -z "${rdmnt}" ]]; then
+	echo "Usage: $0 <rdmnt directory> [buildstamp]"
+	exit 1
 fi
 
 echo "Customizing ${rdmnt}"
@@ -22,11 +24,37 @@ pfexec cp /dev/null ${rdmnt}/var/adm/wtmpx
 pfexec mount -F lofs /dev ${rdmnt}/dev
 # If we're in a GZ there will be a /devices we need to
 if [[ -d /devices ]]; then
-    pfexec mount -F lofs /devices ${rdmnt}/devices
+	pfexec mount -F lofs /devices ${rdmnt}/devices
 fi
-pfexec /usr/bin/catman -M ${rdmnt}/usr/share/man:${rdmnt}/smartdc/man -T ${rdmnt}/usr/share/lib/tmac/ansun
+pfexec /usr/bin/catman -M "${rdmnt}/usr/share/man:${rdmnt}/smartdc/man" \
+    -T "${rdmnt}/usr/share/lib/tmac/ansun"
+
+#
+# catman(1) will happily create new cat pages even if the original man page is
+# a symbolic link to another.  This is quite wasteful of space; remove such
+# cat pages and replace them with links also.
+#
+(cd "${rdmnt}/usr/share/man" && for cdir in *; do
+	[[ -d "${cdir}" ]] || continue
+	(cd "${cdir}" && for catpage in *; do
+		manpage="${rdmnt}/usr/share/man/${cdir/cat/man}/${catpage}"
+		if [[ -L "${manpage}" && ! -L "${catpage}" ]]; then
+			link="$(readlink ${manpage})"
+			if [[ ! -f "${rdmnt}/usr/share/man/${cdir}/${link}" ]]
+			then
+				echo "FAIL: Missing catpage link source ${link}"
+				status=1
+			else
+				echo "Replacing cat page ${catpage} with link"
+				pfexec rm -f "${catpage}"
+				pfexec ln -s "${link}" "${catpage}"
+			fi
+		fi
+	done)
+done)
+
 if [[ -d /devices ]]; then
-    pfexec umount ${rdmnt}/devices
+	pfexec umount ${rdmnt}/devices
 fi
 pfexec umount ${rdmnt}/dev
 
@@ -34,4 +62,4 @@ pfexec chown root:root ${rdmnt}
 pfexec gsed -i -e "s/ [0-9]\{8\}T[0-9]\{6\}Z/ ${BUILDSTAMP}/" ${rdmnt}/etc/motd
 pfexec gsed -i -e "s/ [0-9]\{8\}T[0-9]\{6\}Z/ ${BUILDSTAMP}/" ${rdmnt}/etc/issue
 
-exit 0
+exit $status

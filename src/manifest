@@ -391,9 +391,9 @@ f usr/bin/mkzpool 0555 root bin
 f usr/lib/measure_terminal 0555 root bin
 s usr/sbin/fwadm=../fw/sbin/fwadm
 s usr/sbin/vmadm=../vm/sbin/vmadm
-d usr/node 0555 root bin
-d usr/node/0.8 0555 root bin
-d usr/node/0.8/node_modules 0555 root bin
+d usr/node 0755 root bin
+d usr/node/0.8 0755 root bin
+d usr/node/0.8/node_modules 0755 root bin
 f usr/node/0.8/node_modules/async.js 0444 root bin
 f usr/node/0.8/node_modules/disklayout.js 0444 root bin
 f usr/node/0.8/node_modules/dtrace-provider.js 0444 root bin

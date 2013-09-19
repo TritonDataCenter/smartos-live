@@ -40,6 +40,29 @@ var payload = {
     ]
 };
 
+var payload_with_tags = {
+    'autoboot': false,
+    'brand': 'kvm',
+    'alias': 'autotest-' + process.pid,
+    'do_not_inventory': true,
+    'tags': {
+       'hello': 'world'
+    },
+    'disks': [
+        {
+            'size': 2048,
+            'model': 'virtio'
+        },
+    ],
+    'nics': [
+        {
+            'nic_tag': 'admin',
+            'ip': 'dhcp',
+            'model': 'virtio'
+        }
+    ]
+}
+
 test('test create with bad image_size', {'timeout': 240000}, function(t) {
 
     p = {
@@ -247,3 +270,28 @@ test('test default refreservation', {'timeout': 240000}, function(t) {
         }
     ]);
 });
+
+
+test('test create with tags', {'timeout': 240000}, function(t) {
+
+    var p = JSON.parse(JSON.stringify(payload_with_tags));
+    var state = {'brand': p.brand};
+
+    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [
+            function (cb) {
+                VM.load(state.uuid, {fields: ['tags']}, function (err, obj) {
+                    t.ok(!err, 'reloaded VM after create: ' + (err ? err.message : 'no error'));
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+                    t.ok((obj.tags.hello === 'world'), 'tags: ' + JSON.stringify(obj.tags));
+                    cb();
+                });
+            }
+        ], function (err) {
+            t.end();
+        }
+    );
+});
+

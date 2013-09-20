@@ -314,10 +314,12 @@ d usr/fw/node_modules/fwrule 0555 root bin
 d usr/fw/sbin 0555 root bin
 f usr/fw/etc/fwadm.completion 0444 root bin
 f usr/fw/lib/cli.js 0444 root bin
+f usr/fw/lib/filter.js 0444 root bin
 f usr/fw/lib/fw.js 0444 root bin
 f usr/fw/lib/fwadm.js 0444 root bin
 f usr/fw/lib/ipf.js 0444 root bin
 f usr/fw/lib/pipeline.js 0444 root bin
+f usr/fw/lib/rvm.js 0444 root bin
 f usr/fw/lib/util/log.js 0444 root bin
 f usr/fw/lib/util/obj.js 0444 root bin
 f usr/fw/lib/util/vm.js 0444 root bin

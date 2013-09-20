@@ -51,6 +51,39 @@ function endsWith(str, suffix)
 
 
 /**
+ * Adds a series of zones rules
+ */
+function addZoneRules(exp, toAdd) {
+    assert.object(exp, 'exp');
+
+    toAdd.forEach(function (r) {
+        // console.log('adding: %s %s %s %s %s %j',
+        //    r[0].uuid, r[1], r[2], r[3], r[4], r[5]);
+
+        var vm = r[0].uuid;
+        if (!exp[vm]) {
+            exp[vm] = defaultZoneRules();
+        }
+
+        if (r[1] === 'default') {
+            return;
+        }
+
+        // [vm, 'in', 'pass', 'tcp', ip, ports]
+        var proto = createSubObjects(exp[vm], r[1], r[2], r[3]);
+        if (!proto.hasOwnProperty(r[4])) {
+            proto[r[4]] = [];
+        }
+
+        var ports = typeof (r[5]) === 'object' ? r[5] : r[5];
+        proto[r[4]] = proto[r[4]].concat(ports).sort(function (a, b) {
+            return Number(a) > Number(b);
+        });
+    });
+}
+
+
+/**
  * Returns the default rule set for a zone
  */
 function defaultZoneRules(uuids) {
@@ -421,6 +454,16 @@ function generateVM(override) {
 
 
 /**
+ * Prints a VM for debugging
+ */
+function printVM(name, vm) {
+    console.log('%s=%s (%s)', name, vm.uuid, vm.nics.map(function (n) {
+        return n.ip;
+    }).join(', '));
+}
+
+
+/**
  * Gets the remote VM files stored on disk in /var/fw/vms
  */
 function remoteVMsOnDisk(fw) {
@@ -516,6 +559,7 @@ function vmsAffected(opts, callback) {
 
 
 module.exports = {
+    addZoneRules: addZoneRules,
     defaultZoneRules: defaultZoneRules,
     fillInRuleBlanks: fillInRuleBlanks,
     findRuleInList: findRuleInList,
@@ -525,6 +569,7 @@ module.exports = {
     fwRvmRulesEqual: fwRvmRulesEqual,
     getIPFenabled: getIPFenabled,
     generateVM: generateVM,
+    printVM: printVM,
     remoteVMsOnDisk: remoteVMsOnDisk,
     rulesOnDisk: rulesOnDisk,
     sortRes: sortRes,

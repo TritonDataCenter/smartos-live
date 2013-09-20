@@ -4,9 +4,11 @@
  * mocks for tests
  */
 
+var clone = require('clone');
 var fw;
 var mockery = require('mockery');
 var mod_obj = require('../../lib/util/obj');
+var util = require('util');
 
 var createSubObjects = mod_obj.createSubObjects;
 
@@ -48,24 +50,44 @@ function _splitFile(f) {
 
 
 
-function _log(level, args) {
-    if (args.length !== 0) {
-        VALUES.bunyan[level].push(args);
-        if (LOG) {
-            console.error('# %s %j', level, args);
+function _log(level, num, obj) {
+    if (obj && obj[0]) {
+        VALUES.bunyan[level].push(Array.prototype.slice.call(obj, 1));
+        if (LOG || process.env.LOG) {
+            var json = {};
+            var msgArgs;
+
+            if (typeof (obj[0]) !== 'string') {
+                json = clone(obj[0]);
+                msgArgs = Array.prototype.slice.call(obj, 1);
+            } else {
+                msgArgs = Array.prototype.slice.call(obj);
+            }
+
+            json.hostname = 'fw-test';
+            json.name = 'fw-test';
+            json.pid = process.pid;
+            json.v = 0;
+            json.msg = util.format.apply(null, msgArgs);
+            json.level = num;
+            json.time = (new Date());
+
+            console.error(JSON.stringify(json));
         }
     }
+
     return true;
 }
 
 
 function createLogger() {
     return {
-        trace: function () { return _log('trace', arguments); },
-        debug: function () { return _log('debug', arguments); },
-        error: function () { return _log('error', arguments); },
-        warn: function () { return _log('warn', arguments); },
-        info: function () { return _log('info', arguments); }
+        trace: function () { return _log('trace', 10, arguments); },
+        debug: function () { return _log('debug', 20, arguments); },
+        info: function () { return _log('info', 30, arguments); },
+        warn: function () { return _log('warn', 40, arguments); },
+        error: function () { return _log('error', 50, arguments); },
+        fatal: function () { return _log('fatal', 60, arguments); }
     };
 }
 
@@ -357,11 +379,13 @@ function setup() {
         'verror',
         'util',
         './clonePrototype.js',
+        './filter',
         './ipf',
         './obj',
         './parser',
         './pipeline',
         './rule',
+        './rvm',
         './util/log',
         './util/obj',
         './util/vm',

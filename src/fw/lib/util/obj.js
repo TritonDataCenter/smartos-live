@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: shared object logic
@@ -30,6 +30,22 @@
 
 // --- Exports
 
+
+
+/**
+ * Adds to a 3-level deep object
+ */
+function addToObj3(hash, key1, key2, key3, obj) {
+    if (!hash.hasOwnProperty(key1)) {
+        hash[key1] = {};
+    }
+    if (!hash[key1].hasOwnProperty(key2)) {
+        hash[key1][key2] = {};
+    }
+    if (!hash[key1][key2].hasOwnProperty(key3)) {
+        hash[key1][key2][key3] = obj;
+    }
+}
 
 
 /**
@@ -112,6 +128,7 @@ function objEmpty(obj) {
 
 
 module.exports = {
+    addToObj3: addToObj3,
     createSubObjects: createSubObjects,
     forEachKey: forEachKey,
     isArray: isArray,

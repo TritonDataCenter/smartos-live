@@ -57,6 +57,10 @@ exports.setUp = function (cb) {
 exports['add: no rules or VMs'] = function (t) {
     fw.add({}, function (err, res) {
         t.ok(err, 'error returned');
+        if (!err) {
+            return t.done();
+        }
+
         t.equal(err.message, 'opts.vms ([object]) required', 'VMs required');
         t.done();
     });
@@ -857,6 +861,20 @@ exports['enable / disable rule'] = function (t) {
 
     ], function () {
             t.done();
+    });
+};
+
+
+exports['del: no uuids or rvmUUIDs'] = function (t) {
+    fw.del({ vms: [ helpers.generateVM() ] }, function (err, res) {
+        t.ok(err, 'error returned');
+        if (!err) {
+            return t.done();
+        }
+
+        t.equal(err.message, 'Payload must contain one of: rvmUUIDs, uuids',
+            'Error message');
+        t.done();
     });
 };
 

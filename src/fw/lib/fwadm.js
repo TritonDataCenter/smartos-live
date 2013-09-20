@@ -422,6 +422,33 @@ Fwadm.prototype.do_delete = function (subcmd, opts, args, callback) {
 
 
 /**
+ * Deletes a remote VM
+ */
+Fwadm.prototype['do_delete-rvm'] = function (subcmd, opts, args, callback) {
+    if (args.length === 0) {
+        return console.error('Must specify remote VMs to delete!');
+    }
+
+    args.forEach(function (uuid) {
+        cli.validateUUID(uuid);
+    });
+
+    pipeline({
+    funcs: [
+        function vms(_, cb) { VM.lookup({}, { fields: fw.VM_FIELDS }, cb); },
+        function delRVMs(state, cb) {
+            var delOpts = preparePayload(opts);
+            delOpts.vms = state.vms;
+            delOpts.rvmUUIDs = args;
+            return fw.del(delOpts, cb);
+        }
+    ]}, function _afterDel(err, results) {
+        return ruleOutput(err, results.state.delRVMs, opts, 'Deleted');
+    });
+};
+
+
+/**
  * Gets the rules that apply to a remote VM
  */
 Fwadm.prototype['do_rvm-rules'] = function (subcmd, opts, args, callback) {
@@ -554,6 +581,7 @@ Fwadm.prototype.do_vms = function (subcmd, opts, args, callback) {
 var HELP = {
     add: 'Add firewall rules or data.',
     delete: 'Deletes a rule.',
+    'delete-rvm': 'Deletes a remote VM.',
     disable: 'Disable a rule.',
     enable: 'Enable a rule.',
     get: 'Get a rule.',

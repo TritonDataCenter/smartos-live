@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * fwadm tests
  */
@@ -10,13 +10,6 @@ var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
 var mod_uuid = require('node-uuid');
 var util = require('util');
-
-
-
-// --- Globals
-
-
-
 
 
 
@@ -90,22 +83,19 @@ exports['single rules'] = function (t) {
         },
         {
             name: 'tag to ip: missing tag',
-            rule: 'FROM tag two TO ip 1.2.3.4 BLOCK tcp PORT 25',
-            errors: [ 'No VMs found that match rule: %r' ]
+            rule: 'FROM tag two TO ip 1.2.3.4 BLOCK tcp PORT 25'
         },
         {
             name: 'vm to missing tag',
             rule: util.format('FROM vm %s TO tag two BLOCK tcp PORT 25',
-                vm.uuid),
-            errors: [ 'Missing tag two for rule: %r' ]
+                vm.uuid)
         },
         {
             name: 'vm to missing tag and missing vm',
             rule: util.format(
                 'FROM vm %s TO (tag blue OR vm %s) BLOCK tcp PORT 25',
                 vm.uuid, uuid1),
-            errors: [ 'Missing tag blue for rule: %r',
-                util.format('Missing vm %s for rule: %r', uuid1) ]
+            errors: [ util.format('Missing vm %s for rule: %r', uuid1) ]
         }
     ];
 

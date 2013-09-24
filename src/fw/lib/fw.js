@@ -969,6 +969,12 @@ function validateRules(vms, rvms, rules, callback) {
             return;
         }
 
+        // Allow creating rules that target tags, but not any specific VMs
+        if (type == 'tags') {
+            delete rulesLeft[rule.uuid];
+            return;
+        }
+
         createSubObjects(sideData, rule.uuid, dir, 'missing', type);
         createSubObjects(sideData, rule.uuid, dir, 'vms');
 
@@ -993,6 +999,10 @@ function validateRules(vms, rvms, rules, callback) {
 
     rules.forEach(function (rule) {
         var missing = sideData[rule.uuid];
+
+        if (!missing) {
+            return;
+        }
 
         DIRECTIONS.forEach(function (dir) {
             var otherSide = (dir == 'to' ? 'from' : 'to');

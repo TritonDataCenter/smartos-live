@@ -35,6 +35,15 @@ if [ -f /var/svc/provisioning ]; then
     mv /var/svc/provision{ing,_success}
 fi
 
+if [[ -x /var/svc/mdata-operator-script ]]; then
+    /var/svc/mdata-operator-script
+    operator_script_exit=$?
+    if [[ ${operator_script_exit} -gt 0 ]]; then
+        echo "WARNING: operator-script failed: exited ${operator_script_exit}" \
+            >&2
+    fi
+fi
+
 user_script_exit=${SMF_EXIT_OK}
 if [ -x /var/svc/mdata-user-script ]; then
     /var/svc/mdata-user-script

@@ -95,6 +95,24 @@ case $? in
     ;;
 esac
 
+echo "Retrieving metadata operator-script..."
+/usr/sbin/mdata-get sdc:operator-script >/var/svc/mdata-operator-script.new
+case $? in
+  0)
+    echo "Metadata operator-script successfuly retrieved."
+    mv /var/svc/mdata-operator-script{.new,}
+    chmod +x /var/svc/mdata-operator-script
+    ;;
+  1)
+    echo "Metadata operator-script not defined."
+    rm -f /var/svc/mdata-operator-script{,.new}
+    ;;
+  *)
+    echo "Metadata couldn't be retrieved."
+    exit ${SMF_EXIT_ERR_FATAL}
+    ;;
+esac
+
 echo "Retrieving tmpfs value..."
 tmpfs=$(/usr/sbin/mdata-get sdc:tmpfs)
 if [[ $? == 0 && -n ${tmpfs} && -f /etc/vfstab ]]; then

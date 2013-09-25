@@ -151,8 +151,9 @@ function load(uuid, log, callback) {
     return fs.readFile(file, function (err, raw) {
         if (err) {
             if (err.code == 'ENOENT') {
-                return callback(new VError('Unknown remote VM "%s"',
-                    uuid));
+                var uErr = new VError('Unknown remote VM "%s"', uuid);
+                uErr.code = 'ENOENT';
+                return callback(uErr);
             }
 
             return callback(err);

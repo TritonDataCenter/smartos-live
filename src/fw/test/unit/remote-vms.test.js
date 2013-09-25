@@ -345,6 +345,7 @@ exports['local VM to remote VM'] = function (t) {
                 return cb();
             }
 
+            t.equal(err.code, 'ENOENT', 'error code');
             t.equal(err.message,
                 util.format('Unknown remote VM "%s"', rvm.uuid),
                 'error message');

@@ -70,7 +70,7 @@ parser.yy.validateIPv4subnet = function validateIPv4subnet(subnet) {
 
 
 parser.yy.validatePortNumber = function validatePortNumber(num) {
-    if (isNaN(num) || Number(num) < 1 || Number(num) > 65536) {
+    if (isNaN(num) || Number(num) < 1 || Number(num) > 65535) {
         throw new validators.InvalidParamError('rule',
             'Port number "%s" is invalid', num);
     }

@@ -73,7 +73,7 @@ function validatePort(port) {
         return false;
     }
 
-    if (Number(port) > 65536) {
+    if (Number(port) > 65535) {
         return false;
     }
 

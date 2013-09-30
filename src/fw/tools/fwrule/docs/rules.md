@@ -205,9 +205,10 @@ ports or types can be used (see the Ports section below).
     ( type <icmp type> AND type <icmp type> code <icmp code> AND ... )
 
 For TCP and UDP, this specifies the port numbers that the rule applies to.
+Port numbers must be between 1 and 65535, inclusive.
 
 For ICMP, this specifies the ICMP type and optional code that the rule
-applies to.
+applies to.  Types and codes must be between 0 and 255, inclusive.
 
 **Examples:**
 

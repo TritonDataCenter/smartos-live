@@ -1095,3 +1095,89 @@ test('delete zone', function(t) {
         t.end();
     }
 });
+
+test('create stopped zone', {'timeout': 240000}, function(t) {
+    var payload = {
+        'brand': 'joyent-minimal',
+        'autoboot': false,
+        'image_uuid': image_uuid,
+        'alias': 'test-snapshot-' + process.pid,
+        'do_not_inventory': true
+    };
+
+    VM.create(payload, function (err, obj) {
+        if (err) {
+            t.ok(false, 'error creating VM: ' + err.message);
+            t.end();
+        } else {
+            t.ok(true, 'VM created with uuid ' + obj.uuid);
+            VM.load(obj.uuid, function (e, o) {
+                t.ok(!err, 'loading VM after create');
+                if (!err) {
+                    t.ok(o.snapshots.length === 0, 'no snapshots after create');
+                    t.ok(o.hasOwnProperty('zfs_filesystem'),
+                        'has zfs_filesystem');
+                    vmobj = o;
+                } else {
+                    abort = true;
+                }
+                t.end();
+            });
+        }
+    });
+});
+
+test('take snapshot (should not mount)', {'timeout': 240000}, function(t) {
+
+    var filename;
+
+    if (abort) {
+        t.ok(false, 'skipping snapshot as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    VM.create_snapshot(vmobj.uuid, 'shouldntmount', {}, function (err) {
+        t.ok(!err, 'no error creating snapshot of ' + vmobj.uuid);
+        VM.load(vmobj.uuid, function (e, o) {
+            t.ok(!e, 'loading VM after create');
+            if (!e) {
+                t.ok(o.snapshots.length === 1, '1 snapshot after create');
+                t.ok(hasSnapshot(o.snapshots, 'shouldntmount'), 'have snapshot "shouldntmount" after create');
+                fs.exists(o.zonepath + '/root/checkpoints/shouldntmount/root', function (exists) {
+                    t.ok(!exists, o.zonepath + '/root/checkpoints/shouldntmount wasn\'t mounted: ' + !exists);
+                    t.end();
+                });
+            } else {
+                abort = true;
+                t.end();
+            }
+        });
+    });
+});
+
+test('delete zone', {'timeout': 240000}, function(t) {
+
+    if (abort) {
+        t.ok(false, 'skipping send as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    if (vmobj.uuid) {
+        VM.delete(vmobj.uuid, function (err) {
+            if (err) {
+                t.ok(false, 'error deleting VM: ' + err.message);
+                abort = true;
+            } else {
+                t.ok(true, 'deleted VM: ' + vmobj.uuid);
+            }
+            t.end();
+            vmobj = {};
+        });
+    } else {
+        t.ok(false, 'no VM to delete');
+        abort = true;
+        t.end();
+    }
+});

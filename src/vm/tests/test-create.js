@@ -41,6 +41,20 @@ var payload_with_tags = {
     ]
 }
 
+var payload_with_null_alias = {
+    'autoboot': false,
+    'brand': 'joyent-minimal',
+    'alias': null,
+    'do_not_inventory': true,
+    'nics': [
+        {
+            'nic_tag': 'admin',
+            'ip': 'dhcp'
+        }
+    ]
+}
+
+
 test('test create with invalid IP', {'timeout': 240000}, function(t) {
 
     p = JSON.parse(JSON.stringify(payload_invalid_ip));
@@ -74,5 +88,27 @@ test('test create with tags', {'timeout': 240000}, function(t) {
             t.end();
         }
     );
+});
+
+test('test create with null alias', {'timeout': 240000}, function(t) {
+
+    var p = JSON.parse(JSON.stringify(payload_with_null_alias));
+    var state = {'brand': p.brand};
+
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, p, state, [
+        function (cb) {
+            VM.load(state.uuid, {fields: ['alias']}, function (err, obj) {
+                t.ok(!err, 'reloaded VM after create: ' + (err ? err.message : 'no error'));
+                if (err) {
+                    cb(err);
+                    return;
+                }
+                t.ok((obj.alias === undefined), 'alias: ' + JSON.stringify(obj.alias));
+                cb();
+            });
+        }
+    ], function (err) {
+        t.end();
+    });
 });
 

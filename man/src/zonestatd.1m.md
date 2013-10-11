@@ -1,4 +1,4 @@
-zonestatd(1m) -- zones monitoring daemon
+zonestatd(1M) -- zones monitoring daemon
 ========================================
 
 ## SYNOPSIS
@@ -35,8 +35,8 @@ zonestatd(1m) -- zones monitoring daemon
     |_____________________________|_____________________________|
 
 ## SEE ALSO
-     zonestat(1), smf(5), zones(5),  poolcfg(1m), pooladm(1m), prctl(1m),
-     rcapadm(1m), acctadm(1m)
+     zonestat(1), smf(5), zones(5),  poolcfg(1M), pooladm(1M), prctl(1M),
+     rcapadm(1M), acctadm(1M)
 
 ## NOTES
     The zonestat service is managed by  the  service  management
@@ -54,7 +54,7 @@ zonestatd(1m) -- zones monitoring daemon
       config/sample_interval
 
 	This property sets the zonestatd sample interval.  This is the
-    interval used by the zones monitoring daemon, zonestatd(1m) to
+    interval used by the zones monitoring daemon, zonestatd(1M) to
     sample resource utilization.  This is also the interval used to
     determine configuration changes such as processor set changes,
     resource control changes, and zone state changes.
@@ -65,7 +65,7 @@ zonestatd(1m) -- zones monitoring daemon
     not already enabled, it enables the tracking of process accounting
     resources, and configures a process accounting file.  The zonestat
     service will roll the process accounting log at its configured
-    interval (see zonestatd(1m)).
+    interval (see zonestatd(1M)).
 
     If extended process accounting is enabled externally, the zonestat
     service will use the process accounting log as configured.  It

@@ -258,7 +258,7 @@ interval
     Specifies the length in seconds to pause between each
     interval report. An interval of "default" will use the
     configured interval of the zones monitoring service
-    (see zonestatd(1m).
+    (see zonestatd(1M).
 
     Interval is required.  An interval of zero is not
     permitted.  The interval can be specified as
@@ -346,7 +346,7 @@ The following list defines the column heading of the command output:
         The amount of cpu uses as a percentage of the total cpu in
         a processor-set to which the zone is bound.  A zone can only
         have processes bound to multiple processor sets if it is the
-        global zone, or if psrset(1m) psets are used.  If multiple
+        global zone, or if psrset(1M) psets are used.  If multiple
         binding are found for a zone, it's %PART will be the fraction
         used of all bound psets.  For [total] and [system],
         %PART is the percent used of all cpus on the system.
@@ -453,9 +453,9 @@ Command invocation and parsable output is Committed.  Human
 readable output (default output) is uncommitted.
 
 ## SEE ALSO
-    date(1), zonestatd(1m), libzonestat(3lib), zonecfg(1m), zoneadm(1m),
-    zones(5), poolcfg(1m), pooladm(1m), prctl(1m), privileges(5),
-    rcapadm(1m), resource_controls(5), timezone(4)
+    date(1), zonestatd(1M), libzonestat(3LIB), zonecfg(1M), zoneadm(1M),
+    zones(5), poolcfg(1M), pooladm(1M), prctl(1M), privileges(5),
+    rcapadm(1M), resource_controls(5), timezone(4)
 
 ## NOTES
 The zonestat utility depends on the zones monitoring service:

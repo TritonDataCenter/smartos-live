@@ -1,4 +1,4 @@
-# imgadm(1m) -- Manage SmartOS virtual machine images
+# imgadm(1M) -- Manage SmartOS virtual machine images
 
 ## SYNOPSIS
 
@@ -593,4 +593,4 @@ The following exit values are returned:
 
 ## SEE ALSO
 
-    vmadm(1m), zfs(1m)
+    vmadm(1M), zfs(1M)

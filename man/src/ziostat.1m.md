@@ -1,4 +1,4 @@
-ziostat(1m) -- Report ZFS read I/O activity
+ziostat(1M) -- Report ZFS read I/O activity
 =============================================
 
 ## SYNOPSIS
@@ -63,7 +63,7 @@ Specifies the number of intervals to report.  Defaults to
 unlimited if not specified.
 
 ## SEE ALSO
-    iostat(1m), vfsstat(1m), mpstat(1m)
+    iostat(1M), vfsstat(1M), mpstat(1M)
 
 ## NOTES
 

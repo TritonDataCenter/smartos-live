@@ -1,4 +1,4 @@
-# sysinfo(1m) -- Output information about this SmartOS system.
+# sysinfo(1M) -- Output information about this SmartOS system.
 
 ## SYNOPSIS
 
@@ -238,5 +238,5 @@ making changes.
 
 ## SEE ALSO
 
-    dladm(1m), hostname(1), ifconfig(1m), prtconf(1m), psrinfo(1m), smbios(1m), uname(1), zfs(1m), zpool(1m)
+    dladm(1M), hostname(1), ifconfig(1M), prtconf(1M), psrinfo(1M), smbios(1M), uname(1), zfs(1M), zpool(1M)
 

@@ -1,4 +1,4 @@
-vmadmd(1m) -- virtual machine management daemon
+vmadmd(1M) -- virtual machine management daemon
 ===============================================
 
 ## SYNOPSIS
@@ -8,9 +8,9 @@ vmadmd(1m) -- virtual machine management daemon
 ## DESCRIPTION
 
     The vmadmd daemon is designed to run in a SmartOS global zone and support
-    vmadm(1m) by performing some actions which require maintaining open
+    vmadm(1M) by performing some actions which require maintaining open
     connections or waiting for state change events that cannot be handle in a
-    single run of vmadm(1m).
+    single run of vmadm(1M).
 
     The functions vmadmd handles are:
 
@@ -25,7 +25,7 @@ vmadmd(1m) -- virtual machine management daemon
     Each of these is described in more detail below. These actions are exposed
     through an HTTP server listening on a unix socket /tmp/vmadmd.http.
 
-    The HTTP interface is expected to only be used by vmadm(1m) and endpoints
+    The HTTP interface is expected to only be used by vmadm(1M) and endpoints
     should be considered a private interface. It is documented here in order to
     aid understanding of its behaviour.
 
@@ -71,7 +71,7 @@ vmadmd(1m) -- virtual machine management daemon
     VMs is implemented as a stop and start so this also applies when running
     'vmadm reboot'.
 
-    Since the vmadm(1m) process returns once a stop request is sent, it is up
+    Since the vmadm(1M) process returns once a stop request is sent, it is up
     to vmadmd to ensure that if the VM does not complete its transition by the
     expiry, the stop or reboot is forced.
 
@@ -85,7 +85,7 @@ vmadmd(1m) -- virtual machine management daemon
 ## QMP Commands
 
     Qemu processes support a protocol called QMP for sending several types of
-    management commands to the hypervisor. When created with vmadm(1m) the qmp
+    management commands to the hypervisor. When created with vmadm(1M) the qmp
     socket will be listening on a unix socket /zones/<uuid>/root/tmp/vm.qmp.
     vmadmd exposes some of these commands and handles sending them through QMP.
     The commands exposed are described below.
@@ -173,7 +173,7 @@ vmadmd(1m) -- virtual machine management daemon
 
 ## SEE ALSO
 
-    vmadm(1m), zonecfg(1m), zoneadm(1m), zones(5)
+    vmadm(1M), zonecfg(1M), zoneadm(1M), zones(5)
 
 ## NOTES
 

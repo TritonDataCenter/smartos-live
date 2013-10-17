@@ -200,70 +200,69 @@ if smf_is_globalzone; then
     create_aggrs
 
     # Setup admin NIC
-    if [[ -n ${SYSINFO_NIC_admin} ]]; then
-        plumb_admin
+    if [[ -z "${SYSINFO_NIC_admin}" ]]; then
+        echo "ERROR: admin NIC not found, unable to bring up admin network."
+        exit ${SMF_EXIT_ERR_CONFIG}
+    fi
+
+    plumb_admin
+
+    # Prefer the config file for admin nic values, but use
+    # bootparams if present
+    admin_ip=${CONFIG_admin_ip}
+    if [[ -z "$admin_ip" ]]; then
+        admin_ip=${BOOT_admin_ip}
+    fi
+
+    admin_netmask=${CONFIG_admin_netmask}
+    if [[ -z "$admin_netmask" ]]; then
+        admin_netmask=${BOOT_admin_netmask}
+    fi
+
+    admin_gateway=${CONFIG_admin_gateway}
+    if [[ -z "$admin_gateway" ]]; then
+        admin_gateway=${BOOT_admin_gateway}
+    fi
+
+    if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]];
+    then
+        /sbin/ifconfig ${SYSINFO_NIC_admin} inet ${admin_ip} \
+            netmask ${admin_netmask} up
+        ADMIN_NIC_UP=true
+
+        # also setup resolv.conf if we can
+        if [[ -n ${CONFIG_dns_domain} ]] && [[ -n ${CONFIG_dns_resolvers} ]]; then
+            echo "search ${CONFIG_dns_domain}" > /etc/resolv.conf
+            if [[ -n ${CONFIG_binder_admin_ips} ]]; then
+               for serv in $(echo "${CONFIG_binder_admin_ips}" | sed -e "s/,/ /g"); do
+                   echo "nameserver ${serv}" >> /etc/resolv.conf
+               done
+            fi
+            for serv in $(echo "${CONFIG_dns_resolvers}" | sed -e "s/,/ /g"); do
+                echo "nameserver ${serv}" >> /etc/resolv.conf
+            done
+        fi
+    else
         if [[ ${headnode} == "true" ]]; then
-            if [[ -n ${CONFIG_admin_ip} ]] && [[ -n ${CONFIG_admin_netmask} ]];
-            then
-                /sbin/ifconfig ${SYSINFO_NIC_admin} inet ${CONFIG_admin_ip} \
-                    netmask ${CONFIG_admin_netmask} up
-                ADMIN_NIC_UP=true
-
-                # also setup resolv.conf if we can
-                if [[ -n ${CONFIG_dns_domain} ]] && [[ -n ${CONFIG_dns_resolvers} ]]; then
-                    echo "search ${CONFIG_dns_domain}" > /etc/resolv.conf
-                    if [[ -n ${CONFIG_binder_admin_ips} ]]; then
-                       for serv in $(echo "${CONFIG_binder_admin_ips}" | sed -e "s/,/ /g"); do
-                           echo "nameserver ${serv}" >> /etc/resolv.conf
-                       done
-                    fi
-                    for serv in $(echo "${CONFIG_dns_resolvers}" | sed -e "s/,/ /g"); do
-                        echo "nameserver ${serv}" >> /etc/resolv.conf
-                    done
-                fi
-            else
-                echo "ERROR: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
-                # Set a flag, but try to plumb the other interfaces anyway
-                ADMIN_NIC_MISCONFIGURED=true
-            fi
-         elif [[ -n $(/usr/bin/bootparams | grep "^smartos") ]]; then
-            if [[ -n ${CONFIG_admin_ip} ]] && [[ -n ${CONFIG_admin_netmask} ]]; then
-                /sbin/ifconfig ${SYSINFO_NIC_admin} inet ${CONFIG_admin_ip} \
-                    netmask ${CONFIG_admin_netmask} up
-                ADMIN_NIC_UP=true
-
-                # also setup resolv.conf if we can
-                if [[ -n ${CONFIG_dns_domain} ]] && [[ -n ${CONFIG_dns_resolvers} ]]; then
-                    echo "search ${CONFIG_dns_domain}" > /etc/resolv.conf
-                    for serv in $(echo "${CONFIG_dns_resolvers}" | sed -e "s/,/ /g"); do
-                        echo "nameserver ${serv}" >> /etc/resolv.conf
-                    done
-                fi
-            else
-                /sbin/ifconfig ${SYSINFO_NIC_admin} dhcp || /bin/true
-                ADMIN_NIC_UP=true
-            fi
-
+            echo "ERROR: headnode but no admin_{ip,netmask} in config, not bringing up admin network."
+            # Set a flag, but try to plumb the other interfaces anyway
+            ADMIN_NIC_MISCONFIGURED=true
         else
             # We ignore errors here because the most common one is that DHCP is
             # already running.
             /sbin/ifconfig ${SYSINFO_NIC_admin} dhcp || /bin/true
             ADMIN_NIC_UP=true
-
         fi
+    fi
 
-        # If on VMWare or Parallels or VirtualBox, create a bridge which
-        # allows traffic to flow correctly to the host-only network
-        if [[ "${ADMIN_NIC_UP}" == "true" ]] \
-            && [[ ${SYSINFO_Product} == "VMware Virtual Platform" \
-                  || ${SYSINFO_Product} == "Parallels Virtual Platform" \
-                  || ${SYSINFO_Product} == "VirtualBox" ]] \
-            && [[ -z $(/usr/sbin/dladm show-bridge -p vmwarebr) ]]; then
-            /usr/sbin/dladm create-bridge -l ${SYSINFO_NIC_admin} vmwarebr
-        fi
-    else
-        echo "ERROR: admin NIC not found, unable to bring up admin network."
-        exit ${SMF_EXIT_ERR_CONFIG}
+    # If on VMWare or Parallels or VirtualBox, create a bridge which
+    # allows traffic to flow correctly to the host-only network
+    if [[ "${ADMIN_NIC_UP}" == "true" ]] \
+        && [[ ${SYSINFO_Product} == "VMware Virtual Platform" \
+              || ${SYSINFO_Product} == "Parallels Virtual Platform" \
+              || ${SYSINFO_Product} == "VirtualBox" ]] \
+        && [[ -z $(/usr/sbin/dladm show-bridge -p vmwarebr) ]]; then
+        /usr/sbin/dladm create-bridge -l ${SYSINFO_NIC_admin} vmwarebr
     fi
 
     # Setup external NIC
@@ -277,7 +276,7 @@ if smf_is_globalzone; then
         [[ "${CONFIG_coal}" == "true" ]]; then
 
         # Convert the admin IP and netmask to CIDR notation
-        CIDR=$(ip_netmask_to_cidr ${CONFIG_admin_ip} ${CONFIG_admin_netmask})
+        CIDR=$(ip_netmask_to_cidr ${admin_ip} ${admin_netmask})
 
         # Allow zones to reach the internet using the global zone as a router
         cat >> /etc/ipf/ipnat.conf <<IPNAT
@@ -290,8 +289,8 @@ IPNAT
     # if that's set.
     if [[ -n "${CONFIG_headnode_default_gateway}" ]]; then
         echo "${CONFIG_headnode_default_gateway}" > /etc/defaultrouter
-    elif [[ -n ${CONFIG_admin_gateway} ]]; then
-        echo "${CONFIG_admin_gateway}" > /etc/defaultrouter
+    elif [[ -n ${admin_gateway} ]]; then
+        echo "${admin_gateway}" > /etc/defaultrouter
     fi
 
     # Setup extra nics, if specified in the config file

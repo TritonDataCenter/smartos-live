@@ -56,9 +56,9 @@ The vfsstat utility reports the following information:
 	wactv	average number of write operations actively being
 			serviced by the VFS layer
 
-	read_t	average VFS read latency
+	read_t	average VFS read latency, in microseconds
 
-	writ_t	average VFS write latency
+	writ_t	average VFS write latency, in microseconds
 
 	%r	percent of time there is a VFS read operation
 		pending

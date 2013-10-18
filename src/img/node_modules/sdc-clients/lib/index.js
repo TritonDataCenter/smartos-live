@@ -39,5 +39,8 @@ module.exports = {
     },
     get SAPI() {
         return require('./sapi');
+    },
+    get PAPI() {
+        return require('./papi');
     }
 };

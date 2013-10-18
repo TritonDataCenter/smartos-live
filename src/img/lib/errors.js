@@ -363,6 +363,22 @@ function UnexpectedNumberOfSnapshotsError(uuid, snapnames) {
 }
 util.inherits(UnexpectedNumberOfSnapshotsError, ImgadmError);
 
+function ImageMissingOriginalSnapshotError(uuid, datasetGuid) {
+    assert.string(uuid, 'uuid');
+    assert.optionalString(datasetGuid, 'datasetGuid');
+    var extra = '';
+    if (datasetGuid) {
+        extra = ' (expected a snapshot with guid ' + datasetGuid + ')';
+    }
+    ImgadmError.call(this, {
+        message: format('image "%s" is missing its original snapshot%s',
+            uuid, extra),
+        code: 'ImageMissingOriginalSnapshot',
+        exitStatus: 1
+    });
+}
+util.inherits(ImageMissingOriginalSnapshotError, ImgadmError);
+
 function FileSystemError(cause, message) {
     if (message === undefined) {
         message = cause;
@@ -584,6 +600,7 @@ module.exports = {
     OriginNotInstalledError: OriginNotInstalledError,
     InvalidManifestError: InvalidManifestError,
     UnexpectedNumberOfSnapshotsError: UnexpectedNumberOfSnapshotsError,
+    ImageMissingOriginalSnapshotError: ImageMissingOriginalSnapshotError,
     FileSystemError: FileSystemError,
     UncompressionError: UncompressionError,
     UsageError: UsageError,

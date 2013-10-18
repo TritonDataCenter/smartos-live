@@ -18,11 +18,11 @@ d usr/img/node_modules 0555 root bin
 d usr/img/node_modules/.bin 0555 root bin
 f usr/img/node_modules/.bin/nodeunit 0444 root bin
 f usr/img/node_modules/.bin/nopt 0444 root bin
+f usr/img/node_modules/.bin/rimraf 0444 root bin
 d usr/img/node_modules/assert-plus 0555 root bin
 f usr/img/node_modules/assert-plus/assert.js 0444 root bin
 f usr/img/node_modules/assert-plus/package.json 0444 root bin
 d usr/img/node_modules/async 0555 root bin
-f usr/img/node_modules/async/index.js 0444 root bin
 d usr/img/node_modules/async/lib 0555 root bin
 f usr/img/node_modules/async/lib/async.js 0444 root bin
 f usr/img/node_modules/async/LICENSE 0444 root bin
@@ -108,7 +108,9 @@ d usr/img/node_modules/rimraf/node_modules/graceful-fs 0555 root bin
 f usr/img/node_modules/rimraf/node_modules/graceful-fs/LICENSE 0444 root bin
 f usr/img/node_modules/rimraf/node_modules/graceful-fs/graceful-fs.js 0444 root bin
 f usr/img/node_modules/rimraf/node_modules/graceful-fs/package.json 0444 root bin
+f usr/img/node_modules/rimraf/node_modules/graceful-fs/polyfills.js 0444 root bin
 f usr/img/node_modules/rimraf/package.json 0444 root bin
+f usr/img/node_modules/rimraf/bin.js 0444 root bin
 f usr/img/node_modules/rimraf/rimraf.js 0444 root bin
 d usr/img/node_modules/sdc-clients 0555 root bin
 d usr/img/node_modules/sdc-clients/lib 0555 root bin
@@ -170,6 +172,7 @@ d usr/img/node_modules/sdc-clients/node_modules/lru-cache/lib 0555 root bin
 f usr/img/node_modules/sdc-clients/node_modules/lru-cache/lib/lru-cache.js 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/lru-cache/LICENSE 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/lru-cache/package.json 0444 root bin
+f usr/img/node_modules/sdc-clients/node_modules/lru-cache/s.js 0444 root bin
 d usr/img/node_modules/sdc-clients/node_modules/mime 0555 root bin
 f usr/img/node_modules/sdc-clients/node_modules/mime/LICENSE 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/mime/mime.js 0444 root bin

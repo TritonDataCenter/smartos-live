@@ -1735,49 +1735,237 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
  *
  * Dev Note: Currently this just writes progress (updated images) with
  * `console.log`, which isn't very "library-like".
+ *
+ * @param options {Object}
+ *      - uuids {Array} Optional array of uuids to which to limit processing.
+ *      - dryRun {Boolean} Default false. Just print changes that would be made
+ *        without making them.
+ * @param callback {Function} `function (err)`
  */
-IMGADM.prototype.updateImages = function updateImages(callback) {
+IMGADM.prototype.updateImages = function updateImages(options, callback) {
+    assert.object(options, 'options');
+    assert.optionalArrayOfString(options.uuids, 'options.uuids');
+    assert.optionalBool(options.dryRun, 'options.dryRun');
     assert.func(callback, 'callback');
     var self = this;
+    var updateErrs = [];
 
-    function updateImage(ii, next) {
+    self.listImages(function (listErr, ii) {
+        if (listErr) {
+            callback(listErr);
+            return;
+        }
+
+        var imagesInfo = ii;
+        if (options.uuids) {
+            var iiFromUuid = {};
+            ii.forEach(function (i) { iiFromUuid[i.manifest.uuid] = i; });
+
+            imagesInfo = [];
+            var missing = [];
+            options.uuids.forEach(function (u) {
+                if (!iiFromUuid[u]) {
+                    missing.push(u);
+                } else {
+                    imagesInfo.push(iiFromUuid[u]);
+                }
+            });
+            if (missing.length) {
+                callback(new errors.UsageError(
+                    'no install image with the given UUID(s): '
+                    + missing.join(', ')));
+                return;
+            }
+        } else {
+            imagesInfo = ii;
+        }
+
+        async.forEachSeries(
+            imagesInfo,
+            updateImage,
+            function (err) {
+                if (err) {
+                    callback(err);
+                } else if (updateErrs.length === 1) {
+                    callback(updateErrs[0]);
+                } else if (updateErrs.length > 1) {
+                    callback(new errors.MultiError(updateErrs));
+                } else {
+                    callback();
+                }
+            });
+    });
+
+    function updateImage(ii, cb) {
         assert.object(ii.manifest, 'ii.manifest');
         assert.string(ii.zpool, 'ii.zpool');
-        if (ii.manifest.name) {
-            next();
-            return;
-        }
+
         var uuid = ii.manifest.uuid;
-        self.sourcesGet(uuid, true, function (sGetErr, imageInfo) {
-            if (sGetErr) {
-                next(sGetErr);
-                return;
-            }
-            if (!imageInfo) {
-                console.log('Could not find image %s in image sources', uuid);
-                next();
-                return;
-            }
-            imageInfo.zpool = ii.zpool;
-            self.dbAddImage(imageInfo, function (dbAddErr) {
-                if (dbAddErr) {
-                    next(dbAddErr);
+        var sii; // source imageImage
+        var snapshots;
+        async.series([
+            function getSourceInfo(next) {
+                self.sourcesGet(uuid, true, function (sGetErr, sImageInfo) {
+                    if (sGetErr) {
+                        next(sGetErr);
+                        return;
+                    }
+                    sii = sImageInfo;
+                    if (!sii) {
+                        console.log('warning: Could not find image %s in '
+                            + 'image sources (skipping)', uuid);
+                    }
+                    next();
+                });
+            },
+            function getSnapshots(next) {
+                if (!sii) {
+                    next();
                     return;
                 }
-                console.log('Updated image %s from "%s"', uuid,
-                    imageInfo.source.url);
-                next();
-            });
-        });
-    }
+                var properties = ['name', 'children'];
+                var fsName = format('%s/%s', ii.zpool, uuid);
+                getZfsDataset(fsName, properties, function (zErr, ds) {
+                    if (zErr) {
+                        next(zErr);
+                        return;
+                    }
+                    snapshots = ds.children.snapshots;
+                    next();
+                });
+            },
+            function updateManifest(next) {
+                if (!sii) {
+                    next();
+                    return;
+                }
+                sii.zpool = ii.zpool;
+                var msg;
+                if (!ii.manifest.name) {
+                    // Didn't have any manifest details.
+                    msg = format('Added manifest info for image %s from "%s"',
+                        uuid, sii.source.url);
+                } else {
+                    var sm = sii.manifest;
+                    var m = ii.manifest;
+                    if (JSON.stringify(sm) === JSON.stringify(m)) {
+                        // No manifest changes.
+                        next();
+                        return;
+                    }
+                    var diffs = common.diffManifestFields(m, sm);
+                    // If 'diffs' is empty here, then the early out above just
+                    // had order differences.
+                    if (diffs.length === 0) {
+                        next();
+                        return;
+                    }
+                    msg = format('Updated %d manifest field%s for image '
+                        + '%s from "%s": %s', diffs.length,
+                        (diffs.length === 1 ? '' : 's'), uuid, sii.source.url,
+                        diffs.join(', '));
+                }
+                if (options.dryRun) {
+                    console.log(msg);
+                    next();
+                    return;
+                }
+                self.dbAddImage(sii, function (dbAddErr) {
+                    if (dbAddErr) {
+                        next(dbAddErr);
+                        return;
+                    }
+                    console.log(msg);
+                    next();
+                });
+            },
+            function ensureFinalSnapshot(next) {
+                if (!sii) {
+                    next();
+                    return;
+                }
+                var finalSnapshot = format('%s/%s@final', ii.zpool, uuid);
+                if (snapshots.indexOf(finalSnapshot) !== -1) {
+                    next();
+                    return;
+                }
 
-    self.listImages(function (err, imagesInfo) {
-        if (err) {
-            callback(err);
-            return;
-        }
-        async.forEachSeries(imagesInfo, updateImage, callback);
-    });
+                /**
+                 * We don't have a '@final' snapshot for this image.
+                 * - If there aren't *any* snapshots, then fail because the
+                 *   original has been deleted. For 'vmadm send/receive' to
+                 *   ever work the base snapshot for VMs must be the same
+                 *   original.
+                 * - If the source manifest info doesn't have a
+                 *   "files.0.dataset_uuid" then skip (we can't check).
+                 * - If there are any, find the one that is the original
+                 *   (by machine dataset_uuid to the zfs 'uuid' property).
+                 */
+                if (snapshots.length === 0) {
+                    next(new errors.ImageMissingOriginalSnapshotError(uuid));
+                    return;
+                }
+
+                var expectedGuid = sii.manifest.files[0].dataset_guid;
+                if (!expectedGuid) {
+                    console.warn('imgadm: warn: cannot determine original '
+                        + 'snapshot for image "%s" (source info has no '
+                        + '"dataset_guid")', uuid);
+                    next();
+                    return;
+                }
+
+                var found = null;
+                var i = 0;
+                async.until(
+                    function testDone() {
+                        return found || i >= snapshots.length;
+                    },
+                    function checkOneSnapshot(nextSnapshot) {
+                        var snapshot = snapshots[i];
+                        i++;
+                        var props = ['name', 'guid'];
+                        getZfsDataset(snapshot, props, function (zErr, ds) {
+                            if (zErr) {
+                                nextSnapshot(zErr);
+                                return;
+                            }
+                            if (ds.guid === expectedGuid) {
+                                found = snapshot;
+                            }
+                            nextSnapshot();
+                        });
+
+                    },
+                    function doneSnapshots(sErr) {
+                        if (sErr) {
+                            next(sErr);
+                        } else if (!found) {
+                            next(new errors.ImageMissingOriginalSnapshotError(
+                                uuid, expectedGuid));
+                        } else {
+                            // Rename this snapshot to '@final'.
+                            zfsRenameSnapshot(
+                                found,
+                                finalSnapshot,
+                                {recursive: true, log: self.log},
+                                function (rErr) {
+                                    if (rErr) {
+                                        next(rErr);
+                                        return;
+                                    }
+                                    console.log('Renamed image %s original '
+                                        + 'snapshot from %s to %s', uuid,
+                                        found, finalSnapshot);
+                                    next();
+                                }
+                            );
+                        }
+                    }
+                );
+            }
+        ], cb);
+    }
 };
 
 

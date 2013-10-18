@@ -1,5 +1,15 @@
 # imgadm changelog
 
+## 2.4.0
+
+- Add `imgadm update [UUID...]` support for updating specific image uuids.
+
+- [OS-2490] `imgadm update` should ensure imported images' snapshot is named
+  `@final`
+
+- [OS-1999] `imgadm update` on already installed image should re-fetch manifest
+  for mutable field changes
+
 ## 2.3.1
 
 - [OS-2487] 'imgadm import' will now not complain about not being able to

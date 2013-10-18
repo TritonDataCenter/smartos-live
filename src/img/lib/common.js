@@ -113,6 +113,48 @@ function pathSlugify(s) {
 
 
 
+/**
+ * Return an array of manifest fields that differ between the two given
+ * image manifests. The 'requirements' object is descended into to give
+ * more specific diff info.
+ */
+function diffManifestFields(a, b) {
+    var diffs = [];  // List of field names with diffs.
+    Object.keys(b).forEach(function (field) {
+        if (field === 'requirements') {
+            if (a[field] === undefined) {
+                diffs.push(field);
+            }
+            return;
+        }
+        if (JSON.stringify(b[field]) !==
+            JSON.stringify(a[field])) {
+            diffs.push(field);
+        }
+    });
+    Object.keys(a).forEach(function (field) {
+        if (b[field] === undefined) {
+            diffs.push(field);
+        }
+    });
+    if (b.requirements && a.requirements) {
+        Object.keys(b.requirements).forEach(function (field) {
+            if (JSON.stringify(b.requirements[field]) !==
+                JSON.stringify(a.requirements[field])) {
+                diffs.push('requirements.' + field);
+            }
+        });
+        Object.keys(a.requirements).forEach(function (field) {
+            if (b.requirements[field] === undefined) {
+                diffs.push('requirements.' + field);
+            }
+        });
+    }
+    return diffs;
+}
+
+
+
 // ---- exports
 
 module.exports = {
@@ -126,5 +168,6 @@ module.exports = {
     objMerge: objMerge,
     assertUuid: assertUuid,
     boolFromString: boolFromString,
-    pathSlugify: pathSlugify
+    pathSlugify: pathSlugify,
+    diffManifestFields: diffManifestFields
 };

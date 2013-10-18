@@ -15,7 +15,7 @@
 
     imgadm list                         list installed images
     imgadm get [-P <pool>] <uuid>       info on an installed image
-    imgadm update                       gather info on unknown images
+    imgadm update [<uuid>...]           update installed images
     imgadm delete [-P <pool>] <uuid>    remove an installed image
 
     # Experimental.
@@ -163,14 +163,26 @@ UUID.
                                Default is "zones".
 
 
-    imgadm update
+    imgadm update [<uuid>...]
 
-        Gather info on unknown images.
+        Update currently installed images, if necessary.
 
-        Images that are installed without "imgadm" (e.g. via "zfs recv") will
-        not have cached image manifest information. This command will attempt
-        to retrieve this information from current image sources based on
-        image UUID.
+        Images that are installed without "imgadm" (e.g. via "zfs recv")
+        not have cached image manifest information. Also, images installed
+        prior to imgadm version 2.0.3 will not have a "@final" snapshot
+        (preferred for provisioning and require for incremental image
+        creation, via "imgadm create -i ..."). This command will attempt
+        to retrieve manifest information and to ensure images have the correct
+        "@final" snapshot, using info from current image sources.
+
+        If no "<uuid>" is given, then update is run for all installed images.
+
+        Usage:
+            imgadm update [<uuid>...]
+
+        Options:
+            -h, --help         Print this help and exit.
+            -n                 Do a dry-run (do not actually make changes).
 
 
     imgadm delete [-P <pool>] <uuid>

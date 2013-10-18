@@ -67,7 +67,12 @@ update_modules:
 		find node_modules/$$dep -name test | xargs rm -rf; \
 		find node_modules/$$dep -name tests | xargs rm -rf; \
 		find node_modules/$$dep -name benchmark | xargs rm -rf; \
+		find node_modules/$$dep -name component.json | xargs rm -rf; \
 	done;
+	rm -rf node_modules/progbar/node_modules/assert-plus  # slight version mismatch
+	rm -rf node_modules/imgmanifest/node_modules/assert-plus  # slight version mismatch
+
+
 
 INSTALLIMAGE=/var/tmp/img-install-image
 .PHONY: dev-install-image

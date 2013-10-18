@@ -497,7 +497,7 @@ CLI.prototype.printHelp = function printHelp(callback) {
             '',
             '    imgadm list                            list installed images',
             '    imgadm get [-P <pool>] <uuid>          info on an installed image',
-            '    imgadm update                          gather info on unknown images',
+            '    imgadm update [<uuid>...]              update installed images',
             '    imgadm delete [-P <pool>] <uuid>       remove an installed image',
             '',
             '    # Experimental',
@@ -1287,27 +1287,42 @@ CLI.prototype.do_install.shortOpts = {
  * `imgadm update`
  */
 CLI.prototype.do_update = function do_update(subcmd, opts, args, callback) {
+    var options = {
+        dryRun: opts.dryRun
+    };
     if (args.length) {
-        callback(new errors.UsageError(format(
-            'unexpected arguments: "%s"', args.join(' '))));
-        return;
+        options.uuids = args;
     }
-    this.tool.updateImages(callback);
+    this.tool.updateImages(options, callback);
 };
 CLI.prototype.do_update.description = (
-    'Gather info on unknown images.\n'
+    'Update currently installed images, if necessary.\n'
     + '\n'
     + 'Images that are installed without "imgadm" (e.g. via "zfs recv")\n'
-    + 'not have cached image manifest information. This command will attempt\n'
-    + 'to retrieve this information from current image sources based on image\n'
-    + 'UUID.\n'
+    + 'not have cached image manifest information. Also, images installed\n'
+    + 'prior to imgadm version 2.0.3 will not have a "@final" snapshot\n'
+    + '(preferred for provisioning and require for incremental image\n'
+    + 'creation, via "imgadm create -i ..."). This command will attempt\n'
+    + 'to retrieve manifest information and to ensure images have the correct\n'
+    + '"@final" snapshot, using info from current image sources.\n'
+    + '\n'
+    + 'If no "<uuid>" is given, then update is run for all installed images.\n'
     + '\n'
     + 'Usage:\n'
-    + '    $NAME update\n'
+    + '    $NAME update [<uuid>...]\n'
     + '\n'
     + 'Options:\n'
     + '    -h, --help         Print this help and exit.\n'
+    + '    -n                 Do a dry-run (do not actually make changes).\n'
 );
+CLI.prototype.do_update.longOpts = {
+    // WARNING: When I switch option processing to dashdash, the '--camelCase'
+    //  spellings will be replaced with either no long opt or '--this-style'.
+    'dryRun': Boolean
+};
+CLI.prototype.do_update.shortOpts = {
+    'n': ['--dryRun']
+};
 
 
 /**

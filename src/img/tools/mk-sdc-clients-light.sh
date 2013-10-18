@@ -192,7 +192,7 @@ npm install mime@$VER
 VER=$(json -f package.json dependencies.node-uuid)
 npm install node-uuid@$VER
 (cd node_modules/node-uuid \
-    && rm -rf .[a-z]* node_modules README.md test benchmark)
+    && rm -rf .[a-z]* node_modules README.md test benchmark component.json)
 
 # ssh-agent
 VER=$(json -f package.json dependencies.ssh-agent)

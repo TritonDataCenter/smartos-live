@@ -515,6 +515,25 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    archive_on_delete:
+
+        When archive_on_delete is set to 'true' and the VM is deleted and the
+        zones/archive dataset exists and is mounted on /zones/archive, we will
+        extract debug information from the zone before destroying it.
+        Information saved includes cores, the JSON as output by 'vmadm get',
+        the zone's XML file from /etc/zones, SMF logs, qemu logs (for KVM),
+        the startvm script (for KVM), the properties from all the zone's
+        datasets, metadata, tags and /var/adm/messages. In the future the list
+        may change. The files specified will be written to the directory
+        /zones/archives/<uuid>.
+
+        type: boolean
+        vmtype: OS,KVM
+        listable: no
+        create: yes
+        update: yes
+        default: false
+
     autoboot:
 
         Controls whether or not a VM is booted when the system is rebooted.

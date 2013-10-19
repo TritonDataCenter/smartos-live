@@ -44,6 +44,12 @@ case "$1" in
         exit $SMF_EXIT_OK
     fi
 
+    if [[ ! $(zfs get -Hpo value name zones/archive 2>&1) == "zones/archive" ]]; then
+        # we don't have zones/archive, create it
+        mkdir -p /zones/archive
+        zfs create -o compression=lzjb -o mountpoint=/zones/archive zones/archive
+    fi
+
     /usr/bin/ctrun -l child -o noorphan /usr/vm/sbin/vmadmd 2>&1 &
     ;;
 

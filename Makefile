@@ -179,10 +179,10 @@ update-base:
 	    gmake DESTDIR=$(PROTO) install)
 	touch $@
 
-0-livesrc-stamp: src/bootparams.c
+0-livesrc-stamp: 0-illumos-stamp 0-extra-stamp 1-extra-stamp
 	(cd $(ROOT)/src && \
-	    gmake DESTDIR=$(PROTO) && \
-	    gmake DESTDIR=$(PROTO) install)
+	    gmake NATIVEDIR=$(STRAP_PROTO) DESTDIR=$(PROTO) && \
+	    gmake NATIVEDIR=$(STRAP_PROTO) DESTDIR=$(PROTO) install)
 	touch $@
 
 0-man-stamp:

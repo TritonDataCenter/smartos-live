@@ -116,6 +116,15 @@ $(KSTAT.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 $(KSTAT.NODE) :	LIBS +=		-lkstat
 
 #
+# The lockfd Node add-on is based on v8plus, which has its own system of
+# Makefiles.
+#
+LOCKFD_BINDING.NODE =		node-lockfd/lib/lockfd_binding.node
+
+LOCKFD_SRC_DIR =		node-lockfd/src
+LOCKFD_V8PLUS_DIR =		node-lockfd/node_modules/v8plus
+
+#
 # The dtrace-provider add-on uses a combination of C, assembly and C++ files in
 # multiple directories.
 #
@@ -314,6 +323,7 @@ TARGETS = \
 	$(EXPAT.NODE) \
 	$(DTRACE_PROVIDER.NODE) \
 	$(KSTAT.NODE) \
+	$(LOCKFD_BINDING.NODE) \
 	$(MICROTIME.NODE) \
 	$(SYSLOG.NODE) \
 	$(SQLITE3_BINDINGS.NODE) \
@@ -344,6 +354,8 @@ install: all
 	mkdir -m 0755 -p $(PREFIX_NODE)/node_modules
 	cp -Pr node_modules/* $(PREFIX_NODE)/node_modules
 	cp $(KSTAT.NODE) $(PREFIX_NODE)/node_modules/
+	cp node-lockfd/lib/index.js $(PREFIX_NODE)/node_modules/lockfd.js
+	cp $(LOCKFD_BINDING.NODE) $(PREFIX_NODE)/node_modules/lockfd_binding.node
 	cp $(MICROTIME.NODE) $(PREFIX_NODE)/node_modules/
 	rm -rf $(DESTDIR)/usr/vm
 	cp -PR vm $(DESTDIR)/usr/
@@ -462,6 +474,7 @@ clean:
 	-rm -f $(TARGETS) $(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) *.o \
 	    $(CLEANFILES)
 	-rm -rf node-sqlite3/build
+	cd $(LOCKFD_SRC_DIR) && $(MAKE) clean
 
 include Makefile.targ
 
@@ -494,6 +507,23 @@ nictagadm:
 $(EXPAT.NODE): node-expat/node-expat.cc
 	@mkdir -p $(EXPAT_OBJDIR)
 	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
+
+#
+# node-lockfd is built using the v8plus-based Makefile contained within the
+# project.  We use LD_OPTIONS, here, to induce the linker to include libc,
+# which gcc as configured in proto.strap does not, but which other C compilers
+# generally do.
+#
+$(LOCKFD_BINDING.NODE): FRC
+	cd $(LOCKFD_SRC_DIR) && \
+	LD_OPTIONS=-lc \
+	$(MAKE) \
+		CC=$(GCC) CXX=$(GXX) \
+		PREFIX_NODE=$(PREFIX_NODE) \
+		NODE_EXEC=$(NODE_EXEC) \
+		V8PLUS=$(PWD)/$(LOCKFD_V8PLUS_DIR) \
+		CTFCONVERT=$(CTFCONVERT) \
+		CTFMERGE=$(CTFMERGE)
 
 #
 # The next two are used to build libusdt files into
@@ -553,3 +583,5 @@ $(ZUTIL_OBJDIR)/%.o: $(ZUTIL_SRCDIR)/%.cc $(ZUTIL_BINDINGS_HDRS)
 
 $(ZUTIL_BINDINGS.NODE): $(ZUTIL_BINDINGS_OBJS)
 	$(GXX) $(LDFLAGS) -o $@ $(ZUTIL_BINDINGS_OBJS) $(LIBS)
+
+FRC:

@@ -23,18 +23,24 @@
 
 BASE =		$(PWD)
 DESTDIR =	$(BASE)/../proto
+NATIVEDIR =	$(BASE)/../proto.strap
+ILLUMOS_SRC =	$(BASE)/../projects/illumos/usr/src
 
 ifeq ($(shell uname -s),Darwin)
 MAKE =		make
 PATH =		$(DESTDIR)/usr/bin:/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
 else
 MAKE =		gmake
-PATH =		$(DESTDIR)/usr/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
+PATH =		$(NATIVEDIR)/usr/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
 endif
 
 PARALLEL =	-j128
-GCC =		$(DESTDIR)/usr/bin/gcc
-GXX =		$(DESTDIR)/usr/bin/g++
+GCC =		$(NATIVEDIR)/usr/bin/gcc
+GXX =		$(NATIVEDIR)/usr/bin/g++
+
+CTFBINDIR =	$(ILLUMOS_SRC)/tools/proto/root_i386-nd/opt/onbld/bin/i386
+CTFMERGE =	$(CTFBINDIR)/ctfmerge
+CTFCONVERT =	$(CTFBINDIR)/ctfconvert
 
 SYSINCDIRS =	/usr/include
 SYSLIBDIRS =	/usr/lib /lib
@@ -44,6 +50,7 @@ LDFLAGS =	$(SYSLIBDIRS:%=-L$(DESTDIR)/%) -Wl,-zassert-deflib \
 		    -Wl,-zfatal-warnings
 
 PREFIX_NODE =	$(DESTDIR)/usr/node/0.8
+NODE_EXEC =	$(NATIVEDIR)/usr/node/0.8/bin/node
 
 DEBUG_FLAGS =	-g
 WARN_FLAGS =	-Wall -Wextra -Werror

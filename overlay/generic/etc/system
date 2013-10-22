@@ -151,3 +151,6 @@ set sata:sata_auto_online=1
 * not help at all to wait longer.
 *
 set sd:sd_io_time=10
+
+* Use hires tick to improve some scheduling latency issues
+set hires_tick=1

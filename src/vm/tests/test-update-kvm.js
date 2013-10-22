@@ -79,6 +79,41 @@ var PAYLOADS = {
             "00:02:03:04:05:06",
             "02:03:04:05:06:07"
         ]
+    }, "add_net0_through_net2": {
+        "add_nics": [
+            {
+                "model": "virtio",
+                "ip": "10.254.254.254",
+                "netmask": "255.255.255.0",
+                "nic_tag": "external",
+                "interface": "net0",
+                "vlan_id": 0,
+                "gateway": "10.254.254.1",
+                "mac": "00:02:03:04:05:06"
+            }, {
+                "model": "virtio",
+                "ip": "10.254.254.253",
+                "netmask": "255.255.255.0",
+                "nic_tag": "external",
+                "interface": "net1",
+                "vlan_id": 0,
+                "gateway": "10.254.254.1",
+                "mac": "02:03:04:05:06:07"
+            }, {
+                "model": "virtio",
+                "ip": "10.254.254.252",
+                "netmask": "255.255.255.0",
+                "nic_tag": "external",
+                "interface": "net2",
+                "vlan_id": 0,
+                "gateway": "10.254.254.1",
+                "mac": "02:03:04:05:06:08"
+            }
+        ]
+    }, "remove_net1": {
+        "remove_nics": [
+            "02:03:04:05:06:07"
+        ]
     }, "add_disk1": {
         "add_disks": [
             {"size": 1024}
@@ -391,6 +426,64 @@ test('remove net0 and net1', function(t) {
                 t.end();
             });
         }
+    });
+});
+
+test('add 3 NICs', {'timeout': 240000}, function(t) {
+    VM.update(vm_uuid, PAYLOADS.add_net0_through_net2, function(err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                } else if (obj.nics.length !== 3) {
+                    t.ok(false, 'VM has ' + obj.nics.length + ' != 3 nics');
+                } else {
+                    t.ok(true, 'Successfully 3 NICs to VM');
+                }
+                t.end();
+            });
+        }
+    });
+});
+
+test('remove net1', {'timeout': 240000}, function(t) {
+    VM.update(vm_uuid, PAYLOADS.remove_net1, function(err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                } else if (obj.nics.length !== 2) {
+                    t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
+                } else {
+                    t.ok(true, 'Successfully removed net1');
+                }
+                t.end();
+            });
+        }
+    });
+});
+
+test('reboot VM', {'timeout': 240000}, function(t) {
+    VM.stop(vm_uuid, {'force': true}, function (err) {
+        t.ok(!err, 'stopping VM' + (err ? ': ' + err.message : ''));
+        VM.start(vm_uuid, {}, function (err) {
+            t.ok(!err, 'starting VM' + (err ? ': ' + err.message : ''));
+            VM.load(vm_uuid, function (err, obj) {
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                } else {
+                    t.ok(obj.state === 'running', 'VM is running after restart: ' + obj.state);
+                }
+
+                t.end();
+            });
+        });
     });
 });
 

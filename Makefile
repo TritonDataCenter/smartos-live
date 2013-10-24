@@ -25,6 +25,15 @@ JSSTYLE =	$(ROOT)/tools/jsstyle/jsstyle
 JSLINT =	$(ROOT)/tools/javascriptlint/build/install/jsl
 CSTYLE =	$(ROOT)/tools/cstyle
 
+CTFBINDIR = \
+	$(ROOT)/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386
+CTFMERGE =	$(CTFBINDIR)/ctfmerge
+CTFCONVERT =	$(CTFBINDIR)/ctfconvert
+
+SUBDIR_DEFS = \
+	CTFMERGE=$(CTFMERGE) \
+	CTFCONVERT=$(CTFCONVERT)
+
 ADJUNCT_TARBALL :=	$(shell ls `pwd`/illumos-adjunct*.tgz 2>/dev/null \
 	| tail -n1 && echo $?)
 
@@ -150,12 +159,13 @@ update-base:
 0-local-stamp: $(LOCAL_SUBDIRS:%=0-subdir-%-stamp)
 	touch $@
 
-0-subdir-%-stamp:
+0-subdir-%-stamp: 0-illumos-stamp
 	cd "$(ROOT)/projects/local/$*" && \
 	    if [[ -f Makefile.joyent ]]; then \
-		gmake -f Makefile.joyent DESTDIR=$(PROTO) world install; \
+		gmake -f Makefile.joyent $(SUBDIR_DEFS) DESTDIR=$(PROTO) \
+		    world install; \
 	    else \
-		gmake DESTDIR=$(PROTO) world install; \
+		gmake $(SUBDIR_DEFS) DESTDIR=$(PROTO) world install; \
 	    fi
 	touch $@
 

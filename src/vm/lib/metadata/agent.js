@@ -1,6 +1,8 @@
+// vim: set ts=4 sts=4 sw=4 et:
 var VM  = require('/usr/vm/node_modules/VM');
 var ZWatch = require('./zwatch');
 var common = require('./common');
+var crc32 = require('./crc32');
 var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
 var fs = require('fs');
@@ -465,6 +467,14 @@ function (zopts, callback, waitSecs) {
     }
 };
 
+function base64_decode(input) {
+    try {
+        return (new Buffer(input, 'base64')).toString();
+    } catch (err) {
+        return null;
+    }
+}
+
 MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
     var self = this;
     var zlog = self.zlog[zone];
@@ -483,6 +493,8 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         var val;
         var vmobj;
         var want;
+        var reqid;
+        var req_is_v2 = false;
 
         parts = rtrim(data.toString()).replace(/\n$/, '')
             .match(/^([^\s]+)\s?(.*)/);
@@ -495,15 +507,28 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         cmd = parts[1];
         want = parts[2];
 
-        if (cmd === 'GET' && !want) {
+        if ((cmd === 'NEGOTIATE' || cmd === 'GET') && !want) {
             write('invalid command\n');
             return;
         }
 
         vmobj = self.zones[zone];
 
+        // Unbox V2 protocol frames:
+        if (cmd === 'V2') {
+            if (!parse_v2_request(want))
+                return;
+        }
+
         if (cmd === 'GET') {
-            zlog.info('Serving ' + want);
+            want = (want || '').trim();
+            if (!want) {
+                returnit(new Error('Invalid GET Request'));
+                return;
+            }
+
+            zlog.info('Serving GET ' + want);
+
             if (want.slice(0, 4) === 'sdc:') {
                 want = want.slice(4);
 
@@ -618,6 +643,68 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     }
                 });
             }
+        } else if (!req_is_v2 && cmd === 'NEGOTIATE') {
+            if (want === 'V2') {
+                write('V2_OK\n');
+            } else {
+                write('FAILURE\n');
+            }
+            return;
+        } else if (req_is_v2 && cmd === 'DELETE') {
+            want = (want || '').trim();
+            if (!want) {
+                returnit(new Error('Invalid DELETE Request'));
+                return;
+            }
+
+            zlog.info('Serving DELETE ' + want);
+
+            setMetadata(want, null, function (err) {
+                if (err) {
+                    returnit(err);
+                } else {
+                    returnit(null, 'OK');
+                }
+            });
+        } else if (req_is_v2 && cmd === 'PUT') {
+            var key;
+            var value;
+            var terms;
+
+            terms = (want || '').trim().split(' ');
+
+            if (terms.length !== 2) {
+                returnit(new Error('Invalid PUT Request'));
+                return;
+            }
+
+            // PUT requests have two space-separated BASE64-encoded
+            // arguments: the Key and then the Value.
+            key = (base64_decode(terms[0]) || '').trim();
+            value = base64_decode(terms[1]);
+
+            if (!key || value === null) {
+                returnit(new Error('Invalid PUT Request'));
+                return;
+            }
+
+            if (key.slice(0, 4) === 'sdc:') {
+                returnit(new Error('Cannot update the "sdc" Namespace.'));
+                return;
+            }
+
+            zlog.info('Serving PUT ' + key);
+            setMetadata(key, value, function (err) {
+                if (err) {
+                    zlog.error(err, 'could not set metadata (key "' + key
+                        + '")');
+                    returnit(err);
+                } else {
+                    returnit(null, 'OK');
+                }
+            });
+
+            return;
         } else if (cmd === 'KEYS') {
             addMetadata(function (err) {
                 var ckeys = [];
@@ -732,31 +819,132 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
             });
         }
 
+        function setMetadata(_key, _value, cb) {
+            var payload = {};
+            var which = 'customer_metadata';
+
+            // Some keys come from "internal_metadata":
+            if (_key.match(/_pw$/) || _key === 'operator-script') {
+                which = 'internal_metadata';
+            }
+
+            // Construct payload for VM.update()
+            if (_value) {
+                payload['set_' + which] = {};
+                payload['set_' + which][_key] = _value;
+            } else {
+                payload['remove_' + which] = [ _key ];
+            }
+
+            zlog.trace({ payload: payload }, 'calling VM.update()');
+            VM.update(vmobj.uuid, payload, zlog, cb);
+        }
+
+        function parse_v2_request(inframe) {
+            var m;
+            var m2;
+            var newcrc32;
+            var framecrc32;
+            var clen;
+
+            zlog.trace({ request: inframe }, 'incoming V2 request');
+
+            m = inframe.match(
+                /\s*([0-9]+)\s+([0-9a-f]+)\s+([0-9a-f]+)\s+(.*)/);
+            if (!m) {
+                zlog.error('V2 frame did not parse: ', inframe);
+                return (false);
+            }
+
+            clen = Number(m[1]);
+            if (!(clen > 0) || clen !== (m[3] + ' ' + m[4]).length) {
+                zlog.error('V2 invalid clen: ' + m[1]);
+                return (false);
+            }
+
+            newcrc32 = crc32.crc32_calc(m[3] + ' ' + m[4]);
+            framecrc32 = m[2];
+            if (framecrc32 !== newcrc32) {
+                zlog.error('V2 crc mismatch (ours ' + newcrc32
+                    + ' theirs ' + framecrc32 + '): ' + want);
+                return (false);
+            }
+
+            reqid = m[3];
+
+            m2 = m[4].match(/\s*(\S+)\s*(.*)/);
+            if (!m2) {
+                zlog.error('V2 invalid body: ' + m[4]);
+                return (false);
+            }
+
+            cmd = m2[1];
+            want = base64_decode(m2[2]);
+
+            req_is_v2 = true;
+
+            return (true);
+        }
+
+
+        function format_v2_response(code, body) {
+            var resp;
+            var fullresp;
+
+            resp = reqid + ' ' + code;
+            if (body)
+                resp += ' ' + (new Buffer(body).toString('base64'));
+
+            fullresp = 'V2 ' + resp.length + ' ' + crc32.crc32_calc(
+                resp) + ' ' + resp + '\n';
+
+            zlog.trace({ response: fullresp }, 'formatted V2 response');
+
+            return (fullresp);
+        }
+
         function returnit(error, retval) {
             var towrite;
 
             if (error) {
                 zlog.error(error.message);
-                write('FAILURE\n');
+                if (req_is_v2)
+                    write(format_v2_response('FAILURE', error.message));
+                else
+                    write('FAILURE\n');
                 return;
             }
 
             // String value
             if (common.isString(retval)) {
-                towrite = retval.replace(/^\./mg, '..');
-                write('SUCCESS\n' + towrite + '\n.\n');
+                if (req_is_v2) {
+                    write(format_v2_response('SUCCESS', retval));
+                } else {
+                    towrite = retval.replace(/^\./mg, '..');
+                    write('SUCCESS\n' + towrite + '\n.\n');
+                }
                 return;
             } else if (!isNaN(retval)) {
-                towrite = retval.toString().replace(/^\./mg, '..');
-                write('SUCCESS\n' + towrite + '\n.\n');
+                if (req_is_v2) {
+                    write(format_v2_response('SUCCESS', retval.toString()));
+                } else {
+                    towrite = retval.toString().replace(/^\./mg, '..');
+                    write('SUCCESS\n' + towrite + '\n.\n');
+                }
                 return;
             } else if (retval) {
                 // Non-string value
-                write('FAILURE\n');
+                if (req_is_v2)
+                    write(format_v2_response('FAILURE'));
+                else
+                    write('FAILURE\n');
                 return;
             } else {
                 // Nothing to return
-                write('NOTFOUND\n');
+                if (req_is_v2)
+                    write(format_v2_response('NOTFOUND'));
+                else
+                    write('NOTFOUND\n');
                 return;
             }
         }

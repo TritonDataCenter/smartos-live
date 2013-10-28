@@ -184,6 +184,22 @@ extern nvlist_t *v8plus_method_call_direct(void *, const char *,
     const nvlist_t *);
 
 /*
+ * These functions allow the consumer to hold the V8 event loop open for
+ * potential input from other threads.  If your process blocks in another
+ * thread, e.g. an event subscription thread, you must signal to v8plus
+ * that the event loop should remain active.  Calls to v8plus_eventloop_hold()
+ * and v8plus_eventloop_rele() should be balanced.  It is safe to call
+ * v8plus_eventloop_rele() from outside the event loop thread.
+ *
+ * Note: Holds obtained via v8plus_obj_hold() and v8plus_jsfunc_hold() will
+ * also automatically hold the event loop, removing the need to use this
+ * interface explicitly.
+ */
+extern void v8plus_eventloop_hold(void);
+extern void v8plus_eventloop_rele(void);
+extern void v8plus_eventloop_rele_direct(void);
+
+/*
  * These methods are analogous to strerror(3c) and similar functions; they
  * translate among error names, codes, and default messages.  There is
  * normally little need for these functions in C methods, as everything

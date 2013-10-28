@@ -18,6 +18,16 @@ typedef struct lockfd_args {
 	boolean_t lfa_run_sync;
 } lockfd_args_t;
 
+static const char *
+errno_to_code(int en)
+{
+	return (en == EAGAIN ? "EAGAIN" :
+	    en == ENOLCK ? "ENOLCK" :
+	    en == EINTR ? "EINTR" :
+	    en == EDEADLK ? "EDEADLK" :
+	    "");
+}
+
 /*
  * Worker thread for blocking fcntl() calls:
  */
@@ -27,20 +37,18 @@ lockfd_thread(void *arg)
 	lockfd_args_t *lfa = arg;
 	nvlist_t *ap;
 	int ret, en = 0;
-	char *errmsg = "";
 
 	errno = 0;
-	if ((ret = fcntl(lfa->lfa_fd, F_SETLKW, &lfa->lfa_flock)) == -1) {
-		errmsg = strerror(en);
-	}
+	if ((ret = fcntl(lfa->lfa_fd, F_SETLKW, &lfa->lfa_flock)) == -1)
+		en = errno;
 
 	/*
 	 * Call back into JS:
 	 */
 	ap = v8plus_obj(
 	    V8PLUS_TYPE_NUMBER, "0", (double) ret,
-	    V8PLUS_TYPE_NUMBER, "1", (double) en,
-	    V8PLUS_TYPE_STRING, "2", errmsg,
+	    V8PLUS_TYPE_STRING, "1", strerror(en),
+	    V8PLUS_TYPE_STRING, "2", errno_to_code(en),
 	    V8PLUS_TYPE_NONE);
 	(void) v8plus_call(lfa->lfa_cb, ap);
 	nvlist_free(ap);

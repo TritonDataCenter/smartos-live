@@ -523,6 +523,12 @@ v8plus_jsfunc_hold(v8plus_jsfunc_t f)
 		it->second.ch_persist = _B_TRUE;
 	}
 	++it->second.ch_refs;
+
+	/*
+	 * If the consumer puts a hold on a callback, we should also put a hold
+	 * on the V8 event loop to prevent it dematerialising beneath us.
+	 */
+	v8plus_eventloop_hold();
 }
 
 extern "C" void
@@ -544,6 +550,11 @@ v8plus_jsfunc_rele_direct(v8plus_jsfunc_t f)
 		}
 		cbhash.erase(it);
 	}
+
+	/*
+	 * Release the event loop hold we took in v8plus_jsfunc_hold():
+	 */
+	v8plus_eventloop_rele_direct();
 }
 
 static size_t
@@ -637,6 +648,12 @@ v8plus_obj_hold(const void *cop)
 {
 	v8plus::ObjectWrap *op = v8plus::ObjectWrap::objlookup(cop);
 	op->public_Ref();
+
+	/*
+	 * If the consumer puts a hold on an object, we should also put a hold
+	 * on the V8 event loop to prevent it dematerialising beneath us.
+	 */
+	v8plus_eventloop_hold();
 }
 
 extern "C" void
@@ -644,4 +661,9 @@ v8plus_obj_rele_direct(const void *cop)
 {
 	v8plus::ObjectWrap *op = v8plus::ObjectWrap::objlookup(cop);
 	op->public_Unref();
+
+	/*
+	 * Release the event loop hold we took in v8plus_obj_hold():
+	 */
+	v8plus_eventloop_rele_direct();
 }

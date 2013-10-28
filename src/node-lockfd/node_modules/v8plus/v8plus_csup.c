@@ -31,11 +31,14 @@ static pthread_mutex_t _v8plus_callq_mtx;
 static pthread_t _v8plus_uv_event_thread;
 static uv_async_t _v8plus_uv_async;
 
+static int _v8plus_eventloop_refcount;
+
 typedef enum v8plus_async_call_type {
 	ACT_OBJECT_CALL = 1,
 	ACT_OBJECT_RELEASE,
 	ACT_JSFUNC_CALL,
 	ACT_JSFUNC_RELEASE,
+	ACT_EVENTLOOP_RELEASE
 } v8plus_async_call_type_t;
 
 typedef enum v8plus_async_call_flags {
@@ -120,6 +123,9 @@ v8plus_async_callback(uv_async_t *async __UNUSED, int status __UNUSED)
 			break;
 		case ACT_JSFUNC_RELEASE:
 			v8plus_jsfunc_rele_direct(vac->vac_func);
+			break;
+		case ACT_EVENTLOOP_RELEASE:
+			v8plus_eventloop_rele_direct();
 			break;
 		}
 
@@ -304,6 +310,49 @@ v8plus_crossthread_init(void)
 		v8plus_panic("unable to initialise uv_async_t");
 	if (pthread_mutex_init(&_v8plus_callq_mtx, NULL) != 0)
 		v8plus_panic("unable to initialise mutex");
+
+	/*
+	 * If we do not unreference the async handle, then its mere
+	 * existence will keep the event loop open forever.  If the consumer
+	 * _wants_ this behaviour, they may call v8plus_eventloop_hold()
+	 * from the event loop thread.
+	 */
+	uv_unref((uv_handle_t *)&_v8plus_uv_async);
+}
+
+void
+v8plus_eventloop_hold(void)
+{
+	++_v8plus_eventloop_refcount;
+	uv_ref((uv_handle_t *)&_v8plus_uv_async);
+}
+
+void
+v8plus_eventloop_rele_direct(void)
+{
+	if (--_v8plus_eventloop_refcount < 1) {
+		_v8plus_eventloop_refcount = 0;
+		uv_unref((uv_handle_t *)&_v8plus_uv_async);
+	}
+}
+
+void
+v8plus_eventloop_rele(void)
+{
+	v8plus_async_call_t *vac;
+
+	if (v8plus_in_event_thread() == B_TRUE) {
+		return (v8plus_eventloop_rele_direct());
+	}
+
+	vac = calloc(1, sizeof (*vac));
+	if (vac == NULL)
+		v8plus_panic("could not allocate async call structure");
+
+	vac->vac_type = ACT_EVENTLOOP_RELEASE;
+	vac->vac_flags = ACF_NOREPLY;
+
+	(void) v8plus_cross_thread_call(vac);
 }
 
 nvlist_t *

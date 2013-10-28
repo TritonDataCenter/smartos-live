@@ -17,6 +17,8 @@ ERRNO_JSON =	errno.json
 CC =		/opt/local/bin/gcc
 CXX =		/opt/local/bin/g++
 
+CFLAGS +=	-pthread
+
 #WARN_FLAGS +=	-Wno-error=unused-parameter
 
 #LDFLAGS +=	-L/usr/lib/fm -R/usr/lib/fm

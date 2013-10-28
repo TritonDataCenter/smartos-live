@@ -685,12 +685,15 @@ asynchronous mechanisms may require it.  If you are returning from a method
 call but have stashed a reference to the object somewhere and are not
 calling `v8plus_defer()`, you must call this first.  Holds and releases must
 be balanced.  Use of the object within a thread after releasing is a bug.
+This hold includes an implicit event loop hold, as if `v8plus_eventloop_hold()`
+was called.
 
 ### void v8plus_obj_rele(const void *op)
 
 Releases a hold placed by `v8plus_obj_hold()`.  This function may be called
 safely from any thread; releases from threads other than the main event loop
-are non-blocking and will occur some time in the future.
+are non-blocking and will occur some time in the future.  Releases the
+implicit event loop hold obtained by `v8plus_obj_hold()`.
 
 ### void v8plus_jsfunc_hold(v8plus_jsfunc_t f)
 
@@ -700,13 +703,15 @@ reference to the function, typically to use it asynchronously as a callback.
 All holds must be balanced with a release.  Because a single hold is placed
 on such objects when passed to you in an argument list (and released for you
 when you return), it is legal to reference and even to invoke such a
-function without first placing an additional hold on it.
+function without first placing an additional hold on it.  This hold includes
+an implicit event loop hold, as if `v8plus_eventloop_hold()` was called.
 
 ### void v8plus_jsfunc_rele(v8plus_jsfunc_t f)
 
 Releases a hold placed by `v8plus_jsfunc_hold()`.  This function may be called
 safely from any thread; releases from threads other than the main event loop
-thread are non-blocking and will occur some time in the future.
+thread are non-blocking and will occur some time in the future.  Releases
+the implicit event loop hold obtained by `v8plus_jsfunc_hold()`.
 
 ### void v8plus_defer(void *op, void *ctx, worker, completion)
 
@@ -715,6 +720,26 @@ Enqueues work to be performed in the Node.js shared thread pool.  The object
 thread from that pool.  The same two arguments, along with the worker's
 return value, are passed to `completion` executing in the main event loop
 thread.  See example above.
+
+### void v8plus_eventloop_hold(void)
+
+Places a hold on the V8 event loop.  V8 will terminate when it detects that
+there is no more work to do.  This liveliness check includes things like open
+sockets or file descriptors, but only if they are tracked by the event loop
+itself.  If you are using multiple threads, some of which may blocking waiting
+for input (e.g. a message subscription thread) then you will need to prevent V8
+from terminating prematurely.  This function must be called from within the
+main event loop thread.  Each hold must be balanced with a release.  Note that
+holds on objects or functions obtained via `v8plus_obj_hold()` or
+`v8plus_jsfunc_hold()` will implicitly hold the event loop for you.
+
+### void v8plus_eventloop_rele(void)
+
+Release a hold on the V8 event loop.  If there are no more pending events or
+input sources, then V8 will generally terminate the process shortly afterward.
+This function may be called safely from any thread; releases from threads other
+than the main event loop thread are non-blocking and will occur some time in
+the future.
 
 ### nvlist_t *v8plus_call(v8plus_jsfunc_t f, const nvlist_t *ap)
 

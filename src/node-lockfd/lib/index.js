@@ -17,10 +17,10 @@ lockfd(fd, callback)
 	check_arg(1, 'fd', fd, 'number');
 	check_arg(2, 'callback', callback, 'function');
 
-	BINDING.lock_fd(fd, "write", false, function (ret, errno, errmsg) {
+	BINDING.lock_fd(fd, "write", false, function (ret, errmsg, errno) {
 		if (ret === -1) {
 			var err = new Error('File Locking Error: ' + errmsg);
-			err.__errno = errno;
+			err.code = errno;
 
 			callback(err);
 			return;

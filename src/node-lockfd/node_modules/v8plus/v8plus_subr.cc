@@ -108,6 +108,16 @@ nvlist_add_v8_Value(nvlist_t *lp, const char *name,
 		ch.ch_refs = 1;
 		ch.ch_persist = _B_FALSE;
 
+		/*
+		 * We create the callback handle with its reference count set
+		 * to 1; i.e. it is created in the held state.  Each call to
+		 * v8plus_jsfunc_rele() will call v8plus_eventloop_rele() to
+		 * release the event loop hold implicit in a jsfunc hold.
+		 * So that our holds and releases are balanced, we take an
+		 * event loop hold here:
+		 */
+		v8plus_eventloop_hold();
+
 		while (cbhash.find(cbnext) != cbhash.end())
 			++cbnext;
 		cbhash.insert(std::make_pair(cbnext, ch));
@@ -614,7 +624,7 @@ nvlist_free(nvlist_t *lp)
 				continue;
 			if (nvpair_value_uint64_array(pp, &vp, &nv) != 0) {
 				v8plus_panic(
-				    "unable to obtain callbach hash tag");
+				    "unable to obtain callback hash tag");
 			}
 			if (nv != 1) {
 				v8plus_panic(

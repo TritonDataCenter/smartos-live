@@ -51,7 +51,10 @@ SMARTDCLIBDIR =	$(DESTDIR)/smartdc/lib
 #
 bootparams :	LIBS +=		-ldevinfo
 bootparams :	WARN_FLAGS +=	-Wno-unused
-diskinfo :	LIBS +=		-ldladm -ldiskmgt -lnvpair
+diskinfo :	LDFLAGS +=	-L$(DESTDIR)/usr/lib/fm
+diskinfo :	CPPFLAGS +=	-I$(ROOT)/projects/illumos/usr/src/lib/fm/topo
+diskinfo :	LIBS +=		-R/usr/lib/fm
+diskinfo :	LIBS +=		-ldladm -ldiskmgt -lnvpair -ltopo
 zfs_recv :	LIBS +=		-lsocket
 zfs_send :	LIBS +=		-lsocket
 vmbundle :	CPPFLAGS +=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64

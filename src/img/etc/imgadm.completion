@@ -75,10 +75,14 @@ _imgadm()
         local installed_uuids=$(imgadm list -H -o uuid)
         COMPREPLY=( $(compgen -W "${installed_uuids}" -- ${cur}) )
 
+    elif [[ ${prev} == '-s' ]] && [[ ${cmd} == 'create' ]]; then
+        # Local path for imgadm create prepre-script path.
+        COMPREPLY=( $(compgen -f -- ${cur}) )
+
     elif [[ ${cmd} == 'create' ]]; then
-        # Stopped VM UUIDs.
-        local stopped_vm_uuids=$(vmadm list -H -o uuid state=stopped)
-        COMPREPLY=( $(compgen -W "${stopped_vm_uuids}" -- ${cur}) )
+        # VM UUIDs.
+        local vm_uuids=$(vmadm list -H -o uuid)
+        COMPREPLY=( $(compgen -W "${vm_uuids}" -- ${cur}) )
 
     else
         # Just expand files by default.

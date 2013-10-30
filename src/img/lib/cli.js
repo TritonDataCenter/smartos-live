@@ -1440,6 +1440,8 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, callback) {
             manifest: manifest,
             compression: opts.compression,
             incremental: opts.incremental,
+            prepareScript: opts['prepare-script']
+                && fs.readFileSync(opts['prepare-script'], 'utf8'),
             savePrefix: savePrefix,
             logCb: console.log,
             quiet: opts.quiet
@@ -1478,16 +1480,28 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, callback) {
 };
 CLI.prototype.do_create.description = (
     /* BEGIN JSSTYLED */
-    'Create a new image from a prepared and stopped VM.\n'
+    'Create an image from the given VM and manifest data.\n'
     + '\n'
-    + 'To create a new virtual image, one first creates a VM from an existing\n'
-    + 'image, customizes it, runs "sm-prepare-image", shuts it down, and\n'
-    + 'then runs this "imgadm create" to create the image file and manifest.\n'
+    + 'There are two basic calling modes: (1) a prepare-image script is\n'
+    + 'provided (via "-s") to have imgadm automatically run the script inside the\n'
+    + 'VM before image creation; or (2) the given VM is already "prepared" and\n'
+    + 'shutdown.\n'
     + '\n'
-    + 'This will snapshot the VM, create a manifest and image file and\n'
-    + 'delete the snapshot. Optionally the image can be published directly\n'
-    + 'to a given image repository (IMGAPI) via "-p URL" (or that can be\n'
-    + 'done separately via "imgadm publish").\n'
+    + 'The former involves snapshotting the VM, running the prepare-image script\n'
+    + '(via the SmartOS mdata operator-script facility), creating the image,\n'
+    + 'rolling back to the pre-prepared state. This is preferred because it is (a)\n'
+    + 'easier (fewer steps to follow for imaging) and (b) safe (gating with\n'
+    + 'snapshot/rollback ensures the VM is unchanged by imaging -- the preparation\n'
+    + 'script is typically destructive.\n'
+    + '\n'
+    + 'With the latter, one first creates a VM from an existing image, customizes\n'
+    + 'it, runs "sm-prepare-image" (or equivalent for KVM guest OSes), shuts it\n'
+    + 'down, runs this "imgadm create" to create the image file and manifest, and\n'
+    + 'finally destroys the "proto" VM.\n'
+    + '\n'
+    + 'With either calling mode, the image can optionally be published directly\n'
+    + 'to a given image repository (IMGAPI) via "-p URL". This can also be\n'
+    + 'done separately via "imgadm publish".\n'
     + '\n'
     + 'Usage:\n'
     + '    $NAME create [<options>] <vm-uuid> [<manifest-field>=<value> ...]\n'
@@ -1497,7 +1511,7 @@ CLI.prototype.do_create.description = (
     + '    -m <manifest>  Path to image manifest data (as JSON) to\n'
     + '                   include in the created manifest. Specify "-"\n'
     + '                   to read manifest JSON from stdin.\n'
-    + '    -o PATH, --output-template PATH\n'
+    + '    -o <path>, --output-template <path>\n'
     + '                   Path prefix to which to save the created manifest\n'
     + '                   and image file. By default "NAME-VER.imgmanifest\n'
     + '                   and "NAME-VER.zfs[.EXT]" are saved to the current\n'
@@ -1505,12 +1519,21 @@ CLI.prototype.do_create.description = (
     + '                   to it. If the basename of "PATH" is not a dir,\n'
     + '                   then "PATH.imgmanifest" and "PATH.zfs[.EXT]" are\n'
     + '                   created.\n'
-    + '    -c COMPRESSION One of "none", "gz" or "bzip2" for the compression\n'
+    + '    -c <comp>      One of "none", "gz" or "bzip2" for the compression\n'
     + '                   to use on the image file, if any. Default is "none".\n'
     + '    -i             Build an incremental image (based on the "@final"\n'
     + '                   snapshot of the source image for the VM).\n'
     + '\n'
-    + '    -p URL, --publish URL\n'
+    + '    -s <prepare-image-path>\n'
+    + '                   Path to a script that is run inside the VM to\n'
+    + '                   prepare it for imaging. Specifying this triggers the\n'
+    + '                   full snapshot/prepare-image/create-image/rollback\n'
+    + '                   automatic image creation process (see notes above).\n'
+    + '                   There is a contract with "imgadm" that a \n'
+    + '                   prepare-image script must follow. See the "PREPARE\n'
+    + '                   IMAGE SCRIPT" section in "man imgadm".\n'
+    + '\n'
+    + '    -p <url>, --publish <url>\n'
     + '                   Publish directly to the given image source\n'
     + '                   (an IMGAPI server). You may not specify both\n'
     + '                   "-p" and "-o".\n'
@@ -1528,23 +1551,28 @@ CLI.prototype.do_create.description = (
     + '                   will be strings.\n'
     + '\n'
     + 'Examples:\n'
+    + '    # Create an image from VM 5f7a53e9-fc4d-d94b-9205-9ff110742aaf.\n'
+    + '    echo \'{"name": "foo", "version": "1.0.0"}\' \\\n'
+    + '        | imgadm create -m - -s /path/to/prepare-image \\\n'
+    + '            5f7a53e9-fc4d-d94b-9205-9ff110742aaf\n'
+    + '    \n'
+    + '    # Specify manifest data as arguments.\n'
+    + '    imgadm create -s prep-image 5f7a53e9-fc4d-d94b-9205-9ff110742aaf \\\n'
+    + '        name=foo version=1.0.0\n'
+    + '    \n'
+    + '    # Write the manifest and image file to "/var/tmp".\n'
+    + '    imgadm create -s prep-image 5f7a53e9-fc4d-d94b-9205-9ff110742aaf \\\n'
+    + '        name=foo version=1.0.0 -o /var/tmp\n'
+    + '    \n'
+    + '    # Publish directly to an image repository (IMGAPI server).\n'
+    + '    imgadm create -s prep-image 5f7a53e9-fc4d-d94b-9205-9ff110742aaf \\\n'
+    + '        name=foo version=1.0.0 --publish https://images.example.com\n'
+    + '    \n'
     + '    # Create an image from the prepared and shutdown VM\n'
     + '    # 5f7a53e9-fc4d-d94b-9205-9ff110742aaf, using some manifest JSON\n'
     + '    # data from stdin.\n'
     + '    echo \'{"name": "foo", "version": "1.0.0"}\' \\\n'
     + '        | imgadm create -m - 5f7a53e9-fc4d-d94b-9205-9ff110742aaf\n'
-    + '    \n'
-    + '    # Specify manifest data as arguments.\n'
-    + '    imgadm create 5f7a53e9-fc4d-d94b-9205-9ff110742aaf \\\n'
-    + '        name=foo version=1.0.0\n'
-    + '    \n'
-    + '    # Write the manifest and image file to "/var/tmp".\n'
-    + '    imgadm create 5f7a53e9-fc4d-d94b-9205-9ff110742aaf \\\n'
-    + '        name=foo version=1.0.0 -o /var/tmp\n'
-    + '    \n'
-    + '    # Publish directly to an image repository (IMGAPI server).\n'
-    + '    imgadm create 5f7a53e9-fc4d-d94b-9205-9ff110742aaf \\\n'
-    + '        name=foo version=1.0.0 --publish https://images.example.com\n'
     /* END JSSTYLED */
 );
 CLI.prototype.do_create.longOpts = {
@@ -1552,6 +1580,7 @@ CLI.prototype.do_create.longOpts = {
     'compression': String,
     'output-template': String,
     'incremental': Boolean,
+    'prepare-script': String,
     'publish': String,
     'quiet': Boolean
 };
@@ -1560,6 +1589,7 @@ CLI.prototype.do_create.shortOpts = {
     'c': ['--compression'],
     'o': ['--output-template'],
     'i': ['--incremental'],
+    's': ['--prepare-script'],
     'p': ['--publish'],
     'q': ['--quiet']
 };

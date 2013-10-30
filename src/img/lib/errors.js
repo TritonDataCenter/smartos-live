@@ -35,6 +35,16 @@ var verror = require('verror'),
 
 
 
+// ---- internal support stuff
+
+function _indent(s, indent) {
+    if (!indent) indent = '    ';
+    var lines = s.split(/\r?\n/g);
+    return indent + lines.join('\n' + indent);
+}
+
+
+
 // ---- error classes
 
 /**
@@ -205,6 +215,68 @@ function VmHasNoOriginError(cause, vmUuid) {
     });
 }
 util.inherits(VmHasNoOriginError, ImgadmError);
+
+function PrepareImageError(cause, vmUuid, details) {
+    if (details === undefined) {
+        details = vmUuid;
+        vmUuid = cause;
+        cause = undefined;
+    }
+    assert.string(vmUuid, 'vmUuid');
+    assert.string(details, 'details');
+    var extra = '';
+    if (details) {
+        if (details.indexOf('\n') !== -1) {
+            extra = ':\n' + _indent('...\n' + details);
+        } else {
+            extra = ': ' + details;
+        }
+    }
+    ImgadmError.call(this, {
+        cause: cause,
+        message: format('prepare-image script error while preparing VM %s%s',
+            vmUuid, extra),
+        code: 'PrepareImageError',
+        exitStatus: 1
+    });
+}
+util.inherits(PrepareImageError, ImgadmError);
+
+/**
+ * When the prepare-image script (used by `imgadm create -s prep-script`)
+ * does not set the 'prepare-image:state=running' mdata to indicate that it
+ * started running.
+ */
+function PrepareImageDidNotRunError(cause, vmUuid) {
+    if (vmUuid === undefined) {
+        vmUuid = cause;
+        cause = undefined;
+    }
+    assert.string(vmUuid, 'vmUuid');
+    ImgadmError.call(this, {
+        cause: cause,
+        message: format('prepare-image script did not indicate it was run '
+            + '(old guest tools in VM %s?)', vmUuid),
+        code: 'PrepareImageDidNotRun',
+        exitStatus: 1
+    });
+}
+util.inherits(PrepareImageDidNotRunError, ImgadmError);
+
+function TimeoutError(cause, msg) {
+    if (msg === undefined) {
+        msg = cause;
+        cause = undefined;
+    }
+    assert.string(msg, 'msg');
+    ImgadmError.call(this, {
+        cause: cause,
+        message: msg,
+        code: 'Timeout',
+        exitStatus: 1
+    });
+}
+util.inherits(TimeoutError, ImgadmError);
 
 // For *incremental* image creation the origin image must have a '@final'
 // snapshot from which the incr zfs send is taken. '@final' is what 'imgadm
@@ -562,7 +634,7 @@ util.inherits(UpgradeError, ImgadmError);
  */
 function MultiError(errs) {
     assert.arrayOfObject(errs, 'errs');
-    var lines = [format('multiple (%d) API errors', errs.length)];
+    var lines = [format('multiple (%d) errors', errs.length)];
     for (var i = 0; i < errs.length; i++) {
         var err = errs[i];
         lines.push(format('    error (%s): %s', err.code, err.message));
@@ -591,6 +663,9 @@ module.exports = {
     VmNotFoundError: VmNotFoundError,
     VmNotStoppedError: VmNotStoppedError,
     VmHasNoOriginError: VmHasNoOriginError,
+    PrepareImageError: PrepareImageError,
+    PrepareImageDidNotRunError: PrepareImageDidNotRunError,
+    TimeoutError: TimeoutError,
     OriginHasNoFinalSnapshotError: OriginHasNoFinalSnapshotError,
     ManifestValidationError: ManifestValidationError,
     ActiveImageNotFoundError: ActiveImageNotFoundError,

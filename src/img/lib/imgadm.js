@@ -52,7 +52,6 @@ var mkdirp = require('mkdirp');
 var ProgressBar = require('progbar').ProgressBar;
 var imgapi = require('sdc-clients/lib/imgapi');
 var dsapi = require('sdc-clients/lib/dsapi');
-var VM = require('/usr/vm/node_modules/VM.js');
 var zfs = require('/usr/node/node_modules/zfs.js').zfs;
 var imgmanifest = require('imgmanifest');
 var genUuid = require('node-uuid');
@@ -1970,8 +1969,21 @@ IMGADM.prototype.updateImages = function updateImages(options, callback) {
 
 
 /**
- * Create an image from the given (prepared and shutdown) VM and manifest
- * data.
+ * Create an image from the given VM and manifest data. There are two basic
+ * calling modes here:
+ * 1. A `options.prepareScript` is provided to be used to prepare the VM
+ *    before image creation. The running of the prepare script is gated by
+ *    a snapshot and rollback so that the end result is a VM that is unchanged.
+ *    This is desireable because (a) it is easier (fewer steps to follow
+ *    for imaging) and (b) the typical preparation script is destructive, so
+ *    gating with snapshotting makes the original VM re-usable. Note that
+ *    the snapshotting and preparation involve reboots of the VM (typically
+ *    two reboots).
+ *    Dev Note: This mode with prepareScript is called "autoprep" in vars
+ *    below.
+ * 2. The VM is already prepared (via the typical prepare-image scripts,
+ *    see <https://download.joyent.com/pub/prepare-image/>) and shutdown.
+ *    For this "mode" do NOT pass in `options.prepareScript`.
  *
  * @param options {Object}
  *      - @param vmUuid {String} UUID of the VM from which to create the image.
@@ -1985,6 +1997,12 @@ IMGADM.prototype.updateImages = function updateImages(options, callback) {
  *        to save the manifest and image files.
  *      - @param incremental {Boolean} Optional. Default false. Create an
  *        incremental image.
+ *      - @param prepareScript {String} Optional. A script to run to prepare
+ *        the VM for image. See note above.
+ *      - @param prepareTimeout {Number} Optional. Default is 300 (5 minutes).
+ *        The number of seconds before timing out any prepare *stage*. The
+ *        preparation stages are (starting from the VM being shutdown):
+ *        prepare-image running, prepare-image complete, VM stopped.
  * @param callback {Function} `function (err, imageInfo)` where imageInfo
  *      has `manifest` (the manifest object), `manifestPath` (the saved
  *      manifest path) and `filePath` (the saved image file path) keys.
@@ -1997,32 +2015,31 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
     assert.optionalFunc(options.logCb, 'options.logCb');
     assert.optionalString(options.compression, 'options.compression');
     assert.optionalBool(options.incremental, 'options.incremental');
+    assert.optionalString(options.prepareScript, 'options.prepareScript');
+    assert.optionalNumber(options.prepareTimeout, 'options.prepareTimeout');
     var vmUuid = options.vmUuid;
     var incremental = options.incremental || false;
     var logCb = options.logCb || function () {};
+    var prepareScript = options.prepareScript;
+    var prepareTimeout = options.prepareTimeout || 300;  // in seconds
 
     var vmInfo;
-    var vmZfsFilesystem;
+    var vmZfsFilesystemName;
+    var vmZfsSnapnames;
     var originInfo;
     var imageInfo = {};
-    var snapshot;
+    var finalSnapshot;
     var toCleanup = {};
     async.waterfall([
-        // Validate this is a stopped VM.
         function validateVm(next) {
-            // Note: Don't pass `self.log` to VM.js because we don't want
-            // any logging on our stderr right now for a cli -- that is
-            // until imgadm has a better logging story.
-            VM.load(vmUuid, /* { log: self.log }, */ function (loadErr, vm) {
-                if (loadErr) {
-                    if (loadErr.code === 'ENOENT') {
-                        next(new errors.VmNotFoundError(vmUuid));
-                    } else {
-                        next(new errors.InternalError(loadErr));
-                    }
+            common.vmGet(vmUuid, {log: self.log}, function (err, vm) {
+                // Currently `vmGet` doesn't distinguish bwtn some unexpected
+                // error and no such VM.
+                if (err) {
+                    next(new errors.VmNotFoundError(vmUuid));
                     return;
                 }
-                if (vm.state !== 'stopped') {
+                if (!prepareScript && vm.state !== 'stopped') {
                     next(new errors.VmNotStoppedError(vmUuid));
                     return;
                 }
@@ -2038,14 +2055,14 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                         if (vmInfo.disks[i].image_uuid) {
                             var disk = vmInfo.disks[i];
                             opts = {uuid: disk.image_uuid, zpool: disk.zpool};
-                            vmZfsFilesystem = disk.zfs_filesystem;
+                            vmZfsFilesystemName = disk.zfs_filesystem;
                             break;
                         }
                     }
                 }
             } else {
                 opts = {uuid: vmInfo.image_uuid, zpool: vmInfo.zpool};
-                vmZfsFilesystem = vmInfo.zfs_filesystem;
+                vmZfsFilesystemName = vmInfo.zfs_filesystem;
             }
             if (!opts) {
                 // Couldn't find an origin image.
@@ -2130,41 +2147,220 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 }
             });
         },
-        function renameFinalSnapshotOutOfTheWay(next) {
-            // We use a snapshot named '@final'. If there is an existing one,
-            // rename it to '@final-$timestamp'.
+
+        function getVmZfsDataset(next) {
+            // Get snapshot/children dataset details on the ZFS filesystem with
+            // which we are going to be mucking.
             var properties = ['name', 'children'];
-            getZfsDataset(vmZfsFilesystem, properties, function (zErr, ds) {
+            getZfsDataset(vmZfsFilesystemName, properties, function (zErr, ds) {
                 if (zErr) {
                     next(zErr);
                     return;
                 }
                 var snapshots = ds.children.snapshots;
-                var snapnames = snapshots.map(
+                vmZfsSnapnames = snapshots.map(
                     function (n) { return '@' + n.split(/@/g).slice(-1)[0]; });
-                if (snapnames.indexOf('@final') == -1) {
-                    next();
+                next();
+            });
+        },
+
+        // If `prepareScript` was given, here is where we need to:
+        // - snapshot the VM
+        // - prepare the VM
+        function autoprepStopVmIfNecessary(next) {
+            if (!prepareScript) {
+                next();
+            } else if (vmInfo.state !== 'stopped') {
+                logCb(format('Stopping VM %s', vmUuid));
+                toCleanup.autoprepStartVm = vmUuid; // Re-start it when done.
+                common.vmStop(vmUuid, {log: self.log}, next);
+            } else {
+                next();
+            }
+        },
+        function autoprepSnapshotDatasets(next) {
+            if (!prepareScript) {
+                next();
+                return;
+            }
+
+            var toSnapshot = [vmInfo.zfs_filesystem];
+            if (vmInfo.brand === 'kvm' && vmInfo.disks) {
+                for (var i = 0; i < vmInfo.disks.length; i++) {
+                    toSnapshot.push(vmInfo.disks[i].zfs_filesystem);
+                }
+            }
+
+            var snapname = '@imgadm-create-pre-prepare';
+            logCb(format('Snapshotting VM "%s" to %s', vmUuid, snapname));
+            toCleanup.autoprepSnapshots = [];
+            async.eachSeries(
+                toSnapshot,
+                function snapshotOne(ds, nextSnapshot) {
+                    var snap = ds + snapname;
+                    zfs.snapshot(snap, function (zfsErr) {
+                        if (zfsErr) {
+                            nextSnapshot(new errors.InternalError(zfsErr));
+                            return;
+                        }
+                        toCleanup.autoprepSnapshots.push(snap);
+                        nextSnapshot();
+                    });
+                },
+                next);
+        },
+        function autoprepSetOperatorScript(next) {
+            if (!prepareScript) {
+                next();
+                return;
+            }
+            var update = {
+                set_internal_metadata: {
+                    'operator-script': prepareScript
+                }
+            };
+            common.vmUpdate(vmUuid, update, {log: self.log}, next);
+        },
+        /**
+         * "Prepare" the VM by booting it, which should run the
+         * operator-script to prepare and shutdown. We track progress via
+         * the 'prepare-image:state' and 'prepare-image:error' keys on
+         * customer_metadata. See the "PREPARE IMAGE SCRIPT" section in the
+         * man page for the contract.
+         */
+        function autoprepClearMdata(next) {
+            if (!prepareScript) {
+                next();
+                return;
+            }
+            var update = {
+                remove_customer_metadata: [
+                    'prepare-image:state',
+                    'prepare-image:error'
+                ]
+            };
+            common.vmUpdate(vmUuid, update, {log: self.log}, next);
+        },
+        function autoprepBoot(next) {
+            if (!prepareScript) {
+                next();
+                return;
+            }
+            logCb(format('Preparing VM %s (starting it)', vmUuid));
+            common.vmStart(vmUuid, {log: self.log}, next);
+        },
+        function autoprepWaitForRunning(next) {
+            if (!prepareScript) {
+                next();
+                return;
+            }
+            var opts = {
+                log: self.log,
+                key: 'prepare-image:state',
+                // Don't explicitly check for value=running here because it is
+                // fine if it blows by to 'success' between our polling.
+                timeout: prepareTimeout * 1000
+            };
+            common.vmWaitForCustomerMetadatum(vmUuid, opts, function (err, vm) {
+                if (err) {
+                    if (err.code === 'Timeout') {
+                        /**
+                         * This could mean any of:
+                         * - the VM has old guest tools that either don't run
+                         *   an 'sdc:operator-script' or don't have a working
+                         *   'mdata-put'
+                         * - the VM boot + time to get to prepare-image script
+                         *   setting 'prepare-image:state' mdata takes >5
+                         *   minutes
+                         * - the prepare-image script has a bug in that it does
+                         *   not set the 'prepare-image:state' mdata key to
+                         *   'running'
+                         * - the prepare-image script crashed early
+                         */
+                        next(new errors.PrepareImageDidNotRunError(vmUuid));
+                    } else {
+                        next(err);
+                    }
                     return;
                 }
-                var curr = vmZfsFilesystem + '@final';
-                var outofway = curr + '-' + Date.now();
-                logCb(format('Moving existing @final snapshot out of the '
-                    + 'way to "%s"', outofway));
-                zfsRenameSnapshot(curr, outofway,
-                    {recursive: true, log: self.log}, next);
+                logCb('Prepare script is running');
+                vmInfo = vm;
+                next();
             });
+        },
+        function autoprepWaitForComplete(next) {
+            if (!prepareScript) {
+                next();
+                return;
+            }
+            var opts = {
+                log: self.log,
+                key: 'prepare-image:state',
+                values: ['success', 'error'],
+                timeout: prepareTimeout * 1000
+            };
+            common.vmWaitForCustomerMetadatum(vmUuid, opts, function (err, vm) {
+                if (err) {
+                    next(new errors.PrepareImageError(err, vmUuid,
+                        'prepare-image script did not complete'));
+                    return;
+                }
+                vmInfo = vm;
+                if (vm.customer_metadata['prepare-image:state'] === 'error') {
+                    next(new errors.PrepareImageError(vmUuid,
+                        vm.customer_metadata['prepare-image:error'] || ''));
+                } else {
+                    logCb('Prepare script succeeded');
+                    next();
+                }
+            });
+        },
+        function autoprepWaitForVmStopped(next) {
+            if (!prepareScript) {
+                next();
+                return;
+            }
+            var opts = {
+                state: 'stopped',
+                timeout: prepareTimeout * 1000,
+                log: self.log
+            };
+            common.vmWaitForState(vmUuid, opts, function (err) {
+                if (err) {
+                    next(new errors.PrepareImageError(err, vmUuid,
+                        'VM did not shutdown'));
+                    return;
+                }
+                logCb('Prepare script stopped VM ' + vmUuid);
+                next();
+            });
+        },
+
+        function renameFinalSnapshotOutOfTheWay(next) {
+            // We use a snapshot named '@final'. If there is an existing one,
+            // rename it to '@final-$timestamp'.
+            if (vmZfsSnapnames.indexOf('@final') == -1) {
+                next();
+                return;
+            }
+            var curr = vmZfsFilesystemName + '@final';
+            var outofway = curr + '-' + Date.now();
+            logCb(format('Moving existing @final snapshot out of the '
+                + 'way to "%s"', outofway));
+            zfsRenameSnapshot(curr, outofway,
+                {recursive: true, log: self.log}, next);
         },
         function snapshotVm(next) {
             // We want '@final' to be the snapshot in the created image -- see
             // the notes in _installImage.
-            snapshot = format('%s@final', vmZfsFilesystem);
-            logCb(format('Snapshotting to "%s"', snapshot));
-            zfs.snapshot(snapshot, function (zfsErr) {
+            finalSnapshot = format('%s@final', vmZfsFilesystemName);
+            logCb(format('Snapshotting to "%s"', finalSnapshot));
+            zfs.snapshot(finalSnapshot, function (zfsErr) {
                 if (zfsErr) {
                     next(new errors.InternalError(zfsErr));
                     return;
                 }
-                toCleanup.snapshot = snapshot;
+                toCleanup.finalSnapshot = finalSnapshot;
                 next();
             });
         },
@@ -2257,7 +2453,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 zfsArgs.push(format('%s/%s@final', originInfo.zpool,
                     originInfo.manifest.uuid));
             }
-            zfsArgs.push(snapshot);
+            zfsArgs.push(finalSnapshot);
             self.log.debug({cmd: ['/usr/sbin/zfs'].concat(zfsArgs)},
                 'spawn zfs send');
             var zfsSend = spawn('/usr/sbin/zfs', zfsArgs);
@@ -2362,13 +2558,6 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 });
                 toCleanup.compressor.kill('SIGKILL');
             },
-            function cleanupSnapshot(next) {
-                if (!toCleanup.snapshot) {
-                    next();
-                    return;
-                }
-                zfsDestroy(toCleanup.snapshot, self.log, next);
-            },
             function cleanupImageFile(next) {
                 if (!toCleanup.filePath) {
                     next();
@@ -2377,13 +2566,71 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 self.log.debug('remove incomplete image file "%s"',
                     toCleanup.filePath);
                 rimraf(toCleanup.filePath, next);
+            },
+            function cleanupFinalSnapshot(next) {
+                if (!toCleanup.finalSnapshot) {
+                    next();
+                    return;
+                }
+                zfsDestroy(toCleanup.finalSnapshot, self.log, next);
+            },
+            /**
+             * Restoring the VM dataset(s) to their previous state in 3 parts:
+             * 1. ensure the VM is stopped (it is surprising if it isn't)
+             * 2. rollback all the zfs filesystems
+             * 3. destroy the snaps
+             */
+            function cleanupAutoprepSnapshots1(next) {
+                if (!toCleanup.autoprepSnapshots) {
+                    next();
+                    return;
+                }
+                logCb(format('Rollback VM %s to pre-prepare snapshot (cleanup)',
+                    vmUuid));
+                var opts = {log: self.log};
+                common.vmHaltIfNotStopped(vmUuid, opts, next);
+            },
+            function cleanupAutoprepSnapshots2(next) {
+                if (!toCleanup.autoprepSnapshots) {
+                    next();
+                    return;
+                }
+                async.eachSeries(
+                    toCleanup.autoprepSnapshots,
+                    function rollbackOne(snap, nextSnapshot) {
+                        self.log.debug('zfs rollback', snap);
+                        zfs.rollback(snap, nextSnapshot);
+                    },
+                    next);
+            },
+            function cleanupAutoprepSnapshots3(next) {
+                if (!toCleanup.autoprepSnapshots) {
+                    next();
+                    return;
+                }
+                async.eachSeries(
+                    toCleanup.autoprepSnapshots,
+                    function destroyOne(snap, nextSnapshot) {
+                        zfsDestroy(snap, self.log, nextSnapshot);
+                    },
+                    next);
+            },
+            function cleanupAutoprepStartVm(next) {
+                if (!toCleanup.autoprepStartVm) {
+                    next();
+                    return;
+                }
+                logCb(format('Restarting VM %s (cleanup)',
+                    toCleanup.autoprepStartVm));
+                common.vmStart(toCleanup.autoprepStartVm,
+                    {log: self.log}, next);
             }
         ], function (cleanErr) {
-            if (cleanErr) {
-                self.log.warn(cleanErr,
-                    'error cleaning up during image creation');
+            var e = err || cleanErr;
+            if (err && cleanErr) {
+                e = new errors.MultiError([err, cleanErr]);
             }
-            callback(err, imageInfo);
+            callback(e, imageInfo);
         });
     });
 };

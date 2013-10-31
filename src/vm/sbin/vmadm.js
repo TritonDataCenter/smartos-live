@@ -35,6 +35,7 @@ var panic = require('/usr/node/node_modules/panic');
 var sprintf = require('/usr/node/node_modules/sprintf').sprintf;
 var tty = require('tty');
 var util = require('util');
+var draining_stdout_and_exiting = false;
 
 VM.logname = 'vmadm';
 
@@ -1179,6 +1180,51 @@ function flushLogs(callback)
         fwLog.flush(callback);
         return;
     });
+}
+
+process.stdout.on('error', function (err) {
+    if (err.code === 'EPIPE') {
+        // See <https://github.com/trentm/json/issues/9>.
+        drainStdoutAndExit(0);
+    } else {
+        console.warn(err.message);
+        drainStdoutAndExit(1);
+    }
+});
+
+/**
+ *
+ * This function is a modified version of the one from Trent Mick's excellent
+ * jsontool at:
+ *
+ *  https://github.com/trentm/json
+ *
+ * A hacked up version of "process.exit" that will first drain stdout
+ * before exiting. *WARNING: This doesn't stop event processing.* IOW,
+ * callers have to be careful that code following this call isn't
+ * accidentally executed.
+ *
+ * In node v0.6 "process.stdout and process.stderr are blocking when they
+ * refer to regular files or TTY file descriptors." However, this hack might
+ * still be necessary in a shell pipeline.
+ */
+function drainStdoutAndExit(code) {
+    var flushed;
+
+    if (draining_stdout_and_exiting) {
+        // only want drainStdoutAndExit() run once
+        return;
+    }
+    draining_stdout_and_exiting = true;
+
+    process.stdout.on('drain', function () {
+        process.exit(code);
+    });
+
+    flushed = process.stdout.write('');
+    if (flushed) {
+        process.exit(code);
+    }
 }
 
 onlyif.rootInSmartosGlobal(function (err) {

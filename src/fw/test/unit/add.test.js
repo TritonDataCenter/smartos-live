@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
- * fwadm update unit tests
+ * fwadm add unit tests
  */
 
 var async = require('async');
@@ -55,7 +55,7 @@ exports.setUp = function (cb) {
 
 
 
-exports['update non-existent rule'] = function (t) {
+exports['created_by'] = function (t) {
     var vm = helpers.generateVM();
 
     var payload = {
@@ -64,100 +64,25 @@ exports['update non-existent rule'] = function (t) {
                 rule: util.format('FROM vm %s TO any BLOCK tcp PORT 8080',
                     vm.uuid),
                 uuid: mod_uuid.v4(),
-                enabled: true
-            }
-        ],
-        vms: [vm]
-    };
-
-    var expRules = [clone(payload.rules[0])];
-    var vmsEnabled = {};
-    var zoneRules;
-
-    async.series([
-    function (cb) {
-        fw.update(payload, function (err) {
-            t.ok(err, 'Error returned');
-            return cb();
-        });
-
-    }, function (cb) {
-        payload.allowAdds = true;
-        fw.update(payload, function (err, res) {
-            t.ifError(err);
-            if (err) {
-                return cb();
-            }
-
-            t.ok(res.rules[0].uuid, 'rule has a uuid');
-            expRules[0].uuid = res.rules[0].uuid;
-
-            t.ok(res.rules[0].version, 'rule has a version');
-            expRules[0].version = res.rules[0].version;
-
-            t.deepEqual(res, {
-                rules: expRules,
-                vms: [ vm.uuid ]
-            }, 'rules returned');
-
-            zoneRules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(zoneRules, vm.uuid, 'out', 'block', 'tcp',
-                {
-                    any: [ 8080 ]
-                });
-
-            t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
-                'firewall rules correct');
-
-            vmsEnabled[vm.uuid] = true;
-            t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
-                'ipf enabled in VMs');
-
-            cb();
-        });
-
-    }, function (cb) {
-        helpers.fwGetEquals(t, expRules[0], cb);
-    }
-
-    ], function () {
-            t.done();
-    });
-};
-
-
-exports['localVM not in list'] = function (t) {
-    var vm = helpers.generateVM();
-    var payload = {
-        localVMs: [ vm ],
-        vms: [ ]
-    };
-
-    fw.update(payload, function (err, res) {
-        t.ok(err, 'error returned');
-        t.equal(err.message, util.format('Could not find VM "%s" in VM list',
-            vm.uuid), 'error message');
-        t.done();
-    });
-};
-
-
-exports['description and created_by'] = function (t) {
-    var payload = {
-        rules: [
+                enabled: true,
+                version: '1383205115597.067782'
+            },
             {
-                rule: 'FROM any TO all vms ALLOW tcp PORT 60',
+                created_by: 'other',
+                rule: util.format('FROM vm %s TO any BLOCK tcp PORT 8081',
+                    vm.uuid),
                 uuid: mod_uuid.v4(),
-                enabled: false,
-                created_by: 'fwadm',
-                description: 'one',
-                version: '1383163604683.062275'
+                enabled: true,
+                version: '1383205115597.067782'
             }
         ],
-        vms: [ helpers.generateVM() ]
+        vms: [vm],
+        createdBy: 'fwadm'
     };
 
-    var expRules = [clone(payload.rules[0])];
+    var expRules = clone(payload.rules);
+    expRules[0].created_by = payload.createdBy;
+
     var expRulesOnDisk = {};
 
     async.series([
@@ -170,10 +95,16 @@ exports['description and created_by'] = function (t) {
 
             t.deepEqual(res, {
                 rules: expRules,
+                vms: [ vm.uuid ]
+            }, 'rules returned');
+
+            t.deepEqual(res, {
+                rules: expRules,
                 vms: [ payload.vms[0].uuid ]
             }, 'rules returned');
 
             expRulesOnDisk[expRules[0].uuid] = clone(expRules[0]);
+            expRulesOnDisk[expRules[1].uuid] = clone(expRules[1]);
             t.deepEqual(helpers.rulesOnDisk(), expRulesOnDisk,
                 'rules on disk OK');
 
@@ -184,11 +115,15 @@ exports['description and created_by'] = function (t) {
         helpers.fwGetEquals(t, expRules[0], cb);
 
     }, function (cb) {
+        helpers.fwGetEquals(t, expRules[1], cb);
 
-        payload.rules[0].created_by = 'other';
-        payload.rules[0].description = 'two';
+    }, function (cb) {
+        payload.allowAdds = true;
+        payload.rules[0].uuid = mod_uuid.v4();
+        payload.rules[1].uuid = mod_uuid.v4();
+        expRules = clone(payload.rules);
+        expRules[0].created_by = payload.createdBy;
 
-        expRules = [clone(payload.rules[0])];
         fw.update(payload, function (err, res) {
             t.ifError(err);
             if (err) {
@@ -197,10 +132,16 @@ exports['description and created_by'] = function (t) {
 
             t.deepEqual(res, {
                 rules: expRules,
+                vms: [ vm.uuid ]
+            }, 'rules returned');
+
+            t.deepEqual(res, {
+                rules: expRules,
                 vms: [ payload.vms[0].uuid ]
             }, 'rules returned');
 
             expRulesOnDisk[expRules[0].uuid] = clone(expRules[0]);
+            expRulesOnDisk[expRules[1].uuid] = clone(expRules[1]);
             t.deepEqual(helpers.rulesOnDisk(), expRulesOnDisk,
                 'rules on disk OK');
 
@@ -209,6 +150,10 @@ exports['description and created_by'] = function (t) {
 
     }, function (cb) {
         helpers.fwGetEquals(t, expRules[0], cb);
+
+    }, function (cb) {
+        helpers.fwGetEquals(t, expRules[1], cb);
+
     }
 
     ], function () {

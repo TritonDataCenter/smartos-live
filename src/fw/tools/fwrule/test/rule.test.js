@@ -16,18 +16,22 @@ var runOne;
 
 
 exports['all target types'] = function (t) {
+    var desc = 'all target types';
     var ips = ['192.168.1.1', '10.2.0.3'];
     var vms = ['9a343ca8-b42a-4a27-a9c5-800f57d1e8ed',
         '518908b6-8299-466d-8ea5-20a0ceff63ec'];
     var tags = ['tag1', 'tag2'];
     var subnets = ['192.168.2.0/24', '10.2.1.0/24'];
+    var ruleTxt = util.format('FROM (ip %s OR vm %s OR tag %s OR subnet %s) ',
+        ips[0], vms[0], tags[0], subnets[0])
+        + util.format('TO (ip %s OR vm %s OR tag %s OR subnet %s)',
+        ips[1], vms[1], tags[1], subnets[1])
+        + ' ALLOW tcp port 80';
 
-    var rule = fwrule.create({ rule:
-        util.format('FROM (ip %s OR vm %s OR tag %s OR subnet %s) ',
-            ips[0], vms[0], tags[0], subnets[0])
-            + util.format('TO (ip %s OR vm %s OR tag %s OR subnet %s)',
-            ips[1], vms[1], tags[1], subnets[1])
-            + ' ALLOW tcp port 80',
+    var rule = fwrule.create({
+        rule: ruleTxt,
+        created_by: 'fwadm',
+        description: desc,
         enabled: true,
         version: fwrule.generateVersion()
     });
@@ -47,6 +51,8 @@ exports['all target types'] = function (t) {
             tags: [tags[1]],
             wildcards: []
         },
+        created_by: 'fwadm',
+        description: desc,
         enabled: true,
         ports: [ 80 ],
         action: 'allow',
@@ -59,6 +65,18 @@ exports['all target types'] = function (t) {
     t.deepEqual(rule.from, raw.from, 'rule.from');
     t.deepEqual(rule.to, raw.to, 'rule.to');
     t.ok(!rule.allVMs, 'rule.allVMs');
+
+    t.deepEqual(rule.serialize(), {
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        rule: util.format('FROM (ip %s OR subnet %s OR tag %s OR vm %s) '
+            + 'TO (ip %s OR subnet %s OR tag %s OR vm %s) ALLOW tcp PORT 80',
+            ips[0], subnets[0], tags[0], vms[0],
+            ips[1], subnets[1], tags[1], vms[1]),
+        uuid: rule.uuid,
+        version: rule.version
+    }, 'rule.serialize()');
 
     t.done();
 };

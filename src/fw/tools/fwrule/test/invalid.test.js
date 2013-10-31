@@ -14,6 +14,15 @@ var util = require('util');
 var runOne;
 
 
+function longStr() {
+    var str = '';
+    for (var i = 0; i < 256; i++) {
+        str += '0';
+    }
+
+    return str;
+}
+
 
 var INVALID = [
     [ 'invalid IP: too many numbers',
@@ -80,7 +89,55 @@ var INVALID = [
     [ 'other ports listed with ALL second', {
         rule: 'FROM ip 10.0.0.1 TO all vms ALLOW TCP (port 53 AND port ALL)'
         }, 'rule',
-        'Error at character 55: \'ALL\', expected: \'WORD\', found: ALL' ]
+        'Error at character 55: \'ALL\', expected: \'WORD\', found: ALL' ],
+
+    [ 'created_by: object instead of string', {
+        created_by: { },
+        rule: 'FROM ip 10.0.0.1 TO all vms ALLOW TCP port 53'
+        }, 'created_by',
+        'created_by must be a string'],
+
+    [ 'created_by: array instead of string', {
+        created_by: ['asdf'],
+        rule: 'FROM ip 10.0.0.1 TO all vms ALLOW TCP port 53'
+        }, 'created_by',
+        'created_by must be a string'],
+
+    [ 'created_by: number instead of string', {
+        created_by: 42,
+        rule: 'FROM ip 10.0.0.1 TO all vms ALLOW TCP port 53'
+        }, 'created_by',
+        'created_by must be a string'],
+
+    [ 'created_by: string too long', {
+        created_by: longStr(),
+        rule: 'FROM ip 10.0.0.1 TO all vms ALLOW TCP port 53'
+        }, 'created_by',
+        'created_by must be shorter than 255 characters'],
+
+    [ 'description: object instead of string', {
+        description: { },
+        rule: 'FROM ip 10.0.0.1 TO all vms ALLOW TCP port 53'
+        }, 'description',
+        'description must be a string'],
+
+    [ 'description: array instead of string', {
+        description: ['asdf'],
+        rule: 'FROM ip 10.0.0.1 TO all vms ALLOW TCP port 53'
+        }, 'description',
+        'description must be a string'],
+
+    [ 'description: number instead of string', {
+        description: 42,
+        rule: 'FROM ip 10.0.0.1 TO all vms ALLOW TCP port 53'
+        }, 'description',
+        'description must be a string'],
+
+    [ 'description: string too long', {
+        description: longStr(),
+        rule: 'FROM ip 10.0.0.1 TO all vms ALLOW TCP port 53'
+        }, 'description',
+        'description must be shorter than 255 characters']
 ];
 
 

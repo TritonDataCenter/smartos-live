@@ -39,6 +39,7 @@ var verror = require('verror');
 
 
 var DIRECTIONS = ['to', 'from'];
+var STRING_PROPS = ['created_by', 'description'];
 var TARGET_TYPES = ['wildcard', 'ip', 'subnet', 'tag', 'vm'];
 
 
@@ -194,6 +195,18 @@ function FwRule(data) {
         this.enabled = false;
     }
 
+    for (var s in STRING_PROPS) {
+        var str = STRING_PROPS[s];
+        if (data.hasOwnProperty(str)) {
+            try {
+                validators.validateString(str, data[str]);
+                this[str] = data[str];
+            } catch (valErr) {
+                errs.push(valErr);
+            }
+        }
+    }
+
     if (errs.length !== 0) {
         if (errs.length === 1) {
             throw errs[0];
@@ -319,6 +332,13 @@ FwRule.prototype.raw = function () {
         raw.ports = this.ports;
     }
 
+    for (var s in STRING_PROPS) {
+        var str = STRING_PROPS[s];
+        if (this.hasOwnProperty(str)) {
+            raw[str] = this[str];
+        }
+    }
+
     return raw;
 };
 
@@ -336,6 +356,13 @@ FwRule.prototype.serialize = function () {
 
     if (this.owner_uuid) {
         ser.owner_uuid = this.owner_uuid;
+    }
+
+    for (var s in STRING_PROPS) {
+        var str = STRING_PROPS[s];
+        if (this.hasOwnProperty(str)) {
+            ser[str] = this[str];
+        }
     }
 
     return ser;

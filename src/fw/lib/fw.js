@@ -248,10 +248,15 @@ function validateOpts(opts) {
  * @param {Function} callback : `f(err, newRules)`
  * - newRules {Array} : array of rule objects
  */
-function createRules(inRules, callback) {
+function createRules(inRules, createdBy, callback) {
     var errors = [];
     var rules = [];
     var ver = mod_rule.generateVersion();
+
+    if (!callback) {
+        callback = createdBy;
+        createdBy = null;
+    }
 
     if (!inRules || inRules.length === 0) {
         return callback(null, []);
@@ -261,6 +266,10 @@ function createRules(inRules, callback) {
         var rule = clone(payloadRule);
         if (!rule.hasOwnProperty('version')) {
             rule.version = ver;
+        }
+
+        if (createdBy && !rule.hasOwnProperty('created_by')) {
+            rule.created_by = createdBy;
         }
 
         try {
@@ -305,6 +314,10 @@ function createUpdatedRules(opts, callback) {
         // out if allowAdds was unset and an add was attempted
         if (!rule.hasOwnProperty('version')) {
             rule.version = ver;
+        }
+
+        if (opts.createdBy && !rule.hasOwnProperty('created_by')) {
+            rule.created_by = opts.createdBy;
         }
 
         if (originals.hasOwnProperty(rule.uuid)) {
@@ -1698,6 +1711,7 @@ function add(opts, callback) {
         assert.optionalArrayOfObject(opts.rules, 'opts.rules');
         assert.optionalArrayOfObject(opts.localVMs, 'opts.localVMs');
         assert.optionalArrayOfObject(opts.remoteVMs, 'opts.remoteVMs');
+        assert.optionalString(opts.createdBy, 'opts.createdBy');
 
         var optRules = opts.rules || [];
         var optLocalVMs = opts.localVMs || [];
@@ -1714,7 +1728,9 @@ function add(opts, callback) {
 
     pipeline({
     funcs: [
-        function rules(_, cb) { createRules(opts.rules, cb); },
+        function rules(_, cb) {
+            createRules(opts.rules, opts.createdBy, cb);
+        },
 
         function vms(_, cb) { createVMlookup(opts.vms, cb); },
 
@@ -2236,6 +2252,7 @@ function update(opts, callback) {
         assert.optionalArrayOfObject(opts.rules, 'opts.rules');
         assert.optionalArrayOfObject(opts.localVMs, 'opts.localVMs');
         assert.optionalArrayOfObject(opts.remoteVMs, 'opts.remoteVMs');
+        assert.optionalString(opts.createdBy, 'opts.createdBy');
 
         var optRules = opts.rules || [];
         var optLocalVMs = opts.localVMs || [];
@@ -2266,6 +2283,7 @@ function update(opts, callback) {
         // Apply updates to the found rules
         function rules(res, cb) {
             createUpdatedRules({
+                createdBy: opts.createdBy,
                 originalRules: res.originalRules,
                 updatedRules: opts.rules
             }, cb);

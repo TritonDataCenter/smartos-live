@@ -397,22 +397,22 @@ setup_fw()
 	ipf_conf=$ZONEPATH/config/ipf.conf
 	if [ -e $ipf_conf ]; then
 		echo "starting firewall ($ipf_conf)"
-		/usr/sbin/ipf -E $ZONENAME
+		/usr/sbin/ipf -GE $ZONENAME
 		if (( $? != 0 )); then
 			log_and_exit "error enabling ipfilter"
 		fi
 
-		/usr/sbin/ipf -Fa $ZONENAME
+		/usr/sbin/ipf -GFa $ZONENAME
 		if (( $? != 0 )); then
 			log_and_exit "error flushing ipfilter"
 		fi
 
-		/usr/sbin/ipf -f $ipf_conf $ZONENAME
+		/usr/sbin/ipf -Gf $ipf_conf $ZONENAME
 		if (( $? != 0 )); then
 			log_and_exit "error loading ipfilter config"
 		fi
 
-		/usr/sbin/ipf -y $ZONENAME
+		/usr/sbin/ipf -Gy $ZONENAME
 		if (( $? != 0 )); then
 			log_and_exit "error syncing ipfilter interfaces"
 		fi

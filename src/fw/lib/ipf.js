@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * fwadm: ipf control functions
  */
@@ -100,21 +100,23 @@ function zoneReload(uuid, conf, log, callback) {
     assert.object(log, 'log');
     assert.func(callback, 'callback');
 
-    // Flush (-F) all (-a) rules from the inactive list (-I)
-    return ipf(['-IFa', uuid], log, function (err, res) {
+    // Flush (-F) all (-a) rules from the inactive list (-I) for the
+    // GZ-controlled ipf stack (-G) for zone uuid
+    return ipf(['-GIFa', uuid], log, function (err, res) {
         if (err) {
             return callback(err, res);
         }
 
-        // Load rules from conf (-f) into the inactive list (-I)
-        return ipf(['-I', '-f', conf, uuid], log, function (err2, res2) {
+        // Load rules from conf (-f) into the inactive list (-I) for the
+        // GZ-controlled (-G) ipf stack
+        return ipf(['-G', '-I', '-f', conf, uuid], log, function (err2, res2) {
             if (err2) {
                 return callback(err2, res2);
             }
 
             // Swap (-s) the active and inactive lists, and update the interface
-            // list (-y)
-            return ipf(['-s', '-y', uuid], log, callback);
+            // list (-y) for the GZ-controlled ipf stack (-G)
+            return ipf(['-G', '-s', '-y', uuid], log, callback);
         });
     });
 }
@@ -132,7 +134,7 @@ function zoneRuleStats(uuid, log, callback) {
     assert.object(log, 'log');
     assert.func(callback, 'callback');
 
-    return ipfstat(['-hoi', '-z', uuid], log, function (err, res) {
+    return ipfstat(['-hoi', '-G', uuid], log, function (err, res) {
         if (!res.stdout) {
             return callback(new Error('No output from ipfstat'), res);
         }
@@ -167,7 +169,7 @@ function zoneStatus(uuid, log, callback) {
     assert.object(log, 'log');
     assert.func(callback, 'callback');
 
-    return ipf(['-V', uuid], log, function (err, res) {
+    return ipf(['-GV', uuid], log, function (err, res) {
         if (err) {
             return callback(err, res);
         }
@@ -226,7 +228,7 @@ function zoneStart(uuid, log, callback) {
     assert.object(log, 'log');
     assert.func(callback, 'callback');
 
-    return ipf(['-E', uuid], log, callback);
+    return ipf(['-GE', uuid], log, callback);
 }
 
 
@@ -242,7 +244,7 @@ function zoneStop(uuid, log, callback) {
     assert.object(log, 'log');
     assert.func(callback, 'callback');
 
-    return ipf(['-D', uuid], log, callback);
+    return ipf(['-GD', uuid], log, callback);
 }
 
 

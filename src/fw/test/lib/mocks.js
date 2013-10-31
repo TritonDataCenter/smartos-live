@@ -113,26 +113,26 @@ function mockRingBuffer(opts) {
 function _recordIPFstate(args) {
     var zone = createSubObjects(VALUES.ipf, args[args.length - 1]);
 
-    if (args[0] == '-D') {
+    if (args[0] == '-GD') {
         zone.enabled = false;
         zone.inactive = '';
         zone.active = '';
         return;
     }
 
-    if (args[0] == '-E') {
+    if (args[0] == '-GE') {
         zone.enabled = true;
         zone.inactive = '';
         zone.active = '';
         return;
     }
 
-    if (args[0] == '-IFa') {
+    if (args[0] == '-GIFa') {
         zone.inactive = '';
         return;
     }
 
-    if (args[0] == '-s') {
+    if (args[1] == '-s') {
         var active = zone.active || '';
         var inactive = zone.inactive || '';
         zone.active = inactive;
@@ -140,9 +140,9 @@ function _recordIPFstate(args) {
         return;
     }
 
-    if (args[0] == '-I' && args[1] == '-f') {
+    if (args[1] == '-I' && args[2] == '-f') {
         var root = VALUES.fs;
-        var p = _splitFile(args[2]);
+        var p = _splitFile(args[3]);
         if (!root.hasOwnProperty(p.dir)
                 || !root[p.dir].hasOwnProperty(p.file)) {
             throw _ENOENT(p.file);

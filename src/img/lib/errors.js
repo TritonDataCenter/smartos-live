@@ -481,6 +481,21 @@ function UncompressionError(cause, message) {
 }
 util.inherits(UncompressionError, ImgadmError);
 
+function NotSupportedError(cause, message) {
+    if (message === undefined) {
+        message = cause;
+        cause = undefined;
+    }
+    assert.string(message);
+    ImgadmError.call(this, {
+        cause: cause,
+        message: message,
+        code: 'NotSupported',
+        exitStatus: 1
+    });
+}
+util.inherits(NotSupportedError, ImgadmError);
+
 function UsageError(cause, message) {
     if (message === undefined) {
         message = cause;
@@ -678,6 +693,7 @@ module.exports = {
     ImageMissingOriginalSnapshotError: ImageMissingOriginalSnapshotError,
     FileSystemError: FileSystemError,
     UncompressionError: UncompressionError,
+    NotSupportedError: NotSupportedError,
     UsageError: UsageError,
     UnknownOptionError: UnknownOptionError,
     UnknownCommandError: UnknownCommandError,

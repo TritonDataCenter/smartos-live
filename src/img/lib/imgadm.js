@@ -2027,6 +2027,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
     var vmZfsFilesystemName;
     var vmZfsSnapnames;
     var originInfo;
+    var originFinalSnap;
     var imageInfo = {};
     var finalSnapshot;
     var toCleanup = {};
@@ -2114,8 +2115,17 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 if (!originInfo) {
                     next(new errors.VmHasNoOriginError(vmUuid));
                     return;
+                } else if (originInfo.manifest.origin) {
+                    // If the origin is itself incremental then... we don't
+                    // currently support this until 'imgadm import' supports
+                    // importing a full chain of incremental images.
+                    next(new errors.NotSupportedError(format('cannot create '
+                        + 'incremental image for VM %s: incremental images '
+                        + 'of incremental images are not currently supported',
+                        vmUuid)));
+                } else {
+                    m.origin = originInfo.manifest.uuid;
                 }
-                m.origin = originInfo.manifest.uuid;
             }
             logCb(format('Manifest:\n%s',
                 _indent(JSON.stringify(m, null, 2))));
@@ -2134,14 +2144,14 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 next();
                 return;
             }
-            var originFinalSnap = format('%s/%s@final', originInfo.zpool,
-                originInfo.manifest.uuid);
+            originFinalSnap = format('%s/%s@final', originInfo.zpool,
+                imageInfo.manifest.origin);
             getZfsDataset(originFinalSnap, function (err, ds) {
                 if (err) {
                     next(err);
                 } else if (!ds) {
                     next(new errors.OriginHasNoFinalSnapshotError(
-                        originInfo.manifest.uuid));
+                        imageInfo.manifest.origin));
                 } else {
                     next();
                 }
@@ -2450,8 +2460,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             var zfsArgs = ['send'];
             if (incremental) {
                 zfsArgs.push('-i');
-                zfsArgs.push(format('%s/%s@final', originInfo.zpool,
-                    originInfo.manifest.uuid));
+                zfsArgs.push(originFinalSnap);
             }
             zfsArgs.push(finalSnapshot);
             self.log.debug({cmd: ['/usr/sbin/zfs'].concat(zfsArgs)},

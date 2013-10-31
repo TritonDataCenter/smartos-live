@@ -2,11 +2,14 @@
 
 ## 2.5.0
 
-- `imgadm create -s <prepare-image-script> ...` support to automatic running
-  of a preparation script, gated by VM snapshotting and rollback for safety.
-  This makes image creation easier (fewer steps, do not need to manually
-  prepare and stop the VM) and safer (snapshot/rollback ensures an unchanged
-  and usable original VM on completion).
+- [OS-2600] `imgadm create -i ...` using a VM created from an *incremental*
+  image explicitly fails with NotSupported.
+
+- [OS-2550] `imgadm create -s <prepare-image-script> ...` support to automatic
+  running of a preparation script, gated by VM snapshotting and rollback for
+  safety. This makes image creation easier (fewer steps, do not need to
+  manually prepare and stop the VM) and safer (snapshot/rollback ensures an
+  unchanged and usable original VM on completion).
 
 ## 2.4.0
 

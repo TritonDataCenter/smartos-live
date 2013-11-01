@@ -1,4 +1,8 @@
-// Copyright 2012 Joyent, Inc.  All rights reserved.
+// Copyright 2013 Joyent, Inc.  All rights reserved.
+//
+// NOTE: we use 169.254.169.x as *non-Private* here because it's not in the
+// designated private ranges we're concerned with. It may cause problems in
+// which case it can be changed to some other non-Private address.
 
 process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
@@ -76,6 +80,74 @@ var PAYLOADS = {
         "remove_nics": [
             "01:02:03:04:05:06",
             "02:03:04:05:06:07"
+        ]
+
+    }, "add_3_nics_2_non_private": {
+        "add_nics": [
+            {
+                "ip": "10.254.254.254",
+                "netmask": "255.255.255.0",
+                "nic_tag": "external",
+                "interface": "net0",
+                "vlan_id": 0,
+                "gateway": "10.254.254.1",
+                "mac": "01:02:03:04:05:06"
+            }, {
+                "ip": "169.254.169.254",
+                "netmask": "255.255.255.0",
+                "nic_tag": "external",
+                "interface": "net1",
+                "vlan_id": 254,
+                "gateway": "169.254.169.1",
+                "mac": "02:03:04:05:06:07",
+                "primary": true
+            }, {
+                "ip": "169.254.169.253",
+                "netmask": "255.255.255.0",
+                "nic_tag": "external",
+                "interface": "net2",
+                "vlan_id": 253,
+                "gateway": "169.254.169.1",
+                "mac": "02:03:04:05:06:08"
+            }
+        ]
+    }, "add_3_nics_1_non_private": {
+        "add_nics": [
+            {
+                "ip": "10.254.254.254",
+                "netmask": "255.255.255.0",
+                "nic_tag": "external",
+                "interface": "net0",
+                "vlan_id": 0,
+                "gateway": "10.254.254.1",
+                "mac": "01:02:03:04:05:06"
+            }, {
+                "ip": "169.254.169.254",
+                "netmask": "255.255.255.0",
+                "nic_tag": "external",
+                "interface": "net1",
+                "vlan_id": 254,
+                "gateway": "169.254.169.1",
+                "mac": "02:03:04:05:06:07",
+                "primary": true
+            }, {
+                "ip": "10.254.254.253",
+                "netmask": "255.255.255.0",
+                "nic_tag": "external",
+                "interface": "net2",
+                "vlan_id": 0,
+                "gateway": "10.254.254.1",
+                "mac": "02:03:04:05:06:08"
+            }
+        ]
+    }, "remove_net1": {
+        "remove_nics": [
+            "02:03:04:05:06:07"
+        ]
+    }, "remove_net0_and_net2": {
+        "remove_nics": [
+            "01:02:03:04:05:06",
+            "02:03:04:05:06:08"
         ]
     }, "add_nic_with_minimal_properties": {
         "add_nics": [
@@ -265,6 +337,137 @@ test('remove net0 and net1', function(t) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 0 nics');
                 } else {
                     t.ok(true, 'Successfully removed net0 and net1 from VM');
+                }
+                t.end();
+            });
+        }
+    });
+});
+
+test('add 3 nics, 2 non-private', function(t) {
+    VM.update(vm_uuid, PAYLOADS.add_3_nics_2_non_private, function (err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                failures = 0;
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                } else if (obj.nics.length !== 3) {
+                    t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
+                } else {
+                    t.ok(obj.nics[1].primary === true, '2nd NIC is primary: ' + !!obj.nics[1].primary);
+                }
+                if (failures === 0) {
+                    t.ok(true, 'updated VM: ' + vm_uuid);
+                }
+                t.end();
+            });
+        }
+    });
+});
+
+test('remove net1', function(t) {
+    VM.update(vm_uuid, PAYLOADS.remove_net1, function(err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                } else if (obj.nics.length !== 2) {
+                    t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
+                } else {
+                    t.ok(true, 'Successfully removed net1 from VM');
+                    t.ok(obj.nics[1].primary === true, 'xxx 2nd NIC is primary: ' + !!obj.nics[1].primary);
+                    t.ok(true, JSON.stringify(obj.nics));
+                }
+                t.end();
+            });
+        }
+    });
+});
+
+test('remove net0 and net2', function(t) {
+    VM.update(vm_uuid, PAYLOADS.remove_net0_and_net2, function(err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                } else if (obj.nics.length !== 0) {
+                    t.ok(false, 'VM has ' + obj.nics.length + ' != 0 nics');
+                } else {
+                    t.ok(true, 'Successfully removed net0 and net2 from VM');
+                }
+                t.end();
+            });
+        }
+    });
+});
+
+test('add 3 nics, 1 non-private', function(t) {
+    VM.update(vm_uuid, PAYLOADS.add_3_nics_1_non_private, function (err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                failures = 0;
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                } else if (obj.nics.length !== 3) {
+                    t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
+                } else {
+                    t.ok(obj.nics[1].primary === true, '2nd NIC is primary: ' + !!obj.nics[1].primary);
+                }
+                if (failures === 0) {
+                    t.ok(true, 'updated VM: ' + vm_uuid);
+                }
+                t.end();
+            });
+        }
+    });
+});
+
+test('remove net1', function(t) {
+    VM.update(vm_uuid, PAYLOADS.remove_net1, function(err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                } else if (obj.nics.length !== 2) {
+                    t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
+                } else {
+                    t.ok(true, 'Successfully removed net0 and net1 from VM');
+                    t.ok(obj.nics[0].primary === true, '1st NIC is primary: ' + !!obj.nics[0].primary);
+                }
+                t.end();
+            });
+        }
+    });
+});
+
+test('remove net0 and net2', function(t) {
+    VM.update(vm_uuid, PAYLOADS.remove_net0_and_net2, function(err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                } else if (obj.nics.length !== 0) {
+                    t.ok(false, 'VM has ' + obj.nics.length + ' != 0 nics');
+                } else {
+                    t.ok(true, 'Successfully removed net0 and net2 from VM');
                 }
                 t.end();
             });

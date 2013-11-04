@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2010 Joyent Inc., All rights reserved.
+# Copyright 2013 Joyent Inc., All rights reserved.
 #
 
 set -e
@@ -39,6 +39,7 @@ ${SVCCFG} -v import ${rdmnt}/lib/svc/manifest
 ${SVCCFG} -s "system/boot-config:default" setprop config/fastreboot_default=false
 ${SVCCFG} -s "system/auditd:default" setprop general/enabled=true
 ${SVCCFG} -s "system/coreadm:default" setprop config_params/global_enabled=true
+${SVCCFG} -s "system/coreadm:default" setprop config_params/global_setid_enabled=true
 ${SVCCFG} -s "system/coreadm:default" setprop config_params/global_pattern='/%Z/cores/core.%f.%p'
 
 # These two are only for use in zones.

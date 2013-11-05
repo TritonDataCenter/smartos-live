@@ -27,6 +27,8 @@
 # Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
+# Copyright 2013 Joyent Inc. All rights reserved.
+#
 # ident "%Z%%M% %I% %E% SMI"
 
 . /lib/svc/share/smf_include.sh
@@ -38,9 +40,18 @@ set -o xtrace
 LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 
 #
-# If DHCP was used on a primary interface then set the hostname
-# that was returned. If no hostname was returned, set the name
-# to be "unknown". The hostname must be set to something, because
+# For the GZ, use one of the following values for hostname, in order:
+#   * DHCP hostname (if set on a primary interface)
+#   * hostname value from config file
+#   * hostname bootparam
+#   * if not a headnode:
+#     * admin MAC address
+#     * any other MAC address
+#
+# If none of the above could be found, default to "headnode" for headnodes, and
+# "unknown" for non-headnodes.
+#
+# The hostname must be set to something, because
 # tooltalk will hang unless the name can be locally resolved.
 # Sendmail also requires the name to be resolvable locally.
 # Later, in inetsvc, we create a name "unknown" and create a entry
@@ -52,6 +63,40 @@ LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 # For non-global zones, fall back to the `uname -n` value provided by the
 # kernel if /etc/nodename does not exist, as is expected on an initial boot.
 #
+
+set_gz_hostname() {
+    hostname=${CONFIG_hostname}
+    if [ -z "$hostname" ] || [ "$hostname" == "unknown" ]; then
+        hostname=$SYSINFO_Bootparam_hostname
+    fi
+
+    if [ -n "$hostname" ] && [ "$hostname" != "unknown" ]; then
+        return
+    fi
+
+    # $headnode is set by load_sdc_config()
+    if [ "$headnode" == "true" ]; then
+        hostname="headnode"
+        return
+    fi
+
+    if [[ -n ${SYSINFO_NIC_admin} ]]; then
+        eval "admin_mac=\${SYSINFO_Network_Interface_${SYSINFO_NIC_admin}_MAC_Address}"
+        if [[ -n ${admin_mac} ]]; then
+            hostname=$(echo "${admin_mac}" | tr ':' '-')
+            return
+        fi
+    fi
+
+    fallback_mac=$(set | grep "^SYSINFO_Network_Interface_.*_MAC_Address" | head -n1 | cut -d'=' -f2)
+    if [[ -n ${fallback_mac} ]]; then
+        hostname=$(echo "${fallback_mac}" | tr ':' '-')
+        return
+    fi
+
+    hostname="unknown"
+}
+
 
 smf_netstrategy
 
@@ -67,8 +112,9 @@ case "$_INIT_NET_STRATEGY" in
             hostname=`/sbin/hostconfig -h -p bootparams`
         done
         trap 2 3 ;;
+    # /etc/nodename defaults to "unknown" on SmartOS
     "none") hostname="`shcat /etc/nodename 2>/dev/null`"
-            if [ -z "$hostname" ]; then
+        if [ -z "$hostname" ]; then
             if smf_is_globalzone; then
                 hostname=`/sbin/hostconfig -h -p bootparams`
             else
@@ -77,22 +123,15 @@ case "$_INIT_NET_STRATEGY" in
         fi ;;
 esac
 
-# Load sysinfo variables with SYSINFO_ prefix
+# Load sysinfo variables with SYSINFO_ prefix and config variables with
+# CONFIG_ prefix.
 # Note: since we're still starting up, "soft" values like network IP and such could
 # not be set yet.
 
 if smf_is_globalzone; then
-  eval $(/usr/bin/sysinfo -p | sed -e "s/^/SYSINFO_/")
-  if [[ -n ${SYSINFO_NIC_admin} ]]; then
-      eval "admin_mac=\${SYSINFO_Network_Interface_${SYSINFO_NIC_admin}_MAC_Address}"
-  fi
-  if [[ -z ${admin_mac} ]]; then
-      fallback_mac=$(set | grep "^SYSINFO_Network_Interface_.*_MAC_Address" | head -n1 | cut -d'=' -f2)
-  fi
-
-  if [[ -z $hostname ]]; then
-    hostname=$SYSINFO_Bootparam_hostname
-  fi
+    . /lib/sdc/config.sh
+    load_sdc_config
+    load_sdc_sysinfo
 fi
 
 #
@@ -102,28 +141,16 @@ fi
 if [ -z "$hostname" ] || [ "$hostname" == "unknown" ]; then
     hostname="`shcat /etc/nodename 2>/dev/null`"
     if [ -z "$hostname" ] || [ "$hostname" == "unknown" ]; then
-        if smf_is_globalzone && [ -n "$(bootparams | grep '^headnode=true')" ]; then
-            configfile="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/smartdc:default)/config"
-            if [[ ! -f ${configfile} ]]; then
-                configfile="$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/smartdc:default)/config"
-            fi
-            hostname=$(grep '^hostname=' ${configfile} | cut -d'=' -f2-)
-            if [[ -z ${hostname} ]]; then
-                hostname="headnode"
-            fi
-        elif smf_is_globalzone; then
-            # take admin nic as hostname
-            if [[ -n ${admin_mac} ]]; then
-                hostname=$(echo "${admin_mac}" | tr ':' '-')
-            elif [[ -n ${fallback_mac} ]]; then
-                hostname=$(echo "${fallback_mac}" | tr ':' '-')
-            else
-                hostname="unknown"
-            fi
+        if smf_is_globalzone; then
+            set_gz_hostname
         else
             hostname="unknown"
         fi
     fi
+fi
+
+if smf_is_globalzone; then
+    echo "$hostname" > /etc/nodename
 fi
 
 /sbin/uname -S $hostname
@@ -141,7 +168,13 @@ if [[ -z ${ipaddr} ]]; then
     ipaddr=$(set | grep "^SYSINFO_Network_Interface_.*_IPv4_Address" | head -n1 | cut -d'=' -f2)
 fi
 if [[ -n ${ipaddr} ]]; then
-    printf "${ipaddr}\t${hostname}\n" >> /etc/hosts
+    fullname=${hostname}
+
+    if [ -n "$CONFIG_dns_domain" ]; then
+        fullname="${hostname}.${CONFIG_dns_domain}"
+    fi
+
+    printf "${ipaddr}\t${fullname}\n" >> /etc/hosts
 fi
 
 # Reset the library path now that we are past the critical stage

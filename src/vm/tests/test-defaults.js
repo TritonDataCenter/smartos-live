@@ -45,6 +45,7 @@ var zone_defaults = {
     'last_modified': ['<NON-EMPTY>'],
     'server_uuid': ['<NON-EMPTY>'],
     'datacenter_name': ['<OPTIONAL-NON-EMPTY>'],
+    'platform_buildstamp': ['<NON-EMPTY>'],
     'headnode_id': ['<OPTIONAL-NON-EMPTY>'],
     'create_timestamp': ['<NON-EMPTY>'],
     'resolvers': ['<EMPTY-ARRAY>'],

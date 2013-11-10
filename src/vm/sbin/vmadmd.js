@@ -439,6 +439,7 @@ function handleProvisioning(vmobj, cb)
                     // clear any old timers or VNC/SPICE since this vm just came
                     // up (state was provisioning), then spin up a new VNC.
                     clearVM(obj.uuid);
+                    rotateKVMLog(vmobj.uuid);
                     spawnRemoteDisplay(obj);
                 }
                 cb(null, 'success');
@@ -511,6 +512,39 @@ function handleProvisioning(vmobj, cb)
             success();
         });
     }
+}
+
+/*
+ * Before calling this function we should already have guarded to ensure this is
+ * a KVM VM that's just gone running. What we want to do then is set a timeout
+ * and run:
+ *
+ * /usr/vm/sbin/rotate-kvm-logs.sh vmobj.uuid
+ *
+ * 30s from now to rotate the initial log. We do this to prevent the case where
+ * a VM gets rebooted more than 10 times in a given hour in which case we'd lose
+ * logs if we only rotated at the end of that hour since qemu-exec would have
+ * rotated vm.log.0 -> .9 and then deleted the last one.
+ *
+ * 30s was chosen arbitrarily as an estimate of when we'd be past the initial
+ * boot.
+ */
+function rotateKVMLog(vm_uuid)
+{
+    setTimeout(function () {
+        execFile('/usr/vm/sbin/rotate-kvm-logs.sh', [vm_uuid],
+            function (error, stdout, stderr) {
+                if (error) {
+                    log.error({err: error, stdout: stdout, stderr: stderr},
+                        'failed to rotate kvm log for just-booted ' + vm_uuid);
+                    return;
+                }
+                log.debug({stdout: stdout, stderr: stderr}, 'rotated kvm log '
+                    + 'for just-booted ' + vm_uuid);
+                return;
+            }
+        );
+    }, 30 * 1000);
 }
 
 // NOTE: nobody's paying attention to whether this completes or not.
@@ -690,6 +724,7 @@ function updateZoneStatus(ev)
             // clear any old timers or VNC/SPICE since this vm just came
             // up, then spin up a new VNC.
             clearVM(vmobj.uuid);
+            rotateKVMLog(vmobj.uuid);
             spawnRemoteDisplay(vmobj);
         } else if (ev.oldstate === 'running') {
             if (VNC.hasOwnProperty(ev.zonename)) {

@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <time.h>
 #include <unistd.h>
 
 #define LOG_FILE "/tmp/vm.log"
@@ -31,6 +32,9 @@ void rotate_logs(void);
 int
 main(int argc, char **argv)
 {
+    time_t now;
+    char time_buffer[32];
+
     if (argc < 2) {
         (void) fprintf(stderr, "Usage: %s <command> ...\n", argv[0]);
         exit(1);
@@ -42,8 +46,12 @@ main(int argc, char **argv)
     dump_privs();
     dump_args(argc, argv);
 
+    /* get the current time for the log */
+    time(&now);
+    cftime(time_buffer, "%Y-%m-%dT%H:%M:%SZ", &now);
+
     /* print the header for the output from the program we exec (pre-flush) */
-    (void) puts("=== OUTPUT ===");
+    (void) printf("=== OUTPUT (%s) ===\n", time_buffer);
 
     /* flush before next cmd takes over */
     (void) fflush(stdout);

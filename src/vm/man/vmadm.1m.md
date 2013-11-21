@@ -764,7 +764,7 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         See zfs_root_compression section below for more details.
 
-        type: string one of: "on,off,lzjb,gzip,gzip-N,zle"
+        type: string one of: "on,off,lzjb,gzip,gzip-N,zle,lz4"
         vmtype: KVM
         listable: no
         create: yes
@@ -1772,7 +1772,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         The caveats and warnings in the zfs_root_compression section below also
         apply to this option.
 
-        type: string one of: "on,off,lzjb,gzip,gzip-N,zle"
+        type: string one of: "on,off,lzjb,gzip,gzip-N,zle,lz4"
         vmtype: OS
         listable: no
         create: yes
@@ -1822,7 +1822,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         NOTE: to change this property for KVM, see disks.*.zfs_compression
         above.
 
-        type: string one of: "on,off,lzjb,gzip,gzip-N,zle"
+        type: string one of: "on,off,lzjb,gzip,gzip-N,zle,lz4"
         vmtype: OS
         listable: no
         create: yes

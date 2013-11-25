@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
- * remoteTargets tests
+ * fw.vms() tests
  */
 
 var async = require('async');

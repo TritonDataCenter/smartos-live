@@ -51,6 +51,11 @@ var OPTS = {
         type: 'bool',
         help: 'Do not apply changes.'
     },
+    delim: {
+        names: ['delim', 'd'],
+        type: 'string',
+        help: 'Output delimiter.'
+    },
     enable: {
         names: ['enable', 'e'],
         type: 'bool',
@@ -71,10 +76,20 @@ var OPTS = {
         type: 'bool',
         help: 'Output JSON.'
     },
+    output_fields: {
+        names: ['fields', 'o'],
+        type: 'string',
+        help: 'Output field list'
+    },
     owner_uuid: {
         names: ['owner_uuid', 'O'],
         type: 'string',
         help: 'Owner UUID'
+    },
+    parseable: {
+        names: ['parseable', 'p'],
+        type: 'bool',
+        help: 'Parseable output'
     },
     stdout: {
         names: ['stdout'],
@@ -102,7 +117,13 @@ function preparePayload(opts, payload) {
     if (payload) {
         newOpts = clone(payload);
 
-        if (newOpts.hasOwnProperty('rule')) {
+        // Allow doing this:
+        //   echo '{ ... }' | fwadm add|update
+        if (newOpts.hasOwnProperty('rule')
+            || newOpts.hasOwnProperty('enabled')
+            || newOpts.hasOwnProperty('description')
+            || newOpts.hasOwnProperty('owner_uuid')
+            || newOpts.hasOwnProperty('version')) {
             // Trying to add a single rule, and nothing else
             newOpts = { rules: [ newOpts ] };
         }
@@ -285,8 +306,19 @@ Fwadm.prototype.do_add = function (subcmd, opts, args, callback) {
  * Lists firewall rules
  */
 Fwadm.prototype.do_list = function (subcmd, opts, args, callback) {
-    // XXX: support filtering, sorting
-    return fw.list({}, function (err, res) {
+    // XXX: support sorting
+    var listOpts = {};
+    if (opts.fields) {
+        opts.fields = opts.fields.split(',');
+        listOpts.fields = opts.fields;
+    }
+
+    if (opts.delim && !opts.parseable) {
+        return cli.outputError(new Error(
+            '-d requires -p'), opts);
+    }
+
+    return fw.list(listOpts, function (err, res) {
         return cli.displayRules(err, res, opts);
     });
 };
@@ -600,6 +632,7 @@ var HELP = {
 
 var EXTRA_OPTS = {
     add: [ OPTS.enable, OPTS.file, OPTS.owner_uuid ],
+    list: [ OPTS.delim, OPTS.output_fields, OPTS.parseable ],
     update: [ OPTS.enable, OPTS.file, OPTS.owner_uuid ]
 };
 

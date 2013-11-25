@@ -2010,6 +2010,21 @@ function listRemoteVMs(opts, callback) {
 function listRules(opts, callback) {
     try {
         assert.object(opts, 'opts');
+        assert.optionalArrayOfString(opts.fields, 'opts.fields');
+        if (opts.fields) {
+            var invalid = [];
+            opts.fields.forEach(function (f) {
+                if (mod_rule.FIELDS.indexOf(f) === -1) {
+                    invalid.push(f);
+                }
+            });
+
+            if (invalid.length > 0) {
+                throw new verror.VError('Invalid display field%s: %s',
+                    invalid.length == 1 ? '' : 's',
+                    invalid.sort().join(', '));
+            }
+        }
     } catch (err) {
         return callback(err);
     }
@@ -2024,12 +2039,35 @@ function listRules(opts, callback) {
 
         // XXX: support sorting by other fields, filtering
         // (eg: enabled=true vm=<uuid>)
-        var sortFn = function _sort(a, b) {
+        var sortFn = function _defaultSort(a, b) {
             return (a.uuid > b.uuid) ? 1: -1;
         };
+        var mapFn = function _defaultMap(r) {
+            return r.serialize();
+        };
 
-        return callback(null,
-            res.map(function (r) { return r.serialize(); }).sort(sortFn));
+        if (opts.fields) {
+            var filterFields = opts.fields;
+            // If we didn't include uuid in the fields to list, include
+            // it here so that we can sort by it - we'll remove it after
+            if (opts.fields.indexOf('uuid') === -1) {
+                filterFields = opts.fields.concat(['uuid']);
+            }
+
+            mapFn = function _fieldMap(r) {
+                return r.serialize(filterFields);
+            };
+        }
+
+        var rules = res.map(mapFn).sort(sortFn);
+        if (opts.fields && opts.fields.indexOf('uuid') === -1) {
+            rules = rules.map(function (r) {
+                delete r.uuid;
+                return r;
+            });
+        }
+
+        return callback(null, rules);
     });
 }
 

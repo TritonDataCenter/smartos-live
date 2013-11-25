@@ -53,29 +53,7 @@ teststop:
 
 # Create a node modules suitable for installing in the platform
 $(NM):
-	rm -rf $(NM)
-	npm install
-	rm -rf $(NM_ORIG)
-	mv node_modules{,.orig}
-	@mkdir $(NM)
-	@cp $(NM_ORIG)/assert-plus/assert.js $(NM)/assert-plus.js
-	@cp $(NM_ORIG)/node-uuid/uuid.js $(NM)/node-uuid.js
-	@cp $(NM_ORIG)/mkdirp/index.js $(NM)/mkdirp.js
-	@cp $(NM_ORIG)/extsprintf/lib/extsprintf.js \
-		$(NM_ORIG)/verror/lib/verror.js \
-		$(NM_ORIG)/vasync/lib/vasync.js \
-		$(NM)/
-	@mkdir $(NM)/clone
-	@cp $(NM_ORIG)/clone/clone.js $(NM)/clone/index.js
-	@cp $(NM_ORIG)/clone/{LICENSE,clonePrototype.js} $(NM)/clone/
-	@mkdir $(NM)/fwrule
-	@cp tools/fwrule/lib/* $(NM)/fwrule/
-	@mkdir $(NM)/cmdln
-	@cp $(NM_ORIG)/cmdln/lib/cmdln.js $(NM)/cmdln/index.js
-	@cp $(NM_ORIG)/cmdln/LICENSE.txt $(NM)/cmdln/
-	@mkdir $(NM)/dashdash
-	@cp $(NM_ORIG)/cmdln/node_modules/dashdash/lib/dashdash.js $(NM)/dashdash/index.js
-	@cp $(NM_ORIG)/cmdln/node_modules/dashdash/LICENSE.txt $(NM)/dashdash/LICENSE.txt
+	$(TOP)/tools/bin/rebuild-node-modules
 
 #
 # Re-adding nodeunit and test-related source files

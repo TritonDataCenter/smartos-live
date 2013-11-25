@@ -149,6 +149,7 @@ function parse() {
 module.exports = {
     ACTIONS: ['allow', 'block'],
     DIRECTIONS: rule.DIRECTIONS,
+    FIELDS: rule.FIELDS,
     create: rule.create,
     FwRule: rule.FwRule,
     generateVersion: rule.generateVersion,

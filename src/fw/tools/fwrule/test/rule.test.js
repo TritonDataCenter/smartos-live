@@ -15,6 +15,20 @@ var runOne;
 
 
 
+// --- Tests
+
+
+
+exports['rule exports'] = function (t) {
+    ['ACTIONS', 'DIRECTIONS', 'FIELDS', 'PROTOCOLS', 'TARGET_TYPES'].forEach(
+        function (field) {
+        t.ok(fwrule[field].length > 0, 'fwrule.' + field);
+    });
+
+    t.done();
+};
+
+
 exports['all target types'] = function (t) {
     var desc = 'all target types';
     var ips = ['192.168.1.1', '10.2.0.3'];

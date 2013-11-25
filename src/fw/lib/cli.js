@@ -22,10 +22,12 @@
  *
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
+ *
  * fwadm: CLI shared logic
  */
 
 var fs = require('fs');
+var tab = require('tab');
 var tty = require('tty');
 var util = require('util');
 var verror = require('verror');
@@ -36,6 +38,16 @@ var verror = require('verror');
 
 
 
+var DEFAULT_FIELDS = ['uuid', 'enabled', 'rule'];
+var DEFAULT_FIELD_WIDTHS = {
+    created_by: 10,
+    description: 15,
+    enabled: 7,
+    owner_uuid: 36,
+    rule: 20,
+    uuid: 36,
+    version: 20
+};
 var UUID_REGEX =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -57,10 +69,55 @@ function displayRules(err, res, opts) {
         return console.log(json(res));
     }
 
-    console.log('UUID                                 ENABLED RULE');
-    res.forEach(function (r) {
-        console.log(ruleLine(r));
+    var fields = opts.fields || DEFAULT_FIELDS;
+    var tableOpts = {
+        columns: [],
+        omitHeader: opts.parseable || false,
+        rows: []
+    };
+
+    if (opts.parseable) {
+        tableOpts.columnSeparator = opts.delim || ':';
+    }
+
+    fields.forEach(function (f) {
+        tableOpts.columns.push({
+            align: 'left',
+            label: f.toUpperCase(),
+            // Parseable output: make all field widths 1, so that
+            // there's no whitespace between them
+            width: opts.parseable ? 1 : DEFAULT_FIELD_WIDTHS[f]
+        });
     });
+
+    res.forEach(function (r) {
+        tableOpts.rows.push(fields.map(function (f, i) {
+            if (!r[f]) {
+                return '-';
+            }
+
+            var str = r[f].toString();
+            if (tableOpts.columnSeparator) {
+                str = str.split(tableOpts.columnSeparator).join(
+                    '\\' + tableOpts.columnSeparator);
+            }
+
+            if (opts.parseable) {
+                // We don't care about fixing the length for parseable
+                // output: there's no spacing
+                return str;
+            }
+
+            var len = str.length;
+            if (len > tableOpts.columns[i].width) {
+                tableOpts.columns[i].width = len;
+            }
+
+            return str;
+        }));
+    });
+
+    tab.emitTable(tableOpts);
 }
 
 
@@ -100,14 +157,14 @@ function getPayload(opts, args, callback) {
     }
 
     if (file === '-') {
-            file = '/dev/stdin';
+        file = '/dev/stdin';
     }
 
     fs.readFile(file, function (err, data) {
         if (err) {
             if (err.code === 'ENOENT') {
-                    return callback(new verror.VError(
-                        'File "%s" does not exist.', file));
+                return callback(new verror.VError(
+                    'File "%s" does not exist.', file));
             }
             return callback(new verror.VError(
                 'Error reading "%s": %s', file, err.message));

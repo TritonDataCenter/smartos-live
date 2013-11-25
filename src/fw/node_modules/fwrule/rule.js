@@ -39,6 +39,16 @@ var verror = require('verror');
 
 
 var DIRECTIONS = ['to', 'from'];
+// Exported fields that can be in the serialized rule:
+var FIELDS = [
+    'created_by',
+    'description',
+    'enabled',
+    'owner_uuid',
+    'rule',
+    'uuid',
+    'version'
+];
 var STRING_PROPS = ['created_by', 'description'];
 var TARGET_TYPES = ['wildcard', 'ip', 'subnet', 'tag', 'vm'];
 
@@ -345,23 +355,23 @@ FwRule.prototype.raw = function () {
 
 /**
  * Returns the serialized version of the rule, suitable for storing
+ *
+ * @param fields {Array}: fields to return (optional)
  */
-FwRule.prototype.serialize = function () {
-    var ser = {
-        enabled: this.enabled,
-        rule: this.text(),
-        uuid: this.uuid,
-        version: this.version
-    };
-
-    if (this.owner_uuid) {
-        ser.owner_uuid = this.owner_uuid;
+FwRule.prototype.serialize = function (fields) {
+    var ser = {};
+    if (!fields) {
+        fields = FIELDS;
     }
 
-    for (var s in STRING_PROPS) {
-        var str = STRING_PROPS[s];
-        if (this.hasOwnProperty(str)) {
-            ser[str] = this[str];
+    for (var f in fields) {
+        var field = fields[f];
+        if (field === 'rule') {
+            ser.rule = this.text();
+        } else {
+            if (this.hasOwnProperty(field)) {
+                ser[field] = this[field];
+            }
         }
     }
 
@@ -461,6 +471,7 @@ module.exports = {
     create: createRule,
     generateVersion: generateVersion,
     DIRECTIONS: DIRECTIONS,
+    FIELDS: FIELDS,
     FwRule: FwRule,
     TARGET_TYPES: TARGET_TYPES
 };

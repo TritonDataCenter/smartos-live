@@ -234,10 +234,10 @@ function vmGet(uuid, options, callback) {
     assert.object(options.log, 'options.log');
     assert.func(callback);
     var cmd = format('/usr/sbin/vmadm get %s', uuid);
-    options.log.trace({cmd: cmd}, 'start vmGet');
+    //options.log.trace({cmd: cmd}, 'start vmGet');
     exec(cmd, function (err, stdout, stderr) {
-        options.log.trace({cmd: cmd, err: err, stdout: stdout, stderr: stderr},
-            'finish vmGet');
+        //options.log.trace({cmd: cmd, err: err, stdout: stdout, stderr: stderr},
+        //    'finish vmGet');
         if (err) {
             callback(new InternalError({
                 cause: err,
@@ -307,6 +307,8 @@ function vmWaitForCustomerMetadatum(uuid, options, callback) {
             }, interval);
         },
         function testIt() {
+            options.log.trace({vm: uuid},
+                'test for customer_metadata "%s" key match', options.key);
             return (match(vm.customer_metadata[key])
                 || (options.timeout && Date.now() - start >= options.timeout));
         },
@@ -366,6 +368,8 @@ function vmWaitForState(uuid, options, callback) {
             }, interval);
         },
         function testIt() {
+            options.log.trace({vm: uuid, state: vm.state},
+                'test for state "%s"', options.state);
             return vm.state === options.state
                 || (options.timeout
                     && Date.now() - start >= options.timeout);

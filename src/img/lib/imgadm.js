@@ -2017,6 +2017,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
     assert.optionalBool(options.incremental, 'options.incremental');
     assert.optionalString(options.prepareScript, 'options.prepareScript');
     assert.optionalNumber(options.prepareTimeout, 'options.prepareTimeout');
+    var log = self.log;
     var vmUuid = options.vmUuid;
     var incremental = options.incremental || false;
     var logCb = options.logCb || function () {};
@@ -2033,7 +2034,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
     var toCleanup = {};
     async.waterfall([
         function validateVm(next) {
-            common.vmGet(vmUuid, {log: self.log}, function (err, vm) {
+            common.vmGet(vmUuid, {log: log}, function (err, vm) {
                 // Currently `vmGet` doesn't distinguish bwtn some unexpected
                 // error and no such VM.
                 if (err) {
@@ -2067,7 +2068,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             }
             if (!opts) {
                 // Couldn't find an origin image.
-                self.log.debug('no origin image found');
+                log.debug('no origin image found');
                 next();
                 return;
             }
@@ -2076,7 +2077,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     next(getErr);
                     return;
                 }
-                self.log.debug({imageInfo: ii}, 'origin image');
+                log.debug({imageInfo: ii}, 'origin image');
                 originInfo = ii;
                 next();
             });
@@ -2181,9 +2182,9 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             if (!prepareScript) {
                 next();
             } else if (vmInfo.state !== 'stopped') {
-                logCb(format('Stopping VM %s', vmUuid));
+                logCb(format('Stopping VM %s to snapshot it', vmUuid));
                 toCleanup.autoprepStartVm = vmUuid; // Re-start it when done.
-                common.vmStop(vmUuid, {log: self.log}, next);
+                common.vmStop(vmUuid, {log: log}, next);
             } else {
                 next();
             }
@@ -2229,7 +2230,8 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     'operator-script': prepareScript
                 }
             };
-            common.vmUpdate(vmUuid, update, {log: self.log}, next);
+            log.debug('set operator-script');
+            common.vmUpdate(vmUuid, update, {log: log}, next);
         },
         /**
          * "Prepare" the VM by booting it, which should run the
@@ -2249,7 +2251,8 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     'prepare-image:error'
                 ]
             };
-            common.vmUpdate(vmUuid, update, {log: self.log}, next);
+            log.debug('create prepare-image:* customer_metadata');
+            common.vmUpdate(vmUuid, update, {log: log}, next);
         },
         function autoprepBoot(next) {
             if (!prepareScript) {
@@ -2257,7 +2260,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 return;
             }
             logCb(format('Preparing VM %s (starting it)', vmUuid));
-            common.vmStart(vmUuid, {log: self.log}, next);
+            common.vmStart(vmUuid, {log: log}, next);
         },
         function autoprepWaitForRunning(next) {
             if (!prepareScript) {
@@ -2265,12 +2268,14 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 return;
             }
             var opts = {
-                log: self.log,
+                log: log,
                 key: 'prepare-image:state',
                 // Don't explicitly check for value=running here because it is
                 // fine if it blows by to 'success' between our polling.
                 timeout: prepareTimeout * 1000
             };
+            log.debug('wait for up to %ds for prepare-image:state signal ' +
+                'from operator-script', prepareTimeout);
             common.vmWaitForCustomerMetadatum(vmUuid, opts, function (err, vm) {
                 if (err) {
                     if (err.code === 'Timeout') {
@@ -2304,11 +2309,13 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 return;
             }
             var opts = {
-                log: self.log,
+                log: log,
                 key: 'prepare-image:state',
                 values: ['success', 'error'],
                 timeout: prepareTimeout * 1000
             };
+            log.debug('wait for up to %ds for prepare-image:state of "error" ' +
+                'or "success"', prepareTimeout);
             common.vmWaitForCustomerMetadatum(vmUuid, opts, function (err, vm) {
                 if (err) {
                     next(new errors.PrepareImageError(err, vmUuid,
@@ -2333,8 +2340,9 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             var opts = {
                 state: 'stopped',
                 timeout: prepareTimeout * 1000,
-                log: self.log
+                log: log
             };
+            log.debug('wait for up to %ds for VM to stop', prepareTimeout);
             common.vmWaitForState(vmUuid, opts, function (err) {
                 if (err) {
                     next(new errors.PrepareImageError(err, vmUuid,
@@ -2358,7 +2366,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             logCb(format('Moving existing @final snapshot out of the '
                 + 'way to "%s"', outofway));
             zfsRenameSnapshot(curr, outofway,
-                {recursive: true, log: self.log}, next);
+                {recursive: true, log: log}, next);
         },
         function snapshotVm(next) {
             // We want '@final' to be the snapshot in the created image -- see
@@ -2396,7 +2404,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     /* jsl:pass */
                 } else if (err) {
                     finished = true;
-                    self.log.trace({err: err}, 'sendImageFile err');
+                    log.trace({err: err}, 'sendImageFile err');
                     next(err);
                 } else if (numFinishes >= numToFinish) {
                     finished = true;
@@ -2446,10 +2454,10 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                             + '    compression: %s\n'
                             + '    stderr:\n%s', code, compression,
                             _indent(compStderrChunks.join(''), '        '));
-                        self.log.debug(msg);
+                        log.debug(msg);
                         finish(new errors.InternalError({message: msg}));
                     } else {
-                        self.log.trace({compression: compression},
+                        log.trace({compression: compression},
                             'compressor exited successfully');
                         finish();
                     }

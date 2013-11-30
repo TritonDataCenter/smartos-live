@@ -1,5 +1,18 @@
 # imgadm changelog
 
+## 2.6.0
+
+- Change '-v, --verbose' option to mean *debug*-level logging (instead of
+  trace-level in v2.3.0-v2.5.0). Also add support for the
+  `IMGADM_LOG_LEVEL=<log level name>` environment variable, e.g.
+
+        IMGADM_LOG_LEVEL=trace imgadm create ...
+
+  Supported log level names are: trace, debug, info, warn (default), error,
+  fatal.
+
+- Improve debug logging for `imgadm create`.
+
 ## 2.5.0
 
 - [OS-2600] `imgadm create -i ...` using a VM created from an *incremental*

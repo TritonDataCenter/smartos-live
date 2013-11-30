@@ -1,7 +1,7 @@
 {
   "name": "imgadm",
   "description": "Tool to manage virtual images on SmartOS",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "author": "Joyent (joyent.com)",
   "private": true,
   "dependencies": {

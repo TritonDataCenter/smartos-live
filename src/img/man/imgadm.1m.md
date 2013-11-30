@@ -19,7 +19,7 @@
     imgadm delete [-P <pool>] <uuid>    remove an installed image
 
     # Experimental.
-    imgadm create [-p <url>] <vm-uuid> [<manifest-field>=<value> ...]
+    imgadm create <vm-uuid> [<manifest-field>=<value> ...] ...
                                         create an image from a VM
     imgadm publish -m <manifest> -f <file> <imgapi-url>
                                         publish an image to an image repo
@@ -50,7 +50,8 @@ UUID.
     Print the imgadm version and exit.
 
 **-v, --verbose**
-    More verbose logging. Use multiple times for more verbosity.
+    More verbose logging (debug level). See the **IMGADM_LOG_LEVEL=<level>**
+    environment variable.
 
 
 ## SUBCOMMANDS
@@ -177,9 +178,6 @@ UUID.
 
         If no "<uuid>" is given, then update is run for all installed images.
 
-        Usage:
-            imgadm update [<uuid>...]
-
         Options:
             -h, --help         Print this help and exit.
             -n                 Do a dry-run (do not actually make changes).
@@ -197,8 +195,7 @@ UUID.
             -P <pool>          Name of zpool from which to delete the image.
                                Default is "zones".
 
-
-    imgadm create [-p <url>] <vm-uuid> [<manifest-field>=<value> ...]
+    imgadm create [<options>] <vm-uuid> [<manifest-field>=<value> ...]
 
         Create an image from the given VM and manifest data.
 
@@ -222,9 +219,6 @@ UUID.
         With either calling mode, the image can optionally be published directly
         to a given image repository (IMGAPI) via "-p URL". This can also be
         done separately via "imgadm publish".
-
-        Usage:
-            imgadm create [<options>] <vm-uuid> [<manifest-field>=<value> ...]
 
         Options:
             -h, --help     Print this help and exit.
@@ -295,17 +289,15 @@ UUID.
                 | imgadm create -m - 5f7a53e9-fc4d-d94b-9205-9ff110742aaf
 
 
-    imgadm publish
+    imgadm publish [<options>] -m <manifest> -f <file> <imgapi-url>
 
-        **Experimental.** Publish an image from local manifest and image
-        data files.
+        Publish an image (local manifest and data) to a remote IMGAPI repo.
 
         Typically the local manifest and image file are created with
         "imgadm create ...". Note that "imgadm create" supports a
         "-p/--publish" option to publish directly in one step.
-
-        Usage:
-            imgadm publish [<options>] -m <manifest> -f <file> <imgapi-url>
+        Limitation: This does not yet support *authentication* that some
+        IMGAPI image repositories require.
 
         Options:
             -h, --help         Print this help and exit.
@@ -393,6 +385,11 @@ compatibility differences with earlier imgadm. These are:
 
         Set to 1 to allow an imgadm source URL that uses HTTPS to a server
         without a valid SSL certificate.
+
+    IMGADM_LOG_LEVEL
+
+        Set the level at which imgadm will log to stderr. Supported levels are
+        "trace", "debug", "info", "warn" (default), "error", "fatal".
 
 
 ## EXIT STATUS

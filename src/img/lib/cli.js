@@ -314,11 +314,13 @@ CLI.prototype.main = function main(argv, options, callback) {
          *
          * - If no `options.log` is given, we log to stderr.
          * - By default we log at the 'warn' level. Intentionally that is
-         *   almost no logging
-         * - '-v|--verbose' to set to trace and enable 'src' (source file
-         *   location information)
+         *   almost no logging.
+         * - use IMGADM_LOG_LEVEL=trace envvar to set to trace level and enable
+         *   source location (src=true) in log records
+         * - '-v|--verbose' or IMGADM_LOG_LEVEL=debug to set to debug level
+         * - use IMGADM_LOG_LEVEL=<bunyan level> to set to a different level
          * - '-E' to have a possible error be logged as the last single line
-         *   of stderr as a Bunyan log record with an 'err'. I.e. in a
+         *   of stderr as a raw Bunyan log JSON record with an 'err'. I.e. in a
          *   structured format more useful to automation tooling.
          *
          * Logging is in Bunyan (JSON) format so one needs to pipe via
@@ -337,16 +339,31 @@ CLI.prototype.main = function main(argv, options, callback) {
             ],
             serializers: bunyan.stdSerializers
         });
-        if (opts.verbose) {
-            log = log.child({src: true});
-            log.level('trace');
+        var IMGADM_LOG_LEVEL;
+        try {
+            if (process.env.IMGADM_LOG_LEVEL &&
+                bunyan.resolveLevel(process.env.IMGADM_LOG_LEVEL))
+            {
+                IMGADM_LOG_LEVEL = process.env.IMGADM_LOG_LEVEL;
+            }
+        } catch (e) {
+            log.warn('invalid IMGADM_LOG_LEVEL=%s envvar (ignoring)',
+                process.env.IMGADM_LOG_LEVEL);
+        }
+        if (IMGADM_LOG_LEVEL && IMGADM_LOG_LEVEL === 'trace') {
+            log.src = true;
+            log.level(IMGADM_LOG_LEVEL);
+        } else if (opts.verbose) {
+            log.level('debug');
+        } else if (IMGADM_LOG_LEVEL) {
+            log.level(IMGADM_LOG_LEVEL);
         }
         self.log = log;
         self.verbose = Boolean(opts.verbose);
         self.structuredErr = opts.E;
 
         // Handle top-level args and opts.
-        self.log.debug({opts: opts, argv: argv}, 'parsed argv');
+        self.log.trace({opts: opts, argv: argv}, 'parsed argv');
         var args = opts.argv.remain;
         if (opts.version) {
             console.log(self.name + ' ' + common.getVersion());
@@ -443,7 +460,8 @@ CLI.prototype.printHelp = function printHelp(callback) {
         'Options:',
         '    -h, --help          Show this help message and exit.',
         '    --version           Show version and exit.',
-        '    -v, --verbose       Verbose logging.'
+        '    -v, --verbose       Verbose logging (debug level). See also',
+        '                        IMGADM_LOG_LEVEL=<level> envvar.'
     ]);
 
     if (self.envopts && self.envopts.length) {
@@ -500,9 +518,8 @@ CLI.prototype.printHelp = function printHelp(callback) {
             '    imgadm update [<uuid>...]              update installed images',
             '    imgadm delete [-P <pool>] <uuid>       remove an installed image',
             '',
-            '    # Experimental',
-            '    imgadm create <uuid> [<manifest-field>=<value> ...]',
-            '                                           create an image from a prepared VM',
+            '    imgadm create <vm-uuid> [<manifest-field>=<value> ...] ...',
+            '                                           create an image from a VM',
             '    imgadm publish -m <manifest> -f <file> <imgapi-url>',
             '                                           publish an image to an image repo'
         ]);
@@ -1299,7 +1316,7 @@ CLI.prototype.do_update.description = (
     'Update currently installed images, if necessary.\n'
     + '\n'
     + 'Images that are installed without "imgadm" (e.g. via "zfs recv")\n'
-    + 'not have cached image manifest information. Also, images installed\n'
+    + 'may not have cached image manifest information. Also, images installed\n'
     + 'prior to imgadm version 2.0.3 will not have a "@final" snapshot\n'
     + '(preferred for provisioning and require for incremental image\n'
     + 'creation, via "imgadm create -i ..."). This command will attempt\n'
@@ -1648,12 +1665,13 @@ CLI.prototype.do_publish = function do_publish(subcmd, opts, args, callback) {
 };
 CLI.prototype.do_publish.description = (
     /* BEGIN JSSTYLED */
-    '**Experimental.** Publish an image from local manifest and image\n'
-    + 'data files.\n'
+    'Publish an image (local manifest and data) to a remote IMGAPI repo.\n'
     + '\n'
     + 'Typically the local manifest and image file are created with\n'
     + '"imgadm create ...". Note that "imgadm create" supports a\n'
     + '"-p/--publish" option to publish directly in one step.\n'
+    + 'Limitation: This does not yet support *authentication* that some\n'
+    + 'IMGAPI image repositories require.\n'
     + '\n'
     + 'Usage:\n'
     + '    $NAME publish [<options>] -m <manifest> -f <file> <imgapi-url>\n'

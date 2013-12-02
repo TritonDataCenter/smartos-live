@@ -99,7 +99,7 @@ test('enable / disable', TEST_OPTS, function (t) {
                                 }
 
                                 vm = obj;
-                                t.equal(vm.firewall_enabled, undefined,
+                                t.equal(vm.firewall_enabled, false,
                                     'firewall disabled');
                                 return cb();
                         });

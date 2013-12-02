@@ -234,9 +234,10 @@ function vmGet(uuid, options, callback) {
     assert.object(options.log, 'options.log');
     assert.func(callback);
     var cmd = format('/usr/sbin/vmadm get %s', uuid);
-    //options.log.trace({cmd: cmd}, 'start vmGet');
+    // options.log.trace({cmd: cmd}, 'start vmGet');
     exec(cmd, function (err, stdout, stderr) {
-        //options.log.trace({cmd: cmd, err: err, stdout: stdout, stderr: stderr},
+        // options.log.trace(
+        //    {cmd: cmd, err: err, stdout: stdout, stderr: stderr},
         //    'finish vmGet');
         if (err) {
             callback(new InternalError({

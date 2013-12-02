@@ -341,8 +341,8 @@ CLI.prototype.main = function main(argv, options, callback) {
         });
         var IMGADM_LOG_LEVEL;
         try {
-            if (process.env.IMGADM_LOG_LEVEL &&
-                bunyan.resolveLevel(process.env.IMGADM_LOG_LEVEL))
+            if (process.env.IMGADM_LOG_LEVEL
+                && bunyan.resolveLevel(process.env.IMGADM_LOG_LEVEL))
             {
                 IMGADM_LOG_LEVEL = process.env.IMGADM_LOG_LEVEL;
             }

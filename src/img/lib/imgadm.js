@@ -2274,8 +2274,8 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 // fine if it blows by to 'success' between our polling.
                 timeout: prepareTimeout * 1000
             };
-            log.debug('wait for up to %ds for prepare-image:state signal ' +
-                'from operator-script', prepareTimeout);
+            log.debug('wait for up to %ds for prepare-image:state signal '
+                + 'from operator-script', prepareTimeout);
             common.vmWaitForCustomerMetadatum(vmUuid, opts, function (err, vm) {
                 if (err) {
                     if (err.code === 'Timeout') {
@@ -2314,8 +2314,8 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 values: ['success', 'error'],
                 timeout: prepareTimeout * 1000
             };
-            log.debug('wait for up to %ds for prepare-image:state of "error" ' +
-                'or "success"', prepareTimeout);
+            log.debug('wait for up to %ds for prepare-image:state of "error" '
+                + 'or "success"', prepareTimeout);
             common.vmWaitForCustomerMetadatum(vmUuid, opts, function (err, vm) {
                 if (err) {
                     next(new errors.PrepareImageError(err, vmUuid,

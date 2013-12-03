@@ -22,10 +22,11 @@
  *
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
+ *
  * fwadm: logging and associated utils
  */
 
-var bunyan = require('/usr/node/node_modules/bunyan');
+var bunyan = require('bunyan');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
 var sprintf = require('extsprintf').sprintf;

@@ -332,6 +332,7 @@ f usr/fw/lib/util/log.js 0444 root bin
 f usr/fw/lib/util/obj.js 0444 root bin
 f usr/fw/lib/util/vm.js 0444 root bin
 f usr/fw/node_modules/assert-plus.js 0444 root bin
+f usr/fw/node_modules/bunyan.js 0444 root bin
 f usr/fw/node_modules/carrier/index.js 0444 root bin
 f usr/fw/node_modules/carrier/LICENSE 0444 root bin
 f usr/fw/node_modules/clone/LICENSE 0444 root bin
@@ -341,6 +342,8 @@ f usr/fw/node_modules/cmdln/index.js 0444 root bin
 f usr/fw/node_modules/cmdln/LICENSE.txt 0444 root bin
 f usr/fw/node_modules/dashdash/index.js 0444 root bin
 f usr/fw/node_modules/dashdash/LICENSE.txt 0444 root bin
+f usr/fw/node_modules/dtrace-provider.js 0444 root bin
+f usr/fw/node_modules/dtrace-provider.node 0444 root bin
 f usr/fw/node_modules/fwrule/index.js 0444 root bin
 f usr/fw/node_modules/fwrule/parser.js 0444 root bin
 f usr/fw/node_modules/fwrule/rule.js 0444 root bin
@@ -348,6 +351,7 @@ f usr/fw/node_modules/fwrule/validators.js 0444 root bin
 f usr/fw/node_modules/extsprintf.js 0444 root bin
 f usr/fw/node_modules/mkdirp.js 0444 root bin
 f usr/fw/node_modules/node-uuid.js 0444 root bin
+f usr/fw/node_modules/onlyif.js 0444 root bin
 f usr/fw/node_modules/strsplit/index.js 0444 root bin
 f usr/fw/node_modules/strsplit/LICENSE 0444 root bin
 f usr/fw/node_modules/tab.js 0444 root bin

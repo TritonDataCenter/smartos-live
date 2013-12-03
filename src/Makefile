@@ -436,6 +436,14 @@ install: all
 	cp -PR fw/lib $(DESTDIR)/usr/fw/
 	cp -PR fw/node_modules $(DESTDIR)/usr/fw/
 	cp -PR fw/sbin $(DESTDIR)/usr/fw/
+	cp -Pr node_modules/onlyif.js $(DESTDIR)/usr/fw/node_modules/onlyif.js
+	cp $(DTRACE_PROVIDER.NODE) $(DESTDIR)/usr/fw/node_modules/dtrace-provider.node
+	sed -e "s|require('./build.*DTraceProviderBindings')|require('/usr/fw/node_modules/dtrace-provider.node')|" \
+	    < $(DTRACE_PROVIDER_SRCDIR)/dtrace-provider.js \
+	    > $(DESTDIR)/usr/fw/node_modules/dtrace-provider.js
+	sed -e "s|require('dtrace-provider')|require('/usr/fw/node_modules/dtrace-provider')|" \
+	    < node-bunyan/lib/bunyan.js \
+	    > $(DESTDIR)/usr/fw/node_modules/bunyan.js
 
 check: $(JSLINT)
 	@echo "==> Running cstyle..."

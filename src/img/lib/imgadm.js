@@ -78,6 +78,9 @@ var VMADM_IMG_NAME_RE = /^([a-zA-Z][a-zA-Z\._-]*)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 /* END JSSTYLED */
 
+var UA = 'imgadm/' + common.getVersion() +
+    ' (' + 'node/' + process.versions.node + '; ' +
+    'OpenSSL/' + process.versions.openssl + ')';
 
 
 // ---- internal support stuff
@@ -704,14 +707,16 @@ IMGADM.prototype.clientFromSource = function clientFromSource(
             agent: false,
             url: baseNormUrl,
             log: self.log.child({component: 'api', source: source.url}, true),
-            rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1')
+            rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
+            userAgent: UA
         });
     } else {
         self._clientCache[normUrl] = imgapi.createClient({
             agent: false,
             url: normUrl,
             log: self.log.child({component: 'api', source: source.url}, true),
-            rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1')
+            rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
+            userAgent: UA
         });
     }
     callback(null, self._clientCache[normUrl]);
@@ -2099,6 +2104,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     'users', 'billing_tags', 'traits', 'generate_passwords',
                     'inherited_directories', 'nic_driver', 'disk_driver',
                     'cpu_type', 'image_size'];
+                // TODO Should this *merge* requirements?
                 INHERITED_FIELDS.forEach(function (field) {
                     if (!m.hasOwnProperty(field)
                         && originManifest.hasOwnProperty(field))
@@ -2272,7 +2278,8 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 key: 'prepare-image:state',
                 // Don't explicitly check for value=running here because it is
                 // fine if it blows by to 'success' between our polling.
-                timeout: prepareTimeout * 1000
+                timeout: prepareTimeout * 1000,
+                interval: 2000
             };
             log.debug('wait for up to %ds for prepare-image:state signal '
                 + 'from operator-script', prepareTimeout);
@@ -2292,8 +2299,14 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                          *   'running'
                          * - the prepare-image script crashed early
                          */
+                        logCb('Timeout waiting for prepare-image script to ' +
+                            'signal it started');
+                        log.debug('timeout waiting for operator-script to ' +
+                            'set prepare-image:state');
                         next(new errors.PrepareImageDidNotRunError(vmUuid));
                     } else {
+                        log.debug(err, 'unexpected error waiting for ' +
+                            'operator-script to set prepare-image:state');
                         next(err);
                     }
                     return;
@@ -2683,7 +2696,9 @@ IMGADM.prototype.publishImage = function publishImage(opts, callback) {
     var client = imgapi.createClient({
         agent: false,
         url: opts.url,
-        log: self.log.child({component: 'api', url: opts.url}, true)
+        log: self.log.child({component: 'api', url: opts.url}, true),
+        rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
+        userAgent: UA
     });
     var uuid = manifest.uuid;
     var rollbackImage;

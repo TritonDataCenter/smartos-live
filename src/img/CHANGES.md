@@ -1,5 +1,13 @@
 # imgadm changelog
 
+## 2.6.1
+
+- Include User-Agent header in requests to IMGAPI and DSAPI sources,
+  e.g. "imgadm/2.6.1 (node/0.8.26; OpenSSL/1.0.1d)".
+
+- [OS-2651] Fix 'imgadm create' wiping any given manifest.requirements.
+
+
 ## 2.6.0
 
 - Change '-v, --verbose' option to mean *debug*-level logging (instead of

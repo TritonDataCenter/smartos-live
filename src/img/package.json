@@ -6,7 +6,7 @@
   "private": true,
   "dependencies": {
     "sdc-clients": "git+ssh://git@git.joyent.com:node-sdc-clients.git#ea765c0",
-    "imgmanifest": "git+ssh://git@git.joyent.com:node-imgmanifest.git#1237bd3",
+    "imgmanifest": "git+ssh://git@git.joyent.com:node-imgmanifest.git#c426fc3",
     "assert-plus": "0.1.4",
     "mkdirp": "0.3.5",
     "nopt": "2.1.2",

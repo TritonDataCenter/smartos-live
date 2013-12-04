@@ -92,6 +92,20 @@ function _indent(s, indent) {
 }
 
 
+function getSysinfo(log, callback) {
+    assert.object(log, 'log');
+    assert.func(callback, 'callback');
+    exec('sysinfo', function (err, stdout, stderr) {
+        if (err) {
+            callback(err);
+        } else {
+            // Explicitly want to abort/coredump on this not being parsable.
+            var sysinfo = JSON.parse(stdout.trim());
+            callback(null, sysinfo);
+        }
+    });
+}
+
 /**
  * Call `zfs destroy -r` on the given dataset name.
  *
@@ -2030,6 +2044,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
     var prepareTimeout = options.prepareTimeout || 300;  // in seconds
 
     var vmInfo;
+    var sysinfo;
     var vmZfsFilesystemName;
     var vmZfsSnapnames;
     var originInfo;
@@ -2087,6 +2102,17 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 next();
             });
         },
+        function getSystemInfo(next) {
+            if (vmInfo.brand === 'kvm') {
+                next();
+                return;
+            }
+            // We need `sysinfo` for smartos images. See below.
+            getSysinfo(log, function (err, sysinfo_) {
+                sysinfo = sysinfo_;
+                next(err);
+            });
+        },
         function gatherManifest(next) {
             var m = {
                 v: common.MANIFEST_V,
@@ -2117,6 +2143,21 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                         }
                     }
                 });
+            }
+            if (vmInfo.brand !== 'kvm' /* i.e. this is a smartos image */
+                && !(options.manifest.requirements
+                    && options.manifest.requirements.min_platform))
+            {
+                // Unless an explicit min_platform is provided (possibly empty)
+                // the min_platform for a SmartOS image must be the current
+                // platform, b/c that's the SmartOS binary compat story.
+                if (!m.requirements)
+                    m.requirements = {};
+                m.requirements.min_platform = {};
+                m.requirements.min_platform[sysinfo['SDC Version']]
+                    = sysinfo['Live Image'];
+                log.debug({min_platform: m.requirements.min_platform},
+                    'set smartos image min_platform to current');
             }
             if (incremental) {
                 if (!originInfo) {

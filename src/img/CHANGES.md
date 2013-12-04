@@ -1,5 +1,12 @@
 # imgadm changelog
 
+## 2.6.2
+
+- [IMGAPI-312] `imgadm create` will set "requirements.min_platform" to the
+  current platform for *SmartOS* images, to ensure proper binary compatibility
+  -- in case the image includes binaries built on this platform.
+
+
 ## 2.6.1
 
 - Include User-Agent header in requests to IMGAPI and DSAPI sources,

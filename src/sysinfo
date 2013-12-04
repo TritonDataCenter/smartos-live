@@ -26,6 +26,7 @@ ZONENAME=$(zonename)
 FORCE=
 PARSABLE=
 UPDATE_ONLY=
+ZSTAT=
 
 while getopts fnpu? name
 do
@@ -223,11 +224,12 @@ function get_hostname()
 function get_zpool_disks()
 {
     local zpool=$1
+    local disks=$(/usr/bin/disklist -n)
+    ZSTAT=$(/usr/sbin/zpool status ${zpool} | awk '/[a-z]/{ print $1 }')
     Zpool_disks=
 
-    for disk in $(/usr/bin/disklist -n); do
-        local disk_in_pool=$(/usr/sbin/zpool status ${zpool} | grep ${disk})
-        if [[ -n ${disk_in_pool} ]]; then
+    for disk in ${disks}; do
+        if [[ "${ZSTAT}" =~ "${disk}" ]]; then
             Zpool_disks="${Zpool_disks},${disk}"
         fi
     done
@@ -242,7 +244,7 @@ function get_zpool_profile()
     Zpool_profile="striped"
 
     for profile in ${profiles[*]}; do
-        if [[ -n $(/usr/sbin/zpool status ${zpool} | grep ${profile}) ]]; then
+        if [[ "${ZSTAT}" =~ "${profile}" ]]; then
             Zpool_profile=${profile}
             break
         fi

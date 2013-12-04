@@ -78,9 +78,9 @@ var VMADM_IMG_NAME_RE = /^([a-zA-Z][a-zA-Z\._-]*)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 /* END JSSTYLED */
 
-var UA = 'imgadm/' + common.getVersion() +
-    ' (' + 'node/' + process.versions.node + '; ' +
-    'OpenSSL/' + process.versions.openssl + ')';
+var UA = 'imgadm/' + common.getVersion()
+    + ' (' + 'node/' + process.versions.node + '; '
+    + 'OpenSSL/' + process.versions.openssl + ')';
 
 
 // ---- internal support stuff
@@ -2299,14 +2299,14 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                          *   'running'
                          * - the prepare-image script crashed early
                          */
-                        logCb('Timeout waiting for prepare-image script to ' +
-                            'signal it started');
-                        log.debug('timeout waiting for operator-script to ' +
-                            'set prepare-image:state');
+                        logCb('Timeout waiting for prepare-image script to '
+                            + 'signal it started');
+                        log.debug('timeout waiting for operator-script to '
+                            + 'set prepare-image:state');
                         next(new errors.PrepareImageDidNotRunError(vmUuid));
                     } else {
-                        log.debug(err, 'unexpected error waiting for ' +
-                            'operator-script to set prepare-image:state');
+                        log.debug(err, 'unexpected error waiting for '
+                            + 'operator-script to set prepare-image:state');
                         next(err);
                     }
                     return;

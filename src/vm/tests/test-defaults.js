@@ -23,6 +23,7 @@ var zone_defaults = {
     'autoboot': [true],
     'zonepath': ['uuid', prefix_zones_slash],
     'do_not_inventory': [true],
+    'firewall_enabled': [false],
     'brand': ['joyent'],
     'quota': [10],
     'cpu_shares': [100],

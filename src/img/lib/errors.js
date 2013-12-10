@@ -64,7 +64,10 @@ function ImgadmError(options) {
 
     var args = [];
     if (options.cause) args.push(options.cause);
-    args.push(options.message);
+    if (options.message) {
+        args.push('%s');
+        args.push(options.message);
+    }
     WError.apply(this, args);
 
     var extra = Object.keys(options).filter(

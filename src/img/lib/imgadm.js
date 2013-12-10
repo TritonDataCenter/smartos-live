@@ -2377,9 +2377,15 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     return;
                 }
                 vmInfo = vm;
-                if (vm.customer_metadata['prepare-image:state'] === 'error') {
+                var cm = vm.customer_metadata;
+                log.debug({
+                    'prepare-image:state': cm['prepare-image:state'],
+                    'prepare-image:error': cm['prepare-image:error'],
+                    'prepare-image:progress': cm['prepare-image:progress']
+                }, 'prepare-image:state is set');
+                if (cm['prepare-image:state'] === 'error') {
                     next(new errors.PrepareImageError(vmUuid,
-                        vm.customer_metadata['prepare-image:error'] || ''));
+                        cm['prepare-image:error'] || ''));
                 } else {
                     logCb('Prepare script succeeded');
                     next();
@@ -2397,12 +2403,18 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 log: log
             };
             log.debug('wait for up to %ds for VM to stop', prepareTimeout);
-            common.vmWaitForState(vmUuid, opts, function (err) {
+            common.vmWaitForState(vmUuid, opts, function (err, vm) {
                 if (err) {
                     next(new errors.PrepareImageError(err, vmUuid,
                         'VM did not shutdown'));
                     return;
                 }
+                var cm = vm.customer_metadata;
+                log.debug({
+                    'prepare-image:state': cm['prepare-image:state'],
+                    'prepare-image:error': cm['prepare-image:error'],
+                    'prepare-image:progress': cm['prepare-image:progress']
+                }, 'prepare-image stopped VM');
                 logCb('Prepare script stopped VM ' + vmUuid);
                 next();
             });

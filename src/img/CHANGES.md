@@ -1,5 +1,11 @@
 # imgadm changelog
 
+## 2.6.3
+
+- [OS-2657] Fix an issue where an error message with a printf formatting char
+  could crash on error creation: loosing error details.
+
+
 ## 2.6.2
 
 - [IMGAPI-312] `imgadm create` will set "requirements.min_platform" to the

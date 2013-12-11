@@ -26,9 +26,11 @@
  * fwadm: logging and associated utils
  */
 
-var bunyan = require('bunyan');
+var assert = require('assert-plus');
+var bunyan;
 var fs = require('fs');
 var mkdirp = require('mkdirp');
+var path = require('path');
 var sprintf = require('extsprintf').sprintf;
 var util = require('util');
 var vasync = require('vasync');
@@ -39,11 +41,8 @@ var vasync = require('vasync');
 
 
 
-var LOG;
-var LOG_TO_FILE = false;
 var LOG_DIR = '/var/log/fw/logs';
-// keep the last 50 messages just in case we end up wanting them.
-var RINGBUFFER = new bunyan.RingBuffer({ limit: 50 });
+var LOG_NAME = process.argv[1] ? path.basename(process.argv[1]) : 'fw';
 
 
 
@@ -67,6 +66,32 @@ function fullRuleSerializer(rules) {
 
 
 /**
+ * Returns true if the bunyan stream is logging to LOG_DIR
+ */
+function isLoggingToFile(str) {
+    if (str.type === 'file' && str.stream
+        && startsWith(str.path, LOG_DIR)) {
+        return true;
+    }
+
+    return false;
+}
+
+
+/**
+ * Returns true if the bunyan stream is an OpenOnErrorFileStream
+ */
+function isOnErrorStream(str) {
+    if (str.type === 'raw' && str.stream
+        && str.stream instanceof OpenOnErrorFileStream) {
+        return true;
+    }
+
+    return false;
+}
+
+
+/**
  * Bunyan serializer for just the rule UUID
  */
 function ruleSerializer(rules) {
@@ -78,6 +103,19 @@ function ruleSerializer(rules) {
     return Object.keys(res);
 }
 
+
+/**
+ * Taken from jsprim
+ */
+function startsWith(str, prefix)
+{
+    return (str.substr(0, prefix.length) == prefix);
+}
+
+
+function newOnErrStream(filename) {
+
+}
 
 /**
  * Bunyan serializer for just the VM UUID
@@ -98,80 +136,6 @@ function vmSerializer(vms) {
 }
 
 
-/**
- * Create logger
- */
-function createLogger(opts) {
-    if (!opts) {
-        opts = {};
-    }
-
-    // XXX: allow upgrading from readOnly to writing
-
-    if (LOG) {
-        return LOG;
-    }
-
-    var logName = 'fwadm';
-    var logLevel = 'debug';
-    var streams = [];
-
-    // XXX: allow logging to stderr
-    if (opts.action) {
-        logName = opts.action;
-    }
-
-    if (opts.logName) {
-        logName = opts.logName;
-    }
-
-    if (opts.logLevel) {
-        logLevel = opts.logLevel;
-    }
-
-    var filename = util.format('%s/%s-%s-%s.log',
-            LOG_DIR, Date.now(0), sprintf('%06d', process.pid), logName);
-
-    if (opts.readOnly) {
-        streams.push({
-            type: 'raw',
-            stream: new OpenOnErrorFileStream(filename),
-            level: logLevel
-        });
-    } else {
-        streams.push({ level: logLevel, path: filename });
-    }
-
-    // Add the ringbuffer which we'll dump if we switch from not writing to
-    // writing, and so that they'll show up in dumps.
-    streams.push({
-            level: 'trace',
-            type: 'raw',
-            stream: RINGBUFFER
-    });
-
-    mkdirp.sync(LOG_DIR);
-
-    if (opts.log) {
-        LOG = opts.log.child({ component: 'fw', streams: streams });
-        return;
-    }
-
-    LOG = bunyan.createLogger({
-        name: 'fw',
-        serializers: {
-            err: bunyan.stdSerializers.err,
-            fullRules: fullRuleSerializer,
-            rules: ruleSerializer,
-            vms: vmSerializer
-        },
-        streams: streams
-    });
-
-    return LOG;
-}
-
-
 
 // --- OpenOnErrorFileStream (originally from VM.js)
 
@@ -183,13 +147,49 @@ function createLogger(opts) {
 // breaks.  Thanks to Trent++ for most of this code.
 
 
-function OpenOnErrorFileStream(filename) {
-    this.path = filename;
+function OpenOnErrorFileStream(opts) {
+    this.path = opts.path;
+    this.level = bunyan.resolveLevel(opts.level);
     this.write = this.constructor.prototype.write1;
     this.end = this.constructor.prototype.end1;
     this.on = this.constructor.prototype.on1;
     this.once = this.constructor.prototype.once1;
+
+    // Add the ringbuffer which we'll dump if we switch from not writing to
+    // writing, and so that they'll show up in dumps.
+    this.ringbuffer = new bunyan.RingBuffer({ limit: 50 });
+    this.log_to_file = false;
 }
+
+
+OpenOnErrorFileStream.prototype.startLoggingToFile = function () {
+    this._startWriting(this.level);
+};
+
+
+OpenOnErrorFileStream.prototype._startWriting = function (level, rec) {
+    var r;
+
+    if (this.stream) {
+        return;
+    }
+
+    this.stream = fs.createWriteStream(this.path,
+        { flags: 'a', encoding: 'utf8' });
+    this.emit = this.stream.emit;
+    this.end = this.stream.end;
+    this.on = this.stream.on;
+    this.once = this.stream.once;
+    this.write = this.constructor.prototype.write2;
+    // dump out logs from ringbuffer too since there was an error so we can
+    // figure out what's going on.
+    for (r in this.ringbuffer.records) {
+        r = this.ringbuffer.records[r];
+        if (r.level >= level && (!rec || r != rec)) {
+            this.write(r);
+        }
+    }
+};
 
 
 OpenOnErrorFileStream.prototype.end1 = function () {
@@ -211,25 +211,11 @@ OpenOnErrorFileStream.prototype.once1 = function (name, cb) {
 // used until first ERROR or higher, then opens file and ensures future writes
 // go to .write2()
 OpenOnErrorFileStream.prototype.write1 = function (rec) {
-    var r;
-
-    if (rec.level >= bunyan.ERROR || LOG_TO_FILE) {
-        this.stream = fs.createWriteStream(this.path,
-                {flags: 'a', encoding: 'utf8'});
-        this.end = this.stream.end;
-        this.on = this.stream.on;
-        this.once = this.stream.once;
-        this.write = this.constructor.prototype.write2;
-        // dump out logs from ringbuffer too since there was an error so we can
-        // figure out what's going on.
-        for (r in RINGBUFFER.records) {
-                r = RINGBUFFER.records[r];
-                if (r != rec) {
-                        this.write(r);
-                }
-        }
-
+    if (rec.level >= bunyan.ERROR || this.log_to_file) {
+        this._startWriting(bunyan.TRACE, rec);
         this.write(rec);
+    } else {
+        this.ringbuffer.write(rec);
     }
 };
 
@@ -247,16 +233,123 @@ OpenOnErrorFileStream.prototype.write2 = function (rec) {
 
 
 /**
+ * Create logger
+ */
+function createLogger(opts, readOnly) {
+    readOnly = !!readOnly;  // make boolean
+    if (!opts) {
+        opts = {};
+    }
+    assert.string(opts.action, 'opts.action');
+
+    if (!bunyan) {
+        bunyan = require('bunyan');
+    }
+
+    var log;
+    var logName = opts.logName || LOG_NAME;
+    var logLevel = opts.logLevel || 'debug';
+    var serializers = {
+        err: bunyan.stdSerializers.err,
+        fullRules: fullRuleSerializer,
+        rules: ruleSerializer,
+        vms: vmSerializer
+    };
+    var s;
+    var str;
+    var streams = [];
+
+    // XXX: allow logging to stderr
+
+    var filename = util.format('%s/%s-%s-%s.log',
+        LOG_DIR, Date.now(0), sprintf('%06d', process.pid),
+        opts.action.toLowerCase());
+
+    function addOnErrStream() {
+        streams.push({
+            type: 'raw',
+            stream: new OpenOnErrorFileStream({
+                path: filename,
+                level: logLevel
+            }),
+            level: 'trace'
+        });
+    }
+
+    function addFileStream() {
+        streams.push({ level: logLevel, path: filename });
+    }
+
+    mkdirp.sync(LOG_DIR);
+
+    if (opts.log) {
+        if (readOnly) {
+            for (s in opts.log.streams) {
+                str = opts.log.streams[s];
+
+                if (isLoggingToFile(str) || isOnErrorStream(str)) {
+                    return opts.log;
+                }
+            }
+
+            addOnErrStream();
+
+        } else {
+            for (s in opts.log.streams) {
+                str = opts.log.streams[s];
+
+                if (isLoggingToFile(str)) {
+                    return opts.log;
+                }
+
+                if (isOnErrorStream(str)) {
+                    str.startLoggingToFile();
+                    return opts.log;
+                }
+            }
+
+            addFileStream();
+        }
+
+        log = opts.log.child({
+            component: logName,
+            serializers: serializers,
+            streams: streams
+        });
+        return log;
+    }
+
+    if (readOnly) {
+        addOnErrStream();
+    } else {
+        addFileStream();
+    }
+
+    log = bunyan.createLogger({
+        name: logName,
+        serializers: serializers,
+        streams: streams
+    });
+
+    return log;
+}
+
+
+/**
  * Create the logger and log one of the API entry points. Strips down
  * properties in opts that we know to be too big to log (eg: VMs).
  */
-function logEntry(opts, action) {
+function logEntry(opts, action, readOnly) {
     opts.action = action;
 
     var localVMs;
-    var log;
+    var log = createLogger(opts, readOnly).child({ component: action });
+    var oldLog;
     var rules;
     var vms;
+
+    // Remove or truncate properties from opts to make the start logline
+    // below a little cleaner
 
     if (opts.localVMs) {
         localVMs = opts.localVMs;
@@ -265,7 +358,7 @@ function logEntry(opts, action) {
     }
 
     if (opts.log) {
-        log = opts.log;
+        oldLog = opts.log;
         delete opts.log;
     }
 
@@ -282,14 +375,15 @@ function logEntry(opts, action) {
         });
     }
 
-    createLogger(opts);
-    LOG.debug(opts, '%s: entry', action);
+    log.debug(opts, '%s: start', action);
+
+    // Now restore the removed / massaged properties
 
     if (localVMs) {
         opts.localVMs = localVMs;
     }
-    if (log) {
-        opts.log = log;
+    if (oldLog) {
+        opts.log = oldLog;
     }
     if (rules) {
         opts.rules = rules;
@@ -298,20 +392,20 @@ function logEntry(opts, action) {
         opts.vms = vms;
     }
 
-    return LOG;
+    return log;
 }
 
 
 /**
  * Flush all open log streams
  */
-function flushLogs(callback) {
-    if (!LOG) {
+function flushLogs(log, callback) {
+    if (!log) {
         return callback();
     }
 
     vasync.forEachParallel({
-        inputs: LOG.streams,
+        inputs: log.streams,
         func: function _closeStream(str, cb) {
             if (!str || !str.stream) {
                 return cb();
@@ -335,8 +429,18 @@ function flushLogs(callback) {
 }
 
 
+/**
+ * Set the bunyan module
+ */
+function setBunyan(mod) {
+    bunyan = mod;
+}
+
+
 
 module.exports = {
+    create: createLogger,
     entry: logEntry,
-    flush: flushLogs
+    flush: flushLogs,
+    setBunyan: setBunyan
 };

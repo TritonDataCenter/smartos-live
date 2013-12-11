@@ -328,6 +328,7 @@ f usr/fw/lib/fwadm.js 0444 root bin
 f usr/fw/lib/ipf.js 0444 root bin
 f usr/fw/lib/pipeline.js 0444 root bin
 f usr/fw/lib/rvm.js 0444 root bin
+f usr/fw/lib/util/errors.js 0444 root bin
 f usr/fw/lib/util/log.js 0444 root bin
 f usr/fw/lib/util/obj.js 0444 root bin
 f usr/fw/lib/util/vm.js 0444 root bin

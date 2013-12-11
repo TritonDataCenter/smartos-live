@@ -28,15 +28,17 @@
 
 var fs = require('fs');
 var mkdirp = require('mkdirp');
-var mod_obj = require('./util/obj');
 var mod_rule = require('fwrule');
 var util = require('util');
+var util_err = require('./util/errors');
+var util_obj = require('./util/obj');
+var util_vm = require('./util/vm');
 var vasync = require('vasync');
 var VError = require('verror').VError;
 
 
-var createSubObjects = mod_obj.createSubObjects;
-var forEachKey = mod_obj.forEachKey;
+var createSubObjects = util_obj.createSubObjects;
+var forEachKey = util_obj.forEachKey;
 
 
 
@@ -50,6 +52,47 @@ var VM_PATH = '/var/fw/vms';
 
 // --- Exports
 
+
+
+/**
+ * Create remote VM objects
+ *
+ * @param allVMs {Object}: VM lookup table, as returned by createVMlookup()
+ * @param vms {Array}: array of VM objects to turn into remote VMs
+ * @param callback {Function} `function (err, remoteVMs)`
+ * - Where remoteVMs is an object of remote VMs, keyed by UUID
+ */
+function create(allVMs, vms, log, callback) {
+    log.trace(vms, 'rvm.create: entry');
+    if (!vms || vms.length === 0) {
+        return callback();
+    }
+
+    var remoteVMs = {};
+    var errs = [];
+
+    vms.forEach(function (vm) {
+        try {
+            var rvm = util_vm.createRemoteVM(vm);
+            if (allVMs.all.hasOwnProperty(rvm.uuid)) {
+                var err = new VError(
+                    'Remote VM "%s" must not have the same UUID as a local VM',
+                    rvm.uuid);
+                err.details = vm;
+                throw err;
+            }
+            remoteVMs[rvm.uuid] = rvm;
+        } catch (err2) {
+            errs.push(err2);
+        }
+    });
+
+    if (errs.length !== 0) {
+        return callback(util_err.createMultiError(errs));
+    }
+
+    return callback(null, remoteVMs);
+}
 
 
 /**
@@ -71,12 +114,12 @@ function createLookup(remoteVMs, log) {
         wildcards: {}
     };
 
-    if (!remoteVMs || mod_obj.objEmpty(remoteVMs)) {
+    if (!remoteVMs || util_obj.objEmpty(remoteVMs)) {
         return rvmLookup;
     }
 
     var rvmList = remoteVMs;
-    if (!mod_obj.isArray(rvmList)) {
+    if (!util_obj.isArray(rvmList)) {
         rvmList = [ remoteVMs ];
     }
 
@@ -95,7 +138,7 @@ function createLookup(remoteVMs, log) {
             }
 
             rvm.ips.forEach(function (ip) {
-                mod_obj.addToObj3(rvmLookup, 'ips', ip, uuid, rvm);
+                util_obj.addToObj3(rvmLookup, 'ips', ip, uuid, rvm);
             });
 
             rvmLookup.all[uuid] = rvm;
@@ -225,7 +268,7 @@ function loadAll(log, callback) {
 function save(vms, log, callback) {
     log.trace('rvm.save: entry');
 
-    if (!vms || mod_obj.objEmpty(vms)) {
+    if (!vms || util_obj.objEmpty(vms)) {
         return callback();
     }
 
@@ -279,6 +322,7 @@ function save(vms, log, callback) {
 
 
 module.exports = {
+    create: create,
     createLookup: createLookup,
     del: del,
     load: load,

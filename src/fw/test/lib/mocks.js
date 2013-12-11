@@ -82,6 +82,7 @@ function _log(level, num, obj) {
 
 function createLogger() {
     return {
+        child: function () { return this; },
         trace: function () { return _log('trace', 10, arguments); },
         debug: function () { return _log('debug', 20, arguments); },
         info: function () { return _log('info', 30, arguments); },
@@ -91,6 +92,7 @@ function createLogger() {
     };
 }
 
+
 function errSerializer(err) {
     return err;
 }
@@ -98,6 +100,11 @@ function errSerializer(err) {
 
 function mockRingBuffer(opts) {
     this.opts = opts;
+}
+
+
+function resolveLevel() {
+    return 3;
 }
 
 
@@ -272,6 +279,16 @@ mkdirp.sync = function mkdirpSync(dir) {
 
 
 
+// --- path
+
+
+
+function basename(file) {
+    return file;
+}
+
+
+
 // --- Setup / Teardown
 
 
@@ -340,12 +357,13 @@ function setup() {
     resetValues();
     mockery.enable();
     var modules = {
-        '/usr/node/node_modules/bunyan': {
+        bunyan: {
             createLogger: createLogger,
             RingBuffer: mockRingBuffer,
             stdSerializers: {
                 err: errSerializer
-            }
+            },
+            resolveLevel: resolveLevel
         },
         child_process: {
             execFile: execFile
@@ -359,6 +377,7 @@ function setup() {
         },
         mkdirp: mkdirp,
         path: {
+            basename: basename
         }
     };
 
@@ -386,6 +405,7 @@ function setup() {
         './pipeline',
         './rule',
         './rvm',
+        './util/errors',
         './util/log',
         './util/obj',
         './util/vm',

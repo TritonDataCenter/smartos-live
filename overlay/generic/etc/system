@@ -154,3 +154,8 @@ set sd:sd_io_time=10
 
 * Use hires tick to improve some scheduling latency issues
 set hires_tick=1
+
+* The defaults for zfs for these are too low for production
+set zfs:zfs_vdev_sync_write_max_active=100
+set zfs:zfs_vdev_async_write_min_active=50
+set zfs:zfs_vdev_async_write_max_active=100

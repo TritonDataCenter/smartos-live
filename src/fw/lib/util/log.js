@@ -391,6 +391,7 @@ function logEntry(opts, action, readOnly) {
     if (vms) {
         opts.vms = vms;
     }
+    delete opts.inputRules;
 
     return log;
 }

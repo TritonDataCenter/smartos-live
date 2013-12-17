@@ -88,6 +88,7 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
     var payload = {
         rules: [
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM vm %s TO ip 10.99.99.254 BLOCK tcp '
                                 + 'PORT 8080', vm.uuid),
                 enabled: true
@@ -276,6 +277,7 @@ exports['add / update: vm to IP: ALLOW'] = function (t) {
     var payload = {
         rules: [
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM vm %s TO ip 10.99.99.254 ALLOW tcp '
                                 + 'PORT 8080', vm.uuid),
                 enabled: true
@@ -350,6 +352,7 @@ exports['add: tag to IP'] = function (t) {
     var payload = {
         rules: [
             {
+                owner_uuid: vm1.owner_uuid,
                 rule: 'FROM tag foo TO ip 10.99.99.254 BLOCK tcp PORT 25',
                 enabled: true
             }
@@ -445,10 +448,12 @@ exports['add: tag to subnet'] = function (t) {
     var payload = {
         rules: [
             {
+                owner_uuid: vm1.owner_uuid,
                 rule: 'FROM tag foo TO subnet 10.99.99.0/24 BLOCK tcp PORT 25',
                 enabled: true
             },
             {
+                owner_uuid: vm2.owner_uuid,
                 rule: 'FROM subnet 10.99.99.0/24 TO tag foo ALLOW tcp PORT 80',
                 enabled: true
             }
@@ -570,12 +575,14 @@ exports['add: vm to subnet'] = function (t) {
     var payload = {
         rules: [
             {
+                owner_uuid: vm1.owner_uuid,
                 rule: util.format(
                     'FROM vm %s TO subnet 10.99.99.0/24 BLOCK tcp PORT 25',
                     vm1.uuid),
                 enabled: true
             },
             {
+                owner_uuid: vm2.owner_uuid,
                 rule: util.format(
                     'FROM subnet 10.99.99.0/24 TO vm %s ALLOW tcp PORT 80',
                     vm1.uuid),
@@ -706,6 +713,7 @@ exports['enable / disable rule'] = function (t) {
     var payload = {
         rules: [
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM vm %s TO ip 192.168.5.2 BLOCK tcp '
                                 + 'PORT 25', vm.uuid),
                 enabled: false
@@ -809,6 +817,7 @@ exports['enable / disable rule'] = function (t) {
         var addPayload = {
             rules: [
                 {
+                    owner_uuid: vm.owner_uuid,
                     rule: 'FROM any TO all vms ALLOW tcp PORT 33',
                     enabled: true
                 }

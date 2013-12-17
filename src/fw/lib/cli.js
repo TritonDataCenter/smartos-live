@@ -43,11 +43,14 @@ var DEFAULT_FIELD_WIDTHS = {
     created_by: 10,
     description: 15,
     enabled: 7,
+    global: 6,
     owner_uuid: 36,
     rule: 20,
     uuid: 36,
     version: 20
 };
+// Have we output an error?
+var OUTPUT_ERROR = false;
 var UUID_REGEX =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -176,6 +179,14 @@ function getPayload(opts, args, callback) {
 
 
 /**
+ * Have we output an error so far?
+ */
+function haveOutputErr() {
+    return OUTPUT_ERROR;
+}
+
+
+/**
  * Pretty-print a JSON object
  */
 function json(obj) {
@@ -189,6 +200,8 @@ function json(obj) {
  */
 function outputError(err, opts) {
     var errs = [ err ];
+
+    OUTPUT_ERROR = true;
     if (err.hasOwnProperty('ase_errors')) {
         errs = err.ase_errors;
     }
@@ -248,6 +261,7 @@ module.exports = {
     displayRules: displayRules,
     exitWithErr: exitWithErr,
     getPayload: getPayload,
+    haveOutputErr : haveOutputErr,
     json: json,
     outputError: outputError,
     ruleLine: ruleLine,

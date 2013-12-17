@@ -127,6 +127,7 @@ exports['add / update: tag to tag'] = function (t) {
         rules: [
             {
                 rule: 'FROM tag one TO tag one ALLOW tcp PORT 80',
+                owner_uuid: vm1.owner_uuid,
                 enabled: true
             }
         ],
@@ -518,10 +519,12 @@ exports['add / update: tag to tag'] = function (t) {
         var addPayload = {
             rules: [
                 {
+                    owner_uuid: vm1.owner_uuid,
                     rule: 'FROM tag red TO tag one ALLOW udp PORT 1000',
                     enabled: true
                 },
                 {
+                    owner_uuid: vm1.owner_uuid,
                     rule: 'FROM tag red TO tag one ALLOW udp PORT 1001',
                     enabled: true
                 }
@@ -575,6 +578,7 @@ exports['add / update: tag to tag'] = function (t) {
         var addPayload = {
             rules: [
                 {
+                    owner_uuid: vm1.owner_uuid,
                     rule: 'FROM tag one TO tag red ALLOW tcp PORT 25',
                     enabled: true
                 }
@@ -749,11 +753,13 @@ exports['add / update: tag to tag'] = function (t) {
         var addPayload = {
             rules: [
                 {
+                    owner_uuid: vm1.owner_uuid,
                     rule: util.format(
                         'FROM vm %s TO tag one ALLOW tcp PORT 8080', vm4.uuid),
                     enabled: true
                 },
                 {
+                    owner_uuid: vm1.owner_uuid,
                     rule: util.format(
                         'FROM tag one TO vm %s ALLOW tcp PORT 8080', vm4.uuid),
                     enabled: true
@@ -818,6 +824,7 @@ exports['add / update: tag to tag'] = function (t) {
         var addPayload = {
             rules: [
                 {
+                    owner_uuid: vm1.owner_uuid,
                     rule: 'FROM tag one TO tag two ALLOW tcp PORT 125',
                     enabled: true
                 }
@@ -895,6 +902,7 @@ exports['tags with values'] = function (t) {
         remoteVMs: [rvm1, rvm2, rvm3],
         rules: [
             {
+                owner_uuid: vm1.owner_uuid,
                 rule: 'FROM any TO tag role = web ALLOW tcp PORT 80',
                 enabled: true
             }
@@ -963,6 +971,7 @@ exports['tags with values'] = function (t) {
         var addPayload = {
             rules: [
                 {
+                    owner_uuid: vm1.owner_uuid,
                     rule: 'FROM tag role = web TO tag role = mon '
                         + 'ALLOW udp PORT 514',
                     enabled: true
@@ -1188,10 +1197,12 @@ exports['tags that target no VMs'] = function (t) {
     var vms = [ helpers.generateVM(), helpers.generateVM() ];
     var rules = [
         {
+            owner_uuid: vms[0].owner_uuid,
             rule: 'FROM any TO tag doesnotexist ALLOW tcp PORT 80',
             enabled: true
         },
         {
+            owner_uuid: vms[0].owner_uuid,
             rule: 'FROM any TO tag exists = nada ALLOW tcp PORT 81',
             enabled: true
         }

@@ -58,6 +58,11 @@ var OPTS = {
         type: 'string',
         help: 'Output delimiter.'
     },
+    description: {
+        names: ['description', 'desc' ],
+        type: 'string',
+        help: 'Rule description.'
+    },
     enable: {
         names: ['enable', 'e'],
         type: 'bool',
@@ -67,6 +72,11 @@ var OPTS = {
         names: ['file', 'f'],
         type: 'string',
         help: 'Input file.'
+    },
+    global: {
+        names: ['global', 'g'],
+        type: 'bool',
+        help: 'Global rule.'
     },
     help: {
         names: ['help', 'h'],
@@ -137,6 +147,12 @@ function preparePayload(opts, payload) {
         if (opts.enable) {
             newOpts.rules.forEach(function (r) {
                 r.enabled = true;
+            });
+        }
+
+        if (opts.global) {
+            newOpts.rules.forEach(function (r) {
+                r.global = true;
             });
         }
 
@@ -651,6 +667,17 @@ Fwadm.prototype.do_vms = function (subcmd, opts, args, callback) {
     });
 };
 
+var ARG_OPTS;
+
+/**
+ * Run before any of the do_* methods
+ */
+Fwadm.prototype.init = function (opts, args, callback) {
+    ARG_OPTS = opts;
+    return callback();
+
+};
+
 
 
 // --- Help text and other cmdln options
@@ -678,9 +705,11 @@ var HELP = {
 };
 
 var EXTRA_OPTS = {
-    add: [ OPTS.enable, OPTS.file, OPTS.owner_uuid ],
+    add: [ OPTS.description, OPTS.enable, OPTS.file, OPTS.global,
+        OPTS.owner_uuid ],
     list: [ OPTS.delim, OPTS.output_fields, OPTS.parseable ],
-    update: [ OPTS.enable, OPTS.file, OPTS.owner_uuid ]
+    update: [ OPTS.description, OPTS.enable, OPTS.file, OPTS.global,
+        OPTS.owner_uuid ]
 };
 
 // Help text and options for all commands
@@ -714,6 +743,9 @@ function main() {
 
         var fwadm = new Fwadm;
         fwadm.main(process.argv, function (err2) {
+            if (err2 && !cli.haveOutputErr()) {
+                cli.outputError(err2, ARG_OPTS);
+            }
             // Potentially 3 different logs to flush: if we've only used
             // fw.js, just flush LOG.  If we've gone through VM.update (eg: for
             // start / stop), we need to flush VM.log and VM.fw_log.

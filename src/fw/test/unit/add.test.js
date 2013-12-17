@@ -63,7 +63,8 @@ exports['created_by'] = function (t) {
             {
                 rule: util.format('FROM vm %s TO any BLOCK tcp PORT 8080',
                     vm.uuid),
-                uuid: mod_uuid.v4(),
+                uuid: vm.owner_uuid,
+                owner_uuid: mod_uuid.v4(),
                 enabled: true,
                 version: '1383205115597.067782'
             },
@@ -72,6 +73,7 @@ exports['created_by'] = function (t) {
                 rule: util.format('FROM vm %s TO any BLOCK tcp PORT 8081',
                     vm.uuid),
                 uuid: mod_uuid.v4(),
+                owner_uuid: vm.owner_uuid,
                 enabled: true,
                 version: '1383205115597.067782'
             }
@@ -93,8 +95,8 @@ exports['created_by'] = function (t) {
                 return cb();
             }
 
-            t.deepEqual(res, {
-                rules: expRules,
+            t.deepEqual(helpers.sortRes(res), {
+                rules: expRules.sort(helpers.uuidSort),
                 vms: [ vm.uuid ]
             }, 'rules returned');
 

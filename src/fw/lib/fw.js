@@ -211,7 +211,7 @@ function createRules(inRules, createdBy, callback) {
         }
 
         try {
-            var r = mod_rule.create(rule);
+            var r = mod_rule.create(rule, { enforceGlobal: true });
             rules.push(r);
         } catch (err) {
             errors.push(err);
@@ -239,6 +239,8 @@ function createUpdatedRules(opts, log, callback) {
         return callback(null, []);
     }
 
+    var mergedRule;
+    var origRule;
     var originals = {};
     var updated = [];
     var ver = mod_rule.generateVersion();
@@ -259,7 +261,29 @@ function createUpdatedRules(opts, log, callback) {
         }
 
         if (originals.hasOwnProperty(rule.uuid)) {
-            updated.push(mergeObjects(rule, originals[rule.uuid].serialize()));
+            origRule = originals[rule.uuid].serialize();
+            mergedRule = mergeObjects(rule, origRule);
+
+            if (!(rule.hasOwnProperty('owner_uuid')
+                && rule.hasOwnProperty('global'))) {
+                // If both owner_uuid and global are set - let
+                // this bubble up the appropriate error in createRules()
+
+                if (rule.hasOwnProperty('owner_uuid')
+                    && origRule.hasOwnProperty('global')) {
+                    // Updating from global -> owner_uuid rule
+                    delete mergedRule.global;
+                }
+
+                if (rule.hasOwnProperty('global')
+                    && origRule.hasOwnProperty('owner_uuid')) {
+                    // Updating from owner_uuid -> global rule
+                    delete mergedRule.owner_uuid;
+                }
+            }
+
+            updated.push(mergedRule);
+
         } else {
             updated.push(rule);
         }

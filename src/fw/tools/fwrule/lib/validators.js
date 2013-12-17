@@ -108,6 +108,18 @@ function validateAction(action) {
 
 
 /**
+ * Returns true if bool is a valid boolean value, false otherwise
+ */
+function validateBoolean(bool) {
+    if (typeof (bool) !== 'boolean' && bool !== 'true' && bool !== 'false') {
+        return false;
+    }
+
+    return true;
+}
+
+
+/**
  * Throws an InvalidParamError if the string is invalid
  */
 function validateString(name, str) {
@@ -131,6 +143,7 @@ function validateUUID(uuid) {
 
 
 module.exports = {
+    bool: validateBoolean,
     InvalidParamError: InvalidParamError,
     validateAction: validateAction,
     validateIPv4address: validateIPv4address,

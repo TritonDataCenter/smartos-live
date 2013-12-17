@@ -88,7 +88,7 @@ exports['tag to IP'] = function (t) {
             t.deepEqual(res, {
                 vms: [ vm2.uuid ],
                 rules: [ payload.rules[0] ]
-            }, 'rules returned');
+            }, 'add 1: rules returned');
 
             var zoneRules = helpers.zoneIPFconfigs();
             var expRules = helpers.defaultZoneRules(vm2.uuid);
@@ -126,7 +126,8 @@ exports['tag to IP'] = function (t) {
             rules: [
                 {
                     rule: 'FROM tag foo TO ip 10.99.99.254 BLOCK tcp PORT 250',
-                    enabled: true
+                    enabled: true,
+                    global: true
                 }
             ],
             vms: [vm1, vm2]
@@ -149,7 +150,7 @@ exports['tag to IP'] = function (t) {
             t.deepEqual(res, {
                 vms: [ vm1.uuid, vm2.uuid ],
                 rules: [ payload2.rules[0] ]
-            }, 'rules returned');
+            }, 'add 2: rules returned');
 
             var zoneRules = helpers.zoneIPFconfigs();
             var expRules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
@@ -196,6 +197,7 @@ exports['tag to IP'] = function (t) {
             vms: [vm1, vm2]
         };
         expRule2.owner_uuid = owner;
+        delete expRule2.global;
 
         fw.update(payload3, function (err, res) {
             t.ifError(err);
@@ -208,7 +210,7 @@ exports['tag to IP'] = function (t) {
                 // written out, and vm2 has the default plus rule 2
                 vms: [ vm2.uuid, vm1.uuid ],
                 rules: [ expRule2 ]
-            }, 'rules returned');
+            }, 'update: rules returned');
 
             var zoneRules = helpers.zoneIPFconfigs();
             var expRules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
@@ -383,6 +385,7 @@ exports['all vms (local and remote)'] = function (t) {
         var addPayload = {
             rules: [
                 {
+                    global: true,
                     rule: 'FROM all vms TO all vms ALLOW tcp PORT 8083',
                     enabled: true
                 }

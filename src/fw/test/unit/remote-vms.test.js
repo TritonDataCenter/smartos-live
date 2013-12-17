@@ -71,11 +71,13 @@ exports['local VM to remote VM'] = function (t) {
         remoteVMs: [rvm],
         rules: [
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM vm %s TO vm %s ALLOW tcp PORT 80',
                                 vm.uuid, rvm.uuid),
                 enabled: true
             },
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM vm %s TO vm %s ALLOW tcp PORT 80',
                                 rvm.uuid, vm.uuid),
                 enabled: true
@@ -179,6 +181,7 @@ exports['local VM to remote VM'] = function (t) {
     }, function (cb) {
         // Add another rule referencing rvm
         rule3 = {
+            owner_uuid: vm.owner_uuid,
             enabled: true,
             rule: util.format('FROM vm %s TO vm %s ALLOW udp PORT 161',
                             rvm.uuid, vm.uuid)
@@ -356,6 +359,7 @@ exports['local VM to remote VM'] = function (t) {
         // Add another rule and rvm, to make sure that the existing (but
         // disabled) rules won't cause errors
         rule4 = {
+            owner_uuid: vm.owner_uuid,
             rule: util.format('FROM vm %s TO vm %s ALLOW tcp PORT 90',
                             rvm2.uuid, vm.uuid),
             enabled: true
@@ -449,11 +453,13 @@ exports['local VM to remote tag'] = function (t) {
         remoteVMs: [rvm],
         rules: [
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM vm %s TO tag other ALLOW tcp PORT 80',
                                 vm.uuid),
                 enabled: true
             },
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM tag other TO vm %s ALLOW tcp PORT 80',
                                 vm.uuid),
                 enabled: true
@@ -530,6 +536,7 @@ exports['local VM to remote tag'] = function (t) {
         // Add another rule referencing rvm
         rule3 = {
             enabled: true,
+            owner_uuid: vm.owner_uuid,
             rule: util.format('FROM vm %s TO vm %s ALLOW udp PORT 161',
                             rvm.uuid, vm.uuid)
         };
@@ -645,11 +652,13 @@ exports['local VM and remote VM to IP'] = function (t) {
         remoteVMs: [rvm],
         rules: [
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM (vm %s OR vm %s) TO ip 10.0.0.1 '
                     + 'ALLOW tcp PORT 80', vm.uuid, rvm.uuid),
                 enabled: true
             },
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM ip 10.0.0.1 TO (vm %s OR vm %s) '
                     + 'ALLOW tcp PORT 80', vm.uuid, rvm.uuid),
                 enabled: true
@@ -745,6 +754,7 @@ exports['all vms to local VM'] = function (t) {
         remoteVMs: [rvm],
         rules: [
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM all vms TO vm %s ALLOW tcp PORT 44',
                     vm.uuid),
                 enabled: true
@@ -803,6 +813,7 @@ exports['all vms to local VM'] = function (t) {
         var addPayload = {
             rules: [
                 {
+                    owner_uuid: vm.owner_uuid,
                     rule: util.format(
                         'FROM ip 10.6.0.1 TO vm %s ALLOW tcp PORT 45', vm.uuid),
                     enabled: true
@@ -1067,16 +1078,19 @@ exports['delete: different VMs than RVMs in rule'] = function (t) {
 
     var rules = [
         {
+            owner_uuid: vms[0].owner_uuid,
             rule: util.format('FROM vm %s TO vm %s ALLOW tcp PORT 80',
                 rvms[0].uuid, vms[0].uuid),
             enabled: true
         },
         {
+            owner_uuid: vms[0].owner_uuid,
             rule: util.format('FROM ip 10.2.0.2 TO vm %s ALLOW tcp PORT 81',
                 vms[1].uuid),
             enabled: true
         },
         {
+            owner_uuid: vms[0].owner_uuid,
             rule: util.format('FROM vm %s TO vm %s ALLOW tcp PORT 82',
                 rvms[1].uuid, vms[1].uuid),
             enabled: true

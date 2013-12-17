@@ -62,6 +62,7 @@ exports['any <-> vm: add / update'] = function (t) {
     var payload = {
         rules: [
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM vm %s TO any BLOCK tcp PORT 8080',
                     vm.uuid),
                 enabled: true
@@ -120,6 +121,7 @@ exports['any <-> vm: add / update'] = function (t) {
         var addPayload = {
             rules: [
                 {
+                    owner_uuid: vm.owner_uuid,
                     rule: util.format('FROM any TO vm %s ALLOW tcp PORT 8081',
                         vm.uuid),
                     enabled: true
@@ -308,19 +310,23 @@ exports['any <-> all vms: add / update'] = function (t) {
         remoteVMs: [ rvm1 ],
         rules: [
             {
+                owner_uuid: vm1.owner_uuid,
                 rule: util.format('FROM all vms TO vm %s BLOCK tcp PORT 8080',
                                 vm1.uuid),
                 enabled: true
             },
             {
+                owner_uuid: vm1.owner_uuid,
                 rule: 'FROM any TO all vms ALLOW tcp PORT 8081',
                 enabled: true
             },
             {
+                owner_uuid: vm1.owner_uuid,
                 rule: 'FROM all vms TO all vms BLOCK tcp PORT 8082',
                 enabled: true
             },
             {
+                owner_uuid: vm1.owner_uuid,
                 rule: 'FROM all vms TO all vms ALLOW tcp PORT 8083',
                 enabled: true
             }
@@ -548,6 +554,7 @@ exports['add / update: all ports'] = function (t) {
     var payload = {
         rules: [
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM vm %s TO any BLOCK tcp PORT all',
                     vm.uuid),
                 enabled: true
@@ -606,6 +613,7 @@ exports['add / update: all ports'] = function (t) {
         var addPayload = {
             rules: [
                 {
+                    owner_uuid: vm.owner_uuid,
                     rule: util.format('FROM any TO vm %s ALLOW tcp PORT all',
                         vm.uuid),
                     enabled: true

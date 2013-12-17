@@ -61,12 +61,14 @@ exports['fields'] = function (t) {
     var payload = {
         rules: [
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM vm %s TO any BLOCK tcp PORT 8080',
                     vm.uuid),
                 uuid: mod_uuid.v4(),
                 enabled: true
             },
             {
+                owner_uuid: vm.owner_uuid,
                 created_by: 'other',
                 rule: util.format(
                     'FROM (vm %s OR tag foo) TO any BLOCK tcp PORT 8081',
@@ -74,6 +76,7 @@ exports['fields'] = function (t) {
                 enabled: false
             },
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM vm %s TO any BLOCK tcp PORT 8082',
                     vm.uuid),
                 enabled: true

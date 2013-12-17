@@ -54,10 +54,13 @@ exports['empty rules'] = function (t) {
 exports['single rules'] = function (t) {
     var uuid1 = mod_uuid.v4();
     var vm = helpers.generateVM({ tags: { one: true } });
+    // Stub out a rule payload - we'll change rules[0].rule for each
+    // test below
     var opts = {
         rules: [
             {
-                enabled: true
+                enabled: true,
+                owner_uuid: vm.owner_uuid
             }
         ],
         vms: [

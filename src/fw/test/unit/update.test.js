@@ -61,6 +61,7 @@ exports['update non-existent rule'] = function (t) {
     var payload = {
         rules: [
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM vm %s TO any BLOCK tcp PORT 8080',
                     vm.uuid),
                 uuid: mod_uuid.v4(),
@@ -146,6 +147,7 @@ exports['description and created_by'] = function (t) {
     var payload = {
         rules: [
             {
+                global: true,
                 rule: 'FROM any TO all vms ALLOW tcp PORT 60',
                 uuid: mod_uuid.v4(),
                 enabled: false,

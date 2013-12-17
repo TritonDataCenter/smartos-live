@@ -59,6 +59,7 @@ exports['add / update'] = function (t) {
     var payload = {
         rules: [
             {
+                owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM ip 10.99.99.254 TO vm %s ALLOW icmp '
                                 + 'TYPE 8', vm.uuid),
                 enabled: true

@@ -92,7 +92,7 @@ function install_pkgin
 
 	pkglist="$pkglist flex libxslt sun-jre6 sun-jdk6 nodejs"
 	pkglist="$pkglist p5-XML-Parser gettext python26 py26-expat"
-	pkglist="$pkglist coreutils gsed pkg_alternatives"
+	pkglist="$pkglist coreutils gsed pkg_alternatives cdrtools"
 
 	for pkg in $pkglist; do
 		if ! pkg_info -qe $pkg; then

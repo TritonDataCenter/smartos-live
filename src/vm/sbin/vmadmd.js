@@ -2018,9 +2018,7 @@ function main()
             VM.lookup({}, {fields: lookup_fields}, function (e, vmobjs) {
                 var obj;
 
-                for (obj in vmobjs) {
-                    obj = vmobjs[obj];
-
+                async.forEachSeries(vmobjs, function (obj) {
                     upgradeVM(obj, lookup_fields, function (upg_err, vmobj) {
 
                         if (upg_err) {
@@ -2076,7 +2074,7 @@ function main()
                             log.debug('ignoring non-kvm VM ' + vmobj.uuid);
                         }
                     });
-                }
+                });
             });
         });
     });

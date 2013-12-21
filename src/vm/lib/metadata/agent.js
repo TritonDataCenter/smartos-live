@@ -29,6 +29,7 @@ var sdc_fields = [
     'hostname',
     'limit_priv',
     'last_modified',
+    'maintain_resolvers',
     'max_physical_memory',
     'max_locked_memory',
     'max_lwps',

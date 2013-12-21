@@ -21,6 +21,7 @@ var INVALID_GW = 'Invalid route gateway: "%s" '
     + '(must be IP address or nic)';
 var INVALID_NIC = 'Route gateway: "%s" '
     + 'refers to non-existent or DHCP nic';
+var INVALID_VAL = 'Invalid value(s) for: %s';
 
 var payload = {
     'autoboot': false,
@@ -73,6 +74,22 @@ function vmRoutes(vmobj) {
 
     return routes;
 }
+
+function waitAndValidateZoneFiles(t, vm, resolvers, routes, callback) {
+    var timeout;
+    // For now, just wait 10 seconds for mdata:fetch to complete.
+    // TODO: something smarter
+    timeout = setTimeout(function () {
+        clearTimeout(timeout);
+        t.deepEqual(vmResolvers(vm), resolvers,
+            'resolvers in resolv.conf');
+        t.deepEqual(vmRoutes(vm), routes,
+            'routes in static_routes');
+
+        return callback();
+    }, 10000);
+}
+
 
 var failures = [
     [ 'destination: invalid',
@@ -130,6 +147,11 @@ var failures = [
             nics: [ { 'nic_tag': 'admin', 'ip': 'dhcp' } ]
         }
     ],
+
+    [ 'maintain_resolvers: invalid',
+        format(INVALID_VAL, 'maintain_resolvers'),
+        { 'maintain_resolvers': 'asdf' }
+    ]
 ];
 
 test('validation failures', test_opts, function(t) {
@@ -173,6 +195,11 @@ test('update routes and resolvers', test_opts, function(t) {
     };
     var vm;
 
+    var inZoneRoutes = {
+        '172.21.1.1': '172.20.1.2',     // nics[1].ip
+        '172.22.2.0/24': '172.19.1.1'
+    };
+    var oldResolvers;
     var resolvers = [ '172.21.1.1' ];
     var routes = {
         '172.21.1.1': 'nics[1]',
@@ -187,6 +214,7 @@ test('update routes and resolvers', test_opts, function(t) {
               'ip': '172.20.1.2',
               'netmask': '255.255.255.0' },
         ],
+        'maintain_resolvers': true,
         'nowait': false,
         'resolvers': resolvers,
         'routes': routes
@@ -209,10 +237,8 @@ test('update routes and resolvers', test_opts, function(t) {
 
                     t.deepEqual(vmResolvers(vm), resolvers,
                         'resolvers in resolv.conf');
-                    t.deepEqual(vmRoutes(vm), {
-                        '172.21.1.1': vm.nics[1].ip,
-                        '172.22.2.0/24': '172.19.1.1'
-                    }, 'routes in static_routes');
+                    t.deepEqual(vmRoutes(vm), inZoneRoutes,
+                        'routes in static_routes');
                 }
 
                 cb(err);
@@ -228,7 +254,11 @@ test('update routes and resolvers', test_opts, function(t) {
                 },
             };
             delete routes['172.22.2.0/24'];
+            delete inZoneRoutes['172.22.2.0/24'];
+
             routes['172.22.3.0/24'] = '172.19.1.1';
+            inZoneRoutes['172.22.3.0/24'] = '172.19.1.1';
+
             resolvers = updatePayload.resolvers;
 
             VM.update(state.uuid, updatePayload, function (err) {
@@ -251,20 +281,7 @@ test('update routes and resolvers', test_opts, function(t) {
         },
 
         function (cb) {
-            var timeout;
-            // For now, just wait 10 seconds for mdata:fetch to complete.
-            // TODO: something smarter
-            timeout = setTimeout(function () {
-                clearTimeout(timeout);
-                t.deepEqual(vmResolvers(vm), resolvers,
-                    'resolvers in resolv.conf');
-                t.deepEqual(vmRoutes(vm), {
-                    '172.21.1.1': vm.nics[1].ip,
-                    '172.22.3.0/24': '172.19.1.1'
-                }, 'routes in static_routes');
-
-                return cb();
-            }, 10000);
+            waitAndValidateZoneFiles(t, vm, resolvers, inZoneRoutes, cb);
         },
 
         function (cb) {
@@ -292,6 +309,7 @@ test('update routes and resolvers', test_opts, function(t) {
                 remove_routes: [ '172.21.1.1' ]
             };
             delete routes['172.21.1.1'];
+            delete inZoneRoutes['172.21.1.1'];
 
             VM.update(state.uuid, updatePayload, function (err) {
                 t.ifErr(err, 'Updating VM');
@@ -311,6 +329,221 @@ test('update routes and resolvers', test_opts, function(t) {
                 cb(err);
             });
         },
+
+        function (cb) {
+            waitAndValidateZoneFiles(t, vm, resolvers, inZoneRoutes, cb);
+        },
+
+        function (cb) {
+            // Don't update resolvers in the zone if maintain_resolvers is
+            // not set
+            var updatePayload = {
+                maintain_resolvers: false,
+                resolvers: [ '172.21.1.2' ]
+            };
+            oldResolvers = resolvers;
+            resolvers = updatePayload.resolvers;
+
+            VM.update(state.uuid, updatePayload, function (err) {
+                t.ifErr(err, 'Updating VM');
+                cb(err);
+            });
+        },
+
+        function (cb) {
+            VM.load(state.uuid, function(err, obj) {
+                t.ifErr(err, 'loading VM');
+                if (obj) {
+                    t.deepEqual(obj.routes, routes, 'routes are the same');
+                    t.deepEqual(obj.resolvers, resolvers,
+                        'VM object resolvers updated');
+                    vm = obj;
+                }
+
+                cb(err);
+            });
+        },
+
+        function (cb) {
+            // resolv.conf in the zone should have the old resolvers, not
+            // the ones we just updated. static_routes in the zone should
+            // also be unchanged.
+            waitAndValidateZoneFiles(t, vm, oldResolvers, inZoneRoutes, cb);
+
+        },
+
+        function (cb) {
+            // The changes should persist across reboots
+            VM.reboot(state.uuid, {}, function(err) {
+                if (err) {
+                    t.ifErr(err, 'reboot VM');
+                    return cb(err);
+                }
+
+                VM.load(state.uuid, function (err2, obj) {
+                    t.ifErr(err2, 'loading VM');
+                    if (obj) {
+                        t.deepEqual(obj.routes, routes,
+                            'routes are the same');
+                        t.deepEqual(obj.resolvers, resolvers,
+                            'resolvers are the same');
+                        vm = obj;
+                    }
+
+                    cb(err2);
+
+                });
+            });
+        },
+
+        function (cb) {
+            // resolv.conf and static_routes should be unchanged
+            waitAndValidateZoneFiles(t, vm, oldResolvers, inZoneRoutes, cb);
+        },
+
+        function (cb) {
+            // Set maintain_resolvers again: we should now have the new
+            // resolvers in the zone
+            VM.update(state.uuid, { maintain_resolvers: true }, function (err) {
+                t.ifErr(err, 'Updating VM');
+                cb(err);
+            });
+        },
+
+        function (cb) {
+            // resolv.conf and static_routes should now match the VM object
+            waitAndValidateZoneFiles(t, vm, resolvers, inZoneRoutes, cb);
+        }
+
+    ], function (err) {
+        return t.end();
+    });
+});
+
+
+test('create zone without maintain_resolvers', test_opts, function(t) {
+    var state = {
+        'brand': 'joyent-minimal'
+    };
+    var vm;
+
+    var inZoneRoutes = {
+        '172.21.1.1': '172.20.1.3'     // nics[0].ip
+    };
+    var oldResolvers;
+    var resolvers = [ '172.21.1.1' ];
+    var routes = {
+        '172.21.1.1': 'nics[0]'
+    };
+    var newPayload = {
+        'nics': [
+            { 'nic_tag': 'admin',
+              'ip': '172.20.1.3',
+              'netmask': '255.255.255.0' },
+        ],
+        // leaving out maintain_resolvers on purpose
+        'nowait': false,
+        'resolvers': resolvers,
+        'routes': routes
+    };
+
+    for (var k in payload) {
+        newPayload[k] = payload[k];
+    }
+
+    newPayload.autoboot = true;
+
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, newPayload, state, [
+        function (cb) {
+            VM.load(state.uuid, function(err, obj) {
+                t.ifErr(err, 'loading new VM');
+                if (obj) {
+                    t.deepEqual(obj.routes, routes, 'routes present');
+                    t.deepEqual(obj.resolvers, resolvers, 'resolvers present');
+                    vm = obj;
+
+                    // We expect the resolvers to be set on the initial boot
+                    t.deepEqual(vmResolvers(vm), resolvers,
+                        'resolvers in resolv.conf');
+                    t.deepEqual(vmRoutes(vm), inZoneRoutes,
+                        'routes in static_routes');
+                }
+
+                cb(err);
+            });
+        },
+
+        function (cb) {
+            var updatePayload = {
+                resolvers: [ '8.8.8.8', '8.8.4.4' ],
+                set_routes: {
+                    '172.22.3.0/24': '172.19.1.1'
+                }
+            };
+            delete routes['172.22.2.0/24'];
+            delete inZoneRoutes['172.22.2.0/24'];
+
+            routes['172.22.3.0/24'] = '172.19.1.1';
+            inZoneRoutes['172.22.3.0/24'] = '172.19.1.1';
+
+            oldResolvers = resolvers;
+            resolvers = updatePayload.resolvers;
+
+            VM.update(state.uuid, updatePayload, function (err) {
+                t.ifErr(err, 'Updating VM');
+                cb(err);
+            });
+        },
+
+        function (cb) {
+            VM.load(state.uuid, function(err, obj) {
+                t.ifErr(err, 'loading VM');
+                if (obj) {
+                    t.deepEqual(obj.routes, routes, 'routes updated');
+                    // updated resolvers should show up in the VM object
+                    t.deepEqual(obj.resolvers, resolvers, 'resolvers updated');
+                    vm = obj;
+                }
+
+                cb(err);
+            });
+        },
+
+        function (cb) {
+            // resolv.conf should not have the updated resolvers, since
+            // maintain_resolvers is not set
+
+            waitAndValidateZoneFiles(t, vm, oldResolvers, inZoneRoutes, cb);
+        },
+
+        function (cb) {
+            // The old resolvers should stay across reboots
+            VM.reboot(state.uuid, {}, function(err) {
+                if (err) {
+                    t.ifErr(err, 'reboot VM');
+                    return cb(err);
+                }
+
+                VM.load(state.uuid, function (err2, obj) {
+                    t.ifErr(err2, 'loading VM');
+                    if (obj) {
+                        t.deepEqual(obj.routes, routes,
+                            'routes are the same');
+                        t.deepEqual(obj.resolvers, resolvers,
+                            'resolvers are the same');
+                        vm = obj;
+                    }
+
+                    cb(err2);
+
+                });
+            });
+        },
+
+        function (cb) {
+            // resolv.conf and static_routes should be unchanged
+            waitAndValidateZoneFiles(t, vm, oldResolvers, inZoneRoutes, cb);
+        }
 
     ], function (err) {
         return t.end();

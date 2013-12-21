@@ -2016,8 +2016,6 @@ function main()
             ];
 
             VM.lookup({}, {fields: lookup_fields}, function (e, vmobjs) {
-                var obj;
-
                 async.forEachSeries(vmobjs, function (obj) {
                     upgradeVM(obj, lookup_fields, function (upg_err, vmobj) {
 

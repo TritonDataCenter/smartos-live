@@ -1003,7 +1003,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         true. When set false the property will not appear.
 
         type: boolean
-        vmtype: OS,KVM
+        vmtype: OS
         listable: no
         create: yes
         update: yes
@@ -1067,6 +1067,17 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes
         OS default: "default"
         KVM default: "default,-file_link_any,-net_access,-proc_fork,-proc_info,-proc_session"
+
+    maintain_resolvers:
+
+        If set, the resolvers in /etc/resolv.conf inside the VM will be updated
+        when the resolvers property is updated.
+
+        type: boolean
+        vmtype: OS
+        listable: no
+        create: yes
+        update: yes
 
     max_locked_memory:
 
@@ -1518,6 +1529,8 @@ tab-complete UUIDs rather than having to type them out for every command.
     resolvers:
 
         For OS VMs, this value sets the resolvers which get put into
+        /etc/resolv.conf at VM creation. If maintain_resolvers is set to
+        true, updating this property will also update the resolvers in
         /etc/resolv.conf. For KVM VMs these will get passed as the resolvers
         with DHCP responses.
 

@@ -99,6 +99,9 @@
   <service name='system/name-service-cache' version='1' type='service'>
     <instance name='default' enabled='true'/>
   </service>
+  <service name='network/netmask' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
   <service name='network/nfs/status' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>

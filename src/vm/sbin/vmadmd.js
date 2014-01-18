@@ -2016,7 +2016,7 @@ function main()
             ];
 
             VM.lookup({}, {fields: lookup_fields}, function (e, vmobjs) {
-                async.forEachSeries(vmobjs, function (obj) {
+                async.forEachSeries(vmobjs, function (obj, upg_cb) {
                     upgradeVM(obj, lookup_fields, function (upg_err, vmobj) {
 
                         if (upg_err) {
@@ -2037,6 +2037,7 @@ function main()
 
                         if (vmobj.state === 'failed') {
                             log.debug('skipping failed VM ' + vmobj.uuid);
+                            upg_cb();
                         } else if (vmobj.state === 'provisioning') {
                             log.debug('at vmadmd startup, VM ' + vmobj.uuid
                                 + ' is in state "provisioning"');
@@ -2044,6 +2045,7 @@ function main()
                             if (PROV_WAIT.hasOwnProperty(vmobj.uuid)) {
                                 log.warn('at vmadmd startup, already waiting '
                                     + 'for "provisioning" for ' + vmobj.uuid);
+                                upg_cb();
                                 return;
                             }
 
@@ -2059,17 +2061,21 @@ function main()
                                     log.error(prov_err, 'error handling '
                                         + 'provisioning state for ' + vmobj.uuid
                                         + ': ' + prov_err.message);
+                                    upg_cb();
                                     return;
                                 }
                                 log.debug('at vmadmd startup, handleProvision()'
                                     + 'for ' + vmobj.uuid + ' returned: '
                                     + result);
+                                upg_cb();
                             });
                         } else if (vmobj.brand === 'kvm') {
                             log.debug('calling loadVM(' + vmobj.uuid + ')');
                             loadVM(vmobj, do_autoboot);
+                            upg_cb();
                         } else {
                             log.debug('ignoring non-kvm VM ' + vmobj.uuid);
+                            upg_cb();
                         }
                     });
                 });

@@ -224,8 +224,8 @@ check: $(JSLINT)
 	@(cd $(ROOT)/src && make check)
 
 clean:
-	rm -f $(MANIFEST)
-	rm -rf $(ROOT)/$(MPROTO)/*
+	rm -f $(MANIFEST) $(BOOT_MANIFEST)
+	rm -rf $(MPROTO)/* $(BOOT_MPROTO)/*
 	(cd $(ROOT)/src && gmake clean)
 	[ ! -d $(ROOT)/projects/illumos-extra ] || \
 	    (cd $(ROOT)/projects/illumos-extra && gmake clean)

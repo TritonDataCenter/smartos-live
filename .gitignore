@@ -48,6 +48,8 @@ man/man/man1m/vmadm.1m
 man/man/man1m/vmadmd.1m
 man/man/man1m/sysinfo.1m
 man/man/man1m/diskinfo.1m
+man/man/man1m/disklayout.1m
+man/man/man1m/mkzpool.1m
 src/diskinfo
 src/disklayout
 src/mkzpool

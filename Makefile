@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013, Joyent, Inc.  All rights reserved.
+# Copyright (c) 2014, Joyent, Inc.  All rights reserved.
 #
 
 ROOT =		$(PWD)
@@ -112,8 +112,7 @@ $(MPROTO)/illumos-extra.manifest: 1-extra-stamp | $(MPROTO)
 	gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest \
 	    -C projects/illumos-extra manifest; \
 
-.PHONY: $(MPROTO)/%.sd.manifest
-$(MPROTO)/%.sd.manifest:
+$(MPROTO)/%.sd.manifest: projects/local/%/Makefile projects/local/%/manifest
 	cd $(ROOT)/projects/local/$* && \
 	    if [[ -f Makefile.joyent ]]; then \
 		gmake DESTDIR=$(MPROTO) DESTNAME=$*.sd.manifest \

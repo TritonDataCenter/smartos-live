@@ -388,6 +388,13 @@ function get_smartos_network_interfaces()
         # list of interfaces that are actually on the aggr, rather than
         # what's defined in the config file
         if [[ -n ${port} ]]; then
+            # If a nic is in an aggregation, its MAC address in the output of
+            # `dladm show-phys -m` (used above) will be the MAC of the first
+            # port in the aggregation.  Correct that here, so sysinfo will
+            # still show the underlying nic's MAC.
+            normalize_mac $(echo ${mac} | sed 's/\|/:/g')
+            eval "Network_Interface_${port}_MAC_Address=${normalized}"
+
             ag_count=1
             for aggr in "${Aggrs[@]}"; do
                 if [[ "${aggr}" == "${iface}" ]]; then

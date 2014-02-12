@@ -178,8 +178,23 @@ done < <(/usr/sbin/mdata-get sdc:nics \
 
 # rebuild resolv.conf
 resolvers=$(mdata-get sdc:resolvers)
-result=$?
-if [[ ${result} == 0 ]]; then
+resolvers_result=$?
+
+# Determine if resolv.conf is managed for us
+maintain_resolvers=$(mdata-get sdc:maintain_resolvers)
+maintain_result=$?
+if [[ ${maintain_result} != 0 ]]; then
+    echo "Error getting maintain_resolvers, code: ${maintain_result}"
+    maintain_resolvers="false"
+fi
+
+# If this is our first boot, write an initial set of resolvers
+if [[ -f /var/svc/provisioning ]]; then
+    echo "First boot: writing resolvers"
+    maintain_resolvers="true"
+fi
+
+if [[ ${resolvers_result} == 0 && ${maintain_resolvers} == "true" ]]; then
 
     # if dns_domain is missing or broken, we still write out, just w/o search
     search="search $(mdata-get sdc:dns_domain)"
@@ -205,7 +220,13 @@ if [[ ${result} == 0 ]]; then
         && cat /etc/.resolv.conf.tmp >&2 \
         && rm -f /etc/.resolv.conf.tmp
 else
-    echo "Error getting resolvers, code: ${result}"
+    if [[ ${resolvers_result} == 0 ]]; then
+        echo "Error getting resolvers, code: ${resolvers_result}"
+    fi
+
+    if [[ ${maintain_resolvers} == "true" ]]; then
+        echo "Not setting resolvers, maintain_resolvers=${maintain_resolvers}"
+    fi
 fi
 
 # Fetch routes

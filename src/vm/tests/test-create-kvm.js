@@ -4,6 +4,7 @@
 //
 
 process.env['TAP'] = 1;
+var fs = require('fs');
 var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
@@ -61,7 +62,36 @@ var payload_with_tags = {
             'model': 'virtio'
         }
     ]
-}
+};
+
+var payload_with_too_many_resolvers = {
+    'autoboot': true,
+    'brand': 'kvm',
+    'alias': 'autotest-' + process.pid,
+    'do_not_inventory': true,
+    'resolvers': [
+        '0.0.0.1',
+        '0.0.0.2',
+        '0.0.0.3',
+        '0.0.0.4',
+        '0.0.0.5'
+    ],
+    'disks': [
+        {
+            'size': 2048,
+            'model': 'virtio'
+        },
+    ],
+    'nics': [
+        {
+            'gateway': '10.254.10.1',
+            'ip': '10.254.10.2',
+            'netmask': '255.255.255.0',
+            'nic_tag': 'admin',
+            'model': 'virtio'
+        }
+    ]
+};
 
 test('test create with bad image_size', {'timeout': 240000}, function(t) {
 
@@ -288,6 +318,44 @@ test('test create with tags', {'timeout': 240000}, function(t) {
                     t.ok((obj.tags.hello === 'world'), 'tags: ' + JSON.stringify(obj.tags));
                     cb();
                 });
+            }
+        ], function (err) {
+            t.end();
+        }
+    );
+});
+
+test('test create with too many resolvers', {'timeout': 240000}, function(t) {
+
+    var p = JSON.parse(JSON.stringify(payload_with_too_many_resolvers));
+    var state = {'brand': p.brand};
+    var startvm = '';
+
+    vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [
+            function (cb) {
+                VM.stop(state.uuid, {force: true}, function (err, obj) {
+                    t.ok(!err, 'stopped VM after create: ' + (err ? err.message : 'no error'));
+                    cb();
+                });
+            }, function (cb) {
+                var filename = '/zones/' + state.uuid + '/root/startvm';
+                fs.readFile(filename, 'utf8', function (err, data) {
+                    if (!err) {
+                        t.ok(true, 'got startvm data: ' + data.toString().length
+                            + ' bytes');
+                        startvm = data.toString();
+                    } else {
+                        t.ok(false, 'failed to get startvm data: ' + err.message);
+                    }
+                    cb(err);
+                });
+            }, function (cb) {
+                var match = startvm.match(/vnic,name=net0,.*(dns_ip0=[^"]*)\"/);
+                t.ok(match, 'found dns entries: ' + !!match);
+                if (match) {
+                    t.equal(match[1], 'dns_ip0=0.0.0.1,dns_ip1=0.0.0.2,dns_ip2=0.0.0.3,dns_ip3=0.0.0.4', 'match is as expected: ' + match[1]);
+                }
+                cb();
             }
         ], function (err) {
             t.end();

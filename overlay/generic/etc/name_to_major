@@ -270,3 +270,4 @@ ipmi 273
 dr_sas 274
 t4nex 275
 cxgbe 276
+virtio 277

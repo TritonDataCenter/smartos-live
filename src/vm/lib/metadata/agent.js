@@ -539,16 +539,18 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 // that depends on it, please add a note about that here
                 // otherwise expect it will be removed on you sometime.
                 if (want === 'nics' && vmobj.hasOwnProperty('nics')) {
-                    val = JSON.stringify(vmobj.nics);
-                    returnit(null, val);
-                    return;
+                    self.updateZone(zone, function () {
+                        val = JSON.stringify(vmobj.nics);
+                        returnit(null, val);
+                        return;
+                    });
                 } else if (want === 'resolvers'
                     && vmobj.hasOwnProperty('resolvers')) {
 
-                    // resolvers and routes are special because we might reload
-                    // metadata trying to get the new ones w/o zone reboot. To
-                    // ensure these are fresh we always run updateZone which
-                    // reloads the data if stale.
+                    // resolvers, nics and routes are special because we might
+                    // reload metadata trying to get the new ones w/o zone
+                    // reboot. To ensure these are fresh we always run
+                    // updateZone which reloads the data if stale.
                     self.updateZone(zone, function () {
                         // See NOTE above about nics, same applies to resolvers.
                         // It's here solely for the use of mdata-fetch.

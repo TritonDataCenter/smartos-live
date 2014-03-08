@@ -31,7 +31,6 @@ var fwlog = require('/usr/fw/lib/util/log');
 var VM = require('/usr/vm/node_modules/VM');
 var nopt = require('/usr/vm/node_modules/nopt');
 var onlyif = require('/usr/node/node_modules/onlyif');
-var panic = require('/usr/node/node_modules/panic');
 var sprintf = require('/usr/node/node_modules/sprintf').sprintf;
 var tty = require('tty');
 var util = require('util');
@@ -1234,11 +1233,6 @@ onlyif.rootInSmartosGlobal(function (err) {
         process.exit(2);
         return;
     }
-
-    panic.enablePanicOnCrash({
-        'skipDump': true,
-        'abortOnPanic': true
-    });
 
     main(function (e, message) {
         if (e) {

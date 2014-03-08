@@ -1,0 +1,7 @@
+{
+  "zonename": "073ae53b-c444-4e23-866b-10f99f276242",
+  "autoboot": true,
+  "brand": "joyent",
+  "limit_priv": "default",
+  "nics": []
+}

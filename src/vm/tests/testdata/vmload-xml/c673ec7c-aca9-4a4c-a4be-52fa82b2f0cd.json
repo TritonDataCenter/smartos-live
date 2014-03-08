@@ -1,0 +1,38 @@
+{
+  "zonename": "c673ec7c-aca9-4a4c-a4be-52fa82b2f0cd",
+  "autoboot": true,
+  "brand": "joyent",
+  "limit_priv": "default,dtrace_proc,dtrace_user",
+  "cpu_shares": 2,
+  "zfs_io_priority": 2,
+  "max_lwps": 2000,
+  "max_physical_memory": 256,
+  "max_locked_memory": 256,
+  "max_swap": 512,
+  "billing_id": "dfd227bc-e285-449f-8898-ee817a1d7196",
+  "owner_uuid": "a829a6ce-b4a9-40dd-81a2-6a1ca66fe723",
+  "package_name": "customer256-1",
+  "package_version": "1.0.0",
+  "cpu_cap": 50,
+  "alias": "abc-defgh1-slave-ijkL-0",
+  "tmpfs": 256,
+  "dns_domain": "local",
+  "resolvers": [
+    "8.8.8.8",
+    "8.8.4.4"
+  ],
+  "image_uuid": "d7529e10-7b1d-44e9-b82a-2dc6f4ff41cc",
+  "v": 1,
+  "nics": [
+    {
+      "interface": "net0",
+      "mac": "01:02:03:04:05:06",
+      "vlan_id": 1024,
+      "nic_tag": "internal",
+      "gateway": "10.0.0.1",
+      "ip": "10.0.0.2",
+      "netmask": "255.255.224.0",
+      "primary": true
+    }
+  ]
+}

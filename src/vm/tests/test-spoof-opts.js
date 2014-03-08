@@ -391,7 +391,7 @@ function brand_test(brand, image, t) {
 
         }, function (cb) {
             // The changes should persist across reboots
-            VM.reboot(state.uuid, {}, function(err) {
+            VM.reboot(state.uuid, {force: true}, function(err) {
                 if (err) {
                     t.ok(false, 'VM reboot: ' + err.message);
                     return cb(err);

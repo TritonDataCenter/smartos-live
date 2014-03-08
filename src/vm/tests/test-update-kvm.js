@@ -1033,8 +1033,11 @@ test('remove disks', function(t) {
                                         'ensure dataset no longer exists');
                                     VM.load(vmobj.uuid, function (err, final_obj) {
                                         t.ok(!err, 'loaded VM after delete');
-                                        t.ok(final_obj.disks.length === 0, 'disks list empty: '
-                                            + JSON.stringify(final_obj.disks));
+                                        t.ok(final_obj.hasOwnProperty('disks'), 'no disks member for final_obj');
+                                        if (final_obj.hasOwnProperty('disks')) {
+                                            t.ok(final_obj.disks.length === 0, 'disks list empty: '
+                                                + JSON.stringify(final_obj.disks));
+                                        }
                                         t.end();
                                     });
                                 });

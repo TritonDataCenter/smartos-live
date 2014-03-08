@@ -1,0 +1,6 @@
+{
+    "zonename": "lx-zone",
+    "autoboot": false,
+    "brand": "lx",
+    "nics": []
+}

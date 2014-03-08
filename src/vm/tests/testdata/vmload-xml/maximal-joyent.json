@@ -1,0 +1,90 @@
+{
+  "zonename": "e9f6d7c2-49c5-4b54-9414-ca1405663e4f",
+  "autoboot": true,
+  "brand": "joyent",
+  "limit_priv": "default,-file_link_any,-net_access",
+  "fs_allowed": "ufs,pcfs",
+  "v": 1,
+  "create_timestamp": "2014-02-17T10:17:28.739Z",
+  "image_uuid": "01b2c898-945f-11e1-a523-af1afbe22822",
+  "cpu_shares": 100,
+  "zfs_io_priority": 100,
+  "max_lwps": 2000,
+  "max_physical_memory": 256,
+  "max_locked_memory": 256,
+  "max_swap": 256,
+  "billing_id": "00000000-0000-0000-0000-000000000000",
+  "owner_uuid": "00000000-0000-0000-0000-000000000000",
+  "tmpfs": 256,
+  "datasets": [
+    "zones/e9f6d7c2-49c5-4b54-9414-ca1405663e4f/data"
+  ],
+  "alias": "the works",
+  "archive_on_delete": true,
+  "cpu_cap": 800,
+  "default_gateway": "10.10.10.1",
+  "do_not_inventory": true,
+  "dns_domain": "joyent.io",
+  "filesystems": [
+    {
+      "source": "/var/tmp",
+      "raw": "/dev/var/tmp",
+      "target": "/gz_var_tmp",
+      "type": "lofs",
+      "options": [
+        "ro",
+        "nodevices"
+      ]
+    }
+  ],
+  "firewall_enabled": true,
+  "hostname": "maximum",
+  "init_name": "/sbin/init",
+  "maintain_resolvers": true,
+  "nics": [
+    {
+      "interface": "net0",
+      "mac": "01:02:03:04:05:06",
+      "nic_tag": "admin",
+      "ip": "10.10.10.10",
+      "netmask": "255.255.255.0"
+    },
+    {
+      "interface": "net1",
+      "mac": "00:00:5e:00:01:01",
+      "vlan_id": 1337,
+      "nic_tag": "admin",
+      "gateway": "10.10.10.1",
+      "allowed_ips": [
+        "10.10.10.11",
+        "10.10.10.12"
+      ],
+      "ip": "10.10.10.11",
+      "netmask": "255.255.255.0",
+      "network_uuid": "298ec546-4b2c-41b4-ba58-6034b1fa8e02",
+      "dhcp_server": true,
+      "allow_dhcp_spoofing": true,
+      "blocked_outgoing_ports": [
+        25,
+        587
+      ],
+      "allow_ip_spoofing": true,
+      "allow_mac_spoofing": true,
+      "allow_restricted_traffic": true,
+      "allow_unfiltered_promisc": true,
+      "vrrp_vrid": 1,
+      "vrrp_primary_ip": "10.10.10.10",
+      "primary": true
+    }
+  ],
+  "package_name": "g6-kitchen-sink",
+  "package_version": "1.0.0",
+  "resolvers": [
+    "4.2.2.1",
+    "4.2.2.2"
+  ],
+  "restart_init": false,
+  "state": "stopping",
+  "transition_to": "stopped",
+  "transition_expire": 2147483647
+}

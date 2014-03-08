@@ -28,7 +28,7 @@ ILLUMOS_SRC =	$(BASE)/../projects/illumos/usr/src
 
 ifeq ($(shell uname -s),Darwin)
 MAKE =		make
-PATH =		$(DESTDIR)/usr/bin:/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
+PATH =		$(DESTDIR)/usr/bin:/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin:/usr/local/bin
 else
 MAKE =		gmake
 PATH =		$(NATIVEDIR)/usr/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin

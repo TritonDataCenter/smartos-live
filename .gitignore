@@ -62,6 +62,7 @@ src/node-zsock/build/
 src/node-zutil/.lock-wscript
 src/node-zutil/build/
 src/sdc-on-tty
+src/vm/node_modules/props.js
 tools/pwgen-2.06/Makefile
 tools/pwgen-2.06/autom4te.cache
 boot.manifest.gen

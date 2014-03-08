@@ -43,6 +43,9 @@ smf_configure_ip || exit ${SMF_EXIT_OK}
 # Make sure that the libraries essential to this stage of booting can be found.
 LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 
+# Time (in seconds) to wait for admin NIC to get DHCP address before continuing.
+ADMIN_DHCP_TIMEOUT=300
+
 smf_netstrategy
 
 function log_if_state
@@ -251,6 +254,16 @@ if smf_is_globalzone; then
             # We ignore errors here because the most common one is that DHCP is
             # already running.
             /sbin/ifconfig ${SYSINFO_NIC_admin} dhcp || /bin/true
+
+            # Wait for DHCP
+            timeout=${ADMIN_DHCP_TIMEOUT}
+            dhcp_admin_ip=$(/sbin/ifconfig ${SYSINFO_NIC_admin} | grep inet | awk '{ print $2 }')
+            while [[ (-z ${dhcp_admin_ip} || ${dhcp_admin_ip} == "0.0.0.0") && ${timeout} -gt 0 ]]; do
+                dhcp_admin_ip=$(/sbin/ifconfig ${SYSINFO_NIC_admin} | grep inet | awk '{ print $2 }')
+                timeout=$((${timeout} - 1))
+                sleep 1
+            done
+
             ADMIN_NIC_UP=true
         fi
     fi

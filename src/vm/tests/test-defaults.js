@@ -27,6 +27,7 @@ var zone_defaults = {
     'brand': ['joyent'],
     'quota': [10],
     'cpu_shares': [100],
+    'datasets': ['<EMPTY-ARRAY>'],
     'zfs_io_priority': [100],
     'zpool': ['zones'],
     'max_lwps': [2000],

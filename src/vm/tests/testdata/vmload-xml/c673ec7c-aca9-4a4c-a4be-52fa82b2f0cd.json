@@ -2,6 +2,7 @@
   "zonename": "c673ec7c-aca9-4a4c-a4be-52fa82b2f0cd",
   "autoboot": true,
   "brand": "joyent",
+  "datasets": [],
   "limit_priv": "default,dtrace_proc,dtrace_user",
   "cpu_shares": 2,
   "zfs_io_priority": 2,

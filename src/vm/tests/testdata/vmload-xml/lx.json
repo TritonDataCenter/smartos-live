@@ -2,5 +2,6 @@
     "zonename": "lx-zone",
     "autoboot": false,
     "brand": "lx",
+    "datasets": [],
     "nics": []
 }

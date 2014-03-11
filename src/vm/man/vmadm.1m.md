@@ -1078,6 +1078,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: no
         create: yes
         update: yes
+        default: false
 
     max_locked_memory:
 

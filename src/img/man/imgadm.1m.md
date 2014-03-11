@@ -238,6 +238,12 @@ UUID.
             -i             Build an incremental image (based on the "@final"
                            snapshot of the source image for the VM).
 
+            --max-origin-depth <max-origin-depth>
+                           Maximum origin depth to allow when creating
+                           incremental images. E.g. a value of 3 means that
+                           the image will only be created if there are no more
+                           than 3 parent images in the origin chain.
+
             -s <prepare-image-path>
                            Path to a script that is run inside the VM to
                            prepare it for imaging. Specifying this triggers the

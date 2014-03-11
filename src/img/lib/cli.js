@@ -1368,6 +1368,13 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, callback) {
             'cannot specify both -o/--output-template and -p/--publish'));
         return;
     }
+    if (opts['max-origin-depth'] !== undefined &&
+        Number(opts['max-origin-depth']) < 2) {
+        callback(new errors.UsageError(format(
+            'invalid max-origin-depth "%s": must be greater than 1',
+            opts['max-origin-depth'])));
+        return;
+    }
 
     function gatherManifestData(next) {
         // Pick up fields from the CLI argv.
@@ -1461,7 +1468,8 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, callback) {
                 && fs.readFileSync(opts['prepare-script'], 'utf8'),
             savePrefix: savePrefix,
             logCb: console.log,
-            quiet: opts.quiet
+            quiet: opts.quiet,
+            maxOriginDepth: opts['max-origin-depth']
         };
         self.tool.createImage(createOpts, function (createErr, imageInfo) {
             if (createErr) {
@@ -1541,6 +1549,12 @@ CLI.prototype.do_create.description = (
     + '    -i             Build an incremental image (based on the "@final"\n'
     + '                   snapshot of the source image for the VM).\n'
     + '\n'
+    + '    --max-origin-depth <max-origin-depth>\n'
+    + '                   Maximum origin depth to allow when creating\n'
+    + '                   incremental images. E.g. a value of 3 means that\n'
+    + '                   the image will only be created if there are no more\n'
+    + '                   than 3 parent images in the origin chain.\n'
+    + '\n'
     + '    -s <prepare-image-path>\n'
     + '                   Path to a script that is run inside the VM to\n'
     + '                   prepare it for imaging. Specifying this triggers the\n'
@@ -1599,7 +1613,8 @@ CLI.prototype.do_create.longOpts = {
     'incremental': Boolean,
     'prepare-script': String,
     'publish': String,
-    'quiet': Boolean
+    'quiet': Boolean,
+    'max-origin-depth': Number
 };
 CLI.prototype.do_create.shortOpts = {
     'm': ['--manifest'],

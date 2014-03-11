@@ -2036,12 +2036,14 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
     assert.optionalBool(options.incremental, 'options.incremental');
     assert.optionalString(options.prepareScript, 'options.prepareScript');
     assert.optionalNumber(options.prepareTimeout, 'options.prepareTimeout');
+    assert.optionalNumber(options.maxOriginDepth, 'options.maxOriginDepth');
     var log = self.log;
     var vmUuid = options.vmUuid;
     var incremental = options.incremental || false;
     var logCb = options.logCb || function () {};
     var prepareScript = options.prepareScript;
     var prepareTimeout = options.prepareTimeout || 300;  // in seconds
+    var maxOriginDepth = options.maxOriginDepth;
 
     var vmInfo;
     var sysinfo;
@@ -2101,6 +2103,58 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 originInfo = ii;
                 next();
             });
+        },
+        function validateMaxOriginDepth(next) {
+            // If there is no origin, no depth was passed or origin doesn't
+            // have an origin itself
+            if (!originInfo || !maxOriginDepth || !originInfo.manifest.origin) {
+                next();
+                return;
+            }
+            var currentDepth = 1;
+            // One origin is already one level deep
+            var currentOrigin = originInfo;
+            var foundFirstOrigin = false;
+
+            // Recursively call getImage until we find the source origin
+            async.whilst(
+                function () {
+                    return currentDepth <= maxOriginDepth && !foundFirstOrigin;
+                },
+                function (cb) {
+                    if (!currentOrigin.manifest.origin) {
+                        foundFirstOrigin = true;
+                        return cb();
+                    }
+                    var getOpts = {
+                        uuid: currentOrigin.manifest.origin,
+                        zpool: currentOrigin.zpool
+                    };
+                    self.getImage(getOpts, function (getErr, origImg) {
+                        if (getErr) {
+                            cb(getErr);
+                            return;
+                        }
+                        currentDepth++;
+                        currentOrigin = origImg;
+                        cb();
+                    });
+                },
+                function (err) {
+                    if (err) {
+                        next(err);
+                        return;
+                    }
+                    // If we exited the loop because we hit maxOriginDepth
+                    if (currentDepth > maxOriginDepth) {
+                        next(new errors.MaxOriginDepthError(maxOriginDepth));
+                        return;
+                    } else {
+                        next();
+                        return;
+                    }
+                }
+            );
         },
         function getSystemInfo(next) {
             if (vmInfo.brand === 'kvm') {
@@ -2163,14 +2217,6 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 if (!originInfo) {
                     next(new errors.VmHasNoOriginError(vmUuid));
                     return;
-                } else if (originInfo.manifest.origin) {
-                    // If the origin is itself incremental then... we don't
-                    // currently support this until 'imgadm import' supports
-                    // importing a full chain of incremental images.
-                    next(new errors.NotSupportedError(format('cannot create '
-                        + 'incremental image for VM %s: incremental images '
-                        + 'of incremental images are not currently supported',
-                        vmUuid)));
                 } else {
                     m.origin = originInfo.manifest.uuid;
                 }

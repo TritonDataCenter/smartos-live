@@ -1,5 +1,11 @@
 # imgadm changelog
 
+## 2.6.4
+
+- [OS-2484] Support for incremental of incremental image creation. Added
+  --max-origin-depth to `imgadm create` to allow setting a limit in the number
+  of child incremental images for an image.
+
 ## 2.6.3
 
 - [OS-2657] Fix an issue where an error message with a printf formatting char

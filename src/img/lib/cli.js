@@ -797,7 +797,15 @@ CLI.prototype.do_avail = function do_avail(subcmd, opts, args, callback) {
             'unexpected args: ' + args.join(' ')));
         return;
     }
-    self.tool.sourcesList(function (err, imagesInfo) {
+    var filterOpts = {};
+    if (opts.marker) {
+        assertUuid(opts.marker);
+        filterOpts.marker = opts.marker;
+    }
+    if (opts.limit) {
+        filterOpts.limit = opts.limit;
+    }
+    self.tool.sourcesList(filterOpts, function (err, imagesInfo) {
         // Even if there was an err, we still attempt to return results
         // for working sources.
         if (opts.json) {
@@ -844,6 +852,11 @@ CLI.prototype.do_avail.description = (
     + '                       "uuid,name,version,os,published".\n'
     + '    -s field1,...      Sort on the given fields. Default is\n'
     + '                       "published_at,name".\n'
+    + '    -m, --marker       Only list images that were created after the\n'
+    + '                       marker image creation date. The marker must be\n'
+    + '                       an image UUID.\n'
+    + '    -l, --limit        Maximum number of images to return. Images are\n'
+    + '                       sorted by creation date (ASC) by default.\n'
     + '\n'
     + textWrap('Valid fields for "-o" and "-s" are: '
         + availValidFields.join(', ') + '.') + '\n'
@@ -852,13 +865,17 @@ CLI.prototype.do_avail.longOpts = {
     'json': Boolean,
     'skipHeader': Boolean,
     'output': String,
-    'sort': String
+    'sort': String,
+    'marker': String,
+    'limit': Number
 };
 CLI.prototype.do_avail.shortOpts = {
     'j': ['--json'],
     'H': ['--skipHeader'],
     'o': ['--output'],
-    's': ['--sort']
+    's': ['--sort'],
+    'm': ['--marker'],
+    'l': ['--limit']
 };
 CLI.prototype.do_avail.aliases = ['available'];
 

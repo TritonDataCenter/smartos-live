@@ -1057,7 +1057,7 @@ IMGADM.prototype.getImage = function getImage(options, callback) {
  *      will still contain results. This is so that an error in one source
  *      does not break everything.
  */
-IMGADM.prototype.sourcesList = function sourcesList(callback) {
+IMGADM.prototype.sourcesList = function sourcesList(filterOpts, callback) {
     var self = this;
     var errs = [];
     var imageSetFromSourceUrl = {};
@@ -1075,7 +1075,7 @@ IMGADM.prototype.sourcesList = function sourcesList(callback) {
                     next();
                     return;
                 }
-                client.listImages(function (listErr, images) {
+                client.listImages(filterOpts, function (listErr, images) {
                     if (listErr) {
                         errs.push(self._errorFromClientError(
                             source.url, listErr));

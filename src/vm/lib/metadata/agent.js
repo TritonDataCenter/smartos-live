@@ -1,4 +1,5 @@
 // vim: set ts=4 sts=4 sw=4 et:
+var assert = require('assert');
 var VM  = require('/usr/vm/node_modules/VM');
 var ZWatch = require('./zwatch');
 var common = require('./common');
@@ -56,6 +57,7 @@ var MetadataAgent = module.exports = function (options) {
     this.log = options.log;
     this.zlog = {};
     this.zones = {};
+    this.zoneRetryTimeouts = {};
     this.zoneConnections = {};
 };
 
@@ -231,6 +233,8 @@ MetadataAgent.prototype.start = function () {
             });
         } else if (msg.cmd === 'stop') {
             if (self.zoneConnections[msg.zonename]) {
+                self.log.trace('saw zone ' + msg.zonename
+                    + ' stop, calling end()');
                 self.zoneConnections[msg.zonename].end();
             }
         }
@@ -399,15 +403,22 @@ function (zopts, callback, waitSecs) {
                 { err: error },
                 'createZoneSocket error, %s seconds before next attempt',
                 waitSecs);
-            setTimeout(function () {
-                self.createZoneSocket(zopts, function () {}, waitSecs);
-            }, waitSecs * 1000);
+            assert(!self.zoneRetryTimeouts[zopts.zone], 'timeout already set'
+                + ' for zone ' + zopts.zone + ', should have been cleared.');
+            self.zoneRetryTimeouts[zopts.zone] =
+                setTimeout(function () {
+                    self.zoneRetryTimeouts[zopts.zone] = null;
+                    self.createZoneSocket(zopts, callback, waitSecs);
+                }, waitSecs * 1000);
             return;
         }
 
         var server = net.createServer(function (socket) {
             var handler = self.makeMetadataHandler(zopts.zone, socket);
             var buffer = '';
+
+            zlog.trace('creating new server for FD ' + fd);
+
             socket.on('data', function (data) {
                 var chunk, chunks;
                 buffer += data.toString();
@@ -435,11 +446,33 @@ function (zopts, callback, waitSecs) {
             });
         });
 
+        /*
+         * When we create a new zoneConnections entry, we want to make sure if
+         * there's an existing one (due to an error that we're retrying for
+         * example) that we clear the existing one and its timeout before
+         * creating a new one.
+         */
+        zlog.trace('creating new zoneConnections[' + zopts.zone + ']');
+        if (self.zoneConnections[zopts.zone]
+            && !self.zoneConnections[zopts.zone].done) {
+
+            self.log.trace('creating new connection for ' + zopts.zone
+                + ', but existing zoneConnection exists, calling end()');
+            self.zoneConnections[zopts.zone].end();
+        }
+
         self.zoneConnections[zopts.zone] = {
             conn: server,
             done: false,
             end: function () {
+                if (self.zoneRetryTimeouts[zopts.zone]) {
+                    // When .end() is called, want to stop any existing retries
+                    clearTimeout(self.zoneRetryTimeouts[zopts.zone]);
+                    self.zoneRetryTimeouts[zopts.zone] = null;
+                }
                 if (this.done) {
+                    zlog.trace(zopts.zone + ' ' + fd + ' already done, not '
+                        + 'closing again.');
                     return;
                 }
                 this.done = true;
@@ -454,6 +487,7 @@ function (zopts, callback, waitSecs) {
                 throw e;
             }
         });
+
         var Pipe = process.binding('pipe_wrap').Pipe;
         var p = new Pipe(true);
         p.open(fd);
@@ -461,11 +495,11 @@ function (zopts, callback, waitSecs) {
         server._handle = p;
 
         server.listen();
-    });
 
-    if (callback) {
-        callback();
-    }
+        if (callback) {
+            callback();
+        }
+    });
 };
 
 function base64_decode(input) {

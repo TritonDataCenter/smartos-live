@@ -61,6 +61,8 @@ ZONEPATH=$3
 state=$4
 cmd=$5
 
+VNDADM=/usr/sbin/vndadm
+
 LOCKFILE=/etc/dladm/zone.lck
 KVMLOG=/tmp/kvm.log=
 
@@ -323,6 +325,16 @@ setup_net()
 			IFS=$OLDIFS
 		fi
 
+		#
+		# At this point we should go ahead and set up the vnd interface
+		# for this datalink.
+		#
+		$VNDADM create -z $ZONENAME $nic
+		if [[ $? -ne 0 ]]; then
+			echo "failed to create vnd device"
+			exit 1
+		fi
+
 		unlock_file
 	done
 }
@@ -335,6 +347,36 @@ log_and_exit()
 	echo "$1"
 	logger -p daemon.err "zone $ZONENAME $1"
 	exit 1
+}
+
+#
+# Set up the firewall for the zone.
+#
+setup_fw()
+{
+	ipf_conf=$ZONEPATH/config/ipf.conf
+	if [ -e $ipf_conf ]; then
+		echo "starting firewall ($ipf_conf)"
+		/usr/sbin/ipf -E $ZONENAME
+		if (( $? != 0 )); then
+			log_and_exit "error enabling ipfilter"
+		fi
+
+		/usr/sbin/ipf -Fa $ZONENAME
+		if (( $? != 0 )); then
+			log_and_exit "error flushing ipfilter"
+		fi
+
+		/usr/sbin/ipf -f $ipf_conf $ZONENAME
+		if (( $? != 0 )); then
+			log_and_exit "error loading ipfilter config"
+		fi
+
+		/usr/sbin/ipf -y $ZONENAME
+		if (( $? != 0 )); then
+			log_and_exit "error syncing ipfilter interfaces"
+		fi
+	fi
 }
 
 #
@@ -521,7 +563,11 @@ load_sdc_config
 echo "statechange $subcommand $cmd" >>/tmp/kvm.log
 [[ "$subcommand" == "pre" && $cmd == 0 ]] && setup_fs
 [[ "$subcommand" == "pre" && $cmd == 4 ]] && cleanup_net
-[[ "$subcommand" == "post" && $cmd == 0 ]] && setup_net
+if [[ "$subcommand" == "post" && $cmd == 0 ]]; then
+	setup_net
+	setup_fw
+fi
+
 # We can't set a rctl until we have a process in the zone to grab
 [[ "$subcommand" == "post" && $cmd == 1 ]] && setup_cpu_baseline
 

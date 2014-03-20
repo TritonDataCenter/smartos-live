@@ -266,3 +266,5 @@ blkdev:* 0640 root root
 ibp:* 0666 root sys
 clone:ibp 0666 root sys
 ipmi:ipmi 0600 root sys
+lx_ptm:lx_ptmajor 0666 root sys
+lx_systrace:* 0644 root sys

@@ -401,8 +401,8 @@ function MaxOriginDepthError(cause, max) {
     assert.number(max, 'MaxOriginDepth');
     ImgadmError.call(this, {
         cause: cause,
-        message: format('cannot create image: maximum origin depth "%s" ' +
-            'has been reached', max),
+        message: format('cannot create image: maximum origin depth "%s" '
+            + 'has been reached', max),
         code: 'MaxOriginDepth',
         exitStatus: 1
     });

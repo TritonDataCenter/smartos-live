@@ -1385,8 +1385,8 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, callback) {
             'cannot specify both -o/--output-template and -p/--publish'));
         return;
     }
-    if (opts['max-origin-depth'] !== undefined &&
-        Number(opts['max-origin-depth']) < 2) {
+    if (opts['max-origin-depth'] !== undefined
+        && Number(opts['max-origin-depth']) < 2) {
         callback(new errors.UsageError(format(
             'invalid max-origin-depth "%s": must be greater than 1',
             opts['max-origin-depth'])));

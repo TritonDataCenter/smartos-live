@@ -2124,7 +2124,8 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 function (cb) {
                     if (!currentOrigin.manifest.origin) {
                         foundFirstOrigin = true;
-                        return cb();
+                        cb();
+                        return;
                     }
                     var getOpts = {
                         uuid: currentOrigin.manifest.origin,

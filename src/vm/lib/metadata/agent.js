@@ -477,7 +477,12 @@ function (zopts, callback, waitSecs) {
                 }
                 this.done = true;
                 zlog.info('Closing server');
-                server.close();
+                try {
+                    server.close();
+                } catch (e) {
+                    zlog.error({err: e}, 'Caught exception closing server: '
+                        + e.message);
+                }
             }
         };
 

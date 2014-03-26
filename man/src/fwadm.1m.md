@@ -1,0 +1,1 @@
+../../src/fw/man/fwadm.1m.md

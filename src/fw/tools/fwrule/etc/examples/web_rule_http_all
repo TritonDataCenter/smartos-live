@@ -1,0 +1,5 @@
+{
+    "description": "allow HTTP traffic from any IP to all VMs",
+    "enabled": true,
+    "rule": "FROM any TO all vms ALLOW tcp PORT 80"
+}

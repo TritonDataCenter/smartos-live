@@ -1,0 +1,9 @@
+echo '{
+    "rules": [
+        {
+            "uuid": "71bf3c29-bcd3-42a4-b4cb-222585429a70",
+            "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+            "rule": "FROM tag www TO tag db ALLOW tcp PORT 5432"
+        }
+    ]
+}' | fwadm add

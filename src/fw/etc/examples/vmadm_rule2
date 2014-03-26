@@ -1,0 +1,6 @@
+{
+    "description": "allow HTTP and HTTPS traffic",
+    "enabled": true,
+    "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+    "rule": "FROM any TO tag role=webserver ALLOW tcp (PORT 80 AND PORT 443)"
+}

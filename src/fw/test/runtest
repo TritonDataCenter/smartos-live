@@ -1,7 +1,12 @@
 #!/bin/bash
 
+UNAME=$(uname -s)
 NODE=node
 NODEUNIT="test/node_modules/nodeunit/bin/nodeunit"
+
+if [[ $UNAME == "SunOS" ]]; then
+    exec /usr/vm/test/runtest $*
+fi
 
 function usage
 {

@@ -1,12 +1,14 @@
 {
-  "name": "fwadm",
-  "description": "administrative tool for managing VM firewalls",
+  "name": "fw",
+  "description": "Administrative tool for managing VM firewalls",
   "version": "1.0.0",
   "author": "Joyent (joyent.com)",
   "private": true,
+  "main": "./lib/fw.js",
   "devDependencies": {
     "mockery": "1.2.0",
-    "nodeunit": "git://github.com/rgulewich/nodeunit.git#80a3876"
+    "nodeunit": "0.8.6",
+    "ramsey": "0.1.2"
   },
   "dependencies": {
     "assert-plus": "0.1.2",

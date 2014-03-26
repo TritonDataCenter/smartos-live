@@ -10,7 +10,8 @@
   },
   "devDependencies": {
     "jison": "0.4.2",
-    "nodeunit": "0.7.4"
+    "nodeunit": "0.7.4",
+    "ramsey": "0.1.0"
   },
   "engines": {
     "node": ">=0.6"

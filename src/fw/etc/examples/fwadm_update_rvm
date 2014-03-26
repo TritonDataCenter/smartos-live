@@ -1,0 +1,10 @@
+echo '{
+    "remoteVMs": [
+        {
+            "uuid": "5baca016-6dda-11e3-a6f2-730593c54f04",
+            "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+            "ips": [ "172.29.0.2", "172.31.0.2" ],
+            "tags": { "role": "web" }
+        }
+    ]
+}' | fwadm update

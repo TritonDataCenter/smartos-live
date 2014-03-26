@@ -1,0 +1,1 @@
+../../src/fw/man/fwrule.5.md

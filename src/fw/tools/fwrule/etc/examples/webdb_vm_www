@@ -1,0 +1,6 @@
+{
+    "firewall_enabled": true,
+    "tags": {
+        "role": "www"
+    }
+}

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2014, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: logging and associated utils
@@ -28,8 +28,10 @@
 
 var assert = require('assert-plus');
 var bunyan;
+var events = require('events');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
+var mod_uuid = require('node-uuid');
 var path = require('path');
 var sprintf = require('extsprintf').sprintf;
 var util = require('util');
@@ -113,10 +115,6 @@ function startsWith(str, prefix)
 }
 
 
-function newOnErrStream(filename) {
-
-}
-
 /**
  * Bunyan serializer for just the VM UUID
  */
@@ -152,14 +150,14 @@ function OpenOnErrorFileStream(opts) {
     this.level = bunyan.resolveLevel(opts.level);
     this.write = this.constructor.prototype.write1;
     this.end = this.constructor.prototype.end1;
-    this.on = this.constructor.prototype.on1;
-    this.once = this.constructor.prototype.once1;
 
     // Add the ringbuffer which we'll dump if we switch from not writing to
     // writing, and so that they'll show up in dumps.
     this.ringbuffer = new bunyan.RingBuffer({ limit: 50 });
     this.log_to_file = false;
 }
+
+util.inherits(OpenOnErrorFileStream, events.EventEmitter);
 
 
 OpenOnErrorFileStream.prototype.startLoggingToFile = function () {
@@ -169,6 +167,7 @@ OpenOnErrorFileStream.prototype.startLoggingToFile = function () {
 
 OpenOnErrorFileStream.prototype._startWriting = function (level, rec) {
     var r;
+    var self = this;
 
     if (this.stream) {
         return;
@@ -176,11 +175,22 @@ OpenOnErrorFileStream.prototype._startWriting = function (level, rec) {
 
     this.stream = fs.createWriteStream(this.path,
         { flags: 'a', encoding: 'utf8' });
-    this.emit = this.stream.emit;
-    this.end = this.stream.end;
-    this.on = this.stream.on;
-    this.once = this.stream.once;
+
+    this.stream.once('close', function _onClose() {
+        var args = Array.prototype.slice(arguments);
+        args.unshift('close');
+        self.emit.apply(self, args);
+    });
+
+    this.stream.once('drain', function _onDrain() {
+        var args = Array.prototype.slice(arguments);
+        args.unshift('drain');
+        self.emit.apply(self, args);
+    });
+
+    this.end = function _end() { this.stream.end(); };
     this.write = this.constructor.prototype.write2;
+
     // dump out logs from ringbuffer too since there was an error so we can
     // figure out what's going on.
     for (r in this.ringbuffer.records) {
@@ -194,16 +204,7 @@ OpenOnErrorFileStream.prototype._startWriting = function (level, rec) {
 
 OpenOnErrorFileStream.prototype.end1 = function () {
     // in initial mode we're not writing anything, so nothing to flush
-    return;
-};
-
-
-OpenOnErrorFileStream.prototype.on1 = function (name, cb) {
-    return;
-};
-
-
-OpenOnErrorFileStream.prototype.once1 = function (name, cb) {
+    this.emit('close');
     return;
 };
 
@@ -213,9 +214,9 @@ OpenOnErrorFileStream.prototype.once1 = function (name, cb) {
 OpenOnErrorFileStream.prototype.write1 = function (rec) {
     if (rec.level >= bunyan.ERROR || this.log_to_file) {
         this._startWriting(bunyan.TRACE, rec);
-        this.write(rec);
+        return this.write(rec);
     } else {
-        this.ringbuffer.write(rec);
+        return this.ringbuffer.write(rec);
     }
 };
 
@@ -327,6 +328,7 @@ function createLogger(opts, readOnly) {
 
     log = bunyan.createLogger({
         name: logName,
+        req_id: opts.req_id || mod_uuid.v4(),
         serializers: serializers,
         streams: streams
     });
@@ -398,34 +400,67 @@ function logEntry(opts, action, readOnly) {
 
 
 /**
+ * Log error and suberrors on API endpoint exit
+ */
+function finishErr(log, err, msg) {
+    if (err.hasOwnProperty('ase_errors')) {
+        for (var e in err.ase_errors) {
+            log.error(err.ase_errors[e], msg + ': err %d/%d',
+                Number(e) + 1, err.ase_errors.length);
+        }
+    }
+
+    return log.error(err, msg);
+}
+
+
+/**
  * Flush all open log streams
  */
-function flushLogs(log, callback) {
-    if (!log) {
+function flushLogs(logs, callback) {
+    if (!logs) {
         return callback();
     }
 
-    vasync.forEachParallel({
-        inputs: log.streams,
-        func: function _closeStream(str, cb) {
-            if (!str || !str.stream) {
-                return cb();
-            }
+    var streams = [];
+    if (!util.isArray(logs)) {
+        logs = [ logs ];
+    }
 
-            var returned = false;
-            str.stream.once('drain', function () {
-                if (!returned) {
-                    return cb();
-                }
-            });
+    if (logs.length === 0) {
+        return callback();
+    }
 
-            if (str.stream.write('')) {
-                returned = true;
-                return cb();
-            }
+    logs.forEach(function (log) {
+        if (!log || !log.streams || log.streams.length === 0) {
+            return;
         }
-    }, function _doneClose(err) {
-        return callback(err);
+
+        streams = streams.concat(log.streams);
+    });
+
+    var toClose = streams.length;
+    var closed = 0;
+
+    function _doneClose() {
+        closed++;
+        if (closed == toClose) {
+            return callback();
+        }
+    }
+
+    streams.forEach(function (str) {
+        if (!str || !str.stream) {
+            return _doneClose();
+        }
+
+        str.stream.once('drain', function () {
+            _doneClose();
+        });
+
+        if (str.stream.write('')) {
+            _doneClose();
+        }
     });
 }
 
@@ -442,6 +477,7 @@ function setBunyan(mod) {
 module.exports = {
     create: createLogger,
     entry: logEntry,
+    finishErr: finishErr,
     flush: flushLogs,
     setBunyan: setBunyan
 };

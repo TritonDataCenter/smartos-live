@@ -1,0 +1,20 @@
+{
+    "brand": "joyent",
+    "image_uuid": "01b2c898-945f-11e1-a523-af1afbe22822",
+    "firewall_enabled": true,
+    "nics": [
+      {
+        "nic_tag": "external",
+        "ip": "10.88.88.59",
+        "netmask": "255.255.255.0",
+        "gateway": "10.88.88.2",
+        "primary": true
+      }
+    ],
+    "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+    "ram": 128,
+    "tags": {
+        "blocksmtp": true
+    },
+    "uuid": "60e90d15-fb48-4bb9-90e6-1e1bb8269d1e"
+}

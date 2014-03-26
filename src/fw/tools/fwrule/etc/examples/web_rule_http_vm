@@ -1,0 +1,5 @@
+{
+    "description": "allow HTTP traffic to a single VM",
+    "enabled": true,
+    "rule": "FROM any TO vm ba2c95e9-1cdf-4295-8253-3fee371374d9 ALLOW tcp PORT 80"
+}

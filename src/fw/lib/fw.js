@@ -175,7 +175,13 @@ function startIPF(opts, log, callback) {
  */
 function validateOpts(opts) {
     assert.object(opts, 'opts');
-    assert.arrayOfObject(opts.vms, 'opts.vms');
+    assert.ok(util.isArray(opts.vms),
+        'opts.vms ([object]) required');
+    // Allow opts.vms to be empty - it's possible, though unlikely, that
+    // there are no VMs on this system
+    if (opts.vms.length !== 0) {
+        assert.arrayOfObject(opts.vms, 'opts.vms');
+    }
 }
 
 
@@ -1518,7 +1524,7 @@ function add(opts, callback) {
 
     ]}, function (err, res) {
         if (err) {
-            log.error(err, 'add: finish');
+            util_log.finishErr(log, err, 'add: finish');
             return callback(err);
         }
 
@@ -1617,7 +1623,7 @@ function del(opts, callback) {
 
     ]}, function (err, res) {
         if (err) {
-            log.error(err, 'del: finish');
+            util_log.finishErr(log, err, 'del: finish');
             return callback(err);
         }
 
@@ -1649,7 +1655,7 @@ function getRemoteVM(opts, callback) {
                 // Don't write a log file for "not found"
                 log.info(err, 'getRemoteVM: finish');
             } else {
-                log.error(err, 'getRemoteVM: finish');
+                util_log.finishErr(log, err, 'getRemoteVM: finish');
             }
             return callback(err);
         }
@@ -1682,13 +1688,13 @@ function getRule(opts, callback) {
                 // Don't write a log file for "not found"
                 log.info(err, 'get: finish');
             } else {
-                log.error(err, 'get: finish');
+                util_log.finishErr(log, err, 'get: finish');
             }
             return callback(err);
         }
 
         var ser = rule.serialize();
-        log.error(ser, 'get: finish');
+        log.debug(ser, 'get: finish');
         return callback(null, ser);
     });
 }
@@ -1707,7 +1713,7 @@ function listRemoteVMs(opts, callback) {
 
     mod_rvm.loadAll(log, function (err, res) {
         if (err) {
-            log.error(err, 'listRemoteVMs: finish');
+            util_log.finishErr(log, err, 'listRemoteVMs: finish');
             return callback(err);
         }
 
@@ -1752,7 +1758,7 @@ function listRules(opts, callback) {
 
     loadAllRules(log, function (err, res) {
         if (err) {
-            log.error(err, 'list: finish');
+            util_log.finishErr(log, err, 'list: finish');
             return callback(err);
         }
 
@@ -1854,7 +1860,7 @@ function enableVM(opts, callback) {
         }
     ]}, function _afterEnable(err, res) {
         if (err) {
-            log.error(err, 'enable: finish');
+            util_log.finishErr(log, err, 'enable: finish');
             return callback(err);
         }
 
@@ -1898,7 +1904,7 @@ function disableVM(opts, callback) {
         },
         function stop(_, cb) {
             if (opts.vm.state !== 'running') {
-                log.debug('disableVM: VM "%s" not stopping ipf (state=%s)',
+                log.debug('disableVM: VM "%s": not stopping ipf (state=%s)',
                     opts.vm.uuid, opts.vm.state);
                 return cb(null);
             }
@@ -1908,7 +1914,7 @@ function disableVM(opts, callback) {
         }
     ]}, function _afterDisable(err) {
         if (err) {
-            log.error(err, 'disable: finish');
+            util_log.finishErr(log, err, 'disable: finish');
             return callback(err);
         }
 
@@ -1943,7 +1949,7 @@ function vmStatus(opts, callback) {
                 return callback(null, { running: false });
             }
 
-            log.error(err, 'status: finish');
+            util_log.finishErr(log, err, 'status: finish');
             return callback(err);
         }
 
@@ -1984,7 +1990,7 @@ function vmStats(opts, callback) {
                 if (res.stderr.indexOf('empty list') !== -1) {
                     return vmStatus(opts, function (err2, res2) {
                         if (err2) {
-                            log.error(err2, 'stats: finish');
+                            util_log.finishErr(log, err2, 'stats: finish');
                             return callback(err2);
                         }
 
@@ -2148,7 +2154,7 @@ function update(opts, callback) {
         }
     ]}, function (err, res) {
         if (err) {
-            log.error(err, 'update: finish');
+            util_log.finishErr(log, err, 'update: finish');
             return callback(err);
         }
 
@@ -2190,13 +2196,14 @@ function getRemoteTargets(opts, callback) {
 
     createRules(opts.rules, function (err, rules) {
         if (err) {
-            log.error(err, 'remoteTargets: finish: createRules');
+            util_log.finishErr(log, err, 'remoteTargets: finish: createRules');
             return callback(err);
         }
 
         createVMlookup(opts.vms, log, function (err2, vms) {
             if (err2) {
-                log.error(err2, 'remoteTargets: finish: createVMlookup');
+                util_log.finishErr(log, err2,
+                    'remoteTargets: finish: createVMlookup');
                 return callback(err2);
             }
 
@@ -2266,7 +2273,7 @@ function getRuleVMs(opts, callback) {
         }
     ]}, function (err, res) {
         if (err) {
-            log.error(err, 'vms: finish (vm=%s)', opts.vm);
+            util_log.finishErr(log, err, 'vms: finish (vm=%s)', opts.vm);
             return callback(err);
         }
 
@@ -2322,7 +2329,8 @@ function getRemoteVMrules(opts, callback) {
         }
     ]}, function (err, res) {
         if (err) {
-            log.error(err, 'rvmRules: finish (vm=%s)', opts.remoteVM);
+            util_log.finishErr(log, err, 'rvmRules: finish (vm=%s)',
+                opts.remoteVM);
             return callback(err);
         }
 
@@ -2367,7 +2375,7 @@ function getVMrules(opts, callback) {
         }
     ]}, function (err, res) {
         if (err) {
-            log.error(err, 'vmRules: finish (vm=%s)', opts.vm);
+            util_log.finishErr(log, err, 'vmRules: finish (vm=%s)', opts.vm);
             return callback(err);
         }
 
@@ -2435,7 +2443,7 @@ function validatePayload(opts, callback) {
         }
     ]}, function (err, res) {
         if (err) {
-            log.error(err, 'validatePayload: finish');
+            util_log.finishErr(log, err, 'validatePayload: finish');
             return callback(err);
         }
 

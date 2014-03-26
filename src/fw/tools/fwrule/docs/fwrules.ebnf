@@ -1,0 +1,37 @@
+
+/* 
+    Converted from https://mo.joyent.com/fwrule/raw/master/src/fwrule.jison
+    with http://bottlecaps.de/convert/ 
+    then elided for simplicity
+    then generated with http://bottlecaps.de/rr/ui
+ */ 
+
+/* converted on Mon Dec 16, 2013, 20:22 (UTC-05) by jison-to-w3c v0.33.722 which is Copyright (c) 2011-2013 by Gunther Rademacher <grd@gmx.net> */
+
+rule     ::= 'FROM' target_list 'TO' target_list action protocol 
+target_list
+         ::= 'ANY'
+           | 'ALL VMS'
+           | '(' target ( 'OR' target )* ')'
+           | target
+target   ::= 'IP ADDRESS'
+           | 'SUBNET'
+           | 'TAG' tag_string
+           | 'TAG' tag_string '=' tag_value
+           | 'VM' uuid
+action   ::= 'BLOCK'
+           | 'ALLOW'
+protocol ::= 'TCP' port_list
+           | 'UDP' port_list
+           | 'ICMP' type_list
+port_list
+         ::= '(' port ( 'AND' port )* ')'
+           | port
+           | '(' 'PORT ALL' ')'
+           | 'PORT ALL'
+port     ::= 'PORT' '1 - 65535'
+type_list
+         ::= '(' type ( 'AND' type )* ')'
+           | type
+type     ::= 'TYPE' '0 - 255' 'CODE' '0 - 255'
+           | 'TYPE' '0 - 255'

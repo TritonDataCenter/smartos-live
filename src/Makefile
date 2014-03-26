@@ -435,8 +435,10 @@ install: all
 	cp -PR img/sbin $(DESTDIR)/usr/img/
 	cp -PR img/test $(DESTDIR)/usr/img/
 	rm -rf $(DESTDIR)/usr/fw
-	mkdir -m 0755 -p $(DESTDIR)/usr/fw
+	mkdir -m 0755 -p $(DESTDIR)/usr/fw/test/integration
 	cp -PR fw/etc $(DESTDIR)/usr/fw/
+	cp -Pr fw/test/integration/*.js $(DESTDIR)/usr/fw/test/integration/
+	cp fw/test/runtest $(DESTDIR)/usr/fw/test/
 	cp -PR fw/lib $(DESTDIR)/usr/fw/
 	cp -PR fw/node_modules $(DESTDIR)/usr/fw/
 	cp -PR fw/sbin $(DESTDIR)/usr/fw/
@@ -484,6 +486,14 @@ manifest:
 	(cd vm/tests && \
 	    find testdata/ -type f -exec echo "{}" "0444 root bin" \;) \
 	    | sed -e "s|^testdata/|f usr/vm/test/testdata/|" \
+	    >> $(DESTDIR)/$(DESTNAME)
+	(cd fw/test && \
+	    find integration/ -type f -exec echo "{}" "0444 root bin" \;) \
+	    | sed -e "s|^integration/|f usr/fw/test/integration/|" \
+	    >> $(DESTDIR)/$(DESTNAME)
+	(cd fw/etc && \
+	    find examples/ -type f -exec echo "{}" "0444 root bin" \;) \
+	    | sed -e "s|^examples/|f usr/fw/etc/examples/|" \
 	    >> $(DESTDIR)/$(DESTNAME)
 
 $(JSLINT):

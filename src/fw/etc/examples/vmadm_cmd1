@@ -1,0 +1,1 @@
+echo '{ "set_tags": { "role": "webserver" } }' | vmadm update 60e90d15-fb48-4bb9-90e6-1e1bb8269d1e

@@ -1,0 +1,5 @@
+{
+    "description": "allow database traffic from web servers to database servers",
+    "enabled": true,
+    "rule": "FROM tag role = www TO tag role = db ALLOW tcp PORT 5432"
+}

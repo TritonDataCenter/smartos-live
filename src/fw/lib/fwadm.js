@@ -317,6 +317,39 @@ Fwadm.prototype.do_add = function (subcmd, opts, args, callback) {
 
 
 /**
+ * Adds a remote VM
+ */
+Fwadm.prototype['do_add-rvm'] = function (subcmd, opts, args, callback) {
+    LOG = util_log.create({ action: 'add' });
+
+    pipeline({
+    funcs: [
+        function payload(_, cb) { cli.getPayload(opts, args, cb); },
+        function vms(_, cb) { VM.lookup({}, { fields: fw.VM_FIELDS }, cb); },
+        function addRules(state, cb) {
+            var addOpts = {
+                log: LOG,
+                vms: state.vms
+            };
+
+            if (state.payload.hasOwnProperty('remoteVMs')) {
+                // formatted like it was being passed to 'fwadm add'
+                addOpts.remoteVMs = state.payload.remoteVMs;
+            } else {
+                // just the remote VM (hopefully)
+                addOpts.remoteVMs = [ state.payload ];
+            }
+
+            return fw.add(addOpts, cb);
+        }
+    ]}, function _afterAdd(err, results) {
+        ruleOutput(err, results.state.addRules, opts, 'Added');
+        return callback(err);
+    });
+};
+
+
+/**
  * Lists firewall rules
  */
 Fwadm.prototype.do_list = function (subcmd, opts, args, callback) {
@@ -328,9 +361,15 @@ Fwadm.prototype.do_list = function (subcmd, opts, args, callback) {
     }
 
     if (opts.delim && !opts.parseable) {
-        var reqErr = new Error('-d requires -p');
-        cli.outputError(reqErr, opts);
-        return callback(reqErr);
+        var delimErr = new Error('-d requires -p');
+        cli.outputError(delimErr, opts);
+        return callback(delimErr);
+    }
+
+    if (opts.json && opts.parseable) {
+        var fmtErr = new Error('cannot specify both -j and -p');
+        cli.outputError(fmtErr, opts);
+        return callback(fmtErr);
     }
 
     LOG = util_log.create({ action: 'list' }, true);
@@ -685,28 +724,30 @@ Fwadm.prototype.init = function (opts, args, callback) {
 
 
 var HELP = {
-    add: 'Add firewall rules or data.',
-    delete: 'Deletes a rule.',
-    'delete-rvm': 'Deletes a remote VM.',
-    disable: 'Disable a rule.',
-    enable: 'Enable a rule.',
-    get: 'Get a rule.',
-    'get-rvm': 'Get a remote VM.',
-    list: 'List rules.',
-    'list-rvms': 'List remote VMs.',
-    rules: 'List rules that apply to a VM.',
-    'rvm-rules': 'List rules that apply to a remote VM.',
-    start: 'Starts a VM\'s firewall.',
-    status: 'Get the status of a VM\'s firewall.',
-    stats: 'Get rule statistics for a VM\'s firewall.',
-    stop: 'Stops a VM\'s firewall.',
-    update: 'Updates firewall rules or data.',
-    vms: 'Get the VMs affected by a rule'
+    add: 'add firewall rules or remote VMs',
+    'add-rvm': 'add a remote VM',
+    delete: 'delete a rule',
+    'delete-rvm': 'delete a remote VM',
+    disable: 'disable a rule',
+    enable: 'enable a rule',
+    get: 'get a rule',
+    'get-rvm': 'get a remote VM',
+    list: 'list rules',
+    'list-rvms': 'list remote VMs',
+    rules: 'list rules that apply to a VM',
+    'rvm-rules': 'list rules that apply to a remote VM',
+    start: 'start a VM\'s firewall',
+    status: 'get the status of a VM\'s firewall',
+    stats: 'get rule statistics for a VM\'s firewall',
+    stop: 'stop a VM\'s firewall',
+    update: 'update firewall rules or data',
+    vms: 'list the UUIDs of VMs affected by a rule'
 };
 
 var EXTRA_OPTS = {
     add: [ OPTS.description, OPTS.enable, OPTS.file, OPTS.global,
         OPTS.owner_uuid ],
+    'add-rvm': [ OPTS.file ],
     list: [ OPTS.delim, OPTS.output_fields, OPTS.parseable ],
     update: [ OPTS.description, OPTS.enable, OPTS.file, OPTS.global,
         OPTS.owner_uuid ]
@@ -745,16 +786,19 @@ function main() {
         fwadm.main(process.argv, function (err2) {
             if (err2 && !cli.haveOutputErr()) {
                 cli.outputError(err2, ARG_OPTS);
+                // This is a usage error - no need to flush logs
+                process.exit(2);
             }
+
             // Potentially 3 different logs to flush: if we've only used
-            // fw.js, just flush LOG.  If we've gone through VM.update (eg: for
-            // start / stop), we need to flush VM.log and VM.fw_log.
-            util_log.flush(LOG, function () {
-                util_log.flush(VM.log, function () {
-                    util_log.flush(VM.fw_log, function () {
-                        process.exit(err2 ? 1 : 0);
-                    });
-                });
+            // fw.js, just flush LOG.  If we've gone through VM.update
+            // (for start / stop), we need to flush VM.log and VM.fw_log.
+            util_log.flush([LOG, VM.log, VM.fw_log], function () {
+                if (cli.haveOutputErr()) {
+                    process.exit(1);
+                }
+
+                process.exit(0);
             });
         });
     });

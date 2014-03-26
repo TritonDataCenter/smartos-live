@@ -1,0 +1,1 @@
+fwadm add -g -e FROM any TO all vms ALLOW tcp PORT 22

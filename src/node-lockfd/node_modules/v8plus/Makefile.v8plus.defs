@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2012 Joyent, Inc.  All rights reserved.
+# Copyright (c) 2013 Joyent, Inc.  All rights reserved.
 #
 
 #
@@ -13,7 +13,7 @@ CC =		gcc
 CXX =		g++
 CTFCONVERT =	/opt/onbld/bin/i386/ctfconvert
 CTFMERGE =	/opt/onbld/bin/i386/ctfmerge
-CTF_LABEL =	v8plus_0.0.1
+CTF_LABEL =	v8plus_0.2.0
 
 NODE_EXEC =	$(PREFIX_NODE)/bin/node
 
@@ -38,7 +38,7 @@ CXXFLAGS =	$(DEBUG_FLAGS) \
 		$(CXX_STDFLAGS)
 
 STD_DEFS =	-D_GNU_SOURCE
-NODE_DEFS =	-DBUILDING_NODE_EXTENSION
+NODE_DEFS =	-DBUILDING_NODE_EXTENSION -DMODULE=$(MODULE)
 LF64_DEFS =	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 PIC_DEFS =	-DPIC
 NODE_INCS =	-isystem $(PREFIX_NODE)/include/node -I. -I$(V8PLUS)
@@ -54,7 +54,7 @@ MAPFILES =	$(MAPFILE)
 
 LDFLAGS =	$(SHARED_FLAGS) $(ZTEXT) $(ZDEFS) $(NODE_LIBDIR)
 LDFLAGS +=	$(MAPFILES:%=-Wl,-M,%)
-LIBS =		-lnvpair
+LIBS =		-lnvpair -lc
 
 OBJS.c =	$(SRCS:.c=.o)
 OBJS =		$(OBJS.c:.cc=.o)
@@ -73,6 +73,14 @@ ERRNO_H =	v8plus_errno.h
 ERRNO_C =	v8plus_errno.c
 
 MAPFILE =	mapfile_node
+
+NODE_SYMBOL =	$(shell $(CC) -xc $(CPPFLAGS) -E $(V8PLUS)/checkver.h \
+		    -o /dev/null 2>/dev/null || echo '\t\t$(MODULE)_module;')
+MAPFILE_GEN =	\
+	/usr/bin/nm -ghnp $< | \
+	    (printf "\$$mapfile_version 2\n\nSYMBOL_SCOPE {\n\tglobal:\n"; \
+	    awk '$$2 != "U" { print "\t\t" $$3 "\t{ FLAGS = EXTERN };" }'; \
+	    printf "$(NODE_SYMBOL)\n\tlocal:\n\t\t*;\n};") > $@
 
 CTFCONVERT.o =	$(CTFCONVERT) -l $(CTF_LABEL) $@
 CTFMERGE.node =	$(CTFMERGE) -l $(CTF_LABEL) -o $@ $(OBJS)

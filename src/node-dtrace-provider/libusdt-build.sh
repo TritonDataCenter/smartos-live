@@ -6,17 +6,27 @@ unset MAKEFLAGS
 
 # Ask node what arch it's been built for, and build libusdt to match.
 #
+# We use node from the path; npm will have adjusted PATH for us if
+# necessary, otherwise we assume the user did so when building by
+# hand.
+#
 # (this will need to change at the point that GYP is able to build
 # node extensions universal on the Mac - for now we'll go with x86_64
-# on a 64 bit Mac)
+# on a 64 bit Mac, because that's the default architecture in that
+# situation).
 #
-ARCH=`node -e "console.log(process.config.variables.target_arch == 'x64' ? 'x86_64' : 'i386')"`
+ARCH=`node libusdt-arch.js`
 echo "Building libusdt for ${ARCH}"
 export ARCH
 
 # Respect a MAKE variable if set
 if [ -z $MAKE ]; then
-  MAKE=make
+  # Default to `gmake` first if available, because we require GNU make
+  # and `make` isn't GNU make on some plats.
+  MAKE=`which gmake`
+  if [ -z $MAKE ]; then
+    MAKE=make
+  fi
 fi
 
 # Build.

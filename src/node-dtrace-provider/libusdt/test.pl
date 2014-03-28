@@ -7,13 +7,17 @@ use IO::Handle;
 use Test::More qw/ no_plan /;
 
 my $USDT_ARG_MAX = 32;
+if ($^O eq 'freebsd') {
+    # FreeBSD currently only supports 5 arguments to USDT probes
+    $USDT_ARG_MAX = 5;
+}
 
 my $arch;
 if (scalar @ARGV == 1) {
     $arch = $ARGV[0];
 }
 
-my $user_t = ($^O eq 'solaris') ? 'uintptr_t' : 'user_addr_t';
+my $user_t = ($^O eq 'darwin') ? 'user_addr_t' : 'uintptr_t';
 
 run_tests('c', 'A');
 run_tests('i', 1);
@@ -22,10 +26,10 @@ sub run_tests {
     my ($type, $start_arg) = @_;
     
     for my $i (0..$USDT_ARG_MAX) {
-        my ($t_status, $d_status, $output) = run_dtrace('func', 'name', split(//, $type x $i));
+	my ($t_status, $d_status, $output) = run_dtrace('type'.$type, $i.'arg', split(//, $type x $i));
         is($t_status, 0, 'test exit status is 0');
         is($d_status, 0, 'dtrace exit status is 0');
-        like($output, qr/func:name/, 'function and name match');
+	like($output, qr/type[ic]:\d+arg/, 'function and name match');
 
         my $arg = $start_arg;
         for my $j (0..$i - 1) {

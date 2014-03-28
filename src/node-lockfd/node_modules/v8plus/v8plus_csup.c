@@ -1,21 +1,24 @@
 /*
- * Copyright (c) 2012 Joyent, Inc.  All rights reserved.
+ * Copyright (c) 2013 Joyent, Inc.  All rights reserved.
  */
 
 #include <sys/ccompile.h>
 #include <sys/debug.h>
 #include <sys/queue.h>
 #include <sys/types.h>
+#include <sys/atomic.h>
 #include <stdarg.h>
 #include <string.h>
 #include <strings.h>
 #include <errno.h>
 #include <uv.h>
+#include <node_version.h>
 #include <pthread.h>
 #include "v8plus_glue.h"
 
 __thread v8plus_errno_t _v8plus_errno;
 __thread char _v8plus_errmsg[V8PLUS_ERRMSG_LEN];
+static uint_t init_done;
 
 typedef struct v8plus_uv_ctx {
 	void *vuc_obj;
@@ -304,6 +307,9 @@ v8plus_jsfunc_rele(v8plus_jsfunc_t f)
 void
 v8plus_crossthread_init(void)
 {
+	if (atomic_swap_uint(&init_done, 1) != 0)
+		return;
+
 	_v8plus_uv_event_thread = pthread_self();
 	if (uv_async_init(uv_default_loop(), &_v8plus_uv_async,
 	    v8plus_async_callback) != 0)
@@ -846,7 +852,11 @@ v8plus_uv_worker(uv_work_t *wp)
 }
 
 static void
+#if NODE_VERSION_AT_LEAST(0, 9, 4)
+v8plus_uv_completion(uv_work_t *wp, int ignored __UNUSED)
+#else
 v8plus_uv_completion(uv_work_t *wp)
+#endif
 {
 	v8plus_uv_ctx_t *cp = wp->data;
 
@@ -876,3 +886,37 @@ v8plus_defer(void *cop, void *ctxp, v8plus_worker_f worker,
 	uv_queue_work(uv_default_loop(), wp, v8plus_uv_worker,
 	    v8plus_uv_completion);
 }
+
+#ifndef V8PLUS_NEW_API
+
+/*
+ * The old API only ever supports a single integrated module.
+ */
+#ifdef V8PLUS_LIBRARY_MODEL
+#error	"The old v8plus API is incompatible with the library model."
+#endif
+
+static void _v8plus_init(void) __attribute__((constructor));
+static void
+_v8plus_init(void)
+{
+	static v8plus_module_defn_t _v8plus_module;
+
+	_v8plus_module.vmd_version = V8PLUS_MODULE_VERSION;
+	_v8plus_module.vmd_modname = NODE_STRINGIFY(MODULE);
+	_v8plus_module.vmd_filename = __FILE__;
+	_v8plus_module.vmd_nodeflags = 0;
+	_v8plus_module.vmd_link = NULL;
+	_v8plus_module.vmd_ctor = v8plus_ctor;
+	_v8plus_module.vmd_dtor = v8plus_dtor;
+	_v8plus_module.vmd_js_factory_name = v8plus_js_factory_name;
+	_v8plus_module.vmd_js_class_name = v8plus_js_class_name;
+	_v8plus_module.vmd_methods = v8plus_methods;
+	_v8plus_module.vmd_method_count = v8plus_method_count;
+	_v8plus_module.vmd_static_methods = v8plus_static_methods;
+	_v8plus_module.vmd_static_method_count = v8plus_static_method_count;
+
+	v8plus_module_register(&_v8plus_module);
+}
+
+#endif

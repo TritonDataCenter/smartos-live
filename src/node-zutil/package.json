@@ -11,6 +11,9 @@
   "scripts": {
     "preinstall": "node-waf configure build"
   },
+  "dependencies": {
+    "v8plus": "~0.3.1"
+  },
   "devDependencies": {
     "jshint": ">=0.1.9",
     "nodeunit": ">=0.5.1",

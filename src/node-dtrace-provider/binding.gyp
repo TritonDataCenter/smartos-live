@@ -1,12 +1,17 @@
 {
-    'targets': [
-        {
-            'target_name': 'DTraceProviderBindings',
-            'conditions': [
-                ['OS=="mac" or OS=="solaris" or OS=="freebsd"', {
+    'conditions': [
+	['OS=="mac" or OS=="solaris"', {
+
+	    # If we are on the Mac, or a Solaris derivative, attempt
+	    # to build the DTrace provider extension.
+
+	    'targets': [
+		{
+		    'target_name': 'DTraceProviderBindings',
                     'sources': [
-	                'dtrace_provider.cc',
-	                'dtrace_probe.cc',
+			'dtrace_provider.cc',
+			'dtrace_probe.cc',
+			'dtrace_argument.cc'
                     ],
                     'include_dirs': [
 	                'libusdt'
@@ -17,14 +22,10 @@
                     'libraries': [
                         '-L<(module_root_dir)/libusdt -l usdt'
                     ]
-                }]
-            ]
-        },
-        {
-            'target_name': 'libusdt',
-            'type': 'none',
-            'conditions': [
-                ['OS=="mac" or OS=="solaris" or OS=="freebsd"', {
+		},
+		{
+		    'target_name': 'libusdt',
+		    'type': 'none',
                     'actions': [{
                         'inputs': [''],
                         'outputs': [''],
@@ -32,9 +33,22 @@
 	      	        'action': [
                             'sh', 'libusdt-build.sh'
 		        ]
-	            }]
-                }]
+		    }]
+		}
+	    ]
+	},
+
+	# If we are not on the Mac or Solaris, DTrace is unavailable.
+	# This target is necessary because GYP requires at least one
+	# target to exist.
+
+	{
+	    'targets': [
+		{
+		    'target_name': 'DTraceProviderStub',
+		    'type': 'none'
+		}
             ]
-        }
+	}]
     ]
 }

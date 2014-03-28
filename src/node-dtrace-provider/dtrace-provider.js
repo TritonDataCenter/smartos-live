@@ -9,22 +9,11 @@ DTraceProviderStub.prototype.addProbe = function() {
 DTraceProviderStub.prototype.enable = function() {};
 DTraceProviderStub.prototype.fire = function() {};
 
-var builds = ['Release', 'default', 'Debug'];
-
-for (var i in builds) {
-    try {
-        var binding = require('./build/' + builds[i] + '/DTraceProviderBindings');
-        DTraceProvider = binding.DTraceProvider;
-        break;
-    } catch (e) {
-        // if the platform looks like it _should_ have DTrace
-        // available, log a failure to load the bindings.
-        if (process.platform == 'darwin' ||
-            process.platform == 'solaris' ||
-            process.platform == 'freebsd') {
-            console.log(e);
-        }
-    }
+try {
+    var binding = require('/usr/node/node_modules/DTraceProviderBindings.node');
+    DTraceProvider = binding.DTraceProvider;
+} catch (e) {
+    console.log(e);
 }
 
 if (!DTraceProvider) {

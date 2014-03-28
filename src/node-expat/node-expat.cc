@@ -369,10 +369,4 @@ private:
   }
 };
 
-
-
-extern "C" void init(Handle<Object> target)
-{
-  HandleScope scope;
-  Parser::Initialize(target);
-}
+NODE_MODULE(expat_binding, Parser::Initialize)

@@ -4,8 +4,6 @@
 
 #include "usdt_internal.h"
 
-#include <stdlib.h>
-
 int
 usdt_dof_section_add_data(usdt_dof_section_t *section, void *data, size_t length)
 {
@@ -77,6 +75,12 @@ usdt_dof_section_init(usdt_dof_section_t *section, uint32_t type, dof_secidx_t i
         }
 
         return (0);
+}
+
+void
+usdt_dof_section_free(usdt_dof_section_t *section)
+{
+	free(section->data);
 }
 
 int

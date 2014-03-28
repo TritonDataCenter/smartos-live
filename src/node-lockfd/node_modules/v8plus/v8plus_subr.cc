@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 Joyent, Inc.  All rights reserved.
+ * Copyright (c) 2013 Joyent, Inc.  All rights reserved.
  */
 
 #include <sys/types.h>
@@ -21,8 +21,41 @@
 
 typedef struct cb_hdl {
 	v8::Handle<v8::Function> ch_hdl;
+	v8::Persistent<v8::Function> ch_phdl;
 	uint_t ch_refs;
 	boolean_t ch_persist;
+
+/*
+ * It's no longer possible in 0.11.3+ to assign or copy a Persistent value
+ * so in order to use this type with STL maps etc. we must provide our own
+ * copy-constructor and assignment, the former of which is actually used by
+ * the internal STL code when manipulating objects in the data structure.
+ */
+#if NODE_VERSION_AT_LEAST(0, 11, 3)
+	cb_hdl() {};
+	cb_hdl(const struct cb_hdl &src) {
+		if (src.ch_persist) {
+			this->ch_phdl.Reset(v8::Isolate::GetCurrent(),
+			    src.ch_phdl);
+		} else {
+			this->ch_hdl = src.ch_hdl;
+		}
+		this->ch_refs = src.ch_refs;
+		this->ch_persist = src.ch_persist;
+	}
+	struct cb_hdl &operator=(const struct cb_hdl &src) {
+		if (src.ch_persist) {
+			this->ch_phdl.Reset(v8::Isolate::GetCurrent(),
+			    src.ch_phdl);
+		} else {
+			this->ch_hdl = src.ch_hdl;
+		}
+		this->ch_refs = src.ch_refs;
+		this->ch_persist = src.ch_persist;
+
+		return (*this);
+	};
+#endif
 } cb_hdl_t;
 
 static std::unordered_map<uint64_t, cb_hdl_t> cbhash;
@@ -184,7 +217,7 @@ nvlist_add_v8_Value(nvlist_t *lp, const char *name,
 #undef	LA_V
 
 nvlist_t *
-v8plus::v8_Arguments_to_nvlist(const v8::Arguments &args)
+v8plus::v8_Arguments_to_nvlist(const V8_ARGUMENTS &args)
 {
 	char name[16];
 	nvlist_t *lp;
@@ -428,6 +461,7 @@ v8plus::exception(const char *type, const nvlist_t *lp, const char *fmt, ...)
 extern "C" nvlist_t *
 v8plus_call_direct(v8plus_jsfunc_t f, const nvlist_t *lp)
 {
+	HANDLE_SCOPE(scope);
 	std::unordered_map<uint64_t, cb_hdl_t>::iterator it;
 	const int max_argc = nvlist_length(lp);
 	int argc, err;
@@ -445,8 +479,13 @@ v8plus_call_direct(v8plus_jsfunc_t f, const nvlist_t *lp)
 		return (v8plus_nverr(err, NULL));
 
 	v8::TryCatch tc;
-	res = it->second.ch_hdl->Call(v8::Context::GetCurrent()->Global(),
-	    argc, argv);
+	if (it->second.ch_persist) {
+		res = V8_LOCAL(it->second.ch_phdl, v8::Function)->Call(
+		    v8::Context::GetCurrent()->Global(), argc, argv);
+	} else {
+		res = it->second.ch_hdl->Call(
+		    v8::Context::GetCurrent()->Global(), argc, argv);
+	}
 	if (tc.HasCaught()) {
 		err = nvlist_add_v8_Value(rp, "err", tc.Exception());
 		tc.Reset();
@@ -465,6 +504,7 @@ v8plus_call_direct(v8plus_jsfunc_t f, const nvlist_t *lp)
 extern "C" nvlist_t *
 v8plus_method_call_direct(void *cop, const char *name, const nvlist_t *lp)
 {
+	HANDLE_SCOPE(scope);
 	v8plus::ObjectWrap *op = v8plus::ObjectWrap::objlookup(cop);
 	const int max_argc = nvlist_length(lp);
 	int argc, err;
@@ -521,15 +561,13 @@ nvlist_lookup_v8plus_jsfunc(const nvlist_t *lp, const char *name,
 extern "C" void
 v8plus_jsfunc_hold(v8plus_jsfunc_t f)
 {
-	v8::Persistent<v8::Function> pfh;
 	std::unordered_map<uint64_t, cb_hdl_t>::iterator it;
 
 	if ((it = cbhash.find(f)) == cbhash.end())
 		v8plus_panic("callback hash tag %llu not found", f);
 
 	if (!it->second.ch_persist) {
-		pfh = v8::Persistent<v8::Function>::New(it->second.ch_hdl);
-		it->second.ch_hdl = pfh;
+		V8_PF_ASSIGN(it->second.ch_phdl, it->second.ch_hdl);
 		it->second.ch_persist = _B_TRUE;
 	}
 	++it->second.ch_refs;
@@ -555,8 +593,7 @@ v8plus_jsfunc_rele_direct(v8plus_jsfunc_t f)
 
 	if (--it->second.ch_refs == 0) {
 		if (it->second.ch_persist) {
-			v8::Persistent<v8::Function> pfh(it->second.ch_hdl);
-			pfh.Dispose();
+			it->second.ch_phdl.Dispose();
 		}
 		cbhash.erase(it);
 	}

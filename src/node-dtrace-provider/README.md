@@ -67,6 +67,30 @@ enabled. This means you can do more expensive work to gather arguments.
 
 The maximum number of arguments supported is 32. 
 
+Available argument types are "int", for integer numeric values,
+"char *" for strings, and "json" for objects rendered into JSON strings.
+
+Arguments typed as "json" will be created as "char *" probes in
+DTrace, but objects passed to these probe arguments will be
+automatically serialized to JSON before being passed to DTrace. This
+feature is best used in conjunction with the json() D subroutine, but
+is available whether or not the platform supports it.
+
+    # create a json probe:
+
+    var dtp = d.createDTraceProvider("nodeapp");
+    var p1 = dtp.addProbe("j1", "json");
+    dtp.enable();
+    p1.fire(function() { return { "foo" => "bar" }; });
+
+    # on a platform supporting json():
+
+    $ sudo dtrace -Z -n 'nodeapp*:::j1{ this->j = copyinstr(arg0); \
+					trace(json(this->j, "foo")) }'
+    dtrace: description 'nodeapp$target:::j1' matched 0 probes
+    CPU     ID                    FUNCTION:NAME
+      0  68712                            j1:j1   bar
+
 ## PLATFORM SUPPORT
 
 This libusdt-based Node.JS module supports 64 and 32 bit processes on
@@ -84,11 +108,8 @@ install this module without building libusdt, with a stub no-op
 implementation provided for compatibility. This allows cross-platform
 npm modules to embed probes and include a dependency on this module.
 
-## LIMITATIONS
- 
-The data types supported are "int" and "char *". Support for
-structured types is planned, depending on support from the host DTrace
-implementation for the necessary translators. 
+GNU Make is required to build libusdt; the build scripts will look for
+gmake in PATH first, and then for make.
 
 ## CAVEATS
 
@@ -106,6 +127,11 @@ The source is available at:
 
 For issues, please use the Github issue tracker linked to the
 repository. Github pull requests are very welcome. 
+
+## RUNNING THE TESTS
+
+   $ npm install
+   $ sudo ./node_modules/.bin/tap --tap test/*.test.js
 
 ## OTHER IMPLEMENTATIONS
 

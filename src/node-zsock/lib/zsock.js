@@ -1,7 +1,7 @@
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 var net = require('net');
 
-var bindings = require('../build/Release/zsock_bindings');
+var bindings = require('./zsock_bindings');
 
 // Make the net API work like 0.4 (the way it should...)
 if (net.Server.prototype.listenFD.name !== "listenFDZsock") {

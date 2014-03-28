@@ -5,7 +5,7 @@
   "author": "Joshua M. Clulow <jmc@joyent.com>",
   "repository": "git://github.com/joyent/node-lockfd.git",
   "dependencies": {
-    "v8plus": "~0.1.0"
+    "v8plus": "~0.2.0"
   },
   "scripts": {
     "postinstall": "cd src && gmake $(eval echo ${MAKE_OVERRIDES})"

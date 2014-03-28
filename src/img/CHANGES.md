@@ -1,10 +1,17 @@
 # imgadm changelog
 
+## 2.6.5
+
+- [OS-2867] Add optional `config.userAgentExtra` for a string to append to
+  the User-Agent in IMGAPI client usage.
+
+
 ## 2.6.4
 
 - [OS-2484] Support for incremental of incremental image creation. Added
   --max-origin-depth to `imgadm create` to allow setting a limit in the number
   of child incremental images for an image.
+
 
 ## 2.6.3
 
@@ -67,7 +74,7 @@
   delete -partial dataset on rollback (because sometimes it really isn't
   there yet).
 
-- [OS-2488] Incremental imgadm creation (`imgadm create -i`) will not explcitly
+- [OS-2488] Incremental imgadm creation (`imgadm create -i`) will not explicitly
   fail if the origin image does not have a '@final' snapshot on the origin image.
   Images installed with imgadm v2.0.3 or later will have this but images installed
   prior to that may not.

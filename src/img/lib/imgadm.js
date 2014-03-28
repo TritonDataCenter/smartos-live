@@ -384,6 +384,22 @@ IMGADM.prototype.init = function init(callback) {
         });
     }
 
+    function setUserAgent(next) {
+        assert.optionalString(self.config.userAgentExtra,
+            'config.userAgentExtra');
+        self.userAgent = UA;
+        if (self.config && self.config.userAgentExtra) {
+            if (typeof(self.config.userAgentExtra) !== 'string') {
+                next(new errors.ConfigError(e, format(
+                    '"userAgentExtra" in config file "%s" is not a string',
+                    CONFIG_PATH)));
+                return;
+            }
+            self.userAgent += ' ' + self.config.userAgentExtra;
+        }
+        next();
+    }
+
     function upgradeDb(next) {
         upgrade.upgradeIfNecessary(self, next);
     }
@@ -407,7 +423,12 @@ IMGADM.prototype.init = function init(callback) {
         );
     }
 
-    async.series([loadConfig, upgradeDb, addSources], callback);
+    async.series([
+        loadConfig,
+        setUserAgent,
+        upgradeDb,
+        addSources
+    ], callback);
 };
 
 
@@ -722,7 +743,7 @@ IMGADM.prototype.clientFromSource = function clientFromSource(
             url: baseNormUrl,
             log: self.log.child({component: 'api', source: source.url}, true),
             rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
-            userAgent: UA
+            userAgent: self.userAgent
         });
     } else {
         self._clientCache[normUrl] = imgapi.createClient({
@@ -730,7 +751,7 @@ IMGADM.prototype.clientFromSource = function clientFromSource(
             url: normUrl,
             log: self.log.child({component: 'api', source: source.url}, true),
             rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
-            userAgent: UA
+            userAgent: self.userAgent
         });
     }
     callback(null, self._clientCache[normUrl]);
@@ -2798,7 +2819,7 @@ IMGADM.prototype.publishImage = function publishImage(opts, callback) {
         url: opts.url,
         log: self.log.child({component: 'api', url: opts.url}, true),
         rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
-        userAgent: UA
+        userAgent: self.userAgent
     });
     var uuid = manifest.uuid;
     var rollbackImage;

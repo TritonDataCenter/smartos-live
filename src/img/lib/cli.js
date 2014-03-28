@@ -387,6 +387,7 @@ CLI.prototype.main = function main(argv, options, callback) {
         // Dispatch subcommands.
         imgadm.createTool({log: self.log}, function (createErr, tool) {
             if (createErr) {
+                self.printErr(createErr, 'imgadm tool creation error');
                 callback(createErr);
                 return;
             }

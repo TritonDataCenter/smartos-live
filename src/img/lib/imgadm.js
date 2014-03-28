@@ -385,12 +385,10 @@ IMGADM.prototype.init = function init(callback) {
     }
 
     function setUserAgent(next) {
-        assert.optionalString(self.config.userAgentExtra,
-            'config.userAgentExtra');
         self.userAgent = UA;
         if (self.config && self.config.userAgentExtra) {
-            if (typeof(self.config.userAgentExtra) !== 'string') {
-                next(new errors.ConfigError(e, format(
+            if (typeof (self.config.userAgentExtra) !== 'string') {
+                next(new errors.ConfigError(format(
                     '"userAgentExtra" in config file "%s" is not a string',
                     CONFIG_PATH)));
                 return;

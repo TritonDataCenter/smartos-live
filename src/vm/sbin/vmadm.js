@@ -35,6 +35,10 @@ var sprintf = require('/usr/node/node_modules/sprintf').sprintf;
 var tty = require('tty');
 var util = require('util');
 var draining_stdout_and_exiting = false;
+var properties = require('/usr/vm/node_modules/props');
+
+// pull in stuff from generated props (originating in proptable.js)
+var BRAND_OPTIONS = properties.BRAND_OPTIONS;
 
 VM.logname = 'vmadm';
 
@@ -459,11 +463,19 @@ function startVM(uuid, extra, callback)
 
 function addFakeFields(m)
 {
-    if (m.brand === 'kvm') {
-        m.type = 'KVM';
+    if (BRAND_OPTIONS[m.brand]
+        && BRAND_OPTIONS[m.brand].features
+        && BRAND_OPTIONS[m.brand].features.type) {
+
+        m.type = BRAND_OPTIONS[m.brand].features.type;
     } else {
-        m.ram = m.max_physical_memory;
+        // When we don't know 'type', treat as OS VM
         m.type = 'OS';
+    }
+
+    if (m.brand !== 'kvm') {
+        // when we dont normally have 'ram' set as fake property for consistency
+        m.ram = m.max_physical_memory;
     }
 }
 

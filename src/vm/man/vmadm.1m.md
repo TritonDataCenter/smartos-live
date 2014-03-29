@@ -7,9 +7,14 @@ vmadm(1m) -- Manage SmartOS virtual machines
 ## DESCRIPTION
 
 The vmadm tool allows you to interact with virtual machines on a SmartOS
-system. Both OS Virtual Machines (zones) and KVM Virtual Machines can be
-managed. vmadm allows you to create, inspect, modify and delete virtual
-machines on the local system.
+system. All 3 of: OS Virtual Machines (SmartOS zones), LX Virtual Machines
+and KVM Virtual Machines can be managed. vmadm allows you to create, inspect,
+modify and delete virtual machines on the local system.
+
+IMPORTANT: Support for LX VMs is currently limited and experimental. This means
+it is very likely to change in major ways without notice. Also: not all the LX
+functionality that *is* implemented is documented yet. The documentation will
+be updated as things stablize.
 
 The primary reference for a VM is its UUID. Most commands operate on VMs by
 UUID. In SmartOS, there are included bash tab-completion rules so that you can
@@ -52,7 +57,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         Connect to the text console for a running VM. For OS VMs, this will be
         the zone console. For KVM VMs, this will be the serial console and your
         VM will need to be setup with getty or similar running on the first
-        serial device.
+        serial device. Not yet supported on LX VMs.
 
         To end the serial console session hit CTRL-]. For OS VMs, you'll need
         to do this at the start of a line, so generally this means pressing:
@@ -487,7 +492,7 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         type -- type of the properties value.
 
-        vmtype -- types of VM (OS and/or KVM) for which this property applies.
+        vmtype -- types of VM (KVM, LX, OS) for which this property applies.
 
         listable -- if they can be included in the -o or -s lists for the
                     'vmadm list' command.
@@ -1054,6 +1059,16 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (but see special notes on update command)
         default: {}
+
+    kernel_version:
+
+        This sets the version of Linux to emulate for LX VMs.
+
+        type: string (kernel version, eg. 2.6.31)
+        vmtype: LX
+        listable: no
+        create: no
+        update: yes
 
     limit_priv:
 

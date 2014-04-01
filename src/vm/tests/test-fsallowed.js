@@ -15,9 +15,6 @@ var vmobj;
 
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 
-// This will ensure vmtest.CURRENT_* are installed
-vmtest.ensureCurrentImages();
-
 test('create zone with fs_allowed', {'timeout': 240000}, function(t) {
     var payload = {
         'brand': 'joyent-minimal',

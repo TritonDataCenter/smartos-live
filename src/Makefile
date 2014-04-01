@@ -70,6 +70,7 @@ JS_CHECK_TARGETS=\
 	vm/node_modules/vmload/*.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
+	vm/tests/test-indestructible.js \
 	vm/lib/metadata/*.js
 
 JS_CHECK_OLDSKOOL_TARGETS = \

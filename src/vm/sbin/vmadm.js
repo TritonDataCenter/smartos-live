@@ -88,6 +88,8 @@ var LIST_FIELDS = {
     firewall_enabled: {header: 'FIREWALL_ENABLED', width: 16},
     hostname: {header: 'HOSTNAME', width: 32},
     image_uuid: {header: 'IMAGE_UUID', width: 36},
+    indestructible_delegated: {header: 'INDESTR_DATA', width: 12},
+    indestructible_zoneroot: {header: 'INDESTR_ROOT', width: 12},
     ram: {header: 'RAM', width: 7},
     max_locked_memory: {header: 'MAX_LOCKED', width: 10},
     max_lwps: {header: 'MAX_LWP', width: 7},
@@ -788,6 +790,8 @@ function main(callback)
 
             VM.reprovision(uuid, payload, function (e) {
                 if (e) {
+                    e.message = 'Failed to reprovision VM ' + uuid + ': '
+                        + e.message;
                     callback(e);
                 } else {
                     callback(null, 'Successfully reprovisioned VM ' + uuid);

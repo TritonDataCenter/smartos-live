@@ -17,9 +17,6 @@ var vmobj;
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var vm_image_uuid = vmtest.CURRENT_UBUNTU_UUID;
 
-// This will ensure vmtest.CURRENT_* are installed
-vmtest.ensureCurrentImages();
-
 test('create zone with root_recsize 64k', {'timeout': 240000}, function(t) {
     var payload = {
         'brand': 'joyent-minimal',

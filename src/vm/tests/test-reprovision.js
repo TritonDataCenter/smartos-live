@@ -61,9 +61,6 @@ function trim(str, chars)
     return ltrim(rtrim(str, chars), chars);
 }
 
-// This will ensure vmtest.CURRENT_* are installed
-vmtest.ensureCurrentImages();
-
 [['zone', smartos_payload, smartos_image_uuid]].forEach(function (d) {
     var thing_name = d[0];
     var thing_payload = d[1];

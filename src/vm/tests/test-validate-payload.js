@@ -14,9 +14,6 @@ var ubuntu_image_size = vmtest.CURRENT_UBUNTU_SIZE;
 
 VM.loglevel = 'DEBUG';
 
-// This will ensure vmtest.CURRENT_* are installed
-vmtest.ensureCurrentImages();
-
 test('test nonexistent brand', function (t) {
     VM.validate('gorilla', 'create', {'hello': 'world'}, function (errors) {
         t.ok(errors, 'bail on gorilla brand: ' + JSON.stringify(errors));

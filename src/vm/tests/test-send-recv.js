@@ -42,10 +42,6 @@ var smartos_payload = {
     'customer_metadata': {'hello': 'world'}
 };
 
-
-// This will ensure vmtest.CURRENT_* are installed
-vmtest.ensureCurrentImages();
-
 [['zone', smartos_payload], ['kvm', kvm_payload]].forEach(function (d) {
     var thing_name = d[0];
     var thing_payload = d[1];

@@ -69,8 +69,17 @@ tab-complete UUIDs rather than having to type them out for every command.
         Delete the VM with the specified UUID. The VM and any associated
         storage including zvols and the zone filesystem will be removed.
 
-        Note: this command is not interactive, take care to delete the right
-        VM.
+        If you have set the indestructible_zoneroot or indestructible_delegated
+        flags on a VM it *cannot* be deleted until you have unset these flags
+        with something like:
+
+            vmadm update <uuid> indestructible_zoneroot=false
+            vmadm update <uuid> indestructible_delegated=false
+
+        to remove the snapshot and holds.
+
+        Note: 'vmadm delete' command is not interactive, take care to delete the
+        right VM.
 
       delete-snapshot <uuid> <snapname>
 
@@ -1059,6 +1068,55 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (but see special notes on update command)
         default: {}
+
+    indestructible_delegated:
+
+        When set this property adds an @indestructible snapshot to the delegated
+        (<zfs_filesystem>/data) dataset and sets a zfs hold on that snapshot.
+        This hold must be removed before the VM can be deleted enabling a
+        two-step deletion. Eg. to delete a VM where this has been set, you would
+        need to:
+
+            vmadm update <uuid> indestructible_delegated=false
+            vmadm delete <uuid>
+
+        instead of being able to do the delete on its own. The property will
+        only show up in VM objects when set true.
+
+        NOTE: if the hold on the @indestructible dataset is removed manually
+        from the GZ or from within the zone, this would also remove this flag
+        and allow the VM to be deleted.
+
+        type: boolean
+        vmtype: KVM,LX,OS
+        listable: yes
+        create: yes
+        update: yes
+        default: false
+
+    indestructible_zoneroot:
+
+        When set this property adds an @indestructible snapshot to the zoneroot
+        (zfs_filesystem) dataset and sets a zfs hold on that snapshot. This hold
+        must be removed before the VM can be deleted *or reprovisioned*. Eg. to
+        delete a VM where this has been set, you would need to:
+
+            vmadm update <uuid> indestructible_zoneroot=false
+            vmadm delete <uuid>
+
+        instead of being able to do the delete on its own. The property will
+        only show up in VM objects when set true.
+
+        NOTE: if the hold on the @indestructible dataset is removed manually
+        from the GZ, this would also remove this flag and allow the VM to be
+        deleted.
+
+        type: boolean
+        vmtype: KVM,LX,OS
+        listable: yes
+        create: yes
+        update: yes
+        default: false
 
     kernel_version:
 

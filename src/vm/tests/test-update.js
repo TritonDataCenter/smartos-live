@@ -169,9 +169,6 @@ simple_properties = [
     ['package_version', 'XP']
 ];
 
-// This will ensure vmtest.CURRENT_* are installed
-vmtest.ensureCurrentImages();
-
 test('create zone', {'timeout': 240000}, function(t) {
     VM.create(PAYLOADS.create, function (err, vmobj) {
         if (err) {

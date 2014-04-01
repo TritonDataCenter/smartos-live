@@ -39,9 +39,6 @@ function hasSnapshot(snapshots, snapname)
     return false;
 }
 
-// This will ensure vmtest.CURRENT_* are installed
-vmtest.ensureCurrentImages();
-
 // create VM try to snapshot, should fail
 
 test('create zone with delegated dataset', {'timeout': 240000}, function(t) {
@@ -834,6 +831,8 @@ test('delete zone', {'timeout': 240000}, function(t) {
     }
 });
 
+/* XXX disabled pending OS-2848
+
 // test that snapshots work on SNGL
 test('create SNGL zone', {'timeout': 240000}, function(t) {
     var payload = {
@@ -866,7 +865,7 @@ test('create SNGL zone', {'timeout': 240000}, function(t) {
     });
 });
 
-// XXX duplicate of joyent-minimal test from above
+// XXX duplicate of joyent-minimal test from above, but for SNGL
 test('write file to zoneroot then snapshot', {'timeout': 240000}, function(t) {
 
     var filename;
@@ -880,7 +879,7 @@ test('write file to zoneroot then snapshot', {'timeout': 240000}, function(t) {
     filename = path.join(vmobj.zonepath, 'root', '/root/hello.txt');
 
     fs.writeFile(filename, MAGIC_STRING1, function (err) {
-        t.ok(!err, 'no error writing file to zoneroot');
+        t.ok(!err, 'no error writing file to zoneroot: ' + (err ? err.message : 'success'));
         if (err) {
             abort = true;
             t.end();
@@ -902,7 +901,7 @@ test('write file to zoneroot then snapshot', {'timeout': 240000}, function(t) {
     });
 });
 
-// XXX duplicate of joyent-minimal test from above
+// XXX duplicate of joyent-minimal test from above, but for SNGL
 test('write file to zoneroot again then snapshot again', {'timeout': 240000}, function(t) {
 
     var filename;
@@ -939,7 +938,7 @@ test('write file to zoneroot again then snapshot again', {'timeout': 240000}, fu
     });
 });
 
-// XXX duplicate of joyent-minimal test from above
+// XXX duplicate of joyent-minimal test from above, but for SNGL
 test('write file to zoneroot one last time, then snapshot again', {'timeout': 240000}, function(t) {
 
     var filename;
@@ -977,7 +976,7 @@ test('write file to zoneroot one last time, then snapshot again', {'timeout': 24
     });
 });
 
-// XXX duplicate of joyent-minimal test from above
+// XXX duplicate of joyent-minimal test from above, but for SNGL
 test('rollback to snapshot2 and test data', {'timeout': 240000}, function(t) {
     if (abort) {
         t.ok(false, 'skipping rollback as test run is aborted.');
@@ -1016,7 +1015,7 @@ test('rollback to snapshot2 and test data', {'timeout': 240000}, function(t) {
     });
 });
 
-// XXX duplicate of joyent-minimal test from above
+// XXX duplicate of joyent-minimal test from above, but for SNGL
 test('rollback to snapshot1 and test data', {'timeout': 240000}, function(t) {
     if (abort) {
         t.ok(false, 'skipping rollback as test run is aborted.');
@@ -1054,7 +1053,7 @@ test('rollback to snapshot1 and test data', {'timeout': 240000}, function(t) {
     });
 });
 
-// XXX duplicate of joyent-minimal test from above
+// XXX duplicate of joyent-minimal test from above, but for SNGL
 test('delete snapshot1', {'timeout': 240000}, function(t) {
 
     if (abort) {
@@ -1095,6 +1094,7 @@ test('delete zone', function(t) {
         t.end();
     }
 });
+*/
 
 test('create stopped zone', {'timeout': 240000}, function(t) {
     var payload = {

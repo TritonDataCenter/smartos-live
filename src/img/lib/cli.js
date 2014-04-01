@@ -40,6 +40,7 @@ var async = require('async');
 var nopt = require('nopt');
 var sprintf = require('extsprintf').sprintf;
 var rimraf = require('rimraf');
+var genUuid = require('node-uuid');
 var bunyan;
 if (process.platform === 'sunos') {
     bunyan = require('/usr/node/node_modules/bunyan');
@@ -329,6 +330,14 @@ CLI.prototype.main = function main(argv, options, callback) {
          *
          *      imgadm -v ... 2>&1 | bunyan
          */
+        var req_id;
+        if (process.env.REQ_ID) {
+            req_id = process.env.REQ_ID;
+        } else if (process.env.req_id) {
+            req_id = process.env.req_id;
+        } else {
+            req_id = genUuid();
+        }
         var log = options.log || bunyan.createLogger({
             name: self.name,
             streams: [
@@ -337,7 +346,8 @@ CLI.prototype.main = function main(argv, options, callback) {
                     level: 'warn'
                 }
             ],
-            serializers: bunyan.stdSerializers
+            serializers: bunyan.stdSerializers,
+            req_id: req_id
         });
         var IMGADM_LOG_LEVEL;
         try {
@@ -1177,7 +1187,6 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, callback) {
                     callback(importErr);
                     return;
                 }
-                console.log('Imported image %s to "%s/%s".', uuid, zpool, uuid);
                 callback();
             });
         });
@@ -1283,7 +1292,6 @@ CLI.prototype.do_install = function do_install(subcmd, opts, args, callback) {
                 callback(installErr);
                 return;
             }
-            console.log('Installed image %s to "%s/%s".', uuid, zpool, uuid);
             callback();
         });
     });

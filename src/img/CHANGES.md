@@ -1,5 +1,15 @@
 # imgadm changelog
 
+## 2.6.6
+
+- Debug logging will include a "req_id", optionally taken from a `REQ_ID`
+  environment variable.
+
+- [OS-2203] 'imgadm import' and 'imgadm avail' will coordinate concurrent
+  attempts to import the same image, instead of having all but one of them
+  fail.
+
+
 ## 2.6.5
 
 - [OS-2867] Add optional `config.userAgentExtra` for a string to append to

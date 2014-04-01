@@ -50,7 +50,7 @@ UUID.
     Print the imgadm version and exit.
 
 **-v, --verbose**
-    More verbose logging (debug level). See the **IMGADM_LOG_LEVEL=<level>**
+    More verbose logging (debug level). See the **IMGADM\_LOG\_LEVEL=<level>**
     environment variable.
 
 
@@ -396,6 +396,10 @@ compatibility differences with earlier imgadm. These are:
 
         Set the level at which imgadm will log to stderr. Supported levels are
         "trace", "debug", "info", "warn" (default), "error", "fatal".
+
+    REQ_ID
+
+        If provided, this value is used for imgadm's logging.
 
 
 ## EXIT STATUS

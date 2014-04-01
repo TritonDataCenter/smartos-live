@@ -36,6 +36,7 @@ d usr/img/node_modules/imgmanifest 0555 root bin
 d usr/img/node_modules/imgmanifest/lib 0555 root bin
 f usr/img/node_modules/imgmanifest/lib/imgmanifest.js 0444 root bin
 f usr/img/node_modules/imgmanifest/package.json 0444 root bin
+h usr/img/node_modules/locker.js=usr/vm/node_modules/locker.js
 d usr/img/node_modules/mkdirp 0555 root bin
 f usr/img/node_modules/mkdirp/index.js 0444 root bin
 f usr/img/node_modules/mkdirp/LICENSE 0444 root bin

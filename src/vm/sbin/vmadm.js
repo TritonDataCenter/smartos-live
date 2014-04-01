@@ -476,7 +476,8 @@ function addFakeFields(m)
     }
 
     if (m.brand !== 'kvm') {
-        // when we dont normally have 'ram' set as fake property for consistency
+        // when we do not normally have 'ram', set as fake property for
+        // consistency
         m.ram = m.max_physical_memory;
     }
 }
@@ -644,18 +645,6 @@ function listVM(spec, order, sortby, options, callback)
     }
 
     fields = order.split(',');
-
-    // some fields are added by addFakeFields and not real lookup fields
-    // lookup will return these because of the transform we pass in, but
-    // we need to also add the stuff transform needs to get these.
-    if (fields.indexOf('type') !== -1) {
-        if (fields.indexOf('brand') === -1) {
-            fields.push('brand');
-        }
-    }
-    if (fields.indexOf('ram') !== -1) {
-        fields.push('max_physical_memory');
-    }
 
     // not all fields we're passed as order are looked up directly. When you
     // want nics.0.ip for example, we just request the whole .nics object.

@@ -1871,14 +1871,16 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             function releaseLock(next) {
                 log.debug({lockPath: lockPath}, 'releasing lock');
                 unlock(function (unlockErr) {
-                    if (!unlockErr) {
-                        log.debug({lockPath: lockPath}, 'released lock');
+                    if (unlockErr) {
+                        next(new errors.InternalError({
+                            message: 'error releasing lock',
+                            lockPath: lockPath,
+                            cause: unlockErr
+                        }));
+                        return;
                     }
-                    next(new errors.InternalError({
-                        message: 'error releasing lock',
-                        lockPath: lockPath,
-                        cause: unlockErr
-                    }));
+                    log.debug({lockPath: lockPath}, 'released lock');
+                    next();
                 });
             },
             function noteCompletion(next) {

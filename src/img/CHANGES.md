@@ -1,6 +1,14 @@
 # imgadm changelog
 
+## 2.6.7
+
+- [OS-2878] Fix 'imgadm import' broken in previous version.
+
+
 ## 2.6.6
+
+Note: This was a bad version in which "imgadm import" was broken.
+Use version 2.6.7 or later.
 
 - Debug logging will include a "req_id", optionally taken from a `REQ_ID`
   environment variable.

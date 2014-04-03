@@ -1,5 +1,12 @@
 # imgadm changelog
 
+## 2.6.8
+
+- [IMGAPI-373] `imgadm avail` now returns all images by making use of limit and
+  marker implicitly instead of forcing the client to pass these values as
+  command line options.
+
+
 ## 2.6.7
 
 - [OS-2878] Fix 'imgadm import' broken in previous version.

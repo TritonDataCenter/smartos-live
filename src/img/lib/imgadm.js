@@ -1077,7 +1077,7 @@ IMGADM.prototype.getImage = function getImage(options, callback) {
  *      will still contain results. This is so that an error in one source
  *      does not break everything.
  */
-IMGADM.prototype.sourcesList = function sourcesList(filterOpts, callback) {
+IMGADM.prototype.sourcesList = function sourcesList(callback) {
     var self = this;
     var errs = [];
     var imageSetFromSourceUrl = {};
@@ -1089,21 +1089,83 @@ IMGADM.prototype.sourcesList = function sourcesList(filterOpts, callback) {
     async.forEach(
         self.sources,
         function oneSource(source, next) {
-            self.clientFromSource(source, function (cErr, client) {
+            var limit, marker;
+            var images = [];
+            var stop = false;
+            var client;
+
+            self.clientFromSource(source, function (cErr, _client) {
                 if (cErr) {
                     errs.push(cErr);
                     next();
                     return;
                 }
-                client.listImages(filterOpts, function (listErr, images) {
+
+                client = _client;
+                async.doWhilst(listImagesFromSource,
+                    function testAllImagesFetched() {
+                        return !stop;
+                    },
+                    function doneOneSource(whilstErr) {
+                        imageSetFromSourceUrl[source.url] = images;
+                        return next();
+                    }
+                );
+            });
+
+            function listImagesFromSource(whilstNext) {
+                var filterOpts = {};
+                // These options are passed once they are set for the first time
+                if (marker) {
+                    filterOpts.marker = marker;
+                }
+                if (limit) {
+                    filterOpts.limit = limit;
+                }
+
+                client.listImages(filterOpts, function (listErr, sImages, res) {
                     if (listErr) {
                         errs.push(self._errorFromClientError(
                             source.url, listErr));
+                        stop = true;
+                        return whilstNext();
                     }
-                    imageSetFromSourceUrl[source.url] = images || [];
-                    next();
+                    // On every query we do this:
+                    // - check if result size is less than limit (stop)
+                    // - if we have to keep going set a new marker,
+                    //   otherwise shift() because the first element is
+                    //   our marker
+                    // - concat to full list of images
+                    if (!limit) {
+                        limit = res.headers['x-query-limit'] || 1000;
+                    }
+                    if (sImages.length < limit) {
+                        stop = true;
+                    }
+                    // No marker means this is the first query and we
+                    // shouldn't shift() the array
+                    if (marker) {
+                        sImages.shift();
+                    }
+                    // We hit this when we either reached an empty page of
+                    // results or an empty first result
+                    if (!sImages.length) {
+                        stop = true;
+                        return whilstNext();
+                    }
+                    // Safety check if remote server doesn't support limit
+                    // and marker yet. In this case we would be iterating
+                    // over the same list of /images
+                    var newMarker = sImages[sImages.length - 1].uuid;
+                    if (marker && marker === newMarker) {
+                        stop = true;
+                        return whilstNext();
+                    }
+                    marker = newMarker;
+                    images = images.concat(sImages);
+                    return whilstNext();
                 });
-            });
+            }
         },
         function done(err) {
             if (!err && errs.length) {

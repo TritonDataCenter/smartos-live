@@ -392,6 +392,23 @@ function OriginNotInstalledError(cause, zpool, uuid) {
 }
 util.inherits(OriginNotInstalledError, ImgadmError);
 
+function MaxOriginDepthError(cause, max) {
+    if (max === undefined) {
+        // `cause` was not provided.
+        max = cause;
+        cause = undefined;
+    }
+    assert.number(max, 'MaxOriginDepth');
+    ImgadmError.call(this, {
+        cause: cause,
+        message: format('cannot create image: maximum origin depth "%s" '
+            + 'has been reached', max),
+        code: 'MaxOriginDepth',
+        exitStatus: 1
+    });
+}
+util.inherits(MaxOriginDepthError, ImgadmError);
+
 function InvalidUUIDError(cause, uuid) {
     if (uuid === undefined) {
         uuid = cause;
@@ -691,6 +708,7 @@ module.exports = {
     ImageNotInstalledError: ImageNotInstalledError,
     ImageHasDependentClonesError: ImageHasDependentClonesError,
     OriginNotInstalledError: OriginNotInstalledError,
+    MaxOriginDepthError: MaxOriginDepthError,
     InvalidManifestError: InvalidManifestError,
     UnexpectedNumberOfSnapshotsError: UnexpectedNumberOfSnapshotsError,
     ImageMissingOriginalSnapshotError: ImageMissingOriginalSnapshotError,

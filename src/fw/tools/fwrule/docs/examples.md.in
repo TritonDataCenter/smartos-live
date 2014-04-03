@@ -1,0 +1,160 @@
+# Deployment Examples
+
+These examples are meant to outline some common use-cases for the firewall.
+Note that all VMs need to have their firewall property set for rules to apply
+to them:
+
+    {{#indent}}
+    {{vm_firewall_enabled}}
+    {{/indent}}
+
+Recall that for VMs that have firewall_enabled set, the default policy is
+always:
+
+* allow incoming ping requests
+* block all other incoming traffic
+* allow all outgoing traffic
+
+Note as well that all of the examples here are not mutually exclusive. You can
+combine the rules in the examples as you see fit.
+
+
+## Allow SSH traffic
+
+To allow SSH access from any IP to all VMs in a datacenter, create the
+following rule:
+
+    {{#indent}}
+    {{ssh_rule_all}}
+    {{/indent}}
+
+
+To allow SSH to one VM with ID {{vm1}}, create
+this rule:
+
+    {{#indent}}
+    {{ssh_rule_vm}}
+    {{/indent}}
+
+Note that if you have created the first rule in this section, you do not need
+to create this second rule - every VM will already have SSH access enabled.
+
+
+## Allow HTTP traffic
+
+To allow HTTP connections from any IP to all VMs in a datacenter, create the
+following rule:
+
+    {{#indent}}
+    {{web_rule_http_all}}
+    {{/indent}}
+
+
+To allow both HTTP and HTTPS connections to all VMs in a datacenter, create the
+following rule (or update the rule above to the following):
+
+    {{#indent}}
+    {{web_rule_https_all}}
+    {{/indent}}
+
+To allow HTTP to one VM with ID {{vm1}}, create
+this rule:
+
+    {{#indent}}
+    {{web_rule_http_vm}}
+    {{/indent}}
+
+Note that if you have created either of the first two rules in this section,
+you do not need to create this second rule - every VM will already allow
+HTTP connections.
+
+
+## Multiple web and database server setup
+
+Say you are running a website.  You have two webservers that talk to two
+database servers.
+
+For each of the webservers, you create them with these parameters:
+
+    {{#indent}}
+    {{webdb_vm_www}}
+    {{/indent}}
+
+For each of the database servers, you create them with these parameters:
+
+    {{#indent}}
+    {{webdb_vm_db}}
+    {{/indent}}
+
+We now need to create firewall rules to control access to these VMs.  Recall
+that by default, VMs with firewalls enabled will block all incoming TCP and
+UDP traffic. We now need to open up the necessary ports for each VM role.
+
+First, we want to allow communication between the webservers and the database
+servers. We do so by creating this rule:
+
+    {{#indent}}
+    {{webdb_rule_db}}
+    {{/indent}}
+
+This rule allows *only* the webservers to connect to the database servers on
+the standard PostgreSQL port (5432). All other inbound traffic to the database
+servers is blocked.
+
+Second, we want to allow HTTP and HTTPS traffic to the webservers from anywhere
+on the internet. We do so by creating this rule:
+
+    {{#indent}}
+    {{webdb_rule_http}}
+    {{/indent}}
+
+After both of these rules have been created, VMs with tag role set to "db"
+will have the following behaviour:
+
+* Allow TCP traffic on port 5432 from VMs with tag role="www"
+* Allow all outgoing traffic
+* Allow incoming ping requests
+* Block all other incoming traffic
+
+After both of these rules have been created, VMs with tag role set to "www"
+will have the following behaviour:
+
+* Allow incoming TCP traffic on ports 80 and 443 from any IP
+* Allow outgoing TCP traffic on port 5432 to VMs with tag role="www"
+* Allow all outgoing traffic
+* Allow incoming ping requests
+* Block all other incoming traffic
+
+Creating additional VMs with the role tags listed above will automatically
+apply these rules. For example, to apply the webserver rules to a new server,
+just give it tag role = "www".
+
+
+## Bastion host setup
+
+In this setup, we have the following requirements:
+
+1. VMs are allowed access from the bastion host on all ports
+2. VMs block all other connections
+3. The bastion host accepts SSH connections from only certain IP addresses and
+   no others.
+
+Recall that the default policy is to block all incoming connecions, so
+requirement 2 is taken care of. We then need two rules to handle the other
+requirements.
+
+First, let's take care of VMs allowing access from the bastion host
+{{vm2}} by creating this rule:
+
+    {{#indent}}
+    {{bastion_rule_allow_all}}
+    {{/indent}}
+
+Second, let's take care of the bastion host accepting connections from certain
+IP addresses with this rule:
+
+    {{#indent}}
+    {{bastion_rule_ips}}
+    {{/indent}}
+
+When you create new VMs, they will have access from the bastion host.

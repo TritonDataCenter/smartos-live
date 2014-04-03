@@ -1,0 +1,13 @@
+echo '{
+    "remoteVMs": [
+        {
+            "uuid": "0c3a87d2-b9b6-4445-8eeb-96a94d72b29e",
+            "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+            "nics": [
+                { "ip": "172.29.0.3" },
+                { "ip": "172.30.0.3" }
+            ],
+            "tags": { "role": "db" }
+        }
+    ]
+}' | fwadm add

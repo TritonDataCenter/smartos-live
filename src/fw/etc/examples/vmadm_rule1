@@ -1,0 +1,6 @@
+{
+    "description": "block all outgoing SMTP traffic",
+    "enabled": true,
+    "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+    "rule": "FROM tag blocksmtp TO any BLOCK tcp PORT 25"
+}

@@ -241,7 +241,7 @@ function upgradeIfNecessary(tool, callback) {
     var currVer = tool.config.upgradedToVer || '1.0.0';
     var currVerInfo = verInfoFromVer(currVer);
     if (currVerInfo > highestUpVerInfo || currVer === highestUpVer) {
-        log.debug({currVer: currVer, highestUpVer: highestUpVer},
+        log.trace({currVer: currVer, highestUpVer: highestUpVer},
             'upgrade not necessary');
         callback();
         return;

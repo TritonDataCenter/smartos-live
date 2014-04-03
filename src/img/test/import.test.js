@@ -32,6 +32,7 @@ var format = require('util').format;
 var exec = require('child_process').exec;
 var fs = require('fs');
 
+var async = require('async');
 var rimraf = require('rimraf');
 var mkdirp = require('mkdirp');
 
@@ -69,6 +70,15 @@ test('setup: clean WRKDIR (' + WRKDIR + ')', function (t) {
 
 test('setup: ensure images.joyent.com source', function (t) {
     exec('imgadm sources -a https://images.joyent.com', function (err, o, e) {
+        t.ifError(err);
+        t.end();
+    });
+});
+
+test('setup: get test image in local SDC IMGAPI (if available)', function (t) {
+    var cmd = 'sdc-imgadm import ' + TEST_IMAGE_UUID +
+        ' -S https://images.joyent.com --skip-owner-check || true';
+    exec(cmd, function (err, o, e) {
         t.ifError(err);
         t.end();
     });
@@ -117,7 +127,7 @@ test('setup: cache test image file', function (t) {
 
 // ---- tests
 
-test('precondition: remove image ' + TEST_IMAGE_UUID, function (t) {
+test('precondition1: remove image ' + TEST_IMAGE_UUID, function (t) {
     var cmd = format(
         'imgadm get %s 2>/dev/null >/dev/null && imgadm delete %s || true',
         TEST_IMAGE_UUID, TEST_IMAGE_UUID);
@@ -134,7 +144,7 @@ test('imgadm import ' + TEST_IMAGE_UUID, function (t) {
     });
 });
 
-test('precondition: remove image ' + TEST_IMAGE_UUID, function (t) {
+test('precondition2: remove image ' + TEST_IMAGE_UUID, function (t) {
     var cmd = format(
         'imgadm get %s 2>/dev/null >/dev/null && imgadm delete %s || true',
         TEST_IMAGE_UUID, TEST_IMAGE_UUID);
@@ -153,3 +163,33 @@ test('imgadm install ... ' + TEST_IMAGE_UUID, function (t) {
     });
 });
 
+
+test('precondition3: remove image ' + TEST_IMAGE_UUID, function (t) {
+    var cmd = format(
+        'imgadm get %s 2>/dev/null >/dev/null && imgadm delete %s || true',
+        TEST_IMAGE_UUID, TEST_IMAGE_UUID);
+    t.exec(cmd, function () {
+        t.end();
+    });
+});
+
+test('concurrent: imgadm import ' + TEST_IMAGE_UUID, function (t) {
+    async.each(
+        ['alice', 'bob', 'charlie'],
+        function importTheImage(who, next) {
+            // TODO: capture this log and assert that there was some waiting
+            //       on locks?
+            t.exec('imgadm -v import ' + TEST_IMAGE_UUID, function () {
+                t.exec('imgadm get ' + TEST_IMAGE_UUID, function () {
+                    next();
+                });
+            });
+        },
+        function doneAll(err) {
+            t.ifError(err);
+            t.exec('imgadm get ' + TEST_IMAGE_UUID, function () {
+                t.end();
+            });
+        }
+    )
+});

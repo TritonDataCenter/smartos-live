@@ -40,6 +40,7 @@ var async = require('async');
 var nopt = require('nopt');
 var sprintf = require('extsprintf').sprintf;
 var rimraf = require('rimraf');
+var genUuid = require('node-uuid');
 var bunyan;
 if (process.platform === 'sunos') {
     bunyan = require('/usr/node/node_modules/bunyan');
@@ -329,6 +330,14 @@ CLI.prototype.main = function main(argv, options, callback) {
          *
          *      imgadm -v ... 2>&1 | bunyan
          */
+        var req_id;
+        if (process.env.REQ_ID) {
+            req_id = process.env.REQ_ID;
+        } else if (process.env.req_id) {
+            req_id = process.env.req_id;
+        } else {
+            req_id = genUuid();
+        }
         var log = options.log || bunyan.createLogger({
             name: self.name,
             streams: [
@@ -337,7 +346,8 @@ CLI.prototype.main = function main(argv, options, callback) {
                     level: 'warn'
                 }
             ],
-            serializers: bunyan.stdSerializers
+            serializers: bunyan.stdSerializers,
+            req_id: req_id
         });
         var IMGADM_LOG_LEVEL;
         try {
@@ -387,6 +397,7 @@ CLI.prototype.main = function main(argv, options, callback) {
         // Dispatch subcommands.
         imgadm.createTool({log: self.log}, function (createErr, tool) {
             if (createErr) {
+                self.printErr(createErr, 'imgadm tool creation error');
                 callback(createErr);
                 return;
             }
@@ -797,7 +808,15 @@ CLI.prototype.do_avail = function do_avail(subcmd, opts, args, callback) {
             'unexpected args: ' + args.join(' ')));
         return;
     }
-    self.tool.sourcesList(function (err, imagesInfo) {
+    var filterOpts = {};
+    if (opts.marker) {
+        assertUuid(opts.marker);
+        filterOpts.marker = opts.marker;
+    }
+    if (opts.limit) {
+        filterOpts.limit = opts.limit;
+    }
+    self.tool.sourcesList(filterOpts, function (err, imagesInfo) {
         // Even if there was an err, we still attempt to return results
         // for working sources.
         if (opts.json) {
@@ -844,6 +863,11 @@ CLI.prototype.do_avail.description = (
     + '                       "uuid,name,version,os,published".\n'
     + '    -s field1,...      Sort on the given fields. Default is\n'
     + '                       "published_at,name".\n'
+    + '    -m, --marker       Only list images that were created after the\n'
+    + '                       marker image creation date. The marker must be\n'
+    + '                       an image UUID.\n'
+    + '    -l, --limit        Maximum number of images to return. Images are\n'
+    + '                       sorted by creation date (ASC) by default.\n'
     + '\n'
     + textWrap('Valid fields for "-o" and "-s" are: '
         + availValidFields.join(', ') + '.') + '\n'
@@ -852,13 +876,17 @@ CLI.prototype.do_avail.longOpts = {
     'json': Boolean,
     'skipHeader': Boolean,
     'output': String,
-    'sort': String
+    'sort': String,
+    'marker': String,
+    'limit': Number
 };
 CLI.prototype.do_avail.shortOpts = {
     'j': ['--json'],
     'H': ['--skipHeader'],
     'o': ['--output'],
-    's': ['--sort']
+    's': ['--sort'],
+    'm': ['--marker'],
+    'l': ['--limit']
 };
 CLI.prototype.do_avail.aliases = ['available'];
 
@@ -1159,7 +1187,6 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, callback) {
                     callback(importErr);
                     return;
                 }
-                console.log('Imported image %s to "%s/%s".', uuid, zpool, uuid);
                 callback();
             });
         });
@@ -1265,7 +1292,6 @@ CLI.prototype.do_install = function do_install(subcmd, opts, args, callback) {
                 callback(installErr);
                 return;
             }
-            console.log('Installed image %s to "%s/%s".', uuid, zpool, uuid);
             callback();
         });
     });
@@ -1368,6 +1394,13 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, callback) {
             'cannot specify both -o/--output-template and -p/--publish'));
         return;
     }
+    if (opts['max-origin-depth'] !== undefined
+        && Number(opts['max-origin-depth']) < 2) {
+        callback(new errors.UsageError(format(
+            'invalid max-origin-depth "%s": must be greater than 1',
+            opts['max-origin-depth'])));
+        return;
+    }
 
     function gatherManifestData(next) {
         // Pick up fields from the CLI argv.
@@ -1461,7 +1494,8 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, callback) {
                 && fs.readFileSync(opts['prepare-script'], 'utf8'),
             savePrefix: savePrefix,
             logCb: console.log,
-            quiet: opts.quiet
+            quiet: opts.quiet,
+            maxOriginDepth: opts['max-origin-depth']
         };
         self.tool.createImage(createOpts, function (createErr, imageInfo) {
             if (createErr) {
@@ -1541,6 +1575,12 @@ CLI.prototype.do_create.description = (
     + '    -i             Build an incremental image (based on the "@final"\n'
     + '                   snapshot of the source image for the VM).\n'
     + '\n'
+    + '    --max-origin-depth <max-origin-depth>\n'
+    + '                   Maximum origin depth to allow when creating\n'
+    + '                   incremental images. E.g. a value of 3 means that\n'
+    + '                   the image will only be created if there are no more\n'
+    + '                   than 3 parent images in the origin chain.\n'
+    + '\n'
     + '    -s <prepare-image-path>\n'
     + '                   Path to a script that is run inside the VM to\n'
     + '                   prepare it for imaging. Specifying this triggers the\n'
@@ -1599,7 +1639,8 @@ CLI.prototype.do_create.longOpts = {
     'incremental': Boolean,
     'prepare-script': String,
     'publish': String,
-    'quiet': Boolean
+    'quiet': Boolean,
+    'max-origin-depth': Number
 };
 CLI.prototype.do_create.shortOpts = {
     'm': ['--manifest'],

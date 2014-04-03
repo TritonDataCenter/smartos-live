@@ -77,11 +77,8 @@ test('imgadm --version', function (t) {
 });
 
 
-test('imgadm -v   # bunyan debug log on stderr', function (t) {
-    exec('imgadm -v bogus', function (err, stdout, stderr) {
-        t.ok(err);
-        t.equal(err.code, 1);
-        t.equal(stdout, '', 'stdout');
+test('imgadm -v list  # bunyan debug log on stderr', function (t) {
+    exec('imgadm -v list', function (err, stdout, stderr) {
         t.ok(stderr);
         var firstLine = stderr.split(/\n/g)[0];
         var record = JSON.parse(firstLine);

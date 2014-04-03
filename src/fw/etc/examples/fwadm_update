@@ -1,0 +1,1 @@
+fwadm update 71bf3c29-bcd3-42a4-b4cb-222585429a70 'FROM (tag www OR ip 172.30.0.250) TO tag db ALLOW tcp PORT 5432'

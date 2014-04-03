@@ -35,6 +35,10 @@ var sprintf = require('/usr/node/node_modules/sprintf').sprintf;
 var tty = require('tty');
 var util = require('util');
 var draining_stdout_and_exiting = false;
+var properties = require('/usr/vm/node_modules/props');
+
+// pull in stuff from generated props (originating in proptable.js)
+var BRAND_OPTIONS = properties.BRAND_OPTIONS;
 
 VM.logname = 'vmadm';
 
@@ -84,6 +88,8 @@ var LIST_FIELDS = {
     firewall_enabled: {header: 'FIREWALL_ENABLED', width: 16},
     hostname: {header: 'HOSTNAME', width: 32},
     image_uuid: {header: 'IMAGE_UUID', width: 36},
+    indestructible_delegated: {header: 'INDESTR_DATA', width: 12},
+    indestructible_zoneroot: {header: 'INDESTR_ROOT', width: 12},
     ram: {header: 'RAM', width: 7},
     max_locked_memory: {header: 'MAX_LOCKED', width: 10},
     max_lwps: {header: 'MAX_LWP', width: 7},
@@ -459,11 +465,20 @@ function startVM(uuid, extra, callback)
 
 function addFakeFields(m)
 {
-    if (m.brand === 'kvm') {
-        m.type = 'KVM';
+    if (BRAND_OPTIONS[m.brand]
+        && BRAND_OPTIONS[m.brand].features
+        && BRAND_OPTIONS[m.brand].features.type) {
+
+        m.type = BRAND_OPTIONS[m.brand].features.type;
     } else {
-        m.ram = m.max_physical_memory;
+        // When we don't know 'type', treat as OS VM
         m.type = 'OS';
+    }
+
+    if (m.brand !== 'kvm') {
+        // when we do not normally have 'ram', set as fake property for
+        // consistency
+        m.ram = m.max_physical_memory;
     }
 }
 
@@ -631,18 +646,6 @@ function listVM(spec, order, sortby, options, callback)
 
     fields = order.split(',');
 
-    // some fields are added by addFakeFields and not real lookup fields
-    // lookup will return these because of the transform we pass in, but
-    // we need to also add the stuff transform needs to get these.
-    if (fields.indexOf('type') !== -1) {
-        if (fields.indexOf('brand') === -1) {
-            fields.push('brand');
-        }
-    }
-    if (fields.indexOf('ram') !== -1) {
-        fields.push('max_physical_memory');
-    }
-
     // not all fields we're passed as order are looked up directly. When you
     // want nics.0.ip for example, we just request the whole .nics object.
     fields.forEach(function (field) {
@@ -776,6 +779,8 @@ function main(callback)
 
             VM.reprovision(uuid, payload, function (e) {
                 if (e) {
+                    e.message = 'Failed to reprovision VM ' + uuid + ': '
+                        + e.message;
                     callback(e);
                 } else {
                     callback(null, 'Successfully reprovisioned VM ' + uuid);

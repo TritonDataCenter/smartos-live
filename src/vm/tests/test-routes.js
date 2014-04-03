@@ -1,4 +1,4 @@
-// Copyright 2013 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 //
 // Tests for specifying static routes
 //
@@ -6,6 +6,7 @@
 process.env['TAP'] = 1;
 var assert = require('assert');
 var async = require('/usr/node/node_modules/async');
+var cp = require('child_process');
 var fs = require('fs');
 var format = require('util').format;
 var path = require('path');
@@ -14,6 +15,9 @@ var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
 
 VM.loglevel = 'DEBUG';
+
+// If true, don't delete VMs once the test is complete
+var DO_NOT_CLEANUP_VMS = false;
 
 var INVALID_DEST = 'Invalid route destination: "%s" '
     + '(must be IP address or CIDR)';
@@ -30,14 +34,213 @@ var payload = {
     'do_not_inventory': true
 };
 
+var LAST_METADATA_RESTART_TIME;
+var LAST_NETWORKING_RESTART_TIME;
+var ROUTING_SVC = 'routing-setup';
+var RESTART_TRIES = 10;
+
 var test_opts = {
     'timeout': 240000
 };
+
+
+function debugKeepVM(state, cb) {
+    if (DO_NOT_CLEANUP_VMS) {
+        // If state.uuid is missing, vmtest.on_new_vm won't delete it
+        console.error('# Not cleaning up VM: ' + state.uuid);
+        delete state.uuid;
+    }
+
+    cb();
+}
+
+function getServiceStartTime(uuid, svc, callback) {
+    cp.execFile('/usr/bin/svcs', ['-H', '-o', 'stime', '-z', uuid, svc],
+        function (err, stdout, stderr) {
+        if (err) {
+            return callback(err);
+        }
+
+        return callback(null, stdout.replace('\n', ''));
+    });
+}
+
+function getStartTimes(t, state, desc, callback) {
+    getServiceStartTime(state.uuid, 'mdata:fetch', function (err, time) {
+        if (err) {
+            t.ifErr(err, format('Error getting metadata service start time ' +
+                'for VM %s (%s)', state.uuid, desc));
+            return callback(err);
+        }
+
+        t.ok(time, format('metadata start time of %s', time));
+        LAST_METADATA_RESTART_TIME = time;
+        getServiceStartTime(state.uuid, ROUTING_SVC,
+            function (err2, time2) {
+            if (err) {
+                t.ifErr(err, format('Error getting network/physical service' +
+                    'start time for VM %s (%s)', state.uuid, desc));
+                return callback(err);
+            }
+
+            t.ok(time2, format('networking start time of %s', time2));
+            LAST_NETWORKING_RESTART_TIME = time2;
+
+            callback();
+        });
+    });
+}
+
+function getRoutingTables(uuid, callback) {
+    cp.exec(format('/usr/sbin/zlogin %s /usr/bin/netstat -rnf inet |' +
+        'egrep -v \'Destination|Routing|---\' | awk \'{ print $1,$2 }\'', uuid),
+        function (err, stdout, stderr) {
+        if (err) {
+            return callback(err);
+        }
+
+        var routes = {};
+        stdout.split(/\n/g).forEach(function (line) {
+            var parts = line.split(' ');
+            if (parts[0] == "" || parts[0] == "127.0.0.1") {
+                return;
+            }
+
+            routes[parts[0]] = parts[1];
+        });
+
+        return callback(null, routes);
+    });
+}
 
 function readZoneFile(vmobj, file) {
     assert.ok(vmobj, 'vmobj');
     assert.ok(vmobj.zonepath, 'vmobj.zonepath');
     return fs.readFileSync(path.join(vmobj.zonepath, 'root', file), 'utf8');
+}
+
+function runRouteCmd(t, uuid, cmd, callback) {
+    cp.exec(format('/usr/sbin/zlogin %s /usr/sbin/route %s',
+        uuid, cmd), function (err, stdout, stderr) {
+        t.ifErr(err, 'running route ' + cmd);
+        t.equal(stderr, '', 'stderr: route ' + cmd);
+        if (err) {
+            t.equal(stdout, '', 'stdout: route ' + cmd);
+            return callback(err);
+        }
+
+        return callback(null, stdout);
+    });
+}
+
+// Update the metadata service start time (so we can use it to determine when
+// the service restarts) and then do a VM.update
+function updateVM(t, state, payload, desc, callback) {
+    getStartTimes(t, state, desc, function (err) {
+        if (err) {
+            t.ifErr(err, format('Error getting metadata service start time ' +
+                'for VM %s (%s)', state.uuid, desc));
+            return callback(err);
+        }
+
+        VM.update(state.uuid, payload, function (err) {
+            t.ifErr(err, 'Updating VM ' + state.uuid);
+            return callback(err);
+        });
+    });
+}
+
+// Validate the following in the zone:
+// * resolv.conf
+// * static_routes
+// * static_routes.vmadm
+function validateZoneData(t, vm, opts, callback) {
+    var desc = format(' (%s)', opts.desc);
+    var resolvers = opts.resolvers;
+    var vmadmRoutes = opts.vmadmRoutes;
+    var zoneRoutes = opts.inZoneRoutes;
+    var routingTable = opts.routingTable;
+    var i = 0;
+    var interval = 1000;
+    var timeout;
+    // Time to wait after the metadata service restart (needs to be
+    // higher for a start / reboot, since the routing-setup service needs
+    // to run)
+    var waitAfter = opts.start ? 10000 : 5000;
+
+    function checkChanges() {
+        getServiceStartTime(vm.uuid, 'mdata:fetch', function (err, time) {
+            clearTimeout(timeout);
+            i++;
+            if (err) {
+                // If the zone is booting or rebooting, we might get repository
+                // unavailable errors
+                if (!(opts.start && err.message.match(
+                    /repository server unavailable/) !== null)) {
+                    t.ifErr(err, 'Error getting metadata service start time ' +
+                        'for VM ' + vm.uuid);
+                }
+                if (i == RESTART_TRIES) {
+                    return callback();
+                }
+
+                timeout = setTimeout(checkChanges, timeout);
+                return;
+            }
+
+            if (time != LAST_METADATA_RESTART_TIME) {
+                // Service has restarted: wait a little longer for it to
+                // finish
+                timeout = setTimeout(function () {
+                    clearTimeout(timeout);
+                    t.ok(time, format('last metadata restart time changed from ' +
+                        '%s to %s (after %d tries)',
+                        LAST_METADATA_RESTART_TIME, time, i));
+                    LAST_METADATA_RESTART_TIME = time;
+
+                    t.deepEqual(vmResolvers(vm), resolvers,
+                        'resolvers in resolv.conf' + desc);
+                    t.deepEqual(vmRoutes(vm, true), zoneRoutes,
+                        'routes in static_routes' + desc);
+                    t.deepEqual(vmRoutes(vm), vmadmRoutes,
+                        'routes in static_routes.vmadm' + desc);
+
+                    if (opts.start) {
+                        return waitAndCheckRoutes(t, vm, routingTable, desc,
+                            callback);
+                    }
+
+                    getRoutingTables(vm.uuid, function (err2, table) {
+                        t.ifErr(err2, 'Error getting routing tables for ' +
+                            'VM ' + vm.uuid);
+                        if (err2) {
+                            return callback(err2);
+                        }
+
+                        t.deepEqual(table, routingTable,
+                            'routing table' + desc);
+                        return callback();
+                    });
+                }, waitAfter);
+                return;
+            }
+
+            if (i == RESTART_TRIES) {
+                if (opts.start) {
+                    return callback();
+                }
+
+                t.ok(false, format('metadata service for VM %s did not ' +
+                    'restart after %d seconds', vm.uuid,
+                    (interval / 1000) * RESTART_TRIES));
+                return callback();
+            }
+
+            timeout = setTimeout(checkChanges, timeout);
+        });
+    }
+
+    timeout = setTimeout(checkChanges, timeout);
 }
 
 function vmResolvers(vmobj) {
@@ -53,8 +256,22 @@ function vmResolvers(vmobj) {
     return resolvers;
 }
 
-function vmRoutes(vmobj) {
-    var static_routes = readZoneFile(vmobj, '/etc/inet/static_routes');
+function vmRoutes(vmobj, inZone) {
+    var file = '/etc/inet/static_routes.vmadm';
+    if (inZone) {
+        file = '/etc/inet/static_routes';
+    }
+
+    try {
+        var static_routes = readZoneFile(vmobj, file);
+    } catch (err) {
+        if (err.code == 'ENOENT') {
+            return {};
+        }
+
+        throw err;
+    }
+
     var routes = {};
     static_routes.split('\n').forEach(function (line) {
         if (line.indexOf('#') === 0) {
@@ -75,19 +292,64 @@ function vmRoutes(vmobj) {
     return routes;
 }
 
-function waitAndValidateZoneFiles(t, vm, resolvers, routes, callback) {
+function waitAndCheckRoutes(t, vm, routingTable, desc, callback) {
+    var i = 0;
+    var interval = 1000;
     var timeout;
-    // For now, just wait 10 seconds for mdata:fetch to complete.
-    // TODO: something smarter
-    timeout = setTimeout(function () {
-        clearTimeout(timeout);
-        t.deepEqual(vmResolvers(vm), resolvers,
-            'resolvers in resolv.conf');
-        t.deepEqual(vmRoutes(vm), routes,
-            'routes in static_routes');
+    var waitAfter = 5000;
 
-        return callback();
-    }, 10000);
+    function checkService() {
+        getServiceStartTime(vm.uuid, ROUTING_SVC, function (err, time) {
+            clearTimeout(timeout);
+            i++;
+            if (err) {
+                t.ifErr(err, 'Error getting network/physical service start ' +
+                    'time for VM ' + vm.uuid);
+                if (i == RESTART_TRIES) {
+                    return callback();
+                }
+
+                timeout = setTimeout(checkService, timeout);
+                return;
+            }
+
+            if (time != LAST_NETWORKING_RESTART_TIME) {
+                // Service has restarted: wait a little longer for it to
+                // finish
+                timeout = setTimeout(function () {
+                    clearTimeout(timeout);
+                    t.ok(time, format('last network/physical restart time ' +
+                        'changed from %s to %s (after %d tries)',
+                        LAST_NETWORKING_RESTART_TIME, time, i));
+                    LAST_NETWORKING_RESTART_TIME = time;
+
+                    getRoutingTables(vm.uuid, function (err2, table) {
+                        t.ifErr(err2, 'Error getting routing tables for ' +
+                            'VM ' + vm.uuid);
+                        if (err2) {
+                            return callback(err2);
+                        }
+
+                        t.deepEqual(table, routingTable,
+                            'routing table' + desc);
+                        return callback();
+                    });
+                }, waitAfter);
+                return;
+            }
+
+            if (i == RESTART_TRIES) {
+                t.ok(false, format('network/physical service for VM %s did ' +
+                    'not restart after %d seconds', vm.uuid,
+                    (interval / 1000) * RESTART_TRIES));
+                return callback();
+            }
+
+            timeout = setTimeout(checkService, timeout);
+        });
+    }
+
+    timeout = setTimeout(checkService, timeout);
 }
 
 
@@ -154,8 +416,8 @@ var failures = [
     ]
 ];
 
-test('validation failures', test_opts, function(t) {
 
+test('validation failures', test_opts, function(t) {
     async.forEachSeries(failures, function (fail, cb) {
         var desc = ' (' + fail[0] + ')';
         var newPayload = {};
@@ -195,9 +457,19 @@ test('update routes and resolvers', test_opts, function(t) {
     };
     var vm;
 
-    var inZoneRoutes = {
+    // Routes set in the zone
+    var inZoneRoutes = {};
+    // Routes controlled by vmadm:
+    var vmadmRoutes = {
         '172.21.1.1': '172.20.1.2',     // nics[1].ip
         '172.22.2.0/24': '172.19.1.1'
+    };
+    // Kernel's routing table for the zone:
+    var routingTable = {
+        '172.19.1.0': '172.19.1.2',     // nics[1] local subnet route
+        '172.20.1.0': '172.20.1.2',     // nics[2] local subnet route
+        '172.21.1.1': '172.20.1.2',
+        '172.22.2.0': '172.19.1.1'
     };
     var oldResolvers;
     var resolvers = [ '172.21.1.1' ];
@@ -228,6 +500,10 @@ test('update routes and resolvers', test_opts, function(t) {
 
     vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, newPayload, state, [
         function (cb) {
+            getStartTimes(t, state, 'after provision', cb);
+        },
+
+        function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 t.ifErr(err, 'loading new VM');
                 if (obj) {
@@ -236,13 +512,24 @@ test('update routes and resolvers', test_opts, function(t) {
                     vm = obj;
 
                     t.deepEqual(vmResolvers(vm), resolvers,
-                        'resolvers in resolv.conf');
-                    t.deepEqual(vmRoutes(vm), inZoneRoutes,
-                        'routes in static_routes');
+                        'initial resolvers in resolv.conf');
+                    t.deepEqual(vmRoutes(vm), vmadmRoutes,
+                        'initial routes in static_routes');
                 }
 
                 cb(err);
             });
+        },
+
+        function (cb) {
+            validateZoneData(t, vm, {
+                desc: 'initial',
+                start: true,
+                resolvers: resolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
         },
 
         function (cb) {
@@ -251,28 +538,28 @@ test('update routes and resolvers', test_opts, function(t) {
                 resolvers: [ '8.8.8.8', '8.8.4.4' ],
                 set_routes: {
                     '172.22.3.0/24': '172.19.1.1'
-                },
+                }
             };
             delete routes['172.22.2.0/24'];
-            delete inZoneRoutes['172.22.2.0/24'];
+            delete routingTable['172.22.2.0'];
+            delete vmadmRoutes['172.22.2.0/24'];
 
             routes['172.22.3.0/24'] = '172.19.1.1';
-            inZoneRoutes['172.22.3.0/24'] = '172.19.1.1';
+            vmadmRoutes['172.22.3.0/24'] = '172.19.1.1';
+            routingTable['172.22.3.0'] = '172.19.1.1';
 
             resolvers = updatePayload.resolvers;
 
-            VM.update(state.uuid, updatePayload, function (err) {
-                t.ifErr(err, 'Updating VM');
-                cb(err);
-            });
+            updateVM(t, state, updatePayload, 'update 1', cb);
         },
 
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
-                t.ifErr(err, 'loading VM');
+                t.ifErr(err, 'loading VM after update 1');
                 if (obj) {
-                    t.deepEqual(obj.routes, routes, 'routes updated');
-                    t.deepEqual(obj.resolvers, resolvers, 'resolvers updated');
+                    t.deepEqual(obj.routes, routes, 'update 1: routes updated');
+                    t.deepEqual(obj.resolvers, resolvers,
+                        'update 1: resolvers updated');
                     vm = obj;
                 }
 
@@ -281,7 +568,13 @@ test('update routes and resolvers', test_opts, function(t) {
         },
 
         function (cb) {
-            waitAndValidateZoneFiles(t, vm, resolvers, inZoneRoutes, cb);
+            validateZoneData(t, vm, {
+                desc: 'update 1',
+                resolvers: resolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
         },
 
         function (cb) {
@@ -302,19 +595,17 @@ test('update routes and resolvers', test_opts, function(t) {
         },
 
         function (cb) {
-            // Do allow removing a nic and the route that refers to it at
+            // Allow removing a nic and the route that refers to it at
             // the same time
             var updatePayload = {
                 remove_nics: [ vm.nics[1].mac ],
                 remove_routes: [ '172.21.1.1' ]
             };
             delete routes['172.21.1.1'];
-            delete inZoneRoutes['172.21.1.1'];
+            delete routingTable['172.21.1.1'];
+            delete vmadmRoutes['172.21.1.1'];
 
-            VM.update(state.uuid, updatePayload, function (err) {
-                t.ifErr(err, 'Updating VM');
-                cb(err);
-            });
+            updateVM(t, state, updatePayload, 'update 2', cb);
         },
 
         function (cb) {
@@ -331,7 +622,13 @@ test('update routes and resolvers', test_opts, function(t) {
         },
 
         function (cb) {
-            waitAndValidateZoneFiles(t, vm, resolvers, inZoneRoutes, cb);
+            validateZoneData(t, vm, {
+                desc: 'update 2',
+                resolvers: resolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
         },
 
         function (cb) {
@@ -344,10 +641,7 @@ test('update routes and resolvers', test_opts, function(t) {
             oldResolvers = resolvers;
             resolvers = updatePayload.resolvers;
 
-            VM.update(state.uuid, updatePayload, function (err) {
-                t.ifErr(err, 'Updating VM');
-                cb(err);
-            });
+            updateVM(t, state, updatePayload, 'update 3', cb);
         },
 
         function (cb) {
@@ -368,8 +662,13 @@ test('update routes and resolvers', test_opts, function(t) {
             // resolv.conf in the zone should have the old resolvers, not
             // the ones we just updated. static_routes in the zone should
             // also be unchanged.
-            waitAndValidateZoneFiles(t, vm, oldResolvers, inZoneRoutes, cb);
-
+            validateZoneData(t, vm, {
+                desc: 'update 3',
+                resolvers: oldResolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
         },
 
         function (cb) {
@@ -384,35 +683,211 @@ test('update routes and resolvers', test_opts, function(t) {
                     t.ifErr(err2, 'loading VM');
                     if (obj) {
                         t.deepEqual(obj.routes, routes,
-                            'routes are the same');
+                            'routes are the same after reboot');
                         t.deepEqual(obj.resolvers, resolvers,
-                            'resolvers are the same');
+                            'resolvers are the same after reboot');
                         vm = obj;
                     }
 
                     cb(err2);
-
                 });
             });
         },
 
         function (cb) {
+            // This is delayed from update 2 above - we removed the nic
+            // (and therefore its route), but the nic won't be really
+            // gone until after the reboot.
+            delete routingTable['172.20.1.0'];
+
             // resolv.conf and static_routes should be unchanged
-            waitAndValidateZoneFiles(t, vm, oldResolvers, inZoneRoutes, cb);
+            validateZoneData(t, vm, {
+                desc: 'after reboot',
+                start: true,
+                resolvers: oldResolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
         },
 
         function (cb) {
             // Set maintain_resolvers again: we should now have the new
             // resolvers in the zone
-            VM.update(state.uuid, { maintain_resolvers: true }, function (err) {
-                t.ifErr(err, 'Updating VM');
+            updateVM(t, state, {maintain_resolvers: true}, 'update 4', cb);
+        },
+
+        function (cb) {
+            // resolv.conf and static_routes should now match the VM object
+            validateZoneData(t, vm, {
+                desc: 'update 4',
+                resolvers: resolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
+        },
+
+        function (cb) {
+            // Add a route inside the VM
+            runRouteCmd(t, state.uuid, '-p add 172.22.4.0/24 172.19.1.253', cb);
+        },
+
+        function (cb) {
+            // Confirm that the route was applied
+            routingTable['172.22.4.0'] = '172.19.1.253';
+            inZoneRoutes['172.22.4.0/24'] = '172.19.1.253';
+
+            getRoutingTables(state.uuid, function (err, res) {
+                t.ifErr(err, 'getting routes');
+                if (res) {
+                    t.deepEqual(res, routingTable,
+                       'routes after adding in-zone route');
+                }
+
                 cb(err);
             });
         },
 
         function (cb) {
-            // resolv.conf and static_routes should now match the VM object
-            waitAndValidateZoneFiles(t, vm, resolvers, inZoneRoutes, cb);
+            // Add the same route with vmadm - it should not get added to
+            // static_routes.vmadm
+            var updatePayload = {
+                set_routes: {
+                    '172.22.4.0/24': '172.19.1.253'
+                }
+            };
+
+            updateVM(t, state, updatePayload, 'update 5', cb);
+        },
+
+        function (cb) {
+            validateZoneData(t, vm, {
+                desc: 'update 5',
+                resolvers: resolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
+        },
+
+        function (cb) {
+            // Add the same route with vmadm - it should not get added to
+            // static_routes.vmadm
+            var updatePayload = {
+                set_routes: {
+                    '172.22.5.0/24': '172.19.1.253'
+                }
+            };
+
+            updateVM(t, state, updatePayload, 'update 6', cb);
+        },
+
+        function (cb) {
+            routingTable['172.22.5.0'] = '172.19.1.253';
+            vmadmRoutes['172.22.5.0/24'] = '172.19.1.253';
+
+            validateZoneData(t, vm, {
+                desc: 'update 6',
+                resolvers: resolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
+        },
+
+        function (cb) {
+            // Add the same route inside the VM
+            runRouteCmd(t, state.uuid, '-p add 172.22.5.0/24 172.19.1.253', cb);
+        },
+
+        function (cb) {
+            inZoneRoutes['172.22.5.0/24'] = '172.19.1.253';
+
+            validateZoneData(t, vm, {
+                desc: 'after route add 172.22.5.0/24',
+                resolvers: resolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
+        },
+
+        function (cb) {
+            // Delete the route from vmadm.  This shouldn't remove the route
+            // from static_routes or the routing tables
+            var updatePayload = {
+                remove_routes: [ '172.22.5.0/24' ]
+            };
+
+            updateVM(t, state, updatePayload, 'update 7', cb);
+        },
+
+        function (cb) {
+            delete vmadmRoutes['172.22.5.0/24'];
+
+            validateZoneData(t, vm, {
+                desc: 'update 7',
+                resolvers: resolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
+        },
+
+        function (cb) {
+            // Remove the rest of the vmadm-defined routes.
+            var updatePayload = {
+                remove_routes: [ ]
+            };
+            for (var r in vmadmRoutes) {
+                updatePayload.remove_routes.push(r);
+                delete vmadmRoutes[r];
+            }
+
+            delete routingTable['172.22.3.0'];
+            updateVM(t, state, updatePayload, 'update 8', cb);
+        },
+
+        function (cb) {
+            validateZoneData(t, vm, {
+                desc: 'update 8',
+                resolvers: resolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
+        },
+
+        function (cb) {
+            VM.reboot(state.uuid, {}, function(err) {
+                t.ifErr(err, 'reboot VM');
+                return cb(err);
+            });
+        },
+
+        function (cb) {
+            // resolv.conf and static_routes should be unchanged
+            validateZoneData(t, vm, {
+                desc: 'after second reboot',
+                start: true,
+                resolvers: resolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
+        },
+
+        function (cb) {
+            // static_routes.vmadm should not exist anymore
+            t.ok(!fs.existsSync(path.join(vm.zonepath,
+                'root/etc/inet/static_routes.vmadm')),
+                'static_routes.vmadm no longer exists');
+            cb();
+        },
+
+        function (cb) {
+            debugKeepVM(state, cb);
         }
 
     ], function (err) {
@@ -427,8 +902,13 @@ test('create zone without maintain_resolvers', test_opts, function(t) {
     };
     var vm;
 
-    var inZoneRoutes = {
+    var inZoneRoutes = {};
+    var vmadmRoutes = {
         '172.21.1.1': '172.20.1.3'     // nics[0].ip
+    };
+    var routingTable = {
+        '172.20.1.0': '172.20.1.3',
+        '172.21.1.1': '172.20.1.3'
     };
     var oldResolvers;
     var resolvers = [ '172.21.1.1' ];
@@ -465,7 +945,7 @@ test('create zone without maintain_resolvers', test_opts, function(t) {
                     // We expect the resolvers to be set on the initial boot
                     t.deepEqual(vmResolvers(vm), resolvers,
                         'resolvers in resolv.conf');
-                    t.deepEqual(vmRoutes(vm), inZoneRoutes,
+                    t.deepEqual(vmRoutes(vm), vmadmRoutes,
                         'routes in static_routes');
                 }
 
@@ -481,18 +961,15 @@ test('create zone without maintain_resolvers', test_opts, function(t) {
                 }
             };
             delete routes['172.22.2.0/24'];
-            delete inZoneRoutes['172.22.2.0/24'];
+            delete vmadmRoutes['172.22.2.0/24'];
 
             routes['172.22.3.0/24'] = '172.19.1.1';
-            inZoneRoutes['172.22.3.0/24'] = '172.19.1.1';
+            vmadmRoutes['172.22.3.0/24'] = '172.19.1.1';
 
             oldResolvers = resolvers;
             resolvers = updatePayload.resolvers;
 
-            VM.update(state.uuid, updatePayload, function (err) {
-                t.ifErr(err, 'Updating VM');
-                cb(err);
-            });
+            updateVM(t, state, updatePayload, 'update 1', cb);
         },
 
         function (cb) {
@@ -513,7 +990,13 @@ test('create zone without maintain_resolvers', test_opts, function(t) {
             // resolv.conf should not have the updated resolvers, since
             // maintain_resolvers is not set
 
-            waitAndValidateZoneFiles(t, vm, oldResolvers, inZoneRoutes, cb);
+            validateZoneData(t, vm, {
+                desc: 'update 1',
+                resolvers: oldResolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
         },
 
         function (cb) {
@@ -542,7 +1025,18 @@ test('create zone without maintain_resolvers', test_opts, function(t) {
 
         function (cb) {
             // resolv.conf and static_routes should be unchanged
-            waitAndValidateZoneFiles(t, vm, oldResolvers, inZoneRoutes, cb);
+            validateZoneData(t, vm, {
+                start: true,
+                desc: 'after reboot',
+                resolvers: oldResolvers,
+                vmadmRoutes: vmadmRoutes,
+                inZoneRoutes: inZoneRoutes,
+                routingTable: routingTable
+            }, cb);
+        },
+
+        function (cb) {
+            debugKeepVM(state, cb);
         }
 
     ], function (err) {

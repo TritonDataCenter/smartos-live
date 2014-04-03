@@ -1,0 +1,104 @@
+#!/usr/bin/env node
+
+/*
+ * Copyright (c) 2014 Rob Gulewich. All rights reserved.
+ *
+ * Ramsey: the suburban commando for templating your text files
+ */
+
+var dashdash = require('dashdash');
+var template = require('../lib/template');
+
+
+
+// --- Globals
+
+
+
+var OPTIONS = [
+    {
+        names: ['dir', 'd'],
+        type: 'string',
+        help: 'directory of input files'
+    },
+    {
+        names: ['file', 'f'],
+        type: 'string',
+        help: 'JSON input file'
+    },
+    {
+        names: ['param', 'p'],
+        type: 'arrayOfString',
+        help: 'parameter(s) that control template rendering'
+    }
+];
+
+
+
+// --- Main
+
+
+function usage(msg) {
+    var text = [
+        'ramsey [-d <template directory>] [-f <JSON file>] ' +
+        '<input file> <output file>'
+    ];
+
+    if (msg) {
+        text.unshift(msg);
+    }
+
+    console.error(text.join('\n'));
+    process.exit(1);
+}
+
+
+
+// --- Main
+
+
+
+var opts;
+var params = {};
+var parser = dashdash.createParser({ options: OPTIONS });
+
+try {
+    opts = parser.parse(process.argv);
+} catch (e) {
+    console.error('error: %s', e.message);
+    process.exit(1);
+}
+
+// console.log(JSON.stringify(opts, null, 2));
+
+if (opts._args.length === 0) {
+    usage('Must specify input file!');
+}
+
+if (opts.hasOwnProperty('param')) {
+    opts.param.forEach(function (p) {
+        var parts = p.split('=', 2);
+        if (parts.length != 2) {
+            usage('Invalid parameter: ' + p);
+        }
+
+        params[parts[0]] = parts[1];
+    });
+}
+
+// console.log(JSON.stringify(params, null, 2));
+
+if (params.hasOwnProperty('wrap')) {
+    params.wrap = Number(params.wrap);
+    if (isNaN(params.wrap)) {
+        usage('wrap parameter must be a number!');
+    }
+}
+
+template.generateFile({
+    dir: opts.dir,
+    file: opts.file,
+    inFile: opts._args[0],
+    outFile: opts._args[1],
+    params: params
+});

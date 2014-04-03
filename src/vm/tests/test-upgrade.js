@@ -106,9 +106,6 @@ function zfs(args, callback)
     });
 }
 
-// This will ensure vmtest.CURRENT_* are installed
-vmtest.ensureCurrentImages();
-
 test('create zone', {'timeout': 240000}, function(t) {
     VM.create(smartos_payload, function (err, obj) {
         if (err) {

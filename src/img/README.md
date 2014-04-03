@@ -51,3 +51,20 @@ build and rebooting on it. Here is how:
 
 Before commits, please (a) run the test suite on a test box per the notes
 above and (b) maintain style by running `make check`.
+
+
+# /var/imgadm/imgadm.conf
+
+"/var/imgadm/imgadm.conf" is imgadm's config file. Typically it should not be
+edited as most configuration is done via `imgadm ...` commands. For example,
+the list of image repository (IMGAPI) "sources" is controlled via
+`imgadm sources ...`.
+
+    VAR             DESCRIPTION
+    sources         Array of image repository (IMGAPI) sources used for
+                    `imgadm avail`, `imgadm import`, etc. Use `imgadm sources`
+                    to control this value.
+    upgradedToVer   Automatically set by `imgadm` as it does any necessary
+                    internal DB migrations.
+    userAgentExtra  Optional string that is appended to the User-Agent header
+                    when talking to an IMGAPI source.

@@ -65,6 +65,7 @@ test('test with one zone and one image', function (t) {
             "compression": "off",
             "creation": 1392846460,
             "mountpoint": "/zones",
+            "userrefs" : "-",
             "name": "zones",
             "quota": 0,
             "recsize": 131072,
@@ -78,6 +79,7 @@ test('test with one zone and one image', function (t) {
             "compression": "off",
             "creation": 1392846722,
             "mountpoint": "/zones/01b2c898-945f-11e1-a523-af1afbe22822",
+            "userrefs" : "-",
             "name": "zones/01b2c898-945f-11e1-a523-af1afbe22822",
             "quota": 0,
             "recsize": 131072,
@@ -91,6 +93,7 @@ test('test with one zone and one image', function (t) {
             "compression": "-",
             "creation": 1335967116,
             "mountpoint": "/zones/01b2c898-945f-11e1-a523-af1afbe22822@final",
+            "userrefs" : "-",
             "name": "zones/01b2c898-945f-11e1-a523-af1afbe22822@final",
             "quota": "-",
             "recsize": "-",
@@ -104,6 +107,7 @@ test('test with one zone and one image', function (t) {
             "compression": "off",
             "creation": 1392939536,
             "mountpoint": "/zones/8be21e2a-ce25-4eb2-b796-b36b274b5a25",
+            "userrefs" : "-",
             "name": "zones/8be21e2a-ce25-4eb2-b796-b36b274b5a25",
             "quota": 10737418240,
             "recsize": 131072,
@@ -117,6 +121,7 @@ test('test with one zone and one image', function (t) {
             "compression": "off",
             "creation": 1392939536,
             "mountpoint": "/zones/8be21e2a-ce25-4eb2-b796-b36b274b5a25/data",
+            "userrefs" : "-",
             "name": "zones/8be21e2a-ce25-4eb2-b796-b36b274b5a25/data",
             "quota": 0,
             "recsize": 131072,
@@ -130,6 +135,7 @@ test('test with one zone and one image', function (t) {
             "compression": "lzjb",
             "creation": 1392849677,
             "mountpoint": "/zones/archive",
+            "userrefs" : "-",
             "name": "zones/archive",
             "quota": 0,
             "recsize": 131072,
@@ -143,6 +149,7 @@ test('test with one zone and one image', function (t) {
             "compression": "off",
             "creation": 1392846460,
             "mountpoint": "/zones/config",
+            "userrefs" : "-",
             "name": "zones/config",
             "quota": 0,
             "recsize": 131072,
@@ -156,6 +163,7 @@ test('test with one zone and one image', function (t) {
             "compression": "lz4",
             "creation": 1392846460,
             "mountpoint": "none",
+            "userrefs" : "-",
             "name": "zones/cores",
             "quota": 0,
             "recsize": 131072,
@@ -169,6 +177,7 @@ test('test with one zone and one image', function (t) {
             "compression": "lz4",
             "creation": 1392939536,
             "mountpoint": "/zones/8be21e2a-ce25-4eb2-b796-b36b274b5a25/cores",
+            "userrefs" : "-",
             "name": "zones/cores/8be21e2a-ce25-4eb2-b796-b36b274b5a25",
             "quota": 107374182400,
             "recsize": 131072,
@@ -182,6 +191,7 @@ test('test with one zone and one image', function (t) {
             "compression": "lz4",
             "creation": 1392846460,
             "mountpoint": "/zones/global/cores",
+            "userrefs" : "-",
             "name": "zones/cores/global",
             "quota": 10737418240,
             "recsize": 131072,
@@ -195,6 +205,7 @@ test('test with one zone and one image', function (t) {
             "compression": "off",
             "creation": 1392846460,
             "mountpoint": "/dev/zvol/rdsk/zones/dump",
+            "userrefs" : "-",
             "name": "zones/dump",
             "quota": "-",
             "recsize": "-",
@@ -208,6 +219,7 @@ test('test with one zone and one image', function (t) {
             "compression": "off",
             "creation": 1392846460,
             "mountpoint": "/zones/opt",
+            "userrefs" : "-",
             "name": "zones/opt",
             "quota": 0,
             "recsize": 131072,
@@ -221,6 +233,7 @@ test('test with one zone and one image', function (t) {
             "compression": "off",
             "creation": 1392846461,
             "mountpoint": "/dev/zvol/rdsk/zones/swap",
+            "userrefs" : "-",
             "name": "zones/swap",
             "quota": "-",
             "recsize": "-",
@@ -234,6 +247,7 @@ test('test with one zone and one image', function (t) {
             "compression": "off",
             "creation": 1392846460,
             "mountpoint": "/zones/usbkey",
+            "userrefs" : "-",
             "name": "zones/usbkey",
             "quota": 0,
             "recsize": 131072,
@@ -247,6 +261,7 @@ test('test with one zone and one image', function (t) {
             "compression": "off",
             "creation": 1392846460,
             "mountpoint": "/zones/var",
+            "userrefs" : "-",
             "name": "zones/var",
             "quota": 0,
             "recsize": 131072,
@@ -290,45 +305,45 @@ test('test with one zone and one image', function (t) {
      *
      * zfs list -H -p -t filesystem,snapshot,volume \
      *     -o compression,creation,mountpoint,name,quota,recsize,refreservation\
-     *     ,type,volblocksize,volsize,zoned
+     *     ,type,userrefs,volblocksize,volsize,zoned
      *
      * from a system with only one zone and one image.
      */
     var lines = [
         'off	1392846460	/zones	zones	0	131072	0	'
-            + 'filesystem	-	-	off',
+            + 'filesystem	-	-	-	off',
         'off	1392846722	/zones/01b2c898-945f-11e1-a523-af1afbe22822	zones/'
             + '01b2c898-945f-11e1-a523-af1afbe22822	0	131072	0	'
-            + 'filesystem	-	-	off',
+            + 'filesystem	-	-	-	off',
         '-	1335967116	-	zones/01b2c898-945f-11e1-a523-af1afbe22822@'
-            + 'final	-	-	-	snapshot	-	-	-',
+            + 'final	-	-	-	snapshot	-	-	-	-',
         'off	1392939536	/zones/8be21e2a-ce25-4eb2-b796-b36b274b5a25	zones/'
             + '8be21e2a-ce25-4eb2-b796-b36b274b5a25	10737418240	131072	0	'
-            + 'filesystem	-	-	off',
+            + 'filesystem	-	-	-	off',
         'off	1392939536	/zones/8be21e2a-ce25-4eb2-b796-b36b274b5a25/'
             + 'data	zones/8be21e2a-ce25-4eb2-b796-b36b274b5a25/data	0	'
-            + '131072	0	filesystem	-	-	on',
+            + '131072	0	filesystem	-	-	-	on',
         'lzjb	1392849677	/zones/archive	zones/archive	0	131072	0	'
-            + 'filesystem	-	-	off',
+            + 'filesystem	-	-	-	off',
         'off	1392846460	legacy	zones/config	0	131072	0	filesystem	'
-            + '-	-	off',
+            + '-	-	-	off',
         'lz4	1392846460	none	zones/cores	0	131072	0	filesystem	'
-            + '-	-	off',
+            + '-	-	-	off',
         'lz4	1392939536	/zones/8be21e2a-ce25-4eb2-b796-b36b274b5a25/'
             + 'cores	zones/cores/8be21e2a-ce25-4eb2-b796-b36b274b5a25	'
-            + '107374182400	131072	0	filesystem	-	-	off',
+            + '107374182400	131072	0	filesystem	-	-	-	off',
         'lz4	1392846460	/zones/global/cores	zones/cores/global	'
-            + '10737418240	131072	0	filesystem	-	-	off',
-        'off	1392846460	-	zones/dump	-	-	0	volume	131072	'
+            + '10737418240	131072	0	filesystem	-	-	-	off',
+        'off	1392846460	-	zones/dump	-	-	0	volume	-	131072	'
             + '2146435072	-',
         'off	1392846460	legacy	zones/opt	0	131072	0	filesystem	'
-            + '-	-	off',
+            + '-	-	-	off',
         'off	1392846461	-	zones/swap	-	-	2147483648	volume	'
-            + '8192	4294967296	-',
+            + '-	8192	4294967296	-',
         'off	1392846460	legacy	zones/usbkey	0	131072	0	'
-            + 'filesystem	-	-	off',
+            + 'filesystem	-	-	-	off',
         'off	1392846460	legacy	zones/var	0	131072	0	filesystem	'
-            + '-	-	off'
+            + '-	-	-	off'
     ];
 
     var expected_args = [
@@ -339,7 +354,7 @@ test('test with one zone and one image', function (t) {
         'filesystem,snapshot,volume',
         '-o',
         'compression,creation,mountpoint,name,quota,recsize,refreservation,'
-            + 'type,volblocksize,volsize,zoned',
+            + 'type,userrefs,volblocksize,volsize,zoned',
     ];
 
     var out = {};

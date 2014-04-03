@@ -1,0 +1,5 @@
+{
+    "description": "allow access to all VMs from bastion host",
+    "enabled": true,
+    "rule": "FROM vm cb3f80b9-d333-4521-b067-b237e748e473 TO all vms ALLOW tcp PORT all"
+}

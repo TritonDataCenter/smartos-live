@@ -2,7 +2,8 @@ _fwadm()
 {
     local cur prev opts base
     COMPREPLY=()
-    COMMANDS="list get add update enable disable start stop status rules"
+    COMMANDS="add add-rvm delete delete-rvm disable enable get get-rvm list \
+        list-rvms rules rvm-rules start stats status stop update vms"
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
@@ -17,13 +18,24 @@ _fwadm()
             sort | uniq)
         COMPREPLY=( $(compgen -W "${vms_uuids}" -- ${cur}) )
 
-    elif [[ ${prev} == 'enable'
+    elif [[ ${prev} == 'delete'
           || ${prev} == 'disable'
-          || ${prev} == 'get' ]]; then
+          || ${prev} == 'enable'
+          || ${prev} == 'get'
+          || ${prev} == 'update'
+          || ${prev} == 'vms' ]]; then
 
         rule_uuids=$(/usr/bin/ls -1 /var/fw/rules/*.json | \
             sed -e 's,/var/fw/rules/,,' -e 's/.json//')
         COMPREPLY=( $(compgen -W "${rule_uuids}" -- ${cur}) )
+
+    elif [[ ${prev} == 'delete-rvm'
+          || ${prev} == 'get-rvm'
+          || ${prev} == 'rvm-rules' ]]; then
+
+        rvm_uuids=$(/usr/bin/ls -1 /var/fw/vms/*.json | \
+            sed -e 's,/var/fw/vms/,,' -e 's/.json//')
+        COMPREPLY=( $(compgen -W "${rvm_uuids}" -- ${cur}) )
 
     elif [[ ${prev} == 'fwadm' ]]; then
 

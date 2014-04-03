@@ -1,0 +1,17 @@
+echo '{
+    "rules": [
+        {
+          "enabled": true,
+          "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+          "rule": "FROM vm a223bec2-c62b-4fe7-babb-ad4c4d8441bb TO all vms ALLOW tcp PORT 22"
+        }
+    ],
+    "remoteVMs": [
+        {
+            "uuid": "5baca016-6dda-11e3-a6f2-730593c54f04",
+            "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+            "nics": [ { "ip": "172.29.0.2" } ],
+            "tags": { "role": "web" }
+        }
+    ]
+}' | fwadm add

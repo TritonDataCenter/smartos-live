@@ -1,0 +1,5 @@
+{
+    "description": "allow HTTP and HTTPS traffic from anywhere to webservers",
+    "enabled": true,
+    "rule": "FROM any TO tag role = www ALLOW tcp (PORT 80 AND PORT 443)"
+}

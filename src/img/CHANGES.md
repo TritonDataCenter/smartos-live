@@ -1,5 +1,36 @@
 # imgadm changelog
 
+## 2.6.7
+
+- [OS-2878] Fix 'imgadm import' broken in previous version.
+
+
+## 2.6.6
+
+Note: This was a bad version in which "imgadm import" was broken.
+Use version 2.6.7 or later.
+
+- Debug logging will include a "req_id", optionally taken from a `REQ_ID`
+  environment variable.
+
+- [OS-2203] 'imgadm import' and 'imgadm avail' will coordinate concurrent
+  attempts to import the same image, instead of having all but one of them
+  fail.
+
+
+## 2.6.5
+
+- [OS-2867] Add optional `config.userAgentExtra` for a string to append to
+  the User-Agent in IMGAPI client usage.
+
+
+## 2.6.4
+
+- [OS-2484] Support for incremental of incremental image creation. Added
+  --max-origin-depth to `imgadm create` to allow setting a limit in the number
+  of child incremental images for an image.
+
+
 ## 2.6.3
 
 - [OS-2657] Fix an issue where an error message with a printf formatting char
@@ -61,7 +92,7 @@
   delete -partial dataset on rollback (because sometimes it really isn't
   there yet).
 
-- [OS-2488] Incremental imgadm creation (`imgadm create -i`) will not explcitly
+- [OS-2488] Incremental imgadm creation (`imgadm create -i`) will not explicitly
   fail if the origin image does not have a '@final' snapshot on the origin image.
   Images installed with imgadm v2.0.3 or later will have this but images installed
   prior to that may not.

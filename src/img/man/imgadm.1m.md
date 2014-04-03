@@ -50,7 +50,7 @@ UUID.
     Print the imgadm version and exit.
 
 **-v, --verbose**
-    More verbose logging (debug level). See the **IMGADM_LOG_LEVEL=<level>**
+    More verbose logging (debug level). See the **IMGADM\_LOG\_LEVEL=<level>**
     environment variable.
 
 
@@ -238,6 +238,12 @@ UUID.
             -i             Build an incremental image (based on the "@final"
                            snapshot of the source image for the VM).
 
+            --max-origin-depth <max-origin-depth>
+                           Maximum origin depth to allow when creating
+                           incremental images. E.g. a value of 3 means that
+                           the image will only be created if there are no more
+                           than 3 parent images in the origin chain.
+
             -s <prepare-image-path>
                            Path to a script that is run inside the VM to
                            prepare it for imaging. Specifying this triggers the
@@ -390,6 +396,10 @@ compatibility differences with earlier imgadm. These are:
 
         Set the level at which imgadm will log to stderr. Supported levels are
         "trace", "debug", "info", "warn" (default), "error", "fatal".
+
+    REQ_ID
+
+        If provided, this value is used for imgadm's logging.
 
 
 ## EXIT STATUS

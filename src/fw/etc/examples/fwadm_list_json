@@ -1,0 +1,1 @@
+fwadm list -j -o uuid,rule

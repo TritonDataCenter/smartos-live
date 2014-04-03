@@ -7,9 +7,14 @@ vmadm(1m) -- Manage SmartOS virtual machines
 ## DESCRIPTION
 
 The vmadm tool allows you to interact with virtual machines on a SmartOS
-system. Both OS Virtual Machines (zones) and KVM Virtual Machines can be
-managed. vmadm allows you to create, inspect, modify and delete virtual
-machines on the local system.
+system. All 3 of: OS Virtual Machines (SmartOS zones), LX Virtual Machines
+and KVM Virtual Machines can be managed. vmadm allows you to create, inspect,
+modify and delete virtual machines on the local system.
+
+IMPORTANT: Support for LX VMs is currently limited and experimental. This means
+it is very likely to change in major ways without notice. Also: not all the LX
+functionality that *is* implemented is documented yet. The documentation will
+be updated as things stablize.
 
 The primary reference for a VM is its UUID. Most commands operate on VMs by
 UUID. In SmartOS, there are included bash tab-completion rules so that you can
@@ -52,7 +57,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         Connect to the text console for a running VM. For OS VMs, this will be
         the zone console. For KVM VMs, this will be the serial console and your
         VM will need to be setup with getty or similar running on the first
-        serial device.
+        serial device. Not yet supported on LX VMs.
 
         To end the serial console session hit CTRL-]. For OS VMs, you'll need
         to do this at the start of a line, so generally this means pressing:
@@ -64,8 +69,17 @@ tab-complete UUIDs rather than having to type them out for every command.
         Delete the VM with the specified UUID. The VM and any associated
         storage including zvols and the zone filesystem will be removed.
 
-        Note: this command is not interactive, take care to delete the right
-        VM.
+        If you have set the indestructible_zoneroot or indestructible_delegated
+        flags on a VM it *cannot* be deleted until you have unset these flags
+        with something like:
+
+            vmadm update <uuid> indestructible_zoneroot=false
+            vmadm update <uuid> indestructible_delegated=false
+
+        to remove the snapshot and holds.
+
+        Note: 'vmadm delete' command is not interactive, take care to delete the
+        right VM.
 
       delete-snapshot <uuid> <snapname>
 
@@ -487,7 +501,7 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         type -- type of the properties value.
 
-        vmtype -- types of VM (OS and/or KVM) for which this property applies.
+        vmtype -- types of VM (KVM, LX, OS) for which this property applies.
 
         listable -- if they can be included in the -o or -s lists for the
                     'vmadm list' command.
@@ -1055,6 +1069,65 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (but see special notes on update command)
         default: {}
 
+    indestructible_delegated:
+
+        When set this property adds an @indestructible snapshot to the delegated
+        (<zfs_filesystem>/data) dataset and sets a zfs hold on that snapshot.
+        This hold must be removed before the VM can be deleted enabling a
+        two-step deletion. Eg. to delete a VM where this has been set, you would
+        need to:
+
+            vmadm update <uuid> indestructible_delegated=false
+            vmadm delete <uuid>
+
+        instead of being able to do the delete on its own. The property will
+        only show up in VM objects when set true.
+
+        NOTE: if the hold on the @indestructible dataset is removed manually
+        from the GZ or from within the zone, this would also remove this flag
+        and allow the VM to be deleted.
+
+        type: boolean
+        vmtype: KVM,LX,OS
+        listable: yes
+        create: yes
+        update: yes
+        default: false
+
+    indestructible_zoneroot:
+
+        When set this property adds an @indestructible snapshot to the zoneroot
+        (zfs_filesystem) dataset and sets a zfs hold on that snapshot. This hold
+        must be removed before the VM can be deleted *or reprovisioned*. Eg. to
+        delete a VM where this has been set, you would need to:
+
+            vmadm update <uuid> indestructible_zoneroot=false
+            vmadm delete <uuid>
+
+        instead of being able to do the delete on its own. The property will
+        only show up in VM objects when set true.
+
+        NOTE: if the hold on the @indestructible dataset is removed manually
+        from the GZ, this would also remove this flag and allow the VM to be
+        deleted.
+
+        type: boolean
+        vmtype: KVM,LX,OS
+        listable: yes
+        create: yes
+        update: yes
+        default: false
+
+    kernel_version:
+
+        This sets the version of Linux to emulate for LX VMs.
+
+        type: string (kernel version, eg. 2.6.31)
+        vmtype: LX
+        listable: no
+        create: no
+        update: yes
+
     limit_priv:
 
         This sets a list of privileges that will be available to the Zone that
@@ -1078,6 +1151,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         listable: no
         create: yes
         update: yes
+        default: false
 
     max_locked_memory:
 

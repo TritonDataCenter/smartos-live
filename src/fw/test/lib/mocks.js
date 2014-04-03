@@ -336,24 +336,6 @@ function setup() {
         return fw;
     }
 
-    // Mock out process.pid, but keep the rest of the process
-    // object the same
-    if (!ORIG_PROCESS) {
-        ORIG_PROCESS = process;
-        PID = process.pid;
-        process = {
-            get pid() {
-                return PID++;
-            }
-        };
-        for (var p in ORIG_PROCESS) {
-            if (p.name === 'pid') {
-                continue;
-            }
-            process[p] = ORIG_PROCESS[p];
-        }
-    }
-
     resetValues();
     mockery.enable();
     var modules = {
@@ -389,10 +371,11 @@ function setup() {
         'assert',
         'assert-plus',
         'clone',
+        'events',
         'extsprintf',
         'fwrule',
-        'node-uuid',
         'net',
+        'node-uuid',
         'stream',
         'vasync',
         'verror',

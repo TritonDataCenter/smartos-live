@@ -30,9 +30,6 @@ var test_cases = [
     [{'brand': 'kvm', 'quota': 10, 'image_uuid': smartos_image_uuid}, 10],
 ];
 
-// This will ensure vmtest.CURRENT_* are installed
-vmtest.ensureCurrentImages();
-
 function do_test(payload, expected_result)
 {
     var vmobj = {};

@@ -1,0 +1,5 @@
+{
+    "description": "allow access to all VMs from bastion host",
+    "enabled": true,
+    "rule": "FROM (ip 172.1.1.110 OR ip 172.1.1.111) TO vm cb3f80b9-d333-4521-b067-b237e748e473 ALLOW tcp PORT 22"
+}

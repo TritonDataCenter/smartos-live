@@ -36,6 +36,7 @@ d usr/img/node_modules/imgmanifest 0555 root bin
 d usr/img/node_modules/imgmanifest/lib 0555 root bin
 f usr/img/node_modules/imgmanifest/lib/imgmanifest.js 0444 root bin
 f usr/img/node_modules/imgmanifest/package.json 0444 root bin
+h usr/img/node_modules/locker.js=usr/vm/node_modules/locker.js
 d usr/img/node_modules/mkdirp 0555 root bin
 f usr/img/node_modules/mkdirp/index.js 0444 root bin
 f usr/img/node_modules/mkdirp/LICENSE 0444 root bin
@@ -522,6 +523,7 @@ f usr/vm/node_modules/vmload/dump-zonexml.js 0755 root root
 f usr/vm/node_modules/vmload/vmload-datasets.js 0644 root root
 f usr/vm/node_modules/vmload/README.md 0644 root root
 f usr/vm/node_modules/vmload/dump-vmobjs.js 0755 root root
+f usr/vm/node_modules/vmload/vmload-utils.js 0644 root root
 f usr/vm/node_modules/vmload/vmload-xml.js 0644 root root
 f usr/vm/node_modules/vmload/dump-json.js 0755 root root
 f usr/vm/node_modules/vmload/index.js 0644 root root
@@ -532,6 +534,7 @@ f usr/vm/smf/system-vmadmd.xml 0444 root bin
 s etc/bash/bash_completion.d/fwadm=/usr/fw/etc/fwadm.completion
 d usr/fw 0555 root bin
 d usr/fw/etc 0555 root bin
+d usr/fw/etc/examples 0555 root bin
 d usr/fw/lib 0555 root bin
 d usr/fw/lib/util 0555 root bin
 d usr/fw/node_modules 0555 root bin
@@ -581,6 +584,9 @@ f usr/fw/node_modules/tab.js 0444 root bin
 f usr/fw/node_modules/vasync.js 0444 root bin
 f usr/fw/node_modules/verror.js 0444 root bin
 f usr/fw/sbin/fwadm 0555 root bin
+d usr/fw/test 0555 root bin
+d usr/fw/test/integration 0555 root bin
+f usr/fw/test/runtest 0555 root bin
 # metadata daemon
 d usr/vm/lib 0555 root bin
 d usr/vm/lib/metadata 0555 root bin
@@ -768,6 +774,7 @@ f usr/share/man/man3m/y0.3m 0444 root bin
 d usr/share/man/man1m 0755 root bin
 f usr/share/man/man1m/diskinfo.1m 0444 root bin
 f usr/share/man/man1m/disklayout.1m 0444 root bin
+f usr/share/man/man1m/fwadm.1m 0444 root bin
 f usr/share/man/man1m/mkzpool.1m 0444 root bin
 f usr/share/man/man1m/netservices.1m 0444 root bin
 f usr/share/man/man1m/tzreload.1m 0444 root bin
@@ -805,3 +812,4 @@ f usr/share/man/man3mvec/vz_exp_.3mvec 0444 root bin
 d usr/share/man/man5 0755 root bin
 f usr/share/man/man5/openssl.5 0444 root bin
 f usr/share/man/man5/joyent.5 0444 root bin
+f usr/share/man/man5/fwrule.5 0444 root bin

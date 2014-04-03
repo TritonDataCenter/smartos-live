@@ -1,0 +1,6 @@
+{
+    "description": "block UDP port 5400 to bastion host",
+    "enabled": true,
+    "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+    "rule": "FROM all vms TO vm 86abf627-5398-45ee-8e65-8260d3466e3f BLOCK udp PORT 54"
+}

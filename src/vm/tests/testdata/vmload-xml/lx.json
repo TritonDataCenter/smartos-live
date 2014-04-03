@@ -3,5 +3,6 @@
     "autoboot": false,
     "brand": "lx",
     "datasets": [],
+    "kernel_version" : "2.6",
     "nics": []
 }

@@ -437,8 +437,10 @@ install: all
 	cp -PR img/test $(DESTDIR)/usr/img/
 	rm -rf $(DESTDIR)/usr/fw
 	mkdir -m 0755 -p $(DESTDIR)/usr/fw/test/integration
+	mkdir -m 0755 -p $(DESTDIR)/usr/fw/test/node_modules/async
 	cp -PR fw/etc $(DESTDIR)/usr/fw/
 	cp -Pr fw/test/integration/*.js $(DESTDIR)/usr/fw/test/integration/
+	cp -Pr fw/test/node_modules/async/* $(DESTDIR)/usr/fw/test/node_modules/async/
 	cp fw/test/runtest $(DESTDIR)/usr/fw/test/
 	cp -PR fw/lib $(DESTDIR)/usr/fw/
 	cp -PR fw/node_modules $(DESTDIR)/usr/fw/

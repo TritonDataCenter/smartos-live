@@ -587,7 +587,6 @@ f usr/fw/sbin/fwadm 0555 root bin
 d usr/fw/test 0555 root bin
 d usr/fw/test/integration 0555 root bin
 f usr/fw/test/runtest 0555 root bin
-f usr/fw/test/runtests 0555 root bin
 d usr/fw/test/node_modules 0555 root bin
 d usr/fw/test/node_modules/async 0555 root bin
 f usr/fw/test/node_modules/async/index.js 0444 root bin

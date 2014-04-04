@@ -1,0 +1,135 @@
+#!/bin/bash
+#
+# Copyright (c) 2014, Joyent, Inc. All rights reserved.
+#
+# Run the fwadm integration tests.
+# Run `./runtests -h` for usage info.
+#
+
+if [ "$TRACE" != "" ]; then
+    export PS4='${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -o xtrace
+fi
+set -o errexit
+set -o pipefail
+
+
+
+#---- guard
+
+if [[ ! -f "/lib/sdc/.sdc-test-no-production-data" ]]; then
+    cat <<EOF
+To run this test you must create the file:
+
+    /lib/sdc/.sdc-test-no-production-data
+
+after ensuring you have no production data on this SDC.
+EOF
+    exit 2
+fi
+
+
+
+#---- config
+
+NAME=fw
+TOP=$(cd $(dirname $0)/../; pwd)
+
+
+
+#---- support functions
+
+function fatal
+{
+    echo "$(basename $0): fatal error: $*"
+    exit 1
+}
+
+function usage
+{
+    echo "Usage:"
+    echo "  runtests [OPTIONS...]"
+    echo ""
+    echo "Options:"
+    echo "  -f FILTER   Filter pattern (substring match) for test files to run."
+}
+
+
+
+#---- mainline
+
+start_time=$(date +%s)
+
+# Options.
+opt_test_pattern=
+while getopts "hf:" opt
+do
+    case "$opt" in
+        h)
+            usage
+            exit 0
+            ;;
+        f)
+            opt_test_pattern=$OPTARG
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+OUTPUT_DIR=/var/tmp/${NAME}test
+echo "# Create output dir ($OUTPUT_DIR)."
+rm -rf $OUTPUT_DIR
+mkdir -p $OUTPUT_DIR
+
+
+
+#---- start tests
+
+for test in $(ls $TOP/test/integration | grep "\.test.js$"); do
+    test_name=$(basename $test)
+    set +o errexit
+    set -o pipefail
+    /usr/vm/test/runtest $TOP/test/integration/${test} | tee ${OUTPUT_DIR}/${test_name}.output.$$.tap
+    TEST_EXIT_CODE=$?
+    set +o pipefail
+    set -o errexit
+    if [[ ${TEST_EXIT_CODE} != 0 ]]; then
+        test_errors=$((${test_errors} + 1))
+        failed_tests=$(printf "${pwd}/test/integration/${test}\n${failed_tests}")
+    fi
+done
+
+
+
+#---- summary
+
+echo ""
+echo "# test output in $OUTPUT_DIR:"
+cd $OUTPUT_DIR
+ls *.tap
+
+echo ""
+echo "# test results:"
+
+end_time=$(date +%s)
+elapsed=$((${end_time} - ${start_time}))
+
+tests=$(grep "^# tests [0-9]" $OUTPUT_DIR/*.tap | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
+passed=$(grep "^# pass  [0-9]" $OUTPUT_DIR/*.tap | tr -s ' ' | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
+[[ -z ${tests} ]] && tests=0
+[[ -z ${passed} ]] && passed=0
+fail=$((${tests} - ${passed}))
+
+echo "# Completed in ${elapsed} seconds."
+echo -e "# \033[32mPASS: ${passed} / ${tests}\033[39m"
+if [[ ${fail} -gt 0 ]]; then
+    echo -e "# \033[31mFAIL: ${fail} / ${tests}\033[39m"
+fi
+echo ""
+
+if [[ ${tests} != ${passed} ]]; then
+    exit 1
+fi

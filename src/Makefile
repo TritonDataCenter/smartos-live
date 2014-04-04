@@ -442,6 +442,7 @@ install: all
 	cp -Pr fw/test/integration/*.js $(DESTDIR)/usr/fw/test/integration/
 	cp -Pr fw/test/node_modules/async/* $(DESTDIR)/usr/fw/test/node_modules/async/
 	cp fw/test/runtest $(DESTDIR)/usr/fw/test/
+	cp fw/test/runtests $(DESTDIR)/usr/fw/test/
 	cp -PR fw/lib $(DESTDIR)/usr/fw/
 	cp -PR fw/node_modules $(DESTDIR)/usr/fw/
 	cp -PR fw/sbin $(DESTDIR)/usr/fw/

@@ -174,9 +174,7 @@ test('setup', function (t) {
             fs.readFileSync(path.join(EX_DIR, ex)).toString();
     });
 
-    vmtest.ensureCurrentImages(t, [ IMAGE_UUID ], function () {
-        t.end();
-    });
+    t.end();
 });
 
 

@@ -156,12 +156,43 @@ function SourcePingError(cause, source) {
 }
 util.inherits(SourcePingError, ImgadmError);
 
+/**
+ * This is thrown if, while importing image A from a source IMGAPI, the image
+ * has an origin image B that is *not in that source*. That means there is
+ * a problem with the IMGAPI source: it is meant to be an invariant that
+ * an IMGAPI source has all images that make up the full origin chain for
+ * its images.
+ */
+function OriginNotFoundInSourceError(cause, originUuid, source) {
+    if (source === undefined) {  // `cause` is optional
+        source = originUuid;
+        originUuid = cause;
+        cause = undefined;
+    }
+    assert.string(originUuid, 'originUuid');
+    assert.object(source, 'source');
+    var details = '';
+    if (cause) {
+        details = ': ' + cause.toString();
+    }
+    ImgadmError.call(this, {
+        cause: cause,
+        message: format(
+            'origin image "%s" does not exist in image source "%s"%s',
+            originUuid, source.url, details),
+        code: 'OriginNotFoundInSource',
+        source: source.url,
+        exitStatus: 1
+    });
+}
+util.inherits(OriginNotFoundInSourceError, ImgadmError);
+
 function ImageNotFoundError(cause, uuid) {
     if (uuid === undefined) {
         uuid = cause;
         cause = undefined;
     }
-    assert.string(uuid);
+    assert.string(uuid, 'uuid');
     ImgadmError.call(this, {
         cause: cause,
         message: format('image "%s" was not found', uuid),
@@ -694,6 +725,7 @@ module.exports = {
     InvalidUUIDError: InvalidUUIDError,
     NoSourcesError: NoSourcesError,
     SourcePingError: SourcePingError,
+    OriginNotFoundInSourceError: OriginNotFoundInSourceError,
     ImageNotFoundError: ImageNotFoundError,
     VmNotFoundError: VmNotFoundError,
     VmNotStoppedError: VmNotStoppedError,

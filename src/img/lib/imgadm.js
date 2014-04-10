@@ -1200,17 +1200,24 @@ IMGADM.prototype.sourcesList = function sourcesList(callback) {
 /**
  * Get info (mainly manifest data) on the given image UUID from sources.
  *
- * @param uuid {String}
- * @param ensureActive {Boolean} Set to true to skip inactive images.
+ * @param options {Object}
+ *      - @param uuid {String} Required. The image UUID to get.
+ *      - @param ensureActive {Boolean} Required. Set to true to skip inactive
+ *        images.
+ *      - @param sources {Array} Optional. An optional override to the set
+ *        of sources to search. Defaults to `self.sources`.
  * @param callback {Function} `function (err, imageInfo)` where `imageInfo`
  *      is `{manifest: <manifest>, source: <source>}`
  */
-IMGADM.prototype.sourcesGet
-        = function sourcesGet(uuid, ensureActive, callback) {
-    assert.string(uuid, 'uuid');
-    assert.bool(ensureActive, 'ensureActive');
+IMGADM.prototype.sourcesGet = function sourcesGet(options, callback) {
+    assert.object(options, 'options');
+    assert.string(options.uuid, 'options.uuid');
+    assert.bool(options.ensureActive, 'options.ensureActive');
+    assert.optionalArrayOfObject(options.sources, 'options.sources');
     assert.func(callback, 'callback');
     var self = this;
+    var uuid = options.uuid;
+    var ensureActive = options.ensureActive;
     var errs = [];
 
     if (self.sources.length === 0) {
@@ -1220,7 +1227,7 @@ IMGADM.prototype.sourcesGet
 
     var imageInfo = null;
     async.forEachSeries(
-        self.sources,
+        options.sources || self.sources,
         function oneSource(source, next) {
             if (imageInfo) {
                 next();
@@ -1541,11 +1548,19 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                 assert.ok(options.source);
 
                 logCb(format('Origin image %s is not installed: '
-                    + 'searching sources', manifest.origin));
-                self.sourcesGet(manifest.origin, true,
-                        function (err, originInfo) {
+                    + 'searching source', manifest.origin));
+                var getOpts = {
+                    uuid: manifest.origin,
+                    ensureActive: true,
+                    sources: [imageInfo.source]
+                };
+                self.sourcesGet(getOpts, function (err, originInfo) {
                     if (err) {
                         next(err);
+                        return;
+                    } else if (!originInfo) {
+                        next(new errors.OriginNotFoundInSourceError(
+                            manifest.origin, imageInfo.source));
                         return;
                     }
                     logCb(format('Importing origin image %s (%s %s) from "%s"',
@@ -1931,6 +1946,10 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                 }
             },
             function releaseLock(next) {
+                if (!unlock) {
+                    next();
+                    return;
+                }
                 log.debug({lockPath: lockPath}, 'releasing lock');
                 unlock(function (unlockErr) {
                     if (unlockErr) {
@@ -2046,7 +2065,11 @@ IMGADM.prototype.updateImages = function updateImages(options, callback) {
         var snapshots;
         async.series([
             function getSourceInfo(next) {
-                self.sourcesGet(uuid, true, function (sGetErr, sImageInfo) {
+                var getOpts = {
+                    uuid: uuid,
+                    ensureActive: true
+                };
+                self.sourcesGet(getOpts, function (sGetErr, sImageInfo) {
                     if (sGetErr) {
                         next(sGetErr);
                         return;

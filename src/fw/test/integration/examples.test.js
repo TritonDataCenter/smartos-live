@@ -375,6 +375,50 @@ test('vmadm', TEST_OPTS, function (t) {
                 'pass in quick proto tcp from any to any port = www',
                 'pass in quick proto tcp from any to any port = https'
             ], 'smtp block rule applied', cb);
+
+        // In the man page but not in the examples dir: disable the VM
+        // and make sure there are no rules
+        }, function (cb) {
+            var cmd = 'fwadm stop ' + VMS[0];
+            exec(cmd, function (err, stdout, stderr) {
+                t.ifErr(err, 'error running: ' + cmd);
+                t.equal(stdout, 'Firewall stopped for VM ' + VMS[0] + '\n',
+                    'stdout: ' + cmd);
+                t.equal(stderr, '', 'stderr: ' + cmd);
+
+                return cb();
+            });
+
+        }, function (cb) {
+            var cmd = 'fwadm stats ' + VMS[0];
+            exec(cmd, function (err, stdout, stderr) {
+                t.ok(err, 'expected error running: ' + cmd);
+                t.equal(stderr, 'Firewall is not running for VM "'
+                    + VMS[0] + '"\n',
+                    'stderr: ' + cmd);
+
+                return cb();
+            });
+
+        // Now re-enable and make sure it has the same rules
+
+        }, function (cb) {
+            var cmd = 'fwadm start ' + VMS[0];
+            exec(cmd, function (err, stdout, stderr) {
+                t.ifErr(err, 'error running: ' + cmd);
+                t.equal(stdout, 'Firewall started for VM ' + VMS[0] + '\n',
+                    'stdout: ' + cmd);
+                t.equal(stderr, '', 'stderr: ' + cmd);
+
+                return cb();
+            });
+
+        }, function (cb) {
+            fwStatsContain(t, VMS[0], [
+                'block out quick proto tcp from any to any port = smtp',
+                'pass in quick proto tcp from any to any port = www',
+                'pass in quick proto tcp from any to any port = https'
+            ], 'smtp block rule applied', cb);
         }
 
     ], function () {

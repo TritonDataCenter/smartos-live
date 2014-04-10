@@ -271,8 +271,7 @@ if smf_is_globalzone; then
     # If on VMWare or Parallels or VirtualBox, create a bridge which
     # allows traffic to flow correctly to the host-only network
     if [[ "${ADMIN_NIC_UP}" == "true" ]] \
-        && [[ ${SYSINFO_Product} == "VMware Virtual Platform" \
-              || ${SYSINFO_Product} == "Parallels Virtual Platform" \
+        && [[ ${SYSINFO_Product} == "Parallels Virtual Platform" \
               || ${SYSINFO_Product} == "VirtualBox" ]] \
         && [[ -z $(/usr/sbin/dladm show-bridge -p vmwarebr) ]]; then
         /usr/sbin/dladm create-bridge -l ${SYSINFO_NIC_admin} vmwarebr

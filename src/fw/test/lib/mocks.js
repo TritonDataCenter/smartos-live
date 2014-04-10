@@ -21,6 +21,28 @@ var createSubObjects = mod_obj.createSubObjects;
 var IPF = '/usr/sbin/ipf';
 var VALUES = {};
 var LOG = false;
+var MOCKS = {
+    bunyan: {
+        createLogger: createLogger,
+        RingBuffer: mockRingBuffer,
+        stdSerializers: {
+            err: errSerializer
+        },
+        resolveLevel: resolveLevel
+    },
+    child_process: {
+        execFile: execFile
+    },
+    fs: {
+        readdir: readDir,
+        readFile: readFile,
+        readFileSync: readFileSync,
+        rename: rename,
+        unlink: unlink,
+        writeFile: writeFile
+    },
+    mkdirp: mkdirp
+};
 var ORIG_PROCESS;
 var PID;
 
@@ -165,13 +187,17 @@ function execFile(path, args, cb) {
     var vals = VALUES.child_process[path];
     if (!vals) {
         vals = {
-            err: new Error('Uh-oh'),
+            err: new Error('child_process.execFile mock: no mock data for '
+                + path),
             stderr: null,
             stdout: null
         };
     }
 
-    // console.log('> execFile: %s %s', path, args.join(' '));
+    if (typeof (vals) == 'function') {
+        return vals(path, args, cb);
+    }
+
     if (path == IPF) {
         try {
             _recordIPFstate(args);
@@ -209,6 +235,19 @@ function readFile(file, cb) {
     }
 
     return cb(null, root[p.dir][p.file]);
+}
+
+
+function readFileSync(file, cb) {
+    var p = _splitFile(file);
+    var root = VALUES.fs;
+
+    if (!root.hasOwnProperty(p.dir)
+            || !root[p.dir].hasOwnProperty(p.file)) {
+        throw _ENOENT(file);
+    }
+
+    return root[p.dir][p.file];
 }
 
 
@@ -328,46 +367,62 @@ function resetValues() {
 
 
 /**
- * Enable all of the mocks, and initialize VALUES. Returns a newly-require()'d
- * fw.js with most external modules mocked out.
+ * Mock setup:
+ *   * Initialize VALUES, populating with values in opts.initialValues if
+ *     present
+ *   * Create mocks, overriding / adding to the list with mocks in opts.mocks
+ *     if present
+ *   * If opts.allowed is present, add all mocks in the list to mockery's
+ *     allowed modules
+ *   * Enable all of the mocks
+ *
+ * Returns a newly-require()'d fw.js with most external modules mocked out.
  */
-function setup() {
+function setup(opts) {
     if (fw) {
         return fw;
     }
 
-    resetValues();
-    mockery.enable();
-    var modules = {
-        bunyan: {
-            createLogger: createLogger,
-            RingBuffer: mockRingBuffer,
-            stdSerializers: {
-                err: errSerializer
-            },
-            resolveLevel: resolveLevel
-        },
-        child_process: {
-            execFile: execFile
-        },
-        fs: {
-            readdir: readDir,
-            readFile: readFile,
-            rename: rename,
-            unlink: unlink,
-            writeFile: writeFile
-        },
-        mkdirp: mkdirp,
-        path: {
-            basename: basename
-        }
-    };
+    var m;
 
-    for (var m in modules) {
-        mockery.registerMock(m, modules[m]);
+    if (!opts) {
+        opts = {};
+    }
+    if (!opts.mocks) {
+        opts.mocks = {};
     }
 
-    [
+    resetValues();
+
+    if (opts.initialValues) {
+        // As a convenience, allow fs values to be full paths
+        if (opts.initialValues.hasOwnProperty('fs')) {
+            for (var f in opts.initialValues.fs) {
+                var p = _splitFile(f);
+                mkdirp.sync(p.dir);
+                VALUES.fs[p.dir][p.file] = opts.initialValues.fs[f];
+            }
+
+            for (var i in opts.initialValues) {
+                if (i == 'fs') {
+                    continue;
+                }
+
+                VALUES[i] = opts.initialValues[i];
+            }
+        }
+    }
+
+    mockery.enable();
+    for (m in opts.mocks) {
+        MOCKS[m] = opts.mocks[m];
+    }
+
+    for (m in MOCKS) {
+        mockery.registerMock(m, MOCKS[m]);
+    }
+
+    var allowed = [
         'assert',
         'assert-plus',
         'clone',
@@ -394,7 +449,13 @@ function setup() {
         './util/vm',
         './validators',
         '../../lib/fw'
-    ].forEach(function (mod) {
+    ];
+
+    if (opts.allowed) {
+        allowed = allowed.concat(opts.allowed);
+    }
+
+    allowed.forEach(function (mod) {
         mockery.registerAllowable(mod);
     });
 
@@ -419,6 +480,9 @@ function teardown() {
 module.exports = {
     get fw() {
         return fw;
+    },
+    get mocks() {
+        return MOCKS;
     },
     get values() {
         return VALUES;

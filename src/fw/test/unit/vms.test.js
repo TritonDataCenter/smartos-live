@@ -101,6 +101,34 @@ exports['non-existent VM'] = function (t) {
 };
 
 
+exports['all vms -> local VM'] = function (t) {
+    var owner = mod_uuid.v4();
+    var vms = [ helpers.generateVM({ owner_uuid: owner }),
+        helpers.generateVM() ];
+    var rule = {
+        enabled: true,
+        owner_uuid: owner,
+        rule: util.format('FROM all vms TO vm %s ALLOW tcp PORT all',
+            vms[0].uuid)
+    };
+
+    var payload = {
+        rule: rule,
+        vms: vms
+    };
+
+    fw.vms(payload, function (err, res) {
+        t.ifError(err, 'error returned');
+        if (err) {
+            return t.done();
+        }
+
+        t.deepEqual(res, [ vms[0].uuid ], 'vm returned');
+        return t.done();
+    });
+};
+
+
 
 // --- Teardown
 

@@ -21,7 +21,7 @@
  * CDDL HEADER END
  *
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2014, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: Main entry points
@@ -2251,9 +2251,6 @@ function getRuleVMs(opts, callback) {
     }
     var log = util_log.entry(opts, 'vms', true);
 
-    var toFind = {};
-    toFind[opts.vm] = opts.vm;
-
     pipeline({
     funcs: [
         function rules(_, cb) {
@@ -2273,12 +2270,12 @@ function getRuleVMs(opts, callback) {
         }
     ]}, function (err, res) {
         if (err) {
-            util_log.finishErr(log, err, 'vms: finish (vm=%s)', opts.vm);
+            util_log.finishErr(log, err, 'vms: finish');
             return callback(err);
         }
 
         var matched = Object.keys(res.state.ruleVMs);
-        log.debug(matched, 'vms: finish (vm=%s)', opts.vm);
+        log.debug(matched, 'vms: finish');
         return callback(null, matched);
     });
 }

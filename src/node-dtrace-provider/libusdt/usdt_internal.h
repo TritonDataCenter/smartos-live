@@ -2,21 +2,26 @@
  * Copyright (c) 2012, Chris Andrews. All rights reserved.
  */
 
+#ifdef __linux__
+#include <endian.h>
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#ifndef _LITTLE_ENDIAN
+#define _LITTLE_ENDIAN
+#endif
+#endif
+#endif
+
 #include <sys/dtrace.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 
+#include <stdlib.h>
 #include <errno.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdint.h>
 #include <assert.h>
-
-#ifndef __APPLE__
-/* solaris and freebsd */
-#include <stdlib.h>
-#endif
 
 #define FUNC_SIZE 32
 
@@ -30,6 +35,7 @@ extern void usdt_probe_args(void *, int, void**);
 uint32_t usdt_probe_offset(usdt_probe_t *probe, char *dof, uint8_t argc);
 uint32_t usdt_is_enabled_offset(usdt_probe_t *probe, char *dof);
 int usdt_create_tracepoints(usdt_probe_t *probe);
+void usdt_free_tracepoints(usdt_probe_t *probe);
 
 typedef struct usdt_dof_section {
         dof_secidx_t index;
@@ -48,6 +54,7 @@ int usdt_dof_section_init(usdt_dof_section_t *section,
                           uint32_t type, dof_secidx_t index);
 int usdt_dof_section_add_data(usdt_dof_section_t *section,
                               void *data, size_t length);
+void usdt_dof_section_free(usdt_dof_section_t *section);
 
 typedef struct usdt_strtab {
         dof_secidx_t index;
@@ -81,6 +88,7 @@ void usdt_dof_file_append_section(usdt_dof_file_t *file, usdt_dof_section_t *sec
 void usdt_dof_file_generate(usdt_dof_file_t *file, usdt_strtab_t *strtab);
 int usdt_dof_file_load(usdt_dof_file_t *file, const char *module);
 int usdt_dof_file_unload(usdt_dof_file_t *file);
+void usdt_dof_file_free(usdt_dof_file_t *file);
 
 int usdt_dof_probes_sect(usdt_dof_section_t *probes,
                          usdt_provider_t *provider, usdt_strtab_t *strtab);

@@ -3,6 +3,9 @@
 # Copyright (c) 2013 Joyent Inc., All Rights Reserved.
 #
 
+set -o errexit
+set -o pipefail
+
 status=0
 
 BUILDSTAMP=$2

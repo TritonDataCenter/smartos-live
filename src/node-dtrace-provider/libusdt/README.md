@@ -1,13 +1,7 @@
 libusdt
 =======
 
-This is "libusdt", an extraction into a C library of the common parts
-of ruby-dtrace[1], perl-dtrace[2] and node-dtrace-provider[3].
-
-Those individual language-specific implementations will then become
-bindings to this library, rather than containing their own
-implementations of DOF generation and probe creation. Other dynamic
-language bindings could then easily follow.
+This is "libusdt", a library for creating DTrace USDT providers.
 
 The idea here is to allow the specification of a DTrace provider
 dynamically in code and then create the provider at runtime. This
@@ -27,7 +21,7 @@ Status
 
 The implementation here works as shown in test_usdt.c on Mac OS X,
 i386 and x86_64, on Solaris-like systems, i386 and x86_64 and on
-FreeBSD, x86_64 only (so far).
+FreeBSD and Oracle Linux, x86_64 only.
 
 Is-enabled probes are supported and exposed in the API.
 
@@ -40,23 +34,30 @@ build.
 
 FreeBSD builds suffer from broken argument handling; this is a known
 issue with the current state of DTrace generally on FreeBSD: only the
-first four arguments work reliably. See:
+first five arguments work reliably. See:
 
   http://wiki.freebsd.org/DTraceTODO
 
 See Also
 --------
 
-There are experimental Lua bindings available, which are a thin
-layer over this library, and should serve as an example of typical use
-as a dynamic language extension:
+There are various language bindings available:
+
+Lua:
 
   https://github.com/chrisa/lua-usdt
 
-There are also Ruby bindings by Kevin Chan, replacing the provider
-implementation in ruby-dtrace:
+Ruby (by Kevin Chan):
 
   https://github.com/kevinykchan/ruby-usdt
+
+Node.JS:
+
+  https://github.com/chrisa/node-dtrace-provider
+
+Perl:
+
+  https://github.com/chrisa/perl-Devel-DTrace-Provider
 
 To Do
 -----
@@ -74,8 +75,3 @@ Features:
 
  * support structured types, with close integration with the host
    DTrace system.
-
-
-[1] https://github.com/chrisa/ruby-dtrace
-[2] https://github.com/chrisa/perl-dtrace
-[3] https://github.com/chrisa/node-dtrace-provider

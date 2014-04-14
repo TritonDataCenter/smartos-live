@@ -22,6 +22,12 @@
 /src/node-kstat/build
 /src/node-syslog/.lock-wscript
 /src/node-syslog/build
+/src/node-zsock/lib/zsock_bindings.node
+/src/node-zutil/lib/zutil_bindings.node
+/src/node-*/src/*.o
+/src/node-*/src/mapfile_node
+/src/node-*/src/v8plus_errno.c
+/src/node-*/src/v8plus_errno.h
 /tools/builder/builder
 /tools/builder/*.o
 /tools/builder/users.c

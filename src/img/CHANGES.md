@@ -1,5 +1,13 @@
 # imgadm changelog
 
+## 2.6.9
+
+- [OS-2903] Error out with 'OriginNotFoundInSource' instead of crashing if
+  an attempt to import an image cannot proceed if the source IMGAPI does
+  not have the image's origin image. (This is a bug in the source IMGAPI,
+  but `imgadm` still should not crash.)
+
+
 ## 2.6.8
 
 - [IMGAPI-373] `imgadm avail` now returns all images by making use of limit and

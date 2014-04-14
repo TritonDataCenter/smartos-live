@@ -8,6 +8,15 @@ namespace node {
 
   using namespace v8;
 
+  DTraceProvider::DTraceProvider() : ObjectWrap() {
+    provider = NULL;
+  }
+
+  DTraceProvider::~DTraceProvider() {
+    usdt_provider_disable(provider);
+    usdt_provider_free(provider);
+  }
+
   Persistent<FunctionTemplate> DTraceProvider::constructor_template;
   
   void DTraceProvider::Initialize(Handle<Object> target) {
@@ -71,14 +80,13 @@ namespace node {
   Handle<Value> DTraceProvider::AddProbe(const Arguments& args) {
     HandleScope scope;
     const char *types[USDT_ARG_MAX];
-    int argc = 0;
 
     Handle<Object> obj = args.Holder();
     DTraceProvider *provider = ObjectWrap::Unwrap<DTraceProvider>(obj);
 
     // create a DTraceProbe object
     Handle<Function> klass = DTraceProbe::constructor_template->GetFunction();
-    Handle<Object> pd = Persistent<Object>::New(klass->NewInstance());
+    Handle<Object> pd = Local<Object>::New(klass->NewInstance());
 
     // store in provider object
     DTraceProbe *probe = ObjectWrap::Unwrap<DTraceProbe>(pd->ToObject());
@@ -88,14 +96,29 @@ namespace node {
     for (int i = 0; i < USDT_ARG_MAX; i++) {
       if (i < args.Length() - 1) {
         String::AsciiValue type(args[i + 1]->ToString());
-        types[i] = strdup(*type);
-        argc++;
+
+	if (strncmp("json", *type, 4) == 0)
+	  probe->arguments[i] = new DTraceJsonArgument();
+	else if (strncmp("char *", *type, 6) == 0)
+	  probe->arguments[i] = new DTraceStringArgument();
+	else if (strncmp("int", *type, 3) == 0)
+	  probe->arguments[i] = new DTraceIntegerArgument();
+	else
+	  probe->arguments[i] = new DTraceStringArgument();
+
+	types[i] = strdup(probe->arguments[i]->Type());
+	probe->argc++;
       }
     }
+
     String::AsciiValue name(args[0]->ToString());
-    probe->probedef = usdt_create_probe(*name, *name, argc, types);
+    probe->probedef = usdt_create_probe(*name, *name, probe->argc, types);
     usdt_provider_add_probe(provider->provider, probe->probedef);
-    
+
+    for (size_t i = 0; i < probe->argc; i++) {
+      free((char *)types[i]);
+    }
+
     return pd;
   }
 
@@ -107,7 +130,7 @@ namespace node {
 
     Handle<Object> probe_obj = Local<Object>::Cast(args[0]);
     DTraceProbe *probe = ObjectWrap::Unwrap<DTraceProbe>(probe_obj);
-    
+
     Handle<String> name = String::New(probe->probedef->name);
     provider_obj->Delete(name);
 
@@ -167,4 +190,5 @@ namespace node {
     DTraceProvider::Initialize(target);
   }
 
+  NODE_MODULE(DTraceProviderBindings, init)
 } // namespace node

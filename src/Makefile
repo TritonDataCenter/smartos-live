@@ -135,9 +135,10 @@ LOCKFD_V8PLUS_DIR =		node-lockfd/node_modules/v8plus
 #
 DTRACE_PROVIDER_OBJDIR =	node-dtrace-provider/build/Release
 DTRACE_PROVIDER_SRCDIR =	node-dtrace-provider
-DTRACE_PROVIDER.NODE =		$(DTRACE_PROVIDER_OBJDIR)/dtrace-provider.node
+DTRACE_PROVIDER.NODE =		$(DTRACE_PROVIDER_OBJDIR)/DTraceProviderBindings.node
 
 DTRACE_PROVIDER_SRCS += \
+			dtrace_argument.cc \
 			dtrace_probe.cc \
 			dtrace_provider.cc
 
@@ -258,55 +259,19 @@ $(UUID.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 $(UUID.NODE) :	LIBS +=		-luuid
 
 #
-# The zsock add-on places its single source file in a subdirectory.
+# The zsock Node add-on is based on v8plus, which has its own system of
+# Makefiles.
 #
-ZSOCK_OBJDIR =	node-zsock/build/Release
-ZSOCK_SRCDIR =	node-zsock/src
-ZSOCK_BINDINGS.NODE =	$(ZSOCK_OBJDIR)/zsock_bindings.node
-
-$(ZSOCK_BINDINGS.NODE) :	WARN_FLAGS =	-Wall -Werror
-$(ZSOCK_BINDINGS.NODE) :	CPPFLAGS += \
-				$(NODE_CPPFLAGS) \
-				-D_REENTRANT \
-				-D_POSIX_PTHREAD_SEMANTICS \
-				-D_XOPEN_SOURCE_EXTENDED=1 \
-				-D__EXTENSIONS__ \
-				-DSunOS
-$(ZSOCK_BINDINGS.NODE) :	CXXFLAGS += \
-				$(NODE_CFLAGS) \
-				-std=c++98
-$(ZSOCK_BINDINGS.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
-$(ZSOCK_BINDINGS.NODE) :	LIBS +=		-lsocket -lnsl -lcontract
+ZSOCK_SRCDIR =		node-zsock/src
+ZSOCK_V8PLUS_DIR =	node-zsock/node_modules/v8plus
+ZSOCK_BINDINGS.NODE =	$(ZSOCK_SRCDIR)/../lib/zsock_bindings.node
 
 #
-# The zutil add-on places its multiple source files in a subdirectory, and
-# builds them against some headers that it also supplies and needs to depend on.
-# Because we must build intermediate object files, this requires a
-# different target pattern as well; see below.
+# Likewise zutil.
 #
-ZUTIL_OBJDIR =	node-zutil/build/Release
-ZUTIL_SRCDIR =	node-zutil/src
-ZUTIL_BINDINGS.NODE =	$(ZUTIL_OBJDIR)/zutil_bindings.node
-
-ZUTIL_SRCS += \
-	zone.cc \
-	zonecfg.cc \
-	zutil_bindings.cc
-
-ZUTIL_HDRS += \
-	zone.h \
-	zonecfg.h \
-	zutil_common.h
-
-ZUTIL_BINDINGS_OBJS =	$(ZUTIL_SRCS:%.cc=$(ZUTIL_OBJDIR)/%.o)
-ZUTIL_BINDINGS_HDRS =	$(ZUTIL_HDRS:%=$(ZUTIL_SRCDIR)/%)
-CLEANFILES +=		$(ZUTIL_BINDINGS_OBJS)
-
-$(ZUTIL_BINDINGS.NODE) :	WARN_FLAGS +=	-Wno-unused
-$(ZUTIL_BINDINGS.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS) -DSunOS
-$(ZUTIL_BINDINGS.NODE) :	CXXFLAGS +=	$(NODE_CFLAGS)
-$(ZUTIL_BINDINGS.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
-$(ZUTIL_BINDINGS.NODE) :	LIBS +=		-lzonecfg
+ZUTIL_SRCDIR =		node-zutil/src
+ZUTIL_V8PLUS_DIR =	node-zutil/node_modules/v8plus
+ZUTIL_BINDINGS.NODE =	$(ZUTIL_SRCDIR)/../lib/zutil_bindings.node
 
 #
 # List of targets.  TARGETS, SMARTDC_TARGETS, and SMARTDC_LIB_TARGETS must
@@ -392,10 +357,8 @@ install: all
 	    $(PREFIX_NODE)/node_modules/zutil/build/Release
 	cp $(EXPAT.NODE) $(PREFIX_NODE)/node_modules/expat_binding.node
 	cp $(UUID.NODE) $(PREFIX_NODE)/node_modules/uuid.node
-	cp $(DTRACE_PROVIDER.NODE) $(PREFIX_NODE)/node_modules/dtrace-provider.node
-	sed -e "s|require('./build.*DTraceProviderBindings')|require('/usr/node/node_modules/dtrace-provider.node')|" \
-	    < $(DTRACE_PROVIDER_SRCDIR)/dtrace-provider.js \
-	    > $(PREFIX_NODE)/node_modules/dtrace-provider.js
+	cp $(DTRACE_PROVIDER.NODE) $(PREFIX_NODE)/node_modules/DTraceProviderBindings.node
+	cp node-dtrace-provider/dtrace-provider.js $(PREFIX_NODE)/node_modules/dtrace-provider.js
 	sed -e "s|var expat.*;|var expat = require('./expat_binding');|" \
 	    < node-expat/lib/node-expat.js \
 	    > $(PREFIX_NODE)/node_modules/node-expat.js
@@ -447,10 +410,8 @@ install: all
 	cp -PR fw/node_modules $(DESTDIR)/usr/fw/
 	cp -PR fw/sbin $(DESTDIR)/usr/fw/
 	cp -Pr node_modules/onlyif.js $(DESTDIR)/usr/fw/node_modules/onlyif.js
-	cp $(DTRACE_PROVIDER.NODE) $(DESTDIR)/usr/fw/node_modules/dtrace-provider.node
-	sed -e "s|require('./build.*DTraceProviderBindings')|require('/usr/fw/node_modules/dtrace-provider.node')|" \
-	    < $(DTRACE_PROVIDER_SRCDIR)/dtrace-provider.js \
-	    > $(DESTDIR)/usr/fw/node_modules/dtrace-provider.js
+	cp $(DESTDIR)/usr/node/0.10/node_modules/dtrace-provider.js $(DESTDIR)/usr/fw/node_modules/dtrace-provider.js
+	cp $(DTRACE_PROVIDER.NODE) $(DESTDIR)/usr/fw/node_modules/DTraceProviderBindings.node
 	sed -e "s|require('dtrace-provider')|require('/usr/fw/node_modules/dtrace-provider')|" \
 	    < node-bunyan/lib/bunyan.js \
 	    > $(DESTDIR)/usr/fw/node_modules/bunyan.js
@@ -607,18 +568,26 @@ $(UUID.NODE): $(UUID_SRCDIR)/uuid.cc
 	@mkdir -p $(UUID_OBJDIR)
 	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
 
-$(ZSOCK_BINDINGS.NODE): $(ZSOCK_SRCDIR)/zsock.cc
-	@mkdir -p $(ZSOCK_OBJDIR)
-	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
+$(ZSOCK_BINDINGS.NODE): FRC
+	cd $(ZSOCK_SRCDIR) && \
+	LD_OPTIONS=-lc \
+	$(MAKE) \
+		CC=$(GCC) CXX=$(GXX) \
+		PREFIX_NODE=$(PREFIX_NODE) \
+		NODE_EXEC=$(NODE_EXEC) \
+		V8PLUS=$(PWD)/$(ZSOCK_V8PLUS_DIR) \
+		CTFCONVERT=$(CTFCONVERT) \
+		CTFMERGE=$(CTFMERGE)
 
-#
-# The zutil add-on requires a slightly more complex 2-phase build.
-#
-$(ZUTIL_OBJDIR)/%.o: $(ZUTIL_SRCDIR)/%.cc $(ZUTIL_BINDINGS_HDRS)
-	@mkdir -p $(ZUTIL_OBJDIR)
-	$(GXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
-
-$(ZUTIL_BINDINGS.NODE): $(ZUTIL_BINDINGS_OBJS)
-	$(GXX) $(LDFLAGS) -o $@ $(ZUTIL_BINDINGS_OBJS) $(LIBS)
+$(ZUTIL_BINDINGS.NODE): FRC
+	cd $(ZUTIL_SRCDIR) && \
+	LD_OPTIONS=-lc \
+	$(MAKE) \
+		CC=$(GCC) CXX=$(GXX) \
+		PREFIX_NODE=$(PREFIX_NODE) \
+		NODE_EXEC=$(NODE_EXEC) \
+		V8PLUS=$(PWD)/$(ZUTIL_V8PLUS_DIR) \
+		CTFCONVERT=$(CTFCONVERT) \
+		CTFMERGE=$(CTFMERGE)
 
 FRC:

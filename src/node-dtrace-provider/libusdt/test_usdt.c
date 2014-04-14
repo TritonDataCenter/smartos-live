@@ -74,11 +74,14 @@ int main(int argc, char **argv) {
         fgets(buf, 255, stdin);
 
         fire_probe(probedef, (argc-3), (void **)args);
+	usdt_probe_release(probedef);
 
         if ((usdt_provider_disable(provider)) < 0) {
                 fprintf(stderr, "unable to disable provider: %s\n", usdt_errstr(provider));
                 exit (1);
         }
+
+	usdt_provider_free(provider);
 
         return 0;
 }

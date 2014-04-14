@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 Joyent, Inc.  All rights reserved.
+ * Copyright (c) 2013 Joyent, Inc.  All rights reserved.
  */
 
 #ifndef	_V8PLUS_GLUE_H
@@ -19,6 +19,10 @@ extern "C" {
 
 #define	V8PLUS_ERRMSG_LEN	512
 #define	V8PLUS_JSF_COOKIE	".__v8plus_jsfunc_cookie"
+
+#define	V8PLUS_MODULE_VERSION	1
+#define	V8PLUS_STRINGIFY_HELPER(_x)	#_x
+#define	V8PLUS_STRINGIFY(_x)	V8PLUS_STRINGIFY_HELPER(_x)
 
 typedef enum v8plus_type {
 	V8PLUS_TYPE_NONE = 0,		/* N/A */
@@ -211,6 +215,25 @@ extern const char *v8plus_strerror(v8plus_errno_t);
 extern const char *v8plus_errname(v8plus_errno_t);
 extern const char *v8plus_excptype(v8plus_errno_t);
 
+typedef struct v8plus_module_defn {
+	uint_t vmd_version;
+	const char *vmd_modname;
+	const char *vmd_filename;
+	uint_t vmd_nodeflags;
+	struct v8plus_module_defn *vmd_link;
+	v8plus_c_ctor_f vmd_ctor;
+	v8plus_c_dtor_f vmd_dtor;
+	const char *vmd_js_factory_name;
+	const char *vmd_js_class_name;
+	const v8plus_method_descr_t *vmd_methods;
+	uint_t vmd_method_count;
+	const v8plus_static_descr_t *vmd_static_methods;
+	uint_t vmd_static_method_count;
+	void *vmd_node[64];		/* v8plus use only */
+} v8plus_module_defn_t;
+
+#ifndef V8PLUS_NEW_API
+
 /*
  * Provided by C code.  See README.md.
  */
@@ -222,6 +245,10 @@ extern const v8plus_method_descr_t v8plus_methods[];
 extern const uint_t v8plus_method_count;
 extern const v8plus_static_descr_t v8plus_static_methods[];
 extern const uint_t v8plus_static_method_count;
+
+#endif	/* V8PLUS_NEW_API */
+
+extern void v8plus_module_register(v8plus_module_defn_t *);
 
 /*
  * Private methods.

@@ -24,11 +24,47 @@ namespace node {
 
   using namespace v8;
 
+  class DTraceArgument {
+  public:
+    virtual const char *Type() = 0;
+    virtual void *ArgumentValue(Handle<Value>) = 0;
+    virtual void FreeArgument(void *) = 0;
+    virtual ~DTraceArgument() { };
+  };
+
+  class DTraceIntegerArgument : public DTraceArgument {
+  public:
+    const char *Type();
+    void *ArgumentValue(Handle<Value>);
+    void FreeArgument(void *);
+  };
+
+  class DTraceStringArgument : public DTraceArgument {
+  public:
+    const char *Type();
+    void *ArgumentValue(Handle<Value>);
+    void FreeArgument(void *);
+  };
+
+  class DTraceJsonArgument : public DTraceArgument {
+  public:
+    const char *Type();
+    void *ArgumentValue(Handle<Value>);
+    void FreeArgument(void *);
+    DTraceJsonArgument();
+    ~DTraceJsonArgument();
+  private:
+    Persistent<Object> JSON;
+    Persistent<Function> JSON_stringify;
+  };
+
   class DTraceProbe : ObjectWrap {
 
   public:
     static void Initialize(v8::Handle<v8::Object> target);
     usdt_probedef_t *probedef;
+    size_t argc;
+    DTraceArgument *arguments[USDT_ARG_MAX];
 
     static v8::Handle<v8::Value> New(const v8::Arguments& args);
     static v8::Handle<v8::Value> Fire(const v8::Arguments& args);
@@ -37,13 +73,8 @@ namespace node {
 
     static Persistent<FunctionTemplate> constructor_template;
 
-    DTraceProbe() : ObjectWrap() {
-      probedef = NULL;
-    }
-
-    ~DTraceProbe() {
-    }
-
+    DTraceProbe();
+    ~DTraceProbe();
   private:
   };
 
@@ -60,14 +91,8 @@ namespace node {
     static v8::Handle<v8::Value> Disable(const v8::Arguments& args);
     static v8::Handle<v8::Value> Fire(const v8::Arguments& args);
 
-    DTraceProvider() : ObjectWrap() {
-      provider = NULL;
-    }
-
-    ~DTraceProvider() {
-      usdt_provider_disable(provider);
-    }
-
+    DTraceProvider();
+    ~DTraceProvider();
   private:
     static Persistent<FunctionTemplate> constructor_template;
   };

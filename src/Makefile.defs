@@ -49,8 +49,8 @@ CPPFLAGS =	$(SYSINCDIRS:%=-isystem $(DESTDIR)/%)
 LDFLAGS =	$(SYSLIBDIRS:%=-L$(DESTDIR)/%) -Wl,-zassert-deflib \
 		    -Wl,-zfatal-warnings
 
-PREFIX_NODE =	$(DESTDIR)/usr/node/0.8
-NODE_EXEC =	$(NATIVEDIR)/usr/node/0.8/bin/node
+PREFIX_NODE =	$(DESTDIR)/usr/node/0.10
+NODE_EXEC =	$(NATIVEDIR)/usr/node/0.10/bin/node
 
 DEBUG_FLAGS =	-g
 WARN_FLAGS =	-Wall -Wextra -Werror

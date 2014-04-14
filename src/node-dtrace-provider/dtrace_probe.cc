@@ -4,21 +4,32 @@
 #include <node.h>
 
 namespace node {
-  
+
   using namespace v8;
+
+  DTraceProbe::DTraceProbe() : ObjectWrap() {
+    argc = 0;
+    probedef = NULL;
+  }
+
+  DTraceProbe::~DTraceProbe() {
+    for (size_t i = 0; i < argc; i++)
+      delete(this->arguments[i]);
+    usdt_probe_release(probedef);
+  }
 
   Persistent<FunctionTemplate> DTraceProbe::constructor_template;
 
   void DTraceProbe::Initialize(Handle<Object> target) {
     HandleScope scope;
-    
+
     Local<FunctionTemplate> t = FunctionTemplate::New(DTraceProbe::New);
     constructor_template = Persistent<FunctionTemplate>::New(t);
     constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
     constructor_template->SetClassName(String::NewSymbol("DTraceProbe"));
-    
+
     NODE_SET_PROTOTYPE_METHOD(constructor_template, "fire", DTraceProbe::Fire);
-    
+
     target->Set(String::NewSymbol("DTraceProbe"), constructor_template->GetFunction());
   }
 
@@ -26,14 +37,14 @@ namespace node {
     DTraceProbe *probe = new DTraceProbe();
     probe->Wrap(args.This());
     return args.This();
-  }  
+  }
 
   Handle<Value> DTraceProbe::Fire(const Arguments& args) {
     HandleScope scope;
     DTraceProbe *pd = ObjectWrap::Unwrap<DTraceProbe>(args.Holder());
     return pd->_fire(args[0]);
   }
-  
+
   Handle<Value> DTraceProbe::_fire(v8::Local<v8::Value> argsfn) {
 
     if (usdt_is_enabled(this->probedef->probe) == 0) {
@@ -47,7 +58,7 @@ namespace node {
       return ThrowException(Exception::Error(String::New(
         "Must give probe value callback as argument")));
     }
-    
+
     Local<Function> cb = Local<Function>::Cast(argsfn);
     Local<Value> probe_args = cb->Call(this->handle_, 0, NULL);
 
@@ -65,28 +76,18 @@ namespace node {
     Local<Array> a = Local<Array>::Cast(probe_args);
     void *argv[USDT_ARG_MAX];
 
-    // limit argc to the defined number of probe args
-    size_t argc = a->Length();
-    if (argc > this->probedef->argc)
-      argc = this->probedef->argc;
-    
+    // convert each argument value
     for (size_t i = 0; i < argc; i++) {
-      if (this->probedef->types[i] == USDT_ARGTYPE_STRING) {
-	// char *
-	String::AsciiValue str(a->Get(i)->ToString());
-	argv[i] = (void *) strdup(*str);
-      }
-      else {
-	// int
-#ifdef __x86_64__
-	argv[i] = (void *)(long) a->Get(i)->ToInteger()->Value();
-#else
-	argv[i] = (void *)(int) a->Get(i)->ToInt32()->Value();
-#endif        
-      }
+      argv[i] = this->arguments[i]->ArgumentValue(a->Get(i));
     }
 
+    // finally fire the probe
     usdt_fire_probe(this->probedef->probe, argc, argv);
+
+    // free argument values
+    for (size_t i = 0; i < argc; i++) {
+      this->arguments[i]->FreeArgument(argv[i]);
+    }
 
     return True();
   }

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2012 Joyent, Inc.  All rights reserved.
+# Copyright (c) 2013 Joyent, Inc.  All rights reserved.
 #
 
 all: $(MODULE_DIR)/$(MODULE).node
@@ -31,10 +31,7 @@ $(MODULE_DIR)/$(MODULE).node: $(OBJS) $(MAPFILE)
 	$(CXX) $(CXXPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
 $(MAPFILE): $(PREFIX_NODE)/bin/node
-	/usr/bin/nm -ghnp $< | \
-	    (printf "\$$mapfile_version 2\n\nSYMBOL_SCOPE {\n\tglobal:\n"; \
-	    awk '$$2 != "U" { print "\t\t" $$3 "\t{ FLAGS = EXTERN };" }'; \
-	    printf "\t\tinit;\n\tlocal:\n\t\t*;\n};") > $@
+	$(MAPFILE_GEN)
 
 .PHONY: clean
 

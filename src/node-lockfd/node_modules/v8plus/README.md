@@ -16,11 +16,17 @@ For full docs, read the source code.
 
 ## Node.js Support
 
-v8+ works with, and has been tested to some extent with, Node.js 0.6.18 and
-0.8.1.  It most likely works with other micro versions in the 0.6 and 0.8
-series as well.  Note that this does not mean you can necessarily expect an
-addon built against a particular minor release of Node.js to work with any
-other minor release of Node.js.
+v8+ works with, and has been tested to some extent with, Node.js 0.6.18,
+0.8.1, 0.8.26, 0.10.24, and 0.11.10.  It most likely works with other
+micro versions in the 0.6 and 0.8 series as well; if you are using 0.10,
+you will need 0.10.24 or later so that you have headers to build
+against.  Note that this does not mean you can necessarily expect an
+addon built against a particular minor release of Node.js to work with
+any other minor release of Node.js.
+
+Node 0.11.10 and later are also supported, and contain a new module API
+that v8plus can leverage to provide an entirely new model for building
+and using C modules.
 
 ## Building and Installing
 
@@ -833,13 +839,6 @@ your addon.  It does not attempt to restrict the visibility of any symbols,
 so you will not be warned if your addon is using private or deprecated
 functionality in V8 or Node.js.  Your build will, however, fail if you've
 neglected to link in any required libraries, typo'd a symbol name, etc.
-
-- Why use the old init() instead of NODE_MODULE()?
-
-Because NODE_MODULE() is a macro that can't be passed another macro as the
-name of your addon.  Using it would therefore require the source to v8+ to
-be generated at build time to match your module's name, which is
-inconvenient.  There may be a way to work around this.
 
 - Why can't I see my exception's decorative properties in JavaScript?
 

@@ -334,8 +334,4 @@ KStatReader::Read(const Arguments& args)
 	return (rval);
 }
 
-extern "C" void
-init (Handle<Object> target) 
-{
-	KStatReader::Initialize(target);
-}
+NODE_MODULE(kstat, KStatReader::Initialize)

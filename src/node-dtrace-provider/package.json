@@ -1,10 +1,22 @@
 {
-  "name" : "dtrace-provider",
-  "version" : "0.2.3",
-  "description" : "Native DTrace providers for node.js applications",
-  "keywords" : ["dtrace"],
-  "homepage" : "https://github.com/chrisa/node-dtrace-provider#readme",
-  "author" : { "name" : "Chris Andrews", "email": "chris@nodnol.org" },
-  "main" : "./dtrace-provider.js",
-  "repository" : { "type" : "git", "url" : "http://github.com/chrisa/node-dtrace-provider.git" }
+    "name" : "dtrace-provider",
+    "version" : "0.2.8",
+    "description" : "Native DTrace providers for node.js applications",
+    "keywords" : ["dtrace"],
+    "homepage" : "https://github.com/chrisa/node-dtrace-provider#readme",
+    "author" : {
+	"name" : "Chris Andrews",
+	"email": "chris@nodnol.org"
+    },
+    "repository" : {
+	"type" : "git",
+	"url" : "http://github.com/chrisa/node-dtrace-provider.git"
+    },
+    "engines" : {
+	"node" : ">=0.6"
+    },
+    "devDependencies": {
+	"tap": ">=0.2.0"
+    },
+    "main" : "./dtrace-provider.js"
 }

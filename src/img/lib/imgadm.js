@@ -2067,7 +2067,7 @@ IMGADM.prototype.updateImages = function updateImages(options, callback) {
             function getSourceInfo(next) {
                 var getOpts = {
                     uuid: uuid,
-                    ensureActive: true
+                    ensureActive: false
                 };
                 self.sourcesGet(getOpts, function (sGetErr, sImageInfo) {
                     if (sGetErr) {

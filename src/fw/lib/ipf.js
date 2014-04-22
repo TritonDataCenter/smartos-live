@@ -36,6 +36,8 @@ var execFile = require('child_process').execFile;
 
 var IPF = '/usr/sbin/ipf';
 var IPFSTAT = '/usr/sbin/ipfstat';
+// Are we using an older version of ipf?
+var OLD = false;
 
 
 
@@ -87,6 +89,14 @@ function ipfstat(args, log, callback) {
 
 
 /**
+ * Indicates we're on a platform that doesn't support the '-G' flag
+ */
+function setOld() {
+    OLD = true;
+}
+
+
+/**
  * Reloads the ipf rules for a zone
  *
  * @param uuid {String} : zone UUID
@@ -102,21 +112,34 @@ function zoneReload(uuid, conf, log, callback) {
 
     // Flush (-F) all (-a) rules from the inactive list (-I) for the
     // GZ-controlled ipf stack (-G) for zone uuid
-    return ipf(['-GIFa', uuid], log, function (err, res) {
+    var flushOpts = ['-GIFa', uuid];
+    if (OLD) {
+        flushOpts = ['-IFa', uuid];
+    }
+    return ipf(flushOpts, log, function (err, res) {
         if (err) {
             return callback(err, res);
         }
 
         // Load rules from conf (-f) into the inactive list (-I) for the
         // GZ-controlled (-G) ipf stack
-        return ipf(['-G', '-I', '-f', conf, uuid], log, function (err2, res2) {
+        var loadOpts = ['-G', '-I', '-f', conf, uuid];
+        if (OLD) {
+            loadOpts = ['-I', '-f', conf, uuid];
+        }
+        return ipf(loadOpts, log, function (err2, res2) {
             if (err2) {
                 return callback(err2, res2);
             }
 
             // Swap (-s) the active and inactive lists, and update the interface
             // list (-y) for the GZ-controlled ipf stack (-G)
-            return ipf(['-G', '-s', '-y', uuid], log, callback);
+            var swapOpts = ['-G', '-s', '-y', uuid];
+            if (OLD) {
+                swapOpts = ['-s', '-y', uuid];
+            }
+
+            return ipf(swapOpts, log, callback);
         });
     });
 }
@@ -134,7 +157,11 @@ function zoneRuleStats(uuid, log, callback) {
     assert.object(log, 'log');
     assert.func(callback, 'callback');
 
-    return ipfstat(['-hoi', '-G', uuid], log, function (err, res) {
+    var statOpts = ['-hoi', '-G', uuid];
+    if (OLD) {
+        statOpts = ['-hoi', '-z', uuid];
+    }
+    return ipfstat(statOpts, log, function (err, res) {
         if (!res.stdout) {
             return callback(new Error('No output from ipfstat'), res);
         }
@@ -169,7 +196,11 @@ function zoneStatus(uuid, log, callback) {
     assert.object(log, 'log');
     assert.func(callback, 'callback');
 
-    return ipf(['-GV', uuid], log, function (err, res) {
+    var statusOpts = ['-GV', uuid];
+    if (OLD) {
+        statusOpts = ['-V', uuid];
+    }
+    return ipf(statusOpts, log, function (err, res) {
         if (err) {
             return callback(err, res);
         }
@@ -228,7 +259,11 @@ function zoneStart(uuid, log, callback) {
     assert.object(log, 'log');
     assert.func(callback, 'callback');
 
-    return ipf(['-GE', uuid], log, callback);
+    var startOpts = ['-GE', uuid];
+    if (OLD) {
+        startOpts = ['-E', uuid];
+    }
+    return ipf(startOpts, log, callback);
 }
 
 
@@ -244,12 +279,18 @@ function zoneStop(uuid, log, callback) {
     assert.object(log, 'log');
     assert.func(callback, 'callback');
 
-    return ipf(['-GD', uuid], log, callback);
+    var stopOpts = ['-GD', uuid];
+    if (OLD) {
+        stopOpts = ['-D', uuid];
+    }
+
+    return ipf(stopOpts, log, callback);
 }
 
 
 
 module.exports = {
+    _setOld: setOld,
     ipf: ipf,
     ipfstat: ipfstat,
     reload: zoneReload,

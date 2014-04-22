@@ -2452,6 +2452,7 @@ function validatePayload(opts, callback) {
 
 
 module.exports = {
+    _setOldIPF: mod_ipf._setOld,
     add: add,
     del: del,
     disable: disableVM,

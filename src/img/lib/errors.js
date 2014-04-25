@@ -289,8 +289,8 @@ function PrepareImageDidNotRunError(cause, vmUuid) {
     assert.string(vmUuid, 'vmUuid');
     ImgadmError.call(this, {
         cause: cause,
-        message: format('prepare-image script did not indicate it was run '
-            + '(old guest tools in VM %s?)', vmUuid),
+        message: format('prepare-image script did not run on VM %s boot',
+            vmUuid),
         code: 'PrepareImageDidNotRun',
         exitStatus: 1
     });

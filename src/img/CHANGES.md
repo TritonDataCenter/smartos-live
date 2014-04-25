@@ -1,5 +1,12 @@
 # imgadm changelog
 
+## 2.6.10
+
+- [IMGAPI-395] Fix race in IMGAPI client that could result in
+  spurious 'imgadm import' errors.
+- [OS-2925] 'imgadm update' should include disabled images
+
+
 ## 2.6.9
 
 - [OS-2903] Error out with 'OriginNotFoundInSource' instead of crashing if

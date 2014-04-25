@@ -94,12 +94,12 @@ mkdir _repos
 (cd _repos && git clone git@git.joyent.com:node-sdc-clients.git)
 (cd _repos/node-sdc-clients && git checkout $SHA)
 mv _repos/node-sdc-clients/{package.json,lib} .
-(cd lib && rm -f config.js package.js ufds.js mapi.javascript assertions.js)
+(cd lib && rm -f config.js package.javascript ufds.js mapi.javascript assertions.js)
 
 if [[ -n "$LIBS" ]]; then
     for LIB in $(cd lib && ls -1 *api.js) amon.js ca.js; do
         if [[ -z $(echo "$LIBS" | grep "\<$LIB\>") ]]; then
-            rm -f lib/$LIB
+            rm lib/$LIB
         fi
     done
 fi
@@ -159,7 +159,7 @@ npm install async@$VER
 VER=$(json -f package.json dependencies.vasync)
 npm install vasync@$VER
 (cd node_modules/vasync \
-    && rm -rf .[a-z]* node_modules README.md examples Makefile* jsl.node.conf)
+    && rm -rf .[a-z]* node_modules README.md examples Makefile* jsl.node.conf tests)
 
 # jsprim (used by vasync)
 VER=$(json -f node_modules/vasync/package.json dependencies.jsprim)

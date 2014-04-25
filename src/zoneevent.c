@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +13,13 @@ sysevent_handle_t * sysev_register(const char *klass,
     void (*handler)(sysevent_t *));
 evchan_t * sysev_register_evc(const char *channel, const char *klass,
     int (*handler)(sysevent_t *, void *));
+
+static void
+exit_on_sigpipe(int signo) {
+    // no point outputing anything, parent is gone.
+    signo = signo; // quiet -Wall
+    exit(2);
+}
 
 static int
 sysev_evc_handler(sysevent_t *ev, void *cookie)
@@ -113,10 +121,16 @@ main(int argc, char **argv)
     argc = argc;
     argv = argv;
 
+    if (signal(SIGPIPE, exit_on_sigpipe) == SIG_ERR) {
+        fprintf(stderr, "failed to register SIGPIPE handler: %s\n",
+            strerror(errno));
+        exit(1);
+    }
+
     ch = sysev_register_evc("com.sun:zones:status", "status",
         sysev_evc_handler);
     if (!ch) {
-        fprintf(stderr, "failed to register event handler.");
+        fprintf(stderr, "failed to register event handler.\n");
         exit(1);
     }
 

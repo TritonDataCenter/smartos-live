@@ -42,10 +42,6 @@ check:
 .PHONY: update_modules
 update_modules:
 	rm -rf node_modules
-	./tools/mk-sdc-clients-light.sh \
-		$(shell json -f package.json dependencies.sdc-clients | cut -d'#' -f2) \
-		node_modules/sdc-clients imgapi.js dsapi.js
-	./tools/mk-nodeunit-light.sh $(shell json -f package.json devDependencies.nodeunit)
 	npm install
 	for dep in $(shell json -f package.json dependencies devDependencies \
 			| json --keys -a --merge \
@@ -71,6 +67,10 @@ update_modules:
 	done;
 	rm -rf node_modules/progbar/node_modules/assert-plus  # slight version mismatch
 	rm -rf node_modules/imgmanifest/node_modules/assert-plus  # slight version mismatch
+	./tools/mk-sdc-clients-light.sh \
+		$(shell json -f package.json dependencies.sdc-clients | cut -d'#' -f2) \
+		node_modules/sdc-clients imgapi.js dsapi.js
+	./tools/mk-nodeunit-light.sh $(shell json -f package.json devDependencies.nodeunit)
 
 
 

@@ -1,6 +1,12 @@
 # imgadm changelog
 
+## 2.6.11
+
+- [OS-2961] Fix a breakage in 'imgadm import' introduced in version 2.6.10.
+
 ## 2.6.10
+
+Note: This was a bad version. Use 2.6.11 or later.
 
 - [IMGAPI-395] Fix race in IMGAPI client that could result in
   spurious 'imgadm import' errors.

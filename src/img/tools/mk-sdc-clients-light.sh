@@ -176,6 +176,12 @@ npm install keep-alive-agent@$VER
 (cd node_modules/keep-alive-agent \
     && rm -rf .[a-z]* node_modules README.md test)
 
+# tunnel-agent (used by restify)
+VER=$(json -f node_modules/restify/package.json dependencies.tunnel-agent)
+npm install tunnel-agent@$VER
+(cd node_modules/tunnel-agent \
+    && rm -rf .[a-z]* node_modules README.md test.js)
+
 # lru-cache
 VER=$(json -f package.json dependencies.lru-cache)
 npm install lru-cache@$VER

@@ -200,6 +200,7 @@ f usr/img/node_modules/sdc-clients/node_modules/restify/lib/errors/index.js 0444
 f usr/img/node_modules/sdc-clients/node_modules/restify/lib/errors/rest_error.js 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/restify/lib/http_date.js 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/restify/lib/index.js 0444 root bin
+f usr/img/node_modules/sdc-clients/node_modules/restify/lib/upgrade.js 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/restify/lib/utils.js 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/restify/LICENSE 0444 root bin
 f usr/img/node_modules/sdc-clients/node_modules/restify/package.json 0444 root bin

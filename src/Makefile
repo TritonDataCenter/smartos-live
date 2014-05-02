@@ -334,7 +334,6 @@ install: all
 	mkdir -p $(PREFIX_NODE)/node_modules/{zsock,zutil}/build/Release
 	mkdir -p $(DESTDIR)/usr/vm/test/tests
 	cp -Pr vm/common $(DESTDIR)/usr/vm/test/
-	cp -Pr vm/node-tap $(DESTDIR)/usr/vm/test/
 	mkdir -p $(DESTDIR)/usr/vm/test/tests
 	cp -Pr vm/tests/*.js $(DESTDIR)/usr/vm/test/tests/
 	cp -Pr vm/tests/testdata $(DESTDIR)/usr/vm/test/

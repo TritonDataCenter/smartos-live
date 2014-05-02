@@ -8,11 +8,12 @@ var bunyan = require('/usr/vm/node_modules/bunyan');
 var log;
 var vmload_datasets = require('/usr/vm/node_modules/vmload/vmload-datasets');
 
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
+
 // save some typing
 var getDatasets = vmload_datasets.getDatasets;
-
-// this puts test stuff in global
-require('nodeunit-plus');
 
 // TODO: logger that errors when message >= WARN
 log = bunyan.createLogger({

@@ -1,18 +1,19 @@
-// Copyright 2012 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 //
 // Test setting antispoof opts on nics
 //
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var dladm = require('/usr/vm/node_modules/dladm');
 var vmtest = require('../common/vmtest.js');
 
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
+
 VM.loglevel = 'DEBUG';
 
-var test_opts = {'timeout': 240000};
 var smartos_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var ubuntu_uuid = vmtest.CURRENT_UBUNTU_UUID;
 
@@ -37,30 +38,30 @@ function nic_link_props(opts, callback) {
 }
 
 function brand_test(brand, image, t) {
-    var state = { 'brand': brand };
+    var state = { brand: brand };
     var ips = ['10.3.0.200', '10.4.0.200', '10.5.0.200', '10.6.0.200'];
     var payload = {
-        'autoboot': true,
-        'brand': brand,
-        'do_not_inventory': true,
-        'alias': 'autozone-' + process.pid,
-        'nowait': false,
-        'nics': [
-          { 'nic_tag': 'admin',
-            'ip': ips[0],
-            'netmask': '255.255.255.0' },
-          { 'nic_tag': 'external',
-            'ip': ips[1],
-            'netmask': '255.255.255.0' },
-          { 'nic_tag': 'external',
-            'ip': ips[2],
-            'netmask': '255.255.255.0' },
-          { 'nic_tag': 'admin',
-            'ip': ips[3],
-            'netmask': '255.255.255.0',
-            'allow_dhcp_spoofing': true,
-            'allow_mac_spoofing': true,
-            'allowed_ips': [ '10.6.0.201', '10.6.0.202', '10.6.0.0/25' ]
+        autoboot: true,
+        brand: brand,
+        do_not_inventory: true,
+        alias: 'autozone-' + process.pid,
+        nowait: false,
+        nics: [
+          { nic_tag: 'admin',
+            ip: ips[0],
+            netmask: '255.255.255.0' },
+          { nic_tag: 'external',
+            ip: ips[1],
+            netmask: '255.255.255.0' },
+          { nic_tag: 'external',
+            ip: ips[2],
+            netmask: '255.255.255.0' },
+          { nic_tag: 'admin',
+            ip: ips[3],
+            netmask: '255.255.255.0',
+            allow_dhcp_spoofing: true,
+            allow_mac_spoofing: true,
+            allowed_ips: [ '10.6.0.201', '10.6.0.202', '10.6.0.0/25' ]
           }
         ]
     };
@@ -150,9 +151,9 @@ function brand_test(brand, image, t) {
 
         }, function (cb) {
             // Updating a nic to have more than 13 allowed_ips should fail
-            VM.update(state.uuid, {'update_nics': [
-                { 'mac': state.nics[2].mac,
-                  'allowed_ips': [ '10.5.0.201', '10.5.0.202', '10.5.0.202',
+            VM.update(state.uuid, { update_nics: [
+                { mac: state.nics[2].mac,
+                  allowed_ips: [ '10.5.0.201', '10.5.0.202', '10.5.0.202',
                     '10.5.0.203', '10.5.0.204', '10.5.0.205', '10.5.0.206',
                     '10.5.0.207', '10.5.0.208', '10.5.0.209', '10.5.0.210',
                     '10.5.0.211', '10.5.0.212', '10.5.0.213', '10.5.0.214' ]
@@ -174,20 +175,20 @@ function brand_test(brand, image, t) {
             //   net0: set ip and mac spoofing
             //   net1: allow all spoofing
             //   net1: change allowed_ips only
-            VM.update(state.uuid, {'update_nics': [
-                { 'mac': state.nics[0].mac,
-                  'allow_ip_spoofing': true,
-                  'allow_mac_spoofing': true,
+            VM.update(state.uuid, {update_nics: [
+                { mac: state.nics[0].mac,
+                  allow_ip_spoofing: true,
+                  allow_mac_spoofing: true,
                 },
                 // disable all
-                { 'mac': state.nics[1].mac,
-                  'allow_ip_spoofing': true,
-                  'allow_mac_spoofing': true,
-                  'allow_dhcp_spoofing': true,
-                  'allow_restricted_traffic': true
+                { mac: state.nics[1].mac,
+                  allow_ip_spoofing: true,
+                  allow_mac_spoofing: true,
+                  allow_dhcp_spoofing: true,
+                  allow_restricted_traffic: true
                 },
-                { 'mac': state.nics[2].mac,
-                  'allowed_ips': [ '10.5.0.201', '10.5.0.202' ]
+                { mac: state.nics[2].mac,
+                  allowed_ips: [ '10.5.0.201', '10.5.0.202' ]
                 }
             ]}, function (e) {
 
@@ -298,9 +299,9 @@ function brand_test(brand, image, t) {
 
         }, function (cb) {
             // update net1 to disable dhcp spoofing
-            VM.update(state.uuid, {'update_nics': [
-                { 'mac': state.nics[1].mac,
-                  'allow_dhcp_spoofing': false,
+            VM.update(state.uuid, {update_nics: [
+                { mac: state.nics[1].mac,
+                  allow_dhcp_spoofing: false,
                 }]},
                 function (e) {
 
@@ -500,19 +501,19 @@ function brand_test(brand, image, t) {
 }
 
 
-test('joyent-minimal: antispoof options update without reboot', test_opts,
+test('joyent-minimal: antispoof options update without reboot',
     function (t) {
     brand_test('joyent-minimal', smartos_uuid, t);
     return;
 });
 
-test('joyent: antispoof options update without reboot', test_opts,
+test('joyent: antispoof options update without reboot',
     function (t) {
     brand_test('joyent', smartos_uuid, t);
     return;
 });
 
-test('kvm: antispoof options update without reboot', test_opts,
+test('kvm: antispoof options update without reboot',
     function (t) {
     brand_test('kvm', ubuntu_uuid, t);
     return;

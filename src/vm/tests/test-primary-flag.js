@@ -1,25 +1,32 @@
-// Copyright 2012 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that default values don't change accidentally.
 //
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 
-test('create VM with 2 nics', {'timeout': 240000}, function(t) {
-    var state = {'brand': 'joyent-minimal'};
-    vmtest.on_new_vm(t, image_uuid,
-        {'autoboot': false, 'do_not_inventory': true,
-        'alias': 'autozone-' + process.pid, 'nowait': true,
-        'nics': [{'nic_tag': 'admin', 'ip': 'dhcp'},
-        {'nic_tag': 'admin', 'ip': 'dhcp'}]}, state, [
+test('create VM with 2 nics', function(t) {
+    var state = {brand: 'joyent-minimal'};
+    vmtest.on_new_vm(t, image_uuid, {
+        autoboot: false,
+        do_not_inventory: true,
+        alias: 'autozone-' + process.pid,
+        nowait: true,
+        nics: [
+            {nic_tag: 'admin', ip: 'dhcp'},
+            {nic_tag: 'admin', ip: 'dhcp'}
+        ]
+    }, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 var has_primary = 0;
@@ -72,7 +79,7 @@ test('create VM with 2 nics', {'timeout': 240000}, function(t) {
                     return;
                 }
 
-                VM.update(state.uuid, {'update_nics': [{'mac': update_mac, 'primary': true}]},
+                VM.update(state.uuid, {update_nics: [{mac: update_mac, primary: true}]},
                     function (e) {
 
                     t.ok((!e), 'updating to set non-primary -> primary');
@@ -115,7 +122,7 @@ test('create VM with 2 nics', {'timeout': 240000}, function(t) {
                     }
                 }
 
-                VM.update(state.uuid, {'update_nics': [{'mac': update_mac, 'primary': false}]}, function (e) {
+                VM.update(state.uuid, {update_nics: [{mac: update_mac, primary: false}]}, function (e) {
 
                     t.ok(e, 'updating to set primary=false failed');
                     cb();
@@ -138,7 +145,7 @@ test('create VM with 2 nics', {'timeout': 240000}, function(t) {
                     }
                 }
 
-                VM.update(state.uuid, {'update_nics': [{'mac': update_mac, 'primary': 'blah'}]},
+                VM.update(state.uuid, {update_nics: [{mac: update_mac, primary: 'blah'}]},
                     function (e) {
 
                     t.ok(e, 'updating to set primary="blah" failed');
@@ -160,7 +167,7 @@ test('create VM with 2 nics', {'timeout': 240000}, function(t) {
                     existing_macs.push(n.mac);
                 }
 
-                VM.update(state.uuid, {'add_nics': [{'primary': true, 'nic_tag': 'admin', 'ip': 'dhcp'}]},
+                VM.update(state.uuid, {add_nics: [{primary: true, nic_tag: 'admin', ip: 'dhcp'}]},
                     function (e) {
 
                     t.ok(!e, 'add nic failed');
@@ -196,12 +203,18 @@ test('create VM with 2 nics', {'timeout': 240000}, function(t) {
     });
 });
 
-test('create VM with 2 nics (second primary)', {'timeout': 240000}, function(t) {
-    var state = {'brand': 'joyent-minimal'};
-    vmtest.on_new_vm(t, image_uuid,
-        {'autoboot': false, 'do_not_inventory': true,
-        'alias': 'autozone-' + process.pid, 'nowait': true,
-        'nics': [{'nic_tag': 'admin', 'ip': 'dhcp'}, {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': 1}]}, state, [
+test('create VM with 2 nics (second primary)', function(t) {
+    var state = {brand: 'joyent-minimal'};
+    vmtest.on_new_vm(t, image_uuid, {
+        autoboot: false,
+        do_not_inventory: true,
+        alias: 'autozone-' + process.pid,
+        nowait: true,
+        nics: [
+            {nic_tag: 'admin', ip: 'dhcp'},
+            {nic_tag: 'admin', ip: 'dhcp', primary: 1}
+        ]
+    }, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 var has_primary = 0;
@@ -231,36 +244,39 @@ test('create VM with 2 nics (second primary)', {'timeout': 240000}, function(t) 
     });
 });
 
-test('create VM with 3 nics (all primary)', {'timeout': 240000}, function(t) {
+test('create VM with 3 nics (all primary)', function(t) {
     var state = {
-        'brand': 'joyent-minimal',
-        'expect_create_failure': true
+        brand: 'joyent-minimal',
+        expect_create_failure: true
     };
-    vmtest.on_new_vm(t, image_uuid,
-        {'autoboot': false, 'do_not_inventory': true,
-        'alias': 'autozone-' + process.pid, 'nowait': true,
-        'nics': [{'nic_tag': 'admin', 'ip': 'dhcp', 'primary': true},
-        {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': true},
-        {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': 1}]}, state, [],
-    function (err) {
+    vmtest.on_new_vm(t, image_uuid, {
+        autoboot: false,
+        do_not_inventory: true,
+        alias: 'autozone-' + process.pid,
+        nowait: true,
+        nics: [
+            {nic_tag: 'admin', ip: 'dhcp', primary: true},
+            {nic_tag: 'admin', ip: 'dhcp', primary: true},
+            {nic_tag: 'admin', ip: 'dhcp', primary: 1}
+        ]
+    }, state, [], function (err) {
         t.end();
     });
 });
 
-test('create VM with 3 nics (one primary, 2 false)', {'timeout': 240000}, function(t) {
-    var state = { 'brand': 'joyent-minimal' };
-    vmtest.on_new_vm(t, image_uuid,
-        {
-            'autoboot': false,
-            'do_not_inventory': true,
-            'alias': 'autozone-' + process.pid,
-            'nowait': true,
-            'nics': [
-                {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': true},
-                {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': false},
-                {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': false}
-            ]}, state,
-    [
+test('create VM with 3 nics (one primary, 2 false)', function(t) {
+    var state = { brand: 'joyent-minimal' };
+    vmtest.on_new_vm(t, image_uuid, {
+        autoboot: false,
+        do_not_inventory: true,
+        alias: 'autozone-' + process.pid,
+        nowait: true,
+        nics: [
+            {nic_tag: 'admin', ip: 'dhcp', primary: true},
+            {nic_tag: 'admin', ip: 'dhcp', primary: false},
+            {nic_tag: 'admin', ip: 'dhcp', primary: false}
+        ]
+    }, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
                 var has_primary = 0;
@@ -291,44 +307,44 @@ test('create VM with 3 nics (one primary, 2 false)', {'timeout': 240000}, functi
     });
 });
 
-test('create VM with 3 nics (all false)', {'timeout': 240000}, function(t) {
-    var state = { 'brand': 'joyent-minimal' };
-    vmtest.on_new_vm(t, image_uuid,
-        {
-            'autoboot': false,
-            'do_not_inventory': true,
-            'alias': 'autozone-' + process.pid,
-            'nowait': true,
-            'nics': [
-                {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': false},
-                {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': false},
-                {'nic_tag': 'admin', 'ip': 'dhcp', 'primary': false}
-            ]}, state, [
-                function (cb) {
-                    VM.load(state.uuid, function(err, obj) {
-                        var has_primary = 0;
-                        var n;
+test('create VM with 3 nics (all false)', function(t) {
+    var state = { brand: 'joyent-minimal' };
+    vmtest.on_new_vm(t, image_uuid, {
+        autoboot: false,
+        do_not_inventory: true,
+        alias: 'autozone-' + process.pid,
+        nowait: true,
+        nics: [
+            {nic_tag: 'admin', ip: 'dhcp', primary: false},
+            {nic_tag: 'admin', ip: 'dhcp', primary: false},
+            {nic_tag: 'admin', ip: 'dhcp', primary: false}
+        ]
+    }, state, [
+        function (cb) {
+            VM.load(state.uuid, function(err, obj) {
+                var has_primary = 0;
+                var n;
 
-                        if (err) {
-                            t.ok(false, 'load obj from new VM: ' + err.message);
-                            return cb(err);
-                        }
+                if (err) {
+                    t.ok(false, 'load obj from new VM: ' + err.message);
+                    return cb(err);
+                }
 
-                        for (n in obj.nics) {
-                            n = obj.nics[n];
-                            if (n.hasOwnProperty('primary')) {
-                                t.ok((n.primary === true),
-                                    'nic.primary is boolean true');
-                                has_primary++;
-                            }
-                        }
+                for (n in obj.nics) {
+                    n = obj.nics[n];
+                    if (n.hasOwnProperty('primary')) {
+                        t.ok((n.primary === true),
+                            'nic.primary is boolean true');
+                        has_primary++;
+                    }
+                }
 
-                        t.ok((has_primary === 1), 'VM has ' + has_primary + ' primary'
-                            + ' nics, expected: 1');
-                        cb();
-                    });
-            }],
-    function (err) {
+                t.ok((has_primary === 1), 'VM has ' + has_primary + ' primary'
+                    + ' nics, expected: 1');
+                cb();
+            });
+        }
+    ], function (err) {
         t.end();
     });
 });

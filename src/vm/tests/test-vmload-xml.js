@@ -10,13 +10,15 @@ var log = bunyan.createLogger({level: 'debug', name: 'test-vmload-xml', serializ
 var path = require('path');
 var vmload_xml = require('/usr/vm/node_modules/vmload/vmload-xml');
 
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
+
 // save some typing
 var getVmobjXML = vmload_xml.getVmobjXML;
 var getVmobjXMLFile = vmload_xml.getVmobjXMLFile;
 
 var TESTDIR = '/usr/vm/test/testdata/vmload-xml';
-
-require('nodeunit-plus');
 
 /*
  * TODO: logger that errors when message >= WARN

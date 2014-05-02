@@ -3,18 +3,20 @@
 // Tests for VM.lookup()
 //
 
-process.env['TAP'] = 1;
 var execFile = require('child_process').execFile;
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 
-test('test tag lookup', {'timeout': 240000}, function(t) {
-    state = {'brand': 'joyent-minimal'};
+test('test tag lookup', function(t) {
+    state = {brand: 'joyent-minimal'};
     vmtest.on_new_vm(t, image_uuid, {
         do_not_inventory: true,
         tags: {'bigbaddaboom': 'multipass'}

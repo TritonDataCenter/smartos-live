@@ -1,12 +1,14 @@
-// Copyright 2012 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
 var execFile = cp.execFile;
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
@@ -17,16 +19,16 @@ var vmobj;
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var vm_image_uuid = vmtest.CURRENT_UBUNTU_UUID;
 
-test('create zone with root_recsize 64k', {'timeout': 240000}, function(t) {
+test('create zone with root_recsize 64k', function(t) {
     var payload = {
-        'brand': 'joyent-minimal',
-        'autoboot': false,
-        'image_uuid': image_uuid,
-        'alias': 'test-recsize-' + process.pid,
-        'do_not_inventory': true,
-        'delegate_dataset': true,
-        'zfs_root_recsize': 65536,
-        'zfs_data_recsize': 1024
+        brand: 'joyent-minimal',
+        autoboot: false,
+        image_uuid: image_uuid,
+        alias: 'test-recsize-' + process.pid,
+        do_not_inventory: true,
+        delegate_dataset: true,
+        zfs_root_recsize: 65536,
+        zfs_data_recsize: 1024
     };
 
     VM.create(payload, function (err, obj) {
@@ -57,7 +59,7 @@ test('create zone with root_recsize 64k', {'timeout': 240000}, function(t) {
 function testInvalidRootRecsize(t, size, vmobj, callback)
 {
     var payload = {
-        'zfs_root_recsize': size
+        zfs_root_recsize: size
     };
     var prev_size = vmobj.zfs_root_recsize;
 
@@ -92,7 +94,7 @@ function testInvalidRootRecsize(t, size, vmobj, callback)
 function testValidRootRecsize(t, size, vmobj, callback)
 {
     var payload = {
-        'zfs_root_recsize': size
+        zfs_root_recsize: size
     };
     var prev_size = vmobj.zfs_root_recsize;
 
@@ -129,7 +131,7 @@ function testValidRootRecsize(t, size, vmobj, callback)
 }
 
 // test too low
-test('update zone with root_recsize 256', {'timeout': 240000}, function(t) {
+test('update zone with root_recsize 256', function(t) {
     var payload;
 
     if (abort) {
@@ -144,7 +146,7 @@ test('update zone with root_recsize 256', {'timeout': 240000}, function(t) {
 });
 
 // test too high
-test('update zone with root_recsize 132096', {'timeout': 240000}, function(t) {
+test('update zone with root_recsize 132096', function(t) {
     var payload;
 
     if (abort) {
@@ -159,7 +161,7 @@ test('update zone with root_recsize 132096', {'timeout': 240000}, function(t) {
 });
 
 // test not-a-power-of-2
-test('update zone with root_recsize 31337', {'timeout': 240000}, function(t) {
+test('update zone with root_recsize 31337', function(t) {
     var payload;
 
     if (abort) {
@@ -173,7 +175,7 @@ test('update zone with root_recsize 31337', {'timeout': 240000}, function(t) {
     });
 });
 
-test('update zone with root_recsize 512', {'timeout': 240000}, function(t) {
+test('update zone with root_recsize 512', function(t) {
     var payload;
 
     if (abort) {
@@ -187,7 +189,7 @@ test('update zone with root_recsize 512', {'timeout': 240000}, function(t) {
     });
 });
 
-test('update zone with root_recsize 131072', {'timeout': 240000}, function(t) {
+test('update zone with root_recsize 131072', function(t) {
     var payload;
 
     if (abort) {
@@ -201,7 +203,7 @@ test('update zone with root_recsize 131072', {'timeout': 240000}, function(t) {
     });
 });
 
-test('update zone with root_recsize 32768', {'timeout': 240000}, function(t) {
+test('update zone with root_recsize 32768', function(t) {
     var payload;
 
     if (abort) {
@@ -215,7 +217,7 @@ test('update zone with root_recsize 32768', {'timeout': 240000}, function(t) {
     });
 });
 
-test('delete zone', function(t) {
+test('delete root_recsize test zone', function(t) {
     if (abort) {
         t.ok(false, 'skipping send as test run is aborted.');
         t.end();
@@ -239,15 +241,15 @@ test('delete zone', function(t) {
     }
 });
 
-test('create zone with data_recsize 64k', {'timeout': 240000}, function(t) {
+test('create zone with data_recsize 64k', function(t) {
     var payload = {
-        'brand': 'joyent-minimal',
-        'autoboot': false,
-        'image_uuid': image_uuid,
-        'alias': 'test-recsize-' + process.pid,
-        'do_not_inventory': true,
-        'delegate_dataset': true,
-        'zfs_data_recsize': 65536
+        brand: 'joyent-minimal',
+        autoboot: false,
+        image_uuid: image_uuid,
+        alias: 'test-recsize-' + process.pid,
+        do_not_inventory: true,
+        delegate_dataset: true,
+        zfs_data_recsize: 65536
     };
 
     VM.create(payload, function (err, obj) {
@@ -275,7 +277,7 @@ test('create zone with data_recsize 64k', {'timeout': 240000}, function(t) {
 function testInvalidDataRecsize(t, size, vmobj, callback)
 {
     var payload = {
-        'zfs_data_recsize': size
+        zfs_data_recsize: size
     };
     var prev_size = vmobj.zfs_data_recsize;
 
@@ -310,7 +312,7 @@ function testInvalidDataRecsize(t, size, vmobj, callback)
 function testValidDataRecsize(t, size, vmobj, callback)
 {
     var payload = {
-        'zfs_data_recsize': size
+        zfs_data_recsize: size
     };
     var prev_size = vmobj.zfs_data_recsize;
 
@@ -342,7 +344,7 @@ function testValidDataRecsize(t, size, vmobj, callback)
 }
 
 // test too low
-test('update zone with data_recsize 256', {'timeout': 240000}, function(t) {
+test('update zone with data_recsize 256', function(t) {
     var payload;
 
     if (abort) {
@@ -357,7 +359,7 @@ test('update zone with data_recsize 256', {'timeout': 240000}, function(t) {
 });
 
 // test too high
-test('update zone with data_recsize 132096', {'timeout': 240000}, function(t) {
+test('update zone with data_recsize 132096', function(t) {
     var payload;
 
     if (abort) {
@@ -372,7 +374,7 @@ test('update zone with data_recsize 132096', {'timeout': 240000}, function(t) {
 });
 
 // test not-a-power-of-2
-test('update zone with data_recsize 31337', {'timeout': 240000}, function(t) {
+test('update zone with data_recsize 31337', function(t) {
     var payload;
 
     if (abort) {
@@ -386,7 +388,7 @@ test('update zone with data_recsize 31337', {'timeout': 240000}, function(t) {
     });
 });
 
-test('update zone with data_recsize 512', {'timeout': 240000}, function(t) {
+test('update zone with data_recsize 512', function(t) {
     var payload;
 
     if (abort) {
@@ -400,7 +402,7 @@ test('update zone with data_recsize 512', {'timeout': 240000}, function(t) {
     });
 });
 
-test('update zone with data_recsize 131072', {'timeout': 240000}, function(t) {
+test('update zone with data_recsize 131072', function(t) {
     var payload;
 
     if (abort) {
@@ -414,7 +416,7 @@ test('update zone with data_recsize 131072', {'timeout': 240000}, function(t) {
     });
 });
 
-test('update zone with data_recsize 32768', {'timeout': 240000}, function(t) {
+test('update zone with data_recsize 32768', function(t) {
     var payload;
 
     if (abort) {
@@ -428,7 +430,7 @@ test('update zone with data_recsize 32768', {'timeout': 240000}, function(t) {
     });
 });
 
-test('delete zone', function(t) {
+test('delete data_recsize test zone', function(t) {
     if (abort) {
         t.ok(false, 'skipping send as test run is aborted.');
         t.end();
@@ -452,15 +454,15 @@ test('delete zone', function(t) {
     }
 });
 
-test('create zone with compression', {'timeout': 240000}, function(t) {
+test('create zone with compression', function(t) {
     var payload = {
-        'brand': 'joyent-minimal',
-        'autoboot': false,
-        'image_uuid': image_uuid,
-        'alias': 'test-recsize-' + process.pid,
-        'do_not_inventory': true,
-        'delegate_dataset': true,
-        'zfs_root_compression': 'gzip'
+        brand: 'joyent-minimal',
+        autoboot: false,
+        image_uuid: image_uuid,
+        alias: 'test-recsize-' + process.pid,
+        do_not_inventory: true,
+        delegate_dataset: true,
+        zfs_root_compression: 'gzip'
     };
 
     VM.create(payload, function (err, obj) {
@@ -488,9 +490,9 @@ test('create zone with compression', {'timeout': 240000}, function(t) {
     });
 });
 
-test('update zone with compression off', {'timeout': 240000}, function(t) {
+test('update zone with compression off', function(t) {
     var payload = {
-        'zfs_root_compression': 'off'
+        zfs_root_compression: 'off'
     };
 
     if (abort) {
@@ -523,9 +525,9 @@ test('update zone with compression off', {'timeout': 240000}, function(t) {
     });
 });
 
-test('update zone with compression gzip-2 for data', {'timeout': 240000}, function(t) {
+test('update zone with compression gzip-2 for data', function(t) {
     var payload = {
-        'zfs_data_compression': 'gzip-2'
+        zfs_data_compression: 'gzip-2'
     };
 
     if (abort) {
@@ -562,7 +564,7 @@ test('update zone with compression gzip-2 for data', {'timeout': 240000}, functi
     });
 });
 
-test('delete zone', function(t) {
+test('delete compression test zone', function(t) {
     if (abort) {
         t.ok(false, 'skipping send as test run is aborted.');
         t.end();
@@ -586,17 +588,17 @@ test('delete zone', function(t) {
     }
 });
 
-test('create KVM with block_size 64k', {'timeout': 240000}, function(t) {
+test('create KVM with block_size 64k', function(t) {
     var payload = {
-        'brand': 'kvm',
-        'autoboot': false,
-        'alias': 'test-recsize-' + process.pid,
-        'do_not_inventory': true,
-        'ram': 128,
-        'disks': [{
-            'size': 5120,
-            'model': 'virtio',
-            'block_size': '65536'
+        brand: 'kvm',
+        autoboot: false,
+        alias: 'test-recsize-' + process.pid,
+        do_not_inventory: true,
+        ram: 128,
+        disks: [{
+            size: 5120,
+            model: 'virtio',
+            block_size: '65536'
         }]
     };
 
@@ -625,7 +627,11 @@ test('create KVM with block_size 64k', {'timeout': 240000}, function(t) {
 function testAddDiskInvalidBlockSize(t, size, vmobj, callback)
 {
     var payload = {
-        'add_disks': [{'size': size, 'model': 'virtio', 'block_size': size}]
+        add_disks: [{
+            size: size,
+            model: 'virtio',
+            block_size: size
+        }]
     };
     var prev_count = vmobj.disks.length;
 
@@ -658,7 +664,7 @@ function testAddDiskInvalidBlockSize(t, size, vmobj, callback)
 }
 
 // test too low
-test('update kvm with block_size 256', {'timeout': 240000}, function(t) {
+test('update kvm with block_size 256', function(t) {
     var payload;
 
     if (abort) {
@@ -673,7 +679,7 @@ test('update kvm with block_size 256', {'timeout': 240000}, function(t) {
 });
 
 // test too high
-test('update kvm with block_size 132096', {'timeout': 240000}, function(t) {
+test('update kvm with block_size 132096', function(t) {
     var payload;
 
     if (abort) {
@@ -688,7 +694,7 @@ test('update kvm with block_size 132096', {'timeout': 240000}, function(t) {
 });
 
 // test not-a-power-of-2
-test('update kvm with block_size 31337', {'timeout': 240000}, function(t) {
+test('update kvm with block_size 31337', function(t) {
     var payload;
 
     if (abort) {
@@ -702,7 +708,7 @@ test('update kvm with block_size 31337', {'timeout': 240000}, function(t) {
     });
 });
 
-test('delete vm', function(t) {
+test('delete kvm vm from blocksize test', function(t) {
     if (abort) {
         t.ok(false, 'skipping send as test run is aborted.');
         t.end();
@@ -725,17 +731,17 @@ test('delete vm', function(t) {
     }
 });
 
-test('create KVM with compression', {'timeout': 240000}, function(t) {
+test('create KVM with compression', function(t) {
     var payload = {
-        'brand': 'kvm',
-        'autoboot': false,
-        'alias': 'test-recsize-' + process.pid,
-        'do_not_inventory': true,
-        'ram': 128,
-        'disks': [{
-            'size': 5120,
-            'model': 'virtio',
-            'compression': 'gzip'
+        brand: 'kvm',
+        autoboot: false,
+        alias: 'test-recsize-' + process.pid,
+        do_not_inventory: true,
+        ram: 128,
+        disks: [{
+            size: 5120,
+            model: 'virtio',
+            compression: 'gzip'
         }]
     };
 
@@ -761,10 +767,10 @@ test('create KVM with compression', {'timeout': 240000}, function(t) {
     });
 });
 
-test('update kvm with compression off', {'timeout': 240000}, function(t) {
+test('update kvm with compression off', function(t) {
     var payload = {
-        'update_disks': [
-            {'path': vmobj.disks[0].path, 'compression': 'off'}
+        update_disks: [
+            {path: vmobj.disks[0].path, compression: 'off'}
         ]
     };
 
@@ -798,7 +804,7 @@ test('update kvm with compression off', {'timeout': 240000}, function(t) {
     });
 });
 
-test('delete vm', function(t) {
+test('delete kvm vm from compression test', function(t) {
     if (abort) {
         t.ok(false, 'skipping send as test run is aborted.');
         t.end();

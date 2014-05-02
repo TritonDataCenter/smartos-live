@@ -1,14 +1,16 @@
-// Copyright 2013 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that delete behaves correctly.
 //
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
@@ -34,7 +36,7 @@ function getUUID(callback)
 
 // w/ OS-2284 we sometimes blew up deleting a non-existent VM, test that we
 // haven't regressed.
-test('test deleting nonexistent VM', {'timeout': 240000}, function(t) {
+test('test deleting nonexistent VM', function(t) {
     var i;
 
     i = 0;

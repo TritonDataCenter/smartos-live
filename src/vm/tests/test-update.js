@@ -1,16 +1,18 @@
-// Copyright 2013 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 //
 // NOTE: we use 169.254.169.x as *non-Private* here because it's not in the
 // designated private ranges we're concerned with. It may cause problems in
 // which case it can be changed to some other non-Private address.
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
 var fs = require('fs');
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
@@ -18,143 +20,143 @@ var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var vm_uuid;
 
 var PAYLOADS = {
-    "create": {
-        "image_uuid": image_uuid,
-        "alias": "autotest" + process.pid,
-        "do_not_inventory": true
-    }, "add_net0": {
-        "add_nics": [
+    create: {
+        image_uuid: image_uuid,
+        alias: 'autotest' + process.pid,
+        do_not_inventory: true
+    }, add_net0: {
+        add_nics: [
             {
-                "ip": "10.254.254.254",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net0",
-                "vlan_id": 0,
-                "gateway": "10.254.254.1",
-                "mac": "01:02:03:04:05:06"
+                ip: '10.254.254.254',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net0',
+                vlan_id: 0,
+                gateway: '10.254.254.1',
+                mac: '01:02:03:04:05:06'
             }
         ]
-    }, "add_net1": {
-        "add_nics": [
+    }, add_net1: {
+        add_nics: [
             {
-                "ip": "10.99.99.12,10.99.99.33,10.99.99.34",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net1",
-                "vlan_id": 0,
-                "gateway": "10.254.254.1"
+                ip: '10.99.99.12,10.99.99.33,10.99.99.34',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net1',
+                vlan_id: 0,
+                gateway: '10.254.254.1'
             }
         ]
-    }, "add_invalid_allow_unfiltered_promisc": {
-        "update_nics": [
+    }, add_invalid_allow_unfiltered_promisc: {
+        update_nics: [
             {
-                "mac": "01:02:03:04:05:06",
-                "allow_unfiltered_promisc": true
+                mac: '01:02:03:04:05:06',
+                allow_unfiltered_promisc: true
             }
         ]
-    }, "remove_net0": {
-        "remove_nics": [
-            "01:02:03:04:05:06"
+    }, remove_net0: {
+        remove_nics: [
+            '01:02:03:04:05:06'
         ]
-    }, "add_net0_and_net1": {
-        "add_nics": [
+    }, add_net0_and_net1: {
+        add_nics: [
             {
-                "ip": "10.254.254.254",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net0",
-                "vlan_id": 0,
-                "gateway": "10.254.254.1",
-                "mac": "01:02:03:04:05:06"
+                ip: '10.254.254.254',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net0',
+                vlan_id: 0,
+                gateway: '10.254.254.1',
+                mac: '01:02:03:04:05:06'
             }, {
-                "ip": "10.254.254.253",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net1",
-                "vlan_id": 253,
-                "gateway": "10.254.254.1",
-                "mac": "02:03:04:05:06:07"
+                ip: '10.254.254.253',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net1',
+                vlan_id: 253,
+                gateway: '10.254.254.1',
+                mac: '02:03:04:05:06:07'
             }
         ]
-    }, "remove_net0_and_net1": {
-        "remove_nics": [
-            "01:02:03:04:05:06",
-            "02:03:04:05:06:07"
+    }, remove_net0_and_net1: {
+        remove_nics: [
+            '01:02:03:04:05:06',
+            '02:03:04:05:06:07'
         ]
 
-    }, "add_3_nics_2_non_private": {
-        "add_nics": [
+    }, add_3_nics_2_non_private: {
+        add_nics: [
             {
-                "ip": "10.254.254.254",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net0",
-                "vlan_id": 0,
-                "gateway": "10.254.254.1",
-                "mac": "01:02:03:04:05:06"
+                ip: '10.254.254.254',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net0',
+                vlan_id: 0,
+                gateway: '10.254.254.1',
+                mac: '01:02:03:04:05:06'
             }, {
-                "ip": "169.254.169.254",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net1",
-                "vlan_id": 254,
-                "gateway": "169.254.169.1",
-                "mac": "02:03:04:05:06:07",
-                "primary": true
+                ip: '169.254.169.254',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net1',
+                vlan_id: 254,
+                gateway: '169.254.169.1',
+                mac: '02:03:04:05:06:07',
+                primary: true
             }, {
-                "ip": "169.254.169.253",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net2",
-                "vlan_id": 253,
-                "gateway": "169.254.169.1",
-                "mac": "02:03:04:05:06:08"
+                ip: '169.254.169.253',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net2',
+                vlan_id: 253,
+                gateway: '169.254.169.1',
+                mac: '02:03:04:05:06:08'
             }
         ]
-    }, "add_3_nics_1_non_private": {
-        "add_nics": [
+    }, add_3_nics_1_non_private: {
+        add_nics: [
             {
-                "ip": "10.254.254.254",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net0",
-                "vlan_id": 0,
-                "gateway": "10.254.254.1",
-                "mac": "01:02:03:04:05:06"
+                ip: '10.254.254.254',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net0',
+                vlan_id: 0,
+                gateway: '10.254.254.1',
+                mac: '01:02:03:04:05:06'
             }, {
-                "ip": "169.254.169.254",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net1",
-                "vlan_id": 254,
-                "gateway": "169.254.169.1",
-                "mac": "02:03:04:05:06:07",
-                "primary": true
+                ip: '169.254.169.254',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net1',
+                vlan_id: 254,
+                gateway: '169.254.169.1',
+                mac: '02:03:04:05:06:07',
+                primary: true
             }, {
-                "ip": "10.254.254.253",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net2",
-                "vlan_id": 0,
-                "gateway": "10.254.254.1",
-                "mac": "02:03:04:05:06:08"
+                ip: '10.254.254.253',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net2',
+                vlan_id: 0,
+                gateway: '10.254.254.1',
+                mac: '02:03:04:05:06:08'
             }
         ]
-    }, "remove_net1": {
-        "remove_nics": [
-            "02:03:04:05:06:07"
+    }, remove_net1: {
+        remove_nics: [
+            '02:03:04:05:06:07'
         ]
-    }, "remove_net0_and_net2": {
-        "remove_nics": [
-            "01:02:03:04:05:06",
-            "02:03:04:05:06:08"
+    }, remove_net0_and_net2: {
+        remove_nics: [
+            '01:02:03:04:05:06',
+            '02:03:04:05:06:08'
         ]
-    }, "add_nic_with_minimal_properties": {
-        "add_nics": [
+    }, add_nic_with_minimal_properties: {
+        add_nics: [
             {
-                "mac": "01:02:03:04:05:06",
-                "ip": "dhcp",
-                "nic_tag": "admin"
+                mac: '01:02:03:04:05:06',
+                ip: 'dhcp',
+                nic_tag: 'admin'
             }
         ]
     }
@@ -169,7 +171,7 @@ simple_properties = [
     ['package_version', 'XP']
 ];
 
-test('create zone', {'timeout': 240000}, function(t) {
+test('create VM', function(t) {
     VM.create(PAYLOADS.create, function (err, vmobj) {
         if (err) {
             t.ok(false, 'error creating VM: ' + err.message);
@@ -182,7 +184,7 @@ test('create zone', {'timeout': 240000}, function(t) {
 });
 
 /* update ignores values you can't update so this test always fails for now
-test('update v: should fail', {'timeout': 240000}, function(t) {
+test('update v: should fail', function(t) {
     VM.update(vm_uuid, {v: 31337}, function (err) {
         t.ok(err, 'failed: ' + (err ? err.message : 'NO!'));
         if (err) {
@@ -365,7 +367,7 @@ test('add 3 nics, 2 non-private', function(t) {
     });
 });
 
-test('remove net1', function(t) {
+test('remove net1 -- 1st time', function(t) {
     VM.update(vm_uuid, PAYLOADS.remove_net1, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -387,7 +389,7 @@ test('remove net1', function(t) {
     });
 });
 
-test('remove net0 and net2', function(t) {
+test('remove net0 and net2 -- 1st time', function(t) {
     VM.update(vm_uuid, PAYLOADS.remove_net0_and_net2, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -431,7 +433,7 @@ test('add 3 nics, 1 non-private', function(t) {
     });
 });
 
-test('remove net1', function(t) {
+test('remove net1 -- 2nd time', function(t) {
     VM.update(vm_uuid, PAYLOADS.remove_net1, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -452,7 +454,7 @@ test('remove net1', function(t) {
     });
 });
 
-test('remove net0 and net2', function(t) {
+test('remove net0 and net2 -- 2nd time', function(t) {
     VM.update(vm_uuid, PAYLOADS.remove_net0_and_net2, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -551,7 +553,7 @@ test('set then unset simple properties', function(t) {
 });
 
 test('update quota', function(t) {
-    VM.update(vm_uuid, {'quota': 13}, function(err) {
+    VM.update(vm_uuid, {quota: 13}, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
             t.end();
@@ -570,7 +572,7 @@ test('update quota', function(t) {
                             if (error) {
                                 t.ok(false, 'Failed to get quota from zfs: ' + e.message);
                             } else {
-                                res = stdout.replace(new RegExp("[\\s]+$", "g"), "");
+                                res = stdout.replace(new RegExp('[\\s]+$', 'g'), '');
                                 t.ok(res === '13G', 'updated quota now: ' + res + ' vs 13G');
                             }
                             t.end();
@@ -583,7 +585,7 @@ test('update quota', function(t) {
 });
 
 test('remove quota', function(t) {
-    VM.update(vm_uuid, {'quota': 0}, function(err) {
+    VM.update(vm_uuid, {quota: 0}, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
             t.end();
@@ -602,7 +604,7 @@ test('remove quota', function(t) {
                             if (error) {
                                 t.ok(false, 'Failed to get quota from zfs: ' + e.message);
                             } else {
-                                res = stdout.replace(new RegExp("[\\s]+$", "g"), "");
+                                res = stdout.replace(new RegExp('[\\s]+$', 'g'), '');
                                 t.ok(res === 'none', 'updated quota now: ' + res + ' vs none');
                             }
                             t.end();
@@ -617,7 +619,7 @@ test('remove quota', function(t) {
 function test_update_ram(ram)
 {
     test('update ram ' + ram, function(t) {
-        VM.update(vm_uuid, {'ram': ram}, function(err) {
+        VM.update(vm_uuid, {ram: ram}, function(err) {
             if (err) {
                 t.ok(false, 'error updating VM: ' + err.message);
                 t.end();
@@ -651,14 +653,14 @@ test_update_ram(512);
 // Update to a lower value should lower everything...
 test_update_ram(128);
 // test updating with string to higher
-test_update_ram("256");
+test_update_ram('256');
 // now lower
-test_update_ram("64");
+test_update_ram('64');
 // Now something bigger
 test_update_ram(1024);
 
 // now try *just* updating swap
-test('update max_swap', function(t) {
+test('update max_swap (up)', function(t) {
     var test_value = 1536;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -667,7 +669,7 @@ test('update max_swap', function(t) {
             t.end();
             return;
         }
-        VM.update(vm_uuid, {'max_swap': test_value}, function(err) {
+        VM.update(vm_uuid, {max_swap: test_value}, function(err) {
             if (err) {
                 t.ok(false, 'error updating VM: ' + err.message);
                 t.end();
@@ -696,7 +698,7 @@ test('update max_swap', function(t) {
 });
 
 // now try *just* updating swap, and to a lower than RAM.
-test('update max_swap', function(t) {
+test('update max_swap (down)', function(t) {
     var test_value;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -737,7 +739,7 @@ test('update max_swap', function(t) {
 });
 
 // now try *just* updating max_physical_memory (up)
-test('update max_physical_memory', function(t) {
+test('update max_physical_memory (up)', function(t) {
     var test_value = 2048;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -777,7 +779,7 @@ test('update max_physical_memory', function(t) {
 });
 
 // now try *just* updating max_physical_memory (down)
-test('update max_physical_memory', function(t) {
+test('update max_physical_memory (down)', function(t) {
     var test_value = 512;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -862,9 +864,9 @@ function zonecfg(args, callback)
 
     execFile(cmd, args, function (error, stdout, stderr) {
         if (error) {
-            callback(error, {'stdout': stdout, 'stderr': stderr});
+            callback(error, {stdout: stdout, stderr: stderr});
         } else {
-            callback(null, {'stdout': stdout, 'stderr': stderr});
+            callback(null, {stdout: stdout, stderr: stderr});
         }
     });
 }

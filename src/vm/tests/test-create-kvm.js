@@ -1,13 +1,15 @@
-// Copyright 2012 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that create works with specific options set.
 //
 
-process.env['TAP'] = 1;
 var fs = require('fs');
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
@@ -16,102 +18,102 @@ VM.loglevel = 'DEBUG';
 // and a blank zvol. We don't boot it because the ISOs don't exist.
 // With the passed-in UUID we also test for smartos-live#112
 var payload = {
-    'autoboot': false,
-    'brand': 'kvm',
-    'uuid': '3f5592c4-edb1-11e1-a15f-e72adbb11c67',
-    'do_not_inventory': true,
-    'virtio_txtimer': 123000,
-    'virtio_txburst': 123,
-    'boot': 'order=cd,once=d',
-    'disks': [
+    autoboot: false,
+    brand: 'kvm',
+    uuid: '3f5592c4-edb1-11e1-a15f-e72adbb11c67',
+    do_not_inventory: true,
+    virtio_txtimer: 123000,
+    virtio_txburst: 123,
+    boot: 'order=cd,once=d',
+    disks: [
         {
-            'size': 2048,
-            'model': 'virtio'
+            size: 2048,
+            model: 'virtio'
         },
         {
-            'media': 'cdrom',
-            'path': '/foo.iso',
-            'model': 'ide'
+            media: 'cdrom',
+            path: '/foo.iso',
+            model: 'ide'
         },
         {
-            'media': 'cdrom',
-            'path': '/bar.iso',
-            'model': 'ide'
+            media: 'cdrom',
+            path: '/bar.iso',
+            model: 'ide'
         }
     ]
 };
 
 var payload_with_tags = {
-    'autoboot': false,
-    'brand': 'kvm',
-    'alias': 'autotest-' + process.pid,
-    'do_not_inventory': true,
-    'tags': {
-       'hello': 'world'
+    autoboot: false,
+    brand: 'kvm',
+    alias: 'autotest-' + process.pid,
+    do_not_inventory: true,
+    tags: {
+       hello: 'world'
     },
-    'disks': [
+    disks: [
         {
-            'size': 2048,
-            'model': 'virtio'
+            size: 2048,
+            model: 'virtio'
         },
     ],
-    'nics': [
+    nics: [
         {
-            'nic_tag': 'admin',
-            'ip': 'dhcp',
-            'model': 'virtio'
+            nic_tag: 'admin',
+            ip: 'dhcp',
+            model: 'virtio'
         }
     ]
 };
 
 var payload_with_too_many_resolvers = {
-    'autoboot': true,
-    'brand': 'kvm',
-    'alias': 'autotest-' + process.pid,
-    'do_not_inventory': true,
-    'resolvers': [
+    autoboot: true,
+    brand: 'kvm',
+    alias: 'autotest-' + process.pid,
+    do_not_inventory: true,
+    resolvers: [
         '0.0.0.1',
         '0.0.0.2',
         '0.0.0.3',
         '0.0.0.4',
         '0.0.0.5'
     ],
-    'disks': [
+    disks: [
         {
-            'size': 2048,
-            'model': 'virtio'
+            size: 2048,
+            model: 'virtio'
         },
     ],
-    'nics': [
+    nics: [
         {
-            'gateway': '10.254.10.1',
-            'ip': '10.254.10.2',
-            'netmask': '255.255.255.0',
-            'nic_tag': 'admin',
-            'model': 'virtio'
+            gateway: '10.254.10.1',
+            ip: '10.254.10.2',
+            netmask: '255.255.255.0',
+            nic_tag: 'admin',
+            model: 'virtio'
         }
     ]
 };
 
-test('test create with bad image_size', {'timeout': 240000}, function(t) {
+test('test create with bad image_size', function(t) {
 
     p = {
-        'brand': 'kvm',
-        'vcpus': 1,
-        'ram': 256,
-        'alias': 'autotest-' + process.pid,
-        'do_not_inventory': true,
-        'autoboot': false,
-        'disks': [
+        brand: 'kvm',
+        vcpus: 1,
+        ram: 256,
+        alias: 'autotest-' + process.pid,
+        do_not_inventory: true,
+        autoboot: false,
+        disks: [
           {
-            'boot': true,
-            'model': 'virtio',
-            'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
-            'image_size': 31337
+            boot: true,
+            model: 'virtio',
+            image_uuid: vmtest.CURRENT_UBUNTU_UUID,
+            image_size: 31337
           }
         ]
     };
-    state = {'brand': p.brand, 'expect_create_failure': true};
+    state = {brand: p.brand, expect_create_failure: true};
 
     vmtest.on_new_vm(t, null, p, state, [],
         function (err) {
@@ -120,24 +122,24 @@ test('test create with bad image_size', {'timeout': 240000}, function(t) {
     );
 });
 
-test('test create with missing image_size', {'timeout': 240000}, function(t) {
+test('test create with missing image_size', function(t) {
 
     p = {
-        'brand': 'kvm',
-        'vcpus': 1,
-        'ram': 256,
-        'alias': 'autotest-' + process.pid,
-        'do_not_inventory': true,
-        'autoboot': false,
-        'disks': [
+        brand: 'kvm',
+        vcpus: 1,
+        ram: 256,
+        alias: 'autotest-' + process.pid,
+        do_not_inventory: true,
+        autoboot: false,
+        disks: [
           {
-            'boot': true,
-            'model': 'virtio',
-            'image_uuid': vmtest.CURRENT_UBUNTU_UUID
+            boot: true,
+            model: 'virtio',
+            image_uuid: vmtest.CURRENT_UBUNTU_UUID
           }
         ]
     };
-    state = {'brand': p.brand};
+    state = {brand: p.brand};
 
     vmtest.on_new_vm(t, null, p, state, [],
         function (err) {
@@ -146,8 +148,8 @@ test('test create with missing image_size', {'timeout': 240000}, function(t) {
     );
 });
 
-test('test create with virtio_tx*', {'timeout': 240000}, function(t) {
-    state = {'brand': 'kvm'};
+test('test create with virtio_tx*', function(t) {
+    state = {brand: 'kvm'};
     vmtest.on_new_vm(t, null, payload, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
@@ -177,28 +179,28 @@ test('test create with virtio_tx*', {'timeout': 240000}, function(t) {
     ]);
 });
 
-test('test normalish refreservation', {'timeout': 240000}, function(t) {
+test('test normalish refreservation', function(t) {
     p = {
-        'brand': 'kvm',
-        'vcpus': 1,
-        'ram': 256,
-        'alias': 'autotest-' + process.pid,
-        'do_not_inventory': true,
-        'autoboot': false,
-        'disk_driver': 'virtio',
-        'disks': [
+        brand: 'kvm',
+        vcpus: 1,
+        ram: 256,
+        alias: 'autotest-' + process.pid,
+        do_not_inventory: true,
+        autoboot: false,
+        disk_driver: 'virtio',
+        disks: [
           {
-            'boot': true,
-            'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
-            'image_size': vmtest.CURRENT_UBUNTU_SIZE,
-            'refreservation': vmtest.CURRENT_UBUNTU_SIZE
+            boot: true,
+            image_uuid: vmtest.CURRENT_UBUNTU_UUID,
+            image_size: vmtest.CURRENT_UBUNTU_SIZE,
+            refreservation: vmtest.CURRENT_UBUNTU_SIZE
           }, {
-            'size': 1024,
-            'refreservation': 10
+            size: 1024,
+            refreservation: 10
           }
         ]
     };
-    state = {'brand': p.brand};
+    state = {brand: p.brand};
     vmtest.on_new_vm(t, null, p, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
@@ -219,28 +221,28 @@ test('test normalish refreservation', {'timeout': 240000}, function(t) {
     ]);
 });
 
-test('test 0 refreservation', {'timeout': 240000}, function(t) {
+test('test 0 refreservation', function(t) {
     p = {
-        'brand': 'kvm',
-        'vcpus': 1,
-        'ram': 256,
-        'alias': 'autotest-' + process.pid,
-        'do_not_inventory': true,
-        'autoboot': false,
-        'disk_driver': 'virtio',
-        'disks': [
+        brand: 'kvm',
+        vcpus: 1,
+        ram: 256,
+        alias: 'autotest-' + process.pid,
+        do_not_inventory: true,
+        autoboot: false,
+        disk_driver: 'virtio',
+        disks: [
           {
-            'boot': true,
-            'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
-            'image_size': vmtest.CURRENT_UBUNTU_SIZE,
-            'refreservation': 0
+            boot: true,
+            image_uuid: vmtest.CURRENT_UBUNTU_UUID,
+            image_size: vmtest.CURRENT_UBUNTU_SIZE,
+            refreservation: 0
           }, {
-            'size': 1024,
-            'refreservation': 0
+            size: 1024,
+            refreservation: 0
           }
         ]
     };
-    state = {'brand': p.brand};
+    state = {brand: p.brand};
     vmtest.on_new_vm(t, null, p, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
@@ -261,26 +263,26 @@ test('test 0 refreservation', {'timeout': 240000}, function(t) {
     ]);
 });
 
-test('test default refreservation', {'timeout': 240000}, function(t) {
+test('test default refreservation', function(t) {
     p = {
-        'brand': 'kvm',
-        'vcpus': 1,
-        'ram': 256,
-        'alias': 'autotest-' + process.pid,
-        'do_not_inventory': true,
-        'autoboot': false,
-        'disk_driver': 'virtio',
-        'disks': [
+        brand: 'kvm',
+        vcpus: 1,
+        ram: 256,
+        alias: 'autotest-' + process.pid,
+        do_not_inventory: true,
+        autoboot: false,
+        disk_driver: 'virtio',
+        disks: [
           {
-            'boot': true,
-            'image_uuid': vmtest.CURRENT_UBUNTU_UUID,
-            'image_size': vmtest.CURRENT_UBUNTU_SIZE
+            boot: true,
+            image_uuid: vmtest.CURRENT_UBUNTU_UUID,
+            image_size: vmtest.CURRENT_UBUNTU_SIZE
           }, {
-            'size': 1024
+            size: 1024
           }
         ]
     };
-    state = {'brand': p.brand};
+    state = {brand: p.brand};
     vmtest.on_new_vm(t, null, p, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
@@ -302,10 +304,10 @@ test('test default refreservation', {'timeout': 240000}, function(t) {
 });
 
 
-test('test create with tags', {'timeout': 240000}, function(t) {
+test('test create with tags', function(t) {
 
     var p = JSON.parse(JSON.stringify(payload_with_tags));
-    var state = {'brand': p.brand};
+    var state = {brand: p.brand};
 
     vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [
             function (cb) {
@@ -325,10 +327,10 @@ test('test create with tags', {'timeout': 240000}, function(t) {
     );
 });
 
-test('test create with too many resolvers', {'timeout': 240000}, function(t) {
+test('test create with too many resolvers', function(t) {
 
     var p = JSON.parse(JSON.stringify(payload_with_too_many_resolvers));
-    var state = {'brand': p.brand};
+    var state = {brand: p.brand};
     var startvm = '';
 
     vmtest.on_new_vm(t, vmtest.CURRENT_UBUNTU_UUID, p, state, [

@@ -1,13 +1,15 @@
-// Copyright 2012 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
 var execFile = cp.execFile;
-var test = require('tap').test;
 var fs = require('fs');
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
@@ -16,13 +18,13 @@ var bundle_filename;
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var vmobj;
 var payload = {
-    'brand': 'joyent-minimal',
-    'image_uuid': image_uuid,
-    'alias': 'test-delegate-' + process.pid,
-    'do_not_inventory': true,
-    'delegate_dataset': true,
-    'ram': 256,
-    'max_swap': 256
+    brand: 'joyent-minimal',
+    image_uuid: image_uuid,
+    alias: 'test-delegate-' + process.pid,
+    do_not_inventory: true,
+    delegate_dataset: true,
+    ram: 256,
+    max_swap: 256
 };
 
 test('import dataset', function(t) {
@@ -32,7 +34,7 @@ test('import dataset', function(t) {
     });
 });
 
-test('create zone', {'timeout': 240000}, function(t) {
+test('create zone', function(t) {
     VM.create(payload, function (err, obj) {
         if (err) {
             t.ok(false, 'error creating VM: ' + err.message);
@@ -52,7 +54,7 @@ test('create zone', {'timeout': 240000}, function(t) {
     });
 });
 
-test('check delegated', {'timeout': 180000}, function(t) {
+test('check delegated', function(t) {
     if (abort) {
         t.ok(false, 'skipping send as test run is aborted.');
         t.end();

@@ -1,12 +1,14 @@
-// Copyright 2012 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
 var execFile = cp.execFile;
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
@@ -15,14 +17,14 @@ var vmobj;
 
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 
-test('create zone with fs_allowed', {'timeout': 240000}, function(t) {
+test('create zone with fs_allowed', function(t) {
     var payload = {
-        'brand': 'joyent-minimal',
-        'autoboot': false,
-        'image_uuid': image_uuid,
-        'alias': 'test-fsallowed-' + process.pid,
-        'do_not_inventory': true,
-        "fs_allowed": "ufs,pcfs,tmpfs"
+        brand: 'joyent-minimal',
+        autoboot: false,
+        image_uuid: image_uuid,
+        alias: 'test-fsallowed-' + process.pid,
+        do_not_inventory: true,
+        fs_allowed: 'ufs,pcfs,tmpfs'
     };
 
     VM.create(payload, function (err, obj) {
@@ -57,9 +59,9 @@ test('create zone with fs_allowed', {'timeout': 240000}, function(t) {
     });
 });
 
-test('empty the fs_allowed list', {'timeout': 240000}, function(t) {
+test('empty the fs_allowed list', function(t) {
     var payload = {
-        'fs_allowed': ""
+        fs_allowed: ''
     };
 
     if (abort) {
@@ -92,9 +94,9 @@ test('empty the fs_allowed list', {'timeout': 240000}, function(t) {
     });
 });
 
-test('add fs_allowed using array', {'timeout': 240000}, function(t) {
+test('add fs_allowed using array', function(t) {
     var payload = {
-        'fs_allowed': ['ufs', 'pcfs', 'tmpfs']
+        fs_allowed: ['ufs', 'pcfs', 'tmpfs']
     };
 
     if (abort) {
@@ -133,9 +135,9 @@ test('add fs_allowed using array', {'timeout': 240000}, function(t) {
     });
 });
 
-test('empty the fs_allowed list using array', {'timeout': 240000}, function(t) {
+test('empty the fs_allowed list using array', function(t) {
     var payload = {
-        'fs_allowed': []
+        fs_allowed: []
     };
 
     if (abort) {

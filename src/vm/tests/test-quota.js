@@ -1,12 +1,14 @@
-// Copyright 2012 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
 var execFile = cp.execFile;
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
@@ -20,14 +22,14 @@ var test_case;
 // - the kvm is created with smartos_image_uuid to test the SPICE case, we don't actually use that zoneroot.
 //
 var test_cases = [
-    [{'brand': 'joyent-minimal', 'quota': 0, 'image_uuid': smartos_image_uuid}, 0],
-    [{'brand': 'joyent-minimal', 'quota': 1024, 'image_uuid': smartos_image_uuid}, 1024],
-    [{'brand': 'joyent', 'quota': 0, 'image_uuid': smartos_image_uuid}, 0],
-    [{'brand': 'joyent', 'quota': 1048576, 'image_uuid': smartos_image_uuid}, 1048576],
-    [{'brand': 'kvm', 'quota': 0}, 0],
-    [{'brand': 'kvm', 'quota': 102400}, 102400],
-    [{'brand': 'kvm', 'quota': 0, 'image_uuid': smartos_image_uuid}, 0],
-    [{'brand': 'kvm', 'quota': 10, 'image_uuid': smartos_image_uuid}, 10],
+    [{brand: 'joyent-minimal', quota: 0, image_uuid: smartos_image_uuid}, 0],
+    [{brand: 'joyent-minimal', quota: 1024, image_uuid: smartos_image_uuid}, 1024],
+    [{brand: 'joyent', quota: 0, image_uuid: smartos_image_uuid}, 0],
+    [{brand: 'joyent', quota: 1048576, image_uuid: smartos_image_uuid}, 1048576],
+    [{brand: 'kvm', quota: 0}, 0],
+    [{brand: 'kvm', quota: 102400}, 102400],
+    [{brand: 'kvm', quota: 0, image_uuid: smartos_image_uuid}, 0],
+    [{brand: 'kvm', quota: 10, image_uuid: smartos_image_uuid}, 10],
 ];
 
 function do_test(payload, expected_result)
@@ -41,7 +43,7 @@ function do_test(payload, expected_result)
     payload.do_not_inventory = true;
 
     test('create ' + payload.brand + ' zone with ' + payload.quota + ' quota',
-        {'timeout': 240000}, function(t) {
+        function(t) {
 
         VM.create(payload, function (err, obj) {
             if (err) {
@@ -67,7 +69,7 @@ function do_test(payload, expected_result)
         });
     });
 
-    test('delete zone', function(t) {
+    test('delete ' + payload.brand + ' zone with ' + payload.quota + ' quota', function(t) {
         if (abort) {
             t.ok(false, 'skipping delete as test run is aborted.');
             t.end();
@@ -102,15 +104,15 @@ for (test_case in test_cases) {
 }
 
 test('create joyent-minimal zone with invalid type of quota',
-    {'timeout': 240000}, function(t) {
+    function(t) {
 
     var payload = {
-        'brand': 'joyent-minimal',
-        'quota': 'none',
-        'image_uuid': smartos_image_uuid,
-        'autoboot': false,
-        'alias': 'test-invalid-quota-' + process.pid,
-        'do_not_inventory': true
+        brand: 'joyent-minimal',
+        quota: 'none',
+        image_uuid: smartos_image_uuid,
+        autoboot: false,
+        alias: 'test-invalid-quota-' + process.pid,
+        do_not_inventory: true
     };
 
     VM.create(payload, function (err, obj) {

@@ -58,16 +58,10 @@ done
 
 set +o errexit
 set -o pipefail
-if grep "require.*nodeunit" $1 >/dev/null; then
-    /usr/node/bin/node /usr/vm/node_modules/nodeunit/bin/nodeunit \
-        --reporter tap $1 | tee -a /tmp/test.output.$$
-    TEST_EXIT_CODE=$?
-else
-    export TAP=1
-    NODE_PATH="/usr/vm/test/node-tap/node_modules:${NODE_PATH}" \
-        /usr/node/bin/node $1 | tee -a /tmp/test.output.$$
-    TEST_EXIT_CODE=$?
-fi
+/usr/node/bin/node --abort_on_uncaught_exception \
+    /usr/vm/node_modules/nodeunit/bin/nodeunit \
+    --reporter tap $1 | tee -a /tmp/test.output.$$
+TEST_EXIT_CODE=$?
 set +o pipefail
 set -o errexit
 

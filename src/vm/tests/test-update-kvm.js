@@ -1,152 +1,154 @@
-// Copyright 2012 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
 var vm_uuid;
 
 var PAYLOADS = {
-    "create": {
-        "brand": "kvm",
-        "ram": 256,
-        "autoboot": false,
-        "alias": "autotest-vm" + process.pid,
-        "disks": [{"size": 1024, "model": "ide"}],
-        "do_not_inventory": true
-    }, "add_net0": {
-        "add_nics": [
+    create: {
+        brand: 'kvm',
+        ram: 256,
+        autoboot: false,
+        alias: 'autotest-vm' + process.pid,
+        disks: [{size: 1024, model: 'ide'}],
+        do_not_inventory: true
+    }, add_net0: {
+        add_nics: [
             {
-                "model": "e1000",
-                "ip": "10.254.254.254",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net0",
-                "vlan_id": 0,
-                "gateway": "10.254.254.1",
-                "mac": "00:02:03:04:05:06"
+                model: 'e1000',
+                ip: '10.254.254.254',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net0',
+                vlan_id: 0,
+                gateway: '10.254.254.1',
+                mac: '00:02:03:04:05:06'
             }
         ]
-    }, "add_net1": {
-        "add_nics": [
+    }, add_net1: {
+        add_nics: [
             {
-                "ip": "10.254.254.253",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net1",
-                "vlan_id": 0,
-                "gateway": "10.254.254.1",
-                "mac": "02:03:04:05:06:07"
+                ip: '10.254.254.253',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net1',
+                vlan_id: 0,
+                gateway: '10.254.254.1',
+                mac: '02:03:04:05:06:07'
             }
         ]
-    }, "remove_net0": {
-        "remove_nics": [
-            "00:02:03:04:05:06"
+    }, remove_net0: {
+        remove_nics: [
+            '00:02:03:04:05:06'
         ]
-    }, "remove_net1": {
-        "remove_nics": [
-            "02:03:04:05:06:07"
+    }, remove_net1: {
+        remove_nics: [
+            '02:03:04:05:06:07'
         ]
-    }, "add_net0_and_net1": {
-        "add_nics": [
+    }, add_net0_and_net1: {
+        add_nics: [
             {
-                "model": "virtio",
-                "ip": "10.254.254.254",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net0",
-                "vlan_id": 0,
-                "gateway": "10.254.254.1",
-                "mac": "00:02:03:04:05:06"
+                model: 'virtio',
+                ip: '10.254.254.254',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net0',
+                vlan_id: 0,
+                gateway: '10.254.254.1',
+                mac: '00:02:03:04:05:06'
             }, {
-                "model": "virtio",
-                "ip": "10.254.254.253",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net1",
-                "vlan_id": 253,
-                "gateway": "10.254.254.1",
-                "mac": "02:03:04:05:06:07"
+                model: 'virtio',
+                ip: '10.254.254.253',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net1',
+                vlan_id: 253,
+                gateway: '10.254.254.1',
+                mac: '02:03:04:05:06:07'
             }
         ]
-    }, "remove_net0_and_net1": {
-        "remove_nics": [
-            "00:02:03:04:05:06",
-            "02:03:04:05:06:07"
+    }, remove_net0_and_net1: {
+        remove_nics: [
+            '00:02:03:04:05:06',
+            '02:03:04:05:06:07'
         ]
-    }, "add_net0_through_net2": {
-        "add_nics": [
+    }, add_net0_through_net2: {
+        add_nics: [
             {
-                "model": "virtio",
-                "ip": "10.254.254.254",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net0",
-                "vlan_id": 0,
-                "gateway": "10.254.254.1",
-                "mac": "00:02:03:04:05:06"
+                model: 'virtio',
+                ip: '10.254.254.254',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net0',
+                vlan_id: 0,
+                gateway: '10.254.254.1',
+                mac: '00:02:03:04:05:06'
             }, {
-                "model": "virtio",
-                "ip": "10.254.254.253",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net1",
-                "vlan_id": 0,
-                "gateway": "10.254.254.1",
-                "mac": "02:03:04:05:06:07"
+                model: 'virtio',
+                ip: '10.254.254.253',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net1',
+                vlan_id: 0,
+                gateway: '10.254.254.1',
+                mac: '02:03:04:05:06:07'
             }, {
-                "model": "virtio",
-                "ip": "10.254.254.252",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "interface": "net2",
-                "vlan_id": 0,
-                "gateway": "10.254.254.1",
-                "mac": "02:03:04:05:06:08"
+                model: 'virtio',
+                ip: '10.254.254.252',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                interface: 'net2',
+                vlan_id: 0,
+                gateway: '10.254.254.1',
+                mac: '02:03:04:05:06:08'
             }
         ]
-    }, "remove_net1": {
-        "remove_nics": [
-            "02:03:04:05:06:07"
+    }, remove_net1: {
+        remove_nics: [
+            '02:03:04:05:06:07'
         ]
-    }, "add_disk1": {
-        "add_disks": [
-            {"size": 1024}
+    }, add_disk1: {
+        add_disks: [
+            {size: 1024}
         ]
-    }, "create_w_drivers": {
-        "brand": "kvm",
-        "ram": 256,
-        "autoboot": false,
-        "nic_driver": "e1000",
-        "disk_driver": "ide",
-        "alias": "autotest-vm" + process.pid,
-        "nics": [
+    }, create_w_drivers: {
+        brand: 'kvm',
+        ram: 256,
+        autoboot: false,
+        nic_driver: 'e1000',
+        disk_driver: 'ide',
+        alias: 'autotest-vm' + process.pid,
+        nics: [
             {
-                "model": "virtio",
-                "ip": "10.254.254.254",
-                "netmask": "255.255.255.0",
-                "nic_tag": "external",
-                "gateway": "10.254.254.1",
-                "mac": "00:02:03:04:05:06"
+                model: 'virtio',
+                ip: '10.254.254.254',
+                netmask: '255.255.255.0',
+                nic_tag: 'external',
+                gateway: '10.254.254.1',
+                mac: '00:02:03:04:05:06'
             }
         ],
-        "disks": [{"size": 1024, "model": "virtio"}],
-        "do_not_inventory": true
-    }, "add_nic_and_disk_wo_model": {
-        "add_disks": [{"size": 1024}],
-        "add_nics": [{
-            "ip": "10.254.254.253",
-            "netmask": "255.255.255.0",
-            "nic_tag": "external",
-            "interface": "net1",
-            "vlan_id": 253,
-            "gateway": "10.254.254.1",
-            "mac": "02:03:04:05:06:07"
+        disks: [{size: 1024, model: 'virtio'}],
+        do_not_inventory: true
+    }, add_nic_and_disk_wo_model: {
+        add_disks: [{size: 1024}],
+        add_nics: [{
+            ip: '10.254.254.253',
+            netmask: '255.255.255.0',
+            nic_tag: 'external',
+            interface: 'net1',
+            vlan_id: 253,
+            gateway: '10.254.254.1',
+            mac: '02:03:04:05:06:07'
         }]
     }
 };
@@ -164,7 +166,7 @@ simple_properties = [
     ['virtio_txburst', '128', 128]
 ];
 
-test('create zone', {'timeout': 240000}, function(t) {
+test('create KVM VM', function(t) {
     VM.create(PAYLOADS.create, function (err, vmobj) {
         if (err) {
             t.ok(false, 'error creating VM: ' + err.message);
@@ -176,7 +178,7 @@ test('create zone', {'timeout': 240000}, function(t) {
     });
 });
 
-test('update disk model', {'timeout': 60000}, function(t) {
+test('update KVM VM disk model', function(t) {
 
     VM.load(vm_uuid, function (err, before_obj) {
         var path;
@@ -210,7 +212,7 @@ test('update disk model', {'timeout': 60000}, function(t) {
 });
 
 // Add disk1 w/o model and ensure it gets same model as disk0 (See OS-2363)
-test('add disk1', {'timeout': 60000}, function(t) {
+test('add disk1 to KVM VM', function(t) {
     VM.update(vm_uuid, PAYLOADS.add_disk1, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -230,14 +232,14 @@ test('add disk1', {'timeout': 60000}, function(t) {
     });
 });
 
-test('boot zone', function(t) {
+test('boot KVM VM', function(t) {
     VM.start(vm_uuid, {}, function (err) {
         t.ok(!err, 'error starting VM' + (err ? ': ' + err.message : ''));
         t.end();
     });
 });
 
-test('add net0', {'timeout': 60000}, function(t) {
+test('add net0 to KVM VM', function(t) {
     VM.update(vm_uuid, PAYLOADS.add_net0, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -271,7 +273,7 @@ test('add net0', {'timeout': 60000}, function(t) {
     });
 });
 
-test('update nic model', {'timeout': 60000}, function(t) {
+test('update nic model on KVM VM', function(t) {
 
     VM.load(vm_uuid, function (err, before_obj) {
         var mac;
@@ -313,7 +315,7 @@ test('update nic model', {'timeout': 60000}, function(t) {
 });
 
 // Add net1 w/o model and ensure it gets same model as net0 (See OS-2363)
-test('add net1', {'timeout': 60000}, function(t) {
+test('add net1 to KVM VM', function(t) {
     VM.update(vm_uuid, PAYLOADS.add_net1, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -333,7 +335,7 @@ test('add net1', {'timeout': 60000}, function(t) {
     });
 });
 
-test('remove net0', function(t) {
+test('remove net0 from KVM VM', function(t) {
     VM.update(vm_uuid, PAYLOADS.remove_net0, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -353,7 +355,7 @@ test('remove net0', function(t) {
     });
 });
 
-test('remove net1', function(t) {
+test('remove net1 from KVM VM', function(t) {
     VM.update(vm_uuid, PAYLOADS.remove_net1, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -373,7 +375,7 @@ test('remove net1', function(t) {
     });
 });
 
-test('add net0 and net1', function(t) {
+test('add net0 and net1 to KVM VM', function(t) {
     VM.update(vm_uuid, PAYLOADS.add_net0_and_net1, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -409,7 +411,7 @@ test('add net0 and net1', function(t) {
     });
 });
 
-test('remove net0 and net1', function(t) {
+test('remove net0 and net1 from KVM VM', function(t) {
     VM.update(vm_uuid, PAYLOADS.remove_net0_and_net1, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -429,7 +431,7 @@ test('remove net0 and net1', function(t) {
     });
 });
 
-test('add 3 NICs', {'timeout': 240000}, function(t) {
+test('add 3 NICs to KVM VM', function(t) {
     VM.update(vm_uuid, PAYLOADS.add_net0_through_net2, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -449,7 +451,7 @@ test('add 3 NICs', {'timeout': 240000}, function(t) {
     });
 });
 
-test('remove net1', {'timeout': 240000}, function(t) {
+test('remove net1 from KVM VM -- 2nd time', function(t) {
     VM.update(vm_uuid, PAYLOADS.remove_net1, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -469,7 +471,7 @@ test('remove net1', {'timeout': 240000}, function(t) {
     });
 });
 
-test('reboot VM', {'timeout': 240000}, function(t) {
+test('reboot KVM VM', function(t) {
     VM.stop(vm_uuid, {'force': true}, function (err) {
         t.ok(!err, 'stopping VM' + (err ? ': ' + err.message : ''));
         VM.start(vm_uuid, {}, function (err) {
@@ -487,7 +489,7 @@ test('reboot VM', {'timeout': 240000}, function(t) {
     });
 });
 
-test('set then unset simple properties', {'timeout': 240000}, function(t) {
+test('set then unset simple properties on KVM VM', function(t) {
     async.forEachSeries(simple_properties,
         function (item, cb) {
             var prop = item[0];
@@ -546,7 +548,7 @@ test('set then unset simple properties', {'timeout': 240000}, function(t) {
     );
 });
 
-test('update quota', function(t) {
+test('update KVM VM quota', function(t) {
     VM.update(vm_uuid, {'quota': 13}, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -566,7 +568,7 @@ test('update quota', function(t) {
                             if (error) {
                                 t.ok(false, 'Failed to get quota from zfs: ' + e.message);
                             } else {
-                                res = stdout.replace(new RegExp("[\\s]+$", "g"), "");
+                                res = stdout.replace(new RegExp('[\\s]+$', 'g'), '');
                                 t.ok(res === '13G', 'updated quota now: ' + res + ' vs 13G');
                             }
                             t.end();
@@ -578,7 +580,7 @@ test('update quota', function(t) {
     });
 });
 
-test('remove quota', function(t) {
+test('remove KVM VM quota', function(t) {
     VM.update(vm_uuid, {'quota': 0}, function(err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -598,7 +600,7 @@ test('remove quota', function(t) {
                             if (error) {
                                 t.ok(false, 'Failed to get quota from zfs: ' + e.message);
                             } else {
-                                res = stdout.replace(new RegExp("[\\s]+$", "g"), "");
+                                res = stdout.replace(new RegExp('[\\s]+$', 'g'), '');
                                 t.ok(res === 'none', 'updated quota now: ' + res + ' vs none');
                             }
                             t.end();
@@ -646,7 +648,7 @@ test_update_ram(128);
 test_update_ram(1024);
 
 // now try *just* updating swap
-test('update max_swap', function(t) {
+test('update KVM VM max_swap', function(t) {
     var test_value = 2560;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -682,7 +684,7 @@ test('update max_swap', function(t) {
 });
 
 // now try *just* updating swap, and to a lower than RAM.
-test('update max_swap', function(t) {
+test('update KVM VM max_swap to lower value than RAM', function(t) {
     var test_value;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -722,7 +724,7 @@ test('update max_swap', function(t) {
 });
 
 // now try *just* updating max_physical_memory to a value: ram + 256
-test('update max_physical_memory', function(t) {
+test('update max_physical_memory to RAM + 256', function(t) {
     var test_value;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -761,7 +763,7 @@ test('update max_physical_memory', function(t) {
 });
 
 // now try *just* updating max_physical_memory to a value: ram + 1024
-test('update max_physical_memory', function(t) {
+test('update max_physical_memory to RAM + 1024', function(t) {
     var test_value;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -800,7 +802,7 @@ test('update max_physical_memory', function(t) {
 });
 
 // now try *just* updating max_swap to a value: ram - 64
-test('update max_swap', function(t) {
+test('update max_swap to RAM - 64', function(t) {
     var test_value;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -833,7 +835,7 @@ test('update max_swap', function(t) {
 });
 
 // now try *just* updating max_locked_memory, high value (should get clamped)
-test('update max_locked_memory', function(t) {
+test('update max_locked_memory to high value', function(t) {
     var test_value;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -983,7 +985,7 @@ test('enable / disable compression', function(t) {
 // VM should at this point be running, so removing the disk should fail.
 // Stopping and removing should succeed.
 // Adding should also succeed at that point.
-test('remove disks', function(t) {
+test('remove KVM disks', function(t) {
     VM.load(vm_uuid, function (err, vmobj) {
         var disk0;
         var disk1;
@@ -1054,7 +1056,7 @@ test('remove disks', function(t) {
     });
 });
 
-test('delete zone', function(t) {
+test('delete KVM VM', function(t) {
     if (vm_uuid) {
         VM.delete(vm_uuid, function (err) {
             if (err) {
@@ -1070,7 +1072,7 @@ test('delete zone', function(t) {
     }
 });
 
-test('create KVM VM w/ *_drivers', {'timeout': 240000}, function(t) {
+test('create KVM VM w/ *_drivers', function(t) {
     var state = {'brand': 'kvm'};
     vmtest.on_new_vm(t, null, PAYLOADS['create_w_drivers'], state, [
         function (cb) {
@@ -1119,7 +1121,7 @@ test('create KVM VM w/ *_drivers', {'timeout': 240000}, function(t) {
     });
 });
 
-test('test 100%/10% refreservation, change to 50%/75%', {'timeout': 240000}, function(t) {
+test('test 100%/10% refreservation, change to 50%/75%', function(t) {
     p = {
         'brand': 'kvm',
         'vcpus': 1,

@@ -1,27 +1,29 @@
-// Copyright 2012 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that default values don't change accidentally.
 //
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 var vm_uuid;
 var payload = {
-    "brand": "kvm",
-    "alias": "autotest-vm" + process.pid,
-    "do_not_inventory": true,
-    "ram": 256,
-    "swap_in_bytes": 2147483648,
-    "ram_in_bytes": 1073741824,
-    "max_physical_memory": 256,
-    "max_swap": 512
+    brand: 'kvm',
+    alias: 'autotest-vm' + process.pid,
+    do_not_inventory: true,
+    ram: 256,
+    swap_in_bytes: 2147483648,
+    ram_in_bytes: 1073741824,
+    max_physical_memory: 256,
+    max_swap: 512
 };
 
 
-test('create zone', {'timeout': 240000}, function(t) {
+test('create zone', function(t) {
     VM.create(payload, function (err, vmobj) {
         if (err) {
             t.ok(false, 'error creating VM: ' + err.message);
@@ -33,7 +35,7 @@ test('create zone', {'timeout': 240000}, function(t) {
     });
 });
 
-test('ensure memory values were bumped', {}, function(t) {
+test('ensure memory values were bumped', function(t) {
     if (!vm_uuid) {
         t.ok(false, 'no zone, can\'t check memory');
         t.end();

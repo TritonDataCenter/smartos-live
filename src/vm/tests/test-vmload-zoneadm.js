@@ -10,12 +10,14 @@ var log = bunyan.createLogger({level: 'debug', name: 'test-vmload-zoneadm', seri
 var path = require('path');
 var vmload_zoneadm = require('/usr/vm/node_modules/vmload/vmload-zoneadm');
 
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
+
 // save some typing
 var getZoneRecords = vmload_zoneadm.getZoneRecords;
 
 var TESTDIR = '/usr/vm/test/testdata/vmload-zoneadm';
-
-require('nodeunit-plus');
 
 var simple_tests = [
     {

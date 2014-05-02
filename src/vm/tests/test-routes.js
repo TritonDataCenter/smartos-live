@@ -3,16 +3,18 @@
 // Tests for specifying static routes
 //
 
-process.env['TAP'] = 1;
 var assert = require('assert');
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
 var fs = require('fs');
 var format = require('util').format;
 var path = require('path');
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
@@ -28,21 +30,16 @@ var INVALID_NIC = 'Route gateway: "%s" '
 var INVALID_VAL = 'Invalid value(s) for: %s';
 
 var payload = {
-    'autoboot': false,
-    'brand': 'joyent-minimal',
-    'alias': 'autotest-' + process.pid,
-    'do_not_inventory': true
+    autoboot: false,
+    brand: 'joyent-minimal',
+    alias: 'autotest-' + process.pid,
+    do_not_inventory: true
 };
 
 var LAST_METADATA_RESTART_TIME;
 var LAST_NETWORKING_RESTART_TIME;
 var ROUTING_SVC = 'routing-setup';
 var RESTART_TRIES = 10;
-
-var test_opts = {
-    'timeout': 240000
-};
-
 
 function debugKeepVM(state, cb) {
     if (DO_NOT_CLEANUP_VMS) {
@@ -68,7 +65,7 @@ function getServiceStartTime(uuid, svc, callback) {
 function getStartTimes(t, state, desc, callback) {
     getServiceStartTime(state.uuid, 'mdata:fetch', function (err, time) {
         if (err) {
-            t.ifErr(err, format('Error getting metadata service start time ' +
+            t.ifError(err, format('Error getting metadata service start time ' +
                 'for VM %s (%s)', state.uuid, desc));
             return callback(err);
         }
@@ -78,7 +75,7 @@ function getStartTimes(t, state, desc, callback) {
         getServiceStartTime(state.uuid, ROUTING_SVC,
             function (err2, time2) {
             if (err) {
-                t.ifErr(err, format('Error getting network/physical service' +
+                t.ifError(err, format('Error getting network/physical service' +
                     'start time for VM %s (%s)', state.uuid, desc));
                 return callback(err);
             }
@@ -122,7 +119,7 @@ function readZoneFile(vmobj, file) {
 function runRouteCmd(t, uuid, cmd, callback) {
     cp.exec(format('/usr/sbin/zlogin %s /usr/sbin/route %s',
         uuid, cmd), function (err, stdout, stderr) {
-        t.ifErr(err, 'running route ' + cmd);
+        t.ifError(err, 'running route ' + cmd);
         t.equal(stderr, '', 'stderr: route ' + cmd);
         if (err) {
             t.equal(stdout, '', 'stdout: route ' + cmd);
@@ -138,13 +135,13 @@ function runRouteCmd(t, uuid, cmd, callback) {
 function updateVM(t, state, payload, desc, callback) {
     getStartTimes(t, state, desc, function (err) {
         if (err) {
-            t.ifErr(err, format('Error getting metadata service start time ' +
+            t.ifError(err, format('Error getting metadata service start time ' +
                 'for VM %s (%s)', state.uuid, desc));
             return callback(err);
         }
 
         VM.update(state.uuid, payload, function (err) {
-            t.ifErr(err, 'Updating VM ' + state.uuid);
+            t.ifError(err, 'Updating VM ' + state.uuid);
             return callback(err);
         });
     });
@@ -177,7 +174,7 @@ function validateZoneData(t, vm, opts, callback) {
                 // unavailable errors
                 if (!(opts.start && err.message.match(
                     /repository server unavailable/) !== null)) {
-                    t.ifErr(err, 'Error getting metadata service start time ' +
+                    t.ifError(err, 'Error getting metadata service start time ' +
                         'for VM ' + vm.uuid);
                 }
                 if (i == RESTART_TRIES) {
@@ -211,7 +208,7 @@ function validateZoneData(t, vm, opts, callback) {
                     }
 
                     getRoutingTables(vm.uuid, function (err2, table) {
-                        t.ifErr(err2, 'Error getting routing tables for ' +
+                        t.ifError(err2, 'Error getting routing tables for ' +
                             'VM ' + vm.uuid);
                         if (err2) {
                             return callback(err2);
@@ -303,7 +300,7 @@ function waitAndCheckRoutes(t, vm, routingTable, desc, callback) {
             clearTimeout(timeout);
             i++;
             if (err) {
-                t.ifErr(err, 'Error getting network/physical service start ' +
+                t.ifError(err, 'Error getting network/physical service start ' +
                     'time for VM ' + vm.uuid);
                 if (i == RESTART_TRIES) {
                     return callback();
@@ -324,7 +321,7 @@ function waitAndCheckRoutes(t, vm, routingTable, desc, callback) {
                     LAST_NETWORKING_RESTART_TIME = time;
 
                     getRoutingTables(vm.uuid, function (err2, table) {
-                        t.ifErr(err2, 'Error getting routing tables for ' +
+                        t.ifError(err2, 'Error getting routing tables for ' +
                             'VM ' + vm.uuid);
                         if (err2) {
                             return callback(err2);
@@ -398,7 +395,7 @@ var failures = [
         format(INVALID_NIC, 'nics[1]'),
         {
             routes: { '10.2.0.0/24': 'nics[1]' },
-            nics: [ { 'nic_tag': 'admin', 'ip': 'dhcp' } ]
+            nics: [ { nic_tag: 'admin', ip: 'dhcp' } ]
         }
     ],
 
@@ -406,24 +403,24 @@ var failures = [
         format(INVALID_NIC, 'nics[0]'),
         {
             routes: { '10.2.0.0/24': 'nics[0]' },
-            nics: [ { 'nic_tag': 'admin', 'ip': 'dhcp' } ]
+            nics: [ { nic_tag: 'admin', ip: 'dhcp' } ]
         }
     ],
 
     [ 'maintain_resolvers: invalid',
         format(INVALID_VAL, 'maintain_resolvers'),
-        { 'maintain_resolvers': 'asdf' }
+        { maintain_resolvers: 'asdf' }
     ]
 ];
 
 
-test('validation failures', test_opts, function(t) {
+test('validation failures', function(t) {
     async.forEachSeries(failures, function (fail, cb) {
         var desc = ' (' + fail[0] + ')';
         var newPayload = {};
         var state = {
-            'brand': 'joyent-minimal',
-            'expect_create_failure': true
+            brand: 'joyent-minimal',
+            expect_create_failure: true
         };
 
         [payload, fail[2]].forEach(function (obj) {
@@ -451,9 +448,9 @@ test('validation failures', test_opts, function(t) {
 });
 
 
-test('update routes and resolvers', test_opts, function(t) {
+test('update routes and resolvers', function(t) {
     var state = {
-        'brand': 'joyent-minimal'
+        brand: 'joyent-minimal'
     };
     var vm;
 
@@ -478,18 +475,18 @@ test('update routes and resolvers', test_opts, function(t) {
         '172.22.2.0/24': '172.19.1.1'
     };
     var newPayload = {
-        'nics': [
-            { 'nic_tag': 'admin',
-              'ip': '172.19.1.2',
-              'netmask': '255.255.255.0' },
-            { 'nic_tag': 'admin',
-              'ip': '172.20.1.2',
-              'netmask': '255.255.255.0' },
+        nics: [
+            { nic_tag: 'admin',
+              ip: '172.19.1.2',
+              netmask: '255.255.255.0' },
+            { nic_tag: 'admin',
+              ip: '172.20.1.2',
+              netmask: '255.255.255.0' },
         ],
-        'maintain_resolvers': true,
-        'nowait': false,
-        'resolvers': resolvers,
-        'routes': routes
+        maintain_resolvers: true,
+        nowait: false,
+        resolvers: resolvers,
+        routes: routes
     };
 
     for (var k in payload) {
@@ -505,7 +502,7 @@ test('update routes and resolvers', test_opts, function(t) {
 
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
-                t.ifErr(err, 'loading new VM');
+                t.ifError(err, 'loading new VM');
                 if (obj) {
                     t.deepEqual(obj.routes, routes, 'routes present');
                     t.deepEqual(obj.resolvers, resolvers, 'resolvers present');
@@ -555,7 +552,7 @@ test('update routes and resolvers', test_opts, function(t) {
 
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
-                t.ifErr(err, 'loading VM after update 1');
+                t.ifError(err, 'loading VM after update 1');
                 if (obj) {
                     t.deepEqual(obj.routes, routes, 'update 1: routes updated');
                     t.deepEqual(obj.resolvers, resolvers,
@@ -610,7 +607,7 @@ test('update routes and resolvers', test_opts, function(t) {
 
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
-                t.ifErr(err, 'loading VM');
+                t.ifError(err, 'loading VM');
                 if (obj) {
                     t.deepEqual(obj.routes, routes, 'routes updated');
                     t.deepEqual(obj.resolvers, resolvers, 'resolvers updated');
@@ -646,7 +643,7 @@ test('update routes and resolvers', test_opts, function(t) {
 
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
-                t.ifErr(err, 'loading VM');
+                t.ifError(err, 'loading VM');
                 if (obj) {
                     t.deepEqual(obj.routes, routes, 'routes are the same');
                     t.deepEqual(obj.resolvers, resolvers,
@@ -675,12 +672,12 @@ test('update routes and resolvers', test_opts, function(t) {
             // The changes should persist across reboots
             VM.reboot(state.uuid, {}, function(err) {
                 if (err) {
-                    t.ifErr(err, 'reboot VM');
+                    t.ifError(err, 'reboot VM');
                     return cb(err);
                 }
 
                 VM.load(state.uuid, function (err2, obj) {
-                    t.ifErr(err2, 'loading VM');
+                    t.ifError(err2, 'loading VM');
                     if (obj) {
                         t.deepEqual(obj.routes, routes,
                             'routes are the same after reboot');
@@ -739,7 +736,7 @@ test('update routes and resolvers', test_opts, function(t) {
             inZoneRoutes['172.22.4.0/24'] = '172.19.1.253';
 
             getRoutingTables(state.uuid, function (err, res) {
-                t.ifErr(err, 'getting routes');
+                t.ifError(err, 'getting routes');
                 if (res) {
                     t.deepEqual(res, routingTable,
                        'routes after adding in-zone route');
@@ -861,7 +858,7 @@ test('update routes and resolvers', test_opts, function(t) {
 
         function (cb) {
             VM.reboot(state.uuid, {}, function(err) {
-                t.ifErr(err, 'reboot VM');
+                t.ifError(err, 'reboot VM');
                 return cb(err);
             });
         },
@@ -896,7 +893,7 @@ test('update routes and resolvers', test_opts, function(t) {
 });
 
 
-test('create zone without maintain_resolvers', test_opts, function(t) {
+test('create zone without maintain_resolvers', function(t) {
     var state = {
         'brand': 'joyent-minimal'
     };
@@ -916,15 +913,15 @@ test('create zone without maintain_resolvers', test_opts, function(t) {
         '172.21.1.1': 'nics[0]'
     };
     var newPayload = {
-        'nics': [
-            { 'nic_tag': 'admin',
-              'ip': '172.20.1.3',
-              'netmask': '255.255.255.0' },
+        nics: [
+            { nic_tag: 'admin',
+              ip: '172.20.1.3',
+              netmask: '255.255.255.0' },
         ],
         // leaving out maintain_resolvers on purpose
-        'nowait': false,
-        'resolvers': resolvers,
-        'routes': routes
+        nowait: false,
+        resolvers: resolvers,
+        routes: routes
     };
 
     for (var k in payload) {
@@ -936,7 +933,7 @@ test('create zone without maintain_resolvers', test_opts, function(t) {
     vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, newPayload, state, [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
-                t.ifErr(err, 'loading new VM');
+                t.ifError(err, 'loading new VM');
                 if (obj) {
                     t.deepEqual(obj.routes, routes, 'routes present');
                     t.deepEqual(obj.resolvers, resolvers, 'resolvers present');
@@ -974,7 +971,7 @@ test('create zone without maintain_resolvers', test_opts, function(t) {
 
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
-                t.ifErr(err, 'loading VM');
+                t.ifError(err, 'loading VM');
                 if (obj) {
                     t.deepEqual(obj.routes, routes, 'routes updated');
                     // updated resolvers should show up in the VM object
@@ -1003,12 +1000,12 @@ test('create zone without maintain_resolvers', test_opts, function(t) {
             // The old resolvers should stay across reboots
             VM.reboot(state.uuid, {}, function(err) {
                 if (err) {
-                    t.ifErr(err, 'reboot VM');
+                    t.ifError(err, 'reboot VM');
                     return cb(err);
                 }
 
                 VM.load(state.uuid, function (err2, obj) {
-                    t.ifErr(err2, 'loading VM');
+                    t.ifError(err2, 'loading VM');
                     if (obj) {
                         t.deepEqual(obj.routes, routes,
                             'routes are the same');

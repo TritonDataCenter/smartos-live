@@ -1,14 +1,15 @@
-// Copyright 2013 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure the filewait tool is working
 //
 
-process.env['TAP'] = 1;
-
 var execFile = require('child_process').execFile;
 var fs = require('fs');
-var test = require('tap').test;
 var util = require('util');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 // blatantly copied from VM.js
 function rtrim(str, chars)
@@ -74,7 +75,7 @@ function cleanup(dirname, callback) {
  * not yet exist when we start waiting and gets created after.
  *
  */
-test('test filewait when directory does not exist', {}, function(t) {
+test('test filewait when directory does not exist', function(t) {
     var data = {};
     var dir = '/tmp/filewait-test.' + process.pid;
     var file = dir + '/testfile';
@@ -110,7 +111,7 @@ test('test filewait when directory does not exist', {}, function(t) {
  * Ensure filewait behaves properly when the file exists before filewait is run
  *
  */
-test('test filewait notices existing file', {}, function(t) {
+test('test filewait notices existing file', function(t) {
     var dir = '/tmp/filewait-test.' + process.pid;
     var file = dir + '/testfile';
 
@@ -134,7 +135,7 @@ test('test filewait notices existing file', {}, function(t) {
  * watching.
  *
  */
-test('test filewait notices new file', {}, function(t) {
+test('test filewait notices new file', function(t) {
     var dir = '/tmp/filewait-test.' + process.pid;
     var file = dir + '/testfile';
 

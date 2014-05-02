@@ -16,12 +16,3 @@ to /usr/vm/test and run:
 
 which will run only that test.
 
-How to update the test framework (node-tap) from upstream.
-==========================================================
-
-You should be able to just run:
-
-    ./tools/setup-tap.sh
-
-which will update all the node-tap files.  Please ensure all tests are working
-before you commit the update to node-tap.

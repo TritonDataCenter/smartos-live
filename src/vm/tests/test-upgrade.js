@@ -1,12 +1,14 @@
-// Copyright 2013 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
 var fs = require('fs');
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
@@ -17,44 +19,44 @@ var vmobj;
 
 var smartos_payload =
 {
-    "alias": "autotest" + process.pid,
-    "do_not_inventory": true,
-    "image_uuid": image_uuid,
-    "max_physical_memory": 256,
-    "nics": [
+    alias: 'autotest' + process.pid,
+    do_not_inventory: true,
+    image_uuid: image_uuid,
+    max_physical_memory: 256,
+    nics: [
         {
-            "ip": "10.254.254.254",
-            "netmask": "255.255.255.0",
-            "nic_tag": "external",
-            "interface": "net0",
-            "vlan_id": 0,
-            "gateway": "10.254.254.1",
-            "mac": "01:02:03:04:05:06"
+            ip: '10.254.254.254',
+            netmask: '255.255.255.0',
+            nic_tag: 'external',
+            interface: 'net0',
+            vlan_id: 0,
+            gateway: '10.254.254.1',
+            mac: '01:02:03:04:05:06'
         }
     ]
 };
 
 var kvm_payload =
 {
-    "alias": "autotest" + process.pid,
-    "brand": "kvm",
-    "do_not_inventory": true,
-    "max_physical_memory": 256,
-    "disk_driver": "virtio",
-    "nic_driver": "virtio",
-    "disks": [
-        { "image_uuid": kvm_image_uuid },
-        { "size": 1024 }
+    alias: 'autotest' + process.pid,
+    brand: 'kvm',
+    do_not_inventory: true,
+    max_physical_memory: 256,
+    disk_driver: 'virtio',
+    nic_driver: 'virtio',
+    disks: [
+        { image_uuid: kvm_image_uuid },
+        { size: 1024 }
     ],
-    "nics": [
+    nics: [
         {
-            "ip": "10.254.254.254",
-            "netmask": "255.255.255.0",
-            "nic_tag": "external",
-            "interface": "net0",
-            "vlan_id": 0,
-            "gateway": "10.254.254.1",
-            "mac": "06:05:04:03:02:01"
+            ip: '10.254.254.254',
+            netmask: '255.255.255.0',
+            nic_tag: 'external',
+            interface: 'net0',
+            vlan_id: 0,
+            gateway: '10.254.254.1',
+            mac: '06:05:04:03:02:01'
         }
     ]
 };
@@ -106,7 +108,7 @@ function zfs(args, callback)
     });
 }
 
-test('create zone', {'timeout': 240000}, function(t) {
+test('create smartos VM', function(t) {
     VM.create(smartos_payload, function (err, obj) {
         if (err) {
             t.ok(false, 'error creating VM: ' + err.message);
@@ -126,7 +128,7 @@ test('create zone', {'timeout': 240000}, function(t) {
     });
 });
 
-test('time machine', function(t) {
+test('time machine for smartos VM', function(t) {
 
     if (aborted) {
         t.ok(false, 'Test run is aborted');
@@ -223,9 +225,9 @@ function upgrade_zone(t) {
     });
 }
 
-test('upgrade zone', {'timeout': 240000}, upgrade_zone);
+test('upgrade smartos VM', upgrade_zone);
 
-test ('check properties after upgrade', {'timeout': 240000}, function(t) {
+test ('check smartos VM properties after upgrade', function(t) {
     if (aborted) {
         t.ok(false, 'Test run is aborted');
         t.end();
@@ -265,7 +267,7 @@ test ('check properties after upgrade', {'timeout': 240000}, function(t) {
     });
 });
 
-test ('check cores after upgrade', {'timeout': 240000}, function(t) {
+test ('check cores on smartos VM after upgrade', function(t) {
     var args;
     var datasets = [];
     var new_cores;
@@ -319,7 +321,7 @@ test ('check cores after upgrade', {'timeout': 240000}, function(t) {
     });
 });
 
-test('time machine part 2', function(t) {
+test('time machine for smartos VM part 2', function(t) {
 
     if (aborted) {
         t.ok(false, 'Test run is aborted');
@@ -363,9 +365,9 @@ test('time machine part 2', function(t) {
     });
 });
 
-test('upgrade zone again', {'timeout': 240000}, upgrade_zone);
+test('upgrade smartos VM again', upgrade_zone);
 
-test('check the machine again after upgrade #2', function (t) {
+test('check the smartos VM again after upgrade #2', function (t) {
 
     if (aborted) {
         t.ok(false, 'Test run is aborted');
@@ -405,7 +407,7 @@ test('check the machine again after upgrade #2', function (t) {
     });
 });
 
-test('delete zone', function(t) {
+test('delete smartos VM', function(t) {
     if (aborted) {
         t.ok(false, 'Test run is aborted, leaving zone for investigation');
         t.end();
@@ -427,7 +429,7 @@ test('delete zone', function(t) {
     }
 });
 
-test('create kvm', {'timeout': 240000}, function(t) {
+test('create kvm VM', function(t) {
     VM.create(kvm_payload, function (err, obj) {
         if (err) {
             t.ok(false, 'error creating VM: ' + err.message);
@@ -448,7 +450,7 @@ test('create kvm', {'timeout': 240000}, function(t) {
     });
 });
 
-test('kvm time machine', function(t) {
+test('kvm VM time machine', function(t) {
 
     if (aborted) {
         t.ok(false, 'Test run is aborted');
@@ -497,9 +499,9 @@ test('kvm time machine', function(t) {
     });
 });
 
-test('upgrade zone', {'timeout': 240000}, upgrade_zone);
+test('upgrade kvm VM', upgrade_zone);
 
-test ('check properties after upgrade', {'timeout': 240000}, function(t) {
+test ('check kvm VM properties after upgrade', function(t) {
     if (aborted) {
         t.ok(false, 'Test run is aborted');
         t.end();
@@ -531,6 +533,7 @@ test ('check properties after upgrade', {'timeout': 240000}, function(t) {
             t.ok(newobj.create_timestamp === expected_create_timestamp, 'create_timestamp expected: ' + expected_create_timestamp + ', actual: ' + newobj.create_timestamp);
             t.ok(newobj.quota === 10, 'quota expected: 10, actual: ' + newobj.quota);
             t.ok(newobj.v === 1, 'v expected: 1, actual: ' + newobj.v);
+            t.ok(Array.isArray(vmobj.disks), 'vmobj.disks is array');
             t.ok(vmobj.disks.length === 2, 'vmobj has 2 disks: ' + vmobj.disks.length);
 
             // check that refreservation is set to size for first disk.
@@ -559,7 +562,7 @@ test ('check properties after upgrade', {'timeout': 240000}, function(t) {
 
 });
 
-test('delete kvm', function(t) {
+test('delete kvm VM', function(t) {
     if (aborted) {
         t.ok(false, 'Test run is aborted, leaving zone for investigation');
         t.end();

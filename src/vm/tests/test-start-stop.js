@@ -1,13 +1,15 @@
-// Copyright 2012 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that default values don't change accidentally.
 //
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
@@ -15,8 +17,8 @@ var abort = false;
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var loops = 10;
 
-test('create zone', {'timeout': 240000}, function(t) {
-    var state = {'brand': 'joyent-minimal'};
+test('create zone', function(t) {
+    var state = {brand: 'joyent-minimal'};
     var functions = [
         function (cb) {
             VM.load(state.uuid, function(err, obj) {
@@ -67,9 +69,9 @@ test('create zone', {'timeout': 240000}, function(t) {
     }
 
     vmtest.on_new_vm(t, image_uuid, {
-        'autoboot': false,
-        'do_not_inventory': true,
-        'alias': 'autozone-' + process.pid,
+        autoboot: false,
+        do_not_inventory: true,
+        alias: 'autozone-' + process.pid,
     }, state, functions);
 });
 

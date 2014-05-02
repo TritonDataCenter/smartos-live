@@ -1,13 +1,15 @@
-// Copyright 2013 Joyent, Inc.  All rights reserved.
+// Copyright 2014 Joyent, Inc.  All rights reserved.
 
-process.env['TAP'] = 1;
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
 var execFile = cp.execFile;
 var fs = require('fs');
-var test = require('tap').test;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+
+// this puts test stuff in global, so we need to tell jsl about that:
+/* jsl:import ../node_modules/nodeunit-plus/index.js */
+require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
@@ -18,14 +20,14 @@ var kvm_image_uuid = vmtest.CURRENT_UBUNTU_UUID;
 var vmobj;
 
 var smartos_payload = {
-    'brand': 'joyent-minimal',
-    'image_uuid': smartos_image_uuid,
-    'alias': 'test-reprovision-' + process.pid,
-    'do_not_inventory': true,
-    'delegate_dataset': true,
-    'ram': 256,
-    'max_swap': 1024,
-    'customer_metadata': {'hello': 'world'}
+    brand: 'joyent-minimal',
+    image_uuid: smartos_image_uuid,
+    alias: 'test-reprovision-' + process.pid,
+    do_not_inventory: true,
+    delegate_dataset: true,
+    ram: 256,
+    max_swap: 1024,
+    customer_metadata: {hello: 'world'}
 };
 
 function zfs(args, callback)
@@ -34,9 +36,9 @@ function zfs(args, callback)
 
     execFile(cmd, args, function (error, stdout, stderr) {
         if (error) {
-            callback(error, {'stdout': stdout, 'stderr': stderr});
+            callback(error, {stdout: stdout, stderr: stderr});
         } else {
-            callback(null, {'stdout': stdout, 'stderr': stderr});
+            callback(null, {stdout: stdout, stderr: stderr});
         }
     });
 }
@@ -66,7 +68,7 @@ function trim(str, chars)
     var thing_payload = d[1];
     var thing_image_uuid = d[2];
 
-    test('create ' + thing_name, {'timeout': 240000}, function(t) {
+    test('create ' + thing_name, function(t) {
         VM.create(thing_payload, function (err, obj) {
             if (err) {
                 t.ok(false, 'error creating VM: ' + err.message);
@@ -111,7 +113,7 @@ function trim(str, chars)
     });
 
     // See OS-2270, we used to die when there were snapshots of the zoneroot.
-    test('snapshot zoneroot of ' + thing_name, {'timeout': 360000}, function(t) {
+    test('snapshot zoneroot of ' + thing_name, function(t) {
         if (abort) {
             t.ok(false, 'skipping snapshot as test run is aborted.');
             t.end();
@@ -125,7 +127,7 @@ function trim(str, chars)
 
     });
 
-    test('reprovision ' + thing_name, {'timeout': 360000}, function(t) {
+    test('reprovision ' + thing_name, function(t) {
         if (abort) {
             t.ok(false, 'skipping reprovision as test run is aborted.');
             t.end();

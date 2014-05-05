@@ -1,5 +1,10 @@
 # imgadm changelog
 
+## 2.6.12
+
+- [OS-2981, joyent/smartos-live#322] Fix 'imgadm avail' crash with a DSAPI
+  image source.
+
 ## 2.6.11
 
 - [OS-2961] Fix a breakage in 'imgadm import' introduced in version 2.6.10.

@@ -59,7 +59,7 @@ DSAPI.prototype.ping = function ping(callback) {
  * @param {Object} params : Filter params. Images can be filtered by
  *                          'name', 'version', 'type', 'os',
  *                          'restricted_to_uuid' & 'creator_uuid' params.
- * @param {Function} callback : of the form f(err, imgs).
+ * @param {Function} callback : `function (err, images, res)`
  */
 DSAPI.prototype.listImages = function (params, cb) {
     var self = this,
@@ -80,9 +80,9 @@ DSAPI.prototype.listImages = function (params, cb) {
 
     return self.client.get(path, function (err, req, res, imgs) {
         if (err) {
-            return cb(err);
+            return cb(err, null, res);
         } else {
-            return cb(null, imgs);
+            return cb(null, imgs, res);
         }
     });
 };

@@ -155,21 +155,3 @@ test('`imgadm info BOGUS_UUID` ImageNotInstalled error, rv 3', function (t) {
         t.end();
     });
 });
-
-
-// OS-2981: we broke 'imgadm avail' with a DSAPI source once.
-test('imgadm sources -a DSAPI', function (t) {
-    exec('imgadm sources -a https://datasets.joyent.com/datasets',
-            function (err, stdout, stderr) {
-        t.ifError(err, err);
-        t.end();
-    });
-});
-test('imgadm avail', function (t) {
-    exec('imgadm avail -o source,uuid,name | grep datasets.joyent.com',
-            function (err, stdout, stderr) {
-        t.ifError(err, err);
-        t.ok(/base/.test(stdout), 'datasets.joyent.com provides a "base" img');
-        t.end();
-    });
-});

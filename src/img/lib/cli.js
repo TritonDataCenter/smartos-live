@@ -349,7 +349,7 @@ CLI.prototype.main = function main(argv, options, callback) {
             ],
             // TODO hack serializers until
             // https://github.com/mcavage/node-restify/pull/501 is fixed
-            //serializers: bunyan.stdSerializers,
+            // serializers: bunyan.stdSerializers,
             serializers: restify.bunyan.serializers,
             req_id: req_id
         });

@@ -136,6 +136,8 @@ f usr/lib/brand/kvm/platform.xml 0444 root root
 f usr/lib/brand/kvm/poststate 0755 root root
 f usr/lib/brand/kvm/prestate 0755 root root
 f usr/lib/brand/kvm/statechange 0755 root root
+d usr/lib/brand/lx 0755 root bin
+f usr/lib/brand/lx/lx_install 0755 root root
 d usr/lib/localedef 0755 root bin
 d usr/lib/localedef/extensions 0755 root bin
 f usr/lib/localedef/extensions/UTF-8.x 0444 root bin

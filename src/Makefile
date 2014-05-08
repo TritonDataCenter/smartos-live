@@ -68,6 +68,7 @@ JS_CHECK_TARGETS=\
 	vm/sbin/*.js \
 	vm/node_modules/{dladm,expander,proptable,utils,VM,qmp}.js \
 	vm/node_modules/vmload/*.js \
+	vm/node_modules/vmsnapshot/*.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
 	vm/tests/test-indestructible.js \

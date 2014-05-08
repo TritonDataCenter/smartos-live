@@ -38,6 +38,7 @@ var fs = require('fs');
 var assert = require('assert-plus');
 var async = require('async');
 var nopt = require('nopt');
+var restify = require('sdc-clients/node_modules/restify');
 var sprintf = require('extsprintf').sprintf;
 var rimraf = require('rimraf');
 var genUuid = require('node-uuid');
@@ -346,7 +347,10 @@ CLI.prototype.main = function main(argv, options, callback) {
                     level: 'warn'
                 }
             ],
-            serializers: bunyan.stdSerializers,
+            // TODO hack serializers until
+            // https://github.com/mcavage/node-restify/pull/501 is fixed
+            // serializers: bunyan.stdSerializers,
+            serializers: restify.bunyan.serializers,
             req_id: req_id
         });
         var IMGADM_LOG_LEVEL;
@@ -1161,7 +1165,7 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, callback) {
             }
             self.log.trace({imageInfo: imageInfo},
                 'found source for image %s', uuid);
-            console.log('Importing image %s (%s %s) from "%s"', uuid,
+            console.log('Importing image %s (%s@%s) from "%s"', uuid,
                 imageInfo.manifest.name, imageInfo.manifest.version,
                 imageInfo.source.url);
 

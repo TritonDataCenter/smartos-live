@@ -1,8 +1,23 @@
 # imgadm changelog
 
+## 2.6.13
+
+- [OS-2989] Fix 'imgadm import UUID' *when importing from a DSAPI source*
+  (e.g. https://datasets.joyent.com/datasets). This has been broken since
+  v2.2.0. Note that import from an IMGAPI source (the default and more
+  common) is fine.
+
+
+## 2.6.12
+
+- [OS-2981, joyent/smartos-live#322] Fix 'imgadm avail' crash with a DSAPI
+  image source.
+
+
 ## 2.6.11
 
 - [OS-2961] Fix a breakage in 'imgadm import' introduced in version 2.6.10.
+
 
 ## 2.6.10
 

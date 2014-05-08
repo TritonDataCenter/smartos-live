@@ -1563,7 +1563,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                             manifest.origin, imageInfo.source));
                         return;
                     }
-                    logCb(format('Importing origin image %s (%s %s) from "%s"',
+                    logCb(format('Importing origin image %s (%s@%s) from "%s"',
                         originInfo.manifest.uuid, originInfo.manifest.name,
                         originInfo.manifest.version, originInfo.source.url));
                     var impOpts = {
@@ -1966,7 +1966,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             },
             function noteCompletion(next) {
                 if (doTheImport) {
-                    logCb(format('%s image %s (%s/%s) to "%s/%s"',
+                    logCb(format('%s image %s (%s@%s) to "%s/%s"',
                         (options.file ? 'Installed' : 'Imported'),
                         uuid,
                         manifest.name,

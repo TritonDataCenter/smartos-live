@@ -493,8 +493,124 @@ function brand_test(brand, image, t) {
                     'restricted' ],
                 allowed_ips: [ips[2], '10.5.0.201', '10.5.0.202']
             }, cb);
-        }
+        }, function (cb) {
+            // update net2 to have a v4 prefix for IP antispoof
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_ips: [ '10.88.88.0/24' ]
+            } ] }, function (e) {
+                if (e) {
+                    t.ok(false, 'VM.update: ' + e.message);
+                    return cb(e);
+                }
 
+                VM.load(state.uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'VM.load: ' + err.message);
+                        return cb(err);
+                    }
+
+                    t.ok(obj.nics[2].allowed_ips[0] == '10.88.88.0/24',
+                        'single allowed-ips IPv4 prefix');
+                    cb();
+                });
+            });
+        }, function (cb) {
+            // update net2 to have a v6 prefix for IP antispoof
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_ips: [ '2600:3c00::f03c:91ff:fe96:a260/124' ]
+            } ] }, function (e) {
+                if (e) {
+                    t.ok(false, 'VM.update: ' + e.message);
+                    return cb(e);
+                }
+
+                VM.load(state.uuid, function (err, obj) {
+                    if (err) {
+                        t.ok(false, 'VM.load: ' + err.message);
+                        return cb(err);
+                    }
+
+                    t.ok(obj.nics[2].allowed_ips[0] ==
+                        '2600:3c00::f03c:91ff:fe96:a260/124',
+                        'single allowed-ips IPv6 prefix');
+                    cb();
+                });
+            });
+        }, function (cb) {
+            // update net2 to have an invalid v4 prefix for IP antispoof
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_ips: [ '10.88.88.0/36' ]
+            } ] }, function (e) {
+                t.ok(e, 'v4 prefix too large');
+                cb();
+            });
+        }, function (cb) {
+            // update net2 to have an invalid v4 prefix for IP antispoof
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_ips: [ '10.88.88.0/0' ]
+            } ] }, function (e) {
+                t.ok(e, 'v4 prefix too small');
+                cb();
+            });
+        }, function (cb) {
+            // update net2 to have an invalid v4 prefix for IP antispoof
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_ips: [ '10.88.88.0/-3' ]
+            } ] }, function (e) {
+                t.ok(e, 'v4 prefix invalid number');
+                cb();
+            });
+        }, function (cb) {
+            // update net2 to have an invalid v4 prefix for IP antispoof
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_ips: [ '10.88.88.0/' ]
+            } ] }, function (e) {
+                t.ok(e, 'v4 prefix missing number');
+                cb();
+            });
+        }, function (cb) {
+            // update net2 to have an invalid v6 prefix for IP antispoof
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_ips: [ '2600:3c00::f03c:91ff:fe96:a260/129' ]
+            } ] }, function (e) {
+                t.ok(e, 'v6 prefix too large');
+                cb();
+            });
+        }, function (cb) {
+            // update net2 to have an invalid v6 prefix for IP antispoof
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_ips: [ '2600:3c00::f03c:91ff:fe96:a260/0' ]
+            } ] }, function (e) {
+                t.ok(e, 'v6 prefix too small');
+                cb();
+            });
+        }, function (cb) {
+            // update net2 to have an invalid v6 prefix for IP antispoof
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_ips: [ '2600:3c00::f03c:91ff:fe96:a260/-5' ]
+            } ] }, function (e) {
+                t.ok(e, 'v6 prefix invalid number');
+                cb();
+            });
+        }, function (cb) {
+            // update net2 to have an invalid v6 prefix for IP antispoof
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_ips: [ '2600:3c00::f03c:91ff:fe96:a260/' ]
+            } ] }, function (e) {
+                t.ok(e, 'v6 prefix missing number');
+                cb();
+            });
+        }
     ], function (err) {
         t.end();
     });

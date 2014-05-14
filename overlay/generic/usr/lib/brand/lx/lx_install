@@ -53,21 +53,12 @@ screenlog()
 	[[ -n $logfile ]] && printf "$fmt\n" "$@" >&2
 }
 
-# Print and log provided text if the shell variable "verbose_mode" is set
-verbose()
-{
-	[[ -n $verbose_mode ]] && echo "$@"
-	[[ -n $logfile ]] && [[ -n $verbose_mode ]] && echo "$@" >&2
-}
-
 cmd_not_found=$(gettext "Required command '%s' cannot be found!")
 cmd_not_exec=$(gettext "Required command '%s' not executable!")
 zone_initfail=$(gettext "Attempt to initialize zone '%s' FAILED.")
 path_abs=$(gettext "Pathname specified to -d '%s' must be absolute.")
 
 cmd=$(gettext "%s -z <zone name> %s")
-
-both_modes=$(gettext "%s: error: cannot select both silent and verbose modes")
 
 not_found=$(gettext "%s: error: file or directory not found.")
 
@@ -105,7 +96,7 @@ usage()
 	int_code=$ZONE_SUBPROC_USAGE
 
 	echo $(gettext "Usage:")
-	printf "  $cmd\n" "zoneadm" "install [-s|-v] -d {path to archive}"
+	printf "  $cmd\n" "zoneadm" "install -d {path to archive}"
 
 	echo
 
@@ -162,29 +153,31 @@ trap trap_cleanup INT
 # brand directory name here.
 #
 branddir=$(dirname "$0")
-zonename="$1"
-zoneroot="$2"
+REPROVISONING=""
+ZONENAME="$1"
+ZONEPATH="$2"
+# Default to 10GB diskset quota
+ZQUOTA=10
 
-install_root="$zoneroot/root"
+install_root="$ZONEPATH/root"
 logdir="$install_root/var/log"
 
 shift; shift	# remove zonename and zoneroot from arguments array
 
 unset gtaropts
-unset install_opts
 unset install_src
 unset msg
-unset silent_mode
-unset verbose_mode
 
-while getopts "d:hsvX" opt
+while getopts "d:hq:rt:" opt
 do
 	case "$opt" in
-		h) 	usage;;
-		s)	silent_mode=1;;
-		v)	verbose_mode=1;;
 		d) 	install_src="$OPTARG" ;;
-		X)	install_opts="$install_opts -x" ;;
+		h) 	usage;;
+		q)	ZQUOTA="$OPTARG";;
+		r)	set -x
+			REPROVISIONING="true"
+			;;
+		t)	TMPLZONE="$OPTARG";;
 		*)	usage;;
 	esac
 done
@@ -195,13 +188,6 @@ if [[ $# -gt 0 ]]; then
 
 	screenlog "$msg"
 	screenlog "  \"%s\"" "$@"
-	screenlog ""
-	usage
-fi
-
-# The install can't be both verbose AND silent...
-if [[ -n $silent_mode && -n $verbose_mode ]]; then
-	screenlog "$both_modes" "zoneadm install"
 	screenlog ""
 	usage
 fi
@@ -225,57 +211,100 @@ fi
 
 if [[ ! -a "$install_src" ]]; then
 	screenlog "$not_found" "$install_src"
-	screenlog "$install_abort" "$zonename"
+	screenlog "$install_abort" "$ZONENAME"
 	exit $int_code
 fi
 
 if [[ ! -r "$install_src" ]]; then
 	screenlog "$not_readable" "$install_src"
-	screenlog "$install_abort" "$zonename"
+	screenlog "$install_abort" "$ZONENAME"
 	exit $int_code
 fi
 
 if [[ ! -f "$install_src" ]]; then
 	screenlog "$wrong_type" "$install_src"
-	screenlog "$install_abort" "$zonename"
+	screenlog "$install_abort" "$ZONENAME"
 	exit $int_code
 fi
 
 filetype=`{ LC_ALL=C file $install_src | awk '{print $2}' ; } 2>/dev/null`
 
 if [[ "$filetype" = "gzip" ]]; then
-	verbose "\"$install_src\": \"gzip\" archive"
 	gtaropts="-xz"
 elif [[ "$filetype" = "bzip2" ]]; then
-	verbose "\"$install_src\": \"bzip2\" archive"
 	gtaropts="-xj"
 elif [[ "$filetype" = "compressed" ]]; then
-	verbose "\"$install_src\": Lempel-Ziv" "compressed (\".Z\") archive."
 	gtaropts="-xZ"
 elif [[ "$filetype" = "USTAR" ]]; then
-	verbose "\"$install_src\":" "uncompressed (\"tar\") archive."
 	gtaropts="-x"
 else
 	screenlog "$wrong_type" "$install_src"
-	screenlog "$install_abort" "$zonename"
+	screenlog "$install_abort" "$ZONENAME"
 	exit $int_code
 fi
 
-#
-# Start silent operation
-#
-if [[ -n $silent_mode ]]; then
-	exec 1>/dev/null
-	install_opts="$install_opts -s"
-fi
-
-if [[ -n $verbose_mode ]]; then
-	echo $(gettext "Verbose output mode enabled.")
-	install_opts="$install_opts -v"
-	[[ -n $gtaropts ]] && gtaropts="${gtaropts}v"
-fi
-
 gtaropts="${gtaropts}f"
+
+#
+# IMPORTANT: all actions below need to consider reprovision. If the action
+# modifies files in the zoneroot itself, it should be run on reprovision
+# any other changes to the zone or dataset should not be done on reprovision.
+#
+
+if [[ -z ${REPROVISIONING} \
+    && -n $(zonecfg -z "${ZONENAME}" info attr name=transition \
+    | grep "value: receiving:") ]]; then
+
+	# Here we're doing an install for a received zone, the dataset should
+	# have already been created.
+	exit $ZONE_SUBPROC_OK
+fi
+
+if [[ -z $ZONEPATH || -z $ZONENAME ]]; then
+	print -u2 "Brand error: No zone path or name"
+	exit $ZONE_SUBPROC_USAGE
+fi
+
+if [[ -z ${REPROVISIONING} ]]; then
+	# The install requires a template zone.
+	# XXX
+#	if [[ -z $TMPLZONE ]]; then
+#		print -u2 "Brand error: a zone template is required"
+#		exit $ZONE_SUBPROC_USAGE
+#	fi
+
+	# The dataset quota must be a number.
+	case $ZQUOTA in *[!0-9]*)
+		print -u2 "Brand error: The quota $ZQUOTA is not a number"
+		exit $ZONE_SUBPROC_USAGE;;
+	esac
+fi
+
+ZROOT=$ZONEPATH/root
+
+if [[ -z ${REPROVISIONING} ]]; then
+	# Get the dataset of the parent directory of the zonepath.
+	dname=${ZONEPATH%/*}
+	bname=${ZONEPATH##*/}
+	PDS_NAME=`mount | nawk -v p=$dname '{if ($1 == p) print $3}'`
+	[ -z "$PDS_NAME" ] && \
+	    print -u2 "Brand error: missing parent ZFS dataset for $dname"
+
+	# We expect that zoneadm was invoked with '-x nodataset', so it won't
+	# have created the dataset.
+
+	QUOTA_ARG=
+	if [[ ${ZQUOTA} != "0" ]]; then
+		QUOTA_ARG="-o quota=${ZQUOTA}g"
+	fi
+
+	# XXX here is where we would snapshot and clone image dataset
+	# just create dataset for now if its not already there
+
+	zfs create ${QUOTA_ARG} ${PDS_NAME}/${bname}
+fi
+
+# The rest should be run when REPROVISIONING is set as well.
 
 if [[ ! -d "$install_root" ]]; then
 	if ! mkdir -p "$install_root" 2>/dev/null; then
@@ -300,7 +329,7 @@ if [[ ! -d "$logdir" ]]; then
 	fi
 fi
 
-logfile="${logdir}/$zonename.install.$$.log"
+logfile="${logdir}/$ZONENAME.install.$$.log"
 
 if ! > $logfile; then
 	screenlog "$no_logfile" "$logfile"
@@ -318,9 +347,9 @@ exec 2>>"$logfile"
 #
 int_code=$ZONE_SUBPROC_FATAL
 
-log "Installation started for zone \"$zonename\" `/usr/bin/date`"
+log "Installation started for zone \"$ZONENAME\" `/usr/bin/date`"
 
-screenlog "$install_zone" "$zonename" "$zoneroot"
+screenlog "$install_zone" "$ZONENAME" "$ZONEPATH"
 screenlog "$install_from" "$install_src"
 echo
 echo $(gettext "This process may take several minutes.")
@@ -333,7 +362,7 @@ else
 	    -d "${install_root}/sbin" ]]; then
 		log "Error: improper or incomplete tar archive."
 	else
-		$branddir/lx_init_zone "$install_root"
+		$branddir/lx_init_zone "$ZONENAME" "$install_root"
 
 		#
 		# Emit the same code from here whether we're
@@ -343,17 +372,17 @@ else
 	fi
 fi
 
-mkdir $zoneroot/cores
+mkdir $ZONEPATH/cores
 
 if [[ $int_code -eq ZONE_SUBPROC_OK ]]; then
-	log "Install completed for zone '$zonename' `date`."
+	log "Install completed for zone '$ZONENAME' `date`."
 else
-	log "Install failed for zone \"$zonename\" `date`."
+	log "Install failed for zone \"$ZONENAME\" `date`."
 fi
 
 if [[ $int_code -ne $ZONE_SUBPROC_OK ]]; then
 	screenlog ""
-	screenlog "$install_fail" "$zonename"
+	screenlog "$install_fail" "$ZONENAME"
 	screenlog ""
 
 	#
@@ -375,11 +404,24 @@ fi
 exec 2>>"$logfile"
 
 screenlog ""
-screenlog "$install_good" "$zonename"
+screenlog "$install_good" "$ZONENAME"
 screenlog ""
 
 echo $(gettext "Details saved to log file:")
 echo "    \"$logfile\""
 echo
+
+if [[ -z ${REPROVISIONING} ]]; then
+	# The cores quota exists to control run-away zones. As such we make it
+	# such that it will protect the system from a single run-away, but
+	# still allow us to get most cores. 100G seems good enough based on
+	# samples from JPC.
+	rm -rf $ZONEPATH/cores
+	CORE_QUOTA=102400
+	zfs create -o quota=${CORE_QUOTA}m \
+	    -o mountpoint=/${PDS_NAME}/$bname/cores ${PDS_NAME}/cores/$bname
+
+	chmod 700 $ZONEPATH
+fi
 
 exit $ZONE_SUBPROC_OK

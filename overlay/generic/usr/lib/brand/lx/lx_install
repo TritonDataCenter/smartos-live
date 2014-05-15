@@ -53,8 +53,6 @@ screenlog()
 	[[ -n $logfile ]] && printf "$fmt\n" "$@" >&2
 }
 
-cmd_not_found=$(gettext "Required command '%s' cannot be found!")
-cmd_not_exec=$(gettext "Required command '%s' not executable!")
 zone_initfail=$(gettext "Attempt to initialize zone '%s' FAILED.")
 path_abs=$(gettext "Pathname specified to -d '%s' must be absolute.")
 
@@ -101,6 +99,55 @@ usage()
 	echo
 
 	exit $int_code
+}
+
+customize()
+{
+    zonecfg -z $ZONENAME info net | awk '
+        BEGIN {
+            printf("# interfaces(5) file used by ifup(8) and ifdown(8)\n")
+            printf("auto lo0\n")
+            printf("iface lo0 inet loopback\n")
+            printf("\n")
+
+        } {
+            if ($1 == "physical:") {
+                phys = $2
+            } else if ($1 == "property:") {
+                split($2, a, ",")
+                split(a[1], k, "=")
+                split(a[2], v, "=")
+
+                val = substr(v[2], 2)
+                val = substr(val, 1, length(val) - 2)
+
+                if (k[2] == "ip")
+                    ip = val
+                else if (k[2] == "netmask")
+                    mask = val
+                else if (k[2] == "primary")
+                    prim = val
+            }
+
+            if ($1 == "net:" && phys != "") {
+                printf("auto %s\n", phys)
+                printf("iface %s inet static\n", phys);
+                printf("    address %s\n", ip);
+                printf("    netmask %s\n", mask);
+                printf("    up flush-mail\n");
+                printf("\n")
+
+                phys = ""
+                prim = ""
+            }
+        }
+        END {
+            printf("auto %s\n", phys)
+            printf("iface %s inet static\n", phys);
+            printf("    address %s\n", ip);
+            printf("    netmask %s\n", mask);
+            printf("    up flush-mail\n");
+        }' > $install_root/etc/network/interfaces
 }
 
 #
@@ -369,6 +416,11 @@ else
 		# interrupted or exiting normally.
 		#
 		int_code=$?
+
+		if [[ $int_code == 0 ]]; then
+			customize
+			int_code=$?
+		fi
 	fi
 fi
 

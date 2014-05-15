@@ -431,6 +431,7 @@ function setup(opts) {
         'fwrule',
         'net',
         'node-uuid',
+        'path',
         'stream',
         'vasync',
         'verror',

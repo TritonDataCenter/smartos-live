@@ -129,6 +129,38 @@ exports['all vms -> local VM'] = function (t) {
 };
 
 
+exports['tags with boolean values'] = function (t) {
+    var owner = mod_uuid.v4();
+    var vms = [
+        helpers.generateVM({ owner_uuid: owner }),
+        helpers.generateVM({ owner_uuid: owner, tags: { private: 'true' } }),
+        helpers.generateVM({ owner_uuid: owner, tags: { private: true } }),
+        helpers.generateVM()
+    ];
+    var rule = {
+        enabled: true,
+        owner_uuid: owner,
+        rule: 'FROM ip 10.0.1.1 TO tag private = true ALLOW tcp PORT all'
+    };
+
+    var payload = {
+        rule: rule,
+        vms: vms
+    };
+
+    fw.vms(payload, function (err, res) {
+        t.ifError(err, 'error returned');
+        if (err) {
+            return t.done();
+        }
+
+        t.deepEqual(res, [ vms[1].uuid, vms[2].uuid ].sort(helpers.uuidSort),
+            'vms returned');
+        return t.done();
+    });
+};
+
+
 
 // --- Teardown
 

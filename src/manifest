@@ -634,8 +634,6 @@ f usr/node/0.10/node_modules/sprintf.js 0444 root bin
 f usr/node/0.10/node_modules/sqlite3.js 0444 root bin
 f usr/node/0.10/node_modules/sqlite3_trace.js 0444 root bin
 f usr/node/0.10/node_modules/node_sqlite3.node 0444 root bin
-f usr/node/0.10/node_modules/panic.js 0444 root bin
-f usr/node/0.10/node_modules/subr.js 0444 root bin
 f usr/node/0.10/node_modules/system.js 0444 root bin
 f usr/node/0.10/node_modules/uuid.node 0444 root bin
 f usr/node/0.10/node_modules/zfs.js 0444 root bin

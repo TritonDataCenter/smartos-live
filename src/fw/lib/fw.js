@@ -1475,7 +1475,11 @@ function add(opts, callback) {
 
         // Get VMs the added rules affect
         function matchingVMs(res, cb) {
-            filter.vmsByRules(res.vms, res.rules, log, cb);
+            filter.vmsByRules({
+                log: log,
+                rules: res.rules,
+                vms: res.vms
+            }, cb);
         },
 
         // Get rules the added remote VMs affect
@@ -1491,8 +1495,11 @@ function add(opts, callback) {
         // Merge the local and remote VM rules, and use that list to find
         // the VMs affected
         function localAndRemoteVMsAffected(res, cb) {
-            filter.vmsByRules(res.vms,
-                dedupRules(res.localVMrules, res.remoteVMrules), log, cb);
+            filter.vmsByRules({
+                log: log,
+                rules: dedupRules(res.localVMrules, res.remoteVMrules),
+                vms: res.vms
+            }, cb);
         },
 
         function mergedVMs(res, cb) {
@@ -1584,7 +1591,11 @@ function del(opts, callback) {
 
         // Get VMs that are affected by the remote VM rules
         function rvmVMs(res, cb) {
-            filter.vmsByRules(res.vms, res.remoteVMrules, log, cb);
+            filter.vmsByRules({
+                log: log,
+                rules: res.remoteVMrules,
+                vms: res.vms
+            }, cb);
         },
 
         // Get the deleted rules
@@ -1594,7 +1605,11 @@ function del(opts, callback) {
 
         // Get VMs the deleted rules affect
         function ruleVMs(res, cb) {
-            filter.vmsByRules(res.vms, res.rules.matching, log, cb);
+            filter.vmsByRules({
+                log: log,
+                rules: res.rules.matching,
+                vms: res.vms
+            }, cb);
         },
 
         // Now find all rules that apply to those VMs, omitting the
@@ -2094,12 +2109,20 @@ function update(opts, callback) {
 
         // Get the VMs the rules applied to before the update
         function originalVMs(res, cb) {
-            filter.vmsByRules(res.vms, res.originalRules, log, cb);
+            filter.vmsByRules({
+                log: log,
+                rules: res.originalRules,
+                vms: res.vms
+            }, cb);
         },
 
         // Now get the VMs the updated rules apply to
         function matchingVMs(res, cb) {
-            filter.vmsByRules(res.vms, res.rules, log, cb);
+            filter.vmsByRules({
+                log: log,
+                rules: res.rules,
+                vms: res.vms
+            }, cb);
         },
 
         // Replace the rules with their updated versions
@@ -2121,8 +2144,11 @@ function update(opts, callback) {
         // Merge the local and remote VM rules, and use that list to find
         // the VMs affected
         function localAndRemoteVMsAffected(res, cb) {
-            filter.vmsByRules(res.vms,
-                dedupRules(res.localVMrules, res.remoteVMrules), log, cb);
+            filter.vmsByRules({
+                log: log,
+                rules: dedupRules(res.localVMrules, res.remoteVMrules),
+                vms: res.vms
+            }, cb);
         },
 
         function mergedVMs(res, cb) {
@@ -2238,6 +2264,8 @@ function getRemoteTargets(opts, callback) {
  * @param opts {Object} : options:
  * - vms {Array} : array of VM objects (as per VM.js)
  * - rule {UUID or Object} : UUID of pre-existing rule, or a rule object
+ * - includeDisabled {Boolean, optional} : if set, include VMs that have
+ *   their firewalls disabled in the search
  * @param callback {Function} `function (err, vms)`
  * - Where vms is an array of VMs that are affected by that rule
  */
@@ -2246,6 +2274,7 @@ function getRuleVMs(opts, callback) {
         assert.object(opts, 'opts');
         assert.arrayOfObject(opts.vms, 'opts.vms');
         assertStringOrObject(opts.rule, 'opts.rule');
+        assert.optionalBool(opts.includeDisabled, 'opts.includeDisabled');
     } catch (err) {
         return callback(err);
     }
@@ -2266,7 +2295,12 @@ function getRuleVMs(opts, callback) {
                 state.rules = [ state.rules ];
             }
 
-            filter.vmsByRules(state.vms, state.rules, log, cb);
+            filter.vmsByRules({
+                includeDisabled: opts.includeDisabled,
+                log: log,
+                rules: state.rules,
+                vms: state.vms
+            }, cb);
         }
     ]}, function (err, res) {
         if (err) {

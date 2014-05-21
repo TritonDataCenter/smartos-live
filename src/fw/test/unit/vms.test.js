@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2014, Joyent, Inc. All rights reserved.
  *
  * fw.vms() tests
  */
@@ -24,7 +24,29 @@ var createSubObjects = mod_obj.createSubObjects;
 // Set this to any of the exports in this file to only run that test,
 // plus setup and teardown
 var runOne;
+var d = {};
 var printVMs = false;
+
+
+
+// --- Internal
+
+
+/**
+ * Runs fw.vms() with the payload and compares its output against exp
+ */
+function vmsExpected(t, payload, exp) {
+    fw.vms(payload, function (err, res) {
+        t.ifError(err, 'error returned');
+        if (err) {
+            return t.done();
+        }
+
+        t.deepEqual(res.sort(helpers.uuidSort), exp.sort(helpers.uuidSort),
+            'expected return');
+        return t.done();
+    });
+}
 
 
 
@@ -72,32 +94,21 @@ exports['missing rule'] = function (t) {
 
 
 exports['non-existent VM'] = function (t) {
-    var owner = mod_uuid.v4();
     var vm = mod_uuid.v4();
-    var vms = [
-        helpers.generateVM(),
-        helpers.generateVM()
-    ];
-
     var payload = {
         rule: {
             enabled: true,
-            owner_uuid: owner,
+            owner_uuid: mod_uuid.v4(),
             rule: util.format(
                 'FROM vm %s TO tag role = web ALLOW tcp PORT 80', vm)
         },
-        vms: vms
+        vms: [
+            helpers.generateVM(),
+            helpers.generateVM()
+        ]
     };
 
-    fw.vms(payload, function (err, res) {
-        t.ifError(err, 'error returned');
-        if (err) {
-            return t.done();
-        }
-
-        t.deepEqual(res, [], 'no VMs returned');
-        return t.done();
-    });
+    vmsExpected(t, payload, []);
 };
 
 
@@ -105,59 +116,109 @@ exports['all vms -> local VM'] = function (t) {
     var owner = mod_uuid.v4();
     var vms = [ helpers.generateVM({ owner_uuid: owner }),
         helpers.generateVM() ];
-    var rule = {
-        enabled: true,
-        owner_uuid: owner,
-        rule: util.format('FROM all vms TO vm %s ALLOW tcp PORT all',
-            vms[0].uuid)
-    };
 
     var payload = {
-        rule: rule,
+        rule: {
+            enabled: true,
+            owner_uuid: owner,
+            rule: util.format('FROM all vms TO vm %s ALLOW tcp PORT all',
+                vms[0].uuid)
+        },
         vms: vms
     };
 
-    fw.vms(payload, function (err, res) {
-        t.ifError(err, 'error returned');
-        if (err) {
-            return t.done();
-        }
-
-        t.deepEqual(res, [ vms[0].uuid ], 'vm returned');
-        return t.done();
-    });
+    vmsExpected(t, payload, [ vms[0].uuid ]);
 };
 
 
 exports['tags with boolean values'] = function (t) {
     var owner = mod_uuid.v4();
-    var vms = [
-        helpers.generateVM({ owner_uuid: owner }),
-        helpers.generateVM({ owner_uuid: owner, tags: { private: 'true' } }),
-        helpers.generateVM({ owner_uuid: owner, tags: { private: true } }),
-        helpers.generateVM()
-    ];
-    var rule = {
-        enabled: true,
-        owner_uuid: owner,
-        rule: 'FROM ip 10.0.1.1 TO tag private = true ALLOW tcp PORT all'
-    };
-
     var payload = {
-        rule: rule,
-        vms: vms
+        rule: {
+            enabled: true,
+            owner_uuid: owner,
+            rule: 'FROM ip 10.0.1.1 TO tag private = true ALLOW tcp PORT all'
+        },
+        vms: [
+            helpers.generateVM({ owner_uuid: owner }),
+            helpers.generateVM({
+                owner_uuid: owner, tags: { private: 'true' }
+            }),
+            helpers.generateVM({ owner_uuid: owner, tags: { private: true } }),
+            helpers.generateVM()
+        ]
     };
 
-    fw.vms(payload, function (err, res) {
-        t.ifError(err, 'error returned');
-        if (err) {
-            return t.done();
-        }
+    vmsExpected(t, payload, [ payload.vms[1].uuid, payload.vms[2].uuid ]);
+};
 
-        t.deepEqual(res, [ vms[1].uuid, vms[2].uuid ].sort(helpers.uuidSort),
-            'vms returned');
+
+exports['firewall disabled'] = {
+    'setup': function (t) {
+        var owners = [ mod_uuid.v4(), mod_uuid.v4() ];
+
+        d.vms = [
+            helpers.generateVM({
+                owner_uuid: owners[0],
+                tags: { role: 'web' }
+            }),
+            helpers.generateVM({
+                firewall_enabled: false,
+                owner_uuid: owners[0],
+                tags: { role: 'web' }
+            }),
+            helpers.generateVM({
+                owner_uuid: owners[1],
+                tags: { role: 'web' }
+            })
+        ];
+
+        delete d.vms[0].firewall_enabled;
+
+        d.rule = {
+            enabled: true,
+            owner_uuid: owners[0],
+            rule: 'FROM ip 10.0.1.1 TO tag role = web ALLOW tcp PORT 80'
+        };
+
         return t.done();
-    });
+    },
+
+    'no disabled VMs included': function (t) {
+        var payload = {
+            rule: d.rule,
+            vms: d.vms
+        };
+
+        vmsExpected(t, payload, []);
+    },
+
+    'disabled VMs included': function (t) {
+        var payload = {
+            includeDisabled: true,
+            rule: d.rule,
+            vms: d.vms
+        };
+
+        vmsExpected(t, payload, [ d.vms[0].uuid, d.vms[1].uuid ]);
+    }
+};
+
+
+exports['rule disabled'] = function (t) {
+    var owner = mod_uuid.v4();
+    var vm = helpers.generateVM({ owner_uuid: owner });
+    var payload = {
+        rule: {
+            enabled: false,
+            owner_uuid: owner,
+            rule: util.format('FROM ip 10.0.1.1 TO vm %s ALLOW tcp PORT 2020',
+                vm.uuid)
+        },
+        vms: [ vm ]
+    };
+
+    vmsExpected(t, payload, [ vm.uuid ]);
 };
 
 

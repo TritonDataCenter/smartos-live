@@ -20,12 +20,13 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2014, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: functions for filtering rules and remote VMs
  */
 
+var assert = require('assert-plus');
 var mod_rvm = require('./rvm');
 var objEmpty = require('./util/obj').objEmpty;
 
@@ -195,17 +196,17 @@ function rulesByVMs(allVMs, vms, rules, log, callback) {
             vmList = allVMs[type][t][val];
         }
 
-        var owner_uuid = rule.owner_uuid;
+        var owner = rule.owner_uuid;
 
         for (var uuid in vmList) {
             if (!vms.hasOwnProperty(uuid)) {
                 continue;
             }
 
-            if (owner_uuid && vmList[uuid].owner_uuid != owner_uuid) {
+            if (owner && vmList[uuid].owner_uuid != owner) {
                 log.trace('filter.rulesByVMs: VM %s owner_uuid=%s does not'
                     + ' match rule owner_uuid=%s: %s', vmList[uuid].owner_uuid,
-                    owner_uuid, rule);
+                    owner, rule);
                 continue;
             }
 
@@ -268,15 +269,32 @@ function rvmsByUUIDs(allRVMs, uuids, log, callback) {
 /**
  * Returns an object of the VMs the given rules apply to
  *
- * @param vms {Object}: VM lookup table, as returned by createVMlookup()
- * @param rules {Array}: array of rule objects
+ * @param opts {Object} : options:
+ * - log {Object}: bunyan logger
+ * - vms {Object}: VM lookup table, as returned by createVMlookup()
+ * - rules {Array}: array of rule objects
+ * - includeDisabled {Boolean, optional} : if set, include VMs that have
+ *   their firewalls disabled in the filter. Defaults to true.
  * @param callback {Function} `function (err, matchingVMs)`
  * - Where matchingVMs contains VM objects keyed by uuid, like:
  *     { vm_uuid: vmObj }
  */
-function vmsByRules(vms, rules, log, callback) {
-    log.debug({ rules: rules }, 'filter.vmsByRules: entry');
+function vmsByRules(opts, callback) {
+    assert.object(opts, 'opts');
+    assert.object(opts.log, 'opts.log');
+    assert.arrayOfObject(opts.rules, 'opts.rules');
+    assert.object(opts.vms, 'opts.vms');
+
+    opts.log.debug({ rules: opts.rules }, 'filter.vmsByRules: entry');
+
+    var includeDisabled = true;
+    var rules = opts.rules;
     var matchingVMs = {};
+    var vms = opts.vms;
+
+    if (opts.hasOwnProperty('includeDisabled')) {
+        includeDisabled = opts.includeDisabled;
+    }
 
     ruleTypeWalk(rules, function _matchingVMs(rule, type, t, val) {
         if (val !== undefined) {
@@ -288,7 +306,7 @@ function vmsByRules(vms, rules, log, callback) {
         }
 
         if (!vms[type].hasOwnProperty(t)) {
-            log.trace(
+            opts.log.trace(
                 'filter.vmsByRules: type=%s, t=%s, rule=%s: not in VM hash',
                 type, t, rule);
             return;
@@ -302,25 +320,34 @@ function vmsByRules(vms, rules, log, callback) {
             vmList = vms[type][t][val];
         }
 
-        var owner_uuid = rule.owner_uuid;
+        var owner = rule.owner_uuid;
 
         Object.keys(vmList).forEach(function (uuid) {
             var vm = vmList[uuid];
-            if (owner_uuid && vm.owner_uuid != owner_uuid) {
-                log.trace(
+            if (owner && vm.owner_uuid != owner) {
+                opts.log.trace(
                     'filter.vmsByRules: type=%s, t=%s, VM=%s: rule owner uuid'
                     + ' (%s) did not match VM owner uuid (%s): %s',
-                    type, t, uuid, owner_uuid, vm.owner_uuid, rule);
+                    type, t, uuid, owner, vm.owner_uuid, rule);
                 return;
             }
-            log.trace(
+
+            if (!includeDisabled && !vm.enabled) {
+                opts.log.trace(
+                    'filter.vmsByRules: type=%s, t=%s, VM=%s: '
+                    + 'VM matched but did not have firewall_enabled=true: %s',
+                    type, t, uuid, rule);
+                return;
+            }
+
+            opts.log.trace(
                 'filter.vmsByRules: type=%s, t=%s, VM=%s: matched rule: %s',
                 type, t, uuid, rule);
             matchingVMs[uuid] = vm;
         });
     });
 
-    log.debug({ vms: matchingVMs }, 'filter.vmsByRules: return');
+    opts.log.debug({ vms: matchingVMs }, 'filter.vmsByRules: return');
     return callback(null, matchingVMs);
 }
 

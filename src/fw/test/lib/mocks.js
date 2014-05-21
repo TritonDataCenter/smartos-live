@@ -335,7 +335,7 @@ function basename(file) {
 /**
  * Initialize VALUES to a clean state for each mock
  */
-function resetValues() {
+function resetValues(opts) {
     VALUES = {};
 
     VALUES.bunyan = {
@@ -363,6 +363,25 @@ function resetValues() {
     VALUES.fs = {};
 
     VALUES.ipf = {};
+
+    if (opts && opts.initialValues) {
+        // As a convenience, allow fs values to be full paths
+        if (opts.initialValues.hasOwnProperty('fs')) {
+            for (var f in opts.initialValues.fs) {
+                var p = _splitFile(f);
+                mkdirp.sync(p.dir);
+                VALUES.fs[p.dir][p.file] = opts.initialValues.fs[f];
+            }
+
+            for (var i in opts.initialValues) {
+                if (i == 'fs') {
+                    continue;
+                }
+
+                VALUES[i] = opts.initialValues[i];
+            }
+        }
+    }
 }
 
 
@@ -392,26 +411,7 @@ function setup(opts) {
         opts.mocks = {};
     }
 
-    resetValues();
-
-    if (opts.initialValues) {
-        // As a convenience, allow fs values to be full paths
-        if (opts.initialValues.hasOwnProperty('fs')) {
-            for (var f in opts.initialValues.fs) {
-                var p = _splitFile(f);
-                mkdirp.sync(p.dir);
-                VALUES.fs[p.dir][p.file] = opts.initialValues.fs[f];
-            }
-
-            for (var i in opts.initialValues) {
-                if (i == 'fs') {
-                    continue;
-                }
-
-                VALUES[i] = opts.initialValues[i];
-            }
-        }
-    }
+    resetValues(opts);
 
     mockery.enable();
     for (m in opts.mocks) {

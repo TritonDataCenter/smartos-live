@@ -1,4 +1,4 @@
-vmadm(1m) -- Manage SmartOS virtual machines
+vmadm(1M) -- Manage SmartOS virtual machines
 ============================================
 
 ## SYNOPSIS
@@ -103,7 +103,7 @@ tab-complete UUIDs rather than having to type them out for every command.
       info <uuid> [type,...]
 
         The info command operates on running KVM VMs only. It talks to the
-        vmadmd(1m) daemon and requests some information about the running VM.
+        vmadmd(1M) daemon and requests some information about the running VM.
         The information is output to stdout as a JSON object with member
         objects for each type specified. If no types are specified, all info
         is included. The type values can be separated either by commas or
@@ -1011,7 +1011,7 @@ tab-complete UUIDs rather than having to type them out for every command.
     firewall_enabled:
 
         This enables the firewall for this VM, allowing firewall rules set
-        by fwadm(1m) to be applied.
+        by fwadm(1M) to be applied.
 
         Note: this property will only show up in a 'vmadm get' when it's set
         true. When set false the property will not appear.
@@ -1391,6 +1391,21 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
         default: the value of the nic_driver property on the VM
+
+    nics.*.mtu:
+
+	Sets the MTU for the network interface. The maximum MTU for a device is
+        determined based on its nic tag. If this property is not set, then it
+        defaults to the current MTU of the data link that the nic tag
+        corresponds to. The supported range of MTUs is from 1500-9000. This
+        property is not updated live with vmadm update. If a specific MTU has
+        not been requested, then this property is not present through get.
+
+        type: integer
+        vmtype: OS
+        listable: no
+        create: yes
+        update: yes
 
     nics.*.netmask
 
@@ -1903,7 +1918,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         Specifies a compression algorithm used for this VM's root dataset. This
         option affects only the zoneroot dataset. Setting to 'on' is equivalent
         to setting to 'lzjb'. If you want more information about the specific
-        compression types, see the man page for zfs(1m).
+        compression types, see the man page for zfs(1M).
 
         WARNING: If you change this value for an existing VM, only *new* data
         will be compressed. It will not rewrite existing data compress.
@@ -2162,11 +2177,11 @@ The following exit values are returned:
 
 ## SEE ALSO
 
-    vmadmd(1m), zonecfg(1m), zoneadm(1m), zones(5)
+    vmadmd(1M), zonecfg(1M), zoneadm(1M), zones(5)
 
 ## NOTES
 
-Some of the vmadm commands depend on the vmadmd(1m) service:
+Some of the vmadm commands depend on the vmadmd(1M) service:
 
     svc/system/smartdc/vmadmd:default
 

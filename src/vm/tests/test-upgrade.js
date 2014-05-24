@@ -31,7 +31,7 @@ var smartos_payload =
             interface: 'net0',
             vlan_id: 0,
             gateway: '10.254.254.1',
-            mac: '01:02:03:04:05:06'
+            mac: '00:02:03:04:05:06'
         }
     ]
 };

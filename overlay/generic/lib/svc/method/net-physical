@@ -22,7 +22,7 @@
 #
 # Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T. All rights reserved.
 # Copyright (c) 1999, 2010, Oracle and/or its affiliates. All rights reserved.
-# Copyright (c) 2010, 2011 Joyent Inc., All rights reserved.
+# Copyright (c) 2014, Joyent Inc., All rights reserved.
 #
 
 . /lib/svc/share/smf_include.sh
@@ -83,6 +83,26 @@ function wait_for_admin_nic_state
     echo "wait_for_admin_nic_state: finished in state '$link_state'"
 }
 
+function valid_mtu
+{
+    typeset tag mtu
+
+    tag="$1"
+    mtu="$2"
+
+    if ! [[ $mtu =~ [1-9][0-9][0-9][0-9] ]] ; then
+        echo "Invalid mtu specified for tag $tag: $mtu"
+        echo "Valid MTU range is from 1500-9000"
+        exit $SMF_EXIT_ERR_FATAL
+    fi
+
+    if [[ $mtu -gt 9000 || $mtu -lt 1500 ]]; then
+        echo "Invalid mtu specified for tag $tag: $mtu"
+        echo "Valid MTU range is from 1500-9000"
+        exit $SMF_EXIT_ERR_FATAL
+    fi
+}
+
 # Plumbs the admin interface, and attempts to work around poorly-behaved
 # drivers that can't handle plumb commands too quickly after one another
 function plumb_admin
@@ -115,9 +135,11 @@ function vnic_up
     typeset vlan_id="$5"
     typeset mac_addr="$6"
     typeset dhcp_primary="$7"
+    typeset mtu="$8"
     typeset details="link='${link}', iface='${iface}', ip='${ip}', netmask='${netmask}, vlan_id='${vlan_id}'"
     typeset vlan_opt=
     typeset mac_addr_opt=
+    typeset prop_opt=
 
     if [[ -z ${link} ]] || [[ -z ${iface} ]] || [[ -z ${ip} ]] || ([[ ${ip} != "dhcp" ]] && [[ -z ${netmask} ]]); then
         echo "WARNING: not bringing up nic (insufficient configuration): $details"
@@ -139,8 +161,23 @@ function vnic_up
         mac_addr_opt="-m ${mac_addr}"
     fi
 
-    /usr/sbin/dladm create-vnic -l ${link} ${vlan_opt} ${mac_addr_opt} ${iface}
+    if [[ -n ${mtu} ]]; then
+        valid_mtu ${iface} ${mtu}
+        prop_opt="-p mtu=${mtu}"
+    fi
+
+    /usr/sbin/dladm create-vnic -l ${link} ${prop_opt} ${vlan_opt} \
+        ${mac_addr_opt} ${iface}
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to create VNIC ${iface}"
+        exit $SMF_EXIT_ERR_FATAL
+    fi
+
     /sbin/ifconfig ${iface} plumb
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to plumb ${iface}"
+        exit $SMF_EXIT_ERR_FATAL
+    fi
 
     if [[ ${ip} == "dhcp" ]]; then
         # We ignore errors here because the most common one is that DHCP
@@ -160,6 +197,7 @@ function vnic_up
 # If there are aggregations in sysinfo, set them up.
 function create_aggrs
 {
+    typeset links mode mtu
     if [[ -z "${SYSINFO_Aggregations}" ]]; then
         return 0
     fi
@@ -168,16 +206,73 @@ function create_aggrs
     for aggr in "${aggrs[@]}"; do
         eval "links=\${SYSINFO_Aggregation_${aggr}_Interfaces}"
         eval "mode=\${SYSINFO_Aggregation_${aggr}_LACP_mode}"
+        eval "mtu=\${CONFIG_${aggr}_mtu}"
         [[ -z "$mode" ]] && mode="off"
 
         echo "Creating aggr: ${aggr} (mode=${mode}, links=${links})"
         dladm create-aggr -l $(echo ${links} | sed -e "s/,/ -l /g") \
             -L ${mode} ${aggr}
+        if [[ -n "$mtu" ]]; then
+            dladm set-linkprop -p mtu=${mtu} ${aggr}
+            if [[ $? -ne 0 ]]; then
+                echo "Failed to set mtu on aggr ${aggr} to ${mtu}"
+                exit $SMF_EXIT_ERR_FATAL
+            fi
+        fi
     done
 
     # Creating the aggregations may affect the nic tags in sysinfo, so update:
     /usr/bin/sysinfo -u
     load_sdc_sysinfo
+}
+
+#
+# Go through and set up the MTU for all of the various nic tags
+#
+function setup_mtu
+{
+    typeset tag oldifs val mac link
+    typeset -A mtus
+    typeset -A tagmap
+
+    set -o xtrace
+    oldifs=$IFS
+    IFS=,
+    for tag in ${SYSINFO_Nic_Tags}; do
+        eval "val=\${CONFIG_${tag}_mtu}"
+        eval "mac=\${CONFIG_${tag}_nic}"
+        [[ -z "$val" ]] && continue
+
+        valid_mtu ${tag} $val
+
+        #
+        # Note, it doesn't matter what tag we use for a given mac
+        # address, because we'll always get the same link name later on.
+        #
+        if [[ -z "${tagmap[$mac]}" ]]; then
+            tagmap[$mac]=$tag
+        fi
+
+        if [[ -z "${mtus[$mac]}" ]]; then
+            mtus[$mac]=$val
+        elif [[ "${mtus[$mac]}" -lt $val ]]; then
+            mtus[$mac]=$val
+        fi
+    done
+    IFS=$oldifs
+
+    for mac in ${!mtus[@]}; do
+        tag=${tagmap[$mac]}
+        eval "link=\${SYSINFO_NIC_${tag}}"
+        if [[ -z "${link}" ]]; then
+            echo "/usbkey/config error: Missing link name for ${tag}"
+            exit $SMF_EXIT_ERR_FATAL
+        fi
+        if ! /usr/sbin/dladm set-linkprop -p mtu=${mtus[$mac]} ${link}; then
+            echo "Failed to set mtu to ${mtus[$mac]} for link ${link}"
+            exit $SMF_EXIT_ERR_FATAL
+        fi
+    done
 }
 
 if smf_is_globalzone; then
@@ -201,6 +296,9 @@ if smf_is_globalzone; then
 
     # Create aggregations
     create_aggrs
+
+    # Make any mtu adjustments that may be necessary
+    setup_mtu
 
     # Setup admin NIC
     if [[ -z "${SYSINFO_NIC_admin}" ]]; then
@@ -279,22 +377,16 @@ if smf_is_globalzone; then
 
     # Setup external NIC
     if [[ -n ${SYSINFO_NIC_external} ]] && [[ -n "${CONFIG_external_ip}" ]]; then
-        vnic_up "${SYSINFO_NIC_external}" "external0" "${CONFIG_external_ip}" \
-            "${CONFIG_external_netmask}" "${CONFIG_external_vlan_id}" "" "primary"
-    fi
-
-    # Set up the GZ to NAT for Coal
-    if [[ -n ${SYSINFO_NIC_external} ]] && [[ -n "${CONFIG_external_ip}" ]] &&
-        [[ "${CONFIG_coal}" == "true" ]]; then
-
-        # Convert the admin IP and netmask to CIDR notation
-        CIDR=$(ip_netmask_to_cidr ${admin_ip} ${admin_netmask})
-
-        # Allow zones to reach the internet using the global zone as a router
-        cat >> /etc/ipf/ipnat.conf <<IPNAT
-map external0 ${CIDR} -> 0.0.0.0/32
-map external0 ${CIDR} -> 0.0.0.0/32 portmap tcp/udp auto
-IPNAT
+        #
+        # The installer may have set up external0, so if it already
+        # exists, we're not going to try and set up the vnic again.
+        #
+        if ! dladm show-vnic external0 > /dev/null; then
+            vnic_up "${SYSINFO_NIC_external}" "external0" \
+                "${CONFIG_external_ip}" "${CONFIG_external_netmask}" \
+                "${CONFIG_external_vlan_id}" "" "primary" \
+                "${CONFIG_external_mtu}"
+        fi
     fi
 
     # Use headnode_default_gateway if set, otherwise fall back to admin_gateway
@@ -328,9 +420,10 @@ IPNAT
                     eval "netmask=\${CONFIG_${iface}_netmask}"
                     eval "vlan=\${CONFIG_${iface}_vlan_id}"
                     eval "macaddr=\${CONFIG_${iface}_mac}"
+                    eval "mtu=\${CONFIG_${iface}_mtu}"
 
-                    echo vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}"
-                    vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}"
+                    echo vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}" "${mtu}"
+                    vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}" "${mtu}"
                 fi
             done
 
@@ -341,8 +434,9 @@ IPNAT
                     eval "netmask=\${BOOT_${iface}_netmask}"
                     eval "vlan=\${BOOT_${iface}_vlan_id}"
                     eval "macaddr=\${BOOT_${iface}_mac}"
-                    echo vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}"
-                    vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}"
+                    eval "mtu=\${CONFIG_${iface}_mtu}"
+                    echo vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}" "${mtu}"
+                    vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}" "${mtu}"
                 fi
             done
 

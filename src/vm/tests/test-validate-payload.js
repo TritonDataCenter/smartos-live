@@ -233,6 +233,42 @@ for (brand in os_brands) {
         });
     });
 
+    test('set mtu too low', function (t) {
+         VM.validate(brand, 'create', {
+                brand: brand,
+                image_uuid: smartos_image_uuid,
+                nics: [ {
+                        nic_tag: 'admin',
+                        ip: 'dhcp',
+                        mtu: 500
+                } ]
+         }, function (errors) {
+            t.ok(errors, 'valid payload, errors: ' + JSON.stringify(errors));
+            if (errors) {
+                t.ok(errors.bad_values.indexOf('nics.*.mtu') !== -1, 'confirm that it is bad values breaking: ' + JSON.stringify(errors));
+            }
+            t.end();
+	 });
+    });
+
+    test('set mtu too high', function (t) {
+         VM.validate(brand, 'create', {
+                brand: brand,
+                image_uuid: smartos_image_uuid,
+                nics: [ {
+                        nic_tag: 'admin',
+                        ip: 'dhcp',
+                        mtu: 10000
+                } ]
+         }, function (errors) {
+            t.ok(errors, 'valid payload, errors: ' + JSON.stringify(errors));
+            if (errors) {
+                t.ok(errors.bad_values.indexOf('nics.*.mtu') !== -1, 'confirm that it is bad values breaking: ' + JSON.stringify(errors));
+            }
+            t.end();
+	 });
+    });
+
     test('set good nic list', function (t) {
         VM.validate(brand, 'create', {
                 brand: brand,
@@ -243,6 +279,75 @@ for (brand in os_brands) {
             t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
             t.end();
         });
+    });
+
+    test('invalid mtu, fractional value', function (t) {
+         VM.validate(brand, 'create', {
+                brand: brand,
+                image_uuid: smartos_image_uuid,
+                nics: [ {
+                        nic_tag: 'admin',
+                        ip: 'dhcp',
+                        mtu: 1500.3
+                } ]
+         }, function (errors) {
+            t.ok(errors, 'valid payload, errors: ' + JSON.stringify(errors));
+            if (errors) {
+                t.ok(errors.bad_values.indexOf('nics.*.mtu') !== -1, 'confirm that it is bad values breaking: ' + JSON.stringify(errors));
+            }
+            t.end();
+	 });
+    });
+
+    test('invalid mtu, string', function (t) {
+         VM.validate(brand, 'create', {
+                brand: brand,
+                image_uuid: smartos_image_uuid,
+                nics: [ {
+                        nic_tag: 'admin',
+                        ip: 'dhcp',
+                        mtu: 'Ah Elbereth, Gilthoniel!'
+                } ]
+         }, function (errors) {
+            t.ok(errors, 'valid payload, errors: ' + JSON.stringify(errors));
+            if (errors) {
+                t.ok(errors.bad_values.indexOf('nics.*.mtu') !== -1, 'confirm that it is bad values breaking: ' + JSON.stringify(errors));
+            }
+            t.end();
+	 });
+    });
+
+    test('invalid mtu, object', function (t) {
+         VM.validate(brand, 'create', {
+                brand: brand,
+                image_uuid: smartos_image_uuid,
+                nics: [ {
+                        nic_tag: 'admin',
+                        ip: 'dhcp',
+                        mtu: { "hello": "world" }
+                } ]
+         }, function (errors) {
+            t.ok(errors, 'valid payload, errors: ' + JSON.stringify(errors));
+            if (errors) {
+                t.ok(errors.bad_values.indexOf('nics.*.mtu') !== -1, 'confirm that it is bad values breaking: ' + JSON.stringify(errors));
+            }
+            t.end();
+	 });
+    });
+
+    test('valid mtu, low', function (t) {
+         VM.validate(brand, 'create', {
+                brand: brand,
+                image_uuid: smartos_image_uuid,
+                nics: [ {
+                        nic_tag: 'admin',
+                        ip: 'dhcp',
+                        mtu: 1500
+                } ]
+         }, function (errors) {
+            t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
+            t.end();
+	 });
     });
 
     test('set bad nic obj', function (t) {
@@ -259,6 +364,67 @@ for (brand in os_brands) {
             t.end();
         });
     });
+
+    test('valid mtu, low', function (t) {
+         VM.validate(brand, 'create', {
+                brand: brand,
+                image_uuid: smartos_image_uuid,
+                nics: [ {
+                        nic_tag: 'admin',
+                        ip: 'dhcp',
+                        mtu: 1500
+                } ]
+         }, function (errors) {
+            t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
+            t.end();
+	 });
+    });
+
+    test('valid mtu, mid', function (t) {
+         VM.validate(brand, 'create', {
+                brand: brand,
+                image_uuid: smartos_image_uuid,
+                nics: [ {
+                        nic_tag: 'admin',
+                        ip: 'dhcp',
+                        mtu: 4242
+                } ]
+         }, function (errors) {
+            t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
+            t.end();
+	 });
+    });
+
+    test('valid mtu, high', function (t) {
+         VM.validate(brand, 'create', {
+                brand: brand,
+                image_uuid: smartos_image_uuid,
+                nics: [ {
+                        nic_tag: 'admin',
+                        ip: 'dhcp',
+                        mtu: 9000
+                } ]
+         }, function (errors) {
+            t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
+            t.end();
+	 });
+    });
+
+    test('valid mtu, string', function (t) {
+         VM.validate(brand, 'create', {
+                brand: brand,
+                image_uuid: smartos_image_uuid,
+                nics: [ {
+                        nic_tag: 'admin',
+                        ip: 'dhcp',
+                        mtu: '2323'
+                } ]
+         }, function (errors) {
+            t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
+            t.end();
+	 });
+    });
+
 
     test('set bad nic string', function (t) {
         VM.validate(brand, 'create', {
@@ -389,7 +555,8 @@ for (brand in os_brands) {
                 ip: '10.88.88.200',
                 nic_tag: 'external',
                 primary: true,
-                vlan_id: 400
+                vlan_id: 400,
+                mtu: 1500
             }],
             owner_uuid: '9258cc86-a737-11e1-995c-bbd52ce4e9c1',
             package_name: 'crazypackage',

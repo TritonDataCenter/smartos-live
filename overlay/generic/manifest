@@ -100,9 +100,18 @@ f smartdc/man/man1/sdc-lastcomm.1 0444 root bin
 f usr/bin/json 0555 root bin
 f usr/include/usb.h 0444 root bin
 d usr/lib/brand 0755 root bin
+d usr/lib/brand/jcommon 0755 root bin
+f usr/lib/brand/jcommon/cattach 0444 root root
+f usr/lib/brand/jcommon/cdetach 0444 root root
+f usr/lib/brand/jcommon/cinstall 0444 root root
+f usr/lib/brand/jcommon/cuninstall 0444 root root
+f usr/lib/brand/jcommon/libhooks.ksh 0444 root root
+f usr/lib/brand/jcommon/poststate 0444 root root
+f usr/lib/brand/jcommon/prestate 0444 root root
+f usr/lib/brand/jcommon/query 0555 root root
+f usr/lib/brand/jcommon/statechange 0444 root root
 d usr/lib/brand/joyent 0755 root bin
 d usr/lib/brand/joyent-minimal 0755 root bin
-f usr/lib/brand/joyent-minimal/common.ksh 0444 root root
 f usr/lib/brand/joyent-minimal/config.xml 0444 root root
 f usr/lib/brand/joyent-minimal/jattach 0555 root root
 f usr/lib/brand/joyent-minimal/jdetach 0555 root root
@@ -112,9 +121,8 @@ f usr/lib/brand/joyent-minimal/manifests 0444 root root
 f usr/lib/brand/joyent-minimal/platform.xml 0444 root root
 f usr/lib/brand/joyent-minimal/poststate 0555 root root
 f usr/lib/brand/joyent-minimal/prestate 0555 root root
-f usr/lib/brand/joyent-minimal/query 0555 root root
+s usr/lib/brand/joyent-minimal/query=../jcommon/query
 f usr/lib/brand/joyent-minimal/statechange 0555 root root
-f usr/lib/brand/joyent/common.ksh 0444 root root
 f usr/lib/brand/joyent/config.xml 0444 root root
 f usr/lib/brand/joyent/jattach 0755 root root
 f usr/lib/brand/joyent/jdetach 0755 root root
@@ -124,10 +132,9 @@ f usr/lib/brand/joyent/manifests 0444 root root
 f usr/lib/brand/joyent/platform.xml 0444 root root
 f usr/lib/brand/joyent/poststate 0755 root root
 f usr/lib/brand/joyent/prestate 0755 root root
-f usr/lib/brand/joyent/query 0755 root root
+s usr/lib/brand/joyent/query=../jcommon/query
 f usr/lib/brand/joyent/statechange 0755 root root
 d usr/lib/brand/kvm 0755 root bin
-f usr/lib/brand/kvm/common.ksh 0444 root root
 f usr/lib/brand/kvm/config.xml 0444 root root
 f usr/lib/brand/kvm/kattach 0755 root root
 f usr/lib/brand/kvm/kdetach 0755 root root

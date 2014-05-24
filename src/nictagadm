@@ -1,28 +1,19 @@
 #!/bin/bash
 #
-# CDDL HEADER START
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
 #
-# The contents of this file are subject to the terms of the
-# Common Development and Distribution License, Version 1.0 only
-# (the "License").  You may not use this file except in compliance
-# with the License.
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
 #
-# You can obtain a copy of the license at http://smartos.org/CDDL
+
 #
-# See the License for the specific language governing permissions
-# and limitations under the License.
+# Copyright (c) 2014 Joyent, Inc. All rights reserved.
 #
-# When distributing Covered Code, include this CDDL HEADER in each
-# file.
-#
-# If applicable, add the following below this CDDL HEADER, with the
-# fields enclosed by brackets "[]" replaced with your own identifying
-# information: Portions Copyright [yyyy] [name of copyright owner]
-#
-# CDDL HEADER END
-#
-#
-# Copyright (c) 2013, Joyent, Inc. All rights reserved.
+
 #
 # Command-line tool for managing nic tags
 #
@@ -30,15 +21,18 @@
 PATH=/usr/bin:/usr/sbin
 . /lib/sdc/config.sh
 
-
+CMD=
+CMD_LIST="add delete exists list update vms"
 CONF=
 CONF_FILES=
 DELIM=":"
 HAVE_USB=
 LIST_LINE="%-14s %-18s %-14s\n"
 LOCAL=
+NORMALIZED_MAC=
 NO_LIST_STUBS=
 PARSABLE=
+PROPS=
 TAG_TYPE=
 TMP_CONF="/tmp/.nic-tags"
 VERBOSE=
@@ -55,6 +49,12 @@ function fatal()
     exit 1
 }
 
+function warn()
+{
+    local msg="$*"
+    [[ -n "$msg" ]] && echo "$msg"
+}
+
 
 function verbose()
 {
@@ -64,25 +64,27 @@ function verbose()
 
 function usage()
 {
+    local msg me
+    msg="$*"
+    [[ -n "$msg" ]] && echo "$msg"
     me=$(basename $0)
 cat - >&2 <<USAGE
 Manage nic tags
 
 Usage:
-    $me [OPTIONS] <command> [ARGS...]
+        $me [OPTIONS] <subcommand> <args...> ...
 
-Options:
-    -v                      Verbose output
+General Options:
+        -v
+            Verbose output
 
-Commands:
-    list                    List nic tags.
-    list -l                 List local nic tags (etherstubs) only.
-    list -L                 List non-local nic tags only.
-    add <name> <MAC>        Add a nic tag to a physical nic.
-    add -l <name>           Add a local-only nic tag (etherstub).
-    update <name> <MAC>     Update the physical nic associated with a nic tag.
-    delete [-f] <name>      Delete a nic tag.
-    vms <name>              List VM UUIDs using a nic tag.
+Subcommands:
+        add             [-l] [-p prop=value,...] <name> [mac]
+        delete          [-f] <name>
+        exists          <name>
+        list            [-l | -L] [-p] [-d delim]
+        update          [-l] [-p prop=value,...] <name> [mac]
+        vms             <name>
 USAGE
     exit 2
 }
@@ -91,6 +93,7 @@ USAGE
 # Clean up any temp files left around
 function cleanup()
 {
+    local conf
     for conf in ${CONF_FILES}; do
         [[ -f ${conf}.$$ ]] && rm ${conf}.$$
     done
@@ -139,10 +142,11 @@ function valid_stub_name()
 # system
 function nic_exists()
 {
+    local macs mac
     macs=$(dladm show-phys -m -o address | grep -v ADDRESS)
     for mac in ${macs}; do
         normalize_mac ${mac}
-        [[ ${normalized} == $1 ]] && return 0
+        [[ ${NORMALIZED_MAC} == $1 ]] && return 0
     done
 
     return 1
@@ -152,6 +156,7 @@ function nic_exists()
 # Returns non-zero if the aggregation does not exist in the config file
 function aggr_exists()
 {
+    local conf_match
     conf_match=$(sdc_config_keys_contain "^${1}_aggr$")
     [[ "${conf_match}" == "true" ]] && return 0
     sdc_bootparams_keys | grep "^${1}_aggr" > /dev/null 2>&1
@@ -160,12 +165,13 @@ function aggr_exists()
 
 function get_link_names()
 {
+    local line fields
     for line in $(dladm show-phys -m -o address,link | \
         grep -v ADDRESS | awk '{ print $1, $2 }' | tr ' ' ','); do
         fields=(${line//,/ })
         normalize_mac ${fields[0]}
-        [[ ${normalized} == $1 ]] && return 0
-		eval "link_${normalized//:/_}=${fields[1]}"
+        [[ ${NORMALIZED_MAC} == $1 ]] && return 0
+                eval "link_${NORMALIZED_MAC//:/_}=${fields[1]}"
     done
 }
 
@@ -176,13 +182,25 @@ function normalize_mac()
     local mac=$1
     [[ -z "${mac}" ]] && fatal "unable to normalize empty mac!"
 
-    normalized=`echo ${mac} | awk -F':' '{ print $1, $2, $3, $4, $5, $6 }' | { read o1 o2 o3 o4 o5 o6 junk
+    NORMALIZED_MAC=`echo ${mac} | awk -F':' '{ print $1, $2, $3, $4, $5, $6 }' | { read o1 o2 o3 o4 o5 o6 junk
         printf "%02x:%02x:%02x:%02x:%02x:%02x" 0x${o1} 0x${o2} 0x${o3} 0x${o4} 0x${o5} 0x${o6}
     }`
 
     # ensure results are 'normal'
-    echo "${normalized}" | grep "[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}" >/dev/null 2>&1
+    echo "${NORMALIZED_MAC}" | grep "[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}\:[a-fA-F0-9]\{2\}" >/dev/null 2>&1
     [[ "$?" != "0" ]] && fatal "failed to normalize MAC '${mac}'"
+}
+
+#
+# A valid MTU is a four digit number in the range of [1500, 9000]
+#
+function valid_mtu()
+{
+    local mtu=$1
+
+    [[ $mtu =~ [1-9][0-9][0-9][0-9] ]] || fatal "invalid mtu: $mtu"
+    [[ $mtu -lt 1500 || $mtu -gt 9000 ]] && fatal \
+        "mtu must be between 1500-9000"
 }
 
 
@@ -216,6 +234,7 @@ function find_config_paths()
 
 function mount_usb()
 {
+    local key
     if [[ -z "${HAVE_USB}" ]]; then
         verbose "USB copy not present: not mounting USB key"
         return 0
@@ -291,8 +310,9 @@ function tag_conf_init()
 # Check if a tag exists, and return 0 if it does.
 function tag_exists()
 {
+    local seen
     cmd_tag_list > /dev/null
-	eval "seen=\${seen_${1}}"
+    eval "seen=\${seen_${1}}"
     [[ -n "${seen}" ]] && return 0
     return 1
 }
@@ -308,6 +328,7 @@ function tag_in_use()
 # meant to replace
 function move_files()
 {
+    local conf
     for conf in ${CONF_FILES}; do
         [[ ! -f ${conf} ]] && continue
         [[ ! -f ${conf}.$$ ]] && continue
@@ -321,6 +342,7 @@ function move_files()
 # Adds an etherstub config item to all conf files
 function conf_add_etherstub()
 {
+    local conf stub_line
     verbose "Adding etherstub: $1"
 
     for conf in ${CONF_FILES}; do
@@ -352,6 +374,7 @@ function conf_add_etherstub()
 # Adds a nic tag item to all conf files
 function conf_add_tag()
 {
+    local conf
     for conf in ${CONF_FILES}; do
         if [[ ! -f ${conf} ]]; then
             verbose "File '${conf}' does not exist: not adding tag"
@@ -361,25 +384,38 @@ function conf_add_tag()
 
         echo "${1}_nic=${2}" >> $conf
         [[ $? != 0 ]] && fatal "could not write to '$conf'"
+        if [[ -n "${3}" ]]; then
+            echo "${1}_mtu=${3}" >> $conf
+            [[ $? != 0 ]] && fatal "could not write to '$conf'"
+        fi
     done
 }
 
 
 # Updates a nic tag item in all conf files
-function conf_update_tag()
+function conf_update_field()
 {
+    local name key value
+
+    name="$1"
+    key="$2"
+    value="$3"
     for conf in ${CONF_FILES}; do
         if [[ ! -f ${conf} ]]; then
             verbose "File '${conf}' does not exist: not updating tag"
             continue
         fi
-        verbose "Updating nic tag: $1=$2 in '$conf'"
+        verbose "Updating nic tag: ${name}_${key}=$value in '$conf'"
 
-        cat $conf | grep -v "^${1}_nic=" > ${conf}.$$
-        echo "${1}_nic=${2}" >> ${conf}.$$
+        cat $conf | grep -v "^${name}_${key}=" > ${conf}.$$
+        echo "${name}_${key}=${value}" >> ${conf}.$$
         [[ $? != 0 ]] && fatal "could not write to '$conf'"
     done
+}
 
+# Commit a series of updates now that they're all done
+function conf_update_commit()
+{
     move_files
 }
 
@@ -387,6 +423,8 @@ function conf_update_tag()
 # Deletes a nic tag line from all conf files
 function conf_delete_tag()
 {
+    local conf
+
     for conf in ${CONF_FILES}; do
         if [[ ! -f ${conf} ]]; then
             verbose "File '${conf}' does not exist: not deleting tag"
@@ -394,7 +432,7 @@ function conf_delete_tag()
         fi
         verbose "Deleting nic tag '$1' from '$conf'"
 
-        cat $conf | grep -v "^${1}_nic=" > ${conf}.$$
+        cat $conf | grep -v "^${1}_nic=" | grep -v "^${1}_mtu=" > ${conf}.$$
         [[ $? != 0 ]] && fatal "could not write to '$conf'"
     done
 
@@ -405,6 +443,7 @@ function conf_delete_tag()
 # Deletes an etherstub from all conf files
 function conf_delete_etherstub()
 {
+    local conf stub_line
     for conf in ${CONF_FILES}; do
         if [[ ! -f ${conf} ]]; then
             verbose "File '${conf}' does not exist: not deleting etherstub"
@@ -433,26 +472,27 @@ function conf_delete_etherstub()
 # prints one tag / mac / link line, optionally formatted to be parseable
 function print_line()
 {
-	tag=$1
-	mac=$2
+    local tag mac link seen
+    tag=$1
+    mac=$2
     link=$3
 
-	eval "seen=\${seen_${1}}"
+    eval "seen=\${seen_${1}}"
     # Try to see if we have a link name from get_link_names():
     [[ -z ${link} ]] && eval "link=\${link_${mac//:/_}}"
     [[ -z ${link} ]] && link="-"
 
-	# Don't print out duplicates
-	if [[ -z "${seen}" ]]; then
-		eval "seen_${tag}=true"
+    # Don't print out duplicates
+    if [[ -z "${seen}" ]]; then
+        eval "seen_${tag}=true"
 
-		if [[ -n "${PARSABLE}" ]]; then
-			[[ "${DELIM}" == ":" ]] && mac=${mac//:/\\:}
-			echo "${tag}${DELIM}${mac}${DELIM}${link}"
-		else
-			printf "${LIST_LINE}" ${tag} ${mac} ${link}
-		fi
-	fi
+        if [[ -n "${PARSABLE}" ]]; then
+            [[ "${DELIM}" == ":" ]] && mac=${mac//:/\\:}
+            echo "${tag}${DELIM}${mac}${DELIM}${link}"
+        else
+            printf "${LIST_LINE}" ${tag} ${mac} ${link}
+        fi
+    fi
 }
 
 
@@ -460,6 +500,7 @@ function print_line()
 # for that stub, since it uses the seen_ variable to filter out duplicates
 function set_tag_type()
 {
+    local seen_stub
     eval "seen_stub=\${seen_${1}}"
     if [[ -z "${seen_stub}" ]]; then
         eval "type_${1}=${2}"
@@ -469,12 +510,28 @@ function set_tag_type()
 
 function get_tag_type()
 {
+    local get_type
     eval "get_type=\${type_${1}}"
     [[ -z "${get_type}" ]] && get_type="-"
     echo ${get_type}
 }
 
+function parse_props()
+{
+    local props ofs key value f
+    props="$1"
+    ofs=$IFS
 
+    IFS=","
+    for f in $props; do
+        key=$(echo $f | nawk -F\= '{ print $1 }')
+        value=$(echo $f | nawk -F\= '{ print $2 }')
+        [[ -z "$key" ]] && fatal "invalid property $1"
+        [[ -z "$value" ]] && fatal "invalid property $1"
+        PROPS[$key]=$value
+    done
+    IFS=$ofs
+}
 
 # --- commands
 
@@ -486,12 +543,14 @@ function cmd_tag_exists()
         fatal "tag_exists: no tag specified"
     fi
 
-    tag_exists $1
+    tag_exists ${1}
 }
 
 
 function cmd_tag_list()
 {
+    local line fields tag val key stub_line
+
     [[ -z ${PARSABLE} ]] && printf "${LIST_LINE}" \
         "NAME" "MACADDRESS" "LINK"
     get_link_names
@@ -511,17 +570,17 @@ function cmd_tag_list()
             else
                 set_tag_type ${tag} "normal"
                 normalize_mac ${val}
-                print_line ${tag} ${normalized}
+                print_line ${tag} ${NORMALIZED_MAC}
             fi
         done
     fi
 
-	[[ -n "${NO_LIST_STUBS}" ]] && return 0
+    [[ -n "${NO_LIST_STUBS}" ]] && return 0
 
     for key in $(dladm show-etherstub -p); do
         eval "etherstub_up_${key}=true"
         set_tag_type ${key} "etherstub"
-		print_line ${key} "-"
+        print_line ${key} "-"
     done
 
     # Catch tags that are in the config etherstub list but are not up
@@ -533,7 +592,7 @@ function cmd_tag_list()
         fields=(${stub_line//=/ })
         for key in "${fields[1]/,/ }"; do
             set_tag_type ${key} "etherstub"
-			print_line ${key} "-"
+            print_line ${key} "-"
         done
     fi
 }
@@ -541,76 +600,127 @@ function cmd_tag_list()
 
 function cmd_tag_add()
 {
-    [[ -z "$1" ]] && usage
-    [[ -z "$2" ]] && [[ -z "$LOCAL" ]] && usage
-    [[ -n "$2" ]] && [[ -n "$LOCAL" ]] && \
-        fatal "cannot specify a local tag with a MAC address"
+    local name mac mtu
 
+    name=$1
+    [[ -z "$name" ]] && usage
 
-    tag_exists $1 && fatal "nic tag '$1' already exists"
-    if [[ -n "$2" ]]; then
-        if valid_stub_name "$2"; then
-            aggr_exists $2 || fatal "aggregation '$2' does not exist"
-            mac=$2
+    [[ -n "$2" && -n "${PROPS['mac']}" ]] && fatal "mac address specified twice"
+    [[ -n "$2" ]] && mac=$2
+    [[ -n "${PROPS['mac']}" ]] && mac=${PROPS['mac']}
+
+    [[ -z "$mac" && -z "$LOCAL" ]] && fatal \
+        "create non-local tag, but no mac address specified"
+
+    [[ -n "$mac" && -n "$LOCAL" ]] && fatal \
+        "create local tag, but mac address specified"
+
+    mtu=${PROPS['mtu']}
+    [[ -n $mtu && -n "$LOCAL" ]] && fatal "Cannot specify MTU for local nic tag"
+    [[ -n "$mtu" ]] && valid_mtu $mtu
+
+    tag_exists $name && fatal "nic tag '$name' already exists"
+
+    #
+    # When creating a network tag over an aggregation, we use the 'MAC'
+    # field to optionally be the name of an aggregation.
+    #
+    if [[ -n "$mac" ]]; then
+        if valid_stub_name "$mac"; then
+            aggr_exists $mac || fatal "aggregation '$mac' does not exist"
         else
-            valid_mac $2 || fatal "MAC address '$2' is invalid"
-            normalize_mac $2
-            nic_exists ${normalized} || \
-                fatal "No physical nic found with MAC address '$2'"
-            mac=${normalized}
+            valid_mac $mac || fatal "MAC address '$mac' is invalid"
+            normalize_mac $mac
+            nic_exists $NORMALIZED_MAC || \
+                fatal "No physical nic found with MAC address '$mac'"
+            mac=$NORMALIZED_MAC
         fi
 
-        valid_name $1 || "nic tag name is invalid"
+        valid_name $name || "nic tag name is invalid"
     else
-        valid_stub_name $1 || fatal "nic tag name is invalid"
+        valid_stub_name $name || fatal "nic tag name is invalid"
     fi
 
-    verbose "adding nic tag: name='$1', mac='${mac}', local='$LOCAL'"
+
+    verbose "adding nic tag: name='$name', mac='$mac', local='$LOCAL'"
+    [[ -n "$mtu" ]] && verbose "adding mtu for tag: name='$name', mtu='$mtu'"
 
     mount_usb
     if [[ -n $LOCAL ]]; then
-        conf_add_etherstub $1
-        dladm create-etherstub -t $1
-        [[ $? != 0 ]] && fatal "Could not create etherstub '$1'"
+        conf_add_etherstub $name
+        dladm create-etherstub -t $name
+        [[ $? != 0 ]] && fatal "Could not create etherstub '$name'"
     else
-        conf_add_tag $1 ${mac}
+        conf_add_tag $name $mac $mtu
     fi
 
     sysinfo -u
     umount_usb
+
+    [[ -n "$mtu" ]] && warn "MTU changes will not take effect until next reboot"
+    return 0
 }
 
 
 function cmd_tag_update()
 {
-    [[ -z "$1" ]] && usage
-    [[ -z "$2" ]] && usage
+    local name mac mtu
+
+    name="$1"
+    [[ -z "$name" ]] && usage
     [[ -n "$LOCAL" ]] && fatal "cannot update a local tag"
 
-    tag_exists $1 || fatal "nic tag '$1' does not exist"
+    #
+    # We require either the presence of the MTU or mac address, though
+    # both are also fine.
+    #
+    [[ -n "$2" && -n "${PROPS['mac']}" ]] && fatal "mac address specified twice"
+    [[ -n "$2" ]] && mac=$2
+    [[ -n "${PROPS['mac']}" ]] && mac=${PROPS['mac']}
 
-    if valid_stub_name "$2"; then
-        aggr_exists $2 || fatal "aggregation '$2' does not exist"
-        mac=$2
-    else
-        valid_mac $2 || fatal "MAC address '$2' is invalid"
-        normalize_mac $2
-        nic_exists ${normalized} || fatal "No physical nic found with MAC address '$2'"
-        mac=${normalized}
+    mtu=${PROPS['mtu']}
+    [[ -n "$mtu" ]] && valid_mtu $mtu
+
+    [[ -z "$mac" && -z "$mtu" ]] && fatal "nothing to update"
+
+    tag_exists $name || fatal "nic tag '$name' does not exist"
+
+    #
+    # Recall that the 'mac' of an aggregation is its name.
+    #
+    if [[ -n "$mac" ]]; then
+        if valid_stub_name "$mac"; then
+            aggr_exists $mac || fatal "aggregation '$mac' does not exist"
+        else
+            valid_mac $mac || fatal "MAC address '$mac' is invalid"
+            normalize_mac $mac
+            nic_exists ${NORMALIZED_MAC} || fatal \
+                "No physical nic found with MAC address '$mac'"
+            mac=${NORMALIZED_MAC}
+        fi
     fi
 
-    verbose "updating nic tag: name='$1', mac='${mac}', local='$LOCAL'"
+    [[ -n "$mac" ]] && verbose \
+        "updating nic tag MAC: name='$name', mac='$mac'"
+    [[ -n "$mtu" ]] && verbose \
+        "updating nic tag MAC: name='$name', mtu='$mtu'"
 
     mount_usb
-    conf_update_tag $1 ${mac}
+    [[ -n "$mac" ]] && conf_update_field $1 "nic" ${mac}
+    [[ -n "$mtu" ]] && conf_update_field $1 "mtu" ${mtu}
+    conf_update_commit
 
     sysinfo -u
     umount_usb
+
+    [[ -n "$mtu" ]] && warn "MTU changes will not take effect until next reboot"
+    return 0
 }
 
 
 function cmd_tag_delete()
 {
+    local tag_type etherstub_up
     [[ -z "$1" ]] && usage
     [[ -n "$LOCAL" ]] && usage
 
@@ -657,8 +767,7 @@ function cmd_tags_used_by()
     fatal "This program can only be run as root."
 
 # -v goes before the command
-while getopts vh? opt
-do
+while getopts vh? opt; do
     case $opt in
     v)
         VERBOSE="true"
@@ -676,38 +785,80 @@ trap cleanup EXIT
 # If we netbooted, ensure that the tags conf file is initialized
 [[ -z ${HAVE_USB} ]] && tag_conf_init
 
-case "$1" in
-    add) CMD="add" ;;
-    delete) CMD="delete" ;;
-    exists) CMD="exists" ;;
-    list) CMD="list" ;;
-    update) CMD="update" ;;
-    vms) CMD="vms" ;;
-    *) usage ;;
-esac
-shift
-
-while getopts d:flLp opt
-do
-    case $opt in
-    d)
-        DELIM=${OPTARG}
-        delim_flag=true
-        ;;
-    f)
-        FORCE="true"
-        ;;
-    l)
-        LOCAL="true"
-        ;;
-    L)
-        NO_LIST_STUBS="true"
-        ;;
-    p)
-        PARSABLE="true"
-        ;;
-    esac
+for c in $CMD_LIST; do
+    if [[ "$1" -eq $c ]]; then
+        CMD=$1
+        shift
+        break
+    fi
 done
+
+[[ -z "$CMD" ]] && usage
+
+declare -A PROPS
+
+OPTIND=1
+case "$CMD" in
+    "add" | "update")
+        while getopts "lp:" c $@; do
+            case $c in
+            l)
+                LOCAL="true"
+                ;;
+            p)
+                parse_props $OPTARG
+                ;;
+            :)
+                usage "missing required argument -- $OPTARG"
+                ;;
+            *)
+                usage "invalid option: $OPTARG"
+                ;;
+            esac
+        done
+        ;;
+    delete)
+        while getopts "f" c $@; do
+            case $c in
+            f)
+                FORCE="true"
+                ;;
+            :)
+                usage "missing required argument -- $OPTARG"
+                ;;
+            *)
+                usage "invalid option: $OPTARG"
+                ;;
+            esac
+        done
+        ;;
+    list)
+        while getopts "lLpd:" c $@; do
+            case $c in
+            d)
+                DELIM=${OPTARG}
+                delim_flag=true
+                ;;
+            l)
+                LOCAL="true"
+                ;;
+            L)
+                NO_LIST_STUBS="true"
+                ;;
+            p)
+                PARSABLE="true"
+                ;;
+            :)
+                usage "missing required argument -- $OPTARG"
+                ;;
+            *)
+                usage "invalid option: $OPTARG"
+                ;;
+            esac
+        done
+        ;;
+esac
+
 shift $(($OPTIND - 1))
 
 [[ -n $LOCAL ]] && [[ -n $NO_LIST_STUBS ]] && \

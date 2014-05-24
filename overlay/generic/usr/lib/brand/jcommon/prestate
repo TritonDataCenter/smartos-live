@@ -15,5 +15,20 @@
 # Copyright (c) 2014 Joyent, Inc.  All rights reserved.
 #
 
-ps_brand="lx"
-. /usr/lib/brand/jcommon/prestate
+unset LD_LIBRARY_PATH
+PATH=/usr/bin:/usr/sbin
+export PATH
+
+if [[ -n $_ZONEADMD_brand_debug ]]; then
+	logfile=/var/log/zone_bh.$1
+	date >>$logfile
+	echo "zone $1 pre-state-change $3 $4" >>$logfile
+	ksh -x /usr/lib/brand/$ps_brand/statechange "pre" $@ 2>>$logfile
+	res=$?
+	echo "zone $1 pre-state-change result $?" >>$logfile
+else
+	/usr/lib/brand/$ps_brand/statechange "pre" $@
+	res=$?
+fi
+
+exit $res

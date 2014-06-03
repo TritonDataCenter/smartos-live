@@ -1,0 +1,6 @@
+driftfile /var/ntp/ntp.drift
+logfile /var/log/ntp.log
+
+# Default, ignore all
+restrict default ignore
+restrict -6 default ignore

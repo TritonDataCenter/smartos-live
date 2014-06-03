@@ -21,6 +21,7 @@ f etc/dumpadm.conf 0644 root other
 f etc/group 0644 root sys
 d etc/inet 0755 root sys
 f etc/inet/ntp.conf 0644 root sys
+f etc/inet/ntp.conf.template 0644 root sys
 f etc/inet/services 0644 root sys
 f etc/inittab 0644 root sys
 f etc/issue 0644 root sys

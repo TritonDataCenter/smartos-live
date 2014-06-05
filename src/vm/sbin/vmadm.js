@@ -156,7 +156,7 @@ function usage(message, code)
     out('lookup [-j|-1] [-o field,...] [field=value ...]');
     out('reboot <uuid> [-F]');
     out('receive [-f <filename>]');
-    out('reprovision [-f <filename>]');
+    out('reprovision <uuid> [-f <filename>]');
     out('rollback-snapshot <uuid> <snapname>');
     out('send <uuid> [target]');
     out('start <uuid> [option=value ...]');

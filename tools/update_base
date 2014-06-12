@@ -76,11 +76,11 @@ else
 	echo "illumos-extra tarball in use. Update illumos-extra manually."
 fi
 
-echo "Updating illumos-joyent... \c "
-cd $upd_root/projects/illumos
-[[ $? -eq 0 ]] || fail "can't find illumos directory"
-git_update || rm -f $upd_illumos_stamp
-echo "done"
+#echo "Updating illumos-joyent... \c "
+#cd $upd_root/projects/illumos
+#[[ $? -eq 0 ]] || fail "can't find illumos directory"
+#git_update || rm -f $upd_illumos_stamp
+#echo "done"
 
 
 echo "Updating illumos-live... \c "

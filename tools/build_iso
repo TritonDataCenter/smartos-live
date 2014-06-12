@@ -182,7 +182,7 @@ function bi_generate_grub_conf
 	local shadow='$5$2HOHRnK3$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA'
 	echo "Generating grub menu.lst... \c "
 	cat > $bi_output_grub_dir/menu.lst <<EOF
-default=0
+default=4
 timeout=10
 min_mem64 1024
 

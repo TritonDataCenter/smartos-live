@@ -1,18 +1,16 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2014, Joyent, Inc. All rights reserved.
  *
  * Integration test: test that commands and payloads in etc/examples are
  * actually valid
  */
 
-process.env['TAP'] = 1;
 var async = require('async');
 var exec = require('child_process').exec;
 var fs = require('fs');
+var mod_vm = require('../lib/vm');
 var path = require('path');
-var test = require('tap').test;
 var util = require('util');
-var vmtest = require('/usr/vm/test/common/vmtest');
 
 
 
@@ -20,15 +18,12 @@ var vmtest = require('/usr/vm/test/common/vmtest');
 
 
 
-// Set to 'false' to keep VMs around for later inspection
-var DELETE_VMS = true;
 var EX_DIR = '/usr/fw/etc/examples';
 var EXAMPLES = {};
-var IMAGE_UUID = vmtest.CURRENT_SMARTOS_UUID;
+var IMAGE_UUID = mod_vm.images.smartos;
 var RULES = {};
 var RVMS = {};
 var TEMP_FILES = [];
-var TEST_OPTS = { timeout: 240000 };
 var VMS = [
     // vmadm_vm1
     '60e90d15-fb48-4bb9-90e6-1e1bb8269d1e'
@@ -37,6 +32,7 @@ var VMS = [
 
 
 // --- Helpers
+
 
 
 /**
@@ -93,7 +89,7 @@ function fwStatsContain(t, uuid, inLines, inDesc, cb) {
     var lines = inLines.map(function (l) { return l; });
 
     exec(cmd, function (err, stdout, stderr) {
-        t.ifErr(err, desc + 'error running: ' + cmd);
+        t.ifError(err, desc + 'error running: ' + cmd);
         t.equal(stderr, '', desc + 'stderr: ' + cmd);
 
         var rules = [];
@@ -125,42 +121,12 @@ function fwStatsContain(t, uuid, inLines, inDesc, cb) {
 }
 
 
-/**
- * Delete a VM with vmadm, but do not cause an error if the VM has already
- * been deleted
- */
-function vmDelete(t, uuid, inDesc, callback) {
-    var cmd = 'vmadm delete ' + uuid;
-    var desc = inDesc + ': ';
 
-    if (!DELETE_VMS) {
-        t.ok(true, 'DELETE_VMS=false: not deleting VM ' + uuid);
-        return callback();
-    }
-
-    exec(cmd, function (err, stdout, stderr) {
-        if (err) {
-            if (err.message.indexOf('No such zone configured') !== -1) {
-                t.ok(true, desc + 'VM ' + uuid + ' already deleted');
-                return callback();
-            }
-
-            t.ifErr(err, desc + 'error running: ' + cmd);
-        }
-
-        t.equal(stderr, 'Successfully deleted VM ' + uuid + '\n',
-            desc + 'stderr: ' + cmd);
-        return callback(err);
-    });
-}
+// --- Setup
 
 
 
-// --- Tests
-
-
-
-test('setup', function (t) {
+exports['setup'] = function (t) {
     var exampleFiles = fs.readdirSync(EX_DIR);
     t.ok(exampleFiles.length > 1, 'example files exist');
 
@@ -174,20 +140,16 @@ test('setup', function (t) {
             fs.readFileSync(path.join(EX_DIR, ex)).toString();
     });
 
-    t.end();
-});
+    return t.done();
+};
 
 
-test('delete VMs from previous test runs', TEST_OPTS, function (t) {
-    async.forEachSeries(VMS, function _doVMdelete(uuid, cb) {
-        vmDelete(t, uuid, 'cleanup leftover VMs', cb);
-    }, function () {
-        t.end();
-    });
-});
+
+// --- Tests
 
 
-test('fwadm examples: add / update', function (t) {
+
+exports['fwadm examples: add / update'] = function (t) {
     var examples = Object.keys(EXAMPLES.fwadm).sort();
     async.forEachSeries(examples, function _doAdd(ex, cb) {
         // Handle list tests in the next two blocks
@@ -196,7 +158,7 @@ test('fwadm examples: add / update', function (t) {
         }
 
         exec(EXAMPLES.fwadm[ex], function (err, stdout, stderr) {
-            t.ifErr(err, 'error running: ' + ex);
+            t.ifError(err, 'error running: ' + ex);
             t.equal(stderr, '', 'stderr: ' + ex);
             if (ex.indexOf('add') !== -1) {
                 addRulesAndRVMs(stdout);
@@ -206,17 +168,17 @@ test('fwadm examples: add / update', function (t) {
             return cb();
         });
     }, function () {
-        t.end();
+        return t.done();
     });
-});
+};
 
 
-test('fwadm_list_json', function (t) {
+exports['fwadm_list_json'] = function (t) {
     exec(EXAMPLES.fwadm.fwadm_list_json, function (err, stdout, stderr) {
-        t.ifErr(err, 'error running');
+        t.ifError(err, 'error running');
         t.equal(stderr, '', 'stderr');
         if (err) {
-            return t.end();
+            return t.done();
         }
 
         var rules = Object.keys(RULES);
@@ -224,7 +186,7 @@ test('fwadm_list_json', function (t) {
         try {
             json = JSON.parse(stdout);
         } catch (parseErr) {
-            t.ifErr(parseErr, 'JSON parse error');
+            t.ifError(parseErr, 'JSON parse error');
         }
 
         json.forEach(function (r) {
@@ -235,17 +197,17 @@ test('fwadm_list_json', function (t) {
 
         t.deepEqual(rules, [], 'All added rules found in list');
         delete EXAMPLES.fwadm.fwadm_list_json;
-        return t.end();
+        return t.done();
     });
-});
+};
 
 
-test('fwadm_list_parseable', function (t) {
+exports['fwadm_list_parseable'] = function (t) {
     exec(EXAMPLES.fwadm.fwadm_list_parseable, function (err, stdout, stderr) {
-        t.ifErr(err, 'error running');
+        t.ifError(err, 'error running');
         t.equal(stderr, '', 'stderr');
         if (err) {
-            return t.end();
+            return t.done();
         }
 
         var rules = Object.keys(RULES);
@@ -264,12 +226,12 @@ test('fwadm_list_parseable', function (t) {
 
         t.deepEqual(rules, [], 'All added rules found in list');
         delete EXAMPLES.fwadm.fwadm_list_parseable;
-        return t.end();
+        return t.done();
     });
-});
+};
 
 
-test('rvm rules', function (t) {
+exports['rvm rules'] = function (t) {
     var examples = Object.keys(EXAMPLES.rvm).filter(function (ex) {
         return (ex.indexOf('rule') !== -1);
     });
@@ -279,7 +241,7 @@ test('rvm rules', function (t) {
         var cmd = 'fwadm add -f ' + path.join(EX_DIR, ex);
 
         exec(cmd, function (err, stdout, stderr) {
-            t.ifErr(err, 'error running: ' + cmd);
+            t.ifError(err, 'error running: ' + cmd);
             t.equal(stderr, '', 'stderr: ' + cmd);
             addRulesAndRVMs(stdout);
 
@@ -287,12 +249,12 @@ test('rvm rules', function (t) {
             return cb();
         });
     }, function () {
-        t.end();
+        return t.done();
     });
-});
+};
 
 
-test('rvm remote VMs', function (t) {
+exports['rvm remote VMs'] = function (t) {
     var examples = Object.keys(EXAMPLES.rvm).filter(function (ex) {
         return (ex.indexOf('_rvm') !== -1);
     });
@@ -302,7 +264,7 @@ test('rvm remote VMs', function (t) {
         var cmd = 'fwadm add-rvm -f ' + path.join(EX_DIR, ex);
 
         exec(cmd, function (err, stdout, stderr) {
-            t.ifErr(err, 'error running: ' + cmd);
+            t.ifError(err, 'error running: ' + cmd);
             t.equal(stderr, '', 'stderr: ' + cmd);
             addRulesAndRVMs(stdout);
 
@@ -310,134 +272,142 @@ test('rvm remote VMs', function (t) {
             return cb();
         });
     }, function () {
-        t.end();
+        return t.done();
     });
-});
+};
 
 
-test('vmadm', TEST_OPTS, function (t) {
-    async.series([
-        function (cb) {
-            var cmd = 'fwadm add -f ' + path.join(EX_DIR, 'vmadm_rule1');
+exports['vmadm'] = {
+    'vmadm_rule1': function (t) {
+        var cmd = 'fwadm add -f ' + path.join(EX_DIR, 'vmadm_rule1');
 
-            exec(cmd, function (err, stdout, stderr) {
-                t.ifErr(err, 'error running: ' + cmd);
-                t.equal(stderr, '', 'stderr: ' + cmd);
-                addRulesAndRVMs(stdout);
+        exec(cmd, function (err, stdout, stderr) {
+            t.ifError(err, 'error running: ' + cmd);
+            t.equal(stderr, '', 'stderr: ' + cmd);
+            addRulesAndRVMs(stdout);
 
-                delete EXAMPLES.vmadm.vmadm_rule1;
-                return cb();
-            });
+            delete EXAMPLES.vmadm.vmadm_rule1;
+            return t.done();
+        });
+    },
 
-        }, function (cb) {
-            var cmd = 'vmadm create -f ' + path.join(EX_DIR, 'vmadm_vm1');
-
-            exec(cmd, function (err, stdout, stderr) {
-                t.ifErr(err, 'error running: ' + cmd);
-                t.equal(stderr, 'Successfully created VM ' + VMS[0] + '\n',
-                    'stderr: ' + cmd);
-
+    'vmadm_vm1': function (t) {
+        mod_vm.create(t, {
+            file: path.join(EX_DIR, 'vmadm_vm1')
+        }, function (err) {
+            if (!err) {
                 delete EXAMPLES.vmadm.vmadm_vm1;
-                return cb();
-            });
+            }
 
-        }, function (cb) {
-            fwStatsContain(t, VMS[0], [
-                'block out quick proto tcp from any to any port = smtp'
-            ], 'smtp block rule applied', cb);
+            return t.done();
+        });
+    },
 
-        }, function (cb) {
-            var cmd = 'fwadm add -f ' + path.join(EX_DIR, 'vmadm_rule2');
+    'stats after vmadm_vm1': function (t) {
+        fwStatsContain(t, VMS[0], [
+            'block out quick proto tcp from any to any port = smtp'
+        ], 'smtp block rule applied', function () {
+            return t.done();
+        });
+    },
 
-            exec(cmd, function (err, stdout, stderr) {
-                t.ifErr(err, 'error running: ' + cmd);
-                t.equal(stderr, '', 'stderr: ' + cmd);
-                addRulesAndRVMs(stdout);
+    'vmadm_rule2': function (t) {
+        var cmd = 'fwadm add -f ' + path.join(EX_DIR, 'vmadm_rule2');
 
-                delete EXAMPLES.vmadm.vmadm_rule2;
-                return cb();
-            });
+        exec(cmd, function (err, stdout, stderr) {
+            t.ifError(err, 'error running: ' + cmd);
+            t.equal(stderr, '', 'stderr: ' + cmd);
+            addRulesAndRVMs(stdout);
 
-        }, function (cb) {
-            var cmd = EXAMPLES.vmadm.vmadm_cmd1;
-            exec(cmd, function (err, stdout, stderr) {
-                t.ifErr(err, 'error running: ' + cmd);
-                t.equal(stderr, 'Successfully updated VM ' + VMS[0] + '\n',
-                    'stderr: ' + cmd);
+            delete EXAMPLES.vmadm.vmadm_rule2;
+            return t.done();
+        });
+    },
 
-                delete EXAMPLES.vmadm.vmadm_cmd1;
-                return cb();
-            });
+    'vmadm_cmd1': function (t) {
+        var cmd = EXAMPLES.vmadm.vmadm_cmd1;
+        exec(cmd, function (err, stdout, stderr) {
+            t.ifError(err, 'error running: ' + cmd);
+            t.equal(stderr, 'Successfully updated VM ' + VMS[0] + '\n',
+                'stderr: ' + cmd);
 
-        }, function (cb) {
-            fwStatsContain(t, VMS[0], [
-                'block out quick proto tcp from any to any port = smtp',
-                'pass in quick proto tcp from any to any port = www',
-                'pass in quick proto tcp from any to any port = https'
-            ], 'smtp block rule applied', cb);
+            delete EXAMPLES.vmadm.vmadm_cmd1;
+            return t.done();
+        });
+    },
 
+    'stats after vmadm_cmd1': function (t) {
+        fwStatsContain(t, VMS[0], [
+            'block out quick proto tcp from any to any port = smtp',
+            'pass in quick proto tcp from any to any port = www',
+            'pass in quick proto tcp from any to any port = https'
+        ], 'smtp block rule applied', function () {
+            return t.done();
+        });
+    },
+
+    'fwadm stop': function (t) {
         // In the man page but not in the examples dir: disable the VM
         // and make sure there are no rules
-        }, function (cb) {
-            var cmd = 'fwadm stop ' + VMS[0];
-            exec(cmd, function (err, stdout, stderr) {
-                t.ifErr(err, 'error running: ' + cmd);
-                t.equal(stdout, 'Firewall stopped for VM ' + VMS[0] + '\n',
-                    'stdout: ' + cmd);
-                t.equal(stderr, '', 'stderr: ' + cmd);
+        var cmd = 'fwadm stop ' + VMS[0];
+        exec(cmd, function (err, stdout, stderr) {
+            t.ifError(err, 'error running: ' + cmd);
+            t.equal(stdout, 'Firewall stopped for VM ' + VMS[0] + '\n',
+                'stdout: ' + cmd);
+            t.equal(stderr, '', 'stderr: ' + cmd);
 
-                return cb();
-            });
+            return t.done();
+        });
+    },
 
-        }, function (cb) {
-            var cmd = 'fwadm stats ' + VMS[0];
-            exec(cmd, function (err, stdout, stderr) {
-                t.ok(err, 'expected error running: ' + cmd);
-                t.equal(stderr, 'Firewall is not running for VM "'
-                    + VMS[0] + '"\n',
-                    'stderr: ' + cmd);
+    'fwadm stats after stop': function (t) {
+        var cmd = 'fwadm stats ' + VMS[0];
+        exec(cmd, function (err, stdout, stderr) {
+            t.ok(err, 'expected error running: ' + cmd);
+            t.equal(stderr, 'Firewall is not running for VM "'
+                + VMS[0] + '"\n',
+                'stderr: ' + cmd);
 
-                return cb();
-            });
+            return t.done();
+        });
+    },
 
+    'fwadm start': function (t) {
         // Now re-enable and make sure it has the same rules
+        var cmd = 'fwadm start ' + VMS[0];
+        exec(cmd, function (err, stdout, stderr) {
+            t.ifError(err, 'error running: ' + cmd);
+            t.equal(stdout, 'Firewall started for VM ' + VMS[0] + '\n',
+                'stdout: ' + cmd);
+            t.equal(stderr, '', 'stderr: ' + cmd);
 
-        }, function (cb) {
-            var cmd = 'fwadm start ' + VMS[0];
-            exec(cmd, function (err, stdout, stderr) {
-                t.ifErr(err, 'error running: ' + cmd);
-                t.equal(stdout, 'Firewall started for VM ' + VMS[0] + '\n',
-                    'stdout: ' + cmd);
-                t.equal(stderr, '', 'stderr: ' + cmd);
+            return t.done();
+        });
+    },
 
-                return cb();
-            });
-
-        }, function (cb) {
-            fwStatsContain(t, VMS[0], [
-                'block out quick proto tcp from any to any port = smtp',
-                'pass in quick proto tcp from any to any port = www',
-                'pass in quick proto tcp from any to any port = https'
-            ], 'smtp block rule applied', cb);
-        }
-
-    ], function () {
-        t.end();
-    });
-});
+    'stats after start': function (t) {
+        fwStatsContain(t, VMS[0], [
+            'block out quick proto tcp from any to any port = smtp',
+            'pass in quick proto tcp from any to any port = www',
+            'pass in quick proto tcp from any to any port = https'
+        ], 'smtp block rule applied', function () {
+            return t.done();
+        });
+    }
+};
 
 
-test('delete rules', function (t) {
+exports['delete rules'] = function (t) {
     var rules = Object.keys(RULES);
     t.ok(rules.length > 0, 'rules were added');
     if (rules.length === 0) {
-        return t.end();
+        return t.done();
     }
 
     async.forEachSeries(rules, function _delRule(rule, cb) {
         var cmd = 'fwadm delete ' + rule;
         exec(cmd, function (err, stdout, stderr) {
-            t.ifErr(err, 'error running: ' + cmd);
+            t.ifError(err, 'error running: ' + cmd);
             t.equal(stderr, '', 'stderr: ' + cmd);
 
             if (!err) {
@@ -447,22 +417,22 @@ test('delete rules', function (t) {
             return cb();
         });
     }, function () {
-        t.end();
+        return t.done();
     });
-});
+};
 
 
-test('delete remote VMs', function (t) {
+exports['delete remote VMs'] = function (t) {
     var rvms = Object.keys(RVMS);
     t.ok(rvms.length > 0, 'remote VMs were added');
     if (rvms.length === 0) {
-        return t.end();
+        return t.done();
     }
 
     async.forEachSeries(rvms, function _delRVM(rvm, cb) {
         var cmd = 'fwadm delete-rvm ' + rvm;
         exec(cmd, function (err, stdout, stderr) {
-            t.ifErr(err, 'error running: ' + cmd);
+            t.ifError(err, 'error running: ' + cmd);
             t.equal(stderr, '', 'stderr: ' + cmd);
 
             if (!err) {
@@ -472,24 +442,15 @@ test('delete remote VMs', function (t) {
             return cb();
         });
     }, function () {
-        t.end();
+        return t.done();
     });
-});
-
-
-test('cleanup created VMs', TEST_OPTS, function (t) {
-    async.forEachSeries(VMS, function _doVMdelete(uuid, cb) {
-        vmDelete(t, uuid, 'cleanup', cb);
-    }, function () {
-        t.end();
-    });
-});
+};
 
 
 /*
  * Test that we've tried all of the examples
  */
-test('all examples tested', function (t) {
+exports['all examples tested'] = function (t) {
     for (var pfx in EXAMPLES) {
         t.deepEqual(Object.keys(EXAMPLES[pfx]), [],
             'No ' + pfx + ' examples left unused');
@@ -498,5 +459,15 @@ test('all examples tested', function (t) {
     t.deepEqual(Object.keys(RULES), [], 'All rules deleted');
     t.deepEqual(Object.keys(RVMS), [], 'All remote VMs deleted');
 
-    t.end();
-});
+    return t.done();
+};
+
+
+
+// --- Teardown
+
+
+
+exports['teardown'] = function (t) {
+    mod_vm.delAllCreated(t, {});
+};

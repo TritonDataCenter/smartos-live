@@ -1,15 +1,12 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2014, Joyent, Inc. All rights reserved.
  *
  * Integration tests for enabling / disabling firewalls in a VM
  */
 
-process.env['TAP'] = 1;
-var fw = require('/usr/fw/lib/fw');
-var test = require('tap').test;
+var mod_fw = require('../lib/fw');
 var util = require('util');
-var VM = require('/usr/vm/node_modules/VM');
-var vmtest = require('/usr/vm/test/common/vmtest');
+var mod_vm = require('../lib/vm');
 
 
 
@@ -17,9 +14,7 @@ var vmtest = require('/usr/vm/test/common/vmtest');
 
 
 
-VM.loglevel = 'DEBUG';
-var IMAGE_UUID = vmtest.CURRENT_SMARTOS_UUID;
-var TEST_OPTS = { timeout: 240000 };
+var d = {};
 
 
 
@@ -27,129 +22,87 @@ var TEST_OPTS = { timeout: 240000 };
 
 
 
-test('enable / disable', TEST_OPTS, function (t) {
-    var state = {
-        brand: 'joyent-minimal',
-        // We don't need the ubuntu image for these tests:
-        ensure_images: [ IMAGE_UUID ]
-    };
-    var vm;
-    var vm_params = {
-        alias: 'fw-enable' + process.pid,
-        autoboot: true,
-        do_not_inventory: true,
-        firewall_enabled: true,
-        nics: [
-            {
-                nic_tag: 'admin',
-                ip: '10.4.0.30',
-                netmask: '255.255.255.0'
+exports['enable / disable'] = {
+    'create': function (t) {
+        mod_vm.create(t, {
+            params: {
+                firewall_enabled: true,
+                image_uuid: mod_vm.images.smartos,
+                nics: [
+                    {
+                        nic_tag: 'admin',
+                        ip: '10.4.0.30',
+                        netmask: '255.255.255.0'
+                    }
+                ]
+            },
+            partialExp: {
+                firewall_enabled: true
             }
-        ],
-        nowait: false,
-        ram: 128
-    };
+        });
+    },
 
-    // Create a VM with firewall enabled
-    vmtest.on_new_vm(t, IMAGE_UUID, vm_params, state, [
-        function (cb) {
-            // Verify VM object parameters
-            VM.load(state.uuid, function (err, obj) {
-                t.ifErr(err, 'loading new VM: err');
-                if (!obj) {
-                    return cb(err);
-                }
+    'fw status after create': function (t) {
+        d.vm = mod_vm.lastCreated();
+        t.ok(d.vm, 'have last created VM');
 
-                vm = obj;
-                t.equal(vm.firewall_enabled, true, 'firewall enabled');
-                return cb();
-            });
+        mod_fw.status(t, {
+            uuid: d.vm.uuid,
+            partialExp: {
+                running: true
+            }
+        });
+    },
 
-        }, function (cb) {
-            // Verify that the firewall is running
-            fw.status({ uuid: vm.uuid }, function (err, res) {
-                t.ifErr(err, 'firewall status: err');
-                if (err) {
-                    return cb(err);
-                }
+    'update: disable firewall': function (t) {
+        mod_vm.update(t, {
+            uuid: d.vm.uuid,
+            params: {
+                firewall_enabled: false
+            },
+            partialExp: {
+                firewall_enabled: false
+            }
+        });
+    },
 
-                t.equal(res.running, true, 'status: running');
-                return cb();
-            });
+    'fw status after disable': function (t) {
+        mod_fw.status(t, {
+            uuid: d.vm.uuid,
+            partialExp: {
+                running: false
+            }
+        });
+    },
 
-        }, function (cb) {
-            VM.update(state.uuid, { firewall_enabled: false },
-                function (err, obj) {
-                t.ifErr(err, 'updating VM: err');
-                if (!obj) {
-                    return cb(err);
-                }
+    'update: re-enable firewall': function (t) {
+        mod_vm.update(t, {
+            uuid: d.vm.uuid,
+            params: {
+                firewall_enabled: true
+            },
+            partialExp: {
+                firewall_enabled: true
+            }
+        });
+    },
 
-                t.equal(obj.firewall_enabled, false, 'firewall disabled');
-                return cb();
-            });
+    'fw status after re-enable': function (t) {
+        mod_fw.status(t, {
+            uuid: d.vm.uuid,
+            partialExp: {
+                running: true
+            }
+        });
+    }
+};
 
-        }, function (cb) {
-            VM.load(state.uuid, function (err, obj) {
-                t.ifErr(err, 'loading updated VM: err');
-                if (!obj) {
-                    return cb(err);
-                }
 
-                vm = obj;
-                t.equal(vm.firewall_enabled, false, 'firewall disabled');
-                return cb();
-            });
 
-        }, function (cb) {
-            fw.status({ uuid: vm.uuid }, function (err, res) {
-                t.ifErr(err, 'firewall status: err');
-                if (err) {
-                    return cb(err);
-                }
+// --- Teardown
 
-                t.equal(res.running, false, 'firewall not running');
-                return cb();
-            });
 
-        // Now re-enable and make sure the changes take effect
-        }, function (cb) {
-            VM.update(state.uuid, { firewall_enabled: true },
-                function (err, obj) {
-                t.ifErr(err, 'updating VM: err');
-                if (!obj) {
-                    return cb(err);
-                }
 
-                t.equal(obj.firewall_enabled, true, 'firewall enabled');
-                return cb();
-            });
-
-        }, function (cb) {
-            VM.load(state.uuid, function (err, obj) {
-                t.ifErr(err, 'loading updated VM: err');
-                if (!obj) {
-                        return cb(err);
-                }
-
-                vm = obj;
-                t.equal(obj.firewall_enabled, true, 'firewall enabled');
-                return cb();
-            });
-
-        }, function (cb) {
-            fw.status({ uuid: vm.uuid }, function (err, res) {
-                t.ifErr(err, 'firewall status: err');
-                if (err) {
-                    return cb(err);
-                }
-
-                t.equal(res.running, true, 'firewall running');
-                return cb();
-            });
-        }
-
-    ], function () {
-        t.end();
-    });
-});
+exports['teardown'] = function (t) {
+    mod_vm.delAllCreated(t, {});
+};

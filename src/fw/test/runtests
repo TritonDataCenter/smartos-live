@@ -92,7 +92,7 @@ for test in $(ls $TOP/test/integration | grep "\.test.js$"); do
     test_name=$(basename $test)
     set +o errexit
     set -o pipefail
-    /usr/vm/test/runtest $TOP/test/integration/${test} | tee ${OUTPUT_DIR}/${test_name}.output.$$.tap
+    /usr/fw/test/runtest $TOP/test/integration/${test} | tee ${OUTPUT_DIR}/${test_name}.output.$$.tap
     TEST_EXIT_CODE=$?
     set +o pipefail
     set -o errexit

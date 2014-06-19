@@ -37,5 +37,15 @@ do
     esac
 done
 
+if [[ $UNAME == "SunOS" ]]; then
+    echo "# Adding images.joyent.com as an imgadm source"
+    imgadm sources -a "https://images.joyent.com/"
+
+    for IMG in $(/usr/node/bin/node -e "console.log(require('/usr/fw/test/lib/vm').imageUUIDs.join(' '));"); do
+        echo "# Installing required image $IMG"
+        imgadm import $IMG
+    done
+fi
+
 shift $(($OPTIND - 1))
 $NODE $NODEUNIT --reporter $opt_reporter $1

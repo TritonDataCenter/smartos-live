@@ -44,6 +44,16 @@ function exec(t, opts, callback) {
             }, 'error running ' + opts.cmdName);
         }
 
+        if (log.debug()) {
+            log.debug({
+                cmd: opts.cmd,
+                cmdName: opts.cmdName,
+                err: err,
+                stderr: stderr,
+                stdout: stdout
+            }, 'ran ' + opts.cmdName);
+        }
+
         return callback(err, stdout, stderr);
     });
 }

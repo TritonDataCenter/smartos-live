@@ -228,6 +228,11 @@ module.exports = {
     get images() {
         return IMAGES;
     },
+    get imageUUIDs() {
+        return Object.keys(IMAGES).map(function (img) {
+            return IMAGES[img];
+        });
+    },
     create: create,
     del: del,
     delAllCreated: delAllCreated,

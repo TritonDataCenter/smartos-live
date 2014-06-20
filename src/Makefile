@@ -397,6 +397,7 @@ install: all
 	cp -PR img/sbin $(DESTDIR)/usr/img/
 	cp -PR img/test $(DESTDIR)/usr/img/
 	rm -rf $(DESTDIR)/usr/fw
+	mkdir -m 0755 -p $(DESTDIR)/usr/fw/test
 	cp -PR fw/etc $(DESTDIR)/usr/fw/
 	cp -Pr fw/test/integration $(DESTDIR)/usr/fw/test/
 	cp -Pr fw/test/lib $(DESTDIR)/usr/fw/test/

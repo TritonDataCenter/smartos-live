@@ -71,8 +71,10 @@ JS_CHECK_TARGETS=\
 	img/lib/*.js \
 	img/sbin/imgadm \
 	vm/tests/test-alias.js \
+	vm/tests/test-fswatcher.js \
 	vm/tests/test-indestructible.js \
-	vm/lib/metadata/*.js
+	vm/lib/metadata/*.js \
+	vm/node_modules/vmevent/fswatcher.js
 
 JS_CHECK_OLDSKOOL_TARGETS = \
 	disklayout.js \
@@ -85,7 +87,8 @@ C_CHECK_TARGETS=\
 	vmunbundle.c \
 	zfs_recv.c \
 	zfs_send.c \
-	zoneevent.c
+	zoneevent.c \
+	vm/node_modules/vmevent/fswatcher.c
 
 #
 # Generic flags we apply by default to everything.

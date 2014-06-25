@@ -1145,45 +1145,57 @@ function main(callback)
     }
 }
 
-function flushLogs(callback)
-{
-    var streams;
-
-    if (!VM.log) {
-        fwlog.flush(VM.fw_log, callback);
+/**
+ * Flush all open log streams
+ */
+function flushLogs(logs, callback) {
+    if (!logs) {
+        callback();
         return;
     }
 
-    streams = VM.log.streams;
-    async.forEachSeries(streams, function (str, cb) {
-        var called_back = false;
+    var streams = [];
+    if (!util.isArray(logs)) {
+        logs = [ logs ];
+    }
 
+    if (logs.length === 0) {
+        callback();
+        return;
+    }
+
+    logs.forEach(function (log) {
+        if (!log || !log.streams || log.streams.length === 0) {
+            return;
+        }
+
+        streams = streams.concat(log.streams);
+    });
+
+    var toClose = streams.length;
+    var closed = 0;
+
+    function _doneClose() {
+        closed++;
+        if (closed == toClose) {
+            callback();
+            return;
+        }
+    }
+
+    streams.forEach(function (str) {
         if (!str || !str.stream) {
-            cb();
+            _doneClose();
             return;
         }
 
         str.stream.once('drain', function () {
-            if (!called_back) {
-                called_back = true;
-                cb();
-            }
+            _doneClose();
         });
 
         if (str.stream.write('')) {
-            // according to node docs true here means we're done
-            if (!called_back) {
-                called_back = true;
-                cb();
-            }
-        } else {
-            // false means: wait for 'drain' to call cb();
-            /*jsl:pass*/
+            _doneClose();
         }
-        return;
-    }, function () {
-        fwlog.flush(VM.fw_log, callback);
-        return;
     });
 }
 
@@ -1240,16 +1252,25 @@ onlyif.rootInSmartosGlobal(function (err) {
     }
 
     main(function (e, message) {
+        var logs = [];
+
+        if (VM.log) {
+            logs.push(VM.log);
+        }
+        if (VM.fw_log) {
+            logs.push(VM.fw_log);
+        }
+
         if (e) {
             console.error(e.message);
-            flushLogs(function () {
+            flushLogs(logs, function () {
                 process.exit(1);
             });
         } else {
             if (message) {
                 console.error(message);
             }
-            flushLogs(function () {
+            flushLogs(logs, function () {
                 process.exit(0);
             });
         }

@@ -339,7 +339,13 @@ function (zonename, callback) {
     var zlog = self.zlog[zonename];
     var zonePath = self.zones[zonename].zonepath;
     var localpath = '/.zonecontrol';
-    var zonecontrolpath = path.join(zonePath, 'root', localpath);
+    var zonecontrolpath;
+
+    if (self.zones[zonename].brand === 'lx') {
+        localpath = '/native' + localpath;
+    }
+
+    zonecontrolpath = path.join(zonePath, 'root', localpath);
 
     zlog.info('Starting socket server');
 

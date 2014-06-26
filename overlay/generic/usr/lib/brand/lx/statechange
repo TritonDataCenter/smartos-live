@@ -30,6 +30,6 @@ jst_simplefs="yes"
 # jst_showsnap="yes"
 
 # Where does the mdata socket live?
-jst_mdatapath="/.zonecontrol/"
+jst_mdatapath="/native/.zonecontrol/"
 
 . /usr/lib/brand/jcommon/statechange

@@ -12,7 +12,7 @@ var VM = require('/usr/vm/node_modules/VM');
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
 require('/usr/vm/node_modules/nodeunit-plus');
 
-var FsWatcher = require('./fswatcher.js').FsWatcher;
+var FsWatcher = require('fswatcher').FsWatcher;
 var log = bunyan.createLogger({
         level: 'trace',
         name: 'fswatcher-test-dummy',

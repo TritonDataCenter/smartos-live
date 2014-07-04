@@ -96,10 +96,7 @@
  *   "timestamp" is included when (type == event)
  *   "type" is always included
  *
- * Current values for "code" are:
- *
- *   - unable to create event port (FATAL, process will also exit)
- *
+ * Current values for "code" are in the ErrorCodes enum below.
  *
  * EXIT STATUS
  *
@@ -108,17 +105,23 @@
  *   should result in a message of type "error" being output before exiting
  *   non-zero.
  *
+ *   When errors occur that are completly unexpected, this will call abort() to
+ *   generate a core dump.
+ *
  */
 
 /*
  * XXX watch/unwatch are currently O(N)
  */
 
-#define MAX_KEY_LEN 10 // number of digits (0-4294967295)
+#define MAX_FMT_LEN 64
+#define MAX_KEY 4294967295
+#define MAX_KEY_LEN 10 /* number of digits (0-4294967295) */
+#define MAX_STAT_RETRY 10 /* number of times to retry stat() before abort() */
 
-// longest command is '<KEY> UNWATCH <path>' with <KEY> being 10 characters.
+/* longest command is '<KEY> UNWATCH <path>' with <KEY> being 10 characters. */
 #define MAX_CMD_LEN (MAX_KEY_LEN + 1 + 7 + 1 + PATH_MAX)
-#define MAX_HANDLES 100000 // limit on how many watches to have active at once
+#define MAX_HANDLES 100000 /* limit on how many watches to have active */
 #define SYSTEM_KEY 0
 
 enum ErrorCodes {
@@ -126,6 +129,7 @@ enum ErrorCodes {
     ERR_PORT_CREATE,       /* failed to create a port */
     ERR_GET_STDIN,         /* failed to read from stdin (non-EOF) */
     ERR_INVALID_COMMAND,   /* failed to parse command from stdin line */
+    ERR_INVALID_KEY,       /* failed to parse command from stdin line */
     ERR_UNKNOWN_COMMAND,   /* line was parsable, but unimplmented command */
     ERR_CANNOT_ALLOCATE,   /* can't allocate memory required */
     ERR_CANNOT_ASSOCIATE,  /* port_associate(3c) failed */
@@ -171,7 +175,7 @@ printEvent(int event, char *pathname, int final)
     uint64_t timestamp;
 
     if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
-        // XXX TODO printError
+        /* This is entirely unexpected so we abort() to ensure a core dump. */
         abort();
     }
 
@@ -220,6 +224,10 @@ printEvent(int event, char *pathname, int final)
     fflush(stdout);
 }
 
+/*
+ * printError() takes a key, code (one of the ErrorCodes) and message and writes
+ * to stdout.
+ */
 void
 printError(uint32_t key, uint32_t code, const char *message_fmt, ...)
 {
@@ -241,6 +249,10 @@ printError(uint32_t key, uint32_t code, const char *message_fmt, ...)
     (void) fflush(stdout);
 }
 
+/*
+ * printResult() takes a key, code (RESULT_SUCCESS||RESULT_FAILURE), pathname
+ * and message and writes to stdout.
+ */
 void
 printResult(uint32_t key, uint32_t code, const char *pathname,
     const char *message_fmt, ...)
@@ -252,7 +264,7 @@ printResult(uint32_t key, uint32_t code, const char *pathname,
     uint64_t timestamp;
 
     if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
-        // XXX TODO printError
+        /* This is entirely unexpected so we abort() to ensure a core dump. */
         abort();
     }
 
@@ -282,7 +294,12 @@ printResult(uint32_t key, uint32_t code, const char *pathname,
     (void) fflush(stdout);
 }
 
-/* this should be called only while holding the handles_mutex */
+/*
+ * findHandleIdx() takes a pathname and returns the index from the handles array
+ * for that path. It returns -1 if pathname is not found.
+ *
+ * This should be called only while holding the handles_mutex
+ */
 int
 findHandleIdx(char *pathname)
 {
@@ -292,7 +309,7 @@ findHandleIdx(char *pathname)
     for (i = 0; i <= largest_idx; i++) {
         handle = handles[i];
 
-        // XXX record that this is the first unused
+        /* Record that this is the first unused since we're looping anyway */
         if (handle == NULL && i < next_unused) {
             next_unused = i;
         }
@@ -307,7 +324,12 @@ findHandleIdx(char *pathname)
     return (-1);
 }
 
-/* this should be called only while holding the handles_mutex */
+/*
+ * getNextHandleIdx() returns the next unused index from the handles array. If
+ * no unused are found below MAX_HANDLES, it returns -1.
+ *
+ * This should be called only while holding the handles_mutex
+ */
 int
 getNextHandleIdx()
 {
@@ -326,12 +348,12 @@ getNextHandleIdx()
 }
 
 /*
- * This function takes the same arguments as stat and calls stat for you but
- * does retries on errors and ultimately returns either 0 (success) or one of
- * the errno's listed in stat(2).
+ * statFile() takes the same arguments as stat and calls stat for you but does
+ * retries on errors and ultimately returns either 0 (success) or one of the
+ * errno's listed in stat(2).
  *
- * WARNING: If it gets EINTR too many times, this will call abort().
- *
+ * WARNING: If it gets EINTR too many times (more than MAX_STAT_RETRY), this
+ * will call abort().
  */
 int
 statFile(const char *path, struct stat *buf)
@@ -348,14 +370,16 @@ statFile(const char *path, struct stat *buf)
 
         if (stat_ret == -1) {
             if (stat_err == EINTR) {
-                // Interrupted by signal, try again... but after 10 tries
-                // we give up and try to dump core.
+                /*
+                 * Interrupted by signal, try again... but after MAX_STAT_RETRY
+                 * tries we give up and try to dump core.
+                 */
                 loops++;
-                if (loops > 10) {
+                if (loops > MAX_STAT_RETRY) {
                     abort();
                 }
             } else {
-                // Actual failure, return code.
+                /* Actual failure, return code. */
                 result = stat_err;
                 done = 1;
             }
@@ -369,7 +393,17 @@ statFile(const char *path, struct stat *buf)
 }
 
 /*
- * Event handler.
+ * processFile() is called to (re)arm watches. This can either be because of
+ * an event (in which case revents should be pe.portev_events) or to initially
+ * arm in which case revents should be 0.
+ *
+ * It also performs the required stat() and in case this is a re-arm prints
+ * the event.
+ *
+ * We keep these two functions together (rearming and printing) because we need
+ * to do the stat() before we print the results since if the file no longer
+ * exists we cannot rearm. In that case we set the 'final' flag in the response.
+ *
  */
 void
 processFile(uint32_t key, struct fileinfo *finf, int revents)
@@ -396,10 +430,10 @@ processFile(uint32_t key, struct fileinfo *finf, int revents)
         case 0:
             /* SUCCESS! */
             break;
-        case ELOOP:         // symbolic links in path point to each other
-        case ENOTDIR:       // component of path is not a dir
-        case EACCES:        // permission denied
-        case ENOENT:        // file or component path doesn't exist
+        case ELOOP:         /* symbolic links in path point to each other */
+        case ENOTDIR:       /* component of path is not a dir */
+        case EACCES:        /* permission denied */
+        case ENOENT:        /* file or component path doesn't exist */
             /*
              * The above are all fixable problems. We can't open the file right
              * now, but we know that we shouldn't be able to either. As such,
@@ -409,12 +443,12 @@ processFile(uint32_t key, struct fileinfo *finf, int revents)
              */
             final = 1;
             break;
-        case EFAULT:        // filename or buffer are invalid (programmer error)
-        case EIO:           // error reading from filesystem (system error)
-        case ENAMETOOLONG:  // fo_name is too long (programmer error)
-        case ENOLINK:       // broken link to remote machine
-        case ENXIO:         // path or component is marked faulty and retired
-        case EOVERFLOW:     // file is broken (system error)
+        case EFAULT:        /* filename or buffer invalid (programmer error) */
+        case EIO:           /* error reading from filesystem (system error) */
+        case ENAMETOOLONG:  /* fo_name is too long (programmer error) */
+        case ENOLINK:       /* broken link to remote machine */
+        case ENXIO:         /* path or component is marked faulty and retired */
+        case EOVERFLOW:     /* file is broken (system error) */
         default:
             /*
              * This handles cases we don't know how to deal with, by dumping
@@ -485,7 +519,8 @@ processFile(uint32_t key, struct fileinfo *finf, int revents)
 }
 
 /*
- * Worker thread waits here for event.
+ * Worker thread waits here for events, which then get dispatched to
+ * processFile().
  */
 void *
 waitForEvents(void *pn)
@@ -520,6 +555,9 @@ waitForEvents(void *pn)
     return (NULL);
 }
 
+/*
+ * Free a finf object.
+ */
 void
 freeFinf(struct fileinfo **finfp)
 {
@@ -537,7 +575,7 @@ freeFinf(struct fileinfo **finfp)
 }
 
 /*
- *
+ * unHandle() attempts to remove the handles array data for a given pathname.
  */
 void
 unHandle(char *pathname)
@@ -548,14 +586,20 @@ unHandle(char *pathname)
 
     idx = findHandleIdx(pathname);
     if (idx < 0) {
-        // XXX should we output here?
+#ifdef DEBUG
+        fprintf(stderr, "DEBUG: unHandle called, but no file: %s\n", pathname);
+#endif
     } else {
+        /* The 1 argument here tells unhandleIdx we're already holding mutex */
         unHandleIdx(idx, 1);
     }
 
     mutex_unlock(&handles_mutex);
 }
 
+/*
+ * unHandleIdx() attempts to remove the handles array data at a given index.
+ */
 void
 unHandleIdx(int idx, int holdingMutex)
 {
@@ -586,8 +630,7 @@ unHandleIdx(int idx, int holdingMutex)
 }
 
 /*
- * Only called from main thread.
- *
+ * Only called from main thread. Attempts to watch pathname.
  */
 int
 watchPath(char *pathname, uint32_t key)
@@ -600,14 +643,14 @@ watchPath(char *pathname, uint32_t key)
     if (finf == NULL) {
         printError(key, ERR_CANNOT_ALLOCATE, "failed to allocate memory for "
             "new watcher errno %d: %s", errno, strerror(errno));
-        // XXX abort(); ?
+        /* XXX abort(); ? */
         return (ERR_CANNOT_ALLOCATE);
     }
 
     if ((finf->fobj.fo_name = strdup(pathname)) == NULL) {
         printError(key, ERR_CANNOT_ALLOCATE, "strdup failed w/ errno %d: %s",
             errno, strerror(errno));
-        // XXX abort(); ?
+        /* XXX abort(); ? */
         free(finf);
         return (ERR_CANNOT_ALLOCATE);
     }
@@ -621,19 +664,18 @@ watchPath(char *pathname, uint32_t key)
         printResult(key, RESULT_SUCCESS, pathname, "already watching");
         freeFinf(&finf);
 
-        /* early-exit: already watching so unlock and return success */
+        /* early-return: already watching so unlock and return success */
         mutex_unlock(&handles_mutex);
         return (0);
     }
 
     idx = getNextHandleIdx();
     if (idx < 0) {
-        // XXX unable to find a free handle
         printResult(key, RESULT_FAILURE, pathname,
             "unable to find free handle");
         freeFinf(&finf);
 
-        /* early-exit: failed to find a handle, so return an error */
+        /* early-return: failed to find a handle, so return an error */
         mutex_unlock(&handles_mutex);
         return (1);
     }
@@ -662,6 +704,9 @@ watchPath(char *pathname, uint32_t key)
     return (0);
 }
 
+/*
+ * Only called from main thread. Attempts to unwatch pathname.
+ */
 int
 unwatchPath(char *pathname, uint32_t key)
 {
@@ -683,7 +728,7 @@ unwatchPath(char *pathname, uint32_t key)
     finf = handles[idx];
 
     if (finf == NULL) {
-        // already gone, should we output?
+        /* XXX: already gone, should we output? */
         printResult(key, RESULT_SUCCESS, pathname, "already not watching '%s'",
             pathname);
     } else {
@@ -715,10 +760,7 @@ unwatchPath(char *pathname, uint32_t key)
          * associated and remove the handle.
          */
         if (port_dissociate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp) == -1) {
-            /*
-             * XXX Add error processing as required, file may have been
-             * deleted/moved.
-             */
+            /* file may have been deleted/moved */
             printResult(key, RESULT_FAILURE, pathname,
                 "failed to unregister '%s' (errno %d): %s", pathname, errno,
                 strerror(errno));
@@ -732,7 +774,7 @@ unwatchPath(char *pathname, uint32_t key)
 
     mutex_unlock(&handles_mutex);
 
-    // XXX what can fail here?
+    /* XXX what can fail here? */
 
     return (0);
 }
@@ -742,9 +784,11 @@ main()
 {
     char cmd[MAX_CMD_LEN + 1];
     int exit_code = SUCCESS;
-    int res;
     uint32_t key;
+    char key_str[MAX_KEY_LEN + 2];
     char path[MAX_CMD_LEN + 1];
+    int res;
+    char sscanf_fmt[MAX_FMT_LEN];
     char str[MAX_CMD_LEN + 1];
     pthread_t tid;
 
@@ -767,14 +811,25 @@ main()
             break;
         }
 
-        res = sscanf(str, "%u %s %s\n", &key, cmd, path);
+        /* read one character past MAX_KEY_LEN so we know it's too long */
+        snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s", MAX_KEY_LEN + 1);
+        res = sscanf(str, sscanf_fmt, key_str, cmd, path);
         if (res != 3) {
-            // outputError(... invalid input line)
             printError(SYSTEM_KEY, ERR_INVALID_COMMAND, "invalid command line");
             continue;
         }
+        key = strtoul(key_str, NULL, 10);
+        if ((strlen(key_str) > MAX_KEY_LEN) ||
+            (key == ULONG_MAX && errno == ERANGE)) {
 
-        // XXX DEBUG
+            printError(SYSTEM_KEY, ERR_INVALID_KEY, "invalid key: > ULONG_MAX");
+            continue;
+        }
+        if (key == 0) {
+            printError(SYSTEM_KEY, ERR_INVALID_KEY, "invalid key: 0");
+            continue;
+        }
+
 #ifdef DEBUG
         fprintf(stderr, "DEBUG key: %u cmd: %s path: %s\n", key, cmd, path);
 #endif
@@ -802,7 +857,7 @@ main()
                 break;
             }
         } else {
-            // XXX if they included crazy garbage, this may result in non-JSON
+            /* XXX if they include crazy garbage, this may include non-JSON */
             printError(key, ERR_UNKNOWN_COMMAND, "unknown command '%s'", cmd);
         }
     }

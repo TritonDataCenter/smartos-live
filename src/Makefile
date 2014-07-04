@@ -55,6 +55,7 @@ diskinfo :	LDFLAGS +=	-L$(DESTDIR)/usr/lib/fm
 diskinfo :	CPPFLAGS +=	-I$(ROOT)/projects/illumos/usr/src/lib/fm/topo
 diskinfo :	LIBS +=		-R/usr/lib/fm
 diskinfo :	LIBS +=		-ldladm -ldiskmgt -lnvpair -ltopo
+fswatcher :	LIBS +=		-lthread
 zfs_recv :	LIBS +=		-lsocket
 zfs_send :	LIBS +=		-lsocket
 vmbundle :	CPPFLAGS +=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
@@ -288,6 +289,7 @@ TARGETS = \
 	disklayout \
 	disklist \
 	disk_size \
+	fswatcher \
 	mkzpool \
 	removable_disk \
 	vmunbundle \
@@ -365,6 +367,7 @@ install: all
 	sed -e "s|var expat.*;|var expat = require('./expat_binding');|" \
 	    < node-expat/lib/node-expat.js \
 	    > $(PREFIX_NODE)/node_modules/node-expat.js
+	cp fswatcher $(DESTDIR)/usr/vm/sbin/fswatcher
 	cp zoneevent $(DESTDIR)/usr/vm/sbin/zoneevent
 	cp zfs_send $(DESTDIR)/usr/vm/sbin/zfs_send
 	cp zfs_recv $(DESTDIR)/usr/vm/sbin/zfs_recv

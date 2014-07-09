@@ -12,6 +12,7 @@
 /src/disk_size
 /src/removable_disk
 /src/disklist
+/src/fswatcher
 /src/qemu-exec
 /src/vmunbundle
 /src/zfs_recv

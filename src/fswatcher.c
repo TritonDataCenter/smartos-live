@@ -118,9 +118,10 @@
 #define MAX_KEY 4294967295
 #define MAX_KEY_LEN 10 /* number of digits (0-4294967295) */
 #define MAX_STAT_RETRY 10 /* number of times to retry stat() before abort() */
+#define MAX_TIMESTAMP_LEN 10
 
 /* longest command is '<KEY> UNWATCH <path>' with <KEY> being 10 characters. */
-#define MAX_CMD_LEN (MAX_KEY_LEN + 1 + 7 + 1 + PATH_MAX)
+#define MAX_CMD_LEN (MAX_KEY_LEN + 1 + 7 + 1 + PATH_MAX + 1 + MAX_TIMESTAMP_LEN)
 #define MAX_HANDLES 100000 /* limit on how many watches to have active */
 #define SYSTEM_KEY 0
 
@@ -791,6 +792,7 @@ main()
     char sscanf_fmt[MAX_FMT_LEN];
     char str[MAX_CMD_LEN + 1];
     pthread_t tid;
+    uint32_t start_timestamp;
 
     if ((port = port_create()) == -1) {
         printError(SYSTEM_KEY, ERR_PORT_CREATE, "port_create failed(%d): %s",
@@ -811,10 +813,12 @@ main()
             break;
         }
 
+        start_timestamp = 0;
+
         /* read one character past MAX_KEY_LEN so we know it's too long */
-        snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s", MAX_KEY_LEN + 1);
-        res = sscanf(str, sscanf_fmt, key_str, cmd, path);
-        if (res != 3) {
+        snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s %%u", MAX_KEY_LEN + 1);
+        res = sscanf(str, sscanf_fmt, key_str, cmd, path, &start_timestamp);
+        if (res != 3 && res != 4) {
             printError(SYSTEM_KEY, ERR_INVALID_COMMAND, "invalid command line");
             continue;
         }

@@ -4,27 +4,34 @@
 set -o errexit
 
 ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+IS_GLOBAL=1
+NODEUNIT_PATH=/usr/vm/node_modules/nodeunit
 
-if [[ ! -f "/lib/sdc/.sdc-test-no-production-data" ]]; then
-    cat <<EOF
+if [[ $(zonename) == 'global' ]]; then
+    if [[ ! -f "/lib/sdc/.sdc-test-no-production-data" ]]; then
+        cat <<EOF
 To run this test you must create the file:
 
     /lib/sdc/.sdc-test-no-production-data
 
 after ensuring you have no production data on this machine.
 EOF
-    exit 2
+        exit 2
+    fi
+else
+    # non-global
+    IS_GLOBAL=0
+    if [[ -f ${ROOT}/../fswatcher.c ]]; then
+        gcc -Wall -Wextra ${ROOT}/../fswatcher.c -o /tmp/fswatcher -lthread
+        export FSWATCHER_CMD=/tmp/fswatcher
+    fi
+    NODEUNIT_PATH=${ROOT}/node_modules/nodeunit
 fi
 
 start_time=$(date +%s)
 
 if [[ $(uname -s) != 'SunOS' ]]; then
     echo "FATAL: this can only run on SmartOS"
-    exit 1
-fi
-
-if [[ $(zonename) != 'global' ]]; then
-    echo "FATAL: this can only run in the GZ"
     exit 1
 fi
 
@@ -40,26 +47,29 @@ fi
 
 # Before starting tests, ensure we have the source(s) we want for test VM images
 
-have_sources="imgadm sources | sort"
-want_source="grep IMAGES_SOURCE ${ROOT}/common/vmtest.js | cut -d\' -f2"
+if [[ ${IS_GLOBAL} -eq 1 ]]; then
 
-for src in $(comm -1 -3 <(eval ${have_sources}) <(eval ${want_source})); do
-    imgadm sources -a "${src}"
-done
+    have_sources="imgadm sources | sort"
+    want_source="grep IMAGES_SOURCE ${ROOT}/common/vmtest.js | cut -d\' -f2"
 
-# Ensure images used by tests are installed
+    for src in $(comm -1 -3 <(eval ${have_sources}) <(eval ${want_source})); do
+        imgadm sources -a "${src}"
+    done
 
-installed_images='imgadm list -H -o uuid | sort'
-want_images="cat ${ROOT}/common/vmtest.js | grep exports\.CURRENT_.*_UUID | cut -d \"'\" -f2 | sort"
+    # Ensure images used by tests are installed
 
-for img in $(comm -1 -3 <(eval ${installed_images}) <(eval ${want_images})); do
-    imgadm import "${img}"
-done
+    installed_images='imgadm list -H -o uuid | sort'
+    want_images="cat ${ROOT}/common/vmtest.js | grep exports\.CURRENT_.*_UUID | cut -d \"'\" -f2 | sort"
+
+    for img in $(comm -1 -3 <(eval ${installed_images}) <(eval ${want_images})); do
+        imgadm import "${img}"
+    done
+fi
 
 set +o errexit
 set -o pipefail
 /usr/node/bin/node --abort_on_uncaught_exception \
-    /usr/vm/node_modules/nodeunit/bin/nodeunit \
+    ${NODEUNIT_PATH}/bin/nodeunit \
     --reporter tap $1 | tee -a /tmp/test.output.$$
 TEST_EXIT_CODE=$?
 set +o pipefail

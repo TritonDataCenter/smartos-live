@@ -1,18 +1,17 @@
 // Copyright 2014 Joyent, Inc.  All rights reserved.
 
 var assert = require('assert');
-var async = require('/usr/node/node_modules/async');
-var bunyan = require('/usr/vm/node_modules/bunyan');
+var async = require('async');
+var bunyan = require('bunyan');
 var execFile = require('child_process').execFile;
 var fs = require('fs');
 var path = require('path');
-var VM = require('/usr/vm/node_modules/VM');
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
-require('/usr/vm/node_modules/nodeunit-plus');
+require('nodeunit-plus');
 
-var FsWatcher = require('fswatcher').FsWatcher;
+var FsWatcher = require('vmevent/fswatcher').FsWatcher;
 var log = bunyan.createLogger({
         level: 'trace',
         name: 'fswatcher-test-dummy',

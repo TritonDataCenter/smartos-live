@@ -724,6 +724,8 @@ f usr/lib/amd64/libiostream.so.1 0755 root bin
 d smartdc 0555 root bin
 d smartdc/bin 0555 root bin
 f smartdc/bin/qemu-exec 0555 root bin
+d smartdc/lib 0555 root bin
+f smartdc/lib/ntp_config 0555 root bin
 f usr/bin/nictagadm 0555 root bin
 f usr/bin/sysinfo 0555 root bin
 f usr/bin/bootparams 0555 root bin

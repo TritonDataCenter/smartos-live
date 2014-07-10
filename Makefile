@@ -30,6 +30,8 @@ CTFBINDIR = \
 CTFMERGE =	$(CTFBINDIR)/ctfmerge
 CTFCONVERT =	$(CTFBINDIR)/ctfconvert
 
+NATIVE_CC =	/opt/local/bin/gcc
+
 SUBDIR_DEFS = \
 	CTFMERGE=$(CTFMERGE) \
 	CTFCONVERT=$(CTFCONVERT)
@@ -57,7 +59,7 @@ BOOT_TARBALL :=	output/$(BOOT_VERSION).tgz
 world: 0-extra-stamp 0-illumos-stamp 1-extra-stamp 0-livesrc-stamp \
 	0-local-stamp 0-tools-stamp 0-man-stamp 0-devpro-stamp
 
-live: world manifest boot
+live: world manifest boot tools/cryptpass
 	@echo $(OVERLAY_MANIFESTS)
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
@@ -198,11 +200,7 @@ update-base:
 	(cd $(ROOT)/man/src && gmake clean && gmake)
 	touch $@
 
-0-tools-stamp: 0-builder-stamp 0-pwgen-stamp tools/cryptpass
-	(cp ${ROOT}/tools/cryptpass $(PROTO)/usr/lib)
-	touch $@
-
-0-builder-stamp:
+0-tools-stamp: 0-pwgen-stamp
 	(cd $(ROOT)/tools/builder && gmake builder)
 	touch $@
 
@@ -211,13 +209,13 @@ update-base:
 	    make && cp pwgen ${ROOT}/tools)
 	touch $@
 
-tools/cryptpass: tools/cryptpass.c
-	(cd ${ROOT}/tools && gcc -Wall -W -O2 -o cryptpass cryptpass.c)
+tools/cryptpass: src/cryptpass.c
+	$(NATIVE_CC) -Wall -W -O2 -o $@ $<
 
 jsl: $(JSLINT)
 
 $(JSLINT):
-	@(cd $(ROOT)/tools/javascriptlint; make CC=gcc install)
+	@(cd $(ROOT)/tools/javascriptlint; make CC=$(NATIVE_CC) install)
 
 check: $(JSLINT)
 	@(cd $(ROOT)/src && make check)
@@ -241,6 +239,7 @@ clean:
 	(cd $(ROOT) && rm -rf $(STRAP_PROTO))
 	(cd $(ROOT) && rm -rf $(BOOT_PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO))
+	rm -f tools/cryptpass
 	rm -f 0-*-stamp 1-*-stamp
 
 .PHONY: manifest check jsl

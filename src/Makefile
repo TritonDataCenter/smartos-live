@@ -82,6 +82,7 @@ JS_CHECK_OLDSKOOL_TARGETS = \
 
 # These files will get run through cstyle on 'make check'
 C_CHECK_TARGETS=\
+	cryptpass.c \
 	qemu-exec.c \
 	vmunbundle.c \
 	zfs_recv.c \
@@ -305,6 +306,7 @@ TARGETS = \
 	$(ZUTIL_BINDINGS.NODE)
 
 USR_LIB_TARGETS = \
+	cryptpass \
 	measure_terminal
 
 SMARTDC_TARGETS = \

@@ -133,6 +133,7 @@ RMSVCS="acpid.conf
 	mounted-dev.conf
 	mounted-debugfs.conf
 	network-interface-security.conf
+	network-manager.conf
 	plymouth.conf
 	plymouth-log.conf
 	plymouth-splash.conf

@@ -725,6 +725,8 @@ f usr/lib/amd64/libiostream.so.1 0755 root bin
 d smartdc 0555 root bin
 d smartdc/bin 0555 root bin
 f smartdc/bin/qemu-exec 0555 root bin
+d smartdc/lib 0555 root bin
+f smartdc/lib/ntp_config 0555 root bin
 f usr/bin/nictagadm 0555 root bin
 f usr/bin/sysinfo 0555 root bin
 f usr/bin/bootparams 0555 root bin
@@ -734,6 +736,7 @@ f usr/bin/disklist 0555 root bin
 f usr/bin/disk_size 0555 root bin
 f usr/bin/removable_disk 0555 root bin
 f usr/bin/mkzpool 0555 root bin
+f usr/lib/cryptpass 0555 root bin
 f usr/lib/measure_terminal 0555 root bin
 s usr/sbin/fwadm=../fw/sbin/fwadm
 s usr/sbin/vmadm=../vm/sbin/vmadm

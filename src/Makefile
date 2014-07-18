@@ -80,10 +80,12 @@ JS_CHECK_TARGETS=\
 JS_CHECK_OLDSKOOL_TARGETS = \
 	disklayout.js \
 	mkzpool.js \
+	ntp_config.js \
 	node_modules/disklayout.js
 
 # These files will get run through cstyle on 'make check'
 C_CHECK_TARGETS=\
+	cryptpass.c \
 	fswatcher.c \
 	qemu-exec.c \
 	vmunbundle.c \
@@ -309,12 +311,14 @@ TARGETS = \
 	$(ZUTIL_BINDINGS.NODE)
 
 USR_LIB_TARGETS = \
+	cryptpass \
 	measure_terminal
 
 SMARTDC_TARGETS = \
 	qemu-exec
 
 SMARTDC_LIB_TARGETS = \
+	ntp_config \
 	sdc-on-tty
 
 all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm $(SMARTDC_TARGETS) \
@@ -491,6 +495,10 @@ disklist: disklist.sh
 mkzpool: mkzpool.js
 	cp mkzpool.js mkzpool
 	chmod 0755 mkzpool
+
+ntp_config: ntp_config.js
+	cp $^ $@
+	chmod 0755 $@
 
 sysinfo:
 	touch sysinfo

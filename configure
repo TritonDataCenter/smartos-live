@@ -309,6 +309,7 @@ LEX=/opt/local/bin/lex;				export LEX
 YACC=/opt/local/bin/yacc;			export YACC
 RPCGEN=/opt/local/bin/rpcgen;			export RPCGEN
 ASTBINDIR=/opt/local/ast/bin;			export ASTBINDIR
+LD_TOXIC_PATH="\$ROOT/lib:\$ROOT/usr/lib";	export LD_TOXIC_PATH
 EOF
 	[[ $? -eq 0 ]] || fatal "failed to write illumos nightly env file"
 }

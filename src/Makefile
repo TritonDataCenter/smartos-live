@@ -84,12 +84,12 @@ JS_CHECK_OLDSKOOL_TARGETS = \
 
 # These files will get run through cstyle on 'make check'
 C_CHECK_TARGETS=\
+	fswatcher.c \
 	qemu-exec.c \
 	vmunbundle.c \
 	zfs_recv.c \
 	zfs_send.c \
-	zoneevent.c \
-	vm/node_modules/vmevent/fswatcher.c
+	zoneevent.c
 
 #
 # Generic flags we apply by default to everything.
@@ -425,7 +425,7 @@ check: $(JSLINT)
 	@# cstyle doesn't echo as it goes so we add an echo to each line below
 	@(for file in $(C_CHECK_TARGETS); do \
 		echo $(PWD)/$$file; \
-		$(CSTYLE) $$file; \
+		$(CSTYLE) $$file || exit 1; \
 	done)
 	@printf "\nC files ok!\n"
 	@printf "\n==> Running JavaScriptLint...\n"

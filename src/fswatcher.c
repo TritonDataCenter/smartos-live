@@ -26,7 +26,7 @@
  *
  */
 
-#define DEBUG
+// #define DEBUG
 
 #define _REENTRANT
 #include <assert.h>
@@ -44,11 +44,12 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <thread.h>
+#include <time.h>
 
 /*
  * On STDIN you can send:
  *
- * <KEY> WATCH <pathname>\n
+ * <KEY> WATCH <pathname> [timestamp]\n
  * <KEY> UNWATCH <pathname>\n
  *
  * The first will cause <pathname> to be added to the watch list. The second
@@ -56,6 +57,11 @@
  * be an integer in the range 1-4294967295 (inclusive). Leading 0's will be
  * removed. NOTE: 0 is a special key in that it will be used in output for
  * errors which were not directly the result of a command.
+ *
+ * When using a WATCH command with a <timestamp> argument, the timestamp must
+ * be an integer number of nanoseconds since Jan 1, 1970 00:00:00 UTC. This
+ * usually will be the time that the last event or modification was seen for
+ * this file and the data can be pulled from stat(2)'s st_mtim structure.
  *
  * On STDOUT you will see JSON messages that look like the following but are
  * on a single line:
@@ -81,7 +87,7 @@
  *   message   is a human-readable string describing response
  *   pathname  is the path to which an event applies
  *   result    indicates whether a command was a SUCCESS or FAILURE
- *   timestamp timestamp in ms since 1970-01-01 00:00:00 UTC
+ *   timestamp timestamp in ns since 1970-01-01 00:00:00 UTC
  *   type      is one of: event, response, error
  *
  * And:
@@ -118,7 +124,7 @@
 #define MAX_KEY 4294967295
 #define MAX_KEY_LEN 10 /* number of digits (0-4294967295) */
 #define MAX_STAT_RETRY 10 /* number of times to retry stat() before abort() */
-#define MAX_TIMESTAMP_LEN 10
+#define MAX_TIMESTAMP_LEN 20
 
 /* longest command is '<KEY> UNWATCH <path>' with <KEY> being 10 characters. */
 #define MAX_CMD_LEN (MAX_KEY_LEN + 1 + 7 + 1 + PATH_MAX + 1 + MAX_TIMESTAMP_LEN)
@@ -151,6 +157,7 @@ struct fileinfo {
 struct fileinfo *handles[MAX_HANDLES] = { NULL };
 int largest_idx = 0;
 static mutex_t handles_mutex;
+static mutex_t stdout_mutex;
 int next_unused = 0;
 int port = -1;
 
@@ -158,9 +165,10 @@ int findHandleIdx(char *pathname);
 void freeFinf(struct fileinfo **finfp);
 int getNextHandleIdx();
 void printEvent(int event, char *pathname, int final);
-void processFile(uint32_t key, struct fileinfo *finf, int revents);
+void processFile(uint32_t key, struct fileinfo *finf, int revents,
+    uint64_t start_timestamp);
 void * waitForEvents(void *pn);
-int watchPath(char *pathname, uint32_t key);
+int watchPath(char *pathname, uint32_t key, uint64_t start_timestamp);
 int unwatchPath(char *pathname, uint32_t key);
 void unHandle(char *pathname);
 void unHandleIdx(int idx, int holdingMutex);
@@ -177,12 +185,13 @@ printEvent(int event, char *pathname, int final)
 
     if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
         /* This is entirely unexpected so we abort() to ensure a core dump. */
+        perror("fswatcher: vsnprintf");
         abort();
     }
 
-    timestamp = ((uint64_t)ts.tv_sec * (uint64_t)1000)
-        + ((uint64_t) ts.tv_nsec / (uint64_t) 1000000);
+    timestamp = ((uint64_t)ts.tv_sec * (uint64_t)1000000000) + ts.tv_nsec;
 
+    mutex_lock(&stdout_mutex);
     printf("{\"type\": \"event\", \"timestamp\": %llu, \"pathname\": \"%s\", "
         "\"changes\": [", timestamp, pathname);
     if (event & FILE_ACCESS) {
@@ -221,6 +230,7 @@ printEvent(int event, char *pathname, int final)
     } else {
         printf("], \"is_final\": false}\n");
     }
+    mutex_unlock(&stdout_mutex);
 
     fflush(stdout);
 }
@@ -241,12 +251,16 @@ printError(uint32_t key, uint32_t code, const char *message_fmt, ...)
          * We failed to build the error message, and there's no good way to
          * handle this so we try to force a core dump. Most likely a bug.
          */
+        perror("fswatcher: vsnprintf");
         abort();
     }
     va_end(arg_ptr);
 
+    mutex_lock(&stdout_mutex);
     (void) printf("{\"type\": \"error\", \"key\": %u, \"code\": %u, "
         "\"message\": \"%s\"}\n", key, code, message);
+    mutex_unlock(&stdout_mutex);
+
     (void) fflush(stdout);
 }
 
@@ -266,11 +280,11 @@ printResult(uint32_t key, uint32_t code, const char *pathname,
 
     if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
         /* This is entirely unexpected so we abort() to ensure a core dump. */
+        perror("fswatcher: vsnprintf");
         abort();
     }
 
-    timestamp = ((uint64_t)ts.tv_sec * (uint64_t)1000)
-        + ((uint64_t) ts.tv_nsec / (uint64_t) 1000000);
+    timestamp = ((uint64_t)ts.tv_sec * (uint64_t)1000000000) + ts.tv_nsec;
 
     va_start(arg_ptr, message_fmt);
     if (vsnprintf(message, 4096, message_fmt, arg_ptr) < 0) {
@@ -278,6 +292,7 @@ printResult(uint32_t key, uint32_t code, const char *pathname,
          * We failed to build the error message, and there's no good way to
          * handle this so we try to force a core dump. Most likely a bug.
          */
+        perror("fswatcher: vsnprintf");
         abort();
     }
     va_end(arg_ptr);
@@ -288,10 +303,13 @@ printResult(uint32_t key, uint32_t code, const char *pathname,
         result = "FAIL";
     }
 
+    mutex_lock(&stdout_mutex);
     (void) printf("{\"type\": \"response\", \"key\": %u, \"code\": %u, "
         "\"pathname\": \"%s\", \"result\": \"%s\", \"message\": \"%s\", "
         "\"timestamp\": %llu}\n",
         key, code, pathname, result, message, timestamp);
+    mutex_unlock(&stdout_mutex);
+
     (void) fflush(stdout);
 }
 
@@ -393,44 +411,30 @@ statFile(const char *path, struct stat *buf)
     return (result);
 }
 
+
 /*
- * processFile() is called to (re)arm watches. This can either be because of
- * an event (in which case revents should be pe.portev_events) or to initially
- * arm in which case revents should be 0.
+ * Returns:
  *
- * It also performs the required stat() and in case this is a re-arm prints
- * the event.
- *
- * We keep these two functions together (rearming and printing) because we need
- * to do the stat() before we print the results since if the file no longer
- * exists we cannot rearm. In that case we set the 'final' flag in the response.
- *
+ *  0     - success: atime, ctime and mtime will be populated
+ *  non-0 - failed: file could not be accessed (return is stat(2) errno)
  */
-void
-processFile(uint32_t key, struct fileinfo *finf, int revents)
+int
+getStat(char *pathname, struct stat *sb)
 {
-    int final = 0;
-    struct file_obj *fobjp = &finf->fobj;
-    int pa_ret;
-    int port = finf->port;
-    struct stat sb;
     int stat_ret;
 
-    /*
-     * Events to not rearm themselves. So if we get here and we return without
-     * rearming, there's no need to remove the event it simply won't get
-     * rearmed. But we *do* want to ensure that if we fail to rearm, we remove
-     * from handles and cleanup the memory.
-     */
+    stat_ret = statFile(pathname, sb);
 
-    stat_ret = statFile(fobjp->fo_name, &sb);
+#ifdef DEBUG
     fprintf(stderr, "DEBUG: statFile %s returned: %d: %s\n",
-        fobjp->fo_name, stat_ret, strerror(stat_ret));
+        pathname, stat_ret, strerror(stat_ret));
     fflush(stderr);
+#endif
+
     switch (stat_ret) {
         case 0:
-            /* SUCCESS! */
-            break;
+            /* SUCCESS! (sb will be populated) */
+            return (0);
         case ELOOP:         /* symbolic links in path point to each other */
         case ENOTDIR:       /* component of path is not a dir */
         case EACCES:        /* permission denied */
@@ -442,8 +446,7 @@ processFile(uint32_t key, struct fileinfo *finf, int revents)
              * set true) response if we're responding to a request or an error
              * line if we're dealing with an event.
              */
-            final = 1;
-            break;
+            return (stat_ret);
         case EFAULT:        /* filename or buffer invalid (programmer error) */
         case EIO:           /* error reading from filesystem (system error) */
         case ENAMETOOLONG:  /* fo_name is too long (programmer error) */
@@ -459,35 +462,14 @@ processFile(uint32_t key, struct fileinfo *finf, int revents)
             abort();
             break;
     }
+}
 
-    /*
-     * We print the result after we've done the stat() so that we can include
-     * "final: true" when we're not going to be able to re-register the file.
-     */
-    if (revents) {
-        printEvent(revents, fobjp->fo_name, final);
-    }
+void
+registerWatch(uint32_t key, struct fileinfo *finf, struct stat sb)
+{
+    struct file_obj *fobjp = &finf->fobj;
+    int pa_ret;
 
-    if ((key != 0) && (stat_ret != 0)) {
-        /*
-         * We're doing the initial register for this file, so we need to send
-         * a result. Since stat() just failed, we'll send now and return since
-         * we're not going to do anything further.
-         */
-        printResult(key, RESULT_FAILURE, fobjp->fo_name, "stat(2) failed with "
-            "errno %d: %s", stat_ret, strerror(stat_ret));
-        assert(final);
-    }
-
-    if (final) {
-        /* we're not going to re-enable, so cleanup */
-        unHandle(fobjp->fo_name);
-        return;
-    }
-
-    /*
-     * (re)register.
-     */
     fobjp->fo_atime = sb.st_atim;
     fobjp->fo_mtime = sb.st_mtim;
     fobjp->fo_ctime = sb.st_ctim;
@@ -520,6 +502,99 @@ processFile(uint32_t key, struct fileinfo *finf, int revents)
 }
 
 /*
+ * processFile() is called to (re)arm watches. This can either be because of
+ * an event (in which case revents should be pe.portev_events) or to initially
+ * arm in which case revents should be 0.
+ *
+ * It also performs the required stat() and in case this is a re-arm prints
+ * the event.
+ *
+ * We keep these two functions together (rearming and printing) because we need
+ * to do the stat() before we print the results since if the file no longer
+ * exists we cannot rearm. In that case we set the 'final' flag in the response.
+ *
+ * XXX rename
+ *
+ */
+void
+processFile(uint32_t key, struct fileinfo *finf, int revents,
+    uint64_t start_timestamp)
+{
+    int final = 0;
+    struct file_obj *fobjp = &finf->fobj;
+    struct stat sb;
+    int stat_ret;
+    time_t tv_sec;
+    long tv_nsec;
+
+    /*
+     * Events do not rearm themselves. So if we get here and we return without
+     * rearming, there's no need to remove the event it simply won't get
+     * rearmed. But we *do* want to ensure that if we fail to rearm, we remove
+     * from handles and cleanup the memory.
+     */
+
+    if (fobjp->fo_name == NULL) {
+        fprintf(stderr, "WARNING: processFile() called w/ null fo_name\n");
+        return;
+    }
+
+    /*
+     * We always do stat, even if we're going to override the timestamps so
+     * that we also check for existence.
+     */
+    stat_ret = getStat(fobjp->fo_name, &sb);
+    if (stat_ret != 0) {
+        final = 1;
+    }
+    if (start_timestamp != 0) {
+        tv_sec = (time_t)(start_timestamp / (uint64_t)1000000000);
+        tv_nsec = (long)(start_timestamp
+            - ((uint64_t) tv_sec * (uint64_t)1000000000));
+
+        sb.st_atim.tv_sec = tv_sec;
+        sb.st_atim.tv_nsec = tv_nsec;
+        sb.st_ctim.tv_sec = tv_sec;
+        sb.st_ctim.tv_nsec = tv_nsec;
+        sb.st_mtim.tv_sec = tv_sec;
+        sb.st_mtim.tv_nsec = tv_nsec;
+
+        fprintf(stderr, "%llu %ld %ld\n", start_timestamp, tv_sec, tv_nsec);
+    }
+
+    /*
+     * We print the result after we've done the stat() so that we can include
+     * "final: true" when we're not going to be able to re-register the file.
+     */
+    if (revents) {
+        printEvent(revents, fobjp->fo_name, final);
+    }
+
+    if ((key != 0) && (stat_ret != 0)) {
+        /*
+         * We're doing the initial register for this file, so we need to send
+         * a result. Since stat() just failed, we'll send now and return since
+         * we're not going to do anything further.
+         */
+        printResult(key, RESULT_FAILURE, fobjp->fo_name, "stat(2) failed with "
+            "errno %d: %s", stat_ret, strerror(stat_ret));
+        assert(final);
+    }
+
+    if (final) {
+        /* we're not going to re-enable, so cleanup */
+        unHandle(fobjp->fo_name);
+        return;
+    }
+
+    /*
+     * (re)register.
+     */
+
+    registerWatch(key, finf, sb);
+}
+
+/*
  * Worker thread waits here for events, which then get dispatched to
  * processFile().
  */
@@ -538,7 +613,7 @@ waitForEvents(void *pn)
         case PORT_SOURCE_FILE:
             /* Call file events event handler */
             processFile(0, (struct fileinfo *)pe.portev_object,
-                pe.portev_events);
+                pe.portev_events, 0);
             break;
         default:
             /*
@@ -634,7 +709,7 @@ unHandleIdx(int idx, int holdingMutex)
  * Only called from main thread. Attempts to watch pathname.
  */
 int
-watchPath(char *pathname, uint32_t key)
+watchPath(char *pathname, uint32_t key, uint64_t start_timestamp)
 {
     struct fileinfo *finf;
     int idx;
@@ -700,7 +775,7 @@ watchPath(char *pathname, uint32_t key)
     /*
      * Start monitor this file.
      */
-    processFile(key, finf, 0);
+    processFile(key, finf, 0, start_timestamp);
 
     return (0);
 }
@@ -792,7 +867,7 @@ main()
     char sscanf_fmt[MAX_FMT_LEN];
     char str[MAX_CMD_LEN + 1];
     pthread_t tid;
-    uint32_t start_timestamp;
+    uint64_t start_timestamp;
 
     if ((port = port_create()) == -1) {
         printError(SYSTEM_KEY, ERR_PORT_CREATE, "port_create failed(%d): %s",
@@ -816,7 +891,8 @@ main()
         start_timestamp = 0;
 
         /* read one character past MAX_KEY_LEN so we know it's too long */
-        snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s %%u", MAX_KEY_LEN + 1);
+        snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s %%llu",
+            MAX_KEY_LEN + 1);
         res = sscanf(str, sscanf_fmt, key_str, cmd, path, &start_timestamp);
         if (res != 3 && res != 4) {
             printError(SYSTEM_KEY, ERR_INVALID_COMMAND, "invalid command line");
@@ -851,7 +927,7 @@ main()
             }
         } else if (strcmp("WATCH", cmd) == 0) {
             /* watchPath() will print an object to stdout */
-            res = watchPath(path, key);
+            res = watchPath(path, key, start_timestamp);
             if (res != 0) {
                 /*
                  * An error occured and watchPath() will have written an error

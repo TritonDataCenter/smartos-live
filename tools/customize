@@ -29,32 +29,6 @@ pfexec mount -F lofs /dev ${rdmnt}/dev
 if [[ -d /devices ]]; then
 	pfexec mount -F lofs /devices ${rdmnt}/devices
 fi
-pfexec /usr/bin/catman -M "${rdmnt}/usr/share/man:${rdmnt}/smartdc/man" \
-    -T "${rdmnt}/usr/share/lib/tmac/ansun"
-
-#
-# catman(1) will happily create new cat pages even if the original man page is
-# a symbolic link to another.  This is quite wasteful of space; remove such
-# cat pages and replace them with links also.
-#
-(cd "${rdmnt}/usr/share/man" && for cdir in *; do
-	[[ -d "${cdir}" ]] || continue
-	(cd "${cdir}" && for catpage in *; do
-		manpage="${rdmnt}/usr/share/man/${cdir/cat/man}/${catpage}"
-		if [[ -L "${manpage}" && ! -L "${catpage}" ]]; then
-			link="$(readlink ${manpage})"
-			if [[ ! -f "${rdmnt}/usr/share/man/${cdir}/${link}" ]]
-			then
-				echo "FAIL: Missing catpage link source ${link}"
-				status=1
-			else
-				echo "Replacing cat page ${catpage} with link"
-				pfexec rm -f "${catpage}"
-				pfexec ln -s "${link}" "${catpage}"
-			fi
-		fi
-	done)
-done)
 
 if [[ -d /devices ]]; then
 	pfexec umount ${rdmnt}/devices

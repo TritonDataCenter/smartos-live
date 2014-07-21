@@ -29,6 +29,7 @@
 /src/node-*/src/mapfile_node
 /src/node-*/src/v8plus_errno.c
 /src/node-*/src/v8plus_errno.h
+/src/ntp_config
 /tools/builder/builder
 /tools/builder/*.o
 /tools/builder/users.c

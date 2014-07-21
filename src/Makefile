@@ -68,14 +68,15 @@ JS_CHECK_TARGETS=\
 	node_modules/{system,onlyif}.js \
 	vm/sbin/*.js \
 	vm/node_modules/{dladm,expander,proptable,utils,VM,qmp}.js \
+	vm/node_modules/vmevent/*.js \
 	vm/node_modules/vmload/*.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
 	vm/tests/test-alias.js \
 	vm/tests/test-fswatcher.js \
 	vm/tests/test-indestructible.js \
-	vm/lib/metadata/*.js \
-	vm/node_modules/vmevent/fswatcher.js
+	vm/tests/test-zpoolwatcher.js \
+	vm/lib/metadata/*.js
 
 JS_CHECK_OLDSKOOL_TARGETS = \
 	disklayout.js \

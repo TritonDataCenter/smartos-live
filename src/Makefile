@@ -75,6 +75,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-alias.js \
 	vm/tests/test-fswatcher.js \
 	vm/tests/test-indestructible.js \
+	vm/tests/test-zonewatcher.js \
 	vm/tests/test-zpoolwatcher.js \
 	vm/lib/metadata/*.js
 

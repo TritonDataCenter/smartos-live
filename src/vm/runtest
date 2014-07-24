@@ -47,7 +47,7 @@ fi
 
 # Before starting tests, ensure we have the source(s) we want for test VM images
 
-if [[ ${IS_GLOBAL} -eq 1 ]]; then
+if [[ ${IS_GLOBAL} -eq 1 && -z ${SKIP_IMAGES} ]]; then
 
     have_sources="imgadm sources | sort"
     want_source="grep IMAGES_SOURCE ${ROOT}/common/vmtest.js | cut -d\' -f2"

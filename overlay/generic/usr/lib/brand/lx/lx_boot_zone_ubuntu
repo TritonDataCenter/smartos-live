@@ -114,48 +114,61 @@ setup_net()
         rm -f /tmp/$ZONENAME.$$
 }
 
-RMSVCS="acpid.conf
-	alsa-restore.conf
-	alsa-state.conf
-	alsa-store.conf
-	avahi-cups-reload.conf
-	avahi-daemon.conf
-	bluetooth.conf
-	control-alt-delete.conf
-	console-setup.conf
-	dmesg.conf
-	hwclock.conf
-	hwclock-save.conf
-	irqbalance.conf
-	lightdm.conf 
-	modemmanager.conf
-	module-init-tools.conf
-	mounted-dev.conf
-	mounted-debugfs.conf
-	network-interface-security.conf
-	network-manager.conf
-	plymouth.conf
-	plymouth-log.conf
-	plymouth-splash.conf
-	plymouth-stop.conf
-	plymouth-upstart-bridge.conf
-	pulseaudio.conf
-	setvtrgb.conf
-	tty1.conf
-	tty2.conf
-	tty3.conf
-	tty4.conf
-	tty5.conf
-	tty6.conf
-	upstart-udev-bridge.conf
-	udev.conf
-	udevmonitor.conf
-	udevtrigger.conf
-	udev-fallback-graphics.conf
-	udev-finish.conf
-	ureadahead-other.conf
-	ureadahead.conf
-	whoopsie.conf"
+disable_svc()
+{
+	fnm=$ZONEROOT/etc/init/$1.override
+	[[ -h $fnm || -f $fnm ]] && return
+	echo "manual" > $fnm
+}
+
+
+RMSVCS="acpid
+	alsa-restore
+	alsa-state
+	alsa-store
+	avahi-cups-reload
+	avahi-daemon
+	bluetooth
+	bootmisc.sh
+	checkroot.sh
+	control-alt-delete
+	console-setup
+	dmesg
+	hwclock
+	hwclock-save
+	irqbalance
+	lightdm
+	modemmanager
+	module-init-tools
+	mountdevsubfs.sh
+	mounted-dev
+	mounted-debugfs
+	mountkernfs.sh
+	mtab.sh
+	network-interface-security
+	network-manager
+	plymouth
+	plymouth-log
+	plymouth-splash
+	plymouth-stop
+	plymouth-upstart-bridge
+	pulseaudio
+	setvtrgb
+	tty1
+	tty2
+	tty3
+	tty4
+	tty5
+	tty6
+	upstart-udev-bridge
+	udev
+	udevmonitor
+	udevtrigger
+	udev-fallback-graphics
+	udev-finish
+	ureadahead-other
+	ureadahead
+	whoopsie"
 
 
 #
@@ -164,9 +177,13 @@ RMSVCS="acpid.conf
 
 for f in $RMSVCS
 do
-	fnm=$ZONEROOT/etc/init/$f
-	[[ ! -h $fnm && -f $fnm ]] && rm -f $fnm
+	disable_svc $f
 done
+
+# remove these?
+# etc/init.d
+#    networking
+#    umountfs
 
 RMSVCS="kerneloops"
 

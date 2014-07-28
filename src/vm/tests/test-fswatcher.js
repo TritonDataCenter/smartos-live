@@ -88,7 +88,11 @@ test('try watching an existent file and catching CHANGE and DELETE',
             fs.writeFileSync(filename, 'goodbye world\n');
         };
 
-        fsw.watch(filename, watchcb);
+        fsw.once('ready', function (evt) {
+            fsw.watch(filename, watchcb);
+        });
+
+        fsw.start();
     }
 );
 
@@ -101,56 +105,60 @@ test('try watching a non-existent file then create it', function (t) {
 
     dirname = path.dirname(filename);
 
-    fsw.watch(filename);
+    fsw.once('ready', function (evt) {
+        async.waterfall([
+            function (cb) {
+                fsw.watch(filename, cb);
+            }, function (cb) {
+                // create directory
+                execFile('/usr/bin/mkdir', ['-p', dirname],
+                    function (err, stdout, stderr) {
+                        t.ok(!err, 'mkdir -p ' + dirname);
+                        cb(err);
+                    }
+                );
+            }, function (cb) {
+                t.ok(!saw_create, 'haven\'t seen "create" event yet');
+                // create file
+                fs.writeFile(filename, 'hello world\n', function (err) {
+                    t.ok(!err, 'wrote "hello world" to ' + filename);
+                    cb(err);
+                });
+            }, function (cb) {
+                var depth = 0;
+
+                // poll on saw_create being true
+                function check_whether_created() {
+                    depth++;
+                    if (depth > 50) { // 10 seconds
+                        cb(new Error('timeout waiting for "create" event'));
+                        return;
+                    }
+                    setTimeout(function () {
+                        if (saw_create) {
+                            t.ok(true, 'saw "create" event');
+                            cb();
+                        } else {
+                            check_whether_created();
+                        }
+                    }, 200);
+                }
+
+                check_whether_created();
+            }
+        ], function (err) {
+            fsw.shutdown();
+            t.ok(!err, (err ? err.message : 'created file successfully'));
+            t.end();
+        });
+    });
 
     fsw.on('create', function (evt) {
         t.ok(evt.pathname === filename, 'saw create event for ' + filename);
         saw_create = true;
     });
 
-    async.waterfall([
-        function (cb) {
-            // create directory
-            execFile('/usr/bin/mkdir', ['-p', dirname],
-                function (err, stdout, stderr) {
-                    t.ok(!err, 'mkdir -p ' + dirname);
-                    cb(err);
-                }
-            );
-        }, function (cb) {
-            t.ok(!saw_create, 'haven\'t seen "create" event yet');
-            // create file
-            fs.writeFile(filename, 'hello world\n', function (err) {
-                t.ok(!err, 'wrote "hello world" to ' + filename);
-                cb(err);
-            });
-        }, function (cb) {
-            var depth = 0;
-
-            // poll on saw_create being true
-            function check_whether_created() {
-                depth++;
-                if (depth > 50) { // 10 seconds
-                    cb(new Error('timeout waiting for "create" event'));
-                    return;
-                }
-                setTimeout(function () {
-                    if (saw_create) {
-                        t.ok(true, 'saw "create" event');
-                        cb();
-                    } else {
-                        check_whether_created();
-                    }
-                }, 200);
-            }
-
-            check_whether_created();
-        }
-    ], function (err) {
-        fsw.shutdown();
-        t.ok(!err, (err ? err.message : 'created file successfully'));
-        t.end();
-    });
+    fsw.start();
 });
 
 test('try watching an existent file, unwatching and ensure no events',
@@ -197,12 +205,16 @@ test('try watching an existent file, unwatching and ensure no events',
             }
         });
 
-        fsw.watch(filename, function (err) {
-            fs.writeFileSync(filename, 'now we are writing junk!\n');
-            // now change event should have been triggered and we should have
-            // stopped watcher. Control should pass to fsw.on('change'... above.
-            return;
+        fsw.once('ready', function (evt) {
+            fsw.watch(filename, function (err) {
+                fs.writeFileSync(filename, 'now we are writing junk!\n');
+                // now change event should have been triggered and we should have
+                // stopped watcher. Control should pass to fsw.on('change'... above.
+                return;
+            });
         });
+
+        fsw.start();
     }
 );
 
@@ -213,11 +225,11 @@ test('create a file and ensure we get multiple modify events',
 
         var fsw = new FsWatcher({log: log, dedup_ns: 2000000000});
 
-        fs.writeFileSync(filename, 'initial data\n');
-        t.ok(fs.existsSync(filename), 'file was created');
-
         fsw.on('all', function (evt) {
-            t.deepEqual(evt.changes, ['FILE_MODIFIED'], 'change',
+            if (evt.type === 'ready') {
+                return;
+            }
+            t.deepEqual(evt.changes, ['FILE_MODIFIED'],
                 'type of "all" event is "change"');
         });
 
@@ -231,10 +243,17 @@ test('create a file and ensure we get multiple modify events',
             }
         });
 
-        fsw.watch(filename, function (err) {
-            fs.writeFileSync(filename, 'first modification!\n');
-            return;
+        fsw.once('ready', function (evt) {
+            fs.writeFileSync(filename, 'initial data\n');
+            t.ok(fs.existsSync(filename), 'file was created');
+
+            fsw.watch(filename, function (err) {
+                fs.writeFileSync(filename, 'first modification!\n');
+                return;
+            });
         });
+
+        fsw.start();
     }
 );
 
@@ -247,6 +266,11 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
 
         async.waterfall([
             function (cb) {
+                fsw.once('ready', function (evt) {
+                    cb();
+                });
+                fsw.start();
+            }, function (cb) {
                 execFile('/usr/bin/mkdir', ['-p', testdir],
                     function (err, stdout, stderr) {
                         assert(!err);
@@ -279,26 +303,34 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     }
 
                     idx = path.basename(evt.pathname).split('.')[1];
-                    if (files[idx].indexOf('change-observed') !== -1) {
-                        console.error('IGNORING 2ND CHANGE FOR: '
-                            + evt.pathname);
-                        return;
+                    if (files[idx].indexOf('change-observed') === -1) {
+                        files[idx].push('change-observed');
                     }
-                    files[idx].push('change-observed');
 
                     // should trigger delete
                     fs.stat(evt.pathname, function (err, stats) {
                         if (err) {
                             if (err.code === 'ENOENT') {
-
+                                console.log('saw ENOENT0: ' + evt.pathname);
                                 return;
                             } else {
                                 throw err;
                             }
                         }
                         console.error('\n\nDELETING ' + evt.pathname + '\n\n');
-                        fs.unlinkSync(evt.pathname);
-                        files[idx].push('deleted');
+                        try {
+                            fs.unlinkSync(evt.pathname);
+                        } catch (e) {
+                            if (e.code === 'ENOENT') {
+                                console.log('saw ENOENT1: ' + evt.pathname);
+                                return;
+                            } else {
+                                throw (e);
+                            }
+                        }
+                        if (files[idx].indexOf('deleted') === -1) {
+                            files[idx].push('deleted');
+                        }
                     });
                 });
 
@@ -453,6 +485,7 @@ test('watch some files then kill the fswatcher child, then modify files',
         var filename2 = path.join(testdir, 'killtest-2');
         var fsw = new FsWatcher({log: log, dedup_ns: 2000000000});
         var scoreboard = {};
+        var started = false;
 
         fs.writeFileSync(filename1, 'initial data 1\n');
         fs.writeFileSync(filename2, 'initial data 2\n');
@@ -460,6 +493,9 @@ test('watch some files then kill the fswatcher child, then modify files',
         t.ok(fs.existsSync(filename2), 'file2 was created');
 
         fsw.on('all', function (evt) {
+            if (!evt.changes) {
+                return;
+            }
             t.deepEqual(evt.changes, ['FILE_MODIFIED'], 'change',
                 'type of "all" event is "change"');
 
@@ -524,6 +560,11 @@ test('watch some files then kill the fswatcher child, then modify files',
 
         async.waterfall([
             function (cb) {
+                fsw.once('ready', function (evt) {
+                    cb();
+                });
+                fsw.start();
+            }, function (cb) {
                 fsw.watch(filename1, function (err) {
                     t.ok(!err, 'watching file1');
                     fs.writeFileSync(filename1, 'first modification 1!\n');

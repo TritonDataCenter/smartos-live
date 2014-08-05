@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2014, Joyent, Inc. All rights reserved.
  *
  * remoteTargets tests
  */
@@ -112,6 +112,10 @@ exports['matches'] = function (t) {
         helpers.generateVM({
             tags: { foo : true },
             owner_uuid: owner2
+        }),
+        helpers.generateVM({
+            tags: { multi : 1 },
+            owner_uuid: owner
         })
     ];
 
@@ -148,6 +152,11 @@ exports['matches'] = function (t) {
             rule: util.format('FROM all vms TO vm %s BLOCK tcp PORT 22',
                 vms[0].uuid),
             res: { allVMs: true }
+        },
+        {
+            rule: 'FROM (tag multi = 1 OR tag multi = 2) '
+                + 'TO (tag multi = 1 OR tag multi = 2) ALLOW tcp PORT 5984',
+            res: { tags: { multi: [ 1, 2 ] } }
         }
 
     ], function (data, cb) {

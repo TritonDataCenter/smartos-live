@@ -187,7 +187,7 @@ update-base:
 
 1-extra-stamp: 0-illumos-stamp
 	(cd $(ROOT)/projects/illumos-extra && \
-	    gmake DESTDIR=$(PROTO) install)
+	    gmake $(SUBDIR_DEFS) DESTDIR=$(PROTO) install)
 	touch $@
 
 0-livesrc-stamp: 0-illumos-stamp 0-extra-stamp 1-extra-stamp

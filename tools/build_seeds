@@ -89,10 +89,9 @@ function build_database
 	rm -f $SVCCFG_REPOSITORY
 
 	[[ -f $input ]] || fail "can't read manifest input file: $input"
-	while read service enabled import; do
+	while read service enabled; do
 		[[ -z "$service" ]] && continue
 		[[ "$service" =~ ^\# ]] && continue
-		[[ "$import" == "noimport" ]] && continue
 		import_manifest $service $enabled
 		
 		echo $service $enabled

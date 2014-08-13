@@ -5,7 +5,7 @@
 # should be listed here.
 #
 # The format of the file is:
-#	manifest_name enable/disable [noimport]
+#	manifest_name enable/disable
 # The manifest_name is found relative to /lib/svc/manifest on the system.
 # The second field is used to indicate if the svc should be enabled or
 # disabled by default within zones, independently of its current status in
@@ -78,6 +78,7 @@
 # system/boot-archive-update.xml
 # system/boot-archive.xml
 # system/boot-config.xml
+# system/cron.xml
 # system/fmd.xml
 # system/sac.xml
 #
@@ -124,4 +125,3 @@ milestone/name-services.xml	enabled
 system/early-manifest-import.xml	disabled
 system/manifest-import.xml	disabled
 system/mdata.xml	enabled
-system/cron.xml			disabled	noimport	

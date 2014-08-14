@@ -17,25 +17,62 @@ VM.loglevel = 'DEBUG';
 var smartos_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var ubuntu_uuid = vmtest.CURRENT_UBUNTU_UUID;
 
+
+/*
+ * Compare the dladm link properties of opts.nic from zone opts.uuid with
+ * the antispoof properties in opts.props and allowed IPs in opts.allowed_ips.
+ */
 function nic_link_props(opts, callback) {
     dladm.showLinkProp(opts.uuid, opts.nic, VM.log,
-        function(err, props) {
+        function (err, props) {
         if (err) {
-            opts.t.ok(false, opts.nic + ': dladm for ' + state.uuid + ': '
+            opts.t.ok(false, opts.nic + ': dladm for ' + opts.uuid + ': '
                 + err.message);
-            callback(err);
-            return;
+            return callback(err);
         }
 
         opts.t.deepEqual(props.protection.sort(), opts.props,
-          opts.nic + ': antispoof options ' + opts.desc);
-        opts.t.deepEqual(props['allowed-ips'].sort(), opts.allowed_ips,
-          opts.nic + ': allowed-ips ' + opts.desc);
+            opts.nic + ': antispoof options ' + opts.desc);
+        opts.t.deepEqual(props['allowed-ips'].sort(),
+            opts.allowed_ips.map(function (ip) {
+                if (ip == '--') {
+                    return ip;
+                }
 
-        callback();
-        return;
+                return ip + '/32';
+            }),
+            opts.nic + ': allowed-ips ' + opts.desc);
+
+        return callback();
     });
 }
+
+
+/*
+ * Compare the properties in the object props with the vmadm nic with the
+ * given name.
+ */
+function nic_antispoof_props(t, nic, name, props) {
+    var sProps = ['allowed_ips', 'allow_dhcp_spoofing', 'allow_ip_spoofing',
+        'allow_mac_spoofing', 'allow_restricted_traffic', 'primary'];
+
+    for (var p in sProps) {
+        var prop = sProps[p];
+        var desc = name + ': ' + prop + ' ';
+
+        if (props.hasOwnProperty(prop)) {
+            t.ok(nic.hasOwnProperty(prop), desc + 'present');
+            if (props[prop]) {
+                t.ok(nic[prop], desc + 'set');
+            } else {
+                t.notOk(nic[prop], desc + 'not set');
+            }
+        } else {
+            t.notOk(nic.hasOwnProperty(prop), desc + 'not present');
+        }
+    }
+}
+
 
 function brand_test(brand, image, t) {
     var state = { brand: brand };
@@ -47,24 +84,29 @@ function brand_test(brand, image, t) {
         alias: 'autozone-' + process.pid,
         nowait: false,
         nics: [
-          { nic_tag: 'admin',
-            ip: ips[0],
-            netmask: '255.255.255.0' },
-          { nic_tag: 'external',
-            ip: ips[1],
-            netmask: '255.255.255.0' },
-          { nic_tag: 'external',
-            ip: ips[2],
-            netmask: '255.255.255.0' },
-          { nic_tag: 'admin',
-            ip: ips[3],
-            netmask: '255.255.255.0',
-            allow_dhcp_spoofing: true,
-            allow_mac_spoofing: true,
-            allowed_ips: [ '10.6.0.201', '10.6.0.202', '10.6.0.0/25' ]
-          }
+            {
+                nic_tag: 'admin',
+                ip: ips[0],
+                netmask: '255.255.255.0'
+            }, {
+                nic_tag: 'external',
+                ip: ips[1],
+                netmask: '255.255.255.0'
+            }, {
+                nic_tag: 'external',
+                ip: ips[2],
+                netmask: '255.255.255.0'
+            }, {
+                nic_tag: 'admin',
+                ip: ips[3],
+                netmask: '255.255.255.0',
+                allow_dhcp_spoofing: true,
+                allow_mac_spoofing: true,
+                allowed_ips: [ '10.6.0.201', '10.6.0.202', '10.6.0.0/25' ]
+            }
         ]
     };
+
     if (brand === 'kvm') {
         payload.nics.forEach(function (nic) {
             nic.model = 'virtio';
@@ -73,9 +115,7 @@ function brand_test(brand, image, t) {
 
     vmtest.on_new_vm(t, image, payload, state, [
         function (cb) {
-            VM.load(state.uuid, function(err, obj) {
-                var n;
-
+            VM.load(state.uuid, function (err, obj) {
                 if (err) {
                     t.ok(false, 'load obj from new VM: ' + err.message);
                     return cb(err);
@@ -85,89 +125,53 @@ function brand_test(brand, image, t) {
                 state.nics = obj.nics;
 
                 t.ok(obj.nics[0].primary, 'net0 is primary');
-
-                for (n in obj.nics) {
-                    n = obj.nics[n];
-                    if (n.ip == ips[3]) {
-                        continue;
-                    }
-
-                    t.notOk(n.hasOwnProperty('allow_dhcp_spoofing'),
-                        'allow_dhcp_spoofing property not set');
-                    t.notOk(n.hasOwnProperty('allow_ip_spoofing'),
-                        'allow_ip_spoofing property not set');
-                    t.notOk(n.hasOwnProperty('allow_mac_spoofing'),
-                        'allow_mac_spoofing property not set');
-                    t.notOk(n.hasOwnProperty('allow_restricted_traffic'),
-                        'allow_restricted_traffic property not set');
-                    t.notOk(n.hasOwnProperty('allowed_ips'),
-                        'allowed_ips property not set');
-                }
-
-                // net3
-                t.ok(obj.nics[3].hasOwnProperty('allow_dhcp_spoofing'),
-                    'net3: allow_dhcp_spoofing property set');
-                t.notOk(obj.nics[3].hasOwnProperty('allow_ip_spoofing'),
-                    'net3: allow_ip_spoofing property not set');
-                t.ok(obj.nics[3].hasOwnProperty('allow_mac_spoofing'),
-                    'net3: allow_mac_spoofing property set');
-                t.notOk(obj.nics[3].hasOwnProperty('allow_restricted_traffic'),
-                    'net3: allow_restricted_traffic property not set');
-                t.ok(obj.nics[3].hasOwnProperty('allowed_ips'),
-                    'net3: allowed_ips property set');
-
-                t.ok(obj.nics[3].allow_dhcp_spoofing,
-                  'net3: dhcp spoofing enabled');
-                t.ok(obj.nics[3].allow_mac_spoofing,
-                  'net3: mac spoofing enabled');
+                nic_antispoof_props(t, obj.nics[0], 'net0', { primary: true });
+                nic_antispoof_props(t, obj.nics[1], 'net1', {});
+                nic_antispoof_props(t, obj.nics[2], 'net2', {});
+                nic_antispoof_props(t, obj.nics[3], 'net3', {
+                    allowed_ips: true,
+                    allow_dhcp_spoofing: true,
+                    allow_mac_spoofing: true
+                });
 
                 t.deepEqual(obj.nics[3].allowed_ips,
                     [ '10.6.0.201', '10.6.0.202', '10.6.0.0/25' ],
                     'net3: allowed_ips set correctly');
 
-                cb();
+                return cb();
             });
         }, function (cb) {
             // Check link props
             async.map([0, 1, 2], function (i, cb2) {
-                var iface = 'net' + i;
-                dladm.showLinkProp(state.uuid, iface, VM.log,
-                    function(err, props) {
-                    if (err) {
-                        t.ok(false, 'dladm for ' + state.uuid + ', ' +
-                            iface + + err.message);
-                        return cb2(err);
-                    }
-
-                    t.deepEqual(props.protection.sort(), [ 'dhcp-nospoof',
-                      'ip-nospoof', 'mac-nospoof', 'restricted' ],
-                      'All antispoof options set for net0');
-                    t.deepEqual(props['allowed-ips'], [ips[i]],
-                      iface + ': allowed-ips set to assigned IP');
-
-                    cb2();
-                });
+                nic_link_props({
+                    desc: 'after provision',
+                    uuid: state.uuid,
+                    nic: 'net' + i,
+                    t: t,
+                    props: [ 'dhcp-nospoof', 'ip-nospoof', 'mac-nospoof',
+                        'restricted' ],
+                    allowed_ips: [ ips[i] ]
+                }, cb2);
             }, cb);
 
         }, function (cb) {
             // Updating a nic to have more than 13 allowed_ips should fail
-            VM.update(state.uuid, { update_nics: [
-                { mac: state.nics[2].mac,
-                  allowed_ips: [ '10.5.0.201', '10.5.0.202', '10.5.0.202',
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_ips: [ '10.5.0.201', '10.5.0.202', '10.5.0.202',
                     '10.5.0.203', '10.5.0.204', '10.5.0.205', '10.5.0.206',
                     '10.5.0.207', '10.5.0.208', '10.5.0.209', '10.5.0.210',
                     '10.5.0.211', '10.5.0.212', '10.5.0.213', '10.5.0.214' ]
-                }
-            ]}, function (e) {
+            } ]}, function (e) {
                 t.ok(e, 'error returned');
                 if (!e) {
-                    cb();
-                    return;
+                    return cb();
                 }
 
                 t.equal(e.message, 'Maximum of 13 allowed_ips per nic',
                     'allowed_ips error message');
-                cb();
+
+                return cb();
             });
 
         }, function (cb) {
@@ -175,20 +179,22 @@ function brand_test(brand, image, t) {
             //   net0: set ip and mac spoofing
             //   net1: allow all spoofing
             //   net1: change allowed_ips only
-            VM.update(state.uuid, {update_nics: [
-                { mac: state.nics[0].mac,
-                  allow_ip_spoofing: true,
-                  allow_mac_spoofing: true,
-                },
+            VM.update(state.uuid, { update_nics: [
+                {
+                    mac: state.nics[0].mac,
+                    allow_ip_spoofing: true,
+                    allow_mac_spoofing: true
+                }, {
                 // disable all
-                { mac: state.nics[1].mac,
-                  allow_ip_spoofing: true,
-                  allow_mac_spoofing: true,
-                  allow_dhcp_spoofing: true,
-                  allow_restricted_traffic: true
+                    mac: state.nics[1].mac,
+                    allow_ip_spoofing: true,
+                    allow_mac_spoofing: true,
+                    allow_dhcp_spoofing: true,
+                    allow_restricted_traffic: true
                 },
-                { mac: state.nics[2].mac,
-                  allowed_ips: [ '10.5.0.201', '10.5.0.202' ]
+                {
+                    mac: state.nics[2].mac,
+                    allowed_ips: [ '10.5.0.201', '10.5.0.202' ]
                 }
             ]}, function (e) {
 
@@ -197,69 +203,36 @@ function brand_test(brand, image, t) {
                     return cb(e);
                 }
 
-                VM.load(state.uuid, function (err, obj) {
+                return VM.load(state.uuid, function (err, obj) {
                     if (err) {
                         t.ok(false, 'VM.load: ' + err.message);
                         return cb(err);
                     }
 
-                    // net0
-                    t.notOk(obj.nics[0].hasOwnProperty('allow_dhcp_spoofing'),
-                        'net0: allow_dhcp_spoofing property not set');
-                    t.ok(obj.nics[0].hasOwnProperty('allow_ip_spoofing'),
-                        'net0: allow_ip_spoofing property set');
-                    t.ok(obj.nics[0].hasOwnProperty('allow_mac_spoofing'),
-                        'net0: allow_mac_spoofing property set');
-                    t.notOk(obj.nics[0].hasOwnProperty('allow_restricted_traffic'),
-                        'net0: allow_restricted_traffic property not set');
-                    t.notOk(obj.nics[0].hasOwnProperty('allowed_ips'),
-                        'net0: allowed_ips property not set');
-
-                    t.ok(obj.nics[0].allow_mac_spoofing,
-                      'net0: mac spoofing enabled');
-                    t.ok(obj.nics[0].allow_ip_spoofing,
-                      'net0: ip spoofing enabled');
-
-                    t.ok(obj.nics[0].primary, 'net0 is still primary');
+                    nic_antispoof_props(t, obj.nics[0], 'net0', {
+                        allow_ip_spoofing: true,
+                        allow_mac_spoofing: true,
+                        primary: true
+                    });
 
                     // net1
-                    t.ok(obj.nics[1].hasOwnProperty('allow_dhcp_spoofing'),
-                        'net1: allow_dhcp_spoofing property set');
-                    t.ok(obj.nics[1].hasOwnProperty('allow_ip_spoofing'),
-                        'net1: allow_ip_spoofing property set');
-                    t.ok(obj.nics[1].hasOwnProperty('allow_mac_spoofing'),
-                        'net1: allow_mac_spoofing property set');
-                    t.ok(obj.nics[1].hasOwnProperty('allow_restricted_traffic'),
-                        'net1: allow_restricted_traffic property set');
-                    t.notOk(obj.nics[1].hasOwnProperty('allowed_ips'),
-                        'net1: allowed_ips property not set');
-
-                    t.ok(obj.nics[1].allow_mac_spoofing,
-                      'net1: mac spoofing enabled');
-                    t.ok(obj.nics[1].allow_ip_spoofing,
-                      'net1: ip spoofing enabled');
-                    t.ok(obj.nics[1].allow_dhcp_spoofing,
-                      'net1: dhcp spoofing enabled');
-                    t.ok(obj.nics[1].allow_restricted_traffic,
-                      'net1: restricted traffic enabled');
+                    nic_antispoof_props(t, obj.nics[1], 'net1', {
+                        allow_dhcp_spoofing: true,
+                        allow_ip_spoofing: true,
+                        allow_mac_spoofing: true,
+                        allow_restricted_traffic: true
+                    });
 
                     // net2
-                    t.notOk(obj.nics[2].hasOwnProperty('allow_dhcp_spoofing'),
-                        'net2: allow_dhcp_spoofing property not set');
-                    t.notOk(obj.nics[2].hasOwnProperty('allow_ip_spoofing'),
-                        'net2: allow_ip_spoofing property not set');
-                    t.notOk(obj.nics[2].hasOwnProperty('allow_mac_spoofing'),
-                        'net2: allow_mac_spoofing property not set');
-                    t.notOk(obj.nics[2].hasOwnProperty('allow_restricted_traffic'),
-                        'net2: allow_restricted_traffic property not set');
-                    t.ok(obj.nics[2].hasOwnProperty('allowed_ips'),
-                        'net2: allowed_ips property set');
+                    nic_antispoof_props(t, obj.nics[2], 'net2', {
+                        allowed_ips: true
+                    });
 
                     t.deepEqual(obj.nics[2].allowed_ips,
                         [ '10.5.0.201', '10.5.0.202' ],
                         'net2: allowed_ips set correctly');
 
-                    cb();
+                    return cb();
                 });
             });
 
@@ -299,60 +272,42 @@ function brand_test(brand, image, t) {
 
         }, function (cb) {
             // update net1 to disable dhcp spoofing
-            VM.update(state.uuid, {update_nics: [
-                { mac: state.nics[1].mac,
-                  allow_dhcp_spoofing: false,
-                }]},
-                function (e) {
-
+            VM.update(state.uuid, {update_nics: [ {
+                    mac: state.nics[1].mac,
+                    allow_dhcp_spoofing: false
+            } ] }, function (e) {
                 if (e) {
                     t.ok(false, 'VM.update: ' + e.message);
                     return cb(e);
                 }
 
-                VM.load(state.uuid, function (err, obj) {
+                return VM.load(state.uuid, function (err, obj) {
                     if (err) {
                         t.ok(false, 'VM.load: ' + err.message);
                         return cb(err);
                     }
 
                     // net0 - should still be the same
-                    t.notOk(obj.nics[0].hasOwnProperty('allow_dhcp_spoofing'),
-                        'allow_dhcp_spoofing property not set');
-                    t.ok(obj.nics[0].hasOwnProperty('allow_ip_spoofing'),
-                        'allow_ip_spoofing property set');
-                    t.ok(obj.nics[0].hasOwnProperty('allow_mac_spoofing'),
-                        'allow_mac_spoofing property set');
-                    t.notOk(obj.nics[0].hasOwnProperty('allow_restricted_traffic'),
-                        'allow_restricted_traffic property not set');
-
-                    t.ok(obj.nics[0].allow_mac_spoofing,
-                      'net0: mac spoofing enabled');
-                    t.ok(obj.nics[0].allow_ip_spoofing,
-                      'net0: ip spoofing enabled');
-
-                    t.ok(obj.nics[0].primary, 'net0 is still primary');
+                    nic_antispoof_props(t, obj.nics[0], 'net0', {
+                        allow_ip_spoofing: true,
+                        allow_mac_spoofing: true,
+                        primary: true
+                    });
 
                     // net1 - should now have dhcp spoofing disabled
-                    t.ok(obj.nics[1].hasOwnProperty('allow_dhcp_spoofing'),
-                        'allow_dhcp_spoofing property set');
-                    t.ok(obj.nics[1].hasOwnProperty('allow_ip_spoofing'),
-                        'allow_ip_spoofing property set');
-                    t.ok(obj.nics[1].hasOwnProperty('allow_mac_spoofing'),
-                        'allow_mac_spoofing property set');
-                    t.ok(obj.nics[1].hasOwnProperty('allow_restricted_traffic'),
-                        'allow_restricted_traffic property set');
+                    nic_antispoof_props(t, obj.nics[1], 'net1', {
+                        allow_dhcp_spoofing: false,
+                        allow_ip_spoofing: true,
+                        allow_mac_spoofing: true,
+                        allow_restricted_traffic: true
+                    });
 
-                    t.ok(obj.nics[1].allow_mac_spoofing,
-                      'net1: mac spoofing enabled');
-                    t.ok(obj.nics[1].allow_ip_spoofing,
-                      'net1: ip spoofing enabled');
-                    t.notOk(obj.nics[1].allow_dhcp_spoofing,
-                      'net1: dhcp spoofing disabled');
-                    t.ok(obj.nics[1].allow_restricted_traffic,
-                      'net1: restricted traffic enabled');
+                    // net2 - should still be the same
+                    nic_antispoof_props(t, obj.nics[2], 'net2', {
+                        allowed_ips: true
+                    });
 
-                    cb();
+                    return cb();
                 });
             });
 
@@ -392,74 +347,43 @@ function brand_test(brand, image, t) {
 
         }, function (cb) {
             // The changes should persist across reboots
-            VM.reboot(state.uuid, {force: true}, function(err) {
+            VM.reboot(state.uuid, {force: true}, function (err) {
                 if (err) {
                     t.ok(false, 'VM reboot: ' + err.message);
                     return cb(err);
                 }
-                VM.load(state.uuid, function (err, obj) {
-                    if (err) {
-                        t.ok(false, 'VM.load: ' + err.message);
-                        return cb(err);
+
+                return VM.load(state.uuid, function (err2, obj) {
+                    if (err2) {
+                        t.ok(false, 'VM.load: ' + err2.message);
+                        return cb(err2);
                     }
 
                     // net0 - should still be the same
-                    t.notOk(obj.nics[0].hasOwnProperty('allow_dhcp_spoofing'),
-                        'net0: allow_dhcp_spoofing property not set');
-                    t.ok(obj.nics[0].hasOwnProperty('allow_ip_spoofing'),
-                        'net0: allow_ip_spoofing property set');
-                    t.ok(obj.nics[0].hasOwnProperty('allow_mac_spoofing'),
-                        'net0: allow_mac_spoofing property set');
-                    t.notOk(obj.nics[0].hasOwnProperty('allow_restricted_traffic'),
-                        'net0: allow_restricted_traffic property not set');
-                    t.notOk(obj.nics[0].hasOwnProperty('allowed_ips'),
-                        'net0: allowed_ips property not set');
-
-                    t.ok(obj.nics[0].allow_mac_spoofing,
-                      'net0: mac spoofing enabled');
-                    t.ok(obj.nics[0].allow_ip_spoofing,
-                      'net0: ip spoofing enabled');
-
-                    t.ok(obj.nics[0].primary, 'net0 is still primary');
+                    nic_antispoof_props(t, obj.nics[0], 'net0', {
+                        allow_ip_spoofing: true,
+                        allow_mac_spoofing: true,
+                        primary: true
+                    });
 
                     // net1 - should still be the same
-                    t.ok(obj.nics[1].hasOwnProperty('allow_dhcp_spoofing'),
-                        'net1: allow_dhcp_spoofing property set');
-                    t.ok(obj.nics[1].hasOwnProperty('allow_ip_spoofing'),
-                        'net1: allow_ip_spoofing property set');
-                    t.ok(obj.nics[1].hasOwnProperty('allow_mac_spoofing'),
-                        'net1: allow_mac_spoofing property set');
-                    t.ok(obj.nics[1].hasOwnProperty('allow_restricted_traffic'),
-                        'net1: allow_restricted_traffic property set');
-                    t.notOk(obj.nics[1].hasOwnProperty('allowed_ips'),
-                        'net1: allowed_ips property not set');
-
-                    t.ok(obj.nics[1].allow_mac_spoofing,
-                      'net1: mac spoofing enabled');
-                    t.ok(obj.nics[1].allow_ip_spoofing,
-                      'net1: ip spoofing enabled');
-                    t.notOk(obj.nics[1].allow_dhcp_spoofing,
-                      'net1: dhcp spoofing not enabled');
-                    t.ok(obj.nics[1].allow_restricted_traffic,
-                      'net1: restricted traffic enabled');
+                    nic_antispoof_props(t, obj.nics[1], 'net1', {
+                        allow_dhcp_spoofing: false,
+                        allow_ip_spoofing: true,
+                        allow_mac_spoofing: true,
+                        allow_restricted_traffic: true
+                    });
 
                     // net2 - should still be the same
-                    t.notOk(obj.nics[2].hasOwnProperty('allow_dhcp_spoofing'),
-                        'net2: allow_dhcp_spoofing property not set');
-                    t.notOk(obj.nics[2].hasOwnProperty('allow_ip_spoofing'),
-                        'net2: allow_ip_spoofing property not set');
-                    t.notOk(obj.nics[2].hasOwnProperty('allow_mac_spoofing'),
-                        'net2: allow_mac_spoofing property not set');
-                    t.notOk(obj.nics[2].hasOwnProperty('allow_restricted_traffic'),
-                        'net2: allow_restricted_traffic property not set');
-                    t.ok(obj.nics[2].hasOwnProperty('allowed_ips'),
-                        'net2: allowed_ips property set');
+                    nic_antispoof_props(t, obj.nics[2], 'net2', {
+                        allowed_ips: true
+                    });
 
                     t.deepEqual(obj.nics[2].allowed_ips,
                         [ '10.5.0.201', '10.5.0.202' ],
                         'net2: allowed_ips set correctly');
 
-                    cb();
+                    return cb();
                 });
             });
 
@@ -504,7 +428,7 @@ function brand_test(brand, image, t) {
                     return cb(e);
                 }
 
-                VM.load(state.uuid, function (err, obj) {
+                return VM.load(state.uuid, function (err, obj) {
                     if (err) {
                         t.ok(false, 'VM.load: ' + err.message);
                         return cb(err);
@@ -512,7 +436,8 @@ function brand_test(brand, image, t) {
 
                     t.ok(obj.nics[2].allowed_ips[0] == '10.88.88.0/24',
                         'single allowed-ips IPv4 prefix');
-                    cb();
+
+                    return cb();
                 });
             });
         }, function (cb) {
@@ -526,7 +451,7 @@ function brand_test(brand, image, t) {
                     return cb(e);
                 }
 
-                VM.load(state.uuid, function (err, obj) {
+                return VM.load(state.uuid, function (err, obj) {
                     if (err) {
                         t.ok(false, 'VM.load: ' + err.message);
                         return cb(err);
@@ -535,7 +460,8 @@ function brand_test(brand, image, t) {
                     t.ok(obj.nics[2].allowed_ips[0] ==
                         '2600:3c00::f03c:91ff:fe96:a260/124',
                         'single allowed-ips IPv6 prefix');
-                    cb();
+
+                    return cb();
                 });
             });
         }, function (cb) {
@@ -545,7 +471,8 @@ function brand_test(brand, image, t) {
                 allowed_ips: [ '10.88.88.0/36' ]
             } ] }, function (e) {
                 t.ok(e, 'v4 prefix too large');
-                cb();
+
+                return cb();
             });
         }, function (cb) {
             // update net2 to have an invalid v4 prefix for IP antispoof
@@ -554,7 +481,8 @@ function brand_test(brand, image, t) {
                 allowed_ips: [ '10.88.88.0/0' ]
             } ] }, function (e) {
                 t.ok(e, 'v4 prefix too small');
-                cb();
+
+                return cb();
             });
         }, function (cb) {
             // update net2 to have an invalid v4 prefix for IP antispoof
@@ -563,7 +491,8 @@ function brand_test(brand, image, t) {
                 allowed_ips: [ '10.88.88.0/-3' ]
             } ] }, function (e) {
                 t.ok(e, 'v4 prefix invalid number');
-                cb();
+
+                return cb();
             });
         }, function (cb) {
             // update net2 to have an invalid v4 prefix for IP antispoof
@@ -572,7 +501,8 @@ function brand_test(brand, image, t) {
                 allowed_ips: [ '10.88.88.0/' ]
             } ] }, function (e) {
                 t.ok(e, 'v4 prefix missing number');
-                cb();
+
+                return cb();
             });
         }, function (cb) {
             // update net2 to have an invalid v6 prefix for IP antispoof
@@ -581,7 +511,8 @@ function brand_test(brand, image, t) {
                 allowed_ips: [ '2600:3c00::f03c:91ff:fe96:a260/129' ]
             } ] }, function (e) {
                 t.ok(e, 'v6 prefix too large');
-                cb();
+
+                return cb();
             });
         }, function (cb) {
             // update net2 to have an invalid v6 prefix for IP antispoof
@@ -590,7 +521,8 @@ function brand_test(brand, image, t) {
                 allowed_ips: [ '2600:3c00::f03c:91ff:fe96:a260/0' ]
             } ] }, function (e) {
                 t.ok(e, 'v6 prefix too small');
-                cb();
+
+                return cb();
             });
         }, function (cb) {
             // update net2 to have an invalid v6 prefix for IP antispoof
@@ -599,7 +531,8 @@ function brand_test(brand, image, t) {
                 allowed_ips: [ '2600:3c00::f03c:91ff:fe96:a260/-5' ]
             } ] }, function (e) {
                 t.ok(e, 'v6 prefix invalid number');
-                cb();
+
+                return cb();
             });
         }, function (cb) {
             // update net2 to have an invalid v6 prefix for IP antispoof
@@ -608,7 +541,7 @@ function brand_test(brand, image, t) {
                 allowed_ips: [ '2600:3c00::f03c:91ff:fe96:a260/' ]
             } ] }, function (e) {
                 t.ok(e, 'v6 prefix missing number');
-                cb();
+                return cb();
             });
         }
     ], function (err) {
@@ -620,17 +553,14 @@ function brand_test(brand, image, t) {
 test('joyent-minimal: antispoof options update without reboot',
     function (t) {
     brand_test('joyent-minimal', smartos_uuid, t);
-    return;
 });
 
 test('joyent: antispoof options update without reboot',
     function (t) {
     brand_test('joyent', smartos_uuid, t);
-    return;
 });
 
 test('kvm: antispoof options update without reboot',
     function (t) {
     brand_test('kvm', ubuntu_uuid, t);
-    return;
 });

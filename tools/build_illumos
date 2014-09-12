@@ -25,6 +25,12 @@ cd ${ROOT}/projects/illumos
 cp usr/src/tools/scripts/nightly.sh ./nightly
 chmod u+x ./nightly
 gsed -i -e "s|^GATE=.*$|GATE=\"joyent_${BUILDSTAMP}\"; export GATE|" illumos.sh
+if [[ -n ${MAX_JOBS} ]]; then
+    MJ=${MAX_JOBS}
+else
+    MJ=128
+fi
+gsed -i -e "s|^MAX_JOBS=.*$|MAX_JOBS=${MJ}; export MAX_JOBS|" illumos.sh
 
 ksh93 ./usr/src/tools/scripts/bldenv.sh illumos.sh \
     'cd $CODEMGR_WS/usr/src && export PATH="$PATH:/opt/local/bin" && \

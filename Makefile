@@ -16,6 +16,23 @@ else
 PATH =		/usr/bin:/usr/sbin:/sbin:/opt/local/bin
 endif
 
+#
+# This number establishes a maximum for smartos-live, illumos-extra, and
+# illumos-joyent.  Support for it can and should be added to other projects
+# as time allows.  The default value on large (16 GB or more) zones/systems
+# is 128; on smaller systems it is 8.  You can override this in the usual way;
+# i.e.,
+#
+# gmake world live MAX_JOBS=32
+#
+CRIPPLED_HOST :=	$(shell [[ `prtconf -m 2>/dev/null || echo 999999` -lt \
+    16384 ]] && echo yes || echo no)
+ifeq ($(CRIPPLED_HOST),yes)
+MAX_JOBS ?=	8
+else
+MAX_JOBS ?=	128
+endif
+
 LOCAL_SUBDIRS :=	$(shell ls projects/local)
 OVERLAYS :=	$(shell cat overlay/order)
 PKGSRC =	$(ROOT)/pkgsrc
@@ -34,7 +51,8 @@ NATIVE_CC =	/opt/local/bin/gcc
 
 SUBDIR_DEFS = \
 	CTFMERGE=$(CTFMERGE) \
-	CTFCONVERT=$(CTFCONVERT)
+	CTFCONVERT=$(CTFCONVERT) \
+	MAX_JOBS=$(MAX_JOBS)
 
 ADJUNCT_TARBALL :=	$(shell ls `pwd`/illumos-adjunct*.tgz 2>/dev/null \
 	| tail -n1 && echo $?)
@@ -176,12 +194,13 @@ update-base:
 	touch $@
 
 0-illumos-stamp: 0-extra-stamp
-	(cd $(ROOT) && ./tools/build_illumos)
+	(cd $(ROOT) && MAX_JOBS=$(MAX_JOBS) ./tools/build_illumos)
 	touch $@
 
 0-extra-stamp:
 	(cd $(ROOT)/projects/illumos-extra && \
-	    gmake STRAP=strap DESTDIR=$(STRAP_PROTO) install_strap)
+	    gmake MAX_JOBS=$(MAX_JOBS) STRAP=strap DESTDIR=$(STRAP_PROTO) \
+	    install_strap)
 	(cd $(STRAP_PROTO) && gtar xzf $(ADJUNCT_TARBALL))
 	touch $@
 
@@ -192,7 +211,8 @@ update-base:
 
 0-livesrc-stamp: 0-illumos-stamp 0-extra-stamp 1-extra-stamp
 	(cd $(ROOT)/src && \
-	    gmake NATIVEDIR=$(STRAP_PROTO) DESTDIR=$(PROTO) && \
+	    gmake -j$(MAX_JOBS) NATIVEDIR=$(STRAP_PROTO) \
+	    DESTDIR=$(PROTO) && \
 	    gmake NATIVEDIR=$(STRAP_PROTO) DESTDIR=$(PROTO) install)
 	touch $@
 

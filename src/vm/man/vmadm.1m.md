@@ -1730,11 +1730,15 @@ tab-complete UUIDs rather than having to type them out for every command.
         for the /tmp filesystem. This is only available for OS VMs, and doesn't
         make any sense for KVM VMs.
 
+        If set to 0 this indicates that you would like to not have /tmp mounted
+        as tmpfs at all. When changing to/from a "0" value, the VM must be
+        rebooted in order for the change to take effect.
+
         vmtype: OS
         listable: yes
         create: yes
         update: yes
-        default: max_swap
+        default: max_physical_memory
 
     transition_expire:
 

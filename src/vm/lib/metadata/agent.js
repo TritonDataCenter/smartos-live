@@ -603,6 +603,15 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                         returnit(null, val);
                         return;
                     });
+                } else if (want === 'tmpfs'
+                    && vmobj.hasOwnProperty('tmpfs')) {
+                    // We want tmpfs to reload the cache right away because we
+                    // might be depending on a /etc/vfstab update
+                    self.updateZone(zone, function () {
+                        val = JSON.stringify(self.zones[zone].tmpfs);
+                        returnit(null, val);
+                        return;
+                    });
                 } else if (want === 'routes'
                     && vmobj.hasOwnProperty('routes')) {
 

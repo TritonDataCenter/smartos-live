@@ -73,6 +73,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-alias.js \
 	vm/tests/test-indestructible.js \
 	vm/tests/test-spoof-opts.js \
+	vm/tests/test-tmpfs.js \
 	vm/tests/test-vrrp-nics.js \
 	vm/lib/metadata/*.js
 

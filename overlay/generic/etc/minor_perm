@@ -269,3 +269,4 @@ ipmi:ipmi 0600 root sys
 lx_ptm:lx_ptmajor 0666 root sys
 lx_systrace:* 0644 root sys
 inotify:* 0666 root sys
+skd:* 0600 root sys

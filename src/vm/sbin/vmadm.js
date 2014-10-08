@@ -85,6 +85,7 @@ var LIST_FIELDS = {
     create_timestamp: {header: 'CREATE_TIMESTAMP', width: 24},
     dns_domain: {header: 'DOMAIN', width: 32},
     do_not_inventory: {header: 'DNI', width: 5},
+    docker: {header: 'DOCKER', width: 6},
     firewall_enabled: {header: 'FIREWALL_ENABLED', width: 16},
     hostname: {header: 'HOSTNAME', width: 32},
     image_uuid: {header: 'IMAGE_UUID', width: 36},

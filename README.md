@@ -69,6 +69,7 @@ The configure script sets everything up for building including:
   * ensures SUNWspro is installed in `/opt/SUNWspro`
   * ensures that `projects/illumos` exists and creates `illumos.sh` there
   * ensures that `projects/illumos-extra` exists
+  * optional: set the environment variable MAX_JOBS to set build job concurrency (useful for small systems)
 
 ### The "make world" works as follows:
 

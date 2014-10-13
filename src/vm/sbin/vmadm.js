@@ -78,6 +78,7 @@ var LIST_FIELDS = {
     alias: {header: 'ALIAS', width: 10},
     autoboot: {header: 'AUTOBOOT', width: 8},
     billing_id: {header: 'BILLING_ID', width: 36},
+    boot_timestamp: {header: 'BOOT_TIMESTAMP', width: 24},
     brand: {header: 'BRAND', width: 14},
     cpu_cap: {header: 'CPU_CAP', width: 7},
     cpu_shares: {header: 'CPU_SHARE', width: 9},

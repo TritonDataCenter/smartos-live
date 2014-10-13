@@ -492,9 +492,11 @@ f usr/vm/node_modules/qmp.js 0444 root bin
 f usr/vm/node_modules/utils.js 0444 root bin
 d usr/vm/node_modules/vmload 0755 root root
 f usr/vm/node_modules/vmload/vmload-zoneadm.js 0644 root root
+f usr/vm/node_modules/vmload/vmload-zoneinfo.js 0644 root root
 f usr/vm/node_modules/vmload/vmload-json.js 0644 root root
 f usr/vm/node_modules/vmload/dump-datasets.js 0755 root root
 f usr/vm/node_modules/vmload/dump-zoneadm.js 0755 root root
+f usr/vm/node_modules/vmload/dump-zoneinfo.js 0755 root root
 f usr/vm/node_modules/vmload/dump-zonexml.js 0755 root root
 f usr/vm/node_modules/vmload/vmload-datasets.js 0644 root root
 f usr/vm/node_modules/vmload/README.md 0644 root root

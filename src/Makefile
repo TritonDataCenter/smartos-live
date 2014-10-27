@@ -72,6 +72,7 @@ JS_CHECK_TARGETS=\
 	img/sbin/imgadm \
 	vm/tests/test-alias.js \
 	vm/tests/test-indestructible.js \
+	vm/tests/test-internal_metadata_namespaces.js \
 	vm/tests/test-spoof-opts.js \
 	vm/tests/test-tmpfs.js \
 	vm/tests/test-vrrp-nics.js \

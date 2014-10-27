@@ -28,6 +28,7 @@ var sdc_fields = [
     'force_metadata_socket',
     'fs_allowed',
     'hostname',
+    'internal_metadata_namespaces',
     'limit_priv',
     'last_modified',
     'maintain_resolvers',
@@ -521,6 +522,30 @@ function base64_decode(input) {
     }
 }
 
+function internalNamespace(vmobj, want)
+{
+    var internal_namespace = null;
+    var prefix;
+
+    /*
+     * If we have a ':' we need to check against namespaces. If it is in the
+     * list, we're dealing with read-only internal_metadata instead of
+     * customer_metadata.
+     */
+    if ((want.indexOf(':') !== -1)
+        && vmobj.hasOwnProperty('internal_metadata_namespaces')) {
+
+        prefix = (want.split(':'))[0];
+        vmobj.internal_metadata_namespaces.forEach(function (ns) {
+            if (ns === prefix) {
+                internal_namespace = prefix;
+            }
+        });
+    }
+
+    return (internal_namespace);
+}
+
 MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
     var self = this;
     var zlog = self.zlog[zone];
@@ -535,6 +560,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
     return function (data) {
         var cmd;
+        var ns;
         var parts;
         var val;
         var vmobj;
@@ -690,6 +716,10 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                         which_mdata = 'internal_metadata';
                     }
 
+                    if (internalNamespace(vmobj, want) !== null) {
+                        which_mdata = 'internal_metadata';
+                    }
+
                     if (vmobj.hasOwnProperty(which_mdata)) {
                         returnit(null, vmobj[which_mdata][want]);
                         return;
@@ -715,6 +745,18 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
             }
 
             zlog.info('Serving DELETE ' + want);
+
+            if (want.slice(0, 4) === 'sdc:') {
+                returnit(new Error('Cannot update the "sdc" Namespace.'));
+                return;
+            }
+
+            ns = internalNamespace(vmobj, want);
+            if (ns !== null) {
+                returnit(new Error('Cannot update the "' + ns
+                    + '" Namespace.'));
+                return;
+            }
 
             setMetadata(want, null, function (err) {
                 if (err) {
@@ -750,6 +792,13 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 return;
             }
 
+            ns = internalNamespace(vmobj, key);
+            if (ns !== null) {
+                returnit(new Error('Cannot update the "' + ns
+                    + '" Namespace.'));
+                return;
+            }
+
             zlog.info('Serving PUT ' + key);
             setMetadata(key, value, function (err) {
                 if (err) {
@@ -773,17 +822,22 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     return;
                 }
 
-                // *_pw$ keys come from internal_metadata, everything else comes
-                // from customer_metadata
+                /*
+                 * Keys that match *_pw$ and internal_metadata_namespace
+                 * prefixed keys come from internal_metadata, everything else
+                 * comes from customer_metadata.
+                 */
                 ckeys = Object.keys(vmobj.customer_metadata)
                     .filter(function (k) {
 
-                    return (!k.match(/_pw$/));
+                    return (!k.match(/_pw$/)
+                        && internalNamespace(vmobj, k) === null);
                 });
                 ikeys = Object.keys(vmobj.internal_metadata)
                     .filter(function (k) {
 
-                    return (k.match(/_pw$/));
+                    return (k.match(/_pw$/)
+                        || internalNamespace(vmobj, k) !== null);
                 });
 
                 returnit(null, ckeys.concat(ikeys).join('\n'));

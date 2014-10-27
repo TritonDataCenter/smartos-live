@@ -680,8 +680,13 @@ tab-complete UUIDs rather than having to type them out for every command.
         This field allows metadata to be set and associated with this VM. The
         value should be an object with only top-level key=value pairs.
 
-        NOTE: for historical reasons, do not put keys in here that match the
+        NOTE1: for historical reasons, do not put keys in here that match the
         pattern *_pw. Those keys should go in internal_metadata instead.
+
+        NOTE2: keys that are prefixed with one of the prefixes listed in
+        internal_metadata_namespaces will not be read from customer_metadata but
+        rather from internal_metadata. These will also be read-only from within
+        the zone.
 
         type: JSON Object (key: value)
         vmtype: OS,KVM
@@ -689,22 +694,6 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (but see special notes on update command)
         default: {}
-
-    image_uuid:
-
-        This should be a UUID identifying the image for the VM if a VM was
-        created from an image.
-
-        NOTE: when this is passed for KVM VMs, it specifies the *zone root*
-        dataset which is not visible from within the VM. The user-visible
-        dataset will be the one specified through the disks.*.image_uuid.
-        Normally you do *not* want to set this for KVM.
-
-        type: string (UUID)
-        vmtype: OS,KVM
-        listable: yes
-        create: yes
-        update: no
 
     datasets:
 
@@ -1059,6 +1048,22 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (but does nothing for OS VMs)
         default: the value of zonename
 
+    image_uuid:
+
+        This should be a UUID identifying the image for the VM if a VM was
+        created from an image.
+
+        NOTE: when this is passed for KVM VMs, it specifies the *zone root*
+        dataset which is not visible from within the VM. The user-visible
+        dataset will be the one specified through the disks.*.image_uuid.
+        Normally you do *not* want to set this for KVM.
+
+        type: string (UUID)
+        vmtype: OS,KVM
+        listable: yes
+        create: yes
+        update: no
+
     internal_metadata:
 
         This field allows metadata to be set and associated with this VM. The
@@ -1079,6 +1084,20 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (but see special notes on update command)
         default: {}
+
+    internal_metadata_namespaces:
+
+        This allows a list of namespaces to be set as internal_metadata-only
+        prefixes. If a namespace 'foo' is in this list, metadata keys with the
+        prefix 'foo:' will come from internal_metadata rather than
+        customer_metadata. They will also be read-only from within the zone.
+
+        type: list of strings
+        vmtype: OS,KVM
+        listable: no
+        create: yes
+        update: yes
+        default: []
 
     indestructible_delegated:
 

@@ -58,9 +58,9 @@ exports.retryUntil = function (step, max, check, callback) {
         }, step);
     }
 
-    function stop () {
+    function stop() {
         clearInterval(interval);
-    };
+    }
 };
 
 

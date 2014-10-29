@@ -3,6 +3,10 @@ s etc/bash/bash_completion.d/imgadm=/usr/img/etc/imgadm.completion
 s usr/sbin/dsadm=../img/sbin/imgadm
 s usr/sbin/imgadm=../img/sbin/imgadm
 f usr/share/man/man1m/imgadm.1m 0444 root bin
+d usr/lib 0755 root bin
+d usr/lib/brand 0755 root bin
+d usr/lib/brand/lx 0755 root bin
+f usr/lib/brand/lx/lx_boot_zone_docker 0755 root root
 d usr/img 0555 root bin
 d usr/img/etc 0555 root bin
 f usr/img/etc/imgadm.completion 0444 root bin

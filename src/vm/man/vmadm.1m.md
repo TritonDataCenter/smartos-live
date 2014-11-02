@@ -146,33 +146,6 @@ tab-complete UUIDs rather than having to type them out for every command.
             The IP, port and VNC display number for the TCP socket we're
             listening on for this VM. If VNC is enabled.
 
-      kill [-s SIGNAL|-SIGNAL] <uuid>
-
-        The kill command sends a signal to the init process of a given VM. Its
-        behavior should be identical to running:
-
-        /usr/bin/kill [-s SIGNAL|-SIGNAL] PID
-
-        where PID is the PID of the init process of the zone (also available as
-        'pid' in VM objects returned by 'vmadm get').
-
-        The signal can be specified in one of the following forms:
-
-          <integer>:   a signal number (eg. vmadm kill -9 <uuid>)
-          <signal>:    a signal name w/ SIG-prefix (eg. vmadm kill -KILL <uuid>)
-          SIG<signal>: same as ^^ w/ SIG-prefix (eg. vmadm kill -SIGKILL <uuid>)
-
-        It is up to the init process itself to determine how to handle this
-        signal. Note especially that many signals can be ignored.
-
-        Also note that only those signals supported by /usr/node/bin/node can be
-        used here. To get a list of signals you can run:
-
-          /usr/node/bin/node -e "console.dir(process.binding('constants'));" \
-            | grep " SIG"
-
-        which will show both the SIG-name and signal number for the supported
-        signals.
 
       list [-p] [-H] [-o field,...] [-s field,...] [field=value ...]
 

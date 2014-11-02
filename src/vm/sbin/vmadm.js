@@ -34,8 +34,10 @@ var onlyif = require('/usr/node/node_modules/onlyif');
 var sprintf = require('/usr/node/node_modules/sprintf').sprintf;
 var tty = require('tty');
 var util = require('util');
-var draining_stdout_and_exiting = false;
+var utils = require('/usr/vm/node_modules/utils');
 var properties = require('/usr/vm/node_modules/props');
+
+var draining_stdout_and_exiting = false;
 
 // pull in stuff from generated props (originating in proptable.js)
 var BRAND_OPTIONS = properties.BRAND_OPTIONS;
@@ -57,6 +59,7 @@ var COMMANDS = [
     'install',
     'get', 'json',
     'list',
+    'kill',
     'lookup',
     'reboot',
     'receive', 'recv',
@@ -147,6 +150,7 @@ function usage(message, code)
     out('get <uuid>');
     out('info <uuid> [type,...]');
     out('install <uuid>');
+    out('kill [-s SIGNAL|-SIGNAL] <uuid>');
     out('list [-p] [-H] [-o field,...] [-s field,...] [field=value ...]');
     out('lookup [-j|-1] [-o field,...] [field=value ...]');
     out('reboot <uuid> [-F]');
@@ -400,6 +404,10 @@ function addCommandOptions(command, opts, shorts)
         shorts.o = ['--output'];
         opts.unique = Boolean;
         shorts['1'] = ['--unique'];
+        break;
+    case 'kill':
+        opts.signal = String;
+        shorts.s = ['--signal'];
         break;
     case 'create':
     case 'receive':
@@ -715,11 +723,13 @@ function main(callback)
     var order_list;
     var parsed;
     var shortHands = {};
+    var signal;
     var snapname;
     var sortby;
     var sortby_list;
     var type;
     var types;
+    var unexpected_args = [];
     var uuid;
 
     if (!command) {
@@ -1116,6 +1126,59 @@ function main(callback)
         }
 
         listVM(extra, order, sortby, options, callback);
+        break;
+    case 'kill':
+        if (parsed.hasOwnProperty('signal')) {
+            // the '-s <signal>' case
+            signal = parsed.signal;
+            uuid = getUUID(command, parsed);
+        } else if ((parsed.argv.remain.length === 1)
+            && (utils.isUUID(parsed.argv.remain[0]))) {
+
+            // When we just call 'vmadm kill <uuid>' the default is SIGTERM
+            signal = 'SIGTERM';
+            uuid = parsed.argv.remain.shift();
+        } else {
+            // here we're looking for '-SIGNAL <UUID>'
+            Object.keys(parsed).forEach(function (k) {
+                // Skip the built-in argv argument
+                if (k === 'argv') {
+                    return;
+                }
+                // if we already found a uuid or if the argument to this option
+                // is not a uuid (eg. -9 <uuid>) then it's definitely unexpected
+                if (uuid || !utils.isUUID(parsed[k])) {
+                    unexpected_args.push(k);
+                    return;
+                }
+                signal = k;
+                uuid = parsed[k];
+            });
+
+            if (unexpected_args.length > 0) {
+                usage('Unexpected args: ' + JSON.stringify(unexpected_args));
+                break;
+            }
+        }
+
+        if (parsed.argv.remain.length > 0) {
+            usage('Too many arguments.');
+            break;
+        }
+
+        if (!utils.isUUID(uuid)) {
+            usage('Invalid or missing argument UUID');
+            break;
+        }
+
+        VM.kill(uuid, {signal: signal}, function (err) {
+            if (err) {
+                callback(err);
+            } else {
+                callback(null, 'Sent signal "' + signal + '" to init process '
+                    + 'for VM ' + uuid);
+            }
+        });
         break;
     case 'halt':
         command = 'stop';

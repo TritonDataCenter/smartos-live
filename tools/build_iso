@@ -205,6 +205,14 @@ title Live 64-bit (ttya) +kmdb
 title Live 64-bit (ttya)
    kernel /platform/i86pc/kernel/amd64/unix -B console=ttya,ttya-mode="115200,8,n,1,-",root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive
+
+title Live 64-bit (ttyb) +kmdb
+   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=ttyb,ttyb-mode="115200,8,n,1,-",root_shadow='$shadow'$bi_grub_optstr
+   module /platform/i86pc/amd64/boot_archive
+
+title Live 64-bit (ttyb)
+   kernel /platform/i86pc/kernel/amd64/unix -B console=ttyb,ttyb-mode="115200,8,n,1,-",root_shadow='$shadow'$bi_grub_optstr
+   module /platform/i86pc/amd64/boot_archive
 EOF
 	[[ $? -eq 0 ]] || fail "failed to create menu.lst"
 	echo "done"

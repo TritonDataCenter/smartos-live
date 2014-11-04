@@ -1,0 +1,12 @@
+{
+	"vdevs": [
+		{
+			"name": "disk0",
+			"vid": "MFG",
+			"pid": "DISK",
+			"size": "600127266816",
+			"solid_state": false
+		}
+	],
+	"capacity": "600127266816"
+}

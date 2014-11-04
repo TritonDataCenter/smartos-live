@@ -1,0 +1,45 @@
+{
+	"vdevs": [
+		{
+			"type": "raidz2",
+			"devices": [
+				{
+					"name": "disk0",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk1",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk2",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk3",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk4",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		}
+	],
+	"capacity": 1800381800448
+}

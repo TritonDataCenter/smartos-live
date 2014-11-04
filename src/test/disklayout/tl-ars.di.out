@@ -1,0 +1,54 @@
+{
+	"vdevs": [
+		{
+			"type": "raidz2",
+			"devices": [
+				{
+					"name": "c0t5000CCA02203E181d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "c1t5000CCA022040715d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "c2t5000CCA022015A91d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "c3t5000CCA02203D151d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "c4t5000CCA02203E2D1d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		}
+	],
+	"capacity": 1800381800448,
+	"logs": [
+		{
+			"name": "c12t5000CCA0490428ADd0",
+			"vid": "HGST",
+			"pid": "HUSMH8010BSS204",
+			"size": "100030242816",
+			"solid_state": true
+		}
+	]
+}

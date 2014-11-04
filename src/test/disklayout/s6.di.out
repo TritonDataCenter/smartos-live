@@ -1,0 +1,57 @@
+{
+	"vdevs": [
+		{
+			"type": "raidz",
+			"devices": [
+				{
+					"name": "disk0",
+					"vid": "MFG",
+					"pid": "SSD",
+					"size": "600127266816",
+					"solid_state": true
+				},
+				{
+					"name": "disk1",
+					"vid": "MFG",
+					"pid": "SSD",
+					"size": "600127266816",
+					"solid_state": true
+				},
+				{
+					"name": "disk2",
+					"vid": "MFG",
+					"pid": "SSD",
+					"size": "600127266816",
+					"solid_state": true
+				}
+			]
+		},
+		{
+			"type": "raidz",
+			"devices": [
+				{
+					"name": "disk3",
+					"vid": "MFG",
+					"pid": "SSD",
+					"size": "600127266816",
+					"solid_state": true
+				},
+				{
+					"name": "disk4",
+					"vid": "MFG",
+					"pid": "SSD",
+					"size": "600127266816",
+					"solid_state": true
+				},
+				{
+					"name": "disk5",
+					"vid": "MFG",
+					"pid": "SSD",
+					"size": "600127266816",
+					"solid_state": true
+				}
+			]
+		}
+	],
+	"capacity": 2400509067264
+}

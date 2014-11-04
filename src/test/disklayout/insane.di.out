@@ -1,0 +1,135 @@
+{
+	"spares": [
+		{
+			"name": "disk8",
+			"vid": "MFG",
+			"pid": "DISK",
+			"size": "3000127266816",
+			"solid_state": false
+		},
+		{
+			"name": "disk9",
+			"vid": "MFG",
+			"pid": "DISK",
+			"size": "3000127266816",
+			"solid_state": false
+		}
+	],
+	"vdevs": [
+		{
+			"type": "raidz2",
+			"devices": [
+				{
+					"name": "disk10",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "3000127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk11",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "3000127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk12",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "3000127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk13",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "3000127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk14",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "3000127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk15",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "3000127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk16",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "3000127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk3",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "3000127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk4",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "3000127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk5",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "3000127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk6",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "3000127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk7",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "3000127266816",
+					"solid_state": false
+				}
+			]
+		}
+	],
+	"capacity": 30001272668160,
+	"logs": [
+		{
+			"name": "disk0",
+			"vid": "MFG",
+			"pid": "SSD",
+			"size": "100030242816",
+			"solid_state": true
+		}
+	],
+	"cache": [
+		{
+			"name": "disk1",
+			"vid": "MFG2",
+			"pid": "DISK2",
+			"size": "600127266816",
+			"solid_state": false
+		},
+		{
+			"name": "disk2",
+			"vid": "MFG2",
+			"pid": "DISK2",
+			"size": "600127266816",
+			"solid_state": false
+		}
+	]
+}

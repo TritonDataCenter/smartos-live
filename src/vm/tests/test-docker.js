@@ -77,18 +77,11 @@ function getDockerFlags(t, state, cb) {
 }
 
 test('test docker=true on new VM', function (t) {
-    var payload = common_payload;
+    var payload = JSON.parse(JSON.stringify(common_payload));
     var prev_docker_id;
     var state = {brand: payload.brand};
 
     payload.docker = true;
-    delete payload.internal_metadata;
-    delete payload.internal_metadata_namespaces;
-    delete payload.uuid;
-    delete payload.zpool;
-    delete payload.zfs_filesystem;
-    delete payload.zonepath;
-    delete payload.zonename;
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function (cb) {
@@ -157,17 +150,10 @@ test('test docker=true on new VM', function (t) {
 test('test docker=true + docker:id + docker namespace on new VM', function (t) {
     var new_dockerid;
     var new_uuid;
-    var payload = common_payload;
+    var payload = JSON.parse(JSON.stringify(common_payload));
     var state = {brand: payload.brand};
 
     payload.docker = true;
-    delete payload.internal_metadata;
-    delete payload.internal_metadata_namespaces;
-    delete payload.uuid;
-    delete payload.zpool;
-    delete payload.zfs_filesystem;
-    delete payload.zonepath;
-    delete payload.zonename;
 
     new_uuid = libuuid.create();
     new_dockerid = (new_uuid + libuuid.create()).replace(/-/g, '');
@@ -201,12 +187,11 @@ test('test docker=true + docker:id + docker namespace on new VM', function (t) {
 });
 
 test('test docker=true + non-docker namespace on new VM', function (t) {
-    var payload = common_payload;
+    var payload = JSON.parse(JSON.stringify(common_payload));
     var state = {brand: payload.brand};
 
     payload.docker = true;
     payload.internal_metadata_namespaces = ['bacon'];
-    delete payload.internal_metadata;
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function (cb) {
@@ -231,17 +216,8 @@ test('test docker=true + non-docker namespace on new VM', function (t) {
 });
 
 test('test adding docker=true on old VM', function (t) {
-    var payload = common_payload;
+    var payload = JSON.parse(JSON.stringify(common_payload));
     var state = {brand: payload.brand};
-
-    delete payload.docker;
-    delete payload.internal_metadata;
-    delete payload.internal_metadata_namespaces;
-    delete payload.uuid;
-    delete payload.zpool;
-    delete payload.zfs_filesystem;
-    delete payload.zonepath;
-    delete payload.zonename;
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function (cb) {
@@ -283,18 +259,13 @@ test('test adding docker=true on old VM', function (t) {
 });
 
 test('test stop docker VM w/ suicidal init', function (t) {
-    var payload = common_payload;
+    var payload = JSON.parse(JSON.stringify(common_payload));
     var state = {brand: payload.brand};
 
     payload.uuid = libuuid.create();
     payload.docker = true;
     payload.autoboot = true;
     payload.init_name = '/bin/sh'; // found by accident, this exits leaving zone
-    delete payload.internal_metadata;
-    delete payload.zpool;
-    delete payload.zfs_filesystem;
-    delete payload.zonepath;
-    delete payload.zonename;
 
     // pretend init moves /var/svc/provisioning
     setTimeout(function () {
@@ -337,7 +308,7 @@ test('test stop docker VM w/ suicidal init', function (t) {
 });
 
 test('test stop docker VM w/ init that exits on SIGTERM', function (t) {
-    var payload = common_payload;
+    var payload = JSON.parse(JSON.stringify(common_payload));
     var state = {brand: payload.brand};
 
     payload.uuid = libuuid.create();
@@ -345,11 +316,6 @@ test('test stop docker VM w/ init that exits on SIGTERM', function (t) {
     payload.autoboot = false;
     payload.init_name = '/root/init';
     payload.restart_init = false;
-    delete payload.internal_metadata;
-    delete payload.zpool;
-    delete payload.zfs_filesystem;
-    delete payload.zonepath;
-    delete payload.zonename;
 
     // pretend init moves /var/svc/provisioning
     setTimeout(function () {
@@ -404,7 +370,7 @@ test('test stop docker VM w/ init that exits on SIGTERM', function (t) {
 });
 
 test('test stop docker VM w/ init that ignores SIGTERM', function (t) {
-    var payload = common_payload;
+    var payload = JSON.parse(JSON.stringify(common_payload));
     var state = {brand: payload.brand};
 
     payload.uuid = libuuid.create();
@@ -412,11 +378,6 @@ test('test stop docker VM w/ init that ignores SIGTERM', function (t) {
     payload.autoboot = false;
     payload.init_name = '/root/init';
     payload.restart_init = false;
-    delete payload.internal_metadata;
-    delete payload.zpool;
-    delete payload.zfs_filesystem;
-    delete payload.zonepath;
-    delete payload.zonename;
 
     // pretend init moves /var/svc/provisioning
     setTimeout(function () {
@@ -466,6 +427,113 @@ test('test stop docker VM w/ init that ignores SIGTERM', function (t) {
                 }
 
                 t.equal(obj.state, 'stopped', 'VM is stopped');
+                cb();
+            });
+        }
+    ]);
+});
+
+test('test restart docker VM', function (t) {
+    var boot_timestamps = [];
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.uuid = libuuid.create();
+    payload.docker = true;
+    payload.autoboot = false;
+    payload.init_name = '/root/init';
+    payload.restart_init = false;
+
+    // pretend init moves /var/svc/provisioning
+    setTimeout(function () {
+        fs.renameSync('/zones/' + payload.uuid + '/root/var/svc/provisioning',
+            '/zones/' + payload.uuid + '/root/var/svc/provision_success');
+    }, 2000);
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        function (cb) {
+            writeInit(payload.uuid, '#!/usr/bin/bash\n'
+                + 'sleep 3600\n',
+                function (err) {
+                    t.ok(!err, 'wrote init replacement');
+                    cb(err);
+                }
+            );
+        }, function (cb) {
+            VM.start(state.uuid, {}, function (err) {
+                t.ok(!err, 'started VM: ' + (err ? err.message : 'success'));
+                cb(err);
+            });
+        }, function (cb) {
+            VM.load(state.uuid, function (err, obj) {
+                t.ok(!err, 'loading obj for new VM');
+                if (err) {
+                    cb(err);
+                    return;
+                }
+
+                t.equal(obj.state, 'running', 'VM is running');
+                t.ok(obj.pid > 0, 'PID is > 0: ' + obj.pid);
+                t.ok(obj.pid < 4294967295, 'PID is < 4294967295: ' + obj.pid);
+                t.ok(obj.boot_timestamp, 'VM booted at ' + obj.boot_timestamp);
+                boot_timestamps.push(obj.boot_timestamp);
+                cb();
+            });
+        }, function (cb) {
+            VM.reboot(state.uuid, {}, function (err) {
+                t.ok(!err, 'rebooted VM: ' + (err ? err.message : 'success'));
+                cb(err);
+            });
+        }, function (cb) {
+            VM.load(state.uuid, function (err, obj) {
+                t.ok(!err, 'loading obj for new VM');
+                if (err) {
+                    cb(err);
+                    return;
+                }
+
+                t.equal(obj.state, 'running', 'VM is running');
+                t.ok(obj.boot_timestamp > boot_timestamps[0], 'VM booted at '
+                    + obj.boot_timestamp);
+                boot_timestamps.push(obj.boot_timestamp);
+                cb();
+            });
+        }, function (cb) {
+            VM.stop(state.uuid, {}, function (err) {
+                t.ok(!err, 'stopped VM: ' + (err ? err.message : 'success'));
+                cb(err);
+            });
+        }, function (cb) {
+            VM.load(state.uuid, function (err, obj) {
+                t.ok(!err, 'loading obj for new VM');
+                if (err) {
+                    cb(err);
+                    return;
+                }
+
+                t.equal(obj.state, 'stopped', 'VM is stopped');
+                cb();
+            });
+        }, function (cb) {
+            // Ensure we can 'reboot' from stopped which results in 'running'
+            // since docker supports that.
+            VM.reboot(state.uuid, {}, function (err) {
+                t.ok(!err, 'rebooted VM: ' + (err ? err.message : 'success'));
+                cb(err);
+            });
+        }, function (cb) {
+            VM.load(state.uuid, function (err, obj) {
+                t.ok(!err, 'loading obj for new VM');
+                if (err) {
+                    cb(err);
+                    return;
+                }
+
+                t.equal(obj.state, 'running', 'VM is running');
+                t.ok(obj.boot_timestamp
+                    > boot_timestamps[boot_timestamps.length - 1],
+                    'VM booted at ' + obj.boot_timestamp);
+                boot_timestamps.push(obj.boot_timestamp);
                 cb();
             });
         }

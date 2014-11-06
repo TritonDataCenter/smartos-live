@@ -23,6 +23,7 @@ ur-agent: master
 kvm: master
 kvm-cmd: master
 mdata-client: master
+sdc-platform: master
 EOF
 fi
 

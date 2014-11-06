@@ -8,7 +8,7 @@ mkdir -p projects/local
 (cd projects/local && [[ -d mdata-client ]] \
     || git clone git://github.com/joyent/mdata-client.git mdata-client)
 (cd projects/local && [[ -d sdc-platform ]] \
-    || git clone git://github.com/sdc-platform.git)
+    || git clone git://github.com/joyent/sdc-platform.git sdc-platform)
 (cd overlay && [[ -d sdc ]] || \
     ln -s ../projects/local/sdc-platform/overlay sdc)
 

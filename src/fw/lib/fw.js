@@ -1160,7 +1160,9 @@ function addOtherSideRemoteTargets(vms, rule, targets, dir, log) {
                             targets.tags[key] = [ targets.tags[key] ];
                         }
 
-                        targets.tags[key].push(val);
+                        if (targets.tags[key].indexOf(val) === -1) {
+                            targets.tags[key].push(val);
+                        }
                     }
                 }
             }

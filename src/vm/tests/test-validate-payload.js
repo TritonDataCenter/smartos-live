@@ -191,18 +191,6 @@ for (brand in os_brands) {
         });
     });
 
-    test('set good string fs_allowed', function (t) {
-        VM.validate(brand, 'create', {
-                brand: brand,
-                image_uuid: smartos_image_uuid,
-                fs_allowed: 'ufs,tmpfs,pcfs'
-            }, function (errors) {
-
-            t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
-            t.end();
-        });
-    });
-
     test('set bad array fs_allowed', function (t) {
         VM.validate(brand, 'create', {
                 brand: brand,
@@ -509,7 +497,7 @@ for (brand in os_brands) {
             zpool: 'zones',
             dns_domain: 'local',
             tmpfs: 64,
-            limit_priv: 'default',
+            limit_priv: ['default'],
             billing_id: '01b2c898-945f-11e1-a523-af1afbe22822',
             zonepath: '/zones/91273098-cc0a-4fdd-9e6d-8f7496f3db80'
         };

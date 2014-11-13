@@ -118,18 +118,34 @@ echo "Retrieving tmpfs value..."
 tmpfs=$(/usr/sbin/mdata-get sdc:tmpfs)
 if [[ $? == 0 && -n ${tmpfs} && -f /etc/vfstab ]]; then
   check="swap        -   /tmp                tmpfs";
-  new="swap        -   /tmp                tmpfs    -   yes    size=${tmpfs}m";
-  if ! /usr/bin/grep "^${new}" /etc/vfstab; then
-    if ! /usr/bin/grep "^${check}" /etc/vfstab; then
-      # no tmpfs line. add it.
-      echo "${new}" >> /etc/vfstab
-    else
-      # existing tmpfs line, but wrong value. fix it.
-      /usr/bin/sed -i "" -e "s|^swap.*/tmp.*tmpfs.*$|${new}|" /etc/vfstab
-      echo $?
+
+  if [[ ${tmpfs} == "0" ]]; then
+    # When tmpfs is set 0, we remove any entry from /etc/vfstab but cannot
+    # adjust the "live" value as current /tmp will be in-use. On reboot the
+    # new value will take effect.
+
+    grep -v "^${check}" /etc/vfstab > /etc/vfstab.new \
+      && mv /etc/vfstab.new /etc/vfstab
+  else
+    new="swap        -   /tmp                tmpfs    -   yes    size=${tmpfs}m";
+    if ! /usr/bin/grep "^${new}" /etc/vfstab; then
+      if ! /usr/bin/grep "^${check}" /etc/vfstab; then
+        # no tmpfs line. add it.
+        echo "${new}" >> /etc/vfstab
+      else
+        # existing tmpfs line, but wrong value. fix it.
+        /usr/bin/sed -i "" -e "s|^swap.*/tmp.*tmpfs.*$|${new}|" /etc/vfstab
+        echo $?
+      fi
+
+      if mount | grep "^/tmp"; then
+        # Also fix current size, since /etc/vfstab didn't have our correct line
+        # but only if we have /tmp mounted at all. If not, we'll have to wait
+        # until the next reboot since /tmp will be in-use.
+        /usr/sbin/mount -F tmpfs -o remount,size=${tmpfs}m /tmp
+      fi
+
     fi
-    # also fix current size, since /etc/vfstab didn't have our correct line
-    /usr/sbin/mount -F tmpfs -o remount,size=${tmpfs}m /tmp
   fi
 fi
 

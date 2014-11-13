@@ -1,0 +1,33 @@
+{
+	"vdevs": [
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "disk1",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk2",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		}
+	],
+	"capacity": 600127266816,
+	"logs": [
+		{
+			"name": "disk0",
+			"vid": "MFG",
+			"pid": "SSD",
+			"size": "100030242816",
+			"solid_state": true
+		}
+	]
+}

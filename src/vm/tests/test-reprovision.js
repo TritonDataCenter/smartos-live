@@ -180,7 +180,7 @@ function trim(str, chars)
             }
 
             for (prop in vmobj) {
-                if (['last_modified', 'zoneid'].indexOf(prop) !== -1) {
+                if (['boot_timestamp', 'last_modified', 'pid', 'zoneid'].indexOf(prop) !== -1) {
                     // we expect these properties to be different.
                     continue;
                 }

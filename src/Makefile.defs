@@ -34,7 +34,8 @@ MAKE =		gmake
 PATH =		$(NATIVEDIR)/usr/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
 endif
 
-PARALLEL =	-j128
+MAX_JOBS =	128
+PARALLEL =	-j$(MAX_JOBS)
 GCC =		$(NATIVEDIR)/usr/bin/gcc
 GXX =		$(NATIVEDIR)/usr/bin/g++
 

@@ -2,7 +2,8 @@
 
 UNAME=$(uname -s)
 NODE=node
-NODEUNIT="test/node_modules/nodeunit/bin/nodeunit"
+TOP=$(unset CDPATH; cd $(dirname $0)/../; pwd)
+NODEUNIT="${TOP}/test/node_modules/nodeunit/bin/nodeunit"
 
 if [[ $UNAME == "SunOS" ]]; then
     NODE=/usr/node/0.10/bin/node

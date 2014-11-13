@@ -1,0 +1,71 @@
+{
+	"spares": [
+		{
+			"name": "disk6",
+			"vid": "MFG",
+			"pid": "DISK",
+			"size": "600127266816",
+			"solid_state": false
+		}
+	],
+	"vdevs": [
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "disk0",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk1",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		},
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "disk2",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk3",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		},
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "disk4",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk5",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		}
+	],
+	"capacity": 1800381800448
+}

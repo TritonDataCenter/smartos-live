@@ -30,24 +30,39 @@ exports.createJsonChunkParser = function (log, handler, delimeter) {
 exports.retryUntil = function (step, max, check, callback) {
     var waited = 0;
     var interval;
-    var stop = function () { clearInterval(interval); };
 
-    interval = setInterval(function () {
-        waited += step;
-        if (waited > max) {
-            stop();
-            callback(new Error('Timeout'));
+    check(function (error, abort) {
+        if (abort) {
+            callback(error);
             return;
         }
+        start();
+    });
 
-        check(function (error, abort) {
-            if (abort) {
+    function start() {
+        interval = setInterval(function () {
+            waited += step;
+            if (waited >= max) {
                 stop();
-                callback(error);
+                callback(new Error('Timeout'));
+                return;
             }
-        });
-    }, step);
+
+            check(function (error, abort) {
+                if (abort) {
+                    stop();
+                    callback(error);
+                    return;
+                }
+            });
+        }, step);
+    }
+
+    function stop() {
+        clearInterval(interval);
+    }
 };
+
 
 exports.isString = function (obj) {
     return Object.prototype.toString.call(obj) === '[object String]';

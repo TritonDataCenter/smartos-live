@@ -881,6 +881,40 @@ test('update resolvers when no resolvers', function (t) {
     });
 });
 
+test('update resolvers to empty when already empty', function (t) {
+    zonecfg(['-z', vm_uuid, 'remove attr name=resolvers;'], function (err, fds) {
+        VM.load(vm_uuid, function (err, before_obj) {
+            if (err) {
+                t.ok(false, 'loading VM: ' + err.message);
+                t.end();
+                return;
+            }
+
+            t.deepEqual(before_obj.resolvers, [], 'initial '
+                + 'state has no resolvers: ' + JSON.stringify(before_obj.resolvers));
+            VM.update(vm_uuid, {'resolvers': []}, function(err) {
+                if (err) {
+                    t.ok(false, 'updating resolvers: ' + err.message);
+                    t.end();
+                    return;
+                }
+
+                VM.load(vm_uuid, function (err, after_obj) {
+                    if (err) {
+                        t.ok(false, 'loading VM (after): ' + err.message);
+                        t.end();
+                        return;
+                    }
+
+                    t.deepEqual(after_obj.resolvers, [], 'no resolvers after update'
+                        + ': ' + JSON.stringify(after_obj.resolvers));
+                    t.end();
+                });
+            });
+        });
+    });
+});
+
 test('delete zone', function(t) {
     if (vm_uuid) {
         VM.delete(vm_uuid, function (err) {

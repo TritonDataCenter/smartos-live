@@ -73,8 +73,14 @@ JS_CHECK_TARGETS=\
 	img/lib/*.js \
 	img/sbin/imgadm \
 	vm/tests/test-alias.js \
+	vm/tests/test-docker.js \
 	vm/tests/test-fswatcher.js \
 	vm/tests/test-indestructible.js \
+	vm/tests/test-internal_metadata_namespaces.js \
+	vm/tests/test-reboot.js \
+	vm/tests/test-spoof-opts.js \
+	vm/tests/test-tmpfs.js \
+	vm/tests/test-vrrp-nics.js \
 	vm/tests/test-zonewatcher.js \
 	vm/tests/test-zpoolwatcher.js \
 	vm/lib/metadata/*.js

@@ -1,0 +1,80 @@
+{
+	"spares": [
+		{
+			"name": "disk8",
+			"vid": "INTEL",
+			"pid": "DCS3700",
+			"size": "800000000000",
+			"solid_state": true
+		}
+	],
+	"vdevs": [
+		{
+			"type": "raidz",
+			"devices": [
+				{
+					"name": "disk0",
+					"vid": "INTEL",
+					"pid": "DCS3700",
+					"size": "800000000000",
+					"solid_state": true
+				},
+				{
+					"name": "disk1",
+					"vid": "INTEL",
+					"pid": "DCS3700",
+					"size": "800000000000",
+					"solid_state": true
+				},
+				{
+					"name": "disk2",
+					"vid": "INTEL",
+					"pid": "DCS3700",
+					"size": "800000000000",
+					"solid_state": true
+				},
+				{
+					"name": "disk3",
+					"vid": "INTEL",
+					"pid": "DCS3700",
+					"size": "800000000000",
+					"solid_state": true
+				}
+			]
+		},
+		{
+			"type": "raidz",
+			"devices": [
+				{
+					"name": "disk4",
+					"vid": "INTEL",
+					"pid": "DCS3700",
+					"size": "800000000000",
+					"solid_state": true
+				},
+				{
+					"name": "disk5",
+					"vid": "INTEL",
+					"pid": "DCS3700",
+					"size": "800000000000",
+					"solid_state": true
+				},
+				{
+					"name": "disk6",
+					"vid": "INTEL",
+					"pid": "DCS3700",
+					"size": "800000000000",
+					"solid_state": true
+				},
+				{
+					"name": "disk7",
+					"vid": "INTEL",
+					"pid": "DCS3700",
+					"size": "800000000000",
+					"solid_state": true
+				}
+			]
+		}
+	],
+	"capacity": 4800000000000
+}

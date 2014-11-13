@@ -2,7 +2,7 @@
 
 ## Quickstart
 
-  * create/modify an appropriate configure.local fragment
+  * cp sample.configure.smartos configure.smartos
   * ./configure
   * gmake world
   * gmake live
@@ -16,16 +16,22 @@ collection of utilities comprising SmartOS-specific functionality
 found in projects/local; and implementation-specific overlays that deliver
 additional files verbatim.
 
-The build process accumulates from those various components a set of objects
-into a subdirectory of the smartos-live root.  This subdirectory is known as
-the proto area and by default is named proto.  All objects that are
-delivered by the platform are built against the contents of the proto area,
-such that they use the interfaces defined by the headers and libraries
-provided by the software being delivered rather than that installed on the
-build system.  However, not all objects installed into the proto area are
-delivered by the platform.  This allows objects in the platform to be built
-correctly without forcing us to deliver private objects in the platform that
-would conflict with objects delivered by pkgsrc into zones.
+The build procses occurs in two phases; the first phase is a bootstrap phase.
+The bootstrap phase uses the pkgsrc delivered compiler to build the set of items
+required to build illumos, this includes the compiler and various other
+components.  This process is driven from the illumos-extra repository and
+delivered into a subdirectory of the smartos-live root named proto.strap.
+
+Next, the build process accumulates from those various components a set of
+objects into a subdirectory of the smartos-live root.  This subdirectory is
+known as the proto area and by default is named proto.  All objects that are
+delivered by the platform are built against the contents of the proto area, such
+that they use the interfaces defined by the headers and libraries provided by
+the software being delivered rather than that installed on the build system.
+However, not all objects installed into the proto area are delivered by the
+platform.  This allows objects in the platform to be built correctly without
+forcing us to deliver private objects in the platform that would conflict with
+objects delivered by pkgsrc into zones.
 
 Each component (illumos, illumos-extra, illumos-live, and each subproject
 and overlay) includes a manifest.  The manifest lists the files installed
@@ -50,13 +56,10 @@ libraries and for linting illumos.  Hopefully this dependency will be
 removed in the future.
 
 Additional build tools are required to be present on the build system;
-configure (see below) will install them if you are building on an
-IPS-capable system, which is not supported nor recommended.  If you are
-building in a SmartOS zone, which is the supported and recommended practice,
-see http://wiki.smartos.org/display/DOC/Building+SmartOS+on+SmartOS for zone
-setup instructions.  The existence and necessity of the "fake-subset" is a
-bug that should be addressed by incorporating build-time tools into the
-build process itself in the manner of usr/src/tools in illumos.
+configure (see below) will install them if you are building in a SmartOS
+zone, which is the supported and recommended practice, see
+http://wiki.smartos.org/display/DOC/Building+SmartOS+on+SmartOS for zone
+setup instructions. 
 
 ## Build Steps
 
@@ -64,10 +67,9 @@ The configure script sets everything up for building including:
 
   * ensures system has required packages installed (and is running on illumos!)
   * ensures SUNWspro is installed in `/opt/SUNWspro`
-  * downloads and installs gcc 4.4.4 in `/opt/gcc/4.4.4`
   * ensures that `projects/illumos` exists and creates `illumos.sh` there
   * ensures that `projects/illumos-extra` exists
-  * downloads the opensolaris manpages
+  * optional: set the environment variable MAX_JOBS to set build job concurrency (useful for small systems)
 
 ### The "make world" works as follows:
 
@@ -77,14 +79,16 @@ The configure script sets everything up for building including:
 
   * The illumos source in projects/illumos (can be a link) is built with the
     aid of tools/build_illumos and installed into the proto area.  The
-    compiler used is the one installed in `/opt/gcc/4.4.4`; this is a bug
-    covered by OS-1324.
+    compiler used is the one built in the first phase.
 
   * All illumos-extra components are built and installed into the proto
     area.
 
   * The local sources in the `src` subdirectory are built and installed into
     the proto area.
+
+  * Any extra projects found in the directory projects/local, by default kvm and
+    kvm-cmd, are built and installed into the proto area.
 
 ### The "make live" uses the tools/build_live script as follows:
 
@@ -114,6 +118,14 @@ The configure script sets everything up for building including:
     which case the failure to stop that build at that point is also a build
     system bug).
 
+## Creating additional build artifacts
+
+By default, the build only generates the `platform-BUILDSTAMP.tgz` file. This
+may also be transformed into a CD-ROM ISO image and a USB key image. To
+transform it into a CD-ROM ISO image, one may use the `./tools/build_iso`
+script. To transform it into a USB image, one should use the `./tools/build_usb`
+script.
+
 ## Known Issues
 
   * There are still a small number of illumos-extra components that do not
@@ -123,8 +135,6 @@ The configure script sets everything up for building including:
   * python should be part of illumos-extra, as there are a small number of
     tools delivered that use it. (TBD)
 
-  * The illumos-extra gcc 4.4.4 should be used to build illumos. (OS-1324)	
-
   * While there should never be a delivered object with build environment
     DT_RPATH leakage, there is currently no tool for checking this.
     (OS-1122)
@@ -133,11 +143,6 @@ The configure script sets everything up for building including:
     the platform have no dependencies outside the platform.  This includes
     both runtime library linking and the execution of interpreters.
     (OS-1122)
-
-  * The fake-subset tarball, and likely the adjuncts tarball as well,
-    contains files that are no longer needed.  These should be pruned
-    aggressively so that we can use them as an inventory of remaining bugs
-    to be fixed. (OS-1326)
 
   * illumos-extra recurses over all components even during an incremental
     build.  This is time-consuming and usually pointless. (OS-1319)	
@@ -155,11 +160,6 @@ The configure script sets everything up for building including:
 Changes for any of the above issues, or any other bug you encounter, are
 welcome and may be submitted via the appropriate github repository.
 Additional issues may also be filed there.
-
-In order to accept patches, Joyent requires contributors to sign a
-Contributor agreement, available at
-https://download.joyent.com/pub/cla_smartos.pdf.  Please fill out this form
-and email to smartos@joyent.com prior to sending pull requests or patches.
 
 ## Other Notes
 

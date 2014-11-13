@@ -1137,7 +1137,7 @@ IMGADM.prototype.sourcesList = function sourcesList(callback) {
                     //   our marker
                     // - concat to full list of images
                     if (!limit) {
-                        limit = res.headers['x-query-limit'] || 1000;
+                        limit = 1000;
                     }
                     if (sImages.length < limit) {
                         stop = true;

@@ -655,7 +655,7 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, callback) {
         var beforeText = before.join('\n')
             + '\n\n'
             + '#\n'
-            + '# Enter source URLs, on per line.\n'
+            + '# Enter source URLs, one per line.\n'
             + '# Comments beginning with "#" are stripped.\n'
             + '#\n';
         var tmpPath = path.resolve(os.tmpDir(),

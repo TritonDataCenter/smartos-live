@@ -1,0 +1,9 @@
+You cannot technically run this on the build machine, because you won't
+get the correct platform node and modules.  However, in general, you
+want something like:
+
+$ for f in *.di; do disklayout -f $f > /var/tmp/$f.out; diff -u $f.out /var/tmp/$f.out; rm -f /var/tmp/$f.out; done
+
+If you insist on trying on the build machine, first do:
+
+# mount -o ro -O -F lofs src/node_modules/disklayout.js /usr/node/0.10/node_modules/disklayout.js

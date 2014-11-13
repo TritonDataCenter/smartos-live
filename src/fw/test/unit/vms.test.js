@@ -42,8 +42,7 @@ function vmsExpected(t, payload, exp) {
             return t.done();
         }
 
-        t.deepEqual(res.sort(helpers.uuidSort), exp.sort(helpers.uuidSort),
-            'expected return');
+        t.deepEqual(res.sort(), exp.sort(), 'expected return');
         return t.done();
     });
 }
@@ -219,6 +218,32 @@ exports['rule disabled'] = function (t) {
     };
 
     vmsExpected(t, payload, [ vm.uuid ]);
+};
+
+
+exports['ip, vm, vm -> ip, vm, vm'] = function (t) {
+    var owners = [ mod_uuid.v4() ];
+    var otherVM = mod_uuid.v4();
+
+    d.vms = [
+        helpers.generateVM({
+            owner_uuid: owners[0]
+        })
+    ];
+
+    var payload = {
+        rule: {
+            enabled: true,
+            owner_uuid: owners[0],
+            rule: util.format('FROM (ip 239.0.0.1 OR vm %s OR vm %s) '
+                + 'TO (ip 239.0.0.1 OR vm %s OR vm %s) '
+                + 'ALLOW udp (PORT 4803 AND PORT 4804)',
+                otherVM, d.vms[0].uuid, otherVM, d.vms[0].uuid)
+        },
+        vms: d.vms
+    };
+
+    vmsExpected(t, payload, [ d.vms[0].uuid ]);
 };
 
 

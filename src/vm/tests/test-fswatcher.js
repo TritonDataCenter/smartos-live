@@ -485,7 +485,6 @@ test('watch some files then kill the fswatcher child, then modify files',
         var filename2 = path.join(testdir, 'killtest-2');
         var fsw = new FsWatcher({log: log, dedup_ns: 2000000000});
         var scoreboard = {};
-        var started = false;
 
         fs.writeFileSync(filename1, 'initial data 1\n');
         fs.writeFileSync(filename2, 'initial data 2\n');

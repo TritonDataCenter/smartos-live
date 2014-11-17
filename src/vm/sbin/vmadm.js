@@ -90,6 +90,8 @@ var LIST_FIELDS = {
     dns_domain: {header: 'DOMAIN', width: 32},
     do_not_inventory: {header: 'DNI', width: 5},
     docker: {header: 'DOCKER', width: 6},
+    exit_status: {header: 'EXIT', width: 4},
+    exit_timestamp: {header: 'EXIT_TIMESTAMP', width: 24},
     firewall_enabled: {header: 'FIREWALL_ENABLED', width: 16},
     hostname: {header: 'HOSTNAME', width: 32},
     image_uuid: {header: 'IMAGE_UUID', width: 36},
@@ -543,6 +545,7 @@ function outputVMListLine(order_fields, m, options)
 {
     var args = [];
     var field;
+    var flat;
     var fmt = '';
     var output;
     var value;
@@ -560,12 +563,15 @@ function outputVMListLine(order_fields, m, options)
         if (!m) {
             // This is special case to just write the header.
             value = getListProperties(field).header;
-        } else if (VM.flatten(m, field)) {
-            value = VM.flatten(m, field).toString();
-        } else if (options.parsable) {
-            value = '';
         } else {
-            value = '-';
+            flat = VM.flatten(m, field);
+            if (flat || flat === 0) {
+                value = flat.toString();
+            } else if (options.parsable) {
+                value = '';
+            } else {
+                value = '-';
+            }
         }
 
         if (options.parsable) {

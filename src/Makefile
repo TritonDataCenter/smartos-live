@@ -77,6 +77,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-fswatcher.js \
 	vm/tests/test-indestructible.js \
 	vm/tests/test-internal_metadata_namespaces.js \
+	vm/tests/test-lastexited.js \
 	vm/tests/test-reboot.js \
 	vm/tests/test-spoof-opts.js \
 	vm/tests/test-tmpfs.js \

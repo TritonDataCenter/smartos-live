@@ -54,12 +54,25 @@ function getDockerFlags(t, state, cb) {
         }
 
         results.docker = !!obj.docker;
+
+        if (obj.restart_init === false) {
+            results.restart_init = false;
+        } else {
+            results.restart_init = true;
+        }
+
         if (obj.hasOwnProperty('internal_metadata')
             && obj.internal_metadata['docker:id']) {
 
             results.docker_id = obj.internal_metadata['docker:id'];
         } else {
             results.docker_id = false;
+        }
+
+        if (obj.hasOwnProperty('init_name')) {
+            results.init_name = obj.init_name;
+        } else {
+            results.init_name = '';
         }
 
         if (obj.hasOwnProperty('internal_metadata_namespaces')
@@ -96,6 +109,9 @@ test('test docker=true on new VM', function (t) {
                 t.ok(flags.docker_id, 'docker:id set after create: '
                     + flags.docker_id);
                 t.ok(flags.docker_ns, 'docker namespaces set after create');
+                t.ok(!flags.restart_init, 'restart_init is false after create');
+                t.equal(flags.init_name, '/usr/vm/sbin/dockerinit',
+                    'init_name correct after create');
                 cb();
             });
         }, function (cb) {
@@ -231,6 +247,8 @@ test('test adding docker=true on old VM', function (t) {
                 t.ok(!flags.docker, 'docker flag set false after create');
                 t.ok(!flags.docker_id, 'docker:id not set after create');
                 t.ok(!flags.docker_ns, 'docker namespace not set after create');
+                t.ok(flags.restart_init, 'restart_init is true after create');
+                t.equal(flags.init_name, '', 'init_name empty after create');
 
                 cb();
             });
@@ -252,55 +270,9 @@ test('test adding docker=true on old VM', function (t) {
                 t.ok(flags.docker_id, 'docker:id set after update: '
                     + flags.docker_id);
                 t.ok(flags.docker_ns, 'docker namespaces set after update');
-                cb();
-            });
-        }
-    ]);
-});
-
-test('test stop docker VM w/ suicidal init', function (t) {
-    var payload = JSON.parse(JSON.stringify(common_payload));
-    var state = {brand: payload.brand};
-
-    payload.uuid = libuuid.create();
-    payload.docker = true;
-    payload.autoboot = true;
-    payload.init_name = '/bin/sh'; // found by accident, this exits leaving zone
-
-    // pretend init moves /var/svc/provisioning
-    setTimeout(function () {
-        fs.renameSync('/zones/' + payload.uuid + '/root/var/svc/provisioning',
-            '/zones/' + payload.uuid + '/root/var/svc/provision_success');
-    }, 2000);
-
-    vmtest.on_new_vm(t, image_uuid, payload, state, [
-        function (cb) {
-            VM.load(state.uuid, function (err, obj) {
-                t.ok(!err, 'loading obj for new VM');
-                if (err) {
-                    cb(err);
-                    return;
-                }
-
-                t.equal(obj.state, 'running', 'VM is running');
-                t.equal(obj.pid, 4294967295, 'VM has UINT32_MAX PID: '
-                    + obj.pid);
-                cb();
-            });
-        }, function (cb) {
-            VM.stop(state.uuid, {}, function (err) {
-                t.ok(!err, 'stopped VM: ' + (err ? err.message : 'success'));
-                cb();
-            });
-        }, function (cb) {
-            VM.load(state.uuid, function (err, obj) {
-                t.ok(!err, 'loading obj for new VM');
-                if (err) {
-                    cb(err);
-                    return;
-                }
-
-                t.equal(obj.state, 'stopped', 'VM is stopped');
+                t.ok(!flags.restart_init, 'restart_init is false after create');
+                t.equal(flags.init_name, '/usr/vm/sbin/dockerinit',
+                    'init_name correct after create');
                 cb();
             });
         }

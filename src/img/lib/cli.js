@@ -892,6 +892,7 @@ var listValidFields = [
     'type',
     'os',
     'urn',
+    'origin',
     'nic_driver',
     'disk_driver',
     'cpu_type',

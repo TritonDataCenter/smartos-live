@@ -37,26 +37,28 @@
  */
 
 var p = console.warn;
-var path = require('path');
-var fs = require('fs');
-var util = require('util'),
-    format = util.format;
+
 var assert = require('assert-plus');
-var crypto = require('crypto');
 var async = require('async');
 var child_process = require('child_process'),
     spawn = child_process.spawn,
     exec = child_process.exec;
-var url = require('url');
-var mkdirp = require('mkdirp');
-var ProgressBar = require('progbar').ProgressBar;
-var imgapi = require('sdc-clients/lib/imgapi');
+var crypto = require('crypto');
 var dsapi = require('sdc-clients/lib/dsapi');
-var zfs = require('/usr/node/node_modules/zfs.js').zfs;
-var imgmanifest = require('imgmanifest');
+var fs = require('fs');
 var genUuid = require('node-uuid');
-var rimraf = require('rimraf');
+var imgapi = require('sdc-clients/lib/imgapi');
+var imgmanifest = require('imgmanifest');
 var lock = require('/usr/img/node_modules/locker').lock;
+var mkdirp = require('mkdirp');
+var path = require('path');
+var ProgressBar = require('progbar').ProgressBar;
+var rimraf = require('rimraf');
+var url = require('url');
+var util = require('util'),
+    format = util.format;
+var vasync = require('vasync');
+var zfs = require('/usr/node/node_modules/zfs.js').zfs;
 
 var common = require('./common'),
     NAME = common.NAME,
@@ -82,6 +84,7 @@ var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 var UA = 'imgadm/' + common.getVersion()
     + ' (' + 'node/' + process.versions.node + '; '
     + 'OpenSSL/' + process.versions.openssl + ')';
+
 
 
 // ---- internal support stuff
@@ -282,6 +285,7 @@ function getZfsDataset(name, properties, callback) {
 }
 
 
+// TODO: persist "?channel=<channel>"
 function normUrlFromUrl(u) {
     // `url.parse('example.com:9999')` is not what you expect. Make sure we
     // have a protocol.
@@ -1494,33 +1498,26 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         return;
     }
 
-    // Data processed in the waterfall below.
-    var imageInfo = {
-        manifest: manifest,
-        zpool: options.zpool,
-        source: options.source
+    // Context object for the pipeline below (and called helpers).
+    var ctx = {
+        imageInfo: {
+            manifest: manifest,
+            zpool: options.zpool,
+            source: options.source
+        },
+        lockPath: self._lockPathFromUuid(uuid),
+        dsName: format('%s/%s', options.zpool, uuid),
+        quiet: options.quiet
     };
-    var dsName = format('%s/%s', options.zpool, uuid);
-    var partialDsName;  // set when the 'zfs receive' begins
-    var bar = null;  // progress-bar object
-    var md5Hash = null;
-    var sha1Hash = null;
-    var md5Expected = null;
-    var lockPath = self._lockPathFromUuid(uuid);
-    var unlock;
-    var doTheImport;  // determined after getting the import lock
-    var fileInfo;
-    var localOriginInfo;
-    var acquireLogTimeout;
 
-    async.waterfall([
+    vasync.pipeline({arg: ctx, funcs: [
         /**
          * If this image has an origin, need to ensure it is installed first.
          * If we're streaming from a given IMGAPI `source` then we can try
          * to get the origin as well. If we're just given a file, then nothing
          * we can do.
          */
-        function getOrigin(next) {
+        function getOrigin(ctx, next) {
             if (!manifest.origin) {
                 next();
                 return;
@@ -1530,16 +1527,16 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                 zpool: options.zpool
             };
             self.getImage(getOpts, function (getErr, oi) {
-                localOriginInfo = oi;
+                ctx.localOriginInfo = oi;
                 next(getErr);
             });
         },
-        function ensureOrigin(next) {
+        function ensureOrigin(ctx, next) {
             if (!manifest.origin) {
                 next();
                 return;
             }
-            if (localOriginInfo) {
+            if (ctx.localOriginInfo) {
                 next();
             } else if (options.file) {
                 next(new errors.OriginNotInstalledError(options.zpool,
@@ -1552,7 +1549,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                 var getOpts = {
                     uuid: manifest.origin,
                     ensureActive: true,
-                    sources: [imageInfo.source]
+                    sources: [ctx.imageInfo.source]
                 };
                 self.sourcesGet(getOpts, function (err, originInfo) {
                     if (err) {
@@ -1560,7 +1557,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                         return;
                     } else if (!originInfo) {
                         next(new errors.OriginNotFoundInSourceError(
-                            manifest.origin, imageInfo.source));
+                            manifest.origin, ctx.imageInfo.source));
                         return;
                     }
                     logCb(format('Importing origin image %s (%s@%s) from "%s"',
@@ -1577,25 +1574,25 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             }
         },
 
-        function acquireLock(next) {
-            acquireLogTimeout = setTimeout(function () {
+        function acquireLock(ctx, next) {
+            var acquireLogTimeout = setTimeout(function () {
                 logCb(format('Waiting for image %s import lock', uuid));
             }, 1000);
-            log.debug({lockPath: lockPath}, 'acquire lock');
-            lock(lockPath, function (lockErr, unlock_) {
+            log.debug({lockPath: ctx.lockPath}, 'acquire lock');
+            lock(ctx.lockPath, function (lockErr, unlockFn_) {
+                if (acquireLogTimeout) {
+                    clearTimeout(acquireLogTimeout);
+                }
                 if (lockErr) {
                     next(new errors.InternalError({
                         message: 'error acquiring lock',
-                        lockPath: lockPath,
+                        lockPath: ctx.lockPath,
                         cause: lockErr
                     }));
                     return;
                 }
-                log.debug({lockPath: lockPath}, 'acquired lock');
-                if (acquireLogTimeout) {
-                    clearTimeout(acquireLogTimeout);
-                }
-                unlock = unlock_;
+                log.debug({lockPath: ctx.lockPath}, 'acquired lock');
+                ctx.unlockFn = unlockFn_;
                 next();
             });
         },
@@ -1603,7 +1600,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         /**
          * While waiting for the lock the image could have been imported.
          */
-        function checkIfImportedAfterLock(next) {
+        function checkIfImportedAfterLock(ctx, next) {
             var getOpts = {
                 uuid: uuid,
                 zpool: options.zpool
@@ -1613,22 +1610,17 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                     next(getErr);
                     return;
                 } else if (ii) {
-                    logCb(format('Image %s (%s %s) was imported while '
+                    logCb(format('Image %s (%s@%s) was imported while '
                         + 'waiting on lock', uuid, ii.manifest.name,
                         ii.manifest.version));
-                    doTheImport = false;
+                    next(true);  // `true` means early abort
                 } else {
-                    doTheImport = true;
+                    next();
                 }
-                next();
             });
         },
 
-        function getImageFileInfo(next) {
-            if (!doTheImport) {
-                next();
-                return;
-            }
+        function getImageFileInfo(ctx, next) {
             if (options.file) {
                 fs.stat(options.file, function (statErr, stats) {
                     if (statErr) {
@@ -1636,7 +1628,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                         return;
                     }
                     var stream = fs.createReadStream(options.file);
-                    fileInfo = {
+                    ctx.fileInfo = {
                         stream: stream,
                         size: stats.size
                     };
@@ -1644,19 +1636,19 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                 });
             } else {
                 assert.ok(options.source);
-                self.sourceGetFileStream(imageInfo, function (err, stream) {
+                self.sourceGetFileStream(ctx.imageInfo, function (err, stream) {
                     if (err) {
                         next(err);
                         return;
                     }
-                    if (imageInfo.source.type !== 'dsapi'
+                    if (ctx.imageInfo.source.type !== 'dsapi'
                         && !stream.headers['content-md5'])
                     {
                         next(new errors.DownloadError('image file headers '
                             + 'did not include a "Content-MD5"'));
                         return;
                     }
-                    fileInfo = {
+                    ctx.fileInfo = {
                         stream: stream,
                         size: Number(stream.headers['content-length']),
                         contentMd5: stream.headers['content-md5']
@@ -1671,12 +1663,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
          *      | inflator (if necessary) \     [B]
          *      | zfs recv                      [C]
          */
-        function recvTheDataset(next) {
-            if (!doTheImport) {
-                next();
-                return;
-            }
-
+        function recvTheDataset(ctx, next) {
             // To complete this stage we want to wait for all of:
             // 1. the 'zfs receive' process to 'exit'.
             // 2. the compressor process to 'exit' (if we are compressing)
@@ -1701,24 +1688,23 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                 }
             }
 
-            if (!options.quiet && process.stderr.isTTY) {
-                bar = new ProgressBar({
-                    size: fileInfo.size,
+            if (!ctx.quiet && process.stderr.isTTY) {
+                ctx.bar = new ProgressBar({
+                    size: ctx.fileInfo.size,
                     filename: uuid
                 });
             }
 
             // [A]
-            md5Expected = fileInfo.contentMd5;
-            md5Hash = crypto.createHash('md5');
-            sha1Hash = crypto.createHash('sha1');
-            fileInfo.stream.on('data', function (chunk) {
-                if (bar)
-                    bar.advance(chunk.length);
-                md5Hash.update(chunk);
-                sha1Hash.update(chunk);
+            ctx.md5Hash = crypto.createHash('md5');
+            ctx.sha1Hash = crypto.createHash('sha1');
+            ctx.fileInfo.stream.on('data', function (chunk) {
+                if (ctx.bar)
+                    ctx.bar.advance(chunk.length);
+                ctx.md5Hash.update(chunk);
+                ctx.sha1Hash.update(chunk);
             });
-            fileInfo.stream.on('error', finish);
+            ctx.fileInfo.stream.on('error', finish);
 
             // [B]
             var compression = manifest.files[0].compression;
@@ -1760,8 +1746,8 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             }
 
             // [C]
-            partialDsName = dsName + '-partial';
-            var zfsRecv = spawn('/usr/sbin/zfs', ['receive', partialDsName]);
+            ctx.partialDsName = ctx.dsName + '-partial';
+            var zfsRecv = spawn('/usr/sbin/zfs', ['receive', ctx.partialDsName]);
             zfsRecv.stderr.on('data', function (chunk) {
                 console.error('Stderr from zfs receive: %s',
                     chunk.toString());
@@ -1787,28 +1773,24 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
 
             if (uncompressor) {
                 uncompressor.stdout.pipe(zfsRecv.stdin);
-                fileInfo.stream.pipe(uncompressor.stdin);
+                ctx.fileInfo.stream.pipe(uncompressor.stdin);
             } else {
-                fileInfo.stream.pipe(zfsRecv.stdin);
+                ctx.fileInfo.stream.pipe(zfsRecv.stdin);
             }
-            fileInfo.stream.resume();
+            ctx.fileInfo.stream.resume();
         },
 
         /**
          * Ensure the streamed image data matches expected checksums.
          */
-        function checksum(next) {
-            if (!doTheImport) {
-                next();
-                return;
-            }
-
+        function checksum(ctx, next) {
             var err;
 
             // We have a content-md5 from the headers if the is was streamed
             // from an IMGAPI.
+            var md5Expected = ctx.fileInfo.contentMd5;
             if (md5Expected) {
-                var md5Actual = md5Hash.digest('base64');
+                var md5Actual = ctx.md5Hash.digest('base64');
                 if (md5Actual !== md5Expected) {
                     err = new errors.DownloadError(format(
                         'Content-MD5 expected to be %s, but was %s',
@@ -1817,7 +1799,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             }
 
             var sha1Expected = manifest.files[0].sha1;
-            var sha1Actual = sha1Hash.digest('hex');
+            var sha1Actual = ctx.sha1Hash.digest('hex');
             if (sha1Expected && sha1Actual !== sha1Expected) {
                 err = new errors.DownloadError(format(
                     'image file sha1 expected to be %s, but was %s',
@@ -1837,14 +1819,9 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
          * Here we ensure that the snapshot for this image is called "@final",
          * renaming it if necessary.
          */
-        function ensureFinalSnapshot(next) {
-            if (!doTheImport) {
-                next();
-                return;
-            }
-
+        function ensureFinalSnapshot(ctx, next) {
             var properties = ['name', 'children'];
-            getZfsDataset(partialDsName, properties, function (zErr, ds) {
+            getZfsDataset(ctx.partialDsName, properties, function (zErr, ds) {
                 if (zErr) {
                     next(zErr);
                     return;
@@ -1870,20 +1847,15 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
          * We recv'd the dataset to a "...-partial" temporary name. Rename it to
          * the final name.
          */
-        function renameToFinalDsName(next) {
-            if (!doTheImport) {
-                next();
-                return;
-            }
-
+        function renameToFinalDsName(ctx, next) {
             var cmd = format('/usr/sbin/zfs rename %s %s',
-                partialDsName, dsName);
+                ctx.partialDsName, ctx.dsName);
             log.trace({cmd: cmd}, 'rename tmp image');
             exec(cmd, function (err, stdout, stderr) {
                 if (err) {
                     log.error({cmd: cmd, err: err, stdout: stdout,
-                        stderr: stderr, partialDsName: partialDsName,
-                        dsName: dsName}, 'error renaming imported image');
+                        stderr: stderr, partialDsName: ctx.partialDsName,
+                        dsName: ctx.dsName}, 'error renaming imported image');
                     next(new errors.InternalError(
                         {message: 'error importing'}));
                 } else {
@@ -1892,20 +1864,15 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             });
         },
 
-        function saveManifestToDb(next) {
-            if (!doTheImport) {
-                next();
-                return;
-            }
-
+        function saveManifestToDb(ctx, next) {
             // On error, rollback uses `partialDsName`. Now that we've renamed
             // the dataset, make sure that *it* gets cleaned if saving the
             // manifest fails.
-            partialDsName = dsName;
+            ctx.partialDsName = ctx.dsName;
 
-            self.dbAddImage(imageInfo, function (addErr) {
+            self.dbAddImage(ctx.imageInfo, function (addErr) {
                 if (addErr) {
-                    log.error({err: addErr, imageInfo: imageInfo},
+                    log.error({err: addErr, imageInfo: ctx.imageInfo},
                         'error saving image to the database');
                     next(new errors.InternalError(
                         {message: 'error saving image manifest'}));
@@ -1915,28 +1882,34 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             });
         }
 
-    ], function finishUp(err) {
-        async.series([
-            function stopProgressBar(next) {
-                if (bar) {
-                    bar.end();
+    ]}, function finishUp(err) {
+        var didTheImport = true;
+        if (err === true) {
+            // This is the sign that the image was already imported.
+            err = null;
+            didTheImport = false;
+        }
+        vasync.pipeline({funcs: [
+            function stopProgressBar(_, next) {
+                if (ctx.bar) {
+                    ctx.bar.end();
                 }
                 next();
             },
-            function rollbackPartialDsIfNecessary(next) {
-                if (err && partialDsName) {
+            function rollbackPartialDsIfNecessary(_, next) {
+                if (err && ctx.partialDsName) {
                     // Rollback the currently installed dataset, if necessary.
                     // Silently fail here (i.e. only log at trace level) because
                     // it is possible we errored out before the -partial dataset
                     // was created.
                     var cmd = format('/usr/sbin/zfs destroy -r %s',
-                        partialDsName);
+                        ctx.partialDsName);
                     exec(cmd, function (rollbackErr, stdout, stderr) {
                         if (rollbackErr) {
                             log.trace({cmd: cmd, err: rollbackErr,
                                 stdout: stdout,
                                 stderr: stderr,
-                                rollbackDsName: partialDsName},
+                                rollbackDsName: ctx.partialDsName},
                                 'error destroying dataset while rolling back');
                         }
                         next();
@@ -1945,27 +1918,27 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                     next();
                 }
             },
-            function releaseLock(next) {
-                if (!unlock) {
+            function releaseLock(_, next) {
+                if (!ctx.unlockFn) {
                     next();
                     return;
                 }
-                log.debug({lockPath: lockPath}, 'releasing lock');
-                unlock(function (unlockErr) {
+                log.debug({lockPath: ctx.lockPath}, 'releasing lock');
+                ctx.unlockFn(function (unlockErr) {
                     if (unlockErr) {
                         next(new errors.InternalError({
                             message: 'error releasing lock',
-                            lockPath: lockPath,
+                            lockPath: ctx.lockPath,
                             cause: unlockErr
                         }));
                         return;
                     }
-                    log.debug({lockPath: lockPath}, 'released lock');
+                    log.debug({lockPath: ctx.lockPath}, 'released lock');
                     next();
                 });
             },
-            function noteCompletion(next) {
-                if (doTheImport) {
+            function noteCompletion(_, next) {
+                if (didTheImport) {
                     logCb(format('%s image %s (%s@%s) to "%s/%s"',
                         (options.file ? 'Installed' : 'Imported'),
                         uuid,
@@ -1976,7 +1949,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                 }
                 next();
             }
-        ], function done(finishUpErr) {
+        ]}, function done(finishUpErr) {
             // We shouldn't ever get a `finishUpErr`. Let's be loud if we do.
             if (finishUpErr) {
                 log.fatal({err: finishUpErr},

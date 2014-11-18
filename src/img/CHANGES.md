@@ -1,5 +1,14 @@
 # imgadm changelog
 
+## 2.7.0
+
+- Add preliminary support for importing images of `type: 'docker'`,
+  where the image file content is the native Docker image format
+  (a tarball of changed files with ".wh*" AUFS whiteout files).
+  Note that this still implies using an IMGAPI source for pulling
+  images -- pulling from the Docker Index/Registry API is not
+  supported in this change.
+
 ## 2.6.13
 
 - [OS-2989] Fix 'imgadm import UUID' *when importing from a DSAPI source*

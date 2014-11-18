@@ -77,7 +77,7 @@ test('setup: ensure images.joyent.com source', function (t) {
 
 test('setup: get test image in local SDC IMGAPI (if available)', function (t) {
     var cmd = 'sdc-imgadm import ' + TEST_IMAGE_UUID +
-        ' -S https://images.joyent.com --skip-owner-check || true';
+        ' -S https://images.joyent.com || true';
     exec(cmd, function (err, o, e) {
         t.ifError(err);
         t.end();

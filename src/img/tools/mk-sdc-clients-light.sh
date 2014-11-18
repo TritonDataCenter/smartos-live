@@ -122,6 +122,11 @@ fi
     && rm -rf formatters plugins request.js response.js \
         router.js server.js)
 
+# restify needs this
+npm install semver
+(cd node_modules/semver \
+    && rm -rf .[a-z]* bin *.browser.js* *.min.js* README* Makefile test *.js.txt)
+
 # assert-plus
 npm install assert-plus
 
@@ -244,15 +249,15 @@ patch -p0 <<PATCH
          var bunyan = require('./bunyan_helper');
 --- node_modules/restify/lib/dtrace.js
 +++ node_modules/restify/lib/dtrace.js
-@@ -38,7 +38,7 @@
+@@ -36,7 +36,7 @@
  module.exports = function exportStaticProvider() {
-         if (!PROVIDER) {
-                 try {
--                        var dtrace = require('dtrace-provider');
-+                        var dtrace = require('/usr/node/node_modules/dtrace-provider');
-                         PROVIDER = dtrace.createDTraceProvider('restify');
-                 } catch (e) {
-                         PROVIDER = {
+     if (!PROVIDER) {
+         try {
+-            var dtrace = require('dtrace-provider');
++            var dtrace = require('/usr/node/node_modules/dtrace-provider');
+             PROVIDER = dtrace.createDTraceProvider('restify');
+         } catch (e) {
+             PROVIDER = {
 PATCH
 
 

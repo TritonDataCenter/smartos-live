@@ -1,0 +1,5 @@
+joyent-mdata-client (0.0.1-1); urgency=low
+
+  * Initial packaging for Joyent repository.
+
+ -- Joshua M. Clulow <jmc@joyent.com>  Wed, 06 Nov 2013 16:54:10 -0800

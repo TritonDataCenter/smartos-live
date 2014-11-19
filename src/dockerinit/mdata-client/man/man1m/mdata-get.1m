@@ -1,0 +1,90 @@
+.\" Copyright (c) 2013, Joyent, Inc.
+.\" See LICENSE file for copyright and license details.
+
+.TH "MDATA-GET" "__SECT__" "October 2013" "Joyent SmartDataCenter" "Metadata Commands"
+
+.SH "NAME"
+\fBmdata-get\fR \-\- Fetch the value of a metadata key-value pair\.
+
+.SH "SYNOPSIS"
+.
+.nf
+\fB/usr/sbin/mdata-get\fR \fIkeyname\fR
+.fi
+
+.SH "DESCRIPTION"
+.sp
+.LP
+The \fBmdata-get\fR command allows the user (or a script) to query the metadata
+for a guest instance running in a \fISmartDataCenter (SDC)\fR cloud.  Metadata
+values are generally set programmatically via \fICloudAPI\fR, or during
+interactive provisioning via a Web Portal.  They may also be set from within
+the instance with the \fBmdata-put\fR command.
+.sp
+.LP
+The value of the requested \fIkeyname\fR will be printed to \fBstdout\fR.  If
+the metadata service is unavailable at the time of the request, this command
+will block waiting for it to become available.  Non-transient failures, such
+as the non-existence of the requested \fIkeyname\fR, will cause the program
+to exit with a non-zero status.  Depending on the nature of the error, some
+diagnostic output may be printed to \fBstderr\fR.
+
+.SH "EXIT STATUS"
+.sp
+.LP
+The following exit values are returned:
+
+.sp
+.ne 2
+.na
+\fB0\fR
+.ad
+.RS 5n
+Successful completion.
+.sp
+The requested \fIkeyname\fR was available, and its value was emitted to
+\fBstdout\fR.
+.RE
+
+.sp
+.ne 2
+.na
+\fB1\fR
+.ad
+.RS 5n
+Metadata value not found.
+.sp
+The requested \fIkeyname\fR was not found in the metadata.
+.RE
+
+.sp
+.ne 2
+.na
+\fB2\fR
+.ad
+.RS 5n
+An error occurred.
+.sp
+An unexpected error condition occurred, which is believed to be a
+non-transient condition.  Retrying the request is not expected to
+resolve the error condition; either a software bug or misconfiguration
+exists.
+.RE
+
+.sp
+.ne 2
+.na
+\fB3\fR
+.ad
+.RS 5n
+A usage error occurred.
+.sp
+Malformed arguments were passed to the program.  Check the usage instructions
+to ensure valid arguments are supplied.
+.RE
+
+.SH "SEE ALSO"
+.sp
+.LP
+\fBmdata-delete\fR(__SECT__), \fBmdata-list\fR(__SECT__),
+\fBmdata-put\fR(__SECT__)

@@ -1,0 +1,6 @@
+mdata-client/mdata-delete
+mdata-client/mdata-get
+mdata-client/mdata-list
+mdata-client/mdata-put
+build/dockerinit
+*.o

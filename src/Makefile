@@ -290,6 +290,7 @@ ZUTIL_BINDINGS.NODE =	$(ZUTIL_SRCDIR)/../lib/zutil_bindings.node
 #
 TARGETS = \
 	bootparams \
+	dockerinit/build/dockerinit \
 	diskinfo \
 	disklayout \
 	disklist \
@@ -373,6 +374,7 @@ install: all
 	sed -e "s|var expat.*;|var expat = require('./expat_binding');|" \
 	    < node-expat/lib/node-expat.js \
 	    > $(PREFIX_NODE)/node_modules/node-expat.js
+	cp dockerinit/build/dockerinit $(DESTDIR)/usr/vm/sbin/dockerinit
 	cp zoneevent $(DESTDIR)/usr/vm/sbin/zoneevent
 	cp zfs_send $(DESTDIR)/usr/vm/sbin/zfs_send
 	cp zfs_recv $(DESTDIR)/usr/vm/sbin/zfs_recv
@@ -432,6 +434,7 @@ check: $(JSLINT)
 		echo $(PWD)/$$file; \
 		$(CSTYLE) $$file; \
 	done)
+	@(cd $(PWD)/dockerinit && $(MAKE) check)
 	@printf "\nC files ok!\n"
 	@printf "\n==> Running JavaScriptLint...\n"
 	@$(JSLINT) --nologo --conf=$(ROOT)/tools/jsl.node.conf \
@@ -477,6 +480,7 @@ clean:
 	-rm -f $(TARGETS) $(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) *.o \
 	    $(CLEANFILES)
 	-rm -rf node-sqlite3/build
+	@(cd dockerinit && $(MAKE) clean)
 	cd $(LOCKFD_SRC_DIR) && $(MAKE) clean
 
 include Makefile.targ
@@ -492,6 +496,9 @@ disklayout: disklayout.js
 disklist: disklist.sh
 	cp disklist.sh disklist
 	chmod 0755 disklist
+
+dockerinit/build/dockerinit: dockerinit/src/dockerinit.c
+	@(cd dockerinit && $(MAKE) build/dockerinit)
 
 mkzpool: mkzpool.js
 	cp mkzpool.js mkzpool

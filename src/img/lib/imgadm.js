@@ -1658,12 +1658,113 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             }
         },
 
+        function _installTheFile(ctx, next) {
+            self._installZfsImage(ctx, next);
+        },
+
+        function saveManifestToDb(ctx, next) {
+            // Note that we have a DS to remove if the rest of the import fails.
+            ctx.installedDs = true;
+
+            self.dbAddImage(ctx.imageInfo, function (addErr) {
+                if (addErr) {
+                    log.error({err: addErr, imageInfo: ctx.imageInfo},
+                        'error saving image to the database');
+                    next(new errors.InternalError(
+                        {message: 'error saving image manifest'}));
+                } else {
+                    next();
+                }
+            });
+        }
+
+    ]}, function finishUp(err) {
+        var didTheImport = true;
+        if (err === true) {
+            // This is the sign that the image was already imported.
+            err = null;
+            didTheImport = false;
+        }
+
+        vasync.pipeline({arg: context, funcs: [
+            function rollbackDsIfNecessary(ctx, next) {
+                if (err && ctx.installedDs) {
+                    var cmd = format('/usr/sbin/zfs destroy -r %s', ctx.dsName);
+                    exec(cmd, function (rollbackErr, stdout, stderr) {
+                        if (rollbackErr) {
+                            log.trace({cmd: cmd, err: rollbackErr,
+                                stdout: stdout, stderr: stderr,
+                                rollbackDsName: ctx.dsName},
+                                'error destroying dataset while rolling back');
+                        }
+                        next();
+                    });
+                } else {
+                    next();
+                }
+            },
+            function releaseLock(ctx, next) {
+                if (!ctx.unlockFn) {
+                    next();
+                    return;
+                }
+                log.debug({lockPath: ctx.lockPath}, 'releasing lock');
+                ctx.unlockFn(function (unlockErr) {
+                    if (unlockErr) {
+                        next(new errors.InternalError({
+                            message: 'error releasing lock',
+                            lockPath: ctx.lockPath,
+                            cause: unlockErr
+                        }));
+                        return;
+                    }
+                    log.debug({lockPath: ctx.lockPath}, 'released lock');
+                    next();
+                });
+            },
+            function noteCompletion(ctx, next) {
+                if (didTheImport) {
+                    logCb(format('%s image %s (%s@%s) to "%s/%s"',
+                        (options.file ? 'Installed' : 'Imported'),
+                        uuid,
+                        manifest.name,
+                        manifest.version,
+                        options.zpool,
+                        uuid));
+                }
+                next();
+            }
+        ]}, function done(finishUpErr) {
+            // We shouldn't ever get a `finishUpErr`. Let's be loud if we do.
+            if (finishUpErr) {
+                log.fatal({err: finishUpErr},
+                    'unexpected error finishing up image import');
+            }
+            callback(err || finishUpErr);
+        });
+    });
+};
+
+
+IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
+    var self = this;
+    assert.object(ctx, 'ctx');
+    assert.object(ctx.fileInfo, 'ctx.fileInfo');
+    assert.string(ctx.dsName, 'ctx.dsName');
+    assert.object(ctx.imageInfo.manifest, 'ctx.imageInfo.manifest');
+    assert.optionalBool(ctx.quiet, 'ctx.quiet');
+
+    var manifest = ctx.imageInfo.manifest;
+    var uuid = manifest.uuid;
+    var log = self.log;
+
+    vasync.pipeline({funcs: [
         /**
          * image file stream \                  [A]
          *      | inflator (if necessary) \     [B]
          *      | zfs recv                      [C]
          */
-        function recvTheDataset(ctx, next) {
+        function recvTheDataset(_, next) {
             // To complete this stage we want to wait for all of:
             // 1. the 'zfs receive' process to 'exit'.
             // 2. the compressor process to 'exit' (if we are compressing)
@@ -1784,7 +1885,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         /**
          * Ensure the streamed image data matches expected checksums.
          */
-        function checksum(ctx, next) {
+        function checksum(_, next) {
             var err;
 
             // We have a content-md5 from the headers if the is was streamed
@@ -1820,7 +1921,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
          * Here we ensure that the snapshot for this image is called "@final",
          * renaming it if necessary.
          */
-        function ensureFinalSnapshot(ctx, next) {
+        function ensureFinalSnapshot(_, next) {
             var properties = ['name', 'children'];
             getZfsDataset(ctx.partialDsName, properties, function (zErr, ds) {
                 if (zErr) {
@@ -1848,7 +1949,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
          * We recv'd the dataset to a "...-partial" temporary name. Rename it to
          * the final name.
          */
-        function renameToFinalDsName(ctx, next) {
+        function renameToFinalDsName(_, next) {
             var cmd = format('/usr/sbin/zfs rename %s %s',
                 ctx.partialDsName, ctx.dsName);
             log.trace({cmd: cmd}, 'rename tmp image');
@@ -1863,41 +1964,17 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                     next();
                 }
             });
-        },
-
-        function saveManifestToDb(ctx, next) {
-            // On error, rollback uses `partialDsName`. Now that we've renamed
-            // the dataset, make sure that *it* gets cleaned if saving the
-            // manifest fails.
-            ctx.partialDsName = ctx.dsName;
-
-            self.dbAddImage(ctx.imageInfo, function (addErr) {
-                if (addErr) {
-                    log.error({err: addErr, imageInfo: ctx.imageInfo},
-                        'error saving image to the database');
-                    next(new errors.InternalError(
-                        {message: 'error saving image manifest'}));
-                } else {
-                    next();
-                }
-            });
         }
 
     ]}, function finishUp(err) {
-        var didTheImport = true;
-        if (err === true) {
-            // This is the sign that the image was already imported.
-            err = null;
-            didTheImport = false;
-        }
-        vasync.pipeline({arg: context, funcs: [
-            function stopProgressBar(ctx, next) {
+        vasync.pipeline({funcs: [
+            function stopProgressBar(_, next) {
                 if (ctx.bar) {
                     ctx.bar.end();
                 }
                 next();
             },
-            function rollbackPartialDsIfNecessary(ctx, next) {
+            function rollbackPartialDsIfNecessary(_, next) {
                 if (err && ctx.partialDsName) {
                     // Rollback the currently installed dataset, if necessary.
                     // Silently fail here (i.e. only log at trace level) because
@@ -1918,37 +1995,6 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                 } else {
                     next();
                 }
-            },
-            function releaseLock(ctx, next) {
-                if (!ctx.unlockFn) {
-                    next();
-                    return;
-                }
-                log.debug({lockPath: ctx.lockPath}, 'releasing lock');
-                ctx.unlockFn(function (unlockErr) {
-                    if (unlockErr) {
-                        next(new errors.InternalError({
-                            message: 'error releasing lock',
-                            lockPath: ctx.lockPath,
-                            cause: unlockErr
-                        }));
-                        return;
-                    }
-                    log.debug({lockPath: ctx.lockPath}, 'released lock');
-                    next();
-                });
-            },
-            function noteCompletion(ctx, next) {
-                if (didTheImport) {
-                    logCb(format('%s image %s (%s@%s) to "%s/%s"',
-                        (options.file ? 'Installed' : 'Imported'),
-                        uuid,
-                        manifest.name,
-                        manifest.version,
-                        options.zpool,
-                        uuid));
-                }
-                next();
             }
         ]}, function done(finishUpErr) {
             // We shouldn't ever get a `finishUpErr`. Let's be loud if we do.
@@ -1956,7 +2002,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                 log.fatal({err: finishUpErr},
                     'unexpected error finishing up image import');
             }
-            callback(err || finishUpErr);
+            cb(err || finishUpErr);
         });
     });
 };

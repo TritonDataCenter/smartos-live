@@ -85,7 +85,7 @@ function CLI() {
                     + 'IMGADM_LOG_LEVEL envvar.'},
             {name: 'E', type: 'bool',
                 help: 'On error, emit a structured JSON error object as the '
-                    + 'last line of stderr output.'},
+                    + 'last line of stderr output.'}
         ],
         helpOpts: {
             includeEnv: true,
@@ -187,7 +187,8 @@ CLI.prototype.init = function init(opts, args, cb) {
     // Cmdln class handles `opts.help`.
     Cmdln.prototype.init.call(this, opts, args, function (err) {
         if (err || err === false) {
-            return cb(err);
+            cb(err);
+            return;
         }
         imgadm.createTool({log: self.log}, function (createErr, tool) {
             if (createErr) {
@@ -229,8 +230,6 @@ CLI.prototype.fini = function fini(subcmd, err, cb) {
  * Manual, but much nicer.
  */
 CLI.prototype.printHelp = function printHelp(cb) {
-    var self = this;
-
     var lines = [];
     if (this.desc) {
         lines.push(this.desc);
@@ -241,7 +240,7 @@ CLI.prototype.printHelp = function printHelp(cb) {
         'Usage:',
         '    {{name}} [<options>] <command> [<args>...]',
         '    {{name}} help <command>',
-        '',
+        ''
     ]);
     if (this.optParser.help) {
         lines.push('Options:');
@@ -293,7 +292,8 @@ CLI.prototype.printHelp = function printHelp(cb) {
 CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
-        return self.do_help('help', {}, [subcmd], cb);
+        self.do_help('help', {}, [subcmd], cb);
+        return;
     }
     if (args.length > 0) {
         cb(new errors.UsageError(
@@ -453,7 +453,7 @@ CLI.prototype.do_sources.options = [
         help: 'Force no "ping check" on new source URLs. By default'
             + 'a ping check is done against new source URLs to'
             + 'attempt to ensure they are a running IMGAPI server.'
-    },
+    }
 ];
 
 
@@ -478,12 +478,13 @@ var availValidFields = [
     'image_size',
     'generate_passwords',
     'description'
-    // XXX new fields? tags, etc.  Pull from imgmanifest?
+    // TODO: new fields? tags, etc.  Pull from imgmanifest?
 ];
 CLI.prototype.do_avail = function do_avail(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
-        return self.do_help('help', {}, [subcmd], cb);
+        self.do_help('help', {}, [subcmd], cb);
+        return;
     }
     if (args.length) {
         cb(new errors.UsageError(
@@ -604,12 +605,13 @@ var listValidFields = [
     'description',
     'clones',
     'zpool'
-    //XXX should merge this list with availValidFields above? pull from imgmanfiest?
+    // TODO: merge this list with availValidFields above?
 ];
 CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
-        return self.do_help('help', {}, [subcmd], cb);
+        self.do_help('help', {}, [subcmd], cb);
+        return;
     }
     if (args.length) {
         cb(new errors.UsageError(
@@ -709,7 +711,8 @@ CLI.prototype.do_list.options = [
 CLI.prototype.do_show = function do_show(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
-        return self.do_help('help', {}, [subcmd], cb);
+        self.do_help('help', {}, [subcmd], cb);
+        return;
     }
     if (args.length !== 1) {
         cb(new errors.UsageError(format(
@@ -759,7 +762,8 @@ CLI.prototype.do_show.options = [
 CLI.prototype.do_get = function do_get(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
-        return self.do_help('help', {}, [subcmd], cb);
+        self.do_help('help', {}, [subcmd], cb);
+        return;
     }
     if (args.length !== 1) {
         cb(new errors.UsageError(format(
@@ -821,7 +825,8 @@ CLI.prototype.do_get.options = [
 CLI.prototype.do_delete = function do_delete(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
-        return self.do_help('help', {}, [subcmd], cb);
+        self.do_help('help', {}, [subcmd], cb);
+        return;
     }
     if (args.length !== 1) {
         cb(new errors.UsageError(format(
@@ -876,7 +881,8 @@ CLI.prototype.do_delete.options = [
 CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
-        return self.do_help('help', {}, [subcmd], cb);
+        self.do_help('help', {}, [subcmd], cb);
+        return;
     }
     if (args.length !== 1) {
         cb(new errors.UsageError(format(
@@ -982,7 +988,8 @@ CLI.prototype.do_import.options = [
 CLI.prototype.do_install = function do_install(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
-        return self.do_help('help', {}, [subcmd], cb);
+        self.do_help('help', {}, [subcmd], cb);
+        return;
     }
     if (args.length !== 0) {
         cb(new errors.UsageError(format(
@@ -1106,7 +1113,8 @@ CLI.prototype.do_install.options = [
 CLI.prototype.do_update = function do_update(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
-        return self.do_help('help', {}, [subcmd], cb);
+        self.do_help('help', {}, [subcmd], cb);
+        return;
     }
     var options = {
         dryRun: opts.dry_run
@@ -1155,7 +1163,8 @@ CLI.prototype.do_update.options = [
 CLI.prototype.do_create = function do_create(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
-        return self.do_help('help', {}, [subcmd], cb);
+        self.do_help('help', {}, [subcmd], cb);
+        return;
     }
     if (args.length < 1) {
         cb(new errors.UsageError(format(
@@ -1211,7 +1220,7 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, cb) {
         if (!opts.m) {
             manifest = {};
             next(null, objMerge(manifest, argFields));
-        } else if (opts.m=== '-') {
+        } else if (opts.m === '-') {
             var stdin = '';
             process.stdin.resume();
             process.stdin.on('data', function (chunk) {
@@ -1461,7 +1470,7 @@ CLI.prototype.do_create.options = [
         names: ['quiet', 'q'],
         type: 'bool',
         help: 'Disable progress bar in upload.'
-    },
+    }
 ];
 
 
@@ -1471,7 +1480,8 @@ CLI.prototype.do_create.options = [
 CLI.prototype.do_publish = function do_publish(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
-        return self.do_help('help', {}, [subcmd], cb);
+        self.do_help('help', {}, [subcmd], cb);
+        return;
     }
     if (args.length !== 1) {
         cb(new errors.UsageError(format(
@@ -1557,7 +1567,7 @@ CLI.prototype.do_publish.options = [
         names: ['quiet', 'q'],
         type: 'bool',
         help: 'Disable progress bar in upload.'
-    },
+    }
 ];
 
 

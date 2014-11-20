@@ -1499,7 +1499,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
     }
 
     // Context object for the pipeline below (and called helpers).
-    var ctx = {
+    var context = {
         imageInfo: {
             manifest: manifest,
             zpool: options.zpool,
@@ -1510,7 +1510,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         quiet: options.quiet
     };
 
-    vasync.pipeline({arg: ctx, funcs: [
+    vasync.pipeline({arg: context, funcs: [
         /**
          * If this image has an origin, need to ensure it is installed first.
          * If we're streaming from a given IMGAPI `source` then we can try
@@ -1747,7 +1747,8 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
 
             // [C]
             ctx.partialDsName = ctx.dsName + '-partial';
-            var zfsRecv = spawn('/usr/sbin/zfs', ['receive', ctx.partialDsName]);
+            var zfsRecv = spawn('/usr/sbin/zfs',
+                ['receive', ctx.partialDsName]);
             zfsRecv.stderr.on('data', function (chunk) {
                 console.error('Stderr from zfs receive: %s',
                     chunk.toString());
@@ -1889,14 +1890,14 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
             err = null;
             didTheImport = false;
         }
-        vasync.pipeline({funcs: [
-            function stopProgressBar(_, next) {
+        vasync.pipeline({arg: context, funcs: [
+            function stopProgressBar(ctx, next) {
                 if (ctx.bar) {
                     ctx.bar.end();
                 }
                 next();
             },
-            function rollbackPartialDsIfNecessary(_, next) {
+            function rollbackPartialDsIfNecessary(ctx, next) {
                 if (err && ctx.partialDsName) {
                     // Rollback the currently installed dataset, if necessary.
                     // Silently fail here (i.e. only log at trace level) because
@@ -1918,7 +1919,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                     next();
                 }
             },
-            function releaseLock(_, next) {
+            function releaseLock(ctx, next) {
                 if (!ctx.unlockFn) {
                     next();
                     return;
@@ -1937,7 +1938,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                     next();
                 });
             },
-            function noteCompletion(_, next) {
+            function noteCompletion(ctx, next) {
                 if (didTheImport) {
                     logCb(format('%s image %s (%s@%s) to "%s/%s"',
                         (options.file ? 'Installed' : 'Imported'),

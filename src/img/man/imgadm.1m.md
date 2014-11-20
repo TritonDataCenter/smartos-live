@@ -53,6 +53,10 @@ UUID.
     More verbose logging (debug level). See the **IMGADM\_LOG\_LEVEL=<level>**
     environment variable.
 
+**-E**
+    On error, emit a structured JSON error object as the last line of stderr
+    output.
+
 
 ## SUBCOMMANDS
 
@@ -233,7 +237,8 @@ UUID.
                            to it. If the basename of "PATH" is not a dir,
                            then "PATH.imgmanifest" and "PATH.zfs[.EXT]" are
                            created.
-            -c <comp>      One of "none", "gz" or "bzip2" for the compression
+            -c <comp>, --compression=<comp>
+                           One of "none", "gz" or "bzip2" for the compression
                            to use on the image file, if any. Default is "none".
             -i             Build an incremental image (based on the "@final"
                            snapshot of the source image for the VM).

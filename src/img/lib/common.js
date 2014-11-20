@@ -164,6 +164,29 @@ function diffManifestFields(a, b) {
 }
 
 
+/**
+ * Return an 80-column wrapped string.
+ */
+function textWrap(text) {
+    var width = 80;
+    var words = text.split(/\s+/g).reverse();
+    var lines = [];
+    var line = '';
+    while (words.length) {
+        var word = words.pop();
+        if (line.length + 1 + word.length >= width) {
+            lines.push(line);
+            line = '';
+        }
+        if (line.length)
+            line += ' ' + word;
+        else
+            line += word;
+    }
+    lines.push(line);
+    return lines.join('\n');
+}
+
 
 /**
  * Call `vmadm stop UUID`.
@@ -491,6 +514,7 @@ module.exports = {
     boolFromString: boolFromString,
     pathSlugify: pathSlugify,
     diffManifestFields: diffManifestFields,
+    textWrap: textWrap,
     vmStop: vmStop,
     vmStart: vmStart,
     vmGet: vmGet,

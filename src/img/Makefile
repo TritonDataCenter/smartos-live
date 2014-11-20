@@ -58,6 +58,7 @@ update_modules:
 		find node_modules/$$dep -name CONTRIBUTING.md | xargs rm; \
 		find node_modules/$$dep -name jsl.node.conf | xargs rm; \
 		find node_modules/$$dep -name examples | xargs rm -rf; \
+		find node_modules/$$dep -name TODO.txt | xargs rm; \
 		find node_modules/$$dep -name CHANGES.md | xargs rm; \
 		find node_modules/$$dep -name "Makefile*" | xargs rm; \
 		find node_modules/$$dep -name tools | xargs rm -rf; \
@@ -76,7 +77,9 @@ update_modules:
 	rm -rf node_modules/verror/node_modules/extsprintf  # version mismatch
 	rm -rf node_modules/vasync/node_modules/verror # version mismatch
 	rm -rf node_modules/verror/experiments
-	rm node_modules/nopt/node_modules/abbrev/test.js
+	rm -rf node_modules/tabula/{bin,node_modules} \
+		node_modules/.bin/tabula \
+		node_modules/tabula/lib/linestream.js  # only need lib/tabula.js
 	./tools/mk-sdc-clients-light.sh \
 		$(shell json -f package.json dependencies.sdc-clients | cut -d'#' -f2) \
 		node_modules/sdc-clients imgapi.js dsapi.js

@@ -1282,7 +1282,7 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, cb) {
             vmUuid: vmUuid,
             manifest: manifest,
             compression: opts.compression,
-            incremental: opts.i,
+            incremental: opts.incremental,
             prepareScript: opts.s && fs.readFileSync(opts.s, 'utf8'),
             savePrefix: savePrefix,
             logCb: console.log,
@@ -1296,9 +1296,8 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, cb) {
                 // If '-p URL' given, publish and delete the temp created
                 // image and manifest files.
                 var pOpts = {
-                    manifest: imageInfo.manifestPath,
-                    file: imageInfo.filePath,
-                    url: opts.publish,
+                    m: imageInfo.manifestPath,
+                    f: imageInfo.filePath,
                     quiet: opts.quiet
                 };
                 var pArgs = [opts.publish];
@@ -1423,7 +1422,7 @@ CLI.prototype.do_create.options = [
             + 'to use on the image file, if any. Default is "none".'
     },
     {
-        names: ['i'],
+        names: ['incremental', 'i'],
         type: 'bool',
         help: 'Build an incremental image (based on the "@final" '
             + 'snapshot of the source image for the VM).'

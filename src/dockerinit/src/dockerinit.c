@@ -63,6 +63,7 @@
 #include "../mdata-client/plat.h"
 #include "../mdata-client/proto.h"
 
+#define DEFAULT_TERM "TERM=xterm"
 #define IPMGMTD_DOOR_OS "/etc/svc/volatile/ipadm/ipmgmt_door"
 #define IPMGMTD_DOOR_LX "/native/etc/svc/volatile/ipadm/ipmgmt_door"
 #define LOGFILE "/var/log/sdc-dockerinit.log"
@@ -383,6 +384,8 @@ execCmdline()
         fatal(ERR_SETUID, "setuid(%d): %s\n", pwd->pw_uid, strerror(errno));
     }
 
+    execname = execName(cmdline[0]);
+
     dlog("SWITCHING TO /dev/console\n");
 
     close(0);
@@ -408,7 +411,6 @@ execCmdline()
             strerror(errno));
     }
 
-    execname = execName(cmdline[0]);
     execve(execname, cmdline, env);
 
     fatal(ERR_EXEC_FAILED, "execve(%s) failed: %s\n", cmdline[0],
@@ -539,10 +541,13 @@ buildCmdEnv()
 
     getMdataArray("docker:env", &nvl, &env_len);
 
-    /* NOTE: We allocate one extra char * in case we're going to add 'HOME' */
-    env = malloc((sizeof (char *)) * (env_len + 2));
+    /*
+     * NOTE: We allocate two extra char * in case we're going to add 'HOME'
+     * and/or 'TERM'
+     */
+    env = malloc((sizeof (char *)) * (env_len + 3));
     if (env == NULL) {
-        fatal(ERR_UNEXPECTED, "malloc() for env[%d] failed: %s\n", env_len + 2,
+        fatal(ERR_UNEXPECTED, "malloc() for env[%d] failed: %s\n", env_len + 3,
             strerror(errno));
     }
 
@@ -574,7 +579,9 @@ addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl)
     char *home;
     int home_len;
     int found_home = 0;
+    int found_term = 0;
     int ret;
+    char *term;
     char *value;
 
     switch (type) {
@@ -619,6 +626,9 @@ addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl)
                 if ((type == ARRAY_ENV) && (strncmp(value, "HOME=", 5) == 0)) {
                     found_home = 1;
                 }
+                if ((type == ARRAY_ENV) && (strncmp(value, "TERM=", 5) == 0)) {
+                    found_term = 1;
+                }
                 if ((type == ARRAY_ENV) && (strncmp(value, "PATH=", 5) == 0)) {
                     path = (value + 5);
                 }
@@ -654,6 +664,20 @@ addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl)
                 strerror(errno));
         }
         array[(*idx)++] = home;
+        dlog("ENV[%d] %s\n", (*idx) - 1, home);
+    }
+
+    /*
+     * If TERM was not set we also add that now. Currently docker only sets TERM
+     * for interactive sessions, but we set in all cases if not passed in to
+     * work around OS-3579.
+     */
+    if ((type == ARRAY_ENV) && !found_term) {
+        if ((term = strdup(DEFAULT_TERM)) == NULL) {
+            fatal(ERR_UNEXPECTED, "strdup(TERM=) failed: %s\n",
+                strerror(errno));
+        }
+        array[(*idx)++] = term;
         dlog("ENV[%d] %s\n", (*idx) - 1, home);
     }
 }

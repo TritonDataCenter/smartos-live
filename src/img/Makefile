@@ -54,10 +54,12 @@ update_modules:
 		find node_modules/$$dep -name .travis.yml | xargs rm; \
 		find node_modules/$$dep -name AUTHORS | xargs rm; \
 		find node_modules/$$dep -iname README.md | xargs rm; \
+		find node_modules/$$dep -iname readme.markdown | xargs rm; \
 		find node_modules/$$dep -name History.md | xargs rm; \
 		find node_modules/$$dep -name CONTRIBUTING.md | xargs rm; \
 		find node_modules/$$dep -name jsl.node.conf | xargs rm; \
 		find node_modules/$$dep -name examples | xargs rm -rf; \
+		find node_modules/$$dep -name example | xargs rm -rf; \
 		find node_modules/$$dep -name TODO.txt | xargs rm; \
 		find node_modules/$$dep -name CHANGES.md | xargs rm; \
 		find node_modules/$$dep -name "Makefile*" | xargs rm; \

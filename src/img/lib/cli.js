@@ -1047,7 +1047,7 @@ CLI.prototype.do_install = function do_install(subcmd, opts, args, cb) {
         }
 
         // 3. Install it.
-        console.log('Installing image %s (%s %s)', uuid, manifest.name,
+        console.log('Installing image %s (%s@%s)', uuid, manifest.name,
             manifest.version);
         var installOpts = {
             manifest: manifest,

@@ -29,6 +29,7 @@
 var p = console.log;
 var child_process = require('child_process'),
     exec = child_process.exec,
+    execFile = child_process.execFile,
     spawn = child_process.spawn;
 var format = require('util').format;
 
@@ -185,6 +186,46 @@ function textWrap(text) {
     }
     lines.push(line);
     return lines.join('\n');
+}
+
+
+/**
+ * A convenience wrapper around `child_process.execFile` to take away some
+ * logging and error handling boilerplate.
+ *
+ * @param args {Object}
+ *      - argv {Array} Required.
+ *      - execOpts {Array} Exec options.
+ *      - log {Bunyan Logger} Required. Use to log details at trace level.
+ * @param cb {Function} `function (err, stdout, stderr)` where `err` here is
+ *      an `errors.InternalError` wrapper around the child_process error.
+ */
+function execFilePlus(args, cb) {
+    assert.object(args, 'args');
+    assert.arrayOfString(args.argv, 'args.argv');
+    assert.optionalObject(args.execOpts, 'args.execOpts');
+    assert.object(args.log, 'args.log');
+    assert.func(cb);
+    var argv = args.argv;
+    var execOpts = args.execOpts;
+
+    //args.log.trace({exec: true, argv: argv, execOpts: execOpts}, 'exec start');
+    execFile(argv[0], argv.slice(1), execOpts, function (err, stdout, stderr) {
+        args.log.trace({exec: true, argv: argv, execOpts: execOpts, err: err,
+            stdout: stdout, stderr: stderr}, 'exec done');
+        if (err) {
+            var msg = format(
+                'exec error:\n'
+                + '\targv: %j\n'
+                + '\texit status: %s\n'
+                + '\tstdout:\n%s\n'
+                + '\tstderr:\n%s',
+                argv, err.code, stdout.trim(), stderr.trim());
+            cb(new InternalError({cause: err, message: msg}), stdout, stderr);
+        } else {
+            cb(null, stdout, stderr);
+        }
+    });
 }
 
 
@@ -515,6 +556,7 @@ module.exports = {
     pathSlugify: pathSlugify,
     diffManifestFields: diffManifestFields,
     textWrap: textWrap,
+    execFilePlus: execFilePlus,
     vmStop: vmStop,
     vmStart: vmStart,
     vmGet: vmGet,

@@ -46,6 +46,9 @@ d usr/img/node_modules/extsprintf/lib 0555 root bin
 f usr/img/node_modules/extsprintf/lib/extsprintf.js 0444 root bin
 f usr/img/node_modules/extsprintf/LICENSE 0444 root bin
 f usr/img/node_modules/extsprintf/package.json 0444 root bin
+d usr/img/node_modules/findit 0555 root bin
+f usr/img/node_modules/findit/index.js 0444 root bin
+f usr/img/node_modules/findit/package.json 0444 root bin
 d usr/img/node_modules/imgmanifest 0555 root bin
 f usr/img/node_modules/imgmanifest/LICENSE 0444 root bin
 d usr/img/node_modules/imgmanifest/lib 0555 root bin
@@ -56,7 +59,6 @@ d usr/img/node_modules/mkdirp 0555 root bin
 f usr/img/node_modules/mkdirp/index.js 0444 root bin
 f usr/img/node_modules/mkdirp/LICENSE 0444 root bin
 f usr/img/node_modules/mkdirp/package.json 0444 root bin
-f usr/img/node_modules/mkdirp/README.markdown 0444 root bin
 d usr/img/node_modules/node-uuid 0555 root bin
 f usr/img/node_modules/node-uuid/LICENSE.md 0444 root bin
 f usr/img/node_modules/node-uuid/package.json 0444 root bin

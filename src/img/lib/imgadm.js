@@ -45,12 +45,14 @@ var child_process = require('child_process'),
     exec = child_process.exec;
 var crypto = require('crypto');
 var dsapi = require('sdc-clients/lib/dsapi');
+var findit = require('findit');
 var fs = require('fs');
 var genUuid = require('node-uuid');
 var imgapi = require('sdc-clients/lib/imgapi');
 var imgmanifest = require('imgmanifest');
 var lock = require('/usr/img/node_modules/locker').lock;
 var mkdirp = require('mkdirp');
+var once = require('once');
 var path = require('path');
 var ProgressBar = require('progbar').ProgressBar;
 var rimraf = require('rimraf');
@@ -63,7 +65,8 @@ var zfs = require('/usr/node/node_modules/zfs.js').zfs;
 var common = require('./common'),
     NAME = common.NAME,
     objCopy = common.objCopy,
-    assertUuid = common.assertUuid;
+    assertUuid = common.assertUuid,
+    execFilePlus = common.execFilePlus;
 var errors = require('./errors');
 var upgrade = require('./upgrade');
 
@@ -1481,7 +1484,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
     var logCb = options.logCb || function () {};
     assert.func(callback, 'callback');
     var uuid = options.manifest.uuid;
-    assertUuid(uuid, 'options.manifest.uuid');
+    assert.uuid(uuid, 'options.manifest.uuid');
     var log = self.log;
     log.debug({
         zpool: options.zpool,
@@ -1628,6 +1631,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
                         return;
                     }
                     var stream = fs.createReadStream(options.file);
+                    stream.pause();
                     ctx.fileInfo = {
                         stream: stream,
                         size: stats.size
@@ -1659,7 +1663,11 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
         },
 
         function _installTheFile(ctx, next) {
-            self._installZfsImage(ctx, next);
+            if (manifest.type === 'docker') {
+                self._installDockerImage(ctx, next);
+            } else {
+                self._installZfsImage(ctx, next);
+            }
         },
 
         function saveManifestToDb(ctx, next) {
@@ -1746,12 +1754,269 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
 };
 
 
+/**
+ * This handles creating an image in the zpool from a *single* docker
+ * layer.
+ *
+ * - if have origin:
+ *      zfs clone zones/$origin@final zones/$uuid
+ *   else:
+ *      zfs create zones/$uuid
+ *      mkdir zones/$uuid/root
+ *      crle ...
+ * - cd /zones/$uuid/root && tar xf $layerFile
+ * - handle .wh.* files
+ * - zfs snapshot zones/$uuid@final
+*/
+IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
+    var self = this;
+    assert.object(ctx, 'ctx');
+    assert.object(ctx.fileInfo, 'ctx.fileInfo');
+    assert.string(ctx.dsName, 'ctx.dsName');
+    assert.string(ctx.imageInfo.zpool, 'ctx.imageInfo.zpool');
+    assert.object(ctx.imageInfo.manifest, 'ctx.imageInfo.manifest');
+    assert.uuid(ctx.imageInfo.manifest.uuid, 'ctx.imageInfo.manifest.uuid');
+    assert.optionalBool(ctx.quiet, 'ctx.quiet');
+
+    var zpool = ctx.imageInfo.zpool;
+    var manifest = ctx.imageInfo.manifest;
+    var uuid = manifest.uuid;
+    var log = self.log;
+
+    var partialDsName = ctx.dsName + '-partial';
+    var zoneroot = format('/%s/root', partialDsName, uuid);
+
+    vasync.pipeline({funcs: [
+        function cloneOrigin(_, next) {
+            if (!manifest.origin) {
+                return next();
+            }
+            steps.push(function zfsClone(_, next) {
+                var argv = ['/usr/sbin/zfs', 'clone',
+                    format('%s/%s@final', zpool, manifest.origin),
+                    partialDsName];
+                execFilePlus({argv: argv, log: log}, next);
+            });
+        },
+
+        function createNewZoneroot(_, next) {
+            if (manifest.origin) {
+                return next();
+            }
+            vasync.pipeline({funcs: [
+                function zfsCreate(_, next2) {
+                    var argv = ['/usr/sbin/zfs', 'create', partialDsName];
+                    execFilePlus({argv: argv, log: log}, next2);
+                },
+                // XXX Hope these can go away (discussed with joshw).
+                function mkZoneroot(_, next2) {
+                    var argv = ['/usr/bin/mkdir', '-p',
+                        zoneroot + '/var/ld/64'];
+                    execFilePlus({argv: argv, log: log}, next2);
+                },
+                function crle(_, next2) {
+                    var argv = ['/usr/bin/crle',
+                        '-c', zoneroot + '/var/ld/ld.config',
+                        '-l', '/native/lib:/native/usr/lib',
+                        '-s', '/native/lib/secure:/native/usr/lib/secure'];
+                    execFilePlus({argv: argv, log: log}, next2);
+                },
+                function crle64(_, next2) {
+                    var argv = ['/usr/bin/crle', '-64',
+                        '-c', zoneroot + '/var/ld/64/ld.config',
+                        '-l', '/native/lib/64:/native/usr/lib/64',
+                        '-s',
+                        '/native/lib/secure/64:/native/usr/lib/secure/64'];
+                    execFilePlus({argv: argv, log: log}, next2);
+                }
+            ]}, next);
+        },
+
+        function extract(_, next) {
+            /**
+             * ...stream... | gtar xf -
+             *
+             * To complete this stage we want to wait for all of:
+             * 1. the tar process to 'exit'
+             * 2. the pipeline's std handles to 'close'
+             *
+             * If we get an error we "finish" right away. This `finish` stuff
+             * coordinates that.
+             *
+             * TODO: consider a quick path for 0 length layers. Don't bother
+             * transfering the empty content tar, and don't bother with
+             * tar process and stream.
+             */
+            var numToFinish = 2;
+            var numFinishes = 0;
+            var finished = false;
+            function finish(err) {
+                numFinishes++;
+                if (finished) {
+                    /* jsl:pass */
+                } else if (err) {
+                    finished = true;
+                    log.trace({err: err}, 'extract err');
+                    next(err);
+                } else if (numFinishes >= numToFinish) {
+                    finished = true;
+                    next();
+                }
+            }
+
+            if (!ctx.quiet && process.stderr.isTTY) {
+                ctx.bar = new ProgressBar({
+                    size: ctx.fileInfo.size,
+                    filename: uuid
+                });
+            }
+
+            // Calculate input stream hashes to verify checksum at the end.
+            ctx.md5Hash = crypto.createHash('md5');
+            ctx.sha1Hash = crypto.createHash('sha1');
+            ctx.fileInfo.stream.on('data', function (chunk) {
+                if (ctx.bar)
+                    ctx.bar.advance(chunk.length);
+                ctx.md5Hash.update(chunk);
+                ctx.sha1Hash.update(chunk);
+            });
+            ctx.fileInfo.stream.on('error', finish);
+
+            // tar
+            var tar = spawn('/usr/bin/gtar', ['xf', '-'], {cwd: zoneroot});
+            tar.stderr.on('data', function (chunk) {
+                console.error('tar stderr: %s', chunk.toString());
+            });
+            tar.stdout.on('data', function (chunk) {
+                console.error('tar stdout: %s', chunk.toString());
+            });
+            tar.on('exit', function (code, signal) {
+                if (code !== 0 || signal) {
+                    finish(new errors.InternalError({message: format(
+                        'tar error extracting docker image: '
+                        + 'exit code %s, signal %s', code, signal)}));
+                } else {
+                    finish();
+                }
+            });
+            tar.on('close', function () {
+                finish();
+            });
+
+            ctx.fileInfo.stream.pipe(tar.stdin);
+            ctx.fileInfo.stream.resume();
+        },
+
+        /**
+         * Ensure the streamed image data matches expected checksums.
+         */
+        function checksum(_, next) {
+            var err;
+
+            // We have a content-md5 from the headers if the is was streamed
+            // from an IMGAPI.
+            var md5Expected = ctx.fileInfo.contentMd5;
+            if (md5Expected) {
+                var md5Actual = ctx.md5Hash.digest('base64');
+                if (md5Actual !== md5Expected) {
+                    err = new errors.DownloadError(format(
+                        'Content-MD5 expected to be %s, but was %s',
+                        md5Expected, md5Actual));
+                }
+            }
+
+            var sha1Expected = manifest.files[0].sha1;
+            var sha1Actual = ctx.sha1Hash.digest('hex');
+            if (sha1Expected && sha1Actual !== sha1Expected) {
+                err = new errors.DownloadError(format(
+                    'image file sha1 expected to be %s, but was %s',
+                    sha1Expected, sha1Actual));
+            }
+
+            if (!err) {
+                log.info('checksums match')
+            }
+            next(err);
+        },
+
+        function whiteout(_, next) {
+            var find = findit(zoneroot);
+            var onceNext = once(next);
+            var toRemove = [];
+            find.on('file', function (file, stat) {
+                var base = path.basename(file);
+                if (base.slice(0, 4) === '.wh.') {
+                    toRemove.push(path.join(path.dirname(file), base.slice(4)));
+                    toRemove.push(file);
+                }
+            });
+            find.on('end', function () {
+                log.info({toRemove: toRemove}, 'whiteout files');
+                vasync.forEachPipeline({
+                    inputs: toRemove,
+                    func: rimraf
+                }, onceNext);
+            });
+            find.on('error', onceNext);
+        },
+
+        /**
+         * As a rule, we want all installed images on SmartOS to have their
+         * single base snapshot (from which VMs are cloned) called "@final".
+         * `vmadm` presumes this (tho allows for it not to be there for
+         * bwcompat). This "@final" snapshot is also necessary for
+         * `imgadm create -i` (i.e. incremental images).
+         */
+        function zfsSnapshot(_, next) {
+            var argv = ['/usr/sbin/zfs', 'snapshot', partialDsName + '@final'];
+            execFilePlus({argv: argv, log: log}, next);
+        },
+
+        /**
+         * We created the dataset to a "...-partial" temporary name.
+         * Rename it to the final name.
+         */
+        function renameToFinalDsName(_, next) {
+            var argv = ['/usr/sbin/zfs', 'rename', partialDsName, ctx.dsName];
+            execFilePlus({argv: argv, log: log}, next);
+        }
+
+    ]}, function finishUp(err) {
+        if (ctx.bar) {
+            ctx.bar.end();
+        }
+        if (err) {
+            // Rollback the currently installed dataset, if necessary.
+            // Silently fail here (i.e. only log at debug level) because
+            // it is possible we errored out before the -partial dataset
+            // was created.
+            // TODO: Be specific above about partialDsCreated=true and
+            //      key off that.
+            var argv = ['/usr/sbin/zfs', 'destroy', '-r',
+                partialDsName];
+            execFilePlus({argv: argv, log: log},
+                         function (rollbackErr, stdout, stderr) {
+                if (rollbackErr) {
+                    log.debug({argv: argv, err: rollbackErr,
+                        rollbackDsName: partialDsName},
+                        'error destroying dataset while rolling back');
+                }
+                cb(err);
+            });
+        } else {
+            cb(err);
+        }
+    });
+};
+
+
 IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
     var self = this;
     assert.object(ctx, 'ctx');
     assert.object(ctx.fileInfo, 'ctx.fileInfo');
     assert.string(ctx.dsName, 'ctx.dsName');
     assert.object(ctx.imageInfo.manifest, 'ctx.imageInfo.manifest');
+    assert.uuid(ctx.imageInfo.manifest.uuid, 'ctx.imageInfo.manifest.uuid');
     assert.optionalBool(ctx.quiet, 'ctx.quiet');
 
     var manifest = ctx.imageInfo.manifest;

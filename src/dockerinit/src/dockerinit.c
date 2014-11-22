@@ -579,7 +579,8 @@ mountOSDevFD()
     dlog("MOUNT /dev/fd (fd)\n");
 
     if (mount("fd", "/dev/fd", MS_DATA, "fd", NULL, 0) != 0) {
-        fatal(ERR_MOUNT_DEVFD, "failed to mount /dev/fd: %s\n", strerror(errno));
+        fatal(ERR_MOUNT_DEVFD, "failed to mount /dev/fd: %s\n",
+            strerror(errno));
     }
 }
 

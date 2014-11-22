@@ -209,7 +209,8 @@ function execFilePlus(args, cb) {
     var argv = args.argv;
     var execOpts = args.execOpts;
 
-    //args.log.trace({exec: true, argv: argv, execOpts: execOpts}, 'exec start');
+    // args.log.trace({exec: true, argv: argv, execOpts: execOpts},
+    //      'exec start');
     execFile(argv[0], argv.slice(1), execOpts, function (err, stdout, stderr) {
         args.log.trace({exec: true, argv: argv, execOpts: execOpts, err: err,
             stdout: stdout, stderr: stderr}, 'exec done');

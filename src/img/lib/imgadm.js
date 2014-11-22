@@ -1767,7 +1767,7 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
  * - cd /zones/$uuid/root && tar xf $layerFile
  * - handle .wh.* files
  * - zfs snapshot zones/$uuid@final
-*/
+ */
 IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
     var self = this;
     assert.object(ctx, 'ctx');
@@ -1789,39 +1789,38 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
     vasync.pipeline({funcs: [
         function cloneOrigin(_, next) {
             if (!manifest.origin) {
-                return next();
+                next();
+                return;
             }
-            steps.push(function zfsClone(_, next) {
-                var argv = ['/usr/sbin/zfs', 'clone',
-                    format('%s/%s@final', zpool, manifest.origin),
-                    partialDsName];
-                execFilePlus({argv: argv, log: log}, next);
-            });
+            var argv = ['/usr/sbin/zfs', 'clone',
+                format('%s/%s@final', zpool, manifest.origin), partialDsName];
+            execFilePlus({argv: argv, log: log}, next);
         },
 
         function createNewZoneroot(_, next) {
             if (manifest.origin) {
-                return next();
+                next();
+                return;
             }
             vasync.pipeline({funcs: [
-                function zfsCreate(_, next2) {
+                function zfsCreate(_2, next2) {
                     var argv = ['/usr/sbin/zfs', 'create', partialDsName];
                     execFilePlus({argv: argv, log: log}, next2);
                 },
                 // XXX Hope these can go away (discussed with joshw).
-                function mkZoneroot(_, next2) {
+                function mkZoneroot(_2, next2) {
                     var argv = ['/usr/bin/mkdir', '-p',
                         zoneroot + '/var/ld/64'];
                     execFilePlus({argv: argv, log: log}, next2);
                 },
-                function crle(_, next2) {
+                function crle(_2, next2) {
                     var argv = ['/usr/bin/crle',
                         '-c', zoneroot + '/var/ld/ld.config',
                         '-l', '/native/lib:/native/usr/lib',
                         '-s', '/native/lib/secure:/native/usr/lib/secure'];
                     execFilePlus({argv: argv, log: log}, next2);
                 },
-                function crle64(_, next2) {
+                function crle64(_2, next2) {
                     var argv = ['/usr/bin/crle', '-64',
                         '-c', zoneroot + '/var/ld/64/ld.config',
                         '-l', '/native/lib/64:/native/usr/lib/64',
@@ -1934,7 +1933,7 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
             }
 
             if (!err) {
-                log.info('checksums match')
+                log.info('checksums match');
             }
             next(err);
         },
@@ -1995,7 +1994,7 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
             var argv = ['/usr/sbin/zfs', 'destroy', '-r',
                 partialDsName];
             execFilePlus({argv: argv, log: log},
-                         function (rollbackErr, stdout, stderr) {
+                    function (rollbackErr, stdout, stderr) {
                 if (rollbackErr) {
                     log.debug({argv: argv, err: rollbackErr,
                         rollbackDsName: partialDsName},

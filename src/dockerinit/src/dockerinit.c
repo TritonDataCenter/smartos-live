@@ -114,7 +114,8 @@ typedef enum {
     ERR_DOOR_INFO,
     ERR_IPMGMTD_EXIT,
     ERR_IPMGMTD_DIED,
-    ERR_IPMGMTD_CRASHED
+    ERR_IPMGMTD_CRASHED,
+    ERR_MOUNT_DEVFD
 } dockerinit_err_t;
 
 typedef enum {
@@ -134,6 +135,7 @@ void dlog(const char *fmt, ...);
 void killIpmgmtd();
 const char *mdataGet(const char *keyname);
 void mountLXProc();
+void mountOSDevFD();
 void runIpmgmtd(char *cmdline[], char *env[]);
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
@@ -568,6 +570,16 @@ mountLXProc()
 
     if (mount("lxproc", "/proc", MS_DATA, "lxproc", NULL, 0) != 0) {
         fatal(ERR_MOUNT_LXPROC, "failed to mount /proc: %s\n", strerror(errno));
+    }
+}
+
+void
+mountOSDevFD()
+{
+    dlog("MOUNT /dev/fd (fd)\n");
+
+    if (mount("fd", "/dev/fd", MS_DATA, "fd", NULL, 0) != 0) {
+        fatal(ERR_MOUNT_DEVFD, "failed to mount /dev/fd: %s\n", strerror(errno));
     }
 }
 
@@ -1236,7 +1248,11 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
             setupMtab();
             break;
         case JOYENT_MINIMAL:
-            /* joyent-minimal brand mounts /proc for us so we don't need to */
+            /*
+             * joyent-minimal brand mounts /proc for us so we don't need to,
+             * but without /proc being lxproc, we need to mount /dev/fd
+             */
+            mountOSDevFD();
             ipmgmtd_cmd = IPMGMTD_CMD_OS;
             ipmgmtd_env = IPMGMTD_ENV_OS;
             ipmgmtd_door = IPMGMTD_DOOR_OS;

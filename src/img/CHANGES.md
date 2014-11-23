@@ -9,6 +9,10 @@
   images -- pulling from the Docker Index/Registry API is not
   supported in this change.
 
+- `imgadm list [<filters>]` support for filtering with 'field=value'
+  arguments. E.g., `imgadm list type=docker`.
+
+
 ## 2.6.13
 
 - [OS-2989] Fix 'imgadm import UUID' *when importing from a DSAPI source*

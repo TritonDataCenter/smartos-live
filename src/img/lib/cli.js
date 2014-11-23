@@ -613,13 +613,29 @@ CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
         self.do_help('help', {}, [subcmd], cb);
         return;
     }
-    if (args.length) {
-        cb(new errors.UsageError(
-            'unexpected args: ' + args.join(' ')));
-        return;
-    }
     var log = self.log;
     log.debug({opts: opts}, 'list');
+
+    var filters = {};
+    for (var i = 0; i < args.length; i++) {
+        var arg = args[i];
+        var idx = arg.indexOf('=');
+        if (idx === -1) {
+            return callback(new errors.UsageError(format(
+                'invalid filter: "%s" (must be of the form "field=value")',
+                arg)));
+        }
+        var val = arg.slice(idx + 1);
+        if (val === 'true') {
+            val = true;
+        } else if (val === 'false') {
+            val = false;
+        }
+        filters[arg.slice(0, idx)] = val;
+    }
+    if (args) {
+        log.debug({filters: filters}, 'list filters');
+    }
 
     /* JSSTYLED */
     var columns = opts.o.trim().split(/\s*,\s*/g);
@@ -631,6 +647,49 @@ CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
         if (err) {
             cb(err);
             return;
+        }
+
+        var fields = Object.keys(filters);
+        if (fields.length) {
+            var filtered = [];
+            for (var i = 0; i < imagesInfo.length; i++) {
+                var imageInfo = imagesInfo[i];
+                var manifest = imageInfo.manifest;
+                var keep = true;
+                for (var f = 0; f < fields.length; f++) {
+                    var field = fields[f];
+                    var val = filters[field];
+                    var lookups = field.split(/\./g);
+                    var actual = manifest;
+                    for (var j = 0; j < lookups.length; j++) {
+                        actual = actual[lookups[j]];
+                        if (actual === undefined) {
+                            break;
+                        }
+                    }
+                    if (typeof (val) === 'boolean') {
+                        if (val !== actual) {
+                            keep = false;
+                            break;
+                        }
+                    } else if (val[0] === '~') {
+                        var substr = val.slice(1);
+                        if (actual.indexOf(val.slice(1)) === -1) {
+                            keep = false;
+                            break;
+                        }
+                    } else {
+                        if (String(actual) !== val) {
+                            keep = false;
+                            break;
+                        }
+                    }
+                }
+                if (keep) {
+                    filtered.push(imageInfo);
+                }
+            }
+            imagesInfo = filtered;
         }
 
         if (opts.json) {
@@ -669,7 +728,12 @@ CLI.prototype.do_list.help = (
     'List locally installed images.\n'
     + '\n'
     + 'Usage:\n'
-    + '    {{name}} list [<options>...]\n'
+    + '    {{name}} list [<options>...] [<filters>]\n'
+    + '\n'
+    + 'Filters:\n' +
+    + '    FIELD=VALUE\n'
+    + '    FIELD=true|false\n'
+    + '    FIELD=~SUBSTRING\n'
     + '\n'
     + '{{options}}'
     + '\n'

@@ -68,6 +68,48 @@ var pkg = require('../package.json');
 
 
 
+// ---- internal support functions
+
+
+function listImagesInfoSync(imagesInfo, opts) {
+    assert.arrayOfObject(imagesInfo, 'imagesInfo');
+    assert.optionalObject(opts, 'opts');
+    if (!opts) {
+        opts = {};
+    }
+    assert.optionalBool(opts.json, 'opts.json');
+    assert.optionalBool(opts.skipHeader, 'opts.skipHeader');
+    assert.optionalArrayOfString(opts.columns, 'opts.columns');
+    assert.optionalArrayOfString(opts.sort, 'opts.sort');
+
+    if (opts.json) {
+        console.log(JSON.stringify(imagesInfo, null, 2));
+    } else {
+        var rows = [];
+        imagesInfo.forEach(function (i) {
+            var row = i.manifest;
+            if (row.published_at) {
+                // Just the date.
+                row.published_date = row.published_at.slice(0, 10);
+                // Normalize on no milliseconds.
+                row.published = row.published_at.replace(/\.\d+Z$/, 'Z');
+            }
+            row.source = i.source;
+            row.clones = i.clones;
+            row.zpool = i.zpool;
+            rows.push(row);
+        });
+        tabula(rows, {
+            skipHeader: opts.skipHeader,
+            columns: opts.columns,
+            sort: opts.sort,
+            validFields: listValidFields
+        });
+    }
+}
+
+
+
 // ---- CLI object
 
 /**
@@ -274,6 +316,7 @@ CLI.prototype.printHelp = function printHelp(cb) {
         '    imgadm get [-P <pool>] <uuid>          info on an installed image',
         '    imgadm update [<uuid>...]              update installed images',
         '    imgadm delete [-P <pool>] <uuid>       remove an installed image',
+        '    imgadm ancestry [-P <pool>] <uuid>     show ancestry of installed image',
         '',
         '    imgadm create <vm-uuid> [<manifest-field>=<value> ...] ...',
         '                                           create an image from a VM',
@@ -621,17 +664,17 @@ CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
         var arg = args[i];
         var idx = arg.indexOf('=');
         if (idx === -1) {
-            return callback(new errors.UsageError(format(
+            return cb(new errors.UsageError(format(
                 'invalid filter: "%s" (must be of the form "field=value")',
                 arg)));
         }
-        var val = arg.slice(idx + 1);
-        if (val === 'true') {
-            val = true;
-        } else if (val === 'false') {
-            val = false;
+        var argVal = arg.slice(idx + 1);
+        if (argVal === 'true') {
+            argVal = true;
+        } else if (argVal === 'false') {
+            argVal = false;
         }
-        filters[arg.slice(0, idx)] = val;
+        filters[arg.slice(0, idx)] = argVal;
     }
     if (args) {
         log.debug({filters: filters}, 'list filters');
@@ -652,8 +695,8 @@ CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
         var fields = Object.keys(filters);
         if (fields.length) {
             var filtered = [];
-            for (var i = 0; i < imagesInfo.length; i++) {
-                var imageInfo = imagesInfo[i];
+            for (var j = 0; j < imagesInfo.length; j++) {
+                var imageInfo = imagesInfo[j];
                 var manifest = imageInfo.manifest;
                 var keep = true;
                 for (var f = 0; f < fields.length; f++) {
@@ -661,8 +704,8 @@ CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
                     var val = filters[field];
                     var lookups = field.split(/\./g);
                     var actual = manifest;
-                    for (var j = 0; j < lookups.length; j++) {
-                        actual = actual[lookups[j]];
+                    for (var k = 0; k < lookups.length; k++) {
+                        actual = actual[lookups[k]];
                         if (actual === undefined) {
                             break;
                         }
@@ -673,7 +716,6 @@ CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
                             break;
                         }
                     } else if (val[0] === '~') {
-                        var substr = val.slice(1);
                         if (actual.indexOf(val.slice(1)) === -1) {
                             keep = false;
                             break;
@@ -692,36 +734,18 @@ CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
             imagesInfo = filtered;
         }
 
-        if (opts.json) {
-            console.log(JSON.stringify(imagesInfo, null, 2));
-        } else {
-            var rows = [];
-            imagesInfo.forEach(function (i) {
-                var row = i.manifest;
-                if (row.published_at) {
-                    // Just the date.
-                    row.published_date = row.published_at.slice(0, 10);
-                    // Normalize on no milliseconds.
-                    row.published = row.published_at.replace(/\.\d+Z$/, 'Z');
-                }
-                row.source = i.source;
-                row.clones = i.clones;
-                row.zpool = i.zpool;
-                rows.push(row);
+        try {
+            listImagesInfoSync(imagesInfo, {
+                json: opts.json,
+                columns: columns,
+                sort: sort,
+                skipHeader: opts.H
             });
-            try {
-                tabula(rows, {
-                    skipHeader: opts.H,
-                    columns: columns,
-                    sort: sort,
-                    validFields: listValidFields
-                });
-            } catch (e) {
-                cb(e);
-                return;
-            }
-            cb();
+        } catch (e) {
+            cb(e);
+            return;
         }
+        cb();
     });
 };
 CLI.prototype.do_list.help = (
@@ -730,7 +754,7 @@ CLI.prototype.do_list.help = (
     + 'Usage:\n'
     + '    {{name}} list [<options>...] [<filters>]\n'
     + '\n'
-    + 'Filters:\n' +
+    + 'Filters:\n'
     + '    FIELD=VALUE\n'
     + '    FIELD=true|false\n'
     + '    FIELD=~SUBSTRING\n'
@@ -882,6 +906,108 @@ CLI.prototype.do_get.options = [
     }
 ];
 
+
+
+CLI.prototype.do_ancestry = function do_ancestry(subcmd, opts, args, cb) {
+    var self = this;
+    if (opts.help) {
+        self.do_help('help', {}, [subcmd], cb);
+        return;
+    }
+    if (args.length !== 1) {
+        cb(new errors.UsageError(format(
+            'incorrect number of args (%d): "%s"',
+            args.length, args.join(' '))));
+        return;
+    }
+    var uuid = args[0];
+    assert.uuid(uuid, 'uuid');
+    var zpool = opts.P || common.DEFAULT_ZPOOL;
+    /* JSSTYLED */
+    var columns = opts.o.trim().split(/\s*,\s*/g);
+    var log = self.log;
+    log.debug({opts: opts, zpool: zpool, uuid: uuid}, 'ancestry');
+
+    var ancestry = [];
+    getNextAncestor(uuid);
+
+
+    function getNextAncestor(aUuid) {
+        var getOpts = {uuid: aUuid, zpool: zpool};
+        self.tool.getImage(getOpts, function (err, imageInfo) {
+            if (err) {
+                cb(err);
+                return;
+            }
+            if (!imageInfo) {
+                cb(new errors.ImageNotInstalledError(zpool, aUuid));
+                return;
+            }
+            ancestry.push(imageInfo);
+            if (imageInfo.manifest.origin) {
+                getNextAncestor(imageInfo.manifest.origin);
+            } else {
+                finish();
+            }
+        });
+    }
+
+    function finish() {
+        try {
+            listImagesInfoSync(ancestry, {
+                json: opts.json,
+                columns: columns,
+                skipHeader: opts.H
+            });
+        } catch (e) {
+            cb(e);
+            return;
+        }
+        cb();
+    }
+};
+CLI.prototype.do_ancestry.help = (
+    'List the ancestry (the "origin" chain) for the given incremental image.\n'
+    + '\n'
+    + 'Usage:\n'
+    + '    {{name}} ancestry [<options>...] <uuid>\n'
+    + '\n'
+    + '{{options}}'
+    + '\n'
+    + common.textWrap('Valid fields for "-o" are: '
+        + listValidFields.join(', ') + '.') + '\n'
+);
+CLI.prototype.do_ancestry.options = [
+    {
+        names: ['help', 'h'],
+        type: 'bool',
+        help: 'Show this help.'
+    },
+    {
+        names: ['json', 'j'],
+        type: 'bool',
+        help: 'JSON output.'
+    },
+    {
+        names: ['H'],
+        type: 'bool',
+        help: 'Do not print table header row.'
+    },
+    {
+        names: ['o'],
+        type: 'string',
+        help: 'Specify fields (columns) to output. Default is '
+            + '"uuid,name,version,os,published".',
+        default: 'uuid,name,version,os,published'
+    },
+    {
+        names: ['P'],
+        type: 'string',
+        helpArg: '<pool>',
+        help: 'Name of zpool in which to look for the image. Default is "'
+            + common.DEFAULT_ZPOOL + '".'
+    }
+];
 
 /**
  * `imgadm delete <uuid>`

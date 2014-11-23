@@ -12,6 +12,9 @@
 - `imgadm list [<filters>]` support for filtering with 'field=value'
   arguments. E.g., `imgadm list type=docker`.
 
+- Add the `imgadm ancestry <uuid>` command to list the full ancestry
+  (i.e. walk the `origin` chanin) of the given installed image.
+
 
 ## 2.6.13
 

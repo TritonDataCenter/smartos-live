@@ -324,32 +324,18 @@ function normUrlFromUrl(u) {
  *
  * @param options {Object} with these keys
  *      - url {String}
- *      - type {String} Optional. One of 'dsapi' or 'imgapi'. If not given
- *        it is (imperfectly) inferred from the URL.
+ *      - type {String} One of `common.VALID_SOURCE_TYPES`.
  *      - log {Bunyan Logger}
  */
 function Source(options) {
     assert.object(options, 'options');
     assert.string(options.url, 'options.url');
-    assert.optionalString(options.type, 'options.type');
+    assert.string(options.type, 'options.type');
     assert.object(options.log, 'options.log');
     this.url = options.url;
+    this.type = options.type;
     this.normUrl = normUrlFromUrl(this.url);
     this.log = options.log;
-
-    // Figure out `type` if necessary.
-    this.type = options.type;
-    if (!this.type) {
-        // Per the old imgadm (v1) the old source URL includes the
-        // "datasets/" subpath. That's not a completely reliable marker, but
-        // we'll use that.
-        var isDsapiUrl = /datasets$/;
-        if (isDsapiUrl.test(this.normUrl)) {
-            this.type = 'dsapi';
-        } else {
-            this.type = 'imgapi';
-        }
-    }
 }
 
 
@@ -447,19 +433,22 @@ IMGADM.prototype.init = function init(callback) {
  * @param source {Source|Object} A `Source` instance or an object describing
  *      the image source with these keys:
  *      - url {String}
- *      - type {String} Optional. One of 'dsapi' or 'imgapi'. If not given
- *        it is (imperfectly) inferred from the URL.
+ *      - type {String}
  * @param skipPingCheck {Boolean} Whether to do a ping check on the new
- *      source URL. Default false. However, a ping check is not done for
- *      an existing source (i.e. if `source` is already a Source instance).
+ *      source URL. This is done to (a) verify that the given URL doesn't have
+ *      typos and (b) to determine which type of source it is if `type` isn't
+ *      specified. By default the ping check is done when adding a source
+ *      (unless it is an existing source, i.e. if `source` is already a `Source`
+ *      instance). If `source.type` is not given, then the ping check cannot be
+ *      skipped.
  * @param callback {Function} `function (err, changed)` where `changed` is
  *      a boolean indicating if the config changed as a result.
  */
 IMGADM.prototype._addSource = function _addSource(
         source, skipPingCheck, callback) {
     assert.object(source, 'source');
-    assert.optionalString(source.type, 'source.type');
     assert.string(source.url, 'source.url');
+    assert.string(source.type, 'source.type');
     assert.bool(skipPingCheck, 'skipPingCheck');
     assert.func(callback, 'callback');
     var self = this;
@@ -501,11 +490,14 @@ IMGADM.prototype._addSource = function _addSource(
         });
     }
 
-    // No-op if already have this URL.
+    // No-op if already have this URL/TYPE.
     var normUrl = normUrlFromUrl(source.url);
     for (var i = 0; i < self.sources.length; i++) {
-        if (self.sources[i].normUrl === normUrl)
+        if (self.sources[i].normUrl === normUrl
+            && self.sources[i].type === source.type)
+        {
             return callback(null, false);
+        }
     }
 
     // If already a source, then just add it.
@@ -539,18 +531,23 @@ IMGADM.prototype._addSource = function _addSource(
  * Note that this does *not* update the IMGADM config file.
  *
  * @param sourceUrl {String}
- * @param callback {Function} `function (err, changed)` where `changed` is
- *      a boolean indicating if the config changed as a result.
+ * @param callback {Function} `function (err, deleted)` where `deleted` is
+ *      an array of `Source` instances deleted, if any.
  */
 IMGADM.prototype._delSource = function _delSource(sourceUrl, callback) {
     assert.string(sourceUrl, 'sourceUrl');
     var lenBefore = this.sources.length;
     var normSourceUrl = normUrlFromUrl(sourceUrl);
+    var deleted = [];
     this.sources = this.sources.filter(function (s) {
-        return s.normUrl !== normSourceUrl;
+        if (s.normUrl !== normSourceUrl) {
+            return true;
+        } else {
+            deleted.push(s);
+            return false;
+        }
     });
-    var changed = (lenBefore !== this.sources.length);
-    callback(null, changed);
+    callback(null, deleted.length ? deleted : null);
 };
 
 
@@ -559,8 +556,8 @@ IMGADM.prototype._delSource = function _delSource(sourceUrl, callback) {
  *
  * @param source {Object} Image source object with these keys:
  *      - url {String}
- *      - type {String} Optional. One of 'dsapi' or 'imgapi'. If not given
- *        it is (imperfectly) inferred from the URL.
+ *      - type {String} Optional. One of 'imgapi', 'docker', or 'dsapi'. If
+ *        not given it is (imperfectly) inferred from the URL.
  * @param skipPingCheck {Boolean} Whether to do a ping check on the new
  *      source URL. Default false.
  * @param callback {Function} `function (err, changed)`
@@ -602,17 +599,18 @@ IMGADM.prototype.configAddSource = function configAddSource(
  * Delete a source URL and update the on-disk config.
  *
  * @param sourceUrl {String}
- * @param callback {Function} `function (err, changed)`
+ * @param callback {Function} `function (err, deleted)` where `deleted` is
+ *      an array of `Source` instances deleted, if any.
  */
 IMGADM.prototype.configDelSourceUrl = function configDelSourceUrl(
         sourceUrl, callback) {
     assert.string(sourceUrl, 'sourceUrl');
     var self = this;
 
-    self._delSource(sourceUrl, function (delErr, changed) {
+    self._delSource(sourceUrl, function (delErr, deleted) {
         if (delErr) {
             callback(delErr);
-        } else if (changed) {
+        } else if (deleted) {
             self.config.sources = self.sources.map(function (s) {
                 return {url: s.url, type: s.type};
             });
@@ -622,10 +620,10 @@ IMGADM.prototype.configDelSourceUrl = function configDelSourceUrl(
                     return;
                 }
                 self.log.debug({sourceUrl: sourceUrl}, 'deleted source url');
-                callback(null, true);
+                callback(null, deleted);
             });
         } else {
-            callback(null, false);
+            callback(null, null);
         }
     });
 };
@@ -637,7 +635,8 @@ IMGADM.prototype.configDelSourceUrl = function configDelSourceUrl(
  * Dev Notes: The histrionics below are to avoid re-running ping checks
  * on already existing source URLs.
  *
- * @param sourceUrls {Array}
+ * @param sourcesInfo {Array} Array of source info objects (with type and
+ *      url keys).
  * @param skipPingCheck {Boolean} Whether to do a ping check on the new
  *      source URL. Default false. However, a ping check is not done
  *      on already existing sources.
@@ -645,35 +644,57 @@ IMGADM.prototype.configDelSourceUrl = function configDelSourceUrl(
  *      a list of changes of the form `{type: <type>, url: <url>}` where
  *      `type` is one of 'reorder', 'add', 'del'.
  */
-IMGADM.prototype.updateSourceUrls = function updateSourceUrls(
-        sourceUrls, skipPingCheck, callback) {
-    assert.arrayOfString(sourceUrls, 'sourceUrls');
+IMGADM.prototype.updateSources = function updateSources(
+        sourcesInfo, skipPingCheck, callback) {
+    assert.arrayOfObject(sourcesInfo, 'sourcesInfo');
     assert.bool(skipPingCheck, 'skipPingCheck');
     assert.func(callback, 'callback');
     var self = this;
 
-    var changes = [];
-    var oldSourceUrls = self.sources.map(function (s) { return s.url; });
-    var newSources = [];
-    for (var i = 0; i < sourceUrls.length; i++) {
-        var sourceUrl = sourceUrls[i];
-        var idx = oldSourceUrls.indexOf(sourceUrl);
-        if (idx === -1) {
-            newSources.push({url: sourceUrl});
-            changes.push({type: 'add', url: sourceUrl});
-        } else {
-            newSources.push(self.sources[idx]);
-            oldSourceUrls[idx] = null;
+    // Validate types
+    for (var i = 0; i < sourcesInfo.length; i++) {
+        var si = sourcesInfo[i];
+        assert.string(si.url, format('sourcesInfo[%d].url', i));
+        assert.string(si.type, format('sourcesInfo[%d].type', i));
+        if (common.VALID_SOURCE_TYPES.indexOf(si.type) === -1) {
+            callback(new errors.ConfigError(format(
+                'type "%s" for source url "%s" is invalid: must be one of "%s"',
+                si.type, si.url, common.VALID_SOURCE_TYPES.join('", "'))));
         }
     }
-    oldSourceUrls
-        .filter(function (u) { return u !== null; })
-        .forEach(function (u) { changes.push({type: 'del', url: u}); });
+
+    var changes = [];
+    var oldSources = self.sources.map(function (s) {
+        return {url: s.url, type: s.type};
+    });
+    var newSources = [];
+    for (var i = 0; i < sourcesInfo.length; i++) {
+        var sourceInfo = sourcesInfo[i];
+        var idx = -1;
+        for (var j = 0; j < oldSources.length; j++) {
+            var old = oldSources[j];
+            if (old && old.type === sourceInfo.type
+                && old.url === sourceInfo.url)
+            {
+                idx = j;
+                break;
+            }
+        }
+        if (idx === -1) {
+            newSources.push(sourceInfo);
+            changes.push({type: 'add', source: sourceInfo});
+        } else {
+            newSources.push(self.sources[idx]);
+            oldSources[idx] = null;
+        }
+    }
+    oldSources
+        .filter(function (s) { return s !== null; })
+        .forEach(function (s) { changes.push({type: 'del', source: s}); });
     if (changes.length === 0) {
         changes.push({type: 'reorder'});
     }
 
-    // `_addSource` has the logic to fill out the source object.
     self.sources = [];
     async.forEachSeries(
         newSources,
@@ -743,6 +764,12 @@ IMGADM.prototype.clientFromSource = function clientFromSource(
 
     var normUrl = source.normUrl;
     if (source.type === 'dsapi') {
+        if (! /\/datasets\/?$/.test(normUrl)) {
+            callback(new errors.ConfigError(format(
+                '"dsapi" source URL does not end with "/datasets": "%s"',
+                normUrl)));
+            return;
+        }
         var baseNormUrl = path.dirname(normUrl); // drop 'datasets/' tail
         self._clientCache[normUrl] = dsapi.createClient({
             agent: false,
@@ -751,14 +778,17 @@ IMGADM.prototype.clientFromSource = function clientFromSource(
             rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
             userAgent: self.userAgent
         });
-    } else {
+    } else if (source.type === 'imgapi') {
         self._clientCache[normUrl] = imgapi.createClient({
             agent: false,
             url: normUrl,
+            version: '~2',
             log: self.log.child({component: 'api', source: source.url}, true),
             rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
             userAgent: self.userAgent
         });
+    } else {
+        throw new Error('unknown source type: "' + source.type + '"');
     }
     callback(null, self._clientCache[normUrl]);
 };

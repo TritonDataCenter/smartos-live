@@ -148,8 +148,8 @@ function SourcePingError(cause, source) {
     }
     ImgadmError.call(this, {
         cause: cause,
-        message: format('unexpected ping error with image source "%s" (%s)%s',
-            source.url, source.type, details),
+        message: format('unexpected ping error with "%s" image source "%s"%s',
+            source.type, source.url, details),
         code: 'SourcePing',
         exitStatus: 1
     });

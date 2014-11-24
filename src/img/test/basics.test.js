@@ -96,7 +96,7 @@ test('imgadm --version', function (t) {
 });
 
 
-test('imgadm -v list  # bunyan debug log on stderr', function (t) {
+test('imgadm -v list  # bunyan trace log on stderr', function (t) {
     exec('imgadm -v list', function (err, stdout, stderr) {
         t.ok(stderr);
         var firstLine = stderr.split(/\n/g)[0];

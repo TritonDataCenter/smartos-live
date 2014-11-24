@@ -1,6 +1,6 @@
 # imgadm changelog
 
-## 2.7.0
+## 3.0.0
 
 - Add preliminary support for importing images of `type: 'docker'`,
   where the image file content is the native Docker image format

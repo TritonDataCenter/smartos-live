@@ -123,8 +123,8 @@ function CLI() {
             {names: ['help', 'h'], type: 'bool', help: 'Print help and exit.'},
             {name: 'version', type: 'bool', help: 'Print version and exit.'},
             {names: ['verbose', 'v'], type: 'bool',
-                help: 'Verbose output: debug logging, stack on error. See '
-                    + 'IMGADM_LOG_LEVEL envvar.'},
+                help: 'Verbose output: trace-level logging, stack on error. '
+                    + 'See IMGADM_LOG_LEVEL envvar.'},
             {name: 'E', type: 'bool',
                 help: 'On error, emit a structured JSON error object as the '
                     + 'last line of stderr output.'}
@@ -151,7 +151,7 @@ CLI.prototype.init = function init(opts, args, cb) {
      *   almost no logging.
      * - use IMGADM_LOG_LEVEL=trace envvar to set to trace level and enable
      *   source location (src=true) in log records
-     * - '-v|--verbose' or IMGADM_LOG_LEVEL=debug to set to debug level
+     * - '-v|--verbose' or IMGADM_LOG_LEVEL=trace to set to trace-level
      * - use IMGADM_LOG_LEVEL=<bunyan level> to set to a different level
      * - '-E' to have a possible error be logged as the last single line
      *   of stderr as a raw Bunyan log JSON record with an 'err'. I.e. in a
@@ -198,13 +198,14 @@ CLI.prototype.init = function init(opts, args, cb) {
         log.warn('invalid IMGADM_LOG_LEVEL=%s envvar (ignoring)',
             process.env.IMGADM_LOG_LEVEL);
     }
-    if (IMGADM_LOG_LEVEL && IMGADM_LOG_LEVEL === 'trace') {
+    if (opts.verbose) {
+        log.level('trace');
         log.src = true;
-        log.level(IMGADM_LOG_LEVEL);
-    } else if (opts.verbose) {
-        log.level('debug');
     } else if (IMGADM_LOG_LEVEL) {
         log.level(IMGADM_LOG_LEVEL);
+        if (IMGADM_LOG_LEVEL === 'trace') {
+            log.src = true;
+        }
     }
     self.log = log;
 
@@ -353,18 +354,51 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
         return;
     }
     var skipPingCheck = opts.force === true;
+
     if (opts.e) {
-        var before = self.tool.sources.map(function (s) { return s.url; });
-        var beforeText = before.join('\n')
+        var before = self.tool.sources.map(function (s) {
+            return {url: s.url, type: s.type};
+        });
+
+        var width = 0;
+        self.tool.sources.forEach(function (s) {
+            width = Math.max(width, s.url.length);
+        });
+        var template = format('%%-%ds  %s', Math.min(width, 50));
+        var beforeText = before.map(function (s) {
+                return sprintf(template, s.url, s.type);
+            }).join('\n')
             + '\n\n'
             + '#\n'
-            + '# Enter source URLs, one per line.\n'
+            + '# Enter sources, one per line, as follows:\n'
+            + '#\n'
+            + '#   URL TYPE\n'
+            + '#\n'
+            + '# where "TYPE" is one of "imgapi" (the default), "docker"\n'
+            + '# (experimental), or "dsapi" (deprecated).\n'
+            + '#\n'
             + '# Comments beginning with "#" are stripped.\n'
             + '#\n';
         var tmpPath = path.resolve(os.tmpDir(),
             format('imgadm-sources-%s.txt', process.pid));
         fs.writeFileSync(tmpPath, beforeText, 'utf8');
 
+        function sourcesInfoFromText(text) {
+            return text.trim().split(/\n/g)
+                .map(function (line) {
+                    return line.split('#')[0].trim();  // drop comments
+                }).filter(function (line) {
+                    return line.length;  // drop blank lines
+                }).map(function (line) {
+                    var parts = line.split(/\s+/);
+                    if (!parts[1]) {
+                        parts[1] = 'imgapi'; // default type
+                    }
+                    return {url: parts[0], type: parts[1]};
+                });
+        }
+
+        // TODO: re-editing if error adding (e.g. typo in type or whtaever)
         var vi = spawn('/usr/bin/vi', ['-f', tmpPath], {stdio: 'inherit'});
         vi.on('exit', function (code) {
             if (code) {
@@ -380,18 +414,15 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
                 cb();
                 return;
             }
-            var after = afterText.trim().split(/\n/g).filter(function (line) {
-                line = line.split('#')[0].trim();
-                if (line.length === 0)
-                    return false;
-                return true;
-            });
-            if (after.join('\n') === before.join('\n')) {
+            after = sourcesInfoFromText(afterText);
+            if (JSON.stringify(after) === JSON.stringify(before)) {
                 console.log('Image sources unchanged');
                 cb();
                 return;
             }
-            self.tool.updateSourceUrls(after, skipPingCheck,
+
+            self.log.info({after: after}, 'update sources');
+            self.tool.updateSources(after, skipPingCheck,
                 function (err, changes) {
                     if (err) {
                         cb(err);
@@ -400,50 +431,62 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
                             if (change.type === 'reorder') {
                                 console.log('Reordered image sources');
                             } else if (change.type === 'add') {
-                                console.log('Added image source "%s"',
-                                    change.url);
+                                console.log('Added "%s" image source "%s"',
+                                    change.source.type, change.source.url);
                             } else if (change.type === 'del') {
-                                console.log('Deleted image source "%s"',
-                                    change.url);
+                                console.log('Deleted "%s" image source "%s"',
+                                    change.source.type, change.source.url);
                             }
                         });
                         cb();
                     }
                 });
         });
+
     } else if (opts.a) {
-        this.tool.configAddSource({url: opts.a}, skipPingCheck,
+        this.tool.configAddSource({url: opts.a, type: opts.type}, skipPingCheck,
             function (err, changed) {
                 if (err) {
                     cb(err);
                 } else if (changed) {
-                    console.log('Added image source "%s"', opts.a);
-                } else {
-                    console.log('Already have image source "%s", no change',
+                    console.log('Added "%s" image source "%s"', opts.type,
                         opts.a);
+                } else {
+                    console.log(
+                        'Already have "%s" image source "%s", no change',
+                        opts.type, opts.a);
                 }
             }
         );
+
     } else if (opts.d) {
-        this.tool.configDelSourceUrl(opts.d, function (err, changed) {
+        this.tool.configDelSourceUrl(opts.d, function (err, deleted) {
             if (err) {
                 cb(err);
-            } else if (changed) {
-                console.log('Deleted image source "%s"', opts.d);
+            } else if (deleted) {
+                deleted.forEach(function (s) {
+                    console.log('Deleted "%s" image source "%s"',
+                        s.type, s.url);
+                })
             } else {
                 console.log('Do not have image source "%s", no change',
                     opts.d);
             }
         });
+
     } else {
+        // The default flat list of source *urls*.
         var sources = this.tool.sources.map(function (s) {
-            return s.url;
+            return {url: s.url, type: s.type};
         });
         if (opts.json) {
             console.log(JSON.stringify(sources, null, 2));
+        } else if (opts.verbose) {
+            tabula(sources, {columns: ['url', 'type']});
         } else {
+            // The default flat list of source *urls*.
             sources.forEach(function (s) {
-                console.log(s);
+                console.log(s.url);
             });
         }
         cb();
@@ -457,7 +500,10 @@ CLI.prototype.do_sources.help = (
     + 'The default IMGAPI is + ' + common.DEFAULT_SOURCE.url + '\n'
     + '\n'
     + 'Usage:\n'
-    + '    {{name}} sources [<options>]\n'
+    + '    {{name}} sources [--verbose|-v] [--json|-j]  # list sources\n'
+    + '    {{name}} sources -a <url> [-t <type>]        # add a source\n'
+    + '    {{name}} sources -d <url>                    # delete a source\n'
+    + '    {{name}} sources -e                          # edit sources\n'
     + '\n'
     + '{{options}}'
     /* END JSSTYLED */
@@ -469,9 +515,17 @@ CLI.prototype.do_sources.options = [
         help: 'Show this help.'
     },
     {
+        names: ['verbose', 'v'],
+        type: 'bool',
+        help: 'Verbose output. List source URL and TYPE.'
+    },
+    {
         names: ['json', 'j'],
         type: 'bool',
-        help: 'List sources as JSON'
+        help: 'List sources as JSON.'
+    },
+    {
+        group: ''
     },
     {
         names: ['a'],
@@ -491,10 +545,19 @@ CLI.prototype.do_sources.options = [
         help: 'Edit sources in an editor.'
     },
     {
+        names: ['type', 't'],
+        type: 'string',
+        default: 'imgapi',
+        helpArg: '<type>',
+        help: 'The source type. One of "imgapi" (the default), "docker" '
+            + '(experimental), or "dsapi" (deprecated).'
+
+    },
+    {
         names: ['force', 'f'],
         type: 'bool',
-        help: 'Force no "ping check" on new source URLs. By default'
-            + 'a ping check is done against new source URLs to'
+        help: 'Force no "ping check" on new source URLs. By default '
+            + 'a ping check is done against new source URLs to '
             + 'attempt to ensure they are a running IMGAPI server.'
     }
 ];

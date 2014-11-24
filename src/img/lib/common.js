@@ -48,6 +48,8 @@ var DEFAULT_SOURCE = {type: 'imgapi', url: 'https://images.joyent.com'};
 
 var VALID_COMPRESSIONS = ['none', 'bzip2', 'gzip'];
 
+var VALID_SOURCE_TYPES = ['imgapi', 'dsapi', 'docker'];
+
 
 var _versionCache = null;
 function getVersion() {
@@ -549,6 +551,7 @@ module.exports = {
     DEFAULT_ZPOOL: DEFAULT_ZPOOL,
     DEFAULT_SOURCE: DEFAULT_SOURCE,
     VALID_COMPRESSIONS: VALID_COMPRESSIONS,
+    VALID_SOURCE_TYPES: VALID_SOURCE_TYPES,
     getVersion: getVersion,
     objCopy: objCopy,
     objMerge: objMerge,

@@ -278,6 +278,11 @@ function IMGAPI(options) {
     } else {
         this.url = options.url;
     }
+    this._basePath = parsed.path;  // the URL subpath *without* a trailing '/'
+    if (this._basePath.slice(-1) === '/') {
+        this._basePath = this._basePath.slice(0, -1);
+    }
+
     if (options.channel) {
         this.channel = options.channel;
         delete options.channel;
@@ -382,6 +387,28 @@ IMGAPI.prototype._qs = function _qs(fields, fields2) {
 };
 
 
+/**
+ * Return an appropriate full URL *path* given an IMGAPI subpath.
+ * This handles prepending the API's base path, if any: e.g. if the configured
+ * URL is "https://example.com/base/path".
+ *
+ * Optionally an object of query params can be passed in to include a query
+ * string. This just calls `this._qs(...)`.
+ */
+IMGAPI.prototype._path = function _path(subpath, qparams, qparams2) {
+    assert.string(subpath, 'subpath');
+    assert.ok(subpath[0] === '/');
+    assert.optionalObject(qparams, 'qparams');
+    assert.optionalObject(qparams2, 'qparams2'); // can be handy to pass in 2
+
+    var path = this._basePath + subpath;
+    if (qparams) {
+        path += this._qs(qparams, qparams2);
+    }
+    return path;
+};
+
+
 
 /**
  * Ping. <https://mo.joyent.com/docs/imgapi/master/#Ping>
@@ -399,7 +426,7 @@ IMGAPI.prototype.ping = function ping(error, callback) {
     assert.optionalString(error, 'error');
     assert.func(callback, 'callback');
 
-    var path = '/ping' + self._qs({error: error});
+    var path = self._path('/ping', {error: error});
     self._getAuthHeaders(function (hErr, headers) {
         if (hErr) {
             callback(hErr);
@@ -430,7 +457,7 @@ IMGAPI.prototype.adminGetState = function adminGetState(callback) {
     var self = this;
     assert.func(callback, 'callback');
 
-    var path = '/state';
+    var path = self._path('/state');
     self._getAuthHeaders(function (hErr, headers) {
         if (hErr) {
             callback(hErr);
@@ -503,7 +530,7 @@ IMGAPI.prototype.listImages = function listImages(filters, options, callback) {
 
     function listImagesWithLimit(headers, cb) {
         // limit and marker come straight from filters
-        var path = '/images' + self._qs(filters, {channel: self.channel});
+        var path = self._path('/images', filters, {channel: self.channel});
         var reqOpts = {
             path: path,
             headers: headers
@@ -546,7 +573,7 @@ IMGAPI.prototype.listImages = function listImages(filters, options, callback) {
                 filters.limit = limit;
             }
 
-            var path = '/images' + self._qs(filters, {channel: self.channel});
+            var path = self._path('/images', filters, {channel: self.channel});
             var reqOpts = {
                 path: path,
                 headers: headers
@@ -634,8 +661,10 @@ function getImage(uuid, account, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s', uuid);
-    path += self._qs({account: account, channel: self.channel});
+    var path = self._path('/images/' + uuid, {
+        account: account,
+        channel: self.channel
+    });
     self._getAuthHeaders(function (hErr, headers) {
         if (hErr) {
             callback(hErr);
@@ -691,7 +720,7 @@ function createImage(data, account, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = '/images' + self._qs({account: account, channel: self.channel});
+    var path = self._path('/images', {account: account, channel: self.channel});
     self._getAuthHeaders(function (hErr, headers) {
         if (hErr) {
             callback(hErr);
@@ -748,7 +777,7 @@ function createImageFromVm(data, options, account, callback) {
     assert.optionalString(account, 'account');
     assert.func(callback, 'callback');
 
-    var path = '/images';
+    var path = self._path('/images');
     path += self._qs({
         channel: self.channel,
         action: 'create-from-vm',
@@ -868,7 +897,7 @@ IMGAPI.prototype.adminImportImage = function adminImportImage(
     assert.func(callback, 'callback');
     assert.string(data.uuid, 'data.uuid');
 
-    var path = '/images/' + data.uuid;
+    var path = self._path('/images/' + data.uuid);
     path += self._qs({
         channel: self.channel,
         action: 'import',
@@ -937,8 +966,7 @@ function adminImportRemoteImageAndWait(uuid, source, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = '/images/' + uuid;
-    path += self._qs({
+    var path = self._path('/images/' + uuid, {
         channel: self.channel,
         action: 'import-remote',
         source: source,
@@ -1080,8 +1108,7 @@ function adminImportRemoteImage(uuid, source, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = '/images/' + uuid;
-    path += self._qs({
+    var path = self._path('/images/' + uuid, {
         channel: self.channel,
         action: 'import-remote',
         source: source,
@@ -1152,8 +1179,7 @@ IMGAPI.prototype.addImageFile = function addImageFile(options, account,
     // Separate code path for undocumented AddImageFileFromSource endpoint.
     if (options.source) {
         assert.string(options.source, 'options.source');
-        var path = format('/images/%s/file', uuid);
-        path += self._qs({
+        var path = self._path(format('/images/%s/file', uuid), {
             channel: self.channel,
             source: options.source,
             storage: options.storage
@@ -1216,8 +1242,7 @@ IMGAPI.prototype.addImageFile = function addImageFile(options, account,
             return;
         }
 
-        var path = format('/images/%s/file', uuid);
-        path += self._qs({
+        var path = self._path(format('/images/%s/file', uuid), {
             channel: self.channel,
             compression: options.compression,
             account: account,
@@ -1313,8 +1338,7 @@ function getImageFile(uuid, filePath, account, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s/file', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s/file', uuid), {
         channel: self.channel,
         account: account
     });
@@ -1399,8 +1423,7 @@ IMGAPI.prototype.getImageFileStream = function getImageFileStream(
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s/file', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s/file', uuid), {
         channel: self.channel,
         account: account
     });
@@ -1501,8 +1524,7 @@ IMGAPI.prototype.addImageIcon = function addImageIcon(options, account,
             return;
         }
 
-        var path = format('/images/%s/icon', uuid);
-        path += self._qs({
+        var path = self._path(format('/images/%s/icon', uuid), {
             channel: self.channel,
             account: account,
             sha1: options.sha1
@@ -1595,8 +1617,7 @@ function getImageIcon(uuid, filePath, account, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s/icon', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s/icon', uuid), {
         channel: self.channel,
         account: account
     });
@@ -1682,8 +1703,7 @@ IMGAPI.prototype.getImageIconStream = function getImageIconStream(
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s/icon', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s/icon', uuid), {
         channel: self.channel,
         account: account
     });
@@ -1747,8 +1767,7 @@ function deleteImageIcon(uuid, account, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s/icon', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s/icon', uuid), {
         channel: self.channel,
         account: account
     });
@@ -1808,8 +1827,7 @@ function exportImage(uuid, account, options, callback) {
     assert.optionalString(account, 'account');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s', uuid), {
         channel: self.channel,
         action: 'export',
         manta_path: options.manta_path,
@@ -1866,8 +1884,7 @@ function activateImage(uuid, account, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s', uuid), {
         channel: self.channel,
         action: 'activate',
         account: account
@@ -1923,8 +1940,7 @@ function disableImage(uuid, account, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s', uuid), {
         channel: self.channel,
         action: 'disable',
         account: account
@@ -1980,8 +1996,7 @@ function enableImage(uuid, account, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s', uuid), {
         channel: self.channel,
         action: 'enable',
         account: account
@@ -2039,8 +2054,7 @@ function addImageAcl(uuid, acl, account, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s/acl', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s/acl', uuid), {
         channel: self.channel,
         action: 'add',
         account: account
@@ -2098,8 +2112,7 @@ function removeImageAcl(uuid, acl, account, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s/acl', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s/acl', uuid), {
         channel: self.channel,
         action: 'remove',
         account: account
@@ -2157,8 +2170,7 @@ function updateImage(uuid, data, account, options, callback) {
     assert.optionalObject(options.headers, 'options.headers');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s', uuid), {
         channel: self.channel,
         action: 'update',
         account: account
@@ -2225,8 +2237,7 @@ function deleteImage(uuid, account, options, callback) {
     assert.optionalBool(options.forceAllChannels, 'options.forceAllChannels');
     assert.func(callback, 'callback');
 
-    var path = format('/images/%s', uuid);
-    path += self._qs({
+    var path = self._path(format('/images/%s', uuid), {
         channel: self.channel,
         account: account,
         force_all_channels: options.forceAllChannels
@@ -2271,7 +2282,7 @@ IMGAPI.prototype.listChannels = function listChannels(opts, cb) {
     assert.optionalObject(opts.headers, 'opts.headers');
     assert.func(cb, 'cb');
 
-    var path = '/channels';
+    var path = self._path('/channels');
     self._getAuthHeaders(function (hErr, headers) {
         if (hErr) {
             cb(hErr);
@@ -2324,8 +2335,7 @@ IMGAPI.prototype.channelAddImage = function channelAddImage(opts, cb) {
      *    add image.
      */
 
-    var path = '/images/' + opts.uuid;
-    path += self._qs({
+    var path = self._path('/images/' + opts.uuid, {
         channel: self.channel,
         action: 'channel-add',
         account: opts.account

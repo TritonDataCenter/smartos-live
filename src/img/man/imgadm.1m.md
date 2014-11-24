@@ -17,6 +17,7 @@
     imgadm get [-P <pool>] <uuid>       info on an installed image
     imgadm update [<uuid>...]           update installed images
     imgadm delete [-P <pool>] <uuid>    remove an installed image
+    imgadm ancestry [-P <pool>] <uuid>  show ancestry of an installed image
 
     # Experimental.
     imgadm create <vm-uuid> [<manifest-field>=<value> ...] ...
@@ -186,6 +187,26 @@ UUID.
             -h, --help         Print this help and exit.
             -n                 Do a dry-run (do not actually make changes).
 
+    imgadm ancestry [-P <pool>] <uuid>
+
+        List the ancestry (the "origin" chain) for the given incremental image.
+
+        Usage:
+            imgadm ancestry [<options>...] <uuid>
+
+        Options:
+            -h, --help         Show this help.
+            -j, --json         JSON output.
+            -H                 Do not print table header row.
+            -o ARG             Specify fields (columns) to output. Default is
+                               "uuid,name,version,os,published".
+            -P <pool>          Name of zpool in which to look for the image.
+                               Default is "zones".
+
+        Valid fields for "-o" are: source, uuid, owner, name, version, state, disabled,
+        public, published, published_at, type, os, urn, origin, nic_driver,
+        disk_driver, cpu_type, image_size, generate_passwords, description, clones,
+        zpool.
 
     imgadm delete [-P <pool>] <uuid>
 

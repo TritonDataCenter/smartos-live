@@ -316,7 +316,7 @@ CLI.prototype.printHelp = function printHelp(cb) {
         '    imgadm get [-P <pool>] <uuid>          info on an installed image',
         '    imgadm update [<uuid>...]              update installed images',
         '    imgadm delete [-P <pool>] <uuid>       remove an installed image',
-        '    imgadm ancestry [-P <pool>] <uuid>     show ancestry of installed image',
+        '    imgadm ancestry [-P <pool>] <uuid>     show ancestry of an installed image',
         '',
         '    imgadm create <vm-uuid> [<manifest-field>=<value> ...] ...',
         '                                           create an image from a VM',

@@ -506,6 +506,14 @@ CLI.prototype.do_sources.help = (
     + '    {{name}} sources -e                          # edit sources\n'
     + '\n'
     + '{{options}}'
+    + '\n'
+    + 'Examples:\n'
+    + '    # Joyent\'s primary public image repository\n'
+    + '    {{name}} sources -a https://images.joyent.com\n'
+    + '    # The main Docker registry (experimental)\n'
+    + '    {{name}} sources -a https://registry-1.docker.io -t docker\n'
+    + '    # Legacy SDC 6.5 DSAPI (deprecated)\n'
+    + '    {{name}} sources -a https://datasets.joyent.com/datasets -t dsapi\n'
     /* END JSSTYLED */
 );
 CLI.prototype.do_sources.options = [
@@ -1146,6 +1154,8 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
     var uuid = args[0];
     assertUuid(uuid);
     var zpool = opts.P || common.DEFAULT_ZPOOL;
+
+    //XXX START HERE: how to support docker 'imgadm import redis'
 
     // 1. Ensure we don't already have this UUID installed.
     self.tool.getImage({uuid: uuid, zpool: zpool}, function (getErr, ii) {

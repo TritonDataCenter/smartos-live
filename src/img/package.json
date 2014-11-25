@@ -8,6 +8,7 @@
     "assert-plus": "0.1.5",
     "async": "0.9.0",
     "cmdln": "3.0.1",
+    "docker-registry-client": "git://github.com/joyent/node-docker-registry-client.git#9564f35",
     "extsprintf": "1.2.0",
     "findit": "2.0.0",
     "imgmanifest": "git://github.com/joyent/node-imgmanifest.git#29032be",

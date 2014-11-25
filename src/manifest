@@ -11,6 +11,8 @@ d usr/img 0555 root bin
 d usr/img/etc 0555 root bin
 f usr/img/etc/imgadm.completion 0444 root bin
 d usr/img/lib 0555 root bin
+d usr/img/lib/apis 0555 root bin
+f usr/img/lib/apis/docker.js 0444 root bin
 f usr/img/lib/cli.js 0444 root bin
 f usr/img/lib/common.js 0444 root bin
 f usr/img/lib/errors.js 0444 root bin
@@ -41,6 +43,14 @@ d usr/img/node_modules/cmdln/node_modules/dashdash/lib 0555 root bin
 f usr/img/node_modules/cmdln/node_modules/dashdash/lib/dashdash.js 0444 root bin
 f usr/img/node_modules/cmdln/node_modules/dashdash/package.json 0444 root bin
 f usr/img/node_modules/cmdln/package.json 0444 root bin
+d usr/img/node_modules/docker-registry-client 0555 root bin
+d usr/img/node_modules/docker-registry-client/lib 0555 root bin
+d usr/img/node_modules/docker-registry-client/lib/clients 0555 root bin
+f usr/img/node_modules/docker-registry-client/lib/clients/idx.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/lib/clients/index.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/lib/clients/registry.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/LICENSE.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/package.json 0444 root bin
 d usr/img/node_modules/extsprintf 0555 root bin
 d usr/img/node_modules/extsprintf/lib 0555 root bin
 f usr/img/node_modules/extsprintf/lib/extsprintf.js 0444 root bin

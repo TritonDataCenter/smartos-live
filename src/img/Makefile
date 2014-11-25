@@ -73,6 +73,8 @@ update_modules:
 	rm -rf node_modules/mkdirp/bin \
 	    node_modules/mkdirp/node_modules \
 	    node_modules/.bin/mkdirp  # don't want mkdirp CLI
+	rm -rf node_modules/docker-registry-client/node_modules # should have all these
+	rm -rf node_modules/docker-registry-client/deps
 	rm -rf node_modules/progbar/node_modules/assert-plus  # slight version mismatch
 	rm -rf node_modules/progbar/node_modules/readable-stream # only needed for node 0.8
 	rm -rf node_modules/imgmanifest/node_modules/assert-plus  # slight version mismatch

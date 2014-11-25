@@ -67,6 +67,7 @@ var common = require('./common'),
     objCopy = common.objCopy,
     assertUuid = common.assertUuid,
     execFilePlus = common.execFilePlus;
+var docker = require('./apis/docker');
 var errors = require('./errors');
 var upgrade = require('./upgrade');
 
@@ -319,8 +320,7 @@ function normUrlFromUrl(u) {
 // ---- Source class
 
 /**
- * A light wrapper around an image source repository. A source has a
- * `url` and a `type` ("dsapi" or "imgapi").
+ * A light wrapper around an image source repository.
  *
  * @param options {Object} with these keys
  *      - url {String}
@@ -783,6 +783,14 @@ IMGADM.prototype.clientFromSource = function clientFromSource(
             agent: false,
             url: normUrl,
             version: '~2',
+            log: self.log.child({component: 'api', source: source.url}, true),
+            rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
+            userAgent: self.userAgent
+        });
+    } else if (source.type === 'docker') {
+        self._clientCache[normUrl] = docker.createClient({
+            agent: false,
+            url: normUrl,
             log: self.log.child({component: 'api', source: source.url}, true),
             rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
             userAgent: self.userAgent

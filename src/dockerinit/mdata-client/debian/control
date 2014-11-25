@@ -1,0 +1,13 @@
+Source: joyent-mdata-client
+Maintainer: Joshua M. Clulow <jmc@joyent.com>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.4
+Build-Depends: debhelper (>= 8)
+
+Package: joyent-mdata-client
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Homepage: https://github.com/joyent/mdata-client
+Description: Metadata client tools for use in guest virtual machines
+ hosted on a SmartOS hypervisor.

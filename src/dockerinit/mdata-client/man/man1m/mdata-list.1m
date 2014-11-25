@@ -1,0 +1,79 @@
+.\" Copyright (c) 2013, Joyent, Inc.
+.\" See LICENSE file for copyright and license details.
+
+.TH "MDATA-LIST" "__SECT__" "October 2013" "Joyent SmartDataCenter" "Metadata Commands"
+
+.SH "NAME"
+\fBmdata-list\fR \-\- Fetch the list of available metadata key-value pairs\.
+
+.SH "SYNOPSIS"
+.
+.nf
+\fB/usr/sbin/mdata-list\fR
+.fi
+
+.SH "DESCRIPTION"
+.sp
+.LP
+The \fBmdata-list\fR command allows the user (or a script) to query the metadata
+for a guest instance running in a \fISmartDataCenter (SDC)\fR cloud.  Metadata
+values are generally set programmatically via \fICloudAPI\fR, or during
+interactive provisioning via a Web Portal.  They may also be set from within
+the instance with the \fBmdata-put\fR command.  The value of a key-value pair
+may be obtained by passing its name to the \fBmdata-get\fR command.
+.sp
+.LP
+The list of all customer-provided metadata key-value pairs will be printed to
+\fBstdout\fR.  If the metadata service is unavailable at the time of the
+request, this command will block waiting for it to become available.
+Non-transient failures will cause the program to exit with a non-zero status.
+Depending on the nature of the error, some diagnostic output may be printed to
+\fBstderr\fR.
+
+.SH "EXIT STATUS"
+.sp
+.LP
+The following exit values are returned:
+
+.sp
+.ne 2
+.na
+\fB0\fR
+.ad
+.RS 5n
+Successful completion.
+.sp
+The list of key-value pairs was emitted to \fBstdout\fR.
+.RE
+
+.sp
+.ne 2
+.na
+\fB2\fR
+.ad
+.RS 5n
+An error occurred.
+.sp
+An unexpected error condition occurred, which is believed to be a
+non-transient condition.  Retrying the request is not expected to
+resolve the error condition; either a software bug or misconfiguration
+exists.
+.RE
+
+.sp
+.ne 2
+.na
+\fB3\fR
+.ad
+.RS 5n
+A usage error occurred.
+.sp
+Malformed arguments were passed to the program.  Check the usage instructions
+to ensure valid arguments are supplied.
+.RE
+
+.SH "SEE ALSO"
+.sp
+.LP
+\fBmdata-delete\fR(__SECT__), \fBmdata-get\fR(__SECT__),
+\fBmdata-put\fR(__SECT__)

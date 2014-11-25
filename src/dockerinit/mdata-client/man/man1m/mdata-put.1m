@@ -1,0 +1,83 @@
+.\" Copyright (c) 2013, Joyent, Inc.
+.\" See LICENSE file for copyright and license details.
+
+.TH "MDATA-PUT" "__SECT__" "October 2013" "Joyent SmartDataCenter" "Metadata Commands"
+
+.SH "NAME"
+\fBmdata-put\fR \-\- Set the value of a metadata key-value pair\.
+
+.SH "SYNOPSIS"
+.
+.nf
+\fB/usr/sbin/mdata-put\fR \fIkeyname\fR [ \fIvalue\fR ]
+.fi
+
+.SH "DESCRIPTION"
+.sp
+.LP
+The \fBmdata-put\fR command allows the user (or a script) to modify the metadata
+for a guest instance running in a \fISmartDataCenter (SDC)\fR cloud.  Metadata
+values are generally set programmatically via \fICloudAPI\fR, or during
+interactive provisioning via a Web Portal.  The value of a key-value pair
+may be obtained by passing its name to the \fBmdata-get\fR command.
+.sp
+.LP
+The key-value pair named \fIkeyname\fR will be updated in the metadata store
+for this instance.  If a \fIvalue\fR argument is provided on the command-line,
+then that value will be used.  Otherwise, if \fIstdin\fR is not a tty, the
+value will be read from \fIstdin\fR.
+.sp
+.LP
+If the metadata service is unavailable at the time of the request, this command
+will block waiting for it to become available.  Non-transient failures, such as
+the non-existence of the requested \fIkeyname\fR, will cause the program to
+exit with a non-zero status.  Depending on the nature of the error, some
+diagnostic output may be printed to \fBstderr\fR.
+
+.SH "EXIT STATUS"
+.sp
+.LP
+The following exit values are returned:
+
+.sp
+.ne 2
+.na
+\fB0\fR
+.ad
+.RS 5n
+Successful completion.
+.sp
+The requested \fIkeyname\fR was valid, and its value was updated.
+.RE
+
+.sp
+.ne 2
+.na
+\fB2\fR
+.ad
+.RS 5n
+An error occurred.
+.sp
+An unexpected error condition occurred, which is believed to be a
+non-transient condition.  Retrying the request is not expected to
+resolve the error condition; either a software bug or misconfiguration
+exists.
+.RE
+
+.sp
+.ne 2
+.na
+\fB3\fR
+.ad
+.RS 5n
+A usage error occurred.
+.sp
+Malformed arguments were passed to the program.  Check the usage instructions
+to ensure valid arguments are supplied.
+.RE
+
+.SH "SEE ALSO"
+.sp
+.LP
+\fBmdata-delete\fR(__SECT__), \fBmdata-get\fR(__SECT__),
+\fBmdata-list\fR(__SECT__)

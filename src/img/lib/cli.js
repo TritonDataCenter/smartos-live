@@ -414,7 +414,7 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
                 cb();
                 return;
             }
-            after = sourcesInfoFromText(afterText);
+            var after = sourcesInfoFromText(afterText);
             if (JSON.stringify(after) === JSON.stringify(before)) {
                 console.log('Image sources unchanged');
                 cb();
@@ -467,7 +467,7 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
                 deleted.forEach(function (s) {
                     console.log('Deleted "%s" image source "%s"',
                         s.type, s.url);
-                })
+                });
             } else {
                 console.log('Do not have image source "%s", no change',
                     opts.d);
@@ -1154,8 +1154,6 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
     var uuid = args[0];
     assertUuid(uuid);
     var zpool = opts.P || common.DEFAULT_ZPOOL;
-
-    //XXX START HERE: how to support docker 'imgadm import redis'
 
     // 1. Ensure we don't already have this UUID installed.
     self.tool.getImage({uuid: uuid, zpool: zpool}, function (getErr, ii) {

@@ -536,7 +536,6 @@ IMGADM.prototype._addSource = function _addSource(
  */
 IMGADM.prototype._delSource = function _delSource(sourceUrl, callback) {
     assert.string(sourceUrl, 'sourceUrl');
-    var lenBefore = this.sources.length;
     var normSourceUrl = normUrlFromUrl(sourceUrl);
     var deleted = [];
     this.sources = this.sources.filter(function (s) {
@@ -650,9 +649,10 @@ IMGADM.prototype.updateSources = function updateSources(
     assert.bool(skipPingCheck, 'skipPingCheck');
     assert.func(callback, 'callback');
     var self = this;
+    var i, j;
 
     // Validate types
-    for (var i = 0; i < sourcesInfo.length; i++) {
+    for (i = 0; i < sourcesInfo.length; i++) {
         var si = sourcesInfo[i];
         assert.string(si.url, format('sourcesInfo[%d].url', i));
         assert.string(si.type, format('sourcesInfo[%d].type', i));
@@ -668,10 +668,10 @@ IMGADM.prototype.updateSources = function updateSources(
         return {url: s.url, type: s.type};
     });
     var newSources = [];
-    for (var i = 0; i < sourcesInfo.length; i++) {
+    for (i = 0; i < sourcesInfo.length; i++) {
         var sourceInfo = sourcesInfo[i];
         var idx = -1;
-        for (var j = 0; j < oldSources.length; j++) {
+        for (j = 0; j < oldSources.length; j++) {
             var old = oldSources[j];
             if (old && old.type === sourceInfo.type
                 && old.url === sourceInfo.url)

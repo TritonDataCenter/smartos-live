@@ -369,6 +369,8 @@ function update_branches
 		if [[ "$repo" == "illumos-joyent" || \
 		    "$repo" == "illumos" ]]; then
 			update_git "projects/illumos" $branch && continue
+		elif  [[ "$repo" == "smartos-overlay" ]]; then
+			update_git "overlay/smartos" $branch && continue
 		elif  [[ "$repo" == "illumos-extra" ]]; then
 			update_git "projects/illumos-extra" $branch && continue
 		else

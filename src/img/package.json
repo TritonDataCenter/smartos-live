@@ -7,6 +7,8 @@
   "dependencies": {
     "assert-plus": "0.1.5",
     "async": "0.9.0",
+    "backoff": "2.4.0",
+    "bunyan": "1.2.3",
     "cmdln": "3.0.1",
     "docker-registry-client": "git://github.com/joyent/node-docker-registry-client.git#9564f35",
     "extsprintf": "1.2.0",
@@ -16,6 +18,7 @@
     "node-uuid": "1.4.1",
     "once": "1.3.1",
     "progbar": "1.0.0",
+    "restify": "2.8.3",
     "rimraf": "2.2.8",
     "sdc-clients": "git://github.com/joyent/node-sdc-clients.git#411e604",
     "tabula": "1.4.1",

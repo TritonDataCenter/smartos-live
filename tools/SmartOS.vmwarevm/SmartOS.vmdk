@@ -1,0 +1,18 @@
+# Disk DescriptorFile
+version=1
+encoding= #"UTF-8"
+CID=fffffffe
+parentCID=ffffffff
+isNativeSnapshot="no"
+createType="monolithicFlat"
+
+# Extent description
+RW 3906250 FLAT "smartos.img" 0
+
+# The Disk Data Base 
+#DDB
+
+ddb.geometry.cylinders = "3875"
+ddb.geometry.heads = "16"
+ddb.geometry.sectors = "63"
+ddb.adapterType = "ide"

@@ -1,0 +1,94 @@
+#!/bin/bash
+#
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright (c) 2013, Joyent, Inc. All rights reserved.
+# Copyright (c) 2014 Elysium Digital, L.L.C.
+#
+
+#
+# Generates the changelog published alongside SmartOS images
+#
+
+shopt -s xpg_echo
+set -o pipefail
+export PATH=/usr/bin:/opt/local/bin
+
+function fail
+{
+	local msg="$*"
+	[[ -z "$msg" ]] && msg="failed"
+	exit 1
+}
+
+function git_incache
+{
+	local remote
+	remote=$(git remote -v | grep origin | grep fetch | \
+	    awk '{print $2}' || fail)
+	if [[ -d ${remote} ]]; then
+		cd ${remote} || \
+		    fail "Unable to cd to git remote directory ${remote}"
+	fi
+	git "$@" || fail "failed: PWD=${PWD} command was: git $@"
+}
+
+function get_log
+{
+	local head
+	head=$(git rev-parse --abbrev-ref HEAD || fail)
+	echo -n $(git_incache config remote.origin.url) >&2
+	echo ": ${1}..${head}" >&2
+	git_incache log ${1}..${head} || \
+	    fail "failed: PWD=${PWD} command was: git_incache log ${1}..${head}"
+}
+
+function build_section
+{
+	local directory lastbranch description
+	directory=$1
+	lastbranch=$2
+	cd $directory || fail "Unable to cd to $directory"
+	description=${3:-$(basename $PWD)}
+	echo $description ; echo "--------" ; echo
+	get_log ${lastbranch} || fail "failed to get log for $directory"
+}
+
+cd $(dirname $0)/.. || fail "failed to cd to $(dirname $0)/.."
+
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+if [[ $(git rev-parse --abbrev-ref HEAD) == release* ]]; then
+	lastbranch=$(git_incache branch -a | grep origin/ | \
+	    ggrep -B 1 origin/${current_branch} | \
+	    head -n1 | sed -e 's:remotes/::g')
+else
+	lastbranch='origin/release-'$(git_incache branch -a | \
+	    grep origin/release- | sed -e 's/.*release-//' | \
+	    sort -n | tail -n1)
+fi
+
+(build_section . ${lastbranch} > output/changelog.txt) || \
+    fail "failed to build section for ${PWD}"
+
+for git_dir in $(/usr/bin/find projects -maxdepth 3 -type d -name .git || \
+    fail "failed to invoke find"); do
+	(build_section ${git_dir}/.. ${lastbranch} >> output/changelog.txt) || \
+	    fail "failed to build_section for projects/${project}"
+done
+
+if [[ -d overlay/smartos ]] && \
+    grep -q ${PWD}/overlay/smartos overlay/order; then
+	(build_section overlay/smartos ${lastbranch} smartos-overlay >> \
+	    output/changelog.txt) || \
+	    fail "failed to build_section for overlay/smartos"
+fi

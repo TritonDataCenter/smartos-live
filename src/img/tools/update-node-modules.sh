@@ -88,6 +88,20 @@ done
 rm -rf node_modules/.bin/
 
 rm -rf node_modules/bunyan/node_modules
+# patch to use platform's dtrace-provider
+patch -p0 <<'PATCHBUNYAN'
+--- node_modules/bunyan/lib/bunyan.js
++++ node_modules/bunyan/lib/bunyan.js
+@@ -32,7 +32,7 @@ var util = require('util');
+ var assert = require('assert');
+ try {
+     /* Use `+ ''` to hide this import from browserify. */
+-    var dtrace = require('dtrace-provider' + '');
++    var dtrace = require('/usr/node/node_modules/dtrace-provider' + '');
+ } catch (e) {
+     dtrace = null;
+ }
+PATCHBUNYAN
 
 rm -rf node_modules/mkdirp/bin \
     node_modules/mkdirp/node_modules
@@ -152,7 +166,7 @@ ls node_modules/restify/node_modules/semver/ \
         | while read FNAME; do
     rm -rf node_modules/restify/node_modules/semver/$FNAME
 done
-patch -p0 <<PATCH
+patch -p0 <<'PATCHRESTIFY'
 --- node_modules/restify/lib/index.js.orig	2013-02-05 16:08:51.000000000 -0800
 +++ node_modules/restify/lib/index.js	2013-02-05 16:09:04.000000000 -0800
 @@ -7,6 +7,8 @@
@@ -175,7 +189,7 @@ patch -p0 <<PATCH
              PROVIDER = dtrace.createDTraceProvider('restify');
          } catch (e) {
              PROVIDER = {
-PATCH
+PATCHRESTIFY
 rm -rf node_modules/restify/lib/index.js.orig
 rm -rf node_modules/restify/lib/dtrace.js.orig
 
@@ -190,7 +204,7 @@ rm -rf node_modules/nodeunit/lib/reporters/tap.js
 rm -rf node_modules/nodeunit/deps/ejs
 rm -rf node_modules/nodeunit/lib/reporters/junit.js
 # patch to drop reporters
-patch -p0 <<PATCH
+patch -p0 <<'PATCHNODEUNIT'
 --- node_modules/nodeunit/lib/reporters/index.js.orig
 +++ node_modules/nodeunit/lib/reporters/index.js
 @@ -1,12 +1,10 @@
@@ -206,7 +220,5 @@ patch -p0 <<PATCH
      'nested': require('./nested'),
      'verbose' : require('./verbose')
      // browser test reporter is not listed because it cannot be used
-PATCH
+PATCHNODEUNIT
 rm -rf node_modules/nodeunit/lib/reporters/index.js.orig
-
-

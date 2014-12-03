@@ -86,6 +86,11 @@ function upgradeTo300(tool, callback) {
 
     vasync.pipeline({funcs: [
         function upgradeSources(_, next) {
+            if (!tool.config.sources) {
+                next();
+                return;
+            }
+
             log.info({sources: tool.config.sources}, 'config.sources before');
             var changed = false;
             tool.config.sources.forEach(function (s) {

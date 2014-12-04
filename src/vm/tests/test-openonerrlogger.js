@@ -20,7 +20,7 @@ require('nodeunit-plus');
  * after 5 more seconds stop and check that there are 10 messages in the file.
  *
  */
-test('test basic OpenOnError logging', function(t) {
+test('test basic OpenOnError logging', function (t) {
     var log;
     var logfile = '/tmp/logfile.' + process.pid + '.log';
     var written = 0;
@@ -45,6 +45,7 @@ test('test basic OpenOnError logging', function(t) {
     function done() {
         fs.readFile(logfile, 'utf8', function (error, data) {
             var i;
+            var json;
             var lines;
 
             t.ok(!error, 'loaded log file: '
@@ -56,7 +57,7 @@ test('test basic OpenOnError logging', function(t) {
                     json = JSON.parse(lines[i]);
                     if (json.written !== i) {
                         t.ok(false, 'lines[' + i + ']: unexpected "written" '
-                            + 'value: ' + JSON.stringify(json))
+                            + 'value: ' + JSON.stringify(json));
                         t.end();
                         return;
                     }
@@ -72,9 +73,9 @@ test('test basic OpenOnError logging', function(t) {
     function reEnable() {
         setTimeout(function () {
             if (written === 5) {
-                log.error({written: written}, "message %d", written);
+                log.error({written: written}, 'message %d', written);
             } else {
-                log.debug({written: written}, "message %d", written);
+                log.debug({written: written}, 'message %d', written);
             }
             written++;
             if (written < 10) {
@@ -94,7 +95,7 @@ test('test basic OpenOnError logging', function(t) {
  * continue this for 20 seconds or until we crash.
  *
  */
-test('test moved log file', function(t) {
+test('test moved log file', function (t) {
     var done_moving = false;
     var log;
     var logfile = '/tmp/logfile.' + process.pid + '.log';
@@ -125,7 +126,6 @@ test('test moved log file', function(t) {
     }
 
     function startMover() {
-        //process.nextTick(function () {
         setTimeout(function () {
             fs.rename(logfile, logfile + '.old', function () {
                 move_counter++;
@@ -141,7 +141,7 @@ test('test moved log file', function(t) {
             if (written === 20) {
                 startMover();
             }
-            log.error({written: written}, "message %d", written);
+            log.error({written: written}, 'message %d', written);
             written++;
             if (written < 120) {
                 reEnable();

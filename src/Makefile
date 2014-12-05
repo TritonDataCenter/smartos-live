@@ -28,7 +28,7 @@ JSSTYLE_OLDSKOOL_OPTS =
 # without extra effort; it is overridden when make is invoked in this
 # subdirectory.
 #
-DESTDIR =		../proto
+DESTDIR =		$(PWD)/../proto
 
 #
 # DESTNAME is used for the manifest target.  We set it to something

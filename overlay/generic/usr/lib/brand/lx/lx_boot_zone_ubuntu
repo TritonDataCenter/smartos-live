@@ -245,6 +245,7 @@ script
 
     /sbin/initctl emit --no-wait virtual-filesystems
     /bin/mount -t tmpfs tmpfs /run || true
+    /bin/mkdir -p /run/lock || true
     /sbin/initctl emit --no-wait mounted MOUNTPOINT=/run TYPE=tmpfs
     /sbin/initctl emit --no-wait local-filesystems
     /sbin/initctl emit --no-wait all-swaps

@@ -68,6 +68,7 @@
 	<device match="dsk" />
 	<device match="dtrace/*" />
 	<device match="dtrace/provider/*" />
+	<device match="eventfd" />
 	<device match="fd" />
 	<device match="inotify" />
 	<device match="ipnet" />

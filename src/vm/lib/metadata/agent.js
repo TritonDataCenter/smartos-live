@@ -495,7 +495,18 @@ function (zopts, callback, waitSecs) {
 
         server.on('error', function (e) {
             zlog.error({err: e}, 'Zone socket error: ' + e.message);
-            if (e.code !== 'EINTR') {
+            if (e.code === 'ENOTSOCK') {
+                // the socket inside the zone went away, 
+                // likely due to resource constraints (ie: disk full)
+                try {
+                    server.close();
+                } catch (e) {
+                    zlog.error({err: e}, 'Caught exception closing server: '
+                        + e.message);
+                }
+                // start the retry timer
+                self.createZoneSocket(zopts);
+            } else if (e.code !== 'EINTR') {
                 throw e;
             }
         });

@@ -208,8 +208,9 @@ test('try watching an existent file, unwatching and ensure no events',
         fsw.once('ready', function (evt) {
             fsw.watch(filename, function (err) {
                 fs.writeFileSync(filename, 'now we are writing junk!\n');
-                // now change event should have been triggered and we should have
-                // stopped watcher. Control should pass to fsw.on('change'... above.
+                // now change event should have been triggered and we should
+                //  have stopped watcher. Control should pass to
+                // fsw.on('change'... above.
                 return;
             });
         });

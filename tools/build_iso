@@ -33,6 +33,8 @@ bi_platform_dir="output/"
 bi_platform_name=
 bi_platform=
 bi_grub_optstr=
+bi_console=vga
+bi_grub_unit=
 bi_dont_clean=0
 no_smartos=0
 bi_usbpath=
@@ -43,11 +45,12 @@ function usage
 	local msg="$*"
 	[[ -z "$msg" ]] && echo "$msg"
 	cat <<USAGE >&2
-Usage: $bi_arg0 [ -o options ] [ -k ]
+Usage: $bi_arg0 [ -o options ] [-c dev] [ -k ]
 
 Generate a bootable $bi_type image from the proto area and newest platform directory.
 
 	-o options	Append all the options to every GRUB menu.lst entry
+	-c dev		Set default console to be dev (tty{a,b,c,d} or vga)
 	-k		Don't delete temporary files
 	-n		Don't build for SmartOS
 	-h		Display this message
@@ -111,6 +114,33 @@ function bi_verif_grub
 		[[ -f $bi_grub_dir/$file ]] ||
 		    fail "missing required file from grub proto area: $file"
 	done
+	echo "done"
+}
+
+function bi_verif_console
+{
+	echo "Verifying console selection... \c "
+	case "$bi_console" in
+	text|graphics|vga)
+		bi_console=vga
+		bi_grub_unit=1,0,2,3
+		;;
+	ttya)
+		bi_grub_unit=0,1,2,3
+		;;
+	ttyb)
+		bi_grub_unit=1,0,2,3
+		;;
+	ttyc)
+		bi_grub_unit=2,1,0,3
+		;;
+	ttyd)
+		bi_grub_unit=3,1,0,2
+		;;
+	*)
+		fail "Invalid console device $bi_console"
+		;;
+	esac
 	echo "done"
 }
 
@@ -179,31 +209,29 @@ function bi_generate_grub_conf
 	if [[ $no_smartos != 1 ]]; then
 		bi_grub_optstr="${bi_grub_optstr},smartos=true"
 	fi
+	local console_settings='console=${os_console},${os_console}-mode="115200,8,n,1,-"'
+	# keep passord and shadow in sync, please
+	local password='root'
 	local shadow='$5$2HOHRnK3$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA'
 	echo "Generating grub menu.lst... \c "
 	cat > $bi_output_grub_dir/menu.lst <<EOF
 default=0
 timeout=10
 min_mem64 1024
+serial --speed=115200 --unit=$bi_grub_unit --word=8 --parity=no --stop=1
+terminal composite
+variable os_console $bi_console
 
-title Live 64-bit (text)
-   kernel /platform/i86pc/kernel/amd64/unix -B console=text,root_shadow='$shadow'$bi_grub_optstr
+title SmartOS
+   kernel$ /platform/i86pc/kernel/amd64/unix -B $console_settings,root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive
 
-title Live 64-bit (noinstall)
-   kernel /platform/i86pc/kernel/amd64/unix -B console=text,root_shadow='$shadow',standalone=true,noimport=true
+title SmartOS noinstall/recovery (login/pw: root/$password)
+   kernel$ /platform/i86pc/kernel/amd64/unix -B $console_settings,root_shadow='$shadow',standalone=true,noimport=true
    module /platform/i86pc/amd64/boot_archive
 
-title Live 64-bit (text) +kmdb
-   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=text,root_shadow='$shadow'$bi_grub_optstr
-   module /platform/i86pc/amd64/boot_archive
-
-title Live 64-bit (ttya) +kmdb
-   kernel /platform/i86pc/kernel/amd64/unix -kd -B console=ttya,ttya-mode="115200,8,n,1,-",root_shadow='$shadow'$bi_grub_optstr
-   module /platform/i86pc/amd64/boot_archive
-
-title Live 64-bit (ttya)
-   kernel /platform/i86pc/kernel/amd64/unix -B console=ttya,ttya-mode="115200,8,n,1,-",root_shadow='$shadow'$bi_grub_optstr
+title SmartOS +kmdb
+   kernel$ /platform/i86pc/kernel/amd64/unix -kd -B $console_settings,root_shadow='$shadow'$bi_grub_optstr
    module /platform/i86pc/amd64/boot_archive
 EOF
 	[[ $? -eq 0 ]] || fail "failed to create menu.lst"
@@ -255,11 +283,14 @@ ____ENDOFGRUBCOMMANDS
 	echo "usb image is available at $(pwd)/${bi_usbpath}.bz2"
 }
 
-while getopts "ko:nh" c $@; do
+while getopts "ko:nhc:" c $@; do
 	case "$c" in
 	o)
 		echo "Building $bi_type image with additional options: $OPTARG"
 		bi_grub_optstr=",$OPTARG"
+		;;
+	c)
+		bi_console="$OPTARG"
 		;;
 	k)
 		bi_dont_clean=1
@@ -292,6 +323,7 @@ case "$bi_type" in
 		;;
 esac
 bi_verif_grub
+bi_verif_console
 bi_get_build
 bi_verif_platform
 bi_setup_work_dir

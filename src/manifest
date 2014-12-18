@@ -1,24 +1,29 @@
-# imgadm
-s etc/bash/bash_completion.d/imgadm=/usr/img/etc/imgadm.completion
-s usr/sbin/dsadm=../img/sbin/imgadm
-s usr/sbin/imgadm=../img/sbin/imgadm
-f usr/share/man/man1m/imgadm.1m 0444 root bin
 d usr/lib 0755 root bin
 d usr/lib/brand 0755 root bin
 d usr/lib/brand/lx 0755 root bin
 f usr/lib/brand/lx/lx_boot_zone_docker 0755 root root
 
+# imgadm
+s etc/bash/bash_completion.d/imgadm=/usr/img/etc/imgadm.completion
+s usr/sbin/dsadm=../img/sbin/imgadm
+s usr/sbin/imgadm=../img/sbin/imgadm
+f usr/share/man/man1m/imgadm.1m 0444 root bin
 d usr/img 0555 root bin
 f usr/img/README.md 0444 root bin
 d usr/img/etc 0555 root bin
 f usr/img/etc/imgadm.completion 0444 root bin
 d usr/img/lib 0555 root bin
-d usr/img/lib/apis 0555 root bin
-f usr/img/lib/apis/docker.js 0444 root bin
 f usr/img/lib/cli.js 0444 root bin
 f usr/img/lib/common.js 0444 root bin
+f usr/img/lib/configuration.js 0444 root bin
 f usr/img/lib/errors.js 0444 root bin
 f usr/img/lib/imgadm.js 0444 root bin
+d usr/img/lib/sources 0555 root bin
+f usr/img/lib/sources/docker.js 0444 root bin
+f usr/img/lib/sources/dsapi.js 0444 root bin
+f usr/img/lib/sources/imgapi.js 0444 root bin
+f usr/img/lib/sources/index.js 0444 root bin
+f usr/img/lib/sources/source.js 0444 root bin
 f usr/img/lib/upgrade.js 0444 root bin
 d usr/img/node_modules 0555 root bin
 d usr/img/node_modules/assert-plus 0555 root bin
@@ -62,10 +67,10 @@ f usr/img/node_modules/cmdln/node_modules/dashdash/package.json 0444 root bin
 f usr/img/node_modules/cmdln/package.json 0444 root bin
 d usr/img/node_modules/docker-registry-client 0555 root bin
 d usr/img/node_modules/docker-registry-client/lib 0555 root bin
-d usr/img/node_modules/docker-registry-client/lib/clients 0555 root bin
-f usr/img/node_modules/docker-registry-client/lib/clients/idx.js 0444 root bin
-f usr/img/node_modules/docker-registry-client/lib/clients/index.js 0444 root bin
-f usr/img/node_modules/docker-registry-client/lib/clients/registry.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/lib/common.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/lib/index-client.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/lib/index.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/lib/registry-client.js 0444 root bin
 f usr/img/node_modules/docker-registry-client/package.json 0444 root bin
 d usr/img/node_modules/extsprintf 0555 root bin
 d usr/img/node_modules/extsprintf/lib 0555 root bin
@@ -211,12 +216,14 @@ f usr/img/sbin/imgadm 0555 root bin
 d usr/img/test 0555 root bin
 f usr/img/test/basics.test.js 0444 root bin
 f usr/img/test/create.test.js 0444 root bin
+f usr/img/test/docker.test.js 0444 root bin
 f usr/img/test/dsapi.test.js 0444 root bin
 f usr/img/test/import.test.js 0444 root bin
 f usr/img/test/mk-custom-image 0555 root bin
 f usr/img/test/runtests 0555 root bin
 f usr/img/test/tap4nodeunit.js 0444 root bin
 f usr/img/test/try-custom-image 0555 root bin
+f usr/img/test/update.test.js 0444 root bin
 
 # new vmadmd
 s etc/bash/bash_completion.d/vmadm=/usr/vm/etc/vmadm.completion

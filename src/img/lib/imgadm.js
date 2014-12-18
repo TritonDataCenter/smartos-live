@@ -64,18 +64,20 @@ var zfs = require('/usr/node/node_modules/zfs.js').zfs;
 
 var common = require('./common'),
     NAME = common.NAME,
+    DB_DIR = common.DB_DIR,
+    indent = common.indent,
     objCopy = common.objCopy,
     assertUuid = common.assertUuid,
     execFilePlus = common.execFilePlus;
-var docker = require('./apis/docker');
+var configuration = require('./configuration');
 var errors = require('./errors');
+var mod_sources = require('./sources');
 var upgrade = require('./upgrade');
 
 
 
 // ---- globals
 
-var DB_DIR = '/var/imgadm';
 var CONFIG_PATH = DB_DIR + '/imgadm.conf';
 var DEFAULT_CONFIG = {};
 
@@ -92,13 +94,6 @@ var UA = 'imgadm/' + common.getVersion()
 
 
 // ---- internal support stuff
-
-function _indent(s, indent) {
-    if (!indent) indent = '    ';
-    var lines = s.split(/\r?\n/g);
-    return indent + lines.join('\n' + indent);
-}
-
 
 function getSysinfo(log, callback) {
     assert.object(log, 'log');
@@ -289,56 +284,6 @@ function getZfsDataset(name, properties, callback) {
 }
 
 
-// TODO: persist "?channel=<channel>"
-function normUrlFromUrl(u) {
-    // `url.parse('example.com:9999')` is not what you expect. Make sure we
-    // have a protocol.
-    if (! /^\w+:\/\// .test(u)) {
-        u = 'http://' + u;
-    }
-
-    var parsed = url.parse(u);
-
-    // Don't want trailing '/'.
-    if (parsed.pathname.slice(-1) === '/') {
-        parsed.pathname = parsed.pathname.slice(0, -1);
-    }
-
-    // Drop redundant ports.
-    if (parsed.port
-        && ((parsed.protocol === 'https:' && parsed.port === '443')
-        || (parsed.protocol === 'http:' && parsed.port === '80'))) {
-        parsed.port = '';
-        parsed.host = parsed.hostname;
-    }
-
-    return url.format(parsed);
-}
-
-
-
-// ---- Source class
-
-/**
- * A light wrapper around an image source repository.
- *
- * @param options {Object} with these keys
- *      - url {String}
- *      - type {String} One of `common.VALID_SOURCE_TYPES`.
- *      - log {Bunyan Logger}
- */
-function Source(options) {
-    assert.object(options, 'options');
-    assert.string(options.url, 'options.url');
-    assert.string(options.type, 'options.type');
-    assert.object(options.log, 'options.log');
-    this.url = options.url;
-    this.type = options.type;
-    this.normUrl = normUrlFromUrl(this.url);
-    this.log = options.log;
-}
-
-
 
 // ---- IMGADM tool
 
@@ -355,26 +300,9 @@ IMGADM.prototype.init = function init(callback) {
     var self = this;
 
     function loadConfig(next) {
-        self.config = objCopy(DEFAULT_CONFIG);
-        fs.exists(CONFIG_PATH, function (exists) {
-            if (!exists) {
-                next();
-                return;
-            }
-            self.log.trace({path: CONFIG_PATH}, 'read config file');
-            fs.readFile(CONFIG_PATH, 'utf8', function (err, content) {
-                try {
-                    var config = JSON.parse(content);
-                } catch (e) {
-                    next(new errors.ConfigError(e, format(
-                        'config file "%s" is not valid JSON', CONFIG_PATH)));
-                    return;
-                }
-                Object.keys(config).forEach(function (k) {
-                    self.config[k] = config[k];
-                });
-                next();
-            });
+        configuration.loadConfig({log: self.log}, function (err, config) {
+            self.config = config;
+            next(err);
         });
     }
 
@@ -398,12 +326,12 @@ IMGADM.prototype.init = function init(callback) {
 
     function addSources(next) {
         self.sources = [];
-        var sources = self.config.sources || [common.DEFAULT_SOURCE];
-        self.log.trace({sources: sources}, 'init: add sources');
+        var sourcesInfo = self.config.sources || [common.DEFAULT_SOURCE];
+        self.log.trace({sourcesInfo: sourcesInfo}, 'init: add sources');
         async.forEachSeries(
-            sources,
-            function oneSource(source, nextSource) {
-                self._addSource(source, true, nextSource);
+            sourcesInfo,
+            function oneSource(sourceInfo, nextSource) {
+                self._addSource(sourceInfo, true, nextSource);
             },
             function doneSources(err) {
                 if (err) {
@@ -425,100 +353,59 @@ IMGADM.prototype.init = function init(callback) {
 
 
 /**
- * Add a source URL to the current IMGADM object. It normalizes and handles
- * DNS lookup as required.
+ * Add a source to the current IMGADM object, if it isn't already a source.
+ * It normalizes and handles DNS lookup as required.
  *
  * Note that this does *not* update the IMGADM config file.
  *
- * @param source {Source|Object} A `Source` instance or an object describing
- *      the image source with these keys:
+ * @param source {Object} A source info object with these keys:
  *      - url {String}
  *      - type {String}
  * @param skipPingCheck {Boolean} Whether to do a ping check on the new
- *      source URL. This is done to (a) verify that the given URL doesn't have
- *      typos and (b) to determine which type of source it is if `type` isn't
- *      specified. By default the ping check is done when adding a source
+ *      source. This is done to verify that the given URL doesn't have
+ *      typos. By default the ping check is done when adding a source
  *      (unless it is an existing source, i.e. if `source` is already a `Source`
- *      instance). If `source.type` is not given, then the ping check cannot be
- *      skipped.
+ *      instance).
  * @param callback {Function} `function (err, changed)` where `changed` is
  *      a boolean indicating if the config changed as a result.
  */
 IMGADM.prototype._addSource = function _addSource(
-        source, skipPingCheck, callback) {
-    assert.object(source, 'source');
-    assert.string(source.url, 'source.url');
-    assert.string(source.type, 'source.type');
+        sourceInfo, skipPingCheck, callback) {
+    assert.object(sourceInfo, 'sourceInfo');
+    assert.string(sourceInfo.url, 'sourceInfo.url');
+    assert.string(sourceInfo.type, 'sourceInfo.type');
     assert.bool(skipPingCheck, 'skipPingCheck');
     assert.func(callback, 'callback');
     var self = this;
 
-    // Ping-test against the new URL
-    function sourcePingCheck(sourceToPing, next) {
-        if (skipPingCheck) {
-            next();
-            return;
-        }
-
-        self.log.trace({source: sourceToPing.url}, 'sourcePingCheck');
-        self.clientFromSource(sourceToPing, function (cErr, client) {
-            if (cErr) {
-                next(cErr);
-                return;
-            }
-            client.ping(function (err, pong, res) {
-                if (err
-                    || res.statusCode !== 200
-                    || (sourceToPing.type === 'imgapi' && !pong.imgapi))
-                {
-                    if (res
-                        && res.headers['content-type'] !== 'application/json')
-                    {
-                        var body = res.body;
-                        if (body && body.length > 1024) {
-                            body = body.slice(0, 1024) + '...';
-                        }
-                        err = new Error(format(
-                            'statusCode %s, response not JSON:\n%s',
-                            res.statusCode, _indent(body)));
-                    }
-                    next(new errors.SourcePingError(err, sourceToPing));
-                    return;
-                }
-                next();
-            });
-        });
-    }
-
     // No-op if already have this URL/TYPE.
-    var normUrl = normUrlFromUrl(source.url);
+    var normUrl = common.normUrlFromUrl(sourceInfo.url);
     for (var i = 0; i < self.sources.length; i++) {
         if (self.sources[i].normUrl === normUrl
-            && self.sources[i].type === source.type)
+            && self.sources[i].type === sourceInfo.type)
         {
             return callback(null, false);
         }
     }
 
-    // If already a source, then just add it.
-    if (source.constructor.name === 'Source') {
+    // Else make a new Source instance.
+    var source = mod_sources.createSource(sourceInfo.type, {
+        url: sourceInfo.url,
+        log: self.log,
+        userAgent: self.userAgent,
+        config: self.config
+    });
+
+    if (skipPingCheck) {
         self.sources.push(source);
         callback(null, true);
-        return;
-    }
-
-    // Else make a new Source instance.
-    var s = new Source({url: source.url, type: source.type, log: self.log});
-    if (skipPingCheck) {
-        self.sources.push(s);
-        callback(null, true);
     } else {
-        sourcePingCheck(s, function (pingErr) {
+        source.ping(function (pingErr) {
             if (pingErr) {
                 callback(pingErr);
                 return;
             }
-            self.sources.push(s);
+            self.sources.push(source);
             callback(null, true);
         });
     }
@@ -536,7 +423,7 @@ IMGADM.prototype._addSource = function _addSource(
  */
 IMGADM.prototype._delSource = function _delSource(sourceUrl, callback) {
     assert.string(sourceUrl, 'sourceUrl');
-    var normSourceUrl = normUrlFromUrl(sourceUrl);
+    var normSourceUrl = common.normUrlFromUrl(sourceUrl);
     var deleted = [];
     this.sources = this.sources.filter(function (s) {
         if (s.normUrl !== normSourceUrl) {
@@ -553,24 +440,23 @@ IMGADM.prototype._delSource = function _delSource(sourceUrl, callback) {
 /**
  * Add a source and update the on-disk config.
  *
- * @param source {Object} Image source object with these keys:
+ * @param sourceInfo {Object} Image source object with these keys:
  *      - url {String}
- *      - type {String} Optional. One of 'imgapi', 'docker', or 'dsapi'. If
- *        not given it is (imperfectly) inferred from the URL.
+ *      - type {String}
  * @param skipPingCheck {Boolean} Whether to do a ping check on the new
  *      source URL. Default false.
  * @param callback {Function} `function (err, changed)`
  */
 IMGADM.prototype.configAddSource = function configAddSource(
-        source, skipPingCheck, callback) {
-    assert.object(source, 'source');
-    assert.string(source.url, 'source.url');
-    assert.optionalString(source.type, 'source.type');
+        sourceInfo, skipPingCheck, callback) {
+    assert.object(sourceInfo, 'sourceInfo');
+    assert.string(sourceInfo.url, 'sourceInfo.url');
+    assert.string(sourceInfo.type, 'sourceInfo.type');
     assert.bool(skipPingCheck, 'skipPingCheck');
     assert.func(callback, 'callback');
     var self = this;
 
-    self._addSource(source, skipPingCheck, function (addErr, changed) {
+    self._addSource(sourceInfo, skipPingCheck, function (addErr, changed) {
         if (addErr) {
             callback(addErr);
         } else if (changed) {
@@ -578,13 +464,16 @@ IMGADM.prototype.configAddSource = function configAddSource(
                 // Was implicitly getting the default source. Let's keep it.
                 self.config.sources = [common.DEFAULT_SOURCE];
             }
-            self.config.sources.push({url: source.url, type: source.type});
-            self.saveConfig(function (saveErr) {
+            // XXX This should be `source.toJSON` or something. I.e. return `source` from _addSource instead of `changed`.
+            self.config.sources.push(
+                {url: sourceInfo.url, type: sourceInfo.type});
+            var saveOpts = {log: self.log, config: self.config};
+            configuration.saveConfig(saveOpts, function (saveErr) {
                 if (saveErr) {
                     callback(saveErr);
                     return;
                 }
-                self.log.debug({source: source}, 'added source url');
+                self.log.debug({source: sourceInfo}, 'added source');
                 callback(null, true);
             });
         } else {
@@ -613,7 +502,8 @@ IMGADM.prototype.configDelSourceUrl = function configDelSourceUrl(
             self.config.sources = self.sources.map(function (s) {
                 return {url: s.url, type: s.type};
             });
-            self.saveConfig(function (saveErr) {
+            var saveOpts = {log: self.log, config: self.config};
+            configuration.saveConfig(saveOpts, function (saveErr) {
                 if (saveErr) {
                     callback(saveErr);
                     return;
@@ -708,7 +598,8 @@ IMGADM.prototype.updateSources = function updateSources(
             }
             self.config.sources = self.sources.map(
                 function (s) { return {url: s.url, type: s.type}; });
-            self.saveConfig(function (saveErr) {
+            var saveOpts = {log: self.log, config: self.config};
+            configuration.saveConfig(saveOpts, function (saveErr) {
                 if (saveErr) {
                     callback(saveErr);
                     return;
@@ -721,84 +612,71 @@ IMGADM.prototype.updateSources = function updateSources(
 
 
 /**
- * Save out the current config.
- *
- * @param callback {Function} `function (err)`
- */
-IMGADM.prototype.saveConfig = function saveConfig(callback) {
-    var self = this;
-    self.log.debug({config: self.config}, 'save config to %s', CONFIG_PATH);
-    var configDir = path.dirname(CONFIG_PATH);
-    mkdirp(configDir, function (dirErr) {
-        if (dirErr) {
-            callback(dirErr);
-            return;
-        }
-        var str = JSON.stringify(self.config, null, 2);
-        fs.writeFile(CONFIG_PATH, str, 'utf8', callback);
-    });
-};
-
-
-
-/**
  * Return an API client for the given source.
  *
  * @param source {Source}
- * @param callback {Function} `function (err, client)`
+ * @param cb {Function} `function (err, client)`
  */
-IMGADM.prototype.clientFromSource = function clientFromSource(
-        source, callback) {
-    var self = this;
+//XXX drop usage of this, -> source.<method>
+IMGADM.prototype.clientFromSource = function clientFromSource(source, cb) {
     assert.object(source, 'source');
-    assert.func(callback, 'callback');
+    assert.func(cb, 'cb');
 
-    if (self._clientCache === undefined) {
-        self._clientCache = {};
+    try {
+        var client = this.clientFromSourceSync(source);
+        cb(null, client);
+    } catch (err) {
+        cb(err);
     }
-    var client = self._clientCache[source.normUrl];
+};
+
+//XXX drop usage of this, -> source.<method>
+IMGADM.prototype.clientFromSourceSync = function clientFromSourceSync(source) {
+    if (this._clientCache === undefined) {
+        this._clientCache = {};
+    }
+    var client = this._clientCache[source.normUrl];
     if (client) {
-        callback(null, client);
-        return;
+        return client;
     }
 
     var normUrl = source.normUrl;
     if (source.type === 'dsapi') {
         if (! /\/datasets\/?$/.test(normUrl)) {
-            callback(new errors.ConfigError(format(
+            throw new errors.ConfigError(format(
                 '"dsapi" source URL does not end with "/datasets": "%s"',
-                normUrl)));
-            return;
+                normUrl));
         }
         var baseNormUrl = path.dirname(normUrl); // drop 'datasets/' tail
-        self._clientCache[normUrl] = dsapi.createClient({
+        this._clientCache[normUrl] = dsapi.createClient({
             agent: false,
             url: baseNormUrl,
-            log: self.log.child({component: 'api', source: source.url}, true),
+            log: this.log.child({component: 'api', source: source.url}, true),
             rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
-            userAgent: self.userAgent
+            userAgent: this.userAgent
         });
     } else if (source.type === 'imgapi') {
-        self._clientCache[normUrl] = imgapi.createClient({
+        this._clientCache[normUrl] = imgapi.createClient({
             agent: false,
             url: normUrl,
             version: '~2',
-            log: self.log.child({component: 'api', source: source.url}, true),
+            log: this.log.child({component: 'api', source: source.url}, true),
             rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
-            userAgent: self.userAgent
+            userAgent: this.userAgent
         });
     } else if (source.type === 'docker') {
-        self._clientCache[normUrl] = docker.createClient({
+        XXX // this should be dead
+        this._clientCache[normUrl] = docker.createClient({
             agent: false,
             url: normUrl,
-            log: self.log.child({component: 'api', source: source.url}, true),
+            log: this.log.child({component: 'api', source: source.url}, true),
             rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
-            userAgent: self.userAgent
+            userAgent: this.userAgent
         });
     } else {
         throw new Error('unknown source type: "' + source.type + '"');
     }
-    callback(null, self._clientCache[normUrl]);
+    return this._clientCache[normUrl];
 };
 
 
@@ -819,7 +697,7 @@ IMGADM.prototype._errorFromClientError = function _errorFromClientError(
 
 
 IMGADM.prototype._dbImagePath = function _dbImagePath(zpool, uuid) {
-    return path.resolve(DB_DIR, 'images', zpool + '-' + uuid + '.json');
+    return path.resolve(common.DB_DIR, 'images', zpool + '-' + uuid + '.json');
 };
 
 
@@ -1117,129 +995,132 @@ IMGADM.prototype.getImage = function getImage(options, callback) {
 /**
  * Return available images from all sources.
  *
- * @param callback {Function} `function (err, imagesInfo)`
+ * Limitations:
+ * - This is not supported for Docker sources (they are skipped).
+ *
+ * @param cb {Function} `function (err, imagesInfo)`
  *      If there is an error then `err` will be set. Note that `imagesInfo`
  *      will still contain results. This is so that an error in one source
  *      does not break everything.
  */
-IMGADM.prototype.sourcesList = function sourcesList(callback) {
+IMGADM.prototype.sourcesList = function sourcesList(cb) {
     var self = this;
     var errs = [];
     var imageSetFromSourceUrl = {};
 
     if (self.sources.length === 0) {
-        callback(new errors.NoSourcesError());
+        cb(new errors.NoSourcesError());
         return;
     }
-    async.forEach(
-        self.sources,
-        function oneSource(source, next) {
-            var limit, marker;
-            var images = [];
-            var stop = false;
-            var client;
 
-            self.clientFromSource(source, function (cErr, _client) {
-                if (cErr) {
-                    errs.push(cErr);
-                    next();
-                    return;
+    var allImages = [];
+    var imagesFromSourceUrl = {};
+    var errs = [];
+    vasync.forEachParallel({
+        inputs: self.sources,
+        func: function oneSource(source, next) {
+            if (source.type === 'docker') {
+                next();
+                return;
+            }
+            source.listImages(function (err, images) {
+                if (err) {
+                    errs.push(err);
+                } else if (images) {
+                    imagesFromSourceUrl[source.url] = images;
                 }
-
-                client = _client;
-                async.doWhilst(listImagesFromSource,
-                    function testAllImagesFetched() {
-                        return !stop;
-                    },
-                    function doneOneSource(whilstErr) {
-                        imageSetFromSourceUrl[source.url] = images;
-                        return next();
-                    }
-                );
+                next();
             });
-
-            function listImagesFromSource(whilstNext) {
-                var filterOpts = {};
-                // These options are passed once they are set for the first time
-                if (marker) {
-                    filterOpts.marker = marker;
-                }
-                if (limit) {
-                    filterOpts.limit = limit;
-                }
-
-                client.listImages(filterOpts, function (listErr, sImages, res) {
-                    if (listErr) {
-                        errs.push(self._errorFromClientError(
-                            source.url, listErr));
-                        stop = true;
-                        return whilstNext();
-                    }
-                    // On every query we do this:
-                    // - check if result size is less than limit (stop)
-                    // - if we have to keep going set a new marker,
-                    //   otherwise shift() because the first element is
-                    //   our marker
-                    // - concat to full list of images
-                    if (!limit) {
-                        limit = 1000;
-                    }
-                    if (sImages.length < limit) {
-                        stop = true;
-                    }
-                    // No marker means this is the first query and we
-                    // shouldn't shift() the array
-                    if (marker) {
-                        sImages.shift();
-                    }
-                    // We hit this when we either reached an empty page of
-                    // results or an empty first result
-                    if (!sImages.length) {
-                        stop = true;
-                        return whilstNext();
-                    }
-                    // Safety check if remote server doesn't support limit
-                    // and marker yet. In this case we would be iterating
-                    // over the same list of /images
-                    var newMarker = sImages[sImages.length - 1].uuid;
-                    if (marker && marker === newMarker) {
-                        stop = true;
-                        return whilstNext();
-                    }
-                    marker = newMarker;
-                    images = images.concat(sImages);
-                    return whilstNext();
-                });
-            }
-        },
-        function done(err) {
-            if (!err && errs.length) {
-                err = (errs.length === 1 ? errs[0]
-                    : new errors.MultiError(errs));
-            }
-            var imagesInfo = [];
-            var imageFromUuid = {};
-            self.log.trace({imageSetFromSourceUrl: imageSetFromSourceUrl},
-                'image sets from each source');
-            for (var i = 0; i < self.sources.length; i++) {
-                var sourceUrl = self.sources[i].url;
-                var imageSet = imageSetFromSourceUrl[sourceUrl];
-                if (!imageSet) {
-                    continue;
-                }
-                for (var j = 0; j < imageSet.length; j++) {
-                    var image = imageSet[j];
-                    var uuid = image.uuid;
-                    if (imageFromUuid[uuid] === undefined) {
-                        imageFromUuid[uuid] = image;
-                        imagesInfo.push({manifest: image, source: sourceUrl});
-                    }
-                }
-            }
-            callback(err, imagesInfo);
         }
-    );
+    }, function finishSourcesList(err) {
+        if (!err && errs.length) {
+            err = (errs.length === 1 ? errs[0] : new errors.MultiError(errs));
+        }
+
+        var imagesInfo = [];
+        var imageFromUuid = {};
+        self.log.trace({imagesFromSourceUrl: imagesFromSourceUrl},
+            'images from each source');
+        var sourceUrls = Object.keys(imagesFromSourceUrl);
+        for (var i = 0; i < sourceUrls.length; i++) {
+            var images = imagesFromSourceUrl[sourceUrls[i]];
+            if (!images) {
+                continue;
+            }
+            for (var j = 0; j < images.length; j++) {
+                var image = images[j];
+                var uuid = image.uuid;
+                if (imageFromUuid[uuid] === undefined) {
+                    imageFromUuid[uuid] = image;
+                    imagesInfo.push({manifest: image, source: sourceUrls[i]});
+                }
+            }
+        }
+        cb(err, imagesInfo);
+    });
 };
+
+
+/**
+ * Get import info on the given image/repo from sources.
+ *
+ * @param opts {Object}
+ *      - @param arg {String} Required. The import arg, e.g. a UUID for an
+ *        IMGAPI source or a `docker pull ARG` for a Docker source.
+ *      - @param sources {Array} Optional. An optional override to the set
+ *        of sources to search. Defaults to `self.sources`.
+ *      - @param ensureActive {Boolean} Optional. Default true. Set to false
+ *        to have imgapi source searches exclude inactive images.
+ * @param cb {Function} `function (err, importInfo)` where `importInfo`
+ *      is `{uuid: <uuid>, source: <source>, ...opt source-specific fields...}`
+ */
+IMGADM.prototype.sourcesGetImportInfo = function sourcesGetImportInfo(opts, cb) {
+    var self = this;
+    assert.object(opts, 'opts');
+    assert.string(opts.arg, 'opts.arg');
+    assert.optionalArrayOfObject(opts.sources, 'opts.sources');
+    assert.optionalBool(opts.ensureActive, 'opts.ensureActive');
+    var ensureActive = (opts.ensureActive === undefined
+            ? true : opts.ensureActive);
+    assert.func(cb, 'cb');
+
+    var sources = opts.sources || self.sources;
+    if (sources.length === 0) {
+        cb(new errors.NoSourcesError());
+        return;
+    }
+
+    var importInfo = null;
+    var errs = [];
+    vasync.forEachPipeline({
+        inputs: sources,
+        func: function oneSource(source, next) {
+            if (importInfo) {
+                next();
+                return;
+            }
+            var getOpts = {
+                arg: opts.arg,
+                ensureActive: ensureActive
+            };
+            source.getImportInfo(getOpts, function (err, info) {
+                if (err) {
+                    errs.push(err);
+                } else if (info) {
+                    importInfo = info;
+                    importInfo.source = source;
+                }
+                next();
+            });
+        }
+    }, function finish(err) {
+        if (!err && errs.length) {
+            err = (errs.length === 1 ? errs[0] : new errors.MultiError(errs));
+        }
+        cb(err, importInfo);
+    });
+};
+
 
 
 /**
@@ -1254,6 +1135,7 @@ IMGADM.prototype.sourcesList = function sourcesList(callback) {
  * @param callback {Function} `function (err, imageInfo)` where `imageInfo`
  *      is `{manifest: <manifest>, source: <source>}`
  */
+// XXX obsolete, use sourcesGetImportInfo
 IMGADM.prototype.sourcesGet = function sourcesGet(options, callback) {
     assert.object(options, 'options');
     assert.string(options.uuid, 'options.uuid');
@@ -1269,6 +1151,8 @@ IMGADM.prototype.sourcesGet = function sourcesGet(options, callback) {
         callback(new errors.NoSourcesError());
         return;
     }
+
+    XXX;
 
     var imageInfo = null;
     async.forEachSeries(
@@ -1317,32 +1201,6 @@ IMGADM.prototype.sourcesGet = function sourcesGet(options, callback) {
             callback(err, imageInfo);
         }
     );
-};
-
-
-/**
- * Get info (mainly manifest data) on the given image UUID from sources.
- *
- * @param imageInfo {Object} as from `IMGADM.sourcesGet`:
- *      - @param manifest {Object} The image manifest
- *      - @param source {Object} The source object
- * @param callback {Function} `function (err, stream)`
- */
-IMGADM.prototype.sourceGetFileStream = function sourceGetFileStream(
-        imageInfo, callback) {
-    var self = this;
-    assert.object(imageInfo, 'imageInfo');
-    assert.object(imageInfo.manifest, 'imageInfo.manifest');
-    assert.object(imageInfo.source, 'imageInfo.source');
-    assert.func(callback, 'callback');
-
-    self.clientFromSource(imageInfo.source, function (cErr, client) {
-        if (cErr) {
-            callback(cErr);
-            return;
-        }
-        client.getImageFileStream(imageInfo.manifest.uuid, callback);
-    });
 };
 
 
@@ -1429,43 +1287,643 @@ IMGADM.prototype.deleteImage = function deleteImage(options, callback) {
 
 
 /**
- * Import the given image from the given `source`
+ * Import (find, download and install) the given image and, if necessary, its
+ * ancestry.
  *
- * It is up to the caller to ensure this UUID is not already installed.
- *
- * @param options {Object}
- *      - @param manifest {Object} The manifest to import.
+ * @param opts {Object}
+ *      - @param importInfo {Object} Source-specific import info (from
+ *        `source.getImportInfo()`.
  *      - @param zpool {String} The zpool to which to import.
- *      - @param source {Object} The source object from which to import.
  *      - @param quiet {Boolean} Optional. Default false. Set to true
  *        to not have a progress bar for the install.
  *      - @param logCb {Function} Optional. A function that is called
- *        with progress messages. Called as `logCb(<string>)`. E.g. passing
- *        console.log is legal.
- * @param callback {Function} `function (err)`
+ *        with progress messages. It should support printf-like syntax,
+ *        e.g. passing console.log is legal.
+ * @param cb {Function} `function (err)`
  */
-IMGADM.prototype.importImage = function importImage(options, callback) {
-    assert.object(options, 'options');
-    assert.object(options.manifest, 'options.manifest');
-    assert.string(options.zpool, 'options.zpool');
-    assert.object(options.source, 'options.source');
-    assert.optionalBool(options.quiet, 'options.quiet');
-    assert.optionalFunc(options.logCb, 'options.logCb');
+IMGADM.prototype.importImage = function importImage(opts, cb) {
+    assert.object(opts, 'opts');
+    assert.object(opts.importInfo, 'opts.importInfo');
+    assert.object(opts.importInfo.source, 'opts.importInfo.source');
+    assert.string(opts.zpool, 'opts.zpool');
+    assert.optionalBool(opts.quiet, 'opts.quiet');
+    assert.optionalFunc(opts.logCb, 'opts.logCb');
 
-    // Ensure this image is active (upgrading manifest if required).
-    try {
-        options.manifest = imgmanifest.upgradeManifest(options.manifest);
-    } catch (err) {
-        callback(new errors.InvalidManifestError(err));
-        return;
-    }
-    if (options.manifest.state !== 'active') {
-        callback(new errors.ImageNotActiveError(options.manifest.uuid));
-        return;
+    var manifest = opts.importInfo.manifest;
+    if (manifest) {
+        // Ensure this image is active.
+        if (manifest.state !== 'active') {
+            cb(new errors.ImageNotActiveError(manifest.uuid));
+            return;
+        }
     }
 
-    this._installImage(options, callback);
+    this._importImage(opts, cb);
 };
+
+
+/**
+ * Download one image file to a local temp directory.
+ *
+ * @param opts {Object}
+ *      - source
+ *      - bar
+ *      - logCb
+ *      - importInfo
+ *      - imgMeta
+ * @param cb {Function} `function (err, downloadInfo)` where `downloadInfo` is
+ *      {
+ *          "path": "/var/tmp/.imgadm-downloads/$uuid.file"
+ *      }
+ */
+IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
+    var self = this;
+    assert.func(cb, 'cb');
+    assert.object(opts, 'opts');
+    assert.object(opts.source, 'opts.source');
+    assert.optionalObject(opts.bar, 'opts.bar');
+    assert.func(opts.logCb, 'opts.logCb');
+    // As from `source.getImportInfo`.
+    assert.object(opts.importInfo, 'opts.importInfo');
+    // As from `source.getImgMeta`.
+    assert.object(opts.imgMeta, 'opts.imgMeta');
+    assert.number(opts.imgMeta.size, 'opts.imgMeta.size');
+    assert.optionalString(opts.imgMeta.checksum, 'opts.imgMeta.checksum');
+
+    var log = self.log;
+    var uuid = opts.importInfo.uuid;
+    var downDir = '/var/tmp/.imgadm-downloads';
+    var downFile = path.join(downDir, uuid + '.file');
+
+    var context = {};
+
+    vasync.pipeline({arg: context, funcs: [
+        function abortIfAlreadyExists(ctx, next) {
+            if (! fs.existsSync(downFile)) {
+                next();
+                return;
+            }
+            // XXX check opts.imgMeta.size and, if defined, opts.imgMeta.checksum
+            next(true); // early abort
+        },
+
+        function mkdirpDownDir(ctx, next) {
+            mkdirp(downDir, next);
+        },
+
+        function getStream(ctx, next) {
+            // XXX what about integrating optional checksums from the *index*?
+            ctx.stream = opts.source.getImgFileStream(opts.importInfo,
+                function (err, stream) {
+                    ctx.stream = stream;
+                    next(err);
+                }
+            );
+        },
+
+        function downloadIt(ctx, next_) {
+            var next = once(next_);
+
+            // Track size and checksum for checking.
+            ctx.bytesDownloaded = 0;
+            if (opts.imgMeta.checksum) {
+                ctx.checksum = opts.imgMeta.checksum.split(':');
+                ctx.checksumHash = crypto.createHash(ctx.checksum[0]);
+            }
+            if (ctx.stream.headers['content-md5']) {
+                ctx.contentMd5 = ctx.stream.headers['content-md5'];
+                ctx.md5sumHash = crypto.createHash('md5');
+            }
+            ctx.stream.on('data', function (chunk) {
+                if (opts.bar)
+                    opts.bar.advance(chunk.length);
+                ctx.bytesDownloaded += chunk.length;
+                if (ctx.checksumHash) {
+                    ctx.checksumHash.update(chunk);
+                }
+                if (ctx.md5sumHash) {
+                    ctx.md5sumHash.update(chunk);
+                }
+            });
+
+            ctx.downFilePartial = downFile + '.partial';
+            var fout = fs.createWriteStream(ctx.downFilePartial);
+            ctx.stream.on('error', next);
+            fout.on('error', next);
+            fout.on('finish', next);
+            ctx.stream.pipe(fout);
+            ctx.stream.resume();
+        },
+
+        /**
+         * Ensure the streamed image data matches expected checksum and size.
+         */
+        function checksum(ctx, next) {
+            var errs = [];
+
+            if (ctx.bytesDownloaded !== opts.imgMeta.size) {
+                errs.push(new errors.DownloadError(format('image %s file size '
+                    + 'error: expected %d bytes, downloaded %d bytes',
+                    uuid, opts.imgMeta.size, ctx.bytesDownloaded)));
+            }
+
+            if (ctx.checksumHash) {
+                var checksumActual = ctx.checksumHash.digest('hex');
+                if (checksumActual !== ctx.checksum[1]) {
+                    errs.push(new errors.DownloadError(format('image %s file '
+                        + 'checksum (%s) error: expected "%s", downloaded '
+                        + 'checksum was "%s"', uuid, ctx.checksum[0],
+                        ctx.checksum[1], checksumActual)));
+                }
+            }
+
+            if (ctx.md5sumHash) {
+                var md5sumActual = ctx.md5sumHash.digest('base64');
+                if (md5sumActual !== ctx.contentMd5) {
+                    errs.push(new errors.DownloadError(format('image %s file '
+                        + 'Content-MD5 error: expected "%s", downloaded '
+                        + 'checksum was "%s"', uuid,
+                        ctx.contentMd5, md5sumActual)));
+                }
+            }
+
+            if (errs.length === 1) {
+                next(errs[0]);
+            } else if (errs.length > 1) {
+                next(new errors.MultiError(errs));
+            } else {
+                log.info({uuid: opts.importInfo.uuid},
+                    'download passed size and checksum checks');
+                next();
+            }
+        },
+
+        function mvToFinalName(ctx, next) {
+            fs.rename(ctx.downFilePartial, downFile, function (err) {
+                delete ctx.downFilePartial;
+                next(err);
+            });
+        }
+
+    ]}, function (err) {
+        if (err === true) { // Signal for early abort.
+            err = null;
+        }
+
+        if (err) {
+            if (context.downFilePartial) {
+                rimraf(context.downFilePartial, function (rmErr) {
+                    if (rmErr) {
+                        log.warn({err: rmErr, uuid: uuid,
+                            path: context.downFilePartial},
+                            'could not remove partial download file');
+                    }
+                    cb(err);
+                });
+            } else {
+                cb(err);
+            }
+        } else {
+            var downloadInfo = {
+                path: downFile
+            };
+            cb(null, downloadInfo);
+        }
+    });
+};
+
+
+
+/**
+ * Do the work for `importImage`.
+ *
+ * tl;dr on import process:
+ *  - Gather `installedImageFromName` and `irecs` (Import RECords, one for each
+ *    image to download).
+ *  - `manifestQ` to get manifest and meta info from source
+ *  - `downloadQ` to download all the image files to /var/tmp
+ *  - `installQ` to install each image in order to the zpool
+ */
+IMGADM.prototype._importImage = function _importImage(opts, cb) {
+    var self = this;
+    assert.object(opts, 'opts');
+    assert.object(opts.importInfo, 'opts.importInfo');
+    assert.uuid(opts.importInfo.uuid, 'opts.importInfo.uuid');
+    assert.object(opts.importInfo.source, 'opts.importInfo.source');
+    assert.string(opts.zpool, 'opts.zpool');
+    assert.optionalBool(opts.quiet, 'opts.quiet');
+    assert.optionalFunc(opts.logCb, 'opts.logCb');
+
+    // Print timing info.
+    //var _TIMES = {};
+    //function TIME(name) {
+    //    if (_TIMES[name]) {
+    //        logCb('TIME(%s): %ss', name, (Date.now() - _TIMES[name]) / 1000);
+    //    }
+    //    _TIMES[name] = Date.now();
+    //}
+    function TIME() {};  // uncomment to disable timings
+
+    var log = self.log;
+    var logCb = opts.logCb || function () {};
+    var zpool = opts.zpool;
+    var importInfo = opts.importInfo;
+    var source = importInfo.source;
+
+    // TODO: refactor: move these to `ctx`.
+    var canCloseInstallQ = false;
+    var onDeck = {};  // <uuid> -> <irec>; `irec` stands for `import record`
+    var bar;  // progress bar
+    var unlockInfos;
+    var irecs;
+
+    logCb('Importing %s from "%s"',
+        source.titleFromImportInfo(opts.importInfo), source.url);
+
+    var context = {};
+    vasync.pipeline({arg: context, funcs: [
+        /**
+         * "irec" == import record, one for each image/layer we need to
+         * download and install.
+         */
+        function createIrecs(ctx, next) {
+            vasync.parallel({funcs: [
+                function loadInstalledImages(nextGather) {
+                    TIME('loadImages');
+                    var start = Date.now();
+                    self._loadImages(function (err, imagesInfo) {
+                        TIME('loadImages');
+                        ctx.installedImageFromName = {};
+                        for (var i = 0; i < imagesInfo.length; i++) {
+                            var info = imagesInfo[i];
+                            var name = info.zpool + '/' + info.manifest.uuid;
+                            ctx.installedImageFromName[name] = info;
+                        }
+                        nextGather(err);
+                    });
+                },
+
+                function getTargetImgAncestry(nextGather) {
+                    logCb('Gather image %s ancestry', importInfo.uuid);
+                    TIME('ancestry');
+                    source.getImgAncestry(importInfo, function(err, ancestry) {
+                        TIME('ancestry');
+                        ctx.ancestry = ancestry;
+                        log.debug({err: err, ancestry: ancestry},
+                            'img ancestry');
+                        if (err) {
+                            nextGather(err);
+                            return;
+                        }
+                        irecs = ancestry.map(function (a) {
+                            return {
+                                uuid: a.uuid,
+                                // Prefer the top `importInfo` for the top-level
+                                // image as it may have more fields.
+                                importInfo: (a.uuid === importInfo.uuid
+                                    ? importInfo
+                                    : a)
+                            };
+                        });
+                        nextGather();
+                    });
+                }
+            ]}, next);
+        },
+
+        function filterOutAlreadyInstalled(ctx, next) {
+            ctx.isInstalledFromUuid = {};
+            var filteredIrecs = [];
+            for (var i = 0; i < irecs.length; i++) {
+                var irec = irecs[i];
+                var info = ctx.installedImageFromName[zpool + '/' + irec.uuid];
+                if (info) {
+                    ctx.isInstalledFromUuid[irec.uuid] = true;
+                    logCb('Image %s already installed', irec.uuid);
+                } else {
+                    filteredIrecs.push(irec);
+                }
+            }
+            irecs = filteredIrecs;
+            next();
+        },
+
+        function acquireLocks(ctx, next) {
+            var lockOpts = {
+                uuids: irecs.map(function (irec) { return irec.uuid; }),
+                logCb: logCb
+            };
+            self._lockAcquire(lockOpts, function (err, unlockInfos_) {
+                unlockInfos = unlockInfos_;
+                next(err);
+            });
+        },
+
+        // TODO: This should be done for *all* the irecs instead of just
+        //       the top level. Release the lock for each already installed.
+        //       If irecs.length goes to zero, then done.
+        function checkIfImportedAfterLock(ctx, next) {
+            var getOpts = {
+                uuid: opts.importInfo.uuid,
+                zpool: opts.zpool
+            };
+            self.getImage(getOpts, function (getErr, ii) {
+                if (getErr) {
+                    next(getErr);
+                } else if (ii) {
+                    logCb('Image %s (%s@%s) was imported while '
+                        + 'waiting on lock', ii.manifest.uuid,
+                        ii.manifest.name, ii.manifest.version);
+                    next(true);  // early abort
+                } else {
+                    next();
+                }
+            });
+        },
+
+        function getMeta(ctx, next) {
+            var manifestQ = vasync.queuev({
+                concurrency: 5,
+                worker: function getManifestIfNotInstalled(irec, nextManifest) {
+                    // TODO: *could* break this out to separate Q so could get
+                    //      downloads started before having all meta.
+                    source.getImgMeta(irec.importInfo, function (mErr, imgMeta) {
+                        if (mErr) {
+                            nextManifest(mErr);
+                            return;
+                        }
+                        // Note: the image *manifest* is `imgMeta.manifest`.
+                        irec.imgMeta = imgMeta;
+                        log.info({irec: irec}, 'got irec.imgMeta');
+                        nextManifest();
+                    });
+                }
+            });
+
+            manifestQ.on('end', function doneManifests() {
+                TIME('manifests');
+                next();
+            });
+
+            TIME('manifests');
+            manifestQ.push(irecs);
+            manifestQ.close();
+        },
+
+        function downloadAndInstall(ctx, next) {
+            // XXX START HERE: what happens to *errs* reported in the queue?
+            //          I want these to abort the process.
+            var downloadQ = vasync.queuev({
+                concurrency: 5,
+                worker: function fetchImg(irec, nextFetch) {
+                    self.log.info({uuid: irec.uuid}, 'download image');
+                    var downloadOpts = {
+                        source: source,
+                        importInfo: irec.importInfo,
+                        imgMeta: irec.imgMeta,
+                        bar: bar,
+                        logCb: logCb
+                    };
+                    self._downloadImageFile(downloadOpts, function (err, downloadInfo) {
+                        if (err) {
+                            nextFetch(err);
+                            return;
+                        }
+
+                        self.log.info({uuid: irec.uuid, downloadInfo: downloadInfo},
+                            'downloaded image');
+                        if (bar) {
+                            bar.log(format('Downloaded image %s (%s)',
+                                irec.uuid,
+                                common.humanSizeFromBytes(irec.imgMeta.size)));
+                        }
+                        irec.downloadPath = downloadInfo.path;
+
+                        var origin = irec.imgMeta.manifest.origin;
+                        if (!origin || ctx.isInstalledFromUuid[origin]) {
+                            installQ.push(irec);
+                        } else {
+                            onDeck[irec.uuid] = irec;
+                        }
+                        if (canCloseInstallQ && Object.keys(onDeck).length === 0) {
+                            installQ.close();
+                        }
+                        nextFetch();
+                    });
+                }
+            });
+
+            downloadQ.on('end', function doneDownloads() {
+                TIME('downloads');
+                if (bar) {
+                    bar.end();
+                }
+                canCloseInstallQ = true;
+            });
+
+            var installQ = vasync.queuev({
+                concurrency: 1,
+                worker: function installImg(irec, nextInstall) {
+                    TIME('install-'+irec.uuid);
+                    var installOpts = {
+                        source: source,
+                        zpool: zpool,
+                        imgMeta: irec.imgMeta,
+                        dsName: format('%s/%s', zpool, irec.uuid),
+                        filePath: irec.downloadPath,
+                        quiet: opts.quiet
+                    };
+                    self._installSingleImage(installOpts, function (err) {
+                        if (err) {
+                            nextInstall(err);
+                            return;
+                        }
+
+                        // TODO sort out bar.log vs logCb
+                        var msg = format('Imported image %s (%s@%s)',
+                            irec.uuid,
+                            irec.imgMeta.manifest.name,
+                            irec.imgMeta.manifest.version);
+                        if (bar) {
+                            bar.log(msg)
+                        } else {
+                            logCb(msg)
+                        }
+
+                        rimraf(irec.downloadPath, function (rmErr) {
+                            if (rmErr) {
+                                nextInstall(rmErr);
+                                return;
+                            }
+
+                            ctx.isInstalledFromUuid[irec.uuid] = true;
+
+                            // We can now install any downloaded (i.e. on deck)
+                            // images whose origin was this image that we just
+                            // installed.
+                            // TODO: there is just one child, shouldn't have to iterate
+                            Object.keys(onDeck).forEach(function (uuid) {
+                                var onDeckIrec = onDeck[uuid];
+                                if (onDeckIrec.imgMeta.manifest.origin === irec.uuid) {
+                                    log.debug({uuid: irec.uuid}, 'putting img on installQ');
+                                    delete onDeck[uuid];
+                                    installQ.push(onDeckIrec);
+                                }
+                            });
+                            if (canCloseInstallQ && Object.keys(onDeck).length === 0) {
+                                installQ.close();
+                            }
+                            TIME('install-'+irec.uuid);
+                            nextInstall();
+                        });
+                    });
+                }
+            });
+
+            installQ.on('end', function doneInstalls() {
+                log.debug('done installs');
+                next();
+            });
+
+
+            irecs.reverse();
+            log.info({irecs: irecs, numInAncestry: ctx.ancestry.length,
+                numToInstall: irecs.length}, 'irecs to download and install');
+            var totalBytes = irecs
+                .map(function (irec) { return irec.imgMeta.size; })
+                .reduce(function (a, b) { return a + b; });
+            logCb('Must download and install %d images (%s)',
+                irecs.length, common.humanSizeFromBytes(totalBytes));
+            if (!opts.quiet && process.stderr.isTTY) {
+                bar = new ProgressBar({
+                    size: totalBytes,
+                    filename: format('Download %d images', irecs.length)
+                });
+            }
+            TIME('downloads');
+            downloadQ.push(irecs);
+            downloadQ.close();
+        },
+
+    ]}, function finishUp(err) {
+        if (err === true) { // Signal for early abort.
+            err = null;
+        }
+
+        var unlockOpts = {
+            unlockInfos: unlockInfos,
+            logCb: logCb
+        };
+        self._lockRelease(unlockOpts, function (unlockErr) {
+            var e = (err && unlockErr
+                ? new errors.MultiError([err, unlockErr])
+                : err || unlockErr);
+            cb(e);
+        });
+    });
+};
+
+
+
+/**
+ * Lock imports for the given `uuids`.
+ *
+ * When locking multiple UUIDs (typical for an image import with ancestry),
+ * it is expected that `opts.uuids` is in order from top image, its parent,
+ * etc. down to the base. Lock files are per-uuid and will be acquired in order.
+ * This should avoid deadlock if used consistently.
+ *
+ * @param opts {Object}
+ * @param cb {Function} `function (err, unlockInfos)`
+ */
+IMGADM.prototype._lockAcquire = function _lockAcquire(opts, cb) {
+    assert.object(opts, 'opts');
+    assert.arrayOfString(opts.uuids, 'opts.uuids');
+    assert.func(opts.logCb, 'opts.logCb');
+    assert.func(cb, 'cb');
+
+    var self = this;
+    var log = self.log;
+    var unlockInfos = [];
+
+    vasync.forEachPipeline({
+        inputs: opts.uuids,
+        func: function lockOneUuid(uuid, next) {
+            var acquireLogTimeout = setTimeout(function () {
+                opts.logCb(format('Waiting for image %s import lock', uuid));
+            }, 1000);
+
+            var lockPath = self._lockPathFromUuid(uuid);
+            log.debug({uuid: uuid, lockPath: lockPath}, 'acquiring lock');
+
+            lock(lockPath, function (lockErr, unlockFn) {
+                if (acquireLogTimeout) {
+                    clearTimeout(acquireLogTimeout);
+                }
+                if (lockErr) {
+                    next(new errors.InternalError({
+                        message: 'error acquiring lock',
+                        uuid: uuid,
+                        lockPath: lockPath,
+                        cause: lockErr
+                    }));
+                    return;
+                }
+                log.debug({lockPath: lockPath, uuid: uuid}, 'acquired lock');
+                unlockInfos.push({
+                    uuid: uuid,
+                    lockPath: lockPath,
+                    unlockFn: unlockFn
+                });
+                next();
+            });
+        }
+    }, function finishLockAcquires(err) {
+        if (err) {
+            var unlockOpts = {
+                unlockInfos: unlockInfos,
+                logCb: opts.logCb
+            };
+            self._lockRelease(unlockOpts, function (unlockErr) {
+                if (unlockErr) {
+                    log.warn({unlockInfos: unlockInfos, err: unlockErr},
+                        'could not release all locks in _lockAcquire cleanup');
+                }
+                cb(err);
+            });
+        } else {
+            cb(null, unlockInfos);
+        }
+    });
+}
+
+
+IMGADM.prototype._lockRelease = function _lockRelease(opts, cb) {
+    var self = this;
+    assert.object(opts, 'opts');
+    assert.arrayOfObject(opts.unlockInfos, 'opts.unlockInfos');
+    assert.func(opts.logCb, 'opts.logCb');
+    assert.func(cb, 'cb');
+
+    vasync.forEachPipeline({
+        inputs: opts.unlockInfos,
+        func: function unlockOne(unlockInfo, next) {
+            self.log.debug({unlockInfo: unlockInfo}, 'releasing lock');
+            unlockInfo.unlockFn(function (unlockErr) {
+                if (unlockErr) {
+                    next(new errors.InternalError({
+                        message: 'error releasing lock',
+                        lockPath: unlockInfo.lockPath,
+                        cause: unlockErr
+                    }));
+                    return;
+                }
+                self.log.debug({unlockInfo: unlockInfo}, 'released lock');
+                next();
+            });
+        }
+    }, cb);
+}
 
 
 /**
@@ -1474,321 +1932,163 @@ IMGADM.prototype.importImage = function importImage(options, callback) {
  *
  * It is up to the caller to ensure this UUID is not already installed.
  *
- * @param options {Object}
+ * @param opts {Object}
  *      - @param manifest {Object} The manifest to import.
  *      - @param zpool {String} The zpool to which to import.
  *      - @param file {String} Path to the image file.
  *      - @param quiet {Boolean} Optional. Default false. Set to true
  *        to not have a progress bar for the install.
- *      - @param logCb {Function} Optional. A function that is called
+ *      - @param logCb {Function} A function that is called
  *        with progress messages. Called as `logCb(<string>)`. E.g. passing
  *        console.log is legal.
- * @param callback {Function} `function (err)`
+ * @param cb {Function} `function (err)`
  */
-IMGADM.prototype.installImage = function installImage(options, callback) {
-    assert.object(options, 'options');
-    assert.object(options.manifest, 'options.manifest');
-    assert.string(options.zpool, 'options.zpool');
-    assert.string(options.file, 'options.file');
-    assert.optionalBool(options.quiet, 'options.quiet');
-    assert.optionalFunc(options.logCb, 'options.logCb');
+IMGADM.prototype.installImage = function installImage(opts, cb) {
+    var self = this;
+    assert.object(opts, 'opts');
+    assert.object(opts.manifest, 'opts.manifest');
+    assert.string(opts.zpool, 'opts.zpool');
+    assert.string(opts.file, 'opts.file');
+    assert.optionalBool(opts.quiet, 'opts.quiet');
+    assert.func(opts.logCb, 'opts.logCb');
 
-    this._installImage(options, callback);
+    // Upgrade manifest if required.
+    try {
+        var manifest = imgmanifest.upgradeManifest(opts.manifest);
+    } catch (err) {
+        cb(new errors.InvalidManifestError(err));
+        return;
+    }
+
+    var logCb = opts.logCb;
+    var imgMeta = {
+        manifest: manifest
+    };
+    var lockPath = self._lockPathFromUuid(manifest.uuid);
+    var unlockInfos;
+
+    vasync.pipeline({funcs: [
+        function acquireLock(_, next) {
+            var lockOpts = {
+                uuids: [manifest.uuid],
+                logCb: logCb
+            };
+            self._lockAcquire(lockOpts, function (err, unlockInfos_) {
+                unlockInfos = unlockInfos_;
+                next(err);
+            });
+        },
+
+        function checkIfImportedAfterLock(_, next) {
+            var getOpts = {
+                uuid: manifest.uuid,
+                zpool: opts.zpool
+            };
+            self.getImage(getOpts, function (getErr, ii) {
+                if (getErr) {
+                    next(getErr);
+                } else if (ii) {
+                    logCb('Image %s (%s@%s) was installed while '
+                        + 'waiting on lock', manifest.uuid, ii.manifest.name,
+                        ii.manifest.version);
+                    next(true);  // early abort
+                } else {
+                    next();
+                }
+            });
+        },
+
+        function getAndCheckSize(_, next) {
+            fs.stat(opts.file, function (statErr, stats) {
+                if (statErr) {
+                    next(statErr);
+                    return;
+                }
+                var manSize = (manifest.files && manifest.files[0]
+                    && manifest.files[0].size);
+                if (manSize !== undefined && manSize != stats.size) {
+                    next(new errors.DownloadError(format('image file size '
+                        + 'error: manifest says %d bytes, %s is %d bytes',
+                        uuid, manSize, opts.file, stats.size)));
+                    return;
+                }
+                imgMeta.size = stats.size;
+                next();
+            });
+        },
+
+        function checkHash(_, next_) {
+            var next = once(next_);
+
+            var manSha1 = (manifest.files && manifest.files[0]
+                && manifest.files[0].sha1);
+            if (!manSha1) {
+                next();
+                return;
+            }
+
+            var hash = crypto.createHash('sha1');
+            var s = fs.createReadStream(opts.file);
+            s.on('data', function (chunk) {
+                hash.update(chunk);
+            });
+            s.on('error', function (err) {
+                next(err);
+            });
+            s.on('end', function () {
+                var actualSha1 = hash.digest('hex');
+                if (manSha1 != actualSha1) {
+                    next(new errors.DownloadError(format('image file '
+                        + 'checksum (sha1) error: manifest says "%s", '
+                        + '%s is "%s"', manSha1, opts.file, actualSha1)));
+                } else {
+                    next();
+                }
+            });
+        },
+
+        function installIt(_, next) {
+            var installOpts = {
+                imgMeta: imgMeta,
+                filePath: opts.file,
+                dsName: format('%s/%s', opts.zpool, manifest.uuid),
+                zpool: opts.zpool,
+                quiet: opts.quiet
+            };
+            self._installSingleImage(installOpts, function (err) {
+                if (err) {
+                    next(err);
+                    return;
+                }
+
+                logCb('Installed image %s (%s@%s)',
+                    manifest.uuid, manifest.name, manifest.version);
+                next();
+            });
+        }
+
+    ]}, function finishInstallImage(err) {
+        if (err === true) { // Signal for early abort.
+            err = null;
+        }
+
+        var unlockOpts = {
+            unlockInfos: unlockInfos,
+            logCb: logCb
+        };
+        self._lockRelease(unlockOpts, function (unlockErr) {
+            var e = (err && unlockErr
+                ? new errors.MultiError([err, unlockErr])
+                : err || unlockErr);
+            cb(e);
+        });
+    });
 };
 
 
 IMGADM.prototype._lockPathFromUuid = function _lockPathFromUuid(uuid) {
     assertUuid(uuid, 'uuid');
     return '/var/run/img.' + uuid + '.import.lock';
-};
-
-
-/**
- * Install an image from the given manifest and either a local `file` or
- * downloading from a given image `source`.
- */
-IMGADM.prototype._installImage = function _installImage(options, callback) {
-    var self = this;
-    assert.object(options, 'options');
-    assert.object(options.manifest, 'options.manifest');
-    assert.string(options.zpool, 'options.zpool');
-    assert.optionalString(options.file, 'options.file');
-    assert.optionalObject(options.source, 'options.source');
-    assert.ok((options.file || options.source)
-        && !(options.file && options.source),
-        'must specify exactly *one* of options.file or options.source');
-    assert.optionalBool(options.quiet, 'options.quiet');
-    assert.optionalFunc(options.logCb, 'options.logCb');
-    var logCb = options.logCb || function () {};
-    assert.func(callback, 'callback');
-    var uuid = options.manifest.uuid;
-    assert.uuid(uuid, 'options.manifest.uuid');
-    var log = self.log;
-    log.debug({
-        zpool: options.zpool,
-        manifest: options.manifest,
-        sourceUrl: options.source && options.source.url,
-        file: options.file
-    }, '_installImage');
-
-    // Upgrade manifest if required.
-    try {
-        var manifest = imgmanifest.upgradeManifest(options.manifest);
-    } catch (err) {
-        callback(new errors.InvalidManifestError(err));
-        return;
-    }
-
-    // Context object for the pipeline below (and called helpers).
-    var context = {
-        imageInfo: {
-            manifest: manifest,
-            zpool: options.zpool,
-            source: options.source
-        },
-        lockPath: self._lockPathFromUuid(uuid),
-        dsName: format('%s/%s', options.zpool, uuid),
-        quiet: options.quiet
-    };
-
-    vasync.pipeline({arg: context, funcs: [
-        /**
-         * If this image has an origin, need to ensure it is installed first.
-         * If we're streaming from a given IMGAPI `source` then we can try
-         * to get the origin as well. If we're just given a file, then nothing
-         * we can do.
-         */
-        function getOrigin(ctx, next) {
-            if (!manifest.origin) {
-                next();
-                return;
-            }
-            var getOpts = {
-                uuid: manifest.origin,
-                zpool: options.zpool
-            };
-            self.getImage(getOpts, function (getErr, oi) {
-                ctx.localOriginInfo = oi;
-                next(getErr);
-            });
-        },
-        function ensureOrigin(ctx, next) {
-            if (!manifest.origin) {
-                next();
-                return;
-            }
-            if (ctx.localOriginInfo) {
-                next();
-            } else if (options.file) {
-                next(new errors.OriginNotInstalledError(options.zpool,
-                    manifest.origin));
-            } else {
-                assert.ok(options.source);
-
-                logCb(format('Origin image %s is not installed: '
-                    + 'searching source', manifest.origin));
-                var getOpts = {
-                    uuid: manifest.origin,
-                    ensureActive: true,
-                    sources: [ctx.imageInfo.source]
-                };
-                self.sourcesGet(getOpts, function (err, originInfo) {
-                    if (err) {
-                        next(err);
-                        return;
-                    } else if (!originInfo) {
-                        next(new errors.OriginNotFoundInSourceError(
-                            manifest.origin, ctx.imageInfo.source));
-                        return;
-                    }
-                    logCb(format('Importing origin image %s (%s@%s) from "%s"',
-                        originInfo.manifest.uuid, originInfo.manifest.name,
-                        originInfo.manifest.version, originInfo.source.url));
-                    var impOpts = {
-                        manifest: originInfo.manifest,
-                        zpool: options.zpool,
-                        source: originInfo.source,
-                        logCb: options.logCb
-                    };
-                    self.importImage(impOpts, next);
-                });
-            }
-        },
-
-        function acquireLock(ctx, next) {
-            var acquireLogTimeout = setTimeout(function () {
-                logCb(format('Waiting for image %s import lock', uuid));
-            }, 1000);
-            log.debug({lockPath: ctx.lockPath}, 'acquire lock');
-            lock(ctx.lockPath, function (lockErr, unlockFn_) {
-                if (acquireLogTimeout) {
-                    clearTimeout(acquireLogTimeout);
-                }
-                if (lockErr) {
-                    next(new errors.InternalError({
-                        message: 'error acquiring lock',
-                        lockPath: ctx.lockPath,
-                        cause: lockErr
-                    }));
-                    return;
-                }
-                log.debug({lockPath: ctx.lockPath}, 'acquired lock');
-                ctx.unlockFn = unlockFn_;
-                next();
-            });
-        },
-
-        /**
-         * While waiting for the lock the image could have been imported.
-         */
-        function checkIfImportedAfterLock(ctx, next) {
-            var getOpts = {
-                uuid: uuid,
-                zpool: options.zpool
-            };
-            self.getImage(getOpts, function (getErr, ii) {
-                if (getErr) {
-                    next(getErr);
-                    return;
-                } else if (ii) {
-                    logCb(format('Image %s (%s@%s) was imported while '
-                        + 'waiting on lock', uuid, ii.manifest.name,
-                        ii.manifest.version));
-                    next(true);  // `true` means early abort
-                } else {
-                    next();
-                }
-            });
-        },
-
-        function getImageFileInfo(ctx, next) {
-            if (options.file) {
-                fs.stat(options.file, function (statErr, stats) {
-                    if (statErr) {
-                        next(statErr);
-                        return;
-                    }
-                    var stream = fs.createReadStream(options.file);
-                    stream.pause();
-                    ctx.fileInfo = {
-                        stream: stream,
-                        size: stats.size
-                    };
-                    next();
-                });
-            } else {
-                assert.ok(options.source);
-                self.sourceGetFileStream(ctx.imageInfo, function (err, stream) {
-                    if (err) {
-                        next(err);
-                        return;
-                    }
-                    if (ctx.imageInfo.source.type !== 'dsapi'
-                        && !stream.headers['content-md5'])
-                    {
-                        next(new errors.DownloadError('image file headers '
-                            + 'did not include a "Content-MD5"'));
-                        return;
-                    }
-                    ctx.fileInfo = {
-                        stream: stream,
-                        size: Number(stream.headers['content-length']),
-                        contentMd5: stream.headers['content-md5']
-                    };
-                    next();
-                });
-            }
-        },
-
-        function _installTheFile(ctx, next) {
-            if (manifest.type === 'docker') {
-                self._installDockerImage(ctx, next);
-            } else {
-                self._installZfsImage(ctx, next);
-            }
-        },
-
-        function saveManifestToDb(ctx, next) {
-            // Note that we have a DS to remove if the rest of the import fails.
-            ctx.installedDs = true;
-
-            self.dbAddImage(ctx.imageInfo, function (addErr) {
-                if (addErr) {
-                    log.error({err: addErr, imageInfo: ctx.imageInfo},
-                        'error saving image to the database');
-                    next(new errors.InternalError(
-                        {message: 'error saving image manifest'}));
-                } else {
-                    next();
-                }
-            });
-        }
-
-    ]}, function finishUp(err) {
-        var didTheImport = true;
-        if (err === true) {
-            // This is the sign that the image was already imported.
-            err = null;
-            didTheImport = false;
-        }
-
-        vasync.pipeline({arg: context, funcs: [
-            function rollbackDsIfNecessary(ctx, next) {
-                if (err && ctx.installedDs) {
-                    var cmd = format('/usr/sbin/zfs destroy -r %s', ctx.dsName);
-                    exec(cmd, function (rollbackErr, stdout, stderr) {
-                        if (rollbackErr) {
-                            log.trace({cmd: cmd, err: rollbackErr,
-                                stdout: stdout, stderr: stderr,
-                                rollbackDsName: ctx.dsName},
-                                'error destroying dataset while rolling back');
-                        }
-                        next();
-                    });
-                } else {
-                    next();
-                }
-            },
-            function releaseLock(ctx, next) {
-                if (!ctx.unlockFn) {
-                    next();
-                    return;
-                }
-                log.debug({lockPath: ctx.lockPath}, 'releasing lock');
-                ctx.unlockFn(function (unlockErr) {
-                    if (unlockErr) {
-                        next(new errors.InternalError({
-                            message: 'error releasing lock',
-                            lockPath: ctx.lockPath,
-                            cause: unlockErr
-                        }));
-                        return;
-                    }
-                    log.debug({lockPath: ctx.lockPath}, 'released lock');
-                    next();
-                });
-            },
-            function noteCompletion(ctx, next) {
-                if (didTheImport) {
-                    logCb(format('%s image %s (%s@%s) to "%s/%s"',
-                        (options.file ? 'Installed' : 'Imported'),
-                        uuid,
-                        manifest.name,
-                        manifest.version,
-                        options.zpool,
-                        uuid));
-                }
-                next();
-            }
-        ]}, function done(finishUpErr) {
-            // We shouldn't ever get a `finishUpErr`. Let's be loud if we do.
-            if (finishUpErr) {
-                log.fatal({err: finishUpErr},
-                    'unexpected error finishing up image import');
-            }
-            callback(err || finishUpErr);
-        });
-    });
 };
 
 
@@ -1809,20 +2109,19 @@ IMGADM.prototype._installImage = function _installImage(options, callback) {
 IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
     var self = this;
     assert.object(ctx, 'ctx');
-    assert.object(ctx.fileInfo, 'ctx.fileInfo');
+    assert.object(ctx.source, 'ctx.source');
+    assert.string(ctx.filePath, 'ctx.filePath');
     assert.string(ctx.dsName, 'ctx.dsName');
-    assert.string(ctx.imageInfo.zpool, 'ctx.imageInfo.zpool');
-    assert.object(ctx.imageInfo.manifest, 'ctx.imageInfo.manifest');
-    assert.uuid(ctx.imageInfo.manifest.uuid, 'ctx.imageInfo.manifest.uuid');
-    assert.optionalBool(ctx.quiet, 'ctx.quiet');
+    assert.string(ctx.zpool, 'ctx.zpool');
+    assert.object(ctx.imgMeta.manifest, 'ctx.imgMeta.manifest');
 
-    var zpool = ctx.imageInfo.zpool;
-    var manifest = ctx.imageInfo.manifest;
+    var zpool = ctx.zpool;
+    var manifest = ctx.imgMeta.manifest;
     var uuid = manifest.uuid;
     var log = self.log;
 
     var partialDsName = ctx.dsName + '-partial';
-    var zoneroot = format('/%s/root', partialDsName, uuid);
+    var zoneroot = format('/%s/root', partialDsName);
 
     vasync.pipeline({funcs: [
         function cloneOrigin(_, next) {
@@ -1869,111 +2168,13 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
             ]}, next);
         },
 
+        // Dev Note: If we can just gtar a file and NOT do streaming into
+        // gtar, then it'll handle compression detection for us, in particular
+        // for docker files for which we don't track compression.
         function extract(_, next) {
-            /**
-             * ...stream... | gtar xf -
-             *
-             * To complete this stage we want to wait for all of:
-             * 1. the tar process to 'exit'
-             * 2. the pipeline's std handles to 'close'
-             *
-             * If we get an error we "finish" right away. This `finish` stuff
-             * coordinates that.
-             *
-             * TODO: consider a quick path for 0 length layers. Don't bother
-             * transfering the empty content tar, and don't bother with
-             * tar process and stream.
-             */
-            var numToFinish = 2;
-            var numFinishes = 0;
-            var finished = false;
-            function finish(err) {
-                numFinishes++;
-                if (finished) {
-                    /* jsl:pass */
-                } else if (err) {
-                    finished = true;
-                    log.trace({err: err}, 'extract err');
-                    next(err);
-                } else if (numFinishes >= numToFinish) {
-                    finished = true;
-                    next();
-                }
-            }
-
-            if (!ctx.quiet && process.stderr.isTTY) {
-                ctx.bar = new ProgressBar({
-                    size: ctx.fileInfo.size,
-                    filename: uuid
-                });
-            }
-
-            // Calculate input stream hashes to verify checksum at the end.
-            ctx.md5Hash = crypto.createHash('md5');
-            ctx.sha1Hash = crypto.createHash('sha1');
-            ctx.fileInfo.stream.on('data', function (chunk) {
-                if (ctx.bar)
-                    ctx.bar.advance(chunk.length);
-                ctx.md5Hash.update(chunk);
-                ctx.sha1Hash.update(chunk);
-            });
-            ctx.fileInfo.stream.on('error', finish);
-
-            // tar
-            var tar = spawn('/usr/bin/gtar', ['xf', '-'], {cwd: zoneroot});
-            tar.stderr.on('data', function (chunk) {
-                console.error('tar stderr: %s', chunk.toString());
-            });
-            tar.stdout.on('data', function (chunk) {
-                console.error('tar stdout: %s', chunk.toString());
-            });
-            tar.on('exit', function (code, signal) {
-                if (code !== 0 || signal) {
-                    finish(new errors.InternalError({message: format(
-                        'tar error extracting docker image: '
-                        + 'exit code %s, signal %s', code, signal)}));
-                } else {
-                    finish();
-                }
-            });
-            tar.on('close', function () {
-                finish();
-            });
-
-            ctx.fileInfo.stream.pipe(tar.stdin);
-            ctx.fileInfo.stream.resume();
-        },
-
-        /**
-         * Ensure the streamed image data matches expected checksums.
-         */
-        function checksum(_, next) {
-            var err;
-
-            // We have a content-md5 from the headers if the is was streamed
-            // from an IMGAPI.
-            var md5Expected = ctx.fileInfo.contentMd5;
-            if (md5Expected) {
-                var md5Actual = ctx.md5Hash.digest('base64');
-                if (md5Actual !== md5Expected) {
-                    err = new errors.DownloadError(format(
-                        'Content-MD5 expected to be %s, but was %s',
-                        md5Expected, md5Actual));
-                }
-            }
-
-            var sha1Expected = manifest.files[0].sha1;
-            var sha1Actual = ctx.sha1Hash.digest('hex');
-            if (sha1Expected && sha1Actual !== sha1Expected) {
-                err = new errors.DownloadError(format(
-                    'image file sha1 expected to be %s, but was %s',
-                    sha1Expected, sha1Actual));
-            }
-
-            if (!err) {
-                log.info('checksums match');
-            }
-            next(err);
+            assert.string(ctx.filePath, 'ctx.filePath');
+            var argv = ['/usr/bin/gtar', '-xf', ctx.filePath, '-C', zoneroot];
+            execFilePlus({argv: argv, log: log}, next);
         },
 
         function whiteout(_, next) {
@@ -2019,15 +2220,12 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
         }
 
     ]}, function finishUp(err) {
-        if (ctx.bar) {
-            ctx.bar.end();
-        }
         if (err) {
             // Rollback the currently installed dataset, if necessary.
             // Silently fail here (i.e. only log at debug level) because
             // it is possible we errored out before the -partial dataset
             // was created.
-            // TODO: Be specific above about partialDsCreated=true and
+            // XXX: Be specific above about partialDsCreated=true and
             //      key off that.
             var argv = ['/usr/sbin/zfs', 'destroy', '-r',
                 partialDsName];
@@ -2050,13 +2248,14 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
 IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
     var self = this;
     assert.object(ctx, 'ctx');
-    assert.object(ctx.fileInfo, 'ctx.fileInfo');
+    assert.string(ctx.filePath, 'ctx.filePath');
     assert.string(ctx.dsName, 'ctx.dsName');
-    assert.object(ctx.imageInfo.manifest, 'ctx.imageInfo.manifest');
-    assert.uuid(ctx.imageInfo.manifest.uuid, 'ctx.imageInfo.manifest.uuid');
+    assert.string(ctx.zpool, 'ctx.zpool');
+    assert.object(ctx.imgMeta.manifest, 'ctx.imgMeta.manifest');
+    assert.number(ctx.imgMeta.size, 'ctx.imgMeta.size');
     assert.optionalBool(ctx.quiet, 'ctx.quiet');
 
-    var manifest = ctx.imageInfo.manifest;
+    var manifest = ctx.imgMeta.manifest;
     var uuid = manifest.uuid;
     var log = self.log;
 
@@ -2093,21 +2292,19 @@ IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
 
             if (!ctx.quiet && process.stderr.isTTY) {
                 ctx.bar = new ProgressBar({
-                    size: ctx.fileInfo.size,
-                    filename: uuid
+                    size: ctx.imgMeta.size,
+                    filename: ctx.dsName
                 });
             }
 
             // [A]
-            ctx.md5Hash = crypto.createHash('md5');
-            ctx.sha1Hash = crypto.createHash('sha1');
-            ctx.fileInfo.stream.on('data', function (chunk) {
-                if (ctx.bar)
+            var stream = fs.createReadStream(ctx.filePath);
+            if (ctx.bar) {
+                stream.on('data', function (chunk) {
                     ctx.bar.advance(chunk.length);
-                ctx.md5Hash.update(chunk);
-                ctx.sha1Hash.update(chunk);
-            });
-            ctx.fileInfo.stream.on('error', finish);
+                });
+            }
+            stream.on('error', finish);
 
             // [B]
             var compression = manifest.files[0].compression;
@@ -2177,40 +2374,15 @@ IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
 
             if (uncompressor) {
                 uncompressor.stdout.pipe(zfsRecv.stdin);
-                ctx.fileInfo.stream.pipe(uncompressor.stdin);
+                stream.pipe(uncompressor.stdin);
             } else {
-                ctx.fileInfo.stream.pipe(zfsRecv.stdin);
+                stream.pipe(zfsRecv.stdin);
             }
-            ctx.fileInfo.stream.resume();
-        },
-
-        /**
-         * Ensure the streamed image data matches expected checksums.
-         */
-        function checksum(_, next) {
-            var err;
-
-            // We have a content-md5 from the headers if the is was streamed
-            // from an IMGAPI.
-            var md5Expected = ctx.fileInfo.contentMd5;
-            if (md5Expected) {
-                var md5Actual = ctx.md5Hash.digest('base64');
-                if (md5Actual !== md5Expected) {
-                    err = new errors.DownloadError(format(
-                        'Content-MD5 expected to be %s, but was %s',
-                        md5Expected, md5Actual));
-                }
-            }
-
-            var sha1Expected = manifest.files[0].sha1;
-            var sha1Actual = ctx.sha1Hash.digest('hex');
-            if (sha1Expected && sha1Actual !== sha1Expected) {
-                err = new errors.DownloadError(format(
-                    'image file sha1 expected to be %s, but was %s',
-                    sha1Expected, sha1Actual));
-            }
-
-            next(err);
+            // XXX in node 0.10 do I need this `resume()`?
+            // XXX Actually *with* this in used I now get this error:
+            //      Error: Command failed: Uncaught Error: Cannot switch to old mode now.
+            //     I don't know where the change was here.
+            //stream.resume();
         },
 
         /**
@@ -2310,42 +2482,120 @@ IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
 };
 
 
+/**
+ * Install a given image file and manifest to the zpool and imgadm db.
+ *
+ * It is the responsibility of the caller to have the import lock.
+ */
+IMGADM.prototype._installSingleImage = function _installSingleImage(ctx, cb) {
+    var self = this;
+    assert.object(ctx, 'ctx');
+    assert.optionalObject(ctx.source, 'ctx.source');
+    assert.string(ctx.filePath, 'ctx.filePath');
+    assert.string(ctx.dsName, 'ctx.dsName');
+    assert.string(ctx.zpool, 'ctx.zpool');
+    assert.object(ctx.imgMeta.manifest, 'ctx.imgMeta.manifest');
+    assert.number(ctx.imgMeta.size, 'ctx.imgMeta.size');
+    assert.optionalBool(ctx.quiet, 'ctx.quiet');
+    assert.func(cb, 'cb');
+
+    var manifest = ctx.imgMeta.manifest;
+
+    vasync.pipeline({funcs: [
+
+        /**
+         * Install the manifest *before the file*, because it is the presense
+         * of the file in the zpool that decides if there is actually an
+         * image. Therefore if we, for whatever reason, install the file in
+         * the zpool but do *not install the manifest in imgadm's db*, then
+         * we get a broken image. Further, for an image from a *docker* source
+         * we cannot `imgadm update` it to recover.
+         */
+        function saveManifestToDb(_, next) {
+            // Note that we have a DS to remove if the rest of the import fails.
+            ctx.installedDs = true;
+
+            var dbImageInfo = {
+                zpool: ctx.zpool,
+                manifest: manifest,
+                source: ctx.source
+            };
+            self.dbAddImage(dbImageInfo, function (addErr) {
+                if (addErr) {
+                    log.error({err: addErr, zpool: ctx.zpool,
+                        manifest: manifest},
+                        'error saving image to the database');
+                    next(new errors.InternalError(
+                        {message: 'error saving image manifest'}));
+                } else {
+                    next();
+                }
+            });
+        },
+
+        function _installTheFile(_, next) {
+            if (manifest.type === 'docker') {
+                self._installDockerImage(ctx, next);
+            } else {
+                self._installZfsImage(ctx, next);
+            }
+        }
+
+    ]}, function finishUp(err) {
+        if (err && ctx.installedDs) {
+            var cmd = format('/usr/sbin/zfs destroy -r %s', ctx.dsName);
+            exec(cmd, function (rollbackErr, stdout, stderr) {
+                if (rollbackErr) {
+                    log.trace({cmd: cmd, err: rollbackErr,
+                        stdout: stdout, stderr: stderr,
+                        rollbackDsName: ctx.dsName},
+                        'error destroying dataset while rolling back');
+                }
+                cb(err);
+            });
+        } else {
+            cb(err);
+        }
+    });
+};
 
 /**
  * Update image database. I.e., attempt to gather info on installed images
  * with no cached manifest info, from current image sources.
  *
+ * Limitation: Doesn't support updating from docker sources.
+ *
  * Dev Note: Currently this just writes progress (updated images) with
  * `console.log`, which isn't very "library-like".
  *
- * @param options {Object}
+ * @param opts {Object}
  *      - uuids {Array} Optional array of uuids to which to limit processing.
  *      - dryRun {Boolean} Default false. Just print changes that would be made
  *        without making them.
- * @param callback {Function} `function (err)`
+ * @param cb {Function} `function (err)`
  */
-IMGADM.prototype.updateImages = function updateImages(options, callback) {
-    assert.object(options, 'options');
-    assert.optionalArrayOfString(options.uuids, 'options.uuids');
-    assert.optionalBool(options.dryRun, 'options.dryRun');
-    assert.func(callback, 'callback');
+IMGADM.prototype.updateImages = function updateImages(opts, cb) {
+    assert.object(opts, 'opts');
+    assert.optionalArrayOfString(opts.uuids, 'opts.uuids');
+    assert.optionalBool(opts.dryRun, 'opts.dryRun');
+    assert.func(cb, 'cb');
     var self = this;
     var updateErrs = [];
 
     self.listImages(function (listErr, ii) {
         if (listErr) {
-            callback(listErr);
+            cb(listErr);
             return;
         }
 
-        var imagesInfo = ii;
-        if (options.uuids) {
+        var imagesInfo;
+        if (opts.uuids) {
             var iiFromUuid = {};
             ii.forEach(function (i) { iiFromUuid[i.manifest.uuid] = i; });
 
             imagesInfo = [];
             var missing = [];
-            options.uuids.forEach(function (u) {
+            opts.uuids.forEach(function (u) {
                 if (!iiFromUuid[u]) {
                     missing.push(u);
                 } else {
@@ -2353,8 +2603,8 @@ IMGADM.prototype.updateImages = function updateImages(options, callback) {
                 }
             });
             if (missing.length) {
-                callback(new errors.UsageError(
-                    'no install image with the given UUID(s): '
+                cb(new errors.UsageError(
+                    'no installed image with the given UUID(s): '
                     + missing.join(', ')));
                 return;
             }
@@ -2362,49 +2612,51 @@ IMGADM.prototype.updateImages = function updateImages(options, callback) {
             imagesInfo = ii;
         }
 
-        async.forEachSeries(
-            imagesInfo,
-            updateImage,
-            function (err) {
-                if (err) {
-                    callback(err);
-                } else if (updateErrs.length === 1) {
-                    callback(updateErrs[0]);
-                } else if (updateErrs.length > 1) {
-                    callback(new errors.MultiError(updateErrs));
-                } else {
-                    callback();
-                }
-            });
+        vasync.forEachPipeline({
+            inputs: imagesInfo,
+            func: updateImage
+        }, function finishUpdateImages (err) {
+            if (err) {
+                cb(err);
+            } else if (updateErrs.length === 1) {
+                cb(updateErrs[0]);
+            } else if (updateErrs.length > 1) {
+                cb(new errors.MultiError(updateErrs));
+            } else {
+                cb();
+            }
+        });
     });
 
-    function updateImage(ii, cb) {
+    function updateImage(ii, cb2) {
         assert.object(ii.manifest, 'ii.manifest');
         assert.string(ii.zpool, 'ii.zpool');
 
         var uuid = ii.manifest.uuid;
-        var sii; // source imageImage
+        var sImportInfo; // source importInfo
         var snapshots;
-        async.series([
-            function getSourceInfo(next) {
+        vasync.pipeline({funcs: [
+            function getSource(_, next) {
                 var getOpts = {
-                    uuid: uuid,
+                    arg: uuid,
                     ensureActive: false
                 };
-                self.sourcesGet(getOpts, function (sGetErr, sImageInfo) {
-                    if (sGetErr) {
-                        next(sGetErr);
+                self.sourcesGetImportInfo(getOpts, function (err, importInfo) {
+                    if (err) {
+                        next(err);
                         return;
                     }
-                    sii = sImageInfo;
-                    if (!sii) {
+                    sii = importInfo;
+                    // Limitation: don't support docker sources, skip warnings
+                    // on them.
+                    if (!sii && ii.manifest.type !== 'docker') {
                         console.log('warning: Could not find image %s in '
                             + 'image sources (skipping)', uuid);
                     }
                     next();
                 });
             },
-            function getSnapshots(next) {
+            function getSnapshots(_, next) {
                 if (!sii) {
                     next();
                     return;
@@ -2420,7 +2672,7 @@ IMGADM.prototype.updateImages = function updateImages(options, callback) {
                     next();
                 });
             },
-            function updateManifest(next) {
+            function updateManifest(_, next) {
                 if (!sii) {
                     next();
                     return;
@@ -2451,7 +2703,7 @@ IMGADM.prototype.updateImages = function updateImages(options, callback) {
                         (diffs.length === 1 ? '' : 's'), uuid, sii.source.url,
                         diffs.join(', '));
                 }
-                if (options.dryRun) {
+                if (opts.dryRun) {
                     console.log(msg);
                     next();
                     return;
@@ -2465,7 +2717,7 @@ IMGADM.prototype.updateImages = function updateImages(options, callback) {
                     next();
                 });
             },
-            function ensureFinalSnapshot(next) {
+            function ensureFinalSnapshot(_, next) {
                 if (!sii) {
                     next();
                     return;
@@ -2521,7 +2773,6 @@ IMGADM.prototype.updateImages = function updateImages(options, callback) {
                             }
                             nextSnapshot();
                         });
-
                     },
                     function doneSnapshots(sErr) {
                         if (sErr) {
@@ -2550,7 +2801,7 @@ IMGADM.prototype.updateImages = function updateImages(options, callback) {
                     }
                 );
             }
-        ], cb);
+        ]}, cb2);
     }
 };
 
@@ -2791,7 +3042,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 }
             }
             logCb(format('Manifest:\n%s',
-                _indent(JSON.stringify(m, null, 2))));
+                indent(JSON.stringify(m, null, 2))));
             next();
         },
         function validateManifest(next) {
@@ -3142,7 +3393,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                             'error compressing zfs stream: exit code %s\n'
                             + '    compression: %s\n'
                             + '    stderr:\n%s', code, compression,
-                            _indent(compStderrChunks.join(''), '        '));
+                            indent(compStderrChunks.join(''), '        '));
                         log.debug(msg);
                         finish(new errors.InternalError({message: msg}));
                     } else {
@@ -3176,7 +3427,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                         + '    cmd: /usr/sbin/zfs %s\n'
                         + '    stderr:\n%s', code,
                         zfsArgs.join(' '),
-                        _indent(zfsStderrChunks.join(''), '        '));
+                        indent(zfsStderrChunks.join(''), '        '));
                     self.log.debug(msg);
                     finish(new errors.InternalError({message: msg}));
                 } else {

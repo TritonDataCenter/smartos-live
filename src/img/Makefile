@@ -56,5 +56,7 @@ dev-install-image:
 	cp -PR lib $(INSTALLIMAGE)/lib
 	cp -PR node_modules $(INSTALLIMAGE)/node_modules
 	cp -PR test $(INSTALLIMAGE)/test
+	mkdir -p $(INSTALLIMAGE)/tools
+	cp -PR tools/coal-create-docker-vm.sh $(INSTALLIMAGE)/tools/
 	mkdir -p $(INSTALLIMAGE)/man
 	node ../../tools/ronnjs/bin/ronn.js man/imgadm.1m.md > $(INSTALLIMAGE)/man/imgadm.1m

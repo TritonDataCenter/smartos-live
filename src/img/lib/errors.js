@@ -333,20 +333,35 @@ function OriginHasNoFinalSnapshotError(cause, originUuid) {
 }
 util.inherits(OriginHasNoFinalSnapshotError, ImgadmError);
 
-function ActiveImageNotFoundError(cause, uuid) {
-    if (uuid === undefined) {
-        uuid = cause;
+function ActiveImageNotFoundError(cause, arg) {
+    if (arg === undefined) {
+        arg = cause;
         cause = undefined;
     }
-    assert.string(uuid);
+    assert.string(arg, 'arg');
     ImgadmError.call(this, {
         cause: cause,
-        message: format('an active image "%s" was not found', uuid),
+        message: format('an active image "%s" was not found', arg),
         code: 'ActiveImageNotFound',
         exitStatus: 1
     });
 }
 util.inherits(ActiveImageNotFoundError, ImgadmError);
+
+function DockerRepoNotFoundError(cause, repo) {
+    if (repo === undefined) {
+        repo = cause;
+        cause = undefined;
+    }
+    assert.string(repo, 'repo');
+    ImgadmError.call(this, {
+        cause: cause,
+        message: format('docker repo "%s" was not found', repo),
+        code: 'DockerRepoNotFound',
+        exitStatus: 1
+    });
+}
+util.inherits(DockerRepoNotFoundError, ImgadmError);
 
 function ImageNotActiveError(cause, uuid) {
     if (uuid === undefined) {
@@ -453,6 +468,20 @@ function InvalidUUIDError(cause, uuid) {
     });
 }
 util.inherits(InvalidUUIDError, ImgadmError);
+
+function InvalidArgumentError(cause, message) {
+    if (message === undefined) {
+        message = cause;
+        cause = undefined;
+    }
+    ImgadmError.call(this, {
+        cause: cause,
+        message: message,
+        code: 'InvalidArgument',
+        exitStatus: 1
+    });
+}
+util.inherits(InvalidArgumentError, ImgadmError);
 
 function InvalidManifestError(cause) {
     assert.optionalObject(cause);
@@ -723,6 +752,7 @@ module.exports = {
     ImgadmError: ImgadmError,
     InternalError: InternalError,
     InvalidUUIDError: InvalidUUIDError,
+    InvalidArgumentError: InvalidArgumentError,
     NoSourcesError: NoSourcesError,
     SourcePingError: SourcePingError,
     OriginNotFoundInSourceError: OriginNotFoundInSourceError,
@@ -736,6 +766,7 @@ module.exports = {
     OriginHasNoFinalSnapshotError: OriginHasNoFinalSnapshotError,
     ManifestValidationError: ManifestValidationError,
     ActiveImageNotFoundError: ActiveImageNotFoundError,
+    DockerRepoNotFoundError: DockerRepoNotFoundError,
     ImageNotActiveError: ImageNotActiveError,
     ImageNotInstalledError: ImageNotInstalledError,
     ImageHasDependentClonesError: ImageHasDependentClonesError,

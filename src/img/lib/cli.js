@@ -35,7 +35,7 @@ var p = console.warn;
 
 var assert = require('assert-plus');
 var async = require('async');
-var bunyan = require('/usr/node/node_modules/bunyan');
+var bunyan = require('bunyan');
 var child_process = require('child_process'),
     spawn = child_process.spawn,
     exec = child_process.exec;
@@ -50,6 +50,7 @@ var sprintf = require('extsprintf').sprintf;
 var tabula = require('tabula');
 var util = require('util'),
     format = util.format;
+var vasync = require('vasync');
 
 var imgadm = require('./imgadm');
 var common = require('./common'),
@@ -58,6 +59,7 @@ var common = require('./common'),
     NAME = common.NAME,
     pathSlugify = common.pathSlugify,
     assertUuid = common.assertUuid;
+var docker = require('./sources/docker');
 var errors = require('./errors');
 
 
@@ -70,8 +72,124 @@ var pkg = require('../package.json');
 
 // ---- internal support functions
 
+/**
+ * Take CLI input args of the form FIELD=VALUE (or similar) and transform
+ * to an object of `filters` which can be used with `filterImagesInfo`.
+ */
+function filtersFromArgs(args) {
+    assert.arrayOfString(args, 'args');
 
-function listImagesInfoSync(imagesInfo, opts) {
+    var filters = {};
+    for (var i = 0; i < args.length; i++) {
+        var arg = args[i];
+        var idx = arg.indexOf('=');
+        if (idx === -1) {
+            return cb(new errors.UsageError(format(
+                'invalid filter: "%s" (must be of the form "field=value")',
+                arg)));
+        }
+        var argVal = arg.slice(idx + 1);
+        if (argVal === 'true') {
+            argVal = true;
+        } else if (argVal === 'false') {
+            argVal = false;
+        }
+        filters[arg.slice(0, idx)] = argVal;
+    }
+    return filters;
+}
+
+/**
+ * Return a "row" with the manifest fields and a number of calculate
+ * convenience fields to be used for filtering and listing.
+ *
+ * Dev Note: Update the `do_list.help` docs below when changing row fields.
+ *
+ * Dev Note: this modifies `imageInfo.manifest` in-place.
+ */
+function rowFromImageInfo(imageInfo) {
+    assert.object(imageInfo, 'imageInfo');
+
+    var row = imageInfo.manifest;
+    if (row.published_at) {
+        // Just the date.
+        row.published_date = row.published_at.slice(0, 10);
+        // Normalize on no milliseconds.
+        row.published = row.published_at.replace(/\.\d+Z$/, 'Z');
+    }
+    row.source = imageInfo.source;
+    row.clones = imageInfo.clones;
+    row.zpool = imageInfo.zpool;
+    if (row.files && row.files[0]) {
+        row.size = row.files[0].size;
+    }
+
+    if (row.type === 'docker') {
+        row.docker_id = row.tags['docker:id'];
+        row.docker_short_id = row.docker_id.slice(0, 12);
+        row.docker_repo = row.tags['docker:repo'];
+        row.docker_tags = Object.keys(row.tags).filter(function (t) {
+            return t.slice(0, 11) === 'docker:tag:';
+        }).map(function (t) { return t.slice(11); });
+    }
+
+    return row;
+}
+
+
+function filterImagesInfo(imagesInfo, filters) {
+    assert.arrayOfObject(imagesInfo, 'imagesInfo');
+    assert.object(filters, 'filters');
+
+    var fields = Object.keys(filters);
+    if (fields.length === 0) {
+        return imagesInfo;
+    }
+
+    var filtered = [];
+    for (j = 0; j < imagesInfo.length; j++) {
+        var row = rowFromImageInfo(imagesInfo[j]);
+        var keep = true;
+        for (f = 0; f < fields.length; f++) {
+            var field = fields[f];
+            var val = filters[field];
+            var lookups = field.split(/\./g);
+            var actual = row;
+            for (k = 0; k < lookups.length; k++) {
+                actual = actual[lookups[k]];
+                if (actual === undefined) {
+                    break;
+                }
+            }
+            if (actual === undefined) {
+                keep = false;
+                break
+            } else if (typeof (val) === 'boolean') {
+                if (val !== actual) {
+                    keep = false;
+                    break;
+                }
+            } else if (val[0] === '~') {
+                if (actual.indexOf(val.slice(1)) === -1) {
+                    keep = false;
+                    break;
+                }
+            } else {
+                if (String(actual) !== val) {
+                    keep = false;
+                    break;
+                }
+            }
+        }
+        if (keep) {
+            filtered.push(imagesInfo[j]);
+        }
+    }
+    return filtered;
+}
+
+
+function listImagesInfo(imagesInfo, opts) {
     assert.arrayOfObject(imagesInfo, 'imagesInfo');
     assert.optionalObject(opts, 'opts');
     if (!opts) {
@@ -79,33 +197,80 @@ function listImagesInfoSync(imagesInfo, opts) {
     }
     assert.optionalBool(opts.json, 'opts.json');
     assert.optionalBool(opts.skipHeader, 'opts.skipHeader');
+    assert.optionalBool(opts.docker, 'opts.docker');
     assert.optionalArrayOfString(opts.columns, 'opts.columns');
     assert.optionalArrayOfString(opts.sort, 'opts.sort');
+    var validFields = listValidFields;
 
     if (opts.json) {
         console.log(JSON.stringify(imagesInfo, null, 2));
     } else {
-        var rows = [];
-        imagesInfo.forEach(function (i) {
-            var row = i.manifest;
-            if (row.published_at) {
-                // Just the date.
-                row.published_date = row.published_at.slice(0, 10);
-                // Normalize on no milliseconds.
-                row.published = row.published_at.replace(/\.\d+Z$/, 'Z');
+        var rows = imagesInfo.map(
+            function (imageInfo) { return rowFromImageInfo(imageInfo) });
+
+        /**
+         * `docker images`-like output:
+         * - only docker images
+         * - one row per *tag*
+         * - skip "non-head" images (see docker/graph/list.go)
+         */
+        if (opts.docker) {
+            var i, row;
+            var isOriginFromUuid = {};
+            for (i = 0; i < rows.length; i++) {
+                row = rows[i];
+                if (isOriginFromUuid[row.uuid] === undefined) {
+                    isOriginFromUuid[row.uuid] = false;
+                }
+                if (row.origin) {
+                    isOriginFromUuid[row.origin] = true;
+                }
             }
-            row.source = i.source;
-            row.clones = i.clones;
-            row.zpool = i.zpool;
-            rows.push(row);
-        });
+            var dRows = [];
+            for (i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                if (row.type !== 'docker') {
+                    continue;
+                }
+                var isHead = !isOriginFromUuid[row.uuid];
+                if (!isHead) {
+                    continue;
+                }
+                (row.docker_tags.length ? row.docker_tags : [null]).forEach(
+                    function (dTag) {
+                        var dRow = objCopy(row);
+                        dRow.docker_tag = dTag;
+                        dRows.push(dRow);
+                    });
+            }
+            rows = dRows;
+
+            // Override display opts.
+            opts.columns = [
+                {name: 'UUID', lookup: 'uuid'},
+                {name: 'REPOSITORY', lookup: 'docker_repo'},
+                {name: 'TAG', lookup: 'docker_tag'},
+                {name: 'IMAGE_ID', lookup: 'docker_short_id'},
+                {name: 'CREATED', lookup: 'published'}
+            ];
+            opts.sort = ['published_at'];
+            validFields = undefined;
+        }
+
         tabula(rows, {
             skipHeader: opts.skipHeader,
             columns: opts.columns,
             sort: opts.sort,
-            validFields: listValidFields
+            validFields: validFields
         });
     }
+}
+
+
+function warnNotHubDockerSource() {
+    console.warn('warning: You have added a "docker" source that is not '
+        + 'the Docker Hub, <%s>. This is currently untested.',
+        docker.DOCKER_HUB_URL);
 }
 
 
@@ -309,7 +474,7 @@ CLI.prototype.printHelp = function printHelp(cb) {
         '    imgadm avail                           list available images',
         '    imgadm show <uuid>                     show manifest of an available image',
         '',
-        '    imgadm import [-P <pool>] <uuid>       import image from a source',
+        '    imgadm import [-P <pool>] <image-id>   import image from a source',
         '    imgadm install [-P <pool>] -m <manifest> -f <file>',
         '                                           import from local image data',
         '',
@@ -344,6 +509,12 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
             'unexpected args: ' + args.join(' ')));
         return;
     }
+
+    if (opts.add_docker_hub) {
+        opts.a = 'https://index.docker.io';
+        opts.type = 'docker';
+    }
+
     var nActions = 0;
     if (opts.e) nActions++;
     if (opts.a) nActions++;
@@ -431,6 +602,11 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
                             if (change.type === 'reorder') {
                                 console.log('Reordered image sources');
                             } else if (change.type === 'add') {
+                                if (change.source.type === 'docker' &&
+                                    change.source.url !== docker.DOCKER_HUB_URL)
+                                {
+                                    warnNotHubDockerSource();
+                                }
                                 console.log('Added "%s" image source "%s"',
                                     change.source.type, change.source.url);
                             } else if (change.type === 'del') {
@@ -449,6 +625,11 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
                 if (err) {
                     cb(err);
                 } else if (changed) {
+                    if (opts.type === 'docker' &&
+                        opts.a !== docker.DOCKER_HUB_URL)
+                    {
+                        warnNotHubDockerSource();
+                    }
                     console.log('Added "%s" image source "%s"', opts.type,
                         opts.a);
                 } else {
@@ -472,6 +653,32 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
                 console.log('Do not have image source "%s", no change',
                     opts.d);
             }
+        });
+
+    } else if (opts.check) {
+        var rows = [];
+        vasync.forEachParallel({
+            inputs: this.tool.sources,
+            func: function pingCheck(source, next) {
+                source.ping(function (pingErr) {
+                    var row = {url: source.url, type: source.type};
+                    if (pingErr) {
+                        row.ok = false;
+                        row.error = pingErr.toString();
+                    } else {
+                        row.ok = true;
+                    }
+                    rows.push(row);
+                    next(null);
+                });
+            }
+        }, function donePingChecks(err) {
+            if (err) {
+                cb(err);
+                return;
+            }
+            tabula(rows, {columns: ['url', 'type', 'ok', 'error']});
+            cb();
         });
 
     } else {
@@ -542,6 +749,12 @@ CLI.prototype.do_sources.options = [
         help: 'Add a source. It is appended to the list of sources.'
     },
     {
+        names: ['add-docker-hub'],
+        type: 'bool',
+        help: 'A shortcut for "imgadm sources -t docker '
+            + '-a https://index.docker.io".'
+    },
+    {
         names: ['d'],
         type: 'string',
         helpArg: '<source>',
@@ -553,13 +766,17 @@ CLI.prototype.do_sources.options = [
         help: 'Edit sources in an editor.'
     },
     {
+        names: ['check', 'c'],
+        type: 'bool',
+        help: 'Ping check all sources.'
+    },
+    {
         names: ['type', 't'],
         type: 'string',
         default: 'imgapi',
         helpArg: '<type>',
         help: 'The source type. One of "imgapi" (the default), "docker" '
             + '(experimental), or "dsapi" (deprecated).'
-
     },
     {
         names: ['force', 'f'],
@@ -571,6 +788,7 @@ CLI.prototype.do_sources.options = [
 ];
 
 
+// TODO use listValidFields ?
 var availValidFields = [
     'source',
     'uuid',
@@ -614,51 +832,28 @@ CLI.prototype.do_avail = function do_avail(subcmd, opts, args, cb) {
     self.tool.sourcesList(function (err, imagesInfo) {
         // Even if there was an err, we still attempt to return results
         // for working sources.
-        if (opts.json) {
-            console.log(JSON.stringify(imagesInfo, null, 2));
-        } else {
-            var rows = [];
-            imagesInfo.forEach(function (i) {
-                var row = i.manifest;
-                if (row.published_at) {
-                    // Just the date.
-                    row.published_date = row.published_at.slice(0, 10);
-                    // Normalize on no milliseconds.
-                    row.published = row.published_at.replace(/\.\d+Z$/, 'Z');
-                }
-                row.source = i.source;
-                rows.push(row);
+        try {
+            listImagesInfo(imagesInfo, {
+                json: opts.json,
+                columns: columns,
+                sort: sort,
+                skipHeader: opts.H
             });
-            try {
-                tabula(rows, {
-                    skipHeader: opts.H,
-                    columns: columns,
-                    sort: sort,
-                    validFields: availValidFields
-                });
-            } catch (e) {
-                cb(e);
-                return;
-            }
+        } catch (e) {
+            cb(e);
+            return;
         }
         cb(err);
     });
 };
 CLI.prototype.do_avail.help = (
     'List available images from all sources.\n'
+    + 'This is not supported for Docker sources.\n'
     + '\n'
     + 'Usage:\n'
     + '    {{name}} avail [<options>...]\n'
     + '\n'
     + '{{options}}'
-    + 'Options:\n'
-    + '    -h, --help         Print this help and exit.\n'
-    + '    -j, --json         JSON output\n'
-    + '    -H                 Do not print table header row\n'
-    + '    -o field1,...      Specify fields (columns) to output. Default is\n'
-    + '                       "uuid,name,version,os,published".\n'
-    + '    -s field1,...      Sort on the given fields. Default is\n'
-    + '                       "published_at,name".\n'
     + '\n'
     + common.textWrap('Valid fields for "-o" and "-s" are: '
         + availValidFields.join(', ') + '.') + '\n'
@@ -718,7 +913,12 @@ var listValidFields = [
     'generate_passwords',
     'description',
     'clones',
-    'zpool'
+    'zpool',
+    'size',
+    'docker_id',
+    'docker_short_id',
+    'docker_tags',
+    'docker_repo',
     // TODO: merge this list with availValidFields above?
 ];
 CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
@@ -728,24 +928,12 @@ CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
         return;
     }
     var log = self.log;
+    var f, i, j, k;
     log.debug({opts: opts}, 'list');
 
-    var filters = {};
-    for (var i = 0; i < args.length; i++) {
-        var arg = args[i];
-        var idx = arg.indexOf('=');
-        if (idx === -1) {
-            return cb(new errors.UsageError(format(
-                'invalid filter: "%s" (must be of the form "field=value")',
-                arg)));
-        }
-        var argVal = arg.slice(idx + 1);
-        if (argVal === 'true') {
-            argVal = true;
-        } else if (argVal === 'false') {
-            argVal = false;
-        }
-        filters[arg.slice(0, idx)] = argVal;
+    var filters = filtersFromArgs(args);
+    if (opts.docker) {
+        filters['type'] = 'docker';
     }
     if (args) {
         log.debug({filters: filters}, 'list filters');
@@ -763,54 +951,15 @@ CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
             return;
         }
 
-        var fields = Object.keys(filters);
-        if (fields.length) {
-            var filtered = [];
-            for (var j = 0; j < imagesInfo.length; j++) {
-                var imageInfo = imagesInfo[j];
-                var manifest = imageInfo.manifest;
-                var keep = true;
-                for (var f = 0; f < fields.length; f++) {
-                    var field = fields[f];
-                    var val = filters[field];
-                    var lookups = field.split(/\./g);
-                    var actual = manifest;
-                    for (var k = 0; k < lookups.length; k++) {
-                        actual = actual[lookups[k]];
-                        if (actual === undefined) {
-                            break;
-                        }
-                    }
-                    if (typeof (val) === 'boolean') {
-                        if (val !== actual) {
-                            keep = false;
-                            break;
-                        }
-                    } else if (val[0] === '~') {
-                        if (actual.indexOf(val.slice(1)) === -1) {
-                            keep = false;
-                            break;
-                        }
-                    } else {
-                        if (String(actual) !== val) {
-                            keep = false;
-                            break;
-                        }
-                    }
-                }
-                if (keep) {
-                    filtered.push(imageInfo);
-                }
-            }
-            imagesInfo = filtered;
-        }
-
         try {
-            listImagesInfoSync(imagesInfo, {
+            imagesInfo = filterImagesInfo(imagesInfo, filters);
+
+            listImagesInfo(imagesInfo, {
                 json: opts.json,
                 columns: columns,
                 sort: sort,
-                skipHeader: opts.H
+                skipHeader: opts.H,
+                docker: opts.docker
             });
         } catch (e) {
             cb(e);
@@ -825,15 +974,30 @@ CLI.prototype.do_list.help = (
     + 'Usage:\n'
     + '    {{name}} list [<options>...] [<filters>]\n'
     + '\n'
-    + 'Filters:\n'
-    + '    FIELD=VALUE\n'
-    + '    FIELD=true|false\n'
-    + '    FIELD=~SUBSTRING\n'
-    + '\n'
     + '{{options}}'
     + '\n'
-    + common.textWrap('Valid fields for "-o" and "-s" are: '
-        + listValidFields.join(', ') + '.') + '\n'
+    + 'Filters:\n'
+    + '    FIELD=VALUE               exact string match\n'
+    + '    FIELD=true|false          boolean match\n'
+    + '    FIELD=~SUBSTRING          substring match\n'
+    + '\n'
+    + 'Fields for filtering, "-o" and "-s":\n'
+    + '    Any of the manifest fields (see `imgadm list -j` output) plus the\n'
+    + '    following computed fields for convenience.\n'
+    + '\n'
+    + '    published_date            just the date part of `published_at`\n'
+    + '    published                 `published_at` with the milliseconds removed\n'
+    + '    source                    the source URL, if available\n'
+    + '    clones                    the number of clones (dependent images and VMs)\n'
+    + '    size                      the size, in bytes, of the image file\n'
+    + '\n'
+    + '    In addition if this is a docker image, then the following:\n'
+    + '\n'
+    + '    docker_id                 the full docker id string\n'
+    + '    docker_short_id           the short 12 character docker id\n'
+    + '    docker_repo               the docker repo from which this image\n'
+    + '                              originates, if available\n'
+    + '    docker_tags               a JSON array of docker repo tags, if available\n'
 );
 CLI.prototype.do_list.options = [
     {
@@ -854,6 +1018,7 @@ CLI.prototype.do_list.options = [
     {
         names: ['o'],
         type: 'string',
+        helpArg: 'FIELD,...',
         help: 'Specify fields (columns) to output. Default is '
             + '"uuid,name,version,os,published".',
         default: 'uuid,name,version,os,published'
@@ -861,8 +1026,14 @@ CLI.prototype.do_list.options = [
     {
         names: ['s'],
         type: 'string',
+        helpArg: 'FIELD,...',
         help: 'Sort on the given fields. Default is "published_at,name".',
         default: 'published_at,name'
+    },
+    {
+        names: ['docker'],
+        type: 'bool',
+        help: 'Limit and format list similar to `docker images`'
     }
 ];
 
@@ -879,33 +1050,43 @@ CLI.prototype.do_show = function do_show(subcmd, opts, args, cb) {
             args.length, args.join(' '))));
         return;
     }
-    var uuid = args[0];
-    assertUuid(uuid);
+
     var getOpts = {
-        uuid: uuid,
+        arg: args[0],
         ensureActive: false
     };
-    self.tool.sourcesGet(getOpts, function (err, imageInfo) {
+    self.tool.sourcesGetImportInfo(getOpts, function (err, importInfo) {
         if (err) {
             cb(err);
             return;
+        } else if (!importInfo) {
+            cb(new errors.ImageNotFoundError(getOpts.arg));
+            return;
+        } else if (importInfo.manifest) {
+            // IMGAPI/DSAPI return the manifest with source.getImportInfo().
+            console.log(JSON.stringify(importInfo.manifest, null, 2));
+            cb();
+            return;
         }
-        if (!imageInfo) {
-            err = new errors.ImageNotFoundError(uuid);
-        } else {
-            console.log(JSON.stringify(imageInfo.manifest, null, 2));
-        }
-        cb(err);
+
+        importInfo.source.getImgMeta(importInfo, function (metaErr, imgMeta) {
+            if (metaErr) {
+                cb(metaErr);
+                return;
+            }
+            console.log(JSON.stringify(imgMeta.manifest, null, 2));
+            cb();
+        });
     });
 };
 CLI.prototype.do_show.help = (
     'Show the manifest for an available image.\n'
     + '\n'
-    + 'This searches each imgadm source for an available image with this UUID\n'
-    + 'and prints its manifest.\n'
+    + 'This searches each imgadm source for the given image and prints its\n'
+    + 'its manifest.\n'
     + '\n'
     + 'Usage:\n'
-    + '    {{name}} show <uuid>\n'
+    + '    {{name}} show <uuid|docker-repo-tag>\n'
     + '\n'
     + '{{options}}'
 );
@@ -1025,7 +1206,7 @@ CLI.prototype.do_ancestry = function do_ancestry(subcmd, opts, args, cb) {
 
     function finish() {
         try {
-            listImagesInfoSync(ancestry, {
+            listImagesInfo(ancestry, {
                 json: opts.json,
                 columns: columns,
                 skipHeader: opts.H
@@ -1068,8 +1249,8 @@ CLI.prototype.do_ancestry.options = [
         names: ['o'],
         type: 'string',
         help: 'Specify fields (columns) to output. Default is '
-            + '"uuid,name,version,os,published".',
-        default: 'uuid,name,version,os,published'
+            + '"uuid,name,version,published".',
+        default: 'uuid,name,version,published'
     },
     {
         names: ['P'],
@@ -1137,7 +1318,8 @@ CLI.prototype.do_delete.options = [
 
 
 /**
- * `imgadm import <uuid>`
+ * `imgadm import <uuid>` for imgapi/dsapi imports
+ * `imgadm import <name>[:<tag>]` for docker imports
  */
 CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
     var self = this;
@@ -1151,63 +1333,118 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
             args.length, args.join(' '))));
         return;
     }
-    var uuid = args[0];
-    assertUuid(uuid);
+    var arg = args[0];
+    var log = self.log;
     var zpool = opts.P || common.DEFAULT_ZPOOL;
 
-    // 1. Ensure we don't already have this UUID installed.
-    self.tool.getImage({uuid: uuid, zpool: zpool}, function (getErr, ii) {
-        if (getErr) {
-            cb(getErr);
-            return;
-        }
-        if (ii) {
-            var extra = '';
-            if (ii.manifest.name) {
-                extra = format(' (%s %s)', ii.manifest.name,
-                    ii.manifest.version);
-            }
-            console.log('Image %s%s is already installed, skipping',
-                ii.manifest.uuid, extra);
-            cb();
-            return;
-        }
-
-        // 2. Find this image in the sources.
-        var getOpts = {
-            uuid: uuid,
-            ensureActive: true
-        };
-        self.tool.sourcesGet(getOpts, function (sGetErr, imageInfo) {
-            if (sGetErr) {
-                cb(sGetErr);
-                return;
-            } else if (!imageInfo) {
-                cb(new errors.ActiveImageNotFoundError(uuid));
+    vasync.pipeline({arg: {}, funcs: [
+        function validateArg(ctx, next) {
+            if (common.UUID_RE.test(arg)) {
+                ctx.uuid = arg;
+            } else if (docker.isDockerPullArg(arg)) {
+                ctx.dockerId = arg;
+            } else {
+                next(new errors.UsageError(format(
+                    'invalid image-id arg: %j', arg)));
                 return;
             }
-            self.log.trace({imageInfo: imageInfo},
-                'found source for image %s', uuid);
-            console.log('Importing image %s (%s@%s) from "%s"', uuid,
-                imageInfo.manifest.name, imageInfo.manifest.version,
-                imageInfo.source.url);
+            log.info({uuid: ctx.uuid, dockerId: ctx.dockerId, arg: arg},
+                'image-id validated');
+            next();
+        },
 
-            // 3. Import it.
-            var importOpts = {
-                manifest: imageInfo.manifest,
-                source: imageInfo.source,
+        function checkIfUuidInstalled(ctx, next) {
+            if (!ctx.uuid) {
+                next();
+                return;
+            }
+
+            var getOpts = {uuid: ctx.uuid, zpool: zpool};
+            self.tool.getImage(getOpts, function (getErr, ii) {
+                if (getErr) {
+                    next(getErr);
+                    return;
+                }
+                if (ii) {
+                    var extra = '';
+                    if (ii.manifest.name) {
+                        extra = format(' (%s %s)', ii.manifest.name,
+                            ii.manifest.version);
+                    }
+                    console.log('Image %s%s is already installed, skipping',
+                        ii.manifest.uuid, extra);
+                    next(true);
+                } else {
+                    next();
+                }
+            });
+        },
+
+        function getImportInfo(ctx, next) {
+            self.tool.sourcesGetImportInfo({arg: arg}, function (err, info) {
+                if (err) {
+                    next(err);
+                    return;
+                } else if (!info) {
+                    next(new errors.ActiveImageNotFoundError(arg));
+                    return;
+                }
+                self.log.info({importInfo: info, arg: arg},
+                    'found source for import');
+                ctx.importInfo = info;
+                next();
+            });
+        },
+
+        /*
+         * If the `arg` was a uuid, then we were able to check if it was
+         * already installed before consulting the source API. If `arg` *wasn't*
+         * we now have a UUID that we can check.
+         */
+        function checkIfImageInstalled(ctx, next) {
+            if (ctx.uuid) {
+                next();
+                return;
+            }
+            assert.uuid(ctx.importInfo.uuid, 'ctx.importInfo.uuid');
+
+            var getOpts = {
+                uuid: ctx.importInfo.uuid,
+                zpool: zpool
+            };
+            self.tool.getImage(getOpts, function (getErr, ii) {
+                if (getErr) {
+                    next(getErr);
+                    return;
+                } else if (ii) {
+                    var extra = '';
+                    if (ii.manifest.name) {
+                        extra = format(' (%s %s)', ii.manifest.name,
+                            ii.manifest.version);
+                    }
+                    console.log('Image %s%s is already installed',
+                        ii.manifest.uuid, extra);
+                    next(true); // early abort
+                } else {
+                    next();
+                }
+            });
+        },
+
+        function importIt(ctx, next) {
+            self.tool.importImage({
+                importInfo: ctx.importInfo,
                 zpool: zpool,
                 quiet: opts.quiet,
                 logCb: console.log
-            };
-            self.tool.importImage(importOpts, function (importErr) {
-                if (importErr) {
-                    cb(importErr);
-                    return;
-                }
-                cb();
-            });
-        });
+            }, next);
+        }
+
+    ]}, function finish(err) {
+        if (err === true) { // Early abort.
+            err = null;
+        }
+        cb(err);
     });
 };
 CLI.prototype.do_import.help = (

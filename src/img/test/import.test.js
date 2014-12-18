@@ -144,6 +144,27 @@ test('imgadm import ' + TEST_IMAGE_UUID, function (t) {
     });
 });
 
+test('imgadm ancestry ' + TEST_IMAGE_UUID, function (t) {
+    t.exec('imgadm ancestry ' + TEST_IMAGE_UUID, function (e, stdout, stderr) {
+        var lines = stdout.trim().split(/\n/g);
+        t.equal(lines.length, 2);
+        t.equal(lines[0].split(/ +/g)[0], 'UUID');
+        t.equal(lines[1].split(/ +/g)[0], TEST_IMAGE_UUID);
+        t.equal(stderr.trim().length, 0);
+        t.end();
+    });
+});
+
+test('imgadm ancestry -j ' + TEST_IMAGE_UUID, function (t) {
+    t.exec('imgadm ancestry -j ' + TEST_IMAGE_UUID, function (e, stdout) {
+        var ancestry = JSON.parse(stdout);
+        t.equal(ancestry.length, 1);
+        t.equal(ancestry[0].manifest.uuid, TEST_IMAGE_UUID);
+        t.equal(ancestry[0].zpool, 'zones');
+        t.end();
+    });
+});
+
 test('precondition2: remove image ' + TEST_IMAGE_UUID, function (t) {
     var cmd = format(
         'imgadm get %s 2>/dev/null >/dev/null && imgadm delete %s || true',
@@ -173,6 +194,39 @@ test('precondition3: remove image ' + TEST_IMAGE_UUID, function (t) {
     });
 });
 
+test('concurrent: imgadm install ... ' + TEST_IMAGE_UUID, function (t) {
+    async.each(
+        ['alice', 'bob', 'charlie'],
+        function installTheImage(who, next) {
+            // TODO: capture this log and assert that there was some waiting
+            //       on locks?
+            var cmd = format('imgadm install -m %s/%s.imgmanifest -f %s/%s.file',
+                CACHEDIR, TEST_IMAGE_UUID, CACHEDIR, TEST_IMAGE_UUID);
+            t.exec(cmd, function () {
+                t.exec('imgadm get ' + TEST_IMAGE_UUID, function () {
+                    next();
+                });
+            });
+        },
+        function doneAll(err) {
+            t.ifError(err);
+            t.exec('imgadm get ' + TEST_IMAGE_UUID, function () {
+                t.end();
+            });
+        }
+    )
+});
+
+
+test('precondition4: remove image ' + TEST_IMAGE_UUID, function (t) {
+    var cmd = format(
+        'imgadm get %s 2>/dev/null >/dev/null && imgadm delete %s || true',
+        TEST_IMAGE_UUID, TEST_IMAGE_UUID);
+    t.exec(cmd, function () {
+        t.end();
+    });
+});
+
 test('concurrent: imgadm import ' + TEST_IMAGE_UUID, function (t) {
     async.each(
         ['alice', 'bob', 'charlie'],
@@ -193,3 +247,8 @@ test('concurrent: imgadm import ' + TEST_IMAGE_UUID, function (t) {
         }
     )
 });
+
+// Need a test IMGAPI for the following:
+// TODO: test case importing from IMGAPI *with an origin*
+// TODO: test case 'imgadm ancestry' on the zfs-dataset image with origin
+// TODO: test case for a layer download error in multi-layer import

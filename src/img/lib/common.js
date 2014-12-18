@@ -32,6 +32,8 @@ var child_process = require('child_process'),
     execFile = child_process.execFile,
     spawn = child_process.spawn;
 var format = require('util').format;
+var mod_url = require('url');
+
 
 var assert = require('assert-plus');
 var async = require('async');
@@ -40,11 +42,14 @@ var errors = require('./errors'),
     InternalError = errors.InternalError;
 
 
+// ---- globals
 
 var NAME = 'imgadm';
 var MANIFEST_V = 2;
 var DEFAULT_ZPOOL = 'zones';
 var DEFAULT_SOURCE = {type: 'imgapi', url: 'https://images.joyent.com'};
+
+var DB_DIR = '/var/imgadm';
 
 var VALID_COMPRESSIONS = ['none', 'bzip2', 'gzip'];
 
@@ -57,6 +62,14 @@ function getVersion() {
         _versionCache = require('../package.json').version;
     return _versionCache;
 }
+
+
+function indent(s, indentStr) {
+    if (!indentStr) indentStr = '    ';
+    var lines = s.split(/\r?\n/g);
+    return indentStr + lines.join('\n' + indentStr);
+}
+
 
 function objCopy(obj, target) {
     if (!target) {
@@ -191,6 +204,51 @@ function textWrap(text) {
 }
 
 
+
+/**
+ * Adapted from <http://stackoverflow.com/a/18650828>
+ */
+function humanSizeFromBytes(bytes) {
+    assert.number(bytes, 'bytes');
+    var sizes = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+    if (bytes === 0) {
+        return '0 B';
+    }
+    var i = Number(Math.floor(Math.log(bytes) / Math.log(1024)));
+    var s = String(bytes / Math.pow(1024, i));
+    var precision1 = (s.indexOf('.') === -1
+        ? s + '.0' : s.slice(0, s.indexOf('.') + 2));
+    return format('%s %s', precision1, sizes[i]);
+}
+
+
+// TODO: persist "?channel=<channel>"
+function normUrlFromUrl(u) {
+    // `url.parse('example.com:9999')` is not what you expect. Make sure we
+    // have a protocol.
+    if (! /^\w+:\/\// .test(u)) {
+        u = 'http://' + u;
+    }
+
+    var parsed = mod_url.parse(u);
+
+    // Don't want trailing '/'.
+    if (parsed.pathname.slice(-1) === '/') {
+        parsed.pathname = parsed.pathname.slice(0, -1);
+    }
+
+    // Drop redundant ports.
+    if (parsed.port
+        && ((parsed.protocol === 'https:' && parsed.port === '443')
+        || (parsed.protocol === 'http:' && parsed.port === '80'))) {
+        parsed.port = '';
+        parsed.host = parsed.hostname;
+    }
+
+    return mod_url.format(parsed);
+}
+
+
 /**
  * A convenience wrapper around `child_process.execFile` to take away some
  * logging and error handling boilerplate.
@@ -259,6 +317,7 @@ function vmStop(uuid, options, callback) {
         callback(err);
     });
 }
+
 
 /**
  * Call `vmadm start UUID`.
@@ -550,16 +609,21 @@ module.exports = {
     MANIFEST_V: MANIFEST_V,
     DEFAULT_ZPOOL: DEFAULT_ZPOOL,
     DEFAULT_SOURCE: DEFAULT_SOURCE,
+    DB_DIR: DB_DIR,
     VALID_COMPRESSIONS: VALID_COMPRESSIONS,
     VALID_SOURCE_TYPES: VALID_SOURCE_TYPES,
     getVersion: getVersion,
+    indent: indent,
     objCopy: objCopy,
     objMerge: objMerge,
+    UUID_RE: UUID_RE,
     assertUuid: assertUuid,
     boolFromString: boolFromString,
     pathSlugify: pathSlugify,
     diffManifestFields: diffManifestFields,
     textWrap: textWrap,
+    humanSizeFromBytes: humanSizeFromBytes,
+    normUrlFromUrl: normUrlFromUrl,
     execFilePlus: execFilePlus,
     vmStop: vmStop,
     vmStart: vmStart,

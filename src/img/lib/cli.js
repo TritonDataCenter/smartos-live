@@ -84,9 +84,9 @@ function filtersFromArgs(args) {
         var arg = args[i];
         var idx = arg.indexOf('=');
         if (idx === -1) {
-            return cb(new errors.UsageError(format(
+            throw new errors.UsageError(format(
                 'invalid filter: "%s" (must be of the form "field=value")',
-                arg)));
+                arg));
         }
         var argVal = arg.slice(idx + 1);
         if (argVal === 'true') {
@@ -147,15 +147,15 @@ function filterImagesInfo(imagesInfo, filters) {
     }
 
     var filtered = [];
-    for (j = 0; j < imagesInfo.length; j++) {
+    for (var j = 0; j < imagesInfo.length; j++) {
         var row = rowFromImageInfo(imagesInfo[j]);
         var keep = true;
-        for (f = 0; f < fields.length; f++) {
+        for (var f = 0; f < fields.length; f++) {
             var field = fields[f];
             var val = filters[field];
             var lookups = field.split(/\./g);
             var actual = row;
-            for (k = 0; k < lookups.length; k++) {
+            for (var k = 0; k < lookups.length; k++) {
                 actual = actual[lookups[k]];
                 if (actual === undefined) {
                     break;
@@ -163,7 +163,7 @@ function filterImagesInfo(imagesInfo, filters) {
             }
             if (actual === undefined) {
                 keep = false;
-                break
+                break;
             } else if (typeof (val) === 'boolean') {
                 if (val !== actual) {
                     keep = false;
@@ -206,7 +206,7 @@ function listImagesInfo(imagesInfo, opts) {
         console.log(JSON.stringify(imagesInfo, null, 2));
     } else {
         var rows = imagesInfo.map(
-            function (imageInfo) { return rowFromImageInfo(imageInfo) });
+            function (imageInfo) { return rowFromImageInfo(imageInfo); });
 
         /**
          * `docker images`-like output:
@@ -228,7 +228,7 @@ function listImagesInfo(imagesInfo, opts) {
             }
             var dRows = [];
             for (i = 0; i < rows.length; i++) {
-                var row = rows[i];
+                row = rows[i];
                 if (row.type !== 'docker') {
                     continue;
                 }
@@ -594,29 +594,29 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
 
             self.log.info({after: after}, 'update sources');
             self.tool.updateSources(after, skipPingCheck,
-                function (err, changes) {
-                    if (err) {
-                        cb(err);
-                    } else {
-                        changes.forEach(function (change) {
-                            if (change.type === 'reorder') {
-                                console.log('Reordered image sources');
-                            } else if (change.type === 'add') {
-                                if (change.source.type === 'docker' &&
-                                    change.source.url !== docker.DOCKER_HUB_URL)
-                                {
-                                    warnNotHubDockerSource();
-                                }
-                                console.log('Added "%s" image source "%s"',
-                                    change.source.type, change.source.url);
-                            } else if (change.type === 'del') {
-                                console.log('Deleted "%s" image source "%s"',
-                                    change.source.type, change.source.url);
+                    function (err, changes) {
+                if (err) {
+                    cb(err);
+                } else {
+                    changes.forEach(function (change) {
+                        if (change.type === 'reorder') {
+                            console.log('Reordered image sources');
+                        } else if (change.type === 'add') {
+                            if (change.source.type === 'docker'
+                                && change.source.url !== docker.DOCKER_HUB_URL)
+                            {
+                                warnNotHubDockerSource();
                             }
-                        });
-                        cb();
-                    }
-                });
+                            console.log('Added "%s" image source "%s"',
+                                change.source.type, change.source.url);
+                        } else if (change.type === 'del') {
+                            console.log('Deleted "%s" image source "%s"',
+                                change.source.type, change.source.url);
+                        }
+                    });
+                    cb();
+                }
+            });
         });
 
     } else if (opts.a) {
@@ -625,8 +625,8 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
                 if (err) {
                     cb(err);
                 } else if (changed) {
-                    if (opts.type === 'docker' &&
-                        opts.a !== docker.DOCKER_HUB_URL)
+                    if (opts.type === 'docker'
+                        && opts.a !== docker.DOCKER_HUB_URL)
                     {
                         warnNotHubDockerSource();
                     }
@@ -918,7 +918,8 @@ var listValidFields = [
     'docker_id',
     'docker_short_id',
     'docker_tags',
-    'docker_repo',
+    'docker_repo'
+    // XXX clear this up
     // TODO: merge this list with availValidFields above?
 ];
 CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
@@ -928,10 +929,14 @@ CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
         return;
     }
     var log = self.log;
-    var f, i, j, k;
     log.debug({opts: opts}, 'list');
 
-    var filters = filtersFromArgs(args);
+    try {
+        var filters = filtersFromArgs(args);
+    } catch (e) {
+        cb(e);
+        return;
+    }
     if (opts.docker) {
         filters['type'] = 'docker';
     }
@@ -969,6 +974,7 @@ CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
     });
 };
 CLI.prototype.do_list.help = (
+    /* BEGIN JSSTYLED */
     'List locally installed images.\n'
     + '\n'
     + 'Usage:\n'
@@ -998,6 +1004,7 @@ CLI.prototype.do_list.help = (
     + '    docker_repo               the docker repo from which this image\n'
     + '                              originates, if available\n'
     + '    docker_tags               a JSON array of docker repo tags, if available\n'
+    /* END JSSTYLED */
 );
 CLI.prototype.do_list.options = [
     {

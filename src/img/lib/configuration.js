@@ -43,6 +43,7 @@
 var p = console.warn;
 
 var assert = require('assert-plus');
+var format = require('util').format;
 var fs = require('fs');
 var mkdirp = require('mkdirp');
 var path = require('path');
@@ -127,8 +128,7 @@ function saveConfig(opts, cb) {
         var str = JSON.stringify(opts.config, null, 2);
         fs.writeFile(CONFIG_PATH, str, 'utf8', cb);
     });
-};
-
+}
 
 
 

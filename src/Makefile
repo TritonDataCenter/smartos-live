@@ -71,6 +71,7 @@ JS_CHECK_TARGETS=\
 	img/lib/*.js \
 	img/sbin/imgadm \
 	vm/tests/test-alias.js \
+	vm/tests/test-cleanup-on-failure.js \
 	vm/tests/test-docker.js \
 	vm/tests/test-indestructible.js \
 	vm/tests/test-internal_metadata_namespaces.js \

@@ -403,6 +403,11 @@ function (zonename, callback) {
 function attemptCreateZoneSocket(self, zopts, waitSecs) {
     var zlog = self.zlog[zopts.zone];
 
+    if (!zlog) {
+        // if there's no zone-specific logger, use the global one
+        zlog = self.log;
+    }
+
     zlog.debug('attemptCreateZoneSocket(): zone: %s, wait: %d', zopts.zone,
         waitSecs);
 

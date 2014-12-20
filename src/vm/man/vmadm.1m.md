@@ -501,7 +501,11 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         type -- type of the properties value.
 
-        vmtype -- types of VM (KVM, LX, OS) for which this property applies.
+        vmtype -- types of VM (KVM, OS) for which this property applies.
+
+        ostype -- type of os (lx, joyent, joyent-minimal or sngl) for which
+                  this property applies. It applies to all of them if it 
+                  is missing.
 
         listable -- if they can be included in the -o or -s lists for the
                     'vmadm list' command.
@@ -604,7 +608,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         virtualization and 'kvm' for full hardware virtualization. This is a
         required value for VM creation.
 
-        type: string (joyent|joyent-minimal|kvm|sngl)
+        type: string (joyent|joyent-minimal|kvm|sngl|lx)
         vmtype: OS,KVM
         listable: yes
         create: yes
@@ -1118,7 +1122,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         and allow the VM to be deleted.
 
         type: boolean
-        vmtype: KVM,LX,OS
+        vmtype: OS,KVM
         listable: yes
         create: yes
         update: yes
@@ -1142,7 +1146,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         deleted.
 
         type: boolean
-        vmtype: KVM,LX,OS
+        vmtype: OS,KVM
         listable: yes
         create: yes
         update: yes
@@ -1153,7 +1157,8 @@ tab-complete UUIDs rather than having to type them out for every command.
         This sets the version of Linux to emulate for LX VMs.
 
         type: string (kernel version, eg. 2.6.31)
-        vmtype: LX
+        vmtype: OS
+        ostype: lx
         listable: no
         create: no
         update: yes

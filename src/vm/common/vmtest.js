@@ -5,6 +5,7 @@
 //
 
 process.env['TAP'] = 1;
+process.env['NOCACHE'] = 1;
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
 var fs = require('fs');

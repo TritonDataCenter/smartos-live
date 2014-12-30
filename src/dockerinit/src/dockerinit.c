@@ -566,9 +566,9 @@ buildCmdEnv()
 void
 mountLXProc()
 {
-    dlog("MOUNT /proc (lxproc)\n");
+    dlog("MOUNT /proc (lx_proc)\n");
 
-    if (mount("lxproc", "/proc", MS_DATA, "lxproc", NULL, 0) != 0) {
+    if (mount("proc", "/proc", MS_DATA, "lx_proc", NULL, 0) != 0) {
         fatal(ERR_MOUNT_LXPROC, "failed to mount /proc: %s\n", strerror(errno));
     }
 }

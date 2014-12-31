@@ -53,6 +53,7 @@ var sdc_fields = [
     'zonepath',
     'zonename'
 ];
+var MAX_RETRY = 300; // in seconds
 
 var MetadataAgent = module.exports = function (options) {
     this.log = options.log;
@@ -375,7 +376,7 @@ function (zonename, callback) {
             return;
         }
 
-        self.createZoneSocket(zopts, function (createErr) {
+        self.createZoneSocket(zopts, undefined, function (createErr) {
             if (createErr) {
                 // We call callback here, but don't include the error because
                 // this is running in async.forEach and we don't want to fail
@@ -395,32 +396,59 @@ function (zonename, callback) {
     });
 };
 
-MetadataAgent.prototype.createZoneSocket =
-function (zopts, callback, waitSecs) {
-    var self = this;
+/*
+ * waitSecs here indicates how long we should wait to retry after this attempt
+ * if we fail.
+ */
+function attemptCreateZoneSocket(self, zopts, waitSecs) {
     var zlog = self.zlog[zopts.zone];
-    waitSecs = waitSecs || 1;
 
-    zsock.createZoneSocket(zopts, function (error, fd) {
-        if (error) {
-            // If we get errors trying to create the zone socket, wait and then
-            // keep retrying.
-            waitSecs = waitSecs * 2;
-            zlog.error(
-                { err: error },
-                'createZoneSocket error, %s seconds before next attempt',
-                waitSecs);
-            assert(!self.zoneRetryTimeouts[zopts.zone], 'timeout already set'
-                + ' for zone ' + zopts.zone + ', should have been cleared.');
-            self.zoneRetryTimeouts[zopts.zone] =
-                setTimeout(function () {
-                    self.zoneRetryTimeouts[zopts.zone] = null;
-                    self.createZoneSocket(zopts, callback, waitSecs);
-                }, waitSecs * 1000);
+    if (!zlog) {
+        // if there's no zone-specific logger, use the global one
+        zlog = self.log;
+    }
+
+    zlog.debug('attemptCreateZoneSocket(): zone: %s, wait: %d', zopts.zone,
+        waitSecs);
+
+    function _retryCreateZoneSocketLater() {
+        if (self.zoneRetryTimeouts[zopts.zone]) {
+            zlog.error('_retryCreateZoneSocketLater(): already have a retry '
+                + 'running, not starting another one.');
             return;
         }
 
-        var server = net.createServer(function (socket) {
+        zlog.info('Will retry zsock creation for %s in %d seconds',
+            zopts.zone, waitSecs);
+
+        self.zoneRetryTimeouts[zopts.zone] = setTimeout(function () {
+            var nextRetry = waitSecs * 2;
+
+            if (nextRetry > MAX_RETRY) {
+                nextRetry = MAX_RETRY;
+            }
+
+            zlog.info('Retrying %s', zopts.zone);
+            self.zoneRetryTimeouts[zopts.zone] = null;
+            process.nextTick(function () {
+                attemptCreateZoneSocket(self, zopts, nextRetry);
+            });
+        }, waitSecs * 1000);
+    }
+
+    zsock.createZoneSocket(zopts, function (error, fd) {
+        var server;
+
+        if (error) {
+            // If we get errors trying to create the zone socket, setup a retry
+            // loop and return.
+            zlog.error({err: error}, 'createZoneSocket error, %s seconds before'
+                + ' next attempt', waitSecs);
+            _retryCreateZoneSocketLater();
+            return;
+        }
+
+        server = net.createServer(function (socket) {
             var handler = self.makeMetadataHandler(zopts.zone, socket);
             var buffer = '';
 
@@ -443,13 +471,13 @@ function (zopts, callback, waitSecs) {
                     + 'socket and server.');
                 try {
                     server.close();
+                    socket.end();
                 } catch (e) {
-                    zlog.error({err: e}, 'Caught exception closing server: '
-                        + e.message);
+                    zlog.error({err: e}, 'Caught exception closing server: %s',
+                        e.message);
                 }
-
-                socket.end();
-                self.createZoneSocket(zopts);
+                _retryCreateZoneSocketLater();
+                return;
             });
         });
 
@@ -493,10 +521,21 @@ function (zopts, callback, waitSecs) {
             }
         };
 
-        server.on('error', function (e) {
-            zlog.error({err: e}, 'Zone socket error: ' + e.message);
-            if (e.code !== 'EINTR') {
-                throw e;
+        server.on('error', function (err) {
+            zlog.error({err: err}, 'Zone socket error: %s', err.message);
+            if (err.code === 'ENOTSOCK' || err.code === 'EBADF') {
+                // the socket inside the zone went away,
+                // likely due to resource constraints (ie: disk full)
+                try {
+                    server.close();
+                } catch (e) {
+                    zlog.error({err: e}, 'Caught exception closing server: '
+                        + e.message);
+                }
+                // start the retry timer
+                _retryCreateZoneSocketLater();
+            } else if (err.code !== 'EINTR') {
+                throw err;
             }
         });
 
@@ -507,11 +546,19 @@ function (zopts, callback, waitSecs) {
         server._handle = p;
 
         server.listen();
-
-        if (callback) {
-            callback();
-        }
     });
+}
+
+MetadataAgent.prototype.createZoneSocket =
+function (zopts, waitSecs, callback) {
+    var self = this;
+    waitSecs = waitSecs || 1;
+
+    attemptCreateZoneSocket(self, zopts, waitSecs);
+
+    if (callback) {
+        callback();
+    }
 };
 
 function base64_decode(input) {

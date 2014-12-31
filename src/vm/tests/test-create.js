@@ -56,6 +56,33 @@ var payload_with_null_alias = {
     ]
 }
 
+var payload_with_zvol_as_zoneroot = {
+    autoboot: false,
+    brand: 'joyent-minimal',
+    alias: null,
+    image_uuid: vmtest.CURRENT_UBUNTU_UUID,
+    do_not_inventory: true,
+    nics: [
+        {
+            nic_tag: 'admin',
+            ip: 'dhcp'
+        }
+    ]
+}
+
+var payload_with_smartos_zoneroot = {
+    autoboot: false,
+    brand: 'lx',
+    alias: null,
+    image_uuid: vmtest.CURRENT_SMARTOS_UUID,
+    do_not_inventory: true,
+    nics: [
+        {
+            nic_tag: 'admin',
+            ip: 'dhcp'
+        }
+    ]
+}
 
 test('test create with invalid IP', function(t) {
 
@@ -110,6 +137,26 @@ test('test create with null alias', function(t) {
             });
         }
     ], function (err) {
+        t.end();
+    });
+});
+
+test('test create with wrong image_uuid type (KVM for OS VM)', function(t) {
+
+    var p = JSON.parse(JSON.stringify(payload_with_zvol_as_zoneroot));
+    var state = {brand: p.brand, expect_create_failure: true};
+
+    vmtest.on_new_vm(t, p.image_uuid, p, state, [], function (err) {
+        t.end();
+    });
+});
+
+test('test create with wrong image_uuid type (SmartOS for LX)', function(t) {
+
+    var p = JSON.parse(JSON.stringify(payload_with_smartos_zoneroot));
+    var state = {brand: p.brand, expect_create_failure: true};
+
+    vmtest.on_new_vm(t, p.image_uuid, p, state, [], function (err) {
         t.end();
     });
 });

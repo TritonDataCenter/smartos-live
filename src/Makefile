@@ -67,17 +67,19 @@ JS_CHECK_TARGETS=\
   filewait.js \
 	node_modules/{system,onlyif}.js \
 	vm/sbin/*.js \
-	vm/node_modules/{dladm,expander,proptable,utils,VM,qmp}.js \
 	vm/node_modules/vmevent/*.js \
+	vm/node_modules/{dladm,expander,proptable,utils,VM,qmp,openonerrlogger}.js \
 	vm/node_modules/vmload/*.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
 	vm/tests/test-alias.js \
+	vm/tests/test-cleanup-on-failure.js \
 	vm/tests/test-docker.js \
 	vm/tests/test-fswatcher.js \
 	vm/tests/test-indestructible.js \
 	vm/tests/test-internal_metadata_namespaces.js \
 	vm/tests/test-lastexited.js \
+	vm/tests/test-openonerrlogger.js \
 	vm/tests/test-reboot.js \
 	vm/tests/test-spoof-opts.js \
 	vm/tests/test-tmpfs.js \

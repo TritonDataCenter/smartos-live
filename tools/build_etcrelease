@@ -89,4 +89,9 @@ get_status $ber_wsroot/projects/illumos-extra illumos-extra
 for d in $ber_wsroot/projects/local/*; do
 	get_status $d $(basename $d)
 done
+
+# if the smartos overlay exists and is in use, include it
+[[ -d $ber_wsroot/overlay/smartos ]] && \
+    grep -q $ber_wsroot/overlay/smartos $ber_wsroot/overlay/order && \
+    get_status $ber_wsroot/overlay/smartos smartos-overlay
 printf "]\n"

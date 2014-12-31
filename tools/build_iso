@@ -249,6 +249,7 @@ ____ENDOFGRUBCOMMANDS
 	pfexec lofiadm -d $bi_lofidev || fail "failed to remove lofi device $bi_lofidev"
 	bi_lofidev= #unset that variable so fail won't try to clean it up again
 	echo "Compressing usb image... \c "
+	[[ -f ${bi_usbpath}.bz2 ]] && rm ${bi_usbpath}.bz2
 	pbzip2 $bi_usbpath || fail "failed to compress $bi_usbpath"
 	echo "done"
 	echo "usb image is available at $(pwd)/${bi_usbpath}.bz2"

@@ -32,6 +32,7 @@ var zsock = require('/usr/node/node_modules/zsock');
 var http = require('http');
 var fs = require('fs');
 var net = require('net');
+var Queue = require('../queue');
 
 var MAX_RETRY = 300; // in seconds
 
@@ -787,24 +788,7 @@ var MetadataAgent = module.exports = function (options) {
 
     self.initQueue = function (callback) {
         self.queue = async.queue(function (task, callback) {
-            switch (task.type) {
-            case 'create':
-                console.log('CREATE');
-                self.vmobjs[task.zonename] = task.vm;
-                self.createZoneLog(task.vm.brand, task.zonename);
-                // start server
-                break;
-            case 'modify':
-                console.log('MODIFY');
-                self.vmobjs[task.zonename] = task.vm;
-                break;
-            case 'delete':
-                console.log('DELETE');
-                // stop server
-                delete (self.zlog)[task.zonename];
-                delete (self.vmobjs)[task.zonename];
-                break;
-            }
+
             callback();
         }, 10);
         callback();
@@ -825,6 +809,7 @@ var MetadataAgent = module.exports = function (options) {
             var body = '';
 
             res.on('data', function (data) {
+                var task;
                 var chunk;
                 var chunks;
 
@@ -833,7 +818,29 @@ var MetadataAgent = module.exports = function (options) {
 
                 while (chunks.length > 1) {
                     chunk = chunks.shift();
-                    self.queue.push(JSON.parse(chunk));
+                    task = JSON.parse(chunk);
+                    self.event_queue.enqueue(function (callback) {
+                        switch (task.type) {
+                        case 'create':
+                            console.log('CREATE');
+                            self.vmobjs[task.zonename] = task.vm;
+                            self.createZoneLog(task.vm.brand, task.zonename);
+                            // start server
+                            break;
+                        case 'modify':
+                            console.log('MODIFY');
+                            self.vmobjs[task.zonename] = task.vm;
+                            break;
+                        case 'delete':
+                            console.log('DELETE');
+                            // stop server
+                            delete (self.zlog)[task.zonename];
+                            delete (self.vmobjs)[task.zonename];
+                            break;
+                        }
+
+                        callback();
+                    });
                 }
                 body = chunks.pop(); // remainder
             });
@@ -920,11 +927,8 @@ MetadataAgent.prototype.start = function (callback) {
     async.series([
         // init queue
         function (cb) {
-            self.initQueue(cb);
-        },
-        // pause queue
-        function (cb) {
-            self.queue.pause();
+            var opts = {workers: 20, paused: true};
+            self.event_queue = new Queue(opts);
             cb();
         },
         // start vminfo event listener
@@ -941,7 +945,8 @@ MetadataAgent.prototype.start = function (callback) {
         },
         // resume queue
         function (cb) {
-            self.queue.resume();
+            self.event_queue.resume();
+            cb();
         },
         // start refresh timers
         function (cb) {

@@ -32,6 +32,7 @@ var zsock = require('/usr/node/node_modules/zsock');
 var http = require('http');
 var fs = require('fs');
 var net = require('net');
+var path = require('path');
 var Queue = require('../queue');
 
 var MAX_RETRY = 300; // in seconds
@@ -53,7 +54,7 @@ var MetadataAgent = module.exports = function (options) {
         self.refresh_interval = 300000; // 5 minutes
     }
 
-    self.createZoneLog = function (type, zonename) {
+    function createZoneLog(type, zonename) {
         var opts = {brand: type, 'zonename': zonename};
         self.zlog[zonename] = self.log.child(opts);
         return (self.zlog[zonename]);
@@ -474,7 +475,7 @@ var MetadataAgent = module.exports = function (options) {
                         return;
                     } else if (want === 'tmpfs'
                         && vmobj.hasOwnProperty('tmpfs')) {
-                        val = JSON.stringify(vmobjs.tmpfs);
+                        val = JSON.stringify(vmobj.tmpfs);
                         returnit(null, val);
                         return;
                     } else if (want === 'routes'
@@ -520,7 +521,7 @@ var MetadataAgent = module.exports = function (options) {
                         return;
                     } else {
                         val = VM.flatten(vmobj, want);
-                        returnit(err, val);
+                        returnit(null, val);
                     }
                 } else {
                     // not sdc:, so key will come from *_mdata
@@ -786,13 +787,40 @@ var MetadataAgent = module.exports = function (options) {
         };
     };
 
-    self.initQueue = function (callback) {
-        self.queue = async.queue(function (task, callback) {
-
-            callback();
-        }, 10);
-        callback();
-    };
+    function handleEvent(task) {
+        self.event_queue.enqueue(function (callback) {
+            switch (task.type) {
+            case 'create':
+                self.vmobjs[task.zonename] = task.vm;
+                createZoneLog(task.vm.brand, task.zonename);
+                if (task.vm.brand === 'kvm') {
+                    startKVMSocketServer(task.zonename, 
+                        function (err) {
+                        callback();
+                    });
+                } else {
+                    startZoneSocketServer(task.zonename, 
+                        function (err) {
+                        callback();
+                    });
+                }
+                break;
+            case 'modify':
+                self.vmobjs[task.zonename] = task.vm;
+                callback();
+                break;
+            case 'delete':
+                // stop server
+                delete (self.zlog)[task.zonename];
+                delete (self.vmobjs)[task.zonename];
+                callback();
+                break;
+            default :
+                callback();
+                break;
+            }
+        });
+    }
 
     self.startEvents = function (callback) {
         self.eventConnectAttempts += 1;
@@ -819,28 +847,7 @@ var MetadataAgent = module.exports = function (options) {
                 while (chunks.length > 1) {
                     chunk = chunks.shift();
                     task = JSON.parse(chunk);
-                    self.event_queue.enqueue(function (callback) {
-                        switch (task.type) {
-                        case 'create':
-                            console.log('CREATE');
-                            self.vmobjs[task.zonename] = task.vm;
-                            self.createZoneLog(task.vm.brand, task.zonename);
-                            // start server
-                            break;
-                        case 'modify':
-                            console.log('MODIFY');
-                            self.vmobjs[task.zonename] = task.vm;
-                            break;
-                        case 'delete':
-                            console.log('DELETE');
-                            // stop server
-                            delete (self.zlog)[task.zonename];
-                            delete (self.vmobjs)[task.zonename];
-                            break;
-                        }
-
-                        callback();
-                    });
+                    handleEvent(task);
                 }
                 body = chunks.pop(); // remainder
             });
@@ -871,6 +878,7 @@ var MetadataAgent = module.exports = function (options) {
         var opts = {host: '127.0.0.1', port: 9090, path: '/vms'};
         http.get(opts, function (res) {
             var body = '';
+            var vmobjs;
 
             res.on('data', function (chunk) {
                 body += chunk;
@@ -880,7 +888,9 @@ var MetadataAgent = module.exports = function (options) {
                 if (res.statusCode === 200) {
                     try {
                         vmobjs = JSON.parse(body);
-                        console.log('vmobjs: ' + JSON.stringify(vmobjs));
+                        vmobjs.forEach(function(vmobj) {
+                            self.vmobjs[vmobj.zonename] = vmobj;
+                        });
                     } catch (e) {
                         self.log.debug('failed to parse body from vminfod: '
                             + e.message);
@@ -899,7 +909,20 @@ var MetadataAgent = module.exports = function (options) {
     };
 
     self.startServers = function (callback) {
-        callback();
+        async.each(Object.keys(self.vmobjs), function (zonename, cb) {
+            var vmobj = self.vmobjs[zonename];
+            createZoneLog(vmobj.brand, zonename);
+
+            if (vmobj.brand === 'kvm') {
+                startKVMSocketServer(zonename, function (err) {
+                    cb();
+                });
+            } else {
+                startZoneSocketServer(zonename, function (err) {
+                    cb();
+                });
+            }
+        }, callback);
     };
 
     function reset(callback) {

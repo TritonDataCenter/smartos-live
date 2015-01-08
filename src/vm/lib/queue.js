@@ -32,7 +32,7 @@ var Queue = module.exports = function (opts) {
     }
 
     // the set of jobs, indexed by timestamp
-    self.jobs = {};
+    self.jobs = [];
 
     // the number of jobs currently being worked
     self.working = 0;
@@ -53,7 +53,6 @@ var Queue = module.exports = function (opts) {
     self.ff_callbacks = [];
 
     self.work = function () {
-        var key;
         var job;
 
         // queue is paused and we're not fast-forwarding
@@ -62,7 +61,7 @@ var Queue = module.exports = function (opts) {
         }
 
         // no jobs to work
-        if (Object.keys(self.jobs).length === 0) {
+        if (self.jobs.length === 0) {
             return;
         }
 
@@ -71,18 +70,16 @@ var Queue = module.exports = function (opts) {
             return;
         }
 
-        // since the keys are a timestamp, sort the keys and return
-        // the first item to get the oldest.
-        key = Object.keys(self.jobs).sort()[0];
+        job = self.jobs.shift();
 
         // we've fast-forwarded
         if (self.stop_at !== undefined) {
-            if (key > self.stop_at) {
+            if (job.created_at > self.stop_at) {
+                // add the job back
+                self.jobs.unshift(job);
                 return;
             }
         }
-
-        job = self.jobs[key];
 
         // increment the working count
         self.working++;
@@ -93,9 +90,6 @@ var Queue = module.exports = function (opts) {
 
             // run the original callback, passing along the arguments
             job.callback.apply(null, arguments);
-
-            // delete the job
-            delete (self.jobs)[key];
 
             // checkPaused if nothing is working
             if (self.working === 0) {
@@ -138,8 +132,8 @@ var Queue = module.exports = function (opts) {
             return;
         }
 
-        for (var key in self.jobs) {
-            if (key < self.stop_at) {
+        for (var i = 0; i < self.jobs.length; i++) {
+            if (self.jobs[i].created_at < self.stop_at) {
                 // something still needs to work
                 return;
             }
@@ -155,18 +149,16 @@ var Queue = module.exports = function (opts) {
 
 Queue.prototype.enqueue = function (job, callback) {
     var self = this;
-    var key;
 
     if (callback === undefined) {
         callback = function () {};
     }
 
-    key = (new Date()).toISOString();
-
-    self.jobs[key] = {
+    self.jobs.push({
+        created_at: (new Date()).toISOString(),
         work: job,
         callback: callback
-    };
+    });
 
     process.nextTick(function () {
         self.work();

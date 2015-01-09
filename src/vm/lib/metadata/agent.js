@@ -315,7 +315,7 @@ var MetadataAgent = module.exports = function (options) {
                     if (self.zoneRetryTimeouts[zopts.zone]) {
                         // When .end() is called, want to stop any existing retries
                         clearTimeout(self.zoneRetryTimeouts[zopts.zone]);
-                        self.zoneRetryTimeouts[zopts.zone] = null;
+                        delete (self.zoneRetryTimeouts)[zopts.zone];
                     }
                     if (this.done) {
                         zlog.trace(zopts.zone + ' ' + fd + ' already done, not '
@@ -810,7 +810,7 @@ var MetadataAgent = module.exports = function (options) {
                 callback();
                 break;
             case 'delete':
-                // stop server
+                self.zoneConnections[task.zonename].end();
                 delete (self.zlog)[task.zonename];
                 delete (self.vmobjs)[task.zonename];
                 callback();

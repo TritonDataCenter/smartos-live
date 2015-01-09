@@ -23,6 +23,10 @@
  * Copyright (c) 2014, Joyent, Inc. All rights reserved.
  *
  */
+
+// TODO: 
+// - add logging to refactored bits
+// - make hard refresh actually work
 var assert = require('assert');
 var VM  = require('/usr/vm/node_modules/VM');
 var common = require('./common');

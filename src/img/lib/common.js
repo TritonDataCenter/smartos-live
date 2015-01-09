@@ -27,19 +27,19 @@
  */
 
 var p = console.log;
+var assert = require('assert-plus');
+var async = require('async');
 var child_process = require('child_process'),
     exec = child_process.exec,
     execFile = child_process.execFile,
     spawn = child_process.spawn;
 var format = require('util').format;
+var path = require('path');
 var mod_url = require('url');
-
-
-var assert = require('assert-plus');
-var async = require('async');
 
 var errors = require('./errors'),
     InternalError = errors.InternalError;
+
 
 
 // ---- globals
@@ -61,6 +61,14 @@ function getVersion() {
     if (_versionCache === null)
         _versionCache = require('../package.json').version;
     return _versionCache;
+}
+
+
+var DOWNLOAD_DIR = '/var/tmp/.imgadm-downloads';
+
+function downloadFileFromUuid(uuid) {
+    assert.string(uuid, 'uuid');
+    return path.join(DOWNLOAD_DIR, uuid + '.file');
 }
 
 
@@ -92,6 +100,7 @@ function objMerge(a, b) {
     });
     return a;
 }
+
 
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 function assertUuid(uuid) {
@@ -613,6 +622,8 @@ module.exports = {
     VALID_COMPRESSIONS: VALID_COMPRESSIONS,
     VALID_SOURCE_TYPES: VALID_SOURCE_TYPES,
     getVersion: getVersion,
+    DOWNLOAD_DIR: DOWNLOAD_DIR,
+    downloadFileFromUuid: downloadFileFromUuid,
     indent: indent,
     objCopy: objCopy,
     objMerge: objMerge,

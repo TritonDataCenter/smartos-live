@@ -136,6 +136,26 @@ function rowFromImageInfo(imageInfo) {
     return row;
 }
 
+/* BEGIN JSSTYLED */
+var rowFieldsHelp = (
+      '    Any of the manifest fields (see `imgadm list -j` output) plus the\n'
+    + '    following computed fields for convenience.\n'
+    + '\n'
+    + '    published_date            just the date part of `published_at`\n'
+    + '    published                 `published_at` with the milliseconds removed\n'
+    + '    source                    the source URL, if available\n'
+    + '    clones                    the number of clones (dependent images and VMs)\n'
+    + '    size                      the size, in bytes, of the image file\n'
+    + '\n'
+    + '    In addition if this is a docker image, then the following:\n'
+    + '\n'
+    + '    docker_id                 the full docker id string\n'
+    + '    docker_short_id           the short 12 character docker id\n'
+    + '    docker_repo               the docker repo from which this image\n'
+    + '                              originates, if available\n'
+    + '    docker_tags               a JSON array of docker repo tags, if available\n');
+/* END JSYSTYLED */
+
 
 function filterImagesInfo(imagesInfo, filters) {
     assert.arrayOfObject(imagesInfo, 'imagesInfo');
@@ -200,7 +220,6 @@ function listImagesInfo(imagesInfo, opts) {
     assert.optionalBool(opts.docker, 'opts.docker');
     assert.optionalArrayOfString(opts.columns, 'opts.columns');
     assert.optionalArrayOfString(opts.sort, 'opts.sort');
-    var validFields = listValidFields;
 
     if (opts.json) {
         console.log(JSON.stringify(imagesInfo, null, 2));
@@ -254,14 +273,12 @@ function listImagesInfo(imagesInfo, opts) {
                 {name: 'CREATED', lookup: 'published'}
             ];
             opts.sort = ['published_at'];
-            validFields = undefined;
         }
 
         tabula(rows, {
             skipHeader: opts.skipHeader,
             columns: opts.columns,
-            sort: opts.sort,
-            validFields: validFields
+            sort: opts.sort
         });
     }
 }
@@ -472,7 +489,7 @@ CLI.prototype.printHelp = function printHelp(cb) {
         '    imgadm sources [<options>]             list and edit image sources',
         '',
         '    imgadm avail                           list available images',
-        '    imgadm show <uuid>                     show manifest of an available image',
+        '    imgadm show <uuid|docker-repo-tag>     show manifest of an available image',
         '',
         '    imgadm import [-P <pool>] <image-id>   import image from a source',
         '    imgadm install [-P <pool>] -m <manifest> -f <file>',
@@ -788,30 +805,6 @@ CLI.prototype.do_sources.options = [
 ];
 
 
-// TODO use listValidFields ?
-var availValidFields = [
-    'source',
-    'uuid',
-    'owner',
-    'name',
-    'version',
-    'state',
-    'disabled',
-    'public',
-    'published',
-    'published_at',
-    'published_date',
-    'type',
-    'os',
-    'urn',
-    'nic_driver',
-    'disk_driver',
-    'cpu_type',
-    'image_size',
-    'generate_passwords',
-    'description'
-    // TODO: new fields? tags, etc.  Pull from imgmanifest?
-];
 CLI.prototype.do_avail = function do_avail(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
@@ -855,8 +848,8 @@ CLI.prototype.do_avail.help = (
     + '\n'
     + '{{options}}'
     + '\n'
-    + common.textWrap('Valid fields for "-o" and "-s" are: '
-        + availValidFields.join(', ') + '.') + '\n'
+    + 'Fields for "-o" and "-s":\n'
+    + rowFieldsHelp
 );
 CLI.prototype.do_avail.options = [
     {
@@ -877,6 +870,7 @@ CLI.prototype.do_avail.options = [
     {
         names: ['o'],
         type: 'string',
+        helpArg: 'FIELD,...',
         help: 'Specify fields (columns) to output. Default is '
             + '"uuid,name,version,os,published".',
         default: 'uuid,name,version,os,published'
@@ -884,6 +878,7 @@ CLI.prototype.do_avail.options = [
     {
         names: ['s'],
         type: 'string',
+        helpArg: 'FIELD,...',
         help: 'Sort on the given fields. Default is "published_at,name".',
         default: 'published_at,name'
     }
@@ -891,37 +886,6 @@ CLI.prototype.do_avail.options = [
 CLI.prototype.do_avail.aliases = ['available'];
 
 
-var listValidFields = [
-    'source',
-    'uuid',
-    'owner',
-    'name',
-    'version',
-    'state',
-    'disabled',
-    'public',
-    'published',
-    'published_at',
-    'type',
-    'os',
-    'urn',
-    'origin',
-    'nic_driver',
-    'disk_driver',
-    'cpu_type',
-    'image_size',
-    'generate_passwords',
-    'description',
-    'clones',
-    'zpool',
-    'size',
-    'docker_id',
-    'docker_short_id',
-    'docker_tags',
-    'docker_repo'
-    // XXX clear this up
-    // TODO: merge this list with availValidFields above?
-];
 CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
@@ -974,7 +938,6 @@ CLI.prototype.do_list = function do_list(subcmd, opts, args, cb) {
     });
 };
 CLI.prototype.do_list.help = (
-    /* BEGIN JSSTYLED */
     'List locally installed images.\n'
     + '\n'
     + 'Usage:\n'
@@ -988,23 +951,7 @@ CLI.prototype.do_list.help = (
     + '    FIELD=~SUBSTRING          substring match\n'
     + '\n'
     + 'Fields for filtering, "-o" and "-s":\n'
-    + '    Any of the manifest fields (see `imgadm list -j` output) plus the\n'
-    + '    following computed fields for convenience.\n'
-    + '\n'
-    + '    published_date            just the date part of `published_at`\n'
-    + '    published                 `published_at` with the milliseconds removed\n'
-    + '    source                    the source URL, if available\n'
-    + '    clones                    the number of clones (dependent images and VMs)\n'
-    + '    size                      the size, in bytes, of the image file\n'
-    + '\n'
-    + '    In addition if this is a docker image, then the following:\n'
-    + '\n'
-    + '    docker_id                 the full docker id string\n'
-    + '    docker_short_id           the short 12 character docker id\n'
-    + '    docker_repo               the docker repo from which this image\n'
-    + '                              originates, if available\n'
-    + '    docker_tags               a JSON array of docker repo tags, if available\n'
-    /* END JSSTYLED */
+    + rowFieldsHelp
 );
 CLI.prototype.do_list.options = [
     {
@@ -1166,7 +1113,9 @@ CLI.prototype.do_get.options = [
 ];
 
 
-
+/**
+ * `imgadm ancestry <uuid>`
+ */
 CLI.prototype.do_ancestry = function do_ancestry(subcmd, opts, args, cb) {
     var self = this;
     if (opts.help) {
@@ -1233,8 +1182,8 @@ CLI.prototype.do_ancestry.help = (
     + '\n'
     + '{{options}}'
     + '\n'
-    + common.textWrap('Valid fields for "-o" are: '
-        + listValidFields.join(', ') + '.') + '\n'
+    + 'Fields for "-o":\n'
+    + rowFieldsHelp
 );
 CLI.prototype.do_ancestry.options = [
     {
@@ -1255,6 +1204,7 @@ CLI.prototype.do_ancestry.options = [
     {
         names: ['o'],
         type: 'string',
+        helpArg: 'FIELD,...',
         help: 'Specify fields (columns) to output. Default is '
             + '"uuid,name,version,published".',
         default: 'uuid,name,version,published'
@@ -1267,6 +1217,7 @@ CLI.prototype.do_ancestry.options = [
             + common.DEFAULT_ZPOOL + '".'
     }
 ];
+
 
 /**
  * `imgadm delete <uuid>`

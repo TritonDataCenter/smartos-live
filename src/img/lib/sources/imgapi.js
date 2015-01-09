@@ -105,7 +105,11 @@ ImgapiSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
     assert.object(opts, 'opts');
     assert.string(opts.arg, 'opts.arg');
     assert.bool(opts.ensureActive, 'opts.ensureActive');
+    assert.optionalBool(opts.errOn404, 'opts.errOn404');
     assert.func(cb, 'cb');
+
+    // By default we do *not* error on a 404 from the server.
+    var errOn404 = (opts.errOn404 !== undefined ? opts.errOn404 : false);
 
     // This can be called with non-docker import ids (e.g. a Docker repo:tag).
     // Just return empty to indicate N/A.
@@ -115,9 +119,11 @@ ImgapiSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
 
     var importInfo = null;
     self.client.getImage(opts.arg, function (err, manifest) {
-        if (err && err.statusCode !== 404) {
-            cb(err);
-            return;
+        if (err) {
+            if (err.statusCode !== 404 || errOn404) {
+                cb(err);
+                return;
+            }
         }
         if (manifest) {
             if (opts.ensureActive) {
@@ -211,17 +217,14 @@ ImgapiSource.prototype.getImgAncestry = function getImgAncestry(opts, cb) {
     getNextOrigin(opts.manifest.origin);
 
     function getNextOrigin(uuid) {
-
         var iOpts = {
             arg: uuid,
-            ensureActive: true
+            ensureActive: true,
+            errOn404: true
         };
         self.getImportInfo(iOpts, function (err, importInfo) {
             if (err) {
-                // XXX should this close the barrier? how to pass the error?
                 cb(err);
-            } else if (!importInfo){
-                XXX  // 404 error, shouldn't ever happen, but handle it
             } else {
                 ancestry.push(importInfo);
                 if (importInfo.manifest.origin) {

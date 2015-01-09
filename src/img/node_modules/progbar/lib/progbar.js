@@ -391,9 +391,14 @@ stream(stream_opts)
 };
 
 ProgressBar.prototype.end = function
-end()
+end(options)
 {
 	var self = this;
+
+	mod_assert.optionalObject(options, 'options');
+	if (!options)
+		options = {};
+	mod_assert.optionalBool(options.nocomplete, 'options.nocomplete');
 
 	/*
 	 * Re-enable the cursor if we turned it off:
@@ -404,7 +409,7 @@ end()
 	if (self.pb_done)
 		return;
 
-	if (!self.pb_nosize)
+	if (!self.pb_nosize && !options.nocomplete)
 		self.pb_progress = self.pb_size;
 
 	self.draw();

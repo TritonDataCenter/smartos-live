@@ -48,16 +48,14 @@ var fs = require('fs');
 var mkdirp = require('mkdirp');
 var path = require('path');
 
-var common = require('./common'),
-    objCopy = common.objCopy,
-    DB_DIR = common.DB_DIR;
+var common = require('./common');
 var errors = require('./errors');
 
 
 
 // ---- globals
 
-var CONFIG_PATH = DB_DIR + '/imgadm.conf';
+var CONFIG_PATH = common.DB_DIR + '/imgadm.conf';
 
 var DEFAULT_CONFIG = {
     dockerImportSkipUuids: true
@@ -77,7 +75,7 @@ function loadConfig(opts, cb) {
     assert.object(opts.log, 'opts.log');
     assert.func(cb, 'cb');
 
-    var config = objCopy(DEFAULT_CONFIG);
+    var config = common.objCopy(DEFAULT_CONFIG);
     fs.exists(CONFIG_PATH, function (exists) {
         if (!exists) {
             cb(null, config);
@@ -135,7 +133,6 @@ function saveConfig(opts, cb) {
 // ---- exports
 
 module.exports = {
-    DB_DIR: DB_DIR, // XXX move to common.js?
     loadConfig: loadConfig,
     saveConfig: saveConfig
 };

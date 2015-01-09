@@ -284,6 +284,34 @@ function getZfsDataset(name, properties, callback) {
 }
 
 
+function checkFileChecksum(opts, cb) {
+    assert.object(opts, 'opts');
+    assert.string(opts.file, 'opts.file');
+    assert.string(opts.checksum, 'opts.checksum'); // 'type:hexdigest'
+    assert.func(cb, 'cb');
+
+    var onceCb = once(cb);
+    var bits = opts.checksum.split(':');
+    var hash = crypto.createHash(bits[0]);
+
+    var stream = fs.createReadStream(opts.file);
+    stream.on('data', function (chunk) {
+        hash.update(chunk);
+    });
+    stream.on('error', onceCb);
+    stream.on('end', function () {
+        var checksumActual = hash.digest('hex');
+        if (checksumActual !== bits[1]) {
+            onceCb(new errors.DownloadError(format('file checksum (%s) '
+                + 'error: expected "%s", file "%s" checksum is "%s"',
+                bits[0], bits[1], opts.file, checksumActual)));
+        } else {
+            onceCb();
+        }
+    });
+}
+
+
 
 // ---- IMGADM tool
 
@@ -349,6 +377,13 @@ IMGADM.prototype.init = function init(callback) {
         upgradeDb,
         addSources
     ], callback);
+};
+
+
+IMGADM.prototype.saveConfig = function saveConfig(cb) {
+    assert.func(cb, 'cb');
+    var saveOpts = {log: this.log, config: this.config};
+    configuration.saveConfig(saveOpts, cb);
 };
 
 
@@ -468,8 +503,7 @@ IMGADM.prototype.configAddSource = function configAddSource(
             //       I.e. return `source` from _addSource instead of `changed`.
             self.config.sources.push(
                 {url: sourceInfo.url, type: sourceInfo.type});
-            var saveOpts = {log: self.log, config: self.config};
-            configuration.saveConfig(saveOpts, function (saveErr) {
+            self.saveConfig(function (saveErr) {
                 if (saveErr) {
                     callback(saveErr);
                     return;
@@ -503,8 +537,7 @@ IMGADM.prototype.configDelSourceUrl = function configDelSourceUrl(
             self.config.sources = self.sources.map(function (s) {
                 return {url: s.url, type: s.type};
             });
-            var saveOpts = {log: self.log, config: self.config};
-            configuration.saveConfig(saveOpts, function (saveErr) {
+            self.saveConfig(function (saveErr) {
                 if (saveErr) {
                     callback(saveErr);
                     return;
@@ -599,8 +632,7 @@ IMGADM.prototype.updateSources = function updateSources(
             }
             self.config.sources = self.sources.map(
                 function (s) { return {url: s.url, type: s.type}; });
-            var saveOpts = {log: self.log, config: self.config};
-            configuration.saveConfig(saveOpts, function (saveErr) {
+            self.saveConfig(function (saveErr) {
                 if (saveErr) {
                     callback(saveErr);
                     return;
@@ -1200,27 +1232,61 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
 
     var log = self.log;
     var uuid = opts.importInfo.uuid;
-    var downDir = '/var/tmp/.imgadm-downloads';
-    var downFile = path.join(downDir, uuid + '.file');
-
+    var downFile = common.downloadFileFromUuid(uuid);
     var context = {};
 
     vasync.pipeline({arg: context, funcs: [
-        function abortIfAlreadyExists(ctx, next) {
+        function skipIfPreDownloaded(ctx, next) {
             if (! fs.existsSync(downFile)) {
                 next();
                 return;
             }
-            // XXX check opts.imgMeta.size and opts.imgMeta.checksum, if there
-            next(true); // early abort
+
+            // Size and, if given, checksum must match, or we delete the
+            // file and re-download.
+            var stats = fs.statSync(downFile);
+            if (stats.size !== opts.imgMeta.size) {
+                log.info({uuid: uuid, downFile: downFile,
+                    actualSize: stats.size, expectedSize: opts.imgMeta.size},
+                    'unexpected size for pre-downloaded image %s file, '
+                    + 're-downloading', uuid);
+                rimraf.sync(downFile);
+                next();
+                return;
+            }
+
+            if (opts.imgMeta.checksum) {
+                var checkOpts = {
+                    file: downFile,
+                    checksum: opts.imgMeta.checksum
+                };
+                checkFileChecksum(checkOpts, function (err) {
+                    if (err) {
+                        log.info({err: err, uuid: uuid, downFile: downFile,
+                            expectedChecksum: opts.imgMeta.checksum},
+                            'unexpected checksum for pre-downloaded '
+                            + 'image %s file, re-downloading', uuid);
+                        rimraf.sync(downFile);
+                        next();
+                    } else {
+                        log.info({uuid: uuid, downFile: downFile},
+                            'using pre-downloaded image file')
+                        next(true); // early abort
+                    }
+                });
+            } else {
+                log.info({uuid: uuid, downFile: downFile},
+                    'using pre-downloaded image file')
+                next(true); // early abort
+            }
         },
 
         function mkdirpDownDir(ctx, next) {
-            mkdirp(downDir, next);
+            mkdirp(common.DOWNLOAD_DIR, next);
         },
 
         function getStream(ctx, next) {
-            // XXX what about integrating optional checksums from the *index*?
+            // TODO what about integrating optional checksums from the *index*?
             ctx.stream = opts.source.getImgFileStream(opts.importInfo,
                 function (err, stream) {
                     ctx.stream = stream;
@@ -1255,11 +1321,11 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
             });
 
             ctx.downFilePartial = downFile + '.partial';
-            var fout = fs.createWriteStream(ctx.downFilePartial);
+            ctx.fout = fs.createWriteStream(ctx.downFilePartial);
             ctx.stream.on('error', next);
-            fout.on('error', next);
-            fout.on('finish', next);
-            ctx.stream.pipe(fout);
+            ctx.fout.on('error', next);
+            ctx.fout.on('finish', next);
+            ctx.stream.pipe(ctx.fout);
             ctx.stream.resume();
         },
 
@@ -1489,6 +1555,7 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
         },
 
         function getMeta(ctx, next) {
+            // XXX err handling on getImgMeta!
             var manifestQ = vasync.queuev({
                 concurrency: 5,
                 worker: function getManifestIfNotInstalled(irec, nextManifest) {
@@ -1517,12 +1584,20 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
             manifestQ.close();
         },
 
+        /**
+         * Here we run downloads (`downloadQ`, concurrency=5) and installs
+         * into the zpool (`installQ`) in parallel. Most of the code is
+         * bookkeeping for:
+         * (a) error handling: abort cleanly on any error
+         * (b) installing in correct order: from base image up
+         * (c) cleaning up temp files
+         */
         function downloadAndInstall(ctx, next) {
-            // XXX START HERE: what happens to *errs* reported in the queue?
-            //          I want these to abort the process.
+            var onceNext = once(next);
+
             var downloadQ = vasync.queuev({
                 concurrency: 5,
-                worker: function fetchImg(irec, nextFetch) {
+                worker: function fetchImg(irec, nextDownload) {
                     self.log.info({uuid: irec.uuid}, 'download image');
                     var dlOpts = {
                         source: source,
@@ -1533,7 +1608,7 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                     };
                     self._downloadImageFile(dlOpts, function (err, dlInfo) {
                         if (err) {
-                            nextFetch(err);
+                            nextDownload(err);
                             return;
                         }
 
@@ -1548,7 +1623,9 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
 
                         var origin = irec.imgMeta.manifest.origin;
                         if (!origin || ctx.isInstalledFromUuid[origin]) {
-                            installQ.push(irec);
+                            if (!installQ.closed) {
+                                installQ.push(irec, onTaskEnd);
+                            }
                         } else {
                             onDeck[irec.uuid] = irec;
                         }
@@ -1557,7 +1634,7 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                         {
                             installQ.close();
                         }
-                        nextFetch();
+                        nextDownload();
                     });
                 }
             });
@@ -1568,6 +1645,7 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                     bar.end();
                 }
                 canCloseInstallQ = true;
+                log.debug('done downloads');
             });
 
             var installQ = vasync.queuev({
@@ -1588,7 +1666,7 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                             return;
                         }
 
-                        // TODO sort out bar.log vs logCb
+                        // XXX sort out bar.log vs logCb
                         var msg = format('Imported image %s (%s@%s)',
                             irec.uuid,
                             irec.imgMeta.manifest.name,
@@ -1608,9 +1686,9 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                             ctx.isInstalledFromUuid[irec.uuid] = true;
 
                             // We can now install any downloaded (i.e. on deck)
-                            // images whose origin was this image that we just
+                            // images whose origin was the image that we just
                             // installed.
-                            // TODO: avoid iteration: just one child
+                            // TODO: avoid iteration: there is just one child
                             Object.keys(onDeck).forEach(function (uuid) {
                                 var onDeckIrec = onDeck[uuid];
                                 var origin = onDeckIrec.imgMeta.manifest.origin;
@@ -1618,7 +1696,9 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                                     log.debug({uuid: irec.uuid},
                                         'putting img on installQ');
                                     delete onDeck[uuid];
-                                    installQ.push(onDeckIrec);
+                                    if (!installQ.closed) {
+                                        installQ.push(onDeckIrec, onTaskEnd);
+                                    }
                                 }
                             });
                             if (canCloseInstallQ
@@ -1635,10 +1715,40 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
 
             installQ.on('end', function doneInstalls() {
                 log.debug('done installs');
-                next();
+                onceNext();
             });
 
 
+            /**
+             * If there is a download or install error, abort. Vasync's
+             * `queue.kill()` does not stop running tasks (only prevents
+             * queued ones from being started), therefore we need
+             * `_downloadImageFile` and `_installSingleImage` to support
+             * being aborted.
+             */
+            var abortDAI = once(function _abortDownloadAndInstall(taskErr) {
+                if (bar) {
+                    bar.end({nocomplete: true});
+                }
+                log.info({err: taskErr}, 'abort download and install');
+                logCb('Aborting (%s)', taskErr.message);
+
+                downloadQ.kill();
+                installQ.kill();
+
+                // TODO: Abort any ongoing downloads and install.
+
+                onceNext(taskErr);
+            });
+
+            function onTaskEnd(taskErr) {
+                if (taskErr) {
+                    abortDAI(taskErr);
+                }
+            }
+
+
+            // Start it up.
             irecs.reverse();
             log.info({irecs: irecs, numInAncestry: ctx.ancestry.length,
                 numToInstall: irecs.length}, 'irecs to download and install');
@@ -1650,11 +1760,12 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
             if (!opts.quiet && process.stderr.isTTY) {
                 bar = new ProgressBar({
                     size: totalBytes,
-                    filename: format('Download %d images', irecs.length)
+                    filename: (irecs.length === 1 ? 'Download 1 image'
+                        : format('Download %d images', irecs.length))
                 });
             }
             TIME('downloads');
-            downloadQ.push(irecs);
+            downloadQ.push(irecs, onTaskEnd);
             downloadQ.close();
         }
 
@@ -2076,8 +2187,6 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
             // Silently fail here (i.e. only log at debug level) because
             // it is possible we errored out before the -partial dataset
             // was created.
-            // XXX: Be specific above about partialDsCreated=true and
-            //      key off that.
             var argv = ['/usr/sbin/zfs', 'destroy', '-r',
                 partialDsName];
             execFilePlus({argv: argv, log: log},
@@ -2085,7 +2194,7 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
                 if (rollbackErr) {
                     log.debug({argv: argv, err: rollbackErr,
                         rollbackDsName: partialDsName},
-                        'error destroying dataset while rolling back');
+                        'error destroying partial dataset while rolling back');
                 }
                 cb(err);
             });

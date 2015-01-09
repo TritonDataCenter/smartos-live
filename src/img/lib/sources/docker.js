@@ -26,9 +26,10 @@
 var p = console.log;
 
 var assert = require('assert-plus');
+var drc = require('docker-registry-client');
+var imgmanifest = require('imgmanifest');
 var util = require('util'),
     format = util.format;
-var drc = require('docker-registry-client');
 var vasync = require('vasync');
 
 var common = require('../common');
@@ -39,88 +40,7 @@ var Source = require('./source');
 
 // ---- globals
 
-// TODO: handle http?
 var DOCKER_HUB_URL = 'https://index.docker.io'
-
-
-
-// ---- internal support stuff
-
-//XXX use for imgmanifest
-function imgUuidFromDockerId(dockerId) {
-    return (dockerId.slice(0, 8)
-        + '-' + dockerId.slice(8, 12)
-        + '-' + dockerId.slice(12, 16)
-        + '-' + dockerId.slice(16, 20)
-        + '-' + dockerId.slice(20, 32));
-}
-
-//XXX use for imgmanifest
-/**
- * Make an IMGAPI image manifest from Docker "image json", an optionally some
- * other metadata.
- */
-function imgManifestFromDockerJson(opts) {
-    assert.object(opts, 'opts');
-    assert.object(opts.imgJson, 'opts.imgJson');
-    assert.optionalString(opts.uuid, 'opts.uuid');
-    assert.optionalString(opts.owner, 'opts.owner');
-    assert.optionalString(opts.repo, 'opts.repo'); // docker repo
-    assert.optionalArrayOfString(opts.tags, 'opts.tags'); // docker repo tags
-    var imgJson = opts.imgJson;
-
-    var manifest = {
-        v: 2,
-        uuid: opts.uuid || imgUuidFromDockerId(imgJson.id),
-        owner: opts.owner || '00000000-0000-0000-0000-000000000000',
-        name: 'docker-layer',
-        version: imgJson.id.slice(0, 12),
-        state: 'active',
-        disabled: false,
-        public: true,
-        published_at: new Date(imgJson.created).toISOString(),
-        type: 'docker',
-        os: imgmanifestOsFromDockerOs(imgJson.os),
-        description: imgJson.comment
-            || imgJson.container_config.Cmd.join(' '),
-        tags: {
-            'docker:id': imgJson.id,
-            'docker:architecture': imgJson.architecture,
-        }
-    };
-    if (imgJson.parent) {
-        manifest.origin = imgUuidFromDockerId(imgJson.parent);
-    }
-    if (opts.repo) {
-        manifest.tags['docker:repo'] = opts.repo;
-    }
-    if (opts.tags) {
-        opts.tags.forEach(function (tag) {
-            manifest.tags['docker:tag:' + tag] = true;
-        })
-    }
-
-    // Let's pick the fields we pass through as we know we need them, because
-    // a number of them seem to be inherited-from-container cruft. Not sure
-    // though.
-    if (imgJson.config) {
-        var dockerConfigSubset = {};
-        ['Cmd', 'Entrypoint', 'Env', 'WorkingDir'].forEach(function (key) {
-            dockerConfigSubset[key] = imgJson.config[key];
-        });
-        manifest.tags['docker:config'] = dockerConfigSubset;
-    }
-
-    return manifest;
-}
-
-
-//XXX use for imgmanifest
-function imgmanifestOsFromDockerOs(dockerOs) {
-    return {
-        linux: "linux"
-    }[dockerOs];
-}
 
 
 
@@ -250,7 +170,7 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
                     tag: rat.tag,   // the requested tag
                     tags: [],       // all the tags on that imgId
                     imgId: imgId,
-                    uuid: imgUuidFromDockerId(imgId),
+                    uuid: imgmanifest.imgUuidFromDockerId(imgId),
                 };
                 Object.keys(repoTags).forEach(function (repoTag) {
                     if (repoTags[repoTag] === imgId) {
@@ -296,7 +216,7 @@ DockerSource.prototype.getImgAncestry = function getImgAncestry(opts, cb) {
             var ancestry = dAncestry.map(function (imgId) {
                 return {
                     imgId: imgId,
-                    uuid: imgUuidFromDockerId(imgId),
+                    uuid: imgmanifest.imgUuidFromDockerId(imgId),
                     repo: opts.repo
                 };
             });
@@ -328,7 +248,7 @@ DockerSource.prototype.getImgMeta = function getImgMeta(opts, cb) {
             var size = Number(res.headers['x-docker-size']);
             assert.number(size, 'x-docker-size header');
             var imgMeta = {
-                manifest: imgManifestFromDockerJson({
+                manifest: imgmanifest.imgManifestFromDockerJson({
                     imgJson: imgJson,
                     uuid: opts.uuid,
                     repo: opts.repo,
@@ -391,5 +311,3 @@ module.exports.isDockerPullArg = function isDockerPullArg(arg) {
         return false;
     }
 };
-
-module.exports.imgUuidFromDockerId = imgUuidFromDockerId;

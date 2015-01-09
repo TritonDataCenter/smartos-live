@@ -169,7 +169,6 @@ function upgradeTo200(tool, callback) {
         } catch (upErr) {
             /* Pass through, because we expect validation to handle it. */
         }
-        // TODO:XXX handle validation failure -> warning, skip it
         var imageInfo = {
             manifest: manifest,
             zpool: ii.zpool

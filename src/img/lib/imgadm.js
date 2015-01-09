@@ -1270,13 +1270,13 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
                         next();
                     } else {
                         log.info({uuid: uuid, downFile: downFile},
-                            'using pre-downloaded image file')
+                            'using pre-downloaded image file');
                         next(true); // early abort
                     }
                 });
             } else {
                 log.info({uuid: uuid, downFile: downFile},
-                    'using pre-downloaded image file')
+                    'using pre-downloaded image file');
                 next(true); // early abort
             }
         },

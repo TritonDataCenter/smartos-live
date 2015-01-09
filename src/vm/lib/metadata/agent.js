@@ -58,7 +58,7 @@ var MetadataAgent = module.exports = function (options) {
         var opts = {brand: type, 'zonename': zonename};
         self.zlog[zonename] = self.log.child(opts);
         return (self.zlog[zonename]);
-    };
+    }
 
     function startKVMSocketServer(zonename, callback) {
         var vmobj = self.vmobjs[zonename];
@@ -82,8 +82,8 @@ var MetadataAgent = module.exports = function (options) {
                             zlog.error({err: error}, 'Timed out waiting for '
                                 + 'metadata socket');
                         } else {
-                            zlog.debug('returning from startKVMSocketServer w/o '
-                                + 'error');
+                            zlog.debug('returning from startKVMSocketServer '
+                                + 'w/o error');
                         }
                         cb(error);
                     }
@@ -158,7 +158,7 @@ var MetadataAgent = module.exports = function (options) {
                     cb();
                     return;
                 } else {
-                    fs.mkdir(zonecontrolpath, parseInt('700', 8), 
+                    fs.mkdir(zonecontrolpath, parseInt('700', 8),
                         function (error) {
                         cb(error);
                     });
@@ -180,9 +180,10 @@ var MetadataAgent = module.exports = function (options) {
 
             createZoneSocket(zopts, undefined, function (createErr) {
                 if (createErr) {
-                    // We call callback here, but don't include the error because
-                    // this is running in async.forEach and we don't want to fail
-                    // the others and there's nothing we can do to recover anyway.
+                    // We call callback here, but don't include the error
+                    // because this is running in async.forEach and we don't
+                    // want to fail the others and there's nothing we can do
+                    // to recover anyway.
                     if (callback) {
                         callback();
                     }
@@ -209,8 +210,8 @@ var MetadataAgent = module.exports = function (options) {
     }
 
     /*
-     * waitSecs here indicates how long we should wait to retry after this attempt
-     * if we fail.
+     * waitSecs here indicates how long we should wait to retry after this
+     * attempt if we fail.
      */
     function attemptCreateZoneSocket(zopts, waitSecs) {
         var zlog = self.zlog[zopts.zone];
@@ -225,8 +226,8 @@ var MetadataAgent = module.exports = function (options) {
 
         function _retryCreateZoneSocketLater() {
             if (self.zoneRetryTimeouts[zopts.zone]) {
-                zlog.error('_retryCreateZoneSocketLater(): already have a retry '
-                    + 'running, not starting another one.');
+                zlog.error('_retryCreateZoneSocketLater(): already have a '
+                    + 'retry running, not starting another one.');
                 return;
             }
 
@@ -252,10 +253,10 @@ var MetadataAgent = module.exports = function (options) {
             var server;
 
             if (error) {
-                // If we get errors trying to create the zone socket, setup a retry
-                // loop and return.
-                zlog.error({err: error}, 'createZoneSocket error, %s seconds before'
-                    + ' next attempt', waitSecs);
+                // If we get errors trying to create the zone socket, setup a
+                // retry loop and return.
+                zlog.error({err: error}, 'createZoneSocket error, %s seconds'
+                    + ' before next attempt', waitSecs);
                 _retryCreateZoneSocketLater();
                 return;
             }
@@ -279,13 +280,14 @@ var MetadataAgent = module.exports = function (options) {
 
                 socket.on('error', function (err) {
                     zlog.error({err: err}, 'ZSocket error: ' + err.message);
-                    zlog.info('Attempting to recover; closing and recreating zone '
-                        + 'socket and server.');
+                    zlog.info('Attempting to recover; closing and recreating '
+                        + ' zone socket and server.');
                     try {
                         server.close();
                         socket.end();
                     } catch (e) {
-                        zlog.error({err: e}, 'Caught exception closing server: %s',
+                        zlog.error({err: e},
+                            'Caught exception closing server: %s',
                             e.message);
                     }
                     _retryCreateZoneSocketLater();
@@ -294,10 +296,10 @@ var MetadataAgent = module.exports = function (options) {
             });
 
             /*
-             * When we create a new zoneConnections entry, we want to make sure if
-             * there's an existing one (due to an error that we're retrying for
-             * example) that we clear the existing one and its timeout before
-             * creating a new one.
+             * When we create a new zoneConnections entry, we want to make sure
+             * if there's an existing one (due to an error that we're retrying
+             * for example) that we clear the existing one and its timeout
+             * before creating a new one.
              */
             zlog.trace('creating new zoneConnections[' + zopts.zone + ']');
             if (self.zoneConnections[zopts.zone]
@@ -313,7 +315,8 @@ var MetadataAgent = module.exports = function (options) {
                 done: false,
                 end: function () {
                     if (self.zoneRetryTimeouts[zopts.zone]) {
-                        // When .end() is called, want to stop any existing retries
+                        // When .end() is called, want to stop any existing
+                        // retries
                         clearTimeout(self.zoneRetryTimeouts[zopts.zone]);
                         delete (self.zoneRetryTimeouts)[zopts.zone];
                     }
@@ -405,8 +408,8 @@ var MetadataAgent = module.exports = function (options) {
             if (socket.writable) {
                 socket.write(str);
             } else {
-                zlog.error('Socket for ' + zone + ' closed before we could write '
-                    + 'anything.');
+                zlog.error('Socket for ' + zone + ' closed before we could '
+                    + ' write anything.');
             }
         };
 
@@ -785,7 +788,7 @@ var MetadataAgent = module.exports = function (options) {
                 }
             }
         };
-    };
+    }
 
     function handleEvent(task) {
         self.event_queue.enqueue(function (callback) {
@@ -794,12 +797,12 @@ var MetadataAgent = module.exports = function (options) {
                 self.vmobjs[task.zonename] = task.vm;
                 createZoneLog(task.vm.brand, task.zonename);
                 if (task.vm.brand === 'kvm') {
-                    startKVMSocketServer(task.zonename, 
+                    startKVMSocketServer(task.zonename,
                         function (err) {
                         callback();
                     });
                 } else {
-                    startZoneSocketServer(task.zonename, 
+                    startZoneSocketServer(task.zonename,
                         function (err) {
                         callback();
                     });
@@ -888,7 +891,7 @@ var MetadataAgent = module.exports = function (options) {
                 if (res.statusCode === 200) {
                     try {
                         vmobjs = JSON.parse(body);
-                        vmobjs.forEach(function(vmobj) {
+                        vmobjs.forEach(function (vmobj) {
                             self.vmobjs[vmobj.zonename] = vmobj;
                         });
                     } catch (e) {
@@ -958,7 +961,7 @@ MetadataAgent.prototype.start = function (callback) {
         function (cb) {
             self.startEvents(cb);
         },
-        // load vmobjs 
+        // load vmobjs
         function (cb) {
             self.setVmobjs(cb);
         },
@@ -980,10 +983,10 @@ MetadataAgent.prototype.start = function (callback) {
             callback();
         }
     });
-}
+};
 
 MetadataAgent.prototype.stop = function (callback) {
     if (callback) {
         callback();
     }
-}
+};

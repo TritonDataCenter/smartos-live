@@ -1234,6 +1234,7 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
     var uuid = opts.importInfo.uuid;
     var downFile = common.downloadFileFromUuid(uuid);
     var context = {};
+    var cosmicRay = common.testForCosmicRay('download');
 
     vasync.pipeline({arg: context, funcs: [
         function skipIfPreDownloaded(ctx, next) {
@@ -1298,6 +1299,15 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
         function downloadIt(ctx, next_) {
             var next = once(next_);
 
+            var cosmicRayFunc;
+            if (cosmicRay) {
+                cosmicRayFunc = once(function () {
+                    next(new errors.DownloadError(format(
+                        'image %s cosmic ray error', uuid)));
+                    ctx.stream.unpipe(ctx.fout);
+                });
+            }
+
             // Track size and checksum for checking.
             ctx.bytesDownloaded = 0;
             if (opts.imgMeta.checksum) {
@@ -1312,6 +1322,9 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
                 if (opts.bar)
                     opts.bar.advance(chunk.length);
                 ctx.bytesDownloaded += chunk.length;
+                if (cosmicRay) {
+                    cosmicRayFunc();
+                }
                 if (ctx.checksumHash) {
                     ctx.checksumHash.update(chunk);
                 }

@@ -610,6 +610,57 @@ function vmUpdate(uuid, update, options, callback) {
 }
 
 
+/**
+ * "cosmic ray" stuff for testing error code paths
+ *
+ * To support testing some error code paths we support inducing some errors
+ * via "IMGADM_TEST_*_COSMIC_RAY" environment variables, where "*" is an
+ * action like "DOWNLOAD".
+ *
+ * If defined it must be a comma-separated list of numbers (from zero to one).
+ * Each number is a *probability* of failure (i.e. of having a cosmic ray)
+ * for the Nth action (e.g. for the 0th, 1st, ... download). The "N" here is
+ * a global count from `imgadm` invocation.
+ *
+ * E.g.: The following will result in the 3rd attempted
+ * download failing:
+ *      IMGADM_TEST_DOWNLOAD_COSMIC_RAY=0,0,1 imgadm import busybox:latest
+ *
+ * Usage in code:
+ *      var cosmicRay = common.testForCosmicRay('download');
+ *      ...
+ *      if (cosmicRay) {
+ *          return cb(new errors.InternalError('download cosmic ray'));
+ *      }
+ */
+var cosmicRayCountFromName = {};
+
+function testForCosmicRay(name) {
+    assert.string(name, 'name');
+
+    if (cosmicRayCountFromName[name] === undefined) {
+        cosmicRayCountFromName[name] = 0;
+    }
+    var index = cosmicRayCountFromName[name]++;
+    var prob = 0;
+    var envvar = 'IMGADM_TEST_' + name.toUpperCase() + '_COSMIC_RAY';
+
+    if (process.env[envvar]) {
+        // JSSTYLED
+        var probs = process.env[envvar].split(/,/g);
+        if (index < probs.length) {
+            prob = Number(probs[index]);
+            assert.number(prob, envvar + '[' + index + ']');
+        }
+    }
+    var cosmicRay = prob > 0 && Math.random() <= prob;
+
+    return cosmicRay;
+}
+
+
+
+
 
 // ---- exports
 
@@ -636,11 +687,14 @@ module.exports = {
     humanSizeFromBytes: humanSizeFromBytes,
     normUrlFromUrl: normUrlFromUrl,
     execFilePlus: execFilePlus,
+
     vmStop: vmStop,
     vmStart: vmStart,
     vmGet: vmGet,
     vmUpdate: vmUpdate,
     vmWaitForState: vmWaitForState,
     vmHaltIfNotStopped: vmHaltIfNotStopped,
-    vmWaitForCustomerMetadatum: vmWaitForCustomerMetadatum
+    vmWaitForCustomerMetadatum: vmWaitForCustomerMetadatum,
+
+    testForCosmicRay: testForCosmicRay
 };

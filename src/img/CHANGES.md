@@ -2,6 +2,9 @@
 
 ## 3.0.0
 
+- [joyent/smartos-live#120] Support using a HTTP(S) proxy via
+  the `https_proxy` or `http_proxy` environment variable.
+
 - Add preliminary support for importing images of `type: 'docker'`,
   where the image file content is the native Docker image format
   (a tarball of changed files with ".wh*" AUFS whiteout files).

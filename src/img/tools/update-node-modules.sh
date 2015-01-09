@@ -193,6 +193,13 @@ PATCHRESTIFY
 rm -rf node_modules/restify/lib/index.js.orig
 rm -rf node_modules/restify/lib/dtrace.js.orig
 
+# tunnel-agent >=0.4.1
+# At the time of writing tunnel-agent.git has a fix we need for Docker Hub
+# import via an http_proxy. Only 0.4.0 was published to npm.
+if [[ "$(json -f node_modules/restify/node_modules/tunnel-agent/package.json version)" == "0.4.0" ]]; then
+    curl https://raw.githubusercontent.com/mikeal/tunnel-agent/912a7a6d00e10ec76baf9c9369de280fa5badef3/index.js \
+        -o node_modules/restify/node_modules/tunnel-agent/index.js
+fi
 
 # nodeunit
 # Drop bits not needed for running.

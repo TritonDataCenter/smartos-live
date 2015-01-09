@@ -44,7 +44,6 @@ function ImgapiSource(opts) {
     this.__defineGetter__('client', function () {
         if (this._client === undefined) {
             this._client = imgapi.createClient({
-                agent: false,
                 url: self.normUrl,
                 version: '~2',
                 log: self.log,

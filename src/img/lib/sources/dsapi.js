@@ -52,7 +52,6 @@ function DsapiSource(opts) {
             // drop 'datasets/' tail
             var baseNormUrl = path.dirname(self.normUrl);
             this._client = dsapi.createClient({
-                agent: false,
                 url: baseNormUrl,
                 log: self.log,
                 rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),

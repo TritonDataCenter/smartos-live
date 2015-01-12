@@ -1427,7 +1427,7 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
  * tl;dr on import process:
  *  - Gather `installedImageFromName` and `irecs` (Import RECords, one for each
  *    image to download).
- *  - `manifestQ` to get manifest and meta info from source
+ *  - `getMetaQ` to get meta info (i.e. the manifest et al) from source
  *  - `downloadQ` to download all the image files to /var/tmp
  *  - `installQ` to install each image in order to the zpool
  */
@@ -1567,13 +1567,26 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
             });
         },
 
+        /**
+         * Get imgMeta for all import records.
+         *
+         * We *could* break this out to separate Q so could get downloads
+         * started before having all meta.
+         */
         function getMeta(ctx, next) {
-            // XXX err handling on getImgMeta!
-            var manifestQ = vasync.queuev({
+            var onceNext = once(next);
+            var cosmicRay = common.testForCosmicRay('get_meta');
+
+            var getMetaQ = vasync.queuev({
                 concurrency: 5,
                 worker: function getManifestIfNotInstalled(irec, nextManifest) {
-                    // TODO: *could* break this out to separate Q so could get
-                    //      downloads started before having all meta.
+                    if (cosmicRay) {
+                        nextManifest(new errors.InternalError({
+                            message: 'getMeta cosmic raw'
+                        }));
+                        return;
+                    }
+
                     source.getImgMeta(irec.importInfo, function (err, imgMeta) {
                         if (err) {
                             nextManifest(err);
@@ -1587,14 +1600,23 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                 }
             });
 
-            manifestQ.on('end', function doneManifests() {
+            getMetaQ.on('end', function doneManifests() {
                 TIME('manifests');
-                next();
+                onceNext();
             });
 
+            function onTaskEnd(taskErr) {
+                if (taskErr && !getMetaQ.killed) {
+                    log.info({err: taskErr}, 'abort getMeta');
+                    logCb('Aborting (%s)', taskErr.message);
+                    getMetaQ.kill();
+                    onceNext(taskErr);
+                }
+            }
+
             TIME('manifests');
-            manifestQ.push(irecs);
-            manifestQ.close();
+            getMetaQ.push(irecs, onTaskEnd);
+            getMetaQ.close();
         },
 
         /**
@@ -1679,7 +1701,8 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                             return;
                         }
 
-                        // XXX sort out bar.log vs logCb
+                        // `bar.log` conflicts with `logCb`. It would require
+                        // something more capable than `logCb` to do right.
                         var msg = format('Imported image %s (%s@%s)',
                             irec.uuid,
                             irec.imgMeta.manifest.name,
@@ -1750,6 +1773,15 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                 installQ.kill();
 
                 // TODO: Abort any ongoing downloads and install.
+                // Object.keys(downloadQ.pending).forEach(function (id) {
+                //     var task = downloadQ.pending[id].task;
+                //     try {
+                //         task.abort();
+                //     } catch (e) {
+                //         log.warn({err: e, task: task},
+                //             'error aborting ongoing image download');
+                //     }
+                // });
 
                 onceNext(taskErr);
             });
@@ -2119,25 +2151,8 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
                     var argv = ['/usr/sbin/zfs', 'create', partialDsName];
                     execFilePlus({argv: argv, log: log}, next2);
                 },
-                // XXX Hope these can go away (discussed with joshw).
                 function mkZoneroot(_2, next2) {
-                    var argv = ['/usr/bin/mkdir', '-p',
-                        zoneroot + '/var/ld/64'];
-                    execFilePlus({argv: argv, log: log}, next2);
-                },
-                function crle(_2, next2) {
-                    var argv = ['/usr/bin/crle',
-                        '-c', zoneroot + '/var/ld/ld.config',
-                        '-l', '/native/lib:/native/usr/lib',
-                        '-s', '/native/lib/secure:/native/usr/lib/secure'];
-                    execFilePlus({argv: argv, log: log}, next2);
-                },
-                function crle64(_2, next2) {
-                    var argv = ['/usr/bin/crle', '-64',
-                        '-c', zoneroot + '/var/ld/64/ld.config',
-                        '-l', '/native/lib/64:/native/usr/lib/64',
-                        '-s',
-                        '/native/lib/secure/64:/native/usr/lib/secure/64'];
+                    var argv = ['/usr/bin/mkdir', '-p', zoneroot];
                     execFilePlus({argv: argv, log: log}, next2);
                 }
             ]}, next);

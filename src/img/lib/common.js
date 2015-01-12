@@ -630,7 +630,7 @@ function vmUpdate(uuid, update, options, callback) {
  *      var cosmicRay = common.testForCosmicRay('download');
  *      ...
  *      if (cosmicRay) {
- *          return cb(new errors.InternalError('download cosmic ray'));
+ *          return cb(new Error('download cosmic ray'));
  *      }
  */
 var cosmicRayCountFromName = {};

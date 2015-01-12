@@ -495,7 +495,7 @@ CLI.prototype.printHelp = function printHelp(cb) {
         '    imgadm install [-P <pool>] -m <manifest> -f <file>',
         '                                           import from local image data',
         '',
-        '    imgadm list                            list installed images',
+        '    imgadm list [<filters>]                list installed images',
         '    imgadm get [-P <pool>] <uuid>          info on an installed image',
         '    imgadm update [<uuid>...]              update installed images',
         '    imgadm delete [-P <pool>] <uuid>       remove an installed image',
@@ -1582,6 +1582,7 @@ CLI.prototype.do_update = function do_update(subcmd, opts, args, cb) {
 };
 CLI.prototype.do_update.help = (
     'Update currently installed images, if necessary.\n'
+    + 'This does not yet support images from a "docker" source.\n'
     + '\n'
     + 'Images that are installed without "imgadm" (e.g. via "zfs recv")\n'
     + 'may not have cached image manifest information. Also, images installed\n'

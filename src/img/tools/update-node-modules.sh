@@ -108,8 +108,10 @@ rm -rf node_modules/mkdirp/bin \
 
 rm -rf node_modules/docker-registry-client/deps
 # Should have all these deps.
-rm -rf node_modules/docker-registry-client/node_modules/{.bin,bunyan,vasync,verror}
-rmdir node_modules/docker-registry-client/node_modules
+if [[ -d node_modules/docker-registry-client/node_modules ]]; then
+    rm -rf node_modules/docker-registry-client/node_modules/{.bin,bunyan,vasync,verror}
+    rmdir node_modules/docker-registry-client/node_modules
+fi
 
 rm -rf node_modules/progbar/node_modules/assert-plus  # slight version mismatch
 rm -rf node_modules/progbar/node_modules/readable-stream # only needed for node 0.8

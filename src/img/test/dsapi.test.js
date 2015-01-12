@@ -61,7 +61,7 @@ test('imgadm sources -d images.jo', function (t) {
     });
 });
 test('imgadm sources -a DSAPI', function (t) {
-    exec('imgadm sources -a https://datasets.joyent.com/datasets',
+    exec('imgadm sources -a https://datasets.joyent.com/datasets -t dsapi',
             function (err, stdout, stderr) {
         t.ifError(err, err);
         t.end();

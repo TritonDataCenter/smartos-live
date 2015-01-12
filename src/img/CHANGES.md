@@ -1,5 +1,64 @@
 # imgadm changelog
 
+## 3.0.0
+
+- [joyent/smartos-live#120] Support using a HTTP(S) proxy via
+  the `https_proxy` or `http_proxy` environment variable.
+
+- Docker image import: both in importing images of `type=docker` from an
+  IMGAPI source and in importing Docker images directly from Docker Hub.
+  Docker registries other than Docker Hub are technically supported, but client
+  auth is not yet implemented. A shortcut for adding the Docker Hub as an
+  import source is:
+
+        imgadm sources --add-docker-hub
+
+  Use the following to mimic `docker images`:
+
+        imgadm list --docker
+
+  And list all Docker images (including intermediate layers) with:
+
+        imgadm list type=docker
+
+  A subset of the full Docker "image json" metadata is stored as "docker:*"
+  tags on the image. E.g. for the current "busybox:latest":
+
+        ...
+        "tags": {
+          "docker:id": "4986bf8c15363d1c5d15512d5266f8777bfba4974ac56e3270e7760f6f0a8125",
+          "docker:architecture": "amd64",
+          "docker:repo": "library/busybox",
+          "docker:tag:buildroot-2014.02": true,
+          "docker:tag:latest": true,
+          "docker:config": {
+            "Cmd": [
+              "/bin/sh"
+            ],
+            "Entrypoint": null,
+            "Env": [
+              "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "WorkingDir": ""
+          }
+        ...
+
+- Refactoring of import and source handling. Multiple images (in a single
+  image's ancestry) are downloaded in parallel. As well a number of small
+  command changes are part of this:
+
+    - `imgadm sources -v` gives tabular output with the source *type*
+    - `imgadm sources -c`
+    - `imgadm -v` used to result in *debug*-level logging, now it results in
+      *trace*-level
+
+- `imgadm list [<filters>]` support for filtering with 'field=value'
+  arguments. E.g., `imgadm list type=docker`.
+
+- Add the `imgadm ancestry <uuid>` command to list the full ancestry
+  (i.e. walk the `origin` chanin) of the given installed image.
+
+
 ## 2.6.13
 
 - [OS-2989] Fix 'imgadm import UUID' *when importing from a DSAPI source*

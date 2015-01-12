@@ -27,25 +27,33 @@
  */
 
 var p = console.log;
-var child_process = require('child_process'),
-    exec = child_process.exec,
-    spawn = child_process.spawn;
-var format = require('util').format;
-
 var assert = require('assert-plus');
 var async = require('async');
+var child_process = require('child_process'),
+    exec = child_process.exec,
+    execFile = child_process.execFile,
+    spawn = child_process.spawn;
+var format = require('util').format;
+var path = require('path');
+var mod_url = require('url');
 
 var errors = require('./errors'),
     InternalError = errors.InternalError;
 
 
 
+// ---- globals
+
 var NAME = 'imgadm';
 var MANIFEST_V = 2;
 var DEFAULT_ZPOOL = 'zones';
 var DEFAULT_SOURCE = {type: 'imgapi', url: 'https://images.joyent.com'};
 
+var DB_DIR = '/var/imgadm';
+
 var VALID_COMPRESSIONS = ['none', 'bzip2', 'gzip'];
+
+var VALID_SOURCE_TYPES = ['imgapi', 'dsapi', 'docker'];
 
 
 var _versionCache = null;
@@ -54,6 +62,22 @@ function getVersion() {
         _versionCache = require('../package.json').version;
     return _versionCache;
 }
+
+
+var DOWNLOAD_DIR = '/var/tmp/.imgadm-downloads';
+
+function downloadFileFromUuid(uuid) {
+    assert.string(uuid, 'uuid');
+    return path.join(DOWNLOAD_DIR, uuid + '.file');
+}
+
+
+function indent(s, indentStr) {
+    if (!indentStr) indentStr = '    ';
+    var lines = s.split(/\r?\n/g);
+    return indentStr + lines.join('\n' + indentStr);
+}
+
 
 function objCopy(obj, target) {
     if (!target) {
@@ -76,6 +100,7 @@ function objMerge(a, b) {
     });
     return a;
 }
+
 
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 function assertUuid(uuid) {
@@ -164,6 +189,115 @@ function diffManifestFields(a, b) {
 }
 
 
+/**
+ * Return an 80-column wrapped string.
+ */
+function textWrap(text) {
+    var width = 80;
+    var words = text.split(/\s+/g).reverse();
+    var lines = [];
+    var line = '';
+    while (words.length) {
+        var word = words.pop();
+        if (line.length + 1 + word.length >= width) {
+            lines.push(line);
+            line = '';
+        }
+        if (line.length)
+            line += ' ' + word;
+        else
+            line += word;
+    }
+    lines.push(line);
+    return lines.join('\n');
+}
+
+
+
+/**
+ * Adapted from <http://stackoverflow.com/a/18650828>
+ */
+function humanSizeFromBytes(bytes) {
+    assert.number(bytes, 'bytes');
+    var sizes = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+    if (bytes === 0) {
+        return '0 B';
+    }
+    var i = Number(Math.floor(Math.log(bytes) / Math.log(1024)));
+    var s = String(bytes / Math.pow(1024, i));
+    var precision1 = (s.indexOf('.') === -1
+        ? s + '.0' : s.slice(0, s.indexOf('.') + 2));
+    return format('%s %s', precision1, sizes[i]);
+}
+
+
+// TODO: persist "?channel=<channel>"
+function normUrlFromUrl(u) {
+    // `url.parse('example.com:9999')` is not what you expect. Make sure we
+    // have a protocol.
+    if (! /^\w+:\/\// .test(u)) {
+        u = 'http://' + u;
+    }
+
+    var parsed = mod_url.parse(u);
+
+    // Don't want trailing '/'.
+    if (parsed.pathname.slice(-1) === '/') {
+        parsed.pathname = parsed.pathname.slice(0, -1);
+    }
+
+    // Drop redundant ports.
+    if (parsed.port
+        && ((parsed.protocol === 'https:' && parsed.port === '443')
+        || (parsed.protocol === 'http:' && parsed.port === '80'))) {
+        parsed.port = '';
+        parsed.host = parsed.hostname;
+    }
+
+    return mod_url.format(parsed);
+}
+
+
+/**
+ * A convenience wrapper around `child_process.execFile` to take away some
+ * logging and error handling boilerplate.
+ *
+ * @param args {Object}
+ *      - argv {Array} Required.
+ *      - execOpts {Array} Exec options.
+ *      - log {Bunyan Logger} Required. Use to log details at trace level.
+ * @param cb {Function} `function (err, stdout, stderr)` where `err` here is
+ *      an `errors.InternalError` wrapper around the child_process error.
+ */
+function execFilePlus(args, cb) {
+    assert.object(args, 'args');
+    assert.arrayOfString(args.argv, 'args.argv');
+    assert.optionalObject(args.execOpts, 'args.execOpts');
+    assert.object(args.log, 'args.log');
+    assert.func(cb);
+    var argv = args.argv;
+    var execOpts = args.execOpts;
+
+    // args.log.trace({exec: true, argv: argv, execOpts: execOpts},
+    //      'exec start');
+    execFile(argv[0], argv.slice(1), execOpts, function (err, stdout, stderr) {
+        args.log.trace({exec: true, argv: argv, execOpts: execOpts, err: err,
+            stdout: stdout, stderr: stderr}, 'exec done');
+        if (err) {
+            var msg = format(
+                'exec error:\n'
+                + '\targv: %j\n'
+                + '\texit status: %s\n'
+                + '\tstdout:\n%s\n'
+                + '\tstderr:\n%s',
+                argv, err.code, stdout.trim(), stderr.trim());
+            cb(new InternalError({cause: err, message: msg}), stdout, stderr);
+        } else {
+            cb(null, stdout, stderr);
+        }
+    });
+}
+
 
 /**
  * Call `vmadm stop UUID`.
@@ -192,6 +326,7 @@ function vmStop(uuid, options, callback) {
         callback(err);
     });
 }
+
 
 /**
  * Call `vmadm start UUID`.
@@ -475,6 +610,57 @@ function vmUpdate(uuid, update, options, callback) {
 }
 
 
+/**
+ * "cosmic ray" stuff for testing error code paths
+ *
+ * To support testing some error code paths we support inducing some errors
+ * via "IMGADM_TEST_*_COSMIC_RAY" environment variables, where "*" is an
+ * action like "DOWNLOAD".
+ *
+ * If defined it must be a comma-separated list of numbers (from zero to one).
+ * Each number is a *probability* of failure (i.e. of having a cosmic ray)
+ * for the Nth action (e.g. for the 0th, 1st, ... download). The "N" here is
+ * a global count from `imgadm` invocation.
+ *
+ * E.g.: The following will result in the 3rd attempted
+ * download failing:
+ *      IMGADM_TEST_DOWNLOAD_COSMIC_RAY=0,0,1 imgadm import busybox:latest
+ *
+ * Usage in code:
+ *      var cosmicRay = common.testForCosmicRay('download');
+ *      ...
+ *      if (cosmicRay) {
+ *          return cb(new Error('download cosmic ray'));
+ *      }
+ */
+var cosmicRayCountFromName = {};
+
+function testForCosmicRay(name) {
+    assert.string(name, 'name');
+
+    if (cosmicRayCountFromName[name] === undefined) {
+        cosmicRayCountFromName[name] = 0;
+    }
+    var index = cosmicRayCountFromName[name]++;
+    var prob = 0;
+    var envvar = 'IMGADM_TEST_' + name.toUpperCase() + '_COSMIC_RAY';
+
+    if (process.env[envvar]) {
+        // JSSTYLED
+        var probs = process.env[envvar].split(/,/g);
+        if (index < probs.length) {
+            prob = Number(probs[index]);
+            assert.number(prob, envvar + '[' + index + ']');
+        }
+    }
+    var cosmicRay = prob > 0 && Math.random() <= prob;
+
+    return cosmicRay;
+}
+
+
+
+
 
 // ---- exports
 
@@ -483,19 +669,32 @@ module.exports = {
     MANIFEST_V: MANIFEST_V,
     DEFAULT_ZPOOL: DEFAULT_ZPOOL,
     DEFAULT_SOURCE: DEFAULT_SOURCE,
+    DB_DIR: DB_DIR,
     VALID_COMPRESSIONS: VALID_COMPRESSIONS,
+    VALID_SOURCE_TYPES: VALID_SOURCE_TYPES,
     getVersion: getVersion,
+    DOWNLOAD_DIR: DOWNLOAD_DIR,
+    downloadFileFromUuid: downloadFileFromUuid,
+    indent: indent,
     objCopy: objCopy,
     objMerge: objMerge,
+    UUID_RE: UUID_RE,
     assertUuid: assertUuid,
     boolFromString: boolFromString,
     pathSlugify: pathSlugify,
     diffManifestFields: diffManifestFields,
+    textWrap: textWrap,
+    humanSizeFromBytes: humanSizeFromBytes,
+    normUrlFromUrl: normUrlFromUrl,
+    execFilePlus: execFilePlus,
+
     vmStop: vmStop,
     vmStart: vmStart,
     vmGet: vmGet,
     vmUpdate: vmUpdate,
     vmWaitForState: vmWaitForState,
     vmHaltIfNotStopped: vmHaltIfNotStopped,
-    vmWaitForCustomerMetadatum: vmWaitForCustomerMetadatum
+    vmWaitForCustomerMetadatum: vmWaitForCustomerMetadatum,
+
+    testForCosmicRay: testForCosmicRay
 };

@@ -27,7 +27,9 @@
  * imgadm -- manage images on SmartOS
  */
 
+var cmdln = require('cmdln');
 var onlyif = require('/usr/node/node_modules/onlyif');
+
 var CLI = require('../lib/cli');
 
 
@@ -38,13 +40,7 @@ function main(argv) {
             process.exit(2);
         }
         var cli = new CLI();
-        cli.main(argv, {}, function (err) {
-            if (err) {
-                process.exit(err.exitStatus || 1);
-            } else {
-                process.exit(0);
-            }
-        });
+        cmdln.main(cli, {argv: argv, showCode: true});
     });
 }
 

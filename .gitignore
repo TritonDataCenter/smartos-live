@@ -17,6 +17,7 @@
 /src/zfs_recv
 /src/zfs_send
 /src/zoneevent
+/src/img/tmp
 /src/vm/tests.tar.gz
 /src/node-kstat/.lock-wscript
 /src/node-kstat/build

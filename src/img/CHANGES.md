@@ -1,5 +1,12 @@
 # imgadm changelog
 
+## 3.1.0
+
+- [OS-3692] Start a very limited "/usr/img/lib/IMG.js" node.js API to
+  imgadm for *platform-based* node.js tools to use for performance.
+  Currently this only adds `IMG.quickGetImage()` for use by `vminfod`.
+
+
 ## 3.0.0
 
 - [joyent/smartos-live#120] Support using a HTTP(S) proxy via
@@ -42,6 +49,9 @@
             "WorkingDir": ""
           }
         ...
+
+  This work involved the following tickets: OS-3593, OS-3585, OS-3584, OS-3521,
+  OS-3604, OS-3566.
 
 - Refactoring of import and source handling. Multiple images (in a single
   image's ancestry) are downloaded in parallel. As well a number of small

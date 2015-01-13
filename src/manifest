@@ -13,9 +13,11 @@ f usr/img/README.md 0444 root bin
 d usr/img/etc 0555 root bin
 f usr/img/etc/imgadm.completion 0444 root bin
 d usr/img/lib 0555 root bin
+f usr/img/lib/IMG.js 0444 root bin
 f usr/img/lib/cli.js 0444 root bin
 f usr/img/lib/common.js 0444 root bin
 f usr/img/lib/configuration.js 0444 root bin
+f usr/img/lib/database.js 0444 root bin
 f usr/img/lib/errors.js 0444 root bin
 f usr/img/lib/imgadm.js 0444 root bin
 d usr/img/lib/sources 0555 root bin
@@ -214,6 +216,7 @@ f usr/img/package.json 0444 root bin
 d usr/img/sbin 0555 root bin
 f usr/img/sbin/imgadm 0555 root bin
 d usr/img/test 0555 root bin
+f usr/img/test/IMG.test.js 0444 root bin
 f usr/img/test/basics.test.js 0444 root bin
 f usr/img/test/create.test.js 0444 root bin
 f usr/img/test/docker.test.js 0444 root bin

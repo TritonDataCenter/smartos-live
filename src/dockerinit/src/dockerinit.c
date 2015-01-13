@@ -979,6 +979,7 @@ killIpmgmtd()
     struct door_info info;
     pid_t ipmgmtd_pid;
     char *should_kill;
+    int status;
 
     should_kill = (char *) mdataGet("docker:noipmgmtd");
     if ((should_kill == NULL) || (strncmp(should_kill, "true", 4) != 0)) {
@@ -1009,6 +1010,7 @@ killIpmgmtd()
                 strerror(errno));
         } else {
             dlog("KILLED ipmgmtd[%d]\n", ipmgmtd_pid);
+            waitpid(ipmgmtd_pid, &status, 0);
         }
     }
 }

@@ -29,7 +29,7 @@
  * - On `imgadm.init()` we upgrade if necessary, as early as possible via
  *   `upgrade.upgradeIfNecessary(...)`. This basically checks if there is
  *   an upgrader function for a version > config.upgradedToVer.
- * - There is an order array of upgraders something like:
+ * - There is an ordered array of upgraders something like:
  *          var upgraders = [
  *              ['2.0.0', upgradeTo200],
  *              ['2.1.0', upgradeTo210],
@@ -42,12 +42,14 @@
  * DB upgrade.
  */
 
-var warn = console.warn;
-var path = require('path');
-var fs = require('fs');
-var format = require('util').format;
+var p = console.log;
+
 var assert = require('assert-plus');
 var async = require('async');
+var format = require('util').format;
+var fs = require('fs');
+var path = require('path');
+var vasync = require('vasync');
 
 var imgmanifest = require('imgmanifest');
 var errors = require('./errors');
@@ -69,7 +71,63 @@ function verInfoFromVer(ver) {
 // ---- upgraders
 
 /**
- * Upgrade DB to 2.0.0
+ * Upgrade imgadm to v3.0.0
+ *
+ * imgadm 2 -> imgadm 3 simply requires a `type` value on each source object
+ * (the `sources` array in "/var/imgadm/imgadm.conf"). It must be one
+ * of `common.VALID_SOURCE_TYPES`.
+ *
+ * We use the same logic that was being used on the fly in imgadm v2 and lower:
+ * - If the url ends with `/datasets/?`, then `type="dsapi"`.
+ * - Else, default to "imgapi".
+ */
+function upgradeTo300(tool, callback) {
+    var log = tool.log.child({upgrade: true, upgradeTo300: true}, true);
+
+    vasync.pipeline({funcs: [
+        function upgradeSources(_, next) {
+            if (!tool.config.sources) {
+                next();
+                return;
+            }
+
+            log.info({sources: tool.config.sources}, 'config.sources before');
+            var changed = false;
+            tool.config.sources.forEach(function (s) {
+                if (!s.type) {
+                    // Per imgadm v1, the old source URL includes the
+                    // "/datasets/" subpath. That's not a completely reliable
+                    // marker, but we'll use that.
+                    var isDsapiUrl = /\/datasets\/?$/;
+                    if (isDsapiUrl.test(s.url)) {
+                        s.type = 'dsapi';
+                    } else {
+                        s.type = 'imgapi';
+                    }
+                    changed = true;
+                }
+            });
+
+            if (changed) {
+                log.info({sources: tool.config.sources},
+                    'config.sources updated');
+                tool.saveConfig(next);
+            } else {
+                next();
+            }
+        },
+
+        function updateConfigVer(_, next) {
+            tool.config.upgradedToVer = '3.0.0';
+            tool.saveConfig(next);
+        }
+    ]}, callback);
+}
+
+
+
+/**
+ * Upgrade DB to v2.0.0
  *
  * imgadm <unversioned> -> imgadm 2 was a big re-write. The old datasets
  * API (DSAPI) was replaced by the Images API (IMGAPI). The dataset/image
@@ -111,7 +169,6 @@ function upgradeTo200(tool, callback) {
         } catch (upErr) {
             /* Pass through, because we expect validation to handle it. */
         }
-        // TODO:XXX handle validation failure -> warning, skip it
         var imageInfo = {
             manifest: manifest,
             zpool: ii.zpool
@@ -226,7 +283,8 @@ function upgradeTo200(tool, callback) {
 
 
 var upgraders = [
-    ['2.0.0', upgradeTo200]
+    ['2.0.0', upgradeTo200],
+    ['3.0.0', upgradeTo300]
 ];
 var highestUpVer = upgraders[upgraders.length - 1][0];
 var highestUpVerInfo = verInfoFromVer(highestUpVer);

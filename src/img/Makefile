@@ -41,38 +41,7 @@ check:
 
 .PHONY: update_modules
 update_modules:
-	rm -rf node_modules
-	npm install
-	for dep in $(shell json -f package.json dependencies devDependencies \
-			| json --keys -a --merge \
-			| grep -v sdc-clients | grep -v nodeunit); do \
-		echo "# trim $$dep dependency"; \
-		find node_modules/$$dep -name .gitmodules | xargs rm; \
-		find node_modules/$$dep -name .npmignore | xargs rm; \
-		find node_modules/$$dep -name .travis.yml | xargs rm; \
-		find node_modules/$$dep -name AUTHORS | xargs rm; \
-		find node_modules/$$dep -name README.md | xargs rm; \
-		find node_modules/$$dep -name Readme.md | xargs rm; \
-		find node_modules/$$dep -name History.md | xargs rm; \
-		find node_modules/$$dep -name jsl.node.conf | xargs rm; \
-		find node_modules/$$dep -name examples | xargs rm -rf; \
-		find node_modules/$$dep -name CHANGES.md | xargs rm; \
-		find node_modules/$$dep -name "Makefile*" | xargs rm; \
-		find node_modules/$$dep -name tools | xargs rm -rf; \
-		find node_modules/$$dep -name tst | xargs rm -rf; \
-		find node_modules/$$dep -name test | xargs rm -rf; \
-		find node_modules/$$dep -name tests | xargs rm -rf; \
-		find node_modules/$$dep -name benchmark | xargs rm -rf; \
-		find node_modules/$$dep -name component.json | xargs rm -rf; \
-	done;
-	rm -rf node_modules/progbar/node_modules/assert-plus  # slight version mismatch
-	rm -rf node_modules/imgmanifest/node_modules/assert-plus  # slight version mismatch
-	./tools/mk-sdc-clients-light.sh \
-		$(shell json -f package.json dependencies.sdc-clients | cut -d'#' -f2) \
-		node_modules/sdc-clients imgapi.js dsapi.js
-	./tools/mk-nodeunit-light.sh $(shell json -f package.json devDependencies.nodeunit)
-
-
+	./tools/update-node-modules.sh
 
 INSTALLIMAGE=/var/tmp/img-install-image
 .PHONY: dev-install-image
@@ -87,5 +56,7 @@ dev-install-image:
 	cp -PR lib $(INSTALLIMAGE)/lib
 	cp -PR node_modules $(INSTALLIMAGE)/node_modules
 	cp -PR test $(INSTALLIMAGE)/test
+	mkdir -p $(INSTALLIMAGE)/tools
+	cp -PR tools/coal-create-docker-vm.sh $(INSTALLIMAGE)/tools/
 	mkdir -p $(INSTALLIMAGE)/man
 	node ../../tools/ronnjs/bin/ronn.js man/imgadm.1m.md > $(INSTALLIMAGE)/man/imgadm.1m

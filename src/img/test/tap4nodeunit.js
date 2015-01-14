@@ -79,7 +79,7 @@ module.exports = {
                     verbose('stdout: %j', stdout);
                     verbose('stderr: %j', stderr);
                     t.ifError(err);
-                    cb();
+                    cb(err, stdout, stderr);
                 });
             };
 

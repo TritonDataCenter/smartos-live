@@ -51,6 +51,25 @@ function objCopy(obj, target) {
 }
 
 
+test('imgadm', function (t) {
+    exec('imgadm', function (err, stdout, stderr) {
+        t.ok(err);
+        t.equal(stderr, '', 'stderr');
+        t.ok(/\nUsage:/.test(stdout), 'stdout has help');
+        t.end();
+    });
+});
+
+test('imgadm -E', function (t) {
+    exec('imgadm -E', function (err, stdout, stderr) {
+        t.ok(err);
+        var lines = stderr.trimRight().split(/\n/g);
+        structuredErr = JSON.parse(lines[lines.length - 1]);
+        t.equal(structuredErr.err.code, 'NoCommand');
+        t.end();
+    });
+});
+
 
 test('imgadm --version', function (t) {
     exec('imgadm --version', function (err, stdout, stderr) {
@@ -65,7 +84,7 @@ test('imgadm --version', function (t) {
     });
 });
 
-['', ' --help', ' -h', ' help'].forEach(function (args) {
+[' --help', ' -h', ' help'].forEach(function (args) {
     test('imgadm' + args, function (t) {
         exec('imgadm' + args, function (err, stdout, stderr) {
             t.ifError(err, err);
@@ -77,7 +96,7 @@ test('imgadm --version', function (t) {
 });
 
 
-test('imgadm -v list  # bunyan debug log on stderr', function (t) {
+test('imgadm -v list  # bunyan trace log on stderr', function (t) {
     exec('imgadm -v list', function (err, stdout, stderr) {
         t.ok(stderr);
         var firstLine = stderr.split(/\n/g)[0];

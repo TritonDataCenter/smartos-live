@@ -37,7 +37,7 @@ var http = require('http');
 var fs = require('fs');
 var net = require('net');
 var path = require('path');
-var Queue = require('../queue');
+var Queue = require('/usr/vm/node_modules/queue');
 
 var MAX_RETRY = 300; // in seconds
 

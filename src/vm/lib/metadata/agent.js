@@ -24,7 +24,7 @@
  *
  */
 
-// TODO: 
+// TODO:
 // - add logging to refactored bits
 // - make hard refresh actually work
 var assert = require('assert');

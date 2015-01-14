@@ -370,7 +370,7 @@ execName(char *cmd)
 void
 execCmdline()
 {
-    int console;
+    int _stdin, _stdout, _stderr;
     char *execname;
 
     dlog("DROP PRIVS\n");
@@ -388,28 +388,43 @@ execCmdline()
 
     execname = execName(cmdline[0]);
 
-    dlog("SWITCHING TO /dev/console\n");
+    dlog("SWITCHING TO /dev/zfd/*\n");
 
-    close(0);
-    close(1);
-    close(2);
-
-    console = open("/dev/console", O_RDWR);
-    if (console == -1) {
-        fatal(ERR_OPEN_CONSOLE, "failed to open /dev/console: %s\n",
+    _stdin = open("/dev/zfd/0", O_RDONLY);
+    if (_stdin == -1) {
+        if (errno == ENOENT) {
+            _stdin = open("/dev/null", O_RDONLY);
+            if (_stdin == -1) {
+                fatal(ERR_OPEN_CONSOLE, "failed to open /dev/null: %s\n",
+                    strerror(errno));
+            }
+        } else {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
+                strerror(errno));
+        }
+    }
+    if (dup2(_stdin, 0) == -1) {
+        fatal(ERR_UNEXPECTED, "failed to dup2(_stdin, 0): %s\n",
             strerror(errno));
     }
 
-    if (dup2(console, 0) == -1) {
-        fatal(ERR_UNEXPECTED, "failed to dup2(console, 0): %s\n",
+    _stdout = open("/dev/zfd/1", O_WRONLY);
+    if (_stdout == -1) {
+        fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
             strerror(errno));
     }
-    if (dup2(console, 1) == -1) {
-        fatal(ERR_UNEXPECTED, "failed to dup2(console, 1): %s\n",
+    if (dup2(_stdout, 1) == -1) {
+        fatal(ERR_UNEXPECTED, "failed to dup2(_stdout, 1): %s\n",
             strerror(errno));
     }
-    if (dup2(console, 2) == -1) {
-        fatal(ERR_UNEXPECTED, "failed to dup2(console, 2): %s\n",
+
+    _stderr = open("/dev/zfd/2", O_WRONLY);
+    if (_stderr == -1) {
+        fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/2: %s\n",
+            strerror(errno));
+    }
+    if (dup2(_stderr, 2) == -1) {
+        fatal(ERR_UNEXPECTED, "failed to dup2(_stderr, 2): %s\n",
             strerror(errno));
     }
 
@@ -566,9 +581,9 @@ buildCmdEnv()
 void
 mountLXProc()
 {
-    dlog("MOUNT /proc (lxproc)\n");
+    dlog("MOUNT /proc (lx_proc)\n");
 
-    if (mount("lxproc", "/proc", MS_DATA, "lxproc", NULL, 0) != 0) {
+    if (mount("proc", "/proc", MS_DATA, "lx_proc", NULL, 0) != 0) {
         fatal(ERR_MOUNT_LXPROC, "failed to mount /proc: %s\n", strerror(errno));
     }
 }
@@ -964,6 +979,7 @@ killIpmgmtd()
     struct door_info info;
     pid_t ipmgmtd_pid;
     char *should_kill;
+    int status;
 
     should_kill = (char *) mdataGet("docker:noipmgmtd");
     if ((should_kill == NULL) || (strncmp(should_kill, "true", 4) != 0)) {
@@ -994,6 +1010,7 @@ killIpmgmtd()
                 strerror(errno));
         } else {
             dlog("KILLED ipmgmtd[%d]\n", ipmgmtd_pid);
+            waitpid(ipmgmtd_pid, &status, 0);
         }
     }
 }
@@ -1226,7 +1243,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     mkdir("/var", 0755);
     mkdir("/var/log", 0755);
 
-    fd = open(LOGFILE, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    fd = open(LOGFILE, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
     if (fd == -1) {
         fatal(ERR_OPEN, "failed to open log file: %s\n", strerror(errno));
     }

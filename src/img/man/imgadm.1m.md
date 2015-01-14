@@ -2,34 +2,34 @@
 
 ## SYNOPSIS
 
-    imgadm help [<command>]             help on commands
+    imgadm help [<command>]                help on commands
 
-    imgadm sources [<options>]          list and edit image sources
+    imgadm sources [<options>]             list and edit image sources
 
-    imgadm avail                        list available images
-    imgadm show <uuid>                  show manifest of an available image
+    imgadm avail                           list available images
+    imgadm show <uuid|docker-repo-tag>     show manifest of an available image
 
-    imgadm import [-P <pool>] <uuid>    import image from a source
+    imgadm import [-P <pool>] <image-id>   import image from a source
     imgadm install [-P <pool>] -m <manifest> -f <file>
-                                        import from local image data
+                                           import from local image data
 
-    imgadm list                         list installed images
-    imgadm get [-P <pool>] <uuid>       info on an installed image
-    imgadm update [<uuid>...]           update installed images
-    imgadm delete [-P <pool>] <uuid>    remove an installed image
+    imgadm list [<filters>]                list installed images
+    imgadm get [-P <pool>] <uuid>          info on an installed image
+    imgadm update [<uuid>...]              update installed images
+    imgadm delete [-P <pool>] <uuid>       remove an installed image
+    imgadm ancestry [-P <pool>] <uuid>     show ancestry of an installed image
 
-    # Experimental.
     imgadm create <vm-uuid> [<manifest-field>=<value> ...] ...
-                                        create an image from a VM
+                                           create an image from a VM
     imgadm publish -m <manifest> -f <file> <imgapi-url>
-                                        publish an image to an image repo
+                                           publish an image to an image repo
 
 ## DESCRIPTION
 
-The imgadm tool allows you to interact with virtual machine images on a
+The imgadm tool allows you to import and manage virtual machine images on a
 SmartOS system. Virtual machine images (also sometimes referred to as
-'datasets') are snapshots of pre-installed virtual machines which are
-prepared for generic and repeated deployments.
+'datasets') are snapshots of pre-installed virtual machines which are prepared
+for generic and repeated deployments.
 
 Virtual machine images are made up of two primary components: A compressed
 ZFS snapshot, and a manifest (metadata) which describes the contents of that
@@ -37,7 +37,7 @@ file. A ZFS snapshot may be of either a ZFS filesystem (for OS-level virtual
 machines, a.k.a. zones), or a ZFS zvol (for KVM virtual machines).
 The manifest is a JSON serialized description.
 
-The identifier for an Image is its UUID. Most commands operate on Images by
+The identifier for an image is its UUID. Most commands operate on images by
 UUID.
 
 
@@ -50,8 +50,12 @@ UUID.
     Print the imgadm version and exit.
 
 **-v, --verbose**
-    More verbose logging (debug level). See the **IMGADM\_LOG\_LEVEL=<level>**
-    environment variable.
+    Verbose logging: trace-level logging, stack on error. See the
+    **IMGADM\_LOG\_LEVEL=<level>** environment variable.
+
+**-E**
+    On error, emit a structured JSON error object as the last line of stderr
+    output.
 
 
 ## SUBCOMMANDS
@@ -65,40 +69,82 @@ UUID.
 
     imgadm sources [<options>]
 
-        List and edit image sources. An image source is a URL to a server
-        implementing the Images API (IMGAPI). The default source is
-        "https://images.joyent.com".
+        List and edit image sources.
+
+        An image source is a URL to a server implementing the IMGAPI.
+        The default IMGAPI is + https://images.joyent.com
+
+        Usage:
+            imgadm sources [--verbose|-v] [--json|-j]  # list sources
+            imgadm sources -a <url> [-t <type>]        # add a source
+            imgadm sources -d <url>                    # delete a source
+            imgadm sources -e                          # edit sources
 
         Options:
-            -j, --json         List sources as JSON.
-            -a SOURCE          Add a source. It is appended.
-            -d SOURCE          Delete a source.
-            -e                 Edit sources in an editor.
-            -f                 Force no "ping check" on new source URLs. By
-                               default a ping check is done against new
-                               source URLs to attempt to ensure they are a
-                               running IMGAPI server.
+            -h, --help                Show this help.
+            -v, --verbose             Verbose output. List source URL and TYPE.
+            -j, --json                List sources as JSON.
+
+            -a <source>               Add a source. It is appended to the list of
+                                      sources.
+            --add-docker-hub          A shortcut for "imgadm sources -t docker -a
+                                      https://index.docker.io".
+            -d <source>               Delete a source.
+            -e                        Edit sources in an editor.
+            -c, --check               Ping check all sources.
+            -t <type>, --type=<type>  The source type. One of "imgapi" (the default),
+                                      "docker" (experimental), or "dsapi" (deprecated).
+            -f, --force               Force no "ping check" on new source URLs. By
+                                      default a ping check is done against new source
+                                      URLs to attempt to ensure they are a running
+                                      IMGAPI server.
+
+        Examples:
+            # Joyent's primary public image repository
+            imgadm sources -a https://images.joyent.com
+            # The main Docker registry (experimental)
+            imgadm sources -a https://registry-1.docker.io -t docker
+            # Legacy SDC 6.5 DSAPI (deprecated)
+            imgadm sources -a https://datasets.joyent.com/datasets -t dsapi
 
 
     imgadm avail
 
         List available images from all sources.
+        This is not supported for Docker sources.
+
+        Usage:
+            imgadm avail [<options>...]
 
         Options:
-            -j, --json         JSON output
-            -H                 Do not print table header row
-            -o field1,...      Specify fields (columns) to output. Default is
-                               "uuid,name,version,os,published".
-            -s field1,...      Sort on the given fields. Default is
-                               "published_at,name".
+            -h, --help                Show this help.
+            -j, --json                JSON output.
+            -H                        Do not print table header row.
+            -o FIELD,...              Specify fields (columns) to output. Default is
+                                      "uuid,name,version,os,published".
+            -s FIELD,...              Sort on the given fields. Default is
+                                      "published_at,name".
 
-        Valid fields for "-o" and "-s" are: source, uuid, owner, name,
-        version, state, disabled, public, published, published_at,
-        published_date, type, os, urn, nic_driver, disk_driver, cpu_type,
-        image_size, generate_passwords, description.
+        Fields for "-o" and "-s":
+            Any of the manifest fields (see `imgadm list -j` output) plus the
+            following computed fields for convenience.
+
+            published_date            just the date part of `published_at`
+            published                 `published_at` with the milliseconds removed
+            source                    the source URL, if available
+            clones                    the number of clones (dependent images and VMs)
+            size                      the size, in bytes, of the image file
+
+            In addition if this is a docker image, then the following:
+
+            docker_id                 the full docker id string
+            docker_short_id           the short 12 character docker id
+            docker_repo               the docker repo from which this image
+                                      originates, if available
+            docker_tags               a JSON array of docker repo tags, if available
 
 
-    imgadm show <uuid>
+    imgadm show <uuid|docker-repo-tag>
 
         Show the manifest for an available image. This searches each imgadm
         source for an available image with this UUID and prints its manifest
@@ -107,14 +153,16 @@ UUID.
 
     imgadm import [-P <pool>] <uuid>
 
-        Import an image from a source IMGAPI. This finds the image with the
-        given UUID in the configured sources and imports it into the local
-        system.
+        Import an image from a source IMGAPI.
+
+        This finds the image with the given UUID in the configured sources
+        and imports it into the local system.
 
         Options:
-            -P <pool>          Name of zpool in which to import the image.
-                               Default is "zones".
-            -q, --quiet        Disable progress bar.
+            -h, --help                Show this help.
+            -q, --quiet               Disable progress bar.
+            -P <pool>                 Name of zpool in which to look for the image.
+                                      Default is "zones".
 
 
     imgadm install [-P <pool>] -m <manifest> -f <file>
@@ -130,27 +178,45 @@ UUID.
             -q, --quiet        Disable progress bar.
 
 
-    imgadm list
+    imgadm list [<filters>]
 
         List locally installed images.
 
+        Usage:
+            imgadm list [<options>...] [<filters>]
+
         Options:
-            -j, --json         JSON output
-            -H                 Do not print table header row
-            -o field1,...      Specify fields (columns) to output. Default is
-                               "uuid,name,version,os,published".
-            -s field1,...      Sort on the given fields. Default is
-                               "published_at,name".
+            -h, --help                Show this help.
+            -j, --json                JSON output.
+            -H                        Do not print table header row.
+            -o FIELD,...              Specify fields (columns) to output. Default is
+                                      "uuid,name,version,os,published".
+            -s FIELD,...              Sort on the given fields. Default is
+                                      "published_at,name".
+            --docker                  Limit and format list similar to `docker images`.
 
-        A heuristic is used to determine which ZFS datasets are images
-        (any filesystem or volume named 'POOL/UUID' whose mountpoint is not
-        a zoneroot). If this includes datasets that it should not, you can
-        tell imgadm to ignore them via: `zfs set imgadm:ignore=true DATASET`.
+        Filters:
+            FIELD=VALUE               exact string match
+            FIELD=true|false          boolean match
+            FIELD=~SUBSTRING          substring match
 
-        Valid fields for "-o" and "-s" are: source, uuid, owner, name,
-        version, state, disabled, public, published, published_at, type, os,
-        urn, nic_driver, disk_driver, cpu_type, image_size,
-        generate_passwords, description, clones, zpool.
+        Fields for filtering, "-o" and "-s":
+            Any of the manifest fields (see `imgadm list -j` output) plus the
+            following computed fields for convenience.
+
+            published_date            just the date part of `published_at`
+            published                 `published_at` with the milliseconds removed
+            source                    the source URL, if available
+            clones                    the number of clones (dependent images and VMs)
+            size                      the size, in bytes, of the image file
+
+            In addition if this is a docker image, then the following:
+
+            docker_id                 the full docker id string
+            docker_short_id           the short 12 character docker id
+            docker_repo               the docker repo from which this image
+                                      originates, if available
+            docker_tags               a JSON array of docker repo tags, if available
 
 
     imgadm get [-P <pool>] <uuid>
@@ -167,6 +233,7 @@ UUID.
     imgadm update [<uuid>...]
 
         Update currently installed images, if necessary.
+        This does not yet support images from a "docker" source.
 
         Images that are installed without "imgadm" (e.g. via "zfs recv")
         not have cached image manifest information. Also, images installed
@@ -180,7 +247,42 @@ UUID.
 
         Options:
             -h, --help         Print this help and exit.
-            -n                 Do a dry-run (do not actually make changes).
+            -n, --dry-run      Do a dry-run (do not actually make changes).
+
+
+    imgadm ancestry [-P <pool>] <uuid>
+
+        List the ancestry (the "origin" chain) for the given incremental image.
+
+        Usage:
+            imgadm ancestry [<options>...] <uuid>
+
+        Options:
+            -h, --help                Show this help.
+            -j, --json                JSON output.
+            -H                        Do not print table header row.
+            -o FIELD,...              Specify fields (columns) to output. Default is
+                                      "uuid,name,version,published".
+            -P <pool>                 Name of zpool in which to look for the image.
+                                      Default is "zones".
+
+        Fields for "-o":
+            Any of the manifest fields (see `imgadm list -j` output) plus the
+            following computed fields for convenience.
+
+            published_date            just the date part of `published_at`
+            published                 `published_at` with the milliseconds removed
+            source                    the source URL, if available
+            clones                    the number of clones (dependent images and VMs)
+            size                      the size, in bytes, of the image file
+
+            In addition if this is a docker image, then the following:
+
+            docker_id                 the full docker id string
+            docker_short_id           the short 12 character docker id
+            docker_repo               the docker repo from which this image
+                                      originates, if available
+            docker_tags               a JSON array of docker repo tags, if available
 
 
     imgadm delete [-P <pool>] <uuid>
@@ -233,7 +335,8 @@ UUID.
                            to it. If the basename of "PATH" is not a dir,
                            then "PATH.imgmanifest" and "PATH.zfs[.EXT]" are
                            created.
-            -c <comp>      One of "none", "gz" or "bzip2" for the compression
+            -c <comp>, --compression=<comp>
+                           One of "none", "gz" or "bzip2" for the compression
                            to use on the image file, if any. Default is "none".
             -i             Build an incremental image (based on the "@final"
                            snapshot of the source image for the VM).
@@ -360,7 +463,57 @@ default there is a 5 minute timeout on state transitions: (VM booted) -> running
 -> success or error -> (VM stopped).
 
 
+## DOCKER INTEGRATION
+
+Since version 3.0.0 imgadm has support for importing Docker images: both in
+importing images of `type=docker` from an IMGAPI source and in importing Docker
+images directly from Docker Hub. Docker registries other than Docker Hub are
+technically supported, but client auth is not yet implemented.
+
+Add the Docker Hub as an import source with:
+
+    imgadm sources --add-docker-hub
+
+Use the following to mimic `docker images`:
+
+    imgadm list --docker
+
+and list all Docker images (including intermediate layers) with:
+
+    imgadm list type=docker
+
+A subset of the full Docker "image json" metadata is stored as "docker:*"
+tags on the image. E.g. for the current "busybox:latest":
+
+    ...
+    "tags": {
+      "docker:id": "4986bf8c15363d1c5d15512d5266f8777bfba4974ac56e3270e7760f6f0a8125",
+      "docker:architecture": "amd64",
+      "docker:repo": "library/busybox",
+      "docker:tag:buildroot-2014.02": true,
+      "docker:tag:latest": true,
+      "docker:config": {
+        "Cmd": [
+          "/bin/sh"
+        ],
+        "Entrypoint": null,
+        "Env": [
+          "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        ],
+        "WorkingDir": ""
+      }
+    ...
+
+
 ## COMPATIBILITY NOTES
+
+Version 3 of "imgadm" added Docker image support. This involved a significant
+refactoring of import and source handling leading to a few compatibility
+differences with previous versions. These are:
+
+- "imgadm sources -j" is an object for each source; previously each listed
+  sources we just a string (the URL).
+- "imgadm sources -e" includes type in edited lines.
 
 The imgadm tool was re-written for version 2. There are a few minor
 compatibility differences with earlier imgadm. These are:

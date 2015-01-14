@@ -30,7 +30,6 @@ fi
 PUBLISHER="joyent"
 RELEASE_VER="joyent_147"
 SUNW_SPRO12_URL="https://download.joyent.com/pub/build/SunStudio.tar.bz2"
-GCC44_URL="https://download.joyent.com/pub/build/gcc-4.tar.bz2"
 ON_CLOSED_BINS_URL="https://download.joyent.com/pub/build/illumos/on-closed-bins.i386.tar.bz2"
 ON_CLOSED_BINS_ND_URL="https://download.joyent.com/pub/build/illumos/on-closed-bins-nd.i386.tar.bz2"
 GET_ILLUMOS="git clone git://github.com/joyent/illumos-joyent.git illumos"

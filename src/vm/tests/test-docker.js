@@ -282,6 +282,7 @@ test('test adding docker=true on old VM', function (t) {
 test('test stop docker VM w/ init that exits on SIGTERM', function (t) {
     var payload = JSON.parse(JSON.stringify(common_payload));
     var state = {brand: payload.brand};
+    var waited = 0;
 
     payload.uuid = libuuid.create();
     payload.docker = true;
@@ -289,11 +290,24 @@ test('test stop docker VM w/ init that exits on SIGTERM', function (t) {
     payload.init_name = '/root/init';
     payload.restart_init = false;
 
+    function tryToRename() {
+        var dirname = '/zones/' + payload.uuid + '/root/var/svc/';
+        var filename = dirname + 'provisioning';
+        var newname = dirname + 'provision_success';
+
+        fs.exists(filename, function (exists) {
+            if (exists) {
+                t.ok(true, 'waited ' + (waited / 10) + 's for ' + filename);
+                fs.renameSync(filename, newname);
+                return;
+            }
+            waited++;
+            setTimeout(tryToRename, 100);
+        });
+    }
+
     // pretend init moves /var/svc/provisioning
-    setTimeout(function () {
-        fs.renameSync('/zones/' + payload.uuid + '/root/var/svc/provisioning',
-            '/zones/' + payload.uuid + '/root/var/svc/provision_success');
-    }, 2000);
+    tryToRename();
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function (cb) {
@@ -344,6 +358,7 @@ test('test stop docker VM w/ init that exits on SIGTERM', function (t) {
 test('test stop docker VM w/ init that ignores SIGTERM', function (t) {
     var payload = JSON.parse(JSON.stringify(common_payload));
     var state = {brand: payload.brand};
+    var waited = 0;
 
     payload.uuid = libuuid.create();
     payload.docker = true;
@@ -351,11 +366,24 @@ test('test stop docker VM w/ init that ignores SIGTERM', function (t) {
     payload.init_name = '/root/init';
     payload.restart_init = false;
 
+    function tryToRename() {
+        var dirname = '/zones/' + payload.uuid + '/root/var/svc/';
+        var filename = dirname + 'provisioning';
+        var newname = dirname + 'provision_success';
+
+        fs.exists(filename, function (exists) {
+            if (exists) {
+                t.ok(true, 'waited ' + (waited / 10) + 's for ' + filename);
+                fs.renameSync(filename, newname);
+                return;
+            }
+            waited++;
+            setTimeout(tryToRename, 100);
+        });
+    }
+
     // pretend init moves /var/svc/provisioning
-    setTimeout(function () {
-        fs.renameSync('/zones/' + payload.uuid + '/root/var/svc/provisioning',
-            '/zones/' + payload.uuid + '/root/var/svc/provision_success');
-    }, 2000);
+    tryToRename();
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function (cb) {
@@ -409,6 +437,7 @@ test('test restart docker VM', function (t) {
     var boot_timestamps = [];
     var payload = JSON.parse(JSON.stringify(common_payload));
     var state = {brand: payload.brand};
+    var waited = 0;
 
     payload.uuid = libuuid.create();
     payload.docker = true;
@@ -416,11 +445,24 @@ test('test restart docker VM', function (t) {
     payload.init_name = '/root/init';
     payload.restart_init = false;
 
+    function tryToRename() {
+        var dirname = '/zones/' + payload.uuid + '/root/var/svc/';
+        var filename = dirname + 'provisioning';
+        var newname = dirname + 'provision_success';
+
+        fs.exists(filename, function (exists) {
+            if (exists) {
+                t.ok(true, 'waited ' + (waited / 10) + 's for ' + filename);
+                fs.renameSync(filename, newname);
+                return;
+            }
+            waited++;
+            setTimeout(tryToRename, 100);
+        });
+    }
+
     // pretend init moves /var/svc/provisioning
-    setTimeout(function () {
-        fs.renameSync('/zones/' + payload.uuid + '/root/var/svc/provisioning',
-            '/zones/' + payload.uuid + '/root/var/svc/provision_success');
-    }, 2000);
+    tryToRename();
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function (cb) {

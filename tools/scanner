@@ -5,7 +5,7 @@
 
 ROOT=$1
 DIR=$2
-command="pfexec find $DIR -ls"
+command="pfexec find $DIR -ls | sort"
 
 if [ ! -z ${ROOT} ] && [ "${ROOT}" == "-" ]; then
     ROOT="/"
@@ -24,8 +24,8 @@ fi
 
 cd ${ROOT}
 sh -c "${command}" | \
-{  
-    while read line; do  
+{
+    while read line; do
         # Squeeze multiple spaces/tabs into one space
         line=`echo "${line}" | sed -e "s/   / /" | tr -s ' '`
 
@@ -62,4 +62,3 @@ sh -c "${command}" | \
         }
     done
 }
-

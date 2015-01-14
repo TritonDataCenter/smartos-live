@@ -41,6 +41,8 @@ setup_net()
 	    printf("    /sbin/ipmgmtd || true\n")
 	    printf("    /sbin/ifconfig-native lo0 plumb\n")
 	    printf("    /sbin/ifconfig-native lo0 up\n")
+	    printf("    /sbin/ifconfig-native lo0 inet6 plumb\n")
+	    printf("    /sbin/ifconfig-native lo0 inet6 up\n")
 	    printf("    /sbin/initctl emit --no-wait net-device-up IFACE=lo LOGICAL=lo ADDRFAM=inet METHOD=loopback || true\n")
 
         } {
@@ -79,6 +81,7 @@ setup_net()
                     printf("    /sbin/ifconfig-native %s plumb || true\n", phys)
                     printf("    /sbin/ifconfig-native %s %s netmask %s up || true\n",
                         phys, ip, mask)
+                    printf("    /sbin/ifconfig-native %s inet6 plumb up || true\n", phys)
                     if (prim == "true" && length(gw) > 0)
 		        printf("    /sbin/route add default %s || true\n", gw)
                     printf("    /sbin/initctl emit --no-wait net-device-up IFACE=%s\n",
@@ -98,6 +101,7 @@ setup_net()
 	    printf("    /sbin/ifconfig-native %s plumb || true\n", phys)
 	    printf("    /sbin/ifconfig-native %s %s netmask %s up || true\n",
 		phys, ip, mask)
+	    printf("    /sbin/ifconfig-native %s inet6 plumb up || true\n", phys)
             if (prim == "true" && length(gw) > 0)
 	        printf("    /sbin/route add default %s || true\n", gw)
 	    printf("    /sbin/initctl emit --no-wait net-device-up IFACE=%s\n",
@@ -245,6 +249,7 @@ script
 
     /sbin/initctl emit --no-wait virtual-filesystems
     /bin/mount -t tmpfs tmpfs /run || true
+    /bin/mkdir -p /run/lock || true
     /sbin/initctl emit --no-wait mounted MOUNTPOINT=/run TYPE=tmpfs
     /sbin/initctl emit --no-wait local-filesystems
     /sbin/initctl emit --no-wait all-swaps

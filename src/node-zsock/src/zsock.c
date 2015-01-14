@@ -390,6 +390,8 @@ zsocket_create(void *op __UNUSED, void *ctx)
 		sock_fd = zsocket(zoneid, ccp->zcc_path);
 	} while (attempts++ < 3 && sock_fd < 0);
 
+	ccp->zcc_fd = sock_fd;
+
 	if (sock_fd < 0) {
 		zsock_ctx_set_errno(ccp, "zsocket", errno);
 		return (NULL);
@@ -399,8 +401,6 @@ zsocket_create(void *op __UNUSED, void *ctx)
 		zsock_ctx_set_errno(ccp, "listen", errno);
 		return (NULL);
 	}
-
-	ccp->zcc_fd = sock_fd;
 
 	return (NULL);
 }

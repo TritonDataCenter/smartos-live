@@ -28,12 +28,13 @@ CONF_FILES=
 DELIM=":"
 EXISTS_NAMES=
 HAVE_USB=
-LIST_LINE="%-14s %-18s %-14s\n"
+LIST_LINE="%-14s %-18s %-14s %-16s\n"
 LOCAL=
 NORMALIZED_MAC=
 NO_LIST_STUBS=
 PARSABLE=
 PROPS=
+OVERLAY_RULES="/var/run/smartdc/networking/overlay_rules.json"
 TAG_TYPE=
 TMP_CONF="/tmp/.nic-tags"
 VERBOSE=
@@ -83,7 +84,7 @@ Subcommands:
         add             [-l] [-p prop=value,...] <name> [mac]
         delete          [-f] <name>
         exists          [-l] <name>
-        list            [-l | -L] [-p] [-d delim]
+        list            [-l | -L] [-o | -O] [-p] [-d delim]
         update          [-l] [-p prop=value,...] <name> [mac]
         vms             <name>
 USAGE
@@ -117,14 +118,33 @@ function valid_name()
 {
     local res=$(echo $1 | tr -d '[a-zA-Z0-9_]')
     [[ -n $res ]] && return 1
-    [[ $(echo ${1} | wc -c) -gt 31 ]] && return 1
+    [[ $(echo ${1} | wc -c) -ge 31 ]] && return 1
+    return 0
+}
+
+# Returns zero for a valid overlay rule name, non-zero otherwise. Valid names
+# are slightly different. Specifically:
+# * Have the same valid characters as vnics and etherstubs
+#   (alphanumeric plus _)
+# * Must end with a non-number, so they can be created as overlay devices with
+#   <tag-name><overlay id>
+# * Must be < 20 characters long, to allow for overlays to use a full 32-bit id
+#   space
+#
+function valid_overlay_rule()
+{
+    local res=$(echo $1 | tr -d '[a-zA-Z0-9_]')
+    [[ -n $res ]] && return 1
+    res=$(echo $1 | sed 's/^.*[a-zA-Z_]$//')
+    [[ -n $res ]] && return 1
+    [[ $(echo ${1} | wc -c) -ge 20 ]] && return 1
     return 0
 }
 
 
 # Returns zero for valid etherstub names, non-zero otherwise. Valid names:
 # * Consist only of alphanumeric characters plus _
-# * <= 32 characters
+# * <= 31 characters
 # * Have a number at the end (in order to be a valid link name)
 function valid_stub_name()
 {
@@ -134,8 +154,14 @@ function valid_stub_name()
     echo "${1}" | grep '[0-9]$' > /dev/null 2>&1
     [[ $? != "0" ]] && return 1
 
-    [[ $(echo ${1} | wc -c) -gt 32 ]] && return 1
+    [[ $(echo ${1} | wc -c) -gt 31 ]] && return 1
     return 0
+}
+
+function valid_gen_name()
+{
+    local res=$(echo ${1} | sed 's/[a-zA-Z0-9_]//')
+    [[ -z "$res" ]]
 }
 
 
@@ -309,12 +335,41 @@ function tag_conf_init()
 
 
 # Check if a tag exists, and return 0 if it does.
+#
+# This is slightly more complicated for overlay rules. For overlay rules, the
+# name of the rule itself is not a tag. Instead, a valid tag is one of which is
+# formatted as 'rule/<number>'. As such, we check the tag type and if it matches
+# an overlay_rule, we explicitly error. In addition, if it doesn't match and it
+# has a '/' in it, then we see if it matches an overlay rule.
 function tag_exists()
 {
-    local seen
+    local seen typ res tag num
     cmd_tag_list > /dev/null
+
+    #
+    # The '/' character is basically toxic to the shell when it comes to
+    # variable names. So what we do is if this matches the overlay_rule pattern,
+    # then we consider it. Otherwise, we next have to check if it's a valid to
+    # make sure that none of the other shell meta-characters get in our way.
+    # Isn't this fun? Sigh, shell...
+    #
+    res=$(echo ${1} | sed -E 's_[a-zA-Z_0-9]+/[0-9]+__')
+    if [[ -z "${res}" ]]; then
+        tag=${1%/*}
+        num=${1#*/}
+        typ=$(get_tag_type ${tag})
+        [[ "${typ}" != "overlay_rule" ]] && return 1
+        [[ "$num" -lt 0 || "$num" -gt 4294967294 ]] && return 1
+        return 0
+    fi
+
+    ! valid_gen_name ${1} && return 1
+
     eval "seen=\${seen_${1}}"
+    typ=$(get_tag_type ${1})
+    [[ "${typ}" -eq "overlay_rule" ]] && return 1
     [[ -n "${seen}" ]] && return 0
+
     return 1
 }
 
@@ -477,6 +532,7 @@ function print_line()
     tag=$1
     mac=$2
     link=$3
+    ntype=$(get_tag_type ${1} | tr '_' ' ')
 
     eval "seen=\${seen_${1}}"
     # Try to see if we have a link name from get_link_names():
@@ -489,9 +545,9 @@ function print_line()
 
         if [[ -n "${PARSABLE}" ]]; then
             [[ "${DELIM}" == ":" ]] && mac=${mac//:/\\:}
-            echo "${tag}${DELIM}${mac}${DELIM}${link}"
+            echo "${tag}${DELIM}${mac}${DELIM}${link}${DELIM}${ntype}"
         else
-            printf "${LIST_LINE}" ${tag} ${mac} ${link}
+            printf "${LIST_LINE}" ${tag} ${mac} ${link} "${ntype}"
         fi
     fi
 }
@@ -565,9 +621,10 @@ function cmd_tag_exists()
 function cmd_tag_list()
 {
     local line fields tag val key stub_line
+    local rules rl
 
     [[ -z ${PARSABLE} ]] && printf "${LIST_LINE}" \
-        "NAME" "MACADDRESS" "LINK"
+        "NAME" "MACADDRESS" "LINK" "TYPE"
     get_link_names
 
     if [[ -z ${LOCAL} ]]; then
@@ -588,6 +645,20 @@ function cmd_tag_list()
                 print_line ${tag} ${NORMALIZED_MAC}
             fi
         done
+    fi
+
+    #
+    # Go through and print overlay device rules
+    #
+    if [[ -z "${LOCAL}" ]]; then
+        rules=$(json -ka -f ${OVERLAY_RULES} 2>/dev/null)
+        if [[ $? -eq 0 ]]; then
+            for rl in ${rules}; do
+                ! valid_overlay_rule ${rl} && continue
+                set_tag_type ${rl} "overlay_rule"
+                print_line ${rl} "-" "-"
+            done
+        fi
     fi
 
     [[ -n "${NO_LIST_STUBS}" ]] && return 0

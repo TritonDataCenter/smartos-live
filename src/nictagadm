@@ -26,6 +26,7 @@ CMD_LIST="add delete exists list update vms"
 CONF=
 CONF_FILES=
 DELIM=":"
+EXISTS_NAMES=
 HAVE_USB=
 LIST_LINE="%-14s %-18s %-14s\n"
 LOCAL=
@@ -52,7 +53,7 @@ function fatal()
 function warn()
 {
     local msg="$*"
-    [[ -n "$msg" ]] && echo "$msg"
+    [[ -n "$msg" ]] && echo "$msg" >&2
 }
 
 
@@ -81,7 +82,7 @@ General Options:
 Subcommands:
         add             [-l] [-p prop=value,...] <name> [mac]
         delete          [-f] <name>
-        exists          <name>
+        exists          [-l] <name>
         list            [-l | -L] [-p] [-d delim]
         update          [-l] [-p prop=value,...] <name> [mac]
         vms             <name>
@@ -539,11 +540,25 @@ function parse_props()
 
 function cmd_tag_exists()
 {
-    if [[ -z "${1}" ]]; then
+    local arg es
+    if [[ $# -eq 0 ]]; then
         fatal "tag_exists: no tag specified"
     fi
 
-    tag_exists ${1}
+    es=0
+    for arg in "$@"; do
+        tag_exists $arg
+        if [[ $? -ne 0 ]]; then
+            if [[ -z "$EXISTS_NAMES" ]]; then
+                 warn "invalid tag: $arg"
+            else
+                 warn "$arg"
+            fi
+            es=1
+        fi
+    done
+
+    return $es
 }
 
 
@@ -857,6 +872,21 @@ case "$CMD" in
             esac
         done
         ;;
+    exists)
+        while getopts "l" c $@; do
+            case $c in
+            l)
+                EXISTS_NAMES="true"
+                ;;
+            :)
+                usage "missing required argument -- $OPTARG"
+                ;;
+            *)
+                usage "invalid option: $OPTARG"
+                ;;
+            esac
+        done
+        ;;
 esac
 
 shift $(($OPTIND - 1))
@@ -870,8 +900,9 @@ shift $(($OPTIND - 1))
 case ${CMD} in
     add) cmd_tag_add "$1" "$2";;
     delete) cmd_tag_delete "$1";;
-    exists) cmd_tag_exists "$1";;
+    exists) cmd_tag_exists $@;;
     list) cmd_tag_list ;;
     update) cmd_tag_update "$1" "$2";;
     vms) cmd_tags_used_by "$1";;
+    *) fatal "unknown command ${CMD}";;
 esac

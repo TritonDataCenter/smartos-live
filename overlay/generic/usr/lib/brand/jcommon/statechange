@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright (c) 2014 Joyent, Inc.  All rights reserved.
+# Copyright (c) 2015 Joyent, Inc.  All rights reserved.
 #
 
 unset LD_LIBRARY_PATH
@@ -56,6 +56,7 @@ cmd=$5
 VNDADM=/usr/sbin/vndadm
 LOCKFILE=/etc/dladm/zone.lck
 SNAPSHOT_DIR=root/checkpoints
+OVERLAY_RULES=/var/run/smartdc/networking/overlay_rules.json
 
 #
 # The following are the list of features that a corresponding brand may
@@ -139,6 +140,7 @@ get_boolean_nic_property()
 #
 setup_net()
 {
+	typeset tmp overlay tag id rule
 	for nic in $_ZONECFG_net_resources
 	do
 		# Get simplified versions of the network config. variables.
@@ -162,6 +164,7 @@ setup_net()
 		vrrp_primary_ip=$(eval \
 		    echo \$_ZONECFG_net_${nic}_vrrp_primary_ip)
 		mtu=$(eval echo \$_ZONECFG_net_${nic}_mtu)
+		isoverlay=
 
 		# If address set, must be a shared stack zone
 		[[ -n $address ]] && exit 0
@@ -171,14 +174,53 @@ setup_net()
 		[[ -z $global_nic ]] && continue
 
 		orig_global=$global_nic
-		global_nic=$(eval echo \$SYSINFO_NIC_${orig_global})
 
-		# If the global nic is specified as a device or etherstub name
-		# rather than a tag
-		if [[ -z $global_nic ]]; then
-			echo "$(dladm show-phys -p -o LINK) $(dladm show-etherstub -p -o LINK)" \
-			| egrep "(^| )${orig_global}( |$)" > /dev/null
-			(( $? == 0 )) && global_nic=${orig_global}
+		#
+		# The nic tag for a device (the zonecfg global_nic) can come in
+		# one of a few forms. It may:
+		#
+		# 1) Be a traditional tag which refers to a physical device or
+		#    aggregation to create a VNIC over. The source of this
+		#    mapping is sysinfo.
+		#
+		# 2) It can be the name of an etherstub. The source of these is
+		#    from dladm show-etherstub
+		#
+		# 3) It can take the form of an overlay device rule. An overlay
+		#    device rule is an invalid DLPI device and invalid nic tag.
+		#    It has the form of <name>/<number>. For example,
+		#    sdc_sdn/23. That refers to the overlay rule sdc_sdn. If we
+		#    have an overlay rule, we may need to dynamically create the
+		#    overlay device if it doesn't exist.
+		#		
+		# To handle these cases, we first check if it's an overlay
+		# device, and then if not, check the other cases.
+		#
+
+		tmp=$(echo $orig_global | sed -E 's_[a-zA-Z_0-9]+/[0-9]+__')
+		if [[ -n "$tmp" ]]; then
+
+			global_nic=$(eval echo \$SYSINFO_NIC_${orig_global})
+
+			# If the global nic is specified as a device or etherstub name
+			# rather than a tag
+			if [[ -z $global_nic ]]; then
+				echo "$(dladm show-phys -p -o LINK) $(dladm show-etherstub -p -o LINK)" \
+				| egrep "(^| )${orig_global}( |$)" > /dev/null
+				(( $? == 0 )) && global_nic=${orig_global}
+			fi
+		else
+			isoverlay="true"
+			tag=${orig_global%/*}
+			num=${orig_global#*/}
+			global_nic="$tag$num"
+			rule=$(json -f $OVERLAY_RULES $tag)
+			if [[ $? -ne 0 || -z "$rule" ]]; then
+				logger -p daemon.err "zone $ZONENAME had tag " \
+				    "$tag which indicates an overlay rule, " \
+				    "no corresponding overlay rule found."
+				exit 1
+			fi
 		fi
 
 		# For backwards compatibility with the other parts of the
@@ -196,6 +238,25 @@ setup_net()
 		fi
 
 		lock_file
+
+		#
+		# If we have an overlay device, do we need to create it, or does
+		# it already exist?
+		#
+		if [[ -n "$isoverlay" ]]; then
+			if ! dladm show-overlay $global_nic 2>/dev/null; then
+				dladm create-overlay $rule -v $num $global_nic
+				if [[ $? -ne 0 ]]; then
+					logger -p daemon.err "zone $ZONENAME " \
+					    "failed to create overlay device " \
+					     "$global_nic with command " \
+					     "'dladm create-overlay $rule -v " \
+					     "$num $global_nic"
+					exit 1
+				fi
+			fi
+		fi
+
 
 		#
 		# Create the vnic.

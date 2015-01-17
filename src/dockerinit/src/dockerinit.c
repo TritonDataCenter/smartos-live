@@ -873,7 +873,7 @@ setupWorkdir()
             }
         }
     } else {
-        workdir = pwd->pw_dir;
+        workdir = "/";
     }
 
     dlog("WORKDIR '%s'\n", workdir);

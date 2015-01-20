@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright (c) 2014 Joyent, Inc. All rights reserved.
+# Copyright (c) 2015 Joyent, Inc. All rights reserved.
 #
 
 #
@@ -160,7 +160,7 @@ function valid_stub_name()
 
 function valid_gen_name()
 {
-    local res=$(echo ${1} | sed 's/[a-zA-Z0-9_]//')
+    local res=$(echo ${1} | sed -E 's/[a-zA-Z0-9_]+//')
     [[ -z "$res" ]]
 }
 
@@ -367,7 +367,7 @@ function tag_exists()
 
     eval "seen=\${seen_${1}}"
     typ=$(get_tag_type ${1})
-    [[ "${typ}" -eq "overlay_rule" ]] && return 1
+    [[ "${typ}" == "overlay_rule" ]] && return 1
     [[ -n "${seen}" ]] && return 0
 
     return 1

@@ -114,6 +114,7 @@ var MetadataAgent = module.exports = function (options) {
                 this.done = true;
                 zlog.info('Closing kvm stream for ' + zopts.zone);
                 kvmstream.end();
+                delete (self.zoneConnections)[zopts.zone];
             }
         };
 
@@ -330,6 +331,7 @@ var MetadataAgent = module.exports = function (options) {
                     zlog.info('Closing server');
                     try {
                         server.close();
+                        delete (self.zoneConnections)[zopts.zone];
                     } catch (e) {
                         zlog.error({err: e}, 'Caught exception closing server: '
                             + e.message);
@@ -792,34 +794,59 @@ var MetadataAgent = module.exports = function (options) {
     }
 
     function handleEvent(task) {
+
+        function start(zonename, brand, callback) {
+            if (!self.zoneConnections.hasOwnProperty(zonename)) {
+                if (brand === 'kvm') {
+                    startKVMSocketServer(zonename, function (err) {
+                        callback();
+                    });
+                } else {
+                    startZoneSocketServer(zonename, function (err) {
+                        callback();
+                    });
+                }
+            } else {
+                callback();
+            }
+        }
+
+        function stop(zonename, callback) {
+            if (self.zoneConnections.hasOwnProperty(zonename)) {
+                self.zoneConnections[zonename].end();
+            }
+            callback();
+        }
+
         self.event_queue.enqueue(function (callback) {
+            var old_state;
+            var new_state;
+
             switch (task.type) {
             case 'create':
                 self.vmobjs[task.zonename] = task.vm;
                 createZoneLog(task.vm.brand, task.zonename);
-                if (task.vm.brand === 'kvm') {
-                    startKVMSocketServer(task.zonename,
-                        function (err) {
-                        callback();
-                    });
-                } else {
-                    startZoneSocketServer(task.zonename,
-                        function (err) {
-                        callback();
-                    });
-                }
+                start(task.zonename, task.vm.brand, callback);
                 break;
             case 'modify':
+                old_state = self.vmobjs[task.zonename].state;
+                new_state = task.vm.state;
                 self.vmobjs[task.zonename] = task.vm;
-                callback();
+                if (new_state === 'running' && old_state !== 'running') {
+                    start(task.zonename, task.vm.brand, callback);
+                } else if (new_state === 'stopped' && old_state !== 'stopped') {
+                    stop(task.zonename, callback);
+                } else {
+                    callback();
+                }
                 break;
             case 'delete':
-                self.zoneConnections[task.zonename].end();
+                stop(task.zonename, callback);
                 delete (self.zlog)[task.zonename];
                 delete (self.vmobjs)[task.zonename];
                 callback();
                 break;
-            default :
+            default:
                 callback();
                 break;
             }
@@ -919,14 +946,18 @@ var MetadataAgent = module.exports = function (options) {
             var vmobj = self.vmobjs[zonename];
             createZoneLog(vmobj.brand, zonename);
 
-            if (vmobj.brand === 'kvm') {
-                startKVMSocketServer(zonename, function (err) {
-                    cb();
-                });
+            if (vmobj.state === 'running') {
+                if (vmobj.brand === 'kvm') {
+                    startKVMSocketServer(zonename, function (err) {
+                        cb();
+                    });
+                } else {
+                    startZoneSocketServer(zonename, function (err) {
+                        cb();
+                    });
+                }
             } else {
-                startZoneSocketServer(zonename, function (err) {
-                    cb();
-                });
+                cb();                
             }
         }, callback);
     };

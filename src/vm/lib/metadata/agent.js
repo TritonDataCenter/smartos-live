@@ -860,13 +860,15 @@ var MetadataAgent = module.exports = function (options) {
                 self.startEvents();
             });
 
+            self.log.info('subscribed to vminfo. Waiting for events.');
+
             if (callback) {
                 callback();
             }
         }).on('error', function (err) {
-            self.log.debug('vminfod request failed: ' + err.message);
+            self.log.error('vminfod request failed: ' + err.message);
 
-            if (self.eventConnectAttempts == 10) {
+            if (self.eventConnectAttempts === 10) {
                 self.log.error('vminfod event requests reached max attempts');
                 throw new Error('Unable to subscribe to vminfod events');
             } else {

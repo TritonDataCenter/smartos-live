@@ -55,10 +55,65 @@ var MetadataAgent = module.exports = function (options) {
         self.refresh_interval = 300000; // 5 minutes
     }
 
-    function createZoneLog(type, zonename) {
-        var opts = {brand: type, 'zonename': zonename};
+    function createZoneLog(zonename) {
+        var brand = self.vmobjs[zonename].brand;
+        var opts = {brand: brand, 'zonename': zonename};
         self.zlog[zonename] = self.log.child(opts);
         return (self.zlog[zonename]);
+    }
+
+    function createVmobj(vmobj, callback) {
+        self.vmobjs[vmobj.zonename] = vmobj;
+        createZoneLog(vmobj.zonename);
+        startServer(vmobj.zonename, callback);
+    }
+
+    function modifyVmobj(vmobj, callback) {
+        var old_state = self.vmobjs[vmobj.zonename].state;
+        var new_state = vmobj.state;
+        self.vmobjs[vmobj.zonename] = vmobj;
+        if (new_state === 'running' && old_state !== 'running') {
+            startServer(vmobj.zonename, callback);
+        } else if (new_state === 'stopped' && old_state !== 'stopped') {
+            stopServer(vmobj.zonename, callback);
+        } else {
+            callback();
+        }
+    }
+
+    function deleteVmobj(zonename, callback) {
+        stopServer(zonename, function () {
+            delete (self.zlog)[zonename];
+            delete (self.vmobjs)[zonename];
+            callback();
+        });
+    }
+
+    function startServer(zonename, callback) {
+        var brand = self.vmobjs[zonename].brand;
+
+        if (!self.zoneConnections.hasOwnProperty(zonename)
+            && self.vmobjs[zonename].state === 'running') {
+
+            if (brand === 'kvm') {
+                startKVMSocketServer(zonename, function (err) {
+                    callback();
+                });
+            } else {
+                startZoneSocketServer(zonename, function (err) {
+                    callback();
+                });
+            }
+        } else {
+            callback();
+        }
+    }
+
+    function stopServer(zonename, callback) {
+        if (self.zoneConnections.hasOwnProperty(zonename)) {
+            self.zoneConnections[zonename].end();
+        }
+        callback();
     }
 
     function startKVMSocketServer(zonename, callback) {
@@ -794,57 +849,16 @@ var MetadataAgent = module.exports = function (options) {
     }
 
     function handleEvent(task) {
-
-        function start(zonename, brand, callback) {
-            if (!self.zoneConnections.hasOwnProperty(zonename)) {
-                if (brand === 'kvm') {
-                    startKVMSocketServer(zonename, function (err) {
-                        callback();
-                    });
-                } else {
-                    startZoneSocketServer(zonename, function (err) {
-                        callback();
-                    });
-                }
-            } else {
-                callback();
-            }
-        }
-
-        function stop(zonename, callback) {
-            if (self.zoneConnections.hasOwnProperty(zonename)) {
-                self.zoneConnections[zonename].end();
-            }
-            callback();
-        }
-
         self.event_queue.enqueue(function (callback) {
-            var old_state;
-            var new_state;
-
             switch (task.type) {
             case 'create':
-                self.vmobjs[task.zonename] = task.vm;
-                createZoneLog(task.vm.brand, task.zonename);
-                start(task.zonename, task.vm.brand, callback);
+                createVmobj(task.vm, callback);
                 break;
             case 'modify':
-                old_state = self.vmobjs[task.zonename].state;
-                new_state = task.vm.state;
-                self.vmobjs[task.zonename] = task.vm;
-                if (new_state === 'running' && old_state !== 'running') {
-                    start(task.zonename, task.vm.brand, callback);
-                } else if (new_state === 'stopped' && old_state !== 'stopped') {
-                    stop(task.zonename, callback);
-                } else {
-                    callback();
-                }
+                modifyVmobj(task.vm, callback);
                 break;
             case 'delete':
-                stop(task.zonename, callback);
-                delete (self.zlog)[task.zonename];
-                delete (self.vmobjs)[task.zonename];
-                callback();
+                deleteVmobj(task.zonename, callback);
                 break;
             default:
                 callback();
@@ -943,27 +957,108 @@ var MetadataAgent = module.exports = function (options) {
 
     self.startServers = function (callback) {
         async.each(Object.keys(self.vmobjs), function (zonename, cb) {
-            var vmobj = self.vmobjs[zonename];
-            createZoneLog(vmobj.brand, zonename);
-
-            if (vmobj.state === 'running') {
-                if (vmobj.brand === 'kvm') {
-                    startKVMSocketServer(zonename, function (err) {
-                        cb();
-                    });
-                } else {
-                    startZoneSocketServer(zonename, function (err) {
-                        cb();
-                    });
-                }
-            } else {
-                cb();                
-            }
+            createZoneLog(zonename);
+            startServer(zonename, cb);
         }, callback);
     };
 
+    /*
+     * reset() hard reset the data to ensure integrity
+     *
+     * This function will:
+     *   1- pause the event queue
+     *   2- fetch new vmobjs
+     *   3- synchronize vmobjs/servers
+     *   4- resume the event queue
+     */
     function reset(callback) {
-        callback();
+        var new_vmobjs = {};
+
+        async.series([
+            // pause the queue
+            function (cb) {
+                self.log.debug('pausing the event queue');
+                self.event_queue.pause(cb);
+            },
+            // fetch new vmobjs
+            function (cb) {
+                var opts = {host: '127.0.0.1', port: 9090, path: '/vms'};
+                http.get(opts, function (res) {
+                    var body = '';
+                    var vmobjs;
+
+                    res.on('data', function (chunk) {
+                        body += chunk;
+                    });
+
+                    res.on('end', function () {
+                        if (res.statusCode === 200) {
+                            try {
+                                vmobjs = JSON.parse(body);
+                                vmobjs.forEach(function (vmobj) {
+                                    new_vmobjs[vmobj.zonename] = vmobj;
+                                });
+                                cb();
+                            } catch (e) {
+                                self.log.debug('failed to parse body from '
+                                    + 'vminfod: ' + e.message);
+                                cb(e);
+                            }
+                        } else {
+                            self.log.debug('vminfod response not usable: '
+                                + res.statusCode);
+                            cb(new Error('vminfo invalid response code'));
+                        }
+                    });
+                }).on('error', function (err) {
+                    self.log.debug('vminfod request failed: ' + err.message);
+                    cb(err);
+                });
+            },
+            // synchronize vmobjs/servers
+            function (cb) {
+                async.series([
+                    // remove stale
+                    function (cb1) {
+                        async.each(Object.keys(self.vmobjs),
+                            function (zonename, cb2) {
+
+                            if (!new_vmobjs.hasOwnProperty(zonename)) {
+                                deleteVmobj(zonename, cb2);
+                            } else {
+                                cb2();
+                            }
+                        }, cb1);
+                    },
+                    // add new
+                    function (cb1) {
+                        async.each(Object.keys(new_vmobjs),
+                            function (zonename, cb2) {
+
+                            if (!self.vmobjs.hasOwnProperty(zonename)) {
+                                createVmobj(new_vmobjs[zonename], cb2);
+                            } else {
+                                cb2();
+                            }
+                        }, cb1);
+                    },
+                    // refresh
+                    function (cb1) {
+                        async.each(Object.keys(new_vmobjs),
+                            function (zonename, cb2) {
+
+                            modifyVmobj(new_vmobjs[zonename], cb2);
+                        }, cb1);
+                    }
+                ], cb);
+            },
+            // resume the event queue
+            function (cb) {
+                self.log.debug('resuming the event queue');
+                self.event_queue.resume();
+                cb();
+            }
+        ], callback);
     }
 
     self.startTimers = function (callback) {

@@ -1593,13 +1593,25 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                 concurrency: 1,
                 worker: function installImg(irec, nextInstall) {
                     TIME('install-'+irec.uuid);
+
+                    // `bar.log` conflicts with `logCb`. It would require
+                    // something more capable than `logCb` to do right.
+                    var barLogCb = function (msg) {
+                        if (bar) {
+                            bar.log(msg);
+                        } else {
+                            logCb(msg);
+                        }
+                    };
+
                     var installOpts = {
                         source: source,
                         zpool: zpool,
                         imgMeta: irec.imgMeta,
                         dsName: format('%s/%s', zpool, irec.uuid),
                         filePath: irec.downloadPath,
-                        quiet: opts.quiet
+                        quiet: opts.quiet,
+                        logCb: barLogCb
                     };
                     self._installSingleImage(installOpts, function (err) {
                         if (err) {
@@ -1607,17 +1619,10 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                             return;
                         }
 
-                        // `bar.log` conflicts with `logCb`. It would require
-                        // something more capable than `logCb` to do right.
-                        var msg = format('Imported image %s (%s@%s)',
+                        barLogCb(format('Imported image %s (%s@%s)',
                             irec.uuid,
                             irec.imgMeta.manifest.name,
-                            irec.imgMeta.manifest.version);
-                        if (bar) {
-                            bar.log(msg);
-                        } else {
-                            logCb(msg);
-                        }
+                            irec.imgMeta.manifest.version));
 
                         rimraf(irec.downloadPath, function (rmErr) {
                             if (rmErr) {
@@ -1967,7 +1972,8 @@ IMGADM.prototype.installImage = function installImage(opts, cb) {
                 filePath: opts.file,
                 dsName: format('%s/%s', opts.zpool, manifest.uuid),
                 zpool: opts.zpool,
-                quiet: opts.quiet
+                quiet: opts.quiet,
+                logCb: logCb
             };
             self._installSingleImage(installOpts, function (err) {
                 if (err) {
@@ -2019,6 +2025,8 @@ IMGADM.prototype._lockPathFromUuid = function _lockPathFromUuid(uuid) {
  * - cd /zones/$uuid/root && tar xf $layerFile
  * - handle .wh.* files
  * - zfs snapshot zones/$uuid@final
+ *
+ * Dev Note: This presumes an imgadm lock is held for this image.
  */
 IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
     var self = this;
@@ -2028,6 +2036,8 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
     assert.string(ctx.dsName, 'ctx.dsName');
     assert.string(ctx.zpool, 'ctx.zpool');
     assert.object(ctx.imgMeta.manifest, 'ctx.imgMeta.manifest');
+    assert.func(ctx.logCb, 'ctx.logCb');
+    assert.func(cb, 'cb');
 
     var zpool = ctx.zpool;
     var manifest = ctx.imgMeta.manifest;
@@ -2037,6 +2047,24 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
     var zoneroot = format('/%s/root', partialDsName);
 
     vasync.pipeline({funcs: [
+        /**
+         * A crashed earlier import of this image could have left a partial
+         * dataset around. Turf it (we hold the lock).
+         */
+        function deleteExistingPartial(_, next) {
+            getZfsDataset(partialDsName, ['name'], function (getErr, ds) {
+                if (getErr) {
+                    next(getErr);
+                } else if (!ds) {
+                    next();
+                } else {
+                    ctx.logCb('Warning: deleting partial dataset left over '
+                        + 'from earlier import attempt: ' + partialDsName);
+                    zfsDestroy(partialDsName, log, next);
+                }
+            });
+        },
+
         function cloneOrigin(_, next) {
             if (!manifest.origin) {
                 next();
@@ -2309,8 +2337,8 @@ IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
         },
 
         /**
-         * We recv'd the dataset to a "...-partial" temporary name. Rename it to
-         * the final name.
+         * We recv'd the dataset to a "...-partial" temporary name.
+         * Rename it to the final name.
          */
         function renameToFinalDsName(_, next) {
             var cmd = format('/usr/sbin/zfs rename %s %s',
@@ -2341,8 +2369,8 @@ IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
                 if (err && ctx.partialDsName) {
                     // Rollback the currently installed dataset, if necessary.
                     // Silently fail here (i.e. only log at trace level) because
-                    // it is possible we errored out before the -partial dataset
-                    // was created.
+                    // it is possible we errored out before the -partial
+                    // dataset was created.
                     var cmd = format('/usr/sbin/zfs destroy -r %s',
                         ctx.partialDsName);
                     exec(cmd, function (rollbackErr, stdout, stderr) {
@@ -2386,6 +2414,7 @@ IMGADM.prototype._installSingleImage = function _installSingleImage(ctx, cb) {
     assert.object(ctx.imgMeta.manifest, 'ctx.imgMeta.manifest');
     assert.number(ctx.imgMeta.size, 'ctx.imgMeta.size');
     assert.optionalBool(ctx.quiet, 'ctx.quiet');
+    assert.func(ctx.logCb, 'ctx.logCb');
     assert.func(cb, 'cb');
 
     var manifest = ctx.imgMeta.manifest;

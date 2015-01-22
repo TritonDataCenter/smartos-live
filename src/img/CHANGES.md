@@ -1,5 +1,9 @@
 # imgadm changelog
 
+## 3.1.1
+
+- [OS-3734] imgadm import fails with 'dataset already exists'
+
 ## 3.1.0
 
 - [OS-3692] Start a very limited "/usr/img/lib/IMG.js" node.js API to

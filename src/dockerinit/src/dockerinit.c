@@ -115,7 +115,9 @@ typedef enum {
     ERR_IPMGMTD_EXIT,
     ERR_IPMGMTD_DIED,
     ERR_IPMGMTD_CRASHED,
-    ERR_MOUNT_DEVFD
+    ERR_MOUNT_DEVFD,
+    ERR_FDOPEN_LOG,
+    ERR_CLOSE
 } dockerinit_err_t;
 
 typedef enum {
@@ -157,6 +159,7 @@ char **env;
 char fallback[] = "1970-01-01T00:00:00.000Z";
 ipadm_handle_t iph;
 char *ipmgmtd_door;
+FILE *log_stream = stderr;
 char *path = NULL;
 struct passwd *pwd;
 struct group *grp;
@@ -246,9 +249,10 @@ fatal(dockerinit_err_t code, char *fmt, ...)
      va_list ap;
      va_start(ap, fmt);
 
-     (void) fprintf(stderr, "%s FATAL (code: %d): ", getTimestamp(), (int)code);
-     (void) vfprintf(stderr, fmt, ap);
-     fflush(stderr);
+     (void) fprintf(log_stream, "%s FATAL (code: %d): ",
+         getTimestamp(), (int)code);
+     (void) vfprintf(log_stream, fmt, ap);
+     fflush(log_stream);
      va_end(ap);
 
     if (code == ERR_UNEXPECTED) {
@@ -263,9 +267,9 @@ dlog(const char *fmt, ...)
 {
      va_list ap;
      va_start(ap, fmt);
-     (void) fprintf(stderr, "%s ", getTimestamp());
-     (void) vfprintf(stderr, fmt, ap);
-     fflush(stderr);
+     (void) fprintf(log_stream, "%s ", getTimestamp());
+     (void) vfprintf(log_stream, fmt, ap);
+     fflush(log_stream);
      va_end(ap);
 }
 
@@ -377,6 +381,16 @@ execCmdline()
 
     dlog("SWITCHING TO /dev/zfd/*\n");
 
+    if (close(0) == -1) {
+        fatal(ERR_CLOSE, "failed to close(0): %s\n", strerror(errno));
+    }
+    if (close(1) == -1) {
+        fatal(ERR_CLOSE, "failed to close(1): %s\n", strerror(errno));
+    }
+    if (close(2) == -1) {
+        fatal(ERR_CLOSE, "failed to close(2): %s\n", strerror(errno));
+    }
+
     _stdin = open("/dev/zfd/0", O_RDONLY);
     if (_stdin == -1) {
         if (errno == ENOENT) {
@@ -390,28 +404,16 @@ execCmdline()
                 strerror(errno));
         }
     }
-    if (dup2(_stdin, 0) == -1) {
-        fatal(ERR_UNEXPECTED, "failed to dup2(_stdin, 0): %s\n",
-            strerror(errno));
-    }
 
     _stdout = open("/dev/zfd/1", O_WRONLY);
     if (_stdout == -1) {
         fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
             strerror(errno));
     }
-    if (dup2(_stdout, 1) == -1) {
-        fatal(ERR_UNEXPECTED, "failed to dup2(_stdout, 1): %s\n",
-            strerror(errno));
-    }
 
     _stderr = open("/dev/zfd/2", O_WRONLY);
     if (_stderr == -1) {
         fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/2: %s\n",
-            strerror(errno));
-    }
-    if (dup2(_stderr, 2) == -1) {
-        fatal(ERR_UNEXPECTED, "failed to dup2(_stderr, 2): %s\n",
             strerror(errno));
     }
 
@@ -1240,6 +1242,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
 {
     int fd;
     int ret;
+    int tmpfd;
     char **ipmgmtd_cmd;
     char **ipmgmtd_env;
 
@@ -1247,16 +1250,29 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     mkdir("/var", 0755);
     mkdir("/var/log", 0755);
 
+    /* start w/ descriptors 0,1,2 attached to /dev/null */
+    if ((tmpfd = open("/dev/null", O_RDONLY)) != 0) {
+        fatal(ERR_OPEN, "failed to open stdin as /dev/null: %d: %s\n", tmpfd,
+            strerror(errno));
+    }
+    if ((tmpfd = open("/dev/null", O_WRONLY)) != 1) {
+        fatal(ERR_OPEN, "failed to open stdout as /dev/null: %d: %s\n", tmpfd,
+            strerror(errno));
+    }
+    if ((tmpfd = open("/dev/null", O_WRONLY)) != 2) {
+        fatal(ERR_OPEN, "failed to open stderr as /dev/null: %d: %s\n", tmpfd,
+            strerror(errno));
+    }
+
     fd = open(LOGFILE, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
     if (fd == -1) {
         fatal(ERR_OPEN, "failed to open log file: %s\n", strerror(errno));
     }
 
-    if (dup2(fd, 1) == -1) {
-        fatal(ERR_UNEXPECTED, "failed to dup2: %s\n", strerror(errno));
-    }
-    if (dup2(fd, 2) == -1) {
-        fatal(ERR_UNEXPECTED, "failed to dup2: %s\n", strerror(errno));
+    log_stream = fdopen(fd, "w");
+    if (log_stream == NULL) {
+        log_stream = stderr;
+        fatal(ERR_FDOPEN_LOG, "failed to fdopen(2): %s\n", strerror(errno));
     }
 
     getBrand();
@@ -1311,9 +1327,9 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     buildCmdline();
 
     /* cleanup mess from mdata-client */
-    close(3); /* /dev/urandom from mdata-client */
-    close(4); /* event port from mdata-client */
-    close(5); /* /native/.zonecontrol/metadata.sock from mdata-client */
+    close(4); /* /dev/urandom from mdata-client */
+    close(5); /* event port from mdata-client */
+    close(6); /* /native/.zonecontrol/metadata.sock from mdata-client */
     /* TODO: ensure we cleaned up everything else mdata created for us */
 
     /* This tells vmadm that provisioning is complete. */

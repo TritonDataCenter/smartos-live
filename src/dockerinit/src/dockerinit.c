@@ -125,28 +125,29 @@ typedef enum {
     JOYENT_MINIMAL = 1
 } brand_t;
 
+int addRoute(const char *, const char *, const char *);
 void addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl);
 void buildCmdEnv();
 void buildCmdline();
+void closeIpadmHandle();
+void dlog(const char *fmt, ...);
 void execCmdline();
+void fatal(dockerinit_err_t code, char *fmt, ...);
 void getBrand();
 void getMdataArray(char *key, nvlist_t **nvl, uint32_t *len);
-void fatal(dockerinit_err_t code, char *fmt, ...);
+void getStdinStatus();
 void getUserGroupData();
-void dlog(const char *fmt, ...);
 void killIpmgmtd();
 const char *mdataGet(const char *keyname);
 void mountLXProc();
 void mountOSDevFD();
+void openIpadmHandle();
+void plumbIf(const char *);
+int raiseIf(char *, char *, char *);
 void runIpmgmtd(char *cmdline[], char *env[]);
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
 void setupWorkdir();
-void openIpadmHandle();
-void closeIpadmHandle();
-void plumbIf(const char *);
-int raiseIf(char *, char *, char *);
-int addRoute(const char *, const char *, const char *);
 
 /* global metadata client bits */
 int initialized_proto = 0;
@@ -160,6 +161,7 @@ char fallback[] = "1970-01-01T00:00:00.000Z";
 ipadm_handle_t iph;
 char *ipmgmtd_door;
 FILE *log_stream = stderr;
+int open_stdin = 0;
 char *path = NULL;
 struct passwd *pwd;
 struct group *grp;
@@ -381,28 +383,35 @@ execCmdline()
 
     dlog("SWITCHING TO /dev/zfd/*\n");
 
-    if (close(0) == -1) {
-        fatal(ERR_CLOSE, "failed to close(0): %s\n", strerror(errno));
+    /*
+     * If 'OpenStdin' is set on the container we reopen stdin as connected to
+     * the zfd. Otherwise we leave it opened as /dev/null.
+     */
+    if (open_stdin) {
+        if (close(0) == -1) {
+            fatal(ERR_CLOSE, "failed to close(0): %s\n", strerror(errno));
+        }
+
+        _stdin = open("/dev/zfd/0", O_RDONLY);
+        if (_stdin == -1) {
+            if (errno == ENOENT) {
+                _stdin = open("/dev/null", O_RDONLY);
+                if (_stdin == -1) {
+                    fatal(ERR_OPEN_CONSOLE, "failed to open /dev/null: %s\n",
+                        strerror(errno));
+                }
+            } else {
+                fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
+                    strerror(errno));
+            }
+        }
     }
+
     if (close(1) == -1) {
         fatal(ERR_CLOSE, "failed to close(1): %s\n", strerror(errno));
     }
     if (close(2) == -1) {
         fatal(ERR_CLOSE, "failed to close(2): %s\n", strerror(errno));
-    }
-
-    _stdin = open("/dev/zfd/0", O_RDONLY);
-    if (_stdin == -1) {
-        if (errno == ENOENT) {
-            _stdin = open("/dev/null", O_RDONLY);
-            if (_stdin == -1) {
-                fatal(ERR_OPEN_CONSOLE, "failed to open /dev/null: %s\n",
-                    strerror(errno));
-            }
-        } else {
-            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
-                strerror(errno));
-        }
     }
 
     _stdout = open("/dev/zfd/1", O_WRONLY);
@@ -909,6 +918,20 @@ getBrand()
 }
 
 void
+getStdinStatus()
+{
+    const char *data;
+    /* open_stdin is global */
+
+    data = mdataGet("docker:open_stdin");
+    if (data != NULL && strcmp("true", data) == 0) {
+        open_stdin = 1;
+    } else {
+        open_stdin = 0;
+    }
+}
+
+void
 setupMtab()
 {
     FILE *fp;
@@ -1325,6 +1348,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     setupWorkdir();
     buildCmdEnv();
     buildCmdline();
+    getStdinStatus();
 
     /* cleanup mess from mdata-client */
     close(4); /* /dev/urandom from mdata-client */

@@ -298,6 +298,7 @@ ZUTIL_BINDINGS.NODE =	$(ZUTIL_SRCDIR)/../lib/zutil_bindings.node
 #
 TARGETS = \
 	bootparams \
+	dockerinit/build/dockerexec \
 	dockerinit/build/dockerinit \
 	diskinfo \
 	disklayout \
@@ -385,6 +386,7 @@ install: all
 	    > $(PREFIX_NODE)/node_modules/node-expat.js
 	cp fswatcher $(DESTDIR)/usr/vm/sbin/fswatcher
 	cp dockerinit/build/dockerinit $(DESTDIR)/usr/vm/sbin/dockerinit
+	cp dockerinit/build/dockerexec $(DESTDIR)/usr/vm/sbin/dockerexec
 	cp zoneevent $(DESTDIR)/usr/vm/sbin/zoneevent
 	cp zfs_send $(DESTDIR)/usr/vm/sbin/zfs_send
 	cp zfs_recv $(DESTDIR)/usr/vm/sbin/zfs_recv
@@ -507,7 +509,12 @@ disklist: disklist.sh
 	cp disklist.sh disklist
 	chmod 0755 disklist
 
-dockerinit/build/dockerinit: dockerinit/src/dockerinit.c
+dockerinit/build/dockerexec: dockerinit/src/dockerexec.c \
+	    dockerinit/src/docker-common.c
+	@(cd dockerinit && $(MAKE) build/dockerexec)
+
+dockerinit/build/dockerinit: dockerinit/src/dockerinit.c \
+	    dockerinit/src/docker-common.c
 	@(cd dockerinit && $(MAKE) build/dockerinit)
 
 mkzpool: mkzpool.js

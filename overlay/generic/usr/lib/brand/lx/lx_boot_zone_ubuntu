@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright 2014 Joyent, Inc.  All rights reserved.
+# Copyright 2015 Joyent, Inc.  All rights reserved.
 #
 
 #
@@ -159,6 +159,7 @@ RMSVCS="acpid
 	plymouth-upstart-bridge
 	pulseaudio
 	setvtrgb
+	systemd-logind
 	tty1
 	tty2
 	tty3

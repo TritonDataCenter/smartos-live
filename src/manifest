@@ -250,6 +250,7 @@ f usr/vm/test/common/vmtest.js 0444 root bin
 f usr/vm/test/runtest 0555 root bin
 f usr/vm/test/runtests 0555 root bin
 f usr/vm/sbin/add-userscript 0555 root bin
+f usr/vm/sbin/dockerexec 0555 root bin
 f usr/vm/sbin/dockerinit 0555 root bin
 f usr/vm/sbin/filewait 0555 root bin
 f usr/vm/sbin/rotate-kvm-logs.sh 0555 root bin

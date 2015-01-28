@@ -70,6 +70,7 @@ var common = require('./common'),
     assertUuid = common.assertUuid,
     execFilePlus = common.execFilePlus;
 var configuration = require('./configuration');
+var Database = require('./database');
 var errors = require('./errors');
 var mod_sources = require('./sources');
 var upgrade = require('./upgrade');
@@ -322,6 +323,7 @@ function IMGADM(options) {
     this.log = options.log;
     this._manifestFromUuid = null;
     this.sources = null;
+    this._db = new Database(options);
 }
 
 IMGADM.prototype.init = function init(callback) {
@@ -660,82 +662,6 @@ IMGADM.prototype._errorFromClientError = function _errorFromClientError(
 
 
 
-IMGADM.prototype._dbImagePath = function _dbImagePath(zpool, uuid) {
-    return path.resolve(common.DB_DIR, 'images', zpool + '-' + uuid + '.json');
-};
-
-
-/**
- * Load the image info for this image from the imgadm db.
- *
- * This never callsback with an error. Basically we treat the imgadm db
- * of image info as a cache: if we don't have the manifest info, then we
- * keep going. A debug message is logged if there is a corrupt db file that
- * is ignored.
- *
- * If no image info is found in the db, then this returns the minimal
- * `imageInfo`:  `{manifest: {uuid: UUID}, zpool: ZPOOL}`
- *
- * @param options {Object}:
- *      - @param uuid {String}
- *      - @param zpool {String}
- * @param callback {Function} `function (err, imageInfo)`
- */
-IMGADM.prototype._dbLoadImage = function _dbLoadImage(options, callback) {
-    var self = this;
-    assert.object(options, 'options');
-    assertUuid(options.uuid, 'options.uuid');
-    assert.string(options.zpool, 'options.zpool');
-    assert.func(callback, 'callback');
-
-    var dbImagePath = this._dbImagePath(options.zpool, options.uuid);
-    fs.readFile(dbImagePath, 'utf8', function (err, content) {
-        var info = null;
-        if (!err) {
-            try {
-                info = JSON.parse(content);
-            } catch (synErr) {
-                self.log.debug(synErr, 'corrupt "%s"', dbImagePath);
-            }
-            assert.equal(info.manifest.uuid, options.uuid, format(
-                'UUID for image in "%s" is wrong', dbImagePath));
-        }
-        if (!info) {
-            info = {manifest: {uuid: options.uuid}, zpool: options.zpool};
-        }
-        callback(null, info);
-    });
-};
-
-
-/**
- * Delete image info for this image from the imgadm db.
- *
- * @param options {Object}:
- *      - @param uuid {String}
- *      - @param zpool {String}
- * @param callback {Function} `function (err)`  It is *not* an error if the
- *      db image file does not exist (imgadm supports handling images that
- *      aren't in the imgadm db).
- */
-IMGADM.prototype._dbDeleteImage = function _dbDeleteImage(options, callback) {
-    assert.object(options, 'options');
-    assertUuid(options.uuid, 'options.uuid');
-    assert.string(options.zpool, 'options.zpool');
-    assert.func(callback, 'callback');
-
-    var dbImagePath = this._dbImagePath(options.zpool, options.uuid);
-    fs.exists(dbImagePath, function (exists) {
-        if (!exists) {
-            callback();
-            return;
-        } else {
-            fs.unlink(dbImagePath, callback);
-        }
-    });
-};
-
-
 /**
  * Save image info to the db.
  *
@@ -746,27 +672,7 @@ IMGADM.prototype._dbDeleteImage = function _dbDeleteImage(options, callback) {
  * @param callback {Function} `function (err)`
  */
 IMGADM.prototype.dbAddImage = function dbAddImage(imageInfo, callback) {
-    assert.object(imageInfo, 'imageInfo');
-    assert.object(imageInfo.manifest, 'imageInfo.manifest');
-    assert.string(imageInfo.zpool, 'imageInfo.zpool');
-    assert.optionalObject(imageInfo.source, 'imageInfo.source');
-
-    var dbImagePath = this._dbImagePath(imageInfo.zpool,
-                                        imageInfo.manifest.uuid);
-    var dbImageDir = path.dirname(dbImagePath);
-    mkdirp(dbImageDir, function (dirErr) {
-        if (dirErr) {
-            callback(dirErr);
-            return;
-        }
-        var dbData = {
-            manifest: imageInfo.manifest,
-            zpool: imageInfo.zpool,
-            source: (imageInfo.source ? imageInfo.source.url : undefined)
-        };
-        var content = JSON.stringify(dbData, null, 2) + '\n';
-        fs.writeFile(dbImagePath, content, 'utf8', callback);
-    });
+    this._db.addImage(imageInfo, callback);
 };
 
 
@@ -883,7 +789,7 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
                 function loadOne(imageName, next) {
                     var parsed = VMADM_FS_NAME_RE.exec(imageName);
                     var opts = {uuid: parsed[2], zpool: parsed[1]};
-                    self._dbLoadImage(opts, function (err, info) {
+                    self._db.loadImage(opts, function (err, info) {
                         if (err) {
                             next(err);
                             return;
@@ -941,7 +847,7 @@ IMGADM.prototype.getImage = function getImage(options, callback) {
             callback(null, null);
             return;
         }
-        self._dbLoadImage(options, function (loadErr, info) {
+        self._db.loadImage(options, function (loadErr, info) {
             if (loadErr) {
                 callback(loadErr);
                 return;
@@ -1160,7 +1066,7 @@ IMGADM.prototype.deleteImage = function deleteImage(options, callback) {
                 }));
                 return;
             }
-            self._dbDeleteImage(options, callback);
+            self._db.deleteImage(options, callback);
         });
     });
 };
@@ -1687,13 +1593,25 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                 concurrency: 1,
                 worker: function installImg(irec, nextInstall) {
                     TIME('install-'+irec.uuid);
+
+                    // `bar.log` conflicts with `logCb`. It would require
+                    // something more capable than `logCb` to do right.
+                    var barLogCb = function (msg) {
+                        if (bar) {
+                            bar.log(msg);
+                        } else {
+                            logCb(msg);
+                        }
+                    };
+
                     var installOpts = {
                         source: source,
                         zpool: zpool,
                         imgMeta: irec.imgMeta,
                         dsName: format('%s/%s', zpool, irec.uuid),
                         filePath: irec.downloadPath,
-                        quiet: opts.quiet
+                        quiet: opts.quiet,
+                        logCb: barLogCb
                     };
                     self._installSingleImage(installOpts, function (err) {
                         if (err) {
@@ -1701,17 +1619,10 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                             return;
                         }
 
-                        // `bar.log` conflicts with `logCb`. It would require
-                        // something more capable than `logCb` to do right.
-                        var msg = format('Imported image %s (%s@%s)',
+                        barLogCb(format('Imported image %s (%s@%s)',
                             irec.uuid,
                             irec.imgMeta.manifest.name,
-                            irec.imgMeta.manifest.version);
-                        if (bar) {
-                            bar.log(msg);
-                        } else {
-                            logCb(msg);
-                        }
+                            irec.imgMeta.manifest.version));
 
                         rimraf(irec.downloadPath, function (rmErr) {
                             if (rmErr) {
@@ -2061,7 +1972,8 @@ IMGADM.prototype.installImage = function installImage(opts, cb) {
                 filePath: opts.file,
                 dsName: format('%s/%s', opts.zpool, manifest.uuid),
                 zpool: opts.zpool,
-                quiet: opts.quiet
+                quiet: opts.quiet,
+                logCb: logCb
             };
             self._installSingleImage(installOpts, function (err) {
                 if (err) {
@@ -2113,6 +2025,8 @@ IMGADM.prototype._lockPathFromUuid = function _lockPathFromUuid(uuid) {
  * - cd /zones/$uuid/root && tar xf $layerFile
  * - handle .wh.* files
  * - zfs snapshot zones/$uuid@final
+ *
+ * Dev Note: This presumes an imgadm lock is held for this image.
  */
 IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
     var self = this;
@@ -2122,6 +2036,8 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
     assert.string(ctx.dsName, 'ctx.dsName');
     assert.string(ctx.zpool, 'ctx.zpool');
     assert.object(ctx.imgMeta.manifest, 'ctx.imgMeta.manifest');
+    assert.func(ctx.logCb, 'ctx.logCb');
+    assert.func(cb, 'cb');
 
     var zpool = ctx.zpool;
     var manifest = ctx.imgMeta.manifest;
@@ -2131,6 +2047,24 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
     var zoneroot = format('/%s/root', partialDsName);
 
     vasync.pipeline({funcs: [
+        /**
+         * A crashed earlier import of this image could have left a partial
+         * dataset around. Turf it (we hold the lock).
+         */
+        function deleteExistingPartial(_, next) {
+            getZfsDataset(partialDsName, ['name'], function (getErr, ds) {
+                if (getErr) {
+                    next(getErr);
+                } else if (!ds) {
+                    next();
+                } else {
+                    ctx.logCb('Warning: deleting partial dataset left over '
+                        + 'from earlier import attempt: ' + partialDsName);
+                    zfsDestroy(partialDsName, log, next);
+                }
+            });
+        },
+
         function cloneOrigin(_, next) {
             if (!manifest.origin) {
                 next();
@@ -2403,8 +2337,8 @@ IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
         },
 
         /**
-         * We recv'd the dataset to a "...-partial" temporary name. Rename it to
-         * the final name.
+         * We recv'd the dataset to a "...-partial" temporary name.
+         * Rename it to the final name.
          */
         function renameToFinalDsName(_, next) {
             var cmd = format('/usr/sbin/zfs rename %s %s',
@@ -2435,8 +2369,8 @@ IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
                 if (err && ctx.partialDsName) {
                     // Rollback the currently installed dataset, if necessary.
                     // Silently fail here (i.e. only log at trace level) because
-                    // it is possible we errored out before the -partial dataset
-                    // was created.
+                    // it is possible we errored out before the -partial
+                    // dataset was created.
                     var cmd = format('/usr/sbin/zfs destroy -r %s',
                         ctx.partialDsName);
                     exec(cmd, function (rollbackErr, stdout, stderr) {
@@ -2480,6 +2414,7 @@ IMGADM.prototype._installSingleImage = function _installSingleImage(ctx, cb) {
     assert.object(ctx.imgMeta.manifest, 'ctx.imgMeta.manifest');
     assert.number(ctx.imgMeta.size, 'ctx.imgMeta.size');
     assert.optionalBool(ctx.quiet, 'ctx.quiet');
+    assert.func(ctx.logCb, 'ctx.logCb');
     assert.func(cb, 'cb');
 
     var manifest = ctx.imgMeta.manifest;

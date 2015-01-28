@@ -111,6 +111,9 @@
 	<device match="urandom" />
 	<device match="vnd/*" />
 	<device match="zero" />
+	<device match="zfd/%z/slave/0" name="zfd/0" />
+	<device match="zfd/%z/slave/1" name="zfd/1" />
+	<device match="zfd/%z/slave/2" name="zfd/2" />
 	<device match="zfs" />
 	<device match="zvol/dsk/%P/%z/*" />
 	<device match="zvol/rdsk/%P/%z/*" />

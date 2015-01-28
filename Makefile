@@ -262,4 +262,13 @@ clean:
 	rm -f tools/cryptpass
 	rm -f 0-*-stamp 1-*-stamp
 
+clobber: clean
+	rm -f output/* output-iso/* output-usb/*
+ 
+iso: live
+	./tools/build_iso
+
+usb: live
+	./tools/build_usb
+
 .PHONY: manifest check jsl

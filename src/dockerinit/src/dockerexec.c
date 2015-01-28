@@ -1,0 +1,141 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+/*
+ * Copyright (c) 2015, Joyent, Inc.
+ */
+
+/*
+ * This program acts as an 'exec' helper for a docker zone on SmartOS. When
+ * `docker exec` is run this is used to:
+ *
+ *  - switch users/groups (based on docker:user)
+ *  - setup environment
+ *  - setup cmdline
+ *  - exec requested cmd
+ *
+ * If successful, the exec cmd will replace this process running in the zone.
+ * If any error is encountered, this will exit non-zero and the exec session
+ * should fail to start.
+ *
+ * A log is also written to /var/log/sdc-dockerexec.log in order to debug
+ * problems.
+ */
+
+#include <door.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <grp.h>
+#include <libipadm.h>
+#include <libinetutil.h>
+#include <libnvpair.h>
+#include <limits.h>
+#include <pwd.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#include <unistd.h>
+
+#include <arpa/inet.h>
+
+#include <net/if.h>
+#include <net/route.h>
+#include <netinet/in.h>
+
+#include <sys/types.h>
+#include <sys/mount.h>
+#include <sys/mntent.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+
+#include "../json-nvlist/json-nvlist.h"
+#include "../mdata-client/common.h"
+#include "../mdata-client/dynstr.h"
+#include "../mdata-client/plat.h"
+#include "../mdata-client/proto.h"
+
+#include "docker-common.h"
+
+#define LOGFILE "/var/log/sdc-dockerexec.log"
+
+/* global metadata client bits */
+int initialized_proto = 0;
+mdata_proto_t *mdp;
+
+/* global data */
+char **cmdline;
+char **env;
+FILE *log_stream = stderr;
+char *path = NULL;
+struct passwd *pwd;
+struct group *grp;
+
+int
+main(int argc, char *argv[])
+{
+    char *execname;
+    int fd;
+
+    /* we'll write our log in /var/log */
+    mkdir("/var", 0755);
+    mkdir("/var/log", 0755);
+
+    fd = open(LOGFILE, O_WRONLY | O_APPEND | O_CREAT | O_CLOEXEC, 0600);
+    if (fd == -1) {
+        fatal(ERR_OPEN, "failed to open log file: %s\n", strerror(errno));
+    }
+
+    log_stream = fdopen(fd, "w");
+    if (log_stream == NULL) {
+        log_stream = stderr;
+        fatal(ERR_FDOPEN_LOG, "failed to fdopen(2): %s\n", strerror(errno));
+    }
+
+    if (argc < 2) {
+        fatal(ERR_NO_COMMAND, "no command specified on cmdline, argc: %d\n",
+            argc);
+    }
+
+    /* NOTE: all of these will call fatal() if there's a problem */
+    getUserGroupData();
+    setupWorkdir();
+    buildCmdEnv();
+
+    /* cleanup mess from mdata-client */
+    close(4); /* /dev/urandom from mdata-client */
+    close(5); /* event port from mdata-client */
+    close(6); /* /native/.zonecontrol/metadata.sock from mdata-client */
+    /* TODO: ensure we cleaned up everything else mdata created for us */
+
+    // TODO: close any descriptors which are not to be attached to this
+    //       exec cmd? Or let the zlogin caller deal with that?
+
+    dlog("DROP PRIVS\n");
+
+    if (setgid(grp->gr_gid) != 0) {
+        fatal(ERR_SETGID, "setgid(%d): %s\n", grp->gr_gid, strerror(errno));
+    }
+    if (initgroups(pwd->pw_name, grp->gr_gid) != 0) {
+        fatal(ERR_INITGROUPS, "initgroups(%s,%d): %s\n", pwd->pw_name,
+            grp->gr_gid, strerror(errno));
+    }
+    if (setuid(pwd->pw_uid) != 0) {
+        fatal(ERR_SETUID, "setuid(%d): %s\n", pwd->pw_uid, strerror(errno));
+    }
+
+    // find execname from argv[1] (w/ path), then execute it.
+    execname = execName(argv[1]); // calls fatal() if fails
+    execve(execname, argv+1, env);
+
+    fatal(ERR_EXEC_FAILED, "execve(%s) failed: %s\n", argv[1],
+        strerror(errno));
+
+    /* NOTREACHED */
+    abort();
+}

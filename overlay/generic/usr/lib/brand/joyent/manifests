@@ -137,6 +137,7 @@ network/slp.xml			disabled
 network/ssh.xml			enabled
 network/vrrp.xml		disabled
 system/auditd.xml		disabled
+system/auditset.xml		disabled
 system/consadm.xml		disabled
 system/console-login.xml	disabled
 system/coreadm.xml		enabled

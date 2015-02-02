@@ -64,7 +64,8 @@ zoneevent :	LIBS +=		-lnvpair -lsysevent
 # These files will get run through jsstyle and jslint on 'make check'
 JS_CHECK_TARGETS=\
   filewait.js \
-	node_modules/{system,onlyif}.js \
+	node_modules/{system,onlyif,net-boot-config}.js \
+	net-boot-config \
 	vm/sbin/*.js \
 	vm/node_modules/{dladm,expander,proptable,utils,VM,qmp,openonerrlogger}.js \
 	vm/node_modules/vmload/*.js \
@@ -430,6 +431,8 @@ install: all
 	sed -e "s|require('dtrace-provider')|require('/usr/fw/node_modules/dtrace-provider')|" \
 	    < node-bunyan/lib/bunyan.js \
 	    > $(DESTDIR)/usr/fw/node_modules/bunyan.js
+	mkdir -m 0755 -p $(DESTDIR)/usr/lib/sdc
+	cp -p net-boot-config $(DESTDIR)/usr/lib/sdc
 
 check: $(JSLINT)
 	@echo "==> Running cstyle..."

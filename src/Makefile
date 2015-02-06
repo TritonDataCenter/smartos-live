@@ -72,8 +72,10 @@ JS_CHECK_TARGETS=\
 	img/sbin/imgadm \
 	vm/tests/test-alias.js \
 	vm/tests/test-cleanup-on-failure.js \
+	vm/tests/test-create.js \
 	vm/tests/test-create-filesystems.js \
 	vm/tests/test-docker.js \
+	vm/tests/test-defaults.js \
 	vm/tests/test-indestructible.js \
 	vm/tests/test-internal_metadata_namespaces.js \
 	vm/tests/test-lastexited.js \
@@ -81,6 +83,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-reboot.js \
 	vm/tests/test-spoof-opts.js \
 	vm/tests/test-tmpfs.js \
+	vm/tests/test-update.js \
 	vm/tests/test-vrrp-nics.js \
 	vm/lib/metadata/*.js
 

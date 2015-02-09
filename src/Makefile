@@ -64,7 +64,7 @@ zoneevent :	LIBS +=		-lnvpair -lsysevent
 
 # These files will get run through jsstyle and jslint on 'make check'
 JS_CHECK_TARGETS=\
-  filewait.js \
+	filewait.js \
 	node_modules/{system,onlyif}.js \
 	vm/sbin/*.js \
 	vm/node_modules/{dladm,expander,proptable,utils,VM,qmp,openonerrlogger}.js \
@@ -74,8 +74,11 @@ JS_CHECK_TARGETS=\
 	img/sbin/imgadm \
 	vm/tests/test-alias.js \
 	vm/tests/test-cleanup-on-failure.js \
+	vm/tests/test-create.js \
+	vm/tests/test-create-filesystems.js \
 	vm/tests/test-docker.js \
 	vm/tests/test-fswatcher.js \
+	vm/tests/test-defaults.js \
 	vm/tests/test-indestructible.js \
 	vm/tests/test-internal_metadata_namespaces.js \
 	vm/tests/test-lastexited.js \
@@ -83,6 +86,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-reboot.js \
 	vm/tests/test-spoof-opts.js \
 	vm/tests/test-tmpfs.js \
+	vm/tests/test-update.js \
 	vm/tests/test-vrrp-nics.js \
 	vm/tests/test-zonewatcher.js \
 	vm/tests/test-zpoolwatcher.js \

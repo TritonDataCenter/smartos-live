@@ -168,13 +168,13 @@ if [[ -z ${ipaddr} ]]; then
     ipaddr=$(set | grep "^SYSINFO_Network_Interface_.*_IPv4_Address" | head -n1 | cut -d'=' -f2)
 fi
 if [[ -n ${ipaddr} ]]; then
-    fullname=${hostname}
+    fullname=""
 
     if [ -n "$CONFIG_dns_domain" ]; then
-        fullname="${hostname}.${CONFIG_dns_domain}"
+        fullname=" ${hostname}.${CONFIG_dns_domain}"
     fi
 
-    printf "${ipaddr}\t${fullname}\n" >> /etc/hosts
+    printf "${ipaddr}\t${hostname}${fullname}\n" >> /etc/hosts
 fi
 
 # Reset the library path now that we are past the critical stage

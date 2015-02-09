@@ -159,10 +159,15 @@ var PAYLOADS = {
                 nic_tag: 'admin'
             }
         ]
+    }, set_rctls: {
+        max_msg_ids: 3333,
+        max_sem_ids: 2332,
+        max_shm_ids: 2345,
+        max_shm_memory: 1234
     }
 };
 
-simple_properties = [
+var simple_properties = [
     ['alias', 'useless VM'],
     ['billing_id', '9.99'],
     ['hostname', 'hamburgerhelper'],
@@ -171,7 +176,7 @@ simple_properties = [
     ['package_version', 'XP']
 ];
 
-test('create VM', function(t) {
+test('create VM', function (t) {
     VM.create(PAYLOADS.create, function (err, vmobj) {
         if (err) {
             t.ok(false, 'error creating VM: ' + err.message);
@@ -183,35 +188,16 @@ test('create VM', function(t) {
     });
 });
 
-/* update ignores values you can't update so this test always fails for now
-test('update v: should fail', function(t) {
-    VM.update(vm_uuid, {v: 31337}, function (err) {
-        t.ok(err, 'failed: ' + (err ? err.message : 'NO!'));
-        if (err) {
-            t.end();
-            return;
-        }
-        VM.load(vm_uuid, {fields: ['v']}, function (err, obj) {
-            t.ok(!err, 'reloaded VM after update');
-            if (err) {
-                t.end();
-                return;
-            }
-            t.ok((obj.v === 1), 'version(' + obj.v + ') == 1');
-            t.end();
-        });
-    });
-});
-*/
-
-test('add net0', function(t) {
-    VM.update(vm_uuid, PAYLOADS.add_net0, function (err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('add net0', function (t) {
+    VM.update(vm_uuid, PAYLOADS.add_net0, function (update_err) {
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
-                failures = 0;
+                var failures = 0;
+                var field;
+
                 if (err) {
                     t.ok(false, 'failed reloading VM');
                 } else if (obj.nics.length !== 1) {
@@ -219,12 +205,16 @@ test('add net0', function(t) {
                 } else {
                     for (field in PAYLOADS.add_net0.add_nics[0]) {
                         if (field === 'physical') {
-                            // physical is a property that gets added but not in the obj
+                            // physical is a property that gets added but not in
+                            // the obj
                             continue;
                         }
-                        if (obj.nics[0][field] !== PAYLOADS.add_net0.add_nics[0][field]) {
-                            t.ok(false, 'failed to set ' + field + ', was [' + obj.nics[0][field] +
-                                '], expected [' + PAYLOADS.add_net0.add_nics[0][field] + ']');
+                        if (obj.nics[0][field]
+                            !== PAYLOADS.add_net0.add_nics[0][field]) {
+
+                            t.ok(false, 'failed to set ' + field + ', was ['
+                                + obj.nics[0][field] + '], expected ['
+                                + PAYLOADS.add_net0.add_nics[0][field] + ']');
                             failures++;
                         }
                     }
@@ -238,17 +228,20 @@ test('add net0', function(t) {
     });
 });
 
-test('add net1 -- bad IP', function(t) {
+test('add net1 -- bad IP', function (t) {
     VM.update(vm_uuid, PAYLOADS.add_net1, function (err) {
-        t.ok(err, 'failed to add nic with invalid IP: ' + (err ? err.message : ''));
+        t.ok(err, 'failed to add nic with invalid IP: '
+            + (err ? err.message : ''));
         t.end();
     });
 });
 
-test('add KVM-only property to zone', function(t) {
-    VM.update(vm_uuid, PAYLOADS.add_invalid_allow_unfiltered_promisc, function(err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('add KVM-only property to zone', function (t) {
+    VM.update(vm_uuid, PAYLOADS.add_invalid_allow_unfiltered_promisc,
+        function (update_err) {
+
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
@@ -257,9 +250,12 @@ test('add KVM-only property to zone', function(t) {
                     t.end();
                     return;
                 }
-                t.ok(obj.nics.length === 1, 'VM has [' + obj.nics.length + ' vs. 1] nics');
+                t.ok(obj.nics.length === 1, 'VM has [' + obj.nics.length
+                    + ' vs. 1] nics');
                 if (obj.nics.length === 1) {
-                    t.ok(!obj.nics[0].hasOwnProperty('allow_unfiltered_promisc'), 'allow_unfiltered_promisc is not set');
+                    t.ok(!obj.nics[0]
+                        .hasOwnProperty('allow_unfiltered_promisc'),
+                        'allow_unfiltered_promisc is not set');
                 }
                 t.end();
             });
@@ -267,10 +263,10 @@ test('add KVM-only property to zone', function(t) {
     });
 });
 
-test('remove net0', function(t) {
-    VM.update(vm_uuid, PAYLOADS.remove_net0, function(err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('remove net0', function (t) {
+    VM.update(vm_uuid, PAYLOADS.remove_net0, function (update_err) {
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
@@ -287,28 +283,39 @@ test('remove net0', function(t) {
     });
 });
 
-test('add net0 and net1', function(t) {
-    VM.update(vm_uuid, PAYLOADS.add_net0_and_net1, function (err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('add net0 and net1', function (t) {
+    VM.update(vm_uuid, PAYLOADS.add_net0_and_net1, function (update_err) {
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
-                failures = 0;
+                var failures = 0;
+                var field;
+                var nic;
+
                 if (err) {
                     t.ok(false, 'failed reloading VM');
                 } else if (obj.nics.length !== 2) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
                 } else {
                     for (nic in [0, 1]) {
-                        for (field in PAYLOADS.add_net0_and_net1.add_nics[nic]) {
+                        for (field in
+                            PAYLOADS.add_net0_and_net1.add_nics[nic]) {
+
                             if (field === 'physical') {
-                                // physical is a property that gets added but not in the obj
+                                // physical is a property that gets added but
+                                // not in the obj
                                 continue;
                             }
-                            if (obj.nics[nic][field] !== PAYLOADS.add_net0_and_net1.add_nics[nic][field]) {
-                                t.ok(false, 'failed to set ' + field + ', was [' + obj.nics[nic][field] +
-                                    '], expected [' + PAYLOADS.add_net0_and_net1.add_nics[nic][field] + ']');
+                            if (obj.nics[nic][field]
+                                !== PAYLOADS.add_net0_and_net1
+                                .add_nics[nic][field]) {
+
+                                t.ok(false, 'failed to set ' + field + ', was ['
+                                    + obj.nics[nic][field] + '], expected ['
+                                    + PAYLOADS.add_net0_and_net1
+                                    .add_nics[nic][field] + ']');
                                 failures++;
                             }
                         }
@@ -323,10 +330,10 @@ test('add net0 and net1', function(t) {
     });
 });
 
-test('remove net0 and net1', function(t) {
-    VM.update(vm_uuid, PAYLOADS.remove_net0_and_net1, function(err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('remove net0 and net1', function (t) {
+    VM.update(vm_uuid, PAYLOADS.remove_net0_and_net1, function (update_err) {
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
@@ -343,20 +350,24 @@ test('remove net0 and net1', function(t) {
     });
 });
 
-test('add 3 nics, 2 non-private', function(t) {
-    VM.update(vm_uuid, PAYLOADS.add_3_nics_2_non_private, function (err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('add 3 nics, 2 non-private', function (t) {
+    VM.update(vm_uuid, PAYLOADS.add_3_nics_2_non_private,
+        function (update_err) {
+
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
-                failures = 0;
+                var failures = 0;
+
                 if (err) {
                     t.ok(false, 'failed reloading VM');
                 } else if (obj.nics.length !== 3) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
                 } else {
-                    t.ok(obj.nics[1].primary === true, '2nd NIC is primary: ' + !!obj.nics[1].primary);
+                    t.ok(obj.nics[1].primary === true, '2nd NIC is primary: '
+                        + !!obj.nics[1].primary);
                 }
                 if (failures === 0) {
                     t.ok(true, 'updated VM: ' + vm_uuid);
@@ -367,10 +378,10 @@ test('add 3 nics, 2 non-private', function(t) {
     });
 });
 
-test('remove net1 -- 1st time', function(t) {
-    VM.update(vm_uuid, PAYLOADS.remove_net1, function(err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('remove net1 -- 1st time', function (t) {
+    VM.update(vm_uuid, PAYLOADS.remove_net1, function (update_err) {
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
@@ -380,7 +391,8 @@ test('remove net1 -- 1st time', function(t) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
                 } else {
                     t.ok(true, 'Successfully removed net1 from VM');
-                    t.ok(obj.nics[1].primary === true, 'xxx 2nd NIC is primary: ' + !!obj.nics[1].primary);
+                    t.ok(obj.nics[1].primary === true, '2nd NIC is primary: '
+                        + !!obj.nics[1].primary);
                     t.ok(true, JSON.stringify(obj.nics));
                 }
                 t.end();
@@ -389,10 +401,10 @@ test('remove net1 -- 1st time', function(t) {
     });
 });
 
-test('remove net0 and net2 -- 1st time', function(t) {
-    VM.update(vm_uuid, PAYLOADS.remove_net0_and_net2, function(err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('remove net0 and net2 -- 1st time', function (t) {
+    VM.update(vm_uuid, PAYLOADS.remove_net0_and_net2, function (update_err) {
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
@@ -409,20 +421,24 @@ test('remove net0 and net2 -- 1st time', function(t) {
     });
 });
 
-test('add 3 nics, 1 non-private', function(t) {
-    VM.update(vm_uuid, PAYLOADS.add_3_nics_1_non_private, function (err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('add 3 nics, 1 non-private', function (t) {
+    VM.update(vm_uuid, PAYLOADS.add_3_nics_1_non_private,
+        function (update_err) {
+
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
-                failures = 0;
+                var failures = 0;
+
                 if (err) {
                     t.ok(false, 'failed reloading VM');
                 } else if (obj.nics.length !== 3) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
                 } else {
-                    t.ok(obj.nics[1].primary === true, '2nd NIC is primary: ' + !!obj.nics[1].primary);
+                    t.ok(obj.nics[1].primary === true, '2nd NIC is primary: '
+                        + !!obj.nics[1].primary);
                 }
                 if (failures === 0) {
                     t.ok(true, 'updated VM: ' + vm_uuid);
@@ -433,10 +449,10 @@ test('add 3 nics, 1 non-private', function(t) {
     });
 });
 
-test('remove net1 -- 2nd time', function(t) {
-    VM.update(vm_uuid, PAYLOADS.remove_net1, function(err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('remove net1 -- 2nd time', function (t) {
+    VM.update(vm_uuid, PAYLOADS.remove_net1, function (update_err) {
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
@@ -446,7 +462,8 @@ test('remove net1 -- 2nd time', function(t) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
                 } else {
                     t.ok(true, 'Successfully removed net0 and net1 from VM');
-                    t.ok(obj.nics[0].primary === true, '1st NIC is primary: ' + !!obj.nics[0].primary);
+                    t.ok(obj.nics[0].primary === true, '1st NIC is primary: '
+                        + !!obj.nics[0].primary);
                 }
                 t.end();
             });
@@ -454,10 +471,10 @@ test('remove net1 -- 2nd time', function(t) {
     });
 });
 
-test('remove net0 and net2 -- 2nd time', function(t) {
-    VM.update(vm_uuid, PAYLOADS.remove_net0_and_net2, function(err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('remove net0 and net2 -- 2nd time', function (t) {
+    VM.update(vm_uuid, PAYLOADS.remove_net0_and_net2, function (update_err) {
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
@@ -474,10 +491,12 @@ test('remove net0 and net2 -- 2nd time', function(t) {
     });
 });
 
-test('add NIC with minimal properties', function(t) {
-    VM.update(vm_uuid, PAYLOADS.add_nic_with_minimal_properties, function(err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('add NIC with minimal properties', function (t) {
+    VM.update(vm_uuid, PAYLOADS.add_nic_with_minimal_properties,
+        function (update_err) {
+
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
@@ -488,11 +507,14 @@ test('add NIC with minimal properties', function(t) {
                 if (err) {
                     return;
                 }
-                t.ok(obj.nics.length === 1, 'VM has ' + obj.nics.length + ' nics, expected: 1');
+                t.ok(obj.nics.length === 1, 'VM has ' + obj.nics.length
+                    + ' nics, expected: 1');
                 nic = obj.nics[0];
                 for (prop in nic) {
-                    t.ok((['interface', 'mac', 'nic_tag', 'ip'].indexOf(prop) !== -1), 'prop is expected: ' + prop);
-                    t.ok(nic[prop] !== 'undefined', 'prop ' + prop + ' is not undefined');
+                    t.ok((['interface', 'mac', 'nic_tag', 'ip']
+                        .indexOf(prop) !== -1), 'prop is expected: ' + prop);
+                    t.ok(nic[prop] !== 'undefined', 'prop ' + prop
+                        + ' is not undefined');
                 }
                 t.end();
             });
@@ -500,7 +522,7 @@ test('add NIC with minimal properties', function(t) {
     });
 });
 
-test('set then unset simple properties', function(t) {
+test('set then unset simple properties', function (t) {
     async.forEachSeries(simple_properties,
         function (item, cb) {
             var prop = item[0];
@@ -509,35 +531,39 @@ test('set then unset simple properties', function(t) {
 
             payload[prop] = value;
 
-            VM.update(vm_uuid, payload, function(err) {
-                if (err) {
-                    t.ok(false, 'error updating VM: ' + err.message);
+            VM.update(vm_uuid, payload, function (update_err) {
+                if (update_err) {
+                    t.ok(false, 'error updating VM: ' + update_err.message);
                     t.end();
                     cb();
                 } else {
                     VM.load(vm_uuid, function (err, obj) {
                         if (err) {
-                            t.ok(false, 'failed reloading VM');
-                            return cb();
+                            t.ok(false, 'failed reloading VM: ' + err.message);
+                            cb();
+                            return;
                         } else {
                             t.ok(obj[prop] === value, prop + ' is ' + obj[prop]
                                 + ', expected: ' + value);
                         }
                         payload[prop] = undefined;
-                        VM.update(vm_uuid, payload, function (err) {
-                            if (err) {
-                                t.ok(false, 'error updating VM: ' + err.message);
+                        VM.update(vm_uuid, payload, function (up_err) {
+                            if (up_err) {
+                                t.ok(false, 'error updating VM: '
+                                    + up_err.message);
                                 t.end();
                                 cb();
                             } else {
-                                VM.load(vm_uuid, function (err, obj) {
-                                    if (err) {
-                                        t.ok(false, 'failed reloading VM');
-                                        return cb();
+                                VM.load(vm_uuid, function (l_err, l_obj) {
+                                    if (l_err) {
+                                        t.ok(false, 'failed reloading VM: '
+                                            + l_err.message);
+                                        cb();
+                                        return;
                                     }
-                                    t.ok(!obj.hasOwnProperty(prop), prop +
-                                        ' is ' + obj[prop] + ', expected: ' +
-                                        'undefined');
+                                    t.ok(!l_obj.hasOwnProperty(prop), prop
+                                        + ' is ' + l_obj[prop] + ', expected: '
+                                        + 'undefined');
                                     cb();
                                 });
                             }
@@ -552,10 +578,10 @@ test('set then unset simple properties', function(t) {
     );
 });
 
-test('update quota', function(t) {
-    VM.update(vm_uuid, {quota: 13}, function(err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('update quota', function (t) {
+    VM.update(vm_uuid, {quota: 13}, function (update_err) {
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
@@ -566,28 +592,35 @@ test('update quota', function(t) {
                     t.ok(false, 'VM has ' + obj.quota + ' != 13');
                     t.end();
                 } else {
-                    execFile('/usr/sbin/zfs', ['get', '-H', '-o', 'value', 'quota', obj.zonepath.substr(1)],
-                        function (error, stdout, stderr) {
-                            var res;
-                            if (error) {
-                                t.ok(false, 'Failed to get quota from zfs: ' + e.message);
-                            } else {
-                                res = stdout.replace(new RegExp('[\\s]+$', 'g'), '');
-                                t.ok(res === '13G', 'updated quota now: ' + res + ' vs 13G');
-                            }
-                            t.end();
+                    execFile('/usr/sbin/zfs', [
+                        'get',
+                        '-H',
+                        '-o', 'value',
+                        'quota',
+                        obj.zonepath.substr(1)
+                    ], function (error, stdout, stderr) {
+                        var res;
+                        if (error) {
+                            t.ok(false, 'Failed to get quota from zfs: '
+                                + error.message);
+                        } else {
+                            res = stdout
+                                .replace(new RegExp('[\\s]+$', 'g'), '');
+                            t.ok(res === '13G', 'updated quota now: ' + res
+                                + ' vs 13G');
                         }
-                    );
+                        t.end();
+                    });
                 }
             });
         }
     });
 });
 
-test('remove quota', function(t) {
-    VM.update(vm_uuid, {quota: 0}, function(err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+test('remove quota', function (t) {
+    VM.update(vm_uuid, {quota: 0}, function (update_err) {
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
@@ -598,18 +631,25 @@ test('remove quota', function(t) {
                     t.ok(false, 'VM has ' + obj.quota + ' != 0');
                     t.end();
                 } else {
-                    execFile('/usr/sbin/zfs', ['get', '-H', '-o', 'value', 'quota', obj.zonepath.substr(1)],
-                        function (error, stdout, stderr) {
-                            var res;
-                            if (error) {
-                                t.ok(false, 'Failed to get quota from zfs: ' + e.message);
-                            } else {
-                                res = stdout.replace(new RegExp('[\\s]+$', 'g'), '');
-                                t.ok(res === 'none', 'updated quota now: ' + res + ' vs none');
-                            }
-                            t.end();
+                    execFile('/usr/sbin/zfs', [
+                        'get',
+                        '-H',
+                        '-o', 'value',
+                        'quota',
+                        obj.zonepath.substr(1)
+                    ], function (error, stdout, stderr) {
+                        var res;
+                        if (error) {
+                            t.ok(false, 'Failed to get quota from zfs: '
+                                + error.message);
+                        } else {
+                            res = stdout
+                                .replace(new RegExp('[\\s]+$', 'g'), '');
+                            t.ok(res === 'none', 'updated quota now: ' + res
+                                + ' vs none');
                         }
-                    );
+                        t.end();
+                    });
                 }
             });
         }
@@ -618,10 +658,10 @@ test('remove quota', function(t) {
 
 function test_update_ram(ram)
 {
-    test('update ram ' + ram, function(t) {
-        VM.update(vm_uuid, {ram: ram}, function(err) {
-            if (err) {
-                t.ok(false, 'error updating VM: ' + err.message);
+    test('update ram ' + ram, function (t) {
+        VM.update(vm_uuid, {ram: ram}, function (update_err) {
+            if (update_err) {
+                t.ok(false, 'error updating VM: ' + update_err.message);
                 t.end();
             } else {
                 VM.load(vm_uuid, function (err, obj) {
@@ -630,10 +670,12 @@ function test_update_ram(ram)
                         t.end();
                     }
 
-                    t.ok((obj.max_physical_memory === Number(ram)), 'vm.max_physical_memory: '
-                        + obj.max_physical_memory + ' expected: ' + ram);
-                    t.ok((obj.max_locked_memory === Number(ram)), 'vm.max_locked_memory: '
-                        + obj.max_locked_memory + ' expected: ' + ram);
+                    t.ok((obj.max_physical_memory === Number(ram)),
+                        'vm.max_physical_memory: ' + obj.max_physical_memory
+                        + ' expected: ' + ram);
+                    t.ok((obj.max_locked_memory === Number(ram)),
+                        'vm.max_locked_memory: ' + obj.max_locked_memory
+                        + ' expected: ' + ram);
                     if (ram > 256) {
                         t.ok((obj.max_swap === Number(ram)), 'vm.max_swap: '
                             + obj.max_swap + ' expected: ' + ram);
@@ -660,7 +702,7 @@ test_update_ram('64');
 test_update_ram(1024);
 
 // now try *just* updating swap
-test('update max_swap (up)', function(t) {
+test('update max_swap (up)', function (t) {
     var test_value = 1536;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -669,25 +711,27 @@ test('update max_swap (up)', function(t) {
             t.end();
             return;
         }
-        VM.update(vm_uuid, {max_swap: test_value}, function(err) {
-            if (err) {
-                t.ok(false, 'error updating VM: ' + err.message);
+        VM.update(vm_uuid, {max_swap: test_value}, function (update_err) {
+            if (update_err) {
+                t.ok(false, 'error updating VM: ' + update_err.message);
                 t.end();
             } else {
-                VM.load(vm_uuid, function (err, obj) {
-                    if (err) {
-                        t.ok(false, 'failed reloading VM');
+                VM.load(vm_uuid, function (l_err, obj) {
+                    if (l_err) {
+                        t.ok(false, 'failed reloading VM: ' + l_err.message);
                         t.end();
                         return;
                     }
-                    t.ok((obj.max_swap === test_value), 'vm.max_swap: ' + obj.max_swap
-                        + ' expected: ' + test_value);
-                    t.ok((obj.tmpfs == before_obj.tmpfs), 'vm.tmpfs: ' + obj.tmpfs
-                        + ' expected: ' + before_obj.tmpfs);
-                    t.ok((obj.max_physical_memory == before_obj.max_physical_memory),
+                    t.ok((obj.max_swap === test_value), 'vm.max_swap: '
+                        + obj.max_swap + ' expected: ' + test_value);
+                    t.ok((obj.tmpfs == before_obj.tmpfs), 'vm.tmpfs: '
+                        + obj.tmpfs + ' expected: ' + before_obj.tmpfs);
+                    t.ok((obj.max_physical_memory
+                        == before_obj.max_physical_memory),
                         'vm.max_physical_memory: ' + obj.max_physical_memory
                         + ' expected: ' + before_obj.max_physical_memory);
-                    t.ok((obj.max_locked_memory == before_obj.max_locked_memory),
+                    t.ok((obj.max_locked_memory
+                        == before_obj.max_locked_memory),
                         'vm.max_locked_memory: ' + obj.max_locked_memory
                         + ' expected: ' + before_obj.max_locked_memory);
                     t.end();
@@ -698,7 +742,7 @@ test('update max_swap (up)', function(t) {
 });
 
 // now try *just* updating swap, and to a lower than RAM.
-test('update max_swap (down)', function(t) {
+test('update max_swap (down)', function (t) {
     var test_value;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -708,14 +752,14 @@ test('update max_swap (down)', function(t) {
             return;
         }
         test_value = (before_obj.max_physical_memory - 64);
-        VM.update(vm_uuid, {'max_swap': test_value}, function(err) {
-            if (err) {
-                t.ok(false, 'error updating VM: ' + err.message);
+        VM.update(vm_uuid, {'max_swap': test_value}, function (up_err) {
+            if (up_err) {
+                t.ok(false, 'error updating VM: ' + up_err.message);
                 t.end();
             } else {
-                VM.load(vm_uuid, function (err, obj) {
-                    if (err) {
-                        t.ok(false, 'failed reloading VM');
+                VM.load(vm_uuid, function (l_err, obj) {
+                    if (l_err) {
+                        t.ok(false, 'failed reloading VM: ' + l_err.message);
                         t.end();
                         return;
                     }
@@ -723,12 +767,14 @@ test('update max_swap (down)', function(t) {
                     t.ok((obj.max_swap === before_obj.max_physical_memory),
                         'vm.max_swap: ' + obj.max_swap
                         + ' expected: ' + before_obj.max_physical_memory);
-                    t.ok((obj.tmpfs == before_obj.tmpfs), 'vm.tmpfs: ' + obj.tmpfs
-                        + ' expected: ' + before_obj.tmpfs);
-                    t.ok((obj.max_physical_memory == before_obj.max_physical_memory),
+                    t.ok((obj.tmpfs == before_obj.tmpfs), 'vm.tmpfs: '
+                        + obj.tmpfs + ' expected: ' + before_obj.tmpfs);
+                    t.ok((obj.max_physical_memory
+                        == before_obj.max_physical_memory),
                         'vm.max_physical_memory: ' + obj.max_physical_memory
                         + ' expected: ' + before_obj.max_physical_memory);
-                    t.ok((obj.max_locked_memory == before_obj.max_locked_memory),
+                    t.ok((obj.max_locked_memory
+                        == before_obj.max_locked_memory),
                         'vm.max_locked_memory: ' + obj.max_locked_memory
                         + ' expected: ' + before_obj.max_locked_memory);
                     t.end();
@@ -739,7 +785,7 @@ test('update max_swap (down)', function(t) {
 });
 
 // now try *just* updating max_physical_memory (up)
-test('update max_physical_memory (up)', function(t) {
+test('update max_physical_memory (up)', function (t) {
     var test_value = 2048;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -748,21 +794,23 @@ test('update max_physical_memory (up)', function(t) {
             t.end();
             return;
         }
-        VM.update(vm_uuid, {'max_physical_memory': test_value}, function(err) {
-            if (err) {
-                t.ok(false, 'error updating VM: ' + err.message);
+        VM.update(vm_uuid, {'max_physical_memory': test_value},
+            function (up_err) {
+
+            if (up_err) {
+                t.ok(false, 'error updating VM: ' + up_err.message);
                 t.end();
             } else {
-                VM.load(vm_uuid, function (err, obj) {
-                    if (err) {
-                        t.ok(false, 'failed reloading VM');
+                VM.load(vm_uuid, function (l_err, obj) {
+                    if (l_err) {
+                        t.ok(false, 'failed reloading VM: ' + l_err.message);
                         t.end();
                         return;
                     }
 
                     // everything else should have been bumped too
-                    t.ok((obj.max_swap === test_value), 'vm.max_swap: ' + obj.max_swap
-                        + ' expected: ' + test_value);
+                    t.ok((obj.max_swap === test_value), 'vm.max_swap: '
+                        + obj.max_swap + ' expected: ' + test_value);
                     t.ok((obj.tmpfs === test_value), 'vm.tmpfs: ' + obj.tmpfs
                         + ' expected: ' + test_value);
                     t.ok((obj.max_physical_memory === test_value),
@@ -779,7 +827,7 @@ test('update max_physical_memory (up)', function(t) {
 });
 
 // now try *just* updating max_physical_memory (down)
-test('update max_physical_memory (down)', function(t) {
+test('update max_physical_memory (down)', function (t) {
     var test_value = 512;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -788,21 +836,21 @@ test('update max_physical_memory (down)', function(t) {
             t.end();
             return;
         }
-        VM.update(vm_uuid, {'max_physical_memory': 512}, function(err) {
-            if (err) {
-                t.ok(false, 'error updating VM: ' + err.message);
+        VM.update(vm_uuid, {'max_physical_memory': 512}, function (up_err) {
+            if (up_err) {
+                t.ok(false, 'error updating VM: ' + up_err.message);
                 t.end();
             } else {
-                VM.load(vm_uuid, function (err, obj) {
-                    if (err) {
-                        t.ok(false, 'failed reloading VM');
+                VM.load(vm_uuid, function (l_err, obj) {
+                    if (l_err) {
+                        t.ok(false, 'failed reloading VM: ' + l_err.message);
                         t.end();
                         return;
                     }
 
                     // everything else should have been lowered
-                    t.ok((obj.max_swap === test_value), 'vm.max_swap: ' + obj.max_swap
-                        + ' expected: ' + test_value);
+                    t.ok((obj.max_swap === test_value), 'vm.max_swap: '
+                        + obj.max_swap + ' expected: ' + test_value);
                     t.ok((obj.tmpfs === test_value), 'vm.tmpfs: ' + obj.tmpfs
                         + ' expected: ' + test_value);
                     t.ok((obj.max_physical_memory === test_value),
@@ -819,7 +867,7 @@ test('update max_physical_memory (down)', function(t) {
 });
 
 // now try *just* updating max_locked_memory, high value (should get clamped)
-test('update max_locked_memory', function(t) {
+test('update max_locked_memory', function (t) {
     var test_value;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -829,26 +877,30 @@ test('update max_locked_memory', function(t) {
             return;
         }
         test_value = before_obj.max_physical_memory + 256;
-        VM.update(vm_uuid, {'max_locked_memory': test_value}, function(err) {
-            if (err) {
-                t.ok(false, 'error updating VM: ' + err.message);
+        VM.update(vm_uuid, {'max_locked_memory': test_value},
+            function (up_err) {
+
+            if (up_err) {
+                t.ok(false, 'error updating VM: ' + up_err.message);
                 t.end();
             } else {
-                VM.load(vm_uuid, function (err, obj) {
-                    if (err) {
-                        t.ok(false, 'failed reloading VM');
+                VM.load(vm_uuid, function (l_err, obj) {
+                    if (l_err) {
+                        t.ok(false, 'failed reloading VM: ' + l_err.message);
                         t.end();
                         return;
                     }
-                    t.ok((obj.max_swap === before_obj.max_swap), 'vm.max_swap: ' + obj.max_swap
-                        + ' expected: ' + before_obj.max_swap);
-                    t.ok((obj.tmpfs == before_obj.tmpfs), 'vm.tmpfs: ' + obj.tmpfs
-                        + ' expected: ' + before_obj.tmpfs);
-                    t.ok((obj.max_physical_memory == before_obj.max_physical_memory),
+                    t.ok((obj.max_swap === before_obj.max_swap), 'vm.max_swap: '
+                        + obj.max_swap + ' expected: ' + before_obj.max_swap);
+                    t.ok((obj.tmpfs == before_obj.tmpfs), 'vm.tmpfs: '
+                        + obj.tmpfs + ' expected: ' + before_obj.tmpfs);
+                    t.ok((obj.max_physical_memory
+                        == before_obj.max_physical_memory),
                         'vm.max_physical_memory: ' + obj.max_physical_memory
                         + ' expected: ' + before_obj.max_physical_memory);
                     // should have been clamped
-                    t.ok((obj.max_locked_memory == before_obj.max_physical_memory),
+                    t.ok((obj.max_locked_memory
+                        == before_obj.max_physical_memory),
                         'vm.max_locked_memory: ' + obj.max_locked_memory
                         + ' expected: ' + before_obj.max_physical_memory);
                     t.end();
@@ -873,41 +925,49 @@ function zonecfg(args, callback)
 
 test('update resolvers when no resolvers', function (t) {
 
-    zonecfg(['-z', vm_uuid, 'remove attr name=resolvers;'], function (err, fds) {
-        VM.update(vm_uuid, {resolvers: ['4.2.2.1', '4.2.2.2']}, function (err) {
-            t.ok(!err, 'no error adding resolvers: ' + (err ? err.message : 'ok'));
-            t.end();
-        });
+    zonecfg([
+        '-z', vm_uuid,
+        'remove attr name=resolvers;'
+    ], function (err, fds) {
+        VM.update(vm_uuid, {resolvers: ['4.2.2.1', '4.2.2.2']},
+            function (up_err) {
+                t.ok(!up_err, 'no error adding resolvers: '
+                    + (up_err ? up_err.message : 'ok'));
+                t.end();
+            }
+        );
     });
 });
 
 test('update resolvers to empty when already empty', function (t) {
-    zonecfg(['-z', vm_uuid, 'remove attr name=resolvers;'], function (err, fds) {
-        VM.load(vm_uuid, function (err, before_obj) {
-            if (err) {
-                t.ok(false, 'loading VM: ' + err.message);
+    zonecfg(['-z', vm_uuid, 'remove attr name=resolvers;'],
+        function (err, fds) {
+
+        VM.load(vm_uuid, function (l_err, before_obj) {
+            if (l_err) {
+                t.ok(false, 'loading VM: ' + l_err.message);
                 t.end();
                 return;
             }
 
-            t.deepEqual(before_obj.resolvers, [], 'initial '
-                + 'state has no resolvers: ' + JSON.stringify(before_obj.resolvers));
-            VM.update(vm_uuid, {'resolvers': []}, function(err) {
-                if (err) {
-                    t.ok(false, 'updating resolvers: ' + err.message);
+            t.deepEqual(before_obj.resolvers, [], 'initial state has no '
+                + 'resolvers: ' + JSON.stringify(before_obj.resolvers));
+            VM.update(vm_uuid, {'resolvers': []}, function (up_err) {
+                if (up_err) {
+                    t.ok(false, 'updating resolvers: ' + up_err.message);
                     t.end();
                     return;
                 }
 
-                VM.load(vm_uuid, function (err, after_obj) {
-                    if (err) {
-                        t.ok(false, 'loading VM (after): ' + err.message);
+                VM.load(vm_uuid, function (error, after_obj) {
+                    if (error) {
+                        t.ok(false, 'loading VM (after): ' + error.message);
                         t.end();
                         return;
                     }
 
-                    t.deepEqual(after_obj.resolvers, [], 'no resolvers after update'
-                        + ': ' + JSON.stringify(after_obj.resolvers));
+                    t.deepEqual(after_obj.resolvers, [], 'no resolvers after '
+                        + 'update: ' + JSON.stringify(after_obj.resolvers));
                     t.end();
                 });
             });
@@ -915,7 +975,47 @@ test('update resolvers to empty when already empty', function (t) {
     });
 });
 
-test('delete zone', function(t) {
+test('update shm rctls', function (t) {
+    var payload_copy = JSON.parse(JSON.stringify(PAYLOADS.set_rctls));
+
+    VM.load(vm_uuid, function (err, before_obj) {
+        if (err) {
+            t.ok(false, 'loading VM: ' + err.message);
+            t.end();
+            return;
+        }
+
+        // Ensure the values are not already what we're changing them to
+        Object.keys(PAYLOADS.set_rctls).forEach(function (k) {
+            t.ok(before_obj[k] !== PAYLOADS.set_rctls[k], k + ' value before '
+                + 'test: ' + before_obj[k]);
+        });
+
+        VM.update(vm_uuid, payload_copy, function (up_err) {
+            if (up_err) {
+                t.ok(false, 'updating rctls: ' + up_err.message);
+                t.end();
+                return;
+            }
+
+            VM.load(vm_uuid, function (l_err, after_obj) {
+                if (l_err) {
+                    t.ok(false, 'loading VM (after): ' + l_err.message);
+                    t.end();
+                    return;
+                }
+
+                Object.keys(PAYLOADS.set_rctls).forEach(function (k) {
+                    t.equal(after_obj[k], PAYLOADS.set_rctls[k], k + ' value '
+                        + 'after test: ' + after_obj[k]);
+                });
+                t.end();
+            });
+        });
+    });
+});
+
+test('delete zone', function (t) {
     if (vm_uuid) {
         VM.delete(vm_uuid, function (err) {
             if (err) {
@@ -930,4 +1030,3 @@ test('delete zone', function(t) {
         t.end();
     }
 });
-

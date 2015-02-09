@@ -270,6 +270,10 @@ f usr/vm/node_modules/dladm.js 0444 root bin
 f usr/vm/node_modules/expander.js 0444 root bin
 f usr/vm/node_modules/ip.js 0444 root bin
 f usr/vm/node_modules/locker.js 0444 root bin
+d usr/vm/node_modules/mkdirp 0755 root root
+f usr/vm/node_modules/mkdirp/LICENSE 0444 root root
+f usr/vm/node_modules/mkdirp/package.json 0444 root root
+f usr/vm/node_modules/mkdirp/index.js 0755 root root
 d usr/vm/node_modules/nodeunit 0755 root root
 f usr/vm/node_modules/nodeunit/LICENSE 0644 root root
 d usr/vm/node_modules/nodeunit/node_modules 0755 root root

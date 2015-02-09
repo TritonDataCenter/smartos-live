@@ -63,7 +63,7 @@ zoneevent :	LIBS +=		-lnvpair -lsysevent
 
 # These files will get run through jsstyle and jslint on 'make check'
 JS_CHECK_TARGETS=\
-  filewait.js \
+	filewait.js \
 	node_modules/{system,onlyif}.js \
 	vm/sbin/*.js \
 	vm/node_modules/{dladm,expander,proptable,utils,VM,qmp,openonerrlogger}.js \

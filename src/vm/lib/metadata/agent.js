@@ -1082,7 +1082,7 @@ MetadataAgent.prototype.start = function (callback) {
     async.series([
         // init queue
         function (cb) {
-            var opts = {workers: 20, paused: true};
+            var opts = {workers: 5, paused: true};
             self.event_queue = new Queue(opts);
             cb();
         },
@@ -1108,6 +1108,14 @@ MetadataAgent.prototype.start = function (callback) {
             self.startTimers(cb);
         }
     ], function (err) {
+        if (err) {
+            self.log.error('failed to complete boot sequence');
+            throw err;
+        } else {
+            self.log.info('boot sequence complete');
+            self.emit('ready', self.vmobjs);
+        }
+
         if (callback) {
             callback();
         }

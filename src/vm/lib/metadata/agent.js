@@ -47,6 +47,7 @@ var MetadataAgent = module.exports = function (options) {
     self.zoneRetryTimeouts = {};
     self.zoneConnections = {};
     self.eventConnectAttempts = 0;
+    self.eventInitialConnect = true;
 
     // set default refresh interval
     if (options.hasOwnProperty('refresh_interval')) {
@@ -903,6 +904,21 @@ var MetadataAgent = module.exports = function (options) {
 
             self.log.info('subscribed to vminfo. Waiting for events.');
 
+            if (self.eventInitialConnect === false) {
+                reset(function (err) {
+                    if (err) {
+                        self.log.warn('failed to reset after re-subscribing '
+                            + 'to vminfo events');
+                    } else {
+                        self.log.info('successfully reset after re-subscribing ' 
+                            + 'to vminfo events');
+                    }
+                });
+            }
+
+            // ensure subsequent disconnects will be reset
+            self.eventInitialConnect = false;
+
             if (callback) {
                 callback();
             }
@@ -915,7 +931,11 @@ var MetadataAgent = module.exports = function (options) {
             } else {
                 // try again in 10 seconds
                 setTimeout(function () {
-                    self.startEvents(callback);
+                    if (self.eventInitialConnect === true) {
+                        self.startEvents(callback);
+                    } else {
+                        self.startEvents();
+                    }
                 }, 10000);
             }
         });
@@ -1113,7 +1133,6 @@ MetadataAgent.prototype.start = function (callback) {
             throw err;
         } else {
             self.log.info('boot sequence complete');
-            self.emit('ready', self.vmobjs);
         }
 
         if (callback) {

@@ -910,7 +910,7 @@ var MetadataAgent = module.exports = function (options) {
                         self.log.warn('failed to reset after re-subscribing '
                             + 'to vminfo events');
                     } else {
-                        self.log.info('successfully reset after re-subscribing ' 
+                        self.log.info('successfully reset after re-subscribing '
                             + 'to vminfo events');
                     }
                 });

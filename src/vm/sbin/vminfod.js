@@ -8,7 +8,7 @@ onlyif.rootInSmartosGlobal(function (err) {
 
     var log = bunyan.createLogger({
         name: 'vminfo',
-        level: 'debug',
+        level: 'info',
         serializers: bunyan.stdSerializers
     });
 

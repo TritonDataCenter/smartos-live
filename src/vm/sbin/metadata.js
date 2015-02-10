@@ -6,7 +6,7 @@ var Agent = require('../lib/metadata/agent');
 
 var log = bunyan.createLogger({
     name: 'metadata',
-    level: 'debug',
+    level: 'info',
     serializers: bunyan.stdSerializers
 });
 

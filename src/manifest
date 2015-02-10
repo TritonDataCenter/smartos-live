@@ -483,7 +483,14 @@ f usr/vm/node_modules/openonerrlogger.js 0444 root bin
 f usr/vm/node_modules/props.js 0444 root bin
 f usr/vm/node_modules/proptable.js 0444 root bin
 f usr/vm/node_modules/qmp.js 0444 root bin
+f usr/vm/node_modules/queue.js 0444 root bin
 f usr/vm/node_modules/utils.js 0444 root bin
+d usr/vm/node_modules/vmevent 0755 root root
+f usr/vm/node_modules/vmevent/diff.js 0644 root root
+f usr/vm/node_modules/vmevent/fswatcher.js 0644 root root
+f usr/vm/node_modules/vmevent/vminfo.js 0644 root root
+f usr/vm/node_modules/vmevent/zonewatcher.js 0644 root root
+f usr/vm/node_modules/vmevent/zpoolwatcher.js 0644 root root
 d usr/vm/node_modules/vmload 0755 root root
 f usr/vm/node_modules/vmload/vmload-zoneadm.js 0644 root root
 f usr/vm/node_modules/vmload/vmload-zoneinfo.js 0644 root root
@@ -502,6 +509,8 @@ f usr/vm/node_modules/vmload/index.js 0644 root root
 f usr/vm/node_modules/VM.js 0444 root bin
 f usr/vm/smf/system-vmadmd 0555 root bin
 f usr/vm/smf/system-vmadmd.xml 0444 root bin
+f usr/vm/smf/system-vminfod 0555 root bin
+f usr/vm/smf/system-vminfod.xml 0444 root bin
 # fwadm
 s etc/bash/bash_completion.d/fwadm=/usr/fw/etc/fwadm.completion
 d usr/fw 0555 root bin

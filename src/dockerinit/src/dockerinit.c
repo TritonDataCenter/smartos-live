@@ -83,6 +83,7 @@ void openIpadmHandle();
 void plumbIf(const char *);
 int raiseIf(char *, char *, char *);
 void runIpmgmtd(char *cmdline[], char *env[]);
+void setupHostname();
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
 
@@ -527,6 +528,20 @@ killIpmgmtd()
 }
 
 void
+setupHostname()
+{
+    char *hostname;
+
+    hostname = (char *) mdataGet("sdc:hostname");
+    if (hostname != NULL) {
+        dlog("INFO setting hostname = '%s'\n", hostname);
+        if (sethostname(hostname, strlen(hostname)) != 0) {
+            dlog("ERROR failed to set hostname: %s\n", strerror(errno));
+        }
+    }
+}
+
+void
 closeIpadmHandle()
 {
     if (iph) {
@@ -826,6 +841,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     dlog("INFO network setup complete\n");
 
     /* NOTE: all of these will call fatal() if there's a problem */
+    setupHostname();
     getUserGroupData();
     setupWorkdir();
     buildCmdEnv();

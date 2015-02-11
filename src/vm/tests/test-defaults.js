@@ -13,6 +13,7 @@ require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
+var idx;
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 
 // Format:
@@ -38,7 +39,11 @@ var zone_defaults = {
     limit_priv: ['default'],
     max_locked_memory: ['max_physical_memory', zone_property],
     max_lwps: [2000],
+    max_msg_ids: [4096],
     max_physical_memory: [256],
+    max_sem_ids: [4096],
+    max_shm_memory: ['max_physical_memory', zone_property],
+    max_shm_ids: [4096],
     max_swap: ['max_physical_memory', zone_property],
     nics: ['<EMPTY-ARRAY>'],
     owner_uuid: ['00000000-0000-0000-0000-000000000000'],
@@ -73,6 +78,7 @@ var kvm_defaults = {
     billing_id: ['00000000-0000-0000-0000-000000000000'],
     brand: ['kvm'],
     disks: ['<EMPTY-ARRAY>'],
+    /* JSSTYLED */
     limit_priv: ['default,-file_link_any,-net_access,-proc_fork,-proc_info,-proc_session'],
     max_physical_memory: [1280],
     ram: [256],
@@ -81,7 +87,8 @@ var kvm_defaults = {
 
 for (idx in zone_defaults) {
     if (zone_only.indexOf(idx) !== -1) {
-        //console.error('skipping zone-only: ' + idx);
+        // console.error('skipping zone-only: ' + idx);
+        // jsl:pass
     } else if (!kvm_defaults.hasOwnProperty(idx)) {
         kvm_defaults[idx] = zone_defaults[idx];
     }
@@ -154,6 +161,7 @@ function zonecfg(args, callback)
 }
 function check_property(t, state, prop, expected, transform)
 {
+    var value;
     var vmobj = state.vmobj;
 
     value = vmobj[prop];
@@ -163,22 +171,31 @@ function check_property(t, state, prop, expected, transform)
     if (expected === '<NON-EMPTY>') {
         t.ok(value.length > 0, prop + ' [' + expected + ',' + value + ']');
     } else if (expected === '<EMPTY-ARRAY>') {
-        t.ok(JSON.stringify(value) === '[]', prop + ' [],' + JSON.stringify(value));
+        t.ok(JSON.stringify(value) === '[]', prop + ' [],'
+            + JSON.stringify(value));
     } else if (expected === '<EMPTY-OBJ>') {
-        t.ok(JSON.stringify(value) === '{}', prop + ' {},' + JSON.stringify(value));
+        t.ok(JSON.stringify(value) === '{}', prop + ' {},'
+            + JSON.stringify(value));
     } else if (expected === '<OPTIONAL-NON-EMPTY>') {
         if (value !== undefined) {
             // this is optional, but if it exists it should be non-empty
-            t.ok(value.toString().length > 0, prop + ' [' + expected + ',' + value + ']');
+            t.ok(value.toString().length > 0, prop + ' [' + expected + ','
+                + value + ']');
         }
     } else {
-        t.ok(value === expected, prop + ' [' + expected + ':' + typeof(expected)
-            + ',' + value + ':' + typeof(value) + ']');
+        t.ok(value === expected, prop + ' [' + expected + ':'
+            + typeof (expected) + ',' + value + ':' + typeof (value) + ']');
     }
 }
 
 function check_values(t, state)
 {
+    var def;
+    var defaults;
+    var expected;
+    var prop;
+    var transform;
+
     if (state.brand === 'joyent-minimal') {
         defaults = zone_defaults;
     } else if (state.brand === 'kvm') {
@@ -186,7 +203,7 @@ function check_values(t, state)
     }
 
     for (def in defaults) {
-        //def = defaults[def];
+        // def = defaults[def];
 
         prop = def;
         expected = defaults[def][0];
@@ -209,16 +226,18 @@ function check_values(t, state)
     }
 }
 
-test('check default zone properties', function(t) {
-    state = {brand: 'joyent-minimal'};
+test('check default zone properties', function (t) {
+    var state = {brand: 'joyent-minimal'};
+
     vmtest.on_new_vm(t, image_uuid, {
         do_not_inventory: true
     }, state, [
         function (cb) {
-            VM.load(state.uuid, function(err, obj) {
+            VM.load(state.uuid, function (err, obj) {
                 if (err) {
                     t.ok(false, 'load obj from new VM: ' + err.message);
-                    return cb(err);
+                    cb(err);
+                    return;
                 }
                 t.ok(true, 'loaded obj for new VM');
                 state.vmobj = obj;
@@ -229,17 +248,19 @@ test('check default zone properties', function(t) {
     ]);
 });
 
-test('check default kvm properties', function(t) {
-    state = {brand: 'kvm'};
+test('check default kvm properties', function (t) {
+    var state = {brand: 'kvm'};
+
     vmtest.on_new_vm(t, null, {
         brand: 'kvm',
         do_not_inventory: true
     }, state, [
         function (cb) {
-            VM.load(state.uuid, function(err, obj) {
+            VM.load(state.uuid, function (err, obj) {
                 if (err) {
                     t.ok(false, 'load obj from new VM: ' + err.message);
-                    return cb(err);
+                    cb(err);
+                    return;
                 }
                 t.ok(true, 'loaded obj for new VM');
                 state.vmobj = obj;
@@ -250,23 +271,27 @@ test('check default kvm properties', function(t) {
     ]);
 });
 
-test('check default create_timestamp', function(t) {
-    state = {brand: 'joyent-minimal'};
+test('check default create_timestamp', function (t) {
+    var state = {brand: 'joyent-minimal'};
     var vmobj;
 
     vmtest.on_new_vm(t, image_uuid, {
         do_not_inventory: true
     }, state, [
         function (cb) {
-            zonecfg(['-z', state.uuid, 'remove attr name=create-timestamp;'], function (err, fds) {
-                t.ok(!err, 'removing create-timestamp: ' + (err ? err.message : 'ok'));
+            zonecfg(['-z', state.uuid, 'remove attr name=create-timestamp;'],
+                function (err, fds) {
+
+                t.ok(!err, 'removing create-timestamp: '
+                    + (err ? err.message : 'ok'));
                 cb(err);
             });
         }, function (cb) {
-            VM.load(state.uuid, function(err, obj) {
+            VM.load(state.uuid, function (err, obj) {
                 if (err) {
                     t.ok(false, 'load obj from new VM: ' + err.message);
-                    return cb(err);
+                    cb(err);
+                    return;
                 }
                 vmobj = obj;
                 cb();
@@ -279,20 +304,21 @@ test('check default create_timestamp', function(t) {
                 var dataset_creation_time;
 
                 if (!err && !creation_timestamp) {
-                   err = new Error('Unable to find creation timestamp in zfs '
+                    err = new Error('Unable to find creation timestamp in zfs '
                         + 'output');
                 }
 
                 if (err) {
                     cb(err);
-                   return;
+                    return;
                 }
 
                 dataset_creation_time =
                     (new Date(creation_timestamp * 1000)).toISOString();
 
-                t.ok(vmobj.create_timestamp === dataset_creation_time, 'VM has create_timestamp, expected: '
-                    + dataset_creation_time + ', actual: ' + vmobj.create_timestamp);
+                t.ok(vmobj.create_timestamp === dataset_creation_time, 'VM has'
+                    + ' create_timestamp, expected: ' + dataset_creation_time
+                    + ', actual: ' + vmobj.create_timestamp);
 
                 cb();
 

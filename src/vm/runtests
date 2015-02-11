@@ -62,26 +62,35 @@ skipped=$(grep "^# skip  [0-9]" /tmp/test.output.$$ | tr -s ' ' | cut -d ' ' -f3
 fail=$((${tests} - ${passed} - ${skipped}))
 
 if [[ -t 0 ]]; then
-    # We're on a terminal so output the summary
-    echo "#"
-    echo "# $1 TEST COMPLETE IN ${elapsed} SECONDS, SUMMARY:"
-    echo "#"
-    echo -e "# \033[32mPASS: ${passed} / ${tests}\033[39m"
-    if [[ ${skipped} -gt 0 ]]; then
-        echo -e "# \033[31mSKIP: ${skipped} / ${tests}\033[39m"
-    fi
-    if [[ ${fail} -gt 0 ]]; then
-        echo -e "# \033[31mFAIL: ${fail} / ${tests}\033[39m"
-    fi
-    if [[ -n ${failed_tests} ]]; then
-        echo "#"
-        echo "#  ** FAILED TESTS **"
-        for test in ${failed_tests}; do
-            echo -e "#  \033[31m${test}\033[39m"
-        done
-    fi
-    echo "#"
+    PASS_COLOR="\033[32m"
+    SKIP_COLOR="\033[31m"
+    FAIL_COLOR="\033[31m"
+    NORMAL_COLOR="\033[39m"
+else
+    PASS_COLOR=
+    SKIP_COLOR=
+    FAIL_COLOR=
+    NORMAL_COLOR=
 fi
+
+echo "#"
+echo "# $1 TEST COMPLETE IN ${elapsed} SECONDS, SUMMARY:"
+echo "#"
+echo -e "# ${PASS_COLOR}PASS: ${passed} / ${tests}${NORMAL_COLOR}"
+if [[ ${skipped} -gt 0 ]]; then
+    echo -e "# ${SKIP_COLOR}SKIP: ${skipped} / ${tests}${NORMAL_COLOR}"
+fi
+if [[ ${fail} -gt 0 ]]; then
+    echo -e "# ${FAIL_COLOR}FAIL: ${fail} / ${tests}${NORMAL_COLOR}"
+fi
+if [[ -n ${failed_tests} ]]; then
+    echo "#"
+    echo "#  ** FAILED TESTS **"
+    for test in ${failed_tests}; do
+        echo -e "#  ${FAIL_COLOR}${test}${NORMAL_COLOR}"
+    done
+fi
+echo "#"
 
 if [[ ${fail} -gt 0 || ${test_errors} -gt 0 ]]; then
     exit 1

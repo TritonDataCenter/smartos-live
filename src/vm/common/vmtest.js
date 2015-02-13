@@ -36,6 +36,12 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
                 if (err) {
                     state.create_err = err;
                     if (state.expect_create_failure) {
+                        if (obj) {
+                            state.vminfo = obj;
+                            if (obj.uuid) {
+                                state.uuid = obj.uuid;
+                            }
+                        }
                         t.ok(true, 'failed to create VM: ' + err.message);
                         cb();
                     } else {
@@ -65,7 +71,12 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
         if (state.hasOwnProperty('uuid')) {
             VM.delete(state.uuid, function (err) {
                 if (err) {
-                    t.ok(false, 'error deleting VM: ' + err.message);
+                    if (err.message.match(/No such zone configured/)) {
+                        t.ok(true, 'tried to delete VM ' + state.uuid
+                            + ' but it was already gone.');
+                    } else {
+                        t.ok(false, 'error deleting VM: ' + err.message);
+                    }
                 } else {
                     t.ok(true, 'deleted VM: ' + state.uuid);
                 }

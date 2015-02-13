@@ -75,6 +75,8 @@ test('test creating new VM with created filesystem', function (t) {
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function (cb) {
             VM.load(state.uuid, function (err, obj) {
+                var found_source = false;
+
                 t.ok(!err, 'loading obj for new VM');
                 if (err) {
                     cb(err);
@@ -84,11 +86,18 @@ test('test creating new VM with created filesystem', function (t) {
                 vmobj = obj;
 
                 t.equal(obj.state, 'running', 'VM is running');
-                t.equal(obj.filesystems.length, 1, 'have 1 filesystem');
-                t.equal(obj.filesystems[0].source, obj.zonepath
-                    + '/volumes/' + new_uuid, 'source has transformed: '
-                    + obj.filesystems[0].source);
-                t.equal(obj.filesystems[0].target, '/hello', 'target: /hello');
+                t.equal(obj.filesystems.length, 4, 'have 4 filesystem');
+                obj.filesystems.forEach(function (f) {
+                    if (f.target === '/hello') {
+                        found_source = true;
+                        t.equal(f.source, obj.zonepath + '/volumes/' + new_uuid,
+                            'source has transformed: ' + f.source);
+                    }
+                });
+
+                if (!found_source) {
+                    t.ok(false, 'unable to find /hello target in filesystems');
+                }
                 cb();
             });
         }, function (cb) {

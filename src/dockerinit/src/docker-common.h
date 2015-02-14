@@ -82,7 +82,10 @@ typedef enum {
     ERR_IPMGMTD_CRASHED,
     ERR_MOUNT_DEVFD,
     ERR_FDOPEN_LOG,
-    ERR_CLOSE
+    ERR_CLOSE,
+    ERR_ATTACH_NOT_TIMESTAMP,
+    ERR_ATTACH_GETTIME,
+    ERR_ATTACH_TIMEDOUT
 } dockerinit_err_t;
 
 typedef enum {

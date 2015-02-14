@@ -69,6 +69,7 @@
 #define IPMGMTD_DOOR_LX "/native/etc/svc/volatile/ipadm/ipmgmt_door"
 #define LOGFILE "/var/log/sdc-dockerinit.log"
 #define RTMBUFSZ sizeof (struct rt_msghdr) + (3 * sizeof (struct sockaddr_in))
+#define ATTACH_CHECK_INTERVAL 200000 // 200ms
 
 int addRoute(const char *, const char *, const char *);
 void buildCmdline();
@@ -86,6 +87,7 @@ void runIpmgmtd(char *cmdline[], char *env[]);
 void setupHostname();
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
+void waitIfAttaching();
 
 /* global metadata client bits */
 int initialized_proto = 0;
@@ -757,6 +759,65 @@ chrootNetworking() {
     }
 }
 
+long long
+currentTimestamp()
+{
+    struct timeval tv;
+
+    if (gettimeofday(&tv, NULL) != 0) {
+        dlog("gettimeofday(): %s\n", strerror(errno));
+        return (0LL);
+    }
+
+    return (((long long) tv.tv_sec) * 1000LL) + (long long) (tv.tv_usec / 1000);
+}
+
+void
+waitIfAttaching()
+{
+    int display_freq;
+    int done = 0;
+    unsigned int loops = 0;
+    char *timeout;
+    long long timestamp;
+    long long now;
+
+    if (ATTACH_CHECK_INTERVAL > 1000000) {
+        display_freq = 1;
+    } else {
+        display_freq = (1000000 / ATTACH_CHECK_INTERVAL);
+    }
+
+    while (!done) {
+        loops++;
+        timeout = (char *) mdataGet("docker:wait_for_attach");
+        if (timeout == NULL) {
+            done = 1;
+        } else {
+            timestamp = strtoll((const char *) timeout, NULL, 10);
+            if (timestamp <= 0LL) {
+                fatal(ERR_ATTACH_NOT_TIMESTAMP,
+                    "Invalid value for 'docker:wait_for_attach'\n");
+            }
+            now = currentTimestamp();
+            if (now <= 0LL) {
+                fatal(ERR_ATTACH_GETTIME, "Unable to determine current time\n");
+            }
+
+            if (loops == 1 || ((loops % display_freq) == 0)) {
+                dlog("INFO Waiting until %lld for attach, currently: %lld\n",
+                    timestamp, now);
+            }
+
+            if (timestamp < now) {
+                fatal(ERR_ATTACH_TIMEDOUT, "Timed out waiting for attach\n");
+            }
+
+            (void) usleep(ATTACH_CHECK_INTERVAL);
+        }
+    }
+}
+
 int
 main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
 {
@@ -847,6 +908,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     buildCmdEnv();
     buildCmdline();
     getStdinStatus();
+    waitIfAttaching();
 
     /* cleanup mess from mdata-client */
     close(4); /* /dev/urandom from mdata-client */

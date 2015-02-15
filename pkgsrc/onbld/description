@@ -1,0 +1,3 @@
+This package contains the build tools that go along with illumos and
+commonly are built as part of the gate. This includes various build
+related tools, CTF tools, etc.

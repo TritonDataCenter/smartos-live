@@ -19,17 +19,17 @@ PROTO =			$(ROOT)/proto
 PROTO_PKGSRC =		$(ROOT)/proto.pkgsrc
 VERSION =		$(shell /usr/bin/date +%Y%m%d)
 PKG_CREATE =		/opt/local/sbin/pkg_create
-PKGSRC_PREFIX =		/opt/local
 
 PACKAGES = \
 	dmake \
 	sgstools \
 	astmsgtools \
-	rpcgen
+	rpcgen \
+	onbld
 
 PKGSRC_TGZS :=	$(PACKAGES:%=%-$(VERSION).tgz)
 
-%-$(VERSION).tgz: %/build-info %/comment %/description %/packlist %/prefix
+%-$(VERSION).tgz: %/build-info %/comment %/description %/packlist %/prefix %/iprefix
 	rm -f $*-$(VERSION).tgz
 	cd $* && \
 	$(PKG_CREATE) \
@@ -37,7 +37,7 @@ PKGSRC_TGZS :=	$(PACKAGES:%=%-$(VERSION).tgz)
 	    -c comment \
 	    -d description \
 	    -f packlist \
-	    -I $(PKGSRC_PREFIX) \
+	    -I $$(cat iprefix) \
 	    -p $(PROTO)/$$(cat prefix) \
 	    -U $*-$(VERSION).tgz
 	mv $*/$*-$(VERSION).tgz .

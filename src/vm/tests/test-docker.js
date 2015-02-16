@@ -1,12 +1,15 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that docker flag works as expected when setting/unsetting
+// Also test that /etc/resolv.conf, /etc/hosts and /etc/hostname are set
+// correctly.
 //
 
 var async = require('/usr/node/node_modules/async');
 var exec = require('child_process').exec;
 var fs = require('fs');
 var libuuid = require('/usr/node/node_modules/uuid');
+var path = require('path');
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
 
@@ -113,6 +116,43 @@ test('test docker=true on new VM', function (t) {
                 t.equal(flags.init_name, '/usr/vm/sbin/dockerinit',
                     'init_name correct after create');
                 cb();
+            });
+        }, function (cb) {
+            // ensure that resolv.conf / hosts / hostname mounted in
+            VM.load(state.uuid, function (err, obj) {
+                var found_hostname = false;
+                var found_hosts = false;
+                var found_resolv_conf = false;
+
+                t.ok(!err, 'loading obj for new VM');
+                if (err) {
+                    cb(err);
+                    return;
+                }
+
+                if (obj.filesystems.length > 0) {
+                    obj.filesystems.forEach(function (f) {
+                        if (f.source === obj.zonepath + '/config/resolv.conf') {
+                            found_resolv_conf = true;
+                        } else if (f.source === obj.zonepath
+                            + '/config/hosts') {
+
+                            found_hosts = true;
+                        } else if (f.source === obj.zonepath
+                            + '/config/hostname') {
+
+                            found_hostname = true;
+                        }
+                    });
+
+                    t.ok(found_hostname, 'found hostname file in vmobj');
+                    t.ok(found_hosts, 'found hosts file in vmobj');
+                    t.ok(found_resolv_conf, 'found resolv.conf file in vmobj');
+                    cb();
+                } else {
+                    t.ok(false, 'no filesystems in vmobj');
+                    cb(new Error('no filesystems in vmobj'));
+                }
             });
         }, function (cb) {
             VM.update(state.uuid, {docker: false}, function (err) {
@@ -550,6 +590,120 @@ test('test restart docker VM', function (t) {
                 boot_timestamps.push(obj.boot_timestamp);
                 cb();
             });
+        }
+    ]);
+});
+
+/*
+ * This test should fail because we're trying to create resolv.conf as
+ * /etc which is a directory and not a file we could mount on.
+ */
+test('test docker VM with bad resolv.conf path', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand, expect_create_failure: true};
+
+    payload.docker = true;
+    payload.autoboot = false;
+    payload.internal_metadata = {
+        'docker:resolvConfFile': '/etc'
+    };
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, []);
+});
+
+/*
+ * This test should fail because we're trying to create hosts as
+ * /etc which is a directory and not a file we could mount on.
+ */
+test('test docker VM with bad hosts path', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand, expect_create_failure: true};
+
+    payload.docker = true;
+    payload.autoboot = false;
+    payload.internal_metadata = {
+        'docker:hostsFile': '/etc'
+    };
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, []);
+});
+
+/*
+ * This test should fail because we're trying to create hostname as
+ * /etc which is a directory and not a file we could mount on.
+ */
+test('test docker VM with bad hostname path', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand, expect_create_failure: true};
+
+    payload.docker = true;
+    payload.autoboot = false;
+    payload.internal_metadata = {
+        'docker:hostnameFile': '/etc'
+    };
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, []);
+});
+
+/*
+ * This test should create all conf files in /tmp
+ */
+test('test docker VM with paths in /tmp', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+    var vmobj = {};
+
+    payload.docker = true;
+    payload.autoboot = false;
+    payload.internal_metadata = {
+        'docker:hostnameFile': '/tmp/hostname',
+        'docker:hostsFile': '/tmp/hosts',
+        'docker:resolvConfFile': '/tmp/resolv.conf'
+    };
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        function (cb) {
+            VM.load(state.uuid, function (err, obj) {
+                var found_hostname = false;
+                var found_hosts = false;
+                var found_resolv_conf = false;
+
+                t.ok(!err, 'loading obj for new VM');
+                if (err) {
+                    cb(err);
+                    return;
+                }
+
+                vmobj = obj;
+
+                t.equal(vmobj.filesystems.length, 3, 'have filesystems');
+
+                vmobj.filesystems.forEach(function (f) {
+                    if (f.source === obj.zonepath + '/config/resolv.conf') {
+                        found_resolv_conf = true;
+                    } else if (f.source === obj.zonepath + '/config/hosts') {
+                        found_hosts = true;
+                    } else if (f.source === obj.zonepath + '/config/hostname') {
+                        found_hostname = true;
+                    }
+                });
+
+                t.ok(found_hostname, 'found hostname file in vmobj');
+                t.ok(found_hosts, 'found hosts file in vmobj');
+                t.ok(found_resolv_conf, 'found resolv.conf file in vmobj');
+
+                cb();
+            });
+        }, function (cb) {
+            [
+                '/tmp/hostname',
+                '/tmp/hosts',
+                '/tmp/resolv.conf'
+            ].forEach(function (k) {
+                t.ok(fs.existsSync(path.normalize(vmobj.zonepath + '/root/'
+                    + k)), k + ' exists');
+            });
+            cb();
         }
     ]);
 });

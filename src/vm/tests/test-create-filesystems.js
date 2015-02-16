@@ -1,6 +1,6 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
-// These tests ensure that docker flag works as expected when setting/unsetting
+// These tests ensure that docker volumes are created correctly.
 //
 
 var async = require('/usr/node/node_modules/async');
@@ -20,7 +20,11 @@ var common_payload = {
     alias: 'test-create-filesystems',
     autoboot: true,
     brand: 'joyent-minimal',
+    docker: true,
     do_not_inventory: true,
+    internal_metadata: {
+        'docker:cmd': '["/bin/sleep", "3600"]'
+    },
     max_locked_memory: 512,
     max_physical_memory: 512,
     max_swap: 1024
@@ -39,7 +43,7 @@ function haveMount(uuid, source, target, callback) {
             callback(error, {'stdout': stdout, 'stderr': stderr});
         } else {
             stdout.split('\n').forEach(function (line) {
-                if (line.indexOf('/hello on ' + source) === 0) {
+                if (line.indexOf('/hello on /hello') === 0) {
                     found = true;
                 }
             });
@@ -63,7 +67,7 @@ test('test creating new VM with created filesystem', function (t) {
         {
             source: new_uuid,
             target: '/hello',
-            type: 'zfs',
+            type: 'lofs',
             options: []
         }
     ];
@@ -71,6 +75,8 @@ test('test creating new VM with created filesystem', function (t) {
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function (cb) {
             VM.load(state.uuid, function (err, obj) {
+                var found_source = false;
+
                 t.ok(!err, 'loading obj for new VM');
                 if (err) {
                     cb(err);
@@ -80,13 +86,18 @@ test('test creating new VM with created filesystem', function (t) {
                 vmobj = obj;
 
                 t.equal(obj.state, 'running', 'VM is running');
-                t.ok(obj.filesystems.length === 1, 'num filesystems (expect 1):'
-                    + ' ' + obj.filesystems.length);
-                t.ok(obj.filesystems[0].source === obj.zfs_filesystem
-                    + '/volumes/' + new_uuid, 'source has transformed: '
-                    + obj.filesystems[0].source);
-                t.ok(obj.filesystems[0].target === '/hello', 'target is '
-                    + obj.filesystems[0].target);
+                t.equal(obj.filesystems.length, 4, 'have 4 filesystem');
+                obj.filesystems.forEach(function (f) {
+                    if (f.target === '/hello') {
+                        found_source = true;
+                        t.equal(f.source, obj.zonepath + '/volumes/' + new_uuid,
+                            'source has transformed: ' + f.source);
+                    }
+                });
+
+                if (!found_source) {
+                    t.ok(false, 'unable to find /hello target in filesystems');
+                }
                 cb();
             });
         }, function (cb) {

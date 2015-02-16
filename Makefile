@@ -257,7 +257,7 @@ clean:
 	(cd $(PKGSRC) && gmake clean)
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && rm -rf $(STRAP_PROTO))
-	(cd $(ROOT) && rm -rf $(BOOT_PROTO))
+	(cd $(ROOT) && pfexec rm -rf $(BOOT_PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO))
 	rm -f tools/cryptpass
 	rm -f 0-*-stamp 1-*-stamp

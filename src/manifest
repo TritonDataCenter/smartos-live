@@ -504,7 +504,6 @@ d usr/vm/node_modules/vasync/node_modules/jsprim/node_modules/json-schema 0755 r
 d usr/vm/node_modules/vasync/node_modules/jsprim/node_modules/json-schema/lib 0755 root root
 f usr/vm/node_modules/vasync/node_modules/jsprim/node_modules/json-schema/lib/links.js 0644 root root
 f usr/vm/node_modules/vasync/node_modules/jsprim/node_modules/json-schema/lib/validate.js 0644 root root
-f usr/vm/node_modules/vasync/node_modules/jsprim/node_modules/json-schema/LICENSE 0644 root root
 f usr/vm/node_modules/vasync/node_modules/jsprim/node_modules/json-schema/package.json 0644 root root
 d usr/vm/node_modules/vasync/node_modules/jsprim/node_modules/verror 0755 root root
 d usr/vm/node_modules/vasync/node_modules/jsprim/node_modules/verror/lib 0755 root root

@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2015, Joyent, Inc. All rights reserved.
  *
  */
 
@@ -33,6 +33,7 @@ var consts = require('constants');
 var events = require('events');
 var execFile = cp.execFile;
 var fs = require('fs');
+var lock = require('/usr/vm/node_modules/locker').lock;
 var net = require('net');
 var VM = require('/usr/vm/node_modules/VM');
 var onlyif = require('/usr/node/node_modules/onlyif');
@@ -62,6 +63,10 @@ var log;
 // time we see them regardless of which zone transition we see for them.  Also
 // stores basic information so we don't have to VM.load() as often.
 var seen_vms = {};
+
+// Used to keep track of which VMs we're currently delaying a restart for in
+// order to not start additional restarts in that period.
+var restart_waiters = {};
 
 
 function sysinfo(callback)
@@ -546,6 +551,152 @@ function rotateKVMLog(vm_uuid)
     }, 30 * 1000);
 }
 
+function restartDockerContainer(uuid, restart_count)
+{
+    VM.load(uuid, {fields: [
+        'autoboot',
+        'brand',
+        'internal_metadata',
+        'state',
+        'uuid',
+        'zone_state',
+        'zonepath'
+    ]}, function (err, vmobj) {
+        if (err) {
+            log.error('restartDockerContainer(): Unable to load vm: '
+                + err.message, err);
+            return;
+        }
+
+        if (vmobj.zone_state !== 'installed') {
+            log.warn({
+                uuid: vmobj.uuid,
+                state: vmobj.state,
+                zone_state: vmobj.zone_state
+            }, 'VM state is not "installed", not restarting');
+            return;
+        }
+
+        if (!vmobj.autoboot) {
+            log.warn({
+                uuid: vmobj.uuid,
+                state: vmobj.state
+            }, 'VM is not set to autoboot, not restarting');
+            return;
+        }
+
+        VM.start(vmobj.uuid, {}, {increment_restart_count: true},
+            function (start_err) {
+
+            if (start_err) {
+                log.error({err: start_err, uuid: vmobj.uuid},
+                    'failed to restart docker container');
+                return;
+            }
+            log.info({uuid: vmobj.uuid}, 'restarted docker container');
+        });
+
+    });
+}
+
+/*
+ * How restart policies work here:
+ *
+ * If vmadmd has just started or if we just saw a zone switch to a state from
+ * running this gets called for each docker container that is assumed to be
+ * stopped but has a restartpolicy set.
+ *
+ * We also assume that if a VM has been explicitly stopped or started the
+ * autoboot flag will be set appropriately to indicate the intention for the
+ * zone. If autoboot is true, we assume the zone should be running if the
+ * restart policy is always or on-failure and the last exit status was non-zero.
+ * If autoboot is false we'll never try to boot the zone.
+ *
+ */
+
+function applyDockerRestartPolicy(vmobj)
+{
+    var im;
+    var parts;
+    var max_restarts = 0;
+    var restart_count;
+    var restart_delay;
+    var restart_policy;
+
+    /*
+     * if a new timer comes in while one's still running, we ignore it as most
+     * likely it's a duplicate. If it is a new event that's fine too though
+     * since we're going to check after the delay that we're still supposed to
+     * boot.
+     *
+     */
+    if (restart_waiters[vmobj.uuid]) {
+        log.debug({uuid: vmobj.uuid},
+            'already have a timer running, skipping');
+        return;
+    }
+
+    im = vmobj.internal_metadata;
+
+    if (!im || !im['docker:restartpolicy']) {
+        log.error({vmobj: vmobj}, 'applyDockerRestartPolicy(): VM is missing '
+            + 'restart policy');
+        return;
+    }
+
+    if (im['docker:restartcount']) {
+        restart_count = im['docker:restartcount'];
+    } else {
+        restart_count = 0;
+    }
+
+    restart_policy = im['docker:restartpolicy'];
+    parts = restart_policy.split(':');
+    if (parts.length === 2 && parts[0] === 'on-failure'
+        && !isNaN(Number(parts[1]))) {
+
+        restart_policy = parts[0];
+        max_restarts = Number(parts[1]);
+    } else if (parts.length !== 1) {
+        log.error({vmobj: vmobj}, 'applyDockerRestartPolicy(): VM has invalid '
+            + 'restart policy');
+        return;
+    }
+
+    if ((restart_policy === 'on-failure')
+        && (!vmobj.exit_status || (vmobj.exit_status === 0))) {
+
+        log.info({uuid: vmobj.uuid, exit_status: vmobj.exit_status},
+            'policy is on-failure but no failure found, not restarting');
+        return;
+    }
+
+    if (['always', 'on-failure'].indexOf(restart_policy) === -1) {
+        log.error({vmobj: vmobj, restart_policy: restart_policy},
+            'Unhandled restart policy');
+        return;
+    }
+
+    // Either the policy is 'always' or it's 'on-failure' and we exited with
+    // a failure code. In both cases we will start.
+
+    if (max_restarts > 0 && restart_count >= max_restarts) {
+        log.warn({vmobj: vmobj, restarts: restart_count, max: max_restarts},
+            'VM has been restarted too many times, not restarting');
+        return;
+    }
+
+    restart_delay = 100 * Math.pow(2, restart_count);
+    log.info({uuid: vmobj.uuid}, 'delaying %s ms before (re)start',
+        restart_delay);
+
+    restart_waiters[vmobj.uuid] = setTimeout(function _delayedRestart() {
+        // clear so someone else can run
+        delete restart_waiters[vmobj.uuid];
+        restartDockerContainer(vmobj.uuid, restart_count, log);
+    }, restart_delay);
+}
+
 // NOTE: nobody's paying attention to whether this completes or not.
 function updateZoneStatus(ev)
 {
@@ -566,9 +717,10 @@ function updateZoneStatus(ev)
      *   - zone is stopping, stop VNC
      *   - remove stop timer/timeout
      *
-     * <anystate> -> uninitialized (KVM ONLY)
+     * <anystate> -> uninitialized (KVM + docker ONLY)
      *   - zone stopped
      *   - clear the 'stopping' transition
+     *   - if docker: call applyDockerRestartPolicy()
      *
      * <anystate> -> running (KVM ONLY)
      *    - setup VNC / SPICE
@@ -611,6 +763,37 @@ function updateZoneStatus(ev)
         log.info('' + ev.zonename + ' (kvm) went from ' + ev.oldstate
             + ' to ' + ev.newstate + ' at ' + ev.when);
         // Continue on to VM.load()
+    } else if (seen_vms[ev.zonename].docker
+        && (ev.newstate === 'uninitialized')) {
+
+        VM.load(ev.zonename, {fields: [
+            'autoboot',
+            'brand',
+            'exit_status',
+            'internal_metadata',
+            'state',
+            'uuid',
+            'zone_state'
+        ]}, function (err, vmobj) {
+            log.info(ev.zonename + ' (docker) went from ' + ev.oldstate + ' to '
+                + ev.newstate + ' at ' + ev.when);
+
+            /*
+             * If we stop while autoboot is set, the user was intending for it
+             * to be up. So, if there's a restart policy we start it. If not, we
+             * leave it alone.
+             */
+            if (vmobj.autoboot
+                && vmobj.zone_state !== 'running'
+                && vmobj.internal_metadata
+                && vmobj.internal_metadata['docker:restartpolicy']) {
+
+                // no callback, nobody cares
+                applyDockerRestartPolicy(vmobj, log);
+            }
+        });
+
+        return;
     } else {
         try {
             if (fs.existsSync(seen_vms[ev.zonename].zonepath
@@ -636,6 +819,8 @@ function updateZoneStatus(ev)
 
     load_fields = [
         'brand',
+        'docker',
+        'exit_status',
         'failed',
         'spice_opts',
         'spice_password',
@@ -674,7 +859,18 @@ function updateZoneStatus(ev)
         if (!seen_vms[ev.zonename].hasOwnProperty('uuid')) {
             seen_vms[ev.zonename].uuid = vmobj.uuid;
             seen_vms[ev.zonename].brand = vmobj.brand;
+            if (vmobj.docker) {
+                seen_vms[ev.zonename].docker = vmobj.docker;
+            }
             seen_vms[ev.zonename].zonepath = vmobj.zonepath;
+            if (ev.newstate === 'running') {
+                // if we just saw it go running and we have an existing timer
+                // waiting to start it, kill that.
+                if (restart_waiters[vmobj.uuid]) {
+                    clearTimeout(restart_waiters[vmobj.uuid]);
+                    delete restart_waiters[vmobj.uuid];
+                }
+            }
         }
 
         if (vmobj.state === 'provisioning') {
@@ -1454,6 +1650,12 @@ function startSeenCleaner() {
                     } else {
                         // no longer exists
                         log.info('VM ' + vm + ' is gone, removing from "seen"');
+                        if (seen_vms.uuid) {
+                            delete restart_waiters[seen_vms.uuid];
+                        } else {
+                            // in case it's a UUID
+                            delete restart_waiters[vm];
+                        }
                         delete seen_vms[vm];
                     }
                 });
@@ -1472,7 +1674,7 @@ function upgradeVM(vmobj, fields, callback)
     var upgrade_payload = {};
 
     if (vmobj.v === 1) {
-        log.debug('VM ' + vmobj.uuid + ' already at version 1, skipping '
+        log.trace('VM ' + vmobj.uuid + ' already at version 1, skipping '
             + 'upgrade.');
         callback(null, vmobj);
         return;
@@ -1990,6 +2192,7 @@ function main()
                 'customer_metadata',
                 'default_gateway',
                 'disks',
+                'docker',
                 'image_uuid',
                 'internal_metadata',
                 'max_physical_memory',
@@ -2029,6 +2232,9 @@ function main()
                                 uuid: vmobj.uuid,
                                 zonepath: vmobj.zonepath
                             };
+                            if (vmobj.docker) {
+                                seen_vms[vmobj.zonename].docker = vmobj.docker;
+                            }
                         }
                         if (vmobj.state !== 'provisioning') {
                             seen_vms[vmobj.zonename].provisioned = true;
@@ -2071,6 +2277,19 @@ function main()
                         } else if (vmobj.brand === 'kvm') {
                             log.debug('calling loadVM(' + vmobj.uuid + ')');
                             loadVM(vmobj, do_autoboot);
+                            upg_cb();
+                        } else if (vmobj.docker
+                            && vmobj.autoboot
+                            && vmobj.zone_state !== 'running'
+                            && vmobj.internal_metadata
+                            && vmobj
+                                .internal_metadata['docker:restartpolicy']) {
+
+                            log.debug({uuid: vmobj.uuid},
+                                'docker VM not running at vmadmd startup, '
+                                + 'applying restart policy');
+
+                            applyDockerRestartPolicy(vmobj, log);
                             upg_cb();
                         } else {
                             log.debug('ignoring non-kvm VM ' + vmobj.uuid);

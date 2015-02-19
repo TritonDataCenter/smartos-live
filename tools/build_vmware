@@ -64,6 +64,6 @@ bzip2 -d < output-usb/platform-${buildstamp}.usb.bz2 \
     fail "failed to decompress output-usb/platform-${buildstamp}.usb.bz2"
 echo "Creating compressed tarball suitable for upload..."
 (cd output-vmware && \
-    tar -jcf smartos-${buildstamp}.vmwarevm.tar.bz2 SmartOS.vmwarevm) || \
+    gtar -jcf smartos-${buildstamp}.vmwarevm.tar.bz2 SmartOS.vmwarevm) || \
     fail "failed creating output-vmware/smartos-${buildstamp}.vmwarevm.tar.bz2"
 echo "Done!"

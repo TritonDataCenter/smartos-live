@@ -43,7 +43,6 @@ var MetadataAgent = module.exports = function (options) {
 
     self.log = options.log;
     self.zlog = {};
-    self.vmobjs = {};
     self.zoneRetryTimeouts = {};
     self.zoneConnections = {};
     self.eventConnectAttempts = 0;
@@ -56,52 +55,26 @@ var MetadataAgent = module.exports = function (options) {
         self.refresh_interval = 300000; // 5 minutes
     }
 
-    function createZoneLog(zonename) {
-        var brand = self.vmobjs[zonename].brand;
+    function createZoneLog(zonename, brand)
+    {
         var opts = {brand: brand, 'zonename': zonename};
         self.zlog[zonename] = self.log.child(opts);
         return (self.zlog[zonename]);
     }
 
-    function createVmobj(vmobj, callback) {
-        self.vmobjs[vmobj.zonename] = vmobj;
-        createZoneLog(vmobj.zonename);
-        startServer(vmobj.zonename, callback);
-    }
-
-    function modifyVmobj(vmobj, callback) {
-        var old_state = self.vmobjs[vmobj.zonename].state;
-        var new_state = vmobj.state;
-        self.vmobjs[vmobj.zonename] = vmobj;
-        if (new_state === 'running' && old_state !== 'running') {
-            startServer(vmobj.zonename, callback);
-        } else if (new_state === 'stopped' && old_state !== 'stopped') {
-            stopServer(vmobj.zonename, callback);
-        } else {
-            callback();
+    function startServer(zonename, vmobj, callback)
+    {
+        if (!self.zlog.hasOwnProperty(zonename)) {
+            createZoneLog(zonename, vmobj.brand);
         }
-    }
 
-    function deleteVmobj(zonename, callback) {
-        stopServer(zonename, function () {
-            delete (self.zlog)[zonename];
-            delete (self.vmobjs)[zonename];
-            callback();
-        });
-    }
-
-    function startServer(zonename, callback) {
-        var brand = self.vmobjs[zonename].brand;
-
-        if (!self.zoneConnections.hasOwnProperty(zonename)
-            && self.vmobjs[zonename].state === 'running') {
-
-            if (brand === 'kvm') {
-                startKVMSocketServer(zonename, function (err) {
+        if (!self.zoneConnections.hasOwnProperty(zonename)) {
+            if (vmobj.brand === 'kvm') {
+                startKVMSocketServer(zonename, vmobj, function (err) {
                     callback();
                 });
             } else {
-                startZoneSocketServer(zonename, function (err) {
+                startZoneSocketServer(zonename, vmobj, function (err) {
                     callback();
                 });
             }
@@ -110,15 +83,22 @@ var MetadataAgent = module.exports = function (options) {
         }
     }
 
-    function stopServer(zonename, callback) {
+    function stopServer(zonename, callback)
+    {
         if (self.zoneConnections.hasOwnProperty(zonename)) {
             self.zoneConnections[zonename].end();
+            delete (self.zoneConnections)[zonename];
         }
+
+        if (self.zlog.hasOwnProperty(zonename)) {
+            delete (self.zlog)[zonename];
+        }
+
         callback();
     }
 
-    function startKVMSocketServer(zonename, callback) {
-        var vmobj = self.vmobjs[zonename];
+    function startKVMSocketServer(zonename, vmobj, callback)
+    {
         var zlog = self.zlog[zonename];
         var sockpath = path.join(vmobj.zonepath, '/root/tmp/vm.ttyb');
 
@@ -156,7 +136,8 @@ var MetadataAgent = module.exports = function (options) {
         });
     }
 
-    function createKVMServer(zopts, callback) {
+    function createKVMServer(zopts, callback)
+    {
         var zlog = self.zlog[zopts.zone];
         var kvmstream = new net.Stream();
 
@@ -196,13 +177,14 @@ var MetadataAgent = module.exports = function (options) {
         callback();
     }
 
-    function startZoneSocketServer(zonename, callback) {
+    function startZoneSocketServer(zonename, vmobj, callback)
+    {
         var zlog = self.zlog[zonename];
-        var zonePath = self.vmobjs[zonename].zonepath;
+        var zonePath = vmobj.zonepath;
         var localpath = '/.zonecontrol';
         var zonecontrolpath;
 
-        if (self.vmobjs[zonename].brand === 'lx') {
+        if (vmobj.brand === 'lx') {
             localpath = '/native' + localpath;
         }
 
@@ -257,7 +239,8 @@ var MetadataAgent = module.exports = function (options) {
         });
     }
 
-    function createZoneSocket(zopts, waitSecs, callback) {
+    function createZoneSocket(zopts, waitSecs, callback)
+    {
         waitSecs = waitSecs || 1;
 
         attemptCreateZoneSocket(zopts, waitSecs);
@@ -271,7 +254,8 @@ var MetadataAgent = module.exports = function (options) {
      * waitSecs here indicates how long we should wait to retry after this
      * attempt if we fail.
      */
-    function attemptCreateZoneSocket(zopts, waitSecs) {
+    function attemptCreateZoneSocket(zopts, waitSecs)
+    {
         var zlog = self.zlog[zopts.zone];
 
         if (!zlog) {
@@ -423,13 +407,15 @@ var MetadataAgent = module.exports = function (options) {
         });
     }
 
-    function rtrim(str, chars) {
+    function rtrim(str, chars)
+    {
         chars = chars || '\\s';
         str = str || '';
         return str.replace(new RegExp('[' + chars + ']+$', 'g'), '');
     }
 
-    function base64_decode(input) {
+    function base64_decode(input)
+    {
         try {
             return (new Buffer(input, 'base64')).toString();
         } catch (err) {
@@ -461,7 +447,44 @@ var MetadataAgent = module.exports = function (options) {
         return (internal_namespace);
     }
 
-    function makeMetadataHandler(zone, socket) {
+    function fetchVmobj(zonename, callback)
+    {
+        var opts = {
+            host: '127.0.0.1',
+            port: 9090,
+            path: '/vms/' + zonename
+        };
+
+        http.get(opts, function (res) {
+            var body = '';
+
+            res.on('data', function (chunk) {
+                body += chunk;
+            });
+
+            res.on('end', function () {
+                if (res.statusCode === 200) {
+                    try {
+                        callback(null, JSON.parse(body));
+                    } catch (e) {
+                        self.log.debug('failed to parse body from '
+                            + 'vminfod: ' + e.message);
+                        callback(e);
+                    }
+                } else {
+                    self.log.debug('vminfod response not usable: '
+                        + res.statusCode);
+                    callback(new Error('vminfo invalid response code'));
+                }
+            });
+        }).on('error', function (err) {
+            self.log.debug('vminfod request failed: ' + err.message);
+            callback(err);
+        });
+    }
+
+    function makeMetadataHandler(zone, socket)
+    {
         var zlog = self.zlog[zone];
         var write = function (str) {
             if (socket.writable) {
@@ -477,7 +500,6 @@ var MetadataAgent = module.exports = function (options) {
             var ns;
             var parts;
             var val;
-            var vmobj;
             var want;
             var reqid;
             var req_is_v2 = false;
@@ -498,226 +520,240 @@ var MetadataAgent = module.exports = function (options) {
                 return;
             }
 
-            vmobj = self.vmobjs[zone];
-
-            // Unbox V2 protocol frames:
-            if (cmd === 'V2') {
-                if (!parse_v2_request(want))
-                    return;
-            }
-
-            if (cmd === 'GET') {
-                want = (want || '').trim();
-                if (!want) {
-                    returnit(new Error('Invalid GET Request'));
+            fetchVmobj(zone, function (error, vmobj) {
+                if (error) {
+                    returnit(new Error('Unable to fetch vmobj'));
                     return;
                 }
 
-                zlog.info('Serving GET ' + want);
-
-                if (want.slice(0, 4) === 'sdc:') {
-                    want = want.slice(4);
-
-                    // NOTE: sdc:nics, sdc:resolvers and sdc:routes are not a
-                    // committed interface, do not rely on it. At this point it
-                    // should only be used by mdata-fetch, if you add a consumer
-                    // that depends on it, please add a note about that here
-                    // otherwise expect it will be removed on you sometime.
-                    if (want === 'nics' && vmobj.hasOwnProperty('nics')) {
-                        val = JSON.stringify(vmobj.nics);
-                        returnit(null, val);
+                // Unbox V2 protocol frames:
+                if (cmd === 'V2') {
+                    if (!parse_v2_request(want))
                         return;
-                    } else if (want === 'resolvers'
-                        && vmobj.hasOwnProperty('resolvers')) {
+                }
 
-                        // See NOTE above about nics, same applies to resolvers.
-                        // It's here solely for the use of mdata-fetch.
-                        val = JSON.stringify(vmobj.resolvers);
-                        returnit(null, val);
+                if (cmd === 'GET') {
+                    want = (want || '').trim();
+                    if (!want) {
+                        returnit(new Error('Invalid GET Request'));
                         return;
-                    } else if (want === 'tmpfs'
-                        && vmobj.hasOwnProperty('tmpfs')) {
-                        val = JSON.stringify(vmobj.tmpfs);
-                        returnit(null, val);
-                        return;
-                    } else if (want === 'routes'
-                        && vmobj.hasOwnProperty('routes')) {
+                    }
 
-                        var vmRoutes = [];
+                    zlog.info('Serving GET ' + want);
 
-                        // The notes above about resolvers also to routes. It's
-                        // here solely for the use of mdata-fetch, and we need
-                        // to do the updateZone here so that we have latest
-                        // data.
-                        for (var r in vmobj.routes) {
-                            var route = { linklocal: false, dst: r };
-                            var nicIdx = vmobj.routes[r].match(/nics\[(\d+)\]/);
-                            if (!nicIdx) {
-                                // Non link-local route: we have all the
-                                // information we need already
-                                route.gateway = vmobj.routes[r];
+                    if (want.slice(0, 4) === 'sdc:') {
+                        want = want.slice(4);
+
+                        // NOTE: sdc:nics, sdc:resolvers and sdc:routes are not
+                        // a committed interface, do not rely on it. At this
+                        // point it should only be used by mdata-fetch, if you
+                        // add a consumer that depends on it, please add a note
+                        // about that here otherwise expect it will be removed
+                        // on you sometime.
+                        if (want === 'nics' && vmobj.hasOwnProperty('nics')) {
+                            val = JSON.stringify(vmobj.nics);
+                            returnit(null, val);
+                            return;
+                        } else if (want === 'resolvers'
+                            && vmobj.hasOwnProperty('resolvers')) {
+
+                            // See NOTE above about nics, same applies to
+                            // resolvers. It's here solely for the use of
+                            // mdata-fetch.
+                            val = JSON.stringify(vmobj.resolvers);
+                            returnit(null, val);
+                            return;
+                        } else if (want === 'tmpfs'
+                            && vmobj.hasOwnProperty('tmpfs')) {
+                            val = JSON.stringify(vmobj.tmpfs);
+                            returnit(null, val);
+                            return;
+                        } else if (want === 'routes'
+                            && vmobj.hasOwnProperty('routes')) {
+
+                            var vmRoutes = [];
+
+                            // The notes above about resolvers also to routes.
+                            // It's here solely for the use of mdata-fetch, and
+                            // we need to do the updateZone here so that we have
+                            // latest data.
+                            for (var r in vmobj.routes) {
+                                var route = { linklocal: false, dst: r };
+                                var nicIdx = vmobj.routes[r].match(
+                                    /nics\[(\d+)\]/);
+                                if (!nicIdx) {
+                                    // Non link-local route: we have all the
+                                    // information we need already
+                                    route.gateway = vmobj.routes[r];
+                                    vmRoutes.push(route);
+                                    continue;
+                                }
+                                nicIdx = Number(nicIdx[1]);
+
+                                // Link-local route: we need the IP of the
+                                // local nic
+                                if (!vmobj.hasOwnProperty('nics')
+                                    || !vmobj.nics[nicIdx]
+                                    || !vmobj.nics[nicIdx].hasOwnProperty('ip')
+                                    || vmobj.nics[nicIdx].ip === 'dhcp') {
+
+                                    continue;
+                                }
+
+                                route.gateway = vmobj.nics[nicIdx].ip;
+                                route.linklocal = true;
                                 vmRoutes.push(route);
-                                continue;
-                            }
-                            nicIdx = Number(nicIdx[1]);
-
-                            // Link-local route: we need the IP of the local nic
-                            if (!vmobj.hasOwnProperty('nics')
-                                || !vmobj.nics[nicIdx]
-                                || !vmobj.nics[nicIdx].hasOwnProperty('ip')
-                                || vmobj.nics[nicIdx].ip === 'dhcp') {
-
-                                continue;
                             }
 
-                            route.gateway = vmobj.nics[nicIdx].ip;
-                            route.linklocal = true;
-                            vmRoutes.push(route);
+                            returnit(null, JSON.stringify(vmRoutes));
+                            return;
+                        } else if (want === 'operator-script') {
+                            returnit(null,
+                                vmobj.internal_metadata['operator-script']);
+                            return;
+                        } else {
+                            val = VM.flatten(vmobj, want);
+                            returnit(null, val);
+                        }
+                    } else {
+                        // not sdc:, so key will come from *_mdata
+                        var which_mdata = 'customer_metadata';
+
+                        if (want.match(/_pw$/)) {
+                            which_mdata = 'internal_metadata';
                         }
 
-                        returnit(null, JSON.stringify(vmRoutes));
-                        return;
-                    } else if (want === 'operator-script') {
-                        returnit(null,
-                            vmobj.internal_metadata['operator-script']);
-                        return;
-                    } else {
-                        val = VM.flatten(vmobj, want);
-                        returnit(null, val);
+                        if (internalNamespace(vmobj, want) !== null) {
+                            which_mdata = 'internal_metadata';
+                        }
+
+                        if (vmobj.hasOwnProperty(which_mdata)) {
+                            returnit(null, vmobj[which_mdata][want]);
+                            return;
+                        } else {
+                            returnit(new Error('Zone did not contain '
+                                + which_mdata));
+                            return;
+                        }
                     }
+                } else if (!req_is_v2 && cmd === 'NEGOTIATE') {
+                    if (want === 'V2') {
+                        write('V2_OK\n');
+                    } else {
+                        write('FAILURE\n');
+                    }
+                    return;
+                } else if (req_is_v2 && cmd === 'DELETE') {
+                    want = (want || '').trim();
+                    if (!want) {
+                        returnit(new Error('Invalid DELETE Request'));
+                        return;
+                    }
+
+                    zlog.info('Serving DELETE ' + want);
+
+                    if (want.slice(0, 4) === 'sdc:') {
+                        returnit(new Error('Cannot update the "sdc"'
+                            + 'Namespace.'));
+                        return;
+                    }
+
+                    ns = internalNamespace(vmobj, want);
+                    if (ns !== null) {
+                        returnit(new Error('Cannot update the "' + ns
+                            + '" Namespace.'));
+                        return;
+                    }
+
+                    setMetadata(vmobj.uuid, want, null, function (err) {
+                        if (err) {
+                            returnit(err);
+                        } else {
+                            returnit(null, 'OK');
+                        }
+                    });
+                } else if (req_is_v2 && cmd === 'PUT') {
+                    var key;
+                    var value;
+                    var terms;
+
+                    terms = (want || '').trim().split(' ');
+
+                    if (terms.length !== 2) {
+                        returnit(new Error('Invalid PUT Request'));
+                        return;
+                    }
+
+                    // PUT requests have two space-separated BASE64-encoded
+                    // arguments: the Key and then the Value.
+                    key = (base64_decode(terms[0]) || '').trim();
+                    value = base64_decode(terms[1]);
+
+                    if (!key || value === null) {
+                        returnit(new Error('Invalid PUT Request'));
+                        return;
+                    }
+
+                    if (key.slice(0, 4) === 'sdc:') {
+                        returnit(new Error('Cannot update the "sdc"'
+                            + ' Namespace.'));
+                        return;
+                    }
+
+                    ns = internalNamespace(vmobj, key);
+                    if (ns !== null) {
+                        returnit(new Error('Cannot update the "' + ns
+                            + '" Namespace.'));
+                        return;
+                    }
+
+                    zlog.info('Serving PUT ' + key);
+                    setMetadata(vmobj.uuid, key, value, function (err) {
+                        if (err) {
+                            zlog.error(err, 'could not set metadata (key "'
+                                + key + '")');
+                            returnit(err);
+                        } else {
+                            returnit(null, 'OK');
+                        }
+                    });
+
+                    return;
+                } else if (cmd === 'KEYS') {
+                    var ckeys = [];
+                    var ikeys = [];
+
+                    /*
+                     * Keys that match *_pw$ and internal_metadata_namespace
+                     * prefixed keys come from internal_metadata, everything
+                     * else comes from customer_metadata.
+                     */
+                    ckeys = Object.keys(vmobj.customer_metadata)
+                        .filter(function (k) {
+
+                        return (!k.match(/_pw$/)
+                            && internalNamespace(vmobj, k) === null);
+                    });
+                    ikeys = Object.keys(vmobj.internal_metadata)
+                        .filter(function (k) {
+
+                        return (k.match(/_pw$/)
+                            || internalNamespace(vmobj, k) !== null);
+                    });
+
+                    returnit(null, ckeys.concat(ikeys).join('\n'));
+                    return;
                 } else {
-                    // not sdc:, so key will come from *_mdata
-                    var which_mdata = 'customer_metadata';
-
-                    if (want.match(/_pw$/)) {
-                        which_mdata = 'internal_metadata';
-                    }
-
-                    if (internalNamespace(vmobj, want) !== null) {
-                        which_mdata = 'internal_metadata';
-                    }
-
-                    if (vmobj.hasOwnProperty(which_mdata)) {
-                        returnit(null, vmobj[which_mdata][want]);
-                        return;
-                    } else {
-                        returnit(new Error('Zone did not contain '
-                            + which_mdata));
-                        return;
-                    }
-                }
-            } else if (!req_is_v2 && cmd === 'NEGOTIATE') {
-                if (want === 'V2') {
-                    write('V2_OK\n');
-                } else {
-                    write('FAILURE\n');
-                }
-                return;
-            } else if (req_is_v2 && cmd === 'DELETE') {
-                want = (want || '').trim();
-                if (!want) {
-                    returnit(new Error('Invalid DELETE Request'));
+                    zlog.error('Unknown command ' + cmd);
+                    returnit(new Error('Unknown command ' + cmd));
                     return;
                 }
 
-                zlog.info('Serving DELETE ' + want);
+            });
 
-                if (want.slice(0, 4) === 'sdc:') {
-                    returnit(new Error('Cannot update the "sdc" Namespace.'));
-                    return;
-                }
 
-                ns = internalNamespace(vmobj, want);
-                if (ns !== null) {
-                    returnit(new Error('Cannot update the "' + ns
-                        + '" Namespace.'));
-                    return;
-                }
-
-                setMetadata(want, null, function (err) {
-                    if (err) {
-                        returnit(err);
-                    } else {
-                        returnit(null, 'OK');
-                    }
-                });
-            } else if (req_is_v2 && cmd === 'PUT') {
-                var key;
-                var value;
-                var terms;
-
-                terms = (want || '').trim().split(' ');
-
-                if (terms.length !== 2) {
-                    returnit(new Error('Invalid PUT Request'));
-                    return;
-                }
-
-                // PUT requests have two space-separated BASE64-encoded
-                // arguments: the Key and then the Value.
-                key = (base64_decode(terms[0]) || '').trim();
-                value = base64_decode(terms[1]);
-
-                if (!key || value === null) {
-                    returnit(new Error('Invalid PUT Request'));
-                    return;
-                }
-
-                if (key.slice(0, 4) === 'sdc:') {
-                    returnit(new Error('Cannot update the "sdc" Namespace.'));
-                    return;
-                }
-
-                ns = internalNamespace(vmobj, key);
-                if (ns !== null) {
-                    returnit(new Error('Cannot update the "' + ns
-                        + '" Namespace.'));
-                    return;
-                }
-
-                zlog.info('Serving PUT ' + key);
-                setMetadata(key, value, function (err) {
-                    if (err) {
-                        zlog.error(err, 'could not set metadata (key "' + key
-                            + '")');
-                        returnit(err);
-                    } else {
-                        returnit(null, 'OK');
-                    }
-                });
-
-                return;
-            } else if (cmd === 'KEYS') {
-                var ckeys = [];
-                var ikeys = [];
-
-                /*
-                 * Keys that match *_pw$ and internal_metadata_namespace
-                 * prefixed keys come from internal_metadata, everything else
-                 * comes from customer_metadata.
-                 */
-                ckeys = Object.keys(vmobj.customer_metadata)
-                    .filter(function (k) {
-
-                    return (!k.match(/_pw$/)
-                        && internalNamespace(vmobj, k) === null);
-                });
-                ikeys = Object.keys(vmobj.internal_metadata)
-                    .filter(function (k) {
-
-                    return (k.match(/_pw$/)
-                        || internalNamespace(vmobj, k) !== null);
-                });
-
-                returnit(null, ckeys.concat(ikeys).join('\n'));
-                return;
-            } else {
-                zlog.error('Unknown command ' + cmd);
-                returnit(new Error('Unknown command ' + cmd));
-                return;
-            }
-
-            function setMetadata(_key, _value, cb) {
+            function setMetadata(uuid, _key, _value, cb)
+            {
                 var payload = {};
                 var which = 'customer_metadata';
 
@@ -735,10 +771,11 @@ var MetadataAgent = module.exports = function (options) {
                 }
 
                 zlog.trace({ payload: payload }, 'calling VM.update()');
-                VM.update(vmobj.uuid, payload, zlog, cb);
+                VM.update(uuid, payload, zlog, cb);
             }
 
-            function parse_v2_request(inframe) {
+            function parse_v2_request(inframe)
+            {
                 var m;
                 var m2;
                 var newcrc32;
@@ -785,7 +822,8 @@ var MetadataAgent = module.exports = function (options) {
             }
 
 
-            function format_v2_response(code, body) {
+            function format_v2_response(code, body)
+            {
                 var resp;
                 var fullresp;
 
@@ -801,7 +839,8 @@ var MetadataAgent = module.exports = function (options) {
                 return (fullresp);
             }
 
-            function returnit(error, retval) {
+            function returnit(error, retval)
+            {
                 var towrite;
 
                 if (error) {
@@ -849,21 +888,13 @@ var MetadataAgent = module.exports = function (options) {
         };
     }
 
-    function handleEvent(task) {
+    function handleEvent(task)
+    {
         self.event_queue.enqueue(function (callback) {
-            switch (task.type) {
-            case 'create':
-                createVmobj(task.vm, callback);
-                break;
-            case 'modify':
-                modifyVmobj(task.vm, callback);
-                break;
-            case 'delete':
-                deleteVmobj(task.zonename, callback);
-                break;
-            default:
-                callback();
-                break;
+            if (task.vm && task.vm.state === 'running') {
+                startServer(task.zonename, task.vm, callback);
+            } else {
+                stopServer(task.zonename, callback);
             }
         });
     }
@@ -941,11 +972,10 @@ var MetadataAgent = module.exports = function (options) {
         });
     };
 
-    self.setVmobjs = function (callback) {
+    self.startServers = function (callback) {
         var opts = {host: '127.0.0.1', port: 9090, path: '/vms'};
         http.get(opts, function (res) {
             var body = '';
-            var vmobjs;
 
             res.on('data', function (chunk) {
                 body += chunk;
@@ -954,15 +984,19 @@ var MetadataAgent = module.exports = function (options) {
             res.on('end', function () {
                 if (res.statusCode === 200) {
                     try {
-                        vmobjs = JSON.parse(body);
-                        vmobjs.forEach(function (vmobj) {
-                            self.vmobjs[vmobj.zonename] = vmobj;
-                        });
+                        var vmobjs = JSON.parse(body);
+                        async.eachSeries(vmobjs, function (vmobj, cb) {
+                            if (vmobj.state === 'running') {
+                                startServer(vmobj.zonename, vmobj, cb);
+                            } else {
+                                cb();
+                            }
+                        }, callback);
                     } catch (e) {
-                        self.log.debug('failed to parse body from vminfod: '
-                            + e.message);
+                        self.log.debug('failed to parse body from '
+                            + 'vminfod: ' + e.message);
+                        callback();
                     }
-                    callback();
                 } else {
                     self.log.debug('vminfod response not usable: '
                         + res.statusCode);
@@ -975,13 +1009,6 @@ var MetadataAgent = module.exports = function (options) {
         });
     };
 
-    self.startServers = function (callback) {
-        async.each(Object.keys(self.vmobjs), function (zonename, cb) {
-            createZoneLog(zonename);
-            startServer(zonename, cb);
-        }, callback);
-    };
-
     /*
      * reset() hard reset the data to ensure integrity
      *
@@ -991,8 +1018,9 @@ var MetadataAgent = module.exports = function (options) {
      *   3- synchronize vmobjs/servers
      *   4- resume the event queue
      */
-    function reset(callback) {
-        var new_vmobjs = {};
+    function reset(callback)
+    {
+        var vmobjs = {};
 
         async.series([
             // pause the queue
@@ -1005,7 +1033,6 @@ var MetadataAgent = module.exports = function (options) {
                 var opts = {host: '127.0.0.1', port: 9090, path: '/vms'};
                 http.get(opts, function (res) {
                     var body = '';
-                    var vmobjs;
 
                     res.on('data', function (chunk) {
                         body += chunk;
@@ -1014,9 +1041,9 @@ var MetadataAgent = module.exports = function (options) {
                     res.on('end', function () {
                         if (res.statusCode === 200) {
                             try {
-                                vmobjs = JSON.parse(body);
-                                vmobjs.forEach(function (vmobj) {
-                                    new_vmobjs[vmobj.zonename] = vmobj;
+                                var vms = JSON.parse(body);
+                                vms.forEach(function (vm) {
+                                    vmobjs[vm.zonename] = vm;
                                 });
                                 cb();
                             } catch (e) {
@@ -1035,42 +1062,28 @@ var MetadataAgent = module.exports = function (options) {
                     cb(err);
                 });
             },
-            // synchronize vmobjs/servers
+            // start/stop servers
             function (cb) {
-                async.series([
-                    // remove stale
-                    function (cb1) {
-                        async.each(Object.keys(self.vmobjs),
-                            function (zonename, cb2) {
-
-                            if (!new_vmobjs.hasOwnProperty(zonename)) {
-                                deleteVmobj(zonename, cb2);
-                            } else {
-                                cb2();
-                            }
-                        }, cb1);
-                    },
-                    // add new
-                    function (cb1) {
-                        async.each(Object.keys(new_vmobjs),
-                            function (zonename, cb2) {
-
-                            if (!self.vmobjs.hasOwnProperty(zonename)) {
-                                createVmobj(new_vmobjs[zonename], cb2);
-                            } else {
-                                cb2();
-                            }
-                        }, cb1);
-                    },
-                    // refresh
-                    function (cb1) {
-                        async.each(Object.keys(new_vmobjs),
-                            function (zonename, cb2) {
-
-                            modifyVmobj(new_vmobjs[zonename], cb2);
-                        }, cb1);
+                async.each(Object.keys(vmobjs), function (zonename, cb1) {
+                    if (vmobjs[zonename].state === 'running') {
+                        startServer(zonename, vmobjs[zonename], cb1);
+                    } else if (self.zoneConnections.hasOwnProperty(zonename)) {
+                        stopServer(zonename, cb1);
+                    } else {
+                        cb1();
                     }
-                ], cb);
+                }, cb);
+            },
+            // clean cruft
+            function (cb) {
+                var keys = Object.keys(self.zoneConnections);
+                async.each(keys, function (zonename, cb1) {
+                    if (!vmobjs.hasOwnProperty(zonename)) {
+                        stopServer(zonename, cb1);
+                    } else {
+                        cb1();
+                    }
+                }, cb);
             },
             // resume the event queue
             function (cb) {
@@ -1109,10 +1122,6 @@ MetadataAgent.prototype.start = function (callback) {
         // start vminfo event listener
         function (cb) {
             self.startEvents(cb);
-        },
-        // load vmobjs
-        function (cb) {
-            self.setVmobjs(cb);
         },
         // start servers
         function (cb) {

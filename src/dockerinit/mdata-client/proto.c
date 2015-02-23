@@ -526,15 +526,19 @@ retry:
 		 * We could not send the request, so reset the stream
 		 * and try again:
 		 */
-		fprintf(stderr, "receive timeout, resetting "
-		    "protocol...\n");
+		/* XXX disabled for use as library
+		 * fprintf(stderr, "receive timeout, resetting "
+		 *   "protocol...\n");
+		.*/
 		if (proto_reset(mdp) == -1) {
 			/*
 			 * We could not do a reset, so abort the whole
 			 * thing.
 			 */
-			fprintf(stderr, "ERROR: while resetting connection: "
-			    "%s\n", mdp->mdp_errmsg);
+			/* XXX disabled for use as library
+			 * fprintf(stderr, "ERROR: while resetting connection: "
+			 *    "%s\n", mdp->mdp_errmsg);
+			 */
 			goto bail;
 		} else {
 			/*

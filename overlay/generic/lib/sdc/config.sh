@@ -7,10 +7,51 @@
 #
 # bash config.sh -json
 #
-# Copyright (c) 2013 Joyent Inc., All rights reserved.
+# Copyright (c) 2015 Joyent Inc., All rights reserved.
 #
 
 CACHE_FILE_JSON="/tmp/.config.json"
+NET_BOOT_FILE="/system/boot/networking.json"
+OVERLAY_RULES_DIR="/var/run/smartdc/networking"
+OVERLAY_RULES_FILE="/var/run/smartdc/networking/overlay_rules.json"
+
+#set -o xtrace
+
+function boot_file_config_enabled
+{
+    /usr/lib/sdc/net-boot-config --enabled
+}
+
+function boot_file_config_valid
+{
+    /usr/bin/json --validate -f $NET_BOOT_FILE
+}
+
+function boot_file_nic_tag_params
+{
+
+    /usr/lib/sdc/net-boot-config | egrep '_nic=|etherstub='
+}
+
+function boot_file_config_init
+{
+    /usr/lib/sdc/net-boot-config --routes | while read dst gw; do
+        route -pR "/" add "$dst" "$gw"
+    done
+
+    mkdir -p $OVERLAY_RULES_DIR
+    rm -f $OVERLAY_RULES_FILE
+    if [[ $(/usr/lib/sdc/net-boot-config --nictag-rules | /usr/bin/json -k | wc -l) != "0" ]]; then
+        /usr/lib/sdc/net-boot-config --nictag-rules > $OVERLAY_RULES_FILE
+    fi
+}
+
+function load_boot_file_config
+{
+    for line in $(/usr/lib/sdc/net-boot-config); do
+        eval "CONFIG_${line}"
+    done
+}
 
 # Loads sysinfo variables with prefix (default: SYSINFO_)
 function load_sdc_sysinfo {

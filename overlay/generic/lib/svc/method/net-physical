@@ -282,12 +282,29 @@ if smf_is_globalzone; then
     # The next command is for logging purposes only
     log_if_state before
 
-    # Load sysinfo variables with SYSINFO_ prefix
+    # Load sysinfo variables with SYSINFO_ prefix: we primarily care about
+    # the NIC_variables, which contain the actual interface name for a nic
+    # tag (it has mapped the foo_nic=<MAC address> variables to interface
+    # names for us).
     load_sdc_sysinfo
-    # Load config variables with CONFIG_ prefix, and sets the headnode variable
-    load_sdc_config
-    # Load boot params with BOOT_ prefix
-    load_sdc_bootparams
+
+    if boot_file_config_enabled; then
+        # We have a boot-time networking file present - use its values rather
+        # than ones from the config file or bootparams
+        if ! boot_file_config_valid; then
+            echo "ERROR: boot-time network config file incorrect"
+            exit ${SMF_EXIT_ERR_CONFIG}
+        fi
+
+        load_boot_file_config
+        boot_file_config_init
+    else
+        # Load config variables with CONFIG_ prefix,
+        # and sets the headnode variable
+        load_sdc_config
+        # Load boot params with BOOT_ prefix
+        load_sdc_bootparams
+    fi
 
     # Set up etherstubs
     for stub in $(echo "${CONFIG_etherstub}" | sed -e "s/,/ /g"); do
@@ -384,8 +401,8 @@ if smf_is_globalzone; then
         if ! dladm show-vnic external0 > /dev/null; then
             vnic_up "${SYSINFO_NIC_external}" "external0" \
                 "${CONFIG_external_ip}" "${CONFIG_external_netmask}" \
-                "${CONFIG_external_vlan_id}" "" "primary" \
-                "${CONFIG_external_mtu}"
+                "${CONFIG_external_vlan_id}" "${CONFIG_external_mac}" \
+                "primary" "${CONFIG_external_mtu}"
         fi
     fi
 
@@ -402,8 +419,14 @@ if smf_is_globalzone; then
     if [[ -n "${nic_tags}" ]]; then
         tags=(${nic_tags//,/ })
 
-        bootparam_ip_keys=$(sdc_bootparams_keys | grep -- "-ip$" || true)
-        config_ip_keys=$(sdc_config_keys | grep "_ip$" || true)
+        if boot_file_config_enabled; then
+            bootparam_ip_keys=""
+            config_ip_keys=${CONFIG_bootfile_ip_keys//,/ }
+        else
+            bootparam_ip_keys=$(sdc_bootparams_keys | grep -- "-ip$" || true)
+            config_ip_keys=$(sdc_config_keys | grep "_ip$" || true)
+        fi
+
         for tag in "${tags[@]}"; do
 
             eval "link=\${SYSINFO_NIC_${tag}}"
@@ -423,7 +446,8 @@ if smf_is_globalzone; then
                     eval "mtu=\${CONFIG_${iface}_mtu}"
 
                     echo vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}" "${mtu}"
-                    vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}" "${mtu}"
+                    vnic_up "${link}" "${iface}" "${ip}" "${netmask}" \
+                        "${vlan}" "${macaddr}" "" "${mtu}"
                 fi
             done
 
@@ -436,7 +460,8 @@ if smf_is_globalzone; then
                     eval "macaddr=\${BOOT_${iface}_mac}"
                     eval "mtu=\${CONFIG_${iface}_mtu}"
                     echo vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}" "${mtu}"
-                    vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}" "${mtu}"
+                    vnic_up "${link}" "${iface}" "${ip}" "${netmask}" \
+                        "${vlan}" "${macaddr}" "" "${mtu}"
                 fi
             done
 

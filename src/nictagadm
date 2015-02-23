@@ -235,6 +235,13 @@ function find_config_paths()
 {
     [[ -n ${CONF} ]] && return 0
 
+    if boot_file_config_enabled; then
+        CONF_FILES=${TMP_CONF}
+        CONF=${TMP_CONF}
+        verbose "Using config file (boot file config enabled): ${CONF_FILES}"
+        return
+    fi
+
     USB_CONFIG_COPY="$(svcprop -p 'joyentfs/usb_copy_path' \
         svc:/system/filesystem/smartdc:default)/config"
     USB_MNT="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' \
@@ -329,8 +336,18 @@ function umount_usb()
 function tag_conf_init()
 {
     [[ -e ${TMP_CONF} ]] && return 0
-    bootparams | egrep '^.*_nic=|^etherstub=' > ${TMP_CONF}
-    chmod 644 ${TMP_CONF}
+
+    if boot_file_config_enabled; then
+        verbose "Initializing TMP_CONF: ${TMP_CONF} (boot file config enabled)"
+        if boot_file_config_valid 2>/dev/null; then
+            boot_file_nic_tag_params > ${TMP_CONF}
+            chmod 644 ${TMP_CONF}
+        fi
+    else
+        verbose "Initializing TMP_CONF: ${TMP_CONF} (using bootparams)"
+        bootparams | egrep '^.*_nic=|^etherstub=' > ${TMP_CONF}
+        chmod 644 ${TMP_CONF}
+    fi
 }
 
 
@@ -676,7 +693,7 @@ function cmd_tag_list()
 
     if [[ -n ${stub_line} ]]; then
         fields=(${stub_line//=/ })
-        for key in "${fields[1]/,/ }"; do
+        for key in ${fields[1]/,/ }; do
             set_tag_type ${key} "etherstub"
             print_line ${key} "-"
         done

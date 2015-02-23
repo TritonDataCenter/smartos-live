@@ -27,7 +27,7 @@
 # Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# Copyright 2013 Joyent Inc. All rights reserved.
+# Copyright 2015 Joyent Inc. All rights reserved.
 #
 # ident "%Z%%M% %I% %E% SMI"
 
@@ -130,8 +130,14 @@ esac
 
 if smf_is_globalzone; then
     . /lib/sdc/config.sh
-    load_sdc_config
+
     load_sdc_sysinfo
+
+    if boot_file_config_enabled; then
+        load_boot_file_config
+    else
+        load_sdc_config
+    fi
 fi
 
 #

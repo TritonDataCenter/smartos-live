@@ -732,12 +732,16 @@ f usr/bin/removable_disk 0555 root bin
 f usr/bin/mkzpool 0555 root bin
 f usr/lib/cryptpass 0555 root bin
 f usr/lib/measure_terminal 0555 root bin
+d usr/lib/sdc 0755 root bin
+f usr/lib/sdc/net-boot-config 0555 root bin
 s usr/sbin/fwadm=../fw/sbin/fwadm
 s usr/sbin/vmadm=../vm/sbin/vmadm
 d usr/node 0755 root bin
 d usr/node/0.10 0755 root bin
 d usr/node/0.10/node_modules 0755 root bin
+f usr/node/0.10/node_modules/assert-plus.js 0444 root bin
 f usr/node/0.10/node_modules/async.js 0444 root bin
+f usr/node/0.10/node_modules/dashdash.js 0444 root bin
 f usr/node/0.10/node_modules/disklayout.js 0444 root bin
 f usr/node/0.10/node_modules/dtrace-provider.js 0444 root bin
 f usr/node/0.10/node_modules/DTraceProviderBindings.node 0444 root bin
@@ -746,6 +750,7 @@ f usr/node/0.10/node_modules/kstat.node 0444 root bin
 f usr/node/0.10/node_modules/lockfd.js 0444 root bin
 f usr/node/0.10/node_modules/lockfd_binding.node 0444 root bin
 f usr/node/0.10/node_modules/microtime.node 0444 root bin
+f usr/node/0.10/node_modules/net-boot-config.js 0444 root bin
 f usr/node/0.10/node_modules/onlyif.js 0444 root bin
 f usr/node/0.10/node_modules/sprintf.js 0444 root bin
 f usr/node/0.10/node_modules/sqlite3.js 0444 root bin

@@ -105,6 +105,7 @@
 	<device match="ticlts" />
 	<device match="ticots" />
 	<device match="ticotsord" />
+	<device match="timerfd" />
 	<device match="tty" />
 	<device match="tun" />
 	<device match="udp" />

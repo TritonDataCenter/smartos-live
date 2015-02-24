@@ -80,22 +80,22 @@ int
 main(int argc, char *argv[])
 {
     char *execname;
-    int fd;
 
-    /* we'll write our log in /var/log */
-    mkdir("/var", 0755);
-    mkdir("/var/log", 0755);
-
-    fd = open(LOGFILE, O_WRONLY | O_APPEND | O_CREAT | O_CLOEXEC, 0600);
-    if (fd == -1) {
-        fatal(ERR_OPEN, "failed to open log file: %s\n", strerror(errno));
-    }
-
-    log_stream = fdopen(fd, "w");
-    if (log_stream == NULL) {
-        log_stream = stderr;
-        fatal(ERR_FDOPEN_LOG, "failed to fdopen(2): %s\n", strerror(errno));
-    }
+    /*
+     * We write the log to stderr and expect cn-agent to log/parse the output.
+     * It can know that dockerexec finished when it sees either a line that
+     * starts with:
+     *
+     * <timestamp> FATAL
+     *
+     * or:
+     *
+     * <timestamp> EXEC
+     *
+     * the former indicating that we failed and the latter that the next action
+     * will be execve().
+     */
+    log_stream = stderr;
 
     if (argc < 2) {
         fatal(ERR_NO_COMMAND, "no command specified on cmdline, argc: %d\n",
@@ -131,8 +131,15 @@ main(int argc, char *argv[])
 
     // find execname from argv[1] (w/ path), then execute it.
     execname = execName(argv[1]); // calls fatal() if fails
+
+    // Message for cn-agent that dockerexec is done and child should start
+    // now.
+    dlog("EXEC\n");
+
     execve(execname, argv+1, env);
 
+    // If execve() has failed, this next message should go to the user since
+    // stdout and stderr should now be connected to them.
     fatal(ERR_EXEC_FAILED, "execve(%s) failed: %s\n", argv[1],
         strerror(errno));
 

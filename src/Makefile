@@ -28,7 +28,7 @@ JSSTYLE_OLDSKOOL_OPTS =
 # without extra effort; it is overridden when make is invoked in this
 # subdirectory.
 #
-DESTDIR =		../proto
+DESTDIR =		$(PWD)/../proto
 
 #
 # DESTNAME is used for the manifest target.  We set it to something
@@ -399,10 +399,13 @@ install: all
 	mkdir -p $(DESTDIR)/lib/svc/manifest/system
 	cp vm/smf/system-vmadmd.xml \
 	    $(DESTDIR)/lib/svc/manifest/system/system-vmadmd.xml
+	cp vm/smf/system-vminfod.xml \
+	    $(DESTDIR)/lib/svc/manifest/system/system-vminfod.xml
 	cp vm/smf/system-metadata.xml \
 	    $(DESTDIR)/lib/svc/manifest/system/system-metadata.xml
 	mv $(DESTDIR)/usr/vm/sbin/vmadmd.js $(DESTDIR)/usr/vm/sbin/vmadmd
 	mv $(DESTDIR)/usr/vm/sbin/vmadm.js $(DESTDIR)/usr/vm/sbin/vmadm
+	mv $(DESTDIR)/usr/vm/sbin/vminfod.js $(DESTDIR)/usr/vm/sbin/vminfod
 	mv $(DESTDIR)/usr/vm/sbin/add-userscript.js \
 	    $(DESTDIR)/usr/vm/sbin/add-userscript
 	mv $(DESTDIR)/usr/vm/sbin/metadata.js $(DESTDIR)/usr/vm/sbin/metadata

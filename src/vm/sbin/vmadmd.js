@@ -44,6 +44,7 @@ var Qmp = require('/usr/vm/node_modules/qmp').Qmp;
 var qs = require('querystring');
 var url = require('url');
 var util = require('util');
+var Queue = require('/usr/vm/node_modules/queue');
 
 var UPGRADE_SCRIPT = '/smartdc/vm-upgrade/001_upgrade';
 var VMADMD_PORT = 8080;
@@ -69,7 +70,7 @@ var seen_vms = {};
 var restart_waiters = {};
 
 // Determine whether vmadmd should autoboot vms
-va = false;
+var do_autoboot = false;
 
 // The following fields are used to track connection state into the vminfo
 // event channel, allowing us to reset if possible.
@@ -77,7 +78,7 @@ var event_connect_attempts = 0;
 var event_initial_connect = true;
 
 // Event queue to ensure flooding events don't create too much back-pressure.
-var event_queue = new Queue({workers: 5});
+var event_queue;
 
 // global lookup fields that will be needed when loading zones
 var lookup_fields = [
@@ -740,8 +741,7 @@ function applyDockerRestartPolicy(vmobj)
     }, restart_delay);
 }
 
-// NOTE: nobody's paying attention to whether this completes or not.
-function updateZoneStatus(ev)
+function updateZoneStatus(ev, callback)
 {
     var load_fields;
     var reprovisioning = false;
@@ -750,6 +750,7 @@ function updateZoneStatus(ev)
         || ! ev.hasOwnProperty('newstate') || ! ev.hasOwnProperty('when')) {
 
         log.debug('skipping unknown event: ' + JSON.stringify(ev, null, 2));
+        callback();
         return;
     }
 
@@ -786,6 +787,7 @@ function updateZoneStatus(ev)
         // time.
         log.debug('Already loading VM ' + ev.zonename + ' ignoring transition'
             + ' from ' + ev.oldstate + ' to ' + ev.newstate + ' at ' + ev.when);
+        callback();
         return;
     } else if (PROV_WAIT[seen_vms[ev.zonename].uuid]) {
         // We're already waiting for this machine to provision, other
@@ -793,6 +795,7 @@ function updateZoneStatus(ev)
         // until after provisioning anyway.
         log.debug('still waiting for ' + seen_vms[ev.zonename].uuid
             + ' to complete provisioning, ignoring additional transition.');
+        callback();
         return;
     } else if (!(seen_vms[ev.zonename].provisioned)) {
         log.debug('VM ' + seen_vms[ev.zonename].uuid + ' is not provisioned'
@@ -831,9 +834,11 @@ function updateZoneStatus(ev)
                 && vmobj.internal_metadata
                 && vmobj.internal_metadata['docker:restartpolicy']) {
 
-                // no callback, nobody cares
                 applyDockerRestartPolicy(vmobj, log);
+
             }
+
+            callback();
         });
 
         return;
@@ -856,6 +861,7 @@ function updateZoneStatus(ev)
             log.trace('ignoring transition for ' + ev.zonename + ' ('
                 + seen_vms[ev.zonename].brand + ') from ' + ev.oldstate + ' to '
                 + ev.newstate + ' at ' + ev.when);
+            callback();
             return;
         }
     }
@@ -884,6 +890,7 @@ function updateZoneStatus(ev)
 
         if (err) {
             log.warn(err, 'unable to load zone: ' + err.message);
+            callback();
             return;
         }
 
@@ -891,6 +898,7 @@ function updateZoneStatus(ev)
             // never do anything to failed zones
             log.info('doing nothing for ' + ev.zonename + ' transition because '
                 + ' VM is marked "failed".');
+            callback();
             return;
         }
 
@@ -921,6 +929,7 @@ function updateZoneStatus(ev)
             if (PROV_WAIT.hasOwnProperty(vmobj.uuid)) {
                 log.trace('already waiting for ' + vmobj.uuid
                     + ' to leave "provisioning"');
+                callback();
                 return;
             }
 
@@ -940,10 +949,12 @@ function updateZoneStatus(ev)
                 if (prov_err) {
                     log.error(prov_err, 'error handling provisioning state for'
                         + ' ' + vmobj.uuid + ': ' + prov_err.message);
+                    callback();
                     return;
                 }
                 log.debug('handleProvision() for ' + vmobj.uuid + ' returned: '
                     +  result);
+                callback();
                 return;
             });
         } else {
@@ -955,6 +966,7 @@ function updateZoneStatus(ev)
         if (vmobj.brand !== 'kvm') {
             log.trace('doing nothing for ' + ev.zonename + ' transition '
                 + 'because brand != "kvm"');
+            callback();
             return;
         }
 
@@ -964,12 +976,14 @@ function updateZoneStatus(ev)
             clearVM(vmobj.uuid);
             rotateKVMLog(vmobj.uuid);
             spawnRemoteDisplay(vmobj);
+            callback();
         } else if (ev.oldstate === 'running') {
             if (VNC.hasOwnProperty(ev.zonename)) {
                 // VMs always have zonename === uuid, so we can remove this
                 log.info('clearing state for disappearing VM ' + ev.zonename);
                 clearVM(ev.zonename);
             }
+            callback();
         } else if (ev.newstate === 'uninitialized') { // this means installed!?
             // XXX we're running stop so it will clear the transition marker
 
@@ -977,40 +991,11 @@ function updateZoneStatus(ev)
                 if (e && e.code !== 'ENOTRUNNING') {
                     log.error(e, 'stop failed');
                 }
+                callback();
             });
+        } else {
+            callback();
         }
-    });
-}
-
-function startZoneWatcher(callback)
-{
-    var chunks;
-    var buffer = '';
-    var watcher;
-
-    watcher = spawn('/usr/vm/sbin/zoneevent', [], {'customFds': [-1, -1, -1]});
-
-    log.info('zoneevent running with pid ' + watcher.pid);
-
-    watcher.stdout.on('data', function (data) {
-        var chunk;
-        var obj;
-
-        buffer += data.toString();
-        chunks = buffer.split('\n');
-        while (chunks.length > 1) {
-            chunk = chunks.shift();
-            obj = JSON.parse(chunk);
-            callback(obj);
-        }
-        buffer = chunks.pop();
-    });
-
-    watcher.stdin.end();
-
-    watcher.on('exit', function (code) {
-        log.info('zoneevent watcher exited.');
-        watcher = null;
     });
 }
 
@@ -1164,7 +1149,7 @@ function handleGet(c, args, response)
     }
 }
 
-function startHTTPHandler()
+function startHTTPHandler(callback)
 {
     var ip;
     var ips = ['127.0.0.1'];
@@ -1221,6 +1206,8 @@ function startHTTPHandler()
         log.debug('LISTENING ON ' + ip + ':' + VMADMD_PORT);
         http.createServer(handler).listen(VMADMD_PORT, ip);
     }
+
+    callback();
 }
 
 /*
@@ -1654,7 +1641,7 @@ function loadVM(vmobj)
 
 // To help diagnose problems we write the keys we're watching to the TRACE log
 // which can be viewed using dtrace.
-function startTraceLoop() {
+function startTraceLoop(callback) {
     setInterval(function () {
         var prov_wait_keys = Object.keys(PROV_WAIT);
         var timer_keys = Object.keys(TIMER);
@@ -1666,45 +1653,20 @@ function startTraceLoop() {
             log.trace('TIMER keys: ' + JSON.stringify(timer_keys));
         }
     }, 5000);
+    callback();
 }
 
-// This checks zoneadm periodically to ensure that zones in 'seen_vms' all
-// still exist, if not: collect garbage.
-function startSeenCleaner() {
-    setInterval(function () {
-        execFile('/usr/sbin/zoneadm', ['list', '-c'],
-            function (error, stdout, stderr) {
-                var current_vms = {};
+function removeVM(zonename, callback)
+{
+    if (restart_waiters.hasOwnProperty(zonename)) {
+        delete restart_waiters[zonename];
+    }
 
-                if (error) {
-                    log.error(error);
-                    return;
-                }
+    if (seen_vms.hasOwnProperty(zonename)) {
+        delete seen_vms[zonename];
+    }
 
-                stdout.split('\n').forEach(function (vm) {
-                    if (vm.length > 0 && vm !== 'global') {
-                        current_vms[vm] = true;
-                    }
-                });
-
-                Object.keys(seen_vms).forEach(function (vm) {
-                    if (current_vms.hasOwnProperty(vm)) {
-                        log.trace('VM ' + vm + ' still exists, leaving "seen"');
-                    } else {
-                        // no longer exists
-                        log.info('VM ' + vm + ' is gone, removing from "seen"');
-                        if (seen_vms.uuid) {
-                            delete restart_waiters[seen_vms.uuid];
-                        } else {
-                            // in case it's a UUID
-                            delete restart_waiters[vm];
-                        }
-                        delete seen_vms[vm];
-                    }
-                });
-            }
-        );
-    }, (5 * 60) * 1000);
+    callback();
 }
 
 // Remember to add any fields you need in vmobj to lookup_fields in main()
@@ -2224,7 +2186,7 @@ function initVM(obj, callback)
 
         if (vmobj.state === 'failed') {
             log.debug('skipping failed VM ' + vmobj.uuid);
-            upg_cb();
+            callback();
         } else if (vmobj.state === 'provisioning') {
             log.debug('at vmadmd startup, VM ' + vmobj.uuid
                 + ' is in state "provisioning"');
@@ -2232,7 +2194,7 @@ function initVM(obj, callback)
             if (PROV_WAIT.hasOwnProperty(vmobj.uuid)) {
                 log.warn('at vmadmd startup, already waiting '
                     + 'for "provisioning" for ' + vmobj.uuid);
-                upg_cb();
+                callback();
                 return;
             }
 
@@ -2248,18 +2210,18 @@ function initVM(obj, callback)
                     log.error(prov_err, 'error handling '
                         + 'provisioning state for ' + vmobj.uuid
                         + ': ' + prov_err.message);
-                    upg_cb();
+                    callback();
                     return;
                 }
                 log.debug('at vmadmd startup, handleProvision()'
                     + 'for ' + vmobj.uuid + ' returned: '
                     + result);
-                upg_cb();
+                callback();
             });
         } else if (vmobj.brand === 'kvm') {
             log.debug('calling loadVM(' + vmobj.uuid + ')');
             loadVM(vmobj, do_autoboot);
-            upg_cb();
+            callback();
         } else if (vmobj.docker
             && vmobj.autoboot
             && vmobj.zone_state !== 'running'
@@ -2272,21 +2234,65 @@ function initVM(obj, callback)
                 + 'applying restart policy');
 
             applyDockerRestartPolicy(vmobj, log);
-            upg_cb();
+            callback();
         } else {
             log.debug('ignoring non-kvm VM ' + vmobj.uuid);
-            upg_cb();
+            callback();
         }
     });
 }
 
 function handleEvent(task)
 {
+    function createEvent(zonename, newstate, oldstate) {
+        if (oldstate === undefined) {
+            oldstate = 'uninitialized';
+        }
+
+        return ({
+            zonename: zonename,
+            newstate: newstate,
+            oldstate: oldstate,
+            when: (new Date()).getTime()
+        });
+    }
+
+    function extractZoneStateChange(changes) {
+        var change;
+        for (var i = 0; i < changes.length; i++) {
+            change = changes[i];
+
+            if (change.path === 'zone_state') {
+                return (change);
+            }
+        }
+    }
+
     event_queue.enqueue(function (callback) {
-        if (task.vm && task.vm.zone_state === 'running') {
-            startServer(task.zonename, task.vm, callback);
-        } else {
-            stopServer(task.zonename, callback);
+        var ev;
+        var change;
+
+        switch (task.type) {
+        case 'create':
+            ev = createEvent(task.zonename, task.vm.zone_state);
+            updateZoneStatus(ev, callback);
+            break;
+        case 'modify':
+            change = extractZoneStateChange(task.changes);
+
+            if (change !== undefined) {
+                ev = createEvent(task.zonename, change.to, change.from);
+                updateZoneStatus(ev, callback);
+            } else {
+                callback();
+            }
+            break;
+        case 'delete':
+            removeVM(task.zonename, callback);
+            break;
+        default:
+            callback();
+            break;
         }
     });
 }
@@ -2341,7 +2347,7 @@ function startEvents(callback)
         }
 
         // ensure subsequent disconnects will be reset
-        self.event_initial_connect = false;
+        event_initial_connect = false;
 
         if (callback) {
             callback();
@@ -2365,21 +2371,83 @@ function startEvents(callback)
     });
 }
 
+function reset(callback)
+{
+    var vms = {};
+
+    async.series([
+        // pause the event queue
+        function (cb) {
+            log.debug('pausing the event queue');
+            event_queue.pause(cb);
+        },
+        // fetch new vms
+        function (cb) {
+            VM.lookup({}, {fields: lookup_fields}, function (err, vmobjs) {
+                vmobjs.forEach(function (vmobj) {
+                    vms[vmobj.zonename] = vmobj;
+                });
+                cb();
+            });
+        },
+        // init unseen vms
+        function (cb) {
+            var keys = Object.keys(vms);
+            async.forEachSeries(keys, function (zonename, cb1) {
+                if (!seen_vms.hasOwnProperty(zonename)) {
+                    initVM(vms[zonename], cb1);
+                } else {
+                    cb1();
+                }
+            }, cb);
+        },
+        // clean cruft
+        function (cb) {
+            var keys = Object.keys(seen_vms);
+            async.forEachSeries(keys, function (zonename, cb1) {
+                if (!vms.hasOwnProperty(zonename)) {
+                    removeVM(zonename, cb1);
+                } else {
+                    cb1();
+                }
+            });
+        },
+        // resume event queue
+        function (cb) {
+            event_queue.resume();
+            cb();
+        }
+    ], callback);
+}
+
+function startTimers(callback)
+{
+    setTimeout(function () {
+        log.info('preparing to refresh data');
+        reset(function (err) {
+            startTimers();
+        });
+    }, 300000); // 5 minutes
+
+    if (callback) {
+        callback();
+    }
+}
+
 // kicks everything off
 function main()
 {
     // XXX TODO: load fs-ext so we can flock a pid file to be exclusive
-
-    // startZoneWatcher(updateZoneStatus);
-    startHTTPHandler();
-    startTraceLoop();
-    // startSeenCleaner();
-
     async.series([
-        // pause event queue
+        // init event queue
         function (cb) {
-            event_queue.pause();
+            var opts = {workers: 5, paused: true};
+            event_queue = new Queue(opts);
             cb();
+        },
+        // start vminfo event listener
+        function (cb) {
+            startEvents(cb);
         },
         // load config
         function (cb) {
@@ -2390,7 +2458,7 @@ function main()
                 } else {
                     cb();
                 }
-            })
+            });
         },
         // determine autoboot
         function (cb) {
@@ -2409,7 +2477,7 @@ function main()
         function (cb) {
             VM.lookup({}, {fields: lookup_fields}, function (err, vmobjs) {
                 async.forEachSeries(vmobjs, function (obj, init_cb) {
-                    initVM(obj, lookup_fields, init_cb);
+                    initVM(obj, init_cb);
                 }, cb);
             });
         },
@@ -2417,6 +2485,18 @@ function main()
         function (cb) {
             event_queue.resume();
             cb();
+        },
+        // start http server
+        function (cb) {
+            startHTTPHandler(cb);
+        },
+        // start refresh timers
+        function (cb) {
+            startTimers(cb);
+        },
+        // start trace loop
+        function (cb) {
+            startTraceLoop(cb);
         }
     ], function (err) {
         if (err) {

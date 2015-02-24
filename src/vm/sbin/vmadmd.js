@@ -68,6 +68,49 @@ var seen_vms = {};
 // order to not start additional restarts in that period.
 var restart_waiters = {};
 
+// Determine whether vmadmd should autoboot vms
+va = false;
+
+// The following fields are used to track connection state into the vminfo
+// event channel, allowing us to reset if possible.
+var event_connect_attempts = 0;
+var event_initial_connect = true;
+
+// Event queue to ensure flooding events don't create too much back-pressure.
+var event_queue = new Queue({workers: 5});
+
+// global lookup fields that will be needed when loading zones
+var lookup_fields = [
+    'autoboot',
+    'brand',
+    'create_timestamp',
+    'customer_metadata',
+    'default_gateway',
+    'disks',
+    'docker',
+    'image_uuid',
+    'internal_metadata',
+    'max_physical_memory',
+    'max_swap',
+    'never_booted',
+    'nics',
+    'ram',
+    'spice_opts',
+    'spice_password',
+    'spice_port',
+    'state',
+    'transition_expire',
+    'transition_to',
+    'uuid',
+    'v',
+    'vnc_password',
+    'vnc_port',
+    'zfs_filesystem',
+    'zone_state',
+    'zonename',
+    'zonepath',
+    'zpool'
+];
 
 function sysinfo(callback)
 {
@@ -1567,7 +1610,7 @@ function setStopTimer(uuid, expire)
 // state
 // transition_expire
 // transition_to
-function loadVM(vmobj, do_autoboot)
+function loadVM(vmobj)
 {
     var expire;
 
@@ -2156,149 +2199,229 @@ function upgradeVM(vmobj, fields, callback)
     });
 }
 
+function initVM(obj, callback)
+{
+    upgradeVM(obj, lookup_fields, function (upg_err, vmobj) {
+
+        if (upg_err) {
+            log.error(upg_err, 'failed to upgrade VM '
+                + vmobj.uuid);
+        }
+
+        if (!seen_vms.hasOwnProperty(vmobj.zonename)) {
+            seen_vms[vmobj.zonename] = {
+                brand: vmobj.brand,
+                uuid: vmobj.uuid,
+                zonepath: vmobj.zonepath
+            };
+            if (vmobj.docker) {
+                seen_vms[vmobj.zonename].docker = vmobj.docker;
+            }
+        }
+        if (vmobj.state !== 'provisioning') {
+            seen_vms[vmobj.zonename].provisioned = true;
+        }
+
+        if (vmobj.state === 'failed') {
+            log.debug('skipping failed VM ' + vmobj.uuid);
+            upg_cb();
+        } else if (vmobj.state === 'provisioning') {
+            log.debug('at vmadmd startup, VM ' + vmobj.uuid
+                + ' is in state "provisioning"');
+
+            if (PROV_WAIT.hasOwnProperty(vmobj.uuid)) {
+                log.warn('at vmadmd startup, already waiting '
+                    + 'for "provisioning" for ' + vmobj.uuid);
+                upg_cb();
+                return;
+            }
+
+            PROV_WAIT[vmobj.uuid] = true;
+            // this calls the callback when we go out of
+            // provisioning one way or another.
+            handleProvisioning(vmobj,
+                function (prov_err, result) {
+
+                delete PROV_WAIT[vmobj.uuid];
+                seen_vms[vmobj.zonename].provisioned = true;
+                if (prov_err) {
+                    log.error(prov_err, 'error handling '
+                        + 'provisioning state for ' + vmobj.uuid
+                        + ': ' + prov_err.message);
+                    upg_cb();
+                    return;
+                }
+                log.debug('at vmadmd startup, handleProvision()'
+                    + 'for ' + vmobj.uuid + ' returned: '
+                    + result);
+                upg_cb();
+            });
+        } else if (vmobj.brand === 'kvm') {
+            log.debug('calling loadVM(' + vmobj.uuid + ')');
+            loadVM(vmobj, do_autoboot);
+            upg_cb();
+        } else if (vmobj.docker
+            && vmobj.autoboot
+            && vmobj.zone_state !== 'running'
+            && vmobj.internal_metadata
+            && vmobj
+                .internal_metadata['docker:restartpolicy']) {
+
+            log.debug({uuid: vmobj.uuid},
+                'docker VM not running at vmadmd startup, '
+                + 'applying restart policy');
+
+            applyDockerRestartPolicy(vmobj, log);
+            upg_cb();
+        } else {
+            log.debug('ignoring non-kvm VM ' + vmobj.uuid);
+            upg_cb();
+        }
+    });
+}
+
+function handleEvent(task)
+{
+    event_queue.enqueue(function (callback) {
+        if (task.vm && task.vm.zone_state === 'running') {
+            startServer(task.zonename, task.vm, callback);
+        } else {
+            stopServer(task.zonename, callback);
+        }
+    });
+}
+
+function startEvents(callback)
+{
+    event_connect_attempts += 1;
+
+    var opts = {host: '127.0.0.1', port: 9090, path: '/events'};
+    http.get(opts, function (res) {
+        // reset connect attempts
+        event_connect_attempts = 0;
+        // all of our chunks should be JSON
+        res.setEncoding('utf8');
+        // let this connection stay open forever
+        res.connection.setTimeout(0);
+
+        var body = '';
+
+        res.on('data', function (data) {
+            var task;
+            var chunk;
+            var chunks;
+
+            body += data.toString();
+            chunks = body.split('\n');
+
+            while (chunks.length > 1) {
+                chunk = chunks.shift();
+                task = JSON.parse(chunk);
+                handleEvent(task);
+            }
+            body = chunks.pop(); // remainder
+        });
+
+        res.on('end', function () {
+            startEvents();
+        });
+
+        log.info('subscribed to vminfo. Waiting for events.');
+
+        if (event_initial_connect === false) {
+            reset(function (err) {
+                if (err) {
+                    log.warn('failed to reset after re-subscribing '
+                        + 'to vminfo events');
+                } else {
+                    log.info('successfully reset after re-subscribing '
+                        + 'to vminfo events');
+                }
+            });
+        }
+
+        // ensure subsequent disconnects will be reset
+        self.event_initial_connect = false;
+
+        if (callback) {
+            callback();
+        }
+    }).on('error', function (err) {
+        log.error('vminfod request failed: ' + err.message);
+
+        if (event_connect_attempts === 10) {
+            log.error('vminfod event requests reached max attempts');
+            throw new Error('Unable to subscribe to vminfod events');
+        } else {
+            // try again in 10 seconds
+            setTimeout(function () {
+                if (event_initial_connect === true) {
+                    startEvents(callback);
+                } else {
+                    startEvents();
+                }
+            }, 10000);
+        }
+    });
+}
+
 // kicks everything off
 function main()
 {
     // XXX TODO: load fs-ext so we can flock a pid file to be exclusive
 
-    startZoneWatcher(updateZoneStatus);
+    // startZoneWatcher(updateZoneStatus);
     startHTTPHandler();
     startTraceLoop();
-    startSeenCleaner();
+    // startSeenCleaner();
 
-    loadConfig(function (err) {
-        var do_autoboot = false;
-
+    async.series([
+        // pause event queue
+        function (cb) {
+            event_queue.pause();
+            cb();
+        },
+        // load config
+        function (cb) {
+            loadConfig(function (err) {
+                if (err) {
+                    log.error(err, 'Unable to load config');
+                    cb(err);
+                } else {
+                    cb();
+                }
+            })
+        },
+        // determine autoboot
+        function (cb) {
+            fs.exists(VMADMD_AUTOBOOT_FILE, function (exists) {
+                if (!exists) {
+                    do_autoboot = true;
+                    // boot all autoboot vms because this vm just booted, now
+                    // create file so on restart we know they system wasn't just
+                    // booted.
+                    fs.writeFileSync(VMADMD_AUTOBOOT_FILE, 'booted');
+                }
+                cb();
+            });
+        },
+        // initialize vms
+        function (cb) {
+            VM.lookup({}, {fields: lookup_fields}, function (err, vmobjs) {
+                async.forEachSeries(vmobjs, function (obj, init_cb) {
+                    initVM(obj, lookup_fields, init_cb);
+                }, cb);
+            });
+        },
+        // resume the queue
+        function (cb) {
+            event_queue.resume();
+            cb();
+        }
+    ], function (err) {
         if (err) {
-            log.error(err, 'Unable to load config');
             process.exit(2);
         }
-
-        fs.exists(VMADMD_AUTOBOOT_FILE, function (exists) {
-            var lookup_fields;
-
-            if (!exists) {
-                do_autoboot = true;
-                // boot all autoboot vms because this vm just booted, now
-                // create file so on restart we know they system wasn't just
-                // booted.
-                fs.writeFileSync(VMADMD_AUTOBOOT_FILE, 'booted');
-            }
-
-            lookup_fields = [
-                'autoboot',
-                'brand',
-                'create_timestamp',
-                'customer_metadata',
-                'default_gateway',
-                'disks',
-                'docker',
-                'image_uuid',
-                'internal_metadata',
-                'max_physical_memory',
-                'max_swap',
-                'never_booted',
-                'nics',
-                'ram',
-                'spice_opts',
-                'spice_password',
-                'spice_port',
-                'state',
-                'transition_expire',
-                'transition_to',
-                'uuid',
-                'v',
-                'vnc_password',
-                'vnc_port',
-                'zfs_filesystem',
-                'zone_state',
-                'zonename',
-                'zonepath',
-                'zpool'
-            ];
-
-            VM.lookup({}, {fields: lookup_fields}, function (e, vmobjs) {
-                async.forEachSeries(vmobjs, function (obj, upg_cb) {
-                    upgradeVM(obj, lookup_fields, function (upg_err, vmobj) {
-
-                        if (upg_err) {
-                            log.error(upg_err, 'failed to upgrade VM '
-                                + vmobj.uuid);
-                        }
-
-                        if (!seen_vms.hasOwnProperty(vmobj.zonename)) {
-                            seen_vms[vmobj.zonename] = {
-                                brand: vmobj.brand,
-                                uuid: vmobj.uuid,
-                                zonepath: vmobj.zonepath
-                            };
-                            if (vmobj.docker) {
-                                seen_vms[vmobj.zonename].docker = vmobj.docker;
-                            }
-                        }
-                        if (vmobj.state !== 'provisioning') {
-                            seen_vms[vmobj.zonename].provisioned = true;
-                        }
-
-                        if (vmobj.state === 'failed') {
-                            log.debug('skipping failed VM ' + vmobj.uuid);
-                            upg_cb();
-                        } else if (vmobj.state === 'provisioning') {
-                            log.debug('at vmadmd startup, VM ' + vmobj.uuid
-                                + ' is in state "provisioning"');
-
-                            if (PROV_WAIT.hasOwnProperty(vmobj.uuid)) {
-                                log.warn('at vmadmd startup, already waiting '
-                                    + 'for "provisioning" for ' + vmobj.uuid);
-                                upg_cb();
-                                return;
-                            }
-
-                            PROV_WAIT[vmobj.uuid] = true;
-                            // this calls the callback when we go out of
-                            // provisioning one way or another.
-                            handleProvisioning(vmobj,
-                                function (prov_err, result) {
-
-                                delete PROV_WAIT[vmobj.uuid];
-                                seen_vms[vmobj.zonename].provisioned = true;
-                                if (prov_err) {
-                                    log.error(prov_err, 'error handling '
-                                        + 'provisioning state for ' + vmobj.uuid
-                                        + ': ' + prov_err.message);
-                                    upg_cb();
-                                    return;
-                                }
-                                log.debug('at vmadmd startup, handleProvision()'
-                                    + 'for ' + vmobj.uuid + ' returned: '
-                                    + result);
-                                upg_cb();
-                            });
-                        } else if (vmobj.brand === 'kvm') {
-                            log.debug('calling loadVM(' + vmobj.uuid + ')');
-                            loadVM(vmobj, do_autoboot);
-                            upg_cb();
-                        } else if (vmobj.docker
-                            && vmobj.autoboot
-                            && vmobj.zone_state !== 'running'
-                            && vmobj.internal_metadata
-                            && vmobj
-                                .internal_metadata['docker:restartpolicy']) {
-
-                            log.debug({uuid: vmobj.uuid},
-                                'docker VM not running at vmadmd startup, '
-                                + 'applying restart policy');
-
-                            applyDockerRestartPolicy(vmobj, log);
-                            upg_cb();
-                        } else {
-                            log.debug('ignoring non-kvm VM ' + vmobj.uuid);
-                            upg_cb();
-                        }
-                    });
-                });
-            });
-        });
     });
 }
 

@@ -891,7 +891,7 @@ var MetadataAgent = module.exports = function (options) {
     function handleEvent(task)
     {
         self.event_queue.enqueue(function (callback) {
-            if (task.vm && task.vm.state === 'running') {
+            if (task.vm && task.vm.zone_state === 'running') {
                 startServer(task.zonename, task.vm, callback);
             } else {
                 stopServer(task.zonename, callback);

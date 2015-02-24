@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2013 Joyent Inc., All rights reserved.
+# Copyright (c) 2015 Joyent Inc., All rights reserved.
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -493,6 +493,15 @@ function get_smartos_vnics()
     done
 }
 
+function get_overlay_nic_tags()
+{
+    if /usr/lib/sdc/net-boot-config --enabled; then
+        for line in $(/usr/lib/sdc/net-boot-config grep '_overlay_nic_tags_provided='); do
+            eval "CONFIG_${line}"
+        done
+    fi
+}
+
 function get_nic_tags()
 {
     NicTagCount=0
@@ -893,6 +902,7 @@ END
         eval "link_status=\${${link_status_var}}"
         eval "vlan=\${${vlan_var}}"
         eval "host=\${${host_var}}"
+        eval "overlay_nic_tags=\${CONFIG_${iface}_overlay_nic_tags_provided}"
 
         ((printed++))
         trailing_comma=","
@@ -903,6 +913,9 @@ END
         echo -n "\"Link Status\": \"${link_status}\", "
         if [[ ${ZONENAME} == "global" ]]; then
             echo -n "\"Host Interface\": \"${host}\", "
+        fi
+        if [[ -n $overlay_nic_tags ]]; then
+            echo -n "\"Overlay Nic Tags\": [ \"${overlay_nic_tags//,/\", }\" ], "
         fi
         echo -n "\"VLAN\": \"${vlan}\"}"
         echo "${trailing_comma}"
@@ -954,6 +967,7 @@ get_live_image_buildstamp
 get_system_type
 get_hostname
 get_aggregation_mappings
+get_overlay_nic_tags
 get_nic_tags
 get_smartos_network_interfaces
 get_smartos_vnics

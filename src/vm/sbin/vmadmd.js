@@ -2393,7 +2393,7 @@ function reset(callback)
         // init unseen vms
         function (cb) {
             var keys = Object.keys(vms);
-            async.forEachSeries(keys, function (zonename, cb1) {
+            async.each(keys, function (zonename, cb1) {
                 if (!seen_vms.hasOwnProperty(zonename)) {
                     initVM(vms[zonename], cb1);
                 } else {
@@ -2404,7 +2404,7 @@ function reset(callback)
         // clean cruft
         function (cb) {
             var keys = Object.keys(seen_vms);
-            async.forEachSeries(keys, function (zonename, cb1) {
+            async.each(keys, function (zonename, cb1) {
                 if (!vms.hasOwnProperty(zonename)) {
                     removeVM(zonename, cb1);
                 } else {
@@ -2476,7 +2476,7 @@ function main()
         // initialize vms
         function (cb) {
             VM.lookup({}, {fields: lookup_fields}, function (err, vmobjs) {
-                async.forEachSeries(vmobjs, function (obj, init_cb) {
+                async.each(vmobjs, function (obj, init_cb) {
                     initVM(obj, init_cb);
                 }, cb);
             });

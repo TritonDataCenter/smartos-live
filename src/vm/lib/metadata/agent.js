@@ -956,7 +956,7 @@ var MetadataAgent = module.exports = function (options) {
                 if (res.statusCode === 200) {
                     try {
                         var vmobjs = JSON.parse(body);
-                        async.eachSeries(vmobjs, function (vmobj, cb) {
+                        async.each(vmobjs, function (vmobj, cb) {
                             if (vmobj.state === 'running') {
                                 startServer(vmobj.zonename, vmobj, cb);
                             } else {

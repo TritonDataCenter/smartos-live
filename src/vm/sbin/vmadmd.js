@@ -837,11 +837,9 @@ function updateZoneStatus(ev, callback)
                 applyDockerRestartPolicy(vmobj, log);
 
             }
-
             callback();
+            return;
         });
-
-        return;
     } else {
         try {
             if (fs.existsSync(seen_vms[ev.zonename].zonepath
@@ -939,6 +937,8 @@ function updateZoneStatus(ev, callback)
             }
 
             PROV_WAIT[vmobj.uuid] = true;
+            // we don't hold up the queue for this, as it may take a long time
+            // to complete and we have no control over when this finishes
             handleProvisioning(vmobj, function (prov_err, result) {
                 delete PROV_WAIT[vmobj.uuid]; // this waiter finished
 
@@ -949,12 +949,10 @@ function updateZoneStatus(ev, callback)
                 if (prov_err) {
                     log.error(prov_err, 'error handling provisioning state for'
                         + ' ' + vmobj.uuid + ': ' + prov_err.message);
-                    callback();
                     return;
                 }
                 log.debug('handleProvision() for ' + vmobj.uuid + ' returned: '
                     +  result);
-                callback();
                 return;
             });
         } else {
@@ -991,8 +989,9 @@ function updateZoneStatus(ev, callback)
                 if (e && e.code !== 'ENOTRUNNING') {
                     log.error(e, 'stop failed');
                 }
-                callback();
             });
+
+            callback();
         } else {
             callback();
         }
@@ -2379,7 +2378,8 @@ function reset(callback)
         // pause the event queue
         function (cb) {
             log.debug('pausing the event queue');
-            event_queue.pause(cb);
+            event_queue.pause();
+            cb();
         },
         // fetch new vms
         function (cb) {
@@ -2410,7 +2410,7 @@ function reset(callback)
                 } else {
                     cb1();
                 }
-            });
+            }, cb);
         },
         // resume event queue
         function (cb) {

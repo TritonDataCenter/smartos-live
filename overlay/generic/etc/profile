@@ -29,8 +29,7 @@ export LOGNAME PATH
 
 if [ "$TERM" = "" ]
 then
-	if /bin/i386
-	then
+	if [ `uname -p` = "i386" ]; then
 		TERM=sun-color
 	else
 		TERM=sun

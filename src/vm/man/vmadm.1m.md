@@ -1427,9 +1427,11 @@ tab-complete UUIDs rather than having to type them out for every command.
         Sets the MTU for the network interface. The maximum MTU for a device is
         determined based on its nic tag. If this property is not set, then it
         defaults to the current MTU of the data link that the nic tag
-        corresponds to. The supported range of MTUs is from 1500-9000. This
-        property is not updated live with vmadm update. If a specific MTU has
-        not been requested, then this property is not present through get.
+        corresponds to. The supported range of MTUs is from 1500-9000 for
+        VMs created on physical nics, and 576-9000 for VMs created on
+        etherstubs or overlays.  This property is not updated live with vmadm
+        update. If a specific MTU has not been requested, then this property
+        is not present through get.
 
         type: integer
         vmtype: OS

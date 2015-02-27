@@ -84,7 +84,7 @@ Subcommands:
         add             [-l] [-p prop=value,...] <name> [mac]
         delete          [-f] <name>
         exists          [-l] <name>
-        list            [-l | -L] [-o | -O] [-p] [-d delim]
+        list            [-l | -L] [-p] [-d delim]
         update          [-l] [-p prop=value,...] <name> [mac]
         vms             <name>
 USAGE
@@ -806,7 +806,7 @@ function cmd_tag_update()
     [[ -n "$mac" ]] && verbose \
         "updating nic tag MAC: name='$name', mac='$mac'"
     [[ -n "$mtu" ]] && verbose \
-        "updating nic tag MAC: name='$name', mtu='$mtu'"
+        "updating nic tag MTU: name='$name', mtu='$mtu'"
 
     mount_usb
     [[ -n "$mac" ]] && conf_update_field $1 "nic" ${mac}

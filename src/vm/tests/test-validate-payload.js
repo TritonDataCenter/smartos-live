@@ -236,7 +236,7 @@ for (brand in os_brands) {
                 t.ok(errors.bad_values.indexOf('nics.*.mtu') !== -1, 'confirm that it is bad values breaking: ' + JSON.stringify(errors));
             }
             t.end();
-	 });
+         });
     });
 
     test('set mtu too high', function (t) {
@@ -254,7 +254,7 @@ for (brand in os_brands) {
                 t.ok(errors.bad_values.indexOf('nics.*.mtu') !== -1, 'confirm that it is bad values breaking: ' + JSON.stringify(errors));
             }
             t.end();
-	 });
+         });
     });
 
     test('set good nic list', function (t) {
@@ -284,7 +284,7 @@ for (brand in os_brands) {
                 t.ok(errors.bad_values.indexOf('nics.*.mtu') !== -1, 'confirm that it is bad values breaking: ' + JSON.stringify(errors));
             }
             t.end();
-	 });
+         });
     });
 
     test('invalid mtu, string', function (t) {
@@ -302,7 +302,7 @@ for (brand in os_brands) {
                 t.ok(errors.bad_values.indexOf('nics.*.mtu') !== -1, 'confirm that it is bad values breaking: ' + JSON.stringify(errors));
             }
             t.end();
-	 });
+         });
     });
 
     test('invalid mtu, object', function (t) {
@@ -320,22 +320,7 @@ for (brand in os_brands) {
                 t.ok(errors.bad_values.indexOf('nics.*.mtu') !== -1, 'confirm that it is bad values breaking: ' + JSON.stringify(errors));
             }
             t.end();
-	 });
-    });
-
-    test('valid mtu, low', function (t) {
-         VM.validate(brand, 'create', {
-                brand: brand,
-                image_uuid: smartos_image_uuid,
-                nics: [ {
-                        nic_tag: 'admin',
-                        ip: 'dhcp',
-                        mtu: 1500
-                } ]
-         }, function (errors) {
-            t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
-            t.end();
-	 });
+         });
     });
 
     test('set bad nic obj', function (t) {
@@ -360,12 +345,12 @@ for (brand in os_brands) {
                 nics: [ {
                         nic_tag: 'admin',
                         ip: 'dhcp',
-                        mtu: 1500
+                        mtu: 576
                 } ]
          }, function (errors) {
             t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
             t.end();
-	 });
+         });
     });
 
     test('valid mtu, mid', function (t) {
@@ -380,7 +365,7 @@ for (brand in os_brands) {
          }, function (errors) {
             t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
             t.end();
-	 });
+         });
     });
 
     test('valid mtu, high', function (t) {
@@ -395,7 +380,7 @@ for (brand in os_brands) {
          }, function (errors) {
             t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
             t.end();
-	 });
+         });
     });
 
     test('valid mtu, string', function (t) {
@@ -410,7 +395,7 @@ for (brand in os_brands) {
          }, function (errors) {
             t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
             t.end();
-	 });
+         });
     });
 
 

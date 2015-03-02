@@ -5,7 +5,7 @@
 
     nictagadm add [-v] [-l] [-p prop=value,...] <name> [mac]
     nictagadm delete [-v] [-f] <name>
-    nictagadm exists [-v] <name>
+    nictagadm exists [-lv] <name> [name1]...
     nictagadm list [-v]  [-l | -L] [-p] [-d delim]
     nictagadm update [-v] [-p prop=value,...] <name> [mac]
     nictagadm vms [-v] <name>
@@ -91,10 +91,14 @@ The following options are valid for all commands.
 
               See GENERAL OPTIONS above.
 
-      exists [-v] <name>
+      exists [-lv] <name> [name1]...
 
          Tests to see if a nic tag exists with *name*. If it exists, the
          program exits 0, otherwise it exists non-zero.
+
+         -l
+
+              Only emit the names of nic tags that don't exist to stderr.
 
          -v
 

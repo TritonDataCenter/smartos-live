@@ -69,6 +69,7 @@ extern mdata_proto_t *mdp;
 /* other global bits we fill in for callers */
 extern char **cmdline;
 extern char **env;
+extern char *hostname;
 extern FILE *log_stream;
 extern char *path;
 extern struct passwd *pwd;
@@ -231,7 +232,10 @@ addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl)
     char *field, *printf_fmt;
     char *home;
     int home_len;
+    char *hostname_env;
+    int hostname_env_len;
     int found_home = 0;
+    int found_hostname = 0;
     int found_path = 0;
     int found_term = 0;
     char *new_path;
@@ -288,6 +292,11 @@ addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl)
                     path = (value + 5);
                     found_path = 1;
                 }
+                if ((type == ARRAY_ENV) &&
+                    (strncmp(value, "HOSTNAME=", 9) == 0)) {
+
+                    found_hostname = 1;
+                }
                 dlog(printf_fmt, *idx, array[*idx]);
                 (*idx)++;
             } else {
@@ -321,6 +330,27 @@ addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl)
         }
         array[(*idx)++] = home;
         dlog("ENV[%d] %s\n", (*idx) - 1, home);
+    }
+
+    /*
+     * If HOSTNAME was not set in the environment, but we've looked it up, we
+     * set it here based on the looked up value.
+     */
+    if ((type == ARRAY_ENV) && !found_hostname && (hostname != NULL)) {
+        hostname_env_len = (strlen(hostname) + 10);
+        hostname_env = malloc(sizeof (char) * hostname_env_len);
+        if (hostname_env == NULL) {
+            fatal(ERR_UNEXPECTED, "malloc() for hostname[%d] failed: %s\n",
+                hostname_env_len, strerror(errno));
+        }
+        if (snprintf(hostname_env, hostname_env_len, "HOSTNAME=%s",
+            hostname) < 0) {
+
+            fatal(ERR_UNEXPECTED, "snprintf(HOSTNAME=) failed: %s\n",
+                strerror(errno));
+        }
+        array[(*idx)++] = hostname_env;
+        dlog("ENV[%d] %s\n", (*idx) - 1, hostname_env);
     }
 
     /*

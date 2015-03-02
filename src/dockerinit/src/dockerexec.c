@@ -71,6 +71,7 @@ mdata_proto_t *mdp;
 /* global data */
 char **cmdline;
 char **env;
+char *hostname = NULL;
 FILE *log_stream = stderr;
 char *path = NULL;
 struct passwd *pwd;

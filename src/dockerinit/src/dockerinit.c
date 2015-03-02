@@ -97,6 +97,7 @@ mdata_proto_t *mdp;
 brand_t brand;
 char **cmdline;
 char **env;
+char *hostname = NULL;
 ipadm_handle_t iph;
 char *ipmgmtd_door;
 FILE *log_stream = stderr;
@@ -532,8 +533,6 @@ killIpmgmtd()
 void
 setupHostname()
 {
-    char *hostname;
-
     hostname = (char *) mdataGet("sdc:hostname");
     if (hostname != NULL) {
         dlog("INFO setting hostname = '%s'\n", hostname);

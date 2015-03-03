@@ -997,7 +997,7 @@ var MetadataAgent = module.exports = function (options) {
             // pause the queue
             function (cb) {
                 self.log.debug('pausing the event queue');
-                self.event_queue.pause(cb);
+                self.event_queue.pause({timeout: 10000}, cb);
             },
             // fetch new vmobjs
             function (cb) {

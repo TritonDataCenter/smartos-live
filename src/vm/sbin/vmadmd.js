@@ -2378,8 +2378,7 @@ function reset(callback)
         // pause the event queue
         function (cb) {
             log.debug('pausing the event queue');
-            event_queue.pause();
-            cb();
+            event_queue.pause({timeout: 10000}, cb);
         },
         // fetch new vms
         function (cb) {

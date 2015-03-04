@@ -403,7 +403,7 @@ if smf_is_globalzone; then
         fi
     fi
 
-    # If on VMWare or Parallels or VirtualBox, create a bridge which
+    # If on Parallels or VirtualBox, create a bridge which
     # allows traffic to flow correctly to the host-only network
     if [[ "${ADMIN_NIC_UP}" == "true" ]] \
         && [[ ${SYSINFO_Product} == "Parallels Virtual Platform" \

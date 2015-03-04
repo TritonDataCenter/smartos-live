@@ -227,6 +227,31 @@ function create_aggrs
 }
 
 #
+# Try various config parameters to set the default route
+#
+function set_default_route
+{
+    typeset default_gw
+
+    if [[ -n "${CONFIG_headnode_default_gateway}" ]]; then
+        default_gw="${CONFIG_headnode_default_gateway}"
+
+    elif [[ -n ${CONFIG_admin_gateway} ]]; then
+        default_gw="${CONFIG_admin_gateway}"
+
+    elif [[ -n ${BOOT_admin_gateway} ]]; then
+        default_gw=${BOOT_admin_gateway}
+
+    elif [[ -n ${CONFIG_external_gateway} ]]; then
+        default_gw=${CONFIG_external_gateway}
+    fi
+
+    if [[ -n ${default_gw} ]]; then
+        echo "${default_gw}" > /etc/defaultrouter
+    fi
+}
+
+#
 # Go through and set up the MTU for all of the various nic tags
 #
 function setup_mtu
@@ -337,11 +362,6 @@ if smf_is_globalzone; then
         admin_netmask=${BOOT_admin_netmask}
     fi
 
-    admin_gateway=${CONFIG_admin_gateway}
-    if [[ -z "$admin_gateway" ]]; then
-        admin_gateway=${BOOT_admin_gateway}
-    fi
-
     if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]];
     then
         /sbin/ifconfig ${SYSINFO_NIC_admin} inet ${admin_ip} \
@@ -406,13 +426,7 @@ if smf_is_globalzone; then
         fi
     fi
 
-    # Use headnode_default_gateway if set, otherwise fall back to admin_gateway
-    # if that's set.
-    if [[ -n "${CONFIG_headnode_default_gateway}" ]]; then
-        echo "${CONFIG_headnode_default_gateway}" > /etc/defaultrouter
-    elif [[ -n ${admin_gateway} ]]; then
-        echo "${admin_gateway}" > /etc/defaultrouter
-    fi
+    set_default_route
 
     # Setup extra nics, if specified in the config file
     nic_tags="${SYSINFO_Nic_Tags}"

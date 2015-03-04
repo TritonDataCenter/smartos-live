@@ -27,6 +27,11 @@ function main() {
             help: 'Exit 0 if boot-time networking is enabled.'
         },
         {
+            names: ['json', 'j'],
+            type: 'bool',
+            help: 'Output JSON.'
+        },
+        {
             names: ['help', 'h'],
             type: 'bool',
             help: 'Print help and exit.'
@@ -68,10 +73,15 @@ function main() {
         });
     }
 
-    if (opts.routes || opts.nictag_rules) {
+    if (opts.json || opts.routes || opts.nictag_rules) {
         return boot_file.load(function (err, config) {
             if (err) {
                 return console.error(err.message);
+            }
+
+            if (opts.json) {
+                console.log(JSON.stringify(config, null, 2));
+                return null;
             }
 
             if (opts.routes) {

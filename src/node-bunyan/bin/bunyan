@@ -1,13 +1,19 @@
 #!/usr/bin/env node
-// -*- mode: js -*-
-//
-// bunyan -- filter and pretty-print JSON logs, like Bunyan logs.
-//
-// See <https://github.com/trentm/node-bunyan>.
-//
+/**
+ * Copyright (c) 2015 Trent Mick. All rights reserved.
+ * Copyright (c) 2015 Joyent Inc. All rights reserved.
+ *
+ * bunyan -- filter and pretty-print Bunyan log files (line-delimited JSON)
+ *
+ * See <https://github.com/trentm/node-bunyan>.
+ *
+ * -*- mode: js -*-
+ * vim: expandtab:ts=4:sw=4
+ */
 
-var VERSION = '0.21.3';
+var VERSION = '1.3.4';
 
+var p = console.log;
 var util = require('util');
 var pathlib = require('path');
 var vm = require('vm');
@@ -77,6 +83,13 @@ Object.keys(levelFromName).forEach(function (name) {
 });
 
 
+// Display time formats.
+TIME_UTC = 1;  // the default, bunyan's native format
+TIME_LOCAL = 2;
+
+var timezoneOffsetMs; // used for TIME_LOCAL display
+
+
 // The current raw input line being processed. Used for `uncaughtException`.
 var currLine = null;
 
@@ -86,12 +99,15 @@ var child = null;
 // Whether ANSI codes are being used. Used for signal-handling.
 var usingAnsiCodes = false;
 
-// Global ref to options used only by 'uncaughtException' handler.
-var gOptsForUncaughtException;
+// Used to tell the 'uncaughtException' handler that '-c CODE' is being used.
+var gUsingConditionOpts = false;
 
 // Pager child process, and output stream to which to write.
 var pager = null;
 var stdout = process.stdout;
+
+// Whether we are reading from stdin.
+var readingStdin = false;
 
 
 
@@ -165,7 +181,6 @@ function objCopy(obj) {
 
 function printHelp() {
     /* BEGIN JSSTYLED */
-    var p = console.log;
     p('Usage:');
     p('  bunyan [OPTIONS] [FILE ...]');
     p('  ... | bunyan [OPTIONS]');
@@ -177,7 +192,7 @@ function printHelp() {
     p('  -h, --help    print this help info and exit');
     p('  --version     print version of this command and exit');
     p('');
-    p('DTrace options (only on dtrace-supporting platforms):');
+    p('Runtime log snooping (via DTrace, only on supported platforms):');
     p('  -p PID        Process bunyan:log-* probes from the process');
     p('                with the given PID. Can be used multiple times,');
     p('                or specify all processes with "*", or a set of');
@@ -187,8 +202,8 @@ function printHelp() {
     p('Filtering options:');
     p('  -l, --level LEVEL');
     p('                Only show messages at or above the specified level.');
-    p('                You can specify level *names* or numeric values.');
-    p('                (See "Log Levels" below.)');
+    p('                You can specify level *names* or the internal numeric');
+    p('                values.');
     p('  -c, --condition CONDITION');
     p('                Run each log message through the condition and');
     p('                only show those that return truish. E.g.:');
@@ -218,18 +233,9 @@ function printHelp() {
     p('                  inspect: node.js `util.inspect` output');
     p('                  short: like "long", but more concise');
     p('  -j            shortcut for `-o json`');
-    p('');
-    p('Log Levels:');
-    p('  Either numeric values or their associated strings are valid for the');
-    p('  -l|--level argument.  However, -c|--condition scripts will see a numeric');
-    p('  "level" value, not a string.');
-    p('');
-    Object.keys(levelFromName).forEach(function (name) {
-        var n = name;
-        while (n.length < 6)
-            n += ' ';
-        p('    %s %d', n, levelFromName[name]);
-    });
+    p('  -0            shortcut for `-o bunyan`');
+    p('  -L, --time local');
+    p('                Display time field in local time, rather than UTC.');
     p('');
     p('Environment Variables:');
     p('  BUNYAN_NO_COLOR    Set to a non-empty value to force no output ');
@@ -276,9 +282,16 @@ function filterRecord(rec, opts)
         return false;
     }
 
-    if (opts.conditions) {
-        for (var i = 0; i < opts.conditions.length; i++) {
-            var pass = opts.conditions[i].runInNewContext(rec);
+    if (opts.condFuncs) {
+        var recCopy = objCopy(rec);
+        for (var i = 0; i < opts.condFuncs.length; i++) {
+            var pass = opts.condFuncs[i].call(recCopy);
+            if (!pass)
+                return false;
+        }
+    } else if (opts.condVm) {
+        for (var i = 0; i < opts.condVm.length; i++) {
+            var pass = opts.condVm[i].runInNewContext(rec);
             if (!pass)
                 return false;
         }
@@ -349,6 +362,33 @@ function emitNextRecord(opts, stylize)
 }
 
 /**
+ * Return a function for the given JS code that returns.
+ *
+ * If no 'return' in the given javascript snippet, then assume we are a single
+ * statement and wrap in 'return (...)'. This is for convenience for short
+ * '-c ...' snippets.
+ */
+function funcWithReturnFromSnippet(js) {
+    // auto-"return"
+    if (js.indexOf('return') === -1) {
+        if (js.substring(js.length - 1) === ';') {
+            js = js.substring(0, js.length - 1);
+        }
+        js = 'return (' + js + ')';
+    }
+
+    // Expose level definitions to condition func context
+    var varDefs = [];
+    Object.keys(upperNameFromLevel).forEach(function (lvl) {
+        varDefs.push(format('var %s = %d;',
+                upperNameFromLevel[lvl], lvl));
+    });
+    varDefs = varDefs.join('\n') + '\n';
+
+    return (new Function(varDefs + js));
+}
+
+/**
  * Parse the command-line options and arguments into an object.
  *
  *    {
@@ -369,10 +409,10 @@ function parseArgv(argv) {
         outputMode: OM_LONG,
         jsonIndent: 2,
         level: null,
-        conditions: null,
         strict: false,
         pids: null,
-        pidsType: null
+        pidsType: null,
+        timeFormat: null  // one of the TIME_ constants
     };
 
     // Turn '-iH' into '-i -H', except for argument-accepting options.
@@ -400,6 +440,7 @@ function parseArgv(argv) {
     }
     args = newArgs;
 
+    // Expose level definitions to condition vm context
     var condDefines = [];
     Object.keys(upperNameFromLevel).forEach(function (lvl) {
         condDefines.push(
@@ -455,6 +496,28 @@ function parseArgv(argv) {
             case '-j': // output with JSON.stringify
                 parsed.outputMode = OM_JSON;
                 break;
+            case '-0':
+                parsed.outputMode = OM_BUNYAN;
+                break;
+            case '-L':
+                parsed.timeFormat = TIME_LOCAL;
+                break;
+            case '--time':
+                var timeArg = args.shift();
+                switch (timeArg) {
+                case 'utc':
+                    parsed.timeFormat = TIME_UTC;
+                    break
+                case 'local':
+                    parsed.timeFormat = TIME_LOCAL;
+                    break
+                case undefined:
+                    throw new Error('missing argument to "--time"');
+                default:
+                    throw new Error(format('invalid time format: "%s"',
+                        timeArg));
+                }
+                break;
             case '-p':
                 if (!parsed.pids) {
                     parsed.pids = [];
@@ -494,41 +557,49 @@ function parseArgv(argv) {
                 break;
             case '-c':
             case '--condition':
+                gUsingConditionOpts = true;
                 var condition = args.shift();
-                parsed.conditions = parsed.conditions || [];
-                var scriptName = 'bunyan-condition-'+parsed.conditions.length;
-                var code = condDefines + condition;
-                try {
-                    var script = vm.createScript(code, scriptName);
-                } catch (compileErr) {
-                    throw new Error(format('illegal CONDITION code: %s\n'
-                        + '  CONDITION script:\n'
-                        + '%s\n'
-                        + '  Error:\n'
-                        + '%s',
-                        compileErr, indent(code), indent(compileErr.stack)));
-                }
+                if (Boolean(process.env.BUNYAN_EXEC &&
+                    process.env.BUNYAN_EXEC === 'vm'))
+                {
+                    parsed.condVm = parsed.condVm || [];
+                    var scriptName = 'bunyan-condition-'+parsed.condVm.length;
+                    var code = condDefines + condition;
+                    var script;
+                    try {
+                        script = vm.createScript(code, scriptName);
+                    } catch (complErr) {
+                        throw new Error(format('illegal CONDITION code: %s\n'
+                            + '  CONDITION script:\n'
+                            + '%s\n'
+                            + '  Error:\n'
+                            + '%s',
+                            complErr, indent(code), indent(complErr.stack)));
+                    }
 
-                // Ensure this is a reasonably safe CONDITION.
-                try {
-                    script.runInNewContext(minValidRecord);
-                } catch (condErr) {
-                    throw new Error(format(
-                        /* JSSTYLED */
-                        'CONDITION code cannot safely filter a minimal Bunyan log record\n'
-                        + '  CONDITION script:\n'
-                        + '%s\n'
-                        + '  Minimal Bunyan log record:\n'
-                        + '%s\n'
-                        + '  Filter error:\n'
-                        + '%s',
-                        indent(code),
-                        indent(JSON.stringify(minValidRecord, null, 2)),
-                        indent(condErr.stack)
-                        ));
+                    // Ensure this is a reasonably safe CONDITION.
+                    try {
+                        script.runInNewContext(minValidRecord);
+                    } catch (condErr) {
+                        throw new Error(format(
+                            /* JSSTYLED */
+                            'CONDITION code cannot safely filter a minimal Bunyan log record\n'
+                            + '  CONDITION script:\n'
+                            + '%s\n'
+                            + '  Minimal Bunyan log record:\n'
+                            + '%s\n'
+                            + '  Filter error:\n'
+                            + '%s',
+                            indent(code),
+                            indent(JSON.stringify(minValidRecord, null, 2)),
+                            indent(condErr.stack)
+                            ));
+                    }
+                    parsed.condVm.push(script);
+                } else  {
+                    parsed.condFuncs = parsed.condFuncs || [];
+                    parsed.condFuncs.push(funcWithReturnFromSnippet(condition));
                 }
-
-                parsed.conditions.push(script);
                 break;
             default: // arguments
                 if (!endOfOptions && arg.length > 0 && arg[0] === '-') {
@@ -551,8 +622,10 @@ function isInteger(s) {
 
 // http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
 // Suggested colors (some are unreadable in common cases):
-// - Good: cyan, yellow (limited use), grey, bold, green, magenta, red
-// - Bad: blue (not visible on cmd.exe)
+// - Good: cyan, yellow (limited use), bold, green, magenta, red
+// - Bad: blue (not visible on cmd.exe), grey (same color as background on
+//   Solarized Dark theme from <https://github.com/altercation/solarized>, see
+//   issue #160)
 var colors = {
     'bold' : [1, 22],
     'italic' : [3, 23],
@@ -679,17 +752,25 @@ function emitRecord(rec, line, opts, stylize) {
 
         delete rec.v;
 
-        /*
-         * We assume the Date is formatted according to ISO8601, in which
-         * case we can safely chop off the date information.
-         */
-        if (short && rec.time[10] == 'T') {
-            var time = rec.time.substr(11);
-            time = stylize(time, 'XXX');
-        } else {
-            var time = stylize('[' + rec.time + ']', 'XXX');
+        var time = rec.time;
+        switch (opts.timeFormat) {
+        case TIME_UTC:
+            break;
+        case TIME_LOCAL:
+            if (!timezoneOffsetMs) {
+                timezoneOffsetMs
+                    = (new Date(time)).getTimezoneOffset() * 60 * 1000;
+            }
+            time = new Date(
+                (new Date(time)).getTime() - timezoneOffsetMs).toISOString()
+            break;
         }
-
+        if (short && rec.time[10] === 'T') {
+            // Presuming `time` is ISO8601 formatted, i.e. safe to drop date.
+            time = stylize(time.substr(11), 'XXX');
+        } else {
+            time = stylize('[' + time + ']', 'XXX');
+        }
         delete rec.time;
 
         var nameStr = rec.name;
@@ -707,8 +788,8 @@ function emitRecord(rec, line, opts, stylize) {
         var level = (upperPaddedNameFromLevel[rec.level] || 'LVL' + rec.level);
         if (opts.color) {
             var colorFromLevel = {
-                10: 'grey',     // TRACE
-                20: 'grey',     // DEBUG
+                10: 'white',    // TRACE
+                20: 'yellow',   // DEBUG
                 30: 'cyan',     // INFO
                 40: 'magenta',  // WARN
                 50: 'red',      // ERROR
@@ -754,14 +835,19 @@ function emitRecord(rec, line, opts, stylize) {
             var req = rec.req;
             delete rec.req;
             var headers = req.headers;
+            if (!headers) {
+                headers = '';
+            } else if (typeof (headers) === 'string') {
+                headers = '\n' + headers;
+            } else if (typeof (headers) === 'object') {
+                headers = '\n' + Object.keys(headers).map(function (h) {
+                    return h + ': ' + headers[h];
+                }).join('\n');
+            }
             var s = format('%s %s HTTP/%s%s', req.method,
                 req.url,
                 req.httpVersion || '1.1',
-                (headers ?
-                    '\n' + Object.keys(headers).map(function (h) {
-                        return h + ': ' + headers[h];
-                    }).join('\n') :
-                    '')
+                headers
             );
             delete req.url;
             delete req.method;
@@ -832,24 +918,37 @@ function emitRecord(rec, line, opts, stylize) {
 
         function _res(res) {
             var s = '';
-            if (res.header) {
-                s += res.header.trimRight();
-            } else if (res.headers) {
-                if (res.statusCode) {
-                    s += format('HTTP/1.1 %s %s\n', res.statusCode,
-                        http.STATUS_CODES[res.statusCode]);
-                }
-                var headers = res.headers;
+            if (res.statusCode !== undefined) {
+                s += format('HTTP/1.1 %s %s\n', res.statusCode,
+                    http.STATUS_CODES[res.statusCode]);
+                delete res.statusCode;
+            }
+            // Handle `res.header` or `res.headers` as either a string or
+            // and object of header key/value pairs. Prefer `res.header` if set
+            // (TODO: Why? I don't recall. Typical of restify serializer?
+            // Typical JSON.stringify of a core node HttpResponse?)
+            var headers;
+            if (res.header !== undefined) {
+                headers = res.header;
+                delete res.header;
+            } else if (res.headers !== undefined) {
+                headers = res.headers;
+                delete res.headers;
+            }
+            if (!headers) {
+                /* pass through */
+            } else if (typeof (headers) === 'string') {
+                s += headers.trimRight();
+            } else {
                 s += Object.keys(headers).map(
                     function (h) { return h + ': ' + headers[h]; }).join('\n');
             }
-            delete res.header;
-            delete res.headers;
-            delete res.statusCode;
-            if (res.body) {
+            if (res.body !== undefined) {
                 s += '\n\n' + (typeof (res.body) === 'object'
                     ? JSON.stringify(res.body, null, 2) : res.body);
                 delete res.body;
+            } else {
+                s = s.trimRight();
             }
             if (res.trailer) {
                 s += '\n' + res.trailer;
@@ -876,7 +975,17 @@ function emitRecord(rec, line, opts, stylize) {
         }
 
         if (rec.err && rec.err.stack) {
-            details.push(indent(rec.err.stack));
+            var err = rec.err
+            details.push(indent(err.stack));
+            delete err.message;
+            delete err.name;
+            delete err.stack;
+            // E.g. for extra 'foo' field on 'err', add 'err.foo' at
+            // top-level. This *does* have the potential to stomp on a
+            // literal 'err.foo' key.
+            Object.keys(err).forEach(function (k) {
+                rec['err.' + k] = err[k];
+            })
             delete rec.err;
         }
 
@@ -901,9 +1010,9 @@ function emitRecord(rec, line, opts, stylize) {
         }
 
         extras = stylize(
-            (extras.length ? ' (' + extras.join(', ') + ')' : ''), 'grey');
+            (extras.length ? ' (' + extras.join(', ') + ')' : ''), 'XXX');
         details = stylize(
-            (details.length ? details.join('\n    --\n') + '\n' : ''), 'grey');
+            (details.length ? details.join('\n    --\n') + '\n' : ''), 'XXX');
         if (!short)
             emit(format('%s %s: %s on %s%s:%s%s\n%s',
                 time,
@@ -991,6 +1100,7 @@ function drainStdoutAndExit(code) {
  * @param callback {Function} `function ()`
  */
 function processStdin(opts, stylize, callback) {
+    readingStdin = true;
     var leftover = '';  // Left-over partial line from last chunk.
     var stdin = process.stdin;
     stdin.resume();
@@ -1127,6 +1237,15 @@ function processPids(opts, stylize, callback) {
             // Share the stderr handle to have error output come
             // straight through. Only supported in v0.8+.
             {stdio: ['pipe', 'pipe', process.stderr]});
+        dtrace.on('error', function (e) {
+            if (e.syscall === 'spawn' && e.errno === 'ENOENT') {
+                console.error('bunyan: error: could not spawn "dtrace" ' +
+                    '("bunyan -p" is only supported on platforms with dtrace)');
+            } else {
+                console.error('bunyan: error: unexpected dtrace error: %s', e);
+            }
+            callback(1);
+        })
         child = dtrace; // intentionally global
 
         function finish(code) {
@@ -1134,7 +1253,7 @@ function processPids(opts, stylize, callback) {
                 handleLogLine(null, leftover, opts, stylize);
                 leftover = '';
             }
-            callback(returnCode);
+            callback(code);
         }
 
         dtrace.stdout.setEncoding('utf8');
@@ -1317,7 +1436,16 @@ function cleanupAndExit(code, signal) {
 
 //---- mainline
 
-process.on('SIGINT', function () { cleanupAndExit(1, 'SIGINT'); });
+process.on('SIGINT', function () {
+    /**
+     * Ignore SIGINT (Ctrl+C) if processing stdin -- we should process
+     * remaining output from preceding process in the pipeline and
+     * except *it* to close.
+     */
+    if (!readingStdin) {
+        cleanupAndExit(1, 'SIGINT');
+    }
+});
 process.on('SIGQUIT', function () { cleanupAndExit(1, 'SIGQUIT'); });
 process.on('SIGTERM', function () { cleanupAndExit(1, 'SIGTERM'); });
 process.on('SIGHUP', function () { cleanupAndExit(1, 'SIGHUP'); });
@@ -1334,13 +1462,15 @@ process.on('uncaughtException', function (err) {
     var title = encodeURIComponent(format(
         'Bunyan %s crashed: %s', getVersion(), String(err)));
     var e = console.error;
-    e('* * *');
+    e('```');
     e('* The Bunyan CLI crashed!');
     e('*');
-    if (err.name === 'ReferenceError' && gOptsForUncaughtException.conditions) {
-        e('* A "ReferenceError" is often the result of given');
-        e('* `-c CONDITION` code that doesn\'t guard against undefined');
-        e('* values. If that is not the problem:');
+    if (err.name === 'ReferenceError' && gUsingConditionOpts) {
+        /* BEGIN JSSTYLED */
+        e('* This crash was due to a "ReferenceError", which is often the result of given');
+        e('* `-c CONDITION` code that doesn\'t guard against undefined values. If that is');
+        /* END JSSTYLED */
+        e('* not the problem:');
         e('*');
     }
     e('* Please report this issue and include the details below:');
@@ -1348,13 +1478,14 @@ process.on('uncaughtException', function (err) {
     e('*    https://github.com/trentm/node-bunyan/issues/new?title=%s', title);
     e('*');
     e('* * *');
+    e('* platform:', process.platform);
     e('* node version:', process.version);
     e('* bunyan version:', getVersion());
     e('* argv: %j', process.argv);
     e('* log line: %j', currLine);
     e('* stack:');
     e(_indent(err.stack));
-    e('* * *');
+    e('```');
     process.exit(1);
 });
 
@@ -1366,7 +1497,6 @@ function main(argv) {
         warn('bunyan: error: %s', e.message);
         return drainStdoutAndExit(1);
     }
-    gOptsForUncaughtException = opts; // intentionally global
     if (opts.help) {
         printHelp();
         return;
@@ -1399,7 +1529,7 @@ function main(argv) {
         !opts.pids && // Don't page if following process output.
         opts.args.length > 0 && // Don't page if no file args to process.
         process.platform !== 'win32' &&
-        nodeVer >= [0, 8, 0] &&
+        (nodeVer[0] > 0 || nodeVer[1] >= 8) &&
         (opts.paginate === true ||
             (opts.paginate !== false &&
                 (!process.env.BUNYAN_NO_PAGER ||

@@ -82,5 +82,6 @@ boot.manifest.d/
 manifest.d/
 overlay/order
 overlay/sdc
+overlay/smartos
 pkgsrc/*.tgz
 .*.swp

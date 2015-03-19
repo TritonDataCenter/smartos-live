@@ -54,6 +54,7 @@
 #include <sys/mount.h>
 #include <sys/mntent.h>
 #include <sys/socket.h>
+#include <sys/sockio.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
 
@@ -563,9 +564,42 @@ plumbIf(const char *ifname)
 
     if ((status = ipadm_create_if(iph, ifbuf, AF_INET, IPADM_OPT_ACTIVE))
         != IPADM_SUCCESS) {
-        fatal(ERR_PLUMB_IF, "ipadm_create_if error %d: plumbing %s: %s\n",
+        fatal(ERR_PLUMB_IF, "ipadm_create_if error %d: plumbing %s/v4: %s\n",
             status, ifname, ipadm_status2str(status));
     }
+
+    if ((status = ipadm_create_if(iph, ifbuf, AF_INET6, IPADM_OPT_ACTIVE))
+        != IPADM_SUCCESS) {
+        fatal(ERR_PLUMB_IF, "ipadm_create_if error %d: plumbing %s/v6: %s\n",
+            status, ifname, ipadm_status2str(status));
+    }
+}
+
+void
+upIPv6Addr(char *ifname)
+{
+    struct lifreq lifr;
+    int s;
+
+    s = socket(AF_INET6, SOCK_DGRAM, 0);
+    if (s == -1) {
+        fatal(ERR_UP_IP6, "socket error %d: bringing up %s: %s\n",
+            errno, ifname, strerror(errno));
+    }
+
+    (void) strncpy(lifr.lifr_name, ifname, sizeof (lifr.lifr_name));
+    if (ioctl(s, SIOCGLIFFLAGS, (caddr_t)&lifr) < 0) {
+        fatal(ERR_UP_IP6, "SIOCGLIFFLAGS error %d: bringing up %s: %s\n",
+            errno, ifname, strerror(errno));
+    }
+
+    lifr.lifr_flags |= IFF_UP;
+    if (ioctl(s, SIOCSLIFFLAGS, (caddr_t)&lifr) < 0) {
+        fatal(ERR_UP_IP6, "SIOCSLIFFLAGS error %d: bringing up %s: %s\n",
+            errno, ifname, strerror(errno));
+    }
+
+    (void) close(s);
 }
 
 int
@@ -611,6 +645,8 @@ raiseIf(char *ifname, char *addr, char *netmask)
         ipadm_destroy_addrobj(ipaddr);
         return (-4);
     }
+
+    upIPv6Addr(ifname);
 
     ipadm_destroy_addrobj(ipaddr);
     return (0);

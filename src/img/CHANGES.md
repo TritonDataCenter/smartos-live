@@ -2,7 +2,9 @@
 
 ## 3.1.1
 
+- [#412] support 'imgadm create' on non-cloned KVM VMs
 - [OS-3734] imgadm import fails with 'dataset already exists'
+
 
 ## 3.1.0
 

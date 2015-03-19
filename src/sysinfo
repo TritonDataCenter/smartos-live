@@ -300,16 +300,25 @@ function net_conf_grep()
 
 function get_aggregation_mappings()
 {
+    local aggr_name
     count=1
     for line in $(net_conf_grep "^[a-zA-Z0-9_]*_aggr="); do
         fields=(${line//=/ })
         key=${fields[0]}
         val=${fields[1]}
 
-        Aggrs[${count}]=$(echo ${key} | sed -e 's/_aggr$//')
+        aggr_name=$(echo ${key} | sed -e 's/_aggr$//')
+        Aggrs[${count}]=$aggr_name
         macs=(${val//,/ })
         for mac in "${macs[@]}"; do
             normalize_mac ${mac}
+
+            if [[ -z ${AggrMacs[${aggr_name}]} ]]; then
+                AggrMacs[${aggr_name}]=${normalized}
+            else
+                AggrMacs[${aggr_name}]="${AggrMacs[${aggr_name}]},${normalized}"
+            fi
+
             if [[ -z ${AggrInterfaceList[${count}]} ]]; then
                 AggrInterfaceList[${count}]=${normalized}
             else
@@ -539,6 +548,7 @@ function get_aggr_params()
             fi
             eval "Aggregation_${aggr}_LACP_mode=${lacp_val}"
             eval "Aggregation_${aggr}_Interfaces=${list}"
+            eval "Aggregation_${aggr}_MACs=${AggrMacs[${aggr}]}"
 
             ((c++))
         fi
@@ -732,6 +742,8 @@ END
             lacp_var="Aggregation_${aggr}_LACP_mode"
             eval "lacp=\${${lacp_var}}"
             echo "${lacp_var}=${lacp}"
+
+            echo "Aggregation_${aggr}_MACs=${AggrMacs[${aggr}]}"
         done
     fi
 

@@ -1,11 +1,12 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
-// These tests ensure that create works with specific options set.
+// Test detection of network-related conflicts
 //
 
 var execFile = require('child_process').execFile;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+var mod_tag = require('../common/nictag');
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
@@ -74,9 +75,13 @@ should_fail_with_conflict('KVM with same IP and MAC',
 test('no conflict when reusing IP of failed VM', function (t) {
     var p;
     var state;
+    var tagName = 'test_tag_' + process.pid;
 
     var payloadA = {brand: 'joyent-minimal', image_uuid: image_uuid, nics: [{nic_tag: 'admin', mac: '01:02:03:04:05:06', ip: '172.17.2.172', netmask: '255.255.255.0'}]};
     var payloadB = {brand: 'joyent-minimal', image_uuid: image_uuid, nics: [{nic_tag: 'admin', mac: '0f:0e:0d:0c:0b:0a', ip: '172.17.2.172', netmask: '255.255.255.0'}]};
+    // Identical to B, but with a different MAC and nic_tag
+    var payloadC = {brand: 'joyent-minimal', image_uuid: image_uuid, nics: [{nic_tag: tagName, mac: '0e:0e:0d:0c:0b:0b', ip: '172.17.2.172', netmask: '255.255.255.0'}]};
+
 
     for (p in payload) {
         payloadA[p] = payload[p];
@@ -104,6 +109,28 @@ test('no conflict when reusing IP of failed VM', function (t) {
                     cb();
                 }
             );
+        }, function (cb) {
+            mod_tag.list(t, function (err, tags) {
+                if (err) {
+                    cb(err);
+                    return;
+                }
+
+                mod_tag.add(t, tagName, tags.admin, cb);
+            });
+        }, function (cb) {
+            // Make sure we can create a VM on a different nic tag with the
+            // same IP
+            vmtest.on_new_vm(t, payloadC.image_uuid, payloadC,
+                {brand: payloadC.brand}, [],
+                function (err) {
+                    t.ifError(err, 'adding VM with same IP');
+                    t.ok(!err, 'no error adding VM with same IP');
+                    cb();
+                }
+            );
+        }, function (cb) {
+            mod_tag.del(t, tagName, true, cb);
         }
     ]);
 });

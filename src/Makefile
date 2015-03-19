@@ -73,6 +73,7 @@ JS_CHECK_TARGETS=\
 	vm/node_modules/vmload/*.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
+	vm/common/nictag.js \
 	vm/tests/test-alias.js \
 	vm/tests/test-cleanup-on-failure.js \
 	vm/tests/test-create.js \
@@ -411,7 +412,7 @@ install: all
 	    $(DESTDIR)/usr/vm/sbin/add-userscript
 	mv $(DESTDIR)/usr/vm/sbin/metadata.js $(DESTDIR)/usr/vm/sbin/metadata
 	mkdir -p $(DESTDIR)/usr/share/man/man1
-	sed -e "s|require('dtrace-provider')|require('/usr/node/node_modules/dtrace-provider')|" \
+	sed -e "s|require('dtrace-provider'|require('/usr/node/node_modules/dtrace-provider'|" \
 	    < node-bunyan/lib/bunyan.js \
 	    > $(PREFIX_NODE)/node_modules/bunyan.js
 	cp node-bunyan/docs/bunyan.1 $(DESTDIR)/usr/share/man/man1/bunyan.1

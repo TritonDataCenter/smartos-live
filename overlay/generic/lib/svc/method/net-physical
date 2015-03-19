@@ -45,8 +45,19 @@ LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 
 # Time (in seconds) to wait for admin NIC to get DHCP address before continuing.
 ADMIN_DHCP_TIMEOUT=300
+ActiveAggrLinks=
+typeset -A ActiveAggrLinks
 
 smf_netstrategy
+
+function add_active_aggr_links
+{
+    typeset alink
+
+    for alink in ${2//,/ }; do
+        ActiveAggrLinks[$alink]=$1
+    done
+}
 
 function log_if_state
 {
@@ -151,6 +162,13 @@ function vnic_up
         echo "vnic already up: $details"
         return
     fi
+
+    if [[ -n ${mac_addr} ]] && [[ -n ${ActiveAggrLinks[${mac_addr}]} ]]; then
+        echo "WARNING: trying to assign MAC address \"${mac_addr}\" to vnic," \
+            " but it already belongs to link aggr \"${ActiveAggrLinks[${mac_addr}]}\""
+        return
+    fi
+
     echo "Bringing up nic: $details"
 
     if [[ -n ${vlan_id} ]] && [[ ${vlan_id} != 0 ]]; then
@@ -197,7 +215,7 @@ function vnic_up
 # If there are aggregations in sysinfo, set them up.
 function create_aggrs
 {
-    typeset links mode mtu
+    typeset links macs mode mtu
     if [[ -z "${SYSINFO_Aggregations}" ]]; then
         return 0
     fi
@@ -205,13 +223,17 @@ function create_aggrs
     aggrs=(${SYSINFO_Aggregations//,/ })
     for aggr in "${aggrs[@]}"; do
         eval "links=\${SYSINFO_Aggregation_${aggr}_Interfaces}"
+        eval "macs=\${SYSINFO_Aggregation_${aggr}_MACs}"
         eval "mode=\${SYSINFO_Aggregation_${aggr}_LACP_mode}"
         eval "mtu=\${CONFIG_${aggr}_mtu}"
         [[ -z "$mode" ]] && mode="off"
 
         echo "Creating aggr: ${aggr} (mode=${mode}, links=${links})"
-        dladm create-aggr -l $(echo ${links} | sed -e "s/,/ -l /g") \
-            -L ${mode} ${aggr}
+        dladm create-aggr -l ${links//,/ -l } -L ${mode} ${aggr}
+        if [[ $? -eq 0 ]]; then
+            add_active_aggr_links ${aggr} ${macs}
+        fi
+
         if [[ -n "$mtu" ]]; then
             dladm set-linkprop -p mtu=${mtu} ${aggr}
             if [[ $? -ne 0 ]]; then
@@ -224,6 +246,31 @@ function create_aggrs
     # Creating the aggregations may affect the nic tags in sysinfo, so update:
     /usr/bin/sysinfo -u
     load_sdc_sysinfo
+}
+
+#
+# Try various config parameters to set the default route
+#
+function set_default_route
+{
+    typeset default_gw
+
+    if [[ -n "${CONFIG_headnode_default_gateway}" ]]; then
+        default_gw="${CONFIG_headnode_default_gateway}"
+
+    elif [[ -n ${CONFIG_admin_gateway} ]]; then
+        default_gw="${CONFIG_admin_gateway}"
+
+    elif [[ -n ${BOOT_admin_gateway} ]]; then
+        default_gw=${BOOT_admin_gateway}
+
+    elif [[ -n ${CONFIG_external_gateway} ]]; then
+        default_gw=${CONFIG_external_gateway}
+    fi
+
+    if [[ -n ${default_gw} ]]; then
+        echo "${default_gw}" > /etc/defaultrouter
+    fi
 }
 
 #
@@ -337,11 +384,6 @@ if smf_is_globalzone; then
         admin_netmask=${BOOT_admin_netmask}
     fi
 
-    admin_gateway=${CONFIG_admin_gateway}
-    if [[ -z "$admin_gateway" ]]; then
-        admin_gateway=${BOOT_admin_gateway}
-    fi
-
     if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]];
     then
         /sbin/ifconfig ${SYSINFO_NIC_admin} inet ${admin_ip} \
@@ -383,7 +425,7 @@ if smf_is_globalzone; then
         fi
     fi
 
-    # If on VMWare or Parallels or VirtualBox, create a bridge which
+    # If on Parallels or VirtualBox, create a bridge which
     # allows traffic to flow correctly to the host-only network
     if [[ "${ADMIN_NIC_UP}" == "true" ]] \
         && [[ ${SYSINFO_Product} == "Parallels Virtual Platform" \
@@ -406,13 +448,7 @@ if smf_is_globalzone; then
         fi
     fi
 
-    # Use headnode_default_gateway if set, otherwise fall back to admin_gateway
-    # if that's set.
-    if [[ -n "${CONFIG_headnode_default_gateway}" ]]; then
-        echo "${CONFIG_headnode_default_gateway}" > /etc/defaultrouter
-    elif [[ -n ${admin_gateway} ]]; then
-        echo "${admin_gateway}" > /etc/defaultrouter
-    fi
+    set_default_route
 
     # Setup extra nics, if specified in the config file
     nic_tags="${SYSINFO_Nic_Tags}"

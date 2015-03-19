@@ -1,10 +1,14 @@
-/*
- * Copyright (c) 2013 Trent Mick. All rights reserved.
+/**
+ * Copyright (c) 2014 Trent Mick. All rights reserved.
+ * Copyright (c) 2014 Joyent Inc. All rights reserved.
  *
  * The bunyan logging library for node.js.
+ *
+ * -*- mode: js -*-
+ * vim: expandtab:ts=4:sw=4
  */
 
-var VERSION = '0.21.3';
+var VERSION = '1.3.4';
 
 // Bunyan log format version. This becomes the 'v' field on all log records.
 // `0` is until I release a version '1.0.0' of node-bunyan. Thereafter,
@@ -27,34 +31,62 @@ var fs = require('fs');
 var util = require('util');
 var assert = require('assert');
 try {
-    var dtrace = require('dtrace-provider');
+    /* Use `+ ''` to hide this import from browserify. */
+    var dtrace = require('dtrace-provider' + '');
 } catch (e) {
     dtrace = null;
 }
 var EventEmitter = require('events').EventEmitter;
 
+try {
+    var safeJsonStringify = require('safe-json-stringify');
+} catch (e) {
+    safeJsonStringify = null;
+}
+if (process.env.BUNYAN_TEST_NO_SAFE_JSON_STRINGIFY) {
+    safeJsonStringify = null;
+}
+
 // The 'mv' module is required for rotating-file stream support.
 try {
-    var mv = require('mv');
+    /* Use `+ ''` to hide this import from browserify. */
+    var mv = require('mv' + '');
 } catch (e) {
     mv = null;
+}
+
+// Are we in the browser (e.g. running via browserify)?
+var isBrowser = function () {
+        return typeof (window) !== 'undefined' && this === window; }();
+
+try {
+    /* Use `+ ''` to hide this import from browserify. */
+    var sourceMapSupport = require('source-map-support' + '');
+} catch (_) {
+    sourceMapSupport = null;
 }
 
 
 
 //---- Internal support stuff
 
+/**
+ * A shallow copy of an object. Bunyan logging attempts to never cause
+ * exceptions, so this function attempts to handle non-objects gracefully.
+ */
 function objCopy(obj) {
-    if (obj === null) {
-        return null;
+    if (obj == null) {  // null or undefined
+        return obj;
     } else if (Array.isArray(obj)) {
         return obj.slice();
-    } else {
+    } else if (typeof (obj) === 'object') {
         var copy = {};
         Object.keys(obj).forEach(function (k) {
             copy[k] = obj[k];
         });
         return copy;
+    } else {
+        return obj;
     }
 }
 
@@ -110,8 +142,12 @@ function getCaller3Info() {
     var savePrepare = Error.prepareStackTrace;
     Error.stackTraceLimit = 3;
     Error.captureStackTrace(this, getCaller3Info);
+
     Error.prepareStackTrace = function (_, stack) {
         var caller = stack[2];
+        if (sourceMapSupport) {
+            caller = sourceMapSupport.wrapCallSite(caller);
+        }
         obj.file = caller.getFileName();
         obj.line = caller.getLineNumber();
         var func = caller.getFunctionName();
@@ -125,30 +161,48 @@ function getCaller3Info() {
 }
 
 
+function _indent(s, indent) {
+    if (!indent) indent = '    ';
+    var lines = s.split(/\r?\n/g);
+    return indent + lines.join('\n' + indent);
+}
+
+
 /**
  * Warn about an bunyan processing error.
  *
- * If file/line are given, this makes an attempt to warn on stderr only once.
- *
  * @param msg {String} Message with which to warn.
- * @param file {String} Optional. File path relevant for the warning.
- * @param line {String} Optional. Line number in `file` path relevant for
- *    the warning.
+ * @param dedupKey {String} Optional. A short string key for this warning to
+ *      have its warning only printed once.
  */
-function _warn(msg, file, line) {
+function _warn(msg, dedupKey) {
     assert.ok(msg);
-    var key;
-    if (file && line) {
-        key = file + ':' + line;
-        if (_warned[key]) {
+    if (dedupKey) {
+        if (_warned[dedupKey]) {
             return;
         }
-        _warned[key] = true;
+        _warned[dedupKey] = true;
     }
     process.stderr.write(msg + '\n');
 }
+function _haveWarned(dedupKey) {
+    return _warned[dedupKey];
+}
 var _warned = {};
 
+
+function ConsoleRawStream() {}
+ConsoleRawStream.prototype.write = function (rec) {
+    if (rec.level < INFO) {
+        console.log(rec);
+    } else if (rec.level < WARN) {
+        console.info(rec);
+    } else if (rec.level < ERROR) {
+        console.warn(rec);
+    } else {
+        console.error(rec);
+    }
+};
 
 
 //---- Levels
@@ -168,6 +222,10 @@ var levelFromName = {
     'error': ERROR,
     'fatal': FATAL
 };
+var nameFromLevel = {};
+Object.keys(levelFromName).forEach(function (name) {
+    nameFromLevel[levelFromName[name]] = name;
+});
 
 // Dtrace probes.
 var dtp = undefined;
@@ -182,9 +240,6 @@ function resolveLevel(nameOrNum) {
     var level = (typeof (nameOrNum) === 'string'
             ? levelFromName[nameOrNum.toLowerCase()]
             : nameOrNum);
-    if (! (TRACE <= level && level <= FATAL)) {
-        throw new Error('invalid level: ' + nameOrNum);
-    }
     return level;
 }
 
@@ -229,7 +284,7 @@ function resolveLevel(nameOrNum) {
  */
 function Logger(options, _childOptions, _childSimple) {
     xxx('Logger start:', options)
-    if (! this instanceof Logger) {
+    if (!(this instanceof Logger)) {
         return new Logger(options, _childOptions);
     }
 
@@ -238,7 +293,7 @@ function Logger(options, _childOptions, _childSimple) {
     if (_childOptions !== undefined) {
         parent = options;
         options = _childOptions;
-        if (! parent instanceof Logger) {
+        if (!(parent instanceof Logger)) {
             throw new TypeError(
                 'invalid Logger creation: do not pass a second arg');
         }
@@ -333,116 +388,47 @@ function Logger(options, _childOptions, _childSimple) {
         dtp.enable();
     }
 
-    // Helpers
-    function addStream(s) {
-        s = objCopy(s);
-
-        // Implicit 'type' from other args.
-        var type = s.type;
-        if (!s.type) {
-            if (s.stream) {
-                s.type = 'stream';
-            } else if (s.path) {
-                s.type = 'file'
-            }
-        }
-        s.raw = (s.type === 'raw');  // PERF: Allow for faster check in `_emit`.
-
-        if (s.level) {
-            s.level = resolveLevel(s.level);
-        } else if (options.level) {
-            s.level = resolveLevel(options.level);
-        } else {
-            s.level = INFO;
-        }
-        if (s.level < self._level) {
-            self._level = s.level;
-        }
-
-        switch (s.type) {
-        case 'stream':
-            if (!s.closeOnExit) {
-                s.closeOnExit = false;
-            }
-            break;
-        case 'file':
-            if (!s.stream) {
-                s.stream = fs.createWriteStream(s.path,
-                    {flags: 'a', encoding: 'utf8'});
-                s.stream.on('error', function (err) {
-                    self.emit('error', err, s);
-                });
-                if (!s.closeOnExit) {
-                    s.closeOnExit = true;
-                }
-            } else {
-                if (!s.closeOnExit) {
-                    s.closeOnExit = false;
-                }
-            }
-            break;
-        case 'rotating-file':
-            assert.ok(!s.stream,
-                '"rotating-file" stream should not give a "stream"');
-            assert.ok(s.path);
-            assert.ok(mv, '"rotating-file" stream type is not supported: '
-                + 'missing "mv" module');
-            s.stream = new RotatingFileStream(s);
-            if (!s.closeOnExit) {
-                s.closeOnExit = true;
-            }
-            break;
-        case 'raw':
-            if (!s.closeOnExit) {
-                s.closeOnExit = false;
-            }
-            break;
-        default:
-            throw new TypeError('unknown stream type "' + s.type + '"');
-        }
-
-        self.streams.push(s);
-    }
-
-    function addSerializers(serializers) {
-        if (!self.serializers) {
-            self.serializers = {};
-        }
-        Object.keys(serializers).forEach(function (field) {
-            var serializer = serializers[field];
-            if (typeof (serializer) !== 'function') {
-                throw new TypeError(format(
-                    'invalid serializer for "%s" field: must be a function',
-                    field));
-            } else {
-                self.serializers[field] = serializer;
-            }
-        });
-    }
-
     // Handle *config* options (i.e. options that are not just plain data
     // for log records).
     if (options.stream) {
-        addStream({
+        self.addStream({
             type: 'stream',
             stream: options.stream,
             closeOnExit: false,
-            level: (options.level ? resolveLevel(options.level) : INFO)
+            level: options.level
         });
     } else if (options.streams) {
-        options.streams.forEach(addStream);
+        options.streams.forEach(function (s) {
+            self.addStream(s, options.level);
+        });
     } else if (parent && options.level) {
         this.level(options.level);
     } else if (!parent) {
-        addStream({
-            type: 'stream',
-            stream: process.stdout,
-            closeOnExit: false,
-            level: (options.level ? resolveLevel(options.level) : INFO)
-        });
+        if (isBrowser) {
+            /*
+             * In the browser we'll be emitting to console.log by default.
+             * Any console.log worth its salt these days can nicely render
+             * and introspect objects (e.g. the Firefox and Chrome console)
+             * so let's emit the raw log record. Are there browsers for which
+             * that breaks things?
+             */
+            self.addStream({
+                type: 'raw',
+                stream: new ConsoleRawStream(),
+                closeOnExit: false,
+                level: options.level
+            });
+        } else {
+            self.addStream({
+                type: 'stream',
+                stream: process.stdout,
+                closeOnExit: false,
+                level: options.level
+            });
+        }
     }
     if (options.serializers) {
-        addSerializers(options.serializers);
+        self.addSerializers(options.serializers);
     }
     if (options.src) {
         this.src = true;
@@ -478,6 +464,124 @@ util.inherits(Logger, EventEmitter);
 
 
 /**
+ * Add a stream
+ *
+ * @param stream {Object}. Object with these fields:
+ *    - `type`: The stream type. See README.md for full details.
+ *      Often this is implied by the other fields. Examples are
+ *      'file', 'stream' and "raw".
+ *    - `path` or `stream`: The specify the file path or writeable
+ *      stream to which log records are written. E.g.
+ *      `stream: process.stdout`.
+ *    - `level`: Optional. Falls back to `defaultLevel`.
+ *    - `closeOnExit` (boolean): Optional. Default is true for a
+ *      'file' stream when `path` is given, false otherwise.
+ *    See README.md for full details.
+ * @param defaultLevel {Number|String} Optional. A level to use if
+ *      `stream.level` is not set. If neither is given, this defaults to INFO.
+ */
+Logger.prototype.addStream = function addStream(s, defaultLevel) {
+    var self = this;
+    if (defaultLevel === null || defaultLevel === undefined) {
+        defaultLevel = INFO;
+    }
+
+    s = objCopy(s);
+
+    // Implicit 'type' from other args.
+    var type = s.type;
+    if (!s.type) {
+        if (s.stream) {
+            s.type = 'stream';
+        } else if (s.path) {
+            s.type = 'file'
+        }
+    }
+    s.raw = (s.type === 'raw');  // PERF: Allow for faster check in `_emit`.
+
+    if (s.level) {
+        s.level = resolveLevel(s.level);
+    } else {
+        s.level = resolveLevel(defaultLevel);
+    }
+    if (s.level < self._level) {
+        self._level = s.level;
+    }
+
+    switch (s.type) {
+    case 'stream':
+        if (!s.closeOnExit) {
+            s.closeOnExit = false;
+        }
+        break;
+    case 'file':
+        if (!s.stream) {
+            s.stream = fs.createWriteStream(s.path,
+                                            {flags: 'a', encoding: 'utf8'});
+            s.stream.on('error', function (err) {
+                self.emit('error', err, s);
+            });
+            if (!s.closeOnExit) {
+                s.closeOnExit = true;
+            }
+        } else {
+            if (!s.closeOnExit) {
+                s.closeOnExit = false;
+            }
+        }
+        break;
+    case 'rotating-file':
+        assert.ok(!s.stream,
+                  '"rotating-file" stream should not give a "stream"');
+        assert.ok(s.path);
+        assert.ok(mv, '"rotating-file" stream type is not supported: '
+                      + 'missing "mv" module');
+        s.stream = new RotatingFileStream(s);
+        if (!s.closeOnExit) {
+            s.closeOnExit = true;
+        }
+        break;
+    case 'raw':
+        if (!s.closeOnExit) {
+            s.closeOnExit = false;
+        }
+        break;
+    default:
+        throw new TypeError('unknown stream type "' + s.type + '"');
+    }
+
+    self.streams.push(s);
+    delete self.haveNonRawStreams;  // reset
+}
+
+
+/**
+ * Add serializers
+ *
+ * @param serializers {Object} Optional. Object mapping log record field names
+ *    to serializing functions. See README.md for details.
+ */
+Logger.prototype.addSerializers = function addSerializers(serializers) {
+    var self = this;
+
+    if (!self.serializers) {
+        self.serializers = {};
+    }
+    Object.keys(serializers).forEach(function (field) {
+        var serializer = serializers[field];
+        if (typeof (serializer) !== 'function') {
+            throw new TypeError(format(
+                'invalid serializer for "%s" field: must be a function',
+                field));
+        } else {
+            self.serializers[field] = serializer;
+        }
+    });
+}
+
+
+
+/**
  * Create a child logger, typically to add a few log record fields.
  *
  * This can be useful when passing a logger to a sub-component, e.g. a
@@ -504,8 +608,46 @@ util.inherits(Logger, EventEmitter);
  *    creation. See 'tools/timechild.js' for numbers.
  */
 Logger.prototype.child = function (options, simple) {
-    return new Logger(this, options || {}, simple);
+    return new (this.constructor)(this, options || {}, simple);
 }
+
+
+/**
+ * A convenience method to reopen 'file' streams on a logger. This can be
+ * useful with external log rotation utilities that move and re-open log files
+ * (e.g. logrotate on Linux, logadm on SmartOS/Illumos). Those utilities
+ * typically have rotation options to copy-and-truncate the log file, but
+ * you may not want to use that. An alternative is to do this in your
+ * application:
+ *
+ *      var log = bunyan.createLogger(...);
+ *      ...
+ *      process.on('SIGUSR2', function () {
+ *          log.reopenFileStreams();
+ *      });
+ *      ...
+ *
+ * See <https://github.com/trentm/node-bunyan/issues/104>.
+ */
+Logger.prototype.reopenFileStreams = function () {
+    var self = this;
+    self.streams.forEach(function (s) {
+        if (s.type === 'file') {
+            if (s.stream) {
+                // Not sure if typically would want this, or more immediate
+                // `s.stream.destroy()`.
+                s.stream.end();
+                s.stream.destroySoon();
+                delete s.stream;
+            }
+            s.stream = fs.createWriteStream(s.path,
+                {flags: 'a', encoding: 'utf8'});
+            s.stream.on('error', function (err) {
+                self.emit('error', err, s);
+            });
+        }
+    });
+};
 
 
 /* BEGIN JSSTYLED */
@@ -652,30 +794,14 @@ Logger.prototype._applySerializers = function (fields, excludeFields) {
         try {
             fields[name] = self.serializers[name](fields[name]);
         } catch (err) {
-            _warn(format('bunyan: ERROR: This should never happen. '
-                + 'This is a bug in <https://github.com/trentm/node-bunyan> '
-                + 'or in this application. Exception from "%s" Logger '
-                + 'serializer: %s',
+            _warn(format('bunyan: ERROR: Exception thrown from the "%s" '
+                + 'Bunyan serializer. This should never happen. This is a bug'
+                + 'in that serializer function.\n%s',
                 name, err.stack || err));
             fields[name] = format('(Error in Bunyan log "%s" serializer '
                 + 'broke field. See stderr for details.)', name);
         }
     });
-}
-
-
-/**
- * A log record is a 4-tuple:
- *    [<default fields object>,
- *     <log record fields object>,
- *     <level integer>,
- *     <msg args array>]
- * For Perf reasons, we only render this down to a single object when
- * it is emitted.
- */
-Logger.prototype._mkRecord = function (fields, level, msgArgs) {
-    var recFields = (fields ? objCopy(fields) : null);
-    return [this.fields, recFields, level, msgArgs];
 }
 
 
@@ -704,7 +830,23 @@ Logger.prototype._emit = function (rec, noemit) {
     // Stringify the object. Attempt to warn/recover on error.
     var str;
     if (noemit || this.haveNonRawStreams) {
-        str = JSON.stringify(rec, safeCycles()) + '\n';
+        try {
+            str = JSON.stringify(rec, safeCycles()) + '\n';
+        } catch (e) {
+            if (safeJsonStringify) {
+                str = safeJsonStringify(rec) + '\n';
+            } else {
+                var dedupKey = e.stack.split(/\n/g, 2).join('\n');
+                _warn('bunyan: ERROR: Exception in '
+                    + '`JSON.stringify(rec)`. You can install the '
+                    + '"safe-json-stringify" module to have Bunyan fallback '
+                    + 'to safer stringification. Record:\n'
+                    + _indent(format('%s\n%s', util.inspect(rec), e.stack)),
+                    dedupKey);
+                str = format('(Exception in JSON.stringify(rec): %j. '
+                    + 'See stderr for details.)\n', e.message);
+            }
+        }
     }
 
     if (noemit)
@@ -736,14 +878,20 @@ function mkLogEmitter(minLevel) {
             var excludeFields;
             if (args[0] instanceof Error) {
                 // `log.<level>(err, ...)`
-                fields = {err: errSerializer(args[0])};
+                fields = {
+                    // Use this Logger's err serializer, if defined.
+                    err: (log.serializers && log.serializers.err
+                        ? log.serializers.err(args[0])
+                        : Logger.stdSerializers.err(args[0]))
+                };
                 excludeFields = {err: true};
                 if (args.length === 1) {
                     msgArgs = [fields.err.message];
                 } else {
                     msgArgs = Array.prototype.slice.call(args, 1);
                 }
-            } else if (typeof (args[0]) === 'string') {
+            } else if (typeof (args[0]) !== 'object' && args[0] !== null ||
+                       Array.isArray(args[0])) {
                 // `log.<level>(msg, ...)`
                 fields = null;
                 msgArgs = Array.prototype.slice.call(args);
@@ -787,7 +935,23 @@ function mkLogEmitter(minLevel) {
         var msgArgs = arguments;
         var str = null;
         var rec = null;
-        if (arguments.length === 0) {   // `log.<level>()`
+        if (! this._emit) {
+            /*
+             * Show this invalid Bunyan usage warning *once*.
+             *
+             * See <https://github.com/trentm/node-bunyan/issues/100> for
+             * an example of how this can happen.
+             */
+            var dedupKey = 'unbound';
+            if (!_haveWarned[dedupKey]) {
+                var caller = getCaller3Info();
+                _warn(format('bunyan usage error: %s:%s: attempt to log '
+                    + 'with an unbound log method: `this` is: %s',
+                    caller.file, caller.line, util.inspect(this)),
+                    dedupKey);
+            }
+            return;
+        } else if (arguments.length === 0) {   // `log.<level>()`
             return (this._level <= minLevel);
         } else if (this._level > minLevel) {
             /* pass through */
@@ -931,7 +1095,12 @@ function RotatingFileStream(options) {
     this.stream = fs.createWriteStream(this.path,
         {flags: 'a', encoding: 'utf8'});
     this.count = (options.count == null ? 10 : options.count);
-    assert.ok(typeof (this.count) === 'number' && this.count >= 0);
+    assert.equal(typeof (this.count), 'number',
+        format('rotating-file stream "count" is not a number: %j (%s) in %j',
+            this.count, typeof (this.count), this));
+    assert.ok(this.count >= 0,
+        format('rotating-file stream "count" is not >= 0: %j in %j',
+            this.count, this));
 
     // Parse `options.period`.
     if (options.period) {
@@ -987,9 +1156,19 @@ util.inherits(RotatingFileStream, EventEmitter);
 RotatingFileStream.prototype._setupNextRot = function () {
     var self = this;
     this.rotAt = this._nextRotTime();
+    var delay = this.rotAt - Date.now();
+    // Cap timeout to Node's max setTimeout, see
+    // <https://github.com/joyent/node/issues/8656>.
+    var TIMEOUT_MAX = 2147483647; // 2^31-1
+    if (delay > TIMEOUT_MAX) {
+        delay = TIMEOUT_MAX;
+    }
     this.timeout = setTimeout(
         function () { self.rotate(); },
-        this.rotAt - Date.now());
+        delay);
+    if (typeof (this.timeout.unref) === 'function') {
+        this.timeout.unref();
+    }
 }
 
 RotatingFileStream.prototype._nextRotTime = function _nextRotTime(first) {
@@ -1077,7 +1256,16 @@ RotatingFileStream.prototype.rotate = function rotate() {
     var self = this;
     var _DEBUG = false;
 
-    if (_DEBUG) console.log('-- [%s] rotating %s', new Date(), self.path);
+    // If rotation period is > ~25 days, we have to break into multiple
+    // setTimeout's. See <https://github.com/joyent/node/issues/8656>.
+    if (self.rotAt && self.rotAt > Date.now()) {
+        return self._setupNextRot();
+    }
+
+    if (_DEBUG) {
+        console.log('-- [%s, pid=%s] rotating %s',
+            new Date(), process.pid, self.path);
+    }
     if (self.rotating) {
         throw new TypeError('cannot start a rotation when already rotating');
     }
@@ -1112,7 +1300,10 @@ RotatingFileStream.prototype.rotate = function rotate() {
             if (!exists) {
                 moves();
             } else {
-                if (_DEBUG) console.log('mv %s %s', before, after);
+                if (_DEBUG) {
+                    console.log('[pid %s] mv %s %s',
+                        process.pid, before, after);
+                }
                 mv(before, after, function (mvErr) {
                     if (mvErr) {
                         self.emit('error', mvErr);
@@ -1126,7 +1317,7 @@ RotatingFileStream.prototype.rotate = function rotate() {
     }
 
     function finish() {
-        if (_DEBUG) console.log('open %s', self.path);
+        if (_DEBUG) console.log('[pid %s] open %s', process.pid, self.path);
         self.stream = fs.createWriteStream(self.path,
             {flags: 'a', encoding: 'utf8'});
         var q = self.rotQueue, len = q.length;
@@ -1224,6 +1415,8 @@ module.exports.WARN = WARN;
 module.exports.ERROR = ERROR;
 module.exports.FATAL = FATAL;
 module.exports.resolveLevel = resolveLevel;
+module.exports.levelFromName = levelFromName;
+module.exports.nameFromLevel = nameFromLevel;
 
 module.exports.VERSION = VERSION;
 module.exports.LOG_VERSION = LOG_VERSION;
@@ -1233,6 +1426,7 @@ module.exports.createLogger = function createLogger(options) {
 };
 
 module.exports.RingBuffer = RingBuffer;
+module.exports.RotatingFileStream = RotatingFileStream;
 
 // Useful for custom `type == 'raw'` streams that may do JSON stringification
 // of log records themselves. Usage:

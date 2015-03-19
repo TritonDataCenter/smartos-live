@@ -9,7 +9,6 @@ f etc/cron.d/crontabs/root 0600 root root
 d etc/crypto 0755 root sys
 f etc/crypto/pkcs11.conf 0644 root sys
 d etc/curl 0555 root sys
-f etc/curl/curlCA 0444 root sys
 d etc/default 0755 root sys
 f etc/default/init 0644 root sys
 f etc/default/login 0644 root sys

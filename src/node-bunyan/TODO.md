@@ -1,7 +1,11 @@
-- need .npmignore? tools dir, etc.
+- `bunyan` (without redir) ^C should stop, doesn't since recent change
 - man page for the bunyan CLI (refer to it in the readme)
 - `tail -f`-like support
-- 1.0 with `v: 1` in log records. Fwd/bwd compat in `bunyan` CLI
+- 2.0 (?) with `v: 1` in log records. Fwd/bwd compat in `bunyan` CLI
+
+# docs
+
+- document log.addStream() and log.addSerializers()
 
 
 # someday/maybe
@@ -63,3 +67,4 @@
     - differential HTTP *client* req/res with *server* req/res.
 - statsd stream? http://codeascraft.etsy.com/2011/02/15/measure-anything-measure-everything/
   Think about it.
+- web ui. Ideas: http://googlecloudplatform.blogspot.ca/2014/04/a-new-logs-viewer-for-google-cloud.html

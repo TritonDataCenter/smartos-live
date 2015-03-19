@@ -2811,14 +2811,12 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
         function getVmInfo(next) {
             var opts;
             if (vmInfo.brand === 'kvm') {
-                if (vmInfo.disks) {
-                    for (var i = 0; i < vmInfo.disks.length; i++) {
-                        if (vmInfo.disks[i].image_uuid) {
-                            var disk = vmInfo.disks[i];
-                            opts = {uuid: disk.image_uuid, zpool: disk.zpool};
-                            vmZfsFilesystemName = disk.zfs_filesystem;
-                            break;
-                        }
+                if (vmInfo.disks && vmInfo.disks[0]) {
+                    var disk = vmInfo.disks[0];
+                    vmZfsFilesystemName = disk.zfs_filesystem;
+
+                    if (disk.image_uuid) {
+                        opts = {uuid: disk.image_uuid, zpool: disk.zpool};
                     }
                 }
             } else {

@@ -12,6 +12,7 @@
 
 CACHE_FILE_JSON="/tmp/.config.json"
 NET_BOOT_FILE="/system/boot/networking.json"
+NET_BOOT_HN_FILE="/usbkey/boot/networking.json"
 OVERLAY_RULES_DIR="/var/run/smartdc/networking"
 OVERLAY_RULES_FILE="/var/run/smartdc/networking/overlay_rules.json"
 
@@ -24,7 +25,17 @@ function boot_file_config_enabled
 
 function boot_file_config_valid
 {
-    /usr/bin/json --validate -f $NET_BOOT_FILE
+    if [[ -e $NET_BOOT_FILE ]]; then
+        /usr/bin/json --validate -f $NET_BOOT_FILE
+        return $?
+
+    elif [[ -e $NET_BOOT_HN_FILE ]]; then
+        /usr/bin/json --validate -f $NET_BOOT_HN_FILE
+        return $?
+
+    else
+        return 0
+    fi
 }
 
 function boot_file_nic_tag_params

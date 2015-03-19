@@ -6,6 +6,302 @@ Known issues:
   bug](https://github.com/TooTallNate/node-gyp/issues/65).
 
 
+## bunyan 1.3.4
+
+- Allow `log.child(...)` to work even if the logger is a *sub-class*
+  of Bunyan's Logger class.
+- [issue #219] Hide 'source-map-support' require from browserify.
+- [issue #218] Reset `haveNonRawStreams` on `<logger>.addStream`.
+
+
+## bunyan 1.3.3
+
+- [pull #127] Update to dtrace-provider 0.4.0, which gives io.js 1.x support
+  for dtrace-y parts of Bunyan.
+
+
+## bunyan 1.3.2
+
+- [pull #182] Fallback to using the optional 'safe-json-stringify' module
+  if `JSON.stringify` throws -- possibly with an enumerable property
+  getter than throws. By Martin Gausby.
+
+
+## bunyan 1.3.1
+
+- Export `bunyan.RotatingFileStream` which is needed if one wants to
+  customize it. E.g. see issue #194.
+
+- [pull #122] Source Map support for caller line position for [the "src"
+  field](https://github.com/trentm/node-bunyan#src). This could be interesting
+  for [CoffeeScript](http://coffeescript.org/documentation/docs/sourcemap.html)
+  users of Bunyan. By Manuel Schneider.
+
+- [issue #164] Ensure a top-level `level` given in `bunyan.createLogger`
+  is *used* for given `streams`. For example, ensure that the following
+  results in the stream having a DEBUG level:
+
+        var log = bunyan.createLogger({
+            name: 'foo',
+            level: 'debug',
+            streams: [
+                {
+                    path: '/var/tmp/foo.log'
+                }
+            ]
+        });
+
+  This was broken in the 1.0.1 release. Between that release and 1.3.0
+  the "/var/tmp/foo.log" stream would be at the INFO level (Bunyan's
+  default level).
+
+
+## bunyan 1.3.0
+
+- [issue #103] `bunyan -L` (or `bunyan --time local`) to show local time.
+  Bunyan log records store `time` in UTC time. Sometimes it is convenient
+  to display in local time.
+
+- [issue #205] Fix the "The Bunyan CLI crashed!" checking to properly warn of
+  the common failure case when `-c CONDITION` is being used.
+
+
+## bunyan 1.2.4
+
+- [issue #210] Export `bunyan.nameFromLevel` and `bunyan.levelFromName`. It can
+  be a pain for custom streams to have to reproduce that.
+
+- [issue #100] Gracefully handle the case of an unbound
+  `Logger.{info,debug,...}` being used for logging, e.g.:
+
+        myEmittingThing.on('data', log.info)
+
+  Before this change, bunyan would throw. Now it emits a warning to stderr
+  *once*, and then silently ignores those log attempts, e.g.:
+
+        bunyan usage error: /Users/trentm/tm/node-bunyan/foo.js:12: attempt to log with an unbound log method: `this` is: { _events: { data: [Function] } }
+
+
+## bunyan 1.2.3
+
+- [issue #184] Fix log rotation for rotation periods > ~25 days. Before this
+  change, a rotation period longer than this could hit [the maximum setTimeout
+  delay in node.js](https://github.com/joyent/node/issues/8656). By Daniel Juhl.
+
+
+## bunyan 1.2.2
+
+- Drop the guard that a bunyan Logger level must be between TRACE (10)
+  and FATAL (60), inclusive. This allows a trick of setting the level
+  to `FATAL + 1` to turn logging off. While the standard named log levels are
+  the golden path, then intention was not to get in the way of using
+  other level numbers.
+
+
+## bunyan 1.2.1
+
+- [issue #178, #181] Get at least dtrace-provider 0.3.1 for
+  optionalDependencies to get a fix for install with decoupled npm (e.g. with
+  homebrew's node and npm).
+
+
+## bunyan 1.2.0
+
+- [issue #157] Restore dtrace-provider as a dependency (in
+  "optionalDependencies").
+
+  Dtrace-provider version 0.3.0 add build sugar that should eliminate the
+  problems from older versions:
+  The build is not attempted on Linux and Windows. The build spew is
+  *not* emitted by default (use `V=1 npm install` to see it); instead a
+  short warning is emitted if the build fails.
+
+  Also, importantly, the new dtrace-provider fixes working with node
+  v0.11/0.12.
+
+
+## bunyan 1.1.3
+
+- [issue #165] Include extra `err` fields in `bunyan` CLI output. Before
+  this change only the fields part of the typical node.js error stack
+  (err.stack, err.message, err.name) would be emitted, even though
+  the Bunyan *library* would typically include err.code and err.signal
+  in the raw JSON log record.
+
+
+## bunyan 1.1.2
+
+- Fix a breakage in `log.info(err)` on a logger with no serializers.
+
+
+## bunyan 1.1.1
+
+Note: *Bad release.* It breaks `log.info(err)` on a logger with no serializers.
+Use version 1.1.2.
+
+- [pull #168] Fix handling of `log.info(err)` to use the `log` Logger's `err`
+  serializer if it has one, instead of always using the core Bunyan err
+  serializer. (By Mihai Tomescu.)
+
+
+## bunyan 1.1.0
+
+- [issue #162] Preliminary support for [browserify](http://browserify.org/).
+  See [the section in the README](../README.md#browserify).
+
+
+## bunyan 1.0.1
+
+- [issues #105, #138, #151] Export `<Logger>.addStream(...)` and
+  `<Logger>.addSerializers(...)` to be able to add them after Logger creation.
+  Thanks @andreineculau!
+
+- [issue #159] Fix bad handling in construtor guard intending to allow
+  creation without "new": `var log = Logger(...)`. Thanks @rmg!
+
+- [issue #156] Smaller install size via .npmignore file.
+
+- [issue #126, #161] Ignore SIGINT (Ctrl+C) when processing stdin. `...| bunyan`
+  should expect the preceding process in the pipeline to handle SIGINT. While
+  it is doing so, `bunyan` should continue to process any remaining output.
+  Thanks @timborodin and @jnordberg!
+
+- [issue #160] Stop using ANSI 'grey' in `bunyan` CLI output, because of the
+  problems that causes with Solarized Dark themes (see
+  <https://github.com/altercation/solarized/issues/220>).
+
+
+## bunyan 1.0.0
+
+- [issue #87] **Backward incompatible change to `-c CODE`** improving
+  performance by over 10x (good!), with a backward incompatible change to
+  semantics (unfortunate), and adding some sugar (good!).
+
+  The `-c CODE` implementation was changed to use a JS function for processing
+  rather than `vm.runInNewContext`. The latter was specatularly slow, so
+  won't be missed. Unfortunately this does mean a few semantic differences in
+  the `CODE`, the most noticeable of which is that **`this` is required to
+  access the object fields:**
+
+        # Bad. Works with bunyan 0.x but not 1.x.
+        $ bunyan -c 'pid === 123' foo.log
+        ...
+
+        # Good. Works with all versions of bunyan
+        $ bunyan -c 'this.pid === 123' foo.log
+        ...
+
+  The old behaviour of `-c` can be restored with the `BUNYAN_EXEC=vm`
+  environment variable:
+
+        $ BUNYAN_EXEC=vm bunyan -c 'pid === 123' foo.log
+        ...
+
+  Some sugar was also added: the TRACE, DEBUG, ... constants are defined, so
+  one can:
+
+        $ bunyan -c 'this.level >= ERROR && this.component === "http"' foo.log
+        ...
+
+  And example of the speed improvement on a 10 MiB log example:
+
+        $ time BUNYAN_EXEC=vm bunyan -c 'this.level === ERROR' big.log | cat >slow
+
+        real    0m6.349s
+        user    0m6.292s
+        sys    0m0.110s
+
+        $ time bunyan -c 'this.level === ERROR' big.log | cat >fast
+
+        real    0m0.333s
+        user    0m0.303s
+        sys    0m0.028s
+
+  The change was courtesy Patrick Mooney (https://github.com/pfmooney). Thanks!
+
+- Add `bunyan -0 ...` shortcut for `bunyan -o bunyan ...`.
+
+- [issue #135] **Backward incompatible.** Drop dtrace-provider even from
+  `optionalDependencies`. Dtrace-provider has proven a consistent barrier to
+  installing bunyan, because it is a binary dep. Even as an *optional* dep it
+  still caused confusion and install noise.
+
+  Users of Bunyan on dtrace-y platforms (SmartOS, Mac, Illumos, Solaris) will
+  need to manually `npm install dtrace-provider` themselves to get [Bunyan's
+  dtrace support](https://github.com/trentm/node-bunyan#runtime-log-snooping-via-dtrace)
+  to work. If not installed, bunyan should stub it out properly.
+
+
+
+## bunyan 0.23.1
+
+- [pull #125, pull #97, issue #73] Unref rotating-file timeout which was
+  preventing processes from exiting (by https://github.com/chakrit and
+  https://github.com/glenn-murray-bse). Note: this only fixes the issue
+  for node 0.10 and above.
+
+
+## bunyan 0.23.0
+
+- [issue #139] Fix `bunyan` crash on a log record with `res.header` that is an
+  object. A side effect of this improvement is that a record with `res.statusCode`
+  but no header info will render a response block, for example:
+
+        [2012-08-08T10:25:47.637Z]  INFO: my-service/12859 on my-host: some message (...)
+            ...
+            --
+            HTTP/1.1 200 OK
+            --
+            ...
+
+- [pull #42] Fix `bunyan` crash on a log record with `req.headers` that is a *string*
+  (by https://github.com/aexmachina).
+
+- Drop node 0.6 support. I can't effectively `npm install` with a node 0.6
+  anymore.
+
+- [issue #85] Ensure logging a non-object/non-string doesn't throw (by
+  https://github.com/mhart). This changes fixes:
+
+        log.info(<bool>)     # TypeError: Object.keys called on non-object
+        log.info(<function>) # "msg":"" (instead of wanted "msg":"[Function]")
+        log.info(<array>)    # "msg":"" (instead of wanted "msg":util.format(<array>))
+
+
+## bunyan 0.22.3
+
+- Republish the same code to npm.
+
+
+## bunyan 0.22.2
+
+Note: Bad release. The published package in the npm registry got corrupted. Use 0.22.3 or later.
+
+- [issue #131] Allow `log.info(<number>)` and, most importantly, don't crash on that.
+
+- Update 'mv' optional dep to latest.
+
+
+## bunyan 0.22.1
+
+- [issue #111] Fix a crash when attempting to use `bunyan -p` on a platform without
+  dtrace.
+
+- [issue #101] Fix a crash in `bunyan` rendering a record with unexpected "res.headers".
+
+
+## bunyan 0.22.0
+
+- [issue #104] `log.reopenFileStreams()` convenience method to be used with external log
+  rotation.
+
+
+## bunyan 0.21.4
+
+- [issue #96] Fix `bunyan` to default to paging (with `less`) by default in node 0.10.0.
+  The intention has always been to default to paging for node >=0.8.
+
+
 ## bunyan 0.21.3
 
 - [issue #90] Fix `bunyan -p '*'` breakage in version 0.21.2.

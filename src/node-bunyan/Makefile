@@ -30,20 +30,21 @@ NON_DTRACE_TEST_FILES := $(shell ls -1 test/*.test.js | grep -v dtrace | xargs)
 
 #---- Targets
 
-all:
+all $(NODEUNIT):
 	npm install
 
 # Ensure all version-carrying files have the same version.
 .PHONY: versioncheck
 versioncheck:
+	@echo version is: $(shell cat package.json | json version)
 	[[ `cat package.json | json version` == `grep '^## ' CHANGES.md | head -1 | awk '{print $$3}'` ]]
 	[[ `cat package.json | json version` == `grep '^var VERSION' bin/bunyan | awk -F"'" '{print $$2}'` ]]
 	[[ `cat package.json | json version` == `grep '^var VERSION' lib/bunyan.js | awk -F"'" '{print $$2}'` ]]
 	@echo Version check ok.
 
 .PHONY: cutarelease
-cutarelease: versioncheck
-	[[ `git status | tail -n1` == "nothing to commit (working directory clean)" ]]
+cutarelease: versioncheck check
+	[[ `git status | tail -n1 | cut -c1-17` == "nothing to commit" ]]
 	./tools/cutarelease.py -p bunyan -f package.json -f lib/bunyan.js -f bin/bunyan
 
 .PHONY: docs
@@ -77,16 +78,22 @@ distclean:
 test: $(NODEUNIT)
 	test -z "$(DTRACE_UP_IN_HERE)" || test -n "$(SKIP_DTRACE)" || \
 		(node -e 'require("dtrace-provider").createDTraceProvider("isthisthingon")' && \
+		echo "\nNote: Use 'SKIP_DTRACE=1 make test' to skip parts of the test suite that require root." && \
 		$(SUDO) $(NODEUNIT) test/dtrace.test.js)
 	$(NODEUNIT) $(NON_DTRACE_TEST_FILES)
 
 # Test will all node supported versions (presumes install locations I use on
 # my machine).
-# Note: 'test08' is last so (if all is well) I end up with a binary
-# dtrace-provider build for node 0.8 (my current version).
+# Note: 'test10' is last so (if all is well) I end up with a binary
+# dtrace-provider build for node 0.10 (my current version).
 .PHONY: testall
-testall: test06 test10 test08
+testall: test11 test08 test10
 
+.PHONY: test11
+test11:
+	@echo "# Test node 0.11.x (with node `$(NODEOPT)/node-0.11/bin/node --version`)"
+	@$(NODEOPT)/node-0.11/bin/node --version
+	PATH="$(NODEOPT)/node-0.11/bin:$(PATH)" make distclean all test
 .PHONY: test10
 test10:
 	@echo "# Test node 0.10.x (with node `$(NODEOPT)/node-0.10/bin/node --version`)"
@@ -97,11 +104,6 @@ test08:
 	@echo "# Test node 0.8.x (with node `$(NODEOPT)/node-0.8/bin/node --version`)"
 	@$(NODEOPT)/node-0.8/bin/node --version
 	PATH="$(NODEOPT)/node-0.8/bin:$(PATH)" make distclean all test
-.PHONY: test06
-test06:
-	@echo "# Test node 0.6.x (with node `$(NODEOPT)/node-0.6/bin/node --version`)"
-	@$(NODEOPT)/node-0.6/bin/node --version
-	PATH="$(NODEOPT)/node-0.6/bin:$(PATH)" make distclean all test
 
 
 #---- check

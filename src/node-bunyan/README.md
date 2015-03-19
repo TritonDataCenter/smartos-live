@@ -48,9 +48,11 @@ node.js library usage of bunyan in your apps.
 - [`bunyan` CLI](#cli-usage) for pretty-printing and filtering of Bunyan logs
 - simple include of log call source location (file, line, function) with
   [`src: true`](#src)
-- light-weight specialization of Logger instances with [`log.child`](#logchild)
+- lightweight specialization of Logger instances with [`log.child`](#logchild)
 - custom rendering of logged objects with ["serializers"](#serializers)
-- [Dtrace support](#dtrace-support)
+- [Runtime log snooping via Dtrace support](#runtime-log-snooping-via-dtrace)
+- Support for [browserify](http://browserify.org/). See [Browserify
+  section](#browserify) below.
 
 
 # Introduction
@@ -84,7 +86,7 @@ full API is:
                     // This is equivalent to `log.isInfoEnabled()` or
                     // `log.isEnabledFor(INFO)` in log4j.
 
-    log.info('hi');                     // Log a simple string message.
+    log.info('hi');                     // Log a simple string message (or number).
     log.info('hi %s', bob, anotherVar); // Uses `util.format` for msg formatting.
 
     log.info({foo: 'bar'}, 'hi');
@@ -110,7 +112,7 @@ This will dove-tail with [Bunyan serializer support](#serializers), discussed
 later.
 
 The same goes for all of Bunyan's log levels: `log.trace`, `log.debug`,
-`log.info`, `log.warn`, and `log.fatal`. See the [levels section](#levels)
+`log.info`, `log.warn`, `log.error`, and `log.fatal`. See the [levels section](#levels)
 below for details and suggestions.
 
 
@@ -165,11 +167,11 @@ streams at different levels**.
       streams: [
         {
           level: 'info',
-          stream: process.stdout,           // log INFO and above to stdout
+          stream: process.stdout            // log INFO and above to stdout
         },
         {
           level: 'error',
-          path: '/var/log/myapp-error.log'  // log ERROR and above to a file
+          path: '/var/tmp/myapp-error.log'  // log ERROR and above to a file
         }
       ]
     });
@@ -224,12 +226,13 @@ And with the `bunyan` CLI (using the "short" output mode):
 A more practical example is in the
 [node-restify](https://github.com/mcavage/node-restify) web framework.
 Restify uses Bunyan for its logging. One feature of its integration, is that
-each restify request handler includes a `req.log` logger that is:
+if `server.use(restify.requestLogger())` is used, each restify request handler
+includes a `req.log` logger that is:
 
     log.child({req_id: <unique request id>}, true)
 
 Apps using restify can then use `req.log` and have all such log records
-include the unique request id (as "req_id"). Handy.
+include the unique request id (as "req\_id"). Handy.
 
 
 ## Serializers
@@ -263,7 +266,7 @@ Or this:
         serializers: {req: bunyan.stdSerializers.req}
     });
 
-because Buyan includes a small set of standard serializers. To use all the
+because Bunyan includes a small set of standard serializers. To use all the
 standard serializers you can use:
 
     var log = bunyan.createLogger({
@@ -447,7 +450,7 @@ Recommended/Best Practice Fields:
   for a request. This really shines when you have a SOA with multiple services
   and you carry a single request ID from the top API down through all APIs
   (as [node-restify](https://github.com/mcavage/node-restify) facilitates
-  with its 'X-Request-Id' header).
+  with its 'Request-Id' header).
 
 - `req`: An HTTP server request. Bunyan provides `bunyan.stdSerializers.req`
   to serialize a request with a suggested set of keys. Example:
@@ -529,6 +532,9 @@ do this:
     log.on('error', function (err, stream) {
         // Handle stream write or create error here.
     });
+
+Note: This is **not** that same as a log record at the "error" level as
+produced by `log.error(...)`.
 
 
 ## stream type: `stream`
@@ -639,6 +645,23 @@ used for anything else.</td>
 
 ## stream type: `rotating-file`
 
+**WARNING on node 0.8 usage:** Users of Bunyan's `rotating-file` should (a) be
+using at least bunyan 0.23.1 (with the fix for [this
+issue](https://github.com/trentm/node-bunyan/pull/97)), and (b) should use at
+least node 0.10 (node 0.8 does not support the `unref()` method on
+`setTimeout(...)` needed for the mentioned fix). The symptom is that process
+termination will hang for up to a full rotation period.
+
+**WARNING on [cluster](http://nodejs.org/docs/latest/api/all.html#all_cluster)
+usage:** Using Bunyan's `rotating-file` stream with node.js's "cluster" module
+can result in unexpected file rotation. You must not have multiple processes
+in the cluster logging to the same file path. In other words, you must have
+a separate log file path for the master and each worker in the cluster.
+Alternatively, consider using a system file rotation facility such as
+`logrotate` on Linux or `logadm` on SmartOS/Illumos. See
+[this comment on issue #117](https://github.com/trentm/node-bunyan/issues/117#issuecomment-44804938)
+for details.
+
 A `type === 'rotating-file'` is a file stream that handles file automatic
 rotation.
 
@@ -719,6 +742,23 @@ used for anything else.</td>
 </table>
 
 
+**Note on log rotation**: Often you may be using external log rotation utilities
+like `logrotate` on Linux or `logadm` on SmartOS/Illumos. In those cases, unless
+your are ensuring "copy and truncate" sematics (via `copytruncate` with
+logrotate or `-c` with logadm) then the fd for your 'file' stream will change.
+You can tell bunyan to reopen the file stream with code like this in your
+app:
+
+    var log = bunyan.createLogger(...);
+    ...
+    process.on('SIGUSR2', function () {
+        log.reopenFileStreams();
+    });
+
+where you'd configure your log rotation to send SIGUSR2 (or some other signal)
+to your process. Any other mechanism to signal your app to run
+`log.reopenFileStreams()` would work as well.
+
 
 ## stream type: `raw`
 
@@ -777,11 +817,20 @@ This example emits:
   [mcavage/node-bunyan-syslog](https://github.com/mcavage/node-bunyan-syslog)
   provides support for directing bunyan logging to a syslog server.
 
+- bunyan-slack:
+[qualitybath/bunyan-slack](https://github.com/qualitybath/bunyan-slack) Bunyan stream for Slack chat integration.
+
+- bunyan-fogbugz
+[qualitybath/bunyan-fogbugz](https://github.com/qualitybath/bunyan-fogbugz) Bunyan stream for sending automated crash reports to FogBugz
+
 - TODO: eventually https://github.com/trentm/node-bunyan-winston
 
 
 
-# DTrace support
+# Runtime log snooping via DTrace
+
+**Note**: To use Bunyan's DTrace facilities you need to manually install
+the "dtrace-provider" lib separately via `npm install dtrace-provider`.
 
 On systems that support DTrace (e.g., MacOS, FreeBSD, illumos derivatives
 like SmartOS and OmniOS), Bunyan will create a DTrace provider (`bunyan`)
@@ -887,6 +936,98 @@ Output of the above might be:
               node`_start+0x83
 
 
+# Browserify
+
+As the [Browserify](http://browserify.org/) site says it "lets you
+`require('modules')` in the browser by bundling up all of your dependencies."
+It is a build tool to run on your node.js script to bundle up your script and
+all its node.js dependencies into a single file that is runnable in the
+browser via:
+
+    <script src="play.browser.js"></script>
+
+As of version 1.1.0, node-bunyan supports being run via Browserify. The
+default [stream](#streams) when running in the browser is one that emits
+raw log records to `console.log/info/warn/error`.
+
+Here is a quick example showing you how you can get this working for your
+script.
+
+1. Get browserify and bunyan installed in your module:
+
+
+        $ npm install browserify bunyan
+
+2. An example script using Bunyan, "play.js":
+
+    ```javascript
+    var bunyan = require('bunyan');
+    var log = bunyan.createLogger({name: 'play', level: 'debug'});
+    log.trace('this one does not emit');
+    log.debug('hi on debug');   // console.log
+    log.info('hi on info');     // console.info
+    log.warn('hi on warn');     // console.warn
+    log.error('hi on error');   // console.error
+    ```
+
+3. Build this into a bundle to run in the browser, "play.browser.js":
+
+        $ ./node_modules/.bin/browserify play.js -o play.browser.js
+
+4. Put that into an HTML file, "play.html":
+
+    ```html
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <script src="play.browser.js"></script>
+    </head>
+    <body>
+      <div>hi</div>
+    </body>
+    </html>
+    ```
+
+5. Open that in your browser and open your browser console:
+
+        $ open play.html
+
+
+Here is what it looks like in Firefox's console: ![Bunyan + Browserify in the
+Firefox console](./docs/img/bunyan.browserify.png)
+
+For some, the raw log records might not be desired. To have a rendered log line
+you'll want to add your own stream, starting with something like this:
+
+```javascript
+var bunyan = require('./lib/bunyan');
+
+function MyRawStream() {}
+MyRawStream.prototype.write = function (rec) {
+    console.log('[%s] %s: %s',
+        rec.time.toISOString(),
+        bunyan.nameFromLevel[rec.level],
+        rec.msg);
+}
+
+var log = bunyan.createLogger({
+    name: 'play',
+    streams: [
+        {
+            level: 'info',
+            stream: new MyRawStream(),
+            type: 'raw'
+        }
+    ]
+});
+
+log.info('hi on info');
+```
+
+
+
+
 # Versioning
 
 The scheme I follow is most succintly described by the bootstrap guys
@@ -906,7 +1047,10 @@ MIT. See "LICENSE.txt".
 
 - Bunyan syslog support: <https://github.com/mcavage/node-bunyan-syslog>.
 - Bunyan + Graylog2: <https://github.com/mhart/gelf-stream>.
+- Bunyan middleware for Express: <https://github.com/villadora/express-bunyan-logger>
 - An example of a Bunyan shim to the Winston logging system:
-  <https://github.com/trentm/node-bunyan-winston>.
+  <https://github.com/trentm/node-bunyan-winston>. Also a [comparison of
+  Winston and Bunyan](http://strongloop.com/strongblog/compare-node-js-logging-winston-bunyan/).
 - [Bunyan for Bash](https://github.com/trevoro/bash-bunyan).
 - TODO: `RequestCaptureStream` example from restify.
+- [Bunyan integration for https://logentries.com](https://www.npmjs.org/package/logentries-stream)

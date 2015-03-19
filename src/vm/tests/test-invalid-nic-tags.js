@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // Test invalid nic tag detection
 //
@@ -10,6 +10,7 @@ var fs = require('fs');
 var util = require('util');
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+var mod_tag = require('../common/nictag');
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
@@ -19,7 +20,6 @@ VM.loglevel = 'DEBUG';
 
 var ERR_STR = 'Invalid nic tag "%s"';
 var IMAGE_UUID = vmtest.CURRENT_SMARTOS_UUID;
-var NICTAGADM = '/usr/bin/nictagadm';
 var TAGS_ADDED = [];
 
 
@@ -54,38 +54,11 @@ function stopVM(t, vm, uuid, callback) {
 
 
 
-// List all nic tags on the system, returning an object mapping tag names
-// to MAC addresses
-function listTags(callback) {
-    // list output looks like:
-    //   external|00:50:56:3d:a7:95
-    cp.execFile(NICTAGADM, ['list', '-p', '-d', '|'],
-        function (err, stdout, stderr) {
-        if (err) {
-            return callback(err);
-        }
-
-        var tags = {};
-
-        stdout.split('\n').forEach(function (line) {
-            var tagData = line.split('|');
-            if (tagData[1] === '-') {
-                return;
-            }
-
-            tags[tagData[0]] = tagData[1];
-        });
-
-        return callback(null, tags);
-    });
-}
-
-
 // Assigns the nic tags in names to the admin nic: afterward,
 // the admin nic has tags of:
 //     ['admin', <any other tags it had before>].concat(names)
 function add_admin_nic_tags(t, names, callback) {
-    listTags(function (err, tags) {
+    mod_tag.list(t, function (err, tags) {
         t.ifError(err, 'error listing nic tags');
         if (err) {
             callback(err);
@@ -118,15 +91,7 @@ function add_admin_nic_tags(t, names, callback) {
                 return;
             }
 
-            cp.execFile(NICTAGADM, ['add', name, admin_nic],
-                function (err2, stdout, stderr) {
-                t.ifError(err2, 'nictagadm add ' + name + ' ' + admin_nic);
-                if (err2) {
-                    return cb(err2);
-                }
-
-                return cb();
-            });
+            mod_tag.add(t, name, admin_nic, cb);
         }, callback);
     });
 }
@@ -139,7 +104,7 @@ function remove_admin_nic_tags(t, names, force, callback) {
         names = [ names ];
     }
 
-    listTags(function (err, tags) {
+    mod_tag.list(t, function (err, tags) {
         t.ifError(err, 'error listing nic tags');
         if (err) {
             callback(err);
@@ -167,21 +132,8 @@ function remove_admin_nic_tags(t, names, force, callback) {
                 return;
             }
 
-            var args = ['delete'];
-            if (force) {
-                args.push('-f');
-            }
-            args.push(name);
-
-            cp.execFile(NICTAGADM, args, function (err2, stdout, stderr) {
-                t.ifError(err2, 'nictagadm delete ' + name);
-                if (err2) {
-                    return cb(err2);
-                }
-
-                return cb();
-            });
-
+            mod_tag.del(t, name, force, cb);
+            return;
         }, callback);
     });
 }
@@ -263,7 +215,7 @@ test('reboot / shutdown / start / update with invalid nic tag',
                             return;
                         }
 
-                        listTags(function (err2, tags) {
+                        mod_tag.list(t, function (err2, tags) {
                             if (err2) {
                                 cb(err2);
                                 return;

@@ -71,6 +71,7 @@ JS_CHECK_TARGETS=\
 	vm/node_modules/vmload/*.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
+	vm/common/nictag.js \
 	vm/tests/test-alias.js \
 	vm/tests/test-cleanup-on-failure.js \
 	vm/tests/test-create.js \

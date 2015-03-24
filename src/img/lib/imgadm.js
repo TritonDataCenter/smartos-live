@@ -72,6 +72,7 @@ var common = require('./common'),
 var configuration = require('./configuration');
 var Database = require('./database');
 var errors = require('./errors');
+var magic = require('./magic');
 var mod_sources = require('./sources');
 var upgrade = require('./upgrade');
 
@@ -1711,8 +1712,9 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
             var totalBytes = irecs
                 .map(function (irec) { return irec.imgMeta.size; })
                 .reduce(function (a, b) { return a + b; });
-            logCb('Must download and install %d images (%s)',
-                irecs.length, common.humanSizeFromBytes(totalBytes));
+            logCb('Must download and install %d image%s (%s)',
+                irecs.length, (irecs.length === 1 ? '' : 's'),
+                common.humanSizeFromBytes(totalBytes));
             if (!opts.quiet && process.stderr.isTTY) {
                 bar = new ProgressBar({
                     size: totalBytes,
@@ -2092,13 +2094,52 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
             ]}, next);
         },
 
-        // Dev Note: If we can just gtar a file and NOT do streaming into
-        // gtar, then it'll handle compression detection for us, in particular
-        // for docker files for which we don't track compression.
+        function sniffCompression(_, next) {
+            assert.string(ctx.filePath, 'ctx.filePath');
+            magic.compressionTypeFromPath(ctx.filePath, function (err, cType) {
+                if (err) {
+                    next(err);
+                    return;
+                }
+                ctx.cType = cType; // one of: null, bzip2, gzip, xz
+                next();
+            });
+        },
+
+        /*
+         * '/usr/bin/tar' supports sniffing 'xz', but balks on some Mac tar
+         * goop (as in the learn/tutorial image). '/usr/bin/gtar' currently
+         * doesn't sniff 'xz' compression.
+         */
         function extract(_, next) {
             assert.string(ctx.filePath, 'ctx.filePath');
-            var argv = ['/usr/bin/gtar', '-xf', ctx.filePath, '-C', zoneroot];
-            execFilePlus({argv: argv, log: log}, next);
+            assert.optionalString(ctx.cType, 'ctx.cType');
+
+            if (ctx.cType === 'xz') {
+                common.execPlus({
+                    command: format(
+                        '/usr/bin/xz -dc %s | /usr/bin/gtar -x -C %s -f -',
+                        ctx.filePath,
+                        zoneroot),
+                    log: log,
+                    execOpts: {
+                        maxBuffer: 2 * 1024 * 1024
+                    }
+                }, next);
+            } else {
+                var tarOpt = {
+                    bzip2: 'j',
+                    gzip: 'z'
+                }[ctx.cType] || '';
+                common.execFilePlus({
+                    argv: ['/usr/bin/gtar', '-x' + tarOpt + 'f',
+                        ctx.filePath, '-C', zoneroot],
+                    log: log,
+                    execOpts: {
+                        maxBuffer: 2 * 1024 * 1024
+                    }
+                }, next);
+            }
         },
 
         function whiteout(_, next) {
@@ -2811,14 +2852,12 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
         function getVmInfo(next) {
             var opts;
             if (vmInfo.brand === 'kvm') {
-                if (vmInfo.disks) {
-                    for (var i = 0; i < vmInfo.disks.length; i++) {
-                        if (vmInfo.disks[i].image_uuid) {
-                            var disk = vmInfo.disks[i];
-                            opts = {uuid: disk.image_uuid, zpool: disk.zpool};
-                            vmZfsFilesystemName = disk.zfs_filesystem;
-                            break;
-                        }
+                if (vmInfo.disks && vmInfo.disks[0]) {
+                    var disk = vmInfo.disks[0];
+                    vmZfsFilesystemName = disk.zfs_filesystem;
+
+                    if (disk.image_uuid) {
+                        opts = {uuid: disk.image_uuid, zpool: disk.zpool};
                     }
                 }
             } else {

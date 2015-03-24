@@ -74,6 +74,7 @@ typedef enum {
     ERR_IPADM_DOOR,
     ERR_PLUMB_IF,
     ERR_RAISE_IF,
+    ERR_UP_IP6,
     ERR_CHROOT_FAILED,
     ERR_CHILD_NET,
     ERR_DOOR_INFO,

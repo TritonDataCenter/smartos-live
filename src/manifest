@@ -20,6 +20,7 @@ f usr/img/lib/configuration.js 0444 root bin
 f usr/img/lib/database.js 0444 root bin
 f usr/img/lib/errors.js 0444 root bin
 f usr/img/lib/imgadm.js 0444 root bin
+f usr/img/lib/magic.js 0444 root bin
 d usr/img/lib/sources 0555 root bin
 f usr/img/lib/sources/docker.js 0444 root bin
 f usr/img/lib/sources/dsapi.js 0444 root bin
@@ -247,6 +248,7 @@ d usr/vm/test/testdata 0555 root bin
 d usr/vm/test/testdata/vmload-xml 0555 root bin
 d usr/vm/test/tests 0555 root bin
 d usr/vm/test/common 0555 root bin
+f usr/vm/test/common/nictag.js 0444 root bin
 f usr/vm/test/common/vmtest.js 0444 root bin
 f usr/vm/test/runtest 0555 root bin
 f usr/vm/test/runtests 0555 root bin

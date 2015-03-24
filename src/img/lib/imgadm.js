@@ -2113,7 +2113,6 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
          */
         function extract(_, next) {
             assert.string(ctx.filePath, 'ctx.filePath');
-            assert.optionalString(ctx.cType, 'ctx.cType');
 
             if (ctx.cType === 'xz') {
                 common.execPlus({

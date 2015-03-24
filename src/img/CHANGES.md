@@ -1,5 +1,10 @@
 # imgadm changelog
 
+## 3.1.2
+
+- [OS-4097] support xz-compressed Docker images, e.g. learn/tutorial
+
+
 ## 3.1.1
 
 - [#412] support 'imgadm create' on non-cloned KVM VMs

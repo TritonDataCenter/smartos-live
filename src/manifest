@@ -20,6 +20,7 @@ f usr/img/lib/configuration.js 0444 root bin
 f usr/img/lib/database.js 0444 root bin
 f usr/img/lib/errors.js 0444 root bin
 f usr/img/lib/imgadm.js 0444 root bin
+f usr/img/lib/magic.js 0444 root bin
 d usr/img/lib/sources 0555 root bin
 f usr/img/lib/sources/docker.js 0444 root bin
 f usr/img/lib/sources/dsapi.js 0444 root bin

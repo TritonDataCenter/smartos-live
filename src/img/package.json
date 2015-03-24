@@ -13,7 +13,7 @@
     "docker-registry-client": "git://github.com/joyent/node-docker-registry-client.git#765e74c",
     "extsprintf": "1.2.0",
     "findit": "2.0.0",
-    "imgmanifest": "git://github.com/joyent/node-imgmanifest.git#91e5d80",
+    "imgmanifest": "git://github.com/joyent/node-imgmanifest.git#4f80d8c",
     "mkdirp": "0.5.0",
     "node-uuid": "1.4.1",
     "once": "1.3.1",

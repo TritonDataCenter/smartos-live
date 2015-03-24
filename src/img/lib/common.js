@@ -53,7 +53,7 @@ var DEFAULT_SOURCE = {type: 'imgapi', url: 'https://images.joyent.com'};
 
 var DB_DIR = '/var/imgadm';
 
-var VALID_COMPRESSIONS = ['none', 'bzip2', 'gzip'];
+var VALID_COMPRESSIONS = ['none', 'bzip2', 'gzip', 'xz'];
 
 var VALID_SOURCE_TYPES = ['imgapi', 'dsapi', 'docker'];
 

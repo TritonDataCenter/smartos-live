@@ -2277,6 +2277,9 @@ IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
             } else if (compression === 'gzip') {
                 uncompressor = spawn('/usr/bin/gzip', ['-cdfq']);
                 numToFinish++;
+            } else if (compression === 'xz') {
+                uncompressor = spawn('/usr/bin/xz', ['-cdfq']);
+                numToFinish++;
             } else {
                 assert.equal(compression, 'none',
                     format('image %s file compression: %s', uuid, compression));
@@ -3329,6 +3332,10 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             } else if (compression === 'gzip') {
                 compressor = spawn('/usr/bin/gzip', ['-cfq']);
                 imageInfo.filePath += '.gz';
+                numToFinish++;
+            } else if (compression === 'xz') {
+                compressor = spawn('/usr/bin/xz', ['-cfq']);
+                imageInfo.filePath += '.xz';
                 numToFinish++;
             } else {
                 finish(new errors.UsageError(format(

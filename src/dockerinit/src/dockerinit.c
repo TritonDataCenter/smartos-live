@@ -42,6 +42,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include <arpa/inet.h>
@@ -180,16 +181,18 @@ runIpmgmtd(char *cmd[], char *env[])
     }
 }
 
-void
-execCmdline()
-{
-    int _stdin, _stdout, _stderr;
-    char *execname;
 
-    execname = execName(cmdline[0]);
+void setupTerminal() {
+    int _stdin, _stdout, _stderr;
+    int ctty = 0;
+    const char *data;
+
+    data = mdataGet("docker:tty");
+    if (data != NULL && strcmp("true", data) == 0) {
+        ctty = 1;
+    }
 
     dlog("SWITCHING TO /dev/zfd/*\n");
-
     /*
      * If 'OpenStdin' is set on the container we reopen stdin as connected to
      * the zfd. Otherwise we leave it opened as /dev/null.
@@ -221,17 +224,50 @@ execCmdline()
         fatal(ERR_CLOSE, "failed to close(2): %s\n", strerror(errno));
     }
 
-    _stdout = open("/dev/zfd/1", O_WRONLY);
-    if (_stdout == -1) {
-        fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
-            strerror(errno));
-    }
+    if (ctty) {
+        /* Configure output as a controlling terminal */
+        _stdout = open("/dev/zfd/0", O_WRONLY);
+        if (_stdout == -1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
+                strerror(errno));
+        }
+        _stderr = open("/dev/zfd/0", O_WRONLY);
+        if (_stderr == -1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
+                strerror(errno));
+        }
 
-    _stderr = open("/dev/zfd/2", O_WRONLY);
-    if (_stderr == -1) {
-        fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/2: %s\n",
-            strerror(errno));
+        if (setsid() < 0) {
+            fatal(ERR_OPEN_CONSOLE, "failed to create process session: %s\n",
+                strerror(errno));
+        }
+        if (ioctl(_stdout, TIOCSCTTY, NULL) < 0) {
+            fatal(ERR_OPEN_CONSOLE, "failed set controlling tty: %s\n",
+                strerror(errno));
+        }
+    } else {
+        /* Configure individual pipe style output */
+        _stdout = open("/dev/zfd/1", O_WRONLY);
+        if (_stdout == -1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
+                strerror(errno));
+        }
+        _stderr = open("/dev/zfd/2", O_WRONLY);
+        if (_stderr == -1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/2: %s\n",
+                strerror(errno));
+        }
     }
+}
+
+void
+execCmdline()
+{
+    char *execname;
+
+    execname = execName(cmdline[0]);
+
+    setupTerminal();
 
     /*
      * We need to drop privs *after* we've setup /dev/zfd/[0-2] since that

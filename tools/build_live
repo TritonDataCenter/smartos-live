@@ -32,7 +32,7 @@ BUILDER=${ROOT}/tools/builder/builder
 SCANNER=${ROOT}/tools/scanner
 PWGEN=${ROOT}/tools/pwgen
 GET_STATUS=${ROOT}/tools/build_etcrelease
-CHECK_DIR="${ROOT}/tools/checks"
+MANCHECK="${ROOT}/tools/mancheck/mancheck"
 
 BUILDSTAMP=$(cat ${ROOT}/proto/buildstamp)
 if [[ -z ${BUILDSTAMP} ]]; then
@@ -296,7 +296,7 @@ function fatal_error
 
 function run_checks
 {
-    ${CHECK_DIR}/mancheck -f ${MANIFEST} -s
+    ${MANCHECK} -f ${MANIFEST} -s
     [[ $? -eq 0 ]] || fatal_error "you are not mancheck -s clean"
 }
 

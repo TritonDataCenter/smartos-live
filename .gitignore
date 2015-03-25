@@ -32,8 +32,6 @@
 /src/ntp_config
 /tools/builder/builder
 /tools/builder/*.o
-/tools/builder/users.c
-/tools/builder/users.c.tmp
 /tools/cryptpass
 /tools/pwgen
 /tools/pwgen-2.06/configure

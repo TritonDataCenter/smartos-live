@@ -159,7 +159,8 @@ function create_ufs
     mount -F ufs -o nologging ${lofiusrdev} "${rdmnt}/usr"
 
     # do the actual copy
-    ${BUILDER} ${MANIFEST} ${rdmnt} ${IN_DIRS}
+    BUILDER_PASSWD_DIR=${ROOT}/overlay/generic/etc \
+        ${BUILDER} ${MANIFEST} ${rdmnt} ${IN_DIRS}
     if [ $? -ne 0 ]; then
         echo "ERROR: copy onto the image failed"
         echo "(may need to increase the size or manifest file not found)"

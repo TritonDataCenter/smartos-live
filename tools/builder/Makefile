@@ -3,22 +3,31 @@
 #
 
 CC=gcc
-CFLAGS=-Wall -W
+CFLAGS=-Wall -W -Werror -std=c99 -I../common -D__EXTENSIONS__
 SRC_ROOT=$(PWD)/../..
 
-TARGETS=builder
-OBJS=builder.o file_cp.o users.o
+PROG=builder
+OBJS=builder.o copyfile.o users.o strlist.o common.o parser.o custr.o
+LDLIBS=-lavl
 
-all: $(TARGETS)
+ILLUMOS_SRC=../../projects/illumos
+TOOLS_BIN=$(ILLUMOS_SRC)/usr/src/tools/proto/root_i386-nd/opt/onbld/bin
+CTFCONVERT=$(TOOLS_BIN)/i386/ctfconvert
+CTFMERGE=$(TOOLS_BIN)/i386/ctfmerge
+
+all: $(PROG)
 
 builder: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDLIBS)
+	$(CTFMERGE) -l $(PROG) -o $@ $(OBJS)
 
 %.o: %.c
-	$(CC) -c $(CFLAGS) -o $@ $<
+	$(CC) -c -gdwarf-2 $(CFLAGS) -o $@ $<
+	$(CTFCONVERT) -l $(PROG) $@
 
-users.c:
-	./build_users_c.sh $(SRC_ROOT)/overlay/generic > users.c.tmp && mv users.c.tmp users.c
+%.o: ../common/%.c
+	$(CC) -c -gdwarf-2 $(CFLAGS) -o $@ $<
+	$(CTFCONVERT) -l $(PROG) $@
 
 clean:
-	rm $(TARGETS) $(OBJS)
+	rm -f $(TARGETS) $(OBJS)

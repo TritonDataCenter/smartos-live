@@ -75,6 +75,7 @@ BOOT_VERSION :=	boot-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
 BOOT_TARBALL :=	output/$(BOOT_VERSION).tgz
 
 TOOLS_TARGETS = \
+	tools/builder/builder \
 	tools/mancheck/mancheck \
 	tools/cryptpass
 
@@ -100,7 +101,8 @@ $(BOOT_TARBALL): world manifest
 	pfexec rm -rf $(BOOT_PROTO)
 	mkdir -p $(BOOT_PROTO)
 	mkdir -p $(ROOT)/output
-	pfexec ./tools/builder/builder $(ROOT)/$(BOOT_MANIFEST) \
+	BUILDER_PASSWD_DIR=$(ROOT)/overlay/generic/etc \
+	    pfexec ./tools/builder/builder $(ROOT)/$(BOOT_MANIFEST) \
 	    $(BOOT_PROTO) $(ROOT)/proto
 	(cd $(BOOT_PROTO) && pfexec gtar czf $(ROOT)/$@ .)
 
@@ -226,7 +228,6 @@ update-base:
 	touch $@
 
 0-tools-stamp: 0-pwgen-stamp
-	(cd $(ROOT)/tools/builder && gmake builder)
 	touch $@
 
 0-pwgen-stamp:
@@ -244,6 +245,10 @@ tools/mancheck/mancheck: 0-illumos-stamp
 .PHONY: sdcman
 sdcman:
 	(cd $(ROOT)/man/sdc && gmake install DESTDIR=$(PROTO) $(SUBDIR_DEFS))
+
+.PHONY: tools/builder/builder
+tools/builder/builder: 0-illumos-stamp
+	(cd tools/builder && gmake builder CC=$(NATIVE_CC) $(SUBDIR_DEFS))
 
 jsl: $(JSLINT)
 
@@ -275,6 +280,7 @@ clean:
 	rm -f tools/cryptpass
 	(cd tools/mancheck && gmake clean)
 	(cd man/sdc && gmake clean)
+	(cd tools/builder && gmake clean)
 	rm -f 0-*-stamp 1-*-stamp
 
 clobber: clean

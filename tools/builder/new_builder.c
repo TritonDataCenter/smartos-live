@@ -12,13 +12,17 @@
 
 #include "users.h"
 #include "copyfile.h"
+#include "strlist.h"
 
-#define MAX_DIRS     10
-#define MAX_LINE_LEN 1024
+/*
+ * Maximum number of input directories to search:
+ */
+#define	MAX_DIRS	32
+
+#define	MAX_LINE_LEN	1024
 
 /* Globals! */
-char *search_dirs[MAX_DIRS] = { NULL };
-builder_ids_t *bid;
+strlist_t *search_dirs;
 
 static int exit_status = 0;
 
@@ -131,7 +135,8 @@ void handle_file(const char *target, const char *mode, const char *user, const c
 
 }
 
-void handle_link(const char *target, const char *type, int(*linker)(const char *, const char *))
+void
+handle_link(const char *target, const char *type, int(*linker)(const char *, const char *))
 {
   char *copy, *ptr, *oldpath, *newpath;
 
@@ -169,6 +174,250 @@ void handle_link(const char *target, const char *type, int(*linker)(const char *
   printf("OK\n");
 }
 
+typedef struct builder {
+	char *b_passwd_dir;
+	char *b_output_dir;
+	char *b_manifest_file;
+	strlist_t *b_search_dirs;
+	strset_t *b_errors;
+	builder_ids_t *b_ids;
+} builder_t;
+
+static void
+usage(int status, char *msg)
+{
+	if (msg != NULL) {
+		(void) fprintf(status == 0 ? stdout : stderr, "%s\n", msg);
+	}
+
+	(void) fprintf(status == 0 ? stdout : stderr,
+	    "Usage: builder -p passwd_dir <manifest_file> <output_dir>\n"
+	    "           <input_dir>...\n",
+	    "\n");
+
+	exit(status);
+}
+
+static void
+parse_opts(builder_t *b, int argc, char **argv)
+{
+	int c, i;
+	char *pflag = NULL;
+
+	while ((c = getopt(argc, argv, ":p:")) != -1) {
+		switch (c) {
+		case 'p':
+			pflag = optarg;
+			break;
+		case ':':
+			(void) fprintf(stderr, "Option -%c requires an "
+			    "operand\n", optopt);
+			usage(1, NULL);
+			break;
+		case '?':
+			(void) fprintf(stderr, "Unrecognised option: -%c\n",
+			    optopt);
+			usage(1, NULL);
+			break;
+		}
+	}
+
+	if (pflag == NULL) {
+		usage(1, "must specify passwd directory with -p");
+	} else if ((b->b_passwd_dir = strdup(pflag)) == NULL) {
+		err(1, "strdup failure");
+	}
+
+	if ((argc - optind) < 3) {
+		usage(1, "must provide manifest, output directory and input"
+		    "directories");
+	}
+
+	if (argv[optind][0] != '/') {
+		usage(1, "manifest file must be an absolute path");
+	} else if ((b->b_manifest_file = strdup(argv[optind])) == NULL) {
+		err(1, "strdup failure");
+	}
+
+	if (argv[optind + 1][0] != '/') {
+		usage(1, "output directory must be an absolute path");
+	} else if ((b->b_output_dir = strdup(argv[optind + 1])) == NULL) {
+		err(1, "strdup failure");
+	}
+
+	for (i = optind + 2; i < argc; i++) {
+		if (argv[i][0] != '/') {
+			usage(1, "input directory must be an absolute path");
+		}
+
+		if (strlist_set_tail(&b->b_search_dirs, argv[i]) != 0) {
+			err(1, "strlist_set_tail failure");
+		}
+	}
+	if (strlist_contig_count(&b->b_search_dirs) < 1) {
+		usage(1, "must provide at least one input directory");
+	}
+}
+
+static int
+map_user_and_group(builder_t *b, const char *user, uid_t *u,
+    const char *group, gid_t *g)
+{
+	char buf[100];
+
+	if (uid_from_name(b->b_ids, user, u) != 0) {
+		(void) snprintf(buf, sizeof (buf), "user \"%s\" not "
+		    "found in passwd file", user);
+		if (strset_add(&b->b_errors, buf) != 0) {
+			err(1, "strset_add failure");
+		}
+	}
+
+	if (gid_from_name(b->b_ids, group, g) != 0) {
+		(void) snprintf(buf, sizeof (buf), "group \"%s\" not "
+		    "found in group file", group);
+		if (strset_add(&b->b_errors, buf) != 0) {
+			err(1, "strset_add failure");
+		}
+	}
+}
+
+static me_cb_ret_t
+handle_directory(manifest_ent_t *me, void *arg)
+{
+	builder_t *b = arg;
+	uid_t u;
+	gid_t g;
+
+	if (me->me_type != ME_TYPE_DIRECTORY) {
+		return (MECB_NEXT);
+	}
+
+	if (map_user_and_group(b, me->me_user, &u, me->me_group, &g) != 0) {
+		return (MECB_NEXT);
+	}
+
+	fprintf(stdout, "DIR: [%s][%04o][%s/%d][%s/%d]: ", me->me_name,
+	    (unsigned int)me->me_mode, me->me_user, u, me->me_group, g);
+
+	if (mkdir(me->me_name, me->me_mode) != 0 && errno != EEXIST) {
+		char buf[MAXPATHLEN + 100];
+
+		(void) snprintf(buf, sizeof (buf), "mkdir failed for "
+		    "\"%s\": %s", me->me_name, strerror(errno));
+
+		if (strset_add(&b->b_errors, buf) != 0) {
+			err(1, "strset_add failure");
+		}
+
+		return (MECB_CANCEL);
+	}
+
+	if (chown(me->me_name, u, g) != 0) {
+		char buf[MAXPATHLEN + 100];
+
+		(void) snprintf(buf, sizeof (buf), "chown failed for "
+		    "\"%s\": %s", me->me_name, strerror(errno));
+
+		if (strset_add(&b->b_errors, buf) != 0) {
+			err(1, "strset_add failure");
+		}
+
+		return (MECB_CANCEL);
+	}
+
+	fprintf(stdout, "OK\n");
+}
+
+static me_cb_ret_t
+sanity_check(manifest_ent_t *me, void *arg)
+{
+	builder_t *b = arg;
+	uid_t u;
+	gid_t g;
+
+	/*
+	 * Check for duplicate entries in the manifest file.
+	 */
+	if (strset_add(&b->b_paths, me->me_name) != 0) {
+		if (errno == EEXIST) {
+			char buf[100 + MAXPATHLEN];
+
+			(void) snprintf(buf, sizeof (buf), "duplicate entry "
+			    "\"%s\"", me->me_name);
+			if (strset_add(&b->b_errors, buf) != 0) {
+				err(1, "strset_add failure");
+			}
+		} else {
+			err(1, "strset_add failure");
+		}
+	}
+
+	/*
+	 * Check that all user and group names map to valid entries in the
+	 * shipped /etc/passwd and /etc/group databases.
+	 */
+	switch (me->me_type) {
+	case ME_TYPE_DIRECTORY:
+	case ME_TYPE_FILE:
+		if (map_user_and_group(b, me->me_user, &u, me->me_group,
+		    &g) != 0) {
+			return (MECB_NEXT);
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return (MECB_NEXT);
+}
+
+static manifest_ent_cb_t *builder_passes[] = {
+	sanity_check,
+	handle_directory,
+	handle_file,
+	handle_link,
+	NULL
+};
+
+int
+main(int argc, char **argv)
+{
+	builder_t b;
+
+	bzero(&b, sizeof (b));
+	if (strlist_alloc(&b->b_search_dirs, MAX_DIRS) != 0 ||
+	    strset_alloc(&b->b_errors, STRSET_IGNORE_DUPLICATES) != 0 ||
+	    strset_alloc(&b->b_paths, 0) != 0) {
+		err(1, "strlist_alloc failure");
+	}
+
+	if (geteuid() != 0) {
+		errx(1, "must be root to use this tool");
+	}
+
+	parse_opts(&b, argc, argv);
+
+	if (builder_ids_init(&b->b_ids, b->b_passwd_dir) != 0) {
+		err(1, "failed to read passwd/group files");
+	}
+
+	(void) fprintf(stdout, "MANIFEST:   %s\n", b->b_manifest_path);
+	(void) fprintf(stdout, "OUTPUT:     %s\n", b->b_output_dir);
+	for (int i = 0; (char *c = strlist_get(&b->b_search_dirs, i)) != NULL;
+	    i++) {
+		(void) fprintf(stdout, "SEARCH[%02d]: %s\n", i, c);
+	}
+
+	if (chdir(b->b_output_dir) != 0) {
+		err(1, "failed to change to output directory (%s)",
+		    b->b_output_dir);
+	}
+
+	return (1);
+}
+
 int main(int argc, char *argv[])
 {
   FILE *file;
@@ -179,6 +428,10 @@ int main(int argc, char *argv[])
 
   if (geteuid() != 0) {
     printf("euid must be 0 to use this tool.\n");
+    exit(1);
+  }
+
+  if (strlist_alloc(&search_dirs, MAX_DIRS) != 0) {
     exit(1);
   }
 

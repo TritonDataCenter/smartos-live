@@ -435,6 +435,10 @@ var fields = [
         mutable: false
     },
     {
+        name: 'urn',
+        mutable: false
+    },
+    {
         name: 'owner',
         mutable: true
     },
@@ -592,6 +596,16 @@ var validators = {
             errs.push({ field: 'uuid', code: 'MissingParameter' });
         } else if (! UUID_RE.test(manifest.uuid)) {
             errs.push({field: 'uuid', code: 'Invalid'});
+        }
+        return errs;
+    },
+
+    urn: function validateUrn(manifest) {
+        var errs = [];
+        if (manifest.urn === undefined) {
+            errs.push({ field: 'urn', code: 'MissingParameter' });
+        } else if (typeof (manifest.urn) !== 'string') {
+            errs.push({field: 'urn', code: 'Invalid'});
         }
         return errs;
     },

@@ -1,0 +1,79 @@
+#!/bin/sh
+#
+# Run `gtar` in a chroot to guard against symlink/hardlink break outs.
+#
+# Warning: should also provide a '-C DIR' for tar usage, else the
+# 'chroot-tools-$PID' support dir could conflict.
+#
+# Limitation: This doesn't guard against multiple concurrent runs in the same
+# or child/parent dirs.
+#
+
+if [[ -n "$TRACE" ]]; then
+    export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -o xtrace
+fi
+set -o errexit
+set -o pipefail
+
+
+function fatal
+{
+    echo "$0: fatal error: $*" >&2
+    exit 1
+}
+
+function onexit
+{
+    [[ -n "$TOOLSDIR" ]] && rm -rf $TOOLSDIR
+    exit $1
+}
+
+function usage
+{
+    echo "usage: chroot-gtar DIR GTAR-ARGS..." >&2
+    echo "" >&2
+    echo "It is suggested a '-C DIR' is always used in the GTAR-ARGS to avoid" >&2
+    echo "conflict with the '$DIR/chroot-tools-$PID' support dir created for" >&2
+    echo "the chroot environment." >&2
+    echo "" >&2
+    echo "example:" >&2
+    echo "    xz -dc archive.tar.xz | ./chroot-gtar /var/tmp/foo -xf - -C subdir" >&2
+}
+
+
+
+#---- mainline
+
+ROOTDIR=$1
+if [[ -z "$ROOTDIR" ]]; then
+    usage
+    exit 1
+fi
+shift
+
+ARGS="$*"
+
+TOOLS=chroot-tools-$$
+TOOLSDIR=$ROOTDIR/$TOOLS
+BINDIR=$TOOLSDIR/bin
+LIBDIR=$TOOLSDIR/lib
+
+trap 'onexit $?' EXIT
+
+rm -rf $TOOLSDIR
+mkdir $TOOLSDIR
+
+mkdir -p $BINDIR
+GTAR=$(which gtar)
+cp $GTAR $BINDIR/
+
+mkdir -p $LIBDIR
+libs="/lib/ld.so.1 $(ldd $GTAR | awk '{print $3}' | sort | uniq)"
+for lib in $libs; do
+    cp $lib $LIBDIR/
+done
+
+/usr/sbin/chroot $ROOTDIR \
+    /$TOOLS/lib/ld.so.1 -e LD_LIBRARY_PATH=/$TOOLS/lib -e LD_NOCONFIG=1 \
+    /$TOOLS/bin/gtar $ARGS

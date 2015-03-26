@@ -52,7 +52,7 @@ dev-install-image:
 	mkdir -p $(INSTALLIMAGE)/etc
 	cp etc/imgadm.completion $(INSTALLIMAGE)/etc/
 	mkdir -p $(INSTALLIMAGE)/sbin
-	cp sbin/imgadm $(INSTALLIMAGE)/sbin/
+	cp sbin/* $(INSTALLIMAGE)/sbin/
 	cp -PR lib $(INSTALLIMAGE)/lib
 	cp -PR node_modules $(INSTALLIMAGE)/node_modules
 	cp -PR test $(INSTALLIMAGE)/test

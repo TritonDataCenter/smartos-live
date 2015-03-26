@@ -2114,31 +2114,36 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
         function extract(_, next) {
             assert.string(ctx.filePath, 'ctx.filePath');
 
-            if (ctx.cType === 'xz') {
-                common.execPlus({
-                    command: format(
-                        '/usr/bin/xz -dc %s | /usr/bin/gtar -x -C %s -f -',
-                        ctx.filePath,
-                        zoneroot),
-                    log: log,
-                    execOpts: {
-                        maxBuffer: 2 * 1024 * 1024
-                    }
-                }, next);
-            } else {
-                var tarOpt = {
-                    bzip2: 'j',
-                    gzip: 'z'
-                }[ctx.cType] || '';
-                common.execFilePlus({
-                    argv: ['/usr/bin/gtar', '-x' + tarOpt + 'f',
-                        ctx.filePath, '-C', zoneroot],
-                    log: log,
-                    execOpts: {
-                        maxBuffer: 2 * 1024 * 1024
-                    }
-                }, next);
+            var decompressCmd;
+            switch (ctx.cType) {
+            case null:
+                decompressCmd = '/usr/bin/cat';
+                break;
+            case 'gzip':
+                decompressCmd = '/usr/bin/gzcat';
+                break;
+            case 'bzip2':
+                decompressCmd = '/usr/bin/bzcat';
+                break;
+            case 'xz':
+                decompressCmd = '/usr/bin/xzcat';
+                break;
+            default:
+                throw new Error('unexpected compression type: ' + ctx.cType);
             }
+
+            common.execPlus({
+                command: format(
+                    '%s %s | /usr/img/sbin/chroot-gtar %s -xf - -C %s',
+                    decompressCmd,
+                    ctx.filePath,
+                    path.dirname(zoneroot),
+                    path.basename(zoneroot)),
+                log: log,
+                execOpts: {
+                    maxBuffer: 2 * 1024 * 1024
+                }
+            }, next);
         },
 
         function whiteout(_, next) {

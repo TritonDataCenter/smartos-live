@@ -1,7 +1,8 @@
 # imgadm changelog
 
-## 3.1.2
+## 3.1.3
 
+- DOCKER-263 guard against symlink or hard link attacks with imgadm import of docker images
 - [OS-4102] OS-4097 broke import of uncompressed images
 
 ## 3.1.2

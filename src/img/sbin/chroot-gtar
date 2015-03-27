@@ -2,8 +2,8 @@
 #
 # Run `gtar` in a chroot to guard against symlink/hardlink break outs.
 #
-# Warning: should also provide a '-C DIR' for tar usage, else the
-# 'chroot-tools-$PID' support dir could conflict.
+# Warning: should also provide a '-C DIR' for tar usage, else could conflict
+# with the 'lib' and 'chroot-bin-$PID' support dirs.
 #
 # Limitation: This doesn't guard against multiple concurrent runs in the same
 # or child/parent dirs.
@@ -25,7 +25,8 @@ function fatal
 
 function onexit
 {
-    [[ -n "$TOOLSDIR" ]] && rm -rf $TOOLSDIR
+    [[ -n "$BINDIR" ]] && rm -rf $BINDIR
+    [[ -n "$LIBDIR" ]] && rm -rf $LIBDIR
     exit $1
 }
 
@@ -34,8 +35,8 @@ function usage
     echo "usage: chroot-gtar DIR GTAR-ARGS..." >&2
     echo "" >&2
     echo "It is suggested a '-C DIR' is always used in the GTAR-ARGS to avoid" >&2
-    echo "conflict with the '$DIR/chroot-tools-$PID' support dir created for" >&2
-    echo "the chroot environment." >&2
+    echo "conflict with the '$DIR/lib' and '$DIR/chroot-tools-$PID' support" >&2
+    echo "dirs created for the chroot environment." >&2
     echo "" >&2
     echo "example:" >&2
     echo "    xz -dc archive.tar.xz | ./chroot-gtar /var/tmp/foo -xf - -C subdir" >&2
@@ -54,26 +55,35 @@ shift
 
 ARGS="$*"
 
-TOOLS=chroot-tools-$$
-TOOLSDIR=$ROOTDIR/$TOOLS
-BINDIR=$TOOLSDIR/bin
-LIBDIR=$TOOLSDIR/lib
+CHROOTBIN=chroot-bin-$$
+BINDIR=$ROOTDIR/$CHROOTBIN
+LIBDIR=$ROOTDIR/lib
 
 trap 'onexit $?' EXIT
 
-rm -rf $TOOLSDIR
-mkdir $TOOLSDIR
+if [[ -e $LIBDIR ]]; then
+    fatal "conflict: $LIBDIR exists"
+fi
+mkdir -p $LIBDIR
+
+
+rm -rf $BINDIR
+mkdir $BINDIR
 
 mkdir -p $BINDIR
-GTAR=$(which gtar)
-cp $GTAR $BINDIR/
+CMDS="gtar gzip bzip2"
+for cmd in $CMDS; do
+    cp $(which $cmd) $BINDIR/
+done
 
 mkdir -p $LIBDIR
-libs="/lib/ld.so.1 $(ldd $GTAR | awk '{print $3}' | sort | uniq)"
+libs="/lib/ld.so.1
+    $(for cmd in $CMDS; do ldd $(which $cmd); done \
+        | awk '{print $3}' | sort | uniq)
+    "
 for lib in $libs; do
     cp $lib $LIBDIR/
 done
 
-/usr/sbin/chroot $ROOTDIR \
-    /$TOOLS/lib/ld.so.1 -e LD_LIBRARY_PATH=/$TOOLS/lib -e LD_NOCONFIG=1 \
-    /$TOOLS/bin/gtar $ARGS
+PATH=/$CHROOTBIN:$PATH /usr/sbin/chroot $ROOTDIR \
+    /$CHROOTBIN/gtar $ARGS

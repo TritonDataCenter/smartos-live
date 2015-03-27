@@ -1,5 +1,9 @@
 # imgadm changelog
 
+## 3.1.4
+
+- OS-4117: imgadm import crashes on a docker layer which is an empty gzip
+
 ## 3.1.3
 
 - DOCKER-263 guard against symlink or hard link attacks with imgadm import of docker images

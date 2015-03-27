@@ -2145,6 +2145,14 @@ IMGADM.prototype._lockPathFromUuid = function _lockPathFromUuid(uuid) {
  * - zfs snapshot zones/$uuid@final
  *
  * Dev Note: This presumes an imgadm lock is held for this image.
+ *
+ * Testing notes:
+ * - 'imgadm import tutum/influxdb' has a cbde4a8607af layer that is an
+ *   empty gzip. That breaks `zcat FILE | gtar xz -f` that was used in earlier
+ *   imgadm versions.
+ * - 'imgadm import learn/tutorial' (layer 8dbd9e392a96) uses xz compression.
+ * - 'imgadm import busybox' has layers with no compression.
+ * - TODO: what's a docker image using bzip2 compression?
  */
 IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
     var self = this;
@@ -2230,31 +2238,46 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
         function extract(_, next) {
             assert.string(ctx.filePath, 'ctx.filePath');
 
-            var decompressCmd;
+            var command;
             switch (ctx.cType) {
             case null:
-                decompressCmd = '/usr/bin/cat';
+                command = format(
+                    '/usr/bin/cat %s '
+                        + '| /usr/img/sbin/chroot-gtar %s -xf - -C %s',
+                    ctx.filePath,
+                    path.dirname(zoneroot),
+                    path.basename(zoneroot));
                 break;
             case 'gzip':
-                decompressCmd = '/usr/bin/gzcat';
+                command = format(
+                    '/usr/bin/cat %s '
+                        + '| /usr/img/sbin/chroot-gtar %s -xzf - -C %s',
+                    ctx.filePath,
+                    path.dirname(zoneroot),
+                    path.basename(zoneroot));
                 break;
             case 'bzip2':
-                decompressCmd = '/usr/bin/bzcat';
+                command = format(
+                    '/usr/bin/cat %s '
+                        + '| /usr/img/sbin/chroot-gtar %s -xjf - -C %s',
+                    ctx.filePath,
+                    path.dirname(zoneroot),
+                    path.basename(zoneroot));
                 break;
             case 'xz':
-                decompressCmd = '/usr/bin/xzcat';
+                command = format(
+                    '/usr/bin/xzcat %s '
+                        + '| /usr/img/sbin/chroot-gtar %s -xf - -C %s',
+                    ctx.filePath,
+                    path.dirname(zoneroot),
+                    path.basename(zoneroot));
                 break;
             default:
                 throw new Error('unexpected compression type: ' + ctx.cType);
             }
 
             common.execPlus({
-                command: format(
-                    '%s %s | /usr/img/sbin/chroot-gtar %s -xf - -C %s',
-                    decompressCmd,
-                    ctx.filePath,
-                    path.dirname(zoneroot),
-                    path.basename(zoneroot)),
+                command: command,
                 log: log,
                 execOpts: {
                     maxBuffer: 2 * 1024 * 1024

@@ -805,8 +805,15 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
             zoneRoots[zoneRoot] = true;
         });
 
+        /*
+         * PERF Note: Snapshots are gathered to do that (hopefully rare)
+         * `hasFinalSnap` exclusions below. That can add 10%-20% (or
+         * theoretically) more time to `imgadm list`. If that's a problem
+         * we might want an option to exclude that processing if the caller
+         * is fine with false positives.
+         */
         execPlus({
-            command: '/usr/sbin/zfs list -t filesystem,volume -pH '
+            command: '/usr/sbin/zfs list -t filesystem,volume,snapshot -pH '
                 + '-o name,origin,mountpoint,imgadm:ignore',
             log: self.log,
             errMsg: 'could not load images',
@@ -819,6 +826,16 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
                 return;
             }
             var lines = stdout.trim().split('\n');
+
+            // First pass to gather which filesystems have '@final' snapshot.
+            var hasFinalSnap = {};  /* 'zones/UUID' => true */
+            for (i = 0; i < lines.length; i++) {
+                var name = lines[i].split('\t', 1)[0];
+                if (name.slice(-6) === '@final') {
+                    hasFinalSnap[name.slice(0, -6)] = true;
+                }
+            }
+
             var imageNames = [];
             var usageFromImageName = {};
             for (i = 0; i < lines.length; i++) {
@@ -833,13 +850,24 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
                 var ignore = parts[3];
                 if (!VMADM_FS_NAME_RE.test(name))
                     continue;
-                if (// If it has a mountpoint from `zoneadm list` it is
-                    // a zone, not an image.
+                if (/*
+                     * If it has a mountpoint from `zoneadm list` it is
+                     * a zone, not an image.
+                     */
                     !zoneRoots[mountpoint]
-                    // If it doesn't match `VMADM_IMG_NAME_RE` it is
-                    // a KVM disk volume, e.g.
-                    // "zones/7970c690-1738-4e58-a04f-8ce4ea8ebfca-disk0".
-                    && VMADM_IMG_NAME_RE.test(name))
+                    /*
+                     * If it doesn't match `VMADM_IMG_NAME_RE` it is a KVM
+                     * disk volume, e.g. 'zones/UUID-disk0' or a snapshot,
+                     * e.g. 'zones/UUID@SNAP'.
+                     */
+                    && VMADM_IMG_NAME_RE.test(name)
+                    /*
+                     * If it has a 'zones/UUID@final' origin (i.e. it was
+                     * cloned from a modern-enough imgadm that enforced @final),
+                     * but does *not* have a @final snapshot itself, then
+                     * this isn't an image.
+                     */
+                    && !(origin.slice(-6) === '@final' && !hasFinalSnap[name]))
                 {
                     // Gracefully handle 'imgadm:ignore' boolean property.
                     if (ignore !== '-') {

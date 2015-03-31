@@ -305,14 +305,17 @@ function execFilePlus(args, cb) {
  *
  * @param args {Object}
  *      - command {String} Required.
- *      - execOpts {Array} Exec options.
  *      - log {Bunyan Logger} Required. Use to log details at trace level.
+ *      - execOpts {Array} Optional. child_process.exec options.
+ *      - errMsg {String} Optional. Error string to use in error message on
+ *        failure.
  * @param cb {Function} `function (err, stdout, stderr)` where `err` here is
  *      an `errors.InternalError` wrapper around the child_process error.
  */
 function execPlus(args, cb) {
     assert.object(args, 'args');
     assert.string(args.command, 'args.command');
+    assert.optionalString(args.errMsg, 'args.errMsg');
     assert.optionalObject(args.execOpts, 'args.execOpts');
     assert.object(args.log, 'args.log');
     assert.func(cb);
@@ -326,12 +329,13 @@ function execPlus(args, cb) {
             err: err, stdout: stdout, stderr: stderr}, 'exec done');
         if (err) {
             var msg = format(
-                'exec error:\n'
+                '%s:\n'
                 + '\tcommand: %s\n'
                 + '\texit status: %s\n'
                 + '\tstdout:\n%s\n'
                 + '\tstderr:\n%s',
-                command, err.code, stdout.trim(), stderr.trim());
+                args.errMsg || 'exec error', command, err.code,
+                stdout.trim(), stderr.trim());
             cb(new InternalError({cause: err, message: msg}), stdout, stderr);
         } else {
             cb(null, stdout, stderr);

@@ -1,5 +1,10 @@
 # imgadm changelog
 
+## 3.1.5
+
+- OS-3873: imgadm exec's of 'zfs list' and 'zoneadm list' can break the default
+  200k maxBuffer
+
 ## 3.1.4
 
 - OS-4117: imgadm import crashes on a docker layer which is an empty gzip

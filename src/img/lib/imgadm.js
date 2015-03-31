@@ -69,7 +69,8 @@ var common = require('./common'),
     indent = common.indent,
     objCopy = common.objCopy,
     assertUuid = common.assertUuid,
-    execFilePlus = common.execFilePlus;
+    execFilePlus = common.execFilePlus,
+    execPlus = common.execPlus;
 var configuration = require('./configuration');
 var Database = require('./database');
 var errors = require('./errors');
@@ -778,7 +779,6 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
     // We also count the usages of these images: zfs filesystems with the
     // image as an origin.
 
-    var zCmd = '/usr/sbin/zoneadm list -pc';
     /* BEGIN JSSTYLED */
     // Example output:
     //      0:global:running:/::liveimg:shared:
@@ -786,10 +786,16 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
     //      21:dc5cbce7-798a-4bc8-bdc5-61b4be00a22e:running:/zones/dc5cbce7-798a-4bc8-bdc5-61b4be00a22e:dc5cbce7-798a-4bc8-bdc5-61b4be00a22e:joyent-minimal:excl:21
     //      -:7970c690-1738-4e58-a04f-8ce4ea8ebfca:installed:/zones/7970c690-1738-4e58-a04f-8ce4ea8ebfca:7970c690-1738-4e58-a04f-8ce4ea8ebfca:kvm:excl:22
     /* END JSSTYLED */
-    exec(zCmd, function (zError, zStdout, zStderr) {
-        if (zError) {
-            callback(new errors.InternalError(
-                {message: format('could not list zones: %s', zError)}));
+    execPlus({
+        command: '/usr/sbin/zoneadm list -pc',
+        log: self.log,
+        errMsg: 'could not list zones',
+        execOpts: {
+            maxBuffer: 10485760  /* >200k hit in prod, 10M should suffice */
+        }
+    }, function (zErr, zStdout, zStderr) {
+        if (zErr) {
+            callback(zErr);
             return;
         }
         var zLines = zStdout.trim().split('\n');
@@ -799,12 +805,17 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
             zoneRoots[zoneRoot] = true;
         });
 
-        var cmd = '/usr/sbin/zfs list -t filesystem,volume -pH '
-            + '-o name,origin,mountpoint,imgadm:ignore';
-        exec(cmd, function (error, stdout, stderr) {
-            if (error) {
-                callback(new errors.InternalError(
-                    {message: format('could not load images: %s', error)}));
+        execPlus({
+            command: '/usr/sbin/zfs list -t filesystem,volume -pH '
+                + '-o name,origin,mountpoint,imgadm:ignore',
+            log: self.log,
+            errMsg: 'could not load images',
+            execOpts: {
+                maxBuffer: 10485760  /* >200k hit in prod, 10M should suffice */
+            }
+        }, function (zfsErr, stdout, stderr) {
+            if (zfsErr) {
+                callback(zfsErr);
                 return;
             }
             var lines = stdout.trim().split('\n');
@@ -2276,7 +2287,7 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
                 throw new Error('unexpected compression type: ' + ctx.cType);
             }
 
-            common.execPlus({
+            execPlus({
                 command: command,
                 log: log,
                 execOpts: {

@@ -826,11 +826,12 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
                 return;
             }
             var lines = stdout.trim().split('\n');
+            var name;
 
             // First pass to gather which filesystems have '@final' snapshot.
             var hasFinalSnap = {};  /* 'zones/UUID' => true */
             for (i = 0; i < lines.length; i++) {
-                var name = lines[i].split('\t', 1)[0];
+                name = lines[i].split('\t', 1)[0];
                 if (name.slice(-6) === '@final') {
                     hasFinalSnap[name.slice(0, -6)] = true;
                 }
@@ -844,13 +845,14 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
                     continue;
                 var parts = line.split('\t');
                 assert.equal(parts.length, 4);
-                var name = parts[0];
+                name = parts[0];
                 var origin = parts[1];
                 var mountpoint = parts[2];
                 var ignore = parts[3];
                 if (!VMADM_FS_NAME_RE.test(name))
                     continue;
-                if (/*
+                if (
+                    /*
                      * If it has a mountpoint from `zoneadm list` it is
                      * a zone, not an image.
                      */
@@ -867,7 +869,8 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
                      * but does *not* have a @final snapshot itself, then
                      * this isn't an image.
                      */
-                    && !(origin.slice(-6) === '@final' && !hasFinalSnap[name]))
+                    && !(origin.slice(-6) === '@final' && !hasFinalSnap[name])
+                    )
                 {
                     // Gracefully handle 'imgadm:ignore' boolean property.
                     if (ignore !== '-') {

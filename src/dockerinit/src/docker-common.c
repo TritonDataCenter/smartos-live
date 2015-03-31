@@ -55,6 +55,7 @@
 #include <sys/stat.h>
 
 #include "../json-nvlist/json-nvlist.h"
+#include "../mdata-client/base64.h"
 #include "../mdata-client/common.h"
 #include "../mdata-client/dynstr.h"
 #include "../mdata-client/plat.h"
@@ -194,6 +195,65 @@ mdataGet(const char *keyname)
 
     /* NOTREACHED */
     return (NULL);
+}
+
+void
+mdataPut(const char *keyname, const char *value)
+{
+    string_t *data;
+    char *errmsg = NULL;
+    mdata_response_t mdr;
+    string_t *req = dynstr_new();
+
+    if (initialized_proto == 0) {
+        if (proto_init(&mdp, &errmsg) != 0) {
+            fatal(ERR_MDATA_INIT, "could not initialize metadata: %s\n",
+                errmsg);
+        }
+        initialized_proto = 1;
+    }
+
+    base64_encode(keyname, strlen(keyname), req);
+    dynstr_appendc(req, ' ');
+    base64_encode(value, strlen(value), req);
+
+    if (proto_version(mdp) < 2) {
+        fatal(ERR_MDATA_TOO_OLD, "mdata protocol must be >= 2 for PUT");
+    }
+
+    if (proto_execute(mdp, "PUT", dynstr_cstr(req), &mdr, &data) != 0) {
+        fatal(ERR_MDATA_FAIL, "failed to PUT");
+    }
+
+    dynstr_free(req);
+
+    dlog("MDATA PUT %s=%s\n", keyname, value);
+}
+
+void
+mdataDelete(const char *keyname)
+{
+    string_t *data;
+    char *errmsg = NULL;
+    mdata_response_t mdr;
+
+    if (initialized_proto == 0) {
+        if (proto_init(&mdp, &errmsg) != 0) {
+            fatal(ERR_MDATA_INIT, "could not initialize metadata: %s\n",
+                errmsg);
+        }
+        initialized_proto = 1;
+    }
+
+    if (proto_version(mdp) < 2) {
+        fatal(ERR_MDATA_TOO_OLD, "mdata protocol must be >= 2 for DELETE");
+    }
+
+    if (proto_execute(mdp, "DELETE", keyname, &mdr, &data) != 0) {
+        fatal(ERR_MDATA_FAIL, "failed to DELETE");
+    }
+
+    dlog("MDATA DELETE %s\n", keyname);
 }
 
 void

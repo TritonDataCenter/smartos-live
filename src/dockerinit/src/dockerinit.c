@@ -89,6 +89,7 @@ void runIpmgmtd(char *cmdline[], char *env[]);
 void setupHostname();
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
+void setupTerminal();
 void waitIfAttaching();
 
 /* global metadata client bits */
@@ -181,8 +182,8 @@ runIpmgmtd(char *cmd[], char *env[])
     }
 }
 
-
-void setupTerminal() {
+void
+setupTerminal() {
     int _stdin, _stdout, _stderr;
     int ctty = 0;
     const char *data;
@@ -193,6 +194,7 @@ void setupTerminal() {
     }
 
     dlog("SWITCHING TO /dev/zfd/*\n");
+
     /*
      * If 'OpenStdin' is set on the container we reopen stdin as connected to
      * the zfd. Otherwise we leave it opened as /dev/null.
@@ -266,8 +268,6 @@ execCmdline()
     char *execname;
 
     execname = execName(cmdline[0]);
-
-    setupTerminal();
 
     /*
      * We need to drop privs *after* we've setup /dev/zfd/[0-2] since that
@@ -846,6 +846,7 @@ currentTimestamp()
 void
 waitIfAttaching()
 {
+    int did_put = 0;
     int display_freq;
     int done = 0;
     unsigned int loops = 0;
@@ -875,6 +876,11 @@ waitIfAttaching()
                 fatal(ERR_ATTACH_GETTIME, "Unable to determine current time\n");
             }
 
+            if (!did_put) {
+                mdataPut("__dockerinit_waiting_for_attach", timeout);
+                did_put = 1;
+            }
+
             if (loops == 1 || ((loops % display_freq) == 0)) {
                 dlog("INFO Waiting until %lld for attach, currently: %lld\n",
                     timestamp, now);
@@ -886,6 +892,10 @@ waitIfAttaching()
 
             (void) usleep(ATTACH_CHECK_INTERVAL);
         }
+    }
+
+    if (did_put) {
+        mdataDelete("__dockerinit_waiting_for_attach");
     }
 }
 
@@ -979,6 +989,11 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     buildCmdEnv();
     buildCmdline();
     getStdinStatus();
+    /*
+     * In case we're going to read from stdin w/ attach, we want to open the zfd
+     * _now_ so it won't return EOF on reads.
+     */
+    setupTerminal();
     waitIfAttaching();
 
     /* cleanup mess from mdata-client */

@@ -1,11 +1,24 @@
 #!/bin/bash
 #
-# Copyright (c) 2013 Joyent Inc., All Rights Reserved.
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright (c) 2015 Joyent Inc.
 #
 
 set -o errexit
 set -o pipefail
 
+ROOT=$PWD
+MAN=$ROOT/projects/illumos/usr/src/tools/proto/root_i386-nd/opt/onbld/bin/i386/man
 status=0
 
 BUILDSTAMP=$2
@@ -16,6 +29,11 @@ fi
 rdmnt=$1
 if [[ -z "${rdmnt}" ]]; then
 	echo "Usage: $0 <rdmnt directory> [buildstamp]"
+	exit 1
+fi
+
+if [[ ! -f $MAN ]]; then
+	echo "Somehow you lost your illumos tools"
 	exit 1
 fi
 
@@ -38,5 +56,7 @@ pfexec umount ${rdmnt}/dev
 pfexec chown root:root ${rdmnt}
 pfexec gsed -i -e "s/ [0-9]\{8\}T[0-9]\{6\}Z/ ${BUILDSTAMP}/" ${rdmnt}/etc/motd
 pfexec gsed -i -e "s/ [0-9]\{8\}T[0-9]\{6\}Z/ ${BUILDSTAMP}/" ${rdmnt}/etc/issue
+
+pfexec $MAN -M ${rdmnt}/usr/share/man:${rdmnt}/smartdc/man -w
 
 exit $status

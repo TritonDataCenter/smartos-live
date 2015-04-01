@@ -42,6 +42,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include <arpa/inet.h>
@@ -54,6 +55,7 @@
 #include <sys/mount.h>
 #include <sys/mntent.h>
 #include <sys/socket.h>
+#include <sys/sockio.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
 
@@ -87,6 +89,7 @@ void runIpmgmtd(char *cmdline[], char *env[]);
 void setupHostname();
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
+void setupTerminal();
 void waitIfAttaching();
 
 /* global metadata client bits */
@@ -180,12 +183,15 @@ runIpmgmtd(char *cmd[], char *env[])
 }
 
 void
-execCmdline()
-{
+setupTerminal() {
     int _stdin, _stdout, _stderr;
-    char *execname;
+    int ctty = 0;
+    const char *data;
 
-    execname = execName(cmdline[0]);
+    data = mdataGet("docker:tty");
+    if (data != NULL && strcmp("true", data) == 0) {
+        ctty = 1;
+    }
 
     dlog("SWITCHING TO /dev/zfd/*\n");
 
@@ -220,17 +226,48 @@ execCmdline()
         fatal(ERR_CLOSE, "failed to close(2): %s\n", strerror(errno));
     }
 
-    _stdout = open("/dev/zfd/1", O_WRONLY);
-    if (_stdout == -1) {
-        fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
-            strerror(errno));
-    }
+    if (ctty) {
+        /* Configure output as a controlling terminal */
+        _stdout = open("/dev/zfd/0", O_WRONLY);
+        if (_stdout == -1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
+                strerror(errno));
+        }
+        _stderr = open("/dev/zfd/0", O_WRONLY);
+        if (_stderr == -1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
+                strerror(errno));
+        }
 
-    _stderr = open("/dev/zfd/2", O_WRONLY);
-    if (_stderr == -1) {
-        fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/2: %s\n",
-            strerror(errno));
+        if (setsid() < 0) {
+            fatal(ERR_OPEN_CONSOLE, "failed to create process session: %s\n",
+                strerror(errno));
+        }
+        if (ioctl(_stdout, TIOCSCTTY, NULL) < 0) {
+            fatal(ERR_OPEN_CONSOLE, "failed set controlling tty: %s\n",
+                strerror(errno));
+        }
+    } else {
+        /* Configure individual pipe style output */
+        _stdout = open("/dev/zfd/1", O_WRONLY);
+        if (_stdout == -1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
+                strerror(errno));
+        }
+        _stderr = open("/dev/zfd/2", O_WRONLY);
+        if (_stderr == -1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/2: %s\n",
+                strerror(errno));
+        }
     }
+}
+
+void
+execCmdline()
+{
+    char *execname;
+
+    execname = execName(cmdline[0]);
 
     /*
      * We need to drop privs *after* we've setup /dev/zfd/[0-2] since that
@@ -563,9 +600,42 @@ plumbIf(const char *ifname)
 
     if ((status = ipadm_create_if(iph, ifbuf, AF_INET, IPADM_OPT_ACTIVE))
         != IPADM_SUCCESS) {
-        fatal(ERR_PLUMB_IF, "ipadm_create_if error %d: plumbing %s: %s\n",
+        fatal(ERR_PLUMB_IF, "ipadm_create_if error %d: plumbing %s/v4: %s\n",
             status, ifname, ipadm_status2str(status));
     }
+
+    if ((status = ipadm_create_if(iph, ifbuf, AF_INET6, IPADM_OPT_ACTIVE))
+        != IPADM_SUCCESS) {
+        fatal(ERR_PLUMB_IF, "ipadm_create_if error %d: plumbing %s/v6: %s\n",
+            status, ifname, ipadm_status2str(status));
+    }
+}
+
+void
+upIPv6Addr(char *ifname)
+{
+    struct lifreq lifr;
+    int s;
+
+    s = socket(AF_INET6, SOCK_DGRAM, 0);
+    if (s == -1) {
+        fatal(ERR_UP_IP6, "socket error %d: bringing up %s: %s\n",
+            errno, ifname, strerror(errno));
+    }
+
+    (void) strncpy(lifr.lifr_name, ifname, sizeof (lifr.lifr_name));
+    if (ioctl(s, SIOCGLIFFLAGS, (caddr_t)&lifr) < 0) {
+        fatal(ERR_UP_IP6, "SIOCGLIFFLAGS error %d: bringing up %s: %s\n",
+            errno, ifname, strerror(errno));
+    }
+
+    lifr.lifr_flags |= IFF_UP;
+    if (ioctl(s, SIOCSLIFFLAGS, (caddr_t)&lifr) < 0) {
+        fatal(ERR_UP_IP6, "SIOCSLIFFLAGS error %d: bringing up %s: %s\n",
+            errno, ifname, strerror(errno));
+    }
+
+    (void) close(s);
 }
 
 int
@@ -611,6 +681,8 @@ raiseIf(char *ifname, char *addr, char *netmask)
         ipadm_destroy_addrobj(ipaddr);
         return (-4);
     }
+
+    upIPv6Addr(ifname);
 
     ipadm_destroy_addrobj(ipaddr);
     return (0);
@@ -774,6 +846,7 @@ currentTimestamp()
 void
 waitIfAttaching()
 {
+    int did_put = 0;
     int display_freq;
     int done = 0;
     unsigned int loops = 0;
@@ -803,6 +876,11 @@ waitIfAttaching()
                 fatal(ERR_ATTACH_GETTIME, "Unable to determine current time\n");
             }
 
+            if (!did_put) {
+                mdataPut("__dockerinit_waiting_for_attach", timeout);
+                did_put = 1;
+            }
+
             if (loops == 1 || ((loops % display_freq) == 0)) {
                 dlog("INFO Waiting until %lld for attach, currently: %lld\n",
                     timestamp, now);
@@ -814,6 +892,10 @@ waitIfAttaching()
 
             (void) usleep(ATTACH_CHECK_INTERVAL);
         }
+    }
+
+    if (did_put) {
+        mdataDelete("__dockerinit_waiting_for_attach");
     }
 }
 
@@ -907,6 +989,11 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     buildCmdEnv();
     buildCmdline();
     getStdinStatus();
+    /*
+     * In case we're going to read from stdin w/ attach, we want to open the zfd
+     * _now_ so it won't return EOF on reads.
+     */
+    setupTerminal();
     waitIfAttaching();
 
     /* cleanup mess from mdata-client */

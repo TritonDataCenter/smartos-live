@@ -204,7 +204,7 @@ setupTerminal() {
             fatal(ERR_CLOSE, "failed to close(0): %s\n", strerror(errno));
         }
 
-        _stdin = open("/dev/zfd/0", O_RDONLY);
+        _stdin = open("/dev/zfd/0", O_RDWR);
         if (_stdin == -1) {
             if (errno == ENOENT) {
                 _stdin = open("/dev/null", O_RDONLY);

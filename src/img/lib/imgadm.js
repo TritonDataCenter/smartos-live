@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * * *
  * The main imgadm functionality. The CLI is a light wrapper around this tool.
@@ -42,7 +42,6 @@ var assert = require('assert-plus');
 var async = require('async');
 var child_process = require('child_process'),
     spawn = child_process.spawn,
-    execFile = child_process.execFile,
     exec = child_process.exec;
 var crypto = require('crypto');
 var dsapi = require('sdc-clients/lib/dsapi');
@@ -99,9 +98,10 @@ var UA = 'imgadm/' + common.getVersion()
 
 // ---- internal support stuff
 
-function getSysinfo(callback) {
+function getSysinfo(log, callback) {
+    assert.object(log, 'log');
     assert.func(callback, 'callback');
-    execFile('/usr/bin/sysinfo', function (err, stdout, stderr) {
+    exec('sysinfo', function (err, stdout, stderr) {
         if (err) {
             callback(err);
         } else {
@@ -111,80 +111,6 @@ function getSysinfo(callback) {
         }
     });
 }
-
-
-/**
- * Return an error if min_platform or max_platform isn't satisfied with the
- * current platform version.
- *
- * @param opts:
- *      - sysinfo {Object} sysinfo for this platform
- *      - manifest {Object} the manifest to check
- * @returns null or an error
- */
-function checkMinMaxPlatformSync(opts) {
-    assert.object(opts, 'opts');
-    assert.object(opts.manifest, 'opts.manifest');
-    assert.object(opts.sysinfo, 'opts.sysinfo');
-
-    var minPlatSpec = opts.manifest.requirements
-        && opts.manifest.requirements.min_platform;
-    var maxPlatSpec = opts.manifest.requirements
-        && opts.manifest.requirements.max_platform;
-    if (!minPlatSpec && !maxPlatSpec) {
-        return null;
-    }
-
-    // SDC 6.5 sysinfo is missing 'SDC Version' key in sysinfo.
-    var platVer = opts.sysinfo['SDC Version'] || '6.5';
-    var platTimestamp = opts.sysinfo['Live Image'];
-
-    if (minPlatSpec) {
-        if (minPlatSpec[platVer]) {
-            if (platTimestamp < minPlatSpec[platVer]) {
-                return new errors.MinPlatformError(platVer,
-                    platTimestamp, minPlatSpec);
-            }
-        } else {
-            /*
-             * From the IMGAPI docs:
-             * 2. if SDC version is greater than the lowest key,
-             *    e.g. if "7.0" for the example above, then this
-             *    image may be used on this platform.
-             */
-            var lowestSpecVer = Object.keys(minPlatSpec).sort()[0];
-            if (platVer < lowestSpecVer) {
-                return new errors.MinPlatformError(platVer,
-                    platTimestamp, minPlatSpec);
-            }
-        }
-    }
-
-    if (maxPlatSpec) {
-        if (maxPlatSpec[platVer]) {
-            if (platTimestamp > maxPlatSpec[platVer]) {
-                return new errors.MaxPlatformError(platVer,
-                    platTimestamp, maxPlatSpec);
-            }
-        } else {
-            /*
-             * From the IMGAPI docs:
-             * 1. if SDC version is greater than the highest key,
-             *    e.g. if "7.2" for the example above, then this
-             *    image may not be used on this platform.
-             */
-            var highestSpecVer = Object.keys(maxPlatSpec)
-                .sort().slice(-1)[0];
-            if (platVer > highestSpecVer) {
-                return new errors.MaxPlatformError(platVer,
-                    platTimestamp, maxPlatSpec);
-            }
-        }
-    }
-
-    return null;
-}
-
 
 /**
  * Call `zfs destroy -r` on the given dataset name.
@@ -1492,17 +1418,6 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
 
     var context = {};
     vasync.pipeline({arg: context, funcs: [
-        function gatherSysinfo(ctx, next) {
-            getSysinfo(function (err, sysinfo) {
-                if (err) {
-                    next(err);
-                    return;
-                }
-                ctx.sysinfo = sysinfo;
-                next();
-            });
-        },
-
         /**
          * "irec" == import record, one for each image/layer we need to
          * download and install.
@@ -1629,11 +1544,7 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                         // Note: the image *manifest* is `imgMeta.manifest`.
                         irec.imgMeta = imgMeta;
                         log.info({irec: irec}, 'got irec.imgMeta');
-
-                        nextManifest(checkMinMaxPlatformSync({
-                            sysinfo: ctx.sysinfo,
-                            manifest: imgMeta.manifest
-                        }));
+                        nextManifest();
                     });
                 }
             });
@@ -2020,28 +1931,6 @@ IMGADM.prototype.installImage = function installImage(opts, cb) {
     var unlockInfos;
 
     vasync.pipeline({funcs: [
-        function validateManifest(_, next) {
-            var errs = imgmanifest.validateMinimalManifest(manifest);
-            if (errs) {
-                next(new errors.ManifestValidationError(errs));
-            } else {
-                next();
-            }
-        },
-
-        function checkMinMaxPlatform(_, next) {
-            getSysinfo(function (err, sysinfo) {
-                if (err) {
-                    next(err);
-                    return;
-                }
-                next(checkMinMaxPlatformSync({
-                    sysinfo: sysinfo,
-                    manifest: manifest
-                }));
-            });
-        },
-
         function acquireLock(_, next) {
             var lockOpts = {
                 uuids: [manifest.uuid],
@@ -2145,11 +2034,6 @@ IMGADM.prototype.installImage = function installImage(opts, cb) {
     ]}, function finishInstallImage(err) {
         if (err === true) { // Signal for early abort.
             err = null;
-        }
-
-        if (!unlockOpts) {
-            cb(err);
-            return;
         }
 
         var unlockOpts = {
@@ -3124,7 +3008,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 return;
             }
             // We need `sysinfo` for smartos images. See below.
-            getSysinfo(function (err, sysinfo_) {
+            getSysinfo(log, function (err, sysinfo_) {
                 sysinfo = sysinfo_;
                 next(err);
             });

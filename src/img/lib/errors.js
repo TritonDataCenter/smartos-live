@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  *
  * * *
  * Error classes that imgadm may produce.
@@ -126,40 +126,6 @@ function ManifestValidationError(cause, errors) {
     });
 }
 util.inherits(ManifestValidationError, ImgadmError);
-
-/**
- * Errors when attempting to install/import an image when
- * `requirements.min_platform` or `requirements.max_platform` fail.
- *
- * // JSSTYLED
- * https://github.com/joyent/sdc-imgapi/blob/master/docs/index.md#manifest-requirementsmin_platform
- */
-function MinPlatformError(platVer, platTimestamp, minPlatSpec) {
-    assert.string(platVer, 'platVer');
-    assert.string(platTimestamp, 'platTimestamp');
-    assert.object(minPlatSpec, 'minPlatSpec');
-    var message = format('current platform version, %s/%s, does not satisfy '
-        + 'requirements.min_platform=%j', platVer, platTimestamp, minPlatSpec);
-    ImgadmError.call(this, {
-        message: message,
-        code: 'MinPlatform'
-    });
-}
-util.inherits(MinPlatformError, ImgadmError);
-
-function MaxPlatformError(platVer, platTimestamp, maxPlatSpec) {
-    assert.string(platVer, 'platVer');
-    assert.string(platTimestamp, 'platTimestamp');
-    assert.object(maxPlatSpec, 'maxPlatSpec');
-    var message = format('current platform version, %s/%s, does not satisfy '
-        + 'requirements.max_platform=%j', platVer, platTimestamp, maxPlatSpec);
-    ImgadmError.call(this, {
-        message: message,
-        code: 'MaxPlatform'
-    });
-}
-util.inherits(MaxPlatformError, ImgadmError);
-
 
 function NoSourcesError() {
     ImgadmError.call(this, {
@@ -787,8 +753,6 @@ module.exports = {
     InternalError: InternalError,
     InvalidUUIDError: InvalidUUIDError,
     InvalidArgumentError: InvalidArgumentError,
-    MinPlatformError: MinPlatformError,
-    MaxPlatformError: MaxPlatformError,
     NoSourcesError: NoSourcesError,
     SourcePingError: SourcePingError,
     OriginNotFoundInSourceError: OriginNotFoundInSourceError,

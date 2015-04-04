@@ -87,7 +87,8 @@ typedef enum {
     ERR_ATTACH_NOT_TIMESTAMP,
     ERR_ATTACH_GETTIME,
     ERR_ATTACH_TIMEDOUT,
-    ERR_MDATA_TOO_OLD
+    ERR_MDATA_TOO_OLD,
+    ERR_UNLINK_MTAB
 } dockerinit_err_t;
 
 typedef enum {

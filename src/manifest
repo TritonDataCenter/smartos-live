@@ -724,6 +724,10 @@ d smartdc/bin 0555 root bin
 f smartdc/bin/qemu-exec 0555 root bin
 d smartdc/lib 0555 root bin
 f smartdc/lib/ntp_config 0555 root bin
+f smartdc/lib/sdc-on-tty 0555 root bin
+d smartdc/man 0555 root bin
+d smartdc/man/man1 0555 root bin
+f smartdc/man/man1/sdc-factoryreset.1 0444 root bin
 f usr/bin/nictagadm 0555 root bin
 f usr/bin/sysinfo 0555 root bin
 f usr/bin/bootparams 0555 root bin

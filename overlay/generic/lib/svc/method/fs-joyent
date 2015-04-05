@@ -1,0 +1,314 @@
+#!/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at COPYING
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at COPYING.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2014, Joyent, Inc. All rights reserved.
+
+set -o xtrace
+
+fatal()
+{
+    echo "Error: $1"
+    exit $SMF_EXIT_ERR_FATAL
+}
+
+. /lib/svc/share/smf_include.sh
+. /lib/svc/share/fs_include.sh
+
+# first of all, if we aren't the global zone this doesn't make any sense to run
+
+smf_is_globalzone || exit $SMF_EXIT_OK
+
+# We need the links to /dev/dsk. Rather than trying to play games with manually
+# invoking syseventd ask devfsadm to do some work.
+/usr/sbin/devfsadm -c disk
+
+function destroy_zpools
+{
+    for pool in $(zpool list -p -o name | grep -v NAME) ; do
+        zpool destroy -f ${pool}
+    done
+}
+
+function mount_zfs
+{
+    local dataset=$1
+    local mountpoint=$2
+    local output=
+
+    #
+    # Try to mount the ZFS dataset.  If the mountpoint is busy, wait five
+    # seconds and try again.  Fail if the mount attempt returns EBUSY three
+    # consecutive times.
+    #
+    for i in {1..3}; do
+        output=$(mount -F zfs ${dataset} ${mountpoint} 2>&1)
+        if [[ $? -eq 0 ]]; then
+            break
+        fi
+
+        if [ "${output}" == "mount failed: Device busy" ]; then
+            sleep 5
+        else
+            echo ${output} 1>&2
+            return
+        fi
+    done
+
+    # The mount attempt must have failed
+    echo ${output} 1>&2
+}
+
+/bin/bootparams | grep "^noimport=true" >/dev/null
+if [ $? -ne 0 ]; then
+    # If the zpool doesn't exist, then there's nothing to mount.
+
+    # Assume the system zpool is zones, but if a different system pool
+    # identifies itself (by virtue of the .system_pool file being present in the
+    # pool's root dataset), then use that system pool instead.
+    SYS_ZPOOL=zones
+
+    # Import specified zpools, or all zpools available
+    pools=$(/bin/bootparams | egrep "^zpools?=" | cut -d= -f2 | tr , ' ')
+    if [ -z ${pools} ]; then
+         pools=$(zpool import | grep "pool:" | awk '{print $2}')
+    fi
+
+    for pool in $pools; do
+        zpool import -f $pool
+	# Due to early, failed attempts to support the filesystem_limits
+	# feature we now need to ensure the dependent feature is enabled.
+	zpool set feature@extensible_dataset=enabled $pool
+        if [[ -f /$pool/.system_pool ]]; then
+            SYS_ZPOOL=$pool
+        fi
+    done
+
+    svccfg -s svc:/system/smartdc/init setprop \
+        config/zpool=${SYS_ZPOOL}
+    svccfg -s svc:/system/smartdc/init:default refresh
+
+    # If the destroy_zpools boot parameter is set, destroy all zpools
+    /bin/bootparams | grep "^destroy_zpools=true" >/dev/null
+    if [ $? -eq 0 ]; then
+        destroy_zpools
+    fi
+
+    # A machine is reset to its original unsetup state (i.e. a 'factory reset')
+    # when the smartdc:factoryreset ZFS user property is set on the var dataset.
+    reset=$(zfs get -H -o value smartdc:factoryreset ${SYS_ZPOOL}/var)
+    if [ ${reset} == "yes" ]; then
+        destroy_zpools
+    fi
+
+    # For the system zpool, mount and configure all system datasets
+    zpool status -v ${SYS_ZPOOL}
+    if [ $? -eq 0 ]; then
+        mount_zfs ${SYS_ZPOOL}/var /var
+        mount_zfs ${SYS_ZPOOL}/config /etc/zones
+        mount_zfs ${SYS_ZPOOL}/opt /opt
+
+        if [[ -z $(/bin/bootparams | grep '^smartos=true') ]]; then
+            mkdir -p /opt/smartdc/agents/smf
+            mount -O -F lofs /var/svc/manifest/site /opt/smartdc/agents/smf
+        fi
+
+        if [[ -n $(/bin/bootparams | grep '^headnode=true') || \
+            -n $(/bin/bootparams | grep '^smartos=true') ]]; then
+            mkdir /usbkey
+            mount_zfs ${SYS_ZPOOL}/usbkey /usbkey
+        fi
+
+        if [[ -n $(/bin/bootparams | grep '^smartos=true') ]]; then
+            mount -F lofs /usbkey/shadow /etc/shadow
+            mount -F lofs /usbkey/ssh /etc/ssh
+        fi
+
+        swap -a /dev/zvol/dsk/${SYS_ZPOOL}/swap || \
+            fatal "failed to configure swap device"
+
+        #
+        # Configure the dump device on top of a ZFS volume.  In addition to the
+        # usual dumpadm(1m) call, there are two prerequisites for using this
+        # volume as a dump device: (1) that zvol must be using the noparity
+        # checksum algorithem, and (2) the MULTI_VDEV_CRASH_DUMP ZFS feature
+        # must be enabled.  Prerequisite (1) is necessary since the exact
+        # on-disk value for ZIO_CHECKSUM_NOPARITY has changed, so to avoid a
+        # flag day on all systems, this service just sets that property again
+        # every time.
+        #
+        zfs set checksum=noparity ${SYS_ZPOOL}/dump || \
+            fatal "failed to set checksum=noparity on dump zvol"
+        zpool set feature@multi_vdev_crash_dump=enabled ${SYS_ZPOOL} || \
+            fatal "failed to enable multi_vdev_crash_dump ZFS feature"
+	dumpadm -y -d /dev/zvol/dsk/${SYS_ZPOOL}/dump || \
+            fatal "failed to configure dump device"
+
+	zfs list -H -o name ${SYS_ZPOOL}/cores/global >/dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    # Booting for the first time on a CN whose cores dataset is setup
+	    # in the 6.x style.  Convert to the new style.
+	    zfs destroy -r ${SYS_ZPOOL}/cores
+	    zfs create -o compression=gzip -o mountpoint=none ${SYS_ZPOOL}/cores
+	    zfs create -o quota=10g -o mountpoint=/${SYS_ZPOOL}/global/cores \
+	        ${SYS_ZPOOL}/cores/global
+	fi
+
+	ln -s /${SYS_ZPOOL}/global/cores /cores
+
+	[[ -f /${SYS_ZPOOL}/currbooted ]] && \
+            mv /${SYS_ZPOOL}/currbooted /${SYS_ZPOOL}/lastbooted
+	uname -v >/${SYS_ZPOOL}/currbooted
+    fi
+fi
+
+# The rest only applies to the headnode
+/bin/bootparams | grep "^headnode=true" >/dev/null || exit $SMF_EXIT_OK
+
+# If we rebooted during an upgrade, we're in deep trouble.
+if [ -d /var/upgrade_in_progress ]; then
+    echo "ERROR: An upgrade was in progress when the system rebooted." \
+        >/dev/console
+    echo "       The system is in an indeterminate state, unable to continue." \
+        >/dev/console
+    exit $SMF_EXIT_ERR_FATAL
+fi
+
+USBMOUNTPOINT=/mnt/`svcprop -p "joyentfs/usb_mountpoint" ${SMF_FMRI}`
+COPYINPOINT=`svcprop -p "joyentfs/usb_copy_path" ${SMF_FMRI}`
+DEBUG=`svcprop -p "joyentfs/debug" ${SMF_FMRI}`
+
+mount_usb_msg=""
+
+if [[ -d /mnt ]]; then
+    chown root:root /mnt
+    chmod 700 /mnt
+else
+    mkdir -m 700 /mnt
+fi
+
+function make_usb_copy
+{
+    echo "" > /dev/console
+    echo "Moving files from USB boot device onto disk storage." > /dev/console
+    echo "This may take several minutes. Please note the time..." > /dev/console
+    echo "" > /dev/console
+    echo "" > /dev/console
+
+    $(cd ${USBMOUNTPOINT}; rsync -av --log-file=/dev/console --exclude private --exclude os * ${COPYINPOINT})
+    if [[ -d ${USBMOUNTPOINT}/os ]]; then
+        (cd ${USBMOUNTPOINT}/os ; \
+            for dir in $(ls -d *); do
+                # source comes from pcfs which we've got lowering the case
+                # of everything, but we normally use capital T and Z for
+                # buildstamp, so fix it here.
+                source_dir=${dir}
+                target_dir=$(echo ${dir} | tr "[:lower:]" "[:upper:]")
+                mkdir -p ${COPYINPOINT}/os
+                echo "Copying: ${source_dir}/ ${COPYINPOINT}/os/${target_dir}" > /dev/console
+                rsync -a ${source_dir}/ ${COPYINPOINT}/os/${target_dir}
+            done
+        )
+    fi
+
+    echo "" > /dev/console
+    echo "Done copying files from USB device" > /dev/console
+}
+
+mkdir -p ${USBMOUNTPOINT}
+
+if [[ -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
+    mount_usb_msg="already mounted"
+
+    zpool list | grep zones
+    if [[ $? == 0 ]]; then
+        make_usb_copy
+        exit $?
+    fi
+    exit 0;
+fi
+
+# First thing to do is to mount the USB key / VMWare disk
+USBKEYS=`/usr/bin/disklist -a`
+for key in ${USBKEYS}; do
+    if [[ `/usr/sbin/fstyp /dev/dsk/${key}p0:1` == 'pcfs' ]]; then
+        /usr/sbin/mount -F pcfs -o foldcase,noatime /dev/dsk/${key}p0:1 \
+            ${USBMOUNTPOINT};
+        if [[ $? == "0" ]]; then
+            if [[ ! -f ${USBMOUNTPOINT}/.joyliveusb ]]; then
+                if [[ ${DEBUG} == "true" ]]; then
+                    mount_usb_msg="${mount_usb_msg}\n[debug] didn't find ${USBMOUNTPOINT}/.joyliveusb on pcfs /dev/dsk/${key}p0:1"
+                fi
+                /usr/sbin/umount ${USBMOUNTPOINT};
+            else
+                if [[ ${DEBUG} == "true" ]]; then
+                    mount_usb_msg="${mount_usb_msg}\n[debug] found ${USBMOUNTPOINT}/.joyliveusb on pcfs /dev/dsk/${key}p0:1"
+                fi
+                break;
+            fi
+        elif [[ ${DEBUG} == "true" ]]; then
+            mount_usb_msg="${mount_usb_msg}\n[debug] mount failed for pcfs /dev/dsk/${key}p0:1"
+        fi
+    elif [[ ${DEBUG} == "true" ]]; then
+        mount_usb_msg="${mount_usb_msg}\n[debug] /dev/dsk/${key}p0:1 is not pcfs"
+    fi
+done
+
+if [[ ! -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
+    # we're probably VMWare, so we're looking at a non-USB disk.
+    for disk in `/usr/bin/disklist -a`; do
+        if [[ `/usr/sbin/fstyp /dev/dsk/${disk}p1` == 'pcfs' ]]; then
+            /usr/sbin/mount -F pcfs -o foldcase,noatime /dev/dsk/${disk}p1 \
+                ${USBMOUNTPOINT};
+            if [[ $? == "0" ]]; then
+                if [[ ! -f ${USBMOUNTPOINT}/.joyliveusb ]]; then
+                    if [[ ${DEBUG} == "true" ]]; then
+                        mount_usb_msg="${mount_usb_msg}\n[debug] didn't find ${USBMOUNTPOINT}/.joyliveusb on pcfs /dev/dsk/${disk}p1"
+                    fi
+                    /usr/sbin/umount ${USBMOUNTPOINT};
+                else
+                    if [[ ${DEBUG} == "true" ]]; then
+                        mount_usb_msg="${mount_usb_msg}\n[debug] found ${USBMOUNTPOINT}/.joyliveusb on pcfs /dev/dsk/${disk}p1"
+                    fi
+                    break;
+                fi
+            elif [[ ${DEBUG} == "true" ]]; then
+                mount_usb_msg="${mount_usb_msg}\n[debug] unable to mount /dev/dsk/${disk}p1"
+            fi
+        elif [[ ${DEBUG} == "true" ]]; then
+            mount_usb_msg="${mount_usb_msg}\n[debug] /dev/dsk/${disk}p1 is not pcfs"
+        fi
+    done
+fi
+
+if [[ -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
+    mount_usb_msg="success"
+
+    zpool list | grep zones
+
+    if [[ $? == 0 ]]; then
+        make_usb_copy
+    fi
+
+    exit 0;
+fi
+
+mount_usb_msg="${mount_usb_msg}\n[FATAL] mount_usb(): could not find USB Key"
+exit 1;

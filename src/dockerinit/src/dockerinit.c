@@ -204,7 +204,7 @@ setupTerminal() {
             fatal(ERR_CLOSE, "failed to close(0): %s\n", strerror(errno));
         }
 
-        _stdin = open("/dev/zfd/0", O_RDONLY);
+        _stdin = open("/dev/zfd/0", O_RDWR);
         if (_stdin == -1) {
             if (errno == ENOENT) {
                 _stdin = open("/dev/null", O_RDONLY);
@@ -457,50 +457,23 @@ getStdinStatus()
 void
 setupMtab()
 {
-    FILE *fp;
-    struct stat statbuf;
-    int write_mtab = 0;
-
     /*
      * Some images (such as busybox) link /etc/mtab to /proc/mounts so we only
      * write out /etc/mtab if it doesn't exist or is a regular file.
      */
-    dlog("CHECK /etc/mtab\n");
-    if (lstat("/etc/mtab", &statbuf) == -1) {
-        if (errno == ENOENT) {
-            write_mtab = 1;
-        } else {
-            /*
-             * This is not fatal because it's possible for an image to have
-             * messed things up so we can't touch /etc/mtab, that will only
-             * screw itself.
-             */
-            dlog("ERROR stat /etc/mtab: %s\n", strerror(errno));
-        }
-    } else {
-        if (S_ISREG(statbuf.st_mode)) {
-            write_mtab = 1;
-        }
+    dlog("REPLACE /etc/mtab\n");
+    if ((unlink("/etc/mtab") == -1) && (errno != ENOENT)) {
+        fatal(ERR_UNLINK_MTAB, "failed to unlink /etc/mtab: %s\n",
+            strerror(errno));
     }
-
-    if (write_mtab) {
-        dlog("WRITE /etc/mtab\n");
-        fp = fopen("/etc/mtab", "w");
-        if (fp == NULL) {
-            fatal(ERR_WRITE_MTAB, "failed to write /etc/mtab: %s\n",
-                strerror(errno));
-        }
-        if (fprintf(fp,
-            "/ / zfs rw 0 0\nproc /proc proc rw,noexec,nosuid,nodev 0 0\n")
-            < 0) {
-
-            /* just log because we don't want zone boot failing on this */
-            dlog("ERROR failed to fprintf() mtab line: %s\n", strerror(errno));
-        }
-        if (fclose(fp) == EOF) {
-            /* just log because we don't want zone boot failing on this */
-            dlog("ERROR failed to fclose() mtab file: %s\n", strerror(errno));
-        }
+    /*
+     * We ignore mkdir() return since either it's failing because of EEXIST or
+     * we'll fail to create symlink anyway.
+     */
+    (void) mkdir("/etc", 0755);
+    if (symlink("/proc/mounts", "/etc/mtab") == -1) {
+        fatal(ERR_WRITE_MTAB, "failed to symlink /etc/mtab: %s\n",
+            strerror(errno));
     }
 }
 

@@ -7,7 +7,6 @@
 ./bin/checkproto
 ./bin/copyrightchk
 ./bin/cstyle
-./bin/ctffindmod
 ./bin/elfcmp
 ./bin/elfsigncmp
 ./bin/find_elf

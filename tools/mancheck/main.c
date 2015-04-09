@@ -31,14 +31,15 @@
 #include <sys/stat.h>
 #include <sys/debug.h>
 #include <err.h>
+#include <errno.h>
 #include <dirent.h>
-#include <libcmdutils.h>
 #include <fnmatch.h>
 
 #include "common.h"
 #include "strset.h"
 #include "parser.h"
 #include "manifest.h"
+#include "custr.h"
 
 /*
  * List of directories to check for binaries.

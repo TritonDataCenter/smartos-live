@@ -11,7 +11,7 @@
 ## Delete archived zone data over 7 days old
 30 0 * * * find /zones/archive/ -mount -maxdepth 1 -mindepth 1 -type d -mtime +7 -exec rm -rf "{}" \;
 ## Delete logs to be uploaded over 7 days old if they aren't being consumed
-45 0 * * * find /var/log/sdc/upload/ -mount -maxdepth 1 -mindepth 1 -type f -mtime +7 -exec rm -f "{}" \;
+45 0 * * * [ -d /var/log/sdc/upload/ ] && find /var/log/sdc/upload/ -mount -maxdepth 1 -mindepth 1 -type f -mtime +7 -exec rm -f "{}" \;
 
 # NOTE: all entries above are in root's system-defined crontab; see the
 # crontab(1) man page.

@@ -102,10 +102,12 @@ static const char *cm_wholesect_exceptions[] = {
 	"__sparc_utrap_install.2",
 
 	"curl_*.3",
+	"libcurl*.3",
 	"libusb.3lib",
 	"libtsol.3lib",
 	"libtsnet.3lib",
 	"librsm.3lib",
+	"libpapi.3lib",
 
 	"volume-defaults.4",
 	"md.cf.4",
@@ -115,8 +117,6 @@ static const char *cm_wholesect_exceptions[] = {
 	"hal.5",
 	"pam_tsol_account.5",
 	"trusted_extensions.5",
-
-	"libcurl-multi.3",
 	"rsyncd.conf.5",
 
 	/*
@@ -471,6 +471,7 @@ check_whole_sect_dir(const char *sect, const char *sectpath, mancheck_t *mc)
 		struct dirent *de;
 		struct stat st;
 
+top:
 		errno = 0;
 		if ((de = readdir(dir)) == NULL) {
 			e = errno;
@@ -516,7 +517,7 @@ check_whole_sect_dir(const char *sect, const char *sectpath, mancheck_t *mc)
 				/*
 				 * Do not ship this page.
 				 */
-				goto out;
+				goto top;
 			}
 
 			if (r != FNM_NOMATCH) {
@@ -546,7 +547,7 @@ check_whole_sect_dir(const char *sect, const char *sectpath, mancheck_t *mc)
 out:
 	custr_free(path);
 	custr_free(shipname);
-	(void) closedir(dir);
+	VERIFY0(closedir(dir));
 	errno = e;
 	return (e == 0 ? 0 : -1);
 }
@@ -650,7 +651,7 @@ check_whole_sects(mancheck_t *mc)
 				}
 
 				if ((res = fnmatch(custr_cstr(sectpath),
-				    de->d_name, 0) != 0) != 0) {
+				    de->d_name, 0)) != 0) {
 					if (res == FNM_NOMATCH) {
 						continue;
 					}
@@ -674,13 +675,16 @@ check_whole_sects(mancheck_t *mc)
 				}
 			}
 		}
+
+		VERIFY0(closedir(dir));
+		dir = NULL;
 	}
 
 	VERIFY0(strset_walk(wholesects, check_whole_sect, mc, sectpath));
 
 out:
 	if (dir != NULL) {
-		(void) closedir(dir);
+		VERIFY0(closedir(dir));
 	}
 	strset_free(wholesects);
 	custr_free(sectpath);

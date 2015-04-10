@@ -183,7 +183,7 @@ function _recordIPFstate(args) {
 }
 
 
-function execFile(path, args, cb) {
+function execFile(path, args, opts, cb) {
     var vals = VALUES.child_process[path];
     if (!vals) {
         vals = {
@@ -194,8 +194,12 @@ function execFile(path, args, cb) {
         };
     }
 
+    if (cb === undefined) {
+        cb = opts;
+    }
+
     if (typeof (vals) == 'function') {
-        return vals(path, args, cb);
+        return vals.apply(null, arguments);
     }
 
     if (path == IPF) {

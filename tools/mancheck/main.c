@@ -116,6 +116,9 @@ static const char *cm_wholesect_exceptions[] = {
 	"pam_tsol_account.5",
 	"trusted_extensions.5",
 
+	"libcurl-multi.3",
+	"rsyncd.conf.5",
+
 	/*
 	 * Unfortunately these pages are pretty broken, mostly because
 	 * of the way NTP tries to provide manual pages via AutoGen.

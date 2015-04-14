@@ -291,7 +291,7 @@ addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl)
     nvpair_t *pair;
     char *field, *printf_fmt;
     char *home;
-    int home_len;
+    int home_len = 0;
     char *hostname_env;
     int hostname_env_len;
     int found_home = 0;
@@ -378,15 +378,19 @@ addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl)
      * pw_dir value from the passwd file.
      */
     if ((type == ARRAY_ENV) && !found_home) {
-        home_len = (strlen(pwd->pw_dir) + 6);
-        home = malloc(sizeof (char) * home_len);
-        if (home == NULL) {
-            fatal(ERR_UNEXPECTED, "malloc() for home[%d] failed: %s\n",
-                home_len, strerror(errno));
-        }
-        if (snprintf(home, home_len, "HOME=%s", pwd->pw_dir) < 0) {
-            fatal(ERR_UNEXPECTED, "snprintf(HOME=) failed: %s\n",
-                strerror(errno));
+        if (pwd != NULL) {
+            home_len = (strlen(pwd->pw_dir) + 6);
+            home = malloc(sizeof (char) * home_len);
+            if (home == NULL) {
+                fatal(ERR_UNEXPECTED, "malloc() for home[%d] failed: %s\n",
+                    home_len, strerror(errno));
+            }
+            if (snprintf(home, home_len, "HOME=%s", pwd->pw_dir) < 0) {
+                fatal(ERR_UNEXPECTED, "snprintf(HOME=) failed: %s\n",
+                    strerror(errno));
+            }
+        } else {
+            home = "HOME=/";
         }
         array[(*idx)++] = home;
         dlog("ENV[%d] %s\n", (*idx) - 1, home);
@@ -593,19 +597,15 @@ getUserGroupData()
         dlog("INFO passwd.pw_uid: %u\n", pwd->pw_uid);
         dlog("INFO passwd.pw_gid: %u\n", pwd->pw_gid);
         dlog("INFO passwd.pw_dir: %s\n", pwd->pw_dir);
-    } else {
-        fatal(ERR_NO_USER, "failed to find user passwd structure\n");
     }
 
-    if (grp == NULL) {
+    if (grp == NULL && pwd != NULL) {
         grp = getgrgid(pwd->pw_gid);
     }
 
     if (grp != NULL) {
         dlog("INFO group.gr_name: %s\n", grp->gr_name);
         dlog("INFO group.gr_gid: %u\n", grp->gr_gid);
-    } else {
-        fatal(ERR_NO_GROUP, "failed to find group structure\n");
     }
 }
 
@@ -616,7 +616,7 @@ setupWorkdir()
     char *workdir;
 
     workdir = (char *) mdataGet("docker:workdir");
-    if (workdir != NULL) {
+    if (workdir != NULL && pwd != NULL) {
         /* support ~/foo */
         if (workdir[0] == '~') {
             if (asprintf(&workdir, "%s%s", pwd->pw_dir, workdir + 1) == -1) {

@@ -74,8 +74,8 @@ char **env;
 char *hostname = NULL;
 FILE *log_stream = stderr;
 char *path = NULL;
-struct passwd *pwd;
-struct group *grp;
+struct passwd *pwd = NULL;
+struct group *grp = NULL;
 
 int
 main(int argc, char *argv[])
@@ -119,15 +119,19 @@ main(int argc, char *argv[])
 
     dlog("DROP PRIVS\n");
 
-    if (setgid(grp->gr_gid) != 0) {
-        fatal(ERR_SETGID, "setgid(%d): %s\n", grp->gr_gid, strerror(errno));
+    if (grp != NULL) {
+        if (setgid(grp->gr_gid) != 0) {
+            fatal(ERR_SETGID, "setgid(%d): %s\n", grp->gr_gid, strerror(errno));
+        }
     }
-    if (initgroups(pwd->pw_name, grp->gr_gid) != 0) {
-        fatal(ERR_INITGROUPS, "initgroups(%s,%d): %s\n", pwd->pw_name,
-            grp->gr_gid, strerror(errno));
-    }
-    if (setuid(pwd->pw_uid) != 0) {
-        fatal(ERR_SETUID, "setuid(%d): %s\n", pwd->pw_uid, strerror(errno));
+    if (pwd != NULL) {
+        if (initgroups(pwd->pw_name, grp->gr_gid) != 0) {
+            fatal(ERR_INITGROUPS, "initgroups(%s,%d): %s\n", pwd->pw_name,
+                grp->gr_gid, strerror(errno));
+        }
+        if (setuid(pwd->pw_uid) != 0) {
+            fatal(ERR_SETUID, "setuid(%d): %s\n", pwd->pw_uid, strerror(errno));
+        }
     }
 
     // find execname from argv[1] (w/ path), then execute it.

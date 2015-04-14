@@ -297,7 +297,7 @@ read_manifest_file(const char *path, manifest_ent_cb_t *mecb, void *arg)
 
 			case MECB_CANCEL:
 				error = ECANCELED;
-				errno = ECANCELED;
+				rval = -1;
 				goto out;
 
 			default:

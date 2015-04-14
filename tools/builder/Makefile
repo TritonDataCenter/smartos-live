@@ -7,7 +7,7 @@ CFLAGS=-Wall -W -Werror -std=c99 -I../common -D__EXTENSIONS__
 SRC_ROOT=$(PWD)/../..
 
 PROG=builder
-OBJS=builder.o copyfile.o users.o strlist.o common.o parser.o custr.o
+OBJS=new_builder.o copyfile.o users.o strlist.o strset.o manifest.o common.o parser.o custr.o
 LDLIBS=-lavl
 
 ILLUMOS_SRC=../../projects/illumos

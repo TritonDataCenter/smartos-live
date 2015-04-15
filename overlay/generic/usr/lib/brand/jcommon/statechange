@@ -262,11 +262,22 @@ setup_net()
 		# Create the vnic.
 		#
 
-		opt_str="-p zone=$ZONENAME"
+		opt_str="-p "
 
 		if [[ -n "$mtu" ]]; then
-			opt_str="$opt_str,mtu=$mtu"
+			opt_str="$opt_str mtu=$mtu,"
 		fi
+
+		#
+		# Always append the zone as the last property. This is
+		# to work around the fact that once we associate it with
+		# a zone, the zone will have a hold on the device and
+		# we'll not be able to delete it if a create fails due
+		# to a bad property (say an invalid MTU). Note if we
+		# have other properties, it is their responsibility to
+		# put a trailing comma on it.
+		#
+		opt_str="${opt_str}zone=$ZONENAME"
 
 		if [[ -n "$jst_vrrp" && -n $vrid ]]; then
 			# MAC addresses for VRRP vnics are determined by the VRID
@@ -278,6 +289,7 @@ setup_net()
 
 		[[ -n $vlan_id && $vlan_id != 0 ]] && \
 		    opt_str="$opt_str -v $vlan_id"
+
 
 		#
 		# Creating a VNIC in a zone is a multi-step process internally.

@@ -31,11 +31,15 @@
 #include <sys/stat.h>
 #include <sys/debug.h>
 #include <err.h>
+#include <errno.h>
+#include <dirent.h>
+#include <fnmatch.h>
 
 #include "common.h"
 #include "strset.h"
 #include "parser.h"
 #include "manifest.h"
+#include "custr.h"
 
 /*
  * List of directories to check for binaries.
@@ -70,6 +74,71 @@ static const char *cm_mansects[] = {
 };
 
 /*
+ * List of manual sections where we wish to ship every extant page, e.g. "3c".
+ */
+static const char *cm_wholesects[] = {
+	"2*",
+	"!3iscsit",
+	"!3papi",
+	"!3tsol",
+	"!3tnf",
+	"!3perl",
+	"!3rsm",
+	"3*",
+	"4*",
+	"5*",
+	"!7",
+	"!7d",
+	"7*",
+	"9*",
+	NULL
+};
+
+/*
+ * These manual pages are built, but should not be shipped even if they
+ * appear in a section we intend to (essentially) completely ship:
+ */
+static const char *cm_wholesect_exceptions[] = {
+	"__sparc_utrap_install.2",
+
+	"curl_*.3",
+	"libcurl*.3",
+	"libusb.3lib",
+	"libtsol.3lib",
+	"libtsnet.3lib",
+	"librsm.3lib",
+	"libpapi.3lib",
+
+	"volume-defaults.4",
+	"md.cf.4",
+	"wanboot.conf.4",
+
+	"pkcs11_tpm.5",
+	"hal.5",
+	"pam_tsol_account.5",
+	"trusted_extensions.5",
+	"rsyncd.conf.5",
+
+	/*
+	 * Unfortunately these pages are pretty broken, mostly because
+	 * of the way NTP tries to provide manual pages via AutoGen.
+	 */
+	"ntp.conf.5",
+	"ntp.keys.5",
+
+	/*
+	 * These pages are for interfaces we do not really ship or
+	 * support:
+	 */
+	"dsp.7i",
+	"mixer.7i",
+	"audio.7i",
+	"agpgart_io.7i",
+
+	NULL
+};
+
+/*
  * The directory in the proto area where manual pages are shipped.
  */
 static const char *cm_pdir = "usr/share/man";
@@ -80,7 +149,8 @@ static const char *cm_pdir = "usr/share/man";
  */
 typedef enum mancheck_flags {
 	MCF_DONT_EXIST = 0x1,
-	MCF_NOT_SHIPPED = 0x2
+	MCF_NOT_SHIPPED = 0x2,
+	MCF_WHOLE_SECTS = 0x4
 } mancheck_flags_t;
 
 typedef struct mancheck {
@@ -88,6 +158,7 @@ typedef struct mancheck {
 	char *mc_manifest_path;
 	unsigned long mc_cnt_dont_exist;
 	unsigned long mc_cnt_not_shipped;
+	unsigned long mc_cnt_whole_sects;
 	strset_t *mc_shiplist;
 } mancheck_t;
 
@@ -113,7 +184,7 @@ usage(int rc, const char *progname)
 	    "\t-f manifest\tManifest file to search\n"
 	    "\t-h\t\tShow this message\n"
 	    "\t-m\t\tOnly warn for man pages which don't exist\n"
-	    "\t-m\t\tOnly warn for man pages which aren't shipped\n"
+	    "\t-s\t\tOnly warn for man pages which aren't shipped\n"
 	    "\n";
 
 	(void) fprintf(rc == 0 ? stdout : stderr, msg, progname);
@@ -161,7 +232,7 @@ parse_opts(mancheck_t *mc, int argc, char **argv)
 	/*
 	 * If no flags are specified, we do both checks by default:
 	 */
-	mc->mc_flags |= (MCF_DONT_EXIST | MCF_NOT_SHIPPED);
+	mc->mc_flags |= (MCF_DONT_EXIST | MCF_NOT_SHIPPED | MCF_WHOLE_SECTS);
 
 	if (mflag > 0 && sflag > 0) {
 		(void) fprintf(stderr, "-m and -s are mutually exclusive\n");
@@ -372,6 +443,255 @@ check_manifest_ent(manifest_ent_t *me, void *arg)
 	return (MECB_NEXT);
 }
 
+static int
+check_whole_sect_dir(const char *sect, const char *sectpath, mancheck_t *mc)
+{
+	int e = 0;
+	DIR *dir;
+	custr_t *shipname = NULL, *path = NULL;
+
+	if ((dir = opendir(sectpath)) == NULL) {
+		if (errno == ENOENT) {
+			/*
+			 * Some manual sections may not appear in every
+			 * source directory.
+			 */
+			return (0);
+		}
+		fprintf(stderr, "opendir failure\n");
+		return (-1);
+	}
+
+	if (custr_alloc(&shipname) != 0 || custr_alloc(&path) != 0) {
+		e = errno;
+		goto out;
+	}
+
+	for (;;) {
+		struct dirent *de;
+		struct stat st;
+
+top:
+		errno = 0;
+		if ((de = readdir(dir)) == NULL) {
+			e = errno;
+			goto out;
+		}
+
+		if (strcmp(de->d_name, ".") == 0 ||
+		    strcmp(de->d_name, "..") == 0 ||
+		    strlen(de->d_name) < 1) {
+			/*
+			 * Ignore special directory entries.
+			 */
+			continue;
+		}
+
+		custr_reset(path);
+		if (custr_append_printf(path, "%s/%s", sectpath,
+		    de->d_name) != 0) {
+			e = errno;
+			fprintf(stderr, "custr_append_printf failure\n");
+			goto out;
+		}
+
+		if (lstat(custr_cstr(path), &st) != 0) {
+			e = errno;
+			fprintf(stderr, "lstat(%s) failed: %s\n",
+			    custr_cstr(path), strerror(errno));
+			goto out;
+		}
+
+		if (!S_ISREG(st.st_mode) && !S_ISLNK(st.st_mode)) {
+			/*
+			 * We only care about files or symlinks.
+			 */
+			continue;
+		}
+
+		for (int i = 0; cm_wholesect_exceptions[i] != NULL; i++) {
+			int r;
+
+			if ((r = fnmatch(cm_wholesect_exceptions[i],
+			    de->d_name, 0)) == 0) {
+				/*
+				 * Do not ship this page.
+				 */
+				goto top;
+			}
+
+			if (r != FNM_NOMATCH) {
+				err(1, "fnmatch failure");
+			}
+		}
+
+		/*
+		 * The shipped page list contains strings of the form
+		 * "<cm_pdir>/man<sect>/pagename.<sect>".
+		 */
+		custr_reset(shipname);
+		if (custr_append_printf(shipname, "%s/man%s/%s",
+		    cm_pdir, sect, de->d_name) != 0) {
+			e = errno;
+			fprintf(stderr, "custr_append_printf failure\n");
+			goto out;
+		}
+
+		if (!strset_contains(mc->mc_shiplist, custr_cstr(shipname))) {
+			(void) fprintf(stdout, "section %s page not shipped:"
+			    " %s\n", sect, custr_cstr(path));
+			mc->mc_cnt_whole_sects++;
+		}
+	}
+
+out:
+	custr_free(path);
+	custr_free(shipname);
+	VERIFY0(closedir(dir));
+	errno = e;
+	return (e == 0 ? 0 : -1);
+}
+
+static strset_walk_t
+check_whole_sect(strset_t *ss _UNUSED, const char *sect, void *arg0,
+    void *arg1)
+{
+	mancheck_t *mc = arg0;
+	custr_t *tmp = arg1;
+
+	/*
+	 * For each manual page directory:
+	 */
+	for (int i = 0; cm_mpaths[i] != NULL; i++) {
+		/*
+		 * Construct the full path of the manual page section:
+		 */
+		custr_reset(tmp);
+		if (custr_append_printf(tmp, "%s/man%s",
+		    cm_mpaths[i], sect) != 0) {
+			err(1, "custr_append_printf failure");
+		}
+
+		if (check_whole_sect_dir(sect, custr_cstr(tmp), mc) != 0) {
+			(void) fprintf(stderr, "ERROR: failed to check "
+			    "section %s in directory %s: %s\n",
+			    sect, custr_cstr(tmp),
+			    strerror(errno));
+		}
+	}
+
+	return (STRSET_WALK_NEXT);
+}
+
+static int
+check_whole_sects(mancheck_t *mc)
+{
+	int e = 0;
+	custr_t *sectpath = NULL;
+	strset_t *wholesects = NULL;
+	DIR *dir = NULL;
+
+	if (custr_alloc(&sectpath) != 0 || strset_alloc(&wholesects,
+	    STRSET_IGNORE_DUPLICATES) != 0) {
+		e = errno;
+		goto out;
+	}
+
+	/*
+	 * Build manual page section list.  For each manual page
+	 * directory:
+	 */
+	for (int i = 0; cm_mpaths[i] != NULL; i++) {
+		if ((dir = opendir(cm_mpaths[i])) == NULL) {
+			e = errno;
+			(void) fprintf(stderr, "ERROR: failed to open "
+			    "directory %s: %s\n", cm_mpaths[i],
+			    strerror(errno));
+			goto out;
+		}
+
+		for (;;) {
+			struct dirent *de;
+
+			errno = 0;
+			if ((de = readdir(dir)) == NULL) {
+				break;
+			}
+
+			if (strcmp(de->d_name, ".") == 0 ||
+			    strcmp(de->d_name, "..") == 0 ||
+			    strlen(de->d_name) < 1) {
+				continue;
+			}
+
+			/*
+			 * For each manual page section pattern:
+			 */
+			for (int j = 0; cm_wholesects[j] != NULL; j++) {
+				boolean_t negate = B_FALSE;
+				const char *x = cm_wholesects[j];
+				int res;
+
+				/*
+				 * Entries that begin with bang (!) are
+				 * negated entries.  If we match one
+				 * of these patterns, the section is
+				 * excluded.
+				 */
+				if (*x == '!') {
+					negate = B_TRUE;
+					x++;
+				}
+
+				custr_reset(sectpath);
+				if (custr_append_printf(sectpath, "man%s",
+				    x) != 0) {
+					e = errno;
+					goto out;
+				}
+
+				if ((res = fnmatch(custr_cstr(sectpath),
+				    de->d_name, 0)) != 0) {
+					if (res == FNM_NOMATCH) {
+						continue;
+					}
+
+					e = errno;
+					goto out;
+				}
+
+				if (negate) {
+					/*
+					 * This entry matches a negated
+					 * pattern, so stop processing.
+					 */
+					break;
+				}
+
+				if (strset_add(wholesects,
+				    de->d_name + 3) != 0) {
+					e = errno;
+					goto out;
+				}
+			}
+		}
+
+		VERIFY0(closedir(dir));
+		dir = NULL;
+	}
+
+	VERIFY0(strset_walk(wholesects, check_whole_sect, mc, sectpath));
+
+out:
+	if (dir != NULL) {
+		VERIFY0(closedir(dir));
+	}
+	strset_free(wholesects);
+	custr_free(sectpath);
+	errno = e;
+	return (e == 0 ? 0 : -1);
+}
+
 int
 main(int argc _UNUSED, char **argv _UNUSED)
 {
@@ -409,8 +729,27 @@ main(int argc _UNUSED, char **argv _UNUSED)
 	}
 
 	/*
+	 * Read the manual page shipping directories to see if there are
+	 * unshipped manual pages in sections where we intend to ship the
+	 * entire section.
+	 */
+	if (check_whole_sects(&mc) != 0) {
+		rval = 50;
+		goto out;
+	}
+
+	/*
 	 * Print final status counts for each requested check.
 	 */
+	if ((mc.mc_flags & MCF_WHOLE_SECTS) && mc.mc_cnt_whole_sects > 0) {
+		if (!endl) {
+			(void) fprintf(stdout, "\n");
+			endl = B_TRUE;
+		}
+		(void) fprintf(stdout, "unshipped manual pages from entirely "
+		    "shipped sections: %ld\n", mc.mc_cnt_whole_sects);
+		rval = 60;
+	}
 	if ((mc.mc_flags & MCF_DONT_EXIST) && mc.mc_cnt_dont_exist > 0) {
 		if (!endl) {
 			(void) fprintf(stdout, "\n");

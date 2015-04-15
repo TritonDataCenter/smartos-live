@@ -106,8 +106,8 @@ char *ipmgmtd_door;
 FILE *log_stream = stderr;
 int open_stdin = 0;
 char *path = NULL;
-struct passwd *pwd;
-struct group *grp;
+struct passwd *pwd = NULL;
+struct group *grp = NULL;
 
 const char *ROUTE_ADDR_MSG =
     "WARN addRoute: invalid %s address \"%s\" for %s: %s\n";
@@ -275,15 +275,19 @@ execCmdline()
      */
     dlog("DROP PRIVS\n");
 
-    if (setgid(grp->gr_gid) != 0) {
-        fatal(ERR_SETGID, "setgid(%d): %s\n", grp->gr_gid, strerror(errno));
+    if (grp != NULL) {
+        if (setgid(grp->gr_gid) != 0) {
+            fatal(ERR_SETGID, "setgid(%d): %s\n", grp->gr_gid, strerror(errno));
+        }
     }
-    if (initgroups(pwd->pw_name, grp->gr_gid) != 0) {
-        fatal(ERR_INITGROUPS, "initgroups(%s,%d): %s\n", pwd->pw_name,
-            grp->gr_gid, strerror(errno));
-    }
-    if (setuid(pwd->pw_uid) != 0) {
-        fatal(ERR_SETUID, "setuid(%d): %s\n", pwd->pw_uid, strerror(errno));
+    if (pwd != NULL) {
+        if (initgroups(pwd->pw_name, grp->gr_gid) != 0) {
+            fatal(ERR_INITGROUPS, "initgroups(%s,%d): %s\n", pwd->pw_name,
+                grp->gr_gid, strerror(errno));
+        }
+        if (setuid(pwd->pw_uid) != 0) {
+            fatal(ERR_SETUID, "setuid(%d): %s\n", pwd->pw_uid, strerror(errno));
+        }
     }
 
     execve(execname, cmdline, env);
@@ -364,6 +368,8 @@ void
 mountLXProc()
 {
     dlog("MOUNT /proc (lx_proc)\n");
+
+    (void) mkdir("/proc", 0555);
 
     if (mount("proc", "/proc", MS_DATA, "lx_proc", NULL, 0) != 0) {
         fatal(ERR_MOUNT_LXPROC, "failed to mount /proc: %s\n", strerror(errno));

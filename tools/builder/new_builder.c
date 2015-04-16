@@ -20,10 +20,28 @@
 #include "manifest.h"
 #include "custr.h"
 
+#define	KILOBYTES	1024
+#define	MEGABYTES	(1024 * KILOBYTES)
+#define	GIGABYTES	(1024 * MEGABYTES)
+
 /*
  * Maximum number of input directories to search:
  */
 #define	MAX_DIRS	32
+
+typedef enum {
+	BPS_CHECK = 0x1,
+	BPS_COPY = 0x2
+} builder_pass_sets_t;
+
+typedef struct builder_stats {
+	uint64_t bs_inodes;
+	uint64_t bs_bytes;
+	uint64_t bs_cnt_dirs;
+	uint64_t bs_cnt_files;
+	uint64_t bs_cnt_symlinks;
+	uint64_t bs_cnt_hardlinks;
+} builder_stats_t;
 
 typedef struct builder {
 	char *b_passwd_dir;
@@ -35,6 +53,8 @@ typedef struct builder {
 	boolean_t b_quiet;
 	char *b_errbuf;
 	custr_t *b_error;
+	builder_pass_sets_t b_pass_sets;
+	builder_stats_t b_stats;
 } builder_t;
 
 static void
@@ -72,8 +92,16 @@ parse_opts(builder_t *b, int argc, char **argv)
 	int c, i;
 	char *pflag = NULL;
 
-	while ((c = getopt(argc, argv, ":p:q")) != -1) {
+	b->b_pass_sets = BPS_COPY | BPS_CHECK;
+
+	while ((c = getopt(argc, argv, ":np:q")) != -1) {
 		switch (c) {
+		case 'n':
+			/*
+			 * Dry-run.
+			 */
+			b->b_pass_sets &= ~BPS_COPY;
+			break;
 		case 'p':
 			pflag = optarg;
 			break;
@@ -184,6 +212,10 @@ handle_link_common(manifest_ent_t *me, void *arg, manifest_ent_type_t type)
 	    me->me_type == ME_TYPE_HARDLINK ? "link" : "symlink",
 	    me->me_name, me->me_target);
 
+	if ((b->b_pass_sets & BPS_COPY) == 0) {
+		goto done;
+	}
+
 	op = "unlinking target";
 	if (unlink(me->me_name) != 0 && errno != ENOENT) {
 		e = errno;
@@ -204,6 +236,17 @@ handle_link_common(manifest_ent_t *me, void *arg, manifest_ent_type_t type)
 		}
 	}
 
+done:
+	if (me->me_type == ME_TYPE_HARDLINK) {
+		b->b_stats.bs_cnt_hardlinks++;
+	} else {
+		/*
+		 * Assume a block for each symlink:
+		 */
+		b->b_stats.bs_bytes += 512;
+		b->b_stats.bs_cnt_symlinks++;
+		b->b_stats.bs_inodes++;
+	}
 	emit(b, "OK\n");
 	return (MECB_NEXT);
 
@@ -227,6 +270,16 @@ handle_symlink(manifest_ent_t *me, void *arg)
 	return (handle_link_common(me, arg, ME_TYPE_SYMLINK));
 }
 
+static uint64_t
+round_up(uint64_t input, uint64_t alignment)
+{
+	while (input % alignment != 0) {
+		input++;
+	}
+
+	return (input);
+}
+
 static me_cb_ret_t
 handle_file(manifest_ent_t *me, void *arg)
 {
@@ -237,6 +290,7 @@ handle_file(manifest_ent_t *me, void *arg)
 	boolean_t found = B_FALSE;
 	uid_t u;
 	gid_t g;
+	struct stat st;
 
 	if (me->me_type != ME_TYPE_FILE) {
 		return (MECB_NEXT);
@@ -258,7 +312,6 @@ handle_file(manifest_ent_t *me, void *arg)
 	op = "locating source file";
 	for (unsigned int i = 0; i < strlist_contig_count(b->b_search_dirs);
 	    i++) {
-		struct stat st;
 
 		free(p);
 		if (asprintf(&p, "%s/%s", strlist_get(b->b_search_dirs, i),
@@ -275,6 +328,10 @@ handle_file(manifest_ent_t *me, void *arg)
 	if (!found) {
 		e = ENOENT;
 		goto fail;
+	}
+
+	if ((b->b_pass_sets & BPS_COPY) == 0) {
+		goto done;
 	}
 
 	op = "unlinking target";
@@ -301,6 +358,10 @@ handle_file(manifest_ent_t *me, void *arg)
 		goto fail;
 	}
 
+done:
+	b->b_stats.bs_cnt_files++;
+	b->b_stats.bs_inodes++;
+	b->b_stats.bs_bytes += round_up(st.st_size, 512);
 	emit(b, "OK (%s)\n", p);
 	free(p);
 	return (MECB_NEXT);
@@ -336,6 +397,10 @@ handle_directory(manifest_ent_t *me, void *arg)
 	emit(b, "DIR: [%s][%04o][%s/%d][%s/%d]: ", me->me_name,
 	    (unsigned int)me->me_mode, me->me_user, u, me->me_group, g);
 
+	if ((b->b_pass_sets & BPS_COPY) == 0) {
+		goto done;
+	}
+
 	op = "mkdir";
 	if (mkdir(me->me_name, me->me_mode) != 0 && errno != EEXIST) {
 		e = errno;
@@ -354,6 +419,13 @@ handle_directory(manifest_ent_t *me, void *arg)
 		goto fail;
 	}
 
+done:
+	/*
+	 * Assume four blocks for each directory:
+	 */
+	b->b_stats.bs_bytes += 4096;
+	b->b_stats.bs_inodes++;
+	b->b_stats.bs_cnt_dirs++;
 	emit(b, "OK\n");
 	return (MECB_NEXT);
 
@@ -467,15 +539,15 @@ main(int argc, char **argv)
 	builder_t *b = NULL;
 	const char *c;
 
-	if (geteuid() != 0) {
-		errx(1, "must be root to use this tool");
-	}
-
 	if (builder_alloc(&b) != 0) {
 		err(1, "builder_t alloc failure");
 	}
 
 	parse_opts(b, argc, argv);
+
+	if ((b->b_pass_sets & BPS_COPY) != 0 && geteuid() != 0) {
+		errx(1, "must be root to use this tool in wet-run mode");
+	}
 
 	if (builder_ids_init(&b->b_ids, b->b_passwd_dir) != 0) {
 		err(1, "failed to read passwd/group files");
@@ -508,6 +580,20 @@ main(int argc, char **argv)
 			}
 		}
 	}
+
+	/*
+	 * Print statistics:
+	 */
+	(void) fprintf(stdout, "STATS:");
+	(void) fprintf(stdout, "\tBYTES:     %llu\n", b->b_stats.bs_bytes);
+	(void) fprintf(stdout, "\tMEGABYTES: %llu\n", (b->b_stats.bs_bytes / MEGABYTES));
+	(void) fprintf(stdout, "\tINODES:    %llu\n", b->b_stats.bs_inodes);
+	(void) fprintf(stdout, "\n");
+	(void) fprintf(stdout, "\tDIRS:      %llu\n", b->b_stats.bs_cnt_dirs);
+	(void) fprintf(stdout, "\tFILES:     %llu\n", b->b_stats.bs_cnt_files);
+	(void) fprintf(stdout, "\tSYMLINKS:  %llu\n", b->b_stats.bs_cnt_symlinks);
+	(void) fprintf(stdout, "\tHARDLINKS: %llu\n", b->b_stats.bs_cnt_hardlinks);
+	(void) fprintf(stdout, "\n");
 
 	builder_free(b);
 	return (0);

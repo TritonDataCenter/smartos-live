@@ -81,6 +81,7 @@
 	<privilege set="default" name="proc_taskid" />
 	<privilege set="default" name="sys_acct" />
 	<privilege set="default" name="sys_admin" />
+	<privilege set="default" name="sys_fs_import" />
 	<privilege set="default" name="sys_ip_config" ip-type="exclusive" />
 	<privilege set="default" name="sys_iptun_config" ip-type="exclusive" />
 	<privilege set="default" name="sys_mount" />

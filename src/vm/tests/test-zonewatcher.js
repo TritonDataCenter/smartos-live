@@ -1,8 +1,8 @@
 // Copyright 2014 Joyent, Inc.  All rights reserved.
 
 var assert = require('assert');
-var async = require('async');
-var bunyan = require('bunyan');
+var async = require('/usr/node/node_modules/async');
+var bunyan = require('/usr/node/node_modules/bunyan');
 var fs = require('fs');
 var path = require('path');
 var spawn = require('child_process').spawn;

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2015, Joyent, Inc. All rights reserved.
  *
  * * *
  * The main imgadm functionality. The CLI is a light wrapper around this tool.
@@ -42,6 +42,7 @@ var assert = require('assert-plus');
 var async = require('async');
 var child_process = require('child_process'),
     spawn = child_process.spawn,
+    execFile = child_process.execFile,
     exec = child_process.exec;
 var crypto = require('crypto');
 var dsapi = require('sdc-clients/lib/dsapi');
@@ -68,7 +69,8 @@ var common = require('./common'),
     indent = common.indent,
     objCopy = common.objCopy,
     assertUuid = common.assertUuid,
-    execFilePlus = common.execFilePlus;
+    execFilePlus = common.execFilePlus,
+    execPlus = common.execPlus;
 var configuration = require('./configuration');
 var Database = require('./database');
 var errors = require('./errors');
@@ -97,10 +99,9 @@ var UA = 'imgadm/' + common.getVersion()
 
 // ---- internal support stuff
 
-function getSysinfo(log, callback) {
-    assert.object(log, 'log');
+function getSysinfo(callback) {
     assert.func(callback, 'callback');
-    exec('sysinfo', function (err, stdout, stderr) {
+    execFile('/usr/bin/sysinfo', function (err, stdout, stderr) {
         if (err) {
             callback(err);
         } else {
@@ -110,6 +111,80 @@ function getSysinfo(log, callback) {
         }
     });
 }
+
+
+/**
+ * Return an error if min_platform or max_platform isn't satisfied with the
+ * current platform version.
+ *
+ * @param opts:
+ *      - sysinfo {Object} sysinfo for this platform
+ *      - manifest {Object} the manifest to check
+ * @returns null or an error
+ */
+function checkMinMaxPlatformSync(opts) {
+    assert.object(opts, 'opts');
+    assert.object(opts.manifest, 'opts.manifest');
+    assert.object(opts.sysinfo, 'opts.sysinfo');
+
+    var minPlatSpec = opts.manifest.requirements
+        && opts.manifest.requirements.min_platform;
+    var maxPlatSpec = opts.manifest.requirements
+        && opts.manifest.requirements.max_platform;
+    if (!minPlatSpec && !maxPlatSpec) {
+        return null;
+    }
+
+    // SDC 6.5 sysinfo is missing 'SDC Version' key in sysinfo.
+    var platVer = opts.sysinfo['SDC Version'] || '6.5';
+    var platTimestamp = opts.sysinfo['Live Image'];
+
+    if (minPlatSpec) {
+        if (minPlatSpec[platVer]) {
+            if (platTimestamp < minPlatSpec[platVer]) {
+                return new errors.MinPlatformError(platVer,
+                    platTimestamp, minPlatSpec);
+            }
+        } else {
+            /*
+             * From the IMGAPI docs:
+             * 2. if SDC version is greater than the lowest key,
+             *    e.g. if "7.0" for the example above, then this
+             *    image may be used on this platform.
+             */
+            var lowestSpecVer = Object.keys(minPlatSpec).sort()[0];
+            if (platVer < lowestSpecVer) {
+                return new errors.MinPlatformError(platVer,
+                    platTimestamp, minPlatSpec);
+            }
+        }
+    }
+
+    if (maxPlatSpec) {
+        if (maxPlatSpec[platVer]) {
+            if (platTimestamp > maxPlatSpec[platVer]) {
+                return new errors.MaxPlatformError(platVer,
+                    platTimestamp, maxPlatSpec);
+            }
+        } else {
+            /*
+             * From the IMGAPI docs:
+             * 1. if SDC version is greater than the highest key,
+             *    e.g. if "7.2" for the example above, then this
+             *    image may not be used on this platform.
+             */
+            var highestSpecVer = Object.keys(maxPlatSpec)
+                .sort().slice(-1)[0];
+            if (platVer > highestSpecVer) {
+                return new errors.MaxPlatformError(platVer,
+                    platTimestamp, maxPlatSpec);
+            }
+        }
+    }
+
+    return null;
+}
+
 
 /**
  * Call `zfs destroy -r` on the given dataset name.
@@ -704,7 +779,6 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
     // We also count the usages of these images: zfs filesystems with the
     // image as an origin.
 
-    var zCmd = '/usr/sbin/zoneadm list -pc';
     /* BEGIN JSSTYLED */
     // Example output:
     //      0:global:running:/::liveimg:shared:
@@ -712,10 +786,16 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
     //      21:dc5cbce7-798a-4bc8-bdc5-61b4be00a22e:running:/zones/dc5cbce7-798a-4bc8-bdc5-61b4be00a22e:dc5cbce7-798a-4bc8-bdc5-61b4be00a22e:joyent-minimal:excl:21
     //      -:7970c690-1738-4e58-a04f-8ce4ea8ebfca:installed:/zones/7970c690-1738-4e58-a04f-8ce4ea8ebfca:7970c690-1738-4e58-a04f-8ce4ea8ebfca:kvm:excl:22
     /* END JSSTYLED */
-    exec(zCmd, function (zError, zStdout, zStderr) {
-        if (zError) {
-            callback(new errors.InternalError(
-                {message: format('could not list zones: %s', zError)}));
+    execPlus({
+        command: '/usr/sbin/zoneadm list -pc',
+        log: self.log,
+        errMsg: 'could not list zones',
+        execOpts: {
+            maxBuffer: 10485760  /* >200k hit in prod, 10M should suffice */
+        }
+    }, function (zErr, zStdout, zStderr) {
+        if (zErr) {
+            callback(zErr);
             return;
         }
         var zLines = zStdout.trim().split('\n');
@@ -725,15 +805,38 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
             zoneRoots[zoneRoot] = true;
         });
 
-        var cmd = '/usr/sbin/zfs list -t filesystem,volume -pH '
-            + '-o name,origin,mountpoint,imgadm:ignore';
-        exec(cmd, function (error, stdout, stderr) {
-            if (error) {
-                callback(new errors.InternalError(
-                    {message: format('could not load images: %s', error)}));
+        /*
+         * PERF Note: Snapshots are gathered to do that (hopefully rare)
+         * `hasFinalSnap` exclusions below. That can add 10%-20% (or
+         * theoretically) more time to `imgadm list`. If that's a problem
+         * we might want an option to exclude that processing if the caller
+         * is fine with false positives.
+         */
+        execPlus({
+            command: '/usr/sbin/zfs list -t filesystem,volume,snapshot -pH '
+                + '-o name,origin,mountpoint,imgadm:ignore',
+            log: self.log,
+            errMsg: 'could not load images',
+            execOpts: {
+                maxBuffer: 10485760  /* >200k hit in prod, 10M should suffice */
+            }
+        }, function (zfsErr, stdout, stderr) {
+            if (zfsErr) {
+                callback(zfsErr);
                 return;
             }
             var lines = stdout.trim().split('\n');
+            var name;
+
+            // First pass to gather which filesystems have '@final' snapshot.
+            var hasFinalSnap = {};  /* 'zones/UUID' => true */
+            for (i = 0; i < lines.length; i++) {
+                name = lines[i].split('\t', 1)[0];
+                if (name.slice(-6) === '@final') {
+                    hasFinalSnap[name.slice(0, -6)] = true;
+                }
+            }
+
             var imageNames = [];
             var usageFromImageName = {};
             for (i = 0; i < lines.length; i++) {
@@ -742,19 +845,32 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
                     continue;
                 var parts = line.split('\t');
                 assert.equal(parts.length, 4);
-                var name = parts[0];
+                name = parts[0];
                 var origin = parts[1];
                 var mountpoint = parts[2];
                 var ignore = parts[3];
                 if (!VMADM_FS_NAME_RE.test(name))
                     continue;
-                if (// If it has a mountpoint from `zoneadm list` it is
-                    // a zone, not an image.
+                if (
+                    /*
+                     * If it has a mountpoint from `zoneadm list` it is
+                     * a zone, not an image.
+                     */
                     !zoneRoots[mountpoint]
-                    // If it doesn't match `VMADM_IMG_NAME_RE` it is
-                    // a KVM disk volume, e.g.
-                    // "zones/7970c690-1738-4e58-a04f-8ce4ea8ebfca-disk0".
-                    && VMADM_IMG_NAME_RE.test(name))
+                    /*
+                     * If it doesn't match `VMADM_IMG_NAME_RE` it is a KVM
+                     * disk volume, e.g. 'zones/UUID-disk0' or a snapshot,
+                     * e.g. 'zones/UUID@SNAP'.
+                     */
+                    && VMADM_IMG_NAME_RE.test(name)
+                    /*
+                     * If it has a 'zones/UUID@final' origin (i.e. it was
+                     * cloned from a modern-enough imgadm that enforced @final),
+                     * but does *not* have a @final snapshot itself, then
+                     * this isn't an image.
+                     */
+                    && !(origin.slice(-6) === '@final' && !hasFinalSnap[name])
+                    )
                 {
                     // Gracefully handle 'imgadm:ignore' boolean property.
                     if (ignore !== '-') {
@@ -1376,6 +1492,17 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
 
     var context = {};
     vasync.pipeline({arg: context, funcs: [
+        function gatherSysinfo(ctx, next) {
+            getSysinfo(function (err, sysinfo) {
+                if (err) {
+                    next(err);
+                    return;
+                }
+                ctx.sysinfo = sysinfo;
+                next();
+            });
+        },
+
         /**
          * "irec" == import record, one for each image/layer we need to
          * download and install.
@@ -1502,7 +1629,11 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                         // Note: the image *manifest* is `imgMeta.manifest`.
                         irec.imgMeta = imgMeta;
                         log.info({irec: irec}, 'got irec.imgMeta');
-                        nextManifest();
+
+                        nextManifest(checkMinMaxPlatformSync({
+                            sysinfo: ctx.sysinfo,
+                            manifest: imgMeta.manifest
+                        }));
                     });
                 }
             });
@@ -1889,6 +2020,28 @@ IMGADM.prototype.installImage = function installImage(opts, cb) {
     var unlockInfos;
 
     vasync.pipeline({funcs: [
+        function validateManifest(_, next) {
+            var errs = imgmanifest.validateMinimalManifest(manifest);
+            if (errs) {
+                next(new errors.ManifestValidationError(errs));
+            } else {
+                next();
+            }
+        },
+
+        function checkMinMaxPlatform(_, next) {
+            getSysinfo(function (err, sysinfo) {
+                if (err) {
+                    next(err);
+                    return;
+                }
+                next(checkMinMaxPlatformSync({
+                    sysinfo: sysinfo,
+                    manifest: manifest
+                }));
+            });
+        },
+
         function acquireLock(_, next) {
             var lockOpts = {
                 uuids: [manifest.uuid],
@@ -1994,6 +2147,11 @@ IMGADM.prototype.installImage = function installImage(opts, cb) {
             err = null;
         }
 
+        if (!unlockOpts) {
+            cb(err);
+            return;
+        }
+
         var unlockOpts = {
             unlockInfos: unlockInfos,
             logCb: logCb
@@ -2029,6 +2187,14 @@ IMGADM.prototype._lockPathFromUuid = function _lockPathFromUuid(uuid) {
  * - zfs snapshot zones/$uuid@final
  *
  * Dev Note: This presumes an imgadm lock is held for this image.
+ *
+ * Testing notes:
+ * - 'imgadm import tutum/influxdb' has a cbde4a8607af layer that is an
+ *   empty gzip. That breaks `zcat FILE | gtar xz -f` that was used in earlier
+ *   imgadm versions.
+ * - 'imgadm import learn/tutorial' (layer 8dbd9e392a96) uses xz compression.
+ * - 'imgadm import busybox' has layers with no compression.
+ * - TODO: what's a docker image using bzip2 compression?
  */
 IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
     var self = this;
@@ -2113,33 +2279,52 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
          */
         function extract(_, next) {
             assert.string(ctx.filePath, 'ctx.filePath');
-            assert.optionalString(ctx.cType, 'ctx.cType');
 
-            if (ctx.cType === 'xz') {
-                common.execPlus({
-                    command: format(
-                        '/usr/bin/xz -dc %s | /usr/bin/gtar -x -C %s -f -',
-                        ctx.filePath,
-                        zoneroot),
-                    log: log,
-                    execOpts: {
-                        maxBuffer: 2 * 1024 * 1024
-                    }
-                }, next);
-            } else {
-                var tarOpt = {
-                    bzip2: 'j',
-                    gzip: 'z'
-                }[ctx.cType] || '';
-                common.execFilePlus({
-                    argv: ['/usr/bin/gtar', '-x' + tarOpt + 'f',
-                        ctx.filePath, '-C', zoneroot],
-                    log: log,
-                    execOpts: {
-                        maxBuffer: 2 * 1024 * 1024
-                    }
-                }, next);
+            var command;
+            switch (ctx.cType) {
+            case null:
+                command = format(
+                    '/usr/bin/cat %s '
+                        + '| /usr/img/sbin/chroot-gtar %s -xf - -C %s',
+                    ctx.filePath,
+                    path.dirname(zoneroot),
+                    path.basename(zoneroot));
+                break;
+            case 'gzip':
+                command = format(
+                    '/usr/bin/cat %s '
+                        + '| /usr/img/sbin/chroot-gtar %s -xzf - -C %s',
+                    ctx.filePath,
+                    path.dirname(zoneroot),
+                    path.basename(zoneroot));
+                break;
+            case 'bzip2':
+                command = format(
+                    '/usr/bin/cat %s '
+                        + '| /usr/img/sbin/chroot-gtar %s -xjf - -C %s',
+                    ctx.filePath,
+                    path.dirname(zoneroot),
+                    path.basename(zoneroot));
+                break;
+            case 'xz':
+                command = format(
+                    '/usr/bin/xzcat %s '
+                        + '| /usr/img/sbin/chroot-gtar %s -xf - -C %s',
+                    ctx.filePath,
+                    path.dirname(zoneroot),
+                    path.basename(zoneroot));
+                break;
+            default:
+                throw new Error('unexpected compression type: ' + ctx.cType);
             }
+
+            execPlus({
+                command: command,
+                log: log,
+                execOpts: {
+                    maxBuffer: 2 * 1024 * 1024
+                }
+            }, next);
         },
 
         function whiteout(_, next) {
@@ -2939,7 +3124,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 return;
             }
             // We need `sysinfo` for smartos images. See below.
-            getSysinfo(log, function (err, sysinfo_) {
+            getSysinfo(function (err, sysinfo_) {
                 sysinfo = sysinfo_;
                 next(err);
             });

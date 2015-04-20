@@ -1,0 +1,89 @@
+#!/bin/sh
+#
+# Run `gtar` in a chroot to guard against symlink/hardlink break outs.
+#
+# Warning: should also provide a '-C DIR' for tar usage, else could conflict
+# with the 'lib' and 'chroot-bin-$PID' support dirs.
+#
+# Limitation: This doesn't guard against multiple concurrent runs in the same
+# or child/parent dirs.
+#
+
+if [[ -n "$TRACE" ]]; then
+    export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -o xtrace
+fi
+set -o errexit
+set -o pipefail
+
+
+function fatal
+{
+    echo "$0: fatal error: $*" >&2
+    exit 1
+}
+
+function onexit
+{
+    [[ -n "$BINDIR" ]] && rm -rf $BINDIR
+    [[ -n "$LIBDIR" ]] && rm -rf $LIBDIR
+    exit $1
+}
+
+function usage
+{
+    echo "usage: chroot-gtar DIR GTAR-ARGS..." >&2
+    echo "" >&2
+    echo "It is suggested a '-C DIR' is always used in the GTAR-ARGS to avoid" >&2
+    echo "conflict with the '$DIR/lib' and '$DIR/chroot-tools-$PID' support" >&2
+    echo "dirs created for the chroot environment." >&2
+    echo "" >&2
+    echo "example:" >&2
+    echo "    xz -dc archive.tar.xz | ./chroot-gtar /var/tmp/foo -xf - -C subdir" >&2
+}
+
+
+
+#---- mainline
+
+ROOTDIR=$1
+if [[ -z "$ROOTDIR" ]]; then
+    usage
+    exit 1
+fi
+shift
+
+ARGS="$*"
+
+CHROOTBIN=chroot-bin-$$
+BINDIR=$ROOTDIR/$CHROOTBIN
+LIBDIR=$ROOTDIR/lib
+
+trap 'onexit $?' EXIT
+
+if [[ -e $LIBDIR ]]; then
+    fatal "conflict: $LIBDIR exists"
+fi
+mkdir -p $LIBDIR
+
+
+rm -rf $BINDIR
+mkdir $BINDIR
+
+mkdir -p $BINDIR
+CMDS="gtar gzip bzip2"
+for cmd in $CMDS; do
+    cp $(which $cmd) $BINDIR/
+done
+
+mkdir -p $LIBDIR
+libs="/lib/ld.so.1
+    $(for cmd in $CMDS; do ldd $(which $cmd); done \
+        | awk '{print $3}' | sort | uniq)
+    "
+for lib in $libs; do
+    cp $lib $LIBDIR/
+done
+
+PATH=/$CHROOTBIN:$PATH /usr/sbin/chroot $ROOTDIR \
+    /$CHROOTBIN/gtar $ARGS

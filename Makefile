@@ -74,10 +74,15 @@ BOOT_VERSION :=	boot-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
 BOOT_TARBALL :=	output/$(BOOT_VERSION).tgz
 
-world: 0-extra-stamp 0-illumos-stamp 1-extra-stamp 0-livesrc-stamp \
-	0-local-stamp 0-tools-stamp 0-man-stamp 0-devpro-stamp
+TOOLS_TARGETS = \
+	tools/mancheck/mancheck \
+	tools/cryptpass
 
-live: world manifest boot tools/cryptpass
+world: 0-extra-stamp 0-illumos-stamp 1-extra-stamp 0-livesrc-stamp \
+	0-local-stamp 0-tools-stamp 0-man-stamp 0-devpro-stamp \
+	$(TOOLS_TARGETS) sdcman
+
+live: world manifest boot sdcman $(TOOLS_TARGETS)
 	@echo $(OVERLAY_MANIFESTS)
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
@@ -232,6 +237,14 @@ update-base:
 tools/cryptpass: src/cryptpass.c
 	$(NATIVE_CC) -Wall -W -O2 -o $@ $<
 
+.PHONY: tools/mancheck/mancheck
+tools/mancheck/mancheck: 0-illumos-stamp
+	(cd tools/mancheck && gmake mancheck CC=$(NATIVE_CC) $(SUBDIR_DEFS))
+
+.PHONY: sdcman
+sdcman:
+	(cd $(ROOT)/man/sdc && gmake install DESTDIR=$(PROTO) $(SUBDIR_DEFS))
+
 jsl: $(JSLINT)
 
 $(JSLINT):
@@ -260,6 +273,8 @@ clean:
 	(cd $(ROOT) && pfexec rm -rf $(BOOT_PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO))
 	rm -f tools/cryptpass
+	(cd tools/mancheck && gmake clean)
+	(cd man/sdc && gmake clean)
 	rm -f 0-*-stamp 1-*-stamp
 
 clobber: clean

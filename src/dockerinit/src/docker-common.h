@@ -86,7 +86,9 @@ typedef enum {
     ERR_CLOSE,
     ERR_ATTACH_NOT_TIMESTAMP,
     ERR_ATTACH_GETTIME,
-    ERR_ATTACH_TIMEDOUT
+    ERR_ATTACH_TIMEDOUT,
+    ERR_MDATA_TOO_OLD,
+    ERR_UNLINK_MTAB
 } dockerinit_err_t;
 
 typedef enum {
@@ -102,7 +104,9 @@ void fatal(dockerinit_err_t code, char *fmt, ...);
 void getMdataArray(char *key, nvlist_t **nvl, uint32_t *len);
 char *getTimestamp();
 void getUserGroupData();
+void mdataDelete(const char *keyname);
 const char *mdataGet(const char *keyname);
+void mdataPut(const char *keyname, const char *value);
 void setupWorkdir();
 
 #endif

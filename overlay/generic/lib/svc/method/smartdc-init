@@ -368,6 +368,9 @@ update_local_key()
 case "$1" in
 'start')
 
+    # Always setup socket filter no matter what happens next.
+    /sbin/soconfig -F datafilt datafilt prog '2:2:0,2:2:6,26:2:0,26:2:6'
+
     USBMOUNT=
 
     # If we're not importing the pools, we shouldn't try to setup as a headnode

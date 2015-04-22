@@ -101,6 +101,7 @@ static const char *cm_wholesects[] = {
 static const char *cm_wholesect_exceptions[] = {
 	"__sparc_utrap_install.2",
 
+	"CURL*.3",
 	"curl_*.3",
 	"libcurl*.3",
 	"libusb.3lib",

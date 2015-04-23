@@ -1,4 +1,15 @@
 #
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
 # Copyright 2015 Joyent, Inc.
 #
 
@@ -298,8 +309,6 @@ ZUTIL_BINDINGS.NODE =	$(ZUTIL_SRCDIR)/../lib/zutil_bindings.node
 #
 TARGETS = \
 	bootparams \
-	dockerinit/build/dockerexec \
-	dockerinit/build/dockerinit \
 	diskinfo \
 	disklayout \
 	disklist \
@@ -333,10 +342,24 @@ SMARTDC_LIB_TARGETS = \
 	ntp_config \
 	sdc-on-tty
 
-all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm $(SMARTDC_TARGETS) \
-	$(SMARTDC_LIB_TARGETS)
+#
+# Subdirectory management
+#
+SUBDIRS = dockerinit
 
-install: all
+all : TARGET = all
+clean : TARGET = clean
+install : TARGET = install
+check : TARGET = lint
+
+$(SUBDIRS): FRC
+	@cd $@; pwd; $(MAKE) CTFCONVERT=$(CTFCONVERT) CTFMERGE=$(CTFMERGE) $(TARGET)
+
+
+all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm $(SMARTDC_TARGETS) \
+	$(SMARTDC_LIB_TARGETS) $(SUBDIRS)
+
+install: all $(SUBDIRS)
 	mkdir -p $(DESTDIR)/usr/bin
 	cp -p $(TARGETS) sysinfo nictagadm $(DESTDIR)/usr/bin
 	cp -p $(USR_LIB_TARGETS) $(DESTDIR)/usr/lib
@@ -439,7 +462,7 @@ install: all
 	mkdir -m 0755 -p $(DESTDIR)/usr/lib/sdc
 	cp -p net-boot-config $(DESTDIR)/usr/lib/sdc
 
-check: $(JSLINT)
+check: $(JSLINT) $(SUBDIRS)
 	@echo "==> Running cstyle..."
 	@# cstyle doesn't echo as it goes so we add an echo to each line below
 	@(for file in $(C_CHECK_TARGETS); do \
@@ -492,7 +515,7 @@ mancheck_conf:
 $(JSLINT):
 	(cd $(ROOT); $(MAKE) jsl)
 
-clean:
+clean: $(SUBDIRS)
 	-rm -f $(TARGETS) $(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) *.o \
 	    $(CLEANFILES)
 	-rm -rf node-sqlite3/build
@@ -512,14 +535,6 @@ disklayout: disklayout.js
 disklist: disklist.sh
 	cp disklist.sh disklist
 	chmod 0755 disklist
-
-dockerinit/build/dockerexec: dockerinit/src/dockerexec.c \
-	    dockerinit/src/docker-common.c
-	@(cd dockerinit && $(MAKE) build/dockerexec)
-
-dockerinit/build/dockerinit: dockerinit/src/dockerinit.c \
-	    dockerinit/src/docker-common.c
-	@(cd dockerinit && $(MAKE) build/dockerinit)
 
 mkzpool: mkzpool.js
 	cp mkzpool.js mkzpool
@@ -630,5 +645,6 @@ $(ZUTIL_BINDINGS.NODE): FRC
 		V8PLUS=$(PWD)/$(ZUTIL_V8PLUS_DIR) \
 		CTFCONVERT=$(CTFCONVERT) \
 		CTFMERGE=$(CTFMERGE)
+
 
 FRC:

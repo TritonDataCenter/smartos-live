@@ -265,7 +265,7 @@ function getZfsDataset(name, properties, callback) {
     function getDataset(next) {
         var cmd = format('/usr/sbin/zfs list -H -p -o %s %s',
             properties.join(','), name);
-        exec(cmd, function (err, stdout, stderr) {
+        exec(cmd, {maxBuffer: 10485760}, function (err, stdout, stderr) {
             if (err) {
                 // `zfs list` *seems* to exit 2 for bogus properties and 1 for
                 // non-existant dataset.
@@ -298,7 +298,7 @@ function getZfsDataset(name, properties, callback) {
         }
         dataset.children = {};
         var cmd = format('/usr/sbin/zfs list -t all -pHr -o name %s', name);
-        exec(cmd, function (err, stdout, stderr) {
+        exec(cmd, {maxBuffer: 10485760}, function (err, stdout, stderr) {
             if (err) {
                 next(new errors.InternalError({
                     cause: err,
@@ -329,7 +329,7 @@ function getZfsDataset(name, properties, callback) {
             return;
         }
         var cmd = '/usr/sbin/zfs list -t filesystem,volume -o origin,name -pH';
-        exec(cmd, function (err, stdout, stderr) {
+        exec(cmd, {maxBuffer: 10485760}, function (err, stdout, stderr) {
             if (err) {
                 next(new errors.InternalError({
                     cause: err,

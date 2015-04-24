@@ -260,10 +260,15 @@ void
 buildCmdEnv()
 {
     int idx;
-    nvlist_t *nvl;
+    nvlist_t *nvl_cont;
+    nvlist_t *nvl_link;
+    uint32_t contenv_len;
+    uint32_t linkenv_len;
     uint32_t env_len;
 
-    getMdataArray("docker:env", &nvl, &env_len);
+    getMdataArray("docker:env", &nvl_cont, &contenv_len);
+    getMdataArray("docker:linkEnv", &nvl_link, &linkenv_len);
+    env_len = contenv_len + linkenv_len;
 
     /*
      * NOTE: We allocate two extra char * in case we're going to add 'HOME'
@@ -275,12 +280,17 @@ buildCmdEnv()
             strerror(errno));
     }
 
+    /*
+     * NOTE: nvl_link is added before nvl_cont, so that container env will
+     * win (in execve) if the same variable appears in both environments.
+     */
     idx = 0;
-    addValues(env, &idx, ARRAY_ENV, nvl);
+    addValues(env, &idx, ARRAY_ENV, nvl_link);
+    addValues(env, &idx, ARRAY_ENV, nvl_cont);
     env[idx] = NULL;
 
     /*
-     * NOTE: we don't nvlist_free(nvl); here because we need this memory
+     * NOTE: we don't nvlist_free(nvl_*); here because we need this memory
      * for execve() and when we execve() things get cleaned up anyway.
      */
 }

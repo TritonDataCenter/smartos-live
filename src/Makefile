@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2012, Joyent, Inc.  All rights reserved.
+# Copyright 2015 Joyent, Inc.
 #
 
 include Makefile.defs
@@ -484,6 +484,10 @@ manifest:
 	    find examples/ -type f -exec echo "{}" "0444 root bin" \;) \
 	    | sed -e "s|^examples/|f usr/fw/etc/examples/|" \
 	    >> $(DESTDIR)/$(DESTNAME)
+
+.PHONY: mancheck_conf
+mancheck_conf:
+	cp mancheck.conf $(DESTDIR)/$(DESTNAME)
 
 $(JSLINT):
 	(cd $(ROOT); $(MAKE) jsl)

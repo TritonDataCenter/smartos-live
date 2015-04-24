@@ -21,8 +21,9 @@
 #
 
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Copyright (c) 2013 Joyent, Inc.  All rights reserved.
 # Use is subject to license terms.
+#
+# Copyright 2015 Joyent, Inc.
 
 ROOT=`pwd`
 CUSTOMIZE_SCRIPT=${ROOT}/tools/customize
@@ -33,6 +34,7 @@ SCANNER=${ROOT}/tools/scanner
 PWGEN=${ROOT}/tools/pwgen
 GET_STATUS=${ROOT}/tools/build_etcrelease
 MANCHECK="${ROOT}/tools/mancheck/mancheck"
+MANCHECK_CONF_D="${ROOT}/mancheck.conf.d"
 
 BUILDSTAMP=$(cat ${ROOT}/proto/buildstamp)
 if [[ -z ${BUILDSTAMP} ]]; then
@@ -296,8 +298,17 @@ function fatal_error
 
 function run_checks
 {
-    ${MANCHECK} -f ${MANIFEST} -s
-    [[ $? -eq 0 ]] || fatal_error "you are not mancheck -s clean"
+    mancheck_args=""
+
+    for f in "${MANCHECK_CONF_D}"/*.mancheck.conf; do
+        if [[ -f "${f}" ]]; then
+            mancheck_args="${mancheck_args} -c ${f}"
+        fi
+    done
+
+    if ! ${MANCHECK} -f ${MANIFEST} -s ${mancheck_args}; then
+        fatal_error "you are not mancheck -s clean"
+    fi
 }
 
 # Create tmp dir to do the work in

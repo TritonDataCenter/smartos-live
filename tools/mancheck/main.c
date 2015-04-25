@@ -34,6 +34,7 @@
 #include <errno.h>
 #include <dirent.h>
 #include <fnmatch.h>
+#include <ctype.h>
 
 #include "common.h"
 #include "strset.h"
@@ -74,72 +75,6 @@ static const char *cm_mansects[] = {
 };
 
 /*
- * List of manual sections where we wish to ship every extant page, e.g. "3c".
- */
-static const char *cm_wholesects[] = {
-	"2*",
-	"!3iscsit",
-	"!3papi",
-	"!3tsol",
-	"!3tnf",
-	"!3perl",
-	"!3rsm",
-	"3*",
-	"4*",
-	"5*",
-	"!7",
-	"!7d",
-	"7*",
-	"9*",
-	NULL
-};
-
-/*
- * These manual pages are built, but should not be shipped even if they
- * appear in a section we intend to (essentially) completely ship:
- */
-static const char *cm_wholesect_exceptions[] = {
-	"__sparc_utrap_install.2",
-
-	"CURL*.3",
-	"curl_*.3",
-	"libcurl*.3",
-	"libusb.3lib",
-	"libtsol.3lib",
-	"libtsnet.3lib",
-	"librsm.3lib",
-	"libpapi.3lib",
-
-	"volume-defaults.4",
-	"md.cf.4",
-	"wanboot.conf.4",
-
-	"pkcs11_tpm.5",
-	"hal.5",
-	"pam_tsol_account.5",
-	"trusted_extensions.5",
-	"rsyncd.conf.5",
-
-	/*
-	 * Unfortunately these pages are pretty broken, mostly because
-	 * of the way NTP tries to provide manual pages via AutoGen.
-	 */
-	"ntp.conf.5",
-	"ntp.keys.5",
-
-	/*
-	 * These pages are for interfaces we do not really ship or
-	 * support:
-	 */
-	"dsp.7i",
-	"mixer.7i",
-	"audio.7i",
-	"agpgart_io.7i",
-
-	NULL
-};
-
-/*
  * The directory in the proto area where manual pages are shipped.
  */
 static const char *cm_pdir = "usr/share/man";
@@ -151,23 +86,37 @@ static const char *cm_pdir = "usr/share/man";
 typedef enum mancheck_flags {
 	MCF_DONT_EXIST = 0x1,
 	MCF_NOT_SHIPPED = 0x2,
-	MCF_WHOLE_SECTS = 0x4
+	MCF_WHOLE_SECTS = 0x4,
+	MCF_DUMP_CONFIG = 0x8
 } mancheck_flags_t;
 
 typedef struct mancheck {
 	mancheck_flags_t mc_flags;
 	char *mc_manifest_path;
+	strset_t *mc_config_paths;
+
 	unsigned long mc_cnt_dont_exist;
 	unsigned long mc_cnt_not_shipped;
 	unsigned long mc_cnt_whole_sects;
+
 	strset_t *mc_shiplist;
+
+	strset_t *mc_section_includes;
+	strset_t *mc_section_excludes;
+	strset_t *mc_page_excludes;
 } mancheck_t;
 
 static void
 mancheck_reset(mancheck_t *mc)
 {
 	free(mc->mc_manifest_path);
+
 	strset_free(mc->mc_shiplist);
+	strset_free(mc->mc_config_paths);
+
+	strset_free(mc->mc_section_includes);
+	strset_free(mc->mc_section_excludes);
+	strset_free(mc->mc_page_excludes);
 
 	bzero(mc, sizeof (*mc));
 }
@@ -176,16 +125,20 @@ static void
 usage(int rc, const char *progname)
 {
 	const char *msg =
-	    "Usage: %s -f manifest [ -m | -s ]\n"
+	    "Usage: %s -f manifest [ -c mancheck.conf [ -c ... ]]\n"
+	    "\t\t\t\t[ -m | -s ] [ -D ]\n"
 	    "\n"
 	    "Validate that all binaries mentioned in 'manifest' have man "
 	    "pages and that they\n"
 	    "are present in 'manifest'.\n"
 	    "\n"
-	    "\t-f manifest\tManifest file to search\n"
-	    "\t-h\t\tShow this message\n"
-	    "\t-m\t\tOnly warn for man pages which don't exist\n"
-	    "\t-s\t\tOnly warn for man pages which aren't shipped\n"
+	    "\t-h\t\t\tShow this message\n"
+	    "\n"
+	    "\t-f manifest\t\tManifest file to search\n"
+	    "\t-c mancheck.conf\tMancheck configuration file(s) to read\n"
+	    "\t-m\t\t\tOnly warn for man pages which don't exist\n"
+	    "\t-s\t\t\tOnly warn for man pages which aren't shipped\n"
+	    "\t-D\t\t\tDump configuration file directives\n"
 	    "\n";
 
 	(void) fprintf(rc == 0 ? stdout : stderr, msg, progname);
@@ -196,10 +149,18 @@ static void
 parse_opts(mancheck_t *mc, int argc, char **argv)
 {
 	int c;
-	int mflag = 0, sflag = 0;
+	int mflag = 0, sflag = 0, Dflag = 0;
 
-	while ((c = getopt(argc, argv, ":f:hms")) != -1) {
+	while ((c = getopt(argc, argv, ":c:Df:hms")) != -1) {
 		switch (c) {
+		case 'c':
+			if (strset_add(mc->mc_config_paths, optarg) != 0) {
+				err(1, "strset_add failure");
+			}
+			break;
+		case 'D':
+			Dflag++;
+			break;
 		case 'f':
 			mc->mc_manifest_path = strdup(optarg);
 			break;
@@ -233,7 +194,7 @@ parse_opts(mancheck_t *mc, int argc, char **argv)
 	/*
 	 * If no flags are specified, we do both checks by default:
 	 */
-	mc->mc_flags |= (MCF_DONT_EXIST | MCF_NOT_SHIPPED | MCF_WHOLE_SECTS);
+	mc->mc_flags |= (MCF_DONT_EXIST | MCF_NOT_SHIPPED);
 
 	if (mflag > 0 && sflag > 0) {
 		(void) fprintf(stderr, "-m and -s are mutually exclusive\n");
@@ -242,6 +203,22 @@ parse_opts(mancheck_t *mc, int argc, char **argv)
 		mc->mc_flags &= ~MCF_NOT_SHIPPED;
 	} else if (sflag > 0) {
 		mc->mc_flags &= ~MCF_DONT_EXIST;
+	}
+
+	/*
+	 * If configuration files were passed in, we attempt to use them to
+	 * do the whole-section checks that can be specified through these
+	 * files.
+	 */
+	if (strset_count(mc->mc_config_paths) > 0) {
+		mc->mc_flags |= MCF_WHOLE_SECTS;
+	}
+
+	if (Dflag) {
+		/*
+		 * The -D flag disables all other behaviours.
+		 */
+		mc->mc_flags = MCF_DUMP_CONFIG;
 	}
 }
 
@@ -296,7 +273,8 @@ check_man(const char *filen, strset_t *pages)
 				    cm_mansects[j]);
 
 				if (strset_add(pages, fullp) != 0) {
-					err(1, "strset_add failure (%s)", fullp);
+					err(1, "strset_add failure (%s)",
+					    fullp);
 				}
 			}
 		}
@@ -444,6 +422,39 @@ check_manifest_ent(manifest_ent_t *me, void *arg)
 	return (MECB_NEXT);
 }
 
+static strset_walk_t
+strset_fnmatch_walker(strset_t *ss _UNUSED, const char *pattern, void *arg0,
+    void *arg1)
+{
+	const char *input = arg0;
+	int *count = arg1;
+
+	switch (fnmatch(pattern, input, FNM_PATHNAME)) {
+	case 0:
+		(*count)++;
+		return (STRSET_WALK_NEXT);
+
+	case FNM_NOMATCH:
+		return (STRSET_WALK_NEXT);
+
+	default:
+		err(1, "fnmatch failure");
+	}
+}
+
+static int
+strset_fnmatch(strset_t *set, const char *input)
+{
+	int count = 0;
+
+	if (strset_walk(set, strset_fnmatch_walker, (void *)input,
+	    &count) != 0) {
+		err(1, "strset_walk failure");
+	}
+
+	return (count);
+}
+
 static int
 check_whole_sect_dir(const char *sect, const char *sectpath, mancheck_t *mc)
 {
@@ -510,20 +521,11 @@ top:
 			continue;
 		}
 
-		for (int i = 0; cm_wholesect_exceptions[i] != NULL; i++) {
-			int r;
-
-			if ((r = fnmatch(cm_wholesect_exceptions[i],
-			    de->d_name, 0)) == 0) {
-				/*
-				 * Do not ship this page.
-				 */
-				goto top;
-			}
-
-			if (r != FNM_NOMATCH) {
-				err(1, "fnmatch failure");
-			}
+		if (strset_fnmatch(mc->mc_page_excludes, de->d_name) > 0) {
+			/*
+			 * Do not ship this page.
+			 */
+			goto top;
 		}
 
 		/*
@@ -625,55 +627,35 @@ check_whole_sects(mancheck_t *mc)
 				continue;
 			}
 
-			/*
-			 * For each manual page section pattern:
-			 */
-			for (int j = 0; cm_wholesects[j] != NULL; j++) {
-				boolean_t negate = B_FALSE;
-				const char *x = cm_wholesects[j];
-				int res;
-
+			if (strncmp(de->d_name, "man", 3) != 0) {
 				/*
-				 * Entries that begin with bang (!) are
-				 * negated entries.  If we match one
-				 * of these patterns, the section is
-				 * excluded.
+				 * Ignore directories that do not begin with the
+				 * "man" prefix.
 				 */
-				if (*x == '!') {
-					negate = B_TRUE;
-					x++;
-				}
+				continue;
+			}
 
-				custr_reset(sectpath);
-				if (custr_append_printf(sectpath, "man%s",
-				    x) != 0) {
-					e = errno;
-					goto out;
-				}
+			/*
+			 * Check to see if this section name is excluded by a
+			 * section exclusion directive:
+			 */
+			if (strset_fnmatch(mc->mc_section_excludes,
+			    de->d_name + 3) > 0) {
+				continue;
+			}
 
-				if ((res = fnmatch(custr_cstr(sectpath),
-				    de->d_name, 0)) != 0) {
-					if (res == FNM_NOMATCH) {
-						continue;
-					}
+			/*
+			 * Check to see if this section name is included by
+			 * any section inclusion directives:
+			 */
+			if (strset_fnmatch(mc->mc_section_includes,
+			    de->d_name + 3) < 1) {
+				continue;
+			}
 
-					e = errno;
-					goto out;
-				}
-
-				if (negate) {
-					/*
-					 * This entry matches a negated
-					 * pattern, so stop processing.
-					 */
-					break;
-				}
-
-				if (strset_add(wholesects,
-				    de->d_name + 3) != 0) {
-					e = errno;
-					goto out;
-				}
+			if (strset_add(wholesects, de->d_name + 3) != 0) {
+				e = errno;
+				goto out;
 			}
 		}
 
@@ -693,6 +675,238 @@ out:
 	return (e == 0 ? 0 : -1);
 }
 
+static strset_walk_t
+read_config_file(strset_t *ss _UNUSED, const char *config_path, void *arg0,
+    void *arg1 _UNUSED)
+{
+	int c = EOF;
+	FILE *f;
+	mancheck_t *mc _UNUSED = arg0;
+	enum state {
+		ST_REST = 1,
+		ST_COMMENT_0,
+		ST_COMMENT_1,
+		ST_COMMENT_2,
+		ST_PRE_STRING,
+		ST_STRING,
+		ST_PRE_SEMICOLON,
+		ST_KEYWORD
+	} state = ST_REST, comment_state = ST_REST;
+	char type = '?';
+	custr_t *keyword = NULL;
+	custr_t *value = NULL;
+
+	if (custr_alloc(&keyword) != 0 || custr_alloc(&value) != 0) {
+		err(1, "custr_alloc failure");
+	}
+
+	if ((f = fopen(config_path, "r")) == NULL) {
+		err(1, "could not open config file \"%s\"", config_path);
+	}
+
+	if (!is_regular_file(f)) {
+		errx(1, "\"%s\" is not a regular file", config_path);
+	}
+
+	for (;;) {
+		/*
+		 * Attempt to read a character from the input file:
+		 */
+		errno = 0;
+		if ((c = fgetc(f)) == EOF) {
+			if (errno != 0) {
+				err(1, "error reading file");
+			}
+			if (state != ST_REST) {
+				errx(1, "unexpected end of file \"%s\"",
+				    config_path);
+			}
+			goto out;
+		}
+
+top:
+		switch (state) {
+		case ST_REST:
+		case ST_PRE_STRING:
+		case ST_PRE_SEMICOLON:
+			if (c == '/') {
+				/*
+				 * Begin comment.
+				 */
+				comment_state = state;
+				state = ST_COMMENT_0;
+				continue;
+			}
+			break;
+		default:
+			break;
+		}
+
+		switch (state) {
+		case ST_REST:
+			if (isspace(c)) {
+				/*
+				 * Eat whitespace.
+				 */
+				continue;
+			} else if (c == '+' || c == '-') {
+				/*
+				 * Begin +page, -section or +section:
+				 */
+				type = c;
+				custr_reset(keyword);
+				custr_reset(value);
+				state = ST_KEYWORD;
+				continue;
+			}
+			goto parse_error;
+
+		case ST_KEYWORD:
+			if (isalnum(c)) {
+				if (custr_appendc(keyword, c) != 0) {
+					err(1, "custr_appendc failure");
+				}
+				continue;
+			} else if (isspace(c)) {
+				const char *x = custr_cstr(keyword);
+
+				if (x == NULL) {
+					goto parse_error;
+				}
+
+				state = ST_PRE_STRING;
+				goto top;
+			}
+			goto parse_error;
+
+		case ST_PRE_STRING:
+			if (isspace(c)) {
+				/*
+				 * Eat whitespace.
+				 */
+				continue;
+			} else if (c == '"') {
+				state = ST_STRING;
+				custr_reset(value);
+				break;
+			}
+			goto parse_error;
+
+		case ST_STRING:
+			if (c == '\n' || c == '\r') {
+				errx(1, "line break in string");
+			}
+			if (c == '"') {
+				state = ST_PRE_SEMICOLON;
+				continue;
+			}
+			if (custr_appendc(value, c) != 0) {
+				err(1, "custr_appendc failure");
+			}
+			continue;
+
+		case ST_PRE_SEMICOLON:
+			if (isspace(c)) {
+				/*
+				 * Eat whitespace.
+				 */
+				continue;
+			} else if (c != ';') {
+				goto parse_error;
+			}
+
+			if (strcmp(custr_cstr(keyword), "section") == 0) {
+				strset_t *a;
+
+				if (type == '+') {
+					a = mc->mc_section_includes;
+				} else {
+					a = mc->mc_section_excludes;
+				}
+
+				if (strset_add(a, custr_cstr(value)) != 0) {
+					err(1, "strset_add failure");
+				}
+			} else if (strcmp(custr_cstr(keyword), "page") == 0) {
+				strset_t *a;
+
+				if (type == '+') {
+					errx(1, "pages may only be excluded");
+				} else {
+					a = mc->mc_page_excludes;
+				}
+
+				if (strset_add(a, custr_cstr(value)) != 0) {
+					err(1, "strset_add failure");
+				}
+			} else {
+				errx(1, "invalid keyword \"%s\"",
+				    custr_cstr(keyword));
+			}
+			state = ST_REST;
+			continue;
+
+		case ST_COMMENT_0:
+			if (c == '*') {
+				state = ST_COMMENT_1;
+				continue;
+			}
+			goto parse_error;
+
+		case ST_COMMENT_1:
+			if (c == '*') {
+				state = ST_COMMENT_2;
+				continue;
+			}
+			break;
+
+		case ST_COMMENT_2:
+			if (c == '/') {
+				state = comment_state;
+				continue;
+			}
+			state = ST_COMMENT_1;
+			goto top;
+
+		}
+	}
+
+parse_error:
+	errx(1, "invalid config file \"%s\", character '%c'", config_path, c);
+
+out:
+	custr_free(keyword);
+	custr_free(value);
+	(void) fclose(f);
+	return (STRSET_WALK_NEXT);
+}
+
+static strset_walk_t
+dump_record(strset_t *ss _UNUSED, const char *pattern, void *arg0 _UNUSED,
+    void *arg1 _UNUSED)
+{
+	(void) fprintf(stdout, "\t%s\n", pattern);
+	return (STRSET_WALK_NEXT);
+}
+
+void
+mancheck_init(mancheck_t *mc)
+{
+	int e = 0;
+
+	bzero(mc, sizeof (*mc));
+
+	e |= strset_alloc(&mc->mc_config_paths, STRSET_IGNORE_DUPLICATES);
+	e |= strset_alloc(&mc->mc_shiplist, 0);
+	e |= strset_alloc(&mc->mc_section_includes, STRSET_IGNORE_DUPLICATES);
+	e |= strset_alloc(&mc->mc_section_excludes, STRSET_IGNORE_DUPLICATES);
+	e |= strset_alloc(&mc->mc_page_excludes, STRSET_IGNORE_DUPLICATES);
+
+	if (e != 0) {
+		err(1, "alloc failure");
+	}
+}
+
 int
 main(int argc _UNUSED, char **argv _UNUSED)
 {
@@ -700,11 +914,34 @@ main(int argc _UNUSED, char **argv _UNUSED)
 	mancheck_t mc;
 	boolean_t endl = B_FALSE;
 
-	bzero(&mc, sizeof (mc));
-	parse_opts(&mc, argc, argv);
+	mancheck_init(&mc);
 
-	if (strset_alloc(&mc.mc_shiplist, 0) != 0) {
-		err(1, "strset_alloc failure");
+	parse_opts(&mc, argc, argv);
+	(void) strset_walk(mc.mc_config_paths, read_config_file, &mc, NULL);
+
+	if (mc.mc_flags & MCF_DUMP_CONFIG) {
+		fprintf(stdout, "dumping config in processing order:\n");
+		fprintf(stdout, "\n");
+
+		fprintf(stdout, "   1. section excludes:\n");
+		(void)strset_walk(mc.mc_section_excludes, dump_record,
+		    NULL, NULL);
+		fprintf(stdout, "\n");
+
+		fprintf(stdout, "   2. section includes:\n");
+		(void)strset_walk(mc.mc_section_includes, dump_record,
+		    NULL, NULL);
+		fprintf(stdout, "\n");
+
+		fprintf(stdout, "   3. page excludes:\n");
+		(void)strset_walk(mc.mc_page_excludes, dump_record,
+		    NULL, NULL);
+		fprintf(stdout, "\n");
+
+		if (mc.mc_flags == MCF_DUMP_CONFIG) {
+			fprintf(stdout, "dumping only\n");
+			return (0);
+		}
 	}
 
 	/*

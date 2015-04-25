@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2014, Joyent, Inc.  All rights reserved.
+# Copyright 2015 Joyent, Inc.
 #
 
 ROOT =		$(PWD)
@@ -8,6 +8,7 @@ STRAP_PROTO =	$(ROOT)/proto.strap
 MPROTO =	$(ROOT)/manifest.d
 BOOT_MPROTO =	$(ROOT)/boot.manifest.d
 BOOT_PROTO =	$(ROOT)/proto.boot
+MCPROTO =	$(ROOT)/mancheck.conf.d
 
 # On Darwin/OS X we support running 'make check'
 ifeq ($(shell uname -s),Darwin)
@@ -41,6 +42,7 @@ BOOT_MANIFEST =	boot.manifest.gen
 JSSTYLE =	$(ROOT)/tools/jsstyle/jsstyle
 JSLINT =	$(ROOT)/tools/javascriptlint/build/install/jsl
 CSTYLE =	$(ROOT)/tools/cstyle
+MANCHECK =	$(ROOT)/tools/mancheck/mancheck
 
 CTFBINDIR = \
 	$(ROOT)/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386
@@ -64,25 +66,35 @@ WORLD_MANIFESTS := \
 	$(MPROTO)/live.manifest \
 	$(MPROTO)/illumos-extra.manifest
 
+WORLD_MANCHECK_CONFS := \
+	$(MCPROTO)/illumos.mancheck.conf \
+	$(MCPROTO)/live.mancheck.conf \
+	$(MCPROTO)/illumos-extra.mancheck.conf
+
 BOOT_MANIFESTS := \
 	$(BOOT_MPROTO)/illumos.manifest
 
 SUBDIR_MANIFESTS :=	$(LOCAL_SUBDIRS:%=$(MPROTO)/%.sd.manifest)
 OVERLAY_MANIFESTS :=	$(OVERLAYS:$(ROOT)/overlay/%=$(MPROTO)/%.ov.manifest)
 
+SUBDIR_MANCHECK_CONFS := \
+	$(LOCAL_SUBDIRS:%=$(MCPROTO)/%.sd.mancheck.conf)
+OVERLAY_MANCHECK_CONFS := \
+	$(OVERLAYS:$(ROOT)/overlay/%=$(MCPROTO)/%.ov.mancheck.conf)
+
 BOOT_VERSION :=	boot-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
 BOOT_TARBALL :=	output/$(BOOT_VERSION).tgz
 
 TOOLS_TARGETS = \
-	tools/mancheck/mancheck \
+	$(MANCHECK) \
 	tools/cryptpass
 
 world: 0-extra-stamp 0-illumos-stamp 1-extra-stamp 0-livesrc-stamp \
 	0-local-stamp 0-tools-stamp 0-man-stamp 0-devpro-stamp \
 	$(TOOLS_TARGETS) sdcman
 
-live: world manifest boot sdcman $(TOOLS_TARGETS)
+live: world manifest mancheck_conf boot sdcman $(TOOLS_TARGETS)
 	@echo $(OVERLAY_MANIFESTS)
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
@@ -120,15 +132,30 @@ $(BOOT_TARBALL): world manifest
 #
 manifest: $(MANIFEST) $(BOOT_MANIFEST)
 
-$(MPROTO) $(BOOT_MPROTO):
+mancheck_conf: $(WORLD_MANCHECK_CONFS) $(SUBDIR_MANCHECK_CONFS) \
+    $(OVERLAY_MANCHECK_CONFS)
+
+dump_mancheck_conf: manifest mancheck_conf $(MANCHECK)
+	args=; for x in $(MCPROTO)/*.mancheck.conf; do \
+	    args="$$args -c $$x"; done; \
+	    $(MANCHECK) -f manifest.gen -s -D $$args
+
+$(MPROTO) $(BOOT_MPROTO) $(MCPROTO):
 	mkdir -p $@
 
 $(MPROTO)/live.manifest: src/manifest | $(MPROTO)
 	gmake DESTDIR=$(MPROTO) DESTNAME=live.manifest \
 	    -C src manifest
 
+$(MCPROTO)/live.mancheck.conf: src/mancheck.conf | $(MCPROTO)
+	gmake DESTDIR=$(MCPROTO) DESTNAME=live.mancheck.conf \
+	    -C src mancheck_conf
+
 $(MPROTO)/illumos.manifest: projects/illumos/manifest | $(MPROTO)
 	cp projects/illumos/manifest $(MPROTO)/illumos.manifest
+
+$(MCPROTO)/illumos.mancheck.conf: projects/illumos/mancheck.conf | $(MCPROTO)
+	cp projects/illumos/mancheck.conf $(MCPROTO)/illumos.mancheck.conf
 
 $(BOOT_MPROTO)/illumos.manifest: projects/illumos/manifest | $(BOOT_MPROTO)
 	cp projects/illumos/boot.manifest $(BOOT_MPROTO)/illumos.manifest
@@ -136,6 +163,10 @@ $(BOOT_MPROTO)/illumos.manifest: projects/illumos/manifest | $(BOOT_MPROTO)
 $(MPROTO)/illumos-extra.manifest: 1-extra-stamp | $(MPROTO)
 	gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest \
 	    -C projects/illumos-extra manifest; \
+
+$(MCPROTO)/illumos-extra.mancheck.conf: FRC | 1-extra-stamp $(MCPROTO)
+	gmake DESTDIR=$(MCPROTO) DESTNAME=illumos-extra.mancheck.conf \
+	    -C projects/illumos-extra mancheck_conf; \
 
 $(MPROTO)/%.sd.manifest: projects/local/%/Makefile projects/local/%/manifest
 	cd $(ROOT)/projects/local/$* && \
@@ -147,8 +178,21 @@ $(MPROTO)/%.sd.manifest: projects/local/%/Makefile projects/local/%/manifest
 		    manifest; \
 	    fi
 
+$(MCPROTO)/%.sd.mancheck.conf: FRC | $(MCPROTO)
+	cd $(ROOT)/projects/local/$* && \
+	    if [[ -f Makefile.joyent ]]; then \
+		gmake DESTDIR=$(MCPROTO) DESTNAME=$*.sd.mancheck.conf \
+		    -f Makefile.joyent mancheck_conf; \
+	    else \
+		gmake DESTDIR=$(MCPROTO) DESTNAME=$*.sd.mancheck.conf \
+		    mancheck_conf; \
+	    fi
+
 $(MPROTO)/%.ov.manifest: $(MPROTO) $(ROOT)/overlay/%/manifest
 	cp $(ROOT)/overlay/$*/manifest $@
+
+$(MCPROTO)/%.ov.mancheck.conf: $(ROOT)/overlay/%/mancheck.conf | $(MCPROTO)
+	cp $(ROOT)/overlay/$*/mancheck.conf $@
 
 $(MANIFEST): $(WORLD_MANIFESTS) $(SUBDIR_MANIFESTS) $(OVERLAY_MANIFESTS)
 	-rm -f $@
@@ -237,8 +281,8 @@ update-base:
 tools/cryptpass: src/cryptpass.c
 	$(NATIVE_CC) -Wall -W -O2 -o $@ $<
 
-.PHONY: tools/mancheck/mancheck
-tools/mancheck/mancheck: 0-illumos-stamp
+.PHONY: $(MANCHECK)
+$(MANCHECK): 0-illumos-stamp
 	(cd tools/mancheck && gmake mancheck CC=$(NATIVE_CC) $(SUBDIR_DEFS))
 
 .PHONY: sdcman
@@ -255,7 +299,7 @@ check: $(JSLINT)
 
 clean:
 	rm -f $(MANIFEST) $(BOOT_MANIFEST)
-	rm -rf $(MPROTO)/* $(BOOT_MPROTO)/*
+	rm -rf $(MPROTO)/* $(BOOT_MPROTO)/* $(MCPROTO)/*
 	(cd $(ROOT)/src && gmake clean)
 	[ ! -d $(ROOT)/projects/illumos-extra ] || \
 	    (cd $(ROOT)/projects/illumos-extra && gmake clean)
@@ -286,4 +330,6 @@ iso: live
 usb: live
 	./tools/build_usb
 
-.PHONY: manifest check jsl
+FRC:
+
+.PHONY: manifest mancheck_conf check jsl FRC

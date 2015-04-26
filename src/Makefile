@@ -469,7 +469,6 @@ check: $(JSLINT) $(SUBDIRS)
 		echo $(PWD)/$$file; \
 		$(CSTYLE) $$file; \
 	done)
-	@(cd $(PWD)/dockerinit && $(MAKE) check)
 	@printf "\nC files ok!\n"
 	@printf "\n==> Running JavaScriptLint...\n"
 	@$(JSLINT) --nologo --conf=$(ROOT)/tools/jsl.node.conf \
@@ -519,7 +518,6 @@ clean: $(SUBDIRS)
 	-rm -f $(TARGETS) $(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) *.o \
 	    $(CLEANFILES)
 	-rm -rf node-sqlite3/build
-	@(cd dockerinit && $(MAKE) clean)
 	cd $(LOCKFD_SRC_DIR) && $(MAKE) clean
 
 include Makefile.targ

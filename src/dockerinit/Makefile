@@ -68,6 +68,9 @@ check: src/*.c
 	@echo $(PWD)/$^
 	@$(CSTYLE) $^
 
+lint:
+	/bin/true
+
 clean:
 	rm -f $(OBJS) build/*
 

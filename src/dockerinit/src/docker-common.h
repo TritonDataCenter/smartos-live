@@ -37,7 +37,8 @@
 typedef enum {
     ARRAY_CMD,
     ARRAY_ENTRYPOINT,
-    ARRAY_ENV
+    ARRAY_ENV,
+    ARRAY_LINK_ENV
 } array_type_t;
 
 typedef enum {

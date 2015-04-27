@@ -272,9 +272,9 @@ buildCmdEnv()
 
     /*
      * NOTE: We allocate two extra char * in case we're going to add 'HOME'
-     * and/or 'TERM'
+     * and 'HOSTNAME' and 'PATH' and 'TERM' and a slot for NULL.
      */
-    env = malloc((sizeof (char *)) * (env_len + 3));
+    env = malloc((sizeof (char *)) * (env_len + 5));
     if (env == NULL) {
         fatal(ERR_UNEXPECTED, "malloc() for env[%d] failed: %s\n", env_len + 3,
             strerror(errno));
@@ -285,7 +285,7 @@ buildCmdEnv()
      * win (in execve) if the same variable appears in both environments.
      */
     idx = 0;
-    addValues(env, &idx, ARRAY_ENV, nvl_link);
+    addValues(env, &idx, ARRAY_LINK_ENV, nvl_link);
     addValues(env, &idx, ARRAY_ENV, nvl_cont);
     env[idx] = NULL;
 
@@ -322,6 +322,7 @@ addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl)
             field = "docker:entrypoint";
             printf_fmt = "ARGV[%d]:ENTRYPOINT %s\n";
             break;
+        case ARRAY_LINK_ENV:
         case ARRAY_ENV:
             field = "docker:env";
             printf_fmt = "ENV[%d] %s\n";

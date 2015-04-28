@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that tmpfs works as expected when setting/unsetting
 //
@@ -76,7 +76,7 @@ function waitForSvc(t, zonename, svc, state, callback) {
 
 test('test with default tmpfs', function (t) {
     var payload = {
-        alias: 'test-tmpfs',
+        alias: 'test-tmpfs-' + process.pid,
         autoboot: true,
         brand: 'joyent',
         do_not_inventory: true,
@@ -153,7 +153,7 @@ test('test with default tmpfs', function (t) {
 
 test('test with tmpfs=0', function (t) {
     var payload = {
-        alias: 'test-tmpfs',
+        alias: 'test-tmpfs-' + process.pid,
         autoboot: true,
         brand: 'joyent',
         do_not_inventory: true,

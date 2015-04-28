@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that exit_status and exit_timestamp fields work as
 // expected when starting/stopping/zone exits
@@ -20,7 +20,7 @@ require('nodeunit-plus');
 VM.loglevel = 'DEBUG';
 
 var common_payload = {
-    alias: 'test-lastexited',
+    alias: 'test-lastexited-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
     do_not_inventory: true,

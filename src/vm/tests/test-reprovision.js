@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
@@ -20,9 +20,9 @@ var kvm_image_uuid = vmtest.CURRENT_UBUNTU_UUID;
 var vmobj;
 
 var smartos_payload = {
+    alias: 'test-reprovision-' + process.pid,
     brand: 'joyent-minimal',
     image_uuid: smartos_image_uuid,
-    alias: 'test-reprovision-' + process.pid,
     do_not_inventory: true,
     delegate_dataset: true,
     ram: 256,

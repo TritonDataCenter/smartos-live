@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 
 var assert = require('assert');
 var async = require('/usr/node/node_modules/async');
@@ -28,33 +28,33 @@ var vm_vmobj;
 
 var PAYLOADS = {
     zoneroot_only: {
+        alias: 'test-indestructible-' + process.pid,
         brand: 'joyent-minimal',
         image_uuid: image_uuid,
-        alias: 'indestructible-test-' + process.pid,
         do_not_inventory: true
     }, zoneroot_indestructible: {
+        alias: 'test-indestructible-' + process.pid,
         brand: 'joyent-minimal',
         image_uuid: image_uuid,
-        alias: 'indestructible-test-' + process.pid,
         do_not_inventory: true,
         indestructible_zoneroot: true
     }, delegated: {
+        alias: 'test-indestructible-' + process.pid,
         brand: 'joyent-minimal',
         image_uuid: image_uuid,
-        alias: 'indestructible-test-' + process.pid,
         do_not_inventory: true,
         delegate_dataset: true
     }, delegated_indestructible: {
+        alias: 'test-indestructible-' + process.pid,
         brand: 'joyent-minimal',
         image_uuid: image_uuid,
-        alias: 'indestructible-test-' + process.pid,
         do_not_inventory: true,
         delegate_dataset: true,
         indestructible_delegated: true
     }, totally_indestructible: {
+        alias: 'test-indestructible-' + process.pid,
         brand: 'joyent-minimal',
         image_uuid: image_uuid,
-        alias: 'indestructible-test-' + process.pid,
         do_not_inventory: true,
         delegate_dataset: true,
         indestructible_delegated: true,

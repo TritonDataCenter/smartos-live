@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that default values don't change accidentally.
 //
@@ -12,8 +12,8 @@ require('nodeunit-plus');
 
 var vm_uuid;
 var payload = {
+    alias: 'test-create-kvm-mem-override-' + process.pid,
     brand: 'kvm',
-    alias: 'autotest-vm' + process.pid,
     do_not_inventory: true,
     ram: 256,
     swap_in_bytes: 2147483648,

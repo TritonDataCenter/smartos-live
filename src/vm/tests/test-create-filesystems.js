@@ -17,7 +17,7 @@ require('nodeunit-plus');
 VM.loglevel = 'DEBUG';
 
 var common_payload = {
-    alias: 'test-create-filesystems',
+    alias: 'test-create-filesystems-' + process.pid,
     autoboot: true,
     brand: 'joyent-minimal',
     docker: true,

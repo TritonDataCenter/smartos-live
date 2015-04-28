@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
@@ -21,10 +21,10 @@ var vm_image_uuid = vmtest.CURRENT_UBUNTU_UUID;
 
 test('create zone with root_recsize 64k', function(t) {
     var payload = {
+        alias: 'test-blocksizes-' + process.pid,
         brand: 'joyent-minimal',
         autoboot: false,
         image_uuid: image_uuid,
-        alias: 'test-recsize-' + process.pid,
         do_not_inventory: true,
         delegate_dataset: true,
         zfs_root_recsize: 65536,
@@ -243,10 +243,10 @@ test('delete root_recsize test zone', function(t) {
 
 test('create zone with data_recsize 64k', function(t) {
     var payload = {
+        alias: 'test-blocksizes-' + process.pid,
         brand: 'joyent-minimal',
         autoboot: false,
         image_uuid: image_uuid,
-        alias: 'test-recsize-' + process.pid,
         do_not_inventory: true,
         delegate_dataset: true,
         zfs_data_recsize: 65536
@@ -456,10 +456,10 @@ test('delete data_recsize test zone', function(t) {
 
 test('create zone with compression', function(t) {
     var payload = {
+        alias: 'test-blocksizes-' + process.pid,
         brand: 'joyent-minimal',
         autoboot: false,
         image_uuid: image_uuid,
-        alias: 'test-recsize-' + process.pid,
         do_not_inventory: true,
         delegate_dataset: true,
         zfs_root_compression: 'gzip'
@@ -590,9 +590,9 @@ test('delete compression test zone', function(t) {
 
 test('create KVM with block_size 64k', function(t) {
     var payload = {
+        alias: 'test-blocksizes-' + process.pid,
         brand: 'kvm',
         autoboot: false,
-        alias: 'test-recsize-' + process.pid,
         do_not_inventory: true,
         ram: 128,
         disks: [{
@@ -733,9 +733,9 @@ test('delete kvm vm from blocksize test', function(t) {
 
 test('create KVM with compression', function(t) {
     var payload = {
+        alias: 'test-blocksizes-' + process.pid,
         brand: 'kvm',
         autoboot: false,
-        alias: 'test-recsize-' + process.pid,
         do_not_inventory: true,
         ram: 128,
         disks: [{

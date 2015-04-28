@@ -154,9 +154,10 @@ function reset_nic_tags(t, callback) {
 test('create with invalid nic tag', function(t) {
     var state = {brand: 'joyent-minimal', expect_create_failure: true };
     vmtest.on_new_vm(t, IMAGE_UUID,
-        { autoboot: false,
+        {
+          alias: 'test-invalid-nic-tags-' + process.pid,
+          autoboot: false,
           do_not_inventory: true,
-          alias: 'autozone-' + process.pid,
           nowait: false,
           nics: [
             { nic_tag: 'does_not_exist', ip: 'dhcp' }
@@ -184,9 +185,10 @@ test('reboot / shutdown / start / update with invalid nic tag',
 
         // Create a VM with a nic on new_tag1
         vmtest.on_new_vm(t, IMAGE_UUID,
-            { autoboot: true,
+            {
+              alias: 'test-invalid-nic-tags-' + process.pid,
+              autoboot: true,
               do_not_inventory: true,
-              alias: 'autozone-' + process.pid,
               nowait: false,
               nics: [ {
                   nic_tag: 'new_tag1',
@@ -312,9 +314,10 @@ test('booting with invalid etherstub', function(t) {
 
     // Create a VM with a nic on new_tag1
     vmtest.on_new_vm(t, IMAGE_UUID,
-        { autoboot: true,
+        {
+          alias: 'test-invalid-nic-tags-' + process.pid,
+          autoboot: true,
           do_not_inventory: true,
-          alias: 'autozone-' + process.pid,
           nowait: false,
           nics: [
             { nic_tag: 'new_stub1',

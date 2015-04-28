@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that default values don't change accidentally.
 //
@@ -69,9 +69,9 @@ test('create zone', function(t) {
     }
 
     vmtest.on_new_vm(t, image_uuid, {
+        alias: 'test-start-stop-' + process.pid,
         autoboot: false,
-        do_not_inventory: true,
-        alias: 'autozone-' + process.pid,
+        do_not_inventory: true
     }, state, functions);
 });
 

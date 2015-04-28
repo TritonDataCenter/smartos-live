@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
@@ -45,10 +45,10 @@ function hasSnapshot(snapshots, snapname)
 
 test('create joyent-minimal VM with delegated dataset', function(t) {
     var payload = {
+        alias: 'test-snapshots-' + process.pid,
         brand: 'joyent-minimal',
         autoboot: false,
         image_uuid: image_uuid,
-        alias: 'test-snapshot-' + process.pid,
         do_not_inventory: true,
         delegate_dataset: true
     };
@@ -124,9 +124,9 @@ test('delete joyent-minimal VM w/ delegated dataset', function(t) {
 
 test('create KVM VM', function(t) {
     var payload = {
+        alias: 'test-snapshots-' + process.pid,
         brand: 'kvm',
         autoboot: false,
-        alias: 'test-snapshot-' + process.pid,
         do_not_inventory: true,
         ram: 128,
         disks: [{
@@ -218,10 +218,10 @@ test('delete KVM VM', function(t) {
 
 test('create joyent-minimal VM w/o delegated', function(t) {
     var payload = {
+        alias: 'test-snapshots-' + process.pid,
         brand: 'joyent-minimal',
         autoboot: true,
         image_uuid: image_uuid,
-        alias: 'test-snapshot-' + process.pid,
         do_not_inventory: true
     };
 
@@ -838,10 +838,10 @@ test('delete joyent-minimal VM', function(t) {
 // test that snapshots work on SNGL
 test('create SNGL zone', function(t) {
     var payload = {
+        'alias': 'test-snapshots-' + process.pid,
         'brand': 'sngl',
         'autoboot': true,
         'image_uuid': sngl_image_uuid,
-        'alias': 'test-sngl-snapshot-' + process.pid,
         'do_not_inventory': true
     };
 
@@ -1100,10 +1100,10 @@ test('delete zone', function(t) {
 
 test('create stopped joyent-minimal VM', function(t) {
     var payload = {
+        alias: 'test-snapshots-' + process.pid,
         brand: 'joyent-minimal',
         autoboot: false,
         image_uuid: image_uuid,
-        alias: 'test-snapshot-' + process.pid,
         do_not_inventory: true
     };
 

@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // Test invalid nic tag detection
 //
@@ -40,7 +40,7 @@ function expectUpdateError(opts, cb) {
  * Generate a new unique VM alias
  */
 function alias() {
-    return 'autozone-' + process.pid + '-' + VM_NUM++;
+    return 'test-vrrp-nics-' + process.pid + '-' + VM_NUM++;
 }
 
 /*

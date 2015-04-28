@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that the internal_metadata_namespaces feature:
 //
@@ -48,7 +48,7 @@ function waitForSvc(t, zonename, svc, state, callback) {
 
 test('test exercising internal_metadata_namespaces', function (t) {
     var payload = {
-        alias: 'test-namespace',
+        alias: 'test-internal_metadata_namespaces-' + process.pid,
         autoboot: false,
         brand: 'joyent-minimal',
         do_not_inventory: true,

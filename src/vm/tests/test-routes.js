@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // Tests for specifying static routes
 //
@@ -30,9 +30,9 @@ var INVALID_NIC = 'Route gateway: "%s" '
 var INVALID_VAL = 'Invalid value(s) for: %s';
 
 var payload = {
+    alias: 'test-routes-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true
 };
 

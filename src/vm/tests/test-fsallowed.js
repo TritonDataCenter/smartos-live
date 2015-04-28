@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
@@ -19,10 +19,10 @@ var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 
 test('create zone with fs_allowed', function(t) {
     var payload = {
+        alias: 'test-fsallowed-' + process.pid,
         brand: 'joyent-minimal',
         autoboot: false,
         image_uuid: image_uuid,
-        alias: 'test-fsallowed-' + process.pid,
         do_not_inventory: true,
         fs_allowed: 'ufs,pcfs,tmpfs'
     };

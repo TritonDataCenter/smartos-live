@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
@@ -18,9 +18,9 @@ var bundle_filename;
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var vmobj;
 var payload = {
+    alias: 'test-delegate-' + process.pid,
     brand: 'joyent-minimal',
     image_uuid: image_uuid,
-    alias: 'test-delegate-' + process.pid,
     do_not_inventory: true,
     delegate_dataset: true,
     ram: 256,

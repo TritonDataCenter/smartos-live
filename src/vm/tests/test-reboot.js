@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that reboot works.
 //
@@ -17,7 +17,7 @@ require('nodeunit-plus');
 VM.loglevel = 'DEBUG';
 
 var common_payload = {
-    alias: 'test-reboot',
+    alias: 'test-reboot-' + process.pid,
     autoboot: true,
     brand: 'joyent-minimal',
     do_not_inventory: true,
@@ -27,10 +27,10 @@ var common_payload = {
 };
 
 var common_kvm_payload = {
+    alias: 'test-reboot-' + process.pid,
     brand: 'kvm',
     vcpus: 1,
     ram: 256,
-    alias: 'test-reboot',
     do_not_inventory: true,
     autoboot: true,
     disk_driver: 'virtio',

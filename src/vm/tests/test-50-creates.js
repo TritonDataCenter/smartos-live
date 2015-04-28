@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that default values don't change accidentally.
 //
@@ -27,9 +27,9 @@ test('create and destroy 50 zones', function(t) {
         function (callback) {
             var state = {'brand': 'joyent-minimal'};
             vmtest.on_new_vm(t, image_uuid, {
+                alias: 'test-50-creates-' + i,
                 autoboot: false,
                 do_not_inventory: true,
-                alias: 'vmtest-50-' + i,
                 nowait: true
             }, state, [
                 function (cb) {

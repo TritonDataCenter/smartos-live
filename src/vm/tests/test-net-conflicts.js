@@ -17,9 +17,9 @@ VM.loglevel = 'DEBUG';
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 
 var payload = {
-    do_not_inventory: true,
+    alias: 'test-net-conflicts-' + process.pid,
     autoboot: false,
-    alias: 'autotest-' + process.pid
+    do_not_inventory: true
 };
 
 function should_fail_with_conflict(name, payloadA, payloadB)

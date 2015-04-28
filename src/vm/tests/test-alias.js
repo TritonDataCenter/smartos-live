@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // Tests for VM.lookup()
 //
@@ -109,7 +109,7 @@ test('test alias', function (t) {
     var state = {brand: 'joyent-minimal'};
 
     vmtest.on_new_vm(t, image_uuid, {
-        alias: 'testing-aliases',
+        alias: 'test-alias-' + process.pid,
         brand: 'joyent-minimal',
         do_not_inventory: true
     }, state, [

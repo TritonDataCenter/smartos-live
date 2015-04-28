@@ -20,7 +20,7 @@ require('nodeunit-plus');
 VM.loglevel = 'DEBUG';
 
 var common_payload = {
-    alias: 'test-docker',
+    alias: 'test-docker-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
     do_not_inventory: true,

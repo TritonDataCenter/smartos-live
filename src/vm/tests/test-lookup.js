@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // Tests for VM.lookup()
 //
@@ -18,6 +18,7 @@ var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 test('test tag lookup', function(t) {
     state = {brand: 'joyent-minimal'};
     vmtest.on_new_vm(t, image_uuid, {
+        alias: 'test-lookup-' + process.pid,
         do_not_inventory: true,
         tags: {'bigbaddaboom': 'multipass'}
     }, state, [

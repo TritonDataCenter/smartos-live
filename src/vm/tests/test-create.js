@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that create behaves correctly.
 //
@@ -13,9 +13,9 @@ require('nodeunit-plus');
 VM.loglevel = 'DEBUG';
 
 var payload_invalid_ip = {
+    alias: 'test-create-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     nics: [
         {
@@ -28,9 +28,9 @@ var payload_invalid_ip = {
 };
 
 var payload_with_tags = {
+    alias: 'test-create-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     tags: {
         hello: 'world'
@@ -44,9 +44,9 @@ var payload_with_tags = {
 };
 
 var payload_with_null_alias = {
+    alias: null,
     autoboot: false,
     brand: 'joyent-minimal',
-    alias: null,
     do_not_inventory: true,
     nics: [
         {
@@ -57,9 +57,9 @@ var payload_with_null_alias = {
 };
 
 var payload_with_zvol_as_zoneroot = {
+    alias: 'test-create-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
-    alias: null,
     image_uuid: vmtest.CURRENT_UBUNTU_UUID,
     do_not_inventory: true,
     nics: [
@@ -71,9 +71,9 @@ var payload_with_zvol_as_zoneroot = {
 };
 
 var payload_with_smartos_zoneroot = {
+    alias: 'test-create-' + process.pid,
     autoboot: false,
     brand: 'lx',
-    alias: null,
     image_uuid: vmtest.CURRENT_SMARTOS_UUID,
     do_not_inventory: true,
     nics: [
@@ -85,9 +85,9 @@ var payload_with_smartos_zoneroot = {
 };
 
 var payload_with_rctls = {
+    alias: 'test-create-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     max_physical_memory: 1024,
     max_shm_memory: 4096,

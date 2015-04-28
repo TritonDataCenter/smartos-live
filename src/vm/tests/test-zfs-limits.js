@@ -18,7 +18,7 @@ var trim = utils.trim;
 
 test('test create vm with filesystem and snapshot limits', function (t) {
     var payload = {
-        alias: 'test-zfs-limits',
+        alias: 'test-zfs-limits-' + process.pid,
         autoboot: true,
         brand: 'joyent-minimal',
         delegate_dataset: true,

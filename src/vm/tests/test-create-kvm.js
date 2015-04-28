@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that create works with specific options set.
 //
@@ -18,6 +18,7 @@ VM.loglevel = 'DEBUG';
 // and a blank zvol. We don't boot it because the ISOs don't exist.
 // With the passed-in UUID we also test for smartos-live#112
 var payload = {
+    alias: 'test-create-kvm-' + process.pid,
     autoboot: false,
     brand: 'kvm',
     uuid: '3f5592c4-edb1-11e1-a15f-e72adbb11c67',
@@ -44,9 +45,9 @@ var payload = {
 };
 
 var payload_with_tags = {
+    alias: 'test-create-kvm-' + process.pid,
     autoboot: false,
     brand: 'kvm',
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     tags: {
        hello: 'world'
@@ -67,9 +68,9 @@ var payload_with_tags = {
 };
 
 var payload_with_too_many_resolvers = {
+    alias: 'test-create-kvm-' + process.pid,
     autoboot: true,
     brand: 'kvm',
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     resolvers: [
         '0.0.0.1',
@@ -98,10 +99,10 @@ var payload_with_too_many_resolvers = {
 test('test create with bad image_size', function(t) {
 
     p = {
+        alias: 'test-create-kvm-' + process.pid,
         brand: 'kvm',
         vcpus: 1,
         ram: 256,
-        alias: 'autotest-' + process.pid,
         do_not_inventory: true,
         autoboot: false,
         disks: [
@@ -125,10 +126,10 @@ test('test create with bad image_size', function(t) {
 test('test create with missing image_size', function(t) {
 
     p = {
+        alias: 'test-create-kvm-' + process.pid,
         brand: 'kvm',
         vcpus: 1,
         ram: 256,
-        alias: 'autotest-' + process.pid,
         do_not_inventory: true,
         autoboot: false,
         disks: [
@@ -181,10 +182,10 @@ test('test create with virtio_tx*', function(t) {
 
 test('test normalish refreservation', function(t) {
     p = {
+        alias: 'test-create-kvm-' + process.pid,
         brand: 'kvm',
         vcpus: 1,
         ram: 256,
-        alias: 'autotest-' + process.pid,
         do_not_inventory: true,
         autoboot: false,
         disk_driver: 'virtio',
@@ -223,10 +224,10 @@ test('test normalish refreservation', function(t) {
 
 test('test 0 refreservation', function(t) {
     p = {
+        alias: 'test-create-kvm-' + process.pid,
         brand: 'kvm',
         vcpus: 1,
         ram: 256,
-        alias: 'autotest-' + process.pid,
         do_not_inventory: true,
         autoboot: false,
         disk_driver: 'virtio',
@@ -265,10 +266,10 @@ test('test 0 refreservation', function(t) {
 
 test('test default refreservation', function(t) {
     p = {
+        alias: 'test-create-kvm-' + process.pid,
         brand: 'kvm',
         vcpus: 1,
         ram: 256,
-        alias: 'autotest-' + process.pid,
         do_not_inventory: true,
         autoboot: false,
         disk_driver: 'virtio',

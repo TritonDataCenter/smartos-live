@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 
 var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
@@ -19,7 +19,7 @@ var vmobj;
 
 var smartos_payload =
 {
-    alias: 'autotest' + process.pid,
+    alias: 'test-upgrade-' + process.pid,
     do_not_inventory: true,
     image_uuid: image_uuid,
     max_physical_memory: 256,
@@ -38,7 +38,7 @@ var smartos_payload =
 
 var kvm_payload =
 {
-    alias: 'autotest' + process.pid,
+    alias: 'test-upgrade-' + process.pid,
     brand: 'kvm',
     do_not_inventory: true,
     max_physical_memory: 256,

@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
@@ -19,9 +19,9 @@ var kvm_image_uuid = vmtest.CURRENT_UBUNTU_UUID;
 var vmobj;
 
 var kvm_payload = {
+    alias: 'test-send-recv-' + process.pid,
     brand: 'kvm',
     autoboot: false,
-    alias: 'test-send-recv-' + process.pid,
     do_not_inventory: true,
     ram: 256,
     max_swap: 1024,
@@ -35,9 +35,9 @@ var kvm_payload = {
 };
 
 var smartos_payload = {
+    alias: 'test-send-recv-' + process.pid,
     brand: 'joyent-minimal',
     image_uuid: image_uuid,
-    alias: 'test-send-recv-' + process.pid,
     do_not_inventory: true,
     ram: 256,
     max_swap: 1024,

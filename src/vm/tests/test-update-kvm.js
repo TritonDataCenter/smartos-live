@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 
 var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
@@ -15,10 +15,10 @@ var vm_uuid;
 
 var PAYLOADS = {
     create: {
+        alias: 'test-update-kvm-' + process.pid,
         brand: 'kvm',
         ram: 256,
         autoboot: false,
-        alias: 'autotest-vm' + process.pid,
         disks: [{size: 1024, model: 'ide'}],
         do_not_inventory: true
     }, add_net0: {
@@ -121,12 +121,12 @@ var PAYLOADS = {
             {size: 1024}
         ]
     }, create_w_drivers: {
+        alias: 'test-update-kvm-' + process.pid,
         brand: 'kvm',
         ram: 256,
         autoboot: false,
         nic_driver: 'e1000',
         disk_driver: 'ide',
-        alias: 'autotest-vm' + process.pid,
         nics: [
             {
                 model: 'virtio',
@@ -1123,10 +1123,10 @@ test('create KVM VM w/ *_drivers', function(t) {
 
 test('test 100%/10% refreservation, change to 50%/75%', function(t) {
     p = {
+        'alias': 'test-update-kvm-' + process.pid,
         'brand': 'kvm',
         'vcpus': 1,
         'ram': 256,
-        'alias': 'autotest-' + process.pid,
         'do_not_inventory': true,
         'autoboot': false,
         'disk_driver': 'virtio',

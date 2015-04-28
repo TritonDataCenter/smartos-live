@@ -6,6 +6,7 @@ set -o errexit
 ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 IS_GLOBAL=1
 NODEUNIT_PATH=/usr/vm/node_modules/nodeunit
+export NODE_PATH=${NODE_PATH}:/usr/node/node_modules
 
 if [[ $(zonename) == 'global' ]]; then
     if [[ ! -f "/lib/sdc/.sdc-test-no-production-data" ]]; then

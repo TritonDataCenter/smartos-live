@@ -79,9 +79,9 @@ set -o errexit
 end_time=$(date +%s)
 elapsed=$((${end_time} - ${start_time}))
 
-tests=$(grep "^# tests [0-9]" /tmp/test.output.$$ | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
-passed=$(grep "^# pass  [0-9]" /tmp/test.output.$$ | tr -s ' ' | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
-skipped=$(grep "^# skip  [0-9]" /tmp/test.output.$$ | tr -s ' ' | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
+tests=$(grep "^# tests [0-9]" /tmp/test.output.$$ | awk '{ print $3 }')
+passed=$(grep "^# pass  [0-9]" /tmp/test.output.$$ | awk '{ print $3 }')
+skipped=$(grep "^# skip  [0-9]" /tmp/test.output.$$ | awk '{ print $3 }')
 
 [[ -z ${tests} ]] && tests=0
 [[ -z ${passed} ]] && passed=0
@@ -89,8 +89,16 @@ skipped=$(grep "^# skip  [0-9]" /tmp/test.output.$$ | tr -s ' ' | cut -d ' ' -f3
 
 fail=$((${tests} - ${passed} - ${skipped}))
 
-if [[ ${TEST_EXIT_CODE} != 0 ]]; then
-    fail=$((${fail} + 1))
+# Ensure that exiting non-zero counts as at least 1 failure
+if [[ ${TEST_EXIT_CODE} != 0 && ${fail} -lt 1 ]]; then
+    fail=1
+    tests="?"
+fi
+
+# Ensure that if we didn't see at least one test pass, we count that as a
+# failure. This way we don't end up with `PASS: 0` and treat it as success.
+if [[ ${passed} -lt 1 && ${fail} -lt 1 ]]; then
+    fail=1
     tests="?"
 fi
 

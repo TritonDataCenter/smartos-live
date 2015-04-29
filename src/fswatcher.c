@@ -135,7 +135,6 @@
         for (Xcp = (name); (Xc = *Xcp) != 0; Xcp++) \
             (hash) = ((hash) << 4) + (hash) + Xc;   \
         (hash) = (hash) & HANDLES_MASK;             \
-        ASSERT((Xcp - (name)) <= ((1 << NBBY) - 1));\
         (namlen) = Xcp - (name);                    \
     }
 
@@ -166,16 +165,16 @@ struct fileinfo {
     int port;
 };
 
-struct fileinfo *handles = NULL;
+struct fileinfo **handles = NULL;
 volatile struct fileinfo *free_list = NULL;
 static mutex_t handles_mutex;
 static mutex_t free_mutex;
 static mutex_t stdout_mutex;
 int port = -1;
 
-void enqueueFreeFinf(struct fileinfo **finfp);
+void enqueueFreeFinf(struct fileinfo *finf);
 void printEvent(int event, char *pathname, int final);
-void checkAndRearmEvent(uint32_t key, int idx, int revents,
+void checkAndRearmEvent(uint32_t key, char *name, int revents,
     uint64_t start_timestamp);
 void * waitForEvents(void *pn);
 int watchPath(char *pathname, uint32_t key, uint64_t start_timestamp);
@@ -363,7 +362,7 @@ void
 insertHandle(struct fileinfo* handle)
 {
 
-    HASH(handle->pathname,handle->hash,handle->namelen);
+    HASH(handle->fobj.fo_name,handle->hash,handle->namelen);
 
     if (handles[handle->hash] == NULL) {
         handle->next = handle;
@@ -388,7 +387,7 @@ void
 i_removeHandle(struct fileinfo* handle)
 {
     if (handle->next == handle) {
-        handles[handle->hash] = NULL
+        handles[handle->hash] = NULL;
     } else {
         handles[handle->hash] = handle->next;
         handle->next->prev = handle->prev;
@@ -418,6 +417,7 @@ removeHandle(char *pathname)
  * freeHandle() frees a fileinfo handle.
  *
  */
+void
 freeHandle(struct fileinfo* handle)
 {
     if (handle->fobj.fo_name) {
@@ -636,7 +636,7 @@ checkAndRearmEvent(uint32_t key, char *name, int revents,
      * We always do stat, even if we're going to override the timestamps so
      * that we also check for existence.
      */
-    stat_ret = getStat(fobjp->fo_name, &sb);
+    stat_ret = getStat(finf->fobjp.fo_name, &sb);
     if (stat_ret != 0) {
         final = 1;
     }
@@ -660,7 +660,7 @@ checkAndRearmEvent(uint32_t key, char *name, int revents,
      * "final: true" when we're not going to be able to re-register the file.
      */
     if (revents) {
-        printEvent(revents, fobjp->fo_name, final);
+        printEvent(revents, finf->fobjp.fo_name, final);
     }
 
     if ((key != 0) && (stat_ret != 0)) {
@@ -694,6 +694,7 @@ void *
 waitForEvents(void *pn)
 {
     int port = *((int *)pn);
+    struct fileinfo *finf;
     port_event_t pe;
 
     while (!port_get(port, &pe, NULL)) {
@@ -725,7 +726,7 @@ waitForEvents(void *pn)
          */
         mutex_lock(&free_mutex);
         while (free_list != NULL) {
-            finf = free_list->next
+            finf = free_list->next;
             freeHandle(free_list);
             free_list = finf;
         }
@@ -861,7 +862,7 @@ unwatchPath(char *pathname, uint32_t key)
      * same file, so in every case we assume that the file is no longer
      * associated and remove the handle.
      */
-    ret = port_dissociate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp)
+    ret = port_dissociate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp);
     i_removeHandle(finf);
     mutex_unlock(&handles_mutex);
 

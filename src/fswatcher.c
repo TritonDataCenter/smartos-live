@@ -636,7 +636,7 @@ checkAndRearmEvent(uint32_t key, char *name, int revents,
      * We always do stat, even if we're going to override the timestamps so
      * that we also check for existence.
      */
-    stat_ret = getStat(finf->fobjp.fo_name, &sb);
+    stat_ret = getStat(finf->fobj.fo_name, &sb);
     if (stat_ret != 0) {
         final = 1;
     }
@@ -660,7 +660,7 @@ checkAndRearmEvent(uint32_t key, char *name, int revents,
      * "final: true" when we're not going to be able to re-register the file.
      */
     if (revents) {
-        printEvent(revents, finf->fobjp.fo_name, final);
+        printEvent(revents, finf->fobj.fo_name, final);
     }
 
     if ((key != 0) && (stat_ret != 0)) {
@@ -727,7 +727,7 @@ waitForEvents(void *pn)
         mutex_lock(&free_mutex);
         while (free_list != NULL) {
             finf = free_list->next;
-            freeHandle(free_list);
+            freeHandle((struct fileinfo*)free_list);
             free_list = finf;
         }
         mutex_unlock(&free_mutex);

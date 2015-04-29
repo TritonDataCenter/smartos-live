@@ -171,19 +171,19 @@ static mutex_t free_mutex;
 static mutex_t stdout_mutex;
 int port = -1;
 
-void enqueueFreeFinf(struct fileinfo *finf);
-void printEvent(int event, char *pathname, int final);
-void checkAndRearmEvent(uint32_t key, char *name, int revents,
+void enqueue_free_finf(struct fileinfo *finf);
+void print_event(int event, char *pathname, int final);
+void check_and_rearm_event(uint32_t key, char *name, int revents,
     uint64_t start_timestamp);
-void * waitForEvents(void *pn);
-int watchPath(char *pathname, uint32_t key, uint64_t start_timestamp);
-int unwatchPath(char *pathname, uint32_t key);
+void * wait_for_events(void *pn);
+int watch_path(char *pathname, uint32_t key, uint64_t start_timestamp);
+int unwatch_path(char *pathname, uint32_t key);
 
 /*
  * This outputs a line to stdout indicating the type of event detected.
  */
 void
-printEvent(int event, char *pathname, int final)
+print_event(int event, char *pathname, int final)
 {
     int hits = 0;
     struct timespec ts;
@@ -242,11 +242,11 @@ printEvent(int event, char *pathname, int final)
 }
 
 /*
- * printError() takes a key, code (one of the ErrorCodes) and message and writes
+ * print_error() takes a key, code (one of the ErrorCodes) and message and writes
  * to stdout.
  */
 void
-printError(uint32_t key, uint32_t code, const char *message_fmt, ...)
+print_error(uint32_t key, uint32_t code, const char *message_fmt, ...)
 {
     va_list arg_ptr;
     char message[4096];
@@ -271,11 +271,11 @@ printError(uint32_t key, uint32_t code, const char *message_fmt, ...)
 }
 
 /*
- * printResult() takes a key, code (RESULT_SUCCESS||RESULT_FAILURE), pathname
+ * print_result() takes a key, code (RESULT_SUCCESS||RESULT_FAILURE), pathname
  * and message and writes to stdout.
  */
 void
-printResult(uint32_t key, uint32_t code, const char *pathname,
+print_result(uint32_t key, uint32_t code, const char *pathname,
     const char *message_fmt, ...)
 {
     va_list arg_ptr;
@@ -320,13 +320,13 @@ printResult(uint32_t key, uint32_t code, const char *pathname,
 }
 
 /*
- * findHandle() takes a pathname and returns the fileinfo struct from the
+ * find_handle() takes a pathname and returns the fileinfo struct from the
  * handles hash. returns NULL if no pathname matches.
  *
  * Should only be called when holding the handles_mutex
  */
 struct fileinfo *
-findHandle(char *pathname)
+find_handle(char *pathname)
 {
     int namelen;
     int hash;
@@ -353,13 +353,13 @@ findHandle(char *pathname)
 }
 
 /*
- * insertHandle() inserts a fileinfo into the hash.
+ * insert_handle() inserts a fileinfo into the hash.
  *
  * Should only be called after validating that the element does not exist
  * in the hash, and when holding the handles_mutex.
  */
 void
-insertHandle(struct fileinfo *handle)
+insert_handle(struct fileinfo *handle)
 {
     int hash_idx;
 
@@ -379,13 +379,13 @@ insertHandle(struct fileinfo *handle)
 }
 
 /*
- * i_removeHandle() removes a fileinfo from the hash if the handle
+ * i_remove_handle() removes a fileinfo from the hash if the handle
  * is alreay known.
  *
  * Should only be called when holding the handles_mutex.
  */
 void
-i_removeHandle(struct fileinfo *handle)
+i_remove_handle(struct fileinfo *handle)
 {
     if (handle->next == handle) {
         handles[handle->hash & HANDLES_MASK] = NULL;
@@ -399,27 +399,27 @@ i_removeHandle(struct fileinfo *handle)
 }
 
 /*
- * removeHandle() removes a fileinfo from the hash.
+ * remove_handle() removes a fileinfo from the hash.
  *
  * Should only be called when holding the handles_mutex.
  */
 void
-removeHandle(char *pathname)
+remove_handle(char *pathname)
 {
     struct fileinfo *handle;
 
-    handle = findHandle(pathname);
+    handle = find_handle(pathname);
 
     if (handle != NULL)
-        i_removeHandle(handle);
+        i_remove_handle(handle);
 }
 
 /*
- * freeHandle() frees a fileinfo handle.
+ * free_handle() frees a fileinfo handle.
  *
  */
 void
-freeHandle(struct fileinfo *handle)
+free_handle(struct fileinfo *handle)
 {
     if (handle->fobj.fo_name) {
         free(handle->fobj.fo_name);
@@ -429,21 +429,21 @@ freeHandle(struct fileinfo *handle)
 }
 
 /*
- * destroyHandle() removes a fileinfo handle for the hash, and frees it.
+ * destroy_handle() removes a fileinfo handle for the hash, and frees it.
  *
  * MUST only be called from the secondary thread.
  */
 void
-destroyHandle(struct fileinfo *handle)
+destroy_handle(struct fileinfo *handle)
 {
     mutex_lock(&handles_mutex);
-    i_removeHandle(handle);
+    i_remove_handle(handle);
     mutex_unlock(&handles_mutex);
-    freeHandle(handle);
+    free_handle(handle);
 }
 
 /*
- * statFile() takes the same arguments as stat and calls stat for you but does
+ * stat_file() takes the same arguments as stat and calls stat for you but does
  * retries on errors and ultimately returns either 0 (success) or one of the
  * errno's listed in stat(2).
  *
@@ -451,7 +451,7 @@ destroyHandle(struct fileinfo *handle)
  * will call abort().
  */
 int
-statFile(const char *path, struct stat *buf)
+stat_file(const char *path, struct stat *buf)
 {
     int done = 0;
     int loops = 0;
@@ -495,14 +495,14 @@ statFile(const char *path, struct stat *buf)
  *  non-0 - failed: file could not be accessed (return is stat(2) errno)
  */
 int
-getStat(char *pathname, struct stat *sb)
+get_stat(char *pathname, struct stat *sb)
 {
     int stat_ret;
 
-    stat_ret = statFile(pathname, sb);
+    stat_ret = stat_file(pathname, sb);
 
 #ifdef DEBUG
-    fprintf(stderr, "DEBUG: statFile %s returned: %d: %s\n",
+    fprintf(stderr, "DEBUG: stat_file %s returned: %d: %s\n",
         pathname, stat_ret, strerror(stat_ret));
     fflush(stderr);
 #endif
@@ -541,7 +541,7 @@ getStat(char *pathname, struct stat *sb)
 }
 
 void
-registerWatch(uint32_t key, char *name, struct stat sb)
+register_watch(uint32_t key, char *name, struct stat sb)
 {
     struct fileinfo *finf;
     struct file_obj *fobjp;
@@ -549,7 +549,7 @@ registerWatch(uint32_t key, char *name, struct stat sb)
 
     mutex_lock(&handles_mutex);
 
-    finf = findHandle(name);
+    finf = find_handle(name);
 
     /*
      * We are no longer interested in events for this idx.
@@ -578,12 +578,12 @@ registerWatch(uint32_t key, char *name, struct stat sb)
          * whether we succeeded or failed.
          */
         if (pa_ret == -1) {
-            printResult(key, RESULT_FAILURE, fobjp->fo_name,
+            print_result(key, RESULT_FAILURE, fobjp->fo_name,
                 "port_associate(3c) failed with errno %d: %s",
                 errno, strerror(errno));
-            destroyHandle(finf);
+            destroy_handle(finf);
         } else {
-            printResult(key, RESULT_SUCCESS, fobjp->fo_name,
+            print_result(key, RESULT_SUCCESS, fobjp->fo_name,
                 "port_associate(3c) started watching path");
         }
     } else if (pa_ret == -1) {
@@ -591,13 +591,13 @@ registerWatch(uint32_t key, char *name, struct stat sb)
          * We're trying to re-associate so we only dump a message if that
          * failed.
          */
-        printError(key, ERR_CANNOT_ASSOCIATE, "port_associate(3c) failed "
+        print_error(key, ERR_CANNOT_ASSOCIATE, "port_associate(3c) failed "
             "for '%s', errno %d: %s", fobjp->fo_name, errno, strerror(errno));
     }
 }
 
 /*
- * checkAndRearmEvent() is called to (re)arm watches. This can either be because
+ * check_and_rearm_event() is called to (re)arm watches. This can either be because
  * of an event (in which case revents should be pe.portev_events) or to
  * initially arm in which case revents should be 0.
  *
@@ -611,7 +611,7 @@ registerWatch(uint32_t key, char *name, struct stat sb)
  *
  */
 void
-checkAndRearmEvent(uint32_t key, char *name, int revents,
+check_and_rearm_event(uint32_t key, char *name, int revents,
     uint64_t start_timestamp)
 {
     int final = 0;
@@ -623,7 +623,7 @@ checkAndRearmEvent(uint32_t key, char *name, int revents,
 
     mutex_lock(&handles_mutex);
 
-    finf = findHandle(name);
+    finf = find_handle(name);
     /*
      * We are no longer interested in events for this idx.
      */
@@ -637,7 +637,7 @@ checkAndRearmEvent(uint32_t key, char *name, int revents,
      * We always do stat, even if we're going to override the timestamps so
      * that we also check for existence.
      */
-    stat_ret = getStat(finf->fobj.fo_name, &sb);
+    stat_ret = get_stat(finf->fobj.fo_name, &sb);
     if (stat_ret != 0) {
         final = 1;
     }
@@ -661,7 +661,7 @@ checkAndRearmEvent(uint32_t key, char *name, int revents,
      * "final: true" when we're not going to be able to re-register the file.
      */
     if (revents) {
-        printEvent(revents, finf->fobj.fo_name, final);
+        print_event(revents, finf->fobj.fo_name, final);
     }
 
     if ((key != 0) && (stat_ret != 0)) {
@@ -670,29 +670,29 @@ checkAndRearmEvent(uint32_t key, char *name, int revents,
          * a result. Since stat() just failed, we'll send now and return since
          * we're not going to do anything further.
          */
-        printResult(key, RESULT_FAILURE, finf->fobj.fo_name,
+        print_result(key, RESULT_FAILURE, finf->fobj.fo_name,
             "stat(2) failed with errno %d: %s", stat_ret, strerror(stat_ret));
         assert(final);
     }
 
     if (final) {
         /* we're not going to re-enable, so cleanup */
-        destroyHandle(finf);
+        destroy_handle(finf);
         return;
     }
 
     /*
      * (re)register.
      */
-    registerWatch(key, name, sb);
+    register_watch(key, name, sb);
 }
 
 /*
  * Worker thread waits here for events, which then get dispatched to
- * checkAndRearmEvent().
+ * check_and_rearm_event().
  */
 void *
-waitForEvents(void *pn)
+wait_for_events(void *pn)
 {
     int port = *((int *)pn);
     struct fileinfo *finf;
@@ -706,7 +706,7 @@ waitForEvents(void *pn)
         switch (pe.portev_source) {
         case PORT_SOURCE_FILE:
             /* Call file events event handler */
-            checkAndRearmEvent(0, (char *)pe.portev_object,
+            check_and_rearm_event(0, (char *)pe.portev_object,
                 pe.portev_events, 0);
             break;
         default:
@@ -715,7 +715,7 @@ waitForEvents(void *pn)
              * other than FILE, since that's all we're adding. So abort and hope
              * there's enough state in the core.
              */
-            printError(0, ERR_UNEXPECTED_SOURCE, "event from unexpected source:"
+            print_error(0, ERR_UNEXPECTED_SOURCE, "event from unexpected source:"
                 " %s", strerror(errno));
             abort();
         }
@@ -723,12 +723,12 @@ waitForEvents(void *pn)
         /*
          * The actual work of freeing finf objects is done in this thread so
          * that there aren't any race conditions while accessing
-         * free_list->fobj.fo_name in the checkAndRearmEvent function
+         * free_list->fobj.fo_name in the check_and_rearm_event function
          */
         mutex_lock(&free_mutex);
         while (free_list != NULL) {
             finf = free_list->next;
-            freeHandle((struct fileinfo *)free_list);
+            free_handle((struct fileinfo *)free_list);
             free_list = finf;
         }
         mutex_unlock(&free_mutex);
@@ -747,7 +747,7 @@ waitForEvents(void *pn)
  * access the name of the object that was going to be stat'd.
  */
 void
-enqueueFreeFinf(struct fileinfo *finf)
+enqueue_free_finf(struct fileinfo *finf)
 {
 
     if (finf != NULL) {
@@ -763,24 +763,24 @@ enqueueFreeFinf(struct fileinfo *finf)
  * Only called from main thread. Attempts to watch pathname.
  */
 int
-watchPath(char *pathname, uint32_t key, uint64_t start_timestamp)
+watch_path(char *pathname, uint32_t key, uint64_t start_timestamp)
 {
     struct fileinfo *finf;
     /* port is global */
 
     finf = malloc(sizeof (struct fileinfo));
     if (finf == NULL) {
-        printError(key, ERR_CANNOT_ALLOCATE, "failed to allocate memory for "
+        print_error(key, ERR_CANNOT_ALLOCATE, "failed to allocate memory for "
             "new watcher errno %d: %s", errno, strerror(errno));
         /* XXX abort(); ? */
         return (ERR_CANNOT_ALLOCATE);
     }
 
     if ((finf->fobj.fo_name = strdup(pathname)) == NULL) {
-        printError(key, ERR_CANNOT_ALLOCATE, "strdup failed w/ errno %d: %s",
+        print_error(key, ERR_CANNOT_ALLOCATE, "strdup failed w/ errno %d: %s",
             errno, strerror(errno));
         /* XXX abort(); ? */
-        freeHandle(finf);
+        free_handle(finf);
         return (ERR_CANNOT_ALLOCATE);
     }
 
@@ -788,17 +788,17 @@ watchPath(char *pathname, uint32_t key, uint64_t start_timestamp)
 
     mutex_lock(&handles_mutex);
 
-    if (findHandle(pathname) != NULL) {
+    if (find_handle(pathname) != NULL) {
         /* early-return: already watching so unlock and return success */
         mutex_unlock(&handles_mutex);
 
-        printResult(key, RESULT_SUCCESS, pathname, "already watching");
-        freeHandle(finf);
+        print_result(key, RESULT_SUCCESS, pathname, "already watching");
+        free_handle(finf);
         return (0);
     }
 
 
-    insertHandle(finf);
+    insert_handle(finf);
 
     mutex_unlock(&handles_mutex);
 
@@ -811,7 +811,7 @@ watchPath(char *pathname, uint32_t key, uint64_t start_timestamp)
     /*
      * Start to monitor this file.
      */
-    checkAndRearmEvent(key, finf->fobj.fo_name, 0, start_timestamp);
+    check_and_rearm_event(key, finf->fobj.fo_name, 0, start_timestamp);
 
     return (0);
 }
@@ -820,7 +820,7 @@ watchPath(char *pathname, uint32_t key, uint64_t start_timestamp)
  * Only called from main thread. Attempts to unwatch pathname.
  */
 int
-unwatchPath(char *pathname, uint32_t key)
+unwatch_path(char *pathname, uint32_t key)
 {
     struct fileinfo *finf;
     struct file_obj *fobjp;
@@ -829,10 +829,10 @@ unwatchPath(char *pathname, uint32_t key)
 
     mutex_lock(&handles_mutex);
 
-    finf = findHandle(pathname);
+    finf = find_handle(pathname);
     if (finf == NULL) {
         mutex_unlock(&handles_mutex);
-        printResult(key, RESULT_FAILURE, pathname, "not watching '%s', cannot "
+        print_result(key, RESULT_FAILURE, pathname, "not watching '%s', cannot "
             "unwatch", pathname);
         return (0);
     }
@@ -864,18 +864,18 @@ unwatchPath(char *pathname, uint32_t key)
      * associated and remove the handle.
      */
     ret = port_dissociate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp);
-    i_removeHandle(finf);
+    i_remove_handle(finf);
     mutex_unlock(&handles_mutex);
 
-    enqueueFreeFinf(finf);
+    enqueue_free_finf(finf);
 
     if (ret == -1) {
         /* file may have been deleted/moved */
-        printResult(key, RESULT_FAILURE, pathname,
+        print_result(key, RESULT_FAILURE, pathname,
             "failed to unregister '%s' (errno %d): %s", pathname, errno,
             strerror(errno));
     } else {
-        printResult(key, RESULT_SUCCESS, pathname,
+        print_result(key, RESULT_SUCCESS, pathname,
             "no longer watching '%s'", pathname);
     }
 
@@ -899,18 +899,18 @@ main()
     handles = malloc(sizeof (struct fileinfo *) * HANDLES_MASK);
 
     if ((port = port_create()) == -1) {
-        printError(SYSTEM_KEY, ERR_PORT_CREATE, "port_create failed(%d): %s",
+        print_error(SYSTEM_KEY, ERR_PORT_CREATE, "port_create failed(%d): %s",
             errno, strerror(errno));
         exit(ERR_PORT_CREATE);
     }
 
     /* Create a worker thread to process events. */
-    pthread_create(&tid, NULL, waitForEvents, (void *)&port);
+    pthread_create(&tid, NULL, wait_for_events, (void *)&port);
 
     while (1) {
         if (fgets(str, MAX_CMD_LEN + 1, stdin) == NULL) {
             if (!feof(stdin)) {
-                printError(SYSTEM_KEY, ERR_GET_STDIN, "fswatcher: error on "
+                print_error(SYSTEM_KEY, ERR_GET_STDIN, "fswatcher: error on "
                     "stdin (errno: %d): %s\n", errno, strerror(errno));
             }
             /* In EOF case we don't print, this this is normal termination. */
@@ -924,18 +924,18 @@ main()
             MAX_KEY_LEN + 1);
         res = sscanf(str, sscanf_fmt, key_str, cmd, path, &start_timestamp);
         if (res != 3 && res != 4) {
-            printError(SYSTEM_KEY, ERR_INVALID_COMMAND, "invalid command line");
+            print_error(SYSTEM_KEY, ERR_INVALID_COMMAND, "invalid command line");
             continue;
         }
         key = strtoul(key_str, NULL, 10);
         if ((strlen(key_str) > MAX_KEY_LEN) ||
             (key == ULONG_MAX && errno == ERANGE)) {
 
-            printError(SYSTEM_KEY, ERR_INVALID_KEY, "invalid key: > ULONG_MAX");
+            print_error(SYSTEM_KEY, ERR_INVALID_KEY, "invalid key: > ULONG_MAX");
             continue;
         }
         if (key == 0) {
-            printError(SYSTEM_KEY, ERR_INVALID_KEY, "invalid key: 0");
+            print_error(SYSTEM_KEY, ERR_INVALID_KEY, "invalid key: 0");
             continue;
         }
 
@@ -944,22 +944,22 @@ main()
 #endif
 
         if (strcmp("UNWATCH", cmd) == 0) {
-            /* unwatchPath() will print an object to stdout */
-            res = unwatchPath(path, key);
+            /* unwatch_path() will print an object to stdout */
+            res = unwatch_path(path, key);
             if (res != 0) {
                 /*
-                 * An error occured and unwatchPath() will have written an
+                 * An error occured and unwatch_path() will have written an
                  * error object to stdout. Break the loop so we can exit.
                  */
                 exit_code = res;
                 break;
             }
         } else if (strcmp("WATCH", cmd) == 0) {
-            /* watchPath() will print an object to stdout */
-            res = watchPath(path, key, start_timestamp);
+            /* watch_path() will print an object to stdout */
+            res = watch_path(path, key, start_timestamp);
             if (res != 0) {
                 /*
-                 * An error occured and watchPath() will have written an error
+                 * An error occured and watch_path() will have written an error
                  * object to stdout. Break the loop so we can exit.
                  */
                 exit_code = res;
@@ -967,7 +967,7 @@ main()
             }
         } else {
             /* XXX if they include crazy garbage, this may include non-JSON */
-            printError(key, ERR_UNKNOWN_COMMAND, "unknown command '%s'", cmd);
+            print_error(key, ERR_UNKNOWN_COMMAND, "unknown command '%s'", cmd);
         }
     }
 

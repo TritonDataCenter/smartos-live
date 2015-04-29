@@ -161,7 +161,6 @@ struct fileinfo {
     int hash;
     struct file_obj fobj;
     int events;
-    int port;
 };
 
 struct fileinfo **handles = NULL;
@@ -329,7 +328,7 @@ struct fileinfo *
 find_handle(char *pathname)
 {
     int namelen;
-    int hash;
+    int hash = 0;
     int hash_idx;
     struct fileinfo *handle;
 
@@ -363,8 +362,10 @@ insert_handle(struct fileinfo *handle)
 {
     int hash_idx;
 
+    handle->hash = 0;
     HASH(handle->fobj.fo_name, handle->hash, handle->namelen);
     hash_idx = handle->hash & HANDLES_MASK;
+
     if (handles[hash_idx] == NULL) {
         handle->next = handle;
         handle->prev = handle;
@@ -554,9 +555,8 @@ register_watch(uint32_t key, char *name, struct stat sb)
     /*
      * We are no longer interested in events for this idx.
      */
-    if (finf == NULL) {
+    if (finf == NULL)
         return;
-    }
 
     fobjp = &finf->fobj;
     fobjp->fo_atime = sb.st_atim;
@@ -565,7 +565,7 @@ register_watch(uint32_t key, char *name, struct stat sb)
 
     /*
      * we do the associate inside of the mutex so that we don't accidentally
-     * accociate a source that had been removed.
+     * associate a source that had been removed.
      */
     pa_ret = port_associate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp,
         finf->events, name);
@@ -692,9 +692,9 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
  * check_and_rearm_event().
  */
 void *
-wait_for_events(void *pn)
+wait_for_events(void *arg)
 {
-    int port = *((int *)pn);
+    (void) arg;
     struct fileinfo *finf;
     port_event_t pe;
 
@@ -706,7 +706,7 @@ wait_for_events(void *pn)
         switch (pe.portev_source) {
         case PORT_SOURCE_FILE:
             /* Call file events event handler */
-            check_and_rearm_event(0, (char *)pe.portev_object,
+            check_and_rearm_event(0, (char *)pe.portev_user,
                 pe.portev_events, 0);
             break;
         default:
@@ -806,7 +806,6 @@ watch_path(char *pathname, uint32_t key, uint64_t start_timestamp)
      * Event types to watch.
      */
     finf->events = FILE_MODIFIED;
-    finf->port = port;
 
     /*
      * Start to monitor this file.
@@ -824,7 +823,6 @@ unwatch_path(char *pathname, uint32_t key)
 {
     struct fileinfo *finf;
     struct file_obj *fobjp;
-    int port;
     int ret;
 
     mutex_lock(&handles_mutex);
@@ -837,7 +835,6 @@ unwatch_path(char *pathname, uint32_t key)
         return (0);
     }
 
-    port = finf->port;
     fobjp = &finf->fobj;
     /*
      * From the man page, there are 5 possible errors for port_dissociate():
@@ -896,7 +893,7 @@ main()
     pthread_t tid;
     uint64_t start_timestamp;
 
-    handles = malloc(sizeof (struct fileinfo *) * HANDLES_MASK);
+    handles = calloc(sizeof (struct fileinfo *), HANDLES_MASK);
 
     if ((port = port_create()) == -1) {
         print_error(SYSTEM_KEY, ERR_PORT_CREATE, "port_create failed(%d): %s",
@@ -905,7 +902,7 @@ main()
     }
 
     /* Create a worker thread to process events. */
-    pthread_create(&tid, NULL, wait_for_events, (void *)&port);
+    pthread_create(&tid, NULL, wait_for_events, NULL);
 
     while (1) {
         if (fgets(str, MAX_CMD_LEN + 1, stdin) == NULL) {

@@ -669,7 +669,7 @@ checkAndRearmEvent(uint32_t key, char *name, int revents,
          * a result. Since stat() just failed, we'll send now and return since
          * we're not going to do anything further.
          */
-        printResult(key, RESULT_FAILURE, fobjp->fo_name, "stat(2) failed with "
+        printResult(key, RESULT_FAILURE, finf->fobj.fo_name, "stat(2) failed with "
             "errno %d: %s", stat_ret, strerror(stat_ret));
         assert(final);
     }

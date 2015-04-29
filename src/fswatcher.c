@@ -326,43 +326,43 @@ printResult(uint32_t key, uint32_t code, const char *pathname,
  *
  * Should only be called when holding the handles_mutex
  */
-struct fileinfo*
+struct fileinfo *
 findHandle(char *pathname)
 {
     int namelen;
     int hash;
-    struct fileinfo* handle;
+    struct fileinfo *handle;
 
-    HASH(pathname,hash,namelen);
+    HASH(pathname, hash, namelen);
 
     handle = handles[hash];
 
     if (handle == NULL)
-        return NULL;
+        return (NULL);
 
     do {
         if (handle->hash == hash &&
             handle->namelen == namelen &&
-            strcmp(handle->fobj.fo_name,pathname) == 0){
-            return handle;
+            strcmp(handle->fobj.fo_name, pathname) == 0) {
+            return (handle);
         }
         handle = handle->next;
     } while (handle != handles[hash]);
 
-    return NULL;
+    return (NULL);
 }
 
 /*
  * insertHandle() inserts a fileinfo into the hash.
-
+ *
  * Should only be called after validating that the element does not exist
  * in the hash, and when holding the handles_mutex.
  */
 void
-insertHandle(struct fileinfo* handle)
+insertHandle(struct fileinfo *handle)
 {
 
-    HASH(handle->fobj.fo_name,handle->hash,handle->namelen);
+    HASH(handle->fobj.fo_name, handle->hash, handle->namelen);
 
     if (handles[handle->hash] == NULL) {
         handle->next = handle;
@@ -384,7 +384,7 @@ insertHandle(struct fileinfo* handle)
  * Should only be called when holding the handles_mutex.
  */
 void
-i_removeHandle(struct fileinfo* handle)
+i_removeHandle(struct fileinfo *handle)
 {
     if (handle->next == handle) {
         handles[handle->hash] = NULL;
@@ -405,7 +405,7 @@ i_removeHandle(struct fileinfo* handle)
 void
 removeHandle(char *pathname)
 {
-    struct fileinfo* handle;
+    struct fileinfo *handle;
 
     handle = findHandle(pathname);
 
@@ -418,7 +418,7 @@ removeHandle(char *pathname)
  *
  */
 void
-freeHandle(struct fileinfo* handle)
+freeHandle(struct fileinfo *handle)
 {
     if (handle->fobj.fo_name) {
         free(handle->fobj.fo_name);
@@ -433,7 +433,7 @@ freeHandle(struct fileinfo* handle)
  * MUST only be called from the secondary thread.
  */
 void
-destroyHandle(struct fileinfo* handle)
+destroyHandle(struct fileinfo *handle)
 {
     mutex_lock(&handles_mutex);
     i_removeHandle(handle);
@@ -669,8 +669,8 @@ checkAndRearmEvent(uint32_t key, char *name, int revents,
          * a result. Since stat() just failed, we'll send now and return since
          * we're not going to do anything further.
          */
-        printResult(key, RESULT_FAILURE, finf->fobj.fo_name, "stat(2) failed with "
-            "errno %d: %s", stat_ret, strerror(stat_ret));
+        printResult(key, RESULT_FAILURE, finf->fobj.fo_name,
+            "stat(2) failed with errno %d: %s", stat_ret, strerror(stat_ret));
         assert(final);
     }
 
@@ -727,7 +727,7 @@ waitForEvents(void *pn)
         mutex_lock(&free_mutex);
         while (free_list != NULL) {
             finf = free_list->next;
-            freeHandle((struct fileinfo*)free_list);
+            freeHandle((struct fileinfo *)free_list);
             free_list = finf;
         }
         mutex_unlock(&free_mutex);
@@ -751,7 +751,7 @@ enqueueFreeFinf(struct fileinfo *finf)
 
     if (finf != NULL) {
         mutex_lock(&free_mutex);
-        finf->next = (struct fileinfo*)free_list;
+        finf->next = (struct fileinfo *)free_list;
         free_list = finf;
         finf->prev = NULL;
         mutex_unlock(&free_mutex);
@@ -895,7 +895,7 @@ main()
     pthread_t tid;
     uint64_t start_timestamp;
 
-    handles = malloc(sizeof (struct fileinfo*) * HANDLES_MASK);
+    handles = malloc(sizeof (struct fileinfo *) * HANDLES_MASK);
 
     if ((port = port_create()) == -1) {
         printError(SYSTEM_KEY, ERR_PORT_CREATE, "port_create failed(%d): %s",

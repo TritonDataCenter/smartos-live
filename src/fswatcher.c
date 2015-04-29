@@ -242,8 +242,8 @@ print_event(int event, char *pathname, int final)
 }
 
 /*
- * print_error() takes a key, code (one of the ErrorCodes) and message and writes
- * to stdout.
+ * print_error() takes a key, code (one of the ErrorCodes) and message and
+ * writes to stdout.
  */
 void
 print_error(uint32_t key, uint32_t code, const char *message_fmt, ...)
@@ -597,8 +597,8 @@ register_watch(uint32_t key, char *name, struct stat sb)
 }
 
 /*
- * check_and_rearm_event() is called to (re)arm watches. This can either be because
- * of an event (in which case revents should be pe.portev_events) or to
+ * check_and_rearm_event() is called to (re)arm watches. This can either be
+ * because of an event (in which case revents should be pe.portev_events) or to
  * initially arm in which case revents should be 0.
  *
  * It also performs the required stat() and in case this is a re-arm prints
@@ -715,8 +715,8 @@ wait_for_events(void *pn)
              * other than FILE, since that's all we're adding. So abort and hope
              * there's enough state in the core.
              */
-            print_error(0, ERR_UNEXPECTED_SOURCE, "event from unexpected source:"
-                " %s", strerror(errno));
+            print_error(0, ERR_UNEXPECTED_SOURCE,
+                "event from unexpected source: %s", strerror(errno));
             abort();
         }
 
@@ -924,14 +924,16 @@ main()
             MAX_KEY_LEN + 1);
         res = sscanf(str, sscanf_fmt, key_str, cmd, path, &start_timestamp);
         if (res != 3 && res != 4) {
-            print_error(SYSTEM_KEY, ERR_INVALID_COMMAND, "invalid command line");
+            print_error(SYSTEM_KEY, ERR_INVALID_COMMAND,
+                "invalid command line");
             continue;
         }
         key = strtoul(key_str, NULL, 10);
         if ((strlen(key_str) > MAX_KEY_LEN) ||
             (key == ULONG_MAX && errno == ERANGE)) {
 
-            print_error(SYSTEM_KEY, ERR_INVALID_KEY, "invalid key: > ULONG_MAX");
+            print_error(SYSTEM_KEY, ERR_INVALID_KEY,
+                "invalid key: > ULONG_MAX");
             continue;
         }
         if (key == 0) {

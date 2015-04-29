@@ -751,7 +751,7 @@ enqueueFreeFinf(struct fileinfo *finf)
 
     if (finf != NULL) {
         mutex_lock(&free_mutex);
-        finf->next = free_list;
+        finf->next = (struct fileinfo*)free_list;
         free_list = finf;
         finf->prev = NULL;
         mutex_unlock(&free_mutex);

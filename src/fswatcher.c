@@ -333,7 +333,7 @@ findHandle(char *pathname)
     int hash_idx;
     struct fileinfo *handle;
 
-    HASH(pathname,hash,namelen);
+    HASH(pathname, hash, namelen);
     hash_idx = hash & HANDLES_MASK;
     handle = handles[hash_idx];
 

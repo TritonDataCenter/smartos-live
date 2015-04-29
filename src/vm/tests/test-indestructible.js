@@ -177,13 +177,15 @@ test('make zoneroot_only VM indestructible', function (t) {
 });
 
 test('attempt to delete zoneroot_only VM', function (t) {
+    var timeout;
+
     if (current_vm_aborted) {
         t.ok(false, 'current VM aborted, skipping');
         t.end();
         return;
     }
 
-    setTimeout(function () {
+    timeout = setTimeout(function () {
         t.ok(false, 'timed out attempting to delete zoneroot_only VM');
         t.end();
     }, DELETE_TIMEOUT);
@@ -193,6 +195,7 @@ test('attempt to delete zoneroot_only VM', function (t) {
         VM.delete(vm_uuid, function (err) {
             t.ok(err && err.message.match(/indestructible_zoneroot is set/),
                 'delete: ' + (err ? err.message : 'succeeded'));
+            clearTimeout(timeout);
             t.end();
         });
     } else {
@@ -229,16 +232,19 @@ test('make zoneroot_only VM destructible', function (t) {
 });
 
 test('delete zoneroot_only VM', function (t) {
+    var timeout;
+
     // on destroy we ignore current_vm_aborted because we want to destroy anyway
     // if it exists. If we don't future tests might fail because this is here.
     if (vm_uuid) {
-        setTimeout(function () {
+        timeout = setTimeout(function () {
             t.ok(false, 'timed out deleting zoneroot_only VM');
             t.end();
         }, DELETE_TIMEOUT);
 
         VM.delete(vm_uuid, function (err) {
             t.ok(!err, 'delete VM: ' + (err ? err.message : 'success'));
+            clearTimeout(timeout);
             t.end();
         });
     } else {
@@ -268,13 +274,15 @@ test('create zoneroot_indestructible VM', function (t) {
 });
 
 test('attempt to delete zoneroot_indestructible VM', function (t) {
+    var timeout;
+
     if (current_vm_aborted) {
         t.ok(false, 'current VM aborted, skipping');
         t.end();
         return;
     }
 
-    setTimeout(function () {
+    timeout = setTimeout(function () {
         t.ok(false, 'timed out attempting to delete zoneroot_indestructible VM');
         t.end();
     }, DELETE_TIMEOUT);
@@ -283,6 +291,7 @@ test('attempt to delete zoneroot_indestructible VM', function (t) {
         // should fail!
         t.ok(err && err.message.match(/indestructible_zoneroot is set/),
             'delete: ' + (err ? err.message : 'succeeded'));
+        clearTimeout(timeout);
         t.end();
     });
 });
@@ -334,16 +343,19 @@ test('make zoneroot_indestructible VM destructible', function (t) {
 });
 
 test('delete zoneroot_indestructible VM', function (t) {
+    var timeout;
+
     // on destroy we ignore current_vm_aborted because we want to destroy anyway
     // if it exists. If we don't future tests might fail because this is here.
     if (vm_uuid) {
-        setTimeout(function () {
+        timeout = setTimeout(function () {
             t.ok(false, 'timed out deleting zoneroot_indestructible VM');
             t.end();
         }, DELETE_TIMEOUT);
 
         VM.delete(vm_uuid, function (err) {
             t.ok(!err, 'delete VM: ' + (err ? err.message : 'success'));
+            clearTimeout(timeout);
             t.end();
         });
     } else {
@@ -379,6 +391,8 @@ test('make delegated VM indestructible', function (t) {
 });
 
 test('attempt to delete delegated VM', function (t) {
+    var timeout;
+
     if (current_vm_aborted) {
         t.ok(false, 'current VM aborted, skipping');
         t.end();
@@ -386,7 +400,7 @@ test('attempt to delete delegated VM', function (t) {
     }
 
     if (vm_uuid) {
-        setTimeout(function () {
+        timeout = setTimeout(function () {
             t.ok(false, 'timed out attempting to delete delegated VM');
             t.end();
         }, DELETE_TIMEOUT);
@@ -395,6 +409,7 @@ test('attempt to delete delegated VM', function (t) {
             // should fail!
             t.ok(err && err.message.match(/indestructible_delegated is set/),
                 'delete: ' + (err ? err.message : 'succeeded'));
+            clearTimeout(timeout);
             t.end();
         });
     } else {
@@ -436,16 +451,19 @@ test('make delegated VM destructible', function (t) {
 });
 
 test('delete delegated VM', function (t) {
+    var timeout;
+
     // on destroy we ignore current_vm_aborted because we want to destroy anyway
     // if it exists. If we don't future tests might fail because this is here.
     if (vm_uuid) {
-        setTimeout(function () {
+        timeout = setTimeout(function () {
             t.ok(false, 'timed out deleting delegated VM');
             t.end();
         }, DELETE_TIMEOUT);
 
         VM.delete(vm_uuid, function (err) {
             t.ok(!err, 'delete VM: ' + (err ? err.message : 'success'));
+            clearTimeout(timeout);
             t.end();
         });
     } else {
@@ -476,6 +494,8 @@ test('create delegated_indestructible VM', function (t) {
 });
 
 test('attempt to delete delegated_indestructible VM', function (t) {
+    var timeout;
+
     if (current_vm_aborted) {
         t.ok(false, 'current VM aborted, skipping');
         t.end();
@@ -483,7 +503,7 @@ test('attempt to delete delegated_indestructible VM', function (t) {
     }
 
     if (vm_uuid) {
-        setTimeout(function () {
+        timeout = setTimeout(function () {
             t.ok(false, 'timed out attempting to delete delegated_indestructible VM');
             t.end();
         }, DELETE_TIMEOUT);
@@ -492,6 +512,7 @@ test('attempt to delete delegated_indestructible VM', function (t) {
             // should fail!
             t.ok(err && err.message.match(/indestructible_delegated is set/),
                 'delete: ' + (err ? err.message : 'succeeded'));
+            clearTimeout(timeout);
             t.end();
         });
     } else {
@@ -514,16 +535,19 @@ test('make delegated_indestructible VM destructible', function (t) {
 });
 
 test('delete delegated_indestructible VM', function (t) {
+    var timeout;
+
     // on destroy we ignore current_vm_aborted because we want to destroy anyway
     // if it exists. If we don't future tests might fail because this is here.
     if (vm_uuid) {
-        setTimeout(function () {
+        timeout = setTimeout(function () {
             t.ok(false, 'timed out deleting delegated_indestructible VM');
             t.end();
         }, DELETE_TIMEOUT);
 
         VM.delete(vm_uuid, function (err) {
             t.ok(!err, 'delete VM: ' + (err ? err.message : 'success'));
+            clearTimeout(timeout);
             t.end();
         });
     } else {
@@ -554,6 +578,8 @@ test('create totally_indestructible VM', function (t) {
 });
 
 test('attempt #1 to delete totally_indestructible VM', function (t) {
+    var timeout;
+
     if (current_vm_aborted) {
         t.ok(false, 'current VM aborted, skipping');
         t.end();
@@ -561,7 +587,7 @@ test('attempt #1 to delete totally_indestructible VM', function (t) {
     }
 
     if (vm_uuid) {
-        setTimeout(function () {
+        timeout = setTimeout(function () {
             t.ok(false, 'timed out attempting to delete totally_indestructible VM');
             t.end();
         }, DELETE_TIMEOUT);
@@ -570,6 +596,7 @@ test('attempt #1 to delete totally_indestructible VM', function (t) {
             // should fail!
             t.ok(err && err.message.match(/indestructible_zoneroot is set/),
                 'delete: ' + (err ? err.message : 'succeeded'));
+            clearTimeout(timeout);
             t.end();
         });
     } else {
@@ -592,6 +619,8 @@ test('make totally_indestructible VM\'s zoneroot destructible', function (t) {
 });
 
 test('attempt #2 to delete totally_indestructible VM', function (t) {
+    var timeout;
+
     if (current_vm_aborted) {
         t.ok(false, 'current VM aborted, skipping');
         t.end();
@@ -599,7 +628,7 @@ test('attempt #2 to delete totally_indestructible VM', function (t) {
     }
 
     if (vm_uuid) {
-        setTimeout(function () {
+        timeout = setTimeout(function () {
             t.ok(false, 'timed out attempting to delete totally_indestructible VM');
             t.end();
         }, DELETE_TIMEOUT);
@@ -608,6 +637,7 @@ test('attempt #2 to delete totally_indestructible VM', function (t) {
             // should fail!
             t.ok(err && err.message.match(/indestructible_delegated is set/),
                 'delete: ' + (err ? err.message : 'succeeded'));
+            clearTimeout(timeout);
             t.end();
         });
     } else {
@@ -630,16 +660,19 @@ test('make totally_indestructible VM\'s delegated destructible', function (t) {
 });
 
 test('delete totally_indestructible VM', function (t) {
+    var timeout;
+
     // on destroy we ignore current_vm_aborted because we want to destroy anyway
     // if it exists. If we don't future tests might fail because this is here.
     if (vm_uuid) {
-        setTimeout(function () {
+        timeout = setTimeout(function () {
             t.ok(false, 'timed out deleting totally_indestructible VM');
             t.end();
         }, DELETE_TIMEOUT);
 
         VM.delete(vm_uuid, function (err) {
             t.ok(!err, 'delete VM: ' + (err ? err.message : 'success'));
+            clearTimeout(timeout);
             t.end();
         });
     } else {

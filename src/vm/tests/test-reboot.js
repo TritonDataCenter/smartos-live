@@ -134,7 +134,11 @@ test('test reboot kvm', function (t) {
 
     vmtest.on_new_vm(t, null, payload, state, [
         function (cb) {
+            var timeout = setTimeout(function () {
+                cb(new Error('timed out waiting for VM.load'));
+            }, 30000);
             VM.load(state.uuid, function (err, obj) {
+                clearTimeout(timeout);
                 t.ok(!err, 'loading obj for VM');
                 if (err) {
                     cb(err);
@@ -148,12 +152,20 @@ test('test reboot kvm', function (t) {
                 cb();
             });
         }, function (cb) {
+            var timeout = setTimeout(function () {
+                cb(new Error('timed out waiting for VM.reboot'));
+            }, 30000);
             VM.reboot(state.uuid, {}, function (err) {
+                clearTimeout(timeout);
                 t.ok(!err, 'rebooted VM: ' + (err ? err.message : 'success'));
                 cb();
             });
         }, function (cb) {
+            var timeout = setTimeout(function () {
+                cb(new Error('timed out waiting for VM.load'));
+            }, 30000);
             VM.load(state.uuid, function (err, obj) {
+                clearTimeout(timeout);
                 t.ok(!err, 'loading obj for VM');
                 if (err) {
                     cb(err);

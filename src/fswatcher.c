@@ -116,10 +116,6 @@
  *
  */
 
-/*
- * XXX watch/unwatch are currently O(N)
- */
-
 #define MAX_FMT_LEN 64
 #define MAX_KEY 4294967295
 #define MAX_KEY_LEN 10 /* number of digits (0-4294967295) */
@@ -128,8 +124,20 @@
 
 /* longest command is '<KEY> UNWATCH <path>' with <KEY> being 10 characters. */
 #define MAX_CMD_LEN (MAX_KEY_LEN + 1 + 7 + 1 + PATH_MAX + 1 + MAX_TIMESTAMP_LEN)
-#define MAX_HANDLES 100000 /* limit on how many watches to have active */
+#define HANDLES_MASK 0xffff /* number of lookup buckets in the hash */
 #define SYSTEM_KEY 0
+
+/* hashing implementation, really needs a real one */
+#define HASH(name, hash, namlen)                    \
+    {                                               \
+        char Xc;                                    \
+        const char *Xcp;                            \
+        for (Xcp = (name); (Xc = *Xcp) != 0; Xcp++) \
+            (hash) = ((hash) << 4) + (hash) + Xc;   \
+        (hash) = (hash) & HANDLES_MASK;             \
+        ASSERT((Xcp - (name)) <= ((1 << NBBY) - 1));\
+        (namlen) = Xcp - (name);                    \
+    }
 
 enum ErrorCodes {
     SUCCESS,               /* not an error */
@@ -149,29 +157,29 @@ enum ResultCodes {
 };
 
 struct fileinfo {
+    struct fileinfo *next;
+    struct fileinfo *prev;
+    int namelen;
+    int hash;
     struct file_obj fobj;
     int events;
     int port;
 };
 
-struct fileinfo *handles[MAX_HANDLES] = { NULL };
-int largest_idx = 0;
+struct fileinfo *handles[HANDLES_MASK] = { NULL };
+volatile struct fileinfo *free_list = NULL;
 static mutex_t handles_mutex;
+static mutex_t free_mutex;
 static mutex_t stdout_mutex;
-int next_unused = 0;
 int port = -1;
 
-int findHandleIdx(char *pathname);
-void freeFinf(struct fileinfo **finfp);
-int getNextHandleIdx();
+void enqueueFreeFinf(struct fileinfo **finfp);
 void printEvent(int event, char *pathname, int final);
-void processFile(uint32_t key, struct fileinfo *finf, int revents,
+void checkAndRearmEvent(uint32_t key, int idx, int revents,
     uint64_t start_timestamp);
 void * waitForEvents(void *pn);
 int watchPath(char *pathname, uint32_t key, uint64_t start_timestamp);
 int unwatchPath(char *pathname, uint32_t key);
-void unHandle(char *pathname);
-void unHandleIdx(int idx, int holdingMutex);
 
 /*
  * This outputs a line to stdout indicating the type of event detected.
@@ -314,56 +322,123 @@ printResult(uint32_t key, uint32_t code, const char *pathname,
 }
 
 /*
- * findHandleIdx() takes a pathname and returns the index from the handles array
- * for that path. It returns -1 if pathname is not found.
+ * findHandle() takes a pathname and returns the fileinfo struct from the
+ * handles hash. returns NULL if no pathname matches.
  *
- * This should be called only while holding the handles_mutex
+ * Should only be called when holding the handles_mutex
  */
-int
-findHandleIdx(char *pathname)
+struct fileinfo*
+findHandle(char *pathname)
 {
-    int i;
-    struct fileinfo *handle;
+    int namelen;
+    int hash;
+    struct fileinfo* handle;
 
-    for (i = 0; i <= largest_idx; i++) {
-        handle = handles[i];
+    HASH(pathname,hash,namelen);
 
-        /* Record that this is the first unused since we're looping anyway */
-        if (handle == NULL && i < next_unused) {
-            next_unused = i;
+    handle = handles[hash];
+
+    if (handle == NULL)
+        return NULL;
+
+    do {
+        if (handle->hash == hash &&
+            handle->namelen == namelen &&
+            strcmp(handle->fobj.fo_name,pathname) == 0){
+            return handle;
         }
+        handle = handle->next;
+    } while (handle != handles[hash]);
 
-        if (handle != NULL && handle->fobj.fo_name &&
-            strcmp(handle->fobj.fo_name, pathname) == 0) {
-
-            return (i);
-        }
-    }
-
-    return (-1);
+    return NULL;
 }
 
 /*
- * getNextHandleIdx() returns the next unused index from the handles array. If
- * no unused are found below MAX_HANDLES, it returns -1.
- *
- * This should be called only while holding the handles_mutex
+ * insertHandle() inserts a fileinfo into the hash.
+
+ * Should only be called after validating that the element does not exist
+ * in the hash, and when holding the handles_mutex.
  */
-int
-getNextHandleIdx()
+void
+insertHandle(struct fileinfo* handle)
 {
-    int idx = next_unused;
 
-    while (idx < MAX_HANDLES && handles[idx] != NULL) {
-        idx++;
+    HASH(handle->pathname,handle->hash,handle->namelen);
+
+    if (handles[handle->hash] == NULL) {
+        handle->next = handle;
+        handle->prev = handle;
+        handles[handle->hash] = handle;
+    } else {
+        handle->next = handles[handle->hash];
+        handle->prev = handles[handle->hash]->prev;
+        handles[handle->hash]->prev->next = handle;
+        handles[handle->hash]->prev = handle;
+        handles[handle->hash] = handle;
     }
+}
 
-    if (idx < MAX_HANDLES) {
-        return (idx);
+/*
+ * i_removeHandle() removes a fileinfo from the hash if the handle
+ * is alreay known.
+ *
+ * Should only be called when holding the handles_mutex.
+ */
+void
+i_removeHandle(struct fileinfo* handle)
+{
+    if (handle->next == handle) {
+        handles[handle->hash] = NULL
+    } else {
+        handles[handle->hash] = handle->next;
+        handle->next->prev = handle->prev;
+        handle->prev->next = handle->next;
     }
+    handle->next = NULL;
+    handle->prev = NULL;
+}
 
-    /* couldn't find a handle < MAX_HANDLES that was available */
-    return (-1);
+/*
+ * removeHandle() removes a fileinfo from the hash.
+ *
+ * Should only be called when holding the handles_mutex.
+ */
+void
+removeHandle(char *pathname)
+{
+    struct fileinfo* handle;
+
+    handle = findHandle(pathname);
+
+    if (handle != NULL)
+        i_removeHandle(handle);
+}
+
+/*
+ * freeHandle() frees a fileinfo handle.
+ *
+ */
+freeHandle(struct fileinfo* handle)
+{
+    if (handle->fobj.fo_name) {
+        free(handle->fobj.fo_name);
+        handle->fobj.fo_name = NULL;
+    }
+    free(handle);
+}
+
+/*
+ * destroyHandle() removes a fileinfo handle for the hash, and frees it.
+ *
+ * MUST only be called from the secondary thread.
+ */
+void
+destroyHandle(struct fileinfo* handle)
+{
+    mutex_lock(&handles_mutex);
+    i_removeHandle(handle);
+    mutex_unlock(&handles_mutex);
+    freeHandle(handle);
 }
 
 /*
@@ -465,17 +540,36 @@ getStat(char *pathname, struct stat *sb)
 }
 
 void
-registerWatch(uint32_t key, struct fileinfo *finf, struct stat sb)
+registerWatch(uint32_t key, char *name, struct stat sb)
 {
-    struct file_obj *fobjp = &finf->fobj;
+    struct fileinfo *finf;
+    struct file_obj *fobjp;
     int pa_ret;
 
+    mutex_lock(&handles_mutex);
+
+    finf = findHandle(name);
+
+    /*
+     * We are no longer interested in events for this idx.
+     */
+    if (finf == NULL) {
+        return;
+    }
+
+    fobjp = &finf->fobj;
     fobjp->fo_atime = sb.st_atim;
     fobjp->fo_mtime = sb.st_mtim;
     fobjp->fo_ctime = sb.st_ctim;
 
+    /*
+     * we do the associate inside of the mutex so that we don't accidentally
+     * accociate a source that had been removed.
+     */
     pa_ret = port_associate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp,
-        finf->events, (void *)finf);
+        finf->events, name);
+
+    mutex_unlock(&handles_mutex);
 
     if (key != 0) {
         /*
@@ -486,7 +580,7 @@ registerWatch(uint32_t key, struct fileinfo *finf, struct stat sb)
             printResult(key, RESULT_FAILURE, fobjp->fo_name,
                 "port_associate(3c) failed with errno %d: %s",
                 errno, strerror(errno));
-            unHandle(fobjp->fo_name);
+            destroyHandle(finf);
         } else {
             printResult(key, RESULT_SUCCESS, fobjp->fo_name,
                 "port_associate(3c) started watching path");
@@ -502,9 +596,9 @@ registerWatch(uint32_t key, struct fileinfo *finf, struct stat sb)
 }
 
 /*
- * processFile() is called to (re)arm watches. This can either be because of
- * an event (in which case revents should be pe.portev_events) or to initially
- * arm in which case revents should be 0.
+ * checkAndRearmEvent() is called to (re)arm watches. This can either be because
+ * of an event (in which case revents should be pe.portev_events) or to
+ * initially arm in which case revents should be 0.
  *
  * It also performs the required stat() and in case this is a re-arm prints
  * the event.
@@ -513,31 +607,30 @@ registerWatch(uint32_t key, struct fileinfo *finf, struct stat sb)
  * to do the stat() before we print the results since if the file no longer
  * exists we cannot rearm. In that case we set the 'final' flag in the response.
  *
- * XXX rename
  *
  */
 void
-processFile(uint32_t key, struct fileinfo *finf, int revents,
+checkAndRearmEvent(uint32_t key, char *name, int revents,
     uint64_t start_timestamp)
 {
     int final = 0;
-    struct file_obj *fobjp = &finf->fobj;
+    struct fileinfo *finf;
     struct stat sb;
     int stat_ret;
     time_t tv_sec;
     long tv_nsec;
 
-    /*
-     * Events do not rearm themselves. So if we get here and we return without
-     * rearming, there's no need to remove the event it simply won't get
-     * rearmed. But we *do* want to ensure that if we fail to rearm, we remove
-     * from handles and cleanup the memory.
-     */
+    mutex_lock(&handles_mutex);
 
-    if (fobjp->fo_name == NULL) {
-        fprintf(stderr, "WARNING: processFile() called w/ null fo_name\n");
+    finf = findHandle(name);
+    /*
+     * We are no longer interested in events for this idx.
+     */
+    if (finf == NULL) {
+        mutex_unlock(&handles_mutex);
         return;
     }
+    mutex_unlock(&handles_mutex);
 
     /*
      * We always do stat, even if we're going to override the timestamps so
@@ -583,20 +676,19 @@ processFile(uint32_t key, struct fileinfo *finf, int revents,
 
     if (final) {
         /* we're not going to re-enable, so cleanup */
-        unHandle(fobjp->fo_name);
+        destroyHandle(finf);
         return;
     }
 
     /*
      * (re)register.
      */
-
-    registerWatch(key, finf, sb);
+    registerWatch(key, name, sb);
 }
 
 /*
  * Worker thread waits here for events, which then get dispatched to
- * processFile().
+ * checkAndRearmEvent().
  */
 void *
 waitForEvents(void *pn)
@@ -612,7 +704,7 @@ waitForEvents(void *pn)
         switch (pe.portev_source) {
         case PORT_SOURCE_FILE:
             /* Call file events event handler */
-            processFile(0, (struct fileinfo *)pe.portev_object,
+            checkAndRearmEvent(0, (char *)pe.portev_object,
                 pe.portev_events, 0);
             break;
         default:
@@ -625,6 +717,19 @@ waitForEvents(void *pn)
                 " %s", strerror(errno));
             abort();
         }
+
+        /*
+         * The actual work of freeing finf objects is done in this thread so
+         * that there aren't any race conditions while accessing
+         * free_list->fobj.fo_name in the checkAndRearmEvent function
+         */
+        mutex_lock(&free_mutex);
+        while (free_list != NULL) {
+            finf = free_list->next
+            freeHandle(free_list);
+            free_list = finf;
+        }
+        mutex_unlock(&free_mutex);
     }
     fprintf(stderr, "fswatcher: worker thread exiting\n");
     fflush(stderr);
@@ -632,76 +737,23 @@ waitForEvents(void *pn)
 }
 
 /*
- * Free a finf object.
+ * Enqueue a finf object to be freed. All this really does is add the structure
+ * to a list that should be freed in the secondary worker thread.
+ *
+ * This is done to prevent race conditions where the finf object would be freed
+ * in the main thread right before an event in the secondary threat would try to
+ * access the name of the object that was going to be stat'd.
  */
 void
-freeFinf(struct fileinfo **finfp)
+enqueueFreeFinf(struct fileinfo *finf)
 {
-    struct fileinfo *finf;
-
-    if (*finfp != NULL) {
-        finf = *finfp;
-        if (finf->fobj.fo_name) {
-            free(finf->fobj.fo_name);
-            finf->fobj.fo_name = NULL;
-        }
-        free(finf);
-        *finfp = NULL;
-    }
-}
-
-/*
- * unHandle() attempts to remove the handles array data for a given pathname.
- */
-void
-unHandle(char *pathname)
-{
-    int idx;
-
-    mutex_lock(&handles_mutex);
-
-    idx = findHandleIdx(pathname);
-    if (idx < 0) {
-#ifdef DEBUG
-        fprintf(stderr, "DEBUG: unHandle called, but no file: %s\n", pathname);
-#endif
-    } else {
-        /* The 1 argument here tells unhandleIdx we're already holding mutex */
-        unHandleIdx(idx, 1);
-    }
-
-    mutex_unlock(&handles_mutex);
-}
-
-/*
- * unHandleIdx() attempts to remove the handles array data at a given index.
- */
-void
-unHandleIdx(int idx, int holdingMutex)
-{
-    struct fileinfo *finf;
-
-    if (!holdingMutex) {
-        mutex_lock(&handles_mutex);
-    }
-
-    finf = handles[idx];
 
     if (finf != NULL) {
-        freeFinf(&finf);
-    }
-
-#ifdef DEBUG
-    fprintf(stderr, "DEBUG: clearing index: %d\n", idx);
-#endif
-    handles[idx] = NULL;
-
-    if (idx < next_unused) {
-        next_unused = idx;
-    }
-
-    if (!holdingMutex) {
-        mutex_unlock(&handles_mutex);
+        mutex_lock(&free_mutex);
+        finf->next = free_list;
+        free_list = finf;
+        finf->prev = NULL;
+        mutex_unlock(&free_mutex);
     }
 }
 
@@ -712,7 +764,6 @@ int
 watchPath(char *pathname, uint32_t key, uint64_t start_timestamp)
 {
     struct fileinfo *finf;
-    int idx;
     /* port is global */
 
     finf = malloc(sizeof (struct fileinfo));
@@ -727,7 +778,7 @@ watchPath(char *pathname, uint32_t key, uint64_t start_timestamp)
         printError(key, ERR_CANNOT_ALLOCATE, "strdup failed w/ errno %d: %s",
             errno, strerror(errno));
         /* XXX abort(); ? */
-        free(finf);
+        freeHandle(finf);
         return (ERR_CANNOT_ALLOCATE);
     }
 
@@ -735,34 +786,17 @@ watchPath(char *pathname, uint32_t key, uint64_t start_timestamp)
 
     mutex_lock(&handles_mutex);
 
-    idx = findHandleIdx(pathname);
-    if (idx >= 0) {
-        printResult(key, RESULT_SUCCESS, pathname, "already watching");
-        freeFinf(&finf);
-
+    if (findHandle(pathname) != NULL) {
         /* early-return: already watching so unlock and return success */
         mutex_unlock(&handles_mutex);
+
+        printResult(key, RESULT_SUCCESS, pathname, "already watching");
+        freeHandle(finf);
         return (0);
     }
 
-    idx = getNextHandleIdx();
-    if (idx < 0) {
-        printResult(key, RESULT_FAILURE, pathname,
-            "unable to find free handle");
-        freeFinf(&finf);
 
-        /* early-return: failed to find a handle, so return an error */
-        mutex_unlock(&handles_mutex);
-        return (1);
-    }
-
-#ifdef DEBUG
-    fprintf(stderr, "DEBUG: using index: %d\n", idx);
-#endif
-    if (idx > largest_idx) {
-        largest_idx = idx;
-    }
-    handles[idx] = finf;
+    insertHandle(finf);
 
     mutex_unlock(&handles_mutex);
 
@@ -773,9 +807,9 @@ watchPath(char *pathname, uint32_t key, uint64_t start_timestamp)
     finf->port = port;
 
     /*
-     * Start monitor this file.
+     * Start to monitor this file.
      */
-    processFile(key, finf, 0, start_timestamp);
+    checkAndRearmEvent(key, finf->fobj.fo_name, 0, start_timestamp);
 
     return (0);
 }
@@ -788,69 +822,60 @@ unwatchPath(char *pathname, uint32_t key)
 {
     struct fileinfo *finf;
     struct file_obj *fobjp;
-    int idx;
     int port;
+    int ret;
 
     mutex_lock(&handles_mutex);
 
-    idx = findHandleIdx(pathname);
-    if (idx == -1) {
+    finf = findHandle(pathname);
+    if (finf == NULL) {
         mutex_unlock(&handles_mutex);
         printResult(key, RESULT_FAILURE, pathname, "not watching '%s', cannot "
             "unwatch", pathname);
         return (0);
     }
 
-    finf = handles[idx];
-
-    if (finf == NULL) {
-        /* XXX: already gone, should we output? */
-        printResult(key, RESULT_SUCCESS, pathname, "already not watching '%s'",
-            pathname);
-    } else {
-
-        port = finf->port;
-        fobjp = &finf->fobj;
-        /*
-         * From the man page, there are 5 possible errors for port_dissociate():
-         *
-         * EBADF
-         *          The port identifier is not valid.
-         *
-         * EBADFD
-         *          The source argument is of type PORT_SOURCE_FD  and  the
-         *          object argument is not a valid file descriptor.
-         *
-         * EINVAL
-         *          The source argument is not valid.
-         *
-         * EACCES
-         *          The process is not the owner of the association.
-         *
-         * ENOENT
-         *          The specified object is not associated with the port.
-         *
-         *
-         * none of these seem like they'll succeed if tried again later for this
-         * same file, so in every case we assume that the file is no longer
-         * associated and remove the handle.
-         */
-        if (port_dissociate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp) == -1) {
-            /* file may have been deleted/moved */
-            printResult(key, RESULT_FAILURE, pathname,
-                "failed to unregister '%s' (errno %d): %s", pathname, errno,
-                strerror(errno));
-        } else {
-            printResult(key, RESULT_SUCCESS, pathname,
-                "no longer watching '%s'", pathname);
-        }
-
-        unHandleIdx(idx, 1);
-    }
-
+    port = finf->port;
+    fobjp = &finf->fobj;
+    /*
+     * From the man page, there are 5 possible errors for port_dissociate():
+     *
+     * EBADF
+     *          The port identifier is not valid.
+     *
+     * EBADFD
+     *          The source argument is of type PORT_SOURCE_FD  and  the
+     *          object argument is not a valid file descriptor.
+     *
+     * EINVAL
+     *          The source argument is not valid.
+     *
+     * EACCES
+     *          The process is not the owner of the association.
+     *
+     * ENOENT
+     *          The specified object is not associated with the port.
+     *
+     *
+     * none of these seem like they'll succeed if tried again later for this
+     * same file, so in every case we assume that the file is no longer
+     * associated and remove the handle.
+     */
+    ret = port_dissociate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp)
+    i_removeHandle(finf);
     mutex_unlock(&handles_mutex);
 
-    /* XXX what can fail here? */
+    enqueueFreeFinf(finf);
+
+    if (ret == -1) {
+        /* file may have been deleted/moved */
+        printResult(key, RESULT_FAILURE, pathname,
+            "failed to unregister '%s' (errno %d): %s", pathname, errno,
+            strerror(errno));
+    } else {
+        printResult(key, RESULT_SUCCESS, pathname,
+            "no longer watching '%s'", pathname);
+    }
 
     return (0);
 }

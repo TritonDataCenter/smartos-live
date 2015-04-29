@@ -166,7 +166,7 @@ struct fileinfo {
     int port;
 };
 
-struct fileinfo *handles[HANDLES_MASK] = { NULL };
+struct fileinfo *handles = NULL;
 volatile struct fileinfo *free_list = NULL;
 static mutex_t handles_mutex;
 static mutex_t free_mutex;
@@ -894,6 +894,8 @@ main()
     pthread_t tid;
     uint64_t start_timestamp;
 
+    handles = malloc(sizeof (struct fileinfo*) * HANDLES_MASK);
+
     if ((port = port_create()) == -1) {
         printError(SYSTEM_KEY, ERR_PORT_CREATE, "port_create failed(%d): %s",
             errno, strerror(errno));
@@ -980,6 +982,8 @@ main()
     while (thr_join(0, NULL, NULL) == 0) {
         /* do nothing */;
     }
+
+    free(handles);
 
     exit(exit_code);
 }

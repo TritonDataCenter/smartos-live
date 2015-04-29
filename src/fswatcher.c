@@ -134,7 +134,6 @@
         const char *Xcp;                            \
         for (Xcp = (name); (Xc = *Xcp) != 0; Xcp++) \
             (hash) = ((hash) << 4) + (hash) + Xc;   \
-        (hash) = (hash) & HANDLES_MASK;             \
         (namlen) = Xcp - (name);                    \
     }
 
@@ -331,11 +330,12 @@ findHandle(char *pathname)
 {
     int namelen;
     int hash;
+    int hash_idx;
     struct fileinfo *handle;
 
-    HASH(pathname, hash, namelen);
-
-    handle = handles[hash];
+    HASH(pathname,hash,namelen);
+    hash_idx = hash & HANDLES_MASK;
+    handle = handles[hash_idx];
 
     if (handle == NULL)
         return (NULL);
@@ -347,7 +347,7 @@ findHandle(char *pathname)
             return (handle);
         }
         handle = handle->next;
-    } while (handle != handles[hash]);
+    } while (handle != handles[hash_idx]);
 
     return (NULL);
 }
@@ -361,19 +361,20 @@ findHandle(char *pathname)
 void
 insertHandle(struct fileinfo *handle)
 {
+    int hash_idx;
 
     HASH(handle->fobj.fo_name, handle->hash, handle->namelen);
-
-    if (handles[handle->hash] == NULL) {
+    hash_idx = handle->hash & HANDLES_MASK;
+    if (handles[hash_idx] == NULL) {
         handle->next = handle;
         handle->prev = handle;
-        handles[handle->hash] = handle;
+        handles[hash_idx] = handle;
     } else {
-        handle->next = handles[handle->hash];
-        handle->prev = handles[handle->hash]->prev;
-        handles[handle->hash]->prev->next = handle;
-        handles[handle->hash]->prev = handle;
-        handles[handle->hash] = handle;
+        handle->next = handles[hash_idx];
+        handle->prev = handles[hash_idx]->prev;
+        handles[hash_idx]->prev->next = handle;
+        handles[hash_idx]->prev = handle;
+        handles[hash_idx] = handle;
     }
 }
 
@@ -387,9 +388,9 @@ void
 i_removeHandle(struct fileinfo *handle)
 {
     if (handle->next == handle) {
-        handles[handle->hash] = NULL;
+        handles[handle->hash & HANDLES_MASK] = NULL;
     } else {
-        handles[handle->hash] = handle->next;
+        handles[handle->hash & HANDLES_MASK] = handle->next;
         handle->next->prev = handle->prev;
         handle->prev->next = handle->next;
     }

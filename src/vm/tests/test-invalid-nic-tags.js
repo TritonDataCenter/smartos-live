@@ -203,6 +203,7 @@ test('reboot / shutdown / start / update with invalid nic tag',
                         if (obj) {
                             t.equal(obj.nics[0].nic_tag, 'new_tag1',
                                 'VM created with new nic tag');
+                            t.equal(obj.state, 'running', 'VM is running');
                             vm = obj;
                         }
 

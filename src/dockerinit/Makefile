@@ -28,8 +28,8 @@ MDATA_LIBS=-lnsl -lsocket -lsmbios
 NET_LIBS=-lipadm -linetutil -lnsl -lsocket
 LIBS=$(JSON_LIBS) $(MDATA_LIBS) $(NET_LIBS)
 OBJS=$(JSON_OBJS) $(MDATA_OBJS) src/docker-common.o
-CTFCONVERT = /bin/true
-CTFMERGE = /bin/true
+CTFCONVERT = /usr/bin/true
+CTFMERGE = /usr/bin/true
 
 # NOTE: we add the '-z now' here to the CFLAGS because otherwise we'll try to
 # load libdladm.so.1 after we've entered a chroot and it will look in the wrong
@@ -69,7 +69,7 @@ check: src/*.c
 	@$(CSTYLE) $^
 
 lint:
-	/bin/true
+	/usr/bin/true
 
 clean:
 	rm -f $(OBJS) build/*

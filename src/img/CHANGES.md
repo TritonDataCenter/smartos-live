@@ -1,5 +1,15 @@
 # imgadm changelog
 
+## 3.2.0
+
+- DOCKER-257: A start at support for Docker registries other than Docker Hub.
+  Changes here included support for "insecure" image sources, to allow using
+  HTTPS sources with a self-signed certificate. Also `imgadm sources -k ...` to
+  specify that option.
+- OS-4209: imgadm test suite failure: 'Uncaught AssertionError: x-docker-size header (number) is required'
+- OS-4261: imgadm vacuum
+
+
 ## 3.1.5
 
 - OS-4140: imgadm list could do better excluding some filesystems

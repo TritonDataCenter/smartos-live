@@ -14,11 +14,11 @@
  * SmartDataCenter Image.
  */
 
-var p = console.log;
-var path = require('path');
-var format = require('util').format;
-var url = require('url');
 var assert = require('assert-plus');
+var crypto = require('crypto');
+var format = require('util').format;
+var path = require('path');
+var url = require('url');
 
 
 // ---- globals
@@ -138,6 +138,25 @@ function validPlatformVersion(string) {
 
     return true;
 }
+
+
+// RFC 4122 v5 UUID. I don't bother with a `namespace` argument because
+// all the spec's NS options have the same value.
+function _uuidv5(name) {
+    var nsUuid = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+    var ns = new Buffer(nsUuid.replace(/-/g, ''), 'hex');
+    var hash = crypto.createHash('sha1');
+    hash.update(ns);
+    hash.update(name);
+    var digest = hash.digest('hex');
+    return (digest.slice(0, 8)
+        + '-' + digest.slice(8, 12)
+        + '-' + digest.slice(12, 16)
+        + '-' + digest.slice(16, 20)
+        + '-' + digest.slice(20, 32));
+}
+
+
 
 // ---- upgraders
 
@@ -1646,7 +1665,11 @@ function clip(s, length) {
 
 // ---- docker
 
-function imgUuidFromDockerId(dockerId) {
+/**
+ * This is OBSOLETE: use `imgUuidFromDockerInfo`.
+ * Keeping this around for now to assist with migration and testing.
+ */
+function obsoleteImgUuidFromDockerId(dockerId) {
     return (dockerId.slice(0, 8)
         + '-' + dockerId.slice(8, 12)
         + '-' + dockerId.slice(12, 16)
@@ -1654,7 +1677,37 @@ function imgUuidFromDockerId(dockerId) {
         + '-' + dockerId.slice(20, 32));
 }
 
-function imgmanifestOsFromDockerOs(dockerOs) {
+/**
+ * Generate the SDC/SmartOS image uuid for this docker image.
+ *
+ * An img UUID for a Docker image/layer is a hash of the repository host
+ * (a.k.a the "index name") and the Docker image/layer id.
+ * See https://smartos.org/bugview/DOCKER-257 for design discussion on this.
+ *
+ * @param opts {Object}
+ *      - id {String} The full docker ID
+ *      - indexName {String} The canonicalized Docker index name, as
+ *        from `require('docker-registry-client').parseIndex()`.
+ *      - obsoleteUuid {Boolean} Optional. Default false. Set to true to
+ *        get the `obsoleteImgUuidFromDockerId` behaviour for the UUID.
+ * @returns {String} uuid
+ */
+function imgUuidFromDockerInfo(opts) {
+    assert.string(opts.id, 'opts.id');
+    assert.ok(opts.id.length === 64);
+    assert.string(opts.indexName, 'opts.indexName');
+    assert.optionalBool(opts.obsoleteUuid, 'opts.obsoleteUuid');
+
+    if (opts.obsoleteUuid) {
+        return obsoleteImgUuidFromDockerId(opts.id);
+    }
+
+    // Make a stack RFC 4122 v5 UUID using name='$indexName:$id'.
+    var name = opts.indexName + ':' + opts.id;
+    return _uuidv5(name);
+}
+
+function imgManifestOsFromDockerOs(dockerOs) {
     return {
         linux: 'linux'
     }[dockerOs];
@@ -1663,19 +1716,37 @@ function imgmanifestOsFromDockerOs(dockerOs) {
 /**
  * Make an IMGAPI image manifest from Docker "image json", an optionally some
  * other metadata.
+ *
+ * @param opts {Object}
+ *      - imgJson {Object} The Docker Registry API v1 "image json" as from
+ *        `require('docker-registry-client').RegistryClient.getImgJson`.
+ *      - repo {Object} A structure holding the repo host (aka "index.name")
+ *        of the Docker image as from
+ *        `require('docker-registry-client').parseRepo`.
+ *      - uuid {String} Optional.
+ *      - owner {String} Optional.
+ *      - tags {String} Optional.
+ *      - obsoleteUuid {Boolean} Optional. Default false. Set to true to
+ *        get the `obsoleteImgUuidFromDockerId` behaviour for the UUID.
  */
-function imgManifestFromDockerJson(opts) {
+function imgManifestFromDockerInfo(opts) {
     assert.object(opts, 'opts');
     assert.object(opts.imgJson, 'opts.imgJson');
+    assert.object(opts.repo, 'opts.repo');
+    assert.string(opts.repo.index.name, 'opts.repo.index.name');
     assert.optionalString(opts.uuid, 'opts.uuid');
     assert.optionalString(opts.owner, 'opts.owner');
-    assert.optionalString(opts.repo, 'opts.repo'); // docker repo
     assert.optionalArrayOfString(opts.tags, 'opts.tags'); // docker repo tags
+    assert.optionalBool(opts.obsoleteUuid, 'opts.obsoleteUuid');
     var imgJson = opts.imgJson;
+    var indexName = opts.repo.index.name;
 
+    var uuid = opts.uuid || (opts.obsoleteUuid
+        ? obsoleteImgUuidFromDockerId(imgJson.id)
+        : imgUuidFromDockerInfo({id: imgJson.id, indexName: indexName}));
     var manifest = {
         v: 2,
-        uuid: opts.uuid || imgUuidFromDockerId(imgJson.id),
+        uuid: uuid,
         owner: opts.owner || '00000000-0000-0000-0000-000000000000',
         name: 'docker-layer',
         version: imgJson.id.slice(0, 12),
@@ -1683,20 +1754,20 @@ function imgManifestFromDockerJson(opts) {
         public: true,
         published_at: new Date(imgJson.created).toISOString(),
         type: 'docker',
-        os: imgmanifestOsFromDockerOs(imgJson.os),
+        os: imgManifestOsFromDockerOs(imgJson.os),
         description: clip(
             imgJson.comment || imgJson.container_config.Cmd.join(' '),
             MAX_DESCRIPTION_LENGTH),
         tags: {
+            'docker:repo': opts.repo.canonicalName,
             'docker:id': imgJson.id,
             'docker:architecture': imgJson.architecture
         }
     };
     if (imgJson.parent) {
-        manifest.origin = imgUuidFromDockerId(imgJson.parent);
-    }
-    if (opts.repo) {
-        manifest.tags['docker:repo'] = opts.repo;
+        manifest.origin = (opts.obsoleteUuid
+            ? obsoleteImgUuidFromDockerId(imgJson.parent)
+            : imgUuidFromDockerInfo({id: imgJson.parent, indexName: indexName}));
     }
     if (opts.tags) {
         opts.tags.forEach(function (tag) {
@@ -1730,6 +1801,8 @@ module.exports = {
     validateDcManifest: validateDcManifest,
     validatePublicManifest: validatePublicManifest,
     validatePrivateManifest: validatePrivateManifest,
-    imgManifestFromDockerJson: imgManifestFromDockerJson,
-    imgUuidFromDockerId: imgUuidFromDockerId
+
+    imgManifestFromDockerInfo: imgManifestFromDockerInfo,
+    obsoleteImgUuidFromDockerId: obsoleteImgUuidFromDockerId,
+    imgUuidFromDockerInfo: imgUuidFromDockerInfo
 };

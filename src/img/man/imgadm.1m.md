@@ -9,7 +9,8 @@
     imgadm avail                           list available images
     imgadm show <uuid|docker-repo-tag>     show manifest of an available image
 
-    imgadm import [-P <pool>] <image-id>   import image from a source
+    imgadm import [-P <pool>] <uuid|docker repo:tag>
+                                           import image from a source
     imgadm install [-P <pool>] -m <manifest> -f <file>
                                            import from local image data
 
@@ -18,6 +19,7 @@
     imgadm update [<uuid>...]              update installed images
     imgadm delete [-P <pool>] <uuid>       remove an installed image
     imgadm ancestry [-P <pool>] <uuid>     show ancestry of an installed image
+    imgadm vacuum [-n] [-f]                delete unused images
 
     imgadm create <vm-uuid> [<manifest-field>=<value> ...] ...
                                            create an image from a VM
@@ -71,14 +73,15 @@ UUID.
 
         List and edit image sources.
 
-        An image source is a URL to a server implementing the IMGAPI.
-        The default IMGAPI is + https://images.joyent.com
+        An image source is a URL to a server implementing the IMGAPI, or
+        the Docker Registry API. The default IMGAPI is https://images.joyent.com
 
         Usage:
             imgadm sources [--verbose|-v] [--json|-j]  # list sources
             imgadm sources -a <url> [-t <type>]        # add a source
             imgadm sources -d <url>                    # delete a source
             imgadm sources -e                          # edit sources
+            imgadm sources -c                          # check current sources
 
         Options:
             -h, --help                Show this help.
@@ -88,25 +91,28 @@ UUID.
             -a <source>               Add a source. It is appended to the list of
                                       sources.
             --add-docker-hub          A shortcut for "imgadm sources -t docker -a
-                                      https://index.docker.io".
+                                      https://docker.io".
             -d <source>               Delete a source.
             -e                        Edit sources in an editor.
             -c, --check               Ping check all sources.
-            -t <type>, --type=<type>  The source type. One of "imgapi" (the default),
-                                      "docker" (experimental), or "dsapi" (deprecated).
+
+            -t <type>, --type=<type>  The source type for an added source. One of
+                                      "imgapi" (the default), "docker", or "dsapi"
+                                      (deprecated).
+            -k, --insecure            Allow insecure (no server certificate checking)
+                                      access to the added HTTPS source URL.
             -f, --force               Force no "ping check" on new source URLs. By
                                       default a ping check is done against new source
                                       URLs to attempt to ensure they are a running
                                       IMGAPI server.
 
         Examples:
-            # Joyent's primary public image repository
+            # Joyent's primary public image repository (defaults to "imgapi")
             imgadm sources -a https://images.joyent.com
-            # The main Docker registry (experimental)
-            imgadm sources -a https://registry-1.docker.io -t docker
+            # Docker Hub
+            imgadm sources -a https://docker.io -t docker
             # Legacy SDC 6.5 DSAPI (deprecated)
             imgadm sources -a https://datasets.joyent.com/datasets -t dsapi
-
 
     imgadm avail
 
@@ -151,7 +157,7 @@ UUID.
         (in JSON format).
 
 
-    imgadm import [-P <pool>] <uuid>
+    imgadm import [-P <pool>] <uuid|docker repo:tag>
 
         Import an image from a source IMGAPI.
 
@@ -296,6 +302,18 @@ UUID.
             -h, --help         Print this help and exit.
             -P <pool>          Name of zpool from which to delete the image.
                                Default is "zones".
+
+    imgadm vacuum [-n] [-f]                delete unused images
+
+        Remove unused images -- i.e. not used for any VMs or child images.
+
+        Usage:
+            imgadm vacuum [<options>]
+
+        Options:
+            -h, --help                Show this help.
+            -n, --dry-run             Do a dry-run (do not actually make changes).
+            -f, --force               Force deletion without prompting for confirmation.
 
     imgadm create [<options>] <vm-uuid> [<manifest-field>=<value> ...]
 
@@ -489,7 +507,7 @@ tags on the image. E.g. for the current "busybox:latest":
     "tags": {
       "docker:id": "4986bf8c15363d1c5d15512d5266f8777bfba4974ac56e3270e7760f6f0a8125",
       "docker:architecture": "amd64",
-      "docker:repo": "library/busybox",
+      "docker:repo": "docker.io/library/busybox",
       "docker:tag:buildroot-2014.02": true,
       "docker:tag:latest": true,
       "docker:config": {

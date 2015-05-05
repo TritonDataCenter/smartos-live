@@ -28,7 +28,7 @@ _imgadm()
     local cmdIdx cur prev len cmd
     COMPREPLY=()
     # NOTE: We exclude aliases here to encourage usage of the 'proper' cmds.
-    COMMANDS="help sources avail ancestry show import install list get update delete create publish"
+    COMMANDS="help sources avail ancestry show import install list get update delete create publish vacuum"
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     len="${#COMP_WORDS[@]}"

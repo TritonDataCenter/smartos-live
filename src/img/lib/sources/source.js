@@ -20,11 +20,11 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2015, Joyent, Inc. All rights reserved.
  */
 
-var p = console.log;
 var assert = require('assert-plus');
+var format = require('util').format;
 
 var common = require('../common');
 var errors = require('../errors');
@@ -36,12 +36,16 @@ var errors = require('../errors');
 function Source(opts) {
     assert.object(opts, 'opts');
     assert.string(opts.url, 'opts.url');
+    assert.optionalBool(opts.insecure, 'opts.insecure');
     assert.object(opts.log, 'opts.log');
     assert.string(opts.userAgent, 'opts.userAgent');
 
-    this.log = opts.log.child(
-        {component: 'source', source: {type: this.type, url: this.url}}, true);
+    this.log = opts.log.child({
+        component: 'source',
+        source: {type: this.type, url: this.url, insecure: opts.insecure}
+    }, true);
     this.url = opts.url;
+    this.insecure = opts.insecure;
     this.normUrl = common.normUrlFromUrl(this.url);
     this.userAgent = opts.userAgent;
 }
@@ -51,7 +55,13 @@ function Source(opts) {
  * a roundtripping serialization.
  */
 Source.prototype.toJSON = function toJSON() {
-    return {type: this.type, url: this.url};
+    return {type: this.type, url: this.url, insecure: this.insecure};
+};
+
+Source.prototype.toString = function toString() {
+    var extra = (this.insecure ? ' (insecure)' : '');
+    return format('"%s" image source "%s"%s',
+        this.type, this.url, extra);
 };
 
 
@@ -97,6 +107,8 @@ Source.prototype.listImages = function listImages(cb) {
  *      - arg {String} The source-specific allowed import argument string.
  * @param cb {Function} `function (err, importInfo)`. If a matching image is
  *      not found in this source, then null values for both are returned.
+ *      For an `arg` that is inapplicable for the given source (e.g. an IMGAPI
+ *      UUID for a "docker" source), which will return `null` to indicate N/A.
  *
  *  importInfo = {
  *      // Required

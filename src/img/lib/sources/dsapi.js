@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2015, Joyent, Inc. All rights reserved.
  */
 
 var p = console.log;
@@ -54,7 +54,8 @@ function DsapiSource(opts) {
             this._client = dsapi.createClient({
                 url: baseNormUrl,
                 log: self.log,
-                rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
+                rejectUnauthorized: (opts.insecure !== undefined ?
+                    opts.insecure : process.env.IMGADM_INSECURE !== '1'),
                 userAgent: self.userAgent
             });
         }

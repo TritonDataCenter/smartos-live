@@ -209,7 +209,6 @@ test('test reboot kvm', function (t) {
 });
 
 test('test force reboot kvm', function (t) {
-    var failed = false;
     var payload = JSON.parse(JSON.stringify(common_kvm_payload));
     var prev_boot_timestamp;
     var state = {brand: payload.brand};

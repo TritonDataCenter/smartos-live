@@ -36,7 +36,19 @@ VError.MultiError = MultiError;
  */
 function VError(options)
 {
-	var args, causedBy, ctor, tailmsg;
+	var args, obj, causedBy, ctor, tailmsg;
+
+	/*
+	 * This is a regrettable pattern, but JavaScript's built-in Error class
+	 * is defined to work this way, so we allow the constructor to be called
+	 * without "new".
+	 */
+	if (!(this instanceof VError)) {
+		args = Array.prototype.slice.call(arguments, 0);
+		obj = Object.create(VError.prototype);
+		VError.apply(obj, arguments);
+		return (obj);
+	}
 
 	if (options instanceof Error || typeof (options) === 'object') {
 		args = Array.prototype.slice.call(arguments, 1);
@@ -101,6 +113,8 @@ function VError(options)
 		ctor = ctor || arguments.callee;
 		Error.captureStackTrace(this, ctor);
 	}
+
+	return (this);
 }
 
 mod_util.inherits(VError, Error);

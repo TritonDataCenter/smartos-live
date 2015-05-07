@@ -506,13 +506,7 @@ IMGADM.prototype._addSource = function _addSource(
     }
 
     // Else make a new Source instance.
-    var source = mod_sources.createSource(sourceInfo.type, {
-        url: sourceInfo.url,
-        insecure: sourceInfo.insecure,
-        log: self.log,
-        userAgent: self.userAgent,
-        config: self.config
-    });
+    var source = self.sourceFromInfo(sourceInfo);
 
     if (skipPingCheck) {
         self.sources.push(source);
@@ -527,6 +521,19 @@ IMGADM.prototype._addSource = function _addSource(
             callback(null, true, source);
         });
     }
+};
+
+IMGADM.prototype.sourceFromInfo = function sourceFromInfo(sourceInfo) {
+    assert.object(sourceInfo, 'sourceInfo');
+    assert.string(sourceInfo.type, 'sourceInfo.type');
+
+    return mod_sources.createSource(sourceInfo.type, {
+        url: sourceInfo.url,
+        insecure: sourceInfo.insecure,
+        log: this.log,
+        userAgent: this.userAgent,
+        config: this.config
+    });
 };
 
 
@@ -1224,6 +1231,8 @@ IMGADM.prototype.deleteImage = function deleteImage(options, callback) {
  *      - @param importInfo {Object} Source-specific import info (from
  *        `source.getImportInfo()`.
  *      - @param zpool {String} The zpool to which to import.
+ *      - @param zstream {Boolean} Optional. Default false. If true, indicates
+ *        the GetImageFile will be a raw ZFS dataset stream.
  *      - @param quiet {Boolean} Optional. Default false. Set to true
  *        to not have a progress bar for the install.
  *      - @param logCb {Function} Optional. A function that is called
@@ -1236,6 +1245,7 @@ IMGADM.prototype.importImage = function importImage(opts, cb) {
     assert.object(opts.importInfo, 'opts.importInfo');
     assert.object(opts.importInfo.source, 'opts.importInfo.source');
     assert.string(opts.zpool, 'opts.zpool');
+    assert.optionalBool(opts.zstream, 'opts.zstream');
     assert.optionalBool(opts.quiet, 'opts.quiet');
     assert.optionalFunc(opts.logCb, 'opts.logCb');
 
@@ -1261,6 +1271,8 @@ IMGADM.prototype.importImage = function importImage(opts, cb) {
  *      - logCb
  *      - importInfo
  *      - imgMeta
+ *      - @param zstream {Boolean} Optional. Default false. If true, indicates
+ *        the GetImageFile will be a raw ZFS dataset stream.
  * @param cb {Function} `function (err, downloadInfo)` where `downloadInfo` is
  *      {
  *          "path": "/var/tmp/.imgadm-downloads/$uuid.file",
@@ -1273,6 +1285,7 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
     assert.object(opts, 'opts');
     assert.object(opts.source, 'opts.source');
     assert.optionalObject(opts.bar, 'opts.bar');
+    assert.optionalBool(opts.zstream, 'opts.zstream');
     assert.func(opts.logCb, 'opts.logCb');
     // As from `source.getImportInfo`.
     assert.object(opts.importInfo, 'opts.importInfo');
@@ -1283,6 +1296,7 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
 
     var log = self.log;
     var uuid = opts.importInfo.uuid;
+    var zstream = Boolean(opts.zstream);
     var downFile = common.downloadFileFromUuid(uuid);
     var context = {};
     var cosmicRay = common.testForCosmicRay('download');
@@ -1356,6 +1370,11 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
         },
 
         function checkContentLength(ctx, next) {
+            if (zstream) {
+                next();
+                return;
+            }
+
             ctx.cLen = Number(ctx.stream.headers['content-length']);
             if (isNaN(ctx.cLen)) {
                 next(new errors.DownloadError('unexpected '
@@ -1402,7 +1421,7 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
 
             // Track size and checksum for checking.
             ctx.bytesDownloaded = 0;
-            if (opts.imgMeta.checksum) {
+            if (!zstream && opts.imgMeta.checksum) {
                 ctx.checksum = opts.imgMeta.checksum.split(':');
                 ctx.checksumHash = crypto.createHash(ctx.checksum[0]);
             }
@@ -1440,7 +1459,7 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
         function checksum(ctx, next) {
             var errs = [];
 
-            if (ctx.bytesDownloaded !== ctx.cLen) {
+            if (ctx.cLen !== undefined && ctx.bytesDownloaded !== ctx.cLen) {
                 errs.push(new errors.DownloadError(format('image %s file size '
                     + 'error: expected %d bytes, downloaded %d bytes',
                     uuid, ctx.cLen, ctx.bytesDownloaded)));
@@ -1505,7 +1524,7 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
         } else {
             var downloadInfo = {
                 path: downFile,
-                size: context.cLen
+                size: context.bytesDownloaded || opts.imgMeta.size
             };
             cb(null, downloadInfo);
         }
@@ -1533,6 +1552,7 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
     assert.uuid(opts.importInfo.uuid, 'opts.importInfo.uuid');
     assert.object(opts.importInfo.source, 'opts.importInfo.source');
     assert.string(opts.zpool, 'opts.zpool');
+    assert.optionalBool(opts.zstream, 'opts.zstream');
     assert.optionalBool(opts.quiet, 'opts.quiet');
     assert.optionalFunc(opts.logCb, 'opts.logCb');
 
@@ -1551,6 +1571,9 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
     var zpool = opts.zpool;
     var importInfo = opts.importInfo;
     var source = importInfo.source;
+    // If this will be a raw zstream, then we ignore
+    // 'manifest.files[0].{sha1|size}'.
+    var zstream = Boolean(opts.zstream);
 
     // TODO: refactor: move these to `ctx`.
     var canCloseInstallQ = false;
@@ -1558,6 +1581,16 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
     var bar;  // progress bar
     var unlockInfos;
     var irecs;
+
+    // `bar.log` conflicts with `logCb`. It would require
+    // something more capable than `logCb` to do right.
+    var barLogCb = function (msg) {
+        if (bar) {
+            bar.log(msg);
+        } else {
+            logCb(msg);
+        }
+    };
 
     logCb('Importing %s from "%s"',
         source.titleFromImportInfo(opts.importInfo), source.url);
@@ -1748,6 +1781,7 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                         source: source,
                         importInfo: irec.importInfo,
                         imgMeta: irec.imgMeta,
+                        zstream: zstream,
                         bar: bar,
                         logCb: logCb
                     };
@@ -1760,11 +1794,8 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
 
                         self.log.info({uuid: irec.uuid, downloadInfo: dlInfo},
                             'downloaded image');
-                        if (bar) {
-                            bar.log(format('Downloaded image %s (%s)',
-                                irec.uuid,
-                                common.humanSizeFromBytes(dlInfo.size)));
-                        }
+                        barLogCb(format('Downloaded image %s (%s)',
+                            irec.uuid, common.humanSizeFromBytes(dlInfo.size)));
                         irec.downloadPath = dlInfo.path;
 
                         var origin = irec.imgMeta.manifest.origin;
@@ -1805,22 +1836,13 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                 worker: function installImg(irec, nextInstall) {
                     TIME('install-'+irec.uuid);
 
-                    // `bar.log` conflicts with `logCb`. It would require
-                    // something more capable than `logCb` to do right.
-                    var barLogCb = function (msg) {
-                        if (bar) {
-                            bar.log(msg);
-                        } else {
-                            logCb(msg);
-                        }
-                    };
-
                     var installOpts = {
                         source: source,
                         zpool: zpool,
                         imgMeta: irec.imgMeta,
                         dsName: format('%s/%s', zpool, irec.uuid),
                         filePath: irec.downloadPath,
+                        zstream: zstream,
                         quiet: opts.quiet,
                         logCb: barLogCb
                     };
@@ -1915,9 +1937,9 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
 
             // The progress bar is complicated in that with Docker (v1)
             // downloads we don't have image file size info yet.
-            var haveSizes = (irecs
-                .filter(function (irec) { return irec.imgMeta.size; })
-                .length === irecs.length);
+            var haveSizes = (!zstream
+                && irecs.filter(function (irec) { return irec.imgMeta.size; })
+                    .length === irecs.length);
             var barOpts = {
                 filename: (irecs.length === 1 ? 'Download 1 image'
                     : format('Download %d images', irecs.length))
@@ -1934,7 +1956,12 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                 // We'll be resizing as we read Content-Length headers. We
                 // add a hack extra byte here to ensure we don't "complete"
                 // before all Content-Length headers have been included.
-                barOpts.size = 1;
+                if (zstream) {
+                    barOpts.nosize = true;
+                } else {
+                    barOpts.size = 1;
+                }
+
                 logCb('Must download and install %d image%s',
                     irecs.length, (irecs.length === 1 ? '' : 's'));
             }
@@ -2087,6 +2114,8 @@ IMGADM.prototype._lockRelease = function _lockRelease(opts, cb) {
  *      - @param manifest {Object} The manifest to import.
  *      - @param zpool {String} The zpool to which to import.
  *      - @param file {String} Path to the image file.
+ *      - @param zstream {Boolean} Optional. Default false. If true, indicates
+ *        the GetImageFile will be a raw ZFS dataset stream.
  *      - @param quiet {Boolean} Optional. Default false. Set to true
  *        to not have a progress bar for the install.
  *      - @param logCb {Function} A function that is called
@@ -2100,6 +2129,7 @@ IMGADM.prototype.installImage = function installImage(opts, cb) {
     assert.object(opts.manifest, 'opts.manifest');
     assert.string(opts.zpool, 'opts.zpool');
     assert.string(opts.file, 'opts.file');
+    assert.optionalBool(opts.zstream, 'opts.zstream');
     assert.optionalBool(opts.quiet, 'opts.quiet');
     assert.func(opts.logCb, 'opts.logCb');
 
@@ -2111,6 +2141,7 @@ IMGADM.prototype.installImage = function installImage(opts, cb) {
         return;
     }
 
+    var zstream = Boolean(opts.zstream);
     var logCb = opts.logCb;
     var imgMeta = {
         manifest: manifest
@@ -2171,6 +2202,11 @@ IMGADM.prototype.installImage = function installImage(opts, cb) {
         },
 
         function getAndCheckSize(_, next) {
+            if (zstream) {
+                next();
+                return;
+            }
+
             fs.stat(opts.file, function (statErr, stats) {
                 if (statErr) {
                     next(statErr);
@@ -2191,6 +2227,12 @@ IMGADM.prototype.installImage = function installImage(opts, cb) {
 
         function checkHash(_, next_) {
             var next = once(next_);
+
+            if (zstream) {
+                next();
+                return;
+            }
+
 
             var manSha1 = (manifest.files && manifest.files[0]
                 && manifest.files[0].sha1);
@@ -2225,6 +2267,7 @@ IMGADM.prototype.installImage = function installImage(opts, cb) {
                 filePath: opts.file,
                 dsName: format('%s/%s', opts.zpool, manifest.uuid),
                 zpool: opts.zpool,
+                zstream: opts.zstream,
                 quiet: opts.quiet,
                 logCb: logCb
             };
@@ -2499,8 +2542,10 @@ IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
     assert.string(ctx.zpool, 'ctx.zpool');
     assert.object(ctx.imgMeta.manifest, 'ctx.imgMeta.manifest');
     assert.number(ctx.imgMeta.size, 'ctx.imgMeta.size');
+    assert.optionalBool(ctx.zstream, 'ctx.zstream');
     assert.optionalBool(ctx.quiet, 'ctx.quiet');
 
+    var zstream = Boolean(ctx.zstream);
     var manifest = ctx.imgMeta.manifest;
     var uuid = manifest.uuid;
     var log = self.log;
@@ -2553,7 +2598,10 @@ IMGADM.prototype._installZfsImage = function _installZfsImage(ctx, cb) {
             stream.on('error', finish);
 
             // [B]
-            var compression = manifest.files[0].compression;
+            // If we are getting a raw ZFS stream, then ignore the
+            // manifest.files compression.
+            var compression = (zstream
+                ? 'none' : manifest.files[0].compression);
             var uncompressor;
             if (compression === 'bzip2') {
                 uncompressor = spawn('/usr/bin/bzip2', ['-cdfq']);
@@ -2736,11 +2784,13 @@ IMGADM.prototype._installSingleImage = function _installSingleImage(ctx, cb) {
     assert.string(ctx.dsName, 'ctx.dsName');
     assert.string(ctx.zpool, 'ctx.zpool');
     assert.object(ctx.imgMeta.manifest, 'ctx.imgMeta.manifest');
+    assert.optionalBool(ctx.zstream, 'ctx.zstream');
     assert.optionalBool(ctx.quiet, 'ctx.quiet');
     assert.func(ctx.logCb, 'ctx.logCb');
     assert.func(cb, 'cb');
 
     var manifest = ctx.imgMeta.manifest;
+    var zstream = Boolean(ctx.zstream);
 
     vasync.pipeline({funcs: [
 
@@ -2775,7 +2825,7 @@ IMGADM.prototype._installSingleImage = function _installSingleImage(ctx, cb) {
         },
 
         function _installTheFile(_, next) {
-            if (manifest.type === 'docker') {
+            if (!zstream && manifest.type === 'docker') {
                 self._installDockerImage(ctx, next);
             } else {
                 self._installZfsImage(ctx, next);
@@ -2976,9 +3026,9 @@ IMGADM.prototype.updateImages = function updateImages(opts, cb) {
                  *   ever work the base snapshot for VMs must be the same
                  *   original.
                  * - If the source manifest info doesn't have a
-                 *   "files.0.dataset_uuid" then skip (we can't check).
+                 *   "files.0.dataset_guid" then skip (we can't check).
                  * - If there are any, find the one that is the original
-                 *   (by machine dataset_uuid to the zfs 'uuid' property).
+                 *   (by machine dataset_guid to the zfs 'guid' property).
                  */
                 if (snapshots.length === 0) {
                     next(new errors.ImageMissingOriginalSnapshotError(uuid));

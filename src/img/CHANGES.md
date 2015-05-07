@@ -1,5 +1,14 @@
 # imgadm changelog
 
+## 3.3.0
+
+- OS-4262: 'imgadm import -S <source> ...' to support importing from a given
+  IMGAPI source.  Also 'imgadm import --zstream ...' to support importing where
+  the image file is a raw ZFS stream. Together these options can be useful to
+  import from a lightweight IMGAPI server that pulls image files directly from
+  a ZFS zpool.
+
+
 ## 3.2.0
 
 - DOCKER-257: A start at support for Docker registries other than Docker Hub.

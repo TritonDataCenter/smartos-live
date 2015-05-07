@@ -1301,7 +1301,7 @@ CLI.prototype.do_delete.options = [
 
 /**
  * `imgadm import <uuid>` for imgapi/dsapi imports
- * `imgadm import <name>[:<tag>]` for docker imports
+ * `imgadm import <repo>[:<tag>]` for docker imports
  */
 CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
     var self = this;
@@ -1363,7 +1363,16 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
         },
 
         function getImportInfo(ctx, next) {
-            self.tool.sourcesGetImportInfo({arg: arg}, function (err, info) {
+            var getOpts = { arg: arg };
+            if (opts.source) {
+                getOpts.sources = opts.source.map(function (s) {
+                    return self.tool.sourceFromInfo({
+                        url: s,
+                        type: 'imgapi'
+                    });
+                });
+            }
+            self.tool.sourcesGetImportInfo(getOpts, function (err, info) {
                 if (err) {
                     next(err);
                     return;
@@ -1421,6 +1430,7 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
             self.tool.importImage({
                 importInfo: ctx.importInfo,
                 zpool: zpool,
+                zstream: opts.zstream,
                 quiet: opts.quiet,
                 logCb: console.log
             }, next);
@@ -1462,6 +1472,21 @@ CLI.prototype.do_import.options = [
         helpArg: '<pool>',
         help: 'Name of zpool in which to look for the image. Default is "'
             + common.DEFAULT_ZPOOL + '".'
+    },
+    {
+        names: ['source', 'S'],
+        type: 'arrayOfString',
+        helpArg: '<source>',
+        help: 'An image source (url) from which to import. If given, then '
+            + 'this source is used instead of the configured sources.'
+    },
+    {
+        names: ['zstream'],
+        type: 'bool',
+        help: 'Indicate that the source will send a raw ZFS dataset stream for '
+            + 'the image file data. Typically this is used in conjunction '
+            + 'with -S, so the source is known, and with a source that '
+            + 'stores images in ZFS (e.g. a SmartOS peer node).'
     }
 ];
 

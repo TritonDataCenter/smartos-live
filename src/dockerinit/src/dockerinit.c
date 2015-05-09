@@ -80,7 +80,6 @@ void execCmdline();
 void getBrand();
 void getStdinStatus();
 void killIpmgmtd(const char *);
-void mountLXProc();
 void mountOSDevFD();
 void openIpadmHandle();
 void plumbIf(const char *);
@@ -345,18 +344,6 @@ setupInterfaces()
     }
 
     nvlist_free(nvl);
-}
-
-void
-mountLXProc()
-{
-    dlog("MOUNT /proc (lx_proc)\n");
-
-    (void) mkdir("/proc", 0555);
-
-    if (mount("proc", "/proc", MS_DATA, "lx_proc", NULL, 0) != 0) {
-        fatal(ERR_MOUNT_LXPROC, "failed to mount /proc: %s\n", strerror(errno));
-    }
 }
 
 void
@@ -903,7 +890,6 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
 
     switch (brand) {
         case LX:
-            mountLXProc();
             ipmgmtd_chroot = B_TRUE;
             ipmgmtd_door = IPMGMTD_DOOR_LX;
             setupMtab();

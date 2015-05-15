@@ -37,6 +37,7 @@ var util = require('util');
 var common = require('../common');
 var errors = require('../errors');
 
+var Source = require('./source');
 var DockerSource = require('./docker');
 var DsapiSource = require('./dsapi');
 var ImgapiSource = require('./imgapi');
@@ -69,6 +70,13 @@ function createSource(type, opts) {
     return source;
 }
 
+
+function isSource(s) {
+    return (s instanceof Source);
+}
+
+
 module.exports = {
-    createSource: createSource
+    createSource: createSource,
+    isSource: isSource
 };

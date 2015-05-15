@@ -79,13 +79,12 @@ void closeIpadmHandle();
 void execCmdline();
 void getBrand();
 void getStdinStatus();
-void killIpmgmtd();
-void mountLXProc();
+void killIpmgmtd(const char *);
 void mountOSDevFD();
 void openIpadmHandle();
 void plumbIf(const char *);
 int raiseIf(char *, char *, char *);
-void runIpmgmtd(char *cmdline[], char *env[]);
+void runIpmgmtd(boolean_t);
 void setupHostname();
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
@@ -102,7 +101,6 @@ char **cmdline;
 char **env;
 char *hostname = NULL;
 ipadm_handle_t iph;
-char *ipmgmtd_door;
 FILE *log_stream = stderr;
 int open_stdin = 0;
 char *path = NULL;
@@ -118,38 +116,18 @@ const char *ROUTE_WRITE_LEN_MSG =
     "WARN addRoute: wrote %d/%d to socket "
     "(if=\"%s\", gw=\"%s\", dst=\"%s\": %s)\n";
 
-/*
- * Special variables for a special ipmgmtd
- */
-char *IPMGMTD_CMD_LX[] = {"/native/lib/inet/ipmgmtd", "ipmgmtd", NULL};
-char *IPMGMTD_ENV_LX[] = {
-    /* ipmgmtd thinks SMF is awesome */
-    "SMF_FMRI=svc:/network/ip-interface-management:default",
-    /*
-     * Need to perform some tricks because ipmgmtd is going to mount
-     * things in /etc/svc/volatile and setup a door there as well.
-     * If we don't use thunk, we'll end up using the LX's /etc/svc
-     * but other native commands (such as ifconfig-native) will try
-     * to use /native/etc/svc/volatile.
-     */
-    "LD_NOENVIRON=1",
-    "LD_NOCONFIG=1",
-    "LD_LIBRARY_PATH_32=/native/lib:/native/usr/lib",
-    "LD_PRELOAD_32=/native/usr/lib/brand/lx/lx_thunk.so.1",
-    NULL
-};
-char *IPMGMTD_CMD_OS[] = {"/lib/inet/ipmgmtd", "ipmgmtd", NULL};
-char *IPMGMTD_ENV_OS[] = {
-    /* ipmgmtd thinks SMF is awesome */
-    "SMF_FMRI=svc:/network/ip-interface-management:default",
-    NULL
-};
-
 void
-runIpmgmtd(char *cmd[], char *env[])
+runIpmgmtd(boolean_t do_chroot)
 {
     pid_t pid;
     int status;
+    char *cmd[] = {"/lib/inet/ipmgmtd", "ipmgmtd", NULL};
+    char *env[] = {
+        /* ipmgmtd thinks SMF is awesome */
+        "SMF_FMRI=svc:/network/ip-interface-management:default",
+        NULL
+    };
+
 
     pid = fork();
     if (pid == -1) {
@@ -158,6 +136,10 @@ runIpmgmtd(char *cmd[], char *env[])
 
     if (pid == 0) {
         /* child */
+        if (do_chroot && chroot("/native") != 0) {
+            fatal(ERR_EXEC_FAILED, "chroot() failed: %s\n",
+                strerror(errno));
+        }
         execve(cmd[0], cmd + 1, env);
         fatal(ERR_EXEC_FAILED, "execve(%s) failed: %s\n", cmd[0],
             strerror(errno));
@@ -365,18 +347,6 @@ setupInterfaces()
 }
 
 void
-mountLXProc()
-{
-    dlog("MOUNT /proc (lx_proc)\n");
-
-    (void) mkdir("/proc", 0555);
-
-    if (mount("proc", "/proc", MS_DATA, "lx_proc", NULL, 0) != 0) {
-        fatal(ERR_MOUNT_LXPROC, "failed to mount /proc: %s\n", strerror(errno));
-    }
-}
-
-void
 mountOSDevFD()
 {
     dlog("MOUNT /dev/fd (fd)\n");
@@ -504,7 +474,7 @@ openIpadmHandle()
  * fatal().
  */
 void
-killIpmgmtd()
+killIpmgmtd(const char *door)
 {
     int door_fd;
     struct door_info info;
@@ -519,9 +489,9 @@ killIpmgmtd()
     }
 
     /* find the ipmgmtd pid through the door */
-    if ((door_fd = open(ipmgmtd_door, O_RDONLY)) < 0) {
+    if ((door_fd = open(door, O_RDONLY)) < 0) {
         dlog("ERROR (skipping kill) failed to open ipmgmtd door(%s): %s\n",
-            ipmgmtd_door, strerror(errno));
+            door, strerror(errno));
         return;
     }
     if (door_info(door_fd, &info) != 0) {
@@ -884,8 +854,8 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     int fd;
     int ret;
     int tmpfd;
-    char **ipmgmtd_cmd;
-    char **ipmgmtd_env;
+    const char *ipmgmtd_door;
+    boolean_t ipmgmtd_chroot = B_FALSE;
 
     /* we'll write our log in /var/log */
     mkdir("/var", 0755);
@@ -920,9 +890,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
 
     switch (brand) {
         case LX:
-            mountLXProc();
-            ipmgmtd_cmd = IPMGMTD_CMD_LX;
-            ipmgmtd_env = IPMGMTD_ENV_LX;
+            ipmgmtd_chroot = B_TRUE;
             ipmgmtd_door = IPMGMTD_DOOR_LX;
             setupMtab();
             break;
@@ -932,8 +900,6 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
              * but without /proc being lxproc, we need to mount /dev/fd
              */
             mountOSDevFD();
-            ipmgmtd_cmd = IPMGMTD_CMD_OS;
-            ipmgmtd_env = IPMGMTD_ENV_OS;
             ipmgmtd_door = IPMGMTD_DOOR_OS;
             /* no need for /etc/mtab updates here either */
             break;
@@ -948,7 +914,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     mkdir("/var/run/network", 0755);
 
     /* NOTE: will call fatal() if there's a problem */
-    runIpmgmtd(ipmgmtd_cmd, ipmgmtd_env);
+    runIpmgmtd(ipmgmtd_chroot);
 
     if (brand == LX) {
         chrootNetworking();
@@ -957,7 +923,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     }
 
     /* kill ipmgmtd if we don't need it any more */
-    killIpmgmtd();
+    killIpmgmtd(ipmgmtd_door);
 
     dlog("INFO network setup complete\n");
 

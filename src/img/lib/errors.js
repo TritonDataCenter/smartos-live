@@ -375,27 +375,13 @@ function ActiveImageNotFoundError(cause, arg) {
     assert.string(arg, 'arg');
     ImgadmError.call(this, {
         cause: cause,
-        message: format('an active image "%s" was not found', arg),
+        message: format('an active image "%s" was not found in image sources',
+            arg),
         code: 'ActiveImageNotFound',
         exitStatus: 1
     });
 }
 util.inherits(ActiveImageNotFoundError, ImgadmError);
-
-function DockerRepoNotFoundError(cause, repo) {
-    if (repo === undefined) {
-        repo = cause;
-        cause = undefined;
-    }
-    assert.string(repo, 'repo');
-    ImgadmError.call(this, {
-        cause: cause,
-        message: format('docker repo "%s" was not found', repo),
-        code: 'DockerRepoNotFound',
-        exitStatus: 1
-    });
-}
-util.inherits(DockerRepoNotFoundError, ImgadmError);
 
 function ImageNotActiveError(cause, uuid) {
     if (uuid === undefined) {
@@ -802,7 +788,6 @@ module.exports = {
     OriginHasNoFinalSnapshotError: OriginHasNoFinalSnapshotError,
     ManifestValidationError: ManifestValidationError,
     ActiveImageNotFoundError: ActiveImageNotFoundError,
-    DockerRepoNotFoundError: DockerRepoNotFoundError,
     ImageNotActiveError: ImageNotActiveError,
     ImageNotInstalledError: ImageNotInstalledError,
     ImageHasDependentClonesError: ImageHasDependentClonesError,

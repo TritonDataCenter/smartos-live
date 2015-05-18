@@ -1,5 +1,12 @@
 # imgadm changelog
 
+## 3.4.0
+
+- OS-4315: Slight change in Docker image import to use the "localName"
+  for the "docker:repo" tag, instead of the "canonicalName". E.g. "busybox"
+  instead of "docker.io/busybox". The former is more common parlance
+  and looses no info.
+
 ## 3.3.0
 
 - OS-4262: 'imgadm import -S <source> ...' to support importing from a given

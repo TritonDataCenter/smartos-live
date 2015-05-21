@@ -201,11 +201,6 @@ function trim(str, chars)
     });
 
     test('delete ' + thing_name, function(t) {
-        if (abort) {
-            t.ok(false, 'skipping delete as test run is aborted.');
-            t.end();
-            return;
-        }
         if (vmobj.uuid) {
             VM.delete(vmobj.uuid, function (err) {
                 if (err) {

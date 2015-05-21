@@ -283,7 +283,8 @@ test('attempt to delete zoneroot_indestructible VM', function (t) {
     }
 
     timeout = setTimeout(function () {
-        t.ok(false, 'timed out attempting to delete zoneroot_indestructible VM');
+        t.ok(false,
+            'timed out attempting to delete zoneroot_indestructible VM');
         t.end();
     }, DELETE_TIMEOUT);
 
@@ -504,7 +505,8 @@ test('attempt to delete delegated_indestructible VM', function (t) {
 
     if (vm_uuid) {
         timeout = setTimeout(function () {
-            t.ok(false, 'timed out attempting to delete delegated_indestructible VM');
+            t.ok(false,
+                'timed out attempting to delete delegated_indestructible VM');
             t.end();
         }, DELETE_TIMEOUT);
 
@@ -588,7 +590,8 @@ test('attempt #1 to delete totally_indestructible VM', function (t) {
 
     if (vm_uuid) {
         timeout = setTimeout(function () {
-            t.ok(false, 'timed out attempting to delete totally_indestructible VM');
+            t.ok(false,
+                'timed out attempting to delete totally_indestructible VM');
             t.end();
         }, DELETE_TIMEOUT);
 
@@ -629,7 +632,8 @@ test('attempt #2 to delete totally_indestructible VM', function (t) {
 
     if (vm_uuid) {
         timeout = setTimeout(function () {
-            t.ok(false, 'timed out attempting to delete totally_indestructible VM');
+            t.ok(false,
+                'timed out attempting to delete totally_indestructible VM');
             t.end();
         }, DELETE_TIMEOUT);
 

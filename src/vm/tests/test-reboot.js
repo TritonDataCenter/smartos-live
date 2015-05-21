@@ -128,6 +128,7 @@ test('test reboot stopped SmartOS VM fails', function (t) {
 });
 
 test('test reboot kvm', function (t) {
+    var failed = false;
     var payload = JSON.parse(JSON.stringify(common_kvm_payload));
     var prev_boot_timestamp;
     var state = {brand: payload.brand};
@@ -135,9 +136,15 @@ test('test reboot kvm', function (t) {
     vmtest.on_new_vm(t, null, payload, state, [
         function (cb) {
             var timeout = setTimeout(function () {
-                cb(new Error('timed out waiting for VM.load'));
+                failed = true;
+                // don't return an error since we still want the delete.
+                t.ok(false, 'timed out waiting for VM.load');
+                cb();
             }, 30000);
             VM.load(state.uuid, function (err, obj) {
+                if (failed) {
+                    return;
+                }
                 clearTimeout(timeout);
                 t.ok(!err, 'loading obj for VM');
                 if (err) {
@@ -152,19 +159,39 @@ test('test reboot kvm', function (t) {
                 cb();
             });
         }, function (cb) {
+            if (failed) {
+                cb();
+                return;
+            }
             var timeout = setTimeout(function () {
-                cb(new Error('timed out waiting for VM.reboot'));
+                failed = true;
+                // don't return an error since we still want the delete.
+                t.ok(false, 'timed out waiting for VM.reboot');
+                cb();
             }, 30000);
             VM.reboot(state.uuid, {}, function (err) {
+                if (failed) {
+                    return;
+                }
                 clearTimeout(timeout);
                 t.ok(!err, 'rebooted VM: ' + (err ? err.message : 'success'));
                 cb();
             });
         }, function (cb) {
+            if (failed) {
+                cb();
+                return;
+            }
             var timeout = setTimeout(function () {
-                cb(new Error('timed out waiting for VM.load'));
+                failed = true;
+                // don't return an error since we still want the delete.
+                t.ok(false, 'timed out waiting for VM.load');
+                cb();
             }, 30000);
             VM.load(state.uuid, function (err, obj) {
+                if (failed) {
+                    return;
+                }
                 clearTimeout(timeout);
                 t.ok(!err, 'loading obj for VM');
                 if (err) {

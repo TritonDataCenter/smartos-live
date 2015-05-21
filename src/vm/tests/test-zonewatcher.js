@@ -15,7 +15,7 @@ var ZoneWatcher = require('vmevent/zonewatcher').ZoneWatcher;
 var log = bunyan.createLogger({
         level: 'trace',
         name: 'zonewatcher-test-dummy',
-        streams: [ { stream: process.stderr, level: 'trace' } ],
+        streams: [ { stream: process.stderr, level: 'error' } ],
         serializers: bunyan.stdSerializers
 });
 var testdir = '/tmp/' + process.pid;
@@ -170,6 +170,8 @@ test('create zone (autoboot=true) and stop and destroy',
                 onReady();
             }
         }, 100);
+
+        zonew.start();
 
         t.ok(true, 'created watcher');
     }

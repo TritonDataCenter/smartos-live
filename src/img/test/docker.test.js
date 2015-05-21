@@ -77,7 +77,7 @@ test('setup: ensure docker hub source', function (t) {
         var sources = JSON.parse(stdout);
         sourcesHadDockerHub = false;
         sources.forEach(function (s) {
-            if (s.type === 'docker' && s.url === 'https://index.docker.io') {
+            if (s.type === 'docker' && s.url === 'docker.io') {
                 sourcesHadDockerHub = true;
             }
         });
@@ -160,7 +160,7 @@ test('imgadm list --docker', function (t) {
             var parts = line.split(/ +/g);
             return (
                 parts[0] === testImg.uuid
-                && parts[1] === rat.repo
+                && parts[1] === rat.canonicalName
                 && parts[2] === rat.tag
             );
         });

@@ -1,5 +1,31 @@
 # imgadm changelog
 
+## 3.4.0
+
+- OS-4315: Slight change in Docker image import to use the "localName"
+  for the "docker:repo" tag, instead of the "canonicalName". E.g. "busybox"
+  instead of "docker.io/busybox". The former is more common parlance
+  and looses no info.
+
+## 3.3.0
+
+- OS-4262: 'imgadm import -S <source> ...' to support importing from a given
+  IMGAPI source.  Also 'imgadm import --zstream ...' to support importing where
+  the image file is a raw ZFS stream. Together these options can be useful to
+  import from a lightweight IMGAPI server that pulls image files directly from
+  a ZFS zpool.
+
+
+## 3.2.0
+
+- DOCKER-257: A start at support for Docker registries other than Docker Hub.
+  Changes here included support for "insecure" image sources, to allow using
+  HTTPS sources with a self-signed certificate. Also `imgadm sources -k ...` to
+  specify that option.
+- OS-4209: imgadm test suite failure: 'Uncaught AssertionError: x-docker-size header (number) is required'
+- OS-4261: imgadm vacuum
+
+
 ## 3.1.5
 
 - OS-4140: imgadm list could do better excluding some filesystems

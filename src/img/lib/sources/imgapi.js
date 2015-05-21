@@ -20,12 +20,13 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2015, Joyent, Inc. All rights reserved.
  */
 
 var p = console.log;
 
 var assert = require('assert-plus');
+var format = require('util').format;
 var imgapi = require('sdc-clients/lib/imgapi');
 var imgmanifest = require('imgmanifest');
 var util = require('util');
@@ -47,7 +48,8 @@ function ImgapiSource(opts) {
                 url: self.normUrl,
                 version: '~2',
                 log: self.log,
-                rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
+                rejectUnauthorized: (opts.insecure !== undefined ?
+                    opts.insecure : process.env.IMGADM_INSECURE !== '1'),
                 userAgent: self.userAgent
             });
         }

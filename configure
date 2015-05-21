@@ -90,7 +90,7 @@ function install_pkgin
 		pkglist="$pkglist libtool-base gcc-compiler"
 	fi
 
-	pkglist="$pkglist flex libxslt sun-jre6 sun-jdk6 nodejs"
+	pkglist="$pkglist flex libxslt openjdk7 nodejs"
 	pkglist="$pkglist p5-XML-Parser gettext python26 py26-expat"
 	pkglist="$pkglist coreutils gsed pkg_alternatives cdrtools"
 
@@ -298,7 +298,7 @@ CW_GCC_DIR="\${GCC_ROOT}/bin";			export CW_GCC_DIR
 __GNUC="";					export __GNUC
 # Use GCC4 specific flags
 __GNUC4="";					export __GNUC4
-JAVA_ROOT=/opt/local/java/sun6;			export JAVA_ROOT
+JAVA_ROOT=/opt/local/java/openjdk7;		export JAVA_ROOT
 FLEX=/opt/local/bin/flex;			export FLEX
 GNUXGETTEXT=/opt/local/bin/xgettext;		export GNUXGETTEXT
 PYTHON_26=/opt/local/bin/python2.6;		export PYTHON_26

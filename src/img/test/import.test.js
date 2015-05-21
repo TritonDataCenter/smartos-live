@@ -278,7 +278,7 @@ test('pre-downloaded file; imgadm import ' + TEST_IMAGE_UUID, function (t) {
         t.exec('imgadm -v import ' + TEST_IMAGE_UUID, function (err, o, e) {
             // Stderr has the imgadm log output. Look for the tell-tale sign
             // that the pre-downloaded image file was used.
-            var marker = /"msg":"using pre-downloaded image file"/;
+            var marker = /"msg":"using pre-downloaded image file/;
             t.ok(marker.test(e), 'pre-downloaded image file was used');
             t.notOk(fs.existsSync(downFile));
             t.exec('imgadm get ' + TEST_IMAGE_UUID, function () {

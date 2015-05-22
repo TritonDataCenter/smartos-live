@@ -21,11 +21,13 @@
  * CDDL HEADER END
  *
  * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2015, Pagoda Box, Inc. All rights reserved.
  *
  */
 
 var assert = require('assert');
 var VM  = require('/usr/vm/node_modules/VM');
+var ZWatch = require('./zwatch');
 var common = require('./common');
 var crc32 = require('./crc32');
 var async = require('/usr/node/node_modules/async');
@@ -35,6 +37,48 @@ var fs = require('fs');
 var net = require('net');
 var path = require('path');
 var Queue = require('/usr/vm/node_modules/queue');
+var vminfo = require('/usr/vm/lib/vminfo/common');
+
+var sdc_fields = [
+    'alias',
+    'billing_id',
+    'brand',
+    'cpu_cap',
+    'cpu_shares',
+    'create_timestamp',
+    'server_uuid',
+    'image_uuid',
+    'datacenter_name',
+    'do_not_inventory',
+    'dns_domain',
+    'force_metadata_socket',
+    'fs_allowed',
+    'hostname',
+    'internal_metadata_namespaces',
+    'limit_priv',
+    'last_modified',
+    'maintain_resolvers',
+    'max_physical_memory',
+    'max_locked_memory',
+    'max_lwps',
+    'max_swap',
+    'nics',
+    'owner_uuid',
+    'package_name',
+    'package_version',
+    'quota',
+    'ram',
+    'resolvers',
+    'routes',
+    'state',
+    'tmpfs',
+    'uuid',
+    'vcpus',
+    'vnc_port',
+    'zfs_io_priority',
+    'zonepath',
+    'zonename'
+];
 
 var MAX_RETRY = 300; // in seconds
 
@@ -46,8 +90,8 @@ var MetadataAgent = module.exports = function (options) {
     self.vmobjs = {};
     self.zoneRetryTimeouts = {};
     self.zoneConnections = {};
-    self.eventConnectAttempts = 0;
-    self.eventInitialConnect = true;
+    self.vminfoConnectAttempts = 0;
+    self.vminfoInitialConnect = true;
 
     // set default refresh interval
     if (options.hasOwnProperty('refresh_interval')) {
@@ -61,6 +105,71 @@ var MetadataAgent = module.exports = function (options) {
         var opts = {brand: brand, 'zonename': zonename};
         self.zlog[zonename] = self.log.child(opts);
         return (self.zlog[zonename]);
+    }
+
+    function loadZone(zonename, callback)
+    {
+        VM.lookup({ zonename: zonename }, { fields: sdc_fields },
+            function (error, machines) {
+                callback(error, machines[0]);
+            }
+        );
+    }
+
+    function updateZone(zonename, callback)
+    {
+        var log = self.log;
+
+        function shouldLoad(cb) {
+            if (!self.vmobjs.hasOwnProperty(zonename)) {
+                // don't have a cache, load this guy
+                log.info('no cache for: ' + zonename + ', loading');
+                cb(true);
+                return;
+            }
+
+            // we do have a cached version, we'll reload only if timestamp
+            // changed.
+            fs.stat('/etc/zones/' + zonename + '.xml', function (err, stats) {
+                var old_mtime;
+
+                if (err) {
+                    // fail open when we can't stat
+                    log.error({err: err}, 'cannot fs.stat() ' + zonename);
+                    cb(true);
+                    return;
+                }
+
+                old_mtime = (new Date(self.vmobjs[zonename].last_modified));
+                if (stats.mtime.getTime() > old_mtime.getTime()) {
+                    log.info('last_modified was updated, reloading: '
+                        + zonename);
+                    cb(true);
+                    return;
+                }
+
+                log.debug('using cache for: ' + zonename);
+                cb(false);
+            });
+        }
+
+        shouldLoad(function (load) {
+            if (load) {
+                loadZone(zonename, function (err, vmobj) {
+                    if (err) {
+                        log.error({err: err}, 'failed to load zone: '
+                            + zonename);
+                        callback(err);
+                    } else {
+                        self.vmobjs[zonename] = vmobj;
+                        callback();
+                    }
+                });
+            } else {
+                // no need to reload since there's no change, use existing data
+                callback();
+            }
+        });
     }
 
     function startServer(zonename, vmobj, callback)
@@ -525,90 +634,128 @@ var MetadataAgent = module.exports = function (options) {
                     // about that here otherwise expect it will be removed
                     // on you sometime.
                     if (want === 'nics' && vmobj.hasOwnProperty('nics')) {
-                        val = JSON.stringify(vmobj.nics);
-                        returnit(null, val);
-                        return;
+                        self.updateZone(zone, function () {
+                            val = JSON.stringify(vmobj.nics);
+                            returnit(null, val);
+                            return;
+                        });
                     } else if (want === 'resolvers'
                         && vmobj.hasOwnProperty('resolvers')) {
 
-                        // See NOTE above about nics, same applies to
-                        // resolvers. It's here solely for the use of
-                        // mdata-fetch.
-                        val = JSON.stringify(vmobj.resolvers);
-                        returnit(null, val);
-                        return;
+                        // resolvers, nics and routes are special because we
+                        // might reload metadata trying to get the new ones w/o
+                        // zone reboot. To ensure these are fresh we always run
+                        // updateZone which reloads the data if stale.
+                        self.updateZone(zone, function () {
+                            // See NOTE above about nics, same applies to
+                            // resolvers. It's here solely for the use of
+                            // mdata-fetch.
+                            val = JSON.stringify(self.zones[zone].resolvers);
+                            returnit(null, val);
+                            return;
+                        });
                     } else if (want === 'tmpfs'
                         && vmobj.hasOwnProperty('tmpfs')) {
-                        val = JSON.stringify(vmobj.tmpfs);
-                        returnit(null, val);
-                        return;
+                        // We want tmpfs to reload the cache right away because
+                        // we might be depending on a /etc/vfstab update
+                        self.updateZone(zone, function () {
+                            val = JSON.stringify(self.zones[zone].tmpfs);
+                            returnit(null, val);
+                            return;
+                        });
                     } else if (want === 'routes'
                         && vmobj.hasOwnProperty('routes')) {
 
                         var vmRoutes = [];
 
-                        // The notes above about resolvers also to routes.
-                        // It's here solely for the use of mdata-fetch, and
-                        // we need to do the updateZone here so that we have
-                        // latest data.
-                        for (var r in vmobj.routes) {
-                            var route = { linklocal: false, dst: r };
-                            var nicIdx = vmobj.routes[r].match(
-                                /nics\[(\d+)\]/);
-                            if (!nicIdx) {
-                                // Non link-local route: we have all the
-                                // information we need already
-                                route.gateway = vmobj.routes[r];
+                        self.updateZone(zone, function () {
+
+                            vmobj = self.zones[zone];
+
+                            // The notes above about resolvers also to routes.
+                            // It's here solely for the use of mdata-fetch, and
+                            // we need to do the updateZone here so that we have
+                            // latest data.
+                            for (var r in vmobj.routes) {
+                                var route = { linklocal: false, dst: r };
+                                var nicIdx =
+                                    vmobj.routes[r].match(/nics\[(\d+)\]/);
+                                if (!nicIdx) {
+                                    // Non link-local route: we have all the
+                                    // information we need already
+                                    route.gateway = vmobj.routes[r];
+                                    vmRoutes.push(route);
+                                    continue;
+                                }
+                                nicIdx = Number(nicIdx[1]);
+
+                                // Link-local route: we need the IP of the
+                                // local nic
+                                if (!vmobj.hasOwnProperty('nics')
+                                    || !vmobj.nics[nicIdx]
+                                    || !vmobj.nics[nicIdx].hasOwnProperty('ip')
+                                    || vmobj.nics[nicIdx].ip === 'dhcp') {
+
+                                    continue;
+                                }
+
+                                route.gateway = vmobj.nics[nicIdx].ip;
+                                route.linklocal = true;
                                 vmRoutes.push(route);
-                                continue;
-                            }
-                            nicIdx = Number(nicIdx[1]);
-
-                            // Link-local route: we need the IP of the
-                            // local nic
-                            if (!vmobj.hasOwnProperty('nics')
-                                || !vmobj.nics[nicIdx]
-                                || !vmobj.nics[nicIdx].hasOwnProperty('ip')
-                                || vmobj.nics[nicIdx].ip === 'dhcp') {
-
-                                continue;
                             }
 
-                            route.gateway = vmobj.nics[nicIdx].ip;
-                            route.linklocal = true;
-                            vmRoutes.push(route);
-                        }
-
-                        returnit(null, JSON.stringify(vmRoutes));
-                        return;
+                            returnit(null, JSON.stringify(vmRoutes));
+                            return;
+                        });
                     } else if (want === 'operator-script') {
-                        returnit(null,
-                            vmobj.internal_metadata['operator-script']);
-                        return;
+                        addMetadata(function (err) {
+                            if (err) {
+                                returnit(new Error('Unable to load metadata: '
+                                    + err.message));
+                                return;
+                            }
+
+                            returnit(null,
+                                vmobj.internal_metadata['operator-script']);
+                            return;
+                        });
                     } else {
-                        val = VM.flatten(vmobj, want);
-                        returnit(null, val);
+                        addTags(function (err) {
+                            if (!err) {
+                                val = VM.flatten(vmobj, want);
+                            }
+                            returnit(err, val);
+                            return;
+                        });
                     }
                 } else {
                     // not sdc:, so key will come from *_mdata
-                    var which_mdata = 'customer_metadata';
+                    addMetadata(function (err) {
+                        var which_mdata = 'customer_metadata';
 
-                    if (want.match(/_pw$/)) {
-                        which_mdata = 'internal_metadata';
-                    }
+                        if (err) {
+                            returnit(new Error('Unable to load metadata: '
+                                + err.message));
+                            return;
+                        }
 
-                    if (internalNamespace(vmobj, want) !== null) {
-                        which_mdata = 'internal_metadata';
-                    }
+                        if (want.match(/_pw$/)) {
+                            which_mdata = 'internal_metadata';
+                        }
 
-                    if (vmobj.hasOwnProperty(which_mdata)) {
-                        returnit(null, vmobj[which_mdata][want]);
-                        return;
-                    } else {
-                        returnit(new Error('Zone did not contain '
-                            + which_mdata));
-                        return;
-                    }
+                        if (internalNamespace(vmobj, want) !== null) {
+                            which_mdata = 'internal_metadata';
+                        }
+
+                        if (vmobj.hasOwnProperty(which_mdata)) {
+                            returnit(null, vmobj[which_mdata][want]);
+                            return;
+                        } else {
+                            returnit(new Error('Zone did not contain '
+                                + which_mdata));
+                            return;
+                        }
+                    });
                 }
             } else if (!req_is_v2 && cmd === 'NEGOTIATE') {
                 if (want === 'V2') {
@@ -694,33 +841,123 @@ var MetadataAgent = module.exports = function (options) {
 
                 return;
             } else if (cmd === 'KEYS') {
-                var ckeys = [];
-                var ikeys = [];
+                addMetadata(function (err) {
+                    var ckeys = [];
+                    var ikeys = [];
 
-                /*
-                 * Keys that match *_pw$ and internal_metadata_namespace
-                 * prefixed keys come from internal_metadata, everything
-                 * else comes from customer_metadata.
-                 */
-                ckeys = Object.keys(vmobj.customer_metadata)
-                    .filter(function (k) {
+                    if (err) {
+                        returnit(new Error('Unable to load metadata: '
+                            + err.message));
+                        return;
+                    }
 
-                    return (!k.match(/_pw$/)
-                        && internalNamespace(vmobj, k) === null);
+                    /*
+                     * Keys that match *_pw$ and internal_metadata_namespace
+                     * prefixed keys come from internal_metadata, everything
+                     * else comes from customer_metadata.
+                     */
+                    ckeys = Object.keys(vmobj.customer_metadata)
+                        .filter(function (k) {
+
+                        return (!k.match(/_pw$/)
+                            && internalNamespace(vmobj, k) === null);
+                    });
+                    ikeys = Object.keys(vmobj.internal_metadata)
+                        .filter(function (k) {
+
+                        return (k.match(/_pw$/)
+                            || internalNamespace(vmobj, k) !== null);
+                    });
+
+                    returnit(null, ckeys.concat(ikeys).join('\n'));
+                    return;
                 });
-                ikeys = Object.keys(vmobj.internal_metadata)
-                    .filter(function (k) {
-
-                    return (k.match(/_pw$/)
-                        || internalNamespace(vmobj, k) !== null);
-                });
-
-                returnit(null, ckeys.concat(ikeys).join('\n'));
-                return;
             } else {
                 zlog.error('Unknown command ' + cmd);
                 returnit(new Error('Unknown command ' + cmd));
                 return;
+            }
+
+            function addTags(cb) {
+                var filename;
+
+                filename = vmobj.zonepath + '/config/tags.json';
+                fs.readFile(filename, function (err, file_data) {
+
+                    if (err && err.code === 'ENOENT') {
+                        vmobj.tags = {};
+                        cb();
+                        return;
+                    }
+
+                    if (err) {
+                        zlog.error({err: err}, 'failed to load tags.json: '
+                            + err.message);
+                        cb(err);
+                        return;
+                    }
+
+                    try {
+                        vmobj.tags = JSON.parse(file_data.toString());
+                        cb();
+                    } catch (e) {
+                        zlog.error({err: e}, 'unable to tags.json for ' + zone
+                            + ': ' + e.message);
+                        cb(e);
+                    }
+
+                    return;
+                });
+            }
+
+            function addMetadata(cb) {
+                var filename;
+
+                // If we got here, our answer comes from metadata.
+                // XXX In the future, if the require overhead here ends up being
+                // larger than a stat would be, we might want to cache these and
+                // reload when mtime changes.
+
+                filename = vmobj.zonepath + '/config/metadata.json';
+
+                fs.readFile(filename, function (err, file_data) {
+                    var json = {};
+                    var mdata_types =
+                        [ 'customer_metadata', 'internal_metadata' ];
+
+                    // start w/ both empty, if we fail partway through there
+                    // will just be no metadata instead of wrong metadata.
+                    vmobj.customer_metadata = {};
+                    vmobj.internal_metadata = {};
+
+                    if (err && err.code === 'ENOENT') {
+                        cb();
+                        return;
+                    }
+
+                    if (err) {
+                        zlog.error({err: err}, 'failed to load mdata.json: '
+                            + err.message);
+                        cb(err);
+                        return;
+                    }
+
+                    try {
+                        json = JSON.parse(file_data.toString());
+                        mdata_types.forEach(function (mdata) {
+                            if (json.hasOwnProperty(mdata)) {
+                                vmobj[mdata] = json[mdata];
+                            }
+                        });
+                        cb();
+                    } catch (e) {
+                        zlog.error({err: e}, 'unable to load metadata.json for '
+                            + zone + ': ' + e.message);
+                        cb(e);
+                    }
+
+                    return;
+                });
             }
 
             function setMetadata(uuid, _key, _value, cb)
@@ -859,24 +1096,19 @@ var MetadataAgent = module.exports = function (options) {
         };
     }
 
-    function handleEvent(task)
+    function startVminfoWatcher(callback)
     {
-        self.event_queue.enqueue(function (callback) {
-            if (task.vm && task.vm.zone_state === 'running') {
-                startServer(task.zonename, task.vm, callback);
-            } else {
-                stopServer(task.zonename, callback);
-            }
-        });
-    }
+        self.vminfoConnectAttempts += 1;
 
-    self.startEvents = function (callback) {
-        self.eventConnectAttempts += 1;
+        var opts = {
+            host: vminfo.DEFAULT_HOST,
+            port: vminfo.DEFAULT_PORT,
+            path: '/events'
+        };
 
-        var opts = {host: '127.0.0.1', port: 9090, path: '/events'};
         http.get(opts, function (res) {
             // reset connect attempts
-            self.eventConnectAttempts = 0;
+            self.vminfoConnectAttempts = 0;
             // all of our chunks should be JSON
             res.setEncoding('utf8');
             // let this connection stay open forever
@@ -895,7 +1127,13 @@ var MetadataAgent = module.exports = function (options) {
                 while (chunks.length > 1) {
                     chunk = chunks.shift();
                     task = JSON.parse(chunk);
-                    handleEvent(task);
+                    self.event_queue.enqueue(function (cb) {
+                        if (task.vm && task.vm.zone_state === 'running') {
+                            startServer(task.zonename, task.vm, cb);
+                        } else {
+                            stopServer(task.zonename, cb);
+                        }
+                    });
                 }
                 body = chunks.pop(); // remainder
             });
@@ -906,7 +1144,7 @@ var MetadataAgent = module.exports = function (options) {
 
             self.log.info('subscribed to vminfo. Waiting for events.');
 
-            if (self.eventInitialConnect === false) {
+            if (self.vminfoInitialConnect === false) {
                 reset(function (err) {
                     if (err) {
                         self.log.warn('failed to reset after re-subscribing '
@@ -919,7 +1157,7 @@ var MetadataAgent = module.exports = function (options) {
             }
 
             // ensure subsequent disconnects will be reset
-            self.eventInitialConnect = false;
+            self.vminfoInitialConnect = false;
 
             if (callback) {
                 callback();
@@ -927,13 +1165,13 @@ var MetadataAgent = module.exports = function (options) {
         }).on('error', function (err) {
             self.log.error('vminfod request failed: ' + err.message);
 
-            if (self.eventConnectAttempts === 10) {
+            if (self.vminfoConnectAttempts === 10) {
                 self.log.error('vminfod event requests reached max attempts');
                 throw new Error('Unable to subscribe to vminfod events');
             } else {
                 // try again in 10 seconds
                 setTimeout(function () {
-                    if (self.eventInitialConnect === true) {
+                    if (self.vminfoInitialConnect === true) {
                         self.startEvents(callback);
                     } else {
                         self.startEvents();
@@ -941,42 +1179,67 @@ var MetadataAgent = module.exports = function (options) {
                 }, 10000);
             }
         });
+    }
+
+    function startZoneeventWatcher(callback)
+    {
+        var zwatch = self.zwatch = new ZWatch();
+
+        zwatch.on('zone_transition', function (msg) {
+            self.event_queue.enqueue(function (cb) {
+                if (msg.cmd === 'start') {
+                    loadZone(msg.zonename, function (err, vmobj) {
+                        if (err) {
+                            self.log.error('unable to start server due to'
+                                + ' zone load error');
+                            cb();
+                        } else {
+                            startServer(msg.zonename, vmobj, cb);
+                        }
+                    });
+                } else if (msg.cmd === 'stop') {
+                    stopServer(msg.zonename, cb);
+                }
+            });
+        });
+
+        zwatch.start(self.log);
+    }
+
+    /*
+     * When vminfo is available, we will subscribe to vminfo events. Otherwise
+     * we'll watch for low-level events from zoneevent
+     */
+    self.startEvents = function (callback) {
+        vminfo.isOnline(function (online) {
+            if (online) {
+                startVminfoWatcher(callback);
+            } else {
+                startZoneeventWatcher(callback);
+            }
+        });
     };
 
     self.startServers = function (callback) {
-        var opts = {host: '127.0.0.1', port: 9090, path: '/vms'};
-        http.get(opts, function (res) {
-            var body = '';
-
-            res.on('data', function (chunk) {
-                body += chunk;
-            });
-
-            res.on('end', function () {
-                if (res.statusCode === 200) {
-                    try {
-                        var vmobjs = JSON.parse(body);
-                        async.each(vmobjs, function (vmobj, cb) {
-                            if (vmobj.state === 'running') {
-                                startServer(vmobj.zonename, vmobj, cb);
-                            } else {
-                                cb();
-                            }
-                        }, callback);
-                    } catch (e) {
-                        self.log.debug('failed to parse body from '
-                            + 'vminfod: ' + e.message);
-                        callback();
+        VM.lookup({}, { fields: sdc_fields }, function (error, vmobjs) {
+            if (error) {
+                self.log.debug('request for vm list failed: '
+                    + error.message);
+                callback(error);
+            } else {
+                async.forEach(vmobjs, function (vmobj, cb) {
+                    if (vmobj.zonename === 'global') {
+                        cb();
+                        return;
                     }
-                } else {
-                    self.log.debug('vminfod response not usable: '
-                        + res.statusCode);
-                    callback();
-                }
-            });
-        }).on('error', function (err) {
-            self.log.debug('vminfod request failed: ' + err.message);
-            callback();
+
+                    if (vmobj.state === 'running') {
+                        startServer(vmobj.zonename, vmobj, cb);
+                    } else {
+                        cb();
+                    }
+                }, callback);
+            }
         });
     };
 
@@ -1001,36 +1264,20 @@ var MetadataAgent = module.exports = function (options) {
             },
             // fetch new vmobjs
             function (cb) {
-                var opts = {host: '127.0.0.1', port: 9090, path: '/vms'};
-                http.get(opts, function (res) {
-                    var body = '';
-
-                    res.on('data', function (chunk) {
-                        body += chunk;
-                    });
-
-                    res.on('end', function () {
-                        if (res.statusCode === 200) {
-                            try {
-                                var vms = JSON.parse(body);
-                                vms.forEach(function (vm) {
-                                    vmobjs[vm.zonename] = vm;
-                                });
-                                cb();
-                            } catch (e) {
-                                self.log.debug('failed to parse body from '
-                                    + 'vminfod: ' + e.message);
-                                cb(e);
+                VM.lookup({}, { fields: sdc_fields }, function (error, vms) {
+                    if (error) {
+                        self.log.debug('request for vm list failed: '
+                            + error.message);
+                        cb(error);
+                    } else {
+                        vms.forEach(function (vmobj) {
+                            if (vmobj.zonename !== 'global') {
+                                vmobjs[vmobj.zonename] = vmobj;
                             }
-                        } else {
-                            self.log.debug('vminfod response not usable: '
-                                + res.statusCode);
-                            cb(new Error('vminfo invalid response code'));
-                        }
-                    });
-                }).on('error', function (err) {
-                    self.log.debug('vminfod request failed: ' + err.message);
-                    cb(err);
+                        });
+
+                        cb();
+                    }
                 });
             },
             // start/stop servers

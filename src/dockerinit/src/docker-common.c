@@ -338,21 +338,16 @@ addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl)
         if (nvpair_type(pair) == DATA_TYPE_STRING) {
             ret = nvpair_value_string(pair, &value);
             if (ret == 0) {
-                if ((type == ARRAY_ENTRYPOINT) && (*idx == 0) &&
-                    (value[0] != '/')) {
-
+                if (type == ARRAY_ENTRYPOINT) {
                     /*
-                     * XXX if first component is not an absolute path, we want
-                     * to make sure we're exec'ing something that is. In docker
-                     * they do an exec.LookPath, but for now we'll just run
-                     * under /bin/sh -c
+                     * In case the first component of entrypoint is not an
+                     * absolute path, we run through execName to force it to be
+                     * one (or fail). In Docker, they use exec.LookPath.
                      */
-                    array[(*idx)++] = "/bin/sh";
-                    dlog(printf_fmt, *idx, array[(*idx)-1]);
-                    array[(*idx)++] = "-c";
-                    dlog(printf_fmt, *idx, array[(*idx)-1]);
+                    array[*idx] = execName(value);
+                } else {
+                    array[*idx] = value;
                 }
-                array[*idx] = value;
                 if ((type == ARRAY_ENV) && (strncmp(value, "HOME=", 5) == 0)) {
                     found_home = 1;
                 }

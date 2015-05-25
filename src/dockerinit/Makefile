@@ -14,7 +14,7 @@
 #
 
 JSON_OBJS=json-nvlist/json-nvlist.o
-JSON_LIBS=-lnvpair
+JSON_LIBS=-lnvpair -lcmdutils
 MDATA_OBJS= \
 	mdata-client/dynstr.o \
 	mdata-client/proto.o \

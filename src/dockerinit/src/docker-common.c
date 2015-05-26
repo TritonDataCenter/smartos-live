@@ -524,7 +524,7 @@ getMdataArray(char *key, nvlist_t **nvl, uint32_t *len)
     }
 
     ret = nvlist_parse_json((char *)json, strlen(json), nvl,
-        NVJSON_FORCE_INTEGER, NULL);
+        NVJSON_FORCE_INTEGER);
     if (ret != 0) {
         fatal(ERR_PARSE_JSON, "failed to parse JSON(%s): %s\n", key, json);
     }

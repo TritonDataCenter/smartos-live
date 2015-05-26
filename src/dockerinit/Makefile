@@ -35,7 +35,7 @@ CPPFLAGS = $(SYSINCDIRS:%=-isystem $(DESTDIR)/%)
 LDFLAGS = $(SYSLIBDIRS:%=-L$(DESTDIR)/%) -Wl,-zassert-deflib -Wl,-zfatal-warnings
 
 JSON_OBJS=json-nvlist/json-nvlist.o
-JSON_LIBS=-lnvpair -lcmdutils
+JSON_LIBS=-lnvpair
 MDATA_OBJS= \
 	mdata-client/dynstr.o \
 	mdata-client/proto.o \

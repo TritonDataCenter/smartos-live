@@ -10,14 +10,13 @@
  */
 
 /*
- * Copyright 2015 Joyent, Inc.
+ * Copyright (c) 2014, Joyent, Inc.  All rights reserved.
  */
 
-#ifndef _JSON_NVLIST_H
-#define _JSON_NVLIST_H
+#ifndef	_JSON_NVLIST_H
+#define	_JSON_NVLIST_H
 
 #include <libnvpair.h>
-#include <libcmdutils.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,27 +25,16 @@ extern "C" {
 typedef enum nvlist_parse_json_flags {
 	NVJSON_FORCE_INTEGER = 0x01,
 	NVJSON_FORCE_DOUBLE = 0x02,
-	NVJSON_ERRORS_TO_STDERR = 0x04,
-	NVJSON_DEBUG = 0x08
+	NVJSON_ERRORS_TO_STDERR = 0x04
 } nvlist_parse_json_flags_t;
 
-typedef struct nvlist_parse_json_error {
-	int nje_errno;
-	long nje_pos;
-	char nje_message[512];
-} nvlist_parse_json_error_t;
+extern int nvlist_parse_json(char *, size_t, nvlist_t **,
+    nvlist_parse_json_flags_t);
 
-#define	NVJSON_ALL						\
-	(NVJSON_FORCE_INTEGER |					\
-	NVJSON_FORCE_DOUBLE |					\
-	NVJSON_ERRORS_TO_STDERR |				\
-	NVJSON_DEBUG)
-
-extern int nvlist_parse_json(const char *, size_t, nvlist_t **,
-    nvlist_parse_json_flags_t, nvlist_parse_json_error_t *);
+#define	__UNUSED	__attribute__((unused))
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif	/* _JSON_NVLIST_H */
+#endif	/* _LIBVARPD_FILES_JSON_H */

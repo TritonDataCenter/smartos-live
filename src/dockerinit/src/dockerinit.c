@@ -324,7 +324,7 @@ setupInterfaces()
     }
 
     ret = nvlist_parse_json((char *)json, strlen(json), &nvl,
-        NVJSON_FORCE_INTEGER, NULL);
+        NVJSON_FORCE_INTEGER);
     if (ret != 0) {
         fatal(ERR_PARSE_JSON, "failed to parse nvpair json"
             " for sdc:nics, code: %d\n", ret);

@@ -1,11 +1,11 @@
 mkdir -p projects/local
-(cd projects/local && [[ -d ur-agent ]] \
+(cd projects/local >/dev/null && [[ -d ur-agent ]] \
     || git clone git://github.com/joyent/sdc-ur-agent.git ur-agent)
-(cd projects/local && [[ -d kvm ]] \
+(cd projects/local >/dev/null && [[ -d kvm ]] \
     || git clone git://github.com/joyent/illumos-kvm.git kvm)
-(cd projects/local && [[ -d kvm-cmd ]] \
+(cd projects/local >/dev/null && [[ -d kvm-cmd ]] \
     || git clone git://github.com/joyent/illumos-kvm-cmd.git kvm-cmd)
-(cd projects/local && [[ -d mdata-client ]] \
+(cd projects/local >/dev/null && [[ -d mdata-client ]] \
     || git clone git://github.com/joyent/mdata-client.git mdata-client)
 
 # default branch list if there isn't one

@@ -2403,6 +2403,10 @@ function startZoneeventWatcher(callback)
         log.info('zoneevent watcher exited.');
         watcher = null;
     });
+
+    if (callback) {
+        callback();
+    }
 }
 
 /*

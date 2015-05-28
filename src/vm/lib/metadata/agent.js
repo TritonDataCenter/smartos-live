@@ -634,7 +634,7 @@ var MetadataAgent = module.exports = function (options) {
                     // about that here otherwise expect it will be removed
                     // on you sometime.
                     if (want === 'nics' && vmobj.hasOwnProperty('nics')) {
-                        self.updateZone(zone, function () {
+                        updateZone(zone, function () {
                             val = JSON.stringify(vmobj.nics);
                             returnit(null, val);
                             return;
@@ -646,11 +646,11 @@ var MetadataAgent = module.exports = function (options) {
                         // might reload metadata trying to get the new ones w/o
                         // zone reboot. To ensure these are fresh we always run
                         // updateZone which reloads the data if stale.
-                        self.updateZone(zone, function () {
+                        updateZone(zone, function () {
                             // See NOTE above about nics, same applies to
                             // resolvers. It's here solely for the use of
                             // mdata-fetch.
-                            val = JSON.stringify(self.zones[zone].resolvers);
+                            val = JSON.stringify(self.vmobjs[zone].resolvers);
                             returnit(null, val);
                             return;
                         });
@@ -658,8 +658,8 @@ var MetadataAgent = module.exports = function (options) {
                         && vmobj.hasOwnProperty('tmpfs')) {
                         // We want tmpfs to reload the cache right away because
                         // we might be depending on a /etc/vfstab update
-                        self.updateZone(zone, function () {
-                            val = JSON.stringify(self.zones[zone].tmpfs);
+                        updateZone(zone, function () {
+                            val = JSON.stringify(self.vmobjs[zone].tmpfs);
                             returnit(null, val);
                             return;
                         });
@@ -668,9 +668,9 @@ var MetadataAgent = module.exports = function (options) {
 
                         var vmRoutes = [];
 
-                        self.updateZone(zone, function () {
+                        updateZone(zone, function () {
 
-                            vmobj = self.zones[zone];
+                            vmobj = self.vmobjs[zone];
 
                             // The notes above about resolvers also to routes.
                             // It's here solely for the use of mdata-fetch, and
@@ -1194,16 +1194,23 @@ var MetadataAgent = module.exports = function (options) {
                                 + ' zone load error');
                             cb();
                         } else {
+                            console.log('starting server');
                             startServer(msg.zonename, vmobj, cb);
                         }
                     });
                 } else if (msg.cmd === 'stop') {
                     stopServer(msg.zonename, cb);
+                } else {
+                    cb();
                 }
             });
         });
 
         zwatch.start(self.log);
+
+        if (callback) {
+            callback();
+        }
     }
 
     /*

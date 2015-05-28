@@ -35,7 +35,7 @@ exports.DEFAULT_PORT = PORT;
 /*
  * Runs a simple check against the vminfo socket to see if it's connectable
  */
-exports.isOnline(function (cb) {
+exports.isOnline = function (cb) {
     var client = net.connect({port: PORT, host: HOST}, function () {
         client.end();
         cb(true);
@@ -44,12 +44,12 @@ exports.isOnline(function (cb) {
     client.on('error', function () {
         cb(false);
     });
-});
+};
 
 /*
  * Checks to see if the socket is accepting connections AND also checks
  * to see if the vminfo daemon is available to process requests.
  */
-exports.isReady(function (cb) {
+exports.isReady = function (cb) {
     // TODO: make it work :)
-});
+};

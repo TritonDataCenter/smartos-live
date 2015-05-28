@@ -44,6 +44,7 @@ var Qmp = require('/usr/vm/node_modules/qmp').Qmp;
 var qs = require('querystring');
 var url = require('url');
 var util = require('util');
+var vminfo = require('/usr/vm/lib/vminfo/common');
 var Queue = require('/usr/vm/node_modules/queue');
 
 var UPGRADE_SCRIPT = '/smartdc/vm-upgrade/001_upgrade';
@@ -74,8 +75,8 @@ var do_autoboot = false;
 
 // The following fields are used to track connection state into the vminfo
 // event channel, allowing us to reset if possible.
-var event_connect_attempts = 0;
-var event_initial_connect = true;
+var vminfo_event_connect_attempts = 0;
+var vminfo_event_initial_connect = true;
 
 // Event queue to ensure flooding events don't create too much back-pressure.
 var event_queue;
@@ -2241,7 +2242,7 @@ function initVM(obj, callback)
     });
 }
 
-function handleEvent(task)
+function startVminfoWatcher(callback)
 {
     function createEvent(zonename, newstate, oldstate) {
         if (oldstate === undefined) {
@@ -2267,43 +2268,12 @@ function handleEvent(task)
         }
     }
 
-    event_queue.enqueue(function (callback) {
-        var ev;
-        var change;
-
-        switch (task.type) {
-        case 'create':
-            ev = createEvent(task.zonename, task.vm.zone_state);
-            updateZoneStatus(ev, callback);
-            break;
-        case 'modify':
-            change = extractZoneStateChange(task.changes);
-
-            if (change !== undefined) {
-                ev = createEvent(task.zonename, change.to, change.from);
-                updateZoneStatus(ev, callback);
-            } else {
-                callback();
-            }
-            break;
-        case 'delete':
-            removeVM(task.zonename, callback);
-            break;
-        default:
-            callback();
-            break;
-        }
-    });
-}
-
-function startEvents(callback)
-{
-    event_connect_attempts += 1;
+    vminfo_event_connect_attempts += 1;
 
     var opts = {host: '127.0.0.1', port: 9090, path: '/events'};
     http.get(opts, function (res) {
         // reset connect attempts
-        event_connect_attempts = 0;
+        vminfo_event_connect_attempts = 0;
         // all of our chunks should be JSON
         res.setEncoding('utf8');
         // let this connection stay open forever
@@ -2322,7 +2292,34 @@ function startEvents(callback)
             while (chunks.length > 1) {
                 chunk = chunks.shift();
                 task = JSON.parse(chunk);
-                handleEvent(task);
+                event_queue.enqueue(function (cb) {
+                    var ev;
+                    var change;
+
+                    switch (task.type) {
+                    case 'create':
+                        ev = createEvent(task.zonename, task.vm.zone_state);
+                        updateZoneStatus(ev, cb);
+                        break;
+                    case 'modify':
+                        change = extractZoneStateChange(task.changes);
+
+                        if (change !== undefined) {
+                            ev = createEvent(task.zonename, change.to,
+                                change.from);
+                            updateZoneStatus(ev, cb);
+                        } else {
+                            cb();
+                        }
+                        break;
+                    case 'delete':
+                        removeVM(task.zonename, cb);
+                        break;
+                    default:
+                        cb();
+                        break;
+                    }
+                });
             }
             body = chunks.pop(); // remainder
         });
@@ -2333,7 +2330,7 @@ function startEvents(callback)
 
         log.info('subscribed to vminfo. Waiting for events.');
 
-        if (event_initial_connect === false) {
+        if (vminfo_event_initial_connect === false) {
             reset(function (err) {
                 if (err) {
                     log.warn('failed to reset after re-subscribing '
@@ -2346,7 +2343,7 @@ function startEvents(callback)
         }
 
         // ensure subsequent disconnects will be reset
-        event_initial_connect = false;
+        vminfo_event_initial_connect = false;
 
         if (callback) {
             callback();
@@ -2354,18 +2351,71 @@ function startEvents(callback)
     }).on('error', function (err) {
         log.error('vminfod request failed: ' + err.message);
 
-        if (event_connect_attempts === 10) {
+        if (vminfo_event_connect_attempts === 10) {
             log.error('vminfod event requests reached max attempts');
             throw new Error('Unable to subscribe to vminfod events');
         } else {
             // try again in 10 seconds
             setTimeout(function () {
-                if (event_initial_connect === true) {
+                if (vminfo_event_initial_connect === true) {
                     startEvents(callback);
                 } else {
                     startEvents();
                 }
             }, 10000);
+        }
+    });
+}
+
+function startZoneeventWatcher(callback)
+{
+    var chunks;
+    var buffer = '';
+    var watcher;
+
+    watcher = spawn('/usr/vm/sbin/zoneevent', [], {'customFds': [-1, -1, -1]});
+
+    log.info('zoneevent running with pid ' + watcher.pid);
+
+    watcher.stdout.on('data', function (data) {
+        var chunk;
+        var ev;
+
+        buffer += data.toString();
+        chunks = buffer.split('\n');
+        while (chunks.length > 1) {
+            chunk = chunks.shift();
+            ev = JSON.parse(chunk);
+            event_queue.enqueue(function (cb) {
+                if (ev.newstate === 'uninitialized') {
+                    removeVM(ev.zonename, cb);
+                } else {
+                    updateZoneStatus(ev, cb);
+                }
+            });
+        }
+        buffer = chunks.pop();
+    });
+
+    watcher.stdin.end();
+
+    watcher.on('exit', function (code) {
+        log.info('zoneevent watcher exited.');
+        watcher = null;
+    });
+}
+
+/*
+ * When vminfo is available, we will subscribe to vminfo events. Otherwise
+ * we'll watch for low-level events from zoneevent
+ */
+function startEvents(callback)
+{
+    vminfo.isOnline(function (online) {
+        if (online) {
+            startVminfoWatcher(callback);
+        } else {
+            startZoneeventWatcher(callback);
         }
     });
 }

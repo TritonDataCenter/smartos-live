@@ -3,7 +3,7 @@
 <service_bundle type="manifest" name="vminfod">
   <service name="system/smartdc/vminfod" type="service" version="1.0.0">
 
-    <create_default_instance enabled="true"/>
+    <create_default_instance enabled="false"/>
     <single_instance/>
 
     <dependency name='filesystem-local' grouping='require_all' restart_on='none' type='service'>

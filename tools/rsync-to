@@ -1,0 +1,35 @@
+#!/bin/bash
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+#
+# Copyright (c) 2015, Joyent, Inc.
+#
+
+#
+# Rsync the master in this working copy to the install on the given HN.
+#
+#set -o xtrace
+
+set -o errexit
+
+TOP=$(cd $(dirname $0)/../; pwd)
+NODE=$1
+
+mounted=$(ssh ${NODE} mount | grep "/var/tmp/vm" || echo "notmounted")
+
+# VM
+if [[ $mounted == "notmounted" ]]; then
+    # Copy the original, rsync and then mount it.
+    echo "Creating rw /usr/vm mount"
+    ssh ${NODE} cp -RP /usr/vm /var/tmp/vm
+    ssh ${NODE} mount -F lofs /var/tmp/vm /usr/vm
+fi
+
+echo "Updating /usr/vm/node_modules"
+rsync -av ${TOP}/src/vm/node_modules \
+    $NODE:/usr/vm/ \
+    --exclude .git

@@ -257,6 +257,9 @@ d usr/vm/man 0555 root bin
 d usr/vm/node_modules 0555 root bin
 d usr/vm/sbin 0555 root bin
 d usr/vm/smf 0555 root bin
+d usr/vm/lib 0555 root bin
+d usr/vm/lib/vminfo 0555 root bin
+f usr/vm/lib/vminfo/common.js 0444 root bin
 d usr/vm/test 0555 root bin
 d usr/vm/test/testdata 0555 root bin
 d usr/vm/test/testdata/vmload-xml 0555 root bin

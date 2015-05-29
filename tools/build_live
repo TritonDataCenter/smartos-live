@@ -311,6 +311,27 @@ function run_checks
     fi
 }
 
+function safe_update_symlink
+{
+    if [[ -z "${1}" || -z "${2}" ]]; then
+        fatal_error "safe_update_symlink args: <source_file> <target>"
+    fi
+
+    if ! (cd "$(dirname "${2}")" && test -e "${1}"); then
+        fatal_error "symlink target \"${1}\" does not appear to exist"
+    fi
+
+    if [[ ! -L "${2}" ]]; then
+        if [[ -e "${2}" ]]; then
+            fatal_error "\"${2}\" exists, but is not a symlink"
+        fi
+    fi
+
+    if ! /usr/bin/rm -f "${2}" || ! /usr/bin/ln -s "${1}" "${2}"; then
+        fatal_error "failed to create symlink \"$2\" -> \"$1\""
+    fi
+}
+
 # Create tmp dir to do the work in
 rddir="/tmp/create_ramdisk.$$.tmp"
 rm -rf "$rddir"
@@ -346,6 +367,12 @@ if [ $ERROR -eq 0 ]; then
       > ${OUT_DIR}/${BOOT_ARCHIVE_64}.hash
     echo "${BUILDSTAMP}" > ${OUT_DIR}/buildstamp
     (cd ${OUT_DIR} && gtar -zcf ${PREFIX}.tgz ${PREFIX})
+
+    #
+    # Maintain "latest" symlinks to whichever live image we just assembled.
+    #
+    safe_update_symlink "${PREFIX}" "${OUT_DIR}/platform-latest"
+    safe_update_symlink "${PREFIX}.tgz" "${OUT_DIR}/platform-latest.tgz"
 fi
 
 if [ $ERROR -eq 1 ]; then

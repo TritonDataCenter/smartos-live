@@ -1655,6 +1655,9 @@ function validateFields(manifest, requiredFields, options) {
 
 
 function clip(s, length) {
+    if (!s) {
+        return '';  // null -> empty string
+    }
     if (s.length > length) {
         return s.slice(0, length);
     }
@@ -1760,7 +1763,9 @@ function imgManifestFromDockerInfo(opts) {
         type: 'docker',
         os: imgManifestOsFromDockerOs(imgJson.os),
         description: clip(
-            imgJson.comment || imgJson.container_config.Cmd.join(' '),
+            imgJson.comment || (imgJson.container_config &&
+                imgJson.container_config.Cmd &&
+                imgJson.container_config.Cmd.join(' ')),
             MAX_DESCRIPTION_LENGTH),
         tags: {
             'docker:repo': opts.repo.localName,

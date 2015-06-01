@@ -1,5 +1,10 @@
 # imgadm changelog
 
+## 3.4.1
+
+- DOCKER-424: docker pull failed to complete for an image manifest with no
+  'comment' or 'container_config.Cmd'
+
 ## 3.4.0
 
 - OS-4315: Slight change in Docker image import to use the "localName"

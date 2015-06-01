@@ -103,7 +103,8 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-vrrp-nics.js \
 	vm/tests/test-zonewatcher.js \
 	vm/tests/test-zpoolwatcher.js \
-	vm/lib/metadata/*.js
+	vm/lib/metadata/*.js \
+	vm/lib/vminfo/*.js
 
 JS_CHECK_OLDSKOOL_TARGETS = \
 	disklayout.js \

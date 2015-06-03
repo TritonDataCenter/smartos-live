@@ -137,6 +137,8 @@ setup_manifests()
 	do
 		brand=`basename $i`
 		[[ ! -f /usr/lib/brand/$brand/manifests ]] && continue
+		# joyent-minimal uses /zones/manifests/joyent too
+		[[ "$brand" == "joyent-minimal" ]] && continue
 		cp_brand_manifests $brand
 	done
 }

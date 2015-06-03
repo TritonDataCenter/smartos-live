@@ -34,20 +34,15 @@ does not apply to the KVM brand or the traditional ipkg and S10 branded zones.
 Each brand has a file called `manifests`. This file lists the set of manifests
 that the brand cares about being available to the zone. It is formatted as:
 
-<manifest_name> <enabled | disabled> [noimport]
+<manifest_name> <enabled | disabled>
 
 Examples are:
 
 network/smb/client.xml		disabled
 network/ssh.xml			enabled
-system/cron.xml			disabled	noimport
 
 The use of enabled or disabled determines the default disposition of the service
 when it is imported.
-
-The use of `noimport` is optional and has specific meaning for the
-joyent-minimal brand only at this time. Not specifying anything there is the
-equivalent of saying that this manifest should always be imported.
 
 This list is used in various places throughout the rest of the system for
 determining what shows up in the SMF repositories by default and what shows up
@@ -92,11 +87,11 @@ installed at zone creation time and replaces any existing repository.
 
 This seed repository is generated using the `svc.configd-native` and
 `svccfg-native` binaries. Every manifest listed in the brand's manifests file is
-included unless it has the `noimport` option specified. If that is the case, it
-will not be imported into the SMF repository by default, but will still be
+included.
+
+Manifests available to the `joyent` brand not imported into the database are
 available for manual import in /lib/svc/manifest. With the minimal brand, only
-the bare minimum number of manifests should be imported else that such a zone
-might want should be marked `noimport`.
+the bare minimum number of manifests should be imported.
 
 #
 # Using non-imported manifests

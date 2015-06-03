@@ -1,5 +1,29 @@
 # imgadm changelog
 
+## 3.5.0
+
+- Images imported from 'docker' sources now have a *different local image UUID*
+  from before. Before this change the UUID was just the first half of the
+  Docker 64-char ID, reformatted as a UUID. After this change, the image UUID
+  is (a v5 UUID) generated from the Docker ID *and the Docker registry host*
+  (a.k.a. the "index name"). The reason for this change is to ensure that
+  the same Docker ID from separate registries do not collide. While it
+  may commonly be the *intention* that they are the same image, the
+  Docker Registry API v1 (still relevant, although currently be supplanted
+  by v2) provides no guarantees that a given image ID from separate
+  registries has the same *content*.
+
+  The groundwork for this was laid in v3.2.0 with DOCKER-257.  This is a
+  backwards incompatible change for users of 'docker' sources.  However the
+  only side-effect should be that an image needs to be re-imported from its
+  Docker source. Sources of type 'docker' are currently marked as experimental,
+  hence no major version bump.
+
+## 3.4.1
+
+- DOCKER-424: docker pull failed to complete for an image manifest with no
+  'comment' or 'container_config.Cmd'
+
 ## 3.4.0
 
 - OS-4315: Slight change in Docker image import to use the "localName"

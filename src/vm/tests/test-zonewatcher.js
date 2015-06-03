@@ -93,7 +93,7 @@ test('create zone (autoboot=true) and stop and destroy',
             autoboot: true,
             brand: 'joyent-minimal',
             do_not_inventory: true,
-            image_uuid: 'fd2cc906-8938-11e3-beab-4359c665ac99'
+            image_uuid: '01b2c898-945f-11e1-a523-af1afbe22822'
         };
 
         function finish() {
@@ -110,7 +110,6 @@ test('create zone (autoboot=true) and stop and destroy',
             /* start the ball rolling by creating a VM */
             vmadm(['create'], JSON.stringify(payload), function (err, stdio) {
                 var match;
-
                 t.ok(!err, (err ? err.message : 'created VM'));
                 log.debug({err: err, stdio: stdio}, 'vmadm create');
 

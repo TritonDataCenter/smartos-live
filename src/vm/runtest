@@ -69,12 +69,12 @@ fi
 
 # Ensure nic tags needed by tests exist
 
-# for tag in admin external; do
-#     if ! /usr/bin/nictagadm exists ${tag} >/dev/null 2>&1; then
-#         echo "Missing NIC tag: ${tag}, please add w/ nictagadm and try again" >&2
-#         exit 2
-#     fi
-# done
+for tag in admin external; do
+    if ! /usr/bin/nictagadm exists ${tag} >/dev/null 2>&1; then
+        echo "Missing NIC tag: ${tag}, please add w/ nictagadm and try again" >&2
+        exit 2
+    fi
+done
 
 set +o errexit
 set -o pipefail

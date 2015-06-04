@@ -289,7 +289,8 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     var idx;
 
                     if (!evt.pathname.match(/\/testfile.[0-9]+$/)) {
-                        // console.error('\n\nIGNORING: ' + evt.pathname + '\n\n');
+                        // console.error('\n\nIGNORING: '
+                        //     + evt.pathname + '\n\n');
                         return;
                     }
 
@@ -305,7 +306,8 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     var idx;
 
                     if (!evt.pathname.match(/\/testfile.[0-9]+$/)) {
-                        // console.error('\n\nIGNORING: ' + evt.pathname + '\n\n');
+                        // console.error('\n\nIGNORING: '
+                        //     + evt.pathname + '\n\n');
                         return;
                     }
 
@@ -318,13 +320,15 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     fs.stat(evt.pathname, function (err, stats) {
                         if (err) {
                             if (err.code === 'ENOENT') {
-                                // console.log('saw ENOENT0: ' + evt.pathname);
+                                // console.log('saw ENOENT0: '
+                                //     + evt.pathname);
                                 return;
                             } else {
                                 throw err;
                             }
                         }
-                        // console.error('\n\nDELETING ' + evt.pathname + '\n\n');
+                        // console.error('\n\nDELETING '
+                        //     + evt.pathname + '\n\n');
                         try {
                             fs.unlinkSync(evt.pathname);
                         } catch (e) {
@@ -345,7 +349,8 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     var idx;
 
                     if (!evt.pathname.match(/\/testfile.[0-9]+$/)) {
-                        // console.error('\n\nIGNORING: ' + evt.pathname + '\n\n');
+                        // console.error('\n\nIGNORING: '
+                        //     + evt.pathname + '\n\n');
                         return;
                     }
 
@@ -484,7 +489,7 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
     }
 );
 
-test('watch some files then kill the fswatcher child, then modify files',
+test('watch some files, kill the fswatcher child, then modify files',
     function (t) {
         var killed = false;
         var pid;
@@ -588,8 +593,8 @@ test('watch some files then kill the fswatcher child, then modify files',
                 pid = fsw.watcherPID();
                 t.ok(pid, 'fswatcher PID is ' + pid);
                 process.kill(pid, 'SIGKILL');
-                // XXX delete a file while the watcher is restarting?
                 killed = true;
+                // XXX delete a file while the watcher is restarting?
                 cb();
             }, function (cb) {
                 fs.writeFile(filename1, 'second modification 1!\n',

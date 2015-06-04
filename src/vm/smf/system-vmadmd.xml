@@ -10,11 +10,11 @@
     <dependency name="smartdc-init" grouping="require_all" restart_on="error" type="service">
       <service_fmri value="svc:/system/smartdc/init"/>
     </dependency>
-<!-- 
-    <dependency name="smartdc-vminfod" grouping="require_all" restart_on="error" type="service">
+
+    <dependency name="smartdc-vminfod" grouping="optional_all" restart_on="refresh" type="service">
       <service_fmri value="svc:/system/smartdc/vminfod"/>
     </dependency>
- -->
+
     <exec_method
       type="method"
       name="start"

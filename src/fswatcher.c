@@ -556,7 +556,7 @@ register_watch(uint32_t key, char *name, struct stat sb)
      * We are no longer interested in events for this idx.
      */
     if (finf == NULL) {
-        mutex_unlock(&handles_mutex);    
+        mutex_unlock(&handles_mutex);
         return;
     }
 

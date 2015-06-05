@@ -159,8 +159,7 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
             imgId: imgId,
             uuid: imgmanifest.imgUuidFromDockerInfo({
                 id: imgId,
-                indexName: rat.index.name,
-                obsoleteUuid: true
+                indexName: rat.index.name
             }),
         };
         Object.keys(repoTags).forEach(function (repoTag) {
@@ -197,8 +196,7 @@ DockerSource.prototype.getImgAncestry = function getImgAncestry(opts, cb) {
                 imgId: imgId,
                 uuid: imgmanifest.imgUuidFromDockerInfo({
                     id: imgId,
-                    indexName: opts.repo.index.name,
-                    obsoleteUuid: true
+                    indexName: opts.repo.index.name
                 }),
                 repo: opts.repo
             };
@@ -228,8 +226,7 @@ DockerSource.prototype.getImgMeta = function getImgMeta(opts, cb) {
                 imgJson: imgJson,
                 repo: opts.repo,
                 uuid: opts.uuid,
-                tags: opts.tags,
-                obsoleteUuid: true
+                tags: opts.tags
             }),
             imgJson: imgJson
         };

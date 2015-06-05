@@ -118,6 +118,7 @@ rm -rf node_modules/progbar/node_modules/assert-plus  # slight version mismatch
 rm -rf node_modules/progbar/node_modules/readable-stream # only needed for node 0.8
 
 rm -rf node_modules/imgmanifest/node_modules/assert-plus  # slight version mismatch
+rm -rf node_modules/imgmanifest/bin  # don't need this
 
 rm -rf node_modules/vasync/node_modules/verror # version mismatch
 

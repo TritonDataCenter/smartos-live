@@ -13,9 +13,9 @@ require('nodeunit-plus');
 
 var FsWatcher = require('vmevent/fswatcher').FsWatcher;
 var log = bunyan.createLogger({
-        level: 'trace',
+        level: 'info',
         name: 'fswatcher-test-dummy',
-        streams: [ { stream: process.stderr, level: 'trace' } ],
+        streams: [ { stream: process.stderr, level: 'info' } ],
         serializers: bunyan.stdSerializers
 });
 var testdir = '/tmp/' + process.pid;
@@ -163,7 +163,13 @@ test('try watching a non-existent file then create it', function (t) {
 
 test('try watching an existent file, unwatching and ensure no events',
     function (t) {
-        var events_after_stop = 0;
+        /*
+         * events_after_stop needs to be -1 and not 0 because every event will
+         * fire both the specific 'change' event in addition to the 'all' event.
+         * The initial write will trigger both a change and all, so we'll need
+         * to start at -1.
+         */
+        var events_after_stop = -1;
         var filename = path.join(testdir, 'tricky.txt');
         var saw_change = false;
         var stopped_watching = false;
@@ -283,7 +289,8 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     var idx;
 
                     if (!evt.pathname.match(/\/testfile.[0-9]+$/)) {
-                        console.error('\n\nIGNORING: ' + evt.pathname + '\n\n');
+                        // console.error('\n\nIGNORING: '
+                        //     + evt.pathname + '\n\n');
                         return;
                     }
 
@@ -299,7 +306,8 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     var idx;
 
                     if (!evt.pathname.match(/\/testfile.[0-9]+$/)) {
-                        console.error('\n\nIGNORING: ' + evt.pathname + '\n\n');
+                        // console.error('\n\nIGNORING: '
+                        //     + evt.pathname + '\n\n');
                         return;
                     }
 
@@ -312,18 +320,20 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     fs.stat(evt.pathname, function (err, stats) {
                         if (err) {
                             if (err.code === 'ENOENT') {
-                                console.log('saw ENOENT0: ' + evt.pathname);
+                                // console.log('saw ENOENT0: '
+                                //     + evt.pathname);
                                 return;
                             } else {
                                 throw err;
                             }
                         }
-                        console.error('\n\nDELETING ' + evt.pathname + '\n\n');
+                        // console.error('\n\nDELETING '
+                        //     + evt.pathname + '\n\n');
                         try {
                             fs.unlinkSync(evt.pathname);
                         } catch (e) {
                             if (e.code === 'ENOENT') {
-                                console.log('saw ENOENT1: ' + evt.pathname);
+                                // console.log('saw ENOENT1: ' + evt.pathname);
                                 return;
                             } else {
                                 throw (e);
@@ -339,7 +349,8 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     var idx;
 
                     if (!evt.pathname.match(/\/testfile.[0-9]+$/)) {
-                        console.error('\n\nIGNORING: ' + evt.pathname + '\n\n');
+                        // console.error('\n\nIGNORING: '
+                        //     + evt.pathname + '\n\n');
                         return;
                     }
 
@@ -376,8 +387,8 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                         t.ok(true, 'created ' + count + ' watches');
                         callback();
                     } else {
-                        console.error('created ' + completed + ' / ' + count
-                            + ' watches');
+                        // console.error('created ' + completed + ' / ' + count
+                        //     + ' watches');
                         loops++;
                         if (loops > 600) {
                             clearInterval(ival);
@@ -410,8 +421,8 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                         t.ok(true, 'created ' + count + ' files');
                         callback();
                     } else {
-                        console.error('created ' + completed + ' / ' + count
-                            + ' files');
+                        // console.error('created ' + completed + ' / ' + count
+                        //     + ' files');
                         loops++;
                         if (loops > 600) {
                             clearInterval(ival);
@@ -454,8 +465,8 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                             }
                         });
                         if (missing) {
-                            console.error('STILL WAITING FOR ' + idx + '('
-                                + JSON.stringify(files[idx]) + ')');
+                            // console.error('STILL WAITING FOR ' + idx + '('
+                            //     + JSON.stringify(files[idx]) + ')');
                             done = false;
                             break;
                         }
@@ -478,7 +489,7 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
     }
 );
 
-test('watch some files then kill the fswatcher child, then modify files',
+test('watch some files, kill the fswatcher child, then modify files',
     function (t) {
         var killed = false;
         var pid;
@@ -582,8 +593,8 @@ test('watch some files then kill the fswatcher child, then modify files',
                 pid = fsw.watcherPID();
                 t.ok(pid, 'fswatcher PID is ' + pid);
                 process.kill(pid, 'SIGKILL');
-                // XXX delete a file while the watcher is restarting?
                 killed = true;
+                // XXX delete a file while the watcher is restarting?
                 cb();
             }, function (cb) {
                 fs.writeFile(filename1, 'second modification 1!\n',

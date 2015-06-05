@@ -13,9 +13,9 @@ require('nodeunit-plus');
 
 var ZpoolWatcher = require('vmevent/zpoolwatcher').ZpoolWatcher;
 var log = bunyan.createLogger({
-        level: 'trace',
+        level: 'info',
         name: 'zpoolwatcher-test-dummy',
-        streams: [ { stream: process.stderr, level: 'trace' } ],
+        streams: [ { stream: process.stderr, level: 'info' } ],
         serializers: bunyan.stdSerializers
 });
 var testdir = '/tmp/' + process.pid;
@@ -96,6 +96,8 @@ test('watch pool and create dataset, set quota, snapshot it then delete -r',
                 finish();
             }
         });
+
+        zpoolw.start();
 
         t.ok(true, 'created watcher');
     }

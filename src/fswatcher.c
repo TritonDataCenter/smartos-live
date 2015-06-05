@@ -555,8 +555,10 @@ register_watch(uint32_t key, char *name, struct stat sb)
     /*
      * We are no longer interested in events for this idx.
      */
-    if (finf == NULL)
+    if (finf == NULL) {
+        mutex_unlock(&handles_mutex);
         return;
+    }
 
     fobjp = &finf->fobj;
     fobjp->fo_atime = sb.st_atim;

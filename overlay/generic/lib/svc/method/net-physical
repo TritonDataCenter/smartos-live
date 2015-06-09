@@ -22,7 +22,7 @@
 #
 # Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T. All rights reserved.
 # Copyright (c) 1999, 2010, Oracle and/or its affiliates. All rights reserved.
-# Copyright (c) 2014, Joyent Inc., All rights reserved.
+# Copyright 2015 Joyent, Inc.
 #
 
 . /lib/svc/share/smf_include.sh
@@ -278,7 +278,7 @@ function set_default_route
 #
 function setup_mtu
 {
-    typeset tag oldifs val mac link
+    typeset tag oldifs val mac link curmtu
     typeset -A mtus
     typeset -A tagmap
 
@@ -315,6 +315,16 @@ function setup_mtu
             echo "/usbkey/config error: Missing link name for ${tag}"
             exit $SMF_EXIT_ERR_FATAL
         fi
+
+	#
+	# Check the current MTU of the device. To help out devices which
+	# don't support the setting of the MTU (here's looking at you
+	# bnx), if the MTU is identical to its default, don't do
+	# anything and save the poor folks stuck with bnx some grief.
+	#
+	curmtu=$(/usr/sbin/dladm show-linkprop -c -o value -p mtu ${link})
+	[[ $? -eq 0 ]] && [[ "$curmtu" -eq "${mtus[$mac]}" ]] && continue
+
         if ! /usr/sbin/dladm set-linkprop -p mtu=${mtus[$mac]} ${link}; then
             echo "Failed to set mtu to ${mtus[$mac]} for link ${link}"
             exit $SMF_EXIT_ERR_FATAL

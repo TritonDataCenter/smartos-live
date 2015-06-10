@@ -27,7 +27,7 @@ CPPFLAGS = $(SYSINCDIRS:%=-isystem $(DESTDIR)/%)
 LDFLAGS = $(SYSLIBDIRS:%=-L$(DESTDIR)/%) -Wl,-zassert-deflib -Wl,-zfatal-warnings
 
 JSON_OBJS=json-nvlist/json-nvlist.o
-JSON_LIBS=-lnvpair
+JSON_LIBS=-lnvpair -lcmdutils
 MDATA_OBJS= \
 	mdata-client/dynstr.o \
 	mdata-client/proto.o \
@@ -45,7 +45,7 @@ CTFCONVERT = /usr/bin/true
 CTFMERGE = /usr/bin/true
 
 CC=$(GCC)
-CFLAGS=-Wall -Wextra -Werror -D__HAVE_BOOLEAN_T -m32
+CFLAGS=-Wall -Wextra -Werror -D__HAVE_BOOLEAN_T -m32 -g
 CSTYLE=../../tools/cstyle
 
 all: build/dockerinit build/dockerexec
@@ -73,6 +73,7 @@ mdata-client/%.o: mdata-client/%.c
 
 json-nvlist/%.o: json-nvlist/%.c
 	$(CC) $(CPPFLAGS) $(LDFLAGS) -c $(CFLAGS) -o $@ $<
+	$(CTFCONVERT) -L VERSION $@
 
 check: src/*.c
 	@echo $(PWD)/$^

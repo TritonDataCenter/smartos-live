@@ -286,3 +286,4 @@ skd 289
 eventfd 290
 zfd 291
 timerfd 292
+signalfd 293

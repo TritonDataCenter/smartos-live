@@ -1,6 +1,9 @@
 /configure.*
 /configure-*
 /output
+/output-iso
+/output-usb
+/output-vmware
 /projects
 /proto
 /proto.boot

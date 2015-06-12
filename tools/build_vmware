@@ -106,7 +106,7 @@ function bi_generate_vmware_tar
 	local output_file
 
 	output_name=$(echo "${bi_platform_name}" | sed 's/^platform/smartos/')
-	output_file="${output_name}.vmarevm.tar.bz2"
+	output_file="${output_name}.vmwarevm.tar.bz2"
 
 	bi_emit_start 'Generating VMware tarball'
 	if ! (cd "${bi_output_dir}" && gtar -jcf "${output_file}" \

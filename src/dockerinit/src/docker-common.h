@@ -101,7 +101,7 @@ void buildCmdEnv();
 void dlog(const char *fmt, ...);
 char * execName(char *cmd);
 void fatal(dockerinit_err_t code, char *fmt, ...);
-void getMdataArray(char *key, nvlist_t **nvl, uint32_t *len);
+void getMdataArray(const char *key, nvlist_t **nvl, uint32_t *len);
 char *getTimestamp();
 void getUserGroupData();
 void mdataDelete(const char *keyname);

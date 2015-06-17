@@ -75,7 +75,7 @@
 #define RTMBUFSZ sizeof (struct rt_msghdr) + (3 * sizeof (struct sockaddr_in))
 #define ATTACH_CHECK_INTERVAL 200000 // 200ms
 
-int addRoute(const char *, const char *, const char *);
+int addRoute(const char *, const char *, const char *, int);
 void buildCmdline();
 void closeIpadmHandle();
 void execCmdline();
@@ -109,6 +109,9 @@ int open_stdin = 0;
 char *path = NULL;
 struct passwd *pwd = NULL;
 struct group *grp = NULL;
+
+#define WARNLOG(format, ...) \
+    dlog("WARN %s: " format "\n", __func__, __VA_ARGS__)
 
 const char *ROUTE_ADDR_MSG =
     "WARN addRoute: invalid %s address \"%s\" for %s: %s\n";
@@ -312,7 +315,7 @@ setupInterface(nvlist_t *data)
             if ((ret == 0) && (primary == B_TRUE)) {
                 ret = nvlist_lookup_string(data, "gateway", &gateway);
                 if (ret == 0) {
-                    (void) addRoute(iface, gateway, "0.0.0.0");
+                    (void) addRoute(iface, gateway, "0.0.0.0", 0);
                 }
             }
         }
@@ -649,8 +652,20 @@ raiseIf(char *ifname, char *addr, char *netmask)
     return (0);
 }
 
+static int
+prefixToNetmask(int pfx, struct sockaddr_in *netmask_sin)
+{
+    struct sockaddr *mask = (struct sockaddr *)netmask_sin;
+
+    if (plen2mask(pfx, AF_INET, mask) != 0) {
+        return (-1);
+    }
+
+    return (0);
+}
+
 int
-addRoute(const char *ifname, const char *gw, const char *dst)
+addRoute(const char *ifname, const char *gw, const char *dst, int dstpfx)
 {
     int idx;
     int len;
@@ -685,18 +700,19 @@ addRoute(const char *ifname, const char *gw, const char *dst)
     }
 
     netmask_sin->sin_family = AF_INET;
-    if ((inet_pton(AF_INET, "0.0.0.0", &(netmask_sin->sin_addr))) != 1) {
-        dlog(ROUTE_ADDR_MSG, "netmask", "0.0.0.0", ifname, strerror(errno));
+    if (prefixToNetmask(dstpfx, netmask_sin) != 0) {
+        WARNLOG("invalid route prefix length %d", dstpfx);
         return (-3);
     }
 
-    if ((idx = if_nametoindex(ifname)) == 0) {
-        dlog("WARN addRoute: error getting interface index for %s: %s\n",
-            ifname, strerror(errno));
-        return (-4);
+    if (ifname != NULL) {
+        if ((idx = if_nametoindex(ifname)) == 0) {
+            dlog("WARN addRoute: error getting interface index for %s: %s\n",
+                ifname, strerror(errno));
+            return (-4);
+        }
+        rtm->rtm_index = idx;
     }
-
-    rtm->rtm_index = idx;
 
     if ((sockfd = socket(PF_ROUTE, SOCK_RAW, AF_INET)) < 0) {
         dlog("WARN addRoute: error opening socket: %s\n", strerror(errno));
@@ -720,6 +736,91 @@ addRoute(const char *ifname, const char *gw, const char *dst)
     return (0);
 }
 
+static int
+setupStaticRoute(nvlist_t *route, const char *idx)
+{
+    boolean_t linklocal = B_FALSE;
+    char *slash;
+    char *dstraw = NULL;
+    char *dst;
+    char *gateway;
+    int dstpfx = -1;
+    int ret = -1;
+
+    if (nvlist_lookup_boolean_value(route, "linklocal", &linklocal) == 0 &&
+      linklocal) {
+        WARNLOG("route[%s]: linklocal routes not supported", idx);
+        goto bail;
+    }
+
+    if (nvlist_lookup_string(route, "dst", &dst) != 0) {
+        WARNLOG("route[%s]: route is missing \"dst\"", idx);
+        goto bail;
+    }
+
+    if (nvlist_lookup_string(route, "gateway", &gateway) != 0) {
+        WARNLOG("route[%s]: route is missing \"gateway\"", idx);
+        goto bail;
+    }
+
+    /*
+     * Parse the CIDR-notation destination specification.  For example:
+     * "172.20.5.1/24" becomes a destination of "172.20.5.1" with a prefix
+     * length of 24.
+     */
+    if ((dstraw = strdup(dst)) == NULL) {
+        WARNLOG("route[%s]: strdup failure", idx);
+        goto bail;
+    }
+
+    if ((slash = strchr(dstraw, '/')) == NULL) {
+        WARNLOG("route[%s]: dst \"%s\" invalid", idx, dst);
+        goto bail;
+    }
+    *slash = '\0';
+    dstpfx = atoi(slash + 1);
+    if (dstpfx < 0 || dstpfx > 32) {
+        WARNLOG("route[%s]: dst \"%s\" pfx %d invalid", idx, dst, dstpfx);
+        goto bail;
+    }
+
+    if ((ret = addRoute(NULL, gateway, dstraw, dstpfx)) != 0) {
+        WARNLOG("route[%s]: failed to add (%d)", idx, ret);
+        goto bail;
+    }
+
+    ret = 0;
+
+bail:
+    free(dstraw);
+    return (ret);
+}
+
+void
+setupStaticRoutes(void)
+{
+    nvlist_t *routes = NULL;
+    uint32_t nroutes = 0;
+    uint32_t i;
+
+    getMdataArray("sdc:routes", &routes, &nroutes);
+
+    for (i = 0; i < nroutes; i++) {
+        char idx[32];
+        nvlist_t *route;
+
+        (void) snprintf(idx, sizeof (idx), "%u", i);
+        if (nvlist_lookup_nvlist(routes, idx, &route) != 0) {
+            WARNLOG("route[%s] not found in array", idx);
+            continue;
+        }
+
+        (void) setupStaticRoute(route, idx);
+    }
+
+    nvlist_free(routes);
+}
+
 void
 setupNetworking()
 {
@@ -729,6 +830,12 @@ setupNetworking()
     (void) raiseIf("lo0", "127.0.0.1", "255.0.0.0");
 
     setupInterfaces();
+
+    /*
+     * Configure any additional static routes from NAPI networks:
+     */
+    setupStaticRoutes();
+
     closeIpadmHandle();
 }
 

@@ -272,3 +272,4 @@ inotify:* 0666 root sys
 skd:* 0600 root sys
 eventfd:* 0666 root sys
 timerfd:* 0666 root sys
+signalfd:* 0666 root sys

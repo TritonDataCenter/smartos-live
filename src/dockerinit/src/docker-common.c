@@ -513,23 +513,19 @@ execName(char *cmd)
 }
 
 void
-getMdataArray(char *key, nvlist_t **nvl, uint32_t *len)
+getMdataArray(const char *key, nvlist_t **nvl, uint32_t *len)
 {
-    char *json;
-    int ret;
+    const char *json;
 
-    json = (char *) mdataGet(key);
-    if (json == NULL) {
+    if ((json = mdataGet(key)) == NULL) {
         json = "[]";
     }
 
-    ret = nvlist_parse_json((char *)json, strlen(json), nvl,
-        NVJSON_FORCE_INTEGER, NULL);
-    if (ret != 0) {
+    if (nvlist_parse_json(json, strlen(json), nvl, NVJSON_FORCE_INTEGER,
+      NULL) != 0) {
         fatal(ERR_PARSE_JSON, "failed to parse JSON(%s): %s\n", key, json);
     }
-    ret = nvlist_lookup_uint32(*nvl, "length", len);
-    if (ret != 0) {
+    if (nvlist_lookup_uint32(*nvl, "length", len) != 0) {
         fatal(ERR_UNEXPECTED, "nvl missing 'length' for %s\n", key);
     }
 }

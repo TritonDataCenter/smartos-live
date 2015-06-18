@@ -353,7 +353,12 @@ SMARTDC_LIB_TARGETS = \
 #
 # Subdirectory management
 #
-SUBDIRS = dockerinit
+SUBDIRS = dockerinit routeinfo
+
+SUBDIRS_ENV = \
+	CTFCONVERT=$(CTFCONVERT) \
+	CTFMERGE=$(CTFMERGE) \
+	DESTDIR=$(DESTDIR)
 
 all : TARGET = all
 clean : TARGET = clean
@@ -361,7 +366,7 @@ install : TARGET = install
 check : TARGET = lint
 
 $(SUBDIRS): FRC
-	@cd $@; pwd; $(MAKE) CTFCONVERT=$(CTFCONVERT) CTFMERGE=$(CTFMERGE) $(TARGET)
+	@cd $@; pwd; $(MAKE) $(SUBDIRS_ENV) $(TARGET)
 
 
 all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm $(SMARTDC_TARGETS) \
@@ -473,6 +478,7 @@ install: all $(SUBDIRS)
 	    > $(DESTDIR)/usr/fw/node_modules/bunyan.js
 	mkdir -m 0755 -p $(DESTDIR)/usr/lib/sdc
 	cp -p net-boot-config $(DESTDIR)/usr/lib/sdc
+	cd routeinfo && $(MAKE) install $(SUBDIRS_ENV)
 
 check: $(JSLINT) $(SUBDIRS)
 	@echo "==> Running cstyle..."

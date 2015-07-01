@@ -31,7 +31,8 @@ CFLAGS =					\
 		-std=c99 			\
 		-D__EXTENSIONS__ 		\
 		-D_REENTRANT			\
-		-I../common
+		-I../common			\
+		-I../../src/common/strings
 
 LDLIBS =					\
 		-lumem				\
@@ -44,15 +45,22 @@ CC =		gcc
 CTFCONVERT =	$(TOOLS_BIN)/i386/ctfconvert
 CTFMERGE =	$(TOOLS_BIN)/i386/ctfmerge
 
+COMPILE_C =	$(CC) -c -gdwarf-2 $(CFLAGS) -o $@ $^
+POSTPROC_O =	$(CTFCONVERT) -l $(PROG) $@
+
 all: mancheck
 
 %.o: %.c
-	$(CC) -c -gdwarf-2 $(CFLAGS) -o $@ $^
-	$(CTFCONVERT) -l $(PROG) $@
+	$(COMPILE_C)
+	$(POSTPROC_O)
 
 %.o: ../common/%.c
-	$(CC) -c -gdwarf-2 $(CFLAGS) -o $@ $^
-	$(CTFCONVERT) -l $(PROG) $@
+	$(COMPILE_C)
+	$(POSTPROC_O)
+
+%.o: ../../src/common/strings/%.c
+	$(COMPILE_C)
+	$(POSTPROC_O)
 
 mancheck: $(OBJECTS)
 	$(CC) -o $@ $^ $(LDLIBS)

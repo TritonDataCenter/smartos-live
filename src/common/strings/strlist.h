@@ -17,7 +17,7 @@
 #define	_STRLIST_H
 
 /*
- * smartos-live: Build Tools: String List with fixed element count.
+ * smartos-live: String List with variable element count.
  */
 
 #ifdef __cplusplus
@@ -40,6 +40,8 @@ extern char *strlist_adopt(strlist_t *, unsigned int);
 extern int strlist_first_empty(strlist_t *, unsigned int *);
 extern unsigned int strlist_contig_count(strlist_t *);
 extern unsigned int strlist_capacity(strlist_t *);
+
+extern char *const *strlist_array(strlist_t *);
 
 #ifdef __cplusplus
 }

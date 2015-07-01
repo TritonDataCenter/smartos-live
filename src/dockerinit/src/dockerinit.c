@@ -65,6 +65,7 @@
 #include "../mdata-client/dynstr.h"
 #include "../mdata-client/plat.h"
 #include "../mdata-client/proto.h"
+#include "strlist.h"
 
 #include "docker-common.h"
 
@@ -76,11 +77,10 @@
 #define ATTACH_CHECK_INTERVAL 200000 // 200ms
 
 int addRoute(const char *, const char *, const char *, int);
-void buildCmdline();
 void closeIpadmHandle();
-void execCmdline();
-void getBrand();
-void getStdinStatus();
+static void execCmdline(strlist_t *, strlist_t *, const char *);
+static brand_t getBrand(void);
+static boolean_t getStdinStatus(void);
 void killIpmgmtd(void);
 void mountOSDevFD();
 void openIpadmHandle();
@@ -90,7 +90,7 @@ void runIpmgmtd(void);
 void setupHostname();
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
-void setupTerminal();
+static void setupTerminal(void);
 void waitIfAttaching();
 void makePath(const char *, char *, size_t);
 
@@ -100,12 +100,9 @@ mdata_proto_t *mdp;
 
 /* global data */
 brand_t brand;
-char **cmdline;
-char **env;
 char *hostname = NULL;
 ipadm_handle_t iph;
 FILE *log_stream = stderr;
-int open_stdin = 0;
 char *path = NULL;
 struct passwd *pwd = NULL;
 struct group *grp = NULL;
@@ -177,15 +174,19 @@ runIpmgmtd(void)
     }
 }
 
-void
-setupTerminal() {
+static void
+setupTerminal(void)
+{
     int _stdin, _stdout, _stderr;
-    int ctty = 0;
-    const char *data;
+    boolean_t ctty = B_FALSE;
+    char *data;
+    boolean_t open_stdin = getStdinStatus();
 
-    data = mdataGet("docker:tty");
-    if (data != NULL && strcmp("true", data) == 0) {
-        ctty = 1;
+    if ((data = mdataGet("docker:tty")) != NULL) {
+        if (strcmp("true", data) == 0) {
+            ctty = B_TRUE;
+        }
+        free(data);
     }
 
     dlog("SWITCHING TO /dev/zfd/*\n");
@@ -257,12 +258,13 @@ setupTerminal() {
     }
 }
 
-void
-execCmdline()
+static void
+execCmdline(strlist_t *cmdline, strlist_t *env, const char *workdir)
 {
-    char *execname;
+    custr_t *execname;
 
-    execname = execName(cmdline[0]);
+    execname = execName(strlist_get(cmdline, 0), env, workdir);
+    dlog("EXECNAME \"%s\"\n", custr_cstr(execname));
 
     /*
      * We need to drop privs *after* we've setup /dev/zfd/[0-2] since that
@@ -285,9 +287,9 @@ execCmdline()
         }
     }
 
-    execve(execname, cmdline, env);
+    execve(custr_cstr(execname), strlist_array(cmdline), strlist_array(env));
 
-    fatal(ERR_EXEC_FAILED, "execve(%s) failed: %s\n", cmdline[0],
+    fatal(ERR_EXEC_FAILED, "execve(%s) failed: %s\n", execname,
         strerror(errno));
 }
 
@@ -325,32 +327,28 @@ setupInterface(nvlist_t *data)
 void
 setupInterfaces()
 {
-    const char *json;
-    int ret;
+    char *json;
     nvlist_t *data, *nvl;
     nvpair_t *pair;
 
-    json = mdataGet("sdc:nics");
-    if (json == NULL) {
+    if ((json = mdataGet("sdc:nics")) == NULL) {
         dlog("WARN no NICs found in sdc:nics\n");
         return;
     }
 
-    ret = nvlist_parse_json((char *)json, strlen(json), &nvl,
-        NVJSON_FORCE_INTEGER, NULL);
-    if (ret != 0) {
+    if (nvlist_parse_json(json, strlen(json), &nvl, NVJSON_FORCE_INTEGER,
+      NULL) != 0) {
         fatal(ERR_PARSE_JSON, "failed to parse nvpair json"
-            " for sdc:nics, code: %d\n", ret);
+            " for sdc:nics: %s\n", strerror(errno));
     }
+    free(json);
 
     for (pair = nvlist_next_nvpair(nvl, NULL); pair != NULL;
-        pair = nvlist_next_nvpair(nvl, pair)) {
-
+      pair = nvlist_next_nvpair(nvl, pair)) {
         if (nvpair_type(pair) == DATA_TYPE_NVLIST) {
-            ret = nvpair_value_nvlist(pair, &data);
-            if (ret != 0) {
+            if (nvpair_value_nvlist(pair, &data) != 0) {
                 fatal(ERR_PARSE_JSON, "failed to parse nvpair json"
-                    " for NIC code: %d\n", ret);
+                    " for NIC: %s\n", strerror(errno));
             }
             setupInterface(data);
         }
@@ -370,77 +368,40 @@ mountOSDevFD()
     }
 }
 
-void
-buildCmdline()
+static brand_t
+getBrand(void)
 {
-    int idx;
-    uint32_t cmd_len, entrypoint_len;
-    nvlist_t *nvlc, *nvle;
+    brand_t brand;
+    char *data;
 
-    getMdataArray("docker:cmd", &nvlc, &cmd_len);
-    getMdataArray("docker:entrypoint", &nvle, &entrypoint_len);
-
-    if ((entrypoint_len + cmd_len) < 1) {
-        /*
-         * No ENTRYPOINT or CMD, docker prevents this at the API but if
-         * something somehow gets in this state, it's an error.
-         */
-        fatal(ERR_NO_COMMAND, "No command specified\n");
-    }
-
-    cmdline = malloc((sizeof (char *)) * (entrypoint_len + cmd_len + 1));
-    if (cmdline == NULL) {
-        fatal(ERR_UNEXPECTED, "malloc() failed for cmdline[%d]: %s\n",
-            (entrypoint_len + cmd_len + 1), strerror(errno));
-    }
-
-    /*
-     * idx will be used for keeping track of where we are in cmdline. It
-     * should point to the next writable index.
-     */
-    idx = 0;
-    addValues(cmdline, &idx, ARRAY_ENTRYPOINT, nvle);
-    addValues(cmdline, &idx, ARRAY_CMD, nvlc);
-    /* cap it off with a NULL */
-    cmdline[idx] = NULL;
-
-    /*
-     * NOTE: we don't nvlist_free(nvlc,nvle); here because we need this memory
-     * for execve().
-     */
-}
-
-void
-getBrand()
-{
-    const char *data;
-
-    data = mdataGet("sdc:brand");
-    if (data == NULL) {
+    if ((data = mdataGet("sdc:brand")) == NULL) {
         fatal(ERR_NO_BRAND, "failed to determine brand\n");
     }
 
     if (strcmp("lx", data) == 0) {
-        brand = LX;
+        brand = BRAND_LX;
     } else if (strcmp("joyent-minimal", data) == 0) {
-        brand = JOYENT_MINIMAL;
+        brand = BRAND_JOYENT_MINIMAL;
     } else {
         fatal(ERR_INVALID_BRAND, "invalid brand: %s\n", data);
+	abort();
     }
+
+    free(data);
+    return (brand);
 }
 
-void
-getStdinStatus()
+static boolean_t
+getStdinStatus(void)
 {
     const char *data;
-    /* open_stdin is global */
 
     data = mdataGet("docker:open_stdin");
     if (data != NULL && strcmp("true", data) == 0) {
-        open_stdin = 1;
-    } else {
-        open_stdin = 0;
+        return (B_TRUE);
     }
+
+    return (B_FALSE);
 }
 
 void
@@ -914,6 +875,18 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     int fd;
     int ret;
     int tmpfd;
+    strlist_t *env = NULL;
+    strlist_t *cmdline = NULL;
+    custr_t *workdir = NULL;
+
+    /*
+     * Allocate objects for constructing the environment to pass to the
+     * process to be started.
+     */
+    if (strlist_alloc(&env, 0) != 0 || strlist_alloc(&cmdline, 0) != 0) {
+        fatal(ERR_NO_MEMORY, "failed to allocate string lists: %s",
+            strerror(errno));
+    }
 
     /* we'll write our log in /var/log */
     mkdir("/var", 0755);
@@ -944,13 +917,11 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
         fatal(ERR_FDOPEN_LOG, "failed to fdopen(2): %s\n", strerror(errno));
     }
 
-    getBrand();
-
-    switch (brand) {
-        case LX:
+    switch (getBrand()) {
+        case BRAND_LX:
             setupMtab();
             break;
-        case JOYENT_MINIMAL:
+        case BRAND_JOYENT_MINIMAL:
             /*
              * joyent-minimal brand mounts /proc for us so we don't need to,
              * but without /proc being lxproc, we need to mount /dev/fd
@@ -981,10 +952,15 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     /* NOTE: all of these will call fatal() if there's a problem */
     setupHostname();
     getUserGroupData();
-    setupWorkdir();
-    buildCmdEnv();
-    buildCmdline();
-    getStdinStatus();
+    setupWorkdir(&workdir);
+
+    if (buildCmdEnv(env) != 0) {
+        fatal(ERR_UNEXPECTED, "buildCmdEnv() failed: %s\n", strerror(errno));
+    }
+    if (buildCmdline(cmdline) != 0) {
+        fatal(ERR_UNEXPECTED, "buildCmdline() failed: %s\n", strerror(errno));
+    }
+
     /*
      * In case we're going to read from stdin w/ attach, we want to open the zfd
      * _now_ so it won't return EOF on reads.
@@ -1007,7 +983,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
             strerror(errno));
     }
 
-    execCmdline();
+    execCmdline(cmdline, env, custr_cstr(workdir));
 
     /* NOTREACHED */
     abort();

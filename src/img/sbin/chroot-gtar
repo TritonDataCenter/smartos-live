@@ -2,15 +2,12 @@
 #
 # Run `gtar` in a chroot to guard against symlink/hardlink break outs.
 #
-# Warning: should also provide a '-C DIR' for tar usage, else could conflict
-# with the 'lib' and 'chroot-bin-$PID' support dirs.
-#
 # Limitation: This doesn't guard against multiple concurrent runs in the same
 # or child/parent dirs.
 #
 
 if [[ -n "$TRACE" ]]; then
-    export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    export PS4='${BASH_SOURCE}:${LINENO}: '
     set -o xtrace
 fi
 set -o errexit
@@ -25,21 +22,31 @@ function fatal
 
 function onexit
 {
-    [[ -n "$BINDIR" ]] && rm -rf $BINDIR
-    [[ -n "$LIBDIR" ]] && rm -rf $LIBDIR
+    if [[ -n "$ROOTDIR" ]]; then
+        for path in $TO_UMOUNT; do
+            [[ -e "$path" ]] && umount $path
+        done
+        for path in $TO_REMOVE; do
+            [[ -e "$path" ]] && rm -rf $path
+        done
+    fi
     exit $1
 }
 
 function usage
 {
-    echo "usage: chroot-gtar DIR GTAR-ARGS..." >&2
+    echo "usage: chroot-gtar ROOTDIR SUBDIR TARBALL COMPRESION [GTAR-ARGS...]" >&2
     echo "" >&2
-    echo "It is suggested a '-C DIR' is always used in the GTAR-ARGS to avoid" >&2
-    echo "conflict with the '$DIR/lib' and '$DIR/chroot-tools-$PID' support" >&2
-    echo "dirs created for the chroot environment." >&2
+    echo "'ROOTDIR' is the base dir of the chroot. 'SUBDIR' is a path" >&2
+    echo "relative to ROOTDIR that is passed to gtar as '-C SUBDIR'." >&2
+    echo "It is suggested a SUBDIR other than '.' is always used to avoid" >&2
+    echo "conflict with the '$ROOTDIR/lib' and '$ROOTDIR/chroot-tools-$PID'" >&2
+    echo "support dirs created for the chroot environment." >&2
+    echo "" >&2
+    echo "'COMPRESSION' is one of 'none', 'gzip', 'bzip2' or 'xv'." >&2
     echo "" >&2
     echo "example:" >&2
-    echo "    xz -dc archive.tar.xz | ./chroot-gtar /var/tmp/foo -xf - -C subdir" >&2
+    echo "    ./chroot-gtar /zones/foo root /var/tmp/archive.tar.xz xz" >&2
 }
 
 
@@ -53,25 +60,53 @@ if [[ -z "$ROOTDIR" ]]; then
 fi
 shift
 
-ARGS="$*"
+SUBDIR=$1
+if [[ -z "$SUBDIR" ]]; then
+    usage
+    exit 1
+fi
+shift
 
+TARBALL=$1
+if [[ -z "$TARBALL" ]]; then
+    usage
+    exit 1
+fi
+shift
+
+COMPRESSION=$1
+if [[ -z "$COMPRESSION" ]]; then
+    usage
+    exit 1
+fi
+shift
+
+GTARARGS="$*"
+
+
+trap 'onexit $?' EXIT
+
+TO_UMOUNT=
+TO_REMOVE=
 CHROOTBIN=chroot-bin-$$
 BINDIR=$ROOTDIR/$CHROOTBIN
 LIBDIR=$ROOTDIR/lib
-
-trap 'onexit $?' EXIT
+TO_REMOVE="$TO_REMOVE $BINDIR $LIBDIR"
 
 if [[ -e $LIBDIR ]]; then
     fatal "conflict: $LIBDIR exists"
 fi
 mkdir -p $LIBDIR
 
+cp $TARBALL $ROOTDIR/
+TO_REMOVE="$TO_REMOVE $ROOTDIR/$(basename $TARBALL)"
 
 rm -rf $BINDIR
 mkdir $BINDIR
-
-mkdir -p $BINDIR
-CMDS="gtar gzip bzip2"
+cp /usr/img/sbin/gtar-unlink-dir $BINDIR/
+CMDS="gtar"
+CMDS="$CMDS cat gzip bzip2 xzcat"
+CMDS="$CMDS bash rm grep sed tee"
 for cmd in $CMDS; do
     cp $(which $cmd) $BINDIR/
 done
@@ -85,5 +120,13 @@ for lib in $libs; do
     cp $lib $LIBDIR/
 done
 
-PATH=/$CHROOTBIN:$PATH /usr/sbin/chroot $ROOTDIR \
-    /$CHROOTBIN/gtar $ARGS
+TO_UMOUNT="$TO_UMOUNT $ROOTDIR/proc $ROOTDIR/dev/fd"
+TO_REMOVE="$TO_REMOVE $ROOTDIR/proc $ROOTDIR/dev/fd"
+mkdir -p $ROOTDIR/proc
+mount -F proc proc $ROOTDIR/proc
+[[ ! -e $ROOTDIR/dev ]] && TO_REMOVE="$TO_REMOVE $ROOTDIR/dev"
+mkdir -p $ROOTDIR/dev/fd
+mount -F fd fd $ROOTDIR/dev/fd
+
+TRACE=$TRACE LC_ALL=C PATH=/$CHROOTBIN:$PATH /usr/sbin/chroot $ROOTDIR \
+    /$CHROOTBIN/bash /$CHROOTBIN/gtar-unlink-dir "$SUBDIR" "$(basename "$TARBALL")" "$COMPRESSION" $GTARARGS

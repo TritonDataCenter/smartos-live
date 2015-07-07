@@ -1,5 +1,12 @@
 # imgadm changelog
 
+## 3.5.1
+
+- OS-4466 Fix an issue where some Docker images could not be imported because
+  a child layer included a *file* at a path where a parent layer already had
+  placed a *directory*. `gtar` being used by imgadm for extracting docker layers
+  doesn't include an option for that case.
+
 ## 3.5.0
 
 - Images imported from 'docker' sources now have a *different local image UUID*

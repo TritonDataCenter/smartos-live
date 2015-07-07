@@ -2425,35 +2425,31 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
             switch (ctx.cType) {
             case null:
                 command = format(
-                    '/usr/bin/cat %s '
-                        + '| /usr/img/sbin/chroot-gtar %s -xf - -C %s',
-                    ctx.filePath,
+                    '/usr/img/sbin/chroot-gtar %s %s %s none',
                     path.dirname(zoneroot),
-                    path.basename(zoneroot));
+                    path.basename(zoneroot),
+                    ctx.filePath);
                 break;
             case 'gzip':
                 command = format(
-                    '/usr/bin/cat %s '
-                        + '| /usr/img/sbin/chroot-gtar %s -xzf - -C %s',
-                    ctx.filePath,
+                    '/usr/img/sbin/chroot-gtar %s %s %s gzip',
                     path.dirname(zoneroot),
-                    path.basename(zoneroot));
+                    path.basename(zoneroot),
+                    ctx.filePath);
                 break;
             case 'bzip2':
                 command = format(
-                    '/usr/bin/cat %s '
-                        + '| /usr/img/sbin/chroot-gtar %s -xjf - -C %s',
-                    ctx.filePath,
+                    '/usr/img/sbin/chroot-gtar %s %s %s bzip2',
                     path.dirname(zoneroot),
-                    path.basename(zoneroot));
+                    path.basename(zoneroot),
+                    ctx.filePath);
                 break;
             case 'xz':
                 command = format(
-                    '/usr/bin/xzcat %s '
-                        + '| /usr/img/sbin/chroot-gtar %s -xf - -C %s',
-                    ctx.filePath,
+                    '/usr/img/sbin/chroot-gtar %s %s %s xz',
                     path.dirname(zoneroot),
-                    path.basename(zoneroot));
+                    path.basename(zoneroot),
+                    ctx.filePath);
                 break;
             default:
                 throw new Error('unexpected compression type: ' + ctx.cType);

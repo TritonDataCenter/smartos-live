@@ -230,6 +230,7 @@ f usr/img/node_modules/verror/package.json 0444 root bin
 f usr/img/package.json 0444 root bin
 d usr/img/sbin 0555 root bin
 f usr/img/sbin/chroot-gtar 0555 root bin
+f usr/img/sbin/gtar-unlink-dir 0555 root bin
 f usr/img/sbin/imgadm 0555 root bin
 d usr/img/test 0555 root bin
 f usr/img/test/IMG.test.js 0444 root bin

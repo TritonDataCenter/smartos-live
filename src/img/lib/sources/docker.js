@@ -191,16 +191,26 @@ DockerSource.prototype.getImgAncestry = function getImgAncestry(opts, cb) {
             cb(err);
             return;
         }
-        var ancestry = dAncestry.map(function (imgId) {
-            return {
-                imgId: imgId,
-                uuid: imgmanifest.imgUuidFromDockerInfo({
+        var ancestry = [];
+        for (var i = 0; i < dAncestry.length; i++) {
+            var imgId = dAncestry[i];
+            try {
+                var uuid = imgmanifest.imgUuidFromDockerInfo({
                     id: imgId,
                     indexName: opts.repo.index.name
-                }),
+                });
+            } catch (infoErr) {
+                return cb(new errors.InvalidDockerInfoError(
+                    infoErr, format('docker image %s\'s ancestry (repo %s) ' +
+                    'includes invalid info: %s', opts.imgId,
+                    opts.repo.localName, infoErr.message)));
+            }
+            ancestry.push({
+                imgId: imgId,
+                uuid: uuid,
                 repo: opts.repo
-            };
-        });
+            });
+        }
         cb(null, ancestry);
     });
 };

@@ -1,5 +1,9 @@
 # imgadm changelog
 
+## 3.5.2
+
+- OS-4493 Fix an 'imgadm import' crash on invalid Docker image ancestry info.
+
 ## 3.5.1
 
 - OS-4466 Fix an issue where some Docker images could not be imported because

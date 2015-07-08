@@ -872,7 +872,7 @@ var validators = {
             var VALID_TYPES = {
                 'zone-dataset': true,
                 'zvol': true,
-                'lx-dataset': true,  /* EXPERIMENTAL: see IMGAPI-417 */
+                'lx-dataset': true,
                 'docker': true,
                 'other': true
             };
@@ -1673,6 +1673,7 @@ function clip(s, length) {
  * Keeping this around for now to assist with migration and testing.
  */
 function obsoleteImgUuidFromDockerId(dockerId) {
+    assert.ok(dockerId.length === 64);
     return (dockerId.slice(0, 8)
         + '-' + dockerId.slice(8, 12)
         + '-' + dockerId.slice(12, 16)
@@ -1694,12 +1695,16 @@ function obsoleteImgUuidFromDockerId(dockerId) {
  *      - obsoleteUuid {Boolean} Optional. Default false. Set to true to
  *        get the `obsoleteImgUuidFromDockerId` behaviour for the UUID.
  * @returns {String} uuid
+ * @throws {Error} If the given id does not look like a full 64-char docker id.
  */
 function imgUuidFromDockerInfo(opts) {
     assert.string(opts.id, 'opts.id');
-    assert.ok(opts.id.length === 64);
     assert.string(opts.indexName, 'opts.indexName');
     assert.optionalBool(opts.obsoleteUuid, 'opts.obsoleteUuid');
+
+    if (opts.id.length !== 64) {
+        throw new Error('invalid docker id, it is too short: ' + opts.id);
+    }
 
     if (opts.obsoleteUuid) {
         return obsoleteImgUuidFromDockerId(opts.id);

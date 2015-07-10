@@ -1703,7 +1703,8 @@ function imgUuidFromDockerInfo(opts) {
     assert.optionalBool(opts.obsoleteUuid, 'opts.obsoleteUuid');
 
     if (opts.id.length !== 64) {
-        throw new Error('invalid docker id, it is too short: ' + opts.id);
+        throw new Error('docker id "' + opts.id + '" is too short, full ' +
+            '64-char id was expected');
     }
 
     if (opts.obsoleteUuid) {

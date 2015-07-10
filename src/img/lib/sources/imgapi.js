@@ -112,8 +112,11 @@ ImgapiSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
     // By default we do *not* error on a 404 from the server.
     var errOn404 = (opts.errOn404 !== undefined ? opts.errOn404 : false);
 
-    // This can be called with non-docker import ids (e.g. a Docker repo:tag).
-    // Just return empty to indicate N/A.
+    /*
+     * This can be called with non-IMGAPI import ids (e.g. a Docker repo:tag)
+     * as 'imgadm import ID' cycles through all sources looking for a relevant
+     * one. Just return empty to indicate N/A.
+     */
     if (! common.UUID_RE.test(opts.arg)) {
         return cb();
     }

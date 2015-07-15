@@ -52,6 +52,7 @@ smf_netstrategy
 
 function add_active_aggr_links
 {
+    set -o xtrace
     typeset alink
 
     for alink in ${2//,/ }; do
@@ -61,6 +62,7 @@ function add_active_aggr_links
 
 function log_if_state
 {
+    set -o xtrace
     echo "== debug start: $1 =="
     if ! /usr/sbin/dladm show-phys; then
         echo "WARNING: 'dladm show-phys' failed"
@@ -76,12 +78,14 @@ function log_if_state
 # Gets the link state for the given interface
 function get_link_state
 {
+    set -o xtrace
     link_state=$(/usr/sbin/dladm show-phys -po state $1 2>/dev/null)
 }
 
 # Waits for up to 10 seconds for the link state to change to the given value
 function wait_for_admin_nic_state
 {
+    set -o xtrace
     echo "wait_for_admin_nic_state: waiting for state '$1'"
     i=0
     get_link_state ${SYSINFO_NIC_admin}
@@ -96,6 +100,7 @@ function wait_for_admin_nic_state
 
 function valid_mtu
 {
+    set -o xtrace
     typeset tag mtu
 
     tag="$1"
@@ -118,6 +123,7 @@ function valid_mtu
 # drivers that can't handle plumb commands too quickly after one another
 function plumb_admin
 {
+    set -o xtrace
     driver=${SYSINFO_NIC_admin%%[0-9]*}
     get_link_state ${SYSINFO_NIC_admin}
     if [[ "$link_state" == "down" ]]; then
@@ -139,6 +145,8 @@ function plumb_admin
 # Creates, plumbs and brings up a vnic with the specified parameters
 function vnic_up
 {
+    set -o xtrace
+
     typeset link="$1"
     typeset iface="$2"
     typeset ip="$3"
@@ -184,7 +192,7 @@ function vnic_up
         prop_opt="-p mtu=${mtu}"
     fi
 
-    /usr/sbin/dladm create-vnic -l ${link} ${prop_opt} ${vlan_opt} \
+    /usr/sbin/dladm create-vnic -t -l ${link} ${prop_opt} ${vlan_opt} \
         ${mac_addr_opt} ${iface}
     if [[ $? -ne 0 ]]; then
         echo "Failed to create VNIC ${iface}"
@@ -215,6 +223,7 @@ function vnic_up
 # If there are aggregations in sysinfo, set them up.
 function create_aggrs
 {
+    set -o xtrace
     typeset links macs mode mtu
     if [[ -z "${SYSINFO_Aggregations}" ]]; then
         return 0
@@ -253,6 +262,7 @@ function create_aggrs
 #
 function set_default_route
 {
+    set -o xtrace
     typeset default_gw
 
     if [[ -n "${CONFIG_headnode_default_gateway}" ]]; then
@@ -278,6 +288,7 @@ function set_default_route
 #
 function setup_mtu
 {
+    set -o xtrace
     typeset tag oldifs val mac link curmtu
     typeset -A mtus
     typeset -A tagmap

@@ -38,6 +38,7 @@ TEST_PROGRAMS = \
 		test1 \
 		test2 \
 		test3 \
+		test4 \
 		testpath
 
 TEST_BINS =	$(TEST_PROGRAMS:%=obj/%)
@@ -55,7 +56,7 @@ CTFMERGE =	/usr/bin/true
 CC =		$(GCC)
 CSTYLE =	../../../tools/cstyle
 
-LIBS =		-lcmdutils
+LIBS =		-lcmdutils -lumem
 
 COMPILE_C =	$(CC) $(CPPFLAGS) $(LDFLAGS) $(CFLAGS) -c -o $@ $< $(LIBS)
 
@@ -92,7 +93,8 @@ test: all $(TEST_PROGRAMS:%=%.runtest)
 # Compilation and linking targets
 #
 obj/test%: obj/test%.o $(OBJECTS)
-	$(CC) $(CPPFLAGS) $(LDFLAGS) $(CFLAGS) -o $@ $^ $(LIBS)
+	$(CC) $(CPPFLAGS) $(LDFLAGS) $(CFLAGS) -o $@ $^ $(LIBS) \
+	    tests/force_umem_debug.c
 	$(CTFMERGE) -L VERSION -o $@ $(OBJECTS)
 
 obj/test%.o: tests/test%.c

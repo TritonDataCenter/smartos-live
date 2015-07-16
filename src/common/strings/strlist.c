@@ -35,10 +35,13 @@
 
 /*
  * The capacity of the list is expressed as an unsigned int, but the list
- * itself is backed by a contiguous array of pointers to strings.  That
- * array is bounded above by the maximum size we can allocate and address:
+ * itself is backed by a contiguous array of pointers to strings.  The backing
+ * array includes one extra element beyond the usable capacity, such that the
+ * array is always terminated by a NULL pointer.  This definition accounts for
+ * the extra element, as well as the maximum byte length we can allocate and
+ * address with a size_t.
  */
-#define	MAX_CAPACITY	(SIZE_MAX / sizeof (char *))
+#define	MAX_CAPACITY	(SIZE_MAX / sizeof (char *) - 1)
 
 
 struct strlist {
@@ -77,14 +80,15 @@ static int
 strlist_grow_by(strlist_t *sl, unsigned int grow_by)
 {
 	char **new_strings = NULL;
-	unsigned int new_capacity = sl->sl_capacity + grow_by;
+	unsigned int old_capacity = sl->sl_capacity;
+	unsigned int new_capacity = old_capacity + grow_by;
 	/*
 	 * The new size must include the extra array element for the NULL
 	 * terminator, but the old size does not; a new NULL terminator will be
 	 * written into the new object by memset(), rather than copied from the
 	 * original.
 	 */
-	size_t oldsz = sl->sl_capacity * sizeof (char *);
+	size_t oldsz = old_capacity * sizeof (char *);
 	size_t newsz = (1 + new_capacity) * sizeof (char *);
 
 	if (grow_by == 0) {
@@ -95,7 +99,7 @@ strlist_grow_by(strlist_t *sl, unsigned int grow_by)
 	 * Check that the growth size does not cause us to exceed the maximum
 	 * possible capacity, with care to avoid integer overflow:
 	 */
-	if (grow_by > (MAX_CAPACITY - sl->sl_capacity)) {
+	if (grow_by > (MAX_CAPACITY - old_capacity)) {
 		errno = ENOSPC;
 		return (-1);
 	}
@@ -105,7 +109,7 @@ strlist_grow_by(strlist_t *sl, unsigned int grow_by)
 	}
 
 	(void) memcpy(new_strings, sl->sl_strings, oldsz);
-	(void) memset(new_strings + oldsz, 0, newsz - oldsz);
+	(void) memset(&new_strings[old_capacity], 0, newsz - oldsz);
 
 	free(sl->sl_strings);
 

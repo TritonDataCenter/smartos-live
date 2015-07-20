@@ -71,6 +71,7 @@ zfs_send :	LIBS +=		-lsocket
 vmbundle :	CPPFLAGS +=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 sdc-on-tty :	CFLAGS +=	$(OPT_FLAG)
 zoneevent :	LIBS +=		-lnvpair -lsysevent
+sysevent :	LIBS +=		-lnvpair -lsysevent
 
 # These files will get run through jsstyle and jslint on 'make check'
 JS_CHECK_TARGETS=\
@@ -113,7 +114,8 @@ C_CHECK_TARGETS=\
 	vmunbundle.c \
 	zfs_recv.c \
 	zfs_send.c \
-	zoneevent.c
+	zoneevent.c \
+	sysevent.c
 
 #
 # Generic flags we apply by default to everything.
@@ -319,6 +321,7 @@ TARGETS = \
 	zfs_recv \
 	zfs_send \
 	zoneevent \
+	sysevent \
 	vm/node_modules/props.js \
 	$(EXPAT.NODE) \
 	$(DTRACE_PROVIDER.NODE) \
@@ -361,12 +364,14 @@ $(SUBDIRS): FRC
 	@cd $@; pwd; $(MAKE) $(SUBDIRS_ENV) $(TARGET)
 
 
-all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm $(SMARTDC_TARGETS) \
-	$(SMARTDC_LIB_TARGETS) $(SUBDIRS)
+all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm sysevent \
+	$(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) $(SUBDIRS)
 
 install: all $(SUBDIRS)
 	mkdir -p $(DESTDIR)/usr/bin
 	cp -p $(TARGETS) sysinfo nictagadm $(DESTDIR)/usr/bin
+	mkdir -p $(DESTDIR)/usr/sbin
+	cp -p sysevent $(DESTDIR)/usr/sbin
 	cp -p $(USR_LIB_TARGETS) $(DESTDIR)/usr/lib
 	mkdir -p $(DESTDIR)/smartdc/bin
 	cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin

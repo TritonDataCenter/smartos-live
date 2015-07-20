@@ -16,6 +16,7 @@
 /src/removable_disk
 /src/disklist
 /src/qemu-exec
+/src/sysevent
 /src/vmunbundle
 /src/zfs_recv
 /src/zfs_send
@@ -56,6 +57,7 @@ man/man/man1m/dsadm.1m
 man/man/man1m/fwadm.1m
 man/man/man1m/imgadm.1m
 man/man/man1m/nictagadm.1m
+man/man/man1m/sysevent.1m
 man/man/man1m/vmadm.1m
 man/man/man1m/vmadmd.1m
 man/man/man1m/sysinfo.1m

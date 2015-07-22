@@ -136,6 +136,55 @@ get_boolean_nic_property()
 	fi
 }
 
+nm2prefix()
+{
+	prefix=0
+	numparts=0
+	OLDIFS=$IFS
+	IFS=.
+	for digit in $1 ; do
+		(( numparts+=1 ))
+		case $digit in
+		255)
+			(( prefix+=8 ))
+			;;
+		254)
+			(( prefix+=7 ))
+			;;
+		252)
+			(( prefix+=6 ))
+			;;
+		248)
+			(( prefix+=5 ))
+			;;
+		240)
+			(( prefix+=4 ))
+			;;
+		224)
+			(( prefix+=3 ))
+			;;
+		192)
+			(( prefix+=2 ))
+			;;
+		128)
+			(( prefix+=1 ))
+			;;
+		0);;
+		*)
+			echo "Invalid digit in netmask: $digit" 1>&2;
+			IFS=$OLDIFS
+			return 1;;
+		esac
+	done
+	if [[ $numparts -ne 4 ]]; then
+		echo "Too many parts in the IP address" 1>&2;
+		IFS=$OLDIFS
+		return 1
+	fi
+	IFS=$OLDIFS
+	echo "$prefix"
+}
+
 #
 # Set up the vnic(s) for the zone.
 #
@@ -152,7 +201,9 @@ setup_net()
 		vlan_id=$(eval echo \$_ZONECFG_net_${nic}_vlan_id)
 		blocked_outgoing_ports=$(eval \
 		    echo \$_ZONECFG_net_${nic}_blocked_outgoing_ports)
+		zone_ips=$(eval echo \$_ZONECFG_net_${nic}_ips)
 		zone_ip=$(eval echo \$_ZONECFG_net_${nic}_ip)
+		zone_netmask=$(eval echo \$_ZONECFG_net_${nic}_netmask)
 		allow_dhcp_spoof=$(get_boolean_nic_property ${nic} allow_dhcp_spoofing)
 		allow_ip_spoof=$(get_boolean_nic_property ${nic} allow_ip_spoofing)
 		allow_mac_spoof=$(get_boolean_nic_property ${nic} allow_mac_spoofing)
@@ -166,6 +217,16 @@ setup_net()
 		    echo \$_ZONECFG_net_${nic}_vrrp_primary_ip)
 		mtu=$(eval echo \$_ZONECFG_net_${nic}_mtu)
 		isoverlay=
+
+		# If we don't have our zone_ips, it may be because the configuration
+		# was made on an older platform. In that case, use the "ip" and
+		# "netmask" properties for this NIC, and save it as "ips".
+		if [[ -z $zone_ips && -n $zone_ip ]]; then
+			[[ -n $zone_netmask ]] &&
+			    zone_ip=$zone_ip/`nm2prefix $zone_netmask`
+
+			zone_ips=$zone_ip
+		fi
 
 		# If address set, must be a shared stack zone
 		[[ -n $address ]] && exit 0
@@ -409,35 +470,44 @@ setup_net()
 			fi
 		fi
 
+		# If we aren't using IP spoofing, we'll need to set the allowed-ips
+		# property on the NIC so that the zone will be able to ifconfig the
+		# proper addresses.
+		if [[ $allow_ip_spoof != "true" ]]; then
+			allowed_ip_list=""
 
-		# Get the static IP for the vnic from the zone config file, but only
-		# if there's not an IP from the zone properties
-		hostname_file="$ZONEPATH/root/etc/hostname.$nic"
-		if [[ -z "${zone_ip}" ]] && [ -e $hostname_file ]; then
-			zone_ip=`nawk \
-			    '{if ($1 ~ /[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/)
-			    print $1}' $hostname_file`
-			/usr/sbin/zonecfg -z $ZONENAME "select net physical=${nic}; add property (name=ip, value=\"$zone_ip\"); end; exit"
-			if (( $? != 0 )); then
-				echo "error updating zone config ${nic} ${zone_ip}"
-				logger -p daemon.err "zone $ZONENAME error updating " \
-				    "zone config ${nic} ${zone_ip}"
-				exit 1
+			separator=""
+
+			OLDIFS=$IFS
+			IFS=,
+			for zone_ip in $zone_ips; do
+				# For each static IP available, add it to the list.
+				if [[ $zone_ip != "dhcp" ]] && [[ $zone_ip != "addrconf" ]]; then
+					clean_ip=`printf "%s" "${zone_ip}" | sed 's|^\([^/]*\)/.*|\1|'`
+					allowed_ip_list="${allowed_ip_list}${separator}${clean_ip}"
+					separator=","
+				fi
+			done
+			IFS=$OLDIFS
+
+			# If we're using VRRP and have the IP, add it to the list.
+			if [[ -n "$jst_vrrp" && -n $vrrp_primary_ip ]]; then
+				allowed_ip_list="${allowed_ip_list}${separator}${vrrp_primary_ip}"
+				separator=","
 			fi
-		fi
 
-		if [[ -n "${zone_ip}" ]] && [[ $allow_ip_spoof != "true" ]] && \
-			    [[ "${zone_ip}" != "dhcp" ]]; then
-			allowed_ip_list="${zone_ip}"
-			[[ -n "$jst_vrrp" && -n $vrrp_primary_ip ]] && \
-			    allowed_ip_list="${allowed_ip_list},${vrrp_primary_ip}"
+			# If any additional IPs have been specified (for example, older
+			# VMs set up for IPv6 before vmadm gained support), add them to
+			# the list.
+			if [[ -n $allowed_ips ]]; then
+				allowed_ip_list="${allowed_ip_list}${separator}${allowed_ips}"
+				separator=","
+			fi
 
-			[[ -n $allowed_ips ]] && \
-			    allowed_ip_list="${allowed_ip_list},${allowed_ips}"
-
-			dladm set-linkprop -t -z $ZONENAME \
-			    -p "allowed-ips=${allowed_ip_list}" ${nic}
-			if (( $? != 0 )); then
+			# Set the allowed-ips property on the NIC
+			if [[ -n ${allowed_ip_list} ]] &&
+			    ! dladm set-linkprop -t -z $ZONENAME \
+			    -p "allowed-ips=${allowed_ip_list}" ${nic}; then
 				log_and_exit
 				    "error setting VNIC allowed-ips $nic $allowed_ip_list"
 			fi

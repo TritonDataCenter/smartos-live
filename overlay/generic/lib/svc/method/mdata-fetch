@@ -21,7 +21,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2013, Joyent, Inc. All rights reserved.
+# Copyright (c) 2015, Joyent, Inc. All rights reserved.
 #
 
 export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
@@ -36,6 +36,48 @@ if [ ! -x /usr/sbin/mdata-get ]; then
   echo "Metadata mdata-get tool not found."
   exit ${SMF_EXIT_ERR_FATAL}
 fi
+
+# isAddr will test whether or not an IP address is valid. The first argument
+# is the method to call on the Node "net" module, and the second one is the
+# actual address to test.
+function isAddr() {
+  /usr/node/bin/node <<EOF
+  test = require("net").$1("$2");
+  process.exit(test ? 0 : 1);
+EOF
+}
+
+# isAddrAndCIDR is a lot like isAddr, except that it will test if the address
+# is followed by a slash and the routing prefix, i.e., 192.168.0.1/24.
+function isAddrAndCIDR() {
+  /usr/node/bin/node <<EOF
+  parts = "$2".split('/');
+  test = parts.length === 2
+    && require("net").$1(parts[0])
+    && /^\\d{1,2}\$/.test(parts[1]);
+  process.exit(test ? 0 : 1);
+EOF
+}
+
+# Test if an address is a valid IPv4 address.
+function isIPv4() {
+  isAddr "isIPv4" "$1"
+}
+
+# Test if an address is a valid IPv4 address + CIDR.
+function isIPv4AndCIDR() {
+  isAddrAndCIDR "isIPv4" "$1"
+}
+
+# Test if an address is a valid IPv6 address.
+function isIPv6() {
+  isAddr "isIPv6" "$1"
+}
+
+# Test if an address is a valid IPv6 address + CIDR.
+function isIPv6AndCIDR() {
+  isAddrAndCIDR "isIPv6" "$1"
+}
 
 # For old zones that were created prior to OS-2253 and bumping the mdata:fetch
 # start timeout, we need to fix this otherwise we could timeout waiting for the
@@ -158,40 +200,72 @@ fi
 # had our chance to write these files out before networking comes up. This
 # might eventually be replaced by network/physical grabbing data directly.
 echo "Retrieving nics data..."
-while IFS="|" read -r iface ip netmask primary gateway; do
-
-  # so it shows up in the logs
-  echo "iface[${iface}] ip[${ip}] netmask[${netmask}]" \
-    "primary[${primary}] gateway[${gateway}]"
+while IFS="|" read -r iface ip ips netmask primary gateway gateways; do
 
   # if we don't have interface name, we don't know what files to write out.
   if [[ -z ${iface} ]]; then
     continue;
   fi
 
-  if [[ ${ip} != "dhcp" && -n ${ip} && -n ${netmask} ]]; then
-    echo "${ip} netmask ${netmask} up" > /etc/hostname.${iface}
-  else
-    rm -f /etc/hostname.${iface}
-  fi
+  # A VM created on an older platform may not have the "ips" or "gateways"
+  # properties, so we will need to grab the older "ip" and "gateway" versions
+  # instead.
+  [[ -z $ips ]] && ips=$ip
+  [[ -z $gateways ]] && gateways=$gateway
 
-  # remove any existing dhcp.${iface} file, we'll create one if it belongs later
+  # We remove the hostname.netX file first, so we can append to a clean file
+  rm -f /etc/hostname.${iface}
+
+  # remove any existing DHCP configuration, since we'll create one if
+  # it belongs later
   rm -f /etc/dhcp.${iface}
 
-  if [[ -n ${primary} && ${primary} == "true" ]]; then
-    if [[ -n ${gateway} ]]; then
-      echo "${gateway}" > /etc/defaultrouter
-    fi
+  OLDIFS=$IFS
+  IFS=$','
+  for ip in $ips; do
+    # so it shows up in the logs
+    echo "iface[${iface}] ip[${ip}] netmask[${netmask}]" \
+      "primary[${primary}] gateway[${gateway}]"
+
+    [[ -z ${ip} ]] && continue;
+
     if [[ ${ip} == "dhcp" ]]; then
       touch /etc/dhcp.${iface}
+    elif [[ ${ip} == "addrconf" ]]; then
+      touch /etc/addrconf.${iface}
+    elif isIPv4 ${ip} && [[ -n ${netmask} ]]; then
+      # We're using an older configuration where the routing prefix is
+      # specified using a mask instead of CIDR notation. We'll need to
+      # invoke ifconfig differently.
+      echo "${ip} netmask ${netmask} up" >> /etc/hostname.${iface}
+    elif isIPv4AndCIDR ${ip} \
+        || isIPv6AndCIDR ${ip} \
+        || isIPv6 ${ip}; then
+      # Either a routing prefix was specified, or, in the case of IPv6, we
+      # won't specify one and fall back on NDP to find it when we configure
+      # our interfaces.
+      echo "${ip} up" >> /etc/hostname.${iface}
     fi
+  done
+
+  if [[ ${primary} == "true" ]]; then
+    rm -f /etc/defaultrouter
+    for gateway in $gateways; do
+      if [[ -n ${gateway} ]] && isIPv4 ${gateway}; then
+        echo "${gateway}" >> /etc/defaultrouter
+      fi
+    done
   fi
+  IFS=$OLDIFS
 
   # XXX we leave old hostname.netX files around and just replace when we have
   # one next.
-
 done < <(/usr/sbin/mdata-get sdc:nics \
-    | /usr/bin/json -d '|' -a interface ip netmask primary gateway)
+    | /usr/bin/json \
+        -d '|' \
+        -e 'this.ips = this.ips ? this.ips.join(",") : ""' \
+        -e 'this.gateways = this.gateways ? this.gateways.join(",") : ""' \
+        -a interface ip ips netmask primary gateway gateways)
 
 # rebuild resolv.conf
 resolvers=$(mdata-get sdc:resolvers)

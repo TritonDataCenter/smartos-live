@@ -28,11 +28,13 @@ var PAYLOADS = {
         add_nics: [
             {
                 ip: '10.254.254.254',
+                ips: ['10.254.254.254/24'],
                 netmask: '255.255.255.0',
                 nic_tag: 'external',
                 interface: 'net0',
                 vlan_id: 0,
                 gateway: '10.254.254.1',
+                gateways: ['10.254.254.1'],
                 mac: '01:02:03:04:05:06'
             }
         ]
@@ -62,19 +64,23 @@ var PAYLOADS = {
         add_nics: [
             {
                 ip: '10.254.254.254',
+                ips: ['10.254.254.254/24'],
                 netmask: '255.255.255.0',
                 nic_tag: 'external',
                 interface: 'net0',
                 vlan_id: 0,
                 gateway: '10.254.254.1',
+                gateways: ['10.254.254.1'],
                 mac: '01:02:03:04:05:06'
             }, {
                 ip: '10.254.254.253',
+                ips: ['10.254.254.253/24'],
                 netmask: '255.255.255.0',
                 nic_tag: 'external',
                 interface: 'net1',
                 vlan_id: 253,
                 gateway: '10.254.254.1',
+                gateways: ['10.254.254.1'],
                 mac: '02:03:04:05:06:07'
             }
         ]
@@ -195,7 +201,6 @@ test('add net0', function (t) {
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
-                var failures = 0;
                 var field;
 
                 if (err) {
@@ -209,18 +214,14 @@ test('add net0', function (t) {
                             // the obj
                             continue;
                         }
-                        if (obj.nics[0][field]
-                            !== PAYLOADS.add_net0.add_nics[0][field]) {
-
-                            t.ok(false, 'failed to set ' + field + ', was ['
-                                + obj.nics[0][field] + '], expected ['
-                                + PAYLOADS.add_net0.add_nics[0][field] + ']');
-                            failures++;
-                        }
+                        t.deepEqual(obj.nics[0][field],
+                            PAYLOADS.add_net0.add_nics[0][field],
+                            'failed to set ' + field
+                            + ', was ' + JSON.stringify(obj.nics[0][field])
+                            + ', expected '
+                            + JSON.stringify(
+                                PAYLOADS.add_net0.add_nics[0][field]));
                     }
-                }
-                if (failures === 0) {
-                    t.ok(true, 'updated VM: ' + vm_uuid);
                 }
                 t.end();
             });
@@ -290,7 +291,6 @@ test('add net0 and net1', function (t) {
             t.end();
         } else {
             VM.load(vm_uuid, function (err, obj) {
-                var failures = 0;
                 var field;
                 var nic;
 
@@ -312,17 +312,18 @@ test('add net0 and net1', function (t) {
                                 !== PAYLOADS.add_net0_and_net1
                                 .add_nics[nic][field]) {
 
-                                t.ok(false, 'failed to set ' + field + ', was ['
-                                    + obj.nics[nic][field] + '], expected ['
-                                    + PAYLOADS.add_net0_and_net1
-                                    .add_nics[nic][field] + ']');
-                                failures++;
+                                t.deepEqual(obj.nics[nic][field],
+                                    PAYLOADS.add_net0_and_net1
+                                        .add_nics[nic][field],
+                                    'failed to set ' + field
+                                    + ', was '
+                                    + JSON.stringify(obj.nics[nic][field])
+                                    + ', expected '
+                                    + JSON.stringify(PAYLOADS.add_net0_and_net1
+                                        .add_nics[nic][field]));
                             }
                         }
                     }
-                }
-                if (failures === 0) {
-                    t.ok(true, 'updated VM: ' + vm_uuid);
                 }
                 t.end();
             });
@@ -511,7 +512,7 @@ test('add NIC with minimal properties', function (t) {
                     + ' nics, expected: 1');
                 nic = obj.nics[0];
                 for (prop in nic) {
-                    t.ok((['interface', 'mac', 'nic_tag', 'ip']
+                    t.ok((['interface', 'mac', 'nic_tag', 'ip', 'ips']
                         .indexOf(prop) !== -1), 'prop is expected: ' + prop);
                     t.ok(nic[prop] !== 'undefined', 'prop ' + prop
                         + ' is not undefined');

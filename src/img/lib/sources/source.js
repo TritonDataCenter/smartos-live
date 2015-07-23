@@ -173,9 +173,9 @@ Source.prototype.getImgAncestry = function getImgAncestry(opts, cb) {
  *  imgMeta = {
  *      // Required:
  *      "manifest": {...},
- *      "size": <size-of-the-file-in-bytes>,
  *
  *      // Optional:
+ *      "size": <size-of-the-file-in-bytes>,
  *      "checksum": "<file checksum in the format TYPE:HEXDIGEST,
  *          e.g. 'sha256:23498af90e8g9...'>",
  *

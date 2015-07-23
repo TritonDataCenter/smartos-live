@@ -1721,7 +1721,7 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
                 worker: function getManifestIfNotInstalled(irec, nextManifest) {
                     if (cosmicRay) {
                         nextManifest(new errors.InternalError({
-                            message: 'getMeta cosmic raw'
+                            message: 'getMeta cosmic ray'
                         }));
                         return;
                     }

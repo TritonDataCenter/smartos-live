@@ -1106,7 +1106,7 @@ var validators = {
 
     files: function validateFiles(manifest) {
         var errs = [];
-        var VALID_FILE_COMPRESSIONS = ['gzip', 'bzip2', 'none'];
+        var VALID_FILE_COMPRESSIONS = ['gzip', 'bzip2', 'xz', 'none'];
         var files = manifest.files;
         var activated = boolFromString(manifest.activated);
         // Only push an error if activated is true

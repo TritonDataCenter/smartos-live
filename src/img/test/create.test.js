@@ -180,12 +180,12 @@ test('custom image (incremental, compression=bzip2)', function (t) {
 });
 
 test('custom image (compression=xz)', function (t) {
-    var cmd = format('%s/mk-custom-image %s %s/2 xz >%s/mk-custom-image.2.log 2>&1',
+    var cmd = format('%s/mk-custom-image %s %s/4 xz >%s/mk-custom-image.4.log 2>&1',
         TESTDIR, BASE_UUID, WRKDIR, WRKDIR);
     exec(cmd, {env: envWithTrace}, function (err, stdout, stderr) {
         t.ifError(err, format('error running "%s": %s', cmd, err));
-        var logfile = WRKDIR + '/try-custom-image.2.log';
-        var cmd = format('%s/try-custom-image %s/2.imgmanifest %s/2.zfs.xz >%s 2>&1',
+        var logfile = WRKDIR + '/try-custom-image.4.log';
+        var cmd = format('%s/try-custom-image %s/4.imgmanifest %s/4.zfs.xz >%s 2>&1',
             TESTDIR, WRKDIR, WRKDIR, logfile);
         exec(cmd, function (err) {
             t.ifError(err, format('error running "%s": %s', cmd, err));
@@ -199,12 +199,12 @@ test('custom image (compression=xz)', function (t) {
 });
 
 test('custom image (incremental, compression=xz)', function (t) {
-    var cmd = format('%s/mk-custom-image %s %s/2i xz -i >%s/mk-custom-image.2i.log 2>&1',
+    var cmd = format('%s/mk-custom-image %s %s/4i xz -i >%s/mk-custom-image.4i.log 2>&1',
         TESTDIR, BASE_UUID, WRKDIR, WRKDIR);
     exec(cmd, {env: envWithTrace}, function (err, stdout, stderr) {
         t.ifError(err, format('error running "%s": %s', cmd, err));
-        var logfile = WRKDIR + '/try-custom-image.2i.log';
-        var cmd = format('%s/try-custom-image %s/2i.imgmanifest %s/2i.zfs.xz >%s 2>&1',
+        var logfile = WRKDIR + '/try-custom-image.4i.log';
+        var cmd = format('%s/try-custom-image %s/4i.imgmanifest %s/4i.zfs.xz >%s 2>&1',
             TESTDIR, WRKDIR, WRKDIR, logfile);
         exec(cmd, function (err) {
             t.ifError(err, format('error running "%s": %s', cmd, err));

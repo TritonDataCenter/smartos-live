@@ -26,11 +26,9 @@
  * Magic number sniffing of compression type of files.
  */
 
-var p = console.log;
 var assert = require('assert-plus');
 var format = require('util').format;
 var fs = require('fs');
-var vasync = require('vasync');
 
 
 

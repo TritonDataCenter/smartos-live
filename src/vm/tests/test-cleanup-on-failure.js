@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that things created before a zone is created are cleaned
 // up on failure. Those things created after the zone exists can be cleaned up
@@ -19,7 +19,7 @@ require('nodeunit-plus');
 VM.loglevel = 'DEBUG';
 
 var common_payload = {
-    alias: 'test-refreserve',
+    alias: 'test-cleanup-on-failure-' + process.pid,
     autoboot: false,
     brand: 'kvm',
     disk_driver: 'virtio',

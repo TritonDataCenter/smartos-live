@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
@@ -38,8 +38,8 @@ function do_test(payload, expected_result)
     var abort = false;
 
     // some common properties
-    payload.autoboot = false;
     payload.alias = 'test-quota-' + process.pid;
+    payload.autoboot = false;
     payload.do_not_inventory = true;
 
     test('create ' + payload.brand + ' zone with ' + payload.quota + ' quota',
@@ -99,6 +99,7 @@ function do_test(payload, expected_result)
 
 for (test_case in test_cases) {
     test_case = test_cases[test_case];
+    test_case.alias = 'test-quota-' + process.pid;
 
     do_test(test_case[0], test_case[1]);
 }
@@ -107,11 +108,11 @@ test('create joyent-minimal zone with invalid type of quota',
     function(t) {
 
     var payload = {
+        alias: 'test-invalid-quota-' + process.pid,
         brand: 'joyent-minimal',
         quota: 'none',
         image_uuid: smartos_image_uuid,
         autoboot: false,
-        alias: 'test-invalid-quota-' + process.pid,
         do_not_inventory: true
     };
 

@@ -34,7 +34,9 @@ var child_process = require('child_process'),
     execFile = child_process.execFile,
     spawn = child_process.spawn;
 var format = require('util').format;
+var fs = require('fs');
 var path = require('path');
+var tty = require('tty');
 var mod_url = require('url');
 
 var errors = require('./errors'),
@@ -231,6 +233,105 @@ function humanSizeFromBytes(bytes) {
 }
 
 
+/**
+ * Prompt a user for a y/n answer.
+ *
+ *      cb('y')        user entered in the affirmative
+ *      cb('n')        user entered in the negative
+ *      cb(false)      user ^C'd
+ */
+function promptYesNo(opts_, cb) {
+    assert.object(opts_, 'opts');
+    assert.string(opts_.msg, 'opts.msg');
+    assert.optionalString(opts_.default, 'opts.default');
+    var opts = objCopy(opts_);
+
+    // Setup stdout and stdin to talk to the controlling terminal if
+    // process.stdout or process.stdin is not a TTY.
+    var stdout;
+    if (opts.stdout) {
+        stdout = opts.stdout;
+    } else if (process.stdout.isTTY) {
+        stdout = process.stdout;
+    } else {
+        opts.stdout_fd = fs.openSync('/dev/tty', 'r+');
+        stdout = opts.stdout = new tty.WriteStream(opts.stdout_fd);
+    }
+    var stdin;
+    if (opts.stdin) {
+        stdin = opts.stdin;
+    } else if (process.stdin.isTTY) {
+        stdin = process.stdin;
+    } else {
+        opts.stdin_fd = fs.openSync('/dev/tty', 'r+');
+        stdin = opts.stdin = new tty.ReadStream(opts.stdin_fd);
+    }
+
+    stdout.write(opts.msg);
+    stdin.setEncoding('utf8');
+    stdin.setRawMode(true);
+    stdin.resume();
+    var input = '';
+    stdin.on('data', onData);
+
+    function postInput() {
+        stdin.setRawMode(false);
+        stdin.pause();
+        stdin.write('\n');
+        stdin.removeListener('data', onData);
+    }
+
+    function finish(rv) {
+        if (opts.stdout_fd !== undefined) {
+            stdout.end();
+            delete opts.stdout_fd;
+        }
+        if (opts.stdin_fd !== undefined) {
+            stdin.end();
+            delete opts.stdin_fd;
+        }
+        cb(rv);
+    }
+
+    function onData(ch) {
+        ch = ch + '';
+
+        switch (ch) {
+        case '\n':
+        case '\r':
+        case '\u0004':
+            // They've finished typing their answer
+            postInput();
+            var answer = input.toLowerCase();
+            if (answer === '' && opts.default) {
+                finish(opts.default);
+            } else if (answer === 'yes' || answer === 'y') {
+                finish('y');
+            } else if (answer === 'no' || answer === 'n') {
+                finish('n');
+            } else {
+                stdout.write('Please enter "y", "yes", "n" or "no".\n');
+                promptYesNo(opts, cb);
+                return;
+            }
+            break;
+        case '\u0003':
+            // Ctrl C
+            postInput();
+            finish(false);
+            break;
+        default:
+            // More plaintext characters
+            stdout.write(ch);
+            input += ch;
+            break;
+        }
+    }
+}
+
+
+
+
 // TODO: persist "?channel=<channel>"
 function normUrlFromUrl(u) {
     // `url.parse('example.com:9999')` is not what you expect. Make sure we
@@ -305,14 +406,17 @@ function execFilePlus(args, cb) {
  *
  * @param args {Object}
  *      - command {String} Required.
- *      - execOpts {Array} Exec options.
  *      - log {Bunyan Logger} Required. Use to log details at trace level.
+ *      - execOpts {Array} Optional. child_process.exec options.
+ *      - errMsg {String} Optional. Error string to use in error message on
+ *        failure.
  * @param cb {Function} `function (err, stdout, stderr)` where `err` here is
  *      an `errors.InternalError` wrapper around the child_process error.
  */
 function execPlus(args, cb) {
     assert.object(args, 'args');
     assert.string(args.command, 'args.command');
+    assert.optionalString(args.errMsg, 'args.errMsg');
     assert.optionalObject(args.execOpts, 'args.execOpts');
     assert.object(args.log, 'args.log');
     assert.func(cb);
@@ -326,12 +430,13 @@ function execPlus(args, cb) {
             err: err, stdout: stdout, stderr: stderr}, 'exec done');
         if (err) {
             var msg = format(
-                'exec error:\n'
+                '%s:\n'
                 + '\tcommand: %s\n'
                 + '\texit status: %s\n'
                 + '\tstdout:\n%s\n'
                 + '\tstderr:\n%s',
-                command, err.code, stdout.trim(), stderr.trim());
+                args.errMsg || 'exec error', command, err.code,
+                stdout.trim(), stderr.trim());
             cb(new InternalError({cause: err, message: msg}), stdout, stderr);
         } else {
             cb(null, stdout, stderr);
@@ -726,6 +831,7 @@ module.exports = {
     diffManifestFields: diffManifestFields,
     textWrap: textWrap,
     humanSizeFromBytes: humanSizeFromBytes,
+    promptYesNo: promptYesNo,
     normUrlFromUrl: normUrlFromUrl,
     execFilePlus: execFilePlus,
     execPlus: execPlus,

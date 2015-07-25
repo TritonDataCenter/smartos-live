@@ -55,10 +55,13 @@
 #include <sys/stat.h>
 
 #include "../json-nvlist/json-nvlist.h"
+#include "../mdata-client/base64.h"
 #include "../mdata-client/common.h"
 #include "../mdata-client/dynstr.h"
 #include "../mdata-client/plat.h"
 #include "../mdata-client/proto.h"
+#include "strlist.h"
+#include "strpath.h"
 
 #include "docker-common.h"
 
@@ -67,16 +70,30 @@ extern int initialized_proto;
 extern mdata_proto_t *mdp;
 
 /* other global bits we fill in for callers */
-extern char **cmdline;
-extern char **env;
 extern char *hostname;
 extern FILE *log_stream;
-extern char *path;
 extern struct passwd *pwd;
 extern struct group *grp;
 
 char fallback[] = "1970-01-01T00:00:00.000Z";
 char timestamp[32];
+
+/*
+ * The callback function type for forEachStringInArray().  This function
+ * is passed the following parameters for each string in the array:
+ *   - array name (provided by caller)
+ *   - index of current string element
+ *   - current string element
+ *   - void *arg0 and *arg1 (provided by caller)
+ */
+typedef void forEachStringCb_t(const char *, unsigned int, const char *,
+  void *, void *);
+
+static void insertOrReplaceEnv(strlist_t *, const char *, const char *);
+static void splitEnvEntry(const char *, char **, char **);
+static void forEachStringInArray(const char *, nvlist_t *, forEachStringCb_t *,
+  void *, void *);
+static int getPathList(strlist_t *, strlist_t *, const char *);
 
 char *
 getTimestamp()
@@ -149,12 +166,105 @@ dlog(const char *fmt, ...)
      va_end(ap);
 }
 
-const char *
+/*
+ * Contact the hypervisor metadata agent and request the value for the provided
+ * key name.  Returns a C string if a value is found, NULL if no value is
+ * found, or aborts the program on any other condition.  The caller is expected
+ * to call free(3C) on the returned string.
+ */
+char *
 mdataGet(const char *keyname)
 {
     char *errmsg = NULL;
-    const char *json;
-    string_t *mdata;
+    string_t *mdata = NULL;
+    mdata_response_t mdr;
+    char *out;
+
+    if (initialized_proto == 0) {
+        if (proto_init(&mdp, &errmsg) != 0) {
+            fatal(ERR_MDATA_INIT, "could not initialize metadata: %s\n",
+                errmsg);
+        }
+        initialized_proto = 1;
+    }
+
+    if (proto_execute(mdp, "GET", keyname, &mdr, &mdata) != 0) {
+        fatal(ERR_UNEXPECTED, "failed to get metadata for '%s': unknown "
+          "error\n", keyname);
+    }
+
+    switch (mdr) {
+    case MDR_SUCCESS:
+        if ((out = strdup(dynstr_cstr(mdata))) == NULL) {
+            fatal(ERR_STRDUP, "strdup failure\n");
+        }
+        dynstr_free(mdata);
+        dlog("MDATA %s=%s\n", keyname, out);
+        return (out);
+
+    case MDR_NOTFOUND:
+        dlog("INFO no metadata for '%s'\n", keyname);
+        dynstr_free(mdata);
+        return (NULL);
+
+    case MDR_UNKNOWN:
+        fatal(ERR_MDATA_FAIL, "failed to get metadata for '%s': %s\n",
+            keyname, dynstr_cstr(mdata));
+        break;
+
+    case MDR_INVALID_COMMAND:
+        fatal(ERR_MDATA_FAIL, "failed to get metadata for '%s': %s\n",
+            keyname, "host does not support GET");
+        break;
+
+    default:
+        fatal(ERR_UNEXPECTED, "GET[%s]: unknown response\n", keyname);
+        break;
+    }
+
+    /* NOTREACHED */
+    abort();
+    return (NULL);
+}
+
+void
+mdataPut(const char *keyname, const char *value)
+{
+    string_t *data;
+    char *errmsg = NULL;
+    mdata_response_t mdr;
+    string_t *req = dynstr_new();
+
+    if (initialized_proto == 0) {
+        if (proto_init(&mdp, &errmsg) != 0) {
+            fatal(ERR_MDATA_INIT, "could not initialize metadata: %s\n",
+                errmsg);
+        }
+        initialized_proto = 1;
+    }
+
+    base64_encode(keyname, strlen(keyname), req);
+    dynstr_appendc(req, ' ');
+    base64_encode(value, strlen(value), req);
+
+    if (proto_version(mdp) < 2) {
+        fatal(ERR_MDATA_TOO_OLD, "mdata protocol must be >= 2 for PUT");
+    }
+
+    if (proto_execute(mdp, "PUT", dynstr_cstr(req), &mdr, &data) != 0) {
+        fatal(ERR_MDATA_FAIL, "failed to PUT");
+    }
+
+    dynstr_free(req);
+
+    dlog("MDATA PUT %s=%s\n", keyname, value);
+}
+
+void
+mdataDelete(const char *keyname)
+{
+    string_t *data;
+    char *errmsg = NULL;
     mdata_response_t mdr;
 
     if (initialized_proto == 0) {
@@ -165,233 +275,107 @@ mdataGet(const char *keyname)
         initialized_proto = 1;
     }
 
-    if (proto_execute(mdp, "GET", keyname, &mdr, &mdata) == 0) {
-        json = dynstr_cstr(mdata);
-
-        switch (mdr) {
-        case MDR_SUCCESS:
-            dlog("MDATA %s=%s\n", keyname, json);
-            return (json);
-        case MDR_NOTFOUND:
-            dlog("INFO no metadata for '%s'\n", keyname);
-            return (NULL);
-        case MDR_UNKNOWN:
-            fatal(ERR_MDATA_FAIL, "failed to get metadata for '%s': %s\n",
-                keyname, json);
-            break;
-        case MDR_INVALID_COMMAND:
-            fatal(ERR_MDATA_FAIL, "failed to get metadata for '%s': %s\n",
-                keyname, "host does not support GET");
-            break;
-        default:
-            fatal(ERR_UNEXPECTED, "GET[%s]: unknown response\n", keyname);
-            break;
-        }
+    if (proto_version(mdp) < 2) {
+        fatal(ERR_MDATA_TOO_OLD, "mdata protocol must be >= 2 for DELETE");
     }
 
-    fatal(ERR_UNEXPECTED, "failed to get metadata for '%s': unknown error\n",
-        keyname);
+    if (proto_execute(mdp, "DELETE", keyname, &mdr, &data) != 0) {
+        fatal(ERR_MDATA_FAIL, "failed to DELETE");
+    }
 
-    /* NOTREACHED */
-    return (NULL);
+    dlog("MDATA DELETE %s\n", keyname);
 }
 
+/*
+ * This callback is called for each string in the provided environment vector.
+ * The string is inserted into the provided strlist, replacing any existing
+ * list entry with the same variable name.
+ */
 void
-buildCmdEnv()
+cbEachEnvEntry(const char *array_name __GNU_UNUSED, unsigned int idx
+  __GNU_UNUSED, const char *val, void *arg0, void *arg1 __GNU_UNUSED)
 {
-    int idx;
-    nvlist_t *nvl;
-    uint32_t env_len;
+    strlist_t *env = arg0;
+    char *env_name = NULL;
+    char *env_val = NULL;
 
-    getMdataArray("docker:env", &nvl, &env_len);
+    splitEnvEntry(val, &env_name, &env_val);
 
-    /*
-     * NOTE: We allocate two extra char * in case we're going to add 'HOME'
-     * and/or 'TERM'
-     */
-    env = malloc((sizeof (char *)) * (env_len + 3));
-    if (env == NULL) {
-        fatal(ERR_UNEXPECTED, "malloc() for env[%d] failed: %s\n", env_len + 3,
-            strerror(errno));
-    }
+    insertOrReplaceEnv(env, env_name, env_val);
 
-    idx = 0;
-    addValues(env, &idx, ARRAY_ENV, nvl);
-    env[idx] = NULL;
-
-    /*
-     * NOTE: we don't nvlist_free(nvl); here because we need this memory
-     * for execve() and when we execve() things get cleaned up anyway.
-     */
+    free(env_name);
+    free(env_val);
 }
 
-void
-addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl)
+int
+buildCmdEnv(strlist_t *env)
 {
-    nvpair_t *pair;
-    char *field, *printf_fmt;
-    char *home;
-    int home_len;
-    char *hostname_env;
-    int hostname_env_len;
-    int found_home = 0;
-    int found_hostname = 0;
-    int found_path = 0;
-    int found_term = 0;
-    char *new_path;
-    int ret;
-    char *term;
-    char *value;
+    char *const arrays[] = {
+        /*
+         * Add the link environment first, so that the container environment
+         * may override values from the link:
+         */
+        "docker:linkEnv",
+        "docker:env",
+        NULL
+    };
 
-    switch (type) {
-        case ARRAY_CMD:
-            field = "docker:cmd";
-            printf_fmt = "ARGV[%d]:CMD %s\n";
-            break;
-        case ARRAY_ENTRYPOINT:
-            field = "docker:entrypoint";
-            printf_fmt = "ARGV[%d]:ENTRYPOINT %s\n";
-            break;
-        case ARRAY_ENV:
-            field = "docker:env";
-            printf_fmt = "ENV[%d] %s\n";
-            break;
-        default:
-            fatal(ERR_UNEXPECTED, "unexpected array type: %d\n", type);
-            break;
-    }
-
-    for (pair = nvlist_next_nvpair(nvl, NULL); pair != NULL;
-        pair = nvlist_next_nvpair(nvl, pair)) {
-
-        if (nvpair_type(pair) == DATA_TYPE_STRING) {
-            ret = nvpair_value_string(pair, &value);
-            if (ret == 0) {
-                if ((type == ARRAY_ENTRYPOINT) && (*idx == 0) &&
-                    (value[0] != '/')) {
-
-                    /*
-                     * XXX if first component is not an absolute path, we want
-                     * to make sure we're exec'ing something that is. In docker
-                     * they do an exec.LookPath, but for now we'll just run
-                     * under /bin/sh -c
-                     */
-                    array[(*idx)++] = "/bin/sh";
-                    dlog(printf_fmt, *idx, array[(*idx)-1]);
-                    array[(*idx)++] = "-c";
-                    dlog(printf_fmt, *idx, array[(*idx)-1]);
-                }
-                array[*idx] = value;
-                if ((type == ARRAY_ENV) && (strncmp(value, "HOME=", 5) == 0)) {
-                    found_home = 1;
-                }
-                if ((type == ARRAY_ENV) && (strncmp(value, "TERM=", 5) == 0)) {
-                    found_term = 1;
-                }
-                if ((type == ARRAY_ENV) && (strncmp(value, "PATH=", 5) == 0)) {
-                    path = (value + 5);
-                    found_path = 1;
-                }
-                if ((type == ARRAY_ENV) &&
-                    (strncmp(value, "HOSTNAME=", 9) == 0)) {
-
-                    found_hostname = 1;
-                }
-                dlog(printf_fmt, *idx, array[*idx]);
-                (*idx)++;
-            } else {
-                fatal(ERR_PARSE_NVPAIR_STRING, "failed to parse nvpair string"
-                    " code: %d\n", ret);
-            }
-        } else if (nvpair_type(pair) == DATA_TYPE_BOOLEAN) {
-            /* decorate_array adds this, ignore. */
-        } else if (nvpair_type(pair) == DATA_TYPE_UINT32) {
-            /* decorate_array adds this, it's the length of the array. */
-        } else {
-            dlog("WARNING: unknown type parsing '%s': %d\n", field,
-                nvpair_type(pair));
-        }
+    /*
+     * Start with a minimum set of default environment entries.  These will be
+     * overridden if they are present in the arrays loaded from metadata.
+     *
+     * Currently docker only sets TERM for interactive sessions, but we set a
+     * default in all cases to work around OS-3579.
+     */
+    insertOrReplaceEnv(env, "TERM", DEFAULT_TERM);
+    insertOrReplaceEnv(env, "HOME", pwd != NULL ? pwd->pw_dir : "/");
+    insertOrReplaceEnv(env, "PATH", DEFAULT_PATH);
+    if (hostname != NULL) {
+        insertOrReplaceEnv(env, "HOSTNAME", hostname);
     }
 
     /*
-     * If HOME was not set in the environment, we'll add it here based on the
-     * pw_dir value from the passwd file.
+     * Load environment passed into the zone via metadata:
      */
-    if ((type == ARRAY_ENV) && !found_home) {
-        home_len = (strlen(pwd->pw_dir) + 6);
-        home = malloc(sizeof (char) * home_len);
-        if (home == NULL) {
-            fatal(ERR_UNEXPECTED, "malloc() for home[%d] failed: %s\n",
-                home_len, strerror(errno));
-        }
-        if (snprintf(home, home_len, "HOME=%s", pwd->pw_dir) < 0) {
-            fatal(ERR_UNEXPECTED, "snprintf(HOME=) failed: %s\n",
-                strerror(errno));
-        }
-        array[(*idx)++] = home;
-        dlog("ENV[%d] %s\n", (*idx) - 1, home);
+    for (int i = 0; arrays[i] != NULL; i++) {
+        nvlist_t *nvl = NULL;
+
+        getMdataArray(arrays[i], &nvl, NULL);
+
+        forEachStringInArray(arrays[i], nvl, cbEachEnvEntry, env, NULL);
+
+        nvlist_free(nvl);
     }
 
     /*
-     * If HOSTNAME was not set in the environment, but we've looked it up, we
-     * set it here based on the looked up value.
+     * Emit a DEBUG log of each environment variable:
      */
-    if ((type == ARRAY_ENV) && !found_hostname && (hostname != NULL)) {
-        hostname_env_len = (strlen(hostname) + 10);
-        hostname_env = malloc(sizeof (char) * hostname_env_len);
-        if (hostname_env == NULL) {
-            fatal(ERR_UNEXPECTED, "malloc() for hostname[%d] failed: %s\n",
-                hostname_env_len, strerror(errno));
-        }
-        if (snprintf(hostname_env, hostname_env_len, "HOSTNAME=%s",
-            hostname) < 0) {
-
-            fatal(ERR_UNEXPECTED, "snprintf(HOSTNAME=) failed: %s\n",
-                strerror(errno));
-        }
-        array[(*idx)++] = hostname_env;
-        dlog("ENV[%d] %s\n", (*idx) - 1, hostname_env);
+    for (unsigned int i = 0; strlist_get(env, i) != NULL; i++) {
+        dlog("ENV[%d] %s\n", i, strlist_get(env, i));
     }
 
-    /*
-     * If TERM was not set we also add that now. Currently docker only sets TERM
-     * for interactive sessions, but we set in all cases if not passed in to
-     * work around OS-3579.
-     */
-    if ((type == ARRAY_ENV) && !found_term) {
-        if ((term = strdup(DEFAULT_TERM)) == NULL) {
-            fatal(ERR_UNEXPECTED, "strdup(TERM=) failed: %s\n",
-                strerror(errno));
-        }
-        array[(*idx)++] = term;
-        dlog("ENV[%d] %s\n", (*idx) - 1, term);
-    }
-
-    /*
-     * If PATH was not set, we'll use docker's default path.
-     */
-    if ((type == ARRAY_ENV) && !found_path) {
-        if ((new_path = strdup(DEFAULT_PATH)) == NULL) {
-            fatal(ERR_UNEXPECTED, "strdup(PATH=) failed: %s\n",
-                strerror(errno));
-        }
-        array[(*idx)++] = new_path;
-        path = (new_path + 5);
-        dlog("ENV[%d] %s\n", (*idx) - 1, new_path);
-    }
+    return (0);
 }
 
-char *
-execName(char *cmd)
+custr_t *
+execName(const char *cmd, strlist_t *env, const char *working_directory)
 {
-    char *path_copy;
-    char *result;
-    struct stat statbuf;
-    char testpath[PATH_MAX+1];
-    char *token;
+    strlist_t *path;
+    custr_t *cu = NULL;
+    boolean_t ok = B_FALSE;
+
+    if (strlist_alloc(&path, 0) != 0 || custr_alloc(&cu) != 0) {
+        fatal(ERR_NO_MEMORY, "strlist_alloc failure");
+    }
+
+    if (getPathList(env, path, working_directory) != 0) {
+        fatal(ERR_UNEXPECTED, "getPathList() failed\n");
+    }
 
     /* if cmd contains a '/' we check it exists directly */
     if (strchr(cmd, '/') != NULL) {
+        struct stat statbuf;
+
         if (stat(cmd, &statbuf) != 0) {
             fatal(ERR_STAT_CMD, "stat(%s): %s\n", cmd, strerror(errno));
         }
@@ -401,66 +385,76 @@ execName(char *cmd)
         if (!(statbuf.st_mode & S_IXUSR)) {
             fatal(ERR_STAT_EXEC, "stat(%s): is not executable\n", cmd);
         }
-        return (cmd);
-    }
 
-    /* cmd didn't contain '/' so we'll check PATH */
-
-    if (path == NULL) {
-        fatal(ERR_NO_PATH, "PATH not set, cannot find executable '%s'\n", cmd);
-    }
-
-    /* make a copy before strtok destroys it */
-    path_copy = strdup(path);
-    if (path_copy == NULL) {
-        fatal(ERR_STRDUP, "failed to strdup(%s): %s\n", path, strerror(errno));
-    }
-
-    token = strtok(path_copy, ":");
-    while (token != NULL) {
-        if (snprintf(testpath, PATH_MAX+1, "%s/%s", token, cmd) == -1) {
-            fatal(ERR_UNEXPECTED, "snprintf(testpath): %s\n", strerror(errno));
-        }
-        if ((stat(testpath, &statbuf) == 0) && !S_ISDIR(statbuf.st_mode) &&
-            (statbuf.st_mode & S_IXUSR)) {
-
-            /* exists! so return it. we're done. */
-            result = strdup(testpath);
-            if (result == NULL) {
-                fatal(ERR_STRDUP, "failed to strdup(%s): %s\n", testpath,
-                    strerror(errno));
-            }
-            return (result);
+        custr_reset(cu);
+        if (strpath_append(cu, cmd) != 0) {
+            fatal(ERR_NO_MEMORY, "strpath_append failure");
         }
 
-        token = strtok(NULL, ":");
+        ok = B_TRUE;
+        goto out;
     }
 
-    fatal(ERR_NOT_FOUND, "'%s' not found in PATH\n", cmd);
+    /*
+     * The command did not contain a slash (/), so attempt to construct
+     * a fully qualified path using PATH from the provided environment:
+     */
+    for (unsigned int i = 0; strlist_get(path, i) != NULL; i++) {
+        struct stat statbuf;
 
-    /* not reached */
-    return (NULL);
+        custr_reset(cu);
+        if (strpath_append(cu, strlist_get(path, i)) != 0 ||
+          strpath_append(cu, cmd) != 0) {
+            fatal(ERR_UNEXPECTED, "strpath_append: %s\n", strerror(errno));
+        }
+
+        dlog("TRYPATH \"%s\"\n", custr_cstr(cu));
+
+        if (stat(custr_cstr(cu), &statbuf) != 0 || S_ISDIR(statbuf.st_mode) ||
+          (statbuf.st_mode & S_IXUSR) == 0) {
+            /*
+             * No valid executable found under this path component.  Try
+             * another.
+             */
+            continue;
+        }
+
+        ok = B_TRUE;
+        goto out;
+    }
+
+out:
+    strlist_free(path);
+    if (!ok) {
+        fatal(ERR_NOT_FOUND, "'%s' not found in PATH\n", cmd);
+    }
+    return (cu);
 }
 
 void
-getMdataArray(char *key, nvlist_t **nvl, uint32_t *len)
+getMdataArray(const char *key, nvlist_t **nvl, uint32_t *len)
 {
     char *json;
-    int ret;
+    boolean_t do_free = B_TRUE;
 
-    json = (char *) mdataGet(key);
-    if (json == NULL) {
+    if ((json = mdataGet(key)) == NULL) {
         json = "[]";
+        do_free = B_FALSE;
     }
 
-    ret = nvlist_parse_json((char *)json, strlen(json), nvl,
-        NVJSON_FORCE_INTEGER);
-    if (ret != 0) {
+    if (nvlist_parse_json(json, strlen(json), nvl, NVJSON_FORCE_INTEGER,
+      NULL) != 0) {
         fatal(ERR_PARSE_JSON, "failed to parse JSON(%s): %s\n", key, json);
     }
-    ret = nvlist_lookup_uint32(*nvl, "length", len);
-    if (ret != 0) {
-        fatal(ERR_UNEXPECTED, "nvl missing 'length' for %s\n", key);
+
+    if (len != NULL) {
+        if (nvlist_lookup_uint32(*nvl, "length", len) != 0) {
+            fatal(ERR_UNEXPECTED, "nvl missing 'length' for %s\n", key);
+        }
+    }
+
+    if (do_free) {
+        free(json);
     }
 }
 
@@ -489,11 +483,12 @@ getUserGroupData()
     char *user_orig;
     long long int lli;
     char *group;
+    boolean_t do_free = B_TRUE;
 
-    user = (char *) mdataGet("docker:user");
-    if (user == NULL) {
+    if ((user = mdataGet("docker:user")) == NULL) {
         /* default to root */
         user = "0";
+        do_free = B_FALSE;
     }
     user_orig = strdup(user);
     if (user_orig == NULL) {
@@ -533,44 +528,359 @@ getUserGroupData()
         dlog("INFO passwd.pw_uid: %u\n", pwd->pw_uid);
         dlog("INFO passwd.pw_gid: %u\n", pwd->pw_gid);
         dlog("INFO passwd.pw_dir: %s\n", pwd->pw_dir);
-    } else {
-        fatal(ERR_NO_USER, "failed to find user passwd structure\n");
     }
 
-    if (grp == NULL) {
+    if (grp == NULL && pwd != NULL) {
         grp = getgrgid(pwd->pw_gid);
     }
 
     if (grp != NULL) {
         dlog("INFO group.gr_name: %s\n", grp->gr_name);
         dlog("INFO group.gr_gid: %u\n", grp->gr_gid);
-    } else {
-        fatal(ERR_NO_GROUP, "failed to find group structure\n");
+    }
+
+    if (do_free) {
+        free(user);
     }
 }
 
 void
-setupWorkdir()
+setupWorkdir(custr_t **cup)
 {
-    int ret;
-    char *workdir;
+    char *mdval;
+    custr_t *cu;
 
-    workdir = (char *) mdataGet("docker:workdir");
-    if (workdir != NULL) {
-        /* support ~/foo */
-        if (workdir[0] == '~') {
-            if (asprintf(&workdir, "%s%s", pwd->pw_dir, workdir + 1) == -1) {
-                fatal(ERR_UNEXPECTED, "asprintf('workdir') failed: %s\n",
-                    strerror(errno));
+    if (custr_alloc(&cu) != 0) {
+        fatal(ERR_NO_MEMORY, "custr_alloc failure: %s\n", strerror(errno));
+    }
+
+    /*
+     * Every path is anchored at the root, i.e. "/".
+     */
+    if (strpath_append(cu, "/") != 0) {
+        fatal(ERR_UNEXPECTED, "strpath_append failure\n");
+    }
+
+    if ((mdval = mdataGet("docker:workdir")) != NULL) {
+        const char *t = mdval;
+
+        if (pwd != NULL && t[0] == '~') {
+            /*
+             * Expand the "~" token to the value of $HOME for this user.
+             */
+            if (strpath_append(cu, pwd->pw_dir) != 0) {
+                fatal(ERR_UNEXPECTED, "strpath_append failure\n");
+            }
+
+            /*
+             * Skip the '~' character at the front of the path.
+             */
+            t++;
+        }
+
+        /*
+         * Append the rest of the path.
+         */
+        if (strpath_append(cu, t) != 0) {
+            fatal(ERR_UNEXPECTED, "strpath_append failure\n");
+        }
+
+        free(mdval);
+    }
+
+    dlog("WORKDIR '%s'\n", custr_cstr(cu));
+    if (chdir(custr_cstr(cu)) != 0) {
+        fatal(ERR_CHDIR, "chdir(%s) failed: %s\n", custr_cstr(cu),
+          strerror(errno));
+    }
+
+    if (cup != NULL) {
+        *cup = cu;
+    } else {
+        custr_free(cu);
+    }
+}
+
+static void
+splitEnvEntry(const char *input, char **name, char **value)
+{
+    const char *eq;
+
+    /*
+     * Everything before the first equals ("=") is the environment variable
+     * name.  Determine the length of the name:
+     */
+    if ((eq = strchr(input, '=')) == NULL || eq == input) {
+        fatal(ERR_UNEXPECTED, "invalid env vector entry: %s\n", input);
+    }
+
+    /*
+     * Copy out the name string.
+     */
+    if (name != NULL && (*name = strndup(input, eq - input)) == NULL) {
+        fatal(ERR_STRDUP, "strdup failure: %s\n", strerror(errno));
+    }
+
+    /*
+     * Copy out the value string.
+     */
+    if (value != NULL && (*value = strdup(eq + 1)) == NULL) {
+        fatal(ERR_STRDUP, "strdup failure: %s\n", strerror(errno));
+    }
+}
+
+static void
+insertOrReplaceEnv(strlist_t *sl, const char *name, const char *value)
+{
+    boolean_t found = B_FALSE;
+    unsigned int idx;
+    int ret, e;
+    char *insval;
+
+    /*
+     * Check for an existing environment entry by this name:
+     */
+    for (idx = 0; strlist_get(sl, idx) != NULL; idx++) {
+        char *sname;
+
+        splitEnvEntry(strlist_get(sl, idx), &sname, NULL);
+        if (strcmp(sname, name) == 0) {
+            found = B_TRUE;
+        }
+        free(sname);
+
+        if (found) {
+            break;
+        }
+    }
+
+    /*
+     * Construct the full value to insert:
+     */
+    if (asprintf(&insval, "%s=%s", name, value) < 0) {
+        fatal(ERR_STRDUP, "asprintf failure: %s\n", strerror(errno));
+    }
+
+    if (found) {
+        /*
+         * Replace the existing entry with this new entry.
+         */
+        ret = strlist_set(sl, idx, insval);
+    } else {
+        /*
+         * Append the new entry to the end of the list.
+         */
+        ret = strlist_set_tail(sl, insval);
+    }
+
+    e = errno;
+    free(insval);
+    if (ret != 0) {
+        fatal(ERR_NO_MEMORY, "strlist failure: %s\n", strerror(e));
+    }
+}
+
+/*
+ * Given an nvlist_t representing a JSON array of strings, walk each string in
+ * the array and call the provided callback function.  The user-provided
+ * "array_name", "arg0" and "arg1" values are passed through to the callback
+ * unmodified.
+ */
+static void
+forEachStringInArray(const char *array_name, nvlist_t *array_nvl,
+  forEachStringCb_t *funcp, void *arg0, void *arg1)
+{
+    uint32_t len;
+
+    VERIFY(array_name != NULL);
+    VERIFY(funcp != NULL);
+
+    if (nvlist_lookup_uint32(array_nvl, "length", &len) != 0) {
+        fatal(ERR_UNEXPECTED, "array \"%s\" is missing \"length\" property\n",
+          array_name);
+    }
+
+    for (uint32_t i = 0; i < len; i++) {
+        char idx[32];
+        char *val;
+
+        /*
+         * As part of the conversion from a JSON array to an nvlist, each
+         * array element is stored as a property where the name is the
+         * string representation of the index; e.g., the fifth element is
+         * named "4".
+         */
+        (void) snprintf(idx, sizeof (idx), "%u", i);
+
+        if (nvlist_lookup_string(array_nvl, idx, &val) != 0) {
+            fatal(ERR_UNEXPECTED, "array \"%s\" missing string @ index [%s]\n",
+                array_name, idx);
+        }
+
+        funcp(array_name, i, val, arg0, arg1);
+    }
+}
+
+/*
+ * Load the PATH environment variable from this environment, or if PATH is not
+ * set, load the default.  Split the value, on each delimiting colon, into an
+ * ordered list of search directories.  If a search directory is not fully
+ * qualified, that directory will be appended to the provided "working
+ * directory".
+ */
+static int
+getPathList(strlist_t *env, strlist_t *path, const char *working_directory)
+{
+    char *r = NULL;
+    boolean_t dofree = B_TRUE;
+    custr_t *cu = NULL;
+    custr_t *searchdir = NULL;
+
+    if (custr_alloc(&cu) != 0 || custr_alloc(&searchdir) != 0) {
+        fatal(ERR_NO_MEMORY, "custr_alloc failure");
+    }
+
+    /*
+     * Check environment array for PATH value.
+     */
+    for (unsigned int idx = 0; strlist_get(env, idx) != NULL; idx++) {
+        char *sname;
+        char *svalue;
+
+        splitEnvEntry(strlist_get(env, idx), &sname, &svalue);
+        if (strcmp(sname, "PATH") != 0) {
+            free(sname);
+            free(svalue);
+            continue;
+        }
+
+        free(sname);
+        r = svalue;
+        break;
+    }
+
+    /*
+     * If no PATH was found, fall back to the default:
+     */
+    if (r == NULL) {
+        r = DEFAULT_PATH;
+        dofree = B_FALSE;
+    }
+
+    /*
+     * Parse PATH (i.e., split on ":" characters).
+     */
+    for (unsigned int i = 0; ; i++) {
+        char c = r[i];
+        if (c != ':' && c != '\0') {
+            /*
+             * This is neither the end of an element of the colon-separated
+             * PATH list, nor the end of the entire list.  Save the character
+             * in the working buffer.
+             */
+            if (custr_appendc(cu, c) != 0) {
+                fatal(ERR_NO_MEMORY, "custr_appendc failure");
+            }
+            continue;
+        }
+
+        /*
+         * All paths must be fully-qualified, so start from "/".
+         */
+        custr_reset(searchdir);
+        if (strpath_append(searchdir, "/") != 0) {
+            fatal(ERR_NO_MEMORY, "strpath_append failure");
+        }
+
+        if (custr_len(cu) < 1 || custr_cstr(cu)[0] != '/') {
+            /*
+             * This path is not fully-qualified, or is the empty string.
+             * Prepend the working directory.
+             */
+            if (strpath_append(searchdir, working_directory) != 0) {
+                fatal(ERR_NO_MEMORY, "strpath_append failure");
             }
         }
-    } else {
-        workdir = "/";
+
+        if (custr_len(cu) > 0) {
+            /*
+             * Append the remainder of the path.
+             */
+            if (strpath_append(searchdir, custr_cstr(cu)) != 0) {
+                fatal(ERR_NO_MEMORY, "strpath_append failure");
+            }
+        }
+        custr_reset(cu);
+
+        /*
+         * Store the path in the list.
+         */
+        if (strlist_set_tail(path, custr_cstr(searchdir)) != 0) {
+            fatal(ERR_NO_MEMORY, "strlist_set_tail failure");
+        }
+
+        if (c == '\0') {
+            break;
+        }
     }
 
-    dlog("WORKDIR '%s'\n", workdir);
-    ret = chdir(workdir);
-    if (ret != 0) {
-        fatal(ERR_CHDIR, "chdir() failed: %s\n", strerror(errno));
+    free(dofree ? r : NULL);
+    custr_free(cu);
+    custr_free(searchdir);
+    return (0);
+}
+
+/*
+ * Called for each entry in the CMD and ENTRYPOINT arrays.  Copies the string
+ * into the next available slot in the combined command string list.
+ */
+void
+cbEachCmdEntry(const char *array_name __GNU_UNUSED, unsigned int idx
+  __GNU_UNUSED, const char *val, void *arg0, void *arg1)
+{
+    strlist_t *cmdline = arg0;
+    const char *typ = arg1;
+
+    if (strlist_set_tail(cmdline, val) != 0) {
+        fatal(ERR_NO_MEMORY, "strlist failure: %s\n", strerror(errno));
     }
+
+    dlog("ARGV[%u]:%s \"%s\"\n", strlist_contig_count(cmdline) - 1, typ, val);
+}
+
+int
+buildCmdline(strlist_t *cmdline)
+{
+    struct {
+        const char *ad_name;
+        const char *ad_key;
+    } const arraydefs[] = {
+        /*
+         * The ENTRYPOINT array is read first, followed by the CMD array.
+         */
+        { "ENTRYPOINT",     "docker:entrypoint" },
+        { "CMD",            "docker:cmd" },
+        { NULL,             NULL }
+    };
+
+    for (int i = 0; arraydefs[i].ad_name != NULL; i++) {
+        nvlist_t *nvl = NULL;
+
+        getMdataArray(arraydefs[i].ad_key, &nvl, NULL);
+
+        forEachStringInArray(arraydefs[i].ad_key, nvl, cbEachCmdEntry, cmdline,
+          (void *)arraydefs[i].ad_name);
+
+        nvlist_free(nvl);
+    }
+
+    if (strlist_contig_count(cmdline) < 1) {
+        /*
+         * No ENTRYPOINT or CMD, docker prevents this at the API but if
+         * something somehow gets in this state, it's an error.
+         */
+        fatal(ERR_NO_COMMAND, "No command specified\n");
+    }
+
+    return (0);
 }

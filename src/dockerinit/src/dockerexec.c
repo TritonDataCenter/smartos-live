@@ -59,6 +59,7 @@
 #include "../mdata-client/dynstr.h"
 #include "../mdata-client/plat.h"
 #include "../mdata-client/proto.h"
+#include "strlist.h"
 
 #include "docker-common.h"
 
@@ -69,18 +70,18 @@ int initialized_proto = 0;
 mdata_proto_t *mdp;
 
 /* global data */
-char **cmdline;
-char **env;
 char *hostname = NULL;
 FILE *log_stream = stderr;
 char *path = NULL;
-struct passwd *pwd;
-struct group *grp;
+struct passwd *pwd = NULL;
+struct group *grp = NULL;
 
 int
 main(int argc, char *argv[])
 {
-    char *execname;
+    custr_t *execname = NULL;
+    strlist_t *env = NULL;
+    custr_t *workdir = NULL;
 
     /*
      * We write the log to stderr and expect cn-agent to log/parse the output.
@@ -103,10 +104,18 @@ main(int argc, char *argv[])
             argc);
     }
 
+    if (strlist_alloc(&env, 0) != 0) {
+        fatal(ERR_NO_MEMORY, "failed to allocate string lists: %s",
+          strerror(errno));
+    }
+
     /* NOTE: all of these will call fatal() if there's a problem */
     getUserGroupData();
-    setupWorkdir();
-    buildCmdEnv();
+    setupWorkdir(&workdir);
+
+    if (buildCmdEnv(env) != 0) {
+        fatal(ERR_UNEXPECTED, "buildCmdEnv() failed: %s\n", strerror(errno));
+    }
 
     /* cleanup mess from mdata-client */
     close(4); /* /dev/urandom from mdata-client */
@@ -119,25 +128,32 @@ main(int argc, char *argv[])
 
     dlog("DROP PRIVS\n");
 
-    if (setgid(grp->gr_gid) != 0) {
-        fatal(ERR_SETGID, "setgid(%d): %s\n", grp->gr_gid, strerror(errno));
+    if (grp != NULL) {
+        if (setgid(grp->gr_gid) != 0) {
+            fatal(ERR_SETGID, "setgid(%d): %s\n", grp->gr_gid, strerror(errno));
+        }
     }
-    if (initgroups(pwd->pw_name, grp->gr_gid) != 0) {
-        fatal(ERR_INITGROUPS, "initgroups(%s,%d): %s\n", pwd->pw_name,
-            grp->gr_gid, strerror(errno));
-    }
-    if (setuid(pwd->pw_uid) != 0) {
-        fatal(ERR_SETUID, "setuid(%d): %s\n", pwd->pw_uid, strerror(errno));
+    if (pwd != NULL) {
+        if (initgroups(pwd->pw_name, grp->gr_gid) != 0) {
+            fatal(ERR_INITGROUPS, "initgroups(%s,%d): %s\n", pwd->pw_name,
+                grp->gr_gid, strerror(errno));
+        }
+        if (setuid(pwd->pw_uid) != 0) {
+            fatal(ERR_SETUID, "setuid(%d): %s\n", pwd->pw_uid, strerror(errno));
+        }
     }
 
-    // find execname from argv[1] (w/ path), then execute it.
-    execname = execName(argv[1]); // calls fatal() if fails
+    /*
+     * Find the executable path based on argv[1] and $PATH.  This routine
+     * calls fatal() if it fails.
+     */
+    execname = execName(argv[1], env, custr_cstr(workdir));
 
     // Message for cn-agent that dockerexec is done and child should start
     // now.
     dlog("EXEC\n");
 
-    execve(execname, argv+1, env);
+    execve(custr_cstr(execname), argv + 1, strlist_array(env));
 
     // If execve() has failed, this next message should go to the user since
     // stdout and stderr should now be connected to them.

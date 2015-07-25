@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that create works with specific options set.
 //
@@ -13,9 +13,9 @@ require('nodeunit-plus');
 VM.loglevel = 'DEBUG';
 
 var payload_missing_netmask = {
+    alias: 'test-required-nic-props-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     nics: [
         {
@@ -27,9 +27,9 @@ var payload_missing_netmask = {
 };
 
 var payload_missing_nic_tag = {
+    alias: 'test-required-nic-props-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     nics: [
         {
@@ -41,9 +41,9 @@ var payload_missing_nic_tag = {
 };
 
 var payload_good = {
+    alias: 'test-required-nic-props-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     nics: [
         {
@@ -58,9 +58,9 @@ var payload_good = {
 
 // for testing that we don't require netmask when dhcp
 var payload_good_dhcp = {
+    alias: 'test-required-nic-props-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     nics: [
         {
@@ -71,10 +71,10 @@ var payload_good_dhcp = {
 };
 
 var payload_kvm_missing_netmask = {
+    alias: 'test-required-nic-props-' + process.pid,
     brand: 'kvm',
     vcpus: 1,
     ram: 256,
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     autoboot: false,
     disks: [
@@ -98,12 +98,12 @@ var payload_kvm_missing_netmask = {
 };
 
 var payload_kvm_missing_model = {
+    alias: 'test-required-nic-props-' + process.pid,
     brand: 'kvm',
     vcpus: 1,
     ram: 256,
     autoboot: false,
     do_not_inventory: true,
-    alias: 'autotest-' + process.pid,
     disks: [
       {
         boot: true,
@@ -125,12 +125,12 @@ var payload_kvm_missing_model = {
 };
 
 var payload_kvm_missing_model_but_have_driver = {
+    alias: 'test-required-nic-props-' + process.pid,
     brand: 'kvm',
     vcpus: 1,
     ram: 256,
     autoboot: false,
     do_not_inventory: true,
-    alias: 'autotest-' + process.pid,
     nic_driver: 'virtio',
     disks: [
       {
@@ -153,10 +153,10 @@ var payload_kvm_missing_model_but_have_driver = {
 };
 
 var payload_kvm_good = {
+    alias: 'test-required-nic-props-' + process.pid,
     brand: 'kvm',
     vcpus: 1,
     ram: 256,
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     autoboot: false,
     disks: [
@@ -183,10 +183,10 @@ var payload_kvm_good = {
 
 // test we didn't require netmask when dhcp
 var payload_kvm_good_dhcp = {
+    alias: 'test-required-nic-props-' + process.pid,
     brand: 'kvm',
     vcpus: 1,
     ram: 256,
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     autoboot: false,
     disks: [
@@ -210,9 +210,9 @@ var payload_kvm_good_dhcp = {
 };
 
 var payload_network_uuid = {
+    alias: 'test-required-nic-props-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     nics: [
         {
@@ -226,9 +226,9 @@ var payload_network_uuid = {
 };
 
 var payload_network_uuid_invalid = {
+    alias: 'test-required-nic-props-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
-    alias: 'autotest-' + process.pid,
     do_not_inventory: true,
     nics: [
         {

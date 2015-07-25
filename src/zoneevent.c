@@ -84,6 +84,8 @@ sysev_evc_handler(sysevent_t *ev, void *cookie)
 
     fflush(stdout);
 
+    nvlist_free(nvlist);
+
     return (0);
 }
 

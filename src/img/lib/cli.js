@@ -284,13 +284,6 @@ function listImagesInfo(imagesInfo, opts) {
 }
 
 
-function warnNotHubDockerSource() {
-    console.warn('warning: You have added a "docker" source that is not '
-        + 'the Docker Hub, <%s>. This is currently untested.',
-        docker.DOCKER_HUB_URL);
-}
-
-
 
 // ---- CLI object
 
@@ -500,6 +493,7 @@ CLI.prototype.printHelp = function printHelp(cb) {
         '    imgadm update [<uuid>...]              update installed images',
         '    imgadm delete [-P <pool>] <uuid>       remove an installed image',
         '    imgadm ancestry [-P <pool>] <uuid>     show ancestry of an installed image',
+        '    imgadm vacuum [-n] [-f]                delete unused images',
         '',
         '    imgadm create <vm-uuid> [<manifest-field>=<value> ...] ...',
         '                                           create an image from a VM',
@@ -528,7 +522,7 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
     }
 
     if (opts.add_docker_hub) {
-        opts.a = 'https://index.docker.io';
+        opts.a = 'https://docker.io';
         opts.type = 'docker';
     }
 
@@ -536,34 +530,42 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
     if (opts.e) nActions++;
     if (opts.a) nActions++;
     if (opts.d) nActions++;
+    if (opts.check) nActions++;
     if (nActions > 1) {
         cb(new errors.UsageError(
-            'cannot specify more than one of "-a", "-d" and "-e"'));
+            'cannot specify more than one of "-a", "-d", "-e", and "-c"'));
         return;
     }
     var skipPingCheck = opts.force === true;
 
     if (opts.e) {
         var before = self.tool.sources.map(function (s) {
-            return {url: s.url, type: s.type};
+            return s.toJSON();
         });
 
         var width = 0;
         self.tool.sources.forEach(function (s) {
             width = Math.max(width, s.url.length);
         });
-        var template = format('%%-%ds  %s', Math.min(width, 50));
+        var template = format('%%-%ds  %%-%ds  %%s', Math.min(width, 50), 6);
         var beforeText = before.map(function (s) {
-                return sprintf(template, s.url, s.type);
+                var options = [];
+                if (s.insecure) {
+                    options.push('insecure');
+                }
+                return sprintf(template, s.url, s.type, options.join(','))
+                    .trimRight();
             }).join('\n')
             + '\n\n'
             + '#\n'
             + '# Enter sources, one per line, as follows:\n'
             + '#\n'
-            + '#   URL TYPE\n'
+            + '#   URL TYPE [OPTIONS]\n'
             + '#\n'
-            + '# where "TYPE" is one of "imgapi" (the default), "docker"\n'
-            + '# (experimental), or "dsapi" (deprecated).\n'
+            + '# where "TYPE" is one of "imgapi" (the default), "docker", or\n'
+            + '# "dsapi" (deprecated); and where "OPTIONS" is the literal\n'
+            + '# string "insecure" to skip TLS server certificate checking\n'
+            + '# for this source.\n'
             + '#\n'
             + '# Comments beginning with "#" are stripped.\n'
             + '#\n';
@@ -578,11 +580,26 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
                 }).filter(function (line) {
                     return line.length;  // drop blank lines
                 }).map(function (line) {
-                    var parts = line.split(/\s+/);
+                    var parts = line.split(/\s+/g);
                     if (!parts[1]) {
                         parts[1] = 'imgapi'; // default type
                     }
-                    return {url: parts[0], type: parts[1]};
+                    var s = {url: parts[0], type: parts[1]};
+                    if (parts[2]) {
+                        // JSSTYLED
+                        var options = parts[2].trim().split(/,/g);
+                        for (var i = 0; i < options.length; i++) {
+                            switch (options[i]) {
+                            case 'insecure':
+                                s.insecure = true;
+                                break;
+                            default:
+                                throw new errors.UsageError('unknown source '
+                                    + 'option: ' + options[i]);
+                            }
+                        }
+                    }
+                    return s;
                 });
         }
 
@@ -602,7 +619,12 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
                 cb();
                 return;
             }
-            var after = sourcesInfoFromText(afterText);
+            try {
+                var after = sourcesInfoFromText(afterText);
+            } catch (ex) {
+                cb(ex);
+                return;
+            }
             if (JSON.stringify(after) === JSON.stringify(before)) {
                 console.log('Image sources unchanged');
                 cb();
@@ -619,16 +641,9 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
                         if (change.type === 'reorder') {
                             console.log('Reordered image sources');
                         } else if (change.type === 'add') {
-                            if (change.source.type === 'docker'
-                                && change.source.url !== docker.DOCKER_HUB_URL)
-                            {
-                                warnNotHubDockerSource();
-                            }
-                            console.log('Added "%s" image source "%s"',
-                                change.source.type, change.source.url);
+                            console.log('Added %s', change.source);
                         } else if (change.type === 'del') {
-                            console.log('Deleted "%s" image source "%s"',
-                                change.source.type, change.source.url);
+                            console.log('Deleted %s', change.source);
                         }
                     });
                     cb();
@@ -637,22 +652,21 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
         });
 
     } else if (opts.a) {
-        this.tool.configAddSource({url: opts.a, type: opts.type}, skipPingCheck,
-            function (err, changed) {
+        var addOpts = {
+            url: opts.a,
+            type: opts.type,
+            insecure: opts.insecure
+        };
+        this.tool.configAddSource(addOpts, skipPingCheck,
+            function (err, changed, source) {
                 if (err) {
                     cb(err);
                 } else if (changed) {
-                    if (opts.type === 'docker'
-                        && opts.a !== docker.DOCKER_HUB_URL)
-                    {
-                        warnNotHubDockerSource();
-                    }
-                    console.log('Added "%s" image source "%s"', opts.type,
-                        opts.a);
+                    console.log('Added %s', source);
+                    cb();
                 } else {
-                    console.log(
-                        'Already have "%s" image source "%s", no change',
-                        opts.type, opts.a);
+                    console.log('Already have %s, no change', source);
+                    cb();
                 }
             }
         );
@@ -663,12 +677,13 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
                 cb(err);
             } else if (deleted) {
                 deleted.forEach(function (s) {
-                    console.log('Deleted "%s" image source "%s"',
-                        s.type, s.url);
+                    console.log('Deleted %s', s);
                 });
+                cb();
             } else {
                 console.log('Do not have image source "%s", no change',
                     opts.d);
+                cb();
             }
         });
 
@@ -701,12 +716,12 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
     } else {
         // The default flat list of source *urls*.
         var sources = this.tool.sources.map(function (s) {
-            return {url: s.url, type: s.type};
+            return {url: s.url, type: s.type, insecure: s.insecure};
         });
         if (opts.json) {
             console.log(JSON.stringify(sources, null, 2));
         } else if (opts.verbose) {
-            tabula(sources, {columns: ['url', 'type']});
+            tabula(sources, {columns: ['url', 'type', 'insecure']});
         } else {
             // The default flat list of source *urls*.
             sources.forEach(function (s) {
@@ -720,22 +735,23 @@ CLI.prototype.do_sources.help = (
     /* BEGIN JSSTYLED */
     'List and edit image sources.\n'
     + '\n'
-    + 'An image source is a URL to a server implementing the IMGAPI.\n'
-    + 'The default IMGAPI is + ' + common.DEFAULT_SOURCE.url + '\n'
+    + 'An image source is a URL to a server implementing the IMGAPI, or\n'
+    + 'the Docker Registry API. The default IMGAPI is ' + common.DEFAULT_SOURCE.url + '\n'
     + '\n'
     + 'Usage:\n'
     + '    {{name}} sources [--verbose|-v] [--json|-j]  # list sources\n'
     + '    {{name}} sources -a <url> [-t <type>]        # add a source\n'
     + '    {{name}} sources -d <url>                    # delete a source\n'
     + '    {{name}} sources -e                          # edit sources\n'
+    + '    {{name}} sources -c                          # check current sources\n'
     + '\n'
     + '{{options}}'
     + '\n'
     + 'Examples:\n'
-    + '    # Joyent\'s primary public image repository\n'
+    + '    # Joyent\'s primary public image repository (defaults to "imgapi")\n'
     + '    {{name}} sources -a https://images.joyent.com\n'
-    + '    # The main Docker registry (experimental)\n'
-    + '    {{name}} sources -a https://registry-1.docker.io -t docker\n'
+    + '    # Docker Hub\n'
+    + '    {{name}} sources -a https://docker.io -t docker\n'
     + '    # Legacy SDC 6.5 DSAPI (deprecated)\n'
     + '    {{name}} sources -a https://datasets.joyent.com/datasets -t dsapi\n'
     /* END JSSTYLED */
@@ -768,8 +784,7 @@ CLI.prototype.do_sources.options = [
     {
         names: ['add-docker-hub'],
         type: 'bool',
-        help: 'A shortcut for "imgadm sources -t docker '
-            + '-a https://index.docker.io".'
+        help: 'A shortcut for "imgadm sources -t docker -a https://docker.io".'
     },
     {
         names: ['d'],
@@ -788,12 +803,21 @@ CLI.prototype.do_sources.options = [
         help: 'Ping check all sources.'
     },
     {
+        group: ''
+    },
+    {
         names: ['type', 't'],
         type: 'string',
         default: 'imgapi',
         helpArg: '<type>',
-        help: 'The source type. One of "imgapi" (the default), "docker" '
-            + '(experimental), or "dsapi" (deprecated).'
+        help: 'The source type for an added source. One of "imgapi" (the '
+            + 'default), "docker", or "dsapi" (deprecated).'
+    },
+    {
+        names: ['insecure', 'k'],
+        type: 'bool',
+        help: 'Allow insecure (no server certificate checking) access '
+            + 'to the added HTTPS source URL.'
     },
     {
         names: ['force', 'f'],
@@ -1277,7 +1301,7 @@ CLI.prototype.do_delete.options = [
 
 /**
  * `imgadm import <uuid>` for imgapi/dsapi imports
- * `imgadm import <name>[:<tag>]` for docker imports
+ * `imgadm import <repo>[:<tag>]` for docker imports
  */
 CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
     var self = this;
@@ -1339,7 +1363,16 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
         },
 
         function getImportInfo(ctx, next) {
-            self.tool.sourcesGetImportInfo({arg: arg}, function (err, info) {
+            var getOpts = { arg: arg };
+            if (opts.source) {
+                getOpts.sources = opts.source.map(function (s) {
+                    return self.tool.sourceFromInfo({
+                        url: s,
+                        type: 'imgapi'
+                    });
+                });
+            }
+            self.tool.sourcesGetImportInfo(getOpts, function (err, info) {
                 if (err) {
                     next(err);
                     return;
@@ -1375,13 +1408,17 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
                     next(getErr);
                     return;
                 } else if (ii) {
-                    var extra = '';
+                    var extra1 = '';
                     if (ii.manifest.name) {
-                        extra = format(' (%s %s)', ii.manifest.name,
+                        extra1 = format(' (%s@%s)', ii.manifest.name,
                             ii.manifest.version);
                     }
-                    console.log('Image %s%s is already installed',
-                        ii.manifest.uuid, extra);
+                    var extra2 = '';
+                    if (ii.source) {
+                        extra2 = ' from ' + ii.source;
+                    }
+                    console.log('Image %s%s is already installed%s',
+                        ii.manifest.uuid, extra1, extra2);
                     next(true); // early abort
                 } else {
                     next();
@@ -1393,6 +1430,7 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
             self.tool.importImage({
                 importInfo: ctx.importInfo,
                 zpool: zpool,
+                zstream: opts.zstream,
                 quiet: opts.quiet,
                 logCb: console.log
             }, next);
@@ -1408,11 +1446,12 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
 CLI.prototype.do_import.help = (
     'Import an image from a source IMGAPI.\n'
     + '\n'
-    + 'This finds the image with the given UUID in the configured sources\n'
-    + 'and imports it into the local system.\n'
+    + 'This finds the image with the given UUID (or repository name and tag,\n'
+    + 'for Docker sources) in the configured sources and imports it into\n'
+    + 'the local system.\n'
     + '\n'
     + 'Usage:\n'
-    + '    {{name}} import <uuid>\n'
+    + '    {{name}} import <uuid|docker repo:tag>\n'
     + '\n'
     + '{{options}}'
 );
@@ -1433,6 +1472,21 @@ CLI.prototype.do_import.options = [
         helpArg: '<pool>',
         help: 'Name of zpool in which to look for the image. Default is "'
             + common.DEFAULT_ZPOOL + '".'
+    },
+    {
+        names: ['source', 'S'],
+        type: 'arrayOfString',
+        helpArg: '<source>',
+        help: 'An image source (url) from which to import. If given, then '
+            + 'this source is used instead of the configured sources.'
+    },
+    {
+        names: ['zstream'],
+        type: 'bool',
+        help: 'Indicate that the source will send a raw ZFS dataset stream for '
+            + 'the image file data. Typically this is used in conjunction '
+            + 'with -S, so the source is known, and with a source that '
+            + 'stores images in ZFS (e.g. a SmartOS peer node).'
     }
 ];
 
@@ -1609,6 +1663,52 @@ CLI.prototype.do_update.options = [
         names: ['dry-run', 'n'],
         type: 'bool',
         help: 'Do a dry-run (do not actually make changes).'
+    }
+];
+
+
+// TODO: option to exclude images with a very recent create/import time
+//      imgadm vacuum -t 2d
+// TODO: option to exclude given uuids:  imgadm vacuum -x uuid,uuid
+CLI.prototype.do_vacuum = function do_vacuum(subcmd, opts, args, cb) {
+    var self = this;
+    if (opts.help) {
+        self.do_help('help', {}, [subcmd], cb);
+        return;
+    }
+    var options = {
+        logCb: console.log,
+        dryRun: opts.dry_run,
+        force: opts.force
+    };
+    if (args.length) {
+        cb(new errors.UsageError('unexpected arguments: ' + args.join(' ')));
+    }
+    this.tool.vacuumImages(options, cb);
+};
+CLI.prototype.do_vacuum.help = (
+    'Remove unused images -- i.e. not used for any VMs or child images.\n'
+    + '\n'
+    + 'Usage:\n'
+    + '    {{name}} vacuum [<options>]\n'
+    + '\n'
+    + '{{options}}'
+);
+CLI.prototype.do_vacuum.options = [
+    {
+        names: ['help', 'h'],
+        type: 'bool',
+        help: 'Show this help.'
+    },
+    {
+        names: ['dry-run', 'n'],
+        type: 'bool',
+        help: 'Do a dry-run (do not actually make changes).'
+    },
+    {
+        names: ['force', 'f'],
+        type: 'bool',
+        help: 'Force deletion without prompting for confirmation.'
     }
 ];
 

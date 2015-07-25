@@ -1935,6 +1935,22 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (see caveat below under zfs_root_recsize)
         default: 131072 (128k)
 
+    zfs_filesystem_limit:
+
+        This specifies a limit on the number of filesystems a VM can have. It is
+        most useful when combined with the delegate_dataset option as a
+        mechanism to limit the number of filesystems that can be created from
+        within the zone. The root user in the GZ is immune to this limit.
+
+        type: integer (0+, set to '' or undefined to unset)
+        vmtype: OS,LX
+        listable: no
+        create: yes
+        update: yes
+        default: none (no limit)
+
+        See zfs(1M) `filesystem_limit` for more details.
+
     zfs_io_priority:
 
         This sets an IO throttle priority value relative to other VMs. If one
@@ -1993,6 +2009,22 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (see caveat above)
         default: 131072 (128k)
+
+    zfs_snapshot_limit:
+
+        This specifies a limit on the number of snapshots a VM can have. It is
+        most useful when combined with the delegate_dataset option as a
+        mechanism to limit the number of snapshots that can be taken from within
+        the zone. The root user in the GZ is immune to this limit.
+
+        type: integer (0+, set to '' or undefined to unset)
+        vmtype: OS,LX
+        listable: no
+        create: yes
+        update: yes
+        default: none (no limit)
+
+        See zfs(1M) `snapshot_limit` for more details.
 
     zone_state:
 

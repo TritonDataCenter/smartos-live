@@ -51,7 +51,7 @@ var WRKDIR = '/var/tmp/img-test-docker';
 var CACHEDIR = '/var/tmp/img-test-cache';
 
 var sourcesHadDockerHub;
-var testImgArg = 'busybox:ubuntu-12.04'; // ideally small and typically unused
+var testImgArg = 'hello-world:latest'; // ideally small and typically unused
 var testImg;
 
 
@@ -77,7 +77,7 @@ test('setup: ensure docker hub source', function (t) {
         var sources = JSON.parse(stdout);
         sourcesHadDockerHub = false;
         sources.forEach(function (s) {
-            if (s.type === 'docker' && s.url === 'https://index.docker.io') {
+            if (s.type === 'docker' && s.url === 'docker.io') {
                 sourcesHadDockerHub = true;
             }
         });
@@ -97,10 +97,11 @@ test('setup: get test image id', function (t) {
 
 // ---- tests
 
-// TODO: should remove as much as possible of its layer chain.
 test('precondition1: remove image UUID-OF:' + testImgArg, function (t) {
     var cmd = format(
-        'imgadm get %s 2>/dev/null >/dev/null && imgadm delete %s || true',
+        'imgadm get %s 2>/dev/null >/dev/null && ' +
+            'imgadm ancestry %s -H -o uuid | ' +
+            'xargs -n1 imgadm delete || true',
         testImg.uuid, testImg.uuid);
     t.exec(cmd, function () {
         t.end();
@@ -160,7 +161,7 @@ test('imgadm list --docker', function (t) {
             var parts = line.split(/ +/g);
             return (
                 parts[0] === testImg.uuid
-                && parts[1] === rat.repo
+                && parts[1] === rat.localName
                 && parts[2] === rat.tag
             );
         });
@@ -172,7 +173,12 @@ test('imgadm list --docker', function (t) {
 
 // TODO: should remove as much as possible of its layer chain.
 test('cleanup: remove image UUID-OF:' + testImgArg, function (t) {
-    t.exec('imgadm delete ' + testImg.uuid, function () {
+    var cmd = format(
+        'imgadm get %s 2>/dev/null >/dev/null && ' +
+            'imgadm ancestry %s -H -o uuid | ' +
+            'xargs -n1 imgadm delete || true',
+        testImg.uuid, testImg.uuid);
+    t.exec(cmd, function () {
         t.end();
     });
 });

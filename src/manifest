@@ -2,6 +2,7 @@ d usr/lib 0755 root bin
 d usr/lib/brand 0755 root bin
 d usr/lib/brand/lx 0755 root bin
 f usr/lib/brand/lx/lx_boot_zone_docker 0755 root root
+f usr/lib/brand/lx/routeinfo 0755 root root
 
 # imgadm
 s etc/bash/bash_completion.d/imgadm=/usr/img/etc/imgadm.completion
@@ -71,9 +72,24 @@ f usr/img/node_modules/cmdln/package.json 0444 root bin
 d usr/img/node_modules/docker-registry-client 0555 root bin
 d usr/img/node_modules/docker-registry-client/lib 0555 root bin
 f usr/img/node_modules/docker-registry-client/lib/common.js 0444 root bin
-f usr/img/node_modules/docker-registry-client/lib/index-client.js 0444 root bin
 f usr/img/node_modules/docker-registry-client/lib/index.js 0444 root bin
-f usr/img/node_modules/docker-registry-client/lib/registry-client.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/lib/registry-client-v1.js 0444 root bin
+d usr/img/node_modules/docker-registry-client/node_modules 0555 root bin
+d usr/img/node_modules/docker-registry-client/node_modules/strsplit 0555 root bin
+d usr/img/node_modules/docker-registry-client/node_modules/strsplit/lib 0555 root bin
+f usr/img/node_modules/docker-registry-client/node_modules/strsplit/lib/strsplit.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/node_modules/strsplit/package.json 0444 root bin
+d usr/img/node_modules/docker-registry-client/node_modules/tough-cookie 0555 root bin
+d usr/img/node_modules/docker-registry-client/node_modules/tough-cookie/lib 0555 root bin
+f usr/img/node_modules/docker-registry-client/node_modules/tough-cookie/lib/cookie.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/node_modules/tough-cookie/lib/memstore.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/node_modules/tough-cookie/lib/pubsuffix.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/node_modules/tough-cookie/lib/store.js 0444 root bin
+d usr/img/node_modules/docker-registry-client/node_modules/tough-cookie/node_modules 0555 root bin
+d usr/img/node_modules/docker-registry-client/node_modules/tough-cookie/node_modules/punycode 0555 root bin
+f usr/img/node_modules/docker-registry-client/node_modules/tough-cookie/node_modules/punycode/package.json 0444 root bin
+f usr/img/node_modules/docker-registry-client/node_modules/tough-cookie/node_modules/punycode/punycode.js 0444 root bin
+f usr/img/node_modules/docker-registry-client/node_modules/tough-cookie/package.json 0444 root bin
 f usr/img/node_modules/docker-registry-client/package.json 0444 root bin
 d usr/img/node_modules/extsprintf 0555 root bin
 d usr/img/node_modules/extsprintf/lib 0555 root bin
@@ -165,9 +181,7 @@ f usr/img/node_modules/restify/node_modules/lru-cache/package.json 0444 root bin
 d usr/img/node_modules/restify/node_modules/mime 0555 root bin
 f usr/img/node_modules/restify/node_modules/mime/mime.js 0444 root bin
 f usr/img/node_modules/restify/node_modules/mime/package.json 0444 root bin
-d usr/img/node_modules/restify/node_modules/mime/types 0555 root bin
-f usr/img/node_modules/restify/node_modules/mime/types/mime.types 0444 root bin
-f usr/img/node_modules/restify/node_modules/mime/types/node.types 0444 root bin
+f usr/img/node_modules/restify/node_modules/mime/types.json 0444 root bin
 d usr/img/node_modules/restify/node_modules/semver 0555 root bin
 f usr/img/node_modules/restify/node_modules/semver/package.json 0444 root bin
 f usr/img/node_modules/restify/node_modules/semver/semver.js 0444 root bin
@@ -215,6 +229,8 @@ f usr/img/node_modules/verror/lib/verror.js 0444 root bin
 f usr/img/node_modules/verror/package.json 0444 root bin
 f usr/img/package.json 0444 root bin
 d usr/img/sbin 0555 root bin
+f usr/img/sbin/chroot-gtar 0555 root bin
+f usr/img/sbin/gtar-unlink-dir 0555 root bin
 f usr/img/sbin/imgadm 0555 root bin
 d usr/img/test 0555 root bin
 f usr/img/test/IMG.test.js 0444 root bin
@@ -485,6 +501,23 @@ f usr/vm/node_modules/props.js 0444 root bin
 f usr/vm/node_modules/proptable.js 0444 root bin
 f usr/vm/node_modules/qmp.js 0444 root bin
 f usr/vm/node_modules/utils.js 0444 root bin
+d usr/vm/node_modules/vasync 0755 root root
+d usr/vm/node_modules/vasync/lib 0755 root root
+f usr/vm/node_modules/vasync/lib/vasync.js 0644 root root
+d usr/vm/node_modules/vasync/node_modules 0755 root root
+d usr/vm/node_modules/vasync/node_modules/verror 0755 root root
+d usr/vm/node_modules/vasync/node_modules/verror/lib 0755 root root
+f usr/vm/node_modules/vasync/node_modules/verror/lib/verror.js 0755 root root
+d usr/vm/node_modules/vasync/node_modules/verror/node_modules 0755 root root
+d usr/vm/node_modules/vasync/node_modules/verror/node_modules/extsprintf 0755 root root
+d usr/vm/node_modules/vasync/node_modules/verror/node_modules/extsprintf/lib 0755 root root
+f usr/vm/node_modules/vasync/node_modules/verror/node_modules/extsprintf/lib/extsprintf.js 0644 root root
+f usr/vm/node_modules/vasync/node_modules/verror/node_modules/extsprintf/LICENSE 0644 root root
+f usr/vm/node_modules/vasync/node_modules/verror/node_modules/extsprintf/package.json 0644 root root
+f usr/vm/node_modules/vasync/node_modules/verror/LICENSE 0644 root root
+f usr/vm/node_modules/vasync/node_modules/verror/package.json 0644 root root
+f usr/vm/node_modules/vasync/LICENSE 0644 root root
+f usr/vm/node_modules/vasync/package.json 0644 root root
 d usr/vm/node_modules/vmload 0755 root root
 f usr/vm/node_modules/vmload/vmload-zoneadm.js 0644 root root
 f usr/vm/node_modules/vmload/vmload-zoneinfo.js 0644 root root
@@ -723,6 +756,10 @@ d smartdc/bin 0555 root bin
 f smartdc/bin/qemu-exec 0555 root bin
 d smartdc/lib 0555 root bin
 f smartdc/lib/ntp_config 0555 root bin
+f smartdc/lib/sdc-on-tty 0555 root bin
+d smartdc/man 0555 root bin
+d smartdc/man/man1 0555 root bin
+f smartdc/man/man1/sdc-factoryreset.1 0444 root bin
 f usr/bin/nictagadm 0555 root bin
 f usr/bin/sysinfo 0555 root bin
 f usr/bin/bootparams 0555 root bin
@@ -736,6 +773,7 @@ f usr/lib/cryptpass 0555 root bin
 f usr/lib/measure_terminal 0555 root bin
 d usr/lib/sdc 0755 root bin
 f usr/lib/sdc/net-boot-config 0555 root bin
+f usr/sbin/sysevent 0555 root bin
 s usr/sbin/fwadm=../fw/sbin/fwadm
 s usr/sbin/vmadm=../vm/sbin/vmadm
 d usr/node 0755 root bin
@@ -773,6 +811,7 @@ f usr/share/man/man1m/sys-unconfig.1m 0444 root bin
 f usr/share/man/man1m/ziostat.1m 0444 root bin
 f usr/share/man/man1m/hotplug.1m 0444 root bin
 f usr/share/man/man1m/nictagadm.1m 0444 root bin
+f usr/share/man/man1m/sysevent.1m 0444 root bin
 f usr/share/man/man1m/sysinfo.1m 0444 root bin
 f usr/share/man/man1m/zonemon.1m 0444 root bin
 f usr/share/man/man1m/zonememstat.1m 0444 root bin

@@ -42,7 +42,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <termios.h>
 #include <unistd.h>
+#include <zone.h>
 
 #include <arpa/inet.h>
 
@@ -63,32 +65,34 @@
 #include "../mdata-client/dynstr.h"
 #include "../mdata-client/plat.h"
 #include "../mdata-client/proto.h"
+#include "strlist.h"
 
 #include "docker-common.h"
 
-#define IPMGMTD_DOOR_OS "/etc/svc/volatile/ipadm/ipmgmt_door"
-#define IPMGMTD_DOOR_LX "/native/etc/svc/volatile/ipadm/ipmgmt_door"
+#define IPMGMTD "/lib/inet/ipmgmtd"
+#define IPMGMTD_DOOR "/etc/svc/volatile/ipadm/ipmgmt_door"
+
 #define LOGFILE "/var/log/sdc-dockerinit.log"
 #define RTMBUFSZ sizeof (struct rt_msghdr) + (3 * sizeof (struct sockaddr_in))
 #define ATTACH_CHECK_INTERVAL 200000 // 200ms
 
-int addRoute(const char *, const char *, const char *);
-void buildCmdline();
+int addRoute(const char *, const char *, const char *, int);
 void closeIpadmHandle();
-void execCmdline();
-void getBrand();
-void getStdinStatus();
-void killIpmgmtd();
-void mountLXProc();
+static void execCmdline(strlist_t *, strlist_t *, const char *);
+static brand_t getBrand(void);
+static boolean_t getStdinStatus(void);
+void killIpmgmtd(void);
 void mountOSDevFD();
 void openIpadmHandle();
 void plumbIf(const char *);
 int raiseIf(char *, char *, char *);
-void runIpmgmtd(char *cmdline[], char *env[]);
+void runIpmgmtd(void);
 void setupHostname();
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
+static void setupTerminal(void);
 void waitIfAttaching();
+void makePath(const char *, char *, size_t);
 
 /* global metadata client bits */
 int initialized_proto = 0;
@@ -96,16 +100,15 @@ mdata_proto_t *mdp;
 
 /* global data */
 brand_t brand;
-char **cmdline;
-char **env;
 char *hostname = NULL;
 ipadm_handle_t iph;
-char *ipmgmtd_door;
 FILE *log_stream = stderr;
-int open_stdin = 0;
 char *path = NULL;
-struct passwd *pwd;
-struct group *grp;
+struct passwd *pwd = NULL;
+struct group *grp = NULL;
+
+#define WARNLOG(format, ...) \
+    dlog("WARN %s: " format "\n", __func__, __VA_ARGS__)
 
 const char *ROUTE_ADDR_MSG =
     "WARN addRoute: invalid %s address \"%s\" for %s: %s\n";
@@ -116,49 +119,40 @@ const char *ROUTE_WRITE_LEN_MSG =
     "WARN addRoute: wrote %d/%d to socket "
     "(if=\"%s\", gw=\"%s\", dst=\"%s\": %s)\n";
 
-/*
- * Special variables for a special ipmgmtd
- */
-char *IPMGMTD_CMD_LX[] = {"/native/lib/inet/ipmgmtd", "ipmgmtd", NULL};
-char *IPMGMTD_ENV_LX[] = {
-    /* ipmgmtd thinks SMF is awesome */
-    "SMF_FMRI=svc:/network/ip-interface-management:default",
-    /*
-     * Need to perform some tricks because ipmgmtd is going to mount
-     * things in /etc/svc/volatile and setup a door there as well.
-     * If we don't use thunk, we'll end up using the LX's /etc/svc
-     * but other native commands (such as ifconfig-native) will try
-     * to use /native/etc/svc/volatile.
-     */
-    "LD_NOENVIRON=1",
-    "LD_NOCONFIG=1",
-    "LD_LIBRARY_PATH_32=/native/lib:/native/usr/lib",
-    "LD_PRELOAD_32=/native/usr/lib/brand/lx/lx_thunk.so.1",
-    NULL
-};
-char *IPMGMTD_CMD_OS[] = {"/lib/inet/ipmgmtd", "ipmgmtd", NULL};
-char *IPMGMTD_ENV_OS[] = {
-    /* ipmgmtd thinks SMF is awesome */
-    "SMF_FMRI=svc:/network/ip-interface-management:default",
-    NULL
-};
+void
+makePath(const char *base, char *out, size_t outsz)
+{
+    const char *zroot = zone_get_nroot();
+
+    (void) snprintf(out, outsz, "%s%s", zroot != NULL ? zroot : "", base);
+}
 
 void
-runIpmgmtd(char *cmd[], char *env[])
+runIpmgmtd(void)
 {
     pid_t pid;
     int status;
 
-    pid = fork();
-    if (pid == -1) {
+    if ((pid = fork()) == -1) {
         fatal(ERR_FORK_FAILED, "fork() failed: %s\n", strerror(errno));
     }
 
     if (pid == 0) {
         /* child */
-        execve(cmd[0], cmd + 1, env);
-        fatal(ERR_EXEC_FAILED, "execve(%s) failed: %s\n", cmd[0],
-            strerror(errno));
+        char cmd[MAXPATHLEN];
+        char *const argv[] = {
+            "ipmgmtd",
+            NULL
+        };
+        char *const envp[] = {
+            "SMF_FMRI=svc:/network/ip-interface-management:default",
+            NULL
+        };
+
+        makePath(IPMGMTD, cmd, sizeof (cmd));
+
+        execve(cmd, argv, envp);
+        fatal(ERR_EXEC_FAILED, "execve(%s) failed: %s\n", cmd, strerror(errno));
     }
 
     /* parent */
@@ -180,13 +174,20 @@ runIpmgmtd(char *cmd[], char *env[])
     }
 }
 
-void
-execCmdline()
+static void
+setupTerminal(void)
 {
     int _stdin, _stdout, _stderr;
-    char *execname;
+    boolean_t ctty = B_FALSE;
+    char *data;
+    boolean_t open_stdin = getStdinStatus();
 
-    execname = execName(cmdline[0]);
+    if ((data = mdataGet("docker:tty")) != NULL) {
+        if (strcmp("true", data) == 0) {
+            ctty = B_TRUE;
+        }
+        free(data);
+    }
 
     dlog("SWITCHING TO /dev/zfd/*\n");
 
@@ -199,7 +200,7 @@ execCmdline()
             fatal(ERR_CLOSE, "failed to close(0): %s\n", strerror(errno));
         }
 
-        _stdin = open("/dev/zfd/0", O_RDONLY);
+        _stdin = open("/dev/zfd/0", O_RDWR);
         if (_stdin == -1) {
             if (errno == ENOENT) {
                 _stdin = open("/dev/null", O_RDONLY);
@@ -221,17 +222,49 @@ execCmdline()
         fatal(ERR_CLOSE, "failed to close(2): %s\n", strerror(errno));
     }
 
-    _stdout = open("/dev/zfd/1", O_WRONLY);
-    if (_stdout == -1) {
-        fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
-            strerror(errno));
-    }
+    if (ctty) {
+        /* Configure output as a controlling terminal */
+        _stdout = open("/dev/zfd/0", O_WRONLY);
+        if (_stdout == -1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
+                strerror(errno));
+        }
+        _stderr = open("/dev/zfd/0", O_WRONLY);
+        if (_stderr == -1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
+                strerror(errno));
+        }
 
-    _stderr = open("/dev/zfd/2", O_WRONLY);
-    if (_stderr == -1) {
-        fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/2: %s\n",
-            strerror(errno));
+        if (setsid() < 0) {
+            fatal(ERR_OPEN_CONSOLE, "failed to create process session: %s\n",
+                strerror(errno));
+        }
+        if (ioctl(_stdout, TIOCSCTTY, NULL) < 0) {
+            fatal(ERR_OPEN_CONSOLE, "failed set controlling tty: %s\n",
+                strerror(errno));
+        }
+    } else {
+        /* Configure individual pipe style output */
+        _stdout = open("/dev/zfd/1", O_WRONLY);
+        if (_stdout == -1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
+                strerror(errno));
+        }
+        _stderr = open("/dev/zfd/2", O_WRONLY);
+        if (_stderr == -1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/2: %s\n",
+                strerror(errno));
+        }
     }
+}
+
+static void
+execCmdline(strlist_t *cmdline, strlist_t *env, const char *workdir)
+{
+    custr_t *execname;
+
+    execname = execName(strlist_get(cmdline, 0), env, workdir);
+    dlog("EXECNAME \"%s\"\n", custr_cstr(execname));
 
     /*
      * We need to drop privs *after* we've setup /dev/zfd/[0-2] since that
@@ -239,20 +272,24 @@ execCmdline()
      */
     dlog("DROP PRIVS\n");
 
-    if (setgid(grp->gr_gid) != 0) {
-        fatal(ERR_SETGID, "setgid(%d): %s\n", grp->gr_gid, strerror(errno));
+    if (grp != NULL) {
+        if (setgid(grp->gr_gid) != 0) {
+            fatal(ERR_SETGID, "setgid(%d): %s\n", grp->gr_gid, strerror(errno));
+        }
     }
-    if (initgroups(pwd->pw_name, grp->gr_gid) != 0) {
-        fatal(ERR_INITGROUPS, "initgroups(%s,%d): %s\n", pwd->pw_name,
-            grp->gr_gid, strerror(errno));
-    }
-    if (setuid(pwd->pw_uid) != 0) {
-        fatal(ERR_SETUID, "setuid(%d): %s\n", pwd->pw_uid, strerror(errno));
+    if (pwd != NULL) {
+        if (initgroups(pwd->pw_name, grp->gr_gid) != 0) {
+            fatal(ERR_INITGROUPS, "initgroups(%s,%d): %s\n", pwd->pw_name,
+                grp->gr_gid, strerror(errno));
+        }
+        if (setuid(pwd->pw_uid) != 0) {
+            fatal(ERR_SETUID, "setuid(%d): %s\n", pwd->pw_uid, strerror(errno));
+        }
     }
 
-    execve(execname, cmdline, env);
+    execve(custr_cstr(execname), strlist_array(cmdline), strlist_array(env));
 
-    fatal(ERR_EXEC_FAILED, "execve(%s) failed: %s\n", cmdline[0],
+    fatal(ERR_EXEC_FAILED, "execve(%s) failed: %s\n", execname,
         strerror(errno));
 }
 
@@ -280,7 +317,7 @@ setupInterface(nvlist_t *data)
             if ((ret == 0) && (primary == B_TRUE)) {
                 ret = nvlist_lookup_string(data, "gateway", &gateway);
                 if (ret == 0) {
-                    (void) addRoute(iface, gateway, "0.0.0.0");
+                    (void) addRoute(iface, gateway, "0.0.0.0", 0);
                 }
             }
         }
@@ -290,48 +327,34 @@ setupInterface(nvlist_t *data)
 void
 setupInterfaces()
 {
-    const char *json;
-    int ret;
+    char *json;
     nvlist_t *data, *nvl;
     nvpair_t *pair;
 
-    json = mdataGet("sdc:nics");
-    if (json == NULL) {
+    if ((json = mdataGet("sdc:nics")) == NULL) {
         dlog("WARN no NICs found in sdc:nics\n");
         return;
     }
 
-    ret = nvlist_parse_json((char *)json, strlen(json), &nvl,
-        NVJSON_FORCE_INTEGER);
-    if (ret != 0) {
+    if (nvlist_parse_json(json, strlen(json), &nvl, NVJSON_FORCE_INTEGER,
+      NULL) != 0) {
         fatal(ERR_PARSE_JSON, "failed to parse nvpair json"
-            " for sdc:nics, code: %d\n", ret);
+            " for sdc:nics: %s\n", strerror(errno));
     }
+    free(json);
 
     for (pair = nvlist_next_nvpair(nvl, NULL); pair != NULL;
-        pair = nvlist_next_nvpair(nvl, pair)) {
-
+      pair = nvlist_next_nvpair(nvl, pair)) {
         if (nvpair_type(pair) == DATA_TYPE_NVLIST) {
-            ret = nvpair_value_nvlist(pair, &data);
-            if (ret != 0) {
+            if (nvpair_value_nvlist(pair, &data) != 0) {
                 fatal(ERR_PARSE_JSON, "failed to parse nvpair json"
-                    " for NIC code: %d\n", ret);
+                    " for NIC: %s\n", strerror(errno));
             }
             setupInterface(data);
         }
     }
 
     nvlist_free(nvl);
-}
-
-void
-mountLXProc()
-{
-    dlog("MOUNT /proc (lx_proc)\n");
-
-    if (mount("proc", "/proc", MS_DATA, "lx_proc", NULL, 0) != 0) {
-        fatal(ERR_MOUNT_LXPROC, "failed to mount /proc: %s\n", strerror(errno));
-    }
 }
 
 void
@@ -345,126 +368,62 @@ mountOSDevFD()
     }
 }
 
-void
-buildCmdline()
+static brand_t
+getBrand(void)
 {
-    int idx;
-    uint32_t cmd_len, entrypoint_len;
-    nvlist_t *nvlc, *nvle;
+    brand_t brand;
+    char *data;
 
-    getMdataArray("docker:cmd", &nvlc, &cmd_len);
-    getMdataArray("docker:entrypoint", &nvle, &entrypoint_len);
-
-    if ((entrypoint_len + cmd_len) < 1) {
-        /*
-         * No ENTRYPOINT or CMD, docker prevents this at the API but if
-         * something somehow gets in this state, it's an error.
-         */
-        fatal(ERR_NO_COMMAND, "No command specified\n");
-    }
-
-    cmdline = malloc((sizeof (char *)) * (entrypoint_len + cmd_len + 1));
-    if (cmdline == NULL) {
-        fatal(ERR_UNEXPECTED, "malloc() failed for cmdline[%d]: %s\n",
-            (entrypoint_len + cmd_len + 1), strerror(errno));
-    }
-
-    /*
-     * idx will be used for keeping track of where we are in cmdline. It
-     * should point to the next writable index.
-     */
-    idx = 0;
-    addValues(cmdline, &idx, ARRAY_ENTRYPOINT, nvle);
-    addValues(cmdline, &idx, ARRAY_CMD, nvlc);
-    /* cap it off with a NULL */
-    cmdline[idx] = NULL;
-
-    /*
-     * NOTE: we don't nvlist_free(nvlc,nvle); here because we need this memory
-     * for execve().
-     */
-}
-
-void
-getBrand()
-{
-    const char *data;
-
-    data = mdataGet("sdc:brand");
-    if (data == NULL) {
+    if ((data = mdataGet("sdc:brand")) == NULL) {
         fatal(ERR_NO_BRAND, "failed to determine brand\n");
     }
 
     if (strcmp("lx", data) == 0) {
-        brand = LX;
+        brand = BRAND_LX;
     } else if (strcmp("joyent-minimal", data) == 0) {
-        brand = JOYENT_MINIMAL;
+        brand = BRAND_JOYENT_MINIMAL;
     } else {
         fatal(ERR_INVALID_BRAND, "invalid brand: %s\n", data);
+	abort();
     }
+
+    free(data);
+    return (brand);
 }
 
-void
-getStdinStatus()
+static boolean_t
+getStdinStatus(void)
 {
     const char *data;
-    /* open_stdin is global */
 
     data = mdataGet("docker:open_stdin");
     if (data != NULL && strcmp("true", data) == 0) {
-        open_stdin = 1;
-    } else {
-        open_stdin = 0;
+        return (B_TRUE);
     }
+
+    return (B_FALSE);
 }
 
 void
 setupMtab()
 {
-    FILE *fp;
-    struct stat statbuf;
-    int write_mtab = 0;
-
     /*
      * Some images (such as busybox) link /etc/mtab to /proc/mounts so we only
      * write out /etc/mtab if it doesn't exist or is a regular file.
      */
-    dlog("CHECK /etc/mtab\n");
-    if (lstat("/etc/mtab", &statbuf) == -1) {
-        if (errno == ENOENT) {
-            write_mtab = 1;
-        } else {
-            /*
-             * This is not fatal because it's possible for an image to have
-             * messed things up so we can't touch /etc/mtab, that will only
-             * screw itself.
-             */
-            dlog("ERROR stat /etc/mtab: %s\n", strerror(errno));
-        }
-    } else {
-        if (S_ISREG(statbuf.st_mode)) {
-            write_mtab = 1;
-        }
+    dlog("REPLACE /etc/mtab\n");
+    if ((unlink("/etc/mtab") == -1) && (errno != ENOENT)) {
+        fatal(ERR_UNLINK_MTAB, "failed to unlink /etc/mtab: %s\n",
+            strerror(errno));
     }
-
-    if (write_mtab) {
-        dlog("WRITE /etc/mtab\n");
-        fp = fopen("/etc/mtab", "w");
-        if (fp == NULL) {
-            fatal(ERR_WRITE_MTAB, "failed to write /etc/mtab: %s\n",
-                strerror(errno));
-        }
-        if (fprintf(fp,
-            "/ / zfs rw 0 0\nproc /proc proc rw,noexec,nosuid,nodev 0 0\n")
-            < 0) {
-
-            /* just log because we don't want zone boot failing on this */
-            dlog("ERROR failed to fprintf() mtab line: %s\n", strerror(errno));
-        }
-        if (fclose(fp) == EOF) {
-            /* just log because we don't want zone boot failing on this */
-            dlog("ERROR failed to fclose() mtab file: %s\n", strerror(errno));
-        }
+    /*
+     * We ignore mkdir() return since either it's failing because of EEXIST or
+     * we'll fail to create symlink anyway.
+     */
+    (void) mkdir("/etc", 0755);
+    if (symlink("/proc/mounts", "/etc/mtab") == -1) {
+        fatal(ERR_WRITE_MTAB, "failed to symlink /etc/mtab: %s\n",
+            strerror(errno));
     }
 }
 
@@ -489,13 +448,14 @@ openIpadmHandle()
  * fatal().
  */
 void
-killIpmgmtd()
+killIpmgmtd(void)
 {
     int door_fd;
     struct door_info info;
     pid_t ipmgmtd_pid;
     char *should_kill;
     int status;
+    char door[MAXPATHLEN];
 
     should_kill = (char *) mdataGet("docker:noipmgmtd");
     if ((should_kill == NULL) || (strncmp(should_kill, "true", 4) != 0)) {
@@ -504,9 +464,10 @@ killIpmgmtd()
     }
 
     /* find the ipmgmtd pid through the door */
-    if ((door_fd = open(ipmgmtd_door, O_RDONLY)) < 0) {
+    makePath(IPMGMTD_DOOR, door, sizeof (door));
+    if ((door_fd = open(door, O_RDONLY)) < 0) {
         dlog("ERROR (skipping kill) failed to open ipmgmtd door(%s): %s\n",
-            ipmgmtd_door, strerror(errno));
+            door, strerror(errno));
         return;
     }
     if (door_info(door_fd, &info) != 0) {
@@ -652,8 +613,20 @@ raiseIf(char *ifname, char *addr, char *netmask)
     return (0);
 }
 
+static int
+prefixToNetmask(int pfx, struct sockaddr_in *netmask_sin)
+{
+    struct sockaddr *mask = (struct sockaddr *)netmask_sin;
+
+    if (plen2mask(pfx, AF_INET, mask) != 0) {
+        return (-1);
+    }
+
+    return (0);
+}
+
 int
-addRoute(const char *ifname, const char *gw, const char *dst)
+addRoute(const char *ifname, const char *gw, const char *dst, int dstpfx)
 {
     int idx;
     int len;
@@ -688,18 +661,19 @@ addRoute(const char *ifname, const char *gw, const char *dst)
     }
 
     netmask_sin->sin_family = AF_INET;
-    if ((inet_pton(AF_INET, "0.0.0.0", &(netmask_sin->sin_addr))) != 1) {
-        dlog(ROUTE_ADDR_MSG, "netmask", "0.0.0.0", ifname, strerror(errno));
+    if (prefixToNetmask(dstpfx, netmask_sin) != 0) {
+        WARNLOG("invalid route prefix length %d", dstpfx);
         return (-3);
     }
 
-    if ((idx = if_nametoindex(ifname)) == 0) {
-        dlog("WARN addRoute: error getting interface index for %s: %s\n",
-            ifname, strerror(errno));
-        return (-4);
+    if (ifname != NULL) {
+        if ((idx = if_nametoindex(ifname)) == 0) {
+            dlog("WARN addRoute: error getting interface index for %s: %s\n",
+                ifname, strerror(errno));
+            return (-4);
+        }
+        rtm->rtm_index = idx;
     }
-
-    rtm->rtm_index = idx;
 
     if ((sockfd = socket(PF_ROUTE, SOCK_RAW, AF_INET)) < 0) {
         dlog("WARN addRoute: error opening socket: %s\n", strerror(errno));
@@ -723,6 +697,91 @@ addRoute(const char *ifname, const char *gw, const char *dst)
     return (0);
 }
 
+static int
+setupStaticRoute(nvlist_t *route, const char *idx)
+{
+    boolean_t linklocal = B_FALSE;
+    char *slash;
+    char *dstraw = NULL;
+    char *dst;
+    char *gateway;
+    int dstpfx = -1;
+    int ret = -1;
+
+    if (nvlist_lookup_boolean_value(route, "linklocal", &linklocal) == 0 &&
+      linklocal) {
+        WARNLOG("route[%s]: linklocal routes not supported", idx);
+        goto bail;
+    }
+
+    if (nvlist_lookup_string(route, "dst", &dst) != 0) {
+        WARNLOG("route[%s]: route is missing \"dst\"", idx);
+        goto bail;
+    }
+
+    if (nvlist_lookup_string(route, "gateway", &gateway) != 0) {
+        WARNLOG("route[%s]: route is missing \"gateway\"", idx);
+        goto bail;
+    }
+
+    /*
+     * Parse the CIDR-notation destination specification.  For example:
+     * "172.20.5.1/24" becomes a destination of "172.20.5.1" with a prefix
+     * length of 24.
+     */
+    if ((dstraw = strdup(dst)) == NULL) {
+        WARNLOG("route[%s]: strdup failure", idx);
+        goto bail;
+    }
+
+    if ((slash = strchr(dstraw, '/')) == NULL) {
+        WARNLOG("route[%s]: dst \"%s\" invalid", idx, dst);
+        goto bail;
+    }
+    *slash = '\0';
+    dstpfx = atoi(slash + 1);
+    if (dstpfx < 0 || dstpfx > 32) {
+        WARNLOG("route[%s]: dst \"%s\" pfx %d invalid", idx, dst, dstpfx);
+        goto bail;
+    }
+
+    if ((ret = addRoute(NULL, gateway, dstraw, dstpfx)) != 0) {
+        WARNLOG("route[%s]: failed to add (%d)", idx, ret);
+        goto bail;
+    }
+
+    ret = 0;
+
+bail:
+    free(dstraw);
+    return (ret);
+}
+
+void
+setupStaticRoutes(void)
+{
+    nvlist_t *routes = NULL;
+    uint32_t nroutes = 0;
+    uint32_t i;
+
+    getMdataArray("sdc:routes", &routes, &nroutes);
+
+    for (i = 0; i < nroutes; i++) {
+        char idx[32];
+        nvlist_t *route;
+
+        (void) snprintf(idx, sizeof (idx), "%u", i);
+        if (nvlist_lookup_nvlist(routes, idx, &route) != 0) {
+            WARNLOG("route[%s] not found in array", idx);
+            continue;
+        }
+
+        (void) setupStaticRoute(route, idx);
+    }
+
+    nvlist_free(routes);
+}
+
 void
 setupNetworking()
 {
@@ -732,66 +791,13 @@ setupNetworking()
     (void) raiseIf("lo0", "127.0.0.1", "255.0.0.0");
 
     setupInterfaces();
+
+    /*
+     * Configure any additional static routes from NAPI networks:
+     */
+    setupStaticRoutes();
+
     closeIpadmHandle();
-}
-
-/*
- * Fork a child and run all networking-related commands in a chroot to /native.
- * This is for two reasons:
- *
- * 1) ipadm_door_call() looks for a door in /etc/, but ipmgmtd in this zone is
- *    running in native (non-LX) mode, so it opens its door in /native/etc.
- * 2) ipadm_set_addr() calls getaddrinfo(), which relies on the existence of
- *    /etc/netconfig. This file is present in /native/etc instead.
- */
-void
-chrootNetworking() {
-    pid_t pid;
-    int status;
-
-    dlog("INFO forking child for networking chroot\n");
-
-    pid = fork();
-    if (pid == -1) {
-        fatal(ERR_FORK_FAILED, "networking fork() failed: %s\n",
-            strerror(errno));
-    }
-
-    if (pid == 0) {
-        /* child */
-
-        if (chroot("/native") != 0) {
-            fatal(ERR_CHROOT_FAILED, "chroot() failed: %s\n", strerror(errno));
-        }
-
-        setupNetworking();
-
-        exit(0);
-    } else {
-        /* parent */
-        dlog("<%d> Network setup child\n", (int)pid);
-
-        while (wait(&status) != pid) {
-            /* EMPTY */;
-        }
-
-        if (WIFEXITED(status)) {
-            if (WEXITSTATUS(status) != 0) {
-                fatal(ERR_CHILD_NET, "<%d> Networking child exited: %d\n",
-                    (int)pid, WEXITSTATUS(status));
-            }
-
-            dlog("<%d> Networking child exited: %d\n",
-                (int)pid, WEXITSTATUS(status));
-
-        } else if (WIFSIGNALED(status)) {
-            fatal(ERR_CHILD_NET, "<%d> Networking child died on signal: %d\n",
-                (int)pid, WTERMSIG(status));
-        } else {
-            fatal(ERR_CHILD_NET,
-                "<%d> Networking child failed in unknown way\n", (int)pid);
-        }
-    }
 }
 
 long long
@@ -810,6 +816,7 @@ currentTimestamp()
 void
 waitIfAttaching()
 {
+    int did_put = 0;
     int display_freq;
     int done = 0;
     unsigned int loops = 0;
@@ -839,6 +846,11 @@ waitIfAttaching()
                 fatal(ERR_ATTACH_GETTIME, "Unable to determine current time\n");
             }
 
+            if (!did_put) {
+                mdataPut("__dockerinit_waiting_for_attach", timeout);
+                did_put = 1;
+            }
+
             if (loops == 1 || ((loops % display_freq) == 0)) {
                 dlog("INFO Waiting until %lld for attach, currently: %lld\n",
                     timestamp, now);
@@ -851,6 +863,10 @@ waitIfAttaching()
             (void) usleep(ATTACH_CHECK_INTERVAL);
         }
     }
+
+    if (did_put) {
+        mdataDelete("__dockerinit_waiting_for_attach");
+    }
 }
 
 int
@@ -859,8 +875,18 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     int fd;
     int ret;
     int tmpfd;
-    char **ipmgmtd_cmd;
-    char **ipmgmtd_env;
+    strlist_t *env = NULL;
+    strlist_t *cmdline = NULL;
+    custr_t *workdir = NULL;
+
+    /*
+     * Allocate objects for constructing the environment to pass to the
+     * process to be started.
+     */
+    if (strlist_alloc(&env, 0) != 0 || strlist_alloc(&cmdline, 0) != 0) {
+        fatal(ERR_NO_MEMORY, "failed to allocate string lists: %s",
+            strerror(errno));
+    }
 
     /* we'll write our log in /var/log */
     mkdir("/var", 0755);
@@ -891,25 +917,16 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
         fatal(ERR_FDOPEN_LOG, "failed to fdopen(2): %s\n", strerror(errno));
     }
 
-    getBrand();
-
-    switch (brand) {
-        case LX:
-            mountLXProc();
-            ipmgmtd_cmd = IPMGMTD_CMD_LX;
-            ipmgmtd_env = IPMGMTD_ENV_LX;
-            ipmgmtd_door = IPMGMTD_DOOR_LX;
+    switch (getBrand()) {
+        case BRAND_LX:
             setupMtab();
             break;
-        case JOYENT_MINIMAL:
+        case BRAND_JOYENT_MINIMAL:
             /*
              * joyent-minimal brand mounts /proc for us so we don't need to,
              * but without /proc being lxproc, we need to mount /dev/fd
              */
             mountOSDevFD();
-            ipmgmtd_cmd = IPMGMTD_CMD_OS;
-            ipmgmtd_env = IPMGMTD_ENV_OS;
-            ipmgmtd_door = IPMGMTD_DOOR_OS;
             /* no need for /etc/mtab updates here either */
             break;
         default:
@@ -923,13 +940,9 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     mkdir("/var/run/network", 0755);
 
     /* NOTE: will call fatal() if there's a problem */
-    runIpmgmtd(ipmgmtd_cmd, ipmgmtd_env);
+    runIpmgmtd();
 
-    if (brand == LX) {
-        chrootNetworking();
-    } else {
-        setupNetworking();
-    }
+    setupNetworking();
 
     /* kill ipmgmtd if we don't need it any more */
     killIpmgmtd();
@@ -939,10 +952,20 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     /* NOTE: all of these will call fatal() if there's a problem */
     setupHostname();
     getUserGroupData();
-    setupWorkdir();
-    buildCmdEnv();
-    buildCmdline();
-    getStdinStatus();
+    setupWorkdir(&workdir);
+
+    if (buildCmdEnv(env) != 0) {
+        fatal(ERR_UNEXPECTED, "buildCmdEnv() failed: %s\n", strerror(errno));
+    }
+    if (buildCmdline(cmdline) != 0) {
+        fatal(ERR_UNEXPECTED, "buildCmdline() failed: %s\n", strerror(errno));
+    }
+
+    /*
+     * In case we're going to read from stdin w/ attach, we want to open the zfd
+     * _now_ so it won't return EOF on reads.
+     */
+    setupTerminal();
     waitIfAttaching();
 
     /* cleanup mess from mdata-client */
@@ -960,7 +983,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
             strerror(errno));
     }
 
-    execCmdline();
+    execCmdline(cmdline, env, custr_cstr(workdir));
 
     /* NOTREACHED */
     abort();

@@ -39,7 +39,7 @@ reboot.
 The following options are valid for all commands.
 
 **-v**
-    Output verbose diagnostic information
+    Output verbose diagnostic information.
 
 **-h**
     Print help and exit.
@@ -70,7 +70,7 @@ The following options are valid for all commands.
 
         -l
 
-              Create an ethestub
+              Create an etherstub.
 
         -p *prop=value*,...
 
@@ -118,11 +118,11 @@ The following options are valid for all commands.
 
         -L
 
-              Don't list etherstubs
+              Don't list etherstubs.
 
         -p
 
-              Output in a parseable form
+              Output in a parseable form.
 
         -d *delim*
 

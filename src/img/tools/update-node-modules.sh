@@ -107,16 +107,18 @@ rm -rf node_modules/mkdirp/bin \
     node_modules/mkdirp/node_modules
 
 rm -rf node_modules/docker-registry-client/deps
-# Should have all these deps.
+# Have some of these deps at top-level.
 if [[ -d node_modules/docker-registry-client/node_modules ]]; then
-    rm -rf node_modules/docker-registry-client/node_modules/{.bin,bunyan,vasync,verror}
-    rmdir node_modules/docker-registry-client/node_modules
+    rm -rf node_modules/docker-registry-client/node_modules/{.bin,bunyan,vasync,verror,restify}
+    # Remove some bits not needed for runtime
+    rm -rf node_modules/docker-registry-client/node_modules/tough-cookie/{.editorconfig,generate-pubsuffix.js,public-suffix.txt,tough-cookie-deps.tsv}
 fi
 
 rm -rf node_modules/progbar/node_modules/assert-plus  # slight version mismatch
 rm -rf node_modules/progbar/node_modules/readable-stream # only needed for node 0.8
 
 rm -rf node_modules/imgmanifest/node_modules/assert-plus  # slight version mismatch
+rm -rf node_modules/imgmanifest/bin  # don't need this
 
 rm -rf node_modules/vasync/node_modules/verror # version mismatch
 
@@ -162,6 +164,11 @@ done
 rm -rf node_modules/restify/node_modules/.bin
 rm -rf node_modules/restify/bin
 rm -rf node_modules/restify/node_modules/mime/test.js
+# mime 1.3.4 added some build cruft, and a CLI I don't care about
+rm -rf node_modules/restify/node_modules/mime/build/
+rm -rf node_modules/restify/node_modules/mime/cli.js
+# lru-cache 2.6.2 added some junk
+rm -rf node_modules/restify/node_modules/lru-cache/{foo,bar}.js
 ls node_modules/restify/node_modules/semver/ \
         | grep -v package.json \
         | grep -v semver.js \

@@ -1,5 +1,16 @@
 #
-# Copyright (c) 2012, Joyent, Inc.  All rights reserved.
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright 2015 Joyent, Inc.
 #
 
 include Makefile.defs
@@ -60,6 +71,7 @@ zfs_send :	LIBS +=		-lsocket
 vmbundle :	CPPFLAGS +=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 sdc-on-tty :	CFLAGS +=	$(OPT_FLAG)
 zoneevent :	LIBS +=		-lnvpair -lsysevent
+sysevent :	LIBS +=		-lnvpair -lsysevent
 
 # These files will get run through jsstyle and jslint on 'make check'
 JS_CHECK_TARGETS=\
@@ -102,7 +114,8 @@ C_CHECK_TARGETS=\
 	vmunbundle.c \
 	zfs_recv.c \
 	zfs_send.c \
-	zoneevent.c
+	zoneevent.c \
+	sysevent.c
 
 #
 # Generic flags we apply by default to everything.
@@ -298,8 +311,6 @@ ZUTIL_BINDINGS.NODE =	$(ZUTIL_SRCDIR)/../lib/zutil_bindings.node
 #
 TARGETS = \
 	bootparams \
-	dockerinit/build/dockerexec \
-	dockerinit/build/dockerinit \
 	diskinfo \
 	disklayout \
 	disklist \
@@ -310,6 +321,7 @@ TARGETS = \
 	zfs_recv \
 	zfs_send \
 	zoneevent \
+	sysevent \
 	vm/node_modules/props.js \
 	$(EXPAT.NODE) \
 	$(DTRACE_PROVIDER.NODE) \
@@ -333,12 +345,33 @@ SMARTDC_LIB_TARGETS = \
 	ntp_config \
 	sdc-on-tty
 
-all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm $(SMARTDC_TARGETS) \
-	$(SMARTDC_LIB_TARGETS)
+#
+# Subdirectory management
+#
+SUBDIRS = dockerinit routeinfo
 
-install: all
+SUBDIRS_ENV = \
+	CTFCONVERT=$(CTFCONVERT) \
+	CTFMERGE=$(CTFMERGE) \
+	DESTDIR=$(DESTDIR)
+
+all : TARGET = all
+clean : TARGET = clean
+install : TARGET = install
+check : TARGET = lint
+
+$(SUBDIRS): FRC
+	@cd $@; pwd; $(MAKE) $(SUBDIRS_ENV) $(TARGET)
+
+
+all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm sysevent \
+	$(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) $(SUBDIRS)
+
+install: all $(SUBDIRS)
 	mkdir -p $(DESTDIR)/usr/bin
 	cp -p $(TARGETS) sysinfo nictagadm $(DESTDIR)/usr/bin
+	mkdir -p $(DESTDIR)/usr/sbin
+	cp -p sysevent $(DESTDIR)/usr/sbin
 	cp -p $(USR_LIB_TARGETS) $(DESTDIR)/usr/lib
 	mkdir -p $(DESTDIR)/smartdc/bin
 	cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin
@@ -438,15 +471,15 @@ install: all
 	    > $(DESTDIR)/usr/fw/node_modules/bunyan.js
 	mkdir -m 0755 -p $(DESTDIR)/usr/lib/sdc
 	cp -p net-boot-config $(DESTDIR)/usr/lib/sdc
+	cd routeinfo && $(MAKE) install $(SUBDIRS_ENV)
 
-check: $(JSLINT)
+check: $(JSLINT) $(SUBDIRS)
 	@echo "==> Running cstyle..."
 	@# cstyle doesn't echo as it goes so we add an echo to each line below
 	@(for file in $(C_CHECK_TARGETS); do \
 		echo $(PWD)/$$file; \
 		$(CSTYLE) $$file; \
 	done)
-	@(cd $(PWD)/dockerinit && $(MAKE) check)
 	@printf "\nC files ok!\n"
 	@printf "\n==> Running JavaScriptLint...\n"
 	@$(JSLINT) --nologo --conf=$(ROOT)/tools/jsl.node.conf \
@@ -485,14 +518,17 @@ manifest:
 	    | sed -e "s|^examples/|f usr/fw/etc/examples/|" \
 	    >> $(DESTDIR)/$(DESTNAME)
 
+.PHONY: mancheck_conf
+mancheck_conf:
+	cp mancheck.conf $(DESTDIR)/$(DESTNAME)
+
 $(JSLINT):
 	(cd $(ROOT); $(MAKE) jsl)
 
-clean:
+clean: $(SUBDIRS)
 	-rm -f $(TARGETS) $(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) *.o \
 	    $(CLEANFILES)
 	-rm -rf node-sqlite3/build
-	@(cd dockerinit && $(MAKE) clean)
 	cd $(LOCKFD_SRC_DIR) && $(MAKE) clean
 
 include Makefile.targ
@@ -508,14 +544,6 @@ disklayout: disklayout.js
 disklist: disklist.sh
 	cp disklist.sh disklist
 	chmod 0755 disklist
-
-dockerinit/build/dockerexec: dockerinit/src/dockerexec.c \
-	    dockerinit/src/docker-common.c
-	@(cd dockerinit && $(MAKE) build/dockerexec)
-
-dockerinit/build/dockerinit: dockerinit/src/dockerinit.c \
-	    dockerinit/src/docker-common.c
-	@(cd dockerinit && $(MAKE) build/dockerinit)
 
 mkzpool: mkzpool.js
 	cp mkzpool.js mkzpool
@@ -626,5 +654,6 @@ $(ZUTIL_BINDINGS.NODE): FRC
 		V8PLUS=$(PWD)/$(ZUTIL_V8PLUS_DIR) \
 		CTFCONVERT=$(CTFCONVERT) \
 		CTFMERGE=$(CTFMERGE)
+
 
 FRC:

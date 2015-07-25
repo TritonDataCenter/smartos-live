@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that default values don't change accidentally.
 //
@@ -18,9 +18,9 @@ var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 test('create VM with 2 nics', function(t) {
     var state = {brand: 'joyent-minimal'};
     vmtest.on_new_vm(t, image_uuid, {
+        alias: 'test-primary-flag-' + process.pid,
         autoboot: false,
         do_not_inventory: true,
-        alias: 'autozone-' + process.pid,
         nowait: true,
         nics: [
             {nic_tag: 'admin', ip: 'dhcp'},
@@ -206,9 +206,9 @@ test('create VM with 2 nics', function(t) {
 test('create VM with 2 nics (second primary)', function(t) {
     var state = {brand: 'joyent-minimal'};
     vmtest.on_new_vm(t, image_uuid, {
+        alias: 'test-primary-flag-' + process.pid,
         autoboot: false,
         do_not_inventory: true,
-        alias: 'autozone-' + process.pid,
         nowait: true,
         nics: [
             {nic_tag: 'admin', ip: 'dhcp'},
@@ -250,9 +250,9 @@ test('create VM with 3 nics (all primary)', function(t) {
         expect_create_failure: true
     };
     vmtest.on_new_vm(t, image_uuid, {
+        alias: 'test-primary-flag-' + process.pid,
         autoboot: false,
         do_not_inventory: true,
-        alias: 'autozone-' + process.pid,
         nowait: true,
         nics: [
             {nic_tag: 'admin', ip: 'dhcp', primary: true},
@@ -267,9 +267,9 @@ test('create VM with 3 nics (all primary)', function(t) {
 test('create VM with 3 nics (one primary, 2 false)', function(t) {
     var state = { brand: 'joyent-minimal' };
     vmtest.on_new_vm(t, image_uuid, {
+        alias: 'test-primary-flag-' + process.pid,
         autoboot: false,
         do_not_inventory: true,
-        alias: 'autozone-' + process.pid,
         nowait: true,
         nics: [
             {nic_tag: 'admin', ip: 'dhcp', primary: true},
@@ -310,9 +310,9 @@ test('create VM with 3 nics (one primary, 2 false)', function(t) {
 test('create VM with 3 nics (all false)', function(t) {
     var state = { brand: 'joyent-minimal' };
     vmtest.on_new_vm(t, image_uuid, {
+        alias: 'test-primary-flag-' + process.pid,
         autoboot: false,
         do_not_inventory: true,
-        alias: 'autozone-' + process.pid,
         nowait: true,
         nics: [
             {nic_tag: 'admin', ip: 'dhcp', primary: false},

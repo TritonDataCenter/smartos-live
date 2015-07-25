@@ -1,0 +1,148 @@
+#!/bin/bash
+#
+# This is a wrapper around `gtar` for extracting a TARBALL with given
+# COMPRESSION in a SUBDIR. The wrapper is to handle errors cases like this:
+#
+#   gtar: var/www/html: Cannot open: File exists
+#   gtar: Exiting with failure status due to previous errors
+#
+# These occur when a tarball including a *file*, e.g. "var/www/html", is
+# extracted over a tree having a *directory* at that same path. Docker pull
+# handling will remove the directory before extracting the file. `gtar` does
+# not have an appropriate option for this. Instead we watch for that error
+# message, delete the interfering path, and retry.
+#
+
+if [[ -n "$TRACE" ]]; then
+    export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -o xtrace
+fi
+set -o errexit
+set -o pipefail
+
+
+#---- globals
+
+STDERR_FILE=gtar-unlink-dir.stderr.log
+
+
+#---- support functions
+
+function fatal
+{
+    echo "$0: fatal error: $*" >&2
+    exit 1
+}
+
+function onexit
+{
+    rm -f $STDERR_FILE
+    exit $1
+}
+
+function usage
+{
+    echo "usage: gtar-unlink-dir SUBDIR TARBALL COMPRESSION [GTAR-ARGS...]" >&2
+    echo "" >&2
+    echo "'SUBDIR' is a path that is passed to gtar as '-C SUBDIR'." >&2
+    echo "'COMPRESSION' is one of 'none', 'gzip', 'bzip2' or 'xv'." >&2
+    echo "" >&2
+    echo "example:" >&2
+    echo "    cd /zones/foo && /usr/img/sbin/gtar-unlink-dir root /var/tmp/foo.tgz gzip" >&2
+}
+
+function gtar_unlink_dir
+{
+    local subdir tarball compression gtarargs
+    subdir="$1"
+    tarball="$2"
+    compression="$3"
+    gtarargs="$4"
+
+    local attempts=5
+    local status=
+    local uncompresscat=
+    local uncompressopt=
+
+    case $compression in
+    none)
+        uncompresscat=cat
+        ;;
+    gzip)
+        uncompresscat=cat
+        uncompressopt=z
+        ;;
+    bzip2)
+        uncompresscat=cat
+        uncompressopt=j
+        ;;
+    xz)
+        uncompresscat=xzcat
+        ;;
+    *)
+        fatal "unknown compression: $compression"
+    esac
+
+
+    while true; do
+        if [[ $attempts -le 0 ]]; then
+            return $status
+        fi
+        attempts=$(( $attempts - 1 ))
+
+        set +o errexit
+        $uncompresscat $tarball \
+            | gtar -C "$subdir" -x${uncompressopt}f - $gtarargs 2>$STDERR_FILE
+        status=$?
+        set -o errexit
+
+        if [[ $status -ne 0 ]]; then
+            recover=$(grep '^gtar: .*: Cannot open: File exists$' $STDERR_FILE || true)
+            if [[ -n "$recover" ]]; then
+                echo "$recover" \
+                    | sed -E 's/^gtar: (.*): Cannot open: File exists$/\1/' \
+                    | while read filename; do
+                    echo "gtar-unlink-dir: remove: $filename" >&2
+                    rm -rf $subdir/$filename
+                done
+                echo "gtar-unlink-dir: retry" >&2
+                continue
+            fi
+        fi
+
+        cat $STDERR_FILE
+        return $status
+    done
+}
+
+
+
+#---- mainline
+
+SUBDIR=$1
+if [[ -z "$SUBDIR" ]]; then
+    usage
+    exit 1
+fi
+shift
+
+TARBALL=$1
+if [[ -z "$TARBALL" ]]; then
+    usage
+    exit 1
+fi
+shift
+
+COMPRESSION=$1
+if [[ -z "$COMPRESSION" ]]; then
+    usage
+    exit 1
+fi
+shift
+
+GTARARGS="$*"
+
+
+trap 'onexit $?' EXIT
+
+gtar_unlink_dir "$SUBDIR" "$TARBALL" "$COMPRESSION" "$GTARARGS"

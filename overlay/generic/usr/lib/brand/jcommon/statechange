@@ -57,6 +57,7 @@ VNDADM=/usr/sbin/vndadm
 LOCKFILE=/etc/dladm/zone.lck
 SNAPSHOT_DIR=root/checkpoints
 OVERLAY_RULES=/var/run/smartdc/networking/overlay_rules.json
+DEFAULT_MTU=1500
 
 #
 # The following are the list of features that a corresponding brand may
@@ -262,11 +263,41 @@ setup_net()
 		# Create the vnic.
 		#
 
-		opt_str="-p zone=$ZONENAME"
+		opt_str="-p "
 
-		if [[ -n "$mtu" ]]; then
-			opt_str="$opt_str,mtu=$mtu"
+		#
+		# Traditionally we created VNICs without ever specifying
+		# the MTU. In the world before we supported any kind of
+		# jumbo frames, this is fine, because it would always
+		# match the physical which was 1500 by default for
+		# almost all of our devices. However, when we added
+		# support for mtu in nictagadm and changing it in boot
+		# up, we didn't properly assert the default MTU. This
+		# has led to VMs potentially getting the wrong MTU and
+		# ending up using jumbo frames when the network is
+		# expecting 1500 byte frames. Marx Brothers-esque comedy
+		# and despair ensues.
+		#
+		# Thus we always assert that if no MTU is specified by
+		# the VM, then we go back to the traditional 'default'
+		# value which is 1500.
+		#
+		if [[ -z "$mtu" ]]; then
+			mtu=$DEFAULT_MTU
 		fi
+
+		opt_str="$opt_str mtu=$mtu,"
+
+		#
+		# Always append the zone as the last property. This is
+		# to work around the fact that once we associate it with
+		# a zone, the zone will have a hold on the device and
+		# we'll not be able to delete it if a create fails due
+		# to a bad property (say an invalid MTU). Note if we
+		# have other properties, it is their responsibility to
+		# put a trailing comma on it.
+		#
+		opt_str="${opt_str}zone=$ZONENAME"
 
 		if [[ -n "$jst_vrrp" && -n $vrid ]]; then
 			# MAC addresses for VRRP vnics are determined by the VRID
@@ -278,6 +309,7 @@ setup_net()
 
 		[[ -n $vlan_id && $vlan_id != 0 ]] && \
 		    opt_str="$opt_str -v $vlan_id"
+
 
 		#
 		# Creating a VNIC in a zone is a multi-step process internally.

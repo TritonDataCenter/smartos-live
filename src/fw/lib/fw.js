@@ -60,6 +60,7 @@ var DIRECTIONS = ['from', 'to'];
 var RULE_PATH = '/var/fw/rules';
 var IPF_CONF = '%s/config/ipf.conf';
 var IPF_CONF_OLD = '%s/config/ipf.conf.old';
+var NOT_RUNNING_MSG = 'Could not find running zone';
 // VM fields that affect filtering
 var VM_FIELDS = [
     'firewall_enabled',
@@ -155,9 +156,9 @@ function dedupRules(list1, list2) {
 function startIPF(opts, log, callback) {
     var ipfConf = util.format(IPF_CONF, opts.zonepath);
 
-    return mod_ipf.start(opts.vm, log, function (err) {
+    return mod_ipf.start(opts.vm, log, function (err, res) {
         if (err) {
-            return callback(err);
+            return callback(err, res);
         }
         return mod_ipf.reload(opts.vm, ipfConf, log, callback);
     });
@@ -1254,8 +1255,14 @@ function restartFirewalls(vms, uuids, log, callback) {
 
             // Start the firewall just in case
             return startIPF({ vm: uuid, zonepath: vms.all[uuid].zonepath },
-                log, function (err) {
+                log, function (err, res) {
                     restarted.push(uuid);
+                    if (err && zoneNotRunning(res)) {
+                        // An error starting the firewall due to the zone not
+                        // running isn't really an error
+                        return cb();
+                    }
+
                     return cb(err);
                 });
         }
@@ -1402,6 +1409,15 @@ function applyChanges(opts, log, callback) {
 
         return callback(null, toReturn);
     });
+}
+
+
+/**
+ * Examine the stderr from an ipf command and return true if the zone
+ * wasn't running at the time
+ */
+function zoneNotRunning(res) {
+    return res && res.stderr && res.stderr.indexOf(NOT_RUNNING_MSG) !== -1;
 }
 
 
@@ -1960,8 +1976,7 @@ function vmStatus(opts, callback) {
     return mod_ipf.status(opts.uuid, log, function (err, res) {
         if (err) {
             // 'No such device' is returned when the zone is down
-            if (res && res.stderr
-                && res.stderr.indexOf('Could not find running zone') !== -1) {
+            if (zoneNotRunning(res)) {
                 log.debug({ running: false }, 'status: finish');
                 return callback(null, { running: false });
             }
@@ -1996,7 +2011,7 @@ function vmStats(opts, callback) {
         if (err) {
             if (res && res.stderr) {
                 // Zone is down
-                if (res.stderr.indexOf('Could not find running zone') !== -1) {
+                if (zoneNotRunning(res)) {
                     log.debug('stats: finish: zone not running');
                     return callback(new verror.VError(
                         'Firewall is not running for VM "%s"', opts.uuid));

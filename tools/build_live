@@ -21,8 +21,9 @@
 #
 
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Copyright (c) 2013 Joyent, Inc.  All rights reserved.
 # Use is subject to license terms.
+#
+# Copyright 2015 Joyent, Inc.
 
 ROOT=`pwd`
 CUSTOMIZE_SCRIPT=${ROOT}/tools/customize
@@ -32,7 +33,8 @@ BUILDER=${ROOT}/tools/builder/builder
 SCANNER=${ROOT}/tools/scanner
 PWGEN=${ROOT}/tools/pwgen
 GET_STATUS=${ROOT}/tools/build_etcrelease
-CHECK_DIR="${ROOT}/tools/checks"
+MANCHECK="${ROOT}/tools/mancheck/mancheck"
+MANCHECK_CONF_D="${ROOT}/mancheck.conf.d"
 
 BUILDSTAMP=$(cat ${ROOT}/proto/buildstamp)
 if [[ -z ${BUILDSTAMP} ]]; then
@@ -296,8 +298,38 @@ function fatal_error
 
 function run_checks
 {
-    ${CHECK_DIR}/mancheck -f ${MANIFEST} -s
-    [[ $? -eq 0 ]] || fatal_error "you are not mancheck -s clean"
+    mancheck_args=""
+
+    for f in "${MANCHECK_CONF_D}"/*.mancheck.conf; do
+        if [[ -f "${f}" ]]; then
+            mancheck_args="${mancheck_args} -c ${f}"
+        fi
+    done
+
+    if ! ${MANCHECK} -f ${MANIFEST} -s ${mancheck_args}; then
+        fatal_error "you are not mancheck -s clean"
+    fi
+}
+
+function safe_update_symlink
+{
+    if [[ -z "${1}" || -z "${2}" ]]; then
+        fatal_error "safe_update_symlink args: <source_file> <target>"
+    fi
+
+    if ! (cd "$(dirname "${2}")" && test -e "${1}"); then
+        fatal_error "symlink target \"${1}\" does not appear to exist"
+    fi
+
+    if [[ ! -L "${2}" ]]; then
+        if [[ -e "${2}" ]]; then
+            fatal_error "\"${2}\" exists, but is not a symlink"
+        fi
+    fi
+
+    if ! /usr/bin/rm -f "${2}" || ! /usr/bin/ln -s "${1}" "${2}"; then
+        fatal_error "failed to create symlink \"$2\" -> \"$1\""
+    fi
 }
 
 # Create tmp dir to do the work in
@@ -335,6 +367,12 @@ if [ $ERROR -eq 0 ]; then
       > ${OUT_DIR}/${BOOT_ARCHIVE_64}.hash
     echo "${BUILDSTAMP}" > ${OUT_DIR}/buildstamp
     (cd ${OUT_DIR} && gtar -zcf ${PREFIX}.tgz ${PREFIX})
+
+    #
+    # Maintain "latest" symlinks to whichever live image we just assembled.
+    #
+    safe_update_symlink "${PREFIX}" "${OUT_DIR}/platform-latest"
+    safe_update_symlink "${PREFIX}.tgz" "${OUT_DIR}/platform-latest.tgz"
 fi
 
 if [ $ERROR -eq 1 ]; then

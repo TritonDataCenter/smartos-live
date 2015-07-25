@@ -249,8 +249,15 @@ function find_config_paths()
     USB_CONFIG="${USB_MNT}/config"
 
     if [[ -f ${USB_CONFIG_COPY} ]]; then
-        HAVE_USB=true
-        CONF_FILES="${USB_CONFIG_COPY} ${USB_CONFIG}"
+        # SmartOS w/o SDC does not have /mnt/usbkey, so when smartos=true, we'll
+        # not try to mount / umount a USB Key that won't exist. (OS-4357)
+        if [[ -n $(/usr/bin/bootparams | /usr/bin/grep "^smartos=true" 2>/dev/null) ]]; then
+            HAVE_USB=
+            CONF_FILES="${USB_CONFIG_COPY}"
+        else
+            HAVE_USB=true
+            CONF_FILES="${USB_CONFIG_COPY} ${USB_CONFIG}"
+        fi
         CONF=${USB_CONFIG_COPY}
         verbose "Using config files: ${CONF_FILES}"
     elif [[ -f ${USB_CONFIG} ]]; then
@@ -885,8 +892,8 @@ load_sdc_config
 find_config_paths
 trap cleanup EXIT
 
-# If we netbooted, ensure that the tags conf file is initialized
-[[ -z ${HAVE_USB} ]] && tag_conf_init
+# If we have no /usbkey, ensure that the tags conf file is initialized
+[[ -z ${HAVE_USB} && ! -f ${USB_CONFIG_COPY} ]] && tag_conf_init
 
 for c in $CMD_LIST; do
     if [[ "$1" -eq $c ]]; then

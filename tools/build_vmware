@@ -1,6 +1,5 @@
 #!/bin/bash
 #
-#
 # This file and its contents are supplied under the terms of the
 # Common Development and Distribution License ("CDDL"), version 1.0.
 # You may only use this file in accordance with the terms of version
@@ -12,58 +11,123 @@
 #
 
 #
-# Copyright (c) 2013, Joyent, Inc. All rights reserved.
-# Copyright (c) 2014 Elysium Digital, L.L.C.
+# Copyright 2015 Joyent, Inc.
 #
 
 #
 # Generates the SmartOS vmware image
 #
 
+set -o nounset
 shopt -s xpg_echo
 set -o pipefail
 export PATH=/usr/bin:/opt/local/bin
 
-function fail
+bi_wsroot=$(cd $(dirname $0)/../; pwd)
+bi_arg0=$(basename $0)
+bi_type=${bi_arg0/build_/}
+
+. "${bi_wsroot}/tools/lib/build_common.sh"
+
+bi_template_name='SmartOS.vmwarevm'
+bi_usb_image=
+
+function bi_ensure_usb_image
 {
-	local msg="$*"
-	[[ -z "$msg" ]] && msg="failed"
-	exit 1
+	if [[ -z "${bi_platform_name}" ]]; then
+		fail "\$bi_platform_name not set"
+	fi
+	bi_usb_image="output-usb/${bi_platform_name}.usb.bz2"
+
+	bi_emit_start 'Looking for USB image'
+	if [[ -f "${bi_usb_image}" ]]; then
+		bi_emit_done
+		bi_emit_info 'Using prebuilt USB image' \
+		    "$(basename ${bi_usb_image})"
+		return
+	else
+		bi_emit_done
+		bi_emit_info 'USB image not found; must build' \
+		    "${bi_usb_image}"
+	fi
+
+	bi_emit_start 'Building USB image'
+	bi_emit_newline
+	if ! "${bi_wsroot}/tools/build_usb"; then
+		fail 'Failed to build USB image'
+	fi
+	bi_emit_done
+
+	bi_emit_start 'Looking for USB image (again)'
+	if [[ ! -f "${bi_usb_image}" ]]; then
+		fail 'USB image not found after build.  Aborting.'
+	fi
+	bi_emit_done
+	bi_emit_info 'Using USB image' "$(basename ${bi_usb_image})"
 }
 
-cd $(dirname $0)/.. || fail "failed to cd to $(dirname $0)"
+function bi_ensure_fresh_template
+{
+	bi_emit_start 'Create output directory'
+	if ! mkdir -p "${bi_output_dir}"; then
+		fail "could not mkdir ${bi_output_dir}"
+	fi
+	bi_emit_done
 
-[[ -f output/buildstamp ]] || fail "failed to find output/buildstamp"
-buildstamp="$(cat output/buildstamp)"
-usb_image="output-usb/platform-${buildstamp}.usb.bz2"
+	if [[ -d "${bi_output_dir}/${bi_template_name}" ]]; then
+		bi_emit_start 'Removing existing template directory'
+		if ! rm -rf "${bi_output_dir}/${bi_template_name}"; then
+			fail 'could not remove directory'
+		fi
+		bi_emit_done
+	fi
 
-echo "Looking for USB image..."
-if [[ ! -f ${usb_image} ]]; then
-	echo "Building USB image to embed in vmware image..."
-	(tools/build_usb) || fail "Failed to build USB image"
+	bi_emit_start 'Copying VMware template into output directory'
+	if ! cp -r "${bi_wsroot}/tools/${bi_template_name}" \
+	    "${bi_output_dir}/${bi_template_name}"; then
+		fail 'could not copy VMware template'
+	fi
+	bi_emit_done
+}
+
+function bi_unpack_usb_image
+{
+	bi_emit_start 'Unpacking USB image into template'
+	if ! bzip2 --keep --decompress --stdout "${bi_usb_image}" \
+	    >"${bi_output_dir}/${bi_template_name}/smartos.img"; then
+		fail 'could not unpack USB image'
+	fi
+	bi_emit_done
+}
+
+function bi_generate_vmware_tar
+{
+	local output_name
+	local output_file
+
+	output_name=$(echo "${bi_platform_name}" | sed 's/^platform/smartos/')
+	output_file="${output_name}.vmwarevm.tar.bz2"
+
+	bi_emit_start 'Generating VMware tarball'
+	if ! (cd "${bi_output_dir}" && gtar -jcf "${output_file}" \
+	    "${bi_template_name}"); then
+		fail 'gtar failed'
+	fi
+	bi_emit_done
+
+	bi_emit_info 'VMware Output' "$(pwd)/${bi_output_dir}/${output_file}"
+}
+
+
+#
+# Get us to the root of the workspace
+#
+if ! cd ${bi_wsroot}; then
+	fail "could not chdir to workspace root \"${bi_wsroot}\""
 fi
 
-[[ -f ${usb_image} ]] || fail "failed to find ${usb_image}"
-echo "Using ${usb_image}..."
-
-echo "Creating output-vmware/ ..."
-mkdir -p output-vmware || fail "failed to create output-vmware"
-
-if [[ -d output-vmware/SmartOS.vmwarevm ]]; then
-	echo "Removing existing template..."
-	rm -r output-vmware/SmartOS.vmwarevm || \
-	    fail "failed to remove existing template directory"
-fi
-echo "Copying vmware template into place..."
-cp -r tools/SmartOS.vmwarevm/ output-vmware/ || \
-    fail "failed to copy vmware template"
-
-echo "Copying USB image into place..."
-bzip2 -d < output-usb/platform-${buildstamp}.usb.bz2 \
-    > output-vmware/SmartOS.vmwarevm/smartos.img || \
-    fail "failed to decompress output-usb/platform-${buildstamp}.usb.bz2"
-echo "Creating compressed tarball suitable for upload..."
-(cd output-vmware && \
-    gtar -jcf smartos-${buildstamp}.vmwarevm.tar.bz2 SmartOS.vmwarevm) || \
-    fail "failed creating output-vmware/smartos-${buildstamp}.vmwarevm.tar.bz2"
-echo "Done!"
+bi_get_build
+bi_ensure_usb_image
+bi_ensure_fresh_template
+bi_unpack_usb_image
+bi_generate_vmware_tar

@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // NOTE: we use 169.254.169.x as *non-Private* here because it's not in the
 // designated private ranges we're concerned with. It may cause problems in
@@ -21,8 +21,8 @@ var vm_uuid;
 
 var PAYLOADS = {
     create: {
+        alias: 'test-update-' + process.pid,
         image_uuid: image_uuid,
-        alias: 'autotest' + process.pid,
         do_not_inventory: true
     }, add_net0: {
         add_nics: [

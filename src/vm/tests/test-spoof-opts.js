@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // Test setting antispoof opts on nics
 //
@@ -78,10 +78,10 @@ function brand_test(brand, image, t) {
     var state = { brand: brand };
     var ips = ['10.3.0.200', '10.4.0.200', '10.5.0.200', '10.6.0.200'];
     var payload = {
+        alias: 'test-spoof-opts-' + process.pid,
         autoboot: true,
         brand: brand,
         do_not_inventory: true,
-        alias: 'autozone-' + process.pid,
         nowait: false,
         nics: [
             {

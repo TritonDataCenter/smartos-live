@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that default values don't change accidentally.
 //
@@ -17,6 +17,7 @@ var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 test('check autoboot when autoboot=true', function(t) {
     state = {brand: 'joyent-minimal'};
     vmtest.on_new_vm(t, image_uuid, {
+        alias: 'test-autoboot-' + process.pid,
         do_not_inventory: true,
         autoboot: true
     }, state, [
@@ -45,6 +46,7 @@ test('check autoboot when autoboot=true', function(t) {
 test('check autoboot when autoboot=false', function(t) {
     state = {brand: 'joyent-minimal'};
     vmtest.on_new_vm(t, image_uuid, {
+        alias: 'test-autoboot-' + process.pid,
         do_not_inventory: true,
         autoboot: false
     }, state, [
@@ -73,6 +75,7 @@ test('check autoboot when autoboot=false', function(t) {
 test('check kvm autoboot when autoboot=true', function(t) {
     state = {brand: 'kvm'};
     vmtest.on_new_vm(t, null, {
+        alias: 'test-autoboot-' + process.pid,
         brand: 'kvm',
         do_not_inventory: true,
         autoboot: true
@@ -102,6 +105,7 @@ test('check kvm autoboot when autoboot=true', function(t) {
 test('check kvm autoboot when autoboot=false', function(t) {
     state = {brand: 'kvm'};
     vmtest.on_new_vm(t, null, {
+        alias: 'test-autoboot-' + process.pid,
         brand: 'kvm',
         do_not_inventory: true,
         autoboot: false

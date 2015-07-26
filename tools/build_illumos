@@ -1,6 +1,17 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash
 #
-# Copyright (c) 2013 Joyent Inc.
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright 2015 Joyent, Inc.
 #
 
 # Setup for building stuff!
@@ -9,11 +20,13 @@ unset CXX
 ROOT=`pwd`
 export PATH=/opt/onbld/bin:/sbin:/usr/sbin:/usr/bin:/usr/ccs/bin:/opt/SUNWspro/bin:/opt/local/bin
 
-if [[ -z $BUILDSTAMP ]]; then
-  BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`; export BUILDSTAMP
-fi
 mkdir -p ${ROOT}/proto
-echo ${BUILDSTAMP} > ${ROOT}/proto/buildstamp
+if [[ ! -f ${ROOT}/proto/buildstamp ]]; then
+    if [[ -z $BUILDSTAMP ]]; then
+        BUILDSTAMP=`TZ=UTC date "+%Y%m%dT%H%M%SZ"`; export BUILDSTAMP
+    fi
+    echo ${BUILDSTAMP} > ${ROOT}/proto/buildstamp
+fi
 
 echo "==> Building Illumos (${BUILDSTAMP})"
 
@@ -40,7 +53,4 @@ printf "\nRunning illumos nightly(1).\n"
 printf "This will take a while.\n"
 
 time ./nightly illumos.sh
-res=$?
-# Post-build joyent specific changes to the proto area
-
-exit $res
+exit $?

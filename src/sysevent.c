@@ -87,9 +87,14 @@ process_event(sysevent_t *ev, const char *channel)
 	    nvlist_add_string(nvl, "publisher", publisher) != 0 ||
 	    nvlist_add_string(nvl, "class", class) != 0 ||
 	    nvlist_add_string(nvl, "subclass", subclass) != 0 ||
-	    nvlist_add_int32(nvl, "pid", pid) != 0 ||
-	    nvlist_add_nvlist(nvl, "data", evnvl) != 0) {
+	    nvlist_add_int32(nvl, "pid", pid) != 0) {
 		warn("nvlist_add_* nvl");
+		goto done;
+	}
+
+	if (evnvl != NULL &&
+	    nvlist_add_nvlist(nvl, "data", evnvl) != 0) {
+		warn("nvlist_add_nvlist evnvl");
 		goto done;
 	}
 

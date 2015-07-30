@@ -52,7 +52,7 @@ The following options are valid for all commands.
 
     The following subcommands and options are supported:
 
-      add [-v] [-l] [-p prop=value,...] <name> [mac]
+      add [-l] [-p prop=value,...] <name> [mac]
 
         Create a new nic tag on the system, named *name*. If the '-l' option is
         specified, the nic tag will cause an **etherstub** to be created which
@@ -64,10 +64,6 @@ The following options are valid for all commands.
         optional final argument. For a full list of valid properties, see the
         section PROPERTIES.
 
-        -v
-
-              See GENERAL OPTIONS above.
-
         -l
 
               Create an etherstub.
@@ -78,7 +74,7 @@ The following options are valid for all commands.
               values.
 
 
-      delete [-v] [-f] <name>
+      delete [-f] <name>
 
         Deletes an existing tag on the system, unless it's in use by any VMs.
         The use of -f skips this check.
@@ -87,11 +83,8 @@ The following options are valid for all commands.
 
                Delete the nic tag regardless of existing VMs.
 
-         -v
 
-              See GENERAL OPTIONS above.
-
-      exists [-lv] <name> [name1]...
+      exists [-l] <name> [name1]...
 
          Tests to see if a nic tag exists with *name*. If it exists, the
          program exits 0, otherwise it exists non-zero.
@@ -100,17 +93,10 @@ The following options are valid for all commands.
 
               Only emit the names of nic tags that don't exist to stderr.
 
-         -v
 
-              See GENERAL OPTIONS above.
-
-      list [-v]  [-l | -L] [-p] [-d delim]
+      list [-l | -L] [-p] [-d delim]
 
         List nic tags on the system.
-
-        -v
-
-              See GENERAL OPTIONS above.
 
         -l
 
@@ -129,16 +115,13 @@ The following options are valid for all commands.
               Sets the output delimeter to *delim*. The default delimiter is
               ':'.
 
-      update [-v] [-p prop=value,...] <name> [mac]
+
+      update [-p prop=value,...] <name> [mac]
 
         Updates the properties of a nic tag. For a full list of properties see
         the section PROPERTIES. For backwards compatibility, the mac address
         may be specified as an optional final argument. If used, it should be
         specified via -p.
-
-        -v
-
-              See GENERAL OPTIONS above.
 
         -p *prop=value*,...
 

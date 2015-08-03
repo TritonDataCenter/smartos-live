@@ -500,6 +500,7 @@ f usr/vm/node_modules/openonerrlogger.js 0444 root bin
 f usr/vm/node_modules/props.js 0444 root bin
 f usr/vm/node_modules/proptable.js 0444 root bin
 f usr/vm/node_modules/qmp.js 0444 root bin
+f usr/vm/node_modules/sysevent-stream.js 0444 root bin
 f usr/vm/node_modules/utils.js 0444 root bin
 d usr/vm/node_modules/vasync 0755 root root
 d usr/vm/node_modules/vasync/lib 0755 root root
@@ -792,6 +793,7 @@ f usr/node/0.10/node_modules/lockfd_binding.node 0444 root bin
 f usr/node/0.10/node_modules/microtime.node 0444 root bin
 f usr/node/0.10/node_modules/net-boot-config.js 0444 root bin
 f usr/node/0.10/node_modules/onlyif.js 0444 root bin
+f usr/node/0.10/node_modules/linestream.js 0444 root bin
 f usr/node/0.10/node_modules/sprintf.js 0444 root bin
 f usr/node/0.10/node_modules/sqlite3.js 0444 root bin
 f usr/node/0.10/node_modules/sqlite3_trace.js 0444 root bin

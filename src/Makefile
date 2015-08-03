@@ -81,6 +81,7 @@ JS_CHECK_TARGETS=\
 	vm/sbin/*.js \
 	vm/node_modules/{dladm,expander,proptable,utils,VM,qmp,openonerrlogger}.js \
 	vm/node_modules/vmload/*.js \
+	vm/node_modules/sysevent-stream.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
 	vm/common/nictag.js \

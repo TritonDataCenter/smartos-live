@@ -1,52 +1,45 @@
+var EventEmitter = require('events').EventEmitter;
 var util = require('util');
-var spawn = require('child_process').spawn;
-var common = require('./common');
 
-var ZWatch = module.exports = function () {
-    process.EventEmitter.call(this);
-};
+var SyseventStream = require('/usr/vm/node_modules/sysevent-stream');
 
-util.inherits(ZWatch, process.EventEmitter);
+module.exports = ZWatch;
 
-ZWatch.prototype.start = function (log) {
+function ZWatch(logger) {
     var self = this;
 
-    var handler = function (event) {
-        if (event.newstate === 'shutting_down'
-            && event.oldstate === 'running') {
+    // become an event emitter
+    EventEmitter.call(self);
 
-            event.cmd = 'stop';
-        } else if (event.newstate === 'running'
-            && event.oldstate === 'ready') {
-
-            event.cmd = 'start';
-        } else {
-            event.cmd = 'unknown';
-        }
-
-        self.emit('zone_transition', event);
+    // create a Sysevent event emitter
+    var opts = {
+        logger: logger,
+        class: 'status',
+        channel: 'com.sun:zones:status'
     };
+    self.se = new SyseventStream(opts);
+    self.se.on('readable', function () {
+        var ev;
+        while ((ev = self.se.read()) !== null) {
+            var data = ev.data;
+            if (data.newstate === 'shutting_down'
+                && data.oldstate === 'running') {
 
-    function start() {
-        log.info('Starting zwatch');
-        delete self.zwatch;
-        var zwatch = self.zwatch = spawn('/usr/vm/sbin/zoneevent');
+                data.cmd = 'stop';
+            } else if (data.newstate === 'running'
+                && data.oldstate === 'ready') {
 
-        zwatch.stdout.on('data',
-            common.createJsonChunkParser(log, handler, '\n'));
+                data.cmd = 'start';
+            } else {
+                data.cmd = 'unknown';
+            }
 
-        zwatch.stderr.on('data', function (data) {
-            log.error('error: ' + data.toString());
-        });
+            self.emit('zone_transition', data);
+        }
+    });
+}
+util.inherits(ZWatch, EventEmitter);
 
-        zwatch.on('exit', function (code) {
-            log.info('Detected zoneevent exiting (%d)', code);
-        });
-    }
-
-    start();
-};
-
-ZWatch.prototype.stop = function () {
-    this.zwatch.kill();
+ZWatch.prototype.stop = function stop() {
+    return this.se.stop();
 };

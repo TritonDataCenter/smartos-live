@@ -38,10 +38,10 @@ var net = require('net');
 var VM = require('/usr/vm/node_modules/VM');
 var onlyif = require('/usr/node/node_modules/onlyif');
 var path = require('path');
-var spawn = cp.spawn;
 var http = require('http');
 var Qmp = require('/usr/vm/node_modules/qmp').Qmp;
 var qs = require('querystring');
+var SyseventStream = require('/usr/vm/node_modules/sysevent-stream');
 var url = require('url');
 var util = require('util');
 
@@ -702,6 +702,7 @@ function updateZoneStatus(ev)
 {
     var load_fields;
     var reprovisioning = false;
+    ev = ev.data;
 
     if (! ev.hasOwnProperty('zonename') || ! ev.hasOwnProperty('oldstate')
         || ! ev.hasOwnProperty('newstate') || ! ev.hasOwnProperty('when')) {
@@ -941,33 +942,16 @@ function updateZoneStatus(ev)
 
 function startZoneWatcher(callback)
 {
-    var chunks;
-    var buffer = '';
-    var watcher;
 
-    watcher = spawn('/usr/vm/sbin/zoneevent', [], {'customFds': [-1, -1, -1]});
-
-    log.info('zoneevent running with pid ' + watcher.pid);
-
-    watcher.stdout.on('data', function (data) {
-        var chunk;
-        var obj;
-
-        buffer += data.toString();
-        chunks = buffer.split('\n');
-        while (chunks.length > 1) {
-            chunk = chunks.shift();
-            obj = JSON.parse(chunk);
-            callback(obj);
-        }
-        buffer = chunks.pop();
+    var se = new SyseventStream({
+        class: 'status',
+        logger: log,
+        channel: 'com.sun:zones:status'
     });
-
-    watcher.stdin.end();
-
-    watcher.on('exit', function (code) {
-        log.info('zoneevent watcher exited.');
-        watcher = null;
+    se.on('readable', function () {
+        var ev;
+        while ((ev = se.read()) !== null)
+            callback(ev);
     });
 }
 

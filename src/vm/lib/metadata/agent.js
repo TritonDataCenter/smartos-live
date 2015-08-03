@@ -210,7 +210,7 @@ MetadataAgent.prototype.startDeletedZonesPurger = function () {
 
 MetadataAgent.prototype.start = function () {
     var self = this;
-    var zwatch = this.zwatch = new ZWatch();
+    var zwatch = this.zwatch = new ZWatch(self.log);
     self.createServersOnExistingZones();
     self.startDeletedZonesPurger();
 
@@ -241,8 +241,6 @@ MetadataAgent.prototype.start = function () {
             }
         }
     });
-
-    zwatch.start(self.log);
 };
 
 MetadataAgent.prototype.stop = function () {

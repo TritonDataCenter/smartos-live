@@ -31,15 +31,6 @@ strpath_append(custr_t *path, const char *inp)
 	unsigned int i = 0;
 	unsigned slash_count = 0;
 
-	/*
-	 * Work around errant behaviour where a previously unused custr_t
-	 * returns NULL via custr_cstr(), when it should return a pointer to
-	 * the empty string, i.e. "".
-	 */
-	if (custr_append(path, "") != 0) {
-		return (-1);
-	}
-
 	if (pathl > 0) {
 		/*
 		 * If the existing path does not end in a slash, we must

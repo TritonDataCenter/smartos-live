@@ -49,7 +49,7 @@ split_on(const char *line, char delim, strlist_t *sl)
 	int error = 0;
 	const char *c = line;
 
-	if (custr_alloc(&cu) != 0 || custr_append(cu, "") != 0) {
+	if (custr_alloc(&cu) != 0) {
 		error = errno;
 		goto out;
 	}
@@ -91,7 +91,7 @@ parse_line(const char *line, strlist_t *sl)
 	const char *c = line;
 	int error = 0;
 
-	if (custr_alloc(&cu) != 0 || custr_append(cu, "") != 0) {
+	if (custr_alloc(&cu) != 0) {
 		error = errno;
 		goto out;
 	}

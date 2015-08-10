@@ -92,7 +92,8 @@ typedef enum {
     ERR_ATTACH_TIMEDOUT,
     ERR_MDATA_TOO_OLD,
     ERR_UNLINK_MTAB,
-    ERR_NO_MEMORY
+    ERR_NO_MEMORY,
+    ERR_MKDIR
 } dockerinit_err_t;
 
 typedef enum {

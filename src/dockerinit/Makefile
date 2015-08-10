@@ -57,7 +57,7 @@ OBJDIR :=	obj
 
 BUILD_PROGS =	$(PROGRAMS:%=$(BUILD)/%)
 
-LIBS =		$(JSON_LIBS) $(MDATA_LIBS) $(NET_LIBS)
+LIBS =		$(JSON_LIBS) $(MDATA_LIBS) $(NET_LIBS) -lgen
 
 OBJS =		$(JSON_OBJS:%=obj/%) \
 		$(MDATA_OBJS) \

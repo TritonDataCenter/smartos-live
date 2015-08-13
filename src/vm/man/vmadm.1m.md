@@ -14,7 +14,7 @@ modify and delete virtual machines on the local system.
 IMPORTANT: Support for LX VMs is currently limited and experimental. This means
 it is very likely to change in major ways without notice. Also: not all the LX
 functionality that *is* implemented is documented yet. The documentation will
-be updated as things stablize.
+be updated as things stabilize.
 
 The primary reference for a VM is its UUID. Most commands operate on VMs by
 UUID. In SmartOS, there are included bash tab-completion rules so that you can
@@ -948,7 +948,7 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         This property can be used to mount additional filesystems into an OS
         VM. It is primarily intended for SDC special VMs. The value is an
-        array of objects. The properties available are listed below under the 
+        array of objects. The properties available are listed below under the
         filesystems.*.<property> options. Those objects can have the following
         properties: source, target, raw (optional), type and options.
 

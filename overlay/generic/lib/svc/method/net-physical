@@ -142,7 +142,7 @@ function plumb_admin
     wait_for_admin_nic_state "up"
 }
 
-# Creates, plumbs and brings up a vnic with the specified parameters
+# Creates, plumbs and brings up a vnic with the specified inet parameters
 function vnic_up
 {
     set -o xtrace
@@ -155,13 +155,18 @@ function vnic_up
     typeset mac_addr="$6"
     typeset dhcp_primary="$7"
     typeset mtu="$8"
-    typeset details="link='${link}', iface='${iface}', ip='${ip}', netmask='${netmask}, vlan_id='${vlan_id}'"
+    typeset details=
     typeset vlan_opt=
     typeset mac_addr_opt=
     typeset prop_opt=
 
-    if [[ -z ${link} ]] || [[ -z ${iface} ]] || [[ -z ${ip} ]] || ([[ ${ip} != "dhcp" ]] && [[ -z ${netmask} ]]); then
-        echo "WARNING: not bringing up nic (insufficient configuration): $details"
+    details="link='${link}', iface='${iface}', ip='${ip}'"
+    details="${details}, netmask='${netmask}, vlan_id='${vlan_id}'"
+
+    if [[ -z ${link} ]] || [[ -z ${iface} ]] || \
+       [[ -z ${ip} ]] || ([[ ${ip} != "dhcp" ]] && [[ -z ${netmask} ]]); then
+        echo "WARNING: not bringing up nic (insufficient configuration): " \
+             "$details"
         return
     fi
 
@@ -173,7 +178,8 @@ function vnic_up
 
     if [[ -n ${mac_addr} ]] && [[ -n ${ActiveAggrLinks[${mac_addr}]} ]]; then
         echo "WARNING: trying to assign MAC address \"${mac_addr}\" to vnic," \
-            " but it already belongs to link aggr \"${ActiveAggrLinks[${mac_addr}]}\""
+            " but it already belongs to link aggr " \
+            "\"${ActiveAggrLinks[${mac_addr}]}\""
         return
     fi
 
@@ -216,6 +222,80 @@ function vnic_up
         fi
     else
         /sbin/ifconfig ${iface} inet ${ip} netmask ${netmask} up
+    fi
+    eval "vnic_${iface}_up=true"
+}
+
+# Creates, plumbs and brings up a vnic with the specified inet6 parameters
+function vnic_up6
+{
+    set -o xtrace
+
+    typeset link="$1"
+    typeset iface="$2"
+    typeset ip="$3"
+    typeset vlan_id="$4"
+    typeset mac_addr="$5"
+    typeset mtu="$6"
+    typeset details=
+    typeset vlan_opt=
+    typeset mac_addr_opt=
+    typeset prop_opt=
+
+    details="link='${link}', iface='${iface}', ip6='${ip}'"
+    details="${details}, vlan_id='${vlan_id}'"
+
+    if [[ -z ${link} ]] || [[ -z ${iface} ]] || [[ -z ${ip} ]]; then
+        echo "WARNING: not bringing up nic (insufficient configuration): " \
+             "$details"
+        return
+    fi
+
+    if [[ -n ${mac_addr} ]] && [[ -n ${ActiveAggrLinks[${mac_addr}]} ]]; then
+        echo "WARNING: trying to assign MAC address \"${mac_addr}\" to vnic," \
+            " but it already belongs to link aggr " \
+            "\"${ActiveAggrLinks[${mac_addr}]}\""
+        return
+    fi
+
+    # only bring up nic if not already up
+    eval "vnic_already_up=\${vnic_${iface}_up}"
+    if [[ -z "${vnic_already_up}" ]]; then
+        echo "Bringing up nic: $details"
+
+        if [[ -n ${vlan_id} ]] && [[ ${vlan_id} != 0 ]]; then
+            vlan_opt="-v ${vlan_id}"
+        fi
+
+        if [[ -n ${mac_addr} ]]; then
+            mac_addr_opt="-m ${mac_addr}"
+        fi
+
+        if [[ -n ${mtu} ]]; then
+            valid_mtu ${iface} ${mtu}
+            prop_opt="-p mtu=${mtu}"
+        fi
+
+        /usr/sbin/dladm create-vnic -t -l ${link} ${prop_opt} ${vlan_opt} \
+            ${mac_addr_opt} ${iface}
+        if [[ $? -ne 0 ]]; then
+            echo "Failed to create VNIC ${iface}"
+            exit $SMF_EXIT_ERR_FATAL
+        fi
+    fi
+
+    /sbin/ifconfig ${iface} inet6 plumb
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to plumb ${iface}"
+        exit $SMF_EXIT_ERR_FATAL
+    fi
+
+    if [[ -n ${ip} ]]; then
+        /sbin/ifconfig ${iface} inet6 up
+    fi
+    if [[ ${ip} != "addrconf" ]]; then
+        /sbin/ifconfig ${iface} inet6 \
+            addif ${ip} preferred up
     fi
     eval "vnic_${iface}_up=true"
 }
@@ -280,6 +360,21 @@ function set_default_route
 
     if [[ -n ${default_gw} ]]; then
         echo "${default_gw}" > /etc/defaultrouter
+    fi
+
+    if [[ -n ${CONFIG_admin_gateway6} ]]; then
+        default_gw6="${CONFIG_admin_gateway6}"
+
+    elif [[ -n ${BOOT_admin_gateway6} ]]; then
+        default_gw6=${BOOT_admin_gateway6}
+
+    elif [[ -n ${CONFIG_external_gateway6} ]]; then
+        default_gw6=${CONFIG_external_gateway6}
+    fi
+
+    if [[ -n ${default_gw6} ]]; then
+        # add static route
+        /usr/sbin/route add -inet6 default ${default_gw6}
     fi
 }
 
@@ -418,6 +513,11 @@ if smf_is_globalzone; then
         admin_netmask=${BOOT_admin_netmask}
     fi
 
+    admin_ip6=${CONFIG_admin_ip6}
+    if [[ -z "$admin_ip6" ]]; then
+        admin_ip6=${BOOT_admin_ip6}
+    fi
+
     if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]];
     then
         /sbin/ifconfig ${SYSINFO_NIC_admin} inet ${admin_ip} \
@@ -459,6 +559,28 @@ if smf_is_globalzone; then
         fi
     fi
 
+    if [[ -n ${admin_ip6} ]]; then
+        # Plumb interface for inet6
+        ifconfig ${SYSINFO_NIC_admin} inet6 plumb up
+
+        # Autodiscovery IPv6 using SLAAC
+        # NOTE: in.ndpd will be started later, due to plumbing the interface.
+        #       this means autodiscovery also happens when configuring a
+        #       static address.
+        #
+        #       in.ndpd also sets a default route and this can't be disabled.
+
+        # Configure static IPv6
+        if [[ ${admin_ip6} != "addrconf" ]]; then
+            /sbin/ifconfig ${SYSINFO_NIC_admin} inet6 \
+                addif ${admin_ip6} preferred up
+        fi
+
+        ADMIN_NIC_UP=true
+
+        # don't setup resolv.conf, IPv6 addresses already work
+    fi
+
     # If on Parallels or VirtualBox, create a bridge which
     # allows traffic to flow correctly to the host-only network
     if [[ "${ADMIN_NIC_UP}" == "true" ]] \
@@ -468,17 +590,23 @@ if smf_is_globalzone; then
         /usr/sbin/dladm create-bridge -l ${SYSINFO_NIC_admin} vmwarebr
     fi
 
-    # Setup external NIC
-    if [[ -n ${SYSINFO_NIC_external} ]] && [[ -n "${CONFIG_external_ip}" ]]; then
-        #
-        # The installer may have set up external0, so if it already
-        # exists, we're not going to try and set up the vnic again.
-        #
-        if ! dladm show-vnic external0 > /dev/null; then
+    # Setup the external NIC. The installer may have already set up external0,
+    # so, if it exists, we're not going to try and set up the vnic again.
+    if [[ -n ${SYSINFO_NIC_external} ]] \
+        && ! dladm show-vnic external0 > /dev/null; then
+
+        if [[ -n "${CONFIG_external_ip}" ]]; then
             vnic_up "${SYSINFO_NIC_external}" "external0" \
                 "${CONFIG_external_ip}" "${CONFIG_external_netmask}" \
                 "${CONFIG_external_vlan_id}" "${CONFIG_external_mac}" \
                 "primary" "${CONFIG_external_mtu}"
+        fi
+
+        if [[ -n "${CONFIG_external_ip6}" ]]; then
+            vnic_up6 "${SYSINFO_NIC_external}" "external0" \
+                "${CONFIG_external_ip6}" \
+                "${CONFIG_external_vlan_id}" "${CONFIG_external_mac}" \
+                "${CONFIG_external_mtu}"
         fi
     fi
 
@@ -491,10 +619,14 @@ if smf_is_globalzone; then
 
         if boot_file_config_enabled; then
             bootparam_ip_keys=""
+            bootparam_ip6_keys=""
             config_ip_keys=${CONFIG_bootfile_ip_keys//,/ }
+            config_ip6_keys=${CONFIG_bootfile_ip6_keys//,/ }
         else
             bootparam_ip_keys=$(sdc_bootparams_keys | grep -- "-ip$" || true)
+            bootparam_ip6_keys=$(sdc_bootparams_keys | grep -- "-ip6$" || true)
             config_ip_keys=$(sdc_config_keys | grep "_ip$" || true)
+            config_ip6_keys=$(sdc_config_keys | grep "_ip6$" || true)
         fi
 
         for tag in "${tags[@]}"; do
@@ -532,6 +664,34 @@ if smf_is_globalzone; then
                     echo vnic_up "${link}" "${iface}" "${ip}" "${netmask}" "${vlan}" "${macaddr}" "${mtu}"
                     vnic_up "${link}" "${iface}" "${ip}" "${netmask}" \
                         "${vlan}" "${macaddr}" "" "${mtu}"
+                fi
+            done
+
+            for key in ${config_ip6_keys}; do
+                if [[ ${key} == ${tag}[0-9]_ip6 ]] || [[ ${key} == ${tag}[0-9][0-9]_ip6 ]]; then
+                    iface=${key//_ip6/}
+                    #echo "   iface=$iface"
+                    eval "ip=\${CONFIG_${iface}_ip6}"
+                    eval "vlan=\${CONFIG_${iface}_vlan_id}"
+                    eval "macaddr=\${CONFIG_${iface}_mac}"
+                    eval "mtu=\${CONFIG_${iface}_mtu}"
+
+                    echo vnic_up6 "${link}" "${iface}" "${ip}" "${vlan}" "${macaddr}" "${mtu}"
+                    vnic_up6 "${link}" "${iface}" "${ip}" \
+                        "${vlan}" "${macaddr}" "${mtu}"
+                fi
+            done
+
+            for key in ${bootparam_ip6_keys}; do
+                if [[ ${key} == ${tag}[0-9]-ip6 ]] || [[ ${key} == ${tag}[0-9][0-9]-ip6 ]]; then
+                    iface=${key//-ip6/}
+                    eval "ip=\${BOOT_${iface}_ip6}"
+                    eval "vlan=\${BOOT_${iface}_vlan_id}"
+                    eval "macaddr=\${BOOT_${iface}_mac}"
+                    eval "mtu=\${CONFIG_${iface}_mtu}"
+                    echo vnic_up6 "${link}" "${iface}" "${ip}" "${vlan}" "${macaddr}" "${mtu}"
+                    vnic_up6 "${link}" "${iface}" "${ip}" \
+                        "${vlan}" "${macaddr}" "${mtu}"
                 fi
             done
 

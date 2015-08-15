@@ -278,8 +278,25 @@ function set_default_route
         default_gw=${CONFIG_external_gateway}
     fi
 
+    if [[ -n ${CONFIG_admin_gateway6} ]]; then
+        default_gw6="${CONFIG_admin_gateway6}"
+
+    elif [[ -n ${BOOT_admin_gateway6} ]]; then
+        default_gw6=${BOOT_admin_gateway6}
+
+    elif [[ -n ${CONFIG_external_gateway6} ]]; then
+        default_gw6=${CONFIG_external_gateway6}
+    fi
+
     if [[ -n ${default_gw} ]]; then
         echo "${default_gw}" > /etc/defaultrouter
+    fi
+
+    if [[ -n ${default_gw6} ]]; then
+        # flush existing autoconfigured default routes
+        /usr/sbin/route flush -inet6
+        # add static route
+        /usr/sbin/route add -inet6 default ${default_gw6}
     fi
 }
 

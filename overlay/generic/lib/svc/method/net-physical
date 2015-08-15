@@ -574,28 +574,24 @@ if smf_is_globalzone; then
     fi
 
     # Setup external NIC
-    if [[ -n ${SYSINFO_NIC_external} ]] && [[ -n "${CONFIG_external_ip}" ]]; then
+    if [[ -n ${SYSINFO_NIC_external} ]]; then
         #
         # The installer may have set up external0, so if it already
         # exists, we're not going to try and set up the vnic again.
         #
-        do_external=
+        do_setup_external="no"
         if ! dladm show-vnic external0 > /dev/null; then
-            do_external="yes"
+            do_setup_external="yes"
         fi
-        if [[ ${do_external} == "yes" ]]; then
+
+        if [[ ${do_setup_external} == "yes" ]] && [[ -n "${CONFIG_external_ip}" ]]; then
             vnic_up "${SYSINFO_NIC_external}" "external0" \
                 "${CONFIG_external_ip}" "${CONFIG_external_netmask}" \
                 "${CONFIG_external_vlan_id}" "${CONFIG_external_mac}" \
                 "primary" "${CONFIG_external_mtu}"
         fi
-    fi
-    if [[ -n ${SYSINFO_NIC_external} ]] && [[ -n "${CONFIG_external_ip6}" ]]; then
-        #
-        # The installer may have set up external0, so if it already
-        # exists, we're not going to try and set up the vnic again.
-        #
-        if [[ ${do_external} == "yes" ]]; then
+
+        if [[ ${do_setup_external} == "yes" ]] && [[ -n "${CONFIG_external_ip6}" ]]; then
             vnic_up6 "${SYSINFO_NIC_external}" "external0" \
                 "${CONFIG_external_ip6}" "${CONFIG_external_netmask6}" \
                 "${CONFIG_external_vlan_id}" "${CONFIG_external_mac}" \

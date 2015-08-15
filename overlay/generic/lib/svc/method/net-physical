@@ -482,7 +482,7 @@ if smf_is_globalzone; then
 
             # Configure static IPv6
             /sbin/ifconfig ${SYSINFO_NIC_admin} inet6 \
-                addif ${admin_ip6}/${admin_netmask6} up
+                addif ${admin_ip6}/${admin_netmask6} preferred up
             ADMIN_NIC_UP=true
         else
             if [[ ${admin_ip6} == "auto" ]]; then

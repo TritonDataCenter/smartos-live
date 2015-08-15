@@ -405,6 +405,16 @@ if smf_is_globalzone; then
         admin_netmask=${BOOT_admin_netmask}
     fi
 
+    admin_ip6=${CONFIG_admin_ip6}
+    if [[ -z "$admin_ip6" ]]; then
+        admin_ip6=${BOOT_admin_ip6}
+    fi
+
+    admin_netmask6=${CONFIG_admin_netmask6}
+    if [[ -z "$admin_netmask6" ]]; then
+        admin_netmask6=${BOOT_admin_netmask6}
+    fi
+
     if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]];
     then
         /sbin/ifconfig ${SYSINFO_NIC_admin} inet ${admin_ip} \
@@ -444,6 +454,31 @@ if smf_is_globalzone; then
 
             ADMIN_NIC_UP=true
         fi
+    fi
+
+    if [[ -n ${admin_ip6} ]]; then
+        # NOTE: plumbing the interface for IPv6 also implicitly sets a
+        # default gateway, this is due to in.ndpd and can't be disabled
+        if [[ -n ${admin_ip6} ]] && [[ -n ${admin_netmask6} ]]; then
+            # Plumb interface for inet6
+            ifconfig ${SYSINFO_NIC_admin} inet6 plumb up
+
+            # Configure static IPv6
+            /sbin/ifconfig ${SYSINFO_NIC_admin} inet6 \
+                addif ${admin_ip6}/${admin_netmask6} up
+            ADMIN_NIC_UP=true
+        else
+            if [[ ${admin_ip6} == "auto" ]]; then
+                # Plumb interface for inet6
+                ifconfig ${SYSINFO_NIC_admin} inet6 plumb up
+
+                # Autodiscovery IPv6 using SLAAC
+                # in.ndpd will be started later, we just need to plumb the interface
+                ADMIN_NIC_UP=true
+            fi
+        fi
+
+        # don't setup resolv.conf, IPv6 addresses already work
     fi
 
     # If on Parallels or VirtualBox, create a bridge which

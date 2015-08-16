@@ -133,7 +133,7 @@ process_manifest_line_file(manifest_ent_t *me, strlist_t *line)
 
 	if (strlist_contig_count(line) != 5) {
 		error = EPROTO;
-		return (-1);
+		goto out;
 	}
 
 	errno = 0;

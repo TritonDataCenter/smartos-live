@@ -92,7 +92,7 @@ if [ $? -ne 0 ]; then
     fi
 
     for pool in $pools; do
-        zpool import -f $pool || fatal "failed to import $pool pool"
+        zpool import -f $pool
 	# Due to early, failed attempts to support the filesystem_limits
 	# feature we now need to ensure the dependent feature is enabled.
 	zpool set feature@extensible_dataset=enabled $pool

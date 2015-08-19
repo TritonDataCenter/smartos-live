@@ -3191,8 +3191,7 @@ IMGADM.prototype.vacuumImages = function vacuumImages(opts, cb) {
 
             var msg;
             if (ctx.iiToDel.length === 1) {
-                msg = format('Delete this image? [y/N] ',
-                    ctx.iiToDel.length);
+                msg = 'Delete this image? [y/N] ';
             } else {
                 msg = format('Delete these %d images? [y/N] ',
                     ctx.iiToDel.length);

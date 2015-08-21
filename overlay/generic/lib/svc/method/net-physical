@@ -539,7 +539,7 @@ if smf_is_globalzone; then
         fi
     fi
 
-    if [[ -n $ip && -n $netmask ]] || [[ $ip == 'auto' ]]; then
+    if [[ -n $admin_ip6 && -n $admin_netmask6 ]] || [[ $admin_ip6 == 'auto' ]]; then
         # Plumb interface for inet6
         ifconfig ${SYSINFO_NIC_admin} inet6 plumb up
 

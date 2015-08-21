@@ -278,7 +278,7 @@ function vnic_up6
         exit $SMF_EXIT_ERR_FATAL
     fi
 
-    if [[ -n $ip && -n $netmask ]] || [[ $ip == 'auto' ]]; then
+    if [[ -n ${ip} && -n ${netmask} ]] || [[ ${ip} == 'auto' ]]; then
         /sbin/ifconfig ${iface} inet6 up
     fi
     if [[ -n ${ip} ]] && [[ -n ${netmask} ]]; then
@@ -539,7 +539,7 @@ if smf_is_globalzone; then
         fi
     fi
 
-    if [[ -n $admin_ip6 && -n $admin_netmask6 ]] || [[ $admin_ip6 == 'auto' ]]; then
+    if [[ -n ${admin_ip6} && -n ${admin_netmask6} ]] || [[ ${admin_ip6} == 'auto' ]]; then
         # Plumb interface for inet6
         ifconfig ${SYSINFO_NIC_admin} inet6 plumb up
 

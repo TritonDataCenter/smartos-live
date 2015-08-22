@@ -13,8 +13,10 @@ MCPROTO =	$(ROOT)/mancheck.conf.d
 # On Darwin/OS X we support running 'make check'
 ifeq ($(shell uname -s),Darwin)
 PATH =		/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
+NATIVE_CC =	gcc
 else
 PATH =		/usr/bin:/usr/sbin:/sbin:/opt/local/bin
+NATIVE_CC =	/opt/local/bin/gcc
 endif
 
 #
@@ -48,8 +50,6 @@ CTFBINDIR = \
 	$(ROOT)/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386
 CTFMERGE =	$(CTFBINDIR)/ctfmerge
 CTFCONVERT =	$(CTFBINDIR)/ctfconvert
-
-NATIVE_CC =	/opt/local/bin/gcc
 
 SUBDIR_DEFS = \
 	CTFMERGE=$(CTFMERGE) \

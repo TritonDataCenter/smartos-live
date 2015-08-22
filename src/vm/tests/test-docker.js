@@ -29,6 +29,12 @@ var common_payload = {
     max_swap: 1024
 };
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
+var log_modes = {
+    'interactive': {'docker:tty': true, 'docker:logdriver': 'json-file'},
+    'nlinteractive': {'docker:tty': true, 'docker:logdriver': 'none'},
+    'logging': {'docker:tty': false, 'docker:logdriver': 'json-file'},
+    'nologging': {'docker:tty': false, 'docker:logdriver': 'none'}
+};
 
 function writeInit(uuid, contents, callback) {
     var filename = '/zones/' + uuid + '/root/root/init';
@@ -706,4 +712,32 @@ test('test docker VM with paths in /tmp', function (t) {
             cb();
         }
     ]);
+});
+
+Object.keys(log_modes).forEach(function (mode) {
+    console.log('mode: ' + mode);
+    test('test docker VM with log mode ' + mode, function (t) {
+        var payload = JSON.parse(JSON.stringify(common_payload));
+        var state = {brand: payload.brand};
+
+        payload.docker = true;
+        payload.internal_metadata = log_modes[mode];
+
+        vmtest.on_new_vm(t, image_uuid, payload, state, [
+            function (cb) {
+                VM.load(state.uuid, function (err, obj) {
+
+                    t.ok(!err, 'loading obj for new VM');
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+
+                    t.equal(obj.zlog_mode, mode, 'zlog_mode set correctly for '
+                        + JSON.stringify(log_modes[mode]));
+                    cb();
+                });
+            }
+        ]);
+    });
 });

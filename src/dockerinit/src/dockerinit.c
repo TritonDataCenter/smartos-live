@@ -180,6 +180,8 @@ setupTerminal(void)
     int _stdin, _stdout, _stderr;
     boolean_t ctty = B_FALSE;
     char *data;
+    char *log_config = "{}";
+    char *log_driver = "json-file";
     boolean_t open_stdin = getStdinStatus();
 
     if ((data = mdataGet("docker:tty")) != NULL) {
@@ -188,6 +190,29 @@ setupTerminal(void)
         }
         free(data);
     }
+
+    if ((data = mdataGet("docker:logdriver")) != NULL) {
+        if (strcmp("json-file", data) != 0) {
+            log_driver = strdup(data);
+            if (log_driver == NULL) {
+                fatal(ERR_STRDUP, "unable to strdup() logdriver: %s\n",
+                    strerror(errno));
+            }
+        }
+        free(data);
+    }
+
+    if ((data = mdataGet("docker:logconfig")) != NULL) {
+        log_config = strdup(data);
+        if (log_config == NULL) {
+            fatal(ERR_STRDUP, "unable to strdup() logconfig: %s\n",
+                strerror(errno));
+        }
+        free(data);
+    }
+
+    dlog("INFO logdriver %s\n", log_driver);
+    dlog("INFO logconfig %s\n", log_config);
 
     dlog("SWITCHING TO /dev/zfd/*\n");
 
@@ -213,6 +238,17 @@ setupTerminal(void)
                     strerror(errno));
             }
         }
+    }
+
+    /*
+     * When we're not using json-file, we want to fork a logger child to handle
+     * the logging driver.
+     */
+    if (strcmp("json-file", log_driver) != 0
+        && strcmp("none", log_driver) != 0) {
+
+        fatal(ERR_UNKNOWN_LOG_DRIVER, "unsupported log driver: '%s'\n",
+            log_driver);
     }
 
     if (close(1) == -1) {

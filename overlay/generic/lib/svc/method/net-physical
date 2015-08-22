@@ -235,7 +235,7 @@ function vnic_up6
     typeset mac_addr_opt=
     typeset prop_opt=
 
-    if [[ -z ${link} ]] || [[ -z ${iface} ]] || [[ -z ${ip} ]] || ([[ ${ip} != "auto" ]] && [[ -z ${netmask} ]]); then
+    if [[ -z ${link} ]] || [[ -z ${iface} ]] || [[ -z ${ip} ]] || ([[ ${ip} != "addrconf" ]] && [[ -z ${netmask} ]]); then
         echo "WARNING: not bringing up nic (insufficient configuration): $details"
         return
     fi
@@ -278,7 +278,7 @@ function vnic_up6
         exit $SMF_EXIT_ERR_FATAL
     fi
 
-    if [[ -n ${ip} && -n ${netmask} ]] || [[ ${ip} == 'auto' ]]; then
+    if [[ -n ${ip} && -n ${netmask} ]] || [[ ${ip} == 'addrconf' ]]; then
         /sbin/ifconfig ${iface} inet6 up
     fi
     if [[ -n ${ip} ]] && [[ -n ${netmask} ]]; then
@@ -539,7 +539,7 @@ if smf_is_globalzone; then
         fi
     fi
 
-    if [[ -n ${admin_ip6} && -n ${admin_netmask6} ]] || [[ ${admin_ip6} == 'auto' ]]; then
+    if [[ -n ${admin_ip6} && -n ${admin_netmask6} ]] || [[ ${admin_ip6} == 'addrconf' ]]; then
         # Plumb interface for inet6
         ifconfig ${SYSINFO_NIC_admin} inet6 plumb up
 
@@ -551,7 +551,7 @@ if smf_is_globalzone; then
         #       in.ndpd also sets a default route and this can't be disabled.
 
         # Configure static IPv6
-        if [[ ${admin_ip6} != "auto" ]]; then
+        if [[ ${admin_ip6} != "addrconf" ]]; then
             /sbin/ifconfig ${SYSINFO_NIC_admin} inet6 \
                 addif ${admin_ip6}/${admin_netmask6} preferred up
         fi

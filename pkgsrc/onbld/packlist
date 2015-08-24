@@ -65,8 +65,6 @@
 ./bin/wsdiff
 ./bin/xref
 ./bin/xref.mk
-./env/developer
-./env/gatekeeper
 ./env/illumos
 ./etc/exception_lists/check_rtime
 ./etc/exception_lists/interface_check

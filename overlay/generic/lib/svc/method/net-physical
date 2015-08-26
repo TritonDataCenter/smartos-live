@@ -649,7 +649,7 @@ if smf_is_globalzone; then
 
             for key in ${config_ip6_keys}; do
                 if [[ ${key} == ${tag}[0-9]_ip6 ]] || [[ ${key} == ${tag}[0-9][0-9]_ip6 ]]; then
-                    iface=${key//_i6p/}
+                    iface=${key//_ip6/}
                     #echo "   iface=$iface"
                     eval "ip=\${CONFIG_${iface}_ip6}"
                     eval "vlan=\${CONFIG_${iface}_vlan_id}"

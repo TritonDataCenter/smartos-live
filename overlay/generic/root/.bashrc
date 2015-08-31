@@ -45,15 +45,6 @@ fi
 # Load bash completion
 [ -f /etc/bash/bash_completion ] && . /etc/bash/bash_completion
 
-case "$TERM" in
-	screen)
-		export TERM=xterm-color
-		;;
-	screen-256color)
-		export TERM=xterm-color
-		;;
-esac
-
 svclog() {
   if [[ -z "$PAGER" ]]; then
     PAGER=less

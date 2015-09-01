@@ -139,8 +139,15 @@ shift OPTIND-1
 
 [ $SUMMARY == 1 ] && do_proc
 
+if [ "`zonename`" = 'global' ]; then
+	gz=true
+else
+	gz=false
+fi
+
 kstat -c zone_memory_cap \
-    | nawk -v show_alias=${SHOW_ALIAS} -v zname=$ZONENAME -v over=$OVER 'BEGIN {
+    | nawk -v gz=$gz -v show_alias=${SHOW_ALIAS} -v zname=$ZONENAME -v over=$OVER \
+    'BEGIN {
 	if (show_alias == 1) {
 		alias_len = 12
 		while ("vmadm list -o zonename,alias -H" | getline) {
@@ -160,12 +167,17 @@ kstat -c zone_memory_cap \
     {
 	if ($1 == "nover") {
 		nover = $2
+		nover_t += nover
 	} else if ($1 == "pagedout") {
 		pout = $2 / 1048576
+		pout_t += pout
 	} else if ($1 == "physcap") {
 		cap = $2 / 1048576
+		if (cap < 2147483000)
+			cap_t += cap
 	} else if ($1 == "rss") {
 		rss = $2 / 1048576
+		rss_t += rss
 	} else if ($1 == "swap") {
 		swap = $2 / 1048576
 	} else if ($1 == "swapcap") {
@@ -195,4 +207,14 @@ kstat -c zone_memory_cap \
 				    $2, rss, cap, nover, pout);
 		}
 	}
+    }
+    END {
+	if (gz == "true" && zname == "ALL")
+		if (show_alias == 1)
+			printf("%37s %*s %8u %8u %8u %9u\n",
+			    "total", alias_len, "-", rss_t, cap_t,
+			    nover_t, pout_t);
+		else
+			printf("%37s %8u %8u %8u %9u\n",
+			    "total", rss_t, cap_t, nover_t, pout_t);
 }'

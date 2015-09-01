@@ -238,3 +238,27 @@ patch -p0 <<'PATCHNODEUNIT'
      // browser test reporter is not listed because it cannot be used
 PATCHNODEUNIT
 rm -rf node_modules/nodeunit/lib/reporters/index.js.orig
+
+
+# Normalize all package.json's. Dropping fields that seem to
+# change willy-nilly from npm server-side.
+for packageJson in $(find node_modules -name package.json); do
+    json -f $packageJson -Ie '
+        delete this.readme;
+        delete this.readmeFilename;
+        delete this.dist;
+        delete this.maintainers;
+        delete this.directories;
+        delete this.gitHead;
+        delete this._id;
+        delete this._shasum;
+        delete this._resolved;
+        delete this._npmVersion;
+        delete this._npmUser;
+        delete this._from;
+        delete this._engineSupported;
+        delete this._nodeVersion;
+        delete this._defaultsLoaded;
+        delete this._from;
+    '
+done

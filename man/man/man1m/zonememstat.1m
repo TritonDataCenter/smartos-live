@@ -1,15 +1,15 @@
 '\" te
-.\"  Copyright 2011, Joyent, Inc. All Rights Reserved
+.\"  Copyright 2015, Joyent, Inc.
 .\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
 .\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
 .\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
-.TH zonememstat 1M "5 May 2011" "SunOS 5.11" "System Administration Commands"
+.TH zonememstat 1M "4 Sep 2015" "SunOS 5.11" "System Administration Commands"
 .SH NAME
 zonememstat \- display zone physical memory cap statistics
 .SH SYNOPSIS
 .LP
 .nf
-\fBzonememstat\fR [\fB-o\fR] [\fB-z zonename\fR]
+\fBzonememstat\fR [\fB-athH\fR] [\fB-o\fR | \fB-p\fR] [\fB-z zonename\fR]
 .fi
 
 .SH DESCRIPTION
@@ -22,14 +22,59 @@ The \fBzonememstat\fR command prints a summary of zone's physical memory usage. 
 .sp
 .LP
 The following options are supported:
+
 .sp
 .ne 2
 .mk
 .na
-\fB\fB-o\fR
+\fB-h\fR
 .ad
 .RS 11n
-.rt  
+.rt
+Print the usage message and exit cleanly.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-H\fR
+.ad
+.RS 11n
+.rt
+Omit column headers.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-t\fR
+.ad
+.RS 11n
+.rt
+Add a row with the totals to the bottom of the output.
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-a\fR
+.ad
+.RS 11n
+.rt
+Show machine aliases using \fBvmadm\fR(1M).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-o\fR
+.ad
+.RS 11n
+.rt
 Only show zones which have gone over their cap.
 .RE
 
@@ -37,9 +82,20 @@ Only show zones which have gone over their cap.
 .ne 2
 .mk
 .na
-\fB\fB-z\fR \fBzonename\fR
+\fB-p\fR
 .ad
 .RS 11n
-.rt  
+.rt
+Show machine summaries using \fBpmap\fR(1).
+.RE
+
+.sp
+.ne 2
+.mk
+.na
+\fB-z zonename\fR
+.ad
+.RS 11n
+.rt
 Only show data for the specified zone.
 .RE

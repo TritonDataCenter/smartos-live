@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2012, Joyent, Inc.  All rights reserved.
+# Copyright 2015, Joyent, Inc.
 #
 
 unset LD_LIBRARY_PATH
@@ -119,28 +119,43 @@ do_proc()
 	exit 0;
 }
 
+usage() {
+	echo 'zonememstat [-athH] [-p | -o] [-z zonename]'
+}
+
+HEADER=1
 OVER=0
 SUMMARY=0
 SHOW_ALIAS=0
 ZONENAME="ALL"
+TOTAL=0
 
-while getopts "aopz:" opt
+while getopts "aoHhptz:" opt
 do
 	case "$opt" in
 	a)	SHOW_ALIAS=1;;
+	H)	HEADER=0;;
 	p)	SUMMARY=1;;
 	o)	OVER=1;;
+	t)	TOTAL=1;;
 	z)	ZONENAME=$OPTARG;;
-	*)	printf "zonememstat [-p | -o] [-z zonename]\n"
-		exit 1;;
+	h)	usage; exit 0;;
+	*)	usage; exit 1;;
 	esac
 done
 shift OPTIND-1
 
 [ $SUMMARY == 1 ] && do_proc
 
-kstat -c zone_memory_cap \
-    | nawk -v show_alias=${SHOW_ALIAS} -v zname=$ZONENAME -v over=$OVER 'BEGIN {
+kstat -c zone_memory_cap | nawk \
+    -v "show_alias=$SHOW_ALIAS" \
+    -v "zname=$ZONENAME" \
+    -v "over=$OVER" \
+    -v "total=$TOTAL" \
+    -v "header=$HEADER" \
+    'BEGIN {
+	# is gz if cap is UINT64_MAX / 1048576
+	maxcap = 2147483000;
 	if (show_alias == 1) {
 		alias_len = 12
 		while ("vmadm list -o zonename,alias -H" | getline) {
@@ -149,23 +164,30 @@ kstat -c zone_memory_cap \
 			alias_len = length($2);
 		    }
                 }
-		printf("%37s %*s %8s %8s %8s %9s\n", \
-		    "ZONE", alias_len, "ALIAS", \
-		    "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
+		if (header)
+			printf("%37s %*s %8s %8s %8s %9s\n", \
+			    "ZONE", alias_len, "ALIAS", \
+			    "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
 	} else {
-		printf("%37s %8s %8s %8s %9s\n", \
-		    "ZONE", "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
+		if (header)
+			printf("%37s %8s %8s %8s %9s\n", \
+			    "ZONE", "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
 	}
     }
     {
 	if ($1 == "nover") {
 		nover = $2
+		nover_t += nover
 	} else if ($1 == "pagedout") {
 		pout = $2 / 1048576
+		pout_t += pout
 	} else if ($1 == "physcap") {
 		cap = $2 / 1048576
+		if (cap < maxcap)
+			cap_t += cap
 	} else if ($1 == "rss") {
 		rss = $2 / 1048576
+		rss_t += rss
 	} else if ($1 == "swap") {
 		swap = $2 / 1048576
 	} else if ($1 == "swapcap") {
@@ -179,7 +201,7 @@ kstat -c zone_memory_cap \
 		if (length(alias) == 0)
 		    alias = "-"
 		# If cap is UINT64_MAX / 1048576
-		if (cap >= 2147483000) {
+		if (cap >= maxcap) {
 			if (show_alias == 1)
 				printf("%37s %*s %8u %8s %8s %9s\n",
 				    $2, alias_len, alias, rss, "-", "-", "-");
@@ -189,10 +211,22 @@ kstat -c zone_memory_cap \
 		} else {
 			if (show_alias == 1)
 				printf("%37s %*s %8u %8u %8u %9u\n",
-				    $2, alias_len, alias, rss, cap, nover, pout);
+				    $2, alias_len, alias, rss, cap, nover,
+				    pout);
 			else
 				printf("%37s %8u %8u %8u %9u\n",
 				    $2, rss, cap, nover, pout);
 		}
 	}
-}'
+    }
+    END {
+	if (total == 1) {
+		if (show_alias == 1)
+			printf("%37s %*s %8u %8u %8u %9u\n",
+			    "total", alias_len, "-", rss_t, cap_t,
+			    nover_t, pout_t);
+		else
+			printf("%37s %8u %8u %8u %9u\n",
+			    "total", rss_t, cap_t, nover_t, pout_t);
+	}
+    }'

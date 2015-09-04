@@ -562,7 +562,6 @@ function conf_delete_etherstub()
     move_files
 }
 
-
 # prints one tag / mac / link line, optionally formatted to be parseable
 function print_line()
 {
@@ -573,7 +572,7 @@ function print_line()
     typ=$4
 
     # Try to see if we have a link name from get_link_names():
-    [[ -z $link ]] && link="${LINKS[&mac]}"
+    [[ -z $link ]] && link="${LINKS[$mac]}"
     [[ -z $link ]] && link="-"
 
     [[ -z $typ ]] && typ=${TAG_TYPES[$tag]}

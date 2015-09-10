@@ -53,12 +53,14 @@
 #include <netinet/in.h>
 
 #include <sys/types.h>
+#include <sys/mkdev.h>
 #include <sys/mount.h>
 #include <sys/mntent.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <sys/zfd.h>
 
 #include "../json-nvlist/json-nvlist.h"
 #include "../mdata-client/common.h"
@@ -69,6 +71,7 @@
 
 #include "docker-common.h"
 
+#define DOCKER_LOGGER "/lib/sdc/docker/logger"
 #define IPMGMTD "/lib/inet/ipmgmtd"
 #define IPMGMTD_DOOR "/etc/svc/volatile/ipadm/ipmgmt_door"
 
@@ -90,7 +93,9 @@ void runIpmgmtd(void);
 void setupHostname();
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
-static void setupTerminal(void);
+static void makeMux(int stdid, int logid);
+static void setupTerminal(boolean_t ctty);
+static void setupLogging(boolean_t ctty);
 void waitIfAttaching();
 void makePath(const char *, char *, size_t);
 
@@ -103,6 +108,7 @@ brand_t brand;
 char *hostname = NULL;
 ipadm_handle_t iph;
 FILE *log_stream = stderr;
+int log_fd = -1;
 char *path = NULL;
 struct passwd *pwd = NULL;
 struct group *grp = NULL;
@@ -118,6 +124,23 @@ const char *ROUTE_WRITE_ERR_MSG =
 const char *ROUTE_WRITE_LEN_MSG =
     "WARN addRoute: wrote %d/%d to socket "
     "(if=\"%s\", gw=\"%s\", dst=\"%s\": %s)\n";
+
+struct LoggerEnvVar
+{
+    const char *env_key;
+    const char *mdata_key;
+};
+
+struct LoggerEnvVar logger_vars[] = {
+    {"DOCKERLOG_CONFIG", "docker:logconfig"},
+    {"DOCKERLOG_CONTAINERID", "docker:id"},
+    {"DOCKERLOG_CONTAINERNAME", "sdc:alias"},
+    {"DOCKERLOG_CREATETIME", "sdc:create_timestamp"},
+    {"DOCKERLOG_IMAGEID", "docker:imageid"},
+    {"DOCKERLOG_IMAGENAME", "docker:imagename"},
+    {"DOCKERLOG_ENTRYPOINT", "docker:entrypoint"},
+    {"DOCKERLOG_CMD", "docker:cmd"}
+};
 
 void
 makePath(const char *base, char *out, size_t outsz)
@@ -175,22 +198,100 @@ runIpmgmtd(void)
 }
 
 static void
-setupTerminal(void)
+makeMux(int stdid, int logid)
 {
-    int _stdin, _stdout, _stderr;
-    boolean_t ctty = B_FALSE;
-    char *data;
-    char *log_config = "{}";
-    char *log_driver = "json-file";
-    boolean_t open_stdin = getStdinStatus();
-    struct winsize ws;
+    int lfd = -1;
+    int sfd = -1;
+    struct stat sb;
+    minor_t instance = -1;
+    char stdpath[MAXPATHLEN];
 
-    if ((data = mdataGet("docker:tty")) != NULL) {
-        if (strcmp("true", data) == 0) {
-            ctty = B_TRUE;
+    /*
+     * Open the logging dev and issue the ZFD_MUX ioctl
+     * with the primary stream minor number as an argument. This will
+     * link the two streams into a multiplexer with the logging stream
+     * as a tee off of the primary stream.
+     */
+    (void) snprintf(stdpath, sizeof (stdpath), "/dev/zfd/%d", stdid);
+
+    sfd = open(stdpath, O_RDWR | O_NOCTTY);
+    if (sfd == -1) {
+        fatal(ERR_OPEN_ZFD, "failed to open %s to link streams\n", stdpath);
+    }
+
+    if (fstat(sfd, &sb) != 0) {
+        fatal(ERR_STAT_ZFD, "failed to stat %s to link streams\n", stdpath);
+    }
+
+    instance = minor(sb.st_rdev);
+    (void) snprintf(stdpath, sizeof (stdpath), "/dev/zfd/%d", logid);
+
+    lfd = open(stdpath, O_RDWR | O_NOCTTY);
+    if (lfd == -1) {
+        fatal(ERR_OPEN_ZFD, "failed to open %s to link streams\n", stdpath);
+    }
+
+    if (ioctl(lfd, ZFD_MUX, instance) != 0) {
+        fatal(ERR_IOCTL_ZFD, "failed to issue ioctl to link streams\n");
+    }
+
+    if (sfd != -1) {
+        (void) close(sfd);
+    }
+    if (lfd != -1) {
+        (void) close(lfd);
+    }
+}
+
+static char **
+getLoggingEnv(void)
+{
+    char *data;
+    char **env = NULL;
+    int i;
+    int nvars = (sizeof (logger_vars) / sizeof (struct LoggerEnvVar));
+    int pos = 0;
+
+    env = malloc(sizeof (char *) * (nvars + 1));
+    if (env == NULL) {
+        fatal(ERR_NO_MEMORY, "failed to malloc(%d): %s\n",
+            sizeof (char *) * (nvars + 1), strerror(errno));
+    }
+
+    for (i = 0; i < nvars; i++) {
+        if ((data = mdataGet(logger_vars[i].mdata_key)) != NULL) {
+            if (asprintf(&(env[pos++]), "%s=%s", logger_vars[i].env_key,
+                data) == -1) {
+
+                fatal(ERR_NO_MEMORY, "asprintf(%s) failed to allocate space\n",
+                    logger_vars[i].env_key);
+            }
         }
         free(data);
     }
+    env[pos++] = NULL;
+
+    return (env);
+}
+
+static void
+setupLogging(boolean_t ctty)
+{
+    char *argv[] = {
+        "logger",
+        NULL,
+        NULL
+    };
+    char cmd[MAXPATHLEN];
+    char *data;
+    char **envp;
+    int i;
+    char *log_driver = "json-file";
+    pid_t pid;
+    pid_t init_pid;
+    int _stdout;
+    int _stderr;
+    int tmpfd;
 
     if ((data = mdataGet("docker:logdriver")) != NULL) {
         if (strcmp("json-file", data) != 0) {
@@ -203,14 +304,130 @@ setupTerminal(void)
         free(data);
     }
 
-    if ((data = mdataGet("docker:logconfig")) != NULL) {
-        log_config = strdup(data);
-        if (log_config == NULL) {
-            fatal(ERR_STRDUP, "unable to strdup() logconfig: %s\n",
+    dlog("INFO logdriver %s\n", log_driver);
+    argv[1] = log_driver;
+
+    /*
+     * When we're not using json-file, we want to fork a logger child to handle
+     * the logging driver. For json-file and none we don't need to do anything
+     * in the zone.
+     */
+    if (strcmp("json-file", log_driver) == 0 ||
+        strcmp("none", log_driver) == 0) {
+
+        return;
+    }
+
+    // keep the pid of init/dockerinit so we can kill if the logger doesn't work
+    init_pid = getpid();
+
+    dlog("INFO gathering logger environment\n");
+    envp = getLoggingEnv();
+
+    dlog("INFO creating logger child for %s\n", log_driver);
+
+    if ((pid = fork()) == -1) {
+        fatal(ERR_FORK_FAILED, "fork() failed: %s\n", strerror(errno));
+    }
+
+    if (pid == 0) {
+        /* child */
+
+        // Keep descriptor 0 as a copy of the log descriptor so that errors
+        // until exec() (or if it fails) will go to the dockerinit log. If exec
+        // is successful, the descriptor should close since it's opened CLOEXEC.
+        if (dup2(log_fd, 0) < 0) {
+            fatal(ERR_DUP2, "failed to dup2(log_fd, 0): %s\n", strerror(errno));
+        }
+        log_stream = fdopen(0, "w");
+        if (log_stream == NULL) {
+            log_stream = stderr;
+            fatal(ERR_FDOPEN_LOG, "failed to fdopen(2): %s\n", strerror(errno));
+        }
+
+        // close everything except the log_stream descriptor (0)
+        closefrom(1);
+
+        // connect 1,2 to /dev/null
+        _stdout = open("/dev/null", O_WRONLY);
+        if (_stdout != 1) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/null as stdout: %s\n",
                 strerror(errno));
         }
-        free(data);
+        _stderr = open("/dev/null", O_WRONLY);
+        if (_stderr != 2) {
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/null as stderr: %s\n",
+                strerror(errno));
+        }
+
+        // setup the zfd redirection
+        if (ctty) {
+            makeMux(0, 1);
+            tmpfd = open("/dev/zfd/1", O_RDONLY);
+            if (tmpfd != 3) {
+                fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
+                    strerror(errno));
+            }
+            tmpfd = open("/dev/null", O_RDONLY);
+            if (tmpfd != 4) {
+                fatal(ERR_OPEN_CONSOLE, "failed to open /dev/null: %s\n",
+                    strerror(errno));
+            }
+        } else {
+            makeMux(1, 3);
+            makeMux(2, 4);
+            tmpfd = open("/dev/zfd/3", O_RDONLY);
+            if (tmpfd != 3) {
+                fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/3: %s\n",
+                    strerror(errno));
+            }
+            tmpfd = open("/dev/zfd/4", O_RDONLY);
+            if (tmpfd != 4) {
+                fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/4: %s\n",
+                    strerror(errno));
+            }
+        }
+
+        // log ENV + args + cmd, then close log hole
+
+        makePath(DOCKER_LOGGER, cmd, sizeof (cmd));
+
+        dlog("LOGGER CMD '%s'\n", cmd);
+
+        i = 0;
+        while (argv[i] != NULL) {
+            dlog("LOGGER ARG[%d] %s\n", i, argv[i]);
+            i++;
+        }
+        dlog("LOGGER ARG[%d] <NULL>\n", i);
+
+        i = 0;
+        while (envp[i] != NULL) {
+            dlog("LOGGER ENV[%d] %s\n", i, envp[i]);
+            i++;
+        }
+        dlog("LOGGER ENV[%d] <NULL>\n", i);
+
+        execve(cmd, argv, envp);
+        dlog("LOGGER ERROR execve(%s) failed: %s\n", cmd, strerror(errno));
+        dlog("LOGGER ERROR killing init[%d]\n", (int)init_pid);
+        (void) kill(init_pid, SIGKILL);
+        fatal(ERR_EXEC_FAILED, "execve(%s) failed and we killed init\n", cmd);
     }
+
+    /* parent */
+
+    dlog("INFO started logger[%d] (%s)\n", (int)pid, log_driver);
+
+    free(log_driver);
+}
+
+static void
+setupTerminal(boolean_t ctty)
+{
+    int _stdin, _stdout, _stderr;
+    boolean_t open_stdin = getStdinStatus();
+    struct winsize ws;
 
     /* Try to determine current window size or use defaults. */
     if (ioctl(1, TIOCGWINSZ, &ws) < 0) {
@@ -224,9 +441,6 @@ setupTerminal(void)
     if (ws.ws_col == 0) {
         ws.ws_col = 80;
     }
-
-    dlog("INFO logdriver %s\n", log_driver);
-    dlog("INFO logconfig %s\n", log_config);
 
     dlog("SWITCHING TO /dev/zfd/*\n");
 
@@ -252,17 +466,6 @@ setupTerminal(void)
                     strerror(errno));
             }
         }
-    }
-
-    /*
-     * When we're not using json-file, we want to fork a logger child to handle
-     * the logging driver.
-     */
-    if (strcmp("json-file", log_driver) != 0
-        && strcmp("none", log_driver) != 0) {
-
-        fatal(ERR_UNKNOWN_LOG_DRIVER, "unsupported log driver: '%s'\n",
-            log_driver);
     }
 
     if (close(1) == -1) {
@@ -440,7 +643,7 @@ getBrand(void)
         brand = BRAND_JOYENT_MINIMAL;
     } else {
         fatal(ERR_INVALID_BRAND, "invalid brand: %s\n", data);
-	abort();
+        abort();
     }
 
     free(data);
@@ -455,6 +658,20 @@ getStdinStatus(void)
     data = mdataGet("docker:open_stdin");
     if (data != NULL && strcmp("true", data) == 0) {
         return (B_TRUE);
+    }
+
+    return (B_FALSE);
+}
+
+static boolean_t
+getTtyStatus(void)
+{
+    const char *data;
+
+    if ((data = mdataGet("docker:tty")) != NULL) {
+        if (strcmp("true", data) == 0) {
+            return (B_TRUE);
+        }
     }
 
     return (B_FALSE);
@@ -928,7 +1145,7 @@ waitIfAttaching()
 int
 main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
 {
-    int fd;
+    boolean_t ctty = B_FALSE;
     int ret;
     int tmpfd;
     strlist_t *env = NULL;
@@ -962,12 +1179,12 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
             strerror(errno));
     }
 
-    fd = open(LOGFILE, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
-    if (fd == -1) {
+    log_fd = open(LOGFILE, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (log_fd == -1) {
         fatal(ERR_OPEN, "failed to open log file: %s\n", strerror(errno));
     }
 
-    log_stream = fdopen(fd, "w");
+    log_stream = fdopen(log_fd, "w");
     if (log_stream == NULL) {
         log_stream = stderr;
         fatal(ERR_FDOPEN_LOG, "failed to fdopen(2): %s\n", strerror(errno));
@@ -1021,7 +1238,9 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
      * In case we're going to read from stdin w/ attach, we want to open the zfd
      * _now_ so it won't return EOF on reads.
      */
-    setupTerminal();
+    ctty = getTtyStatus();
+    setupTerminal(ctty);
+    setupLogging(ctty);
     waitIfAttaching();
 
     /* cleanup mess from mdata-client */

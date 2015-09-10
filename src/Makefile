@@ -116,7 +116,10 @@ C_CHECK_TARGETS=\
 	zfs_recv.c \
 	zfs_send.c \
 	zoneevent.c \
-	sysevent.c
+	sysevent.c \
+	dockerinit/src/dockerexec.c \
+	dockerinit/src/dockerinit.c \
+	dockerinit/src/docker-common.c
 
 #
 # Generic flags we apply by default to everything.

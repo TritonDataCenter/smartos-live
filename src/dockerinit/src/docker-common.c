@@ -592,7 +592,7 @@ setupWorkdir(custr_t **cup)
     dlog("WORKDIR '%s'\n", custr_cstr(cu));
 
     /* Create workdir (and parents) if missing. */
-    if(mkdirp(custr_cstr(cu), 0755) == -1 && errno != EEXIST) {
+    if (mkdirp(custr_cstr(cu), 0755) == -1 && errno != EEXIST) {
         fatal(ERR_MKDIR, "mkdirp(%s) failed: %s\n", custr_cstr(cu),
           strerror(errno));
     }

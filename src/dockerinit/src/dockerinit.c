@@ -183,6 +183,7 @@ setupTerminal(void)
     char *log_config = "{}";
     char *log_driver = "json-file";
     boolean_t open_stdin = getStdinStatus();
+    struct winsize ws;
 
     if ((data = mdataGet("docker:tty")) != NULL) {
         if (strcmp("true", data) == 0) {
@@ -209,6 +210,19 @@ setupTerminal(void)
                 strerror(errno));
         }
         free(data);
+    }
+
+    /* Try to determine current window size or use defaults. */
+    if (ioctl(1, TIOCGWINSZ, &ws) < 0) {
+        bzero(&ws, sizeof (ws));
+    }
+
+    if (ws.ws_row == 0) {
+        ws.ws_row = 24;
+    }
+
+    if (ws.ws_col == 0) {
+        ws.ws_col = 80;
     }
 
     dlog("INFO logdriver %s\n", log_driver);
@@ -279,6 +293,12 @@ setupTerminal(void)
             fatal(ERR_OPEN_CONSOLE, "failed set controlling tty: %s\n",
                 strerror(errno));
         }
+
+        if (open_stdin) {
+            (void) ioctl(_stdin, TIOCSWINSZ, &ws);
+        }
+        (void) ioctl(_stdout, TIOCSWINSZ, &ws);
+
     } else {
         /* Configure individual pipe style output */
         _stdout = open("/dev/zfd/1", O_WRONLY);

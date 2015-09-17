@@ -2294,6 +2294,8 @@ function main()
 
                         mod_nic.upgradeNics(vmobj, function (nic_err) {
                             var upgrade_payload = {'update_nics': []};
+                            var update_nic;
+                            var do_push;
 
                             if (nic_err) {
                                 log.error(nic_err);
@@ -2301,11 +2303,19 @@ function main()
 
                             for (nic in vmobj.nics) {
                                 nic = vmobj.nics[nic];
+                                update_nic = { 'mac': nic.mac };
+                                do_push = false;
                                 if (nic.hasOwnProperty('ips')) {
-                                    upgrade_payload.update_nics.push({
-                                        'mac': nic.mac,
-                                        'ips': nic.ips
-                                    });
+                                    update_nic.ips = nic.ips;
+                                    do_push = true;
+                                }
+                                if (nic.hasOwnProperty('gateways')) {
+                                    update_nic.gateways = nic.gateways;
+                                    do_push = true;
+                                }
+                                if (do_push) {
+                                    upgrade_payload.update_nics.push(
+                                        update_nic);
                                 }
                             }
 

@@ -197,6 +197,45 @@ runIpmgmtd(void)
     }
 }
 
+/*
+ * Due to the async nature of devfs it is possible that the zfd devs won't
+ * exist immediately. We need to handle this case by checking and waiting until
+ * they do exist.
+ */
+static void
+zfd_ready()
+{
+    DIR *dirp;
+    struct dirent *dp;
+    boolean_t ready;
+    struct timespec ts;
+
+    ts.tv_sec = 0;
+    ts.tv_nsec = 100000000;	/* 1/10 of a second */
+    for (;;) {
+        ready = B_FALSE;
+        if ((dirp = opendir("/dev/zfd")) != NULL) {
+            do {
+                if ((dp = readdir(dirp)) != NULL) {
+                    if (strcmp(dp->d_name, ".") == 0 ||
+                        strcmp(dp->d_name, "..") == 0) {
+                            continue;
+                    }
+                    ready = B_TRUE;
+                    break;
+                }
+            } while (dp != NULL);
+
+            (void) closedir(dirp);
+        }
+
+        if (ready) {
+            break;
+        }
+        (void) nanosleep(&ts, NULL);
+    }
+}
+
 static void
 makeMux(int stdid, int logid)
 {
@@ -1239,6 +1278,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
      * _now_ so it won't return EOF on reads.
      */
     ctty = getTtyStatus();
+    zfd_ready();
     setupTerminal(ctty);
     setupLogging(ctty);
     waitIfAttaching();

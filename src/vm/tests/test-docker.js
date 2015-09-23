@@ -715,7 +715,6 @@ test('test docker VM with paths in /tmp', function (t) {
 });
 
 Object.keys(log_modes).forEach(function (mode) {
-    console.log('mode: ' + mode);
     test('test docker VM with log mode ' + mode, function (t) {
         var payload = JSON.parse(JSON.stringify(common_payload));
         var state = {brand: payload.brand};
@@ -740,4 +739,142 @@ Object.keys(log_modes).forEach(function (mode) {
             }
         ]);
     });
+});
+
+test('test updates to zlog_mode', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.docker = true;
+
+    function expectLogstate(expected, cb) {
+        VM.load(state.uuid, function (err, obj) {
+            t.ok(!err, 'loading obj for new VM');
+            if (err) {
+                cb(err);
+                return;
+            }
+            t.equal(obj.zlog_mode, expected.zlog_mode, 'correct zlog_mode ('
+                + obj.zlog_mode + ')');
+            t.equal(obj.internal_metadata['docker:tty'], expected.tty,
+                'correct tty value (' + obj.internal_metadata['docker:tty']
+                + ')');
+            t.equal(obj.internal_metadata['docker:logdriver'],
+                expected.logdriver, 'correct logdriver value ('
+                + obj.internal_metadata['docker:logdriver'] + ')');
+            cb();
+        });
+    }
+
+    function applyUpdate(update, cb) {
+        var update_payload = {
+            remove_internal_metadata: [],
+            set_internal_metadata: {}
+        };
+
+        if (update.hasOwnProperty('tty')) {
+            if (update.tty === undefined) {
+                update_payload.remove_internal_metadata.push('docker:tty');
+            } else {
+                update_payload.set_internal_metadata['docker:tty']
+                    = update.tty;
+            }
+        }
+
+        if (update.hasOwnProperty('logdriver')) {
+            if (update.logdriver === undefined) {
+                update_payload.remove_internal_metadata
+                    .push('docker:logdriver');
+            } else {
+                update_payload.set_internal_metadata['docker:logdriver']
+                    = update.logdriver;
+            }
+        }
+
+        if (Object.keys(update_payload.set_internal_metadata).length === 0) {
+            delete update_payload.set_internal_metadata;
+        }
+        if (update_payload.remove_internal_metadata.length === 0) {
+            delete update_payload.remove_internal_metadata;
+        }
+
+        VM.update(state.uuid, update_payload, function (err) {
+            t.ok(!err, 'update ' + JSON.stringify(update_payload)
+                + ' succeeded');
+            cb(err);
+        });
+    }
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        function (cb) {
+            expectLogstate({
+                zlog_mode: 'logging',
+                tty: undefined,
+                logdriver: undefined
+            }, cb);
+        }, function (cb) {
+            applyUpdate({
+                tty: true
+            }, cb);
+        }, function (cb) {
+            expectLogstate({
+                zlog_mode: 'interactive',
+                tty: true,
+                logdriver: undefined
+            }, cb);
+        }, function (cb) {
+            applyUpdate({}, cb);
+        }, function (cb) {
+            // empty update should not have changed anything
+            expectLogstate({
+                zlog_mode: 'interactive',
+                tty: true,
+                logdriver: undefined
+            }, cb);
+        }, function (cb) {
+            applyUpdate({
+                tty: true,
+                logdriver: 'none'
+            }, cb);
+        }, function (cb) {
+            expectLogstate({
+                zlog_mode: 'nlinteractive',
+                tty: true,
+                logdriver: 'none'
+            }, cb);
+        }, function (cb) {
+            applyUpdate({
+                tty: false,
+                logdriver: 'none'
+            }, cb);
+        }, function (cb) {
+            expectLogstate({
+                zlog_mode: 'nologging',
+                tty: false,
+                logdriver: 'none'
+            }, cb);
+        }, function (cb) {
+            applyUpdate({
+                tty: false,
+                logdriver: 'json-file'
+            }, cb);
+        }, function (cb) {
+            expectLogstate({
+                zlog_mode: 'logging',
+                tty: false,
+                logdriver: 'json-file'
+            }, cb);
+        }, function (cb) {
+            applyUpdate({
+                tty: undefined,
+                logdriver: undefined
+            }, cb);
+        }, function (cb) {
+            expectLogstate({
+                zlog_mode: 'logging',
+                tty: undefined,
+                logdriver: undefined
+            }, cb);
+        }
+    ]);
 });

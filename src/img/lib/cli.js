@@ -138,7 +138,7 @@ function rowFromImageInfo(imageInfo) {
 
 /* BEGIN JSSTYLED */
 var rowFieldsHelp = (
-      '    Any of the manifest fields (see `imgadm list -j` output) plus the\n'
+      '    Any of the manifest fields (see `imgadm {{cmd}} -j` output) plus the\n'
     + '    following computed fields for convenience.\n'
     + '\n'
     + '    published_date            just the date part of `published_at`\n'
@@ -481,7 +481,7 @@ CLI.prototype.printHelp = function printHelp(cb) {
         '',
         '    imgadm sources [<options>]             list and edit image sources',
         '',
-        '    imgadm avail                           list available images',
+        '    imgadm avail [<filters>]               list available images',
         '    imgadm show <uuid|docker-repo-tag>     show manifest of an available image',
         '',
         '    imgadm import [-P <pool>] <image-id>   import image from a source',
@@ -835,11 +835,14 @@ CLI.prototype.do_avail = function do_avail(subcmd, opts, args, cb) {
         self.do_help('help', {}, [subcmd], cb);
         return;
     }
-    if (args.length) {
-        cb(new errors.UsageError(
-            'unexpected args: ' + args.join(' ')));
+
+    try {
+        var filters = filtersFromArgs(args);
+    } catch (e) {
+        cb(e);
         return;
     }
+    self.log.debug({filters: filters}, 'avail filters');
 
     /* JSSTYLED */
     var columns = opts.o.trim().split(/\s*,\s*/g);
@@ -850,6 +853,8 @@ CLI.prototype.do_avail = function do_avail(subcmd, opts, args, cb) {
         // Even if there was an err, we still attempt to return results
         // for working sources.
         try {
+            imagesInfo = filterImagesInfo(imagesInfo, filters);
+
             listImagesInfo(imagesInfo, {
                 json: opts.json,
                 columns: columns,

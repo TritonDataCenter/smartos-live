@@ -6,7 +6,7 @@
 
     imgadm sources [<options>]             list and edit image sources
 
-    imgadm avail                           list available images
+    imgadm avail [<filters>]               list available images
     imgadm show <uuid|docker-repo-tag>     show manifest of an available image
 
     imgadm import [-P <pool>] <uuid|docker repo:tag>
@@ -114,7 +114,7 @@ UUID.
             # Legacy SDC 6.5 DSAPI (deprecated)
             imgadm sources -a https://datasets.joyent.com/datasets -t dsapi
 
-    imgadm avail
+    imgadm avail [<filters>]
 
         List available images from all sources.
         This is not supported for Docker sources.
@@ -132,7 +132,7 @@ UUID.
                                       "published_at,name".
 
         Fields for "-o" and "-s":
-            Any of the manifest fields (see `imgadm list -j` output) plus the
+            Any of the manifest fields (see `imgadm avail -j` output) plus the
             following computed fields for convenience.
 
             published_date            just the date part of `published_at`

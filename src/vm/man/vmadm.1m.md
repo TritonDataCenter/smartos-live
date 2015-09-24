@@ -616,7 +616,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         unit used is the percentage of a single CPU that can be used by the VM.
         Eg. a value of 300 means up to 3 full CPUs.
 
-        type: integer (percentage of single CPUs)
+        type: integer (percentage of single CPUs, set to 0 for no cap)
         vmtype: OS,KVM
         listable: yes
         create: yes

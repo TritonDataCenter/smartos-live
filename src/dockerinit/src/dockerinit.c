@@ -466,20 +466,6 @@ setupTerminal(boolean_t ctty)
 {
     int _stdin, _stdout, _stderr;
     boolean_t open_stdin = getStdinStatus();
-    struct winsize ws;
-
-    /* Try to determine current window size or use defaults. */
-    if (ioctl(1, TIOCGWINSZ, &ws) < 0) {
-        bzero(&ws, sizeof (ws));
-    }
-
-    if (ws.ws_row == 0) {
-        ws.ws_row = 24;
-    }
-
-    if (ws.ws_col == 0) {
-        ws.ws_col = 80;
-    }
 
     dlog("SWITCHING TO /dev/zfd/*\n");
 
@@ -535,11 +521,6 @@ setupTerminal(boolean_t ctty)
             fatal(ERR_OPEN_CONSOLE, "failed set controlling tty: %s\n",
                 strerror(errno));
         }
-
-        if (open_stdin) {
-            (void) ioctl(_stdin, TIOCSWINSZ, &ws);
-        }
-        (void) ioctl(_stdout, TIOCSWINSZ, &ws);
 
     } else {
         /* Configure individual pipe style output */

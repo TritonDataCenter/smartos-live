@@ -142,7 +142,7 @@ function plumb_admin
     wait_for_admin_nic_state "up"
 }
 
-# Creates, plumbs and brings up a vnic with the specified parameters
+# Creates, plumbs and brings up a vnic with the specified inet parameters
 function vnic_up
 {
     set -o xtrace
@@ -220,6 +220,7 @@ function vnic_up
     eval "vnic_${iface}_up=true"
 }
 
+# Creates, plumbs and brings up a vnic with the specified inet6 parameters
 function vnic_up6
 {
     set -o xtrace

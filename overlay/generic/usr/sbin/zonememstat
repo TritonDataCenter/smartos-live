@@ -147,7 +147,7 @@ shift OPTIND-1
 
 [ $SUMMARY == 1 ] && do_proc
 
-kstat -c zone_memory_cap | nawk \
+kstat -m memory_cap -c zone_memory_cap | nawk \
     -v "show_alias=$SHOW_ALIAS" \
     -v "zname=$ZONENAME" \
     -v "over=$OVER" \

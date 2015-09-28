@@ -155,13 +155,18 @@ function vnic_up
     typeset mac_addr="$6"
     typeset dhcp_primary="$7"
     typeset mtu="$8"
-    typeset details="link='${link}', iface='${iface}', ip='${ip}', netmask='${netmask}, vlan_id='${vlan_id}'"
+    typeset details=
     typeset vlan_opt=
     typeset mac_addr_opt=
     typeset prop_opt=
 
-    if [[ -z ${link} ]] || [[ -z ${iface} ]] || [[ -z ${ip} ]] || ([[ ${ip} != "dhcp" ]] && [[ -z ${netmask} ]]); then
-        echo "WARNING: not bringing up nic (insufficient configuration): $details"
+    details="link='${link}', iface='${iface}', ip='${ip}'"
+    details="${details}, netmask='${netmask}, vlan_id='${vlan_id}'"
+
+    if [[ -z ${link} ]] || [[ -z ${iface} ]] || \
+       [[ -z ${ip} ]] || ([[ ${ip} != "dhcp" ]] && [[ -z ${netmask} ]]); then
+        echo "WARNING: not bringing up nic (insufficient configuration): " \
+             "$details"
         return
     fi
 
@@ -173,7 +178,8 @@ function vnic_up
 
     if [[ -n ${mac_addr} ]] && [[ -n ${ActiveAggrLinks[${mac_addr}]} ]]; then
         echo "WARNING: trying to assign MAC address \"${mac_addr}\" to vnic," \
-            " but it already belongs to link aggr \"${ActiveAggrLinks[${mac_addr}]}\""
+            " but it already belongs to link aggr " \
+            "\"${ActiveAggrLinks[${mac_addr}]}\""
         return
     fi
 
@@ -231,19 +237,24 @@ function vnic_up6
     typeset vlan_id="$4"
     typeset mac_addr="$5"
     typeset mtu="$6"
-    typeset details="link='${link}', iface='${iface}', ip6='${ip}', vlan_id='${vlan_id}'"
+    typeset details=
     typeset vlan_opt=
     typeset mac_addr_opt=
     typeset prop_opt=
 
+    details="link='${link}', iface='${iface}', ip6='${ip}'"
+    details="${details}, vlan_id='${vlan_id}'"
+
     if [[ -z ${link} ]] || [[ -z ${iface} ]] || [[ -z ${ip} ]]; then
-        echo "WARNING: not bringing up nic (insufficient configuration): $details"
+        echo "WARNING: not bringing up nic (insufficient configuration): " \
+             "$details"
         return
     fi
 
     if [[ -n ${mac_addr} ]] && [[ -n ${ActiveAggrLinks[${mac_addr}]} ]]; then
         echo "WARNING: trying to assign MAC address \"${mac_addr}\" to vnic," \
-            " but it already belongs to link aggr \"${ActiveAggrLinks[${mac_addr}]}\""
+            " but it already belongs to link aggr " \
+            "\"${ActiveAggrLinks[${mac_addr}]}\""
         return
     fi
 

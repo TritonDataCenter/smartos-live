@@ -219,6 +219,7 @@ function vnic_up
     fi
     eval "vnic_${iface}_up=true"
 }
+
 function vnic_up6
 {
     set -o xtrace

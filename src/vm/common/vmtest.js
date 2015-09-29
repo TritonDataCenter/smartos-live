@@ -12,8 +12,8 @@ var VM = require('/usr/vm/node_modules/VM');
 
 var IMAGES_SOURCE = 'https://images.joyent.com/';
 
+exports.CURRENT_DOCKER_ALPINE_UUID = process.env['DOCKER_ALPINE_UUID'];
 exports.CURRENT_SMARTOS_UUID = '01b2c898-945f-11e1-a523-af1afbe22822';
-exports.CURRENT_SNGL_UUID = '4bf9530a-7ae5-11e2-bb4e-3bad5fbc3de9';
 exports.CURRENT_UBUNTU_UUID = '71101322-43a5-11e1-8f01-cf2a3031a7f4';
 exports.CURRENT_UBUNTU_NAME = 'ubuntu-10.04';
 exports.CURRENT_UBUNTU_SIZE = 5120;
@@ -24,7 +24,7 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
         state.brand = payload.brand;
     }
 
-    if ((['joyent', 'joyent-minimal', 'sngl'].indexOf(state.brand) !== -1)
+    if ((['joyent', 'joyent-minimal', 'lx'].indexOf(state.brand) !== -1)
         && (!payload.hasOwnProperty('image_uuid'))) {
 
         payload.image_uuid = uuid;

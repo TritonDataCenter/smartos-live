@@ -50,11 +50,29 @@ done
 # Ensure images used by tests are installed
 
 installed_images='imgadm list -H -o uuid | sort'
-want_images="cat ${ROOT}/common/vmtest.js | grep exports\.CURRENT_.*_UUID | cut -d \"'\" -f2 | sort"
+want_images="cat ${ROOT}/common/vmtest.js | grep exports\.CURRENT_.*_UUID \
+    | grep -v "process.env" | cut -d \"'\" -f2 | sort"
 
 for img in $(comm -1 -3 <(eval ${installed_images}) <(eval ${want_images})); do
     imgadm import "${img}"
 done
+
+# Special case for docker
+
+imgadm sources --add-docker-hub
+export DOCKER_ALPINE_UUID=$(imgadm list -o uuid,tags \
+    | grep "\"docker:repo\":\"alpine\".*\"docker:tag:latest\":true" \
+    | cut -d' ' -f1)
+if [[ -z ${DOCKER_ALPINE_UUID} ]]; then
+    imgadm import alpine:latest
+    export DOCKER_ALPINE_UUID=$(imgadm list -o uuid,tags \
+        | grep "\"docker:repo\":\"alpine\".*\"docker:tag:latest\":true" \
+        | cut -d' ' -f1)
+    if [[ -z ${DOCKER_ALPINE_UUID} ]]; then
+        echo "Unable to download alpine:latest docker image" >&2
+        exit 1
+    fi
+fi
 
 # Ensure nic tags needed by tests exist
 

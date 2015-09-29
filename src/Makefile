@@ -104,6 +104,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-lastexited.js \
 	vm/tests/test-openonerrlogger.js \
 	vm/tests/test-reboot.js \
+	vm/tests/test-reprovision.js \
 	vm/tests/test-spoof-opts.js \
 	vm/tests/test-tmpfs.js \
 	vm/tests/test-update.js \

@@ -1,4 +1,4 @@
-// Copyright 2014 Joyent, Inc.  All rights reserved.
+// Copyright 2015 Joyent, Inc.  All rights reserved.
 
 var brand;
 var os_brands = ['joyent', 'joyent-minimal'];
@@ -139,6 +139,30 @@ for (brand in os_brands) {
             brand: brand,
             image_uuid: smartos_image_uuid,
             zpool: 'zones'
+            }, function (errors) {
+
+            t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
+            t.end();
+        });
+    });
+
+    test('set fs_allowed (string)', function (t) {
+        VM.validate(brand, 'create', {
+            brand: brand,
+            image_uuid: smartos_image_uuid,
+            fs_allowed: 'ufs,pcfs,tmpfs'
+            }, function (errors) {
+
+            t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));
+            t.end();
+        });
+    });
+
+    test('set fs_allowed (array)', function (t) {
+        VM.validate(brand, 'create', {
+            brand: brand,
+            image_uuid: smartos_image_uuid,
+            fs_allowed: ['ufs', 'pcfs', 'tmpfs']
             }, function (errors) {
 
             t.ok(!errors, 'valid payload, errors: ' + JSON.stringify(errors));

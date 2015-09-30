@@ -39,6 +39,13 @@ var PAYLOADS = {
                 mac: '01:02:03:04:05:06'
             }
         ]
+    }, update_net0: {
+        update_nics: [
+            {
+                ips: ['10.254.254.254/24', 'fd00::1/64', 'addrconf'],
+                mac: '01:02:03:04:05:06'
+            }
+        ]
     }, add_net1: {
         add_nics: [
             {
@@ -224,6 +231,41 @@ test('add net0', function (t) {
                             + ', expected '
                             + JSON.stringify(
                                 PAYLOADS.add_net0.add_nics[0][field]));
+                    }
+                }
+                t.end();
+            });
+        }
+    });
+});
+
+test('add IPv6 to net0', function (t) {
+    VM.update(vm_uuid, PAYLOADS.update_net0, function (update_err) {
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
+            t.end();
+        } else {
+            VM.load(vm_uuid, function (err, obj) {
+                var field;
+
+                if (err) {
+                    t.ok(false, 'failed reloading VM');
+                } else if (obj.nics.length !== 1) {
+                    t.ok(false, 'VM has ' + obj.nics.length + ' != 1 nics');
+                } else {
+                    for (field in PAYLOADS.update_net0.update_nics[0]) {
+                        if (field === 'physical') {
+                            // physical is a property that gets added but not in
+                            // the obj
+                            continue;
+                        }
+                        t.deepEqual(obj.nics[0][field],
+                            PAYLOADS.update_net0.update_nics[0][field],
+                            'failed to set ' + field
+                            + ', was ' + JSON.stringify(obj.nics[0][field])
+                            + ', expected '
+                            + JSON.stringify(
+                                PAYLOADS.update_net0.update_nics[0][field]));
                     }
                 }
                 t.end();

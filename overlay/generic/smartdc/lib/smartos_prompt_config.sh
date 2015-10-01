@@ -751,18 +751,23 @@ promptpool()
 
 create_dump()
 {
-	# Get avail zpool size - this assumes we're not using any space yet.
-	base_size=`zfs get -H -p -o value available ${SYS_ZPOOL}`
-	# Convert to MB
-	base_size=`expr $base_size / 1000000`
-	# Calculate 5% of that
-	base_size=`expr $base_size / 20`
-	# Cap it at 4GB
-	[ ${base_size} -gt 4096 ] && base_size=4096
+	# The original setup capped the dumpvol at 4G however this is too small on
+        # large memory servers.  This function will setup a dumpvol based on the 
+        # size of the dumpadm -e estimate.  We take value and double it to insure
+        # we have a good sized dumpvol, out of the box for most cases. We also set
+        # the smallest dumpvol 1G. The reason to double the estimate is this is
+        # the cleanest way to get a usable dumpsize size on most systems. Setting 
+        # the minimum to 1G was recommended to allow the dumpvol to work on small 
+        # ram setups and not to eat too much disk space
 
-	# Create the dump zvol
-	zfs create -V ${base_size}mb ${SYS_ZPOOL}/dump || \
-	    fatal "failed to create the dump zvol"
+	local dumpsize=$(echo "(( $(dumpadm -e |  sed "s/[^0-9|.]//g") * 1024) * 2 )/1" |bc)
+
+	# Ensure the dumpvol is at least 1G. 
+	[ ${dumpsize} -lt 1024 ] && dumpsize=1024
+
+	# Create the dump zvol 
+	zfs create -V ${dumpsize}mb -o checksum=noparity ${SYS_ZPOOL}/dump || \
+        fatal "failed to create the dump zvol"
 	dumpadm -d /dev/zvol/dsk/${SYS_ZPOOL}/dump >/dev/null
 	[[ $? -eq 0 ]] || fatal "failed to enable dump device"
 }

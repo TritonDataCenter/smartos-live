@@ -50,7 +50,7 @@ if [[ -n $DAYS ]]; then
 	fi
 	# Rotate and trim the audit logs
 	audit -n
-	cd $DIR
+	cd "$DIR" || exit 1
 	find . -type f -mtime +$DAYS -print0 2>/dev/null | xargs -0 rm -f
 	exit 0
 fi

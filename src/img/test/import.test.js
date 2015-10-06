@@ -53,9 +53,15 @@ var test = tap4nodeunit.test;
 var WRKDIR = '/var/tmp/img-test-import';
 var CACHEDIR = '/var/tmp/img-test-cache';
 
-// smartos 1.6.2, because its file is relatively small and it is unlikely to
-// collide with current usage.
-var TEST_IMAGE_UUID = 'a93fda38-80aa-11e1-b8c1-8b1f33cd9007';
+/*
+ * Pick an image that (a) exists on datasets.jo (they *do* occassionally get
+ * deprecated) and (b) is relatively small and (c) is unlikely to collide with
+ * current usage.
+ *
+ * Also don't collide with TEST_IMAGE_UUID used in "dsapi.test.js".
+ */
+// minimal-32@15.2.0
+var TEST_IMAGE_UUID = '0764d78e-3472-11e5-8949-4f31abea4e05';
 
 var CACHEFILE = format('%s/%s.file', CACHEDIR, TEST_IMAGE_UUID);
 

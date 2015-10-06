@@ -42,10 +42,15 @@ var test = tap4nodeunit.test;
 
 // ---- globals
 
-// smartos@1.6.1, because its file is relatively small and it is unlikely to
-// collide with current usage. Also don't collide with smartos@1.6.2 used
-// in "import.test.js".
-var TEST_IMAGE_UUID = '2b4466d8-7981-11e1-9be2-3b0d0e114740';
+/*
+ * Pick an image that (a) exists on datasets.jo (they *do* occassionally get
+ * deprecated) and (b) is relatively small and (c) is unlikely to collide with
+ * current usage.
+ *
+ * Also don't collide with TEST_IMAGE_UUID used in "import.test.js".
+ */
+// minimal-64@15.2.0
+var TEST_IMAGE_UUID = '0764d78e-3472-11e5-8949-4f31abea4e05';
 
 
 // ---- tests

@@ -45,6 +45,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <zone.h>
+#include <libcontract.h>
 
 #include <arpa/inet.h>
 
@@ -61,6 +62,8 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/zfd.h>
+#include <sys/ctfs.h>
+#include <sys/contract/process.h>
 
 #include "../json-nvlist/json-nvlist.h"
 #include "../mdata-client/common.h"
@@ -282,6 +285,44 @@ makeMux(int stdid, int logid)
     }
 }
 
+static void
+init_template(void)
+{
+    int fd;
+
+    if ((fd = open64(CTFS_ROOT "/process/template", O_RDWR)) == -1) {
+        fatal(ERR_CONTRACT, "open %s/process/template failed: %s\n",
+	    CTFS_ROOT, strerror(errno));
+    }
+
+    if (ct_tmpl_set_critical(fd, 0) != 0) {
+        fatal(ERR_CONTRACT, "ct_tmpl_set_critical failed: %s\n",
+	    strerror(errno));
+    }
+    if (ct_tmpl_set_informative(fd, 0) != 0) {
+        fatal(ERR_CONTRACT, "ct_tmpl_set_informative failed: %s\n",
+	    strerror(errno));
+    }
+    if (ct_pr_tmpl_set_fatal(fd, CT_PR_EV_HWERR) != 0) {
+        fatal(ERR_CONTRACT, "ct_pr_tmpl_set_fatal failed: %s\n",
+	    strerror(errno));
+    }
+    if (ct_pr_tmpl_set_param(fd, CT_PR_KEEP_EXEC) != 0) {
+        fatal(ERR_CONTRACT, "ct_pr_tmpl_set_param failed: %s\n",
+	    strerror(errno));
+    }
+
+    /* requires PRIV_CONTRACT_IDENTITY so ignore error if it fails */
+    (void) ct_pr_tmpl_set_svc_fmri(fd, "svc:/dockerinit/child:default");
+
+    if (ct_tmpl_activate(fd) != 0) {
+        fatal(ERR_CONTRACT, "ct_tmpl_activate failed: %s\n",
+	    strerror(errno));
+    }
+
+    (void) close(fd);
+}
+
 static char **
 getLoggingEnv(void)
 {
@@ -372,6 +413,13 @@ setupLogging(boolean_t ctty)
     if (pid == 0) {
         /* child */
 
+        /*
+         * The init process and the logger must be in the same contract so that
+         * init will be killed if the logger exits. However, we neeed to ensure
+         * that any children of the logger are in a separate contract.
+         */
+        init_template();
+
         // Keep descriptor 0 as a copy of the log descriptor so that errors
         // until exec() (or if it fails) will go to the dockerinit log. If exec
         // is successful, the descriptor should close since it's opened CLOEXEC.
@@ -455,6 +503,13 @@ setupLogging(boolean_t ctty)
     }
 
     /* parent */
+
+    /*
+     * The init process and the logger must be in the same contract so that
+     * init will be killed if the logger exits. However, we neeed to ensure
+     * that any children of the init process are in a separate contract.
+     */
+    init_template();
 
     dlog("INFO started logger[%d] (%s)\n", (int)pid, log_driver);
 

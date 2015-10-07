@@ -98,7 +98,8 @@ typedef enum {
     ERR_OPEN_ZFD,
     ERR_STAT_ZFD,
     ERR_IOCTL_ZFD,
-    ERR_DUP2
+    ERR_DUP2,
+    ERR_CONTRACT
 } dockerinit_err_t;
 
 typedef enum {

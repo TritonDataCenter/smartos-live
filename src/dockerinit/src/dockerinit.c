@@ -101,6 +101,7 @@ static void setupTerminal(boolean_t ctty);
 static void setupLogging(boolean_t ctty);
 void waitIfAttaching();
 void makePath(const char *, char *, size_t);
+static int init_template(int);
 
 /* global metadata client bits */
 int initialized_proto = 0;
@@ -158,6 +159,9 @@ runIpmgmtd(void)
 {
     pid_t pid;
     int status;
+    int tmplfd;
+
+    tmplfd = init_template(0);
 
     if ((pid = fork()) == -1) {
         fatal(ERR_FORK_FAILED, "fork() failed: %s\n", strerror(errno));
@@ -175,6 +179,9 @@ runIpmgmtd(void)
             NULL
         };
 
+        (void) ct_tmpl_clear(tmplfd);
+        (void) close(tmplfd);
+
         makePath(IPMGMTD, cmd, sizeof (cmd));
 
         execve(cmd, argv, envp);
@@ -182,6 +189,8 @@ runIpmgmtd(void)
     }
 
     /* parent */
+    (void) ct_tmpl_clear(tmplfd);
+    (void) close(tmplfd);
 
     dlog("INFO started ipmgmtd[%d]\n", (int)pid);
 
@@ -285,31 +294,31 @@ makeMux(int stdid, int logid)
     }
 }
 
-static void
-init_template(void)
+static int
+init_template(int flag)
 {
     int fd;
 
     if ((fd = open64(CTFS_ROOT "/process/template", O_RDWR)) == -1) {
         fatal(ERR_CONTRACT, "open %s/process/template failed: %s\n",
-	    CTFS_ROOT, strerror(errno));
+            CTFS_ROOT, strerror(errno));
     }
 
     if (ct_tmpl_set_critical(fd, 0) != 0) {
         fatal(ERR_CONTRACT, "ct_tmpl_set_critical failed: %s\n",
-	    strerror(errno));
+            strerror(errno));
     }
     if (ct_tmpl_set_informative(fd, 0) != 0) {
         fatal(ERR_CONTRACT, "ct_tmpl_set_informative failed: %s\n",
-	    strerror(errno));
+            strerror(errno));
     }
     if (ct_pr_tmpl_set_fatal(fd, CT_PR_EV_HWERR) != 0) {
         fatal(ERR_CONTRACT, "ct_pr_tmpl_set_fatal failed: %s\n",
-	    strerror(errno));
+            strerror(errno));
     }
-    if (ct_pr_tmpl_set_param(fd, CT_PR_KEEP_EXEC) != 0) {
+    if (ct_pr_tmpl_set_param(fd, flag) != 0) {
         fatal(ERR_CONTRACT, "ct_pr_tmpl_set_param failed: %s\n",
-	    strerror(errno));
+            strerror(errno));
     }
 
     /* requires PRIV_CONTRACT_IDENTITY so ignore error if it fails */
@@ -317,10 +326,10 @@ init_template(void)
 
     if (ct_tmpl_activate(fd) != 0) {
         fatal(ERR_CONTRACT, "ct_tmpl_activate failed: %s\n",
-	    strerror(errno));
+            strerror(errno));
     }
 
-    (void) close(fd);
+    return (fd);
 }
 
 static char **
@@ -372,6 +381,7 @@ setupLogging(boolean_t ctty)
     int _stdout;
     int _stderr;
     int tmpfd;
+    int tmplfd;
 
     if ((data = mdataGet("docker:logdriver")) != NULL) {
         if (strcmp("json-file", data) != 0) {
@@ -418,7 +428,8 @@ setupLogging(boolean_t ctty)
          * init will be killed if the logger exits. However, we neeed to ensure
          * that any children of the logger are in a separate contract.
          */
-        init_template();
+        tmplfd = init_template(CT_PR_KEEP_EXEC);
+        (void) close(tmplfd);
 
         // Keep descriptor 0 as a copy of the log descriptor so that errors
         // until exec() (or if it fails) will go to the dockerinit log. If exec
@@ -509,7 +520,8 @@ setupLogging(boolean_t ctty)
      * init will be killed if the logger exits. However, we neeed to ensure
      * that any children of the init process are in a separate contract.
      */
-    init_template();
+    tmplfd = init_template(CT_PR_KEEP_EXEC);
+    (void) close(tmplfd);
 
     dlog("INFO started logger[%d] (%s)\n", (int)pid, log_driver);
 

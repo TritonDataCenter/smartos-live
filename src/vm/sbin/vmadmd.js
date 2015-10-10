@@ -2278,6 +2278,7 @@ function main()
 
                     upgradeVM(obj, lookup_fields, function (upg_err, vmobj) {
                         var nic;
+                        var nic_idx;
 
                         if (upg_err) {
                             log.error(upg_err, 'failed to upgrade VM '
@@ -2285,7 +2286,8 @@ function main()
                         }
 
                         // See if this is a newer VM that uses 'ips'
-                        for (nic in vmobj.nics) {
+                        for (nic_idx in vmobj.nics) {
+                            nic = vmobj.nics[nic_idx];
                             if (nic.hasOwnProperty('ips')) {
                                 finishUpgrade(vmobj);
                                 return;

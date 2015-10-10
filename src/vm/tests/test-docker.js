@@ -30,17 +30,24 @@ var common_payload = {
 };
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var log_modes = [
-    {mode: 'interactive',
+    {zlog_mode: 'interactive', app_svc_dependent: undefined,
         payload: {'docker:tty': true, 'docker:logdriver': 'json-file'}},
-    {mode: 'interactive', payload: {'docker:tty': true}},
-    {mode: 'logging',
+    {zlog_mode: 'interactive', app_svc_dependent: undefined,
+        payload: {'docker:tty': true}},
+    {zlog_mode: 'logging', app_svc_dependent: undefined,
         payload: {'docker:tty': false, 'docker:logdriver': 'json-file'}},
-    {mode: 'logging', payload: {}},
-    {mode: 'nlinteractive',
+    {zlog_mode: 'logging', app_svc_dependent: undefined,
+        payload: {}},
+    {zlog_mode: 'nlinteractive', app_svc_dependent: undefined,
         payload: {'docker:tty': true, 'docker:logdriver': 'none'}},
-    {mode: 'nologging',
+    {zlog_mode: 'nologging', app_svc_dependent: undefined,
         payload: {'docker:tty': false, 'docker:logdriver': 'none'}},
-    {mode: 'nologging', payload: {'docker:logdriver': 'none'}}
+    {zlog_mode: 'nologging', app_svc_dependent: undefined,
+        payload: {'docker:logdriver': 'none'}},
+    {zlog_mode: 'nlinteractive', app_svc_dependent: true,
+        payload: {'docker:tty': true, 'docker:logdriver': 'syslog'}},
+    {zlog_mode: 'nologging', app_svc_dependent: true,
+        payload: {'docker:tty': false, 'docker:logdriver': 'syslog'}}
 ];
 
 function writeInit(uuid, contents, callback) {
@@ -739,8 +746,11 @@ log_modes.forEach(function (mode) {
                         return;
                     }
 
-                    t.equal(obj.zlog_mode, mode.mode,
+                    t.equal(obj.zlog_mode, mode.zlog_mode,
                         'zlog_mode set correctly for ' + JSON.stringify(mode));
+                    t.equal(obj.app_svc_dependent, mode.app_svc_dependent,
+                        'app_svc_dependent set correctly for '
+                        + JSON.stringify(mode));
                     cb();
                 });
             }
@@ -763,6 +773,8 @@ test('test updates to zlog_mode', function (t) {
             }
             t.equal(obj.zlog_mode, expected.zlog_mode, 'correct zlog_mode ('
                 + obj.zlog_mode + ')');
+            t.equal(obj.app_svc_dependent, expected.app_svc_dependent,
+                'correct app_svc_dependent (' + obj.app_svc_dependent + ')');
             t.equal(obj.internal_metadata['docker:tty'], expected.tty,
                 'correct tty value (' + obj.internal_metadata['docker:tty']
                 + ')');
@@ -816,6 +828,7 @@ test('test updates to zlog_mode', function (t) {
         function (cb) {
             expectLogstate({
                 zlog_mode: 'logging',
+                app_svc_dependent: undefined,
                 tty: undefined,
                 logdriver: undefined
             }, cb);
@@ -826,6 +839,7 @@ test('test updates to zlog_mode', function (t) {
         }, function (cb) {
             expectLogstate({
                 zlog_mode: 'interactive',
+                app_svc_dependent: undefined,
                 tty: true,
                 logdriver: undefined
             }, cb);
@@ -835,6 +849,7 @@ test('test updates to zlog_mode', function (t) {
             // empty update should not have changed anything
             expectLogstate({
                 zlog_mode: 'interactive',
+                app_svc_dependent: undefined,
                 tty: true,
                 logdriver: undefined
             }, cb);
@@ -846,6 +861,7 @@ test('test updates to zlog_mode', function (t) {
         }, function (cb) {
             expectLogstate({
                 zlog_mode: 'nlinteractive',
+                app_svc_dependent: undefined,
                 tty: true,
                 logdriver: 'none'
             }, cb);
@@ -857,6 +873,7 @@ test('test updates to zlog_mode', function (t) {
         }, function (cb) {
             expectLogstate({
                 zlog_mode: 'nologging',
+                app_svc_dependent: undefined,
                 tty: false,
                 logdriver: 'none'
             }, cb);
@@ -868,6 +885,7 @@ test('test updates to zlog_mode', function (t) {
         }, function (cb) {
             expectLogstate({
                 zlog_mode: 'logging',
+                app_svc_dependent: undefined,
                 tty: false,
                 logdriver: 'json-file'
             }, cb);
@@ -879,8 +897,33 @@ test('test updates to zlog_mode', function (t) {
         }, function (cb) {
             expectLogstate({
                 zlog_mode: 'logging',
+                app_svc_dependent: undefined,
                 tty: undefined,
                 logdriver: undefined
+            }, cb);
+        }, function (cb) {
+            applyUpdate({
+                tty: undefined,
+                logdriver: 'syslog'
+            }, cb);
+        }, function (cb) {
+            expectLogstate({
+                zlog_mode: 'nologging',
+                app_svc_dependent: true,
+                tty: undefined,
+                logdriver: 'syslog'
+            }, cb);
+        }, function (cb) {
+            applyUpdate({
+                tty: true,
+                logdriver: 'syslog'
+            }, cb);
+        }, function (cb) {
+            expectLogstate({
+                zlog_mode: 'nlinteractive',
+                app_svc_dependent: true,
+                tty: true,
+                logdriver: 'syslog'
             }, cb);
         }
     ]);

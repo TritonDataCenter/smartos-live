@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2012, Joyent, Inc.
+# Copyright 2015, Joyent, Inc.
 #
 
 BASE =		$(PWD)
@@ -42,6 +42,7 @@ GXX =		$(NATIVEDIR)/usr/bin/g++
 CTFBINDIR =	$(ILLUMOS_SRC)/tools/proto/root_i386-nd/opt/onbld/bin/i386
 CTFMERGE =	$(CTFBINDIR)/ctfmerge
 CTFCONVERT =	$(CTFBINDIR)/ctfconvert
+ALTCTFCONV =	$(CTFBINDIR)/ctfconvert-altexec
 
 SYSINCDIRS =	/usr/include
 SYSLIBDIRS =	/usr/lib /lib

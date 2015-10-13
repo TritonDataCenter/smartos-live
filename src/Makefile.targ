@@ -10,8 +10,12 @@
 #
 
 #
-# Copyright (c) 2012, Joyent, Inc.  All rights reserved.
+# Copyright 2015 Joyent, Inc.
 #
 
 %: %.c
 	$(GCC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
+
+%.so: %.c
+	$(GCC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
+	$(ALTCTFCONV) -L VERSION -i $@

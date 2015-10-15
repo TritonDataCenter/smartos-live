@@ -96,7 +96,7 @@ void runIpmgmtd(void);
 void setupHostname();
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
-static void makeMux(int stdid, int logid);
+static void makeMux(int stdid, int logid, boolean_t use_flowcon);
 static void setupTerminal(boolean_t ctty);
 static void setupLogging(boolean_t ctty);
 void waitIfAttaching();
@@ -249,7 +249,7 @@ zfd_ready()
 }
 
 static void
-makeMux(int stdid, int logid)
+makeMux(int stdid, int logid, boolean_t flow_control)
 {
     int lfd = -1;
     int sfd = -1;
@@ -284,6 +284,12 @@ makeMux(int stdid, int logid)
 
     if (ioctl(lfd, ZFD_MUX, instance) != 0) {
         fatal(ERR_IOCTL_ZFD, "failed to issue ioctl to link streams\n");
+    }
+
+    if (flow_control) {
+        if (ioctl(lfd, ZFD_MUX_FLOWCON, 1) != 0) {
+            fatal(ERR_IOCTL_ZFD, "failed to issue flow control ioctl\n");
+        }
     }
 
     if (sfd != -1) {
@@ -382,6 +388,7 @@ setupLogging(boolean_t ctty)
     int _stderr;
     int tmpfd;
     int tmplfd;
+    boolean_t use_flowcon = B_FALSE;
 
     if ((data = mdataGet("docker:logdriver")) != NULL) {
         if (strcmp("json-file", data) != 0) {
@@ -460,7 +467,7 @@ setupLogging(boolean_t ctty)
 
         // setup the zfd redirection
         if (ctty) {
-            makeMux(0, 1);
+            makeMux(0, 1, use_flowcon);
             tmpfd = open("/dev/zfd/1", O_RDONLY);
             if (tmpfd != 3) {
                 fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
@@ -472,8 +479,8 @@ setupLogging(boolean_t ctty)
                     strerror(errno));
             }
         } else {
-            makeMux(1, 3);
-            makeMux(2, 4);
+            makeMux(1, 3, use_flowcon);
+            makeMux(2, 4, use_flowcon);
             tmpfd = open("/dev/zfd/3", O_RDONLY);
             if (tmpfd != 3) {
                 fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/3: %s\n",

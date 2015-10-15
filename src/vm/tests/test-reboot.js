@@ -145,7 +145,11 @@ test('test reboot kvm', function (t) {
                 t.ok(obj.boot_timestamp, 'VM has boot_timestamp: '
                     + obj.boot_timestamp);
                 prev_boot_timestamp = obj.boot_timestamp;
-                cb();
+
+                // Give the VM 20 seconds to (hopefully) boot up and start
+                // paying attention to ACPI shutdown. This is a workaround until
+                // we do something better for OS-4846.
+                setTimeout(cb, 20000);
             });
         }, function (cb) {
             VM.reboot(state.uuid, {}, function (err) {

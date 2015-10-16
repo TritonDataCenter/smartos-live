@@ -2292,6 +2292,16 @@ function main()
                                 finishUpgrade(vmobj);
                                 return;
                             }
+
+                            /*
+                             * 'gateway' and 'netmask' used to not be checked
+                             * if 'ip' was 'dhcp', so delete them, in case they
+                             * contain invalid values.
+                             */
+                            if (nic.ip === 'dhcp') {
+                                delete nic.gateway;
+                                delete nic.netmask;
+                            }
                         }
 
                         mod_nic.upgradeNics(vmobj, function (nic_err) {

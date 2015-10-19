@@ -16,7 +16,7 @@ collection of utilities comprising SmartOS-specific functionality
 found in projects/local; and implementation-specific overlays that deliver
 additional files verbatim.
 
-The build procses occurs in two phases; the first phase is a bootstrap phase.
+The build process occurs in two phases; the first phase is a bootstrap phase.
 The bootstrap phase uses the pkgsrc delivered compiler to build the set of items
 required to build illumos, this includes the compiler and various other
 components.  This process is driven from the illumos-extra repository and

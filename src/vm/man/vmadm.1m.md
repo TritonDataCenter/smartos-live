@@ -539,7 +539,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         the startvm script (for KVM), the properties from all the zone's
         datasets, metadata, tags and /var/adm/messages. In the future the list
         may change. The files specified will be written to the directory
-        /zones/archives/<uuid>.
+        /zones/archive/<uuid>.
 
         type: boolean
         vmtype: OS,KVM

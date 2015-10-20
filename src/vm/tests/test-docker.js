@@ -29,24 +29,23 @@ var common_payload = {
     max_swap: 1024
 };
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
+
 var log_modes = [
-    {zlog_mode: 'interactive', app_svc_dependent: undefined,
+    {zlog_mode: 'gt-', app_svc_dependent: undefined,
         payload: {'docker:tty': true, 'docker:logdriver': 'json-file'}},
-    {zlog_mode: 'interactive', app_svc_dependent: undefined,
+    {zlog_mode: 'gt-', app_svc_dependent: undefined,
         payload: {'docker:tty': true}},
-    {zlog_mode: 'logging', app_svc_dependent: undefined,
+    {zlog_mode: 'g--', app_svc_dependent: undefined,
         payload: {'docker:tty': false, 'docker:logdriver': 'json-file'}},
-    {zlog_mode: 'logging', app_svc_dependent: undefined,
+    {zlog_mode: 'g--', app_svc_dependent: undefined,
         payload: {}},
-    {zlog_mode: 'nlinteractive', app_svc_dependent: undefined,
+    {zlog_mode: '-t-', app_svc_dependent: undefined,
         payload: {'docker:tty': true, 'docker:logdriver': 'none'}},
-    {zlog_mode: 'nologging', app_svc_dependent: undefined,
+    {zlog_mode: '---', app_svc_dependent: undefined,
         payload: {'docker:tty': false, 'docker:logdriver': 'none'}},
-    {zlog_mode: 'nologging', app_svc_dependent: undefined,
-        payload: {'docker:logdriver': 'none'}},
-    {zlog_mode: 'nlinteractive', app_svc_dependent: true,
+    {zlog_mode: 'gtn', app_svc_dependent: true,
         payload: {'docker:tty': true, 'docker:logdriver': 'syslog'}},
-    {zlog_mode: 'nologging', app_svc_dependent: true,
+    {zlog_mode: 'g-n', app_svc_dependent: true,
         payload: {'docker:tty': false, 'docker:logdriver': 'syslog'}}
 ];
 
@@ -827,7 +826,7 @@ test('test updates to zlog_mode', function (t) {
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function (cb) {
             expectLogstate({
-                zlog_mode: 'logging',
+                zlog_mode: 'g--',
                 app_svc_dependent: undefined,
                 tty: undefined,
                 logdriver: undefined
@@ -838,7 +837,7 @@ test('test updates to zlog_mode', function (t) {
             }, cb);
         }, function (cb) {
             expectLogstate({
-                zlog_mode: 'interactive',
+                zlog_mode: 'gt-',
                 app_svc_dependent: undefined,
                 tty: true,
                 logdriver: undefined
@@ -848,7 +847,7 @@ test('test updates to zlog_mode', function (t) {
         }, function (cb) {
             // empty update should not have changed anything
             expectLogstate({
-                zlog_mode: 'interactive',
+                zlog_mode: 'gt-',
                 app_svc_dependent: undefined,
                 tty: true,
                 logdriver: undefined
@@ -860,7 +859,7 @@ test('test updates to zlog_mode', function (t) {
             }, cb);
         }, function (cb) {
             expectLogstate({
-                zlog_mode: 'nlinteractive',
+                zlog_mode: '-t-',
                 app_svc_dependent: undefined,
                 tty: true,
                 logdriver: 'none'
@@ -872,7 +871,7 @@ test('test updates to zlog_mode', function (t) {
             }, cb);
         }, function (cb) {
             expectLogstate({
-                zlog_mode: 'nologging',
+                zlog_mode: '---',
                 app_svc_dependent: undefined,
                 tty: false,
                 logdriver: 'none'
@@ -884,7 +883,7 @@ test('test updates to zlog_mode', function (t) {
             }, cb);
         }, function (cb) {
             expectLogstate({
-                zlog_mode: 'logging',
+                zlog_mode: 'g--',
                 app_svc_dependent: undefined,
                 tty: false,
                 logdriver: 'json-file'
@@ -896,7 +895,7 @@ test('test updates to zlog_mode', function (t) {
             }, cb);
         }, function (cb) {
             expectLogstate({
-                zlog_mode: 'logging',
+                zlog_mode: 'g--',
                 app_svc_dependent: undefined,
                 tty: undefined,
                 logdriver: undefined
@@ -908,7 +907,7 @@ test('test updates to zlog_mode', function (t) {
             }, cb);
         }, function (cb) {
             expectLogstate({
-                zlog_mode: 'nologging',
+                zlog_mode: 'g-n',
                 app_svc_dependent: true,
                 tty: undefined,
                 logdriver: 'syslog'
@@ -920,7 +919,7 @@ test('test updates to zlog_mode', function (t) {
             }, cb);
         }, function (cb) {
             expectLogstate({
-                zlog_mode: 'nlinteractive',
+                zlog_mode: 'gtn',
                 app_svc_dependent: true,
                 tty: true,
                 logdriver: 'syslog'

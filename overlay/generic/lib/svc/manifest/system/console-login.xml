@@ -3,6 +3,8 @@
 	Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 	Use is subject to license terms.
 
+	Copyright 2015 Joyent, Inc.
+
 	NOTE:  This service manifest is not editable; its contents will
 	be overwritten by package or patch operations, including
 	operating system upgrade.  Make customizations in a different
@@ -162,6 +164,60 @@
 			value='ldterm,ttcompat' />
 		<propval name='prompt' type='astring'
 			value='`uname -n` ttyb login:' />
+		<propval name='terminal_type' type='astring'
+			value='xterm' />
+	</property_group>
+</instance>
+
+<instance name='ttyc' enabled='true'>
+
+	    <dependency
+		    name='system-console'
+		    grouping='require_all'
+		    restart_on='none'
+		    type='service'>
+		    <service_fmri value='svc:/system/console-login:default' />
+	    </dependency>
+
+        <!-- these are passed to ttymon in the method script -->
+        <property_group name='ttymon' type='application'>
+		<propval name='value_authorization' type='astring'
+			value='solaris.smf.value.vt' />
+		<propval name='device' type='astring' value='/dev/term/c' />
+		<propval name='label' type='astring' value='115200' />
+		<propval name='timeout' type='count' value='0' />
+		<propval name='nohangup' type='boolean' value='true' />
+		<propval name='modules' type='astring'
+			value='ldterm,ttcompat' />
+		<propval name='prompt' type='astring'
+			value='`uname -n` ttyc login:' />
+		<propval name='terminal_type' type='astring'
+			value='xterm' />
+	</property_group>
+</instance>
+
+<instance name='ttyd' enabled='true'>
+
+	    <dependency
+		    name='system-console'
+		    grouping='require_all'
+		    restart_on='none'
+		    type='service'>
+		    <service_fmri value='svc:/system/console-login:default' />
+	    </dependency>
+
+        <!-- these are passed to ttymon in the method script -->
+        <property_group name='ttymon' type='application'>
+		<propval name='value_authorization' type='astring'
+			value='solaris.smf.value.vt' />
+		<propval name='device' type='astring' value='/dev/term/d' />
+		<propval name='label' type='astring' value='115200' />
+		<propval name='timeout' type='count' value='0' />
+		<propval name='nohangup' type='boolean' value='true' />
+		<propval name='modules' type='astring'
+			value='ldterm,ttcompat' />
+		<propval name='prompt' type='astring'
+			value='`uname -n` ttyd login:' />
 		<propval name='terminal_type' type='astring'
 			value='xterm' />
 	</property_group>

@@ -39,6 +39,7 @@ bi_console=vga
 bi_grub_unit=
 bi_dont_clean=0
 bi_no_smartos=0
+bi_do_kmdb=
 bi_usbpath=
 bi_lofidev=
 
@@ -48,13 +49,14 @@ function usage
 	local msg="$*"
 	[[ -z "$msg" ]] && echo "$msg"
 	cat <<USAGE >&2
-Usage: $bi_arg0 [ -o options ] [-c dev] [ -k ]
+Usage: $bi_arg0 [ -o options ] [-c dev] [ -k ] [ -m ]
 
 Generate a bootable $bi_type image from the proto area and newest platform directory.
 
 	-o options	Append all the options to every GRUB menu.lst entry
 	-c dev		Set default console to be dev (tty{a,b,c,d} or vga)
 	-k		Don't delete temporary files
+	-m		Default to kmdb
 	-n		Don't build for SmartOS
 	-h		Display this message
 
@@ -222,9 +224,11 @@ function bi_generate_grub_conf
 	# keep passord and shadow in sync, please
 	local password='root'
 	local shadow='$5$2HOHRnK3$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA'
+	local default=0
+	[[ -n "$bi_do_kmdb" ]] && default=2
 	bi_emit_start 'Generating grub menu.lst'
 	cat > $bi_output_grub_dir/menu.lst <<EOF
-default=0
+default=$default
 timeout=10
 min_mem64 1024
 serial --speed=115200 --unit=$bi_grub_unit --word=8 --parity=no --stop=1
@@ -299,7 +303,7 @@ ____ENDOFGRUBCOMMANDS
 	bi_emit_info 'USB Output' "$(pwd)/${bi_usbpath}.bz2"
 }
 
-while getopts "ko:nhc:" c $@; do
+while getopts "kmo:nhc:" c $@; do
 	case "$c" in
 	o)
 		bi_emit_info \
@@ -312,6 +316,9 @@ while getopts "ko:nhc:" c $@; do
 		;;
 	k)
 		bi_dont_clean=1
+		;;
+	m)
+		bi_do_kmdb=1
 		;;
 	n)
 		bi_no_smartos=1

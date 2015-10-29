@@ -927,3 +927,112 @@ test('test updates to zlog_mode', function (t) {
         }
     ]);
 });
+
+test('test log archiving', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.archive_on_delete = true;
+    payload.brand = 'lx';
+    payload.docker = true;
+    payload.image_uuid = vmtest.CURRENT_DOCKER_ALPINE_UUID;
+    payload.internal_metadata = {'docker:cmd': '[\"echo\",\"hello world\"]'};
+    payload.kernel_version = '3.13.0';
+
+    function _getState(vm_uuid, callback) {
+        VM.load(vm_uuid, function (err, obj) {
+            if (err) {
+                callback(err);
+                return;
+            }
+            callback(null, obj.state);
+        });
+    }
+
+    function _waitForState(vm_uuid, wait_state, callback) {
+        setTimeout(function () {
+            _getState(vm_uuid, function (err, vm_state) {
+                if (err) {
+                    callback(err);
+                    return;
+                }
+
+                if (wait_state === vm_state) {
+                    callback(null, vm_state);
+                } else {
+                    process.nextTick(function () {
+                        _waitForState(vm_uuid, wait_state, callback);
+                    });
+                }
+            });
+        }, 1000);
+    }
+
+    vmtest.on_new_vm(t, payload.image_uuid, payload, state, [
+        function (cb) {
+            var dirname = '/zones/' + state.uuid + '/logs';
+            var filename;
+            var hour_ago = new Date(new Date().getTime() - (60 * 60 * 1000));
+
+            filename = dirname + '/stdio.log.'
+                + hour_ago.toISOString().split('.')[0].replace(/[-:]/g, '')
+                + 'Z';
+
+            // create a fake rotated log
+            fs.mkdir(dirname, function (mkdir_err) {
+                t.ok(!mkdir_err, 'mkdir ' + dirname + ': '
+                    + (mkdir_err ? mkdir_err.message : 'success'));
+                if (mkdir_err) {
+                    cb(mkdir_err);
+                    return;
+                }
+
+                fs.writeFile(filename, 'old log\n', function (w_err) {
+                    t.ok(!w_err, 'write file ' + filename + ': '
+                        + (w_err ? w_err.message : 'success'));
+
+                    cb(w_err);
+                });
+            });
+        }, function (cb) {
+            // start the VM
+            VM.start(state.uuid, {}, function (err) {
+                t.ok(!err, 'starting VM: ' + (err ? err.message : 'success'));
+                cb(err);
+            });
+        }, function (cb) {
+            // wait for it to stop
+            _waitForState(state.uuid, 'stopped', function (err, _state) {
+                t.ok(!err, 'Waiting for stopped: '
+                    + (err ? err.message : 'success'));
+                if (!err) {
+                    t.equal(_state, 'stopped', 'VM was stopped');
+                }
+                cb(err);
+            });
+        }, function (cb) {
+            var log_dir = '/zones/' + state.uuid + '/logs';
+
+            // ensure we have 2 log files now
+            fs.readdir(log_dir, function (err, files) {
+                t.ok(files.length === 2, 'vm logs: ' + JSON.stringify(files));
+                cb();
+            });
+        }, function (cb) {
+            // delete the VM
+            VM.delete(state.uuid, function (err) {
+                t.ok(!err, 'deleting VM: ' + (err ? err.message : 'success'));
+                cb(err);
+            });
+        }, function (cb) {
+            var archive_dir = '/zones/archive/' + state.uuid + '/docker';
+
+            // and ensure the two log files are in /zones/archive
+            fs.readdir(archive_dir, function (err, files) {
+                t.ok(files.length === 2, 'archive logs: '
+                    + JSON.stringify(files));
+                cb();
+            });
+        }
+    ]);
+});

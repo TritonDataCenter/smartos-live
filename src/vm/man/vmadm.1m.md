@@ -1791,6 +1791,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         This property exposes the current state of a VM.
 
+        See the 'VM STATES' section below for more details.
+
         type: string
         vmtype: OS,KVM
         listable: yes
@@ -2073,6 +2075,8 @@ tab-complete UUIDs rather than having to type them out for every command.
         state of the zone in which this VM is contained. eg. 'running'.  It
         can be different from the 'state' value in several cases.
 
+        See the 'VM STATES' section below for more details.
+
         type: string
         vmtype: KVM
         listable: yes
@@ -2130,6 +2134,211 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: no
         default: zones
+
+
+## VM STATES
+
+The 'zone_state' field represents the state of the zone which contains the VM.
+The zones(5) man page has some more information about these zone states.
+
+The 'state' field defaults to the value of zone\_state, but in some cases the
+state indicates details of the VM that are not reflected directly by the zone.
+For example, zones have no concept of 'provisioning' so while a VM is
+provisioning it will go through several zone\_states but remain in the
+provisioning 'state' until either it goes to 'failed', 'stopped' or 'running'.
+
+Generally for zone\_state you should see transitions something like:
+
+
+               configured
+
+                  ^ |
+       uninstall  | |  install
+                  | v
+
+      +------> installed <-------+
+      |                          |
+      |           ^ |            |
+      |     halt  | |  ready     |  halt
+      |           | v            |
+      |                          |
+      |          ready ----------+
+      |
+      |            |
+      |            |  boot
+      |            v
+      |
+      |         running
+      |
+      |            |
+      |            |  shutdown/reboot
+      |            v
+      |
+      |       shutting_down
+      |
+      |            |
+      |            |
+      |            v
+      |
+      +--------- down
+
+
+The state field will have similar transition except:
+
+ * The zone\_state 'installed' will be state 'stopped'.
+
+ * When first provisioning the VM the 'configured' -> 'installed' -> 'ready' ->
+   'running' states, and any reboots that take place as part of the scripts
+   inside the zone configuring themselves will be hidden by the 'provisioning'
+   state.
+
+ * From 'provisioning' a VM can go into state 'failed' from which it will not
+   recover.
+
+ * It is possible for a VM to be in state 'receiving' while zone\_state
+   transitions through several states.
+
+ * KVM VMs can show state 'stopping' when zone\_state is running but the guest OS
+   has been notified that it should perform an orderly shutdown.
+
+The rest of this section describes the possible values for the 'state' and
+'zone_state' fields for a VM object. Each state will be followed by a note about
+whether it's possible for state, zone\_state or both, and a brief description
+what it means that a VM has that state.
+
+configured
+
+  Possible For: state + zone\_state
+
+  This indicates that the configuration has been created for the zone
+  that contains the VM, but it does not have data. When a VM is first
+  created you will briefly see this for zone\_state but see state
+  'provisioning'. While the VM is being destroyed it also transitions
+  through configured in which case you may see it for both state and
+  zone\_state.
+
+
+down
+
+  Possible For: state + zone\_state
+
+  The VM has been shut down but there is still something holding it
+  from being completely released into the 'installed' state. Usually
+  VMs only pass through this state briefly. If a VM stays in state
+  'down' for an extended period of time it typically requires operator
+  intervention to remedy as some portion of the zone was unable to be
+  torn down.
+
+
+failed
+
+  Possible For: state
+
+  When a provision fails (typically due to timeout) the VM will be
+  marked as failed and the state will be 'failed' regardless of the
+  zone\_state. This is usually caused either by a bug in the image's
+  scripts or by the system being overloaded. When a VM has failed to
+  provision it should generally be investigated by an operator to
+  confirm the cause is known and perform any remedy possible before
+  destroying the failed VM and provisioning it again.
+
+  It is also possible for VMs to go to 'failed' when scripts inside
+  the image have failed during a reprovision. In this case the best
+  course of action is usually to have an operator confirm the cause is
+  known, and reprovision again to an image after fixing the source of
+  the failure.
+
+
+incomplete
+
+  Possible For: state + zone\_state
+
+  If a VM is in this state, it indicates that the zone is in the
+  process of being installed or uninstalled. Normally VMs transition
+  through this state quickly but if a VM stays in this state for an
+  extended period of time it should be investigated by an operator.
+
+
+installed
+
+  Possible For: zone\_state
+
+  The VM has been created and the datasets have been installed. As
+  this really indicates that the VM appears to be healthy but is just
+  not running, we translate this zone\_state to state 'stopped' to
+  make it clear that it is ready to be started.
+
+
+provisioning
+
+  Possible For: state
+
+  When a VM is first being created and autoboot is true, the VM will
+  have state provisioning even as the zone\_state makes several
+  transitions. Non-KVM VMs will stay in state 'provisioning' until the
+  scripts inside the zone have completed to the point where they have
+  removed the /var/svc/provisioning file that was inserted before the
+  zone was first booted. KVM VMs will stay in state 'provisioning'
+  until the 'query-status' result from Qemu includes 'hwsetup' with a
+  value of true.
+
+
+ready
+
+  Possible For: state + zone\_state
+
+  This indicates that the VM has filesystems mounted and devices
+  created but that it is not currently running processes. This state
+  is normally only seen briefly while transitioning to running.
+
+
+receiving
+
+  Possible For: state
+
+  This is similar to 'provisioning' in that a VM will stay in state
+  'receiving' while the 'vmadm recv' command is running and the
+  zone\_state will change underneath it. A received VM will similarly
+  stay in state 'receiving' until all the required datasets have been
+  received.
+
+
+running
+
+  Possible For: state + zone\_state
+
+  The VM has all required resources and is executing processes.
+
+
+shutting_down
+
+  Possible For: state + zone\_state
+
+  The VM is being shut down. Usually VMs only pass through this state
+  briefly.  If a VM stays in state 'shutting_down' for an extended
+  period of time it typically requires operator intervention to remedy
+  as some portion of the zone was unable to be torn down.
+
+
+stopped
+
+  Possible For: state
+
+  When a VM has zone\_state 'installed', it will always have state
+  'stopped'.  This is just a straight rename. Please see the
+  'installed' state for details on what this actually means.
+
+
+stopping
+
+  Possible For: state
+
+  This is a state which only exists for KVM VMs. When we have sent a
+  system_powerdown message to Qemu via QMP we will mark the the VM as
+  being in state 'stopping' until either the shutdown times out and we
+  halt the zone, or the VM reaches zone\_state 'installed'.
+
+
 
 
 ## EXAMPLES

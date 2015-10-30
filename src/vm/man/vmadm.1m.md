@@ -2187,10 +2187,9 @@ The state field will have similar transition except:
 
  * The zone\_state 'installed' will be state 'stopped'.
 
- * When first provisioning the VM the 'configured' -> 'installed' -> 'ready' ->
-   'running' states, and any reboots that take place as part of the scripts
-   inside the zone configuring themselves will be hidden by the 'provisioning'
-   state.
+ * When first provisioning the VM, the 'provisioning' state will hide the
+   zone_states 'configured' -> 'installed' -> 'ready' -> 'running', as well
+   as any reboots that take place as part of the scripts inside the zone.
 
  * From 'provisioning' a VM can go into state 'failed' from which it will not
    recover.
@@ -2245,8 +2244,7 @@ failed
   It is also possible for VMs to go to 'failed' when scripts inside
   the image have failed during a reprovision. In this case the best
   course of action is usually to have an operator confirm the cause is
-  known, and reprovision again to an image after fixing the source of
-  the failure.
+  known, and reprovision again after fixing the source of the failure.
 
 
 incomplete

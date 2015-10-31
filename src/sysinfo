@@ -353,6 +353,9 @@ function get_smartos_network_interfaces()
         mac=${normalized}
         ip4addr=$(ifconfig ${iface} 2>/dev/null \
             | grep "inet " | awk '{ print $2 }')
+        ip6addr=$(ifconfig ${iface}:1 inet6 2> /dev/null \
+            | grep "inet6 " | awk '{ print $2 }' \
+                            | awk -F/ '{ print $1 }')
 
         nic_tag_count=0
         while [[ ${nic_tag_count} -lt ${NicTagCount} ]]; do
@@ -372,6 +375,7 @@ function get_smartos_network_interfaces()
         NetworkInterfaces[${count}]=${iface}
         eval "Network_Interface_${iface}_MAC_Address=${mac}"
         eval "Network_Interface_${iface}_IPv4_Address=${ip4addr}"
+        eval "Network_Interface_${iface}_IPv6_Address=${ip6addr}"
         if [[ -n ${nicnames} ]]; then
             eval "Network_Interface_${iface}_NIC_Names=${nicnames}"
         fi
@@ -437,6 +441,9 @@ function get_smartos_network_interfaces()
 
         ip4addr=$(ifconfig ${iface} 2>/dev/null \
             | grep "inet " | awk '{ print $2 }')
+        ip6addr=$(ifconfig ${iface}:1 inet6 2> /dev/null \
+            | grep "inet6 " | awk '{ print $2 }' \
+                            | awk -F/ '{ print $1 }')
 
         nic_tag_count=0
         while [[ ${nic_tag_count} -lt ${NicTagCount} ]]; do
@@ -457,6 +464,7 @@ function get_smartos_network_interfaces()
         normalize_mac $(echo ${mac} | sed 's/\|/:/g')
         eval "Network_Interface_${iface}_MAC_Address=${normalized}"
         eval "Network_Interface_${iface}_IPv4_Address=${ip4addr}"
+        eval "Network_Interface_${iface}_IPv6_Address=${ip6addr}"
         if [[ -n ${nicnames} ]]; then
             eval "Network_Interface_${iface}_NIC_Names=${nicnames}"
         fi
@@ -492,9 +500,13 @@ function get_smartos_vnics()
         link_status=$(pfexec /sbin/dladm show-link -p -o state ${iface})
         ip4addr=$(ifconfig ${iface} 2>/dev/null \
             | grep "inet " | awk '{ print $2 }')
+        ip6addr=$(ifconfig ${iface}:1 inet6 2> /dev/null \
+            | grep "inet6 " | awk '{ print $2 }' \
+                            | awk -F/ '{ print $1 }')
         VirtualNetworkInterfaces[${count}]=${iface}
         eval "Virtual_Network_Interface_${iface}_MAC_Address=${mac}"
         eval "Virtual_Network_Interface_${iface}_IPv4_Address=${ip4addr}"
+        eval "Virtual_Network_Interface_${iface}_IPv6_Address=${ip6addr}"
         eval "Virtual_Network_Interface_${iface}_Link_Status=${link_status}"
         eval "Virtual_Network_Interface_${iface}_VLAN=${vlan}"
         eval "Virtual_Network_Interface_${iface}_Host_Interface=${over}"

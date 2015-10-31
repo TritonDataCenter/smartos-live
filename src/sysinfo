@@ -699,12 +699,14 @@ END
     for iface in "${NetworkInterfaces[@]}"; do
         mac_var="Network_Interface_${iface}_MAC_Address"
         ipv4_var="Network_Interface_${iface}_IPv4_Address"
+        ipv6_var="Network_Interface_${iface}_IPv6_Address"
         nicnames_var="Network_Interface_${iface}_NIC_Names"
         link_status_var="Network_Interface_${iface}_Link_Status"
         detected_tag_var="Network_Interface_${iface}_Detected_Nic_Tag"
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"
+        eval "ipv6=\${${ipv6_var}}"
         eval "nicnames=\${${nicnames_var}}"
         link_status="unknown"
         eval "link_status=\${${link_status_var}}"
@@ -712,6 +714,7 @@ END
 
         echo "${mac_var}='${mac}'"
         echo "${ipv4_var}='${ipv4}'"
+        echo "${ipv6_var}='${ipv6}'"
         echo "${nicnames_var}='${nicnames}'"
         echo "${link_status_var}='${link_status}'"
         if [[ -n "${detected_tag}" ]] ; then
@@ -722,18 +725,21 @@ END
     for iface in "${VirtualNetworkInterfaces[@]}"; do
         mac_var="Virtual_Network_Interface_${iface}_MAC_Address"
         ipv4_var="Virtual_Network_Interface_${iface}_IPv4_Address"
+        ipv6_var="Virtual_Network_Interface_${iface}_IPv6_Address"
         link_status_var="Virtual_Network_Interface_${iface}_Link_Status"
         vlan_var="Virtual_Network_Interface_${iface}_VLAN"
         host_var="Virtual_Network_Interface_${iface}_Host_Interface"
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"
+        eval "ipv6=\${${ipv6_var}}"
         eval "link_status=\${${link_status_var}}"
         eval "vlan=\${${vlan_var}}"
         eval "host=\${${host_var}}"
 
         echo "${mac_var}='${mac}'"
         echo "${ipv4_var}='${ipv4}'"
+        echo "${ipv6_var}='${ipv6}'"
         echo "${link_status_var}='${link_status}'"
         echo "${vlan_var}='${vlan}'"
         if [[ ${ZONENAME} == "global" ]]; then
@@ -874,6 +880,7 @@ END
     for iface in "${NetworkInterfaces[@]}"; do
         mac_var="Network_Interface_${iface}_MAC_Address"
         ipv4_var="Network_Interface_${iface}_IPv4_Address"
+        ipv6_var="Network_Interface_${iface}_IPv6_Address"
         nicnames_var="Network_Interface_${iface}_NIC_Names"
         link_status_var="Network_Interface_${iface}_Link_Status"
         detected_tag_var="Network_Interface_${iface}_Detected_Nic_Tag"
@@ -882,6 +889,7 @@ END
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"
+        eval "ipv6=\${${ipv6_var}}"
         eval "nicnames=\${${nicnames_var}}"
         eval "link_status=\${${link_status_var}}"
         eval "detected_tag=\${${detected_tag_var}}"
@@ -901,6 +909,7 @@ END
         echo -n "    \"${iface}\": {"
         echo -n "\"MAC Address\": \"${mac}\", "
         echo -n "\"ip4addr\": \"${ipv4}\", "
+        echo -n "\"ip6addr\": \"${ipv6}\", "
         echo -n "\"Link Status\": \"${link_status}\", "
         echo -n "${detected_fmt}"
         echo -n "\"NIC Names\": [${nic_names_fmt}]}"
@@ -917,12 +926,14 @@ END
     for iface in "${VirtualNetworkInterfaces[@]}"; do
         mac_var="Virtual_Network_Interface_${iface}_MAC_Address"
         ipv4_var="Virtual_Network_Interface_${iface}_IPv4_Address"
+        ipv6_var="Virtual_Network_Interface_${iface}_IPv6_Address"
         link_status_var="Virtual_Network_Interface_${iface}_Link_Status"
         vlan_var="Virtual_Network_Interface_${iface}_VLAN"
         parent_var="Virtual_Network_Interface_${iface}_Host_Interface"
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"
+        eval "ipv6=\${${ipv6_var}}"
         eval "link_status=\${${link_status_var}}"
         eval "vlan=\${${vlan_var}}"
         eval "host=\${${host_var}}"
@@ -934,6 +945,7 @@ END
         echo -n "    \"${iface}\": {"
         echo -n "\"MAC Address\": \"${mac}\", "
         echo -n "\"ip4addr\": \"${ipv4}\", "
+        echo -n "\"ip6addr\": \"${ipv6}\", "
         echo -n "\"Link Status\": \"${link_status}\", "
         if [[ ${ZONENAME} == "global" ]]; then
             echo -n "\"Host Interface\": \"${host}\", "

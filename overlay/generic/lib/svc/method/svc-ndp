@@ -64,7 +64,7 @@ args="$args `get_daemon_option_from_property $SMF_FMRI config_file f`"
 
 # Since we potentially made network changes, update the sysinfo cache
 if smf_is_globalzone; then
-    # give in.ndp time to setup an addrconf address
+    # ndp needs some time to stabilize to get addrconf
     sleep 3
     /usr/bin/sysinfo -u
 fi

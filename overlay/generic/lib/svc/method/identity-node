@@ -175,12 +175,12 @@ if [[ -n ${SYSINFO_NIC_admin} ]]; then
 fi
 if [[ -z ${ip4addr} ]]; then
     ip4addr=$(set | grep "^SYSINFO_Network_Interface_.*_IPv4_Address" | head -n1 | cut -d'=' -f2)
-    # empty value ends up as '' as actualy value
+    # empty values end up as '' sometimes, so we clear them
     [[ "${ip4addr}" == "''" ]] && unset ip4addr
 fi
 if [[ -z ${ip6addr} ]]; then
     ip6addr=$(set | grep "^SYSINFO_Network_Interface_.*_IPv6_Address" | head -n1 | cut -d'=' -f2)
-    # empty value ends up as '' as actualy value
+    # empty values end up as '' sometimes, so we clear them
     [[ "${ip6addr}" == "''" ]] && unset ip6addr
 fi
 if [[ -n ${ip4addr} ]] || [[ -n ${ip6addr} ]]; then

@@ -50,10 +50,12 @@ CTFBINDIR = \
 	$(ROOT)/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386
 CTFMERGE =	$(CTFBINDIR)/ctfmerge
 CTFCONVERT =	$(CTFBINDIR)/ctfconvert
+ALTCTFCONVERT =	$(CTFBINDIR)/ctfconvert-altexec
 
 SUBDIR_DEFS = \
 	CTFMERGE=$(CTFMERGE) \
 	CTFCONVERT=$(CTFCONVERT) \
+	ALTCTFCONVERT=$(ALTCTFCONVERT) \
 	MAX_JOBS=$(MAX_JOBS)
 
 ADJUNCT_TARBALL :=	$(shell ls `pwd`/illumos-adjunct*.tgz 2>/dev/null \

@@ -20,7 +20,8 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ *
  *
  * fwadm: firewall rule model
  */
@@ -268,7 +269,9 @@ function FwRule(data, opts) {
         this.protoTargets = this.types;
     } else {
         this.ports = parsed.protocol.targets.sort(function (a, b) {
-            return Number(a) - Number(b);
+            var first = a.hasOwnProperty('start') ? a.start : a;
+            var second = b.hasOwnProperty('start') ? b.start : b;
+            return Number(first) - Number(second);
         });
         this.protoTargets = this.ports;
     }
@@ -442,6 +445,8 @@ FwRule.prototype.serialize = function (fields) {
  * Returns the text of the rule
  */
 FwRule.prototype.text = function () {
+    var containsRange;
+    var ports;
     var protoTxt;
     var targets = {
         from: [],
@@ -478,11 +483,29 @@ FwRule.prototype.text = function () {
             this.types.length > 1 ? ')' : ''
         );
     } else {
-        protoTxt = util.format('%sPORT %s%s',
-            this.ports.length > 1 ? '(' : '',
-            this.ports.join(' AND PORT '),
-            this.ports.length > 1 ? ')' : ''
-        );
+        ports = this.ports.map(function (port) {
+            if (port.hasOwnProperty('start')
+                && port.hasOwnProperty('end')) {
+                /*
+                 * We only output PORTS when we have a range, since we don't
+                 * distinguish PORTS 1, 2 from (PORT 1 AND PORT 2) after
+                 * parsing.
+                 */
+                containsRange = true;
+                return port.start + ' - ' + port.end;
+            } else {
+                return port;
+            }
+        });
+        if (containsRange) {
+            protoTxt = util.format('PORTS %s', ports.join(', '));
+        } else {
+            protoTxt = util.format('%sPORT %s%s',
+                ports.length > 1 ? '(' : '',
+                ports.join(' AND PORT '),
+                ports.length > 1 ? ')' : ''
+            );
+        }
     }
 
     return util.format('FROM %s%s%s TO %s%s%s %s %s',

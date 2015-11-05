@@ -1,7 +1,29 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * CDDL HEADER START
  *
- * Unit tests for the firewall rule object
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ *
+ *
+ * Negative unit tests for the firewall rule object
  */
 
 var fwrule = require('../lib/index');
@@ -91,6 +113,27 @@ var INVALID = [
     [ 'invalid port: too big',
         { rule: 'FROM tag foo TO subnet 10.8.0.0/24 ALLOW udp port 65537' },
         'rule', 'Port number "65537" is invalid' ],
+
+    [ 'invalid port range: too small',
+        { rule: 'FROM tag foo TO subnet 10.8.0.0/24 ALLOW tcp ports 0-20' },
+        'rule', 'Port number "0" is invalid' ],
+
+    [ 'invalid port range: too big',
+        { rule: 'FROM tag foo TO subnet 10.8.0.0/24 ALLOW tcp ports 20-65537' },
+        'rule', 'Port number "65537" is invalid' ],
+
+    [ 'invalid port range: not a port (at end)',
+        { rule: 'FROM tag foo TO subnet 10.8.0.0/24 ALLOW tcp ports 20-bar' },
+        'rule', 'Port number "bar" is invalid' ],
+
+    [ 'invalid port range: not a port (at beginning)',
+        { rule: 'FROM tag foo TO subnet 10.8.0.0/24 ALLOW tcp ports bar-20' },
+        'rule', 'Port number "bar" is invalid' ],
+
+    [ 'invalid port range: incorrect range ordering',
+        { rule: 'FROM tag foo TO subnet 10.8.0.0/24 ALLOW tcp ports 20 - 10' },
+        'rule',
+        'The end of the range (10) cannot be less than the start (20)' ],
 
     [ 'invalid VM UUID',
         { rule: 'FROM vm asdf TO subnet 10.8.0.0/24 ALLOW udp port 50' },

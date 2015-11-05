@@ -1,6 +1,11 @@
-# fwrule
+# sdc-fwrule
 
-Joyent firewall rule object wrapper. There are two parts to this package:
+Joyent firewall rule object wrapper. This is a copy of the sdc-fwrule repo. For
+contribution guidelines, issues, and general documentation, visit the main
+[SDC](http://github.com/joyent/sdc) project page.
+
+This contains shared code for manipulating SmartDataCenter firewall rules.
+There are two parts to this package:
 
 * A Jison grammar (src/fwrule.jison) that specifies a DSL for writing
   firewall rules. This is used to generate the parser (lib/parser.js)
@@ -13,6 +18,7 @@ in order to use this package.
 
 # Repository
 
+    docs/           Documentation (restdown format)
     lib/            Source files
     node_modules/   node.js dependencies (populate by running "npm install")
     src/            Contains the jison grammar for creating the firewall rule
@@ -34,8 +40,14 @@ Before checking in, please run:
 and fix any warnings. Note that jsstyle will stop after the first file with an
 error, so you may need to run this multiple times while fixing.
 
+For non-trivial changes, please add a unit test that covers the functionality
+of the change. If this is a syntax change, update docs/rules.md.in and
+docs/examples.md.in accordingly.
+
 
 # Testing
+
+To run all tests:
 
     make test
 

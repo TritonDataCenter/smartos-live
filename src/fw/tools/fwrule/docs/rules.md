@@ -51,18 +51,18 @@ a rule.
 
 Firewall rules are in the following format:
 
-    FROM <from targets> TO <to targets> <action> <protocol> <ports or types>
-
+    FROM &lt;from targets> TO &lt;to targets> &lt;action> &lt;protocol> &lt;ports or types>
+    
 The parameters are the following:
 
 **from targets** and **to targets** can be any of the following types
 (see the Target Types section below):
 
-* vm <uuid>
-* ip <IP address>
-* subnet <subnet CIDR>
-* tag <tag name>
-* tag <tag name>=<tag value>
+* vm &lt;uuid>
+* ip &lt;IP address>
+* subnet &lt;subnet CIDR>
+* tag &lt;tag name>
+* tag &lt;tag name>=&lt;tag value>
 * a target list of up to 32 of the above
 * all vms
 * any
@@ -80,9 +80,10 @@ The parameters are the following:
 
 **ports** or **types** can be one of (see the Ports section below):
 
-* port <port number> (if protocol is tcp or udp)
-* type <ICMP type> (if protocol is icmp)
-* type <ICMP type> code <ICMP code> (if protocol is icmp)
+* port &lt;port number> (if protocol is tcp or udp)
+* ports &lt;port numbers and ranges> (if protocol is tcp or udp)
+* type &lt;ICMP type> (if protocol is icmp)
+* type &lt;ICMP type> code &lt;ICMP code> (if protocol is icmp)
 
 
 The limits for the parameters are:
@@ -96,7 +97,7 @@ The limits for the parameters are:
 
 ## vm
 
-    vm <uuid>
+    vm &lt;uuid>
 
 Targets the VM with that UUID.
 
@@ -108,7 +109,7 @@ Allows HTTP traffic from any host to VM 04128...
 
 ## ip
 
-    ip <IP address>
+    ip &lt;IP address>
 
 Targets the specified IPv4 address.
 
@@ -120,21 +121,21 @@ Blocks SMTP traffic to that IP.
 
 ## subnet
 
-    subnet <subnet CIDR>
+    subnet &lt;subnet CIDR>
 
 Targets the specified IPv4 subnet range.
 
 **Example:**
 
     FROM subnet 10.8.0.0/16 TO vm 0f570678-c007-4610-a2c0-bbfcaab9f4e6 ALLOW tcp port 443
-
+    
 Allows HTTPS traffic from a private /16 to VM 0f57...
 
 ## tag
 
-    tag <name>
-    tag <name> = <value>
-    tag "<name with spaces>" = "<value with spaces>"
+    tag &lt;name>
+    tag &lt;name> = &lt;value>
+    tag "&lt;name with spaces>" = "&lt;value with spaces>"
 
 Targets all VMs with the specified tag, or all VMs with the specified tag
 and value.  Both tag name and value can be quoted if they contain spaces.
@@ -180,16 +181,15 @@ Allows HTTP traffic from any IP to all VMs.
 
 ## target list
 
-    ( <target> OR <target> OR ... )
+    ( &lt;target> OR &lt;target> OR ... )
 
 The vm, ip, subnet and tag target types can be combined into a list surrounded
 by parentheses and joined by OR.
 
 **Example:**
 
-    FROM (vm 163dcedb-828d-43c9-b076-625423250ee2 OR tag db) TO
-    (subnet 10.2.2.0/24 OR ip 10.3.0.1) BLOCK tcp port 443
-
+    FROM (vm 163dcedb-828d-43c9-b076-625423250ee2 OR tag db) TO (subnet 10.2.2.0/24 OR ip 10.3.0.1) BLOCK tcp port 443
+    
 Blocks HTTPS traffic to an internal subnet and IP.
 
 
@@ -225,14 +225,19 @@ ports or types can be used (see the Ports section below).
 
 # Ports
 
-    port <port number>
-    ( port <port number> AND port <port number> ... )
-    type <icmp type>
-    type <icmp type> code <icmp code>
-    ( type <icmp type> AND type <icmp type> code <icmp code> AND ... )
+    port &lt;port number>
+    ( port &lt;port number> AND port &lt;port number> ... )
+    ports &lt;port number or range>
+    ports &lt;port number or range>, &lt;port number or range>, ...
+    type &lt;icmp type>
+    type &lt;icmp type> code &lt;icmp code>
+    ( type &lt;icmp type> AND type &lt;icmp type> code &lt;icmp code> AND ... )
 
 For TCP and UDP, this specifies the port numbers that the rule applies to.
-Port numbers must be between 1 and 65535, inclusive.
+Port numbers must be between 1 and 65535, inclusive. Ranges are written as two
+port numbers separated by a - (hyphen), with the lower number coming first, with
+optional spaces around the hyphen. Port ranges are inclusive, so writing the
+range "20 - 22" would cause the rule to apply to the ports 20, 21 and 22.
 
 For ICMP, this specifies the ICMP type and optional code that the rule
 applies to.  Types and codes must be between 0 and 255, inclusive.
@@ -242,6 +247,11 @@ applies to.  Types and codes must be between 0 and 255, inclusive.
     FROM tag www TO any ALLOW tcp (port 80 AND port 443)
 
 Allows HTTP and HTTPS traffic from any IP to all webservers.
+
+    FROM tag www TO any ALLOW tcp ports 80, 443, 8000-8100
+
+Allows traffic on HTTP, HTTPS and common alternative HTTP ports from any IP to
+all webservers.
 
     FROM any TO all vms ALLOW icmp TYPE 8 CODE 0
 

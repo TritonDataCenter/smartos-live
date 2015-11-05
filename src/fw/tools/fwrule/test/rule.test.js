@@ -1,5 +1,27 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ *
  *
  * Unit tests for the firewall rule object
  */
@@ -259,18 +281,27 @@ exports['tags'] = function (t) {
 
 
 exports['multiple ports and owner_uuid'] = function (t) {
-    var inRule = {
+    var inRule1 = {
         rule: 'FROM ip 10.88.88.1 TO tag tag2 ALLOW tcp '
             + '(PORT 1002 AND PORT 1052)',
         enabled: true,
         owner_uuid: '930896af-bf8c-48d4-885c-6573a94b1853',
         version: fwrule.generateVersion()
     };
+    var inRule2 = {
+        rule: 'FROM ip 10.88.88.1 TO tag tag2 ALLOW tcp '
+            + 'PORTS 1002, 1052',
+        enabled: true,
+        owner_uuid: '930896af-bf8c-48d4-885c-6573a94b1853',
+        version: fwrule.generateVersion()
+    };
 
-    var rule = fwrule.create(inRule);
+
+    var rule1 = fwrule.create(inRule1);
+    var rule2 = fwrule.create(inRule2);
     var raw = {
         action: 'allow',
-        enabled: inRule.enabled,
+        enabled: inRule1.enabled,
         from: {
             ips: [ '10.88.88.1' ],
             vms: [],
@@ -278,7 +309,7 @@ exports['multiple ports and owner_uuid'] = function (t) {
             tags: [],
             wildcards: []
         },
-        owner_uuid: inRule.owner_uuid,
+        owner_uuid: inRule1.owner_uuid,
         protocol: 'tcp',
         ports: [ 1002, 1052 ],
         to: {
@@ -288,21 +319,35 @@ exports['multiple ports and owner_uuid'] = function (t) {
             tags: [ 'tag2' ],
             wildcards: []
         },
-        uuid: rule.uuid,
-        version: rule.version
+        uuid: rule1.uuid,
+        version: rule1.version
     };
 
-    t.deepEqual(rule.raw(), raw, 'rule.raw()');
-    t.deepEqual(rule.ports, raw.ports, 'rule.ports');
-    t.deepEqual(rule.protoTargets, raw.ports, 'rule.protoTargets');
+    t.deepEqual(rule1.raw(), raw, 'rule1.raw()');
+    t.deepEqual(rule1.ports, raw.ports, 'rule1.ports');
+    t.deepEqual(rule1.protoTargets, raw.ports, 'rule1.protoTargets');
 
-    t.deepEqual(rule.serialize(), {
+    t.deepEqual(rule1.serialize(), {
         enabled: true,
-        owner_uuid: inRule.owner_uuid,
-        rule: inRule.rule,
-        uuid: rule.uuid,
-        version: rule.version
-    }, 'rule.serialize()');
+        owner_uuid: inRule1.owner_uuid,
+        rule: inRule1.rule,
+        uuid: rule1.uuid,
+        version: rule1.version
+    }, 'rule1.serialize()');
+
+    raw.uuid = rule2.uuid;
+
+    t.deepEqual(rule2.raw(), raw, 'rule2.raw()');
+    t.deepEqual(rule2.ports, raw.ports, 'rule2.ports');
+    t.deepEqual(rule2.protoTargets, raw.ports, 'rule2.protoTargets');
+
+    t.deepEqual(rule2.serialize(), {
+        enabled: true,
+        owner_uuid: inRule2.owner_uuid,
+        rule: inRule1.rule,
+        uuid: rule2.uuid,
+        version: rule2.version
+    }, 'rule2.serialize()');
 
     t.done();
 };
@@ -571,6 +616,98 @@ exports['sorting: ports'] = function (t) {
     t.done();
 };
 
+exports['sorting: port ranges'] = function (t) {
+    var inRule = {
+        rule: 'FROM ip 10.88.88.1 TO tag tag2 ALLOW tcp '
+            + 'PORTS 1002, 20-40, 10, 1052, 80, 30245, 6 - 11',
+        enabled: true,
+        version: fwrule.generateVersion()
+    };
+
+    var rule = fwrule.create(inRule);
+    var raw = {
+        action: 'allow',
+        enabled: inRule.enabled,
+        from: {
+            ips: [ '10.88.88.1' ],
+            vms: [],
+            subnets: [],
+            tags: [],
+            wildcards: []
+        },
+        protocol: 'tcp',
+        ports: [ { start: 6, end: 11 }, 10, { start: 20, end: 40 },
+            80, 1002, 1052, 30245 ],
+        to: {
+            ips: [],
+            vms: [],
+            subnets: [],
+            tags: [ 'tag2' ],
+            wildcards: []
+        },
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.raw(), raw, 'rule.raw()');
+
+    t.deepEqual(rule.serialize(), {
+        enabled: true,
+        global: true,
+        rule: 'FROM ip 10.88.88.1 TO tag tag2 ALLOW tcp '
+            + 'PORTS 6 - 11, 10, 20 - 40, 80, 1002, 1052, 30245',
+        uuid: rule.uuid,
+        version: rule.version
+    }, 'rule.serialize()');
+
+    t.done();
+};
+
+exports['single port range'] = function (t) {
+    var inRule = {
+        rule: 'FROM ip 10.88.88.1 TO tag tag2 ALLOW tcp '
+            + 'PORTS 50-50',
+        enabled: true,
+        version: fwrule.generateVersion()
+    };
+
+    var rule = fwrule.create(inRule);
+    var raw = {
+        action: 'allow',
+        enabled: inRule.enabled,
+        from: {
+            ips: [ '10.88.88.1' ],
+            vms: [],
+            subnets: [],
+            tags: [],
+            wildcards: []
+        },
+        protocol: 'tcp',
+        ports: [ { start: 50, end: 50 } ],
+        to: {
+            ips: [],
+            vms: [],
+            subnets: [],
+            tags: [ 'tag2' ],
+            wildcards: []
+        },
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.raw(), raw, 'rule.raw()');
+
+    t.deepEqual(rule.serialize(), {
+        enabled: true,
+        global: true,
+        rule: 'FROM ip 10.88.88.1 TO tag tag2 ALLOW tcp '
+            + 'PORTS 50 - 50',
+        uuid: rule.uuid,
+        version: rule.version
+    }, 'rule.serialize()');
+
+    t.done();
+};
 
 exports['port ALL'] = function (t) {
     var inRule = {

@@ -10,8 +10,8 @@
   },
   "devDependencies": {
     "jison": "0.4.2",
-    "nodeunit": "0.7.4",
-    "ramsey": "0.1.0"
+    "nodeunit": "0.9.1",
+    "ramsey": "0.1.2"
   },
   "engines": {
     "node": ">=0.6"
@@ -19,5 +19,6 @@
   "main": "lib/index.js",
   "scripts": {
     "test": "make test"
-  }
+  },
+  "license": "CDDL-1.0"
 }

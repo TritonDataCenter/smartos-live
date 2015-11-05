@@ -1,5 +1,27 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ *
  *
  * fwadm: firewall rule parser grammar
  */
@@ -35,6 +57,8 @@ t                       {digit}{1,3}
 "VMS"                   return 'VMS';
 "vms"                   return 'VMS';
 
+'-'                     return '-';
+','                     return ',';
 '='                     return '=';
 '('                     return '(';
 ')'                     return ')';
@@ -49,6 +73,8 @@ t                       {digit}{1,3}
 "allow"                 return 'ALLOW';
 "PORT"                  return 'PORT';
 "port"                  return 'PORT';
+"PORTS"                 return 'PORTS';
+"ports"                 return 'PORTS';
 "TCP"                   return 'TCP';
 "tcp"                   return 'TCP';
 "UDP"                   return 'UDP';
@@ -162,7 +188,11 @@ action
 protocol
     : TCP port_list
         { $$ = { 'name': $1.toLowerCase(), 'targets': $2 } }
+    | TCP ports
+        { $$ = { 'name': $1.toLowerCase(), 'targets': $2 } }
     | UDP port_list
+        { $$ = { 'name': $1.toLowerCase(), 'targets': $2 } }
+    | UDP ports
         { $$ = { 'name': $1.toLowerCase(), 'targets': $2 } }
     | ICMP type_list
         { $$ = { 'name': $1.toLowerCase(), 'targets': $2 } }
@@ -189,6 +219,11 @@ port
         { $$ = [ $2 ]; }
     ;
 
+ports
+    : PORTS portnumbers
+        { $$ = $2; }
+    ;
+
 port_all
     : PORT ALL
         { $$ = [ $2.toLowerCase() ]; }
@@ -198,6 +233,22 @@ portnumber
     : WORD
         { yy.validatePortNumber($1);
           $$ = Number($1); }
+    ;
+
+portrange
+    : WORD
+        { $$ = [ yy.createMaybePortRange($1) ]; }
+    | WORD '-' WORD
+        { yy.validatePortNumber($1);
+          yy.validatePortNumber($3);
+          yy.validateRangeOrder($1, $3);
+          $$ = [{ 'start': $1, 'end': $3 }]; }
+    ;
+
+portnumbers
+    : portrange
+    | portnumbers ',' portrange
+        { $$ = $1.concat($3); }
     ;
 
 type_list

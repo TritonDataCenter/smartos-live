@@ -20,7 +20,8 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ *
  *
  * fwadm: firewall rule parser
  */

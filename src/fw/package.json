@@ -7,7 +7,7 @@
   "main": "./lib/fw.js",
   "devDependencies": {
     "mockery": "1.2.0",
-    "nodeunit": "0.8.6",
+    "nodeunit": "0.9.1",
     "ramsey": "0.1.2"
   },
   "dependencies": {

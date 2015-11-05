@@ -439,7 +439,7 @@ the firewalls of any VMs affected.
 
     {
         "brand": "joyent",
-        "image_uuid": "01b2c898-945f-11e1-a523-af1afbe22822",
+        "image_uuid": "7b0b4140-6e98-11e5-b1ae-ff68fe257228",
         "firewall_enabled": true,
         "nics": [
           {

@@ -19,7 +19,7 @@ var util = require('util');
 // Set to 'false' to keep VMs around for later inspection
 var DELETE_VMS = true;
 var IMAGES = {
-    smartos: '01b2c898-945f-11e1-a523-af1afbe22822',
+    smartos: '7b0b4140-6e98-11e5-b1ae-ff68fe257228',
     ubuntu: '71101322-43a5-11e1-8f01-cf2a3031a7f4'
 };
 var log = mod_log.child({ component: 'vm' });

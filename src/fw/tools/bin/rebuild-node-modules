@@ -8,6 +8,7 @@
 NM=node_modules
 NM_ORIG=node_modules.orig
 
+set -o errexit
 set -o xtrace
 
 rm -rf ${NM}
@@ -22,14 +23,24 @@ mv ${NM} ${NM_ORIG}
 
 mkdir ${NM}
 
-cp ${NM_ORIG}/assert-plus/assert.js ${NM}/assert-plus.js
-cp ${NM_ORIG}/node-uuid/uuid.js ${NM}/node-uuid.js
-cp ${NM_ORIG}/mkdirp/index.js ${NM}/mkdirp.js
+# The following are all Joyent-licensed
 cp ${NM_ORIG}/extsprintf/lib/extsprintf.js \
     ${NM_ORIG}/verror/lib/verror.js \
     ${NM_ORIG}/vasync/lib/vasync.js \
     ${NM_ORIG}/tab/lib/tab.js \
     ${NM}/
+
+mkdir ${NM}/assert-plus
+cp ${NM_ORIG}/assert-plus/assert.js ${NM}/assert-plus/index.js
+cp ${NM_ORIG}/assert-plus/README.md ${NM}/assert-plus/README.md
+
+mkdir ${NM}/node-uuid
+cp ${NM_ORIG}/node-uuid/uuid.js ${NM}/node-uuid/index.js
+cp ${NM_ORIG}/node-uuid/LICENSE.md ${NM}/node-uuid/LICENSE.md
+
+mkdir ${NM}/mkdirp
+cp ${NM_ORIG}/mkdirp/index.js ${NM}/mkdirp/index.js
+cp ${NM_ORIG}/mkdirp/LICENSE ${NM}/mkdirp/LICENSE
 
 mkdir ${NM}/clone
 cp ${NM_ORIG}/clone/clone.js ${NM}/clone/index.js
@@ -63,7 +74,7 @@ NODEUNIT_FILES="LICENSE bin index.js lib"
 TAP_FILES="LICENSE bin lib package.json"
 TAP_NM=${NM_ORIG}/nodeunit/node_modules/tap/node_modules
 # TAP dependencies that just have an index.js in their directory
-TAP_IDX_MODS="buffer-equal deep-equal difflet"
+TAP_IDX_MODS="buffer-equal difflet"
 BUNKER=${TAP_NM}/runforcover/node_modules/bunker
 BURRITO=${BUNKER}/node_modules/burrito
 
@@ -94,24 +105,50 @@ cp ${TAP_NM}/buffer-equal/index.js ${TEST_MODULES}/buffer-equal.js
 mkdir -p ${TEST_MODULES}/charm
 cp -r ${TAP_NM}/difflet/node_modules/charm/{index.js,lib} ${TEST_MODULES}/charm/
 cp -r ${TAP_NM}/difflet/node_modules/deep-is/index.js ${TEST_MODULES}/deep-is.js
-cp ${TAP_NM}/deep-equal/index.js ${TEST_MODULES}/deep-equal.js
+
+mkdir -p ${TEST_MODULES}/deep-equal/lib
+cp ${TAP_NM}/deep-equal/index.js ${TEST_MODULES}/deep-equal/index.js
+cp ${TAP_NM}/deep-equal/LICENSE ${TEST_MODULES}/deep-equal/LICENSE
+cp ${TAP_NM}/deep-equal/lib/keys.js ${TEST_MODULES}/deep-equal/lib/keys.js
+cp ${TAP_NM}/deep-equal/lib/is_arguments.js ${TEST_MODULES}/deep-equal/lib/is_arguments.js
 
 mkdir -p ${TEST_MODULES}/glob
-cp ${TAP_NM}/glob/glob.js ${TEST_MODULES}/glob/index.js
+cp ${TAP_NM}/glob/glob.js ${TEST_MODULES}/glob/glob.js
+cp ${TAP_NM}/glob/common.js ${TEST_MODULES}/glob/common.js
+cp ${TAP_NM}/glob/sync.js ${TEST_MODULES}/glob/sync.js
+cp ${TAP_NM}/glob/package.json ${TEST_MODULES}/glob/package.json
 cp ${TAP_NM}/glob/LICENSE ${TEST_MODULES}/glob/
+
+mkdir -p ${TEST_MODULES}/inflight
+cp ${TAP_NM}/glob/node_modules/inflight/inflight.js ${TEST_MODULES}/inflight/index.js
+cp ${TAP_NM}/glob/node_modules/inflight/LICENSE ${TEST_MODULES}/inflight/LICENSE
+
+mkdir -p ${TEST_MODULES}/once
+ONCE=${TAP_NM}/glob/node_modules/once
+cp ${ONCE}/once.js ${TEST_MODULES}/once/index.js
+cp ${ONCE}/LICENSE ${TEST_MODULES}/once/LICENSE
+
+mkdir -p ${TEST_MODULES}/wrappy
+cp ${ONCE}/node_modules/wrappy/wrappy.js ${TEST_MODULES}/wrappy/index.js
+cp ${ONCE}/node_modules/wrappy/LICENSE ${TEST_MODULES}/wrappy/LICENSE
 
 mkdir -p ${TEST_MODULES}/minimatch
 MINIMATCH=${TAP_NM}/glob/node_modules/minimatch
 cp ${MINIMATCH}/minimatch.js ${TEST_MODULES}/minimatch/index.js
 cp ${MINIMATCH}/LICENSE ${TEST_MODULES}/minimatch/
 
-mkdir -p ${TEST_MODULES}/lru-cache
-cp ${MINIMATCH}/node_modules/lru-cache/lib/lru-cache.js ${TEST_MODULES}/lru-cache/index.js
-cp ${MINIMATCH}/node_modules/lru-cache/LICENSE ${TEST_MODULES}/lru-cache/
+mkdir -p ${TEST_MODULES}/brace-expansion
+BRACE_EXPANSION=${MINIMATCH}/node_modules/brace-expansion
+cp ${BRACE_EXPANSION}/index.js ${TEST_MODULES}/brace-expansion/index.js
+cp ${BRACE_EXPANSION}/README.md ${TEST_MODULES}/brace-expansion/README.md
 
-mkdir -p ${TEST_MODULES}/sigmund
-cp ${MINIMATCH}/node_modules/sigmund/sigmund.js ${TEST_MODULES}/sigmund/index.js
-cp ${MINIMATCH}/node_modules/sigmund/LICENSE ${TEST_MODULES}/sigmund/
+mkdir -p ${TEST_MODULES}/balanced-match
+cp ${BRACE_EXPANSION}/node_modules/balanced-match/index.js ${TEST_MODULES}/balanced-match/index.js
+cp ${BRACE_EXPANSION}/node_modules/balanced-match/LICENSE.md ${TEST_MODULES}/balanced-match/LICENSE.md
+
+mkdir -p ${TEST_MODULES}/concat-map
+cp ${BRACE_EXPANSION}/node_modules/concat-map/index.js ${TEST_MODULES}/concat-map/index.js
+cp ${BRACE_EXPANSION}/node_modules/concat-map/LICENSE ${TEST_MODULES}/concat-map/LICENSE
 
 mkdir -p ${TEST_MODULES}/inherits
 cp ${TAP_NM}/inherits/inherits.js ${TEST_MODULES}/inherits/index.js
@@ -119,7 +156,7 @@ cp ${TAP_NM}/inherits/inherits.js ${TEST_MODULES}/inherits/index.js
 mkdir -p ${TEST_MODULES}/nopt
 cp ${TAP_NM}/nopt/lib/nopt.js ${TEST_MODULES}/nopt/index.js
 cp ${TAP_NM}/nopt/LICENSE ${TEST_MODULES}/nopt/
-cp ${TAP_NM}/nopt/node_modules/abbrev/lib/abbrev.js ${TEST_MODULES}/
+cp ${TAP_NM}/nopt/node_modules/abbrev/abbrev.js ${TEST_MODULES}/
 
 cp ${TAP_NM}/runforcover/index.js ${TEST_MODULES}/runforcover.js
 cp ${BUNKER}/index.js ${TEST_MODULES}/bunker.js

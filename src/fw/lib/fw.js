@@ -809,9 +809,13 @@ function protoTarget(rule, target) {
     } else {
         if (target === 'all') {
             return '';
-        }
+        } else if (target.hasOwnProperty('start')
+            && target.hasOwnProperty('end')) {
 
-        return 'port = ' + target;
+            return 'port ' + target.start + ' : ' + target.end;
+        } else {
+            return 'port = ' + target;
+        }
     }
 }
 

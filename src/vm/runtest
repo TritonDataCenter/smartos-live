@@ -54,7 +54,21 @@ want_images="cat ${ROOT}/common/vmtest.js | grep exports\.CURRENT_.*_UUID \
     | grep -v "process.env" | cut -d \"'\" -f2 | sort"
 
 for img in $(comm -1 -3 <(eval ${installed_images}) <(eval ${want_images})); do
-    imgadm import "${img}"
+    if [[ ${img} == "71101322-43a5-11e1-8f01-cf2a3031a7f4" ]]; then
+        MANTA_PATH="https://us-east.manta.joyent.com/Joyent_Dev/public/old_images/ubuntu-10.04"
+        (cd /var/tmp && curl -kO ${MANTA_PATH}/${img}.file \
+            && curl -kO ${MANTA_PATH}/${img}.manifest \
+            && imgadm install -f ${img}.file -m ${img}.manifest \
+            && rm -f ${img}.file ${img}.manifest)
+    elif [[ ${img} == "01b2c898-945f-11e1-a523-af1afbe22822" ]]; then
+        MANTA_PATH="https://us-east.manta.joyent.com/Joyent_Dev/public/old_images/smartos-1.6.3"
+        (cd /var/tmp && curl -kO ${MANTA_PATH}/${img}.file \
+            && curl -kO ${MANTA_PATH}/${img}.manifest \
+            && imgadm install -f ${img}.file -m ${img}.manifest \
+            && rm -f ${img}.file ${img}.manifest)
+    else
+        imgadm import "${img}"
+    fi
 done
 
 # Special case for docker

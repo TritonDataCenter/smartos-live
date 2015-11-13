@@ -173,6 +173,36 @@ var PAYLOADS = {
                 nic_tag: 'admin'
             }
         ]
+    }, add_empty_nics: {
+        add_nics: [
+            {
+                mac: '01:02:03:04:05:06',
+                nic_tag: 'admin',
+                primary: true
+            },
+            {
+                mac: '01:02:03:04:05:07',
+                nic_tag: 'admin'
+            }
+        ]
+    }, remove_empty_nic: {
+        remove_nics: [ '01:02:03:04:05:06' ]
+    }, remove_last_empty_nic: {
+        remove_nics: [ '01:02:03:04:05:07' ]
+    }, add_to_empty_nic: {
+        update_nics: [
+            {
+                mac: '01:02:03:04:05:07',
+                ips: [ '10.254.254.254/24', 'addrconf' ]
+            }
+        ]
+    }, make_empty_nic: {
+        update_nics: [
+            {
+                mac:  '01:02:03:04:05:07',
+                ips: []
+            }
+        ]
     }, set_rctls: {
         max_msg_ids: 3333,
         max_sem_ids: 2332,
@@ -534,6 +564,80 @@ test('remove net0 and net2 -- 2nd time', function (t) {
                 t.end();
             });
         }
+    });
+});
+
+test('add empty NICs', function (t) {
+    var payload = PAYLOADS.add_empty_nics;
+    t.expect(3 + 2 * payload.add_nics.length);
+    VM.update(vm_uuid, payload, function (update_err) {
+        t.ifError(update_err);
+        VM.load(vm_uuid, function (err, obj) {
+            t.ifError(err);
+            t.strictEqual(obj.nics.length, payload.add_nics.length);
+            obj.nics.forEach(function (nic) {
+                t.ok(!nic.hasOwnProperty('ips'),
+                    'Successfully added empty NICs to VM');
+                t.ok(!nic.hasOwnProperty('ip'),
+                    'Successfully added empty NICs to VM');
+            });
+            t.end();
+        });
+    });
+});
+
+test('remove empty, primary NIC', function (t) {
+    t.expect(3);
+    VM.update(vm_uuid, PAYLOADS.remove_empty_nic, function (update_err) {
+        t.ifError(update_err);
+        VM.load(vm_uuid, function (err, obj) {
+            t.ifError(err);
+            t.strictEqual(obj.nics.length, 1);
+            t.end();
+        });
+    });
+});
+
+test('add IPs to empty NIC', function (t) {
+    t.expect(4);
+    VM.update(vm_uuid, PAYLOADS.add_to_empty_nic, function (update_err) {
+        t.ifError(update_err);
+        VM.load(vm_uuid, function (err, obj) {
+            t.ifError(err);
+            t.strictEqual(obj.nics.length, 1);
+            t.deepEqual(obj.nics[0].ips,
+                PAYLOADS.add_to_empty_nic.update_nics[0].ips,
+                'Successfully removed empty NIC from VM');
+            t.end();
+        });
+    });
+});
+
+test('remove IPs to make empty NIC', function (t) {
+    t.expect(5);
+    VM.update(vm_uuid, PAYLOADS.make_empty_nic, function (update_err) {
+        t.ifError(update_err);
+        VM.load(vm_uuid, function (err, obj) {
+            t.ifError(err);
+            t.strictEqual(obj.nics.length, 1);
+            t.ok(!obj.nics[0].hasOwnProperty('ip'),
+                'Successfully removed "ip" from NIC');
+            t.ok(!obj.nics[0].hasOwnProperty('ips'),
+                'Successfully removed "ips" from NIC');
+            t.end();
+        });
+    });
+});
+
+test('clean up from empty tests', function (t) {
+    t.expect(3);
+    VM.update(vm_uuid, PAYLOADS.remove_last_empty_nic, function (update_err) {
+        t.ifError(update_err);
+        VM.load(vm_uuid, function (err, obj) {
+            t.ifError(err);
+            t.strictEqual(obj.nics.length, 0, 'Remove last empty NIC from VM');
+            t.end();
+        });
     });
 });
 

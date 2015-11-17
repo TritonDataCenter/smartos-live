@@ -905,6 +905,8 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (special, see description in 'update' section above)
         default: zones
 
+        NOTE: SDC does not support any pool name other than the default 'zones'.
+
     disk_driver:
 
         This specifies the default values for disks.*.model for disks attached
@@ -2134,6 +2136,8 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: no
         default: zones
+
+        NOTE: SDC does not support any pool name other than the default 'zones'.
 
 
 ## VM STATES

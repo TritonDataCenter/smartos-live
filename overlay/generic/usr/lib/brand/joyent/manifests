@@ -33,7 +33,6 @@
 # network/socket-filter-kssl.xml
 # network/ssl/kssl-proxy.xml
 # network/nfs/rquota.xml
-# network/smb/server.xml
 # network/dns/server.xml
 # network/ftp.xml
 # network/finger.xml
@@ -130,6 +129,7 @@ network/routing/ripng.xml	disabled
 network/routing/route.xml	disabled
 network/rpc/bind.xml		enabled
 network/smb/client.xml		disabled
+network/smb/server.xml		disabled
 network/shares/group.xml	enabled
 network/shares/reparsed.xml	disabled
 network/shell.xml		disabled

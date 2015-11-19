@@ -322,7 +322,7 @@ populate_shiplist(manifest_ent_t *me, void *arg)
 	case ME_TYPE_SYMLINK:
 		if (strncmp(me->me_name, cm_pdir, strlen(cm_pdir)) == 0) {
 			if (strset_add(mc->mc_shiplist, me->me_name) != 0) {
-				err(1, "strset_add failure");
+				err(1, "strset_add failure (%s)", me->me_name);
 			}
 		}
 		break;

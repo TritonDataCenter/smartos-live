@@ -63,7 +63,9 @@ function verbose()
 
 function usage()
 {
-    local msg me
+    local code msg me
+    code=${1:-2}
+    shift
     msg=$*
     [[ -n $msg ]] && echo "$msg"
     me=${0##*/}
@@ -77,6 +79,12 @@ General Options:
         -v
             Verbose output
 
+        -h
+            Print help and exit
+
+        -?
+            Print help and exit
+
 Subcommands:
         add             [-l] [-p prop=value,...] <name> [mac]
         delete          [-f] <name>
@@ -85,7 +93,7 @@ Subcommands:
         update          [-l] [-p prop=value,...] <name> [mac]
         vms             <name>
 USAGE
-    exit 2
+    exit "$code"
 }
 
 # update sysinfo
@@ -878,6 +886,12 @@ while getopts vh? opt; do
     v)
         VERBOSE="true"
         ;;
+    h)
+        usage 0
+        ;;
+    *)
+        usage 2
+        ;;
     esac
 done
 shift "$(( OPTIND - 1 ))"
@@ -925,10 +939,10 @@ add|update)
             parse_props "$OPTARG"
             ;;
         :)
-            usage "missing required argument -- $OPTARG"
+            usage 2 "missing required argument -- $OPTARG"
             ;;
         *)
-            usage "invalid option: $OPTARG"
+            usage 2 "invalid option: $OPTARG"
             ;;
         esac
     done
@@ -940,10 +954,10 @@ delete)
             FORCE="true"
             ;;
         :)
-            usage "missing required argument -- $OPTARG"
+            usage 2 "missing required argument -- $OPTARG"
             ;;
         *)
-            usage "invalid option: $OPTARG"
+            usage 2 "invalid option: $OPTARG"
             ;;
         esac
     done
@@ -965,10 +979,10 @@ list)
             PARSABLE="true"
             ;;
         :)
-            usage "missing required argument -- $OPTARG"
+            usage 2 "missing required argument -- $OPTARG"
             ;;
         *)
-            usage "invalid option: $OPTARG"
+            usage 2 "invalid option: $OPTARG"
             ;;
         esac
     done
@@ -980,10 +994,10 @@ exists)
             EXISTS_NAMES="true"
             ;;
         :)
-            usage "missing required argument -- $OPTARG"
+            usage 2 "missing required argument -- $OPTARG"
             ;;
         *)
-            usage "invalid option: $OPTARG"
+            usage 2 "invalid option: $OPTARG"
             ;;
         esac
     done

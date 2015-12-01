@@ -102,7 +102,7 @@ At some point in time after the initial creation of the zone (during the first
 boot setup script for example), you can import the service. For example, if you
 were going to import the cron service you would run:
 
-svccfg import /var/svc/manifest/system/cron.xml
+svccfg import /lib/svc/manifest/system/cron.xml
 
 Next, you need to potentially enable the service depending on the default
 disposition of the service. You enable the service by running:

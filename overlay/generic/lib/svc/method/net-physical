@@ -445,9 +445,13 @@ function plumbif
 {
     iface=$1
     inet=$2
+    addrtype=$3
     if [[ -z ${plumbedifs[${iface},${inet}]} ]]; then
         plumbedifs[${iface},${inet}]="true"
-        /sbin/ifconfig ${iface} ${inet} plumb up
+        /sbin/ifconfig ${iface} ${inet} plumb
+        if [[ ! ${addrtype} =~ "^vrrp" ]]; then
+            /sbin/ifconfig ${iface} ${inet} up
+        fi
     fi
 }
 
@@ -709,7 +713,7 @@ else
         iface_configured=""
 
         if [[ -f /etc/dhcp.${iface} ]]; then
-            plumbif ${iface} inet
+            plumbif ${iface} inet ${addrtype}
             if [[ -z "${primary}" ]]; then
                 /sbin/ifconfig ${iface} auto-dhcp primary
                 primary=${iface}
@@ -726,7 +730,7 @@ else
                 # interface. For IPv6, the address on the first interface is
                 # the link-local address, and can't be changed.
                 if [[ "${ifparams}" == {3}({1,3}(\d).){1,3}(\d)* ]]; then
-                    plumbif ${iface} inet
+                    plumbif ${iface} inet ${addrtype}
                     if [[ -z "${first_ipv4_configured}" ]]; then
                         first_ipv4_configured="true"
                         ifcommand="inet"
@@ -734,7 +738,7 @@ else
                         ifcommand="inet addif"
                     fi
                 else
-                    plumbif ${iface} inet6
+                    plumbif ${iface} inet6 ${addrtype}
                     ifcommand="inet6 addif"
                 fi
 
@@ -757,7 +761,7 @@ else
             # the network interface. We then just need to plumb the interface,
             # and let in.ndpd take care of configuring addresses.
             svcadm enable svc:/network/routing/ndp:default
-            plumbif ${iface} inet6
+            plumbif ${iface} inet6 ${addrtype}
             iface_configured="true"
         fi
 
@@ -769,22 +773,24 @@ else
     done < <(/usr/sbin/dladm show-vnic -p -o link,macaddrtype 2>/dev/null)
 
     if [[ -z "${primary}" && -n "${first_iface}" ]]; then
-        plumbif ${first_iface} inet
+        first_iface_type=$(dladm show-vnic ${first_iface} -p -o macaddrtype)
+        plumbif ${first_iface} inet ${first_iface_type}
         /sbin/ifconfig ${first_iface} auto-dhcp
         primary=${first_iface}
     fi
 
-    for iface in `/usr/sbin/dladm show-vnic -p -o link`; do
+    while IFS=: read -r iface addrtype; do
         if [[ "${iface}" == "${primary}"
               || -f /etc/hostname.${iface}
               || -f /etc/dhcp.${iface}
-              || -f /etc/addrconf.${iface} ]]; then
+              || -f /etc/addrconf.${iface}
+              || "${addrtype}" =~ "^vrrp" ]]; then
             continue
         fi
 
-        plumbif ${iface} inet
+        plumbif ${iface} inet ${addrtype}
         /sbin/ifconfig ${iface} auto-dhcp start wait 0
-    done
+    done < <(/usr/sbin/dladm show-vnic -p -o link,macaddrtype 2>/dev/null)
 fi
 
 log_if_state after

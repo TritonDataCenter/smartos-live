@@ -66,6 +66,7 @@ diskinfo :	LDFLAGS +=	-L$(DESTDIR)/usr/lib/fm
 diskinfo :	CPPFLAGS +=	-I$(ROOT)/projects/illumos/usr/src/lib/fm/topo
 diskinfo :	LIBS +=		-R/usr/lib/fm
 diskinfo :	LIBS +=		-ldladm -ldiskmgt -lnvpair -ltopo
+fswatcher :	LIBS +=		-lthread
 zfs_recv :	LIBS +=		-lsocket
 zfs_send :	LIBS +=		-lsocket
 vmbundle :	CPPFLAGS +=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
@@ -94,16 +95,18 @@ JS_CHECK_TARGETS=\
 	vm/node_modules/qmp.js \
 	vm/node_modules/openonerrlogger.js \
 	vm/node_modules/vmload/*.js \
+	vm/node_modules/vminfod/*.js \
 	vm/node_modules/sysevent-stream.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
 	vm/common/nictag.js \
 	vm/tests/test-alias.js \
 	vm/tests/test-cleanup-on-failure.js \
-	vm/tests/test-create.js \
 	vm/tests/test-create-filesystems.js \
-	vm/tests/test-docker.js \
+	vm/tests/test-create.js \
 	vm/tests/test-defaults.js \
+	vm/tests/test-docker.js \
+	vm/tests/test-fswatcher.js \
 	vm/tests/test-indestructible.js \
 	vm/tests/test-internal_metadata_namespaces.js \
 	vm/tests/test-lastexited.js \
@@ -114,6 +117,8 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-tmpfs.js \
 	vm/tests/test-update.js \
 	vm/tests/test-vrrp-nics.js \
+	vm/tests/test-zonewatcher.js \
+	vm/tests/test-zpoolwatcher.js \
 	vm/lib/metadata/*.js
 
 JS_CHECK_OLDSKOOL_TARGETS = \
@@ -125,6 +130,7 @@ JS_CHECK_OLDSKOOL_TARGETS = \
 # These files will get run through cstyle on 'make check'
 C_CHECK_TARGETS=\
 	cryptpass.c \
+	fswatcher.c \
 	qemu-exec.c \
 	vmunbundle.c \
 	zfs_recv.c \
@@ -346,6 +352,7 @@ TARGETS = \
 	disklayout \
 	disklist \
 	disk_size \
+	fswatcher \
 	mkzpool \
 	removable_disk \
 	vmunbundle \
@@ -451,6 +458,7 @@ install: all $(SUBDIRS)
 	sed -e "s|var expat.*;|var expat = require('./expat_binding');|" \
 	    < node-expat/lib/node-expat.js \
 	    > $(PREFIX_NODE)/node_modules/node-expat.js
+	cp fswatcher $(DESTDIR)/usr/vm/sbin/fswatcher
 	cp dockerinit/build/dockerinit $(DESTDIR)/usr/vm/sbin/dockerinit
 	cp dockerinit/build/dockerexec $(DESTDIR)/usr/vm/sbin/dockerexec
 	cp zoneevent $(DESTDIR)/usr/vm/sbin/zoneevent
@@ -463,8 +471,11 @@ install: all $(SUBDIRS)
 	    $(DESTDIR)/lib/svc/manifest/system/system-vmadmd.xml
 	cp vm/smf/system-metadata.xml \
 	    $(DESTDIR)/lib/svc/manifest/system/system-metadata.xml
+	cp vm/smf/system-vminfod.xml \
+	    $(DESTDIR)/lib/svc/manifest/system/system-vminfod.xml
 	mv $(DESTDIR)/usr/vm/sbin/vmadmd.js $(DESTDIR)/usr/vm/sbin/vmadmd
 	mv $(DESTDIR)/usr/vm/sbin/vmadm.js $(DESTDIR)/usr/vm/sbin/vmadm
+	mv $(DESTDIR)/usr/vm/sbin/vminfod.js $(DESTDIR)/usr/vm/sbin/vminfod
 	mv $(DESTDIR)/usr/vm/sbin/add-userscript.js \
 	    $(DESTDIR)/usr/vm/sbin/add-userscript
 	mv $(DESTDIR)/usr/vm/sbin/metadata.js $(DESTDIR)/usr/vm/sbin/metadata

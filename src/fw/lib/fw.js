@@ -21,7 +21,7 @@
  * CDDL HEADER END
  *
  *
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2015, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: Main entry points
@@ -1211,8 +1211,16 @@ function saveIPFfiles(ipfData, log, callback) {
                     log.trace('saveIPFfiles: writing temp file "%s"', tempFile);
                     return fs.writeFile(tempFile, ipfData[file], cb2);
                 },
-                function _renameOld(_, cb2) {
-                    return fs.rename(file, oldFile, function (err) {
+                function _unlinkOld(_, cb2) {
+                    return fs.unlink(oldFile, function (err) {
+                        if (err && err.code === 'ENOENT') {
+                            return cb2(null);
+                        }
+                        return cb2(err);
+                    });
+                },
+                function _linkOld(_, cb2) {
+                    return fs.link(file, oldFile, function (err) {
                         if (err && err.code === 'ENOENT') {
                             return cb2(null);
                         }
@@ -1225,7 +1233,6 @@ function saveIPFfiles(ipfData, log, callback) {
             ]}, cb);
         }
     }, function (err, res) {
-        // XXX: rollback if renaming failed
         return callback(err, res);
     });
 }

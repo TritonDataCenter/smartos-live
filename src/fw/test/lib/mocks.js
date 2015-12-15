@@ -34,10 +34,12 @@ var MOCKS = {
         execFile: execFile
     },
     fs: {
+        stat: stat,
         readdir: readDir,
         readFile: readFile,
         readFileSync: readFileSync,
         rename: rename,
+        link: link,
         unlink: unlink,
         writeFile: writeFile
     },
@@ -218,6 +220,17 @@ function execFile(path, args, opts, cb) {
 // --- fs
 
 
+function stat(file, cb) {
+    var p = _splitFile(file);
+    var root = VALUES.fs;
+
+    if (!root.hasOwnProperty(p.dir)
+            || !root[p.dir].hasOwnProperty(p.file)) {
+        return cb(_ENOENT(file));
+    }
+
+    return cb(null, {});
+}
 
 function readDir(dir, cb) {
     var root = VALUES.fs;
@@ -268,6 +281,16 @@ function rename(before, after, cb) {
 
             return unlink(before, cb);
         });
+    });
+}
+
+function link(before, after, cb) {
+    readFile(before, function (err, res) {
+        if (err) {
+            return cb(err);
+        }
+
+        writeFile(after, res, cb);
     });
 }
 

@@ -20,7 +20,7 @@
     "node-uuid": "1.2.0",
     "nopt": "1.0.10",
     "tab": "0.1.0",
-    "vasync": "1.3.2",
+    "vasync": "1.6.3",
     "verror": "1.3.6"
   },
   "scripts": {

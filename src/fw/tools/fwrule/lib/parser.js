@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2015, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: firewall rule parser
@@ -91,7 +91,8 @@ case 36: this.$ = $$[$0-2].concat(Number($$[$0]));
 break;
 case 37: this.$ = [ $$[$0] ]; 
 break;
-case 38: this.$ = $$[$0]; 
+case 38: yy.validateOKVersion(2, 'port ranges');
+          this.$ = $$[$0]; 
 break;
 case 39: this.$ = [ $$[$0].toLowerCase() ]; 
 break;

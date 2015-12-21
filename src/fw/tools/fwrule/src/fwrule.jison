@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2015, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: firewall rule parser grammar
@@ -221,7 +221,8 @@ port
 
 ports
     : PORTS portnumbers
-        { $$ = $2; }
+        { yy.validateOKVersion(2, 'port ranges');
+          $$ = $2; }
     ;
 
 port_all

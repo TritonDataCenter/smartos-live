@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2015, Joyent, Inc. All rights reserved.
  *
  *
  * firewall rule parser: entry point
@@ -40,6 +40,7 @@ var VError = require('verror').VError;
 var uuidRE = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 var portRE = /^[0-9]{1,5}$/;
 
+var CURR_VERSION = 2;
 
 
 // --- Internal helper functions
@@ -148,6 +149,13 @@ parser.yy.validateUUID = function validateUUID(text) {
     }
 };
 
+parser.yy.validateOKVersion = function validateOKVersion(ver, feature) {
+    if (ver > parser.yy.maxVersion) {
+        throw new validators.InvalidParamError('rule',
+            'The rule uses a feature (%s) newer than this API allows', feature);
+    }
+};
+
 
 parser.yy.parseError = function parseError(str, details) {
     var err;
@@ -188,8 +196,15 @@ parser.yy.parseError = function parseError(str, details) {
 
 
 
-function parse() {
-    return parser.parse.apply(parser, arguments);
+function parse(input, opts) {
+    if (!opts) {
+        opts = {};
+    }
+
+    // If a version hasn't been specified, use most recent
+    parser.yy.maxVersion = opts.maxVersion || CURR_VERSION;
+
+    return parser.parse(input);
 }
 
 

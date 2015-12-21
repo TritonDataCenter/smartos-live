@@ -27,7 +27,6 @@
  */
 
 var mod_uuid = require('node-uuid');
-var parser = require('./parser');
 var sprintf = require('extsprintf').sprintf;
 var util = require('util');
 var validators = require('./validators');
@@ -176,7 +175,7 @@ function FwRule(data, opts) {
             'No rule specified'));
     } else {
         try {
-            parsed = data.parsed || parser.parse(data.rule);
+            parsed = data.parsed || require('./').parse(data.rule, opts);
         } catch (err) {
             errs.push(err);
         }

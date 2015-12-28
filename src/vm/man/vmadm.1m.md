@@ -600,11 +600,11 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     brand:
 
-        This will be one of 'joyent', 'joyent-minimal' or 'sngl' for OS
+        This will be one of 'joyent', 'joyent-minimal' or 'lx' for OS
         virtualization and 'kvm' for full hardware virtualization. This is a
         required value for VM creation.
 
-        type: string (joyent|joyent-minimal|kvm|sngl)
+        type: string (joyent|joyent-minimal|lx|kvm)
         vmtype: OS,KVM
         listable: yes
         create: yes
@@ -1849,9 +1849,10 @@ tab-complete UUIDs rather than having to type them out for every command.
     type:
 
         This is a virtual field and cannot be updated. It will be 'OS' when the
-        (brand == 'joyent*' || brand == 'sngl') and 'KVM' when the brand=='kvm'.
+        brand == 'joyent*', 'LX' when the brand == 'lx', and 'KVM' when the
+        brand == 'kvm'.
 
-        type: string value, one of: ['OS', 'KVM']
+        type: string value, one of: ['OS', 'LX', 'KVM']
         vmtype: OS,KVM
         listable: yes
         create: no, set by 'brand' property.

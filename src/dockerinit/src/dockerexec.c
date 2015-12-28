@@ -134,12 +134,14 @@ main(int argc, char *argv[])
         }
     }
     if (pwd != NULL) {
+        if (setuid(pwd->pw_uid) != 0) {
+            fatal(ERR_SETUID, "setuid(%d): %s\n", pwd->pw_uid, strerror(errno));
+        }
+    }
+    if ((pwd != NULL) && (grp != NULL)) {
         if (initgroups(pwd->pw_name, grp->gr_gid) != 0) {
             fatal(ERR_INITGROUPS, "initgroups(%s,%d): %s\n", pwd->pw_name,
                 grp->gr_gid, strerror(errno));
-        }
-        if (setuid(pwd->pw_uid) != 0) {
-            fatal(ERR_SETUID, "setuid(%d): %s\n", pwd->pw_uid, strerror(errno));
         }
     }
 

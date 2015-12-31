@@ -503,8 +503,9 @@ getUserGroupData()
 
         grp = getgrnam(group);
         if (grp == NULL) {
+            /* The `group` field can be a number. */
             lli = strtoll(group, &endptr, 10);
-            if (lli == 0LL && endptr != NULL) {
+            if (endptr != NULL && endptr[0] == '\0') { /* entire string valid */
                 grp = getgrgid((gid_t) lli);
             } else {
                 fatal(ERR_GID_NAN, "GID is not a number: %s\n", group);
@@ -516,8 +517,9 @@ getUserGroupData()
     pwd = getpwnam(user);
     if (pwd == NULL) {
         endptr = NULL;
+        /* The `user` field can be a number. */
         lli = strtoll(user, &endptr, 10);
-        if (lli == 0LL && endptr != NULL) {
+        if (endptr != NULL && endptr[0] == '\0') { /* entire string valid */
             pwd = getpwuid((uid_t) lli);
         } else {
             fatal(ERR_UID_NAN, "UID is not a number: %s\n", user);

@@ -2072,6 +2072,52 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         See zfs(1M) `snapshot_limit` for more details.
 
+    zlog_max_size:
+
+        This property is used to set/show the maximum size for a docker zone's
+        stdio.log file before zoneadmd(1m) will rotate it.
+
+        NOTE: this property only exists for use by sdc-docker and should not be
+        relied on for other things at this point.
+
+        type: integer (size in bytes)
+        vmtype: OS,LX
+        listable: no
+        create: yes
+        update: yes
+        default: none (no rotation)
+
+    zlog_mode:
+
+        This property will show up for docker zones and indicates which mode the
+        zlog/zfd devices will be in for the VM.
+
+        The values are simply positional letters used to indicate various
+        capabilities. The following table shows the meaning of the mode values:
+
+        zlog-mode    gz log - tty - ngz log
+        ---------    ------   ---   -------
+        gt-             y      y       n
+        g--             y      n       n
+        gtn             y      y       y
+        g-n             y      n       y
+        -t-             n      y       n
+        ---             n      n       n
+
+        where the "gz log" here means we'll write the log to the
+        /zones/<uuid>/logs/stdio.log file, "tty" means we'll setup the zfd
+        devices as a tty, and "ngz log" means we'll setup the zfd devices to
+        loop logs back into the zone so that a dockerlogger can process them in
+        the zone.
+
+        NOTE: currently this should only ever appear for "docker" VMs.
+
+        type: string (3 character mode string)
+        vmtype: OS,LX
+        listable: no
+        create: no (handled via docker:* metadata)
+        update: no (handled via docker:* metadata)
+
     zone_state:
 
         This property will show up when fetching a VMs JSON.  this shows the

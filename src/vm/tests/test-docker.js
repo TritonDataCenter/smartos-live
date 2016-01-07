@@ -1036,3 +1036,88 @@ test('test log archiving', function (t) {
         }
     ]);
 });
+
+// Should fail to create when we have non-integer
+test('test docker VM with non-integer zlog_max_size', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand, expect_create_failure: true};
+
+    payload.docker = true;
+    payload.autoboot = false;
+    payload.zlog_max_size = 'abc123';
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, []);
+});
+
+// Should fail to create when we have negative
+test('test docker VM with negative zlog_max_size', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand, expect_create_failure: true};
+
+    payload.docker = true;
+    payload.autoboot = false;
+    payload.zlog_max_size = -1000000;
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, []);
+});
+
+// Should fail to create when we have > INT64_MAX
+test('test docker VM with too large zlog_max_size', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand, expect_create_failure: true};
+
+    payload.docker = true;
+    payload.autoboot = false;
+    payload.zlog_max_size = Math.pow(2, 64);
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, []);
+});
+
+test('test docker VM with good zlog_max_size', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.docker = true;
+    payload.zlog_max_size = 1000000;
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        function (cb) {
+
+        async.series([
+            function (_cb) {
+                VM.load(state.uuid, function (err, obj) {
+                    if (err) {
+                        _cb(err);
+                        return;
+                    }
+
+                    t.equal(payload.zlog_max_size, obj.zlog_max_size,
+                        'VM has correct zlog_max_size');
+
+                    _cb();
+                });
+            }, function (_cb) {
+                VM.update(state.uuid, {zlog_max_size: 1000}, function (err) {
+                    t.ok(!err, 'Update zlog_max_size'
+                        + (err ? ': ' + err.message : ''));
+
+                    _cb(err);
+                });
+            }, function (_cb) {
+                VM.load(state.uuid, function (err, obj) {
+                    t.ok(!err, 'Load VM after update'
+                        + (err ? ': ' + err.message : ''));
+
+                    if (!err) {
+                        t.equal(1000, obj.zlog_max_size,
+                            'VM has correct zlog_max_size');
+                    }
+
+                    _cb(err);
+                });
+            }
+        ], function _doneTest(err) {
+            cb(err);
+        });
+    }]);
+});

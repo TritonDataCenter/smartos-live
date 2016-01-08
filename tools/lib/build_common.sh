@@ -31,7 +31,7 @@ fi
 bi_platform_dir="output/"
 bi_platform_name=
 bi_platform=
-bi_tmpdir="/tmp/build_$bi_type-$USER.$$"
+bi_tmpdir="/tmp/build_$bi_type-$UID.$$"
 bi_output_dir="output-$bi_type"
 
 bi_dont_leave_me_hanging=0

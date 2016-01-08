@@ -104,7 +104,7 @@ break;
 case 42: yy.validatePortNumber($$[$0-2]);
           yy.validatePortNumber($$[$0]);
           yy.validateRangeOrder($$[$0-2], $$[$0]);
-          this.$ = [{ 'start': $$[$0-2], 'end': $$[$0] }]; 
+          this.$ = [{ 'start': Number($$[$0-2]), 'end': Number($$[$0]) }]; 
 break;
 case 44: this.$ = $$[$0-2].concat($$[$0]); 
 break;

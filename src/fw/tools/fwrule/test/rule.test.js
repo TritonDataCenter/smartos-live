@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2015, Joyent, Inc. All rights reserved.
  *
  *
  * Unit tests for the firewall rule object
@@ -650,6 +650,10 @@ exports['sorting: port ranges'] = function (t) {
     };
 
     t.deepEqual(rule.raw(), raw, 'rule.raw()');
+    t.strictEqual(rule.raw().ports[0].start, raw.ports[0].start,
+        'Both starts are Numbers');
+    t.strictEqual(rule.raw().ports[0].end, raw.ports[0].end,
+        'Both ends are Numbers');
 
     t.deepEqual(rule.serialize(), {
         enabled: true,

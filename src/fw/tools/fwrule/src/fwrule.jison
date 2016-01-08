@@ -243,7 +243,7 @@ portrange
         { yy.validatePortNumber($1);
           yy.validatePortNumber($3);
           yy.validateRangeOrder($1, $3);
-          $$ = [{ 'start': $1, 'end': $3 }]; }
+          $$ = [{ 'start': Number($1), 'end': Number($3) }]; }
     ;
 
 portnumbers

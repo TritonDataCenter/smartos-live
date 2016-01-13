@@ -114,6 +114,7 @@ function rowFromImageInfo(imageInfo) {
     if (row.published_at) {
         // Just the date.
         row.published_date = row.published_at.slice(0, 10);
+        row.pub = row.published_date;
         // Normalize on no milliseconds.
         row.published = row.published_at.replace(/\.\d+Z$/, 'Z');
     }
@@ -141,7 +142,7 @@ var rowFieldsHelp = (
       '    Any of the manifest fields (see `imgadm {{cmd}} -j` output) plus the\n'
     + '    following computed fields for convenience.\n'
     + '\n'
-    + '    published_date            just the date part of `published_at`\n'
+    + '    published_date, pub       just the date part of `published_at`\n'
     + '    published                 `published_at` with the milliseconds removed\n'
     + '    source                    the source URL, if available\n'
     + '    clones                    the number of clones (dependent images and VMs)\n'
@@ -901,8 +902,8 @@ CLI.prototype.do_avail.options = [
         type: 'string',
         helpArg: 'FIELD,...',
         help: 'Specify fields (columns) to output. Default is '
-            + '"uuid,name,version,os,published".',
-        default: 'uuid,name,version,os,published'
+            + '"uuid,name,version,os,type,pub".',
+        default: 'uuid,name,version,os,type,pub'
     },
     {
         names: ['s'],
@@ -1003,8 +1004,8 @@ CLI.prototype.do_list.options = [
         type: 'string',
         helpArg: 'FIELD,...',
         help: 'Specify fields (columns) to output. Default is '
-            + '"uuid,name,version,os,published".',
-        default: 'uuid,name,version,os,published'
+            + '"uuid,name,version,os,type,pub".',
+        default: 'uuid,name,version,os,type,pub'
     },
     {
         names: ['s'],

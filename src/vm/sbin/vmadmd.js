@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  */
 
@@ -45,7 +45,9 @@ var qs = require('querystring');
 var SyseventStream = require('/usr/vm/node_modules/sysevent-stream');
 var url = require('url');
 var util = require('util');
+var vasync = require('vasync');
 
+var DOCKER_RUNTIME_DELAY_RESET = 10000; // ms zone being up, we zero delay
 var UPGRADE_SCRIPT = '/smartdc/vm-upgrade/001_upgrade';
 var VMADMD_PORT = 8080;
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
@@ -113,6 +115,66 @@ function zonecfg(args, callback)
         } else {
             callback(null, {'stdout': stdout, 'stderr': stderr});
         }
+    });
+}
+
+/*
+ * This function gets the runtime of the last run of a stopped zone by comparing
+ * the mtime of the /lastbooted and /lastexited files.
+ *
+ * If there are no errors, the last_runtime property will be added to the vmobj.
+ *
+ */
+function addLastRuntime(vmobj, opts, callback)
+{
+    var lastbooted_filename;
+    var lastbooted_mtime;
+    var lastexited_filename;
+    var lastexited_mtime;
+    var zonepath = vmobj.zonepath;
+
+    assert(log, 'missing log'); // log is GLOBAL!
+    assert(zonepath, 'missing zonepath');
+
+    lastbooted_filename = path.join(vmobj.zonepath, '/lastbooted');
+    lastexited_filename = path.join(vmobj.zonepath, '/lastexited');
+
+    vasync.pipeline({funcs: [
+        function (_, cb) {
+            fs.stat(lastbooted_filename, function (err, st) {
+                if (err) {
+                    log.error({err: err, vm_uuid: vmobj.uuid},
+                        'failed to stat lastbooted');
+                    cb(err);
+                    return;
+                }
+                lastbooted_mtime = st.mtime.getTime();
+                cb();
+            });
+        }, function (_, cb) {
+            fs.stat(lastexited_filename, function (err, st) {
+                if (err) {
+                    log.error({err: err, vm_uuid: vmobj.uuid},
+                        'failed to stat lastexited');
+                    cb(err);
+                    return;
+                }
+                lastexited_mtime = st.mtime.getTime();
+                cb();
+            });
+        }
+    ]}, function (err) {
+        if (!err) {
+            assert((lastexited_mtime - lastbooted_mtime) > 0,
+                'mtime delta must be positive [' + lastexited_mtime + ' <= '
+                + lastbooted_mtime + ']');
+
+            vmobj.last_runtime = (lastexited_mtime - lastbooted_mtime);
+            log.debug({vm_uuid: vmobj.uuid, last_runtime: vmobj.last_runtime},
+                'added last_runtime to VM Object');
+        }
+
+        callback();
     });
 }
 
@@ -552,8 +614,10 @@ function rotateKVMLog(vm_uuid)
     }, 30 * 1000);
 }
 
-function restartDockerContainer(uuid, restart_count)
+function restartDockerContainer(uuid, opts)
 {
+    var restart_delay = opts.delay;
+
     VM.load(uuid, {fields: [
         'autoboot',
         'brand',
@@ -586,8 +650,10 @@ function restartDockerContainer(uuid, restart_count)
             return;
         }
 
-        VM.start(vmobj.uuid, {}, {increment_restart_count: true},
-            function (start_err) {
+        VM.start(vmobj.uuid, {}, {
+            increment_restart_count: true,
+            restart_delay: restart_delay
+        }, function (start_err) {
 
             if (start_err) {
                 log.error({err: start_err, uuid: vmobj.uuid},
@@ -651,6 +717,17 @@ function applyDockerRestartPolicy(vmobj)
         restart_count = 0;
     }
 
+    if (vmobj.last_runtime && vmobj.last_runtime > DOCKER_RUNTIME_DELAY_RESET) {
+        // If the container previously ran more than DOCKER_RUNTIME_DELAY_RESET
+        // milliseconds, we reset the delay back to initial value (as though
+        // restart_count were 0).
+        restart_delay = 100;
+    } else if (im['docker:restartdelay']) {
+        restart_delay = im['docker:restartdelay'];
+    } else {
+        restart_delay = 100 * Math.pow(2, restart_count);
+    }
+
     restart_policy = im['docker:restartpolicy'];
     parts = restart_policy.split(':');
     if (parts.length === 2 && parts[0] === 'on-failure'
@@ -687,14 +764,15 @@ function applyDockerRestartPolicy(vmobj)
         return;
     }
 
-    restart_delay = 100 * Math.pow(2, restart_count);
     log.info({uuid: vmobj.uuid}, 'delaying %s ms before (re)start',
         restart_delay);
 
     restart_waiters[vmobj.uuid] = setTimeout(function _delayedRestart() {
         // clear so someone else can run
         delete restart_waiters[vmobj.uuid];
-        restartDockerContainer(vmobj.uuid, restart_count, log);
+        restartDockerContainer(vmobj.uuid, {
+            delay: (restart_delay * 2) // increment for next time
+        });
     }, restart_delay);
 }
 
@@ -775,7 +853,8 @@ function updateZoneStatus(ev)
             'internal_metadata',
             'state',
             'uuid',
-            'zone_state'
+            'zone_state',
+            'zonepath'
         ]}, function (err, vmobj) {
             log.info(ev.zonename + ' (docker) went from ' + ev.oldstate + ' to '
                 + ev.newstate + ' at ' + ev.when);
@@ -790,8 +869,12 @@ function updateZoneStatus(ev)
                 && vmobj.internal_metadata
                 && vmobj.internal_metadata['docker:restartpolicy']) {
 
-                // no callback, nobody cares
-                applyDockerRestartPolicy(vmobj, log);
+                // Add the last_runtime field in case we should reset the delay
+                addLastRuntime(vmobj, {log: log}, function () {
+                    // no callback to call when updateZoneStatus() completes,
+                    // nobody cares about errors.
+                    applyDockerRestartPolicy(vmobj);
+                });
             }
         });
 
@@ -2268,8 +2351,10 @@ function main()
                                 'docker VM not running at vmadmd startup, '
                                 + 'applying restart policy');
 
-                            applyDockerRestartPolicy(vmobj, log);
-                            upg_cb();
+                            addLastRuntime(vmobj, {log: log}, function () {
+                                applyDockerRestartPolicy(vmobj);
+                                upg_cb();
+                            });
                         } else {
                             log.debug('ignoring non-kvm VM ' + vmobj.uuid);
                             upg_cb();

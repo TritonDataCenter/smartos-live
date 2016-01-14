@@ -21,7 +21,7 @@
  * CDDL HEADER END
  *
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: Main entry points
@@ -300,6 +300,21 @@ function createUpdatedRules(opts, log, callback) {
     return createRules(updated, callback);
 }
 
+function mergeIntoLookup(vmStore, vm) {
+    vmStore.all[vm.uuid] = vm;
+    mod_obj.addToObj3(vmStore, 'vms', vm.uuid, vm.uuid, vm);
+
+    forEachKey(vm.tags, function (tag, val) {
+        createSubObjects(vmStore, 'tags', tag, vm.uuid, vm);
+        createSubObjects(vmStore, 'tagValues', tag, val, vm.uuid, vm);
+    });
+
+    vm.ips.forEach(function (ip) {
+        mod_obj.addToObj3(vmStore, 'ips', ip, vm.uuid, vm);
+    });
+
+    // XXX: subnet
+}
 
 /**
  * Turns a list of VMs from VM.js into a lookup table, keyed by the various
@@ -359,19 +374,7 @@ function createVMlookup(vms, log, callback) {
         };
         log.trace(vm, 'Adding VM "%s" to lookup', vm.uuid);
 
-        vmStore.all[vm.uuid] = vm;
-        mod_obj.addToObj3(vmStore, 'vms', vm.uuid, vm.uuid, vm);
-
-        forEachKey(vm.tags, function (tag, val) {
-            createSubObjects(vmStore, 'tags', tag, vm.uuid, vm);
-            createSubObjects(vmStore, 'tagValues', tag, val, vm.uuid, vm);
-        });
-
-        vm.ips.forEach(function (ip) {
-            mod_obj.addToObj3(vmStore, 'ips', ip, vm.uuid, vm);
-        });
-
-        // XXX: subnet
+        mergeIntoLookup(vmStore, vm);
     });
 
     if (errs.length !== 0) {
@@ -1498,6 +1501,13 @@ function add(opts, callback) {
             lookupVMs(res.vms, opts.localVMs, log, cb);
         },
 
+        // Build a table for information about newly added local/remote VMs
+        function newVMs(res, cb) {
+            var nvms = clone(res.remoteVMs);
+            mod_obj.values(res.localVMs).map(mergeIntoLookup.bind(null, nvms));
+            cb(null, nvms);
+        },
+
         function allRules(res, cb) {
             return cb(null, dedupRules(res.rules, res.disk.rules));
         },
@@ -1522,11 +1532,49 @@ function add(opts, callback) {
         },
 
         // Merge the local and remote VM rules, and use that list to find
-        // the VMs affected
+        // the VMs affected. We filter out rules that aren't affected by
+        // adding a remote VM or updating a local VM (for example, simple
+        // wildcard rules). This table shows which rules we keep. Each row
+        // represents whether or not a new VM or remote VM is a source or
+        // destination VM, plus whether or not the rule is a BLOCK or ALLOW
+        // rule. Each column represents a collection of targets we might
+        // have. Each cell says whether or not we need to update the VMs
+        // represented by that column.
+        //
+        //              |  From   |   To    | From |  To  | From | To
+        //              | All VMs | All VMs | Tags | Tags | VMs  | VMs
+        // |------------|---------|---------|------|------|------|-----
+        // | Dest. VM / |   No    |   No    |  No  |  No  |  No  | No
+        // |   ALLOW    |         |         |      |      |      |
+        // |------------|---------|---------|------|------|------|-----
+        // |  Src VM /  |   No    |   Yes   |  No  |  Yes |  No  | Yes
+        // |   ALLOW    |         |         |      |      |      |
+        // |------------|---------|---------|------|------|------|-----
+        // | Dest. VM / |   Yes   |   No    |  Yes |  No  |  Yes | No
+        // |   BLOCK    |         |         |      |      |      |
+        // |------------|---------|---------|------|------|------|-----
+        // |  Src VM /  |   No    |   No    |  No  |  No  |  No  | No
+        // |   BLOCK    |         |         |      |      |      |
+        //
         function localAndRemoteVMsAffected(res, cb) {
+            var affected_rules = dedupRules(res.localVMrules, res.remoteVMrules)
+                .filter(function (el) {
+                    if (el.action === 'allow'
+                        && vmsOnSide(res.newVMs, el, 'from', log).length > 0) {
+                        return el.to.wildcards.indexOf('vmall') !== -1
+                            || el.to.tags.length > 0
+                            || el.to.vms.length > 0;
+                    } else if (el.action === 'block'
+                        && vmsOnSide(res.newVMs, el, 'to', log).length > 0) {
+                        return el.from.wildcards.indexOf('vmall') !== -1
+                            || el.from.tags.length > 0
+                            || el.from.vms.length > 0;
+                    }
+                    return false;
+                });
             filter.vmsByRules({
                 log: log,
-                rules: dedupRules(res.localVMrules, res.remoteVMrules),
+                rules: affected_rules,
                 vms: res.vms
             }, cb);
         },

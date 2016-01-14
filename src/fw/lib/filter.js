@@ -93,7 +93,8 @@ function rulesByRVMs(remoteVMs, rules, log, callback) {
             return;
         }
 
-        if (remoteVMs[type].hasOwnProperty(t)) {
+        if (remoteVMs[type].hasOwnProperty(t)
+            && !objEmpty(remoteVMs[type][t])) {
             if (!rule.hasOwnProperty('owner_uuid')) {
                 matchingRules.push(rule);
                 return;

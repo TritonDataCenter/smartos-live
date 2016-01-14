@@ -114,6 +114,8 @@ function createLookup(remoteVMs, log) {
         wildcards: {}
     };
 
+    rvmLookup.wildcards.vmall = rvmLookup.all;
+
     if (!remoteVMs || util_obj.objEmpty(remoteVMs)) {
         return rvmLookup;
     }

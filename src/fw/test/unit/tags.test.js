@@ -1134,7 +1134,7 @@ exports['tags with values'] = function (t) {
 
             t.deepEqual(helpers.sortRes(res), {
                 remoteVMs: [ rvm4.uuid ],
-                vms: [ vm2.uuid, vm3.uuid, vm4.uuid, vm5.uuid ].sort(),
+                vms: [ vm2.uuid, vm4.uuid, vm5.uuid ].sort(),
                 rules: [ ]
             }, 'rules returned');
 

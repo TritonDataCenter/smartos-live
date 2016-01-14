@@ -126,6 +126,14 @@ function objEmpty(obj) {
 }
 
 
+function objValues(obj) {
+    var arr = [];
+    for (var key in obj) {
+        arr.push(obj[key]);
+    }
+    return arr;
+}
+
 
 module.exports = {
     addToObj3: addToObj3,
@@ -133,5 +141,6 @@ module.exports = {
     forEachKey: forEachKey,
     isArray: isArray,
     mergeObjects: mergeObjects,
+    values: objValues,
     objEmpty: objEmpty
 };

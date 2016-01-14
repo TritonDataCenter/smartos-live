@@ -43,7 +43,7 @@ function getDatasetsWrapper(fields, lines, out, callback)
         spawnZfs: spawnZfs
     };
 
-    getDatasets(options, callback);
+    getDatasets(undefined, {}, options, callback);
 }
 
 test('test with no datasets', function (t) {

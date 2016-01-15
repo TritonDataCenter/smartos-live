@@ -1161,6 +1161,15 @@ function trend(values)
  * This relies on vmadmd being running (since that's what handles restarts)
  */
 test('test restart delay reset', function (t) {
+    /*
+     * cycles_fail here defines how many times we want to exit quickly (avoiding
+     * the delay reset) before we sleep and allow the delay to reset.
+     *
+     * The actual boot delay is pretty variable because of all the steps
+     * involved when booting the zone. As such, the small delays are often
+     * hidden in the noise. That's why we allow it to double 7 times, to ensure
+     * that it's actually growing.
+     */
     var cycles_fail = 7;
     var cycle_reset_delay = 15; // seconds, should be >= 10
     var emitter = new EventEmitter();
@@ -1171,12 +1180,14 @@ test('test restart delay reset', function (t) {
     var num_cycles = (cycles_fail * 2) + 1;
 
     payload.autoboot = false;
-    payload.archive_on_delete = true;
     payload.brand = 'lx';
     payload.docker = true;
     payload.image_uuid = vmtest.CURRENT_DOCKER_ALPINE_UUID;
+
     // This cmd will 'exit 1' cycles_fail times, then sleep cycle_reset_delay
-    // seconds and exit 0, then repeat that pattern.
+    // seconds and exit 0, then repeat that pattern. The repeat happens because
+    // we delete the /var/tmp files so the $(ls -1 /var/tmp | wc) goes back to
+    // 0.
     payload.internal_metadata = {
         'docker:cmd': '[\"/bin/sh\",\"-c\",'
             + '\"[[ $(ls -1 /var/tmp | wc -l) == ' + cycles_fail + ' ]] '
@@ -1199,9 +1210,12 @@ test('test restart delay reset', function (t) {
                 var ev;
                 var im;
 
+                // for each start/stop, if it's for the VM we just created we'll
+                // push an event on the events array.
                 while ((ev = se.read()) !== null) {
                     if (ev.data.zonename === state.uuid) {
                         if (ev.data.newstate === 'uninitialized') {
+                            // VM went to state === 'stopped'
                             im = JSON.parse(fs.readFileSync('/zones/'
                                 + ev.data.zonename + '/config/metadata.json'))
                                 .internal_metadata;
@@ -1213,6 +1227,7 @@ test('test restart delay reset', function (t) {
                                 restartdelay: im['docker:restartdelay']
                             });
                         } else if (ev.data.newstate === 'running') {
+                            // VM went to state === 'running'
                             starts++;
                             events.push({
                                 action: 'start',
@@ -1247,6 +1262,9 @@ test('test restart delay reset', function (t) {
                 var restartcounts = [];
                 var restartdelays = [];
 
+                // generate an array of deltas (in ms) between a stop and the
+                // next start (this will be the restart delay + the time it
+                // actually takes to start).
                 events.forEach(function (evt) {
                     if (evt.action === 'start') {
                         if (last_stop > 0) {
@@ -1259,6 +1277,8 @@ test('test restart delay reset', function (t) {
                     }
                 });
 
+                // Only 'stop' events have a restartcount, so create an array
+                // just of the restart counts.
                 restartcounts = events.filter(function (evt) {
                     if (evt.action === 'stop') {
                         return (true);
@@ -1268,6 +1288,8 @@ test('test restart delay reset', function (t) {
                     return (evt.restartcount);
                 });
 
+                // Only 'stop' events have a restartdelay, so create an array
+                // just of the restart delays.
                 restartdelays = events.filter(function (evt) {
                     if (evt.action === 'stop') {
                         return (true);
@@ -1277,6 +1299,22 @@ test('test restart delay reset', function (t) {
                     return (evt.restartdelay);
                 });
 
+                /*
+                 * vmadmd restarts a zone that has a restartpolicy that requires
+                 * it, when it sees that the VM exited. The delay should be
+                 * increasing between each restart unless the VM was running
+                 * more than 10 seconds. If it was running more than 10 seconds,
+                 * the delay should be reset.
+                 *
+                 * Since we should exit quickly the first cycles_fail times, the
+                 * delay between each of those attempts should go up. We should
+                 * then see the delay go *down* for the next attempt (back to
+                 * the initial delay) because at that point we'll sleep 15 in
+                 * the zone and it will have been running more than 10 seconds.
+                 * After that, we go back to fast-exiting for another
+                 * cycles_fail cycles, so it should be increasing again.
+                 *
+                 */
                 t.equal(trend(deltas.slice(0, cycles_fail - 1)), 1, 'first '
                     + (cycles_fail - 1) + ' should go up');
                 t.equal(trend(deltas.slice(cycles_fail, deltas.length)), 1,
@@ -1284,21 +1322,42 @@ test('test restart delay reset', function (t) {
                 t.ok((deltas[cycles_fail - 1] > deltas[cycles_fail]),
                     deltas[cycles_fail - 1] + ' > ' + deltas[cycles_fail]);
 
-                // should be [0, 1, 2, ... 14]
+                /*
+                 * should be [0, 1, 2, ... 14] because the restart count always
+                 * only increases, regardless of how long the zone was running.
+                 */
                 for (i = 0; i < num_cycles; i++) {
                     expected_counts.push(i);
                 }
 
-                // delays should be: [null, 200, 400 ... 12800, 200, ... 12800]
+                /*
+                 * delays should be: [null, 200, 400 ... 12800, 200, ... 12800]
+                 * because of the:
+                 *
+                 *  restart number |  command
+                 *  ---------------+-------------------
+                 *              0  |  exit 1
+                 *              1  |  exit 1
+                 *            ...
+                 *     num_cycles  |  sleep 15 ; exit 0
+                 * num_cycles + 1  |  exit 1
+                 * num_cycles + 2  |  exit 1
+                 *            ...
+                 *
+                 * pattern, which we stop after the second run through to
+                 * num_cycles.
+                 */
                 for (i = 0; i < cycles_fail; i++) {
-                    expected_delays.push(100 * Math.pow(2, i+1));
+                    expected_delays.push(100 * Math.pow(2, i + 1));
                 }
                 for (i = 0; i < cycles_fail; i++) {
-                    expected_delays.push(100 * Math.pow(2, i+1));
+                    expected_delays.push(100 * Math.pow(2, i + 1));
                 }
 
                 t.deepEqual(restartcounts, expected_counts,
                     'check docker:restartcount');
+
+                // slice(1) here is to skip the null
                 t.deepEqual(restartdelays.slice(1), expected_delays,
                     'check docker:restartdelay');
 

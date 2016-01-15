@@ -47,7 +47,18 @@ var url = require('url');
 var util = require('util');
 var vasync = require('vasync');
 
-var DOCKER_RUNTIME_DELAY_RESET = 10000; // ms zone being up, we zero delay
+/*
+ * The DOCKER_RUNTIME_DELAY_RESET parameter is used when restarting a Docker VM
+ * according to its restart policy. As with Docker, we have an increasing delay
+ * between each restart attempt for a container. The exception to this
+ * increasing delay is when a container stays running for some amount of time.
+ * The DOCKER_RUNTIME_DELAY_RESET is what controls this. If a docker VM was
+ * running for longer than this many milliseconds when it stopped, we'll reset
+ * the delay time between restarts. On Docker this is always 10 seconds, so we
+ * use that here too.
+ */
+var DOCKER_RUNTIME_DELAY_RESET = 10000;
+
 var UPGRADE_SCRIPT = '/smartdc/vm-upgrade/001_upgrade';
 var VMADMD_PORT = 8080;
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
@@ -133,15 +144,16 @@ function addLastRuntime(vmobj, opts, callback)
     var lastexited_mtime;
     var zonepath = vmobj.zonepath;
 
+    assert(vmobj, 'missing vmobj');
     assert(log, 'missing log'); // log is GLOBAL!
     assert(zonepath, 'missing zonepath');
 
-    lastbooted_filename = path.join(vmobj.zonepath, '/lastbooted');
-    lastexited_filename = path.join(vmobj.zonepath, '/lastexited');
+    lastbooted_filename = path.join(vmobj.zonepath, 'lastbooted');
+    lastexited_filename = path.join(vmobj.zonepath, 'lastexited');
 
     vasync.pipeline({funcs: [
-        function (_, cb) {
-            fs.stat(lastbooted_filename, function (err, st) {
+        function _statLastbooted(_, cb) {
+            fs.stat(lastbooted_filename, function _statLastbootedCb(err, st) {
                 if (err) {
                     log.error({err: err, vm_uuid: vmobj.uuid},
                         'failed to stat lastbooted');
@@ -151,8 +163,8 @@ function addLastRuntime(vmobj, opts, callback)
                 lastbooted_mtime = st.mtime.getTime();
                 cb();
             });
-        }, function (_, cb) {
-            fs.stat(lastexited_filename, function (err, st) {
+        }, function _statLastexited(_, cb) {
+            fs.stat(lastexited_filename, function _statLastexitedCb(err, st) {
                 if (err) {
                     log.error({err: err, vm_uuid: vmobj.uuid},
                         'failed to stat lastexited');
@@ -163,7 +175,7 @@ function addLastRuntime(vmobj, opts, callback)
                 cb();
             });
         }
-    ]}, function (err) {
+    ]}, function _addLastRuntimePipelineCb(err) {
         if (!err) {
             assert((lastexited_mtime - lastbooted_mtime) > 0,
                 'mtime delta must be positive [' + lastexited_mtime + ' <= '
@@ -614,9 +626,31 @@ function rotateKVMLog(vm_uuid)
     }, 30 * 1000);
 }
 
+/*
+ * This function is called once we've decided that a docker container needs to
+ * be restarted due to its restart policy.
+ *
+ * It first loads the VM to ensure it is not already running, then does a start
+ * with the additional parameters that allow us to increase the:
+ *
+ *    docker:restartcount
+ *
+ * and set the:
+ *
+ *    docker:restartdelay
+ *
+ * values. The restartcount is displayed for users via `docker inspect` and the
+ * restartdelay will be used *next* time we need to restart this container if it
+ * does not stay up long enough to have the delay reset.
+ *
+ */
 function restartDockerContainer(uuid, opts)
 {
-    var restart_delay = opts.delay;
+    var restart_delay;
+
+    assert(typeof(opts) === 'object', 'opts must be object');
+
+    restart_delay = opts.delay;
 
     VM.load(uuid, {fields: [
         'autoboot',
@@ -679,8 +713,19 @@ function restartDockerContainer(uuid, opts)
  * restart policy is always or on-failure and the last exit status was non-zero.
  * If autoboot is false we'll never try to boot the zone.
  *
+ * When vmadmd has decided it is going to restart a zone, it loads the
+ * docker:restartdelay if there is one. It also loads the lastbooted and
+ * lastexited files which allow us to determine how long the VM was running.
+ *
+ * If the VM was running for longer than 10 seconds, we use the minimum delay
+ * (100ms) and set the docker:restartdelay for the VM to 200 (for the next
+ * restart). If the VM was running less than 10 seconds, or we cannot determine
+ * the runtime, we first look for the docker:restartdelay. If that's not set, we
+ * use 100 * Math.pow(2, docker:restartcount) which which matches what Docker
+ * does. We then set the docker:restartdelay to current * 2 for the next
+ * restart.
+ *
  */
-
 function applyDockerRestartPolicy(vmobj)
 {
     var im;

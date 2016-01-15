@@ -648,7 +648,7 @@ function restartDockerContainer(uuid, opts)
 {
     var restart_delay;
 
-    assert(typeof(opts) === 'object', 'opts must be object');
+    assert(typeof (opts) === 'object', 'opts must be object');
 
     restart_delay = opts.delay;
 

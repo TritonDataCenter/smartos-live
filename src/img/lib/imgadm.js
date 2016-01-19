@@ -47,7 +47,7 @@ var child_process = require('child_process'),
 var crypto = require('crypto');
 var dsapi = require('sdc-clients/lib/dsapi');
 var EventEmitter = require('events').EventEmitter;
-var findit = require('findit');
+var findit2 = require('findit2');
 var fs = require('fs');
 var genUuid = require('node-uuid');
 var imgapi = require('sdc-clients/lib/imgapi');
@@ -2465,7 +2465,7 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
         },
 
         function whiteout(_, next) {
-            var find = findit(zoneroot);
+            var find = findit2(zoneroot);
             var onceNext = once(next);
             var toRemove = [];
             find.on('file', function (file, stat) {

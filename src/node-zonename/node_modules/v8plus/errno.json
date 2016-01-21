@@ -1,0 +1,32 @@
+[
+	{
+		"code": "NOMEM",
+		"msg": "out of memory",
+		"exception": "Error"
+	},
+	{
+		"code": "YOUSUCK",
+		"msg": "programmer error",
+		"exception": "Error"
+	},
+	{
+		"code": "UNKNOWN",
+		"msg": "unknown error",
+		"exception": "Error"
+	},
+	{
+		"code": "MISSINGARG",
+		"msg": "missing argument is required",
+		"exception": "TypeError"
+	},
+	{
+		"code": "BADARG",
+		"msg": "argument is of incorrect type",
+		"exception": "TypeError"
+	},
+	{
+		"code": "EXTRAARG",
+		"msg": "superfluous argument(s) detected",
+		"exception": "TypeError"
+	}
+]

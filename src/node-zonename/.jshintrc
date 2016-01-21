@@ -1,0 +1,13 @@
+{
+	"smarttabs": true,
+	"sub": true,
+	"node": true,
+	"unused": "vars",
+	"undef": true,
+	"eqeqeq": true,
+	"latedef": "nofunc",
+	"quotmark": "single",
+	"trailing": true,
+	"maxlen": 80,
+	"funcscope": true
+}

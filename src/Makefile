@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright 2016 Joyent, Inc.
 #
 
 include Makefile.defs
@@ -171,13 +171,24 @@ $(KSTAT.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 $(KSTAT.NODE) :	LIBS +=		-lkstat
 
 #
-# The lockfd Node add-on is based on v8plus, which has its own system of
-# Makefiles.
+# The lockfd and zonename Node add-on are based on v8plus, which has its own
+# system of Makefiles.
 #
-LOCKFD_BINDING.NODE =		node-lockfd/lib/lockfd_binding.node
+V8PLUS_SUBDIR_ENV = \
+			CC=$(GCC) \
+			CXX=$(GXX) \
+			PREFIX_NODE=$(PREFIX_NODE) \
+			NODE_EXEC=$(NODE_EXEC) \
+			CTFCONVERT=$(CTFCONVERT) \
+			CTFMERGE=$(CTFMERGE)
 
+LOCKFD_BINDING.NODE =		node-lockfd/lib/lockfd_binding.node
 LOCKFD_SRC_DIR =		node-lockfd/src
 LOCKFD_V8PLUS_DIR =		node-lockfd/node_modules/v8plus
+
+ZONENAME_BINDING.NODE =		node-zonename/lib/zonename_binding.node
+ZONENAME_SRC_DIR =		node-zonename/src
+ZONENAME_V8PLUS_DIR =		node-zonename/node_modules/v8plus
 
 #
 # The dtrace-provider add-on uses a combination of C, assembly and C++ files in
@@ -347,6 +358,7 @@ TARGETS = \
 	$(DTRACE_PROVIDER.NODE) \
 	$(KSTAT.NODE) \
 	$(LOCKFD_BINDING.NODE) \
+	$(ZONENAME_BINDING.NODE) \
 	$(MICROTIME.NODE) \
 	$(SYSLOG.NODE) \
 	$(SQLITE3_BINDINGS.NODE) \
@@ -402,6 +414,8 @@ install: all $(SUBDIRS)
 	cp $(KSTAT.NODE) $(PREFIX_NODE)/node_modules/
 	cp node-lockfd/lib/index.js $(PREFIX_NODE)/node_modules/lockfd.js
 	cp $(LOCKFD_BINDING.NODE) $(PREFIX_NODE)/node_modules/lockfd_binding.node
+	cp node-zonename/lib/index.js $(PREFIX_NODE)/node_modules/zonename.js
+	cp $(ZONENAME_BINDING.NODE) $(PREFIX_NODE)/node_modules/zonename_binding.node
 	cp $(MICROTIME.NODE) $(PREFIX_NODE)/node_modules/
 	rm -rf $(DESTDIR)/usr/vm
 	cp -PR vm $(DESTDIR)/usr/
@@ -553,6 +567,7 @@ clean: $(SUBDIRS)
 	    $(CLEANFILES)
 	-rm -rf node-sqlite3/build
 	cd $(LOCKFD_SRC_DIR) && $(MAKE) clean
+	cd $(ZONENAME_SRC_DIR) && $(MAKE) clean
 
 include Makefile.targ
 
@@ -595,21 +610,24 @@ $(EXPAT.NODE): node-expat/node-expat.cc
 	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
 
 #
-# node-lockfd is built using the v8plus-based Makefile contained within the
-# project.  We use LD_OPTIONS, here, to induce the linker to include libc,
-# which gcc as configured in proto.strap does not, but which other C compilers
-# generally do.
+# node-lockfd and node-zonename are built using the v8plus-based Makefile
+# contained within their projects.  We use LD_OPTIONS, here, to induce the
+# linker to include libc, which gcc as configured in proto.strap does not, but
+# which other C compilers generally do.
 #
 $(LOCKFD_BINDING.NODE): FRC
 	cd $(LOCKFD_SRC_DIR) && \
 	LD_OPTIONS=-lc \
 	$(MAKE) \
-		CC=$(GCC) CXX=$(GXX) \
-		PREFIX_NODE=$(PREFIX_NODE) \
-		NODE_EXEC=$(NODE_EXEC) \
-		V8PLUS=$(PWD)/$(LOCKFD_V8PLUS_DIR) \
-		CTFCONVERT=$(CTFCONVERT) \
-		CTFMERGE=$(CTFMERGE)
+		$(V8PLUS_SUBDIR_ENV) \
+		V8PLUS=$(PWD)/$(LOCKFD_V8PLUS_DIR)
+
+$(ZONENAME_BINDING.NODE): FRC
+	cd $(ZONENAME_SRC_DIR) && \
+	LD_OPTIONS=-lc \
+	$(MAKE) \
+		$(V8PLUS_SUBDIR_ENV) \
+		V8PLUS=$(PWD)/$(ZONENAME_V8PLUS_DIR)
 
 #
 # The next two are used to build libusdt files into

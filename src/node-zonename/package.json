@@ -1,0 +1,16 @@
+{
+  "name": "zonename",
+  "description": "Native bindings to the getzonebyid(3C) library",
+  "version": "1.1.0",
+  "author": "Dave Eddy <dave@daveeddy.com> (http://www.daveeddy.com)",
+  "repository": "git://github.com/joyent/node-zonename.git",
+  "main": "./lib/index.js",
+  "dependencies": {
+    "v8plus": "~0.3.1"
+  },
+  "scripts": {
+    "postinstall": "cd src && gmake $(eval echo ${MAKE_OVERRIDES})",
+    "check": "jshint lib/*.js"
+  },
+  "license": "MIT"
+}

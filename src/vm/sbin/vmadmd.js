@@ -836,6 +836,21 @@ function updateZoneStatus(ev)
     }
 
     /*
+     * With OS-4942 and OS-5011 additional states were added which occur before
+     * the zone is installed. We don't care about such zones here since we're
+     * only concerned with starting and stopping, we ignore the 3 state changes
+     * which will happen to get the zone to 'installed'.
+     */
+    if ((ev.oldstate === '' && ev.newstate === 'configured')
+        || (ev.oldstate === 'configured' && ev.newstate === 'incomplete')
+        || (ev.oldstate === 'incomplete' && ev.newstate === 'installed')) {
+        // just log it
+        log.debug({old: ev.oldstate, new: ev.newstate},
+            'ignoring state transitions before first boot');
+        return;
+    }
+
+    /*
      * State changes we care about:
      *
      * running -> <anystate> (KVM ONLY)

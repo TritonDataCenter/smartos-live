@@ -108,8 +108,10 @@ MetadataAgent.prototype.updateZone = function (zonename, callback) {
         if (load) {
             VM.lookup({ zonename: zonename }, { fields: sdc_fields },
                 function (error, machines) {
-                    self.zones[zonename] = machines[0];
-                    callback();
+                    if (!error) {
+                        self.zones[zonename] = machines[0];
+                    }
+                    callback(error);
                     return;
                 }
             );
@@ -655,8 +657,14 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 // that depends on it, please add a note about that here
                 // otherwise expect it will be removed on you sometime.
                 if (want === 'nics' && vmobj.hasOwnProperty('nics')) {
-                    self.updateZone(zone, function () {
-                        val = JSON.stringify(vmobj.nics);
+                    self.updateZone(zone, function (error) {
+                        if (error) {
+                            // updating our cache for this VM failed, so we'll
+                            // use the existing data.
+                            zlog.error({err: error, zone: zone},
+                                'Failed to reload vmobj using cached values');
+                        }
+                        val = JSON.stringify(self.zones[zone].nics);
                         returnit(null, val);
                         return;
                     });
@@ -667,7 +675,13 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     // reload metadata trying to get the new ones w/o zone
                     // reboot. To ensure these are fresh we always run
                     // updateZone which reloads the data if stale.
-                    self.updateZone(zone, function () {
+                    self.updateZone(zone, function (error) {
+                        if (error) {
+                            // updating our cache for this VM failed, so we'll
+                            // use the existing data.
+                            zlog.error({err: error, zone: zone},
+                                'Failed to reload vmobj using cached values');
+                        }
                         // See NOTE above about nics, same applies to resolvers.
                         // It's here solely for the use of mdata-fetch.
                         val = JSON.stringify(self.zones[zone].resolvers);
@@ -678,7 +692,13 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     && vmobj.hasOwnProperty('tmpfs')) {
                     // We want tmpfs to reload the cache right away because we
                     // might be depending on a /etc/vfstab update
-                    self.updateZone(zone, function () {
+                    self.updateZone(zone, function (error) {
+                        if (error) {
+                            // updating our cache for this VM failed, so we'll
+                            // use the existing data.
+                            zlog.error({err: error, zone: zone},
+                                'Failed to reload vmobj using cached values');
+                        }
                         val = JSON.stringify(self.zones[zone].tmpfs);
                         returnit(null, val);
                         return;
@@ -688,7 +708,13 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
                     var vmRoutes = [];
 
-                    self.updateZone(zone, function () {
+                    self.updateZone(zone, function (error) {
+                        if (error) {
+                            // updating our cache for this VM failed, so we'll
+                            // use the existing data.
+                            zlog.error({err: error, zone: zone},
+                                'Failed to reload vmobj using cached values');
+                        }
 
                         vmobj = self.zones[zone];
 

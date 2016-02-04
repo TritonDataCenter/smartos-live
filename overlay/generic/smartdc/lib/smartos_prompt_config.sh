@@ -1024,7 +1024,7 @@ To set up networking you must first configure a network tag. A network tag
 refers to a physical NIC or an aggregation. Virtual machines will be created on
 top of a network tag. Setup will first create a network tag and configure a NIC
 so that you can access the SmartOS global zone. After setup has been completed,
-you will have the option of creating an additional network tags and configuring
+you will have the option of creating additional network tags and configuring
 additional NICs for accessing the global zone through the nictagadm(1M) command.
 
 Press [enter] to continue"

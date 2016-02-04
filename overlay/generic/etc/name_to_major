@@ -289,3 +289,4 @@ zfd 291
 timerfd 292
 signalfd 293
 nvme 294
+lxautofs 295

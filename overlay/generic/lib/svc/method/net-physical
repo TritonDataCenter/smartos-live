@@ -22,7 +22,7 @@
 #
 # Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T. All rights reserved.
 # Copyright (c) 1999, 2010, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2015 Joyent, Inc.
+# Copyright 2016 Joyent, Inc.
 #
 
 . /lib/svc/share/smf_include.sh
@@ -138,7 +138,7 @@ function plumb_admin
     if [[ "$driver" == "bnx" ]]; then
         sleep 5
     fi
-    /sbin/ifconfig ${SYSINFO_NIC_admin} plumb
+    /sbin/ifconfig ${SYSINFO_NIC_admin} plumb mtu ${CONFIG_admin_mtu:-1500}
     wait_for_admin_nic_state "up"
 }
 
@@ -565,7 +565,8 @@ if smf_is_globalzone; then
 
     if [[ -n ${admin_ip6} ]]; then
         # Plumb interface for inet6
-        ifconfig ${SYSINFO_NIC_admin} inet6 plumb up
+        ifconfig ${SYSINFO_NIC_admin} inet6 \
+            plumb mtu ${CONFIG_admin_mtu:-1500} up
 
         # Autodiscovery IPv6 using SLAAC
         # NOTE: in.ndpd will be started later, due to plumbing the interface.

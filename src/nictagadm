@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright (c) 2015 Joyent, Inc. All rights reserved.
+# Copyright (c) 2016 Joyent, Inc. All rights reserved.
 #
 
 #
@@ -92,6 +92,8 @@ Subcommands:
         list            [-l | -L] [-p] [-d delim]
         update          [-l] [-p prop=value,...] <name> [mac]
         vms             <name>
+
+See nictagadm(1M) for more information
 USAGE
     exit "$code"
 }
@@ -1012,6 +1014,10 @@ shift "$(( OPTIND - 1 ))"
 [[ -n $delim_flag ]] && [[ -z $PARSABLE ]] && \
     fatal "Delimiter option requires parsable option to be set"
 
+if [[ -z "$CMD" ]]; then
+    usage 2 "no subcommand given"
+fi
+
 case "$CMD" in
 add)
     cmd_tag_add "$1" "$2"
@@ -1021,6 +1027,9 @@ delete)
     ;;
 exists)
     cmd_tag_exists "$@"
+    ;;
+help)
+    usage 0
     ;;
 list)
     cmd_tag_list

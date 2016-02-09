@@ -93,6 +93,9 @@ The following options are valid for all commands.
 
               Only emit the names of nic tags that don't exist to stderr.
 
+      help
+
+        Print help and exit.
 
       list [-l | -L] [-p] [-d delim]
 

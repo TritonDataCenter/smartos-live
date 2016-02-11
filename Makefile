@@ -1,5 +1,5 @@
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright 2016 Joyent, Inc.
 #
 
 ROOT =		$(PWD)
@@ -45,6 +45,7 @@ JSSTYLE =	$(ROOT)/tools/jsstyle/jsstyle
 JSLINT =	$(ROOT)/tools/javascriptlint/build/install/jsl
 CSTYLE =	$(ROOT)/tools/cstyle
 MANCHECK =	$(ROOT)/tools/mancheck/mancheck
+MANCF =		$(ROOT)/tools/mancf/mancf
 
 CTFBINDIR = \
 	$(ROOT)/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386
@@ -62,6 +63,8 @@ ADJUNCT_TARBALL :=	$(shell ls `pwd`/illumos-adjunct*.tgz 2>/dev/null \
 	| tail -n1 && echo $?)
 
 STAMPFILE :=	$(ROOT)/proto/buildstamp
+
+MANCF_FILE :=	$(ROOT)/proto/usr/share/man/man.cf
 
 WORLD_MANIFESTS := \
 	$(MPROTO)/illumos.manifest \
@@ -90,13 +93,14 @@ BOOT_TARBALL :=	output/$(BOOT_VERSION).tgz
 
 TOOLS_TARGETS = \
 	$(MANCHECK) \
+	$(MANCF) \
 	tools/cryptpass
 
 world: 0-extra-stamp 0-illumos-stamp 1-extra-stamp 0-livesrc-stamp \
 	0-local-stamp 0-tools-stamp 0-man-stamp 0-devpro-stamp \
 	$(TOOLS_TARGETS) sdcman
 
-live: world manifest mancheck_conf boot sdcman $(TOOLS_TARGETS)
+live: world manifest mancheck_conf boot sdcman $(TOOLS_TARGETS) $(MANCF_FILE)
 	@echo $(OVERLAY_MANIFESTS)
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
@@ -283,6 +287,14 @@ update-base:
 tools/cryptpass: src/cryptpass.c
 	$(NATIVE_CC) -Wall -W -O2 -o $@ $<
 
+$(MANCF_FILE): $(MANCF) $(MANIFEST)
+	@rm -f $@
+	$(MANCF) -t -f $(MANIFEST) > $@
+
+.PHONY: $(MANCF)
+$(MANCF): 0-illumos-stamp
+	(cd tools/mancf && gmake mancf CC=$(NATIVE_CC) $(SUBDIR_DEFS))
+
 .PHONY: $(MANCHECK)
 $(MANCHECK): 0-illumos-stamp
 	(cd tools/mancheck && gmake mancheck CC=$(NATIVE_CC) $(SUBDIR_DEFS))
@@ -320,6 +332,7 @@ clean:
 	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO))
 	rm -f tools/cryptpass
 	(cd tools/mancheck && gmake clean)
+	(cd tools/mancf && gmake clean)
 	(cd man/sdc && gmake clean)
 	rm -f 0-*-stamp 1-*-stamp
 

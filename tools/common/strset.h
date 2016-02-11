@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2015 Joyent, Inc.
+ * Copyright 2016 Joyent, Inc.
  */
 
 #ifndef _STRSET_H
@@ -52,11 +52,19 @@ typedef enum strset_walk {
 
 #define	STRSET_WALK_WHATNEXT(a)	((a) & 0xf)
 
+typedef enum strset_compare {
+	STRSET_COMPARE_LEFT_FIRST = -1,
+	STRSET_COMPARE_EQUAL = 0,
+	STRSET_COMPARE_RIGHT_FIRST = 1
+} strset_compare_t;
+
+typedef strset_compare_t strset_compare_func(const char *, const char *);
 
 typedef strset_walk_t strset_walk_func(strset_t *, const char *, void *, void *);
 
 
 extern int strset_alloc(strset_t **, strset_flags_t);
+extern int strset_allocx(strset_t **, strset_flags_t, strset_compare_func *);
 extern void strset_reset(strset_t *);
 extern void strset_free(strset_t *);
 

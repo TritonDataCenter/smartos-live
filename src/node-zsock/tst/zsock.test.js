@@ -1,4 +1,7 @@
-// Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
+/*
+ * Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
+ * Copyright 2016 Joyent, Inc. All rights reserved.
+ */
 var fs = require('fs');
 var net = require('net');
 var testCase = require('nodeunit').testCase;
@@ -87,6 +90,21 @@ module.exports = testCase({
     test.done();
   },
 
+  globalZone: function(test) {
+    var self = this;
+    test.expect(2);
+    function _cb(err, fd) {
+        test.ok(err, 'expected error: ' + (err ? err.message : 'but got none'));
+        test.ok(fd !== 0, 'fd should be non-zero, got: ' + fd);
+        test.done();
+        return;
+    }
+    zsock.createZoneSocket({
+      zone: 'global',
+      path: self.socketPath
+    }, _cb);
+  },
+
   success: function(test) {
     var self = this;
     test.expect(3);
@@ -99,7 +117,7 @@ module.exports = testCase({
       server.listenFD(fd, function() {
         server.close();
         test.done();
-      });  
+      });
     };
 
     zsock.createZoneSocket({zone: self.zone, path: self.socketPath}, _cb);

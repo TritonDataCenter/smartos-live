@@ -13,7 +13,7 @@
 # Copyright 2016 Joyent, Inc.
 #
 
-PROG =		mancheck
+PROG =		mancf
 
 OBJECTS =					\
 		common.o			\
@@ -57,7 +57,7 @@ all: $(PROG)
 %.o: ../../src/common/strings/%.c
 	$(COMPILE_C)
 
-mancheck: $(OBJECTS)
+$(PROG): $(OBJECTS)
 	$(CC) -o $@ $^ $(LDLIBS)
 	$(ALTCTFCONVERT) -l $(PROG) $@
 

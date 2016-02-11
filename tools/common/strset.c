@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2015 Joyent, Inc.
+ * Copyright 2016 Joyent, Inc.
  */
 
 /*
@@ -37,9 +37,11 @@ struct strset {
 	avl_tree_t ss_strings;
 	strset_flags_t ss_flags;
 	int ss_walking;
+	strset_compare_func *ss_compare;
 };
 
 struct strset_node {
+	strset_t *ssn_container;
 	const char *ssn_string;
 	avl_node_t ssn_node;
 };
@@ -50,17 +52,38 @@ strset_comparator(const void *lp, const void *rp)
 	const strset_node_t *lssn = lp;
 	const strset_node_t *rssn = rp;
 	int cmp;
+	strset_compare_func *func;
 
+	VERIFY3P(lssn->ssn_container, ==, rssn->ssn_container);
 	VERIFY3P(lssn->ssn_string, !=, NULL);
 	VERIFY3P(rssn->ssn_string, !=, NULL);
 
-	cmp = strcmp(lssn->ssn_string, rssn->ssn_string);
+	func = lssn->ssn_container->ss_compare;
+	if (func != NULL) {
+		switch (func(lssn->ssn_string, rssn->ssn_string)) {
+		case STRSET_COMPARE_LEFT_FIRST:
+			return (-1);
+		case STRSET_COMPARE_RIGHT_FIRST:
+			return (1);
+		case STRSET_COMPARE_EQUAL:
+			return (0);
+		default:
+			abort();
+		}
+	}
 
+	cmp = strcmp(lssn->ssn_string, rssn->ssn_string);
 	return (cmp < 0 ? -1 : cmp > 0 ? 1 : 0);
 }
 
 int
 strset_alloc(strset_t **ssp, strset_flags_t flags)
+{
+	return (strset_allocx(ssp, flags, NULL));
+}
+
+int
+strset_allocx(strset_t **ssp, strset_flags_t flags, strset_compare_func *cmp)
 {
 	strset_t *ss;
 
@@ -73,6 +96,7 @@ strset_alloc(strset_t **ssp, strset_flags_t flags)
 		return (-1);
 	}
 
+	ss->ss_compare = cmp;
 	ss->ss_flags = flags;
 	avl_create(&ss->ss_strings, strset_comparator,
 	    sizeof (strset_node_t), offsetof(strset_node_t, ssn_node));
@@ -82,10 +106,9 @@ strset_alloc(strset_t **ssp, strset_flags_t flags)
 }
 
 static int
-strset_node_alloc(strset_node_t **ssnp, const char *str)
+strset_node_alloc(strset_node_t **ssnp, const char *str, strset_t *ctr)
 {
 	strset_node_t *ssn = NULL;
-
 
 	VERIFY(str != NULL);
 
@@ -94,6 +117,8 @@ strset_node_alloc(strset_node_t **ssnp, const char *str)
 		free(ssn);
 		return (-1);
 	}
+
+	ssn->ssn_container = ctr;
 
 	*ssnp = ssn;
 	return (0);
@@ -153,6 +178,7 @@ strset_remove(strset_t *ss, const char *torm)
 
 	VERIFY(ss->ss_walking == 0);
 
+	srch.ssn_container = ss;
 	VERIFY((srch.ssn_string = torm) != NULL);
 	if ((ssn = avl_find(&ss->ss_strings, &srch, NULL)) == NULL) {
 		/*
@@ -179,6 +205,7 @@ strset_add(strset_t *ss, const char *str)
 	avl_index_t where;
 	strset_node_t srch;
 
+	srch.ssn_container = ss;
 	VERIFY((srch.ssn_string = str) != NULL);
 
 	/*
@@ -193,7 +220,7 @@ strset_add(strset_t *ss, const char *str)
 		return (-1);
 	}
 
-	if (strset_node_alloc(&ssn, str) != 0) {
+	if (strset_node_alloc(&ssn, str, ss) != 0) {
 		return (-1);
 	}
 
@@ -207,6 +234,7 @@ strset_contains(strset_t *ss, const char *search)
 {
 	strset_node_t srch;
 
+	srch.ssn_container = ss;
 	VERIFY((srch.ssn_string = search) != NULL);
 
 	if (avl_find(&ss->ss_strings, &srch, NULL) == NULL) {

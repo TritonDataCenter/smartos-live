@@ -4,6 +4,9 @@ d usr/lib/brand/lx 0755 root bin
 f usr/lib/brand/lx/lx_boot_zone_docker 0755 root root
 f usr/lib/brand/lx/routeinfo 0755 root root
 
+# automatically generated man.cf file
+f usr/share/man/man.cf 0444 root bin
+
 # imgadm
 s etc/bash/bash_completion.d/imgadm=/usr/img/etc/imgadm.completion
 s usr/sbin/dsadm=../img/sbin/imgadm

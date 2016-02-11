@@ -409,6 +409,11 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
         zlog = self.log;
     }
 
+    if (!self.zones[zopts.zone]) {
+        zlog.info('Zone %s no longer exists, not creating zsock', zopts.zone);
+        return;
+    }
+
     zlog.debug('attemptCreateZoneSocket(): zone: %s, wait: %d', zopts.zone,
         waitSecs);
 
@@ -541,10 +546,10 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
         });
 
         if (guessHandleType(fd) !== 'PIPE') {
-            zlog.debug('fd %d is not a pipe, retry creating zone socket');
+            zlog.debug('fd %d is not a pipe, retry creating zone socket', fd);
             _retryCreateZoneSocketLater();
         } else {
-            zlog.debug('listening on fd %d');
+            zlog.debug('listening on fd %d', fd);
             server.listen({fd: fd});
         }
     });

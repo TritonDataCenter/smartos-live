@@ -298,9 +298,6 @@ zsocket(zoneid_t zoneid, const char *path) {
 
     if (zone_enter(zoneid) != 0) {
       debug("CHILD: zone_enter(%d) => %s\n", zoneid, strerror(errno));
-      if (errno == EINVAL) {
-        _exit(0);
-      }
       _exit(1);
     }
 

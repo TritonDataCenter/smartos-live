@@ -134,7 +134,8 @@ C_CHECK_TARGETS=\
 	sysevent.c \
 	dockerinit/src/dockerexec.c \
 	dockerinit/src/dockerinit.c \
-	dockerinit/src/docker-common.c
+	dockerinit/src/docker-common.c \
+	node-zsock/src/zsock.c
 
 #
 # Generic flags we apply by default to everything.

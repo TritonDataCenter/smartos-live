@@ -1,17 +1,18 @@
 // vim: set ts=4 sts=4 sw=4 et:
 var assert = require('assert');
-var VM  = require('/usr/vm/node_modules/VM');
-var ZWatch = require('./zwatch');
+var async = require('/usr/node/node_modules/async');
 var common = require('./common');
 var crc32 = require('./crc32');
-var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
 var fs = require('fs');
+var guessHandleType = process.binding('tty_wrap').guessHandleType;
 var net = require('net');
 var path = require('path');
 var util = require('util');
+var VM  = require('/usr/vm/node_modules/VM');
 var zsock = require('/usr/node/node_modules/zsock');
 var zutil = require('/usr/node/node_modules/zutil');
+var ZWatch = require('./zwatch');
 
 var sdc_fields = [
     'alias',
@@ -539,13 +540,13 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
             }
         });
 
-        var Pipe = process.binding('pipe_wrap').Pipe;
-        var p = new Pipe(true);
-        p.open(fd);
-        p.readable = p.writable = true;
-        server._handle = p;
-
-        server.listen();
+        if (guessHandleType(fd) !== 'PIPE') {
+            zlog.debug('fd %d is not a pipe, retry creating zone socket');
+            _retryCreateZoneSocketLater();
+        } else {
+            zlog.debug('listening on fd %d');
+            server.listen({fd: fd});
+        }
     });
 }
 

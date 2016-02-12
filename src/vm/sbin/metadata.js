@@ -12,7 +12,13 @@ var log = bunyan.createLogger({
 
 var options = { log: log };
 var agent = new Agent(options);
-agent.start();
+
+// Call .start() from a setImmediate callback to work around OS-5140
+// and test that the theory presented in that ticket to explain the crash
+// in uv__platform_init is actually valid.
+setImmediate(function _startAgent() {
+    agent.start();
+});
 
 process.on('uncaughtException', function (error) {
     log.fatal('Uncaught exception in agent: ' + error.message);

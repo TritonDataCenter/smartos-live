@@ -1,5 +1,26 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  * Unit test helper functions
  */
@@ -24,7 +45,13 @@ var createSubObjects = mod_obj.createSubObjects;
 var DEBUG_FILES = process.env.PRINT_IPF_CONFS;
 var IP_NUM = 2;
 var SYN_LINE = 'pass out quick proto tcp from any to any flags S/SA keep state';
+var ICMPV4_STATE_LINE = 'pass out quick proto icmp from any to any keep state';
+var ICMPV4_WILD_LINE = 'pass out proto icmp from any to any';
+var ICMPV6_STATE_LINE =
+    'pass out quick proto ipv6-icmp from any to any keep state';
+var ICMPV6_WILD_LINE = 'pass out proto ipv6-icmp from any to any';
 
+var icmpr = /^icmp6?$/;
 
 
 // --- Internal functions
@@ -44,6 +71,9 @@ function endsWith(str, suffix)
     return (str.substr(str.length - suffix.length, suffix.length) == suffix);
 }
 
+function ipKey(ip) {
+    return ip.split('/')[0];
+}
 
 
 // --- Exports
@@ -240,7 +270,8 @@ function testEnableDisable(opts, callback) {
     var rvmsBefore = remoteVMsOnDisk();
     var rulesBefore = rulesOnDisk();
     var t = opts.t;
-    var zoneRules = zoneIPFconfigs();
+    var v4rules = zoneIPFconfigs(4);
+    var v6rules = zoneIPFconfigs(6);
 
     mocks.fw.disable({ vm: opts.vm }, function (err, res) {
         t.ifError(err);
@@ -249,8 +280,12 @@ function testEnableDisable(opts, callback) {
         }
 
         // Disabling the firewall should have moved ipf.conf:
-        t.deepEqual(zoneIPFconfigs()[opts.vm.uuid], undefined,
-            'no firewall rules after disable');
+        t.deepEqual(zoneIPFconfigs(4)[opts.vm.uuid], undefined,
+            'no IPv4 firewall rules after disable');
+
+        // Disabling the firewall should have moved ipf6.conf:
+        t.deepEqual(zoneIPFconfigs(6)[opts.vm.uuid], undefined,
+            'no IPv6 firewall rules after disable');
 
         vmsEnabled = getIPFenabled();
         t.deepEqual(vmsEnabled[opts.vm.uuid], false, 'firewall not enabled');
@@ -261,8 +296,10 @@ function testEnableDisable(opts, callback) {
                 return callback(err2);
             }
 
-            t.deepEqual(zoneIPFconfigs(), zoneRules,
-                'firewall rules the same after enable');
+            t.deepEqual(zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules the same after enable');
+            t.deepEqual(zoneIPFconfigs(6), v6rules,
+                'IPv4 firewall rules the same after enable');
 
             vmsEnabled = getIPFenabled();
             t.deepEqual(vmsEnabled[opts.vm.uuid], true, 'firewall enabled');
@@ -307,22 +344,31 @@ function testRVMlist(opts, callback) {
  * Returns the ipf.conf data for all zones from the mock fs module as a
  * an object keyed by zone UUID
  */
-function zoneIPFconfigs() {
+function zoneIPFconfigs(version) {
     var root = mocks.values.fs;
     var firewalls = {};
+    var filename;
+
+    if (version === 4) {
+        filename = 'ipf.conf';
+    } else if (version === 6) {
+        filename = 'ipf6.conf';
+    } else {
+        throw new Error('Unrecognized IP version: ' + version);
+    }
 
     for (var dir in root) {
         if (!startsWith(dir, '/zones') || !endsWith(dir, '/config')) {
             continue;
         }
-        if (!root[dir].hasOwnProperty('ipf.conf')) {
+        if (!root[dir].hasOwnProperty(filename)) {
             continue;
         }
 
         if (DEBUG_FILES) {
             console.log('%s:\n+-', dir);
         }
-        root[dir]['ipf.conf'].split('\n').forEach(function (l) {
+        root[dir][filename].split('\n').forEach(function (l) {
             if (DEBUG_FILES) {
                 console.log('| ' + l);
             }
@@ -340,8 +386,10 @@ function zoneIPFconfigs() {
 
             if (l === 'block in all'
                 || l === SYN_LINE
-                || l === 'pass out quick proto icmp from any to any keep state'
-                || l === 'pass out proto icmp from any to any'
+                || l === ICMPV4_STATE_LINE
+                || l === ICMPV4_WILD_LINE
+                || l === ICMPV6_STATE_LINE
+                || l === ICMPV6_WILD_LINE
                 || /^pass out proto \w+ from any to any/.test(l)) {
                 var act = createSubObjects(firewalls, zone, d, action);
                 act.any = 'any';
@@ -349,18 +397,28 @@ function zoneIPFconfigs() {
             }
 
             var proto = tok[4];
+
+            if (proto === 'ipv6-icmp') {
+                proto = 'icmp6';
+            }
+
             var dest = action === 'block' ? tok[8] : tok[6];
-            var port;
-            if (proto === 'icmp') {
+            var code, port, portMatch;
+            if (icmpr.test(proto)) {
                 /* JSSTYLED */
-                port = l.match(/icmp-type (\d+)/)[1];
-                /* JSSTYLED */
-                var code = l.match(/code (\d+)/);
-                if (code) {
-                    port = port + ':' + code[1];
+                portMatch = l.match(/icmp-type (\d+)/);
+                if (portMatch) {
+                    port = portMatch[1];
+                    /* JSSTYLED */
+                    code = l.match(/code (\d+)/);
+                    if (code) {
+                        port = port + ':' + code[1];
+                    }
+                } else {
+                    port = 'all';
                 }
             } else {
-                var portMatch = l.match(/port = (\d+)/);
+                portMatch = l.match(/port = (\d+)/);
                 if (portMatch) {
                     port = portMatch[1];
                 } else {
@@ -569,6 +627,7 @@ module.exports = {
     fwRvmRulesEqual: fwRvmRulesEqual,
     getIPFenabled: getIPFenabled,
     generateVM: generateVM,
+    ipKey: ipKey,
     printVM: printVM,
     remoteVMsOnDisk: remoteVMsOnDisk,
     rulesOnDisk: rulesOnDisk,

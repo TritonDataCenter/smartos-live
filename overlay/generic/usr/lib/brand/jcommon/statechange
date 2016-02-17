@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright (c) 2015 Joyent, Inc.  All rights reserved.
+# Copyright (c) 2016 Joyent, Inc.  All rights reserved.
 #
 
 unset LD_LIBRARY_PATH
@@ -575,6 +575,7 @@ log_and_exit()
 setup_fw()
 {
 	ipf_conf=$ZONEPATH/config/ipf.conf
+	ipf6_conf=$ZONEPATH/config/ipf6.conf
 	if [ -e $ipf_conf ]; then
 		echo "starting firewall ($ipf_conf)"
 		/usr/sbin/ipf -GE $ZONENAME
@@ -584,12 +585,22 @@ setup_fw()
 
 		/usr/sbin/ipf -GFa $ZONENAME
 		if (( $? != 0 )); then
-			log_and_exit "error flushing ipfilter"
+			log_and_exit "error flushing ipfilter (IPv4)"
+		fi
+
+		/usr/sbin/ipf -6GFa $ZONENAME
+		if (( $? != 0 )); then
+			log_and_exit "error flushing ipfilter (IPv6)"
 		fi
 
 		/usr/sbin/ipf -Gf $ipf_conf $ZONENAME
 		if (( $? != 0 )); then
-			log_and_exit "error loading ipfilter config"
+			log_and_exit "error loading ipfilter config for IPv4"
+		fi
+
+		if [[ -e $ipf6_conf ]] &&
+		    ! /usr/sbin/ipf -6Gf $ipf6_conf $ZONENAME; then
+			log_and_exit "error loading ipfilter config for IPv6"
 		fi
 
 		/usr/sbin/ipf -Gy $ZONENAME

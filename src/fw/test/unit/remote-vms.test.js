@@ -1,5 +1,26 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  * fwadm test: remote VMs
  */
@@ -15,6 +36,7 @@ var util = require('util');
 var util_vm = require('../../lib/util/vm');
 
 var createSubObjects = mod_obj.createSubObjects;
+var ipKey = helpers.ipKey;
 
 
 
@@ -56,13 +78,15 @@ exports.setUp = function (cb) {
 exports['local VM to remote VM'] = function (t) {
     var vm = helpers.generateVM();
     var rvm = helpers.generateVM({
-        nics: [ { ip: '10.1.1.1' }, { ip: '10.2.2.2' } ]
+        nics: [ { ips: ['10.1.1.1/24', 'fd22::5/64'] }, { ip: '10.2.2.2' } ]
     });
     var rvm2 = helpers.generateVM({
         nics: [ { ip: '10.1.1.2' } ]
     });
 
-    var expRules;
+    var rvmNICs = rvm.nics;
+
+    var v4rules, v6rules;
     var expRulesOnDisk = {};
     var remoteVMsOnDisk = {};
     var vmsEnabled = {};
@@ -127,13 +151,19 @@ exports['local VM to remote VM'] = function (t) {
                 remoteVMs: [ rvm.uuid ]
             }, 'rules returned');
 
-            expRules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(expRules, vm.uuid, 'in', 'pass', 'tcp');
-            expRules[vm.uuid]['in'].pass.tcp[rvm.nics[0].ip] = [ 80 ];
-            expRules[vm.uuid]['in'].pass.tcp[rvm.nics[1].ip] = [ 80 ];
+            v4rules = helpers.defaultZoneRules(vm.uuid);
+            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'tcp');
+            v4rules[vm.uuid]['in'].pass.tcp[ipKey(rvmNICs[0].ips[0])] = [ 80 ];
+            v4rules[vm.uuid]['in'].pass.tcp[rvm.nics[1].ip] = [ 80 ];
 
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules');
+            v6rules = helpers.defaultZoneRules(vm.uuid);
+            createSubObjects(v6rules, vm.uuid, 'in', 'pass', 'tcp');
+            v6rules[vm.uuid]['in'].pass.tcp[ipKey(rvmNICs[0].ips[1])] = [ 80 ];
+
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             vmsEnabled[vm.uuid] = true;
 
@@ -206,12 +236,17 @@ exports['local VM to remote VM'] = function (t) {
 
             helpers.fillInRuleBlanks(res.rules, rule3);
 
-            createSubObjects(expRules, vm.uuid, 'in', 'pass', 'udp');
-            expRules[vm.uuid]['in'].pass.udp[rvm.nics[0].ip] = [ 161 ];
-            expRules[vm.uuid]['in'].pass.udp[rvm.nics[1].ip] = [ 161 ];
+            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'udp');
+            v4rules[vm.uuid]['in'].pass.udp[ipKey(rvmNICs[0].ips[0])] = [ 161 ];
+            v4rules[vm.uuid]['in'].pass.udp[rvm.nics[1].ip] = [ 161 ];
 
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules');
+            createSubObjects(v6rules, vm.uuid, 'in', 'pass', 'udp');
+            v6rules[vm.uuid]['in'].pass.udp[ipKey(rvmNICs[0].ips[1])] = [ 161 ];
+
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'firewalls enabled');
@@ -265,9 +300,12 @@ exports['local VM to remote VM'] = function (t) {
                 return cb(err);
             }
 
-            delete expRules[vm.uuid]['in'].pass.udp;
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules');
+            delete v4rules[vm.uuid]['in'].pass.udp;
+            delete v6rules[vm.uuid]['in'].pass.udp;
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'firewalls enabled');
@@ -321,9 +359,12 @@ exports['local VM to remote VM'] = function (t) {
 
             // All of the rules reference rvm, so the ipf rules should
             // effectively be the default now
-            expRules = helpers.defaultZoneRules(vm.uuid);
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules back to default');
+            v4rules = helpers.defaultZoneRules(vm.uuid);
+            v6rules = helpers.defaultZoneRules(vm.uuid);
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules back to default');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules back to default');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'firewalls enabled');
@@ -384,11 +425,13 @@ exports['local VM to remote VM'] = function (t) {
 
             helpers.fillInRuleBlanks(res.rules, rule4);
 
-            createSubObjects(expRules, vm.uuid, 'in', 'pass', 'tcp');
-            expRules[vm.uuid]['in'].pass.tcp[rvm2.nics[0].ip] = [ 90 ];
+            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'tcp');
+            v4rules[vm.uuid]['in'].pass.tcp[rvm2.nics[0].ip] = [ 90 ];
 
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'firewalls enabled');
@@ -419,9 +462,12 @@ exports['local VM to remote VM'] = function (t) {
             }
 
             // ipf rules should be back to the default now
-            expRules = helpers.defaultZoneRules(vm.uuid);
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules back to default');
+            v4rules = helpers.defaultZoneRules(vm.uuid);
+            v6rules = helpers.defaultZoneRules(vm.uuid);
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules back to default');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules back to default');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'firewalls enabled');
@@ -444,7 +490,7 @@ exports['local VM to remote tag'] = function (t) {
     var vm = helpers.generateVM();
     var rvm = helpers.generateVM({ tags: { other: true } });
 
-    var expRules;
+    var v4rules, v6rules;
     var expRulesOnDisk = {};
     var remoteVMsOnDisk = {};
     var vmsEnabled = {};
@@ -493,12 +539,15 @@ exports['local VM to remote tag'] = function (t) {
 
             helpers.fillInRuleBlanks(res.rules, [rule1, rule2]);
 
-            expRules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(expRules, vm.uuid, 'in', 'pass', 'tcp');
-            expRules[vm.uuid]['in'].pass.tcp[rvm.nics[0].ip] = [ 80 ];
+            v4rules = helpers.defaultZoneRules(vm.uuid);
+            v6rules = helpers.defaultZoneRules(vm.uuid);
+            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'tcp');
+            v4rules[vm.uuid]['in'].pass.tcp[rvm.nics[0].ip] = [ 80 ];
 
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             vmsEnabled[vm.uuid] = true;
 
@@ -556,11 +605,13 @@ exports['local VM to remote tag'] = function (t) {
 
             helpers.fillInRuleBlanks(res.rules, rule3);
 
-            createSubObjects(expRules, vm.uuid, 'in', 'pass', 'udp');
-            expRules[vm.uuid]['in'].pass.udp[rvm.nics[0].ip] = [ 161 ];
+            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'udp');
+            v4rules[vm.uuid]['in'].pass.udp[rvm.nics[0].ip] = [ 161 ];
 
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'firewalls enabled');
@@ -606,9 +657,11 @@ exports['local VM to remote tag'] = function (t) {
                 return cb(err);
             }
 
-            delete expRules[vm.uuid]['in'].pass.udp;
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules');
+            delete v4rules[vm.uuid]['in'].pass.udp;
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'firewalls enabled');
@@ -643,7 +696,7 @@ exports['local VM and remote VM to IP'] = function (t) {
     var rvm = helpers.generateVM({
         uuid: 'da08034b-37a0-4788-9c97-e84f685b6561' });
 
-    var expRules;
+    var v4rules, v6rules;
     var expRulesOnDisk = {};
     var remoteVMsOnDisk = {};
     var vmsEnabled = {};
@@ -691,12 +744,15 @@ exports['local VM and remote VM to IP'] = function (t) {
 
             helpers.fillInRuleBlanks(res.rules, [rule1, rule2]);
 
-            expRules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(expRules, vm.uuid, 'in', 'pass', 'tcp');
-            expRules[vm.uuid]['in'].pass.tcp['10.0.0.1'] = [ 80 ];
+            v4rules = helpers.defaultZoneRules(vm.uuid);
+            v6rules = helpers.defaultZoneRules(vm.uuid);
+            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'tcp');
+            v4rules[vm.uuid]['in'].pass.tcp['10.0.0.1'] = [ 80 ];
 
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             vmsEnabled[vm.uuid] = true;
 
@@ -745,7 +801,7 @@ exports['all vms to local VM'] = function (t) {
     var vm = helpers.generateVM();
     var rvm = helpers.generateVM();
 
-    var ipfRules;
+    var v4rules, v6rules;
     var expRulesOnDisk = {};
     var remoteVMsOnDisk = {};
     var vmsEnabled = {};
@@ -786,13 +842,16 @@ exports['all vms to local VM'] = function (t) {
 
             helpers.fillInRuleBlanks(res.rules, [rule1]);
 
-            ipfRules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(ipfRules, vm.uuid, 'in', 'pass', 'tcp');
-            ipfRules[vm.uuid]['in'].pass.tcp[vm.nics[0].ip] = [ 44 ];
-            ipfRules[vm.uuid]['in'].pass.tcp[rvm.nics[0].ip] = [ 44 ];
+            v4rules = helpers.defaultZoneRules(vm.uuid);
+            v6rules = helpers.defaultZoneRules(vm.uuid);
+            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'tcp');
+            v4rules[vm.uuid]['in'].pass.tcp[vm.nics[0].ip] = [ 44 ];
+            v4rules[vm.uuid]['in'].pass.tcp[rvm.nics[0].ip] = [ 44 ];
 
-            t.deepEqual(helpers.zoneIPFconfigs(), ipfRules,
-                'firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             vmsEnabled[vm.uuid] = true;
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
@@ -831,10 +890,12 @@ exports['all vms to local VM'] = function (t) {
 
             helpers.fillInRuleBlanks(res.rules, [rule2]);
 
-            ipfRules[vm.uuid]['in'].pass.tcp['10.6.0.1'] = [ 45 ];
+            v4rules[vm.uuid]['in'].pass.tcp['10.6.0.1'] = [ 45 ];
 
-            t.deepEqual(helpers.zoneIPFconfigs(), ipfRules,
-                'firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             vmsEnabled[vm.uuid] = true;
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
@@ -864,7 +925,7 @@ exports['owner_uuid filtering'] = function (t) {
     var rvm1 = helpers.generateVM({ owner_uuid: ownerA, tags: { one: true } });
     var rvm2 = helpers.generateVM({ owner_uuid: ownerB, tags: { one: true } });
 
-    var ipfRules;
+    var v4rules, v6rules;
     var expRulesOnDisk = {};
     var remoteVMsOnDisk = {};
     var vmsEnabled = {};
@@ -909,12 +970,15 @@ exports['owner_uuid filtering'] = function (t) {
                 vms: [ vm.uuid ]
             }, 'rules returned');
 
-            ipfRules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(ipfRules, vm.uuid, 'in', 'pass', 'tcp');
-            ipfRules[vm.uuid]['in'].pass.tcp[vm.nics[0].ip] = [ 25 ];
+            v4rules = helpers.defaultZoneRules(vm.uuid);
+            v6rules = helpers.defaultZoneRules(vm.uuid);
+            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'tcp');
+            v4rules[vm.uuid]['in'].pass.tcp[vm.nics[0].ip] = [ 25 ];
 
-            t.deepEqual(helpers.zoneIPFconfigs(), ipfRules,
-                'firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             vmsEnabled[vm.uuid] = true;
 
@@ -951,8 +1015,11 @@ exports['owner_uuid filtering'] = function (t) {
                 remoteVMs: [ rvm1.uuid ]
             }, 'rules returned');
 
-            ipfRules[vm.uuid]['in'].pass.tcp[rvm1.nics[0].ip] = [ 25 ];
-            t.deepEqual(helpers.zoneIPFconfigs(), ipfRules, 'firewall rules');
+            v4rules[vm.uuid]['in'].pass.tcp[rvm1.nics[0].ip] = [ 25 ];
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'firewalls enabled');
@@ -987,7 +1054,10 @@ exports['owner_uuid filtering'] = function (t) {
                 remoteVMs: [ rvm2.uuid ]
             }, 'rules returned');
 
-            t.deepEqual(helpers.zoneIPFconfigs(), ipfRules, 'firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'firewalls enabled');
 
@@ -1017,7 +1087,7 @@ exports['delete: different VMs than RVMs in rule'] = function (t) {
     var vms = [ helpers.generateVM(), helpers.generateVM() ];
     var rvms = [ helpers.generateVM(), helpers.generateVM() ];
 
-    var expRules = {};
+    var v4rules = {}, v6rules;
     var expRulesOnDisk = {};
     var remoteVMsOnDisk = {};
     var vmsEnabled = {};
@@ -1076,14 +1146,17 @@ exports['delete: different VMs than RVMs in rule'] = function (t) {
                 remoteVMs: helpers.sortedUUIDs(rvms)
             }, 'rules returned');
 
-            helpers.addZoneRules(expRules, [
+            helpers.addZoneRules(v4rules, [
                 [vms[0], 'in', 'pass', 'tcp', rvms[0].nics[0].ip, 80],
                 [vms[1], 'in', 'pass', 'tcp', '10.2.0.2', 81],
                 [vms[1], 'in', 'pass', 'tcp', rvms[1].nics[0].ip, 82]
             ]);
+            v6rules = helpers.defaultZoneRules([vms[0].uuid, vms[1].uuid]);
 
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             vmsEnabled[vms[0].uuid] = true;
             vmsEnabled[vms[1].uuid] = true;
@@ -1118,9 +1191,11 @@ exports['delete: different VMs than RVMs in rule'] = function (t) {
                 return cb(err);
             }
 
-            delete expRules[vms[1].uuid]['in'].pass.tcp[rvms[1].nics[0].ip];
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules');
+            delete v4rules[vms[1].uuid]['in'].pass.tcp[rvms[1].nics[0].ip];
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'firewalls enabled');
@@ -1149,10 +1224,12 @@ exports['delete: different VMs than RVMs in rule'] = function (t) {
                 return cb(err);
             }
 
-            delete expRules[vms[0].uuid]['in'].pass;
-            delete expRules[vms[1].uuid]['in'].pass;
-            t.deepEqual(helpers.zoneIPFconfigs(), expRules,
-                'firewall rules');
+            delete v4rules[vms[0].uuid]['in'].pass;
+            delete v4rules[vms[1].uuid]['in'].pass;
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'firewalls enabled');

@@ -31,8 +31,7 @@ exports['enable / disable'] = {
                 nics: [
                     {
                         nic_tag: 'admin',
-                        ip: '10.4.0.31',
-                        netmask: '255.255.255.0'
+                        ips: [ '10.4.0.31/24', 'fd22::34/64' ]
                     }
                 ]
             },

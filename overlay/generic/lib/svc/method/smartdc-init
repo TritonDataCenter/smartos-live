@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright 2016 Joyent, Inc.
 #
 
 export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
@@ -64,22 +64,51 @@ create_setup_status()
 
 # Sets the default firewall rules for a node (unless they're already set)
 set_default_fw_rules() {
-    [[ -f /var/fw/.default_rules_setup ]] && return
+    local fw_default_v
+    if [[ -f /var/fw/.default_rules_setup ]]; then
+        read fw_default_v < /var/fw/.default_rules_setup
+    else
+        fw_default_v=0
+    fi
 
-    /usr/sbin/fwadm add -f - <<RULES
+    # Handle empty files from before we started versioning default rules
+    if [[ -z $fw_default_v ]]; then
+        fw_default_v=1
+    fi
+
+    if [[ $fw_default_v -lt 1 ]]; then
+        /usr/sbin/fwadm add -f - <<RULES
 {
   "rules": [
   {
-    "description": "allow pings to all VMs",
-    "rule": "FROM any TO all vms ALLOW icmp type 8 code 0",
+    "description": "allow all ICMPv4 types",
+    "rule": "FROM any TO all vms ALLOW icmp type all",
     "enabled": true,
     "global": true
   }
   ]
 }
 RULES
+        [[ $? -ne 0 ]] && return 1
+        echo 1 > /var/fw/.default_rules_setup
+    fi
 
-    [[ $? -eq 0 ]] && touch /var/fw/.default_rules_setup
+    if [[ $fw_default_v -lt 2 ]]; then
+        /usr/sbin/fwadm add -f - <<RULES
+{
+  "rules": [
+  {
+    "description": "allow all ICMPv6 types",
+    "rule": "FROM any TO all vms ALLOW icmp6 type all",
+    "enabled": true,
+    "global": true
+  }
+  ]
+}
+RULES
+        [[ $? -ne 0 ]] && return 1
+        echo 2 > /var/fw/.default_rules_setup
+    fi
 }
 
 # This process is execessively complex but if not done carefully we can wedge

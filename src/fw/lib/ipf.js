@@ -20,13 +20,15 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  * fwadm: ipf control functions
  */
 
 var assert = require('assert-plus');
 var execFile = require('child_process').execFile;
+var fs = require('fs');
+var vasync = require('vasync');
 
 
 
@@ -104,34 +106,63 @@ function setOld() {
  * @param log {Object} : bunyan logger
  * @param callback {Function} : `function (err, res)`
  */
-function zoneReload(uuid, conf, log, callback) {
+function zoneReload(uuid, conf, conf6, log, callback) {
     assert.string(uuid, 'uuid');
     assert.string(conf, 'conf');
+    assert.string(conf6, 'conf6');
     assert.object(log, 'log');
     assert.func(callback, 'callback');
 
-    // Flush (-F) all (-a) rules from the inactive list (-I) for the
-    // GZ-controlled ipf stack (-G) for zone uuid
-    var flushOpts = ['-GIFa', uuid];
-    if (OLD) {
-        flushOpts = ['-IFa', uuid];
-    }
-    return ipf(flushOpts, log, function (err, res) {
-        if (err) {
-            return callback(err, res);
-        }
-
-        // Load rules from conf (-f) into the inactive list (-I) for the
-        // GZ-controlled (-G) ipf stack
-        var loadOpts = ['-G', '-I', '-f', conf, uuid];
-        if (OLD) {
-            loadOpts = ['-I', '-f', conf, uuid];
-        }
-        return ipf(loadOpts, log, function (err2, res2) {
-            if (err2) {
-                return callback(err2, res2);
+    vasync.waterfall([
+        function _v4flush(cb) {
+            // Flush (-F) all (-a) IPv4 rules from the inactive list (-I) for
+            // the GZ-controlled ipf stack (-G) for zone uuid
+            var flushOpts = ['-GIFa', uuid];
+            if (OLD) {
+                flushOpts = ['-IFa', uuid];
             }
 
+            return ipf(flushOpts, log, cb);
+        },
+        function _v6flush(_, cb) {
+            // Flush (-F) all (-a) IPv6 (-6) rules from the inactive list (-I)
+            // for the GZ-controlled ipf stack (-G) for zone uuid
+            var flushOpts = ['-6GIFa', uuid];
+            if (OLD) {
+                flushOpts = ['-6IFa', uuid];
+            }
+
+            return ipf(flushOpts, log, cb);
+        },
+        function _v4load(_, cb) {
+            // Load IPv4 rules from conf (-f) into the inactive list (-I) for
+            // the GZ-controlled (-G) ipf stack
+            var loadOpts = ['-G', '-I', '-f', conf, uuid];
+            if (OLD) {
+                loadOpts = ['-I', '-f', conf, uuid];
+            }
+            return ipf(loadOpts, log, cb);
+        },
+        function _v6load(_, cb) {
+            fs.stat(conf6, function (err, stati) {
+                if (err) {
+                    if (err.code === 'ENOENT') {
+                        // No IPv6 rules to load
+                        return cb();
+                    }
+                    return cb(err);
+                }
+
+                // Load IPv6 (-6) rules from conf (-f) into the inactive
+                // list (-I) for the GZ-controlled (-G) ipf stack
+                var loadOpts = ['-6', '-G', '-I', '-f', conf6, uuid];
+                if (OLD) {
+                    loadOpts = ['-6', '-I', '-f', conf6, uuid];
+                }
+                return ipf(loadOpts, log, cb);
+            });
+        },
+        function _swap(_, cb) {
             // Swap (-s) the active and inactive lists, and update the interface
             // list (-y) for the GZ-controlled ipf stack (-G)
             var swapOpts = ['-G', '-s', '-y', uuid];
@@ -139,9 +170,9 @@ function zoneReload(uuid, conf, log, callback) {
                 swapOpts = ['-s', '-y', uuid];
             }
 
-            return ipf(swapOpts, log, callback);
-        });
-    });
+            return ipf(swapOpts, log, cb);
+        }
+    ], callback);
 }
 
 

@@ -1,5 +1,26 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  * test rules with owner_uuid set
  */
@@ -90,12 +111,15 @@ exports['tag to IP'] = function (t) {
                 rules: [ payload.rules[0] ]
             }, 'add 1: rules returned');
 
-            var zoneRules = helpers.zoneIPFconfigs();
-            var expRules = helpers.defaultZoneRules(vm2.uuid);
-            createSubObjects(expRules, vm2.uuid, 'out', 'block', 'tcp',
+            var v4rules = helpers.defaultZoneRules(vm2.uuid);
+            var v6rules = helpers.defaultZoneRules(vm2.uuid);
+            createSubObjects(v4rules, vm2.uuid, 'out', 'block', 'tcp',
                         { '10.99.99.254': [ 25 ] });
 
-            t.deepEqual(zoneRules, expRules, 'firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules correct');
 
             var vmsEnabled = {};
             vmsEnabled[vm2.uuid] = true;
@@ -152,14 +176,17 @@ exports['tag to IP'] = function (t) {
                 rules: [ payload2.rules[0] ]
             }, 'add 2: rules returned');
 
-            var zoneRules = helpers.zoneIPFconfigs();
-            var expRules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
-            createSubObjects(expRules, vm2.uuid, 'out', 'block', 'tcp',
+            var v4rules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
+            var v6rules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
+            createSubObjects(v4rules, vm2.uuid, 'out', 'block', 'tcp',
                 { '10.99.99.254': [ 25, 250 ] });
-            createSubObjects(expRules, vm1.uuid, 'out', 'block', 'tcp',
+            createSubObjects(v4rules, vm1.uuid, 'out', 'block', 'tcp',
                 { '10.99.99.254': [ 250 ] });
 
-            t.deepEqual(zoneRules, expRules, 'firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules correct');
 
             var vmsEnabled = {};
             vmsEnabled[vm1.uuid] = true;
@@ -212,12 +239,15 @@ exports['tag to IP'] = function (t) {
                 rules: [ expRule2 ]
             }, 'update: rules returned');
 
-            var zoneRules = helpers.zoneIPFconfigs();
-            var expRules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
-            createSubObjects(expRules, vm2.uuid, 'out', 'block', 'tcp',
+            var v4rules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
+            var v6rules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
+            createSubObjects(v4rules, vm2.uuid, 'out', 'block', 'tcp',
                 { '10.99.99.254': [ 25, 250 ] });
 
-            t.deepEqual(zoneRules, expRules, 'firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules correct');
 
             var vmsEnabled = {};
             vmsEnabled[vm1.uuid] = true;
@@ -247,12 +277,15 @@ exports['tag to IP'] = function (t) {
                 rules: [ expRule2 ]
             }, 'results returned');
 
-            var zoneRules = helpers.zoneIPFconfigs();
-            var expRules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
-            createSubObjects(expRules, vm2.uuid, 'out', 'block', 'tcp',
+            var v4rules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
+            var v6rules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
+            createSubObjects(v4rules, vm2.uuid, 'out', 'block', 'tcp',
                 { '10.99.99.254': [ 25 ] });
 
-            t.deepEqual(zoneRules, expRules, 'firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules correct');
 
             var vmsEnabled = {};
             vmsEnabled[vm1.uuid] = true;
@@ -326,7 +359,7 @@ exports['all vms (local and remote)'] = function (t) {
 
     var expRules = clone(payload.rules);
     var vmsEnabled = {};
-    var zoneRules;
+    var v4rules, v6rules;
 
     async.series([
     function (cb) {
@@ -343,18 +376,19 @@ exports['all vms (local and remote)'] = function (t) {
                 vms: helpers.sortedUUIDs([ vm1, vm2 ])
             }, 'rules returned');
 
-            zoneRules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
+            v4rules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
+            v6rules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
 
             [vm1, vm2].forEach(function (vm) {
                 vmsEnabled[vm.uuid] = true;
-                createSubObjects(zoneRules, vm.uuid, 'out', 'block', 'tcp',
+                createSubObjects(v4rules, vm.uuid, 'out', 'block', 'tcp',
                     {
                         '10.1.1.1': [ 8082 ],
                         '10.1.1.2': [ 8082 ],
                         '10.1.1.3': [ 8082 ],
                         '10.1.1.4': [ 8082 ]
                     });
-                createSubObjects(zoneRules, vm.uuid, 'in', 'pass', 'tcp',
+                createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'tcp',
                     {
                         '10.1.1.1': [ 8081 ],
                         '10.1.1.2': [ 8081 ],
@@ -363,8 +397,10 @@ exports['all vms (local and remote)'] = function (t) {
                     });
             });
 
-            t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
-                'firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules correct');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'ipf enabled in VMs');
@@ -407,7 +443,7 @@ exports['all vms (local and remote)'] = function (t) {
             }, 'rules returned');
 
             [vm1, vm2].forEach(function (vm) {
-                zoneRules[vm.uuid].in.pass.tcp = {
+                v4rules[vm.uuid].in.pass.tcp = {
                         '10.1.1.1': [ 8081, 8083 ],
                         '10.1.1.2': [ 8081, 8083 ],
                         '10.1.1.3': [ 8081, 8083 ],
@@ -417,8 +453,9 @@ exports['all vms (local and remote)'] = function (t) {
                     };
             });
 
-            zoneRules[vm3.uuid] = helpers.defaultZoneRules();
-            createSubObjects(zoneRules, vm3.uuid, 'in', 'pass', 'tcp',
+            v4rules[vm3.uuid] = helpers.defaultZoneRules();
+            v6rules[vm3.uuid] = helpers.defaultZoneRules();
+            createSubObjects(v4rules, vm3.uuid, 'in', 'pass', 'tcp',
                 {
                     '10.1.1.1': [ 8083 ],
                     '10.1.1.2': [ 8083 ],
@@ -428,8 +465,12 @@ exports['all vms (local and remote)'] = function (t) {
                     '10.8.8.2': [ 8083 ]
                 });
 
-            t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
-                'firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules correct');
 
             vmsEnabled[vm3.uuid] = true;
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
@@ -479,7 +520,7 @@ exports['all vms (local and remote)'] = function (t) {
 
 
             [vm1, vm2].forEach(function (vm) {
-                zoneRules[vm.uuid].in.pass.tcp = {
+                v4rules[vm.uuid].in.pass.tcp = {
                         '10.1.1.1': [ 8083 ],
                         '10.1.1.2': [ 8083 ],
                         '10.1.1.3': [ 8083 ],
@@ -489,8 +530,10 @@ exports['all vms (local and remote)'] = function (t) {
                     };
             });
 
-            t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
-                'firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules correct');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'ipf enabled in VMs');
@@ -524,15 +567,17 @@ exports['all vms (local and remote)'] = function (t) {
             }, 'results returned');
 
             [vm1, vm2].forEach(function (vm) {
-                delete zoneRules[vm.uuid].out.block;
+                delete v4rules[vm.uuid].out.block;
             });
 
             expRules = expRules.filter(function (r) {
                 return r.uuid !== expRules[1].uuid;
             });
 
-            t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
-                'firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules correct');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'ipf still enabled in VM');
@@ -607,7 +652,7 @@ exports['remote vms: tags'] = function (t) {
 
     var expRules = clone(payload.rules);
     var vmsEnabled = {};
-    var zoneRules;
+    var v4rules, v6rules;
 
     async.series([
     function (cb) {
@@ -624,17 +669,20 @@ exports['remote vms: tags'] = function (t) {
                 vms: [ vm1.uuid ]
             }, 'rules returned');
 
-            zoneRules = helpers.defaultZoneRules(vm1.uuid);
+            v4rules = helpers.defaultZoneRules(vm1.uuid);
+            v6rules = helpers.defaultZoneRules(vm1.uuid);
 
             vmsEnabled[vm1.uuid] = true;
-            createSubObjects(zoneRules, vm1.uuid, 'in', 'pass', 'tcp',
+            createSubObjects(v4rules, vm1.uuid, 'in', 'pass', 'tcp',
                 {
                     '10.1.1.1': [ 8081 ],
                     '10.1.1.4': [ 8081 ]
                 });
 
-            t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
-                'firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules correct');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'ipf enabled in VMs');
@@ -700,7 +748,7 @@ exports['remote vms: vms'] = function (t) {
 
     var expRules = clone(payload.rules);
     var vmsEnabled = {};
-    var zoneRules;
+    var v4rules, v6rules;
 
     async.series([
     function (cb) {
@@ -717,16 +765,19 @@ exports['remote vms: vms'] = function (t) {
                 vms: [ vm1.uuid ]
             }, 'rules returned');
 
-            zoneRules = helpers.defaultZoneRules(vm1.uuid);
+            v4rules = helpers.defaultZoneRules(vm1.uuid);
+            v6rules = helpers.defaultZoneRules(vm1.uuid);
 
             vmsEnabled[vm1.uuid] = true;
-            createSubObjects(zoneRules, vm1.uuid, 'in', 'pass', 'tcp',
+            createSubObjects(v4rules, vm1.uuid, 'in', 'pass', 'tcp',
                 {
                     '10.1.1.4': [ 8081 ]
                 });
 
-            t.deepEqual(helpers.zoneIPFconfigs(), zoneRules,
-                'firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'IPv4 firewall rules correct');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'IPv6 firewall rules correct');
 
             t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
                 'ipf enabled in VMs');

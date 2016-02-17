@@ -60,6 +60,8 @@ var DIRECTIONS = ['from', 'to'];
 var RULE_PATH = '/var/fw/rules';
 var IPF_CONF = '%s/config/ipf.conf';
 var IPF_CONF_OLD = '%s/config/ipf.conf.old';
+var IPF6_CONF = '%s/config/ipf6.conf';
+var IPF6_CONF_OLD = '%s/config/ipf6.conf.old';
 var NOT_RUNNING_MSG = 'Could not find running zone';
 // VM fields that affect filtering
 var VM_FIELDS = [
@@ -80,6 +82,23 @@ var VM_FIELDS_REQUIRED = [
     'zonepath'
 ];
 
+var icmpr = /^icmp6?$/;
+
+var fallbacks = [
+    '',
+    '# fwadm fallbacks',
+    'block in all',
+    'pass out quick proto tcp from any to any flags S/SA keep state',
+    'pass out proto tcp from any to any',
+    'pass out proto udp from any to any keep state'];
+
+var v4fallbacks = fallbacks.concat([
+    'pass out quick proto icmp from any to any keep state',
+    'pass out proto icmp from any to any']);
+
+var v6fallbacks = fallbacks.concat([
+    'pass out quick proto ipv6-icmp from any to any keep state',
+    'pass out proto ipv6-icmp from any to any']);
 
 
 // --- Internal helper functions
@@ -155,12 +174,13 @@ function dedupRules(list1, list2) {
  */
 function startIPF(opts, log, callback) {
     var ipfConf = util.format(IPF_CONF, opts.zonepath);
+    var ipf6Conf = util.format(IPF6_CONF, opts.zonepath);
 
     return mod_ipf.start(opts.vm, log, function (err, res) {
         if (err) {
             return callback(err, res);
         }
-        return mod_ipf.reload(opts.vm, ipfConf, log, callback);
+        return mod_ipf.reload(opts.vm, ipfConf, ipf6Conf, log, callback);
     });
 }
 
@@ -364,8 +384,7 @@ function createVMlookup(vms, log, callback) {
 
         var vm = {
             enabled: fullVM.firewall_enabled || false,
-            ips: fullVM.nics.map(function (n) { return (n.ip); }).filter(
-                function (i) { return (i !== 'dhcp'); }),
+            ips: util_vm.ipsFromNICs(fullVM.nics),
             owner_uuid: fullVM.owner_uuid,
             state: fullVM.state,
             tags: fullVM.tags,
@@ -805,14 +824,14 @@ function validateRules(vms, rvms, rules, log, callback) {
  * (eg: code for ICMP, port for TCP / UDP)
  */
 function protoTarget(rule, target) {
-    if (rule.protocol === 'icmp') {
+    if (target === 'all') {
+        return '';
+    } else if (icmpr.test(rule.protocol)) {
         var typeArr = target.split(':');
         return 'icmp-type ' + typeArr[0]
             + (typeArr.length === 1 ? '' : ' code ' + typeArr[1]);
     } else {
-        if (target === 'all') {
-            return '';
-        } else if (target.hasOwnProperty('start')
+        if (target.hasOwnProperty('start')
             && target.hasOwnProperty('end')) {
 
             return 'port ' + target.start + ' : ' + target.end;
@@ -830,11 +849,17 @@ function ipfRuleObj(opts) {
     var dir = opts.direction;
     var rule = opts.rule;
 
+    // ipfilter uses /etc/protocols which calls ICMPv6 'ipv6-icmp'
+    var ipfProto = (rule.protocol === 'icmp6') ? 'ipv6-icmp' : rule.protocol;
+
     var sortObj = {
         action: rule.action,
         direction: dir,
         protocol: rule.protocol,
-        text: [ '', util.format('# rule=%s, version=%s, %s=%s',
+        v4text: [ '', util.format('# rule=%s, version=%s, %s=%s',
+            rule.uuid, rule.version, opts.type, opts.value)
+        ],
+        v6text: [ '', util.format('# rule=%s, version=%s, %s=%s',
             rule.uuid, rule.version, opts.type, opts.value)
         ],
         type: opts.type,
@@ -845,12 +870,15 @@ function ipfRuleObj(opts) {
 
     if (opts.type === 'wildcard' && opts.value === 'any') {
         rule.protoTargets.sort().forEach(function (t) {
-            sortObj.text.push(
-                util.format('%s %s quick proto %s from any to any %s',
-                    rule.action === 'allow' ? 'pass' : 'block',
-                    dir === 'from' ? 'out' : 'in',
-                    rule.protocol,
-                    protoTarget(rule, t)));
+            var wild = util.format('%s %s quick proto %s from any to any %s',
+                rule.action === 'allow' ? 'pass' : 'block',
+                dir === 'from' ? 'out' : 'in',
+                ipfProto,
+                protoTarget(rule, t));
+            if (rule.protocol !== 'icmp6')
+                sortObj.v4text.push(wild);
+            if (rule.protocol !== 'icmp')
+                sortObj.v6text.push(wild);
         });
 
         return sortObj;
@@ -860,13 +888,23 @@ function ipfRuleObj(opts) {
         opts.targets : [ opts.targets ];
 
     targets.forEach(function (target) {
+        var isv6 = target.indexOf(':') !== -1;
+
+        // Don't generate rules for ICMPv4/IPv6 or ICMPv6/IPv4
+        if ((isv6 && rule.protocol === 'icmp')
+            || (!isv6 && rule.protocol === 'icmp6')) {
+            return;
+        }
+
+        var text = isv6 ? sortObj.v6text : sortObj.v4text;
+
         // XXX: need to do Number() on these before sorting?
         rule.protoTargets.sort().forEach(function (t) {
-            sortObj.text.push(
+            text.push(
                 util.format('%s %s quick proto %s from %s to %s %s',
                     rule.action === 'allow' ? 'pass' : 'block',
                     dir === 'from' ? 'out' : 'in',
-                    rule.protocol,
+                    ipfProto,
                     dir === 'to' ? target : 'any',
                     dir === 'to' ? 'any' : target,
                     protoTarget(rule, t)));
@@ -955,8 +993,8 @@ function prepareIPFdata(opts, log, callback) {
     var toReturn = { files: {}, vms: [] };
     for (var vm in conf) {
         var rulesIncluded = {};
-        var filename = util.format('%s/config/ipf.conf',
-            allVMs.all[vm].zonepath);
+        var v4filename = util.format(IPF_CONF, allVMs.all[vm].zonepath);
+        var v6filename = util.format(IPF6_CONF, allVMs.all[vm].zonepath);
         var ipfConf = [
             '# DO NOT EDIT THIS FILE. THIS FILE IS AUTO-GENERATED BY fwadm(1M)',
             '# AND MAY BE OVERWRITTEN AT ANY TIME.',
@@ -964,6 +1002,7 @@ function prepareIPFdata(opts, log, callback) {
             '# File generated at ' + date.toString(),
             '#',
             ''];
+        var ipf6Conf = ipfConf.slice();
 
         toReturn.vms.push(vm);
 
@@ -974,23 +1013,21 @@ function prepareIPFdata(opts, log, callback) {
             }
             rulesIncluded[sortObj.uuid].push(sortObj.direction);
 
-            sortObj.text.forEach(function (line) {
+            sortObj.v4text.forEach(function (line) {
                 ipfConf.push(line);
+            });
+            sortObj.v6text.forEach(function (line) {
+                ipf6Conf.push(line);
             });
         });
 
-        log.debug(rulesIncluded, 'VM %s: generated ipf.conf', vm);
+        log.debug(rulesIncluded, 'VM %s: generated ipf(6).conf', vm);
 
-        toReturn.files[filename] = ipfConf.concat([
-            '',
-            '# fwadm fallbacks',
-            'block in all',
-            'pass out quick proto tcp from any to any flags S/SA keep state',
-            'pass out proto tcp from any to any',
-            'pass out proto udp from any to any keep state',
-            'pass out quick proto icmp from any to any keep state',
-            'pass out proto icmp from any to any']).join('\n')
-            + '\n';
+        var v4rules = ipfConf.concat(v4fallbacks);
+        var v6rules = ipf6Conf.concat(v6fallbacks);
+
+        toReturn.files[v4filename] = v4rules.join('\n') + '\n';
+        toReturn.files[v6filename] = v6rules.join('\n') + '\n';
     }
 
     return callback(null, toReturn);
@@ -1979,21 +2016,25 @@ function disableVM(opts, callback) {
     }
     var log = util_log.entry(opts, 'disable');
 
+    function moveConf(new_fmt, old_fmt, _, cb) {
+        // Move config out of the way - on zone boot, the firewall
+        // will start again if it's present
+        var new_cfg = util.format(new_fmt, opts.vm.zonepath);
+        var old_cfg = util.format(old_fmt, opts.vm.zonepath);
+        return fs.rename(new_cfg, old_cfg, function (err) {
+            // If the file's already gone, that's OK
+            if (err && err.code !== 'ENOENT') {
+                return cb(err);
+            }
+
+            return cb(null);
+        });
+    }
+
     pipeline({
     funcs: [
-        function moveConf(_, cb) {
-            // Move ipf.conf out of the way - on zone boot, the firewall
-            // will start again if it's present
-            return fs.rename(util.format(IPF_CONF, opts.vm.zonepath),
-                util.format(IPF_CONF_OLD, opts.vm.zonepath), function (err) {
-                // If the file's already gone, that's OK
-                if (err && err.code !== 'ENOENT') {
-                    return cb(err);
-                }
-
-                return cb(null);
-            });
-        },
+        moveConf.bind(null, IPF_CONF, IPF_CONF_OLD),
+        moveConf.bind(null, IPF6_CONF, IPF6_CONF_OLD),
         function stop(_, cb) {
             if (opts.vm.state !== 'running') {
                 log.debug('disableVM: VM "%s": not stopping ipf (state=%s)',

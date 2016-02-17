@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: shared VM logic
@@ -29,10 +29,36 @@
 var objEmpty = require('./obj').objEmpty;
 var VError = require('verror').VError;
 
+function getIPs(n) {
+    if (n.hasOwnProperty('ips')) {
+        return n.ips.map(function (ip) {
+            return ip.split('/')[0];
+        });
+    } else if (n.hasOwnProperty('ip')) {
+        return [n.ip];
+    } else {
+        return [];
+    }
+}
+
+function concat(acc, curr) {
+    return acc.concat(curr);
+}
+
+function notAuto(i) {
+    return (i !== 'dhcp') && (i !== 'addrconf');
+}
+
 
 
 // --- Exports
 
+/**
+ * Get all of the IP addresses on the provided NICs
+ */
+function ipsFromNICs(nics) {
+    return nics.map(getIPs).reduce(concat, []).filter(notAuto);
+}
 
 
 /**
@@ -52,10 +78,8 @@ function createRemoteVM(vm) {
     rvm.uuid = uuid;
 
     if (vm.hasOwnProperty('nics')) {
-        vm.nics.forEach(function (nic) {
-            if (nic.hasOwnProperty('ip') && nic.ip !== 'dhcp') {
-                ips[nic.ip] = 1;
-            }
+        ipsFromNICs(vm.nics).forEach(function (ip) {
+            ips[ip] = 1;
         });
     }
 
@@ -91,5 +115,6 @@ function createRemoteVM(vm) {
 
 
 module.exports = {
+    ipsFromNICs: ipsFromNICs,
     createRemoteVM: createRemoteVM
 };

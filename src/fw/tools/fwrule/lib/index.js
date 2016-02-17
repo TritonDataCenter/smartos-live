@@ -20,12 +20,13 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  *
  * firewall rule parser: entry point
  */
 
+var mod_net = require('net');
 var parser = require('./parser').parser;
 var rule = require('./rule');
 var validators = require('./validators');
@@ -40,7 +41,15 @@ var VError = require('verror').VError;
 var uuidRE = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 var portRE = /^[0-9]{1,5}$/;
 
-var CURR_VERSION = 2;
+/**
+ * The fwrule language is versioned so that use of new features can be
+ * restricted. These versions are:
+ *
+ * 1 - Initial version of language
+ * 2 - PORTS keyword & support for ranges of ports
+ * 3 - Support for IPv6 targets, the ICMPv6 protocol, and the TYPE ALL keyword
+ */
+var CURR_VERSION = 3;
 
 
 // --- Internal helper functions
@@ -79,13 +88,29 @@ function translateParserNames(name) {
 parser.yy.validateIPv4address = function validateIPv4address(ip) {
     if (!validators.validateIPv4address(ip)) {
         throw new validators.InvalidParamError('rule',
-            'IP address "%s" is invalid', ip);
+            'IPv4 address "%s" is invalid', ip);
     }
 };
 
 
 parser.yy.validateIPv4subnet = function validateIPv4subnet(subnet) {
     if (!validators.validateIPv4subnet(subnet)) {
+        throw new validators.InvalidParamError('rule',
+            'Subnet "%s" is invalid (must be in CIDR format)', subnet);
+    }
+};
+
+
+parser.yy.validateIPv6address = function validateIPv6address(ip) {
+    if (!mod_net.isIPv6(ip)) {
+        throw new validators.InvalidParamError('rule',
+            'IPv6 address "%s" is invalid', ip);
+    }
+};
+
+
+parser.yy.validateIPv6subnet = function validateIPv6subnet(ip, subnet) {
+    if (!validators.validateIPv6subnet(ip, subnet)) {
         throw new validators.InvalidParamError('rule',
             'Subnet "%s" is invalid (must be in CIDR format)', subnet);
     }
@@ -217,7 +242,7 @@ module.exports = {
     FwRule: rule.FwRule,
     generateVersion: rule.generateVersion,
     parse: parse,
-    PROTOCOLS: ['tcp', 'udp', 'icmp'],
+    PROTOCOLS: ['tcp', 'udp', 'icmp', 'icmp6'],
     TARGET_TYPES: rule.TARGET_TYPES,
     validators: validators
 };

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  *
  * Unit tests for the firewall rule object
@@ -567,6 +567,59 @@ exports['sorting: icmp codes'] = function (t) {
     t.done();
 };
 
+exports['sorting: icmp6 codes'] = function (t) {
+    var vm = '8a343ca8-b42a-4a27-a9c5-800f57d1e8ed';
+
+    var rule = fwrule.create({
+        rule: util.format(
+        'FROM any TO vm %s ALLOW icmp6 '
+        + '(TYPE 8 CODE 0 AND TYPE 3 CODE 11 AND TYPE 40 AND TYPE 3 CODE 1 '
+        + 'AND TYPE 30 AND TYPE 3 CODE 5)', vm),
+        enabled: true,
+        version: fwrule.generateVersion()
+    });
+
+    var raw = {
+        from: {
+            ips: [],
+            subnets: [],
+            vms: [],
+            tags: [],
+            wildcards: ['any']
+        },
+        to: {
+            ips: [],
+            subnets: [],
+            vms: [vm],
+            tags: [],
+            wildcards: []
+        },
+        enabled: true,
+        types: [ '3:1', '3:5', '3:11', '8:0', '30', '40' ],
+        action: 'allow',
+        protocol: 'icmp6',
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.raw(), raw, 'rule.raw()');
+    t.deepEqual(rule.from, raw.from, 'rule.from');
+    t.deepEqual(rule.to, raw.to, 'rule.to');
+    t.ok(!rule.allVMs, 'rule.allVMs');
+
+    t.deepEqual(rule.serialize(), {
+        enabled: true,
+        global: true,
+        rule: util.format(
+        'FROM any TO vm %s ALLOW icmp6 '
+        + '(TYPE 3 CODE 1 AND TYPE 3 CODE 5 AND TYPE 3 CODE 11 '
+        + 'AND TYPE 8 CODE 0 AND TYPE 30 AND TYPE 40)', vm),
+        uuid: rule.uuid,
+        version: rule.version
+    }, 'rule.serialize()');
+
+    t.done();
+};
 
 exports['sorting: ports'] = function (t) {
     var inRule = {
@@ -714,47 +767,53 @@ exports['single port range'] = function (t) {
 };
 
 exports['port ALL'] = function (t) {
-    var inRule = {
-        rule: 'FROM ip 10.88.88.1 TO tag tag2 ALLOW tcp PORT all',
-        enabled: true,
-        version: fwrule.generateVersion()
-    };
+    var normalText = 'FROM ip 10.88.88.1 TO tag tag2 ALLOW tcp PORT all';
+    var parenText = 'FROM ip 10.88.88.1 TO tag tag2 ALLOW tcp ( PORT all )';
+    var ruleTexts = [ normalText, parenText ];
 
-    var rule = fwrule.create(inRule);
-    var raw = {
-        action: 'allow',
-        enabled: inRule.enabled,
-        from: {
-            ips: [ '10.88.88.1' ],
-            vms: [],
-            subnets: [],
-            tags: [],
-            wildcards: []
-        },
-        protocol: 'tcp',
-        ports: [ 'all' ],
-        to: {
-            ips: [],
-            vms: [],
-            subnets: [],
-            tags: [ 'tag2' ],
-            wildcards: []
-        },
-        uuid: rule.uuid,
-        version: rule.version
-    };
+    ruleTexts.forEach(function (ruleText) {
+        var inRule = {
+            rule: ruleText,
+            enabled: true,
+            version: fwrule.generateVersion()
+        };
 
-    t.deepEqual(rule.raw(), raw, 'rule.raw()');
-    t.deepEqual(rule.ports, raw.ports, 'rule.ports');
-    t.deepEqual(rule.protoTargets, raw.ports, 'rule.protoTargets');
+        var rule = fwrule.create(inRule);
+        var raw = {
+            action: 'allow',
+            enabled: inRule.enabled,
+            from: {
+                ips: [ '10.88.88.1' ],
+                vms: [],
+                subnets: [],
+                tags: [],
+                wildcards: []
+            },
+            protocol: 'tcp',
+            ports: [ 'all' ],
+            to: {
+                ips: [],
+                vms: [],
+                subnets: [],
+                tags: [ 'tag2' ],
+                wildcards: []
+            },
+            uuid: rule.uuid,
+            version: rule.version
+        };
 
-    t.deepEqual(rule.serialize(), {
-        enabled: true,
-        global: true,
-        rule: inRule.rule,
-        uuid: rule.uuid,
-        version: rule.version
-    }, 'rule.serialize()');
+        t.deepEqual(rule.raw(), raw, 'rule.raw()');
+        t.deepEqual(rule.ports, raw.ports, 'rule.ports');
+        t.deepEqual(rule.protoTargets, raw.ports, 'rule.protoTargets');
+
+        t.deepEqual(rule.serialize(), {
+            enabled: true,
+            global: true,
+            rule: normalText,
+            uuid: rule.uuid,
+            version: rule.version
+        }, 'rule.serialize()');
+    });
 
     t.done();
 };
@@ -973,6 +1032,324 @@ exports['multiple tags: multiple quoted values'] = function (t) {
                 [ '김치', '白김치' ],
                 [ '김치', '백김치' ]
         ], 'rule.tags');
+
+    t.done();
+};
+
+
+exports['IPv6 sources'] = function (t) {
+    var desc = 'IPv6 sources';
+    var vm = '9a343ca8-b42a-4a27-a9c5-800f57d1e8ed';
+    var ips = ['fd00::2', 'fe80::8:20ff:fe40:65e4'];
+    var ruleTxt = util.format('FROM (ip %s OR ip %s) ', ips[0], ips[1])
+        + util.format('TO vm %s ALLOW tcp PORT 80', vm);
+
+    var rule = fwrule.create({
+        rule: ruleTxt,
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        version: fwrule.generateVersion()
+    });
+
+    var raw = {
+        from: {
+            ips: ips,
+            subnets: [],
+            vms: [],
+            tags: [],
+            wildcards: []
+        },
+        to: {
+            ips: [],
+            subnets: [],
+            vms: [vm],
+            tags: [],
+            wildcards: []
+        },
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        ports: [ 80 ],
+        action: 'allow',
+        protocol: 'tcp',
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.raw(), raw, 'rule.raw()');
+    t.deepEqual(rule.from, raw.from, 'rule.from');
+    t.deepEqual(rule.to, raw.to, 'rule.to');
+    t.ok(!rule.allVMs, 'rule.allVMs');
+
+    var ser = {
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        global: true,
+        rule: ruleTxt,
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.serialize(), ser, 'rule.serialize()');
+    t.deepEqual(rule.serialize(['enabled', 'version']),
+        { enabled: ser.enabled, version: ser.version },
+        'rule.serialize(): enabled, version');
+
+    t.done();
+};
+
+exports['IPv6 subnet sources'] = function (t) {
+    var desc = 'IPv6 subnet sources';
+    var vm = '9a343ca8-b42a-4a27-a9c5-800f57d1e8ed';
+    var cidr = 'fd00::/64';
+    var ruleTxt = util.format('FROM subnet %s ', cidr)
+        + util.format('TO vm %s ALLOW tcp PORT 80', vm);
+
+    var rule = fwrule.create({
+        rule: ruleTxt,
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        version: fwrule.generateVersion()
+    });
+
+    var raw = {
+        from: {
+            ips: [],
+            subnets: [cidr],
+            vms: [],
+            tags: [],
+            wildcards: []
+        },
+        to: {
+            ips: [],
+            subnets: [],
+            vms: [vm],
+            tags: [],
+            wildcards: []
+        },
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        ports: [ 80 ],
+        action: 'allow',
+        protocol: 'tcp',
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.raw(), raw, 'rule.raw()');
+    t.deepEqual(rule.from, raw.from, 'rule.from');
+    t.deepEqual(rule.to, raw.to, 'rule.to');
+    t.ok(!rule.allVMs, 'rule.allVMs');
+
+    var ser = {
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        global: true,
+        rule: ruleTxt,
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.serialize(), ser, 'rule.serialize()');
+    t.deepEqual(rule.serialize(['enabled', 'version']),
+        { enabled: ser.enabled, version: ser.version },
+        'rule.serialize(): enabled, version');
+
+    t.done();
+};
+
+exports['IPv6 destinations'] = function (t) {
+    var desc = 'IPv6 destinations';
+    var vm = '9a343ca8-b42a-4a27-a9c5-800f57d1e8ed';
+    var ips = ['fd00::1', 'fd00::2'];
+    var ruleTxt = util.format('FROM vm %s ', vm)
+        + util.format('TO (ip %s OR ip %s) ALLOW tcp PORT 80', ips[0], ips[1]);
+
+    var rule = fwrule.create({
+        rule: ruleTxt,
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        version: fwrule.generateVersion()
+    });
+
+    var raw = {
+        from: {
+            ips: [],
+            subnets: [],
+            vms: [vm],
+            tags: [],
+            wildcards: []
+        },
+        to: {
+            ips: ips,
+            subnets: [],
+            vms: [],
+            tags: [],
+            wildcards: []
+        },
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        ports: [ 80 ],
+        action: 'allow',
+        protocol: 'tcp',
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.raw(), raw, 'rule.raw()');
+    t.deepEqual(rule.from, raw.from, 'rule.from');
+    t.deepEqual(rule.to, raw.to, 'rule.to');
+    t.ok(!rule.allVMs, 'rule.allVMs');
+
+    var ser = {
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        global: true,
+        rule: ruleTxt,
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.serialize(), ser, 'rule.serialize()');
+    t.deepEqual(rule.serialize(['enabled', 'version']),
+        { enabled: ser.enabled, version: ser.version },
+        'rule.serialize(): enabled, version');
+
+    t.done();
+};
+
+exports['IPv6 subnet destinations'] = function (t) {
+    var desc = 'IPv6 subnet destinations';
+    var vm = '9a343ca8-b42a-4a27-a9c5-800f57d1e8ed';
+    var cidr = 'fd00::/64';
+    var ruleTxt = util.format('FROM vm %s ', vm)
+        + util.format('TO subnet %s BLOCK tcp PORT 80', cidr);
+
+    var rule = fwrule.create({
+        rule: ruleTxt,
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        version: fwrule.generateVersion()
+    });
+
+    var raw = {
+        from: {
+            ips: [],
+            subnets: [],
+            vms: [vm],
+            tags: [],
+            wildcards: []
+        },
+        to: {
+            ips: [],
+            subnets: [cidr],
+            vms: [],
+            tags: [],
+            wildcards: []
+        },
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        ports: [ 80 ],
+        action: 'block',
+        protocol: 'tcp',
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.raw(), raw, 'rule.raw()');
+    t.deepEqual(rule.from, raw.from, 'rule.from');
+    t.deepEqual(rule.to, raw.to, 'rule.to');
+    t.ok(!rule.allVMs, 'rule.allVMs');
+
+    var ser = {
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        global: true,
+        rule: ruleTxt,
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.serialize(), ser, 'rule.serialize()');
+    t.deepEqual(rule.serialize(['enabled', 'version']),
+        { enabled: ser.enabled, version: ser.version },
+        'rule.serialize(): enabled, version');
+
+    t.done();
+};
+
+exports['Mixed IPv4 and IPv6'] = function (t) {
+    var desc = 'Mixed IPv4 and IPv6';
+    var vm1 = '9a343ca8-b42a-4a27-a9c5-800f57d1e8ed';
+    var vm2 = '518908b6-8299-466d-8ea5-20a0ceff63ec';
+    var ips = ['10.10.10.5', 'fd00::1'];
+    var ruleTxt =
+        util.format('FROM (ip %s OR ip %s OR vm %s) ', ips[0], ips[1], vm1)
+        + util.format('TO vm %s ALLOW tcp PORT 80', vm2);
+
+    var rule = fwrule.create({
+        rule: ruleTxt,
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        version: fwrule.generateVersion()
+    });
+
+    var raw = {
+        from: {
+            ips: ips,
+            subnets: [],
+            vms: [vm1],
+            tags: [],
+            wildcards: []
+        },
+        to: {
+            ips: [],
+            subnets: [],
+            vms: [vm2],
+            tags: [],
+            wildcards: []
+        },
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        ports: [ 80 ],
+        action: 'allow',
+        protocol: 'tcp',
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.raw(), raw, 'rule.raw()');
+    t.deepEqual(rule.from, raw.from, 'rule.from');
+    t.deepEqual(rule.to, raw.to, 'rule.to');
+    t.ok(!rule.allVMs, 'rule.allVMs');
+
+    var ser = {
+        created_by: 'fwadm',
+        description: desc,
+        enabled: true,
+        global: true,
+        rule: ruleTxt,
+        uuid: rule.uuid,
+        version: rule.version
+    };
+
+    t.deepEqual(rule.serialize(), ser, 'rule.serialize()');
+    t.deepEqual(rule.serialize(['enabled', 'version']),
+        { enabled: ser.enabled, version: ser.version },
+        'rule.serialize(): enabled, version');
 
     t.done();
 };

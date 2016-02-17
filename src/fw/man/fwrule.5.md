@@ -63,7 +63,7 @@ The parameters are the following:
 (see the Target Types section below):
 
 * vm <uuid>
-* ip <IP address>
+* ip <IPv4 or IPv6 address>
 * subnet <subnet CIDR>
 * tag <tag name>
 * tag <tag name>=<tag value>
@@ -81,6 +81,7 @@ The parameters are the following:
 * tcp
 * udp
 * icmp
+* icmp6
 
 **ports** or **types** can be one of (see the Ports section below):
 
@@ -115,11 +116,11 @@ Allows HTTP traffic from any host to VM 04128...
 
     ip <IP address>
 
-Targets the specified IPv4 address.
+Targets the specified IPv4 or IPv6 address.
 
 **Example:**
 
-    FROM all vms to ip 10.2.0.1 BLOCK tcp port 25
+    FROM all vms to (ip 10.2.0.1 OR ip fd22::1234) BLOCK tcp port 25
 
 Blocks SMTP traffic to that IP.
 
@@ -127,14 +128,21 @@ Blocks SMTP traffic to that IP.
 
     subnet <subnet CIDR>
 
-Targets the specified IPv4 subnet range.
+Targets the specified IPv4 or IPv6 subnet range.
 
 **Example:**
 
     FROM subnet 10.8.0.0/16 TO vm 0f570678-c007-4610-a2c0-bbfcaab9f4e6 ALLOW \
          tcp port 443
     
-Allows HTTPS traffic from a private /16 to VM 0f57...
+Allows HTTPS traffic from a private IPv4 /16 to the specified VM.
+
+**Example:**
+
+    FROM subnet fd22::/64 TO vm 0f570678-c007-4610-a2c0-bbfcaab9f4e6 ALLOW \
+         tcp port 443
+    
+Allows HTTPS traffic from a private IPv6 /64 to the specified VM.
 
 ### tag
 
@@ -224,8 +232,9 @@ have an effect.
     tcp
     udp
     icmp
+    icmp6
 
-The protocol can be one of tcp, udp or icmp.  The protocol dictates whether
+The protocol can be one of tcp, udp or icmp(6). The protocol dictates whether
 ports or types can be used (see the Ports section below).
 
 
@@ -261,11 +270,14 @@ all webservers.
 
     FROM any TO all vms ALLOW icmp TYPE 8 CODE 0
 
-Allows pinging all VMs.
+Allows pinging all VMs. The IPv6 equivalent would be:
+
+    FROM any TO all vms ALLOW icmp6 TYPE 128 CODE 0
+
+And to block outgoing replies:
 
     FROM all vms TO any BLOCK icmp TYPE 0
-
-Block outgoing replies.
+    FROM all vms TO any BLOCK icmp6 TYPE 129
 
 
 ## EXAMPLES

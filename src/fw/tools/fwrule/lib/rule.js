@@ -20,12 +20,13 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: firewall rule model
  */
 
+var mod_net = require('net');
 var mod_uuid = require('node-uuid');
 var sprintf = require('extsprintf').sprintf;
 var util = require('util');
@@ -57,7 +58,7 @@ var MAX_PORTS = 8;
 var STRING_PROPS = ['created_by', 'description'];
 var TARGET_TYPES = ['wildcard', 'ip', 'subnet', 'tag', 'vm'];
 
-
+var icmpr = /^icmp6?$/;
 
 // --- Internal functions
 
@@ -263,7 +264,7 @@ function FwRule(data, opts) {
     this.action = parsed.action;
     this.protocol = parsed.protocol.name;
 
-    if (this.protocol === 'icmp') {
+    if (icmpr.test(this.protocol)) {
         this.types = icmpTypeSort(parsed.protocol.targets);
         this.protoTargets = this.types;
     } else {
@@ -279,7 +280,7 @@ function FwRule(data, opts) {
         throw new validators.InvalidParamError('rule',
             'maximum of %d %s allowed',
             MAX_TARGETS_PER_SIDE,
-            this.protocol == 'icmp' ? 'types' : 'ports');
+            icmpr.test(this.protocol) ? 'types' : 'ports');
     }
 
     this.from = {};
@@ -365,6 +366,35 @@ function FwRule(data, opts) {
         this.allVMs = true;
     }
 
+    // Check for rules that obviously don't make sense
+    if (this.protocol === 'icmp') {
+        this.ips.map(function (ip) {
+            if (!mod_net.isIPv4(ip)) {
+                throw new validators.InvalidParamError('rule',
+                    'rule affects ICMPv4 but contains a non-IPv4 address');
+            }
+        });
+        this.subnets.map(function (subnet) {
+            if (!mod_net.isIPv4(subnet.split('/')[0])) {
+                throw new validators.InvalidParamError('rule',
+                    'rule affects ICMPv4 but contains a non-IPv4 subnet');
+            }
+        });
+    } else if (this.protocol === 'icmp6') {
+        this.ips.map(function (ip) {
+            if (!mod_net.isIPv6(ip)) {
+                throw new validators.InvalidParamError('rule',
+                    'rule affects ICMPv6 but contains a non-IPv6 address');
+            }
+        });
+        this.subnets.map(function (subnet) {
+            if (!mod_net.isIPv6(subnet.split('/')[0])) {
+                throw new validators.InvalidParamError('rule',
+                    'rule affects ICMPv6 but contains a non-IPv6 subnet');
+            }
+        });
+    }
+
     // Final check: does this rule actually contain targets that can actually
     // affect VMs?
     if (!this.allVMs && this.tags.length === 0 && this.vms.length === 0) {
@@ -392,7 +422,7 @@ FwRule.prototype.raw = function () {
         raw.owner_uuid = this.owner_uuid;
     }
 
-    if (this.protocol === 'icmp') {
+    if (icmpr.test(this.protocol)) {
         raw.types = this.types;
     } else {
         raw.ports = this.ports;
@@ -471,7 +501,7 @@ FwRule.prototype.text = function () {
     });
 
     // Protocol-specific text: different for ICMP rather than TCP/UDP
-    if (this.protocol === 'icmp') {
+    if (icmpr.test(this.protocol)) {
         protoTxt = util.format('%sTYPE %s%s',
             this.types.length > 1 ? '(' : '',
             this.types.map(function (type) {

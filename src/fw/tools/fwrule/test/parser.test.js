@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  *
  * Unit tests for the firewall rule parser
@@ -205,6 +205,61 @@ exports['icmp with code'] = function (t) {
     t.done();
 };
 
+exports['icmp type all'] = function (t) {
+    var vm = 'b0b92cd9-1fe7-4636-8477-81d2742566c2';
+
+    t.deepEqual(parser.parse(
+        util.format('FROM ip 10.0.0.2 TO vm %s ALLOW icmp type all', vm)),
+        { from: [ [ 'ip', '10.0.0.2' ] ],
+            to: [ [ 'vm', vm ] ],
+            action: 'allow',
+            protocol: {
+                name: 'icmp',
+                targets: [ 'all' ]
+            }
+        }, 'icmp type all');
+
+    t.deepEqual(parser.parse(
+        util.format('FROM ip 10.0.0.2 TO vm %s ALLOW icmp ( TYPE ALL )', vm)),
+        { from: [ [ 'ip', '10.0.0.2' ] ],
+            to: [ [ 'vm', vm ] ],
+            action: 'allow',
+            protocol: {
+                name: 'icmp',
+                targets: [ 'all' ]
+            }
+        }, 'icmp type all in parens');
+
+    t.done();
+};
+
+exports['icmp6 type all'] = function (t) {
+    var vm = 'b0b92cd9-1fe7-4636-8477-81d2742566c2';
+
+    t.deepEqual(parser.parse(
+        util.format('FROM ip 10.0.0.2 TO vm %s ALLOW icmp6 type all', vm)),
+        { from: [ [ 'ip', '10.0.0.2' ] ],
+            to: [ [ 'vm', vm ] ],
+            action: 'allow',
+            protocol: {
+                name: 'icmp6',
+                targets: [ 'all' ]
+            }
+        }, 'icmp6 type all');
+
+    t.deepEqual(parser.parse(
+        util.format('FROM ip 10.0.0.2 TO vm %s ALLOW icmp6 ( TYPE ALL )', vm)),
+        { from: [ [ 'ip', '10.0.0.2' ] ],
+            to: [ [ 'vm', vm ] ],
+            action: 'allow',
+            protocol: {
+                name: 'icmp6',
+                targets: [ 'all' ]
+            }
+        }, 'icmp6 type all in parens');
+
+    t.done();
+};
 
 exports['tag with value'] = function (t) {
     var ruleTxt = 'FROM tag foo = bar TO ip 8.8.8.8 BLOCK udp PORT 53';

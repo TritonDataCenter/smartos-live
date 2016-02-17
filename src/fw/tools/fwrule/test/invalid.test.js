@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  *
  * Negative unit tests for the firewall rule object
@@ -261,6 +261,51 @@ var INVALID = [
         rule: 'FROM all vms TO ip 192.168.5.4 BLOCK TCP ' + nPorts(9)
         }, 'rule',
         'maximum of 24 ports allowed'],
+
+    [ 'rule: bad ip target for ICMPv4', {
+        rule: 'FROM all vms TO ip fd00::45 BLOCK ICMP TYPE 8'
+        }, 'rule',
+        'rule affects ICMPv4 but contains a non-IPv4 address'],
+
+    [ 'rule: bad subnet target for ICMPv4', {
+        rule: 'FROM all vms TO subnet fe80::/64 BLOCK ICMP TYPE 8'
+        }, 'rule',
+        'rule affects ICMPv4 but contains a non-IPv4 subnet'],
+
+    [ 'rule: bad ip target for ICMPv6', {
+        rule: 'FROM all vms TO ip 1.2.3.4 BLOCK ICMP6 TYPE 128'
+        }, 'rule',
+        'rule affects ICMPv6 but contains a non-IPv6 address'],
+
+    [ 'rule: bad subnet target for ICMPv6', {
+        rule: 'FROM all vms TO subnet 10.0.0.0/8 BLOCK ICMP6 TYPE 128'
+        }, 'rule',
+        'rule affects ICMPv6 but contains a non-IPv6 subnet'],
+
+    [ 'rule: bad ICMP type', {
+        rule: 'FROM all vms TO ip 192.168.5.4 BLOCK ICMP TYPE 260'
+        }, 'rule',
+        'ICMP type \"260\" is invalid'],
+
+    [ 'rule: bad ICMP code', {
+        rule: 'FROM all vms TO ip 192.168.5.4 BLOCK ICMP TYPE 8 CODE 270'
+        }, 'rule',
+        'ICMP code \"270\" is invalid'],
+
+    [ 'rule: bad ICMPv6 type', {
+        rule: 'FROM all vms TO ip fd00::45 BLOCK ICMP6 TYPE 260'
+        }, 'rule',
+        'ICMP type \"260\" is invalid'],
+
+    [ 'rule: bad ICMPv6 code', {
+        rule: 'FROM all vms TO ip fd00::45 BLOCK ICMP6 TYPE 128 CODE 270'
+        }, 'rule',
+        'ICMP code \"270\" is invalid'],
+
+    [ 'rule: max number of ICMPv6 types', {
+        rule: 'FROM all vms TO ip fd00::45 BLOCK ICMP ' + nTypes(9)
+        }, 'rule',
+        'maximum of 24 types allowed'],
 
     [ 'rule: max number of ICMP types', {
         rule: 'FROM all vms TO ip 192.168.5.4 BLOCK ICMP ' + nTypes(9)

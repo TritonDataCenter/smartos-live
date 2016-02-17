@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  */
 
@@ -38,6 +38,7 @@ var VError = require('verror').VError;
 
 
 
+var icmpr = /^icmp6?$/;
 var portRE = /^[0-9]{1,5}$/;
 var UUID_REGEX =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -90,6 +91,24 @@ function validateIPv4subnet(subnet) {
 
 
 /**
+ * Returns true if subnet is a valid IPv6 CIDR range
+ */
+function validateIPv6subnet(subnet) {
+    var parts = subnet.split('/');
+    var plen = Number(parts[1]);
+    if (!net.isIPv6(parts[0])) {
+        return false;
+    }
+
+    if (!plen || (plen < 1) || (plen > 128)) {
+        return false;
+    }
+
+    return true;
+}
+
+
+/**
  * Returns true if port is a valid port number
  */
 function validatePort(port) {
@@ -131,7 +150,7 @@ function validatePortOrAll(port) {
  */
 function validateProtocol(protocol) {
     var protoLC = protocol.toLowerCase();
-    if ((protoLC != 'tcp') && (protoLC != 'udp') && (protoLC != 'icmp')) {
+    if ((protoLC != 'tcp') && (protoLC != 'udp') && (!icmpr.test(protoLC))) {
         return false;
     }
     return true;
@@ -192,6 +211,7 @@ module.exports = {
     validateAction: validateAction,
     validateIPv4address: validateIPv4address,
     validateIPv4subnet: validateIPv4subnet,
+    validateIPv6subnet: validateIPv6subnet,
     validatePort: validatePort,
     validatePortOrAll: validatePortOrAll,
     validateProtocol: validateProtocol,

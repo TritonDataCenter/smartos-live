@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: firewall rule parser grammar
@@ -29,6 +29,7 @@
 %lex
 
 digit                   [0-9]
+hex                     [0-9a-f]
 esc                     "\\"
 t                       {digit}{1,3}
 
@@ -81,14 +82,17 @@ t                       {digit}{1,3}
 "udp"                   return 'UDP';
 "ICMP"                  return 'ICMP';
 "icmp"                  return 'ICMP';
+"ICMP6"                 return 'ICMP6';
+"icmp6"                 return 'ICMP6';
 "TYPE"                  return 'TYPE';
 "type"                  return 'TYPE';
 "CODE"                  return 'CODE';
 "code"                  return 'CODE';
 
 \"(?:{esc}["bfnrt/{esc}]|{esc}"u"[a-fA-F0-9]{4}|[^"{esc}])*\"  yytext = yytext.substr(1,yyleng-2); return 'STRING';
-{t}'.'{t}'.'{t}'.'{t}   return 'IPADDR';
-'/'{digit}{digit}       return 'CIDRSUFFIX'
+{t}'.'{t}'.'{t}'.'{t}          return 'IPV4ADDR';
+{hex}*':'{hex}*':'[:0-9a-f]*   return 'IPV6ADDR';
+'/'{digit}{1,3}                return 'CIDRSUFFIX';
 
 [-a-zA-Z0-9_]+          return 'WORD'
 
@@ -118,8 +122,10 @@ target_or_list
     ;
 
 target
-    : ip
-    | subnet
+    : ipv4
+    | ipv4_subnet
+    | ipv6
+    | ipv6_subnet
     | tag
     | vm
     ;
@@ -140,15 +146,29 @@ any
         { $$ = [ ['wildcard', 'any'] ]; }
     ;
 
-ip
-    : IP IPADDR
+ipv4
+    : IP IPV4ADDR
         { yy.validateIPv4address($2);
           $$ = [ ['ip', $2] ]; }
     ;
 
-subnet
-    : SUBNET IPADDR CIDRSUFFIX
+ipv4_subnet
+    : SUBNET IPV4ADDR CIDRSUFFIX
         { yy.validateIPv4subnet($2 + $3);
+            $$ = [ ['subnet', $2 + $3] ]; }
+    ;
+
+ipv6
+    : IP IPV6ADDR
+        { yy.validateOKVersion(3, 'IPv6');
+          yy.validateIPv6address($2);
+          $$ = [ ['ip', $2] ]; }
+    ;
+
+ipv6_subnet
+    : SUBNET IPV6ADDR CIDRSUFFIX
+        { yy.validateOKVersion(3, 'IPv6');
+          yy.validateIPv6subnet($2 + $3);
             $$ = [ ['subnet', $2 + $3] ]; }
     ;
 
@@ -196,6 +216,8 @@ protocol
         { $$ = { 'name': $1.toLowerCase(), 'targets': $2 } }
     | ICMP type_list
         { $$ = { 'name': $1.toLowerCase(), 'targets': $2 } }
+    | ICMP6 type_list
+        { $$ = { 'name': $1.toLowerCase(), 'targets': $2 } }
     ;
 
 
@@ -205,6 +227,7 @@ port_list
         { $$ = $2; }
     | port
     | '(' port_all ')'
+        { $$ = $2; }
     | port_all
     ;
 
@@ -227,7 +250,7 @@ ports
 
 port_all
     : PORT ALL
-        { $$ = [ $2.toLowerCase() ]; }
+        { $$ = [ 'all' ]; }
     ;
 
 portnumber
@@ -256,6 +279,9 @@ type_list
     : '(' type_and_list ')'
         { $$ = $2; }
     | type
+    | '(' type_all ')'
+        { $$ = $2; }
+    | type_all
     ;
 
 type_and_list
@@ -269,6 +295,12 @@ type
         { $$ = [ $2 + ':' + $4 ]; }
     | TYPE icmptype
         { $$ = [ $2 ]; }
+    ;
+
+type_all
+    : TYPE ALL
+        { yy.validateOKVersion(3, 'all ICMP types');
+          $$ = [ 'all' ]; }
     ;
 
 icmptype

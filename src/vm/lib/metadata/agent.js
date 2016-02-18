@@ -73,7 +73,7 @@ var MetadataAgent = module.exports = function (options) {
  * information stays in memory for all known VMs so that it can be pulled from
  * core files. For example:
  *
- * > ::findjsobjects -p zonesDebug -p zoneConnections | ::jsprint -d4 zonesDebug
+ * > ::findjsobjects -p zonesDebug | ::jsprint -d4 zonesDebug
  * {
  *   "4149818f-44d1-4798-875c-ff37aec11042": {
  *       "last_zone_load": 1455735290175 (2016 Feb 17 18:54:50),
@@ -651,7 +651,7 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
                         + e.message);
                 }
             },
-            fd: fd
+            fd: fd // so it's in the core for debugging
         };
 
         server.on('error', function (err) {

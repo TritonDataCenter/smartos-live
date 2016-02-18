@@ -299,10 +299,15 @@ MetadataAgent.prototype.start = function () {
                     self.createZoneLog(self.zones[msg.zonename].brand,
                         msg.zonename);
                 }
-                if (self.zones[msg.zonename].brand === 'kvm') {
-                    self.startKVMSocketServer(msg.zonename);
-                } else {
-                    self.startZoneSocketServer(msg.zonename);
+                // If the zone was not deleted between the time we saw it start
+                // and now, (we did a vmadm lookup in between via updateZone)
+                // we'll start the watcher.
+                if (self.zones[msg.zonename]) {
+                    if (self.zones[msg.zonename].brand === 'kvm') {
+                        self.startKVMSocketServer(msg.zonename);
+                    } else {
+                        self.startZoneSocketServer(msg.zonename);
+                    }
                 }
             });
         } else if (msg.cmd === 'stop') {
@@ -541,6 +546,20 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
             });
         }
 
+        /*
+         * We need to check all the directories below zoneroot to ensure there
+         * are no symlinks or other shenanigans going on since we're running in
+         * the GZ and they'd be evaluated there.
+         *
+         * So we build an array that looks like:
+         *
+         *  [
+         *     '<zoneroot>/foo/bar',
+         *     '<zoneroot>/foo'
+         *  ]
+         *
+         * and then attempt to ensure each component exists.
+         */
         d = sockdir;
         while (d.length > zoneroot.length) {
             dirs.push(d);

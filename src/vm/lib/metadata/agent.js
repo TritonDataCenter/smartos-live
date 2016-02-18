@@ -301,7 +301,7 @@ MetadataAgent.prototype.start = function () {
                 }
                 // If the zone was not deleted between the time we saw it start
                 // and now, (we did a vmadm lookup in between via updateZone)
-                // we'll start the watcher.
+                // we'll attempt to create the metadata socket.
                 if (self.zones[msg.zonename]) {
                     if (self.zones[msg.zonename].brand === 'kvm') {
                         self.startKVMSocketServer(msg.zonename);

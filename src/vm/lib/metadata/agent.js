@@ -1,6 +1,7 @@
 // vim: set ts=4 sts=4 sw=4 et:
-var assert = require('assert');
+var assert = require('/usr/node/node_modules/assert-plus');
 var async = require('/usr/node/node_modules/async');
+var bunyan = require('/usr/vm/node_modules/bunyan');
 var common = require('./common');
 var crc32 = require('./crc32');
 var execFile = require('child_process').execFile;
@@ -9,6 +10,7 @@ var guessHandleType = process.binding('tty_wrap').guessHandleType;
 var net = require('net');
 var path = require('path');
 var util = require('util');
+var vasync = require('vasync');
 var VM  = require('/usr/vm/node_modules/VM');
 var zsock = require('/usr/node/node_modules/zsock');
 var zutil = require('/usr/node/node_modules/zutil');
@@ -60,13 +62,68 @@ var MetadataAgent = module.exports = function (options) {
     this.log = options.log;
     this.zlog = {};
     this.zones = {};
+    this.zonesDebug = {};
     this.zoneRetryTimeouts = {};
     this.zoneConnections = {};
 };
 
+
+/*
+ * This function exists to add debug information to the zonesDebug object. That
+ * information stays in memory for all known VMs so that it can be pulled from
+ * core files. For example:
+ *
+ * > ::findjsobjects -p zonesDebug -p zoneConnections | ::jsprint -d4 zonesDebug
+ * {
+ *   "4149818f-44d1-4798-875c-ff37aec11042": {
+ *       "last_zone_load": 1455735290175 (2016 Feb 17 18:54:50),
+ *       "last_10_logs": [
+ *           {
+ *               "name": "metadata",
+ *               "hostname": "headnode",
+ *               "pid": 83175,
+ *               "brand": "joyent-minimal",
+ *               "zonename": "4149818f-44d1-4798-875c-ff37aec11042",
+ *               "level": 30,
+ *               "msg": "Starting socket server",
+ *               "time": 1455735290175 (2016 Feb 17 18:54:50),
+ *               "v": 0,
+ *           },
+ *           ...
+ *       ],
+ *       "last_zsock_create_attempt": 1455735290176 (2016 Feb 17 18:54:50),
+ *       "last_zsock_create_success": 1455735290804 (2016 Feb 17 18:54:50),
+ *       "last_zsock_listen_success": 1455735290806 (2016 Feb 17 18:54:50),
+ *       "last_zone_stop": undefined,
+ *   },
+ *   ...
+ * }
+ *
+ */
+MetadataAgent.prototype.addDebug = function addDebug(zonename, field, value) {
+    var self = this;
+
+    if (!self.zonesDebug.hasOwnProperty(zonename)) {
+        self.zonesDebug[zonename] = {};
+    }
+
+    if (value === undefined) {
+        self.zonesDebug[zonename][field] = new Date();
+    } else {
+        self.zonesDebug[zonename][field] = value;
+    }
+};
+
 MetadataAgent.prototype.createZoneLog = function (type, zonename) {
     var self = this;
-    self.zlog[zonename] = self.log.child({brand: type, 'zonename': zonename});
+    var newRingbuffer = new bunyan.RingBuffer({limit: 10});
+
+    self.zlog[zonename] = self.log.child({
+        brand: type,
+        streams: [{level: 'trace', type: 'raw', stream: newRingbuffer}],
+        zonename: zonename});
+    self.addDebug(zonename, 'last_10_logs', newRingbuffer.records);
+
     return (self.zlog[zonename]);
 };
 
@@ -111,6 +168,7 @@ MetadataAgent.prototype.updateZone = function (zonename, callback) {
                 function (error, machines) {
                     if (!error) {
                         self.zones[zonename] = machines[0];
+                        self.addDebug(zonename, 'last_zone_load');
                     }
                     callback(error);
                     return;
@@ -135,6 +193,7 @@ MetadataAgent.prototype.createServersOnExistingZones = function () {
             }
 
             self.zones[zone.zonename] = zone;
+            self.addDebug(zone.zonename, 'last_zone_load');
 
             if (zone.state !== 'running') {
                 self.log.debug('skipping zone ' + zone.zonename + ' which has '
@@ -200,6 +259,9 @@ MetadataAgent.prototype.startDeletedZonesPurger = function () {
                 if (!zones.hasOwnProperty(z)) {
                     self.log.info(z + ' no longer exists, purging from cache');
                     delete self.zones[z];
+                    if (self.zonesDebug[z]) {
+                        delete self.zonesDebug[z];
+                    }
                     if (self.zlog.hasOwnProperty(z)) {
                         delete self.zlog[z];
                     }
@@ -219,6 +281,7 @@ MetadataAgent.prototype.start = function () {
 
     zwatch.on('zone_transition', function (msg) {
         if (msg.cmd === 'start') {
+            self.addDebug(msg.zonename, 'last_zone_start');
             self.updateZone(msg.zonename, function (error) {
                 if (error) {
                     self.log.error({err: error}, 'Error updating attributes: '
@@ -237,6 +300,7 @@ MetadataAgent.prototype.start = function () {
                 }
             });
         } else if (msg.cmd === 'stop') {
+            self.addDebug(msg.zonename, 'last_zone_stop');
             if (self.zoneConnections[msg.zonename]) {
                 self.log.trace('saw zone ' + msg.zonename
                     + ' stop, calling end()');
@@ -303,12 +367,12 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
 
     self.zoneConnections[zopts.zone] = {
         conn: new net.Stream(),
-        done: false,
+        done: null,
         end: function () {
             if (this.done) {
                 return;
             }
-            this.done = true;
+            this.done = new Date();
             zlog.info('Closing kvm stream for ' + zopts.zone);
             kvmstream.end();
         }
@@ -342,58 +406,36 @@ function (zonename, callback) {
     var zlog = self.zlog[zonename];
     var zonePath = self.zones[zonename].zonepath;
     var localpath = '/.zonecontrol';
-    var zonecontrolpath;
+    var zopts;
 
     if (self.zones[zonename].brand === 'lx') {
         localpath = '/native' + localpath;
     }
 
-    zonecontrolpath = path.join(zonePath, 'root', localpath);
+    zopts = {
+        path: path.join(localpath, 'metadata.sock'),
+        zone: zonename,
+        zoneroot: path.join(zonePath, 'root')
+    };
 
     zlog.info('Starting socket server');
 
-    function ensureZonecontrolExists(cb) {
-        fs.exists(zonecontrolpath, function (exists) {
-            if (exists)  {
-                cb();
-                return;
-            } else {
-                fs.mkdir(zonecontrolpath, parseInt('700', 8), function (error) {
-                    cb(error);
-                });
-            }
-        });
-    }
-
-    ensureZonecontrolExists(function (err) {
-        var sockpath = path.join(localpath, 'metadata.sock');
-        var zopts = {
-            zone: zonename,
-            path: sockpath
-        };
-
+    self.createZoneSocket(zopts, undefined, function _createZoneSocketCb(err) {
         if (err) {
-            callback({err: err}, 'unable to create ' + zonecontrolpath);
-            return;
-        }
-
-        self.createZoneSocket(zopts, undefined, function (createErr) {
-            if (createErr) {
-                // We call callback here, but don't include the error because
-                // this is running in async.forEach and we don't want to fail
-                // the others and there's nothing we can do to recover anyway.
-                if (callback) {
-                    callback();
-                }
-                return;
-            }
-
-            zlog.info('Zone socket created.');
-
+            // We call callback here, but don't include the error because
+            // this is running in async.forEach and we don't want to fail
+            // the others and there's nothing we can do to recover anyway.
             if (callback) {
                 callback();
             }
-        });
+            return;
+        }
+
+        zlog.info('Zone socket created.');
+
+        if (callback) {
+            callback();
+        }
     });
 };
 
@@ -402,6 +444,11 @@ function (zonename, callback) {
  * if we fail.
  */
 function attemptCreateZoneSocket(self, zopts, waitSecs) {
+    assert.object(zopts, 'zopts');
+    assert.string(zopts.path, 'zopts.path');
+    assert.string(zopts.zone, 'zopts.zone');
+    assert.string(zopts.zoneroot, 'zopts.zoneroot');
+
     var zlog = self.zlog[zopts.zone];
 
     if (!zlog) {
@@ -442,7 +489,81 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
         }, waitSecs * 1000);
     }
 
-    zsock.createZoneSocket(zopts, function (error, fd) {
+    /*
+     * This tries to make sure that the directories in:
+     *
+     *  path.dirname(path.join(zopts.zoneroot, zopts.path))
+     *
+     * exist or are created. It then calls callback().
+     *
+     * If the directories all exist or were created, the callback is called with
+     * no arguments.
+     *
+     * If we were unable to create or check the directory, callback() will be
+     * called with an error object indicating what the problem was.
+     *
+     */
+    function _ensureSockpathDirsExist(callback) {
+        var d;
+        var dirs = [];
+        var sockdir = path.dirname(path.join(zopts.zoneroot, zopts.path));
+        var zoneroot = zopts.zoneroot;
+
+        function _ensureDir(dir, cb) {
+            fs.stat(dir, function _statDirCb(err, stats) {
+                var newErr;
+
+                if (err) {
+                    if (err.code === 'ENOENT') {
+                        // does not exist, so create it.
+                        fs.mkdir(dir, function _mkdirCb(e) {
+                            zlog.debug({dir: dir, zone: zopts.zone, err: e},
+                                'attempted fs.mkdir()');
+                            cb(e);
+                        });
+                    } else {
+                        cb(err);
+                    }
+                    return;
+                }
+
+                if (!stats.isDirectory()) {
+                    newErr = new Error(dir + ' is not a directory');
+                    newErr.code = 'ENOTDIR';
+                    cb(newErr);
+                    return;
+                }
+
+                cb(); // exists and is a directory
+            });
+        }
+
+        d = sockdir;
+        while (d.length > zoneroot.length) {
+            dirs.push(d);
+            d = path.dirname(d);
+        }
+
+        assert.ok(dirs.length > 0, 'should have at least one dir');
+
+        vasync.forEachPipeline({
+            inputs: dirs,
+            func: _ensureDir
+        }, callback);
+    }
+
+    function _attemptCreate(callback) {
+        _ensureSockpathDirsExist(function _ensureSockpathDirsExistCb(error) {
+            if (error) {
+                callback(error);
+                return;
+            }
+            zsock.createZoneSocket(zopts, callback);
+        });
+    }
+
+    self.addDebug(zopts.zone, 'last_zsock_create_attempt');
+    _attemptCreate(function (error, fd) {
         var server;
 
         if (error) {
@@ -453,6 +574,8 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
             _retryCreateZoneSocketLater();
             return;
         }
+
+        self.addDebug(zopts.zone, 'last_zsock_create_success');
 
         server = net.createServer(function (socket) {
             var handler = self.makeMetadataHandler(zopts.zone, socket);
@@ -504,7 +627,7 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
 
         self.zoneConnections[zopts.zone] = {
             conn: server,
-            done: false,
+            done: null,
             end: function () {
                 if (self.zoneRetryTimeouts[zopts.zone]) {
                     // When .end() is called, want to stop any existing retries
@@ -516,7 +639,7 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
                         + 'closing again.');
                     return;
                 }
-                this.done = true;
+                this.done = new Date();
                 zlog.info('Closing server');
                 try {
                     server.close();
@@ -524,7 +647,8 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
                     zlog.error({err: e}, 'Caught exception closing server: '
                         + e.message);
                 }
-            }
+            },
+            fd: fd
         };
 
         server.on('error', function (err) {
@@ -551,6 +675,7 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
         } else {
             zlog.debug('listening on fd %d', fd);
             server.listen({fd: fd});
+            self.addDebug(zopts.zone, 'last_zsock_listen_success');
         }
     });
 }

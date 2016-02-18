@@ -294,15 +294,17 @@ MetadataAgent.prototype.start = function () {
                         + error.message);
                     return;
                 }
-                if (!self.zlog[msg.zonename]) {
-                    // create a logger specific to this VM
-                    self.createZoneLog(self.zones[msg.zonename].brand,
-                        msg.zonename);
-                }
+
                 // If the zone was not deleted between the time we saw it start
                 // and now, (we did a vmadm lookup in between via updateZone)
-                // we'll attempt to create the metadata socket.
+                // we'll start the watcher.
                 if (self.zones[msg.zonename]) {
+                    if (!self.zlog[msg.zonename]) {
+                        // create a logger specific to this VM
+                        self.createZoneLog(self.zones[msg.zonename].brand,
+                            msg.zonename);
+                    }
+
                     if (self.zones[msg.zonename].brand === 'kvm') {
                         self.startKVMSocketServer(msg.zonename);
                     } else {

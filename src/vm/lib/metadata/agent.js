@@ -120,7 +120,7 @@ MetadataAgent.prototype.createZoneLog = function (type, zonename) {
 
     self.zlog[zonename] = self.log.child({
         brand: type,
-        streams: [{level: 'trace', type: 'raw', stream: newRingbuffer}],
+        streams: [ {level: 'trace', type: 'raw', stream: newRingbuffer} ],
         zonename: zonename});
     self.addDebug(zonename, 'last_10_logs', newRingbuffer.records);
 

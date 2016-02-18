@@ -101,6 +101,9 @@ var MetadataAgent = module.exports = function (options) {
  *
  */
 MetadataAgent.prototype.addDebug = function addDebug(zonename, field, value) {
+    assert.string(zonename, 'zonename');
+    assert.string(field, 'field');
+
     var self = this;
 
     if (!self.zonesDebug.hasOwnProperty(zonename)) {
@@ -115,6 +118,9 @@ MetadataAgent.prototype.addDebug = function addDebug(zonename, field, value) {
 };
 
 MetadataAgent.prototype.createZoneLog = function (type, zonename) {
+    assert.string(type);
+    assert.string(zonename);
+
     var self = this;
     var newRingbuffer = new bunyan.RingBuffer({limit: 10});
 
@@ -421,17 +427,14 @@ function (zonename, callback) {
     zlog.info('Starting socket server');
 
     self.createZoneSocket(zopts, undefined, function _createZoneSocketCb(err) {
-        if (err) {
-            // We call callback here, but don't include the error because
-            // this is running in async.forEach and we don't want to fail
-            // the others and there's nothing we can do to recover anyway.
-            if (callback) {
-                callback();
-            }
-            return;
+        if (!err) {
+            zlog.info('Zone socket created.');
         }
 
-        zlog.info('Zone socket created.');
+        // We call callback here, but don't include the error if there was one,
+        // because this is running in async.forEach and we don't want to fail
+        // the others and there's nothing we can do to recover anyway. We'll
+        // just leave it to self.createZoneSocket to schedule a retry.
 
         if (callback) {
             callback();
@@ -516,7 +519,7 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
                 if (err) {
                     if (err.code === 'ENOENT') {
                         // does not exist, so create it.
-                        fs.mkdir(dir, function _mkdirCb(e) {
+                        fs.mkdir(dir, parseInt('700', 8), function _mkdirCb(e) {
                             zlog.debug({dir: dir, zone: zopts.zone, err: e},
                                 'attempted fs.mkdir()');
                             cb(e);

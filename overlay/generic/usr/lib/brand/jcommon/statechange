@@ -474,9 +474,8 @@ setup_net()
 		# property on the NIC so that the zone will be able to ifconfig the
 		# proper addresses.
 		if [[ $allow_ip_spoof != "true" ]]; then
-			allowed_ip_list=""
-
-			separator=""
+			unset allowed_ip_map
+			typeset -A allowed_ip_map
 
 			OLDIFS=$IFS
 			IFS=,
@@ -484,25 +483,30 @@ setup_net()
 				# For each static IP available, add it to the list.
 				if [[ $zone_ip != "dhcp" ]] && [[ $zone_ip != "addrconf" ]]; then
 					clean_ip=`printf "%s" "${zone_ip}" | sed 's|^\([^/]*\)/.*|\1|'`
-					allowed_ip_list="${allowed_ip_list}${separator}${clean_ip}"
-					separator=","
+					allowed_ip_map[${clean_ip}]=true
 				fi
+			done
+
+			# If any additional IPs have been specified (for example, older
+			# VMs set up for IPv6 before vmadm gained support), add them to
+			# the list.
+			for allowed_ip in $allowed_ips; do
+				allowed_ip_map[${allowed_ip}]=true
 			done
 			IFS=$OLDIFS
 
 			# If we're using VRRP and have the IP, add it to the list.
 			if [[ -n "$jst_vrrp" && -n $vrrp_primary_ip ]]; then
-				allowed_ip_list="${allowed_ip_list}${separator}${vrrp_primary_ip}"
-				separator=","
+				allowed_ip_map[${vrrp_primary_ip}]=true
 			fi
 
-			# If any additional IPs have been specified (for example, older
-			# VMs set up for IPv6 before vmadm gained support), add them to
-			# the list.
-			if [[ -n $allowed_ips ]]; then
-				allowed_ip_list="${allowed_ip_list}${separator}${allowed_ips}"
+			allowed_ip_list=""
+
+			separator=""
+			for allowed_ip in ${!allowed_ip_map[@]}; do
+				allowed_ip_list+="${separator}${allowed_ip}"
 				separator=","
-			fi
+			done
 
 			# Set the allowed-ips property on the NIC
 			if [[ -n ${allowed_ip_list} ]] &&

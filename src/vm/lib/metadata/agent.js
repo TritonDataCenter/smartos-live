@@ -125,19 +125,23 @@ var sdc_fields = [
 var MAX_RETRY = 300; // in seconds
 
 
-function zoneExists(zonename) {
+function zoneExists(zonename, callback) {
     var exists = false;
 
-    try {
-        fs.statSync('/etc/zones/' + zonename + '.xml');
-        exists = true;
-    } catch (e) {
-        if (e.code !== 'ENOENT') {
-            throw (e);
+    fs.stat('/etc/zones/' + zonename + '.xml', function _onStat(err, stats) {
+        if (err) {
+            if (err.code !== 'ENOENT') {
+                // Should either exist or not exist but should always be
+                // readable if it does exist. If not: we don't know how to
+                // proceed so throw/abort.
+                throw (err);
+            }
+        } else {
+            exists = true;
         }
-    }
 
-    return (exists);
+        callback(null, exists);
+    });
 }
 
 
@@ -334,11 +338,11 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
     self.log.info(zonename + ' no longer exists, purging from cache(s) and '
         + 'stopping timeout');
 
-    if (self.zoneRetryTimeouts[zonename]) {
+    if (self.zoneRetryTimeouts.hasOwnProperty(zonename)) {
         clearTimeout(self.zoneRetryTimeouts[zonename]);
         delete self.zoneRetryTimeouts[zonename];
     }
-    if (self.zonesDebug[zonename]) {
+    if (self.zonesDebug.hasOwnProperty(zonename)) {
         delete self.zonesDebug[zonename];
     }
     if (self.zlog.hasOwnProperty(zonename)) {
@@ -404,48 +408,49 @@ MetadataAgent.prototype.start = function () {
             return;
         }
 
-        if (!zoneExists(msg.zonename)) {
-            self.log.warn({transition: msg}, 'ignoring transition for zone that'
-                + ' no longer exists');
-            return;
-        } else {
-            self.log.trace({transition: msg}, 'saw zone transition');
-        }
-
-        if (msg.cmd === 'start') {
-            self.addDebug(msg.zonename, 'last_zone_start');
-            self.updateZone(msg.zonename, function (error) {
-                if (error) {
-                    self.log.error({err: error}, 'Error updating attributes: '
-                        + error.message);
-                    return;
-                }
-
-                // If the zone was not deleted between the time we saw it start
-                // and now, (we did a vmadm lookup in between via updateZone)
-                // we'll start the watcher.
-                if (self.zones[msg.zonename]) {
-                    if (!self.zlog[msg.zonename]) {
-                        // create a logger specific to this VM
-                        self.createZoneLog(self.zones[msg.zonename].brand,
-                            msg.zonename);
-                    }
-
-                    if (self.zones[msg.zonename].brand === 'kvm') {
-                        self.startKVMSocketServer(msg.zonename);
-                    } else {
-                        self.startZoneSocketServer(msg.zonename);
-                    }
-                }
-            });
-        } else if (msg.cmd === 'stop') {
-            self.addDebug(msg.zonename, 'last_zone_stop');
-            if (self.zoneConnections[msg.zonename]) {
-                self.log.trace('saw zone ' + msg.zonename
-                    + ' stop, calling end()');
-                self.zoneConnections[msg.zonename].end();
+        zoneExists(msg.zonename, function _zoneExists(_, exists) {
+            if (!exists) {
+                self.log.warn({transition: msg}, 'ignoring transition for zone'
+                    + 'that no longer exists');
+                return;
             }
-        }
+            self.log.trace({transition: msg}, 'saw zone transition');
+
+            if (msg.cmd === 'start') {
+                self.addDebug(msg.zonename, 'last_zone_start');
+                self.updateZone(msg.zonename, function (error) {
+                    if (error) {
+                        self.log.error({err: error}, 'Error updating '
+                            + 'attributes: ' + error.message);
+                        return;
+                    }
+
+                    // If the zone was not deleted between the time we saw it
+                    // start and now, (we did a vmadm lookup in between via
+                    // updateZone) we'll start the watcher.
+                    if (self.zones[msg.zonename]) {
+                        if (!self.zlog[msg.zonename]) {
+                            // create a logger specific to this VM
+                            self.createZoneLog(self.zones[msg.zonename].brand,
+                                msg.zonename);
+                        }
+
+                        if (self.zones[msg.zonename].brand === 'kvm') {
+                            self.startKVMSocketServer(msg.zonename);
+                        } else {
+                            self.startZoneSocketServer(msg.zonename);
+                        }
+                    }
+                });
+            } else if (msg.cmd === 'stop') {
+                self.addDebug(msg.zonename, 'last_zone_stop');
+                if (self.zoneConnections[msg.zonename]) {
+                    self.log.trace('saw zone ' + msg.zonename
+                        + ' stop, calling end()');
+                    self.zoneConnections[msg.zonename].end();
+                }
+            }
+        });
     });
 };
 
@@ -730,16 +735,19 @@ function attemptCreateZoneSocket(self, zopts, waitSecs) {
         var server;
 
         if (error) {
-            if (!zoneExists(zopts.zone)) {
-                zlog.warn({err: error}, 'error creating socket and zone no '
-                    + 'longer exists, not retrying');
+            zoneExists(zopts.zone, function _zoneExists(_, exists) {
+                if (!exists) {
+                    zlog.warn({err: error}, 'error creating socket and zone no '
+                        + 'longer exists, not retrying');
+                    return;
+                }
+                // If we get errors trying to create the zone socket, setup a
+                // retry loop and return.
+                zlog.error({err: error}, 'createZoneSocket error, %s seconds '
+                    + 'before next attempt', waitSecs);
+                _retryCreateZoneSocketLater();
                 return;
-            }
-            // If we get errors trying to create the zone socket, setup a retry
-            // loop and return.
-            zlog.error({err: error}, 'createZoneSocket error, %s seconds before'
-                + ' next attempt', waitSecs);
-            _retryCreateZoneSocketLater();
+            });
             return;
         }
 

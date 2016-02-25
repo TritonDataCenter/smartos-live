@@ -20,13 +20,6 @@ setImmediate(function _startAgent() {
     agent.start();
 });
 
-process.on('uncaughtException', function (error) {
-    log.fatal('Uncaught exception in agent: ' + error.message);
-    log.fatal(error.stack);
-    agent.stop();
-    process.exit(1);
-});
-
 process.on('exit', function () {
     log.info('Agent exiting');
     agent.stop();

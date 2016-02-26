@@ -16,6 +16,8 @@ require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
+var afterVmobj = {};
+var beforeVmobj;
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var vm_uuid;
 
@@ -1195,6 +1197,88 @@ test('remove cpu_cap', function (t) {
                 t.end();
             });
         });
+    });
+});
+
+/*
+ * For this next set of tests, we fill up the zone's quota so that we can't
+ * write any data in the zoneroot. We then test that updates other than
+ * routes/tags/metadata (which operate inside the zoneroot) work. (See OS-3191)
+ */
+
+test('set low quota', function (t) {
+    VM.update(vm_uuid, {quota: 1}, function (update_err) {
+        t.ok(!update_err, 'update quota=1: '
+            + (update_err ? update_err.message : 'success'));
+        t.end();
+    });
+});
+
+test('fill up zoneroot', function (t) {
+    execFile('/usr/bin/dd', [
+        'if=/dev/zero',
+        'of=/zones/' + vm_uuid + '/root/zeros',
+        'bs=1M'
+    ], function (err, stdout, stderr) {
+        var match = stderr.match(/dd: unexpected short write, wrote/);
+        t.ok(match, 'expected short write'
+            + (match ? '' : JSON.stringify(stderr)));
+        t.end();
+    });
+});
+
+test('get vmobj for full VM', function (t) {
+    VM.load(vm_uuid, function (err, obj) {
+        t.ok(!err, 'load VM: ' + (err ? err.message : 'success'));
+
+        if (!err) {
+            beforeVmobj = obj;
+        }
+
+        t.end();
+    });
+});
+
+// modifies only /etc/zones/<uuid>.xml, so should succeed with full zoneroot
+test('bump max_physical_memory', function (t) {
+    if (beforeVmobj) {
+        var newMaxPhysical = beforeVmobj.max_physical_memory + 1024;
+
+        VM.update(vm_uuid, {
+            max_physical_memory: newMaxPhysical
+        }, function _updateCb(err) {
+            t.ok(!err, 'update max_physical_memory: '
+                + (err ? err.message : 'success'));
+            afterVmobj.max_physical_memory = newMaxPhysical;
+            t.end();
+        });
+    } else {
+        t.end();
+    }
+});
+
+// modifies only zfs dataset, so should succeed with full zoneroot
+test('raise quota to 2', function (t) {
+    VM.update(vm_uuid, {quota: 2}, function (err) {
+        t.ok(!err, 'update quota=2: '
+            + (err ? err.message : 'success'));
+        afterVmobj.quota = 2;
+        t.end();
+    });
+});
+
+test('get vmobj for full VM after modifications', function (t) {
+    VM.load(vm_uuid, function (err, obj) {
+        t.ok(!err, 'load VM: ' + (err ? err.message : 'success'));
+
+        if (!err) {
+            Object.keys(afterVmobj).forEach(function _cmpKey(k) {
+                t.equal(JSON.stringify(afterVmobj[k]), JSON.stringify(obj[k]),
+                    'check ' + k);
+            });
+        }
+
+        t.end();
     });
 });
 

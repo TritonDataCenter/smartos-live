@@ -1221,7 +1221,8 @@ test('fill up zoneroot', function (t) {
         'bs=1M'
     ], function (err, stdout, stderr) {
         var match = stderr.match(/dd: unexpected short write, wrote/);
-        t.ok(match, 'expected short write' + (match ? '' : JSON.stringify(stderr)));
+        t.ok(match, 'expected short write'
+            + (match ? '' : JSON.stringify(stderr)));
         t.end();
     });
 });
@@ -1238,7 +1239,7 @@ test('get vmobj for full VM', function (t) {
     });
 });
 
-// modifies only /etc/zones/*.xml, so should succeed with full zoneroot
+// modifies only /etc/zones/<uuid>.xml, so should succeed with full zoneroot
 test('bump max_physical_memory', function (t) {
     if (beforeVmobj) {
         var newMaxPhysical = beforeVmobj.max_physical_memory + 1024;

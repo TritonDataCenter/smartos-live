@@ -120,7 +120,8 @@ var sdc_fields = [
     'vnc_port',
     'zfs_io_priority',
     'zonepath',
-    'zonename'
+    'zonename',
+    'zone_state'
 ];
 var MAX_RETRY = 300; // in seconds
 
@@ -298,9 +299,9 @@ MetadataAgent.prototype.createServersOnExistingZones = function () {
             self.zones[zone.zonename] = zone;
             self.addDebug(zone.zonename, 'last_zone_load');
 
-            if (zone.state !== 'running') {
+            if (zone.zone_state !== 'running') {
                 self.log.debug('skipping zone ' + zone.zonename + ' which has '
-                    + 'non-running state: ' + zone.state);
+                    + 'non-running state: ' + zone.zone_state);
                 cb();
                 return;
             }

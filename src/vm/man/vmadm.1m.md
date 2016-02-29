@@ -1370,6 +1370,20 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    nics.*.allowed_dhcp_cids:
+
+        This specifies which DHCP Client Identifiers outbound DHCP packets are
+        allowed to use. By default, when no Client Identifiers are listed, and
+        nics.*.ips includes "dhcp" or "addrconf", all DHCP Client Identifiers
+        are permitted. Client Identifiers are specified as a string of pairs of
+        hexadecimal characters beginning with the prefix "0x".
+
+        type: array (of even-lengthed hexadecimal strings beginning with "0x")
+        vmtype: OS,LX,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+
     nics.*.dhcp_server:
 
         With this property set to true, this VM will be able to operate as a

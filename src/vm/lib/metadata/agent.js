@@ -301,7 +301,7 @@ MetadataAgent.prototype.createServersOnExistingZones = function () {
 
             if (zone.zone_state !== 'running') {
                 self.log.debug('skipping zone ' + zone.zonename + ' which has '
-                    + 'non-running state: ' + zone.zone_state);
+                    + 'non-running zone_state: ' + zone.zone_state);
                 cb();
                 return;
             }

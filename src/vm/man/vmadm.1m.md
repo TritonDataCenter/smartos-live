@@ -318,7 +318,7 @@ tab-complete UUIDs rather than having to type them out for every command.
             You can specify multiple disk options when booting a VM. They will
             be attached in the order they appear on the cmdline.
 
-      stop <uuid> [-F]
+      stop <uuid> [-F] [-t timeout]
 
         Stop a VM. The default stop will attempt to be graceful.  This ensures
         that processes within the VM are given an opportunity to shut down
@@ -336,6 +336,12 @@ tab-complete UUIDs rather than having to type them out for every command.
         tried to shut it down. This transition marker also includes an expiry.
         If vmadmd sees a VM that has a transition but reaches the expiry before
         actually turning off, it re-sends the stop command with the -F option.
+
+        For Docker VMs, vmadm will send a SIGTERM to init and then wait some
+        number of seconds for the init process to exit. If it has not exited by
+        the timeout expiry, a SIGKILL will be sent. The default timeout is 10
+        seconds but this can be adjusted with the -t <timeout seconds> option.
+        For non-Docker VMs the -t option will do nothing.
 
         If for some reason you are unable or do not want to do a graceful stop
         you can also add the '-F' parameter via to do a forced stop. This stop

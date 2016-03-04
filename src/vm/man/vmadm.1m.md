@@ -333,20 +333,25 @@ tab-complete UUIDs rather than having to type them out for every command.
         ACPI signal to the guest kernel telling it to shut down. In case the
         guest kernel ignores this or for some reason does not receive this
         request we mark the VM with a transition property indicating that we
-        tried to shut it down. This transition marker also includes an expiry.
-        If vmadmd sees a VM that has a transition but reaches the expiry before
-        actually turning off, it re-sends the stop command with the -F option.
+        tried to shut it down. This transition marker also includes an expiry
+        which is set to a timeout (default 180 seconds) value from the sending
+        of the ACPI shutdown signal. If vmadmd sees a VM that has a transition
+        but reaches the expiry before actually turning off, it re-sends the
+        stop command with the -F option.
 
-        For Docker VMs, vmadm will send a SIGTERM to init and then wait some
+        For docker VMs, vmadm will send a SIGTERM to init and then wait some
         number of seconds for the init process to exit. If it has not exited by
         the timeout expiry, a SIGKILL will be sent. The default timeout is 10
-        seconds but this can be adjusted with the -t <timeout seconds> option.
-        For non-Docker VMs the -t option will do nothing.
+        seconds.
+
+        For both KVM and docker VMs the stop timeouts can be adjusted with the
+        -t <timeout seconds> option. For non-Docker and non-KVM VMs use of the
+        -t option will result in an error.
 
         If for some reason you are unable or do not want to do a graceful stop
         you can also add the '-F' parameter via to do a forced stop. This stop
-        will be much faster (especially for KVM) but will not necessarily give
-        the VM any time to shut down its processes.
+        will be much faster (especially for KVM) but will not give the VM any
+        time to shut down its processes.
 
       sysrq <uuid> <nmi|screenshot>
 

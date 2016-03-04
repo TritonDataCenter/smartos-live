@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  */
 
@@ -160,7 +160,7 @@ function usage(message, code)
     out('rollback-snapshot <uuid> <snapname>');
     out('send <uuid> [target]');
     out('start <uuid> [option=value ...]');
-    out('stop <uuid> [-F]');
+    out('stop <uuid> [-F] [-t timeout]');
     out('sysrq <uuid> <nmi|screenshot>');
     out('update <uuid> [-f <filename>]');
     out(' -or- update <uuid> property=value [property=value ...]');
@@ -432,6 +432,8 @@ function addCommandOptions(command, opts, shorts)
     case 'halt':
     case 'reboot':
     case 'stop':
+        opts.timeout = Number;
+        shorts.t = ['--timeout'];
         opts.force = Boolean;
         shorts.F = ['--force', 'true'];
         break;
@@ -1189,10 +1191,13 @@ function main(callback)
         command = 'stop';
         /*jsl:fallthru*/
     case 'stop':
+        if (parsed.timeout) {
+            extra.timeout = parsed.timeout;
+        }
     case 'reboot':
         uuid = getUUID(command, parsed);
         if (parsed.force) {
-            extra = {force: true};
+            extra.force = true;
         }
         VM[command](uuid, extra, function (err) {
             if (err) {

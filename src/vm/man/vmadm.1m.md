@@ -326,7 +326,9 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         For OS VMs, the shutdown command will be run within the zone with the
         cmdline '/usr/sbin/shutdown -y -g 0 -i 5' which will cause the VM to
-        go to the 'off' state after shutting down all processes.
+        go to the 'off' state after shutting down all processes. OS VMs do not
+        support the [-t timeout] option unless they also have the docker
+        property set to true.
 
         For KVM VMs, vmadmd will act as a helper here. We send a powerdown
         message via vmadmd to the running qemu process. Qemu then sends the

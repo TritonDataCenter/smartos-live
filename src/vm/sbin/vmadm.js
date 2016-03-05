@@ -1194,6 +1194,7 @@ function main(callback)
         if (parsed.timeout) {
             extra.timeout = parsed.timeout;
         }
+        /*jsl:fallthru*/
     case 'reboot':
         uuid = getUUID(command, parsed);
         if (parsed.force) {

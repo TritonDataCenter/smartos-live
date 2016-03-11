@@ -107,6 +107,11 @@ typedef enum {
     BRAND_JOYENT_MINIMAL = 1
 } brand_t;
 
+typedef enum {
+    ENV_OK = 0,
+    ENV_IGNORE_ENTRY = 1
+} env_split_result;
+
 void addValues(char **array, int *idx, array_type_t type, nvlist_t *nvl);
 int buildCmdEnv(strlist_t *);
 int buildCmdline(strlist_t *);

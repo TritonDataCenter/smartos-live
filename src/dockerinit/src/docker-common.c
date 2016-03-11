@@ -91,7 +91,7 @@ typedef void forEachStringCb_t(const char *, unsigned int, const char *,
   void *, void *);
 
 static void insertOrReplaceEnv(strlist_t *, const char *, const char *);
-static void splitEnvEntry(const char *, char **, char **);
+static env_split_result splitEnvEntry(const char *, char **, char **);
 static void forEachStringInArray(const char *, nvlist_t *, forEachStringCb_t *,
   void *, void *);
 static int getPathList(strlist_t *, strlist_t *, const char *);
@@ -300,7 +300,9 @@ cbEachEnvEntry(const char *array_name __GNU_UNUSED, unsigned int idx
     char *env_name = NULL;
     char *env_val = NULL;
 
-    splitEnvEntry(val, &env_name, &env_val);
+    if (splitEnvEntry(val, &env_name, &env_val) == ENV_IGNORE_ENTRY) {
+        return;
+    }
 
     insertOrReplaceEnv(env, env_name, env_val);
 
@@ -611,7 +613,13 @@ setupWorkdir(custr_t **cup)
     }
 }
 
-static void
+/**
+ * Split env inout "foo=bar" into separate name "foo" and value "bar" strings.
+ *
+ * Returns ENV_OK on success, or returns ENV_IGNORE_ENTRY if the env variable
+ * is bogus and should be ignored.
+ */
+static env_split_result
 splitEnvEntry(const char *input, char **name, char **value)
 {
     const char *eq;
@@ -621,7 +629,8 @@ splitEnvEntry(const char *input, char **name, char **value)
      * name.  Determine the length of the name:
      */
     if ((eq = strchr(input, '=')) == NULL || eq == input) {
-        fatal(ERR_UNEXPECTED, "invalid env vector entry: %s\n", input);
+        dlog("WARN ignoring empty env var %s\n", input);
+        return ENV_IGNORE_ENTRY;
     }
 
     /*
@@ -637,6 +646,8 @@ splitEnvEntry(const char *input, char **name, char **value)
     if (value != NULL && (*value = strdup(eq + 1)) == NULL) {
         fatal(ERR_STRDUP, "strdup failure: %s\n", strerror(errno));
     }
+
+    return ENV_OK;
 }
 
 static void
@@ -653,7 +664,9 @@ insertOrReplaceEnv(strlist_t *sl, const char *name, const char *value)
     for (idx = 0; strlist_get(sl, idx) != NULL; idx++) {
         char *sname;
 
-        splitEnvEntry(strlist_get(sl, idx), &sname, NULL);
+        if (splitEnvEntry(strlist_get(sl, idx), &sname, NULL) == ENV_IGNORE_ENTRY) {
+            continue;
+        }
         if (strcmp(sname, name) == 0) {
             found = B_TRUE;
         }
@@ -757,7 +770,9 @@ getPathList(strlist_t *env, strlist_t *path, const char *working_directory)
         char *sname;
         char *svalue;
 
-        splitEnvEntry(strlist_get(env, idx), &sname, &svalue);
+        if (splitEnvEntry(strlist_get(env, idx), &sname, &svalue) == ENV_IGNORE_ENTRY) {
+            continue;
+        }
         if (strcmp(sname, "PATH") != 0) {
             free(sname);
             free(svalue);

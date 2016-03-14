@@ -25,12 +25,12 @@
  *
  */
 
-var assert = require('assert');
+var assert = require('/usr/node/node_modules/assert-plus');
 var async = require('/usr/node/node_modules/async');
 var bunyan = require('/usr/node/node_modules/bunyan');
 var cp = require('child_process');
 var consts = require('constants');
-var events = require('events');
+var EventEmitter = require('events').EventEmitter;
 var execFile = cp.execFile;
 var fs = require('fs');
 var lock = require('/usr/vm/node_modules/locker').lock;
@@ -59,6 +59,7 @@ var vasync = require('vasync');
  */
 var DOCKER_RUNTIME_DELAY_RESET = 10000;
 
+var REPORTED_STATES = ['running', 'stopped'];
 var UPGRADE_SCRIPT = '/smartdc/vm-upgrade/001_upgrade';
 var VMADMD_PORT = 8080;
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
@@ -73,14 +74,17 @@ var VNC = {};
 // Global bunyan logger object for use here in vmadmd
 var log;
 
+// Used to keep track of which VMs we're currently delaying a restart for in
+// order to not start additional restarts in that period.
+var restart_waiters = {};
+
 // Used to track which VMs we've seen so that we can update new ones the first
 // time we see them regardless of which zone transition we see for them.  Also
 // stores basic information so we don't have to VM.load() as often.
 var seen_vms = {};
 
-// Used to keep track of which VMs we're currently delaying a restart for in
-// order to not start additional restarts in that period.
-var restart_waiters = {};
+// Used for reporting state changes (running/stopped) to interested listeners
+var stateReporter = new EventEmitter();
 
 
 function sysinfo(callback)
@@ -686,7 +690,8 @@ function restartDockerContainer(uuid, opts)
 
         VM.start(vmobj.uuid, {}, {
             increment_restart_count: true,
-            restart_delay: restart_delay
+            restart_delay: restart_delay,
+            state_waiter: stateWaiter
         }, function (start_err) {
 
             if (start_err) {
@@ -821,6 +826,65 @@ function applyDockerRestartPolicy(vmobj)
     }, restart_delay);
 }
 
+/*
+ * This function waits for a VM (vmUuid) to change to a specified state. It is
+ * passed to VM.start() so that we avoid creating an additional zoneevent
+ * watcher for each, and instead re-use the existing sysevent watcher that we've
+ * already got.
+ */
+function stateWaiter(vmUuid, state, opts, callback) {
+    assert.uuid(vmUuid, 'vmUuid');
+    assert.string(state, 'state');
+    assert.object(opts, 'opts'); // we don't actually use opts though
+    assert.func(callback, 'callback');
+
+    assert.ok(REPORTED_STATES.indexOf(state) !== -1, 'state must be one '
+        + 'of: ' + JSON.stringify(REPORTED_STATES));
+
+    var timeout;
+
+    function _gotState(uuid) {
+        if (uuid === vmUuid) {
+            log.debug({vmUuid: vmUuid, state: state}, 'stateWaiter() saw VM '
+                + 'transition to state');
+            _cleanupWaiter();
+            callback();
+        }
+    }
+
+    function _cleanupWaiter() {
+        clearTimeout(timeout);
+        stateReporter.removeListener(state, _gotState);
+        log.trace({
+            count: EventEmitter.listenerCount(stateReporter, state),
+            state: state,
+            vmUuid: vmUuid
+        }, 'stateReporter listeners after cleanup');
+    }
+
+    stateReporter.on(state, _gotState);
+
+    log.trace({
+        count: EventEmitter.listenerCount(stateReporter, state),
+        state: state,
+        vmUuid: vmUuid
+    }, 'stateReporter listeners after registering');
+
+    timeout = setTimeout(function _onTimeout() {
+        var err = new Error('Timeout waiting for ' + vmUuid + ' transition to '
+            + state);
+
+        log.error({
+            err: err,
+            state: state,
+            vmUuid: vmUuid
+        }, 'timeout waiting for transition');
+
+        _cleanupWaiter();
+        callback(err);
+    }, 30000);
+}
+
 // NOTE: nobody's paying attention to whether this completes or not.
 function updateZoneStatus(ev)
 {
@@ -848,6 +912,15 @@ function updateZoneStatus(ev)
         log.debug({old: ev.oldstate, new: ev.newstate},
             'ignoring state transitions before first boot');
         return;
+    }
+
+    // Report state changes to listeners
+    if (ev.newstate === 'running') {
+        log.trace('emitting: running, ' + ev.zonename);
+        stateReporter.emit('running', ev.zonename);
+    } else if (ev.newstate === 'uninitialized') {
+        log.trace('emitting: stopped, ' + ev.zonename);
+        stateReporter.emit('stopped', ev.zonename);
     }
 
     /*

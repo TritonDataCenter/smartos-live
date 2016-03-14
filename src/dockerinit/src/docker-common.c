@@ -613,7 +613,7 @@ setupWorkdir(custr_t **cup)
     }
 }
 
-/**
+/*
  * Split env inout "foo=bar" into separate name "foo" and value "bar" strings.
  *
  * Returns ENV_OK on success, or returns ENV_IGNORE_ENTRY if the env variable
@@ -630,7 +630,7 @@ splitEnvEntry(const char *input, char **name, char **value)
      */
     if ((eq = strchr(input, '=')) == NULL || eq == input) {
         dlog("WARN ignoring empty env var %s\n", input);
-        return ENV_IGNORE_ENTRY;
+        return (ENV_IGNORE_ENTRY);
     }
 
     /*
@@ -647,7 +647,7 @@ splitEnvEntry(const char *input, char **name, char **value)
         fatal(ERR_STRDUP, "strdup failure: %s\n", strerror(errno));
     }
 
-    return ENV_OK;
+    return (ENV_OK);
 }
 
 static void
@@ -664,7 +664,8 @@ insertOrReplaceEnv(strlist_t *sl, const char *name, const char *value)
     for (idx = 0; strlist_get(sl, idx) != NULL; idx++) {
         char *sname;
 
-        if (splitEnvEntry(strlist_get(sl, idx), &sname, NULL) == ENV_IGNORE_ENTRY) {
+        if (splitEnvEntry(strlist_get(sl, idx), &sname, NULL)
+	    == ENV_IGNORE_ENTRY) {
             continue;
         }
         if (strcmp(sname, name) == 0) {
@@ -770,7 +771,8 @@ getPathList(strlist_t *env, strlist_t *path, const char *working_directory)
         char *sname;
         char *svalue;
 
-        if (splitEnvEntry(strlist_get(env, idx), &sname, &svalue) == ENV_IGNORE_ENTRY) {
+        if (splitEnvEntry(strlist_get(env, idx), &sname, &svalue)
+	    == ENV_IGNORE_ENTRY) {
             continue;
         }
         if (strcmp(sname, "PATH") != 0) {

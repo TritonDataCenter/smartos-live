@@ -25,8 +25,7 @@
  *
  */
 
-var assert = require('assert');
-var assert_plus = require('/usr/node/node_modules/assert-plus');
+var assert = require('/usr/node/node_modules/assert-plus');
 var async = require('/usr/node/node_modules/async');
 var bunyan = require('/usr/node/node_modules/bunyan');
 var cp = require('child_process');
@@ -834,12 +833,12 @@ function applyDockerRestartPolicy(vmobj)
  * already got.
  */
 function stateWaiter(vmUuid, state, opts, callback) {
-    assert_plus.uuid(vmUuid, 'vmUuid');
-    assert_plus.string(state, 'state');
-    assert_plus.object(opts, 'opts'); // we don't actually use opts though
-    assert_plus.func(callback, 'callback');
+    assert.uuid(vmUuid, 'vmUuid');
+    assert.string(state, 'state');
+    assert.object(opts, 'opts'); // we don't actually use opts though
+    assert.func(callback, 'callback');
 
-    assert_plus.ok(REPORTED_STATES.indexOf(state) !== -1, 'state must be one '
+    assert.ok(REPORTED_STATES.indexOf(state) !== -1, 'state must be one '
         + 'of: ' + JSON.stringify(REPORTED_STATES));
 
     var timeout;

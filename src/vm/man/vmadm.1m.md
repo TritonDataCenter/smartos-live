@@ -1439,7 +1439,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         An array of IPv4 or IPv6 addresses to assign to this NIC. The addresses
         should specify their routing prefix in CIDR notation. The strings
         'dhcp' (DHCPv4) and 'addrconf' (SLAAC or DHCPv6) can also be used to
-        obtain the address dynamically.
+        obtain the address dynamically. Up to 20 addresses can be listed.
 
         Since KVM instances receive their static IP addresses from QEMU via
         DHCPv4, they can only receive a single IPv4 address. Therefore, the only

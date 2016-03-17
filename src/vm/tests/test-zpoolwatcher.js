@@ -20,10 +20,11 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2015, Joyent, Inc.
+ * Copyright 2016, Joyent, Inc.
  */
 
-var bunyan = require('bunyan');
+var bunyan = require('/usr/vm/node_modules/bunyan');
+
 var execFile = require('child_process').execFile;
 
 // this puts test stuff in global, so we need to tell jsl about that:

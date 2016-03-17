@@ -20,15 +20,16 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2015, Joyent, Inc.
+ * Copyright 2016, Joyent, Inc.
  */
 
 var assert = require('assert');
-var async = require('async');
-var bunyan = require('bunyan');
 var execFile = require('child_process').execFile;
 var fs = require('fs');
 var path = require('path');
+
+var async = require('/usr/node/node_modules/async');
+var bunyan = require('/usr/vm/node_modules/bunyan');
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */

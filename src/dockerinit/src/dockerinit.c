@@ -97,8 +97,8 @@ void runIpmgmtd(void);
 void setupHostname();
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
-void workaround_OS_5221();
-void doNfsMount(const char *nfsvolume, const char *mountpoint);
+void doNfsMount(const char *nfsvolume, const char *mountpoint,
+    boolean_t readonly);
 void mountNfsVolume(nvlist_t *data);
 void mountNfsVolumes();
 static void makeMux(int stdid, int logid, boolean_t use_flowcon);
@@ -1175,43 +1175,8 @@ setupNetworking()
     closeIpadmHandle();
 }
 
-// HACK to workaround OS-5221, create /etc/nfssec.conf
 void
-workaround_OS_5221()
-{
-    const char *data = "sys\t1\t-\t-\t-\n";
-    int fd;
-    int ret;
-
-    fd = open("/etc/nfssec.conf", O_WRONLY | O_CREAT | O_EXCL,
-        S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
-    if (fd == -1) {
-        if (errno == EEXIST) {
-            dlog("DEBUG nfssec.conf already exists\n");
-            return;
-        }
-        fatal(ERR_OPEN, "failed to open nfssec.conf: (%d) %s\n",
-            errno, strerror(errno));
-    }
-
-    ret = write(fd, data, strlen(data) * sizeof(char));
-    if (ret == -1) {
-        // XXX not an ERR_OPEN really, but this is just a temp hack.
-        fatal(ERR_OPEN, "failed to write nfssec.conf: (%d) %s\n",
-            errno, strerror(errno));
-    }
-
-    close(fd);
-}
-
-/*
- * TODO: Eventually this impl should be replaced by calls to mount(2) and
- * friends instead, but this currently requires additional work for things like
- * parsing the address. For this prototype we'll just execv() the mount.
- */
-void
-doNfsMount(const char *nfsvolume, const char *mountpoint)
+doNfsMount(const char *nfsvolume, const char *mountpoint, boolean_t readonly)
 {
     pid_t pid;
     int status;
@@ -1241,7 +1206,7 @@ doNfsMount(const char *nfsvolume, const char *mountpoint)
         char *const argv[] = {
             "mount",
             "-o",
-            "vers=3,sec=sys",
+            (readonly == B_TRUE) ? "vers=3,sec=sys,ro" : "vers=3,sec=sys",
             (char *)nfsvolume,
             (char *)mountpoint,
             NULL
@@ -1253,7 +1218,7 @@ doNfsMount(const char *nfsvolume, const char *mountpoint)
         makePath(NFS_MOUNT, cmd, sizeof (cmd));
 
         execv(cmd, argv);
-        fatal(ERR_EXEC_FAILED, "execve(%s) failed: %s\n", cmd, strerror(errno));
+        fatal(ERR_EXEC_FAILED, "execv(%s) failed: %s\n", cmd, strerror(errno));
     }
 
     /* parent */
@@ -1282,6 +1247,7 @@ doNfsMount(const char *nfsvolume, const char *mountpoint)
 void
 mountNfsVolume(nvlist_t *data)
 {
+    boolean_t readonly;
     char *nfsvolume, *mountpoint;
     int ret;
 
@@ -1289,7 +1255,12 @@ mountNfsVolume(nvlist_t *data)
     if (ret == 0) {
         ret = nvlist_lookup_string(data, "mountpoint", &mountpoint);
         if (ret == 0) {
-            doNfsMount((const char *)nfsvolume, (const char *)mountpoint);
+            ret = nvlist_lookup_boolean_value(data, "readonly", &readonly);
+            if (ret != 0) {
+                readonly = B_FALSE;
+            }
+            doNfsMount((const char *)nfsvolume, (const char *)mountpoint,
+                readonly);
             return;
         }
     }
@@ -1309,17 +1280,12 @@ mountNfsVolumes()
         return;
     }
 
-    sleep(20);
-
     if (nvlist_parse_json(json, strlen(json), &nvl, NVJSON_FORCE_INTEGER,
       NULL) != 0) {
         fatal(ERR_PARSE_JSON, "failed to parse nvpair json"
             " for docker:nfsvolumes: %s\n", strerror(errno));
     }
     free(json);
-
-    // HACKS to workaround bugs
-    workaround_OS_5221();
 
     for (pair = nvlist_next_nvpair(nvl, NULL); pair != NULL;
       pair = nvlist_next_nvpair(nvl, pair)) {

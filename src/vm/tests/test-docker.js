@@ -12,6 +12,7 @@ var fs = require('fs');
 var libuuid = require('/usr/node/node_modules/uuid');
 var path = require('path');
 var SyseventStream = require('/usr/vm/node_modules/sysevent-stream');
+var util = require('util');
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
 
@@ -724,6 +725,70 @@ test('test docker VM with paths in /tmp', function (t) {
                 t.ok(fs.existsSync(path.normalize(vmobj.zonepath + '/root/'
                     + k)), k + ' exists');
             });
+            cb();
+        }
+    ]);
+});
+
+test('test docker VM with "docker:extraHosts"', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+    var vmobj = {};
+
+    payload.docker = true;
+    payload.autoboot = false;
+    payload.internal_metadata = {
+        'docker:extraHosts': '["foo:1.2.3.4"]'
+    };
+
+    vmtest.on_new_vm(t, image_uuid, payload, state, [
+        function (cb) {
+            VM.load(state.uuid, function (err, obj) {
+                t.ok(!err, 'loading obj for new VM');
+                if (err) {
+                    cb(err);
+                    return;
+                }
+
+                vmobj = obj;
+                cb();
+            });
+        }, function (cb) {
+            VM.start(state.uuid, {}, function (err) {
+                t.ok(!err, 'started VM: ' + (err ? err.message : 'success'));
+                cb(err);
+            });
+        }, function (cb) {
+            var hostsPath = path.resolve(
+                vmobj.zonepath, 'root', 'etc', 'hosts');
+            var hostsContent = fs.readFileSync(hostsPath, 'utf8');
+            var foo = /^foo\t1.2.3.4$/m;
+            t.ok(foo.test(hostsContent),
+                util.format('%s entry found in hosts path (%s): %j',
+                    foo, hostsPath, hostsContent));
+            cb();
+        }, function (cb) {
+            var update = {
+                set_internal_metadata: {
+                    'docker:extraHosts': '["bar:5.6.7.8"]'
+                }
+            };
+            VM.update(state.uuid, update, function (err) {
+                t.ok(!err, 'update ' + JSON.stringify(update) + ' succeeded');
+                cb(err);
+            });
+        }, function (cb) {
+            var hostsPath = path.resolve(
+                vmobj.zonepath, 'root', 'etc', 'hosts');
+            var hostsContent = fs.readFileSync(hostsPath, 'utf8');
+            var foo = /^foo\t1.2.3.4$/m;
+            var bar = /^bar\t5.6.7.8$/m;
+            t.notOk(foo.test(hostsContent),
+                util.format('%s entry NOT found in hosts path (%s): %j',
+                    foo, hostsPath, hostsContent));
+            t.ok(bar.test(hostsContent),
+                util.format('%s entry found in hosts path (%s): %j',
+                    bar, hostsPath, hostsContent));
             cb();
         }
     ]);

@@ -730,7 +730,12 @@ else
                 # For IPv4, we need to set the address on the first logical
                 # interface. For IPv6, the address on the first interface is
                 # the link-local address, and can't be changed.
-                if [[ "${ifparams}" == {3}({1,3}(\d).){1,3}(\d)* ]]; then
+                #
+                # Lines starting with inet indicate the hostname for that
+                # interface, and are used by dhcpagent. Skip over them.
+                if [[ -f /etc/dhcp.${iface} && "${ifparams}" == inet* ]]; then
+                    continue
+                elif [[ "${ifparams}" == {3}({1,3}(\d).){1,3}(\d)* ]]; then
                     plumbif ${iface} inet ${addrtype}
                     if [[ -z "${first_ipv4_configured}" ]]; then
                         first_ipv4_configured="true"

@@ -216,9 +216,10 @@ while IFS="|" read -r iface ip ips netmask primary gateway gateways; do
   # We remove the hostname.netX file first, so we can append to a clean file
   rm -f /etc/hostname.${iface}
 
-  # remove any existing DHCP configuration, since we'll create one if
-  # it belongs later
+  # remove any existing DHCP or addrconf configuration, since we'll create one
+  # if it belongs later
   rm -f /etc/dhcp.${iface}
+  rm -f /etc/addrconf.${iface}
 
   OLDIFS=$IFS
   IFS=$','
@@ -231,6 +232,9 @@ while IFS="|" read -r iface ip ips netmask primary gateway gateways; do
 
     if [[ ${ip} == "dhcp" ]]; then
       touch /etc/dhcp.${iface}
+      if hostname=`mdata-get sdc:hostname`; then
+          echo "inet ${hostname}" >> /etc/hostname.${iface}
+      fi
     elif [[ ${ip} == "addrconf" ]]; then
       touch /etc/addrconf.${iface}
     elif isIPv4 ${ip} && [[ -n ${netmask} ]]; then

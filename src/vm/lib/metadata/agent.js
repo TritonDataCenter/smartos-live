@@ -34,7 +34,7 @@
  *   - attempts to create a metadata socket for all existing VMs on the CN
  *   - starts an interval timer so that we check every 5 minutes for VMs that
  *     have been deleted
- *   - starts a Zwatch watcher that calls a callback whenever a VM is started or
+ *   - starts a ZWatch watcher that calls a callback whenever a VM is started or
  *     stopped.
  *
  * When a zone starts, it attempts to create an appropriate server on a socket
@@ -72,6 +72,8 @@ var common = require('./common');
 var crc32 = require('./crc32');
 var execFile = require('child_process').execFile;
 var fs = require('fs');
+var getZoneinfo
+    = require('/usr/vm/node_modules/vmload/vmload-zoneinfo').getZoneinfo;
 var guessHandleType = process.binding('tty_wrap').guessHandleType;
 var net = require('net');
 var path = require('path');
@@ -85,6 +87,7 @@ var ZWatch = require('./zwatch');
 var sdc_fields = [
     'alias',
     'billing_id',
+    'boot_timestamp',
     'brand',
     'cpu_cap',
     'cpu_shares',
@@ -109,6 +112,7 @@ var sdc_fields = [
     'owner_uuid',
     'package_name',
     'package_version',
+    'pid',
     'quota',
     'ram',
     'resolvers',
@@ -124,6 +128,7 @@ var sdc_fields = [
     'zone_state'
 ];
 var MAX_RETRY = 300; // in seconds
+var ZONEADM_CHECK_FREQUENCY = (1 * 60 * 1000); // ms, check for deleted/running
 
 
 function zoneExists(zonename, callback) {
@@ -220,14 +225,37 @@ MetadataAgent.prototype.createZoneLog = function (type, zonename) {
     return (self.zlog[zonename]);
 };
 
-MetadataAgent.prototype.updateZone = function (zonename, callback) {
+MetadataAgent.prototype.updateZone =
+function updateZone(zonename, opts, callback) {
     var self = this;
     var log = self.log;
+
+    assert.string(zonename, 'zonename');
+    assert.object(opts, 'opts');
+    assert.func(callback, 'callback');
+
+    if (self.zones[zonename]) {
+        self.zones[zonename].updating = true;
+    }
 
     function shouldLoad(cb) {
         if (!self.zones.hasOwnProperty(zonename)) {
             // don't have a cache, load this guy
-            log.info('no cache for: ' + zonename + ', loading');
+            log.info({zonename: zonename},
+                'no cache for: ' + zonename + ', loading');
+            cb(true);
+            return;
+        }
+
+        if (opts.force) {
+            log.trace({zonename: zonename}, 'opts.force set, forcing reload');
+            cb(true);
+            return;
+        }
+
+        if (self.zones[zonename].zone_state === 'unknown') {
+            log.info({zonename: zonename},
+                'VM has unknown zone_state, forcing reload');
             cb(true);
             return;
         }
@@ -265,21 +293,34 @@ MetadataAgent.prototype.updateZone = function (zonename, callback) {
     }
 
     shouldLoad(function (load) {
+        var start_timestamp = (new Date()).getTime();
+
         if (load) {
             VM.lookup({ zonename: zonename }, { fields: sdc_fields },
                 function (error, machines) {
+                    var end_timestamp = (new Date()).getTime();
+
                     if (!error) {
+                        // NOTE: this will unset the .updating flag since we
+                        // replace the whole object.
                         self.zones[zonename] = machines[0];
                         self.addDebug(zonename, 'last_zone_load');
                     }
-                    log.trace({zone: zonename, err: error},
-                        'finished VM.lookup');
+                    log.debug({
+                        elapsed: (end_timestamp - start_timestamp),
+                        err: error,
+                        zonename: zonename
+                    }, 'finished VM.lookup');
                     callback(error);
                     return;
                 }
             );
         } else {
             // no need to reload since there's no change, use existing data
+            if (self.zones[zonename]) {
+                // done updateZone
+                delete self.zones[zonename].updating;
+            }
             callback();
             return;
         }
@@ -357,43 +398,206 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
     }
 };
 
+MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
+    var self = this;
+    var beginning_of_time = '1970-01-01T00:00:00.000Z';
+
+    getZoneinfo(null, {log: self.log}, function (err, results) {
+        assert.ifError(err);
+
+        function _assumeBooted(zonename) {
+            self.addDebug(zonename, 'last_zone_found_running');
+            self.handleZoneBoot(zonename);
+        }
+
+        function _assumeHalted(zonename) {
+            self.addDebug(zonename, 'last_zone_found_stopped');
+            self.handleZoneHalt(zonename);
+        }
+
+        self.log.trace('got ' + Object.keys(results).length + ' VM kstats');
+
+        Object.keys(results).forEach(function (zonename) {
+            if (!self.zones[zonename]) {
+                self.log.warn({newzone: zonename}, 'zone is running, but we had'
+                    + ' no record. Probably lost a sysevent.');
+
+                _assumeBooted(zonename);
+            } else if (self.zones[zonename].updating) {
+                self.log.trace({zonename: zonename}, 'zone is being updated,'
+                    + ' not checking for missed sysevent');
+            } else if (results[zonename].pid === 4294967295
+                || results[zonename].pid === 0
+                || results[zonename].boot_timestamp === beginning_of_time) {
+
+                // In these cases, we're not able to say for sure that the
+                // zone's fully running, so we'll wait for the next go-round
+                // when this should have been sorted out.
+                return;
+
+            } else if (self.zones[zonename].pid !== results[zonename].pid
+                || (self.zones[zonename].boot_timestamp
+                    < results[zonename].boot_timestamp)) {
+
+                self.log.warn({
+                    oldtimestamp: self.zones[zonename].boot_timestamp,
+                    newtimestamp: results[zonename].boot_timestamp,
+                    oldpid: self.zones[zonename].pid,
+                    newpid: results[zonename].pid,
+                    zonename: zonename
+                }, 'PID or boot_timestamp changed for zone. Possibly lost or '
+                    + 'delayed sysevent');
+
+                // Force an update on the next updateZone by setting zone_state
+                // to unknown.
+                self.zones[zonename].zone_state = 'unknown';
+                _assumeBooted(zonename);
+            }
+        });
+
+        // Check all zones to see if there are some that unexpectedly stopped.
+        Object.keys(self.zones).forEach(function (zonename) {
+
+            if (self.zones[zonename].zone_state === 'running'
+                && !results[zonename]) {
+
+                if (self.zones[zonename].updating) {
+                    self.log.trace({zonename: zonename}, 'zone is being '
+                        + 'updated, not checking for missed stop sysevents');
+                    return;
+                }
+
+                // it was running, but now it's not.
+                self.log.warn({zonename: zonename}, 'zone disappeared from '
+                    + 'kstats unexpectedly. Possibly lost or delayed sysevent');
+
+                // Force an update on next updateZone, then cleanup the
+                // connection.
+                self.zones[zonename].zone_state = 'unknown';
+                _assumeHalted(zonename);
+            }
+        });
+    });
+};
+
 MetadataAgent.prototype.startDeletedZonesPurger = function () {
     var cmd = '/usr/sbin/zoneadm';
     var self = this;
 
     // Every 5 minutes we check to see whether zones we've got in self.zones
     // were deleted. If they are, we delete the record from the cache.
-    setInterval(function () {
-        execFile(cmd, ['list', '-c'], function (err, stdout, stderr) {
+
+    function _checkZones() {
+        execFile(cmd, ['list', '-c', '-p'], {maxBuffer: (10 * 1024 * 1024)},
+            function _execFileCb(err, stdout, stderr) {
+
             var zones = {};
             if (err) {
                 self.log.error({err: err}, 'unable to get list of zones');
                 return;
             }
 
-            // each output line is a zonename, so we turn this into an object
-            // that looks like:
+            //
+            // Each output line is comma separated and looks like:
+            //
+            //   zoneid:zonename:state:zonepath:uuid:brand:ip-type
+            //
+            // we turn this into an object that looks like:
             //
             // {
-            //   zonename: true,
-            //   zonename: true
+            //   zonename: state,
+            //   zonename: state
             //   ...
             // }
             //
             // so we can then loop through all the cached zonenames and remove
-            // those that don't exist on the system any longer.
-            stdout.split(/\n/).forEach(function (z) {
-                zones[z] = true;
+            // those that don't exist on the system any longer. And create
+            // zsock sockets for those zones that are running but where we
+            // missed the 'running' sysevent.
+            //
+            stdout.split(/\n/).forEach(function (zline) {
+                var fields = zline.split(':');
+
+                if (zline.trim().length === 0) {
+                    // ignore empty lines
+                    return;
+                }
+
+                if (fields < 8) {
+                    self.log.debug({_fields: fields}, 'short line');
+                    return;
+                }
+
+                if (fields[1] === 'global') {
+                    // ignore global zone
+                    return;
+                }
+
+                if (fields.length > 2) {
+                    zones[fields[1]] = fields[2];
+                }
             });
+
+            // self.log.info({zones: zones}, 'loaded zones from zoneadm');
+
             Object.keys(self.zones).forEach(function (z) {
+                // If our self.zones list includes zones that no longer exist on
+                // the system, we'll purge them now.
                 if (!zones.hasOwnProperty(z)) {
                     self.purgeZoneCache(z);
                 }
             });
-        });
-    }, (5 * 60 * 1000));
 
-    self.log.info('Setup interval to purge deleted zones.');
+            // Here we check for boot messages that we might have missed due to
+            // the fact that sysevent messages are unreliable.
+            self.checkMissedSysevents();
+        });
+
+        // schedule the next check
+        setTimeout(_checkZones, ZONEADM_CHECK_FREQUENCY);
+    }
+
+    setTimeout(_checkZones, ZONEADM_CHECK_FREQUENCY);
+
+    self.log.info('Setup timer to purge deleted zones every %d ms',
+        ZONEADM_CHECK_FREQUENCY);
+};
+
+MetadataAgent.prototype.handleZoneHalt = function handleZoneHalt(zonename) {
+    var self = this;
+
+    if (self.zoneConnections[zonename]) {
+        self.log.trace('saw zone ' + zonename + ' stop, calling end()');
+        self.zoneConnections[zonename].end();
+    }
+};
+
+MetadataAgent.prototype.handleZoneBoot = function handleZoneBoot(zonename) {
+    var self = this;
+
+    self.updateZone(zonename, {force: true}, function (error) {
+        if (error) {
+            self.log.error({err: error}, 'Error updating '
+                + 'attributes: ' + error.message);
+            return;
+        }
+
+        // If the zone was not deleted between the time we saw it
+        // start and now, (we did a vmadm lookup in between via
+        // updateZone) we'll start the watcher.
+        if (self.zones[zonename]) {
+            if (!self.zlog[zonename]) {
+                // create a logger specific to this VM
+                self.createZoneLog(self.zones[zonename].brand, zonename);
+            }
+
+            if (self.zones[zonename].brand === 'kvm') {
+                self.startKVMSocketServer(zonename);
+            } else {
+                self.startZoneSocketServer(zonename);
+            }
+        }
+    });
 };
 
 MetadataAgent.prototype.start = function () {
@@ -410,46 +614,34 @@ MetadataAgent.prototype.start = function () {
         }
 
         zoneExists(msg.zonename, function _zoneExists(_, exists) {
+            var when = new Date(msg.when / 1000000);
+
             if (!exists) {
                 self.log.warn({transition: msg}, 'ignoring transition for zone'
                     + 'that no longer exists');
                 return;
             }
-            self.log.trace({transition: msg}, 'saw zone transition');
+
+            self.log.debug({
+                delay: (new Date()).getTime() - when.getTime(), // in ms
+                when: when,
+                zonename: msg.zonename
+            }, 'watcher saw zone ' + msg.cmd);
 
             if (msg.cmd === 'start') {
                 self.addDebug(msg.zonename, 'last_zone_start');
-                self.updateZone(msg.zonename, function (error) {
-                    if (error) {
-                        self.log.error({err: error}, 'Error updating '
-                            + 'attributes: ' + error.message);
-                        return;
-                    }
-
-                    // If the zone was not deleted between the time we saw it
-                    // start and now, (we did a vmadm lookup in between via
-                    // updateZone) we'll start the watcher.
-                    if (self.zones[msg.zonename]) {
-                        if (!self.zlog[msg.zonename]) {
-                            // create a logger specific to this VM
-                            self.createZoneLog(self.zones[msg.zonename].brand,
-                                msg.zonename);
-                        }
-
-                        if (self.zones[msg.zonename].brand === 'kvm') {
-                            self.startKVMSocketServer(msg.zonename);
-                        } else {
-                            self.startZoneSocketServer(msg.zonename);
-                        }
-                    }
-                });
+                self.handleZoneBoot(msg.zonename);
             } else if (msg.cmd === 'stop') {
-                self.addDebug(msg.zonename, 'last_zone_stop');
-                if (self.zoneConnections[msg.zonename]) {
-                    self.log.trace('saw zone ' + msg.zonename
-                        + ' stop, calling end()');
-                    self.zoneConnections[msg.zonename].end();
+                // Mark state as 'unknown' since we know it changed on us but
+                // aren't sure where it is now. This prevents the missed
+                // sysevent watcher from thinking we missed a stop while we're
+                // still handling it.
+                if (self.zones[msg.zonename]) {
+                    self.zones[msg.zonename].zone_state = 'unknown';
                 }
+
+                self.addDebug(msg.zonename, 'last_zone_stop');
+                self.handleZoneHalt(msg.zonename);
             }
         });
     });
@@ -971,7 +1163,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 // that depends on it, please add a note about that here
                 // otherwise expect it will be removed on you sometime.
                 if (want === 'nics' && vmobj.hasOwnProperty('nics')) {
-                    self.updateZone(zone, function (error) {
+                    self.updateZone(zone, {}, function (error) {
                         if (error) {
                             // updating our cache for this VM failed, so we'll
                             // use the existing data.
@@ -993,7 +1185,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     // reload metadata trying to get the new ones w/o zone
                     // reboot. To ensure these are fresh we always run
                     // updateZone which reloads the data if stale.
-                    self.updateZone(zone, function (error) {
+                    self.updateZone(zone, {}, function (error) {
                         if (error) {
                             // updating our cache for this VM failed, so we'll
                             // use the existing data.
@@ -1014,7 +1206,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     && vmobj.hasOwnProperty('tmpfs')) {
                     // We want tmpfs to reload the cache right away because we
                     // might be depending on a /etc/vfstab update
-                    self.updateZone(zone, function (error) {
+                    self.updateZone(zone, {}, function (error) {
                         if (error) {
                             // updating our cache for this VM failed, so we'll
                             // use the existing data.
@@ -1034,7 +1226,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
                     var vmRoutes = [];
 
-                    self.updateZone(zone, function (error) {
+                    self.updateZone(zone, {}, function (error) {
                         if (error) {
                             // updating our cache for this VM failed, so we'll
                             // use the existing data.

@@ -614,14 +614,6 @@ setup_fw()
 	fi
 }
 
-cleanup_stale_socket()
-{
-	SOCKET=$1
-	if [[ -n $SOCKET && -e $ZONEPATH/root/${SOCKET} ]]; then
-		rm -f $ZONEPATH/root/${SOCKET}
-	fi
-}
-
 #
 # We're readying the zone.  Make sure the per-zone writable
 # directories exist so that we can lofs mount them.  We do this here,
@@ -858,7 +850,6 @@ if [[ "$subcommand" == "post" && $cmd == 0 ]]; then
 	[[ -n "$jst_showsnap" ]] && setup_snapshots
 	setup_net
 	setup_fw
-	cleanup_stale_socket "$jst_mdatapath/metadata.sock"
 fi
 
 # We can't set a rctl until we have a process in the zone to grab

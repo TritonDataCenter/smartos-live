@@ -38,8 +38,8 @@ test('create zone with root_recsize 64k', function(t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                t.ok(!err, 'loading VM after create');
-                if (!err) {
+                t.ok(!e, 'loading VM after create');
+                if (!e) {
                     t.ok(o.zfs_root_recsize === 65536,
                         'root_recsize is correct after load [' + o.zfs_root_recsize
                         + ',65536]');
@@ -259,8 +259,8 @@ test('create zone with data_recsize 64k', function(t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                t.ok(!err, 'loading VM after create');
-                if (!err) {
+                t.ok(!e, 'loading VM after create');
+                if (!e) {
                     t.ok(o.zfs_data_recsize === 65536,
                         'recsize is correct after load [' + o.zfs_data_recsize
                         + ',65536]');
@@ -609,8 +609,8 @@ test('create KVM with block_size 64k', function(t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                t.ok(!err, 'loading VM after create');
-                if (!err) {
+                t.ok(!e, 'loading VM after create');
+                if (!e) {
                     t.ok(o.disks[0].block_size === 65536,
                         'block_size is correct after load [' + o.disks[0].block_size
                         + ',65536]');
@@ -752,8 +752,8 @@ test('create KVM with compression', function(t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                t.ok(!err, 'loading VM after create');
-                if (!err) {
+                t.ok(!e, 'loading VM after create');
+                if (!e) {
                     t.ok(o.disks[0].compression === 'gzip',
                         'compression is correct after load ['
                         + o.disks[0].compression + ',gzip]');

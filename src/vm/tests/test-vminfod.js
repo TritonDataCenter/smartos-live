@@ -114,18 +114,6 @@ var EXPECTED_CHANGES = {
         zpool: {
             action: 'removed'
         },
-        internal_metadata: {
-            action: 'removed'
-        },
-        customer_metadata: {
-            action: 'removed'
-        },
-        exit_timestamp: {
-            action: 'removed'
-        },
-        exit_status: {
-            action: 'removed'
-        },
         pid: {
             action: 'removed'
         },

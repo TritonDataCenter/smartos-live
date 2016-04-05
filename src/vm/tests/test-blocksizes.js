@@ -472,8 +472,8 @@ test('create zone with compression', function(t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                t.ok(!err, 'loading VM after create');
-                if (!err) {
+                t.ok(!e, 'loading VM after create');
+                if (!e) {
                     t.ok(o.zfs_root_compression === 'gzip',
                         'compression is correct after load ['
                         + o.zfs_root_compression + ',gzip]');

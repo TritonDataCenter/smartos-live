@@ -387,6 +387,15 @@ MetadataAgent.prototype.createServersOnExistingZones = function () {
                 self.createZoneLog(zone.brand, zone.zonename);
             }
 
+            // It is possible for VM.lookup() to take a long time. While we're
+            // waiting for it, the watcher could have seen the zone start and
+            // created a socket for the zone. In case that happened, we ignore
+            // zones we've already got a connection for.
+            if (self.zoneConnections[zone.zonename]) {
+                cb();
+                return;
+            }
+
             if (zone.brand === 'kvm') {
                 self.startKVMSocketServer(zone.zonename, function (err) {
                     created++;
@@ -662,21 +671,40 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
 
 MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     var self = this;
+    var buffer;
+    var handler;
+    var kvmstream;
+    var zlog;
 
     assert.object(zopts, 'zopts');
     assert.string(zopts.sockpath, 'zopts.sockpath');
     assert.string(zopts.zone, 'zopts.zone');
     assert.func(callback, 'callback');
 
-    var zlog = self.zlog[zopts.zone];
-    var kvmstream = new net.Stream();
+    // Ignore zones we've already got a connection for and then immediately
+    // create an entry if we don't. To act as a mutex.
+    if (self.zoneConnections[zopts.zone]) {
+        zlog.trace({zonename: zopts.zone}, 'already have zoneConnections[] for '
+            + 'zone -- not replacing.');
+        callback();
+        return;
+    }
+    self.zoneConnections[zopts.zone] = {};
 
+    zlog = self.zlog[zopts.zone];
+    kvmstream = new net.Stream();
+
+    // refuse to overwrite an existing connection
+    assert.ok(!self.zoneConnections[zopts.zone].hasOwnProperty('conn'),
+        'should not have existing connection when creating new');
+
+    // replace the placeholder entry with a real one.
     self.zoneConnections[zopts.zone] = {
         conn: new net.Stream()
     };
 
-    var buffer = '';
-    var handler = self.makeMetadataHandler(zopts.zone, kvmstream);
+    buffer = '';
+    handler = self.makeMetadataHandler(zopts.zone, kvmstream);
 
     kvmstream.on('data', function (data) {
         var chunk, chunks;
@@ -848,6 +876,16 @@ function createZoneSocket(zopts, callback) {
         return;
     }
 
+    // Ignore zones we've already got a connection for and then immediately
+    // create an entry if we don't. To act as a mutex.
+    if (self.zoneConnections[zopts.zone]) {
+        zlog.trace({zonename: zopts.zone}, 'already have zoneConnections[] for '
+            + 'zone -- not replacing.');
+        callback();
+        return;
+    }
+    self.zoneConnections[zopts.zone] = {};
+
     self.addDebug(zopts.zone, 'last_zsock_create_attempt');
     _ensureSockpathDirsExist(zopts, zlog, function _ensureDirsExistCb(error) {
         if (error) {
@@ -912,7 +950,7 @@ function createZoneSocket(zopts, callback) {
             });
 
             // refuse to overwrite an existing connection
-            assert.ok(!self.zoneConnections[zopts.zone],
+            assert.ok(!self.zoneConnections[zopts.zone].hasOwnProperty('conn'),
                 'should not have existing connection when creating new');
 
             self.zoneConnections[zopts.zone] = {
@@ -948,23 +986,13 @@ function createZoneSocket(zopts, callback) {
                 delete self.zoneConnections[zopts.zone];
             });
 
-            if (guessHandleType(fd) !== 'PIPE') {
-                // The case we know about is:
-                //
-                // https://github.com/mcavage/node-zsock/issues/5
-                //
-                // in which case we'll get a bogus FD 0 back. Any other case is
-                // an unknown error that we will just assert on so we can figure
-                // out from the core what happened.
-                assert(fd === 0, 'when not a PIPE we expect fd === 0');
-                zlog.warn('zsock fd %d is not a pipe, will retry later', fd);
-                self.addDebug(zopts.zone, 'last_zsock_listen_failure');
-                delete self.zoneConnections[zopts.zone];
-            } else {
-                server.listen({fd: fd});
-                zlog.info('listening on fd %d', fd);
-                self.addDebug(zopts.zone, 'last_zsock_listen_success');
-            }
+            // If zsock gave us a bogus handle, we don't know what to do with
+            // that so we'll try to get a core to figure out what that means.
+            assert(guessHandleType(fd) === 'PIPE', 'zsock FD must be a pipe');
+
+            server.listen({fd: fd});
+            zlog.info('listening on fd %d', fd);
+            self.addDebug(zopts.zone, 'last_zsock_listen_success');
 
             callback();
         });

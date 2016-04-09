@@ -895,9 +895,11 @@ function createZoneSocket(zopts, callback) {
                 'failed to create sockpath directory');
 
             // We were unable to create the directory but we have not yet
-            // created a self.zoneConnections entry so we can just callback.
-            // If the VM still exists and is running, we'll try again when we
-            // next poll w/ _checkNewZones().
+            // created a real self.zoneConnections entry so we can just delete
+            // the placeholder and call callback. If the VM still exists and
+            // is running, we'll try again when we next poll w/
+            // _checkNewZones().
+            delete self.zoneConnections[zopts.zone];
             callback();
             return;
         }
@@ -910,9 +912,10 @@ function createZoneSocket(zopts, callback) {
                     'failed to create zsock');
 
                 // We were unable to create a zsock, but as with a directory
-                // creation error we've not created a self.zoneConnections
-                // entry yet so we'll let the _checkNewZones() catch it on the
-                // next go-round.
+                // creation error we've not created a real self.zoneConnections
+                // entry yet so we'll delete the placeholder and let the
+                // _checkNewZones() catch it on the next go-round.
+                delete self.zoneConnections[zopts.zone];
                 callback();
                 return;
             }

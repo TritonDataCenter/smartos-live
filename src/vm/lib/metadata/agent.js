@@ -201,6 +201,27 @@ function zoneExists(zonename, callback) {
 }
 
 
+/*
+ * Call as:
+ *
+ *  t = newTimer();
+ *  console.log('elapsed ms: ' + elapsedTimer(t));
+ *
+ */
+function newTimer() {
+    return process.hrtime();
+}
+
+function elapsedTimer(timer) {
+    var end;
+
+    assert.arrayOfNumber(timer);
+
+    end = process.hrtime(timer);
+    return (end[0] * 1000 + (end[1] / 1000000));
+}
+
+
 var MetadataAgent = module.exports = function (options) {
     this.log = options.log;
     this.zlog = {};
@@ -286,7 +307,7 @@ MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
             // don't have a cache, load this guy
             log.info({zonename: zonename},
                 'no cache for: ' + zonename + ', loading');
-            cb(true);
+            cb(null, true);
             return;
         }
 
@@ -300,13 +321,12 @@ MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
             if (err && err.code === 'ENOENT') {
                 // VM has disappeared, purge from cache
                 self.purgeZoneCache(zonename);
-                cb(false);
+                cb(null, false);
                 return;
             } else if (err) {
-                // fail open (meaning: force reload) when we can't stat
                 log.error({err: err, zonename: zonename},
                     'cannot fs.stat(), reloading');
-                cb(true);
+                cb(err);
                 return;
             }
 
@@ -318,23 +338,23 @@ MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
             if (stats.mtime.getTime() > old_mtime.getTime()) {
                 log.info({zonename: zonename},
                     'last_modified was updated, reloading');
-                cb(true);
+                cb(null, true);
                 return;
             }
 
             log.trace('using cache for: ' + zonename);
-            cb(false);
+            cb(null, false);
         });
     }
 
-    shouldLoad(function (load) {
-        var start_lookup_timestamp = (new Date()).getTime();
+    shouldLoad(function (err, load) {
+        var start_lookup_timer = newTimer();
 
-        if (load) {
+        // fail open (meaning: force reload) when something went wrong
+        if (load || err) {
             VM.lookup({ zonename: zonename }, { fields: sdc_fields },
                 function (error, machines) {
-                    var elapsed =
-                        (new Date()).getTime() - start_lookup_timestamp;
+                    var elapsed = elapsedTimer(start_lookup_timer);
 
                     if (!error) {
                         self.zones[zonename] = machines[0];
@@ -398,12 +418,16 @@ MetadataAgent.prototype.createServersOnExistingZones = function () {
 
             if (zone.brand === 'kvm') {
                 self.startKVMSocketServer(zone.zonename, function (err) {
-                    created++;
+                    if (!err) {
+                        created++;
+                    }
                     cb();
                 });
             } else {
                 self.startZoneSocketServer(zone.zonename, function (err) {
-                    created++;
+                    if (!err) {
+                        created++;
+                    }
                     cb();
                 });
             }
@@ -438,10 +462,9 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
 
 MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
     var self = this;
-    var start_kstat_timestamp = (new Date()).getTime();
+    var start_kstat_timer = newTimer();
 
     getZoneinfo(null, {log: self.log}, function (err, results) {
-        var end_kstat_timestamp = (new Date()).getTime();
         assert.ifError(err);
 
         function _assumeBooted(zonename) {
@@ -450,7 +473,7 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
         }
 
         self.log.debug({
-            elapsed: end_kstat_timestamp - start_kstat_timestamp,
+            elapsed: elapsedTimer(start_kstat_timer),
             zoneCount: Object.keys(results).length
         }, 'loaded VM kstats');
 
@@ -474,15 +497,15 @@ MetadataAgent.prototype.startPeriodicChecks = function startPeriodicChecks() {
 
     function _checkDeletedZones() {
         var cmd = '/usr/sbin/zoneadm';
-        var start_zoneadm_timestamp = (new Date()).getTime();
+        var start_zoneadm_timer = newTimer();
 
         execFile(cmd, ['list', '-c'], function (err, stdout, stderr) {
-            var end_zoneadm_timestamp = (new Date()).getTime();
+            var elapsed = elapsedTimer(start_zoneadm_timer);
             var zones = {};
 
             if (err) {
                 self.log.error({
-                    elapsed: end_zoneadm_timestamp - start_zoneadm_timestamp,
+                    elapsed: elapsed,
                     err: err
                 }, 'unable to get list of zones');
                 return;
@@ -506,7 +529,7 @@ MetadataAgent.prototype.startPeriodicChecks = function startPeriodicChecks() {
             });
 
             self.log.debug({
-                elapsed: end_zoneadm_timestamp - start_zoneadm_timestamp,
+                elapsed: elapsed,
                 zonesFound: Object.keys(zones).length
             }, 'loaded zoneadm list of existing zones');
 
@@ -543,6 +566,7 @@ MetadataAgent.prototype.startPeriodicChecks = function startPeriodicChecks() {
 };
 
 MetadataAgent.prototype.handleZoneBoot = function handleZoneBoot(zonename) {
+    assert.string(zonename, 'zonename');
     var self = this;
 
     // We don't wait around for results from creating the sockets because on
@@ -1059,7 +1083,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         var query;
         var reqid;
         var req_is_v2 = false;
-        var start_request_timestamp = (new Date()).getTime();
+        var start_request_timer = newTimer();
         var val;
         var vmobj;
         var want;
@@ -1389,50 +1413,56 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
             return;
         }
 
-        function addTags(cb) {
-            var filename;
-            var start_add_tags = (new Date()).getTime();
+        function _callCbAndLogTimer(opts, err, _cb) {
+            assert.object(opts, 'opts');
+            assert.arrayOfNumber(opts.timer, 'opts.timer');
+            assert.string(opts.loadFile, 'opts.loadFile');
+            assert.optionalObject(err, 'err');
+            assert.func(_cb, '_cb');
 
-            function _callCbAndLogTimer(err) {
-                var elapsed = (new Date()).getTime() - start_add_tags;
-                var loglvl = 'trace';
+            var elapsed = elapsedTimer(opts.timer);
+            var loglvl = 'trace';
 
-                if (elapsed >= 10) {
-                    // If reading the tags file took more than 10ms we log at
-                    // warn instead of trace. Something's not right.
-                    loglvl = 'warn';
-                }
-                zlog[loglvl]({
-                    elapsed: elapsed,
-                    result: (err ? 'FAILED' : 'SUCCESS'),
-                    zonename: vmobj.zonename
-                }, 'load tags');
-                cb(err);
+            if (elapsed >= 10) {
+                // If reading the file took more than 10ms we log at
+                // warn instead of trace. Something's not right.
+                loglvl = 'warn';
             }
+            zlog[loglvl]({
+                elapsed: elapsed,
+                result: (err ? 'FAILED' : 'SUCCESS'),
+                zonename: vmobj.zonename
+            }, 'load ' + opts.loadFile);
+            _cb(err);
+        }
+
+        function addTags(cb) {
+            var cbOpts = {timer: newTimer(), loadFile: 'tags'};
+            var filename;
 
             filename = vmobj.zonepath + '/config/tags.json';
             fs.readFile(filename, function (err, file_data) {
 
                 if (err && err.code === 'ENOENT') {
                     vmobj.tags = {};
-                    _callCbAndLogTimer();
+                    _callCbAndLogTimer(cbOpts, null, cb);
                     return;
                 }
 
                 if (err) {
                     zlog.error({err: err}, 'failed to load tags.json: '
                         + err.message);
-                    _callCbAndLogTimer(err);
+                    _callCbAndLogTimer(cbOpts, err, cb);
                     return;
                 }
 
                 try {
                     vmobj.tags = JSON.parse(file_data.toString());
-                    _callCbAndLogTimer();
+                    _callCbAndLogTimer(cbOpts, null, cb);
                 } catch (e) {
                     zlog.error({err: e}, 'unable to tags.json for ' + zone
                         + ': ' + e.message);
-                    _callCbAndLogTimer(e);
+                    _callCbAndLogTimer(cbOpts, e, cb);
                 }
 
                 return;
@@ -1440,25 +1470,8 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         }
 
         function addMetadata(cb) {
+            var cbOpts = {timer: newTimer(), loadFile: 'metadata'};
             var filename;
-            var start_add_metadata = (new Date()).getTime();
-
-            function _callCbAndLogTimer(err) {
-                var elapsed = (new Date()).getTime() - start_add_metadata;
-                var loglvl = 'trace';
-
-                if (elapsed >= 10) {
-                    // If reading the metadata file took more than 10ms we log
-                    // at warn instead of trace. Something's not right.
-                    loglvl = 'warn';
-                }
-                zlog[loglvl]({
-                    elapsed: elapsed,
-                    result: (err ? 'FAILED' : 'SUCCESS'),
-                    zonename: vmobj.zonename
-                }, 'load metadata');
-                cb(err);
-            }
 
             // If we got here, our answer comes from metadata so read that file.
 
@@ -1480,14 +1493,14 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 vmobj.internal_metadata = {};
 
                 if (err && err.code === 'ENOENT') {
-                    _callCbAndLogTimer();
+                    _callCbAndLogTimer(cbOpts, null, cb);
                     return;
                 }
 
                 if (err) {
                     zlog.error({err: err}, 'failed to load mdata.json: '
                         + err.message);
-                    _callCbAndLogTimer(err);
+                    _callCbAndLogTimer(cbOpts, err, cb);
                     return;
                 }
 
@@ -1498,11 +1511,11 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                             vmobj[mdata] = json[mdata];
                         }
                     });
-                    _callCbAndLogTimer();
+                    _callCbAndLogTimer(cbOpts, null, cb);
                 } catch (e) {
                     zlog.error({err: e}, 'unable to load metadata.json for '
                         + zone + ': ' + e.message);
-                    _callCbAndLogTimer(e);
+                    _callCbAndLogTimer(cbOpts, e, cb);
                 }
 
                 return;
@@ -1597,7 +1610,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         }
 
         function logReturn(res, error) {
-            query.elapsed = (new Date()).getTime() - start_request_timestamp;
+            query.elapsed = elapsedTimer(start_request_timer);
 
             zlog.info({
                 err: error,

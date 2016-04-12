@@ -924,7 +924,7 @@ function createZoneSocket(zopts, callback) {
             // is running, we'll try again when we next poll w/
             // _checkNewZones().
             delete self.zoneConnections[zopts.zone];
-            callback();
+            callback(error);
             return;
         }
 
@@ -940,7 +940,7 @@ function createZoneSocket(zopts, callback) {
                 // entry yet so we'll delete the placeholder and let the
                 // _checkNewZones() catch it on the next go-round.
                 delete self.zoneConnections[zopts.zone];
-                callback();
+                callback(sockErr);
                 return;
             }
 

@@ -274,6 +274,7 @@ f usr/vm/sbin/add-userscript 0555 root bin
 f usr/vm/sbin/dockerexec 0555 root bin
 f usr/vm/sbin/dockerinit 0555 root bin
 f usr/vm/sbin/filewait 0555 root bin
+f usr/vm/sbin/fswatcher 0555 root bin
 f usr/vm/sbin/rotate-kvm-logs.sh 0555 root bin
 f usr/vm/sbin/rotate-logs.sh 0555 root bin
 f usr/vm/sbin/vmadm 0555 root bin
@@ -541,6 +542,9 @@ f usr/vm/node_modules/vmload/index.js 0644 root root
 f usr/vm/node_modules/VM.js 0444 root bin
 f usr/vm/smf/system-vmadmd 0555 root bin
 f usr/vm/smf/system-vmadmd.xml 0444 root bin
+# vminfod
+d usr/vm/node_modules/vminfod 0755 root root
+f usr/vm/node_modules/vminfod/fswatcher.js 0644 root root
 # fwadm
 s etc/bash/bash_completion.d/fwadm=/usr/fw/etc/fwadm.completion
 d usr/fw 0555 root bin

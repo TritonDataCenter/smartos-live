@@ -248,7 +248,7 @@ zsocket(zoneid_t zoneid, const char *path) {
   ctid_t ct = -1;
   int _errno = 0;
   int pid = 0;
-  int sock_fd = 0;
+  int sock_fd = -1;
   int sockfd[2] = {0};
   int stat = 0;
   int tmpl_fd = 0;

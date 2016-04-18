@@ -1,4 +1,4 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2016 Joyent, Inc.  All rights reserved.
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
@@ -54,6 +54,15 @@ var lxdocker_payload = {
     max_physical_memory: 512,
     max_swap: 1024
 };
+
+var payload_test_zfs_on_reprovision = {
+    alias: 'test-reprovision-' + process.pid,
+    autoboot: false,
+    brand: 'joyent-minimal',
+    image_uuid: vmtest.CURRENT_SMARTOS_UUID,
+    do_not_inventory: true
+};
+
 
 function zfs(args, callback)
 {
@@ -410,4 +419,40 @@ test('delete docker VM', function (t) {
         t.ok(false, 'no VM to delete');
         t.end();
     }
+});
+
+test('test zfs reprovision properties', function (t) {
+    var p = JSON.parse(JSON.stringify(payload_test_zfs_on_reprovision));
+    var state = {brand: p.brand};
+    var _vmobj;
+
+    vmtest.on_new_vm(t, p.image_uuid, p, state, [
+        function (cb) {
+            VM.load(state.uuid, {}, function (err, obj) {
+                t.ok(!err, 'reloaded VM after create: '
+                    + (err ? err.message : 'no error'));
+                cb(err);
+            });
+        }, function (cb) {
+            VM.reprovision(state.uuid, {'image_uuid': p.image_uuid},
+                function (err) {
+                    t.ok(!err,
+                        'reprovision: ' + (err ? err.message : 'success'));
+                    cb(err);
+                }
+            );
+        }, function (cb) {
+            VM.load(state.uuid, {}, function (err, obj) {
+                t.ok(!err, 'reloaded VM after reprovision: '
+                    + (err ? err.message : 'no error'));
+                _vmobj = obj;
+                cb(err);
+            });
+        }, function (cb) {
+            vmtest.checkDefaultZfsProperties(t, _vmobj.zfs_filesystem,
+                'default zoneroot properties match defaults after reprovision',
+                cb);
+        }
+    ]);
+
 });

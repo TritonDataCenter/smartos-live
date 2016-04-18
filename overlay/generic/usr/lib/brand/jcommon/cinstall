@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2012, Joyent, Inc. All rights reserved.
+# Copyright (c) 2016, Joyent, Inc. All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -54,11 +54,11 @@ function fixup_images
 	# so we can support old datasets.
 	exists=$(zfs list -Ho name ${PDS_NAME}/${TMPLZONE}@final 2>&1)
 	if [[ $? == 0 && ${exists} == "${PDS_NAME}/${TMPLZONE}@final" ]]; then
-		zfs clone -F ${QUOTA_ARG} ${PDS_NAME}/${TMPLZONE}@final \
+		zfs clone -o devices=off -F ${QUOTA_ARG} ${PDS_NAME}/${TMPLZONE}@final \
 		    ${PDS_NAME}/${bname} || fatal "failed to clone zone dataset"
 	elif [[ ${exists} =~ "dataset does not exist" ]]; then
 		zfs snapshot ${PDS_NAME}/${TMPLZONE}@${bname}
-		zfs clone -F ${QUOTA_ARG} ${PDS_NAME}/${TMPLZONE}@${bname} \
+		zfs clone -o devices=off -F ${QUOTA_ARG} ${PDS_NAME}/${TMPLZONE}@${bname} \
 		    ${PDS_NAME}/${bname} || fatal "failed to clone zone dataset"
 	else
 		fatal "Unable to determine snapshot for ${PDS_NAME}/${TMPLZONE}"

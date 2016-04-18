@@ -1,4 +1,5 @@
-// Copyright 2013 Joyent, Inc.  All rights reserved.
+//
+// Copyright 2016 Joyent, Inc.  All rights reserved.
 //
 // This is the common set of functions for things like ensuring we have a
 // SmartOS and Ubuntu image to work with.
@@ -10,6 +11,42 @@ var cp = require('child_process');
 var fs = require('fs');
 var VM = require('/usr/vm/node_modules/VM');
 
+var DEFAULT_ZFS_PROPERTIES = {
+  "type": "filesystem",
+  "compressratio": "1.00x",
+  "mounted": "yes",
+  "reservation": "0",
+  "recordsize": "131072",
+  "sharenfs": "off",
+  "checksum": "on",
+  "compression": "off",
+  "atime": "off",
+  "devices": "off",
+  "exec": "on",
+  "setuid": "on",
+  "readonly": "off",
+  "zoned": "off",
+  "snapdir": "hidden",
+  "aclmode": "discard",
+  "aclinherit": "restricted",
+  "canmount": "on",
+  "xattr": "on",
+  "copies": "1",
+  "utf8only": "off",
+  "normalization": "none",
+  "casesensitivity": "sensitive",
+  "vscan": "off",
+  "nbmand": "off",
+  "sharesmb": "off",
+  "primarycache": "all",
+  "secondarycache": "all",
+  "logbias": "latency",
+  "dedup": "off",
+  "mlslabel": "none",
+  "sync": "standard",
+  "refcompressratio": "1.00x",
+  "redundant_metadata": "all"
+};
 var IMAGES_SOURCE = 'https://images.joyent.com/';
 
 exports.CURRENT_DOCKER_ALPINE_UUID = process.env['DOCKER_ALPINE_UUID'];
@@ -115,3 +152,36 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
     });
 };
 
+exports.checkDefaultZfsProperties =
+function checkDefaultZfsProperties(t, dataset, message, callback) {
+    var args;
+    var cmd = '/usr/sbin/zfs';
+
+    args = [
+        'get', '-H', '-p', '-o', 'property,value', 'all', dataset
+    ];
+
+    cp.execFile(cmd, args, function (err, stdout, stderr) {
+        var props = {};
+        var propsList;
+
+        if (err) {
+            callback(err);
+            return;
+        }
+
+        propsList = stdout.trim().split('\n');
+
+        propsList.forEach(function (prop) {
+            var p = prop.split('\t');
+            // only include properties whose values we want to check
+            if (DEFAULT_ZFS_PROPERTIES.hasOwnProperty(p[0])) {
+                props[p[0]] = p[1];
+            }
+        });
+
+        t.deepEqual(props, DEFAULT_ZFS_PROPERTIES, message);
+
+        callback();
+    });
+};

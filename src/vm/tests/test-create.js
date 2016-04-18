@@ -1,4 +1,4 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2016 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that create behaves correctly.
 //
@@ -146,6 +146,14 @@ var payload_with_mixed_auto = {
             ips: ['dhcp', 'addrconf']
         }
     ]
+};
+
+var payload_test_zfs_default_properties = {
+    alias: 'test-create-' + process.pid,
+    autoboot: false,
+    brand: 'joyent-minimal',
+    image_uuid: vmtest.CURRENT_SMARTOS_UUID,
+    do_not_inventory: true
 };
 
 test('test create with IPv6 autoconfiguration', function (t) {
@@ -353,4 +361,29 @@ test('test create with rctls', function (t) {
     ], function (err) {
         t.end();
     });
+});
+
+test('test default zfs create properties', function (t) {
+    var p = JSON.parse(JSON.stringify(payload_test_zfs_default_properties));
+    var state = {brand: p.brand};
+    var vmobj;
+
+    vmtest.on_new_vm(t, p.image_uuid, p, state, [
+        function (cb) {
+            VM.load(state.uuid, {}, function (err, obj) {
+                t.ok(!err, 'reloaded VM after create: '
+                    + (err ? err.message : 'no error'));
+                if (err) {
+                    cb(err);
+                    return;
+                }
+
+                vmobj = obj;
+                cb();
+            });
+        }, function (cb) {
+            vmtest.checkDefaultZfsProperties(t, vmobj.zfs_filesystem,
+                'default zoneroot properties are as expected', cb);
+        }
+    ]);
 });

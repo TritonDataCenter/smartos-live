@@ -17,6 +17,9 @@ f usr/img/README.md 0444 root bin
 d usr/img/etc 0555 root bin
 f usr/img/etc/imgadm.completion 0444 root bin
 d usr/img/lib 0555 root bin
+s usr/img/lib/64=amd64
+d usr/img/lib/amd64 0555 root bin
+f usr/img/lib/amd64/nomknod.so 0755 root bin
 f usr/img/lib/IMG.js 0444 root bin
 f usr/img/lib/cli.js 0444 root bin
 f usr/img/lib/common.js 0444 root bin
@@ -25,6 +28,7 @@ f usr/img/lib/database.js 0444 root bin
 f usr/img/lib/errors.js 0444 root bin
 f usr/img/lib/imgadm.js 0444 root bin
 f usr/img/lib/magic.js 0444 root bin
+f usr/img/lib/nomknod.so 0755 root bin
 d usr/img/lib/sources 0555 root bin
 f usr/img/lib/sources/docker.js 0444 root bin
 f usr/img/lib/sources/dsapi.js 0444 root bin

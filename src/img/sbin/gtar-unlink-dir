@@ -20,6 +20,8 @@ fi
 set -o errexit
 set -o pipefail
 
+export LD_PRELOAD_32=/lib/nomknod.so
+export LD_PRELOAD_64=/lib/64/nomknod.so
 
 #---- globals
 

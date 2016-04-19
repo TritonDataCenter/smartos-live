@@ -119,6 +119,9 @@ libs="/lib/ld.so.1
 for lib in $libs; do
     cp $lib $LIBDIR/
 done
+cp /usr/img/lib/nomknod.so $LIBDIR/
+mkdir -p $LIBDIR/64/
+cp /usr/img/lib/64/nomknod.so $LIBDIR/64/
 
 TO_UMOUNT="$TO_UMOUNT $ROOTDIR/proc $ROOTDIR/dev/fd"
 TO_REMOVE="$TO_REMOVE $ROOTDIR/proc $ROOTDIR/dev/fd"

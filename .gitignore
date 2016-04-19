@@ -22,6 +22,8 @@
 /src/zfs_send
 /src/zoneevent
 /src/img/tmp
+/src/nomknod.so.32
+/src/nomknod.so.64
 /src/vm/tests.tar.gz
 /src/node-kstat/.lock-wscript
 /src/node-kstat/build

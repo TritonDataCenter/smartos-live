@@ -336,6 +336,22 @@ ZUTIL_V8PLUS_DIR =	node-zutil/node_modules/v8plus
 ZUTIL_BINDINGS.NODE =	$(ZUTIL_SRCDIR)/../lib/zutil_bindings.node
 
 #
+# Rules for building the nomknod related shared object.
+#
+NOMKNOD_SRC =		nomknod.c
+NOMKNOD_SO =		nomknod.so
+NOMKNOD_32 =		$(NOMKNOD_SO).32
+NOMKNOD_64 =		$(NOMKNOD_SO).64
+NOMKNOD_32_FLAGS =	-m32
+NOMKNOD_64_FLAGS =	-m64
+NOMKNOD_FLAGS =		-nostdlib $(PIC_FLAGS) $(SHARED_FLAGS)
+NOMKNOD_TARGS =		$(NOMKNOD_32) $(NOMKNOD_64)
+NOMKNOD_ROOT =		$(DESTDIR)/usr/img/lib
+NOMKNOD_ROOT64 =	$(DESTDIR)/usr/img/lib/amd64
+
+CLEANFILES +=		$(NOMKNOD_TARGS)
+
+#
 # List of targets.  TARGETS, SMARTDC_TARGETS, and SMARTDC_LIB_TARGETS must
 # include only those files that are safe to remove when the clean target is
 # built.
@@ -354,6 +370,8 @@ TARGETS = \
 	zoneevent \
 	sysevent \
 	sysinfo_mod.so \
+	nomknod.so.32 \
+	nomknod.so.64 \
 	vm/node_modules/props.js \
 	$(EXPAT.NODE) \
 	$(DTRACE_PROVIDER.NODE) \
@@ -361,6 +379,7 @@ TARGETS = \
 	$(LOCKFD_BINDING.NODE) \
 	$(ZONENAME_BINDING.NODE) \
 	$(MICROTIME.NODE) \
+	$(NOMKNOD_TARGS) \
 	$(SYSLOG.NODE) \
 	$(SQLITE3_BINDINGS.NODE) \
 	$(UUID.NODE) \
@@ -510,6 +529,14 @@ install: all $(SUBDIRS)
 	mkdir -p $(SYSINFO_MOD_DIR)
 	rm -f $(SYSINFO_MOD_DIR)/sysinfo_mod.so
 	/usr/sbin/install -f $(SYSINFO_MOD_DIR) -m 0555 sysinfo_mod.so
+	mkdir -p $(NOMKNOD_ROOT) $(NOMKNOD_ROOT64)
+	rm -f $(DESTDIR)/usr/img/lib/64
+	ln -s $(NOMKNOD_ROOT64) $(NOMKNOD_ROOT)/64
+	rm -f $(NOMKNOD_ROOT)/$(NOMKNOD_SO) $(NOMKNOD_ROOT64)/$(NOMKNOD_SO)
+	/usr/sbin/install -f $(NOMKNOD_ROOT) -m 0555 $(NOMKNOD_32)
+	mv $(NOMKNOD_ROOT)/$(NOMKNOD_32) $(NOMKNOD_ROOT)/$(NOMKNOD_SO)
+	/usr/sbin/install -f $(NOMKNOD_ROOT64) -m 0555 $(NOMKNOD_64)
+	mv $(NOMKNOD_ROOT64)/$(NOMKNOD_64) $(NOMKNOD_ROOT64)/$(NOMKNOD_SO)
 
 check: $(JSLINT) $(SUBDIRS)
 	@echo "==> Running cstyle..."
@@ -696,6 +723,12 @@ $(ZUTIL_BINDINGS.NODE): FRC
 		V8PLUS=$(PWD)/$(ZUTIL_V8PLUS_DIR) \
 		CTFCONVERT=$(CTFCONVERT) \
 		CTFMERGE=$(CTFMERGE)
+
+$(NOMKNOD_32):	$(NOMKNOD_SRC)
+	$(GCC) $(NOMKNOD_FLAGS) $(NOMKNOD_32_FLAGS) -o $@ $<
+
+$(NOMKNOD_64):	$(NOMKNOD_SRC)
+	$(GCC) $(NOMKNOD_FLAGS) $(NOMKNOD_64_FLAGS) -o $@ $<
 
 $(SYSINFO_MOD): $(SYSINFO_MOD_SRC)
 	$(GCC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<

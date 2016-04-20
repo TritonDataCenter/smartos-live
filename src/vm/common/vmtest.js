@@ -152,6 +152,12 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
     });
 };
 
+
+/*
+ * This function is intended to be used on a freshly created zoneroot to ensure
+ * that the default properties of that ZFS filesystem have not changed
+ * unexpectedly in the platform.
+ */
 exports.checkDefaultZfsProperties =
 function checkDefaultZfsProperties(t, dataset, message, callback) {
     var args;

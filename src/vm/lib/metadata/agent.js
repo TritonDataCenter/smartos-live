@@ -46,9 +46,16 @@
  *
  * # CREATING SOCKETS
  *
- * If the VM is a KVM VM, this means listening on the "ttyb" virtual serial port
- * of the VM. Otherwise it means creating a 'zsock' inside the zone and
- * listening on that. In non-LX zones, the zsock is created in
+ * If the VM is a KVM VM, the qemu process running in the KVM zone will be
+ * running with a "ttyb" virtual serial port for the KVM guest. From the host
+ * we can connect to connect to /root/tmp/vm.ttyb in the zoneroot which Qemu is
+ * listening on for connections. We connect to this as a client but run a
+ * metadata server on the resulting connection. Inside the KVM guest the
+ * mdata-client tools connect to the serial device and are then talking to our
+ * metadata handler.
+ *
+ * For all non-KVM VMs we create a 'zsock' inside the zone and listen on that.
+ * In non-LX zones, the zsock is created in
  *
  *   <zoneroot>/.zonecontrol/metadata.sock
  *

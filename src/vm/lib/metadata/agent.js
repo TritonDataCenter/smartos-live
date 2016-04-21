@@ -115,6 +115,14 @@
  * for "GET user-script" means that we want to return the value from the vmobj's
  * customer_metadata['user-script'].
  *
+ *
+ * # KNOWN ISSUES
+ *
+ * If many zones are created and deleted between ZONEADM_CHECK_FREQUENCY
+ * intervals, it would be possible to have many stale sockets open which could
+ * potentially run metadata out of filedescriptors. This should be recovered
+ * when we do the next check and cleanup all the destroyed VM's sockets.
+ *
  */
 
 var assert = require('/usr/node/node_modules/assert-plus');
@@ -200,6 +208,47 @@ function zoneExists(zonename, callback) {
     });
 }
 
+/*
+ * Takes a zoneConnections entry (or undefined) and calls callback with:
+ *
+ *  callback(<Error Object>);
+ *
+ *      - when there's an error w/ fs.stat() that's not ENOENT.
+ *
+ *  callback(null, false);
+ *
+ *      - when the conn entry has a sockpath that's still there.
+ *
+ *  callback(null, true);
+ *
+ *      - when the conn entry has a sockpath that's been removed.
+ *
+ */
+function checkStaleSocket(conn, callback) {
+    assert.optionalObject(conn, 'conn');
+    assert.func(callback, 'callback');
+
+    if (!conn || !conn.sockpath) {
+        // if there's no conn, it can't be stale
+        callback(null, false);
+        return;
+    }
+
+    assert.string(conn.sockpath, 'conn.sockpath');
+
+    fs.stat(conn.sockpath, function _onSockpathStat(err, stats) {
+        if (err) {
+            if (err.code === 'ENOENT') {
+                callback(null, true); // stale
+                return;
+            }
+            callback(err);
+            return;
+        }
+        callback(null, false); // no error in stat means exists: not stale
+        return;
+    });
+}
 
 /*
  * Call as:
@@ -453,6 +502,9 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
         delete self.zlog[zonename];
     }
     if (self.zoneConnections.hasOwnProperty(zonename)) {
+        if (self.zoneConnections[zonename].conn) {
+            self.zoneConnections[zonename].conn.close();
+        }
         delete self.zoneConnections[zonename];
     }
     if (self.zones.hasOwnProperty(zonename)) {
@@ -478,12 +530,30 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
         }, 'loaded VM kstats');
 
         Object.keys(results).forEach(function (zonename) {
-            if (!self.zones[zonename]) {
-                self.log.warn({zonename: zonename}, 'zone is running, but we '
-                    + 'had no record. Probably lost or delayed sysevent.');
+            var conn = self.zoneConnections[zonename]; // may be undefined
 
-                _assumeBooted(zonename);
-            }
+            checkStaleSocket(conn, function (e, isStale) {
+                if (e) {
+                    // This currently can only happen when fs.stat fails. We'll
+                    // just have to assume the socket is not stale if we can't
+                    // prove it is. We'll try again next interval.
+                    self.log.error({err: e, zonename: zonename},
+                        'unable to check for existence of socket');
+                } else if (isStale)  {
+                    self.log.debug({zonename: zonename}, 'stale socket detected'
+                        + ' cleaning up');
+                    if (self.zoneConnections[zonename].conn) {
+                        self.zoneConnections[zonename].conn.close();
+                    }
+                    delete self.zoneConnections[zonename];
+                    _assumeBooted(zonename);
+                } else if (!self.zones[zonename]) {
+                    self.log.warn({zonename: zonename},
+                        'zone is running, but we had no record. Probably lost '
+                        + 'or delayed sysevent.');
+                    _assumeBooted(zonename);
+                }
+            });
         });
     });
 };
@@ -611,6 +681,7 @@ MetadataAgent.prototype.start = function () {
     self.startPeriodicChecks();
 
     zwatch.on('zone_transition', function (msg) {
+        var conn = self.zoneConnections[msg.zonename];
         var when = new Date(msg.when / 1000000);
 
         // ignore everything except start
@@ -618,28 +689,45 @@ MetadataAgent.prototype.start = function () {
             return;
         }
 
-        // ignore zones we've already got a connection for
-        if (self.zoneConnections[msg.zonename]) {
-            return;
-        }
+        checkStaleSocket(conn, function (e, isStale) {
+            if (e) {
+                // This currently can only happen when fs.stat fails. We'll
+                // just have to assume the socket is not stale if we can't
+                // prove it is. We'll try again next interval.
+                self.log.error({err: e, zonename: msg.zonename},
+                    'unable to check for existence of socket');
+            } else if (isStale)  {
+                    self.log.debug({zonename: msg.zonename},
+                        'stale socket detected cleaning up');
+                    if (self.zoneConnections[msg.zonename].conn) {
+                        self.zoneConnections[msg.zonename].conn.close();
+                    }
+                    delete self.zoneConnections[msg.zonename];
+            }
 
-        self.log.debug({
-            delay: (new Date()).getTime() - when.getTime(), // in ms
-            when: when,
-            zonename: msg.zonename
-        }, 'ZWatch watcher saw zone start');
-
-        zoneExists(msg.zonename, function _zoneExists(_, exists) {
-
-            if (!exists) {
-                self.log.warn({transition: msg},
-                    'ignoring transition for zone that no longer exists');
+            // ignore zones we've already (still) got a connection for
+            if (self.zoneConnections[msg.zonename]) {
                 return;
             }
 
-            // we only handle start, so that's what this was
-            self.addDebug(msg.zonename, 'last_zone_start');
-            self.handleZoneBoot(msg.zonename);
+            self.log.debug({
+                delay: (new Date()).getTime() - when.getTime(), // in ms
+                when: when,
+                zonename: msg.zonename
+            }, 'ZWatch watcher saw zone start');
+
+            zoneExists(msg.zonename, function _zoneExists(_, exists) {
+
+                if (!exists) {
+                    self.log.warn({transition: msg},
+                        'ignoring transition for zone that no longer exists');
+                    return;
+                }
+
+                // we only handle start, so that's what this was
+                self.addDebug(msg.zonename, 'last_zone_start');
+                self.handleZoneBoot(msg.zonename);
+            });
         });
     });
 };
@@ -696,6 +784,7 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
 MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     var self = this;
     var buffer;
+    var fd;
     var handler;
     var kvmstream;
     var zlog;
@@ -704,6 +793,8 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     assert.string(zopts.sockpath, 'zopts.sockpath');
     assert.string(zopts.zone, 'zopts.zone');
     assert.func(callback, 'callback');
+
+    zlog = self.zlog[zopts.zone];
 
     // Ignore zones we've already got a connection for and then immediately
     // create an entry if we don't. To act as a mutex.
@@ -715,7 +806,6 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     }
     self.zoneConnections[zopts.zone] = {};
 
-    zlog = self.zlog[zopts.zone];
     kvmstream = new net.Stream();
 
     // refuse to overwrite an existing connection
@@ -724,7 +814,8 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
 
     // replace the placeholder entry with a real one.
     self.zoneConnections[zopts.zone] = {
-        conn: new net.Stream()
+        conn: kvmstream,
+        sockpath: zopts.sockpath
     };
 
     buffer = '';
@@ -749,14 +840,15 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
         // When the stream closes, we'll delete from zoneConnections so that on
         // next boot (or periodic scan if for some reason we got closed while
         // the zone was actually running) we re-create.
-        zlog.info('stream closed');
+        zlog.info('stream closed on fd %d', fd);
         delete self.zoneConnections[zopts.zone];
     });
 
     kvmstream.connect(zopts.sockpath);
 
-    zlog.info('listening on fd ' + kvmstream._handle.fd);
-    self.zoneConnections[zopts.zone].fd = kvmstream._handle.fd;
+    fd = kvmstream._handle.fd;
+    zlog.info('listening on fd %d', fd);
+    self.zoneConnections[zopts.zone].fd = fd;
 
     callback();
 };
@@ -982,7 +1074,8 @@ function createZoneSocket(zopts, callback) {
 
             self.zoneConnections[zopts.zone] = {
                 conn: server,
-                fd: fd // so it's in the core for debugging
+                fd: fd, // so it's in the core for debugging
+                sockpath: path.join(zopts.zoneroot, zopts.path)
             };
 
             server.on('error', function (err) {
@@ -1009,7 +1102,7 @@ function createZoneSocket(zopts, callback) {
                 // If the stream closes, we'll delete from zoneConnections so
                 // that on next boot (or periodic scan if for some reason we got
                 // closed while the zone was actually running) we re-create.
-                zlog.info('stream closed');
+                zlog.info('stream closed on fd %d', fd);
                 delete self.zoneConnections[zopts.zone];
             });
 

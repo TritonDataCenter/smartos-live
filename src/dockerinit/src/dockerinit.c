@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (c) 2015, Joyent, Inc.
+ * Copyright (c) 2016, Joyent, Inc.
  */
 
 /*
@@ -81,6 +81,7 @@
 #define LOGFILE "/var/log/sdc-dockerinit.log"
 #define RTMBUFSZ sizeof (struct rt_msghdr) + (3 * sizeof (struct sockaddr_in))
 #define ATTACH_CHECK_INTERVAL 200000 // 200ms
+#define ZFD_OPEN_RETRIES 30 // retries to open a zfd device (1 try per second)
 
 int addRoute(const char *, const char *, const char *, int);
 void closeIpadmHandle();
@@ -102,6 +103,7 @@ static void setupLogging(boolean_t ctty);
 void waitIfAttaching();
 void makePath(const char *, char *, size_t);
 static int init_template(int);
+int zfd_open(const char *path, int oflag);
 
 /* global metadata client bits */
 int initialized_proto = 0;
@@ -221,6 +223,7 @@ zfd_ready()
     struct dirent *dp;
     boolean_t ready;
     struct timespec ts;
+    int loops = 0;
 
     ts.tv_sec = 0;
     ts.tv_nsec = 100000000;	/* 1/10 of a second */
@@ -242,10 +245,41 @@ zfd_ready()
         }
 
         if (ready) {
+            dlog("INFO zfd_ready() took %d loops\n", loops);
             break;
         }
+        loops++;
         (void) nanosleep(&ts, NULL);
     }
+}
+
+int
+zfd_open(const char *path, int oflag)
+{
+    int i;
+    int fd = -1;
+
+    /*
+     * Sometimes devfs takes some time to create our devices. Even though we
+     * already check for *something* in the directory with zfd_ready, we also
+     * want to handle the case where a specific zfd device is not there yet.
+     * If we try to open and get ENOENT, we retry ZFD_OPEN_RETRIES times before
+     * failing.
+     */
+
+    for (i = 0; i < ZFD_OPEN_RETRIES; i++) {
+        fd = open(path, oflag);
+        if (fd >= 0 || errno != ENOENT) {
+            if (fd >= 0) {
+                dlog("INFO open(%s) SUCCESS on attempt %d\n", path, i);
+            }
+            break;
+        }
+        dlog("WARN open(%s) ENOENT on attempt %d, will retry\n", path, i);
+        (void) sleep(1);
+    }
+
+    return (fd);
 }
 
 static void
@@ -265,7 +299,7 @@ makeMux(int stdid, int logid, boolean_t flow_control)
      */
     (void) snprintf(stdpath, sizeof (stdpath), "/dev/zfd/%d", stdid);
 
-    sfd = open(stdpath, O_RDWR | O_NOCTTY);
+    sfd = zfd_open(stdpath, O_RDWR | O_NOCTTY);
     if (sfd == -1) {
         fatal(ERR_OPEN_ZFD, "failed to open %s to link streams\n", stdpath);
     }
@@ -277,7 +311,7 @@ makeMux(int stdid, int logid, boolean_t flow_control)
     instance = minor(sb.st_rdev);
     (void) snprintf(stdpath, sizeof (stdpath), "/dev/zfd/%d", logid);
 
-    lfd = open(stdpath, O_RDWR | O_NOCTTY);
+    lfd = zfd_open(stdpath, O_RDWR | O_NOCTTY);
     if (lfd == -1) {
         fatal(ERR_OPEN_ZFD, "failed to open %s to link streams\n", stdpath);
     }
@@ -468,7 +502,7 @@ setupLogging(boolean_t ctty)
         // setup the zfd redirection
         if (ctty) {
             makeMux(0, 1, use_flowcon);
-            tmpfd = open("/dev/zfd/1", O_RDONLY);
+            tmpfd = zfd_open("/dev/zfd/1", O_RDONLY);
             if (tmpfd != 3) {
                 fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
                     strerror(errno));
@@ -481,12 +515,12 @@ setupLogging(boolean_t ctty)
         } else {
             makeMux(1, 3, use_flowcon);
             makeMux(2, 4, use_flowcon);
-            tmpfd = open("/dev/zfd/3", O_RDONLY);
+            tmpfd = zfd_open("/dev/zfd/3", O_RDONLY);
             if (tmpfd != 3) {
                 fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/3: %s\n",
                     strerror(errno));
             }
-            tmpfd = open("/dev/zfd/4", O_RDONLY);
+            tmpfd = zfd_open("/dev/zfd/4", O_RDONLY);
             if (tmpfd != 4) {
                 fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/4: %s\n",
                     strerror(errno));
@@ -552,18 +586,10 @@ setupTerminal(boolean_t ctty)
             fatal(ERR_CLOSE, "failed to close(0): %s\n", strerror(errno));
         }
 
-        _stdin = open("/dev/zfd/0", O_RDWR);
+        _stdin = zfd_open("/dev/zfd/0", O_RDWR);
         if (_stdin == -1) {
-            if (errno == ENOENT) {
-                _stdin = open("/dev/null", O_RDONLY);
-                if (_stdin == -1) {
-                    fatal(ERR_OPEN_CONSOLE, "failed to open /dev/null: %s\n",
-                        strerror(errno));
-                }
-            } else {
-                fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
-                    strerror(errno));
-            }
+            fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
+                strerror(errno));
         }
     }
 
@@ -576,12 +602,12 @@ setupTerminal(boolean_t ctty)
 
     if (ctty) {
         /* Configure output as a controlling terminal */
-        _stdout = open("/dev/zfd/0", O_WRONLY);
+        _stdout = zfd_open("/dev/zfd/0", O_WRONLY);
         if (_stdout == -1) {
             fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
                 strerror(errno));
         }
-        _stderr = open("/dev/zfd/0", O_WRONLY);
+        _stderr = zfd_open("/dev/zfd/0", O_WRONLY);
         if (_stderr == -1) {
             fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
                 strerror(errno));
@@ -598,12 +624,12 @@ setupTerminal(boolean_t ctty)
 
     } else {
         /* Configure individual pipe style output */
-        _stdout = open("/dev/zfd/1", O_WRONLY);
+        _stdout = zfd_open("/dev/zfd/1", O_WRONLY);
         if (_stdout == -1) {
             fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
                 strerror(errno));
         }
-        _stderr = open("/dev/zfd/2", O_WRONLY);
+        _stderr = zfd_open("/dev/zfd/2", O_WRONLY);
         if (_stderr == -1) {
             fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/2: %s\n",
                 strerror(errno));

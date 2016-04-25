@@ -23,7 +23,7 @@
  * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  *
- * # OVERVIEW
+ * OVERVIEW
  *
  * This module includes the logic that makes up the metadata agent. The
  * /usr/vm/sbin/metadata script creates a new MetadataAgent object 'agent' and
@@ -34,101 +34,34 @@
  *   - attempts to create a metadata socket for all existing VMs on the CN
  *   - starts an interval timer so that we check every 5 minutes for VMs that
  *     have been deleted
- *   - starts an interval timer so that we check every minute for VMs that have
- *     started running without us getting a ZWatch event
- *   - starts a ZWatch watcher that calls a callback whenever a VM is started
- *     and does not already have an active connection
+ *   - starts a Zwatch watcher that calls a callback whenever a VM is started or
+ *     stopped.
  *
- * Either at agent startup or whenever we see a zone boot that does not have a
- * metadata socket, we attempt to create the appropriate socket for the type of
- * VM.
- *
- *
- * # CREATING SOCKETS
- *
- * If the VM is a KVM VM, the qemu process running in the KVM zone will be
- * running with a "ttyb" virtual serial port for the KVM guest. From the host
- * we can connect to connect to /root/tmp/vm.ttyb in the zoneroot which Qemu is
- * listening on for connections. We connect to this as a client but run a
- * metadata server on the resulting connection. Inside the KVM guest the
- * mdata-client tools connect to the serial device and are then talking to our
- * metadata handler.
- *
- * For all non-KVM VMs we create a 'zsock' inside the zone and listen on that.
- * In non-LX zones, the zsock is created in
- *
- *   <zoneroot>/.zonecontrol/metadata.sock
- *
- * and for LX zones:
- *
- *   <zoneroot>/native/.zonecontrol/metadata.sock
+ * When a zone starts, it attempts to create an appropriate server on a socket
+ * for the VM to serve the metadata protocol to the mdata tools inside the zone.
+ * If the VM is a KVM VM, this means listening on the "ttyb" virtual serial port
+ * of the VM. Otherwise it means creating a 'zsock' inside the zone and
+ * listening on that.
  *
  * With a socket created and the server listening, the client in the zone can
  * make queries using the metadata protocol described at:
  *
  *    https://eng.joyent.com/mdata/protocol.html
  *
- *
- * # CLEANUP AND ERRORS
+ * When a zone stops, metadata agent will close the server that it opened for
+ * the stopped zone.
  *
  * If a recoverable error occurs during operation or during server creation and
- * the zone still exists, the agent should remove the connection from the
- * zoneConnections object such that on the next periodic check where we see the
- * VM running, the socket will be (re)created.
+ * the zone still exists, the creation of the socket will be retried on an
+ * exponential backoff schedule with a delay up to MAX_RETRY seconds between
+ * attempts. Once the delay reaches MAX_RETRY, it will no longer be incremented.
  *
  * When a zone is deleted, (no longer shows up in the list we're loading every 5
  * minutes) the global state objects for the VM are cleared.
  *
- *
- * # DEBUGGING
- *
  * For debugging, there are several useful properties attached to the
  * MetadataAgent object. These can be pulled out of metadata agent cores to
- * provide visibility into the state. You can see these properties with:
- *
- * ::findjsobjects -p zonesDebug | ::jsprint -d1
- *
- * using mdb_v8.
- *
- *
- * # SPECIAL "GET" BEHAVIORS
- *
- * For some properties:
- *
- *   sdc:nics
- *   sdc:resolvers
- *   sdc:tmpfs
- *   sdc:routes
- *
- * we do an updateZone() to update our cached zone object for every lookup. For
- * sdc:operator-script, we always load the config/metadata.json file for the
- * zone. For all other sdc:* prefixed GET requests, we update the set of tags
- * directly from config/tags.json to ensure these are up-to-date.
- *
- * For all other requests (without the sdc: prefix) we will load the latest
- * config/metadata.json for the zone before processing. Then:
- *
- * Requests without an SDC prefix can still be prefixed with a special
- * "internal_namespace" which is set via the internal_metadata_namespaces
- * property on the VM. When this is set any request that includes a namespace
- * prefix will be served from internal_metadata instead of customer_metadata.
- * This is used for docker for example to serve special docker:* variables.
- *
- * Requests that have no namespace but end with the string "_pw" are also served
- * from internal_metadata for historical reasons. (See OS-2213 and related
- * tickets)
- *
- * All other requests are served directly from customer_metadata. So a request
- * for "GET user-script" means that we want to return the value from the vmobj's
- * customer_metadata['user-script'].
- *
- *
- * # KNOWN ISSUES
- *
- * If many zones are created and deleted between ZONEADM_CHECK_FREQUENCY
- * intervals, it would be possible to have many stale sockets open which could
- * potentially run metadata out of filedescriptors. This should be recovered
- * when we do the next check and cleanup all the destroyed VM's sockets.
+ * provide visibility into the state.
  *
  */
 
@@ -139,15 +72,14 @@ var common = require('./common');
 var crc32 = require('./crc32');
 var execFile = require('child_process').execFile;
 var fs = require('fs');
-var getZoneinfo
-    = require('/usr/vm/node_modules/vmload/vmload-zoneinfo').getZoneinfo;
 var guessHandleType = process.binding('tty_wrap').guessHandleType;
 var net = require('net');
 var path = require('path');
 var util = require('util');
 var vasync = require('vasync');
-var VM = require('/usr/vm/node_modules/VM');
+var VM  = require('/usr/vm/node_modules/VM');
 var zsock = require('/usr/node/node_modules/zsock');
+var zutil = require('/usr/node/node_modules/zutil');
 var ZWatch = require('./zwatch');
 
 var sdc_fields = [
@@ -192,8 +124,6 @@ var sdc_fields = [
     'zone_state'
 ];
 var MAX_RETRY = 300; // in seconds
-var ZONEADM_CHECK_FREQUENCY = (5 * 60 * 1000); // ms, check for deleted zones
-var MISSED_SYSEVENT_CHECK_FREQUENCY = (1 * 60 * 1000); // ms
 
 
 function zoneExists(zonename, callback) {
@@ -215,74 +145,13 @@ function zoneExists(zonename, callback) {
     });
 }
 
-/*
- * Takes a zoneConnections entry (or undefined) and calls callback with:
- *
- *  callback(<Error Object>);
- *
- *      - when there's an error w/ fs.stat() that's not ENOENT.
- *
- *  callback(null, false);
- *
- *      - when the conn entry has a sockpath that's still there.
- *
- *  callback(null, true);
- *
- *      - when the conn entry has a sockpath that's been removed.
- *
- */
-function checkStaleSocket(conn, callback) {
-    assert.optionalObject(conn, 'conn');
-    assert.func(callback, 'callback');
-
-    if (!conn || !conn.sockpath) {
-        // if there's no conn, it can't be stale
-        callback(null, false);
-        return;
-    }
-
-    assert.string(conn.sockpath, 'conn.sockpath');
-
-    fs.stat(conn.sockpath, function _onSockpathStat(err, stats) {
-        if (err) {
-            if (err.code === 'ENOENT') {
-                callback(null, true); // stale
-                return;
-            }
-            callback(err);
-            return;
-        }
-        callback(null, false); // no error in stat means exists: not stale
-        return;
-    });
-}
-
-/*
- * Call as:
- *
- *  t = newTimer();
- *  console.log('elapsed ms: ' + elapsedTimer(t));
- *
- */
-function newTimer() {
-    return process.hrtime();
-}
-
-function elapsedTimer(timer) {
-    var end;
-
-    assert.arrayOfNumber(timer);
-
-    end = process.hrtime(timer);
-    return (end[0] * 1000 + (end[1] / 1000000));
-}
-
 
 var MetadataAgent = module.exports = function (options) {
     this.log = options.log;
     this.zlog = {};
     this.zones = {};
     this.zonesDebug = {};
+    this.zoneRetryTimeouts = {};
     this.zoneConnections = {};
 };
 
@@ -303,7 +172,7 @@ var MetadataAgent = module.exports = function (options) {
  *               "brand": "joyent-minimal",
  *               "zonename": "4149818f-44d1-4798-875c-ff37aec11042",
  *               "level": 30,
- *               "msg": "starting socket server",
+ *               "msg": "Starting socket server",
  *               "time": 1455735290175 (2016 Feb 17 18:54:50),
  *               "v": 0,
  *           },
@@ -312,7 +181,7 @@ var MetadataAgent = module.exports = function (options) {
  *       "last_zsock_create_attempt": 1455735290176 (2016 Feb 17 18:54:50),
  *       "last_zsock_create_success": 1455735290804 (2016 Feb 17 18:54:50),
  *       "last_zsock_listen_success": 1455735290806 (2016 Feb 17 18:54:50),
- *       ...
+ *       "last_zone_stop": undefined,
  *   },
  *   ...
  * }
@@ -351,38 +220,31 @@ MetadataAgent.prototype.createZoneLog = function (type, zonename) {
     return (self.zlog[zonename]);
 };
 
-MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
+MetadataAgent.prototype.updateZone = function (zonename, callback) {
     var self = this;
     var log = self.log;
-
-    assert.string(zonename, 'zonename');
-    assert.func(callback, 'callback');
 
     function shouldLoad(cb) {
         if (!self.zones.hasOwnProperty(zonename)) {
             // don't have a cache, load this guy
-            log.info({zonename: zonename},
-                'no cache for: ' + zonename + ', loading');
-            cb(null, true);
+            log.info('no cache for: ' + zonename + ', loading');
+            cb(true);
             return;
         }
 
-        // We do have a cached version, we'll reload only if timestamp of the
-        // XML file changed. The vmadm operations we care about will "touch"
-        // this file to update the last_modified if they don't change it
-        // directly.
+        // we do have a cached version, we'll reload only if timestamp changed.
         fs.stat('/etc/zones/' + zonename + '.xml', function (err, stats) {
             var old_mtime;
 
             if (err && err.code === 'ENOENT') {
                 // VM has disappeared, purge from cache
                 self.purgeZoneCache(zonename);
-                cb(null, false);
+                cb(false);
                 return;
             } else if (err) {
-                log.error({err: err, zonename: zonename},
-                    'cannot fs.stat(), reloading');
-                cb(err);
+                // fail open when we can't stat
+                log.error({err: err}, 'cannot fs.stat() ' + zonename);
+                cb(true);
                 return;
             }
 
@@ -392,35 +254,26 @@ MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
 
             old_mtime = (new Date(self.zones[zonename].last_modified));
             if (stats.mtime.getTime() > old_mtime.getTime()) {
-                log.info({zonename: zonename},
-                    'last_modified was updated, reloading');
-                cb(null, true);
+                log.info('last_modified was updated, reloading: ' + zonename);
+                cb(true);
                 return;
             }
 
-            log.trace('using cache for: ' + zonename);
-            cb(null, false);
+            log.debug('using cache for: ' + zonename);
+            cb(false);
         });
     }
 
-    shouldLoad(function (err, load) {
-        var start_lookup_timer = newTimer();
-
-        // fail open (meaning: force reload) when something went wrong
-        if (load || err) {
+    shouldLoad(function (load) {
+        if (load) {
             VM.lookup({ zonename: zonename }, { fields: sdc_fields },
                 function (error, machines) {
-                    var elapsed = elapsedTimer(start_lookup_timer);
-
                     if (!error) {
                         self.zones[zonename] = machines[0];
                         self.addDebug(zonename, 'last_zone_load');
                     }
-                    log.debug({
-                        elapsed: elapsed,
-                        err: error,
-                        zonename: zonename
-                    }, 'finished VM.lookup');
+                    log.trace({zone: zonename, err: error},
+                        'finished VM.lookup');
                     callback(error);
                     return;
                 }
@@ -435,7 +288,6 @@ MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
 
 MetadataAgent.prototype.createServersOnExistingZones = function () {
     var self = this;
-    var created = 0;
 
     VM.lookup({}, { fields: sdc_fields }, function (error, zones) {
         async.forEach(zones, function (zone, cb) {
@@ -463,33 +315,18 @@ MetadataAgent.prototype.createServersOnExistingZones = function () {
                 self.createZoneLog(zone.brand, zone.zonename);
             }
 
-            // It is possible for VM.lookup() to take a long time. While we're
-            // waiting for it, the watcher could have seen the zone start and
-            // created a socket for the zone. In case that happened, we ignore
-            // zones we've already got a connection for.
-            if (self.zoneConnections[zone.zonename]) {
-                cb();
-                return;
-            }
-
             if (zone.brand === 'kvm') {
                 self.startKVMSocketServer(zone.zonename, function (err) {
-                    if (!err) {
-                        created++;
-                    }
                     cb();
                 });
             } else {
                 self.startZoneSocketServer(zone.zonename, function (err) {
-                    if (!err) {
-                        created++;
-                    }
                     cb();
                 });
             }
         }, function (err) {
-            self.log.info('created zone metadata sockets on %d / %d zones',
-                created, zones.length);
+            self.log.info('Created zone metadata sockets on ' + zones.length
+                + ' zones');
         });
     });
 };
@@ -502,6 +339,10 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
     self.log.info(zonename + ' no longer exists, purging from cache(s) and '
         + 'stopping timeout');
 
+    if (self.zoneRetryTimeouts.hasOwnProperty(zonename)) {
+        clearTimeout(self.zoneRetryTimeouts[zonename]);
+        delete self.zoneRetryTimeouts[zonename];
+    }
     if (self.zonesDebug.hasOwnProperty(zonename)) {
         delete self.zonesDebug[zonename];
     }
@@ -509,9 +350,6 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
         delete self.zlog[zonename];
     }
     if (self.zoneConnections.hasOwnProperty(zonename)) {
-        if (self.zoneConnections[zonename].conn) {
-            self.zoneConnections[zonename].conn.close();
-        }
         delete self.zoneConnections[zonename];
     }
     if (self.zones.hasOwnProperty(zonename)) {
@@ -519,72 +357,17 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
     }
 };
 
-MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
-    var self = this;
-    var start_kstat_timer = newTimer();
-
-    getZoneinfo(null, {log: self.log}, function (err, results) {
-        assert.ifError(err);
-
-        function _assumeBooted(zonename) {
-            self.addDebug(zonename, 'last_zone_found_running');
-            self.handleZoneBoot(zonename);
-        }
-
-        self.log.debug({
-            elapsed: elapsedTimer(start_kstat_timer),
-            zoneCount: Object.keys(results).length
-        }, 'loaded VM kstats');
-
-        Object.keys(results).forEach(function (zonename) {
-            var conn = self.zoneConnections[zonename]; // may be undefined
-
-            checkStaleSocket(conn, function (e, isStale) {
-                if (e) {
-                    // This currently can only happen when fs.stat fails. We'll
-                    // just have to assume the socket is not stale if we can't
-                    // prove it is. We'll try again next interval.
-                    self.log.error({err: e, zonename: zonename},
-                        'unable to check for existence of socket');
-                } else if (isStale)  {
-                    self.log.debug({zonename: zonename}, 'stale socket detected'
-                        + ' cleaning up');
-                    if (self.zoneConnections[zonename].conn) {
-                        self.zoneConnections[zonename].conn.close();
-                    }
-                    delete self.zoneConnections[zonename];
-                    _assumeBooted(zonename);
-                } else if (!self.zones[zonename]) {
-                    self.log.warn({zonename: zonename},
-                        'zone is running, but we had no record. Probably lost '
-                        + 'or delayed sysevent.');
-                    _assumeBooted(zonename);
-                }
-            });
-        });
-    });
-};
-
-MetadataAgent.prototype.startPeriodicChecks = function startPeriodicChecks() {
+MetadataAgent.prototype.startDeletedZonesPurger = function () {
+    var cmd = '/usr/sbin/zoneadm';
     var self = this;
 
     // Every 5 minutes we check to see whether zones we've got in self.zones
-    // were deleted. If they are, we delete the record from the cache and close
-    // any open connection.
-
-    function _checkDeletedZones() {
-        var cmd = '/usr/sbin/zoneadm';
-        var start_zoneadm_timer = newTimer();
-
+    // were deleted. If they are, we delete the record from the cache.
+    setInterval(function () {
         execFile(cmd, ['list', '-c'], function (err, stdout, stderr) {
-            var elapsed = elapsedTimer(start_zoneadm_timer);
             var zones = {};
-
             if (err) {
-                self.log.error({
-                    elapsed: elapsed,
-                    err: err
-                }, 'unable to get list of zones');
+                self.log.error({err: err}, 'unable to get list of zones');
                 return;
             }
 
@@ -599,142 +382,75 @@ MetadataAgent.prototype.startPeriodicChecks = function startPeriodicChecks() {
             //
             // so we can then loop through all the cached zonenames and remove
             // those that don't exist on the system any longer.
-            stdout.trim().split(/\n/).forEach(function (z) {
-                if (z !== 'global') {
-                    zones[z] = true;
-                }
+            stdout.split(/\n/).forEach(function (z) {
+                zones[z] = true;
             });
-
-            self.log.debug({
-                elapsed: elapsed,
-                zonesFound: Object.keys(zones).length
-            }, 'loaded zoneadm list of existing zones');
-
             Object.keys(self.zones).forEach(function (z) {
                 if (!zones.hasOwnProperty(z)) {
                     self.purgeZoneCache(z);
                 }
             });
-
-            // schedule the next check
-            setTimeout(_checkDeletedZones, ZONEADM_CHECK_FREQUENCY);
         });
-    }
+    }, (5 * 60 * 1000));
 
-    // Here we check for boot messages that we might have missed due to the fact
-    // that sysevent messages are unreliable.
-
-    function _checkNewZones() {
-        self.checkMissedSysevents();
-
-        // schedule the next check
-        setTimeout(_checkNewZones, MISSED_SYSEVENT_CHECK_FREQUENCY);
-    }
-
-    // Set the first timers to kick these checks off.
-
-    setTimeout(_checkDeletedZones, ZONEADM_CHECK_FREQUENCY);
-    self.log.info('Setup timer to purge deleted zones every %d ms',
-        ZONEADM_CHECK_FREQUENCY);
-
-    setTimeout(_checkNewZones, MISSED_SYSEVENT_CHECK_FREQUENCY);
-    self.log.info('Setup timer to detect (missed) new zones every %d ms',
-        MISSED_SYSEVENT_CHECK_FREQUENCY);
-};
-
-MetadataAgent.prototype.handleZoneBoot = function handleZoneBoot(zonename) {
-    assert.string(zonename, 'zonename');
-    var self = this;
-
-    // We don't wait around for results from creating the sockets because on
-    // failure self.startKVMSocketServer or self.startZoneSocketServer should
-    // leave us in a place we can retry on the next periodic check. So we just
-    // pass this dummy callback instead.
-    function _dummyCb() {
-    }
-
-    self.updateZone(zonename, function (error) {
-        if (error) {
-            self.log.error({err: error}, 'Error updating '
-                + 'attributes: ' + error.message);
-
-            // When there's an error, we'll have not set in self.zones, so we'll
-            // try again next time we see that the zone is running.
-            return;
-        }
-
-        // If the zone was not deleted between the time we saw it start and
-        // now, (we did a vmadm lookup in between via updateZone which could
-        // have taken a while) we'll start the watcher.
-        if (self.zones[zonename]) {
-            if (!self.zlog[zonename]) {
-                // create a logger specific to this VM
-                self.createZoneLog(self.zones[zonename].brand, zonename);
-            }
-
-            if (self.zones[zonename].brand === 'kvm') {
-                self.startKVMSocketServer(zonename, _dummyCb);
-            } else {
-                self.startZoneSocketServer(zonename, _dummyCb);
-            }
-        }
-    });
+    self.log.info('Setup interval to purge deleted zones.');
 };
 
 MetadataAgent.prototype.start = function () {
     var self = this;
     var zwatch = this.zwatch = new ZWatch(self.log);
     self.createServersOnExistingZones();
-    self.startPeriodicChecks();
+    self.startDeletedZonesPurger();
 
     zwatch.on('zone_transition', function (msg) {
-        var conn = self.zoneConnections[msg.zonename];
-        var when = new Date(msg.when / 1000000);
 
-        // ignore everything except start
-        if (msg.cmd !== 'start') {
+        // ignore unknown transitions
+        if (['start', 'stop'].indexOf(msg.cmd) === -1) {
             return;
         }
 
-        checkStaleSocket(conn, function (e, isStale) {
-            if (e) {
-                // This currently can only happen when fs.stat fails. We'll
-                // just have to assume the socket is not stale if we can't
-                // prove it is. We'll try again next interval.
-                self.log.error({err: e, zonename: msg.zonename},
-                    'unable to check for existence of socket');
-            } else if (isStale)  {
-                    self.log.debug({zonename: msg.zonename},
-                        'stale socket detected cleaning up');
-                    if (self.zoneConnections[msg.zonename].conn) {
-                        self.zoneConnections[msg.zonename].conn.close();
-                    }
-                    delete self.zoneConnections[msg.zonename];
-            }
-
-            // ignore zones we've already (still) got a connection for
-            if (self.zoneConnections[msg.zonename]) {
+        zoneExists(msg.zonename, function _zoneExists(_, exists) {
+            if (!exists) {
+                self.log.warn({transition: msg}, 'ignoring transition for zone'
+                    + 'that no longer exists');
                 return;
             }
+            self.log.trace({transition: msg}, 'saw zone transition');
 
-            self.log.debug({
-                delay: (new Date()).getTime() - when.getTime(), // in ms
-                when: when,
-                zonename: msg.zonename
-            }, 'ZWatch watcher saw zone start');
-
-            zoneExists(msg.zonename, function _zoneExists(_, exists) {
-
-                if (!exists) {
-                    self.log.warn({transition: msg},
-                        'ignoring transition for zone that no longer exists');
-                    return;
-                }
-
-                // we only handle start, so that's what this was
+            if (msg.cmd === 'start') {
                 self.addDebug(msg.zonename, 'last_zone_start');
-                self.handleZoneBoot(msg.zonename);
-            });
+                self.updateZone(msg.zonename, function (error) {
+                    if (error) {
+                        self.log.error({err: error}, 'Error updating '
+                            + 'attributes: ' + error.message);
+                        return;
+                    }
+
+                    // If the zone was not deleted between the time we saw it
+                    // start and now, (we did a vmadm lookup in between via
+                    // updateZone) we'll start the watcher.
+                    if (self.zones[msg.zonename]) {
+                        if (!self.zlog[msg.zonename]) {
+                            // create a logger specific to this VM
+                            self.createZoneLog(self.zones[msg.zonename].brand,
+                                msg.zonename);
+                        }
+
+                        if (self.zones[msg.zonename].brand === 'kvm') {
+                            self.startKVMSocketServer(msg.zonename);
+                        } else {
+                            self.startZoneSocketServer(msg.zonename);
+                        }
+                    }
+                });
+            } else if (msg.cmd === 'stop') {
+                self.addDebug(msg.zonename, 'last_zone_stop');
+                if (self.zoneConnections[msg.zonename]) {
+                    self.log.trace('saw zone ' + msg.zonename
+                        + ' stop, calling end()');
+                    self.zoneConnections[msg.zonename].end();
+                }
+            }
         });
     });
 };
@@ -746,8 +462,6 @@ MetadataAgent.prototype.stop = function () {
 MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
     var self = this;
 
-    assert.string(zonename, 'zonename');
-    assert.func(callback, 'callback');
     assert.object(self.zones[zonename], 'self.zones[' + zonename + ']');
     assert.object(self.zlog[zonename], 'self.zlog[' + zonename + ']');
 
@@ -755,16 +469,14 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
     var zlog = self.zlog[zonename];
     var sockpath = path.join(vmobj.zonepath, '/root/tmp/vm.ttyb');
 
-    zlog.trace('starting socket server');
+    zlog.info('Starting socket server');
 
     async.waterfall([
         function (cb) {
             common.retryUntil(2000, 120000,
                 function (c) {
                     fs.exists(sockpath, function (exists) {
-                        if (!exists) {
-                            zlog.warn(sockpath + ' does not exist');
-                        }
+                        zlog.debug(sockpath + ' exists: ' + exists);
                         setTimeout(function () {
                             c(null, exists);
                         }, 1000);
@@ -773,6 +485,9 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
                     if (error) {
                         zlog.error({err: error}, 'Timed out waiting for '
                             + 'metadata socket');
+                    } else {
+                        zlog.debug('returning from startKVMSocketServer w/o '
+                            + 'error');
                     }
                     cb(error);
                 }
@@ -788,45 +503,32 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
     });
 };
 
+function rtrim(str, chars) {
+    chars = chars || '\\s';
+    str = str || '';
+    return str.replace(new RegExp('[' + chars + ']+$', 'g'), '');
+}
+
 MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     var self = this;
-    var buffer;
-    var fd;
-    var handler;
-    var kvmstream;
-    var zlog;
+    var zlog = self.zlog[zopts.zone];
+    var kvmstream = new net.Stream();
 
-    assert.object(zopts, 'zopts');
-    assert.string(zopts.sockpath, 'zopts.sockpath');
-    assert.string(zopts.zone, 'zopts.zone');
-    assert.func(callback, 'callback');
-
-    zlog = self.zlog[zopts.zone];
-
-    // Ignore zones we've already got a connection for and then immediately
-    // create an entry if we don't. To act as a mutex.
-    if (self.zoneConnections[zopts.zone]) {
-        zlog.trace({zonename: zopts.zone}, 'already have zoneConnections[] for '
-            + 'zone -- not replacing.');
-        callback();
-        return;
-    }
-    self.zoneConnections[zopts.zone] = {};
-
-    kvmstream = new net.Stream();
-
-    // refuse to overwrite an existing connection
-    assert.ok(!self.zoneConnections[zopts.zone].hasOwnProperty('conn'),
-        'should not have existing connection when creating new');
-
-    // replace the placeholder entry with a real one.
     self.zoneConnections[zopts.zone] = {
-        conn: kvmstream,
-        sockpath: zopts.sockpath
+        conn: new net.Stream(),
+        done: null,
+        end: function () {
+            if (this.done) {
+                return;
+            }
+            this.done = new Date();
+            zlog.info('Closing kvm stream for ' + zopts.zone);
+            kvmstream.end();
+        }
     };
 
-    buffer = '';
-    handler = self.makeMetadataHandler(zopts.zone, kvmstream);
+    var buffer = '';
+    var handler = self.makeMetadataHandler(zopts.zone, kvmstream);
 
     kvmstream.on('data', function (data) {
         var chunk, chunks;
@@ -843,25 +545,12 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
         zlog.error({err: e}, 'KVM Socket error: ' + e.message);
     });
 
-    kvmstream.on('close', function () {
-        // When the stream closes, we'll delete from zoneConnections so that on
-        // next boot (or periodic scan if for some reason we got closed while
-        // the zone was actually running) we re-create.
-        zlog.info('stream closed on fd %d', fd);
-        delete self.zoneConnections[zopts.zone];
-    });
-
     kvmstream.connect(zopts.sockpath);
-
-    fd = kvmstream._handle.fd;
-    zlog.info('listening on fd %d', fd);
-    self.zoneConnections[zopts.zone].fd = fd;
-
     callback();
 };
 
 MetadataAgent.prototype.startZoneSocketServer =
-function startZoneSocketServer(zonename, callback) {
+function (zonename, callback) {
     var self = this;
 
     assert.object(self.zones[zonename], 'self.zones[' + zonename + ']');
@@ -869,7 +558,6 @@ function startZoneSocketServer(zonename, callback) {
         'self.zones[' + zonename + '].brand');
     assert.string(self.zones[zonename].zonepath,
         'self.zones[' + zonename + '].zonepath');
-    assert.func(callback, 'callback');
 
     var zlog = self.zlog[zonename];
     var zonePath = self.zones[zonename].zonepath;
@@ -886,104 +574,35 @@ function startZoneSocketServer(zonename, callback) {
         zoneroot: path.join(zonePath, 'root')
     };
 
-    zlog.trace('starting socket server');
+    zlog.info('Starting socket server');
 
-    self.createZoneSocket(zopts, callback);
+    self.createZoneSocket(zopts, undefined, function _createZoneSocketCb(err) {
+        if (err) {
+            zlog.error({err: err}, 'Failed to create zone socket.');
+        } else {
+            zlog.info('Zone socket created.');
+        }
+
+        // We call callback here, but don't include the error if there was one,
+        // because this is running in async.forEach and we don't want to fail
+        // the others and there's nothing we can do to recover anyway. We'll
+        // just leave it to self.createZoneSocket to schedule a retry.
+
+        if (callback) {
+            callback();
+        }
+    });
 };
 
 /*
- * This tries to make sure that the directories in:
- *
- *  path.dirname(path.join(zopts.zoneroot, zopts.path))
- *
- * exist or are created. It then calls callback().
- *
- * If the directories all exist or were created, the callback is called with
- * no arguments.
- *
- * If we were unable to create or check the directory, callback() will be
- * called with an error object indicating what the problem was.
- *
+ * waitSecs here indicates how long we should wait to retry after this attempt
+ * if we fail.
  */
-function _ensureSockpathDirsExist(zopts, log, callback) {
-    assert.object(zopts, 'zopts');
-    assert.string(zopts.path, 'zopts.path');
-    assert.string(zopts.zoneroot, 'zopts.zoneroot');
-    assert.object(log, 'log');
-    assert.func(callback, 'callback');
-
-    var d;
-    var dirs = [];
-    var sockdir = path.dirname(path.join(zopts.zoneroot, zopts.path));
-    var zoneroot = zopts.zoneroot;
-
-    function _ensureDir(dir, cb) {
-        fs.stat(dir, function _statDirCb(err, stats) {
-            var newErr;
-
-            if (err) {
-                if (err.code === 'ENOENT') {
-                    // does not exist, so create it.
-                    fs.mkdir(dir, parseInt('700', 8), function _mkdirCb(e) {
-                        log.debug({dir: dir, zone: zopts.zone, err: e},
-                            'attempted fs.mkdir()');
-                        cb(e);
-                    });
-                } else {
-                    cb(err);
-                }
-                return;
-            }
-
-            if (!stats.isDirectory()) {
-                newErr = new Error(dir + ' is not a directory');
-                newErr.code = 'ENOTDIR';
-                cb(newErr);
-                return;
-            }
-
-            cb(); // exists and is a directory
-        });
-    }
-
-    /*
-     * We need to check all the directories below zoneroot to ensure there
-     * are no symlinks or other shenanigans going on since we're running in
-     * the GZ and they'd be evaluated there.
-     *
-     * So we build an array that looks like:
-     *
-     *  [
-     *     '<zoneroot>/foo/bar',
-     *     '<zoneroot>/foo'
-     *  ]
-     *
-     * and then attempt to ensure each component exists.
-     */
-    d = sockdir;
-    while (d.length > zoneroot.length) {
-        dirs.push(d);
-        d = path.dirname(d);
-    }
-
-    assert.ok(dirs.length > 0, 'should have at least one dir');
-
-    vasync.forEachPipeline({
-        inputs: dirs,
-        func: _ensureDir
-    }, callback);
-}
-
-MetadataAgent.prototype.createZoneSocket =
-function createZoneSocket(zopts, callback) {
-    var self = this;
-    var server;
-
+function attemptCreateZoneSocket(self, zopts, waitSecs) {
     assert.object(zopts, 'zopts');
     assert.string(zopts.path, 'zopts.path');
     assert.string(zopts.zone, 'zopts.zone');
     assert.string(zopts.zoneroot, 'zopts.zoneroot');
-    assert.func(callback, 'callback');
 
     var zlog = self.zlog[zopts.zone];
 
@@ -993,137 +612,261 @@ function createZoneSocket(zopts, callback) {
     }
 
     if (!self.zones[zopts.zone]) {
-        zlog.info({zonename: zopts.zone},
-            'zone no longer exists, not creating zsock');
-        callback();
+        zlog.info('Zone %s no longer exists, not creating zsock', zopts.zone);
         return;
     }
 
-    // Ignore zones we've already got a connection for and then immediately
-    // create an entry if we don't. To act as a mutex.
-    if (self.zoneConnections[zopts.zone]) {
-        zlog.trace({zonename: zopts.zone}, 'already have zoneConnections[] for '
-            + 'zone -- not replacing.');
-        callback();
-        return;
-    }
-    self.zoneConnections[zopts.zone] = {};
+    zlog.debug('attemptCreateZoneSocket(): zone: %s, wait: %d', zopts.zone,
+        waitSecs);
 
-    self.addDebug(zopts.zone, 'last_zsock_create_attempt');
-    _ensureSockpathDirsExist(zopts, zlog, function _ensureDirsExistCb(error) {
-        if (error) {
-            self.addDebug(zopts.zone, 'last_zsock_create_failure', error);
-
-            zlog.warn({zonename: zopts.zone, err: error},
-                'failed to create sockpath directory');
-
-            // We were unable to create the directory but we have not yet
-            // created a real self.zoneConnections entry so we can just delete
-            // the placeholder and call callback. If the VM still exists and
-            // is running, we'll try again when we next poll w/
-            // _checkNewZones().
-            delete self.zoneConnections[zopts.zone];
-            callback(error);
+    function _retryCreateZoneSocketLater() {
+        if (self.zoneRetryTimeouts[zopts.zone]) {
+            zlog.error('_retryCreateZoneSocketLater(): already have a retry '
+                + 'running, not starting another one.');
             return;
         }
 
-        zsock.createZoneSocket(zopts, function _onCreateZsock(sockErr, fd) {
-            if (sockErr) {
-                self.addDebug(zopts.zone, 'last_zsock_create_failure', sockErr);
+        zlog.info('Will retry zsock creation for %s in %d seconds',
+            zopts.zone, waitSecs);
 
-                zlog.warn({zonename: zopts.zone, err: sockErr},
-                    'failed to create zsock');
+        self.zoneRetryTimeouts[zopts.zone] = setTimeout(function () {
+            var nextRetry = waitSecs * 2;
 
-                // We were unable to create a zsock, but as with a directory
-                // creation error we've not created a real self.zoneConnections
-                // entry yet so we'll delete the placeholder and let the
-                // _checkNewZones() catch it on the next go-round.
-                delete self.zoneConnections[zopts.zone];
-                callback(sockErr);
-                return;
+            if (nextRetry > MAX_RETRY) {
+                nextRetry = MAX_RETRY;
             }
 
-            self.addDebug(zopts.zone, 'last_zsock_create_success');
-
-            server = net.createServer(function (socket) {
-                var buffer = '';
-                var handler = self.makeMetadataHandler(zopts.zone, socket);
-
-                zlog.trace('new connection on fd ' + fd);
-
-                socket.on('data', function (data) {
-                    var chunk;
-                    var chunks;
-
-                    buffer += data.toString();
-                    chunks = buffer.split('\n');
-                    while (chunks.length > 1) {
-                        chunk = chunks.shift();
-                        handler(chunk);
-                    }
-                    buffer = chunks.pop();
-                });
-
-                socket.on('error', function (err) {
-                    /*
-                     * This is an error on the individual mdata-{get,put,delete}
-                     * session. There's not really much of anything we can do
-                     * about this other than log it. The server will still be
-                     * running and should still accept new sessions.
-                     */
-                    zlog.error({err: err}, 'ZSocket error');
-                });
+            zlog.info('Retrying %s', zopts.zone);
+            self.zoneRetryTimeouts[zopts.zone] = null;
+            process.nextTick(function () {
+                attemptCreateZoneSocket(self, zopts, nextRetry);
             });
+        }, waitSecs * 1000);
+    }
 
-            // refuse to overwrite an existing connection
-            assert.ok(!self.zoneConnections[zopts.zone].hasOwnProperty('conn'),
-                'should not have existing connection when creating new');
+    /*
+     * This tries to make sure that the directories in:
+     *
+     *  path.dirname(path.join(zopts.zoneroot, zopts.path))
+     *
+     * exist or are created. It then calls callback().
+     *
+     * If the directories all exist or were created, the callback is called with
+     * no arguments.
+     *
+     * If we were unable to create or check the directory, callback() will be
+     * called with an error object indicating what the problem was.
+     *
+     */
+    function _ensureSockpathDirsExist(callback) {
+        var d;
+        var dirs = [];
+        var sockdir = path.dirname(path.join(zopts.zoneroot, zopts.path));
+        var zoneroot = zopts.zoneroot;
 
-            self.zoneConnections[zopts.zone] = {
-                conn: server,
-                fd: fd, // so it's in the core for debugging
-                sockpath: path.join(zopts.zoneroot, zopts.path)
-            };
+        function _ensureDir(dir, cb) {
+            fs.stat(dir, function _statDirCb(err, stats) {
+                var newErr;
 
-            server.on('error', function (err) {
-                zlog.error({err: err}, 'Zone socket error: %s', err.message);
-                if (err.code === 'ENOTSOCK' || err.code === 'EBADF') {
-                    // The socket inside the zone went away, likely due to
-                    // resource constraints (ie: disk full)
-                    try {
-                        server.close();
-                    } catch (e) {
-                        zlog.error({err: e}, 'Caught exception closing server: '
-                            + e.message);
+                if (err) {
+                    if (err.code === 'ENOENT') {
+                        // does not exist, so create it.
+                        fs.mkdir(dir, parseInt('700', 8), function _mkdirCb(e) {
+                            zlog.debug({dir: dir, zone: zopts.zone, err: e},
+                                'attempted fs.mkdir()');
+                            cb(e);
+                        });
+                    } else {
+                        cb(err);
                     }
-                    // remove the connection so we'll create a new one
-                    delete self.zoneConnections[zopts.zone];
-                } else if (err.code !== 'EINTR') {
-                    // We really don't know what this is, so dump a core so we
-                    // can investigate.
-                    throw err;
+                    return;
                 }
+
+                if (!stats.isDirectory()) {
+                    newErr = new Error(dir + ' is not a directory');
+                    newErr.code = 'ENOTDIR';
+                    cb(newErr);
+                    return;
+                }
+
+                cb(); // exists and is a directory
             });
+        }
 
-            server.on('close', function () {
-                // If the stream closes, we'll delete from zoneConnections so
-                // that on next boot (or periodic scan if for some reason we got
-                // closed while the zone was actually running) we re-create.
-                zlog.info('stream closed on fd %d', fd);
-                delete self.zoneConnections[zopts.zone];
-            });
+        /*
+         * We need to check all the directories below zoneroot to ensure there
+         * are no symlinks or other shenanigans going on since we're running in
+         * the GZ and they'd be evaluated there.
+         *
+         * So we build an array that looks like:
+         *
+         *  [
+         *     '<zoneroot>/foo/bar',
+         *     '<zoneroot>/foo'
+         *  ]
+         *
+         * and then attempt to ensure each component exists.
+         */
+        d = sockdir;
+        while (d.length > zoneroot.length) {
+            dirs.push(d);
+            d = path.dirname(d);
+        }
 
-            // If zsock gave us a bogus handle, we don't know what to do with
-            // that so we'll try to get a core to figure out what that means.
-            assert(guessHandleType(fd) === 'PIPE', 'zsock FD must be a pipe');
+        assert.ok(dirs.length > 0, 'should have at least one dir');
 
-            server.listen({fd: fd});
-            zlog.info('listening on fd %d', fd);
-            self.addDebug(zopts.zone, 'last_zsock_listen_success');
+        vasync.forEachPipeline({
+            inputs: dirs,
+            func: _ensureDir
+        }, callback);
+    }
 
-            callback();
+    function _attemptCreate(callback) {
+        _ensureSockpathDirsExist(function _ensureSockpathDirsExistCb(error) {
+            if (error) {
+                callback(error);
+                return;
+            }
+            zsock.createZoneSocket(zopts, callback);
         });
+    }
+
+    self.addDebug(zopts.zone, 'last_zsock_create_attempt');
+    _attemptCreate(function (error, fd) {
+        var server;
+
+        if (error) {
+            zoneExists(zopts.zone, function _zoneExists(_, exists) {
+                if (!exists) {
+                    zlog.warn({err: error}, 'error creating socket and zone no '
+                        + 'longer exists, not retrying');
+                    return;
+                }
+                // If we get errors trying to create the zone socket, setup a
+                // retry loop and return.
+                zlog.error({err: error}, 'createZoneSocket error, %s seconds '
+                    + 'before next attempt', waitSecs);
+                _retryCreateZoneSocketLater();
+                return;
+            });
+            return;
+        }
+
+        self.addDebug(zopts.zone, 'last_zsock_create_success');
+
+        server = net.createServer(function (socket) {
+            var handler = self.makeMetadataHandler(zopts.zone, socket);
+            var buffer = '';
+
+            zlog.trace('creating new server for FD ' + fd);
+
+            socket.on('data', function (data) {
+                var chunk, chunks;
+                buffer += data.toString();
+                chunks = buffer.split('\n');
+                while (chunks.length > 1) {
+                    chunk = chunks.shift();
+                    handler(chunk);
+                }
+                buffer = chunks.pop();
+            });
+
+            socket.on('error', function (err) {
+                zlog.error({err: err}, 'ZSocket error: ' + err.message);
+                zlog.info('Attempting to recover; closing and recreating zone '
+                    + 'socket and server.');
+                try {
+                    server.close();
+                    socket.end();
+                } catch (e) {
+                    zlog.error({err: e}, 'Caught exception closing server: %s',
+                        e.message);
+                }
+                _retryCreateZoneSocketLater();
+                return;
+            });
+        });
+
+        /*
+         * When we create a new zoneConnections entry, we want to make sure if
+         * there's an existing one (due to an error that we're retrying for
+         * example) that we clear the existing one and its timeout before
+         * creating a new one.
+         */
+        zlog.trace('creating new zoneConnections[' + zopts.zone + ']');
+        if (self.zoneConnections[zopts.zone]
+            && !self.zoneConnections[zopts.zone].done) {
+
+            self.log.trace('creating new connection for ' + zopts.zone
+                + ', but existing zoneConnection exists, calling end()');
+            self.zoneConnections[zopts.zone].end();
+        }
+
+        self.zoneConnections[zopts.zone] = {
+            conn: server,
+            done: null,
+            end: function () {
+                if (self.zoneRetryTimeouts[zopts.zone]) {
+                    // When .end() is called, want to stop any existing retries
+                    clearTimeout(self.zoneRetryTimeouts[zopts.zone]);
+                    self.zoneRetryTimeouts[zopts.zone] = null;
+                }
+                if (this.done) {
+                    zlog.trace(zopts.zone + ' ' + fd + ' already done, not '
+                        + 'closing again.');
+                    return;
+                }
+                this.done = new Date();
+                zlog.info('Closing server');
+                try {
+                    server.close();
+                } catch (e) {
+                    zlog.error({err: e}, 'Caught exception closing server: '
+                        + e.message);
+                }
+            },
+            fd: fd // so it's in the core for debugging
+        };
+
+        server.on('error', function (err) {
+            zlog.error({err: err}, 'Zone socket error: %s', err.message);
+            if (err.code === 'ENOTSOCK' || err.code === 'EBADF') {
+                // the socket inside the zone went away,
+                // likely due to resource constraints (ie: disk full)
+                try {
+                    server.close();
+                } catch (e) {
+                    zlog.error({err: e}, 'Caught exception closing server: '
+                        + e.message);
+                }
+                // start the retry timer
+                _retryCreateZoneSocketLater();
+            } else if (err.code !== 'EINTR') {
+                throw err;
+            }
+        });
+
+        if (guessHandleType(fd) !== 'PIPE') {
+            zlog.debug('fd %d is not a pipe, retry creating zone socket', fd);
+            _retryCreateZoneSocketLater();
+        } else {
+            zlog.debug('listening on fd %d', fd);
+            server.listen({fd: fd});
+            self.addDebug(zopts.zone, 'last_zsock_listen_success');
+        }
     });
+}
+
+MetadataAgent.prototype.createZoneSocket =
+function (zopts, waitSecs, callback) {
+    var self = this;
+    waitSecs = waitSecs || 1;
+
+    attemptCreateZoneSocket(self, zopts, waitSecs);
+
+    if (callback) {
+        callback();
+    }
 };
 
 function base64_decode(input) {
@@ -1180,15 +923,13 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         var cmd;
         var ns;
         var parts;
-        var query;
-        var reqid;
-        var req_is_v2 = false;
-        var start_request_timer = newTimer();
         var val;
         var vmobj;
         var want;
+        var reqid;
+        var req_is_v2 = false;
 
-        parts = data.toString().trimRight().replace(/\n$/, '')
+        parts = rtrim(data.toString()).replace(/\n$/, '')
             .match(/^([^\s]+)\s?(.*)/);
 
         if (!parts) {
@@ -1198,11 +939,6 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
         cmd = parts[1];
         want = parts[2];
-        query = {
-            cmd: cmd,
-            arg: want,
-            req_v: 1
-        };
 
         if ((cmd === 'NEGOTIATE' || cmd === 'GET') && !want) {
             write('invalid command\n');
@@ -1224,7 +960,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 return;
             }
 
-            zlog.trace('Serving GET ' + want);
+            zlog.info('Serving GET ' + want);
 
             if (want.slice(0, 4) === 'sdc:') {
                 want = want.slice(4);
@@ -1407,7 +1143,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 return;
             }
 
-            zlog.trace('Serving DELETE ' + want);
+            zlog.info('Serving DELETE ' + want);
 
             if (want.slice(0, 4) === 'sdc:') {
                 returnit(new Error('Cannot update the "sdc" Namespace.'));
@@ -1444,7 +1180,6 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
             // arguments: the Key and then the Value.
             key = (base64_decode(terms[0]) || '').trim();
             value = base64_decode(terms[1]);
-            query.arg = key;
 
             if (!key || value === null) {
                 returnit(new Error('Invalid PUT Request'));
@@ -1463,7 +1198,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 return;
             }
 
-            zlog.trace('Serving PUT ' + key);
+            zlog.info('Serving PUT ' + key);
             setMetadata(key, value, function (err) {
                 if (err) {
                     zlog.error(err, 'could not set metadata (key "' + key
@@ -1513,31 +1248,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
             return;
         }
 
-        function _callCbAndLogTimer(opts, err, _cb) {
-            assert.object(opts, 'opts');
-            assert.arrayOfNumber(opts.timer, 'opts.timer');
-            assert.string(opts.loadFile, 'opts.loadFile');
-            assert.optionalObject(err, 'err');
-            assert.func(_cb, '_cb');
-
-            var elapsed = elapsedTimer(opts.timer);
-            var loglvl = 'trace';
-
-            if (elapsed >= 10) {
-                // If reading the file took more than 10ms we log at
-                // warn instead of trace. Something's not right.
-                loglvl = 'warn';
-            }
-            zlog[loglvl]({
-                elapsed: elapsed,
-                result: (err ? 'FAILED' : 'SUCCESS'),
-                zonename: vmobj.zonename
-            }, 'load ' + opts.loadFile);
-            _cb(err);
-        }
-
         function addTags(cb) {
-            var cbOpts = {timer: newTimer(), loadFile: 'tags'};
             var filename;
 
             filename = vmobj.zonepath + '/config/tags.json';
@@ -1545,24 +1256,24 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
                 if (err && err.code === 'ENOENT') {
                     vmobj.tags = {};
-                    _callCbAndLogTimer(cbOpts, null, cb);
+                    cb();
                     return;
                 }
 
                 if (err) {
                     zlog.error({err: err}, 'failed to load tags.json: '
                         + err.message);
-                    _callCbAndLogTimer(cbOpts, err, cb);
+                    cb(err);
                     return;
                 }
 
                 try {
                     vmobj.tags = JSON.parse(file_data.toString());
-                    _callCbAndLogTimer(cbOpts, null, cb);
+                    cb();
                 } catch (e) {
                     zlog.error({err: e}, 'unable to tags.json for ' + zone
                         + ': ' + e.message);
-                    _callCbAndLogTimer(cbOpts, e, cb);
+                    cb(e);
                 }
 
                 return;
@@ -1570,16 +1281,12 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         }
 
         function addMetadata(cb) {
-            var cbOpts = {timer: newTimer(), loadFile: 'metadata'};
             var filename;
 
-            // If we got here, our answer comes from metadata so read that file.
-
-            // NOTE: In the future, if the fs.readFile overhead here ends up
-            // being larger than a stat would be, we might want to cache these
-            // and reload only when mtime changes.
-            //
-            // Alternatively: when OS-2647 lands we might just use vminfod.
+            // If we got here, our answer comes from metadata.
+            // XXX In the future, if the require overhead here ends up being
+            // larger than a stat would be, we might want to cache these and
+            // reload when mtime changes.
 
             filename = vmobj.zonepath + '/config/metadata.json';
 
@@ -1593,14 +1300,14 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 vmobj.internal_metadata = {};
 
                 if (err && err.code === 'ENOENT') {
-                    _callCbAndLogTimer(cbOpts, null, cb);
+                    cb();
                     return;
                 }
 
                 if (err) {
                     zlog.error({err: err}, 'failed to load mdata.json: '
                         + err.message);
-                    _callCbAndLogTimer(cbOpts, err, cb);
+                    cb(err);
                     return;
                 }
 
@@ -1611,11 +1318,11 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                             vmobj[mdata] = json[mdata];
                         }
                     });
-                    _callCbAndLogTimer(cbOpts, null, cb);
+                    cb();
                 } catch (e) {
                     zlog.error({err: e}, 'unable to load metadata.json for '
                         + zone + ': ' + e.message);
-                    _callCbAndLogTimer(cbOpts, e, cb);
+                    cb(e);
                 }
 
                 return;
@@ -1683,9 +1390,6 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
             cmd = m2[1];
             want = base64_decode(m2[2]);
-            query.cmd = cmd;
-            query.arg = want;
-            query.req_v = 2;
 
             req_is_v2 = true;
 
@@ -1709,27 +1413,15 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
             return (fullresp);
         }
 
-        function logReturn(res, error) {
-            query.elapsed = elapsedTimer(start_request_timer);
-
-            zlog.info({
-                err: error,
-                response: res,
-                query: query
-            }, 'handled %s %s', query.cmd, query.arg);
-        }
-
         function returnit(error, retval) {
             var towrite;
 
             if (error) {
                 zlog.error(error.message);
-                if (req_is_v2) {
+                if (req_is_v2)
                     write(format_v2_response('FAILURE', error.message));
-                } else {
+                else
                     write('FAILURE\n');
-                }
-                logReturn('FAILURE', error);
                 return;
             }
 
@@ -1741,7 +1433,6 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     towrite = retval.replace(/^\./mg, '..');
                     write('SUCCESS\n' + towrite + '\n.\n');
                 }
-                logReturn('SUCCESS');
                 return;
             } else if (!isNaN(retval)) {
                 if (req_is_v2) {
@@ -1750,25 +1441,20 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     towrite = retval.toString().replace(/^\./mg, '..');
                     write('SUCCESS\n' + towrite + '\n.\n');
                 }
-                logReturn('SUCCESS');
                 return;
             } else if (retval) {
                 // Non-string value
-                if (req_is_v2) {
+                if (req_is_v2)
                     write(format_v2_response('FAILURE'));
-                } else {
+                else
                     write('FAILURE\n');
-                }
-                logReturn('FAILURE');
                 return;
             } else {
                 // Nothing to return
-                if (req_is_v2) {
+                if (req_is_v2)
                     write(format_v2_response('NOTFOUND'));
-                } else {
+                else
                     write('NOTFOUND\n');
-                }
-                logReturn('NOTFOUND');
                 return;
             }
         }

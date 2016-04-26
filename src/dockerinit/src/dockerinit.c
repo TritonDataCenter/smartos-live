@@ -81,7 +81,7 @@
 #define LOGFILE "/var/log/sdc-dockerinit.log"
 #define RTMBUFSZ sizeof (struct rt_msghdr) + (3 * sizeof (struct sockaddr_in))
 #define ATTACH_CHECK_INTERVAL 200000 // 200ms
-#define ZFD_OPEN_RETRIES 30 // retries to open a zfd device (1 try per second)
+#define ZFD_OPEN_RETRIES 300 /* retries to open a zfd device (10 / second) */
 
 int addRoute(const char *, const char *, const char *, int);
 void closeIpadmHandle();
@@ -103,7 +103,7 @@ static void setupLogging(boolean_t ctty);
 void waitIfAttaching();
 void makePath(const char *, char *, size_t);
 static int init_template(int);
-int zfd_open(const char *path, int oflag);
+static int zfd_open(const char *path, int oflag);
 
 /* global metadata client bits */
 int initialized_proto = 0;
@@ -256,8 +256,8 @@ zfd_ready()
 int
 zfd_open(const char *path, int oflag)
 {
-    int i;
-    int fd = -1;
+    int fd;
+    struct timespec ts;
 
     /*
      * Sometimes devfs takes some time to create our devices. Even though we
@@ -267,7 +267,10 @@ zfd_open(const char *path, int oflag)
      * failing.
      */
 
-    for (i = 0; i < ZFD_OPEN_RETRIES; i++) {
+    ts.tv_sec = 0;
+    ts.tv_nsec = 100000000; /* 1/10 of a second */
+
+    for (int i = 0; i < ZFD_OPEN_RETRIES; i++) {
         fd = open(path, oflag);
         if (fd >= 0 || errno != ENOENT) {
             if (fd >= 0) {
@@ -275,8 +278,19 @@ zfd_open(const char *path, int oflag)
             }
             break;
         }
-        dlog("WARN open(%s) ENOENT on attempt %d, will retry\n", path, i);
-        (void) sleep(1);
+        if ((i + 1) < ZFD_OPEN_RETRIES) {
+            /*
+             * We're going to do another try after a delay. Since the retries
+             * happen every tenth of a second and there might be a lot of them
+             * especially if the container is looping, we'll just log the first
+             * retry and every 10th after that.
+             */
+            if ((i % 10) == 0) {
+                dlog("WARN open(%s) ENOENT on attempt %d, %s\n", path, i,
+                    (i == 0) ? "will retry" : "still retrying");
+            }
+            (void) nanosleep(&ts, NULL);
+        }
     }
 
     return (fd);
@@ -570,6 +584,15 @@ setupLogging(boolean_t ctty)
 }
 
 static void
+assertFd(int actual, int expected)
+{
+    if (actual != expected) {
+        fatal(ERR_UNEXPECTED, "expected fd %d, got %d\n", expected, actual);
+        /* NOTREACHED */
+    }
+}
+
+static void
 setupTerminal(boolean_t ctty)
 {
     int _stdin, _stdout, _stderr;
@@ -591,6 +614,7 @@ setupTerminal(boolean_t ctty)
             fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
                 strerror(errno));
         }
+        assertFd(_stdin, STDIN_FILENO);
     }
 
     if (close(1) == -1) {
@@ -607,11 +631,13 @@ setupTerminal(boolean_t ctty)
             fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
                 strerror(errno));
         }
+        assertFd(_stdout, STDOUT_FILENO);
         _stderr = zfd_open("/dev/zfd/0", O_WRONLY);
         if (_stderr == -1) {
             fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/0: %s\n",
                 strerror(errno));
         }
+        assertFd(_stderr, STDERR_FILENO);
 
         if (setsid() < 0) {
             fatal(ERR_OPEN_CONSOLE, "failed to create process session: %s\n",
@@ -629,11 +655,13 @@ setupTerminal(boolean_t ctty)
             fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/1: %s\n",
                 strerror(errno));
         }
+        assertFd(_stdout, STDOUT_FILENO);
         _stderr = zfd_open("/dev/zfd/2", O_WRONLY);
         if (_stderr == -1) {
             fatal(ERR_OPEN_CONSOLE, "failed to open /dev/zfd/2: %s\n",
                 strerror(errno));
         }
+        assertFd(_stderr, STDERR_FILENO);
     }
 }
 

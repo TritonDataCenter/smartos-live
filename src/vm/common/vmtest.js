@@ -1,5 +1,4 @@
-//
-// Copyright 2016 Joyent, Inc.  All rights reserved.
+// Copyright 2016 Joyent, Inc.
 //
 // This is the common set of functions for things like ensuring we have a
 // SmartOS and Ubuntu image to work with.
@@ -108,7 +107,7 @@ exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
         if (state.hasOwnProperty('uuid')) {
             VM.delete(state.uuid, function (err) {
                 if (err) {
-                    if (err.message.match(/No such zone configured/)) {
+                    if (err.code === 'ENOENT') {
                         t.ok(true, 'tried to delete VM ' + state.uuid
                             + ' but it was already gone.');
                     } else {

@@ -253,7 +253,7 @@ zfd_ready()
     }
 }
 
-int
+static int
 zfd_open(const char *path, int oflag)
 {
     int fd;

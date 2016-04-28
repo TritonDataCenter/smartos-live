@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright (c) 2014 Joyent, Inc.  All rights reserved.
+# Copyright (c) 2016 Joyent, Inc.  All rights reserved.
 #
 
 unset LD_LIBRARY_PATH
@@ -55,7 +55,14 @@ ORIGIN=`zfs get -H -ovalue origin $PDS_NAME/$bname | grep -v "@final$"`
 
 zfs destroy -rF $PDS_NAME/cores/$bname
 zfs destroy -rF $PDS_NAME/$bname
-(( $? != 0 )) && (echo "processes in zone: " && fuser $ZONEPATH)
+if [[ $? != 0 ]]; then
+    echo "processes in zone: "
+    fuser ${ZONEPATH}
+    # Since we are destroying the zone, we don't want to leave a zoneroot behind
+    # just because something couldn't be umounted. So we'll also force the
+    # umount with the 'f' option here.
+    zfs destroy -rfF $PDS_NAME/$bname
+fi
 
 [[ -n ${ORIGIN} && ${ORIGIN} != "-" ]] && zfs destroy -F $ORIGIN
 

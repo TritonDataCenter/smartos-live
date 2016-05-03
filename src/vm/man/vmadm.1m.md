@@ -2060,7 +2060,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         changing the file system's recordsize affects only files created
         after the setting is changed; existing files are unaffected.
 
-        NOTE: to change this property for KVM, see disks.*.zfs_recsize above.
+        NOTE: to change this property for KVM, see disks.*.block_size above.
 
         type: integer (record size in bytes, 512 to 131072, must be power of 2)
         vmtype: OS

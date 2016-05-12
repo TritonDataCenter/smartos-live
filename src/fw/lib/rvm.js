@@ -121,7 +121,7 @@ function createLookup(remoteVMs, log) {
     }
 
     var rvmList = remoteVMs;
-    if (!util_obj.isArray(rvmList)) {
+    if (!Array.isArray(rvmList)) {
         rvmList = [ remoteVMs ];
     }
 

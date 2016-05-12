@@ -142,7 +142,7 @@ function defaultZoneRules(uuids) {
  */
 function fillInRuleBlanks(res, incomplete) {
     var toFill = incomplete;
-    if (!mod_obj.isArray(incomplete)) {
+    if (!Array.isArray(incomplete)) {
         toFill = [incomplete];
     }
 

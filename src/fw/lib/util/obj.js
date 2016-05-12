@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2016, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: shared object logic
@@ -84,18 +84,6 @@ function forEachKey(obj, callback) {
 
 
 /**
- * Returns true if the object is an array
- */
-function isArray(obj) {
-    if (typeof (obj) == 'object' && obj.hasOwnProperty('length')) {
-        return true;
-    }
-
-    return false;
-}
-
-
-/**
  * Merges two objects based on their keys and returns the result. In a key
  * conflict, obj1 wins.
  */
@@ -135,12 +123,32 @@ function objValues(obj) {
 }
 
 
+function shallowObjEqual(obj1, obj2) {
+    var field;
+    for (field in obj1) {
+        if (!obj2.hasOwnProperty(field))
+            return false;
+
+        if (obj1[field] !== obj2[field]) {
+            return false;
+        }
+    }
+
+    for (field in obj2) {
+        if (!obj1.hasOwnProperty(field))
+            return false;
+    }
+
+    return true;
+}
+
+
 module.exports = {
     addToObj3: addToObj3,
     createSubObjects: createSubObjects,
     forEachKey: forEachKey,
-    isArray: isArray,
     mergeObjects: mergeObjects,
+    shallowObjEqual: shallowObjEqual,
     values: objValues,
     objEmpty: objEmpty
 };

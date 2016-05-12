@@ -169,6 +169,50 @@ function dedupRules(list1, list2) {
 }
 
 
+/*
+ * This filter removes rules that aren't affected by adding a remote VM
+ * or updating a local VM (for example, simple wildcard rules), and would
+ * therefore require updating the rules of other VMs. This table shows which
+ * rules we keep. Each row represents whether or not a new VM or remote VM
+ * is a source or destination VM, plus whether or not the rule is a BLOCK
+ * or ALLOW rule. Each column represents a collection of targets we might
+ * have. Each cell says whether or not we need to update the VMs represented
+ * by that column.
+ *
+ *              |  From   |   To    | From |  To  | From | To
+ *              | All VMs | All VMs | Tags | Tags | VMs  | VMs
+ * |------------|---------|---------|------|------|------|-----
+ * | Dest. VM / |   No    |   No    |  No  |  No  |  No  | No
+ * |   ALLOW    |         |         |      |      |      |
+ * |------------|---------|---------|------|------|------|-----
+ * |  Src VM /  |   No    |   Yes   |  No  |  Yes |  No  | Yes
+ * |   ALLOW    |         |         |      |      |      |
+ * |------------|---------|---------|------|------|------|-----
+ * | Dest. VM / |   Yes   |   No    |  Yes |  No  |  Yes | No
+ * |   BLOCK    |         |         |      |      |      |
+ * |------------|---------|---------|------|------|------|-----
+ * |  Src VM /  |   No    |   No    |  No  |  No  |  No  | No
+ * |   BLOCK    |         |         |      |      |      |
+ *
+ */
+function getAffectedRules(new_vms, log) {
+    return function _isAffectedRule(rule) {
+        if (rule.action === 'allow'
+            && vmsOnSide(new_vms, rule, 'from', log).length > 0) {
+            return rule.to.wildcards.indexOf('vmall') !== -1
+                || rule.to.tags.length > 0
+                || rule.to.vms.length > 0;
+        } else if (rule.action === 'block'
+            && vmsOnSide(new_vms, rule, 'to', log).length > 0) {
+            return rule.from.wildcards.indexOf('vmall') !== -1
+                || rule.from.tags.length > 0
+                || rule.from.vms.length > 0;
+        }
+        return false;
+    }
+}
+
+
 /**
  * Starts ipf and reloads the rules for a VM
  */
@@ -196,7 +240,7 @@ function startIPF(opts, log, callback) {
  */
 function validateOpts(opts) {
     assert.object(opts, 'opts');
-    assert.ok(util.isArray(opts.vms),
+    assert.ok(Array.isArray(opts.vms),
         'opts.vms ([object]) required');
     // Allow opts.vms to be empty - it's possible, though unlikely, that
     // there are no VMs on this system
@@ -259,7 +303,7 @@ function createRules(inRules, createdBy, callback) {
  */
 function createUpdatedRules(opts, log, callback) {
     log.trace('createUpdatedRules: entry');
-    var originalRules = opts.originalRules;
+    var originals = opts.originalRules;
     var updatedRules = opts.updatedRules;
 
     if (!updatedRules || updatedRules.length === 0) {
@@ -268,13 +312,8 @@ function createUpdatedRules(opts, log, callback) {
 
     var mergedRule;
     var origRule;
-    var originals = {};
     var updated = [];
     var ver = mod_rule.generateVersion();
-
-    originalRules.forEach(function (r) {
-        originals[r.uuid] = r;
-    });
 
     updatedRules.forEach(function (rule) {
         // Assume that we're allowed to do adds - findRules() would have errored
@@ -309,8 +348,12 @@ function createUpdatedRules(opts, log, callback) {
                 }
             }
 
-            updated.push(mergedRule);
-
+            if (mod_obj.shallowObjEqual(origRule, mergedRule)) {
+                // The rule hasn't changed - do nothing
+                delete originals[rule.uuid];
+            } else {
+                updated.push(mergedRule);
+            }
         } else {
             updated.push(rule);
         }
@@ -319,6 +362,7 @@ function createUpdatedRules(opts, log, callback) {
     log.debug(updated, 'createUpdatedRules: rules merged');
     return createRules(updated, callback);
 }
+
 
 function mergeIntoLookup(vmStore, vm) {
     vmStore.all[vm.uuid] = vm;
@@ -335,6 +379,7 @@ function mergeIntoLookup(vmStore, vm) {
 
     // XXX: subnet
 }
+
 
 /**
  * Turns a list of VMs from VM.js into a lookup table, keyed by the various
@@ -646,7 +691,7 @@ function findRules(opts, log, callback) {
     }
 
     var errs = [];
-    var found = [];
+    var found = {};
     var uuids = {};
     rules.forEach(function (r) {
         if (!r.hasOwnProperty('uuid')) {
@@ -664,7 +709,7 @@ function findRules(opts, log, callback) {
 
         if (uuids.hasOwnProperty(r.uuid)) {
             delete uuids[r.uuid];
-            found.push(r);
+            found[r.uuid] = r;
         }
     });
 
@@ -884,7 +929,7 @@ function ipfRuleObj(opts) {
         return sortObj;
     }
 
-    var targets = mod_obj.isArray(opts.targets) ?
+    var targets = Array.isArray(opts.targets) ?
         opts.targets : [ opts.targets ];
 
     targets.forEach(function (target) {
@@ -1201,7 +1246,7 @@ function addOtherSideRemoteTargets(vms, rule, targets, dir, log) {
                     if (val === true) {
                         targets.tags[key] = val;
                     } else {
-                        if (!util.isArray(targets.tags[key])) {
+                        if (!Array.isArray(targets.tags[key])) {
                             targets.tags[key] = [ targets.tags[key] ];
                         }
 
@@ -1569,49 +1614,13 @@ function add(opts, callback) {
         },
 
         // Merge the local and remote VM rules, and use that list to find
-        // the VMs affected. We filter out rules that aren't affected by
-        // adding a remote VM or updating a local VM (for example, simple
-        // wildcard rules). This table shows which rules we keep. Each row
-        // represents whether or not a new VM or remote VM is a source or
-        // destination VM, plus whether or not the rule is a BLOCK or ALLOW
-        // rule. Each column represents a collection of targets we might
-        // have. Each cell says whether or not we need to update the VMs
-        // represented by that column.
-        //
-        //              |  From   |   To    | From |  To  | From | To
-        //              | All VMs | All VMs | Tags | Tags | VMs  | VMs
-        // |------------|---------|---------|------|------|------|-----
-        // | Dest. VM / |   No    |   No    |  No  |  No  |  No  | No
-        // |   ALLOW    |         |         |      |      |      |
-        // |------------|---------|---------|------|------|------|-----
-        // |  Src VM /  |   No    |   Yes   |  No  |  Yes |  No  | Yes
-        // |   ALLOW    |         |         |      |      |      |
-        // |------------|---------|---------|------|------|------|-----
-        // | Dest. VM / |   Yes   |   No    |  Yes |  No  |  Yes | No
-        // |   BLOCK    |         |         |      |      |      |
-        // |------------|---------|---------|------|------|------|-----
-        // |  Src VM /  |   No    |   No    |  No  |  No  |  No  | No
-        // |   BLOCK    |         |         |      |      |      |
-        //
+        // the VMs affected.
         function localAndRemoteVMsAffected(res, cb) {
-            var affected_rules = dedupRules(res.localVMrules, res.remoteVMrules)
-                .filter(function (el) {
-                    if (el.action === 'allow'
-                        && vmsOnSide(res.newVMs, el, 'from', log).length > 0) {
-                        return el.to.wildcards.indexOf('vmall') !== -1
-                            || el.to.tags.length > 0
-                            || el.to.vms.length > 0;
-                    } else if (el.action === 'block'
-                        && vmsOnSide(res.newVMs, el, 'to', log).length > 0) {
-                        return el.from.wildcards.indexOf('vmall') !== -1
-                            || el.from.tags.length > 0
-                            || el.from.vms.length > 0;
-                    }
-                    return false;
-                });
+            var affectedRules = dedupRules(res.localVMrules, res.remoteVMrules)
+                .filter(getAffectedRules(res.newVMs, log));
             filter.vmsByRules({
                 log: log,
-                rules: affected_rules,
+                rules: affectedRules,
                 vms: res.vms
             }, cb);
         },
@@ -2201,6 +2210,11 @@ function update(opts, callback) {
             }, log, cb);
         },
 
+        // Create list of rules that are being replaced
+        function replacedRules(res, cb) {
+            cb(null, mod_obj.values(res.originalRules));
+        },
+
         // Create the VM lookup
         function vms(_, cb) { createVMlookup(opts.vms, log, cb); },
 
@@ -2224,11 +2238,18 @@ function update(opts, callback) {
             lookupVMs(res.vms, opts.localVMs, log, cb);
         },
 
+        // Build a table for information about updated local/remote VMs
+        function newVMs(res, cb) {
+            var nvms = clone(res.newRemoteVMsLookup);
+            mod_obj.values(res.localVMs).map(mergeIntoLookup.bind(null, nvms));
+            cb(null, nvms);
+        },
+
         // Get the VMs the rules applied to before the update
         function originalVMs(res, cb) {
             filter.vmsByRules({
                 log: log,
-                rules: res.originalRules,
+                rules: res.replacedRules,
                 vms: res.vms
             }, cb);
         },
@@ -2259,19 +2280,24 @@ function update(opts, callback) {
         },
 
         // Merge the local and remote VM rules, and use that list to find
-        // the VMs affected
+        // the VMs affected.
         function localAndRemoteVMsAffected(res, cb) {
+            var affectedRules = dedupRules(res.localVMrules, res.remoteVMrules)
+                .filter(getAffectedRules(res.newVMs, log));
             filter.vmsByRules({
                 log: log,
-                rules: dedupRules(res.localVMrules, res.remoteVMrules),
+                rules: affectedRules,
                 vms: res.vms
             }, cb);
         },
 
         function mergedVMs(res, cb) {
+            // These are VMs affected by changing rules:
             var ruleVMs = mergeObjects(res.originalVMs, res.matchingVMs);
-            return cb(null, mergeObjects(ruleVMs,
-                res.localAndRemoteVMsAffected));
+            // These are VMs affected by changing VM information:
+            var updatedVMs = mergeObjects(res.localVMs,
+                res.localAndRemoteVMsAffected);
+            return cb(null, mergeObjects(ruleVMs, updatedVMs));
         },
 
         // Get the rules that need to be written out for all VMs, before and
@@ -2408,7 +2434,7 @@ function getRuleVMs(opts, callback) {
         },
         function vms(_, cb) { createVMlookup(opts.vms, log, cb); },
         function ruleVMs(state, cb) {
-            if (!util.isArray(state.rules)) {
+            if (!Array.isArray(state.rules)) {
                 state.rules = [ state.rules ];
             }
 

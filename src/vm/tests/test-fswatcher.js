@@ -312,8 +312,6 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     var idx;
 
                     if (!evt.pathname.match(/\/testfile.[0-9]+$/)) {
-                        // console.error('\n\nIGNORING: '
-                        //     + evt.pathname + '\n\n');
                         return;
                     }
 
@@ -329,8 +327,6 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     var idx;
 
                     if (!evt.pathname.match(/\/testfile.[0-9]+$/)) {
-                        // console.error('\n\nIGNORING: '
-                        //     + evt.pathname + '\n\n');
                         return;
                     }
 
@@ -343,20 +339,15 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     fs.stat(evt.pathname, function (err, stats) {
                         if (err) {
                             if (err.code === 'ENOENT') {
-                                // console.log('saw ENOENT0: '
-                                //     + evt.pathname);
                                 return;
                             } else {
                                 throw err;
                             }
                         }
-                        // console.error('\n\nDELETING '
-                        //     + evt.pathname + '\n\n');
                         try {
                             fs.unlinkSync(evt.pathname);
                         } catch (e) {
                             if (e.code === 'ENOENT') {
-                                // console.log('saw ENOENT1: ' + evt.pathname);
                                 return;
                             } else {
                                 throw (e);
@@ -372,8 +363,6 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                     var idx;
 
                     if (!evt.pathname.match(/\/testfile.[0-9]+$/)) {
-                        // console.error('\n\nIGNORING: '
-                        //     + evt.pathname + '\n\n');
                         return;
                     }
 
@@ -410,8 +399,6 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                         t.ok(true, 'created ' + count + ' watches');
                         callback();
                     } else {
-                        // console.error('created ' + completed + ' / ' + count
-                        //     + ' watches');
                         loops++;
                         if (loops > 600) {
                             clearInterval(ival);
@@ -444,8 +431,6 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                         t.ok(true, 'created ' + count + ' files');
                         callback();
                     } else {
-                        // console.error('created ' + completed + ' / ' + count
-                        //     + ' files');
                         loops++;
                         if (loops > 600) {
                             clearInterval(ival);
@@ -488,8 +473,6 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                             }
                         });
                         if (missing) {
-                            // console.error('STILL WAITING FOR ' + idx + '('
-                            //     + JSON.stringify(files[idx]) + ')');
                             done = false;
                             break;
                         }

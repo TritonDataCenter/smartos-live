@@ -107,12 +107,12 @@
  * EXIT STATUS
  *
  *   Under normal operation, fswatcher will run until STDIN is closed or a fatal
- *   error occurs. STDIN closing will result in exit code 0. Any other exit code
- *   should result in a message of type "error" being output before exiting
+ *   error occurs. STDIN closing will result in exit code 0, while any fatal
+ *   error will result in a message of type "error" being output before exiting
  *   non-zero.
  *
- *   When errors occur that are completly unexpected, this will call abort() to
- *   generate a core dump.
+ *   When errors occur that are completly unexpected, this program will call
+ *   abort() to generate a core dump.
  *
  */
 
@@ -381,7 +381,7 @@ insert_handle(struct fileinfo *handle)
 
 /*
  * i_remove_handle() removes a fileinfo from the hash if the handle
- * is alreay known.
+ * is already known.
  *
  * Should only be called when holding the handles_mutex.
  */
@@ -771,14 +771,14 @@ watch_path(char *pathname, uint32_t key, uint64_t start_timestamp)
     if (finf == NULL) {
         print_error(key, ERR_CANNOT_ALLOCATE, "failed to allocate memory for "
             "new watcher errno %d: %s", errno, strerror(errno));
-        /* XXX abort(); ? */
+        abort();
         return (ERR_CANNOT_ALLOCATE);
     }
 
     if ((finf->fobj.fo_name = strdup(pathname)) == NULL) {
         print_error(key, ERR_CANNOT_ALLOCATE, "strdup failed w/ errno %d: %s",
             errno, strerror(errno));
-        /* XXX abort(); ? */
+        abort();
         free_handle(finf);
         return (ERR_CANNOT_ALLOCATE);
     }
@@ -914,7 +914,7 @@ main()
 
         start_timestamp = 0;
 
-        /* read one character past MAX_KEY_LEN so we know it's too long */
+        /* read one character past MAX_KEY_LEN so we know when it's too long */
         snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s %%llu",
             MAX_KEY_LEN + 1);
         res = sscanf(str, sscanf_fmt, key_str, cmd, path, &start_timestamp);

@@ -921,6 +921,14 @@ create_zpools()
 	touch /${SYS_ZPOOL}/.system_pool
 }
 
+update_root_password()
+{
+	[[ -z "$1" ]] && return 0
+	(umask 066; sed -e "s|^root:[^\:]*:|root:$1:|" /etc/shadow \
+		> /etc/shadow.tmp) && \
+	mv /etc/shadow.tmp "$2"
+}
+
 trap "" SIGINT
 
 while getopts "f:" opt
@@ -1246,9 +1254,7 @@ create_zpools "$DISK_LAYOUT"
 mv $tmp_config /usbkey/config || fatal "failed to persist configuration"
 
 # set the root password
-root_shadow=$(/usr/lib/cryptpass "$root_shadow")
-sed -e "s|^root:[^\:]*:|root:${root_shadow}:|" /etc/shadow > /usbkey/shadow \
-      && chmod 400 /usbkey/shadow
+update_root_password "$(/usr/lib/cryptpass "$root_shadow")" /usbkey/shadow
 [[ $? -eq 0 ]] || fatal "failed to preserve root pasword"
 
 cp -rp /etc/ssh /usbkey/ssh || fatal "failed to set up preserve host keys"

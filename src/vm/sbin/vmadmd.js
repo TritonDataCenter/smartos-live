@@ -139,6 +139,11 @@ function zonecfg(args, callback)
  *
  * If there are no errors, the last_runtime property will be added to the vmobj.
  *
+ * If lastbooted is newer than lastexited, we'll *not* add last_runtime since we
+ * assume the VM has actually been started. When it gets to
+ * restartDockerContainer it will be loaded and we'll confirm it's already
+ * running there. If not, at worst we'll use the default timeout.
+ *
  */
 function addLastRuntime(vmobj, opts, callback)
 {
@@ -181,13 +186,18 @@ function addLastRuntime(vmobj, opts, callback)
         }
     ]}, function _addLastRuntimePipelineCb(err) {
         if (!err) {
-            assert((lastexited_mtime - lastbooted_mtime) > 0,
-                'mtime delta must be positive [' + lastexited_mtime + ' <= '
-                + lastbooted_mtime + ']');
-
-            vmobj.last_runtime = (lastexited_mtime - lastbooted_mtime);
-            log.debug({vm_uuid: vmobj.uuid, last_runtime: vmobj.last_runtime},
-                'added last_runtime to VM Object');
+            if ((lastexited_mtime - lastbooted_mtime) > 0) {
+                vmobj.last_runtime = (lastexited_mtime - lastbooted_mtime);
+                log.debug({
+                    vm_uuid: vmobj.uuid,
+                    last_runtime: vmobj.last_runtime
+                }, 'added last_runtime to VM Object');
+            } else {
+                log.warn({
+                    lastbooted_mtime: lastbooted_mtime,
+                    lastexited_mtime: lastexited_mtime
+                }, 'WARNING: VM appears to have booted since it last exited');
+            }
         }
 
         callback();

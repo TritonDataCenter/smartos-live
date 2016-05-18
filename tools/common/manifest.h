@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2015 Joyent, Inc.
+ * Copyright 2016 Joyent, Inc.
  */
 
 #ifndef _MANIFEST_H
@@ -51,6 +51,7 @@ typedef me_cb_ret_t manifest_ent_cb_t(manifest_ent_t *, void *);
 
 extern int read_manifest_file(const char *, manifest_ent_cb_t *, void *);
 extern void manifest_ent_reset(manifest_ent_t *);
+extern const char *manifest_ent_type_name(manifest_ent_type_t);
 
 #ifdef __cplusplus
 }

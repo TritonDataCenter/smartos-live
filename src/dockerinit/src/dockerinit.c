@@ -89,6 +89,7 @@ static void execCmdline(strlist_t *, strlist_t *, const char *);
 static brand_t getBrand(void);
 static boolean_t getStdinStatus(void);
 void killIpmgmtd(void);
+void mountLXDevShm();
 void mountOSDevFD();
 void openIpadmHandle();
 void plumbIf(const char *);
@@ -778,6 +779,17 @@ mountOSDevFD()
     }
 }
 
+void
+mountLXDevShm()
+{
+    dlog("MOUNT /dev/shm (shm)\n");
+
+    if (mount("shm", "/dev/shm", MS_DATA, "tmpfs", NULL, 0) != 0) {
+        fatal(ERR_MOUNT_DEVSHM, "failed to mount /dev/shm: %s\n",
+            strerror(errno));
+    }
+}
+
 static brand_t
 getBrand(void)
 {
@@ -1343,6 +1355,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
 
     switch (getBrand()) {
         case BRAND_LX:
+            mountLXDevShm();
             setupMtab();
             break;
         case BRAND_JOYENT_MINIMAL:

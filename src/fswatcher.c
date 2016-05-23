@@ -1,50 +1,17 @@
 /*
- * CDDL HEADER START
+ * This file and its contents are supplied under the terms of the
+ * Common Development and Distribution License ("CDDL"), version 1.0.
+ * You may only use this file in accordance with the terms of version
+ * 1.0 of the CDDL.
  *
- * The contents of this file are subject to the terms of the
- * Common Development and Distribution License, Version 1.0 only
- * (the "License").  You may not use this file except in compliance
- * with the License.
- *
- * You can obtain a copy of the license at http://smartos.org/CDDL
- *
- * See the License for the specific language governing permissions
- * and limitations under the License.
- *
- * When distributing Covered Code, include this CDDL HEADER in each
- * file.
- *
- * If applicable, add the following below this CDDL HEADER, with the
- * fields enclosed by brackets "[]" replaced with your own identifying
- * information: Portions Copyright [yyyy] [name of copyright owner]
- *
- * CDDL HEADER END
- *
- * Copyright 2016, Joyent, Inc.
- *
- * gcc -Wall -Wextra fswatcher.c -o fswatcher -lthread
- *
+ * A full copy of the text of the CDDL should have accompanied this
+ * source.  A copy of the CDDL is also available via the Internet at
+ * http://www.illumos.org/license/CDDL.
  */
 
-// #define DEBUG
-
-#define _REENTRANT
-#include <assert.h>
-#include <ctype.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <limits.h>
-#include <fcntl.h>
-#include <strings.h>
-#include <port.h>
-#include <errno.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <thread.h>
-#include <time.h>
+/*
+ * Copyright 2016, Joyent, Inc.
+ */
 
 /*
  * On STDIN you can send:
@@ -115,6 +82,23 @@
  *   abort() to generate a core dump.
  *
  */
+
+#include <assert.h>
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <limits.h>
+#include <fcntl.h>
+#include <strings.h>
+#include <port.h>
+#include <errno.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <thread.h>
+#include <time.h>
 
 #define MAX_FMT_LEN 64
 #define MAX_KEY 4294967295
@@ -187,6 +171,7 @@ print_event(int event, char *pathname, int final)
     int hits = 0;
     struct timespec ts;
     uint64_t timestamp;
+    nvlist_t *nvl = NULL;
 
     if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
         /* This is entirely unexpected so we abort() to ensure a core dump. */
@@ -195,6 +180,19 @@ print_event(int event, char *pathname, int final)
     }
 
     timestamp = ((uint64_t)ts.tv_sec * (uint64_t)1000000000) + ts.tv_nsec;
+
+    if (nvlist_alloc(&nvl, NV_UNIQUE_NAME, 0) != 0) {
+        perror("fswatcher: nvlist_alloc");
+        abort();
+    }
+
+    if (nvlist_add_string(nvl, "type", "event") != 0 ||
+        nvlist_add_string(nvl, "pathname", pathname) != 0 ||
+        nvlist_add_boolean_value(nvl, "is_final", final) != 0 ||
+        nvlist_add_uint64(nvl, "timestamp", timestamp) != 0) {
+        perror("fswatcher: nvlist_add_*");
+        abort();
+    }
 
     mutex_lock(&stdout_mutex);
     printf("{\"type\": \"event\", \"timestamp\": %llu, \"pathname\": \"%s\", "
@@ -508,35 +506,35 @@ get_stat(char *pathname, struct stat *sb)
 #endif
 
     switch (stat_ret) {
-        case 0:
-            /* SUCCESS! (sb will be populated) */
-            return (0);
-        case ELOOP:         /* symbolic links in path point to each other */
-        case ENOTDIR:       /* component of path is not a dir */
-        case EACCES:        /* permission denied */
-        case ENOENT:        /* file or component path doesn't exist */
-            /*
-             * The above are all fixable problems. We can't open the file right
-             * now, but we know that we shouldn't be able to either. As such,
-             * these are non-fatal and just result in a FAIL (with final flag
-             * set true) response if we're responding to a request or an error
-             * line if we're dealing with an event.
-             */
-            return (stat_ret);
-        case EFAULT:        /* filename or buffer invalid (programmer error) */
-        case EIO:           /* error reading from filesystem (system error) */
-        case ENAMETOOLONG:  /* fo_name is too long (programmer error) */
-        case ENOLINK:       /* broken link to remote machine */
-        case ENXIO:         /* path or component is marked faulty and retired */
-        case EOVERFLOW:     /* file is broken (system error) */
-        default:
-            /*
-             * This handles cases we don't know how to deal with, by dumping
-             * core so that suckers can come back in an try to figure out what
-             * happened from the core.
-             */
-            abort();
-            break;
+    case 0:
+        /* SUCCESS! (sb will be populated) */
+        return (0);
+    case ELOOP:         /* symbolic links in path point to each other */
+    case ENOTDIR:       /* component of path is not a dir */
+    case EACCES:        /* permission denied */
+    case ENOENT:        /* file or component path doesn't exist */
+        /*
+         * The above are all fixable problems. We can't open the file right
+         * now, but we know that we shouldn't be able to either. As such,
+         * these are non-fatal and just result in a FAIL (with final flag
+         * set true) response if we're responding to a request or an error
+         * line if we're dealing with an event.
+         */
+        return (stat_ret);
+    case EFAULT:        /* filename or buffer invalid (programmer error) */
+    case EIO:           /* error reading from filesystem (system error) */
+    case ENAMETOOLONG:  /* fo_name is too long (programmer error) */
+    case ENOLINK:       /* broken link to remote machine */
+    case ENXIO:         /* path or component is marked faulty and retired */
+    case EOVERFLOW:     /* file is broken (system error) */
+    default:
+        /*
+         * This handles cases we don't know how to deal with, by dumping
+         * core so that suckers can come back in and try to figure out what
+         * happened from the core.
+         */
+        abort();
+        break;
     }
 }
 
@@ -691,13 +689,12 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
  * check_and_rearm_event().
  */
 void *
-wait_for_events(void *arg)
+wait_for_events(__attribute__((unused)) void *arg)
 {
-    (void) arg;
     struct fileinfo *finf;
     port_event_t pe;
 
-    while (!port_get(port, &pe, NULL)) {
+    while (port_get(port, &pe, NULL) == 0) {
         /*
          * Can add cases for other sources if this
          * port is used to collect events from multiple sources.
@@ -749,13 +746,11 @@ void
 enqueue_free_finf(struct fileinfo *finf)
 {
 
-    if (finf != NULL) {
-        mutex_lock(&free_mutex);
-        finf->next = (struct fileinfo *)free_list;
-        free_list = finf;
-        finf->prev = NULL;
-        mutex_unlock(&free_mutex);
-    }
+    mutex_lock(&free_mutex);
+    finf->next = (struct fileinfo *)free_list;
+    free_list = finf;
+    finf->prev = NULL;
+    mutex_unlock(&free_mutex);
 }
 
 /*
@@ -765,13 +760,11 @@ int
 watch_path(char *pathname, uint32_t key, uint64_t start_timestamp)
 {
     struct fileinfo *finf;
-    /* port is global */
 
-    finf = malloc(sizeof (struct fileinfo));
+    finf = calloc(sizeof (struct fileinfo));
     if (finf == NULL) {
         print_error(key, ERR_CANNOT_ALLOCATE, "failed to allocate memory for "
             "new watcher errno %d: %s", errno, strerror(errno));
-        abort();
         return (ERR_CANNOT_ALLOCATE);
     }
 
@@ -902,7 +895,7 @@ main()
     /* Create a worker thread to process events. */
     pthread_create(&tid, NULL, wait_for_events, NULL);
 
-    while (1) {
+    for (;;) {
         if (fgets(str, MAX_CMD_LEN + 1, stdin) == NULL) {
             if (!feof(stdin)) {
                 print_error(SYSTEM_KEY, ERR_GET_STDIN, "fswatcher: error on "
@@ -923,6 +916,7 @@ main()
                 "invalid command line");
             continue;
         }
+        errno = 0;
         key = strtoul(key_str, NULL, 10);
         if ((strlen(key_str) > MAX_KEY_LEN) ||
             (key == ULONG_MAX && errno == ERANGE)) {
@@ -931,8 +925,8 @@ main()
                 "invalid key: > ULONG_MAX");
             continue;
         }
-        if (key == 0) {
-            print_error(SYSTEM_KEY, ERR_INVALID_KEY, "invalid key: 0");
+        if (key == 0 && errno == EINVAL) {
+            print_error(SYSTEM_KEY, ERR_INVALID_KEY, "invalid key");
             continue;
         }
 
@@ -940,7 +934,7 @@ main()
         fprintf(stderr, "DEBUG key: %u cmd: %s path: %s\n", key, cmd, path);
 #endif
 
-        if (strcmp("UNWATCH", cmd) == 0) {
+        if (strcmp(cmd, "UNWATCH") == 0) {
             /* unwatch_path() will print an object to stdout */
             res = unwatch_path(path, key);
             if (res != 0) {
@@ -951,7 +945,7 @@ main()
                 exit_code = res;
                 break;
             }
-        } else if (strcmp("WATCH", cmd) == 0) {
+        } else if (strcmp(cmd, "WATCH") == 0) {
             /* watch_path() will print an object to stdout */
             res = watch_path(path, key, start_timestamp);
             if (res != 0) {
@@ -963,7 +957,6 @@ main()
                 break;
             }
         } else {
-            /* XXX if they include crazy garbage, this may include non-JSON */
             print_error(key, ERR_UNKNOWN_COMMAND, "unknown command '%s'", cmd);
         }
     }

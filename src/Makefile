@@ -67,6 +67,7 @@ diskinfo :	CPPFLAGS +=	-I$(ROOT)/projects/illumos/usr/src/lib/fm/topo
 diskinfo :	LIBS +=		-R/usr/lib/fm
 diskinfo :	LIBS +=		-ldladm -ldiskmgt -lnvpair -ltopo
 fswatcher :	LIBS +=		-lthread
+fswatcher :	CFLAPGS +=	-D_REENTRANT
 zfs_recv :	LIBS +=		-lsocket
 zfs_send :	LIBS +=		-lsocket
 vmbundle :	CPPFLAGS +=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64

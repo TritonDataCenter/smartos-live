@@ -82,6 +82,7 @@ SYSINFO_MOD_DIR = $(DESTDIR)/usr/lib/sysevent/modules
 # These files will get run through jsstyle and jslint on 'make check'
 JS_CHECK_TARGETS=\
 	filewait.js \
+	vminfod.js \
 	node_modules/{system,onlyif,net-boot-config}.js \
 	net-boot-config \
 	vm/sbin/*.js \
@@ -485,6 +486,7 @@ install: all $(SUBDIRS)
 	cp zfs_recv $(DESTDIR)/usr/vm/sbin/zfs_recv
 	cp vmunbundle $(DESTDIR)/usr/vm/sbin/vmunbundle
 	cp filewait.js $(DESTDIR)/usr/vm/sbin/filewait
+	cp vminfod.js $(DESTDIR)/usr/bin/vminfod
 	mkdir -p $(DESTDIR)/lib/svc/manifest/system
 	cp vm/smf/system-vmadmd.xml \
 	    $(DESTDIR)/lib/svc/manifest/system/system-vmadmd.xml

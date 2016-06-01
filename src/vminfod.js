@@ -14,6 +14,7 @@ function usage() {
         'Usage: vminfod [command] [args]',
         '',
         'Commands',
+        '  ping               get vminfod ping     (GET /ping)',
         '  data               get all vminfod data (GET /data)',
         '  status             get vminfod status   (GET /status)',
         '  vms                get all vms          (GET /vms)',
@@ -26,6 +27,7 @@ var args = process.argv.slice(2);
 var cmd = args.shift();
 
 switch (cmd) {
+    case 'ping':
     case 'status':
     case 'vms':
     case 'data':
@@ -59,9 +61,14 @@ switch (cmd) {
                     return;
                 }
 
+                var zn = ev.zonename.split('-')[0];
+                if (args[0] === '-f' || args[0] === '--full') {
+                    zn = ev.zonename;
+                }
+
                 // format the output nicely
                 var base = f('[%s] %s %s',
-                    ev.ts.toISOString(), ev.zonename, ev.type);
+                    ev.ts.toISOString(), zn, ev.type);
 
                 if (ev.changes) {
                     ev.changes.forEach(function (change) {

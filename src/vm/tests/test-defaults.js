@@ -293,7 +293,7 @@ test('check default create_timestamp', function (t) {
                                 zonename: state.uuid
                             };
                             var opts = {
-                                timeout: 30,
+                                timeout: 30 * 1000,
                                 catchErrors: true,
                                 teardown: true
                             };

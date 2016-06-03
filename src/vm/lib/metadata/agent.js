@@ -216,7 +216,9 @@ function zoneExists(zonename, callback) {
 }
 
 /*
- * Takes a zoneConnections entry (or undefined) and calls callback with:
+ * Takes a zoneConnections entry (or undefined) and an 'opts' object that
+ * contains at least a 'log' property which is a bunyan logger, and then
+ * calls callback with:
  *
  *  callback(<Error Object>);
  *
@@ -228,11 +230,14 @@ function zoneExists(zonename, callback) {
  *
  *  callback(null, true);
  *
- *      - when the conn entry has a sockpath that's been removed.
+ *      - when the conn entry has a sockpath that's been removed or
+ *        when the conn entry sockpath has a different fs.stat() signature
  *
  */
-function checkStaleSocket(conn, callback) {
+function checkStaleSocket(conn, opts, callback) {
     assert.optionalObject(conn, 'conn');
+    assert.object(opts, 'opts');
+    assert.object(opts.log, 'opts.log');
     assert.func(callback, 'callback');
 
     if (!conn || !conn.sockpath) {
@@ -242,17 +247,56 @@ function checkStaleSocket(conn, callback) {
     }
 
     assert.string(conn.sockpath, 'conn.sockpath');
+    assert.object(conn.sockstat, 'conn.sockstat');
 
     fs.stat(conn.sockpath, function _onSockpathStat(err, stats) {
+        var field;
+        var fields = ['dev', 'ino']; // fields to compare in fs.Stats
+
         if (err) {
             if (err.code === 'ENOENT') {
+                opts.log.trace({
+                    sockpath: conn.sockpath
+                }, 'ENOENT on sockpath: stale');
                 callback(null, true); // stale
                 return;
             }
             callback(err);
             return;
         }
-        callback(null, false); // no error in stat means exists: not stale
+
+        // Check for changes in the fs.stat() signature since we created this
+        // socket. If it has changed, that means our handle to it is stale and
+        // we should recreate it.
+        for (field = 0; field < fields.length; field++) {
+            if (conn.sockstat[fields[field]] !== stats[fields[field]]) {
+                opts.log.debug({
+                    field: fields[field],
+                    sockpath: conn.sockpath,
+                    new_sockstat: stats,
+                    old_sockstat: conn.sockstat
+                }, 'change in sockpath fs.stat signature: stale');
+                callback(null, true); // stale
+                return;
+            }
+        }
+        if ((conn.sockstat.ctime
+            && conn.sockstat.ctime.getTime()) !== stats.ctime.getTime()) {
+            opts.log.debug({
+                field: 'ctime',
+                sockpath: conn.sockpath,
+                new_sockstat: stats,
+                old_sockstat: conn.sockstat
+            }, 'change in sockpath fs.stat signature: stale');
+            callback(null, true); // stale
+            return;
+        }
+
+        // no error in stat, and no diff fields means exists: not stale
+        opts.log.trace({
+            sockpath: conn.sockpath
+        }, 'sockpath still exists and fs.stat signature matches: not stale');
+        callback(null, false);
         return;
     });
 }
@@ -539,7 +583,7 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
         Object.keys(results).forEach(function (zonename) {
             var conn = self.zoneConnections[zonename]; // may be undefined
 
-            checkStaleSocket(conn, function (e, isStale) {
+            checkStaleSocket(conn, {log: self.log}, function (e, isStale) {
                 if (e) {
                     // This currently can only happen when fs.stat fails. We'll
                     // just have to assume the socket is not stale if we can't
@@ -696,7 +740,7 @@ MetadataAgent.prototype.start = function () {
             return;
         }
 
-        checkStaleSocket(conn, function (e, isStale) {
+        checkStaleSocket(conn, {log: self.log}, function (e, isStale) {
             if (e) {
                 // This currently can only happen when fs.stat fails. We'll
                 // just have to assume the socket is not stale if we can't
@@ -853,11 +897,23 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
 
     kvmstream.connect(zopts.sockpath);
 
-    fd = kvmstream._handle.fd;
-    zlog.info('listening on fd %d', fd);
-    self.zoneConnections[zopts.zone].fd = fd;
+    fs.stat(zopts.sockpath, function _statSock(e, st) {
+        fd = kvmstream._handle.fd;
+        zlog.info('listening on fd %d', fd);
+        self.zoneConnections[zopts.zone].fd = fd;
 
-    callback();
+        if (e) {
+            // If there was an error w/ the stat, it's most likely because
+            // the state of the world has changed. We'll fill in sockstat
+            // with an empty object here so that checkStaleSocket will report
+            // this as stale.
+            self.zoneConnections[zopts.zone].sockstat = {};
+        } else {
+            self.zoneConnections[zopts.zone].sockstat = st;
+        }
+
+        callback();
+    });
 };
 
 MetadataAgent.prototype.startZoneSocketServer =
@@ -1121,7 +1177,20 @@ function createZoneSocket(zopts, callback) {
             zlog.info('listening on fd %d', fd);
             self.addDebug(zopts.zone, 'last_zsock_listen_success');
 
-            callback();
+            fs.stat(self.zoneConnections[zopts.zone].sockpath,
+                function _statSock(e, st) {
+                    if (e) {
+                        // If there was an error w/ the stat, it's most likely
+                        // because the state of the world has changed. We'll
+                        // fill in sockstat with an empty object here so that
+                        // checkStaleSocket will report this as stale.
+                        self.zoneConnections[zopts.zone].sockstat = {};
+                    } else {
+                        self.zoneConnections[zopts.zone].sockstat = st;
+                    }
+                    callback();
+                }
+            );
         });
     });
 };

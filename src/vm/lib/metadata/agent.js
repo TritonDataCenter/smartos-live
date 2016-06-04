@@ -302,6 +302,33 @@ function checkStaleSocket(conn, opts, callback) {
 }
 
 /*
+ * This function does an fs.fstat() on the 'fd' argument and attaches the
+ * fs.Stats result to the 'conn' object as .sockstat. If there is an error
+ * with fs.fstat() conn.sockstat will be set to an empty object.
+ *
+ * After the fstat has completed, callback() will be called. Any error from
+ * fs.fstat() will be passed as the first and only argument to callback().
+ */
+function addConnSockStat(fd, conn, callback) {
+    assert.number(fd, 'fd');
+    assert.object(conn, 'conn');
+    assert.func(callback, 'callback');
+
+    fs.fstat(fd, function _statSock(e, st) {
+        if (e) {
+            // If there was an error w/ the stat, it's most likely because
+            // the state of the world has changed. We'll fill in sockstat
+            // with an empty object here so that checkStaleSocket will report
+            // this as stale.
+            conn.sockstat = {};
+        } else {
+            conn.sockstat = st;
+        }
+        callback(e);
+    });
+}
+
+/*
  * Call as:
  *
  *  t = newTimer();
@@ -897,23 +924,11 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
 
     kvmstream.connect(zopts.sockpath);
 
-    fs.stat(zopts.sockpath, function _statSock(e, st) {
-        fd = kvmstream._handle.fd;
-        zlog.info('listening on fd %d', fd);
-        self.zoneConnections[zopts.zone].fd = fd;
+    fd = kvmstream._handle.fd;
+    zlog.info('listening on fd %d', fd);
+    self.zoneConnections[zopts.zone].fd = fd;
 
-        if (e) {
-            // If there was an error w/ the stat, it's most likely because
-            // the state of the world has changed. We'll fill in sockstat
-            // with an empty object here so that checkStaleSocket will report
-            // this as stale.
-            self.zoneConnections[zopts.zone].sockstat = {};
-        } else {
-            self.zoneConnections[zopts.zone].sockstat = st;
-        }
-
-        callback();
-    });
+    addConnSockStat(fd, self.zoneConnections[zopts.zone], callback);
 };
 
 MetadataAgent.prototype.startZoneSocketServer =
@@ -1177,20 +1192,7 @@ function createZoneSocket(zopts, callback) {
             zlog.info('listening on fd %d', fd);
             self.addDebug(zopts.zone, 'last_zsock_listen_success');
 
-            fs.stat(self.zoneConnections[zopts.zone].sockpath,
-                function _statSock(e, st) {
-                    if (e) {
-                        // If there was an error w/ the stat, it's most likely
-                        // because the state of the world has changed. We'll
-                        // fill in sockstat with an empty object here so that
-                        // checkStaleSocket will report this as stale.
-                        self.zoneConnections[zopts.zone].sockstat = {};
-                    } else {
-                        self.zoneConnections[zopts.zone].sockstat = st;
-                    }
-                    callback();
-                }
-            );
+            addConnSockStat(fd, self.zoneConnections[zopts.zone], callback);
         });
     });
 };

@@ -234,29 +234,29 @@ function zoneExists(zonename, callback) {
  *        when the conn entry sockpath has a different fs.stat() signature
  *
  */
-function checkStaleSocket(conn, opts, callback) {
-    assert.optionalObject(conn, 'conn');
+function checkStaleSocket(zoneConn, opts, callback) {
+    assert.optionalObject(zoneConn, 'zoneConn');
     assert.object(opts, 'opts');
     assert.object(opts.log, 'opts.log');
     assert.func(callback, 'callback');
 
-    if (!conn || !conn.sockpath) {
-        // if there's no conn, it can't be stale
+    if (!zoneConn || !zoneConn.sockpath) {
+        // if there's no zoneConn, it can't be stale
         callback(null, false);
         return;
     }
 
-    assert.string(conn.sockpath, 'conn.sockpath');
-    assert.object(conn.sockstat, 'conn.sockstat');
+    assert.string(zoneConn.sockpath, 'zoneConn.sockpath');
+    assert.object(zoneConn.sockstat, 'zoneConn.sockstat');
 
-    fs.stat(conn.sockpath, function _onSockpathStat(err, stats) {
+    fs.stat(zoneConn.sockpath, function _onSockpathStat(err, stats) {
         var field;
         var fields = ['dev', 'ino']; // fields to compare in fs.Stats
 
         if (err) {
             if (err.code === 'ENOENT') {
                 opts.log.trace({
-                    sockpath: conn.sockpath
+                    sockpath: zoneConn.sockpath
                 }, 'ENOENT on sockpath: stale');
                 callback(null, true); // stale
                 return;
@@ -269,24 +269,24 @@ function checkStaleSocket(conn, opts, callback) {
         // socket. If it has changed, that means our handle to it is stale and
         // we should recreate it.
         for (field = 0; field < fields.length; field++) {
-            if (conn.sockstat[fields[field]] !== stats[fields[field]]) {
+            if (zoneConn.sockstat[fields[field]] !== stats[fields[field]]) {
                 opts.log.debug({
                     field: fields[field],
-                    sockpath: conn.sockpath,
+                    sockpath: zoneConn.sockpath,
                     new_sockstat: stats,
-                    old_sockstat: conn.sockstat
+                    old_sockstat: zoneConn.sockstat
                 }, 'change in sockpath fs.stat signature: stale');
                 callback(null, true); // stale
                 return;
             }
         }
-        if ((conn.sockstat.ctime
-            && conn.sockstat.ctime.getTime()) !== stats.ctime.getTime()) {
+        if ((zoneConn.sockstat.ctime
+            && zoneConn.sockstat.ctime.getTime()) !== stats.ctime.getTime()) {
             opts.log.debug({
                 field: 'ctime',
-                sockpath: conn.sockpath,
+                sockpath: zoneConn.sockpath,
                 new_sockstat: stats,
-                old_sockstat: conn.sockstat
+                old_sockstat: zoneConn.sockstat
             }, 'change in sockpath fs.stat signature: stale');
             callback(null, true); // stale
             return;
@@ -294,7 +294,7 @@ function checkStaleSocket(conn, opts, callback) {
 
         // no error in stat, and no diff fields means exists: not stale
         opts.log.trace({
-            sockpath: conn.sockpath
+            sockpath: zoneConn.sockpath
         }, 'sockpath still exists and fs.stat signature matches: not stale');
         callback(null, false);
         return;
@@ -302,30 +302,41 @@ function checkStaleSocket(conn, opts, callback) {
 }
 
 /*
- * This function does an fs.fstat() on the 'fd' argument and attaches the
- * fs.Stats result to the 'conn' object as .sockstat. If there is an error
- * with fs.fstat() conn.sockstat will be set to an empty object.
+ * This function does an fs.stat() on the 'sockpath' of the zoneConn and
+ * attaches the fs.Stats result to the 'zoneConn' object as .sockstat. If there
+ * is an error with fs.stat() conn.sockstat will be set to an empty object.
  *
- * After the fstat has completed, callback() will be called. Any error from
- * fs.fstat() will be passed as the first and only argument to callback().
+ * After the stat has completed, callback() will be called. Any error from
+ * fs.stat() will be passed as the first and only argument to callback().
  */
-function addConnSockStat(fd, conn, callback) {
-    assert.number(fd, 'fd');
-    assert.object(conn, 'conn');
+function addConnSockStat(zoneConn, callback) {
+    assert.object(zoneConn, 'zoneConn');
+    assert.string(zoneConn.sockpath, 'zoneConn.sockpath');
     assert.func(callback, 'callback');
 
-    fs.fstat(fd, function _statSock(e, st) {
+    fs.stat(zoneConn.sockpath, function _statSock(e, st) {
         if (e) {
             // If there was an error w/ the stat, it's most likely because
             // the state of the world has changed. We'll fill in sockstat
             // with an empty object here so that checkStaleSocket will report
             // this as stale.
-            conn.sockstat = {};
+            zoneConn.sockstat = {};
         } else {
-            conn.sockstat = st;
+            zoneConn.sockstat = st;
         }
         callback(e);
     });
+}
+
+function closeZoneConnection(zoneConn) {
+    // .serverSocket is a net.Server for non-KVM
+    if (zoneConn.serverSocket) {
+        zoneConn.serverSocket.close();
+    }
+    // .conn is a net.Socket client connection to a KVM/qemu device
+    if (zoneConn.conn) {
+        zoneConn.conn.destroy();
+    }
 }
 
 /*
@@ -580,9 +591,7 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
         delete self.zlog[zonename];
     }
     if (self.zoneConnections.hasOwnProperty(zonename)) {
-        if (self.zoneConnections[zonename].conn) {
-            self.zoneConnections[zonename].conn.close();
-        }
+        closeZoneConnection(self.zoneConnections[zonename]);
         delete self.zoneConnections[zonename];
     }
     if (self.zones.hasOwnProperty(zonename)) {
@@ -608,9 +617,9 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
         }, 'loaded VM kstats');
 
         Object.keys(results).forEach(function (zonename) {
-            var conn = self.zoneConnections[zonename]; // may be undefined
+            var zoneConn = self.zoneConnections[zonename]; // may be undefined
 
-            checkStaleSocket(conn, {log: self.log}, function (e, isStale) {
+            checkStaleSocket(zoneConn, {log: self.log}, function (e, isStale) {
                 if (e) {
                     // This currently can only happen when fs.stat fails. We'll
                     // just have to assume the socket is not stale if we can't
@@ -620,9 +629,8 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
                 } else if (isStale)  {
                     self.log.debug({zonename: zonename}, 'stale socket detected'
                         + ' cleaning up');
-                    if (self.zoneConnections[zonename].conn) {
-                        self.zoneConnections[zonename].conn.close();
-                    }
+
+                    closeZoneConnection(self.zoneConnections[zonename]);
                     delete self.zoneConnections[zonename];
                     _assumeBooted(zonename);
                 } else if (!self.zones[zonename]) {
@@ -759,7 +767,7 @@ MetadataAgent.prototype.start = function () {
     self.startPeriodicChecks();
 
     zwatch.on('zone_transition', function (msg) {
-        var conn = self.zoneConnections[msg.zonename];
+        var zoneConn = self.zoneConnections[msg.zonename];
         var when = new Date(msg.when / 1000000);
 
         // ignore everything except start
@@ -767,7 +775,7 @@ MetadataAgent.prototype.start = function () {
             return;
         }
 
-        checkStaleSocket(conn, {log: self.log}, function (e, isStale) {
+        checkStaleSocket(zoneConn, {log: self.log}, function (e, isStale) {
             if (e) {
                 // This currently can only happen when fs.stat fails. We'll
                 // just have to assume the socket is not stale if we can't
@@ -777,9 +785,7 @@ MetadataAgent.prototype.start = function () {
             } else if (isStale)  {
                     self.log.debug({zonename: msg.zonename},
                         'stale socket detected cleaning up');
-                    if (self.zoneConnections[msg.zonename].conn) {
-                        self.zoneConnections[msg.zonename].conn.close();
-                    }
+                    closeZoneConnection(self.zoneConnections[msg.zonename]);
                     delete self.zoneConnections[msg.zonename];
             }
 
@@ -888,7 +894,9 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
 
     // refuse to overwrite an existing connection
     assert.ok(!self.zoneConnections[zopts.zone].hasOwnProperty('conn'),
-        'should not have existing connection when creating new');
+        'should not have existing conn when creating new');
+    assert.ok(!self.zoneConnections[zopts.zone].hasOwnProperty('serverSocket'),
+        'should not have existing serverSocket when creating new');
 
     // replace the placeholder entry with a real one.
     self.zoneConnections[zopts.zone] = {
@@ -928,7 +936,7 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     zlog.info('listening on fd %d', fd);
     self.zoneConnections[zopts.zone].fd = fd;
 
-    addConnSockStat(fd, self.zoneConnections[zopts.zone], callback);
+    addConnSockStat(self.zoneConnections[zopts.zone], callback);
 };
 
 MetadataAgent.prototype.startZoneSocketServer =
@@ -1148,10 +1156,13 @@ function createZoneSocket(zopts, callback) {
 
             // refuse to overwrite an existing connection
             assert.ok(!self.zoneConnections[zopts.zone].hasOwnProperty('conn'),
-                'should not have existing connection when creating new');
+                'should not have existing conn when creating new');
+            assert.ok(!self.zoneConnections[zopts.zone]
+                .hasOwnProperty('serverSocket'),
+                'should not have existing serverSocket when creating new');
 
             self.zoneConnections[zopts.zone] = {
-                conn: server,
+                serverSocket: server,
                 fd: fd, // so it's in the core for debugging
                 sockpath: path.join(zopts.zoneroot, zopts.path)
             };
@@ -1192,7 +1203,7 @@ function createZoneSocket(zopts, callback) {
             zlog.info('listening on fd %d', fd);
             self.addDebug(zopts.zone, 'last_zsock_listen_success');
 
-            addConnSockStat(fd, self.zoneConnections[zopts.zone], callback);
+            addConnSockStat(self.zoneConnections[zopts.zone], callback);
         });
     });
 };

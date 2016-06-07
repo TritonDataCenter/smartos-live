@@ -890,7 +890,7 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     }
     self.zoneConnections[zopts.zone] = {};
 
-    kvmstream = new net.Stream();
+    kvmstream = new net.Socket();
 
     // refuse to overwrite an existing connection
     assert.ok(!self.zoneConnections[zopts.zone].hasOwnProperty('conn'),

@@ -1027,8 +1027,14 @@ test('create garbage /.zonecontrol/metadata.sock', function (t) {
     zonecontrol = vmobj.zonepath + '/root/.zonecontrol/metadata.sock';
     try {
         fs.mkdirSync(path.dirname(zonecontrol));
+    } catch (e) {
+        t.equal(e.code, 'EEXIST', 'mkdir error is EEXIST');
+    }
+    try {
         fs.unlinkSync(zonecontrol);
-    } catch (e) {}
+    } catch (e) {
+        t.equal(e.code, 'ENOENT', 'unlink error is ENOENT');
+    }
     server = new net.Server();
     server.listen(zonecontrol, function () {
         server.unref();

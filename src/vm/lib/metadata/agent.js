@@ -329,6 +329,12 @@ function addConnSockStat(zoneConn, callback) {
 }
 
 function closeZoneConnection(zoneConn) {
+    assert.object(zoneConn, 'zoneConn');
+
+    // Ensure we don't have *both* .serverSocket and .conn
+    assert.ok(!(zoneConn.serverSocket && zoneConn.conn),
+        'should not have both .conn and .serverSocket');
+
     // .serverSocket is a net.Server for non-KVM
     if (zoneConn.serverSocket) {
         zoneConn.serverSocket.close();

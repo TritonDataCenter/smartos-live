@@ -1299,6 +1299,10 @@ doNfsMount(const char *nfsvolume, const char *mountpoint, boolean_t readonly)
 
     if (WIFEXITED(status)) {
         dlog("INFO mount[%d] exited: %d\n", (int)pid, WEXITSTATUS(status));
+        if (WEXITSTATUS(status) != 0) {
+            fatal(ERR_MOUNT_NFS_VOLUME, "mount[%d] exited non-zero (%d)\n",
+                (int)pid, WEXITSTATUS(status));
+        }
     } else if (WIFSIGNALED(status)) {
         fatal(ERR_EXEC_FAILED, "mount[%d] died on signal: %d\n",
             (int)pid, WTERMSIG(status));
@@ -1325,8 +1329,7 @@ mountNfsVolume(nvlist_t *data)
             if (ret != 0) {
                 readonly = B_FALSE;
             }
-            doNfsMount((const char *)nfsvolume, (const char *)mountpoint,
-                readonly);
+            doNfsMount(nfsvolume, mountpoint, readonly);
             return;
         }
     }

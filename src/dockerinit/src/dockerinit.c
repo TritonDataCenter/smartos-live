@@ -1310,8 +1310,6 @@ doNfsMount(const char *nfsvolume, const char *mountpoint, boolean_t readonly)
         fatal(ERR_EXEC_FAILED, "mount[%d] failed in unknown way\n",
             (int)pid);
     }
-
-    return;
 }
 
 void

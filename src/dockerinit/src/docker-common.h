@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (c) 2015, Joyent, Inc.
+ * Copyright (c) 2016, Joyent, Inc.
  */
 
 /*
@@ -100,7 +100,9 @@ typedef enum {
     ERR_IOCTL_ZFD,
     ERR_DUP2,
     ERR_CONTRACT,
-    ERR_MOUNT_DEVSHM
+    ERR_MOUNT_DEVSHM,
+    ERR_INVALID_NFS_VOLUMES,
+    ERR_MOUNT_NFS_VOLUME
 } dockerinit_err_t;
 
 typedef enum {

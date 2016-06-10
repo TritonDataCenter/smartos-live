@@ -49,8 +49,7 @@ INSTALLIMAGE=/var/tmp/img-install-image
 [[ -d "$INSTALLIMAGE" ]] \
     || fatal "no $INSTALLIMAGE, did 'make dev-install-image' fail?"
 
-rsync -av -e "$SSH" --delete $INSTALLIMAGE/ $NODE:/usr/img/
+rsync -av -e "$SSH" $INSTALLIMAGE/ $NODE:/usr/img/
 
 $SSH $NODE 'cp /usr/vm/node_modules/locker.js /usr/img/node_modules/locker.js'
 $SSH $NODE 'cd /usr/man/man1m && rm -f imgadm.1m && ln -s /usr/img/man/imgadm.1m'
-

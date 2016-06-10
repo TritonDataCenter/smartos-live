@@ -1,5 +1,11 @@
 # imgadm changelog
 
+Known issues:
+
+- Docker image imports are experimental. Docker image import also only supports
+  Docker Registry v1, which is now deprecated.
+
+
 ## 3.6.2
 
 - OS-5335 docker image import should disallow meaningless operations

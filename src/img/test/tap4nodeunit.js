@@ -12,7 +12,8 @@
  *      var test = tap4nodeunit.test;
  */
 
-var p = console.log;
+var format = require('util').format;
+
 // Set to `true` for verbose output on `t.exec` usage.
 var verbose = false ? console.warn : function () {};
 
@@ -78,7 +79,9 @@ module.exports = {
                     verbose('err:', err);
                     verbose('stdout: %j', stdout);
                     verbose('stderr: %j', stderr);
-                    t.ifError(err);
+                    // Note: nodeunit doesn't show the msg for `ifError`. Lame.
+                    t.ok(!err, format('no error running cmd "%s": err=%s',
+                        cmd, err));
                     cb(err, stdout, stderr);
                 });
             };

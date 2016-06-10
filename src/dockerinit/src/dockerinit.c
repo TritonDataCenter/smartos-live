@@ -99,10 +99,10 @@ void runIpmgmtd(void);
 void setupHostname();
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
-void doNfsMount(const char *nfsvolume, const char *mountpoint,
+static void doNfsMount(const char *nfsvolume, const char *mountpoint,
     boolean_t readonly);
-void mountNfsVolume(nvlist_t *data);
-void mountNfsVolumes();
+static void mountNfsVolume(nvlist_t *data);
+static void mountNfsVolumes();
 static void makeMux(int stdid, int logid, boolean_t use_flowcon);
 static void setupTerminal(boolean_t ctty);
 static void setupLogging(boolean_t ctty);
@@ -1241,7 +1241,7 @@ setupNetworking()
     closeIpadmHandle();
 }
 
-void
+static void
 doNfsMount(const char *nfsvolume, const char *mountpoint, boolean_t readonly)
 {
     pid_t pid;
@@ -1312,7 +1312,7 @@ doNfsMount(const char *nfsvolume, const char *mountpoint, boolean_t readonly)
     }
 }
 
-void
+static void
 mountNfsVolume(nvlist_t *data)
 {
     boolean_t readonly;
@@ -1335,7 +1335,7 @@ mountNfsVolume(nvlist_t *data)
     fatal(ERR_INVALID_NFS_VOLUMES, "invalid nfsvolumes");
 }
 
-void
+static void
 mountNfsVolumes()
 {
     char *json;

@@ -1,7 +1,7 @@
 #! /usr/bin/env node
 
 /*
- * Copyright (c) 2012 Joyent, Inc.  All rights reserved.
+ * Copyright (c) 2014 Joyent, Inc.  All rights reserved.
  */
 
 var util = require('util');
@@ -23,7 +23,7 @@ var guard_prologue =
     '#endif\t/* __cplusplus */\n';
 
 var decl_prologue =
-    '#define\tV8PLUS_ERRNO_BASE\t%s\n\n' +
+    '#define\tV8PLUS_ERRNO_BASE\t0x10000\n\n' +
     'typedef enum _v8plus_errno {\n' +
     '\tV8PLUSERR_NOERROR = 0,\n' +
     '\tV8PLUSERR_%s = V8PLUS_ERRNO_BASE + 1,\n';
@@ -62,44 +62,6 @@ var func_epilogue =
     '\t\treturn ("%s");\n' +
     '\t}\n' +
     '}\n';
-
-var BUILTIN_ERRORS = [
-	{
-		code: 'NOMEM',
-		msg: 'out of memory',
-		exception: 'Error'
-	},
-	{
-		code: 'YOUSUCK',
-		msg: 'programmer error',
-		exception: 'Error'
-	},
-	{
-		code: 'UNKNOWN',
-		msg: 'unknown error',
-		exception: 'Error'
-	},
-	{
-		code: 'MISSINGARG',
-		msg: 'missing argument is required',
-		exception: 'TypeError'
-	},
-	{
-		code: 'BADARG',
-		msg: 'argument is of incorrect type',
-		exception: 'TypeError'
-	},
-	{
-		code: 'EXTRAARG',
-		msg: 'superfluous argument(s) detected',
-		exception: 'TypeError'
-	},
-	{
-		code: 'BADF',
-		msg: 'bad file descriptor',
-		exception: 'Error'
-	}
-];
 
 function
 usage()
@@ -149,10 +111,6 @@ parse_arguments(argv)
 	defs = fs.readFileSync(obj.input);
 	obj.defs = JSON.parse(defs);
 
-	BUILTIN_ERRORS.forEach(function _prepend_err(e) {
-		obj.defs.errors.unshift(e);
-	});
-
 	return (obj);
 }
 
@@ -174,21 +132,21 @@ write_c(defs, output)
 	out += include;
 
 	out += util.format(func_prologue, 'strerror');
-	defs.errors.forEach(function _append_str(e) {
+	defs.forEach(function _append_str(e) {
 		out += util.format(generic_case, e.code, e.msg);
 	});
 	out += util.format(func_epilogue, 'unknown v8+ error code');
 	out += '\n';
 
 	out += util.format(func_prologue, 'errname');
-	defs.errors.forEach(function _append_name(e) {
+	defs.forEach(function _append_name(e) {
 		out += util.format(errname_case, e.code, e.code);
 	});
 	out += util.format(func_epilogue, 'unknown v8+ error code');
 	out += '\n';
 
 	out += util.format(func_prologue, 'excptype');
-	defs.errors.forEach(function _append_excp(e) {
+	defs.forEach(function _append_excp(e) {
 		out += util.format(generic_case, e.code, e.exception);
 	});
 	out += util.format(func_epilogue, 'Error');
@@ -203,8 +161,8 @@ write_header(defs, output)
 
 	out += prologue;
 	out += guard_prologue;
-	out += util.format(decl_prologue, defs.error_base, defs.errors[0].code);
-	defs.errors.forEach(function _spew_decl(e, i) {
+	out += util.format(decl_prologue, defs[0].code);
+	defs.forEach(function _spew_decl(e, i) {
 		if (i > 0)
 			out += util.format(decl_one, e.code);
 	});

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Joyent, Inc.  All rights reserved.
+ * Copyright (c) 2014 Joyent, Inc.  All rights reserved.
  */
 
 #include <sys/types.h>
@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <stdlib.h>
 #include <node.h>
+#include "v8plus_c_impl.h"
 #include "v8plus_impl.h"
 #include "v8plus_glue.h"
 
@@ -200,19 +201,27 @@ V8_JS_FUNC_DEFN(v8plus::ObjectWrap::_new, args)
 	    reinterpret_cast<v8plus_func_ctx_t *>(ext->Value());
 	v8plus_c_ctor_f cp = fcp->vfc_defn->vmd_ctor;
 	v8plus::ObjectWrap *op = new v8plus::ObjectWrap();
-	nvlist_t *c_excp;
 	nvlist_t *c_args;
 
-	if ((c_args = v8plus::v8_Arguments_to_nvlist(args)) == NULL)
-		V8_JS_FUNC_RETURN(args, V8PLUS_THROW_DEFAULT());
+	v8plus_clear_exception();
 
-	c_excp = cp(c_args, &op->_c_impl);
+	if ((c_args = v8plus::v8_Arguments_to_nvlist(args)) == NULL) {
+		delete op;
+		V8_JS_FUNC_RETURN(args, V8PLUS_THROW_PENDING());
+	}
+
+	(void) cp(c_args, &op->_c_impl);
 	nvlist_free(c_args);
 	if (op->_c_impl == NULL) {
-		if (c_excp == NULL)
-			V8_JS_FUNC_RETURN(args, V8PLUS_THROW_DEFAULT());
-		else
-			V8_JS_FUNC_RETURN(args, V8PLUS_THROW_DECORATED(c_excp));
+		/*
+		 * It is programmer error to fail to set the object pointer
+		 * without throwing an exception.  We used to try to cover this
+		 * up by throwing something ourselves, but we're not going
+		 * to bother any more.  Just abort.
+		 */
+		delete op;
+		VERIFY(v8plus_exception_pending());
+		V8_JS_FUNC_RETURN(args, V8PLUS_THROW_PENDING());
 	}
 
 	op->_defn = fcp->vfc_defn;
@@ -277,7 +286,6 @@ V8_JS_FUNC_DEFN(v8plus::ObjectWrap::_entry, args)
 	    node::ObjectWrap::Unwrap<v8plus::ObjectWrap>(args.This());
 	nvlist_t *c_args;
 	nvlist_t *c_out;
-	nvlist_t *excp;
 	nvpair_t *rpp;
 	v8::Local<v8::String> self = args.Callee()->GetName()->ToString();
 	v8::String::Utf8Value selfsv(self);
@@ -287,29 +295,27 @@ V8_JS_FUNC_DEFN(v8plus::ObjectWrap::_entry, args)
 	if (c_method == NULL)
 		v8plus_panic("impossible method name %s\n", fn);
 
+	v8plus_clear_exception();
+
 	if ((c_args = v8plus::v8_Arguments_to_nvlist(args)) == NULL)
-		V8_JS_FUNC_RETURN(args, V8PLUS_THROW_DEFAULT());
+		V8_JS_FUNC_RETURN(args, V8PLUS_THROW_PENDING());
 
 	c_out = c_method(op->_c_impl, c_args);
 	nvlist_free(c_args);
 
 	if (c_out == NULL) {
-		if (_v8plus_errno == V8PLUSERR_NOERROR)
-			V8_JS_FUNC_RETURN_UNDEFINED_CLOSE(scope);
+		if (v8plus_exception_pending())
+			V8_JS_FUNC_RETURN(args, V8PLUS_THROW_PENDING());
 		else
-			V8_JS_FUNC_RETURN(args, V8PLUS_THROW_DEFAULT());
+			V8_JS_FUNC_RETURN_UNDEFINED_CLOSE(scope);
 	} else {
-		if (nvlist_lookup_nvlist(c_out, "err", &excp) == 0) {
-			v8::Handle<v8::Value> x = V8PLUS_THROW_DECORATED(excp);
-			nvlist_free(c_out);
-			V8_JS_FUNC_RETURN(args, x);
-		} else if (nvlist_lookup_nvpair(c_out, "res", &rpp) == 0) {
+		if (nvlist_lookup_nvpair(c_out, "res", &rpp) != 0) {
+			v8plus_panic("bad encoded value in return");
+		} else {
 			v8::Handle<v8::Value> r =
 			    v8plus::nvpair_to_v8_Value(rpp);
 			nvlist_free(c_out);
 			V8_JS_FUNC_RETURN_CLOSE(args, scope, r);
-		} else {
-			v8plus_panic("bad encoded object in return");
 		}
 	}
 
@@ -327,7 +333,6 @@ V8_JS_FUNC_DEFN(v8plus::ObjectWrap::_static_entry, args)
 	    reinterpret_cast<v8plus_func_ctx_t *>(ext->Value());
 	nvlist_t *c_args;
 	nvlist_t *c_out;
-	nvlist_t *excp;
 	nvpair_t *rpp;
 	v8::Local<v8::String> self = args.Callee()->GetName()->ToString();
 	v8::String::Utf8Value selfsv(self);
@@ -337,29 +342,27 @@ V8_JS_FUNC_DEFN(v8plus::ObjectWrap::_static_entry, args)
 	if (c_static == NULL)
 		v8plus_panic("impossible static method name %s\n", fn);
 
+	v8plus_clear_exception();
+
 	if ((c_args = v8plus::v8_Arguments_to_nvlist(args)) == NULL)
-		V8_JS_FUNC_RETURN(args, V8PLUS_THROW_DEFAULT());
+		V8_JS_FUNC_RETURN(args, V8PLUS_THROW_PENDING());
 
 	c_out = c_static(c_args);
 	nvlist_free(c_args);
 
 	if (c_out == NULL) {
-		if (_v8plus_errno == V8PLUSERR_NOERROR)
-			V8_JS_FUNC_RETURN_UNDEFINED_CLOSE(scope);
+		if (v8plus_exception_pending())
+			V8_JS_FUNC_RETURN(args, V8PLUS_THROW_PENDING());
 		else
-			V8_JS_FUNC_RETURN(args, V8PLUS_THROW_DEFAULT());
+			V8_JS_FUNC_RETURN_UNDEFINED_CLOSE(scope);
 	} else {
-		if (nvlist_lookup_nvlist(c_out, "err", &excp) == 0) {
-			v8::Handle<v8::Value> x = V8PLUS_THROW_DECORATED(excp);
-			nvlist_free(c_out);
-			V8_JS_FUNC_RETURN(args, x);
-		} else if (nvlist_lookup_nvpair(c_out, "res", &rpp) == 0) {
+		if (nvlist_lookup_nvpair(c_out, "res", &rpp) != 0) {
+			v8plus_panic("bad encoded value in return");
+		} else {
 			v8::Handle<v8::Value> r =
 			    v8plus::nvpair_to_v8_Value(rpp);
 			nvlist_free(c_out);
 			V8_JS_FUNC_RETURN_CLOSE(args, scope, r);
-		} else {
-			v8plus_panic("bad encoded object in return");
 		}
 	}
 

@@ -566,6 +566,7 @@ f usr/fw/lib/filter.js 0444 root bin
 f usr/fw/lib/fw.js 0444 root bin
 f usr/fw/lib/fwadm.js 0444 root bin
 f usr/fw/lib/ipf.js 0444 root bin
+f usr/fw/lib/locker.js 0444 root bin
 f usr/fw/lib/pipeline.js 0444 root bin
 f usr/fw/lib/rvm.js 0444 root bin
 f usr/fw/lib/util/errors.js 0444 root bin
@@ -588,6 +589,8 @@ f usr/fw/node_modules/fuzzyset.js/README.rst 0444 root bin
 f usr/fw/node_modules/fuzzyset.js/index.js 0444 root bin
 f usr/fw/node_modules/dtrace-provider.js 0444 root bin
 f usr/fw/node_modules/DTraceProviderBindings.node 0444 root bin
+h usr/fw/node_modules/lockfd.js=usr/node/0.10/node_modules/lockfd.js
+h usr/fw/node_modules/lockfd_binding.node=usr/node/0.10/node_modules/lockfd_binding.node
 f usr/fw/node_modules/fwrule/index.js 0444 root bin
 f usr/fw/node_modules/fwrule/parser.js 0444 root bin
 f usr/fw/node_modules/fwrule/rule.js 0444 root bin

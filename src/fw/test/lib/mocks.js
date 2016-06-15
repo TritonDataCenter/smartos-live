@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright 2016, Joyent, Inc. All rights reserved.
  *
  * mocks for tests
  */
@@ -17,6 +17,7 @@ var createSubObjects = mod_obj.createSubObjects;
 // --- Globals
 
 
+var LOCKED = null;
 
 var IPF = '/usr/sbin/ipf';
 var VALUES = {};
@@ -42,6 +43,11 @@ var MOCKS = {
         link: link,
         unlink: unlink,
         writeFile: writeFile
+    },
+    './locker': {
+        acquireSharedLock: acquireLock,
+        acquireExclusiveLock: acquireLock,
+        releaseLock: releaseLock
     },
     mkdirp: mkdirp
 };
@@ -69,6 +75,28 @@ function _splitFile(f) {
 }
 
 
+// --- locker
+
+
+function acquireLock(callback) {
+    if (LOCKED === null) {
+        LOCKED = Math.random();
+        setImmediate(callback, null, LOCKED);
+    } else {
+        setTimeout(acquireLock, 1000, callback);
+    }
+}
+
+function releaseLock(fd) {
+    if (LOCKED === null) {
+        throw new Error('Can\'t release lock since it\'s already unlocked!');
+    } else if (LOCKED !== fd) {
+        throw new Error(
+            'Can\'t release lock since it\'s locked by someone else!');
+    } else {
+        LOCKED = null;
+    }
+}
 
 // --- bunyan
 

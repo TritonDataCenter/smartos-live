@@ -33,6 +33,7 @@ var filter = require('./filter');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
 var mod_ipf = require('./ipf');
+var mod_lock = require('./locker');
 var mod_obj = require('./util/obj');
 var mod_rvm = require('./rvm');
 var mod_rule = require('fwrule');
@@ -1521,6 +1522,17 @@ function zoneNotRunning(res) {
 // --- Exported functions
 
 
+/**
+ * Functions that touch anything in the following directories:
+ *
+ *   - /var/fw (such as /var/fw/rules and /var/fw/vms)
+ *   - /zones/<uuid>/config (e.g. ipf.conf and ipf6.conf)
+ *
+ * Should acquire the appropriate type of lock so that they read and write
+ * a consistent view of the local firewall rules, and so that parallel
+ * executions don't run into each other while operating. (See FWAPI-240.)
+ */
+
 
 /**
  * Add rules, local VMs or remote VMs
@@ -1555,6 +1567,9 @@ function add(opts, callback) {
 
     pipeline({
     funcs: [
+        function lock(_, cb) {
+            mod_lock.acquireExclusiveLock(cb);
+        },
         function rules(_, cb) {
             createRules(opts.rules, opts.createdBy, cb);
         },
@@ -1651,8 +1666,9 @@ function add(opts, callback) {
                 vms: res.mergedVMs
             }, log, cb);
         }
-
     ]}, function (err, res) {
+        mod_lock.releaseLock(res.state.lock);
+
         if (err) {
             util_log.finishErr(log, err, 'add: finish');
             return callback(err);
@@ -1693,6 +1709,9 @@ function del(opts, callback) {
 
     pipeline({
     funcs: [
+        function lock(_, cb) {
+            mod_lock.acquireExclusiveLock(cb);
+        },
         function vms(_, cb) { createVMlookup(opts.vms, log, cb); },
 
         function disk(_, cb) { loadDataFromDisk(log, cb); },
@@ -1758,8 +1777,9 @@ function del(opts, callback) {
                 vms: mergeObjects(res.ruleVMs, res.rvmVMs)
             }, log, cb);
         }
-
     ]}, function (err, res) {
+        mod_lock.releaseLock(res.state.lock);
+
         if (err) {
             util_log.finishErr(log, err, 'del: finish');
             return callback(err);
@@ -1787,19 +1807,28 @@ function getRemoteVM(opts, callback) {
     }
     var log = util_log.entry(opts, 'getRemoteVM', true);
 
-    return mod_rvm.load(opts.remoteVM, log, function (err, rvm) {
-        if (err) {
-            if (err.code == 'ENOENT') {
-                // Don't write a log file for "not found"
-                log.info(err, 'getRemoteVM: finish');
-            } else {
-                util_log.finishErr(log, err, 'getRemoteVM: finish');
-            }
-            return callback(err);
+    mod_lock.acquireSharedLock(function (lErr, fd) {
+        if (lErr) {
+            callback(lErr);
+            return;
         }
 
-        log.debug(rvm, 'getRemoteVM: finish');
-        return callback(null, rvm);
+        mod_rvm.load(opts.remoteVM, log, function (err, rvm) {
+            mod_lock.releaseLock(fd);
+
+            if (err) {
+                if (err.code == 'ENOENT') {
+                    // Don't write a log file for "not found"
+                    log.info(err, 'getRemoteVM: finish');
+                } else {
+                    util_log.finishErr(log, err, 'getRemoteVM: finish');
+                }
+                return callback(err);
+            }
+
+            log.debug(rvm, 'getRemoteVM: finish');
+            return callback(null, rvm);
+        });
     });
 }
 
@@ -1820,20 +1849,29 @@ function getRule(opts, callback) {
     }
     var log = util_log.entry(opts, 'get', true);
 
-    return loadRule(opts.uuid, log, function (err, rule) {
-        if (err) {
-            if (err.code == 'ENOENT') {
-                // Don't write a log file for "not found"
-                log.info(err, 'get: finish');
-            } else {
-                util_log.finishErr(log, err, 'get: finish');
-            }
-            return callback(err);
+    mod_lock.acquireSharedLock(function (lErr, fd) {
+        if (lErr) {
+            callback(lErr);
+            return;
         }
 
-        var ser = rule.serialize();
-        log.debug(ser, 'get: finish');
-        return callback(null, ser);
+        loadRule(opts.uuid, log, function (err, rule) {
+            mod_lock.releaseLock(fd);
+
+            if (err) {
+                if (err.code == 'ENOENT') {
+                    // Don't write a log file for "not found"
+                    log.info(err, 'get: finish');
+                } else {
+                    util_log.finishErr(log, err, 'get: finish');
+                }
+                return callback(err);
+            }
+
+            var ser = rule.serialize();
+            log.debug(ser, 'get: finish');
+            return callback(null, ser);
+        });
     });
 }
 
@@ -1849,21 +1887,30 @@ function listRemoteVMs(opts, callback) {
     }
     var log = util_log.entry(opts, 'listRemoteVMs', true);
 
-    mod_rvm.loadAll(log, function (err, res) {
-        if (err) {
-            util_log.finishErr(log, err, 'listRemoteVMs: finish');
-            return callback(err);
+    mod_lock.acquireSharedLock(function (lErr, fd) {
+        if (lErr) {
+            callback(lErr);
+            return;
         }
 
-        // XXX: support sorting by other fields, filtering
-        var sortFn = function _sort(a, b) {
-            return (a.uuid > b.uuid) ? 1: -1;
-        };
+        mod_rvm.loadAll(log, function (err, res) {
+            mod_lock.releaseLock(fd);
 
-        log.debug('listRemoteVMs: finish');
-        return callback(null, Object.keys(res).map(function (r) {
-            return res[r];
-        }).sort(sortFn));
+            if (err) {
+                util_log.finishErr(log, err, 'listRemoteVMs: finish');
+                return callback(err);
+            }
+
+            // XXX: support sorting by other fields, filtering
+            var sortFn = function _sort(a, b) {
+                return (a.uuid > b.uuid) ? 1: -1;
+            };
+
+            log.debug('listRemoteVMs: finish');
+            return callback(null, Object.keys(res).map(function (r) {
+                return res[r];
+            }).sort(sortFn));
+        });
     });
 }
 
@@ -1894,44 +1941,53 @@ function listRules(opts, callback) {
     }
     var log = util_log.entry(opts, 'list', true);
 
-    loadAllRules(log, function (err, res) {
-        if (err) {
-            util_log.finishErr(log, err, 'list: finish');
-            return callback(err);
+    mod_lock.acquireSharedLock(function (lErr, fd) {
+        if (lErr) {
+            callback(lErr);
+            return;
         }
 
-        // XXX: support sorting by other fields, filtering
-        // (eg: enabled=true vm=<uuid>)
-        var sortFn = function _defaultSort(a, b) {
-            return (a.uuid > b.uuid) ? 1: -1;
-        };
-        var mapFn = function _defaultMap(r) {
-            return r.serialize();
-        };
+        loadAllRules(log, function (err, res) {
+            mod_lock.releaseLock(fd);
 
-        if (opts.fields) {
-            var filterFields = opts.fields;
-            // If we didn't include uuid in the fields to list, include
-            // it here so that we can sort by it - we'll remove it after
-            if (opts.fields.indexOf('uuid') === -1) {
-                filterFields = opts.fields.concat(['uuid']);
+            if (err) {
+                util_log.finishErr(log, err, 'list: finish');
+                return callback(err);
             }
 
-            mapFn = function _fieldMap(r) {
-                return r.serialize(filterFields);
+            // XXX: support sorting by other fields, filtering
+            // (eg: enabled=true vm=<uuid>)
+            var sortFn = function _defaultSort(a, b) {
+                return (a.uuid > b.uuid) ? 1: -1;
             };
-        }
+            var mapFn = function _defaultMap(r) {
+                return r.serialize();
+            };
 
-        var rules = res.map(mapFn).sort(sortFn);
-        if (opts.fields && opts.fields.indexOf('uuid') === -1) {
-            rules = rules.map(function (r) {
-                delete r.uuid;
-                return r;
-            });
-        }
+            if (opts.fields) {
+                var filterFields = opts.fields;
+                // If we didn't include uuid in the fields to list, include
+                // it here so that we can sort by it - we'll remove it after
+                if (opts.fields.indexOf('uuid') === -1) {
+                    filterFields = opts.fields.concat(['uuid']);
+                }
 
-        log.debug('list: finish');
-        return callback(null, rules);
+                mapFn = function _fieldMap(r) {
+                    return r.serialize(filterFields);
+                };
+            }
+
+            var rules = res.map(mapFn).sort(sortFn);
+            if (opts.fields && opts.fields.indexOf('uuid') === -1) {
+                rules = rules.map(function (r) {
+                    delete r.uuid;
+                    return r;
+                });
+            }
+
+            log.debug('list: finish');
+            return callback(null, rules);
+        });
     });
 }
 
@@ -1963,6 +2019,9 @@ function enableVM(opts, callback) {
 
     pipeline({
     funcs: [
+        function lock(_, cb) {
+            mod_lock.acquireExclusiveLock(cb);
+        },
         function vms(_, cb) { createVMlookup(opts.vms, log, cb); },
 
         function disk(_, cb) { loadDataFromDisk(log, cb); },
@@ -1997,6 +2056,8 @@ function enableVM(opts, callback) {
             }, log, cb);
         }
     ]}, function _afterEnable(err, res) {
+        mod_lock.releaseLock(res.state.lock);
+
         if (err) {
             util_log.finishErr(log, err, 'enable: finish');
             return callback(err);
@@ -2042,6 +2103,9 @@ function disableVM(opts, callback) {
 
     pipeline({
     funcs: [
+        function lock(_, cb) {
+            mod_lock.acquireExclusiveLock(cb);
+        },
         moveConf.bind(null, IPF_CONF, IPF_CONF_OLD),
         moveConf.bind(null, IPF6_CONF, IPF6_CONF_OLD),
         function stop(_, cb) {
@@ -2054,7 +2118,9 @@ function disableVM(opts, callback) {
             log.debug('disableVM: stopping ipf for VM "%s"', opts.vm.uuid);
             return mod_ipf.stop(opts.vm.uuid, log, cb);
         }
-    ]}, function _afterDisable(err) {
+    ]}, function _afterDisable(err, res) {
+        mod_lock.releaseLock(res.state.lock);
+
         if (err) {
             util_log.finishErr(log, err, 'disable: finish');
             return callback(err);
@@ -2190,6 +2256,9 @@ function update(opts, callback) {
 
     pipeline({
     funcs: [
+        function lock(_, cb) {
+            mod_lock.acquireExclusiveLock(cb);
+        },
         function disk(_, cb) { loadDataFromDisk(log, cb); },
 
         // Make sure the rules exist
@@ -2322,6 +2391,8 @@ function update(opts, callback) {
             }, log, cb);
         }
     ]}, function (err, res) {
+        mod_lock.releaseLock(res.state.lock);
+
         if (err) {
             util_log.finishErr(log, err, 'update: finish');
             return callback(err);
@@ -2363,40 +2434,47 @@ function getRemoteTargets(opts, callback) {
     }
     var log = util_log.entry(opts, 'remoteTargets', true);
 
-    createRules(opts.rules, function (err, rules) {
+    pipeline({
+    funcs: [
+        function lock(_, cb) {
+            mod_lock.acquireSharedLock(cb);
+        },
+        function rules(_, cb) {
+            createRules(opts.rules, cb);
+        },
+        function vms(_, cb) {
+            createVMlookup(opts.vms, log, cb);
+        }
+    ] }, function (err, res) {
+        mod_lock.releaseLock(res.state.lock);
+
         if (err) {
-            util_log.finishErr(log, err, 'remoteTargets: finish: createRules');
+            util_log.finishErr(log, err, 'remoteTargets: createRules: finish');
             return callback(err);
         }
 
-        createVMlookup(opts.vms, log, function (err2, vms) {
-            if (err2) {
-                util_log.finishErr(log, err2,
-                    'remoteTargets: finish: createVMlookup');
-                return callback(err2);
+        var targets = {};
+        var rules = res.state.rules;
+        var vms = res.state.vms;
+
+        for (var r in rules) {
+            var rule = rules[r];
+
+            for (var d in DIRECTIONS) {
+                var dir = DIRECTIONS[d];
+                addOtherSideRemoteTargets(vms, rule, targets, dir, log);
             }
+        }
 
-            var targets = {};
-
-            for (var r in rules) {
-                var rule = rules[r];
-
-                for (var d in DIRECTIONS) {
-                    var dir = DIRECTIONS[d];
-                    addOtherSideRemoteTargets(vms, rule, targets, dir, log);
-                }
+        if (targets.hasOwnProperty('vms')) {
+            targets.vms = Object.keys(targets.vms);
+            if (targets.vms.length === 0) {
+                delete targets.vms;
             }
+        }
 
-            if (targets.hasOwnProperty('vms')) {
-                targets.vms = Object.keys(targets.vms);
-                if (targets.vms.length === 0) {
-                    delete targets.vms;
-                }
-            }
-
-            log.debug(targets, 'remoteTargets: finish');
-            return callback(null, targets);
-        });
+        log.debug(targets, 'remoteTargets: finish');
+        return callback(null, targets);
     });
 }
 
@@ -2425,6 +2503,9 @@ function getRuleVMs(opts, callback) {
 
     pipeline({
     funcs: [
+        function lock(_, cb) {
+            mod_lock.acquireSharedLock(cb);
+        },
         function rules(_, cb) {
             if (typeof (opts.rule) === 'string') {
                 return loadRule(opts.rule, log, cb);
@@ -2446,6 +2527,8 @@ function getRuleVMs(opts, callback) {
             }, cb);
         }
     ]}, function (err, res) {
+        mod_lock.releaseLock(res.state.lock);
+
         if (err) {
             util_log.finishErr(log, err, 'vms: finish');
             return callback(err);
@@ -2479,6 +2562,9 @@ function getRemoteVMrules(opts, callback) {
 
     pipeline({
     funcs: [
+        function lock(_, cb) {
+            mod_lock.acquireSharedLock(cb);
+        },
         function allRules(_, cb) { loadAllRules(log, cb); },
         function vms(_, cb) { createVMlookup(opts.vms, log, cb); },
         function rvm(_, cb) {
@@ -2502,6 +2588,8 @@ function getRemoteVMrules(opts, callback) {
             filter.rulesByRVMs(state.rvms, state.allRules, log, cb);
         }
     ]}, function (err, res) {
+        mod_lock.releaseLock(res.state.lock);
+
         if (err) {
             util_log.finishErr(log, err, 'rvmRules: finish (vm=%s)',
                 opts.remoteVM);
@@ -2542,12 +2630,17 @@ function getVMrules(opts, callback) {
 
     pipeline({
     funcs: [
+        function lock(_, cb) {
+            mod_lock.acquireSharedLock(cb);
+        },
         function allRules(_, cb) { loadAllRules(log, cb); },
         function vms(_, cb) { createVMlookup(opts.vms, log, cb); },
         function vmRules(state, cb) {
             filter.rulesByVMs(state.vms, toFind, state.allRules, log, cb);
         }
     ]}, function (err, res) {
+        mod_lock.releaseLock(res.state.lock);
+
         if (err) {
             util_log.finishErr(log, err, 'vmRules: finish (vm=%s)', opts.vm);
             return callback(err);
@@ -2597,6 +2690,9 @@ function validatePayload(opts, callback) {
 
     pipeline({
     funcs: [
+        function lock(_, cb) {
+            mod_lock.acquireSharedLock(cb);
+        },
         function rules(_, cb) {
             createRules(opts.rules, cb);
         },
@@ -2616,6 +2712,8 @@ function validatePayload(opts, callback) {
             validateRules(state.vms, state.allRemoteVMs, state.rules, log, cb);
         }
     ]}, function (err, res) {
+        mod_lock.releaseLock(res.state.lock);
+
         if (err) {
             util_log.finishErr(log, err, 'validatePayload: finish');
             return callback(err);

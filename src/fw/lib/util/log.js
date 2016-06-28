@@ -120,7 +120,7 @@ function startsWith(str, prefix)
  */
 function vmSerializer(vms) {
     // Returning from add, update, etc, vms is a list of VM UUIDs
-    if (util.isArray(vms)) {
+    if (Array.isArray(vms)) {
         if (typeof (vms[0]) === 'string') {
             return vms;
         }
@@ -423,7 +423,7 @@ function flushLogs(logs, callback) {
     }
 
     var streams = [];
-    if (!util.isArray(logs)) {
+    if (!Array.isArray(logs)) {
         logs = [ logs ];
     }
 

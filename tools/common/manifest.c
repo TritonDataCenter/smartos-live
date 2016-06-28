@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2015 Joyent, Inc.
+ * Copyright 2016 Joyent, Inc.
  */
 
 /*
@@ -43,6 +43,26 @@ manifest_ent_reset(manifest_ent_t *me)
 	free(me->me_group);
 
 	bzero(me, sizeof (*me));
+}
+
+/*
+ * Return a human-readable string for this manifest entity type.
+ */
+const char *
+manifest_ent_type_name(manifest_ent_type_t type)
+{
+	switch (type) {
+	case ME_TYPE_FILE:
+		return ("FILE");
+	case ME_TYPE_DIRECTORY:
+		return ("DIRECTORY");
+	case ME_TYPE_HARDLINK:
+		return ("HARDLINK");
+	case ME_TYPE_SYMLINK:
+		return ("SYMLINK");
+	default:
+		return ("INVALID");
+	}
 }
 
 /*

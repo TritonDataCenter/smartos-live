@@ -1981,7 +1981,7 @@ CLI.prototype.do_create.options = [
         names: ['compression', 'c'],
         type: 'string',
         helpArg: '<comp>',
-        help: 'One of "none", "gz" or "bzip2" for the compression '
+        help: 'One of "none", "gzip", "xz" or "bzip2" for the compression '
             + 'to use on the image file, if any. Default is "none".'
     },
     {

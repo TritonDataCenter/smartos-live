@@ -27,7 +27,6 @@
  * Test Docker source integration.
  */
 
-var p = console.log;
 var format = require('util').format;
 var exec = require('child_process').exec;
 var fs = require('fs');
@@ -51,7 +50,9 @@ var WRKDIR = '/var/tmp/img-test-docker';
 var CACHEDIR = '/var/tmp/img-test-cache';
 
 var sourcesHadDockerHub;
-var testImgArg = 'hello-world:latest'; // ideally small and typically unused
+// Use a test image that is ideally small and typically unused. 'alpine'
+// does NOT meet the latter.
+var testImgArg = 'alpine:latest';
 var testImg;
 
 
@@ -60,9 +61,9 @@ var testImg;
 
 test('setup: clean WRKDIR (' + WRKDIR + ')', function (t) {
     rimraf(WRKDIR, function (err) {
-        t.ifError(err);
+        t.ok(!err, format('no error removing %s: err=%s', WRKDIR, err));
         mkdirp(WRKDIR, function (err2) {
-            t.ifError(err2);
+            t.ok(!err2, format('no error mkdirping %s: err=%s', WRKDIR, err2));
             t.end();
         });
     });
@@ -120,10 +121,13 @@ test('imgadm import ' + testImgArg, function (t) {
 test('imgadm ancestry UUID-OF:' + testImgArg, function (t) {
     t.exec('imgadm ancestry ' + testImg.uuid, function (e, stdout, stderr) {
         var lines = stdout.trim().split(/\n/g);
-        t.ok(lines.length > 2);
-        t.equal(lines[0].split(/ +/g)[0], 'UUID');
-        t.equal(lines[1].split(/ +/g)[0], testImg.uuid);
-        t.equal(stderr.trim().length, 0);
+        t.ok(lines.length > 1, format(
+            'more than 1 line of output: got %d lines, stdout=%j',
+            lines.length, stdout));
+        t.equal(lines[0].split(/ +/g)[0], 'UUID', '"UUID" column header');
+        t.equal(lines[1].split(/ +/g)[0], testImg.uuid,
+            'UUID matches value from "imgadm show ..."');
+        t.equal(stderr.trim().length, 0, 'no stderr');
         t.end();
     });
 });
@@ -131,9 +135,12 @@ test('imgadm ancestry UUID-OF:' + testImgArg, function (t) {
 test('imgadm ancestry -j UUID-OF:' + testImgArg, function (t) {
     t.exec('imgadm ancestry -j ' + testImg.uuid, function (e, stdout) {
         var ancestry = JSON.parse(stdout);
-        t.ok(ancestry.length > 1);
-        t.equal(ancestry[0].manifest.uuid, testImg.uuid);
-        t.equal(ancestry[0].zpool, 'zones');
+        t.ok(ancestry.length > 0, format(
+            'more than one ancestry entry: %j', ancestry));
+        t.equal(ancestry[0].manifest.uuid, testImg.uuid,
+            'ancestry[0] UUID matches value from "imgadm show"');
+        t.equal(ancestry[0].zpool, 'zones',
+            'zpool is "zones": ' + ancestry[0].zpool);
         t.end();
     });
 });
@@ -142,10 +149,14 @@ test('imgadm ancestry -j UUID-OF:' + testImgArg, function (t) {
 test('imgadm list type=docker', function (t) {
     t.exec('imgadm list type=docker', function (e, stdout) {
         var lines = stdout.trim().split(/\n/g);
-        t.ok(lines.length > 2);
-        t.equal(lines.filter(function (line) {
+        t.ok(lines.length > 1, format(
+            'more than 1 line of output: got %d lines, stdout=%j',
+            lines.length, stdout));
+        var matchingLines = lines.filter(function (line) {
             return line.split(/ +/g)[0] === testImg.uuid;
-        }).length, 1);
+        })
+        t.equal(matchingLines.length, 1, 'one of the lines\' first column '
+            + 'value is the UUID from "imgadm show"');
         t.end();
     });
 });
@@ -165,7 +176,8 @@ test('imgadm list --docker', function (t) {
                 && parts[2] === rat.tag
             );
         });
-        t.equal(matches.length, 1);
+        t.equal(matches.length, 1,
+            format('found a matching line: %j', matches[0]));
         t.end();
     });
 });

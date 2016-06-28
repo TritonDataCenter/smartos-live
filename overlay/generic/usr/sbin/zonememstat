@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2015, Joyent, Inc.
+# Copyright 2016, Joyent, Inc.
 #
 
 unset LD_LIBRARY_PATH
@@ -156,6 +156,7 @@ kstat -m memory_cap -c zone_memory_cap | nawk \
     'BEGIN {
 	# is gz if cap is UINT64_MAX / 1048576
 	maxcap = 2147483000;
+	OFMT = "%.2f"
 	if (show_alias == 1) {
 		alias_len = 12
 		while ("vmadm list -o zonename,alias -H" | getline) {
@@ -165,13 +166,15 @@ kstat -m memory_cap -c zone_memory_cap | nawk \
 		    }
                 }
 		if (header)
-			printf("%37s %*s %8s %8s %8s %9s\n", \
+			printf("%37s %*s %8s %6s %8s %9s %5s\n", \
 			    "ZONE", alias_len, "ALIAS", \
-			    "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
+			    "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)", \
+			    "SWAP%");
 	} else {
 		if (header)
-			printf("%37s %8s %8s %8s %9s\n", \
-			    "ZONE", "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)");
+			printf("%37s %8s %8s %6s %9s %5s\n", \
+			    "ZONE", "RSS(MB)", "CAP(MB)", "NOVER", "POUT(MB)", \
+			    "SWAP%");
 	}
     }
     {
@@ -200,33 +203,41 @@ kstat -m memory_cap -c zone_memory_cap | nawk \
 		alias=zone_alias[$2]
 		if (length(alias) == 0)
 		    alias = "-"
+
+		if (swapcap >= maxcap) {
+			swappct = "-"
+		} else {
+			swappct = (swap / swapcap) * 100
+		}
+
 		# If cap is UINT64_MAX / 1048576
 		if (cap >= maxcap) {
 			if (show_alias == 1)
-				printf("%37s %*s %8u %8s %8s %9s\n",
-				    $2, alias_len, alias, rss, "-", "-", "-");
+				printf("%37s %*s %8u %6s %8s %9s %5s\n",
+				    $2, alias_len, alias, rss, "-", "-", "-",
+				    swappct);
 			else
-				printf("%37s %8u %8s %8s %9s\n",
-				    $2, rss, "-", "-", "-");
+				printf("%37s %8u %8s %6s %9s %5s\n",
+				    $2, rss, "-", "-", "-", swappct);
 		} else {
 			if (show_alias == 1)
-				printf("%37s %*s %8u %8u %8u %9u\n",
+				printf("%37s %*s %8u %6u %8u %9u %5s\n",
 				    $2, alias_len, alias, rss, cap, nover,
-				    pout);
+				    pout, swappct);
 			else
-				printf("%37s %8u %8u %8u %9u\n",
-				    $2, rss, cap, nover, pout);
+				printf("%37s %8u %8u %6u %9u %5s\n",
+				    $2, rss, cap, nover, pout, swappct);
 		}
 	}
     }
     END {
 	if (total == 1) {
 		if (show_alias == 1)
-			printf("%37s %*s %8u %8u %8u %9u\n",
+			printf("%37s %*s %8u %6u %8u %9u %5s\n",
 			    "total", alias_len, "-", rss_t, cap_t,
-			    nover_t, pout_t);
+			    nover_t, pout_t, "-");
 		else
-			printf("%37s %8u %8u %8u %9u\n",
-			    "total", rss_t, cap_t, nover_t, pout_t);
+			printf("%37s %8u %8u %6u %9u %5s\n",
+			    "total", rss_t, cap_t, nover_t, pout_t, "-");
 	}
     }'

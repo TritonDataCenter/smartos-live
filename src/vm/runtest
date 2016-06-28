@@ -76,7 +76,8 @@ done
 imgadm sources --add-docker-hub
 export DOCKER_ALPINE_UUID=$(imgadm list -o uuid,tags \
     | grep "\"docker:repo\":\"alpine\"" \
-    | cut -d' ' -f1)
+    | cut -d' ' -f1 \
+    | head -1)
 if [[ -z ${DOCKER_ALPINE_UUID} ]]; then
     imgadm import alpine:latest
     export DOCKER_ALPINE_UUID=$(imgadm list -o uuid,tags \

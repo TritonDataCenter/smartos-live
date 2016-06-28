@@ -1,9 +1,9 @@
 '\" te
-.\"  Copyright 2015, Joyent, Inc.
+.\"  Copyright 2016, Joyent, Inc.
 .\" The contents of this file are subject to the terms of the Common Development and Distribution License (the "License").  You may not use this file except in compliance with the License.
 .\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.  See the License for the specific language governing permissions and limitations under the License.
 .\" When distributing Covered Code, include this CDDL HEADER in each file and include the License file at usr/src/OPENSOLARIS.LICENSE.  If applicable, add the following below this CDDL HEADER, with the fields enclosed by brackets "[]" replaced with your own identifying information: Portions Copyright [yyyy] [name of copyright owner]
-.TH zonememstat 1M "4 Sep 2015" "SunOS 5.11" "System Administration Commands"
+.TH zonememstat 1M "12 May 2016" "SunOS 5.11" "System Administration Commands"
 .SH NAME
 zonememstat \- display zone physical memory cap statistics
 .SH SYNOPSIS
@@ -15,7 +15,11 @@ zonememstat \- display zone physical memory cap statistics
 .SH DESCRIPTION
 .sp
 .LP
-The \fBzonememstat\fR command prints a summary of zone's physical memory usage.  It displays the zonename, current RSS, the physical memory cap (if set), the number of times the zone has been over its cap and the total amount of memory paged out when the zone has gone over its cap.
+The \fBzonememstat\fR command prints a summary of zone's physical memory and
+swap usage. It displays the zonename, current RSS, the physical memory cap
+(if set), the number of times the zone has been over its cap, the total
+amount of memory paged out when the zone has gone over its cap, and the percent
+of swap used against the swap cap.
 .sp
 
 .SH OPTIONS

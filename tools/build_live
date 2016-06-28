@@ -23,7 +23,7 @@
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright 2016 Joyent, Inc.
 
 ROOT=`pwd`
 CUSTOMIZE_SCRIPT=${ROOT}/tools/customize
@@ -35,6 +35,7 @@ PWGEN=${ROOT}/tools/pwgen
 GET_STATUS=${ROOT}/tools/build_etcrelease
 MANCHECK="${ROOT}/tools/mancheck/mancheck"
 MANCHECK_CONF_D="${ROOT}/mancheck.conf.d"
+TZCHECK="${ROOT}/tools/tzcheck/tzcheck"
 
 BUILDSTAMP=$(cat ${ROOT}/proto/buildstamp)
 if [[ -z ${BUILDSTAMP} ]]; then
@@ -308,6 +309,10 @@ function run_checks
 
     if ! ${MANCHECK} -f ${MANIFEST} -s ${mancheck_args}; then
         fatal_error "you are not mancheck -s clean"
+    fi
+
+    if ! ${TZCHECK} -f ${MANIFEST} -p "${ROOT}/proto"; then
+        fatal_error "tzcheck failed"
     fi
 }
 

@@ -46,6 +46,7 @@ JSLINT =	$(ROOT)/tools/javascriptlint/build/install/jsl
 CSTYLE =	$(ROOT)/tools/cstyle
 MANCHECK =	$(ROOT)/tools/mancheck/mancheck
 MANCF =		$(ROOT)/tools/mancf/mancf
+TZCHECK =	$(ROOT)/tools/tzcheck/tzcheck
 
 CTFBINDIR = \
 	$(ROOT)/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386
@@ -94,6 +95,7 @@ BOOT_TARBALL :=	output/$(BOOT_VERSION).tgz
 TOOLS_TARGETS = \
 	$(MANCHECK) \
 	$(MANCF) \
+	$(TZCHECK) \
 	tools/cryptpass
 
 world: 0-extra-stamp 0-illumos-stamp 1-extra-stamp 0-livesrc-stamp \
@@ -299,6 +301,10 @@ $(MANCF): 0-illumos-stamp
 $(MANCHECK): 0-illumos-stamp
 	(cd tools/mancheck && gmake mancheck CC=$(NATIVE_CC) $(SUBDIR_DEFS))
 
+.PHONY: $(TZCHECK)
+$(TZCHECK): 0-illumos-stamp
+	(cd tools/tzcheck && gmake tzcheck CC=$(NATIVE_CC) $(SUBDIR_DEFS))
+
 .PHONY: sdcman
 sdcman:
 	(cd $(ROOT)/man/sdc && gmake install DESTDIR=$(PROTO) $(SUBDIR_DEFS))
@@ -333,6 +339,7 @@ clean:
 	rm -f tools/cryptpass
 	(cd tools/mancheck && gmake clean)
 	(cd tools/mancf && gmake clean)
+	(cd tools/tzcheck && gmake clean)
 	(cd man/sdc && gmake clean)
 	rm -f 0-*-stamp 1-*-stamp
 

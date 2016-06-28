@@ -77,6 +77,7 @@
 #define DOCKER_LOGGER "/lib/sdc/docker/logger"
 #define IPMGMTD "/lib/inet/ipmgmtd"
 #define IPMGMTD_DOOR "/etc/svc/volatile/ipadm/ipmgmt_door"
+#define NFS_MOUNT "/usr/lib/fs/nfs/mount"
 
 #define LOGFILE "/var/log/sdc-dockerinit.log"
 #define RTMBUFSZ sizeof (struct rt_msghdr) + (3 * sizeof (struct sockaddr_in))
@@ -89,6 +90,7 @@ static void execCmdline(strlist_t *, strlist_t *, const char *);
 static brand_t getBrand(void);
 static boolean_t getStdinStatus(void);
 void killIpmgmtd(void);
+void mountLXDevShm();
 void mountOSDevFD();
 void openIpadmHandle();
 void plumbIf(const char *);
@@ -97,6 +99,10 @@ void runIpmgmtd(void);
 void setupHostname();
 void setupInterface(nvlist_t *data);
 void setupInterfaces();
+static void doNfsMount(const char *nfsvolume, const char *mountpoint,
+    boolean_t readonly);
+static void mountNfsVolume(nvlist_t *data);
+static void mountNfsVolumes();
 static void makeMux(int stdid, int logid, boolean_t use_flowcon);
 static void setupTerminal(boolean_t ctty);
 static void setupLogging(boolean_t ctty);
@@ -778,6 +784,17 @@ mountOSDevFD()
     }
 }
 
+void
+mountLXDevShm()
+{
+    dlog("MOUNT /dev/shm (shm)\n");
+
+    if (mount("shm", "/dev/shm", MS_DATA, "tmpfs", NULL, 0) != 0) {
+        fatal(ERR_MOUNT_DEVSHM, "failed to mount /dev/shm: %s\n",
+            strerror(errno));
+    }
+}
+
 static brand_t
 getBrand(void)
 {
@@ -1224,6 +1241,133 @@ setupNetworking()
     closeIpadmHandle();
 }
 
+static void
+doNfsMount(const char *nfsvolume, const char *mountpoint, boolean_t readonly)
+{
+    pid_t pid;
+    int status;
+    int ret;
+    int tmplfd;
+
+    dlog("INFO mounting %s on %s\n", nfsvolume, mountpoint);
+
+    /* ensure the directory exists */
+    ret = mkdir(mountpoint, 0755);
+    if (ret == -1 && errno != EEXIST) {
+        fatal(ERR_MKDIR, "failed to mkdir(%s): (%d) %s\n", mountpoint,
+            errno, strerror(errno));
+    }
+
+    /* do the mount */
+
+    tmplfd = init_template(0);
+
+    if ((pid = fork()) == -1) {
+        fatal(ERR_FORK_FAILED, "fork() failed: %s\n", strerror(errno));
+    }
+
+    if (pid == 0) {
+        /* child */
+        char cmd[MAXPATHLEN];
+        char *const argv[] = {
+            "mount",
+            "-o",
+            (readonly == B_TRUE) ? "vers=3,sec=sys,ro" : "vers=3,sec=sys",
+            (char *)nfsvolume,
+            (char *)mountpoint,
+            NULL
+        };
+
+        (void) ct_tmpl_clear(tmplfd);
+        (void) close(tmplfd);
+
+        makePath(NFS_MOUNT, cmd, sizeof (cmd));
+
+        execv(cmd, argv);
+        fatal(ERR_EXEC_FAILED, "execv(%s) failed: %s\n", cmd, strerror(errno));
+    }
+
+    /* parent */
+    (void) ct_tmpl_clear(tmplfd);
+    (void) close(tmplfd);
+
+    dlog("INFO started mount[%d]\n", (int)pid);
+
+    while (wait(&status) != pid) {
+        /* EMPTY */;
+    }
+
+    if (WIFEXITED(status)) {
+        dlog("INFO mount[%d] exited: %d\n", (int)pid, WEXITSTATUS(status));
+        if (WEXITSTATUS(status) != 0) {
+            fatal(ERR_MOUNT_NFS_VOLUME, "mount[%d] exited non-zero (%d)\n",
+                (int)pid, WEXITSTATUS(status));
+        }
+    } else if (WIFSIGNALED(status)) {
+        fatal(ERR_EXEC_FAILED, "mount[%d] died on signal: %d\n",
+            (int)pid, WTERMSIG(status));
+    } else {
+        fatal(ERR_EXEC_FAILED, "mount[%d] failed in unknown way\n",
+            (int)pid);
+    }
+}
+
+static void
+mountNfsVolume(nvlist_t *data)
+{
+    boolean_t readonly;
+    char *nfsvolume, *mountpoint;
+    int ret;
+
+    ret = nvlist_lookup_string(data, "nfsvolume", &nfsvolume);
+    if (ret == 0) {
+        ret = nvlist_lookup_string(data, "mountpoint", &mountpoint);
+        if (ret == 0) {
+            ret = nvlist_lookup_boolean_value(data, "readonly", &readonly);
+            if (ret != 0) {
+                readonly = B_FALSE;
+            }
+            doNfsMount(nfsvolume, mountpoint, readonly);
+            return;
+        }
+    }
+
+    fatal(ERR_INVALID_NFS_VOLUMES, "invalid nfsvolumes");
+}
+
+static void
+mountNfsVolumes()
+{
+    char *json;
+    nvlist_t *data, *nvl;
+    nvpair_t *pair;
+
+    if ((json = mdataGet("docker:nfsvolumes")) == NULL) {
+        dlog("No docker:nfsvolumes, nothing to mount\n");
+        return;
+    }
+
+    if (nvlist_parse_json(json, strlen(json), &nvl, NVJSON_FORCE_INTEGER,
+      NULL) != 0) {
+        fatal(ERR_PARSE_JSON, "failed to parse nvpair json"
+            " for docker:nfsvolumes: %s\n", strerror(errno));
+    }
+    free(json);
+
+    for (pair = nvlist_next_nvpair(nvl, NULL); pair != NULL;
+      pair = nvlist_next_nvpair(nvl, pair)) {
+        if (nvpair_type(pair) == DATA_TYPE_NVLIST) {
+            if (nvpair_value_nvlist(pair, &data) != 0) {
+                fatal(ERR_PARSE_JSON, "failed to parse nvpair json"
+                    " for NFS volume: %s\n", strerror(errno));
+            }
+            mountNfsVolume(data);
+        }
+    }
+
+    nvlist_free(nvl);
+}
+
 long long
 currentTimestamp()
 {
@@ -1343,6 +1487,7 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
 
     switch (getBrand()) {
         case BRAND_LX:
+            mountLXDevShm();
             setupMtab();
             break;
         case BRAND_JOYENT_MINIMAL:
@@ -1372,6 +1517,9 @@ main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
     killIpmgmtd();
 
     dlog("INFO network setup complete\n");
+
+    /* EXPERIMENTAL */
+    mountNfsVolumes();
 
     /* NOTE: all of these will call fatal() if there's a problem */
     setupHostname();

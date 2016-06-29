@@ -713,7 +713,21 @@ promptpool()
 	local layout=""
 	local disks=
 	while [[ /usr/bin/true ]]; do
-		diskinfo -Hp > /var/tmp/mydisks
+		# Skip USB devices and the VMware boot image by default.
+		diskinfo -Hp | nawk '
+			$1 != "USB" {
+				diskinfo = $0;
+				bootdisk = 0;
+				cmd = "fstyp -v /dev/dsk/" $2 "p1 2>/dev/null";
+				while ((cmd | getline) > 0) {
+					if ($0 ~ /^Volume Label:/ && $3 == "SMARTOSBOOT")
+						bootdisk = 1;
+				}
+				close(cmd);
+				if (bootdisk)
+					next;
+				print diskinfo;
+			}' > /var/tmp/mydisks
 		disklayout -f /var/tmp/mydisks $layout > /var/tmp/disklayout.json
 		json error < /var/tmp/disklayout.json | grep . && layout="" && continue
 		prmpt_str="$(printdisklayout /var/tmp/disklayout.json)\n\n"

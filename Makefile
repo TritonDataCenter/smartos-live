@@ -8,6 +8,7 @@ STRAP_PROTO =	$(ROOT)/proto.strap
 MPROTO =	$(ROOT)/manifest.d
 BOOT_MPROTO =	$(ROOT)/boot.manifest.d
 BOOT_PROTO =	$(ROOT)/proto.boot
+IMAGES_PROTO =	$(ROOT)/proto.images
 MCPROTO =	$(ROOT)/mancheck.conf.d
 
 # On Darwin/OS X we support running 'make check'
@@ -92,6 +93,12 @@ BOOT_VERSION :=	boot-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
 BOOT_TARBALL :=	output/$(BOOT_VERSION).tgz
 
+IMAGES_VERSION :=	images-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
+    echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
+IMAGES_TARBALL :=	output/$(IMAGES_VERSION).tgz
+
+IMAGES_SIZES_GB :=	1 2 4 8
+
 TOOLS_TARGETS = \
 	$(MANCHECK) \
 	$(MANCF) \
@@ -123,6 +130,27 @@ $(BOOT_TARBALL): world manifest
 	pfexec ./tools/builder/builder $(ROOT)/$(BOOT_MANIFEST) \
 	    $(BOOT_PROTO) $(ROOT)/proto
 	(cd $(BOOT_PROTO) && pfexec gtar czf $(ROOT)/$@ .)
+
+#
+# Create proforma images for use in assembling bootable USB device images.
+# These images are assembled into a sparse tar file which takes up hardly any
+# space, despite the large size of the (mostly blank) images.  This tar file is
+# used by "make coal" and "make usb" in "sdc-headnode.git" to create Triton
+# boot and installation media.
+#
+images: $(IMAGES_SIZES_GB:%=$(IMAGES_PROTO)/%gb.img)
+
+$(IMAGES_PROTO)/%.img: boot tools/images/%.fdisk tools/images/make_image
+	rm -f $@
+	mkdir -p $(IMAGES_PROTO)
+	./tools/images/make_image -s $* -G $(ROOT)/proto \
+	    -F tools/images/$*.fdisk $@
+
+images-tar: $(IMAGES_TARBALL)
+
+$(IMAGES_TARBALL): images
+	cd $(IMAGES_PROTO) && gtar -Scvz --owner=0 --group=0 -f $(ROOT)/$@ \
+	    $(IMAGES_SIZES_GB:%=%gb.img)
 
 #
 # Manifest construction.  There are 5 sources for manifests we need to collect
@@ -335,7 +363,9 @@ clean:
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && rm -rf $(STRAP_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(BOOT_PROTO))
-	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO))
+	(cd $(ROOT) && pfexec rm -rf $(IMAGES_PROTO))
+	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO) \
+	    $(IMAGES_PROTO))
 	rm -f tools/cryptpass
 	(cd tools/mancheck && gmake clean)
 	(cd tools/mancf && gmake clean)

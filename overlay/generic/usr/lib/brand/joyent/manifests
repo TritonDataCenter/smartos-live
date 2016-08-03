@@ -28,11 +28,9 @@
 # application/x11/x11-server.xml
 # application/x11/xfs.xml
 # application/x11/xvnc-inetd.xml
-# network/ldap/client.xml
 # network/rpc/keyserv.xml
 # network/socket-filter-kssl.xml
 # network/ssl/kssl-proxy.xml
-# network/nfs/rquota.xml
 # network/dns/server.xml
 # network/ftp.xml
 # network/finger.xml
@@ -53,10 +51,7 @@
 # network/security/ktkt_warn.xml
 # network/rpc/smserver.xml
 # network/nfs/cbd.xml
-# network/nfs/mapid.xml
-# network/nfs/status.xml
 # network/ipmievd.xml
-# network/nis/client.xml
 # network/rpc/rex.xml
 # network/http-apache22.xml
 # system/consolekit.xml
@@ -122,6 +117,7 @@ network/nfs/mapid.xml					disabled
 network/nfs/nlockmgr.xml				disabled
 network/nfs/rquota.xml					disabled
 network/nfs/status.xml					disabled
+network/nis/client.xml					disabled
 network/rexec.xml					disabled
 network/routing/legacy-routing.xml			enabled
 network/routing/ndp.xml					disabled

@@ -328,7 +328,7 @@ function createLogger(opts, readOnly) {
 
     log = bunyan.createLogger({
         name: logName,
-        req_id: opts.req_id || mod_uuid.v4(),
+        req_id: opts.req_id || process.env.REQ_ID || mod_uuid.v4(),
         serializers: serializers,
         streams: streams
     });

@@ -323,4 +323,4 @@ Some examples of rules that would cause this message include:
 
 ## SEE ALSO
 
-    fwadm(1m), vmadm(1m), ipf(1m), ipfilter(5)
+    fwadm(1M), vmadm(1M), ipf(1M), ipfilter(5)

@@ -53,9 +53,11 @@ mkdir ${NM}/cmdln
 cp ${NM_ORIG}/cmdln/lib/cmdln.js ${NM}/cmdln/index.js
 cp ${NM_ORIG}/cmdln/LICENSE.txt ${NM}/cmdln/
 
-mkdir ${NM}/dashdash
-cp ${NM_ORIG}/cmdln/node_modules/dashdash/lib/dashdash.js ${NM}/dashdash/index.js
-cp ${NM_ORIG}/cmdln/node_modules/dashdash/LICENSE.txt ${NM}/dashdash/LICENSE.txt
+cp ${NM_ORIG}/cmdln/node_modules/dashdash/lib/dashdash.js ${NM}/dashdash.js
+
+mkdir ${NM}/fuzzyset.js
+cp ${NM_ORIG}/cmdln/node_modules/fuzzyset.js/lib/fuzzyset.js ${NM}/fuzzyset.js/index.js
+cp ${NM_ORIG}/cmdln/node_modules/fuzzyset.js/README.rst ${NM}/fuzzyset.js/README.rst
 
 mkdir ${NM}/carrier
 cp ${NM_ORIG}/tab/node_modules/carrier/lib/carrier.js ${NM}/carrier/index.js

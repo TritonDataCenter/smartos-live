@@ -20,12 +20,13 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright 2016, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: CLI shared logic
  */
 
+var cmdln = require('cmdln');
 var fs = require('fs');
 var tab = require('tab');
 var tty = require('tty');
@@ -148,7 +149,8 @@ function getPayload(opts, args, callback) {
             rule: args.join(' ')
         };
 
-        return callback(null, payload);
+        callback(null, payload);
+        return;
     }
 
     if (!file && !tty.isatty(0)) {
@@ -156,7 +158,8 @@ function getPayload(opts, args, callback) {
     }
 
     if (!file) {
-        return callback(new verror.VError('Must supply file!'));
+        callback(new cmdln.UsageError('Must supply file!'));
+        return;
     }
 
     if (file === '-') {
@@ -217,6 +220,9 @@ function outputError(err, opts) {
                 if (opts.verbose) {
                     j.stack = e.stack;
                 }
+                if (e.cmdlnErrHelpFromErr) {
+                    j.help = cmdln.errHelpFromErr(e);
+                }
                 return j;
             })
         }));
@@ -226,6 +232,9 @@ function outputError(err, opts) {
         console.error(e.message);
         if (opts && opts.verbose) {
             console.error(e.stack);
+        }
+        if (e.cmdlnErrHelpFromErr) {
+            console.error('\n' + cmdln.errHelpFromErr(e));
         }
     });
 }

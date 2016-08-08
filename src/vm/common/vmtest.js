@@ -49,7 +49,7 @@ var DEFAULT_ZFS_PROPERTIES = {
 };
 var IMAGES_SOURCE = 'https://images.joyent.com/';
 
-exports.CURRENT_DOCKER_ALPINE_UUID = process.env['DOCKER_ALPINE_UUID'];
+exports.CURRENT_DOCKER_IMAGE_UUID = process.env['DOCKER_BASE_IMAGE_UUID'];
 exports.CURRENT_SMARTOS_UUID = '01b2c898-945f-11e1-a523-af1afbe22822';
 exports.CURRENT_UBUNTU_UUID = '71101322-43a5-11e1-8f01-cf2a3031a7f4';
 exports.CURRENT_UBUNTU_NAME = 'ubuntu-10.04';

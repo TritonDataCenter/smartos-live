@@ -1002,7 +1002,7 @@ test('test log archiving', function (t) {
     payload.archive_on_delete = true;
     payload.brand = 'lx';
     payload.docker = true;
-    payload.image_uuid = vmtest.CURRENT_DOCKER_ALPINE_UUID;
+    payload.image_uuid = vmtest.CURRENT_DOCKER_IMAGE_UUID;
     payload.internal_metadata = {'docker:cmd': '[\"echo\",\"hello world\"]'};
     payload.kernel_version = '3.13.0';
 
@@ -1247,7 +1247,7 @@ test('test restart delay reset', function (t) {
     payload.autoboot = false;
     payload.brand = 'lx';
     payload.docker = true;
-    payload.image_uuid = vmtest.CURRENT_DOCKER_ALPINE_UUID;
+    payload.image_uuid = vmtest.CURRENT_DOCKER_IMAGE_UUID;
 
     // This cmd will 'exit 1' cycles_fail times, then sleep cycle_reset_delay
     // seconds and exit 0, then repeat that pattern. The repeat happens because
@@ -1255,7 +1255,8 @@ test('test restart delay reset', function (t) {
     // 0.
     payload.internal_metadata = {
         'docker:cmd': '[\"/bin/sh\",\"-c\",'
-            + '\"[[ $(ls -1 /var/tmp | wc -l) == ' + cycles_fail + ' ]] '
+            + '\"mkdir -p /var/tmp; '
+            + '[[ $(ls -1 /var/tmp | wc -l) == ' + cycles_fail + ' ]] '
             + '&& (sleep ' + cycle_reset_delay + '; rm -f /var/tmp/*; exit 0) '
             + '|| (touch /var/tmp/$(/native/usr/bin/uuid); exit 1)\"]',
         'docker:restartpolicy': 'always'
@@ -1459,7 +1460,7 @@ test('test reprovision resolv.conf', function (t) {
     payload.autoboot = false;
     payload.brand = 'lx';
     payload.docker = true;
-    payload.image_uuid = vmtest.CURRENT_DOCKER_ALPINE_UUID;
+    payload.image_uuid = vmtest.CURRENT_DOCKER_IMAGE_UUID;
     payload.internal_metadata = {'docker:cmd': '[\"sleep\",\"3600\"]'};
     payload.kernel_version = '3.13.0';
     payload.resolvers = ['8.8.8.8', '8.8.4.4'];

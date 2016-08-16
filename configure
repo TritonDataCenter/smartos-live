@@ -221,7 +221,7 @@ function fetch_closed
 
 function generate_env
 {
-	local nopts="-CimNnt"
+	local nopts="-CimMNnt"
 	local lint debug lprefix
 
 	if [[ -n "$ILLUMOS_ENABLE_LINT" ]]; then

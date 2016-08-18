@@ -76,6 +76,23 @@
  * zoneConnections object such that on the next periodic check where we see the
  * VM running, the socket will be (re)created.
  *
+ * The rules for zoneConnections are:
+ *
+ *   * if there's any truthy value for a zone's zoneConnections[uuid], we'll not
+ *     try to create a new socket unless checkStaleSocket determines the socket
+ *     is stale (based on the fs.stat signature).
+ *
+ *   * when a socket is determined to be stale, the zoneConnections[uuid] should
+ *     be deleted.
+ *
+ *   * if there's no zoneConnections[uuid] when we're doing our periodic check,
+ *     we should try to create a socket.
+ *
+ *   * whenever we fail to create a socket or there's an error on a socket,
+ *     we should delete the zoneConnections[uuid] entry so a retry will create
+ *     one.
+ *
+ *
  * When a zone is deleted, (no longer shows up in the list we're loading every 5
  * minutes) the global state objects for the VM are cleared.
  *
@@ -628,6 +645,17 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
         Object.keys(results).forEach(function (zonename) {
             var zoneConn = self.zoneConnections[zonename]; // may be undefined
 
+            if (!zoneConn) {
+                // If we have no zoneConn, It's likely we failed a previous
+                // attempt to create one. In any case, since the zone does exist
+                // (it's in getZoneinfo) we should attempt to create a new
+                // socket for it.
+                self.log.warn({zonename: zonename}, 'zone is missing '
+                    + 'zoneConnections entry, (re)trying socket creation');
+                _assumeBooted(zonename);
+                return;
+            }
+
             checkStaleSocket(zoneConn, {log: self.log}, function (e, isStale) {
                 if (e) {
                     // This currently can only happen when fs.stat fails. We'll
@@ -1116,18 +1144,42 @@ function createZoneSocket(zopts, callback) {
         }
 
         zsock.createZoneSocket(zopts, function _onCreateZsock(sockErr, fd) {
-            if (sockErr) {
-                self.addDebug(zopts.zone, 'last_zsock_create_failure', sockErr);
+            var zsockErr = sockErr;
+            var handleType;
+            var handleFd;
 
-                zlog.warn({zonename: zopts.zone, err: sockErr},
-                    'failed to create zsock');
+            // If zsock gave us a bogus handle, we don't know what to do with
+            // that so we'll consider it an error. This is usually a bug in
+            // zsock so the warn message we output here will help us determine
+            // when these have been fixed. Since we do this only when
+            // zsock.createZoneSocket claims success, we also keep the fd for
+            // logging if it's bogus.
+            if (!zsockErr) {
+                handleFd = fd;
+                handleType = guessHandleType(fd);
+                if (handleType !== 'PIPE') {
+                    zsockErr = new Error('zsock FD must be a pipe (got '
+                        + handleType + ')');
+                }
+            }
+
+            if (zsockErr) {
+                self.addDebug(zopts.zone, 'last_zsock_create_failure',
+                    zsockErr);
+
+                zlog.warn({
+                    zonename: zopts.zone,
+                    err: zsockErr,
+                    fd: handleFd,
+                    handleType: handleType
+                }, 'failed to create zsock');
 
                 // We were unable to create a zsock, but as with a directory
                 // creation error we've not created a real self.zoneConnections
                 // entry yet so we'll delete the placeholder and let the
                 // _checkNewZones() catch it on the next go-round.
                 delete self.zoneConnections[zopts.zone];
-                callback(sockErr);
+                callback(zsockErr);
                 return;
             }
 
@@ -1203,10 +1255,6 @@ function createZoneSocket(zopts, callback) {
                 zlog.info('stream closed on fd %d', fd);
                 delete self.zoneConnections[zopts.zone];
             });
-
-            // If zsock gave us a bogus handle, we don't know what to do with
-            // that so we'll try to get a core to figure out what that means.
-            assert(guessHandleType(fd) === 'PIPE', 'zsock FD must be a pipe');
 
             server.listen({fd: fd});
             zlog.info('listening on fd %d', fd);

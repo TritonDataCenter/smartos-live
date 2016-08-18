@@ -263,6 +263,7 @@ function checkStaleSocket(zoneConn, opts, callback) {
         return;
     }
 
+    // Ensure these are the correct types.
     assert.string(zoneConn.sockpath, 'zoneConn.sockpath');
     assert.object(zoneConn.sockstat, 'zoneConn.sockstat');
 
@@ -341,6 +342,7 @@ function addConnSockStat(zoneConn, callback) {
         } else {
             zoneConn.sockstat = st;
         }
+        assert.object(zoneConn.sockstat, 'zoneConn.sockstat');
         callback(e);
     });
 }
@@ -617,7 +619,10 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
         delete self.zlog[zonename];
     }
     if (self.zoneConnections.hasOwnProperty(zonename)) {
-        closeZoneConnection(self.zoneConnections[zonename]);
+        if (self.zoneConnections[zonename]) {
+            // it's not undefined, so attempt to close it
+            closeZoneConnection(self.zoneConnections[zonename]);
+        }
         delete self.zoneConnections[zonename];
     }
     if (self.zones.hasOwnProperty(zonename)) {
@@ -667,7 +672,10 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
                     self.log.debug({zonename: zonename}, 'stale socket detected'
                         + ' cleaning up');
 
-                    closeZoneConnection(self.zoneConnections[zonename]);
+                    if (self.zoneConnections[zonename]) {
+                        // not undefined so attempt to close
+                        closeZoneConnection(self.zoneConnections[zonename]);
+                    }
                     delete self.zoneConnections[zonename];
                     _assumeBooted(zonename);
                 } else if (!self.zones[zonename]) {
@@ -820,10 +828,13 @@ MetadataAgent.prototype.start = function () {
                 self.log.error({err: e, zonename: msg.zonename},
                     'unable to check for existence of socket');
             } else if (isStale)  {
-                    self.log.debug({zonename: msg.zonename},
-                        'stale socket detected cleaning up');
+                self.log.debug({zonename: msg.zonename},
+                    'stale socket detected cleaning up');
+                if (self.zoneConnections[msg.zonename]) {
+                    // not undefined so attempt to close
                     closeZoneConnection(self.zoneConnections[msg.zonename]);
-                    delete self.zoneConnections[msg.zonename];
+                }
+                delete self.zoneConnections[msg.zonename];
             }
 
             // ignore zones we've already (still) got a connection for
@@ -938,7 +949,8 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     // replace the placeholder entry with a real one.
     self.zoneConnections[zopts.zone] = {
         conn: kvmstream,
-        sockpath: zopts.sockpath
+        sockpath: zopts.sockpath,
+        sockstat: {}
     };
 
     buffer = '';
@@ -1225,7 +1237,8 @@ function createZoneSocket(zopts, callback) {
             self.zoneConnections[zopts.zone] = {
                 serverSocket: server,
                 fd: fd, // so it's in the core for debugging
-                sockpath: path.join(zopts.zoneroot, zopts.path)
+                sockpath: path.join(zopts.zoneroot, zopts.path),
+                sockstat: {}
             };
 
             server.on('error', function (err) {

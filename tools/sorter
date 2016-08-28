@@ -1,28 +1,41 @@
-#! /usr/bin/env python2.6
+#! /usr/bin/env python
 # vi: expandtab ts=4 sw=4
 #
-# Takes a 'manifest' style file and outputs a sorted version, warning about
-# any duplicates.
+# Takes a 'manifest' style file and outputs a sorted version. It will emit
+# "ERROR: ..." on stderr and exit non-zero if there are any duplicates or
+# bogus lines.
+#
+# Usage:
+#   <manifest content on stdin> | ./tools/sorter
+#
+# Dev Note: This should work with any Python >= 2.6 (including Python 3).
 #
 
 import os
 import sys
 
+nErrors = 0
 files = {}
 
 for line in sys.stdin.readlines():
     line = line.strip()
     if len(line) == 0 or line[0] == '#':
         continue
-    fields = line.split(' ')
+    fields = line.split()
     if len(fields) < 2:
-        sys.stderr.write("WARNING: unexpected manifest line: '%s' (removing)\n" % line)
+        sys.stderr.write(
+            "ERROR: unexpected manifest line: '%s' (removing)\n" % line)
+        nErrors +=1
         continue
     if fields[1] in files and not (
             # Don't warn about same directory with identical properties.
             fields[0] == 'd' and files[fields[1]] == line):
-        sys.stderr.write("WARNING: duplicate entry for '%s'\n" % fields[1])
+        sys.stderr.write(
+            "WARNING: duplicate manifest entry for '%s'\n" % fields[1])
     files[fields[1]] = line
 
 for key in sorted(files):
-    print files[key].rstrip(' ')
+    print(files[key].rstrip())
+
+if nErrors > 0:
+    sys.exit(1)

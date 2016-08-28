@@ -88,7 +88,7 @@ function install_pkgin
 	fi
 
 	pkglist="$pkglist flex libxslt openjdk7 nodejs"
-	pkglist="$pkglist p5-XML-Parser gettext python26 py26-expat"
+	pkglist="$pkglist p5-XML-Parser gettext python27 py27-expat"
 	pkglist="$pkglist coreutils gsed pkg_alternatives cdrtools"
 
 	for pkg in $pkglist; do
@@ -106,7 +106,7 @@ function install_pkgin
 			curl -k "$conf_pkgsrcurl/$pkg.tgz" -o \
 			    /var/tmp/$pkg.tgz || fatal \
 			    "failed to fetch $pkg.tgz"
-			$conf_priv pkg_add /var/tmp/$pkg.tgz || fatal \
+			$conf_priv pkg_add -C /dev/null /var/tmp/$pkg.tgz || fatal \
 			    "failed to pkg_add $pkg"
 			rm -f /var/tmp/$pkg.tgz
 		fi
@@ -299,7 +299,7 @@ __GNUC4="";					export __GNUC4
 JAVA_ROOT=/opt/local/java/openjdk7;		export JAVA_ROOT
 FLEX=/opt/local/bin/flex;			export FLEX
 GNUXGETTEXT=/opt/local/bin/xgettext;		export GNUXGETTEXT
-PYTHON_26=/opt/local/bin/python2.6;		export PYTHON_26
+PYTHON=/opt/local/bin/python2.7;		export PYTHON
 ELFDUMP=/usr/bin/elfdump;			export ELFDUMP
 LORDER=/usr/bin/lorder;				export LORDER
 MCS=/usr/bin/mcs;				export MCS

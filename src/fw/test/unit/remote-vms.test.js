@@ -690,6 +690,48 @@ exports['local VM to remote tag'] = function (t) {
 };
 
 
+exports['FWAPI-248 - only list an applicable rule once'] = function (t) {
+    var rvm = helpers.generateVM({ tags: { foo: true, bar: false } });
+    var rule = {
+        owner_uuid: rvm.owner_uuid,
+        rule: 'FROM tag foo TO tag bar ALLOW tcp PORT 80',
+        enabled: true
+    };
+    var payload = {
+        remoteVMs: [ rvm ],
+        rules: [ clone(rule) ],
+        vms: []
+    };
+
+    async.series([
+    function (cb) {
+        fw.validatePayload(payload, function (err, res) {
+            t.ifError(err);
+            cb();
+        });
+    }, function (cb) {
+        fw.add(payload, function (err, res) {
+            t.ifError(err);
+            if (err) {
+                cb(err);
+                return;
+            }
+            helpers.fillInRuleBlanks(res.rules, [ rule ]);
+            cb();
+        });
+    }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [ rule ],
+            rvm: rvm.uuid,
+            vms: []
+        }, cb);
+    }], function () {
+        t.done();
+    });
+};
+
+
 exports['local VM and remote VM to IP'] = function (t) {
     var vm = helpers.generateVM({
         uuid: '5293cc31-189c-4b10-be90-7c74c78de927' });

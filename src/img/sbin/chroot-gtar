@@ -123,10 +123,8 @@ cp /usr/img/lib/nomknod.so $LIBDIR/
 mkdir -p $LIBDIR/64/
 cp /usr/img/lib/64/nomknod.so $LIBDIR/64/
 
-TO_UMOUNT="$TO_UMOUNT $ROOTDIR/proc $ROOTDIR/dev/fd"
-TO_REMOVE="$TO_REMOVE $ROOTDIR/proc $ROOTDIR/dev/fd"
-mkdir -p $ROOTDIR/proc
-mount -F proc proc $ROOTDIR/proc
+TO_UMOUNT="$TO_UMOUNT $ROOTDIR/dev/fd"
+TO_REMOVE="$TO_REMOVE $ROOTDIR/dev/fd"
 [[ ! -e $ROOTDIR/dev ]] && TO_REMOVE="$TO_REMOVE $ROOTDIR/dev"
 mkdir -p $ROOTDIR/dev/fd
 mount -F fd fd $ROOTDIR/dev/fd

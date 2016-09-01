@@ -210,7 +210,7 @@ function getAffectedRules(new_vms, log) {
                 || rule.from.vms.length > 0;
         }
         return false;
-    }
+    };
 }
 
 
@@ -1579,7 +1579,8 @@ function add(opts, callback) {
         function disk(_, cb) { loadDataFromDisk(log, cb); },
 
         function newRemoteVMs(res, cb) {
-            mod_rvm.create(res.vms, opts.remoteVMs, log, cb);
+            mod_rvm.create({ allVMs: res.vms, requireIPs: true, log: log },
+                opts.remoteVMs, cb);
         },
 
         // Create remote VMs (if any) from payload
@@ -2289,7 +2290,8 @@ function update(opts, callback) {
 
         // Create remote VMs (if any) from payload
         function newRemoteVMs(res, cb) {
-            mod_rvm.create(res.vms, opts.remoteVMs, log, cb);
+            mod_rvm.create({ allVMs: res.vms, requireIPs: true, log: log },
+                opts.remoteVMs, cb);
         },
 
         // Create a lookup for the new remote VMs
@@ -2454,15 +2456,14 @@ function getRemoteTargets(opts, callback) {
         }
 
         var targets = {};
-        var rules = res.state.rules;
-        var vms = res.state.vms;
 
-        for (var r in rules) {
-            var rule = rules[r];
+        for (var r in res.state.rules) {
+            var rule = res.state.rules[r];
 
             for (var d in DIRECTIONS) {
                 var dir = DIRECTIONS[d];
-                addOtherSideRemoteTargets(vms, rule, targets, dir, log);
+                addOtherSideRemoteTargets(
+                    res.state.vms, rule, targets, dir, log);
             }
         }
 
@@ -2575,8 +2576,8 @@ function getRemoteVMrules(opts, callback) {
             return mod_rvm.load(opts.remoteVM, log, cb);
         },
         function rvms(state, cb) {
-            return mod_rvm.create(state.vms, [ state.rvm ],
-                log, function (e, rvmList) {
+            mod_rvm.create({ allVMs: state.vms, requireIPs: false, log: log },
+                [ state.rvm ], function (e, rvmList) {
                 if (e) {
                     return cb(e);
                 }
@@ -2699,7 +2700,8 @@ function validatePayload(opts, callback) {
         function vms(_, cb) { createVMlookup(opts.vms, log, cb); },
         function remoteVMs(_, cb) { mod_rvm.loadAll(log, cb); },
         function newRemoteVMs(state, cb) {
-            mod_rvm.create(state.vms, opts.remoteVMs, log, cb);
+            mod_rvm.create({ allVMs: state.vms, requireIPs: true, log: log },
+                opts.remoteVMs, cb);
         },
         // Create a combined remote VM lookup of remote VMs on disk plus
         // new remote VMs in the payload

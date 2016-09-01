@@ -26,6 +26,7 @@
  * fwadm: functions for manipulating remote VMs
  */
 
+var assert = require('assert-plus');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
 var mod_rule = require('fwrule');
@@ -62,8 +63,12 @@ var VM_PATH = '/var/fw/vms';
  * @param callback {Function} `function (err, remoteVMs)`
  * - Where remoteVMs is an object of remote VMs, keyed by UUID
  */
-function create(allVMs, vms, log, callback) {
-    log.trace(vms, 'rvm.create: entry');
+function create(opts, vms, callback) {
+    assert.object(opts.log, 'opts.log');
+    assert.object(opts.allVMs, 'opts.allVMs');
+    assert.bool(opts.requireIPs, 'opts.requireIPs');
+
+    opts.log.trace(vms, 'rvm.create: entry');
     if (!vms || vms.length === 0) {
         return callback();
     }
@@ -74,10 +79,16 @@ function create(allVMs, vms, log, callback) {
     vms.forEach(function (vm) {
         try {
             var rvm = util_vm.createRemoteVM(vm);
-            if (allVMs.all.hasOwnProperty(rvm.uuid)) {
+            if (opts.allVMs.all.hasOwnProperty(rvm.uuid)) {
                 var err = new VError(
                     'Remote VM "%s" must not have the same UUID as a local VM',
                     rvm.uuid);
+                err.details = vm;
+                throw err;
+            }
+            if (opts.requireIPs && rvm.ips.length === 0) {
+                err = new VError(
+                    'Remote VM "%s": missing IPs', rvm.uuid);
                 err.details = vm;
                 throw err;
             }
@@ -88,10 +99,11 @@ function create(allVMs, vms, log, callback) {
     });
 
     if (errs.length !== 0) {
-        return callback(util_err.createMultiError(errs));
+        callback(util_err.createMultiError(errs));
+        return;
     }
 
-    return callback(null, remoteVMs);
+    callback(null, remoteVMs);
 }
 
 

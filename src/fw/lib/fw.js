@@ -170,7 +170,24 @@ function dedupRules(list1, list2) {
 }
 
 
-/*
+/**
+ * Given a list of new rules and a map of existing rules, build a list
+ * of the subset of new rules that are actually changing anything.
+ */
+function getChangingRules(rules, existingRules, cb) {
+    var changing = rules.filter(function (rule) {
+        if (!existingRules.hasOwnProperty(rule.uuid)) {
+            return true;
+        }
+        return !mod_obj.shallowObjEqual(rule.serialize(),
+            existingRules[rule.uuid].serialize());
+    });
+
+    cb(null, changing);
+}
+
+
+/**
  * This filter removes rules that aren't affected by adding a remote VM
  * or updating a local VM (for example, simple wildcard rules), and would
  * therefore require updating the rules of other VMs. This table shows which
@@ -652,6 +669,10 @@ function loadDataFromDisk(log, callback) {
                 loadAllRules(log, function (err, res) {
                     if (res) {
                         onDisk.rules = res;
+                        onDisk.rulesByUUID = {};
+                        onDisk.rules.forEach(function (rule) {
+                            onDisk.rulesByUUID[rule.uuid] = rule;
+                        });
                     }
 
                     return cb(err);
@@ -693,30 +714,24 @@ function findRules(opts, log, callback) {
 
     var errs = [];
     var found = {};
-    var uuids = {};
+    var missing = {};
+
     rules.forEach(function (r) {
         if (!r.hasOwnProperty('uuid')) {
             errs.push(new verror.VError('Missing UUID of rule: %j', r));
             return;
         }
-        uuids[r.uuid] = 1;
-    });
-    log.debug(uuids, 'findRules: rules');
 
-    allRules.forEach(function (r) {
-        if (!r.hasOwnProperty('uuid')) {
-            errs.push(new verror.VError('Missing UUID of rule: %j', r));
-        }
-
-        if (uuids.hasOwnProperty(r.uuid)) {
-            delete uuids[r.uuid];
-            found[r.uuid] = r;
+        if (allRules.hasOwnProperty(r.uuid)) {
+            found[r.uuid] = allRules[r.uuid];
+        } else {
+            missing[r.uuid] = 1;
         }
     });
 
     // If we're allowing adds, missing rules aren't an error
-    if (!allowAdds && !objEmpty(uuids)) {
-        Object.keys(uuids).forEach(function (uuid) {
+    if (!allowAdds && !objEmpty(missing)) {
+        Object.keys(missing).forEach(function (uuid) {
             errs.push(new verror.VError('Unknown rule: %s', uuid));
         });
     }
@@ -724,18 +739,19 @@ function findRules(opts, log, callback) {
     if (log.debug()) {
         var ret = { rules: found };
         if (allowAdds) {
-            ret.adds = Object.keys(uuids);
+            ret.adds = Object.keys(missing);
         } else {
-            ret.missing = Object.keys(uuids);
+            ret.missing = Object.keys(missing);
         }
         log.debug(ret, 'findRules: return');
     }
 
     if (errs.length !== 0) {
-        return callback(util_err.createMultiError(errs));
+        callback(util_err.createMultiError(errs));
+        return;
     }
 
-    return callback(null, found);
+    callback(null, found);
 }
 
 
@@ -1570,13 +1586,20 @@ function add(opts, callback) {
         function lock(_, cb) {
             mod_lock.acquireExclusiveLock(cb);
         },
-        function rules(_, cb) {
+
+        function originalRules(_, cb) {
             createRules(opts.rules, opts.createdBy, cb);
         },
 
         function vms(_, cb) { createVMlookup(opts.vms, log, cb); },
 
         function disk(_, cb) { loadDataFromDisk(log, cb); },
+
+        // If we're trying to add a rule that already exists and looks
+        // the same, drop it.
+        function rules(res, cb) {
+            getChangingRules(res.originalRules, res.disk.rulesByUUID, cb);
+        },
 
         function newRemoteVMs(res, cb) {
             mod_rvm.create({ allVMs: res.vms, requireIPs: true, log: log },
@@ -2265,7 +2288,7 @@ function update(opts, callback) {
         // Make sure the rules exist
         function originalRules(res, cb) {
             findRules({
-                allRules: res.disk.rules,
+                allRules: res.disk.rulesByUUID,
                 allowAdds: opts.allowAdds,
                 rules: opts.rules
             }, log, cb);

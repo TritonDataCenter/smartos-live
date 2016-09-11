@@ -1,4 +1,15 @@
 #
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
 # Copyright 2016 Joyent, Inc.
 #
 
@@ -346,6 +357,7 @@ check: $(JSLINT)
 	@(cd $(ROOT)/src && make check)
 
 clean:
+	./tools/clobber_illumos
 	rm -f $(MANIFEST) $(BOOT_MANIFEST)
 	rm -rf $(MPROTO)/* $(BOOT_MPROTO)/* $(MCPROTO)/*
 	(cd $(ROOT)/src && gmake clean)
@@ -374,7 +386,7 @@ clean:
 	rm -f 0-*-stamp 1-*-stamp
 
 clobber: clean
-	rm -f output/* output-iso/* output-usb/*
+	pfexec rm -rf output/* output-iso/* output-usb/*
  
 iso: live
 	./tools/build_iso

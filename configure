@@ -1,6 +1,5 @@
 #!/usr/bin/bash
 #
-# CDDL HEADER START
 #
 # This file and its contents are supplied under the terms of the
 # Common Development and Distribution License ("CDDL"), version 1.0.
@@ -11,11 +10,9 @@
 # source.  A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
 #
-# CDDL HEADER END
-#
 
 #
-# Copyright (c) 2013 Joyent, Inc.
+# Copyright 2016 Joyent, Inc.
 #
 shopt -s xpg_echo
 unalias -a
@@ -286,6 +283,7 @@ PKGPUBLISHER_REDIST="${PUBLISHER}";		export PKGPUBLISHER_REDIST
 MAKEFLAGS=k;					export MAKEFLAGS
 UT_NO_USAGE_TRACKING="1";			export UT_NO_USAGE_TRACKING
 CW_NO_SHADOW="1";				export CW_NO_SHADOW
+MULTI_PROTO="no";				export MULTI_PROTO
 BUILD_TOOLS="\${CODEMGR_WS}/usr/src/tools/proto/root_\${MACH}-nd/opt";
 						export BUILD_TOOLS
 SPRO_ROOT=/opt/SUNWspro;			export SPRO_ROOT

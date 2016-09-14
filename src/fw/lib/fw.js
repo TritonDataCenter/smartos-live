@@ -234,16 +234,11 @@ function getAffectedRules(new_vms, log) {
 /**
  * Starts ipf and reloads the rules for a VM
  */
-function startIPF(opts, log, callback) {
+function reloadIPF(opts, log, callback) {
     var ipfConf = util.format(IPF_CONF, opts.zonepath);
     var ipf6Conf = util.format(IPF6_CONF, opts.zonepath);
 
-    return mod_ipf.start(opts.vm, log, function (err, res) {
-        if (err) {
-            return callback(err, res);
-        }
-        return mod_ipf.reload(opts.vm, ipfConf, ipf6Conf, log, callback);
-    });
+    mod_ipf.reload(opts.vm, ipfConf, ipf6Conf, log, callback);
 }
 
 
@@ -1366,18 +1361,19 @@ function restartFirewalls(vms, uuids, log, callback) {
                 + '(enabled=%s, state=%s)', uuid, vms.all[uuid].enabled,
                 vms.all[uuid].state);
 
-            // Start the firewall just in case
-            return startIPF({ vm: uuid, zonepath: vms.all[uuid].zonepath },
+            // Reload the firewall, and start it if necessary.
+            reloadIPF({ vm: uuid, zonepath: vms.all[uuid].zonepath },
                 log, function (err, res) {
-                    restarted.push(uuid);
-                    if (err && zoneNotRunning(res)) {
-                        // An error starting the firewall due to the zone not
-                        // running isn't really an error
-                        return cb();
-                    }
+                restarted.push(uuid);
+                if (err && zoneNotRunning(res)) {
+                    // An error starting the firewall due to the zone not
+                    // running isn't really an error
+                    cb();
+                    return;
+                }
 
-                    return cb(err);
-                });
+                cb(err);
+            });
         }
     }, function (err, res) {
         // XXX: Does this stop on the first error?

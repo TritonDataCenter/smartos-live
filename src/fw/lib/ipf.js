@@ -102,77 +102,56 @@ function setOld() {
  * Reloads the ipf rules for a zone
  *
  * @param uuid {String} : zone UUID
- * @param conf {String} : path of ipf conf file to load
+ * @param conf4 {String} : path of IPv4 IPF conf file to load
+ * @param conf6 {String} : path of IPv6 IPF conf file to load
  * @param log {Object} : bunyan logger
  * @param callback {Function} : `function (err, res)`
  */
-function zoneReload(uuid, conf, conf6, log, callback) {
+function zoneReload(uuid, conf4, conf6, log, callback) {
     assert.string(uuid, 'uuid');
-    assert.string(conf, 'conf');
+    assert.string(conf4, 'conf4');
     assert.string(conf6, 'conf6');
     assert.object(log, 'log');
     assert.func(callback, 'callback');
 
-    vasync.waterfall([
-        function _v4flush(cb) {
-            // Flush (-F) all (-a) IPv4 rules from the inactive list (-I) for
-            // the GZ-controlled ipf stack (-G) for zone uuid
-            var flushOpts = ['-GIFa', uuid];
-            if (OLD) {
-                flushOpts = ['-IFa', uuid];
-            }
+    /*
+     * ipf(1M) acts on each of its arguments in the order that they are
+     * supplied. Since executing 6 commands for reloading each zone's
+     * firewall gets expensive quickly, we perform multiple actions in
+     * a single ipf(1M) run:
+     */
+    var args = [
+        // Operate on the GZ-controlled firewall
+        '-G',
 
-            return ipf(flushOpts, log, cb);
-        },
-        function _v6flush(_, cb) {
-            // Flush (-F) all (-a) IPv6 (-6) rules from the inactive list (-I)
-            // for the GZ-controlled ipf stack (-G) for zone uuid
-            var flushOpts = ['-6GIFa', uuid];
-            if (OLD) {
-                flushOpts = ['-6IFa', uuid];
-            }
+        // Enable the firewall if it isn't already.
+        '-E',
 
-            return ipf(flushOpts, log, cb);
-        },
-        function _v4load(_, cb) {
-            // Load IPv4 rules from conf (-f) into the inactive list (-I) for
-            // the GZ-controlled (-G) ipf stack
-            var loadOpts = ['-G', '-I', '-f', conf, uuid];
-            if (OLD) {
-                loadOpts = ['-I', '-f', conf, uuid];
-            }
-            return ipf(loadOpts, log, cb);
-        },
-        function _v6load(_, cb) {
-            fs.stat(conf6, function (err, stati) {
-                if (err) {
-                    if (err.code === 'ENOENT') {
-                        // No IPv6 rules to load
-                        return cb();
-                    }
-                    return cb(err);
-                }
+        // Operate on the inactive list.
+        '-I',
 
-                // Load IPv6 (-6) rules from conf (-f) into the inactive
-                // list (-I) for the GZ-controlled (-G) ipf stack
-                var loadOpts = ['-6', '-G', '-I', '-f', conf6, uuid];
-                if (OLD) {
-                    loadOpts = ['-6', '-I', '-f', conf6, uuid];
-                }
-                return ipf(loadOpts, log, cb);
-            });
-        },
-        function _swap(_, cb) {
-            // Swap (-s) the active and inactive lists, and update the interface
-            // list (-y) for the GZ-controlled ipf stack (-G)
-            var swapOpts = ['-G', '-s', '-y', uuid];
-            if (OLD) {
-                swapOpts = ['-s', '-y', uuid];
-            }
+        // Flush all IPv4 rules from the inactive list, and
+        // then load rules from conf4 into it.
+        '-Fa', '-f', conf4,
 
-            return ipf(swapOpts, log, cb);
-        }
-    ], callback);
+        // Flush all IPv6 rules from the inactive list, and
+        // then load rules from conf6 into it.
+        '-6', '-Fa', '-f', conf6,
+
+        // Swap the active and inactive lists, and update the
+        // interface list.
+        '-sy',
+
+        // Operate on a specific zone.
+        uuid
+    ];
+
+    if (OLD) {
+        args.shift();
+    }
+
+    // Run ipf(1M) and reload the zone's firewall.
+    ipf(args, log, callback);
 }
 
 

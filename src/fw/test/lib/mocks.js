@@ -172,43 +172,37 @@ function resolveLevel() {
 function _recordIPFstate(args) {
     var zone = createSubObjects(VALUES.ipf, args[args.length - 1]);
 
-    if (args[0] == '-GD') {
-        zone.enabled = false;
-        zone.inactive = '';
-        zone.active = '';
-        return;
-    }
-
-    if (args[0] == '-GE') {
-        zone.enabled = true;
-        zone.inactive = '';
-        zone.active = '';
-        return;
-    }
-
-    if (args[0] == '-GIFa') {
-        zone.inactive = '';
-        return;
-    }
-
-    if (args[1] == '-s') {
-        var active = zone.active || '';
-        var inactive = zone.inactive || '';
-        zone.active = inactive;
-        zone.inactive = active;
-        return;
-    }
-
-    if (args[1] == '-I' && args[2] == '-f') {
-        var root = VALUES.fs;
-        var p = _splitFile(args[3]);
-        if (!root.hasOwnProperty(p.dir)
-                || !root[p.dir].hasOwnProperty(p.file)) {
-            throw _ENOENT(p.file);
+    for (var i = 0; i < args.length - 1; i++) {
+        switch (args[i]) {
+        case '-GD':
+            zone.enabled = false;
+            break;
+        case '-GE':
+            zone.enabled = true;
+            break;
+        case '-D':
+            zone.enabled = false;
+            break;
+        case '-E':
+            zone.enabled = true;
+            break;
+        // No state to record
+        case '-GV':
+        case '-G':
+            break;
+        // Not currently implemented
+        case '-sy':
+        case '-I':
+        case '-Fa':
+        case '-6':
+            break;
+        case '-f':
+            i += 1;
+            break;
+        default:
+            throw new Error('Unrecognized /usr/sbin/ipf argument (' + args[i]
+                + ') in arguments list: ' + args.join(' '));
         }
-
-        zone.inactive = root[p.dir][p.file];
-        return;
     }
 }
 
@@ -233,11 +227,7 @@ function execFile(path, args, opts, cb) {
     }
 
     if (path == IPF) {
-        try {
-            _recordIPFstate(args);
-        } catch (err) {
-            vals.err = err;
-        }
+        _recordIPFstate(args);
     }
 
     return cb(vals.err, vals.stdout, vals.stderr);

@@ -32,13 +32,44 @@ var mod_lockfd = require('lockfd');
 
 // --- Globals
 
-var FW_LOCK_FILE = '/var/fw/.lockfile';
+var FW_DIR_PATH = '/var/fw';
+var FW_LOCK_FILE = FW_DIR_PATH + '/.lockfile';
+var FW_DIR_MODE = parseInt('0755', 8);
+var FW_FILE_MODE = parseInt('0644', 8);
 
 
 // --- Internal functions
 
+
+/*
+ * Opening the lock file should normally be fine, but in the odd event that we
+ * are trying for the first time on a system initially set up with a pre-June
+ * 2013 platform, when the /var/fw directory started shipping with the platform,
+ * and there've never been any rules on this system, then we need to take care
+ * of creating the directory.
+ */
+function tryOpen(callback) {
+    fs.open(FW_LOCK_FILE, 'w+', FW_FILE_MODE, function (err, fd) {
+        if (!err || err.code !== 'ENOENT') {
+            callback(err, fd);
+            return;
+        }
+
+        try {
+            fs.mkdirSync(FW_DIR_PATH, FW_DIR_MODE);
+            fd = fs.openSync(FW_LOCK_FILE, 'w+', FW_FILE_MODE);
+        } catch (_) {
+            callback(err);
+            return;
+        }
+
+        callback(null, fd);
+    });
+}
+
+
 function acquireLock(operation, callback) {
-    fs.open(FW_LOCK_FILE, 'w+', function (err, fd) {
+    tryOpen(function (err, fd) {
         if (err) {
             callback(err);
             return;

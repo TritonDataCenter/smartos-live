@@ -121,9 +121,18 @@ if [ $? -ne 0 ]; then
     # For the system zpool, mount and configure all system datasets
     zpool status -v ${SYS_ZPOOL}
     if [ $? -eq 0 ]; then
+        # Stash the SUNWdefault.xml file so we can update the
+        # persistent version after mounting zones/config.
+        cp /etc/zones/SUNWdefault.xml /tmp/
+
         mount_zfs ${SYS_ZPOOL}/var /var
         mount_zfs ${SYS_ZPOOL}/config /etc/zones
         mount_zfs ${SYS_ZPOOL}/opt /opt
+
+        # Update the the persistent SUNWdefault.xml file to match the
+        # contents on ramdisk now that zones/config is mounted.
+        cp /tmp/SUNWdefault.xml /etc/zones/
+        rm -f /tmp/SUNWdefault.xml
 
         if [[ -z $(/bin/bootparams | grep '^smartos=true') ]]; then
             mkdir -p /opt/smartdc/agents/smf

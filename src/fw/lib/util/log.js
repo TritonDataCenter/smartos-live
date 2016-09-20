@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright 2016, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: logging and associated utils
@@ -211,20 +211,29 @@ OpenOnErrorFileStream.prototype.end1 = function () {
 
 // used until first ERROR or higher, then opens file and ensures future writes
 // go to .write2()
-OpenOnErrorFileStream.prototype.write1 = function (rec) {
+OpenOnErrorFileStream.prototype.write1 = function (rec, cb) {
+    var ret;
     if (rec.level >= bunyan.ERROR || this.log_to_file) {
         this._startWriting(bunyan.TRACE, rec);
-        return this.write(rec);
+        ret = this.write(rec, cb);
     } else {
-        return this.ringbuffer.write(rec);
+        ret = this.ringbuffer.write(rec);
+        if (cb) {
+            cb();
+        }
     }
+
+    return ret;
 };
 
 
 // used when writing to file
-OpenOnErrorFileStream.prototype.write2 = function (rec) {
-    var str = JSON.stringify(rec, bunyan.safeCycles()) + '\n';
-    this.stream.write(str);
+OpenOnErrorFileStream.prototype.write2 = function (rec, cb) {
+    var str = rec;
+    if (typeof (str) !== 'string') {
+        str = JSON.stringify(rec, bunyan.safeCycles()) + '\n';
+    }
+    this.stream.write(str, cb);
 };
 
 
@@ -328,7 +337,7 @@ function createLogger(opts, readOnly) {
 
     log = bunyan.createLogger({
         name: logName,
-        req_id: opts.req_id || mod_uuid.v4(),
+        req_id: opts.req_id || process.env.REQ_ID || mod_uuid.v4(),
         serializers: serializers,
         streams: streams
     });
@@ -419,7 +428,8 @@ function finishErr(log, err, msg) {
  */
 function flushLogs(logs, callback) {
     if (!logs) {
-        return callback();
+        callback();
+        return;
     }
 
     var streams = [];
@@ -428,7 +438,8 @@ function flushLogs(logs, callback) {
     }
 
     if (logs.length === 0) {
-        return callback();
+        callback();
+        return;
     }
 
     logs.forEach(function (log) {
@@ -439,29 +450,22 @@ function flushLogs(logs, callback) {
         streams = streams.concat(log.streams);
     });
 
-    var toClose = streams.length;
-    var closed = 0;
+    vasync.forEachParallel({
+        inputs: streams,
+        func: function (str, cb) {
+            if (!str || !str.stream) {
+                cb();
+                return;
+            }
 
-    function _doneClose() {
-        closed++;
-        if (closed == toClose) {
-            return callback();
+            if (str.stream instanceof fs.WriteStream
+                || str.stream instanceof OpenOnErrorFileStream) {
+                str.stream.write('', cb);
+            } else {
+                cb();
+            }
         }
-    }
-
-    streams.forEach(function (str) {
-        if (!str || !str.stream) {
-            return _doneClose();
-        }
-
-        str.stream.once('drain', function () {
-            _doneClose();
-        });
-
-        if (str.stream.write('')) {
-            _doneClose();
-        }
-    });
+    }, callback);
 }
 
 

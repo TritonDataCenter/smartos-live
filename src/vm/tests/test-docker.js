@@ -1002,7 +1002,7 @@ test('test log archiving', function (t) {
     payload.archive_on_delete = true;
     payload.brand = 'lx';
     payload.docker = true;
-    payload.image_uuid = vmtest.CURRENT_DOCKER_ALPINE_UUID;
+    payload.image_uuid = vmtest.CURRENT_DOCKER_IMAGE_UUID;
     payload.internal_metadata = {'docker:cmd': '[\"echo\",\"hello world\"]'};
     payload.kernel_version = '3.13.0';
 
@@ -1247,7 +1247,7 @@ test('test restart delay reset', function (t) {
     payload.autoboot = false;
     payload.brand = 'lx';
     payload.docker = true;
-    payload.image_uuid = vmtest.CURRENT_DOCKER_ALPINE_UUID;
+    payload.image_uuid = vmtest.CURRENT_DOCKER_IMAGE_UUID;
 
     // This cmd will 'exit 1' cycles_fail times, then sleep cycle_reset_delay
     // seconds and exit 0, then repeat that pattern. The repeat happens because
@@ -1255,7 +1255,8 @@ test('test restart delay reset', function (t) {
     // 0.
     payload.internal_metadata = {
         'docker:cmd': '[\"/bin/sh\",\"-c\",'
-            + '\"[[ $(ls -1 /var/tmp | wc -l) == ' + cycles_fail + ' ]] '
+            + '\"mkdir -p /var/tmp; '
+            + '[[ $(ls -1 /var/tmp | wc -l) == ' + cycles_fail + ' ]] '
             + '&& (sleep ' + cycle_reset_delay + '; rm -f /var/tmp/*; exit 0) '
             + '|| (touch /var/tmp/$(/native/usr/bin/uuid); exit 1)\"]',
         'docker:restartpolicy': 'always'
@@ -1435,6 +1436,72 @@ test('test restart delay reset', function (t) {
                 se = null;
             }
             cb();
+        }
+    ]);
+});
+
+/* BEGIN JSSTYLED */
+/*
+ * This test creates a docker VM, reprovisions it, and then stops it so we can
+ * check that the resolv.conf created is *not* a directory but instead a file.
+ *
+ * If it's a directory it was created by zoneadmd:
+ *
+ * https://github.com/joyent/illumos-joyent/blob/release-20160707/usr/src/cmd/zoneadmd/vplat.c#L1239-L1245
+ *
+ * which will only happen if VM.js failed to create it.
+ */
+/* END JSSTYLED */
+test('test reprovision resolv.conf', function (t) {
+    var payload = JSON.parse(JSON.stringify(common_payload));
+    var state = {brand: payload.brand};
+
+    payload.archive_on_delete = false;
+    payload.autoboot = false;
+    payload.brand = 'lx';
+    payload.docker = true;
+    payload.image_uuid = vmtest.CURRENT_DOCKER_IMAGE_UUID;
+    payload.internal_metadata = {'docker:cmd': '[\"sleep\",\"3600\"]'};
+    payload.kernel_version = '3.13.0';
+    payload.resolvers = ['8.8.8.8', '8.8.4.4'];
+
+    vmtest.on_new_vm(t, payload.image_uuid, payload, state, [
+        function (cb) {
+            VM.start(state.uuid, {}, function (err) {
+                t.ok(!err, 'started VM: ' + (err ? err.message : 'success'));
+                cb(err);
+            });
+        }, function (cb) {
+            /*
+             * reprovision with the same image we're already using
+             */
+            VM.reprovision(state.uuid, {'image_uuid': payload.image_uuid},
+                function (err) {
+                    t.ok(!err, 'reprovision: '
+                        + (err ? err.message : 'success'));
+                    cb(err);
+                }
+            );
+        }, function (cb) {
+            /*
+             * Now stop the zone so we unmount everything. Otherwise we might
+             * have a file mounted on top of a directory which would be hidden
+             * if the zone's running.
+             */
+            VM.stop(state.uuid, {}, function (err) {
+                t.ok(!err, 'stopped VM: ' + (err ? err.message : 'success'));
+                cb(err);
+            });
+        }, function (cb) {
+            var resolv_conf = path.join('/zones', state.uuid,
+                '/root/etc/resolv.conf');
+
+            fs.stat(resolv_conf, function (err, st) {
+                t.ok(!err, 'stat resolv.conf: '
+                    + (err ? err.message : 'success'));
+                t.ok(st.isFile(), 'resolv.conf is a file: ' + st.isFile());
+                cb(err);
+            });
         }
     ]);
 });

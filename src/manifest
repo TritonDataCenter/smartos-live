@@ -569,7 +569,7 @@ d usr/fw/node_modules 0555 root bin
 d usr/fw/node_modules/carrier 0555 root bin
 d usr/fw/node_modules/clone 0555 root bin
 d usr/fw/node_modules/cmdln 0555 root bin
-d usr/fw/node_modules/dashdash 0555 root bin
+d usr/fw/node_modules/fuzzyset.js 0555 root bin
 d usr/fw/node_modules/fwrule 0555 root bin
 d usr/fw/node_modules/strsplit 0555 root bin
 d usr/fw/sbin 0555 root bin
@@ -579,6 +579,7 @@ f usr/fw/lib/filter.js 0444 root bin
 f usr/fw/lib/fw.js 0444 root bin
 f usr/fw/lib/fwadm.js 0444 root bin
 f usr/fw/lib/ipf.js 0444 root bin
+f usr/fw/lib/locker.js 0444 root bin
 f usr/fw/lib/pipeline.js 0444 root bin
 f usr/fw/lib/rvm.js 0444 root bin
 f usr/fw/lib/util/errors.js 0444 root bin
@@ -596,10 +597,13 @@ f usr/fw/node_modules/clone/clonePrototype.js 0444 root bin
 f usr/fw/node_modules/clone/index.js 0444 root bin
 f usr/fw/node_modules/cmdln/index.js 0444 root bin
 f usr/fw/node_modules/cmdln/LICENSE.txt 0444 root bin
-f usr/fw/node_modules/dashdash/index.js 0444 root bin
-f usr/fw/node_modules/dashdash/LICENSE.txt 0444 root bin
+f usr/fw/node_modules/dashdash.js 0444 root bin
+f usr/fw/node_modules/fuzzyset.js/README.rst 0444 root bin
+f usr/fw/node_modules/fuzzyset.js/index.js 0444 root bin
 f usr/fw/node_modules/dtrace-provider.js 0444 root bin
 f usr/fw/node_modules/DTraceProviderBindings.node 0444 root bin
+h usr/fw/node_modules/lockfd.js=usr/node/0.10/node_modules/lockfd.js
+h usr/fw/node_modules/lockfd_binding.node=usr/node/0.10/node_modules/lockfd_binding.node
 f usr/fw/node_modules/fwrule/index.js 0444 root bin
 f usr/fw/node_modules/fwrule/parser.js 0444 root bin
 f usr/fw/node_modules/fwrule/rule.js 0444 root bin

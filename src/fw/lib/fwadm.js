@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright 2016, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: CLI logic
@@ -36,6 +36,7 @@ var path = require('path');
 var pipeline = require('./pipeline').pipeline;
 var util = require('util');
 var util_log = require('./util/log');
+var util_obj = require('./util/obj');
 var vasync = require('vasync');
 var verror = require('verror');
 var VM = require('/usr/vm/node_modules/VM');
@@ -56,11 +57,13 @@ var OPTS = {
     delim: {
         names: ['delim', 'd'],
         type: 'string',
+        helpArg: '<char>',
         help: 'Output delimiter.'
     },
     description: {
         names: ['description', 'desc' ],
         type: 'string',
+        helpArg: '<str>',
         help: 'Rule description.'
     },
     enable: {
@@ -71,6 +74,7 @@ var OPTS = {
     file: {
         names: ['file', 'f'],
         type: 'string',
+        helpArg: '<file>',
         help: 'Input file.'
     },
     global: {
@@ -91,11 +95,13 @@ var OPTS = {
     output_fields: {
         names: ['fields', 'o'],
         type: 'string',
+        helpArg: '<fields>',
         help: 'Output field list'
     },
     owner_uuid: {
         names: ['owner_uuid', 'O'],
         type: 'string',
+        helpArg: '<uuid>',
         help: 'Owner UUID'
     },
     parseable: {
@@ -280,8 +286,30 @@ function Fwadm() {
     cmdln.Cmdln.call(this, {
         name: 'fwadm',
         desc: 'Manage firewall rules',
-        options: [ OPTS.help, OPTS.json, OPTS.dryrun, OPTS.stdout,
-            OPTS.verbose ]
+        helpSubcmds: [
+            'add',
+            'delete',
+            'disable',
+            'enable',
+            'get',
+            'list',
+            'update',
+            'vms',
+            { group: '' },
+            'add-rvm',
+            'delete-rvm',
+            'get-rvm',
+            'list-rvms',
+            'rvm-rules',
+            { group: '' },
+            'rules',
+            'start',
+            'status',
+            'stats',
+            'stop',
+            { group: '', unmatched: true }
+        ],
+        options: [ OPTS.help, OPTS.json, OPTS.verbose ]
     });
 }
 
@@ -319,7 +347,7 @@ Fwadm.prototype.do_add = function (subcmd, opts, args, callback) {
 /**
  * Adds a remote VM
  */
-Fwadm.prototype['do_add-rvm'] = function (subcmd, opts, args, callback) {
+Fwadm.prototype.do_add_rvm = function (subcmd, opts, args, callback) {
     LOG = util_log.create({ action: 'add' });
 
     pipeline({
@@ -361,21 +389,19 @@ Fwadm.prototype.do_list = function (subcmd, opts, args, callback) {
     }
 
     if (opts.delim && !opts.parseable) {
-        var delimErr = new Error('-d requires -p');
-        cli.outputError(delimErr, opts);
-        return callback(delimErr);
+        callback(new cmdln.UsageError('-d requires -p'));
+        return;
     }
 
     if (opts.json && opts.parseable) {
-        var fmtErr = new Error('cannot specify both -j and -p');
-        cli.outputError(fmtErr, opts);
-        return callback(fmtErr);
+        callback(new cmdln.UsageError('cannot specify both -j and -p'));
+        return;
     }
 
     LOG = util_log.create({ action: 'list' }, true);
     listOpts.log = LOG;
 
-    return fw.list(listOpts, function (err, res) {
+    fw.list(listOpts, function (err, res) {
         cli.displayRules(err, res, opts);
         return callback(err);
     });
@@ -385,7 +411,7 @@ Fwadm.prototype.do_list = function (subcmd, opts, args, callback) {
 /**
  * Lists remote VMs
  */
-Fwadm.prototype['do_list-rvms'] = function (subcmd, opts, args, callback) {
+Fwadm.prototype.do_list_rvms = function (subcmd, opts, args, callback) {
     LOG = util_log.create({ action: 'listRemoteVMs' }, true);
 
     // XXX: support filtering, sorting
@@ -410,10 +436,10 @@ Fwadm.prototype.do_update = function (subcmd, opts, args, callback) {
         id = args.shift();
     }
 
-    return cli.getPayload(opts, args, function (err, payload) {
+    cli.getPayload(opts, args, function (err, payload) {
         if (err) {
-            cli.outputError(err, opts);
-            return callback(err);
+            callback(err);
+            return;
         }
 
         var updatePayload = preparePayload(opts, payload);
@@ -425,7 +451,7 @@ Fwadm.prototype.do_update = function (subcmd, opts, args, callback) {
             updatePayload.rules[0].uuid = cli.validateUUID(id);
         }
 
-        return doUpdate(opts, updatePayload, 'Updated', callback);
+        doUpdate(opts, updatePayload, 'Updated', callback);
     });
 };
 
@@ -452,7 +478,7 @@ Fwadm.prototype.do_get = function (subcmd, opts, args, callback) {
 /**
  * Gets a remote VM
  */
-Fwadm.prototype['do_get-rvm'] = function (subcmd, opts, args, callback) {
+Fwadm.prototype.do_get_rvm = function (subcmd, opts, args, callback) {
     var uuid = cli.validateUUID(args[0]);
     LOG = util_log.create({ action: 'getRemoteVM' }, true);
 
@@ -474,14 +500,15 @@ Fwadm.prototype['do_get-rvm'] = function (subcmd, opts, args, callback) {
 function enableDisable(subcmd, opts, args, callback) {
     var enabled = subcmd === 'enable';
     if (args.length === 0) {
-        return callback(new Error('Must specify rules to enable!'));
+        callback(new cmdln.UsageError('Must specify rules to enable!'));
+        return;
     }
 
     var rules = args.map(function (uuid) {
         return { uuid: cli.validateUUID(uuid), enabled: enabled };
     });
 
-    return doUpdate(opts, preparePayload(opts, { rules: rules }),
+    doUpdate(opts, preparePayload(opts, { rules: rules }),
         enabled ? 'Enabled' : 'Disabled', callback);
 }
 
@@ -489,6 +516,7 @@ function enableDisable(subcmd, opts, args, callback) {
 Fwadm.prototype.do_enable = function () {
     enableDisable.apply(this, arguments);
 };
+
 
 Fwadm.prototype.do_disable = function () {
     enableDisable.apply(this, arguments);
@@ -529,7 +557,7 @@ Fwadm.prototype.do_delete = function (subcmd, opts, args, callback) {
 /**
  * Deletes a remote VM
  */
-Fwadm.prototype['do_delete-rvm'] = function (subcmd, opts, args, callback) {
+Fwadm.prototype.do_delete_rvm = function (subcmd, opts, args, callback) {
     if (args.length === 0) {
         return console.error('Must specify remote VMs to delete!');
     }
@@ -560,7 +588,7 @@ Fwadm.prototype['do_delete-rvm'] = function (subcmd, opts, args, callback) {
 /**
  * Gets the rules that apply to a remote VM
  */
-Fwadm.prototype['do_rvm-rules'] = function (subcmd, opts, args, callback) {
+Fwadm.prototype.do_rvm_rules = function (subcmd, opts, args, callback) {
     var uuid = cli.validateUUID(args[0]);
     LOG = util_log.create({ action: 'rvmRules' }, true);
 
@@ -706,17 +734,6 @@ Fwadm.prototype.do_vms = function (subcmd, opts, args, callback) {
     });
 };
 
-var ARG_OPTS;
-
-/**
- * Run before any of the do_* methods
- */
-Fwadm.prototype.init = function (opts, args, callback) {
-    ARG_OPTS = opts;
-    return callback();
-
-};
-
 
 
 // --- Help text and other cmdln options
@@ -724,46 +741,149 @@ Fwadm.prototype.init = function (opts, args, callback) {
 
 
 var HELP = {
-    add: 'add firewall rules or remote VMs',
-    'add-rvm': 'add a remote VM',
-    delete: 'delete a rule',
-    'delete-rvm': 'delete a remote VM',
-    disable: 'disable a rule',
-    enable: 'enable a rule',
-    get: 'get a rule',
-    'get-rvm': 'get a remote VM',
-    list: 'list rules',
-    'list-rvms': 'list remote VMs',
-    rules: 'list rules that apply to a VM',
-    'rvm-rules': 'list rules that apply to a remote VM',
-    start: 'start a VM\'s firewall',
-    status: 'get the status of a VM\'s firewall',
-    stats: 'get rule statistics for a VM\'s firewall',
-    stop: 'stop a VM\'s firewall',
-    update: 'update firewall rules or data',
-    vms: 'list the UUIDs of VMs affected by a rule'
+    add: {
+        summary: 'Add firewall rules or remote VMs.',
+        synopses: [
+            '{{name}} {{cmd}} -f <file>',
+            '{{name}} {{cmd}} [-e] [--desc <description>] '
+                + '[-g] [-O <owner uuid>] <rule>'
+        ],
+        options: [ OPTS.description, OPTS.enable, OPTS.file, OPTS.global,
+            OPTS.owner_uuid ],
+        examples: '    fwadm add -e -O $USER_UUID FROM any TO all vms ALLOW udp'
+            + ' PORTS 67, 68\n'
+            + '    fwadm add -g -e FROM any TO all vms ALLOW tcp PORT 22\n'
+            + '    fwadm add <<EOF\n'
+            + '    {\n'
+            + '      "rules": [ {\n'
+            + '        "description": "allow all ICMPv6 types",\n'
+            + '        "rule": "FROM any TO all vms ALLOW icmp6 type all",\n'
+            + '        "enabled": true,\n'
+            + '        "global": true\n'
+            + '      } ]\n'
+            + '    }\n'
+            + '    EOF\n'
+    },
+    add_rvm: {
+        summary: 'Add a remote VM.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS]' ],
+        options: [ OPTS.file ]
+    },
+    delete: {
+        summary: 'Delete a rule.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <rule uuid>' ]
+    },
+    delete_rvm: {
+        summary: 'Delete a remote VM.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <rvm uuid>' ]
+    },
+    disable: {
+        summary: 'Disable a rule.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <vm uuid>' ]
+    },
+    enable: {
+        summary: 'Enable a rule.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <vm uuid>' ]
+    },
+    get: {
+        summary: 'Get a rule.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <rule uuid>' ]
+    },
+    get_rvm: {
+        summary: 'Get a remote VM.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <rvm uuid>' ]
+    },
+    list: {
+        summary: 'List rules.',
+        synopses: [
+            '{{name}} {{cmd}} [OPTIONS] -p [-d <char>]',
+            '{{name}} {{cmd}} [OPTIONS] -j'
+        ],
+        options: [ OPTS.delim, OPTS.output_fields, OPTS.parseable ]
+    },
+    list_rvms: {
+        summary: 'List remote VMs.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS]' ]
+    },
+    rules: {
+        summary: 'List rules that apply to a VM.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <vm uuid>' ]
+    },
+    rvm_rules: {
+        summary: 'List rules that apply to a remote VM.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <rvm uuid>' ]
+    },
+    start: {
+        summary: 'Start a VM\'s firewall.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <vm uuid>' ]
+    },
+    status: {
+        summary: 'Get the status of a VM\'s firewall.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <vm uuid>' ]
+    },
+    stats: {
+        summary: 'Get rule statistics for a VM\'s firewall.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <vm uuid>' ]
+    },
+    stop: {
+        summary: 'Stop a VM\'s firewall.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <vm uuid>' ]
+    },
+    update: {
+        summary: 'Update firewall rules or data.',
+        synopses: [
+            '{{name}} {{cmd}} -f <file>',
+            '{{name}} {{cmd}} <rule uuid> [-e] [--desc <description>] [-g] \\\n'
+                + '    [-O <owner uuid>] <rule>'
+        ],
+        options: [ OPTS.description, OPTS.enable, OPTS.file, OPTS.global,
+            OPTS.owner_uuid ]
+    },
+    vms: {
+        summary: 'List the UUIDs of VMs affected by a rule.',
+        synopses: [ '{{name}} {{cmd}} [OPTIONS] <rule uuid>' ]
+    }
 };
 
-var EXTRA_OPTS = {
-    add: [ OPTS.description, OPTS.enable, OPTS.file, OPTS.global,
-        OPTS.owner_uuid ],
-    'add-rvm': [ OPTS.file ],
-    list: [ OPTS.delim, OPTS.output_fields, OPTS.parseable ],
-    update: [ OPTS.description, OPTS.enable, OPTS.file, OPTS.global,
-        OPTS.owner_uuid ]
-};
+
+/**
+ * Wrap a subcommand function with common checks
+ */
+function wrapSubcmd(func) {
+    return function (subcmd, opts, args, callback) {
+        if (opts.help) {
+            this.do_help('help', {}, [ subcmd ], callback);
+            return;
+        }
+
+        opts = this.opts = util_obj.mergeObjects(this.opts, opts);
+
+        onlyif.rootInSmartosGlobal(function (err) {
+            if (err) {
+                console.error('FATAL: cannot run: %s', err);
+                return process.exit(2);
+            }
+
+            func(subcmd, opts, args, callback);
+        });
+    };
+}
+
 
 // Help text and options for all commands
 for (var cmd in HELP) {
-    var proto = Fwadm.prototype['do_' + cmd];
-    proto.help = HELP[cmd];
-    if (!EXTRA_OPTS.hasOwnProperty(cmd)) {
-        EXTRA_OPTS[cmd] = [];
+    var do_key = 'do_' + cmd;
+    var info = HELP[cmd];
+    var proto = Fwadm.prototype[do_key];
+    proto = Fwadm.prototype[do_key] = wrapSubcmd(proto);
+    proto.help = info.summary + '\n\n{{usage}}\n\n{{options}}';
+    if (info.hasOwnProperty('examples')) {
+        proto.help += '\n\nExamples:\n\n' + info.examples;
     }
 
-    EXTRA_OPTS[cmd] = EXTRA_OPTS[cmd].concat([
-        OPTS.dryrun, OPTS.json, OPTS.stdout, OPTS.verbose ]);
-    proto.options = EXTRA_OPTS[cmd];
+    proto.synopses = info.synopses;
+    proto.options = (info.options || []).concat([
+        OPTS.help, OPTS.dryrun, OPTS.json, OPTS.stdout, OPTS.verbose ]);
 }
 
 
@@ -776,30 +896,23 @@ for (var cmd in HELP) {
  * Main entry point
  */
 function main() {
-    onlyif.rootInSmartosGlobal(function (err) {
-        if (err) {
-            console.error('FATAL: cannot run: %s', err);
-            return process.exit(2);
+    var fwadm = new Fwadm();
+    fwadm.main(process.argv, function (err2) {
+        if (err2 && !cli.haveOutputErr()) {
+            cli.outputError(err2, fwadm.opts);
+            // This is a usage error - no need to flush logs
+            process.exit(2);
         }
 
-        var fwadm = new Fwadm;
-        fwadm.main(process.argv, function (err2) {
-            if (err2 && !cli.haveOutputErr()) {
-                cli.outputError(err2, ARG_OPTS);
-                // This is a usage error - no need to flush logs
-                process.exit(2);
+        // Potentially 3 different logs to flush: if we've only used
+        // fw.js, just flush LOG.  If we've gone through VM.update
+        // (for start / stop), we need to flush VM.log and VM.fw_log.
+        util_log.flush([LOG, VM.log, VM.fw_log], function () {
+            if (cli.haveOutputErr()) {
+                process.exit(1);
             }
 
-            // Potentially 3 different logs to flush: if we've only used
-            // fw.js, just flush LOG.  If we've gone through VM.update
-            // (for start / stop), we need to flush VM.log and VM.fw_log.
-            util_log.flush([LOG, VM.log, VM.fw_log], function () {
-                if (cli.haveOutputErr()) {
-                    process.exit(1);
-                }
-
-                process.exit(0);
-            });
+            process.exit(0);
         });
     });
 }

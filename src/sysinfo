@@ -343,7 +343,7 @@ function get_smartos_network_interfaces()
     count=1
 
     # ignore 'LINK SLOT ADDRESS INUSE CLIENT' line
-    for line in $(pfexec /sbin/dladm show-phys -m \
+    for line in $(/sbin/dladm show-phys -m \
         | grep -v "^LINK " | awk '{ print $1,$3 }' | tr ' ' '='); do
 
         nicnames=
@@ -396,7 +396,7 @@ function get_smartos_network_interfaces()
 
     up_count=1
 
-    for line in $(pfexec /sbin/dladm show-aggr -x -p \
+    for line in $(/sbin/dladm show-aggr -x -p \
         -o link,address,state,port | sed -e 's/\\:/|/g'); do
         nicnames=
         fields=(${line//:/ })
@@ -481,7 +481,7 @@ function get_smartos_vnics()
     count=1
 
     # ignore 'LINK SLOT ADDRESS INUSE CLIENT' line
-    for line in $(pfexec /sbin/dladm show-vnic -z '' \
+    for line in $(/sbin/dladm show-vnic -z '' \
         | grep -v "^LINK " | awk '{ print $1,$2,$4,$6 }' | tr ' ' '='); do
         fields=(${line//=/ })
         iface=${fields[0]}
@@ -489,7 +489,7 @@ function get_smartos_vnics()
         normalize_mac ${fields[2]}
         mac=${normalized}
         vlan=${fields[3]}
-        link_status=$(pfexec /sbin/dladm show-link -p -o state ${iface})
+        link_status=$(/sbin/dladm show-link -p -o state ${iface})
         ip4addr=$(ifconfig ${iface} 2>/dev/null \
             | grep "inet " | awk '{ print $2 }')
         VirtualNetworkInterfaces[${count}]=${iface}

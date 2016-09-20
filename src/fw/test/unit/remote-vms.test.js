@@ -690,6 +690,48 @@ exports['local VM to remote tag'] = function (t) {
 };
 
 
+exports['FWAPI-248 - only list an applicable rule once'] = function (t) {
+    var rvm = helpers.generateVM({ tags: { foo: true, bar: false } });
+    var rule = {
+        owner_uuid: rvm.owner_uuid,
+        rule: 'FROM tag foo TO tag bar ALLOW tcp PORT 80',
+        enabled: true
+    };
+    var payload = {
+        remoteVMs: [ rvm ],
+        rules: [ clone(rule) ],
+        vms: []
+    };
+
+    async.series([
+    function (cb) {
+        fw.validatePayload(payload, function (err, res) {
+            t.ifError(err);
+            cb();
+        });
+    }, function (cb) {
+        fw.add(payload, function (err, res) {
+            t.ifError(err);
+            if (err) {
+                cb(err);
+                return;
+            }
+            helpers.fillInRuleBlanks(res.rules, [ rule ]);
+            cb();
+        });
+    }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [ rule ],
+            rvm: rvm.uuid,
+            vms: []
+        }, cb);
+    }], function () {
+        t.done();
+    });
+};
+
+
 exports['local VM and remote VM to IP'] = function (t) {
     var vm = helpers.generateVM({
         uuid: '5293cc31-189c-4b10-be90-7c74c78de927' });
@@ -1252,10 +1294,87 @@ exports['delete: different VMs than RVMs in rule'] = function (t) {
 };
 
 
+exports['FWAPI-252: Allow using rvmRules() on RVM w/o IPs'] = function (t) {
+    var rvm = helpers.generateVM({ tags: { other: true } });
+    delete rvm.ips;
+    delete rvm.nics;
+
+    var expRulesOnDisk = {};
+
+    var payload = {
+        remoteVMs: [],
+        rules: [
+            {
+                owner_uuid: rvm.owner_uuid,
+                rule: 'FROM tag foo TO tag other ALLOW tcp PORT 80',
+                enabled: true
+            },
+            {
+                owner_uuid: rvm.owner_uuid,
+                rule: 'FROM tag other TO tag foo ALLOW tcp PORT 80',
+                enabled: true
+            },
+            {
+                owner_uuid: rvm.owner_uuid,
+                rule: 'FROM tag foo TO tag bar ALLOW tcp PORT 80',
+                enabled: true
+            }
+        ],
+        vms: []
+    };
+
+    var rule1 = clone(payload.rules[0]);
+    var rule2 = clone(payload.rules[1]);
+    var rule3 = clone(payload.rules[2]);
+
+    async.series([
+    function (cb) {
+        fw.validatePayload(payload, function (err, res) {
+            t.ifError(err);
+            cb();
+        });
+
+    }, function (cb) {
+        fw.add(payload, function (err, res) {
+            t.ifError(err);
+            if (err) {
+                cb(err);
+                return;
+            }
+
+            helpers.fillInRuleBlanks(res.rules, [rule1, rule2, rule3]);
+
+            expRulesOnDisk[rule1.uuid] = clone(rule1);
+            expRulesOnDisk[rule2.uuid] = clone(rule2);
+            expRulesOnDisk[rule3.uuid] = clone(rule3);
+
+            t.deepEqual(helpers.rulesOnDisk(), expRulesOnDisk, 'rules on disk');
+
+            cb();
+        });
+
+    }, function (cb) {
+        helpers.fwRvmRulesEqual({
+            t: t,
+            rules: [rule1, rule2],
+            rvm: rvm,
+            vms: []
+        }, cb);
+    }
+
+    ], function () {
+        t.done();
+    });
+};
+
+
 exports['invalid and missing parameters'] = function (t) {
     var payload = {
         vms: [ helpers.generateVM() ]
     };
+
+    var invalidIPs = helpers.generateVM();
+    invalidIPs.ips = [ '1.2.3.4.5' ];
 
     var missingIPs = helpers.generateVM();
     delete missingIPs.nics;
@@ -1268,6 +1387,9 @@ exports['invalid and missing parameters'] = function (t) {
     sameUUID.uuid = payload.vms[0].uuid;
 
     var invalid = [
+        [ 'invalid IPs', invalidIPs, util.format(
+            'Invalid IP address: %s', invalidIPs.ips[0]) ],
+
         [ 'missing IPs', missingIPs, util.format(
             'Remote VM "%s": missing IPs', missingIPs.uuid) ],
 

@@ -50,9 +50,10 @@ var WRKDIR = '/var/tmp/img-test-docker';
 var CACHEDIR = '/var/tmp/img-test-cache';
 
 var sourcesHadDockerHub;
-// Use a test image that is ideally small and typically unused. 'alpine'
-// does NOT meet the latter.
-var testImgArg = 'alpine:latest';
+// Use a test image that is ideally small and typically unused. This
+// should be an older image accessible via the v1 Registry API, since
+// that is what imgadm currently supports.
+var testImgArg = 'busybox:1.24.0';
 var testImg;
 
 

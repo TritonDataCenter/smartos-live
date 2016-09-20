@@ -74,17 +74,17 @@ done
 # Special case for docker
 
 imgadm sources --add-docker-hub
-export DOCKER_ALPINE_UUID=$(imgadm list -o uuid,tags \
-    | grep "\"docker:repo\":\"alpine\"" \
+export DOCKER_BASE_IMAGE_UUID=$(imgadm list -o uuid,tags \
+    | grep "\"docker:repo\":\"busybox\"" \
     | cut -d' ' -f1 \
     | head -1)
-if [[ -z ${DOCKER_ALPINE_UUID} ]]; then
-    imgadm import alpine:latest
-    export DOCKER_ALPINE_UUID=$(imgadm list -o uuid,tags \
-        | grep "\"docker:repo\":\"alpine\"" \
+if [[ -z ${DOCKER_BASE_IMAGE_UUID} ]]; then
+    imgadm import busybox:1.24.0
+    export DOCKER_BASE_IMAGE_UUID=$(imgadm list -o uuid,tags \
+        | grep "\"docker:repo\":\"busybox\"" \
         | cut -d' ' -f1)
-    if [[ -z ${DOCKER_ALPINE_UUID} ]]; then
-        echo "Unable to download alpine:latest docker image" >&2
+    if [[ -z ${DOCKER_BASE_IMAGE_UUID} ]]; then
+        echo "Unable to download busybox:1.24.0 docker image" >&2
         exit 1
     fi
 fi

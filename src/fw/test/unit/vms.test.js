@@ -75,7 +75,7 @@ exports.setUp = function (cb) {
 exports['missing vms'] = function (t) {
     fw.vms({ }, function (err, res) {
         t.ok(err, 'error returned');
-        t.equal(err.message, 'opts.vms ([object]) required',
+        t.equal(err.message, 'opts.vms ([object]) is required',
             'error message');
         return t.done();
     });

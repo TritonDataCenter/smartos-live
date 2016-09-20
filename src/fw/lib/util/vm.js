@@ -26,6 +26,7 @@
  * fwadm: shared VM logic
  */
 
+var mod_net = require('net');
 var objEmpty = require('./obj').objEmpty;
 var VError = require('verror').VError;
 
@@ -89,14 +90,15 @@ function createRemoteVM(vm) {
         });
     }
 
-    if (objEmpty(ips)) {
-        err = new VError(
-            'Remote VM "%s": missing IPs', uuid);
-        err.details = vm;
-        throw err;
-    }
-
     rvm.ips = Object.keys(ips).sort();
+
+    rvm.ips.forEach(function (ip) {
+        if (!mod_net.isIPv4(ip) && !mod_net.isIPv6(ip)) {
+            err = new VError('Invalid IP address: %s', ip);
+            err.details = vm;
+            throw err;
+        }
+    });
 
     if (vm.hasOwnProperty('tags') && !objEmpty(vm.tags)) {
         rvm.tags = {};

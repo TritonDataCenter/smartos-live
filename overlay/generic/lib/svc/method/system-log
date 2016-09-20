@@ -21,7 +21,7 @@
 #
 # Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
-# Copyright 2012, Joyent, Inc.  All rights reserved.
+# Copyright 2016, Joyent, Inc.  All rights reserved.
 #
 
 OLD_CONF=/etc/default/syslogd
@@ -103,20 +103,21 @@ fi
 
 if [ -f /etc/rsyslog.conf ]; then
 	if [ ! -x /usr/sbin/rsyslogd ]; then
-		echo "/etc/rsyslog.conf is missing. Exiting."
+		echo "Executable /usr/sbin/rsyslogd not found or not executable. Exiting."
 		exit $SMF_EXIT_ERR_CONFIG
 	fi
 else
 	#
 	# Fall back to old syslogd
 	#
+	echo "/etc/rsyslog.conf is missing. Using syslogd instead."
 	if [ ! -f /etc/syslog.conf ]; then
 		echo "/etc/syslog.conf is missing. Exiting."
 		exit $SMF_EXIT_ERR_CONFIG
 	fi
 
 	if [ ! -x /usr/sbin/syslogd ]; then
-		echo "Executable /usr/sbin/syslogd not found. Exiting"
+		echo "Executable /usr/sbin/syslogd not found or not executable. Exiting."
 		exit $SMF_EXIT_ERR_CONFIG
 	fi
 fi

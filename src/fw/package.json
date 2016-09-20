@@ -11,17 +11,16 @@
     "ramsey": "0.1.2"
   },
   "dependencies": {
-    "assert-plus": "0.1.2",
+    "assert-plus": "1.0.0",
     "bunyan": "0.14.6",
     "clone": "0.1.4",
-    "cmdln": "1.1.1",
+    "cmdln": "4.1.1",
     "extsprintf": "1.0.2",
     "mkdirp": "0.3.4",
     "node-uuid": "1.2.0",
-    "nopt": "1.0.10",
     "tab": "0.1.0",
     "vasync": "1.6.3",
-    "verror": "1.3.6"
+    "verror": "1.6.0"
   },
   "scripts": {
     "test": "make test"

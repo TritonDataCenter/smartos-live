@@ -87,6 +87,14 @@ function rulesByRVMs(remoteVMs, rules, log, callback) {
     }
 
     var matchingRules = [];
+    var matchingUUIDs = {};
+
+    function pushRule(rule) {
+        if (!matchingUUIDs[rule.uuid]) {
+            matchingRules.push(rule);
+            matchingUUIDs[rule.uuid] = true;
+        }
+    }
 
     ruleTypeWalk(rules, ['tags', 'vms', 'wildcards'], function (rule, type, t) {
         if (type === 'wildcards' && t === 'any') {
@@ -96,13 +104,13 @@ function rulesByRVMs(remoteVMs, rules, log, callback) {
         if (remoteVMs[type].hasOwnProperty(t)
             && !objEmpty(remoteVMs[type][t])) {
             if (!rule.hasOwnProperty('owner_uuid')) {
-                matchingRules.push(rule);
+                pushRule(rule);
                 return;
             }
 
             for (var uuid in remoteVMs[type][t]) {
                 if (remoteVMs[type][t][uuid].owner_uuid == rule.owner_uuid) {
-                    matchingRules.push(rule);
+                    pushRule(rule);
                     return;
                 }
             }

@@ -1,14 +1,14 @@
 #
-# Copyright (c) 2013 Joyent, Inc.  All rights reserved.
+# Copyright (c) 2014 Joyent, Inc.  All rights reserved.
 #
 
 all: $(MODULE_DIR)/$(MODULE).node
 
-$(ERRNO_C): $(GENERRNO_JS) $(ERRNO_JSON)
-	$(GENERRNO) -c -o $@ $(ERRNO_JSON)
+$(ERRNO_C): $(GENERRNO_JS) $(V8PLUS)/errno.json
+	$(GENERRNO) -c -o $@ $(V8PLUS)/errno.json
 
-$(ERRNO_H): $(GENERRNO_JS) $(ERRNO_JSON)
-	$(GENERRNO) -h -o $@ $(ERRNO_JSON)
+$(ERRNO_H): $(GENERRNO_JS) $(V8PLUS)/errno.json
+	$(GENERRNO) -h -o $@ $(V8PLUS)/errno.json
 
 $(OBJS): $(ERRNO_H)
 

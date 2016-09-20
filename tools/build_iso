@@ -184,7 +184,7 @@ function bi_generate_usb_file
 	    "${bi_lofidev/lofi/rlofi}"; then
 		fail "failed to partition ${bi_lofidev/lofi/rlofi}"
 	fi
-	echo "y" | pfexec mkfs -F pcfs -o fat=32 ${bi_lofidev/lofi/rlofi}:c
+	echo "y" | pfexec mkfs -F pcfs -o b=SMARTOSBOOT,fat=32 ${bi_lofidev/lofi/rlofi}:c
 	[[ $? -eq 0 ]] || fail "failed to format the usb image"
 	bi_emit_done
 

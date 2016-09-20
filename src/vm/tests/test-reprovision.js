@@ -15,7 +15,7 @@ VM.loglevel = 'DEBUG';
 
 var abort = false;
 var bundle_filename;
-var docker_image_uuid = vmtest.CURRENT_DOCKER_ALPINE_UUID;
+var docker_image_uuid = vmtest.CURRENT_DOCKER_IMAGE_UUID;
 var smartos_image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var kvm_image_uuid = vmtest.CURRENT_UBUNTU_UUID;
 var vmobj;
@@ -283,7 +283,7 @@ function trim(str, chars)
 
 test('create docker VM', function (t) {
     var payload = JSON.parse(JSON.stringify(lxdocker_payload));
-    payload.image_uuid = vmtest.CURRENT_DOCKER_ALPINE_UUID;
+    payload.image_uuid = vmtest.CURRENT_DOCKER_IMAGE_UUID;
 
     VM.create(payload, function (err, obj) {
         if (err) {

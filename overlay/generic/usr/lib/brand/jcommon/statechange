@@ -85,7 +85,7 @@ lock_file()
 	typeset prev_pid=0
 	while true; do
 		if (set -o noclobber; echo "$$" >$LOCKFILE) 2>/dev/null; then
-			trap 'ecode=$? rm -f $LOCKFILE; exit $ecode' INT TERM EXIT
+			trap 'rm -f $LOCKFILE' EXIT
 			break;
 		fi
 

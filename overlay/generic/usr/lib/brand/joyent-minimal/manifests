@@ -110,6 +110,7 @@ milestone/network.xml		enabled
 system/filesystem/joyent-fs.xml	enabled
 system/filesystem/local-fs.xml	enabled
 system/name-service-cache.xml	enabled
+system/process-security.xml	enabled
 milestone/name-services.xml	enabled
 system/identity.xml		enabled
 network/network-initial.xml	enabled

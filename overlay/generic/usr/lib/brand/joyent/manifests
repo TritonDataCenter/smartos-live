@@ -163,6 +163,7 @@ system/manifest-import.xml				enabled
 system/mdata.xml					disabled
 system/name-service-cache.xml				enabled
 system/pfexecd.xml					enabled
+system/process-security.xml				enabled
 system/rbac.xml						enabled
 system/rcap.xml						disabled
 system/rmtmpfiles.xml					enabled

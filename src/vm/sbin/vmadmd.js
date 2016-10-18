@@ -46,6 +46,7 @@ var SyseventStream = require('/usr/vm/node_modules/sysevent-stream');
 var url = require('url');
 var util = require('util');
 var vasync = require('vasync');
+var vminfod = require('/usr/vm/node_modules/vminfod/client');
 
 /*
  * The DOCKER_RUNTIME_DELAY_RESET parameter is used when restarting a Docker VM
@@ -1169,16 +1170,41 @@ function updateZoneStatus(ev)
 
 function startZoneWatcher(callback)
 {
-
-    var se = new SyseventStream({
-        class: 'status',
-        logger: log,
-        channel: 'com.sun:zones:status'
-    });
-    se.on('readable', function () {
+    var vs = new vminfod.VminfodEventStream();
+    vs.on('readable', function () {
         var ev;
-        while ((ev = se.read()) !== null)
-            callback(ev);
+        while ((ev = vs.read()) !== null) {
+            // make a fake sysevent obj
+            var sysev = {
+                data: {
+                    when: ev.ts,
+                    zonename: ev.zonename
+                }
+            };
+            switch (ev.type) {
+            case 'create':
+                sysev.data.oldstate = '';
+                sysev.data.newstate = ev.vm.zone_state;
+                callback(sysev);
+                break;
+            case 'delete':
+                sysev.data.newstate = '';
+                callback(sysev);
+                break;
+            default:
+                assert(ev.changes, 'ev.changes');
+                for (var i = 0; i < ev.changes.length; i++) {
+                    var change = ev.changes[i];
+                    if (change.path === 'zone_state') {
+                        sysev.data.oldstate = change.from;
+                        sysev.data.newstate = change.to;
+                        callback(sysev);
+                        break;
+                    }
+                }
+                break;
+            }
+        }
     });
 }
 

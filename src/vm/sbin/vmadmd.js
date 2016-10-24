@@ -910,6 +910,7 @@ function updateZoneStatus(ev)
         return;
     }
 
+
     /*
      * With OS-4942 and OS-5011 additional states were added which occur before
      * the zone is installed. We don't care about such zones here since we're
@@ -923,6 +924,11 @@ function updateZoneStatus(ev)
         log.debug({old: ev.oldstate, new: ev.newstate},
             'ignoring state transitions before first boot');
         return;
+    }
+
+    if (ev.newstate === 'installed') {
+        // XXX temporary fix for vminfod
+        ev.newstate = 'uninitialized';
     }
 
     // Report state changes to listeners

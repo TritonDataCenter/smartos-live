@@ -48,6 +48,7 @@ var verror = require('verror');
 
 var createSubObjects = mod_obj.createSubObjects;
 var forEachKey = mod_obj.forEachKey;
+var hasKey = mod_obj.hasKey;
 var objEmpty = mod_obj.objEmpty;
 var mergeObjects = mod_obj.mergeObjects;
 
@@ -140,7 +141,7 @@ function ruleTypeDirWalk(rules, cb) {
     rules.forEach(function (rule) {
         DIRECTIONS.forEach(function (dir) {
             ['ips', 'tags', 'vms'].forEach(function (type) {
-                if (rule[dir].hasOwnProperty(type)) {
+                if (hasKey(rule[dir], type)) {
                     rule[dir][type].forEach(function (t) {
                         cb(rule, dir, type, t);
                     });
@@ -160,7 +161,7 @@ function dedupRules(list1, list2) {
     var toReturn = [];
 
     list1.concat(list2).forEach(function (r) {
-        if (r.hasOwnProperty('uuid') && !seenUUIDs.hasOwnProperty(r.uuid)) {
+        if (hasKey(r, 'uuid') && !hasKey(seenUUIDs, r.uuid)) {
             toReturn.push(r);
             seenUUIDs[r.uuid] = 1;
         }
@@ -176,7 +177,7 @@ function dedupRules(list1, list2) {
  */
 function getChangingRules(rules, existingRules, cb) {
     var changing = rules.filter(function (rule) {
-        if (!existingRules.hasOwnProperty(rule.uuid)) {
+        if (!hasKey(existingRules, rule.uuid)) {
             return true;
         }
         return !mod_obj.shallowObjEqual(rule.serialize(),
@@ -286,11 +287,11 @@ function createRules(inRules, createdBy, callback) {
 
     inRules.forEach(function (payloadRule) {
         var rule = clone(payloadRule);
-        if (!rule.hasOwnProperty('version')) {
+        if (!hasKey(rule, 'version')) {
             rule.version = ver;
         }
 
-        if (createdBy && !rule.hasOwnProperty('created_by')) {
+        if (createdBy && !hasKey(rule, 'created_by')) {
             rule.created_by = createdBy;
         }
 
@@ -331,31 +332,31 @@ function createUpdatedRules(opts, log, callback) {
     updatedRules.forEach(function (rule) {
         // Assume that we're allowed to do adds - findRules() would have errored
         // out if allowAdds was unset and an add was attempted
-        if (!rule.hasOwnProperty('version')) {
+        if (!hasKey(rule, 'version')) {
             rule.version = ver;
         }
 
-        if (opts.createdBy && !rule.hasOwnProperty('created_by')) {
+        if (opts.createdBy && !hasKey(rule, 'created_by')) {
             rule.created_by = opts.createdBy;
         }
 
-        if (originals.hasOwnProperty(rule.uuid)) {
+        if (hasKey(originals, rule.uuid)) {
             origRule = originals[rule.uuid].serialize();
             mergedRule = mergeObjects(rule, origRule);
 
-            if (!(rule.hasOwnProperty('owner_uuid')
-                && rule.hasOwnProperty('global'))) {
+            if (!(hasKey(rule, 'owner_uuid')
+                && hasKey(rule, 'global'))) {
                 // If both owner_uuid and global are set - let
                 // this bubble up the appropriate error in createRules()
 
-                if (rule.hasOwnProperty('owner_uuid')
-                    && origRule.hasOwnProperty('global')) {
+                if (hasKey(rule, 'owner_uuid')
+                    && hasKey(origRule, 'global')) {
                     // Updating from global -> owner_uuid rule
                     delete mergedRule.global;
                 }
 
-                if (rule.hasOwnProperty('global')
-                    && origRule.hasOwnProperty('owner_uuid')) {
+                if (hasKey(rule, 'global')
+                    && hasKey(origRule, 'owner_uuid')) {
                     // Updating from owner_uuid -> global rule
                     delete mergedRule.owner_uuid;
                 }
@@ -425,7 +426,7 @@ function createVMlookup(vms, log, callback) {
     vms.forEach(function (fullVM) {
         var missing = [];
         VM_FIELDS_REQUIRED.forEach(function (field) {
-            if (!fullVM.hasOwnProperty(field)) {
+            if (!hasKey(fullVM, field)) {
                 missing.push(field);
             }
         });
@@ -462,7 +463,7 @@ function createVMlookup(vms, log, callback) {
         var truncated = { };
         ['vms', 'tags', 'ips'].forEach(function (type) {
             truncated[type] = {};
-            if (!vmStore.hasOwnProperty(type)) {
+            if (!hasKey(vmStore, type)) {
                 return;
             }
 
@@ -712,12 +713,12 @@ function findRules(opts, log, callback) {
     var missing = {};
 
     rules.forEach(function (r) {
-        if (!r.hasOwnProperty('uuid')) {
+        if (!hasKey(r, 'uuid')) {
             errs.push(new verror.VError('Missing UUID of rule: %j', r));
             return;
         }
 
-        if (allRules.hasOwnProperty(r.uuid)) {
+        if (hasKey(allRules, r.uuid)) {
             found[r.uuid] = allRules[r.uuid];
         } else {
             missing[r.uuid] = 1;
@@ -765,11 +766,11 @@ function lookupVMs(allVMs, vms, log, callback) {
     var toReturn = {};
     var errs = [];
     vms.forEach(function (vm) {
-        if (!vm.hasOwnProperty('uuid')) {
+        if (!hasKey(vm, 'uuid')) {
             errs.push(new verror.VError('VM missing uuid property: %j', vm));
             return;
         }
-        if (!allVMs.all.hasOwnProperty(vm.uuid)) {
+        if (!hasKey(allVMs.all, vm.uuid)) {
             errs.push(new verror.VError('Could not find VM "%s" in VM list',
                 vm.uuid));
             return;
@@ -825,13 +826,13 @@ function validateRules(vms, rvms, rules, log, callback) {
         createSubObjects(sideData, rule.uuid, dir, 'missing', type);
         createSubObjects(sideData, rule.uuid, dir, 'vms');
 
-        if (vms[type].hasOwnProperty(t)) {
+        if (hasKey(vms[type], t)) {
             for (var vm in vms[type][t]) {
                 sideData[rule.uuid][dir].vms[vm] = 1;
             }
             delete rulesLeft[rule.uuid];
 
-        } else if (rvms[type].hasOwnProperty(t)) {
+        } else if (hasKey(rvms[type], t)) {
             delete rulesLeft[rule.uuid];
 
         } else {
@@ -854,8 +855,8 @@ function validateRules(vms, rvms, rules, log, callback) {
         DIRECTIONS.forEach(function (dir) {
             var otherSide = (dir == 'to' ? 'from' : 'to');
 
-            if (!missing.hasOwnProperty(dir) || objEmpty(missing[dir].vms)
-                || !missing.hasOwnProperty(otherSide)) {
+            if (!hasKey(missing, dir) || objEmpty(missing[dir].vms)
+                || !hasKey(missing, otherSide)) {
                 return;
             }
 
@@ -888,8 +889,8 @@ function protoTarget(rule, target) {
         return 'icmp-type ' + typeArr[0]
             + (typeArr.length === 1 ? '' : ' code ' + typeArr[1]);
     } else {
-        if (target.hasOwnProperty('start')
-            && target.hasOwnProperty('end')) {
+        if (hasKey(target, 'start')
+            && hasKey(target, 'end')) {
 
             return 'port ' + target.start + ' : ' + target.end;
         } else {
@@ -1037,7 +1038,7 @@ function prepareIPFdata(opts, log, callback) {
                 }
 
                 otherSideRules.forEach(function (oRule) {
-                    if (!conf.hasOwnProperty(uuid)) {
+                    if (!hasKey(conf, uuid)) {
                         return;
                     }
 
@@ -1065,7 +1066,7 @@ function prepareIPFdata(opts, log, callback) {
 
         // XXX: sort here
         conf[vm].forEach(function (sortObj) {
-            if (!rulesIncluded.hasOwnProperty(sortObj.uuid)) {
+            if (!hasKey(rulesIncluded, sortObj.uuid)) {
                 rulesIncluded[sortObj.uuid] = [];
             }
             rulesIncluded[sortObj.uuid].push(sortObj.direction);
@@ -1110,21 +1111,21 @@ function vmsOnSide(allVMs, rule, dir, log) {
                 return;
             }
 
-            if (!allVMs[type] || !allVMs[type].hasOwnProperty(t)) {
+            if (!allVMs[type] || !hasKey(allVMs[type], t)) {
                 log.debug('No matching VMs found in lookup for %s=%s', type, t);
                 return;
             }
 
             var vmList = allVMs[type][t];
             if (value !== undefined) {
-                if (!vmList.hasOwnProperty(value)) {
+                if (!hasKey(vmList, value)) {
                     return;
                 }
                 vmList = vmList[value];
             }
 
             Object.keys(vmList).forEach(function (uuid) {
-                if (rule.hasOwnProperty('owner_uuid')
+                if (hasKey(rule, 'owner_uuid')
                     && (rule.owner_uuid != vmList[uuid].owner_uuid)) {
                     return;
                 }
@@ -1188,14 +1189,14 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
             }
 
             [localVMs, remoteVMs].forEach(function (lookup) {
-                if (!lookup.hasOwnProperty(typePlural)
-                    || !lookup[typePlural].hasOwnProperty(value)) {
+                if (!hasKey(lookup, typePlural)
+                    || !hasKey(lookup[typePlural], value)) {
                     return;
                 }
 
                 var vmList = lookup[typePlural][value];
                 if (t !== undefined) {
-                    if (!vmList.hasOwnProperty(t)) {
+                    if (!hasKey(vmList, t)) {
                         return;
                     }
                     vmList = vmList[t];
@@ -1236,7 +1237,7 @@ function addOtherSideRemoteTargets(vms, rule, targets, dir, log) {
 
     var otherSide = dir === 'from' ? 'to' : 'from';
     if (rule[otherSide].tags.length !== 0) {
-        if (!targets.hasOwnProperty('tags')) {
+        if (!hasKey(targets, 'tags')) {
             targets.tags = {};
         }
 
@@ -1251,7 +1252,7 @@ function addOtherSideRemoteTargets(vms, rule, targets, dir, log) {
                 val = tag[1];
             }
 
-            if (!targets.tags.hasOwnProperty(key)) {
+            if (!hasKey(targets.tags, key)) {
                 targets.tags[key] = val;
             } else {
                 if (targets.tags[key] !== true) {
@@ -1272,13 +1273,13 @@ function addOtherSideRemoteTargets(vms, rule, targets, dir, log) {
     }
 
     if (rule[otherSide].vms.length !== 0) {
-        if (!targets.hasOwnProperty('vms')) {
+        if (!hasKey(targets, 'vms')) {
             targets.vms = {};
         }
 
         rule[otherSide].vms.forEach(function (vm) {
             // Don't add if it's a local VM
-            if (!vms.all.hasOwnProperty(vm)) {
+            if (!hasKey(vms.all, vm)) {
                 targets.vms[vm] = true;
             }
         });
@@ -2486,7 +2487,7 @@ function getRemoteTargets(opts, callback) {
             }
         }
 
-        if (targets.hasOwnProperty('vms')) {
+        if (hasKey(targets, 'vms')) {
             targets.vms = Object.keys(targets.vms);
             if (targets.vms.length === 0) {
                 delete targets.vms;

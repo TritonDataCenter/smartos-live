@@ -20,7 +20,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2014, Joyent, Inc. All rights reserved.
+# Copyright 2016, Joyent, Inc. All rights reserved.
 #
 #
 # fwrule Makefile
@@ -31,7 +31,8 @@
 # Tools
 #
 JISON	:= ./node_modules/jison/lib/cli.js
-NODEUNIT := node_modules/nodeunit/bin/nodeunit
+ISTANBUL := node_modules/.bin/istanbul
+FAUCET := node_modules/.bin/faucet
 RAMSEY := node_modules/ramsey/bin/ramsey
 NPM := npm
 JS_FILES	:= $(shell find lib test -name '*.js' | grep -v parser.js)
@@ -41,6 +42,9 @@ JSL_FLAGS  	?= --nologo --nosummary
 JSL_FLAGS_NODE 	 = --conf=$(JSL_CONF_NODE)
 JSSTYLE_FILES	 = $(JS_FILES)
 JSSTYLE_FLAGS    = -o indent=4,strict-indent=1,doxygen,unparenthesized-return=0,continuation-at-front=1,leading-right-paren-ok=1
+ESLINT		= ./node_modules/.bin/eslint
+ESLINT_CONF	= tools/eslint.node.conf
+ESLINT_FILES	= $(JS_FILES)
 
 
 #
@@ -52,7 +56,13 @@ parser: $(JISON)
 	@cp ./src/header.js ./lib/parser.js
 	@cat ./src/fwrule.jison | $(JISON)  >> ./lib/parser.js
 
-$(NODEUNIT):
+$(ESLINT):
+	$(NPM) install
+
+$(ISTANBUL):
+	$(NPM) install
+
+$(FAUCET):
 	$(NPM) install
 
 $(JISON):
@@ -67,15 +77,11 @@ $(RAMSEY):
 #
 
 .PHONY: test
-test: $(NODEUNIT)
-	@(for F in test/*.js; do \
-		echo "# $$F" ;\
-		$(NODEUNIT) --reporter tap $$F ;\
-		[[ $$? == "0" ]] || exit 1; \
-	done)
+test: $(ISTANBUL) $(FAUCET)
+	$(ISTANBUL) cover --print none test/run.js | $(FAUCET)
 
 .PHONY: check
-check: check-jsl check-jsstyle
+check: check-jsl check-jsstyle check-eslint
 	@echo check ok
 
 .PHONY: prepush
@@ -130,3 +136,7 @@ check-jsl: $(JSL_EXEC)
 .PHONY: check-jsstyle
 check-jsstyle:  $(JSSTYLE_EXEC)
 	@$(JSSTYLE) $(JSSTYLE_FLAGS) $(JSSTYLE_FILES)
+
+.PHONY: check-eslint
+check-eslint: $(ESLINT)
+	@$(ESLINT) -c $(ESLINT_CONF) $(ESLINT_FILES)

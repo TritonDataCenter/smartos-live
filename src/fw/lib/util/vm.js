@@ -27,15 +27,29 @@
  */
 
 var mod_net = require('net');
-var objEmpty = require('./obj').objEmpty;
+var mod_obj = require('./obj');
 var VError = require('verror').VError;
 
+
+var objEmpty = mod_obj.objEmpty;
+var hasKey = mod_obj.hasKey;
+
+
+var UUID_REGEX =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+
+function validUUID(uuid) {
+    return UUID_REGEX.test(uuid);
+}
+
+
 function getIPs(n) {
-    if (n.hasOwnProperty('ips')) {
+    if (hasKey(n, 'ips')) {
         return n.ips.map(function (ip) {
             return ip.split('/')[0];
         });
-    } else if (n.hasOwnProperty('ip')) {
+    } else if (hasKey(n, 'ip')) {
         return [n.ip];
     } else {
         return [];
@@ -76,15 +90,22 @@ function createRemoteVM(vm) {
         err.details = vm;
         throw err;
     }
+
+    if (!validUUID(uuid)) {
+        err = new VError('Invalid Remote VM UUID: %s', uuid);
+        err.details = vm;
+        throw err;
+    }
+
     rvm.uuid = uuid;
 
-    if (vm.hasOwnProperty('nics')) {
+    if (hasKey(vm, 'nics')) {
         ipsFromNICs(vm.nics).forEach(function (ip) {
             ips[ip] = 1;
         });
     }
 
-    if (vm.hasOwnProperty('ips')) {
+    if (hasKey(vm, 'ips')) {
         vm.ips.forEach(function (ip) {
             ips[ip] = 1;
         });
@@ -100,15 +121,19 @@ function createRemoteVM(vm) {
         }
     });
 
-    if (vm.hasOwnProperty('tags') && !objEmpty(vm.tags)) {
+    if (hasKey(vm, 'tags') && !objEmpty(vm.tags)) {
         rvm.tags = {};
         for (var t in vm.tags) {
             rvm.tags[t] = vm.tags[t];
         }
     }
 
-    if (vm.hasOwnProperty('owner_uuid')) {
-        // XXX: validate UUID
+    if (hasKey(vm, 'owner_uuid')) {
+        if (!validUUID(vm.owner_uuid)) {
+            err = new VError('Invalid owner UUID: %s', vm.owner_uuid);
+            err.details = vm;
+            throw err;
+        }
         rvm.owner_uuid = vm.owner_uuid;
     }
 

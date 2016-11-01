@@ -2,9 +2,9 @@
 
 Joyent firewall rule object wrapper. This is a copy of the sdc-fwrule repo. For
 contribution guidelines, issues, and general documentation, visit the main
-[SDC](http://github.com/joyent/sdc) project page.
+[sdc-fwrule](http://github.com/joyent/sdc-fwrule) project page.
 
-This contains shared code for manipulating SmartDataCenter firewall rules.
+This contains shared code for manipulating Triton firewall rules.
 There are two parts to this package:
 
 * A Jison grammar (src/fwrule.jison) that specifies a DSL for writing

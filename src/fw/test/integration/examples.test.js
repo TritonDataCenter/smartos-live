@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright 2016, Joyent, Inc. All rights reserved.
  *
  * Integration test: test that commands and payloads in etc/examples are
  * actually valid
@@ -12,6 +12,7 @@ var mod_vm = require('../lib/vm');
 var path = require('path');
 var util = require('util');
 
+var hasKey = require('../../lib/util/obj').hasKey;
 
 
 // --- Globals
@@ -132,7 +133,7 @@ exports['setup'] = function (t) {
 
     exampleFiles.forEach(function (ex) {
         var prefix = ex.split('_')[0];
-        if (!EXAMPLES.hasOwnProperty(prefix)) {
+        if (!hasKey(EXAMPLES, prefix)) {
             EXAMPLES[prefix] = {};
         }
 
@@ -190,7 +191,7 @@ exports['fwadm_list_json'] = function (t) {
         }
 
         json.forEach(function (r) {
-            if (RULES.hasOwnProperty(r.uuid)) {
+            if (hasKey(RULES, r.uuid)) {
                 rules.splice(rules.indexOf(r.uuid), 1);
             }
         });
@@ -219,7 +220,7 @@ exports['fwadm_list_parseable'] = function (t) {
             var fields = r.split('|');
             t.equal(fields.length, 3, '3 fields per line');
 
-            if (RULES.hasOwnProperty(fields[0])) {
+            if (hasKey(RULES, fields[0])) {
                 rules.splice(rules.indexOf(fields[0]), 1);
             }
         });

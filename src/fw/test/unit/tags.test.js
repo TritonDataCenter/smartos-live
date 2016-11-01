@@ -152,7 +152,7 @@ exports['add / update: tag to tag'] = function (t) {
     var payload = {
         rules: [
             {
-                rule: 'FROM tag one TO tag one ALLOW tcp PORT 80',
+                rule: 'FROM tag "one" TO tag "one" ALLOW tcp PORT 80',
                 owner_uuid: vm1.owner_uuid,
                 enabled: true
             }
@@ -576,12 +576,12 @@ exports['add / update: tag to tag'] = function (t) {
             rules: [
                 {
                     owner_uuid: vm1.owner_uuid,
-                    rule: 'FROM tag red TO tag one ALLOW udp PORT 1000',
+                    rule: 'FROM tag "red" TO tag "one" ALLOW udp PORT 1000',
                     enabled: true
                 },
                 {
                     owner_uuid: vm1.owner_uuid,
-                    rule: 'FROM tag red TO tag one ALLOW udp PORT 1001',
+                    rule: 'FROM tag "red" TO tag "one" ALLOW udp PORT 1001',
                     enabled: true
                 }
             ],
@@ -637,7 +637,7 @@ exports['add / update: tag to tag'] = function (t) {
             rules: [
                 {
                     owner_uuid: vm1.owner_uuid,
-                    rule: 'FROM tag one TO tag red ALLOW tcp PORT 25',
+                    rule: 'FROM tag "one" TO tag "red" ALLOW tcp PORT 25',
                     enabled: true
                 }
             ],
@@ -683,7 +683,7 @@ exports['add / update: tag to tag'] = function (t) {
         // Update rule 2 to include tag blue (remote VM 12 has this tag):
         // - tag one VMs should have firewalls updated
 
-        rule2.rule = 'FROM (tag blue OR tag red) TO tag one '
+        rule2.rule = 'FROM (tag "blue" OR tag "red") TO tag "one" '
             + 'ALLOW udp (PORT 1000 AND PORT 1050)';
 
         var updatePayload = {
@@ -823,13 +823,15 @@ exports['add / update: tag to tag'] = function (t) {
                 {
                     owner_uuid: vm1.owner_uuid,
                     rule: util.format(
-                        'FROM vm %s TO tag one ALLOW tcp PORT 8080', vm4.uuid),
+                        'FROM vm %s TO tag "one" ALLOW tcp PORT 8080',
+                        vm4.uuid),
                     enabled: true
                 },
                 {
                     owner_uuid: vm1.owner_uuid,
                     rule: util.format(
-                        'FROM tag one TO vm %s ALLOW tcp PORT 8080', vm4.uuid),
+                        'FROM tag "one" TO vm %s ALLOW tcp PORT 8080',
+                        vm4.uuid),
                     enabled: true
                 }
             ],
@@ -902,7 +904,7 @@ exports['add / update: tag to tag'] = function (t) {
             rules: [
                 {
                     owner_uuid: vm1.owner_uuid,
-                    rule: 'FROM tag one TO tag two ALLOW tcp PORT 125',
+                    rule: 'FROM tag "one" TO tag "two" ALLOW tcp PORT 125',
                     enabled: true
                 }
             ],
@@ -987,7 +989,7 @@ exports['tags with values'] = function (t) {
         rules: [
             {
                 owner_uuid: vm1.owner_uuid,
-                rule: 'FROM any TO tag role = web ALLOW tcp PORT 80',
+                rule: 'FROM any TO tag "role" = "web" ALLOW tcp PORT 80',
                 enabled: true
             }
         ],
@@ -1063,7 +1065,7 @@ exports['tags with values'] = function (t) {
             rules: [
                 {
                     owner_uuid: vm1.owner_uuid,
-                    rule: 'FROM tag role = web TO tag role = mon '
+                    rule: 'FROM tag "role" = "web" TO tag "role" = "mon" '
                         + 'ALLOW udp PORT 514',
                     enabled: true
                 }
@@ -1147,7 +1149,8 @@ exports['tags with values'] = function (t) {
             rules: [
                 {
                     uuid: expRules[0].uuid,
-                    rule: 'FROM any TO (tag role = db OR tag role = web) ALLOW '
+                    rule: 'FROM any TO '
+                        + '(tag "role" = "db" OR tag "role" = "web") ALLOW '
                         + 'tcp PORT 80'
                 }
             ],
@@ -1308,7 +1311,7 @@ exports['add a local provisioning VM with a tag'] = {
         });
         d.rule = {
             owner_uuid: d.vm.owner_uuid,
-            rule: 'FROM tag blocksmtp TO any BLOCK tcp PORT 25',
+            rule: 'FROM tag "blocksmtp" TO any BLOCK tcp PORT 25',
             enabled: true
         };
 
@@ -1365,18 +1368,186 @@ exports['add a local provisioning VM with a tag'] = {
 };
 
 
+exports['tags with escaped characters or odd names/values'] = function (t) {
+    reset();
+    var vms = [
+        helpers.generateVM({ tags: { hasOwnProperty: 'quux' } }),
+        helpers.generateVM({ tags: { foo: 'hasOwnProperty' } }),
+        helpers.generateVM({ tags: { '☃': 'رجل الثلج' } }),
+        helpers.generateVM({ tags: { '(a\nb)': 'foo\tbar' } }),
+        helpers.generateVM({ tags: { 'toString': 'baz' } })
+    ];
+    var rules = [
+        {
+            owner_uuid: vms[0].owner_uuid,
+            rule: 'FROM any TO tag hasOwnProperty ALLOW tcp PORT 80',
+            enabled: true
+        },
+        {
+            owner_uuid: vms[0].owner_uuid,
+            rule: 'FROM any TO tag foo = hasOwnProperty ALLOW tcp PORT 81',
+            enabled: true
+        },
+        {
+            owner_uuid: vms[0].owner_uuid,
+            rule: 'FROM any TO tag "\\u2603" = "\\u0631\\u062c\\u0644 '
+                + '\\u0627\\u0644\\u062b\\u0644\\u062c" ALLOW tcp PORT 82',
+            enabled: true
+        },
+        {
+            owner_uuid: vms[0].owner_uuid,
+            rule: 'FROM any TO tag "\\(a\\nb)" = "foo\\tbar" ALLOW tcp PORT 83',
+            enabled: true
+        },
+        {
+            owner_uuid: vms[0].owner_uuid,
+            rule: 'FROM any TO tag toString = baz ALLOW tcp PORT 84',
+            enabled: true
+        }
+    ];
+
+    var expRules = {};
+    var expRulesOnDisk = {};
+    var remoteVMsOnDisk = {};
+    var vmsEnabled = {};
+
+    var payload = {
+        localVMs: vms,
+        rules: rules,
+        vms: vms
+    };
+
+    async.series([
+    function (cb) {
+        fw.validatePayload(payload, function (err, res) {
+            t.ifError(err);
+            cb();
+        });
+
+    }, function (cb) {
+        fw.add(payload, function (err, res) {
+            t.ifError(err);
+            if (err) {
+                cb();
+                return;
+            }
+
+            // Replace with the normalized versions.
+            rules[0].rule =
+                'FROM any TO tag "hasOwnProperty" ALLOW tcp PORT 80';
+            rules[1].rule =
+                'FROM any TO tag "foo" = "hasOwnProperty" ALLOW tcp PORT 81';
+            rules[2].rule =
+                'FROM any TO tag "☃" = "رجل الثلج" ALLOW tcp PORT 82';
+            rules[3].rule =
+                'FROM any TO tag "\\(a\\nb\\)" = "foo\\tbar" ALLOW tcp PORT 83';
+            rules[4].rule =
+                'FROM any TO tag "toString" = "baz" ALLOW tcp PORT 84';
+
+            helpers.fillInRuleBlanks(res.rules, rules);
+            t.deepEqual(helpers.sortRes(res), {
+                vms: helpers.sortedUUIDs(vms),
+                rules: rules.slice().sort(helpers.uuidSort)
+            }, 'rules returned');
+
+            helpers.addZoneRules(expRules, [
+                [vms[0], 'default'],
+                [vms[1], 'default'],
+                [vms[2], 'default'],
+                [vms[3], 'default'],
+                [vms[4], 'default'],
+
+                [vms[0], 'in', 'pass', 'tcp', 'any', 80],
+                [vms[1], 'in', 'pass', 'tcp', 'any', 81],
+                [vms[2], 'in', 'pass', 'tcp', 'any', 82],
+                [vms[3], 'in', 'pass', 'tcp', 'any', 83],
+                [vms[4], 'in', 'pass', 'tcp', 'any', 84]
+            ]);
+
+            t.deepEqual(helpers.zoneIPFconfigs(4), expRules,
+                'IPv4 firewall rules');
+            t.deepEqual(helpers.zoneIPFconfigs(6), expRules,
+                'IPv6 firewall rules');
+
+            vmsEnabled[vms[0].uuid] = true;
+            vmsEnabled[vms[1].uuid] = true;
+            vmsEnabled[vms[2].uuid] = true;
+            vmsEnabled[vms[3].uuid] = true;
+            vmsEnabled[vms[4].uuid] = true;
+
+            t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
+                'firewalls enabled');
+
+            t.deepEqual(helpers.remoteVMsOnDisk(), remoteVMsOnDisk,
+                'remote VMs on disk');
+
+            expRulesOnDisk[rules[0].uuid] = clone(rules[0]);
+            expRulesOnDisk[rules[1].uuid] = clone(rules[1]);
+            expRulesOnDisk[rules[2].uuid] = clone(rules[2]);
+            expRulesOnDisk[rules[3].uuid] = clone(rules[3]);
+            expRulesOnDisk[rules[4].uuid] = clone(rules[4]);
+
+            t.deepEqual(helpers.rulesOnDisk(), expRulesOnDisk, 'rules on disk');
+
+            cb();
+        });
+    }, function (cb) {
+        helpers.fwListEquals(t, rules, cb);
+    }, function (cb) {
+        helpers.fwRulesEqual({
+            t: t,
+            rules: [ rules[0] ],
+            vm: vms[0],
+            vms: vms
+        }, cb);
+    }, function (cb) {
+        helpers.fwRulesEqual({
+            t: t,
+            rules: [ rules[1] ],
+            vm: vms[1],
+            vms: vms
+        }, cb);
+    }, function (cb) {
+        helpers.fwRulesEqual({
+            t: t,
+            rules: [ rules[2] ],
+            vm: vms[2],
+            vms: vms
+        }, cb);
+    }, function (cb) {
+        helpers.fwRulesEqual({
+            t: t,
+            rules: [ rules[3] ],
+            vm: vms[3],
+            vms: vms
+        }, cb);
+    }, function (cb) {
+        helpers.fwRulesEqual({
+            t: t,
+            rules: [ rules[4] ],
+            vm: vms[4],
+            vms: vms
+        }, cb);
+    }
+
+    ], function () {
+        t.done();
+    });
+};
+
+
 exports['tags that target no VMs'] = function (t) {
     reset();
     var vms = [ helpers.generateVM(), helpers.generateVM() ];
     var rules = [
         {
             owner_uuid: vms[0].owner_uuid,
-            rule: 'FROM any TO tag doesnotexist ALLOW tcp PORT 80',
+            rule: 'FROM any TO tag "doesnotexist" ALLOW tcp PORT 80',
             enabled: true
         },
         {
             owner_uuid: vms[0].owner_uuid,
-            rule: 'FROM any TO tag exists = nada ALLOW tcp PORT 81',
+            rule: 'FROM any TO tag "exists" = "nada" ALLOW tcp PORT 81',
             enabled: true
         }
     ];

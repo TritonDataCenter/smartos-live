@@ -26,12 +26,46 @@
  * Unit tests for the firewall rule parser
  */
 
+'use strict';
+
 var util = require('util');
 var parser = require('../lib/index');
+var test = require('tape');
 
 
+// --- Helpers
 
-exports['tags'] = function (t) {
+function checkInvalidRules(t, toCheck) {
+    toCheck.forEach(function (rule) {
+        try {
+            parser.parse(rule);
+            t.fail('Parsing bad rule didn\'t fail: ' + rule);
+        } catch (err) {
+            t.ok(err.message, 'Failed to parse bad rule: ' + rule);
+        }
+    });
+
+    t.end();
+}
+
+
+// --- Tests
+
+
+test('empty input', function (t) {
+    try {
+        parser.parse('');
+        t.ok(false, 'Empty input to the parser should throw!');
+    } catch (err) {
+        t.deepEqual(err.message,
+            'Error at character 0: \'\', expected: \'FROM\', '
+            + 'found: empty string');
+    }
+    t.end();
+});
+
+
+test('tags', function (t) {
     t.deepEqual(parser.parse(
         'FROM ip 1.2.3.4 TO tag some-tag ALLOW tcp PORT 80'),
         { from: [ [ 'ip', '1.2.3.4' ] ],
@@ -43,11 +77,11 @@ exports['tags'] = function (t) {
             }
         }, 'tag containing dashes');
 
-    t.done();
-};
+    t.end();
+});
 
 
-exports['icmp'] = function (t) {
+test('icmp', function (t) {
     var vm = 'b0b92cd9-1fe7-4636-8477-81d2742566c2';
 
     t.deepEqual(parser.parse(
@@ -57,7 +91,7 @@ exports['icmp'] = function (t) {
             action: 'allow',
             protocol: {
                 name: 'icmp',
-                targets: [ '8' ]
+                targets: [ 8 ]
             }
         }, 'icmp with type');
 
@@ -72,11 +106,11 @@ exports['icmp'] = function (t) {
             }
         }, 'icmp with type and code');
 
-    t.done();
-};
+    t.end();
+});
 
 
-exports['case insensitivity'] = function (t) {
+test('case insensitivity', function (t) {
     var vm = 'b5ff85db-fc33-4471-b045-5688cb7fa6a8';
     var ipToTag = {
         from: [ [ 'ip', '1.2.3.4' ] ],
@@ -115,7 +149,7 @@ exports['case insensitivity'] = function (t) {
         action: 'allow',
         protocol: {
             name: 'icmp',
-            targets: [ '8:0', '9' ]
+            targets: [ '8:0', 9 ]
         }
     };
 
@@ -141,15 +175,168 @@ exports['case insensitivity'] = function (t) {
         try {
             t.deepEqual(parser.parse(data[0]), data[1], data[0]);
         } catch (err) {
-            t.ifError(err);
+            t.ifError(err, data[0]);
         }
     });
 
-    t.done();
-};
+    t.end();
+});
 
-exports['port ranges'] = function (t) {
 
+test('parentheses around wildcards', function (t) {
+    var anyToAll = {
+        from: [ [ 'wildcard', 'any' ] ],
+        to: [ [ 'wildcard', 'vmall' ] ],
+        action: 'allow',
+        protocol: {
+            name: 'udp',
+            targets: [ 50 ]
+        }
+    };
+
+    [
+        [ 'from (ANY) to ALL VMS allow UDP ports 50', anyToAll ],
+        [ 'from (any) to all vms allow udp ports 50', anyToAll ],
+        [ 'from ANY to (ALL VMS) allow UDP ports 50', anyToAll ],
+        [ 'from any to (all vms) allow udp ports 50', anyToAll ],
+        [ 'FROM ( ANY ) TO ALL VMS ALLOW UDP ports 50', anyToAll ],
+        [ 'FROM ( ANY ) TO all vms ALLOW udp ports 50', anyToAll ],
+        [ 'from ANY to ( ALL VMS ) allow UDP ports 50', anyToAll ],
+        [ 'from any to ( all vms ) allow udp ports 50', anyToAll ],
+        [ 'from ( any ) to ( all vms ) allow udp ports 50', anyToAll ],
+        [ 'from (any) to (all vms) allow udp ports 50', anyToAll ]
+    ].forEach(function (data) {
+        try {
+            t.deepEqual(parser.parse(data[0]), data[1], data[0]);
+        } catch (err) {
+            t.ifError(err, data[0]);
+        }
+    });
+
+    t.end();
+});
+
+
+test('incomplete rule text', function (t) {
+    var check = [ ];
+
+    var to = [ 'TO' ];
+    var targets = [
+        'any', 'all vms', 'ip 1.2.3.4', 'ip fd00::1', 'subnet 1.2.3.0/24',
+        'subnet fd00::/64', 'tag foo', 'tag foo = bar',
+        'vm ca3eb1d6-1555-44fb-ea1a-ab66f4685214'
+    ];
+    var endings = [ 'port', 'ports', 'ports 1 -', 'ports 1-', 'type',
+        'type 128 code' ];
+
+    function buildStr(str, remains) {
+        check.push(str);
+
+        if (remains[0] !== undefined) {
+            remains[0].forEach(function (strB) {
+                buildStr(str + ' ' + strB, remains.slice(1));
+            });
+        }
+    }
+
+    buildStr('FROM',
+        [ targets, to, targets, parser.ACTIONS, parser.PROTOCOLS, endings ]);
+
+    checkInvalidRules(t, check);
+});
+
+
+test('Invalid: Logical operations', function (t) {
+    checkInvalidRules(t, [
+        'FROM (tag a foo tag b) TO any ALLOW tcp PORT 80',
+        'FROM (tag a xor tag b) TO any ALLOW tcp PORT 80',
+        'FROM (tag a nand tag b) TO any ALLOW tcp PORT 80',
+        'FROM (tag a not tag b) TO any ALLOW tcp PORT 80',
+        'FROM (tag a nor tag b) TO any ALLOW tcp PORT 80',
+        'FROM (tag a xnor tag b) TO any ALLOW tcp PORT 80'
+    ]);
+});
+
+
+test('Invalid: Actions', function (t) {
+    checkInvalidRules(t, [
+        'FROM any TO any DENY tcp PORT 80',
+        'FROM any TO any FORWARD tcp PORT 80',
+        'FROM any TO any OBSTRUCT tcp PORT 80',
+        'FROM any TO any PASS tcp PORT 80',
+        'FROM any TO any PASSTHROUGH tcp PORT 80',
+        'FROM any TO any PERMIT tcp PORT 80'
+    ]);
+});
+
+
+test('Invalid: Protocols', function (t) {
+    checkInvalidRules(t, [
+        'FROM any TO any ALLOW foo PORT 80',
+        'FROM any TO any ALLOW bar PORT 80',
+        'FROM any TO any ALLOW ftp PORT 80',
+        'FROM any TO any ALLOW ssh PORT 80',
+        'FROM any TO any ALLOW http PORT 80',
+        'FROM any TO any ALLOW sctp PORT 80',
+        'FROM any TO any ALLOW dccp PORT 80',
+        'FROM any TO any ALLOW mtcp PORT 80'
+    ]);
+});
+
+test('Invalid: Parameters for TCP & UDP', function (t) {
+    checkInvalidRules(t, [
+        'FROM any TO any ALLOW tcp PORT hello',
+        'FROM any TO any ALLOW udp PORT hello',
+        'FROM any TO any ALLOW tcp PORT ssh',
+        'FROM any TO any ALLOW udp PORT ssh',
+        'FROM any TO any ALLOW tcp PORT _',
+        'FROM any TO any ALLOW udp PORT _',
+        'FROM any TO any ALLOW tcp PORT *',
+        'FROM any TO any ALLOW udp PORT *',
+        'FROM any TO any ALLOW tcp PORTS hello',
+        'FROM any TO any ALLOW udp PORTS hello',
+        'FROM any TO any ALLOW tcp PORTS ssh',
+        'FROM any TO any ALLOW udp PORTS ssh',
+        'FROM any TO any ALLOW tcp PORTS ssh-http',
+        'FROM any TO any ALLOW udp PORTS ssh-http',
+        'FROM any TO any ALLOW tcp PORTS _',
+        'FROM any TO any ALLOW udp PORTS _',
+        'FROM any TO any ALLOW tcp PORTS *',
+        'FROM any TO any ALLOW udp PORTS *',
+        'FROM any TO any ALLOW tcp TYPE 128',
+        'FROM any TO any ALLOW udp TYPE 128',
+        'FROM any TO any ALLOW tcp TYPE 128 CODE 0',
+        'FROM any TO any ALLOW udp TYPE 128 CODE 0'
+    ]);
+});
+
+test('Invalid: Parameters for ICMP(6)', function (t) {
+    checkInvalidRules(t, [
+        'FROM any TO any ALLOW icmp PORT 80',
+        'FROM any TO any ALLOW icmp6 PORT 80',
+        'FROM any TO any ALLOW icmp PORTS 80',
+        'FROM any TO any ALLOW icmp6 PORTS 80',
+        'FROM any TO any ALLOW icmp PORTS 80-85',
+        'FROM any TO any ALLOW icmp6 PORTS 80-85',
+        'FROM any TO any ALLOW icmp TYPE foo',
+        'FROM any TO any ALLOW icmp6 TYPE foo',
+        'FROM any TO any ALLOW icmp TYPE *',
+        'FROM any TO any ALLOW icmp6 TYPE *',
+        'FROM any TO any ALLOW icmp TYPE 1:0',
+        'FROM any TO any ALLOW icmp6 TYPE 1:0',
+        'FROM any TO any ALLOW icmp 1:0',
+        'FROM any TO any ALLOW icmp6 1:0',
+        'FROM any TO any ALLOW icmp TYPE 128 CODE foo',
+        'FROM any TO any ALLOW icmp6 TYPE 128 CODE foo',
+        'FROM any TO any ALLOW icmp TYPE 128 CODE *',
+        'FROM any TO any ALLOW icmp6 TYPE 128 CODE *',
+        'FROM any TO any ALLOW icmp TYPE 128 CODE _',
+        'FROM any TO any ALLOW icmp6 TYPE 128 CODE _'
+    ]);
+});
+
+
+test('port ranges', function (t) {
     var rangeA = {
         from: [ [ 'ip', '1.2.3.4' ] ],
         to: [ [ 'tag', 'some-tag' ] ],
@@ -170,10 +357,11 @@ exports['port ranges'] = function (t) {
             t.ifError(err);
         }
     });
-    t.done();
-};
+    t.end();
+});
 
-exports['version mismatch'] = function (t) {
+
+test('version mismatch', function (t) {
     try {
         parser.parse('FROM tag foo TO tag bar ALLOW TCP PORTS 20-30',
             { maxVersion: 1 });
@@ -184,10 +372,11 @@ exports['version mismatch'] = function (t) {
             'The rule uses a feature (port ranges) newer than this API allows',
             'Correct error message for using ports in version 1');
     }
-    t.done();
-};
+    t.end();
+});
 
-exports['icmp with code'] = function (t) {
+
+test('icmp with code', function (t) {
     var vm = 'b0b92cd9-1fe7-4636-8477-81d2742566c2';
     var ruleTxt = util.format('FROM ip 10.0.0.2 TO vm %s ALLOW icmp type 8 '
         + 'code 0', vm);
@@ -202,10 +391,11 @@ exports['icmp with code'] = function (t) {
             }
         }, 'icmp with type');
 
-    t.done();
-};
+    t.end();
+});
 
-exports['icmp type all'] = function (t) {
+
+test('icmp type all', function (t) {
     var vm = 'b0b92cd9-1fe7-4636-8477-81d2742566c2';
 
     t.deepEqual(parser.parse(
@@ -230,10 +420,11 @@ exports['icmp type all'] = function (t) {
             }
         }, 'icmp type all in parens');
 
-    t.done();
-};
+    t.end();
+});
 
-exports['icmp6 type all'] = function (t) {
+
+test('icmp6 type all', function (t) {
     var vm = 'b0b92cd9-1fe7-4636-8477-81d2742566c2';
 
     t.deepEqual(parser.parse(
@@ -258,10 +449,11 @@ exports['icmp6 type all'] = function (t) {
             }
         }, 'icmp6 type all in parens');
 
-    t.done();
-};
+    t.end();
+});
 
-exports['tag with value'] = function (t) {
+
+test('Tags: With value', function (t) {
     var ruleTxt = 'FROM tag foo = bar TO ip 8.8.8.8 BLOCK udp PORT 53';
 
     t.deepEqual(parser.parse(ruleTxt),
@@ -274,11 +466,11 @@ exports['tag with value'] = function (t) {
             }
         }, 'tag = value');
 
-    t.done();
-};
+    t.end();
+});
 
 
-exports['multiple tags with values'] = function (t) {
+test('Tags: Multiple values', function (t) {
     var ruleTxt = 'FROM (tag foo = bar OR tag some = value) TO '
         + 'ip 8.8.8.8 BLOCK udp PORT 53';
 
@@ -295,11 +487,11 @@ exports['multiple tags with values'] = function (t) {
             }
         }, 'tag = value');
 
-    t.done();
-};
+    t.end();
+});
 
 
-exports['tag with quoted value'] = function (t) {
+test('Tags: Quoted value', function (t) {
     var ruleTxt = 'FROM tag foo = "some value" TO ip 8.8.8.8 BLOCK udp PORT 53';
 
     t.deepEqual(parser.parse(ruleTxt),
@@ -312,11 +504,11 @@ exports['tag with quoted value'] = function (t) {
             }
         }, 'tag = value');
 
-    t.done();
-};
+    t.end();
+});
 
 
-exports['tags with quoted name and value'] = function (t) {
+test('Tags: Quoted name and value', function (t) {
     var ruleTxt = 'FROM (tag "tag one" = "some value" OR '
         + 'tag "tag two" = "another value")'
         + 'TO ip 8.8.8.8 BLOCK udp PORT 53';
@@ -334,11 +526,61 @@ exports['tags with quoted name and value'] = function (t) {
             }
         }, 'tag = value');
 
-    t.done();
-};
+    t.end();
+});
 
 
-exports['tags with unicode characters'] = function (t) {
+test('Tags: Escaped characters', function (t) {
+    var ruleTxt = 'FROM (tag "\\"" = "\\)" OR tag "\\n" = "\\b") TO tag "\\(" '
+        + 'BLOCK udp PORT 53';
+
+    t.deepEqual(parser.parse(ruleTxt), {
+        from: [ [ 'tag', [ '"', ')' ] ],
+                [ 'tag', [ '\n', '\b' ] ] ],
+        to: [ [ 'tag', '(' ] ],
+        action: 'block',
+        protocol: {
+            name: 'udp',
+            targets: [ 53 ]
+        }
+    });
+
+    t.end();
+});
+
+
+test('Tags: Parens shouldn\'t have to be escaped', function (t) {
+    var ruleTxt = 'FROM tag "(" = "(" TO tag ")" = ")" '
+        + 'BLOCK udp PORT 53';
+
+    t.deepEqual(parser.parse(ruleTxt), {
+        from: [ [ 'tag', [ '(', '(' ] ] ],
+        to: [ [ 'tag', [ ')', ')' ] ] ],
+        action: 'block',
+        protocol: {
+            name: 'udp',
+            targets: [ 53 ]
+        }
+    });
+
+    t.end();
+});
+
+
+test('Tags: UTF-8 characters can be written using \\u', function (t) {
+    var escapedTxt = 'FROM tag "\\u2603" = "\\u0631\\u062c\\u0644 '
+        + '\\u0627\\u0644\\u062b\\u0644\\u062c" TO tag "\\u26C4" '
+        + 'BLOCK udp PORT 53';
+    var unicodeTxt = 'FROM tag "☃" = "رجل الثلج" TO tag "⛄" '
+        + 'BLOCK udp PORT 53';
+
+    t.deepEqual(parser.parse(escapedTxt), parser.parse(unicodeTxt));
+
+    t.end();
+});
+
+
+test('Tags: Unicode characters', function (t) {
     var ruleTxt = 'FROM (tag "☂" = "ທ" OR '
         + 'tag "삼겹살" = "불고기")'
         + 'TO ip 8.8.8.8 BLOCK udp PORT 53';
@@ -356,5 +598,5 @@ exports['tags with unicode characters'] = function (t) {
             }
         }, 'tag = value');
 
-    t.done();
-};
+    t.end();
+});

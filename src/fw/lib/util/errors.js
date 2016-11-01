@@ -26,8 +26,11 @@
  * fwadm: errors
  */
 
+var mod_obj = require('./obj');
 var verror = require('verror');
 
+
+var hasKey = mod_obj.hasKey;
 
 
 // --- Exports
@@ -47,7 +50,7 @@ function createMultiError(errs) {
     var err = new verror.MultiError(errs);
 
     errs.forEach(function (e) {
-        if (e.hasOwnProperty('details')) {
+        if (hasKey(e, 'details')) {
             details.push(e.details);
         }
     });

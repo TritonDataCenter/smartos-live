@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright 2016, Joyent, Inc. All rights reserved.
  *
  * Test utilities for running vmadm commands
  */
@@ -10,6 +10,7 @@ var common = require('./common');
 var mod_log = require('./log');
 var util = require('util');
 
+var hasKey = require('../../lib/util/obj').hasKey;
 
 
 // --- Globals
@@ -58,7 +59,7 @@ function create(t, opts, callback) {
             params[p] = opts.params[p];
         }
 
-        if (!params.hasOwnProperty('alias')) {
+        if (!hasKey(params, 'alias')) {
             params.alias = util.format('fwtest-%d-%d', process.pid, VM_NUM++);
         }
 

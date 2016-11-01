@@ -26,6 +26,8 @@
  * fwadm: firewall rule model
  */
 
+'use strict';
+
 var mod_net = require('net');
 var mod_uuid = require('node-uuid');
 var sprintf = require('extsprintf').sprintf;
@@ -63,23 +65,30 @@ var icmpr = /^icmp6?$/;
 // --- Internal functions
 
 
+/**
+ * Safely check if an object has a property
+ */
+function hasOwnProperty(obj, prop) {
+    return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
 
 /**
  * Calls callback for all of the firewall target types
  */
 function forEachTarget(obj, callback) {
     DIRECTIONS.forEach(function (dir) {
-        if (!obj.hasOwnProperty(dir)) {
+        if (!hasOwnProperty(obj, dir)) {
             return;
         }
 
         TARGET_TYPES.forEach(function (type) {
             var name = type + 's';
-            if (!obj[dir].hasOwnProperty(name)) {
+            if (!hasOwnProperty(obj[dir], name)) {
                 return;
             }
 
-            callback(dir, type, type, obj[dir][name]);
+            callback(dir, type, name, obj[dir][name]);
         });
     });
 }
@@ -105,7 +114,7 @@ function icmpTypeSort(types) {
  * Adds a tag to an object
  */
 function addTag(obj, tag, val) {
-    if (!obj.hasOwnProperty(tag)) {
+    if (!hasOwnProperty(obj, tag)) {
         obj[tag] = {};
     }
 
@@ -114,7 +123,7 @@ function addTag(obj, tag, val) {
         return;
     }
 
-    if (!obj[tag].hasOwnProperty('values')) {
+    if (!hasOwnProperty(obj[tag], 'values')) {
         obj[tag].values = {};
     }
 
@@ -128,7 +137,7 @@ function addTag(obj, tag, val) {
 function tagList(obj) {
     var tags = [];
     Object.keys(obj).sort().forEach(function (tag) {
-        if (obj[tag].hasOwnProperty('all')) {
+        if (hasOwnProperty(obj[tag], 'all')) {
             tags.push(tag);
         } else {
             Object.keys(obj[tag].values).sort().forEach(function (val) {
@@ -141,15 +150,164 @@ function tagList(obj) {
 
 
 /**
- * Quotes a string if it contains non-alphanumeric characters
+ * The following characters are allowed to come after an escape, and get
+ * escaped when producing rule text.
+ *
+ * Parentheses don't need to be escaped with newer parsers, but will cause
+ * errors with older parsers which expect them to be escaped. We therefore
+ * always escape them when generating rule text, to make sure we don't
+ * cause issues for older parsers.
  */
-function quote(str) {
-    var WORD_RE = /[^-a-zA-Z0-9_]/;
-    if (str.search(WORD_RE) !== -1) {
-        return '"' + str + '"';
+var escapes = {
+    '"': '"',
+    'b': '\b',
+    'f': '\f',
+    'n': '\n',
+    'r': '\r',
+    't': '\t',
+    '/': '/',
+    '(': '(',
+    ')': ')',
+    '\\': '\\'
+};
+
+
+/**
+ * When producing text versions of a rule, we escape Unicode whitespace
+ * characters. These characters don't need to be escaped, but we do so
+ * to reduce the chance that an operator will look at a rule and mistake
+ * any of them for the ASCII space character (\u0020), or not see them
+ * because they're non-printing.
+ */
+var unescapes = {
+    // Things that need to be escaped for the fwrule parser
+    '"': '"',
+    '(': '(',
+    ')': ')',
+    '\\': '\\',
+
+    // Special ASCII characters we don't want to print
+    '\u0000': 'u0000', // null (NUL)
+    '\u0001': 'u0001', // start of heading (SOH)
+    '\u0002': 'u0002', // start of text (STX)
+    '\u0003': 'u0003', // end of text (ETX)
+    '\u0004': 'u0004', // end of transmission (EOT)
+    '\u0005': 'u0005', // enquiry (ENQ)
+    '\u0006': 'u0006', // acknowledgement (ACK)
+    '\u0007': 'u0007', // bell (BEL)
+    '\u0008': 'b',     // backspace (BS)
+    '\u0009': 't',     // horizontal tab (HT)
+    '\u000A': 'n',     // newline (NL)
+    '\u000B': 'u000B', // vertical tab (VT)
+    '\u000C': 'f',     // form feed/next page (NP)
+    '\u000D': 'r',     // carriage return (CR)
+    '\u000E': 'u000E', // shift out (SO)
+    '\u000F': 'u000F', // shift in (SI)
+    '\u0010': 'u0010', // data link escape (DLE)
+    '\u0011': 'u0011', // device control 1 (DC1)/XON
+    '\u0012': 'u0012', // device control 2 (DC2)
+    '\u0013': 'u0013', // device control 3 (DC3)/XOFF
+    '\u0014': 'u0014', // device control 4 (DC4)
+    '\u0015': 'u0015', // negative acknowledgement (NAK)
+    '\u0016': 'u0016', // synchronous idle (SYN)
+    '\u0017': 'u0017', // end of transmission block (ETB)
+    '\u0018': 'u0018', // cancel (CAN)
+    '\u0019': 'u0019', // end of medium (EM)
+    '\u001A': 'u001A', // substitute (SUB)
+    '\u001B': 'u001B', // escape (ESC)
+    '\u001C': 'u001C', // file separator (FS)
+    '\u001D': 'u001D', // group separator (GS)
+    '\u001E': 'u001E', // record separator (RS)
+    '\u001F': 'u001F', // unit separator (US)
+    '\u007F': 'u007F', // delete (DEL)
+
+    // Unicode whitespace characters
+    '\u0085': 'u0085', // next line
+    '\u00A0': 'u00A0', // non-breaking space
+    '\u1680': 'u1680', // ogham space mark
+    '\u180E': 'u180E', // mongolian vowel separator
+    '\u2000': 'u2000', // en quad
+    '\u2001': 'u2001', // em quad
+    '\u2002': 'u2002', // en space
+    '\u2003': 'u2003', // em space
+    '\u2004': 'u2004', // three-per-em space
+    '\u2005': 'u2005', // four-per-em space
+    '\u2006': 'u2006', // six-per-em space
+    '\u2007': 'u2007', // figure space
+    '\u2008': 'u2008', // punctuation space
+    '\u2009': 'u2009', // thin space
+    '\u200A': 'u200A', // hair space
+    '\u200B': 'u200B', // zero width space
+    '\u200C': 'u200C', // zero width non-joiner
+    '\u200D': 'u200D', // zero width joiner
+    '\u2028': 'u2028', // line separator
+    '\u2029': 'u2029', // paragraph separator
+    '\u202F': 'u202F', // narrow no-break space
+    '\u205F': 'u205F', // medium mathematical space
+    '\u2060': 'u2060', // word joiner
+    '\u3000': 'u3000', // ideographic space
+    '\uFEFF': 'uFEFF'  // zero width no-break space
+};
+
+
+/**
+ * Unescape a string that's been escaped so that it can be used
+ * in a firewall rule.
+ */
+function tagUnescape(ostr) {
+    var nstr = '';
+    var len = ostr.length;
+
+    for (var cur = 0; cur < len; cur += 1) {
+        var val = ostr[cur];
+        if (val === '\\') {
+            var escaped = ostr[cur + 1];
+            if (escaped === 'u') {
+                nstr += String.fromCharCode(
+                    parseInt(ostr.substring(cur + 2, cur + 6), 16));
+                cur += 5;
+            } else if (escapes[escaped] !== undefined) {
+                nstr += escapes[escaped];
+                cur += 1;
+            } else {
+                throw new Error('Invalid escape sequence "\\' + escaped + '"!');
+            }
+        } else {
+            nstr += val;
+        }
     }
 
-    return str;
+    return nstr;
+}
+
+
+/**
+ * Escape a string so that it can be placed, quoted, into a
+ * firewall rule.
+ */
+function tagEscape(ostr) {
+    var nstr = '';
+    var len = ostr.length;
+
+    for (var cur = 0; cur < len; cur += 1) {
+        var val = ostr[cur];
+        if (unescapes[val] !== undefined) {
+            nstr += '\\' + unescapes[val];
+        } else {
+            nstr += val;
+        }
+    }
+
+    return nstr;
+}
+
+
+/**
+ * Quotes a string in case it contains non-alphanumeric
+ * characters or keywords for firewall rules.
+ */
+function quote(str) {
+    return '"' + tagEscape(str) + '"';
 }
 
 
@@ -182,7 +340,7 @@ function FwRule(data, opts) {
         }
     }
 
-    if (data.hasOwnProperty('uuid')) {
+    if (hasOwnProperty(data, 'uuid')) {
         if (!validators.validateUUID(data.uuid)) {
             errs.push(new validators.InvalidParamError('uuid',
                 'Invalid rule UUID'));
@@ -195,7 +353,7 @@ function FwRule(data, opts) {
 
     this.version = data.version || generateVersion();
 
-    if (data.hasOwnProperty('owner_uuid')) {
+    if (hasOwnProperty(data, 'owner_uuid')) {
         if (!validators.validateUUID(data.owner_uuid)) {
             errs.push(new validators.InvalidParamError('owner_uuid',
                 'Invalid owner UUID'));
@@ -206,7 +364,7 @@ function FwRule(data, opts) {
         this.global = true;
     }
 
-    if (data.hasOwnProperty('enabled')) {
+    if (hasOwnProperty(data, 'enabled')) {
         if (!validators.bool(data.enabled)) {
             errs.push(new validators.InvalidParamError('enabled',
                 'enabled must be true or false'));
@@ -219,7 +377,7 @@ function FwRule(data, opts) {
 
     for (var s in STRING_PROPS) {
         var str = STRING_PROPS[s];
-        if (data.hasOwnProperty(str)) {
+        if (hasOwnProperty(data, str)) {
             try {
                 validators.validateString(str, data[str]);
                 this[str] = data[str];
@@ -230,19 +388,19 @@ function FwRule(data, opts) {
     }
 
     if (opts.enforceGlobal) {
-        if (data.hasOwnProperty('global') && !validators.bool(data.global)) {
+        if (hasOwnProperty(data, 'global') && !validators.bool(data.global)) {
             errs.push(new validators.InvalidParamError('global',
                 'global must be true or false'));
         }
 
-        if (data.hasOwnProperty('global')
-            && data.hasOwnProperty('owner_uuid') && data.global) {
+        if (hasOwnProperty(data, 'global')
+            && hasOwnProperty(data, 'owner_uuid') && data.global) {
             errs.push(new validators.InvalidParamError('global',
                 'cannot specify both global and owner_uuid'));
         }
 
-        if (!data.hasOwnProperty('global')
-            && !data.hasOwnProperty('owner_uuid')) {
+        if (!hasOwnProperty(data, 'global')
+            && !hasOwnProperty(data, 'owner_uuid')) {
             errs.push(new validators.InvalidParamError('owner_uuid',
                 'owner_uuid required'));
         }
@@ -269,8 +427,8 @@ function FwRule(data, opts) {
         this.protoTargets = this.types;
     } else {
         this.ports = parsed.protocol.targets.sort(function (a, b) {
-            var first = a.hasOwnProperty('start') ? a.start : a;
-            var second = b.hasOwnProperty('start') ? b.start : b;
+            var first = hasOwnProperty(a, 'start') ? a.start : a;
+            var second = hasOwnProperty(b, 'start') ? b.start : b;
             return Number(first) - Number(second);
         });
         this.protoTargets = this.ports;
@@ -308,7 +466,7 @@ function FwRule(data, opts) {
             var name = target[0] + 's';
 
             numTargets++;
-            if (!dirs[dir].hasOwnProperty(name)) {
+            if (!hasOwnProperty(dirs[dir], name)) {
                 dirs[dir][name] = {};
             }
 
@@ -343,7 +501,7 @@ function FwRule(data, opts) {
         dir = DIRECTIONS[d];
         for (var t in TARGET_TYPES) {
             var type = TARGET_TYPES[t] + 's';
-            if (dirs[dir].hasOwnProperty(type)) {
+            if (hasOwnProperty(dirs[dir], type)) {
                 if (type === 'tags') {
                     this[dir][type] = tagList(dirs[dir][type]);
 
@@ -430,7 +588,7 @@ FwRule.prototype.raw = function () {
 
     for (var s in STRING_PROPS) {
         var str = STRING_PROPS[s];
-        if (this.hasOwnProperty(str)) {
+        if (hasOwnProperty(this, str)) {
             raw[str] = this[str];
         }
     }
@@ -460,7 +618,7 @@ FwRule.prototype.serialize = function (fields) {
                 ser.global = true;
             }
         } else {
-            if (this.hasOwnProperty(field)) {
+            if (hasOwnProperty(this, field)) {
                 ser[field] = this[field];
             }
         }
@@ -482,7 +640,7 @@ FwRule.prototype.text = function () {
         to: []
     };
 
-    forEachTarget(this, function (dir, type, name, arr) {
+    forEachTarget(this, function (dir, type, _, arr) {
         for (var i in arr) {
             var txt;
             if (type === 'tag') {
@@ -513,8 +671,8 @@ FwRule.prototype.text = function () {
         );
     } else {
         ports = this.ports.map(function (port) {
-            if (port.hasOwnProperty('start')
-                && port.hasOwnProperty('end')) {
+            if (hasOwnProperty(port, 'start')
+                && hasOwnProperty(port, 'end')) {
                 /*
                  * We only output PORTS when we have a range, since we don't
                  * distinguish PORTS 1, 2 from (PORT 1 AND PORT 2) after
@@ -581,6 +739,8 @@ function generateVersion() {
 module.exports = {
     create: createRule,
     generateVersion: generateVersion,
+    tagEscape: tagEscape,
+    tagUnescape: tagUnescape,
     DIRECTIONS: DIRECTIONS,
     FIELDS: FIELDS,
     FwRule: FwRule,

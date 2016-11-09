@@ -273,3 +273,5 @@ skd:* 0600 root sys
 eventfd:* 0666 root sys
 timerfd:* 0666 root sys
 signalfd:* 0666 root sys
+iwn:* 0666 root sys
+clone:iwn 0666 root sys

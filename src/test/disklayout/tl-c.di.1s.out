@@ -1,4 +1,13 @@
 {
+	"spares": [
+		{
+			"name": "disk8",
+			"vid": "INTEL",
+			"pid": "DCS3700",
+			"size": "800000000000",
+			"solid_state": true
+		}
+	],
 	"vdevs": [
 		{
 			"type": "raidz2",
@@ -58,16 +67,9 @@
 					"pid": "DCS3700",
 					"size": "800000000000",
 					"solid_state": true
-				},
-				{
-					"name": "disk8",
-					"vid": "INTEL",
-					"pid": "DCS3700",
-					"size": "800000000000",
-					"solid_state": true
 				}
 			]
 		}
 	],
-	"capacity": 5600000000000
+	"capacity": 4800000000000
 }

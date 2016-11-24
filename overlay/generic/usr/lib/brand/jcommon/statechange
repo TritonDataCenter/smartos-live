@@ -623,7 +623,7 @@ setup_fw()
 setup_fs()
 {
 	# create directory for metadata socket
-	mkdir -m755 -p /zones/zonecontrol/${ZONENAME}
+	mkdir -m755 -p ${ZONEPATH}/zonecontrol
 
 	uname -v > $ZONEPATH/lastbooted
 	[[ -n "$jst_simplefs" ]] && return

@@ -67,7 +67,6 @@ fi
 [[ -n ${ORIGIN} && ${ORIGIN} != "-" ]] && zfs destroy -F $ORIGIN
 
 rm -rf $ZONEPATH
-rm -rf /zones/${ZONENAME}/zonecontrol
 
 jcommon_uninstall_hook
 

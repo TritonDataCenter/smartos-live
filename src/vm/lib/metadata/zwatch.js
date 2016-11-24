@@ -55,9 +55,9 @@ function ZWatch(logger) {
                 && data.oldstate === 'ready') {
 
                 data.cmd = 'start';
-            } else if (data.newstate === "configured" && data.oldstate === '') {
+            } else if (data.newstate === 'configured' && data.oldstate === '') {
                 data.cmd = 'create';
-            } else if (data.oldstate === "configured" && data.newstate === '') {
+            } else if (data.oldstate === 'configured' && data.newstate === '') {
                 data.cmd = 'delete';
             } else {
                 data.cmd = 'unknown';

@@ -456,8 +456,9 @@ MetadataAgent.prototype.createServersOnExistingZones = function () {
                 // For KVM, the zone must be running otherwise Qemu will not
                 // have created a socket.
                 if (zone.zone_state !== 'running') {
-                    self.log.debug('skipping zone ' + zone.zonename + ' which has '
-                        + 'non-running zone_state: ' + zone.zone_state);
+                    self.log.debug('skipping zone ' + zone.zonename
+                        + ' which has ' + 'non-running zone_state: '
+                        + zone.zone_state);
                     cb();
                     return;
                 }
@@ -667,7 +668,6 @@ MetadataAgent.prototype.start = function start() {
     self.startPeriodicChecks();
 
     zwatch.on('zone_transition', function (msg) {
-        var zoneConn = self.zoneConnections[msg.zonename];
         var when = new Date(msg.when / 1000000);
 
         // when a zone was deleted, cleanup any cached stuff for it
@@ -900,8 +900,8 @@ function createZoneSocket(zopts, callback) {
 
     fs.mkdir(zonecontrol, parseInt('700', 8), function _mkdirCb(e) {
         if (e && e.code !== 'EEXIST') {
-            self.addDebug(zopts.zone, 'last_sock_create_failure', error);
-            zlog.warn({zonename: zopts.zone, err: error},
+            self.addDebug(zopts.zone, 'last_sock_create_failure', e);
+            zlog.warn({zonename: zopts.zone, err: e},
                 'failed to create sockpath directory');
             // We were unable to create the directory but we have not yet
             // created a real self.zoneConnections entry so we can just delete
@@ -909,7 +909,7 @@ function createZoneSocket(zopts, callback) {
             // is running, we'll try again when we next poll w/
             // _checkNewZones().
             delete self.zoneConnections[zopts.zone];
-            callback(error);
+            callback(e);
             return;
         }
 
@@ -975,8 +975,7 @@ function createZoneSocket(zopts, callback) {
 
                 zlog.warn({
                     zonename: zopts.zone,
-                    err: unlinkErr,
-                    handleType: handleType
+                    err: unlinkErr
                 }, 'failed to unlink old socket');
 
                 // We were unable to create a socket, but as with a directory

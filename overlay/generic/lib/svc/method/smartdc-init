@@ -186,7 +186,7 @@ install_agents7()
 
     rm -f /var/tmp/agents_latest.sh
     curl -k -o /var/tmp/agents_latest.sh \
-        -s $CONFIG_assets_admin_ip:/extra/agents/latest
+        -s "http://${CONFIG_assets_admin_ip}/extra/agents/latest"
 
     [[ ! -f /var/tmp/agents_latest.sh ]] && return 1
     (cd /var/tmp; bash /var/tmp/agents_latest.sh)
@@ -282,7 +282,7 @@ install_config()
     load_sdc_config
 
     curl -k -o /tmp/node.config --silent \
-	$CONFIG_assets_admin_ip:/extra/joysetup/node.config
+        "http://${CONFIG_assets_admin_ip}/extra/joysetup/node.config"
 
     [[ ! -f /tmp/node.config ]] && return 0
     grep datacenter_name /tmp/node.config >/dev/null 2>&1
@@ -313,7 +313,7 @@ update_local_key()
     [ $nkeys -ne 1 ] && return
 
     curl -k -o /var/tmp/cnkey.tgz -f -s \
-        $CONFIG_assets_admin_ip:/extra/usbkey/cnkey.tgz
+        "http://${CONFIG_assets_admin_ip}/extra/usbkey/cnkey.tgz"
     [ ! -f /var/tmp/cnkey.tgz ] && return
 
     local console=$(bootparams | grep ^console= | cut -d= -f2)

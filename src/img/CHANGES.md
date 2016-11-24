@@ -6,6 +6,10 @@ Known issues:
   Docker Registry v1, which is now deprecated.
 
 
+## 3.7.0
+
+- OS-5798 Allow '+' in the image manifest "version" field.
+
 ## 3.6.2
 
 - OS-5335 docker image import should disallow meaningless operations

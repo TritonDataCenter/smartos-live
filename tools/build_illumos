@@ -65,8 +65,8 @@ time ./nightly illumos.sh
 status=$?
 if [[ $status -ne 0 ]]; then
 	log_dir=$(ls -1t ./log | head -n1)
-	mail_msg=$PWD/$log_dir/mail_msg
-	nightly=$PWD/$log_dir/nightl.log
+	mail_msg=$PWD/log/$log_dir/mail_msg
+	nightly=$PWD/log/$log_dir/nightly.log
 
 	#
 	# Note, the blank lines at the start and end of the heredoc are

@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (c) 2015, Joyent, Inc.
+ * Copyright (c) 2016, Joyent, Inc.
  */
 
 /*
@@ -29,7 +29,7 @@ var V = 2;
 // Regexes
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 var NAME_RE = /^[A-Za-z0-9._/ -]+$/;
-var VERSION_RE = /^[A-Za-z0-9._/-]+$/;
+var VERSION_RE = /^[A-Za-z0-9._/+-]+$/;
 // published_at (ISO 8601 date string, e.g. "2012-12-25T12:00:00.123Z")
 // Required if activated.
 var PUBLISHED_AT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;

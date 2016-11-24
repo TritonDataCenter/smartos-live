@@ -1,0 +1,156 @@
+{
+	"spares": [
+		{
+			"name": "c9t5000CCA02203E3A9d0",
+			"vid": "HITACHI",
+			"pid": "HUC109060CSS600",
+			"size": "600127266816",
+			"solid_state": false
+		}
+	],
+	"vdevs": [
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "c0t5000CCA02203E181d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "c10t5000CCA02203E355d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		},
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "c11t5000CCA02200C695d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "c13t5000CCA016011879d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		},
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "c14t5000CCA016010FBDd0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "c15t5000CCA02203D63Dd0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		},
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "c1t5000CCA022040715d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "c2t5000CCA022015A91d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		},
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "c3t5000CCA02203D151d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "c4t5000CCA02203E2D1d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		},
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "c5t5000CCA022016F69d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "c6t5000CCA02203D20Dd0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		},
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "c7t5000CCA022040AB5d0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "c8t5000CCA022016ADDd0",
+					"vid": "HITACHI",
+					"pid": "HUC109060CSS600",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		}
+	],
+	"capacity": 4200890867712,
+	"logs": [
+		{
+			"name": "c12t5000CCA0490428ADd0",
+			"vid": "HGST",
+			"pid": "HUSMH8010BSS204",
+			"size": "100030242816",
+			"solid_state": true
+		}
+	]
+}

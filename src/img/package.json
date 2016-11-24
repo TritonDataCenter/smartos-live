@@ -1,7 +1,7 @@
 {
   "name": "imgadm",
   "description": "Manage SmartOS virtual machine images.",
-  "version": "3.6.2",
+  "version": "3.7.0",
   "author": "Joyent (joyent.com)",
   "private": true,
   "dependencies": {
@@ -13,7 +13,7 @@
     "docker-registry-client": "git://github.com/joyent/node-docker-registry-client.git#765e74c",
     "extsprintf": "1.2.0",
     "findit2": "2.2.3",
-    "imgmanifest": "git://github.com/joyent/node-imgmanifest.git#4f80d8c",
+    "imgmanifest": "2.3.0",
     "mkdirp": "0.5.0",
     "node-uuid": "1.4.1",
     "once": "1.3.1",

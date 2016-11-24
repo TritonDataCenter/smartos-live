@@ -1,7 +1,7 @@
 #! /usr/node/bin/node
 
 /*
- * Copyright 2012 Joyent, Inc.  All rights reserved.
+ * Copyright 2016 Joyent, Inc.
  */
 
 var fs = require('fs');
@@ -19,14 +19,15 @@ fatal(msg)
 function
 usage()
 {
-	console.log('usage: ' + process.argv[0] + ' [-f file] <layout>');
+	console.log('usage: ' + process.argv[0] +
+	    ' [-c] [-f file] [-s spares] [<layout>]');
 	console.log('supported layouts:\n\t' +
 	    disklayout.list_supported().join('\n\t'));
 	process.exit(-1);
 }
 
 function
-dolayout(disks, layout)
+dolayout(disks, layout, nspares, enable_cache)
 {
 	var config;
 	var mnttab = fs.readFileSync('/etc/mnttab', 'utf8');
@@ -37,19 +38,37 @@ dolayout(disks, layout)
 		return (true);
 	});
 
-	config = disklayout.compute(disks, layout);
+	config = disklayout.compute(disks, layout, nspares, enable_cache);
+	if (config.error !== undefined) {
+		fatal(config.error);
+	}
 	console.log(JSON.stringify(config, null, '\t'));
 }
 
 var g_layout;
+var g_enable_cache = true;
 var opt_f;
+var opt_s;
 var option;
-var parser = new getopt.BasicParser('f:', process.argv);
+var parser = new getopt.BasicParser('cf:s:', process.argv);
 
 while ((option = parser.getopt()) !== undefined && !option.error) {
 	switch (option.option) {
+	case 'c':
+		g_enable_cache = false;
+		break;
 	case 'f':
 		opt_f = option.optarg;
+		break;
+	case 's':
+		opt_s = parseInt(option.optarg, 10);
+		/* Number of spares must be a positive number */
+		if (opt_s != option.optarg || isNaN(opt_s) ||
+		    !isFinite(opt_s) || opt_s < 0) {
+			console.log('invalid value for number of spares: ' +
+			    option.optarg);
+			usage();
+		}
 		break;
 	default:
 		usage();
@@ -85,13 +104,13 @@ if (opt_f) {
 				});
 			}
 		});
-		dolayout(disks, g_layout);
+		dolayout(disks, g_layout, opt_s, g_enable_cache);
 	});
 } else {
 	zfs.zpool.listDisks(function (err, disks) {
 		if (err) {
 			fatal(err);
 		}
-		dolayout(disks, g_layout);
+		dolayout(disks, g_layout, opt_s, g_enable_cache);
 	});
 }

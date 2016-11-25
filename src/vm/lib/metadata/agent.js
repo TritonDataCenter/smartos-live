@@ -848,7 +848,6 @@ function startZoneSocketServer(zonename, callback) {
     assert.func(callback, 'callback');
 
     var zlog = self.zlog[zonename];
-    var zonePath = self.zones[zonename].zonepath;
     var zopts;
 
     zopts = {

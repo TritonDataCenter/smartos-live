@@ -34,7 +34,7 @@
 	<global_mount special="/dev" directory="/dev" type="dev"
 	    opt="attrdir=%R/root/dev"/>
 
-	<global_mount special="/etc/zonecontrol/%z" directory="/.zonecontrol"
+	<global_mount special="/var/zonecontrol/%z" directory="/.zonecontrol"
 	    opt="ro" type="lofs" />
 
 	<global_mount special="/lib" directory="/lib"

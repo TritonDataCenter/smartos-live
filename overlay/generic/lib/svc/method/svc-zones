@@ -177,7 +177,7 @@ case "$1" in
 	[ $? -eq 0 ] && setup_manifests
 
 	# Create directory for zone sockets
-	mkdir -p /etc/zonecontrol
+	mkdir -p /var/zonecontrol
 
 	egrep -vs '^#|^global:' /etc/zones/index || exit 0  # no local zones
 

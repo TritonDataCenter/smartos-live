@@ -54,9 +54,9 @@
  * mdata-client tools connect to the serial device and are then talking to our
  * metadata handler.
  *
- * For all non-KVM VMs we create a unix domain socket in <zonepath>/zonecontrol
- * named metadata.sock. We mount the zonecontrol directory into the zone
- * (read-only) via the brand.
+ * For all non-KVM VMs we create a unix domain socket in
+ * /etc/zonecontrol/<zonename> named metadata.sock. We mount the zonecontrol
+ * directory into the zone (read-only) via the brand.
  *
  * In non-LX zones, the zonecontrol is mounted such that the socket is at:
  *
@@ -852,7 +852,7 @@ function startZoneSocketServer(zonename, callback) {
     var zopts;
 
     zopts = {
-        path: path.join(zonePath, 'zonecontrol/metadata.sock'),
+        path: path.join('/etc/zonecontrol', zonename, 'metadata.sock'),
         zone: zonename
     };
 

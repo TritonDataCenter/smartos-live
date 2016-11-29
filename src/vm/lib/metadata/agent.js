@@ -726,27 +726,36 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
     assert.object(self.zlog[zonename], 'self.zlog[' + zonename + ']');
 
     var vmobj = self.zones[zonename];
-    var zlog = self.zlog[zonename];
+    var zlog = self.zlog[zonename] || self.log;
     var sockpath = path.join(vmobj.zonepath, '/root/tmp/vm.ttyb');
 
     zlog.trace('starting socket server');
 
     async.waterfall([
         function (cb) {
+
             common.retryUntil(2000, 120000,
                 function (c) {
+                    var err;
+
+                    if (!self.zones[zonename]) {
+                        // zone was removed, no need to retry any further
+                        err = new Error('zone no longer exists');
+                        err.code = 'ENOENT';
+                        c(err, true /* abort */);
+                        return;
+                    }
                     fs.exists(sockpath, function (exists) {
                         if (!exists) {
+                            // in this case we'll try again
                             zlog.warn(sockpath + ' does not exist');
                         }
-                        setTimeout(function () {
-                            c(null, exists);
-                        }, 1000);
+                        c(null, exists);
                     });
                 }, function (error) {
                     if (error) {
-                        zlog.error({err: error}, 'Timed out waiting for '
-                            + 'metadata socket');
+                        zlog.error({err: error, code: error.code},
+                            'Error waiting for metadata socket');
                     }
                     cb(error);
                 }
@@ -754,6 +763,12 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
         }
     ], function (error) {
         var zopts = { zone: zonename, sockpath: sockpath };
+
+        if (error) {
+            callback(error);
+            return;
+        }
+
         self.createKVMServer(zopts, function () {
             if (callback) {
                 callback();
@@ -775,7 +790,15 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     assert.string(zopts.zone, 'zopts.zone');
     assert.func(callback, 'callback');
 
-    zlog = self.zlog[zopts.zone];
+    zlog = self.zlog[zopts.zone] || self.log;
+
+    // Ignore zones that have been removed
+    if (!self.zones[zopts.zone]) {
+        zlog.trace({zonename: zopts.zone},
+            'not creating kvm socket for zone that does not exist');
+        callback();
+        return;
+    }
 
     // Ignore zones we've already got a connection for and then immediately
     // create an entry if we don't. To act as a mutex.
@@ -830,7 +853,7 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     kvmstream.connect(zopts.sockpath);
 
     fd = kvmstream._handle.fd;
-    zlog.info('listening on fd %d', fd);
+    zlog.info({zonename: zopts.zone}, 'listening on fd %d', fd);
     self.zoneConnections[zopts.zone].fd = fd;
 
     callback();
@@ -847,7 +870,7 @@ function startZoneSocketServer(zonename, callback) {
         'self.zones[' + zonename + '].zonepath');
     assert.func(callback, 'callback');
 
-    var zlog = self.zlog[zonename];
+    var zlog = self.zlog[zonename] || self.log;
     var zopts;
 
     zopts = {
@@ -870,13 +893,8 @@ function createZoneSocket(zopts, callback) {
     assert.string(zopts.zone, 'zopts.zone');
     assert.func(callback, 'callback');
 
-    var zlog = self.zlog[zopts.zone];
+    var zlog = self.zlog[zopts.zone] || self.log;
     var zonecontrol = path.dirname(zopts.path);
-
-    if (!zlog) {
-        // if there's no zone-specific logger, use the global one
-        zlog = self.log;
-    }
 
     if (!self.zones[zopts.zone]) {
         zlog.info({zonename: zopts.zone},
@@ -1035,7 +1053,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
     assert.object(socket, 'socket');
 
     var self = this;
-    var zlog = self.zlog[zone];
+    var zlog = self.zlog[zone] || self.log;
     var write = function (str) {
         if (socket.writable) {
             socket.write(str);

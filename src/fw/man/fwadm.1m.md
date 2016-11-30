@@ -43,8 +43,10 @@ The format is similar to the vmadm(1M) format with most properties omitted
 and some simplified properties. See the "REMOTE VMS", "REMOTE VM PROPERTIES"
 and "EXAMPLES" sections below for details.
 
-Firewall rules only apply to VMs that have the firewall_enabled property set
-to true. Adding, updating or deleting firewall rules or remote VMs will reload
+Firewall rules only apply to VMs that have the firewall\_enabled property set
+to true. Rules with an owner\_uuid are scoped to VMs with a matching owner.
+Global rules, which are ownerless, will apply to all VMs described in their
+targets. Adding, updating or deleting firewall rules or remote VMs will reload
 the firewalls of any VMs affected.
 
 

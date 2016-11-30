@@ -103,9 +103,18 @@
 		<property_group name='firewall_config_default'
 			type='com.sun,fw_configuration'>
 			<propval name='policy' type='astring' value='custom' />
-      <propval name='custom_policy_file' type='astring' value='/etc/ipf/ipf.conf' />
+			<propval name='block_policy' type='astring'
+				value='none' />
+			<propval name='custom_policy_file' type='astring'
+				value='/etc/ipf/ipf.conf' />
+			<propval name='custom_policy_file_6' type='astring'
+				value='/etc/ipf/ipf6.conf' />
 			<propval name='apply_to' type='astring' value='' />
+			<propval name='apply_to_6' type='astring' value='' />
 			<propval name='exceptions' type='astring' value='' />
+			<propval name='exceptions_6' type='astring' value='' />
+			<propval name='target' type='astring' value='' />
+			<propval name='target_6' type='astring' value='' />
 			<propval name='open_ports' type='astring' value='' />
 			<propval name='version' type='count' value='0' />
 			<propval name='value_authorization' type='astring'
@@ -115,7 +124,10 @@
 		<property_group name='firewall_config_override'
 			type='com.sun,fw_configuration'>
 			<propval name='policy' type='astring' value='none' />
+			<propval name='block_policy' type='astring'
+				value='none' />
 			<propval name='apply_to' type='astring' value='' />
+			<propval name='apply_to_6' type='astring' value='' />
 			<propval name='value_authorization' type='astring'
 				value='solaris.smf.value.firewall.config' />
 		</property_group>
@@ -209,6 +221,47 @@ Apply the custom ipfilter configuration stored in a custom file (custom file pro
 					<include_values type='values'/>
 				</choices>
 			</prop_pattern>
+			<prop_pattern name='block_policy' type='astring'
+			    required='false'>
+				<common_name>
+					<loctext xml:lang='C'>
+Firewall block policy
+					</loctext>
+				</common_name>
+				<description>
+					<loctext xml:lang='C'>
+Service firewall block policy.
+					</loctext>
+				</description>
+				<visibility value='readwrite'/>
+				<cardinality min='1' max='1'/>
+				<values>
+					<value name='use_global'>
+						<description>
+							<loctext xml:lang='C'>
+Apply Global Default block policy, specified in network/ipfilter for the service. This is the default value.
+							</loctext>
+						</description>
+					</value>
+					<value name='none'>
+						<description>
+							<loctext xml:lang='C'>
+Block by dropping packets.
+							</loctext>
+						</description>
+					</value>
+					<value name='return'>
+						<description>
+							<loctext xml:lang='C'>
+Block by returning RST or ICMP messages.
+							</loctext>
+						</description>
+					</value>
+				</values>
+				<choices>
+					<include_values type='values'/>
+				</choices>
+			</prop_pattern>
 			<prop_pattern name="apply_to" type="astring"
 			    required="false">
 				<common_name>
@@ -218,7 +271,20 @@ Apply policy to
 				</common_name>
 				<description>
 					<loctext xml:lang="C">
-The host and network IPs, network interfaces, and ippools to deny if the policy is set to deny, or accept if the policy is set to accept.
+The source host and network IPv4 addresses, incoming network interfaces, and ippools to deny if the policy is set to deny, or accept if the policy is set to accept.
+					</loctext>
+				</description>
+			</prop_pattern>
+			<prop_pattern name="apply_to_6" type="astring"
+			    required="false">
+				<common_name>
+					<loctext xml:lang='C'>
+Apply policy to
+					</loctext>
+				</common_name>
+				<description>
+					<loctext xml:lang="C">
+The source host and network IPv6 addresses, incoming network interfaces, and ippools to deny if the policy is set to deny, or accept if the policy is set to accept.
 					</loctext>
 				</description>
 			</prop_pattern>
@@ -231,7 +297,46 @@ Make exceptions to
 				</common_name>
 				<description>
 					<loctext xml:lang="C">
-The host and network IPs, network interfaces, and ippools which will be exempted from the set policy, accept if the policy is set to deny, or deny if the policy is set to accept.
+The source host and network IPv4 addresses, incoming network interfaces, and ippools which will be exempted from the set policy, accept if the policy is set to deny, or deny if the policy is set to accept.
+					</loctext>
+				</description>
+			</prop_pattern>
+			<prop_pattern name="exceptions_6" type="astring"
+			    required="false">
+				<common_name>
+					<loctext xml:lang='C'>
+Make exceptions to
+					</loctext>
+				</common_name>
+				<description>
+					<loctext xml:lang="C">
+The source host and network IPv6 addressess, incoming network interfaces, and ippools to exempt from the set policy. That is, those to accept if the policy is set to deny, or to deny if the policy is set to accept.
+					</loctext>
+				</description>
+			</prop_pattern>
+			<prop_pattern name="target" type="astring"
+			    required="false">
+				<common_name>
+					<loctext xml:lang='C'>
+Apply policy to
+					</loctext>
+				</common_name>
+				<description>
+					<loctext xml:lang="C">
+The destination host and network IPv4 addresses, and ippools to deny if the policy is set to deny, or accept if the policy is set to accept.
+					</loctext>
+				</description>
+			</prop_pattern>
+			<prop_pattern name="target6" type="astring"
+			    required="false">
+				<common_name>
+					<loctext xml:lang='C'>
+Apply policy to
+					</loctext>
+				</common_name>
+				<description>
+					<loctext xml:lang="C">
+The destination host and network IPv6 addresses, and ippools to deny if the policy is set to deny, or accept if the policy is set to accept.
 					</loctext>
 				</description>
 			</prop_pattern>
@@ -313,6 +418,47 @@ Deny access to entities specified in 'apply_to' property.
 						<description>
 							<loctext xml:lang='C'>
 Allow access to entities specified in 'apply_to' property.
+							</loctext>
+						</description>
+					</value>
+				</values>
+				<choices>
+					<include_values type='values'/>
+				</choices>
+			</prop_pattern>
+			<prop_pattern name='block_policy' type='astring'
+			    required='false'>
+				<common_name>
+					<loctext xml:lang='C'>
+Firewall block policy
+					</loctext>
+				</common_name>
+				<description>
+					<loctext xml:lang='C'>
+Service firewall block policy.
+					</loctext>
+				</description>
+				<visibility value='readwrite'/>
+				<cardinality min='1' max='1'/>
+				<values>
+					<value name='use_global'>
+						<description>
+							<loctext xml:lang='C'>
+Apply Global Default block policy, specified in network/ipfilter for the service. This is the default value.
+							</loctext>
+						</description>
+					</value>
+					<value name='none'>
+						<description>
+							<loctext xml:lang='C'>
+Block by dropping packets.
+							</loctext>
+						</description>
+					</value>
+					<value name='return'>
+						<description>
+							<loctext xml:lang='C'>
+Block by returning RST or ICMP messages.
 							</loctext>
 						</description>
 					</value>

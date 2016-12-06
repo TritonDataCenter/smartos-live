@@ -2340,7 +2340,6 @@ IMGADM.prototype._lockPathFromUuid = function _lockPathFromUuid(uuid) {
 IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
     var self = this;
     assert.object(ctx, 'ctx');
-    assert.object(ctx.source, 'ctx.source');
     assert.string(ctx.filePath, 'ctx.filePath');
     assert.string(ctx.dsName, 'ctx.dsName');
     assert.string(ctx.zpool, 'ctx.zpool');

@@ -742,7 +742,7 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
                         // zone was removed, no need to retry any further
                         err = new Error('zone no longer exists');
                         err.code = 'ENOENT';
-                        c(err, true /* abort */);
+                        c(err, true /* abort the retryUntil */);
                         return;
                     }
                     fs.exists(sockpath, function (exists) {

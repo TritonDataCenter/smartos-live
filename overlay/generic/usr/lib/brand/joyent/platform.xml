@@ -35,7 +35,7 @@
 	    opt="attrdir=%R/root/dev"/>
 
 	<global_mount special="/var/zonecontrol/%z" directory="/.zonecontrol"
-	    opt="ro" type="lofs" />
+	    opt="ro,nodevices,nosetuid,noexec" type="lofs" />
 	<global_mount special="/lib" directory="/lib"
 	    opt="ro,nodevices" type="lofs" />
 	<global_mount special="%P/manifests/joyent"

@@ -54,8 +54,11 @@
  * mdata-client tools connect to the serial device and are then talking to our
  * metadata handler.
  *
- * For all non-KVM VMs we create a 'zsock' inside the zone and listen on that.
- * In non-LX zones, the zsock is created in
+ * For all non-KVM VMs we create a unix domain socket in
+ * /var/zonecontrol/<zonename> named metadata.sock. We mount the zonecontrol
+ * directory into the zone (read-only) via the brand.
+ *
+ * In non-LX zones, the zonecontrol is mounted such that the socket is at:
  *
  *   <zoneroot>/.zonecontrol/metadata.sock
  *
@@ -79,11 +82,7 @@
  * The rules for zoneConnections are:
  *
  *   * if there's any truthy value for a zone's zoneConnections[uuid], we'll not
- *     try to create a new socket unless checkStaleSocket determines the socket
- *     is stale (based on the fs.stat signature).
- *
- *   * when a socket is determined to be stale, the zoneConnections[uuid] should
- *     be deleted.
+ *     try to create a new socket.
  *
  *   * if there's no zoneConnections[uuid] when we're doing our periodic check,
  *     we should try to create a socket.
@@ -94,7 +93,8 @@
  *
  *
  * When a zone is deleted, (no longer shows up in the list we're loading every 5
- * minutes) the global state objects for the VM are cleared.
+ * minutes, or we see a message from zoneevent) the global state objects for the
+ * VM are cleared.
  *
  *
  * # DEBUGGING
@@ -139,14 +139,6 @@
  * for "GET user-script" means that we want to return the value from the vmobj's
  * customer_metadata['user-script'].
  *
- *
- * # KNOWN ISSUES
- *
- * If many zones are created and deleted between ZONEADM_CHECK_FREQUENCY
- * intervals, it would be possible to have many stale sockets open which could
- * potentially run metadata out of filedescriptors. This should be recovered
- * when we do the next check and cleanup all the destroyed VM's sockets.
- *
  */
 
 var assert = require('/usr/node/node_modules/assert-plus');
@@ -164,7 +156,6 @@ var path = require('path');
 var util = require('util');
 var vasync = require('vasync');
 var VM = require('/usr/vm/node_modules/VM');
-var zsock = require('/usr/node/node_modules/zsock');
 var ZWatch = require('./zwatch');
 
 var sdc_fields = [
@@ -229,121 +220,6 @@ function zoneExists(zonename, callback) {
         }
 
         callback(null, exists);
-    });
-}
-
-/*
- * Takes a zoneConnections entry (or undefined) and an 'opts' object that
- * contains at least a 'log' property which is a bunyan logger, and then
- * calls callback with:
- *
- *  callback(<Error Object>);
- *
- *      - when there's an error w/ fs.stat() that's not ENOENT.
- *
- *  callback(null, false);
- *
- *      - when the conn entry has a sockpath that's still there.
- *
- *  callback(null, true);
- *
- *      - when the conn entry has a sockpath that's been removed or
- *        when the conn entry sockpath has a different fs.stat() signature
- *
- */
-function checkStaleSocket(zoneConn, opts, callback) {
-    assert.optionalObject(zoneConn, 'zoneConn');
-    assert.object(opts, 'opts');
-    assert.object(opts.log, 'opts.log');
-    assert.func(callback, 'callback');
-
-    if (!zoneConn || !zoneConn.sockpath) {
-        // if there's no zoneConn, it can't be stale
-        callback(null, false);
-        return;
-    }
-
-    // Ensure these are the correct types.
-    assert.string(zoneConn.sockpath, 'zoneConn.sockpath');
-    assert.object(zoneConn.sockstat, 'zoneConn.sockstat');
-
-    fs.stat(zoneConn.sockpath, function _onSockpathStat(err, stats) {
-        var field;
-        var fields = ['dev', 'ino']; // fields to compare in fs.Stats
-
-        if (err) {
-            if (err.code === 'ENOENT') {
-                opts.log.trace({
-                    sockpath: zoneConn.sockpath
-                }, 'ENOENT on sockpath: stale');
-                callback(null, true); // stale
-                return;
-            }
-            callback(err);
-            return;
-        }
-
-        // Check for changes in the fs.stat() signature since we created this
-        // socket. If it has changed, that means our handle to it is stale and
-        // we should recreate it.
-        for (field = 0; field < fields.length; field++) {
-            if (zoneConn.sockstat[fields[field]] !== stats[fields[field]]) {
-                opts.log.debug({
-                    field: fields[field],
-                    sockpath: zoneConn.sockpath,
-                    new_sockstat: stats,
-                    old_sockstat: zoneConn.sockstat
-                }, 'change in sockpath fs.stat signature: stale');
-                callback(null, true); // stale
-                return;
-            }
-        }
-        if ((zoneConn.sockstat.ctime
-            && zoneConn.sockstat.ctime.getTime()) !== stats.ctime.getTime()) {
-            opts.log.debug({
-                field: 'ctime',
-                sockpath: zoneConn.sockpath,
-                new_sockstat: stats,
-                old_sockstat: zoneConn.sockstat
-            }, 'change in sockpath fs.stat signature: stale');
-            callback(null, true); // stale
-            return;
-        }
-
-        // no error in stat, and no diff fields means exists: not stale
-        opts.log.trace({
-            sockpath: zoneConn.sockpath
-        }, 'sockpath still exists and fs.stat signature matches: not stale');
-        callback(null, false);
-        return;
-    });
-}
-
-/*
- * This function does an fs.stat() on the 'sockpath' of the zoneConn and
- * attaches the fs.Stats result to the 'zoneConn' object as .sockstat. If there
- * is an error with fs.stat() conn.sockstat will be set to an empty object.
- *
- * After the stat has completed, callback() will be called. Any error from
- * fs.stat() will be passed as the first and only argument to callback().
- */
-function addConnSockStat(zoneConn, callback) {
-    assert.object(zoneConn, 'zoneConn');
-    assert.string(zoneConn.sockpath, 'zoneConn.sockpath');
-    assert.func(callback, 'callback');
-
-    fs.stat(zoneConn.sockpath, function _statSock(e, st) {
-        if (e) {
-            // If there was an error w/ the stat, it's most likely because
-            // the state of the world has changed. We'll fill in sockstat
-            // with an empty object here so that checkStaleSocket will report
-            // this as stale.
-            zoneConn.sockstat = {};
-        } else {
-            zoneConn.sockstat = st;
-        }
-        assert.object(zoneConn.sockstat, 'zoneConn.sockstat');
-        callback(e);
     });
 }
 
@@ -419,9 +295,9 @@ var MetadataAgent = module.exports = function (options) {
  *           },
  *           ...
  *       ],
- *       "last_zsock_create_attempt": 1455735290176 (2016 Feb 17 18:54:50),
- *       "last_zsock_create_success": 1455735290804 (2016 Feb 17 18:54:50),
- *       "last_zsock_listen_success": 1455735290806 (2016 Feb 17 18:54:50),
+ *       "last_sock_create_attempt": 1455735290176 (2016 Feb 17 18:54:50),
+ *       "last_sock_create_success": 1455735290804 (2016 Feb 17 18:54:50),
+ *       "last_sock_listen_success": 1455735290806 (2016 Feb 17 18:54:50),
  *       ...
  *   },
  *   ...
@@ -557,13 +433,6 @@ MetadataAgent.prototype.createServersOnExistingZones = function () {
             self.zones[zone.zonename] = zone;
             self.addDebug(zone.zonename, 'last_zone_load');
 
-            if (zone.zone_state !== 'running') {
-                self.log.debug('skipping zone ' + zone.zonename + ' which has '
-                    + 'non-running zone_state: ' + zone.zone_state);
-                cb();
-                return;
-            }
-
             if (error) {
                 throw error;
             }
@@ -574,7 +443,7 @@ MetadataAgent.prototype.createServersOnExistingZones = function () {
             }
 
             // It is possible for VM.lookup() to take a long time. While we're
-            // waiting for it, the watcher could have seen the zone start and
+            // waiting for it, the watcher could have seen the zone creation and
             // created a socket for the zone. In case that happened, we ignore
             // zones we've already got a connection for.
             if (self.zoneConnections[zone.zonename]) {
@@ -583,6 +452,17 @@ MetadataAgent.prototype.createServersOnExistingZones = function () {
             }
 
             if (zone.brand === 'kvm') {
+
+                // For KVM, the zone must be running otherwise Qemu will not
+                // have created a socket.
+                if (zone.zone_state !== 'running') {
+                    self.log.debug('skipping zone ' + zone.zonename
+                        + ' which has ' + 'non-running zone_state: '
+                        + zone.zone_state);
+                    cb();
+                    return;
+                }
+
                 self.startKVMSocketServer(zone.zonename, function (err) {
                     if (!err) {
                         created++;
@@ -637,9 +517,9 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
     getZoneinfo(null, {log: self.log}, function (err, results) {
         assert.ifError(err);
 
-        function _assumeBooted(zonename) {
-            self.addDebug(zonename, 'last_zone_found_running');
-            self.handleZoneBoot(zonename);
+        function _assumeCreated(zonename) {
+            self.addDebug(zonename, 'last_zone_found_existing');
+            self.handleZoneCreated(zonename);
         }
 
         self.log.debug({
@@ -657,34 +537,9 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
                 // socket for it.
                 self.log.warn({zonename: zonename}, 'zone is missing '
                     + 'zoneConnections entry, (re)trying socket creation');
-                _assumeBooted(zonename);
+                _assumeCreated(zonename);
                 return;
             }
-
-            checkStaleSocket(zoneConn, {log: self.log}, function (e, isStale) {
-                if (e) {
-                    // This currently can only happen when fs.stat fails. We'll
-                    // just have to assume the socket is not stale if we can't
-                    // prove it is. We'll try again next interval.
-                    self.log.error({err: e, zonename: zonename},
-                        'unable to check for existence of socket');
-                } else if (isStale)  {
-                    self.log.debug({zonename: zonename}, 'stale socket detected'
-                        + ' cleaning up');
-
-                    if (self.zoneConnections[zonename]) {
-                        // not undefined so attempt to close
-                        closeZoneConnection(self.zoneConnections[zonename]);
-                    }
-                    delete self.zoneConnections[zonename];
-                    _assumeBooted(zonename);
-                } else if (!self.zones[zonename]) {
-                    self.log.warn({zonename: zonename},
-                        'zone is running, but we had no record. Probably lost '
-                        + 'or delayed sysevent.');
-                    _assumeBooted(zonename);
-                }
-            });
         });
     });
 };
@@ -766,7 +621,8 @@ MetadataAgent.prototype.startPeriodicChecks = function startPeriodicChecks() {
         MISSED_SYSEVENT_CHECK_FREQUENCY);
 };
 
-MetadataAgent.prototype.handleZoneBoot = function handleZoneBoot(zonename) {
+MetadataAgent.prototype.handleZoneCreated =
+function handleZoneCreated(zonename) {
     assert.string(zonename, 'zonename');
     var self = this;
 
@@ -805,61 +661,54 @@ MetadataAgent.prototype.handleZoneBoot = function handleZoneBoot(zonename) {
     });
 };
 
-MetadataAgent.prototype.start = function () {
+MetadataAgent.prototype.start = function start() {
     var self = this;
     var zwatch = this.zwatch = new ZWatch(self.log);
     self.createServersOnExistingZones();
     self.startPeriodicChecks();
 
     zwatch.on('zone_transition', function (msg) {
-        var zoneConn = self.zoneConnections[msg.zonename];
         var when = new Date(msg.when / 1000000);
 
-        // ignore everything except start
-        if (msg.cmd !== 'start') {
-            return;
-        }
-
-        checkStaleSocket(zoneConn, {log: self.log}, function (e, isStale) {
-            if (e) {
-                // This currently can only happen when fs.stat fails. We'll
-                // just have to assume the socket is not stale if we can't
-                // prove it is. We'll try again next interval.
-                self.log.error({err: e, zonename: msg.zonename},
-                    'unable to check for existence of socket');
-            } else if (isStale)  {
-                self.log.debug({zonename: msg.zonename},
-                    'stale socket detected cleaning up');
-                if (self.zoneConnections[msg.zonename]) {
-                    // not undefined so attempt to close
-                    closeZoneConnection(self.zoneConnections[msg.zonename]);
-                }
-                delete self.zoneConnections[msg.zonename];
-            }
-
-            // ignore zones we've already (still) got a connection for
-            if (self.zoneConnections[msg.zonename]) {
-                return;
-            }
-
+        // when a zone was deleted, cleanup any cached stuff for it
+        if (msg.cmd === 'delete') {
             self.log.debug({
                 delay: (new Date()).getTime() - when.getTime(), // in ms
                 when: when,
                 zonename: msg.zonename
-            }, 'ZWatch watcher saw zone start');
+            }, 'ZWatch watcher saw zone deletion');
 
-            zoneExists(msg.zonename, function _zoneExists(_, exists) {
+            self.purgeZoneCache(msg.zonename);
+            return;
+        }
 
-                if (!exists) {
-                    self.log.warn({transition: msg},
-                        'ignoring transition for zone that no longer exists');
-                    return;
-                }
+        // ignore everything else except create
+        if (msg.cmd !== 'create') {
+            return;
+        }
 
-                // we only handle start, so that's what this was
-                self.addDebug(msg.zonename, 'last_zone_start');
-                self.handleZoneBoot(msg.zonename);
-            });
+        // ignore zones we've already (still) got a connection for
+        if (self.zoneConnections[msg.zonename]) {
+            return;
+        }
+
+        self.log.debug({
+            delay: (new Date()).getTime() - when.getTime(), // in ms
+            when: when,
+            zonename: msg.zonename
+        }, 'ZWatch watcher saw new zone');
+
+        zoneExists(msg.zonename, function _zoneExists(_, exists) {
+
+            if (!exists) {
+                self.log.warn({transition: msg},
+                    'ignoring transition for zone that no longer exists');
+                return;
+            }
+
+            // we only handle create, so that's what this was
+            self.addDebug(msg.zonename, 'last_zone_create');
+            self.handleZoneCreated(msg.zonename);
         });
     });
 };
@@ -877,27 +726,36 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
     assert.object(self.zlog[zonename], 'self.zlog[' + zonename + ']');
 
     var vmobj = self.zones[zonename];
-    var zlog = self.zlog[zonename];
+    var zlog = self.zlog[zonename] || self.log;
     var sockpath = path.join(vmobj.zonepath, '/root/tmp/vm.ttyb');
 
     zlog.trace('starting socket server');
 
     async.waterfall([
         function (cb) {
+
             common.retryUntil(2000, 120000,
                 function (c) {
+                    var err;
+
+                    if (!self.zones[zonename]) {
+                        // zone was removed, no need to retry any further
+                        err = new Error('zone no longer exists');
+                        err.code = 'ENOENT';
+                        c(err, true /* abort the retryUntil */);
+                        return;
+                    }
                     fs.exists(sockpath, function (exists) {
                         if (!exists) {
+                            // in this case we'll try again
                             zlog.warn(sockpath + ' does not exist');
                         }
-                        setTimeout(function () {
-                            c(null, exists);
-                        }, 1000);
+                        c(null, exists);
                     });
                 }, function (error) {
                     if (error) {
-                        zlog.error({err: error}, 'Timed out waiting for '
-                            + 'metadata socket');
+                        zlog.error({err: error, code: error.code},
+                            'Error waiting for metadata socket');
                     }
                     cb(error);
                 }
@@ -905,6 +763,12 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
         }
     ], function (error) {
         var zopts = { zone: zonename, sockpath: sockpath };
+
+        if (error) {
+            callback(error);
+            return;
+        }
+
         self.createKVMServer(zopts, function () {
             if (callback) {
                 callback();
@@ -926,7 +790,15 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     assert.string(zopts.zone, 'zopts.zone');
     assert.func(callback, 'callback');
 
-    zlog = self.zlog[zopts.zone];
+    zlog = self.zlog[zopts.zone] || self.log;
+
+    // Ignore zones that have been removed
+    if (!self.zones[zopts.zone]) {
+        zlog.trace({zonename: zopts.zone},
+            'not creating kvm socket for zone that does not exist');
+        callback();
+        return;
+    }
 
     // Ignore zones we've already got a connection for and then immediately
     // create an entry if we don't. To act as a mutex.
@@ -949,8 +821,7 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     // replace the placeholder entry with a real one.
     self.zoneConnections[zopts.zone] = {
         conn: kvmstream,
-        sockpath: zopts.sockpath,
-        sockstat: {}
+        sockpath: zopts.sockpath
     };
 
     buffer = '';
@@ -982,10 +853,10 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     kvmstream.connect(zopts.sockpath);
 
     fd = kvmstream._handle.fd;
-    zlog.info('listening on fd %d', fd);
+    zlog.info({zonename: zopts.zone}, 'listening on fd %d', fd);
     self.zoneConnections[zopts.zone].fd = fd;
 
-    addConnSockStat(self.zoneConnections[zopts.zone], callback);
+    callback();
 };
 
 MetadataAgent.prototype.startZoneSocketServer =
@@ -999,108 +870,18 @@ function startZoneSocketServer(zonename, callback) {
         'self.zones[' + zonename + '].zonepath');
     assert.func(callback, 'callback');
 
-    var zlog = self.zlog[zonename];
-    var zonePath = self.zones[zonename].zonepath;
-    var localpath = '/.zonecontrol';
+    var zlog = self.zlog[zonename] || self.log;
     var zopts;
 
-    if (self.zones[zonename].brand === 'lx') {
-        localpath = '/native' + localpath;
-    }
-
     zopts = {
-        path: path.join(localpath, 'metadata.sock'),
-        zone: zonename,
-        zoneroot: path.join(zonePath, 'root')
+        path: path.join('/var/zonecontrol', zonename, 'metadata.sock'),
+        zone: zonename
     };
 
     zlog.trace('starting socket server');
 
     self.createZoneSocket(zopts, callback);
 };
-
-/*
- * This tries to make sure that the directories in:
- *
- *  path.dirname(path.join(zopts.zoneroot, zopts.path))
- *
- * exist or are created. It then calls callback().
- *
- * If the directories all exist or were created, the callback is called with
- * no arguments.
- *
- * If we were unable to create or check the directory, callback() will be
- * called with an error object indicating what the problem was.
- *
- */
-function _ensureSockpathDirsExist(zopts, log, callback) {
-    assert.object(zopts, 'zopts');
-    assert.string(zopts.path, 'zopts.path');
-    assert.string(zopts.zoneroot, 'zopts.zoneroot');
-    assert.object(log, 'log');
-    assert.func(callback, 'callback');
-
-    var d;
-    var dirs = [];
-    var sockdir = path.dirname(path.join(zopts.zoneroot, zopts.path));
-    var zoneroot = zopts.zoneroot;
-
-    function _ensureDir(dir, cb) {
-        fs.stat(dir, function _statDirCb(err, stats) {
-            var newErr;
-
-            if (err) {
-                if (err.code === 'ENOENT') {
-                    // does not exist, so create it.
-                    fs.mkdir(dir, parseInt('700', 8), function _mkdirCb(e) {
-                        log.debug({dir: dir, zone: zopts.zone, err: e},
-                            'attempted fs.mkdir()');
-                        cb(e);
-                    });
-                } else {
-                    cb(err);
-                }
-                return;
-            }
-
-            if (!stats.isDirectory()) {
-                newErr = new Error(dir + ' is not a directory');
-                newErr.code = 'ENOTDIR';
-                cb(newErr);
-                return;
-            }
-
-            cb(); // exists and is a directory
-        });
-    }
-
-    /*
-     * We need to check all the directories below zoneroot to ensure there
-     * are no symlinks or other shenanigans going on since we're running in
-     * the GZ and they'd be evaluated there.
-     *
-     * So we build an array that looks like:
-     *
-     *  [
-     *     '<zoneroot>/foo/bar',
-     *     '<zoneroot>/foo'
-     *  ]
-     *
-     * and then attempt to ensure each component exists.
-     */
-    d = sockdir;
-    while (d.length > zoneroot.length) {
-        dirs.push(d);
-        d = path.dirname(d);
-    }
-
-    assert.ok(dirs.length > 0, 'should have at least one dir');
-
-    vasync.forEachPipeline({
-        inputs: dirs,
-        func: _ensureDir
-    }, callback);
-}
 
 MetadataAgent.prototype.createZoneSocket =
 function createZoneSocket(zopts, callback) {
@@ -1110,19 +891,14 @@ function createZoneSocket(zopts, callback) {
     assert.object(zopts, 'zopts');
     assert.string(zopts.path, 'zopts.path');
     assert.string(zopts.zone, 'zopts.zone');
-    assert.string(zopts.zoneroot, 'zopts.zoneroot');
     assert.func(callback, 'callback');
 
-    var zlog = self.zlog[zopts.zone];
-
-    if (!zlog) {
-        // if there's no zone-specific logger, use the global one
-        zlog = self.log;
-    }
+    var zlog = self.zlog[zopts.zone] || self.log;
+    var zonecontrol = path.dirname(zopts.path);
 
     if (!self.zones[zopts.zone]) {
         zlog.info({zonename: zopts.zone},
-            'zone no longer exists, not creating zsock');
+            'zone no longer exists, not creating socket');
         callback();
         return;
     }
@@ -1137,143 +913,105 @@ function createZoneSocket(zopts, callback) {
     }
     self.zoneConnections[zopts.zone] = {};
 
-    self.addDebug(zopts.zone, 'last_zsock_create_attempt');
-    _ensureSockpathDirsExist(zopts, zlog, function _ensureDirsExistCb(error) {
-        if (error) {
-            self.addDebug(zopts.zone, 'last_zsock_create_failure', error);
+    self.addDebug(zopts.zone, 'last_sock_create_attempt');
 
-            zlog.warn({zonename: zopts.zone, err: error},
+    fs.mkdir(zonecontrol, parseInt('700', 8), function _mkdirCb(e) {
+        if (e && e.code !== 'EEXIST') {
+            self.addDebug(zopts.zone, 'last_sock_create_failure', e);
+            zlog.warn({zonename: zopts.zone, err: e},
                 'failed to create sockpath directory');
-
             // We were unable to create the directory but we have not yet
             // created a real self.zoneConnections entry so we can just delete
             // the placeholder and call callback. If the VM still exists and
             // is running, we'll try again when we next poll w/
             // _checkNewZones().
             delete self.zoneConnections[zopts.zone];
-            callback(error);
+            callback(e);
             return;
         }
 
-        zsock.createZoneSocket(zopts, function _onCreateZsock(sockErr, fd) {
-            var zsockErr = sockErr;
-            var handleType;
-            var handleFd;
+        server = net.createServer(function (socket) {
+            var buffer = '';
+            var handler = self.makeMetadataHandler(zopts.zone, socket);
 
-            // If zsock gave us a bogus handle, we don't know what to do with
-            // that so we'll consider it an error. This is usually a bug in
-            // zsock so the warn message we output here will help us determine
-            // when these have been fixed. Since we do this only when
-            // zsock.createZoneSocket claims success, we also keep the fd for
-            // logging if it's bogus.
-            if (!zsockErr) {
-                handleFd = fd;
-                handleType = guessHandleType(fd);
-                if (handleType !== 'PIPE') {
-                    zsockErr = new Error('zsock FD must be a pipe (got '
-                        + handleType + ')');
+            socket.on('data', function (data) {
+                var chunk;
+                var chunks;
+
+                buffer += data.toString();
+                chunks = buffer.split('\n');
+                while (chunks.length > 1) {
+                    chunk = chunks.shift();
+                    handler(chunk);
                 }
-            }
+                buffer = chunks.pop();
+            });
 
-            if (zsockErr) {
-                self.addDebug(zopts.zone, 'last_zsock_create_failure',
-                    zsockErr);
+            socket.on('error', function (err) {
+                /*
+                 * This is an error on the individual mdata-{get,put,delete}
+                 * session. There's not really much of anything we can do
+                 * about this other than log it. The server will still be
+                 * running and should still accept new sessions.
+                 */
+                zlog.error({err: err}, 'Socket error');
+            });
+        });
+
+        // refuse to overwrite an existing connection
+        assert.ok(!self.zoneConnections[zopts.zone].hasOwnProperty('conn'),
+            'should not have existing conn when creating new');
+        assert.ok(!self.zoneConnections[zopts.zone]
+            .hasOwnProperty('serverSocket'),
+            'should not have existing serverSocket when creating new');
+
+        self.zoneConnections[zopts.zone] = {
+            serverSocket: server,
+            sockpath: zopts.path
+        };
+
+        server.on('error', function (err) {
+            zlog.error({err: err}, 'Zone socket error: %s', err.message);
+            // We really don't know what this is, so dump a core so we can
+            // investigate.
+            throw err;
+        });
+
+        server.on('close', function () {
+            // If the stream closes, we'll delete from zoneConnections so
+            // that on next boot (or periodic scan if for some reason we got
+            // closed while the zone was actually running) we re-create.
+            zlog.info('stream closed for %s', zopts.zone);
+            delete self.zoneConnections[zopts.zone];
+        });
+
+        fs.unlink(zopts.path, function _fsUnlinkCb(unlinkErr) {
+            if (unlinkErr && unlinkErr.code !== 'ENOENT') {
+                self.addDebug(zopts.zone, 'last_sock_create_failure',
+                    unlinkErr);
 
                 zlog.warn({
                     zonename: zopts.zone,
-                    err: zsockErr,
-                    fd: handleFd,
-                    handleType: handleType
-                }, 'failed to create zsock');
+                    err: unlinkErr
+                }, 'failed to unlink old socket');
 
-                // We were unable to create a zsock, but as with a directory
+                // We were unable to create a socket, but as with a directory
                 // creation error we've not created a real self.zoneConnections
                 // entry yet so we'll delete the placeholder and let the
                 // _checkNewZones() catch it on the next go-round.
                 delete self.zoneConnections[zopts.zone];
-                callback(zsockErr);
+                callback(unlinkErr);
                 return;
             }
 
-            self.addDebug(zopts.zone, 'last_zsock_create_success');
+            server.listen(zopts.path, function _serverListenCb() {
+                var fd = server._handle.fd;
+                zlog.info('listening on %d', fd);
+                self.zoneConnections[zopts.zone].fd = fd;
+                self.addDebug(zopts.zone, 'last_sock_listen_success');
 
-            server = net.createServer(function (socket) {
-                var buffer = '';
-                var handler = self.makeMetadataHandler(zopts.zone, socket);
-
-                zlog.trace('new connection on fd ' + fd);
-
-                socket.on('data', function (data) {
-                    var chunk;
-                    var chunks;
-
-                    buffer += data.toString();
-                    chunks = buffer.split('\n');
-                    while (chunks.length > 1) {
-                        chunk = chunks.shift();
-                        handler(chunk);
-                    }
-                    buffer = chunks.pop();
-                });
-
-                socket.on('error', function (err) {
-                    /*
-                     * This is an error on the individual mdata-{get,put,delete}
-                     * session. There's not really much of anything we can do
-                     * about this other than log it. The server will still be
-                     * running and should still accept new sessions.
-                     */
-                    zlog.error({err: err}, 'ZSocket error');
-                });
+                callback();
             });
-
-            // refuse to overwrite an existing connection
-            assert.ok(!self.zoneConnections[zopts.zone].hasOwnProperty('conn'),
-                'should not have existing conn when creating new');
-            assert.ok(!self.zoneConnections[zopts.zone]
-                .hasOwnProperty('serverSocket'),
-                'should not have existing serverSocket when creating new');
-
-            self.zoneConnections[zopts.zone] = {
-                serverSocket: server,
-                fd: fd, // so it's in the core for debugging
-                sockpath: path.join(zopts.zoneroot, zopts.path),
-                sockstat: {}
-            };
-
-            server.on('error', function (err) {
-                zlog.error({err: err}, 'Zone socket error: %s', err.message);
-                if (err.code === 'ENOTSOCK' || err.code === 'EBADF') {
-                    // The socket inside the zone went away, likely due to
-                    // resource constraints (ie: disk full)
-                    try {
-                        server.close();
-                    } catch (e) {
-                        zlog.error({err: e}, 'Caught exception closing server: '
-                            + e.message);
-                    }
-                    // remove the connection so we'll create a new one
-                    delete self.zoneConnections[zopts.zone];
-                } else if (err.code !== 'EINTR') {
-                    // We really don't know what this is, so dump a core so we
-                    // can investigate.
-                    throw err;
-                }
-            });
-
-            server.on('close', function () {
-                // If the stream closes, we'll delete from zoneConnections so
-                // that on next boot (or periodic scan if for some reason we got
-                // closed while the zone was actually running) we re-create.
-                zlog.info('stream closed on fd %d', fd);
-                delete self.zoneConnections[zopts.zone];
-            });
-
-            server.listen({fd: fd});
-            zlog.info('listening on fd %d', fd);
-            self.addDebug(zopts.zone, 'last_zsock_listen_success');
-
-            addConnSockStat(self.zoneConnections[zopts.zone], callback);
         });
     });
 };
@@ -1315,7 +1053,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
     assert.object(socket, 'socket');
 
     var self = this;
-    var zlog = self.zlog[zone];
+    var zlog = self.zlog[zone] || self.log;
     var write = function (str) {
         if (socket.writable) {
             socket.write(str);

@@ -41,10 +41,14 @@ exports.retryUntil = function (step, max, check, callback) {
 
     function start() {
         interval = setInterval(function () {
+            var err;
+
             waited += step;
             if (waited >= max) {
                 stop();
-                callback(new Error('Timeout'));
+                err = new Error('Timeout');
+                err.code = 'ETIMEOUT';
+                callback(err);
                 return;
             }
 

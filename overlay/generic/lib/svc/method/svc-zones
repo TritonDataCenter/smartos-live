@@ -176,6 +176,9 @@ case "$1" in
 	zfs list -H -o name $ZPOOL >/dev/null 2>&1 
 	[ $? -eq 0 ] && setup_manifests
 
+	# Create directory for zone sockets
+	mkdir -m755 -p /var/zonecontrol
+
 	egrep -vs '^#|^global:' /etc/zones/index || exit 0  # no local zones
 
 	#

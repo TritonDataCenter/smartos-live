@@ -622,6 +622,9 @@ setup_fw()
 #
 setup_fs()
 {
+	# create directory for metadata socket
+	mkdir -m755 -p /var/zonecontrol/${ZONENAME}
+
 	uname -v > $ZONEPATH/lastbooted
 	[[ -n "$jst_simplefs" ]] && return
 

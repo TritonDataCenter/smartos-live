@@ -54,7 +54,6 @@ state=$4
 cmd=$5
 
 VNDADM=/usr/sbin/vndadm
-LOCKFILE=/etc/dladm/zone.lck
 SNAPSHOT_DIR=root/checkpoints
 OVERLAY_RULES=/var/run/smartdc/networking/overlay_rules.json
 DEFAULT_MTU=1500
@@ -75,56 +74,6 @@ DEFAULT_MTU=1500
 #
 # o jst_mdatapath - The path the metadata socket is expected in the zone
 #
-
-#
-# Create a lock file which we use to serialize datalink operations across zones.
-#
-lock_file()
-{
-	typeset cnt=0
-	typeset prev_pid=0
-	while true; do
-		if (set -o noclobber; echo "$$" >$LOCKFILE) 2>/dev/null; then
-			trap 'rm -f $LOCKFILE' EXIT
-			break;
-		fi
-
-		typeset hold_pid=`cat $LOCKFILE 2>/dev/null`
-
-		# the file might be gone or empty when we run the cat cmd
-		if [[ -z "$hold_pid" ]]; then
-			sleep 1
-			cnt=0
-			continue
-		fi
-
-		# if held by a different process, restart counter
-		if [[ $prev_pid != $hold_pid ]]; then
-			prev_pid=$hold_pid
-			cnt=0
-		fi
-
-		[[ $cnt == 20 || $cnt == 40 ]] && \
-		    logger -p daemon.err "dlmgmtd lock file $LOCKFILE" \
-		    "held by pid $hold_pid for $cnt seconds"
-
-		if [[ $cnt == 60 ]]; then
-			logger -p daemon.err "breaking dlmgmtd lock" \
-			    "held by pid $hold_pid after $cnt seconds"
-			unlock_file
-			continue
-		fi
-
-		sleep 1
-		let cnt=$cnt+1
-	done
-}
-
-unlock_file()
-{
-	rm -f $LOCKFILE
-	trap - INT TERM EXIT
-}
 
 get_boolean_nic_property()
 {
@@ -298,8 +247,6 @@ setup_net()
 			    "undefined VNIC $nic (global NIC $orig_global)"
 			exit 1
 		fi
-
-		lock_file
 
 		#
 		# If we have an overlay device, do we need to create it, or does
@@ -558,8 +505,6 @@ setup_net()
 				exit 1
 			fi
 		fi
-
-		unlock_file
 	done
 }
 
@@ -740,16 +685,12 @@ cleanup_net()
 	# Cleanup any flows that were setup.
 	for nic in $_ZONECFG_net_resources
 	do
-		lock_file
-
 		flowadm remove-flow -t -z $ZONENAME -l $nic
 		if (( $? != 0 )); then
 			echo "error removing flows for $nic"
 			logger -p daemon.err "zone $ZONENAME " \
 			    "error removing flows for $nic"
 		fi
-
-		unlock_file
 	done
 }
 

@@ -112,7 +112,9 @@ test('test exercising internal_metadata_namespaces', function (t) {
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function (cb) {
-            var vs = new vminfod.VminfodEventStream();
+            var vs = new vminfod.VminfodEventStream({
+                name: 'test-internal_metadata_namespaces.js'
+            });
             vs.on('ready', function () {
                 vasync.parallel({funcs: [
                     function (cb2) {

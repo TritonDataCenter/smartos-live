@@ -1,9 +1,12 @@
 #!/usr/node/bin/node
+/**
+ * command to interface with vminfod daemon
+ */
 
 var f = require('util').format;
 
 var vminfod = require('/usr/vm/node_modules/vminfod/client');
-var client = new vminfod.VminfodClient();
+var client = new vminfod.VminfodClient('vminfod CLI');
 
 function usage() {
     var _args = Array.prototype.slice.call(arguments);
@@ -54,8 +57,6 @@ switch (cmd) {
         vs.on('readable', function () {
             var ev;
             while ((ev = vs.read()) !== null) {
-                delete ev.vm;
-
                 if (args[0] === '-j' || args[0] === '--json') {
                     console.log(JSON.stringify(ev));
                     return;
@@ -66,10 +67,13 @@ switch (cmd) {
                     zn = ev.zonename;
                 }
 
-                // format the output nicely
-                var base = f('[%s] %s %s',
-                    ev.ts.toISOString(), zn, ev.type);
+                var alias = (ev.vm || {}).alias || '-';
 
+                // format the output nicely
+                var base = f('[%s] %s %s %s',
+                    ev.ts.toISOString(), zn, alias, ev.type);
+
+                delete ev.vm;
                 if (ev.changes) {
                     ev.changes.forEach(function (change) {
                         var s = f('%s %s :: %j -> %j',

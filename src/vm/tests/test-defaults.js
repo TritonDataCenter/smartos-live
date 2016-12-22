@@ -283,7 +283,7 @@ test('check default create_timestamp', function (t) {
         do_not_inventory: true
     }, state, [
         function (cb) {
-            var vs = new vminfod.VminfodEventStream();
+            var vs = new vminfod.VminfodEventStream('test-defaults.js');
             vs.on('ready', function () {
                 vasync.parallel({
                     funcs: [

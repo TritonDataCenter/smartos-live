@@ -5,14 +5,23 @@ var vminfod = require('/usr/vm/node_modules/vminfod/client');
 
 module.exports = ZWatch;
 
-function ZWatch(logger) {
+function ZWatch(opts) {
     var self = this;
+
+    var name = [];
+    if (opts.name)
+        name.push(opts.name);
+    name.push('ZWatch');
 
     // become an event emitter
     EventEmitter.call(self);
 
     // create a vminfod event stream
-    self.vs = new vminfod.VminfodEventStream();
+    var vs_opts = {
+        log: opts.log,
+        name: name.join(' - ')
+    };
+    self.vs = new vminfod.VminfodEventStream(vs_opts);
     self.vs.on('readable', function () {
         var ev;
         while ((ev = self.vs.read()) !== null) {

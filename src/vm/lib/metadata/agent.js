@@ -807,7 +807,10 @@ MetadataAgent.prototype.handleZoneBoot = function handleZoneBoot(zonename) {
 
 MetadataAgent.prototype.start = function () {
     var self = this;
-    var zwatch = this.zwatch = new ZWatch(self.log);
+    var zwatch = this.zwatch = new ZWatch({
+        log: self.log,
+        name: 'Metadata Agent'
+    });
     self.createServersOnExistingZones();
     self.startPeriodicChecks();
 

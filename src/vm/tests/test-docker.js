@@ -1279,7 +1279,6 @@ test('test restart delay reset', function (t) {
                     if (ev.zonename !== state.uuid)
                         return;
 
-                    console.error('evt: %s', JSON.stringify(ev));
                     if (ev.vm.zone_state === 'uninitialized') {
                         // VM went to state === 'stopped'
                         im = JSON.parse(fs.readFileSync('/zones/'
@@ -1292,7 +1291,6 @@ test('test restart delay reset', function (t) {
                             restartcount: im['docker:restartcount'],
                             restartdelay: im['docker:restartdelay']
                         });
-                        console.error('zone stopped: stops = %d', stops);
                     } else if (ev.vm.zone_state === 'running') {
                         // VM went to state === 'running'
                         starts++;
@@ -1300,7 +1298,6 @@ test('test restart delay reset', function (t) {
                             action: 'start',
                             time: ev.ts
                         });
-                        console.error('zone start: starts = %d', stops);
                     }
                 }
 
@@ -1308,7 +1305,6 @@ test('test restart delay reset', function (t) {
                     // stop the zoneevent watcher
                     vs.stop();
                     vs = null;
-                    console.error('done');
                     emitter.emit('done');
                 }
                 cb();

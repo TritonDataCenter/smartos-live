@@ -42,7 +42,6 @@ var path = require('path');
 var http = require('http');
 var Qmp = require('/usr/vm/node_modules/qmp').Qmp;
 var qs = require('querystring');
-var SyseventStream = require('/usr/vm/node_modules/sysevent-stream');
 var url = require('url');
 var util = require('util');
 var vasync = require('vasync');

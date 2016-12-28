@@ -11,9 +11,9 @@ var exec = require('child_process').exec;
 var fs = require('fs');
 var libuuid = require('/usr/node/node_modules/uuid');
 var path = require('path');
-var SyseventStream = require('/usr/vm/node_modules/sysevent-stream');
 var util = require('util');
 var VM = require('/usr/vm/node_modules/VM');
+var vminfod = require('/usr/vm/node_modules/vminfod/client');
 var vmtest = require('../common/vmtest.js');
 
 // this puts test stuff in global, so we need to tell jsl about that:
@@ -1240,9 +1240,9 @@ test('test restart delay reset', function (t) {
     var emitter = new EventEmitter();
     var events = [];
     var payload = JSON.parse(JSON.stringify(common_payload));
-    var se;
     var state = {brand: payload.brand};
     var num_cycles = (cycles_fail * 2) + 1;
+    var vs;
 
     payload.autoboot = false;
     payload.brand = 'lx';
@@ -1268,49 +1268,51 @@ test('test restart delay reset', function (t) {
             var starts = 0;
             var stops = 0;
 
-            se = new SyseventStream({
-                class: 'status',
-                channel: 'com.sun:zones:status'
-            });
-            se.on('readable', function () {
+            vs = new vminfod.VminfodEventStream('test-docker.js');
+            vs.on('readable', function () {
                 var ev;
                 var im;
 
                 // for each start/stop, if it's for the VM we just created we'll
                 // push an event on the events array.
-                while ((ev = se.read()) !== null) {
-                    if (ev.data.zonename === state.uuid) {
-                        if (ev.data.newstate === 'uninitialized') {
-                            // VM went to state === 'stopped'
-                            im = JSON.parse(fs.readFileSync('/zones/'
-                                + ev.data.zonename + '/config/metadata.json'))
-                                .internal_metadata;
-                            stops++;
-                            events.push({
-                                action: 'stop',
-                                time: ev.data.when,
-                                restartcount: im['docker:restartcount'],
-                                restartdelay: im['docker:restartdelay']
-                            });
-                        } else if (ev.data.newstate === 'running') {
-                            // VM went to state === 'running'
-                            starts++;
-                            events.push({
-                                action: 'start',
-                                time: ev.data.when
-                            });
-                        }
+                while ((ev = vs.read()) !== null) {
+                    if (ev.zonename !== state.uuid)
+                        return;
+
+                    console.error('evt: %s', JSON.stringify(ev));
+                    if (ev.vm.zone_state === 'uninitialized') {
+                        // VM went to state === 'stopped'
+                        im = JSON.parse(fs.readFileSync('/zones/'
+                            + ev.zonename + '/config/metadata.json'))
+                            .internal_metadata;
+                        stops++;
+                        events.push({
+                            action: 'stop',
+                            time: ev.ts,
+                            restartcount: im['docker:restartcount'],
+                            restartdelay: im['docker:restartdelay']
+                        });
+                        console.error('zone stopped: stops = %d', stops);
+                    } else if (ev.vm.zone_state === 'running') {
+                        // VM went to state === 'running'
+                        starts++;
+                        events.push({
+                            action: 'start',
+                            time: ev.ts
+                        });
+                        console.error('zone start: starts = %d', stops);
                     }
                 }
 
                 if (starts >= num_cycles && stops >= num_cycles) {
                     // stop the zoneevent watcher
-                    se.stop();
-                    se = null;
+                    vs.stop();
+                    vs = null;
+                    console.error('done');
                     emitter.emit('done');
                 }
+                cb();
             });
-            cb();
         }, function (cb) {
             // start the VM
             VM.start(state.uuid, {}, function (err) {
@@ -1334,7 +1336,7 @@ test('test restart delay reset', function (t) {
                 events.forEach(function (evt) {
                     if (evt.action === 'start') {
                         if (last_stop > 0) {
-                            deltas.push((evt.time - last_stop) / 1000000);
+                            deltas.push(evt.time - last_stop);
                         }
                     } else if (evt.action === 'stop') {
                         last_stop = evt.time;
@@ -1430,10 +1432,10 @@ test('test restart delay reset', function (t) {
                 cb();
             });
         }, function (cb) {
-            // stop the zoneevent watcher
-            if (se != null) {
-                se.stop();
-                se = null;
+            // stop the vminfod watcher
+            if (vs !== null) {
+                vs.stop();
+                vs = null;
             }
             cb();
         }

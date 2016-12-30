@@ -63,15 +63,19 @@ switch (cmd) {
                 }
 
                 var zn = ev.zonename.split('-')[0];
+                var date = ev.ts.toISOString();
                 if (args[0] === '-f' || args[0] === '--full') {
                     zn = ev.zonename;
+                } else {
+                    date = date.split('T')[1];
                 }
+
 
                 var alias = (ev.vm || {}).alias || '-';
 
                 // format the output nicely
                 var base = f('[%s] %s %s %s',
-                    ev.ts.toISOString(), zn, alias, ev.type);
+                    date, zn, alias, ev.type);
 
                 delete ev.vm;
                 if (ev.changes) {

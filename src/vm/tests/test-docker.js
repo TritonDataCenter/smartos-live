@@ -1281,9 +1281,7 @@ test('test restart delay reset', function (t) {
 
                     if (ev.vm.zone_state === 'uninitialized') {
                         // VM went to state === 'stopped'
-                        im = JSON.parse(fs.readFileSync('/zones/'
-                            + ev.zonename + '/config/metadata.json'))
-                            .internal_metadata;
+                        im = ev.vm.internal_metadata;
                         stops++;
                         events.push({
                             action: 'stop',

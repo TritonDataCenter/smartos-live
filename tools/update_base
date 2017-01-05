@@ -54,7 +54,7 @@ function git_update
 	local sha newsha
 	sha=$(git show HEAD | head -n1 | awk '{print $2 }')
 	[[ $? -eq 0 ]] || fail 'failed to get current git sha'
-	git pull --rebase > /dev/null
+	git pull --rebase origin master > /dev/null
 	[[ $? -eq 0 ]] || fail 'failed to update git'
 	newsha=$(git show HEAD | head -n1 | awk '{print $2 }')
 	[[ "$sha" == "$newsha" ]]

@@ -1190,10 +1190,12 @@ function startZoneWatcher(callback)
             case 'create':
                 sysev.data.oldstate = '';
                 sysev.data.newstate = ev.vm.zone_state;
+                log.debug({ev: sysev}, 'zone watcher create event');
                 callback(sysev);
                 break;
             case 'delete':
                 sysev.data.newstate = '';
+                log.debug({ev: sysev}, 'zone watcher delete event');
                 callback(sysev);
                 break;
             default:
@@ -1203,6 +1205,7 @@ function startZoneWatcher(callback)
                     if (change.path === 'zone_state') {
                         sysev.data.oldstate = change.from;
                         sysev.data.newstate = change.to;
+                        log.debug({ev: sysev}, 'zone watcher modify event');
                         callback(sysev);
                         break;
                     }

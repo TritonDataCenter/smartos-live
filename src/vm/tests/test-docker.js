@@ -1267,6 +1267,7 @@ test('test restart delay reset', function (t) {
         function (cb) {
             var starts = 0;
             var stops = 0;
+            var running = false;
 
             vs = new vminfod.VminfodEventStream('test-docker.js');
             vs.on('readable', function () {
@@ -1279,8 +1280,9 @@ test('test restart delay reset', function (t) {
                     if (ev.zonename !== state.uuid)
                         return;
 
-                    if (ev.vm.zone_state === 'uninitialized') {
+                    if (running && ev.vm.state === 'stopped') {
                         // VM went to state === 'stopped'
+                        running = false;
                         im = ev.vm.internal_metadata;
                         stops++;
                         events.push({
@@ -1289,8 +1291,9 @@ test('test restart delay reset', function (t) {
                             restartcount: im['docker:restartcount'],
                             restartdelay: im['docker:restartdelay']
                         });
-                    } else if (ev.vm.zone_state === 'running') {
+                    } else if (!running && ev.vm.state === 'running') {
                         // VM went to state === 'running'
+                        running = true;
                         starts++;
                         events.push({
                             action: 'start',
@@ -1305,6 +1308,8 @@ test('test restart delay reset', function (t) {
                     vs = null;
                     emitter.emit('done');
                 }
+            });
+            vs.on('ready', function () {
                 cb();
             });
         }, function (cb) {

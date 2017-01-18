@@ -33,6 +33,7 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <err.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -45,6 +46,8 @@
 #include <stdio.h>
 #include <thread.h>
 #include <time.h>
+
+#include <libnvpair.h>
 
 /*
  * On STDIN you can send:
@@ -69,12 +72,12 @@
  *  {
  *     "changes": [array],
  *     "code": <number>,
- *     "is_final": true|false,
+ *     "final": true|false,
  *     "key": <number>,
  *     "message": "human readable string",
  *     "pathname": "/path/which/had/event",
  *     "result": "SUCCESS|FAIL",
- *     "timestamp": <number>,
+ *     "date": <string>,
  *     "type": <type>
  *  }
  *
@@ -82,25 +85,25 @@
  *
  *   changes   is an array of strings indicating which changes occurred
  *   code      is a positive integer code for an error
- *   is_final  true when the event being printed is the last without re-watch
+ *   final     true when the event being printed is the last without re-watch
  *   key       is the <KEY> for which a response corresponds
  *   message   is a human-readable string describing response
  *   pathname  is the path to which an event applies
  *   result    indicates whether a command was a SUCCESS or FAILURE
- *   timestamp timestamp in ns since 1970-01-01 00:00:00 UTC
+ *   date      ISO string date with millisecond resolution
  *   type      is one of: event, response, error
  *
  * And:
  *
+ *   "date" is always included
+ *   "type" is always included
  *   "changes" is included only when (type == event)
  *   "code" is included only when (type == error)
- *   "is_final" is included when (type == event)
+ *   "final" is included when (type == event)
  *   "key" is included whenever (type == response)
  *   "message" is included whenever (type == error)
  *   "pathname" is included whenever (type == event)
  *   "result" is included when (type == response) value: "SUCCESS" or "FAILURE"
- *   "timestamp" is included when (type == event)
- *   "type" is always included
  *
  * Current values for "code" are in the ErrorCodes enum below.
  *
@@ -170,8 +173,11 @@ static mutex_t free_mutex;
 static mutex_t stdout_mutex;
 int port = -1;
 
+nvlist_t * make_nvlist(char *type);
+void print_nvlist_json(nvlist_t *nvl);
 void enqueue_free_finf(struct fileinfo *finf);
 void print_event(int event, char *pathname, int final);
+void print_ready();
 void check_and_rearm_event(uint32_t key, char *name, int revents,
     uint64_t start_timestamp);
 void * wait_for_events(void *pn);
@@ -179,65 +185,117 @@ int watch_path(char *pathname, uint32_t key, uint64_t start_timestamp);
 int unwatch_path(char *pathname, uint32_t key);
 
 /*
+ * Create an nvlist with "type" set to the type argument given,
+ * and "date" set to the current time.  Must be free()d by
+ * the caller
+ */
+nvlist_t *
+make_nvlist(char *type)
+{
+	nvlist_t *nvl = fnvlist_alloc();
+	struct timeval tv;
+	struct tm *gmt;
+	char date[128];
+	size_t i;
+
+	// get the current time
+	if (gettimeofday(&tv, NULL) != 0)
+		err(1, "gettimeofday");
+
+	if ((gmt = gmtime(&tv.tv_sec)) == NULL)
+		err(1, "gmtime");
+
+	i = strftime(date, sizeof (date), "%Y-%m-%dT%H:%M:%S", gmt);
+	if (i == 0)
+		err(1, "strftime");
+
+	// append milliseconds
+	i = snprintf(date + i, sizeof (date) - i, ".%03ldZ", tv.tv_usec / 1000);
+	if (i == 0)
+		err(1, "snprintf date");
+
+	fnvlist_add_string(nvl, "date", date);
+	fnvlist_add_string(nvl, "type", type);
+
+	return (nvl);
+}
+
+/*
+ * Print an nvlist as a single line of JSON with a trailing newline character
+ * to stdout.  This function handles acquiring the stdout_mutex as well as
+ * fflushing stdout.
+ */
+void
+print_nvlist_json(nvlist_t *nvl)
+{
+	mutex_lock(&stdout_mutex);
+	nvlist_print_json(stdout, nvl);
+	printf("\n");
+	fflush(stdout);
+	mutex_unlock(&stdout_mutex);
+}
+
+/*
  * This outputs a line to stdout indicating the type of event detected.
  */
 void
 print_event(int event, char *pathname, int final)
 {
-    int hits = 0;
-    struct timespec ts;
-    uint64_t timestamp;
+	int i = 0;
+	char *changes[16];
+	nvlist_t *nvl = make_nvlist("event");
 
-    if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
-        /* This is entirely unexpected so we abort() to ensure a core dump. */
-        perror("fswatcher: clock_gettime");
-        abort();
-    }
+	if (event & FILE_ACCESS) {
+		changes[i++] = "FILE_ACCESS";
+	}
+	if (event & FILE_ATTRIB) {
+		changes[i++] = "FILE_ATTRIB";
+	}
+	if (event & FILE_DELETE) {
+		changes[i++] = "FILE_DELETE";
+	}
+	if (event & FILE_EXCEPTION) {
+		changes[i++] = "FILE_EXCEPTION";
+	}
+	if (event & FILE_MODIFIED) {
+		changes[i++] = "FILE_MODIFIED";
+	}
+	if (event & FILE_RENAME_FROM) {
+		changes[i++] = "FILE_RENAME_FROM";
+	}
+	if (event & FILE_RENAME_TO) {
+		changes[i++] = "FILE_RENAME_TO";
+	}
+	if (event & FILE_TRUNC) {
+		changes[i++] = "FILE_TRUNC";
+	}
+	if (event & MOUNTEDOVER) {
+		changes[i++] = "MOUNTEDOVER";
+	}
+	if (event & UNMOUNTED) {
+		changes[i++] = "MOUNTED";
+	}
 
-    timestamp = ((uint64_t)ts.tv_sec * (uint64_t)1000000000) + ts.tv_nsec;
+	fnvlist_add_string_array(nvl, "changes", changes, i);
+	fnvlist_add_string(nvl, "pathname", pathname);
+	fnvlist_add_boolean_value(nvl, "final", final);
 
-    mutex_lock(&stdout_mutex);
-    printf("{\"type\": \"event\", \"timestamp\": %llu, \"pathname\": \"%s\", "
-        "\"changes\": [", timestamp, pathname);
-    if (event & FILE_ACCESS) {
-        printf("%s\"FILE_ACCESS\"", ((hits++ > 0) ? "," : ""));
-    }
-    if (event & FILE_ATTRIB) {
-        printf("%s\"FILE_ATTRIB\"", ((hits++ > 0) ? "," : ""));
-    }
-    if (event & FILE_DELETE) {
-        printf("%s\"FILE_DELETE\"", ((hits++ > 0) ? "," : ""));
-    }
-    if (event & FILE_EXCEPTION) {
-        printf("%s\"FILE_EXCEPTION\"", ((hits++ > 0) ? "," : ""));
-    }
-    if (event & FILE_MODIFIED) {
-        printf("%s\"FILE_MODIFIED\"", ((hits++ > 0) ? "," : ""));
-    }
-    if (event & FILE_RENAME_FROM) {
-        printf("%s\"FILE_RENAME_FROM\"", ((hits++ > 0) ? "," : ""));
-    }
-    if (event & FILE_RENAME_TO) {
-        printf("%s\"FILE_RENAME_TO\"", ((hits++ > 0) ? "," : ""));
-    }
-    if (event & FILE_TRUNC) {
-        printf("%s\"FILE_TRUNC\"", ((hits++ > 0) ? "," : ""));
-    }
-    if (event & MOUNTEDOVER) {
-        printf("%s\"MOUNTEDOVER\"", ((hits++ > 0) ? "," : ""));
-    }
-    if (event & UNMOUNTED) {
-        printf("%s\"UNMOUNTED\"", ((hits++ > 0) ? "," : ""));
-    }
+	print_nvlist_json(nvl);
 
-    if (final) {
-        printf("], \"is_final\": true}\n");
-    } else {
-        printf("], \"is_final\": false}\n");
-    }
-    mutex_unlock(&stdout_mutex);
+	nvlist_free(nvl);
+}
 
-    fflush(stdout);
+/*
+ * This outputs a line to stdout indicating the process is ready for input
+ */
+void
+print_ready()
+{
+	nvlist_t *nvl = make_nvlist("ready");
+
+	print_nvlist_json(nvl);
+
+	nvlist_free(nvl);
 }
 
 /*
@@ -247,26 +305,29 @@ print_event(int event, char *pathname, int final)
 void
 print_error(uint32_t key, uint32_t code, const char *message_fmt, ...)
 {
-    va_list arg_ptr;
-    char message[4096];
+	va_list arg_ptr;
+	char message[4096];
+	nvlist_t *nvl = make_nvlist("error");
 
-    va_start(arg_ptr, message_fmt);
-    if (vsnprintf(message, 4096, message_fmt, arg_ptr) < 0) {
-        /*
-         * We failed to build the error message, and there's no good way to
-         * handle this so we try to force a core dump. Most likely a bug.
-         */
-        perror("fswatcher: vsnprintf");
-        abort();
-    }
-    va_end(arg_ptr);
+	va_start(arg_ptr, message_fmt);
+	if (vsnprintf(message, 4096, message_fmt, arg_ptr) < 0) {
+		/*
+		 * We failed to build the error message, and there's no good
+		 * way to handle this so we try to force a core dump. Most
+		 * likely a bug.
+		 */
+		perror("fswatcher: vsnprintf");
+		abort();
+	}
+	va_end(arg_ptr);
 
-    mutex_lock(&stdout_mutex);
-    (void) printf("{\"type\": \"error\", \"key\": %u, \"code\": %u, "
-        "\"message\": \"%s\"}\n", key, code, message);
-    mutex_unlock(&stdout_mutex);
+	fnvlist_add_uint32(nvl, "key", key);
+	fnvlist_add_uint32(nvl, "code", code);
+	fnvlist_add_string(nvl, "message", message);
 
-    (void) fflush(stdout);
+	print_nvlist_json(nvl);
+
+	nvlist_free(nvl);
 }
 
 /*
@@ -277,45 +338,31 @@ void
 print_result(uint32_t key, uint32_t code, const char *pathname,
     const char *message_fmt, ...)
 {
-    va_list arg_ptr;
-    char message[4096];
-    char *result;
-    struct timespec ts;
-    uint64_t timestamp;
+	va_list arg_ptr;
+	char message[4096];
+	nvlist_t *nvl = make_nvlist("response");
 
-    if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
-        /* This is entirely unexpected so we abort() to ensure a core dump. */
-        perror("fswatcher: clock_gettime");
-        abort();
-    }
+	va_start(arg_ptr, message_fmt);
+	if (vsnprintf(message, 4096, message_fmt, arg_ptr) < 0) {
+		/*
+		 * We failed to build the error message, and there's no good
+		 * way to handle this so we try to force a core dump. Most
+		 * likely a bug.
+		 */
+		perror("fswatcher: vsnprintf");
+		abort();
+	}
+	va_end(arg_ptr);
 
-    timestamp = ((uint64_t)ts.tv_sec * (uint64_t)1000000000) + ts.tv_nsec;
+	fnvlist_add_uint32(nvl, "key", key);
+	fnvlist_add_uint32(nvl, "code", code);
+	fnvlist_add_string(nvl, "pathname", pathname);
+	fnvlist_add_string(nvl, "message", message);
+	fnvlist_add_string(nvl, "result", code == 0 ? "SUCCESS" : "FAIL");
 
-    va_start(arg_ptr, message_fmt);
-    if (vsnprintf(message, 4096, message_fmt, arg_ptr) < 0) {
-        /*
-         * We failed to build the error message, and there's no good way to
-         * handle this so we try to force a core dump. Most likely a bug.
-         */
-        perror("fswatcher: vsnprintf");
-        abort();
-    }
-    va_end(arg_ptr);
+	print_nvlist_json(nvl);
 
-    if (code == 0) {
-        result = "SUCCESS";
-    } else {
-        result = "FAIL";
-    }
-
-    mutex_lock(&stdout_mutex);
-    (void) printf("{\"type\": \"response\", \"key\": %u, \"code\": %u, "
-        "\"pathname\": \"%s\", \"result\": \"%s\", \"message\": \"%s\", "
-        "\"timestamp\": %llu}\n",
-        key, code, pathname, result, message, timestamp);
-    mutex_unlock(&stdout_mutex);
-
-    (void) fflush(stdout);
+	nvlist_free(nvl);
 }
 
 /*
@@ -902,6 +949,9 @@ main()
     /* Create a worker thread to process events. */
     pthread_create(&tid, NULL, wait_for_events, NULL);
 
+    /* alert that we are ready for input */
+    print_ready();
+
     while (1) {
         if (fgets(str, MAX_CMD_LEN + 1, stdin) == NULL) {
             if (!feof(stdin)) {
@@ -915,7 +965,7 @@ main()
         start_timestamp = 0;
 
         /* read one character past MAX_KEY_LEN so we know it's too long */
-        snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s %%llu",
+        snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%[^|]|%%llu",
             MAX_KEY_LEN + 1);
         res = sscanf(str, sscanf_fmt, key_str, cmd, path, &start_timestamp);
         if (res != 3 && res != 4) {
@@ -963,7 +1013,6 @@ main()
                 break;
             }
         } else {
-            /* XXX if they include crazy garbage, this may include non-JSON */
             print_error(key, ERR_UNKNOWN_COMMAND, "unknown command '%s'", cmd);
         }
     }

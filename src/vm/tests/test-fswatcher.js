@@ -30,19 +30,20 @@ var path = require('path');
 
 var async = require('/usr/node/node_modules/async');
 var bunyan = require('/usr/vm/node_modules/bunyan');
+var vasync = require('/usr/vm/node_modules/vasync');
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
-require('nodeunit-plus');
+require('/usr/vm/node_modules/nodeunit-plus');
 
-var FsWatcher = require('vminfod/fswatcher').FsWatcher;
+var FsWatcher = require('/usr/vm/node_modules/vminfod/fswatcher.js').FsWatcher;
 var log = bunyan.createLogger({
-        level: 'info',
-        name: 'fswatcher-test-dummy',
-        streams: [ { stream: process.stderr, level: 'info' } ],
-        serializers: bunyan.stdSerializers
+    level: 'info',
+    name: 'fswatcher-test-dummy',
+    streams: [ { stream: process.stderr, level: 'info' } ],
+    serializers: bunyan.stdSerializers
 });
-var testdir = '/tmp/' + process.pid;
+var testdir = path.join('/tmp', 'test-fswatcher-' + process.pid);
 
 before(function (cb) {
     execFile('/usr/bin/mkdir', ['-p', testdir], function (err, stdout, stderr) {
@@ -51,23 +52,87 @@ before(function (cb) {
     });
 });
 
+test('try starting and stopping watcher', function (t) {
+    var fsw = new FsWatcher({log: log});
+    t.ok(fsw, 'created watcher');
+    t.ok(!fsw.running(), 'watcher not running');
+
+    fsw.once('ready', function () {
+        t.ok(fsw.running(), 'watcher running');
+        fsw.stop();
+        t.end();
+    });
+
+    fsw.start();
+});
+
+test('try starting already running watcher', function (t) {
+    var fsw = new FsWatcher({log: log});
+    t.ok(fsw, 'created watcher');
+
+    fsw.once('ready', function () {
+        t.ok(fsw.running(), 'watcher running');
+        t.throws(function () {
+            fsw.start();
+        }, null, 'start twice');
+
+        fsw.stop();
+        t.end();
+    });
+
+    fsw.start();
+});
+
+test('try stopping a stopped watcher', function (t) {
+    var fsw = new FsWatcher({log: log});
+    t.ok(fsw, 'created watcher');
+    t.ok(!fsw.running(), 'watcher not running');
+
+    t.throws(function () {
+        fsw.stop();
+    }, null, 'stop stopped');
+
+    t.end();
+});
+
+test('try watching files with illegal characters', function (t) {
+    var fsw = new FsWatcher({log: log});
+
+
+    fsw.once('ready', function () {
+        vasync.forEachPipeline({
+            inputs: ['pipe|char', 'newline\nchar', 'nulbyte\0char'],
+            func: function (f, cb) {
+                fsw.watch(f, function (err) {
+                    t.ok(err, 'error is expected: '
+                        + JSON.stringify(err.message));
+                    cb();
+                });
+            }
+        }, function (err) {
+            fsw.stop();
+            t.end();
+        });
+    });
+
+    fsw.start();
+});
+
 test('try watching an existent file and catching CHANGE and DELETE',
     function (t) {
         var filename = path.join(testdir, 'hello.txt');
-        var ival;
-        var loops = 0;
         var saw_change = false;
         var saw_delete = false;
 
         var fsw = new FsWatcher({log: log, dedup_ns: 2000000000});
 
         function cleanup() {
-            fsw.unwatch(filename);
-            // XXX can unwatch call callback instead?
-            setTimeout(function () {
-                fsw.shutdown();
+            fsw.unwatch(filename, function () {
+                fsw.stop();
+                t.ok(saw_change, 'saw change event at cleanup');
+                t.ok(saw_delete, 'saw delete event at cleanup');
                 t.end();
-            }, 200);
+            });
         }
 
         fs.writeFileSync(filename, 'hello world\n');
@@ -78,6 +143,7 @@ test('try watching an existent file and catching CHANGE and DELETE',
             t.equal(evt.pathname, filename, 'delete was for correct filename');
             t.ok(saw_change, 'at delete time, already saw change');
             saw_delete = true;
+            cleanup();
         });
 
         fsw.on('change', function (evt) {
@@ -90,17 +156,7 @@ test('try watching an existent file and catching CHANGE and DELETE',
             }
         });
 
-        ival = setInterval(function () {
-            loops++;
-            if ((saw_change && saw_delete) || (loops > 100)) {
-                clearInterval(ival);
-                t.ok(saw_change, 'saw change event');
-                t.ok(saw_delete, 'saw delete event');
-                cleanup();
-            }
-        }, 100);
-
-        var watchcb = function (err) {
+        function watchcb(err) {
             t.ok(!err, (err ? err.message : 'started watching ' + filename));
             if (err) {
                 cleanup();
@@ -109,7 +165,7 @@ test('try watching an existent file and catching CHANGE and DELETE',
 
             // should trigger CHANGE
             fs.writeFileSync(filename, 'goodbye world\n');
-        };
+        }
 
         fsw.once('ready', function (evt) {
             fsw.watch(filename, watchcb);
@@ -120,13 +176,19 @@ test('try watching an existent file and catching CHANGE and DELETE',
 );
 
 test('try watching a non-existent file then create it', function (t) {
-    var dirname;
     var filename = path.join(testdir, '/file/that/shouldnt/exist.txt');
+    var dirname = path.dirname(filename);
     var saw_create = false;
 
     var fsw = new FsWatcher({log: log, dedup_ns: 2000000000});
 
-    dirname = path.dirname(filename);
+    function cleanup() {
+        fsw.unwatch(filename, function () {
+            fsw.stop();
+            t.ok(saw_create, 'saw create event at cleanup');
+            t.end();
+        });
+    }
 
     fsw.once('ready', function (evt) {
         async.waterfall([
@@ -147,38 +209,19 @@ test('try watching a non-existent file then create it', function (t) {
                     t.ok(!err, 'wrote "hello world" to ' + filename);
                     cb(err);
                 });
-            }, function (cb) {
-                var depth = 0;
-
-                // poll on saw_create being true
-                function check_whether_created() {
-                    depth++;
-                    if (depth > 50) { // 10 seconds
-                        cb(new Error('timeout waiting for "create" event'));
-                        return;
-                    }
-                    setTimeout(function () {
-                        if (saw_create) {
-                            t.ok(true, 'saw "create" event');
-                            cb();
-                        } else {
-                            check_whether_created();
-                        }
-                    }, 200);
-                }
-
-                check_whether_created();
             }
         ], function (err) {
-            fsw.shutdown();
-            t.ok(!err, (err ? err.message : 'created file successfully'));
-            t.end();
+            if (err) {
+                t.ok(!err, err.message);
+                cleanup();
+            }
         });
     });
 
     fsw.on('create', function (evt) {
-        t.ok(evt.pathname === filename, 'saw create event for ' + filename);
+        t.equal(evt.pathname, filename, 'saw create event for ' + filename);
         saw_create = true;
+        cleanup();
     });
 
     fsw.start();
@@ -186,13 +229,7 @@ test('try watching a non-existent file then create it', function (t) {
 
 test('try watching an existent file, unwatching and ensure no events',
     function (t) {
-        /*
-         * events_after_stop needs to be -1 and not 0 because every event will
-         * fire both the specific 'change' event in addition to the 'all' event.
-         * The initial write will trigger both a change and all, so we'll need
-         * to start at -1.
-         */
-        var events_after_stop = -1;
+        var events_after_stop = 0;
         var filename = path.join(testdir, 'tricky.txt');
         var saw_change = false;
         var stopped_watching = false;
@@ -202,7 +239,7 @@ test('try watching an existent file, unwatching and ensure no events',
         fs.writeFileSync(filename, 'look at me, I\'m so tricky!\n');
         t.ok(fs.existsSync(filename), 'file was created');
 
-        fsw.on('all', function (evt) {
+        fsw.on('event', function (evt) {
             if (stopped_watching) {
                 events_after_stop++;
             }
@@ -225,7 +262,7 @@ test('try watching an existent file, unwatching and ensure no events',
 
                     // leave some time for rogue events to show up
                     setTimeout(function () {
-                        fsw.shutdown();
+                        fsw.stop();
                         t.equal(events_after_stop, 0, 'should not see events '
                             + 'after stopping');
                         t.end();
@@ -268,7 +305,7 @@ test('create a file and ensure we get multiple modify events',
             changes++;
             if (changes > 0) {
                 fsw.unwatch(filename);
-                fsw.shutdown();
+                fsw.stop();
                 t.end();
             }
         });
@@ -506,145 +543,7 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
             }
         ], function (err) {
             t.ok(!err, (err ? err.message : 'no errors'));
-            fsw.shutdown();
-            t.end();
-        });
-    }
-);
-
-test('watch some files, kill the fswatcher child, then modify files',
-    function (t) {
-        var killed = false;
-        var pid;
-        var filename1 = path.join(testdir, 'killtest-1');
-        var filename2 = path.join(testdir, 'killtest-2');
-        var fsw = new FsWatcher({log: log, dedup_ns: 2000000000});
-        var scoreboard = {};
-
-        fs.writeFileSync(filename1, 'initial data 1\n');
-        fs.writeFileSync(filename2, 'initial data 2\n');
-        t.ok(fs.existsSync(filename1), 'file1 was created');
-        t.ok(fs.existsSync(filename2), 'file2 was created');
-
-        fsw.on('all', function (evt) {
-            if (!evt.changes) {
-                return;
-            }
-            t.deepEqual(evt.changes, ['FILE_MODIFIED'], 'change',
-                'type of "all" event is "change"');
-
-            if (!scoreboard[evt.pathname]) {
-                scoreboard[evt.pathname] = {};
-            }
-
-            if (evt.changes.indexOf('FILE_MODIFIED') !== -1) {
-                if (killed) {
-                    if (!scoreboard[evt.pathname].after) {
-                        scoreboard[evt.pathname].after = [];
-                    }
-                    scoreboard[evt.pathname].after.push('modified');
-                } else {
-                    if (!scoreboard[evt.pathname].before) {
-                        scoreboard[evt.pathname].before = [];
-                    }
-                    scoreboard[evt.pathname].before.push('modified');
-                }
-            }
-        });
-
-        function _waitForModification(which, cb) {
-            // wait for both modification events
-            var err;
-            var files = [filename1, filename2];
-            var ival;
-            var loops = 0;
-
-            ival = setInterval(function () {
-                var done = true;
-                files.forEach(function (file) {
-                    if (!scoreboard[file] || !scoreboard[file][which]
-                        || (scoreboard[file][which]
-                        .indexOf('modified') === -1)) {
-
-                        done = false;
-                    }
-                });
-
-                if (done) {
-                    clearInterval(ival);
-                    t.ok(true, 'saw ' + which + ' modification for '
-                        + JSON.stringify(files));
-                    cb();
-                    return;
-                }
-
-                if (loops > 100) {
-                    clearInterval(ival);
-
-                    err = new Error('timed out waiting for ' + which
-                        + ' modification. scoreboard: '
-                        + JSON.stringify(scoreboard));
-                    t.ok(false, err.message);
-                    cb(err);
-                }
-
-                loops++;
-            }, 100);
-        }
-
-        async.waterfall([
-            function (cb) {
-                fsw.once('ready', function (evt) {
-                    cb();
-                });
-                fsw.start();
-            }, function (cb) {
-                fsw.watch(filename1, function (err) {
-                    t.ok(!err, 'watching file1');
-                    fs.writeFileSync(filename1, 'first modification 1!\n');
-                    cb(err);
-                });
-            }, function (cb) {
-                fsw.watch(filename2, function (err) {
-                    t.ok(!err, 'watching file2');
-                    fs.writeFileSync(filename2, 'first modification 2!\n');
-                    cb(err);
-                });
-            }, function (cb) {
-                _waitForModification('before', cb);
-            }, function (cb) {
-                pid = fsw.watcherPID();
-                t.ok(pid, 'fswatcher PID is ' + pid);
-                process.kill(pid, 'SIGKILL');
-                killed = true;
-                // XXX delete a file while the watcher is restarting?
-                cb();
-            }, function (cb) {
-                fs.writeFile(filename1, 'second modification 1!\n',
-                    function (err) {
-                        t.ok(!err,
-                            (err ? err.message : 'modified file1 again'));
-                        cb(err);
-                    }
-                );
-            }, function (cb) {
-                fs.writeFile(filename2, 'second modification 2!\n',
-                    function (err) {
-                        t.ok(!err,
-                            (err ? err.message : 'modified file2 again'));
-                        cb(err);
-                    }
-                );
-            }, function (cb) {
-                _waitForModification('after', cb);
-            }, function (cb) {
-                fsw.shutdown();
-                t.ok(true, 'shut down FsWatcher');
-                cb();
-            }, function (cb) {
-                cb();
-            }
-        ], function (err) {
+            fsw.stop();
             t.end();
         });
     }
@@ -652,7 +551,7 @@ test('watch some files, kill the fswatcher child, then modify files',
 
 test('cleanup', function (t) {
     t.ok(true, 'cleaning up');
-    execFile('/usr/bin/rm', ['-rf', '/tmp/' + process.pid],
+    execFile('/usr/bin/rm', ['-rf', testdir],
         function (err, stdout, stderr) {
             t.ok(!err, (err ? err.message : 'cleaned up'));
             t.end();

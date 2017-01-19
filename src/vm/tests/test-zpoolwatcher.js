@@ -55,7 +55,16 @@ var log = bunyan.createLogger({
     streams: [ { stream: process.stderr, level: 'warn' } ],
     serializers: bunyan.stdSerializers
 });
-var zw = new ZpoolWatcher({log: log});
+var zw;
+
+test('create a ZpoolWatcher object', function (t) {
+    zw = new ZpoolWatcher({log: log});
+    t.ok(zw, 'ZpoolWatcher');
+    zw.once('ready', function () {
+        t.ok(true, 'zw.once(ready)');
+        t.end();
+    });
+});
 
 test('creating a ZFS dataset and catching the event', function (t) {
     var timeout = setTimeout(function () {
@@ -63,11 +72,11 @@ test('creating a ZFS dataset and catching the event', function (t) {
         t.end();
     }, TIMEOUT);
 
-    zw.on('all', function (ev) {
+    zw.on('event', function (ev) {
         if (ev.dsname === DATASET && ev.action === 'create'
             && ev.pool === 'zones') {
             clearTimeout(timeout);
-            zw.removeAllListeners('all');
+            zw.removeAllListeners('event');
             t.end();
         }
     });
@@ -84,7 +93,7 @@ test('modifying a ZFS dataset and catching the event', function (t) {
     }, TIMEOUT);
 
     var found = 0;
-    zw.on('all', function (ev) {
+    zw.on('event', function (ev) {
         if (ev.dsname === DATASET && ev.action === 'set'
             && ev.pool === 'zones') {
 
@@ -95,7 +104,7 @@ test('modifying a ZFS dataset and catching the event', function (t) {
 
             if (found >= 2) {
                 clearTimeout(timeout);
-                zw.removeAllListeners('all');
+                zw.removeAllListeners('event');
                 t.end();
             }
         }
@@ -112,11 +121,11 @@ test('destroying a ZFS dataset and catching the event', function (t) {
         t.end();
     }, TIMEOUT);
 
-    zw.on('all', function (ev) {
+    zw.on('event', function (ev) {
         if (ev.dsname === DATASET && ev.action === 'destroy'
             && ev.pool === 'zones') {
             clearTimeout(timeout);
-            zw.removeAllListeners('all');
+            zw.removeAllListeners('event');
             t.end();
         }
     });
@@ -129,6 +138,6 @@ test('destroying a ZFS dataset and catching the event', function (t) {
 
 test('cleanup', function (t) {
     t.ok(true, 'cleaning up');
-    zw.shutdown();
+    zw.stop();
     t.end();
 });

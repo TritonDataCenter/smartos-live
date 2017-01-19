@@ -55,10 +55,10 @@ before(function (cb) {
 test('try starting and stopping watcher', function (t) {
     var fsw = new FsWatcher({log: log});
     t.ok(fsw, 'created watcher');
-    t.ok(!fsw.running(), 'watcher not running');
+    t.ok(fsw.stopped, 'watcher not running');
 
     fsw.once('ready', function () {
-        t.ok(fsw.running(), 'watcher running');
+        t.ok(!fsw.stopped, 'watcher running');
         fsw.stop();
         t.end();
     });
@@ -71,7 +71,7 @@ test('try starting already running watcher', function (t) {
     t.ok(fsw, 'created watcher');
 
     fsw.once('ready', function () {
-        t.ok(fsw.running(), 'watcher running');
+        t.ok(!fsw.stopped, 'watcher running');
         t.throws(function () {
             fsw.start();
         }, null, 'start twice');
@@ -86,7 +86,7 @@ test('try starting already running watcher', function (t) {
 test('try stopping a stopped watcher', function (t) {
     var fsw = new FsWatcher({log: log});
     t.ok(fsw, 'created watcher');
-    t.ok(!fsw.running(), 'watcher not running');
+    t.ok(fsw.stopped, 'watcher not running');
 
     t.throws(function () {
         fsw.stop();
@@ -292,10 +292,7 @@ test('create a file and ensure we get multiple modify events',
 
         var fsw = new FsWatcher({log: log, dedup_ns: 2000000000});
 
-        fsw.on('all', function (evt) {
-            if (evt.type === 'ready') {
-                return;
-            }
+        fsw.on('event', function (evt) {
             t.deepEqual(evt.changes, ['FILE_MODIFIED'],
                 'type of "all" event is "change"');
         });

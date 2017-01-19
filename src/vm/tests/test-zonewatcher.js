@@ -42,6 +42,16 @@ var log = bunyan.createLogger({
         serializers: bunyan.stdSerializers
 });
 var testdir = '/tmp/' + process.pid;
+var zonew;
+
+test('create a ZoneWatcher object', function (t) {
+    zonew = new ZoneWatcher({log: log});
+    t.ok(zonew, 'created ZoneWatcher');
+    zonew.once('ready', function () {
+        t.ok(true, 'ZoneWatcher ready');
+        t.end();
+    });
+});
 
 function vmadm(args, stdin, callback)
 {
@@ -108,7 +118,6 @@ test('create zone (autoboot=true) and stop and destroy',
         var running = [];
         var saw_running = false;
         var vm_uuid = null;
-        var zonew = new ZoneWatcher({log: log});
 
         payload = {
             autoboot: true,
@@ -118,7 +127,7 @@ test('create zone (autoboot=true) and stop and destroy',
         };
 
         function finish() {
-            zonew.shutdown();
+            zonew.stop();
             t.end();
         }
 
@@ -129,7 +138,7 @@ test('create zone (autoboot=true) and stop and destroy',
             });
         }
 
-        zonew.on('change', function (evt) {
+        zonew.on('event', function (evt) {
             log.debug('saw change (looking for ' + vm_uuid + '): '
                 + JSON.stringify(evt));
             if (evt.newstate === 'running') {

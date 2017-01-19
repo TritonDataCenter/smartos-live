@@ -10,7 +10,60 @@
 
 struct {
 	boolean_t opt_j; /* -j, json output */
+	boolean_t opt_r; /* -r, print ready event */
 } opts;
+
+/*
+ * Create an nvlist with "type" set to the type argument given,
+ * and "date" set to the current time.  Must be free()d by
+ * the caller
+ */
+nvlist_t *
+make_nvlist(char *type)
+{
+	nvlist_t *nvl = fnvlist_alloc();
+	struct timeval tv;
+	struct tm *gmt;
+	char date[128];
+	size_t i;
+
+	// get the current time
+	if (gettimeofday(&tv, NULL) != 0)
+		err(1, "gettimeofday");
+
+	if ((gmt = gmtime(&tv.tv_sec)) == NULL)
+		err(1, "gmtime");
+
+	i = strftime(date, sizeof (date), "%Y-%m-%dT%H:%M:%S", gmt);
+	if (i == 0)
+		err(1, "strftime");
+
+	// append milliseconds
+	i = snprintf(date + i, sizeof (date) - i, ".%03ldZ", tv.tv_usec / 1000);
+	if (i == 0)
+		err(1, "snprintf date");
+
+	fnvlist_add_string(nvl, "date", date);
+	fnvlist_add_string(nvl, "type", type);
+
+	return (nvl);
+}
+
+/*
+ * print an nvlist to stdout (with respect to the -j argument)
+ * as well as a trailing newline followed by an fflush.
+ */
+void
+print_nvlist(nvlist_t *nvl)
+{
+	if (opts.opt_j)
+		nvlist_print_json(stdout, nvl);
+	else
+		nvlist_print(stdout, nvl);
+
+	printf("\n");
+	fflush(stdout);
+}
 
 /*
  * Called by sysevent handlers for each event. This will handle emitting the
@@ -24,50 +77,20 @@ struct {
 static void
 process_event(sysevent_t *ev, const char *channel)
 {
-	struct timeval tv;
-	struct tm *gmt;
+	nvlist_t *nvl;
 	nvlist_t *evnvl = NULL;
-	nvlist_t *nvl = NULL;
 	char *vendor = NULL;
 	char *publisher = NULL;
 	char *class = NULL;
 	char *subclass = NULL;
-	char date[128];
 	pid_t pid;
-	size_t i;
 
 	/* create an nvlist to hold everything */
-	if (nvlist_alloc(&nvl, NV_UNIQUE_NAME, 0) != 0) {
-		warn("nvlist_alloc");
-		goto done;
-	}
+	nvl = make_nvlist("event");
 
 	/* get the nvlist from the sysevent */
-	if (sysevent_get_attr_list(ev, &evnvl) != 0) {
-		warn("sysevent_get_attr_list");
-		goto done;
-	}
-
-	/* get the current time */
-	if (gettimeofday(&tv, NULL) != 0) {
-		warn("gettimeofday");
-		goto done;
-	}
-	if ((gmt = gmtime(&tv.tv_sec)) == NULL) {
-		warn("gmtime");
-		goto done;
-	}
-	i = strftime(date, sizeof (date), "%Y-%m-%dT%H:%M:%S", gmt);
-	if (i == 0) {
-		warn("strftime");
-		goto done;
-	}
-	/* append milliseconds */
-	i = snprintf(date + i, sizeof (date) - i, ".%03ldZ", tv.tv_usec / 1000);
-	if (i == 0) {
-		warn("snprintf date");
-		goto done;
-	}
+	if (sysevent_get_attr_list(ev, &evnvl) != 0)
+		err(1, "sysevent_get_attr_list");
 
 	/* get sysevent metadata and add to the nvlist */
 	vendor = sysevent_get_vendor_name(ev);
@@ -77,46 +100,23 @@ process_event(sysevent_t *ev, const char *channel)
 	sysevent_get_pid(ev, &pid);
 
 	if (vendor == NULL || publisher == NULL || class == NULL ||
-	    subclass == NULL) {
-		warn("failed to retrieve sysevent metadata");
-		goto done;
-	}
+	    subclass == NULL)
+		err(1, "failed to retrieve sysevent metadata");
 
-	if (nvlist_add_string(nvl, "date", date) != 0 ||
-	    nvlist_add_string(nvl, "vendor", vendor) != 0 ||
-	    nvlist_add_string(nvl, "publisher", publisher) != 0 ||
-	    nvlist_add_string(nvl, "class", class) != 0 ||
-	    nvlist_add_string(nvl, "subclass", subclass) != 0 ||
-	    nvlist_add_int32(nvl, "pid", pid) != 0) {
-		warn("nvlist_add_* nvl");
-		goto done;
-	}
+	fnvlist_add_string(nvl, "vendor", vendor);
+	fnvlist_add_string(nvl, "publisher", publisher);
+	fnvlist_add_string(nvl, "class", class);
+	fnvlist_add_string(nvl, "subclass", subclass);
+	fnvlist_add_int32(nvl, "pid", pid);
 
-	if (evnvl != NULL &&
-	    nvlist_add_nvlist(nvl, "data", evnvl) != 0) {
-		warn("nvlist_add_nvlist evnvl");
-		goto done;
-	}
+	if (evnvl != NULL)
+	    fnvlist_add_nvlist(nvl, "data", evnvl);
 
-	if (channel != NULL &&
-	    nvlist_add_string(nvl, "channel", channel) != 0) {
-		warn("nvlist_add_string channel");
-		goto done;
-	}
+	if (channel != NULL)
+	    fnvlist_add_string(nvl, "channel", channel);
 
-	/* print to stdout */
-	if (opts.opt_j) {
-		/* json output */
-		nvlist_print_json(stdout, nvl);
-	} else {
-		/* default  output */
-		nvlist_print(stdout, nvl);
-	}
-	printf("\n");
+	print_nvlist(nvl);
 
-	fflush(stdout);
-
-done:
 	free(vendor);
 	free(publisher);
 	nvlist_free(evnvl);
@@ -210,6 +210,7 @@ usage(FILE *s)
 	fprintf(s, "  -c <channel>   bind to the event channel\n");
 	fprintf(s, "  -h             print this message and exit\n");
 	fprintf(s, "  -j             JSON output\n");
+	fprintf(s, "  -r             print 'ready' event at start\n");
 }
 
 int
@@ -220,12 +221,13 @@ main(int argc, char **argv)
 	char *class;
 	const char **subclasses;
 	int num_subclasses;
+	nvlist_t *ready_nvl;
 
 	const char *all_subclasses[1];
 	all_subclasses[0] = EC_SUB_ALL;
 
 	opts.opt_j = B_FALSE;
-	while ((opt = getopt(argc, argv, "c:hj")) != -1) {
+	while ((opt = getopt(argc, argv, "c:hjr")) != -1) {
 		switch (opt) {
 		case 'c':
 			channel = optarg;
@@ -235,6 +237,9 @@ main(int argc, char **argv)
 			return (0);
 		case 'j':
 			opts.opt_j = B_TRUE;
+			break;
+		case 'r':
+			opts.opt_r = B_TRUE;
 			break;
 		default:
 			usage(stderr);
@@ -260,6 +265,13 @@ main(int argc, char **argv)
 	} else {
 		subclasses = all_subclasses;
 		num_subclasses = 1;
+	}
+
+	// ready event
+	if (opts.opt_r) {
+		ready_nvl = make_nvlist("ready");
+		print_nvlist(ready_nvl);
+		nvlist_free(ready_nvl);
 	}
 
 	/* bind and subscribe */

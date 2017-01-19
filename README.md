@@ -59,7 +59,7 @@ Additional build tools are required to be present on the build system;
 configure (see below) will install them if you are building in a SmartOS
 zone, which is the supported and recommended practice, see
 http://wiki.smartos.org/display/DOC/Building+SmartOS+on+SmartOS for zone
-setup instructions. 
+setup instructions.
 
 ## Build Steps
 
@@ -145,7 +145,7 @@ script.
     (OS-1122)
 
   * illumos-extra recurses over all components even during an incremental
-    build.  This is time-consuming and usually pointless. (OS-1319)	
+    build.  This is time-consuming and usually pointless. (OS-1319)
 
   * The complete set of build-order dependencies within illumos-extra
     probably has not been enumerated.  Doing so would allow for greater
@@ -157,9 +157,29 @@ script.
 
 ## Contributing
 
-Changes for any of the above issues, or any other bug you encounter, are
-welcome and may be submitted via the appropriate github repository.
-Additional issues may also be filed there.
+This repository uses [cr.joyent.us](https://cr.joyent.us) (Gerrit) for new
+changes. Anyone can submit changes. To get started, see the [cr.joyent.us user
+guide](https://github.com/joyent/joyent-gerrit/blob/master/docs/user/README.md).
+This repo does not use GitHub pull requests.
+
+All changes should have an associated issue. You can use the [GitHub issue
+tracker](https://github.com/joyent/smartos-live/issues). (Joyent employees use
+an internal JIRA exposed at <https://smartos.org/bugview>.)
+
+Contributions should be `make check` clean.
+
+If you are changing something non-trivial or user-facing, you may want to
+discuss the issue with other developers on one of the following:
+
+* The *smartos-discuss* mailing list. Once you [subscribe to the
+  list](https://www.listbox.com/subscribe/?list_id=184463), you can send mail to
+  the list address: smartos-discuss@lists.smartdatacenter.org.
+  The mailing list archives are also [available on the
+  web](https://www.listbox.com/member/archive/184463/=now).
+
+* In the *#smartos* IRC channel on the [Freenode IRC
+  network](https://freenode.net/).
+
 
 ## Other Notes
 

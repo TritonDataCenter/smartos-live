@@ -70,7 +70,6 @@ switch (cmd) {
                     date = date.split('T')[1];
                 }
 
-
                 var alias = (ev.vm || {}).alias || '-';
 
                 // format the output nicely
@@ -80,9 +79,12 @@ switch (cmd) {
                 delete ev.vm;
                 if (ev.changes) {
                     ev.changes.forEach(function (change) {
-                        var s = f('%s %s :: %j -> %j',
-                            change.path, change.action, change.from, change.to);
-                        console.log('%s: %s', base, s);
+                        console.log('%s: %s %s :: %j -> %j',
+                            base,
+                            change.prettyPath,
+                            change.action,
+                            change.from,
+                            change.to);
                     });
                 } else {
                     console.log(base);

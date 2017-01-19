@@ -299,7 +299,7 @@ test('check default create_timestamp', function (t) {
                             };
                             var changes = [
                                 {
-                                    path: 'create_timestamp',
+                                    path: ['create_timestamp'],
                                     action: 'changed'
                                 }
                             ];

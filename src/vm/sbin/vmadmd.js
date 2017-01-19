@@ -1202,7 +1202,9 @@ function startZoneWatcher(callback)
                 assert(ev.changes, 'ev.changes');
                 for (var i = 0; i < ev.changes.length; i++) {
                     var change = ev.changes[i];
-                    if (change.path === 'zone_state') {
+                    if (change.path.length === 1
+                        && change.path[0] === 'zone_state') {
+
                         sysev.data.oldstate = change.from;
                         sysev.data.newstate = change.to;
                         log.debug({ev: sysev}, 'zone watcher modify event');

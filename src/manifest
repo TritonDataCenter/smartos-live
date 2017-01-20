@@ -802,7 +802,6 @@ f smartdc/man/man1/sdc-factoryreset.1 0444 root bin
 f usr/bin/nictagadm 0555 root bin
 f usr/bin/sysinfo 0555 root bin
 f usr/bin/bootparams 0555 root bin
-f usr/bin/diskinfo 0555 root bin
 f usr/bin/disklayout 0555 root bin
 f usr/bin/disklist 0555 root bin
 f usr/bin/disk_size 0555 root bin
@@ -844,7 +843,6 @@ f usr/node/0.10/node_modules/zonename.js 0444 root bin
 f usr/node/0.10/node_modules/zonename_binding.node 0444 root bin
 # 0-man-stamp
 d usr/share/man/man1m 0755 root bin
-f usr/share/man/man1m/diskinfo.1m 0444 root bin
 f usr/share/man/man1m/disklayout.1m 0444 root bin
 f usr/share/man/man1m/fwadm.1m 0444 root bin
 f usr/share/man/man1m/mkzpool.1m 0444 root bin

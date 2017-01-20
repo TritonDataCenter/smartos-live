@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2016 Joyent, Inc.
+# Copyright 2017 Joyent, Inc.
 #
 
 include Makefile.defs
@@ -62,10 +62,6 @@ SMARTDCLIBDIR =	$(DESTDIR)/smartdc/lib
 #
 bootparams :	LIBS +=		-ldevinfo
 bootparams :	WARN_FLAGS +=	-Wno-unused
-diskinfo :	LDFLAGS +=	-L$(DESTDIR)/usr/lib/fm
-diskinfo :	CPPFLAGS +=	-I$(ROOT)/projects/illumos/usr/src/lib/fm/topo
-diskinfo :	LIBS +=		-R/usr/lib/fm
-diskinfo :	LIBS +=		-ldladm -ldiskmgt -lnvpair -ltopo
 zfs_recv :	LIBS +=		-lsocket
 zfs_send :	LIBS +=		-lsocket
 vmbundle :	CPPFLAGS +=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
@@ -359,7 +355,6 @@ CLEANFILES +=		$(NOMKNOD_TARGS)
 #
 TARGETS = \
 	bootparams \
-	diskinfo \
 	disklayout \
 	disklist \
 	disk_size \

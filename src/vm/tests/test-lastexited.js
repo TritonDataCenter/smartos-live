@@ -4,12 +4,10 @@
 // expected when starting/stopping/zone exits
 //
 
-var async = require('/usr/node/node_modules/async');
 var child_process = require('child_process');
-var exec = child_process.exec;
 var execFile = child_process.execFile;
 var fs = require('fs');
-var libuuid = require('/usr/node/node_modules/uuid');
+var path = require('path');
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
 
@@ -29,6 +27,7 @@ var common_payload = {
     max_swap: 1024
 };
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
+var old_timestamp;
 
 function getExitFields(t, state, callback) {
     VM.load(state.uuid, function (err, obj) {
@@ -52,31 +51,35 @@ function waitInstalled(t, uuid, callback)
 {
     function _checkExists() {
         VM.load(uuid, function (err, obj) {
-            if (!fs.existsSync('/zones/' + uuid + '/lastexited')
-                || !obj || (obj.zone_state !== 'installed')) {
+            if (obj
+                && obj.zone_state === 'installed'
+                && old_timestamp !== obj.exit_timestamp) {
 
-                setTimeout(_checkExists, 100);
-            } else {
+                old_timestamp = obj.exit_timestamp;
                 t.ok(true, 'have lastexited');
                 callback();
+                return;
             }
+
+            setTimeout(_checkExists, 100);
         });
     }
     _checkExists();
 }
 
 function writeInit(uuid, contents, callback) {
-    var filename = '/zones/' + uuid + '/root/root/init';
+    var filename = path.join('/zones', uuid, 'root/root/init');
+    var opts = {
+        encoding: 'utf8',
+        mode: parseInt('0755', 8)
+    };
 
-    fs.writeFile(filename, contents, function (err) {
+    fs.writeFile(filename, contents, opts, function (err) {
         if (err) {
             callback(err);
             return;
         }
 
-        /*jsl:ignore*/
-        fs.chmodSync(filename, 0755);
-        /*jsl:end*/
         callback();
     });
 }
@@ -144,7 +147,7 @@ test('test lastexited not set, then set', function (t) {
 
                 t.equal(fields.zone_state, 'installed', 'zone is stopped');
                 t.equal(fields.exit_status, 0, 'exit status 0');
-                t.ok(fields.exit_timestamp != undefined, 'exit timestamp: '
+                t.ok(fields.exit_timestamp !== undefined, 'exit timestamp: '
                     + fields.exit_timestamp);
                 cb();
             });
@@ -175,7 +178,7 @@ test('test lastexited not set, then set', function (t) {
 
                 t.equal(fields.zone_state, 'installed', 'zone is stopped');
                 t.equal(fields.exit_status, 13, 'exit status 13');
-                t.ok(fields.exit_timestamp != undefined, 'exit timestamp: '
+                t.ok(fields.exit_timestamp !== undefined, 'exit timestamp: '
                     + fields.exit_timestamp);
                 cb();
             });
@@ -206,7 +209,7 @@ test('test lastexited not set, then set', function (t) {
 
                 t.equal(fields.zone_state, 'installed', 'zone is stopped');
                 t.equal(fields.exit_status, -9, 'exit status -9');
-                t.ok(fields.exit_timestamp != undefined, 'exit timestamp: '
+                t.ok(fields.exit_timestamp !== undefined, 'exit timestamp: '
                     + fields.exit_timestamp);
                 cb();
             });

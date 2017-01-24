@@ -6,7 +6,19 @@
 var f = require('util').format;
 
 var vminfod = require('/usr/vm/node_modules/vminfod/client');
-var client = new vminfod.VminfodClient('vminfod CLI');
+var bunyan = require('/usr/node/node_modules/bunyan');
+
+var log = bunyan.createLogger({
+    level: 'error',
+    name: 'vminfod CLI',
+    stream: process.stderr,
+    serializers: bunyan.stdSerializers
+});
+
+var client = new vminfod.VminfodClient({
+    name: 'vminfod CLI',
+    log: log
+});
 
 function usage() {
     var _args = Array.prototype.slice.call(arguments);

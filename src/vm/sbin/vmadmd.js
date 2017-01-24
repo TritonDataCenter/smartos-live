@@ -1175,7 +1175,10 @@ function updateZoneStatus(ev)
 
 function startZoneWatcher(callback)
 {
-    var vs = new vminfod.VminfodEventStream('vmadmd ZoneWatcher');
+    var vs = new vminfod.VminfodEventStream({
+        name: 'vmadmd ZoneWatcher',
+        log: log
+    });
     vs.on('readable', function () {
         var ev;
         while ((ev = vs.read()) !== null) {

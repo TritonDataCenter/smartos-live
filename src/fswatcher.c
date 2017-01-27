@@ -178,10 +178,9 @@ void print_nvlist_json(nvlist_t *nvl);
 void enqueue_free_finf(struct fileinfo *finf);
 void print_event(int event, char *pathname, int final);
 void print_ready();
-void check_and_rearm_event(uint32_t key, char *name, int revents,
-    uint64_t start_timestamp);
+void check_and_rearm_event(uint32_t key, char *name, int revents);
 void * wait_for_events(void *pn);
-int watch_path(char *pathname, uint32_t key, uint64_t start_timestamp);
+int watch_path(char *pathname, uint32_t key);
 int unwatch_path(char *pathname, uint32_t key);
 
 /*
@@ -269,15 +268,19 @@ print_event(int event, char *pathname, int final)
 	if (event & FILE_TRUNC) {
 		changes[i++] = "FILE_TRUNC";
 	}
+	if (event & FILE_NOFOLLOW) {
+		changes[i++] = "FILE_NOFOLLOW";
+	}
 	if (event & MOUNTEDOVER) {
 		changes[i++] = "MOUNTEDOVER";
 	}
 	if (event & UNMOUNTED) {
-		changes[i++] = "MOUNTED";
+		changes[i++] = "UNMOUNTED";
 	}
 
 	fnvlist_add_string_array(nvl, "changes", changes, i);
 	fnvlist_add_string(nvl, "pathname", pathname);
+        fnvlist_add_int32(nvl, "revents", event);
 	fnvlist_add_boolean_value(nvl, "final", final);
 
 	print_nvlist_json(nvl);
@@ -657,15 +660,12 @@ register_watch(uint32_t key, char *name, struct stat sb)
  * exists we cannot rearm. In that case we set the 'final' flag in the response.
  */
 void
-check_and_rearm_event(uint32_t key, char *name, int revents,
-    uint64_t start_timestamp)
+check_and_rearm_event(uint32_t key, char *name, int revents)
 {
     int final = 0;
     struct fileinfo *finf;
     struct stat sb;
     int stat_ret;
-    time_t tv_sec;
-    long tv_nsec;
 
     mutex_lock(&handles_mutex);
 
@@ -679,27 +679,9 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
     }
     mutex_unlock(&handles_mutex);
 
-    /*
-     * We always do stat, even if we're going to override the timestamps so
-     * that we also check for existence.
-     */
     stat_ret = get_stat(finf->fobj.fo_name, &sb);
-    if (stat_ret != 0) {
+    if (stat_ret != 0 || revents & FILE_DELETE || revents & UNMOUNTED) {
         final = 1;
-    }
-    if (start_timestamp != 0) {
-        tv_sec = (time_t)(start_timestamp / (uint64_t)1000000000);
-        tv_nsec = (long)(start_timestamp
-            - ((uint64_t) tv_sec * (uint64_t)1000000000));
-
-        sb.st_atim.tv_sec = tv_sec;
-        sb.st_atim.tv_nsec = tv_nsec;
-        sb.st_ctim.tv_sec = tv_sec;
-        sb.st_ctim.tv_nsec = tv_nsec;
-        sb.st_mtim.tv_sec = tv_sec;
-        sb.st_mtim.tv_nsec = tv_nsec;
-
-        fprintf(stderr, "%llu %ld %ld\n", start_timestamp, tv_sec, tv_nsec);
     }
 
     /*
@@ -752,8 +734,7 @@ wait_for_events(void *arg)
         switch (pe.portev_source) {
         case PORT_SOURCE_FILE:
             /* Call file events event handler */
-            check_and_rearm_event(0, (char *)pe.portev_user,
-                pe.portev_events, 0);
+            check_and_rearm_event(0, (char *)pe.portev_user, pe.portev_events);
             break;
         default:
             /*
@@ -809,7 +790,7 @@ enqueue_free_finf(struct fileinfo *finf)
  * Only called from main thread. Attempts to watch pathname.
  */
 int
-watch_path(char *pathname, uint32_t key, uint64_t start_timestamp)
+watch_path(char *pathname, uint32_t key)
 {
     struct fileinfo *finf;
     /* port is global */
@@ -818,16 +799,13 @@ watch_path(char *pathname, uint32_t key, uint64_t start_timestamp)
     if (finf == NULL) {
         print_error(key, ERR_CANNOT_ALLOCATE, "failed to allocate memory for "
             "new watcher errno %d: %s", errno, strerror(errno));
-        /* XXX abort(); ? */
-        return (ERR_CANNOT_ALLOCATE);
+	abort();
     }
 
     if ((finf->fobj.fo_name = strdup(pathname)) == NULL) {
         print_error(key, ERR_CANNOT_ALLOCATE, "strdup failed w/ errno %d: %s",
             errno, strerror(errno));
-        /* XXX abort(); ? */
-        free_handle(finf);
-        return (ERR_CANNOT_ALLOCATE);
+	abort();
     }
 
     /* From here on we'll need to cleanup finf when done with it. */
@@ -855,7 +833,7 @@ watch_path(char *pathname, uint32_t key, uint64_t start_timestamp)
     /*
      * Start to monitor this file.
      */
-    check_and_rearm_event(key, finf->fobj.fo_name, 0, start_timestamp);
+    check_and_rearm_event(key, finf->fobj.fo_name, 0);
 
     return (0);
 }
@@ -936,7 +914,6 @@ main()
     char sscanf_fmt[MAX_FMT_LEN];
     char str[MAX_CMD_LEN + 1];
     pthread_t tid;
-    uint64_t start_timestamp;
 
     handles = calloc(sizeof (struct fileinfo *), HANDLES_MASK);
 
@@ -962,13 +939,11 @@ main()
             break;
         }
 
-        start_timestamp = 0;
-
         /* read one character past MAX_KEY_LEN so we know it's too long */
-        snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%[^|]|%%llu",
+        snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s",
             MAX_KEY_LEN + 1);
-        res = sscanf(str, sscanf_fmt, key_str, cmd, path, &start_timestamp);
-        if (res != 3 && res != 4) {
+        res = sscanf(str, sscanf_fmt, key_str, cmd, path);
+        if (res != 3) {
             print_error(SYSTEM_KEY, ERR_INVALID_COMMAND,
                 "invalid command line");
             continue;
@@ -1003,7 +978,7 @@ main()
             }
         } else if (strcmp("WATCH", cmd) == 0) {
             /* watch_path() will print an object to stdout */
-            res = watch_path(path, key, start_timestamp);
+            res = watch_path(path, key);
             if (res != 0) {
                 /*
                  * An error occured and watch_path() will have written an error

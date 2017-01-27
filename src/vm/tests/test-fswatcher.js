@@ -101,11 +101,11 @@ test('try watching files with illegal characters', function (t) {
 
     fsw.once('ready', function () {
         vasync.forEachPipeline({
-            inputs: ['pipe|char', 'newline\nchar', 'nulbyte\0char'],
+            inputs: ['newline\nchar', 'nulbyte\0char'],
             func: function (f, cb) {
                 fsw.watch(f, function (err) {
                     t.ok(err, 'error is expected: '
-                        + JSON.stringify(err.message));
+                        + JSON.stringify((err || {}).message));
                     cb();
                 });
             }

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright 2017, Joyent, Inc. All rights reserved.
  *
  * fwadm test: tags
  */
@@ -1657,6 +1657,59 @@ exports['tags that target no VMs'] = function (t) {
     }
 
     ], function () {
+        t.done();
+    });
+};
+
+
+exports['FWAPI-273: Tag without a value following one with'] = function (t) {
+    reset();
+    var vm = helpers.generateVM({ tags: { c: true } });
+    var vms = [ vm ];
+    var rule = {
+        owner_uuid: vm.owner_uuid,
+        rule: 'FROM any TO (tag "a" = "b" OR tag "c") ALLOW tcp PORT 25',
+        enabled: true
+    };
+
+    var expRules = {};
+    var expRulesOnDisk = {};
+    var vmsEnabled = {};
+
+    fw.add({ localVMs: vms, vms: vms, rules: [ rule ] }, function (err, res) {
+        t.ifError(err);
+        if (err) {
+            t.done();
+            return;
+        }
+
+        helpers.fillInRuleBlanks(res.rules, rule);
+        t.deepEqual(res, {
+            vms: [ vm.uuid ],
+            rules: [ rule ]
+        }, 'result');
+
+        helpers.addZoneRules(expRules, [
+            [ vm, 'default' ],
+            [ vm, 'in', 'pass', 'tcp', 'any', 25 ]
+        ]);
+
+        t.deepEqual(helpers.zoneIPFconfigs(4), expRules,
+            'IPv4 firewall rules');
+        t.deepEqual(helpers.zoneIPFconfigs(6), expRules,
+            'IPv6 firewall rules');
+
+        vmsEnabled[vm.uuid] = true;
+        t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
+            'firewalls enabled');
+
+        t.deepEqual(helpers.remoteVMsOnDisk(), {},
+            'remote VMs on disk');
+
+        expRulesOnDisk[rule.uuid] = clone(rule);
+
+        t.deepEqual(helpers.rulesOnDisk(), expRulesOnDisk, 'rules on disk');
+
         t.done();
     });
 };

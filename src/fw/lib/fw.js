@@ -21,7 +21,7 @@
  * CDDL HEADER END
  *
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright 2017, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: Main entry points
@@ -1098,8 +1098,9 @@ function prepareIPFdata(opts, log, callback) {
 function vmsOnSide(allVMs, rule, dir, log) {
     var matching = [];
 
-    ['vms', 'tags', 'wildcards'].forEach(function (type) {
-        rule[dir][type].forEach(function (t) {
+    ['vms', 'tags', 'wildcards'].forEach(function (walkType) {
+        rule[dir][walkType].forEach(function (t) {
+            var type = walkType;
             var value;
             if (typeof (t) !== 'string') {
                 value = t[1];
@@ -1176,25 +1177,28 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
     ['tag', 'vm', 'wildcard'].forEach(function (type) {
         var typePlural = type + 's';
         rule[otherSide][typePlural].forEach(function (value) {
+            var lookupType = type;
+            var lookupTypePlural = typePlural;
             var t;
+
             if (typeof (value) !== 'string') {
                 t = value[1];
                 value = value[0];
-                type = 'tagValue';
-                typePlural = 'tagValues';
+                lookupType = 'tagValue';
+                lookupTypePlural = 'tagValues';
             }
 
-            if (type === 'wildcards' && value === 'any') {
+            if (lookupTypePlural === 'wildcards' && value === 'any') {
                 return;
             }
 
             [localVMs, remoteVMs].forEach(function (lookup) {
-                if (!hasKey(lookup, typePlural)
-                    || !hasKey(lookup[typePlural], value)) {
+                if (!hasKey(lookup, lookupTypePlural)
+                    || !hasKey(lookup[lookupTypePlural], value)) {
                     return;
                 }
 
-                var vmList = lookup[typePlural][value];
+                var vmList = lookup[lookupTypePlural][value];
                 if (t !== undefined) {
                     if (!hasKey(vmList, t)) {
                         return;
@@ -1212,7 +1216,7 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
                         rule: rule,
                         direction: dir,
                         targets: vm.ips,
-                        type: type,
+                        type: lookupType,
                         value: value
                     }));
                 });

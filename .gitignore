@@ -73,13 +73,7 @@ src/diskinfo
 src/disklayout
 src/mkzpool
 src/node-dtrace-provider/build
-src/node-microtime/build
-src/node-sqlite3/build/
 src/node-libuuid/build
-src/node-zsock/.lock-wscript
-src/node-zsock/build/
-src/node-zutil/.lock-wscript
-src/node-zutil/build/
 src/sdc-on-tty
 src/sysinfo_mod.so
 src/vm/node_modules/props.js

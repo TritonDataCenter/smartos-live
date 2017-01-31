@@ -20,15 +20,19 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright 2016, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: functions for filtering rules and remote VMs
  */
 
 var assert = require('assert-plus');
+var mod_obj = require('./util/obj');
 var mod_rvm = require('./rvm');
-var objEmpty = require('./util/obj').objEmpty;
+
+
+var hasKey = mod_obj.hasKey;
+var objEmpty = mod_obj.objEmpty;
 
 
 
@@ -101,9 +105,9 @@ function rulesByRVMs(remoteVMs, rules, log, callback) {
             return;
         }
 
-        if (remoteVMs[type].hasOwnProperty(t)
+        if (hasKey(remoteVMs[type], t)
             && !objEmpty(remoteVMs[type][t])) {
-            if (!rule.hasOwnProperty('owner_uuid')) {
+            if (!hasKey(rule, 'owner_uuid')) {
                 pushRule(rule);
                 return;
             }
@@ -152,7 +156,7 @@ function rulesByUUIDs(rules, uuids, log, callback) {
     }, {});
 
     rules.forEach(function (rule) {
-        if (uuidHash.hasOwnProperty(rule.uuid)) {
+        if (hasKey(uuidHash, rule.uuid)) {
             delete uuidHash[rule.uuid];
             results.matching.push(rule);
         } else {
@@ -192,14 +196,14 @@ function rulesByVMs(allVMs, vms, rules, log, callback) {
         log.trace('filter.rulesByVMs: type=%s, t=%s, rule=%s',
             type, t, rule);
 
-        if (!allVMs[type].hasOwnProperty(t)) {
+        if (!hasKey(allVMs[type], t)) {
             return;
         }
 
         var vmList = allVMs[type][t];
 
         if (val) {
-            if (!allVMs[type][t].hasOwnProperty(val)) {
+            if (!hasKey(allVMs[type][t], val)) {
                 return;
             }
             vmList = allVMs[type][t][val];
@@ -208,7 +212,7 @@ function rulesByVMs(allVMs, vms, rules, log, callback) {
         var owner = rule.owner_uuid;
 
         for (var uuid in vmList) {
-            if (!vms.hasOwnProperty(uuid)) {
+            if (!hasKey(vms, uuid)) {
                 continue;
             }
 
@@ -301,7 +305,7 @@ function vmsByRules(opts, callback) {
     var matchingVMs = {};
     var vms = opts.vms;
 
-    if (opts.hasOwnProperty('includeDisabled')) {
+    if (hasKey(opts, 'includeDisabled')) {
         includeDisabled = opts.includeDisabled;
     }
 
@@ -314,7 +318,7 @@ function vmsByRules(opts, callback) {
             return;
         }
 
-        if (!vms[type].hasOwnProperty(t)) {
+        if (!hasKey(vms[type], t)) {
             opts.log.trace(
                 'filter.vmsByRules: type=%s, t=%s, rule=%s: not in VM hash',
                 type, t, rule);
@@ -323,7 +327,7 @@ function vmsByRules(opts, callback) {
 
         var vmList = vms[type][t];
         if (val) {
-            if (!vms[type][t].hasOwnProperty(val)) {
+            if (!hasKey(vms[type][t], val)) {
                 return;
             }
             vmList = vms[type][t][val];

@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (c) 2016, Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  */
 
 /*
@@ -787,9 +787,22 @@ mountOSDevFD()
 void
 mountLXDevShm()
 {
+    int flags = MS_DATA | MS_OPTIONSTR;
+    char opts[MAX_MNTOPT_STR];
+    int optslen;
+
+    /* initialize */
+    opts[0] = '\0';
+
     dlog("MOUNT /dev/shm (shm)\n");
 
-    if (mount("shm", "/dev/shm", MS_DATA, "tmpfs", NULL, 0) != 0) {
+    /*
+     * Linux defaults to mode=1777 for tmpfs mounts. So should we.
+     */
+    (void) strlcat(opts, "mode=1777", sizeof (opts));
+
+    optslen = sizeof (opts);
+    if (mount("shm", "/dev/shm", flags, "tmpfs", NULL, 0, opts, optslen) != 0) {
         fatal(ERR_MOUNT_DEVSHM, "failed to mount /dev/shm: %s\n",
             strerror(errno));
     }

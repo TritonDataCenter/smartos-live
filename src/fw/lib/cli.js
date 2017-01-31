@@ -28,11 +28,14 @@
 
 var cmdln = require('cmdln');
 var fs = require('fs');
+var mod_obj = require('./util/obj');
 var tab = require('tab');
 var tty = require('tty');
 var util = require('util');
 var verror = require('verror');
 
+
+var hasKey = mod_obj.hasKey;
 
 
 // --- Globals
@@ -205,7 +208,7 @@ function outputError(err, opts) {
     var errs = [ err ];
 
     OUTPUT_ERROR = true;
-    if (err.hasOwnProperty('ase_errors')) {
+    if (hasKey(err, 'ase_errors')) {
         errs = err.ase_errors;
     }
 
@@ -213,7 +216,7 @@ function outputError(err, opts) {
         return console.error(json({
             errors: errs.map(function (e) {
                 var j = { message: e.message };
-                if (e.hasOwnProperty('code')) {
+                if (hasKey(e, 'code')) {
                     j.code = e.code;
                 }
 

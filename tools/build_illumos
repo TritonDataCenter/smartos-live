@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright 2016 Joyent, Inc.
 #
 
 # Setup for building stuff!
@@ -58,5 +58,39 @@ ksh93 ./usr/src/tools/scripts/bldenv.sh illumos.sh \
 printf "\nRunning illumos nightly(1).\n"
 printf "This will take a while.\n"
 
+set +e
+
 time ./nightly illumos.sh
-exit $?
+
+status=$?
+if [[ $status -ne 0 ]]; then
+	log_dir=$(ls -1t ./log | head -n1)
+	mail_msg=$PWD/log/$log_dir/mail_msg
+	nightly=$PWD/log/$log_dir/nightly.log
+
+	#
+	# Note, the blank lines at the start and end of the heredoc are
+	# intentional. These make sure that the output is separate from
+	# the time and eventual gmake errors.
+	#
+	cat << EOF
+
+WARNING: illumos nightly build failed. Please look at the mail_msg and
+nightly.log to determine the exact failure. For more information on how
+to make sense of these, please see the illumos Developer's Guide section
+on build failures online at:
+
+https://www.illumos.org/books/dev/debugging.html#build-failures
+
+The mail_msg for this build is located at:
+$mail_msg
+
+The nightly.log for this build is located at:
+$nightly
+
+If you need additional help, please reach out to the smartos-discuss
+mailing list or ask in the #smartos IRC channel on Freenode.
+
+EOF
+fi
+exit $status

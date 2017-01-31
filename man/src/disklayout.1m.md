@@ -2,7 +2,7 @@
 
 ## SYNOPSIS
 
-    disklayout [-f file] [layout]
+    disklayout [-c] [-f file] [-s spares] [layout]
 
 
 ## DESCRIPTION
@@ -36,19 +36,19 @@ inventory.  If there are inadequate devices to do this, disklayout will
 attempt to define a functional pool with redundancy.  If there is a
 single device, disklayout will define a pool with that single device.
 
-When at least 5 primary storage devices are available, disklayout always
-allocates at least one spare.  Additional spares may be allocated as the
-total number of primary storage devices increases and/or if the number
-of available primary storage devices does not divide evenly by the
-number of devices per vdev with enough left over to provide the minimum
+If the number of spares has not been explicitly specified with the **-s**
+option, then when at least 5 primary storage devices are available,
+disklayout tries to allocate at least one spare. Additional spares may be
+allocated as the total number of primary storage devices increases and/or
+if the number of available primary storage devices does not divide evenly
+by the number of devices per vdev with enough left over to provide the minimum
 number of spares.
 
 When constructing RAIDZ-type layouts, disklayout will consider a range
 of stripe widths (i.e., number of leaf devices per RAIDZ-n vdev).  The
 number of leaf devices per vdev will be at least 3 for RAIDZ, at least 5
 for RAIDZ-2, and at least 7 for RAIDZ-3.  Some versions of this utility
-may consider only stripes wider than the limits documented here.  This
-utility may not support all RAIDZ-n layouts.
+may consider only stripes wider than the limits documented here.
 
 Other than as described here, the heuristics used to select layouts and
 to optimise allocation of devices are not an interface and are subject
@@ -56,11 +56,19 @@ to change at any time without notice.
 
 ## OPTIONS
 
+**-c**
+
+Prevent disklayout from allocating any disks as cache devices.
+
 **-f file**
 
 Use **file** as the source of information about available disks.  The
 running system will not be interrogated; in this mode, the utility may
 be used in a zone if desired.
+
+**-s spares**
+
+Specify **spares** as the number of disks to be be allocated as spares.
 
 **layout**
 
@@ -69,8 +77,8 @@ selects a pool layout class based on the type, number, and size of
 available storage devices.  If you specify a layout class, it will
 generate a configuration of that class instead.  If it is not possible
 to do so given the available devices, an error will occur; see ERRORS
-below.  The set of supported layouts includes at least "single",
-"mirror", and "raidz2", and will be listed if you specify an unsupported
+below.  The set of supported layouts includes "single", "mirror", "raidz1",
+"raidz2" and "raidz3", and will be listed if you specify an unsupported
 layout.
 
 

@@ -31,12 +31,15 @@ var bunyan;
 var events = require('events');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
+var mod_obj = require('./obj');
 var mod_uuid = require('node-uuid');
 var path = require('path');
 var sprintf = require('extsprintf').sprintf;
 var util = require('util');
 var vasync = require('vasync');
 
+
+var hasKey = mod_obj.hasKey;
 
 
 // --- Globals
@@ -126,7 +129,7 @@ function vmSerializer(vms) {
         }
 
         return vms.map(function (v) {
-            return v.hasOwnProperty('uuid') ? v.uuid : v;
+            return hasKey(v, 'uuid') ? v.uuid : v;
         });
     }
 
@@ -412,7 +415,7 @@ function logEntry(opts, action, readOnly) {
  * Log error and suberrors on API endpoint exit
  */
 function finishErr(log, err, msg) {
-    if (err.hasOwnProperty('ase_errors')) {
+    if (hasKey(err, 'ase_errors')) {
         for (var e in err.ase_errors) {
             log.error(err.ase_errors[e], msg + ': err %d/%d',
                 Number(e) + 1, err.ase_errors.length);

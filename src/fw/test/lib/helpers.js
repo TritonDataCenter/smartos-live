@@ -33,8 +33,10 @@ var mocks = require('./mocks');
 var mod_uuid = require('node-uuid');
 var util = require('util');
 var util_vm = require('../../lib/util/vm');
+var VError = require('verror');
 
 var createSubObjects = mod_obj.createSubObjects;
+var hasKey = mod_obj.hasKey;
 
 
 
@@ -101,7 +103,7 @@ function addZoneRules(exp, toAdd) {
 
         // [vm, 'in', 'pass', 'tcp', ip, ports]
         var proto = createSubObjects(exp[vm], r[1], r[2], r[3]);
-        if (!proto.hasOwnProperty(r[4])) {
+        if (!hasKey(proto, r[4])) {
             proto[r[4]] = [];
         }
 
@@ -147,13 +149,14 @@ function fillInRuleBlanks(res, incomplete) {
     }
 
     toFill.forEach(function (rule) {
-        var match = findRuleInList(rule, res);
+        var findRuleText = fwrule.create(rule).text();
+        var match = findRuleInList(findRuleText, res);
         if (!match) {
-            return;
+            throw new VError('Couldn\'t find matching rule: %s', findRuleText);
         }
 
         for (var p in match) {
-            if (!rule.hasOwnProperty(p)) {
+            if (!hasKey(rule, p)) {
                 rule[p] = match[p];
             }
         }
@@ -163,12 +166,10 @@ function fillInRuleBlanks(res, incomplete) {
 /**
  * Finds a rule in the list by rule text
  */
-function findRuleInList(findRule, list) {
-    var findRuleObj = fwrule.create(findRule);
-
+function findRuleInList(findRuleText, list) {
     for (var r in list) {
         var ruleObj = fwrule.create(list[r]);
-        if (findRuleObj.text() == ruleObj.text()) {
+        if (findRuleText === ruleObj.text()) {
             return list[r];
         }
     }
@@ -253,7 +254,7 @@ function fwRvmRulesEqual(opts, callback) {
         // clone the input rules in case order is important to the caller:
         opts.t.deepEqual(res.sort(uuidSort), clone(opts.rules).sort(uuidSort),
             'fw.rvmRules() correct for '
-            + typeof (opts.rvm) === 'object' ?  opts.rvm.uuid : opts.rvm);
+            + (typeof (opts.rvm) === 'object' ?  opts.rvm.uuid : opts.rvm));
 
         return callback();
     });
@@ -361,7 +362,7 @@ function zoneIPFconfigs(version) {
         if (!startsWith(dir, '/zones') || !endsWith(dir, '/config')) {
             continue;
         }
-        if (!root[dir].hasOwnProperty(filename)) {
+        if (!hasKey(root[dir], filename)) {
             continue;
         }
 
@@ -432,7 +433,7 @@ function zoneIPFconfigs(version) {
             }
 
             var dests = createSubObjects(firewalls, zone, d, action, proto);
-            if (!dests.hasOwnProperty(dest)) {
+            if (!hasKey(dests, dest)) {
                 dests[dest] = [];
             }
 
@@ -470,7 +471,7 @@ function getIPFenabled() {
  */
 function uuidNum(num) {
     return '00000000-0000-0000-0000-0000000000'
-        + (Number(num) < 9 ? '0' + num : num);
+        + (Number(num) < 10 ? '0' + num : num);
 }
 
 
@@ -503,7 +504,7 @@ function generateVM(override) {
         }
     }
 
-    if (!vm.hasOwnProperty('zonepath')) {
+    if (!hasKey(vm, 'zonepath')) {
         vm.zonepath = util.format('/zones/%s', vm.uuid);
     }
 
@@ -567,11 +568,11 @@ function rulesOnDisk(fw) {
  * Sort the various fields of a fw.js results object
  */
 function sortRes(res) {
-    if (res.hasOwnProperty('vms')) {
+    if (hasKey(res, 'vms')) {
         res.vms.sort();
     }
 
-    if (res.hasOwnProperty('rules')) {
+    if (hasKey(res, 'rules')) {
         res.rules.sort(uuidSort);
     }
 

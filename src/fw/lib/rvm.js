@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright 2016, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: functions for manipulating remote VMs
@@ -40,6 +40,7 @@ var VError = require('verror').VError;
 
 var createSubObjects = util_obj.createSubObjects;
 var forEachKey = util_obj.forEachKey;
+var hasKey = util_obj.hasKey;
 
 
 
@@ -79,7 +80,7 @@ function create(opts, vms, callback) {
     vms.forEach(function (vm) {
         try {
             var rvm = util_vm.createRemoteVM(vm);
-            if (opts.allVMs.all.hasOwnProperty(rvm.uuid)) {
+            if (hasKey(opts.allVMs.all, rvm.uuid)) {
                 var err = new VError(
                     'Remote VM "%s" must not have the same UUID as a local VM',
                     rvm.uuid);
@@ -143,7 +144,7 @@ function createLookup(remoteVMs, log) {
             rvmLookup.vms[uuid] = {};
             rvmLookup.vms[uuid][uuid] = rvm;
 
-            if (rvm.hasOwnProperty('tags')) {
+            if (hasKey(rvm, 'tags')) {
                 forEachKey(rvm.tags, function (tag, val) {
                     createSubObjects(rvmLookup.tags, tag, uuid, rvm);
                     createSubObjects(rvmLookup, 'tagValues', tag, val,

@@ -30,7 +30,6 @@
 
 digit                   [0-9]
 hex                     [0-9a-f]
-esc                     "\\"
 t                       {digit}{1,3}
 
 %%
@@ -89,7 +88,7 @@ t                       {digit}{1,3}
 "CODE"                  return 'CODE';
 "code"                  return 'CODE';
 
-\"(?:{esc}["bfnrt/{esc}]|{esc}"u"[a-fA-F0-9]{4}|[^"{esc}])*\"  yytext = yytext.substr(1,yyleng-2); return 'STRING';
+\"(?:\\["bfnrt/()\\]|\\"u"[a-fA-F0-9]{4}|[^"\\])*\"  yytext = yy.tagUnescape(yytext.substr(1,yyleng-2)); return 'STRING';
 {t}'.'{t}'.'{t}'.'{t}          return 'IPV4ADDR';
 {hex}*':'{hex}*':'[:0-9a-f]*   return 'IPV6ADDR';
 '/'{digit}{1,3}                return 'CIDRSUFFIX';

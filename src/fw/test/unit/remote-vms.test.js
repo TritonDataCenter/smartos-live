@@ -500,13 +500,13 @@ exports['local VM to remote tag'] = function (t) {
         rules: [
             {
                 owner_uuid: vm.owner_uuid,
-                rule: util.format('FROM vm %s TO tag other ALLOW tcp PORT 80',
+                rule: util.format('FROM vm %s TO tag "other" ALLOW tcp PORT 80',
                                 vm.uuid),
                 enabled: true
             },
             {
                 owner_uuid: vm.owner_uuid,
-                rule: util.format('FROM tag other TO vm %s ALLOW tcp PORT 80',
+                rule: util.format('FROM tag "other" TO vm %s ALLOW tcp PORT 80',
                                 vm.uuid),
                 enabled: true
             }
@@ -694,7 +694,7 @@ exports['FWAPI-248 - only list an applicable rule once'] = function (t) {
     var rvm = helpers.generateVM({ tags: { foo: true, bar: false } });
     var rule = {
         owner_uuid: rvm.owner_uuid,
-        rule: 'FROM tag foo TO tag bar ALLOW tcp PORT 80',
+        rule: 'FROM tag "foo" TO tag "bar" ALLOW tcp PORT 80',
         enabled: true
     };
     var payload = {
@@ -975,7 +975,7 @@ exports['owner_uuid filtering'] = function (t) {
     var payload = {
         rules: [
             {
-                rule: util.format('FROM tag one TO vm %s ALLOW tcp PORT 25',
+                rule: util.format('FROM tag "one" TO vm %s ALLOW tcp PORT 25',
                                 vm.uuid),
                 owner_uuid: ownerA,
                 enabled: true
@@ -1306,17 +1306,17 @@ exports['FWAPI-252: Allow using rvmRules() on RVM w/o IPs'] = function (t) {
         rules: [
             {
                 owner_uuid: rvm.owner_uuid,
-                rule: 'FROM tag foo TO tag other ALLOW tcp PORT 80',
+                rule: 'FROM tag "foo" TO tag "other" ALLOW tcp PORT 80',
                 enabled: true
             },
             {
                 owner_uuid: rvm.owner_uuid,
-                rule: 'FROM tag other TO tag foo ALLOW tcp PORT 80',
+                rule: 'FROM tag "other" TO tag "foo" ALLOW tcp PORT 80',
                 enabled: true
             },
             {
                 owner_uuid: rvm.owner_uuid,
-                rule: 'FROM tag foo TO tag bar ALLOW tcp PORT 80',
+                rule: 'FROM tag "foo" TO tag "bar" ALLOW tcp PORT 80',
                 enabled: true
             }
         ],
@@ -1386,7 +1386,17 @@ exports['invalid and missing parameters'] = function (t) {
     var sameUUID = helpers.generateVM();
     sameUUID.uuid = payload.vms[0].uuid;
 
+    var badUUID = helpers.generateVM({ uuid: 'hasOwnProperty' });
+
+    var badOwnerUUID = helpers.generateVM({ owner_uuid: 'hasOwnProperty' });
+
     var invalid = [
+        [ 'invalid rule UUID', badUUID,
+            'Invalid Remote VM UUID: hasOwnProperty' ],
+
+        [ 'invalid owner UUID', badOwnerUUID,
+            'Invalid owner UUID: hasOwnProperty' ],
+
         [ 'invalid IPs', invalidIPs, util.format(
             'Invalid IP address: %s', invalidIPs.ips[0]) ],
 

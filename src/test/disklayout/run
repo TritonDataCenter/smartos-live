@@ -1,0 +1,112 @@
+#!/bin/sh
+
+for f in *.di
+do
+    disklayout -f $f > /var/tmp/$f.out
+    printf "%-16s " $f.out
+    diff -u $f.out /var/tmp/$f.out
+    rm -f /var/tmp/$f.out
+done
+
+echo
+echo "no spares"
+for f in *.di
+do
+    disklayout -f $f -s 0 > /var/tmp/$f.out
+    printf "%-16s " $f.out
+    diff -u $f.0s.out /var/tmp/$f.out
+    rm -f /var/tmp/$f.out
+done
+
+echo
+echo "1 spare"
+for f in *.di
+do
+    disklayout -f $f -s 1 > /var/tmp/$f.out
+    printf "%-16s " $f.out
+    diff -u $f.1s.out /var/tmp/$f.out
+    rm -f /var/tmp/$f.out
+done
+
+echo
+echo "standalone tests"
+
+disklayout -f insane.di -c > /var/tmp/insane.out
+printf "%-16s " insanec.out
+diff -u insane.di.c.out /var/tmp/insane.out
+rm -f /var/tmp/insane.out
+
+disklayout -f insane.di -c -s 0 > /var/tmp/insane.out
+printf "%-16s " insanec0.out
+diff -u insane.di.c0.out /var/tmp/insane.out
+rm -f /var/tmp/insane.out
+
+disklayout -f insane.di -c -s 1 > /var/tmp/insane.out
+printf "%-16s " insanec1.out
+diff -u insane.di.c1.out /var/tmp/insane.out
+rm -f /var/tmp/insane.out
+
+disklayout -f s8.di mirror > /var/tmp/s8.out
+printf "%-16s " 8mirror.out
+diff -u s8.di.m.out /var/tmp/s8.out
+rm -f /var/tmp/s8.out
+
+disklayout -f s8.di raidz1 > /var/tmp/s8.out
+printf "%-16s " 8z1.out
+diff -u s8.di.z1.out /var/tmp/s8.out
+rm -f /var/tmp/s8.out
+
+disklayout -f s8.di raidz2 > /var/tmp/s8.out
+printf "%-16s " 8z2.out
+diff -u s8.di.z2.out /var/tmp/s8.out
+rm -f /var/tmp/s8.out
+
+disklayout -f s8.di raidz3 > /var/tmp/s8.out
+printf "%-16s " 8z3.out
+diff -u s8.di.z3.out /var/tmp/s8.out
+rm -f /var/tmp/s8.out
+
+disklayout -f s8.di -s 0 mirror > /var/tmp/s8.out
+printf "%-16s " 8mirror0.out
+diff -u s8.di.m0.out /var/tmp/s8.out
+rm -f /var/tmp/s8.out
+
+disklayout -f s16.di mirror > /var/tmp/s16.out
+printf "%-16s " 16mirror.out
+diff -u s16.di.m.out /var/tmp/s16.out
+rm -f /var/tmp/s16.out
+
+disklayout -f s16.di raidz1 > /var/tmp/s16.out
+printf "%-16s " 16z1.out
+diff -u s16.di.z1.out /var/tmp/s16.out
+rm -f /var/tmp/s16.out
+
+disklayout -f s16.di raidz2 > /var/tmp/s16.out
+printf "%-16s " 16z2.out
+diff -u s16.di.z2.out /var/tmp/s16.out
+rm -f /var/tmp/s16.out
+
+disklayout -f s16.di raidz3 > /var/tmp/s16.out
+printf "%-16s " 16z3.out
+diff -u s16.di.z3.out /var/tmp/s16.out
+rm -f /var/tmp/s16.out
+
+disklayout -f s16.di -s 0 mirror > /var/tmp/s16.out
+printf "%-16s " 16mirror0.out
+diff -u s16.di.m0.out /var/tmp/s16.out
+rm -f /var/tmp/s16.out
+
+disklayout -f s16.di -s 0 raidz1 > /var/tmp/s16.out
+printf "%-16s " 16z1-0.out
+diff -u s16.di.z1-0.out /var/tmp/s16.out
+rm -f /var/tmp/s16.out
+
+disklayout -f s16.di -s 0 raidz2 > /var/tmp/s16.out
+printf "%-16s " 16z2-0.out
+diff -u s16.di.z2-0.out /var/tmp/s16.out
+rm -f /var/tmp/s16.out
+
+disklayout -f s16.di -s 0 raidz3 > /var/tmp/s16.out
+printf "%-16s " 16z3-0.out
+diff -u s16.di.z3-0.out /var/tmp/s16.out
+rm -f /var/tmp/s16.out

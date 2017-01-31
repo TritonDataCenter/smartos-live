@@ -762,7 +762,7 @@ test('test docker VM with "docker:extraHosts"', function (t) {
             var hostsPath = path.resolve(
                 vmobj.zonepath, 'root', 'etc', 'hosts');
             var hostsContent = fs.readFileSync(hostsPath, 'utf8');
-            var foo = /^foo\t1.2.3.4$/m;
+            var foo = /^1.2.3.4\tfoo$/m;
             t.ok(foo.test(hostsContent),
                 util.format('%s entry found in hosts path (%s): %j',
                     foo, hostsPath, hostsContent));
@@ -781,8 +781,8 @@ test('test docker VM with "docker:extraHosts"', function (t) {
             var hostsPath = path.resolve(
                 vmobj.zonepath, 'root', 'etc', 'hosts');
             var hostsContent = fs.readFileSync(hostsPath, 'utf8');
-            var foo = /^foo\t1.2.3.4$/m;
-            var bar = /^bar\t5.6.7.8$/m;
+            var foo = /^1.2.3.4\tfoo$/m;
+            var bar = /^5.6.7.8\tbar$/m;
             t.notOk(foo.test(hostsContent),
                 util.format('%s entry NOT found in hosts path (%s): %j',
                     foo, hostsPath, hostsContent));

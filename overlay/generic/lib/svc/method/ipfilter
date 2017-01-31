@@ -24,6 +24,7 @@
 # Use is subject to license terms.
 #
 # Copyright (c) 2013, Joyent, Inc. All rights reserved.
+# Copyright 2016 Hans Rosenfeld <rosenfeld@grumpf.hope-2000.org>
 #
 
 set -o xtrace
@@ -52,6 +53,7 @@ logmsg()
 load_ipf() {
 	bad=0
 	ipf -IFa
+	ipf -6IFa
 
 	for file in $IPFILOVRCONF $CONF_FILES $IPFILCONF; do
 		if [ -r ${file} ]; then
@@ -64,13 +66,16 @@ load_ipf() {
 		fi
 	done
 
-	if [ -r ${IP6FILCONF} ]; then
-		ipf -6IFa -f ${IP6FILCONF}
-		if [ $? != 0 ]; then
-			echo "$0: load of ${IP6FILCONF} into alternate set failed"
-			bad=1
+	for file in $IP6FILOVRCONF $CONF6_FILES $IP6FILCONF; do
+		if [ -r ${file} ]; then
+			ipf -6I -f ${file}
+			if [ $? != 0 ]; then
+				echo "$0: load of ${file} into alternate set failed"
+				bad=1
+			fi
 		fi
-	fi
+	done
+
 	if [ $bad -eq 0 ] ; then
 		ipf -s -y
 		return 0
@@ -168,6 +173,7 @@ configure_firewall()
 {
 	symlink_persistent_file ipnat.conf
 	symlink_persistent_file ipf.conf
+	symlink_persistent_file ipf6.conf
 	create_global_rules || exit $SMF_EXIT_ERR_CONFIG
 	create_global_ovr_rules || exit $SMF_EXIT_ERR_CONFIG
 	create_services_rules || exit $SMF_EXIT_ERR_CONFIG
@@ -228,7 +234,7 @@ case "$1" in
 		fi
 
 		ipf -D
-		[ -n "$ipfid" ] && modunload -i $ipfid
+		[ "$zone" = "global" -a -n "$ipfid" ] && modunload -i $ipfid
 		;;
 
 	pause)

@@ -6,6 +6,14 @@ Known issues:
   Docker Registry v1, which is now deprecated.
 
 
+## 3.7.1
+
+- OS-5823 Allow 'imgadm install' to be able to install a type=docker image.
+
+## 3.7.0
+
+- OS-5798 Allow '+' in the image manifest "version" field.
+
 ## 3.6.2
 
 - OS-5335 docker image import should disallow meaningless operations

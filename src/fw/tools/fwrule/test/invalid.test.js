@@ -26,14 +26,10 @@
  * Negative unit tests for the firewall rule object
  */
 
+'use strict';
+
 var fwrule = require('../lib/index');
-var util = require('util');
-
-
-
-// Set this to any of the exports in this file to only run that test,
-// plus setup and teardown
-var runOne;
+var test = require('tape');
 
 
 function longStr() {
@@ -102,9 +98,29 @@ var INVALID = [
                         + 'expected: \'(\', \'all\', \'any\', \'ip\', '
                         + '\'subnet\', \'vm\', \'tag\', found: word'],
 
-    [ 'invalid subnet',
+    [ 'invalid IPv4',
+        { rule: 'FROM tag foo TO ip 10.288.0.0 ALLOW udp port 53' },
+        'rule', 'IPv4 address "10.288.0.0" is invalid' ],
+
+    [ 'invalid IPv6',
+        { rule: 'FROM tag foo TO ip fd00::12345 ALLOW udp port 53' },
+        'rule', 'IPv6 address "fd00::12345" is invalid' ],
+
+    [ 'invalid IPv4 subnet: bad address component',
+        { rule: 'FROM tag foo TO subnet 10.350.0.0/24 ALLOW udp port 53' },
+        'rule', 'Subnet "10.350.0.0/24" is invalid (must be in CIDR format)' ],
+
+    [ 'invalid IPv4 subnet: bad prefix length',
         { rule: 'FROM tag foo TO subnet 10.8.0.0/33 ALLOW udp port 53' },
         'rule', 'Subnet "10.8.0.0/33" is invalid (must be in CIDR format)' ],
+
+    [ 'invalid IPv6 subnet: bad address component',
+        { rule: 'FROM tag foo TO subnet fd005::/64 ALLOW udp port 53' },
+        'rule', 'Subnet "fd005::/64" is invalid (must be in CIDR format)' ],
+
+    [ 'invalid IPv6 subnet: bad prefix length',
+        { rule: 'FROM tag foo TO subnet fd00::/130 ALLOW udp port 53' },
+        'rule', 'Subnet "fd00::/130" is invalid (must be in CIDR format)' ],
 
     [ 'invalid port: too small',
         { rule: 'FROM tag foo TO subnet 10.8.0.0/24 ALLOW udp port 0' },
@@ -113,6 +129,10 @@ var INVALID = [
     [ 'invalid port: too big',
         { rule: 'FROM tag foo TO subnet 10.8.0.0/24 ALLOW udp port 65537' },
         'rule', 'Port number "65537" is invalid' ],
+
+    [ 'invalid port range: too many numbers',
+        { rule: 'FROM tag foo TO subnet 10.8.0.0/24 ALLOW tcp ports 1-20-30' },
+        'rule', '"1-20-30" is not a valid port number or range' ],
 
     [ 'invalid port range: too small',
         { rule: 'FROM tag foo TO subnet 10.8.0.0/24 ALLOW tcp ports 0-20' },
@@ -314,7 +334,7 @@ var INVALID = [
 ];
 
 
-exports['Invalid rules'] = function (t) {
+test('Invalid rules', function (t) {
     INVALID.forEach(function (data) {
         var testName = data[0];
         var expMsg = data[3];
@@ -324,7 +344,7 @@ exports['Invalid rules'] = function (t) {
         var thrown = false;
 
         try {
-            opts = (field == 'global' ? { enforceGlobal: true } : {});
+            opts = (field === 'global' ? { enforceGlobal: true } : {});
             fwrule.create(rule, opts);
         } catch (err) {
             thrown = true;
@@ -335,11 +355,11 @@ exports['Invalid rules'] = function (t) {
         t.ok(thrown, 'Error thrown: ' + testName);
     });
 
-    t.done();
-};
+    t.end();
+});
 
 
-exports['Invalid parameters'] = function (t) {
+test('Invalid parameters', function (t) {
     var thrown = false;
     var invalid = {
         enabled: 'invalid',
@@ -369,11 +389,11 @@ exports['Invalid parameters'] = function (t) {
     }
 
     t.ok(thrown, 'error thrown');
-    t.done();
-};
+    t.end();
+});
 
 
-exports['Missing rule field'] = function (t) {
+test('Missing rule field', function (t) {
     var thrown = false;
 
     try {
@@ -385,11 +405,11 @@ exports['Missing rule field'] = function (t) {
     }
 
     t.ok(thrown, 'error thrown');
-    t.done();
-};
+    t.end();
+});
 
 
-exports['global and owner_uuid not set'] = function (t) {
+test('global and owner_uuid not set', function (t) {
     var thrown = false;
 
     try {
@@ -403,14 +423,5 @@ exports['global and owner_uuid not set'] = function (t) {
     }
 
     t.ok(thrown, 'error thrown');
-    t.done();
-};
-
-
-
-// Use to run only one test in this file:
-if (runOne) {
-    module.exports = {
-        oneTest: runOne
-    };
-}
+    t.end();
+});

@@ -11,6 +11,7 @@ var mod_obj = require('../../lib/util/obj');
 var util = require('util');
 
 var createSubObjects = mod_obj.createSubObjects;
+var hasKey = mod_obj.hasKey;
 
 
 
@@ -242,8 +243,7 @@ function stat(file, cb) {
     var p = _splitFile(file);
     var root = VALUES.fs;
 
-    if (!root.hasOwnProperty(p.dir)
-            || !root[p.dir].hasOwnProperty(p.file)) {
+    if (!hasKey(root, p.dir) || !hasKey(root[p.dir], p.file)) {
         return cb(_ENOENT(file));
     }
 
@@ -252,7 +252,7 @@ function stat(file, cb) {
 
 function readDir(dir, cb) {
     var root = VALUES.fs;
-    if (!root.hasOwnProperty(dir)) {
+    if (!hasKey(root, dir)) {
         return cb(_ENOENT(dir));
     }
 
@@ -264,8 +264,7 @@ function readFile(file, cb) {
     var p = _splitFile(file);
     var root = VALUES.fs;
 
-    if (!root.hasOwnProperty(p.dir)
-            || !root[p.dir].hasOwnProperty(p.file)) {
+    if (!hasKey(root, p.dir) || !hasKey(root[p.dir], p.file)) {
         return cb(_ENOENT(file));
     }
 
@@ -277,8 +276,7 @@ function readFileSync(file, cb) {
     var p = _splitFile(file);
     var root = VALUES.fs;
 
-    if (!root.hasOwnProperty(p.dir)
-            || !root[p.dir].hasOwnProperty(p.file)) {
+    if (!hasKey(root, p.dir) || !hasKey(root[p.dir], p.file)) {
         throw _ENOENT(file);
     }
 
@@ -317,8 +315,7 @@ function unlink(file, cb) {
     var p = _splitFile(file);
     var root = VALUES.fs;
 
-    if (!root.hasOwnProperty(p.dir)
-            || !root[p.dir].hasOwnProperty(p.file)) {
+    if (!hasKey(root, p.dir) || !hasKey(root[p.dir], p.file)) {
         return cb(_ENOENT(file));
     }
 
@@ -332,7 +329,7 @@ function writeFile(f, data, cb) {
     var p = _splitFile(f);
 
     var root = VALUES.fs;
-    if (!root.hasOwnProperty(p.dir)) {
+    if (!hasKey(root, p.dir)) {
         root[p.dir] = {};
     }
 
@@ -347,7 +344,7 @@ function writeFile(f, data, cb) {
 
 
 function mkdirp(dir, cb) {
-    if (!VALUES.fs.hasOwnProperty(dir)) {
+    if (!hasKey(VALUES.fs, dir)) {
         VALUES.fs[dir] = {};
     }
     return cb();
@@ -355,7 +352,7 @@ function mkdirp(dir, cb) {
 
 
 mkdirp.sync = function mkdirpSync(dir) {
-    if (!VALUES.fs.hasOwnProperty(dir)) {
+    if (!hasKey(VALUES.fs, dir)) {
         VALUES.fs[dir] = {};
     }
     return;
@@ -411,7 +408,7 @@ function resetValues(opts) {
 
     if (opts && opts.initialValues) {
         // As a convenience, allow fs values to be full paths
-        if (opts.initialValues.hasOwnProperty('fs')) {
+        if (hasKey(opts.initialValues, 'fs')) {
             for (var f in opts.initialValues.fs) {
                 var p = _splitFile(f);
                 mkdirp.sync(p.dir);

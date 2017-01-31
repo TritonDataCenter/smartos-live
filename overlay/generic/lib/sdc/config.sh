@@ -7,7 +7,7 @@
 #
 # bash config.sh -json
 #
-# Copyright (c) 2015 Joyent Inc., All rights reserved.
+# Copyright 2016 Joyent Inc.
 #
 
 CACHE_FILE_JSON="/tmp/.config.json"
@@ -73,7 +73,9 @@ function load_sdc_sysinfo {
     eval $(/usr/bin/sysinfo -p | sed -e "s/^/${prefix}/")
 }
 
-# Sets SDC_CONFIG_FILENAME with the location of the USB config file, or /opt/smartdc/config
+# Sets SDC_CONFIG_FILENAME with the location of the config file. This can
+# come from the USB key, /opt/smartdc/config/node.config, or (if on an unsetup
+# CN) /var/tmp/node.config/node.config.
 function load_sdc_config_filename {
 
     # the default
@@ -87,6 +89,10 @@ function load_sdc_config_filename {
 
         if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
             SDC_CONFIG_INC_DIR="$(dirname ${SDC_CONFIG_FILENAME})/config.inc"
+        elif [[ ! -f ${COMPUTE_NODE_CONFIG_FILENAME} ]]; then
+            if [[ -f /var/tmp/node.config/node.config ]]; then
+                COMPUTE_NODE_CONFIG_FILENAME=/var/tmp/node.config/node.config
+            fi
         fi
 
         if [[ -f ${COMPUTE_NODE_CONFIG_FILENAME} ]]; then

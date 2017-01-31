@@ -28,6 +28,8 @@
  * firewall rule parser: validation functions
  */
 
+'use strict';
+
 var net = require('net');
 var util = require('util');
 var VError = require('verror').VError;
@@ -65,7 +67,7 @@ util.inherits(InvalidParamError, VError);
  * the broadcast address
  */
 function validateIPv4address(ip) {
-    if (!net.isIPv4(ip) || (ip == '255.255.255.255') || (ip == '0.0.0.0')) {
+    if (!net.isIPv4(ip) || (ip === '255.255.255.255') || (ip === '0.0.0.0')) {
         return false;
     }
 
@@ -149,11 +151,12 @@ function validatePortOrAll(port) {
  * and lower-case allowed)
  */
 function validateProtocol(protocol) {
-    var protoLC = protocol.toLowerCase();
-    if ((protoLC != 'tcp') && (protoLC != 'udp') && (!icmpr.test(protoLC))) {
+    if (typeof (protocol) !== 'string') {
         return false;
     }
-    return true;
+
+    var protoLC = protocol.toLowerCase();
+    return ((protoLC === 'tcp') || (protoLC === 'udp') || icmpr.test(protoLC));
 }
 
 
@@ -162,11 +165,12 @@ function validateProtocol(protocol) {
  * mixed case allowed)
  */
 function validateAction(action) {
-    var actionLC = action.toLowerCase();
-    if ((actionLC != 'allow') && (actionLC != 'block')) {
+    if (typeof (action) !== 'string') {
         return false;
     }
-    return true;
+
+    var actionLC = action.toLowerCase();
+    return ((actionLC === 'allow') || (actionLC === 'block'));
 }
 
 

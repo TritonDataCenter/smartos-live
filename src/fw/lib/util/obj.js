@@ -31,18 +31,25 @@
 // --- Exports
 
 
+/**
+ * Safely check if an object has a property
+ */
+function hasKey(obj, prop) {
+    return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
 
 /**
  * Adds to a 3-level deep object
  */
 function addToObj3(hash, key1, key2, key3, obj) {
-    if (!hash.hasOwnProperty(key1)) {
+    if (!hasKey(hash, key1)) {
         hash[key1] = {};
     }
-    if (!hash[key1].hasOwnProperty(key2)) {
+    if (!hasKey(hash[key1], key2)) {
         hash[key1][key2] = {};
     }
-    if (!hash[key1][key2].hasOwnProperty(key3)) {
+    if (!hasKey(hash[key1][key2], key3)) {
         hash[key1][key2][key3] = obj;
     }
 }
@@ -63,7 +70,7 @@ function createSubObjects() {
             return;
         }
 
-        if (!h.hasOwnProperty(arguments[i])) {
+        if (!hasKey(h, arguments[i])) {
             h[arguments[i]] = {};
         }
         prev = h;
@@ -126,7 +133,7 @@ function objValues(obj) {
 function shallowObjEqual(obj1, obj2) {
     var field;
     for (field in obj1) {
-        if (!obj2.hasOwnProperty(field))
+        if (!hasKey(obj2, field))
             return false;
 
         if (obj1[field] !== obj2[field]) {
@@ -135,7 +142,7 @@ function shallowObjEqual(obj1, obj2) {
     }
 
     for (field in obj2) {
-        if (!obj1.hasOwnProperty(field))
+        if (!hasKey(obj1, field))
             return false;
     }
 
@@ -147,6 +154,7 @@ module.exports = {
     addToObj3: addToObj3,
     createSubObjects: createSubObjects,
     forEachKey: forEachKey,
+    hasKey: hasKey,
     mergeObjects: mergeObjects,
     shallowObjEqual: shallowObjEqual,
     values: objValues,

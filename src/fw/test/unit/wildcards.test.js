@@ -213,7 +213,7 @@ exports['any <-> vm: add / update'] = function (t) {
                 {
                     uuid: expRules[1].uuid,
                     rule: util.format(
-                        'FROM any TO (tag one OR vm %s) ALLOW tcp PORT 8081',
+                        'FROM any TO (tag "one" OR vm %s) ALLOW tcp PORT 8081',
                         vm.uuid)
                 }
             ],
@@ -747,7 +747,7 @@ exports['add / update: all ports'] = function (t) {
                 {
                     uuid: expRules[1].uuid,
                     rule: util.format(
-                        'FROM any TO (tag one OR vm %s) ALLOW tcp PORT 8081',
+                        'FROM any TO (tag "one" OR vm %s) ALLOW tcp PORT 8081',
                         vm.uuid)
                 }
             ],

@@ -79,7 +79,7 @@ exports['tag to IP'] = function (t) {
     var payload = {
         rules: [
             {
-                rule: 'FROM tag foo TO ip 10.99.99.254 BLOCK tcp PORT 25',
+                rule: 'FROM tag "foo" TO ip 10.99.99.254 BLOCK tcp PORT 25',
                 enabled: true,
                 owner_uuid: owner
             }
@@ -149,7 +149,8 @@ exports['tag to IP'] = function (t) {
         var payload2 = {
             rules: [
                 {
-                    rule: 'FROM tag foo TO ip 10.99.99.254 BLOCK tcp PORT 250',
+                    rule: 'FROM tag "foo" TO ip 10.99.99.254 '
+                        + 'BLOCK tcp PORT 250',
                     enabled: true,
                     global: true
                 }
@@ -642,7 +643,7 @@ exports['remote vms: tags'] = function (t) {
         rules: [
             {
                 owner_uuid: owner,
-                rule: util.format('FROM tag one TO vm %s ALLOW tcp PORT 8081',
+                rule: util.format('FROM tag "one" TO vm %s ALLOW tcp PORT 8081',
                     vm1.uuid),
                 enabled: true
             }

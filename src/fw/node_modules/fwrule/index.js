@@ -26,11 +26,12 @@
  * firewall rule parser: entry point
  */
 
+'use strict';
+
 var mod_net = require('net');
 var parser = require('./parser').parser;
 var rule = require('./rule');
 var validators = require('./validators');
-var VError = require('verror').VError;
 
 
 
@@ -39,7 +40,6 @@ var VError = require('verror').VError;
 
 
 var uuidRE = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
-var portRE = /^[0-9]{1,5}$/;
 
 /**
  * The fwrule language is versioned so that use of new features can be
@@ -109,8 +109,8 @@ parser.yy.validateIPv6address = function validateIPv6address(ip) {
 };
 
 
-parser.yy.validateIPv6subnet = function validateIPv6subnet(ip, subnet) {
-    if (!validators.validateIPv6subnet(ip, subnet)) {
+parser.yy.validateIPv6subnet = function validateIPv6subnet(subnet) {
+    if (!validators.validateIPv6subnet(subnet)) {
         throw new validators.InvalidParamError('rule',
             'Subnet "%s" is invalid (must be in CIDR format)', subnet);
     }
@@ -182,7 +182,7 @@ parser.yy.validateOKVersion = function validateOKVersion(ver, feature) {
 };
 
 
-parser.yy.parseError = function parseError(str, details) {
+parser.yy.parseError = function parseError(_, details) {
     var err;
     if (details.token === null) {
         var pre = this.yy.lexer.pastInput();
@@ -215,6 +215,8 @@ parser.yy.parseError = function parseError(str, details) {
     throw err;
 };
 
+
+parser.yy.tagUnescape = rule.tagUnescape;
 
 
 // --- Exports

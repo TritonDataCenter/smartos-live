@@ -42,6 +42,8 @@ var verror = require('verror');
 var VM = require('/usr/vm/node_modules/VM');
 
 
+var hasKey = util_obj.hasKey;
+
 
 // --- Globals
 
@@ -137,11 +139,11 @@ function preparePayload(opts, payload) {
 
         // Allow doing this:
         //   echo '{ ... }' | fwadm add|update
-        if (newOpts.hasOwnProperty('rule')
-            || newOpts.hasOwnProperty('enabled')
-            || newOpts.hasOwnProperty('description')
-            || newOpts.hasOwnProperty('owner_uuid')
-            || newOpts.hasOwnProperty('version')) {
+        if (hasKey(newOpts, 'rule')
+            || hasKey(newOpts, 'enabled')
+            || hasKey(newOpts, 'description')
+            || hasKey(newOpts, 'owner_uuid')
+            || hasKey(newOpts, 'version')) {
             // Trying to add a single rule, and nothing else
             newOpts = { rules: [ newOpts ] };
         }
@@ -189,7 +191,7 @@ function ruleOutput(err, res, opts, action) {
         return console.log(cli.json(res));
     }
 
-    if (opts && opts.stdout && res.hasOwnProperty('files')) {
+    if (opts && opts.stdout && hasKey(res, 'files')) {
         for (var f in res.files) {
             console.log('=== %s', f);
             console.log(res.files[f]);
@@ -360,7 +362,7 @@ Fwadm.prototype.do_add_rvm = function (subcmd, opts, args, callback) {
                 vms: state.vms
             };
 
-            if (state.payload.hasOwnProperty('remoteVMs')) {
+            if (hasKey(state.payload, 'remoteVMs')) {
                 // formatted like it was being passed to 'fwadm add'
                 addOpts.remoteVMs = state.payload.remoteVMs;
             } else {
@@ -446,7 +448,7 @@ Fwadm.prototype.do_update = function (subcmd, opts, args, callback) {
 
         // Allow doing an 'update <uuid>' instead of requiring the UUID be in
         // the payload:
-        if (id && updatePayload.hasOwnProperty('rules')
+        if (id && hasKey(updatePayload, 'rules')
             && updatePayload.rules.length === 1) {
             updatePayload.rules[0].uuid = cli.validateUUID(id);
         }
@@ -877,7 +879,7 @@ for (var cmd in HELP) {
     var proto = Fwadm.prototype[do_key];
     proto = Fwadm.prototype[do_key] = wrapSubcmd(proto);
     proto.help = info.summary + '\n\n{{usage}}\n\n{{options}}';
-    if (info.hasOwnProperty('examples')) {
+    if (hasKey(info, 'examples')) {
         proto.help += '\n\nExamples:\n\n' + info.examples;
     }
 

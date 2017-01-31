@@ -385,7 +385,7 @@ exports['add: tag to IP'] = function (t) {
         rules: [
             {
                 owner_uuid: vm1.owner_uuid,
-                rule: 'FROM tag foo TO ip 10.99.99.254 BLOCK tcp PORT 25',
+                rule: 'FROM tag "foo" TO ip 10.99.99.254 BLOCK tcp PORT 25',
                 enabled: true
             }
         ],
@@ -485,12 +485,14 @@ exports['add: tag to subnet'] = function (t) {
         rules: [
             {
                 owner_uuid: vm1.owner_uuid,
-                rule: 'FROM tag foo TO subnet 10.99.99.0/24 BLOCK tcp PORT 25',
+                rule: 'FROM tag "foo" TO subnet 10.99.99.0/24 BLOCK '
+                    + 'tcp PORT 25',
                 enabled: true
             },
             {
                 owner_uuid: vm2.owner_uuid,
-                rule: 'FROM subnet 10.99.99.0/24 TO tag foo ALLOW tcp PORT 80',
+                rule: 'FROM subnet 10.99.99.0/24 TO tag "foo" ALLOW '
+                    + 'tcp PORT 80',
                 enabled: true
             }
         ],

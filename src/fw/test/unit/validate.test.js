@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright 2016, Joyent, Inc. All rights reserved.
  *
  * fwadm tests
  */
@@ -82,21 +82,21 @@ exports['single rules'] = function (t) {
         },
         {
             name: 'tag to ip: valid',
-            rule: 'FROM tag one TO ip 1.2.3.4 BLOCK tcp PORT 25'
+            rule: 'FROM tag "one" TO ip 1.2.3.4 BLOCK tcp PORT 25'
         },
         {
             name: 'tag to ip: missing tag',
-            rule: 'FROM tag two TO ip 1.2.3.4 BLOCK tcp PORT 25'
+            rule: 'FROM tag "two" TO ip 1.2.3.4 BLOCK tcp PORT 25'
         },
         {
             name: 'vm to missing tag',
-            rule: util.format('FROM vm %s TO tag two BLOCK tcp PORT 25',
+            rule: util.format('FROM vm %s TO tag "two" BLOCK tcp PORT 25',
                 vm.uuid)
         },
         {
             name: 'vm to missing tag and missing vm',
             rule: util.format(
-                'FROM vm %s TO (tag blue OR vm %s) BLOCK tcp PORT 25',
+                'FROM vm %s TO (tag "blue" OR vm %s) BLOCK tcp PORT 25',
                 vm.uuid, uuid1),
             errors: [ util.format('Missing vm %s for rule: %r', uuid1) ]
         }

@@ -50,7 +50,7 @@ ZWatch.prototype._handle_event = function _handle_event(ev) {
     var self = this;
 
     // only care about create and delete
-    if (ev.type === 'create' || ev.type === 'delete')
+    if (ev.type !== 'create' && ev.type !== 'delete')
         return;
 
     var data = {

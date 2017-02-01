@@ -49,31 +49,15 @@ util.inherits(ZWatch, EventEmitter);
 ZWatch.prototype._handle_event = function _handle_event(ev) {
     var self = this;
 
-    if (ev.type !== 'modify')
+    // only care about create and delete
+    if (ev.type === 'create' || ev.type === 'delete')
         return;
 
     var data = {
+        cmd: ev.type,
         zonename: ev.zonename,
-        when: ev.ts.getTime() * 1000000
+        ts: ev.ts
     };
-
-    var changes = ev.changes || [];
-    changes = changes.filter(function (c) {
-        return c.path.length === 1 && c.path[0] === 'zone_state';
-    });
-
-    if (changes.length !== 1)
-        return;
-
-    var change = changes[0];
-
-    if (change.to === 'shutting_down' && change.from === 'running') {
-        data.cmd = 'stop';
-    } else if (change.to === 'running' && change.from === 'ready') {
-        data.cmd = 'start';
-    } else {
-        data.cmd = 'unknown';
-    }
 
     self.emit('zone_transition', data);
 };

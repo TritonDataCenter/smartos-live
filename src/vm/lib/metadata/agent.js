@@ -667,52 +667,49 @@ MetadataAgent.prototype.start = function start() {
         log: self.log,
         name: 'Metadata Agent'
     });
+
     self.createServersOnExistingZones();
     self.startPeriodicChecks();
 
     zwatch.on('zone_transition', function (msg) {
-        var when = new Date(msg.when / 1000000);
-
-        // when a zone was deleted, cleanup any cached stuff for it
-        if (msg.cmd === 'delete') {
+        switch (msg.cmd) {
+        case 'delete':
+            // when a zone was deleted, cleanup any cached stuff for it
             self.log.debug({
-                delay: (new Date()).getTime() - when.getTime(), // in ms
-                when: when,
+                delay: (new Date()) - msg.ts,
+                when: msg.ts,
                 zonename: msg.zonename
             }, 'ZWatch watcher saw zone deletion');
 
             self.purgeZoneCache(msg.zonename);
-            return;
-        }
-
-        // ignore everything else except create
-        if (msg.cmd !== 'create') {
-            return;
-        }
-
-        // ignore zones we've already (still) got a connection for
-        if (self.zoneConnections[msg.zonename]) {
-            return;
-        }
-
-        self.log.debug({
-            delay: (new Date()).getTime() - when.getTime(), // in ms
-            when: when,
-            zonename: msg.zonename
-        }, 'ZWatch watcher saw new zone');
-
-        zoneExists(msg.zonename, function _zoneExists(_, exists) {
-
-            if (!exists) {
-                self.log.warn({transition: msg},
-                    'ignoring transition for zone that no longer exists');
-                return;
+            break;
+        case 'create':
+            // ignore zones we've already (still) got a connection for
+            if (self.zoneConnections[msg.zonename]) {
+                break;
             }
+            self.log.debug({
+                delay: (new Date()) - msg.ts,
+                when: msg.ts,
+                zonename: msg.zonename
+            }, 'ZWatch watcher saw new zone');
 
-            // we only handle create, so that's what this was
-            self.addDebug(msg.zonename, 'last_zone_create');
-            self.handleZoneCreated(msg.zonename);
-        });
+            zoneExists(msg.zonename, function _zoneExists(_, exists) {
+                if (!exists) {
+                    self.log.warn({transition: msg},
+                        'ignoring transition for zone that no longer exists');
+                    return;
+                }
+
+                // we only handle create, so that's what this was
+                self.addDebug(msg.zonename, 'last_zone_create');
+                self.handleZoneCreated(msg.zonename);
+            });
+            break;
+        default:
+            assert(false, 'unsupport zwatch cmd: ' + msg.cmd);
+            break;
+        }
     });
 };
 

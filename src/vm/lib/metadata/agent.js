@@ -146,82 +146,14 @@ var async = require('/usr/node/node_modules/async');
 var bunyan = require('/usr/vm/node_modules/bunyan');
 var common = require('./common');
 var crc32 = require('./crc32');
-var execFile = require('child_process').execFile;
 var fs = require('fs');
-var getZoneinfo
-    = require('/usr/vm/node_modules/vmload/vmload-zoneinfo').getZoneinfo;
-var guessHandleType = process.binding('tty_wrap').guessHandleType;
 var net = require('net');
 var path = require('path');
-var util = require('util');
-var vasync = require('vasync');
 var VM = require('/usr/vm/node_modules/VM');
-var ZWatch = require('./zwatch');
+var VminfodWatcher
+    = require('/usr/vm/node_modules/vminfod/client').VminfodWatcher;
 
-var sdc_fields = [
-    'alias',
-    'billing_id',
-    'brand',
-    'cpu_cap',
-    'cpu_shares',
-    'create_timestamp',
-    'server_uuid',
-    'image_uuid',
-    'datacenter_name',
-    'do_not_inventory',
-    'dns_domain',
-    'force_metadata_socket',
-    'fs_allowed',
-    'hostname',
-    'internal_metadata_namespaces',
-    'limit_priv',
-    'last_modified',
-    'maintain_resolvers',
-    'max_physical_memory',
-    'max_locked_memory',
-    'max_lwps',
-    'max_swap',
-    'nics',
-    'owner_uuid',
-    'package_name',
-    'package_version',
-    'quota',
-    'ram',
-    'resolvers',
-    'routes',
-    'state',
-    'tmpfs',
-    'uuid',
-    'vcpus',
-    'vnc_port',
-    'zfs_io_priority',
-    'zonepath',
-    'zonename',
-    'zone_state'
-];
-var MAX_RETRY = 300; // in seconds
-var ZONEADM_CHECK_FREQUENCY = (5 * 60 * 1000); // ms, check for deleted zones
-var MISSED_SYSEVENT_CHECK_FREQUENCY = (1 * 60 * 1000); // ms
-
-
-function zoneExists(zonename, callback) {
-    var exists = false;
-
-    fs.stat('/etc/zones/' + zonename + '.xml', function _onStat(err, stats) {
-        if (err) {
-            if (err.code !== 'ENOENT') {
-                // Should either exist or not exist but should always be
-                // readable if it does exist. If not: we don't know how to
-                // proceed so throw/abort.
-                throw (err);
-            }
-        } else {
-            exists = true;
-        }
-
-        callback(null, exists);
-    });
-}
+function noop() {}
 
 function closeZoneConnection(zoneConn) {
     assert.object(zoneConn, 'zoneConn');
@@ -267,7 +199,6 @@ function elapsedTimer(timer) {
 var MetadataAgent = module.exports = function (options) {
     this.log = options.log;
     this.zlog = {};
-    this.zones = {};
     this.zonesDebug = {};
     this.zoneConnections = {};
 };
@@ -322,8 +253,8 @@ MetadataAgent.prototype.addDebug = function addDebug(zonename, field, value) {
 };
 
 MetadataAgent.prototype.createZoneLog = function (type, zonename) {
-    assert.string(type);
-    assert.string(zonename);
+    assert.string(type, 'type');
+    assert.string(zonename, 'zonename');
 
     var self = this;
     var newRingbuffer = new bunyan.RingBuffer({limit: 10});
@@ -337,157 +268,55 @@ MetadataAgent.prototype.createZoneLog = function (type, zonename) {
     return (self.zlog[zonename]);
 };
 
-MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
-    var self = this;
-    var log = self.log;
-
-    assert.string(zonename, 'zonename');
-    assert.func(callback, 'callback');
-
-    function shouldLoad(cb) {
-        if (!self.zones.hasOwnProperty(zonename)) {
-            // don't have a cache, load this guy
-            log.info({zonename: zonename},
-                'no cache for: ' + zonename + ', loading');
-            cb(null, true);
-            return;
-        }
-
-        // We do have a cached version, we'll reload only if timestamp of the
-        // XML file changed. The vmadm operations we care about will "touch"
-        // this file to update the last_modified if they don't change it
-        // directly.
-        fs.stat('/etc/zones/' + zonename + '.xml', function (err, stats) {
-            var old_mtime;
-
-            if (err && err.code === 'ENOENT') {
-                // VM has disappeared, purge from cache
-                self.purgeZoneCache(zonename);
-                cb(null, false);
-                return;
-            } else if (err) {
-                log.error({err: err, zonename: zonename},
-                    'cannot fs.stat(), reloading');
-                cb(err);
-                return;
-            }
-
-            // we just did a successful stat, we really should have
-            // self.zones[zonename]
-            assert.object(self.zones[zonename], 'self.zones[' + zonename + ']');
-
-            old_mtime = (new Date(self.zones[zonename].last_modified));
-            if (stats.mtime.getTime() > old_mtime.getTime()) {
-                log.info({zonename: zonename},
-                    'last_modified was updated, reloading');
-                cb(null, true);
-                return;
-            }
-
-            log.trace('using cache for: ' + zonename);
-            cb(null, false);
-        });
-    }
-
-    shouldLoad(function (err, load) {
-        var start_lookup_timer = newTimer();
-
-        // fail open (meaning: force reload) when something went wrong
-        if (load || err) {
-            VM.lookup({ zonename: zonename }, { fields: sdc_fields },
-                function (error, machines) {
-                    var elapsed = elapsedTimer(start_lookup_timer);
-
-                    if (!error) {
-                        self.zones[zonename] = machines[0];
-                        self.addDebug(zonename, 'last_zone_load');
-                    }
-                    log.debug({
-                        elapsed: elapsed,
-                        err: error,
-                        zonename: zonename
-                    }, 'finished VM.lookup');
-                    callback(error);
-                    return;
-                }
-            );
-        } else {
-            // no need to reload since there's no change, use existing data
-            callback();
-            return;
-        }
-    });
-};
-
-MetadataAgent.prototype.createServersOnExistingZones = function () {
+MetadataAgent.prototype.createServersOnExistingZones = function (vms) {
     var self = this;
     var created = 0;
 
-    VM.lookup({}, { fields: sdc_fields }, function (error, zones) {
-        async.forEach(zones, function (zone, cb) {
-            if (zone.zonename === 'global') {
+    async.forEach(vms, function (vm, cb) {
+        if (!self.zlog[vm.zonename]) {
+            // create a logger specific to this VM
+            self.createZoneLog(vm.brand, vm.zonename);
+        }
+
+        if (self.zoneConnections[vm.zonename]) {
+            cb();
+            return;
+        }
+
+        if (vm.brand === 'kvm') {
+            // For KVM, the zone must be running otherwise Qemu will not
+            // have created a socket.
+            if (vm.zone_state !== 'running') {
+                self.log.debug('skipping non-running vm %s, zone_state %s',
+                    vm.zonename, vm.zone_state);
                 cb();
                 return;
             }
 
-            self.zones[zone.zonename] = zone;
-            self.addDebug(zone.zonename, 'last_zone_load');
-
-            if (error) {
-                throw error;
-            }
-
-            if (!self.zlog[zone.zonename]) {
-                // create a logger specific to this VM
-                self.createZoneLog(zone.brand, zone.zonename);
-            }
-
-            // It is possible for VM.lookup() to take a long time. While we're
-            // waiting for it, the watcher could have seen the zone creation and
-            // created a socket for the zone. In case that happened, we ignore
-            // zones we've already got a connection for.
-            if (self.zoneConnections[zone.zonename]) {
-                cb();
-                return;
-            }
-
-            if (zone.brand === 'kvm') {
-
-                // For KVM, the zone must be running otherwise Qemu will not
-                // have created a socket.
-                if (zone.zone_state !== 'running') {
-                    self.log.debug('skipping zone ' + zone.zonename
-                        + ' which has ' + 'non-running zone_state: '
-                        + zone.zone_state);
-                    cb();
-                    return;
+            self.startKVMSocketServer(vm.zonename, function (err) {
+                if (!err) {
+                    created++;
                 }
-
-                self.startKVMSocketServer(zone.zonename, function (err) {
-                    if (!err) {
-                        created++;
-                    }
-                    cb();
-                });
-            } else {
-                self.startZoneSocketServer(zone.zonename, function (err) {
-                    if (!err) {
-                        created++;
-                    }
-                    cb();
-                });
-            }
-        }, function (err) {
-            self.log.info('created zone metadata sockets on %d / %d zones',
-                created, zones.length);
-        });
+                cb();
+            });
+        } else {
+            self.startZoneSocketServer(vm.zonename, function (err) {
+                if (!err) {
+                    created++;
+                }
+                cb();
+            });
+        }
+    }, function (err) {
+        self.log.info('created zone metadata sockets on %d / %d zones',
+            created, vms.length);
     });
 };
 
 MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
-    assert.string(zonename);
-
     var self = this;
+
+    assert.string(zonename, 'zonename');
 
     self.log.info(zonename + ' no longer exists, purging from cache(s) and '
         + 'stopping timeout');
@@ -495,226 +324,84 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
     if (self.zonesDebug.hasOwnProperty(zonename)) {
         delete self.zonesDebug[zonename];
     }
+
     if (self.zlog.hasOwnProperty(zonename)) {
         delete self.zlog[zonename];
     }
+
     if (self.zoneConnections.hasOwnProperty(zonename)) {
         if (self.zoneConnections[zonename]) {
             // it's not undefined, so attempt to close it
             closeZoneConnection(self.zoneConnections[zonename]);
         }
+
         delete self.zoneConnections[zonename];
     }
-    if (self.zones.hasOwnProperty(zonename)) {
-        delete self.zones[zonename];
-    }
-};
-
-MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
-    var self = this;
-    var start_kstat_timer = newTimer();
-
-    getZoneinfo(null, {log: self.log}, function (err, results) {
-        assert.ifError(err);
-
-        function _assumeCreated(zonename) {
-            self.addDebug(zonename, 'last_zone_found_existing');
-            self.handleZoneCreated(zonename);
-        }
-
-        self.log.debug({
-            elapsed: elapsedTimer(start_kstat_timer),
-            zoneCount: Object.keys(results).length
-        }, 'loaded VM kstats');
-
-        Object.keys(results).forEach(function (zonename) {
-            var zoneConn = self.zoneConnections[zonename]; // may be undefined
-
-            if (!zoneConn) {
-                // If we have no zoneConn, It's likely we failed a previous
-                // attempt to create one. In any case, since the zone does exist
-                // (it's in getZoneinfo) we should attempt to create a new
-                // socket for it.
-                self.log.warn({zonename: zonename}, 'zone is missing '
-                    + 'zoneConnections entry, (re)trying socket creation');
-                _assumeCreated(zonename);
-                return;
-            }
-        });
-    });
-};
-
-MetadataAgent.prototype.startPeriodicChecks = function startPeriodicChecks() {
-    var self = this;
-
-    // Every 5 minutes we check to see whether zones we've got in self.zones
-    // were deleted. If they are, we delete the record from the cache and close
-    // any open connection.
-
-    function _checkDeletedZones() {
-        var cmd = '/usr/sbin/zoneadm';
-        var start_zoneadm_timer = newTimer();
-
-        execFile(cmd, ['list', '-c'], function (err, stdout, stderr) {
-            var elapsed = elapsedTimer(start_zoneadm_timer);
-            var zones = {};
-
-            if (err) {
-                self.log.error({
-                    elapsed: elapsed,
-                    err: err
-                }, 'unable to get list of zones');
-                return;
-            }
-
-            // each output line is a zonename, so we turn this into an object
-            // that looks like:
-            //
-            // {
-            //   zonename: true,
-            //   zonename: true
-            //   ...
-            // }
-            //
-            // so we can then loop through all the cached zonenames and remove
-            // those that don't exist on the system any longer.
-            stdout.trim().split(/\n/).forEach(function (z) {
-                if (z !== 'global') {
-                    zones[z] = true;
-                }
-            });
-
-            self.log.debug({
-                elapsed: elapsed,
-                zonesFound: Object.keys(zones).length
-            }, 'loaded zoneadm list of existing zones');
-
-            Object.keys(self.zones).forEach(function (z) {
-                if (!zones.hasOwnProperty(z)) {
-                    self.purgeZoneCache(z);
-                }
-            });
-
-            // schedule the next check
-            setTimeout(_checkDeletedZones, ZONEADM_CHECK_FREQUENCY);
-        });
-    }
-
-    // Here we check for boot messages that we might have missed due to the fact
-    // that sysevent messages are unreliable.
-
-    function _checkNewZones() {
-        self.checkMissedSysevents();
-
-        // schedule the next check
-        setTimeout(_checkNewZones, MISSED_SYSEVENT_CHECK_FREQUENCY);
-    }
-
-    // Set the first timers to kick these checks off.
-
-    setTimeout(_checkDeletedZones, ZONEADM_CHECK_FREQUENCY);
-    self.log.info('Setup timer to purge deleted zones every %d ms',
-        ZONEADM_CHECK_FREQUENCY);
-
-    setTimeout(_checkNewZones, MISSED_SYSEVENT_CHECK_FREQUENCY);
-    self.log.info('Setup timer to detect (missed) new zones every %d ms',
-        MISSED_SYSEVENT_CHECK_FREQUENCY);
 };
 
 MetadataAgent.prototype.handleZoneCreated =
-function handleZoneCreated(zonename) {
-    assert.string(zonename, 'zonename');
+function handleZoneCreated(vm) {
     var self = this;
 
-    // We don't wait around for results from creating the sockets because on
-    // failure self.startKVMSocketServer or self.startZoneSocketServer should
-    // leave us in a place we can retry on the next periodic check. So we just
-    // pass this dummy callback instead.
-    function _dummyCb() {
+    assert.object(vm, 'vm');
+    assert.string(vm.zonename, 'vm.zonename');
+
+    if (!self.zlog[vm.zonename]) {
+        // create a logger specific to this VM
+        self.createZoneLog(vm.brand, vm.zonename);
     }
 
-    self.updateZone(zonename, function (error) {
-        if (error) {
-            self.log.error({err: error}, 'Error updating '
-                + 'attributes: ' + error.message);
-
-            // When there's an error, we'll have not set in self.zones, so we'll
-            // try again next time we see that the zone is running.
-            return;
-        }
-
-        // If the zone was not deleted between the time we saw it start and
-        // now, (we did a vmadm lookup in between via updateZone which could
-        // have taken a while) we'll start the watcher.
-        if (self.zones[zonename]) {
-            if (!self.zlog[zonename]) {
-                // create a logger specific to this VM
-                self.createZoneLog(self.zones[zonename].brand, zonename);
-            }
-
-            if (self.zones[zonename].brand === 'kvm') {
-                self.startKVMSocketServer(zonename, _dummyCb);
-            } else {
-                self.startZoneSocketServer(zonename, _dummyCb);
-            }
-        }
-    });
+    if (vm.brand === 'kvm') {
+        self.startKVMSocketServer(vm.zonename, noop);
+    } else {
+        self.startZoneSocketServer(vm.zonename, noop);
+    }
 };
 
 MetadataAgent.prototype.start = function start() {
     var self = this;
-    var zwatch = this.zwatch = new ZWatch({
+
+    self.vminfod_watcher = new VminfodWatcher({
         log: self.log,
-        name: 'Metadata Agent'
+        name: 'Metadata Agent - VminfodWatcher'
     });
 
-    self.createServersOnExistingZones();
-    self.startPeriodicChecks();
+    self.vminfod_watcher.on('ready', function (ready_ev) {
+        var vms = self.vminfod_watcher.vms();
+        self.createServersOnExistingZones(vms);
+    });
 
-    zwatch.on('zone_transition', function (msg) {
-        switch (msg.cmd) {
-        case 'delete':
-            // when a zone was deleted, cleanup any cached stuff for it
-            self.log.debug({
-                delay: (new Date()) - msg.ts,
-                when: msg.ts,
-                zonename: msg.zonename
-            }, 'ZWatch watcher saw zone deletion');
+    self.vminfod_watcher.on('create', function (ev) {
+        // ignore zones we've already (still) got a connection for
+        if (self.zoneConnections[ev.zonename])
+            return;
 
-            self.purgeZoneCache(msg.zonename);
-            break;
-        case 'create':
-            // ignore zones we've already (still) got a connection for
-            if (self.zoneConnections[msg.zonename]) {
-                break;
-            }
-            self.log.debug({
-                delay: (new Date()) - msg.ts,
-                when: msg.ts,
-                zonename: msg.zonename
-            }, 'ZWatch watcher saw new zone');
+        self.log.debug({
+            delay: (new Date()) - ev.ts,
+            when: ev.ts,
+            zonename: ev.zonename
+        }, 'VminfodWatcher saw new zone');
 
-            zoneExists(msg.zonename, function _zoneExists(_, exists) {
-                if (!exists) {
-                    self.log.warn({transition: msg},
-                        'ignoring transition for zone that no longer exists');
-                    return;
-                }
+        self.addDebug(ev.zonename, 'last_zone_create');
+        self.handleZoneCreated(ev.vm);
+    });
 
-                // we only handle create, so that's what this was
-                self.addDebug(msg.zonename, 'last_zone_create');
-                self.handleZoneCreated(msg.zonename);
-            });
-            break;
-        default:
-            assert(false, 'unsupport zwatch cmd: ' + msg.cmd);
-            break;
-        }
+    self.vminfod_watcher.on('delete', function (ev) {
+        // when a zone was deleted, cleanup any cached stuff for it
+        self.log.debug({
+            delay: (new Date()) - ev.ts,
+            when: ev.ts,
+            zonename: ev.zonename
+        }, 'VminfodWatcher saw zone deletion');
+
+        self.purgeZoneCache(ev.zonename);
     });
 };
 
 MetadataAgent.prototype.stop = function () {
-    this.zwatch.stop();
+    var self = this;
+
+    self.vminfod_watcher.stop();
 };
 
 MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
@@ -722,23 +409,23 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
 
     assert.string(zonename, 'zonename');
     assert.func(callback, 'callback');
-    assert.object(self.zones[zonename], 'self.zones[' + zonename + ']');
-    assert.object(self.zlog[zonename], 'self.zlog[' + zonename + ']');
 
-    var vmobj = self.zones[zonename];
+    var vmobj = self.vminfod_watcher.vm(zonename);
     var zlog = self.zlog[zonename] || self.log;
+
+    assert.object(vmobj, 'vmobj');
+
     var sockpath = path.join(vmobj.zonepath, '/root/tmp/vm.ttyb');
 
     zlog.trace('starting socket server');
 
     async.waterfall([
         function (cb) {
-
             common.retryUntil(2000, 120000,
                 function (c) {
                     var err;
 
-                    if (!self.zones[zonename]) {
+                    if (!self.vminfod_watcher.vm(zonename)) {
                         // zone was removed, no need to retry any further
                         err = new Error('zone no longer exists');
                         err.code = 'ENOENT';
@@ -793,7 +480,7 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     zlog = self.zlog[zopts.zone] || self.log;
 
     // Ignore zones that have been removed
-    if (!self.zones[zopts.zone]) {
+    if (!self.vminfod_watcher.vm(zopts.zone)) {
         zlog.trace({zonename: zopts.zone},
             'not creating kvm socket for zone that does not exist');
         callback();
@@ -863,11 +550,11 @@ MetadataAgent.prototype.startZoneSocketServer =
 function startZoneSocketServer(zonename, callback) {
     var self = this;
 
-    assert.object(self.zones[zonename], 'self.zones[' + zonename + ']');
-    assert.string(self.zones[zonename].brand,
-        'self.zones[' + zonename + '].brand');
-    assert.string(self.zones[zonename].zonepath,
-        'self.zones[' + zonename + '].zonepath');
+    var vmobj = self.vminfod_watcher.vm(zonename);
+
+    assert.object(vmobj, 'vmobj');
+    assert.string(vmobj.brand, 'vmobj.brand');
+    assert.string(vmobj.zonepath, 'vmobj.zonename');
     assert.func(callback, 'callback');
 
     var zlog = self.zlog[zonename] || self.log;
@@ -896,7 +583,7 @@ function createZoneSocket(zopts, callback) {
     var zlog = self.zlog[zopts.zone] || self.log;
     var zonecontrol = path.dirname(zopts.path);
 
-    if (!self.zones[zopts.zone]) {
+    if (!self.vminfod_watcher.vm(zopts.zone)) {
         zlog.info({zonename: zopts.zone},
             'zone no longer exists, not creating socket');
         callback();
@@ -1064,9 +751,6 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
     };
 
     return function _metadataHandler(data) {
-        // ensure sanity: we should only get metadata request for existing zones
-        assert.object(self.zones[zone], 'self.zones[' + zone + ']');
-
         var cmd;
         var ns;
         var parts;
@@ -1077,6 +761,11 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         var val;
         var vmobj;
         var want;
+
+        vmobj = self.vminfod_watcher.vm(zone);
+
+        // ensure sanity: we should only get metadata request for existing zones
+        assert.object(vmobj, 'vmobj');
 
         parts = data.toString().trimRight().replace(/\n$/, '')
             .match(/^([^\s]+)\s?(.*)/);
@@ -1098,8 +787,6 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
             write('invalid command\n');
             return;
         }
-
-        vmobj = self.zones[zone];
 
         // Unbox V2 protocol frames:
         if (cmd === 'V2') {
@@ -1125,163 +812,84 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 // that depends on it, please add a note about that here
                 // otherwise expect it will be removed on you sometime.
                 if (want === 'nics' && vmobj.hasOwnProperty('nics')) {
-                    self.updateZone(zone, function (error) {
-                        if (error) {
-                            // updating our cache for this VM failed, so we'll
-                            // use the existing data.
-                            zlog.error({err: error, zone: zone},
-                                'Failed to reload vmobj using cached values');
-                        }
-                        if (self.zones[zone]) {
-                            val = JSON.stringify(self.zones[zone].nics);
-                        } else {
-                            val = JSON.stringify(vmobj.nics);
-                        }
-                        returnit(null, val);
-                        return;
-                    });
+
+                    val = JSON.stringify(vmobj.nics);
+                    returnit(null, val);
+
                 } else if (want === 'resolvers'
                     && vmobj.hasOwnProperty('resolvers')) {
 
-                    // resolvers, nics and routes are special because we might
-                    // reload metadata trying to get the new ones w/o zone
-                    // reboot. To ensure these are fresh we always run
-                    // updateZone which reloads the data if stale.
-                    self.updateZone(zone, function (error) {
-                        if (error) {
-                            // updating our cache for this VM failed, so we'll
-                            // use the existing data.
-                            zlog.error({err: error, zone: zone},
-                                'Failed to reload vmobj using cached values');
-                        }
-                        // See NOTE above about nics, same applies to resolvers.
-                        // It's here solely for the use of mdata-fetch.
-                        if (self.zones[zone]) {
-                            val = JSON.stringify(self.zones[zone].resolvers);
-                        } else {
-                            val = JSON.stringify(vmobj.resolvers);
-                        }
-                        returnit(null, val);
-                        return;
-                    });
+                    val = JSON.stringify(vmobj.resolvers);
+                    returnit(null, val);
+
                 } else if (want === 'tmpfs'
                     && vmobj.hasOwnProperty('tmpfs')) {
-                    // We want tmpfs to reload the cache right away because we
-                    // might be depending on a /etc/vfstab update
-                    self.updateZone(zone, function (error) {
-                        if (error) {
-                            // updating our cache for this VM failed, so we'll
-                            // use the existing data.
-                            zlog.error({err: error, zone: zone},
-                                'Failed to reload vmobj using cached values');
-                        }
-                        if (self.zones[zone]) {
-                            val = JSON.stringify(self.zones[zone].tmpfs);
-                        } else {
-                            val = JSON.stringify(vmobj.tmpfs);
-                        }
-                        returnit(null, val);
-                        return;
-                    });
+
+                    val = JSON.stringify(vmobj.tmpfs);
+                    returnit(null, val);
+
                 } else if (want === 'routes'
                     && vmobj.hasOwnProperty('routes')) {
 
                     var vmRoutes = [];
 
-                    self.updateZone(zone, function (error) {
-                        if (error) {
-                            // updating our cache for this VM failed, so we'll
-                            // use the existing data.
-                            zlog.error({err: error, zone: zone},
-                                'Failed to reload vmobj using cached values');
-                        }
-
-                        if (self.zones[zone]) {
-                            vmobj = self.zones[zone];
-                        }
-
-                        // The notes above about resolvers also to routes. It's
-                        // here solely for the use of mdata-fetch, and we need
-                        // to do the updateZone here so that we have latest
-                        // data.
-                        for (var r in vmobj.routes) {
-                            var route = { linklocal: false, dst: r };
-                            var nicIdx = vmobj.routes[r].match(/nics\[(\d+)\]/);
-                            if (!nicIdx) {
-                                // Non link-local route: we have all the
-                                // information we need already
-                                route.gateway = vmobj.routes[r];
-                                vmRoutes.push(route);
-                                continue;
-                            }
-                            nicIdx = Number(nicIdx[1]);
-
-                            // Link-local route: we need the IP of the local nic
-                            if (!vmobj.hasOwnProperty('nics')
-                                || !vmobj.nics[nicIdx]
-                                || !vmobj.nics[nicIdx].hasOwnProperty('ip')
-                                || vmobj.nics[nicIdx].ip === 'dhcp') {
-
-                                continue;
-                            }
-
-                            route.gateway = vmobj.nics[nicIdx].ip;
-                            route.linklocal = true;
+                    // The notes above about resolvers also to routes. It's
+                    // here solely for the use of mdata-fetch, and we need
+                    // to do the updateZone here so that we have latest
+                    // data.
+                    for (var r in vmobj.routes) {
+                        var route = { linklocal: false, dst: r };
+                        var nicIdx = vmobj.routes[r].match(/nics\[(\d+)\]/);
+                        if (!nicIdx) {
+                            // Non link-local route: we have all the
+                            // information we need already
+                            route.gateway = vmobj.routes[r];
                             vmRoutes.push(route);
+                            continue;
+                        }
+                        nicIdx = Number(nicIdx[1]);
+
+                        // Link-local route: we need the IP of the local nic
+                        if (!vmobj.hasOwnProperty('nics')
+                            || !vmobj.nics[nicIdx]
+                            || !vmobj.nics[nicIdx].hasOwnProperty('ip')
+                            || vmobj.nics[nicIdx].ip === 'dhcp') {
+
+                            continue;
                         }
 
-                        returnit(null, JSON.stringify(vmRoutes));
-                        return;
-                    });
+                        route.gateway = vmobj.nics[nicIdx].ip;
+                        route.linklocal = true;
+                        vmRoutes.push(route);
+                    }
+
+                    returnit(null, JSON.stringify(vmRoutes));
                 } else if (want === 'operator-script') {
-                    addMetadata(function (err) {
-                        if (err) {
-                            returnit(new Error('Unable to load metadata: '
-                                + err.message));
-                            return;
-                        }
-
-                        returnit(null,
-                            vmobj.internal_metadata['operator-script']);
-                        return;
-                    });
+                    returnit(null,
+                        vmobj.internal_metadata['operator-script']);
                 } else {
-                    addTags(function (err) {
-                        if (!err) {
-                            val = VM.flatten(vmobj, want);
-                        }
-                        returnit(err, val);
-                        return;
-                    });
+                    val = VM.flatten(vmobj, want);
+                    returnit(null, val);
                 }
             } else {
-                // not sdc:, so key will come from *_mdata
-                addMetadata(function (err) {
-                    var which_mdata = 'customer_metadata';
+                var which_mdata = 'customer_metadata';
 
-                    if (err) {
-                        returnit(new Error('Unable to load metadata: '
-                            + err.message));
-                        return;
-                    }
+                if (want.match(/_pw$/)) {
+                    which_mdata = 'internal_metadata';
+                }
 
-                    if (want.match(/_pw$/)) {
-                        which_mdata = 'internal_metadata';
-                    }
+                if (internalNamespace(vmobj, want) !== null) {
+                    which_mdata = 'internal_metadata';
+                }
 
-                    if (internalNamespace(vmobj, want) !== null) {
-                        which_mdata = 'internal_metadata';
-                    }
-
-                    if (vmobj.hasOwnProperty(which_mdata)) {
-                        returnit(null, vmobj[which_mdata][want]);
-                        return;
-                    } else {
-                        returnit(new Error('Zone did not contain '
-                            + which_mdata));
-                        return;
-                    }
-                });
+                if (vmobj.hasOwnProperty(which_mdata)) {
+                    returnit(null, vmobj[which_mdata][want]);
+                    return;
+                } else {
+                    returnit(new Error('Zone did not contain '
+                        + which_mdata));
+                    return;
+                }
             }
         } else if (!req_is_v2 && cmd === 'NEGOTIATE') {
             if (want === 'V2') {
@@ -1366,37 +974,28 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
             return;
         } else if (cmd === 'KEYS') {
-            addMetadata(function (err) {
-                var ckeys = [];
-                var ikeys = [];
+            var ckeys = [];
+            var ikeys = [];
 
-                if (err) {
-                    returnit(new Error('Unable to load metadata: '
-                        + err.message));
-                    return;
-                }
+            /*
+             * Keys that match *_pw$ and internal_metadata_namespace
+             * prefixed keys come from internal_metadata, everything else
+             * comes from customer_metadata.
+             */
+            ckeys = Object.keys(vmobj.customer_metadata)
+                .filter(function (k) {
 
-                /*
-                 * Keys that match *_pw$ and internal_metadata_namespace
-                 * prefixed keys come from internal_metadata, everything else
-                 * comes from customer_metadata.
-                 */
-                ckeys = Object.keys(vmobj.customer_metadata)
-                    .filter(function (k) {
-
-                    return (!k.match(/_pw$/)
-                        && internalNamespace(vmobj, k) === null);
-                });
-                ikeys = Object.keys(vmobj.internal_metadata)
-                    .filter(function (k) {
-
-                    return (k.match(/_pw$/)
-                        || internalNamespace(vmobj, k) !== null);
-                });
-
-                returnit(null, ckeys.concat(ikeys).join('\n'));
-                return;
+                return (!k.match(/_pw$/)
+                    && internalNamespace(vmobj, k) === null);
             });
+            ikeys = Object.keys(vmobj.internal_metadata)
+                .filter(function (k) {
+
+                return (k.match(/_pw$/)
+                    || internalNamespace(vmobj, k) !== null);
+            });
+
+            returnit(null, ckeys.concat(ikeys).join('\n'));
         } else {
             zlog.error('Unknown command ' + cmd);
             returnit(new Error('Unknown command ' + cmd));
@@ -1424,92 +1023,6 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 zonename: vmobj.zonename
             }, 'load ' + opts.loadFile);
             _cb(err);
-        }
-
-        function addTags(cb) {
-            var cbOpts = {timer: newTimer(), loadFile: 'tags'};
-            var filename;
-
-            filename = vmobj.zonepath + '/config/tags.json';
-            fs.readFile(filename, function (err, file_data) {
-
-                if (err && err.code === 'ENOENT') {
-                    vmobj.tags = {};
-                    _callCbAndLogTimer(cbOpts, null, cb);
-                    return;
-                }
-
-                if (err) {
-                    zlog.error({err: err}, 'failed to load tags.json: '
-                        + err.message);
-                    _callCbAndLogTimer(cbOpts, err, cb);
-                    return;
-                }
-
-                try {
-                    vmobj.tags = JSON.parse(file_data.toString());
-                    _callCbAndLogTimer(cbOpts, null, cb);
-                } catch (e) {
-                    zlog.error({err: e}, 'unable to tags.json for ' + zone
-                        + ': ' + e.message);
-                    _callCbAndLogTimer(cbOpts, e, cb);
-                }
-
-                return;
-            });
-        }
-
-        function addMetadata(cb) {
-            var cbOpts = {timer: newTimer(), loadFile: 'metadata'};
-            var filename;
-
-            // If we got here, our answer comes from metadata so read that file.
-
-            // NOTE: In the future, if the fs.readFile overhead here ends up
-            // being larger than a stat would be, we might want to cache these
-            // and reload only when mtime changes.
-            //
-            // Alternatively: when OS-2647 lands we might just use vminfod.
-
-            filename = vmobj.zonepath + '/config/metadata.json';
-
-            fs.readFile(filename, function (err, file_data) {
-                var json = {};
-                var mdata_types = [ 'customer_metadata', 'internal_metadata' ];
-
-                // start w/ both empty, if we fail partway through there will
-                // just be no metadata instead of wrong metadata.
-                vmobj.customer_metadata = {};
-                vmobj.internal_metadata = {};
-
-                if (err && err.code === 'ENOENT') {
-                    _callCbAndLogTimer(cbOpts, null, cb);
-                    return;
-                }
-
-                if (err) {
-                    zlog.error({err: err}, 'failed to load mdata.json: '
-                        + err.message);
-                    _callCbAndLogTimer(cbOpts, err, cb);
-                    return;
-                }
-
-                try {
-                    json = JSON.parse(file_data.toString());
-                    mdata_types.forEach(function (mdata) {
-                        if (json.hasOwnProperty(mdata)) {
-                            vmobj[mdata] = json[mdata];
-                        }
-                    });
-                    _callCbAndLogTimer(cbOpts, null, cb);
-                } catch (e) {
-                    zlog.error({err: e}, 'unable to load metadata.json for '
-                        + zone + ': ' + e.message);
-                    _callCbAndLogTimer(cbOpts, e, cb);
-                }
-
-                return;
-            });
         }
 
         function setMetadata(_key, _value, cb) {

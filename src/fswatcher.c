@@ -141,15 +141,15 @@
     }
 
 enum ErrorCodes {
-    SUCCESS,               /* not an error */
-    ERR_PORT_CREATE,       /* failed to create a port */
-    ERR_GET_STDIN,         /* failed to read from stdin (non-EOF) */
-    ERR_INVALID_COMMAND,   /* failed to parse command from stdin line */
-    ERR_INVALID_KEY,       /* failed to parse command from stdin line */
-    ERR_UNKNOWN_COMMAND,   /* line was parsable, but unimplmented command */
-    ERR_CANNOT_ALLOCATE,   /* can't allocate memory required */
-    ERR_CANNOT_ASSOCIATE,  /* port_associate(3c) failed */
-    ERR_UNEXPECTED_SOURCE  /* port_get(3c) gave us unexpected portev_source */
+	SUCCESS,               /* not an error */
+	ERR_PORT_CREATE,       /* failed to create a port */
+	ERR_GET_STDIN,         /* failed to read from stdin (non-EOF) */
+	ERR_INVALID_COMMAND,   /* failed to parse command from stdin line */
+	ERR_INVALID_KEY,       /* failed to parse command from stdin line */
+	ERR_UNKNOWN_COMMAND,   /* line was parsable, but unimplmented command */
+	ERR_CANNOT_ALLOCATE,   /* can't allocate memory required */
+	ERR_CANNOT_ASSOCIATE,  /* port_associate(3c) failed */
+	ERR_UNEXPECTED_SOURCE  /* port_get(3c) gave us unexpected portev_source */
 };
 
 enum ResultCodes {
@@ -171,10 +171,16 @@ volatile struct fileinfo *free_list = NULL;
 static mutex_t handles_mutex;
 static mutex_t free_mutex;
 static mutex_t stdout_mutex;
-int port = -1;
+static int port = -1;
 
+static struct {
+	boolean_t opt_j; /* -j, json output */
+	boolean_t opt_r; /* -r, print ready event */
+} opts;
+
+static void usage(FILE *s);
 nvlist_t * make_nvlist(char *type);
-void print_nvlist_json(nvlist_t *nvl);
+void print_nvlist(nvlist_t *nvl);
 void enqueue_free_finf(struct fileinfo *finf);
 void print_event(int event, char *pathname, int final);
 void print_ready();
@@ -182,6 +188,23 @@ void check_and_rearm_event(uint32_t key, char *name, int revents);
 void * wait_for_events(void *pn);
 int watch_path(char *pathname, uint32_t key);
 int unwatch_path(char *pathname, uint32_t key);
+
+/*
+ * Print the usage message to the given FILE handle
+ */
+static void
+usage(FILE *s)
+{
+    fprintf(s, "Usage: fswatcher [-hrj]\n");
+    fprintf(s, "\n");
+    fprintf(s, "Watch files using event ports with commands sent to stdin,\n");
+    fprintf(s, "and event notifications sent to stdout.\n");
+    fprintf(s, "\n");
+    fprintf(s, "Options\n");
+    fprintf(s, "  -h             print this message and exit\n");
+    fprintf(s, "  -j             JSON output\n");
+    fprintf(s, "  -r             print 'ready' event at start\n");
+}
 
 /*
  * Create an nvlist with "type" set to the type argument given,
@@ -220,22 +243,29 @@ make_nvlist(char *type)
 }
 
 /*
- * Print an nvlist as a single line of JSON with a trailing newline character
- * to stdout.  This function handles acquiring the stdout_mutex as well as
+ * Print an nvlist to stdout.  Will use the proper function to print
+ * based on -j being set or not.
+ *
+ * This function handles acquiring the stdout_mutex as well as
  * fflushing stdout.
- */
+*/
 void
-print_nvlist_json(nvlist_t *nvl)
+print_nvlist(nvlist_t *nvl)
 {
 	mutex_lock(&stdout_mutex);
-	nvlist_print_json(stdout, nvl);
+
+	if (opts.opt_j)
+		nvlist_print_json(stdout, nvl);
+	else
+		nvlist_print(stdout, nvl);
 	printf("\n");
 	fflush(stdout);
+
 	mutex_unlock(&stdout_mutex);
 }
 
 /*
- * This outputs a line to stdout indicating the type of event detected.
+ * Handle creating and printing an "event" message.
  */
 void
 print_event(int event, char *pathname, int final)
@@ -283,27 +313,27 @@ print_event(int event, char *pathname, int final)
         fnvlist_add_int32(nvl, "revents", event);
 	fnvlist_add_boolean_value(nvl, "final", final);
 
-	print_nvlist_json(nvl);
+	print_nvlist(nvl);
 
 	nvlist_free(nvl);
 }
 
 /*
- * This outputs a line to stdout indicating the process is ready for input
+ * Handle creating and printing a "ready" message.
  */
 void
 print_ready()
 {
 	nvlist_t *nvl = make_nvlist("ready");
 
-	print_nvlist_json(nvl);
+	print_nvlist(nvl);
 
 	nvlist_free(nvl);
 }
 
 /*
  * print_error() takes a key, code (one of the ErrorCodes) and message and
- * writes to stdout.
+ * handles creating and printing an "error" message.
  */
 void
 print_error(uint32_t key, uint32_t code, const char *message_fmt, ...)
@@ -328,14 +358,14 @@ print_error(uint32_t key, uint32_t code, const char *message_fmt, ...)
 	fnvlist_add_uint32(nvl, "code", code);
 	fnvlist_add_string(nvl, "message", message);
 
-	print_nvlist_json(nvl);
+	print_nvlist(nvl);
 
 	nvlist_free(nvl);
 }
 
 /*
  * print_result() takes a key, code (RESULT_SUCCESS||RESULT_FAILURE), pathname
- * and message and writes to stdout.
+ * and message and handles creating and printing a "result" message.
  */
 void
 print_result(uint32_t key, uint32_t code, const char *pathname,
@@ -363,7 +393,7 @@ print_result(uint32_t key, uint32_t code, const char *pathname,
 	fnvlist_add_string(nvl, "message", message);
 	fnvlist_add_string(nvl, "result", code == 0 ? "SUCCESS" : "FAIL");
 
-	print_nvlist_json(nvl);
+	print_nvlist(nvl);
 
 	nvlist_free(nvl);
 }
@@ -903,8 +933,9 @@ unwatch_path(char *pathname, uint32_t key)
 }
 
 int
-main()
+main(int argc, char **argv)
 {
+    int opt;
     char cmd[MAX_CMD_LEN + 1];
     int exit_code = SUCCESS;
     uint32_t key;
@@ -916,6 +947,26 @@ main()
     pthread_t tid;
 
     handles = calloc(sizeof (struct fileinfo *), HANDLES_MASK);
+
+	opts.opt_j = B_FALSE;
+	while ((opt = getopt(argc, argv, "hjr")) != -1) {
+		switch (opt) {
+		case 'h':
+			usage(stdout);
+			return (0);
+		case 'j':
+			opts.opt_j = B_TRUE;
+			break;
+		case 'r':
+			opts.opt_r = B_TRUE;
+			break;
+		default:
+			usage(stderr);
+			return (1);
+		}
+	}
+	argc -= optind;
+	argv += optind;
 
     if ((port = port_create()) == -1) {
         print_error(SYSTEM_KEY, ERR_PORT_CREATE, "port_create failed(%d): %s",

@@ -141,29 +141,24 @@
     }
 
 enum ErrorCodes {
-	SUCCESS,               /* not an error */
-	ERR_PORT_CREATE,       /* failed to create a port */
-	ERR_GET_STDIN,         /* failed to read from stdin (non-EOF) */
 	ERR_INVALID_COMMAND,   /* failed to parse command from stdin line */
 	ERR_INVALID_KEY,       /* failed to parse command from stdin line */
 	ERR_UNKNOWN_COMMAND,   /* line was parsable, but unimplmented command */
-	ERR_CANNOT_ALLOCATE,   /* can't allocate memory required */
-	ERR_CANNOT_ASSOCIATE,  /* port_associate(3c) failed */
-	ERR_UNEXPECTED_SOURCE  /* port_get(3c) gave us unexpected portev_source */
+	ERR_CANNOT_ASSOCIATE   /* port_associate(3c) failed */
 };
 
 enum ResultCodes {
-    RESULT_SUCCESS,
-    RESULT_FAILURE
+	RESULT_SUCCESS,
+	RESULT_FAILURE
 };
 
 struct fileinfo {
-    struct fileinfo *next;
-    struct fileinfo *prev;
-    int namelen;
-    int hash;
-    struct file_obj fobj;
-    int events;
+	struct fileinfo *next;
+	struct fileinfo *prev;
+	int namelen;
+	int hash;
+	struct file_obj fobj;
+	int events;
 };
 
 struct fileinfo **handles = NULL;
@@ -186,8 +181,9 @@ void print_event(int event, char *pathname, int final);
 void print_ready();
 void check_and_rearm_event(uint32_t key, char *name, int revents);
 void * wait_for_events(void *pn);
-int watch_path(char *pathname, uint32_t key);
-int unwatch_path(char *pathname, uint32_t key);
+void watch_path(char *pathname, uint32_t key);
+void unwatch_path(char *pathname, uint32_t key);
+int process_stdin_line();
 
 /*
  * Print the usage message to the given FILE handle
@@ -195,15 +191,15 @@ int unwatch_path(char *pathname, uint32_t key);
 static void
 usage(FILE *s)
 {
-    fprintf(s, "Usage: fswatcher [-hrj]\n");
-    fprintf(s, "\n");
-    fprintf(s, "Watch files using event ports with commands sent to stdin,\n");
-    fprintf(s, "and event notifications sent to stdout.\n");
-    fprintf(s, "\n");
-    fprintf(s, "Options\n");
-    fprintf(s, "  -h             print this message and exit\n");
-    fprintf(s, "  -j             JSON output\n");
-    fprintf(s, "  -r             print 'ready' event at start\n");
+	fprintf(s, "Usage: fswatcher [-hrj]\n");
+	fprintf(s, "\n");
+	fprintf(s, "Watch files using event ports with commands sent to\n");
+	fprintf(s, "stdin and event notifications sent to stdout.\n");
+	fprintf(s, "\n");
+	fprintf(s, "Options\n");
+	fprintf(s, "  -h             print this message and exit\n");
+	fprintf(s, "  -j             JSON output\n");
+	fprintf(s, "  -r             print 'ready' event at start\n");
 }
 
 /*
@@ -248,7 +244,7 @@ make_nvlist(char *type)
  *
  * This function handles acquiring the stdout_mutex as well as
  * fflushing stdout.
-*/
+ */
 void
 print_nvlist(nvlist_t *nvl)
 {
@@ -407,28 +403,27 @@ print_result(uint32_t key, uint32_t code, const char *pathname,
 struct fileinfo *
 find_handle(char *pathname)
 {
-    int namelen;
-    int hash = 0;
-    int hash_idx;
-    struct fileinfo *handle;
+	int namelen;
+	int hash = 0;
+	int hash_idx;
+	struct fileinfo *handle;
 
-    HASH(pathname, hash, namelen);
-    hash_idx = hash & HANDLES_MASK;
-    handle = handles[hash_idx];
+	HASH(pathname, hash, namelen);
+	hash_idx = hash & HANDLES_MASK;
+	handle = handles[hash_idx];
 
-    if (handle == NULL)
-        return (NULL);
+	if (handle == NULL)
+		return (NULL);
+	do {
+		if (handle->hash == hash &&
+		    handle->namelen == namelen &&
+		    strcmp(handle->fobj.fo_name, pathname) == 0) {
+			return (handle);
+		}
+		handle = handle->next;
+	} while (handle != handles[hash_idx]);
 
-    do {
-        if (handle->hash == hash &&
-            handle->namelen == namelen &&
-            strcmp(handle->fobj.fo_name, pathname) == 0) {
-            return (handle);
-        }
-        handle = handle->next;
-    } while (handle != handles[hash_idx]);
-
-    return (NULL);
+	return (NULL);
 }
 
 /*
@@ -440,23 +435,23 @@ find_handle(char *pathname)
 void
 insert_handle(struct fileinfo *handle)
 {
-    int hash_idx;
+	int hash_idx;
 
-    handle->hash = 0;
-    HASH(handle->fobj.fo_name, handle->hash, handle->namelen);
-    hash_idx = handle->hash & HANDLES_MASK;
+	handle->hash = 0;
+	HASH(handle->fobj.fo_name, handle->hash, handle->namelen);
+	hash_idx = handle->hash & HANDLES_MASK;
 
-    if (handles[hash_idx] == NULL) {
-        handle->next = handle;
-        handle->prev = handle;
-        handles[hash_idx] = handle;
-    } else {
-        handle->next = handles[hash_idx];
-        handle->prev = handles[hash_idx]->prev;
-        handles[hash_idx]->prev->next = handle;
-        handles[hash_idx]->prev = handle;
-        handles[hash_idx] = handle;
-    }
+	if (handles[hash_idx] == NULL) {
+		handle->next = handle;
+		handle->prev = handle;
+		handles[hash_idx] = handle;
+	} else {
+		handle->next = handles[hash_idx];
+		handle->prev = handles[hash_idx]->prev;
+		handles[hash_idx]->prev->next = handle;
+		handles[hash_idx]->prev = handle;
+		handles[hash_idx] = handle;
+	}
 }
 
 /*
@@ -468,15 +463,15 @@ insert_handle(struct fileinfo *handle)
 void
 i_remove_handle(struct fileinfo *handle)
 {
-    if (handle->next == handle) {
-        handles[handle->hash & HANDLES_MASK] = NULL;
-    } else {
-        handles[handle->hash & HANDLES_MASK] = handle->next;
-        handle->next->prev = handle->prev;
-        handle->prev->next = handle->next;
-    }
-    handle->next = NULL;
-    handle->prev = NULL;
+	if (handle->next == handle) {
+		handles[handle->hash & HANDLES_MASK] = NULL;
+	} else {
+		handles[handle->hash & HANDLES_MASK] = handle->next;
+		handle->next->prev = handle->prev;
+		handle->prev->next = handle->next;
+	}
+	handle->next = NULL;
+	handle->prev = NULL;
 }
 
 /*
@@ -487,12 +482,12 @@ i_remove_handle(struct fileinfo *handle)
 void
 remove_handle(char *pathname)
 {
-    struct fileinfo *handle;
+	struct fileinfo *handle;
 
-    handle = find_handle(pathname);
+	handle = find_handle(pathname);
 
-    if (handle != NULL)
-        i_remove_handle(handle);
+	if (handle != NULL)
+		i_remove_handle(handle);
 }
 
 /*
@@ -502,11 +497,11 @@ remove_handle(char *pathname)
 void
 free_handle(struct fileinfo *handle)
 {
-    if (handle->fobj.fo_name) {
-        free(handle->fobj.fo_name);
-        handle->fobj.fo_name = NULL;
-    }
-    free(handle);
+	if (handle->fobj.fo_name) {
+		free(handle->fobj.fo_name);
+		handle->fobj.fo_name = NULL;
+	}
+	free(handle);
 }
 
 /*
@@ -517,10 +512,10 @@ free_handle(struct fileinfo *handle)
 void
 destroy_handle(struct fileinfo *handle)
 {
-    mutex_lock(&handles_mutex);
-    i_remove_handle(handle);
-    mutex_unlock(&handles_mutex);
-    free_handle(handle);
+	mutex_lock(&handles_mutex);
+	i_remove_handle(handle);
+	mutex_unlock(&handles_mutex);
+	free_handle(handle);
 }
 
 /*
@@ -534,38 +529,31 @@ destroy_handle(struct fileinfo *handle)
 int
 stat_file(const char *path, struct stat *buf)
 {
-    int done = 0;
-    int loops = 0;
-    int result;
-    int stat_err;
-    int stat_ret;
+	int stat_err;
+	int stat_ret;
+	int i;
 
-    while (!done) {
-        stat_ret = stat(path, buf);
-        stat_err = errno;
+	for (i = 0; i < MAX_STAT_RETRY; i++) {
+		stat_ret = stat(path, buf);
+		stat_err = errno;
 
-        if (stat_ret == -1) {
-            if (stat_err == EINTR) {
-                /*
-                 * Interrupted by signal, try again... but after MAX_STAT_RETRY
-                 * tries we give up and try to dump core.
-                 */
-                loops++;
-                if (loops > MAX_STAT_RETRY) {
-                    abort();
-                }
-            } else {
-                /* Actual failure, return code. */
-                result = stat_err;
-                done = 1;
-            }
-        } else {
-            result = 0;
-            done = 1;
-        }
-    }
+		// return immediately upon success
+		if (stat_ret == 0)
+			return (0);
 
-    return (result);
+		// error from stat that means we can't retry - just return it
+		if (stat_err != EINTR)
+			return (stat_err);
+
+		// Interrupted by signal, try again...
+	}
+
+	// if we are here, give up
+	fprintf(stderr, "failed to stat %s more than %d times\n",
+	    path, MAX_STAT_RETRY);
+	abort();
+
+	return (-1);
 }
 
 /*
@@ -577,104 +565,98 @@ stat_file(const char *path, struct stat *buf)
 int
 get_stat(char *pathname, struct stat *sb)
 {
-    int stat_ret;
+	int stat_ret;
 
-    stat_ret = stat_file(pathname, sb);
+	stat_ret = stat_file(pathname, sb);
 
-#ifdef DEBUG
-    fprintf(stderr, "DEBUG: stat_file %s returned: %d: %s\n",
-        pathname, stat_ret, strerror(stat_ret));
-    fflush(stderr);
-#endif
-
-    switch (stat_ret) {
-        case 0:
-            /* SUCCESS! (sb will be populated) */
-            return (0);
-        case ELOOP:         /* symbolic links in path point to each other */
-        case ENOTDIR:       /* component of path is not a dir */
-        case EACCES:        /* permission denied */
-        case ENOENT:        /* file or component path doesn't exist */
-            /*
-             * The above are all fixable problems. We can't open the file right
-             * now, but we know that we shouldn't be able to either. As such,
-             * these are non-fatal and just result in a FAIL (with final flag
-             * set true) response if we're responding to a request or an error
-             * line if we're dealing with an event.
-             */
-            return (stat_ret);
-        case EFAULT:        /* filename or buffer invalid (programmer error) */
-        case EIO:           /* error reading from filesystem (system error) */
-        case ENAMETOOLONG:  /* fo_name is too long (programmer error) */
-        case ENOLINK:       /* broken link to remote machine */
-        case ENXIO:         /* path or component is marked faulty and retired */
-        case EOVERFLOW:     /* file is broken (system error) */
-        default:
-            /*
-             * This handles cases we don't know how to deal with, by dumping
-             * core so that suckers can come back in an try to figure out what
-             * happened from the core.
-             */
-            abort();
-            break;
-    }
+	switch (stat_ret) {
+	case 0:
+		/* SUCCESS! (sb will be populated) */
+		return (0);
+	case ELOOP:         /* symbolic links in path point to each other */
+	case ENOTDIR:       /* component of path is not a dir */
+	case EACCES:        /* permission denied */
+	case ENOENT:        /* file or component path doesn't exist */
+		/*
+		 * The above are all fixable problems. We can't open the file
+		 * right now, but we know that we shouldn't be able to either.
+		 * As such, these are non-fatal and just result in a FAIL (with
+		 * final flag set true) response if we're responding to a
+		 * request or an error line if we're dealing with an event.
+		 */
+		return (stat_ret);
+	case EFAULT:        /* filename or buffer invalid (programmer error) */
+	case EIO:           /* error reading from filesystem (system error) */
+	case ENAMETOOLONG:  /* fo_name is too long (programmer error) */
+	case ENOLINK:       /* broken link to remote machine */
+	case ENXIO:         /* path marked faulty and retired */
+	case EOVERFLOW:     /* file is broken (system error) */
+	default:
+		/*
+		 * This handles cases we don't know how to deal with, by
+		 * dumping core so that it can later be debugged.
+		 */
+		abort();
+		break;
+	}
 }
 
 void
 register_watch(uint32_t key, char *name, struct stat sb)
 {
-    struct fileinfo *finf;
-    struct file_obj *fobjp;
-    int pa_ret;
+	struct fileinfo *finf;
+	struct file_obj *fobjp;
+	int pa_ret;
 
-    mutex_lock(&handles_mutex);
+	mutex_lock(&handles_mutex);
 
-    finf = find_handle(name);
+	finf = find_handle(name);
 
-    /*
-     * We are no longer interested in events for this idx.
-     */
-    if (finf == NULL) {
-        mutex_unlock(&handles_mutex);
-        return;
-    }
+	/*
+	 * We are no longer interested in events for this idx.
+	 */
+	if (finf == NULL) {
+		mutex_unlock(&handles_mutex);
+		return;
+	}
 
-    fobjp = &finf->fobj;
-    fobjp->fo_atime = sb.st_atim;
-    fobjp->fo_mtime = sb.st_mtim;
-    fobjp->fo_ctime = sb.st_ctim;
+	fobjp = &finf->fobj;
+	fobjp->fo_atime = sb.st_atim;
+	fobjp->fo_mtime = sb.st_mtim;
+	fobjp->fo_ctime = sb.st_ctim;
 
-    /*
-     * we do the associate inside of the mutex so that we don't accidentally
-     * associate a source that had been removed.
-     */
-    pa_ret = port_associate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp,
-        finf->events, name);
+	/*
+	 * we do the associate inside of the mutex so that we don't
+	 * accidentally associate a source that had been removed.
+	 */
+	pa_ret = port_associate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp,
+	    finf->events, name);
 
-    mutex_unlock(&handles_mutex);
+	mutex_unlock(&handles_mutex);
 
-    if (key != 0) {
-        /*
-         * We're trying to do an initial associate, so we'll print a result
-         * whether we succeeded or failed.
-         */
-        if (pa_ret == -1) {
-            print_result(key, RESULT_FAILURE, fobjp->fo_name,
-                "port_associate(3c) failed with errno %d: %s",
-                errno, strerror(errno));
-            destroy_handle(finf);
-        } else {
-            print_result(key, RESULT_SUCCESS, fobjp->fo_name,
-                "port_associate(3c) started watching path");
-        }
-    } else if (pa_ret == -1) {
-        /*
-         * We're trying to re-associate so we only dump a message if that
-         * failed.
-         */
-        print_error(key, ERR_CANNOT_ASSOCIATE, "port_associate(3c) failed "
-            "for '%s', errno %d: %s", fobjp->fo_name, errno, strerror(errno));
-    }
+	if (key != 0) {
+		/*
+		 * We're trying to do an initial associate, so we'll print a
+		 * result whether we succeeded or failed.
+		 */
+		if (pa_ret == -1) {
+			print_result(key, RESULT_FAILURE, fobjp->fo_name,
+			    "port_associate(3c) failed with errno %d: %s",
+			    errno, strerror(errno));
+			destroy_handle(finf);
+		} else {
+			print_result(key, RESULT_SUCCESS, fobjp->fo_name,
+			    "port_associate(3c) started watching path");
+		}
+	} else if (pa_ret == -1) {
+		/*
+		 * We're trying to re-associate so we only dump a message if
+		 * that failed.
+		 */
+		print_error(key, ERR_CANNOT_ASSOCIATE,
+		    "port_associate(3c) failed for '%s', errno %d: %s",
+		    fobjp->fo_name, errno, strerror(errno));
+	}
 }
 
 /*
@@ -692,57 +674,51 @@ register_watch(uint32_t key, char *name, struct stat sb)
 void
 check_and_rearm_event(uint32_t key, char *name, int revents)
 {
-    int final = 0;
-    struct fileinfo *finf;
-    struct stat sb;
-    int stat_ret;
+	int final = 0;
+	struct fileinfo *finf;
+	struct stat sb;
+	int stat_ret;
 
-    mutex_lock(&handles_mutex);
+	mutex_lock(&handles_mutex);
 
-    finf = find_handle(name);
-    /*
-     * We are no longer interested in events for this idx.
-     */
-    if (finf == NULL) {
-        mutex_unlock(&handles_mutex);
-        return;
-    }
-    mutex_unlock(&handles_mutex);
+	finf = find_handle(name);
+	if (finf == NULL) {
+		mutex_unlock(&handles_mutex);
+		return;
+	}
+	mutex_unlock(&handles_mutex);
 
-    stat_ret = get_stat(finf->fobj.fo_name, &sb);
-    if (stat_ret != 0 || revents & FILE_DELETE || revents & UNMOUNTED) {
-        final = 1;
-    }
+	// We always stat the file after an event is received, or for the
+	// inital watch.  If the stat fails for any reason, or a delete
+	// or unmounted event are seen, we mark this file as "final".  This
+	// means we will no longer be watching this file.
+	stat_ret = get_stat(finf->fobj.fo_name, &sb);
+	if (stat_ret != 0 || revents & FILE_DELETE || revents & UNMOUNTED) {
+		final = 1;
+	}
 
-    /*
-     * We print the result after we've done the stat() so that we can include
-     * "final: true" when we're not going to be able to re-register the file.
-     */
-    if (revents) {
-        print_event(revents, finf->fobj.fo_name, final);
-    }
+	if (revents) {
+		print_event(revents, finf->fobj.fo_name, final);
+	}
 
-    if ((key != 0) && (stat_ret != 0)) {
-        /*
-         * We're doing the initial register for this file, so we need to send
-         * a result. Since stat() just failed, we'll send now and return since
-         * we're not going to do anything further.
-         */
-        print_result(key, RESULT_FAILURE, finf->fobj.fo_name,
-            "stat(2) failed with errno %d: %s", stat_ret, strerror(stat_ret));
-        assert(final);
-    }
+	if ((key != 0) && (stat_ret != 0)) {
+		// We're doing the initial register for this file, so we need
+		// to send a result. Since stat() just failed, we'll send now
+		// and return since we're not going to do anything further.
+		print_result(key, RESULT_FAILURE, finf->fobj.fo_name,
+		    "stat(2) failed with errno %d: %s",
+		    stat_ret, strerror(stat_ret));
+		assert(final);
+	}
 
-    if (final) {
-        /* we're not going to re-enable, so cleanup */
-        destroy_handle(finf);
-        return;
-    }
+	if (final) {
+		// we're not going to re-enable, so cleanup
+		destroy_handle(finf);
+		return;
+	}
 
-    /*
-     * (re)register.
-     */
-    register_watch(key, name, sb);
+	// (re)register
+	register_watch(key, name, sb);
 }
 
 /*
@@ -752,47 +728,50 @@ check_and_rearm_event(uint32_t key, char *name, int revents)
 void *
 wait_for_events(void *arg)
 {
-    (void) arg;
-    struct fileinfo *finf;
-    port_event_t pe;
+	(void) arg;
+	struct fileinfo *finf;
+	port_event_t pe;
 
-    while (!port_get(port, &pe, NULL)) {
-        /*
-         * Can add cases for other sources if this
-         * port is used to collect events from multiple sources.
-         */
-        switch (pe.portev_source) {
-        case PORT_SOURCE_FILE:
-            /* Call file events event handler */
-            check_and_rearm_event(0, (char *)pe.portev_user, pe.portev_events);
-            break;
-        default:
-            /*
-             * Something's seriously wrong if we get events with a port source
-             * other than FILE, since that's all we're adding. So abort and hope
-             * there's enough state in the core.
-             */
-            print_error(0, ERR_UNEXPECTED_SOURCE,
-                "event from unexpected source: %s", strerror(errno));
-            abort();
-        }
+	while (!port_get(port, &pe, NULL)) {
+		/*
+		 * Can add cases for other sources if this
+		 * port is used to collect events from multiple sources.
+		 */
+		switch (pe.portev_source) {
+		case PORT_SOURCE_FILE:
+			/* Call file events event handler */
+			check_and_rearm_event(0, (char *)pe.portev_user,
+			    pe.portev_events);
+			break;
+		default:
+			/*
+			 * Something's seriously wrong if we get events with a
+			 * port source other than FILE, since that's all we're
+			 * adding. So abort and hope there's enough state in
+			 * the core.
+			 */
+			fprintf(stderr, "event from unexpected source: %d",
+			    pe.portev_source);
+			abort();
+		}
 
-        /*
-         * The actual work of freeing finf objects is done in this thread so
-         * that there aren't any race conditions while accessing
-         * free_list->fobj.fo_name in the check_and_rearm_event function
-         */
-        mutex_lock(&free_mutex);
-        while (free_list != NULL) {
-            finf = free_list->next;
-            free_handle((struct fileinfo *)free_list);
-            free_list = finf;
-        }
-        mutex_unlock(&free_mutex);
-    }
-    fprintf(stderr, "fswatcher: worker thread exiting\n");
-    fflush(stderr);
-    return (NULL);
+		/*
+		 * The actual work of freeing finf objects is done in this
+		 * thread so that there aren't any race conditions while
+		 * accessing free_list->fobj.fo_name in the
+		 * check_and_rearm_event function
+		 */
+		mutex_lock(&free_mutex);
+		while (free_list != NULL) {
+			finf = free_list->next;
+			free_handle((struct fileinfo *)free_list);
+			free_list = finf;
+		}
+		mutex_unlock(&free_mutex);
+	}
+	fprintf(stderr, "fswatcher: worker thread exiting\n");
+	fflush(stderr);
+	return (NULL);
 }
 
 /*
@@ -806,149 +785,197 @@ wait_for_events(void *arg)
 void
 enqueue_free_finf(struct fileinfo *finf)
 {
-
-    if (finf != NULL) {
-        mutex_lock(&free_mutex);
-        finf->next = (struct fileinfo *)free_list;
-        free_list = finf;
-        finf->prev = NULL;
-        mutex_unlock(&free_mutex);
-    }
+	if (finf != NULL) {
+		mutex_lock(&free_mutex);
+		finf->next = (struct fileinfo *)free_list;
+		free_list = finf;
+		finf->prev = NULL;
+		mutex_unlock(&free_mutex);
+	}
 }
 
 /*
  * Only called from main thread. Attempts to watch pathname.
  */
-int
+void
 watch_path(char *pathname, uint32_t key)
 {
-    struct fileinfo *finf;
-    /* port is global */
+	struct fileinfo *finf;
 
-    finf = malloc(sizeof (struct fileinfo));
-    if (finf == NULL) {
-        print_error(key, ERR_CANNOT_ALLOCATE, "failed to allocate memory for "
-            "new watcher errno %d: %s", errno, strerror(errno));
-	abort();
-    }
+	finf = malloc(sizeof (struct fileinfo));
+	if (finf == NULL) {
+		fprintf(stderr, "failed to allocate memory for new watcher "
+		    "errno %d: %s", errno, strerror(errno));
+		abort();
+	}
 
-    if ((finf->fobj.fo_name = strdup(pathname)) == NULL) {
-        print_error(key, ERR_CANNOT_ALLOCATE, "strdup failed w/ errno %d: %s",
-            errno, strerror(errno));
-	abort();
-    }
+	if ((finf->fobj.fo_name = strdup(pathname)) == NULL) {
+		fprintf(stderr, "strdup failed w/ errno %d: %s",
+		    errno, strerror(errno));
+		abort();
+	}
 
-    /* From here on we'll need to cleanup finf when done with it. */
+	// from here on we'll need to cleanup finf when done with it.
 
-    mutex_lock(&handles_mutex);
+	mutex_lock(&handles_mutex);
 
-    if (find_handle(pathname) != NULL) {
-        /* early-return: already watching so unlock and return success */
-        mutex_unlock(&handles_mutex);
+	if (find_handle(pathname) != NULL) {
+		// early-return: already watching so unlock and return success
+		mutex_unlock(&handles_mutex);
 
-        print_result(key, RESULT_SUCCESS, pathname, "already watching");
-        free_handle(finf);
-        return (0);
-    }
+		print_result(key, RESULT_SUCCESS, pathname, "already watching");
+		free_handle(finf);
+		return;
+	}
 
-    insert_handle(finf);
+	insert_handle(finf);
 
-    mutex_unlock(&handles_mutex);
+	mutex_unlock(&handles_mutex);
 
-    /*
-     * Event types to watch.
-     */
-    finf->events = FILE_MODIFIED;
-
-    /*
-     * Start to monitor this file.
-     */
-    check_and_rearm_event(key, finf->fobj.fo_name, 0);
-
-    return (0);
+	// only watch for modification events
+	finf->events = FILE_MODIFIED;
+	check_and_rearm_event(key, finf->fobj.fo_name, 0);
 }
 
 /*
  * Only called from main thread. Attempts to unwatch pathname.
  */
-int
+void
 unwatch_path(char *pathname, uint32_t key)
 {
-    struct fileinfo *finf;
-    struct file_obj *fobjp;
-    int ret;
+	struct fileinfo *finf;
+	struct file_obj *fobjp;
+	int ret;
 
-    mutex_lock(&handles_mutex);
+	mutex_lock(&handles_mutex);
 
-    finf = find_handle(pathname);
-    if (finf == NULL) {
-        mutex_unlock(&handles_mutex);
-        print_result(key, RESULT_FAILURE, pathname, "not watching '%s', cannot "
-            "unwatch", pathname);
-        return (0);
-    }
+	finf = find_handle(pathname);
+	if (finf == NULL) {
+		mutex_unlock(&handles_mutex);
+		print_result(key, RESULT_FAILURE, pathname,
+		    "not watching '%s', cannot unwatch", pathname);
+		return;
+	}
 
-    fobjp = &finf->fobj;
-    /*
-     * From the man page, there are 5 possible errors for port_dissociate():
-     *
-     * EBADF
-     *          The port identifier is not valid.
-     *
-     * EBADFD
-     *          The source argument is of type PORT_SOURCE_FD  and  the
-     *          object argument is not a valid file descriptor.
-     *
-     * EINVAL
-     *          The source argument is not valid.
-     *
-     * EACCES
-     *          The process is not the owner of the association.
-     *
-     * ENOENT
-     *          The specified object is not associated with the port.
-     *
-     *
-     * none of these seem like they'll succeed if tried again later for this
-     * same file, so in every case we assume that the file is no longer
-     * associated and remove the handle.
-     */
-    ret = port_dissociate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp);
-    i_remove_handle(finf);
-    mutex_unlock(&handles_mutex);
+	fobjp = &finf->fobj;
+	/*
+	 * From the man page, there are 5 possible errors for port_dissociate():
+	 *
+	 * EBADF
+	 *          The port identifier is not valid.
+	 *
+	 * EBADFD
+	 *          The source argument is of type PORT_SOURCE_FD  and  the
+	 *          object argument is not a valid file descriptor.
+	 *
+	 * EINVAL
+	 *          The source argument is not valid.
+	 *
+	 * EACCES
+	 *          The process is not the owner of the association.
+	 *
+	 * ENOENT
+	 *          The specified object is not associated with the port.
+	 *
+	 *
+	 * none of these seem like they'll succeed if tried again later for this
+	 * same file, so in every case we assume that the file is no longer
+	 * associated and remove the handle.
+	 */
+	ret = port_dissociate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp);
+	i_remove_handle(finf);
+	mutex_unlock(&handles_mutex);
 
-    enqueue_free_finf(finf);
+	enqueue_free_finf(finf);
 
-    if (ret == -1) {
-        /* file may have been deleted/moved */
-        print_result(key, RESULT_FAILURE, pathname,
-            "failed to unregister '%s' (errno %d): %s", pathname, errno,
-            strerror(errno));
-    } else {
-        print_result(key, RESULT_SUCCESS, pathname,
-            "no longer watching '%s'", pathname);
-    }
+	if (ret == -1) {
+		/* file may have been deleted/moved */
+		print_result(key, RESULT_FAILURE, pathname,
+		    "failed to unregister '%s' (errno %d): %s", pathname, errno,
+		    strerror(errno));
+	} else {
+		print_result(key, RESULT_SUCCESS, pathname,
+		    "no longer watching '%s'", pathname);
+	}
+}
 
-    return (0);
+/*
+ * process one line of stdin
+ *
+ * returns 0 if we can continue, otherwise returns a value suitable
+ * for exiting the program with.
+ */
+int
+process_stdin_line()
+{
+	char cmd[MAX_CMD_LEN + 1];
+	uint32_t key;
+	char key_str[MAX_KEY_LEN + 2];
+	char path[MAX_CMD_LEN + 1];
+	int res;
+	char sscanf_fmt[MAX_FMT_LEN];
+	char str[MAX_CMD_LEN + 1];
+
+	// get a line
+	if (fgets(str, MAX_CMD_LEN + 1, stdin) == NULL) {
+		fprintf(stderr, "fswatcher: error on stdin (errno: %d): %s\n",
+		    errno, strerror(errno));
+		return (1);
+	}
+
+	// read one character past MAX_KEY_LEN so we know it's too long
+	snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s", MAX_KEY_LEN + 1);
+	res = sscanf(str, sscanf_fmt, key_str, cmd, path);
+
+	if (res != 3) {
+		print_error(SYSTEM_KEY, ERR_INVALID_COMMAND,
+		    "invalid command line");
+		return (0);
+	}
+
+	// convert key to a number we can work with
+	key = strtoul(key_str, NULL, 10);
+	if ((strlen(key_str) > MAX_KEY_LEN) ||
+	    (key == ULONG_MAX && errno == ERANGE)) {
+
+		print_error(SYSTEM_KEY, ERR_INVALID_KEY,
+		    "invalid key: > ULONG_MAX");
+		return (0);
+	}
+
+	// this is a reserved key
+	if (key == 0) {
+		print_error(SYSTEM_KEY, ERR_INVALID_KEY, "invalid key: 0");
+		return (0);
+	}
+
+#ifdef DEBUG
+	fprintf(stderr, "DEBUG key: %u cmd: %s path: %s\n", key, cmd, path);
+#endif
+
+	if (strcmp("UNWATCH", cmd) == 0) {
+		unwatch_path(path, key);
+	} else if (strcmp("WATCH", cmd) == 0) {
+		watch_path(path, key);
+	} else {
+		print_error(key, ERR_UNKNOWN_COMMAND, "unknown command '%s'",
+		    cmd);
+	}
+
+	return (0);
 }
 
 int
 main(int argc, char **argv)
 {
-    int opt;
-    char cmd[MAX_CMD_LEN + 1];
-    int exit_code = SUCCESS;
-    uint32_t key;
-    char key_str[MAX_KEY_LEN + 2];
-    char path[MAX_CMD_LEN + 1];
-    int res;
-    char sscanf_fmt[MAX_FMT_LEN];
-    char str[MAX_CMD_LEN + 1];
-    pthread_t tid;
+	int opt;
+	int exit_code = 0;
+	pthread_t tid;
 
-    handles = calloc(sizeof (struct fileinfo *), HANDLES_MASK);
+	handles = calloc(sizeof (struct fileinfo *), HANDLES_MASK);
 
 	opts.opt_j = B_FALSE;
+	opts.opt_r = B_FALSE;
 	while ((opt = getopt(argc, argv, "hjr")) != -1) {
 		switch (opt) {
 		case 'h':
@@ -968,96 +995,36 @@ main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
-    if ((port = port_create()) == -1) {
-        print_error(SYSTEM_KEY, ERR_PORT_CREATE, "port_create failed(%d): %s",
-            errno, strerror(errno));
-        exit(ERR_PORT_CREATE);
-    }
+	if ((port = port_create()) == -1) {
+		fprintf(stderr, "port_create failed(%d): %s",
+		    errno, strerror(errno));
+		return (1);
+	}
 
-    /* Create a worker thread to process events. */
-    pthread_create(&tid, NULL, wait_for_events, NULL);
+	// create a worker thread to process events.
+	pthread_create(&tid, NULL, wait_for_events, NULL);
 
-    /* alert that we are ready for input */
-    print_ready();
 
-    while (1) {
-        if (fgets(str, MAX_CMD_LEN + 1, stdin) == NULL) {
-            if (!feof(stdin)) {
-                print_error(SYSTEM_KEY, ERR_GET_STDIN, "fswatcher: error on "
-                    "stdin (errno: %d): %s\n", errno, strerror(errno));
-            }
-            /* In EOF case we don't print, this this is normal termination. */
-            break;
-        }
+	// alert that we are ready for input
+	if (opts.opt_r)
+		print_ready();
 
-        /* read one character past MAX_KEY_LEN so we know it's too long */
-        snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s",
-            MAX_KEY_LEN + 1);
-        res = sscanf(str, sscanf_fmt, key_str, cmd, path);
-        if (res != 3) {
-            print_error(SYSTEM_KEY, ERR_INVALID_COMMAND,
-                "invalid command line");
-            continue;
-        }
-        key = strtoul(key_str, NULL, 10);
-        if ((strlen(key_str) > MAX_KEY_LEN) ||
-            (key == ULONG_MAX && errno == ERANGE)) {
+	// read stdin line-by-link until error
+	while ((exit_code = process_stdin_line()) == 0) {
+		// do nothing
+	}
 
-            print_error(SYSTEM_KEY, ERR_INVALID_KEY,
-                "invalid key: > ULONG_MAX");
-            continue;
-        }
-        if (key == 0) {
-            print_error(SYSTEM_KEY, ERR_INVALID_KEY, "invalid key: 0");
-            continue;
-        }
+	// close port - will de-activate all file events watches
+	close(port);
+	port = -1;
 
-#ifdef DEBUG
-        fprintf(stderr, "DEBUG key: %u cmd: %s path: %s\n", key, cmd, path);
-#endif
+	// wait for threads to exit
+	while (thr_join(0, NULL, NULL) == 0) {
+		// do nothing
+	}
 
-        if (strcmp("UNWATCH", cmd) == 0) {
-            /* unwatch_path() will print an object to stdout */
-            res = unwatch_path(path, key);
-            if (res != 0) {
-                /*
-                 * An error occured and unwatch_path() will have written an
-                 * error object to stdout. Break the loop so we can exit.
-                 */
-                exit_code = res;
-                break;
-            }
-        } else if (strcmp("WATCH", cmd) == 0) {
-            /* watch_path() will print an object to stdout */
-            res = watch_path(path, key);
-            if (res != 0) {
-                /*
-                 * An error occured and watch_path() will have written an error
-                 * object to stdout. Break the loop so we can exit.
-                 */
-                exit_code = res;
-                break;
-            }
-        } else {
-            print_error(key, ERR_UNKNOWN_COMMAND, "unknown command '%s'", cmd);
-        }
-    }
+	// cleanup
+	free(handles);
 
-    /*
-     * Close port, will de-activate all file events watches associated
-     * with the port.
-     */
-    close(port);
-    port = -1;
-
-    /*
-     * Wait for threads to exit.
-     */
-    while (thr_join(0, NULL, NULL) == 0) {
-        /* do nothing */;
-    }
-
-    free(handles);
-
-    exit(exit_code);
+	return (exit_code);
 }

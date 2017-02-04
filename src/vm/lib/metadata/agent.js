@@ -271,14 +271,16 @@ MetadataAgent.prototype.createZoneLog = function (type, zonename) {
 MetadataAgent.prototype.createServersOnExistingZones = function (vms) {
     var self = this;
     var created = 0;
+    var keys = Object.keys(vms);
 
-    async.forEach(vms, function (vm, cb) {
-        if (!self.zlog[vm.zonename]) {
+    async.forEach(keys, function (zonename, cb) {
+        var vm = vms[zonename];
+        if (!self.zlog[zonename]) {
             // create a logger specific to this VM
-            self.createZoneLog(vm.brand, vm.zonename);
+            self.createZoneLog(vm.brand, zonename);
         }
 
-        if (self.zoneConnections[vm.zonename]) {
+        if (self.zoneConnections[zonename]) {
             cb();
             return;
         }
@@ -288,19 +290,19 @@ MetadataAgent.prototype.createServersOnExistingZones = function (vms) {
             // have created a socket.
             if (vm.zone_state !== 'running') {
                 self.log.debug('skipping non-running vm %s, zone_state %s',
-                    vm.zonename, vm.zone_state);
+                    zonename, vm.zone_state);
                 cb();
                 return;
             }
 
-            self.startKVMSocketServer(vm.zonename, function (err) {
+            self.startKVMSocketServer(zonename, function (err) {
                 if (!err) {
                     created++;
                 }
                 cb();
             });
         } else {
-            self.startZoneSocketServer(vm.zonename, function (err) {
+            self.startZoneSocketServer(zonename, function (err) {
                 if (!err) {
                     created++;
                 }
@@ -309,7 +311,7 @@ MetadataAgent.prototype.createServersOnExistingZones = function (vms) {
         }
     }, function (err) {
         self.log.info('created zone metadata sockets on %d / %d zones',
-            created, vms.length);
+            created, keys.length);
     });
 };
 

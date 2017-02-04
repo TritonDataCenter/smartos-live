@@ -20,15 +20,12 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2015, Joyent, Inc.
+ * Copyright 2017, Joyent, Inc.
  *
- * gcc -Wall -Wextra fswatcher.c -o fswatcher -lthread
+ * gcc -Wall -Wextra fswatcher.c -o fswatcher -lthread -lnvpair
  *
  */
 
-// #define DEBUG
-
-#define _REENTRANT
 #include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
@@ -52,7 +49,7 @@
 /*
  * On STDIN you can send:
  *
- * <KEY> WATCH <pathname> [timestamp]\n
+ * <KEY> WATCH <pathname>\n
  * <KEY> UNWATCH <pathname>\n
  *
  * The first will cause <pathname> to be added to the watch list. The second
@@ -60,11 +57,6 @@
  * be an integer in the range 1-4294967295 (inclusive). Leading 0's will be
  * removed. NOTE: 0 is a special key in that it will be used in output for
  * errors which were not directly the result of a command.
- *
- * When using a WATCH command with a <timestamp> argument, the timestamp must
- * be an integer number of nanoseconds since Jan 1, 1970 00:00:00 UTC. This
- * usually will be the time that the last event or modification was seen for
- * this file and the data can be pulled from stat(2)'s st_mtim structure.
  *
  * On STDOUT you will see JSON messages that look like the following but are
  * on a single line:
@@ -110,9 +102,7 @@
  * EXIT STATUS
  *
  *   Under normal operation, fswatcher will run until STDIN is closed or a fatal
- *   error occurs. STDIN closing will result in exit code 0. Any other exit code
- *   should result in a message of type "error" being output before exiting
- *   non-zero.
+ *   error occurs.
  *
  *   When errors occur that are completly unexpected, this will call abort() to
  *   generate a core dump.
@@ -949,9 +939,7 @@ process_stdin_line()
 		return (0);
 	}
 
-#ifdef DEBUG
 	fprintf(stderr, "DEBUG key: %u cmd: %s path: %s\n", key, cmd, path);
-#endif
 
 	if (strcmp("UNWATCH", cmd) == 0) {
 		unwatch_path(path, key);

@@ -1,13 +1,13 @@
 // Copyright 2015 Joyent, Inc.
 
-var VminfodClient = require('vminfod/client');
+var vminfod = require('/usr/vm/node_modules/vminfod/client');
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
 require('nodeunit-plus');
 
 test('create VminfodClient object and test /status', function (t) {
-    var vc = new VminfodClient();
+    var vc = new vminfod.VminfodClient();
     t.ok(vc, 'VminfodClient created');
 
     vc.status(function (err, stats) {

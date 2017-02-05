@@ -124,7 +124,7 @@ test('try watching an existent file and catching CHANGE and DELETE',
         var saw_change = false;
         var saw_delete = false;
 
-        var fsw = new FsWatcher({log: log, dedup_ns: 2000000000});
+        var fsw = new FsWatcher({log: log});
 
         function cleanup() {
             fsw.unwatch(filename, function () {
@@ -180,7 +180,7 @@ test('try watching a non-existent file then create it', function (t) {
     var dirname = path.dirname(filename);
     var saw_create = false;
 
-    var fsw = new FsWatcher({log: log, dedup_ns: 2000000000});
+    var fsw = new FsWatcher({log: log});
 
     function cleanup() {
         fsw.unwatch(filename, function () {
@@ -234,7 +234,7 @@ test('try watching an existent file, unwatching and ensure no events',
         var saw_change = false;
         var stopped_watching = false;
 
-        var fsw = new FsWatcher({log: log, dedup_ns: 2000000000});
+        var fsw = new FsWatcher({log: log});
 
         fs.writeFileSync(filename, 'look at me, I\'m so tricky!\n');
         t.ok(fs.existsSync(filename), 'file was created');
@@ -290,7 +290,7 @@ test('create a file and ensure we get multiple modify events',
         var changes = 0;
         var filename = path.join(testdir, 'changeme.txt');
 
-        var fsw = new FsWatcher({log: log, dedup_ns: 2000000000});
+        var fsw = new FsWatcher({log: log});
 
         fsw.on('event', function (evt) {
             t.deepEqual(evt.changes, ['FILE_MODIFIED'],
@@ -323,10 +323,11 @@ test('create a file and ensure we get multiple modify events',
 
 test('watch 10000 non-existent files, create them, modify them and delete them',
     function (t) {
+        var then = new Date();
 
         var count = 10000;
         var files = {};
-        var fsw = new FsWatcher({log: log, dedup_ns: 2000000000});
+        var fsw = new FsWatcher({log: log});
 
         async.waterfall([
             function (cb) {
@@ -539,7 +540,10 @@ test('watch 10000 non-existent files, create them, modify them and delete them',
                 }, 100);
             }
         ], function (err) {
+            var now = new Date();
+            var delta = now - then;
             t.ok(!err, (err ? err.message : 'no errors'));
+            t.ok(true, 'took ' + delta + 'ms to complete');
             fsw.stop();
             t.end();
         });

@@ -62,7 +62,7 @@ SMARTDCLIBDIR =	$(DESTDIR)/smartdc/lib
 #
 bootparams :	LIBS +=		-ldevinfo
 bootparams :	WARN_FLAGS +=	-Wno-unused
-fswatcher :	LIBS +=		-lthread -lnvpair
+fswatcher :	LIBS +=		-lthread -lnvpair -lavl
 zfs_recv :	LIBS +=		-lsocket
 zfs_send :	LIBS +=		-lsocket
 vmbundle :	CPPFLAGS +=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64

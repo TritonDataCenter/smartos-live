@@ -38,17 +38,17 @@ require('/usr/vm/node_modules/nodeunit-plus');
 
 var FsWatcher = require('/usr/vm/node_modules/vminfod/fswatcher.js').FsWatcher;
 var log = bunyan.createLogger({
-    level: 'info',
+    level: 'error',
     name: 'fswatcher-test-dummy',
-    streams: [ { stream: process.stderr, level: 'info' } ],
+    streams: [ { stream: process.stderr, level: 'error' } ],
     serializers: bunyan.stdSerializers
 });
 var testdir = path.join('/tmp', 'test-fswatcher-' + process.pid);
 
-before(function (cb) {
+test('try creating temp directory', function (t) {
     execFile('/usr/bin/mkdir', ['-p', testdir], function (err, stdout, stderr) {
         assert(!err);
-        cb();
+        t.end();
     });
 });
 

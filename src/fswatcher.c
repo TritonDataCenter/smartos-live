@@ -192,11 +192,9 @@ files_tree_node_comparator(const void *l, const void *r)
 	int ret;
 
 	// first check hash matches
-	ret = ltn->name_hash - rtn->name_hash;
-
-	if (ret < 0)
+	if (ltn->name_hash < rtn->name_hash)
 		return (-1);
-	else if (ret > 0)
+	else if (ltn->name_hash > rtn->name_hash)
 		return (1);
 
 	// hashes are the same, check strings
@@ -377,11 +375,11 @@ print_error(uint32_t key, uint32_t code, const char *message_fmt, ...)
 }
 
 /*
- * print_result() takes a key, code (RESULT_SUCCESS||RESULT_FAILURE), pathname
+ * print_response() takes a key, code (RESULT_SUCCESS||RESULT_FAILURE), pathname
  * and message and handles creating and printing a "result" message.
  */
 void
-print_result(uint32_t key, uint32_t code, const char *pathname,
+print_response(uint32_t key, uint32_t code, const char *pathname,
     const char *message_fmt, ...)
 {
 	va_list arg_ptr;
@@ -409,6 +407,52 @@ print_result(uint32_t key, uint32_t code, const char *pathname,
 	print_nvlist(nvl);
 
 	nvlist_free(nvl);
+}
+
+/*
+ * Only called from stdin thread.  Prints information about this program
+ *
+ * print_status prints a message of type "response"
+ */
+void
+print_status(uint32_t key)
+{
+	int numnodes;
+	char **filenames;
+	struct files_tree_node *ftn;
+	int i = 0;
+	nvlist_t *nvl = make_nvlist("response");
+	nvlist_t *data_nvl = fnvlist_alloc();
+
+	fnvlist_add_uint32(nvl, "key", key);
+	fnvlist_add_uint32(nvl, "code", 0);
+	fnvlist_add_string(nvl, "result", "SUCCESS");
+
+	// get all nodes in the avl tree
+	numnodes = avl_numnodes(&files_tree);
+	filenames = malloc(numnodes * (sizeof (char *)));
+
+	if (filenames == NULL) {
+		perror("malloc");
+		abort();
+	}
+
+	// walk the avl tree and add each filename
+	for (ftn = avl_first(&files_tree); ftn != NULL;
+	    ftn = AVL_NEXT(&files_tree, ftn)) {
+
+		filenames[i++] = ftn->name;
+	}
+	fnvlist_add_uint32(data_nvl, "files_count", numnodes);
+	fnvlist_add_string_array(data_nvl, "files", filenames, i);
+
+	fnvlist_add_nvlist(nvl, "data", data_nvl);
+
+	print_nvlist(nvl);
+
+	nvlist_free(data_nvl);
+	nvlist_free(nvl);
+	free(filenames);
 }
 
 /*
@@ -581,28 +625,26 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 	// if ftn is still null, we don't have a handle for this file so ignore
 	// it
 	if (ftn == NULL) {
-		fprintf(stderr, "got event for '%s' without a handle", name);
+		fprintf(stderr, "got event for '%s' without a handle\n", name);
 		return;
 	}
 
 	// We always stat the file after an event is received, or for the
-	// inital watch.  If the stat fails for any reason, or a delete
-	// or unmounted event are seen, we mark this file as "final".  This
-	// means we will no longer be watching this file.
+	// inital watch.  If the stat fails for any reason, or any event is
+	// seen that indicates the files is gone, we mark this file as "final".
+	// This means we will no longer be watching this file.
 	stat_ret = get_stat(name, &sb);
-	if (stat_ret != 0 || revents & FILE_DELETE || revents & UNMOUNTED) {
-		final = 1;
-	}
+	if (stat_ret != 0 || revents & FILE_DELETE || revents & FILE_RENAME_FROM
+	    || revents & UNMOUNTED || revents & MOUNTEDOVER) {
 
-	if (revents) {
-		print_event(revents, name, final);
+		final = 1;
 	}
 
 	if ((key != SYSTEM_KEY) && (stat_ret != 0)) {
 		// We're doing the initial register for this file, so we need
 		// to send a result. Since stat() just failed, we'll send now
 		// and return since we're not going to do anything further.
-		print_result(key, RESULT_FAILURE, name,
+		print_response(key, RESULT_FAILURE, name,
 		    "stat(2) failed with errno %d: %s",
 		    stat_ret, strerror(stat_ret));
 		assert(final);
@@ -610,6 +652,9 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 
 	if (final) {
 		// we're not going to re-enable, so cleanup
+		if (revents) {
+			print_event(revents, name, final);
+		}
 		destroy_handle(ftn);
 		return;
 	}
@@ -621,26 +666,35 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 	fobjp->fo_ctime = sb.st_ctim;
 
 	pa_ret = port_associate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp,
-	    FILE_MODIFIED, name);
+	    FILE_MODIFIED|FILE_TRUNC, name);
 
 	if (key != SYSTEM_KEY) {
 		// We're trying to do an initial associate, so we'll print a
 		// result whether we succeeded or failed.
+		assert(revents == 0);
 		if (pa_ret == -1) {
-			print_result(key, RESULT_FAILURE, name,
+			print_response(key, RESULT_FAILURE, name,
 			    "port_associate(3c) failed with errno %d: %s",
 			    errno, strerror(errno));
 			destroy_handle(ftn);
-		} else {
-			print_result(key, RESULT_SUCCESS, name,
-			    "port_associate(3c) started watching path");
+			return;
 		}
-	} else if (pa_ret == -1) {
-		// We're trying to re-associate so emit an error if
-		// that failed.
+
+		print_response(key, RESULT_SUCCESS, name,
+		    "port_associate(3c) started watching path");
+		return;
+	}
+
+	// if we are here, this function was called as a result of an event
+	// being seen.
+	assert(revents != 0);
+	print_event(revents, name, final);
+
+	if (pa_ret == -1) {
 		print_error(key, ERR_CANNOT_ASSOCIATE,
 		    "port_associate(3c) failed for '%s', errno %d: %s",
 		    name, errno, strerror(errno));
+		destroy_handle(ftn);
 	}
 }
 
@@ -654,7 +708,7 @@ watch_path(char *pathname, uint32_t key)
 	char *dupname;
 
 	if (find_handle(pathname) != NULL) {
-		print_result(key, RESULT_SUCCESS, pathname, "already watching");
+		print_response(key, RESULT_SUCCESS, pathname, "already watching");
 		return;
 	}
 
@@ -693,7 +747,7 @@ unwatch_path(char *pathname, uint32_t key)
 
 	ftn = find_handle(pathname);
 	if (ftn == NULL) {
-		print_result(key, RESULT_FAILURE, pathname,
+		print_response(key, RESULT_FAILURE, pathname,
 		    "not watching '%s', cannot unwatch", pathname);
 		return;
 	}
@@ -728,11 +782,11 @@ unwatch_path(char *pathname, uint32_t key)
 	destroy_handle(ftn);
 
 	if (ret == -1) {
-		print_result(key, RESULT_FAILURE, pathname,
+		print_response(key, RESULT_FAILURE, pathname,
 		    "failed to unregister '%s' (errno %d): %s", pathname, errno,
 		    strerror(errno));
 	} else {
-		print_result(key, RESULT_SUCCESS, pathname,
+		print_response(key, RESULT_SUCCESS, pathname,
 		    "no longer watching '%s'", pathname);
 	}
 }
@@ -746,10 +800,10 @@ unwatch_path(char *pathname, uint32_t key)
 void
 process_stdin_line(char *str)
 {
-	char cmd[MAX_CMD_LEN + 1];
+	char cmd[MAX_CMD_LEN + 1] = {'\0'};
 	uint32_t key;
 	char key_str[MAX_KEY_LEN + 2];
-	char path[MAX_CMD_LEN + 1];
+	char path[MAX_CMD_LEN + 1] = {'\0'};
 	int res;
 	char sscanf_fmt[MAX_FMT_LEN];
 
@@ -757,7 +811,7 @@ process_stdin_line(char *str)
 	snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s", MAX_KEY_LEN + 1);
 	res = sscanf(str, sscanf_fmt, key_str, cmd, path);
 
-	if (res != 3) {
+	if (!(res == 2 || res == 3)) {
 		print_error(SYSTEM_KEY, ERR_INVALID_COMMAND,
 		    "invalid command line");
 		return;
@@ -779,9 +833,26 @@ process_stdin_line(char *str)
 	}
 
 	if (strcmp("UNWATCH", cmd) == 0) {
+		if (path[0] == '\0') {
+			print_error(SYSTEM_KEY, ERR_INVALID_COMMAND,
+			    "invalid command line - UNWATCH requires pathname");
+			return;
+		}
 		unwatch_path(path, key);
 	} else if (strcmp("WATCH", cmd) == 0) {
+		if (path[0] == '\0') {
+			print_error(SYSTEM_KEY, ERR_INVALID_COMMAND,
+			    "invalid command line - WATCH requires pathname");
+			return;
+		}
 		watch_path(path, key);
+	} else if (strcmp("STATUS", cmd) == 0) {
+		if (path[0] != '\0') {
+			print_error(SYSTEM_KEY, ERR_INVALID_COMMAND,
+			    "invalid command line - STATUS takes no arguments");
+			return;
+		}
+		print_status(key);
 	} else {
 		print_error(key, ERR_UNKNOWN_COMMAND, "unknown command '%s'",
 		    cmd);

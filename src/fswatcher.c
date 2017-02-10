@@ -31,26 +31,38 @@
  *
  * <KEY> WATCH <pathname>\n
  * <KEY> UNWATCH <pathname>\n
+ * <KEY> STATUS\n
  *
  * The first will cause <pathname> to be added to the watch list. The second
- * will cause the watch for the specified path to be removed. The <KEY> must
- * be an integer in the range 1-4294967295 (inclusive). Leading 0's will be
- * removed. NOTE: 0 is a special key in that it will be used in output for
- * errors which were not directly the result of a command.
+ * will cause the watch for the specified path to be removed.  The third will
+ * print this programs status to stdout. The <KEY> must be an integer in the
+ * range 1-4294967295 (inclusive). Leading 0's will be removed. NOTE: 0 is a
+ * special key that will be used in output for errors which were not directly
+ * the result of a command.
+ *
+ * "pathname" can be any type of file that event ports supports (file,
+ * directory, pipe, etc.).  This program will also follow symlinks as well:
+ * note that the source file for the symlink must exist to watch, and if
+ * the source file is deleted after a watch is established a FILE_DELETE
+ * event will be seen.
+ *
+ * When watching a file, it will be rewatched every time an event is seen
+ * until an UNWATCH command for the file is received by the user, or an event
+ * indicates that the file can no longer be watched (like FILE_DELETE).
  *
  * On STDOUT you will see JSON messages that look like the following but are
  * on a single line:
  *
  *  {
+ *     "type": <string>,
+ *     "date": <string>,
  *     "changes": [array],
  *     "code": <number>,
  *     "final": true|false,
  *     "key": <number>,
  *     "message": "human readable string",
  *     "pathname": "/path/which/had/event",
- *     "result": "SUCCESS|FAIL",
- *     "date": <string>,
- *     "type": <type>
+ *     "result": "SUCCESS|FAIL"
  *  }
  *
  * Where:
@@ -67,8 +79,8 @@
  *
  * And:
  *
- *   "date" is always included
  *   "type" is always included
+ *   "date" is always included
  *   "changes" is included only when (type == event)
  *   "code" is included only when (type == error)
  *   "final" is included when (type == event)
@@ -76,6 +88,7 @@
  *   "message" is included whenever (type == error)
  *   "pathname" is included whenever (type == event)
  *   "result" is included when (type == response) value: "SUCCESS" or "FAILURE"
+ *   "data" is included when a call to STATUS is made (type == response)
  *
  * Current values for "code" are in the ErrorCodes enum below.
  *
@@ -139,12 +152,12 @@ enum ResultCodes {
 };
 
 /*
- * file_obj structs are held for every file that is currently being watched.
- * This way, we can verify that incoming events are for files being watched,
- * and also allows us to unwatch files at a later time.
+ * file_obj structs are held in memory for every file that is currently being
+ * watched.  This way we can 1. verify that incoming events are for files being
+ * watched, and 2. unwatch files at a later time if the user wants..
  *
  * These structs are stored in an AVL tree that uses the filename (and a hash
- * of it) as the value to key off of.
+ * of it) as the key.
  */
 struct files_tree_node {
 	struct file_obj fobj;
@@ -217,7 +230,7 @@ djb2(char *str)
 	unsigned long hash = 5381;
 	int c;
 	while ((c = *str++))
-		hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+		hash = ((hash << 5) + hash) + c;
 	return (hash);
 }
 
@@ -355,11 +368,6 @@ print_error(uint32_t key, uint32_t code, const char *message_fmt, ...)
 
 	va_start(arg_ptr, message_fmt);
 	if (vsnprintf(message, 4096, message_fmt, arg_ptr) < 0) {
-		/*
-		 * We failed to build the error message, and there's no good
-		 * way to handle this so we try to force a core dump. Most
-		 * likely a bug.
-		 */
 		perror("fswatcher: vsnprintf");
 		abort();
 	}
@@ -388,11 +396,6 @@ print_response(uint32_t key, uint32_t code, const char *pathname,
 
 	va_start(arg_ptr, message_fmt);
 	if (vsnprintf(message, 4096, message_fmt, arg_ptr) < 0) {
-		/*
-		 * We failed to build the error message, and there's no good
-		 * way to handle this so we try to force a core dump. Most
-		 * likely a bug.
-		 */
 		perror("fswatcher: vsnprintf");
 		abort();
 	}
@@ -443,8 +446,12 @@ print_status(uint32_t key)
 
 		filenames[i++] = ftn->name;
 	}
-	fnvlist_add_uint32(data_nvl, "files_count", numnodes);
+
+	// all STATUS data is stored in a separate nvl that is attached to the
+	// "data" key of the response object.
 	fnvlist_add_string_array(data_nvl, "files", filenames, i);
+	fnvlist_add_uint32(data_nvl, "files_count", numnodes);
+	fnvlist_add_int32(data_nvl, "pid", getpid());
 
 	fnvlist_add_nvlist(nvl, "data", data_nvl);
 
@@ -631,8 +638,8 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 
 	// We always stat the file after an event is received, or for the
 	// inital watch.  If the stat fails for any reason, or any event is
-	// seen that indicates the files is gone, we mark this file as "final".
-	// This means we will no longer be watching this file.
+	// seen that indicates the file is gone, we mark this file as "final" -
+	// this means we will no longer be watching this file.
 	stat_ret = get_stat(name, &sb);
 	if (stat_ret != 0 || revents & FILE_DELETE || revents & FILE_RENAME_FROM
 	    || revents & UNMOUNTED || revents & MOUNTEDOVER) {
@@ -640,7 +647,7 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 		final = 1;
 	}
 
-	if ((key != SYSTEM_KEY) && (stat_ret != 0)) {
+	if (key != SYSTEM_KEY && stat_ret != 0) {
 		// We're doing the initial register for this file, so we need
 		// to send a result. Since stat() just failed, we'll send now
 		// and return since we're not going to do anything further.
@@ -651,8 +658,8 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 	}
 
 	if (final) {
-		// we're not going to re-enable, so cleanup
-		if (revents) {
+		// we're not going to re-watch the file, so cleanup
+		if (revents != 0) {
 			print_event(revents, name, final);
 		}
 		destroy_handle(ftn);
@@ -807,7 +814,7 @@ process_stdin_line(char *str)
 	int res;
 	char sscanf_fmt[MAX_FMT_LEN];
 
-	// read one character past MAX_KEY_LEN so we know it's too long
+	// read one character past MAX_KEY_LEN so we know if it's too long
 	snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s", MAX_KEY_LEN + 1);
 	res = sscanf(str, sscanf_fmt, key_str, cmd, path);
 
@@ -960,8 +967,9 @@ main(int argc, char **argv)
 	pthread_create(&tid, NULL, wait_for_stdin, NULL);
 
 	// alert that we are ready for input
-	if (opts.opt_r)
+	if (opts.opt_r) {
 		print_ready();
+	}
 
 	// block on therads
 	while (thr_join(0, NULL, NULL) == 0) {

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2017, Joyent, Inc. All rights reserved.
  *
  *
  * # OVERVIEW
@@ -679,6 +679,29 @@ MetadataAgent.prototype.start = function start() {
             }, 'ZWatch watcher saw zone deletion');
 
             self.purgeZoneCache(msg.zonename);
+            return;
+        }
+
+        // For non-KVM, we only care about create/delete since the socket
+        // only needs to be created once for these zones. For KVM however,
+        // the qemu process recreates the socket on every boot, so we want
+        // to catch 'start' events for KVM to ensure we connect to metadata
+        // as soon as possible.
+        if (msg.cmd === 'start' && self.zones.hasOwnProperty(msg.zonename)
+            && self.zones[msg.zonename].brand === 'kvm') {
+            // KVM VM started
+
+            self.log.debug({
+                delay: (new Date()).getTime() - when.getTime(), // in ms
+                when: when,
+                zonename: msg.zonename
+            }, 'ZWatch watcher saw KVM zone start');
+
+            self.addDebug(msg.zonename, 'last_zone_start');
+
+            // The "zone" wasn't technically created here, but the socket was
+            // (by qemu) so as far as we're concerned this is the same thing.
+            self.handleZoneCreated(msg.zonename);
             return;
         }
 

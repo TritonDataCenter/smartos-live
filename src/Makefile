@@ -108,6 +108,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-internal_metadata_namespaces.js \
 	vm/tests/test-lastexited.js \
 	vm/tests/test-openonerrlogger.js \
+	vm/tests/test-queue.js \
 	vm/tests/test-reboot.js \
 	vm/tests/test-reprovision.js \
 	vm/tests/test-snapshots.js \

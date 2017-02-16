@@ -100,7 +100,8 @@ done
 
 set +o errexit
 set -o pipefail
-/usr/node/bin/node --abort_on_uncaught_exception \
+/usr/bin/ctrun -l child -o noorphan /usr/node/bin/node \
+    --abort_on_uncaught_exception \
     /usr/vm/node_modules/nodeunit/bin/nodeunit \
     --reporter tap $1 | tee -a /tmp/test.output.$$
 TEST_EXIT_CODE=$?

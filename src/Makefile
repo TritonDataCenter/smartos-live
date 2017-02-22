@@ -540,6 +540,7 @@ check: $(JSLINT) $(SUBDIRS)
 	@(for file in $(C_CHECK_TARGETS); do \
 		echo $(PWD)/$$file; \
 		$(CSTYLE) $$file; \
+		[[ $$? == "0" ]] || exit 1; \
 	done)
 	@printf "\nC files ok!\n"
 	@printf "\n==> Running JavaScriptLint...\n"

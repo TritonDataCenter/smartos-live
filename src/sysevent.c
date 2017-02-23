@@ -8,10 +8,20 @@
 #include <libsysevent.h>
 #include <libnvpair.h>
 
+/* CLI arguments */
 struct {
 	boolean_t opt_j; /* -j, json output */
 	boolean_t opt_r; /* -r, print ready event */
 } opts;
+
+/*
+ * Like VERIFY0, but instead of calling abort(), will print an error message
+ * to stderr and exit the program.
+ */
+#define ENSURE0(arg) {	\
+    if (arg != 0)	\
+        err(1, #arg);	\
+}
 
 /*
  * Create an nvlist with "type" set to the type argument given,
@@ -21,11 +31,13 @@ struct {
 nvlist_t *
 make_nvlist(char *type)
 {
-	nvlist_t *nvl = fnvlist_alloc();
+	nvlist_t *nvl;
 	struct timeval tv;
 	struct tm *gmt;
 	char date[128];
 	size_t i;
+
+	ENSURE0(nvlist_alloc(&nvl, NV_UNIQUE_NAME, 0));
 
 	// get the current time
 	if (gettimeofday(&tv, NULL) != 0)
@@ -43,8 +55,8 @@ make_nvlist(char *type)
 	if (i == 0)
 		err(1, "snprintf date");
 
-	fnvlist_add_string(nvl, "date", date);
-	fnvlist_add_string(nvl, "type", type);
+	ENSURE0(nvlist_add_string(nvl, "date", date));
+	ENSURE0(nvlist_add_string(nvl, "type", type));
 
 	return (nvl);
 }
@@ -103,17 +115,17 @@ process_event(sysevent_t *ev, const char *channel)
 	    subclass == NULL)
 		err(1, "failed to retrieve sysevent metadata");
 
-	fnvlist_add_string(nvl, "vendor", vendor);
-	fnvlist_add_string(nvl, "publisher", publisher);
-	fnvlist_add_string(nvl, "class", class);
-	fnvlist_add_string(nvl, "subclass", subclass);
-	fnvlist_add_int32(nvl, "pid", pid);
+	ENSURE0(nvlist_add_string(nvl, "vendor", vendor));
+	ENSURE0(nvlist_add_string(nvl, "publisher", publisher));
+	ENSURE0(nvlist_add_string(nvl, "class", class));
+	ENSURE0(nvlist_add_string(nvl, "subclass", subclass));
+	ENSURE0(nvlist_add_int32(nvl, "pid", pid));
 
 	if (evnvl != NULL)
-	    fnvlist_add_nvlist(nvl, "data", evnvl);
+	    ENSURE0(nvlist_add_nvlist(nvl, "data", evnvl));
 
 	if (channel != NULL)
-	    fnvlist_add_string(nvl, "channel", channel);
+	    ENSURE0(nvlist_add_string(nvl, "channel", channel));
 
 	print_nvlist(nvl);
 

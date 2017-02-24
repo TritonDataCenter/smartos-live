@@ -405,9 +405,7 @@ MetadataAgent.prototype.start = function start() {
         // the qemu process recreates the socket on every boot, so we want
         // to catch 'start' events for KVM to ensure we connect to metadata
         // as soon as possible.
-
-        if (!self.zones.hasOwnProperty(ev.zonename)
-            || self.zones[ev.zonename].brand !== 'kvm')
+        if (ev.vm.brand !== 'kvm')
             return;
 
         var running = ev.changes.some(function (change) {

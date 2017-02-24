@@ -1,7 +1,35 @@
+/*
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright 2017 Joyent, Inc.
+ *
+ */
+
 #include <err.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <synch.h>
+#include <thread.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -13,6 +41,8 @@ struct {
 	boolean_t opt_j; /* -j, json output */
 	boolean_t opt_r; /* -r, print ready event */
 } opts;
+
+static mutex_t stdout_mutex;
 
 /*
  * Like VERIFY0, but instead of calling abort(), will print an error message
@@ -62,8 +92,10 @@ make_nvlist(char *type)
 }
 
 /*
- * print an nvlist to stdout (with respect to the -j argument)
- * as well as a trailing newline followed by an fflush.
+ * Print an nvlist to stdout (with respect to the -j argument)
+ * as well as a trailing newline followed by a call to fflush.
+ *
+ * Must be called while holding the stdout mutex
  */
 void
 print_nvlist(nvlist_t *nvl)
@@ -127,7 +159,9 @@ process_event(sysevent_t *ev, const char *channel)
 	if (channel != NULL)
 	    ENSURE0(nvlist_add_string(nvl, "channel", channel));
 
+	mutex_lock(&stdout_mutex);
 	print_nvlist(nvl);
+	mutex_unlock(&stdout_mutex);
 
 	free(vendor);
 	free(publisher);
@@ -279,11 +313,12 @@ main(int argc, char **argv)
 		num_subclasses = 1;
 	}
 
-	// ready event
+	// If the caller wants a "ready" event to be emitted, we must grab the
+	// stdout mutex before registering for any sysevents.  This ensures the
+	// "ready" event is printed before any other event is printed, but
+	// after we are successfully subscribed to the event channel.
 	if (opts.opt_r) {
-		ready_nvl = make_nvlist("ready");
-		print_nvlist(ready_nvl);
-		nvlist_free(ready_nvl);
+		mutex_lock(&stdout_mutex);
 	}
 
 	/* bind and subscribe */
@@ -291,6 +326,16 @@ main(int argc, char **argv)
 		sysevc_register(channel, class);
 	else
 		sysev_register(class, subclasses, num_subclasses);
+
+	/* ready event */
+	if (opts.opt_r) {
+		ready_nvl = make_nvlist("ready");
+
+		print_nvlist(ready_nvl);
+		mutex_unlock(&stdout_mutex);
+
+		nvlist_free(ready_nvl);
+	}
 
 	/* halt until events */
 	for (;;)

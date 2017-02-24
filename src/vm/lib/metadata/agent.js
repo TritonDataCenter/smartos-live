@@ -425,7 +425,7 @@ MetadataAgent.prototype.start = function start() {
 
         // The "zone" wasn't technically created here, but the socket was
         // (by qemu) so as far as we're concerned this is the same thing.
-        self.handleZoneCreated(ev.zonename);
+        self.handleZoneCreated(ev.vm);
     });
 };
 

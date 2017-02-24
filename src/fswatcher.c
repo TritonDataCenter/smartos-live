@@ -641,8 +641,9 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 	// seen that indicates the file is gone, we mark this file as "final" -
 	// this means we will no longer be watching this file.
 	stat_ret = get_stat(name, &sb);
-	if (stat_ret != 0 || revents & FILE_DELETE || revents & FILE_RENAME_FROM
-	    || revents & UNMOUNTED || revents & MOUNTEDOVER) {
+	if (stat_ret != 0 ||
+	    revents & FILE_DELETE || revents & FILE_RENAME_FROM ||
+	    revents & UNMOUNTED || revents & MOUNTEDOVER) {
 
 		final = 1;
 	}
@@ -715,7 +716,8 @@ watch_path(char *pathname, uint32_t key)
 	char *dupname;
 
 	if (find_handle(pathname) != NULL) {
-		print_response(key, RESULT_SUCCESS, pathname, "already watching");
+		print_response(key, RESULT_SUCCESS, pathname,
+		    "already watching");
 		return;
 	}
 

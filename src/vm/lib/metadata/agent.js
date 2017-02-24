@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2017, Joyent, Inc. All rights reserved.
  *
  *
  * # OVERVIEW
@@ -397,6 +397,37 @@ MetadataAgent.prototype.start = function start() {
         }, 'VminfodWatcher saw zone deletion');
 
         self.purgeZoneCache(ev.zonename);
+    });
+
+    self.vminfod_watcher.on('modify', function (ev) {
+        // For non-KVM, we only care about create/delete since the socket
+        // only needs to be created once for these zones. For KVM however,
+        // the qemu process recreates the socket on every boot, so we want
+        // to catch 'start' events for KVM to ensure we connect to metadata
+        // as soon as possible.
+
+        if (!self.zones.hasOwnProperty(ev.zonename)
+            || self.zones[ev.zonename].brand !== 'kvm')
+            return;
+
+        var running = ev.changes.some(function (change) {
+            return (change.path[0] === 'state' && change.to === 'running');
+        });
+
+        if (!running)
+            return;
+
+        self.log.debug({
+            delay: (new Date()) - ev.ts,
+            when: ev.ts,
+            zonename: ev.zonename
+        }, 'VminfodWatcher saw KVM zone boot');
+
+        self.addDebug(ev.zonename, 'last_zone_start');
+
+        // The "zone" wasn't technically created here, but the socket was
+        // (by qemu) so as far as we're concerned this is the same thing.
+        self.handleZoneCreated(ev.zonename);
     });
 };
 

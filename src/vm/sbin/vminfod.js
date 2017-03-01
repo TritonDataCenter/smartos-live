@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2015, Joyent, Inc.
+ * Copyright 2017 Joyent, Inc.
  *
  * Vminfod starting point
  */
@@ -31,7 +31,6 @@ var bunyan = require('/usr/node/node_modules/bunyan');
 var VMInfo = require('../node_modules/vminfod/vminfo');
 
 onlyif.rootInSmartosGlobal(function (err) {
-
     var log = bunyan.createLogger({
         name: 'vminfo',
         level: 'debug',
@@ -39,7 +38,7 @@ onlyif.rootInSmartosGlobal(function (err) {
     });
 
     if (err) {
-        log.error(err, 'Fatal: cannot run because: ' + err.message);
+        log.error(err, 'Fatal: cannot run because: %s', err.message);
         process.exit(1);
     }
 
@@ -49,10 +48,12 @@ onlyif.rootInSmartosGlobal(function (err) {
     var vminfo = new VMInfo(options);
     vminfo.start();
 
-    process.on('uncaughtException', function (error) {
-        log.fatal('Uncaught exception in vminfo process: '
-            + error.message);
-        log.fatal(error.stack);
+    process.on('uncaughtException', function (err2) {
+        log.fatal({err: err2},
+            'Uncaught exception in vminfo process: %s',
+            err2.message);
+        log.fatal('%s', err2.stack);
+
         vminfo.stop();
         process.exit(1);
     });

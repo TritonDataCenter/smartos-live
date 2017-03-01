@@ -55,7 +55,6 @@ function usage() {
         '',
         'Commands',
         '  ping               get vminfod ping     (GET /ping)',
-        '  data               get all vminfod data (GET /data)',
         '  status [-f]        get vminfod status   (GET /status)',
         '  vms                get all vms          (GET /vms)',
         '  vm <uuid>          get vm info          (GET /vms/:uuid)',
@@ -105,19 +104,6 @@ function do_status(args) {
     }
 
     client.status(opts, function (err, msg) {
-        if (err) {
-            console.error(err.message);
-            process.exit(1);
-        }
-
-        assert.object(msg, 'msg');
-
-        console.log(JSON.stringify(msg, null, 2));
-    });
-}
-
-function do_data(args) {
-    client.data(function (err, msg) {
         if (err) {
             console.error(err.message);
             process.exit(1);
@@ -274,9 +260,6 @@ function main() {
         break;
     case 'vms':
         do_vms(args);
-        break;
-    case 'data':
-        do_data(args);
         break;
     case 'vm':
         do_vm(args);

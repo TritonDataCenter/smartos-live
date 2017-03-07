@@ -28,7 +28,7 @@
 
 var onlyif = require('/usr/node/node_modules/onlyif');
 var bunyan = require('/usr/node/node_modules/bunyan');
-var VMInfo = require('../node_modules/vminfod/vminfo');
+var Vminfo = require('../node_modules/vminfod/vminfo');
 
 onlyif.rootInSmartosGlobal(function (err) {
     var log = bunyan.createLogger({
@@ -45,7 +45,7 @@ onlyif.rootInSmartosGlobal(function (err) {
     log.info('Starting vminfod');
 
     var options = {log: log};
-    var vminfo = new VMInfo(options);
+    var vminfo = new Vminfo(options);
     vminfo.start();
 
     process.on('uncaughtException', function (err2) {
@@ -59,7 +59,7 @@ onlyif.rootInSmartosGlobal(function (err) {
     });
 
     process.on('exit', function () {
-        log.info('VMInfo process exiting');
+        log.info('Vminfo process exiting');
         vminfo.stop();
     });
 });

@@ -42,7 +42,7 @@ GXX =		$(NATIVEDIR)/usr/bin/g++
 CTFBINDIR =	$(ILLUMOS_SRC)/tools/proto/root_i386-nd/opt/onbld/bin/i386
 CTFMERGE =	$(CTFBINDIR)/ctfmerge
 CTFCONVERT =	$(CTFBINDIR)/ctfconvert
-ALTCTFCONV =	$(CTFBINDIR)/ctfconvert-altexec
+ALTCTFCONV =	$(CTFBINDIR)/ctfconvert
 
 SYSINCDIRS =	/usr/include
 SYSLIBDIRS =	/usr/lib /lib

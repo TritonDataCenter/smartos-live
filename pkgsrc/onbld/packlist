@@ -21,7 +21,6 @@
 ./bin/i386/ctfdiff
 ./bin/i386/ctfdump
 ./bin/i386/ctfmerge
-./bin/i386/ctfmerge-altexec
 ./bin/i386/ctfstabs
 ./bin/i386/ctfstrip
 ./bin/i386/cw

@@ -200,6 +200,7 @@ var sdc_fields = [
     'zone_state'
 ];
 
+var KVM_INITIAL_CONNECT_DELAY = 100; // ms
 var KVM_CONNECT_RETRY_INTERVAL = 500; // ms
 var MAX_RETRY = 300; // in seconds
 var ZONEADM_CHECK_FREQUENCY = (5 * 60 * 1000); // ms, check for deleted zones
@@ -934,7 +935,12 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
         }
     });
 
-    _tryConnect();
+    // Because the zone goes to 'running' before Qemu is ready to serve requests
+    // we add a small delay before the first attempt to connect to the serial
+    // socket for the zone. If this initial connection still fails due to
+    // ECONNREFUSED, we'll fail above in the on('error') handler. (OS-5999)
+    self.zoneKvmReconnTimers[zopts.zone]
+        = setTimeout(_tryConnect, KVM_INITIAL_CONNECT_DELAY);
 
     callback();
 };

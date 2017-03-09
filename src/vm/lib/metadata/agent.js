@@ -900,7 +900,7 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
         self.zoneConnections[zopts.zone].conn = kvmstream;
 
         kvmstream.on('connect', function _onConnect() {
-            // either this on('connect') handler will run or the on('error') above
+            // either this on('connect') handler will run or the on('error')
             fd = kvmstream._handle.fd;
             zlog.info({
                 zonename: zopts.zone,
@@ -930,9 +930,10 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
             if (e.code === 'ECONNREFUSED') {
                 level = 'trace';
 
-                // Our connection was refused by Qemu, presumably because Qemu is
-                // still starting up and we're early. Try again and set a handle to
-                // our retry timer so it can be cancelled if the zone is stopped.
+                // Our connection was refused by Qemu, presumably because Qemu
+                // is still starting up and we're early. Try again and set a
+                // handle to our retry timer so it can be cancelled if the zone
+                // is stopped.
                 //
                 // We log every Xth retry after the first so that we don't
                 // completely spam the log.
@@ -955,9 +956,9 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
         });
 
         kvmstream.on('close', function () {
-            // When the stream closes, we'll delete from zoneConnections so that on
-            // next boot (or periodic scan if for some reason we got closed while
-            // the zone was actually running) we re-create.
+            // When the stream closes, we'll delete from zoneConnections so that
+            // on next boot (or periodic scan if for some reason we got closed
+            // while the zone was actually running) we re-create.
             if (!self.zoneKvmReconnTimers.hasOwnProperty(zopts.zone)) {
                 zlog.info('stream closed on fd %d', fd);
                 delete self.zoneConnections[zopts.zone];

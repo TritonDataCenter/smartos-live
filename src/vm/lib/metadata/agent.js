@@ -199,6 +199,9 @@ var sdc_fields = [
     'zonename',
     'zone_state'
 ];
+
+var KVM_CONNECT_RETRY_INTERVAL = 100; // ms
+var KVM_CONNECT_RETRY_LOG_FREQUENCY = 10; // log every X retries
 var MAX_RETRY = 300; // in seconds
 var ZONEADM_CHECK_FREQUENCY = (5 * 60 * 1000); // ms, check for deleted zones
 var MISSED_SYSEVENT_CHECK_FREQUENCY = (1 * 60 * 1000); // ms
@@ -270,6 +273,7 @@ var MetadataAgent = module.exports = function (options) {
     this.zones = {};
     this.zonesDebug = {};
     this.zoneConnections = {};
+    this.zoneKvmReconnTimers = {};
 };
 
 /*
@@ -510,10 +514,25 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
     }
 };
 
+MetadataAgent.prototype.stopKvmReconnTimer =
+function stopKvmReconnTimer(zonename) {
+    var self = this;
+
+    self.log.warn({zonename: zonename},
+        'clearing connection retries for KVM VM.');
+
+    if (self.zoneKvmReconnTimers.hasOwnProperty(zonename)) {
+        clearTimeout(self.zoneKvmReconnTimers[zonename]);
+        delete self.zoneKvmReconnTimers[zonename];
+    }
+};
+
 MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
     var self = this;
     var start_kstat_timer = newTimer();
 
+    // Reminder: getZoneinfo only returns *running* zones since it pulls its
+    // data from the kernel.
     getZoneinfo(null, {log: self.log}, function (err, results) {
         assert.ifError(err);
 
@@ -527,7 +546,7 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
             zoneCount: Object.keys(results).length
         }, 'loaded VM kstats');
 
-        Object.keys(results).forEach(function (zonename) {
+        Object.keys(results).forEach(function _checkZoneConn(zonename) {
             var zoneConn = self.zoneConnections[zonename]; // may be undefined
 
             if (!zoneConn) {
@@ -541,6 +560,24 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
                 return;
             }
         });
+
+        // We expect the VMs in self.zoneKvmReconnTimers to be 'running', since
+        // we're actively retrying connections to their ttyb sockets. If they
+        // went not-running unexpectedly, kill the retries.
+        Object.keys(self.zoneKvmReconnTimers).forEach(
+            function _checkTimer(zonename) {
+                if (!results.hasOwnProperty(zonename)) {
+                    self.log.warn({zonename: zonename}, 'was reconnecting for '
+                        + 'KVM zone, but it is no longer running.');
+                    self.stopKvmReconnTimer(zonename);
+
+                    // Also remove the zoneConnections entry so that the
+                    // connection will be recreated when we notice it going
+                    // running. See "The rules for zoneConnections" above.
+                    delete self.zoneConnections[zonename];
+                }
+            }
+        );
     });
 };
 
@@ -705,6 +742,27 @@ MetadataAgent.prototype.start = function start() {
             return;
         }
 
+        // If a KVM zone stops while we're trying to reconnect to its metadata
+        // socket, stop trying to reconnect.
+        if (msg.cmd === 'stop'
+            && self.zoneKvmReconnTimers.hasOwnProperty(msg.zonename)) {
+
+            self.log.debug({
+                delay: (new Date()).getTime() - when.getTime(), // in ms
+                when: when,
+                zonename: msg.zonename
+            }, 'ZWatch watcher saw retrying KVM zone stop');
+
+            self.stopKvmReconnTimer(msg.zonename);
+
+            // Also remove the zoneConnections entry so that the
+            // connection will be recreated when we notice it going
+            // running. See "The rules for zoneConnections" above.
+            delete self.zoneConnections[msg.zonename];
+
+            return;
+        }
+
         // ignore everything else except create
         if (msg.cmd !== 'create') {
             return;
@@ -802,10 +860,6 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
 
 MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     var self = this;
-    var buffer;
-    var fd;
-    var handler;
-    var kvmstream;
     var zlog;
 
     assert.object(zopts, 'zopts');
@@ -833,8 +887,6 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     }
     self.zoneConnections[zopts.zone] = {};
 
-    kvmstream = new net.Socket();
-
     // refuse to overwrite an existing connection
     assert.ok(!self.zoneConnections[zopts.zone].hasOwnProperty('conn'),
         'should not have existing conn when creating new');
@@ -843,41 +895,93 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
 
     // replace the placeholder entry with a real one.
     self.zoneConnections[zopts.zone] = {
-        conn: kvmstream,
+        conn: {}, // placeholder so we don't overwrite if we're called again
+        connectsRefused: 0,
         sockpath: zopts.sockpath
     };
 
-    buffer = '';
-    handler = self.makeMetadataHandler(zopts.zone, kvmstream);
+    function _tryConnect() {
+        var buffer = '';
+        var fd;
+        var handler;
+        var kvmstream = new net.Socket();
 
-    kvmstream.on('data', function (data) {
-        var chunk, chunks;
-        buffer += data.toString();
-        chunks = buffer.split('\n');
-        while (chunks.length > 1) {
-            chunk = chunks.shift();
-            handler(chunk);
-        }
-        buffer = chunks.pop();
-    });
+        handler = self.makeMetadataHandler(zopts.zone, kvmstream);
 
-    kvmstream.on('error', function (e) {
-        zlog.error({err: e}, 'KVM Socket error: ' + e.message);
-    });
+        self.zoneConnections[zopts.zone].conn = kvmstream;
 
-    kvmstream.on('close', function () {
-        // When the stream closes, we'll delete from zoneConnections so that on
-        // next boot (or periodic scan if for some reason we got closed while
-        // the zone was actually running) we re-create.
-        zlog.info('stream closed on fd %d', fd);
-        delete self.zoneConnections[zopts.zone];
-    });
+        kvmstream.on('connect', function _onConnect() {
+            // either this on('connect') handler will run or the on('error')
+            fd = kvmstream._handle.fd;
+            zlog.info({
+                conn_refused: self.zoneConnections[zopts.zone].connectsRefused,
+                zonename: zopts.zone
+            }, 'listening on fd %d', fd);
+            self.zoneConnections[zopts.zone].fd = fd;
+            // we're no longer retrying connections (since we connected)
+            delete self.zoneKvmReconnTimers[zopts.zone];
+        });
 
-    kvmstream.connect(zopts.sockpath);
+        kvmstream.on('data', function (data) {
+            var chunk, chunks;
 
-    fd = kvmstream._handle.fd;
-    zlog.info({zonename: zopts.zone}, 'listening on fd %d', fd);
-    self.zoneConnections[zopts.zone].fd = fd;
+            buffer += data.toString();
+            chunks = buffer.split('\n');
+            while (chunks.length > 1) {
+                chunk = chunks.shift();
+                handler(chunk);
+            }
+            buffer = chunks.pop();
+        });
+
+        kvmstream.on('error', function (e) {
+            var level = 'warn';
+            var refused = self.zoneConnections[zopts.zone].connectsRefused;
+
+            if (e.code === 'ECONNREFUSED') {
+                level = 'trace';
+
+                // Our connection was refused by Qemu, presumably because Qemu
+                // is still starting up and we're early. Try again and set a
+                // handle to our retry timer so it can be cancelled if the zone
+                // is stopped.
+                //
+                // We log every Xth retry after the first so that we don't
+                // completely spam the log.
+                if (refused > 0
+                    && (refused % KVM_CONNECT_RETRY_LOG_FREQUENCY) === 0) {
+
+                    zlog.info({
+                        conn_refused: refused,
+                        last_errcode: e.code,
+                        retry_interval: KVM_CONNECT_RETRY_INTERVAL
+                    }, 'KVM socket connection refused, still retrying');
+                }
+                self.zoneKvmReconnTimers[zopts.zone] = setTimeout(_tryConnect,
+                    KVM_CONNECT_RETRY_INTERVAL);
+
+                self.zoneConnections[zopts.zone].connectsRefused++;
+            }
+
+            zlog[level]({err: e}, 'KVM Socket error: ' + e.message);
+        });
+
+        kvmstream.on('close', function () {
+            // When the stream closes, we'll delete from zoneConnections so that
+            // on next boot (or periodic scan if for some reason we got closed
+            // while the zone was actually running) we re-create.
+            if (!self.zoneKvmReconnTimers.hasOwnProperty(zopts.zone)) {
+                zlog.info('stream closed on fd %d', fd);
+                delete self.zoneConnections[zopts.zone];
+            }
+        });
+
+        zlog.trace({zonename: zopts.zone, sockpath: zopts.sockpath},
+            'attempting connection to KVM socket');
+        kvmstream.connect(zopts.sockpath);
+    }
+
+    _tryConnect();
 
     callback();
 };

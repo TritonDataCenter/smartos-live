@@ -126,12 +126,26 @@
 
 #define MAX_FMT_LEN 64
 #define MAX_KEY 4294967295
-#define MAX_KEY_LEN 10       // number of digits (0-4294967295)
-#define MAX_STAT_RETRY 10    // number of times to retry stat() before abort()
+#define MAX_KEY_LEN 10     /* number of digits (0-4294967295) */
+#define MAX_STAT_RETRY 10  /* number of times to retry stat() before abort() */
 
 /* longest command is '<KEY> UNWATCH <path>' with <KEY> being 10 characters. */
 #define MAX_CMD_LEN (MAX_KEY_LEN + 1 + 7 + 1 + PATH_MAX + 1)
 #define SYSTEM_KEY 0
+
+/*
+ * Like VERIFY0, but instead of calling abort(), will print an error message
+ * to stderr and exit the program.
+ *
+ * This is used by the nvlist_* functions to ensure that we are able to create
+ * and add to an nvlist without error.  The nvlist functions used can only
+ * fail with EINVAL or ENOMEM: dumping core because of either of these failure
+ * modes would be excessive.
+ */
+#define ENSURE0(arg) {	\
+    if (arg != 0)	\
+        err(1, #arg);	\
+}
 
 /*
  * These are possible values returned from an "error" event
@@ -154,11 +168,12 @@ enum ResultCodes {
 /*
  * file_obj structs are held in memory for every file that is currently being
  * watched.  This way we can 1. verify that incoming events are for files being
- * watched, and 2. unwatch files at a later time if the user wants..
+ * watched, and 2. unwatch files at a later time if the user wants.
  *
- * These structs are stored in an AVL tree that uses the filename (and a hash
- * of it) as the key.
+ * These structs are stored in a global AVL tree that uses the filename (and a
+ * hash of it) as the key.
  */
+static avl_tree_t files_tree;
 struct files_tree_node {
 	struct file_obj fobj;
 	char *name;
@@ -166,10 +181,23 @@ struct files_tree_node {
 	avl_node_t avl_node;
 };
 
-static avl_tree_t files_tree;
+/*
+ * This programs has 2 main threads running that block on new events from:
+ *
+ * 1. stdin (user commands)
+ * 2. event ports (filesystem events)
+ *
+ * When an event is received from either, this global "work_mutex" is acquired.
+ * This way, no other locks are necessary, and whatever method is currently
+ * processing its event can safely access members of the AVL tree and write
+ * to stdout/stderr.
+ */
 static mutex_t work_mutex;
+
+/* global event port handle */
 static int port = -1;
 
+/* CLI args */
 static struct {
 	boolean_t opt_j; /* -j, json output */
 	boolean_t opt_r; /* -r, print ready event */
@@ -204,13 +232,13 @@ files_tree_node_comparator(const void *l, const void *r)
 	const struct files_tree_node *rtn = r;
 	int ret;
 
-	// first check hash matches
+	/* first check filename hash */
 	if (ltn->name_hash < rtn->name_hash)
 		return (-1);
 	else if (ltn->name_hash > rtn->name_hash)
 		return (1);
 
-	// hashes are the same, check strings
+	/* hashes are the same, do string comparison */
 	ret = strcmp(ltn->name, rtn->name);
 
 	if (ret < 0)
@@ -238,35 +266,38 @@ djb2(char *str)
  * Allocate an nvlist with the "type" set to the type argument given, and the
  * "date" set to the current time.  This function handles any error checking
  * needed and will exit the program if anything fails.
+ *
+ * nvlist must be freed by the caller
  */
 nvlist_t *
 make_nvlist(char *type)
 {
-	nvlist_t *nvl = fnvlist_alloc();
+	nvlist_t *nvl;
 	struct timeval tv;
 	struct tm *gmt;
-	size_t i;
 	char date[128];
+	size_t i;
 
-	// get the current time
+	ENSURE0(nvlist_alloc(&nvl, NV_UNIQUE_NAME, 0));
+
+	/* get the current time */
 	if (gettimeofday(&tv, NULL) != 0)
 		err(1, "gettimeofday");
 
 	if ((gmt = gmtime(&tv.tv_sec)) == NULL)
 		err(1, "gmtime");
 
-	// example: "2017-02-06T17:13:44.974Z"
 	i = strftime(date, sizeof (date), "%Y-%m-%dT%H:%M:%S", gmt);
 	if (i == 0)
 		err(1, "strftime");
 
-	// append milliseconds
+	/* append milliseconds */
 	i = snprintf(date + i, sizeof (date) - i, ".%03ldZ", tv.tv_usec / 1000);
 	if (i == 0)
 		err(1, "snprintf date");
 
-	fnvlist_add_string(nvl, "date", date);
-	fnvlist_add_string(nvl, "type", type);
+	ENSURE0(nvlist_add_string(nvl, "date", date));
+	ENSURE0(nvlist_add_string(nvl, "type", type));
 
 	return (nvl);
 }
@@ -285,6 +316,7 @@ print_nvlist(nvlist_t *nvl)
 	else
 		nvlist_print(stdout, nvl);
 	printf("\n");
+
 	fflush(stdout);
 }
 
@@ -332,10 +364,10 @@ print_event(int event, char *pathname, int final)
 		changes[i++] = "UNMOUNTED";
 	}
 
-	fnvlist_add_string_array(nvl, "changes", changes, i);
-	fnvlist_add_string(nvl, "pathname", pathname);
-        fnvlist_add_int32(nvl, "revents", event);
-	fnvlist_add_boolean_value(nvl, "final", final);
+	ENSURE0(nvlist_add_string_array(nvl, "changes", changes, i));
+	ENSURE0(nvlist_add_string(nvl, "pathname", pathname));
+	ENSURE0(nvlist_add_int32(nvl, "revents", event));
+	ENSURE0(nvlist_add_boolean_value(nvl, "final", final));
 
 	print_nvlist(nvl);
 
@@ -373,9 +405,9 @@ print_error(uint32_t key, uint32_t code, const char *message_fmt, ...)
 	}
 	va_end(arg_ptr);
 
-	fnvlist_add_uint32(nvl, "key", key);
-	fnvlist_add_uint32(nvl, "code", code);
-	fnvlist_add_string(nvl, "message", message);
+	ENSURE0(nvlist_add_uint32(nvl, "key", key));
+	ENSURE0(nvlist_add_uint32(nvl, "code", code));
+	ENSURE0(nvlist_add_string(nvl, "message", message));
 
 	print_nvlist(nvl);
 
@@ -401,11 +433,12 @@ print_response(uint32_t key, uint32_t code, const char *pathname,
 	}
 	va_end(arg_ptr);
 
-	fnvlist_add_uint32(nvl, "key", key);
-	fnvlist_add_uint32(nvl, "code", code);
-	fnvlist_add_string(nvl, "pathname", pathname);
-	fnvlist_add_string(nvl, "message", message);
-	fnvlist_add_string(nvl, "result", code == 0 ? "SUCCESS" : "FAIL");
+	ENSURE0(nvlist_add_uint32(nvl, "key", key));
+	ENSURE0(nvlist_add_uint32(nvl, "code", code));
+	ENSURE0(nvlist_add_string(nvl, "pathname", pathname));
+	ENSURE0(nvlist_add_string(nvl, "message", message));
+	ENSURE0(nvlist_add_string(nvl, "result",
+	    code == RESULT_SUCCESS ? "SUCCESS" : "FAIL"));
 
 	print_nvlist(nvl);
 
@@ -427,18 +460,16 @@ print_status(uint32_t key)
 	nvlist_t *nvl = make_nvlist("response");
 	nvlist_t *data_nvl = fnvlist_alloc();
 
-	fnvlist_add_uint32(nvl, "key", key);
-	fnvlist_add_uint32(nvl, "code", 0);
-	fnvlist_add_string(nvl, "result", "SUCCESS");
+	ENSURE0(nvlist_add_uint32(nvl, "key", key));
+	ENSURE0(nvlist_add_uint32(nvl, "code", RESULT_SUCCESS));
+	ENSURE0(nvlist_add_string(nvl, "result", "SUCCESS"));
 
 	// get all nodes in the avl tree
 	numnodes = avl_numnodes(&files_tree);
 	filenames = malloc(numnodes * (sizeof (char *)));
 
-	if (filenames == NULL) {
-		perror("malloc");
-		abort();
-	}
+	if (filenames == NULL)
+		err(1, "malloc");
 
 	// walk the avl tree and add each filename
 	for (ftn = avl_first(&files_tree); ftn != NULL;
@@ -449,11 +480,11 @@ print_status(uint32_t key)
 
 	// all STATUS data is stored in a separate nvl that is attached to the
 	// "data" key of the response object.
-	fnvlist_add_string_array(data_nvl, "files", filenames, i);
-	fnvlist_add_uint32(data_nvl, "files_count", numnodes);
-	fnvlist_add_int32(data_nvl, "pid", getpid());
+	ENSURE0(nvlist_add_string_array(data_nvl, "files", filenames, i));
+	ENSURE0(nvlist_add_uint32(data_nvl, "files_count", numnodes));
+	ENSURE0(nvlist_add_int32(data_nvl, "pid", getpid()));
 
-	fnvlist_add_nvlist(nvl, "data", data_nvl);
+	ENSURE0(nvlist_add_nvlist(nvl, "data", data_nvl));
 
 	print_nvlist(nvl);
 
@@ -624,22 +655,23 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 	int pa_ret;
 	struct file_obj *fobjp;
 
-	// ftn may be passed as an argument.  if not, we look for it.
+	/* ftn may be passed as an argument.  if not, we look for it. */
 	if (ftn == NULL) {
 		ftn = find_handle(name);
 	}
 
-	// if ftn is still null, we don't have a handle for this file so ignore
-	// it
+	/* we don't have a handle for this file so ignore the event */
 	if (ftn == NULL) {
 		fprintf(stderr, "got event for '%s' without a handle\n", name);
 		return;
 	}
 
-	// We always stat the file after an event is received, or for the
-	// inital watch.  If the stat fails for any reason, or any event is
-	// seen that indicates the file is gone, we mark this file as "final" -
-	// this means we will no longer be watching this file.
+	/*
+	 * We always stat the file after an event is received, or for the
+	 * inital watch.  If the stat fails for any reason, or any event is
+	 * seen that indicates the file is gone, we mark this file as "final" -
+	 * this means we will no longer be watching this file.
+	 */
 	stat_ret = get_stat(name, &sb);
 	if (stat_ret != 0 ||
 	    revents & FILE_DELETE || revents & FILE_RENAME_FROM ||
@@ -649,9 +681,10 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 	}
 
 	if (key != SYSTEM_KEY && stat_ret != 0) {
-		// We're doing the initial register for this file, so we need
-		// to send a result. Since stat() just failed, we'll send now
-		// and return since we're not going to do anything further.
+		/*
+		 * We're doing the initial register for this file, so we need
+		 * to send a result.
+		 */
 		print_response(key, RESULT_FAILURE, name,
 		    "stat(2) failed with errno %d: %s",
 		    stat_ret, strerror(stat_ret));
@@ -659,7 +692,7 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 	}
 
 	if (final) {
-		// we're not going to re-watch the file, so cleanup
+		/* We're not going to re-watch the file, so cleanup */
 		if (revents != 0) {
 			print_event(revents, name, final);
 		}
@@ -677,8 +710,10 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 	    FILE_MODIFIED|FILE_TRUNC, name);
 
 	if (key != SYSTEM_KEY) {
-		// We're trying to do an initial associate, so we'll print a
-		// result whether we succeeded or failed.
+		/*
+		 * We're trying to do an initial associate, so we'll print a
+		 * result whether we succeeded or failed.
+		 */
 		assert(revents == 0);
 		if (pa_ret == -1) {
 			print_response(key, RESULT_FAILURE, name,
@@ -693,8 +728,10 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 		return;
 	}
 
-	// if we are here, this function was called as a result of an event
-	// being seen.
+	/*
+	 * If we are here, this function was called as a result of an event
+	 * being seen.
+	 */
 	assert(revents != 0);
 	print_event(revents, name, final);
 
@@ -722,18 +759,13 @@ watch_path(char *pathname, uint32_t key)
 	}
 
 	ftn = malloc(sizeof (struct files_tree_node));
-	if (ftn == NULL) {
-		fprintf(stderr, "failed to allocate memory for new watcher "
-		    "errno %d: %s", errno, strerror(errno));
-		abort();
-	}
+	if (ftn == NULL)
+		err(1, "malloc new watcher");
 
 	dupname = strdup(pathname);
-	if (dupname == NULL) {
-		fprintf(stderr, "strdup failed w/ errno %d: %s",
-		    errno, strerror(errno));
-		abort();
-	}
+	if (dupname == NULL)
+		err(1, "strdup new watcher");
+
 	ftn->fobj.fo_name = dupname;
 	ftn->name = dupname;
 	ftn->name_hash = djb2(dupname);
@@ -816,7 +848,7 @@ process_stdin_line(char *str)
 	int res;
 	char sscanf_fmt[MAX_FMT_LEN];
 
-	// read one character past MAX_KEY_LEN so we know if it's too long
+	/* read one character past MAX_KEY_LEN so we know if it's too long */
 	snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s", MAX_KEY_LEN + 1);
 	res = sscanf(str, sscanf_fmt, key_str, cmd, path);
 
@@ -826,7 +858,7 @@ process_stdin_line(char *str)
 		return;
 	}
 
-	// convert key to a number we can work with
+	/* convert key to a number we can work with it */
 	key = strtoul(key_str, NULL, 10);
 	if ((strlen(key_str) > MAX_KEY_LEN) ||
 	    (key == ULONG_MAX && errno == ERANGE)) {
@@ -836,9 +868,11 @@ process_stdin_line(char *str)
 		return;
 	}
 
-	// this is a reserved key
+	/* this is a reserved key */
 	if (key == SYSTEM_KEY) {
-		print_error(SYSTEM_KEY, ERR_INVALID_KEY, "invalid key: 0");
+		print_error(SYSTEM_KEY, ERR_INVALID_KEY,
+		    "invalid key: %d", SYSTEM_KEY);
+		return;
 	}
 
 	if (strcmp("UNWATCH", cmd) == 0) {
@@ -847,6 +881,7 @@ process_stdin_line(char *str)
 			    "invalid command line - UNWATCH requires pathname");
 			return;
 		}
+
 		unwatch_path(path, key);
 	} else if (strcmp("WATCH", cmd) == 0) {
 		if (path[0] == '\0') {
@@ -854,6 +889,7 @@ process_stdin_line(char *str)
 			    "invalid command line - WATCH requires pathname");
 			return;
 		}
+
 		watch_path(path, key);
 	} else if (strcmp("STATUS", cmd) == 0) {
 		if (path[0] != '\0') {
@@ -861,6 +897,7 @@ process_stdin_line(char *str)
 			    "invalid command line - STATUS takes no arguments");
 			return;
 		}
+
 		print_status(key);
 	} else {
 		print_error(key, ERR_UNKNOWN_COMMAND, "unknown command '%s'",
@@ -877,7 +914,7 @@ wait_for_stdin(void *arg)
 	(void) arg;
 	char str[MAX_CMD_LEN + 1];
 
-	// read stdin line-by-line indefinitely
+	/* read stdin line-by-line indefinitely */
 	while (fgets(str, MAX_CMD_LEN + 1, stdin) != NULL) {
 		mutex_lock(&work_mutex);
 		process_stdin_line(str);
@@ -886,6 +923,7 @@ wait_for_stdin(void *arg)
 		str[0] = '\0';
 	}
 
+	/* should not be reached */
 	err(1, "fswatcher: error on stdin (errno: %d): %s\n",
 	    errno, strerror(errno));
 }
@@ -904,7 +942,7 @@ wait_for_events(void *arg)
 
 		switch (pe.portev_source) {
 		case PORT_SOURCE_FILE:
-			// Call file events event handler
+			/* call handler for filesystem event */
 			check_and_rearm_event(0, (char *)pe.portev_user,
 			    pe.portev_events, NULL);
 			break;
@@ -923,6 +961,7 @@ wait_for_events(void *arg)
 		mutex_unlock(&work_mutex);
 	}
 
+	/* should not be reached */
 	err(1, "wait_for_events thread exited");
 }
 
@@ -954,28 +993,39 @@ main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
+	/* create event port globally */
 	if ((port = port_create()) == -1) {
 		fprintf(stderr, "port_create failed(%d): %s",
 		    errno, strerror(errno));
 		return (1);
 	}
 
+	/* initialize the AVL tree to hold all files currently being watched */
 	avl_create(&files_tree, files_tree_node_comparator,
 	    sizeof (struct files_tree_node),
 	    offsetof(struct files_tree_node, avl_node));
 
-	// create worker threads to process events from stdin and event ports
+	/*
+	 * If the caller wants a "ready" event to be emitted, we grab the
+	 * global mutex here, and unlock it after the threads are created.
+	 */
+	if (opts.opt_r) {
+		mutex_lock(&work_mutex);
+	}
+
+	/* create worker threads to process stdin and event ports */
 	pthread_create(&tid, NULL, wait_for_events, NULL);
 	pthread_create(&tid, NULL, wait_for_stdin, NULL);
 
-	// alert that we are ready for input
+	/* alert that we are ready for input */
 	if (opts.opt_r) {
 		print_ready();
+		mutex_unlock(&work_mutex);
 	}
 
-	// block on therads
+	/* do nothing while threads handle the load */
 	while (thr_join(0, NULL, NULL) == 0) {
-		// do nothing
+		/* pass */
 	}
 
 	return (0);

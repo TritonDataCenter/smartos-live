@@ -1310,7 +1310,9 @@ test('test restart delay reset', function (t) {
                     emitter.emit('done');
                 }
             });
-            cb();
+            se.once('ready', function () {
+                cb();
+            });
         }, function (cb) {
             // start the VM
             VM.start(state.uuid, {}, function (err) {

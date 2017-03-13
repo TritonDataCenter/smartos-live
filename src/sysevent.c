@@ -47,6 +47,11 @@ static mutex_t stdout_mutex;
 /*
  * Like VERIFY0, but instead of calling abort(), will print an error message
  * to stderr and exit the program.
+ *
+ * This is used by the nvlist_* functions to ensure that we are able to create
+ * and add to an nvlist without error.  The nvlist functions used can only
+ * fail with EINVAL or ENOMEM: dumping core because of either of these failure
+ * modes would be excessive.
  */
 #define ENSURE0(arg) {	\
     if (arg != 0)	\
@@ -55,8 +60,7 @@ static mutex_t stdout_mutex;
 
 /*
  * Create an nvlist with "type" set to the type argument given,
- * and "date" set to the current time.  Must be free()d by
- * the caller
+ * and "date" set to the current time.  Must be freed by the caller.
  */
 nvlist_t *
 make_nvlist(char *type)
@@ -69,7 +73,7 @@ make_nvlist(char *type)
 
 	ENSURE0(nvlist_alloc(&nvl, NV_UNIQUE_NAME, 0));
 
-	// get the current time
+	/* get the current time */
 	if (gettimeofday(&tv, NULL) != 0)
 		err(1, "gettimeofday");
 
@@ -80,7 +84,7 @@ make_nvlist(char *type)
 	if (i == 0)
 		err(1, "strftime");
 
-	// append milliseconds
+	/* append milliseconds */
 	i = snprintf(date + i, sizeof (date) - i, ".%03ldZ", tv.tv_usec / 1000);
 	if (i == 0)
 		err(1, "snprintf date");
@@ -313,10 +317,12 @@ main(int argc, char **argv)
 		num_subclasses = 1;
 	}
 
-	// If the caller wants a "ready" event to be emitted, we must grab the
-	// stdout mutex before registering for any sysevents.  This ensures the
-	// "ready" event is printed before any other event is printed, but
-	// after we are successfully subscribed to the event channel.
+	/*
+	 * If the caller wants a "ready" event to be emitted, we must grab the
+	 * stdout mutex before registering for any sysevents.  This ensures the
+	 * "ready" event is printed before any other event is printed, but
+	 * after we are successfully subscribed to the event channel.
+	 */
 	if (opts.opt_r) {
 		mutex_lock(&stdout_mutex);
 	}

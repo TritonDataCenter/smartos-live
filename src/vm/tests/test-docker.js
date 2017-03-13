@@ -1,4 +1,4 @@
-// Copyright 2016 Joyent, Inc.  All rights reserved.
+// Copyright 2017 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that docker flag works as expected when setting/unsetting
 // Also test that /etc/resolv.conf, /etc/hosts and /etc/hostname are set
@@ -1309,7 +1309,8 @@ test('test restart delay reset', function (t) {
                     emitter.emit('done');
                 }
             });
-            vs.on('ready', function () {
+
+            vs.once('ready', function () {
                 cb();
             });
         }, function (cb) {
@@ -1430,15 +1431,16 @@ test('test restart delay reset', function (t) {
 
                 cb();
             });
-        }, function (cb) {
-            // stop the vminfod watcher
-            if (vs !== null) {
-                vs.stop();
-                vs = null;
-            }
-            cb();
         }
-    ]);
+    ], function () {
+        // stop the vminfod watcher
+        if (vs !== null) {
+            vs.stop();
+            vs = null;
+        }
+
+        t.end();
+    });
 });
 
 /* BEGIN JSSTYLED */

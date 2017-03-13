@@ -58,7 +58,6 @@
 # network/nfs/status.xml
 # network/ipmievd.xml
 # network/nis/client.xml
-# network/rpc/rex.xml
 # network/http-apache22.xml
 # system/consolekit.xml
 # system/device/devices-audio.xml

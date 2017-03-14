@@ -173,6 +173,7 @@ lofi:ctl 0644 root sys
 log:conslog 0666 root sys
 log:log 0640 root sys
 mm:allkmem 0600 root sys
+mm:full 0666 root sys
 mm:kmem 0640 root sys
 mm:mem 0640 root sys
 mm:null 0666 root sys

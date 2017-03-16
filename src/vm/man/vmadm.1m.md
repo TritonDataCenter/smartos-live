@@ -438,6 +438,10 @@ tab-complete UUIDs rather than having to type them out for every command.
         restarted. Other properties will require a reboot in order to take
         effect.
 
+        If the VM is running when an update is made, the 'mdata:fetch' service
+        inside the zone will be restarted - the service will be enabled
+        regardless of its state prior to the update.
+
      validate create [-f <filename>]
      validate update <brand> [-f <filename>]
 

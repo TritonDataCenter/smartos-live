@@ -8,7 +8,6 @@
 ./bin/copyrightchk
 ./bin/cstyle
 ./bin/elfcmp
-./bin/elfsigncmp
 ./bin/find_elf
 ./bin/findcrypto
 ./bin/flg.flp
@@ -31,7 +30,6 @@
 ./bin/i386/ctfstrip
 ./bin/i386/cw
 ./bin/i386/elfextract
-./bin/i386/elfsign
 ./bin/i386/findunref
 ./bin/i386/install
 ./bin/i386/install.bin

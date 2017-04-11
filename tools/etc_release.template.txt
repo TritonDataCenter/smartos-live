@@ -1,6 +1,4 @@
-                       SmartOS %%VERSION%% x86_64
-              Copyright 2010 Sun Microsystems, Inc.  All Rights Reserved.
-              Copyright 2010-2017 Joyent, Inc.  All Rights Reserved.
-                        Use is subject to license terms.
+                      SmartOS %%VERSION%% x86_64
+                    Copyright (c) 2010-2017, Joyent, Inc.
 
    Built with the following components:

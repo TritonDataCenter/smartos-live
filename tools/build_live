@@ -15,7 +15,9 @@
 #
 
 #
-# Build the "boot_archive" RAM disk image.
+# Build the platform image (i.e., "boot_archive", "unix", etc) and the platform
+# tar archive.  This program should be invoked via the "make live" target of
+# the top-level Makefile in "smartos-live.git".
 #
 
 set -o pipefail
@@ -101,6 +103,38 @@ function fail_cleanup
 	fi
 }
 
+function bi_find_buildstamp
+{
+	local bsfile="$bi_wsroot/proto/buildstamp"
+	local bvfile="$bi_wsroot/configure-buildver"
+
+	if [[ ! -f $bsfile ]]; then
+		fail "build stamp file is missing: \"$bsfile\""
+	fi
+
+	bi_buildstamp=$(<"$bsfile")
+
+	if [[ -z $bi_buildstamp ]]; then
+		fail "build stamp file is empty: \"$bsfile\""
+	fi
+
+	bi_emit_info 'Build Stamp' "$bi_buildstamp"
+
+	if [[ -f $bvfile ]]; then
+		if ! bi_buildver=$(/usr/bin/head -n1 "$bvfile"); then
+			fail "reading build version file \"$bvfile\""
+		fi
+	fi
+
+	if [[ -n $bi_buildver ]]; then
+		bi_emit_info 'Build Version' "$bi_buildver"
+		bi_prefix="platform-$bi_buildver-$bi_buildstamp"
+	else
+		bi_prefix="platform-$bi_buildstamp"
+	fi
+
+}
+
 function bi_run_mancheck
 {
 	local mancheck="$bi_wsroot/tools/mancheck/mancheck"
@@ -134,38 +168,6 @@ function bi_run_tzcheck
 	fi
 
 	bi_emit_done
-}
-
-function bi_find_buildstamp
-{
-	local bsfile="$bi_wsroot/proto/buildstamp"
-	local bvfile="$bi_wsroot/configure-buildver"
-
-	if [[ ! -f $bsfile ]]; then
-		fail "build stamp file is missing: \"$bsfile\""
-	fi
-
-	bi_buildstamp=$(<"$bsfile")
-
-	if [[ -z $bi_buildstamp ]]; then
-		fail "build stamp file is empty: \"$bsfile\""
-	fi
-
-	bi_emit_info 'Build Stamp' "$bi_buildstamp"
-
-	if [[ -f $bvfile ]]; then
-		if ! bi_buildver=$(/usr/bin/head -n1 "$bvfile"); then
-			fail "reading build version file \"$bvfile\""
-		fi
-	fi
-
-	if [[ -n $bi_buildver ]]; then
-		bi_emit_info 'Build Version' "$bi_buildver"
-		bi_prefix="platform-$bi_buildver-$bi_buildstamp"
-	else
-		bi_prefix="platform-$bi_buildstamp"
-	fi
-
 }
 
 #
@@ -232,31 +234,6 @@ function bi_create_ufs
 	if ! pfexec /usr/sbin/mount -F ufs -o nologging "$cuf_special" \
 	    "$cuf_path"; then
 		fail "failed to mount \"$cuf_special\" on \"$cuf_path\""
-	fi
-
-	bi_emit_done
-}
-
-function bi_gen_etcrelease
-{
-	local template="$bi_wsroot/tools/etc_release.template.txt"
-	local build_etcrelease="$bi_wsroot/tools/build_etcrelease"
-
-	bi_emit_start 'Building "/etc/release" file'
-
-	if ! "$build_etcrelease" "$bi_buildstamp" "$template" |
-	    pfexec /usr/bin/tee "$bi_mnt_root/etc/release" >/dev/null; then
-		fail 'failed to build "/etc/release" file'
-	fi
-
-	#
-	# We include the JSON-only version of the release information as a
-	# separate build artefact.  We ensure that this is correctly JSON
-	# formatted by passing it through json(1).
-	#
-	if ! "$build_etcrelease" | json -o 'json-4' \
-	    >"$bi_archive.gitstatus"; then
-		fail "could not generate gitstatus file"
 	fi
 
 	bi_emit_done
@@ -397,37 +374,29 @@ function bi_create_password
 	bi_emit_done
 }
 
-function bi_safe_update_symlink
+function bi_gen_etcrelease
 {
-	local source_file=$1
-	local target=$2
+	local template="$bi_wsroot/tools/etc_release.template.txt"
+	local build_etcrelease="$bi_wsroot/tools/build_etcrelease"
 
-	if [[ -z $source_file || -z $target ]]; then
-		fail 'bi_safe_update_symlink args: <source_file> <target>'
-	fi
+	bi_emit_start 'Building "/etc/release" file'
 
-	if ! (cd "$(dirname "$target")" && test -e "$source_file"); then
-		fail "symlink target \"$source_file\" does not appear to exist"
-	fi
-
-	if [[ ! -L $target ]]; then
-		if [[ -e $target ]]; then
-			fail "\"$target\" exists, but is not a symlink"
-		fi
+	if ! "$build_etcrelease" "$bi_buildstamp" "$template" |
+	    pfexec /usr/bin/tee "$bi_mnt_root/etc/release" >/dev/null; then
+		fail 'failed to build "/etc/release" file'
 	fi
 
 	#
-	# We use pfexec to remove the old symlink, in case there are latent
-	# file system permission issues from when this program used to run as
-	# root.
+	# We include the JSON-only version of the release information as a
+	# separate build artefact.  We ensure that this is correctly JSON
+	# formatted by passing it through json(1).
 	#
-	if ! pfexec /usr/bin/rm -f "$target" ||
-	    ! /usr/bin/ln -s "$source_file" "$target"; then
-		fail "failed to create symlink \"$target\" -> \"$source_file\""
+	if ! "$build_etcrelease" | json -o 'json-4' \
+	    >"$bi_archive.gitstatus"; then
+		fail "could not generate gitstatus file"
 	fi
 
-	bi_emit_info 'Linked build output' \
-	    "$(basename "$target") -> $source_file"
+	bi_emit_done
 }
 
 function bi_ship_manifest
@@ -654,6 +623,40 @@ function bi_platform_tar
 
 	bi_emit_done
 }
+
+function bi_safe_update_symlink
+{
+	local source_file=$1
+	local target=$2
+
+	if [[ -z $source_file || -z $target ]]; then
+		fail 'bi_safe_update_symlink args: <source_file> <target>'
+	fi
+
+	if ! (cd "$(dirname "$target")" && test -e "$source_file"); then
+		fail "symlink target \"$source_file\" does not appear to exist"
+	fi
+
+	if [[ ! -L $target ]]; then
+		if [[ -e $target ]]; then
+			fail "\"$target\" exists, but is not a symlink"
+		fi
+	fi
+
+	#
+	# We use pfexec to remove the old symlink, in case there are latent
+	# file system permission issues from when this program used to run as
+	# root.
+	#
+	if ! pfexec /usr/bin/rm -f "$target" ||
+	    ! /usr/bin/ln -s "$source_file" "$target"; then
+		fail "failed to create symlink \"$target\" -> \"$source_file\""
+	fi
+
+	bi_emit_info 'Linked build output' \
+	    "$(basename "$target") -> $source_file"
+}
+
 
 #
 # Process options:

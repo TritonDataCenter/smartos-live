@@ -24,6 +24,7 @@ set -o nounset
 bi_wsroot=$(cd "$(dirname "$0")/.." && pwd)
 bi_arg0=$(basename "$0")
 bi_type='live'
+bi_uid=
 
 . "$bi_wsroot/tools/lib/build_common.sh"
 
@@ -674,6 +675,10 @@ done
 trap 'bi_early_exit' EXIT
 trap 'bi_interrupt' SIGINT SIGHUP
 
+if ! bi_uid=$(/usr/bin/id -u); then
+	fail 'could not determine user id'
+fi
+
 #
 # Gather the remaining positional arguments to form the list of input
 # directories.
@@ -710,7 +715,7 @@ fi
 # user:
 #
 if [[ -d $bi_out_dir ]]; then
-	if ! pfexec /usr/bin/chown -R "$USER" "$bi_out_dir"; then
+	if ! pfexec /usr/bin/chown -R "$bi_uid" "$bi_out_dir"; then
 		fail "could not fix ownership on output directory"
 	fi
 else
@@ -735,7 +740,7 @@ printf '\n'
 # Set up trace logging into a log file:
 #
 if [[ -d "$bi_wsroot/log" ]]; then
-	if ! pfexec /usr/bin/chown -R "$USER" "$bi_wsroot/log"; then
+	if ! pfexec /usr/bin/chown -R "$bi_uid" "$bi_wsroot/log"; then
 		fail "could not fix ownership on log directory"
 	fi
 else

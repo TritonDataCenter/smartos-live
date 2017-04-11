@@ -115,7 +115,7 @@ in the `tools/build_live` script, which performs at least the following actions:
     * from the proto area; finally
     * from the `man/man` subdirectory
 
-* Then the image is packed up and put in output with an expanded directory and
+* Then the image is packed up and put in `output/` with an expanded directory and
   a compressed tar archive, `platform-BUILDSTAMP.tgz`.
 
 * Various customisations to the base operating system are applied, including
@@ -155,15 +155,15 @@ transform it into a USB image, one should use the `make usb` target.
 
 * While there should never be a delivered object with build environment
   DT_RPATH leakage, there is currently no tool for checking this.
-  [OS-1122][OS-1122]
+  ([OS-1122][OS-1122])
 
 * There is also no tool for verifying that all objects delivered within
   the platform have no dependencies outside the platform.  This includes
   both runtime library linking and the execution of interpreters.
-  [OS-1122][OS-1122]
+  ([OS-1122][OS-1122])
 
 * illumos-extra recurses over all components even during an incremental
-  build.  This is time-consuming and usually pointless. [OS-1319][OS-1319]
+  build.  This is time-consuming and usually pointless. ([OS-1319][OS-1319])
 
 * The complete set of build-order dependencies within illumos-extra
   probably has not been enumerated.  Doing so would allow for greater
@@ -204,7 +204,7 @@ discuss the issue with other developers on one of the following:
   * The resulting image requires a 64-bit x86 machine.
 
   * The build stamp, as well as a summary of the repositories from which the
-    image was constructed, is available in the live image in `/etc/release`.
+    image was constructed, is available within the live image as `/etc/release`.
 
   * There is a manifest of shipped files created in the output area; i.e.,
 

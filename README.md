@@ -137,7 +137,7 @@ in the `tools/build_live` script, which performs at least the following actions:
   diagnostic output describing the problem.  If this output is not sufficient,
   the trace log can often contain further leads to debugging the problem.
 
-## Creating additional build artifacts
+## Creating Additional Build Artifacts
 
 By default, the build only generates the `platform-BUILDSTAMP.tgz` file.  This
 may also be transformed into a CD-ROM ISO image and a USB key image.  To

@@ -848,3 +848,7 @@ d usr/share/man/man5 0755 root bin
 f usr/share/man/man5/openssl.5 0444 root bin
 f usr/share/man/man5/joyent.5 0444 root bin
 f usr/share/man/man5/fwrule.5 0444 root bin
+
+# compatibility symlink to new shipped file manifest location
+s var/log/manifest=../../usr/share/smartos/manifest
+

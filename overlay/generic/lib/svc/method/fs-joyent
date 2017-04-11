@@ -134,6 +134,21 @@ if [ $? -ne 0 ]; then
         cp /tmp/SUNWdefault.xml /etc/zones/
         rm -f /tmp/SUNWdefault.xml
 
+	#
+	# We include a manifest of all files shipped in the platform image,
+	# along with an MD5 hash of their contents.  This was originally
+	# shipped as "/var/log/manifest", but once a machine is set up, "/var"
+	# now comes from the pool.  The upshot of this is that every SmartOS
+	# machine has the manifest from the platform at setup time stored in
+	# "/var/log/manifest".  Now that the manifest has moved to an
+	# accessible location, we should remove this file and replace it with a
+	# symbolic link.
+	#
+	if [[ -f '/var/log/manifest' && ! -L '/var/log/manifest' ]]; then
+		mv '/var/log/manifest' '/var/log/manifest.original'
+		ln -s '../../usr/share/smartos/manifest' '/var/log/manifest'
+	fi
+
         if [[ -z $(/bin/bootparams | grep '^smartos=true') ]]; then
             mkdir -p /opt/smartdc/agents/smf
             mount -O -F lofs /var/svc/manifest/site /opt/smartdc/agents/smf

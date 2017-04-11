@@ -335,6 +335,8 @@ while getopts "kmo:nhc:" c $@; do
 	esac
 done
 
+bi_big_banner "Building \"$bi_type\" image"
+
 #
 # Get us to the root of the workspace
 #

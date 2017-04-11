@@ -1,6 +1,5 @@
 #!/bin/bash
 #
-#
 # This file and its contents are supplied under the terms of the
 # Common Development and Distribution License ("CDDL"), version 1.0.
 # You may only use this file in accordance with the terms of version
@@ -12,20 +11,24 @@
 #
 
 #
-# Copyright (c) 2013, Joyent, Inc. All rights reserved.
+# Copyright (c) 2017, Joyent, Inc.
 #
-shopt -s xpg_echo
+
+set -o errexit
 set -o pipefail
 
 ber_arg0=$(basename $0)
-ber_wsroot=
-ber_nent=0
+ber_wsroot=$(cd "$(dirname "$0")/.." && pwd)
+ber_first=true
+ber_version=$1
+ber_template=$2
+ber_template_data=
 
 function fatal
 {
 	local msg="$*"
 	[[ -z "$msg" ]] && msg="failed"
-	echo "$ber_arg0: $msg" >&2
+	printf '%s: %s\n' "$ber_arg0" "$msg" >&2
 	exit 1
 }
 
@@ -33,65 +36,110 @@ function warn
 {
 	local msg="$*"
 	[[ -z "$msg" ]] && msg="failed"
-	echo "$ber_arg0: $msg" >&2
+	printf '%s: %s\n' "$ber_arg0" "$msg" >&2
 }
 
 function get_status
 {
 	local dir=$1 name=$2 cont=$3
-	local branch rev comdate name url
+	local branch rev comdate name url prevdir
 
 	[[ -z "$dir" ]] && fatal "missing directory argument"
 	[[ -z "$name" ]] && fatal "missing name"
 	[[ -d $dir ]] || fatal "asked to get status of non-existant directory"
-	cd $dir || fatal "failed to enter $dir"
-	((ber_nent++))
 
-	printf "\t"
-	[[ $ber_nent -gt 1 ]] && printf ", "
-
-	#
-	# This means that we have a local project that isn't a git directory.
-	# Yay team. In this case we just give them a date and move on with life.
-	#
-	if [[ ! -d .git ]]; then
-		comdate=$(date +%s)
-		[[ $? -eq 0 ]] || fatal "failed to get current date"
-		warn "no git repository information available"
-		printf "%s%s\n" "{ \"repo\": \"$name\", \"date\": " \
-		    "\"$comdate\", \"warning\": \"no git metadata available\" }"
-		cd - >/dev/null
-		return 0
+	prevdir=$PWD
+	if ! cd "$dir"; then
+		fatal "failed to chdir to \"$dir\""
 	fi
-	
-	url=$(git config remote.origin.url)
-	[[ $? -eq 0 ]] || fatal "failed to get git origin url"
-	branch=$(git branch | grep "^* " | cut -d ' ' -f2-)
-	[[ $? -eq 0 ]] || fatal "failed to get git branch"
-	rev=$(git rev-parse HEAD)
-	[[ $? -eq 0 ]] || fatal "failed to get current revision"
-	comdate=$(git log -n 1 --pretty=format:%ct HEAD)
-	[[ $? -eq 0 ]] || fatal "failed to get commit date"
-	printf "%s%s%s\n" "{ \"repo\": \"$name\", \"branch\": \"$branch\", " \
-	     "\"rev\": \"$rev\", \"commit_date\": \"$comdate\", \"url\": " \
-	     "\"$url\" }"
-	cd - >/dev/null
+
+	if [[ $ber_first != true ]]; then
+		printf ',\n'
+	else
+		ber_first=false
+	fi
+	printf '  '
+
+	if [[ ! -d .git ]]; then
+		#
+		# This means that we have a local project that isn't a git
+		# directory.  Yay team. In this case we just give them a date
+		# and move on with life.
+		#
+		if ! comdate=$(date +%s); then
+			fatal "failed to get current date"
+		fi
+		warn "no git repository information available"
+
+		printf '  { "repo": "%s", "date": "%s",\n' \
+		    "$name" "$comdate"
+		printf '      "warning": "no git metadata available" }'
+	else
+		if ! url=$(git config remote.origin.url); then
+			fatal "failed to get git origin url"
+		fi
+		if ! branch=$(git branch | grep "^* " | cut -d ' ' -f2-); then
+			fatal "failed to get git branch"
+		fi
+		if ! rev=$(git rev-parse HEAD); then
+			fatal "failed to get current revision"
+		fi
+		if ! comdate=$(git log -n 1 --pretty=format:%ct HEAD); then
+			fatal "failed to get commit date"
+		fi
+
+		printf '  { "repo": "%s", "branch": "%s",\n' \
+		    "$name" "$branch"
+		printf '      "commit_date": "%s",\n' \
+		    "$comdate"
+		printf '      "rev": "%s",\n' \
+		    "$rev"
+		printf '      "url": "%s" }' \
+		    "$url"
+	fi
+
+	if ! cd "$prevdir"; then
+		fatal "failed to chdir back to \"$prevdir\""
+	fi
+
 	return 0
 }
 
-cd $(dirname $0)/../
-ber_wsroot=$PWD
+#
+# We support two modes of operation:
+#
+#	1. Generating the "/etc/release" file which starts with a header and
+#	   includes the JSON manifest underneath.  To use this mode, the
+#	   caller must provide a VERSION and a TEMPLATE_FILE argument.
+#
+#	2. Generating the bare JSON for the "boot_archive.gitstatus" file.
+#	   This mode is active when no arguments are passed.
+#
+if (( $# != 0 && $# != 2 )); then
+	fatal "usage: $ber_arg0 [ VERSION TEMPLATE_FILE ]"
+fi
 
-printf "[\n"
-get_status $ber_wsroot smartos-live
-get_status $ber_wsroot/projects/illumos illumos-joyent
-get_status $ber_wsroot/projects/illumos-extra illumos-extra
+if [[ -n $ber_template ]]; then
+	if [[ ! -f $ber_template ]]; then
+		fatal "could not find template file \"$ber_template\""
+	fi
+
+	if ! ber_template_data=$(sed -e "s,%%VERSION%%,$ber_version,g" \
+	    "$ber_template"); then
+		fatal "could not load template file \"$ber_template\""
+	fi
+
+	printf '%s\n\n' "$ber_template_data"
+fi
+
+printf '[\n'
+get_status "$ber_wsroot" smartos-live
+get_status "$ber_wsroot/projects/illumos" illumos-joyent
+get_status "$ber_wsroot/projects/illumos-extra" illumos-extra
 for d in $ber_wsroot/projects/local/*; do
 	get_status $d $(basename $d)
 done
 
-# if the smartos overlay exists and is in use, include it
-[[ -d $ber_wsroot/overlay/smartos ]] && \
-    grep -q $ber_wsroot/overlay/smartos $ber_wsroot/overlay/order && \
-    get_status $ber_wsroot/overlay/smartos smartos-overlay
-printf "]\n"
+printf '\n]\n'
+
+exit 0

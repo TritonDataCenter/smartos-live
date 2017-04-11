@@ -5,6 +5,8 @@
 
 set -e
 
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+
 SVCCFG="${ROOT}/projects/illumos/usr/src/cmd/svc/svccfg/svccfg-native"
 
 rdmnt=$1
@@ -12,11 +14,6 @@ if [ -z "${rdmnt}" ] || [ ! -d "${rdmnt}" ]; then
   echo "FATAL: Invalid ramdisk root '${rdmnt}'"
   echo "Usage: $0 <rdmnt>"
   exit 1
-fi
-
-if [ -z "${ROOT}" ]; then
-	echo "FATAL: ROOT not specified"
-	exit 1
 fi
 
 if [[ ! -x ${SVCCFG} ]]; then

@@ -162,7 +162,7 @@ test('test queue fast-forward', function (t) {
     });
     t.equal(ret, true, 'task bar enqueued');
 
-    var time = new Date();
+    var time = process.hrtime();
 
     // enqueue the 'bat' task after we grab the timestamp
     setTimeout(function () {

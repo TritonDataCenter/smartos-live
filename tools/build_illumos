@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright 2016 Joyent, Inc.
+# Copyright (c) 2017 Joyent, Inc.
 #
 
 # Setup for building stuff!
@@ -19,6 +19,7 @@ unset CC
 unset CXX
 ROOT=`pwd`
 export PATH=/opt/onbld/bin:/sbin:/usr/sbin:/usr/bin:/usr/ccs/bin:/opt/SUNWspro/bin:/opt/local/bin
+export SHELL=/usr/bin/bash
 
 mkdir -p ${ROOT}/proto
 if [[ ! -f ${ROOT}/proto/buildstamp ]]; then

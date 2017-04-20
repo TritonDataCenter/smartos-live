@@ -3,7 +3,9 @@
  *
  */
 
-var diff = require('/usr/vm/node_modules/vminfod/diff');
+var util = require('util');
+
+var diff = require('/usr/vm/node_modules/diff');
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
@@ -17,6 +19,7 @@ function copy(o) {
     undefined,
     null,
     new Date(),
+    function func() {},
     '',
     'a',
     5,
@@ -25,12 +28,14 @@ function copy(o) {
     [['foo']],
     [{name: 'foo'}],
     {},
+    [function arrayFunc() {}],
+    {func: function objFunc() {}},
     {name: 'foo'},
     {names: ['foo','bar']},
     {things: [{name: 'foo'}]}
 ].forEach(function (o) {
     test('test diff objects that are the same: '
-        + JSON.stringify(o), function (t) {
+        + util.inspect(o), function (t) {
 
         var changes = diff(o, o);
         t.ok(Array.isArray(changes), 'changes is an array');
@@ -229,6 +234,7 @@ test('test diff vmadm payload objects', function (t) {
     t.equal(change.action, 'changed', 'action');
     t.equal(change.from, payload1.disks[0].name, 'disks changed from');
     t.equal(change.to, payload2.disks[0].name, 'disks changed to');
+    t.equal(change.ident, payload1.disks[0].path, 'disks changed ident');
 
     // assert return
     t.end();

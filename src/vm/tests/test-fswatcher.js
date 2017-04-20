@@ -29,15 +29,14 @@ var fs = require('fs');
 var path = require('path');
 var util = require('util');
 
-var async = require('/usr/node/node_modules/async');
 var bunyan = require('/usr/vm/node_modules/bunyan');
+var FsWatcher = require('/usr/vm/node_modules/fswatcher').FsWatcher;
 var vasync = require('/usr/vm/node_modules/vasync');
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
 require('/usr/vm/node_modules/nodeunit-plus');
 
-var FsWatcher = require('/usr/vm/node_modules/vminfod/fswatcher').FsWatcher;
 var log = bunyan.createLogger({
     level: 'error',
     name: 'fswatcher-test-dummy',

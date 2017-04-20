@@ -41,13 +41,13 @@
  * the result of a command.
  *
  * "pathname" can be any type of file that event ports supports (file,
- * directory, pipe, etc.).  This program will also follow symlinks as well:
- * note that the source file for the symlink must exist to watch, and if
- * the source file is deleted after a watch is established a FILE_DELETE
- * event will be seen.
+ * directory, pipe, etc.).  This program cannot watch symlinks, but instead
+ * will watch the source file of a symlink.  Note that, like a regular file,
+ * the source file for the symlink must exist to watch, and if the source file
+ * is deleted after a watch is established a FILE_DELETE event will be emitted.
  *
  * When watching a file, it will be rewatched every time an event is seen
- * until an UNWATCH command for the file is received by the user, or an event
+ * until an UNWATCH command for the file is received from the user, or an event
  * indicates that the file can no longer be watched (like FILE_DELETE).
  *
  * On STDOUT you will see JSON messages that look like the following but are
@@ -67,28 +67,33 @@
  *
  * Where:
  *
- *   changes   is an array of strings indicating which changes occurred
- *   code      is a positive integer code for an error
- *   final     true when the event being printed is the last without re-watch
- *   key       is the <KEY> for which a response corresponds
- *   message   is a human-readable string describing response
- *   pathname  is the path to which an event applies
- *   result    indicates whether a command was a "SUCCESS" or "FAILURE"
- *   date      ISO string date with millisecond resolution
- *   type      is one of: ready, event, response, error
- *
- * And:
- *
- *   "type" is always included
- *   "date" is always included
- *   "changes" is included only when (type == event)
- *   "code" is included only when (type == error)
- *   "final" is included when (type == event)
- *   "key" is included whenever (type == response)
- *   "message" is included whenever (type == error)
- *   "pathname" is included whenever (type == event)
- *   "result" is included when (type == response) value: "SUCCESS" or "FAILURE"
- *   "data" is included when a call to STATUS is made (type == response)
+ *   - type
+ *             One of: ready, event, response, error.
+ *             Always included.
+ *   - date
+ *             ISO string date with millisecond resolution.
+ *             Always included.
+ *   - changes
+ *             An array of strings indicating which changes occurred.
+ *             Included for "event" messages.
+ *   - code
+ *             A positive integer code for an error.
+ *             Included for "response" and "error" messages.
+ *   - final
+ *             true when the event being printed is the last without re-watch.
+ *             Included for "event" messages.
+ *   - key
+ *             The <KEY> for which a response corresponds.
+ *             Included for "response" and "error" messages.
+ *   - message
+ *             Human-readable string describing response.
+ *             Included for "response" and "error" messages.
+ *   - pathname
+ *             pathname to which an event applies.
+ *             Included for "response" and "event" messages.
+ *   - result
+ *             Indicates whether a command was a "SUCCESS" or "FAILURE"
+ *             Included for "response" messages.
  *
  * Current values for "code" are in the ErrorCodes enum below.
  *
@@ -251,6 +256,14 @@ files_tree_node_comparator(const void *l, const void *r)
 
 /*
  * Simple hashing algorithm pulled from http://www.cse.yorku.ca/~oz/hash.html
+ *
+ * This function is used primarily to make lookups in the AVL tree faster.
+ * Since the tree is keyed off of a files pathname, the pathname string as well
+ * as a hash of the string is stored in the tree.
+ *
+ * There is nothing inherently special or particularly useful about the "djb2"
+ * hashing algorithm, really any quick hashing algorithm will work here, since
+ * when a hash collision is detected a full strcmp() is performed.
  */
 unsigned long
 djb2(char *str)

@@ -778,16 +778,6 @@ f usr/vm/lib/metadata/agent.js 0444 root bin
 f usr/vm/sbin/metadata 0555 root bin
 f usr/vm/smf/system-metadata 0555 root bin
 f lib/svc/manifest/system/system-metadata.xml 0444 root bin
-d usr/node/0.10/node_modules/zsock 0555 root bin
-f usr/node/0.10/node_modules/zsock/package.json 0444 root bin
-d usr/node/0.10/node_modules/zsock/lib 0555 root bin
-f usr/node/0.10/node_modules/zsock/lib/zsock.js 0444 root bin
-f usr/node/0.10/node_modules/zsock/lib/zsock_bindings.node 0444 root bin
-d usr/node/0.10/node_modules/zutil 0555 root bin
-f usr/node/0.10/node_modules/zutil/package.json 0444 root bin
-d usr/node/0.10/node_modules/zutil/lib 0555 root bin
-f usr/node/0.10/node_modules/zutil/lib/zutil.js 0444 root bin
-f usr/node/0.10/node_modules/zutil/lib/zutil_bindings.node 0444 root bin
 # 0-devpro-stamp
 f usr/include/demangle.h 0644 root bin
 f usr/lib/libC.so.5 0755 root bin
@@ -841,14 +831,10 @@ f usr/node/0.10/node_modules/getopt.js 0444 root bin
 f usr/node/0.10/node_modules/kstat.node 0444 root bin
 f usr/node/0.10/node_modules/lockfd.js 0444 root bin
 f usr/node/0.10/node_modules/lockfd_binding.node 0444 root bin
-f usr/node/0.10/node_modules/microtime.node 0444 root bin
 f usr/node/0.10/node_modules/net-boot-config.js 0444 root bin
 f usr/node/0.10/node_modules/onlyif.js 0444 root bin
 f usr/node/0.10/node_modules/linestream.js 0444 root bin
 f usr/node/0.10/node_modules/sprintf.js 0444 root bin
-f usr/node/0.10/node_modules/sqlite3.js 0444 root bin
-f usr/node/0.10/node_modules/sqlite3_trace.js 0444 root bin
-f usr/node/0.10/node_modules/node_sqlite3.node 0444 root bin
 f usr/node/0.10/node_modules/system.js 0444 root bin
 f usr/node/0.10/node_modules/uuid.node 0444 root bin
 f usr/node/0.10/node_modules/zfs.js 0444 root bin

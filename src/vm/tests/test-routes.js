@@ -1,4 +1,4 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2017 Joyent, Inc.
 //
 // Tests for specifying static routes
 //
@@ -157,6 +157,8 @@ function validateZoneData(t, vm, opts, callback) {
     var vmadmRoutes = opts.vmadmRoutes;
     var zoneRoutes = opts.inZoneRoutes;
     var routingTable = opts.routingTable;
+    var waitForServiceRestart = opts.hasOwnProperty('waitForServiceRestart')
+        ? opts.waitForServiceRestart : true;
     var i = 0;
     var interval = 1000;
     var timeout;
@@ -185,7 +187,7 @@ function validateZoneData(t, vm, opts, callback) {
                 return;
             }
 
-            if (time != LAST_METADATA_RESTART_TIME) {
+            if (!waitForServiceRestart || time !== LAST_METADATA_RESTART_TIME) {
                 // Service has restarted: wait a little longer for it to
                 // finish
                 timeout = setTimeout(function () {
@@ -806,7 +808,8 @@ test('update routes and resolvers', function(t) {
                 resolvers: resolvers,
                 vmadmRoutes: vmadmRoutes,
                 inZoneRoutes: inZoneRoutes,
-                routingTable: routingTable
+                routingTable: routingTable,
+                waitForServiceRestart: false
             }, cb);
         },
 

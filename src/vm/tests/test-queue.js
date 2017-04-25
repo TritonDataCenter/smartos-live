@@ -68,10 +68,13 @@ test('test queue paused 100 tasks', function (t) {
         });
     }
 
-    setImmediate(function () {
-        t.ok(true, 'unpausing queue');
+    setTimeout(function () {
+        // all tasks should still be enqueued as the queue is currently paused
+        t.equal(q.paused, true, 'queue is paused');
+        t.equal(q.paused_queue.length, tasks, 'tasks currently paused: '
+            + tasks);
         q.resume();
-    });
+    }, 10);
 });
 
 test('test queue throws to prevent unintended states', function (t) {

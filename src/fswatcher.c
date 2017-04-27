@@ -36,15 +36,16 @@
  * The first will cause <pathname> to be added to the watch list. The second
  * will cause the watch for the specified path to be removed.  The third will
  * print this programs status to stdout. The <KEY> must be an integer in the
- * range 1-4294967295 (inclusive). Leading 0's will be removed. NOTE: 0 is a
- * special key that will be used in output for errors which were not directly
- * the result of a command.
+ * range 1-18446744073709551615 (inclusive). Leading 0's will be removed. NOTE:
+ * 0 is a special key that will be used in output for errors which were not
+ * directly the result of a command.
  *
  * "pathname" can be any type of file that event ports supports (file,
- * directory, pipe, etc.).  This program cannot watch symlinks, but instead
- * will watch the source file of a symlink.  Note that, like a regular file,
- * the source file for the symlink must exist to watch, and if the source file
- * is deleted after a watch is established a FILE_DELETE event will be emitted.
+ * directory, pipe, etc. see port_associate(3C) for a full list).  This program
+ * cannot watch symlinks, but instead will watch the source file of a symlink.
+ * Note that, like a regular file, the source file for the symlink must exist
+ * to watch, and if the source file is deleted after a watch is established a
+ * FILE_DELETE event will be emitted.
  *
  * When watching a file, it will be rewatched every time an event is seen
  * until an UNWATCH command for the file is received from the user, or an event
@@ -56,6 +57,7 @@
  *  {
  *     "type": <string>,
  *     "date": <string>,
+ *     "time": [array],
  *     "changes": [array],
  *     "code": <number>,
  *     "final": true|false,
@@ -72,6 +74,10 @@
  *             Always included.
  *   - date
  *             ISO string date with millisecond resolution.
+ *             Always included.
+ *   - time
+ *             Time as an array of [seconds, nanoseconds], similar to
+ *             JavaScript process.hrtime()
  *             Always included.
  *   - changes
  *             An array of strings indicating which changes occurred.
@@ -129,14 +135,12 @@
 #include <sys/avl.h>
 #include <libnvpair.h>
 
-#define MAX_FMT_LEN 64
-#define MAX_KEY 4294967295
-#define MAX_KEY_LEN 10     /* number of digits (0-4294967295) */
 #define MAX_STAT_RETRY 10  /* number of times to retry stat() before abort() */
+#define SYSTEM_KEY 0       /* reserved key for system events */
 
-/* longest command is '<KEY> UNWATCH <path>' with <KEY> being 10 characters. */
+/* longest command is '<KEY> UNWATCH <path>' */
+#define MAX_KEY_LEN 20     /* number of digits 0-18446744073709551615 (2^64) */
 #define MAX_CMD_LEN (MAX_KEY_LEN + 1 + 7 + 1 + PATH_MAX + 1)
-#define SYSTEM_KEY 0
 
 /*
  * Like VERIFY0, but instead of calling abort(), will print an error message
@@ -156,10 +160,10 @@
  * These are possible values returned from an "error" event
  */
 enum ErrorCodes {
-	ERR_INVALID_COMMAND = 1, // failed to parse command from stdin line
-	ERR_INVALID_KEY,         // key parsed from command is invalid
-	ERR_UNKNOWN_COMMAND,     // line was parsable, but unimplmented command
-	ERR_CANNOT_ASSOCIATE     // port_associate(3c) failed
+	ERR_INVALID_COMMAND = 1, /* failed to parse command from stdin line */
+	ERR_INVALID_KEY,         /* key parsed from command is invalid */
+	ERR_UNKNOWN_COMMAND,     /* line parsable, but command unknown */
+	ERR_CANNOT_ASSOCIATE     /* port_associate(3c) failed */
 };
 
 /*
@@ -214,15 +218,16 @@ static struct {
 static void
 usage(FILE *s)
 {
-	fprintf(s, "Usage: fswatcher [-hrj]\n");
-	fprintf(s, "\n");
-	fprintf(s, "Watch files using event ports with commands sent to\n");
-	fprintf(s, "stdin and event notifications sent to stdout.\n");
-	fprintf(s, "\n");
-	fprintf(s, "Options\n");
-	fprintf(s, "  -h             print this message and exit\n");
-	fprintf(s, "  -j             JSON output\n");
-	fprintf(s, "  -r             print 'ready' event at start\n");
+	fprintf(s,
+	    "Usage: fswatcher [-hrj]\n"
+	    "\n"
+	    "Watch files using event ports with commands sent to\n"
+	    "stdin and event notifications sent to stdout.\n"
+	    "\n"
+	    "Options\n"
+	    "  -h             print this message and exit\n"
+	    "  -j             JSON output\n"
+	    "  -r             print 'ready' event at start\n");
 }
 
 /*
@@ -285,17 +290,18 @@ djb2(char *str)
 nvlist_t *
 make_nvlist(char *type)
 {
-	nvlist_t *nvl;
-	struct timeval tv;
-	struct tm *gmt;
 	char date[128];
+	int32_t time[2];
+	nvlist_t *nvl;
 	size_t i;
+	struct timespec tv;
+	struct tm *gmt;
 
 	ENSURE0(nvlist_alloc(&nvl, NV_UNIQUE_NAME, 0));
 
 	/* get the current time */
-	if (gettimeofday(&tv, NULL) != 0)
-		err(1, "gettimeofday");
+	if (clock_gettime(CLOCK_REALTIME, &tv) != 0)
+		err(1, "clock_gettime CLOCK_REALTIME");
 
 	if ((gmt = gmtime(&tv.tv_sec)) == NULL)
 		err(1, "gmtime");
@@ -305,12 +311,20 @@ make_nvlist(char *type)
 		err(1, "strftime");
 
 	/* append milliseconds */
-	i = snprintf(date + i, sizeof (date) - i, ".%03ldZ", tv.tv_usec / 1000);
+	i = snprintf(date + i, sizeof (date) - i, ".%03dZ",
+	    (int) (tv.tv_nsec / 1e6));
 	if (i == 0)
 		err(1, "snprintf date");
 
-	ENSURE0(nvlist_add_string(nvl, "date", date));
+	/* get the current hrtime */
+	if (clock_gettime(CLOCK_MONOTONIC, &tv) != 0)
+		err(1, "clock_gettime CLOCK_MONOTONIC");
+	time[0] = tv.tv_sec;
+	time[1] = tv.tv_nsec;
+
 	ENSURE0(nvlist_add_string(nvl, "type", type));
+	ENSURE0(nvlist_add_string(nvl, "date", date));
+	ENSURE0(nvlist_add_int32_array(nvl, "time", time, 2));
 
 	return (nvl);
 }
@@ -337,50 +351,43 @@ print_nvlist(nvlist_t *nvl)
  * Handle creating and printing an "event" message.
  */
 void
-print_event(int event, char *pathname, int final)
+print_event(int event, char *pathname, boolean_t is_final)
 {
-	int i = 0;
-	char *changes[16];
 	nvlist_t *nvl = make_nvlist("event");
+	uint_t i;
+	uint_t count = 0;
 
-	if (event & FILE_ACCESS) {
-		changes[i++] = "FILE_ACCESS";
-	}
-	if (event & FILE_ATTRIB) {
-		changes[i++] = "FILE_ATTRIB";
-	}
-	if (event & FILE_DELETE) {
-		changes[i++] = "FILE_DELETE";
-	}
-	if (event & FILE_EXCEPTION) {
-		changes[i++] = "FILE_EXCEPTION";
-	}
-	if (event & FILE_MODIFIED) {
-		changes[i++] = "FILE_MODIFIED";
-	}
-	if (event & FILE_RENAME_FROM) {
-		changes[i++] = "FILE_RENAME_FROM";
-	}
-	if (event & FILE_RENAME_TO) {
-		changes[i++] = "FILE_RENAME_TO";
-	}
-	if (event & FILE_TRUNC) {
-		changes[i++] = "FILE_TRUNC";
-	}
-	if (event & FILE_NOFOLLOW) {
-		changes[i++] = "FILE_NOFOLLOW";
-	}
-	if (event & MOUNTEDOVER) {
-		changes[i++] = "MOUNTEDOVER";
-	}
-	if (event & UNMOUNTED) {
-		changes[i++] = "UNMOUNTED";
+	/* Map event port file event flags to strings */
+	struct flag_names {
+		int fn_flag;
+		char *fn_name;
+	};
+	static struct flag_names flags[] = {
+		{ FILE_ACCESS, "FILE_ACCESS" },
+		{ FILE_ATTRIB, "FILE_ATTRIB" },
+		{ FILE_DELETE, "FILE_DELETE" },
+		{ FILE_EXCEPTION, "FILE_EXCEPTION" },
+		{ FILE_MODIFIED, "FILE_MODIFIED" },
+		{ FILE_RENAME_FROM, "FILE_RENAME_FROM" },
+		{ FILE_RENAME_TO, "FILE_RENAME_TO" },
+		{ FILE_TRUNC, "FILE_TRUNC" },
+		{ FILE_NOFOLLOW, "FILE_NOFOLLOW" },
+		{ MOUNTEDOVER, "MOUNTEDOVER" },
+		{ UNMOUNTED, "UNMOUNTED" }
+	};
+	static const uint_t num_flags = (sizeof (flags) / sizeof (flags[0]));
+	char *changes[num_flags];
+
+	for (i = 0; i < num_flags; i++) {
+		if ((event & flags[i].fn_flag) != 0) {
+			changes[count++] = flags[i].fn_name;
+		}
 	}
 
-	ENSURE0(nvlist_add_string_array(nvl, "changes", changes, i));
+	ENSURE0(nvlist_add_string_array(nvl, "changes", changes, count));
 	ENSURE0(nvlist_add_string(nvl, "pathname", pathname));
 	ENSURE0(nvlist_add_int32(nvl, "revents", event));
-	ENSURE0(nvlist_add_boolean_value(nvl, "final", final));
+	ENSURE0(nvlist_add_boolean_value(nvl, "final", is_final));
 
 	print_nvlist(nvl);
 
@@ -405,20 +412,20 @@ print_ready()
  * handles creating and printing an "error" message.
  */
 void
-print_error(uint32_t key, uint32_t code, const char *message_fmt, ...)
+print_error(uint64_t key, uint32_t code, const char *message_fmt, ...)
 {
 	va_list arg_ptr;
 	char message[4096];
 	nvlist_t *nvl = make_nvlist("error");
 
 	va_start(arg_ptr, message_fmt);
-	if (vsnprintf(message, 4096, message_fmt, arg_ptr) < 0) {
+	if (vsnprintf(message, sizeof (message), message_fmt, arg_ptr) < 0) {
 		perror("fswatcher: vsnprintf");
 		abort();
 	}
 	va_end(arg_ptr);
 
-	ENSURE0(nvlist_add_uint32(nvl, "key", key));
+	ENSURE0(nvlist_add_uint64(nvl, "key", key));
 	ENSURE0(nvlist_add_uint32(nvl, "code", code));
 	ENSURE0(nvlist_add_string(nvl, "message", message));
 
@@ -432,7 +439,7 @@ print_error(uint32_t key, uint32_t code, const char *message_fmt, ...)
  * and message and handles creating and printing a "result" message.
  */
 void
-print_response(uint32_t key, uint32_t code, const char *pathname,
+print_response(uint64_t key, uint32_t code, const char *pathname,
     const char *message_fmt, ...)
 {
 	va_list arg_ptr;
@@ -440,13 +447,13 @@ print_response(uint32_t key, uint32_t code, const char *pathname,
 	nvlist_t *nvl = make_nvlist("response");
 
 	va_start(arg_ptr, message_fmt);
-	if (vsnprintf(message, 4096, message_fmt, arg_ptr) < 0) {
+	if (vsnprintf(message, sizeof (message), message_fmt, arg_ptr) < 0) {
 		perror("fswatcher: vsnprintf");
 		abort();
 	}
 	va_end(arg_ptr);
 
-	ENSURE0(nvlist_add_uint32(nvl, "key", key));
+	ENSURE0(nvlist_add_uint64(nvl, "key", key));
 	ENSURE0(nvlist_add_uint32(nvl, "code", code));
 	ENSURE0(nvlist_add_string(nvl, "pathname", pathname));
 	ENSURE0(nvlist_add_string(nvl, "message", message));
@@ -464,35 +471,37 @@ print_response(uint32_t key, uint32_t code, const char *pathname,
  * print_status prints a message of type "response"
  */
 void
-print_status(uint32_t key)
+print_status(uint64_t key)
 {
-	int numnodes;
+	ulong_t numnodes;
 	char **filenames;
 	struct files_tree_node *ftn;
-	int i = 0;
+	ulong_t i = 0;
 	nvlist_t *nvl = make_nvlist("response");
 	nvlist_t *data_nvl = fnvlist_alloc();
 
-	ENSURE0(nvlist_add_uint32(nvl, "key", key));
+	ENSURE0(nvlist_add_uint64(nvl, "key", key));
 	ENSURE0(nvlist_add_uint32(nvl, "code", RESULT_SUCCESS));
 	ENSURE0(nvlist_add_string(nvl, "result", "SUCCESS"));
 
-	// get all nodes in the avl tree
+	/* get all nodes in the avl tree */
 	numnodes = avl_numnodes(&files_tree);
 	filenames = malloc(numnodes * (sizeof (char *)));
 
 	if (filenames == NULL)
 		err(1, "malloc");
 
-	// walk the avl tree and add each filename
+	/* walk the avl tree and add each filename */
 	for (ftn = avl_first(&files_tree); ftn != NULL;
 	    ftn = AVL_NEXT(&files_tree, ftn)) {
 
 		filenames[i++] = ftn->name;
 	}
 
-	// all STATUS data is stored in a separate nvl that is attached to the
-	// "data" key of the response object.
+	/*
+	 * all STATUS data is stored in a separate nvl that is attached to the
+	 * "data" key of the response object.
+	 */
 	ENSURE0(nvlist_add_string_array(data_nvl, "files", filenames, i));
 	ENSURE0(nvlist_add_uint32(data_nvl, "files_count", numnodes));
 	ENSURE0(nvlist_add_int32(data_nvl, "pid", getpid()));
@@ -574,26 +583,24 @@ destroy_handle(struct files_tree_node *ftn)
 int
 stat_file(const char *path, struct stat *buf)
 {
-	int stat_err;
-	int stat_ret;
 	int i;
 
 	for (i = 0; i < MAX_STAT_RETRY; i++) {
-		stat_ret = stat(path, buf);
-		stat_err = errno;
+		int stat_ret = stat(path, buf);
+		int stat_err = errno;
 
-		// return immediately upon success
+		/* return immediately upon success */
 		if (stat_ret == 0)
 			return (0);
 
-		// error from stat that means we can't retry - just return it
+		/* error from stat that means we can't retry, just return it */
 		if (stat_err != EINTR)
 			return (stat_err);
 
-		// Interrupted by signal, try again...
+		/* Interrupted by signal, try again... */
 	}
 
-	// if we are here, give up
+	/* if we are here, give up */
 	fprintf(stderr, "failed to stat %s more than %d times\n",
 	    path, MAX_STAT_RETRY);
 	abort();
@@ -659,10 +666,10 @@ get_stat(char *pathname, struct stat *sb)
  * exists we cannot rearm. In that case we set the 'final' flag in the response.
  */
 void
-check_and_rearm_event(uint32_t key, char *name, int revents,
+check_and_rearm_event(uint64_t key, char *name, int revents,
     struct files_tree_node *ftn)
 {
-	int final = 0;
+	boolean_t is_final = B_FALSE;
 	struct stat sb;
 	int stat_ret;
 	int pa_ret;
@@ -690,7 +697,7 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 	    revents & FILE_DELETE || revents & FILE_RENAME_FROM ||
 	    revents & UNMOUNTED || revents & MOUNTEDOVER) {
 
-		final = 1;
+		is_final = B_TRUE;
 	}
 
 	if (key != SYSTEM_KEY && stat_ret != 0) {
@@ -701,19 +708,19 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 		print_response(key, RESULT_FAILURE, name,
 		    "stat(2) failed with errno %d: %s",
 		    stat_ret, strerror(stat_ret));
-		assert(final);
+		assert(is_final);
 	}
 
-	if (final) {
+	if (is_final) {
 		/* We're not going to re-watch the file, so cleanup */
 		if (revents != 0) {
-			print_event(revents, name, final);
+			print_event(revents, name, B_TRUE);
 		}
 		destroy_handle(ftn);
 		return;
 	}
 
-	// (re)register watch
+	/* (re)register watch */
 	fobjp = &ftn->fobj;
 	fobjp->fo_atime = sb.st_atim;
 	fobjp->fo_mtime = sb.st_mtim;
@@ -746,7 +753,7 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
 	 * being seen.
 	 */
 	assert(revents != 0);
-	print_event(revents, name, final);
+	print_event(revents, name, B_FALSE);
 
 	if (pa_ret == -1) {
 		print_error(key, ERR_CANNOT_ASSOCIATE,
@@ -760,7 +767,7 @@ check_and_rearm_event(uint32_t key, char *name, int revents,
  * Only called from stdin thread. Attempts to watch pathname.
  */
 void
-watch_path(char *pathname, uint32_t key)
+watch_path(char *pathname, uint64_t key)
 {
 	struct files_tree_node *ftn;
 	char *dupname;
@@ -792,11 +799,10 @@ watch_path(char *pathname, uint32_t key)
  * Only called from stdin thread. Attempts to unwatch pathname.
  */
 void
-unwatch_path(char *pathname, uint32_t key)
+unwatch_path(char *pathname, uint64_t key)
 {
 	struct file_obj *fobjp;
 	int ret;
-
 	struct files_tree_node *ftn;
 
 	ftn = find_handle(pathname);
@@ -846,7 +852,7 @@ unwatch_path(char *pathname, uint32_t key)
 }
 
 /*
- * process one line of stdin
+ * Process one line of stdin
  *
  * returns 0 if we can continue, otherwise returns a value suitable
  * for exiting the program with.
@@ -854,30 +860,25 @@ unwatch_path(char *pathname, uint32_t key)
 void
 process_stdin_line(char *str)
 {
-	char cmd[MAX_CMD_LEN + 1] = {'\0'};
-	uint32_t key;
-	char key_str[MAX_KEY_LEN + 2];
-	char path[MAX_CMD_LEN + 1] = {'\0'};
+	char cmd[MAX_CMD_LEN + 1];
+	char path[MAX_CMD_LEN + 1];
 	int res;
-	char sscanf_fmt[MAX_FMT_LEN];
+	unsigned long long key;
 
-	/* read one character past MAX_KEY_LEN so we know if it's too long */
-	snprintf(sscanf_fmt, MAX_FMT_LEN, "%%%ds %%s %%s", MAX_KEY_LEN + 1);
-	res = sscanf(str, sscanf_fmt, key_str, cmd, path);
+	cmd[0] = '\0';
+	path[0] = '\0';
+
+	if (strlen(str) > MAX_CMD_LEN) {
+		print_error(SYSTEM_KEY, ERR_INVALID_COMMAND,
+		    "command line too long");
+		return;
+	}
+
+	res = sscanf(str, "%llu %s %s", &key, cmd, path);
 
 	if (!(res == 2 || res == 3)) {
 		print_error(SYSTEM_KEY, ERR_INVALID_COMMAND,
 		    "invalid command line");
-		return;
-	}
-
-	/* convert key to a number we can work with it */
-	key = strtoul(key_str, NULL, 10);
-	if ((strlen(key_str) > MAX_KEY_LEN) ||
-	    (key == ULONG_MAX && errno == ERANGE)) {
-
-		print_error(SYSTEM_KEY, ERR_INVALID_KEY,
-		    "invalid key: > ULONG_MAX");
 		return;
 	}
 
@@ -928,7 +929,7 @@ wait_for_stdin(void *arg)
 	char str[MAX_CMD_LEN + 1];
 
 	/* read stdin line-by-line indefinitely */
-	while (fgets(str, MAX_CMD_LEN + 1, stdin) != NULL) {
+	while (fgets(str, sizeof (str), stdin) != NULL) {
 		mutex_lock(&work_mutex);
 		process_stdin_line(str);
 		mutex_unlock(&work_mutex);

@@ -47,6 +47,7 @@ test('test queue unpaused 100 tasks', function (t) {
 
 test('test queue paused 100 tasks', function (t) {
     var tasks = 100;
+    var queue_running = false;
 
     var q = new Queue({
         log: log,
@@ -59,10 +60,17 @@ test('test queue paused 100 tasks', function (t) {
         q.enqueue({
             description: 'task ' + j,
             func: function (extras, cb) {
+                if (!queue_running) {
+                    t.ok(false, 'queue started too early');
+                    t.end();
+                    return;
+                }
+
                 if (++i === tasks) {
                     t.ok(true, 'tasks completed');
                     t.end();
                 }
+
                 cb();
             }
         });
@@ -73,6 +81,8 @@ test('test queue paused 100 tasks', function (t) {
         t.equal(q.paused, true, 'queue is paused');
         t.equal(q.paused_queue.length, tasks, 'tasks currently paused: '
             + tasks);
+
+        queue_running = true;
         q.resume();
     }, 10);
 });

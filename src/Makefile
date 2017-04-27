@@ -82,14 +82,17 @@ JS_CHECK_TARGETS=\
 	node_modules/{system,onlyif,net-boot-config}.js \
 	net-boot-config \
 	vm/sbin/*.js \
+	vm/node_modules/diff.js \
 	vm/node_modules/dladm.js \
 	vm/node_modules/expander.js \
+	vm/node_modules/fswatcher.js \
 	vm/node_modules/ip.js \
 	vm/node_modules/nic.js \
 	vm/node_modules/proptable.js \
 	vm/node_modules/utils.js \
 	vm/node_modules/VM.js \
 	vm/node_modules/qmp.js \
+	vm/node_modules/queue.js \
 	vm/node_modules/openonerrlogger.js \
 	vm/node_modules/vmload/*.js \
 	vm/node_modules/vminfod/*.js \

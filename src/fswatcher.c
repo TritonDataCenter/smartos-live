@@ -36,9 +36,9 @@
  * The first will cause <pathname> to be added to the watch list. The second
  * will cause the watch for the specified path to be removed.  The third will
  * print this programs status to stdout. The <KEY> must be an integer in the
- * range 1-18446744073709551615 (inclusive). Leading 0's will be removed. NOTE:
- * 0 is a special key that will be used in output for errors which were not
- * directly the result of a command.
+ * range 1-UINT64_MAX (inclusive). Leading 0's will be removed. NOTE:  0 is a
+ * special key that will be used in output for errors which were not directly
+ * the result of a command.
  *
  * "pathname" can be any type of file that event ports supports (file,
  * directory, pipe, etc. see port_associate(3C) for a full list).  This program
@@ -139,7 +139,7 @@
 #define SYSTEM_KEY 0       /* reserved key for system events */
 
 /* longest command is '<KEY> UNWATCH <path>' */
-#define MAX_KEY_LEN 20     /* number of digits 0-18446744073709551615 (2^64) */
+#define MAX_KEY_LEN 20     /* number of digits 0-UINT64_MAX */
 #define MAX_CMD_LEN (MAX_KEY_LEN + 1 + 7 + 1 + PATH_MAX + 1)
 
 /*
@@ -270,7 +270,7 @@ files_tree_node_comparator(const void *l, const void *r)
  * hashing algorithm, really any quick hashing algorithm will work here, since
  * when a hash collision is detected a full strcmp() is performed.
  */
-unsigned long
+static unsigned long
 djb2(char *str)
 {
 	unsigned long hash = 5381;
@@ -287,34 +287,14 @@ djb2(char *str)
  *
  * nvlist must be freed by the caller
  */
-nvlist_t *
+static nvlist_t *
 make_nvlist(char *type)
 {
-	char date[128];
 	int32_t time[2];
 	nvlist_t *nvl;
-	size_t i;
 	struct timespec tv;
-	struct tm *gmt;
 
 	ENSURE0(nvlist_alloc(&nvl, NV_UNIQUE_NAME, 0));
-
-	/* get the current time */
-	if (clock_gettime(CLOCK_REALTIME, &tv) != 0)
-		err(1, "clock_gettime CLOCK_REALTIME");
-
-	if ((gmt = gmtime(&tv.tv_sec)) == NULL)
-		err(1, "gmtime");
-
-	i = strftime(date, sizeof (date), "%Y-%m-%dT%H:%M:%S", gmt);
-	if (i == 0)
-		err(1, "strftime");
-
-	/* append milliseconds */
-	i = snprintf(date + i, sizeof (date) - i, ".%03dZ",
-	    (int) (tv.tv_nsec / 1e6));
-	if (i == 0)
-		err(1, "snprintf date");
 
 	/* get the current hrtime */
 	if (clock_gettime(CLOCK_MONOTONIC, &tv) != 0)
@@ -323,7 +303,6 @@ make_nvlist(char *type)
 	time[1] = tv.tv_nsec;
 
 	ENSURE0(nvlist_add_string(nvl, "type", type));
-	ENSURE0(nvlist_add_string(nvl, "date", date));
 	ENSURE0(nvlist_add_int32_array(nvl, "time", time, 2));
 
 	return (nvl);
@@ -335,7 +314,7 @@ make_nvlist(char *type)
  *
  * This function handles fflushing stdout.
  */
-void
+static void
 print_nvlist(nvlist_t *nvl)
 {
 	if (opts.opt_j)
@@ -350,7 +329,7 @@ print_nvlist(nvlist_t *nvl)
 /*
  * Handle creating and printing an "event" message.
  */
-void
+static void
 print_event(int event, char *pathname, boolean_t is_final)
 {
 	nvlist_t *nvl = make_nvlist("event");
@@ -397,7 +376,7 @@ print_event(int event, char *pathname, boolean_t is_final)
 /*
  * Handle creating and printing a "ready" message.
  */
-void
+static void
 print_ready()
 {
 	nvlist_t *nvl = make_nvlist("ready");
@@ -411,7 +390,7 @@ print_ready()
  * print_error() takes a key, code (one of the ErrorCodes) and message and
  * handles creating and printing an "error" message.
  */
-void
+static void
 print_error(uint64_t key, uint32_t code, const char *message_fmt, ...)
 {
 	va_list arg_ptr;
@@ -438,7 +417,7 @@ print_error(uint64_t key, uint32_t code, const char *message_fmt, ...)
  * print_response() takes a key, code (RESULT_SUCCESS||RESULT_FAILURE), pathname
  * and message and handles creating and printing a "result" message.
  */
-void
+static void
 print_response(uint64_t key, uint32_t code, const char *pathname,
     const char *message_fmt, ...)
 {
@@ -470,7 +449,7 @@ print_response(uint64_t key, uint32_t code, const char *pathname,
  *
  * print_status prints a message of type "response"
  */
-void
+static void
 print_status(uint64_t key)
 {
 	ulong_t numnodes;
@@ -519,7 +498,7 @@ print_status(uint64_t key)
  * find_handle() takes a pathname and returns the files_tree_node struct from
  * the files_tree treeh. returns NULL if no pathname matches.
  */
-struct files_tree_node *
+static struct files_tree_node *
 find_handle(char *pathname)
 {
 	struct files_tree_node lookup;
@@ -533,7 +512,7 @@ find_handle(char *pathname)
 /*
  * insert_handle() inserts a files_tree_node struct into the files_tree tree.
  */
-void
+static void
 add_handle(struct files_tree_node *ftn)
 {
 	avl_add(&files_tree, ftn);
@@ -542,34 +521,22 @@ add_handle(struct files_tree_node *ftn)
 /*
  * remove_handle() removes a files_tree_node struct from the files_tree tree.
  */
-void
+static void
 remove_handle(struct files_tree_node *ftn)
 {
 	avl_remove(&files_tree, ftn);
 }
 
 /*
- * free_handle() frees a file_tree_node struct
- */
-void
-free_handle(struct files_tree_node *ftn)
-{
-	if (ftn->name) {
-		free(ftn->name);
-		ftn->name = NULL;
-	}
-	free(ftn);
-}
-
-/*
  * destroy_handle() removes and frees a files_tree_node struct from the
  * files_tree tree.
  */
-void
+static void
 destroy_handle(struct files_tree_node *ftn)
 {
 	remove_handle(ftn);
-	free_handle(ftn);
+	free(ftn->name);
+	free(ftn);
 }
 
 /*
@@ -580,7 +547,7 @@ destroy_handle(struct files_tree_node *ftn)
  * WARNING: If it gets EINTR too many times (more than MAX_STAT_RETRY), this
  * will call abort().
  */
-int
+static int
 stat_file(const char *path, struct stat *buf)
 {
 	int i;
@@ -614,7 +581,7 @@ stat_file(const char *path, struct stat *buf)
  *  0     - success: atime, ctime and mtime will be populated
  *  non-0 - failed: file could not be accessed (return is stat(2) errno)
  */
-int
+static int
 get_stat(char *pathname, struct stat *sb)
 {
 	int stat_ret;
@@ -665,7 +632,7 @@ get_stat(char *pathname, struct stat *sb)
  * to do the stat() before we print the results since if the file no longer
  * exists we cannot rearm. In that case we set the 'final' flag in the response.
  */
-void
+static void
 check_and_rearm_event(uint64_t key, char *name, int revents,
     struct files_tree_node *ftn)
 {
@@ -766,7 +733,7 @@ check_and_rearm_event(uint64_t key, char *name, int revents,
 /*
  * Only called from stdin thread. Attempts to watch pathname.
  */
-void
+static void
 watch_path(char *pathname, uint64_t key)
 {
 	struct files_tree_node *ftn;
@@ -798,7 +765,7 @@ watch_path(char *pathname, uint64_t key)
 /*
  * Only called from stdin thread. Attempts to unwatch pathname.
  */
-void
+static void
 unwatch_path(char *pathname, uint64_t key)
 {
 	struct file_obj *fobjp;
@@ -857,7 +824,7 @@ unwatch_path(char *pathname, uint64_t key)
  * returns 0 if we can continue, otherwise returns a value suitable
  * for exiting the program with.
  */
-void
+static void
 process_stdin_line(char *str)
 {
 	char cmd[MAX_CMD_LEN + 1];
@@ -922,7 +889,7 @@ process_stdin_line(char *str)
 /*
  * Worker thread waits here for stdin data.
  */
-void *
+static void *
 wait_for_stdin(void *arg)
 {
 	(void) arg;
@@ -945,7 +912,7 @@ wait_for_stdin(void *arg)
 /*
  * Worker thread waits here for event port events.
  */
-void *
+static void *
 wait_for_events(void *arg)
 {
 	(void) arg;

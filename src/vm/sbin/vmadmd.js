@@ -45,7 +45,7 @@ var qs = require('querystring');
 var url = require('url');
 var util = require('util');
 var vasync = require('vasync');
-var vminfod = require('/usr/vm/node_modules/vminfod/client');
+var ZoneWatcher = require('/usr/vm/node_modules/zonewatcher').ZoneWatcher;
 
 /*
  * The DOCKER_RUNTIME_DELAY_RESET parameter is used when restarting a Docker VM
@@ -925,11 +925,6 @@ function updateZoneStatus(ev)
         return;
     }
 
-    if (ev.newstate === 'installed') {
-        // XXX temporary fix for vminfod
-        ev.newstate = 'uninitialized';
-    }
-
     // Report state changes to listeners
     if (ev.newstate === 'running') {
         log.trace('emitting: running, ' + ev.zonename);
@@ -1175,49 +1170,12 @@ function updateZoneStatus(ev)
 
 function startZoneWatcher(callback)
 {
-    var vs = new vminfod.VminfodEventStream({
+    var zw = new ZoneWatcher({
         name: 'vmadmd ZoneWatcher',
         log: log
     });
-    vs.on('readable', function () {
-        var ev;
-        while ((ev = vs.read()) !== null) {
-            // make a fake sysevent obj
-            var sysev = {
-                data: {
-                    when: ev.ts,
-                    zonename: ev.zonename
-                }
-            };
-            switch (ev.type) {
-            case 'create':
-                sysev.data.oldstate = '';
-                sysev.data.newstate = ev.vm.zone_state;
-                log.debug({ev: sysev}, 'zone watcher create event');
-                callback(sysev);
-                break;
-            case 'delete':
-                sysev.data.newstate = '';
-                log.debug({ev: sysev}, 'zone watcher delete event');
-                callback(sysev);
-                break;
-            default:
-                assert(ev.changes, 'ev.changes');
-                for (var i = 0; i < ev.changes.length; i++) {
-                    var change = ev.changes[i];
-                    if (change.path.length === 1
-                        && change.path[0] === 'zone_state') {
-
-                        sysev.data.oldstate = change.from;
-                        sysev.data.newstate = change.to;
-                        log.debug({ev: sysev}, 'zone watcher modify event');
-                        callback(sysev);
-                        break;
-                    }
-                }
-                break;
-            }
-        }
+    zw.on('event', function (sysev) {
+        callback(sysev);
     });
 }
 

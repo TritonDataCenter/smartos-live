@@ -284,7 +284,7 @@ test('check default create_timestamp', function (t) {
     }, state, [
         function (cb) {
             var vs = new vminfod.VminfodEventStream('test-defaults.js');
-            vs.on('ready', function () {
+            vs.once('ready', function () {
                 vasync.parallel({
                     funcs: [
                         function (cb2) {

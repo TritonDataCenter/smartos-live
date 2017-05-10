@@ -368,7 +368,7 @@ MetadataAgent.prototype.start = function start() {
         name: 'Metadata Agent - VminfodWatcher'
     });
 
-    self.vminfod_watcher.on('ready', function (ready_ev) {
+    self.vminfod_watcher.once('ready', function (ready_ev) {
         var vms = self.vminfod_watcher.vms();
         self.createServersOnExistingZones(vms);
     });

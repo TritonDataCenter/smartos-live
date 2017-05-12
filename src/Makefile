@@ -67,7 +67,6 @@ zfs_recv :	LIBS +=		-lsocket
 zfs_send :	LIBS +=		-lsocket
 vmbundle :	CPPFLAGS +=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 sdc-on-tty :	CFLAGS +=	$(OPT_FLAG)
-zoneevent :	LIBS +=		-lnvpair -lsysevent
 sysevent :	LIBS +=		-lnvpair -lsysevent
 sysinfo_mod.so : CPPFLAGS +=	-D_REENTRANT
 sysinfo_mod.so : CFLAGS +=	-fpic -Wno-unused-parameter
@@ -97,7 +96,7 @@ JS_CHECK_TARGETS=\
 	vm/node_modules/vmload/*.js \
 	vm/node_modules/vminfod/*.js \
 	vm/node_modules/sysevent-stream.js \
-	vm/node_modules/zonewatcher.js \
+	vm/node_modules/zoneevent.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
 	vm/common/nictag.js \
@@ -138,7 +137,6 @@ C_CHECK_TARGETS=\
 	vmunbundle.c \
 	zfs_recv.c \
 	zfs_send.c \
-	zoneevent.c \
 	sysinfo_mod.c \
 	sysevent.c \
 	dockerinit/src/dockerexec.c \
@@ -287,7 +285,6 @@ TARGETS = \
 	vmunbundle \
 	zfs_recv \
 	zfs_send \
-	zoneevent \
 	sysevent \
 	sysinfo_mod.so \
 	nomknod.so.32 \
@@ -372,7 +369,7 @@ install: all $(SUBDIRS)
 	cp fswatcher $(DESTDIR)/usr/vm/sbin/fswatcher
 	cp dockerinit/build/dockerinit $(DESTDIR)/usr/vm/sbin/dockerinit
 	cp dockerinit/build/dockerexec $(DESTDIR)/usr/vm/sbin/dockerexec
-	cp zoneevent $(DESTDIR)/usr/vm/sbin/zoneevent
+	cp zoneevent.js $(DESTDIR)/usr/vm/sbin/zoneevent
 	cp zfs_send $(DESTDIR)/usr/vm/sbin/zfs_send
 	cp zfs_recv $(DESTDIR)/usr/vm/sbin/zfs_recv
 	cp vmunbundle $(DESTDIR)/usr/vm/sbin/vmunbundle

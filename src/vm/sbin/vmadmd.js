@@ -45,7 +45,7 @@ var qs = require('querystring');
 var url = require('url');
 var util = require('util');
 var vasync = require('vasync');
-var ZoneWatcher = require('/usr/vm/node_modules/zonewatcher').ZoneWatcher;
+var ZoneEvent = require('/usr/vm/node_modules/zoneevent').ZoneEvent;
 
 /*
  * The DOCKER_RUNTIME_DELAY_RESET parameter is used when restarting a Docker VM
@@ -903,7 +903,7 @@ function updateZoneStatus(ev)
     ev = ev.data;
 
     if (! ev.hasOwnProperty('zonename') || ! ev.hasOwnProperty('oldstate')
-        || ! ev.hasOwnProperty('newstate') || ! ev.hasOwnProperty('when')) {
+        || ! ev.hasOwnProperty('newstate') || ! ev.hasOwnProperty('date')) {
 
         log.debug('skipping unknown event: ' + JSON.stringify(ev, null, 2));
         return;
@@ -959,14 +959,14 @@ function updateZoneStatus(ev)
     // if we've never seen this VM before, we always load once.
     if (!seen_vms.hasOwnProperty(ev.zonename)) {
         log.debug(ev.zonename + ' is a VM we haven\'t seen before and went '
-            + 'from ' + ev.oldstate + ' to ' + ev.newstate + ' at ' + ev.when);
+            + 'from ' + ev.oldstate + ' to ' + ev.newstate + ' at ' + ev.date);
         seen_vms[ev.zonename] = {};
         // We'll continue on to load this VM below with VM.load()
     } else if (!seen_vms[ev.zonename].hasOwnProperty('uuid')) {
         // We just saw this machine and haven't finished loading it the first
         // time.
         log.debug('Already loading VM ' + ev.zonename + ' ignoring transition'
-            + ' from ' + ev.oldstate + ' to ' + ev.newstate + ' at ' + ev.when);
+            + ' from ' + ev.oldstate + ' to ' + ev.newstate + ' at ' + ev.date);
         return;
     } else if (PROV_WAIT[seen_vms[ev.zonename].uuid]) {
         // We're already waiting for this machine to provision, other
@@ -985,7 +985,7 @@ function updateZoneStatus(ev)
         || ev.newstate === 'uninitialized')) {
 
         log.info('' + ev.zonename + ' (kvm) went from ' + ev.oldstate
-            + ' to ' + ev.newstate + ' at ' + ev.when);
+            + ' to ' + ev.newstate + ' at ' + ev.date);
         // Continue on to VM.load()
     } else if (seen_vms[ev.zonename].docker
         && (ev.newstate === 'uninitialized')) {
@@ -1001,7 +1001,7 @@ function updateZoneStatus(ev)
             'zonepath'
         ]}, function (err, vmobj) {
             log.info(ev.zonename + ' (docker) went from ' + ev.oldstate + ' to '
-                + ev.newstate + ' at ' + ev.when);
+                + ev.newstate + ' at ' + ev.date);
 
             /*
              * If we stop while autoboot is set, the user was intending for it
@@ -1041,7 +1041,7 @@ function updateZoneStatus(ev)
         if (!reprovisioning) {
             log.trace('ignoring transition for ' + ev.zonename + ' ('
                 + seen_vms[ev.zonename].brand + ') from ' + ev.oldstate + ' to '
-                + ev.newstate + ' at ' + ev.when);
+                + ev.newstate + ' at ' + ev.date);
             return;
         }
     }
@@ -1168,14 +1168,14 @@ function updateZoneStatus(ev)
     });
 }
 
-function startZoneWatcher(callback)
+function startZoneEvent(callback)
 {
-    var zw = new ZoneWatcher({
-        name: 'vmadmd ZoneWatcher',
+    var ze = new ZoneEvent({
+        name: 'vmadmd ZoneEvent',
         log: log
     });
-    zw.on('event', function (sysev) {
-        callback(sysev);
+    ze.on('event', function (ev) {
+        callback(ev);
     });
 }
 
@@ -2369,7 +2369,7 @@ function main()
 {
     // XXX TODO: load fs-ext so we can flock a pid file to be exclusive
 
-    startZoneWatcher(updateZoneStatus);
+    startZoneEvent(updateZoneStatus);
     startHTTPHandler();
     startTraceLoop();
     startSeenCleaner();

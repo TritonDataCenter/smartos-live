@@ -191,10 +191,10 @@ function do_events(args) {
             var zn;
             var date;
             if (opt_f) {
-                date = ev.ts.toISOString();
+                date = ev.date.toISOString();
                 zn = ev.zonename;
             } else {
-                date = ev.ts.toISOString().split('T')[1];
+                date = ev.date.toISOString().split('T')[1];
                 zn = ev.zonename.split('-')[0];
             }
 

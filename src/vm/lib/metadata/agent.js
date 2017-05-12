@@ -379,8 +379,8 @@ MetadataAgent.prototype.start = function start() {
             return;
 
         self.log.debug({
-            delay: (new Date()) - ev.ts,
-            when: ev.ts,
+            delay: (new Date()) - ev.date,
+            when: ev.date,
             zonename: ev.zonename
         }, 'VminfodWatcher saw new zone');
 
@@ -391,8 +391,8 @@ MetadataAgent.prototype.start = function start() {
     self.vminfod_watcher.on('delete', function (ev) {
         // when a zone was deleted, cleanup any cached stuff for it
         self.log.debug({
-            delay: (new Date()) - ev.ts,
-            when: ev.ts,
+            delay: (new Date()) - ev.date,
+            when: ev.date,
             zonename: ev.zonename
         }, 'VminfodWatcher saw zone deletion');
 
@@ -416,8 +416,8 @@ MetadataAgent.prototype.start = function start() {
             return;
 
         self.log.debug({
-            delay: (new Date()) - ev.ts,
-            when: ev.ts,
+            delay: (new Date()) - ev.date,
+            when: ev.date,
             zonename: ev.zonename
         }, 'VminfodWatcher saw KVM zone boot');
 

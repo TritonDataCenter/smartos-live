@@ -1287,7 +1287,7 @@ test('test restart delay reset', function (t) {
                         stops++;
                         events.push({
                             action: 'stop',
-                            time: ev.ts,
+                            time: ev.date,
                             restartcount: im['docker:restartcount'],
                             restartdelay: im['docker:restartdelay']
                         });
@@ -1297,7 +1297,7 @@ test('test restart delay reset', function (t) {
                         starts++;
                         events.push({
                             action: 'start',
-                            time: ev.ts
+                            time: ev.date
                         });
                     }
                 }

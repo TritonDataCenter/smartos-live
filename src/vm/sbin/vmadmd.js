@@ -900,7 +900,6 @@ function updateZoneStatus(ev)
 {
     var load_fields;
     var reprovisioning = false;
-    ev = ev.data;
 
     if (! ev.hasOwnProperty('zonename') || ! ev.hasOwnProperty('oldstate')
         || ! ev.hasOwnProperty('newstate') || ! ev.hasOwnProperty('date')) {

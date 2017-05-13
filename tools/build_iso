@@ -11,12 +11,14 @@
 #
 
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright (c) 2017, Joyent, Inc.
 #
 
 #
-# Automates the process of building iso and usb images of a smartos build.
-# It uses the latest platform file that's been built.
+# Automates the process of building ISO and USB images of a SmartOS build.  It
+# uses the latest platform file that's been built.  This program should be
+# invoked via the "make iso" and "make usb" targets of the top-level Makefile
+# in "smartos-live.git".
 #
 
 shopt -s xpg_echo
@@ -334,6 +336,8 @@ while getopts "kmo:nhc:" c $@; do
 		;;
 	esac
 done
+
+bi_big_banner "Building \"$bi_type\" image"
 
 #
 # Get us to the root of the workspace

@@ -96,6 +96,7 @@ JS_CHECK_TARGETS=\
 	vm/node_modules/vmload/*.js \
 	vm/node_modules/vminfod/*.js \
 	vm/node_modules/sysevent-stream.js \
+	vm/node_modules/zonecfg.js \
 	vm/node_modules/zoneevent.js \
 	img/lib/*.js \
 	img/sbin/imgadm \

@@ -29,11 +29,9 @@ var assert = require('/usr/node/node_modules/assert-plus');
 var async = require('/usr/node/node_modules/async');
 var bunyan = require('/usr/node/node_modules/bunyan');
 var cp = require('child_process');
-var consts = require('constants');
 var EventEmitter = require('events').EventEmitter;
 var execFile = cp.execFile;
 var fs = require('fs');
-var lock = require('/usr/vm/node_modules/locker').lock;
 var mod_nic = require('/usr/vm/node_modules/nic');
 var net = require('net');
 var VM = require('/usr/vm/node_modules/VM');
@@ -45,6 +43,7 @@ var qs = require('querystring');
 var url = require('url');
 var util = require('util');
 var vasync = require('vasync');
+var zonecfg = require('/usr/vm/node_modules/zonecfg');
 var ZoneEvent = require('/usr/vm/node_modules/zoneevent').ZoneEvent;
 
 /*
@@ -108,20 +107,6 @@ function zfs(args, callback)
     var cmd = '/usr/sbin/zfs';
 
     assert(log, 'no logger passed to zfs()');
-
-    log.debug(cmd + ' ' + args.join(' '));
-    execFile(cmd, args, function (error, stdout, stderr) {
-        if (error) {
-            callback(error, {'stdout': stdout, 'stderr': stderr});
-        } else {
-            callback(null, {'stdout': stdout, 'stderr': stderr});
-        }
-    });
-}
-
-function zonecfg(args, callback)
-{
-    var cmd = '/usr/sbin/zonecfg';
 
     log.debug(cmd + ' ' + args.join(' '));
     execFile(cmd, args, function (error, stdout, stderr) {
@@ -2087,9 +2072,9 @@ function upgradeVM(vmobj, fields, callback)
 
                 image_uuid = origin.split('@')[0].split('/').pop();
                 log.info('setting new image_uuid: ' + image_uuid);
-                zonecfg(['-z', vmobj.zonename, 'add attr; '
+                zonecfg(vmobj.zonename, ['-z', vmobj.zonename, 'add attr; '
                     + 'set name=dataset-uuid; set type=string; set value="'
-                    + image_uuid + '"; end'],
+                    + image_uuid + '"; end'], {log: log},
                     function (add_err, add_fds) {
                         if (add_err) {
                             log.error(add_err);
@@ -2196,8 +2181,8 @@ function upgradeVM(vmobj, fields, callback)
             });
         }, function (cb) {
             if (vmobj.hasOwnProperty('default_gateway')) {
-                zonecfg(['-z', vmobj.zonename,
-                    'remove attr name=default-gateway'],
+                zonecfg(vmobj.zonename, ['-z', vmobj.zonename,
+                    'remove attr name=default-gateway'], {log: log},
                     function (err, fds) {
                         if (err) {
                             log.error(err);
@@ -2246,9 +2231,10 @@ function upgradeVM(vmobj, fields, callback)
 
                 log.info('creation time: ' + creation_timestamp + ' from ZFS');
 
-                zonecfg(['-z', vmobj.zonename, 'add attr; '
+                zonecfg(vmobj.zonename, ['-z', vmobj.zonename, 'add attr; '
                     + 'set name=create-timestamp; set type=string; '
                     + 'set value="' + creation_timestamp + '"; end'],
+                    {log: log},
                     function (zcfg_err, zcfg_fds) {
                         if (zcfg_err) {
                             log.error(zcfg_err);
@@ -2332,8 +2318,10 @@ function upgradeVM(vmobj, fields, callback)
         }, function (cb) {
             // zonecfg update vm-version = 1
             log.debug('setting vm-version = 1');
-            zonecfg(['-z', vmobj.zonename, 'add attr; set name=vm-version; '
+            zonecfg(vmobj.zonename, ['-z', vmobj.zonename,
+                'add attr; set name=vm-version; '
                 + 'set type=string; set value=1; end'],
+                {log: log},
                 function (err, fds) {
                     if (err) {
                         log.error(err);

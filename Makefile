@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2016 Joyent, Inc.
+# Copyright (c) 2017, Joyent, Inc.
 #
 
 ROOT =		$(PWD)
@@ -124,9 +124,8 @@ live: world manifest mancheck_conf boot sdcman $(TOOLS_TARGETS) $(MANCF_FILE)
 	@echo $(OVERLAY_MANIFESTS)
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
-	(cd $(ROOT) && \
-	    pfexec ./tools/build_live $(ROOT)/$(MANIFEST) $(ROOT)/output \
-	    $(OVERLAYS) $(ROOT)/proto $(ROOT)/man/man)
+	./tools/build_live -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output \
+	    $(OVERLAYS) $(ROOT)/proto $(ROOT)/man/man
 
 boot: $(BOOT_TARBALL)
 

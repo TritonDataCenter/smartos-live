@@ -1,25 +1,18 @@
 #!/bin/bash
 #
-# CDDL HEADER START
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
 #
-# The contents of this file are subject to the terms of the
-# Common Development and Distribution License, Version 1.0 only
-# (the "License").  You may not use this file except in compliance
-# with the License.
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
 #
-# You can obtain a copy of the license at COPYING
-# See the License for the specific language governing permissions
-# and limitations under the License.
+
 #
-# When distributing Covered Code, include this CDDL HEADER in each
-# file and include the License file at COPYING.
-# If applicable, add the following below this CDDL HEADER, with the
-# fields enclosed by brackets "[]" replaced with your own identifying
-# information: Portions Copyright [yyyy] [name of copyright owner]
+# Copyright (c) 2017, Joyent, Inc.
 #
-# CDDL HEADER END
-#
-# Copyright 2014, Joyent, Inc. All rights reserved.
 
 set -o xtrace
 
@@ -133,6 +126,22 @@ if [ $? -ne 0 ]; then
         # contents on ramdisk now that zones/config is mounted.
         cp /tmp/SUNWdefault.xml /etc/zones/
         rm -f /tmp/SUNWdefault.xml
+
+        #
+        # We include a manifest of all files shipped in the platform image,
+        # along with an MD5 hash of their contents.  This was originally
+        # shipped as "/var/log/manifest", but once a machine is set up, "/var"
+        # now comes from the pool.  The upshot of this is that every SmartOS
+        # machine has the manifest from the platform at setup time stored in
+        # "/var/log/manifest".  Now that the manifest has moved to an
+        # accessible location, we should remove this file and replace it with a
+        # symbolic link.
+        #
+        if [[ -f '/var/log/manifest' && ! -L '/var/log/manifest' &&
+            ! -e '/var/log/manifest.original' ]]; then
+                mv '/var/log/manifest' '/var/log/manifest.original'
+                ln -s '../../usr/share/smartos/manifest' '/var/log/manifest'
+        fi
 
         if [[ -z $(/bin/bootparams | grep '^smartos=true') ]]; then
             mkdir -p /opt/smartdc/agents/smf

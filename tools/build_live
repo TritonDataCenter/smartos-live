@@ -1,388 +1,844 @@
 #!/bin/bash
 #
-# CDDL HEADER START
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
 #
-# The contents of this file are subject to the terms of the
-# Common Development and Distribution License (the "License").
-# You may not use this file except in compliance with the License.
-#
-# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
-# See the License for the specific language governing permissions
-# and limitations under the License.
-#
-# When distributing Covered Code, include this CDDL HEADER in each
-# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
-# If applicable, add the following below this CDDL HEADER, with the
-# fields enclosed by brackets "[]" replaced with your own identifying
-# information: Portions Copyright [yyyy] [name of copyright owner]
-#
-# CDDL HEADER END
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
 #
 
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
 #
-# Copyright 2016 Joyent, Inc.
+# Copyright (c) 2017, Joyent, Inc.
+#
 
-ROOT=`pwd`
-CUSTOMIZE_SCRIPT=${ROOT}/tools/customize
-SMF_IMPORTER=${ROOT}/tools/smf_import
-SMF_SEEDS=${ROOT}/tools/build_seeds
-BUILDER=${ROOT}/tools/builder/builder
-SCANNER=${ROOT}/tools/scanner
-PWGEN=${ROOT}/tools/pwgen
-GET_STATUS=${ROOT}/tools/build_etcrelease
-MANCHECK="${ROOT}/tools/mancheck/mancheck"
-MANCHECK_CONF_D="${ROOT}/mancheck.conf.d"
-TZCHECK="${ROOT}/tools/tzcheck/tzcheck"
+#
+# Build the platform image (i.e., "boot_archive", "unix", etc) and the platform
+# tar archive.  This program should be invoked via the "make live" target of
+# the top-level Makefile in "smartos-live.git".
+#
 
-BUILDSTAMP=$(cat ${ROOT}/proto/buildstamp)
-if [[ -z ${BUILDSTAMP} ]]; then
-    echo "Failed to get buildstamp from proto directory."
-    exit 1
+set -o pipefail
+set -o nounset
+
+if ! bi_wsroot=$(cd "$(dirname "$0")/.." && pwd) ||
+    ! bi_arg0=$(basename "$0"); then
+	printf 'failed to locate working directory\n' >&2
+	exit 1
 fi
-LOGFILE="${ROOT}/log/build_live.${BUILDSTAMP}.log"
-ERROR=0
-PLATFORM=i86pc
-ISA=i386
-ARCH64=amd64
-RSIZE=272000
-USIZE=448000
-KERNEL_64=platform/$PLATFORM/kernel/$ARCH64/unix
-if [[ -f ${ROOT}/configure-buildver ]]; then
-    BUILDVER=$(head -n1 ${ROOT}/configure-buildver)
-fi
-if [[ -n "${BUILDVER}" ]]; then
-    PREFIX=platform-${BUILDVER}-${BUILDSTAMP}
-else
-    PREFIX=platform-${BUILDSTAMP}
-fi
-BOOT_ARCHIVE_64=${PREFIX}/$PLATFORM/$ARCH64/boot_archive
-OUT_KERNEL_64=${PREFIX}/$PLATFORM/kernel/$ARCH64/unix
+bi_type='live'
+bi_uid=
 
-if [ "$(id -u)" != "0" ]; then
-  echo "You must have euid 0 to run this tool."
-  exit 1
+if ! . "$bi_wsroot/tools/lib/build_common.sh"; then
+	printf 'failed to source "build_common.sh"\n' >&2
+	exit 1
 fi
 
-# Send a copy of stdout and stderr to LOGFILE
-exec > >(tee ${LOGFILE}) 2>&1
+bi_manifest=
+bi_out_dir=
+declare -a bi_in_dirs
 
-export PATH=/usr/sbin:/usr/bin:/sbin:/opt/local/bin
+#
+# These variables are populated by "bi_find_buildstamp()":
+#
+bi_buildstamp=
+bi_buildver=
+bi_prefix=
 
-usage() {
-    echo "This tool is for building a live boot_archive amd64."
-    echo ""
-    echo "Usage: ${0##*/}: <manifest> <outdir> <dir> [<dir> <dir> ...]"
-    exit 1
+bi_archive=
+bi_kernel=
+
+#
+# The "bi_create_ramdisk" function stashes the lofi device path for the
+# most recent ramdisk image in this variable:
+#
+bi_lofi_last=
+
+bi_lofi_root=
+bi_lofi_usr=
+
+bi_file_root=
+bi_file_usr=
+
+bi_mnt_root=
+bi_mnt_usr=
+
+bi_log=
+
+
+function usage
+{
+	cat <<-USAGE
+	Usage: $bi_arg0 -m MANIFEST_FILE -o OUTPUT_DIR { INPUT_DIR ... }
+	USAGE
+	exit 2
 }
 
-MANIFEST=$1
-shift
-OUT_DIR=$1
-shift
-IN_DIRS=$*
+function fail_cleanup
+{
+	if [[ -n ${NO_CLEANUP:-} ]]; then
+		printf 'WARNING: skipping cleaning; tmpdir = %s\n' \
+		    "$bi_tmpdir"
+		return
+	fi
 
-# We need the manifest file
-if [ -z "${MANIFEST}" ] || [ ! -f "${MANIFEST}" ]; then
-    echo "FATAL: <manifest> file required"
-    usage
-else
-    # translate to abs path
-    NEW_MANIFEST=$(cd $(dirname ${MANIFEST}) && pwd)/$(basename ${MANIFEST})
-    MANIFEST=${NEW_MANIFEST}
-fi
+	#
+	# Try to make sure we aren't sitting in a directory that we wish
+	# to unmount or remove.
+	#
+	cd /tmp
 
-if [ -z "${OUT_DIR}" ]; then
-    echo "FATAL: <outdir> required."
-    usage
-fi
+	if [[ -n $bi_mnt_usr ]]; then
+		pfexec umount -f "$bi_mnt_usr"
+	fi
+	if [[ -n $bi_mnt_root ]]; then
+		pfexec umount -f "$bi_mnt_root"
+	fi
 
-if [ -z "${IN_DIRS}" ]; then
-    echo "FATAL: at least one <dir> required."
-    usage
-fi
+	if [[ -n $bi_lofi_usr ]]; then
+		pfexec lofiadm -d "$bi_lofi_usr"
+	fi
+	if [[ -n $bi_lofi_root ]]; then
+		pfexec lofiadm -d "$bi_lofi_root"
+	fi
 
-if [ ! -d "${OUT_DIR}" ]; then
-    mkdir -p ${OUT_DIR}
-    if [ ! -d "${OUT_DIR}" ]; then
-        echo "FATAL: Tried to create OUT_DIR: ${OUT_DIR} but failed."
-        exit 1
-    fi
-fi
+	if [[ -n $bi_tmpdir && -d $bi_tmpdir ]]; then
+		rm -rf "$bi_tmpdir"
+	fi
+}
 
-num=0
-echo "=== Options/ ==="
-echo "BUILDSTAMP. ${BUILDSTAMP}"
-echo "MANIFEST .. ${MANIFEST}"
-echo "OUTPUT .... ${OUT_DIR}"
-for dir in ${IN_DIRS}; do
-  num=$((${num} + 1))
-  echo "DIR[$(printf '%02d' ${num})] ... ${dir}"
+function bi_find_buildstamp
+{
+	local bsfile="$bi_wsroot/proto/buildstamp"
+	local bvfile="$bi_wsroot/configure-buildver"
+
+	if [[ ! -f $bsfile ]]; then
+		fail "build stamp file is missing: \"$bsfile\""
+	fi
+
+	bi_buildstamp=$(<"$bsfile")
+
+	if [[ -z $bi_buildstamp ]]; then
+		fail "build stamp file is empty: \"$bsfile\""
+	fi
+
+	bi_emit_info 'Build Stamp' "$bi_buildstamp"
+
+	if [[ -f $bvfile ]]; then
+		if ! bi_buildver=$(/usr/bin/head -n1 "$bvfile"); then
+			fail "reading build version file \"$bvfile\""
+		fi
+	fi
+
+	if [[ -n $bi_buildver ]]; then
+		bi_emit_info 'Build Version' "$bi_buildver"
+		bi_prefix="platform-$bi_buildver-$bi_buildstamp"
+	else
+		bi_prefix="platform-$bi_buildstamp"
+	fi
+
+}
+
+function bi_run_mancheck
+{
+	local mancheck="$bi_wsroot/tools/mancheck/mancheck"
+	local mancheck_conf_dir="$bi_wsroot/mancheck.conf.d"
+	local -a mancheck_args
+
+	bi_emit_start 'Checking manual pages...'
+
+	for f in "$mancheck_conf_dir"/*.mancheck.conf; do
+		if [[ -f $f ]]; then
+			mancheck_args+=( "$f" )
+		fi
+	done
+
+	if ! bi_extra=$("$mancheck" -f "$bi_manifest" \
+	    -s "${mancheck_args[@]}" 2>&1); then
+		fail "not mancheck clean"
+	fi
+
+	bi_emit_done
+}
+
+function bi_run_tzcheck
+{
+	local tzcheck="$bi_wsroot/tools/tzcheck/tzcheck"
+
+	bi_emit_start 'Checking timezone files...'
+
+	if ! "$tzcheck" -f "$bi_manifest" -p "$bi_wsroot/proto"; then
+		fail "not tzcheck clean"
+	fi
+
+	bi_emit_done
+}
+
+#
+# Create a blank ramdisk image file, then attach it as a lofi device.
+#
+function bi_create_ramdisk
+{
+	local crd_size=$1
+	local crd_path=$2
+
+	if [[ -z $crd_size || -z $crd_path ]]; then
+		fail 'bi_create_ramdisk() requires both arguments'
+	fi
+
+	if [[ -f $crd_path ]]; then
+		fail "ramdisk \"$crd_path\" already exists"
+	fi
+
+	bi_emit_start "Creating ramdisk file \"$crd_path\""
+
+	if ! /usr/sbin/mkfile "${crd_size}k" "$crd_path"; then
+		fail "failed to make ramdisk file \"$crd_path\""
+	fi
+
+	if ! crd_lofi=$(pfexec /usr/sbin/lofiadm -a "$crd_path"); then
+		fail "failed to attach file \"$crd_path\" as lofi device"
+	fi
+
+	bi_lofi_last=$crd_lofi
+
+	bi_emit_done
+}
+
+function bi_create_ufs
+{
+	local cuf_inode_density=$1
+	local cuf_special=$2
+	local cuf_path=$3
+	local cuf_name=$4
+	local cuf_out=
+
+	if [[ -z $cuf_inode_density || -z $cuf_special ||
+	    -z $cuf_path ]]; then
+		fail 'bi_create_ufs() requires three arguments'
+	fi
+
+	if [[ ! -b $cuf_special ]]; then
+		fail "\"$cuf_special\" is not a block device"
+	fi
+
+	bi_emit_start "Creating UFS file system ($cuf_name)"
+
+	if ! cuf_out=$(pfexec /usr/sbin/newfs -o space -m 0 \
+	    -i "$cuf_inode_density" -b 4096 "$cuf_special" \
+	    </dev/null 2>&1); then
+		bi_emit_newline
+		fail "newfs failure for \"$cuf_special\": $cuf_out"
+	fi
+
+	if ! mkdir -p "$cuf_path"; then
+		fail "failed to mkdir \"$cuf_path\" for mount"
+	fi
+
+	if ! pfexec /usr/sbin/mount -F ufs -o nologging "$cuf_special" \
+	    "$cuf_path"; then
+		fail "failed to mount \"$cuf_special\" on \"$cuf_path\""
+	fi
+
+	bi_emit_done
+}
+
+function bi_copy_files
+{
+	local builder="$bi_wsroot/tools/builder/builder"
+	local builder_log="$bi_tmpdir/builder.output"
+
+	bi_emit_start 'Copying files from proto areas to image'
+
+	#
+	# A torrent of mostly uninteresting output pours forth from the
+	# "builder" program.  We'll keep it in a file just in case it's needed
+	# later.
+	#
+	if ! pfexec "$builder" "$bi_manifest" "$bi_mnt_root" \
+	    "${bi_in_dirs[@]}" 2>&1 | bi_log_tee >"$builder_log"; then
+		#bi_emit_newline
+		#printf 'Builder failures:\n' >&2
+		#/usr/bin/grep 'FAILED$' "$builder_log" >&2
+		bi_extra=$(/usr/bin/grep 'FAILED$' "$builder_log")
+		fail "\"builder\" failed to copy from proto area to image"
+	fi
+
+	bi_emit_done
+}
+
+function bi_gen_whatis
+{
+	local tools_proto="$bi_wsroot/projects/illumos/usr/src/tools/proto"
+	local tools_man="$tools_proto/root_i386-nd/opt/onbld/bin/i386/man"
+
+	bi_emit_start 'Generating whatis database'
+
+	if [[ ! -e "$tools_man" ]]; then
+		fail "could not find the illumos tools man at \"$tools_man\""
+	fi
+
+	if ! bi_extra=$(pfexec "$tools_man" -M \
+	    "$bi_mnt_root/usr/share/man:$bi_mnt_root/smartdc/man" -w \
+	    2>&1); then
+		fail "could not generate whatis database"
+	fi
+
+	#
+	# "man -w" will, at times, output diagnostic messages that are not
+	# fatal.
+	#
+	if [[ -n $bi_extra ]]; then
+		bi_emit_newline
+		printf "man -w output:\n"
+		sed -e 's/^/| /' <<< "$bi_extra"
+	fi
+
+	bi_emit_done
+}
+
+function bi_smf_import
+{
+	local smf_importer="$bi_wsroot/tools/smf_import"
+
+	bi_emit_start 'Importing GZ SMF manifests'
+
+	if ! bi_extra=$(pfexec "$smf_importer" "$bi_mnt_root" 2>&1); then
+		fail "failed to import GZ SMF manifests"
+	fi
+
+	bi_emit_done
+}
+
+function bi_smf_seeds
+{
+	local smf_seeds="$bi_wsroot/tools/build_seeds"
+
+	bi_emit_start 'Building SMF seeds'
+
+	if ! bi_extra=$(pfexec "$smf_seeds" "$bi_mnt_root" 2>&1); then
+		fail "failed to build SMF seeds"
+	fi
+
+	bi_emit_done
+}
+
+function bi_create_password
+{
+	local pwgen="$bi_wsroot/tools/pwgen"
+	local cryptpass="$bi_wsroot/tools/cryptpass"
+	local cp_password
+	local cp_hash
+	local shadow="$bi_mnt_root/etc/shadow"
+	local stash="$bi_out_dir/$bi_prefix/root.password"
+
+	bi_emit_start 'Setting random "root" password'
+
+	#
+	# Generate a random root password.
+	#
+	if ! cp_password=$("$pwgen" -B -c -n 16 1) ||
+	    [[ -z $cp_password ]]; then
+		fail 'unable to generate root password.'
+	fi
+	bi_emit_info 'Password' "$cp_password"
+
+	#
+	# Hash the password for use in /etc/shadow.
+	#
+	if ! cp_hash=$("$cryptpass" "$cp_password") ||
+	    [[ -z $cp_hash ]]; then
+		fail 'unable to generate root password hash.'
+	fi
+
+	#
+	# Replace the existing "root" account row in the ramdisk /etc/shadow
+	# file.  Note that we use "pfexec tee" when creating the new file, as
+	# the build user may not have permission to write in the mounted image
+	# using regular shell redirection.
+	#
+	if ! pfexec /usr/bin/nawk -v "cp_hash=$cp_hash" '
+	    BEGIN { FS=":"; OFS=":"; }
+	    $1 == "root" { $2 = cp_hash; } { print; }' "$shadow" \
+	    | pfexec /usr/bin/tee "$shadow.new" >/dev/null; then
+		pfexec /usr/bin/rm -f "$shadow.new"
+		fail 'unable to update ramdisk /etc/shadow'
+	fi
+	if ! pfexec /usr/bin/mv "$shadow.new" "$shadow" ||
+	    ! pfexec /usr/bin/chmod 400 "$shadow"; then
+		fail 'unable to update ramdisk /etc/shadow'
+	fi
+
+	#
+	# Stash the generated root password as a plain text build artefact
+	# so that we can find it later if we need it.
+	#
+	if ! printf '%s\n' "$cp_hash" >"$stash"; then
+		fail "unable to stash root password in \"$stash\""
+	fi
+
+	bi_emit_done
+}
+
+function bi_gen_etcrelease
+{
+	local template="$bi_wsroot/tools/etc_release.template.txt"
+	local build_etcrelease="$bi_wsroot/tools/build_etcrelease"
+
+	bi_emit_start 'Building "/etc/release" file'
+
+	#
+	# Create the file using "pfexec tee", as the build user might not have
+	# permission to write in the mounted image using regular shell
+	# redirection.
+	#
+	if ! "$build_etcrelease" "$bi_buildstamp" "$template" |
+	    pfexec /usr/bin/tee "$bi_mnt_root/etc/release" >/dev/null; then
+		fail 'failed to build "/etc/release" file'
+	fi
+
+	#
+	# We include the JSON-only version of the release information as a
+	# separate build artefact.  We ensure that this is correctly JSON
+	# formatted by passing it through json(1).
+	#
+	if ! "$build_etcrelease" | json -o 'json-4' \
+	    >"$bi_archive.gitstatus"; then
+		fail "could not generate gitstatus file"
+	fi
+
+	bi_emit_done
+}
+
+function bi_ship_manifest
+{
+	local fl_manifest="$bi_archive.manifest"
+	local fl_manifest_img="$bi_mnt_usr/share/smartos/manifest"
+
+	bi_emit_start 'Generating shipped file manifest'
+
+	#
+	# Generate a manifest including the MD5 hash of every file we ship.
+	# This is included in the output as a separate build artefact.
+	#
+	if ! (cd "$bi_mnt_root" && pfexec find . -type f | sort |
+	    pfexec xargs md5sum) >"$fl_manifest"; then
+		fail "could not generate manifest file"
+	fi
+
+	#
+	# We include the manifest in the image as well.  Make sure it has
+	# the correct ownership.
+	#
+	if ! pfexec /usr/bin/mkdir "$(dirname "$fl_manifest_img")" ||
+	    ! pfexec /usr/bin/cp "$fl_manifest" "$fl_manifest_img" ||
+	    ! pfexec /usr/bin/chown 0:0 "$fl_manifest_img"; then
+		fail "could not copy manifest file into image"
+	fi
+
+	bi_emit_done
+}
+
+function bi_fill_templates
+{
+	bi_emit_start 'Filling in template files'
+
+	#
+	# The buildstamp needs to be included in various files in place of
+	# the template value of an all-zero date.
+	#
+	for f in etc/motd etc/issue; do
+		if ! pfexec gsed -i -e \
+		    "s/ [0-9]\{8\}T[0-9]\{6\}Z/ $bi_buildstamp/" \
+		    "$bi_mnt_root/$f"; then
+			fail "could not set buildstamp in \"$f\""
+		fi
+	done
+
+	bi_emit_done
+}
+
+function bi_file_fixups
+{
+	local kernel_src="$bi_mnt_root/platform/i86pc/kernel/amd64/unix"
+
+	bi_emit_start 'Fixing shipped files'
+
+	if ! /usr/bin/mkdir -p "$(dirname "$bi_kernel")" ||
+	    ! /usr/bin/cp "$kernel_src" "$bi_kernel"; then
+		fail "could not copy the kernel"
+	fi
+
+	#
+	# Need to ensure that several files in the image are empty
+	#
+	for f in var/log/syslog var/adm/wtmpx; do
+		if ! pfexec /usr/bin/rm -f "$bi_mnt_root/$f" ||
+		    ! pfexec /usr/bin/touch "$bi_mnt_root/$f" ||
+		    ! pfexec /usr/bin/chown 0:0 "$bi_mnt_root/$f"; then
+			fail "could not create empty file \"$f\""
+		fi
+	done
+
+	if ! pfexec /usr/bin/chown 0:0 "$bi_mnt_root/"; then
+		fail "could not fix permissions on /"
+	fi
+
+	#
+	# The system needs certain files in early boot before /usr is mounted.
+	# We create a tar archive of these files, then unmount /usr and
+	# extract it into the /usr directory underneath.
+	#
+	local -a underfiles=(
+		"bin/["
+		"bin/cat"
+		"bin/head"
+		"bin/i86/ksh93"
+		"bin/ls"
+		"kernel/sched/amd64/FSS"
+		"lib/fm/libfmevent.so"
+		"lib/fm/libfmevent.so.1"
+		"lib/fm/libtopo.so"
+		"lib/fm/libtopo.so.1"
+		"lib/libast.so"
+		"lib/libast.so.1"
+		"lib/libcmd.so"
+		"lib/libcmd.so.1"
+		"lib/libdll.so"
+		"lib/libdll.so.1"
+		"lib/libexacct.so"
+		"lib/libexacct.so.1"
+		"lib/libfstyp.so"
+		"lib/libfstyp.so.1"
+		"lib/libidmap.so"
+		"lib/libidmap.so.1"
+		"lib/libipmi.so"
+		"lib/libipmi.so.1"
+		"lib/libpkcs11.so"
+		"lib/libpkcs11.so.1"
+		"lib/libpool.so"
+		"lib/libpool.so.1"
+		"lib/libproject.so"
+		"lib/libproject.so.1"
+		"lib/libshell.so"
+		"lib/libshell.so.1"
+		"lib/libsmbios.so"
+		"lib/libsmbios.so.1"
+		"lib/libsum.so"
+		"lib/libsum.so.1"
+		"sbin/lofiadm"
+	)
+	local fl_tarfile="$bi_tmpdir/usr_underfiles.tar"
+
+	if ! (cd "$bi_mnt_usr" && /usr/bin/tar cbf 512 "$fl_tarfile" \
+	    "${underfiles[@]}"); then
+		fail "could not copy files to put under /usr"
+	fi
+
+	#
+	# Now, unmount /usr
+	#
+	if ! pfexec /sbin/umount "$bi_mnt_usr"; then
+		fail "could not unmount /usr image"
+	fi
+	bi_mnt_usr=
+	if ! pfexec /usr/sbin/lofiadm -d "$bi_lofi_usr"; then
+		fail "could not detach /usr lofi device"
+	fi
+	bi_lofi_usr=
+
+	#
+	# Put the under files in place in the root image
+	#
+	if ! (cd "$bi_mnt_root/usr" && pfexec /usr/bin/tar xbf 512 \
+	    "$fl_tarfile"); then
+		fail "could not copy files under /usr in root image"
+	fi
+
+	#
+	# In our image, ksh93 is a hardlink to isaexec.  Rather than replicate
+	# that arrangement in the root file system, we just symlink to the
+	# 32-bit binary directly.
+	#
+	if ! pfexec /usr/bin/ln -s 'i86/ksh93' "$bi_mnt_root/usr/bin/sh"; then
+		fail "failed to create ksh93 symlink"
+	fi
+
+	bi_emit_done
+}
+
+function bi_compress_usr
+{
+	local usrlgz="$bi_mnt_root/usr.lgz"
+
+	bi_emit_start 'Compressing /usr image to include in root image'
+
+	#
+	# The /usr image is included as a compressed file in the root image.
+	#
+	if ! pfexec /usr/sbin/lofiadm -C "$bi_file_usr"; then
+		fail "could not compress /usr image"
+	fi
+
+	if ! pfexec /usr/bin/mv "$bi_file_usr" "$usrlgz" ||
+	    ! pfexec /usr/bin/chown 0:0 "$usrlgz"; then
+		fail "could not copy /usr image into root image"
+	fi
+
+	bi_emit_done
+}
+
+function bi_finish_archive
+{
+	bi_emit_start 'Finishing boot_archive creation'
+
+	if ! pfexec /sbin/umount "$bi_mnt_root"; then
+		fail "could not unmount root image"
+	fi
+	bi_mnt_root=
+
+	if ! pfexec /usr/sbin/lofiadm -d "$bi_lofi_root"; then
+		fail "could not detach root lofi device"
+	fi
+	bi_lofi_root=
+
+	#
+	# Move the completed boot_archive into the output directory.
+	#
+	if ! /usr/bin/mv "$bi_file_root" "$bi_archive"; then
+		fail "could not move boot_archive into output directory"
+	fi
+
+	#
+	# The boot_archive file was created with mkfile(1), so it probably
+	# has inappropriate permissions.
+	#
+	if ! /usr/bin/chmod 644 "$bi_archive"; then
+		fail "could not set boot_archive permissions"
+	fi
+
+	#
+	# Include the boot_archive hash in the build output.
+	#
+	if ! /usr/bin/digest -a sha1 "$bi_archive" > "$bi_archive.hash"; then
+		fail "could not store hash of boot_archive in output directory"
+	fi
+
+	if ! printf '%s\n' "$bi_buildstamp" >"$bi_out_dir/buildstamp"; then
+		fail "could not store buildstamp in output directory"
+	fi
+
+	bi_emit_done
+}
+
+function bi_platform_tar
+{
+	bi_emit_start 'Creating platform tar archive'
+
+	if ! (cd "$bi_out_dir" && gtar -zcf "$bi_prefix.tgz" \
+	    "$bi_prefix"); then
+		fail "could not create platform tar archive"
+	fi
+
+	bi_emit_done
+}
+
+function bi_safe_update_symlink
+{
+	local source_file=$1
+	local target=$2
+
+	if [[ -z $source_file || -z $target ]]; then
+		fail 'bi_safe_update_symlink args: <source_file> <target>'
+	fi
+
+	if ! (cd "$(dirname "$target")" && test -e "$source_file"); then
+		fail "symlink target \"$source_file\" does not appear to exist"
+	fi
+
+	if [[ ! -L $target ]]; then
+		if [[ -e $target ]]; then
+			fail "\"$target\" exists, but is not a symlink"
+		fi
+	fi
+
+	#
+	# We use pfexec to remove the old symlink, in case there are latent
+	# file system permission issues from when this program used to run as
+	# root.
+	#
+	if ! pfexec /usr/bin/rm -f "$target" ||
+	    ! /usr/bin/ln -s "$source_file" "$target"; then
+		fail "failed to create symlink \"$target\" -> \"$source_file\""
+	fi
+
+	bi_emit_info 'Linked build output' \
+	    "$(basename "$target") -> $source_file"
+}
+
+
+#
+# Process options:
+#
+while getopts "m:o:" c $@; do
+	case "$c" in
+	m)
+		bi_manifest=$OPTARG
+		;;
+	o)
+		bi_out_dir=$OPTARG
+		;;
+	*)
+		usage
+		;;
+	esac
 done
-echo "=== /Options ==="
 
+trap 'bi_early_exit' EXIT
+trap 'bi_interrupt' SIGINT SIGHUP
 
-function cleanup
-{
-    umount -f "${rdmnt}/usr" 2>/dev/null
-    umount -f "${rdmnt}" 2>/dev/null
-    lofiadm -d "${rdfile}" 2>/dev/null
-    lofiadm -d "${usrfile}" 2>/dev/null
-    [ -n "${rddir}" ] && rm -fr "${rddir}" 2> /dev/null
-}
-function gen_etcrelease
-{
-  rdmnt=$1
-  cat <<EOF > ${rdmnt}/etc/release
-                       SmartOS ${BUILDSTAMP} x86_64
-              Copyright 2010 Sun Microsystems, Inc.  All Rights Reserved.
-              Copyright 2010-2012 Joyent, Inc.  All Rights Reserved.
-                        Use is subject to license terms.
-
-   Built with the following components:
-
-EOF
-  (cd ${ROOT} && ${GET_STATUS}) >>  ${rdmnt}/etc/release
-}
-function create_ufs
-{
-    archive=$1
-    lofidev=$2
-    lofiusrdev=$3
-    usrfile=$4
-
-    newfs -o space -m 0 -i 12248 -b 4096 ${lofidev} < /dev/null 2> /dev/null
-    mkdir "${rdmnt}"
-    mount -F ufs -o nologging ${lofidev} "${rdmnt}"
-
-    newfs -o space -m 0 -i 14000 -b 4096 ${lofiusrdev} < /dev/null 2> /dev/null
-    mkdir "${rdmnt}/usr"
-    mount -F ufs -o nologging ${lofiusrdev} "${rdmnt}/usr"
-
-    # do the actual copy
-    ${BUILDER} ${MANIFEST} ${rdmnt} ${IN_DIRS}
-    if [ $? -ne 0 ]; then
-        echo "ERROR: copy onto the image failed"
-        echo "(may need to increase the size or manifest file not found)"
-        ERROR=1
-        echo "Failures:"
-            grep "FAILED$" ${LOGFILE}
-        return
-    fi
-    ${CUSTOMIZE_SCRIPT} ${rdmnt} ${BUILDSTAMP}
-    ROOT=${ROOT} ${SMF_IMPORTER} ${rdmnt}
-    echo ${SMF_SEEDS} ${rdmnt}
-    ${SMF_SEEDS} ${rdmnt}
-    if [ $? -ne 0 ]; then
-        echo "ERROR: setting up live image SMF repoistory failed"
-        ERROR=1
-        return
-    fi
-
-    echo "Setting root password..."
-    create_password "${rdmnt}"
-
-    echo "Adding git manifest..."
-    (cd ${ROOT} && ${GET_STATUS}) > ${archive}.gitstatus
-
-    echo "Writing md5sum manifest..."
-    (cd ${rdmnt} && find . -type f | sort | xargs md5sum) > ${rdmnt}/var/log/manifest
-    #INCLUDE_MD5SUM=1 ${SCANNER} ${rdmnt} . | tee ${rdmnt}/var/log/manifest >/dev/null
-    cp ${rdmnt}/var/log/manifest ${archive}.manifest
-
-    # make sure the kernel we copy over matches our boot archive by copying from there.
-    mkdir -p `dirname ${OUT_DIR}/${OUT_KERNEL_64}`
-    cp ${rdmnt}/${KERNEL_64} ${OUT_DIR}/${OUT_KERNEL_64}
-
-    # Set up the /usr files we need before /usr is mounted
-    echo "tmpdir $rddir/usr"
-    umount -f "$rdmnt/usr"
-    mkdir $rddir/usr
-    mount -F ufs -o nologging ${lofiusrdev} "${rddir}/usr"
-    (cd ${rddir}/usr && tar cbf 512 - \
-        bin/[ bin/cat bin/head bin/i86/ksh93 bin/ls kernel/sched/amd64/FSS \
-        lib/fm/libfmevent.so lib/fm/libfmevent.so.1 lib/fm/libtopo.so \
-        lib/fm/libtopo.so.1 lib/libast.so lib/libast.so.1 lib/libcmd.so \
-        lib/libcmd.so.1 lib/libdll.so lib/libdll.so.1 lib/libexacct.so \
-        lib/libexacct.so.1 lib/libfstyp.so lib/libfstyp.so.1 lib/libidmap.so \
-        lib/libidmap.so.1 lib/libipmi.so lib/libipmi.so.1 lib/libpkcs11.so \
-        lib/libpkcs11.so.1 lib/libpool.so lib/libpool.so.1 lib/libproject.so \
-        lib/libproject.so.1 lib/libshell.so lib/libshell.so.1 lib/libsmbios.so \
-        lib/libsmbios.so.1 lib/libsum.so lib/libsum.so.1 sbin/lofiadm) | \
-        (cd ${rdmnt}/usr; tar xbf 512 -)
-
-    umount -f "${rddir}/usr"
-
-    (cd $rdmnt/usr/bin && ln -s "i86/ksh93" $rdmnt/usr/bin/sh)
-
-    # Now lofi compress our /usr filesystem
-    echo "lofi compressing usr file system"
-    lofiadm -d "$lofiusrdev" 2>/dev/null
-    lofiadm -C $usrfile
-    mv $usrfile $rdmnt/usr.lgz
-
-    gen_etcrelease $rdmnt
-
-    umount -f "$rdmnt"
-    rmdir "$rdmnt"
-
-    mv "${rdfile}" "${archive}-new"
-    if [ $? -ne 0 ] ; then
-        rm -f "${archive}-new"
-        rm -f "${archive}.manifest"
-        rm -f "${archive}.gitstatus"
-    fi
-}
-
-function create_archive
-{
-    archive=$1
-    lofidev=$2
-    lofiusrdev=$3
-    usrfile=$4
-
-    echo "creating ${archive} (${lofidev}) (${lofiusrdev})"
-    mkdir -p `dirname ${archive}`
-
-    create_ufs "$archive" "$lofidev" "$lofiusrdev" "$usrfile"
-    [ $ERROR -eq 1 ] && return
-
-
-    # sanity check the archive before moving it into place
-    #
-    ARCHIVE_SIZE=`ls -l "${archive}-new" 2> /dev/null | nawk '{ print $5 }'`
-    ls "${archive}-new" >/dev/null 2>&1
-
-    if [ $? -eq 1 -o "$ARCHIVE_SIZE" -lt 10000 ]
-    then
-        #
-        # Two of these functions may be run in parallel.  We
-        # need to allow the other to clean up, so we can't
-        # exit immediately.  Instead, we set a flag.
-        #
-        echo "update of $archive failed"
-        ERROR=1
-    else
-        lockfs -f "/$OUT_DIR" 2>/dev/null
-        mv "${archive}-new" "$archive"
-        lockfs -f "/$OUT_DIR" 2>/dev/null
-    fi
-}
-
-function create_password
-{
-    rdmnt=$1
-
-    password="$(${PWGEN} -B -c -n 16 1)"
-    if [[ -z ${password} ]]; then
-        fatal_error "Unable to generate password."
-    fi
-
-    # actually write password into ${rdmnt}/etc/shadow
-    enc_password="$(${ROOT}/tools/cryptpass "${password}")"
-    if [[ -z ${enc_password} ]]; then
-        fatal_error "Unable to generate encrypted password."
-    fi
-    gsed -i -e "s|^root:[^\:]*:|root:${enc_password}:|" ${rdmnt}/etc/shadow
-
-    # write in plaintext to platform so we can find it later if we need it
-    echo "${password}" > ${OUT_DIR}/${PREFIX}/root.password
-}
-
-function fatal_error
-{
-    print -u2 $*
-    exit 1
-}
-
-function run_checks
-{
-    mancheck_args=""
-
-    for f in "${MANCHECK_CONF_D}"/*.mancheck.conf; do
-        if [[ -f "${f}" ]]; then
-            mancheck_args="${mancheck_args} -c ${f}"
-        fi
-    done
-
-    if ! ${MANCHECK} -f ${MANIFEST} -s ${mancheck_args}; then
-        fatal_error "you are not mancheck -s clean"
-    fi
-
-    if ! ${TZCHECK} -f ${MANIFEST} -p "${ROOT}/proto"; then
-        fatal_error "tzcheck failed"
-    fi
-}
-
-function safe_update_symlink
-{
-    if [[ -z "${1}" || -z "${2}" ]]; then
-        fatal_error "safe_update_symlink args: <source_file> <target>"
-    fi
-
-    if ! (cd "$(dirname "${2}")" && test -e "${1}"); then
-        fatal_error "symlink target \"${1}\" does not appear to exist"
-    fi
-
-    if [[ ! -L "${2}" ]]; then
-        if [[ -e "${2}" ]]; then
-            fatal_error "\"${2}\" exists, but is not a symlink"
-        fi
-    fi
-
-    if ! /usr/bin/rm -f "${2}" || ! /usr/bin/ln -s "${1}" "${2}"; then
-        fatal_error "failed to create symlink \"$2\" -> \"$1\""
-    fi
-}
-
-# Create tmp dir to do the work in
-rddir="/tmp/create_ramdisk.$$.tmp"
-rm -rf "$rddir"
-mkdir "$rddir" || fatal_error "Could not create temporary directory $rddir"
-
-# Clean up upon exit.
-trap 'cleanup' EXIT
-
-echo "Running pre-flight checks"
-run_checks
-
-rdfile="$rddir/rd.file.32"
-rdmnt="$rddir/rd.mnt.32"
-usrfile="$rddir/usr.file"
-
-echo "Creating ${RSIZE}k ramdisk image: ${rdfile}"
-mkfile ${RSIZE}k "${rdfile}"
-chown ${USER} ${rdfile}
-echo "Creating ${USIZE}k usr image: ${usrfile}"
-mkfile ${USIZE}k "${usrfile}"
-chown ${USER} ${usrfile}
-
-lofidev32=`lofiadm -a "${rdfile}"`
-lofidevusr=`lofiadm -a "${usrfile}"`
-
-create_archive "${OUT_DIR}/${BOOT_ARCHIVE_64}" $lofidev32 $lofidevusr $usrfile
-
-lofiadm -d "$lofidev32" 2>/dev/null
-
-if [ $ERROR -eq 0 ]; then
-    chmod 0644 ${OUT_DIR}/${BOOT_ARCHIVE_64}
-    digest -a sha1 ${OUT_DIR}/${BOOT_ARCHIVE_64} \
-      > ${OUT_DIR}/${BOOT_ARCHIVE_64}.hash
-    echo "${BUILDSTAMP}" > ${OUT_DIR}/buildstamp
-    (cd ${OUT_DIR} && gtar -zcf ${PREFIX}.tgz ${PREFIX})
-
-    #
-    # Maintain "latest" symlinks to whichever live image we just assembled.
-    #
-    safe_update_symlink "${PREFIX}" "${OUT_DIR}/platform-latest"
-    safe_update_symlink "${PREFIX}.tgz" "${OUT_DIR}/platform-latest.tgz"
+if ! bi_uid=$(/usr/bin/id -u); then
+	fail 'could not determine user id'
 fi
 
-if [ $ERROR -eq 1 ]; then
-    cleanup
-    exit 1
+#
+# Gather the remaining positional arguments to form the list of input
+# directories.
+#
+shift "$(( OPTIND - 1 ))"
+
+while (( $# > 0 )); do
+	bi_in_dirs+=( "$1" )
+	shift
+done
+
+#
+# Check to make sure we have all of the arguments that we need:
+#
+if [[ -z $bi_manifest || -z $bi_out_dir ]]; then
+	fail '-m and -o are required'
 fi
 
-exit 0
+if (( ${#bi_in_dirs[@]} < 1 )); then
+	fail 'at least one input directory is required'
+fi
+
+bi_big_banner 'Building platform image'
+
+#
+# Get us to the root of the workspace:
+#
+if ! cd "$bi_wsroot"; then
+	fail "could not chdir to workspace root \"$bi_wsroot\""
+fi
+
+#
+# Ensure that the output directory exists, and belongs to the correct
+# user:
+#
+if [[ -d $bi_out_dir ]]; then
+	if ! pfexec /usr/bin/chown -R "$bi_uid" "$bi_out_dir"; then
+		fail "could not fix ownership on output directory"
+	fi
+else
+	if ! /usr/bin/mkdir -p "$bi_out_dir"; then
+		fail "could not create output directory \"$bi_out_dir\""
+	fi
+fi
+
+#
+# Load the build stamp (and potentially a build version), and emit some
+# information about what we're going to do.
+#
+bi_find_buildstamp
+bi_emit_info 'Manifest File' "$bi_manifest"
+bi_emit_info 'Output Directory' "$bi_out_dir"
+for (( i = 0; i < ${#bi_in_dirs[@]}; i++ )); do
+	bi_emit_info "Input Directory[$i]" "${bi_in_dirs[$i]}"
+done
+printf '\n'
+
+#
+# Set up trace logging into a log file:
+#
+if [[ -d "$bi_wsroot/log" ]]; then
+	if ! pfexec /usr/bin/chown -R "$bi_uid" "$bi_wsroot/log"; then
+		fail "could not fix ownership on log directory"
+	fi
+else
+	if ! /usr/bin/mkdir -p "$bi_wsroot/log"; then
+		fail "could not create log directory"
+	fi
+fi
+bi_log_setup "$bi_wsroot/log/build_live.$bi_buildstamp.$(date +%s).log"
+
+#
+# Run pre-flight checks:
+#
+bi_run_mancheck
+bi_run_tzcheck
+
+bi_setup_work_dir
+
+#
+# Create and mount the "/" (root) ramdisk image:
+#
+bi_file_root="$bi_tmpdir/root.image"
+bi_create_ramdisk 272000 "$bi_file_root"
+bi_lofi_root="$bi_lofi_last"
+bi_mnt_root="$bi_tmpdir/a"
+bi_create_ufs 12248 "$bi_lofi_root" "$bi_mnt_root" "/"
+
+#
+# Create the /usr directory in the ramdisk:
+#
+bi_mnt_usr="$bi_mnt_root/usr"
+if ! pfexec mkdir "$bi_mnt_usr"; then
+	fail "could not mkdir \"$bi_mnt_usr\""
+fi
+
+#
+# Create and mount the "/usr" ramdisk image:
+#
+bi_file_usr="$bi_tmpdir/usr.image"
+bi_create_ramdisk 448000 "$bi_file_usr"
+bi_lofi_usr="$bi_lofi_last"
+bi_create_ufs 14000 "$bi_lofi_usr" "$bi_mnt_usr" "/usr"
+
+#
+# Set up the output locations where build artefacts will be stored:
+#
+bi_archive="$bi_out_dir/$bi_prefix/i86pc/amd64/boot_archive"
+bi_kernel="$bi_out_dir/$bi_prefix/i86pc/kernel/amd64/unix"
+
+if ! mkdir -p "$(dirname "$bi_archive")" "$(dirname "$bi_kernel")"; then
+	fail "could not create build output directories"
+fi
+
+#
+# Assemble the boot_archive:
+#
+bi_copy_files
+bi_gen_whatis
+bi_smf_import
+bi_smf_seeds
+bi_create_password
+bi_gen_etcrelease
+bi_ship_manifest
+bi_fill_templates
+bi_file_fixups
+bi_compress_usr
+bi_finish_archive
+bi_platform_tar
+
+#
+# Maintain "latest" symlinks to whichever live image we just assembled.
+#
+bi_safe_update_symlink "$bi_prefix" "$bi_out_dir/platform-latest"
+bi_safe_update_symlink "$bi_prefix.tgz" "$bi_out_dir/platform-latest.tgz"
+
+bi_cleanup_work_dir
+
+bi_exit 0

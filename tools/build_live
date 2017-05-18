@@ -65,6 +65,8 @@ bi_file_usr=
 bi_mnt_root=
 bi_mnt_usr=
 
+bi_root_size=
+
 bi_log=
 
 
@@ -786,7 +788,15 @@ bi_setup_work_dir
 # Create and mount the "/" (root) ramdisk image:
 #
 bi_file_root="$bi_tmpdir/root.image"
-bi_create_ramdisk 272000 "$bi_file_root"
+bi_root_size=272000
+if strings "$bi_wsroot/proto/kernel/amd64/genunix" |
+    grep "DEBUG enabled" >/dev/null; then
+	#
+	# Increase root size by 3M if we have a DEBUG kernel.
+	#
+	bi_root_size=$(( bi_root_size + 3000))
+fi
+bi_create_ramdisk "$bi_root_size" "$bi_file_root"
 bi_lofi_root="$bi_lofi_last"
 bi_mnt_root="$bi_tmpdir/a"
 bi_create_ufs 12248 "$bi_lofi_root" "$bi_mnt_root" "/"

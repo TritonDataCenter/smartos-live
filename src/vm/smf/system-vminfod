@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright 2017 Joyent, Inc.
 # Use is subject to license terms.
 
 set -o xtrace
@@ -30,7 +30,11 @@ PATH=/usr/sbin:/usr/bin; export PATH
 
 case "$1" in
 'start')
-    /usr/bin/ctrun -l child -o noorphan /usr/vm/sbin/vminfod 2>&1 &
+    ctrun -l child -o noorphan /usr/vm/sbin/vminfod 2>&1 &
+    # Don't consider the service "online" until vminfod is responsive over the
+    # HTTP interface.  If vminfod fails for any reason this line will run until
+    # SMF brings this service into maintenance mode.
+    while ! vminfod ping; do sleep 1; done
     ;;
 
 'stop')

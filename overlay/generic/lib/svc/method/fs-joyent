@@ -197,6 +197,7 @@ if [ $? -ne 0 ]; then
     fi
 fi
 
+
 # The rest only applies to the headnode
 /bin/bootparams | grep "^headnode=true" >/dev/null || exit $SMF_EXIT_OK
 
@@ -222,13 +223,33 @@ else
     mkdir -m 700 /mnt
 fi
 
-function make_usb_copy
+function make_usb_copy_if_can
 {
+    zpool list | grep zones
+    if [[ $? != 0 ]]; then
+        echo "skipping USB copy setup: no zones zpool" >/dev/console
+        # Still return OK, because this is the expected case for first headnode
+        # boot.
+        return 0
+    fi
+
+    [[ -n "${SYS_ZPOOL}" ]] || fatal "don't know system zpool name"
+    USBDATASET=${SYS_ZPOOL}/usbkey
+    if ! zfs list -Ho name | grep "^${USBDATASET}\$" >/dev/null; then
+        echo "skipping USB copy setup: no zones/usbkey dataset" >/dev/console
+        # Still return OK, because as of HEAD-2343 a CN being converted to a HN
+        # will not yet have this dataset on its first boot as an HN.
+        return 0
+    fi
+
     echo "" > /dev/console
     echo "Moving files from USB boot device onto disk storage." > /dev/console
     echo "This may take several minutes. Please note the time..." > /dev/console
     echo "" > /dev/console
     echo "" > /dev/console
+
+    mkdir ${COPYINPOINT}
+    mount_zfs ${USBDATASET} ${COPYINPOINT}
 
     $(cd ${USBMOUNTPOINT}; rsync -av --log-file=/dev/console --exclude private --exclude os * ${COPYINPOINT})
     if [[ -d ${USBMOUNTPOINT}/os ]]; then
@@ -248,19 +269,15 @@ function make_usb_copy
 
     echo "" > /dev/console
     echo "Done copying files from USB device" > /dev/console
+    return 0
 }
 
 mkdir -p ${USBMOUNTPOINT}
 
 if [[ -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
     mount_usb_msg="already mounted"
-
-    zpool list | grep zones
-    if [[ $? == 0 ]]; then
-        make_usb_copy
-        exit $?
-    fi
-    exit 0;
+    make_usb_copy_if_can
+    exit $?
 fi
 
 # First thing to do is to mount the USB key / VMWare disk
@@ -318,14 +335,8 @@ fi
 
 if [[ -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
     mount_usb_msg="success"
-
-    zpool list | grep zones
-
-    if [[ $? == 0 ]]; then
-        make_usb_copy
-    fi
-
-    exit 0;
+    make_usb_copy_if_can
+    exit $?
 fi
 
 mount_usb_msg="${mount_usb_msg}\n[FATAL] mount_usb(): could not find USB Key"

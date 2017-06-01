@@ -375,7 +375,7 @@ function bi_create_password
 	# Stash the generated root password as a plain text build artefact
 	# so that we can find it later if we need it.
 	#
-	if ! printf '%s\n' "$cp_hash" >"$stash"; then
+	if ! printf '%s\n' "$cp_password" >"$stash"; then
 		fail "unable to stash root password in \"$stash\""
 	fi
 

@@ -901,13 +901,10 @@ setup_datasets()
 		# issue for locked anonymous memory that is backed by
 		# in-memory swap (which will severely and artificially limit
 		# VM tenancy).  We will therfore not create a swap device
-		# smaller than DRAM -- but we still allow for the
-		# configuration variable to account for actual consumed space
-		# by using it to set the refreservation on the swap volume
-		# if/when the specified size is smaller than DRAM.
+		# smaller than DRAM
 		#
 
-		size=${SYSINFO_MiB_of_Memory}
+		size=$(LC_ALL=C LANG=C sysinfo -p |awk -F = '/MiB_of_Memory=/ {print $NF}')
 		zfs create -V ${size}mb ${SWAPVOL} || fatal \
 		    "failed to create swap partition"
 

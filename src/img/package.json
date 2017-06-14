@@ -1,7 +1,7 @@
 {
   "name": "imgadm",
   "description": "Manage SmartOS virtual machine images.",
-  "version": "3.7.1",
+  "version": "3.7.2",
   "author": "Joyent (joyent.com)",
   "private": true,
   "dependencies": {

@@ -6,6 +6,11 @@ Known issues:
   Docker Registry v1, which is now deprecated.
 
 
+## 3.7.2
+
+- OS-6177 avoid checking content-md5 on imgadm import when a checksum exists on
+  image metadata
+
 ## 3.7.1
 
 - OS-5823 Allow 'imgadm install' to be able to install a type=docker image.

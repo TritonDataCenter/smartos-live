@@ -1847,6 +1847,7 @@ CLI.prototype.do_create = function do_create(subcmd, opts, args, cb) {
             compression: opts.compression,
             incremental: opts.incremental,
             prepareScript: opts.s && fs.readFileSync(opts.s, 'utf8'),
+            prepareTimeout: opts.timeout || 300,
             savePrefix: savePrefix,
             logCb: console.log,
             quiet: opts.quiet,
@@ -2016,6 +2017,12 @@ CLI.prototype.do_create.options = [
             + 'There is a contract with "imgadm" that a  '
             + 'prepare-image script must follow. See the "PREPARE '
             + 'IMAGE SCRIPT" section in "man imgadm".'
+    },
+    {
+        names: ['timeout'],
+        type: 'positiveInteger',
+        helpArg: '<timeout>',
+        help: 'Timeout in seconds. Default is 300 (5 minutes).'
     },
     {
         group: ''

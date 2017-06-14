@@ -374,6 +374,9 @@ UUID.
                            prepare-image script must follow. See the "PREPARE
                            IMAGE SCRIPT" section in "man imgadm".
 
+            --timeout <timeout>
+                           Timeout in seconds. Default is 300 (5 minutes).
+
             -p <url>, --publish <url>
                            Publish directly to the given image source
                            (an IMGAPI server). You may not specify both

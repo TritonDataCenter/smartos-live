@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2017, Joyent, Inc. All rights reserved.
  *
  * * *
  * The main imgadm functionality. The CLI is a light wrapper around this tool.
@@ -1424,10 +1424,12 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
             if (!zstream && opts.imgMeta.checksum) {
                 ctx.checksum = opts.imgMeta.checksum.split(':');
                 ctx.checksumHash = crypto.createHash(ctx.checksum[0]);
-            }
-            if (ctx.stream.headers['content-md5']) {
+                log.debug({uuid: uuid}, 'creating %s checksum hash',
+                    ctx.checksum[0]);
+            } else if (ctx.stream.headers['content-md5']) {
                 ctx.contentMd5 = ctx.stream.headers['content-md5'];
                 ctx.md5sumHash = crypto.createHash('md5');
+                log.debug({uuid: uuid}, 'creating content-md5 checksum hash');
             }
             ctx.stream.on('data', function (chunk) {
                 if (opts.bar)

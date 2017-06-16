@@ -28,7 +28,7 @@ GXX =		$(NATIVEDIR)/usr/bin/g++
 SYSINCDIRS =	/usr/include
 SYSLIBDIRS =	/usr/lib /lib
 
-CPPFLAGS =	$(SYSINCDIRS:%=-isystem $(DESTDIR)/%)
+CPPFLAGS =	$(SYSINCDIRS:%=-isystem $(DESTDIR)/%) -D_LARGEFILE64_SOURCE
 LDFLAGS =	$(SYSLIBDIRS:%=-L$(DESTDIR)/%) \
 		-Wl,-zassert-deflib -Wl,-zfatal-warnings
 

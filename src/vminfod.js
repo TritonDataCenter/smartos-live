@@ -57,7 +57,7 @@ function usage() {
         '  ping               get vminfod ping     (GET /ping)',
         '  status [-f]        get vminfod status   (GET /status)',
         '  vms                get all vms          (GET /vms)',
-        '  vm <uuid>          get vm info          (GET /vm/:uuid)',
+        '  vm <uuid>          get vm info          (GET /vms/:uuid)',
         '  events [-jf]       trace vminfod events (GET /events)'
     ];
     if (msg) {

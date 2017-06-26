@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright 2017 Joyent, Inc.
  *
  */
 
@@ -2428,8 +2428,17 @@ function main()
                 'zpool'
             ];
 
-            VM.lookup({}, {fields: lookup_fields}, function (e, vmobjs) {
-                async.forEachSeries(vmobjs, function (obj, upg_cb) {
+            VM.lookup({}, {fields: lookup_fields},
+                function vmLookup(e, vmobjs) {
+
+                if (e) {
+                    log.error({err: e}, 'VM.lookup failed');
+                    process.exit(2);
+                }
+                vasync.forEachPipeline({
+                    inputs: vmobjs,
+                    func: function upgradeSingleVM(obj, upg_cb) {
+
                     function finishUpgrade(vmobj) {
                         if (!seen_vms.hasOwnProperty(vmobj.zonename)) {
                             seen_vms[vmobj.zonename] = {
@@ -2579,6 +2588,14 @@ function main()
                             });
                         });
                     });
+
+                    }
+                }, function upgradeVMsComplete(_err, results) {
+                    if (_err) {
+                        log.error({err: _err}, 'Error processing all VMs');
+                    } else {
+                        log.debug('Finished processing all VMs');
+                    }
                 });
             });
         });

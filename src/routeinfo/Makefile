@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright (c) 2017, Joyent, Inc.
 #
 
 BASE :=		$(PWD)
@@ -32,6 +32,7 @@ CPPFLAGS =	$(SYSINCDIRS:%=-isystem $(DESTDIR)/%)
 LDFLAGS =	$(SYSLIBDIRS:%=-L$(DESTDIR)/%) \
 		-Wl,-zassert-deflib -Wl,-zfatal-warnings
 
+STRINGS_DIR =	$(BASE)/../common/strings
 DOCKER_DIR =	$(BASE)/../dockerinit
 
 ROUTEINFO_OBJECTS = \
@@ -47,16 +48,18 @@ MDATA_OBJECTS = \
 		sunos.o \
 		unix_common.o
 
+custr.o :	CFLAGS += -I$(STRINGS_DIR)
 mdata_%.o :	CFLAGS += -I$(DOCKER_DIR)/mdata-client -D__HAVE_BOOLEAN_T
 
 OBJECTS = \
 		$(MDATA_OBJECTS:%=mdata_%) \
+		custr.o \
 		json-nvlist.o \
 		main.o
 
-json-nvlist.o :	CFLAGS += -I$(DOCKER_DIR)/json-nvlist
+json-nvlist.o :	CFLAGS += -I$(DOCKER_DIR)/json-nvlist -I$(STRINGS_DIR)
 
-LIBS =		-lnvpair -lnsl -lsocket -lsmbios -lcmdutils
+LIBS =		-lnvpair -lnsl -lsocket -lsmbios
 
 CTFCONVERT =	/usr/bin/true
 CTFMERGE =	/usr/bin/true
@@ -92,6 +95,10 @@ clean:
 $(PROGRAM): $(OBJECTS)
 	$(CC) $(CPPFLAGS) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJECTS) $(LIBS)
 	$(CTFMERGE) -L VERSION -o $@ $(OBJECTS)
+
+%.o: $(STRINGS_DIR)/%.c
+	$(COMPILE_C)
+	$(CTFCONVERT) -L VERSION $@
 
 mdata_%.o: $(DOCKER_DIR)/mdata-client/%.c
 	$(COMPILE_C)

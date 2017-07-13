@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2015 Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  */
 
 #include <stdio.h>
@@ -21,6 +21,7 @@
 #include <libnvpair.h>
 #include <sys/ccompile.h>
 
+#include "custr.h"
 #include "json-nvlist.h"
 
 typedef enum json_type {

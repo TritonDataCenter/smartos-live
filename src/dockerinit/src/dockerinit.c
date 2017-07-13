@@ -28,6 +28,7 @@
  * problems.
  */
 
+#include <dirent.h>
 #include <door.h>
 #include <errno.h>
 #include <fcntl.h>

@@ -10,14 +10,13 @@
  */
 
 /*
- * Copyright 2015 Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  */
 
 #ifndef _JSON_NVLIST_H
 #define _JSON_NVLIST_H
 
 #include <libnvpair.h>
-#include <libcmdutils.h>
 
 #ifdef __cplusplus
 extern "C" {

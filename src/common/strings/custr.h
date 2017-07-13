@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2015 Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  */
 
 #ifndef _CUSTR_H
@@ -19,6 +19,8 @@
 /*
  * Private copy of custr*() utilities from libcmdutils.
  */
+
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {

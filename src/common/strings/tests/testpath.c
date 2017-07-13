@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2015 Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  */
 
 #include <stdio.h>
@@ -20,8 +20,8 @@
 #include <err.h>
 #include <errno.h>
 #include <sys/debug.h>
-#include <libcmdutils.h>
 
+#include "custr.h"
 #include "strpath.h"
 
 typedef struct {

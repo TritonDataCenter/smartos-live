@@ -29,6 +29,7 @@ SRC =		$(OBJECTS:%=.o%.c)
 CFLAGS =					\
 		-Wall -Wextra -Werror 		\
 		-std=c99 			\
+		-D_FILE_OFFSET_BITS=64          \
 		-D__EXTENSIONS__ 		\
 		-D_REENTRANT			\
 		-I../common			\

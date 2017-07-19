@@ -21,25 +21,25 @@ test('test pretty hrtime and delta (static time)', function (t) {
             then: [5, 0],
             now: [5, 1000],
             delta: [0, 1000],
-            s: '0.000001s (1us)'
+            s: '0.000001000s (1us)'
         },
         {
             then: [5, 0],
             now: [5, 1000000],
             delta: [0, 1000000],
-            s: '0.001s (1ms)'
+            s: '0.001000000s (1ms)'
         },
         {
             then: [5, 0],
             now: [6, 0],
             delta: [1, 0],
-            s: '1.0s (1s)'
+            s: '1.000000000s (1s)'
         },
         {
             then: [5, 0],
             now: [65, 0],
             delta: [60, 0],
-            s: '60.0s (1m)'
+            s: '60.000000000s (1m)'
         }
     ].forEach(function (o) {
         var delta = hrtime.hrtimeDelta(o.now, o.then);

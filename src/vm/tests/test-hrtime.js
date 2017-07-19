@@ -15,31 +15,31 @@ test('test pretty hrtime and delta (static time)', function (t) {
             then: [5, 0],
             now: [5, 1],
             delta: [0, 1],
-            s: '1ns'
+            s: '0.000000001s (1ns)'
         },
         {
             then: [5, 0],
             now: [5, 1000],
             delta: [0, 1000],
-            s: '1us'
+            s: '0.000001s (1us)'
         },
         {
             then: [5, 0],
             now: [5, 1000000],
             delta: [0, 1000000],
-            s: '1ms'
+            s: '0.001s (1ms)'
         },
         {
             then: [5, 0],
             now: [6, 0],
             delta: [1, 0],
-            s: '1s'
+            s: '1.0s (1s)'
         },
         {
             then: [5, 0],
             now: [65, 0],
             delta: [60, 0],
-            s: '1m'
+            s: '60.0s (1m)'
         }
     ].forEach(function (o) {
         var delta = hrtime.hrtimeDelta(o.now, o.then);
@@ -51,29 +51,6 @@ test('test pretty hrtime and delta (static time)', function (t) {
     });
 
     t.end();
-});
-
-test('test pretty hrtime (dynamic time)', function (t) {
-    var then = process.hrtime();
-
-    setTimeout(function () {
-        var now = process.hrtime();
-        var delta;
-        var s;
-
-        // use hrtimeDelta to calculate the delta
-        delta = hrtime.hrtimeDelta(now, then);
-        s = hrtime.prettyHrtime(delta);
-        t.equal(s, '1s', '1 second hrtimeDelta (using hrtime.hrtimeDelta)');
-
-        // pass the first time to the process.hrtime function to calculate the
-        // delta
-        delta = process.hrtime(then);
-        s = hrtime.prettyHrtime(delta);
-        t.equal(s, '1s', '1 second hrtimeDelta (using process.hrtime)');
-
-        t.end();
-    }, 1000);
 });
 
 test('test hrtime comparator', function (t) {

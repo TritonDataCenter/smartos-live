@@ -383,7 +383,6 @@ install: all $(SUBDIRS)
 	sed -e 's|^#!/usr/bin/env node.*$$|#!/usr/node/bin/node|' \
 	    < node-bunyan/bin/bunyan \
 	    > $(DESTDIR)/usr/bin/bunyan
-	rm -rf $(DESTDIR)/usr/img
 	mkdir -m 0755 -p $(DESTDIR)/usr/img
 	cp img/README.md $(DESTDIR)/usr/img/README.md
 	cp img/package.json $(DESTDIR)/usr/img/package.json

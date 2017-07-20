@@ -2423,6 +2423,7 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
             assert.string(ctx.filePath, 'ctx.filePath');
 
             var command;
+            var env = null;
             switch (ctx.cType) {
             case null:
                 command = format(
@@ -2432,6 +2433,13 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
                     ctx.filePath);
                 break;
             case 'gzip':
+                // Allow the use pigz (parallel gzip) decompression by default,
+                // unless disabled through the 'usePigz' imgadm config option.
+                if (!self.config.hasOwnProperty('usePigz')
+                        || self.config.usePigz) {
+                    env = objCopy(process.env);
+                    env['IMGADM_USE_PIGZ'] = '1';
+                }
                 command = format(
                     '/usr/img/sbin/chroot-gtar %s %s %s gzip',
                     path.dirname(zoneroot),
@@ -2460,6 +2468,7 @@ IMGADM.prototype._installDockerImage = function _installDockerImage(ctx, cb) {
                 command: command,
                 log: log,
                 execOpts: {
+                    env: env,
                     maxBuffer: 2 * 1024 * 1024
                 }
             }, next);

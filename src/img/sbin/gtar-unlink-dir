@@ -64,19 +64,24 @@ function gtar_unlink_dir
     local attempts=5
     local status=
     local uncompresscat=
-    local uncompressopt=
+    local uncompressopts=
 
     case $compression in
     none)
         uncompresscat=cat
         ;;
     gzip)
-        uncompresscat=cat
-        uncompressopt=z
+        if [[ -n "$IMGADM_USE_PIGZ" ]];
+        then
+            uncompresscat="nice -n 5 pigz -dc -p2"
+        else
+            uncompresscat=cat
+            uncompressopts=z
+        fi
         ;;
     bzip2)
         uncompresscat=cat
-        uncompressopt=j
+        uncompressopts=j
         ;;
     xz)
         uncompresscat=xzcat
@@ -94,7 +99,7 @@ function gtar_unlink_dir
 
         set +o errexit
         $uncompresscat $tarball \
-            | gtar -C "$subdir" -x${uncompressopt}f - $gtarargs 2>$STDERR_FILE
+            | gtar -C "$subdir" -x${uncompressopts}f - $gtarargs 2>$STDERR_FILE
         status=$?
         set -o errexit
 

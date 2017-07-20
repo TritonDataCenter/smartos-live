@@ -6,6 +6,10 @@ Known issues:
   Docker Registry v1, which is now deprecated.
 
 
+## 3.8.0
+
+- OS-6185 use pigz (parallel gunzip uncompression) to speed up imgadm import
+
 ## 3.7.2
 
 - OS-6177 avoid checking content-md5 on imgadm import when a checksum exists on

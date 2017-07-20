@@ -107,6 +107,18 @@ cp /usr/img/sbin/gtar-unlink-dir $BINDIR/
 CMDS="gtar"
 CMDS="$CMDS cat gzip bzip2 xzcat"
 CMDS="$CMDS bash rm grep sed tee"
+
+if [[ "$COMPRESSION" == "gzip" && -n "$IMGADM_USE_PIGZ" ]];
+then
+    PIGZ=/usr/img/sbin/pigz
+    if [[ -x $PIGZ ]];
+    then
+        CMDS="$CMDS nice $PIGZ"
+    else
+        IMGADM_USE_PIGZ=
+    fi
+fi
+
 for cmd in $CMDS; do
     cp $(which $cmd) $BINDIR/
 done

@@ -38,6 +38,9 @@
  *   are almost certainly not Docker image ids. Having this be
  *   configurable is mostly an out in case a valid case come ups with
  *   a docker repo that is a UUID.
+ * - `usePigz`: Optional boolean (default true). When true, imgadm import
+ *   of docker images will use the pigz decompression method (instead of
+ *   gzip) for gzipped image files.
  */
 
 var p = console.warn;

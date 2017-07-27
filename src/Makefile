@@ -117,6 +117,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-queue.js \
 	vm/tests/test-reboot.js \
 	vm/tests/test-reprovision.js \
+	vm/tests/test-send-recv.js \
 	vm/tests/test-snapshots.js \
 	vm/tests/test-spoof-opts.js \
 	vm/tests/test-tmpfs.js \

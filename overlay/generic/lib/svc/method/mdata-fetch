@@ -44,46 +44,24 @@ function fatal() {
   exit ${SMF_EXIT_ERR_FATAL}
 }
 
-# isAddr will test whether or not an IP address is valid. The first argument
-# is the method to call on the Node "net" module, and the second one is the
-# actual address to test.
-function isAddr() {
-  /usr/node/bin/node <<EOF
-  test = require("net").$1("$2");
-  process.exit(test ? 0 : 1);
-EOF
-}
-
-# isAddrAndCIDR is a lot like isAddr, except that it will test if the address
-# is followed by a slash and the routing prefix, i.e., 192.168.0.1/24.
-function isAddrAndCIDR() {
-  /usr/node/bin/node <<EOF
-  parts = "$2".split('/');
-  test = parts.length === 2
-    && require("net").$1(parts[0])
-    && /^\\d{1,2}\$/.test(parts[1]);
-  process.exit(test ? 0 : 1);
-EOF
-}
-
-# Test if an address is a valid IPv4 address.
+# Test if an address looks like an IPv4 address.
 function isIPv4() {
-  isAddr "isIPv4" "$1"
+  [[ "$1" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]
 }
 
-# Test if an address is a valid IPv4 address + CIDR.
+# Test if an address looks like an IPv4 address + CIDR.
 function isIPv4AndCIDR() {
-  isAddrAndCIDR "isIPv4" "$1"
+  [[ "$1" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$ ]]
 }
 
-# Test if an address is a valid IPv6 address.
+# Test if an address looks like an IPv6 address.
 function isIPv6() {
-  isAddr "isIPv6" "$1"
+  [[ "$1" =~ ^[0-9a-f]*:[0-9a-f]*:[:0-9a-f]*$ ]]
 }
 
-# Test if an address is a valid IPv6 address + CIDR.
+# Test if an address looks like an IPv6 address + CIDR.
 function isIPv6AndCIDR() {
-  isAddrAndCIDR "isIPv6" "$1"
+  [[ "$1" =~ ^[0-9a-f]*:[0-9a-f]*:[:0-9a-f]*/[0-9]{1,3}$ ]]
 }
 
 # For old zones that were created prior to OS-2253 and bumping the mdata:fetch

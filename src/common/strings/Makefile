@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright (c) 2017, Joyent, Inc.
 #
 
 #
@@ -44,6 +44,7 @@ TEST_PROGRAMS = \
 TEST_BINS =	$(TEST_PROGRAMS:%=obj/%)
 
 STRINGS_OBJECTS = \
+		custr.o \
 		strlist.o \
 		strpath.o
 
@@ -56,7 +57,7 @@ CTFMERGE =	/usr/bin/true
 CC =		$(GCC)
 CSTYLE =	../../../tools/cstyle
 
-LIBS =		-lcmdutils -lumem
+LIBS =		-lumem
 
 COMPILE_C =	$(CC) $(CPPFLAGS) $(LDFLAGS) $(CFLAGS) -c -o $@ $< $(LIBS)
 

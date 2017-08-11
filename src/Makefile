@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2017 Joyent, Inc.
+# Copyright (c) 2017, Joyent, Inc.
 #
 
 include Makefile.defs
@@ -39,7 +39,8 @@ JSSTYLE_OLDSKOOL_OPTS =
 # without extra effort; it is overridden when make is invoked in this
 # subdirectory.
 #
-DESTDIR =		../proto
+# This should be an absolute path, or building $(SUBDIRS) will fail
+DESTDIR =		$(realpath ../proto)
 
 #
 # DESTNAME is used for the manifest target.  We set it to something

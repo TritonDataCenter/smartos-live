@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (c) 2016, Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  */
 
 /*
@@ -29,7 +29,7 @@
 #define DOCKER_COMMON_H
 
 #include <libnvpair.h>
-#include <libcmdutils.h>
+#include "custr.h"
 #include "../json-nvlist/json-nvlist.h"
 #include "strlist.h"
 

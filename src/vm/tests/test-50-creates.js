@@ -1,9 +1,9 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2017 Joyent, Inc.
 //
 // These tests ensure that default values don't change accidentally.
 //
 
-var async = require('/usr/node/node_modules/async');
+var vasync = require('/usr/vm/node_modules/vasync');
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
 var fs = require('fs');
@@ -20,7 +20,7 @@ test('create and destroy 50 zones', function(t) {
     var i;
 
     i = 0;
-    async.whilst(
+    vasync.whilst(
         function () {
             return i < 50;
         },

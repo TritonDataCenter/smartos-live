@@ -1,11 +1,11 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2017 Joyent, Inc.
 
-var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
 var execFile = cp.execFile;
 var fs = require('fs');
 var net = require('net');
 var path = require('path');
+var vasync = require('/usr/vm/node_modules/vasync');
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
 
@@ -324,7 +324,10 @@ test('create snapshot with bad name', function (t) {
         createBadSnapshot(t, vmobj.uuid, name, cb);
     }
 
-    async.forEach(bad_names, caller, function (err) {
+    vasync.forEachParallel({
+        inputs: bad_names,
+        func: caller
+    }, function (err) {
         t.ok(!err, 'no extra errors from creating all the bad snapshots');
         t.end();
     });
@@ -659,7 +662,7 @@ function createXSnapshots(t, x, callback)
 
     var creates = 0;
 
-    async.whilst(
+    vasync.whilst(
     function () { return (!abort && creates < x); },
     function (cb) {
         var snapname;
@@ -705,7 +708,7 @@ test('delete 50 snapshots on joyent-minimal', function (t) {
 
     var deletes = 49;
 
-    async.whilst(
+    vasync.whilst(
     function () { return (!abort && deletes >= 0); },
     function (callback) {
         var snapname;
@@ -744,8 +747,8 @@ function (t) {
         return;
     }
 
-    async.series([
-        function (cb) {
+    vasync.pipeline({funcs: [
+        function (_, cb) {
             VM.load(vmobj.uuid, function (err, obj) {
                 t.ok(!err, 'loading VM before last_modified snapshot');
                 if (!err) {
@@ -753,14 +756,14 @@ function (t) {
                 }
                 cb(err);
             });
-        }, function (cb) {
+        }, function (_, cb) {
             setTimeout(function () {
                 createSnapshot(t, vmobj.uuid, 'modifyme', 1, function (err) {
                     t.ok(!err, 'created snapshot for last_modified test');
                     cb(err);
                 });
             }, 1000);
-        }, function (cb) {
+        }, function (_, cb) {
             VM.load(vmobj.uuid, function (err, obj) {
                 t.ok(!err, 'loaded VM after snapshot');
                 if (!err) {
@@ -768,14 +771,14 @@ function (t) {
                 }
                 cb(err);
             });
-        }, function (cb) {
+        }, function (_, cb) {
             setTimeout(function () {
                 deleteSnapshot(t, vmobj.uuid, 'modifyme', 0, function (err) {
                     t.ok(!err, 'deleted snapshot for last_modified test');
                     cb(err);
                 });
             }, 1000);
-        }, function (cb) {
+        }, function (_, cb) {
             VM.load(vmobj.uuid, function (err, obj) {
                 t.ok(!err, 'loaded VM after delete snapshot');
                 if (!err) {
@@ -784,7 +787,7 @@ function (t) {
                 cb(err);
             });
         }
-    ], function (err) {
+    ]}, function (err) {
         if (!err) {
             t.ok((Date.parse(pre_snap_timestamp)
                 < Date.parse(post_snap_timestamp)),
@@ -811,15 +814,15 @@ test('create/delete joyent-minimal snapshot should handle mounting '
         return;
     }
 
-    async.series([
-        function (cb) {
+    vasync.pipeline({funcs: [
+        function (_, cb) {
             createSnapshot(t, vmobj.uuid, snapname, vmobj.snapshots.length + 1,
                 function (err) {
                     t.ok(!err, 'created snapshot for last_modified test');
                     cb(err);
                 }
             );
-        }, function (cb) {
+        }, function (_, cb) {
             var passwd_file = path.join(checkpoint_dir + '/etc/passwd');
 
             fs.exists(passwd_file, function (exists) {
@@ -831,13 +834,13 @@ test('create/delete joyent-minimal snapshot should handle mounting '
                 }
                 cb(err);
             });
-        }, function (cb) {
+        }, function (_, cb) {
             deleteSnapshot(t, vmobj.uuid, snapname, 0, function (err) {
                 t.ok(!err, 'deleted ' + snapname + ' snapshot for '
                     + vmobj.uuid);
                 cb(err);
             });
-        }, function (cb) {
+        }, function (_, cb) {
 
             fs.exists(checkpoint_dir, function (exists) {
                 var err;
@@ -849,7 +852,7 @@ test('create/delete joyent-minimal snapshot should handle mounting '
                 cb(err);
             });
         }
-    ], function (err) {
+    ]}, function (err) {
         t.ok(!err, 'testing /checkpoints: ' + (err ? err.message : 'success'));
         t.end();
     });

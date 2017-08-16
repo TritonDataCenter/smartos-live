@@ -1,10 +1,10 @@
-// Copyright 2016 Joyent, Inc.
+// Copyright 2017 Joyent, Inc.
 //
 // These tests ensure that delete behaves correctly.
 //
 
-var async = require('/usr/node/node_modules/async');
 var libuuid = require('/usr/node/node_modules/uuid');
+var vasync = require('/usr/vm/node_modules/vasync');
 var VM = require('/usr/vm/node_modules/VM');
 
 // this puts test stuff in global, so we need to tell jsl about that:
@@ -17,7 +17,7 @@ VM.loglevel = 'DEBUG';
 // haven't regressed.
 test('test deleting nonexistent VM', function(t) {
     var i = 0;
-    async.whilst(
+    vasync.whilst(
         function () {
             return i < 50;
         },

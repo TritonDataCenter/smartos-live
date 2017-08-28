@@ -227,7 +227,7 @@ function make_usb_copy_if_possible
 {
     [[ -n "${SYS_ZPOOL}" ]] || fatal "don't know system zpool name"
 
-    zpool list | grep "^${SYS_ZPOOL}\$"
+    zpool list -Ho name | grep "^${SYS_ZPOOL}\$"
     if [[ $? != 0 ]]; then
         echo "skipping USB copy setup: no ${SYS_ZPOOL} zpool" >/dev/console
         # Still return OK, because this is the expected case for first headnode

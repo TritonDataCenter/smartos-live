@@ -223,17 +223,18 @@ else
     mkdir -m 700 /mnt
 fi
 
-function make_usb_copy_if_can
+function make_usb_copy_if_possible
 {
-    zpool list | grep zones
+    [[ -n "${SYS_ZPOOL}" ]] || fatal "don't know system zpool name"
+
+    zpool list | grep "^${SYS_ZPOOL}\$"
     if [[ $? != 0 ]]; then
-        echo "skipping USB copy setup: no zones zpool" >/dev/console
+        echo "skipping USB copy setup: no ${SYS_ZPOOL} zpool" >/dev/console
         # Still return OK, because this is the expected case for first headnode
         # boot.
         return 0
     fi
 
-    [[ -n "${SYS_ZPOOL}" ]] || fatal "don't know system zpool name"
     USBDATASET=${SYS_ZPOOL}/usbkey
     if ! zfs list -Ho name | grep "^${USBDATASET}\$" >/dev/null; then
         echo "skipping USB copy setup: no zones/usbkey dataset" >/dev/console
@@ -276,7 +277,7 @@ mkdir -p ${USBMOUNTPOINT}
 
 if [[ -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
     mount_usb_msg="already mounted"
-    make_usb_copy_if_can
+    make_usb_copy_if_possible
     exit $?
 fi
 
@@ -335,7 +336,7 @@ fi
 
 if [[ -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
     mount_usb_msg="success"
-    make_usb_copy_if_can
+    make_usb_copy_if_possible
     exit $?
 fi
 

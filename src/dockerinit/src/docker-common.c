@@ -293,8 +293,8 @@ mdataDelete(const char *keyname)
  * list entry with the same variable name.
  */
 void
-cbEachEnvEntry(const char *array_name __GNU_UNUSED, unsigned int idx
-  __GNU_UNUSED, const char *val, void *arg0, void *arg1 __GNU_UNUSED)
+cbEachEnvEntry(const char *array_name __unused, unsigned int idx
+  __unused, const char *val, void *arg0, void *arg1 __unused)
 {
     strlist_t *env = arg0;
     char *env_name = NULL;
@@ -862,8 +862,8 @@ getPathList(strlist_t *env, strlist_t *path, const char *working_directory)
  * into the next available slot in the combined command string list.
  */
 void
-cbEachCmdEntry(const char *array_name __GNU_UNUSED, unsigned int idx
-  __GNU_UNUSED, const char *val, void *arg0, void *arg1)
+cbEachCmdEntry(const char *array_name __unused, unsigned int idx
+  __unused, const char *val, void *arg0, void *arg1)
 {
     strlist_t *cmdline = arg0;
     const char *typ = arg1;

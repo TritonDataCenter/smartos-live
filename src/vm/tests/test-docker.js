@@ -1265,12 +1265,17 @@ test('test restart delay reset', function (t) {
 
     vmtest.on_new_vm(t, payload.image_uuid, payload, state, [
         function (cb) {
+            var restartKeys = [
+                'internal_metadata.docker:restartcount',
+                'internal_metadata.docker:restartdelay'
+            ];
+            var running = false;
             var starts = 0;
             var stops = 0;
-            var running = false;
 
             vs = new vminfod.VminfodEventStream('test-docker.js');
             vs.on('readable', function () {
+                var dockerRestartKeysHaveChanged;
                 var ev;
                 var im;
 
@@ -1280,16 +1285,21 @@ test('test restart delay reset', function (t) {
                     if (ev.zonename !== state.uuid)
                         return;
 
+                    dockerRestartKeysHaveChanged = (ev.changes || []).map(
+                        function (change) {
+
+                        return (change.prettyPath);
+                    }).filter(function (p) {
+                        return (restartKeys.indexOf(p) > -1);
+                    }).length > 0;
+
                     if (running && ev.vm.state === 'stopped') {
                         // VM went to state === 'stopped'
                         running = false;
-                        im = ev.vm.internal_metadata;
                         stops++;
                         events.push({
                             action: 'stop',
-                            time: ev.date,
-                            restartcount: im['docker:restartcount'],
-                            restartdelay: im['docker:restartdelay']
+                            time: ev.date
                         });
                     } else if (!running && ev.vm.state === 'running') {
                         // VM went to state === 'running'
@@ -1298,6 +1308,16 @@ test('test restart delay reset', function (t) {
                         events.push({
                             action: 'start',
                             time: ev.date
+                        });
+                    }
+
+                    if (dockerRestartKeysHaveChanged) {
+                        im = ev.vm.internal_metadata;
+                        events.push({
+                            action: 'docker-keys-changed',
+                            time: ev.date,
+                            restartcount: im['docker:restartcount'],
+                            restartdelay: im['docker:restartdelay']
                         });
                     }
                 }
@@ -1334,35 +1354,32 @@ test('test restart delay reset', function (t) {
                 // next start (this will be the restart delay + the time it
                 // actually takes to start).
                 events.forEach(function (evt) {
-                    if (evt.action === 'start') {
+                    switch (evt.action) {
+                    case 'start':
                         if (last_stop > 0) {
                             deltas.push(evt.time - last_stop);
                         }
-                    } else if (evt.action === 'stop') {
+                        break;
+                    case 'stop':
                         last_stop = evt.time;
-                    } else {
+                        break;
+                    case 'docker-keys-changed':
+                        break;
+                    default:
                         throw (new Error('Unexpected action: ' + evt.action));
                     }
                 });
 
-                // Only 'stop' events have a restartcount, so create an array
-                // just of the restart counts.
+                // Create an array just of the restart counts.
                 restartcounts = events.filter(function (evt) {
-                    if (evt.action === 'stop') {
-                        return (true);
-                    }
-                    return (false);
+                    return (evt.action === 'docker-keys-changed');
                 }).map(function (evt) {
                     return (evt.restartcount);
                 });
 
-                // Only 'stop' events have a restartdelay, so create an array
-                // just of the restart delays.
+                // Create an array just of the restart delays.
                 restartdelays = events.filter(function (evt) {
-                    if (evt.action === 'stop') {
-                        return (true);
-                    }
-                    return (false);
+                    return (evt.action === 'docker-keys-changed');
                 }).map(function (evt) {
                     return (evt.restartdelay);
                 });

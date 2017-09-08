@@ -1258,7 +1258,7 @@ test('test restart delay reset', function (t) {
             + '\"mkdir -p /var/tmp; '
             + '[[ $(ls -1 /var/tmp | wc -l) == ' + cycles_fail + ' ]] '
             + '&& (sleep ' + cycle_reset_delay + '; rm -f /var/tmp/*; exit 0) '
-            + '|| (touch /var/tmp/$(/native/usr/bin/uuid); exit 1)\"]',
+            + '|| (touch /var/tmp/$(/native/usr/bin/uuid); sleep 2; exit 1)\"]',
         'docker:restartpolicy': 'always'
     };
     payload.kernel_version = '3.13.0';

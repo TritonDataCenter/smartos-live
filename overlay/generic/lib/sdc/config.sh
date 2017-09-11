@@ -73,34 +73,41 @@ function load_sdc_sysinfo {
     eval $(/usr/bin/sysinfo -p | sed -e "s/^/${prefix}/")
 }
 
-# Sets SDC_CONFIG_FILENAME with the location of the config file. This can
-# come from the USB key, /opt/smartdc/config/node.config, or (if on an unsetup
-# CN) /var/tmp/node.config/node.config.
+# Determines the Triton config filename, and sets SDC_CONFIG_FILENAME and
+# SDC_CONFIG_INC_DIR.
+#
+# On a headnode:
+#   Typically this is "/usbkey/config" (from the USB key copy) or
+#   "/mnt/usbkey/config" (from the USB key, if it is mounted) -- using the
+#   appropriate service properties on the smartdc:default SMF service for
+#   these values.
+#
+# On a compute node:
+#   "/opt/smartdc/config/node.config" on a *setup* CN, or
+#   "/var/tmp/node.config/node.config" on a CN that is in the process of being
+#   setup.
 function load_sdc_config_filename {
-
-    # the default
-    COMPUTE_NODE_CONFIG_FILENAME="/opt/smartdc/config/node.config"
+    local candidate
 
     if [[ -z "${SDC_CONFIG_FILENAME}" ]]; then
-        SDC_CONFIG_FILENAME="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/smartdc:default)/config"
-        if [[ ! -f ${SDC_CONFIG_FILENAME} ]]; then
-            SDC_CONFIG_FILENAME="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/smartdc:default)/config"
-        fi
-
-        if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-            SDC_CONFIG_INC_DIR="$(dirname ${SDC_CONFIG_FILENAME})/config.inc"
-        elif [[ ! -f ${COMPUTE_NODE_CONFIG_FILENAME} ]]; then
-            if [[ -f /var/tmp/node.config/node.config ]]; then
-                COMPUTE_NODE_CONFIG_FILENAME=/var/tmp/node.config/node.config
+        if /bin/bootparams | grep "^headnode=true" >/dev/null; then
+            # Headnode
+            candidate="$(svcprop -p 'joyentfs/usb_copy_path' svc:/system/filesystem/smartdc:default)/config"
+            if [[ ! -f ${candidate} ]]; then
+                candidate="/mnt/$(svcprop -p 'joyentfs/usb_mountpoint' svc:/system/filesystem/smartdc:default)/config"
             fi
-        fi
-
-        if [[ -f ${COMPUTE_NODE_CONFIG_FILENAME} ]]; then
-            if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-                # We write to console to make it clear we don't like this at all.
-                echo "WARNING: ignoring config at ${COMPUTE_NODE_CONFIG_FILENAME} since we have ${SDC_CONFIG_FILENAME}" >> /dev/msglog
-            else
-                SDC_CONFIG_FILENAME=${COMPUTE_NODE_CONFIG_FILENAME}
+            if [[ -f ${candidate} ]]; then
+                SDC_CONFIG_FILENAME=$candidate
+                SDC_CONFIG_INC_DIR="$(dirname ${SDC_CONFIG_FILENAME})/config.inc"
+            fi
+        else
+            # Compute node
+            candidate="/opt/smartdc/config/node.config"
+            if [[ ! -f ${candidate} ]]; then
+                candidate="/var/tmp/node.config/node.config"
+            fi
+            if [[ -f ${candidate} ]]; then
+                SDC_CONFIG_FILENAME=$candidate
                 SDC_CONFIG_INC_DIR="$(dirname ${COMPUTE_NODE_CONFIG_FILENAME})"
             fi
         fi

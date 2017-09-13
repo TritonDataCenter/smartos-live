@@ -85,7 +85,7 @@ var smartos_payload = {
         bundle_filename = util.format('/var/tmp/test.%s.vmbundle.%d',
             vmobj.uuid, process.pid);
 
-        var stderr;
+        var stderr = '';
         var ws = fs.createWriteStream(bundle_filename);
         var args = [
             'send',

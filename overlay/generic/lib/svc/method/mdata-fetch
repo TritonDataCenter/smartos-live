@@ -21,7 +21,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2015, Joyent, Inc. All rights reserved.
+# Copyright (c) 2017, Joyent, Inc. All rights reserved.
 #
 
 export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
@@ -189,6 +189,65 @@ if [[ $? == 0 && -n ${tmpfs} && -f /etc/vfstab ]]; then
 
     fi
   fi
+fi
+
+#
+# If we have NFS volumes, we'll add them to vfstab, and enable the nfs/client
+# service so that will mount the volumes for us.
+#
+echo "Retrieving volume metadata..."
+
+volumes_added=0
+while IFS="|" read -r nfsvolume mountpoint name readonly type; do
+
+  cat >&2 <<EOF
+*** VOLUME ***
+NFSVOLUME: ${nfsvolume}
+MOUNTPOINT: ${mountpoint}
+NAME: ${name}
+READONLY: ${readonly}
+TYPE: ${type}
+EOF
+
+  if [[ -n ${type} && ${type} != "tritonnfs" ]]; then
+      echo "FATAL: unsupported volume type: ${type}" >&2
+      exit ${smf_exit_err_fatal}
+  fi
+
+  # if we don't have volume and mountpoint, we can't add vfstab lines
+  if [[ -z ${nfsvolume} || -z ${mountpoint} ]]; then
+      echo "FATAL: invalid volume specification" >&2
+      exit ${SMF_EXIT_ERR_FATAL}
+      continue
+  fi
+
+  if ! grep "^${nfsvolume}[ 	]" /etc/vfstab; then
+      if [[ ${readonly} == "true" ]]; then
+          mode="ro"
+      else
+          mode="rw"
+      fi
+      line=$(printf "%s - %s nfs - yes %s\n" "${nfsvolume}" "${mountpoint}" "${mode}")
+      volumes_added=$((${volumes}+1))
+
+      mkdir -p ${mountpoint}
+      echo "${line}" >> /etc/vfstab
+  fi
+done < <(/usr/sbin/mdata-get sdc:volumes \
+    | /usr/bin/json \
+        -d '|' \
+        -a nfsvolume mountpoint name readonly type)
+
+if [[ ${volumes_added} -gt 0 ]]; then
+    for svc in \
+        svc:/network/nfs/nlockmgr:default \
+        svc:/network/nfs/status:default \
+        svc:/network/rpc/bind:default \
+        svc:/network/nfs/client:default \
+        ; do
+
+        svcadm enable ${svc}
+     done
 fi
 
 # We use the special sdc:nics value here though this is not an interface for

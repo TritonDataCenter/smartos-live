@@ -81,7 +81,7 @@ print_volumes(nvlist_t *nvl)
             return (-1);
         }
 
-        if (strncmp(type, "tritonnfs", 9) != 0) {
+        if (strcmp(type, "tritonnfs") != 0) {
             fprintf(stderr, "ERROR: volume[%s] has unsupported type (%s)\n",
                 idx, type);
             continue;

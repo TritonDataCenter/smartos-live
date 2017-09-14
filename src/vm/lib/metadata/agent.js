@@ -1373,7 +1373,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                         return;
                     });
                 } else if (want === 'volumes') {
-                    addMetadata(function (err) {
+                    addMetadata(function returnVolumes(err) {
                         if (err) {
                             returnit(new Error('Unable to load metadata: '
                                 + err.message));

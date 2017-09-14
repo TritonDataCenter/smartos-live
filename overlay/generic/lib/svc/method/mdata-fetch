@@ -211,7 +211,7 @@ EOF
 
   if [[ -n ${type} && ${type} != "tritonnfs" ]]; then
       echo "FATAL: unsupported volume type: ${type}" >&2
-      exit ${smf_exit_err_fatal}
+      exit ${SMF_EXIT_ERR_FATAL}
   fi
 
   # if we don't have volume and mountpoint, we can't add vfstab lines
@@ -228,7 +228,7 @@ EOF
           mode="rw"
       fi
       line=$(printf "%s - %s nfs - yes %s\n" "${nfsvolume}" "${mountpoint}" "${mode}")
-      volumes_added=$((${volumes}+1))
+      volumes_added=$((${volumes_added}+1))
 
       mkdir -p ${mountpoint}
       echo "${line}" >> /etc/vfstab

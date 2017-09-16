@@ -37,6 +37,13 @@ if [ ! -x /usr/sbin/mdata-get ]; then
   exit ${SMF_EXIT_ERR_FATAL}
 fi
 
+function fatal() {
+  if [[ -n $1 ]]; then
+      echo "FATAL: $*" >&2
+  fi
+  exit ${SMF_EXIT_ERR_FATAL}
+}
+
 # isAddr will test whether or not an IP address is valid. The first argument
 # is the method to call on the Node "net" module, and the second one is the
 # actual address to test.
@@ -246,7 +253,7 @@ if [[ ${volumes_added} -gt 0 ]]; then
         svc:/network/nfs/client:default \
         ; do
 
-        svcadm enable ${svc}
+        svcadm enable ${svc} || fatal "Unable to enable ${svc}"
      done
 fi
 

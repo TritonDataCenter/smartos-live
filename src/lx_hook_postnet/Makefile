@@ -17,7 +17,7 @@ BASE :=		$(PWD)
 DESTDIR =	$(BASE)/../../proto
 NATIVEDIR =	$(BASE)/../../proto.strap
 
-PROGRAM =	lxinit-post-networking-hook
+PROGRAM =	lx_hook_postnet
 
 GCC =		$(NATIVEDIR)/usr/bin/gcc
 GXX =		$(NATIVEDIR)/usr/bin/g++

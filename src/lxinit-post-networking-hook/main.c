@@ -14,27 +14,36 @@
  */
 
 /*
- * This program forms a private interface between the LX brand in
- * illumos-joyent and the volume configuration information stored by vmadm(1M)
- * in SmartOS/SDC.
+ * This program acts as a post-networking hook for lxinit on SmartOS.
  *
- * When an LX branded zone boots, a special replacement for init(1M) is used,
- * viz.  "/usr/lib/brand/lx/lxinit".  This program is responsible for
- * configuring basic networking settings before starting the emulated Linux
- * "init".  Some of these settings are stored in the zone configuration, but
- * volumes are not; they are stored by vmadm(1M) in a form that requires
- * some processing at runtime.   The volume configuration is, thus, accessed
- * through the "sdc:volumes" metadata key from within the zone.
+ * It assumes:
  *
- * This program, shipped as "/usr/lib/brand/lx/volumeinfo", is executed by
- * "lxinit" to discover the current volume configuration.
+ *  - this is an LX zone and networking is setup successfully
+ *  - messages written to stdout will eventually go to the console
+ *  - that if it exits non-zero the zone will not continue to boot
+ *
+ * It reads control parameters from the metadata service and then attempts to:
+ *
+ *   - mount any NFS Volumes that may have been found in sdc:volumes
+ *
+ * It will write an error message to stdout (should be the console when being
+ * run from lxinit) when there's an error in which case it will also exit
+ * non-zero.
+ *
  */
 
-
+#include <err.h>
+#include <errno.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
-#include <err.h>
+#include <unistd.h>
+#include <zone.h>
+
+#include <sys/stat.h>
+#include <sys/mount.h>
+#include <sys/wait.h>
 
 #include <libnvpair.h>
 
@@ -43,109 +52,171 @@
 #include <mdata-client/dynstr.h>
 #include <mdata-client/plat.h>
 #include <mdata-client/proto.h>
+#include "../dockerinit/src/docker-common.h"
+#include "../common/strings/strlist.h"
 
+#define NFS_MOUNT "/usr/lib/fs/nfs/mount"
 #define SDC_VOLUMES_KEY "sdc:volumes"
 
-int
-print_volumes(nvlist_t *nvl)
+/* global metadata client bits */
+int initialized_proto = 0;
+mdata_proto_t *mdp;
+FILE *log_stream = stdout; // lxinit attaches our stdout to /dev/console
+
+/* not actually used, but needed for docker-common.c */
+char *hostname = NULL;
+struct passwd *pwd = NULL;
+struct group *grp = NULL;
+
+
+void
+makePath(const char *base, char *out, size_t outsz)
 {
-    uint32_t len;
+    const char *zroot = zone_get_nroot();
 
-    /*
-     * The JSON stored in the volumes configuration is an array of
-     * objects.  Walk that array:
-     */
-    if (nvlist_lookup_uint32(nvl, "length", &len) != 0) {
-        fprintf(stderr, "ERROR: could not find \"length\" key\n");
-        return (-1);
+    (void) snprintf(out, outsz, "%s%s", zroot != NULL ? zroot : "", base);
+}
+
+static void
+doNfsMount(const char *nfsvolume, const char *mountpoint, const char *mode)
+{
+    pid_t pid;
+    int status;
+    int ret;
+    char opts[MAX_MNTOPT_STR];
+
+    if (strlcpy(opts, "vers=3,sec=sys,", sizeof (opts)) >= sizeof (opts)) {
+        /* too long (something's busted. ERR_UNEXPECTED so we get a core) */
+        fatal(ERR_UNEXPECTED,
+            "internal error: strlcpy() opts not long enough");
+    }
+    if (strlcat(opts, mode, sizeof (opts)) >= sizeof (opts)) {
+        /* too long (something's busted. ERR_UNEXPECTED so we get a core) */
+        fatal(ERR_UNEXPECTED,
+            "internal error: strlcat() opts not long enough");
     }
 
-    for (uint32_t i = 0; i < len; i++) {
-        char idx[32];
-        nvlist_t *volume;
-        char *mode;
-        char *mountpoint;
-        char *name;
-        char *nfsvolume;
-        char *type;
+    /* ensure the directory exists */
+    ret = mkdir(mountpoint, 0755);
+    if (ret == -1 && errno != EEXIST) {
+        fatal(ERR_MKDIR, "failed to mkdir(%s): (%d) %s\n", mountpoint,
+            errno, strerror(errno));
+    }
 
-        (void) snprintf(idx, sizeof (idx), "%u", i);
+    /* do the mount */
 
-        if (nvlist_lookup_nvlist(nvl, idx, &volume) != 0) {
-            fprintf(stderr, "ERROR: could not find volume[%s]\n", idx);
-            return (-1);
+    if ((pid = fork()) == -1) {
+        fatal(ERR_FORK_FAILED, "fork() failed: %s\n", strerror(errno));
+    }
+
+    if (pid == 0) {
+        /* child */
+        char cmd[MAXPATHLEN];
+        char *const argv[] = {
+            "mount",
+            "-o",
+            opts,
+            (char *)nfsvolume,
+            (char *)mountpoint,
+            NULL
+        };
+
+        makePath(NFS_MOUNT, cmd, sizeof (cmd));
+
+        execv(cmd, argv);
+        fatal(ERR_EXEC_FAILED, "execv(%s) failed: %s\n", cmd, strerror(errno));
+    }
+
+    /* parent */
+
+    while (wait(&status) != pid) {
+        /* EMPTY */;
+    }
+
+    if (WIFEXITED(status)) {
+        if (WEXITSTATUS(status) != 0) {
+            fatal(ERR_MOUNT_NFS_VOLUME, "mount[%d] exited non-zero (%d)\n",
+                (int)pid, WEXITSTATUS(status));
         }
+    } else if (WIFSIGNALED(status)) {
+        fatal(ERR_EXEC_FAILED, "mount[%d] died on signal: %d\n",
+            (int)pid, WTERMSIG(status));
+    } else {
+        fatal(ERR_EXEC_FAILED, "mount[%d] failed in unknown way\n",
+            (int)pid);
+    }
+}
 
-        if (nvlist_lookup_string(volume, "type", &type) != 0) {
-            fprintf(stderr, "ERROR: volume[%s] missing type\n", idx);
-            return (-1);
-        }
+static void
+mountNfsVolume(nvlist_t *data)
+{
+    char *mode;
+    char *mountpoint;
+    char *nfsvolume;
+    int ret;
+    char *type;
 
+    ret = nvlist_lookup_string(data, "type", &type);
+    if (ret == 0) {
         if (strcmp(type, "tritonnfs") != 0) {
-            fprintf(stderr, "ERROR: volume[%s] has unsupported type (%s)\n",
-                idx, type);
-            continue;
+            fatal(ERR_UNKNOWN_VOLUME_TYPE, "invalid volume type %s", type);
         }
-
-        if (nvlist_lookup_string(volume, "mode", &mode) != 0) {
-            fprintf(stderr, "ERROR: volume[%s] missing mode\n", mode);
-            return (-1);
+        ret = nvlist_lookup_string(data, "nfsvolume", &nfsvolume);
+        if (ret == 0) {
+            ret = nvlist_lookup_string(data, "mountpoint", &mountpoint);
+            if (ret == 0) {
+                ret = nvlist_lookup_string(data, "mode", &mode);
+                if (ret != 0) {
+                    mode = "rw";
+                }
+                doNfsMount(nfsvolume, mountpoint, mode);
+                return;
+            }
         }
-
-        if (nvlist_lookup_string(volume, "mountpoint", &mountpoint) != 0) {
-            fprintf(stderr, "ERROR: volume[%s] missing mountpoint\n", idx);
-            return (-1);
-        }
-
-        if (nvlist_lookup_string(volume, "name", &name) != 0) {
-            fprintf(stderr, "ERROR: volume[%s] missing name\n", idx);
-            return (-1);
-        }
-
-        if (nvlist_lookup_string(volume, "nfsvolume", &nfsvolume) != 0) {
-            fprintf(stderr, "ERROR: volume[%s] missing nfsvolume\n", idx);
-            return (-1);
-        }
-
-        fprintf(stdout, "%s|%s|%s|%s|%s\n",
-            type, nfsvolume, mountpoint, name, mode);
-        fflush(stdout);
     }
 
-    return (0);
+    fatal(ERR_INVALID_NFS_VOLUMES, "invalid nfsvolumes");
+}
+
+static void
+mountNfsVolumes()
+{
+    char *json;
+    nvlist_t *data, *nvl;
+    nvpair_t *pair;
+    int r;
+
+    if ((json = mdataGet(SDC_VOLUMES_KEY)) == NULL) {
+        /*
+         * No volumes, nothing to mount.
+         */
+        return;
+    }
+
+    r = nvlist_parse_json(json, strlen(json), &nvl, NVJSON_FORCE_INTEGER, NULL);
+    if (r != 0) {
+        fatal(ERR_PARSE_JSON, "failed to parse nvpair json"
+            " for %s: %s\n", SDC_VOLUMES_KEY, strerror(errno));
+    }
+    free(json);
+
+    for (pair = nvlist_next_nvpair(nvl, NULL); pair != NULL;
+      pair = nvlist_next_nvpair(nvl, pair)) {
+        if (nvpair_type(pair) == DATA_TYPE_NVLIST) {
+            if (nvpair_value_nvlist(pair, &data) != 0) {
+                fatal(ERR_PARSE_JSON, "failed to parse nvpair json"
+                    " for NFS volume: %s\n", strerror(errno));
+            }
+            mountNfsVolume(data);
+        }
+    }
+
+    nvlist_free(nvl);
 }
 
 int
 main(int argc, char *argv[])
 {
-    nvlist_t *nvl = NULL;
-    char *errmsg = NULL;
-    mdata_proto_t *mdp;
-    mdata_response_t mdr;
-    string_t *data;
-    nvlist_parse_json_error_t nje;
-
-    if (proto_init(&mdp, &errmsg) != 0) {
-        errx(EXIT_FAILURE, "could not initialise mdata: %s",
-            errmsg == NULL ?  "?" : errmsg);
-    }
-
-    if (proto_execute(mdp, "GET", SDC_VOLUMES_KEY, &mdr, &data) != 0) {
-        errx(EXIT_FAILURE, "could not get \"%s\" mdata",
-            SDC_VOLUMES_KEY);
-    }
-
-    if (nvlist_parse_json(dynstr_cstr(data), dynstr_len(data),
-        &nvl, 0, &nje) != 0) {
-        errx(EXIT_FAILURE, "could not parse \"%s\" mdata as JSON: %s",
-            SDC_VOLUMES_KEY, nje.nje_message);
-    }
-
-    if (print_volumes(nvl) != 0) {
-        errx(EXIT_FAILURE, "could not print volumes from \"%s\" mdata",
-            SDC_VOLUMES_KEY);
-    }
-
-    nvlist_free(nvl);
+    mountNfsVolumes();
     return (EXIT_SUCCESS);
 }

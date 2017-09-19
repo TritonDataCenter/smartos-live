@@ -1,2 +1,2 @@
 *.o
-volumeinfo
+lxinit-post-networking-hook

@@ -17,7 +17,7 @@ BASE :=		$(PWD)
 DESTDIR =	$(BASE)/../../proto
 NATIVEDIR =	$(BASE)/../../proto.strap
 
-PROGRAM =	volumeinfo
+PROGRAM =	lxinit-post-networking-hook
 
 GCC =		$(NATIVEDIR)/usr/bin/gcc
 GXX =		$(NATIVEDIR)/usr/bin/g++
@@ -35,7 +35,7 @@ LDFLAGS =	$(SYSLIBDIRS:%=-L$(DESTDIR)/%) \
 STRINGS_DIR =	$(BASE)/../common/strings
 DOCKER_DIR =	$(BASE)/../dockerinit
 
-ROUTEINFO_OBJECTS = \
+LXINIT_HOOK_OBJECTS = \
 		main.o
 
 MDATA_OBJECTS = \
@@ -50,16 +50,25 @@ MDATA_OBJECTS = \
 
 custr.o :	CFLAGS += -I$(STRINGS_DIR)
 mdata_%.o :	CFLAGS += -I$(DOCKER_DIR)/mdata-client -D__HAVE_BOOLEAN_T
+main.o:	CFLAGS += -I$(STRINGS_DIR)
+docker_common.o:	CFLAGS += -I$(DOCKER_DIR)/src
+strlist.o:	CFLAGS += -I$(STRINGS_DIR)
+strpath.o:	CFLAGS += -I$(STRINGS_DIR)
 
 OBJECTS = \
 		$(MDATA_OBJECTS:%=mdata_%) \
 		custr.o \
+		docker_common.o \
 		json-nvlist.o \
-		main.o
+		main.o \
+		strlist.o \
+		strpath.o
 
 json-nvlist.o :	CFLAGS += -I$(DOCKER_DIR)/json-nvlist -I$(STRINGS_DIR)
 
-LIBS =		-lnvpair -lnsl -lsocket -lsmbios
+docker_common.o :	CFLAGS += -I$(DOCKER_DIR)/json-nvlist -I$(STRINGS_DIR)
+
+LIBS =		-lnvpair -lnsl -lsocket -lsmbios -lgen
 
 CTFCONVERT =	/usr/bin/true
 CTFMERGE =	/usr/bin/true
@@ -77,7 +86,7 @@ INSTALL_PROG =	mkdir -p $(@D) && rm -f $@ && cp $^ $@ && \
 all: $(PROGRAM)
 
 .PHONY: check
-check: $(ROUTEINFO_OBJECTS:%.o=%.check)
+check: $(LXINIT_HOOK_OBJECTS:%.o=%.check)
 
 %.check: %.c
 	$(CSTYLE) -cPp $<
@@ -105,6 +114,10 @@ mdata_%.o: $(DOCKER_DIR)/mdata-client/%.c
 	$(CTFCONVERT) -L VERSION $@
 
 mdata_%.o: $(DOCKER_DIR)/mdata-client/plat/%.c
+	$(COMPILE_C)
+	$(CTFCONVERT) -L VERSION $@
+
+docker_common.o: $(DOCKER_DIR)/src/docker-common.c
 	$(COMPILE_C)
 	$(CTFCONVERT) -L VERSION $@
 

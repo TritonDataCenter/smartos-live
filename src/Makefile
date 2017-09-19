@@ -132,7 +132,8 @@ C_CHECK_TARGETS=\
 	sysevent.c \
 	dockerinit/src/dockerexec.c \
 	dockerinit/src/dockerinit.c \
-	dockerinit/src/docker-common.c
+	dockerinit/src/docker-common.c \
+	lxinit-post-networking-hook/main.c
 
 #
 # Generic flags we apply by default to everything.
@@ -304,7 +305,7 @@ SMARTDC_LIB_TARGETS = \
 #
 # Subdirectory management
 #
-SUBDIRS = dockerinit routeinfo
+SUBDIRS = dockerinit routeinfo lxinit-post-networking-hook
 
 SUBDIRS_ENV = \
 	CTFCONVERT=$(CTFCONVERT) \

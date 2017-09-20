@@ -558,7 +558,7 @@ f usr/vm/node_modules/vmload/vmload-xml.js 0644 root root
 f usr/vm/node_modules/vmload/dump-json.js 0755 root root
 f usr/vm/node_modules/vmload/index.js 0644 root root
 d usr/vm/node_modules/vminfod 0755 root root
-f usr/vm/node_modules/vminfod/vminfo.js 0644 root root
+f usr/vm/node_modules/vminfod/vminfod.js 0644 root root
 f usr/vm/node_modules/vminfod/zpoolwatcher.js 0644 root root
 f usr/vm/node_modules/vminfod/zonewatcher.js 0644 root root
 f usr/vm/node_modules/vminfod/client.js 0644 root root

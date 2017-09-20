@@ -28,38 +28,46 @@
 
 var onlyif = require('/usr/node/node_modules/onlyif');
 var bunyan = require('/usr/node/node_modules/bunyan');
-var Vminfo = require('../node_modules/vminfod/vminfo');
+var Vminfod = require('../node_modules/vminfod/vminfod');
 
-onlyif.rootInSmartosGlobal(function (err) {
-    var log = bunyan.createLogger({
-        name: 'vminfo',
-        level: 'debug',
-        serializers: bunyan.stdSerializers
-    });
+var log = bunyan.createLogger({
+    name: 'vminfod',
+    level: 'debug',
+    serializers: bunyan.stdSerializers
+});
 
-    if (err) {
-        log.error(err, 'Fatal: cannot run because: %s', err.message);
-        process.exit(1);
-    }
+function startVminfod() {
+    var opts = {
+        log: log
+    };
+    var vminfod = new Vminfod(opts);
 
     log.info('Starting vminfod');
 
-    var options = {log: log};
-    var vminfo = new Vminfo(options);
-    vminfo.start();
+    vminfod.start();
 
-    process.on('uncaughtException', function (err2) {
-        log.fatal({err: err2},
+    process.on('uncaughtException', function (err) {
+        log.fatal({err: err},
             'Uncaught exception in vminfo process: %s',
-            err2.message);
-        log.fatal('%s', err2.stack);
+            err.message);
+        log.fatal('%s', err.stack);
 
-        vminfo.stop();
+        vminfod.stop();
         process.exit(1);
     });
 
     process.on('exit', function () {
         log.info('Vminfo process exiting');
-        vminfo.stop();
+        vminfod.stop();
     });
+}
+
+onlyif.rootInSmartosGlobal(function (err) {
+    if (err) {
+        log.error({err: err},
+            'Fatal: cannot run because: %s', err.message);
+        process.exit(1);
+    }
+
+    startVminfod();
 });

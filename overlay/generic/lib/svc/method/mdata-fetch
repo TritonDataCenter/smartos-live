@@ -21,7 +21,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2015, Joyent, Inc. All rights reserved.
+# Copyright (c) 2017, Joyent, Inc. All rights reserved.
 #
 
 export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
@@ -36,6 +36,13 @@ if [ ! -x /usr/sbin/mdata-get ]; then
   echo "Metadata mdata-get tool not found."
   exit ${SMF_EXIT_ERR_FATAL}
 fi
+
+function fatal() {
+  if [[ -n $1 ]]; then
+      echo "FATAL: $*" >&2
+  fi
+  exit ${SMF_EXIT_ERR_FATAL}
+}
 
 # isAddr will test whether or not an IP address is valid. The first argument
 # is the method to call on the Node "net" module, and the second one is the
@@ -96,8 +103,7 @@ fi
 
 if [[ ! -e /.zonecontrol/metadata.sock ]]; then
     # this is a bug since filewait should not have returned until file existed.
-    echo "missing /.zonecontrol/metadata.sock, Unable to start mdata:fetch"
-    exit ${SMF_EXIT_ERR_FATAL}
+    fatal "missing /.zonecontrol/metadata.sock, Unable to start mdata:fetch"
 fi
 
 # Update sysinfo to ensure values that come from metadata are populated.
@@ -189,6 +195,65 @@ if [[ $? == 0 && -n ${tmpfs} && -f /etc/vfstab ]]; then
 
     fi
   fi
+fi
+
+#
+# If we have NFS volumes, we'll add them to vfstab, and enable the nfs/client
+# service so that will mount the volumes for us.
+#
+echo "Retrieving volume metadata..."
+
+volumes_added=0
+while IFS="|" read -r nfsvolume mountpoint name mode type; do
+
+  cat >&2 <<EOF
+*** VOLUME ***
+NFSVOLUME: ${nfsvolume}
+MOUNTPOINT: ${mountpoint}
+MODE: ${mode}
+NAME: ${name}
+TYPE: ${type}
+EOF
+
+  if [[ -n ${type} && ${type} != "tritonnfs" ]]; then
+      fatal "unsupported volume type: ${type}"
+  fi
+
+  # if we don't have volume and mountpoint, we can't add vfstab lines
+  if [[ -z ${nfsvolume} || -z ${mountpoint} ]]; then
+      fatal "invalid volume specification (need both volume & mountpoint)"
+  fi
+
+  if ! grep "^${nfsvolume}[ 	]" /etc/vfstab; then
+      if [[ -z ${mode} ]]; then
+          mode="rw"
+      fi
+
+      if [[ ${mode} != "rw" && ${mode} != "ro" ]]; then
+          fatal "invalid volume mode: '${mode}'"
+      fi
+
+      line=$(printf "%s - %s nfs - yes %s\n" "${nfsvolume}" "${mountpoint}" "${mode}")
+      volumes_added=$((${volumes_added}+1))
+
+      mkdir -p ${mountpoint}
+      echo "${line}" >> /etc/vfstab
+  fi
+done < <(/usr/sbin/mdata-get sdc:volumes \
+    | /usr/bin/json \
+        -d '|' \
+        -a nfsvolume mountpoint name mode type)
+
+if [[ ${volumes_added} -gt 0 ]]; then
+    for svc in \
+        svc:/network/nfs/nlockmgr:default \
+        svc:/network/nfs/status:default \
+        svc:/network/rpc/bind:default \
+        svc:/network/nfs/client:default \
+        ; do
+
+        svcadm enable ${svc} || fatal "Unable to enable ${svc}"
+     done
 fi
 
 # We use the special sdc:nics value here though this is not an interface for

@@ -2,6 +2,7 @@ d usr/lib 0755 root bin
 d usr/lib/brand 0755 root bin
 d usr/lib/brand/lx 0755 root bin
 f usr/lib/brand/lx/lx_boot_zone_docker 0755 root root
+f usr/lib/brand/lx/lx_hook_postnet 0755 root root
 f usr/lib/brand/lx/routeinfo 0755 root root
 
 # automatically generated man.cf file

@@ -103,8 +103,7 @@ fi
 
 if [[ ! -e /.zonecontrol/metadata.sock ]]; then
     # this is a bug since filewait should not have returned until file existed.
-    echo "missing /.zonecontrol/metadata.sock, Unable to start mdata:fetch"
-    exit ${SMF_EXIT_ERR_FATAL}
+    fatal "missing /.zonecontrol/metadata.sock, Unable to start mdata:fetch"
 fi
 
 # Update sysinfo to ensure values that come from metadata are populated.
@@ -205,35 +204,35 @@ fi
 echo "Retrieving volume metadata..."
 
 volumes_added=0
-while IFS="|" read -r nfsvolume mountpoint name readonly type; do
+while IFS="|" read -r nfsvolume mountpoint name mode type; do
 
   cat >&2 <<EOF
 *** VOLUME ***
 NFSVOLUME: ${nfsvolume}
 MOUNTPOINT: ${mountpoint}
+MODE: ${mode}
 NAME: ${name}
-READONLY: ${readonly}
 TYPE: ${type}
 EOF
 
   if [[ -n ${type} && ${type} != "tritonnfs" ]]; then
-      echo "FATAL: unsupported volume type: ${type}" >&2
-      exit ${SMF_EXIT_ERR_FATAL}
+      fatal "unsupported volume type: ${type}"
   fi
 
   # if we don't have volume and mountpoint, we can't add vfstab lines
   if [[ -z ${nfsvolume} || -z ${mountpoint} ]]; then
-      echo "FATAL: invalid volume specification" >&2
-      exit ${SMF_EXIT_ERR_FATAL}
-      continue
+      fatal "invalid volume specification (need both volume & mountpoint)"
   fi
 
   if ! grep "^${nfsvolume}[ 	]" /etc/vfstab; then
-      if [[ ${readonly} == "true" ]]; then
-          mode="ro"
-      else
+      if [[ -z ${mode} ]]; then
           mode="rw"
       fi
+
+      if [[ ${mode} != "rw" && ${mode} != "ro" ]]; then
+          fatal "invalid volume mode: '${mode}'"
+      fi
+
       line=$(printf "%s - %s nfs - yes %s\n" "${nfsvolume}" "${mountpoint}" "${mode}")
       volumes_added=$((${volumes_added}+1))
 
@@ -243,7 +242,7 @@ EOF
 done < <(/usr/sbin/mdata-get sdc:volumes \
     | /usr/bin/json \
         -d '|' \
-        -a nfsvolume mountpoint name readonly type)
+        -a nfsvolume mountpoint name mode type)
 
 if [[ ${volumes_added} -gt 0 ]]; then
     for svc in \

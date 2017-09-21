@@ -61,7 +61,7 @@
 /* global metadata client bits */
 int initialized_proto = 0;
 mdata_proto_t *mdp;
-FILE *log_stream = stdout; // lxinit attaches our stdout to /dev/console
+FILE *log_stream = stderr; // lxinit attaches our stderr to /dev/console
 
 /* not actually used, but needed for docker-common.c */
 char *hostname = NULL;
@@ -150,11 +150,11 @@ doNfsMount(const char *nfsvolume, const char *mountpoint, const char *mode)
 static void
 mountNfsVolume(nvlist_t *data)
 {
-    char *mode;
-    char *mountpoint;
-    char *nfsvolume;
+    char *mode = NULL;
+    char *mountpoint = NULL;
+    char *nfsvolume = NULL;
     int ret;
-    char *type;
+    char *type = NULL;
 
     ret = nvlist_lookup_string(data, "type", &type);
     if (ret == 0) {

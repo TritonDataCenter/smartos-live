@@ -17,6 +17,7 @@ VM.loglevel = 'DEBUG';
 // haven't regressed.
 test('test deleting nonexistent VM', function(t) {
     var i = 0;
+
     vasync.whilst(
         function () {
             return i < 50;

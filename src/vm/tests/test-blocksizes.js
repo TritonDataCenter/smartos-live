@@ -1,4 +1,4 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2017 Joyent, Inc.
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');

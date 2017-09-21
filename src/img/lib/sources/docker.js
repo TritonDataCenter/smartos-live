@@ -20,12 +20,13 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2017, Joyent, Inc. All rights reserved.
  */
 
 var p = console.log;
 
 var assert = require('assert-plus');
+var concat = require('concat-stream');
 var drc = require('docker-registry-client');
 var imgmanifest = require('imgmanifest');
 var url = require('url');
@@ -65,12 +66,13 @@ DockerSource.prototype.type = 'docker';
 DockerSource.prototype.ping = function ping(cb) {
     var self = this;
 
-    drc.pingIndex({
+    drc.pingV2({
         indexName: self.url,
         log: self.log,
         insecure: self.insecure
-    }, function (err, body, res) {
-        if (err) {
+    }, function (err) {
+        // Allow a 401 "Authentication is required" error.
+        if (err && err.statusCode !== 401) {
             cb(new errors.SourcePingError(err, self));
             return;
         }
@@ -81,7 +83,7 @@ DockerSource.prototype.ping = function ping(cb) {
 
 DockerSource.prototype._clientFromRepo = function _clientFromRepo(repo) {
     assert.object(repo, 'repo');
-    assert.equal(repo.index.name, this.index.name);
+    // assert.equal(repo.index.name, this.index.name);
 
     var key = repo.canonicalName;
 
@@ -90,10 +92,10 @@ DockerSource.prototype._clientFromRepo = function _clientFromRepo(repo) {
     }
 
     if (!this.__clientCache[key]) {
-        this.__clientCache[key] = drc.createClient({
+        this.__clientCache[key] = drc.createClientV2({
+            maxSchemaVersion: 2,
+            repo: repo,
             scheme: this.index.scheme,
-            name: repo.canonicalName,
-            agent: false,
             log: this.log,
             insecure: this.insecure
         });
@@ -126,19 +128,15 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
      * which includes a index name (aka registry host) that doesn't match.
      */
     try {
-        var rat = drc.parseRepoAndTag(opts.arg, self.index);
+        var rat = drc.parseRepoAndTag(opts.arg);
     } catch(e) {
         return cb();
     }
-    if (rat.index.name !== self.index.name) {
-        self.log.trace({arg: opts.arg, rat: rat, source: this},
-            'import arg does not apply to this docker source');
-        return cb();
-    }
-
+    
     var importInfo;
+
     var client = self._clientFromRepo(rat);
-    client.listRepoTags(function (err, repoTags) {
+    client.getManifest({ref: rat.tag}, function (err, dockerManifest, res) {
         if (err) {
             if (err.statusCode === 404) {
                 cb();
@@ -147,27 +145,58 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
             }
             return;
         }
-        if (!repoTags[rat.tag]) {
-            cb();
+        assert.object(dockerManifest, 'manifest');
+        if (!dockerManifest.hasOwnProperty('schemaVersion')
+                || dockerManifest.schemaVersion !== 2) {
+            cb(new errors.InvalidDockerInfoError(
+                'Unsupported docker manifest version: '
+                 + dockerManifest.schemaVersion));
             return;
         }
-        var imgId = repoTags[rat.tag];
-        importInfo = {
-            repo: rat,
-            tag: rat.tag,   // the requested tag
-            tags: [],       // all the tags on that imgId
-            imgId: imgId,
-            uuid: imgmanifest.imgUuidFromDockerInfo({
-                id: imgId,
-                indexName: rat.index.name
-            }),
-        };
-        Object.keys(repoTags).forEach(function (repoTag) {
-            if (repoTags[repoTag] === imgId) {
-                importInfo.tags.push(repoTag);
+        var layerDigests = dockerManifest.layers.map(
+            function (l) {
+                return l.digest;
             }
-        });
-        cb(null, importInfo);
+        );
+
+        var configDigest = dockerManifest.config.digest;
+        client.createBlobReadStream({digest: configDigest},
+            function (err, stream, ress) {
+                if (err) {
+                    cb(err);
+                    return;
+                }
+                stream.pipe(concat(function (buf) {
+                    var imgJson;
+                    try {
+                        imgJson = JSON.parse(buf.toString());
+                    } catch (ex) {
+                        cb(ex);
+                        return;
+                    }
+    
+                    importInfo = {
+                        repo: rat,
+                        tag: rat.tag,   // the requested tag
+                        tags: [rat.tag], // all the tags on that imgId
+                        imgId: dockerManifest.layers[dockerManifest.layers.length-1].digest,
+                        imgJson: imgJson,
+                        dockerManifest: dockerManifest,
+                        layerDigests: layerDigests,
+                        uuid: imgmanifest.imgUuidFromDockerDigests(layerDigests)
+                    };
+                    cb(null, importInfo);
+                }));
+    
+                // stream error handling
+                stream.on('error', function (err) {
+                   console.error('read stream error:', err);
+                   cb(err);
+                });
+    
+                stream.resume();
+            }
+        );
     });
 }
 
@@ -182,66 +211,49 @@ function titleFromImportInfo(importInfo) {
 DockerSource.prototype.getImgAncestry = function getImgAncestry(opts, cb) {
     assert.object(opts, 'opts');
     assert.object(opts.repo, 'opts.repo');
-    assert.string(opts.imgId, 'opts.imgId');
+    assert.object(opts.dockerManifest, 'opts.dockerManifest');
+    assert.object(opts.imgJson, 'opts.imgJson');
+    assert.arrayOfString(opts.layerDigests, 'opts.layerDigests');
     assert.func(cb, 'cb');
 
-    var client = this._clientFromRepo(opts.repo);
-    client.getImgAncestry({imgId: opts.imgId}, function (err, dAncestry) {
-        if (err) {
-            cb(err);
-            return;
-        }
-        var ancestry = [];
-        for (var i = 0; i < dAncestry.length; i++) {
-            var imgId = dAncestry[i];
-            try {
-                var uuid = imgmanifest.imgUuidFromDockerInfo({
-                    id: imgId,
-                    indexName: opts.repo.index.name
-                });
-            } catch (infoErr) {
-                return cb(new errors.InvalidDockerInfoError(
-                    infoErr, format('docker image %s\'s ancestry (repo %s) ' +
-                    'includes invalid info: %s', opts.imgId,
-                    opts.repo.localName, infoErr.message)));
-            }
-            ancestry.push({
-                imgId: imgId,
-                uuid: uuid,
-                repo: opts.repo
-            });
-        }
-        cb(null, ancestry);
+    var ancestry;
+    var digests = opts.layerDigests;
+    var imgJson = common.objCopy(opts.imgJson);
+    var parentDigest = null;
+
+    ancestry = digests.map(function (digest, idx) {
+        imgJson.config = common.objCopy(imgJson.config);
+        imgJson.config.parent = parentDigest;
+        parentDigest = digest;
+        return {
+            imgId: digest,
+            imgJson: imgJson,
+            layerDigests: opts.layerDigests,
+            uuid: imgmanifest.imgUuidFromDockerDigests(digests.slice(0, idx+1)),
+            size: opts.dockerManifest.layers[idx].size,
+            repo: opts.repo
+        };
     });
+    cb(null, ancestry);
 };
 
 
 DockerSource.prototype.getImgMeta = function getImgMeta(opts, cb) {
     assert.object(opts, 'opts');
     assert.object(opts.repo, 'opts.repo');
-    assert.string(opts.uuid, 'opts.uuid');
     assert.string(opts.imgId, 'opts.imgId');
-    // The docker tags on this imgId, if any. Typically set by `getImportInfo`.
-    assert.optionalArrayOfString(opts.tags, 'opts.tags');
+    assert.arrayOfString(opts.layerDigests, 'opts.layerDigests');
     assert.func(cb, 'cb');
 
-    var client = this._clientFromRepo(opts.repo);
-    client.getImgJson({imgId: opts.imgId}, function (err, imgJson, res) {
-        if (err) {
-            cb(err);
-            return;
-        }
-        var imgMeta = {
-            manifest: imgmanifest.imgManifestFromDockerInfo({
-                imgJson: imgJson,
-                repo: opts.repo,
-                uuid: opts.uuid,
-                tags: opts.tags
-            }),
-            imgJson: imgJson
-        };
-        cb(null, imgMeta);
-    });
+    var imgMeta = {
+        manifest: imgmanifest.imgManifestFromDockerInfo({
+            layerDigests: opts.layerDigests,
+            imgJson: opts.imgJson,
+            repo: opts.repo,
+            uuid: opts.uuid
+        })
+    };
+    cb(null, imgMeta);
 };
 
 
@@ -259,7 +271,7 @@ DockerSource.prototype.getImgFileStream = function getImgFileStream(opts, cb) {
     assert.func(cb, 'cb');
 
     var client = this._clientFromRepo(opts.repo);
-    client.getImgLayerStream({imgId: opts.imgId}, function (err, stream) {
+    client.createBlobReadStream({digest: opts.imgId}, function (err, stream) {
         if (err) {
             cb(err);
             return;

@@ -225,11 +225,12 @@ DockerSource.prototype.getImgAncestry = function getImgAncestry(opts, cb) {
         imgJson.config = common.objCopy(imgJson.config);
         imgJson.config.parent = parentDigest;
         parentDigest = digest;
+        var layerDigests = digests.slice(0, idx+1);
         return {
             imgId: digest,
             imgJson: imgJson,
-            layerDigests: opts.layerDigests,
-            uuid: imgmanifest.imgUuidFromDockerDigests(digests.slice(0, idx+1)),
+            layerDigests: layerDigests,
+            uuid: imgmanifest.imgUuidFromDockerDigests(layerDigests),
             size: opts.dockerManifest.layers[idx].size,
             repo: opts.repo
         };

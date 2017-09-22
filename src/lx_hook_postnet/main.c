@@ -53,7 +53,6 @@
 #include <mdata-client/plat.h>
 #include <mdata-client/proto.h>
 #include "../dockerinit/src/docker-common.h"
-#include "../common/strings/strlist.h"
 
 #define NFS_MOUNT "/usr/lib/fs/nfs/mount"
 #define SDC_VOLUMES_KEY "sdc:volumes"
@@ -182,8 +181,11 @@ static void
 mountNfsVolumes()
 {
     char *json;
-    nvlist_t *data, *nvl;
+    nvlist_t *data;
+    nvlist_t *nvl;
     nvpair_t *pair;
+    data_type_t pair_type;
+    char *pair_name;
     int r;
 
     if ((json = mdataGet(SDC_VOLUMES_KEY)) == NULL) {
@@ -201,13 +203,28 @@ mountNfsVolumes()
     free(json);
 
     for (pair = nvlist_next_nvpair(nvl, NULL); pair != NULL;
-      pair = nvlist_next_nvpair(nvl, pair)) {
-        if (nvpair_type(pair) == DATA_TYPE_NVLIST) {
+        pair = nvlist_next_nvpair(nvl, pair)) {
+
+        pair_name = nvpair_name(pair);
+        pair_type = nvpair_type(pair);
+
+        if (pair_type == DATA_TYPE_NVLIST) {
             if (nvpair_value_nvlist(pair, &data) != 0) {
                 fatal(ERR_PARSE_JSON, "failed to parse nvpair json"
                     " for NFS volume: %s\n", strerror(errno));
             }
             mountNfsVolume(data);
+        } else if (strcmp(pair_name, ".__json_array") != 0 &&
+            strcmp(pair_name, "length") != 0) {
+
+            /*
+             * If it's anything other than the "decoration" that json-nvlist
+             * adds, we don't know what to do with it so we will die with an
+             * ERR_UNEXPECTED which will cause an abort so we'll get a core.
+             */
+            fatal(ERR_UNEXPECTED,
+                "internal error: unexpected nvpair (name: %s, type: %d)",
+                pair_name, (int) pair_type);
         }
     }
 

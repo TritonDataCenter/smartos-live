@@ -1669,51 +1669,45 @@ function clip(s, length) {
 // ---- docker
 
 /**
- * This is OBSOLETE: use `imgUuidFromDockerInfo`.
- * Keeping this around for now to assist with migration and testing.
+ * Return a uuid from the given string.
  */
-function obsoleteImgUuidFromDockerId(dockerId) {
-    assert.ok(dockerId.length === 64);
-    return (dockerId.slice(0, 8)
-        + '-' + dockerId.slice(8, 12)
-        + '-' + dockerId.slice(12, 16)
-        + '-' + dockerId.slice(16, 20)
-        + '-' + dockerId.slice(20, 32));
+function uuidFromString(str) {
+    assert.string(str, 'str');
+    assert.ok(str.length >= 32);
+    return (str.slice(0, 8) +
+        '-' + str.slice(8, 12) +
+        '-' + str.slice(12, 16) +
+        '-' + str.slice(16, 20) +
+        '-' + str.slice(20, 32));
 }
 
 /**
- * Generate the SDC/SmartOS image uuid for this docker image.
+ * Generate the SDC/SmartOS image uuid from the docker digest chain. See RFD 57
+ * for why we generated the uuid this way.
  *
- * An img UUID for a Docker image/layer is a hash of the repository host
- * (a.k.a the "index name") and the Docker image/layer id.
- * See https://smartos.org/bugview/DOCKER-257 for design discussion on this.
- *
- * @param opts {Object}
- *      - id {String} The full docker ID
- *      - indexName {String} The canonicalized Docker index name, as
- *        from `require('docker-registry-client').parseIndex()`.
- *      - obsoleteUuid {Boolean} Optional. Default false. Set to true to
- *        get the `obsoleteImgUuidFromDockerId` behaviour for the UUID.
+ * @param digests {Array} The docker digest chain, base is first.
  * @returns {String} uuid
- * @throws {Error} If the given id does not look like a full 64-char docker id.
  */
-function imgUuidFromDockerInfo(opts) {
-    assert.string(opts.id, 'opts.id');
-    assert.string(opts.indexName, 'opts.indexName');
-    assert.optionalBool(opts.obsoleteUuid, 'opts.obsoleteUuid');
+function imgUuidFromDockerDigests(digests) {
+    assert.arrayOfString(digests, 'digests');
 
-    if (opts.id.length !== 64) {
-        throw new Error('docker id "' + opts.id + '" is too short, full ' +
-            '64-char id was expected');
+    // Sanity check the digests.
+    var badDigests = digests.filter(function (d) {
+        var sp = d.split(':');
+        if (sp.length !== 2 || sp[0] !== 'sha256' || sp[1].length !== 64) {
+            return true;
+        }
+        return false;
+    });
+    if (badDigests.length > 0) {
+        throw new Error(
+            'docker digests should be of the form "sha256:xxx", got: ' +
+            badDigests);
     }
 
-    if (opts.obsoleteUuid) {
-        return obsoleteImgUuidFromDockerId(opts.id);
-    }
-
-    // Make a stack RFC 4122 v5 UUID using name='$indexName:$id'.
-    var name = opts.indexName + ':' + opts.id;
-    return _uuidv5(name);
+    var sha256sum = crypto.createHash('sha256');
+    sha256sum.update(digests.join(' '));
+    return uuidFromString(sha256sum.digest('hex'));
 }
 
 function imgManifestOsFromDockerOs(dockerOs) {
@@ -1729,40 +1723,40 @@ function imgManifestOsFromDockerOs(dockerOs) {
  * @param opts {Object}
  *      - imgJson {Object} The Docker Registry API v1 "image json" as from
  *        `require('docker-registry-client').RegistryClient.getImgJson`.
+ *      - layerDigests {Array} Array of docker layer digest strings.
  *      - repo {Object} A structure holding the repo host (aka "index.name")
  *        of the Docker image as from
  *        `require('docker-registry-client').parseRepo`.
- *      - uuid {String} Optional.
  *      - owner {String} Optional.
- *      - tags {String} Optional.
  *      - public {Boolean} Optional. Defaults to true.
- *      - obsoleteUuid {Boolean} Optional. Default false. Set to true to
- *        get the `obsoleteImgUuidFromDockerId` behaviour for the UUID.
+ *      - tags {String} Optional.
+ *      - uuid {String} Optional.
  */
 function imgManifestFromDockerInfo(opts) {
     assert.object(opts, 'opts');
+    assert.arrayOfString(opts.layerDigests, 'opts.layerDigests');
+    assert.ok(opts.layerDigests.length >= 1, 'opts.layerDigests.length >= 1');
     assert.object(opts.imgJson, 'opts.imgJson');
     assert.object(opts.repo, 'opts.repo');
-    assert.string(opts.repo.index.name, 'opts.repo.index.name');
+    assert.string(opts.repo.localName, 'opts.repo.localName');
     assert.optionalString(opts.uuid, 'opts.uuid');
     assert.optionalString(opts.owner, 'opts.owner');
     assert.optionalArrayOfString(opts.tags, 'opts.tags'); // docker repo tags
     assert.optionalBool(opts.public, 'opts.public');
-    assert.optionalBool(opts.obsoleteUuid, 'opts.obsoleteUuid');
-    var imgJson = opts.imgJson;
-    var indexName = opts.repo.index.name;
+    assert.optionalString(opts.origin, 'opts.origin');
 
+    var digest = opts.layerDigests[opts.layerDigests.length - 1];
+    var imgJson = opts.imgJson;
     var public_ = opts.public === undefined ? true : opts.public;
-    var uuid = opts.uuid || (opts.obsoleteUuid
-        ? obsoleteImgUuidFromDockerId(imgJson.id)
-        : imgUuidFromDockerInfo({id: imgJson.id, indexName: indexName}));
+    var shortId = shortDockerId(dockerIdFromDigest(digest));
+    var uuid = opts.uuid || imgUuidFromDockerDigests(opts.layerDigests);
 
     var manifest = {
         v: 2,
         uuid: uuid,
         owner: opts.owner || '00000000-0000-0000-0000-000000000000',
         name: 'docker-layer',
-        version: imgJson.id.slice(0, 12),
+        version: shortId,
         disabled: false,
         public: public_,
         published_at: new Date(imgJson.created).toISOString(),
@@ -1775,15 +1769,13 @@ function imgManifestFromDockerInfo(opts) {
             MAX_DESCRIPTION_LENGTH),
         tags: {
             'docker:repo': opts.repo.localName,
-            'docker:id': imgJson.id,
+            'docker:id': digest,
             'docker:architecture': imgJson.architecture
         }
     };
-    if (imgJson.parent) {
-        manifest.origin = (opts.obsoleteUuid
-            ? obsoleteImgUuidFromDockerId(imgJson.parent)
-            : imgUuidFromDockerInfo(
-                {id: imgJson.parent, indexName: indexName}));
+    if (imgJson.parent || (opts.layerDigests && opts.layerDigests.length > 1)) {
+        manifest.origin = opts.origin ||
+            imgUuidFromDockerDigests(opts.layerDigests.slice(0, -1));
     }
     if (opts.tags) {
         opts.tags.forEach(function (tag) {
@@ -1806,6 +1798,35 @@ function imgManifestFromDockerInfo(opts) {
 }
 
 
+/**
+ * Return the docker id (a string of length 64) from the docker digest.
+ *
+ * A docker digest looks like this:
+ *   'sha256:8ddc19f16526912237dd8af81971d5e4dd0587907234be2b83e249518d5b673f'
+ *
+ * @param digest {String} The full docker digest.
+ * @returns {String} The full 64-character docker id.
+ */
+function dockerIdFromDigest(digest) {
+    assert.string(digest, 'digest');
+    var parts = digest.split(':');
+    assert.ok(parts.length === 2, 'digest should contain exactly one colon');
+    return parts[1];
+}
+
+
+/**
+ * Return a short docker id (a string of length 12) from the full docker id.
+ *
+ * @param id {String} The full 64-character docker id.
+ * @returns {String} The short 12-character docker id.
+ */
+function shortDockerId(dockerId) {
+    assert.string(dockerId, 'dockerId');
+    assert.ok(dockerId.length === 64);
+    return dockerId.substr(0, 12);
+}
+
 
 // ---- exports
 
@@ -1819,6 +1840,8 @@ module.exports = {
     validatePrivateManifest: validatePrivateManifest,
 
     imgManifestFromDockerInfo: imgManifestFromDockerInfo,
-    obsoleteImgUuidFromDockerId: obsoleteImgUuidFromDockerId,
-    imgUuidFromDockerInfo: imgUuidFromDockerInfo
+    imgUuidFromDockerDigests: imgUuidFromDockerDigests,
+
+    dockerIdFromDigest: dockerIdFromDigest,
+    shortDockerId: shortDockerId
 };

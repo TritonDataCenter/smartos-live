@@ -80,6 +80,7 @@ static void
 doNfsMount(const char *nfsvolume, const char *mountpoint, const char *mode)
 {
     pid_t pid;
+    pid_t waitee;
     int status;
     int ret;
     char opts[MAX_MNTOPT_STR];
@@ -128,8 +129,11 @@ doNfsMount(const char *nfsvolume, const char *mountpoint, const char *mode)
 
     /* parent */
 
-    while (wait(&status) != pid) {
-        /* EMPTY */;
+    while ((waitee = waitpid(pid, &status, 0)) != pid) {
+        if (waitee == -1 && errno != EINTR) {
+            fatal(ERR_EXEC_FAILED, "failed to get exit status of %d: %s",
+                (int) pid, strerror(errno));
+        }
     }
 
     if (WIFEXITED(status)) {

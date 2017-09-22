@@ -80,6 +80,8 @@ test('test hrtime comparator', function (t) {
     // sort the unsorted times
     unsorted_times.sort(hrtime.hrtimeComparator);
     t.deepEqual(unsorted_times, sorted_times, 'sorted array of hrtimes');
+
+    t.end();
 });
 
 test('assert hrtime', function (t) {
@@ -107,6 +109,8 @@ test('assert hrtime', function (t) {
             hrtime.assertHrtime(non_hrt);
         });
     });
+
+    t.end();
 });
 
 test('hrtime string conversion', function (t) {
@@ -114,4 +118,6 @@ test('hrtime string conversion', function (t) {
     var roundtrip = hrtime.stringToHrtime(hrtime.hrtimeToString(hrt));
 
     t.deepEqual(roundtrip, hrt, 'round trip conversion');
+
+    t.end();
 });

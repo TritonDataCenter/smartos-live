@@ -1372,6 +1372,18 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                             vmobj.internal_metadata['operator-script']);
                         return;
                     });
+                } else if (want === 'volumes') {
+                    addMetadata(function returnVolumes(err) {
+                        if (err) {
+                            returnit(new Error('Unable to load metadata: '
+                                + err.message));
+                            return;
+                        }
+
+                        returnit(null,
+                            vmobj.internal_metadata['sdc:volumes']);
+                        return;
+                    });
                 } else {
                     addTags(function (err) {
                         if (!err) {

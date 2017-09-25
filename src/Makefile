@@ -132,7 +132,8 @@ C_CHECK_TARGETS=\
 	sysevent.c \
 	dockerinit/src/dockerexec.c \
 	dockerinit/src/dockerinit.c \
-	dockerinit/src/docker-common.c
+	dockerinit/src/docker-common.c \
+	lx_hook_postnet/main.c
 
 #
 # Generic flags we apply by default to everything.
@@ -304,7 +305,7 @@ SMARTDC_LIB_TARGETS = \
 #
 # Subdirectory management
 #
-SUBDIRS = dockerinit routeinfo
+SUBDIRS = dockerinit routeinfo lx_hook_postnet
 
 SUBDIRS_ENV = \
 	CTFCONVERT=$(CTFCONVERT) \
@@ -413,6 +414,7 @@ install: all $(SUBDIRS)
 	mkdir -m 0755 -p $(DESTDIR)/usr/lib/sdc
 	cp -p net-boot-config $(DESTDIR)/usr/lib/sdc
 	cd routeinfo && $(MAKE) install $(SUBDIRS_ENV)
+	cd lx_hook_postnet && $(MAKE) install $(SUBDIRS_ENV)
 	mkdir -p $(SYSINFO_MOD_DIR)
 	rm -f $(SYSINFO_MOD_DIR)/sysinfo_mod.so
 	/usr/sbin/install -f $(SYSINFO_MOD_DIR) -m 0555 sysinfo_mod.so

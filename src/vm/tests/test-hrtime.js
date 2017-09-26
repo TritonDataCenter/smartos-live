@@ -40,6 +40,12 @@ test('test pretty hrtime and delta (static time)', function (t) {
             now: [65, 0],
             delta: [60, 0],
             s: '60.000000000s (1m)'
+        },
+        {
+            then: [5, 0],
+            now: [5, 500478],
+            delta: [0, 500478],
+            s: '0.000500478s (500.48us)'
         }
     ].forEach(function (o) {
         var delta = hrtime.hrtimeDelta(o.now, o.then);

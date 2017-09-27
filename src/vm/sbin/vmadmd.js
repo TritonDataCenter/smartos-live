@@ -2072,9 +2072,9 @@ function upgradeVM(vmobj, fields, callback)
 
                 image_uuid = origin.split('@')[0].split('/').pop();
                 log.info('setting new image_uuid: ' + image_uuid);
-                zonecfg(vmobj.zonename, ['-z', vmobj.zonename, 'add attr; '
+                zonecfg(vmobj.uuid, 'add attr; '
                     + 'set name=dataset-uuid; set type=string; set value="'
-                    + image_uuid + '"; end'], {log: log},
+                    + image_uuid + '"; end', {log: log},
                     function (add_err, add_fds) {
                         if (add_err) {
                             log.error(add_err);
@@ -2180,22 +2180,22 @@ function upgradeVM(vmobj, fields, callback)
                 cb();
             });
         }, function (cb) {
-            if (vmobj.hasOwnProperty('default_gateway')) {
-                zonecfg(vmobj.zonename, ['-z', vmobj.zonename,
-                    'remove attr name=default-gateway'], {log: log},
-                    function (err, fds) {
-                        if (err) {
-                            log.error(err);
-                            cb(err);
-                            return;
-                        }
-                        log.info('removed default-gateway');
-                        cb();
-                    }
-                );
-            } else {
+            if (!vmobj.hasOwnProperty('default_gateway')) {
                 cb();
+                return;
             }
+
+            zonecfg(vmobj.uuid, 'remove attr name=default-gateway',
+                {log: log}, function (err, fds) {
+
+                if (err) {
+                    log.error(err);
+                    cb(err);
+                    return;
+                }
+                log.info('removed default-gateway');
+                cb();
+            });
         }, function (cb) {
             // for KVM we always want 10G zoneroot quota
             if (vmobj.brand === 'kvm' && vmobj.quota !== 10) {
@@ -2231,9 +2231,9 @@ function upgradeVM(vmobj, fields, callback)
 
                 log.info('creation time: ' + creation_timestamp + ' from ZFS');
 
-                zonecfg(vmobj.zonename, ['-z', vmobj.zonename, 'add attr; '
+                zonecfg(vmobj.uuid, 'add attr; '
                     + 'set name=create-timestamp; set type=string; '
-                    + 'set value="' + creation_timestamp + '"; end'],
+                    + 'set value="' + creation_timestamp + '"; end',
                     {log: log},
                     function (zcfg_err, zcfg_fds) {
                         if (zcfg_err) {
@@ -2318,9 +2318,8 @@ function upgradeVM(vmobj, fields, callback)
         }, function (cb) {
             // zonecfg update vm-version = 1
             log.debug('setting vm-version = 1');
-            zonecfg(vmobj.zonename, ['-z', vmobj.zonename,
-                'add attr; set name=vm-version; '
-                + 'set type=string; set value=1; end'],
+            zonecfg(vmobj.uuid, 'add attr; set name=vm-version; '
+                + 'set type=string; set value=1; end',
                 {log: log},
                 function (err, fds) {
                     if (err) {

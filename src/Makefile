@@ -83,6 +83,7 @@ JS_CHECK_TARGETS=\
 	vm/sbin/*.js \
 	vm/node_modules/dladm.js \
 	vm/node_modules/expander.js \
+	vm/node_modules/hrtime.js \
 	vm/node_modules/ip.js \
 	vm/node_modules/nic.js \
 	vm/node_modules/proptable.js \
@@ -101,6 +102,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-create-filesystems.js \
 	vm/tests/test-docker.js \
 	vm/tests/test-defaults.js \
+	vm/tests/test-hrtime.js \
 	vm/tests/test-indestructible.js \
 	vm/tests/test-internal_metadata_namespaces.js \
 	vm/tests/test-lastexited.js \

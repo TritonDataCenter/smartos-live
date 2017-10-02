@@ -294,6 +294,7 @@ f usr/node/0.10/node_modules/node-expat.js 0444 root bin
 f usr/vm/node_modules/bunyan.js 0444 root bin
 f usr/vm/node_modules/dladm.js 0444 root bin
 f usr/vm/node_modules/expander.js 0444 root bin
+f usr/vm/node_modules/hrtime.js 0444 root root
 f usr/vm/node_modules/ip.js 0444 root bin
 f usr/vm/node_modules/locker.js 0444 root bin
 f usr/vm/node_modules/nic.js 0444 root bin

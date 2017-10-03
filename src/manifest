@@ -2,6 +2,7 @@ d usr/lib 0755 root bin
 d usr/lib/brand 0755 root bin
 d usr/lib/brand/lx 0755 root bin
 f usr/lib/brand/lx/lx_boot_zone_docker 0755 root root
+f usr/lib/brand/lx/lx_hook_postnet 0755 root root
 f usr/lib/brand/lx/routeinfo 0755 root root
 
 # automatically generated man.cf file
@@ -297,8 +298,8 @@ f usr/vm/node_modules/bunyan.js 0444 root bin
 f usr/vm/node_modules/diff.js 0644 root root
 f usr/vm/node_modules/dladm.js 0444 root bin
 f usr/vm/node_modules/expander.js 0444 root bin
-f usr/vm/node_modules/fswatcher.js 0644 root root
-f usr/vm/node_modules/hrtime.js 0644 root root
+f usr/vm/node_modules/fswatcher.js 0444 root root
+f usr/vm/node_modules/hrtime.js 0444 root root
 f usr/vm/node_modules/ip.js 0444 root bin
 f usr/vm/node_modules/locker.js 0444 root bin
 f usr/vm/node_modules/nic.js 0444 root bin

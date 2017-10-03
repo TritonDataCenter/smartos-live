@@ -2038,6 +2038,7 @@ function upgradeVM(vmobj, fields, callback)
             });
         }, function (cb) {
             var args = [];
+            var cmd;
 
             if (vmobj.image_uuid || vmobj.brand === 'kvm') {
                 // already have image_uuid, no problem
@@ -2072,9 +2073,16 @@ function upgradeVM(vmobj, fields, callback)
 
                 image_uuid = origin.split('@')[0].split('/').pop();
                 log.info('setting new image_uuid: ' + image_uuid);
-                zonecfg(vmobj.uuid, 'add attr; '
-                    + 'set name=dataset-uuid; set type=string; set value="'
-                    + image_uuid + '"; end', {log: log},
+
+                cmd = [
+                    'add attr',
+                    'set name=dataset-uuid',
+                    'set type=string',
+                    'set value="' + image_uuid + '"',
+                    'end'
+                ].join('; ');
+
+                zonecfg(vmobj.uuid, [cmd], {log: log},
                     function (add_err, add_fds) {
                         if (add_err) {
                             log.error(add_err);
@@ -2185,7 +2193,7 @@ function upgradeVM(vmobj, fields, callback)
                 return;
             }
 
-            zonecfg(vmobj.uuid, 'remove attr name=default-gateway',
+            zonecfg(vmobj.uuid, ['remove attr name=default-gateway'],
                 {log: log}, function (err, fds) {
 
                 if (err) {
@@ -2204,6 +2212,8 @@ function upgradeVM(vmobj, fields, callback)
             }
             cb();
         }, function (cb) {
+            var cmd;
+
             if (vmobj.hasOwnProperty('create_timestamp')) {
                 cb();
                 return;
@@ -2231,20 +2241,24 @@ function upgradeVM(vmobj, fields, callback)
 
                 log.info('creation time: ' + creation_timestamp + ' from ZFS');
 
-                zonecfg(vmobj.uuid, 'add attr; '
-                    + 'set name=create-timestamp; set type=string; '
-                    + 'set value="' + creation_timestamp + '"; end',
-                    {log: log},
+                cmd = [
+                    'add attr',
+                    'set name=create-timestamp',
+                    'set type=string',
+                    'set value="' + creation_timestamp + '"',
+                    'end'
+                ].join('; ');
+                zonecfg(vmobj.uuid, [cmd], {log: log},
                     function (zcfg_err, zcfg_fds) {
-                        if (zcfg_err) {
-                            log.error(zcfg_err);
-                            cb(zcfg_err);
-                            return;
-                        }
-                        log.info('set create-timestamp: ' + creation_timestamp);
-                        cb();
+
+                    if (zcfg_err) {
+                        log.error(zcfg_err);
+                        cb(zcfg_err);
+                        return;
                     }
-                );
+                    log.info('set create-timestamp: ' + creation_timestamp);
+                    cb();
+                });
             });
         }, function (cb) {
             // in SDC7 *_pw keys do not work in customer_metadata and must be in
@@ -2317,20 +2331,28 @@ function upgradeVM(vmobj, fields, callback)
             });
         }, function (cb) {
             // zonecfg update vm-version = 1
+            var cmd;
+
             log.debug('setting vm-version = 1');
-            zonecfg(vmobj.uuid, 'add attr; set name=vm-version; '
-                + 'set type=string; set value=1; end',
-                {log: log},
+            cmd = [
+                'add attr',
+                'set name=vm-version',
+                'set type=string',
+                'set value=1',
+                'end'
+            ].join('; ');
+
+            zonecfg(vmobj.uuid, [cmd], {log: log},
                 function (err, fds) {
-                    if (err) {
-                        log.error(err);
-                        cb(err);
-                        return;
-                    }
-                    log.info('set vm-version = 1');
-                    cb();
+
+                if (err) {
+                    log.error(err);
+                    cb(err);
+                    return;
                 }
-            );
+                log.info('set vm-version = 1');
+                cb();
+            });
         }, function (cb) {
             // reload VM so we get all the updated properties
             VM.load(vmobj.uuid, {fields: fields, log: log},

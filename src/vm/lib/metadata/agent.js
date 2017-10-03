@@ -896,8 +896,9 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
                     returnit(null, JSON.stringify(vmRoutes));
                 } else if (want === 'operator-script') {
-                    returnit(null,
-                        vmobj.internal_metadata['operator-script']);
+                    returnit(null, vmobj.internal_metadata['operator-script']);
+                } else if (want === 'volumes') {
+                    returnit(null, vmobj.internal_metadata['sdc:volumes']);
                 } else {
                     val = VM.flatten(vmobj, want);
                     returnit(null, val);

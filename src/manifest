@@ -545,6 +545,7 @@ f usr/vm/node_modules/vmload/vmload-xml.js 0644 root root
 f usr/vm/node_modules/vmload/dump-json.js 0755 root root
 f usr/vm/node_modules/vmload/index.js 0644 root root
 f usr/vm/node_modules/VM.js 0444 root bin
+f usr/vm/node_modules/zonecfg.js 0444 root bin
 f usr/vm/smf/system-vmadmd 0555 root bin
 f usr/vm/smf/system-vmadmd.xml 0444 root bin
 # fwadm

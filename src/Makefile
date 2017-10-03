@@ -93,6 +93,7 @@ JS_CHECK_TARGETS=\
 	vm/node_modules/openonerrlogger.js \
 	vm/node_modules/vmload/*.js \
 	vm/node_modules/sysevent-stream.js \
+	vm/node_modules/zonecfg.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
 	vm/common/nictag.js \

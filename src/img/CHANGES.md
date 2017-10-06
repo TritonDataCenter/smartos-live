@@ -6,6 +6,10 @@ Known issues:
   Docker Registry v1, which is now deprecated.
 
 
+## 3.7.3
+
+- OS-6383 Fix a possible crash in 'imgadm import ...'.
+
 ## 3.7.2
 
 - OS-6177 avoid checking content-md5 on imgadm import when a checksum exists on

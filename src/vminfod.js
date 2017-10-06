@@ -21,9 +21,8 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2017, Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  *
- * Vminfod CLI
  */
 
 var util = require('util');

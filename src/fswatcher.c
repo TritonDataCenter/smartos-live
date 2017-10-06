@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2017, Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  *
  * cc -Wall -Wextra fswatcher.c -o fswatcher -lthread -lnvpair -lavl
  *

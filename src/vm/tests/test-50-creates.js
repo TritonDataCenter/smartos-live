@@ -1,4 +1,4 @@
-// Copyright 2017 Joyent, Inc.
+// Copyright (c) 2017, Joyent, Inc.
 //
 // These tests ensure that default values don't change accidentally.
 //

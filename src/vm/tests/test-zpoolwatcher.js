@@ -20,7 +20,8 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2016, Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
+ *
  */
 
 var bunyan = require('/usr/vm/node_modules/bunyan');

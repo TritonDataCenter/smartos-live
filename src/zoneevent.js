@@ -21,11 +21,13 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2017, Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  *
+ */
+
+/*
  * Substitute for 'zoneevent.c' that uses Vminfod or sysevents (as appropriate)
  * as an event source
- *
  */
 
 var ZoneEvent = require('/usr/vm/node_modules/zoneevent').ZoneEvent;

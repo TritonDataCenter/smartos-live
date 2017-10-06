@@ -20,7 +20,8 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2015, Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
+ *
  */
 
 var assert = require('assert');

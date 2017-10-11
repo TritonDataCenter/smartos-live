@@ -56,7 +56,6 @@
  *
  *  {
  *     "type": <string>,
- *     "date": <string>,
  *     "time": [array],
  *     "changes": [array],
  *     "code": <number>,
@@ -71,9 +70,6 @@
  *
  *   - type
  *             One of: ready, event, response, error.
- *             Always included.
- *   - date
- *             ISO string date with millisecond resolution.
  *             Always included.
  *   - time
  *             Time as an array of [seconds, nanoseconds], similar to
@@ -281,9 +277,9 @@ djb2(char *str)
 }
 
 /*
- * Allocate an nvlist with the "type" set to the type argument given, and the
- * "date" set to the current time.  This function handles any error checking
- * needed and will exit the program if anything fails.
+ * Allocate an nvlist with "type" set to the type argument given, and "time"
+ * set to the current time.  This function handles any error checking needed
+ * and will exit the program if anything fails.
  *
  * nvlist must be freed by the caller
  */

@@ -44,7 +44,14 @@ function startVminfod() {
 
     log.info('Starting vminfod');
 
-    vminfod.start();
+    vminfod.start(function (err) {
+        if (err) {
+            log.fatal({err: err}, 'Failed to start vminfod');
+            process.exit(1);
+        }
+
+        log.info('Started vminfod');
+    });
 
     process.on('uncaughtException', function (err) {
         log.fatal({err: err},

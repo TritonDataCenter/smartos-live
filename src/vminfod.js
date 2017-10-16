@@ -57,7 +57,7 @@ function usage() {
         '  status [-f]        get vminfod status   (GET /status)',
         '  vms                get all vms          (GET /vms)',
         '  vm <uuid>          get vm info          (GET /vms/:uuid)',
-        '  events [-jf]       trace vminfod events (GET /events)'
+        '  events [-jfr]      trace vminfod events (GET /events)'
     ];
     if (msg) {
         out.unshift('');
@@ -150,13 +150,14 @@ function do_vm(args) {
 function do_events(args) {
     var opts = [
         'f(full)',
-        'j(json)'
+        'j(json)',
+        'r(ready)'
     ].join('');
     var parser = new getopt.BasicParser(opts, args);
 
-
     var opt_f = false;
     var opt_j = false;
+    var opt_r = false;
 
     var option;
     while ((option = parser.getopt())) {
@@ -166,6 +167,9 @@ function do_events(args) {
             break;
         case 'j':
             opt_j = true;
+            break;
+        case 'r':
+            opt_r = true;
             break;
         default:
             usage();
@@ -179,6 +183,20 @@ function do_events(args) {
         log: log
     });
 
+    vs.once('ready', function (ev) {
+        if (!opt_r)
+            return;
+
+        var date = formatDate(ev.date);
+        if (opt_j) {
+            console.log(JSON.stringify(ev));
+        } else if (opt_f) {
+            console.log('[%s] %s (uuid %s)', date, ev.type, ev.uuid);
+        } else {
+            console.log('[%s] %s', date, ev.type);
+        }
+    });
+
     vs.on('readable', function () {
         var ev;
         while ((ev = vs.read()) !== null) {
@@ -187,15 +205,8 @@ function do_events(args) {
                 return;
             }
 
-            var zn;
-            var date;
-            if (opt_f) {
-                date = ev.date.toISOString();
-                zn = ev.zonename;
-            } else {
-                date = ev.date.toISOString().split('T')[1];
-                zn = ev.zonename.split('-')[0];
-            }
+            var zn = formatZonename(ev.zonename);
+            var date = formatDate(ev.date);
 
             var alias = (ev.vm || {}).alias || '-';
             if (alias.length > 30) {
@@ -221,6 +232,22 @@ function do_events(args) {
             }
         }
     });
+
+    function formatDate(date) {
+        if (opt_f) {
+            return date.toISOString();
+        } else {
+            return date.toISOString().split('T')[1];
+        }
+    }
+
+    function formatZonename(zonename) {
+        if (opt_f) {
+            return zonename;
+        } else {
+            return zonename.split('-')[0];
+        }
+    }
 }
 
 function main() {

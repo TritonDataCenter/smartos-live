@@ -34,15 +34,20 @@ var vminfod = require('/usr/vm/node_modules/vminfod/client');
 
 var f = util.format;
 
+var name = 'Vminfod CLI';
+if (process.env.VMINFOD_NAME) {
+    name = f('%s (Vminfod CLI)', process.env.VMINFOD_NAME);
+}
+
 var log = bunyan.createLogger({
     level: 'error',
-    name: 'Vminfod CLI',
+    name: name,
     stream: process.stderr,
     serializers: bunyan.stdSerializers
 });
 
 var client = new vminfod.VminfodClient({
-    name: 'Vminfod CLI',
+    name: name,
     log: log
 });
 
@@ -179,7 +184,7 @@ function do_events(args) {
     }
 
     var vs = new vminfod.VminfodEventStream({
-        name: 'Vminfod CLI',
+        name: name,
         log: log
     });
 

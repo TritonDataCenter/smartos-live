@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2017, Joyent, Inc.
  *
  */
 
@@ -52,6 +52,7 @@ var COMMANDS = [
     'create-snapshot',
     'delete', 'destroy',
     'delete-snapshot',
+    'events',
     'stop', 'halt',
     'help',
     'info',
@@ -148,6 +149,7 @@ function usage(message, code)
     out('console <uuid>');
     out('delete <uuid>');
     out('delete-snapshot <uuid> <snapname>');
+    out('events [-fjr] [uuid]');
     out('get <uuid>');
     out('info <uuid> [type,...]');
     out('install <uuid>');
@@ -243,7 +245,7 @@ function getListProperties(field)
     return undefined;
 }
 
-function getUUID(command, p)
+function getUUID(command, p, opts)
 {
     var uuid;
 
@@ -255,6 +257,10 @@ function getUUID(command, p)
 
             return uuid;
         }
+    }
+
+    if (opts.optional) {
+        return null;
     }
 
     return usage('Invalid or missing UUID for ' + command);
@@ -397,6 +403,14 @@ function addCommandOptions(command, opts, shorts)
     case 'start':
     case 'sysrq':
         // these only take uuid or 'special' args like start order=cd
+        break;
+    case 'events':
+        opts.full = Boolean;
+        shorts.f = ['--full'];
+        opts.json = Boolean;
+        shorts.j = ['--json'];
+        opts.ready = Boolean;
+        shorts.r = ['--ready'];
         break;
     case 'lookup':
         opts.json = Boolean;
@@ -716,6 +730,89 @@ function readFile(filename, callback)
     });
 }
 
+function do_events(parsed, callback) {
+    var uuid = getUUID('events', parsed, {optional: true});
+
+    var opts = {
+        name: 'vmadm'
+    };
+    if (uuid) {
+        opts.zonename = uuid;
+    }
+
+    VM.events(opts, vmEventHandler, vmEventReady);
+
+    // Called when a vminfod event is seen
+    function vmEventHandler(ev) {
+        if (parsed.json) {
+            console.log(JSON.stringify(ev));
+            return;
+        }
+
+        var zn = formatZonename(ev.zonename);
+        var date = formatDate(ev.date);
+
+        var alias = (ev.vm || {}).alias || '-';
+        if (alias.length > 30) {
+            alias = util.formatf('%s...', alias.substr(0, 27));
+        }
+
+        // format the output nicely
+        var base = util.format('[%s] %s %s %s',
+            date, zn, alias, ev.type);
+
+        delete ev.vm;
+        if (ev.changes) {
+            ev.changes.forEach(function (change) {
+                console.log('%s: %s %s :: %j -> %j',
+                    base,
+                    change.prettyPath,
+                    change.action,
+                    change.from,
+                    change.to);
+            });
+        } else {
+            console.log(base);
+        }
+    }
+
+    // Called when the vminfod stream is ready
+    function vmEventReady(err, ev) {
+        if (err) {
+            callback(err);
+            return;
+        }
+
+        if (!parsed.ready)
+            return;
+
+        var date = formatDate(ev.date);
+        if (parsed.json) {
+            console.log(JSON.stringify(ev));
+        } else if (parsed.full) {
+            console.log('[%s] %s (uuid %s)', date, ev.type, ev.uuid);
+        } else {
+            console.log('[%s] %s', date, ev.type);
+        }
+    }
+
+    function formatDate(date) {
+        if (parsed.full) {
+            return date.toISOString();
+        } else {
+            return date.toISOString().split('T')[1];
+        }
+    }
+
+    function formatZonename(zonename) {
+        if (parsed.full) {
+            return zonename;
+        } else {
+            return zonename.split('-')[0];
+        }
+    }
+}
+
 function main(callback)
 {
     var args = process.argv.slice(1);
@@ -756,6 +853,9 @@ function main(callback)
     VM.loglevel = 'debug';
 
     switch (command) {
+    case 'events':
+        do_events(parsed, callback);
+        break;
     case 'start':
     case 'boot':
         uuid = getUUID(command, parsed);

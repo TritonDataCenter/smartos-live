@@ -757,7 +757,7 @@ function do_events(parsed, callback) {
 
         var alias = (ev.vm || {}).alias || '-';
         if (alias.length > 30) {
-            alias = util.formatf('%s...', alias.substr(0, 27));
+            alias = util.format('%s...', alias.substr(0, 27));
         }
 
         // format the output nicely

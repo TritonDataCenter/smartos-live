@@ -734,8 +734,11 @@ function do_events(parsed, callback) {
     var uuid = getUUID('events', parsed, {optional: true});
 
     var opts = {
-        name: 'vmadm'
+        name: 'vmadm CLI'
     };
+    if (process.env.VMADM_IDENT) {
+        opts.name += util.format(' - %s', process.env.VMADM_IDENT);
+    }
     if (uuid) {
         opts.zonename = uuid;
     }

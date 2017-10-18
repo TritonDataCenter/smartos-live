@@ -6,6 +6,16 @@ Known issues:
   Docker Registry v1, which is now deprecated.
 
 
+## 3.7.4
+
+- DOCKER-1118 `imgadm create ...` will no longer set `requirements.min_platform`
+  to the current platform version for LX and Docker images. KVM images already
+  did not set `min_platform`. It is still set for SmartOS images.
+
+## 3.7.3
+
+- OS-6383 Fix a possible crash in 'imgadm import ...'.
+
 ## 3.7.2
 
 - OS-6177 avoid checking content-md5 on imgadm import when a checksum exists on

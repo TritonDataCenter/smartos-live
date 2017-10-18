@@ -1618,15 +1618,20 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
             vasync.parallel({funcs: [
                 function loadInstalledImages(nextGather) {
                     TIME('loadImages');
-                    self._loadImages(function (err, imagesInfo) {
+                    self._loadImages(function onLoadImages(err, imagesInfo) {
                         TIME('loadImages');
+                        if (err) {
+                            nextGather(err);
+                            return;
+                        }
+
                         ctx.installedImageFromName = {};
                         for (var i = 0; i < imagesInfo.length; i++) {
                             var info = imagesInfo[i];
                             var name = info.zpool + '/' + info.manifest.uuid;
                             ctx.installedImageFromName[name] = info;
                         }
-                        nextGather(err);
+                        nextGather();
                     });
                 },
 
@@ -3456,7 +3461,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     }
                 });
             }
-            if (vmInfo.brand !== 'kvm' /* i.e. this is a smartos image */
+            if ((vmInfo.brand === 'joyent' || vmInfo.brand === 'joyent-minimal')
                 && !(options.manifest.requirements
                     && options.manifest.requirements.min_platform))
             {

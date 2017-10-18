@@ -3461,7 +3461,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     }
                 });
             }
-            if (vmInfo.brand !== 'kvm' /* i.e. this is a smartos image */
+            if ((vmInfo.brand === 'joyent' || vmInfo.brand === 'joyent-minimal')
                 && !(options.manifest.requirements
                     && options.manifest.requirements.min_platform))
             {

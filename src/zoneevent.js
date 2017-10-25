@@ -30,11 +30,37 @@
  * as an event source
  */
 
+var f = require('util').format;
+
+var bunyan = require('/usr/node/node_modules/bunyan');
 var ZoneEvent = require('/usr/vm/node_modules/zoneevent').ZoneEvent;
 var zone = require('/usr/node/node_modules/zonename');
 
-var name = process.argv[2] || 'zoneevent CLI';
-var zw = new ZoneEvent(name);
+var name = 'zoneevent CLI';
+
+if (process.argv[2]) {
+    name += f(' (%s)', process.argv[2]);
+}
+
+var log = bunyan.createLogger({
+    level: 'fatal',
+    name: 'zoneevent',
+    stream: process.stderr,
+    serializers: bunyan.stdSerializers
+});
+
+var zw = new ZoneEvent({
+    name: name,
+    log: log
+});
+
+zw.on('ready', function (err, obj) {
+    if (err)
+        throw err;
+
+    // It's unfortunate, but `zoneevent.c` never published a "ready" event, so
+    // we just silently ignore this if everything works as expected.
+});
 
 zw.on('event', function (ev) {
     /*

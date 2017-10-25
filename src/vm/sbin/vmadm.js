@@ -780,7 +780,7 @@ function do_events(parsed, callback) {
     }
 
     // Called when the vminfod stream is ready
-    function vmEventReady(err, ev) {
+    function vmEventReady(err, obj) {
         if (err) {
             callback(err);
             return;
@@ -789,6 +789,7 @@ function do_events(parsed, callback) {
         if (!parsed.ready)
             return;
 
+        var ev = obj.ev;
         var date = formatDate(ev.date);
         if (parsed.json) {
             console.log(JSON.stringify(ev));

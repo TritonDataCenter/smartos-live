@@ -15,7 +15,7 @@
       name="start"
       exec="/usr/vm/smf/system-vminfod %m"
       timeout_seconds="300">
-      <method_context>
+      <method_context working_directory='/'>
         <method_credential user="root" group="staff"/>
       </method_context>
     </exec_method>

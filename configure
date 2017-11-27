@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright 2016 Joyent, Inc.
+# Copyright 2017 Joyent, Inc.
 #
 shopt -s xpg_echo
 unalias -a
@@ -83,7 +83,7 @@ function install_pkgin
 	if pkgin av build-essential | grep ^build-essential >/dev/null; then
 		pkglist="build-essential"
 	else
-		pkglist="gmake binutils autoconf automake bison"
+		pkglist="gmake binutils autoconf automake bison m4"
 		pkglist="$pkglist libtool-base gcc-compiler"
 	fi
 
@@ -310,6 +310,8 @@ AR=/usr/bin/ar;					export AR
 MAKE="$conf_root/proto.strap/usr/bin/dmake";	export MAKE
 LEX=/opt/local/bin/lex;				export LEX
 YACC=/opt/local/bin/yacc;			export YACC
+BISON=/opt/local/bin/bison;			export BISON
+GM4=/opt/local/bin/gm4;				export GM4
 RPCGEN=/opt/local/bin/rpcgen;			export RPCGEN
 ASTBINDIR=/opt/local/ast/bin;			export ASTBINDIR
 LD_TOXIC_PATH="\$ROOT/lib:\$ROOT/usr/lib";	export LD_TOXIC_PATH

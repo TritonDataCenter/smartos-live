@@ -104,29 +104,30 @@
  *   Under normal operation, fswatcher will run until STDIN is closed or a fatal
  *   error occurs.
  *
- *   When errors occur that are completly unexpected, this will call abort() to
- *   generate a core dump.
+ *   When errors occur that are completly unexpected, fswatcher will call
+ *   abort() to generate a core dump.
  *
  */
 
 #include <assert.h>
 #include <ctype.h>
-#include <stdarg.h>
-#include <stdlib.h>
 #include <err.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <limits.h>
-#include <fcntl.h>
-#include <strings.h>
-#include <port.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <port.h>
 #include <pthread.h>
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#include <sys/debug.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <thread.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <sys/avl.h>
 #include <libnvpair.h>
@@ -197,7 +198,7 @@ struct files_tree_node {
  * processing its event can safely access members of the AVL tree and write
  * to stdout/stderr.
  */
-static mutex_t work_mutex;
+static mutex_t work_mutex = DEFAULTMUTEX;
 
 /* global event port handle */
 static int port = -1;
@@ -461,10 +462,10 @@ print_status(uint64_t key)
 
 	/* get all nodes in the avl tree */
 	numnodes = avl_numnodes(&files_tree);
-	filenames = malloc(numnodes * (sizeof (char *)));
+	filenames = calloc(numnodes, sizeof (char *));
 
 	if (filenames == NULL)
-		err(1, "malloc");
+		err(1, "calloc");
 
 	/* walk the avl tree and add each filename */
 	for (ftn = avl_first(&files_tree); ftn != NULL;
@@ -506,7 +507,7 @@ find_handle(char *pathname)
 }
 
 /*
- * insert_handle() inserts a files_tree_node struct into the files_tree tree.
+ * add_handle() inserts a files_tree_node struct into the files_tree tree.
  */
 static void
 add_handle(struct files_tree_node *ftn)
@@ -697,7 +698,7 @@ check_and_rearm_event(uint64_t key, char *name, int revents,
 		 * We're trying to do an initial associate, so we'll print a
 		 * result whether we succeeded or failed.
 		 */
-		assert(revents == 0);
+		VERIFY3S(revents, ==, 0);
 		if (pa_ret == -1) {
 			print_response(key, RESULT_FAILURE, name,
 			    "port_associate(3c) failed with errno %d: %s",
@@ -715,7 +716,7 @@ check_and_rearm_event(uint64_t key, char *name, int revents,
 	 * If we are here, this function was called as a result of an event
 	 * being seen.
 	 */
-	assert(revents != 0);
+	VERIFY3S(revents, !=, 0);
 	print_event(revents, name, B_FALSE);
 
 	if (pa_ret == -1) {
@@ -745,6 +746,10 @@ watch_path(char *pathname, uint64_t key)
 	if (ftn == NULL)
 		err(1, "malloc new watcher");
 
+	/*
+	 * Copy the pathname given here as we need to hold onto it for as long
+	 * as the file is being watched.
+	 */
 	dupname = strdup(pathname);
 	if (dupname == NULL)
 		err(1, "strdup new watcher");
@@ -816,9 +821,6 @@ unwatch_path(char *pathname, uint64_t key)
 
 /*
  * Process one line of stdin
- *
- * returns 0 if we can continue, otherwise returns a value suitable
- * for exiting the program with.
  */
 static void
 process_stdin_line(char *str)
@@ -886,9 +888,8 @@ process_stdin_line(char *str)
  * Worker thread waits here for stdin data.
  */
 static void *
-wait_for_stdin(void *arg)
+wait_for_stdin(void *arg __unused)
 {
-	(void) arg;
 	char str[MAX_CMD_LEN + 1];
 
 	/* read stdin line-by-line indefinitely */
@@ -900,18 +901,21 @@ wait_for_stdin(void *arg)
 		str[0] = '\0';
 	}
 
-	/* should not be reached */
-	err(1, "fswatcher: error on stdin (errno: %d): %s\n",
-	    errno, strerror(errno));
+	/* stdin closed or error */
+	if (feof(stdin)) {
+		errx(0, "stdin closed");
+	} else {
+		perror("stdin fgets");
+		abort();
+	}
 }
 
 /*
  * Worker thread waits here for event port events.
  */
 static void *
-wait_for_events(void *arg)
+wait_for_events(void *arg __unused)
 {
-	(void) arg;
 	port_event_t pe;
 
 	while (!port_get(port, &pe, NULL)) {
@@ -939,7 +943,8 @@ wait_for_events(void *arg)
 	}
 
 	/* should not be reached */
-	err(1, "wait_for_events thread exited");
+	perror("wait_for_events thread exited (port_get)");
+	abort();
 }
 
 
@@ -991,8 +996,8 @@ main(int argc, char **argv)
 	}
 
 	/* create worker threads to process stdin and event ports */
-	pthread_create(&tid, NULL, wait_for_events, NULL);
-	pthread_create(&tid, NULL, wait_for_stdin, NULL);
+	thr_create(NULL, 0, wait_for_events, NULL, 0, &tid);
+	thr_create(NULL, 0, wait_for_stdin, NULL, 0, &tid);
 
 	/* alert that we are ready for input */
 	if (opts.opt_r) {

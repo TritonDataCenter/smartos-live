@@ -116,7 +116,6 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <port.h>
-#include <pthread.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -287,7 +286,7 @@ djb2(char *str)
 static nvlist_t *
 make_nvlist(char *type)
 {
-	int32_t time[2];
+	uint64_t time[2];
 	nvlist_t *nvl;
 	struct timespec tv;
 
@@ -300,7 +299,7 @@ make_nvlist(char *type)
 	time[1] = tv.tv_nsec;
 
 	ENSURE0(nvlist_add_string(nvl, "type", type));
-	ENSURE0(nvlist_add_int32_array(nvl, "time", time, 2));
+	ENSURE0(nvlist_add_uint64_array(nvl, "time", time, 2));
 
 	return (nvl);
 }
@@ -947,12 +946,25 @@ wait_for_events(void *arg __unused)
 	abort();
 }
 
+/*
+ * Create a thread using the given thread_func and exit the process if thread
+ * creation fails.
+ */
+static void
+create_thread(void *(*thread_func)(void *))
+{
+	int rc;
+	thread_t tid;
+
+	if ((rc = thr_create(NULL, 0, thread_func, NULL, 0, &tid)) != 0) {
+		errx(1, "thr_create: %s", strerror(rc));
+	}
+}
 
 int
 main(int argc, char **argv)
 {
 	int opt;
-	pthread_t tid;
 
 	opts.opt_j = B_FALSE;
 	opts.opt_r = B_FALSE;
@@ -977,9 +989,7 @@ main(int argc, char **argv)
 
 	/* create event port globally */
 	if ((port = port_create()) == -1) {
-		fprintf(stderr, "port_create failed(%d): %s",
-		    errno, strerror(errno));
-		return (1);
+		err(1, "port_create");
 	}
 
 	/* initialize the AVL tree to hold all files currently being watched */
@@ -996,8 +1006,8 @@ main(int argc, char **argv)
 	}
 
 	/* create worker threads to process stdin and event ports */
-	thr_create(NULL, 0, wait_for_events, NULL, 0, &tid);
-	thr_create(NULL, 0, wait_for_stdin, NULL, 0, &tid);
+	create_thread(wait_for_events);
+	create_thread(wait_for_stdin);
 
 	/* alert that we are ready for input */
 	if (opts.opt_r) {

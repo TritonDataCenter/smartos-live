@@ -125,12 +125,18 @@ JS_CHECK_OLDSKOOL_TARGETS = \
 
 # These files will get run through cstyle on 'make check'
 C_CHECK_TARGETS=\
+	bootparams.c \
 	cryptpass.c \
+	disk_size.c \
+	measure_terminal.c \
+	nomknod.c \
 	qemu-exec.c \
+	removable_disk.c \
 	vmunbundle.c \
 	zfs_recv.c \
 	zfs_send.c \
 	zoneevent.c \
+	sdc-on-tty.c \
 	sysinfo_mod.c \
 	sysevent.c \
 	dockerinit/src/dockerexec.c \

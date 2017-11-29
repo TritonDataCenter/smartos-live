@@ -240,9 +240,10 @@ main(int argc __UNUSED, char **argv __UNUSED)
 		 */
 		if (strncmp(buf0, PREAMBLE, PREAMBLE_LENGTH) == 0) {
 			/*
-			 * The terminal understood our first request and responded
-			 * with a preamble we recognise.  Consume the second
-			 * escape sequence which we know to be enroute.
+			 * The terminal understood our first request and
+			 * responded with a preamble we recognise. Consume
+			 * the second escape sequence which we know to be
+			 * enroute.
 			 */
 			is_match = B_TRUE;
 			buf1 = read_cseq();
@@ -259,4 +260,3 @@ main(int argc __UNUSED, char **argv __UNUSED)
 	 */
 	return (process_size(buf0));
 }
-

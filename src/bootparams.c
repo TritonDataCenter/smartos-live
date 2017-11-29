@@ -2,7 +2,7 @@
  * Copyright (c) 2010 Joyent Inc., All rights reserved.
  *
  * Prints system parameters from libdevinfo
- * 
+ *
  * Compile: gcc -Wall -o bootparams bootparams.c -ldevinfo
  */
 
@@ -109,7 +109,8 @@ prop_type_guess(di_prop_t prop, void **prop_data, int *prop_type)
     return (len);
 }
 
-void prt_prop(di_prop_t prop)
+void
+prt_prop(di_prop_t prop)
 {
     int i, prop_type, nitems;
     char *p;
@@ -117,12 +118,13 @@ void prt_prop(di_prop_t prop)
 
     nitems = prop_type_guess(prop, &prop_data, &prop_type);
 
-    /* XXX: currently we only handle single string properties because those are
+    /*
+     * XXX: currently we only handle single string properties because those are
      *      all that are needed for showing boot parameters.
      */
     if ((nitems != 1) || (prop_type != DI_PROP_TYPE_STRING))
         return;
-    
+
     printf("%s=", di_prop_name(prop));
     switch (prop_type) {
         case DI_PROP_TYPE_INT:
@@ -153,7 +155,8 @@ void prt_prop(di_prop_t prop)
     printf("\n");
 }
 
-int prt_node(di_node_t node, void *arg)
+int
+prt_node(di_node_t node, void *arg)
 {
     di_prop_t prop = DI_PROP_NIL;
 
@@ -169,7 +172,8 @@ int prt_node(di_node_t node, void *arg)
 /*
  * ported from NetBSD's cat rev 1.47
  */
-void raw_cat(int rfd)
+void
+raw_cat(int rfd)
 {
     static char *buf;
     static char fb_buf[BUFSIZ];
@@ -183,12 +187,12 @@ void raw_cat(int rfd)
         struct stat sbuf;
 
         if (fstat(wfd, &sbuf) == 0 &&
-	    sbuf.st_blksize > (long)sizeof(fb_buf)) {
+            sbuf.st_blksize > (long) sizeof (fb_buf)) {
             bsize = sbuf.st_blksize;
             buf = malloc(bsize);
         }
         if (buf == NULL) {
-            bsize = sizeof(fb_buf);
+            bsize = sizeof (fb_buf);
             buf = fb_buf;
         }
     }
@@ -201,18 +205,22 @@ void raw_cat(int rfd)
     }
 }
 
-int main()
+int
+main()
 {
     di_node_t root_node;
 
     int fd;
 
+    /*
+     * If the /tmp/bootparams file exists, then it acts as a replacement for the
+     * normal data. Otherwise, if we don't have or can't open the file, then we
+     * just get the actual parameters.
+     */
     if ((fd = open("/tmp/bootparams", O_RDONLY)) != -1) {
-        /* If this file exists it acts as a replacement for the normal data */
         raw_cat(fd);
         close(fd);
     } else {
-        /* We didn't have or couldn't open the file, so just get actual params */
         root_node = di_init("/", (DINFOSUBTREE | DINFOPROP));
         if (root_node == DI_NODE_NIL) {
             fprintf(stderr, "di_init() failed\n");

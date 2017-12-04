@@ -520,6 +520,14 @@ d usr/vm/node_modules/vasync/node_modules/verror 0755 root root
 d usr/vm/node_modules/vasync/node_modules/verror/lib 0755 root root
 f usr/vm/node_modules/vasync/node_modules/verror/lib/verror.js 0755 root root
 d usr/vm/node_modules/vasync/node_modules/verror/node_modules 0755 root root
+d usr/vm/node_modules/vasync/node_modules/verror/node_modules/assert-plus 0755 root root
+f usr/vm/node_modules/vasync/node_modules/verror/node_modules/assert-plus/package.json 0644 root root
+f usr/vm/node_modules/vasync/node_modules/verror/node_modules/assert-plus/assert.js 0644 root root
+d usr/vm/node_modules/vasync/node_modules/verror/node_modules/core-util-is 0755 root root
+f usr/vm/node_modules/vasync/node_modules/verror/node_modules/core-util-is/package.json 0644 root root
+f usr/vm/node_modules/vasync/node_modules/verror/node_modules/core-util-is/LICENSE 0644 root root
+d usr/vm/node_modules/vasync/node_modules/verror/node_modules/core-util-is/lib 0755 root root
+f usr/vm/node_modules/vasync/node_modules/verror/node_modules/core-util-is/lib/util.js 0644 root root
 d usr/vm/node_modules/vasync/node_modules/verror/node_modules/extsprintf 0755 root root
 d usr/vm/node_modules/vasync/node_modules/verror/node_modules/extsprintf/lib 0755 root root
 f usr/vm/node_modules/vasync/node_modules/verror/node_modules/extsprintf/lib/extsprintf.js 0644 root root

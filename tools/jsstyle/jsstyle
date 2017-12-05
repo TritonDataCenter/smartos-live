@@ -23,7 +23,7 @@
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# Copyright 2011 Joyent, Inc. All rights reserved.
+# Copyright 2017 Joyent, Inc. All rights reserved.
 #
 # jsstyle - check for some common stylistic errors.
 #
@@ -102,11 +102,14 @@ if (! defined($opts{'t'})) {
 # Load config
 my %config = (
 	indent => "tab",
+	"line-length" => 80,
 	doxygen => 0,  	# doxygen comments: /** ... */
 	splint => 0,    # splint comments. Needed?
 	"unparenthesized-return" => 1,
 	"literal-string-quote" => "single",  # 'single' or 'double'
 	"blank-after-start-comment" => 1,
+	"blank-after-open-comment" => 1,
+	"no-blank-for-anon-function" => 0,
 	"continuation-at-front" => 0,
 	"leading-right-paren-ok" => 0,
 	"strict-indent" => 0
@@ -128,13 +131,22 @@ sub add_config_var ($$) {
 			die "$scope: invalid '$name': must be a number (of ".
 				"spaces) or 'tab'";
 		}
+	} elsif ($name eq "line-length") { # numeric vars
+		if ($value !~ /^\d+$/) {
+			die "$scope: invalid '$name': must be a number";
+		}
 	} elsif ($name eq "doxygen" ||   # boolean vars
 		 $name eq "splint" ||
 		 $name eq "unparenthesized-return" ||
 		 $name eq "continuation-at-front" ||
 		 $name eq "leading-right-paren-ok" ||
+		 $name eq "leading-comma-ok" ||
+		 $name eq "uncuddled-else-ok" ||
+		 $name eq "whitespace-after-left-paren-ok" ||
 		 $name eq "strict-indent" ||
-		 $name eq "blank-after-start-comment") {
+		 $name eq "blank-after-open-comment" ||
+		 $name eq "blank-after-start-comment" ||
+		 $name eq "no-blank-for-anon-function") {
 
 		if ($value != 1 && $value != 0) {
 			die "$scope: invalid '$name': don't give a value";
@@ -206,7 +218,7 @@ my $err_stat = 0;		# exit status
 
 if ($#ARGV >= 0) {
 	foreach my $arg (@ARGV) {
-		my $fh = new IO::File $arg, "r";
+		open(my $fh, "<:encoding(UTF-8)", $arg);
 		if (!defined($fh)) {
 			printf "%s: cannot open\n", $arg;
 		} else {
@@ -297,6 +309,15 @@ line: while (<$filehandle>) {
 	s/"([^\\"]|\\.)*"/\"\"/g;
 
 	#
+	# Strip out contents of easily identifiable regular expressions so that
+	# they don't trip us up. We only modify those that start with '^' or end
+	# with '$' since these are unlikely to be confused with other legitimate
+	# uses of '/' (such as division or comments).
+	#
+	s!/\^([^\\/]|\\.)*/!/ /!g;
+	s!/([^\\/]|\\.)*\$/!/ /!g;
+
+	#
 	# detect string continuation
 	#
 	if ($nocheck || $in_comment) {
@@ -349,15 +370,15 @@ line: while (<$filehandle>) {
 
 	# check length of line.
 	# first, a quick check to see if there is any chance of being too long.
-	if ((($line =~ tr/\t/\t/) * ($tab_width - 1)) + length($line) > 80) {
+	if ((($line =~ tr/\t/\t/) * ($tab_width - 1)) + length($line) > $config{"line-length"}) {
 		# yes, there is a chance.
 		# replace tabs with spaces and check again.
 		my $eline = $line;
 		1 while $eline =~
 		    s/\t+/' ' x
 			(length($&) * $tab_width - length($`) % $tab_width)/e;
-		if (length($eline) > 80) {
-			err("line > 80 characters");
+		if (length($eline) > $config{"line-length"}) {
+			err("line > " . $config{"line-length"} . " characters");
 		}
 	}
 
@@ -511,7 +532,7 @@ line: while (<$filehandle>) {
 		next line;
 	}
 
-	if ((/[^(]\/\*\S/ || /^\/\*\S/) &&
+	if ($config{"blank-after-open-comment"} && (/[^(]\/\*\S/ || /^\/\*\S/) &&
 	    !(/$lint_re/ || ($config{"splint"} && /$splint_re/))) {
 		err("missing blank after open comment");
 	}
@@ -577,13 +598,18 @@ line: while (<$filehandle>) {
 	    !/\/.*?\{\d+,?\d*\}.*?\//) {
 		err("comma or semicolon followed by non-blank");
 	}
+	# check for commas preceded by blanks
+	if ((!$config{"leading-comma-ok"} && /^\s*,/) || (!/^\s*,/ && /\s,/)) {
+		err("comma preceded by blank");
+	}
+	# check for semicolons preceded by blanks
 	# allow "for" statements to have empty "while" clauses
-	if (/\s[,;]/ && !/^[\t]+;$/ && !/^\s*for \([^;]*; ;[^;]*\)/) {
-		err("comma or semicolon preceded by blank");
+	if (/\s;/ && !/^[\t]+;$/ && !/^\s*for \([^;]*; ;[^;]*\)/) {
+		err("semicolon preceded by blank");
 	}
 	if (!$config{"continuation-at-front"} && /^\s*(&&|\|\|)/) {
 		err("improper boolean continuation");
-	} elsif ($config{"continuation-at-front"} && /(&&|\|\||\+)$/) {
+	} elsif ($config{"continuation-at-front"} && /(&&|\|\||[^+]\+)$/) {
 		err("improper continuation");
 	}
 	if (/\S   *(&&|\|\|)/ || /(&&|\|\|)   *\S/) {
@@ -591,7 +617,12 @@ line: while (<$filehandle>) {
 	}
 	# We allow methods which look like obj.delete() but not keywords without
 	# spaces ala: delete(obj)
-	if (/(?<!\.)\b(delete|typeof|instanceof|throw|with|catch|new|function|in|for|if|while|switch|return|case)\(/) {
+	if (!$config{"no-blank-for-anon-function"} && /(?<!\.)\bfunction\(/) {
+		err("missing space between 'function' and paren");
+	} elsif ($config{"no-blank-for-anon-function"} && /(?<!\.)\bfunction\s+\(/) {
+		err("space between 'function' and paren");
+	}
+	if (/(?<!\.)\b(delete|typeof|instanceof|throw|with|catch|new|in|for|if|while|switch|return|case)\(/) {
 		err("missing space between keyword and paren");
 	}
 	if (/(\b(catch|for|if|with|while|switch|return)\b.*){2,}/) {
@@ -627,7 +658,7 @@ line: while (<$filehandle>) {
 	if (/\btypeof\b/ && !/\btypeof\s*\(.*\)/) {
 		err("unparenthesized typeof expression");
 	}
-	if (/\(\s/) {
+	if (!$config{"whitespace-after-left-paren-ok"} && /\(\s/) {
 		err("whitespace after left paren");
 	}
 	# allow "for" statements to have empty "continue" clauses
@@ -641,7 +672,7 @@ line: while (<$filehandle>) {
 	if (/^\s*\(void\)[^ ]/) {
 		err("missing space after (void) cast");
 	}
-	if (/\S{/ && !/({|\(){/ &&
+	if (/\S\{/ && !/({|\(){/ &&
 	    # Allow a brace in a regex quantifier.
 	    !/\/.*?\{\d+,?\d*\}.*?\//) {
 		err("missing space before left brace");
@@ -673,7 +704,7 @@ line: while (<$filehandle>) {
 	}
 
 	if (/^\s*else\W/) {
-		if ($prev =~ /^\s*}$/) {
+		if (!$config{"uncuddled-else-ok"} && $prev =~ /^\s*}$/) {
 			err_prefix($prev,
 			    "else and right brace should be on same line");
 		}

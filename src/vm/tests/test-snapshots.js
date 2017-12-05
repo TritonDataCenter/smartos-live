@@ -29,8 +29,8 @@ var execFile = cp.execFile;
 var fs = require('fs');
 var net = require('net');
 var path = require('path');
-var vasync = require('/usr/vm/node_modules/vasync');
 var VM = require('/usr/vm/node_modules/VM');
+var vasync = require('/usr/vm/node_modules/vasync');
 var vmtest = require('../common/vmtest.js');
 
 // this puts test stuff in global, so we need to tell jsl about that:

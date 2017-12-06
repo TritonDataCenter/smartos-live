@@ -486,12 +486,20 @@ setup_net()
 			unset allowed_ip_map
 			typeset -A allowed_ip_map
 
+			dynamic_methods=""
+			separator=""
 			OLDIFS=$IFS
 			IFS=,
 
 			for zone_ip in $zone_ips; do
 				# For each static IP available, add it to the list.
-				if [[ $zone_ip != "dhcp" ]] && [[ $zone_ip != "addrconf" ]]; then
+				if [[ $zone_ip == "dhcp" ]]; then
+					dynamic_methods+="${separator}dhcpv4"
+					separator=","
+				elif [[ $zone_ip == "addrconf" ]]; then
+					dynamic_methods+="${separator}addrconf"
+					separator=","
+				else
 					clean_ip=`printf "%s" "${zone_ip}" | sed 's|^\([^/]*\)/.*|\1|'`
 					allowed_ip_map[${clean_ip}]=true
 				fi
@@ -524,6 +532,14 @@ setup_net()
 			    -p "allowed-ips=${allowed_ip_list}" ${nic}; then
 				log_and_exit \
 				    "error setting VNIC allowed-ips $nic $allowed_ip_list"
+			fi
+
+			# Set the dynamic-methods property on the NIC
+			if [[ -n ${dynamic_methods} ]] &&
+			    ! dladm set-linkprop -t -z $ZONENAME \
+			    -p "dynamic-methods=${dynamic_methods}" ${nic}; then
+				log_and_exit \
+				    "error setting VNIC dynamic-methods $nic $dynamic_methods"
 			fi
 		fi
 

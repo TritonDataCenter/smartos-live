@@ -50,6 +50,9 @@ function nic_link_props(opts, callback) {
                 return ip + '/32';
             }),
             opts.nic + ': allowed-ips ' + opts.desc);
+        opts.t.deepEqual(props['dynamic-methods'].sort(),
+            opts.dynamic_methods,
+            opts.nic + ': dynamic methods ' + opts.desc);
 
         return callback();
     });
@@ -163,6 +166,7 @@ function brand_test(brand, image, t) {
                     allowed_dhcp_cids: [ '--' ],
                     props: [ 'dhcp-nospoof', 'ip-nospoof', 'mac-nospoof',
                         'restricted' ],
+                    dynamic_methods: [ '--' ],
                     allowed_ips: [ ips[i] ]
                 }, cb2);
             }, cb);
@@ -369,6 +373,7 @@ function brand_test(brand, image, t) {
                 t: t,
                 allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof', 'restricted' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -381,6 +386,7 @@ function brand_test(brand, image, t) {
                 t: t,
                 allowed_dhcp_cids: [ '--' ],
                 props: [ '--' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -394,6 +400,7 @@ function brand_test(brand, image, t) {
                 allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof', 'ip-nospoof', 'mac-nospoof',
                     'restricted' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ips[2], '10.5.0.201', '10.5.0.202']
             }, cb);
 
@@ -409,6 +416,7 @@ function brand_test(brand, image, t) {
                     'dhcp-nospoof', 'ip-nospoof',
                     'mac-nospoof', 'restricted'
                 ],
+                dynamic_methods: [ 'dhcpv6', 'slaac' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -462,6 +470,7 @@ function brand_test(brand, image, t) {
                 t: t,
                 allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof', 'restricted' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -474,6 +483,7 @@ function brand_test(brand, image, t) {
                 t: t,
                 allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -487,6 +497,7 @@ function brand_test(brand, image, t) {
                 allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof', 'ip-nospoof', 'mac-nospoof',
                     'restricted' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ips[2], '10.5.0.201', '10.5.0.202']
             }, cb);
 
@@ -540,6 +551,7 @@ function brand_test(brand, image, t) {
                 t: t,
                 allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof', 'restricted' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -551,6 +563,7 @@ function brand_test(brand, image, t) {
                 t: t,
                 allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -563,6 +576,7 @@ function brand_test(brand, image, t) {
                 allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof', 'ip-nospoof', 'mac-nospoof',
                     'restricted' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ips[2], '10.5.0.201', '10.5.0.202']
             }, cb);
         }, function (cb) {

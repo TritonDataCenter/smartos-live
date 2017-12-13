@@ -375,8 +375,9 @@ MetadataAgent.prototype.start = function start() {
 
     self.vminfod_watcher.on('create', function (ev) {
         // ignore zones we've already (still) got a connection for
-        if (self.zoneConnections[ev.zonename])
+        if (self.zoneConnections[ev.zonename]) {
             return;
+        }
 
         self.log.debug({
             delay: (new Date()) - ev.date,
@@ -405,8 +406,9 @@ MetadataAgent.prototype.start = function start() {
         // the qemu process recreates the socket on every boot, so we want
         // to catch 'start' events for KVM to ensure we connect to metadata
         // as soon as possible.
-        if (ev.vm.brand !== 'kvm')
+        if (ev.vm.brand !== 'kvm') {
             return;
+        }
 
         var running = ev.changes.some(function (change) {
             return (change.path[0] === 'state' && change.to === 'running');

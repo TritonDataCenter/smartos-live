@@ -285,6 +285,7 @@ f usr/vm/sbin/rotate-kvm-logs.sh 0555 root bin
 f usr/vm/sbin/rotate-logs.sh 0555 root bin
 f usr/vm/sbin/vmadm 0555 root bin
 f usr/vm/sbin/vmadmd 0555 root bin
+f usr/vm/sbin/vminfo 0555 root bin
 f usr/vm/sbin/vminfod 0555 root bin
 f usr/vm/sbin/vmunbundle 0555 root bin
 f usr/vm/sbin/zfs_recv 0555 root bin
@@ -821,7 +822,6 @@ f usr/bin/disklist 0555 root bin
 f usr/bin/disk_size 0555 root bin
 f usr/bin/removable_disk 0555 root bin
 f usr/bin/mkzpool 0555 root bin
-f usr/bin/vminfod 0555 root bin
 f usr/lib/cryptpass 0555 root bin
 f usr/lib/measure_terminal 0555 root bin
 f usr/lib/sysevent/modules/sysinfo_mod.so 0555 root bin
@@ -830,6 +830,7 @@ f usr/lib/sdc/net-boot-config 0555 root bin
 f usr/sbin/sysevent 0555 root bin
 s usr/sbin/fwadm=../fw/sbin/fwadm
 s usr/sbin/vmadm=../vm/sbin/vmadm
+s usr/sbin/vminfo=../vm/sbin/vminfo
 d usr/node 0755 root bin
 d usr/node/0.10 0755 root bin
 d usr/node/0.10/node_modules 0755 root bin

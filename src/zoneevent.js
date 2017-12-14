@@ -26,8 +26,7 @@
  */
 
 /*
- * Substitute for 'zoneevent.c' that uses Vminfod or sysevents (as appropriate)
- * as an event source
+ * Substitute for 'zoneevent.c' that uses `VM.events` as the event source.
  */
 
 var f = require('util').format;

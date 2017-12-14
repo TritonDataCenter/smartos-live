@@ -259,7 +259,7 @@ function getUUID(command, p, opts)
         }
     }
 
-    if (opts.optional) {
+    if (opts && opts.optional) {
         return null;
     }
 

@@ -55,7 +55,7 @@ function usage() {
     var _args = Array.prototype.slice.call(arguments);
     var msg = f.apply(null, _args);
     var out = [
-        'Usage: vminfod [command] [args]',
+        'Usage: vminfo [command] [args]',
         '',
         'Commands',
         '  ping               get vminfod ping     (GET /ping)',

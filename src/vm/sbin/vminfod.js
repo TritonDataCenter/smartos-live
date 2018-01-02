@@ -52,21 +52,6 @@ function startVminfod() {
 
         log.info('Started vminfod');
     });
-
-    process.on('uncaughtException', function (err) {
-        log.fatal({err: err},
-            'Uncaught exception in vminfo process: %s',
-            err.message);
-        log.fatal('%s', err.stack);
-
-        vminfod.stop();
-        process.exit(1);
-    });
-
-    process.on('exit', function () {
-        log.info('Vminfo process exiting');
-        vminfod.stop();
-    });
 }
 
 onlyif.rootInSmartosGlobal(function (err) {

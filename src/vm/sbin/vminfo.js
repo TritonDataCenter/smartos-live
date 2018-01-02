@@ -278,8 +278,11 @@ function main() {
     var args = process.argv.slice(parser.optind());
     var cmd = args.shift();
 
-    // put 2 empty elements in front of the existing "args"
-    // this can be removed if posix-getopt is updated
+    /*
+     * Put 2 empty elements in front of the existing "args" this can be removed
+     * if posix-getopt is updated to v1.2.0. see: davepacheco/node-getopt pull
+     * request #3
+     */
     args = ['', ''].concat(args);
 
     switch (cmd) {

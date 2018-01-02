@@ -87,8 +87,8 @@ test('test diff simple objects', function (t) {
     t.equal(change.path[0], ['name'], 'path changed');
     t.equal(change.prettyPath, 'name', 'path changed (pretty)');
     t.equal(change.action, 'changed', 'action changed');
-    t.equal(change.from, 'foo', 'path changed from foo');
-    t.equal(change.to, 'bar', 'path changed to bar');
+    t.equal(change.oldValue, 'foo', 'path changed from foo');
+    t.equal(change.newValue, 'bar', 'path changed to bar');
 
     // modify object and compare again
     o2.id = 2;
@@ -99,14 +99,14 @@ test('test diff simple objects', function (t) {
     t.equal(changes[0].path[0], 'id', 'id changed');
     t.equal(changes[0].prettyPath, 'id', 'id changed (pretty)');
     t.equal(changes[0].action, 'changed', 'action changed');
-    t.equal(changes[0].from, o1.id, 'id changed from');
-    t.equal(changes[0].to, o2.id, 'id changed to');
+    t.equal(changes[0].oldValue, o1.id, 'id changed from');
+    t.equal(changes[0].newValue, o2.id, 'id changed to');
 
     t.equal(changes[1].path[0], 'name', 'name changed');
     t.equal(changes[1].prettyPath, 'name', 'name changed (pretty)');
     t.equal(changes[1].action, 'changed', 'action changed');
-    t.equal(changes[1].from, o1.name, 'name changed from');
-    t.equal(changes[1].to, o2.name, 'name changed to');
+    t.equal(changes[1].oldValue, o1.name, 'name changed from');
+    t.equal(changes[1].newValue, o2.name, 'name changed to');
 
     // make them the same
     o2.id = o1.id;
@@ -143,8 +143,8 @@ test('test diff nested objects', function (t) {
     t.deepEqual(change.path, ['foo', 'bar', 'baz'], 'path is correct');
     t.equal(change.prettyPath, 'foo.bar.baz', 'path is correct (pretty)');
     t.equal(change.action, 'changed', 'action changed');
-    t.equal(change.from, 'hello', 'changed from');
-    t.equal(change.to, 'goodbye', 'changed to');
+    t.equal(change.oldValue, 'hello', 'changed from');
+    t.equal(change.newValue, 'goodbye', 'changed to');
 
     // make them the same
     o2.foo.bar.baz = 'hello';
@@ -158,7 +158,7 @@ test('test diff nested objects', function (t) {
     t.deepEqual(change.path, ['foo', 'bar', 'bat'], 'path is correct');
     t.equal(change.prettyPath, 'foo.bar.bat', 'path is correct (pretty)');
     t.equal(change.action, 'added', 'action added');
-    t.equal(change.to, 'new', 'changed to');
+    t.equal(change.newValue, 'new', 'changed to');
 
     // remove o2.foo completely
     delete o2.foo;
@@ -169,7 +169,7 @@ test('test diff nested objects', function (t) {
     t.deepEqual(change.path, ['foo'], 'path is correct');
     t.equal(change.prettyPath, 'foo', 'path is correct (pretty)');
     t.equal(change.action, 'removed', 'action removed');
-    t.deepEqual(change.from, o1.foo, 'changed from');
+    t.deepEqual(change.oldValue, o1.foo, 'changed from');
 
     t.end();
 });
@@ -208,7 +208,7 @@ test('test diff vmadm payload objects', function (t) {
     t.deepEqual(change.path, ['disks', null], 'path changed');
     t.equal(change.prettyPath, 'disks.*', 'path changed (pretty)');
     t.equal(change.action, 'added', 'action changed');
-    t.equal(change.to, new_disk, 'disk added');
+    t.equal(change.newValue, new_disk, 'disk added');
 
     // reset disks
     payload1.disks = [
@@ -233,12 +233,12 @@ test('test diff vmadm payload objects', function (t) {
     t.deepEqual(changes[0].path, ['disks', null], 'disks changed');
     t.equal(changes[0].prettyPath, 'disks.*', 'disks changed (pretty)');
     t.equal(changes[0].action, 'removed', 'action');
-    t.equal(changes[0].from, payload1.disks[0], 'disks changed from');
+    t.equal(changes[0].oldValue, payload1.disks[0], 'disks changed from');
 
     t.deepEqual(changes[1].path, ['disks', null], 'disks changed');
     t.equal(changes[1].prettyPath, 'disks.*', 'disks changed (pretty)');
     t.equal(changes[1].action, 'added', 'action');
-    t.equal(changes[1].to, payload2.disks[0], 'disks changed to');
+    t.equal(changes[1].newValue, payload2.disks[0], 'disks changed to');
 
     // with a map, this will be reported as 1 change, 'disks.*.name' changing
     // from 'old' to 'new'
@@ -253,8 +253,8 @@ test('test diff vmadm payload objects', function (t) {
     t.deepEqual(change.path, ['disks', null, 'name'], 'disks changed');
     t.equal(change.prettyPath, 'disks.*.name', 'disks changed (pretty)');
     t.equal(change.action, 'changed', 'action');
-    t.equal(change.from, payload1.disks[0].name, 'disks changed from');
-    t.equal(change.to, payload2.disks[0].name, 'disks changed to');
+    t.equal(change.oldValue, payload1.disks[0].name, 'disks changed from');
+    t.equal(change.newValue, payload2.disks[0].name, 'disks changed to');
     t.equal(change.ident, payload1.disks[0].path, 'disks changed ident');
 
     // assert return

@@ -771,8 +771,8 @@ function do_events(parsed, callback) {
                     base,
                     change.prettyPath,
                     change.action,
-                    change.from,
-                    change.to);
+                    change.old,
+                    change.new);
             });
         } else {
             console.log(base);

@@ -23,12 +23,12 @@
  * Copyright (c) 2017, Joyent, Inc.
  */
 
-var assert = require('assert');
 var execFile = require('child_process').execFile;
 var fs = require('fs');
 var path = require('path');
 var util = require('util');
 
+var assert = require('/usr/node/node_modules/assert-plus');
 var bunyan = require('/usr/vm/node_modules/bunyan');
 var FsWatcher = require('/usr/vm/node_modules/fswatcher').FsWatcher;
 var vasync = require('/usr/vm/node_modules/vasync');
@@ -49,7 +49,7 @@ test('try creating temp directory', function createTmpDir(t) {
     execFile('/usr/bin/mkdir', ['-p', testdir],
         function mkdir(err, stdout, stderr) {
 
-        assert(!err);
+        assert.ifError(err);
         t.end();
     });
 });
@@ -105,7 +105,6 @@ test('try watching files with illegal characters',
     function illegalFilenameTest(t) {
 
     var fsw = new FsWatcher({log: log});
-
 
     fsw.once('ready', function fswOnReady() {
         vasync.forEachPipeline({

@@ -55,10 +55,16 @@ test('test queue unpaused 100 tasks', function (t) {
         q.enqueue({
             description: 'task ' + j,
             func: function (extras, cb) {
-                if (++i === tasks) {
+                i++;
+                if (i < tasks) {
+                    cb();
+                } else if (i === tasks) {
                     t.ok(true, 'tasks completed');
                     t.end();
                 }
+
+                // something is wrong if we are here
+                t.ok(false, 'task ' + i + ' called');
                 cb();
             }
         });

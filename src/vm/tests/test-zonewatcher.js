@@ -37,10 +37,10 @@ require('nodeunit-plus');
 
 var ZoneWatcher = require('vminfod/zonewatcher').ZoneWatcher;
 var log = bunyan.createLogger({
-        level: 'trace',
-        name: 'zonewatcher-test-dummy',
-        streams: [ { stream: process.stderr, level: 'error' } ],
-        serializers: bunyan.stdSerializers
+    level: 'trace',
+    name: 'zonewatcher-test-dummy',
+    streams: [ { stream: process.stderr, level: 'error' } ],
+    serializers: bunyan.stdSerializers
 });
 var testdir = '/tmp/' + process.pid;
 var zonew;

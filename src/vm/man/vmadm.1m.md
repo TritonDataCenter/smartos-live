@@ -103,7 +103,8 @@ tab-complete UUIDs rather than having to type them out for every command.
           -f, --full    Output the full event (full zone names, timestamp,
                         etc.)  No data will be truncated.
           -j, --json    Output in JSON.  If `-j` is supplied `-f` is ignored.
-          -r, --ready   Output an event when the event stream is ready.
+          -r, --ready   Output an extra event when the event stream is first
+                        opened and ready.
 
       get <uuid>
 

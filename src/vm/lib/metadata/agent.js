@@ -866,8 +866,8 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
                     var vmRoutes = [];
 
-                    // The notes above about resolvers also to routes. It's
-                    // here solely for the use of mdata-fetch, and we need
+                    // The notes above about resolvers also apply to routes.
+                    // It's here solely for the use of mdata-fetch, and we need
                     // to do the updateZone here so that we have latest
                     // data.
                     for (var r in vmobj.routes) {

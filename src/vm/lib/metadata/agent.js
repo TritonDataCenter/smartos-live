@@ -411,7 +411,8 @@ MetadataAgent.prototype.start = function start() {
         }
 
         var running = ev.changes.some(function (change) {
-            return (change.path[0] === 'state' && change.to === 'running');
+            return (change.path[0] === 'state'
+                && change.newValue === 'running');
         });
 
         if (!running)

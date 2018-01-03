@@ -56,11 +56,17 @@ test('test queue unpaused 100 tasks', function (t) {
             description: 'task ' + j,
             func: function (extras, cb) {
                 i++;
+
                 if (i < tasks) {
                     cb();
-                } else if (i === tasks) {
+                    return;
+                }
+
+                if (i === tasks) {
                     t.ok(true, 'tasks completed');
                     t.end();
+                    cb();
+                    return;
                 }
 
                 // something is wrong if we are here

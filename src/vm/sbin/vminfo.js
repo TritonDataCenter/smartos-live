@@ -72,7 +72,7 @@ function usage() {
 }
 
 function do_ping(args) {
-    client.ping(function (err, msg) {
+    client.ping(function vminfodPingDone(err, msg) {
         if (err) {
             console.error(err.message);
             process.exit(1);
@@ -107,7 +107,7 @@ function do_status(args) {
         }
     }
 
-    client.status(opts, function (err, msg) {
+    client.status(opts, function vminfodStatusDone(err, msg) {
         if (err) {
             console.error(err.message);
             process.exit(1);
@@ -120,7 +120,7 @@ function do_status(args) {
 }
 
 function do_vms(args) {
-    client.vms(function (err, msg) {
+    client.vms(function vminfodVmsDone(err, msg) {
         if (err) {
             console.error(err.message);
             process.exit(1);
@@ -140,7 +140,7 @@ function do_vm(args) {
         process.exit(1);
     }
 
-    client.vm(zonename, function (err, msg) {
+    client.vm(zonename, function vminfodVmDone(err, msg) {
         if (err) {
             console.error(err.message);
             process.exit(1);
@@ -188,7 +188,7 @@ function do_events(args) {
         log: log
     });
 
-    vs.once('ready', function (ev) {
+    vs.once('ready', function vminfodEventStreamReady(ev) {
         if (!opt_r)
             return;
 
@@ -202,7 +202,7 @@ function do_events(args) {
         }
     });
 
-    vs.on('readable', function () {
+    vs.on('readable', function vminfodEventStreamReadable() {
         var ev;
         while ((ev = vs.read()) !== null) {
             if (opt_j) {
@@ -224,7 +224,7 @@ function do_events(args) {
 
             delete ev.vm;
             if (ev.changes) {
-                ev.changes.forEach(function (change) {
+                ev.changes.forEach(function forEachChanges(change) {
                     console.log('%s: %s %s :: %j -> %j',
                         base,
                         change.prettyPath,

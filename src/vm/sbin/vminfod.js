@@ -44,7 +44,7 @@ function startVminfod() {
 
     log.info('Starting vminfod');
 
-    vminfod.start(function (err) {
+    vminfod.start(function vminfodStartDone(err) {
         if (err) {
             log.fatal({err: err}, 'Failed to start vminfod');
             process.exit(1);
@@ -54,7 +54,7 @@ function startVminfod() {
     });
 }
 
-onlyif.rootInSmartosGlobal(function (err) {
+onlyif.rootInSmartosGlobal(function rootInSmartosGlobalDone(err) {
     if (err) {
         log.error({err: err},
             'Fatal: cannot run because: %s', err.message);

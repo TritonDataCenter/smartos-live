@@ -66,23 +66,23 @@ var log = bunyan.createLogger({
 });
 
 function start() {
-    var zw = new ZoneEvent({
+    var ze = new ZoneEvent({
         name: name,
         log: log
     });
 
-    zw.on('ready', function (err, obj) {
+    ze.on('ready', function zoneEventReady(err, obj) {
         if (err)
             throw err;
 
         // It's unfortunate, but `zoneevent.c` never published a "ready" event, so
         // we just silently ignore this if everything works as expected.
-        tryTimeout = setTimeout(function () {
+        tryTimeout = setTimeout(function zoneEventRetry() {
             tries = 0;
         }, TRY_RESET_TIMEOUT);
     });
 
-    zw.on('event', function (ev) {
+    ze.on('event', function zoneEventEventReceived(ev) {
         /*
          * ZoneEvent returns an object that looks like this:
          *
@@ -127,7 +127,7 @@ function start() {
         console.log(JSON.stringify(obj));
     });
 
-    zw.on('error', function (err) {
+    zw.on('error', function zoneEventError(err) {
         if (++tries === MAX_TRIES) {
             log.fatal({err: err}, 'failed %d times', tries);
             process.exit(1);

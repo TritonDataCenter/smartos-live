@@ -127,7 +127,7 @@ function start() {
         console.log(JSON.stringify(obj));
     });
 
-    zw.on('error', function zoneEventError(err) {
+    ze.on('error', function zoneEventError(err) {
         if (++tries === MAX_TRIES) {
             log.fatal({err: err}, 'failed %d times', tries);
             process.exit(1);

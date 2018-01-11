@@ -762,7 +762,8 @@ test('test docker VM with "docker:extraHosts"', function (t) {
     payload.docker = true;
     payload.autoboot = false;
     payload.internal_metadata = {
-        'docker:extraHosts': '["foo:1.2.3.4"]'
+        'docker:extraHosts': '["foo:1.2.3.4"]',
+        'docker:cmd': '["sleep","5"]'
     };
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [

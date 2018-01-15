@@ -154,3 +154,16 @@ set sd:sd_io_time=10
 
 * Use hires tick to improve some scheduling latency issues
 set hires_tick=1
+
+*
+* Used by bhyve.  If not forceloaded, the /dev/vmm and /dev/viona nodes are
+* missing.  Trying to modload then immediately using them involves a race in
+* that modload(1M) returns once _init(9E) completes.  The sdev_plugin(9F) is not
+* registered until attach(9E) completes.
+*
+* Another wrinkle seems to be that if the device nodes are not present when
+* zones start, the device nodes never show up in the zones.  This makes it
+* rather hard to have a autoboot zone that runs bhyve.
+*
+forceload: drv/vmm
+forceload: drv/viona

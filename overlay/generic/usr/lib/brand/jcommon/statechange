@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright (c) 2016 Joyent, Inc.  All rights reserved.
+# Copyright (c) 2018 Joyent, Inc.  All rights reserved.
 #
 
 unset LD_LIBRARY_PATH
@@ -144,8 +144,15 @@ setup_net()
 	do
 		# Get simplified versions of the network config. variables.
 		address=$(eval echo \$_ZONECFG_net_${nic}_address)
-		dhcp_server=$(get_boolean_nic_property ${nic} dhcp_server)
+		# If address set, must be a shared stack zone
+		[[ -n $address ]] && exit 0
+
 		global_nic=$(eval echo \$_ZONECFG_net_${nic}_global_nic)
+		# If no global-nic, must be a dedicated physical NIC instead
+		# of a vnic
+		[[ -z $global_nic ]] && continue
+
+		dhcp_server=$(get_boolean_nic_property ${nic} dhcp_server)
 		mac_addr=$(eval echo \$_ZONECFG_net_${nic}_mac_addr)
 		vlan_id=$(eval echo \$_ZONECFG_net_${nic}_vlan_id)
 		blocked_outgoing_ports=$(eval \
@@ -177,12 +184,7 @@ setup_net()
 			zone_ips=$zone_ip
 		fi
 
-		# If address set, must be a shared stack zone
-		[[ -n $address ]] && exit 0
 
-		# If no global-nic, must be a dedicated physical NIC instead
-		# of a vnic
-		[[ -z $global_nic ]] && continue
 
 		orig_global=$global_nic
 
@@ -203,7 +205,7 @@ setup_net()
 		#    sdc_sdn/23. That refers to the overlay rule sdc_sdn. If we
 		#    have an overlay rule, we may need to dynamically create the
 		#    overlay device if it doesn't exist.
-		#		
+		#
 		# To handle these cases, we first check if it's an overlay
 		# device, and then if not, check the other cases.
 		#
@@ -211,10 +213,19 @@ setup_net()
 		tmp=$(echo $orig_global | sed -E 's_[a-zA-Z_0-9]+/[0-9]+__')
 		if [[ -n "$tmp" ]]; then
 
+			#
+			# We only need sysinfo if we get here, and we only need to load it
+			# once.  Loading is about the same cost as looking up a single
+			# value.
+			#
+			if [[ -z $SYSINFO_LOADED ]]; then
+				load_sdc_sysinfo
+				SYSINFO_LOADED="LOADED"
+			fi
 			global_nic=$(eval echo \$SYSINFO_NIC_${orig_global})
 
 			# If the global nic is specified as a device or etherstub name
-			# rather than a tag
+			# rather than a tag.
 			if [[ -z $global_nic ]]; then
 				echo "$(dladm show-phys -p -o LINK) $(dladm show-etherstub -p -o LINK)" \
 				| egrep "(^| )${orig_global}( |$)" > /dev/null
@@ -426,6 +437,7 @@ setup_net()
 
 			OLDIFS=$IFS
 			IFS=,
+
 			for zone_ip in $zone_ips; do
 				# For each static IP available, add it to the list.
 				if [[ $zone_ip != "dhcp" ]] && [[ $zone_ip != "addrconf" ]]; then
@@ -782,12 +794,6 @@ cleanup_mount()
 #
 # Main
 #
-
-# Load sysinfo variables with SYSINFO_ prefix
-load_sdc_sysinfo
-# Load config variables with CONFIG_ prefix, and sets the headnode variable
-load_sdc_config
-
 
 [[ "$subcommand" == "pre" && $cmd == 0 ]] && setup_fs
 if [[ "$subcommand" == "post" && $cmd == 0 ]]; then

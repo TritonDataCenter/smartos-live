@@ -35,7 +35,6 @@ var mod_uuid = require('node-uuid');
 var util = require('util');
 var util_vm = require('../../lib/util/vm');
 
-var createSubObjects = mod_obj.createSubObjects;
 var mergeObjects = mod_obj.mergeObjects;
 
 
@@ -123,10 +122,9 @@ exports['update non-existent rule'] = function (t) {
             }, 'rules returned');
 
             allRules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(allRules, vm.uuid, 'out', 'block', 'tcp',
-                {
-                    any: [ 8080 ]
-                });
+            allRules[vm.uuid].out.tcp = [
+                helpers.blockPortOutTCP('any', 8080)
+            ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), allRules,
                 'IPv4 firewall rules correct');
@@ -145,7 +143,7 @@ exports['update non-existent rule'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -237,7 +235,7 @@ exports['description and created_by'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 

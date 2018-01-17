@@ -21,7 +21,7 @@
  * CDDL HEADER END
  *
  *
- * Copyright 2017, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: Main entry points
@@ -32,6 +32,7 @@ var clone = require('clone');
 var filter = require('./filter');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
+var mod_addr = require('ip6addr');
 var mod_ipf = require('./ipf');
 var mod_lock = require('./locker');
 var mod_obj = require('./util/obj');
@@ -443,7 +444,7 @@ function createVMlookup(vms, log, callback) {
 
         var vm = {
             enabled: fullVM.firewall_enabled || false,
-            ips: util_vm.ipsFromNICs(fullVM.nics),
+            ips: util_vm.ipsFromNICs(fullVM.nics).sort(mod_addr.compare),
             owner_uuid: fullVM.owner_uuid,
             state: fullVM.state,
             tags: fullVM.tags,
@@ -900,12 +901,83 @@ function protoTarget(rule, target) {
 }
 
 
+function comparePorts(p1, p2) {
+    // "all" comes before any port numbers
+    if (p1 === 'all') {
+        if (p2 === 'all') {
+            return 0;
+        } else {
+            return -1;
+        }
+    } else if (p2 === 'all') {
+        return 1;
+    }
+
+    var n1 = p1.hasOwnProperty('start') ? p1.start : p1;
+    var n2 = p2.hasOwnProperty('start') ? p2.start : p2;
+
+    return Number(n1) - Number(n2);
+}
+
+
+function compareTypes(t1, t2) {
+    var p1 = t1.split(':');
+    var p2 = t2.split(':');
+    var c = Number(p1[0]) - Number(p2[0]);
+    if (c !== 0) {
+        return c;
+    }
+
+    if (p1.length === 1) {
+        if (p2.length === 1) {
+            return 0;
+        } else {
+            return -1;
+        }
+    } else if (p2.length === 1) {
+        return 1;
+    } else {
+        return Number(p1[1]) - Number(p2[1]);
+    }
+}
+
+
+function compareRules(r1, r2) {
+    var res;
+
+    // Sort protocol as: icmp, icmp6, tcp, udp.
+    if (r1.protocol < r2.protocol) {
+        return -1;
+    }
+
+    if (r1.protocol > r2.protocol) {
+        return 1;
+    }
+
+    if (icmpr.test(r1.protocol)) {
+        res = compareTypes(r1.protoTargets[0], r2.protoTargets[0]);
+    } else {
+        res = comparePorts(r1.protoTargets[0], r2.protoTargets[0]);
+    }
+
+    if (res !== 0) {
+        return res;
+    }
+
+    // Target IPs:
+    return mod_addr.compare(r1.targets[0], r2.targets[0]);
+}
+
+
 /**
  * Returns an object containing ipf rule text and enough data to sort on
  */
 function ipfRuleObj(opts) {
     var dir = opts.direction;
     var rule = opts.rule;
+
+    var targets = Array.isArray(opts.targets) ?
+        opts.targets : [ opts.targets ];
 
     // ipfilter uses /etc/protocols which calls ICMPv6 'ipv6-icmp'
     var ipfProto = (rule.protocol === 'icmp6') ? 'ipv6-icmp' : rule.protocol;
@@ -920,6 +992,8 @@ function ipfRuleObj(opts) {
         v6text: [ '', util.format('# rule=%s, version=%s, %s=%s',
             rule.uuid, rule.version, opts.type, opts.value)
         ],
+        targets: targets,
+        protoTargets: rule.protoTargets,
         type: opts.type,
         uuid: rule.uuid,
         value: opts.value,
@@ -927,7 +1001,7 @@ function ipfRuleObj(opts) {
     };
 
     if (opts.type === 'wildcard' && opts.value === 'any') {
-        rule.protoTargets.sort().forEach(function (t) {
+        rule.protoTargets.forEach(function (t) {
             var wild = util.format('%s %s quick proto %s from any to any %s',
                 rule.action === 'allow' ? 'pass' : 'block',
                 dir === 'from' ? 'out' : 'in',
@@ -942,9 +1016,6 @@ function ipfRuleObj(opts) {
         return sortObj;
     }
 
-    var targets = Array.isArray(opts.targets) ?
-        opts.targets : [ opts.targets ];
-
     targets.forEach(function (target) {
         var isv6 = target.indexOf(':') !== -1;
 
@@ -956,8 +1027,7 @@ function ipfRuleObj(opts) {
 
         var text = isv6 ? sortObj.v6text : sortObj.v4text;
 
-        // XXX: need to do Number() on these before sorting?
-        rule.protoTargets.sort().forEach(function (t) {
+        rule.protoTargets.forEach(function (t) {
             text.push(
                 util.format('%s %s quick proto %s from %s to %s %s',
                     rule.action === 'allow' ? 'pass' : 'block',
@@ -1027,23 +1097,19 @@ function prepareIPFdata(opts, log, callback) {
                 return;
             }
 
-            var otherSideRules = rulesFromOtherSide(rule, dir, allVMs,
-                remoteVMs);
+            var otherSideRules =
+                rulesFromOtherSide(rule, dir, allVMs, remoteVMs);
 
             ruleVMs[dir].forEach(function (uuid) {
-                // If the VM's firewall is disabled, we don't need to write out
-                // rules for it
-                if (!allVMs.all[uuid].enabled) {
+                /*
+                 * If the VM's firewall is disabled, we don't need to write out
+                 * rules for it.
+                 */
+                if (!allVMs.all[uuid].enabled || !hasKey(conf, uuid)) {
                     return;
                 }
 
-                otherSideRules.forEach(function (oRule) {
-                    if (!hasKey(conf, uuid)) {
-                        return;
-                    }
-
-                    conf[uuid].push(oRule);
-                });
+                conf[uuid] = conf[uuid].concat(otherSideRules);
             });
         });
     });
@@ -1064,8 +1130,7 @@ function prepareIPFdata(opts, log, callback) {
 
         toReturn.vms.push(vm);
 
-        // XXX: sort here
-        conf[vm].forEach(function (sortObj) {
+        conf[vm].sort(compareRules).forEach(function (sortObj) {
             if (!hasKey(rulesIncluded, sortObj.uuid)) {
                 rulesIncluded[sortObj.uuid] = [];
             }
@@ -1148,12 +1213,13 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
     var ipfRules = [];
 
     if (rule[otherSide].wildcards.indexOf('any') !== -1) {
-            ipfRules.push(ipfRuleObj({
-                rule: rule,
-                direction: dir,
-                type: 'wildcard',
-                value: 'any'
-            }));
+        ipfRules.push(ipfRuleObj({
+            rule: rule,
+            direction: dir,
+            targets: [ '0.0.0.0' ],
+            type: 'wildcard',
+            value: 'any'
+        }));
 
         return ipfRules;
     }
@@ -1212,6 +1278,10 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
                         return;
                     }
 
+                    if (vm.ips.length === 0) {
+                        return;
+                    }
+
                     ipfRules.push(ipfRuleObj({
                         rule: rule,
                         direction: dir,
@@ -1221,7 +1291,6 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
                     }));
                 });
             });
-
         });
     });
 

@@ -26,7 +26,7 @@
  * fwadm: shared VM logic
  */
 
-var mod_net = require('net');
+var mod_addr = require('ip6addr');
 var mod_obj = require('./obj');
 var VError = require('verror').VError;
 
@@ -64,6 +64,9 @@ function notAuto(i) {
     return (i !== 'dhcp') && (i !== 'addrconf');
 }
 
+function toStr(o) {
+    return o.toString();
+}
 
 
 // --- Exports
@@ -111,15 +114,17 @@ function createRemoteVM(vm) {
         });
     }
 
-    rvm.ips = Object.keys(ips).sort();
-
-    rvm.ips.forEach(function (ip) {
-        if (!mod_net.isIPv4(ip) && !mod_net.isIPv6(ip)) {
+    function parseIP(ip) {
+        try {
+            return mod_addr.parse(ip);
+        } catch (_) {
             err = new VError('Invalid IP address: %s', ip);
             err.details = vm;
             throw err;
         }
-    });
+    }
+
+    rvm.ips = Object.keys(ips).map(parseIP).sort(mod_addr.compare).map(toStr);
 
     if (hasKey(vm, 'tags') && !objEmpty(vm.tags)) {
         rvm.tags = {};

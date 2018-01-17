@@ -88,6 +88,8 @@ mkdir -p ${TEST_MODULES}/nodeunit/deps/ejs
 for F in ${NODEUNIT_FILES}; do
     cp -r ${NM_ORIG}/nodeunit/$F ${TEST_MODULES}/nodeunit/
 done
+patch -p3 < tools/nodeunit.patch
+
 cp ${NM_ORIG}/nodeunit/deps/*.js ${TEST_MODULES}/nodeunit/deps
 cp -r ${NM_ORIG}/nodeunit/deps/ejs/lib ${TEST_MODULES}/nodeunit/deps/ejs/lib
 cp ${NM_ORIG}/nodeunit/deps/ejs/package.json ${TEST_MODULES}/nodeunit/deps/ejs/package.json

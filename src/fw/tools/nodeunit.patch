@@ -1,0 +1,31 @@
+nodeunit outputs objects as they exist in memory at the time of rendering, and
+not as they exist at the time of comparison. This makes debugging failures
+rather difficult, since the output can be misleading since the fwadm unit tests
+update the same object before calling t.deepEqual() in several places.
+
+We patch nodeunit to clone its inputs after a comparison fails so that we can
+get better output.
+---
+
+diff --git a/src/fw/test/node_modules/nodeunit/lib/assert.js b/src/fw/test/node_modules/nodeunit/lib/assert.js
+index 55ef744..a5bb34f 100644
+--- a/src/fw/test/node_modules/nodeunit/lib/assert.js
++++ b/src/fw/test/node_modules/nodeunit/lib/assert.js
+@@ -48,6 +48,7 @@ var _keys = function(obj){
+ // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
++var clone = require('clone');
+ var pSlice = Array.prototype.slice;
+
+ // 1. The assert module provides functions that throw
+@@ -62,8 +63,8 @@ var assert = exports;
+ assert.AssertionError = function AssertionError (options) {
+   this.name = "AssertionError";
+   this.message = options.message;
+-  this.actual = options.actual;
+-  this.expected = options.expected;
++  this.actual = clone(options.actual);
++  this.expected = clone(options.expected);
+   this.operator = options.operator;
+   var stackStartFunction = options.stackStartFunction || fail;

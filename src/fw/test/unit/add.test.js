@@ -201,7 +201,7 @@ exports['created_by'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 

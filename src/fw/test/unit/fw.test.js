@@ -35,7 +35,6 @@ var mod_uuid = require('node-uuid');
 var util = require('util');
 var util_vm = require('../../lib/util/vm');
 
-var createSubObjects = mod_obj.createSubObjects;
 var mergeObjects = mod_obj.mergeObjects;
 
 
@@ -141,10 +140,10 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
 
             var v4rules = helpers.defaultZoneRules(vm.uuid);
             var v6rules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(v4rules, vm.uuid, 'out', 'block', 'tcp',
-                {
-                    '10.99.99.254': [ 8080 ]
-                });
+
+            v4rules[vm.uuid].out.tcp = [
+                helpers.blockPortOutTCP('10.99.99.254', 8080)
+            ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');
@@ -207,11 +206,11 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
 
             var v4rules = helpers.defaultZoneRules(vm.uuid);
             var v6rules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(v4rules, vm.uuid, 'out', 'block', 'tcp',
-                {
-                    '10.99.99.254': [ 8080 ],
-                    '10.88.88.2': [ 8080 ]
-                });
+
+            v4rules[vm.uuid].out.tcp = [
+                helpers.blockPortOutTCP('10.88.88.2', 8080),
+                helpers.blockPortOutTCP('10.99.99.254', 8080)
+            ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');
@@ -296,7 +295,7 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -373,7 +372,7 @@ exports['add / update: vm to IP: ALLOW'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -417,10 +416,11 @@ exports['add: tag to IP'] = function (t) {
 
             var v4rules = helpers.defaultZoneRules(vm1.uuid);
             var v6rules = helpers.defaultZoneRules(vm1.uuid);
-            createSubObjects(v4rules, vm1.uuid, 'out', 'block', 'tcp',
-                {
-                    '10.99.99.254': [ 25 ]
-                });
+
+            v4rules[vm1.uuid].out.tcp = [
+                helpers.blockPortOutTCP('10.99.99.254', 25)
+            ];
+
             v4rules[vm2.uuid] = v4rules[vm1.uuid];
             v6rules[vm2.uuid] = v6rules[vm1.uuid];
 
@@ -473,7 +473,7 @@ exports['add: tag to IP'] = function (t) {
         }, cb);
     }
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -525,14 +525,14 @@ exports['add: tag to subnet'] = function (t) {
 
             var v4rules = helpers.defaultZoneRules(vm1.uuid);
             var v6rules = helpers.defaultZoneRules(vm1.uuid);
-            createSubObjects(v4rules, vm1.uuid, 'out', 'block', 'tcp',
-                {
-                    '10.99.99.0/24': [ 25 ]
-                });
-            createSubObjects(v4rules, vm1.uuid, 'in', 'pass', 'tcp',
-                {
-                    '10.99.99.0/24': [ 80 ]
-                });
+
+            v4rules[vm1.uuid].out.tcp = [
+                helpers.blockPortOutTCP('10.99.99.0/24', 25)
+            ];
+            v4rules[vm1.uuid].in.tcp = [
+                helpers.allowPortInTCP('10.99.99.0/24', 80)
+            ];
+
             v4rules[vm2.uuid] = v4rules[vm1.uuid];
             v6rules[vm2.uuid] = v6rules[vm1.uuid];
 
@@ -605,7 +605,7 @@ exports['add: tag to subnet'] = function (t) {
         }, cb);
     }
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -660,14 +660,10 @@ exports['add: vm to subnet'] = function (t) {
 
             var v4rules = helpers.defaultZoneRules(vm1.uuid);
             var v6rules = helpers.defaultZoneRules(vm1.uuid);
-            createSubObjects(v4rules, vm1.uuid, 'out', 'block', 'tcp',
-                {
-                    '10.99.99.0/24': [ 25 ]
-                });
-            createSubObjects(v4rules, vm1.uuid, 'in', 'pass', 'tcp',
-                {
-                    '10.99.99.0/24': [ 80 ]
-                });
+            v4rules[vm1.uuid].out.tcp =
+                [ helpers.blockPortOutTCP('10.99.99.0/24', 25) ];
+            v4rules[vm1.uuid].in.tcp =
+                [ helpers.allowPortInTCP('10.99.99.0/24', 80) ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');
@@ -748,7 +744,7 @@ exports['add: vm to subnet'] = function (t) {
         }, cb);
     }
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -888,14 +884,11 @@ exports['enable / disable rule'] = function (t) {
                 vms: [ vm.uuid ]
             }, 'rules returned');
 
-            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 33 ]
-                });
-            createSubObjects(v6rules, vm.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 33 ]
-                });
+            v4rules[vm.uuid].in.tcp =
+                [ helpers.allowPortInTCP('any', 33) ];
+            v6rules[vm.uuid].in.tcp =
+                [ helpers.allowPortInTCP('any', 33) ];
+
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files still the same');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
@@ -925,7 +918,7 @@ exports['enable / disable rule'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 

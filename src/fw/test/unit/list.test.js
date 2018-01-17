@@ -139,7 +139,7 @@ exports['fields'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 

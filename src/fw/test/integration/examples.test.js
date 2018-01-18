@@ -30,6 +30,8 @@ var VMS = [
     '60e90d15-fb48-4bb9-90e6-1e1bb8269d1e'
 ];
 
+var KS = ' keep state';
+var KF = ' keep frags';
 
 
 // --- Helpers
@@ -87,7 +89,7 @@ function fwStatsContain(t, uuid, inLines, inDesc, cb) {
     var cmd = 'fwadm stats ' + uuid;
     var desc = inDesc + ': ';
     // clone the input:
-    var lines = inLines.map(function (l) { return l; });
+    var lines = inLines.slice();
 
     exec(cmd, function (err, stdout, stderr) {
         t.ifError(err, desc + 'error running: ' + cmd);
@@ -306,7 +308,7 @@ exports['vmadm'] = {
 
     'stats after vmadm_vm1': function (t) {
         fwStatsContain(t, VMS[0], [
-            'block out quick proto tcp from any to any port = smtp'
+            'block out quick proto tcp from any to any port = smtp' + KF
         ], 'smtp block rule applied', function () {
             return t.done();
         });
@@ -339,9 +341,9 @@ exports['vmadm'] = {
 
     'stats after vmadm_cmd1': function (t) {
         fwStatsContain(t, VMS[0], [
-            'block out quick proto tcp from any to any port = smtp',
-            'pass in quick proto tcp from any to any port = www',
-            'pass in quick proto tcp from any to any port = https'
+            'block out quick proto tcp from any to any port = smtp' + KF,
+            'pass in quick proto tcp from any to any port = www' + KS + KF,
+            'pass in quick proto tcp from any to any port = https' + KS + KF
         ], 'smtp block rule applied', function () {
             return t.done();
         });
@@ -388,9 +390,9 @@ exports['vmadm'] = {
 
     'stats after start': function (t) {
         fwStatsContain(t, VMS[0], [
-            'block out quick proto tcp from any to any port = smtp',
-            'pass in quick proto tcp from any to any port = www',
-            'pass in quick proto tcp from any to any port = https'
+            'block out quick proto tcp from any to any port = smtp' + KF,
+            'pass in quick proto tcp from any to any port = www' + KS + KF,
+            'pass in quick proto tcp from any to any port = https' + KS + KF
         ], 'smtp block rule applied', function () {
             return t.done();
         });

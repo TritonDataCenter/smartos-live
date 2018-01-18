@@ -611,39 +611,46 @@ function forEachVMsIPs(vms, f) {
     getIPsFromVMs(vms).forEach(f);
 }
 
-function createPortRule(action, dir, proto, who, port) {
+function createPortRule(action, dir, proto, who, port, rest) {
     var suffix = '';
     if (port) {
         suffix += 'port = ' + port;
+    }
+    suffix += ' keep frags';
+    if (rest) {
+        suffix += ' ' + rest;
     }
     return util.format(
         '%s %s quick proto %s from %s %s', action, dir, proto, who, suffix);
 }
 
-function createRangeRule(action, dir, proto, who, p1, p2) {
+function createRangeRule(action, dir, proto, who, p1, p2, rest) {
     var suffix = 'port ' + p1 + ' : ' + p2 + ' keep frags';
+    if (rest) {
+        suffix += ' ' + rest;
+    }
     return util.format(
         '%s %s quick proto %s from %s %s', action, dir, proto, who, suffix);
 }
 
-function allowPortInTCP(src, port) {
-    return createPortRule('pass', 'in', 'tcp', src + ' to any', port);
+function allowPortInTCP(src, port, rest) {
+    return createPortRule('pass', 'in', 'tcp', src + ' to any', port, rest);
 }
 
 function allowRangeInTCP(src, p1, p2) {
     return createRangeRule('pass', 'in', 'tcp', src + ' to any', p1, p2);
 }
 
-function blockPortInTCP(src, port) {
-    return createPortRule('block', 'in', 'tcp', src + ' to any', port);
+function blockPortInTCP(src, port, rest) {
+    return createPortRule('block', 'in', 'tcp', src + ' to any', port, rest);
 }
 
 function blockRangeInTCP(src, p1, p2) {
     return createRangeRule('block', 'in', 'tcp', src + ' to any', p1, p2);
 }
 
-function allowPortInUDP(src, port) {
-    return createPortRule('pass', 'in', 'udp', src + ' to any', port);
+function allowPortInUDP(src, port, rest) {
+    return createPortRule('pass', 'in', 'udp', src + ' to any', port, rest);
 }
 
 function allowInICMP(src, type, code) {
@@ -654,6 +661,7 @@ function allowInICMP(src, type, code) {
     if (code !== undefined) {
         suffix += ' code ' + code;
     }
+    suffix += ' keep frags';
     return util.format(
         'pass in quick proto icmp from %s to any %s', src, suffix);
 }
@@ -666,6 +674,7 @@ function allowInICMP6(src, type, code) {
     if (code !== undefined) {
         suffix += ' code ' + code;
     }
+    suffix += ' keep frags';
     return util.format(
         'pass in quick proto ipv6-icmp from %s to any %s', src, suffix);
 }

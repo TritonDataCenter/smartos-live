@@ -298,3 +298,6 @@ iwn 301
 xhci 302
 qede 303
 buildstamp 304
+vmm 305
+viona 306
+ppt 307

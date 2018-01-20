@@ -488,7 +488,7 @@ function addFakeFields(m)
         m.type = 'OS';
     }
 
-    if (m.brand !== 'kvm') {
+    if (m.brand !== 'kvm' && m.brand !== 'bhyve') {
         // when we do not normally have 'ram', set as fake property for
         // consistency
         m.ram = m.max_physical_memory;

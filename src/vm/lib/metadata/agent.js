@@ -455,10 +455,10 @@ MetadataAgent.prototype.createServersOnExistingZones = function () {
                 return;
             }
 
-            if (zone.brand === 'kvm') {
+            if (zone.brand === 'kvm' || zone.brand === 'bhyve') {
 
                 // For KVM, the zone must be running otherwise Qemu will not
-                // have created a socket.
+                // have created a socket.  A similar situation exists for bhyve.
                 if (zone.zone_state !== 'running') {
                     self.log.debug('skipping zone ' + zone.zonename
                         + ' which has ' + 'non-running zone_state: '
@@ -689,7 +689,8 @@ function handleZoneCreated(zonename) {
                 self.createZoneLog(self.zones[zonename].brand, zonename);
             }
 
-            if (self.zones[zonename].brand === 'kvm') {
+            if (self.zones[zonename].brand === 'kvm'
+                || self.zones[zonename].brand === 'bhyve') {
                 self.startKVMSocketServer(zonename, _dummyCb);
             } else {
                 self.startZoneSocketServer(zonename, _dummyCb);
@@ -719,14 +720,15 @@ MetadataAgent.prototype.start = function start() {
             return;
         }
 
-        // For non-KVM, we only care about create/delete since the socket
-        // only needs to be created once for these zones. For KVM however,
-        // the qemu process recreates the socket on every boot, so we want
-        // to catch 'start' events for KVM to ensure we connect to metadata
-        // as soon as possible.
+        // For non-KVM and non-bhyve, we only care about create/delete since the
+        // socket only needs to be created once for these zones. For KVM and
+        // bhyve however, the qemu or zhyve process recreates the socket on
+        // every boot, so we want to catch 'start' events for KVM or zhyve to
+        // ensure we connect to metadata as soon as possible.
         if (msg.cmd === 'start' && self.zones.hasOwnProperty(msg.zonename)
-            && self.zones[msg.zonename].brand === 'kvm') {
-            // KVM VM started
+            && (self.zones[msg.zonename].brand === 'kvm'
+            || self.zones[msg.zonename].brand === 'bhyve')) {
+            // KVM or bhyve VM started
 
             self.log.debug({
                 delay: (new Date()).getTime() - when.getTime(), // in ms

@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2017 Joyent, Inc.
+ * Copyright 2018 Joyent, Inc.
  *
  */
 
@@ -606,6 +606,7 @@ function handleProvisioning(vmobj, cb)
  *
  * 30s was chosen arbitrarily as an estimate of when we'd be past the initial
  * boot.
+ *
  */
 function rotateKVMLog(vm_uuid)
 {
@@ -968,8 +969,9 @@ function updateZoneStatus(ev)
         || ev.oldstate === 'running'
         || ev.newstate === 'uninitialized')) {
 
-        log.info('' + ev.zonename + ' (kvm) went from ' + ev.oldstate
-            + ' to ' + ev.newstate + ' at ' + ev.when);
+        log.info('' + ev.zonename + ' (' +seen_vms[ev.zonename].brand
+            + ') went from ' + ev.oldstate + ' to ' + ev.newstate
+            + ' at ' + ev.when);
         // Continue on to VM.load()
     } else if (seen_vms[ev.zonename].docker
         && (ev.newstate === 'uninitialized')) {
@@ -1124,7 +1126,7 @@ function updateZoneStatus(ev)
         // don't handle transitions other than provisioning for non-kvm
         if (vmobj.brand !== 'kvm') {
             log.trace('doing nothing for ' + ev.zonename + ' transition '
-                + 'because brand != "kvm"');
+                + 'because brand is not "kvm"');
             return;
         }
 
@@ -1142,7 +1144,6 @@ function updateZoneStatus(ev)
             }
         } else if (ev.newstate === 'uninitialized') { // this means installed!?
             // XXX we're running stop so it will clear the transition marker
-
             VM.stop(ev.zonename, {'force': true}, function (e) {
                 if (e && e.code !== 'ENOTRUNNING') {
                     log.error(e, 'stop failed');
@@ -1376,6 +1377,14 @@ function startHTTPHandler()
     }
 }
 
+// Generates an error with message 'vmadmd only handles '<command>' for:
+// <brand(s)> (your brand is <brand>)'
+function unsupportedBrandError(brands, command, brand)
+{
+    return new Error('vmadmd only handles "' + command + '" for: '
+        + brands.join(' ') + '(your brand is: ' + brand + ')');
+}
+
 /*
  * GET /vm/:id[?type=vnc,xxx]
  * POST /vm/:id?action=stop
@@ -1396,40 +1405,39 @@ function stopVM(uuid, timeout, callback)
 
     /* We load here to get the zonepath and ensure it exists. */
     VM.load(uuid, {fields: ['brand', 'zonepath']}, function (err, vmobj) {
-        var socket;
-        var q;
-
         if (err) {
             log.debug('Unable to load vm: ' + err.message, err);
             callback(err);
             return;
         }
 
-        q = new Qmp(log);
+        if (vmobj.brand === 'kvm') {
+            var socket;
+            var q;
 
-        if (vmobj.brand !== 'kvm') {
-            callback(new Error('vmadmd only handles "stop" for kvm ('
-                + 'your brand is: ' + vmobj.brand + ')'));
+            q = new Qmp(log);
+
+            socket = vmobj.zonepath + '/root/tmp/vm.qmp';
+            q.connect(socket, function (error) {
+                if (error) {
+                    callback(error);
+                    return;
+                }
+                q.command('system_powerdown', null, function (e, result) {
+                    log.debug('result: ' + JSON.stringify(result));
+                    q.disconnect();
+
+                    // Setup to send kill when timeout expires
+                    setStopTimer(uuid, timeout * 1000);
+
+                    callback(null);
+                    return;
+                });
+            });
+        } else {
+            callback(unsupportedBrandError(['kvm'], 'stop', vmobj.brand));
             return;
         }
-
-        socket = vmobj.zonepath + '/root/tmp/vm.qmp';
-        q.connect(socket, function (error) {
-            if (error) {
-                callback(error);
-                return;
-            }
-            q.command('system_powerdown', null, function (e, result) {
-                log.debug('result: ' + JSON.stringify(result));
-                q.disconnect();
-
-                // Setup to send kill when timeout expires
-                setStopTimer(uuid, timeout * 1000);
-
-                callback(null);
-                return;
-            });
-        });
     });
 }
 
@@ -1869,7 +1877,8 @@ function upgradeVM(vmobj, fields, callback)
     var new_cores;
     var upgrade_payload = {};
 
-    if (vmobj.v === 1) {
+    // 'bhyve' didn't exist pre version 1, so VMs won't need upgrade.
+    if (vmobj.v === 1 || vmobj.brand === 'bhyve') {
         log.trace('VM ' + vmobj.uuid + ' already at version 1, skipping '
             + 'upgrade.');
         callback(null, vmobj);
@@ -2210,7 +2219,8 @@ function upgradeVM(vmobj, fields, callback)
             });
         }, function (cb) {
             // for KVM we always want 10G zoneroot quota
-            if (vmobj.brand === 'kvm' && vmobj.quota !== 10) {
+            if ((vmobj.brand === 'kvm')
+                && vmobj.quota !== 10) {
                 log.info('fixing KVM quota to 10 (was ' + vmobj.quota + ')');
                 upgrade_payload.quota = 10;
             }

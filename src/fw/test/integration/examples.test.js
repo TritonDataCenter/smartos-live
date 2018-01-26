@@ -8,6 +8,7 @@
 var async = require('async');
 var exec = require('child_process').exec;
 var fs = require('fs');
+var mod_fw = require('../lib/fw');
 var mod_vm = require('../lib/vm');
 var path = require('path');
 var util = require('util');
@@ -78,48 +79,6 @@ function addRulesAndRVMs(stdout) {
         }
 
         return;
-    });
-}
-
-
-/**
- * Test whether the ipf rules show up in 'fwadm status' for a VM
- */
-function fwStatsContain(t, uuid, inLines, inDesc, cb) {
-    var cmd = 'fwadm stats ' + uuid;
-    var desc = inDesc + ': ';
-    // clone the input:
-    var lines = inLines.slice();
-
-    exec(cmd, function (err, stdout, stderr) {
-        t.ifError(err, desc + 'error running: ' + cmd);
-        t.equal(stderr, '', desc + 'stderr: ' + cmd);
-
-        var rules = [];
-
-        stdout.split('\n').forEach(function (line) {
-            if (line === '') {
-                return;
-            }
-
-            var parts = line.split(/\s+/g);
-            parts.shift();
-            var rule = parts.join(' ');
-            var idx = lines.indexOf(rule);
-            if (idx !== -1) {
-                t.ok(true, desc + 'found rule: ' + rule);
-                lines.splice(idx, 1);
-            }
-
-            rules.push(rule);
-        });
-
-        t.deepEqual(lines, [], desc + 'found all rules');
-        if (lines.length !== 0) {
-            t.deepEqual(rules, [], desc + 'rules found');
-        }
-
-        return cb();
     });
 }
 
@@ -307,7 +266,7 @@ exports['vmadm'] = {
     },
 
     'stats after vmadm_vm1': function (t) {
-        fwStatsContain(t, VMS[0], [
+        mod_fw.statsContain(t, VMS[0], [
             'block out quick proto tcp from any to any port = smtp' + KF
         ], 'smtp block rule applied', function () {
             return t.done();
@@ -340,7 +299,7 @@ exports['vmadm'] = {
     },
 
     'stats after vmadm_cmd1': function (t) {
-        fwStatsContain(t, VMS[0], [
+        mod_fw.statsContain(t, VMS[0], [
             'block out quick proto tcp from any to any port = smtp' + KF,
             'pass in quick proto tcp from any to any port = www' + KS + KF,
             'pass in quick proto tcp from any to any port = https' + KS + KF
@@ -389,7 +348,7 @@ exports['vmadm'] = {
     },
 
     'stats after start': function (t) {
-        fwStatsContain(t, VMS[0], [
+        mod_fw.statsContain(t, VMS[0], [
             'block out quick proto tcp from any to any port = smtp' + KF,
             'pass in quick proto tcp from any to any port = www' + KS + KF,
             'pass in quick proto tcp from any to any port = https' + KS + KF

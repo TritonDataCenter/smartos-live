@@ -6,6 +6,7 @@
 
 var assert = require('assert-plus');
 var common = require('./common');
+var mod_cp = require('child_process');
 var mod_log = require('./log');
 var util = require('util');
 
@@ -13,6 +14,47 @@ var util = require('util');
 
 // --- Exports
 
+
+/**
+ * Test whether the ipf rules show up in 'fwadm status' for a VM
+ */
+function statsContain(t, uuid, inLines, inDesc, cb) {
+    var cmd = 'fwadm stats ' + uuid;
+    var desc = inDesc + ': ';
+    // clone the input:
+    var lines = inLines.slice();
+
+    mod_cp.exec(cmd, function compareStats(err, stdout, stderr) {
+        t.ifError(err, desc + 'error running: ' + cmd);
+        t.equal(stderr, '', desc + 'stderr: ' + cmd);
+
+        var rules = [];
+
+        stdout.split('\n').forEach(function (line) {
+            if (line === '') {
+                return;
+            }
+
+            var parts = line.split(/\s+/g);
+            parts.shift();
+            var rule = parts.join(' ');
+            var idx = lines.indexOf(rule);
+            if (idx !== -1) {
+                t.ok(true, desc + 'found rule: ' + rule);
+                lines.splice(idx, 1);
+            }
+
+            rules.push(rule);
+        });
+
+        t.deepEqual(lines, [], desc + 'found all rules');
+        if (lines.length !== 0) {
+            t.deepEqual(rules, [], desc + 'rules found');
+        }
+
+        return cb();
+    });
+}
 
 
 /**
@@ -114,6 +156,7 @@ function zoneRunning(t, opts, callback) {
 
 
 module.exports = {
+    statsContain: statsContain,
     status: status,
     zoneEnable: zoneEnable,
     zoneRunning: zoneRunning

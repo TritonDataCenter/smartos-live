@@ -124,10 +124,17 @@ function assertStringOrObject(obj, name) {
  * For a rule and a direction, return whether or not we actually need to
  * write ipf rules. FROM+ALLOW and TO+BLOCK are essentially no-ops, as
  * they will be caught by the block / allow catch-all default rules.
+ *
+ * If the rule has a priority greater than 0, then we always need to write
+ * out ipf rules.
  */
 function noRulesNeeded(dir, rule) {
+    if (rule.priority !== 0) {
+        return false;
+    }
+
     if ((dir === 'from' && rule.action === 'allow')
-            || (dir === 'to' && rule.action === 'block')) {
+        || (dir === 'to' && rule.action === 'block')) {
         return true;
     }
     return false;
@@ -974,10 +981,30 @@ function compareAddrs(a1, a2) {
 }
 
 
+/**
+ * This comparison function is used to sort the output ipf rule objects
+ * in the following order:
+ *
+ * 1. First by protocol: icmp, icmp6, tcp, udp.
+ * 2. Then by direction: outbound rules, then inbound.
+ * 3. By priority level (higher priorities come first).
+ * 4. By action:
+ *   a) For outbound traffic, block comes before allow.
+ *   b) For inbound traffic, allow comes before block.
+ * 5. By the first port or type listed.
+ * 6. By the first targeted IP.
+ *
+ * 1 and 2 help apply some organization to the output file.
+ * 5 and 6 help make testing easier by putting things in a predictable order.
+ *
+ * 3 and 4 are the actual, important metric to sort on: priority and action
+ * are important for ensuring that the actions taken by ipfilter are applied in
+ * the order that fwadm(1M) describes.
+ */
 function compareRules(r1, r2) {
     var res;
 
-    // Sort protocol as: icmp, icmp6, tcp, udp.
+    // Protocol:
     if (r1.protocol < r2.protocol) {
         return -1;
     }
@@ -986,6 +1013,48 @@ function compareRules(r1, r2) {
         return 1;
     }
 
+    // Direction:
+    if (r1.direction < r2.direction) {
+        return -1;
+    }
+
+    if (r1.direction > r2.direction) {
+        return 1;
+    }
+
+    // Priority levels:
+    if (r1.priority < r2.priority) {
+        return 1;
+    }
+
+    if (r1.priority > r2.priority) {
+        return -1;
+    }
+
+    // Action:
+    if (r1.direction === 'from') {
+        if (r1.action === 'allow') {
+            if (r2.action === 'block') {
+                return 1;
+            }
+        } else if (r2.action === 'allow') {
+            if (r1.action === 'block') {
+                return -1;
+            }
+        }
+    } else {
+        if (r1.action === 'allow') {
+            if (r2.action === 'block') {
+                return -1;
+            }
+        } else if (r2.action === 'allow') {
+            if (r1.action === 'block') {
+                return 1;
+            }
+        }
+    }
+
+    // Ports and types:
     if (icmpr.test(r1.protocol)) {
         res = compareTypes(r1.protoTargets[0], r2.protoTargets[0]);
     } else {
@@ -1017,6 +1086,7 @@ function ipfRuleObj(opts) {
     var sortObj = {
         action: rule.action,
         direction: dir,
+        priority: rule.priority,
         protocol: rule.protocol,
         header: util.format('\n# rule=%s, version=%s, %s=%s',
             rule.uuid, rule.version, opts.type, opts.value),

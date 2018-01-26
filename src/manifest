@@ -792,9 +792,14 @@ f usr/fw/node_modules/extsprintf.js 0444 root bin
 d usr/fw/node_modules/mkdirp/ 0555 root bin
 f usr/fw/node_modules/mkdirp/index.js 0444 root bin
 f usr/fw/node_modules/mkdirp/LICENSE 0444 root bin
-d usr/fw/node_modules/node-uuid/ 0555 root bin
-f usr/fw/node_modules/node-uuid/index.js 0444 root bin
-f usr/fw/node_modules/node-uuid/LICENSE.md 0444 root bin
+d usr/fw/node_modules/uuid/ 0555 root bin
+f usr/fw/node_modules/uuid/index.js 0444 root bin
+f usr/fw/node_modules/uuid/v1.js 0444 root bin
+f usr/fw/node_modules/uuid/v4.js 0444 root bin
+f usr/fw/node_modules/uuid/LICENSE.md 0444 root bin
+d usr/fw/node_modules/uuid/lib 0555 root bin
+f usr/fw/node_modules/uuid/lib/bytesToUuid.js 0555 root bin
+f usr/fw/node_modules/uuid/lib/rng.js 0555 root bin
 f usr/fw/node_modules/onlyif.js 0444 root bin
 f usr/fw/node_modules/strsplit/index.js 0444 root bin
 f usr/fw/node_modules/strsplit/LICENSE 0444 root bin

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  */
 
@@ -41,7 +41,6 @@ var VError = require('verror').VError;
 
 
 
-var icmpr = /^icmp6?$/;
 var portRE = /^[0-9]{1,5}$/;
 var UUID_REGEX =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -130,16 +129,25 @@ function validatePortOrAll(port) {
 }
 
 /**
- * Returns true if protocol is one of tcp, udp, icmp (mixing of upper
- * and lower-case allowed)
+ * Returns true if protocol is one of the protocols recognized by the
+ * fwrule language. (Mixing of upper and lower-case is allowed.)
  */
 function validateProtocol(protocol) {
     if (typeof (protocol) !== 'string') {
         return false;
     }
 
-    var protoLC = protocol.toLowerCase();
-    return ((protoLC === 'tcp') || (protoLC === 'udp') || icmpr.test(protoLC));
+    switch (protocol.toLowerCase()) {
+    case 'ah':
+    case 'esp':
+    case 'icmp':
+    case 'icmp6':
+    case 'tcp':
+    case 'udp':
+        return true;
+    default:
+        return false;
+    }
 }
 
 

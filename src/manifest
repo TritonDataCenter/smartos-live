@@ -598,6 +598,7 @@ f usr/fw/node_modules/cmdln/LICENSE.txt 0444 root bin
 f usr/fw/node_modules/dashdash.js 0444 root bin
 f usr/fw/node_modules/fuzzyset.js/README.rst 0444 root bin
 f usr/fw/node_modules/fuzzyset.js/index.js 0444 root bin
+f usr/fw/node_modules/ip6addr.js 0444 root bin
 f usr/fw/node_modules/dtrace-provider.js 0444 root bin
 f usr/fw/node_modules/DTraceProviderBindings.node 0444 root bin
 h usr/fw/node_modules/lockfd.js=usr/node/0.10/node_modules/lockfd.js

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright 2017, Joyent, Inc. All rights reserved.
  *
  *
  * firewall rule parser: entry point
@@ -93,14 +93,6 @@ parser.yy.validateIPv4address = function validateIPv4address(ip) {
 };
 
 
-parser.yy.validateIPv4subnet = function validateIPv4subnet(subnet) {
-    if (!validators.validateIPv4subnet(subnet)) {
-        throw new validators.InvalidParamError('rule',
-            'Subnet "%s" is invalid (must be in CIDR format)', subnet);
-    }
-};
-
-
 parser.yy.validateIPv6address = function validateIPv6address(ip) {
     if (!mod_net.isIPv6(ip)) {
         throw new validators.InvalidParamError('rule',
@@ -109,11 +101,8 @@ parser.yy.validateIPv6address = function validateIPv6address(ip) {
 };
 
 
-parser.yy.validateIPv6subnet = function validateIPv6subnet(subnet) {
-    if (!validators.validateIPv6subnet(subnet)) {
-        throw new validators.InvalidParamError('rule',
-            'Subnet "%s" is invalid (must be in CIDR format)', subnet);
-    }
+parser.yy.validateSubnet = function validateSubnet(input) {
+    validators.validateSubnet('rule', input, parser.yy.enforceSubnetMask);
 };
 
 
@@ -230,6 +219,9 @@ function parse(input, opts) {
 
     // If a version hasn't been specified, use most recent
     parser.yy.maxVersion = opts.maxVersion || CURR_VERSION;
+
+    // Whether we should check if CIDRs have bits set past mask
+    parser.yy.enforceSubnetMask = !!opts.enforceSubnetMask;
 
     return parser.parse(input);
 }

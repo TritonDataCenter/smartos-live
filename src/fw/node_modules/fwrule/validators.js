@@ -30,6 +30,7 @@
 
 'use strict';
 
+var ipaddr = require('ip6addr');
 var net = require('net');
 var util = require('util');
 var VError = require('verror').VError;
@@ -85,24 +86,6 @@ function validateIPv4subnet(subnet) {
     }
 
     if (!Number(parts[1]) || (parts[1] < 1) || (parts[1] > 32)) {
-        return false;
-    }
-
-    return true;
-}
-
-
-/**
- * Returns true if subnet is a valid IPv6 CIDR range
- */
-function validateIPv6subnet(subnet) {
-    var parts = subnet.split('/');
-    var plen = Number(parts[1]);
-    if (!net.isIPv6(parts[0])) {
-        return false;
-    }
-
-    if (!plen || (plen < 1) || (plen > 128)) {
         return false;
     }
 
@@ -202,6 +185,35 @@ function validateString(name, str) {
 
 
 /**
+ * Throws an InvalidParamError if the subnet is invalid
+ */
+function validateSubnet(name, input, enforceSubnetMask) {
+    var parts = input.split('/');
+    var addr, plen, subnet;
+
+    try {
+        addr = ipaddr.parse(parts[0]);
+        plen = Number(parts[1]);
+    } catch (_) {
+        throw new InvalidParamError(name,
+            'Subnet "%s" is invalid (bad address component)', input);
+    }
+
+    try {
+        subnet = ipaddr.createCIDR(addr, plen);
+    } catch (_) {
+        throw new InvalidParamError(name,
+            'Subnet "%s" is invalid (bad prefix length)', input);
+    }
+
+    if (enforceSubnetMask && subnet.address().compare(addr) !== 0) {
+        throw new InvalidParamError(name,
+            'Subnet "%s" is invalid (bits set to right of mask)', input);
+    }
+}
+
+
+/**
  * Returns true if uuid is a valid UUID
  */
 function validateUUID(uuid) {
@@ -215,7 +227,7 @@ module.exports = {
     validateAction: validateAction,
     validateIPv4address: validateIPv4address,
     validateIPv4subnet: validateIPv4subnet,
-    validateIPv6subnet: validateIPv6subnet,
+    validateSubnet: validateSubnet,
     validatePort: validatePort,
     validatePortOrAll: validatePortOrAll,
     validateProtocol: validateProtocol,

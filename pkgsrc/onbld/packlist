@@ -4,7 +4,6 @@
 ./bin/cddlchk
 ./bin/check_rtime
 ./bin/checkpaths
-./bin/checkproto
 ./bin/copyrightchk
 ./bin/cstyle
 ./bin/elfcmp
@@ -12,7 +11,6 @@
 ./bin/findcrypto
 ./bin/flg.flp
 ./bin/genoffsets
-./bin/get_depend_info
 ./bin/git-nits
 ./bin/git-pbchk
 ./bin/hdrchk
@@ -38,14 +36,12 @@
 ./bin/i386/mbh_patch
 ./bin/i386/ndrgen
 ./bin/i386/ndrgen1
-./bin/i386/pmodes
 ./bin/i386/protocmp
 ./bin/i386/protolist
 ./bin/Install
 ./bin/interface_check
 ./bin/interface_cmp
 ./bin/jstyle
-./bin/make_pkg_db
 ./bin/mapfilechk
 ./bin/nightly
 ./bin/onu
@@ -70,11 +66,6 @@
 ./etc/hgstyle
 ./etc/its.conf
 ./etc/its.reg
-./etc/SampleLinks
-./etc/SamplePkgLinks
-./gk/.cshrc
-./gk/.login
-./gk/gen_make.machines
 ./lib/i386/libctf.so
 ./lib/i386/libctf.so.1
 ./lib/i386/libdwarf.so
@@ -134,7 +125,6 @@
 ./man/man1onbld/find_elf.1onbld
 ./man/man1onbld/findunref.1onbld
 ./man/man1onbld/flg.flp.1onbld
-./man/man1onbld/get_depend_info.1onbld
 ./man/man1onbld/git-nits.1onbld
 ./man/man1onbld/git-pbchk.1onbld
 ./man/man1onbld/hdrchk.1onbld
@@ -144,7 +134,6 @@
 ./man/man1onbld/interface_cmp.1onbld
 ./man/man1onbld/jstyle.1onbld
 ./man/man1onbld/lintdump.1onbld
-./man/man1onbld/make_pkg_db.1onbld
 ./man/man1onbld/mapfilechk.1onbld
 ./man/man1onbld/ndrgen.1onbld
 ./man/man1onbld/nightly.1onbld

@@ -1,6 +1,6 @@
-// Copyright 2017 Joyent, Inc.
+// Copyright 2018 Joyent, Inc.
 //
-// Tests for specifying static routes
+// Tests for specifying static routes in joyent-minimal zones
 //
 
 var assert = require('assert');
@@ -30,7 +30,7 @@ var INVALID_NIC = 'Route gateway: "%s" '
 var INVALID_VAL = 'Invalid value(s) for: %s';
 
 var payload = {
-    alias: 'test-routes-' + process.pid,
+    alias: 'test-routes-joyent-minimal' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
     do_not_inventory: true

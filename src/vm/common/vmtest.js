@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Joyent, Inc.  All rights reserved.
+// Copyright 2018 Joyent, Inc.  All rights reserved.
 //
 // This is the common set of functions for things like ensuring we have a
 // SmartOS and Ubuntu image to work with.
@@ -51,9 +51,14 @@ var IMAGES_SOURCE = 'https://images.joyent.com/';
 
 exports.CURRENT_DOCKER_IMAGE_UUID = process.env['DOCKER_BASE_IMAGE_UUID'];
 exports.CURRENT_SMARTOS_UUID = '01b2c898-945f-11e1-a523-af1afbe22822';
-exports.CURRENT_UBUNTU_UUID = '71101322-43a5-11e1-8f01-cf2a3031a7f4';
+
+// ubuntu-14.04
+exports.CURRENT_UBUNTU_LX_IMAGE_UUID = '04179d8e-188a-11e7-af4a-1349e98cbd17';
+
 exports.CURRENT_UBUNTU_NAME = 'ubuntu-10.04';
 exports.CURRENT_UBUNTU_SIZE = 5120;
+exports.CURRENT_UBUNTU_UUID = '71101322-43a5-11e1-8f01-cf2a3031a7f4';
+
 
 exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
 {

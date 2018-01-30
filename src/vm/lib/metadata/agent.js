@@ -156,6 +156,7 @@ var path = require('path');
 var util = require('util');
 var vasync = require('vasync');
 var VM = require('/usr/vm/node_modules/VM');
+var vmload = require('/usr/vm/node_modules/vmload');
 var ZWatch = require('./zwatch');
 
 var sdc_fields = [
@@ -341,7 +342,26 @@ MetadataAgent.prototype.createZoneLog = function (type, zonename) {
     return (self.zlog[zonename]);
 };
 
-MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
+/**
+ * Update the zones cache for the zone with name "zonename", and call "callback"
+ * when done.
+ *
+ * @param zonename {String} the name of the zone for which to update the cache
+ * @param opts {Object} an object with the following properties:
+ *   - forceReload {Boolean} if true, bypasses the cache and always reload that
+ *     zone's information from disk. False by default.
+ * @param callback {Function} a function called when the operation is complete.
+ *   The signature of that function is callback(err), where "err" is an Error
+ *   object that represents the cause of failure if updating the zone cache
+ *   failed.
+ */
+MetadataAgent.prototype.updateZone =
+function updateZone(zonename, opts, callback) {
+    assert.string(zonename, 'zonename');
+    assert.object(opts, 'opts');
+    assert.optionalBool(opts.forceReload, 'opts.forceReload');
+    assert.func(callback, 'callback');
+
     var self = this;
     var log = self.log;
 
@@ -349,6 +369,11 @@ MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
     assert.func(callback, 'callback');
 
     function shouldLoad(cb) {
+        if (opts.forceReload) {
+            cb(null, true);
+            return;
+        }
+
         if (!self.zones.hasOwnProperty(zonename)) {
             // don't have a cache, load this guy
             log.info({zonename: zonename},
@@ -357,40 +382,51 @@ MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
             return;
         }
 
-        // We do have a cached version, we'll reload only if timestamp of the
-        // XML file changed. The vmadm operations we care about will "touch"
-        // this file to update the last_modified if they don't change it
-        // directly.
-        fs.stat('/etc/zones/' + zonename + '.xml', function (err, stats) {
-            var old_mtime;
+        // We do have a cached version, we'll reload only if its last modified
+        // timestamp changed.
+        vmload.getLastModified(zonename, path.join('/zones', zonename), log,
+            function onLastModifiedLoaded(get_last_mod_err, last_modified_iso) {
+                var old_mtime_iso;
 
-            if (err && err.code === 'ENOENT') {
-                // VM has disappeared, purge from cache
-                self.purgeZoneCache(zonename);
+                if (get_last_mod_err) {
+                    log.error({
+                        err: get_last_mod_err,
+                        zonename: zonename
+                    }, 'Error when getting last_modified for zone');
+                    // We couldn't find the last modified time for this zone,
+                    // the VM probably disappeared, so we're removing it from
+                    // the cache.
+                    self.purgeZoneCache(zonename);
+                    cb(null, false);
+                    return;
+                }
+
+                // We just retrieved the last modified time for the zone, which
+                // means it exists, so we really should have
+                // self.zones[zonename].
+                assert.object(self.zones[zonename],
+                    'self.zones[' + zonename + ']');
+
+                old_mtime_iso = self.zones[zonename].last_modified;
+                assert.string(old_mtime_iso, 'old_mtime_iso');
+                assert.string(last_modified_iso, 'last_modified_iso');
+
+                log.info({
+                    old_mtime_ms: old_mtime_iso,
+                    last_modified_ms: last_modified_iso,
+                    zonename: zonename
+                }, 'old last_modified vs newly-loaded last_modifed for zone');
+
+                if (last_modified_iso > old_mtime_iso) {
+                    log.info({zonename: zonename},
+                        'last_modified was updated, reloading');
+                    cb(null, true);
+                    return;
+                }
+
+                log.trace('using cache for: ' + zonename);
                 cb(null, false);
-                return;
-            } else if (err) {
-                log.error({err: err, zonename: zonename},
-                    'cannot fs.stat(), reloading');
-                cb(err);
-                return;
-            }
-
-            // we just did a successful stat, we really should have
-            // self.zones[zonename]
-            assert.object(self.zones[zonename], 'self.zones[' + zonename + ']');
-
-            old_mtime = (new Date(self.zones[zonename].last_modified));
-            if (stats.mtime.getTime() > old_mtime.getTime()) {
-                log.info({zonename: zonename},
-                    'last_modified was updated, reloading');
-                cb(null, true);
-                return;
-            }
-
-            log.trace('using cache for: ' + zonename);
-            cb(null, false);
-        });
+            });
     }
 
     shouldLoad(function (err, load) {
@@ -670,7 +706,7 @@ function handleZoneCreated(zonename) {
     function _dummyCb() {
     }
 
-    self.updateZone(zonename, function (error) {
+    self.updateZone(zonename, {}, function (error) {
         if (error) {
             self.log.error({err: error}, 'Error updating '
                 + 'attributes: ' + error.message);
@@ -1252,7 +1288,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 // that depends on it, please add a note about that here
                 // otherwise expect it will be removed on you sometime.
                 if (want === 'nics' && vmobj.hasOwnProperty('nics')) {
-                    self.updateZone(zone, function (error) {
+                    self.updateZone(zone, {}, function (error) {
                         if (error) {
                             // updating our cache for this VM failed, so we'll
                             // use the existing data.
@@ -1274,7 +1310,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     // reload metadata trying to get the new ones w/o zone
                     // reboot. To ensure these are fresh we always run
                     // updateZone which reloads the data if stale.
-                    self.updateZone(zone, function (error) {
+                    self.updateZone(zone, {}, function (error) {
                         if (error) {
                             // updating our cache for this VM failed, so we'll
                             // use the existing data.
@@ -1295,7 +1331,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     && vmobj.hasOwnProperty('tmpfs')) {
                     // We want tmpfs to reload the cache right away because we
                     // might be depending on a /etc/vfstab update
-                    self.updateZone(zone, function (error) {
+                    self.updateZone(zone, {}, function (error) {
                         if (error) {
                             // updating our cache for this VM failed, so we'll
                             // use the existing data.
@@ -1315,7 +1351,31 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
                     var vmRoutes = [];
 
-                    self.updateZone(zone, function (error) {
+                    /*
+                     * Always reload the information about the zone, including
+                     * its routes, so that the instance can have the most up to
+                     * date information about them when it sets static routes.
+                     * This should not have a significant performance impact
+                     * since the sdc:routes metadata information is queried only
+                     * once at boot time, and we don't expect users to query
+                     * that information frequently. Using the last modified time
+                     * of the zones cache to compare it with the last modified
+                     * time of the routes.json zone configuration file would not
+                     * allow us to determine when to use the cache and when to
+                     * reload the zone's information because with node v0.10.x,
+                     * which is the version used by vmadm, fs.stat's output
+                     * resolution is 1 second. Any change to the routes
+                     * information happening in the same second as the previous
+                     * change to a zone configuration would not trigger a
+                     * reload. We could write a binary add-on to handle that,
+                     * but it seems it would introduce a lot of complexity for
+                     * no significant benefit. Hopefully we can move to node
+                     * v0.12.x or later at some point and rely on a better
+                     * resolution for fs.*stat APIs.
+                     */
+                    self.updateZone(zone, {
+                        forceReload: true
+                    }, function (error) {
                         if (error) {
                             // updating our cache for this VM failed, so we'll
                             // use the existing data.

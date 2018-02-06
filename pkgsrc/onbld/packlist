@@ -14,8 +14,6 @@
 ./bin/git-nits
 ./bin/git-pbchk
 ./bin/hdrchk
-./bin/hg-active
-./bin/hgsetup
 ./bin/i386/aw
 ./bin/i386/codereview
 ./bin/i386/cscope-fast
@@ -63,7 +61,6 @@
 ./etc/exception_lists/check_rtime
 ./etc/exception_lists/interface_check
 ./etc/exception_lists/interface_cmp
-./etc/hgstyle
 ./etc/its.conf
 ./etc/its.reg
 ./lib/i386/libctf.so
@@ -101,19 +98,10 @@
 ./lib/python2.7/onbld/Checks/Mapfile.pyc
 ./lib/python2.7/onbld/Checks/ProcessCheck.py
 ./lib/python2.7/onbld/Checks/ProcessCheck.pyc
-./lib/python2.7/onbld/hgext/__init__.py
-./lib/python2.7/onbld/hgext/__init__.pyc
-./lib/python2.7/onbld/hgext/cdm.py
 ./lib/python2.7/onbld/Scm/__init__.py
 ./lib/python2.7/onbld/Scm/__init__.pyc
-./lib/python2.7/onbld/Scm/Backup.py
-./lib/python2.7/onbld/Scm/Backup.pyc
 ./lib/python2.7/onbld/Scm/Ignore.py
 ./lib/python2.7/onbld/Scm/Ignore.pyc
-./lib/python2.7/onbld/Scm/Version.py
-./lib/python2.7/onbld/Scm/Version.pyc
-./lib/python2.7/onbld/Scm/WorkSpace.py
-./lib/python2.7/onbld/Scm/WorkSpace.pyc
 ./man/man1onbld/bldenv.1onbld
 ./man/man1onbld/bringovercheck.1onbld
 ./man/man1onbld/cddlchk.1onbld
@@ -128,7 +116,6 @@
 ./man/man1onbld/git-nits.1onbld
 ./man/man1onbld/git-pbchk.1onbld
 ./man/man1onbld/hdrchk.1onbld
-./man/man1onbld/hgsetup.1onbld
 ./man/man1onbld/Install.1onbld
 ./man/man1onbld/interface_check.1onbld
 ./man/man1onbld/interface_cmp.1onbld

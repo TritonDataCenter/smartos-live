@@ -26,7 +26,8 @@
 
 var bunyan = require('/usr/vm/node_modules/bunyan');
 
-var execFile = require('child_process').execFile;
+var common = require('./common');
+var zfs = common.zfs;
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
@@ -34,20 +35,6 @@ require('nodeunit-plus');
 
 var TIMEOUT = 10 * 1000;
 var DATASET = 'zones/zpoolwatcher-test-dummy-' + process.pid;
-
-function zfs(args, cb) {
-    var opts = {encoding: 'utf8'};
-    execFile('zfs', args, opts, function (err, stdout, stderr) {
-        if (err) {
-            cb(err);
-            return;
-        } else if (stderr) {
-            cb(new Error('stderr produced: ' + stderr));
-            return;
-        }
-        cb(null, stdout);
-    });
-}
 
 var ZpoolWatcher = require('vminfod/zpoolwatcher').ZpoolWatcher;
 var log = bunyan.createLogger({

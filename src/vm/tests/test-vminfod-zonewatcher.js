@@ -20,16 +20,14 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2017, Joyent, Inc.
+ * Copyright (c) 2018, Joyent, Inc.
  *
  */
 
-var assert = require('assert');
-var async = require('/usr/node/node_modules/async');
 var bunyan = require('/usr/node/node_modules/bunyan');
-var fs = require('fs');
-var path = require('path');
-var spawn = require('child_process').spawn;
+
+var common = require('./common');
+var vmadm = common.vmadm;
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
@@ -42,7 +40,6 @@ var log = bunyan.createLogger({
     streams: [ { stream: process.stderr, level: 'error' } ],
     serializers: bunyan.stdSerializers
 });
-var testdir = '/tmp/' + process.pid;
 var zonew;
 
 test('create a ZoneWatcher object', function (t) {
@@ -53,65 +50,6 @@ test('create a ZoneWatcher object', function (t) {
         t.end();
     });
 });
-
-function vmadm(args, stdin, callback)
-{
-    var buffers = {stdout: '', stderr: ''};
-    var child;
-    var stderr = [];
-    var stdout = [];
-
-    child = spawn('/usr/vm/sbin/vmadm', args, {stdio: 'pipe'});
-    log.debug('vmadm running with pid ' + child.pid);
-
-    if (stdin) {
-        child.stdin.write(stdin);
-    }
-
-    child.stdin.end();
-
-    child.stdout.on('data', function (data) {
-        lineChunk(data, 'stdout', function (chunk) {
-            stdout.push(chunk);
-        });
-    });
-
-    child.stderr.on('data', function (data) {
-        lineChunk(data, 'stderr', function (chunk) {
-            stderr.push(chunk);
-        });
-    });
-
-    child.on('close', function (code, signal) {
-        var err = null;
-        var msg;
-
-        msg = 'vmadm ' + child.pid + ' exited. code: ' + code
-            + ' signal: ' + signal;
-
-        log.warn(msg);
-
-        if (code !== 0) {
-            err = new Error(msg);
-        }
-
-        callback(err, {stdout: stdout.join('\n'), stderr: stderr.join('\n')});
-    });
-
-    function lineChunk(data, buffer, handler) {
-        var chunk;
-        var chunks;
-
-        buffers[buffer] += data.toString();
-        chunks = buffers[buffer].split('\n');
-
-        while (chunks.length > 1) {
-            chunk = chunks.shift();
-            handler(chunk);
-        }
-        buffers[buffer] = chunks.pop(); // remainder
-    }
-}
 
 test('create zone (autoboot=true) and stop and destroy',
     function (t) {
@@ -133,7 +71,7 @@ test('create zone (autoboot=true) and stop and destroy',
         }
 
         function onRunning() {
-            vmadm(['stop', vm_uuid, '-F'], null, function (err, stdio) {
+            vmadm(['stop', vm_uuid, '-F'], {log: log}, function (err, stdio) {
                 t.ok(!err, (err ? err.message : 'stopped VM'));
                 log.debug({err: err, stdio: stdio}, 'vmadm stop');
             });
@@ -151,7 +89,7 @@ test('create zone (autoboot=true) and stop and destroy',
             } else if (evt.newstate == 'uninitialized'
                 && vm_uuid && saw_running) {
 
-                vmadm(['delete', vm_uuid], null, function (err, stdio) {
+                vmadm(['delete', vm_uuid], {log: log}, function (err, stdio) {
                     t.ok(!err, (err ? err.message : 'deleted VM'));
                     log.debug({err: err, stdio: stdio}, 'vmadm delete');
                     finish();
@@ -160,7 +98,9 @@ test('create zone (autoboot=true) and stop and destroy',
         });
 
         /* start the ball rolling by creating a VM */
-        vmadm(['create'], JSON.stringify(payload), function (err, stdio) {
+        vmadm(['create'], {log: log, stdin: JSON.stringify(payload)},
+            function (err, stdio) {
+
             var match;
             t.ok(!err, (err ? err.message : 'created VM'));
             log.debug({err: err, stdio: stdio}, 'vmadm create');

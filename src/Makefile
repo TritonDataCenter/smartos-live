@@ -102,6 +102,7 @@ JS_CHECK_TARGETS=\
 	img/lib/*.js \
 	img/sbin/imgadm \
 	vm/common/nictag.js \
+	vm/tests/common.js \
 	vm/tests/test-alias.js \
 	vm/tests/test-cleanup-on-failure.js \
 	vm/tests/test-create-filesystems.js \
@@ -123,8 +124,9 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-tmpfs.js \
 	vm/tests/test-update.js \
 	vm/tests/test-vrrp-nics.js \
-	vm/tests/test-zonewatcher.js \
-	vm/tests/test-zpoolwatcher.js \
+	vm/tests/test-vminfod-zonewatcher.js \
+	vm/tests/test-vminfod-zonewatcher-overflow.js \
+	vm/tests/test-vminfod-zpoolwatcher.js \
 	vm/lib/metadata/*.js
 
 JS_CHECK_OLDSKOOL_TARGETS = \

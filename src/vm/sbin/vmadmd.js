@@ -655,7 +655,6 @@ function rotateKVMLog(vm_uuid)
  */
 function rotateBhyveLog(vm_uuid)
 {
-    return
 }
 
 /*
@@ -1423,7 +1422,7 @@ function startHTTPHandler()
 function unsupportedBrandError(brands, command, brand)
 {
     return new Error('vmadmd only handles "' + command + '" for: '
-        + brands.join(' ') + '(your brand is: ' + brand + ')')
+        + brands.join(' ') + '(your brand is: ' + brand + ')');
 }
 
 /*
@@ -1454,12 +1453,12 @@ function stopVM(uuid, timeout, callback)
 
         if (vmobj.brand === 'bhyve') {
             // XXX-mg implement graceful shutdown
-            VM.stop(uuid, {'force': true}, function (err) {
-                if (err) {
-                    log.debug(err, 'bhyve stopVM VM.stop(force): '
-                        + err.message);
-                    callback(err);
-                    return
+            VM.stop(uuid, {'force': true}, function (stopErr) {
+                if (stopErr) {
+                    log.debug(stopErr, 'bhyve stopVM VM.stop(force): '
+                        + stopErr.message);
+                    callback(stopErr);
+                    return;
                 }
                 log.debug('stopped VM ' + uuid + ' (not graceful)');
                 callback(null);

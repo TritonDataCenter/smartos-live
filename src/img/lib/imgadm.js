@@ -3552,9 +3552,9 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             }
 
             var toSnapshot = [vmInfo.zfs_filesystem];
-            if ((vmInfo.brand === 'kvm' || vmInfo.brand === 'bhyve') &&
-                vmInfo.disks)
-           {
+            if ((vmInfo.brand === 'kvm' || vmInfo.brand === 'bhyve')
+                && vmInfo.disks) {
+
                 for (var i = 0; i < vmInfo.disks.length; i++) {
                     toSnapshot.push(vmInfo.disks[i].zfs_filesystem);
                 }

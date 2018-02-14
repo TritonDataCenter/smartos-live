@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2015 Joyent Inc., All rights reserved.
+# Copyright (c) 2018 Joyent Inc., All rights reserved.
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -195,6 +195,16 @@ function get_smartos_cpu_info()
     #echo "${CPU_Version}"
     #echo "${CPU_Count}"
     #echo "${CPU_Cores}"
+}
+
+function get_bhyve_capability()
+{
+    Bhyve_Capable="false"
+    if [[ -x /usr/lib/brand/bhyve/bhhwcompat ]]; then
+        if /usr/lib/brand/bhyve/bhhwcompat; then
+            Bhyve_Capable="true"
+        fi
+    fi
 }
 
 function get_live_image_buildstamp()
@@ -655,6 +665,7 @@ VM_Capable='${VM_Capable}'
 CPU_Type='${CPU_Version}'
 CPU_Virtualization='${CPU_Virtualization}'
 CPU_Physical_Cores=${CPU_Count}
+Bhyve_Capable='${Bhyve_Capable}'
 Nic_Tags=${NicTagList}
 Setup='${Setup_complete}'
 END
@@ -787,6 +798,7 @@ END
   "HW Family": "${HW_Family}",
   "Setup": "${Setup_complete}",
   "VM Capable": ${VM_Capable},
+  "Bhyve Capable": ${Bhyve_Capable},
   "CPU Type": "${CPU_Version}",
   "CPU Virtualization": "${CPU_Virtualization}",
   "CPU Physical Cores": ${CPU_Count},
@@ -975,6 +987,7 @@ else
 fi
 get_memory_mib
 get_smartos_cpu_info
+get_bhyve_capability
 get_live_image_buildstamp
 get_system_type
 get_hostname

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2017, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  */
 
 var p = console.log;
@@ -251,6 +251,7 @@ DockerSource.prototype.getImgMeta = function getImgMeta(opts, cb) {
             layerDigests: opts.layerDigests,
             imgJson: opts.imgJson,
             repo: opts.repo,
+            tags: opts.tags,
             uuid: opts.uuid
         })
     };

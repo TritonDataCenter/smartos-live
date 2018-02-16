@@ -52,6 +52,7 @@ npm install --ignore-scripts
 find node_modules -name .bin | xargs rm -rf
 for dep in $(ls node_modules); do
     find node_modules/$dep -name .dir-locals.el | xargs rm;
+    find node_modules/$dep -name .eslintrc.js | xargs rm;
     find node_modules/$dep -name .gitmodules | xargs rm;
     find node_modules/$dep -name .gitignore | xargs rm;
     find node_modules/$dep -name .jshintrc | xargs rm;

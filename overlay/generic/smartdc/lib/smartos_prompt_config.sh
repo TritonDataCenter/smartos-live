@@ -770,7 +770,13 @@ EOF
 		prmpt_str+=" To see a different configuration, type: 'raidz2', 'mirror', or 'default'.\n"
 		prmpt_str+=" To specify a manual configuration, type: 'manual'.\n\n"
 		print $prmpt_str
-		promptval "Selected zpool layout" "yes"
+
+    if [[ ${layout} == $(getanswer "zpool_layout") ]]; then
+      DISK_LAYOUT=/var/tmp/disklayout.json
+      return
+    fi
+
+		promptval "Selected zpool layout" "yes" "zpool_layout"
 		if [[ $val == "raidz2" || $val == "mirror" ]]; then
 			# go around again
 			layout=$val
@@ -968,6 +974,40 @@ create_zpools()
 	touch /${SYS_ZPOOL}/.system_pool
 }
 
+#
+# Search USB boot device and read /private/answers.json
+#
+read_ubs_bootdevice()
+{
+    local usbdisk=""
+    local usbmountpoint="/mnt"
+
+    usbdisk=$(diskinfo -Hp | nawk '
+			{
+				diskid = $2;
+				bootdisk = 0;
+				cmd = "fstyp -v /dev/dsk/" diskid "p1 2>/dev/null";
+				while ((cmd | getline) > 0) {
+					if ($0 ~ /^Volume Label:/ && $3 == "SMARTOSBOOT")
+						bootdisk = 1;
+				}
+				close(cmd);
+				if (bootdisk) {
+					print "/dev/dsk/" diskid "p1";
+					break;
+				}
+				next;
+			}')
+
+			if [[ -n ${usbdisk} ]]; then
+			  mount -F pcfs -o foldcase ${usbdisk} ${usbmountpoint}  || return
+			  if [[ -f ${usbmountpoint}/private/answers.json ]]; then
+			    cp ${usbmountpoint}/private/answers.json /tmp/answers.json
+			  fi
+			  umount ${usbmountpoint}
+			fi
+}
+
 trap "" SIGINT
 
 while getopts "f:" opt
@@ -988,6 +1028,11 @@ if [[ -n ${answer_file} ]]; then
 	fi
 elif [[ -f ${USBMNT}/private/answers.json ]]; then
 	answer_file=${USBMNT}/private/answers.json
+else
+  read_ubs_bootdevice
+  if [[ -f /tmp/answers.json ]]; then
+    answer_file=/tmp/answers.json
+  fi
 fi
 
 #
@@ -1299,7 +1344,8 @@ sed -e "s|^root:[^\:]*:|root:${root_shadow}:|" /etc/shadow > /usbkey/shadow \
 
 cp -rp /etc/ssh /usbkey/ssh || fatal "failed to set up preserve host keys"
 
-printf "System setup has completed.\n\nPress enter to reboot.\n"
-
-read foo
+if [[ $(getanswer "skip_final_confirm") != "true" ]]; then
+  printf "System setup has completed.\n\nPress enter to reboot.\n"
+  read foo
+fi
 reboot

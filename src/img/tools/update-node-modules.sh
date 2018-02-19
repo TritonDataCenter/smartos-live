@@ -86,6 +86,7 @@ for dep in $(ls node_modules); do
     find node_modules/$dep -name tst | xargs rm -rf;
     find node_modules/$dep -name test | xargs rm -rf;
     find node_modules/$dep -name tests | xargs rm -rf;
+    find node_modules/$dep -name test.js | xargs rm;
 done
 
 rm -rf node_modules/.bin/
@@ -166,7 +167,6 @@ for FNAME in $(cd node_modules/restify/node_modules && ls -1); do
 done
 rm -rf node_modules/restify/node_modules/.bin
 rm -rf node_modules/restify/bin
-rm -rf node_modules/restify/node_modules/mime/test.js
 # mime 1.3.4 added some build cruft, and a CLI I don't care about
 rm -rf node_modules/restify/node_modules/mime/build/
 rm -rf node_modules/restify/node_modules/mime/cli.js

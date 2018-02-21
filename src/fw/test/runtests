@@ -88,6 +88,8 @@ mkdir -p $OUTPUT_DIR
 
 #---- start tests
 
+FINAL_EXIT_CODE=0
+
 for test in $(ls $TOP/test/integration | grep "\.test.js$"); do
     test_name=$(basename $test)
     set +o errexit
@@ -111,14 +113,21 @@ echo "# test output in $OUTPUT_DIR:"
 cd $OUTPUT_DIR
 ls *.tap
 
+if [[ ${test_errors} -gt 0 ]]; then
+    echo ""
+    echo "# failing tests:"
+    echo "$failed_tests"
+    FINAL_EXIT_CODE=1
+fi
+
 echo ""
 echo "# test results:"
 
 end_time=$(date +%s)
 elapsed=$((${end_time} - ${start_time}))
 
-tests=$(grep "^# tests [0-9]" $OUTPUT_DIR/*.tap | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
-passed=$(grep "^# pass  [0-9]" $OUTPUT_DIR/*.tap | tr -s ' ' | cut -d ' ' -f3 | xargs | tr ' ' '+' | bc)
+tests=$(awk '/^# tests +[0-9]/ { sum += $(NF) } END { print sum }' $OUTPUT_DIR/*.tap)
+passed=$(awk '/^# pass +[0-9]/ { sum += $(NF) } END { print sum }' $OUTPUT_DIR/*.tap)
 [[ -z ${tests} ]] && tests=0
 [[ -z ${passed} ]] && passed=0
 fail=$((${tests} - ${passed}))
@@ -127,9 +136,11 @@ echo "# Completed in ${elapsed} seconds."
 echo -e "# \033[32mPASS: ${passed} / ${tests}\033[39m"
 if [[ ${fail} -gt 0 ]]; then
     echo -e "# \033[31mFAIL: ${fail} / ${tests}\033[39m"
+    FINAL_EXIT_CODE=1
+elif [[ ${test_errors} -gt 0 ]]; then
+    echo -e "# \033[31mFAIL: ? / ${tests}\033[39m"
+    FINAL_EXIT_CODE=1
 fi
 echo ""
 
-if [[ ${tests} != ${passed} ]]; then
-    exit 1
-fi
+exit $FINAL_EXIT_CODE

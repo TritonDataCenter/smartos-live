@@ -104,6 +104,65 @@ DockerSource.prototype._clientFromRepo = function _clientFromRepo(repo) {
 };
 
 
+function _importInfoFromV21Manifest(opts, cb) {
+    assert.object(opts, 'opts');
+    assert.object(opts.dockerManifest, 'opts.dockerManifest');
+    assert.object(opts.rat, 'opts.rat');
+    assert.func(cb, 'cb');
+
+    var dockerManifest = opts.dockerManifest;
+    var imgJson;
+
+    // These digests are backwards (newest to oldest layer), so we reverse
+    // them to get the base layer first.
+    var layers = dockerManifest.fsLayers.slice();
+    layers = layers.reverse();
+
+    var lastDigest;
+    var layerDigests = layers.filter(
+        // Filter out duplicated layers here - i.e. those layers which are
+        // exactly the same as the previous layer, as there is no need to
+        // download and install the same layer over and over again. We hit
+        // this because v2.1 manifests use an empty bits layer for docker
+        // build commands that don't change the image, i.e. for metadata
+        // commands like ENV and ENTRYPOINT.
+        function _filterLayerDigest(l) {
+            if (l.blobSum === lastDigest) {
+                return false;
+            }
+            lastDigest = l.blobSum;
+            return true;
+        }
+    ).map(
+        function _mapLayerDigest(l) {
+            return l.blobSum;
+        }
+    );
+
+    try {
+        imgJson = JSON.parse(dockerManifest.history[0].v1Compatibility);
+    } catch (manifestErr) {
+        cb(new errors.ValidationFailedError(manifestErr, format(
+            'invalid "v1Compatibility" JSON in docker manifest: %s (%s)',
+            manifestErr, dockerManifest.history[0].v1Compatibility)));
+        return;
+    }
+
+    var rat = opts.rat;
+    var importInfo = {
+        repo: rat,
+        tag: rat.tag,    // the requested tag
+        tags: [rat.tag], // all the tags on that imgId
+        imgId: layerDigests[layerDigests.length - 1], // newest layer
+        imgJson: imgJson,
+        dockerManifest: dockerManifest,
+        layerDigests: layerDigests,
+        uuid: imgmanifest.imgUuidFromDockerDigests(layerDigests)
+    };
+    cb(null, importInfo);
+}
+
+
 /**
  * Attempt to find import info for the given docker pull arg, `REPO[:TAG]`
  * in this docker registry.
@@ -145,14 +204,34 @@ DockerSource.prototype.getImportInfo = function getImportInfo(opts, cb) {
             }
             return;
         }
+
         assert.object(dockerManifest, 'manifest');
-        if (!dockerManifest.hasOwnProperty('schemaVersion')
-                || dockerManifest.schemaVersion !== 2) {
+        if (!dockerManifest.hasOwnProperty('schemaVersion')) {
+            cb(new errors.InvalidDockerInfoError(
+                'No docker manifest schemaVersion defined'));
+            return;
+        }
+
+        if (dockerManifest.schemaVersion !== 1
+                && dockerManifest.schemaVersion !== 2) {
             cb(new errors.InvalidDockerInfoError(
                 'Unsupported docker manifest version: '
                  + dockerManifest.schemaVersion));
             return;
         }
+
+        if (dockerManifest.schemaVersion === 1) {
+            _importInfoFromV21Manifest({
+                dockerManifest: dockerManifest,
+                rat: rat
+            }, cb);
+            return;
+        }
+
+        // For schemaVersion 2 manifests - must fetch the imgJson separately.
+        assert.equal(dockerManifest.schemaVersion, 2,
+            'dockerManifest.schemaVersion === 2');
+
         var layerDigests = dockerManifest.layers.map(
             function (l) {
                 return l.digest;
@@ -222,16 +301,22 @@ DockerSource.prototype.getImgAncestry = function getImgAncestry(opts, cb) {
     var parentDigest = null;
 
     ancestry = digests.map(function (digest, idx) {
+        imgJson = common.objCopy(imgJson);
+        imgJson.parent = parentDigest;
         imgJson.config = common.objCopy(imgJson.config);
         imgJson.config.parent = parentDigest;
         parentDigest = digest;
         var layerDigests = digests.slice(0, idx+1);
+        var size = 0;
+        if (opts.dockerManifest.schemaVersion === 2) {
+            size = opts.dockerManifest.layers[idx].size;
+        }
         return {
             imgId: digest,
             imgJson: imgJson,
             layerDigests: layerDigests,
             uuid: imgmanifest.imgUuidFromDockerDigests(layerDigests),
-            size: opts.dockerManifest.layers[idx].size,
+            size: size,
             repo: opts.repo
         };
     });
@@ -244,6 +329,7 @@ DockerSource.prototype.getImgMeta = function getImgMeta(opts, cb) {
     assert.object(opts.repo, 'opts.repo');
     assert.string(opts.imgId, 'opts.imgId');
     assert.arrayOfString(opts.layerDigests, 'opts.layerDigests');
+    assert.optionalArrayOfString(opts.tags, 'opts.tags');
     assert.func(cb, 'cb');
 
     var imgMeta = {

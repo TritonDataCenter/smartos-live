@@ -206,7 +206,8 @@ $(MCPROTO)/illumos.mancheck.conf: projects/illumos/mancheck.conf | $(MCPROTO)
 $(BOOT_MPROTO)/illumos.manifest: projects/illumos/manifest | $(BOOT_MPROTO)
 	cp projects/illumos/boot.manifest $(BOOT_MPROTO)/illumos.manifest
 
-$(MPROTO)/illumos-extra.manifest: 1-extra-stamp | $(MPROTO)
+$(MPROTO)/illumos-extra.manifest: 1-extra-stamp \
+    projects/illumos-extra/manifest | $(MPROTO)
 	gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest \
 	    -C projects/illumos-extra manifest; \
 

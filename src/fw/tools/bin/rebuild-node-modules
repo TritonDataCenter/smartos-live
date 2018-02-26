@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2014, Joyent, Inc. All rights reserved.
+# Copyright (c) 2018, Joyent, Inc. All rights reserved.
 #
 # Creates a node modules suitable for checking in and installing in
 # the platform
@@ -25,6 +25,7 @@ mkdir ${NM}
 
 # The following are all Joyent-licensed
 cp ${NM_ORIG}/extsprintf/lib/extsprintf.js \
+    ${NM_ORIG}/ip6addr/ip6addr.js \
     ${NM_ORIG}/verror/lib/verror.js \
     ${NM_ORIG}/vasync/lib/vasync.js \
     ${NM_ORIG}/tab/lib/tab.js \
@@ -47,7 +48,8 @@ cp ${NM_ORIG}/clone/clone.js ${NM}/clone/index.js
 cp ${NM_ORIG}/clone/{LICENSE,clonePrototype.js} ${NM}/clone/
 
 mkdir ${NM}/fwrule
-cp tools/fwrule/lib/* ${NM}/fwrule/
+cp ${NM_ORIG}/fwrule/lib/* ${NM}/fwrule/
+cp -r ${NM_ORIG}/fwrule/docs tools/fwrule/
 
 mkdir ${NM}/cmdln
 cp ${NM_ORIG}/cmdln/lib/cmdln.js ${NM}/cmdln/index.js
@@ -86,6 +88,8 @@ mkdir -p ${TEST_MODULES}/nodeunit/deps/ejs
 for F in ${NODEUNIT_FILES}; do
     cp -r ${NM_ORIG}/nodeunit/$F ${TEST_MODULES}/nodeunit/
 done
+patch -p3 < tools/nodeunit.patch
+
 cp ${NM_ORIG}/nodeunit/deps/*.js ${TEST_MODULES}/nodeunit/deps
 cp -r ${NM_ORIG}/nodeunit/deps/ejs/lib ${TEST_MODULES}/nodeunit/deps/ejs/lib
 cp ${NM_ORIG}/nodeunit/deps/ejs/package.json ${TEST_MODULES}/nodeunit/deps/ejs/package.json

@@ -112,10 +112,9 @@ exports['add / update ICMPv4'] = function (t) {
                 rules: [ expRule ]
             }, 'rules returned');
 
-            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'icmp',
-                {
-                    '10.99.99.254': [ '8' ]
-                });
+            v4rules[vm.uuid].in.icmp = [
+                helpers.allowInICMP('10.99.99.254', '8')
+            ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');
@@ -162,7 +161,10 @@ exports['add / update ICMPv4'] = function (t) {
                 rules: [ expRule ]
             }, 'rules returned');
 
-            v4rules[vm.uuid].in.pass.icmp['10.99.99.254'] = [ '8:0' ];
+            v4rules[vm.uuid].in.icmp = [
+                helpers.allowInICMP('10.99.99.254', '8', '0')
+            ];
+
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
@@ -207,7 +209,10 @@ exports['add / update ICMPv4'] = function (t) {
                 rules: [ expRule ]
             }, 'rules returned');
 
-            v4rules[vm.uuid].in.pass.icmp['10.99.99.254'] = [ 'all' ];
+            v4rules[vm.uuid].in.icmp = [
+                helpers.allowInICMP('10.99.99.254')
+            ];
+
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
@@ -286,7 +291,7 @@ exports['add / update ICMPv4'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -328,10 +333,9 @@ exports['add / update ICMPv6'] = function (t) {
                 rules: [ expRule ]
             }, 'rules returned');
 
-            createSubObjects(v6rules, vm.uuid, 'in', 'pass', 'icmp6',
-                {
-                    'fe80::92b8:d0ff:fe4b:c73b': [ '128' ]
-                });
+            v6rules[vm.uuid].in.icmp6 = [
+                helpers.allowInICMP6('fe80::92b8:d0ff:fe4b:c73b', '128')
+            ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');
@@ -379,8 +383,10 @@ exports['add / update ICMPv6'] = function (t) {
                 rules: [ expRule ]
             }, 'rules returned');
 
-            v6rules[vm.uuid].in.pass.icmp6['fe80::92b8:d0ff:fe4b:c73b'] =
-                [ '128:0' ];
+            v6rules[vm.uuid].in.icmp6 = [
+                helpers.allowInICMP6('fe80::92b8:d0ff:fe4b:c73b', '128', '0')
+            ];
+
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
@@ -426,8 +432,10 @@ exports['add / update ICMPv6'] = function (t) {
                 rules: [ expRule ]
             }, 'rules returned');
 
-            v6rules[vm.uuid].in.pass.icmp6['fe80::92b8:d0ff:fe4b:c73b'] =
-                [ 'all' ];
+            v6rules[vm.uuid].in.icmp6 = [
+                helpers.allowInICMP6('fe80::92b8:d0ff:fe4b:c73b')
+            ];
+
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
@@ -505,7 +513,7 @@ exports['add / update ICMPv6'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 

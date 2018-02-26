@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright 2017 Joyent, Inc.
+# Copyright 2018 Joyent, Inc.
 #
 shopt -s xpg_echo
 unalias -a
@@ -90,6 +90,7 @@ function install_pkgin
 	pkglist="$pkglist flex libxslt openjdk7 nodejs"
 	pkglist="$pkglist p5-XML-Parser gettext python27 py27-expat"
 	pkglist="$pkglist coreutils gsed pkg_alternatives cdrtools"
+	pkglist="$pkglist py27-sqlite3 nasm"
 
 	for pkg in $pkglist; do
 		if ! pkg_info -qe $pkg; then

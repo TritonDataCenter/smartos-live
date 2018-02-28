@@ -537,6 +537,14 @@ function get_overlay_nic_tags()
     fi
 }
 
+function get_admin_nic_tag()
+{
+    prop=$(net_conf_grep "^admin_tag=")
+    fields=(${prop//=/ })
+    eval "Admin_NIC_Tag=${fields[1]}"
+}
+
+
 function get_nic_tags()
 {
     NicTagCount=0
@@ -684,6 +692,7 @@ CPU_Physical_Cores=${CPU_Count}
 Bhyve_Capable='${Bhyve_Capable}'
 Bhyve_Max_Vcpus=${Bhyve_Max_Vcpus}
 Nic_Tags=${NicTagList}
+Admin_NIC_Tag=${Admin_NIC_Tag}
 Setup='${Setup_complete}'
 END
     else
@@ -820,6 +829,7 @@ END
   "CPU Type": "${CPU_Version}",
   "CPU Virtualization": "${CPU_Virtualization}",
   "CPU Physical Cores": ${CPU_Count},
+  "Admin NIC Tag": "${Admin_NIC_Tag}",
 END
     else
         echo "  \"ZFS Quota\": \"${QUOTA}\","
@@ -1011,6 +1021,7 @@ get_system_type
 get_hostname
 get_aggregation_mappings
 get_overlay_nic_tags
+get_admin_nic_tag
 get_nic_tags
 get_smartos_network_interfaces
 get_smartos_vnics

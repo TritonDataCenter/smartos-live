@@ -632,6 +632,9 @@ setup_snapshots()
 #
 setup_cpu_baseline()
 {
+	# A brand can override the setup of bursting.
+	[ -n "$NO_BURSTING" ] && return
+
 	# If there is already a baseline, don't set one heuristically
 	curr_base=`prctl -P -n zone.cpu-baseline -i zone $ZONENAME | nawk '{
 		if ($2 == "privileged") print $3

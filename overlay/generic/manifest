@@ -58,6 +58,7 @@ f etc/zones/SUNWdefault.xml 0444 root bin
 f etc/zshrc 0644 root bin
 d kernel/drv 0755 root sys
 f kernel/drv/amd64/bnx 0755 root sys
+f kernel/drv/buildstamp.conf 0644 root sys
 f kernel/drv/mpt_sas.conf 0644 root sys
 f kernel/drv/sd.conf 0644 root sys
 d lib/sdc 0755 root bin

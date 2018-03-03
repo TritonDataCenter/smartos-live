@@ -124,8 +124,9 @@ live: world manifest mancheck_conf boot sdcman $(TOOLS_TARGETS) $(MANCF_FILE)
 	@echo $(OVERLAY_MANIFESTS)
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
-	./tools/build_live -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output \
-	    $(OVERLAYS) $(ROOT)/proto $(ROOT)/man/man
+	ALTCTFCONVERT=$(ALTCTFCONVERT) ./tools/build_live \
+	    -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output $(OVERLAYS) $(ROOT)/proto \
+	    $(ROOT)/man/man
 
 boot: $(BOOT_TARBALL)
 

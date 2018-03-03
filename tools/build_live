@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright (c) 2017, Joyent, Inc.
+# Copyright (c) 2018, Joyent, Inc.
 #
 
 #
@@ -409,6 +409,97 @@ function bi_gen_etcrelease
 	if ! "$build_etcrelease" | json -o 'json-4' \
 	    >"$bi_archive.gitstatus"; then
 		fail "could not generate gitstatus file"
+	fi
+
+	bi_emit_done
+}
+
+function bi_gen_buildstamp_module
+{
+	local module_gcc="$bi_wsroot/proto.strap/usr/bin/gcc"
+	local kernel_source="$bi_wsroot/projects/illumos"
+	local cflags=(
+		'-std=c99'
+		'-m64'
+		'-mcmodel=kernel'
+		'-gdwarf-2'
+		"-I$kernel_source/usr/src/uts/common"
+		"-I$kernel_source/usr/src/uts/intel"
+		"-I$kernel_source/usr/src/uts/i86pc"
+
+		'-nodefaultlibs'
+
+		'-fident'
+		'-fno-builtin'
+		'-fno-asm'
+		'-fno-inline'
+		'-fno-inline-functions'
+		'-ffreestanding'
+		'-mno-red-zone'
+
+		'-Wall'
+		'-Wextra'
+		'-Werror'
+		'-Wno-unknown-pragmas'
+		'-Wno-unused-parameter'
+
+		'-D__sun'
+		'-D_KERNEL'
+	)
+	local tmp_gitstatus="$bi_tmpdir/gitstatus"
+	local tmp_gitstatus_o="$bi_tmpdir/gitstatus.o"
+	local tmp_module_o="$bi_tmpdir/buildstamp.o"
+	local tmp_module="$bi_tmpdir/buildstamp"
+	local tmp_module_img="$bi_mnt_root/kernel/drv/amd64/buildstamp"
+
+	bi_emit_start 'Building "buildstamp" module'
+
+	#
+	# The elfwrap(1) program uses the basename of the file to generate the
+	# symbol names in the target object.  So that the git status
+	# information appears at "gitstatus_start" in the kernel, we make a
+	# copy of the gitstatus file with the desired name.
+	#
+	# In addition, elfwrap does not ensure a NUL byte at the end of the
+	# wrapped contents so we add one with printf(1).  This makes it easier
+	# to access the status information with a command that will print a
+	# NUL-terminated string; e.g.: mdb -ke 'gitstatus_start/s'
+	#
+	/usr/bin/rm -f "$tmp_gitstatus"
+	if ! /usr/bin/cp "$bi_archive.gitstatus" "$tmp_gitstatus"; then
+		fail "could not copy gitstatus file"
+	fi
+	if ! /usr/bin/printf '\0' >>"$tmp_gitstatus"; then
+		fail "could not add NUL byte to gitstatus file"
+	fi
+
+	if ! /usr/bin/elfwrap -64 -z target=x86 -o "$tmp_gitstatus_o" \
+	    "$tmp_gitstatus"; then
+		fail "could not elfwrap the gitstatus file"
+	fi
+
+	if ! "$module_gcc" -c "${cflags[@]}" -o "$tmp_module_o" \
+	    "$bi_wsroot/src/buildstamp.c"; then
+		fail "could not compile buildstamp.c"
+	fi
+
+	if ! /usr/bin/ld -r -o "$tmp_module" "$tmp_module_o" \
+	    "$tmp_gitstatus_o"; then
+		fail "could not link buildstamp module"
+	fi
+
+	if ! $ALTCTFCONVERT "$tmp_module"; then
+		fail "could not add CTF to buildstamp module"
+	fi
+
+	if ! /usr/bin/strip -x "$tmp_module"; then
+		fail "could not strip buildstamp module"
+	fi
+
+	if ! pfexec /usr/bin/cp "$tmp_module" "$tmp_module_img" ||
+	    ! pfexec /usr/bin/chown 0:3 "$tmp_module_img" ||
+	    ! pfexec /usr/bin/chmod 0755 "$tmp_module_img"; then
+		fail "could not copy buildstamp module into image"
 	fi
 
 	bi_emit_done
@@ -836,6 +927,7 @@ bi_smf_import
 bi_smf_seeds
 bi_create_password
 bi_gen_etcrelease
+bi_gen_buildstamp_module
 bi_ship_manifest
 bi_fill_templates
 bi_file_fixups

@@ -154,3 +154,10 @@ set sd:sd_io_time=10
 
 * Use hires tick to improve some scheduling latency issues
 set hires_tick=1
+
+*
+* The "buildstamp" module contains information about the git sources used to
+* build the operating system image.  Once loaded, the driver will refuse to
+* detach.  We load it early to ensure it is in a crash dump wherever possible.
+*
+forceload: drv/buildstamp

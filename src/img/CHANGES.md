@@ -3,8 +3,13 @@
 Known issues:
 
 - Docker image imports are experimental. Docker image import also only supports
-  Docker Registry v1, which is now deprecated.
+  Docker Registry v2.
 
+
+## 3.8.0
+
+- joyent/imgadm#644 Update imgadm to use newer docker-registry-client so it can
+  pull from v2 registries. Docker v1 registry pulls are no longer supported.
 
 ## 3.7.4
 

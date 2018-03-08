@@ -901,6 +901,10 @@ function protoTarget(rule, target) {
 }
 
 
+/**
+ * Compare two port targets. Valid values are "all", numbers, or an object
+ * representing a port range containing "start" and "end" fields.
+ */
 function comparePorts(p1, p2) {
     // "all" comes before any port numbers
     if (p1 === 'all') {
@@ -920,7 +924,22 @@ function comparePorts(p1, p2) {
 }
 
 
+/**
+ * Compare two ICMP type targets. Valid values are "all" or strings like "5" or
+ * "5:3", representing the ICMP type number and code.
+ */
 function compareTypes(t1, t2) {
+    // "all" comes before any types
+    if (t1 === 'all') {
+        if (t2 === 'all') {
+            return 0;
+        } else {
+            return -1;
+        }
+    } else if (t2 === 'all') {
+        return 1;
+    }
+
     var p1 = t1.split(':');
     var p2 = t2.split(':');
     var c = Number(p1[0]) - Number(p2[0]);
@@ -939,6 +958,17 @@ function compareTypes(t1, t2) {
     } else {
         return Number(p1[1]) - Number(p2[1]);
     }
+}
+
+
+/**
+ * Compare IP and subnet targets from an ipf rule object.
+ */
+function compareAddrs(a1, a2) {
+    var s1 = a1.split('/');
+    var s2 = a2.split('/');
+
+    return mod_addr.compare(s1[0], s2[0]);
 }
 
 
@@ -964,8 +994,8 @@ function compareRules(r1, r2) {
         return res;
     }
 
-    // Target IPs:
-    return mod_addr.compare(r1.targets[0], r2.targets[0]);
+    // Target IPs and subnets:
+    return compareAddrs(r1.targets[0], r2.targets[0]);
 }
 
 

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  * * *
  *
@@ -53,7 +53,7 @@ var sourcesHadDockerHub;
 // Use a test image that is ideally small and typically unused. This
 // should be an older image accessible via the v1 Registry API, since
 // that is what imgadm currently supports.
-var testImgArg = 'busybox:1.24.0';
+var testImgArg = 'joyentunsupported/test-nginx:1.0.0';
 var testImg;
 
 

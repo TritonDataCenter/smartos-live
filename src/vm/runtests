@@ -35,7 +35,8 @@ test_errors=0
 failed_tests=
 
 pwd=$(unset CDPATH; cd $(dirname $0); pwd)
-for test in $(ls $pwd/tests | grep "\.js$"); do
+for test in "$pwd/tests"/test-*.js; do
+    test=${test##*/}
     set +o errexit
     set -o pipefail
     (/usr/vm/test/runtest $pwd/tests/${test} 2>&1) > >(tee -a /tmp/test.output.$$)

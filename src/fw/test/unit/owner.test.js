@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  * test rules with owner_uuid set
  */
@@ -31,7 +31,7 @@ var fw;
 var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
 var mod_obj = require('../../lib/util/obj');
-var mod_uuid = require('node-uuid');
+var mod_uuid = require('uuid');
 var util = require('util');
 
 var createSubObjects = mod_obj.createSubObjects;
@@ -401,10 +401,10 @@ exports['all vms (local and remote)'] = function (t) {
                     helpers.blockPortOutTCP('10.1.1.4', 8082)
                 ];
                 v4rules[vm.uuid].in.tcp = [
-                    helpers.allowPortInTCP('10.1.1.1', 8081),
-                    helpers.allowPortInTCP('10.1.1.2', 8081),
-                    helpers.allowPortInTCP('10.1.1.3', 8081),
-                    helpers.allowPortInTCP('10.1.1.4', 8081)
+                    helpers.allowPortInTCP('10.1.1.1', 8081, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.2', 8081, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.3', 8081, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.4', 8081, 'keep state')
                 ];
             });
 
@@ -455,17 +455,17 @@ exports['all vms (local and remote)'] = function (t) {
 
             [vm1, vm2].forEach(function (vm) {
                 v4rules[vm.uuid].in.tcp = [
-                    helpers.allowPortInTCP('10.1.1.1', 8081),
-                    helpers.allowPortInTCP('10.1.1.2', 8081),
-                    helpers.allowPortInTCP('10.1.1.3', 8081),
-                    helpers.allowPortInTCP('10.1.1.4', 8081),
+                    helpers.allowPortInTCP('10.1.1.1', 8081, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.2', 8081, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.3', 8081, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.4', 8081, 'keep state'),
 
-                    helpers.allowPortInTCP('10.1.1.1', 8083),
-                    helpers.allowPortInTCP('10.1.1.2', 8083),
-                    helpers.allowPortInTCP('10.1.1.3', 8083),
-                    helpers.allowPortInTCP('10.1.1.4', 8083),
-                    helpers.allowPortInTCP('10.8.8.1', 8083),
-                    helpers.allowPortInTCP('10.8.8.2', 8083)
+                    helpers.allowPortInTCP('10.1.1.1', 8083, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.2', 8083, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.3', 8083, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.4', 8083, 'keep state'),
+                    helpers.allowPortInTCP('10.8.8.1', 8083, 'keep state'),
+                    helpers.allowPortInTCP('10.8.8.2', 8083, 'keep state')
                 ];
             });
 
@@ -534,13 +534,13 @@ exports['all vms (local and remote)'] = function (t) {
 
             [vm1, vm2].forEach(function (vm) {
                 v4rules[vm.uuid].in.tcp = [
-                    helpers.allowPortInTCP('10.1.1.4', 8081),
-                    helpers.allowPortInTCP('10.1.1.1', 8083),
-                    helpers.allowPortInTCP('10.1.1.2', 8083),
-                    helpers.allowPortInTCP('10.1.1.3', 8083),
-                    helpers.allowPortInTCP('10.1.1.4', 8083),
-                    helpers.allowPortInTCP('10.8.8.1', 8083),
-                    helpers.allowPortInTCP('10.8.8.2', 8083)
+                    helpers.allowPortInTCP('10.1.1.4', 8081, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.1', 8083, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.2', 8083, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.3', 8083, 'keep state'),
+                    helpers.allowPortInTCP('10.1.1.4', 8083, 'keep state'),
+                    helpers.allowPortInTCP('10.8.8.1', 8083, 'keep state'),
+                    helpers.allowPortInTCP('10.8.8.2', 8083, 'keep state')
                 ];
             });
 
@@ -582,6 +582,15 @@ exports['all vms (local and remote)'] = function (t) {
 
             [vm1, vm2].forEach(function (vm) {
                 v4rules[vm.uuid].out = {};
+                v4rules[vm.uuid].in.tcp = [
+                    helpers.allowPortInTCP('10.1.1.4', 8081),
+                    helpers.allowPortInTCP('10.1.1.1', 8083),
+                    helpers.allowPortInTCP('10.1.1.2', 8083),
+                    helpers.allowPortInTCP('10.1.1.3', 8083),
+                    helpers.allowPortInTCP('10.1.1.4', 8083),
+                    helpers.allowPortInTCP('10.8.8.1', 8083),
+                    helpers.allowPortInTCP('10.8.8.2', 8083)
+                ];
             });
 
             expRules = expRules.filter(function (r) {

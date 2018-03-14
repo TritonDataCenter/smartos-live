@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  * fwadm tests
  */
@@ -31,7 +31,7 @@ var fw;
 var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
 var mod_obj = require('../../lib/util/obj');
-var mod_uuid = require('node-uuid');
+var mod_uuid = require('uuid');
 var util = require('util');
 var util_vm = require('../../lib/util/vm');
 
@@ -530,7 +530,7 @@ exports['add: tag to subnet'] = function (t) {
                 helpers.blockPortOutTCP('10.99.99.0/24', 25)
             ];
             v4rules[vm1.uuid].in.tcp = [
-                helpers.allowPortInTCP('10.99.99.0/24', 80)
+                helpers.allowPortInTCP('10.99.99.0/24', 80, 'keep state')
             ];
 
             v4rules[vm2.uuid] = v4rules[vm1.uuid];
@@ -663,7 +663,7 @@ exports['add: vm to subnet'] = function (t) {
             v4rules[vm1.uuid].out.tcp =
                 [ helpers.blockPortOutTCP('10.99.99.0/24', 25) ];
             v4rules[vm1.uuid].in.tcp =
-                [ helpers.allowPortInTCP('10.99.99.0/24', 80) ];
+                [ helpers.allowPortInTCP('10.99.99.0/24', 80, 'keep state') ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');

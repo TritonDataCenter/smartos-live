@@ -31,7 +31,7 @@ var fwrule = require('fwrule');
 var mod_addr = require('ip6addr');
 var mod_obj = require('../../lib/util/obj');
 var mocks = require('./mocks');
-var mod_uuid = require('node-uuid');
+var mod_uuid = require('uuid');
 var util = require('util');
 var util_vm = require('../../lib/util/vm');
 var VError = require('verror');
@@ -611,39 +611,62 @@ function forEachVMsIPs(vms, f) {
     getIPsFromVMs(vms).forEach(f);
 }
 
-function createPortRule(action, dir, proto, who, port) {
+function createPortRule(action, dir, proto, who, port, rest) {
     var suffix = '';
     if (port) {
         suffix += 'port = ' + port;
+    }
+    suffix += ' keep frags';
+    if (rest) {
+        suffix += ' ' + rest;
     }
     return util.format(
         '%s %s quick proto %s from %s %s', action, dir, proto, who, suffix);
 }
 
-function createRangeRule(action, dir, proto, who, p1, p2) {
+function createRangeRule(action, dir, proto, who, p1, p2, rest) {
     var suffix = 'port ' + p1 + ' : ' + p2 + ' keep frags';
+    if (rest) {
+        suffix += ' ' + rest;
+    }
     return util.format(
         '%s %s quick proto %s from %s %s', action, dir, proto, who, suffix);
 }
 
-function allowPortInTCP(src, port) {
-    return createPortRule('pass', 'in', 'tcp', src + ' to any', port);
+function allowInAH(src, rest) {
+    return createPortRule('pass', 'in', 'ah', src + ' to any', null, rest);
+}
+
+function allowInESP(src, rest) {
+    return createPortRule('pass', 'in', 'esp', src + ' to any', null, rest);
+}
+
+function blockOutAH(dst) {
+    return createPortRule('block', 'out', 'ah', 'any to ' + dst);
+}
+
+function blockOutESP(dst) {
+    return createPortRule('block', 'out', 'esp', 'any to ' + dst);
+}
+
+function allowPortInTCP(src, port, rest) {
+    return createPortRule('pass', 'in', 'tcp', src + ' to any', port, rest);
 }
 
 function allowRangeInTCP(src, p1, p2) {
     return createRangeRule('pass', 'in', 'tcp', src + ' to any', p1, p2);
 }
 
-function blockPortInTCP(src, port) {
-    return createPortRule('block', 'in', 'tcp', src + ' to any', port);
+function blockPortInTCP(src, port, rest) {
+    return createPortRule('block', 'in', 'tcp', src + ' to any', port, rest);
 }
 
 function blockRangeInTCP(src, p1, p2) {
     return createRangeRule('block', 'in', 'tcp', src + ' to any', p1, p2);
 }
 
-function allowPortInUDP(src, port) {
-    return createPortRule('pass', 'in', 'udp', src + ' to any', port);
+function allowPortInUDP(src, port, rest) {
+    return createPortRule('pass', 'in', 'udp', src + ' to any', port, rest);
 }
 
 function allowInICMP(src, type, code) {
@@ -654,6 +677,7 @@ function allowInICMP(src, type, code) {
     if (code !== undefined) {
         suffix += ' code ' + code;
     }
+    suffix += ' keep frags';
     return util.format(
         'pass in quick proto icmp from %s to any %s', src, suffix);
 }
@@ -666,6 +690,7 @@ function allowInICMP6(src, type, code) {
     if (code !== undefined) {
         suffix += ' code ' + code;
     }
+    suffix += ' keep frags';
     return util.format(
         'pass in quick proto ipv6-icmp from %s to any %s', src, suffix);
 }
@@ -715,6 +740,12 @@ module.exports = {
 
     allowInICMP: allowInICMP,
     allowInICMP6: allowInICMP6,
+
+    allowInAH: allowInAH,
+    allowInESP: allowInESP,
+
+    blockOutAH: blockOutAH,
+    blockOutESP: blockOutESP,
 
     addZoneRules: addZoneRules,
     defaultZoneRules: defaultZoneRules,

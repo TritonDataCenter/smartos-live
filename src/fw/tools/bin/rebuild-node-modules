@@ -35,9 +35,10 @@ mkdir ${NM}/assert-plus
 cp ${NM_ORIG}/assert-plus/assert.js ${NM}/assert-plus/index.js
 cp ${NM_ORIG}/assert-plus/README.md ${NM}/assert-plus/README.md
 
-mkdir ${NM}/node-uuid
-cp ${NM_ORIG}/node-uuid/uuid.js ${NM}/node-uuid/index.js
-cp ${NM_ORIG}/node-uuid/LICENSE.md ${NM}/node-uuid/LICENSE.md
+mkdir -p ${NM}/uuid/lib
+cp ${NM_ORIG}/uuid/{index,v1,v4}.js ${NM}/uuid/
+cp ${NM_ORIG}/uuid/lib/{bytesToUuid,rng}.js ${NM}/uuid/lib
+cp ${NM_ORIG}/uuid/LICENSE.md ${NM}/uuid/LICENSE.md
 
 mkdir ${NM}/mkdirp
 cp ${NM_ORIG}/mkdirp/index.js ${NM}/mkdirp/index.js
@@ -50,6 +51,7 @@ cp ${NM_ORIG}/clone/{LICENSE,clonePrototype.js} ${NM}/clone/
 mkdir ${NM}/fwrule
 cp ${NM_ORIG}/fwrule/lib/* ${NM}/fwrule/
 cp -r ${NM_ORIG}/fwrule/docs tools/fwrule/
+cp -r ${NM_ORIG}/fwrule/etc tools/fwrule/
 
 mkdir ${NM}/cmdln
 cp ${NM_ORIG}/cmdln/lib/cmdln.js ${NM}/cmdln/index.js

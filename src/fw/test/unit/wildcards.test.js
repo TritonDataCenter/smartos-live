@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  * fwadm tests: all and any targets
  */
@@ -31,7 +31,7 @@ var fw;
 var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
 var mod_obj = require('../../lib/util/obj');
-var mod_uuid = require('node-uuid');
+var mod_uuid = require('uuid');
 var util = require('util');
 var util_vm = require('../../lib/util/vm');
 
@@ -175,8 +175,12 @@ exports['any <-> vm: add / update'] = function (t) {
                 rules: [ expRules[1] ]
             }, 'rules returned');
 
-            v4rules[vm.uuid].in.tcp = [ helpers.allowPortInTCP('any', 8081) ];
-            v6rules[vm.uuid].in.tcp = [ helpers.allowPortInTCP('any', 8081) ];
+            v4rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081, 'keep state')
+            ];
+            v6rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081, 'keep state')
+            ];
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
@@ -301,6 +305,10 @@ exports['any <-> vm: add / update'] = function (t) {
 
             delete v4rules[vm.uuid].out.tcp;
             delete v6rules[vm.uuid].out.tcp;
+
+            v4rules[vm.uuid].in.tcp = [ helpers.allowPortInTCP('any', 8081) ];
+            v6rules[vm.uuid].in.tcp = [ helpers.allowPortInTCP('any', 8081) ];
+
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
@@ -398,12 +406,14 @@ exports['any <-> all vms: add / update'] = function (t) {
                     helpers.blockPortOutTCP('192.168.4.2', 8082)
                 ];
                 v4rules[uuid].in.tcp = [
-                    helpers.allowPortInTCP('any', 8081),
-                    helpers.allowPortInTCP('192.168.0.1', 8083),
-                    helpers.allowPortInTCP('192.168.4.1', 8083),
-                    helpers.allowPortInTCP('192.168.4.2', 8083)
+                    helpers.allowPortInTCP('any', 8081, 'keep state'),
+                    helpers.allowPortInTCP('192.168.0.1', 8083, 'keep state'),
+                    helpers.allowPortInTCP('192.168.4.1', 8083, 'keep state'),
+                    helpers.allowPortInTCP('192.168.4.2', 8083, 'keep state')
                 ];
-                v6rules[uuid].in.tcp = [ helpers.allowPortInTCP('any', 8081) ];
+                v6rules[uuid].in.tcp = [
+                    helpers.allowPortInTCP('any', 8081, 'keep state')
+                ];
             });
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
@@ -458,11 +468,11 @@ exports['any <-> all vms: add / update'] = function (t) {
                     helpers.blockPortOutTCP('192.168.4.2', 8082)
                 ];
                 v4rules[uuid].in.tcp = [
-                    helpers.allowPortInTCP('any', 8081),
-                    helpers.allowPortInTCP('192.168.0.1', 8083),
-                    helpers.allowPortInTCP('192.168.0.2', 8083),
-                    helpers.allowPortInTCP('192.168.4.1', 8083),
-                    helpers.allowPortInTCP('192.168.4.2', 8083)
+                    helpers.allowPortInTCP('any', 8081, 'keep state'),
+                    helpers.allowPortInTCP('192.168.0.1', 8083, 'keep state'),
+                    helpers.allowPortInTCP('192.168.0.2', 8083, 'keep state'),
+                    helpers.allowPortInTCP('192.168.4.1', 8083, 'keep state'),
+                    helpers.allowPortInTCP('192.168.4.2', 8083, 'keep state')
                 ];
             });
 
@@ -512,9 +522,9 @@ exports['any <-> all vms: add / update'] = function (t) {
             delete v6rules[vm2.uuid].in.tcp;
 
             v4rules[vm1.uuid].in.tcp[0] =
-                helpers.allowPortInTCP('192.168.0.2', 8081);
+                helpers.allowPortInTCP('192.168.0.2', 8081, 'keep state');
             v4rules[vm2.uuid].in.tcp[0] =
-                helpers.allowPortInTCP('192.168.0.2', 8081);
+                helpers.allowPortInTCP('192.168.0.2', 8081, 'keep state');
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
@@ -688,10 +698,10 @@ exports['add / update: all ports'] = function (t) {
             }, 'rules returned');
 
             v4rules[vm.uuid].in.tcp = [
-                helpers.allowPortInTCP('any')
+                helpers.allowPortInTCP('any', null, 'keep state')
             ];
             v6rules[vm.uuid].in.tcp = [
-                helpers.allowPortInTCP('any')
+                helpers.allowPortInTCP('any', null, 'keep state')
             ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
@@ -745,8 +755,12 @@ exports['add / update: all ports'] = function (t) {
                 rules: [ expRules[1] ]
             }, 'rules returned');
 
-            v4rules[vm.uuid].in.tcp = [ helpers.allowPortInTCP('any', 8081) ];
-            v6rules[vm.uuid].in.tcp = [ helpers.allowPortInTCP('any', 8081) ];
+            v4rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081, 'keep state')
+            ];
+            v6rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081, 'keep state')
+            ];
 
             v4rules[vm2.uuid] = helpers.defaultZoneRules();
             v6rules[vm2.uuid] = helpers.defaultZoneRules();
@@ -817,6 +831,14 @@ exports['add / update: all ports'] = function (t) {
 
             delete v4rules[vm.uuid].out.tcp;
             delete v6rules[vm.uuid].out.tcp;
+
+            v4rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081)
+            ];
+            v6rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081)
+            ];
+
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,

@@ -91,7 +91,7 @@ var log = bunyan.createLogger({
 
 function usage() {
     var out = [
-        'Usage: zoneevent [-i <ident>] [-h]',
+        'Usage: zoneevent [-i <ident>] [-l <level>] [-h]',
         '',
         'Options',
         '  -h, --help           Print this help message and exit',

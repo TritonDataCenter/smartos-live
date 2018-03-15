@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2017, Joyent, Inc.
+ * Copyright (c) 2018, Joyent, Inc.
  *
  */
 
@@ -32,6 +32,7 @@
 var f = require('util').format;
 
 var bunyan = require('/usr/node/node_modules/bunyan');
+var getopt = require('/usr/node/node_modules/getopt');
 var ZoneEvent = require('/usr/vm/node_modules/zoneevent').ZoneEvent;
 var zone = require('/usr/node/node_modules/zonename');
 
@@ -52,18 +53,54 @@ var tryTimeout;
 // failcount - number of times VM.events has failed to start
 var tries = 0;
 
-var name = 'zoneevent CLI';
+var opts = [
+    'h(help)',
+    'i:(ident)',
+    'l:(level)'
+].join('');
+var parser = new getopt.BasicParser(opts, process.argv);
 
-if (process.argv[2]) {
-    name += f(' (%s)', process.argv[2]);
+var name = 'zoneevent CLI';
+var logLevel = 'fatal';
+var option;
+while ((option = parser.getopt())) {
+    switch (option.option) {
+    case 'h':
+        usage();
+        process.exit(0);
+        break;
+    case 'i':
+        name += f(' (%s)', option.optarg);
+        break;
+    case 'l':
+        logLevel = option.optarg;
+        break;
+    default:
+        usage();
+        process.exit(1);
+        break;
+    }
 }
 
 var log = bunyan.createLogger({
-    level: 'fatal',
+    level: logLevel,
     name: 'zoneevent',
     stream: process.stderr,
     serializers: bunyan.stdSerializers
 });
+
+function usage() {
+    var out = [
+        'Usage: zoneevent [-i <ident>] [-h]',
+        '',
+        'Options',
+        '  -h, --help           Print this help message and exit',
+        '  -i, --ident <ident>  Identifier string to be used for this',
+        '                       invocation (used for vminfod user-agent)',
+        '  -l, --level <level>  Bunyan log level to use, defaults to fatal'
+    ];
+    console.log(out.join('\n'));
+}
 
 function start() {
     var ze = new ZoneEvent({
@@ -128,6 +165,7 @@ function start() {
     });
 
     ze.on('error', function zoneEventError(err) {
+        log.warn({err: err}, 'zoneEventError');
         if (++tries === MAX_TRIES) {
             log.fatal({err: err}, 'failed %d times', tries);
             process.exit(1);

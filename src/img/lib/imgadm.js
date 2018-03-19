@@ -3337,7 +3337,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
         },
         function getVmInfo(next) {
             var opts;
-            if (vmInfo.brand === 'kvm') {
+            if (vmInfo.brand === 'kvm' || vmInfo.Brand === 'bhyve') {
                 if (vmInfo.disks && vmInfo.disks[0]) {
                     var disk = vmInfo.disks[0];
                     vmZfsFilesystemName = disk.zfs_filesystem;
@@ -3420,7 +3420,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             );
         },
         function getSystemInfo(next) {
-            if (vmInfo.brand === 'kvm') {
+            if (vmInfo.brand === 'kvm' || vmInfo.brand === 'bhyve') {
                 next();
                 return;
             }
@@ -3552,7 +3552,9 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             }
 
             var toSnapshot = [vmInfo.zfs_filesystem];
-            if (vmInfo.brand === 'kvm' && vmInfo.disks) {
+            if ((vmInfo.brand === 'kvm' || vmInfo.brand === 'bhyve')
+                && vmInfo.disks) {
+
                 for (var i = 0; i < vmInfo.disks.length; i++) {
                     toSnapshot.push(vmInfo.disks[i].zfs_filesystem);
                 }

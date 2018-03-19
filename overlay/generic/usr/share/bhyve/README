@@ -1,0 +1,6 @@
+The uefi-csm-rom.bin file is a binary generated from the uefi-edk2 package
+shipped in illumos-extra.  At the time of this writing, facilitating an
+isolated build of the uefi ROM was difficult thanks to its dependency on iasl
+to compile the ACPI tables it ships.  While it is excluded from the build until
+those issues are solved, the ROM can be built from those sources (and patches)
+provided a working iasl can be configured for the task.

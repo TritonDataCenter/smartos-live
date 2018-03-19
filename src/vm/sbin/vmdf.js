@@ -6,7 +6,7 @@
  */
 
 /*
- * Copyright (c) 2015, Joyent, Inc.
+ * Copyright (c) 2018, Joyent, Inc.
  */
 
 /*
@@ -159,8 +159,8 @@ VM.lookup({}, {fields: lookup_fields}, function (error, vmobjs) {
 
                     cores = data['zones/cores/' + vm.zonename].used;
 
-                    if (vm.brand === 'kvm') {
-                        vm_usage.virt = 'KVM';
+                    if (vm.brand === 'kvm' || vm.brand === 'bhyve') {
+                        vm_usage.virt = vm.brand.toUpperCase();
                         vm_usage.disks_volsize = 0;
                         vm.disks.forEach(function (d) {
                             vm_usage.disks_volsize

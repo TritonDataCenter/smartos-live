@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2017, Joyent, Inc.
+ * Copyright (c) 2018, Joyent, Inc.
  *
  *
  * # OVERVIEW
@@ -46,17 +46,17 @@
  *
  * # CREATING SOCKETS
  *
- * If the VM is a KVM VM, the qemu process running in the KVM zone will be
- * running with a "ttyb" virtual serial port for the KVM guest. From the host
- * we can connect to connect to /root/tmp/vm.ttyb in the zoneroot which Qemu is
- * listening on for connections. We connect to this as a client but run a
- * metadata server on the resulting connection. Inside the KVM guest the
+ * If the VM is a KVM or bhyve VM, the qemu or bhyve process running in the zone
+ * will be running with a "ttyb" virtual serial port for the KVM guest. From the
+ * host we can connect to connect to /root/tmp/vm.ttyb in the zoneroot on which
+ * Qemu or bhyve is listening for connections. We connect to this as a client
+ * but run a metadata server on the resulting connection. Inside the guest the
  * mdata-client tools connect to the serial device and are then talking to our
  * metadata handler.
  *
- * For all non-KVM VMs we create a unix domain socket in
- * /var/zonecontrol/<zonename> named metadata.sock. We mount the zonecontrol
- * directory into the zone (read-only) via the brand.
+ * For all OS VMs we create a unix domain socket in /var/zonecontrol/<zonename>
+ * named metadata.sock. We mount the zonecontrol directory into the zone
+ * (read-only) via the brand.
  *
  * In non-LX zones, the zonecontrol is mounted such that the socket is at:
  *
@@ -289,7 +289,7 @@ MetadataAgent.prototype.createServersOnExistingZones = function (vms) {
             return;
         }
 
-        if (vm.brand === 'kvm') {
+        if (vm.brand === 'kvm' || vm.brand === 'bhyve') {
             // For KVM, the zone must be running otherwise Qemu will not
             // have created a socket.
             if (vm.zone_state !== 'running') {
@@ -364,13 +364,14 @@ function handleZoneCreated(vm) {
 
     assert.object(vm, 'vm');
     assert.string(vm.zonename, 'vm.zonename');
+    assert.string(vm.brand, 'vm.brand');
 
     if (!self.zlog[vm.zonename]) {
         // create a logger specific to this VM
         self.createZoneLog(vm.brand, vm.zonename);
     }
 
-    if (vm.brand === 'kvm') {
+    if (vm.brand === 'kvm' || vm.brand === 'bhyve') {
         self.startKVMSocketServer(vm.zonename, noop);
     } else {
         self.startZoneSocketServer(vm.zonename, noop);
@@ -420,11 +421,13 @@ MetadataAgent.prototype.start = function start() {
     self.vminfod_watcher.on('modify', function (ev) {
         var state;
 
-        // For non-KVM, we only care about create/delete since the socket
-        // only needs to be created once for these zones. For KVM however,
-        // the qemu process recreates the socket on every boot, so we want
-        // to catch 'start' events for KVM to ensure we connect to metadata
-        // as soon as possible.
+        /*
+         * For non-KVM and non-bhyve, we only care about create/delete since
+         * the socket only needs to be created once for these zones. For KVM
+         * however, the qemu process recreates the socket on every boot, so we
+         * want to catch 'start' events for KVM to ensure we connect to
+         * metadata as soon as possible.
+         */
         if (ev.vm.brand !== 'kvm') {
             return;
         }

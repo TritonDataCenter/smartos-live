@@ -200,9 +200,15 @@ function get_smartos_cpu_info()
 function get_bhyve_capability()
 {
     Bhyve_Capable="false"
+    Bhyve_Max_Vcpus="0"
+
     if [[ -x /usr/lib/brand/bhyve/bhhwcompat ]]; then
         if /usr/lib/brand/bhyve/bhhwcompat; then
             Bhyve_Capable="true"
+            vcpus=$(/usr/lib/brand/bhyve/bhhwcompat -c | /usr/bin/grep "^[0-9]*$")
+            if [[ -n ${vcpus} ]]; then
+                Bhyve_Max_Vcpus=${vcpus}
+            fi
         fi
     fi
 }
@@ -666,6 +672,7 @@ CPU_Type='${CPU_Version}'
 CPU_Virtualization='${CPU_Virtualization}'
 CPU_Physical_Cores=${CPU_Count}
 Bhyve_Capable='${Bhyve_Capable}'
+Bhyve_Max_Vcpus=${Bhyve_Max_Vcpus}
 Nic_Tags=${NicTagList}
 Setup='${Setup_complete}'
 END
@@ -799,6 +806,7 @@ END
   "Setup": "${Setup_complete}",
   "VM Capable": ${VM_Capable},
   "Bhyve Capable": ${Bhyve_Capable},
+  "Bhyve Max Vcpus": ${Bhyve_Max_Vcpus},
   "CPU Type": "${CPU_Version}",
   "CPU Virtualization": "${CPU_Virtualization}",
   "CPU Physical Cores": ${CPU_Count},

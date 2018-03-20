@@ -54,6 +54,20 @@ making changes.
 
     GZ only
 
+  "Bhyve Capable"
+
+    A boolean indicating whether the current hardware has the required features
+    in order to boot bhyve VMs.
+
+    GZ only
+
+  "Bhyve Max Vcpus"
+
+    A number indicating the maximum "vcpus" value that bhyve supports on this
+    platform. When no support is available the value will be 0.
+
+    GZ only
+
   "Boot Time"
 
     Timestamp (seconds since 1970-01-01 00:00:00 UTC) at which the system was

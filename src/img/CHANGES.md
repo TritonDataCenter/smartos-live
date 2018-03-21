@@ -5,6 +5,11 @@ Known issues:
 - Docker image imports are experimental. Docker image import also only supports
   Docker Registry v2.
 
+## 3.9.0
+
+- TRITON-178 add support for image creation for bhyve VMs. Also includes a
+  change where created images for bhyve, lx and kvm will have requirements.brand
+  set to the brand of the source VM when creating an image.
 
 ## 3.8.0
 

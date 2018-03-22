@@ -603,7 +603,7 @@ setup_snapshots()
 	# internal information, mount the /root directory of each snapshot
 	# separately.
 	#
-	for snap in $(ls -1 $ZONEPATH/.zfs/snapshot); do
+	for snap in $(ls -1 $ZONEPATH/.zfs/snapshot | grep ^vmsnap-); do
 		snapdir=$ZONEPATH/$SNAPSHOT_DIR/$(echo ${snap} | sed -e "s/^vmsnap-//")
 		mkdir -p ${snapdir}
 		mount -F lofs -o ro,setuid,nodevices \

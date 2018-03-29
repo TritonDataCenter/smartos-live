@@ -1,4 +1,4 @@
-// Copyright (c) 2017, Joyent, Inc.
+// Copyright 2018 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that default values don't change accidentally.
 //
@@ -218,7 +218,7 @@ function check_values(t, state)
         // the only remaining members we expect are state and zoneid
         if (prop === 'state' || prop === 'zone_state') {
             continue;
-        } else if (prop === 'zoneid') {
+        } else if (prop === 'zoneid' || prop === 'zonedid') {
             continue;
         } else if (state.brand === 'kvm' && prop === 'pid') {
             continue;

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2017, Joyent, Inc.
+ * Copyright (c) 2018, Joyent, Inc.
  *
  */
 
@@ -258,6 +258,7 @@ var smartos_payload = {
                             'boot_timestamp',
                             'last_modified',
                             'pid',
+                            'zonedid',
                             'zoneid'
                         ];
                         if (skipProps.indexOf(prop) !== -1) {

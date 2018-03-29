@@ -1075,12 +1075,14 @@ function main(callback)
             usage('Wrong number of parameters to "sysrq"');
         } else {
             type = parsed.argv.remain[0];
-            if (VM.SYSRQ_TYPES.indexOf(type) === -1) {
+            if (VM.SYSRQ_TYPES['all'].indexOf(type) === -1) {
                 usage('Invalid sysrq type: ' + type);
             } else {
                 VM.sysrq(uuid, type, {}, function (err) {
                     if (err) {
                         callback(err);
+                    } else if (type === 'nmi') {
+                        callback(null, 'Sent NMI to VM ' + uuid);
                     } else {
                         callback(null, 'Sent ' + type + ' sysrq to VM ' + uuid);
                     }

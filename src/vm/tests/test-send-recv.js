@@ -1,4 +1,4 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2018 Joyent, Inc.  All rights reserved.
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
@@ -179,7 +179,13 @@ var smartos_payload = {
                                     t.ok(true, 'Zone went to state: ' + obj.state);
 
                                     for (prop in vmobj) {
-                                        if (['boot_timestamp', 'last_modified', 'pid', 'zoneid'].indexOf(prop) !== -1) {
+                                        if ([
+                                            'boot_timestamp',
+                                            'last_modified',
+                                            'pid',
+                                            'zonedid',
+                                            'zoneid'
+                                        ].indexOf(prop) !== -1) {
                                             // we expect these properties to be different.
                                             continue;
                                         }

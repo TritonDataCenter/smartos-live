@@ -2175,6 +2175,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: no
         default: value of uuid
 
+    zonedid:
+
+        This property will show up in a JSON payload and can be included in
+        list output. It is a value that is used internally to the system and
+        primarily exists to aid debugging. This value will not change when the
+        VM is started/stopped.
+
+        type: integer
+        vmtype: OS,KVM
+        listable: yes
+        create: no
+        update: no
+
     zoneid:
 
         This property will show up in a JSON payload and can be included in

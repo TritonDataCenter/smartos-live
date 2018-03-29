@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  */
 
@@ -32,6 +32,7 @@ var simple_tests = [
             + '1:c0f63bf1-aa36-4c78-8c3c-a9cfe3b0001e:running:/zones/c0f63bf1-aa36-4c78-8c3c-a9cfe3b0001e:c0f63bf1-aa36-4c78-8c3c-a9cfe3b0001e:joyent-minimal:excl:1\n',
         json: {
             "c0f63bf1-aa36-4c78-8c3c-a9cfe3b0001e" : {
+                "zonedid" : 1,
                 "zoneid" : 1,
                 "zonename" : "c0f63bf1-aa36-4c78-8c3c-a9cfe3b0001e",
                 "state" : "running",

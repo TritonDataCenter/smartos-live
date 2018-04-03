@@ -286,6 +286,8 @@ test('test queue idleTime instant', function (t) {
         paused: true
     });
 
+    t.expect(6);
+
     t.equal(q.idle, false, 'queue is not idle while paused');
 
     q.resume();
@@ -315,19 +317,24 @@ test('test queue idleTime instant', function (t) {
 });
 
 test('test queue idleTime delay', function (t) {
+    var maxTasks = 10;
+
     var tasksDone = [];
     var i;
 
     var q = new Queue({
         log: log,
         workers: 1,
-        idleTime: 100
+        idleTime: maxTasks * 10
     });
+
+    t.expect(maxTasks + 2);
 
     t.equal(q.idle, true, 'queue idle when created');
 
     q.once('idle', function () {
-        t.equal(tasksDone.length, 10, '10 tasks done');
+        t.equal(tasksDone.length, maxTasks, maxTasks + ' tasks done');
+        t.end();
     });
 
     function pushTask(_i) {
@@ -342,9 +349,13 @@ test('test queue idleTime delay', function (t) {
         t.equal(ret, true, 'task enqueued: ' + _i);
     }
 
-    for (i = 0; i < 10; i++) {
+    function enqueueDelayedTask(_i, delay) {
         setTimeout(function () {
-            pushTask(i);
-        }, i * 5);
+            pushTask(_i);
+        }, delay);
+    }
+
+    for (i = 0; i < maxTasks; i++) {
+        enqueueDelayedTask(i, i*5);
     }
 });

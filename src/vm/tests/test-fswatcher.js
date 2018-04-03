@@ -20,7 +20,8 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2017, Joyent, Inc.
+ * Copyright (c) 2018, Joyent, Inc.
+ *
  */
 
 var execFile = require('child_process').execFile;

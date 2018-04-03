@@ -276,3 +276,75 @@ test('test deduplication', function (t) {
 
     t.end();
 });
+
+test('test queue idleTime instant', function (t) {
+    var isIdleCalled = false;
+
+    var q = new Queue({
+        log: log,
+        workers: 1,
+        paused: true
+    });
+
+    t.equal(q.idle, false, 'queue is not idle while paused');
+
+    q.resume();
+
+    t.equal(q.idle, true, 'queue idle when resumed');
+
+    q.enqueue({
+        description: 'foo',
+        func: function (extras, cb) {
+            t.equal(q.idle, false, 'queue not idle when running task');
+            setTimeout(cb, 5);
+        }
+    });
+
+    t.equal(q.idle, false, 'queue not idle when task was pushed');
+
+    q.once('idle', function () {
+        isIdleCalled = true;
+        t.equal(q.idle, true, 'queue idle when once("idle") called');
+    });
+
+    // sometime in the future after the task is done
+    setTimeout(function () {
+        t.equal(isIdleCalled, true, '"idle" event seen');
+        t.end();
+    }, 250);
+});
+
+test('test queue idleTime delay', function (t) {
+    var tasksDone = [];
+    var i;
+
+    var q = new Queue({
+        log: log,
+        workers: 1,
+        idleTime: 100
+    });
+
+    t.equal(q.idle, true, 'queue idle when created');
+
+    q.once('idle', function () {
+        t.equal(tasksDone.length, 10, '10 tasks done');
+    });
+
+    function pushTask(_i) {
+        var ret = q.enqueue({
+            description: 'idleTime: ' + _i,
+            func: function (extras, cb) {
+                // the quickest possible task
+                tasksDone.push(_i);
+                cb();
+            }
+        });
+        t.equal(ret, true, 'task enqueued: ' + _i);
+    }
+
+    for (i = 0; i < 10; i++) {
+        setTimeout(function () {
+            pushTask(i);
+        }, i * 5);
+    }
+});

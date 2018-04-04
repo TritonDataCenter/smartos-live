@@ -1068,7 +1068,7 @@ function main(callback)
     case 'json':
         uuid = getUUID(command, parsed);
         VM.load(uuid, function (err, obj) {
-            if (err && err.code === 404) {
+            if (err && err.code === 'ENOENT' && err.statusCode === 404) {
                 /*
                  * In the vminfod world, a VM not found error is expressed a
                  * 404 instead of a failure message directly from zoneadm(1M).

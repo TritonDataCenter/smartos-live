@@ -27,7 +27,11 @@
  */
 
 /*
- * On STDIN you can send:
+ * `fswatcher` will run indefinitely when invoked.  It listens for messages
+ * over stdin, and emits events and responses over stdout, and errors over
+ * stderr.
+ *
+ * On stdin you can send:
  *
  * <KEY> WATCH <pathname>\n
  * <KEY> UNWATCH <pathname>\n
@@ -36,9 +40,12 @@
  * The first will cause <pathname> to be added to the watch list. The second
  * will cause the watch for the specified path to be removed.  The third will
  * print this programs status to stdout. The <KEY> must be an integer in the
- * range 1-UINT64_MAX (inclusive). Leading 0's will be removed. NOTE:  0 is a
- * special key that will be used in output for errors which were not directly
- * the result of a command.
+ * range 1-UINT64_MAX (inclusive). Leading 0's will be removed. The key is for
+ * the caller to know which response by `fswatcher` is related to which command
+ * given since commands are processed asynchronously.
+ *
+ * NOTE: 0 is a special key that will be used in output for errors which were
+ * not directly the result of a command.
  *
  * "pathname" can be any type of file that event ports supports (file,
  * directory, pipe, etc. see port_associate(3C) for a full list).  This program
@@ -51,7 +58,7 @@
  * until an UNWATCH command for the file is received from the user, or an event
  * indicates that the file can no longer be watched (like FILE_DELETE).
  *
- * On STDOUT you will see JSON messages that look like the following but are
+ * On stdout you will see JSON messages that look like the following but are
  * on a single line:
  *
  *  {
@@ -73,7 +80,7 @@
  *             Always included.
  *   - time
  *             Time as an array of [seconds, nanoseconds], similar to
- *             JavaScript process.hrtime()
+ *             Node's process.hrtime()
  *             Always included.
  *   - changes
  *             An array of strings indicating which changes occurred.
@@ -101,7 +108,7 @@
  *
  * EXIT STATUS
  *
- *   Under normal operation, fswatcher will run until STDIN is closed or a fatal
+ *   Under normal operation, fswatcher will run until stdin is closed or a fatal
  *   error occurs.
  *
  *   When errors occur that are completly unexpected, fswatcher will call

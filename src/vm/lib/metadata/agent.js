@@ -31,13 +31,8 @@
  *
  * This agent then:
  *
- *   - attempts to create a metadata socket for all existing VMs on the CN
- *   - starts an interval timer so that we check every 5 minutes for VMs that
- *     have been deleted
- *   - starts an interval timer so that we check every minute for VMs that have
- *     started running without us getting a ZWatch event
- *   - starts a ZWatch watcher that calls a callback whenever a VM is started
- *     and does not already have an active connection
+ *   - starts a VminfodWatcher that handles VM creation, VM deletion, and VM
+ *     state changes.
  *
  * Either at agent startup or whenever we see a zone boot that does not have a
  * metadata socket, we attempt to create the appropriate socket for the type of
@@ -428,7 +423,7 @@ MetadataAgent.prototype.start = function start() {
          * want to catch 'start' events for KVM to ensure we connect to
          * metadata as soon as possible.
          */
-        if (ev.vm.brand !== 'kvm') {
+        if (ev.vm.brand !== 'kvm' && ev.vm.brand !== 'bhyve') {
             return;
         }
 

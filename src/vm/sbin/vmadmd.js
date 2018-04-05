@@ -825,8 +825,8 @@ function applyDockerRestartPolicy(vmobj)
 /*
  * This function waits for a VM (vmUuid) to change to a specified state. It is
  * passed to VM.start() so that we avoid creating an additional zoneevent
- * watcher for each, and instead re-use the existing sysevent watcher that we've
- * already got.
+ * watcher for each, and instead re-use the existing zoneevent watcher that
+ * we've already got.
  */
 function stateWaiter(vmUuid, state, opts, callback) {
     assert.uuid(vmUuid, 'vmUuid');

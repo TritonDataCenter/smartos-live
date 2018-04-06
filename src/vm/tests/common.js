@@ -107,12 +107,17 @@ function ifError(t, err, msg) {
     assert.optionalObject(err, 'err');
     assert.optionalString(msg, 'msg');
 
-    if (!msg) {
-        msg = '(unnamed assert)';
-    }
+    var result;
+
     if (err) {
-        msg = f('%s: %s', msg, err.message);
+        assert.object(err, 'err');
+        assert.string(err.message, 'err.message');
     }
+
+    msg = msg || '(unnamed assert)';
+    result = err ? err.message : 'success';
+
+    msg = f('%s: %s', msg, result);
 
     t.ok(!err, msg);
 }

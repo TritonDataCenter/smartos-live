@@ -44,9 +44,14 @@ function ImgapiSource(opts) {
 
     this.__defineGetter__('client', function () {
         if (this._client === undefined) {
+            var headers = {};
+            if (self.log && self.log.fields && self.log.fields.req_id) {
+                headers['x-request-id'] = self.log.fields.req_id;
+            }
             this._client = imgapi.createClient({
                 url: self.normUrl,
                 version: '~2',
+                headers: headers,
                 log: self.log,
                 rejectUnauthorized: (opts.insecure !== undefined ?
                     opts.insecure : process.env.IMGADM_INSECURE !== '1'),

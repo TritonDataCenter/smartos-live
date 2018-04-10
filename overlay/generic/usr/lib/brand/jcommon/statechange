@@ -794,27 +794,76 @@ cleanup_mount()
 	    id_gz_sockholder /var/run/.smartdc-amon.sock
 }
 
+function fix_forced_attrs {
+	typeset attr
+
+	for attr in ${!FORCED_ATTRS[@]}; do
+		typeset nval=${FORCED_ATTRS["$attr"]}
+		typeset -n envvar=_ZONECFG_attr_${attr//-/_}
+		typeset cval=$envvar
+
+		if [[ $cval == $nval ]]; then
+			# In most cases, $nval and $cval will be the same and
+			# nothing needs to be done. This includes the case where
+			# $nval and $cval are "".
+			continue
+		elif [[ -z $nval ]]; then
+			logger -p daemon.error "[zone $ZONENAME]" \
+			    "Illegal value for attr '$attr': '$cval'." \
+			    "Removing attr '$attr'"
+			zonecfg -z "$ZONENAME" "remove -F attr name=$attr"
+
+			unset ${!envvar}
+		else
+			logger -p daemon.error "[zone $ZONENAME]" \
+			    "Illegal value for attr '$attr': '$cval'." \
+			    "Setting to '$nval'"
+			zonecfg -z "$ZONENAME" "remove -F attr name=$attr;" \
+			    "add attr; set type=string;" \
+			    "set name=$attr; set value=\"$nval\"; end;"
+
+			export ${!envvar}="$nval"
+		fi
+	done
+}
+
 #
 # Main
 #
 
-[[ "$subcommand" == "pre" && $cmd == 0 ]] && setup_fs
-if [[ "$subcommand" == "post" && $cmd == 0 ]]; then
-	[[ -n "$jst_showsnap" ]] && setup_snapshots
-	setup_net
-	setup_fw
-fi
-
-# We can't set a rctl until we have a process in the zone to grab
-[[ "$subcommand" == "post" && $cmd == 1 ]] && setup_cpu_baseline
-
-# Zone halt is hung unmounting, try to recover
-[[ "$subcommand" == "post" && $state == 6 && $cmd == 8 ]] && \
-    cleanup_mount "$6"
-
-if [[ "$subcommand" == "pre" && $cmd == 4 ]]; then
-	[[ -n "$jst_snowsnap" ]] && cleanup_snapshots
-	cleanup_net
-fi
+case $subcommand in
+pre)
+	case $cmd in
+	0)	# pre-ready
+		fix_forced_attrs
+		setup_fs
+		;;
+	4)	# pre-halt
+		[[ -n "$jst_snowsnap" ]] && cleanup_snapshots
+		cleanup_net
+		;;
+	esac
+	;;
+post)
+	case $cmd in
+	0)	# post-ready
+		[[ -n "$jst_showsnap" ]] && setup_snapshots
+		setup_net
+		setup_fw
+		;;
+	1)	# post-boot
+		# We can't set a rctl until we have a process in the zone to
+		# grab
+		setup_cpu_baseline
+		;;
+	8)	# post-unmount
+		# Zone halt is hung unmounting, try to recover
+		if [[ $state == 6 ]]; then
+			cleanup_mount "$6"
+		fi
+		;;
+	esac
+	;;
+esac
 
 exit 0

@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright (c) 2014 Joyent, Inc.  All rights reserved.
+# Copyright (c) 2018 Joyent, Inc.  All rights reserved.
 #
 
 # Do we support vrrp?
@@ -31,5 +31,11 @@ jst_showsnap="yes"
 
 # Where does the mdata socket live?
 jst_mdatapath="/native/.zonecontrol/"
+
+# Ensure docker zfd(7D) log is not put in the wrong place
+if [[ "$_ZONECFG_attr_docker" == true ]]; then
+	typeset -A FORCED_ATTRS
+	FORCED_ATTRS["zlog-name"]=
+fi
 
 . /usr/lib/brand/jcommon/statechange

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /*
  * CDDL HEADER START
  *
@@ -1106,8 +1107,10 @@ test('test log archiving', function (t) {
         }, function (cb) {
             var log_dir = '/zones/' + state.uuid + '/logs';
 
-            // ensure we have 2 log files now
+            // Ensure we have 2 "stdio.log*" files now.
             fs.readdir(log_dir, function (err, files) {
+                files = files.filter(
+                    function (f) { return f.indexOf('stdio.log') === 0; });
                 t.ok(files.length === 2, 'vm logs: ' + JSON.stringify(files));
                 cb();
             });

@@ -4099,9 +4099,16 @@ IMGADM.prototype.publishImage = function publishImage(opts, callback) {
         'options.manifestFile.files[0].compression');
     var self = this;
 
+    // Set x-request-id on all IMGAPI calls.
+    var headers = {};
+    if (self.log && self.log.fields && self.log.fields.req_id) {
+        headers['x-request-id'] = self.log.fields.req_id;
+    }
+
     var client = imgapi.createClient({
         agent: false,
         url: opts.url,
+        headers: headers,
         log: self.log.child({component: 'api', url: opts.url}, true),
         rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
         userAgent: self.userAgent

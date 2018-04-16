@@ -59,7 +59,7 @@ function usage() {
         '',
         'Commands',
         '  ping               get vminfod ping     (GET /ping)',
-        '  status [-f]        get vminfod status   (GET /status)',
+        '  status [-jf]       get vminfod status   (GET /status)',
         '  vms                get all vms          (GET /vms)',
         '  vm <uuid>          get vm info          (GET /vms/:uuid)',
         '  events [-jfr]      trace vminfod events (GET /events)'
@@ -87,18 +87,22 @@ function do_ping(args) {
 
 function do_status(args) {
     var opts = [
-        'f(full)'
+        'f(full)',
+        'j(json)'
     ].join('');
     var parser = new getopt.BasicParser(opts, args);
 
-    opts = {};
+    var opt_f = false;
+    var opt_j = false;
 
     var option;
     while ((option = parser.getopt())) {
         switch (option.option) {
         case 'f':
-            opts.query = opts.query || {};
-            opts.query.full = true;
+            opt_f = true;
+            break;
+        case 'j':
+            opt_j = true;
             break;
         default:
             usage();
@@ -107,7 +111,17 @@ function do_status(args) {
         }
     }
 
+    opts = {};
+    if (opt_f) {
+        opts.query = {
+            full: true
+        };
+    }
+
     client.status(opts, function vminfodStatusDone(err, msg) {
+        var output = [];
+        var evls;
+
         if (err) {
             console.error(err.message);
             process.exit(1);
@@ -115,7 +129,66 @@ function do_status(args) {
 
         assert.object(msg, 'msg');
 
-        console.log(JSON.stringify(msg, null, 2));
+        if (opt_j) {
+            console.log(JSON.stringify(msg, null, 2));
+            return;
+        }
+
+        // format the status object for output
+        output.push(f('state: %s (%s)', msg.state, msg.status));
+        output.push(f('pid: %d', msg.pid));
+        output.push(f('uptime: %s', msg.uptime));
+        output.push(f('rss: %smb', (msg.memory.rss / 1024 / 1024).toFixed(2)));
+        output.push(f('numVms: %d', msg.numVms));
+
+        output.push('queue');
+        output.push(f('  paused: %s', msg.queue.paused));
+        output.push(f('  idle: %s', msg.queue.idle));
+        output.push(f('  npending: %d', msg.queue.vasync_queue.npending));
+        output.push(f('  nqueued: %d', msg.queue.vasync_queue.nqueued));
+
+        output.push('fullRefresh');
+        output.push(f('  lastRefresh: %s', msg.lastRefresh));
+
+        if (msg.refreshErrors.length > 0) {
+            output.push(f('  refreshErrors: (%d items)'),
+                msg.refreshErrors.length);
+            msg.refreshErrors.forEach(function forEachRefreshError(o) {
+                output.push(f('    - %s (%s)', o.err, o.ago));
+            });
+        }
+
+        // included with full=true
+        if (msg.refreshLog && msg.refreshLog.length > 0) {
+            output.push(f('  refreshLog: (%d items)'), msg.refreshLog.length);
+            msg.refreshLog.forEach(function forEachRefreshLog(o) {
+                output.push(f('    - %d cacheChanges / %d vmChanges (%s ago)',
+                    o.cacheChanges.length, o.vmChanges.length, o.endedAgo));
+            });
+        }
+
+        // included with full=true
+        if (msg.fswatcher) {
+            output.push('fswatcher');
+            output.push(f('  running: %s', msg.fswatcher.running));
+            output.push(f('  pid: %d', msg.fswatcher.watcher_pid));
+            output.push(f('  watching: %d', msg.fswatcher.watching.length));
+            output.push(f('  tryingToWatch: %d',
+                msg.fswatcher.not_yet_watching.length));
+            output.push(f('  pendingActions: %d',
+                Object.keys(msg.fswatcher.pending_actions).length));
+        }
+
+        evls = Object.keys(msg.eventsListeners);
+        output.push(f('eventsListeners: (%d listeners)', evls.length));
+        evls.forEach(function forEachEvLs(uuid) {
+            var el = msg.eventsListeners[uuid];
+            output.push(f('  - %s', el.userAgent));
+            output.push(f('    %s created %s ago', uuid, el.createdAgo));
+            output.push('');
+        });
+
+        console.log(output.join('\n'));
     });
 }
 

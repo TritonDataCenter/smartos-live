@@ -160,9 +160,9 @@ function do_status(args) {
 
         // included with full=true
         if (msg.refreshLog && msg.refreshLog.length > 0) {
-            output.push(f('  refreshLog: (%d items)'), msg.refreshLog.length);
+            output.push(f('  refreshLog: (%d items)', msg.refreshLog.length));
             msg.refreshLog.forEach(function forEachRefreshLog(o) {
-                output.push(f('    - %d cacheChanges / %d vmChanges (%s ago)',
+                output.push(f('    - %d cacheChanges / %d vmChanges - %s ago',
                     o.cacheChanges.length, o.vmChanges.length, o.endedAgo));
             });
         }

@@ -24,7 +24,7 @@ var DO_NOT_CLEANUP_VMS = false;
 var INVALID_DEST = 'Invalid route destination: "%s" '
     + '(must be IP address or CIDR)';
 var INVALID_GW = 'Invalid route gateway: "%s" '
-    + '(must be IP address or nic)';
+    + '(must be IP address, MAC address, or nic)';
 var INVALID_NIC = 'Route gateway: "%s" '
     + 'refers to non-existent or DHCP nic';
 var INVALID_VAL = 'Invalid value(s) for: %s';
@@ -378,6 +378,11 @@ var failures = [
         { routes: { '10.2.0.0/24': 'asdf' } }
     ],
 
+    [ 'gateway: invalid mac',
+        format(INVALID_GW, 'macs[asdf]'),
+        { routes: { '10.2.0.0/24': 'macs[asdf]' } }
+    ],
+
     [ 'gateway: CIDR',
         format(INVALID_GW, '10.2.0.0/24'),
         { routes: { '10.2.0.0/24': '10.2.0.0/24' } }
@@ -405,6 +410,27 @@ var failures = [
         format(INVALID_NIC, 'nics[0]'),
         {
             routes: { '10.2.0.0/24': 'nics[0]' },
+            nics: [ { nic_tag: 'admin', ip: 'dhcp' } ]
+        }
+    ],
+
+    [ 'gateway nic by mac: no nics',
+        format(INVALID_NIC, 'macs[aa:bb:cc:dd:ee:ff]'),
+        { routes: { '10.2.0.0/24': 'macs[aa:bb:cc:dd:ee:ff]' } }
+    ],
+
+    [ 'gateway nic by mac: nic with mac not present',
+        format(INVALID_NIC, 'macs[aa:bb:cc:dd:ee:ff]'),
+        {
+            routes: { '10.2.0.0/24': 'macs[aa:bb:cc:dd:ee:ff]' },
+            nics: [ { nic_tag: 'admin', ip: 'dhcp' } ]
+        }
+    ],
+
+    [ 'gateway nic by mac: dhcp nic',
+        format(INVALID_NIC, 'macs[aa:bb:cc:dd:ee:ff]'),
+        {
+            routes: { '10.2.0.0/24': 'macs[aa:bb:cc:dd:ee:ff]' },
             nics: [ { nic_tag: 'admin', ip: 'dhcp' } ]
         }
     ],
@@ -461,29 +487,34 @@ test('update routes and resolvers', function(t) {
     // Routes controlled by vmadm:
     var vmadmRoutes = {
         '172.21.1.1': '172.20.1.2',     // nics[1].ip
-        '172.22.2.0/24': '172.19.1.1'
+        '172.22.2.0/24': '172.19.1.1',
+        '172.23.3.0/24': '172.19.1.2'   // nics[1].ip determined by mac addr
     };
     // Kernel's routing table for the zone:
     var routingTable = {
-        '172.19.1.0': '172.19.1.2',     // nics[1] local subnet route
-        '172.20.1.0': '172.20.1.2',     // nics[2] local subnet route
+        '172.19.1.0': '172.19.1.2',     // nics[0] local subnet route
+        '172.20.1.0': '172.20.1.2',     // nics[1] local subnet route
         '172.21.1.1': '172.20.1.2',
-        '172.22.2.0': '172.19.1.1'
+        '172.22.2.0': '172.19.1.1',
+        '172.23.3.0': '172.19.1.2'
     };
     var oldResolvers;
     var resolvers = [ '172.21.1.1' ];
     var routes = {
         '172.21.1.1': 'nics[1]',
-        '172.22.2.0/24': '172.19.1.1'
+        '172.22.2.0/24': '172.19.1.1',
+        '172.23.3.0/24': 'macs[aa:bb:cc:12:34:56]'
     };
     var newPayload = {
         nics: [
             { nic_tag: 'admin',
               ip: '172.19.1.2',
-              netmask: '255.255.255.0' },
+              netmask: '255.255.255.0',
+              mac: 'aa:bb:cc:12:34:56' },
             { nic_tag: 'admin',
               ip: '172.20.1.2',
-              netmask: '255.255.255.0' },
+              netmask: '255.255.255.0',
+              mac: 'aa:bb:cc:12:34:57' },
         ],
         maintain_resolvers: true,
         nowait: false,
@@ -846,6 +877,7 @@ test('update routes and resolvers', function(t) {
             }
 
             delete routingTable['172.22.3.0'];
+            delete routingTable['172.23.3.0'];
             updateVM(t, state, updatePayload, 'update 8', cb);
         },
 

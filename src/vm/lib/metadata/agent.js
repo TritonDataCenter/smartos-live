@@ -142,6 +142,7 @@ var bunyan = require('/usr/vm/node_modules/bunyan');
 var common = require('./common');
 var crc32 = require('./crc32');
 var fs = require('fs');
+var macaddr = require('/usr/vm/node_modules/macaddr');
 var net = require('net');
 var path = require('path');
 var VM = require('/usr/vm/node_modules/VM');
@@ -948,32 +949,84 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
                     var vmRoutes = [];
 
-                    // The notes above about resolvers also apply to routes.
-                    // It's here solely for the use of mdata-fetch, and we need
+                    // The notes above about resolvers also to routes. It's
+                    // here solely for the use of mdata-fetch, and we need
                     // to do the updateZone here so that we have latest
                     // data.
                     for (var r in vmobj.routes) {
+                        var gateway;
+                        var foundNic = null;
                         var route = { linklocal: false, dst: r };
-                        var nicIdx = vmobj.routes[r].match(/nics\[(\d+)\]/);
-                        if (!nicIdx) {
+                        var mac;
+                        var macMatch = vmobj.routes[r]
+                            .match(/^macs\[(.+)\]$/);
+                        var nicMac;
+                        var nicIdx = vmobj.routes[r]
+                            .match(/^nics\[(\d+)\]$/);
+
+                        if (!nicIdx && !macMatch) {
                             // Non link-local route: we have all the
                             // information we need already
                             route.gateway = vmobj.routes[r];
                             vmRoutes.push(route);
                             continue;
                         }
-                        nicIdx = Number(nicIdx[1]);
 
-                        // Link-local route: we need the IP of the local nic
-                        if (!vmobj.hasOwnProperty('nics')
-                            || !vmobj.nics[nicIdx]
-                            || !vmobj.nics[nicIdx].hasOwnProperty('ip')
-                            || vmobj.nics[nicIdx].ip === 'dhcp') {
+                        if (macMatch) {
+                            try {
+                                mac = macaddr.parse(macMatch[1]);
+                            } catch (parseErr) {
+                                zlog.warn(parseErr, 'failed to parse mac'
+                                    + ' addr');
+                                continue;
+                            }
 
-                            continue;
+                            if (!vmobj.hasOwnProperty('nics'))
+                                continue;
+
+                            // Link-local route: we need the IP of the
+                            // local nic with the provided mac address
+                            for (var i = 0; i < vmobj.nics.length; i++) {
+                                try {
+                                    nicMac = macaddr.parse(vmobj.nics[i]
+                                        .mac);
+                                } catch (parseErr) {
+                                    zlog.warn(parseErr, 'failed to parse'
+                                        + ' nic mac addr');
+                                    continue;
+                                }
+                                if (nicMac.compare(mac) === 0) {
+                                    foundNic = vmobj.nics[i];
+                                    break;
+                                }
+                            }
+
+                            if (!foundNic || !foundNic.hasOwnProperty('ip')
+                                || foundNic.ip === 'dhcp') {
+
+                                continue;
+                            }
+
+                            gateway = foundNic.ip;
+
+                        } else {
+                            nicIdx = Number(nicIdx[1]);
+
+                            // Link-local route: we need the IP of the
+                            // local nic
+                            if (!vmobj.hasOwnProperty('nics')
+                                || !vmobj.nics[nicIdx]
+                                || !vmobj.nics[nicIdx].hasOwnProperty('ip')
+                                || vmobj.nics[nicIdx].ip === 'dhcp') {
+
+                                continue;
+                            }
+
+                            gateway = vmobj.nics[nicIdx].ip;
                         }
 
-                        route.gateway = vmobj.nics[nicIdx].ip;
+                        assert.string(gateway, 'gateway');
+                        route.gateway = gateway;
                         route.linklocal = true;
                         vmRoutes.push(route);
                     }

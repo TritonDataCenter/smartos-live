@@ -12,6 +12,22 @@ require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
+var payload_invalid_mac = {
+    alias: 'test-create-' + process.pid,
+    autoboot: false,
+    brand: 'joyent-minimal',
+    do_not_inventory: true,
+    nics: [
+        {
+            nic_tag: 'admin',
+            ip: '10.99.99.12',
+            mac: 'aa:bb:cc:dd:ee:ff:12',
+            gateway: '10.99.99.1',
+            netmask: '255.255.255.0'
+        }
+    ]
+};
+
 var payload_invalid_ip = {
     alias: 'test-create-' + process.pid,
     autoboot: false,
@@ -252,6 +268,17 @@ test('test create with IPv4 and IPv6 autoconfiguration', function (t) {
     ], function (err) {
         t.end();
     });
+});
+
+test('test create with invalid mac address', function (t) {
+    var p = JSON.parse(JSON.stringify(payload_invalid_mac));
+    var state = {brand: p.brand, expect_create_failure: true};
+
+    vmtest.on_new_vm(t, vmtest.CURRENT_SMARTOS_UUID, p, state, [],
+        function (err) {
+            t.end();
+        }
+    );
 });
 
 test('test create with invalid IP', function (t) {

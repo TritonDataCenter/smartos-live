@@ -1725,21 +1725,25 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     routes:
 
-        This is a key-value object that maps destinations to gateways. These
-        will be set as static routes in the VM. The destinations can be either
-        IPs or subnets in CIDR form. The gateways can either be IP addresses, or
-        can be of the form "nics[0]", which specifies a link-local route on the
-        numbered nic in that VM's nics array (the first nic is 0).  As an
-        example:
+	This is a key-value object that maps destinations to gateways. These
+	will be set as static routes in the VM. The destinations can be either
+	IPs or subnets in CIDR form. The gateways can either be IP addresses,
+	or can be of the form "nics[0]" or "macs[aa:bb:cc:12:34:56]". Using
+	nics[] or macs[] specifies a link-local route. When using nics[] the IP
+	of the numbered nic in that VM's nics array (the first nic is 0) is
+	used. When using macs[] the IP of the nic with the matching mac address
+	in that VM's nic array is used. As an example:
 
             {
                 "10.2.2.0/24": "10.2.1.1",
-                "10.3.0.1": "nics[1]"
+                "10.3.0.1": "nics[1]",
+                "10.4.0.1": "macs[aa:bb:cc:12:34:56]"
             }
 
-        This sets two static routes: to the 10.2.2.0/24 subnet with a gateway
-        of 10.2.1.1, and a link-local route to the host 10.3.0.1 over the VM's
-        second nic.
+	This sets three static routes: to the 10.2.2.0/24 subnet with a gateway
+	of 10.2.1.1, a link-local route to the host 10.3.0.1 over the VM's
+	second nic, and a link-local route to the host 10.4.0.1 over the VM's
+	nic with the corresponding mac address.
 
         type: object
         vmtype: OS

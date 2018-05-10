@@ -501,7 +501,7 @@ function handleProvisioning(vmobj, cb)
             'zonepath'
         ];
 
-        if (vmobj.brand === 'kvm') {
+        if (['bhyve', 'kvm'].indexOf(vmobj.brand) !== -1) {
             // reload the VM to see if we should setup VNC, etc.
             VM.load(vmobj.uuid, {fields: load_fields},
                 function (load_err, obj) {
@@ -517,7 +517,9 @@ function handleProvisioning(vmobj, cb)
                     // clear any old timers or VNC/SPICE since this vm just came
                     // up (state was provisioning), then spin up a new VNC.
                     clearVM(obj.uuid);
-                    rotateKVMLog(vmobj.uuid);
+                    if (vmobj.brand === 'kvm') {
+                        rotateKVMLog(vmobj.uuid);
+                    }
                     spawnRemoteDisplay(obj);
                 }
                 cb(null, 'success');
@@ -1123,10 +1125,11 @@ function updateZoneStatus(ev)
             seen_vms[ev.zonename].provisioned = true;
         }
 
-        // don't handle transitions other than provisioning for non-kvm
-        if (vmobj.brand !== 'kvm') {
+        // don't handle transitions other than provisioning for non-kvm/bhyve
+        if (['bhyve', 'kvm'].indexOf(vmobj.brand) !== -1) {
             log.trace('doing nothing for ' + ev.zonename + ' transition '
-                + 'because brand is not "kvm"');
+                + 'because brand "' + vmobj.brand
+                + '" is not "kvm" or "bhyve"');
             return;
         }
 
@@ -1134,7 +1137,9 @@ function updateZoneStatus(ev)
             // clear any old timers or VNC/SPICE since this vm just came
             // up, then spin up a new VNC.
             clearVM(vmobj.uuid);
-            rotateKVMLog(vmobj.uuid);
+            if (vmobj.brand === 'kvm') {
+                rotateKVMLog(vmobj.uuid);
+            }
             spawnRemoteDisplay(vmobj);
         } else if (ev.oldstate === 'running') {
             if (VNC.hasOwnProperty(ev.zonename)) {
@@ -2508,7 +2513,8 @@ function main()
                                     + result);
                                 upg_cb();
                             });
-                        } else if (vmobj.brand === 'kvm') {
+                        } else if (['bhyve', 'kvm'].
+                                indexOf(vmobj.brand) !== -1) {
                             log.debug('calling loadVM(' + vmobj.uuid + ')');
                             loadVM(vmobj, do_autoboot);
                             upg_cb();

@@ -333,10 +333,7 @@ function parseStartArgs(args)
                 if (!model || !p || p.length === 0 || model.length === 0) {
                     usage('Parameter to ' + key + ' must be: path,model');
                 }
-                if (VM.DISK_MODELS.indexOf(model) === -1) {
-                    usage('Invalid model "' + model + '": model must be one '
-                        + 'of: ' + VM.DISK_MODELS.join(','));
-                }
+                // model is now checked in startVM from VM.js
                 if (!extra.disks) {
                     extra.disks = [];
                 }

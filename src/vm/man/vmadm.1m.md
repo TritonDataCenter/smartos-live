@@ -904,7 +904,8 @@ tab-complete UUIDs rather than having to type them out for every command.
         use virtio. If not, use ide or scsi depending on the drivers in your
         guest.
 
-        type: string (one of ['virtio','ide','scsi'])
+        type: string (KVM: one of ['virtio','ide','scsi'])
+                     (BHYVE: one of ['virtio','ahci'])
         vmtype: KVM
         listable: yes (see above)
         create: yes

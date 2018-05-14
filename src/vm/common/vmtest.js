@@ -59,6 +59,8 @@ exports.CURRENT_UBUNTU_NAME = 'ubuntu-10.04';
 exports.CURRENT_UBUNTU_SIZE = 5120;
 exports.CURRENT_UBUNTU_UUID = '71101322-43a5-11e1-8f01-cf2a3031a7f4';
 
+// centos-bhyve-7
+exports.CURRENT_BHYVE_CENTOS_UUID = '462d1d03-8457-e134-a408-cf9ea2b9be96';
 
 exports.on_new_vm = function(t, uuid, payload, state, fnlist, callback)
 {

@@ -36,6 +36,7 @@ f etc/opasswd 0644 root sys
 f etc/ouser_attr 0644 root sys
 f etc/passwd 0644 root sys
 f etc/path_to_inst 0444 root root
+f etc/ppt_matches 0444 root root
 f etc/profile 0644 root sys
 f etc/resolv.conf 0644 netadm netadm
 f etc/rtc_config 0644 root root

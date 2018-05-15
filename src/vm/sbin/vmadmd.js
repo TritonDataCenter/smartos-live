@@ -1126,7 +1126,7 @@ function updateZoneStatus(ev)
         }
 
         // don't handle transitions other than provisioning for non-kvm/bhyve
-        if (['bhyve', 'kvm'].indexOf(vmobj.brand) !== -1) {
+        if (['bhyve', 'kvm'].indexOf(vmobj.brand) === -1) {
             log.trace('doing nothing for ' + ev.zonename + ' transition '
                 + 'because brand "' + vmobj.brand
                 + '" is not "kvm" or "bhyve"');

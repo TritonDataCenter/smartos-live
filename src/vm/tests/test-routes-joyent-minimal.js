@@ -598,6 +598,34 @@ test('update routes and resolvers', function(t) {
         },
 
         function (cb) {
+            cp.execFile('/bin/cat',
+                [ '/' + vm.zfs_filesystem + '/config/routes.json' ],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
+            cp.execFile('zlogin', [vm.zonename, '/usr/bin/netstat', '-rn'],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
             validateZoneData(t, vm, {
                 desc: 'update 1',
                 resolvers: resolvers,
@@ -652,6 +680,34 @@ test('update routes and resolvers', function(t) {
         },
 
         function (cb) {
+            cp.execFile('/bin/cat',
+                [ '/' + vm.zfs_filesystem + '/config/routes.json' ],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
+            cp.execFile('zlogin', [vm.zonename, '/usr/bin/netstat', '-rn'],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
             validateZoneData(t, vm, {
                 desc: 'update 2',
                 resolvers: resolvers,
@@ -686,6 +742,34 @@ test('update routes and resolvers', function(t) {
 
                 cb(err);
             });
+        },
+
+        function (cb) {
+            cp.execFile('/bin/cat',
+                [ '/' + vm.zfs_filesystem + '/config/routes.json' ],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
+            cp.execFile('zlogin', [vm.zonename, '/usr/bin/netstat', '-rn'],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
         },
 
         function (cb) {
@@ -724,6 +808,33 @@ test('update routes and resolvers', function(t) {
             });
         },
 
+        function (cb) {
+            cp.execFile('/bin/cat',
+                [ '/' + vm.zfs_filesystem + '/config/routes.json' ],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
+            cp.execFile('zlogin', [vm.zonename, '/usr/bin/netstat', '-rn'],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
         function (cb) {
             // This is delayed from update 2 above - we removed the nic
             // (and therefore its route), but the nic won't be really
@@ -764,6 +875,34 @@ test('update routes and resolvers', function(t) {
         },
 
         function (cb) {
+            cp.execFile('/bin/cat',
+                [ '/' + vm.zfs_filesystem + '/config/routes.json' ],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
+            cp.execFile('zlogin', [vm.zonename, '/usr/bin/netstat', '-rn'],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
             // Confirm that the route was applied
             routingTable['172.22.4.0'] = '172.19.1.253';
             inZoneRoutes['172.22.4.0/24'] = '172.19.1.253';
@@ -792,6 +931,33 @@ test('update routes and resolvers', function(t) {
         },
 
         function (cb) {
+            cp.execFile('/bin/cat',
+                [ '/' + vm.zfs_filesystem + '/config/routes.json' ],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
+            cp.execFile('zlogin', [vm.zonename, '/usr/bin/netstat', '-rn'],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+        function (cb) {
             validateZoneData(t, vm, {
                 desc: 'update 5',
                 resolvers: resolvers,
@@ -814,6 +980,34 @@ test('update routes and resolvers', function(t) {
         },
 
         function (cb) {
+            cp.execFile('/bin/cat',
+                [ '/' + vm.zfs_filesystem + '/config/routes.json' ],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
+            cp.execFile('zlogin', [vm.zonename, '/usr/bin/netstat', '-rn'],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
             routingTable['172.22.5.0'] = '172.19.1.253';
             vmadmRoutes['172.22.5.0/24'] = '172.19.1.253';
 
@@ -829,6 +1023,34 @@ test('update routes and resolvers', function(t) {
         function (cb) {
             // Add the same route inside the VM
             runRouteCmd(t, state.uuid, '-p add 172.22.5.0/24 172.19.1.253', cb);
+        },
+
+        function (cb) {
+            cp.execFile('/bin/cat',
+                [ '/' + vm.zfs_filesystem + '/config/routes.json' ],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
+            cp.execFile('zlogin', [vm.zonename, '/usr/bin/netstat', '-rn'],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
         },
 
         function (cb) {
@@ -852,6 +1074,34 @@ test('update routes and resolvers', function(t) {
             };
 
             updateVM(t, state, updatePayload, 'update 7', cb);
+        },
+
+        function (cb) {
+            cp.execFile('/bin/cat',
+                [ '/' + vm.zfs_filesystem + '/config/routes.json' ],
+                function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
+        },
+
+        function (cb) {
+            cp.execFile('zlogin', [vm.zonename, '/usr/bin/netstat',
+                '-rn'], function (err, stdout, stderr) {
+                    if (err) {
+                        cb(err);
+                        return;
+                    }
+
+                    console.log(stdout);
+                    cb(null);
+                }
+            );
         },
 
         function (cb) {

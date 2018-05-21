@@ -75,6 +75,53 @@ DEFAULT_MTU=1500
 # o jst_mdatapath - The path the metadata socket is expected in the zone
 #
 
+lockdir=/var/run
+function lock_enter {
+	typeset lockname=$1
+	typeset lock=$lockdir/$lockname
+	typeset target=/proc/$$
+
+	if [[ -z $lockname || $lockname == */* ]]; then
+		print -u2 "ERROR: invalid lock '$lockname'"
+		exit 1
+	fi
+	if [[ $lock -ef $target ]]; then
+		print -u2 "ERROR: recursive lock by pid $$"
+		exit 1
+	fi
+
+	while ! ln -s "$target" "$lock" >/dev/null 2>&1; do
+		if [[ -d $lock ]]; then
+			# Process holding the lock still exists
+			sleep 0.1
+			continue
+		fi
+
+		# Lock recovery.  A little race here.  Only encountered if
+		# a lock is abandoned.
+		typeset prev=$(ls -l "$lock" | nawk -F/ '{print $NF}')
+		print -u2 "WARNING: recovering lock $lock (abandoned by $prev)"
+		rm -f "$lock"
+	done
+}
+
+function lock_exit {
+	typeset lockname=$1
+	typeset lock=$lockdir/$lockname
+	typeset target=/proc/$$
+
+	if [[ -z $lockname || $lockname == */* ]]; then
+		print -u2 "ERROR: invalid lock '$lockname'"
+		exit 1
+	fi
+	if ! [[ $lock -ef $target ]]; then
+		print -u2 "ERROR: lock '$lockname' not held by pid $$"
+		exit 1
+	fi
+
+	rm -f "$lock"
+}
+
 get_boolean_nic_property()
 {
 	bool_val=$(eval echo \$_ZONECFG_net_${1}_${2})
@@ -264,6 +311,7 @@ setup_net()
 		# it already exist?
 		#
 		if [[ -n "$isoverlay" ]]; then
+			lock_enter ovlock
 			if ! dladm show-overlay $global_nic 2>/dev/null; then
 				dladm create-overlay $rule -v $num $global_nic
 				if [[ $? -ne 0 ]]; then
@@ -272,9 +320,11 @@ setup_net()
 					     "$global_nic with command " \
 					     "'dladm create-overlay $rule -v " \
 					     "$num $global_nic"
+					lock_exit ovlock
 					exit 1
 				fi
 			fi
+			lock_exit ovlock
 		fi
 
 

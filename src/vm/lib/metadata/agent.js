@@ -936,6 +936,7 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     self.zoneConnections[zopts.zone] = {
         conn: {}, // placeholder so we don't overwrite if we're called again
         connectsRefused: 0,
+        connectsMissing: 0,
         sockpath: zopts.sockpath
     };
 
@@ -954,6 +955,7 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
             fd = kvmstream._handle.fd;
             zlog.info({
                 conn_refused: self.zoneConnections[zopts.zone].connectsRefused,
+                conn_missing: self.zoneConnections[zopts.zone].connectsMissing,
                 zonename: zopts.zone
             }, 'listening on fd %d', fd);
             self.zoneConnections[zopts.zone].fd = fd;
@@ -975,15 +977,15 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
 
         kvmstream.on('error', function (e) {
             var level = 'warn';
-            var refused = self.zoneConnections[zopts.zone].connectsRefused;
 
             if (e.code === 'ECONNREFUSED') {
+                var refused = self.zoneConnections[zopts.zone].connectsRefused;
                 level = 'trace';
 
-                // Our connection was refused by Qemu, presumably because Qemu
-                // is still starting up and we're early. Try again and set a
-                // handle to our retry timer so it can be cancelled if the zone
-                // is stopped.
+                // Our connection was refused by Qemu or bhyve, presumably
+                // because it is still starting up and we're early. Try again
+                // and set a handle to our retry timer so it can be cancelled if
+                // the zone is stopped.
                 //
                 // We log every Xth retry after the first so that we don't
                 // completely spam the log.
@@ -1000,6 +1002,31 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
                     KVM_CONNECT_RETRY_INTERVAL);
 
                 self.zoneConnections[zopts.zone].connectsRefused++;
+            } else if (e.code === 'ENOENT') {
+                var missing = self.zoneConnections[zopts.zone].connectsMissing;
+                level = 'trace';
+
+                // The connection failed because the socket is missing.  This
+                // could be due to the socket having not been created the first
+                // time or because qemu or bhyve is replacing a stale socket
+                // with unlink() then bind().  Try again and set a handle to our
+                // retry timer so it can be cancelled if the zone is stopped.
+                //
+                // We log every Xth retry after the first so that we don't
+                // completely spam the log.
+                if (missing > 0
+                    && (missing % KVM_CONNECT_RETRY_LOG_FREQUENCY) === 0) {
+
+                    zlog.info({
+                        conn_missing: missing,
+                        last_errcode: e.code,
+                        retry_interval: KVM_CONNECT_RETRY_INTERVAL
+                    }, 'KVM socket missing, still retrying');
+                }
+                self.zoneKvmReconnTimers[zopts.zone] = setTimeout(_tryConnect,
+                    KVM_CONNECT_RETRY_INTERVAL);
+
+                self.zoneConnections[zopts.zone].connectsMissing++;
             }
 
             zlog[level]({err: e}, 'KVM Socket error: ' + e.message);

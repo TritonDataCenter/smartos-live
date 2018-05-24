@@ -66,6 +66,13 @@ for img in $(comm -1 -3 <(eval ${installed_images}) <(eval ${want_images})); do
             && curl -kO ${MANTA_PATH}/${img}.manifest \
             && imgadm install -f ${img}.file -m ${img}.manifest \
             && rm -f ${img}.file ${img}.manifest)
+    elif [[ ${img} == "462d1d03-8457-e134-a408-cf9ea2b9be96" ]]; then
+        # To be removed by IMAGE-1116
+        MANTA_PATH="https://us-east.manta.joyent.com/Joyent_Dev/public/bhyve/images/$img"
+        (cd /var/tmp && curl -kO "${MANTA_PATH}/manifest.json" \
+            && curl -kO "${MANTA_PATH}/disk0.zfs.gz" \
+            && imgadm install -m manifest.json -f disk0.zfs.gz \
+            && rm -f manifest.json disk0.zfs.gz)
     else
         imgadm import "${img}"
     fi

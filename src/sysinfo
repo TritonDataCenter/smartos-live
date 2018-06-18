@@ -937,7 +937,7 @@ END
         ipv4_var="Virtual_Network_Interface_${iface}_IPv4_Address"
         link_status_var="Virtual_Network_Interface_${iface}_Link_Status"
         vlan_var="Virtual_Network_Interface_${iface}_VLAN"
-        parent_var="Virtual_Network_Interface_${iface}_Host_Interface"
+        host_var="Virtual_Network_Interface_${iface}_Host_Interface"
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"

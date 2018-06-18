@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2016 Joyent, Inc.
+# Copyright (c) 2017, Joyent, Inc.
 #
 
 ROOT =		$(PWD)
@@ -59,6 +59,7 @@ CSTYLE =	$(ROOT)/tools/cstyle
 MANCHECK =	$(ROOT)/tools/mancheck/mancheck
 MANCF =		$(ROOT)/tools/mancf/mancf
 TZCHECK =	$(ROOT)/tools/tzcheck/tzcheck
+UCODECHECK =	$(ROOT)/tools/ucodecheck/ucodecheck
 
 CTFBINDIR = \
 	$(ROOT)/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386
@@ -114,6 +115,7 @@ TOOLS_TARGETS = \
 	$(MANCHECK) \
 	$(MANCF) \
 	$(TZCHECK) \
+	$(UCODECHECK) \
 	tools/cryptpass
 
 world: 0-extra-stamp 0-illumos-stamp 1-extra-stamp 0-livesrc-stamp \
@@ -124,9 +126,9 @@ live: world manifest mancheck_conf boot sdcman $(TOOLS_TARGETS) $(MANCF_FILE)
 	@echo $(OVERLAY_MANIFESTS)
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
-	(cd $(ROOT) && \
-	    pfexec ./tools/build_live $(ROOT)/$(MANIFEST) $(ROOT)/output \
-	    $(OVERLAYS) $(ROOT)/proto $(ROOT)/man/man)
+	ALTCTFCONVERT=$(ALTCTFCONVERT) ./tools/build_live \
+	    -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output $(OVERLAYS) $(ROOT)/proto \
+	    $(ROOT)/man/man
 
 boot: $(BOOT_TARBALL)
 
@@ -207,7 +209,8 @@ $(MCPROTO)/illumos.mancheck.conf: projects/illumos/mancheck.conf | $(MCPROTO)
 $(BOOT_MPROTO)/illumos.manifest: projects/illumos/manifest | $(BOOT_MPROTO)
 	cp projects/illumos/boot.manifest $(BOOT_MPROTO)/illumos.manifest
 
-$(MPROTO)/illumos-extra.manifest: 1-extra-stamp | $(MPROTO)
+$(MPROTO)/illumos-extra.manifest: 1-extra-stamp \
+    projects/illumos-extra/manifest | $(MPROTO)
 	gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest \
 	    -C projects/illumos-extra manifest; \
 
@@ -343,6 +346,10 @@ $(MANCHECK): 0-illumos-stamp
 .PHONY: $(TZCHECK)
 $(TZCHECK): 0-illumos-stamp
 	(cd tools/tzcheck && gmake tzcheck CC=$(NATIVE_CC) $(SUBDIR_DEFS))
+
+.PHONY: $(UCODECHECK)
+$(UCODECHECK): 0-illumos-stamp
+	(cd tools/ucodecheck && gmake ucodecheck CC=$(NATIVE_CC) $(SUBDIR_DEFS))
 
 .PHONY: sdcman
 sdcman:

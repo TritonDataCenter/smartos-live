@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -o errexit
+
 UNAME=$(uname -s)
 NODE=node
 TOP=$(unset CDPATH; cd $(dirname $0)/../; pwd)
@@ -12,7 +14,7 @@ fi
 function usage
 {
     echo "Usage:"
-    echo "  runtest [OPTIONS...]"
+    echo "  runtest [OPTIONS...] file"
     echo ""
     echo "Options:"
     echo "  -r REPORTER  Nodeunit test reporter to use (default is 'tap')."
@@ -37,6 +39,12 @@ do
             ;;
     esac
 done
+
+# Should have only one argument left.
+if [[ $OPTIND -ne $# ]]; then
+    usage
+    exit 1
+fi
 
 if [[ $UNAME == "SunOS" ]]; then
     echo "# Adding images.joyent.com as an imgadm source"

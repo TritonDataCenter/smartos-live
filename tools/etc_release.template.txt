@@ -1,0 +1,4 @@
+                      SmartOS %%VERSION%% x86_64
+                    Copyright (c) 2010-2017, Joyent, Inc.
+
+   Built with the following components:

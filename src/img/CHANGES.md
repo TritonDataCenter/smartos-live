@@ -3,8 +3,37 @@
 Known issues:
 
 - Docker image imports are experimental. Docker image import also only supports
-  Docker Registry v1, which is now deprecated.
+  Docker Registry v2.
 
+## 3.9.1
+
+- OS-5979 ensure imgadm uses the provided req_id
+
+## 3.9.0
+
+- TRITON-178 add support for image creation for bhyve VMs. Also includes a
+  change where created images for bhyve, lx and kvm will have requirements.brand
+  set to the brand of the source VM when creating an image.
+
+## 3.8.0
+
+- joyent/imgadm#644 Update imgadm to use newer docker-registry-client so it can
+  pull from v2 registries. Docker v1 registry pulls are no longer supported.
+
+## 3.7.4
+
+- DOCKER-1118 `imgadm create ...` will no longer set `requirements.min_platform`
+  to the current platform version for LX and Docker images. KVM images already
+  did not set `min_platform`. It is still set for SmartOS images.
+
+## 3.7.3
+
+- OS-6383 Fix a possible crash in 'imgadm import ...'.
+
+## 3.7.2
+
+- OS-6177 avoid checking content-md5 on imgadm import when a checksum exists on
+  image metadata
 
 ## 3.7.1
 

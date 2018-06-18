@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (c) 2016, Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  */
 
 /*
@@ -29,7 +29,7 @@
 #define DOCKER_COMMON_H
 
 #include <libnvpair.h>
-#include <libcmdutils.h>
+#include "custr.h"
 #include "../json-nvlist/json-nvlist.h"
 #include "strlist.h"
 
@@ -102,7 +102,8 @@ typedef enum {
     ERR_CONTRACT,
     ERR_MOUNT_DEVSHM,
     ERR_INVALID_NFS_VOLUMES,
-    ERR_MOUNT_NFS_VOLUME
+    ERR_MOUNT_NFS_VOLUME,
+    ERR_UNKNOWN_VOLUME_TYPE
 } dockerinit_err_t;
 
 typedef enum {

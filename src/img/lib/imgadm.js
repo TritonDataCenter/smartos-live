@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  * * *
  * The main imgadm functionality. The CLI is a light wrapper around this tool.
@@ -85,6 +85,7 @@ var upgrade = require('./upgrade');
 
 var CONFIG_PATH = DB_DIR + '/imgadm.conf';
 var DEFAULT_CONFIG = {};
+var SET_REQUIREMENTS_BRAND_BRANDS = ['bhyve', 'lx', 'kvm'];
 
 /* BEGIN JSSTYLED */
 var VMADM_FS_NAME_RE = /^([a-zA-Z][a-zA-Z\._-]*)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(-disk\d+)?$/;
@@ -1424,10 +1425,12 @@ IMGADM.prototype._downloadImageFile = function _downloadImageFile(opts, cb) {
             if (!zstream && opts.imgMeta.checksum) {
                 ctx.checksum = opts.imgMeta.checksum.split(':');
                 ctx.checksumHash = crypto.createHash(ctx.checksum[0]);
-            }
-            if (ctx.stream.headers['content-md5']) {
+                log.debug({uuid: uuid}, 'creating %s checksum hash',
+                    ctx.checksum[0]);
+            } else if (ctx.stream.headers['content-md5']) {
                 ctx.contentMd5 = ctx.stream.headers['content-md5'];
                 ctx.md5sumHash = crypto.createHash('md5');
+                log.debug({uuid: uuid}, 'creating content-md5 checksum hash');
             }
             ctx.stream.on('data', function (chunk) {
                 if (opts.bar)
@@ -1616,15 +1619,20 @@ IMGADM.prototype._importImage = function _importImage(opts, cb) {
             vasync.parallel({funcs: [
                 function loadInstalledImages(nextGather) {
                     TIME('loadImages');
-                    self._loadImages(function (err, imagesInfo) {
+                    self._loadImages(function onLoadImages(err, imagesInfo) {
                         TIME('loadImages');
+                        if (err) {
+                            nextGather(err);
+                            return;
+                        }
+
                         ctx.installedImageFromName = {};
                         for (var i = 0; i < imagesInfo.length; i++) {
                             var info = imagesInfo[i];
                             var name = info.zpool + '/' + info.manifest.uuid;
                             ctx.installedImageFromName[name] = info;
                         }
-                        nextGather(err);
+                        nextGather();
                     });
                 },
 
@@ -3303,6 +3311,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
     var maxOriginDepth = options.maxOriginDepth;
 
     var vmInfo;
+    var snapname = '@imgadm-create-pre-prepare';
     var sysinfo;
     var vmZfsFilesystemName;
     var vmZfsSnapnames;
@@ -3311,6 +3320,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
     var imageInfo = {};
     var finalSnapshot;
     var toCleanup = {};
+
     async.waterfall([
         function validateVm(next) {
             common.vmGet(vmUuid, {log: log}, function (err, vm) {
@@ -3330,7 +3340,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
         },
         function getVmInfo(next) {
             var opts;
-            if (vmInfo.brand === 'kvm') {
+            if (vmInfo.brand === 'kvm' || vmInfo.brand === 'bhyve') {
                 if (vmInfo.disks && vmInfo.disks[0]) {
                     var disk = vmInfo.disks[0];
                     vmZfsFilesystemName = disk.zfs_filesystem;
@@ -3413,7 +3423,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             );
         },
         function getSystemInfo(next) {
-            if (vmInfo.brand === 'kvm') {
+            if (vmInfo.brand === 'kvm' || vmInfo.brand === 'bhyve') {
                 next();
                 return;
             }
@@ -3454,7 +3464,7 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     }
                 });
             }
-            if (vmInfo.brand !== 'kvm' /* i.e. this is a smartos image */
+            if ((vmInfo.brand === 'joyent' || vmInfo.brand === 'joyent-minimal')
                 && !(options.manifest.requirements
                     && options.manifest.requirements.min_platform))
             {
@@ -3468,6 +3478,20 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                     = sysinfo['Live Image'];
                 log.debug({min_platform: m.requirements.min_platform},
                     'set smartos image min_platform to current');
+            }
+            if (SET_REQUIREMENTS_BRAND_BRANDS.indexOf(vmInfo.brand) !== -1
+                && !(options.manifest.requirements
+                    && options.manifest.requirements.hasOwnProperty('brand')))
+            {
+                // Unless an explicit brand is provided (possibly empty)
+                // the brand for an image for one of these brands match the
+                // source VM since brand-specific changes may have been made
+                // and we can't guarantee it's compatible with other brands.
+                if (!m.requirements)
+                    m.requirements = {};
+                m.requirements.brand = vmInfo.brand;
+                log.debug({brand: m.requirements.brand},
+                    'set image requirements.brand to source VM brand');
             }
             if (incremental) {
                 if (!originInfo) {
@@ -3545,13 +3569,14 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
             }
 
             var toSnapshot = [vmInfo.zfs_filesystem];
-            if (vmInfo.brand === 'kvm' && vmInfo.disks) {
+            if ((vmInfo.brand === 'kvm' || vmInfo.brand === 'bhyve')
+                && vmInfo.disks) {
+
                 for (var i = 0; i < vmInfo.disks.length; i++) {
                     toSnapshot.push(vmInfo.disks[i].zfs_filesystem);
                 }
             }
 
-            var snapname = '@imgadm-create-pre-prepare';
             logCb(format('Snapshotting VM "%s" to %s', vmUuid, snapname));
             toCleanup.autoprepSnapshots = [];
             async.eachSeries(
@@ -4008,6 +4033,20 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 async.eachSeries(
                     toCleanup.autoprepSnapshots,
                     function destroyOne(snap, nextSnapshot) {
+                        var re = new RegExp('/disk[0-9]*' + snapname + '$');
+
+                        if (vmInfo.brand === 'bhyve' && snap.match(re)) {
+                            // For bhyve brand, the disk snapshots will be gone
+                            // when the root snapshot is destroyed (because of
+                            // the -r) so, we only need to remove the root
+                            // snapshot here and skip diskX snapshots.
+                            self.log.debug({
+                                snapname: snap
+                            }, 'skipping deletion of bhyve disk snapshot');
+                            nextSnapshot();
+                            return;
+                        }
+
                         zfsDestroy(snap, self.log, nextSnapshot);
                     },
                     next);
@@ -4060,9 +4099,16 @@ IMGADM.prototype.publishImage = function publishImage(opts, callback) {
         'options.manifestFile.files[0].compression');
     var self = this;
 
+    // Set x-request-id on all IMGAPI calls.
+    var headers = {};
+    if (self.log && self.log.fields && self.log.fields.req_id) {
+        headers['x-request-id'] = self.log.fields.req_id;
+    }
+
     var client = imgapi.createClient({
         agent: false,
         url: opts.url,
+        headers: headers,
         log: self.log.child({component: 'api', url: opts.url}, true),
         rejectUnauthorized: (process.env.IMGADM_INSECURE !== '1'),
         userAgent: self.userAgent

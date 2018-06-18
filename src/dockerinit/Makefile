@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright (c) 2017, Joyent, Inc.
 #
 
 BASE :=		$(PWD)
@@ -33,7 +33,7 @@ LDFLAGS =	$(SYSLIBDIRS:%=-L$(DESTDIR)/%) \
 		-Wl,-zassert-deflib -Wl,-zfatal-warnings
 
 JSON_OBJS =	json-nvlist.o
-JSON_LIBS =	-lnvpair -lcmdutils
+JSON_LIBS =	-lnvpair
 
 MDATA_OBJS = \
 		mdata-client/dynstr.o \
@@ -48,7 +48,7 @@ MDATA_LIBS =	-lnsl -lsocket -lsmbios
 
 NET_LIBS =	-lipadm -linetutil -lnsl -lsocket
 
-STRINGS_OBJS =	strlist.o strpath.o
+STRINGS_OBJS =	custr.o strlist.o strpath.o
 
 DOCKER_OBJS =	docker-common.o
 

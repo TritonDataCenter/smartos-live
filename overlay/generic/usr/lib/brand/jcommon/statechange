@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright (c) 2016 Joyent, Inc.  All rights reserved.
+# Copyright (c) 2018 Joyent, Inc.  All rights reserved.
 #
 
 unset LD_LIBRARY_PATH
@@ -54,7 +54,6 @@ state=$4
 cmd=$5
 
 VNDADM=/usr/sbin/vndadm
-LOCKFILE=/etc/dladm/zone.lck
 SNAPSHOT_DIR=root/checkpoints
 OVERLAY_RULES=/var/run/smartdc/networking/overlay_rules.json
 DEFAULT_MTU=1500
@@ -76,54 +75,51 @@ DEFAULT_MTU=1500
 # o jst_mdatapath - The path the metadata socket is expected in the zone
 #
 
-#
-# Create a lock file which we use to serialize datalink operations across zones.
-#
-lock_file()
-{
-	typeset cnt=0
-	typeset prev_pid=0
-	while true; do
-		if (set -o noclobber; echo "$$" >$LOCKFILE) 2>/dev/null; then
-			trap 'rm -f $LOCKFILE' EXIT
-			break;
-		fi
+lockdir=/var/run
+function lock_enter {
+	typeset lockname=$1
+	typeset lock=$lockdir/$lockname
+	typeset target=/proc/$$
 
-		typeset hold_pid=`cat $LOCKFILE 2>/dev/null`
+	if [[ -z $lockname || $lockname == */* ]]; then
+		print -u2 "ERROR: invalid lock '$lockname'"
+		exit 1
+	fi
+	if [[ $lock -ef $target ]]; then
+		print -u2 "ERROR: recursive lock by pid $$"
+		exit 1
+	fi
 
-		# the file might be gone or empty when we run the cat cmd
-		if [[ -z "$hold_pid" ]]; then
-			sleep 1
-			cnt=0
+	while ! ln -s "$target" "$lock" >/dev/null 2>&1; do
+		if [[ -d $lock ]]; then
+			# Process holding the lock still exists
+			sleep 0.1
 			continue
 		fi
 
-		# if held by a different process, restart counter
-		if [[ $prev_pid != $hold_pid ]]; then
-			prev_pid=$hold_pid
-			cnt=0
-		fi
-
-		[[ $cnt == 20 || $cnt == 40 ]] && \
-		    logger -p daemon.err "dlmgmtd lock file $LOCKFILE" \
-		    "held by pid $hold_pid for $cnt seconds"
-
-		if [[ $cnt == 60 ]]; then
-			logger -p daemon.err "breaking dlmgmtd lock" \
-			    "held by pid $hold_pid after $cnt seconds"
-			unlock_file
-			continue
-		fi
-
-		sleep 1
-		let cnt=$cnt+1
+		# Lock recovery.  A little race here.  Only encountered if
+		# a lock is abandoned.
+		typeset prev=$(ls -l "$lock" | nawk -F/ '{print $NF}')
+		print -u2 "WARNING: recovering lock $lock (abandoned by $prev)"
+		rm -f "$lock"
 	done
 }
 
-unlock_file()
-{
-	rm -f $LOCKFILE
-	trap - INT TERM EXIT
+function lock_exit {
+	typeset lockname=$1
+	typeset lock=$lockdir/$lockname
+	typeset target=/proc/$$
+
+	if [[ -z $lockname || $lockname == */* ]]; then
+		print -u2 "ERROR: invalid lock '$lockname'"
+		exit 1
+	fi
+	if ! [[ $lock -ef $target ]]; then
+		print -u2 "ERROR: lock '$lockname' not held by pid $$"
+		exit 1
+	fi
+
+	rm -f "$lock"
 }
 
 get_boolean_nic_property()
@@ -195,8 +191,15 @@ setup_net()
 	do
 		# Get simplified versions of the network config. variables.
 		address=$(eval echo \$_ZONECFG_net_${nic}_address)
-		dhcp_server=$(get_boolean_nic_property ${nic} dhcp_server)
+		# If address set, must be a shared stack zone
+		[[ -n $address ]] && exit 0
+
 		global_nic=$(eval echo \$_ZONECFG_net_${nic}_global_nic)
+		# If no global-nic, must be a dedicated physical NIC instead
+		# of a vnic
+		[[ -z $global_nic ]] && continue
+
+		dhcp_server=$(get_boolean_nic_property ${nic} dhcp_server)
 		mac_addr=$(eval echo \$_ZONECFG_net_${nic}_mac_addr)
 		vlan_id=$(eval echo \$_ZONECFG_net_${nic}_vlan_id)
 		blocked_outgoing_ports=$(eval \
@@ -212,6 +215,7 @@ setup_net()
 		allow_unfiltered_promisc=$(get_boolean_nic_property ${nic} \
 		    allow_unfiltered_promisc)
 		allowed_ips=$(eval echo \$_ZONECFG_net_${nic}_allowed_ips)
+		allowed_dhcp_cids=$(eval echo \$_ZONECFG_net_${nic}_allowed_dhcp_cids)
 		vrid=$(eval echo \$_ZONECFG_net_${nic}_vrrp_vrid)
 		vrrp_primary_ip=$(eval \
 		    echo \$_ZONECFG_net_${nic}_vrrp_primary_ip)
@@ -228,12 +232,7 @@ setup_net()
 			zone_ips=$zone_ip
 		fi
 
-		# If address set, must be a shared stack zone
-		[[ -n $address ]] && exit 0
 
-		# If no global-nic, must be a dedicated physical NIC instead
-		# of a vnic
-		[[ -z $global_nic ]] && continue
 
 		orig_global=$global_nic
 
@@ -254,7 +253,7 @@ setup_net()
 		#    sdc_sdn/23. That refers to the overlay rule sdc_sdn. If we
 		#    have an overlay rule, we may need to dynamically create the
 		#    overlay device if it doesn't exist.
-		#		
+		#
 		# To handle these cases, we first check if it's an overlay
 		# device, and then if not, check the other cases.
 		#
@@ -262,10 +261,19 @@ setup_net()
 		tmp=$(echo $orig_global | sed -E 's_[a-zA-Z_0-9]+/[0-9]+__')
 		if [[ -n "$tmp" ]]; then
 
+			#
+			# We only need sysinfo if we get here, and we only need to load it
+			# once.  Loading is about the same cost as looking up a single
+			# value.
+			#
+			if [[ -z $SYSINFO_LOADED ]]; then
+				load_sdc_sysinfo
+				SYSINFO_LOADED="LOADED"
+			fi
 			global_nic=$(eval echo \$SYSINFO_NIC_${orig_global})
 
 			# If the global nic is specified as a device or etherstub name
-			# rather than a tag
+			# rather than a tag.
 			if [[ -z $global_nic ]]; then
 				echo "$(dladm show-phys -p -o LINK) $(dladm show-etherstub -p -o LINK)" \
 				| egrep "(^| )${orig_global}( |$)" > /dev/null
@@ -299,13 +307,12 @@ setup_net()
 			exit 1
 		fi
 
-		lock_file
-
 		#
 		# If we have an overlay device, do we need to create it, or does
 		# it already exist?
 		#
 		if [[ -n "$isoverlay" ]]; then
+			lock_enter ovlock
 			if ! dladm show-overlay $global_nic 2>/dev/null; then
 				dladm create-overlay $rule -v $num $global_nic
 				if [[ $? -ne 0 ]]; then
@@ -314,9 +321,11 @@ setup_net()
 					     "$global_nic with command " \
 					     "'dladm create-overlay $rule -v " \
 					     "$num $global_nic"
+					lock_exit ovlock
 					exit 1
 				fi
 			fi
+			lock_exit ovlock
 		fi
 
 
@@ -477,11 +486,20 @@ setup_net()
 			unset allowed_ip_map
 			typeset -A allowed_ip_map
 
+			dynamic_methods=""
+			separator=""
 			OLDIFS=$IFS
 			IFS=,
+
 			for zone_ip in $zone_ips; do
 				# For each static IP available, add it to the list.
-				if [[ $zone_ip != "dhcp" ]] && [[ $zone_ip != "addrconf" ]]; then
+				if [[ $zone_ip == "dhcp" ]]; then
+					dynamic_methods+="${separator}dhcpv4"
+					separator=","
+				elif [[ $zone_ip == "addrconf" ]]; then
+					dynamic_methods+="${separator}addrconf"
+					separator=","
+				else
 					clean_ip=`printf "%s" "${zone_ip}" | sed 's|^\([^/]*\)/.*|\1|'`
 					allowed_ip_map[${clean_ip}]=true
 				fi
@@ -512,9 +530,31 @@ setup_net()
 			if [[ -n ${allowed_ip_list} ]] &&
 			    ! dladm set-linkprop -t -z $ZONENAME \
 			    -p "allowed-ips=${allowed_ip_list}" ${nic}; then
-				log_and_exit
+				log_and_exit \
 				    "error setting VNIC allowed-ips $nic $allowed_ip_list"
 			fi
+
+			# Set the dynamic-methods property on the NIC
+			if [[ -n ${dynamic_methods} ]] &&
+			    ! dladm set-linkprop -t -z $ZONENAME \
+			    -p "dynamic-methods=${dynamic_methods}" ${nic}; then
+				log_and_exit \
+				    "error setting VNIC dynamic-methods $nic $dynamic_methods"
+			fi
+		fi
+
+		if [[ "$enable_dhcp" != "true" ]] && [[ -n "$allowed_dhcp_cids" ]] &&
+		    ! dladm set-linkprop -p "allowed-dhcp-cids=${allowed_dhcp_cids}" \
+		    -t -z $ZONENAME $nic; then
+			log_and_exit \
+			    "error setting VNIC allowed-dhcp-cids $nic $allowed_dhcp_cids"
+		fi
+
+		if [[ "$enable_dhcp" != "true" ]] && [[ -z "$allowed_dhcp_cids" ]] &&
+		    [[ "$zone_ips" == *dhcp* || "$zone_ips" == *addrconf* ]] &&
+		    ! dladm set-linkprop -p "allow-all-dhcp-cids=true" \
+		    -t -z $ZONENAME $nic; then
+			log_and_exit "error setting VNIC allow-all-dhcp-cids $nic"
 		fi
 
 		if [[ -n "$jst_ufpromisc" && ${allow_unfiltered_promisc} == "true" ]]; then
@@ -528,7 +568,7 @@ setup_net()
 				# br='block remote'.  Flow names should be < 31
 				# chars in length so that they get unique
 				# kstats.
-			 	# Use the VNIC mac addr. to generate a unique
+				# Use the VNIC mac addr. to generate a unique
 				# name.
 				mac_addr=`dladm show-vnic -z $ZONENAME -p \
 				    -o MACADDRESS $nic | tr ':' '_'`
@@ -558,8 +598,6 @@ setup_net()
 				exit 1
 			fi
 		fi
-
-		unlock_file
 	done
 }
 
@@ -675,6 +713,9 @@ setup_snapshots()
 #
 setup_cpu_baseline()
 {
+	# A brand can override the setup of bursting.
+	[ -n "$NO_BURSTING" ] && return
+
 	# If there is already a baseline, don't set one heuristically
 	curr_base=`prctl -P -n zone.cpu-baseline -i zone $ZONENAME | nawk '{
 		if ($2 == "privileged") print $3
@@ -740,16 +781,12 @@ cleanup_net()
 	# Cleanup any flows that were setup.
 	for nic in $_ZONECFG_net_resources
 	do
-		lock_file
-
 		flowadm remove-flow -t -z $ZONENAME -l $nic
 		if (( $? != 0 )); then
 			echo "error removing flows for $nic"
 			logger -p daemon.err "zone $ZONENAME " \
 			    "error removing flows for $nic"
 		fi
-
-		unlock_file
 	done
 }
 
@@ -838,33 +875,76 @@ cleanup_mount()
 	    id_gz_sockholder /var/run/.smartdc-amon.sock
 }
 
+function fix_forced_attrs {
+	typeset attr
+
+	for attr in ${!FORCED_ATTRS[@]}; do
+		typeset nval=${FORCED_ATTRS["$attr"]}
+		typeset -n envvar=_ZONECFG_attr_${attr//-/_}
+		typeset cval=$envvar
+
+		if [[ $cval == $nval ]]; then
+			# In most cases, $nval and $cval will be the same and
+			# nothing needs to be done. This includes the case where
+			# $nval and $cval are "".
+			continue
+		elif [[ -z $nval ]]; then
+			logger -p daemon.error "[zone $ZONENAME]" \
+			    "Illegal value for attr '$attr': '$cval'." \
+			    "Removing attr '$attr'"
+			zonecfg -z "$ZONENAME" "remove -F attr name=$attr"
+
+			unset ${!envvar}
+		else
+			logger -p daemon.error "[zone $ZONENAME]" \
+			    "Illegal value for attr '$attr': '$cval'." \
+			    "Setting to '$nval'"
+			zonecfg -z "$ZONENAME" "remove -F attr name=$attr;" \
+			    "add attr; set type=string;" \
+			    "set name=$attr; set value=\"$nval\"; end;"
+
+			export ${!envvar}="$nval"
+		fi
+	done
+}
+
 #
 # Main
 #
 
-# Load sysinfo variables with SYSINFO_ prefix
-load_sdc_sysinfo
-# Load config variables with CONFIG_ prefix, and sets the headnode variable
-load_sdc_config
-
-
-[[ "$subcommand" == "pre" && $cmd == 0 ]] && setup_fs
-if [[ "$subcommand" == "post" && $cmd == 0 ]]; then
-	[[ -n "$jst_showsnap" ]] && setup_snapshots
-	setup_net
-	setup_fw
-fi
-
-# We can't set a rctl until we have a process in the zone to grab
-[[ "$subcommand" == "post" && $cmd == 1 ]] && setup_cpu_baseline
-
-# Zone halt is hung unmounting, try to recover
-[[ "$subcommand" == "post" && $state == 6 && $cmd == 8 ]] && \
-    cleanup_mount "$6"
-
-if [[ "$subcommand" == "pre" && $cmd == 4 ]]; then
-	[[ -n "$jst_snowsnap" ]] && cleanup_snapshots
-	cleanup_net
-fi
+case $subcommand in
+pre)
+	case $cmd in
+	0)	# pre-ready
+		fix_forced_attrs
+		setup_fs
+		;;
+	4)	# pre-halt
+		[[ -n "$jst_snowsnap" ]] && cleanup_snapshots
+		cleanup_net
+		;;
+	esac
+	;;
+post)
+	case $cmd in
+	0)	# post-ready
+		[[ -n "$jst_showsnap" ]] && setup_snapshots
+		setup_net
+		setup_fw
+		;;
+	1)	# post-boot
+		# We can't set a rctl until we have a process in the zone to
+		# grab
+		setup_cpu_baseline
+		;;
+	8)	# post-unmount
+		# Zone halt is hung unmounting, try to recover
+		if [[ $state == 6 ]]; then
+			cleanup_mount "$6"
+		fi
+		;;
+	esac
+	;;
+esac
 
 exit 0

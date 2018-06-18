@@ -21,7 +21,7 @@
  * CDDL HEADER END
  *
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: Main entry points
@@ -32,6 +32,7 @@ var clone = require('clone');
 var filter = require('./filter');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
+var mod_addr = require('ip6addr');
 var mod_ipf = require('./ipf');
 var mod_lock = require('./locker');
 var mod_obj = require('./util/obj');
@@ -64,6 +65,8 @@ var IPF_CONF = '%s/config/ipf.conf';
 var IPF_CONF_OLD = '%s/config/ipf.conf.old';
 var IPF6_CONF = '%s/config/ipf6.conf';
 var IPF6_CONF_OLD = '%s/config/ipf6.conf.old';
+var KEEP_FRAGS = ' keep frags';
+var KEEP_STATE = ' keep state';
 var NOT_RUNNING_MSG = 'Could not find running zone';
 // VM fields that affect filtering
 var VM_FIELDS = [
@@ -121,10 +124,17 @@ function assertStringOrObject(obj, name) {
  * For a rule and a direction, return whether or not we actually need to
  * write ipf rules. FROM+ALLOW and TO+BLOCK are essentially no-ops, as
  * they will be caught by the block / allow catch-all default rules.
+ *
+ * If the rule has a priority greater than 0, then we always need to write
+ * out ipf rules.
  */
 function noRulesNeeded(dir, rule) {
+    if (rule.priority !== 0) {
+        return false;
+    }
+
     if ((dir === 'from' && rule.action === 'allow')
-            || (dir === 'to' && rule.action === 'block')) {
+        || (dir === 'to' && rule.action === 'block')) {
         return true;
     }
     return false;
@@ -443,7 +453,7 @@ function createVMlookup(vms, log, callback) {
 
         var vm = {
             enabled: fullVM.firewall_enabled || false,
-            ips: util_vm.ipsFromNICs(fullVM.nics),
+            ips: util_vm.ipsFromNICs(fullVM.nics).sort(mod_addr.compare),
             owner_uuid: fullVM.owner_uuid,
             state: fullVM.state,
             tags: fullVM.tags,
@@ -901,11 +911,174 @@ function protoTarget(rule, target) {
 
 
 /**
+ * Compare two port targets. Valid values are "all", numbers, or an object
+ * representing a port range containing "start" and "end" fields.
+ */
+function comparePorts(p1, p2) {
+    // "all" comes before any port numbers
+    if (p1 === 'all') {
+        if (p2 === 'all') {
+            return 0;
+        } else {
+            return -1;
+        }
+    } else if (p2 === 'all') {
+        return 1;
+    }
+
+    var n1 = p1.hasOwnProperty('start') ? p1.start : p1;
+    var n2 = p2.hasOwnProperty('start') ? p2.start : p2;
+
+    return Number(n1) - Number(n2);
+}
+
+
+/**
+ * Compare two ICMP type targets. Valid values are "all" or strings like "5" or
+ * "5:3", representing the ICMP type number and code.
+ */
+function compareTypes(t1, t2) {
+    // "all" comes before any types
+    if (t1 === 'all') {
+        if (t2 === 'all') {
+            return 0;
+        } else {
+            return -1;
+        }
+    } else if (t2 === 'all') {
+        return 1;
+    }
+
+    var p1 = t1.split(':');
+    var p2 = t2.split(':');
+    var c = Number(p1[0]) - Number(p2[0]);
+    if (c !== 0) {
+        return c;
+    }
+
+    if (p1.length === 1) {
+        if (p2.length === 1) {
+            return 0;
+        } else {
+            return -1;
+        }
+    } else if (p2.length === 1) {
+        return 1;
+    } else {
+        return Number(p1[1]) - Number(p2[1]);
+    }
+}
+
+
+/**
+ * Compare IP and subnet targets from an ipf rule object.
+ */
+function compareAddrs(a1, a2) {
+    var s1 = a1.split('/');
+    var s2 = a2.split('/');
+
+    return mod_addr.compare(s1[0], s2[0]);
+}
+
+
+/**
+ * This comparison function is used to sort the output ipf rule objects
+ * in the following order:
+ *
+ * 1. First by protocol: icmp, icmp6, tcp, udp.
+ * 2. Then by direction: outbound rules, then inbound.
+ * 3. By priority level (higher priorities come first).
+ * 4. By action:
+ *   a) For outbound traffic, block comes before allow.
+ *   b) For inbound traffic, allow comes before block.
+ * 5. By the first port or type listed.
+ * 6. By the first targeted IP.
+ *
+ * 1 and 2 help apply some organization to the output file.
+ * 5 and 6 help make testing easier by putting things in a predictable order.
+ *
+ * 3 and 4 are the actual, important metric to sort on: priority and action
+ * are important for ensuring that the actions taken by ipfilter are applied in
+ * the order that fwadm(1M) describes.
+ */
+function compareRules(r1, r2) {
+    var res;
+
+    // Protocol:
+    if (r1.protocol < r2.protocol) {
+        return -1;
+    }
+
+    if (r1.protocol > r2.protocol) {
+        return 1;
+    }
+
+    // Direction:
+    if (r1.direction < r2.direction) {
+        return -1;
+    }
+
+    if (r1.direction > r2.direction) {
+        return 1;
+    }
+
+    // Priority levels:
+    if (r1.priority < r2.priority) {
+        return 1;
+    }
+
+    if (r1.priority > r2.priority) {
+        return -1;
+    }
+
+    // Action:
+    if (r1.direction === 'from') {
+        if (r1.action === 'allow') {
+            if (r2.action === 'block') {
+                return 1;
+            }
+        } else if (r2.action === 'allow') {
+            if (r1.action === 'block') {
+                return -1;
+            }
+        }
+    } else {
+        if (r1.action === 'allow') {
+            if (r2.action === 'block') {
+                return -1;
+            }
+        } else if (r2.action === 'allow') {
+            if (r1.action === 'block') {
+                return 1;
+            }
+        }
+    }
+
+    // Ports and types:
+    if (icmpr.test(r1.protocol)) {
+        res = compareTypes(r1.protoTargets[0], r2.protoTargets[0]);
+    } else {
+        res = comparePorts(r1.protoTargets[0], r2.protoTargets[0]);
+    }
+
+    if (res !== 0) {
+        return res;
+    }
+
+    // Target IPs and subnets:
+    return compareAddrs(r1.targets[0], r2.targets[0]);
+}
+
+
+/**
  * Returns an object containing ipf rule text and enough data to sort on
  */
 function ipfRuleObj(opts) {
     var dir = opts.direction;
     var rule = opts.rule;
+
+    var targets = Array.isArray(opts.targets) ?
+        opts.targets : [ opts.targets ];
 
     // ipfilter uses /etc/protocols which calls ICMPv6 'ipv6-icmp'
     var ipfProto = (rule.protocol === 'icmp6') ? 'ipv6-icmp' : rule.protocol;
@@ -913,13 +1086,14 @@ function ipfRuleObj(opts) {
     var sortObj = {
         action: rule.action,
         direction: dir,
+        priority: rule.priority,
         protocol: rule.protocol,
-        v4text: [ '', util.format('# rule=%s, version=%s, %s=%s',
-            rule.uuid, rule.version, opts.type, opts.value)
-        ],
-        v6text: [ '', util.format('# rule=%s, version=%s, %s=%s',
-            rule.uuid, rule.version, opts.type, opts.value)
-        ],
+        header: util.format('\n# rule=%s, version=%s, %s=%s',
+            rule.uuid, rule.version, opts.type, opts.value),
+        v4text: [],
+        v6text: [],
+        targets: targets,
+        protoTargets: rule.protoTargets,
         type: opts.type,
         uuid: rule.uuid,
         value: opts.value,
@@ -927,7 +1101,7 @@ function ipfRuleObj(opts) {
     };
 
     if (opts.type === 'wildcard' && opts.value === 'any') {
-        rule.protoTargets.sort().forEach(function (t) {
+        rule.protoTargets.forEach(function (t) {
             var wild = util.format('%s %s quick proto %s from any to any %s',
                 rule.action === 'allow' ? 'pass' : 'block',
                 dir === 'from' ? 'out' : 'in',
@@ -942,9 +1116,6 @@ function ipfRuleObj(opts) {
         return sortObj;
     }
 
-    var targets = Array.isArray(opts.targets) ?
-        opts.targets : [ opts.targets ];
-
     targets.forEach(function (target) {
         var isv6 = target.indexOf(':') !== -1;
 
@@ -956,8 +1127,7 @@ function ipfRuleObj(opts) {
 
         var text = isv6 ? sortObj.v6text : sortObj.v4text;
 
-        // XXX: need to do Number() on these before sorting?
-        rule.protoTargets.sort().forEach(function (t) {
+        rule.protoTargets.forEach(function (t) {
             text.push(
                 util.format('%s %s quick proto %s from %s to %s %s',
                     rule.action === 'allow' ? 'pass' : 'block',
@@ -1008,15 +1178,45 @@ function prepareIPFdata(opts, log, callback) {
         }, {});
     }
 
-    rules.forEach(function (rule) {
+    /* Gather the VMs targeted on each side of every enabled rule. */
+    var targetVMs = rules.map(function (rule) {
         if (!rule.enabled) {
-            return;
+            return null;
         }
 
-        var ruleVMs = {
+        return {
             from: vmsOnSide(allVMs, rule, 'from', log),
             to: vmsOnSide(allVMs, rule, 'to', log)
         };
+    });
+
+    /*
+     * If we block outbound traffic for a protocol, make sure to also track
+     * inbound state for anything allowed, so that we'll allow response
+     * packets.
+     *
+     * We could just always enable state tracking for all of our inbound
+     * allow rules, but state tracking can get pretty expensive. There's no
+     * need to penalize all firewall users.
+     */
+    var keepInboundState = { };
+    rules.forEach(function (rule, i) {
+        if (!rule.enabled || rule.action === 'allow') {
+            return;
+        }
+
+        targetVMs[i].from.forEach(function (uuid) {
+            if (!hasKey(keepInboundState, uuid)) {
+                keepInboundState[uuid] = {};
+            }
+            keepInboundState[uuid][rule.protocol] = true;
+        });
+    });
+
+    rules.forEach(function (rule, i) {
+        if (!rule.enabled) {
+            return;
+        }
 
         DIRECTIONS.forEach(function (dir) {
             // XXX: add to errors here if missing
@@ -1027,65 +1227,69 @@ function prepareIPFdata(opts, log, callback) {
                 return;
             }
 
-            var otherSideRules = rulesFromOtherSide(rule, dir, allVMs,
-                remoteVMs);
+            var otherSideRules =
+                rulesFromOtherSide(rule, dir, allVMs, remoteVMs);
 
-            ruleVMs[dir].forEach(function (uuid) {
-                // If the VM's firewall is disabled, we don't need to write out
-                // rules for it
-                if (!allVMs.all[uuid].enabled) {
+            targetVMs[i][dir].forEach(function (uuid) {
+                /*
+                 * If the VM's firewall is disabled, we don't need to write out
+                 * rules for it.
+                 */
+                if (!allVMs.all[uuid].enabled || !hasKey(conf, uuid)) {
                     return;
                 }
 
-                otherSideRules.forEach(function (oRule) {
-                    if (!hasKey(conf, uuid)) {
-                        return;
-                    }
-
-                    conf[uuid].push(oRule);
-                });
+                conf[uuid] = conf[uuid].concat(otherSideRules);
             });
         });
     });
 
-    var toReturn = { files: {}, vms: [] };
+    var toReturn = [];
     for (var vm in conf) {
         var rulesIncluded = {};
-        var v4filename = util.format(IPF_CONF, allVMs.all[vm].zonepath);
-        var v6filename = util.format(IPF6_CONF, allVMs.all[vm].zonepath);
-        var ipfConf = [
+        var ipf4Conf = [
             '# DO NOT EDIT THIS FILE. THIS FILE IS AUTO-GENERATED BY fwadm(1M)',
             '# AND MAY BE OVERWRITTEN AT ANY TIME.',
             '#',
             '# File generated at ' + date.toString(),
             '#',
             ''];
-        var ipf6Conf = ipfConf.slice();
+        var ipf6Conf = ipf4Conf.slice();
+        var iks = hasKey(keepInboundState, vm) ? keepInboundState[vm] : {};
 
-        toReturn.vms.push(vm);
+        conf[vm].sort(compareRules).forEach(function (sortObj) {
+            var ktxt = KEEP_FRAGS;
+            if (sortObj.direction === 'to' && iks[sortObj.protocol]) {
+                ktxt += KEEP_STATE;
+            }
 
-        // XXX: sort here
-        conf[vm].forEach(function (sortObj) {
             if (!hasKey(rulesIncluded, sortObj.uuid)) {
                 rulesIncluded[sortObj.uuid] = [];
             }
             rulesIncluded[sortObj.uuid].push(sortObj.direction);
 
+            ipf4Conf.push(sortObj.header);
+            ipf6Conf.push(sortObj.header);
+
             sortObj.v4text.forEach(function (line) {
-                ipfConf.push(line);
+                ipf4Conf.push(line + ktxt);
             });
             sortObj.v6text.forEach(function (line) {
-                ipf6Conf.push(line);
+                ipf6Conf.push(line + ktxt);
             });
         });
 
         log.debug(rulesIncluded, 'VM %s: generated ipf(6).conf', vm);
 
-        var v4rules = ipfConf.concat(v4fallbacks);
+        var v4rules = ipf4Conf.concat(v4fallbacks);
         var v6rules = ipf6Conf.concat(v6fallbacks);
 
-        toReturn.files[v4filename] = v4rules.join('\n') + '\n';
-        toReturn.files[v6filename] = v6rules.join('\n') + '\n';
+        toReturn.push({
+            uuid: vm,
+            zonepath: allVMs.all[vm].zonepath,
+            v4text: v4rules.join('\n') + '\n',
+            v6text: v6rules.join('\n') + '\n'
+        });
     }
 
     return callback(null, toReturn);
@@ -1098,8 +1302,9 @@ function prepareIPFdata(opts, log, callback) {
 function vmsOnSide(allVMs, rule, dir, log) {
     var matching = [];
 
-    ['vms', 'tags', 'wildcards'].forEach(function (type) {
-        rule[dir][type].forEach(function (t) {
+    ['vms', 'tags', 'wildcards'].forEach(function (walkType) {
+        rule[dir][walkType].forEach(function (t) {
+            var type = walkType;
             var value;
             if (typeof (t) !== 'string') {
                 value = t[1];
@@ -1147,12 +1352,13 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
     var ipfRules = [];
 
     if (rule[otherSide].wildcards.indexOf('any') !== -1) {
-            ipfRules.push(ipfRuleObj({
-                rule: rule,
-                direction: dir,
-                type: 'wildcard',
-                value: 'any'
-            }));
+        ipfRules.push(ipfRuleObj({
+            rule: rule,
+            direction: dir,
+            targets: [ '0.0.0.0' ],
+            type: 'wildcard',
+            value: 'any'
+        }));
 
         return ipfRules;
     }
@@ -1176,25 +1382,28 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
     ['tag', 'vm', 'wildcard'].forEach(function (type) {
         var typePlural = type + 's';
         rule[otherSide][typePlural].forEach(function (value) {
+            var lookupType = type;
+            var lookupTypePlural = typePlural;
             var t;
+
             if (typeof (value) !== 'string') {
                 t = value[1];
                 value = value[0];
-                type = 'tagValue';
-                typePlural = 'tagValues';
+                lookupType = 'tagValue';
+                lookupTypePlural = 'tagValues';
             }
 
-            if (type === 'wildcards' && value === 'any') {
+            if (lookupTypePlural === 'wildcards' && value === 'any') {
                 return;
             }
 
             [localVMs, remoteVMs].forEach(function (lookup) {
-                if (!hasKey(lookup, typePlural)
-                    || !hasKey(lookup[typePlural], value)) {
+                if (!hasKey(lookup, lookupTypePlural)
+                    || !hasKey(lookup[lookupTypePlural], value)) {
                     return;
                 }
 
-                var vmList = lookup[typePlural][value];
+                var vmList = lookup[lookupTypePlural][value];
                 if (t !== undefined) {
                     if (!hasKey(vmList, t)) {
                         return;
@@ -1208,16 +1417,19 @@ function rulesFromOtherSide(rule, dir, localVMs, remoteVMs) {
                         return;
                     }
 
+                    if (vm.ips.length === 0) {
+                        return;
+                    }
+
                     ipfRules.push(ipfRuleObj({
                         rule: rule,
                         direction: dir,
                         targets: vm.ips,
-                        type: type,
+                        type: lookupType,
                         value: value
                     }));
                 });
             });
-
         });
     });
 
@@ -1292,93 +1504,150 @@ function addOtherSideRemoteTargets(vms, rule, targets, dir, log) {
 
 
 /**
- * Saves all of the files in ipfData to disk
+ * Carefully move the new ipfilter configuration file into place. It's
+ * important to make sure that if we fail or crash at any point that we
+ * leave a file in place, since its presence is what determines whether
+ * to enable the firewall at zone boot.
  */
-function saveIPFfiles(ipfData, log, callback) {
-    var ver = Date.now(0) + '.' + sprintf('%06d', process.pid);
+function replaceIPFconf(file, data, ver, callback) {
+    var tempFile = util.format('%s.%s', file, ver);
+    var oldFile = util.format('%s.old', file);
 
-    return vasync.forEachParallel({
-        inputs: Object.keys(ipfData),
-        func: function _apply(file, cb) {
-            var tempFile = util.format('%s.%s', file, ver);
-            var oldFile = util.format('%s.old', file);
-
-            vasync.pipeline({
-            funcs: [
-                function _write(_, cb2) {
-                    log.trace('saveIPFfiles: writing temp file "%s"', tempFile);
-                    return fs.writeFile(tempFile, ipfData[file], cb2);
-                },
-                function _unlinkOld(_, cb2) {
-                    return fs.unlink(oldFile, function (err) {
-                        if (err && err.code === 'ENOENT') {
-                            return cb2(null);
-                        }
-                        return cb2(err);
-                    });
-                },
-                function _linkOld(_, cb2) {
-                    return fs.link(file, oldFile, function (err) {
-                        if (err && err.code === 'ENOENT') {
-                            return cb2(null);
-                        }
-                        return cb2(err);
-                    });
-                },
-                function _renameTemp(_, cb2) {
-                    return fs.rename(tempFile, file, cb2);
-                }
-            ]}, cb);
-        }
-    }, function (err, res) {
-        return callback(err, res);
-    });
-}
-
-
-/**
- * Restart the firewalls for VMs listed in uuids
- *
- * @param vms {Object}: VM lookup table, as returned by createVMlookup()
- * @param rules {Array}: array of VM UUIDs to restart
- * @param callback {Function} `function (err, restarted)`
- * - Where restarted is a list of UUIDs for VMs that were actually restarted
- */
-function restartFirewalls(vms, uuids, log, callback) {
-    log.trace(uuids, 'restartFirewalls: entry');
-    var restarted = [];
-
-    return vasync.forEachParallel({
-        inputs: uuids,
-        func: function _restart(uuid, cb) {
-            if (!vms.all[uuid].enabled || vms.all[uuid].state !== 'running') {
-                log.debug('restartFirewalls: VM "%s": not restarting '
-                    + '(enabled=%s, state=%s)', uuid, vms.all[uuid].enabled,
-                    vms.all[uuid].state);
-                return cb(null);
-            }
-
-            log.debug('restartFirewalls: reloading firewall for VM "%s" '
-                + '(enabled=%s, state=%s)', uuid, vms.all[uuid].enabled,
-                vms.all[uuid].state);
-
-            // Reload the firewall, and start it if necessary.
-            reloadIPF({ vm: uuid, zonepath: vms.all[uuid].zonepath },
-                log, function (err, res) {
-                restarted.push(uuid);
-                if (err && zoneNotRunning(res)) {
-                    // An error starting the firewall due to the zone not
-                    // running isn't really an error
-                    cb();
+    vasync.pipeline({
+    funcs: [
+        function _write(_, cb) {
+            fs.writeFile(tempFile, data, cb);
+        },
+        function _unlinkOld(_, cb) {
+            fs.unlink(oldFile, function (err) {
+                if (err && err.code === 'ENOENT') {
+                    cb(null);
                     return;
                 }
 
                 cb(err);
             });
+        },
+        function _linkOld(_, cb) {
+            fs.link(file, oldFile, function (err) {
+                if (err && err.code === 'ENOENT') {
+                    cb(null);
+                    return;
+                }
+
+                cb(err);
+            });
+        },
+        function _renameTemp(_, cb) {
+            fs.rename(tempFile, file, cb);
         }
-    }, function (err, res) {
-        // XXX: Does this stop on the first error?
-        return callback(err, restarted);
+    ]}, callback);
+}
+
+
+/**
+ * Saves all of the generated ipfilter rules in ipfData to disk. We handle
+ * each VM separately in parallel, so that failures for one don't impact
+ * reloading others. For example, a VM may have filled up its disk, and we
+ * now can't write out its configuration, or a VM may have stopped on us
+ * before we had a chance to run ipf(1M) on it.
+ */
+function saveConfsAndReload(opts, ipfData, log, callback) {
+    var ver = Date.now(0) + '.' + sprintf('%06d', process.pid);
+    var files = {};
+    var uuids = [];
+
+    vasync.forEachParallel({
+        inputs: ipfData,
+        func: function (vm, cb) {
+            uuids.push(vm.uuid);
+
+            vasync.pipeline({
+            funcs: [
+                // Write the new ipf.conf for IPv4 rules:
+                function writeV4(_, cb2) {
+                    var filename = util.format(IPF_CONF, vm.zonepath);
+                    files[filename] = vm.v4text;
+
+                    if (opts.dryrun) {
+                        cb2(null);
+                        return;
+                    }
+
+                    replaceIPFconf(filename, vm.v4text, ver, cb2);
+                },
+
+                // Write the new ipf6.conf for IPv6 rules:
+                function writeV6(_, cb2) {
+                    var filename = util.format(IPF6_CONF, vm.zonepath);
+                    files[filename] = vm.v6text;
+
+                    if (opts.dryrun) {
+                        cb2(null);
+                        return;
+                    }
+
+                    replaceIPFconf(filename, vm.v6text, ver, cb2);
+                },
+
+                // Restart the VM's firewall:
+                function reload(_, cb2) {
+                    if (opts.dryrun) {
+                        cb2(null);
+                        return;
+                    }
+
+                    restartFirewall(opts.allVMs, vm.uuid, log, cb2);
+                }
+            ]}, cb);
+        }
+    }, function (err) {
+        if (err) {
+            callback(err);
+            return;
+        }
+
+        callback(null, {
+            files: files,
+            vms: uuids
+        });
+    });
+}
+
+
+/**
+ * Restart the given VMs firewall.
+ *
+ * @param vms {Object}: VM lookup table, as returned by createVMlookup()
+ * @param uuid {UUID}: The UUID of the target VM
+ * @param callback {Function} `function (err)`
+ */
+function restartFirewall(vms, uuid, log, cb) {
+    if (!vms.all[uuid].enabled || vms.all[uuid].state !== 'running') {
+        log.debug('restartFirewalls: VM "%s": not restarting '
+            + '(enabled=%s, state=%s)', uuid, vms.all[uuid].enabled,
+            vms.all[uuid].state);
+        cb(null);
+        return;
+    }
+
+    log.debug('restartFirewalls: reloading firewall for VM "%s" '
+        + '(enabled=%s, state=%s)', uuid, vms.all[uuid].enabled,
+        vms.all[uuid].state);
+
+    // Reload the firewall, and start it if necessary.
+    reloadIPF({ vm: uuid, zonepath: vms.all[uuid].zonepath }, log,
+        function (err, res) {
+        if (err && zoneNotRunning(res)) {
+            /*
+             * An error starting the firewall due to the zone not
+             * running isn't really an error.
+             */
+            cb();
+            return;
+        }
+
+        cb(err);
     });
 }
 
@@ -1419,7 +1688,7 @@ function applyChanges(opts, log, callback) {
     pipeline({
     funcs: [
         // Generate the ipf files for each VM
-        function ipfData(res, cb) {
+        function reloadPlan(res, cb) {
             prepareIPFdata({
                 allVMs: opts.allVMs,
                 remoteVMs: opts.allRemoteVMs,
@@ -1464,25 +1733,14 @@ function applyChanges(opts, log, callback) {
             mod_rvm.del(opts.del.rvms, log, cb);
         },
 
-        // Write the new ipf files to disk
-        function writeIPF(res, cb) {
-            if (opts.dryrun) {
-                return cb(null);
-            }
-            saveIPFfiles(res.ipfData.files, log, cb);
-        },
-
-        // Restart the firewalls for all of the affected VMs
-        function restart(res, cb) {
-            if (opts.dryrun) {
-                return cb(null);
-            }
-            restartFirewalls(opts.allVMs, res.ipfData.vms, log, cb);
+        // Write the new ipf files to disk and restart affected VMs
+        function ipfData(res, cb) {
+            saveConfsAndReload(opts, res.reloadPlan, log, cb);
         }
-
     ] }, function (err, res) {
         if (err) {
-            return callback(err);
+            callback(err);
+            return;
         }
 
         var toReturn = {
@@ -1517,7 +1775,7 @@ function applyChanges(opts, log, callback) {
             toReturn.files = res.state.ipfData.files;
         }
 
-        return callback(null, toReturn);
+        callback(null, toReturn);
     });
 }
 

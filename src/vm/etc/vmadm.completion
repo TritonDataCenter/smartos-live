@@ -5,7 +5,7 @@ _vmadm()
     # NOTE: we don't want the aliases boot,halt,destroy,etc here because we
     # want people to use the 'proper' commands when they can.
     COMMANDS="console create create-snapshot delete delete-snapshot get info list lookup reboot receive reprovision rollback-snapshot send start stop sysrq update validate"
-    BRANDS="joyent joyent-minimal kvm"
+    BRANDS="bhyve joyent joyent-minimal kvm lx"
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
@@ -31,8 +31,9 @@ _vmadm()
     elif [[ ${prev} == 'info'
           || ${prev} == 'sysrq' ]]; then
 
-        # KVM only commands
-        vms_uuids=$(zoneadm list -cp | grep -v ':global:' | grep ":kvm:excl:" | \
+        # kvm/bhyve only commands
+        vms_uuids=$(zoneadm list -cp | grep -v ':global:' | \
+            grep ":[bh]*[ky]v[em]:excl:" | \
             cut -d':' -f5 | sort | uniq)
         COMPREPLY=( $(compgen -W "${vms_uuids}" -- ${cur}) )
 
@@ -42,7 +43,7 @@ _vmadm()
 
         # OS only commands
         vms_uuids=$(zoneadm list -cp | grep -v ':global:' \
-            | grep -v ":kvm:excl:" | cut -d':' -f5 | sort | uniq)
+            | grep -v ":[bh]*[ky]v[em]:excl:" | cut -d':' -f5 | sort | uniq)
         COMPREPLY=( $(compgen -W "${vms_uuids}" -- ${cur}) )
 
     elif [[ ${prev} == 'validate' ]]; then

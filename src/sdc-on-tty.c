@@ -133,8 +133,9 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
-	for (i = 0 ; optind < argc; i++, optind++)
+	for (i = 0; optind < argc; i++, optind++) {
 		args[i] = argv[optind];
+	}
 	args[i] = NULL;
 
 	for (i = 0; i < ndevs; i++) {

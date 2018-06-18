@@ -9,7 +9,7 @@ configurable. However it strives to enforces a single coding style based on
 that cstyle. See "Configuration Options" below.
 
 The original cstyle tool can be found here:
-<http://cvs.opensolaris.org/source/xref/onnv/onnv-gate/usr/src/tools/scripts/cstyle.pl>
+<https://github.com/illumos/illumos-gate/blob/master/usr/src/tools/scripts/cstyle.pl>
 
 The document describing C Style is available here:
 <http://www.cis.upenn.edu/~lee/06cse480/data/cstyle.ms.pdf>
@@ -30,7 +30,8 @@ Examples of conditions checked by this tool include:
 
 ## Status
 
-No known bugs.  No new features planned.
+No new features planned.  The biggest known issue is that jsstyle doesn't grok
+regexes, so you usually need to wrap these in JSSTYLED comments (see below).
 
 
 ## Usage
@@ -55,17 +56,35 @@ configurability.
                             'tab' for tab indentation (the default).
     strict-indent           Boolean option, set to 1 to force indents of spaces
                             to be a multiple of indent parameter.
+    line-length             An integer number to specify the maximum length
+                            of a line (default: 80)
     literal-string-quote    'single' (the default) or 'double'. Specifies
                             the preferred quote character for literal strings.
     unparenthesized-return  Boolean option, set to 0 to disable the
                             "unparenthesized return expression" check.
     blank-after-start-comment
                             Boolean option, set to 0 to disable the
-                            "missing blank after start comment" check.
+                            "missing blank after start comment" check. `// `
+    blank-after-open-comment
+                            Boolean option, set to 0 to disable the
+                            "missing blank after open comment" check. `/* */`
+    no-blank-for-anon-function
+                            Boolean option, set to 1 to allow anonymous
+                            functions without blank before paren. `function() { ... }`
     continuation-at-front   Boolean option, set to 1 to force continations
                             to be at the beginning rather than end of line.
     leading-right-paren-ok  Boolean option, set to 1 to allow ) to start a
                             line.
+
+    whitespace-after-left-paren-ok
+                            Boolean option, allow whitespace after a (
+                            character.
+
+    leading-comma-ok        Boolean option to allow lines to begin with commas
+                            (preceded by whitespace).
+
+    uncuddled-else-ok       Boolean option to allow for an else block to begin
+                            on a new line.
 
 ## "JSSTYLED"-comments
 

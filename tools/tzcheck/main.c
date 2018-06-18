@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2016 Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  */
 
 /*
@@ -35,6 +35,8 @@
 #include <dirent.h>
 #include <ctype.h>
 #include <sys/avl.h>
+#include <limits.h>
+#include <unistd.h>
 
 #include "common.h"
 #include "parser.h"

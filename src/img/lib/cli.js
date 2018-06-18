@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  * * *
  *
@@ -1907,6 +1907,13 @@ CLI.prototype.do_create.help = (
     + 'With either calling mode, the image can optionally be published directly\n'
     + 'to a given image repository (IMGAPI) via "-p URL". This can also be\n'
     + 'done separately via "imgadm publish".\n'
+    + '\n'
+    + 'Note: When creating an image from a VM with brand \'bhyve\', \'lx\', or\n'
+    + '\'kvm\', the resulting manifest will have requirements.brand set to match\n'
+    + 'the brand of the source VM. If this is undesirable, the\n'
+    + 'requirements.brand can be set (optionally empty if the resulting image\n'
+    + 'should not have this value set) in the manifest passed with the \'-m\'\n'
+    + 'option.\n'
     + '\n'
     + 'Usage:\n'
     + '    {{name}} create [<options>] <vm-uuid> [<manifest-field>=<value> ...]\n'

@@ -10,14 +10,13 @@
  */
 
 /*
- * Copyright 2015 Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  */
 
 /*
  * smartos-live: Path manipulation utility functions.
  */
-
-#include <libcmdutils.h>
+#include "custr.h"
 
 /*
  * Append a path string, "inp", to the end of the path string already present

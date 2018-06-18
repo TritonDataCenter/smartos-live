@@ -1,4 +1,4 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2018 Joyent, Inc.  All rights reserved.
 //
 // Test invalid nic tag detection
 //
@@ -247,7 +247,7 @@ test('vrrp vnics: updating', function (t) {
                 payload: {
                     add_nics: [
                         {
-                            mac: '52:31:98:52:5d:07:d0',
+                            mac: '52:31:98:52:5d:07',
                             nic_tag: 'external',
                             ip: 'dhcp',
                             vrrp_vrid: 4
@@ -554,7 +554,7 @@ test('vrrp vnics: updating', function (t) {
 test('create with both mac and vrrp_vid', function (t) {
     expectCreateError({
         nics: [ {
-                mac: '52:31:98:52:5d:07:d1',
+                mac: '52:31:98:52:5d:07',
                 vrrp_vrid: 9
         } ],
         t: t,

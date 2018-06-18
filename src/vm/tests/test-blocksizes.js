@@ -1,4 +1,4 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2017 Joyent, Inc.
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
@@ -38,8 +38,8 @@ test('create zone with root_recsize 64k', function(t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                t.ok(!err, 'loading VM after create');
-                if (!err) {
+                t.ok(!e, 'loading VM after create');
+                if (!e) {
                     t.ok(o.zfs_root_recsize === 65536,
                         'root_recsize is correct after load [' + o.zfs_root_recsize
                         + ',65536]');
@@ -259,9 +259,9 @@ test('create zone with data_recsize 64k', function(t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                t.ok(!err, 'loading VM after create');
-                if (!err) {
-                    t.ok(o.zfs_data_recsize === 65536,
+                t.ok(!e, 'loading VM after create');
+                if (!e) {
+                    t.equal(o.zfs_data_recsize, 65536,
                         'recsize is correct after load [' + o.zfs_data_recsize
                         + ',65536]');
                     vmobj = o;
@@ -296,7 +296,7 @@ function testInvalidDataRecsize(t, size, vmobj, callback)
                 if (err) {
                     t.ok(false, 'failed update broke VM!');
                 } else {
-                    t.ok(o.zfs_data_recsize === prev_size,
+                    t.equal(o.zfs_data_recsize, prev_size,
                         'failed update did not modify recsize');
                 }
                 callback();
@@ -335,7 +335,7 @@ function testValidDataRecsize(t, size, vmobj, callback)
                 if (err) {
                     t.ok(false, 'update broke VM!');
                 } else {
-                    t.ok(o.zfs_data_recsize === size, 'update modified recsize');
+                    t.equal(o.zfs_data_recsize, size, 'update modified recsize');
                 }
                 callback();
             });
@@ -472,9 +472,9 @@ test('create zone with compression', function(t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                t.ok(!err, 'loading VM after create');
-                if (!err) {
-                    t.ok(o.zfs_root_compression === 'gzip',
+                t.ok(!e, 'loading VM after create');
+                if (!e) {
+                    t.equal(o.zfs_root_compression, 'gzip',
                         'compression is correct after load ['
                         + o.zfs_root_compression + ',gzip]');
                     t.ok(!o.hasOwnProperty('zfs_data_compression'),
@@ -551,7 +551,7 @@ test('update zone with compression gzip-2 for data', function(t) {
                         t.ok(false, 'failed to set zfs_data_compression');
                         abort = true;
                     } else {
-                        t.ok(o.zfs_data_compression === 'gzip-2',
+                        t.equal(o.zfs_data_compression, 'gzip-2',
                             'zfs_data_compression was set ['
                             + o.zfs_data_compression + ',gzip-2]');
                         t.ok(!o.hasOwnProperty('zfs_root_compression'),
@@ -609,8 +609,8 @@ test('create KVM with block_size 64k', function(t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                t.ok(!err, 'loading VM after create');
-                if (!err) {
+                t.ok(!e, 'loading VM after create');
+                if (!e) {
                     t.ok(o.disks[0].block_size === 65536,
                         'block_size is correct after load [' + o.disks[0].block_size
                         + ',65536]');
@@ -650,7 +650,7 @@ function testAddDiskInvalidBlockSize(t, size, vmobj, callback)
                 if (err) {
                     t.ok(false, 'failed update broke VM!');
                 } else {
-                    t.ok(o.disks.length === prev_count,
+                    t.equal(o.disks.length, prev_count,
                         'failed update did not modify disks');
                 }
                 callback();
@@ -752,9 +752,9 @@ test('create KVM with compression', function(t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                t.ok(!err, 'loading VM after create');
-                if (!err) {
-                    t.ok(o.disks[0].compression === 'gzip',
+                t.ok(!e, 'loading VM after create');
+                if (!e) {
+                    t.equal(o.disks[0].compression, 'gzip',
                         'compression is correct after load ['
                         + o.disks[0].compression + ',gzip]');
                     vmobj = o;

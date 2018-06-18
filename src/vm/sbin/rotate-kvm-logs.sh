@@ -1,12 +1,16 @@
 #!/bin/bash
 #
-# Copyright (c) 2013 Joyent Inc.
+# Copyright (c) 2017 Joyent Inc.
 #
 # Consume Qemu log files from KVM zones writing to /var/log/sdc/upload so they
 # are ready for offloading to another system.
 #
 # You can optionally pass a <VM UUID> argument to only rotate the logs for that
 # VM. By default it rotates Qemu logs for all KVM VMs.
+#
+# When no argument is passed, in addition to rotating existing logs, this script
+# will remove stale entries from /var/logadm/timestamps that exist for vm.log
+# files for zones that no longer exist.
 #
 
 set -o errexit
@@ -97,6 +101,18 @@ function rotate_vm_logs()
     log "Done rotating logs in ${zoneroot}/tmp."
 }
 
+function cleanup_stale_vm_logs() {
+    awk '/^\/zones\/.*\/root\/tmp\/vm.log/ { print $1 }' \
+        /var/logadm/timestamps | while read -r vmlog; do
+
+        dirname=$(dirname "${vmlog}")
+        if [[ ! -d ${dirname} ]]; then
+            log "removing stale logadm entry for ${vmlog}"
+            logadm -r "${vmlog}"
+        fi
+    done
+}
+
 function usage()
 {
     if [[ -n $1 ]]; then
@@ -126,6 +142,10 @@ if [[ -n ${VM_UUID} ]]; then
         usage "FATAL: \"${VM_UUID}\" does not seem to be a KVM VM."
     fi
 else
+    # Remove /var/logadm/timestamps entries that were created due to logadm
+    # bugs like OS-3097
+    cleanup_stale_vm_logs
+
     for vm in $(vmadm lookup brand=kvm); do
         rotate_vm_logs ${vm}
     done

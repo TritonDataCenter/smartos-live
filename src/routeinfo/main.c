@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2015 Joyent, Inc.
+ * Copyright (c) 2017, Joyent, Inc.
  */
 
 /*
@@ -36,7 +36,6 @@
 #include <err.h>
 
 #include <libnvpair.h>
-#include <libcmdutils.h>
 
 #include <json-nvlist/json-nvlist.h>
 #include <mdata-client/common.h>

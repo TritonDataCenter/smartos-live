@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  * fwadm tests: all and any targets
  */
@@ -31,7 +31,7 @@ var fw;
 var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
 var mod_obj = require('../../lib/util/obj');
-var mod_uuid = require('node-uuid');
+var mod_uuid = require('uuid');
 var util = require('util');
 var util_vm = require('../../lib/util/vm');
 
@@ -117,14 +117,13 @@ exports['any <-> vm: add / update'] = function (t) {
 
             v4rules = helpers.defaultZoneRules(vm.uuid);
             v6rules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(v4rules, vm.uuid, 'out', 'block', 'tcp',
-                {
-                    any: [ 8080 ]
-                });
-            createSubObjects(v6rules, vm.uuid, 'out', 'block', 'tcp',
-                {
-                    any: [ 8080 ]
-                });
+
+            v4rules[vm.uuid].out.tcp = [
+                helpers.blockPortOutTCP('any', 8080)
+            ];
+            v6rules[vm.uuid].out.tcp = [
+                helpers.blockPortOutTCP('any', 8080)
+            ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
@@ -176,14 +175,12 @@ exports['any <-> vm: add / update'] = function (t) {
                 rules: [ expRules[1] ]
             }, 'rules returned');
 
-            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 8081 ]
-                });
-            createSubObjects(v6rules, vm.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 8081 ]
-                });
+            v4rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081, 'keep state')
+            ];
+            v6rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081, 'keep state')
+            ];
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
@@ -237,14 +234,12 @@ exports['any <-> vm: add / update'] = function (t) {
 
             v4rules[vm2.uuid] = helpers.defaultZoneRules();
             v6rules[vm2.uuid] = helpers.defaultZoneRules();
-            createSubObjects(v4rules, vm2.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 8081 ]
-                });
-            createSubObjects(v6rules, vm2.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 8081 ]
-                });
+            v4rules[vm2.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081)
+            ];
+            v6rules[vm2.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081)
+            ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
@@ -308,8 +303,12 @@ exports['any <-> vm: add / update'] = function (t) {
                 rules: [ expRules[0] ]
             }, 'results returned');
 
-            delete v4rules[vm.uuid].out.block;
-            delete v6rules[vm.uuid].out.block;
+            delete v4rules[vm.uuid].out.tcp;
+            delete v6rules[vm.uuid].out.tcp;
+
+            v4rules[vm.uuid].in.tcp = [ helpers.allowPortInTCP('any', 8081) ];
+            v6rules[vm.uuid].in.tcp = [ helpers.allowPortInTCP('any', 8081) ];
+
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
@@ -331,7 +330,7 @@ exports['any <-> vm: add / update'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -398,43 +397,27 @@ exports['any <-> all vms: add / update'] = function (t) {
 
             v4rules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
             v6rules = helpers.defaultZoneRules([vm1.uuid, vm2.uuid]);
-            createSubObjects(v4rules, vm1.uuid, 'out', 'block', 'tcp',
-                {
-                    '192.168.4.1': [ 8080, 8082 ],
-                    '192.168.4.2': [ 8082 ],
-                    '192.168.0.1': [ 8082 ]
-                });
-            createSubObjects(v4rules, vm2.uuid, 'out', 'block', 'tcp',
-                {
-                    '192.168.4.1': [ 8080, 8082 ],
-                    '192.168.4.2': [ 8082 ],
-                    '192.168.0.1': [ 8082 ]
-                });
-            createSubObjects(v4rules, vm1.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 8081 ],
-                    '192.168.0.1': [ 8083 ],
-                    '192.168.4.1': [ 8083 ],
-                    '192.168.4.2': [ 8083 ]
-                });
-            createSubObjects(v6rules, vm1.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 8081 ]
-                });
-            createSubObjects(v4rules, vm2.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 8081 ],
-                    '192.168.0.1': [ 8083 ],
-                    '192.168.4.1': [ 8083 ],
-                    '192.168.4.2': [ 8083 ]
-                });
-            createSubObjects(v6rules, vm2.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 8081 ]
-                });
+
+            [ vm1.uuid, vm2.uuid ].forEach(function (uuid) {
+                v4rules[uuid].out.tcp = [
+                    helpers.blockPortOutTCP('192.168.4.1', 8080),
+                    helpers.blockPortOutTCP('192.168.0.1', 8082),
+                    helpers.blockPortOutTCP('192.168.4.1', 8082),
+                    helpers.blockPortOutTCP('192.168.4.2', 8082)
+                ];
+                v4rules[uuid].in.tcp = [
+                    helpers.allowPortInTCP('any', 8081, 'keep state'),
+                    helpers.allowPortInTCP('192.168.0.1', 8083, 'keep state'),
+                    helpers.allowPortInTCP('192.168.4.1', 8083, 'keep state'),
+                    helpers.allowPortInTCP('192.168.4.2', 8083, 'keep state')
+                ];
+                v6rules[uuid].in.tcp = [
+                    helpers.allowPortInTCP('any', 8081, 'keep state')
+                ];
+            });
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
-                'IPv4 firewall rules correct');
+                'IPv4 firewall rules correct (test)');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
                 'IPv6 firewall rules correct');
 
@@ -476,10 +459,22 @@ exports['any <-> all vms: add / update'] = function (t) {
                 rules: [ ]
             }, 'rules returned');
 
-            v4rules[vm1.uuid].out.block.tcp['192.168.0.2'] = [ 8082 ];
-            v4rules[vm2.uuid].out.block.tcp['192.168.0.2'] = [ 8082 ];
-            v4rules[vm1.uuid].in.pass.tcp['192.168.0.2'] = [ 8083 ];
-            v4rules[vm2.uuid].in.pass.tcp['192.168.0.2'] = [ 8083 ];
+            [ vm1.uuid, vm2.uuid ].forEach(function (uuid) {
+                v4rules[uuid].out.tcp = [
+                    helpers.blockPortOutTCP('192.168.4.1', 8080),
+                    helpers.blockPortOutTCP('192.168.0.1', 8082),
+                    helpers.blockPortOutTCP('192.168.0.2', 8082),
+                    helpers.blockPortOutTCP('192.168.4.1', 8082),
+                    helpers.blockPortOutTCP('192.168.4.2', 8082)
+                ];
+                v4rules[uuid].in.tcp = [
+                    helpers.allowPortInTCP('any', 8081, 'keep state'),
+                    helpers.allowPortInTCP('192.168.0.1', 8083, 'keep state'),
+                    helpers.allowPortInTCP('192.168.0.2', 8083, 'keep state'),
+                    helpers.allowPortInTCP('192.168.4.1', 8083, 'keep state'),
+                    helpers.allowPortInTCP('192.168.4.2', 8083, 'keep state')
+                ];
+            });
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
@@ -523,13 +518,13 @@ exports['any <-> all vms: add / update'] = function (t) {
                 rules: [ expRules[1] ]
             }, 'rules returned');
 
-            delete v4rules[vm1.uuid].in.pass.tcp.any;
-            delete v4rules[vm2.uuid].in.pass.tcp.any;
-            delete v6rules[vm1.uuid].in.pass;
-            delete v6rules[vm2.uuid].in.pass;
+            delete v6rules[vm1.uuid].in.tcp;
+            delete v6rules[vm2.uuid].in.tcp;
 
-            v4rules[vm1.uuid].in.pass.tcp['192.168.0.2'] = [ 8081, 8083 ];
-            v4rules[vm2.uuid].in.pass.tcp['192.168.0.2'] = [ 8081, 8083 ];
+            v4rules[vm1.uuid].in.tcp[0] =
+                helpers.allowPortInTCP('192.168.0.2', 8081, 'keep state');
+            v4rules[vm2.uuid].in.tcp[0] =
+                helpers.allowPortInTCP('192.168.0.2', 8081, 'keep state');
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
@@ -572,10 +567,9 @@ exports['any <-> all vms: add / update'] = function (t) {
             }, 'results returned');
 
             [vm1, vm2].forEach(function (vm) {
-                delete v4rules[vm.uuid].out.block.tcp['192.168.0.1'];
-                delete v4rules[vm.uuid].out.block.tcp['192.168.0.2'];
-                v4rules[vm.uuid].out.block.tcp['192.168.4.1'] = [ 8080 ];
-                delete v4rules[vm.uuid].out.block.tcp['192.168.4.2'];
+                v4rules[vm.uuid].out.tcp = [
+                    helpers.blockPortOutTCP('192.168.4.1', 8080)
+                ];
             });
 
             expRules = expRules.filter(function (r) {
@@ -603,7 +597,7 @@ exports['any <-> all vms: add / update'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -650,14 +644,8 @@ exports['add / update: all ports'] = function (t) {
 
             v4rules = helpers.defaultZoneRules(vm.uuid);
             v6rules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(v4rules, vm.uuid, 'out', 'block', 'tcp',
-                {
-                    any: [ 'all' ]
-                });
-            createSubObjects(v6rules, vm.uuid, 'out', 'block', 'tcp',
-                {
-                    any: [ 'all' ]
-                });
+            v4rules[vm.uuid].out.tcp = [ helpers.blockPortOutTCP('any') ];
+            v6rules[vm.uuid].out.tcp = [ helpers.blockPortOutTCP('any') ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
@@ -709,14 +697,12 @@ exports['add / update: all ports'] = function (t) {
                 rules: [ expRules[1] ]
             }, 'rules returned');
 
-            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 'all' ]
-                });
-            createSubObjects(v6rules, vm.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 'all' ]
-                });
+            v4rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', null, 'keep state')
+            ];
+            v6rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', null, 'keep state')
+            ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
@@ -769,18 +755,17 @@ exports['add / update: all ports'] = function (t) {
                 rules: [ expRules[1] ]
             }, 'rules returned');
 
+            v4rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081, 'keep state')
+            ];
+            v6rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081, 'keep state')
+            ];
+
             v4rules[vm2.uuid] = helpers.defaultZoneRules();
-            v4rules[vm.uuid].in.pass.tcp.any = [ 8081 ];
             v6rules[vm2.uuid] = helpers.defaultZoneRules();
-            v6rules[vm.uuid].in.pass.tcp.any = [ 8081 ];
-            createSubObjects(v4rules, vm2.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 8081 ]
-                });
-            createSubObjects(v6rules, vm2.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 8081 ]
-                });
+            v4rules[vm2.uuid].in.tcp = [ helpers.allowPortInTCP('any', 8081) ];
+            v6rules[vm2.uuid].in.tcp = [ helpers.allowPortInTCP('any', 8081) ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
@@ -844,8 +829,16 @@ exports['add / update: all ports'] = function (t) {
                 rules: [ expRules[0] ]
             }, 'results returned');
 
-            delete v4rules[vm.uuid].out.block;
-            delete v6rules[vm.uuid].out.block;
+            delete v4rules[vm.uuid].out.tcp;
+            delete v6rules[vm.uuid].out.tcp;
+
+            v4rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081)
+            ];
+            v6rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('any', 8081)
+            ];
+
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'IPv4 firewall rules correct');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
@@ -867,7 +860,7 @@ exports['add / update: all ports'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 

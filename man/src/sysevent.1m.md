@@ -30,6 +30,9 @@ JSON to stdout instead for easy machine parsing.
 **-j**
     JSON output.
 
+**-r**
+    Print 'ready' event at start.
+
 ## EXAMPLES
 
 `sysevent`

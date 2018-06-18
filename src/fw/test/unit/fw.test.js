@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  * fwadm tests
  */
@@ -31,11 +31,10 @@ var fw;
 var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
 var mod_obj = require('../../lib/util/obj');
-var mod_uuid = require('node-uuid');
+var mod_uuid = require('uuid');
 var util = require('util');
 var util_vm = require('../../lib/util/vm');
 
-var createSubObjects = mod_obj.createSubObjects;
 var mergeObjects = mod_obj.mergeObjects;
 
 
@@ -141,10 +140,10 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
 
             var v4rules = helpers.defaultZoneRules(vm.uuid);
             var v6rules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(v4rules, vm.uuid, 'out', 'block', 'tcp',
-                {
-                    '10.99.99.254': [ 8080 ]
-                });
+
+            v4rules[vm.uuid].out.tcp = [
+                helpers.blockPortOutTCP('10.99.99.254', 8080)
+            ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');
@@ -207,11 +206,11 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
 
             var v4rules = helpers.defaultZoneRules(vm.uuid);
             var v6rules = helpers.defaultZoneRules(vm.uuid);
-            createSubObjects(v4rules, vm.uuid, 'out', 'block', 'tcp',
-                {
-                    '10.99.99.254': [ 8080 ],
-                    '10.88.88.2': [ 8080 ]
-                });
+
+            v4rules[vm.uuid].out.tcp = [
+                helpers.blockPortOutTCP('10.88.88.2', 8080),
+                helpers.blockPortOutTCP('10.99.99.254', 8080)
+            ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');
@@ -296,7 +295,7 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -373,7 +372,7 @@ exports['add / update: vm to IP: ALLOW'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -417,10 +416,11 @@ exports['add: tag to IP'] = function (t) {
 
             var v4rules = helpers.defaultZoneRules(vm1.uuid);
             var v6rules = helpers.defaultZoneRules(vm1.uuid);
-            createSubObjects(v4rules, vm1.uuid, 'out', 'block', 'tcp',
-                {
-                    '10.99.99.254': [ 25 ]
-                });
+
+            v4rules[vm1.uuid].out.tcp = [
+                helpers.blockPortOutTCP('10.99.99.254', 25)
+            ];
+
             v4rules[vm2.uuid] = v4rules[vm1.uuid];
             v6rules[vm2.uuid] = v6rules[vm1.uuid];
 
@@ -473,7 +473,7 @@ exports['add: tag to IP'] = function (t) {
         }, cb);
     }
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -525,14 +525,14 @@ exports['add: tag to subnet'] = function (t) {
 
             var v4rules = helpers.defaultZoneRules(vm1.uuid);
             var v6rules = helpers.defaultZoneRules(vm1.uuid);
-            createSubObjects(v4rules, vm1.uuid, 'out', 'block', 'tcp',
-                {
-                    '10.99.99.0/24': [ 25 ]
-                });
-            createSubObjects(v4rules, vm1.uuid, 'in', 'pass', 'tcp',
-                {
-                    '10.99.99.0/24': [ 80 ]
-                });
+
+            v4rules[vm1.uuid].out.tcp = [
+                helpers.blockPortOutTCP('10.99.99.0/24', 25)
+            ];
+            v4rules[vm1.uuid].in.tcp = [
+                helpers.allowPortInTCP('10.99.99.0/24', 80, 'keep state')
+            ];
+
             v4rules[vm2.uuid] = v4rules[vm1.uuid];
             v6rules[vm2.uuid] = v6rules[vm1.uuid];
 
@@ -605,7 +605,7 @@ exports['add: tag to subnet'] = function (t) {
         }, cb);
     }
     ], function () {
-            t.done();
+        t.done();
     });
 };
 
@@ -660,14 +660,10 @@ exports['add: vm to subnet'] = function (t) {
 
             var v4rules = helpers.defaultZoneRules(vm1.uuid);
             var v6rules = helpers.defaultZoneRules(vm1.uuid);
-            createSubObjects(v4rules, vm1.uuid, 'out', 'block', 'tcp',
-                {
-                    '10.99.99.0/24': [ 25 ]
-                });
-            createSubObjects(v4rules, vm1.uuid, 'in', 'pass', 'tcp',
-                {
-                    '10.99.99.0/24': [ 80 ]
-                });
+            v4rules[vm1.uuid].out.tcp =
+                [ helpers.blockPortOutTCP('10.99.99.0/24', 25) ];
+            v4rules[vm1.uuid].in.tcp =
+                [ helpers.allowPortInTCP('10.99.99.0/24', 80, 'keep state') ];
 
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files correct');
@@ -748,7 +744,253 @@ exports['add: vm to subnet'] = function (t) {
         }, cb);
     }
     ], function () {
-            t.done();
+        t.done();
+    });
+};
+
+
+exports['sorting: multiple ip and subnet rules'] = function (t) {
+    var vm = helpers.generateVM();
+    var payload = {
+        rules: [
+            {
+                owner_uuid: vm.owner_uuid,
+                rule: util.format(
+                    'FROM subnet 10.99.99.0/24 TO vm %s ALLOW tcp PORT 25',
+                    vm.uuid),
+                enabled: true
+            },
+            {
+                owner_uuid: vm.owner_uuid,
+                rule: util.format(
+                    'FROM subnet 10.88.88.0/24 TO vm %s ALLOW tcp PORT 25',
+                    vm.uuid),
+                enabled: true
+            },
+            {
+                owner_uuid: vm.owner_uuid,
+                rule: util.format(
+                    'FROM subnet 10.66.66.0/24 TO vm %s ALLOW tcp PORT 25',
+                    vm.uuid),
+                enabled: true
+            },
+            {
+                owner_uuid: vm.owner_uuid,
+                rule: util.format(
+                    'FROM ip 10.77.77.77 TO vm %s ALLOW tcp PORT 25',
+                    vm.uuid),
+                enabled: true
+            },
+            {
+                owner_uuid: vm.owner_uuid,
+                rule: util.format(
+                    'FROM ip 10.77.77.99 TO vm %s ALLOW tcp PORT 25',
+                    vm.uuid),
+                enabled: true
+            }
+        ],
+        vms: [vm]
+    };
+
+    var rule1 = clone(payload.rules[0]);
+    var rule2 = clone(payload.rules[1]);
+    var rule3 = clone(payload.rules[2]);
+    var rule4 = clone(payload.rules[3]);
+    var rule5 = clone(payload.rules[4]);
+
+    var rules = [ rule1, rule2, rule3, rule4, rule5 ];
+
+    async.series([
+    function (cb) {
+        fw.validatePayload(payload, function (err, res) {
+            t.ifError(err);
+            cb();
+        });
+
+    }, function (cb) {
+        fw.add(payload, function (err, res) {
+            t.ifError(err);
+            if (err) {
+                cb(err);
+                return;
+            }
+
+            helpers.fillInRuleBlanks(res.rules, rules);
+            rules.sort(helpers.uuidSort);
+
+            t.deepEqual(helpers.sortRes(res), {
+                vms: [ vm.uuid ],
+                rules: rules
+            }, 'rules returned');
+
+            var v4rules = helpers.defaultZoneRules(vm.uuid);
+            var v6rules = helpers.defaultZoneRules(vm.uuid);
+            v4rules[vm.uuid].in.tcp = [
+                helpers.allowPortInTCP('10.66.66.0/24', 25),
+                helpers.allowPortInTCP('10.77.77.77', 25),
+                helpers.allowPortInTCP('10.77.77.99', 25),
+                helpers.allowPortInTCP('10.88.88.0/24', 25),
+                helpers.allowPortInTCP('10.99.99.0/24', 25)
+            ];
+
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'zone ipf.conf files correct');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'zone ipf6.conf files correct');
+
+            var vmsEnabled = {};
+            vmsEnabled[vm.uuid] = true;
+            t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
+                'ipf enabled in VMs');
+
+            var expRulesOnDisk = {};
+            expRulesOnDisk[rule1.uuid] = clone(rule1);
+            expRulesOnDisk[rule2.uuid] = clone(rule2);
+            expRulesOnDisk[rule3.uuid] = clone(rule3);
+            expRulesOnDisk[rule4.uuid] = clone(rule4);
+            expRulesOnDisk[rule5.uuid] = clone(rule5);
+            t.deepEqual(helpers.rulesOnDisk(), expRulesOnDisk, 'rules on disk');
+
+            cb();
+        });
+
+    }, function (cb) {
+        helpers.fwListEquals(t, rules.sort(helpers.uuidSort), cb);
+
+    }, function (cb) {
+        helpers.fwRulesEqual({
+            t: t,
+            rules: rules,
+            vm: vm,
+            vms: [vm]
+        }, cb);
+
+    }
+    ], function () {
+        t.done();
+    });
+};
+
+
+exports['sorting: multiple icmp types'] = function (t) {
+    var vm = helpers.generateVM();
+    var payload = {
+        rules: [
+            {
+                owner_uuid: vm.owner_uuid,
+                rule: util.format(
+                    'FROM any TO vm %s ALLOW icmp TYPE 1',
+                    vm.uuid),
+                enabled: true
+            },
+            {
+                owner_uuid: vm.owner_uuid,
+                rule: util.format(
+                    'FROM ip 1.2.3.4 TO vm %s ALLOW icmp TYPE all',
+                    vm.uuid),
+                enabled: true
+            },
+            {
+                owner_uuid: vm.owner_uuid,
+                rule: util.format(
+                    'FROM ip 1.2.3.5 TO vm %s ALLOW icmp TYPE all',
+                    vm.uuid),
+                enabled: true
+            },
+            {
+                owner_uuid: vm.owner_uuid,
+                rule: util.format(
+                    'FROM any TO vm %s ALLOW icmp TYPE 5 CODE 1',
+                    vm.uuid),
+                enabled: true
+            },
+            {
+                owner_uuid: vm.owner_uuid,
+                rule: util.format(
+                    'FROM any TO vm %s ALLOW icmp TYPE 5 CODE 3',
+                    vm.uuid),
+                enabled: true
+            }
+        ],
+        vms: [vm]
+    };
+
+    var rule1 = clone(payload.rules[0]);
+    var rule2 = clone(payload.rules[1]);
+    var rule3 = clone(payload.rules[2]);
+    var rule4 = clone(payload.rules[3]);
+    var rule5 = clone(payload.rules[4]);
+
+    var rules = [ rule1, rule2, rule3, rule4, rule5 ];
+
+    async.series([
+    function (cb) {
+        fw.validatePayload(payload, function (err, res) {
+            t.ifError(err);
+            cb();
+        });
+
+    }, function (cb) {
+        fw.add(payload, function (err, res) {
+            t.ifError(err);
+            if (err) {
+                cb(err);
+                return;
+            }
+
+            helpers.fillInRuleBlanks(res.rules, rules);
+            rules.sort(helpers.uuidSort);
+
+            t.deepEqual(helpers.sortRes(res), {
+                vms: [ vm.uuid ],
+                rules: rules
+            }, 'rules returned');
+
+            var v4rules = helpers.defaultZoneRules(vm.uuid);
+            var v6rules = helpers.defaultZoneRules(vm.uuid);
+            v4rules[vm.uuid].in.icmp = [
+                helpers.allowInICMP('1.2.3.4'),
+                helpers.allowInICMP('1.2.3.5'),
+                helpers.allowInICMP('any', 1),
+                helpers.allowInICMP('any', 5, 1),
+                helpers.allowInICMP('any', 5, 3)
+            ];
+
+            t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
+                'zone ipf.conf files correct');
+            t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
+                'zone ipf6.conf files correct');
+
+            var vmsEnabled = {};
+            vmsEnabled[vm.uuid] = true;
+            t.deepEqual(helpers.getIPFenabled(), vmsEnabled,
+                'ipf enabled in VMs');
+
+            var expRulesOnDisk = {};
+            expRulesOnDisk[rule1.uuid] = clone(rule1);
+            expRulesOnDisk[rule2.uuid] = clone(rule2);
+            expRulesOnDisk[rule3.uuid] = clone(rule3);
+            expRulesOnDisk[rule4.uuid] = clone(rule4);
+            expRulesOnDisk[rule5.uuid] = clone(rule5);
+            t.deepEqual(helpers.rulesOnDisk(), expRulesOnDisk, 'rules on disk');
+
+            cb();
+        });
+
+    }, function (cb) {
+        helpers.fwListEquals(t, rules.sort(helpers.uuidSort), cb);
+
+    }, function (cb) {
+        helpers.fwRulesEqual({
+            t: t,
+            rules: rules,
+            vm: vm,
+            vms: [vm]
+        }, cb);
+
+    }
+    ], function () {
+        t.done();
     });
 };
 
@@ -888,14 +1130,11 @@ exports['enable / disable rule'] = function (t) {
                 vms: [ vm.uuid ]
             }, 'rules returned');
 
-            createSubObjects(v4rules, vm.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 33 ]
-                });
-            createSubObjects(v6rules, vm.uuid, 'in', 'pass', 'tcp',
-                {
-                    any: [ 33 ]
-                });
+            v4rules[vm.uuid].in.tcp =
+                [ helpers.allowPortInTCP('any', 33) ];
+            v6rules[vm.uuid].in.tcp =
+                [ helpers.allowPortInTCP('any', 33) ];
+
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files still the same');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
@@ -925,7 +1164,7 @@ exports['enable / disable rule'] = function (t) {
     }
 
     ], function () {
-            t.done();
+        t.done();
     });
 };
 

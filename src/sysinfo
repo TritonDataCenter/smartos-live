@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2015 Joyent Inc., All rights reserved.
+# Copyright (c) 2018 Joyent Inc., All rights reserved.
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -103,14 +103,24 @@ function get_smbios_system_info()
 {
     # This puts the variables we're pulling out into the local environment
     eval $(smbios -t SMB_TYPE_SYSTEM | tr -d "\"" \
-        | egrep "Manufacturer: |Product: |Serial Number: |UUID: |SKU Number: |Version: |Family: " \
+        | egrep "Manufacturer: |Product: |Serial Number: |UUID \(Endian-corrected\): |UUID: |SKU Number: |Version: |Family: " \
         | sed -e 's/^ *//' \
         -e 's/: /="/' \
         -e 's/ *$/"/' \
         -e 's/Serial Number/Serial_Number/' \
         -e 's/SKU Number/SKU_Number/' \
         -e 's/Version/HW_Version/' \
-        -e 's/Family/HW_Family/')
+        -e 's/Family/HW_Family/' \
+        -e 's/UUID (Endian-corrected)/Fixed_UUID/')
+
+    vendor=$(smbios -t SMB_TYPE_BIOS | grep "Vendor: " \
+        | sed -e 's/^.*Vendor: //;s/ *$//')
+
+    # If we are a bhyve guest, we can use the correct UUID format; otherwise we
+    # use the network-endian one for compatibility reasons.
+    if [ "$vendor" = "BHYVE" -a -n "$Fixed_UUID" ]; then
+        UUID=$Fixed_UUID
+    fi
 
     # overwrite UUID if config dictates otherwise
     tmp_uuid=$(/usr/bin/bootparams | grep "^override_uuid=" | cut -f2 -d'=')
@@ -195,6 +205,22 @@ function get_smartos_cpu_info()
     #echo "${CPU_Version}"
     #echo "${CPU_Count}"
     #echo "${CPU_Cores}"
+}
+
+function get_bhyve_capability()
+{
+    Bhyve_Capable="false"
+    Bhyve_Max_Vcpus="0"
+
+    if [[ -x /usr/lib/brand/bhyve/bhhwcompat ]]; then
+        if /usr/lib/brand/bhyve/bhhwcompat; then
+            Bhyve_Capable="true"
+            vcpus=$(/usr/lib/brand/bhyve/bhhwcompat -c | /usr/bin/grep "^[0-9]*$")
+            if [[ -n ${vcpus} ]]; then
+                Bhyve_Max_Vcpus=${vcpus}
+            fi
+        fi
+    fi
 }
 
 function get_live_image_buildstamp()
@@ -655,6 +681,8 @@ VM_Capable='${VM_Capable}'
 CPU_Type='${CPU_Version}'
 CPU_Virtualization='${CPU_Virtualization}'
 CPU_Physical_Cores=${CPU_Count}
+Bhyve_Capable='${Bhyve_Capable}'
+Bhyve_Max_Vcpus=${Bhyve_Max_Vcpus}
 Nic_Tags=${NicTagList}
 Setup='${Setup_complete}'
 END
@@ -787,6 +815,8 @@ END
   "HW Family": "${HW_Family}",
   "Setup": "${Setup_complete}",
   "VM Capable": ${VM_Capable},
+  "Bhyve Capable": ${Bhyve_Capable},
+  "Bhyve Max Vcpus": ${Bhyve_Max_Vcpus},
   "CPU Type": "${CPU_Version}",
   "CPU Virtualization": "${CPU_Virtualization}",
   "CPU Physical Cores": ${CPU_Count},
@@ -907,7 +937,7 @@ END
         ipv4_var="Virtual_Network_Interface_${iface}_IPv4_Address"
         link_status_var="Virtual_Network_Interface_${iface}_Link_Status"
         vlan_var="Virtual_Network_Interface_${iface}_VLAN"
-        parent_var="Virtual_Network_Interface_${iface}_Host_Interface"
+        host_var="Virtual_Network_Interface_${iface}_Host_Interface"
 
         eval "mac=\${${mac_var}}"
         eval "ipv4=\${${ipv4_var}}"
@@ -975,6 +1005,7 @@ else
 fi
 get_memory_mib
 get_smartos_cpu_info
+get_bhyve_capability
 get_live_image_buildstamp
 get_system_type
 get_hostname

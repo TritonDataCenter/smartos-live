@@ -1,4 +1,4 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2017 Joyent, Inc.
 //
 // Tests for VM.lookup()
 //
@@ -81,7 +81,7 @@ function setAndCheckAlias(t, uuid, alias, base64, callback)
         }, function (cb) {
             // check that zonecfg value is correct
             getZonecfgAlias(uuid, function _checkZonecfgAlias(err, zalias) {
-                t.equal(zalias, base64);
+                t.equal(zalias, base64, 'alias the same in zonecfg');
                 if (err) {
                     t.ok(false, 'failed to get alias from zonecfg: '
                         + err.message);
@@ -98,7 +98,8 @@ function setAndCheckAlias(t, uuid, alias, base64, callback)
                     return;
                 }
 
-                t.equal((obj.alias == undefined) ? '' : obj.alias, alias);
+                t.equal((obj.alias == undefined) ? '' : obj.alias, alias,
+                    'alias the same from VM.load');
                 cb();
             });
         }

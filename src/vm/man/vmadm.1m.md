@@ -438,6 +438,10 @@ tab-complete UUIDs rather than having to type them out for every command.
         restarted. Other properties will require a reboot in order to take
         effect.
 
+        If the VM is running when an update is made, the 'mdata:fetch' service
+        inside the zone will be restarted - the service will be enabled
+        regardless of its state prior to the update.
+
      validate create [-f <filename>]
      validate update <brand> [-f <filename>]
 
@@ -900,7 +904,8 @@ tab-complete UUIDs rather than having to type them out for every command.
         use virtio. If not, use ide or scsi depending on the drivers in your
         guest.
 
-        type: string (one of ['virtio','ide','scsi'])
+        type: string (KVM: one of ['virtio','ide','scsi'])
+                     (BHYVE: one of ['virtio','ahci'])
         vmtype: KVM
         listable: yes (see above)
         create: yes
@@ -1358,7 +1363,7 @@ tab-complete UUIDs rather than having to type them out for every command.
     nics.*.allowed_ips:
 
         This sets additional IP addresses from which this nic is allowed to
-        send traffic, in addition to the IPs in the ip and vrrp_primary_ip
+        send traffic, in addition to the IPs in the ips and vrrp_primary_ip
         properties (if set). Values may be single IPv4 or IPv6 addresses
         or IPv4 and IPv6 CIDR ranges. The following are all valid
         examples of allowed_ips: '10.169.0.0/16', '10.99.99.7',
@@ -1366,6 +1371,21 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         type: array (of IP addresses or CIDR ranges)
         vmtype: OS,KVM
+        listable: yes (see above)
+        create: yes
+        update: yes
+
+    nics.*.allowed_dhcp_cids:
+
+        This specifies which DHCP Client Identifiers outbound DHCP packets are
+        allowed to use. By default, when no Client Identifiers are listed, and
+        nics.*.ips includes "dhcp" or "addrconf", all DHCP Client Identifiers
+        are permitted. Client Identifiers are specified as a string of pairs of
+        hexadecimal characters beginning with the prefix "0x". Up to 20 Client
+        Identifiers can be listed.
+
+        type: array (of even-lengthed hexadecimal strings beginning with "0x")
+        vmtype: OS,LX,KVM
         listable: yes (see above)
         create: yes
         update: yes
@@ -1721,21 +1741,25 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     routes:
 
-        This is a key-value object that maps destinations to gateways. These
-        will be set as static routes in the VM. The destinations can be either
-        IPs or subnets in CIDR form. The gateways can either be IP addresses, or
-        can be of the form "nics[0]", which specifies a link-local route on the
-        numbered nic in that VM's nics array (the first nic is 0).  As an
-        example:
+	This is a key-value object that maps destinations to gateways. These
+	will be set as static routes in the VM. The destinations can be either
+	IPs or subnets in CIDR form. The gateways can either be IP addresses,
+	or can be of the form "nics[0]" or "macs[aa:bb:cc:12:34:56]". Using
+	nics[] or macs[] specifies a link-local route. When using nics[] the IP
+	of the numbered nic in that VM's nics array (the first nic is 0) is
+	used. When using macs[] the IP of the nic with the matching mac address
+	in that VM's nic array is used. As an example:
 
             {
                 "10.2.2.0/24": "10.2.1.1",
-                "10.3.0.1": "nics[1]"
+                "10.3.0.1": "nics[1]",
+                "10.4.0.1": "macs[aa:bb:cc:12:34:56]"
             }
 
-        This sets two static routes: to the 10.2.2.0/24 subnet with a gateway
-        of 10.2.1.1, and a link-local route to the host 10.3.0.1 over the VM's
-        second nic.
+	This sets three static routes: to the 10.2.2.0/24 subnet with a gateway
+	of 10.2.1.1, a link-local route to the host 10.3.0.1 over the VM's
+	second nic, and a link-local route to the host 10.4.0.1 over the VM's
+	nic with the corresponding mac address.
 
         type: object
         vmtype: OS
@@ -2170,6 +2194,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes (OS VMs only)
         update: no
         default: value of uuid
+
+    zonedid:
+
+        This property will show up in a JSON payload and can be included in
+        list output. It is a value that is used internally to the system and
+        primarily exists to aid debugging. This value will not change when the
+        VM is started/stopped.
+
+        type: integer
+        vmtype: OS,KVM
+        listable: yes
+        create: no
+        update: no
 
     zoneid:
 

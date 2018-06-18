@@ -11,12 +11,14 @@
 #
 
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright (c) 2017, Joyent, Inc.
 #
 
 #
-# Automates the process of building iso and usb images of a smartos build.
-# It uses the latest platform file that's been built.
+# Automates the process of building ISO and USB images of a SmartOS build.  It
+# uses the latest platform file that's been built.  This program should be
+# invoked via the "make iso" and "make usb" targets of the top-level Makefile
+# in "smartos-live.git".
 #
 
 shopt -s xpg_echo
@@ -34,6 +36,7 @@ bi_output_grub_dir="$bi_tmpdir/boot/grub"
 bi_grub_files="stage1 stage2 stage2_eltorito"
 bi_archive_path="i86pc/amd64/boot_archive"
 bi_unix_path="i86pc/kernel/amd64/unix"
+bi_usb_size=2000000000
 bi_grub_optstr=
 bi_console=vga
 bi_grub_unit=
@@ -41,6 +44,7 @@ bi_dont_clean=0
 bi_no_smartos=0
 bi_do_kmdb=
 bi_usbpath=
+bi_tmpusbpath=
 bi_lofidev=
 
 
@@ -72,7 +76,8 @@ function fail_cleanup
 		pfexec lofiadm -d $bi_lofidev
 	fi
 	# an uncompressed usb file is probably incomplete.  remove it
-	[[ -f $bi_usbpath ]] && rm $bi_usbpath
+	[[ -f $bi_tmpusbpath ]] && rm -f $bi_tmpusbpath
+	[[ -f $bi_usbpath ]] && rm -f $bi_usbpath
 	local msg="$*"
 	[[ -z "$msg" ]] && msg="failed"
 	echo "$bi_arg0: $msg" >&2
@@ -168,6 +173,8 @@ function bi_verif_console
 
 function bi_generate_usb_file
 {
+	local tmp_free
+
 	if [[ ! -d $bi_output_dir ]]; then
 		mkdir -p $bi_output_dir > /dev/null
 		[[ $? -eq 0 ]] || fail "failed to make output directory"
@@ -175,9 +182,18 @@ function bi_generate_usb_file
 
 	bi_emit_start 'Generating usb image file'
 	bi_usbpath="$bi_output_dir/$bi_platform_name.usb"
-	rm -f $bi_usbpath
-	mkfile -n 2000000000 $bi_usbpath || fail "failed to generate usb file"
-	if ! bi_lofidev=$(pfexec lofiadm -a $bi_usbpath); then
+	bi_tmpusbpath=$bi_usbpath
+
+	tmp_free=$(stat -f -c '%S * %f' $bi_tmpdir | xargs expr)
+	if ((tmp_free >= bi_usb_size + 10000)); then
+		bi_tmpusbpath="$bi_tmpdir/$bi_platform_name.usb"
+	fi
+
+	rm -f $bi_tmpusbpath
+	if ! mkfile -n $bi_usb_size $bi_tmpusbpath; then
+		fail "failed to generate usb file"
+	fi
+	if ! bi_lofidev=$(pfexec lofiadm -a $bi_tmpusbpath); then
 		fail "failed to create lofi device"
 	fi
 	if ! pfexec fdisk -F "$(dirname $0)/usb_fdisk_table" \
@@ -278,17 +294,9 @@ function bi_generate_iso
 
 function bi_generate_usb
 {
-	bi_emit_start 'Installing grub'
-        bi_emit_newline
-	grub --batch <<____ENDOFGRUBCOMMANDS
-device (hd0) $bi_usbpath
-root (hd0,0)
-setup (hd0)
-quit
-____ENDOFGRUBCOMMANDS
-	[[ $? -eq 0 ]] || fail "failed to install grub"
-	bi_emit_done
-
+	# The image file in $bi_tmpdir is hidden by the mounted image contents,
+	# so we have to make it visible again by umounting before grub can be
+	# installed.
 	if ! pfexec umount "${bi_lofidev}:c"; then
 		fail "failed to unmount ${bi_lofidev}:c"
 	fi
@@ -296,9 +304,24 @@ ____ENDOFGRUBCOMMANDS
 		fail "failed to remove lofi device $bi_lofidev"
 	fi
 	bi_lofidev= #unset that variable so fail won't try to clean it up again
+
+	bi_emit_start 'Installing grub'
+	bi_emit_newline
+	grub --batch <<____ENDOFGRUBCOMMANDS
+device (hd0) $bi_tmpusbpath
+root (hd0,0)
+setup (hd0)
+quit
+____ENDOFGRUBCOMMANDS
+	[[ $? -eq 0 ]] || fail "failed to install grub"
+	bi_emit_done
+
 	bi_emit_start 'Compressing usb image'
 	[[ -f ${bi_usbpath}.bz2 ]] && rm ${bi_usbpath}.bz2
-	pbzip2 $bi_usbpath || fail "failed to compress $bi_usbpath"
+	if ! pbzip2 -c $bi_tmpusbpath > ${bi_usbpath}.bz2; then
+		fail "failed to compress $bi_usbpath"
+	fi
+	rm -f $bi_tmpusbpath
 	bi_emit_done
 	bi_emit_info 'USB Output' "$(pwd)/${bi_usbpath}.bz2"
 }
@@ -334,6 +357,8 @@ while getopts "kmo:nhc:" c $@; do
 		;;
 	esac
 done
+
+bi_big_banner "Building \"$bi_type\" image"
 
 #
 # Get us to the root of the workspace

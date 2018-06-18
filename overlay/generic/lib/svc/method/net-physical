@@ -22,7 +22,7 @@
 #
 # Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T. All rights reserved.
 # Copyright (c) 1999, 2010, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2016 Joyent, Inc.
+# Copyright 2017 Joyent, Inc.
 #
 
 . /lib/svc/share/smf_include.sh
@@ -498,6 +498,34 @@ if smf_is_globalzone; then
     setup_mtu
 
     # Setup admin NIC
+
+    # If there is no NIC with the admin tag, and the config has
+    # admin_nic_autoselect=true, designate the first NIC reported
+    # by dladm for admin use. This is useful in environments where
+    # the NICs are known to change beneath us.
+    if [[ "${BOOT_smartos}" == "true" ]] && \
+        [[ "${CONFIG_admin_nic_autoselect}" == "true" ]] && \
+        ! nictagadm exists admin ; then
+        autoselected_admin_nic=$(dladm show-phys -m -p -o address | head -n1)
+        if [[ -z ${autoselected_admin_nic} ]] ; then
+            echo "ERROR: no NICs found, unable to autoselect admin NIC."
+            exit ${SMF_EXIT_ERR_CONFIG}
+        fi
+
+        nictagadm add admin "${autoselected_admin_nic}"
+        if [[ $? -ne 0 ]] ; then
+            echo "ERROR: unable to add admin tag to NIC ${autoselected_admin_nic}"
+            exit ${SMF_EXIT_ERR_FATAL}
+        fi
+
+        SYSINFO_NIC_admin=$(dladm show-phys -m -p -o link | head -n1)
+        if [[ -n ${SYSINFO_NIC_admin} ]] ; then
+            echo "Autoselected ${SYSINFO_NIC_admin} for use as admin NIC."
+        fi
+
+        nictagadm list
+    fi
+
     if [[ -z "${SYSINFO_NIC_admin}" ]]; then
         echo "ERROR: admin NIC not found, unable to bring up admin network."
         exit ${SMF_EXIT_ERR_CONFIG}
@@ -522,8 +550,9 @@ if smf_is_globalzone; then
         admin_ip6=${BOOT_admin_ip6}
     fi
 
-    if [[ -n ${admin_ip} ]] && [[ -n ${admin_netmask} ]];
-    then
+    if [[ $admin_ip == 'none' ]]; then
+        echo 'INFO: not configuring IP on admin interface (admin_ip=none)'
+    elif [[ -n $admin_ip ]] && [[ -n $admin_netmask ]]; then
         /sbin/ifconfig ${SYSINFO_NIC_admin} inet ${admin_ip} \
             netmask ${admin_netmask} up
         ADMIN_NIC_UP=true
@@ -815,6 +844,13 @@ fi
 # If the admin nic was missing config options, exit with a config error
 if [[ -n "${ADMIN_NIC_MISCONFIGURED}" ]]; then
     exit ${SMF_EXIT_ERR_CONFIG}
+fi
+
+if [[ $admin_ip == 'none' ]]; then
+    #
+    # We're done, even if there are not any usable IP addresses.
+    #
+    exit $SMF_EXIT_OK
 fi
 
 # Any non-loopback IPv4 interfaces with usable addresses up?

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  * Unit test helper functions
  */
@@ -28,9 +28,10 @@
 var assert = require('assert-plus');
 var clone = require('clone');
 var fwrule = require('fwrule');
+var mod_addr = require('ip6addr');
 var mod_obj = require('../../lib/util/obj');
 var mocks = require('./mocks');
-var mod_uuid = require('node-uuid');
+var mod_uuid = require('uuid');
 var util = require('util');
 var util_vm = require('../../lib/util/vm');
 var VError = require('verror');
@@ -121,8 +122,8 @@ function addZoneRules(exp, toAdd) {
 function defaultZoneRules(uuids) {
     var toReturn = {};
     if (!uuids) {
-        createSubObjects(toReturn, 'out', 'pass', { any: 'any' });
-        createSubObjects(toReturn, 'in', 'block', { any: 'any' });
+        createSubObjects(toReturn, 'out', {});
+        createSubObjects(toReturn, 'in', {});
         return toReturn;
     }
 
@@ -131,8 +132,8 @@ function defaultZoneRules(uuids) {
     }
 
     uuids.forEach(function (uuid) {
-        createSubObjects(toReturn, uuid, 'out', 'pass', { any: 'any' });
-        createSubObjects(toReturn, uuid, 'in', 'block', { any: 'any' });
+        createSubObjects(toReturn, uuid, 'out', {});
+        createSubObjects(toReturn, uuid, 'in', {});
     });
 
     return toReturn;
@@ -366,6 +367,13 @@ function zoneIPFconfigs(version) {
             continue;
         }
 
+        var zone = dir.split('/')[2];
+        var rules = {
+            in: {},
+            out: {}
+        };
+        firewalls[zone] = rules;
+
         if (DEBUG_FILES) {
             console.log('%s:\n+-', dir);
         }
@@ -380,9 +388,7 @@ function zoneIPFconfigs(version) {
 
             // block out quick proto tcp from any to 10.99.99.254 port = 3000
             // pass in quick proto tcp from 10.2.0.1 to any port = 80
-            var zone = dir.split('/')[2];
             var tok = l.split(' ');
-            var action = tok[0];
             var d = tok[1];
 
             if (l === 'block in all'
@@ -392,8 +398,6 @@ function zoneIPFconfigs(version) {
                 || l === ICMPV6_STATE_LINE
                 || l === ICMPV6_WILD_LINE
                 || /^pass out proto \w+ from any to any/.test(l)) {
-                var act = createSubObjects(firewalls, zone, d, action);
-                act.any = 'any';
                 return;
             }
 
@@ -403,44 +407,11 @@ function zoneIPFconfigs(version) {
                 proto = 'icmp6';
             }
 
-            var dest = action === 'block' ? tok[8] : tok[6];
-            var code, port, portMatch;
-            if (icmpr.test(proto)) {
-                /* JSSTYLED */
-                portMatch = l.match(/icmp-type (\d+)/);
-                if (portMatch) {
-                    port = portMatch[1];
-                    /* JSSTYLED */
-                    code = l.match(/code (\d+)/);
-                    if (code) {
-                        port = port + ':' + code[1];
-                    }
-                } else {
-                    port = 'all';
-                }
-            } else {
-                portMatch = l.match(/port = (\d+)/);
-                if (portMatch) {
-                    port = portMatch[1];
-                } else {
-                    port = 'all';
-                }
+            if (!hasKey(rules[d], proto)) {
+                rules[d][proto] = [];
             }
 
-            // block out quick proto tcp to any port = 8080
-            if (tok[6] === 'any' && tok.length < 12) {
-                dest = 'any';
-            }
-
-            var dests = createSubObjects(firewalls, zone, d, action, proto);
-            if (!hasKey(dests, dest)) {
-                dests[dest] = [];
-            }
-
-            if (dests[dest].indexOf(port) == -1) {
-                dests[dest] = dests[dest].concat([port]).sort(function (a, b) {
-                    return (a - b); });
-            }
+            rules[d][proto].push(l);
         });
 
         if (DEBUG_FILES) {
@@ -615,9 +586,167 @@ function vmsAffected(opts, callback) {
     });
 }
 
+function compareIPArrays(a, b) {
+    return mod_addr.compare(a[0], b[0]);
+}
+
+function concat(acc, curr) {
+    return acc.concat(curr);
+}
+
+function getIPsFromVMs(vms) {
+    var ips = [];
+
+    vms.forEach(function (vm) {
+        var arr = util_vm.ipsFromNICs(vm.nics);
+        if (arr.length > 0) {
+            ips.push(arr);
+        }
+    });
+
+    return ips.sort(compareIPArrays).reduce(concat, []);
+}
+
+function forEachVMsIPs(vms, f) {
+    getIPsFromVMs(vms).forEach(f);
+}
+
+function createPortRule(action, dir, proto, who, port, rest) {
+    var suffix = '';
+    if (port) {
+        suffix += 'port = ' + port;
+    }
+    suffix += ' keep frags';
+    if (rest) {
+        suffix += ' ' + rest;
+    }
+    return util.format(
+        '%s %s quick proto %s from %s %s', action, dir, proto, who, suffix);
+}
+
+function createRangeRule(action, dir, proto, who, p1, p2, rest) {
+    var suffix = 'port ' + p1 + ' : ' + p2 + ' keep frags';
+    if (rest) {
+        suffix += ' ' + rest;
+    }
+    return util.format(
+        '%s %s quick proto %s from %s %s', action, dir, proto, who, suffix);
+}
+
+function allowInAH(src, rest) {
+    return createPortRule('pass', 'in', 'ah', src + ' to any', null, rest);
+}
+
+function allowInESP(src, rest) {
+    return createPortRule('pass', 'in', 'esp', src + ' to any', null, rest);
+}
+
+function blockOutAH(dst) {
+    return createPortRule('block', 'out', 'ah', 'any to ' + dst);
+}
+
+function blockOutESP(dst) {
+    return createPortRule('block', 'out', 'esp', 'any to ' + dst);
+}
+
+function allowPortInTCP(src, port, rest) {
+    return createPortRule('pass', 'in', 'tcp', src + ' to any', port, rest);
+}
+
+function allowRangeInTCP(src, p1, p2) {
+    return createRangeRule('pass', 'in', 'tcp', src + ' to any', p1, p2);
+}
+
+function blockPortInTCP(src, port, rest) {
+    return createPortRule('block', 'in', 'tcp', src + ' to any', port, rest);
+}
+
+function blockRangeInTCP(src, p1, p2) {
+    return createRangeRule('block', 'in', 'tcp', src + ' to any', p1, p2);
+}
+
+function allowPortInUDP(src, port, rest) {
+    return createPortRule('pass', 'in', 'udp', src + ' to any', port, rest);
+}
+
+function allowInICMP(src, type, code) {
+    var suffix = '';
+    if (type !== undefined) {
+        suffix += 'icmp-type ' + type;
+    }
+    if (code !== undefined) {
+        suffix += ' code ' + code;
+    }
+    suffix += ' keep frags';
+    return util.format(
+        'pass in quick proto icmp from %s to any %s', src, suffix);
+}
+
+function allowInICMP6(src, type, code) {
+    var suffix = '';
+    if (type !== undefined) {
+        suffix += 'icmp-type ' + type;
+    }
+    if (code !== undefined) {
+        suffix += ' code ' + code;
+    }
+    suffix += ' keep frags';
+    return util.format(
+        'pass in quick proto ipv6-icmp from %s to any %s', src, suffix);
+}
+
+
+function allowPortOutTCP(dst, port) {
+    return createPortRule('pass', 'out', 'tcp', 'any to ' + dst, port);
+}
+
+function blockPortOutTCP(dst, port) {
+    return createPortRule('block', 'out', 'tcp', 'any to ' + dst, port);
+}
+
+function allowPortOutUDP(dst, port) {
+    return createPortRule('pass', 'out', 'udp', 'any to ' + dst, port);
+}
+
+function allowRangeOutUDP(dst, p1, p2) {
+    return createRangeRule('pass', 'out', 'udp', 'any to ' + dst, p1, p2);
+}
+
+function blockPortOutUDP(dst, port) {
+    return createPortRule('block', 'out', 'udp', 'any to ' + dst, port);
+}
+
+function blockRangeOutUDP(dst, p1, p2) {
+    return createRangeRule('block', 'out', 'udp', 'any to ' + dst, p1, p2);
+}
 
 
 module.exports = {
+    allowPortInTCP: allowPortInTCP,
+    blockPortInTCP: blockPortInTCP,
+    allowRangeInTCP: allowRangeInTCP,
+    blockRangeInTCP: blockRangeInTCP,
+
+    allowPortOutTCP: allowPortOutTCP,
+    blockPortOutTCP: blockPortOutTCP,
+
+    allowPortInUDP: allowPortInUDP,
+
+    allowPortOutUDP: allowPortOutUDP,
+    blockPortOutUDP: blockPortOutUDP,
+
+    allowRangeOutUDP: allowRangeOutUDP,
+    blockRangeOutUDP: blockRangeOutUDP,
+
+    allowInICMP: allowInICMP,
+    allowInICMP6: allowInICMP6,
+
+    allowInAH: allowInAH,
+    allowInESP: allowInESP,
+
+    blockOutAH: blockOutAH,
+    blockOutESP: blockOutESP,
+
     addZoneRules: addZoneRules,
     defaultZoneRules: defaultZoneRules,
     fillInRuleBlanks: fillInRuleBlanks,
@@ -627,6 +756,8 @@ module.exports = {
     fwRulesEqual: fwRulesEqual,
     fwRvmRulesEqual: fwRvmRulesEqual,
     getIPFenabled: getIPFenabled,
+    getIPsFromVMs: getIPsFromVMs,
+    forEachVMsIPs: forEachVMsIPs,
     generateVM: generateVM,
     ipKey: ipKey,
     printVM: printVM,

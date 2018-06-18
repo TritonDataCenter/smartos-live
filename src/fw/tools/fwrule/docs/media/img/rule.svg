@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="railroad-diagram" width="925" height="92" viewBox="0 0 925 92">
+<defs><style type="text/css"><![CDATA[
+svg.railroad-diagram path {
+  stroke-width: 3;
+  stroke: black;
+  fill: none;
+}
+svg.railroad-diagram text {
+  font: bold 14px monospace;
+  text-anchor: middle;
+}
+svg.railroad-diagram text.label {
+  text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+  font: italic 12px monospace;
+}
+svg.railroad-diagram rect {
+  stroke-width: 3;
+  stroke: black;
+  fill: hsl(120,100%,90%);
+}
+ ]]></style></defs>
+<g transform="translate(.5 .5)">
+<path d="M 20 21 v 20 m 10 -20 v 20 m -10 -10 h 20.5"></path>
+<path d="M40 31h10"></path>
+<g>
+<path d="M50 31h0"></path>
+<path d="M102 31h0"></path>
+<rect x="50" y="20" width="52" height="22" rx="10" ry="10"></rect>
+<text x="76" y="35">FROM</text>
+</g>
+<path d="M102 31h10"></path>
+<path d="M112 31h10"></path>
+<g>
+<path d="M122 31h0"></path>
+<path d="M230 31h0"></path>
+<rect x="122" y="20" width="108" height="22"></rect>
+<text x="176" y="35">target&#95;list</text>
+</g>
+<path d="M230 31h10"></path>
+<path d="M240 31h10"></path>
+<g>
+<path d="M250 31h0"></path>
+<path d="M286 31h0"></path>
+<rect x="250" y="20" width="36" height="22" rx="10" ry="10"></rect>
+<text x="268" y="35">TO</text>
+</g>
+<path d="M286 31h10"></path>
+<path d="M296 31h10"></path>
+<g>
+<path d="M306 31h0"></path>
+<path d="M414 31h0"></path>
+<rect x="306" y="20" width="108" height="22"></rect>
+<text x="360" y="35">target&#95;list</text>
+</g>
+<path d="M414 31h10"></path>
+<g>
+<path d="M424 31h0"></path>
+<path d="M524 31h0"></path>
+<path d="M424 31h20"></path>
+<g>
+<path d="M444 31h0"></path>
+<path d="M504 31h0"></path>
+<rect x="444" y="20" width="60" height="22" rx="10" ry="10"></rect>
+<text x="474" y="35">ALLOW</text>
+</g>
+<path d="M504 31h20"></path>
+<path d="M424 31a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M444 61h0"></path>
+<path d="M504 61h0"></path>
+<rect x="444" y="50" width="60" height="22" rx="10" ry="10"></rect>
+<text x="474" y="65">BLOCK</text>
+</g>
+<path d="M504 61a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+</g>
+<path d="M524 31h10"></path>
+<g>
+<path d="M534 31h0"></path>
+<path d="M618 31h0"></path>
+<rect x="534" y="20" width="84" height="22"></rect>
+<text x="576" y="35">protocol</text>
+</g>
+<path d="M618 31h10"></path>
+<g>
+<path d="M628 31h0"></path>
+<path d="M884 31h0"></path>
+<path d="M628 31h20"></path>
+<g>
+<path d="M648 31h216"></path>
+</g>
+<path d="M864 31h20"></path>
+<path d="M628 31a10 10 0 0 1 10 10v0a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M648 51h0"></path>
+<path d="M864 51h0"></path>
+<path d="M648 51h10"></path>
+<g>
+<path d="M658 51h0"></path>
+<path d="M742 51h0"></path>
+<rect x="658" y="40" width="84" height="22" rx="10" ry="10"></rect>
+<text x="700" y="55">PRIORITY</text>
+</g>
+<path d="M742 51h10"></path>
+<path d="M752 51h10"></path>
+<g>
+<path d="M762 51h0"></path>
+<path d="M854 51h0"></path>
+<rect x="762" y="40" width="92" height="22"></rect>
+<text x="808" y="55">priolevel</text>
+</g>
+<path d="M854 51h10"></path>
+</g>
+<path d="M864 51a10 10 0 0 0 10 -10v0a10 10 0 0 1 10 -10"></path>
+</g>
+<path d="M 884 31 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

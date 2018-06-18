@@ -19,17 +19,28 @@ set -o errexit
 TOP=$(cd $(dirname $0)/../; pwd)
 NODE=$1
 
-mounted=$(ssh ${NODE} mount | grep "/var/tmp/vm" || echo "notmounted")
-
 # VM
-if [[ $mounted == "notmounted" ]]; then
+VM_MOUNTED=$(ssh ${NODE} mount | grep "/var/tmp/vm" || echo "notmounted")
+if [[ $VM_MOUNTED == "notmounted" ]]; then
     # Copy the original, rsync and then mount it.
     echo "Creating rw /usr/vm mount"
     ssh ${NODE} cp -RP /usr/vm /var/tmp/vm
     ssh ${NODE} mount -F lofs /var/tmp/vm /usr/vm
 fi
-
 echo "Updating /usr/vm/node_modules"
 rsync -av ${TOP}/src/vm/node_modules \
     $NODE:/usr/vm/ \
+    --exclude .git
+
+# IMG
+IMG_MOUNTED=$(ssh ${NODE} mount | grep "/var/tmp/img" || echo "notmounted")
+if [[ $IMG_MOUNTED == "notmounted" ]]; then
+    # Copy the original, rsync and then mount it.
+    echo "Creating rw /usr/img mount"
+    ssh ${NODE} cp -RP /usr/img /var/tmp/img
+    ssh ${NODE} mount -F lofs /var/tmp/img /usr/img
+fi
+echo "Updating /usr/img"
+rsync -av ${TOP}/src/img \
+    $NODE:/usr/ \
     --exclude .git

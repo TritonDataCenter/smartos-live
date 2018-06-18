@@ -1,4 +1,4 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2017 Joyent, Inc.
 //
 // These tests ensure that tmpfs works as expected when setting/unsetting
 //
@@ -191,6 +191,9 @@ test('test with tmpfs=0', function (t) {
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function (cb) {
+            // wait for mdata:fetch
+            waitForSvc(t, state.uuid, 'svc:/smartdc/mdata:fetch', 'online', cb);
+        }, function (cb) {
             checkTmpfs(0, 'check that tmpfs === 0', cb);
         }, function (cb) {
             checkZoneState({}, 'zone files/mounts have no tmpfs', cb);
@@ -199,9 +202,6 @@ test('test with tmpfs=0', function (t) {
                 t.ok(!err, 'updated VM with tmpfs=256');
                 cb(err);
             });
-        }, function (cb) {
-            // wait for mdata:fetch
-            waitForSvc(t, state.uuid, 'svc:/smartdc/mdata:fetch', 'online', cb);
         }, function (cb) {
             // Should be 256 value in the object
             checkTmpfs(256, 'check that tmpfs === 256 after update', cb);

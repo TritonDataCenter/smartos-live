@@ -1,4 +1,4 @@
-// Copyright 2016 Joyent, Inc.  All rights reserved.
+// Copyright (c) 2018, Joyent, Inc.
 //
 // These tests ensure that docker flag works as expected when setting/unsetting
 // Also test that /etc/resolv.conf, /etc/hosts and /etc/hostname are set
@@ -1080,8 +1080,10 @@ test('test log archiving', function (t) {
         }, function (cb) {
             var log_dir = '/zones/' + state.uuid + '/logs';
 
-            // ensure we have 2 log files now
+            // Ensure we have 2 "stdio.log*" files now.
             fs.readdir(log_dir, function (err, files) {
+                files = files.filter(
+                    function (f) { return f.indexOf('stdio.log') === 0; });
                 t.ok(files.length === 2, 'vm logs: ' + JSON.stringify(files));
                 cb();
             });
@@ -1310,7 +1312,9 @@ test('test restart delay reset', function (t) {
                     emitter.emit('done');
                 }
             });
-            cb();
+            se.once('ready', function () {
+                cb();
+            });
         }, function (cb) {
             // start the VM
             VM.start(state.uuid, {}, function (err) {
@@ -1429,15 +1433,16 @@ test('test restart delay reset', function (t) {
 
                 cb();
             });
-        }, function (cb) {
-            // stop the zoneevent watcher
-            if (se != null) {
-                se.stop();
-                se = null;
-            }
-            cb();
         }
-    ]);
+    ], function () {
+        // stop the zoneevent watcher
+        if (se != null) {
+            se.stop();
+            se = null;
+        }
+
+        t.end();
+    });
 });
 
 /* BEGIN JSSTYLED */

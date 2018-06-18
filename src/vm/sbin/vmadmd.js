@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright 2018 Joyent, Inc.
  *
  */
 
@@ -29,11 +29,9 @@ var assert = require('/usr/node/node_modules/assert-plus');
 var async = require('/usr/node/node_modules/async');
 var bunyan = require('/usr/node/node_modules/bunyan');
 var cp = require('child_process');
-var consts = require('constants');
 var EventEmitter = require('events').EventEmitter;
 var execFile = cp.execFile;
 var fs = require('fs');
-var lock = require('/usr/vm/node_modules/locker').lock;
 var mod_nic = require('/usr/vm/node_modules/nic');
 var net = require('net');
 var VM = require('/usr/vm/node_modules/VM');
@@ -46,6 +44,7 @@ var SyseventStream = require('/usr/vm/node_modules/sysevent-stream');
 var url = require('url');
 var util = require('util');
 var vasync = require('vasync');
+var zonecfg = require('/usr/vm/node_modules/zonecfg');
 
 /*
  * The DOCKER_RUNTIME_DELAY_RESET parameter is used when restarting a Docker VM
@@ -108,20 +107,6 @@ function zfs(args, callback)
     var cmd = '/usr/sbin/zfs';
 
     assert(log, 'no logger passed to zfs()');
-
-    log.debug(cmd + ' ' + args.join(' '));
-    execFile(cmd, args, function (error, stdout, stderr) {
-        if (error) {
-            callback(error, {'stdout': stdout, 'stderr': stderr});
-        } else {
-            callback(null, {'stdout': stdout, 'stderr': stderr});
-        }
-    });
-}
-
-function zonecfg(args, callback)
-{
-    var cmd = '/usr/sbin/zonecfg';
 
     log.debug(cmd + ' ' + args.join(' '));
     execFile(cmd, args, function (error, stdout, stderr) {
@@ -516,7 +501,7 @@ function handleProvisioning(vmobj, cb)
             'zonepath'
         ];
 
-        if (vmobj.brand === 'kvm') {
+        if (['bhyve', 'kvm'].indexOf(vmobj.brand) !== -1) {
             // reload the VM to see if we should setup VNC, etc.
             VM.load(vmobj.uuid, {fields: load_fields},
                 function (load_err, obj) {
@@ -532,7 +517,9 @@ function handleProvisioning(vmobj, cb)
                     // clear any old timers or VNC/SPICE since this vm just came
                     // up (state was provisioning), then spin up a new VNC.
                     clearVM(obj.uuid);
-                    rotateKVMLog(vmobj.uuid);
+                    if (vmobj.brand === 'kvm') {
+                        rotateKVMLog(vmobj.uuid);
+                    }
                     spawnRemoteDisplay(obj);
                 }
                 cb(null, 'success');
@@ -621,6 +608,7 @@ function handleProvisioning(vmobj, cb)
  *
  * 30s was chosen arbitrarily as an estimate of when we'd be past the initial
  * boot.
+ *
  */
 function rotateKVMLog(vm_uuid)
 {
@@ -983,8 +971,9 @@ function updateZoneStatus(ev)
         || ev.oldstate === 'running'
         || ev.newstate === 'uninitialized')) {
 
-        log.info('' + ev.zonename + ' (kvm) went from ' + ev.oldstate
-            + ' to ' + ev.newstate + ' at ' + ev.when);
+        log.info('' + ev.zonename + ' (' +seen_vms[ev.zonename].brand
+            + ') went from ' + ev.oldstate + ' to ' + ev.newstate
+            + ' at ' + ev.when);
         // Continue on to VM.load()
     } else if (seen_vms[ev.zonename].docker
         && (ev.newstate === 'uninitialized')) {
@@ -1136,10 +1125,11 @@ function updateZoneStatus(ev)
             seen_vms[ev.zonename].provisioned = true;
         }
 
-        // don't handle transitions other than provisioning for non-kvm
-        if (vmobj.brand !== 'kvm') {
+        // don't handle transitions other than provisioning for non-kvm/bhyve
+        if (['bhyve', 'kvm'].indexOf(vmobj.brand) === -1) {
             log.trace('doing nothing for ' + ev.zonename + ' transition '
-                + 'because brand != "kvm"');
+                + 'because brand "' + vmobj.brand
+                + '" is not "kvm" or "bhyve"');
             return;
         }
 
@@ -1147,7 +1137,9 @@ function updateZoneStatus(ev)
             // clear any old timers or VNC/SPICE since this vm just came
             // up, then spin up a new VNC.
             clearVM(vmobj.uuid);
-            rotateKVMLog(vmobj.uuid);
+            if (vmobj.brand === 'kvm') {
+                rotateKVMLog(vmobj.uuid);
+            }
             spawnRemoteDisplay(vmobj);
         } else if (ev.oldstate === 'running') {
             if (VNC.hasOwnProperty(ev.zonename)) {
@@ -1157,7 +1149,6 @@ function updateZoneStatus(ev)
             }
         } else if (ev.newstate === 'uninitialized') { // this means installed!?
             // XXX we're running stop so it will clear the transition marker
-
             VM.stop(ev.zonename, {'force': true}, function (e) {
                 if (e && e.code !== 'ENOTRUNNING') {
                     log.error(e, 'stop failed');
@@ -1391,6 +1382,14 @@ function startHTTPHandler()
     }
 }
 
+// Generates an error with message 'vmadmd only handles '<command>' for:
+// <brand(s)> (your brand is <brand>)'
+function unsupportedBrandError(brands, command, brand)
+{
+    return new Error('vmadmd only handles "' + command + '" for: '
+        + brands.join(' ') + '(your brand is: ' + brand + ')');
+}
+
 /*
  * GET /vm/:id[?type=vnc,xxx]
  * POST /vm/:id?action=stop
@@ -1411,40 +1410,39 @@ function stopVM(uuid, timeout, callback)
 
     /* We load here to get the zonepath and ensure it exists. */
     VM.load(uuid, {fields: ['brand', 'zonepath']}, function (err, vmobj) {
-        var socket;
-        var q;
-
         if (err) {
             log.debug('Unable to load vm: ' + err.message, err);
             callback(err);
             return;
         }
 
-        q = new Qmp(log);
+        if (vmobj.brand === 'kvm') {
+            var socket;
+            var q;
 
-        if (vmobj.brand !== 'kvm') {
-            callback(new Error('vmadmd only handles "stop" for kvm ('
-                + 'your brand is: ' + vmobj.brand + ')'));
+            q = new Qmp(log);
+
+            socket = vmobj.zonepath + '/root/tmp/vm.qmp';
+            q.connect(socket, function (error) {
+                if (error) {
+                    callback(error);
+                    return;
+                }
+                q.command('system_powerdown', null, function (e, result) {
+                    log.debug('result: ' + JSON.stringify(result));
+                    q.disconnect();
+
+                    // Setup to send kill when timeout expires
+                    setStopTimer(uuid, timeout * 1000);
+
+                    callback(null);
+                    return;
+                });
+            });
+        } else {
+            callback(unsupportedBrandError(['kvm'], 'stop', vmobj.brand));
             return;
         }
-
-        socket = vmobj.zonepath + '/root/tmp/vm.qmp';
-        q.connect(socket, function (error) {
-            if (error) {
-                callback(error);
-                return;
-            }
-            q.command('system_powerdown', null, function (e, result) {
-                log.debug('result: ' + JSON.stringify(result));
-                q.disconnect();
-
-                // Setup to send kill when timeout expires
-                setStopTimer(uuid, timeout * 1000);
-
-                callback(null);
-                return;
-            });
-        });
     });
 }
 
@@ -1884,7 +1882,8 @@ function upgradeVM(vmobj, fields, callback)
     var new_cores;
     var upgrade_payload = {};
 
-    if (vmobj.v === 1) {
+    // 'bhyve' didn't exist pre version 1, so VMs won't need upgrade.
+    if (vmobj.v === 1 || vmobj.brand === 'bhyve') {
         log.trace('VM ' + vmobj.uuid + ' already at version 1, skipping '
             + 'upgrade.');
         callback(null, vmobj);
@@ -2057,6 +2056,7 @@ function upgradeVM(vmobj, fields, callback)
             });
         }, function (cb) {
             var args = [];
+            var cmd;
 
             if (vmobj.image_uuid || vmobj.brand === 'kvm') {
                 // already have image_uuid, no problem
@@ -2091,9 +2091,16 @@ function upgradeVM(vmobj, fields, callback)
 
                 image_uuid = origin.split('@')[0].split('/').pop();
                 log.info('setting new image_uuid: ' + image_uuid);
-                zonecfg(['-z', vmobj.zonename, 'add attr; '
-                    + 'set name=dataset-uuid; set type=string; set value="'
-                    + image_uuid + '"; end'],
+                cmd = [
+                    'add attr',
+                    'set name=dataset-uuid',
+                    'set type=string',
+                    'set value="' + image_uuid + '"',
+                    'end'
+                ].join('; ');
+
+                zonecfg(vmobj.uuid, [cmd], {log: log},
+
                     function (add_err, add_fds) {
                         if (add_err) {
                             log.error(add_err);
@@ -2199,30 +2206,33 @@ function upgradeVM(vmobj, fields, callback)
                 cb();
             });
         }, function (cb) {
-            if (vmobj.hasOwnProperty('default_gateway')) {
-                zonecfg(['-z', vmobj.zonename,
-                    'remove attr name=default-gateway'],
-                    function (err, fds) {
-                        if (err) {
-                            log.error(err);
-                            cb(err);
-                            return;
-                        }
-                        log.info('removed default-gateway');
-                        cb();
-                    }
-                );
-            } else {
+            if (!vmobj.hasOwnProperty('default_gateway')) {
                 cb();
+                return;
             }
+
+            zonecfg(vmobj.uuid, ['remove attr name=default-gateway'],
+                {log: log}, function (err, fds) {
+
+                if (err) {
+                    log.error(err);
+                    cb(err);
+                    return;
+                }
+                log.info('removed default-gateway');
+                cb();
+            });
         }, function (cb) {
             // for KVM we always want 10G zoneroot quota
-            if (vmobj.brand === 'kvm' && vmobj.quota !== 10) {
+            if ((vmobj.brand === 'kvm')
+                && vmobj.quota !== 10) {
                 log.info('fixing KVM quota to 10 (was ' + vmobj.quota + ')');
                 upgrade_payload.quota = 10;
             }
             cb();
         }, function (cb) {
+            var cmd;
+
             if (vmobj.hasOwnProperty('create_timestamp')) {
                 cb();
                 return;
@@ -2250,19 +2260,24 @@ function upgradeVM(vmobj, fields, callback)
 
                 log.info('creation time: ' + creation_timestamp + ' from ZFS');
 
-                zonecfg(['-z', vmobj.zonename, 'add attr; '
-                    + 'set name=create-timestamp; set type=string; '
-                    + 'set value="' + creation_timestamp + '"; end'],
+                cmd = [
+                    'add attr',
+                    'set name=create-timestamp',
+                    'set type=string',
+                    'set value="' + creation_timestamp + '"',
+                    'end'
+                ].join('; ');
+                zonecfg(vmobj.uuid, [cmd], {log: log},
                     function (zcfg_err, zcfg_fds) {
-                        if (zcfg_err) {
-                            log.error(zcfg_err);
-                            cb(zcfg_err);
-                            return;
-                        }
-                        log.info('set create-timestamp: ' + creation_timestamp);
-                        cb();
+
+                    if (zcfg_err) {
+                        log.error(zcfg_err);
+                        cb(zcfg_err);
+                        return;
                     }
-                );
+                    log.info('set create-timestamp: ' + creation_timestamp);
+                    cb();
+                });
             });
         }, function (cb) {
             // in SDC7 *_pw keys do not work in customer_metadata and must be in
@@ -2335,19 +2350,29 @@ function upgradeVM(vmobj, fields, callback)
             });
         }, function (cb) {
             // zonecfg update vm-version = 1
+            var cmd;
+
             log.debug('setting vm-version = 1');
-            zonecfg(['-z', vmobj.zonename, 'add attr; set name=vm-version; '
-                + 'set type=string; set value=1; end'],
+
+            cmd = [
+                'add attr',
+                'set name=vm-version',
+                'set type=string',
+                'set value=1',
+                'end'
+            ].join('; ');
+
+            zonecfg(vmobj.uuid, [cmd], {log: log},
                 function (err, fds) {
-                    if (err) {
-                        log.error(err);
-                        cb(err);
-                        return;
-                    }
-                    log.info('set vm-version = 1');
-                    cb();
+
+                if (err) {
+                    log.error(err);
+                    cb(err);
+                    return;
                 }
-            );
+                log.info('set vm-version = 1');
+                cb();
+            });
         }, function (cb) {
             // reload VM so we get all the updated properties
             VM.load(vmobj.uuid, {fields: fields, log: log},
@@ -2428,8 +2453,17 @@ function main()
                 'zpool'
             ];
 
-            VM.lookup({}, {fields: lookup_fields}, function (e, vmobjs) {
-                async.forEachSeries(vmobjs, function (obj, upg_cb) {
+            VM.lookup({}, {fields: lookup_fields},
+                function vmLookup(e, vmobjs) {
+
+                if (e) {
+                    log.error({err: e}, 'VM.lookup failed');
+                    process.exit(2);
+                }
+                vasync.forEachPipeline({
+                    inputs: vmobjs,
+                    func: function upgradeSingleVM(obj, upg_cb) {
+
                     function finishUpgrade(vmobj) {
                         if (!seen_vms.hasOwnProperty(vmobj.zonename)) {
                             seen_vms[vmobj.zonename] = {
@@ -2479,7 +2513,8 @@ function main()
                                     + result);
                                 upg_cb();
                             });
-                        } else if (vmobj.brand === 'kvm') {
+                        } else if (['bhyve', 'kvm'].
+                                indexOf(vmobj.brand) !== -1) {
                             log.debug('calling loadVM(' + vmobj.uuid + ')');
                             loadVM(vmobj, do_autoboot);
                             upg_cb();
@@ -2579,6 +2614,14 @@ function main()
                             });
                         });
                     });
+
+                    }
+                }, function upgradeVMsComplete(_err, results) {
+                    if (_err) {
+                        log.error({err: _err}, 'Error processing all VMs');
+                    } else {
+                        log.debug('Finished processing all VMs');
+                    }
                 });
             });
         });

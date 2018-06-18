@@ -52,7 +52,6 @@
 # network/rpc/smserver.xml
 # network/nfs/cbd.xml
 # network/ipmievd.xml
-# network/rpc/rex.xml
 # network/http-apache22.xml
 # system/consolekit.xml
 # system/device/devices-audio.xml

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  *
  * # OVERVIEW
@@ -46,17 +46,17 @@
  *
  * # CREATING SOCKETS
  *
- * If the VM is a KVM VM, the qemu process running in the KVM zone will be
- * running with a "ttyb" virtual serial port for the KVM guest. From the host
- * we can connect to connect to /root/tmp/vm.ttyb in the zoneroot which Qemu is
- * listening on for connections. We connect to this as a client but run a
- * metadata server on the resulting connection. Inside the KVM guest the
+ * If the VM is a KVM or bhyve VM, the qemu or bhyve process running in the zone
+ * will be running with a "ttyb" virtual serial port for the KVM guest. From the
+ * host we can connect to connect to /root/tmp/vm.ttyb in the zoneroot on which
+ * Qemu or bhyve is listening for connections. We connect to this as a client
+ * but run a metadata server on the resulting connection. Inside the guest the
  * mdata-client tools connect to the serial device and are then talking to our
  * metadata handler.
  *
- * For all non-KVM VMs we create a unix domain socket in
- * /var/zonecontrol/<zonename> named metadata.sock. We mount the zonecontrol
- * directory into the zone (read-only) via the brand.
+ * For all OS VMs we create a unix domain socket in /var/zonecontrol/<zonename>
+ * named metadata.sock. We mount the zonecontrol directory into the zone
+ * (read-only) via the brand.
  *
  * In non-LX zones, the zonecontrol is mounted such that the socket is at:
  *
@@ -151,11 +151,13 @@ var fs = require('fs');
 var getZoneinfo
     = require('/usr/vm/node_modules/vmload/vmload-zoneinfo').getZoneinfo;
 var guessHandleType = process.binding('tty_wrap').guessHandleType;
+var macaddr = require('/usr/vm/node_modules/macaddr');
 var net = require('net');
 var path = require('path');
 var util = require('util');
 var vasync = require('vasync');
 var VM = require('/usr/vm/node_modules/VM');
+var vmload = require('/usr/vm/node_modules/vmload');
 var ZWatch = require('./zwatch');
 
 var sdc_fields = [
@@ -199,6 +201,9 @@ var sdc_fields = [
     'zonename',
     'zone_state'
 ];
+
+var KVM_CONNECT_RETRY_INTERVAL = 100; // ms
+var KVM_CONNECT_RETRY_LOG_FREQUENCY = 10; // log every X retries
 var MAX_RETRY = 300; // in seconds
 var ZONEADM_CHECK_FREQUENCY = (5 * 60 * 1000); // ms, check for deleted zones
 var MISSED_SYSEVENT_CHECK_FREQUENCY = (1 * 60 * 1000); // ms
@@ -270,6 +275,7 @@ var MetadataAgent = module.exports = function (options) {
     this.zones = {};
     this.zonesDebug = {};
     this.zoneConnections = {};
+    this.zoneKvmReconnTimers = {};
 };
 
 /*
@@ -337,7 +343,26 @@ MetadataAgent.prototype.createZoneLog = function (type, zonename) {
     return (self.zlog[zonename]);
 };
 
-MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
+/**
+ * Update the zones cache for the zone with name "zonename", and call "callback"
+ * when done.
+ *
+ * @param zonename {String} the name of the zone for which to update the cache
+ * @param opts {Object} an object with the following properties:
+ *   - forceReload {Boolean} if true, bypasses the cache and always reload that
+ *     zone's information from disk. False by default.
+ * @param callback {Function} a function called when the operation is complete.
+ *   The signature of that function is callback(err), where "err" is an Error
+ *   object that represents the cause of failure if updating the zone cache
+ *   failed.
+ */
+MetadataAgent.prototype.updateZone =
+function updateZone(zonename, opts, callback) {
+    assert.string(zonename, 'zonename');
+    assert.object(opts, 'opts');
+    assert.optionalBool(opts.forceReload, 'opts.forceReload');
+    assert.func(callback, 'callback');
+
     var self = this;
     var log = self.log;
 
@@ -345,6 +370,11 @@ MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
     assert.func(callback, 'callback');
 
     function shouldLoad(cb) {
+        if (opts.forceReload) {
+            cb(null, true);
+            return;
+        }
+
         if (!self.zones.hasOwnProperty(zonename)) {
             // don't have a cache, load this guy
             log.info({zonename: zonename},
@@ -353,40 +383,51 @@ MetadataAgent.prototype.updateZone = function updateZone(zonename, callback) {
             return;
         }
 
-        // We do have a cached version, we'll reload only if timestamp of the
-        // XML file changed. The vmadm operations we care about will "touch"
-        // this file to update the last_modified if they don't change it
-        // directly.
-        fs.stat('/etc/zones/' + zonename + '.xml', function (err, stats) {
-            var old_mtime;
+        // We do have a cached version, we'll reload only if its last modified
+        // timestamp changed.
+        vmload.getLastModified(zonename, path.join('/zones', zonename), log,
+            function onLastModifiedLoaded(get_last_mod_err, last_modified_iso) {
+                var old_mtime_iso;
 
-            if (err && err.code === 'ENOENT') {
-                // VM has disappeared, purge from cache
-                self.purgeZoneCache(zonename);
+                if (get_last_mod_err) {
+                    log.error({
+                        err: get_last_mod_err,
+                        zonename: zonename
+                    }, 'Error when getting last_modified for zone');
+                    // We couldn't find the last modified time for this zone,
+                    // the VM probably disappeared, so we're removing it from
+                    // the cache.
+                    self.purgeZoneCache(zonename);
+                    cb(null, false);
+                    return;
+                }
+
+                // We just retrieved the last modified time for the zone, which
+                // means it exists, so we really should have
+                // self.zones[zonename].
+                assert.object(self.zones[zonename],
+                    'self.zones[' + zonename + ']');
+
+                old_mtime_iso = self.zones[zonename].last_modified;
+                assert.string(old_mtime_iso, 'old_mtime_iso');
+                assert.string(last_modified_iso, 'last_modified_iso');
+
+                log.info({
+                    old_mtime_ms: old_mtime_iso,
+                    last_modified_ms: last_modified_iso,
+                    zonename: zonename
+                }, 'old last_modified vs newly-loaded last_modifed for zone');
+
+                if (last_modified_iso > old_mtime_iso) {
+                    log.info({zonename: zonename},
+                        'last_modified was updated, reloading');
+                    cb(null, true);
+                    return;
+                }
+
+                log.trace('using cache for: ' + zonename);
                 cb(null, false);
-                return;
-            } else if (err) {
-                log.error({err: err, zonename: zonename},
-                    'cannot fs.stat(), reloading');
-                cb(err);
-                return;
-            }
-
-            // we just did a successful stat, we really should have
-            // self.zones[zonename]
-            assert.object(self.zones[zonename], 'self.zones[' + zonename + ']');
-
-            old_mtime = (new Date(self.zones[zonename].last_modified));
-            if (stats.mtime.getTime() > old_mtime.getTime()) {
-                log.info({zonename: zonename},
-                    'last_modified was updated, reloading');
-                cb(null, true);
-                return;
-            }
-
-            log.trace('using cache for: ' + zonename);
-            cb(null, false);
-        });
+            });
     }
 
     shouldLoad(function (err, load) {
@@ -451,10 +492,10 @@ MetadataAgent.prototype.createServersOnExistingZones = function () {
                 return;
             }
 
-            if (zone.brand === 'kvm') {
+            if (zone.brand === 'kvm' || zone.brand === 'bhyve') {
 
                 // For KVM, the zone must be running otherwise Qemu will not
-                // have created a socket.
+                // have created a socket.  A similar situation exists for bhyve.
                 if (zone.zone_state !== 'running') {
                     self.log.debug('skipping zone ' + zone.zonename
                         + ' which has ' + 'non-running zone_state: '
@@ -510,10 +551,25 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
     }
 };
 
+MetadataAgent.prototype.stopKvmReconnTimer =
+function stopKvmReconnTimer(zonename) {
+    var self = this;
+
+    self.log.warn({zonename: zonename},
+        'clearing connection retries for KVM VM.');
+
+    if (self.zoneKvmReconnTimers.hasOwnProperty(zonename)) {
+        clearTimeout(self.zoneKvmReconnTimers[zonename]);
+        delete self.zoneKvmReconnTimers[zonename];
+    }
+};
+
 MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
     var self = this;
     var start_kstat_timer = newTimer();
 
+    // Reminder: getZoneinfo only returns *running* zones since it pulls its
+    // data from the kernel.
     getZoneinfo(null, {log: self.log}, function (err, results) {
         assert.ifError(err);
 
@@ -527,7 +583,7 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
             zoneCount: Object.keys(results).length
         }, 'loaded VM kstats');
 
-        Object.keys(results).forEach(function (zonename) {
+        Object.keys(results).forEach(function _checkZoneConn(zonename) {
             var zoneConn = self.zoneConnections[zonename]; // may be undefined
 
             if (!zoneConn) {
@@ -541,6 +597,24 @@ MetadataAgent.prototype.checkMissedSysevents = function checkMissedSysevents() {
                 return;
             }
         });
+
+        // We expect the VMs in self.zoneKvmReconnTimers to be 'running', since
+        // we're actively retrying connections to their ttyb sockets. If they
+        // went not-running unexpectedly, kill the retries.
+        Object.keys(self.zoneKvmReconnTimers).forEach(
+            function _checkTimer(zonename) {
+                if (!results.hasOwnProperty(zonename)) {
+                    self.log.warn({zonename: zonename}, 'was reconnecting for '
+                        + 'KVM zone, but it is no longer running.');
+                    self.stopKvmReconnTimer(zonename);
+
+                    // Also remove the zoneConnections entry so that the
+                    // connection will be recreated when we notice it going
+                    // running. See "The rules for zoneConnections" above.
+                    delete self.zoneConnections[zonename];
+                }
+            }
+        );
     });
 };
 
@@ -633,7 +707,7 @@ function handleZoneCreated(zonename) {
     function _dummyCb() {
     }
 
-    self.updateZone(zonename, function (error) {
+    self.updateZone(zonename, {}, function (error) {
         if (error) {
             self.log.error({err: error}, 'Error updating '
                 + 'attributes: ' + error.message);
@@ -652,7 +726,8 @@ function handleZoneCreated(zonename) {
                 self.createZoneLog(self.zones[zonename].brand, zonename);
             }
 
-            if (self.zones[zonename].brand === 'kvm') {
+            if (self.zones[zonename].brand === 'kvm'
+                || self.zones[zonename].brand === 'bhyve') {
                 self.startKVMSocketServer(zonename, _dummyCb);
             } else {
                 self.startZoneSocketServer(zonename, _dummyCb);
@@ -679,6 +754,51 @@ MetadataAgent.prototype.start = function start() {
             }, 'ZWatch watcher saw zone deletion');
 
             self.purgeZoneCache(msg.zonename);
+            return;
+        }
+
+        // For non-KVM and non-bhyve, we only care about create/delete since the
+        // socket only needs to be created once for these zones. For KVM and
+        // bhyve however, the qemu or zhyve process recreates the socket on
+        // every boot, so we want to catch 'start' events for KVM or zhyve to
+        // ensure we connect to metadata as soon as possible.
+        if (msg.cmd === 'start' && self.zones.hasOwnProperty(msg.zonename)
+            && (self.zones[msg.zonename].brand === 'kvm'
+            || self.zones[msg.zonename].brand === 'bhyve')) {
+            // KVM or bhyve VM started
+
+            self.log.debug({
+                delay: (new Date()).getTime() - when.getTime(), // in ms
+                when: when,
+                zonename: msg.zonename
+            }, 'ZWatch watcher saw KVM zone start');
+
+            self.addDebug(msg.zonename, 'last_zone_start');
+
+            // The "zone" wasn't technically created here, but the socket was
+            // (by qemu) so as far as we're concerned this is the same thing.
+            self.handleZoneCreated(msg.zonename);
+            return;
+        }
+
+        // If a KVM zone stops while we're trying to reconnect to its metadata
+        // socket, stop trying to reconnect.
+        if (msg.cmd === 'stop'
+            && self.zoneKvmReconnTimers.hasOwnProperty(msg.zonename)) {
+
+            self.log.debug({
+                delay: (new Date()).getTime() - when.getTime(), // in ms
+                when: when,
+                zonename: msg.zonename
+            }, 'ZWatch watcher saw retrying KVM zone stop');
+
+            self.stopKvmReconnTimer(msg.zonename);
+
+            // Also remove the zoneConnections entry so that the
+            // connection will be recreated when we notice it going
+            // running. See "The rules for zoneConnections" above.
+            delete self.zoneConnections[msg.zonename];
+
             return;
         }
 
@@ -779,10 +899,6 @@ MetadataAgent.prototype.startKVMSocketServer = function (zonename, callback) {
 
 MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     var self = this;
-    var buffer;
-    var fd;
-    var handler;
-    var kvmstream;
     var zlog;
 
     assert.object(zopts, 'zopts');
@@ -810,8 +926,6 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
     }
     self.zoneConnections[zopts.zone] = {};
 
-    kvmstream = new net.Socket();
-
     // refuse to overwrite an existing connection
     assert.ok(!self.zoneConnections[zopts.zone].hasOwnProperty('conn'),
         'should not have existing conn when creating new');
@@ -820,41 +934,120 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
 
     // replace the placeholder entry with a real one.
     self.zoneConnections[zopts.zone] = {
-        conn: kvmstream,
+        conn: {}, // placeholder so we don't overwrite if we're called again
+        connectsRefused: 0,
+        connectsMissing: 0,
         sockpath: zopts.sockpath
     };
 
-    buffer = '';
-    handler = self.makeMetadataHandler(zopts.zone, kvmstream);
+    function _tryConnect() {
+        var buffer = '';
+        var fd;
+        var handler;
+        var kvmstream = new net.Socket();
 
-    kvmstream.on('data', function (data) {
-        var chunk, chunks;
-        buffer += data.toString();
-        chunks = buffer.split('\n');
-        while (chunks.length > 1) {
-            chunk = chunks.shift();
-            handler(chunk);
-        }
-        buffer = chunks.pop();
-    });
+        handler = self.makeMetadataHandler(zopts.zone, kvmstream);
 
-    kvmstream.on('error', function (e) {
-        zlog.error({err: e}, 'KVM Socket error: ' + e.message);
-    });
+        self.zoneConnections[zopts.zone].conn = kvmstream;
 
-    kvmstream.on('close', function () {
-        // When the stream closes, we'll delete from zoneConnections so that on
-        // next boot (or periodic scan if for some reason we got closed while
-        // the zone was actually running) we re-create.
-        zlog.info('stream closed on fd %d', fd);
-        delete self.zoneConnections[zopts.zone];
-    });
+        kvmstream.on('connect', function _onConnect() {
+            // either this on('connect') handler will run or the on('error')
+            fd = kvmstream._handle.fd;
+            zlog.info({
+                conn_refused: self.zoneConnections[zopts.zone].connectsRefused,
+                conn_missing: self.zoneConnections[zopts.zone].connectsMissing,
+                zonename: zopts.zone
+            }, 'listening on fd %d', fd);
+            self.zoneConnections[zopts.zone].fd = fd;
+            // we're no longer retrying connections (since we connected)
+            delete self.zoneKvmReconnTimers[zopts.zone];
+        });
 
-    kvmstream.connect(zopts.sockpath);
+        kvmstream.on('data', function (data) {
+            var chunk, chunks;
 
-    fd = kvmstream._handle.fd;
-    zlog.info({zonename: zopts.zone}, 'listening on fd %d', fd);
-    self.zoneConnections[zopts.zone].fd = fd;
+            buffer += data.toString();
+            chunks = buffer.split('\n');
+            while (chunks.length > 1) {
+                chunk = chunks.shift();
+                handler(chunk);
+            }
+            buffer = chunks.pop();
+        });
+
+        kvmstream.on('error', function (e) {
+            var level = 'warn';
+
+            if (e.code === 'ECONNREFUSED') {
+                var refused = self.zoneConnections[zopts.zone].connectsRefused;
+                level = 'trace';
+
+                // Our connection was refused by Qemu or bhyve, presumably
+                // because it is still starting up and we're early. Try again
+                // and set a handle to our retry timer so it can be cancelled if
+                // the zone is stopped.
+                //
+                // We log every Xth retry after the first so that we don't
+                // completely spam the log.
+                if (refused > 0
+                    && (refused % KVM_CONNECT_RETRY_LOG_FREQUENCY) === 0) {
+
+                    zlog.info({
+                        conn_refused: refused,
+                        last_errcode: e.code,
+                        retry_interval: KVM_CONNECT_RETRY_INTERVAL
+                    }, 'KVM socket connection refused, still retrying');
+                }
+                self.zoneKvmReconnTimers[zopts.zone] = setTimeout(_tryConnect,
+                    KVM_CONNECT_RETRY_INTERVAL);
+
+                self.zoneConnections[zopts.zone].connectsRefused++;
+            } else if (e.code === 'ENOENT') {
+                var missing = self.zoneConnections[zopts.zone].connectsMissing;
+                level = 'trace';
+
+                // The connection failed because the socket is missing.  This
+                // could be due to the socket having not been created the first
+                // time or because qemu or bhyve is replacing a stale socket
+                // with unlink() then bind().  Try again and set a handle to our
+                // retry timer so it can be cancelled if the zone is stopped.
+                //
+                // We log every Xth retry after the first so that we don't
+                // completely spam the log.
+                if (missing > 0
+                    && (missing % KVM_CONNECT_RETRY_LOG_FREQUENCY) === 0) {
+
+                    zlog.info({
+                        conn_missing: missing,
+                        last_errcode: e.code,
+                        retry_interval: KVM_CONNECT_RETRY_INTERVAL
+                    }, 'KVM socket missing, still retrying');
+                }
+                self.zoneKvmReconnTimers[zopts.zone] = setTimeout(_tryConnect,
+                    KVM_CONNECT_RETRY_INTERVAL);
+
+                self.zoneConnections[zopts.zone].connectsMissing++;
+            }
+
+            zlog[level]({err: e}, 'KVM Socket error: ' + e.message);
+        });
+
+        kvmstream.on('close', function () {
+            // When the stream closes, we'll delete from zoneConnections so that
+            // on next boot (or periodic scan if for some reason we got closed
+            // while the zone was actually running) we re-create.
+            if (!self.zoneKvmReconnTimers.hasOwnProperty(zopts.zone)) {
+                zlog.info('stream closed on fd %d', fd);
+                delete self.zoneConnections[zopts.zone];
+            }
+        });
+
+        zlog.trace({zonename: zopts.zone, sockpath: zopts.sockpath},
+            'attempting connection to KVM socket');
+        kvmstream.connect(zopts.sockpath);
+    }
+
+    _tryConnect();
 
     callback();
 };
@@ -1125,7 +1318,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                 // that depends on it, please add a note about that here
                 // otherwise expect it will be removed on you sometime.
                 if (want === 'nics' && vmobj.hasOwnProperty('nics')) {
-                    self.updateZone(zone, function (error) {
+                    self.updateZone(zone, {}, function (error) {
                         if (error) {
                             // updating our cache for this VM failed, so we'll
                             // use the existing data.
@@ -1147,7 +1340,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     // reload metadata trying to get the new ones w/o zone
                     // reboot. To ensure these are fresh we always run
                     // updateZone which reloads the data if stale.
-                    self.updateZone(zone, function (error) {
+                    self.updateZone(zone, {}, function (error) {
                         if (error) {
                             // updating our cache for this VM failed, so we'll
                             // use the existing data.
@@ -1168,7 +1361,7 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     && vmobj.hasOwnProperty('tmpfs')) {
                     // We want tmpfs to reload the cache right away because we
                     // might be depending on a /etc/vfstab update
-                    self.updateZone(zone, function (error) {
+                    self.updateZone(zone, {}, function (error) {
                         if (error) {
                             // updating our cache for this VM failed, so we'll
                             // use the existing data.
@@ -1188,7 +1381,31 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
                     var vmRoutes = [];
 
-                    self.updateZone(zone, function (error) {
+                    /*
+                     * Always reload the information about the zone, including
+                     * its routes, so that the instance can have the most up to
+                     * date information about them when it sets static routes.
+                     * This should not have a significant performance impact
+                     * since the sdc:routes metadata information is queried only
+                     * once at boot time, and we don't expect users to query
+                     * that information frequently. Using the last modified time
+                     * of the zones cache to compare it with the last modified
+                     * time of the routes.json zone configuration file would not
+                     * allow us to determine when to use the cache and when to
+                     * reload the zone's information because with node v0.10.x,
+                     * which is the version used by vmadm, fs.stat's output
+                     * resolution is 1 second. Any change to the routes
+                     * information happening in the same second as the previous
+                     * change to a zone configuration would not trigger a
+                     * reload. We could write a binary add-on to handle that,
+                     * but it seems it would introduce a lot of complexity for
+                     * no significant benefit. Hopefully we can move to node
+                     * v0.12.x or later at some point and rely on a better
+                     * resolution for fs.*stat APIs.
+                     */
+                    self.updateZone(zone, {
+                        forceReload: true
+                    }, function (error) {
                         if (error) {
                             // updating our cache for this VM failed, so we'll
                             // use the existing data.
@@ -1205,27 +1422,79 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                         // to do the updateZone here so that we have latest
                         // data.
                         for (var r in vmobj.routes) {
+                            var gateway;
+                            var foundNic = null;
                             var route = { linklocal: false, dst: r };
-                            var nicIdx = vmobj.routes[r].match(/nics\[(\d+)\]/);
-                            if (!nicIdx) {
+                            var mac;
+                            var macMatch = vmobj.routes[r]
+                                .match(/^macs\[(.+)\]$/);
+                            var nicMac;
+                            var nicIdx = vmobj.routes[r]
+                                .match(/^nics\[(\d+)\]$/);
+
+                            if (!nicIdx && !macMatch) {
                                 // Non link-local route: we have all the
                                 // information we need already
                                 route.gateway = vmobj.routes[r];
                                 vmRoutes.push(route);
                                 continue;
                             }
-                            nicIdx = Number(nicIdx[1]);
 
-                            // Link-local route: we need the IP of the local nic
-                            if (!vmobj.hasOwnProperty('nics')
-                                || !vmobj.nics[nicIdx]
-                                || !vmobj.nics[nicIdx].hasOwnProperty('ip')
-                                || vmobj.nics[nicIdx].ip === 'dhcp') {
+                            if (macMatch) {
+                                try {
+                                    mac = macaddr.parse(macMatch[1]);
+                                } catch (parseErr) {
+                                    zlog.warn(parseErr, 'failed to parse mac'
+                                        + ' addr');
+                                    continue;
+                                }
 
-                                continue;
+                                if (!vmobj.hasOwnProperty('nics'))
+                                    continue;
+
+                                // Link-local route: we need the IP of the
+                                // local nic with the provided mac address
+                                for (var i = 0; i < vmobj.nics.length; i++) {
+                                    try {
+                                        nicMac = macaddr.parse(vmobj.nics[i]
+                                            .mac);
+                                    } catch (parseErr) {
+                                        zlog.warn(parseErr, 'failed to parse'
+                                            + ' nic mac addr');
+                                        continue;
+                                    }
+                                    if (nicMac.compare(mac) === 0) {
+                                        foundNic = vmobj.nics[i];
+                                        break;
+                                    }
+                                }
+
+                                if (!foundNic || !foundNic.hasOwnProperty('ip')
+                                    || foundNic.ip === 'dhcp') {
+
+                                    continue;
+                                }
+
+                                gateway = foundNic.ip;
+
+                            } else {
+                                nicIdx = Number(nicIdx[1]);
+
+                                // Link-local route: we need the IP of the
+                                // local nic
+                                if (!vmobj.hasOwnProperty('nics')
+                                    || !vmobj.nics[nicIdx]
+                                    || !vmobj.nics[nicIdx].hasOwnProperty('ip')
+                                    || vmobj.nics[nicIdx].ip === 'dhcp') {
+
+                                    continue;
+                                }
+
+                                gateway = vmobj.nics[nicIdx].ip;
                             }
 
-                            route.gateway = vmobj.nics[nicIdx].ip;
+                            assert.string(gateway, 'gateway');
+                            route.gateway = gateway;
                             route.linklocal = true;
                             vmRoutes.push(route);
                         }
@@ -1243,6 +1512,18 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
 
                         returnit(null,
                             vmobj.internal_metadata['operator-script']);
+                        return;
+                    });
+                } else if (want === 'volumes') {
+                    addMetadata(function returnVolumes(err) {
+                        if (err) {
+                            returnit(new Error('Unable to load metadata: '
+                                + err.message));
+                            return;
+                        }
+
+                        returnit(null,
+                            vmobj.internal_metadata['sdc:volumes']);
                         return;
                     });
                 } else {

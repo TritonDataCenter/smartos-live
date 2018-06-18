@@ -6,7 +6,7 @@
 #
 
 #
-# Copyright (c) 2014, Joyent, Inc.
+# Copyright (c) 2017, Joyent, Inc.
 #
 
 # XXX - TODO
@@ -593,7 +593,7 @@ printheader()
 
 	clear
 	printf " %-40s\n" "SmartOS Setup"
-	printf " %-40s%38s\n" "$subheader" "http://wiki.smartos.org/install"
+	printf " %-40s%38s\n" "$subheader" "https://wiki.smartos.org/install"
 	for i in {1..80} ; do printf "-" ; done && printf "$newline"
 }
 
@@ -729,14 +729,48 @@ promptpool()
 				print diskinfo;
 			}' > /var/tmp/mydisks
 		disklayout -f /var/tmp/mydisks $layout > /var/tmp/disklayout.json
-		json error < /var/tmp/disklayout.json | grep . && layout="" && continue
+
+		if [[ $? -ne 0 ]]; then
+			#
+			# There are two classes of errors that we need to
+			# distinguish between. Those which are endemic to the
+			# system itself and those which are as a result of a
+			# user issue.  This is a bad way to tell these apart,
+			# but for the moment this is the primary case.
+			#
+			if ! grep -q 'no primary storage disks' /var/tmp/disklayout.json; then
+				cat /var/tmp/disklayout.json
+				layout=""
+				continue
+			fi
+			cat >&2 <<EOF
+
+WARNING: failed to determine possible disk layout. It is possible that
+the system detected no disks. We are launching a shell to allow you to
+investigate the problem. Check for disks and their sizes with the
+diskinfo(1M) command. If you do not see disks that you expect, please
+determine your storage controller and reach out to the SmartOS community
+if you require assistence.
+
+If you create or import a zpool named "zones" then installation will continue.
+If you cannot, you should shutdown your system.
+
+EOF
+			/usr/bin/bash
+			zpool list zones >/dev/null 2>/dev/null
+			[[ $? -eq 0 ]] && return
+
+			printheader "Storage"
+			continue
+		fi
+		json error < /var/tmp/disklayout.json 2>/dev/null | grep . && layout="" && continue
 		prmpt_str="$(printdisklayout /var/tmp/disklayout.json)\n\n"
 		[[ -z "$layout" ]] && layout="default"
 		prmpt_str+="This is the '${layout}' storage configuration.  To use it, type 'yes'.\n"
 		prmpt_str+=" To see a different configuration, type: 'raidz2', 'mirror', or 'default'.\n"
 		prmpt_str+=" To specify a manual configuration, type: 'manual'.\n\n"
 		print $prmpt_str
-		read val
+		promptval "Selected zpool layout" "yes"
 		if [[ $val == "raidz2" || $val == "mirror" ]]; then
 			# go around again
 			layout=$val
@@ -749,9 +783,8 @@ promptpool()
 			# let the user manually create the zpool
 			layout=""
 			DISK_LAYOUT="manual"
-			echo
 			echo "Launching a shell."
-			echo "Please manually create/import a zpool named zones."
+			echo "Please manually create/import a zpool named \"zones\"."
 			echo "If you no longer wish to manually create a zpool,"
 			echo "simply exit the shell."
 			/usr/bin/bash
@@ -986,11 +1019,10 @@ done
 updatenicstates
 
 export TERM=xterm-color
-stty erase ^H
 
 trap sig_doshell SIGINT
 
-printheader "Copyright 2013, Joyent, Inc."
+printheader "Joyent"
 
 message="
 You must answer the following questions to configure your SmartOS node.

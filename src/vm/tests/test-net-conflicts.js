@@ -219,3 +219,8 @@ test('add additional nic with same MAC', function(t) {
         }
     ]);
 });
+
+should_fail_with_conflict('KVM with same VNC port',
+  {brand: 'kvm', vnc_port: 12345},
+  {brand: 'kvm', vnc_port: 12345}
+);

@@ -46,11 +46,13 @@ trap 'errexit $? $LINENO' EXIT
 #---- mainline
 
 rm -rf node_modules
-npm install
+npm install --ignore-scripts
 
 # General cruft cleaning
+find node_modules -name .bin | xargs rm -rf
 for dep in $(ls node_modules); do
     find node_modules/$dep -name .dir-locals.el | xargs rm;
+    find node_modules/$dep -name .eslintrc.js | xargs rm;
     find node_modules/$dep -name .gitmodules | xargs rm;
     find node_modules/$dep -name .gitignore | xargs rm;
     find node_modules/$dep -name .jshintrc | xargs rm;
@@ -59,7 +61,7 @@ for dep in $(ls node_modules); do
     find node_modules/$dep -name AUTHORS | xargs rm;
     find node_modules/$dep -name benchmark | xargs rm -rf;
     find node_modules/$dep -name CHANGES.md | xargs rm;
-    find node_modules/$dep -name CHANGELOG | xargs rm;
+    find node_modules/$dep -name CHANGELOG* | xargs rm;
     find node_modules/$dep -name component.json | xargs rm;
     find node_modules/$dep -name CONTRIBUTING.md | xargs rm;
     find node_modules/$dep -name CONTRIBUTORS* | xargs rm;
@@ -68,6 +70,7 @@ for dep in $(ls node_modules); do
     find node_modules/$dep -name examples | xargs rm -rf;
     find node_modules/$dep -name example | xargs rm -rf;
     find node_modules/$dep -name experiments | xargs rm -rf;
+    find node_modules/$dep -name Gruntfile.js | xargs rm;
     find node_modules/$dep -name History.md | xargs rm;
     find node_modules/$dep -name img | xargs rm -rf;
     find node_modules/$dep -name jsl.node.conf | xargs rm;
@@ -83,6 +86,7 @@ for dep in $(ls node_modules); do
     find node_modules/$dep -name tst | xargs rm -rf;
     find node_modules/$dep -name test | xargs rm -rf;
     find node_modules/$dep -name tests | xargs rm -rf;
+    find node_modules/$dep -name test.js | xargs rm;
 done
 
 rm -rf node_modules/.bin/
@@ -163,7 +167,6 @@ for FNAME in $(cd node_modules/restify/node_modules && ls -1); do
 done
 rm -rf node_modules/restify/node_modules/.bin
 rm -rf node_modules/restify/bin
-rm -rf node_modules/restify/node_modules/mime/test.js
 # mime 1.3.4 added some build cruft, and a CLI I don't care about
 rm -rf node_modules/restify/node_modules/mime/build/
 rm -rf node_modules/restify/node_modules/mime/cli.js
@@ -239,6 +242,131 @@ patch -p0 <<'PATCHNODEUNIT'
 PATCHNODEUNIT
 rm -rf node_modules/nodeunit/lib/reporters/index.js.orig
 
+# docker-registry-client
+# drop base64url un-needed bits
+rm -rf node_modules/docker-registry-client/node_modules/base64url/bin
+rm -rf node_modules/docker-registry-client/node_modules/base64url/node_modules/meow
+# drop duplicated base64url module
+rm -rf node_modules/docker-registry-client/node_modules/jws/node_modules/jwa/node_modules/base64url
+# patch to use the older restify module
+patch -p0 <<'PATCHDRC'
+--- node_modules/docker-registry-client/lib/docker-json-client.js
++++ node_modules/docker-registry-client/lib/docker-json-client.js
+@@ -47,13 +47,13 @@
+ 
+ var assert = require('assert-plus');
+ var crypto = require('crypto');
+-var restifyClients = require('restify-clients');
+-var restifyErrors = require('restify-errors');
++var restify = require('restify');
++var restifyErrors = restify.errors;
+ var strsplit = require('strsplit').strsplit;
+ var util = require('util');
+ var zlib = require('zlib');
+ 
+-var StringClient = restifyClients.StringClient;
++var StringClient = restify.StringClient;
+ 
+ 
+ // --- API
+--- node_modules/docker-registry-client/lib/registry-client-v1.js
++++ node_modules/docker-registry-client/lib/registry-client-v1.js
+@@ -22,7 +22,7 @@ var assert = require('assert-plus');
+ var bunyan = require('bunyan');
+ var fmt = require('util').format;
+ var mod_url = require('url');
+-var restifyClients = require('restify-clients');
++var restify = require('restify');
+ var tough = require('tough-cookie');
+ var vasync = require('vasync');
+ var VError = require('verror').VError;
+@@ -77,7 +77,7 @@ function pingIndex(opts, cb) {
+     assert.func(cb, 'cb');
+ 
+     var index = common.parseIndex(opts.indexName);
+-    var client = restifyClients.createJsonClient({
++    var client = restify.createJsonClient({
+         url: common.urlFromIndex(index),
+         log: opts.log,
+         userAgent: opts.userAgent || common.DEFAULT_USERAGENT,
+@@ -140,7 +140,7 @@ function login(opts, cb) {
+     }
+     var indexUrl = common.urlFromIndex(index);
+ 
+-    var client = restifyClients.createJsonClient({
++    var client = restify.createJsonClient({
+         url: indexUrl,
+         log: opts.log,
+         userAgent: opts.userAgent || common.DEFAULT_USERAGENT,
+@@ -303,11 +303,11 @@ function RegistryClientV1(opts) {
+     this.log = opts.log
+         ? opts.log.child({
+                 component: 'registry',
+-                serializers: restifyClients.bunyan.serializers
++                serializers: restify.bunyan.serializers
+             })
+         : bunyan.createLogger({
+                 name: 'registry',
+-                serializers: restifyClients.bunyan.serializers
++                serializers: restify.bunyan.serializers
+             });
+ 
+     this.insecure = Boolean(opts.insecure);
+@@ -548,10 +548,10 @@ RegistryClientV1.prototype._createClient = function _createClient(type, url) {
+     var client;
+     switch (type) {
+     case 'http':
+-        client = restifyClients.createHttpClient(clientOpts);
++        client = restify.createHttpClient(clientOpts);
+         break;
+     case 'json':
+-        client = restifyClients.createJsonClient(clientOpts);
++        client = restify.createJsonClient(clientOpts);
+         break;
+     default:
+         throw new Error('unknown client type: ' + type);
+--- node_modules/docker-registry-client/lib/registry-client-v2.js
++++ node_modules/docker-registry-client/lib/registry-client-v2.js
+@@ -22,8 +22,8 @@ var fmt = require('util').format;
+ var jwkToPem = require('jwk-to-pem');
+ var mod_jws = require('jws');
+ var querystring = require('querystring');
+-var restifyClients = require('restify-clients');
+-var restifyErrors = require('restify-errors');
++var restify = require('restify');
++var restifyErrors = restify.errors;
+ var strsplit = require('strsplit');
+ var mod_url = require('url');
+ var vasync = require('vasync');
+@@ -54,12 +54,12 @@ function _createLogger(log) {
+         // TODO avoid this .child if already have the serializers, e.g. for
+         // recursive call.
+         return log.child({
+-            serializers: restifyClients.bunyan.serializers
++            serializers: restify.bunyan.serializers
+         });
+     } else {
+         return bunyan.createLogger({
+             name: 'registry',
+-            serializers: restifyClients.bunyan.serializers
++            serializers: restify.bunyan.serializers
+         });
+     }
+ }
+@@ -1390,7 +1390,7 @@ RegistryClientV2.prototype._headOrGetBlob = function _headOrGetBlob(opts, cb) {
+                 }
+                 numRedirs += 1;
+ 
+-                var client = restifyClients.createHttpClient(common.objMerge({
++                var client = restify.createHttpClient(common.objMerge({
+                     url: reqOpts.url
+                 }, self._commonHttpClientOpts));
+                 self._clientsToClose.push(client);
+PATCHDRC
+rm -f node_modules/docker-registry-client/lib/*.js.orig
+# now remove un-needed restify-clients and restify-errors
+rm -f node_modules/docker-registry-client/node_modules/restify-clients
+rm -f node_modules/docker-registry-client/node_modules/restify-errors
 
 # Normalize all package.json's. Dropping fields that seem to
 # change willy-nilly from npm server-side.

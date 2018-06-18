@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" class="railroad-diagram" width="325" height="182" viewBox="0 0 325 182">
+<defs><style type="text/css"><![CDATA[
+svg.railroad-diagram path {
+  stroke-width: 3;
+  stroke: black;
+  fill: none;
+}
+svg.railroad-diagram text {
+  font: bold 14px monospace;
+  text-anchor: middle;
+}
+svg.railroad-diagram text.label {
+  text-anchor: start;
+}
+svg.railroad-diagram text.comment {
+  font: italic 12px monospace;
+}
+svg.railroad-diagram rect {
+  stroke-width: 3;
+  stroke: black;
+  fill: hsl(120,100%,90%);
+}
+ ]]></style></defs>
+<g transform="translate(.5 .5)">
+<path d="M 20 21 v 20 m 10 -20 v 20 m -10 -10 h 20.5"></path>
+<g>
+<path d="M40 31h0"></path>
+<path d="M284 31h0"></path>
+<path d="M40 31h20"></path>
+<g>
+<path d="M60 31h80"></path>
+<path d="M184 31h80"></path>
+<rect x="140" y="20" width="44" height="22" rx="10" ry="10"></rect>
+<text x="162" y="35">ANY</text>
+</g>
+<path d="M264 31h20"></path>
+<path d="M40 31a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M60 61h64"></path>
+<path d="M200 61h64"></path>
+<rect x="124" y="50" width="76" height="22" rx="10" ry="10"></rect>
+<text x="162" y="65">ALL VMS</text>
+</g>
+<path d="M264 61a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
+<path d="M40 31a10 10 0 0 1 10 10v40a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M60 91h0"></path>
+<path d="M264 91h0"></path>
+<path d="M60 91h10"></path>
+<g>
+<path d="M70 91h0"></path>
+<path d="M98 91h0"></path>
+<rect x="70" y="80" width="28" height="22" rx="10" ry="10"></rect>
+<text x="84" y="95">(</text>
+</g>
+<path d="M98 91h10"></path>
+<path d="M108 91h10"></path>
+<g>
+<path d="M118 91h0"></path>
+<path d="M206 91h0"></path>
+<path d="M118 91h10"></path>
+<g>
+<path d="M128 91h0"></path>
+<path d="M196 91h0"></path>
+<rect x="128" y="80" width="68" height="22"></rect>
+<text x="162" y="95">target</text>
+</g>
+<path d="M196 91h10"></path>
+<path d="M128 91a10 10 0 0 0 -10 10v10a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M128 121h16"></path>
+<path d="M180 121h16"></path>
+<rect x="144" y="110" width="36" height="22" rx="10" ry="10"></rect>
+<text x="162" y="125">OR</text>
+</g>
+<path d="M196 121a10 10 0 0 0 10 -10v-10a10 10 0 0 0 -10 -10"></path>
+</g>
+<path d="M206 91h10"></path>
+<path d="M216 91h10"></path>
+<g>
+<path d="M226 91h0"></path>
+<path d="M254 91h0"></path>
+<rect x="226" y="80" width="28" height="22" rx="10" ry="10"></rect>
+<text x="240" y="95">)</text>
+</g>
+<path d="M254 91h10"></path>
+</g>
+<path d="M264 91a10 10 0 0 0 10 -10v-40a10 10 0 0 1 10 -10"></path>
+<path d="M40 31a10 10 0 0 1 10 10v100a10 10 0 0 0 10 10"></path>
+<g>
+<path d="M60 151h68"></path>
+<path d="M196 151h68"></path>
+<rect x="128" y="140" width="68" height="22"></rect>
+<text x="162" y="155">target</text>
+</g>
+<path d="M264 151a10 10 0 0 0 10 -10v-100a10 10 0 0 1 10 -10"></path>
+</g>
+<path d="M 284 31 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+</svg>

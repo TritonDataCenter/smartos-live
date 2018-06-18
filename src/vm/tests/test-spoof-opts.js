@@ -1,4 +1,4 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2018 Joyent, Inc.  All rights reserved.
 //
 // Test setting antispoof opts on nics
 //
@@ -33,6 +33,14 @@ function nic_link_props(opts, callback) {
 
         opts.t.deepEqual(props.protection.sort(), opts.props,
             opts.nic + ': antispoof options ' + opts.desc);
+        opts.t.deepEqual(props['allow-all-dhcp-cids'],
+            (opts.allowed_dhcp_cids[0] === '*').toString(),
+            opts.nic + ': all client identifiers allowed ' + opts.desc);
+        opts.t.deepEqual(props['allowed-dhcp-cids'].sort(),
+            opts.allowed_dhcp_cids.map(function (cid) {
+                return (cid === '*' ? '--' : cid);
+            }),
+            opts.nic + ': allowed client identifiers ' + opts.desc);
         opts.t.deepEqual(props['allowed-ips'].sort(),
             opts.allowed_ips.map(function (ip) {
                 if (ip == '--') {
@@ -42,6 +50,9 @@ function nic_link_props(opts, callback) {
                 return ip + '/32';
             }),
             opts.nic + ': allowed-ips ' + opts.desc);
+        opts.t.deepEqual(props['dynamic-methods'].sort(),
+            opts.dynamic_methods,
+            opts.nic + ': dynamic methods ' + opts.desc);
 
         return callback();
     });
@@ -103,6 +114,9 @@ function brand_test(brand, image, t) {
                 allow_dhcp_spoofing: true,
                 allow_mac_spoofing: true,
                 allowed_ips: [ '10.6.0.201', '10.6.0.202', '10.6.0.0/25' ]
+            }, {
+                nic_tag: 'admin',
+                ips: [ 'addrconf' ]
             }
         ]
     };
@@ -133,6 +147,7 @@ function brand_test(brand, image, t) {
                     allow_dhcp_spoofing: true,
                     allow_mac_spoofing: true
                 });
+                nic_antispoof_props(t, obj.nics[4], 'net4', {});
 
                 t.deepEqual(obj.nics[3].allowed_ips,
                     [ '10.6.0.201', '10.6.0.202', '10.6.0.0/25' ],
@@ -148,10 +163,27 @@ function brand_test(brand, image, t) {
                     uuid: state.uuid,
                     nic: 'net' + i,
                     t: t,
+                    allowed_dhcp_cids: [ '--' ],
                     props: [ 'dhcp-nospoof', 'ip-nospoof', 'mac-nospoof',
                         'restricted' ],
+                    dynamic_methods: [ '--' ],
                     allowed_ips: [ ips[i] ]
                 }, cb2);
+            }, cb);
+
+        }, function (cb) {
+            nic_link_props({
+                desc: 'after provision',
+                uuid: state.uuid,
+                nic: 'net4',
+                t: t,
+                allowed_dhcp_cids: [ '*' ],
+                props: [
+                    'dhcp-nospoof', 'ip-nospoof',
+                    'mac-nospoof', 'restricted'
+                ],
+                dynamic_methods: [ 'dhcpv6', 'slaac' ],
+                allowed_ips: [ '--' ]
             }, cb);
 
         }, function (cb) {
@@ -175,10 +207,90 @@ function brand_test(brand, image, t) {
             });
 
         }, function (cb) {
+            // Updating a nic to have more than 20 allowed_dhcp_cids should fail
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_dhcp_cids: [
+                    '0x01', '0x02', '0x03', '0x04', '0x05', '0x06', '0x07',
+                    '0x08', '0x09', '0x0a', '0x0b', '0x0c', '0x0d', '0x0e',
+                    '0x0f', '0x10', '0x11', '0x12', '0x13', '0x14', '0x15',
+                    '0x16', '0x17', '0x18', '0x19', '0x1a', '0x1b', '0x1c',
+                    '0x1d', '0x1e', '0x1f', '0x20', '0x21'
+                ]
+            } ]}, function (e) {
+                t.ok(e, 'error returned');
+                if (e) {
+                    t.equal(e.message, 'nics.*.allowed_dhcp_cids contains '
+                        + '33 Client Identifiers, but is limited to 20',
+                        'allowed_dhcp_cids error message');
+                }
+
+                cb();
+            });
+
+        }, function (cb) {
+            // Updating a nic to have more allowed_dhcp_cids with a total length
+            // of at least 1024 when stored with zonecfg should fail.
+            var cids = [
+                '0x0100020003000400050006000701000200030004000500060007010203',
+                '0x080009000a000b000c000d000e080009000a000b000c000d000e010203',
+                '0x0f0010001100120013001400150f001000110012001300140015010203',
+                '0x16001700180019001a001b001c16001700180019001a001b001c010203',
+                '0x1d001e001f00200021002200231d001e001f0020002100220023010203'
+            ];
+
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_dhcp_cids: cids.concat(cids, cids, cids)
+            } ]}, function (e) {
+                t.ok(e, 'error returned');
+                if (e) {
+                    t.equal(e.message, 'nics.*.allowed_dhcp_cids contains '
+                        + 'too many long Client Identifiers');
+                }
+
+                cb();
+            });
+
+        }, function (cb) {
+            // allowed_dhcp_cids must start with "0x"
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_dhcp_cids: [ '1234' ]
+            } ]}, function (e) {
+                t.ok(e, 'error returned');
+                if (e) {
+                    t.equal(e.message,
+                        'Invalid value(s) for: nics.*.allowed_dhcp_cids',
+                        'allowed_dhcp_cids error message');
+                }
+
+                cb();
+            });
+
+        }, function (cb) {
+            // allowed_dhcp_cids must be hex
+            VM.update(state.uuid, { update_nics: [ {
+                mac: state.nics[2].mac,
+                allowed_dhcp_cids: [ '0xqz' ]
+            } ]}, function (e) {
+                t.ok(e, 'error returned');
+                if (e) {
+                    t.equal(e.message,
+                        'Invalid value(s) for: nics.*.allowed_dhcp_cids',
+                        'allowed_dhcp_cids error message');
+                }
+
+                cb();
+            });
+
+        }, function (cb) {
             // update nics:
             //   net0: set ip and mac spoofing
             //   net1: allow all spoofing
-            //   net1: change allowed_ips only
+            //   net2: change allowed_ips only
+            //   net3: no changes, should remain the same
+            //   net3: add allowed Client Identifier 0x1234
             VM.update(state.uuid, { update_nics: [
                 {
                     mac: state.nics[0].mac,
@@ -195,6 +307,10 @@ function brand_test(brand, image, t) {
                 {
                     mac: state.nics[2].mac,
                     allowed_ips: [ '10.5.0.201', '10.5.0.202' ]
+                },
+                {
+                    mac: state.nics[4].mac,
+                    allowed_dhcp_cids: [ '0x4321' ]
                 }
             ]}, function (e) {
 
@@ -228,6 +344,18 @@ function brand_test(brand, image, t) {
                         allowed_ips: true
                     });
 
+                    // net3
+                    nic_antispoof_props(t, obj.nics[3], 'net3', {
+                        allowed_ips: true,
+                        allow_dhcp_spoofing: true,
+                        allow_mac_spoofing: true
+                    });
+
+                    // net4
+                    nic_antispoof_props(t, obj.nics[4], 'net4', {
+                        allowed_dhcp_cids: [ '0x4321' ]
+                    });
+
                     t.deepEqual(obj.nics[2].allowed_ips,
                         [ '10.5.0.201', '10.5.0.202' ],
                         'net2: allowed_ips set correctly');
@@ -243,7 +371,9 @@ function brand_test(brand, image, t) {
                 uuid: state.uuid,
                 nic: 'net0',
                 t: t,
+                allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof', 'restricted' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -254,7 +384,9 @@ function brand_test(brand, image, t) {
                 uuid: state.uuid,
                 nic: 'net1',
                 t: t,
+                allowed_dhcp_cids: [ '--' ],
                 props: [ '--' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -265,9 +397,27 @@ function brand_test(brand, image, t) {
                 uuid: state.uuid,
                 nic: 'net2',
                 t: t,
+                allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof', 'ip-nospoof', 'mac-nospoof',
                     'restricted' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ips[2], '10.5.0.201', '10.5.0.202']
+            }, cb);
+
+        }, function (cb) {
+            // Check net4's link props
+            nic_link_props({
+                desc: 'after first update',
+                uuid: state.uuid,
+                nic: 'net4',
+                t: t,
+                allowed_dhcp_cids: [ '0x4321' ],
+                props: [
+                    'dhcp-nospoof', 'ip-nospoof',
+                    'mac-nospoof', 'restricted'
+                ],
+                dynamic_methods: [ 'dhcpv6', 'slaac' ],
+                allowed_ips: [ '--' ]
             }, cb);
 
         }, function (cb) {
@@ -318,7 +468,9 @@ function brand_test(brand, image, t) {
                 uuid: state.uuid,
                 nic: 'net0',
                 t: t,
+                allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof', 'restricted' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -329,7 +481,9 @@ function brand_test(brand, image, t) {
                 uuid: state.uuid,
                 nic: 'net1',
                 t: t,
+                allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -340,8 +494,10 @@ function brand_test(brand, image, t) {
                 uuid: state.uuid,
                 nic: 'net2',
                 t: t,
+                allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof', 'ip-nospoof', 'mac-nospoof',
                     'restricted' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ips[2], '10.5.0.201', '10.5.0.202']
             }, cb);
 
@@ -393,7 +549,9 @@ function brand_test(brand, image, t) {
                 uuid: state.uuid,
                 nic: 'net0',
                 t: t,
+                allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof', 'restricted' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -403,7 +561,9 @@ function brand_test(brand, image, t) {
                 uuid: state.uuid,
                 nic: 'net1',
                 t: t,
+                allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ '--' ]
             }, cb);
 
@@ -413,8 +573,10 @@ function brand_test(brand, image, t) {
                 uuid: state.uuid,
                 nic: 'net2',
                 t: t,
+                allowed_dhcp_cids: [ '--' ],
                 props: [ 'dhcp-nospoof', 'ip-nospoof', 'mac-nospoof',
                     'restricted' ],
+                dynamic_methods: [ '--' ],
                 allowed_ips: [ips[2], '10.5.0.201', '10.5.0.202']
             }, cb);
         }, function (cb) {

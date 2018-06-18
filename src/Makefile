@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2016 Joyent, Inc.
+# Copyright (c) 2017, Joyent, Inc.
 #
 
 include Makefile.defs
@@ -39,7 +39,8 @@ JSSTYLE_OLDSKOOL_OPTS =
 # without extra effort; it is overridden when make is invoked in this
 # subdirectory.
 #
-DESTDIR =		../proto
+# This should be an absolute path, or building $(SUBDIRS) will fail
+DESTDIR =		$(realpath ../proto)
 
 #
 # DESTNAME is used for the manifest target.  We set it to something
@@ -62,10 +63,6 @@ SMARTDCLIBDIR =	$(DESTDIR)/smartdc/lib
 #
 bootparams :	LIBS +=		-ldevinfo
 bootparams :	WARN_FLAGS +=	-Wno-unused
-diskinfo :	LDFLAGS +=	-L$(DESTDIR)/usr/lib/fm
-diskinfo :	CPPFLAGS +=	-I$(ROOT)/projects/illumos/usr/src/lib/fm/topo
-diskinfo :	LIBS +=		-R/usr/lib/fm
-diskinfo :	LIBS +=		-ldladm -ldiskmgt -lnvpair -ltopo
 zfs_recv :	LIBS +=		-lsocket
 zfs_send :	LIBS +=		-lsocket
 vmbundle :	CPPFLAGS +=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
@@ -86,6 +83,7 @@ JS_CHECK_TARGETS=\
 	vm/sbin/*.js \
 	vm/node_modules/dladm.js \
 	vm/node_modules/expander.js \
+	vm/node_modules/hrtime.js \
 	vm/node_modules/ip.js \
 	vm/node_modules/nic.js \
 	vm/node_modules/proptable.js \
@@ -95,6 +93,7 @@ JS_CHECK_TARGETS=\
 	vm/node_modules/openonerrlogger.js \
 	vm/node_modules/vmload/*.js \
 	vm/node_modules/sysevent-stream.js \
+	vm/node_modules/zonecfg.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
 	vm/common/nictag.js \
@@ -104,6 +103,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-create-filesystems.js \
 	vm/tests/test-docker.js \
 	vm/tests/test-defaults.js \
+	vm/tests/test-hrtime.js \
 	vm/tests/test-indestructible.js \
 	vm/tests/test-internal_metadata_namespaces.js \
 	vm/tests/test-lastexited.js \
@@ -125,18 +125,24 @@ JS_CHECK_OLDSKOOL_TARGETS = \
 
 # These files will get run through cstyle on 'make check'
 C_CHECK_TARGETS=\
+	bootparams.c \
 	cryptpass.c \
+	disk_size.c \
+	measure_terminal.c \
+	nomknod.c \
 	qemu-exec.c \
+	removable_disk.c \
 	vmunbundle.c \
 	zfs_recv.c \
 	zfs_send.c \
 	zoneevent.c \
+	sdc-on-tty.c \
 	sysinfo_mod.c \
 	sysevent.c \
 	dockerinit/src/dockerexec.c \
 	dockerinit/src/dockerinit.c \
 	dockerinit/src/docker-common.c \
-	node-zsock/src/zsock.c
+	lx_hook_postnet/main.c
 
 #
 # Generic flags we apply by default to everything.
@@ -236,79 +242,6 @@ $(DTRACE_PROVIDER.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 CLEANFILES +=	$(DTRACE_PROVIDER.NODE) $(DTRACE_PROVIDER_OBJS)
 
 #
-# The microtime Node add-on follows the same pattern as EXPAT.NODE.
-#
-MICROTIME_OBJDIR =	node-microtime/build/Release
-MICROTIME.NODE =	$(MICROTIME_OBJDIR)/microtime.node
-
-$(MICROTIME.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-write-strings -Wno-sign-compare
-$(MICROTIME.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
-$(MICROTIME.NODE) :	CXXFLAGS +=	$(NODE_CFLAGS)
-$(MICROTIME.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
-
-
-#
-# The sqlite3 add-on uses a combination of C + C++ files in multiple
-# directories, and has multiple header directories as well.
-#
-SQLITE3_OBJDIR =	node-sqlite3/build/Release
-SQLITE3_SRCDIR =	node-sqlite3/src
-SQLITE3_LIBSRCDIR =	node-sqlite3/deps/sqlite3
-SQLITE3_BINDINGS.NODE =	$(SQLITE3_OBJDIR)/node_sqlite3.node
-
-SQLITE3_SRCS += \
-	database.cc \
-	node_sqlite3.cc \
-	statement.cc
-
-SQLITE3_LIBSRCS +=	sqlite3.c
-
-SQLITE3_NODEHDRS += \
-	async.h \
-	macros.h \
-	statement.h \
-	threading.h
-
-SQLITE3_LIBHDRS += \
-	sqlite3.h \
-	sqlite3ext.h
-
-SQLITE3_OBJS =		\
-			$(SQLITE3_SRCS:%.cc=$(SQLITE3_OBJDIR)/%.o) \
-			$(SQLITE3_LIBSRCS:%.c=$(SQLITE3_OBJDIR)/%.o)
-SQLITE3_HDRS =		\
-			$(SQLITE3_NODEHDRS:%=$(SQLITE3_SRCDIR)/%) \
-			$(SQLITE3_LIBHDRS:%=$(SQLITE3_LIBSRCDIR)/%)
-CLEANFILES +=		$(SQLITE3_OBJS)
-
-SQLITE3_FLAGS = \
-				-fdata-sections \
-				-ffunction-sections \
-				-fno-omit-frame-pointer \
-				-fno-strict-aliasing \
-				-fno-exceptions
-
-$(SQLITE3_BINDINGS.NODE) :	WARN_FLAGS =	-Wall -Werror
-$(SQLITE3_BINDINGS.NODE) :	CPPFLAGS += \
-				$(NODE_CPPFLAGS) \
-				-I$(SQLITE3_LIBSRCDIR) \
-				-D_SQLITE_THREADSAFE=1 \
-				-D_SQLITE_ENABLE_FTS3 \
-				-D_SQLITE_ENABLE_RTREE \
-				-D_LARGEFILE_SOURCE \
-				-D_FILE_OFFSET_BITS=64 \
-				-D_REENTRANT \
-				-D_NDEBUG \
-				-D_POSIX_PTHREAD_SEMANTICS
-$(SQLITE3_BINDINGS.NODE) :	CFLAGS += \
-				$(NODE_CFLAGS) \
-				$(SQLITE3_FLAGS)
-$(SQLITE3_BINDINGS.NODE) :	LDFLAGS += \
-				$(NODE_LDFLAGS) \
-				-Wl,-soname=node_sqlite3.node
-$(SQLITE3_BINDINGS.NODE) :	LIBS += -lpthread
-
-#
 # The libuuid Node add-on follows the same pattern as EXPAT.NODE.
 #
 UUID_OBJDIR =	node-libuuid/build/Release
@@ -320,21 +253,6 @@ $(UUID.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
 $(UUID.NODE) :	CXXFLAGS +=	$(NODE_CFLAGS)
 $(UUID.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 $(UUID.NODE) :	LIBS +=		-luuid
-
-#
-# The zsock Node add-on is based on v8plus, which has its own system of
-# Makefiles.
-#
-ZSOCK_SRCDIR =		node-zsock/src
-ZSOCK_V8PLUS_DIR =	node-zsock/node_modules/v8plus
-ZSOCK_BINDINGS.NODE =	$(ZSOCK_SRCDIR)/../lib/zsock_bindings.node
-
-#
-# Likewise zutil.
-#
-ZUTIL_SRCDIR =		node-zutil/src
-ZUTIL_V8PLUS_DIR =	node-zutil/node_modules/v8plus
-ZUTIL_BINDINGS.NODE =	$(ZUTIL_SRCDIR)/../lib/zutil_bindings.node
 
 #
 # Rules for building the nomknod related shared object.
@@ -359,7 +277,6 @@ CLEANFILES +=		$(NOMKNOD_TARGS)
 #
 TARGETS = \
 	bootparams \
-	diskinfo \
 	disklayout \
 	disklist \
 	disk_size \
@@ -379,13 +296,9 @@ TARGETS = \
 	$(KSTAT.NODE) \
 	$(LOCKFD_BINDING.NODE) \
 	$(ZONENAME_BINDING.NODE) \
-	$(MICROTIME.NODE) \
 	$(NOMKNOD_TARGS) \
 	$(SYSLOG.NODE) \
-	$(SQLITE3_BINDINGS.NODE) \
-	$(UUID.NODE) \
-	$(ZSOCK_BINDINGS.NODE) \
-	$(ZUTIL_BINDINGS.NODE)
+	$(UUID.NODE)
 
 USR_LIB_TARGETS = \
 	cryptpass \
@@ -401,7 +314,7 @@ SMARTDC_LIB_TARGETS = \
 #
 # Subdirectory management
 #
-SUBDIRS = dockerinit routeinfo
+SUBDIRS = dockerinit routeinfo lx_hook_postnet
 
 SUBDIRS_ENV = \
 	CTFCONVERT=$(CTFCONVERT) \
@@ -437,11 +350,9 @@ install: all $(SUBDIRS)
 	cp $(LOCKFD_BINDING.NODE) $(PREFIX_NODE)/node_modules/lockfd_binding.node
 	cp node-zonename/lib/index.js $(PREFIX_NODE)/node_modules/zonename.js
 	cp $(ZONENAME_BINDING.NODE) $(PREFIX_NODE)/node_modules/zonename_binding.node
-	cp $(MICROTIME.NODE) $(PREFIX_NODE)/node_modules/
 	rm -rf $(DESTDIR)/usr/vm
 	cp -PR vm $(DESTDIR)/usr/
 	mkdir -m 0755 -p $(DESTDIR)/usr/vm/node_modules
-	mkdir -p $(PREFIX_NODE)/node_modules/{zsock,zutil}/build/Release
 	mkdir -p $(DESTDIR)/usr/vm/test/tests
 	cp -Pr vm/common $(DESTDIR)/usr/vm/test/
 	mkdir -p $(DESTDIR)/usr/vm/test/tests
@@ -449,21 +360,6 @@ install: all $(SUBDIRS)
 	cp -Pr vm/tests/testdata $(DESTDIR)/usr/vm/test/
 	cp vm/runtest $(DESTDIR)/usr/vm/test/
 	cp vm/runtests $(DESTDIR)/usr/vm/test/
-	cp -Pr node-zsock/{package.json,lib} \
-	    $(PREFIX_NODE)/node_modules/zsock
-	cp -Pr node-zutil/{package.json,lib} \
-	    $(PREFIX_NODE)/node_modules/zutil
-	cp $(SQLITE3_BINDINGS.NODE) \
-	    $(PREFIX_NODE)/node_modules
-	(sed -e "s|var sqlite3.*;|var sqlite3 = module.exports = exports = require('./node_sqlite3');|" | \
-	    sed -e "s|var trace = require.*;|var trace = require('./sqlite3_trace')|") \
-	    < node-sqlite3/lib/sqlite3.js \
-	    > $(PREFIX_NODE)/node_modules/sqlite3.js
-	cp node-sqlite3/lib/trace.js $(PREFIX_NODE)/node_modules/sqlite3_trace.js
-	cp $(ZSOCK_BINDINGS.NODE) \
-	    $(PREFIX_NODE)/node_modules/zsock/build/Release
-	cp $(ZUTIL_BINDINGS.NODE) \
-	    $(PREFIX_NODE)/node_modules/zutil/build/Release
 	cp $(EXPAT.NODE) $(PREFIX_NODE)/node_modules/expat_binding.node
 	cp $(UUID.NODE) $(PREFIX_NODE)/node_modules/uuid.node
 	cp $(DTRACE_PROVIDER.NODE) $(PREFIX_NODE)/node_modules/DTraceProviderBindings.node
@@ -527,6 +423,7 @@ install: all $(SUBDIRS)
 	mkdir -m 0755 -p $(DESTDIR)/usr/lib/sdc
 	cp -p net-boot-config $(DESTDIR)/usr/lib/sdc
 	cd routeinfo && $(MAKE) install $(SUBDIRS_ENV)
+	cd lx_hook_postnet && $(MAKE) install $(SUBDIRS_ENV)
 	mkdir -p $(SYSINFO_MOD_DIR)
 	rm -f $(SYSINFO_MOD_DIR)/sysinfo_mod.so
 	/usr/sbin/install -f $(SYSINFO_MOD_DIR) -m 0555 sysinfo_mod.so
@@ -545,6 +442,7 @@ check: $(JSLINT) $(SUBDIRS)
 	@(for file in $(C_CHECK_TARGETS); do \
 		echo $(PWD)/$$file; \
 		$(CSTYLE) $$file; \
+		[[ $$? == "0" ]] || exit 1; \
 	done)
 	@printf "\nC files ok!\n"
 	@printf "\n==> Running JavaScriptLint...\n"
@@ -594,7 +492,6 @@ $(JSLINT):
 clean: $(SUBDIRS)
 	-rm -f $(TARGETS) $(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) *.o \
 	    $(CLEANFILES)
-	-rm -rf node-sqlite3/build
 	cd $(LOCKFD_SRC_DIR) && $(MAKE) clean
 	cd $(ZONENAME_SRC_DIR) && $(MAKE) clean
 
@@ -684,46 +581,9 @@ $(KSTAT.NODE): node-kstat/kstat.cc
 	@mkdir -p $(KSTAT_OBJDIR)
 	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
 
-$(MICROTIME.NODE): node-microtime/src/microtime.cc
-	@mkdir -p $(MICROTIME_OBJDIR)
-	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
-
-$(SQLITE3_OBJDIR)/%.o: $(SQLITE3_SRCDIR)/%.cc $(SQLITE3_HDRS)
-	@mkdir -p $(SQLITE3_OBJDIR)
-	$(GXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
-
-$(SQLITE3_OBJDIR)/%.o: $(SQLITE3_LIBSRCDIR)/%.c $(SQLITE3_HDRS)
-	@mkdir -p $(SQLITE3_OBJDIR)
-	$(GCC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
-
-$(SQLITE3_BINDINGS.NODE): $(SQLITE3_OBJS)
-	$(GXX) $(LDFLAGS) -o $@ $(SQLITE3_OBJS) $(LIBS)
-
 $(UUID.NODE): $(UUID_SRCDIR)/uuid.cc
 	@mkdir -p $(UUID_OBJDIR)
 	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
-
-$(ZSOCK_BINDINGS.NODE): FRC
-	cd $(ZSOCK_SRCDIR) && \
-	LD_OPTIONS=-lc \
-	$(MAKE) \
-		CC=$(GCC) CXX=$(GXX) \
-		PREFIX_NODE=$(PREFIX_NODE) \
-		NODE_EXEC=$(NODE_EXEC) \
-		V8PLUS=$(PWD)/$(ZSOCK_V8PLUS_DIR) \
-		CTFCONVERT=$(CTFCONVERT) \
-		CTFMERGE=$(CTFMERGE)
-
-$(ZUTIL_BINDINGS.NODE): FRC
-	cd $(ZUTIL_SRCDIR) && \
-	LD_OPTIONS=-lc \
-	$(MAKE) \
-		CC=$(GCC) CXX=$(GXX) \
-		PREFIX_NODE=$(PREFIX_NODE) \
-		NODE_EXEC=$(NODE_EXEC) \
-		V8PLUS=$(PWD)/$(ZUTIL_V8PLUS_DIR) \
-		CTFCONVERT=$(CTFCONVERT) \
-		CTFMERGE=$(CTFMERGE)
 
 $(NOMKNOD_32):	$(NOMKNOD_SRC)
 	$(GCC) $(NOMKNOD_FLAGS) $(NOMKNOD_32_FLAGS) -o $@ $<

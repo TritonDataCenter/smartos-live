@@ -340,6 +340,13 @@ UUID.
         to a given image repository (IMGAPI) via "-p URL". This can also be
         done separately via "imgadm publish".
 
+        Note: When creating an image from a VM with brand 'bhyve', 'lx', or
+        'kvm', the resulting manifest will have requirements.brand set to match
+        the brand of the source VM. If this is undesirable, the
+        requirements.brand can be set (optionally empty if the resulting image
+        should not have this value set) in the manifest passed with the '-m'
+        option.
+
         Options:
             -h, --help     Print this help and exit.
             -m <manifest>  Path to image manifest data (as JSON) to

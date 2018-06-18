@@ -59,6 +59,7 @@ CSTYLE =	$(ROOT)/tools/cstyle
 MANCHECK =	$(ROOT)/tools/mancheck/mancheck
 MANCF =		$(ROOT)/tools/mancf/mancf
 TZCHECK =	$(ROOT)/tools/tzcheck/tzcheck
+UCODECHECK =	$(ROOT)/tools/ucodecheck/ucodecheck
 
 CTFBINDIR = \
 	$(ROOT)/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386
@@ -114,6 +115,7 @@ TOOLS_TARGETS = \
 	$(MANCHECK) \
 	$(MANCF) \
 	$(TZCHECK) \
+	$(UCODECHECK) \
 	tools/cryptpass
 
 world: 0-extra-stamp 0-illumos-stamp 1-extra-stamp 0-livesrc-stamp \
@@ -344,6 +346,10 @@ $(MANCHECK): 0-illumos-stamp
 .PHONY: $(TZCHECK)
 $(TZCHECK): 0-illumos-stamp
 	(cd tools/tzcheck && gmake tzcheck CC=$(NATIVE_CC) $(SUBDIR_DEFS))
+
+.PHONY: $(UCODECHECK)
+$(UCODECHECK): 0-illumos-stamp
+	(cd tools/ucodecheck && gmake ucodecheck CC=$(NATIVE_CC) $(SUBDIR_DEFS))
 
 .PHONY: sdcman
 sdcman:

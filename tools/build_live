@@ -178,6 +178,19 @@ function bi_run_tzcheck
 	bi_emit_done
 }
 
+function bi_run_ucodecheck
+{
+	local ucodecheck="$bi_wsroot/tools/ucodecheck/ucodecheck"
+
+	bi_emit_start 'Checking microcode files...'
+
+	if ! "$ucodecheck" -f "$bi_manifest" -p "$bi_wsroot/proto"; then
+		fail "not ucodecheck clean"
+	fi
+
+	bi_emit_done
+}
+
 #
 # Create a blank ramdisk image file, then attach it as a lofi device.
 #
@@ -322,38 +335,6 @@ function bi_smf_seeds
 
 	if ! bi_extra=$(pfexec "$smf_seeds" "$bi_mnt_root" 2>&1); then
 		fail "failed to build SMF seeds"
-	fi
-
-	bi_emit_done
-}
-
-#
-# The ucode files that are installed by illumos for both Intel and AMD
-# are versions that have all of the different processors combined into
-# one file. However, the ucode update logic in the OS needs that to be
-# expanded into a per-processor file which is normally done by ucodeadm
-# as part of setting up a boot archive. To make sure that microcode
-# updates can be applied we take care of setting this up here. Over
-# time, we should change this to do it as part of the illumos build
-# process and likely illumos should just deliver the decomposed files.
-#
-function bi_expand_ucode
-{
-	local ucodeadm="/usr/sbin/ucodeadm -i -R "
-	local ucode_root="$bi_mnt_root/platform/i86pc/ucode"
-	local intc_file="$ucode_root/intel-ucode.txt"
-	local intc_dir="GenuineIntel"
-	local amd_file="$ucode_root/amd-ucode.bin"
-	local amd_dir="AuthenticAMD"
-
-	bi_emit_start 'Generating microcode files'
-
-	if ! pfexec $ucodeadm $ucode_root/$intc_dir $intc_file; then
-		fail "failed to generate Intel microcode files"
-	fi
-
-	if ! pfexec $ucodeadm $ucode_root/$amd_dir $amd_file; then
-		fail "failed to generate AMD microcode files"
 	fi
 
 	bi_emit_done
@@ -904,6 +885,7 @@ bi_log_setup "$bi_wsroot/log/build_live.$bi_buildstamp.$(date +%s).log"
 #
 bi_run_mancheck
 bi_run_tzcheck
+bi_run_ucodecheck
 
 bi_setup_work_dir
 
@@ -957,7 +939,6 @@ bi_copy_files
 bi_gen_whatis
 bi_smf_import
 bi_smf_seeds
-bi_expand_ucode
 bi_create_password
 bi_gen_etcrelease
 bi_gen_buildstamp_module

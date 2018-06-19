@@ -420,6 +420,7 @@ f usr/img/package.json 0444 root bin
 d usr/img/sbin 0555 root bin
 f usr/img/sbin/chroot-gtar 0555 root bin
 f usr/img/sbin/gtar-unlink-dir 0555 root bin
+f usr/img/sbin/recover-vm-from-failed-imgadm-create.sh 0555 root bin
 f usr/img/sbin/imgadm 0555 root bin
 d usr/img/test 0555 root bin
 f usr/img/test/IMG.test.js 0444 root bin
@@ -1084,4 +1085,3 @@ f usr/share/man/man5/fwrule.5 0444 root bin
 
 # compatibility symlink to new shipped file manifest location
 s var/log/manifest=../../usr/share/smartos/manifest
-

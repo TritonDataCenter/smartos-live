@@ -954,6 +954,9 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     dns_domain:
 
+        For OS VMs this specifies the search value for /etc/resolv.conf that
+        gets set at create time. Updating this after create will have no
+        effect unless maintain_resolvers is true.
         For OS VMs this specifies the domain value for /etc/hosts that gets set
         at create time. Updating this after create will have no effect.
 

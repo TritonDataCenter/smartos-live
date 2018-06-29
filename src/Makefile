@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright (c) 2017, Joyent, Inc.
+# Copyright (c) 2018, Joyent, Inc.
 #
 
 include Makefile.defs
@@ -110,6 +110,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-openonerrlogger.js \
 	vm/tests/test-reboot.js \
 	vm/tests/test-reprovision.js \
+	vm/tests/test-routes-lx.js \
 	vm/tests/test-snapshots.js \
 	vm/tests/test-spoof-opts.js \
 	vm/tests/test-tmpfs.js \

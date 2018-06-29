@@ -20,11 +20,38 @@ var PAYLOAD_TEMPLATE = {
     kernel_version: '3.13.0'
 };
 
-test('setting custom static routes for LX branded zones', function(t) {
+function checkRoutes(t, state, expectedRoutes, cb) {
+    cp.exec(format('/usr/sbin/zlogin %s /bin/netstat -rn |'
+        + 'egrep -v \'Destination|routing\' | awk \'{ print $1,$2 }\'',
+        state.uuid), function checkRoutesCb(err, stdout, stderr) {
+            if (err) {
+                cb(err);
+                return;
+            }
+
+            var actualRoutes = {};
+            stdout.split(/\n/g).forEach(function (line) {
+                var parts = line.split(' ');
+                if (parts[0] === '' || parts[0] === '127.0.0.1') {
+                    return;
+                }
+
+                actualRoutes[parts[0]] = parts[1];
+            });
+
+            t.deepEqual(actualRoutes, expectedRoutes,
+                'routes in zone should be '
+                + JSON.stringify(expectedRoutes)
+                + ' and are: ' + JSON.stringify(actualRoutes));
+
+            cb();
+        });
+}
+
+test('setting custom static routes for LX branded zones', function (t) {
     var state = {
         brand: 'lx'
     };
-    var vm;
 
     var routes = {
         '172.20.42.0/24': '172.19.1.1',
@@ -42,8 +69,8 @@ test('setting custom static routes for LX branded zones', function(t) {
         autoboot: true,
         nics: [
             { nic_tag: 'admin',
-              ip: '172.19.1.2',
-              netmask: '255.255.255.0' }
+                ip: '172.19.1.2',
+                netmask: '255.255.255.0' }
         ],
         maintain_resolvers: true,
         nowait: false,
@@ -68,11 +95,10 @@ test('setting custom static routes for LX branded zones', function(t) {
                     t.ifError(loadErr,
                         'loading VM after create should succeed');
                     if (vmObj && vmObj.state === 'running') {
-                        vm = vmObj;
                         cb();
-                    } else if (vmObj.state === 'failed' ||
-                        vmObj.state === 'destroyed') {
-                        cb(new Error('test VM in state ' + vmObj.state))
+                    } else if (vmObj.state === 'failed'
+                        || vmObj.state === 'destroyed') {
+                        cb(new Error('test VM in state ' + vmObj.state));
                     } else {
                         if (nbTries >= MAX_NB_TRIES) {
                             cb(new Error('Reached max number of retries'));
@@ -84,33 +110,46 @@ test('setting custom static routes for LX branded zones', function(t) {
             }, RETRY_PERIOD_MS);
         },
 
-        function checkRoutes(cb) {
-            cp.exec(format('/usr/sbin/zlogin %s /bin/netstat -rn |' +
-                'egrep -v \'Destination|routing\' | awk \'{ print $1,$2 }\'',
-                    vm.uuid), function (err, stdout, stderr) {
-                        if (err) {
-                            cb(err);
-                            return;
-                        }
+        checkRoutes.bind(null, t, state, expectedRoutesInZone),
 
-                        var actualRoutes = {};
-                        stdout.split(/\n/g).forEach(function (line) {
-                            var parts = line.split(' ');
-                            if (parts[0] == "" || parts[0] == "127.0.0.1") {
-                                return;
-                            }
+        function addAdditionalRoutes(cb) {
+            var updatePayload = {
+                set_routes: {
+                    '172.21.12.0/24': '172.19.1.1',
+                    '172.67.68.0/24': '172.19.1.1'
+                }
+            };
 
-                            actualRoutes[parts[0]] = parts[1];
-                        });
+            expectedRoutesInZone['172.21.12.0'] = '172.19.1.1';
+            expectedRoutesInZone['172.67.68.0'] = '172.19.1.1';
 
-                        t.deepEqual(actualRoutes, expectedRoutesInZone,
-                            'routes in zone should be ' +
-                                JSON.stringify(expectedRoutesInZone) +
-                                ' and are: ' + JSON.stringify(actualRoutes));
+            VM.update(state.uuid, updatePayload,
+                function addAdditionalRoutesCb(err) {
+                    t.ifError(err, 'Updating VM ' + state.uuid
+                        + ' with additional routes');
+                    cb(err);
+                });
+        },
 
-                        cb();
-                    });
-        }
+        checkRoutes.bind(null, t, state, expectedRoutesInZone),
+
+        function delAdditionalRoutes(cb) {
+            var delPayload = {
+                remove_routes: [ '172.21.12.0/24', '172.67.68.0/24' ]
+            };
+
+            delete expectedRoutesInZone['172.21.12.0'];
+            delete expectedRoutesInZone['172.67.68.0'];
+
+            VM.update(state.uuid, delPayload,
+                function delAdditionalRoutesCb(err) {
+                    t.ifError(err, 'Updating VM ' + state.uuid
+                        + ' removing additonal routes');
+                    cb(err);
+                });
+        },
+
+        checkRoutes.bind(null, t, state, expectedRoutesInZone)
 
     ], function (err) {
         t.ifError(err, 'test should not have encountered any error');

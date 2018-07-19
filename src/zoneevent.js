@@ -36,22 +36,8 @@ var getopt = require('/usr/node/node_modules/getopt');
 var ZoneEvent = require('/usr/vm/node_modules/zoneevent').ZoneEvent;
 var zone = require('/usr/node/node_modules/zonename');
 
-// Number of times to retry VM.events if it fails (can happen if vminfod is
-// down or starting)
-var MAX_TRIES = 10;
-
 // ms to wait before retrying VM.events
 var TRY_TIMEOUT = 1000;
-
-// ms to wait to reset the number of tries back to 0.  For example, if
-// VM.events works for 30 seconds the failcount is reset.
-var TRY_RESET_TIMEOUT = 30 * 1000;
-
-// Timeout to reset the failcount to 0
-var tryTimeout;
-
-// failcount - number of times VM.events has failed to start
-var tries = 0;
 
 var opts = [
     'h(help)',
@@ -109,14 +95,9 @@ function start() {
     });
 
     ze.on('ready', function zoneEventReady(err, obj) {
-        if (err)
+        if (err) {
             throw err;
-
-        // It's unfortunate, but `zoneevent.c` never published a "ready" event, so
-        // we just silently ignore this if everything works as expected.
-        tryTimeout = setTimeout(function zoneEventRetry() {
-            tries = 0;
-        }, TRY_RESET_TIMEOUT);
+        }
     });
 
     ze.on('event', function zoneEventEventReceived(ev) {
@@ -166,15 +147,6 @@ function start() {
 
     ze.on('error', function zoneEventError(err) {
         log.warn({err: err}, 'zoneEventError');
-        if (++tries === MAX_TRIES) {
-            log.fatal({err: err}, 'failed %d times', tries);
-            process.exit(1);
-        }
-
-        if (tryTimeout) {
-            clearTimeout(tryTimeout);
-            tryTimeout = null;
-        }
 
         setTimeout(start, TRY_TIMEOUT);
     });

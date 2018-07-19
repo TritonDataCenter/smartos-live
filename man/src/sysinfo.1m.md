@@ -75,7 +75,7 @@ making changes.
 
     GZ and NGZ
 
-  "CPU Physical Cores"
+  "CPU Physical Processors"
 
     Number of physical CPUs in this host.
 

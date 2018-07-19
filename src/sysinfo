@@ -688,7 +688,7 @@ HW_Family='${HW_Family}'
 VM_Capable='${VM_Capable}'
 CPU_Type='${CPU_Version}'
 CPU_Virtualization='${CPU_Virtualization}'
-CPU_Physical_Cores=${CPU_Count}
+CPU_Physical_Processors=${CPU_Count}
 Bhyve_Capable='${Bhyve_Capable}'
 Bhyve_Max_Vcpus=${Bhyve_Max_Vcpus}
 Nic_Tags=${NicTagList}
@@ -828,7 +828,7 @@ END
   "Bhyve Max Vcpus": ${Bhyve_Max_Vcpus},
   "CPU Type": "${CPU_Version}",
   "CPU Virtualization": "${CPU_Virtualization}",
-  "CPU Physical Cores": ${CPU_Count},
+  "CPU Physical Processors": ${CPU_Count},
   "Admin NIC Tag": "${Admin_NIC_Tag}",
 END
     else

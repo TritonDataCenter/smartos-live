@@ -289,8 +289,8 @@ BUILD_TOOLS="\${CODEMGR_WS}/usr/src/tools/proto/root_\${MACH}-nd/opt";
 						export BUILD_TOOLS
 SPRO_ROOT=/opt/SUNWspro;			export SPRO_ROOT
 SPRO_VROOT=\$SPRO_ROOT;				export SPRO_VROOT
-GNU_ROOT="$conf_root/proto.strap/usr/gnu"		export GNU_ROOT
-GCC_ROOT="$conf_root/proto.strap/usr";		export GCC_ROOT
+GNU_ROOT="$conf_root/proto.strap/usr/gnu"	export GNU_ROOT
+GCC_ROOT="$conf_root/proto.strap/usr/gcc/4";	export GCC_ROOT
 # A temporary hack to allow bootstrap of cw(1)
 CW_GCC_DIR="\${GCC_ROOT}/bin";			export CW_GCC_DIR
 # Use GCC as the primary compiler

@@ -361,7 +361,7 @@ UUID.
                            then "PATH.imgmanifest" and "PATH.zfs[.EXT]" are
                            created.
             -c <comp>, --compression=<comp>
-                           One of "none", "gz", "bzip2" or "xz" for the compression
+                           One of "none", "gzip", "bzip2" or "xz" for the compression
                            to use on the image file, if any. Default is "none".
             -i             Build an incremental image (based on the "@final"
                            snapshot of the source image for the VM).

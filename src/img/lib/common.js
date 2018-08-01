@@ -275,9 +275,9 @@ function promptYesNo(opts_, cb) {
     stdin.on('data', onData);
 
     function postInput() {
+        stdout.write('\n');
         stdin.setRawMode(false);
         stdin.pause();
-        stdin.write('\n');
         stdin.removeListener('data', onData);
     }
 

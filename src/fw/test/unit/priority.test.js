@@ -219,9 +219,9 @@ exports['Overriding outbound rules'] = function (t) {
             }, 'rules returned');
 
             v4rules[vm.uuid].out.udp = [
-                helpers.allowPortOutUDP('10.99.99.254', 22),
+                helpers.allowPortOutUDP('10.99.99.254', 22, 'keep state'),
                 helpers.blockRangeOutUDP('10.99.99.254', 15, 30),
-                helpers.allowPortOutUDP('10.99.99.0/24'),
+                helpers.allowPortOutUDP('10.99.99.0/24', '', 'keep state'),
                 helpers.blockPortOutUDP('any')
             ];
 

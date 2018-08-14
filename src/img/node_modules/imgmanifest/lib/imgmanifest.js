@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (c) 2016, Joyent, Inc.
+ * Copyright (c) 2018, Joyent, Inc.
  */
 
 /*
@@ -1383,6 +1383,38 @@ var validators = {
             }
         }
         delete reqs.max_platform;
+
+        if (reqs.bootrom) {
+            var VALID_BOOTROMS = ['bios', 'uefi'];
+            var brand = manifest.requirements.brand;
+            if (!brand) {
+                errs.push({
+                    field: 'requirements.bootrom',
+                    code: 'MissingParameter',
+                    message: '"requirements.brand" not specified. '
+                        + '"requirements.bootrom" requires '
+                        + '"requirements.brand" to be set to "bhyve"'
+                });
+            } else if (brand !== 'bhyve') {
+                errs.push({
+                    field: 'requirements.bootrom',
+                    code: 'Invalid',
+                    message: format('invalid bootrom '
+                        + '"requirements.bootrom" not supported with "%s" '
+                        + 'brand; "requirements.brand" must be "bhyve"', brand)
+                });
+            } else if (VALID_BOOTROMS.indexOf(reqs.bootrom) === -1) {
+                errs.push({
+                    field: 'requirements.bootrom',
+                    code: 'Invalid',
+                    message: format('invalid bootrom '
+                        + '"requirements.bootrom" invalid entry "%s"; '
+                        + 'must be one of: %s',
+                        reqs.bootrom, VALID_BOOTROMS.join(', '))
+                });
+            }
+        }
+        delete reqs.bootrom;
 
         // unknown requirements
         Object.keys(reqs).forEach(function (field) {

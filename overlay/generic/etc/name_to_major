@@ -193,6 +193,7 @@ ixgbe 192
 bpf 193
 lsimega 194
 vioif 195
+overlay 196
 mpt_sas 198
 mr_sas 199
 mega_sas 200

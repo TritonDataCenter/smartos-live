@@ -127,11 +127,10 @@ JS_CHECK_OLDSKOOL_TARGETS = \
 C_CHECK_TARGETS=\
 	bootparams.c \
 	cryptpass.c \
-	disk_size.c \
+	disklist.c \
 	measure_terminal.c \
 	nomknod.c \
 	qemu-exec.c \
-	removable_disk.c \
 	vmunbundle.c \
 	zfs_recv.c \
 	zfs_send.c \
@@ -279,9 +278,7 @@ TARGETS = \
 	bootparams \
 	disklayout \
 	disklist \
-	disk_size \
 	mkzpool \
-	removable_disk \
 	vmunbundle \
 	zfs_recv \
 	zfs_send \
@@ -330,13 +327,14 @@ $(SUBDIRS): FRC
 	@cd $@; pwd; $(MAKE) $(SUBDIRS_ENV) $(TARGET)
 
 
-all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm sysevent \
+all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm sysevent disklist \
 	$(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) $(SUBDIRS)
 
 install: all $(SUBDIRS)
 	mkdir -p $(DESTDIR)/usr/bin
 	cp -p $(TARGETS) sysinfo nictagadm $(DESTDIR)/usr/bin
 	mkdir -p $(DESTDIR)/usr/sbin
+	cp -p disklist $(DESTDIR)/usr/bin
 	cp -p sysevent $(DESTDIR)/usr/sbin
 	cp -p $(USR_LIB_TARGETS) $(DESTDIR)/usr/lib
 	mkdir -p $(DESTDIR)/smartdc/bin
@@ -504,10 +502,6 @@ include Makefile.targ
 disklayout: disklayout.js
 	cp disklayout.js disklayout
 	chmod 0755 disklayout
-
-disklist: disklist.sh
-	cp disklist.sh disklist
-	chmod 0755 disklist
 
 mkzpool: mkzpool.js
 	cp mkzpool.js mkzpool

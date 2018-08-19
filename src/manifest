@@ -1028,8 +1028,6 @@ f usr/bin/sysinfo 0555 root bin
 f usr/bin/bootparams 0555 root bin
 f usr/bin/disklayout 0555 root bin
 f usr/bin/disklist 0555 root bin
-f usr/bin/disk_size 0555 root bin
-f usr/bin/removable_disk 0555 root bin
 f usr/bin/mkzpool 0555 root bin
 f usr/lib/cryptpass 0555 root bin
 f usr/lib/measure_terminal 0555 root bin

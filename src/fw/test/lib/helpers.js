@@ -696,24 +696,24 @@ function allowInICMP6(src, type, code) {
 }
 
 
-function allowPortOutTCP(dst, port) {
-    return createPortRule('pass', 'out', 'tcp', 'any to ' + dst, port);
+function allowPortOutTCP(dst, port, rest) {
+    return createPortRule('pass', 'out', 'tcp', 'any to ' + dst, port, rest);
 }
 
-function blockPortOutTCP(dst, port) {
-    return createPortRule('block', 'out', 'tcp', 'any to ' + dst, port);
+function blockPortOutTCP(dst, port, rest) {
+    return createPortRule('block', 'out', 'tcp', 'any to ' + dst, port, rest);
 }
 
-function allowPortOutUDP(dst, port) {
-    return createPortRule('pass', 'out', 'udp', 'any to ' + dst, port);
+function allowPortOutUDP(dst, port, rest) {
+    return createPortRule('pass', 'out', 'udp', 'any to ' + dst, port, rest);
 }
 
 function allowRangeOutUDP(dst, p1, p2) {
     return createRangeRule('pass', 'out', 'udp', 'any to ' + dst, p1, p2);
 }
 
-function blockPortOutUDP(dst, port) {
-    return createPortRule('block', 'out', 'udp', 'any to ' + dst, port);
+function blockPortOutUDP(dst, port, rest) {
+    return createPortRule('block', 'out', 'udp', 'any to ' + dst, port, rest);
 }
 
 function blockRangeOutUDP(dst, p1, p2) {

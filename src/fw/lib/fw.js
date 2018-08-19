@@ -1259,7 +1259,8 @@ function prepareIPFdata(opts, log, callback) {
 
         conf[vm].sort(compareRules).forEach(function (sortObj) {
             var ktxt = KEEP_FRAGS;
-            if (sortObj.direction === 'to' && iks[sortObj.protocol]) {
+            if ((sortObj.direction === 'from' && sortObj.action === 'allow')
+                || (sortObj.direction === 'to' && iks[sortObj.protocol])) {
                 ktxt += KEEP_STATE;
             }
 

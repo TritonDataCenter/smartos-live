@@ -48,7 +48,6 @@ wusb_ca:* 0666 root sys
 wusb_df:* 0666 root sys
 ipw:* 0666 root sys
 clone:ipw 0666 root sys
-ii:* 0666 root sys
 fcip:* 0600 root sys
 ral:* 0666 root sys
 clone:ral 0666 root sys
@@ -96,10 +95,6 @@ qlc:* 0666 root sys
 qlge:* 0666 root sys
 igb:* 0666 root sys
 clone:igb 0666 root sys
-ncall:* 0666 root sys
-nsctl:* 0666 root sys
-nskern:* 0666 root sys
-sdbc:* 0666 root sys
 afe:* 0666 root sys
 clone:afe 0666 root sys
 scsa1394:* 0666 root sys

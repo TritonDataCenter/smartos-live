@@ -34,10 +34,12 @@
  *   - starts a VminfodWatcher that handles VM creation, VM deletion, and VM
  *     state changes.
  *
- * Either at agent startup or whenever we see a zone boot that does not have a
- * metadata socket, we attempt to create the appropriate socket for the type of
- * VM.
+ * We attempt to create the appropriate socket for any VM that doesn't already
+ * have one:
  *
+ *  1. At agent startup
+ *  2. When a zone state change event is seen (vminfod)
+ *  3. Periodically (every PERIODIC_CONNECTION_RETRY, 1 minute)
  *
  * # CREATING SOCKETS
  *
@@ -88,7 +90,7 @@
  *
  *
  * When a zone is deleted, (no longer shows up in the list we're loading every 5
- * minutes, or we see a message from zoneevent) the global state objects for the
+ * minutes, or we see a message from vminfod) the global state objects for the
  * VM are cleared.
  *
  *
@@ -142,6 +144,7 @@ var bunyan = require('/usr/vm/node_modules/bunyan');
 var common = require('./common');
 var crc32 = require('./crc32');
 var fs = require('fs');
+var hrtime = require('/usr/vm/node_modules/hrtime');
 var macaddr = require('/usr/vm/node_modules/macaddr');
 var net = require('net');
 var path = require('path');
@@ -151,6 +154,7 @@ var VminfodWatcher
 
 var KVM_CONNECT_RETRY_INTERVAL = 100; // ms
 var KVM_CONNECT_RETRY_LOG_FREQUENCY = 10; // log every X retries
+var PERIODIC_CONNECTION_RETRY = 60 * 1000; // every minute
 
 function noop() {}
 
@@ -268,10 +272,18 @@ MetadataAgent.prototype.createZoneLog = function (type, zonename) {
     return (self.zlog[zonename]);
 };
 
-MetadataAgent.prototype.createServersOnExistingZones = function (vms) {
+MetadataAgent.prototype.createServersOnExistingZones =
+function createServersOnExistingZones(vms, callback) {
+
+    assert.object(vms, 'vms');
+    assert.func(callback, 'callback');
+
     var self = this;
     var created = 0;
     var keys = Object.keys(vms);
+    var started_time = process.hrtime();
+
+    self.log.debug('createServersOnExistingZones for %d zones', keys.length);
 
     async.forEach(keys, function (zonename, cb) {
         var vm = vms[zonename];
@@ -310,8 +322,16 @@ MetadataAgent.prototype.createServersOnExistingZones = function (vms) {
             });
         }
     }, function (err) {
-        self.log.info('created zone metadata sockets on %d / %d zones',
-            created, keys.length);
+        var delta = process.hrtime(started_time);
+        var prettyDelta = hrtime.prettyHrtime(delta);
+
+        if (err) {
+            self.log.warn(err, 'createServersOnExistingZones failure');
+        }
+
+        self.log.info('created zone metadata sockets on %d / %d zones took %s',
+            created, keys.length, prettyDelta);
+        callback(err);
     });
 };
 
@@ -377,14 +397,31 @@ function handleZoneCreated(vm) {
 MetadataAgent.prototype.start = function start() {
     var self = this;
 
+    function _createServersOnExistingZonesInterval() {
+        var vms = self.vminfod_watcher.vms();
+        self.createServersOnExistingZones(vms, function (err) {
+            /*
+             * This runs periodicaly to assure that servers are always created
+             * for zones.  With vminfod there is no chance that an event will be
+             * missed, instead, this is run periodically to ensure that any
+             * server that was closed while the VM was still running (an error)
+             * is recreated (OS-7139).
+             *
+             * `err` is purposely ignored here.
+             */
+            setTimeout(_createServersOnExistingZonesInterval,
+                PERIODIC_CONNECTION_RETRY);
+        });
+    }
+
     self.vminfod_watcher = new VminfodWatcher({
         log: self.log,
         name: 'Metadata Agent - VminfodWatcher'
     });
 
     self.vminfod_watcher.once('ready', function (ready_ev) {
-        var vms = self.vminfod_watcher.vms();
-        self.createServersOnExistingZones(vms);
+        // List of VMs is ready, create the servers necessary for them
+        _createServersOnExistingZonesInterval();
     });
 
     self.vminfod_watcher.on('create', function (ev) {
@@ -432,9 +469,11 @@ MetadataAgent.prototype.start = function start() {
         state = ev.changes.filter(function (change) {
             return (change.path.length === 1 && change.path[0] === 'state');
         });
-        if (state.length !== 1) {
+        if (state.length < 1) {
             return;
         }
+        // Only 1 state change event should be seen per vminfod event
+        assert.equal(state.length, 1, 'multiple "state" changes seen');
         state = state[0];
 
         // If a KVM zone stops while we're trying to reconnect to its metadata
@@ -454,6 +493,7 @@ MetadataAgent.prototype.start = function start() {
             return;
         }
 
+        assert.equal(state, 'running', 'state != running');
         self.log.debug({
             delay: (new Date()) - ev.date,
             when: ev.date,

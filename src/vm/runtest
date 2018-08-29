@@ -105,6 +105,73 @@ for tag in admin external; do
     fi
 done
 
+# Ensure the dummy uefi image exists
+
+uefi_img_uuid="45d86edd-8cf4-6c7c-f018-8e27b24c550e"
+if ! imgadm info "$uefi_img_uuid" >/dev/null 2>&1; then
+	uefi_zvol=zones/${uefi_img_uuid}-tmp
+	uefi_snap=${uefi_zvol}@final
+	uefi_zfs=/var/tmp/${uefi_img_uuid}.zfs
+	uefi_manifest=/var/tmp/${uefi_img_uuid}.imgmanifest
+
+	if zfs list "$uefi_zvol" >/dev/null 2>&1; then
+		if ! zfs destroy -r "$uefi_zvol"; then
+			echo "Unable to clean up earlier uefi image" >&2
+			exit 1
+		fi
+	fi
+	if ! zfs create -V 1g -s "$uefi_zvol"; then
+		echo "Unable to create uefi zvol $uefi_zvol" >&2
+		exit 1
+	fi
+	if ! zfs snapshot "$uefi_snap"; then
+		echo "Unable to create uefi snapshot $uefi_snap" >&2
+		exit 1
+	fi
+	if ! zfs send "$uefi_snap" >$uefi_zfs; then
+		echo "Unable to send uefi snapshot $uefi_snap to $uefi_zfs" >&2
+		exit 1
+	fi
+	uefi_size=$(stat -c %s "$uefi_zfs")
+	uefi_sha1=$(digest -a sha1 "$uefi_zfs")
+	cat >$uefi_manifest <<-NOMORE
+	{
+	  "v": 2,
+	  "uuid": "$uefi_img_uuid",
+	  "name": "uefi-dummy",
+	  "version": "1.0",
+	  "type": "zvol",
+	  "os": "windows",
+	  "image_size": 1024,
+	  "description": "Dummy uefi image for VM tests",
+	  "requirements": {
+	    "brand": "bhyve",
+	    "bootrom": "uefi"
+	  },
+	  "files": [
+	    {
+	      "sha1": "$uefi_sha1",
+	      "size": $uefi_size,
+	      "compression": "none"
+	    }
+	  ]
+	}
+	NOMORE
+	if (( $? != 0)); then
+		echo "Unable to create uefi manifest $uefi_manifest" >&2
+		exit 1
+	fi
+	if ! imgadm install -m "$uefi_manifest" -f "$uefi_zfs"; then
+		echo "Unable to install uefi image from $uefi_manifest and" \
+		    "$uefi_zfs" >&2
+		exit 1
+	fi
+
+	# Clean up temporary stuff, but don't freak out if it fails.
+	rm -f "$uefi_manifest" "$uefi_zfs"
+	zfs destroy -r "$uefi_zvol"
+fi
+
 set +o errexit
 set -o pipefail
 /usr/bin/ctrun -l child -o noorphan /usr/node/bin/node \

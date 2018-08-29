@@ -60,43 +60,10 @@ function add_active_aggr_links
     done
 }
 
-function log_if_state
-{
-    set -o xtrace
-    echo "== debug start: $1 =="
-    nictagadm list
-    if ! /usr/sbin/dladm show-phys; then
-        echo "WARNING: 'dladm show-phys' failed"
-    fi
-    # NOTE: DO NOT do a 'dladm show-linkprop' when using the bnx driver,
-    # as it puts it into an unusable state!
-    if ! /sbin/ifconfig -a; then
-        echo "WARNING: 'ifconfig -a' failed"
-    fi
-    echo "== debug end: $1 =="
-}
-
-# Gets the link state for the given interface
-function get_link_state
-{
-    set -o xtrace
-    link_state=$(/usr/sbin/dladm show-phys -po state $1 2>/dev/null)
-}
-
 # Waits for up to 10 seconds for the link state to change to the given value
 function wait_for_admin_nic_state
 {
-    set -o xtrace
-    echo "wait_for_admin_nic_state: waiting for state '$1'"
-    i=0
-    get_link_state ${SYSINFO_NIC_admin}
-    while [[ "$link_state" != "$1" ]] && [[ $i -ne 10 ]]; do
-        sleep 1
-        echo "  $i: link_state=$link_state"
-        ((i++))
-        get_link_state ${SYSINFO_NIC_admin}
-    done
-    echo "wait_for_admin_nic_state: finished in state '$link_state'"
+    wait_for_nic_state "${SYSINFO_NIC_admin}" "$1"
 }
 
 function valid_mtu
@@ -457,8 +424,9 @@ function plumbif
 }
 
 if smf_is_globalzone; then
-
-    /usr/sbin/dladm init-phys
+    EARLY_ADMIN=
+    [[ -f /etc/svc/volatile/.early_admin_setup ]] && EARLY_ADMIN=1
+    [[ -n "$EARLY_ADMIN" ]] || /usr/sbin/dladm init-phys
 
     # The next command is for logging purposes only
     log_if_state before
@@ -478,6 +446,10 @@ if smf_is_globalzone; then
         fi
 
         load_boot_file_config
+
+        # NOTE: some of the routes boot_file_config_init tries to add may
+        # fail if they are admin network routes added by the
+        # network/early-admin service.  This is expected and not a problem.
         boot_file_config_init
     else
         # Load config variables with CONFIG_ prefix,
@@ -546,7 +518,7 @@ if smf_is_globalzone; then
         exit ${SMF_EXIT_ERR_CONFIG}
     fi
 
-    plumb_admin
+    [[ -n "$EARLY_ADMIN" ]] || plumb_admin
 
     # Prefer the config file for admin nic values, but use
     # bootparams if present
@@ -567,6 +539,9 @@ if smf_is_globalzone; then
 
     if [[ $admin_ip == 'none' ]]; then
         echo 'INFO: not configuring IP on admin interface (admin_ip=none)'
+    elif [[ -n "$EARLY_ADMIN" ]]; then
+        echo 'INFO: admin interface already configured (early setup)'
+        ADMIN_NIC_UP=true
     elif [[ -n $admin_ip ]] && [[ -n $admin_netmask ]]; then
         /sbin/ifconfig ${SYSINFO_NIC_admin} inet ${admin_ip} \
             netmask ${admin_netmask} up
@@ -607,7 +582,7 @@ if smf_is_globalzone; then
         fi
     fi
 
-    if [[ -n ${admin_ip6} ]]; then
+    if [[ -n ${admin_ip6} && -z "$EARLY_ADMIN" ]]; then
         # Plumb interface for inet6
         ifconfig ${SYSINFO_NIC_admin} inet6 \
             plumb mtu ${CONFIG_admin_mtu:-1500} up

@@ -74,6 +74,7 @@ d lib/svc/manifest 0755 root sys
 d lib/svc/manifest/network 0755 root sys
 f lib/svc/manifest/network/ipfilter.xml 0444 root sys
 f lib/svc/manifest/network/network-physical.xml 0444 root sys
+f lib/svc/manifest/network/network-early-admin.xml 0444 root sys
 d lib/svc/manifest/system 0755 root sys
 f lib/svc/manifest/system/auditd.xml 0444 root sys
 f lib/svc/manifest/system/console-login.xml 0444 root sys
@@ -95,6 +96,7 @@ f lib/svc/method/ipfilter 0555 root sys
 f lib/svc/method/manifest-import 0555 root bin
 f lib/svc/method/mdata-execute 0555 root bin
 f lib/svc/method/mdata-fetch 0555 root bin
+f lib/svc/method/net-early-admin 0555 root bin
 f lib/svc/method/net-physical 0555 root sys
 f lib/svc/method/smartdc-config 0555 root bin
 f lib/svc/method/smartdc-init 0555 root sys

@@ -37,8 +37,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
       create-snapshot <uuid> <snapname>
 
-        Support for snapshots is currently experimental. It only works for OS
-        VMS which also have no additional datasets.
+        Support for snapshots is currently experimental. It only works for bhyve
+        VMs and OS VMs which also have no additional datasets.
 
         The <snapname> parameter specifies the name of the snapshot to take
         of the specified VM. The snapname must be 64 characters or less and
@@ -83,8 +83,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
       delete-snapshot <uuid> <snapname>
 
-        Support for snapshots is currently experimental. It only works for OS
-        VMS which also have no additional datasets.
+        Support for snapshots is currently experimental. It only works for bhyve
+        VMs and OS VMs which also have no additional datasets.
 
         This command deletes the ZFS snapshot that exists with the name
         <snapname> from the VM with the specified uuid. You cannot undo this
@@ -260,8 +260,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
       rollback-snapshot <uuid> <snapname>
 
-        Support for snapshots is currently experimental. It only works for OS
-        VMS which also have no additional datasets.
+        Support for snapshots is currently experimental. It only works for bhyve
+        VMs and OS VMs which also have no additional datasets.
 
         This command rolls the dataset backing the the VM with the specified
         uuid back to its state at the point when the snapshot with snapname was
@@ -494,9 +494,9 @@ tab-complete UUIDs rather than having to type them out for every command.
 
 ## SNAPSHOTS
 
-    Snapshots are currently only implemented for OS VMs, and only for those
-    that do not utilize delegated datasets or any other datasets other than
-    the zoneroot dataset.
+    Snapshots are currently only implemented for bhyve VMs and OS VMs, and only
+    for those that do not utilize delegated datasets or any other datasets other
+    than the zoneroot dataset and its dependent datasets.
 
     When you create a snapshot with create-snapshot, it will create a ZFS
     snapshot of that dataset with the name dataset@vmsnap-<snapname> and the
@@ -1835,12 +1835,13 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     snapshots (EXPERIMENTAL):
 
-        For OS VMs, this will display a list of snapshots from which you can
-        restore the root dataset for your VM.  Currently this is only supported
-        when your VM does not have any delegated datasets.
+        For bhyve VMs and OS VMs, this will display a list of snapshots from
+        which you can restore the root dataset and its dependent datasets for
+        your VM.  Currently this is only supported when your VM does not have
+        any delegated datasets.
 
         type: array
-        vmtype: OS
+        vmtype: OS or bhyve
         listable: no
         create: no (but you can use create-snapshot)
         update: no (but you can use rollback-snapshot and delete-snapshot)

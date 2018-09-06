@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright (c) 2017, Joyent, Inc.
+# Copyright (c) 2018, Joyent, Inc.
 #
 
 set -o xtrace
@@ -111,90 +111,96 @@ if [ $? -ne 0 ]; then
         destroy_zpools
     fi
 
-    # For the system zpool, mount and configure all system datasets
-    zpool status -v ${SYS_ZPOOL}
-    if [ $? -eq 0 ]; then
-        # Stash the SUNWdefault.xml file so we can update the
-        # persistent version after mounting zones/config.
-        cp /etc/zones/SUNWdefault.xml /tmp/
+    # Capture the zpool's status output in the method's log file for
+    # troubleshooting.
+    #
+    # Note: It is critical that we do not run 'status -v'. If there are errors
+    # in the zpool error log and the zpool is large (e.g. > 200TB), then the
+    # lookup for the error file names can take a very long time (several hours).
+    # This would block the system boot until it completed.
+    zpool status ${SYS_ZPOOL}
 
-        mount_zfs ${SYS_ZPOOL}/var /var
-        mount_zfs ${SYS_ZPOOL}/config /etc/zones
-        mount_zfs ${SYS_ZPOOL}/opt /opt
+    # Stash the SUNWdefault.xml file so we can update the
+    # persistent version after mounting zones/config.
+    cp /etc/zones/SUNWdefault.xml /tmp/
 
-        # Update the the persistent SUNWdefault.xml file to match the
-        # contents on ramdisk now that zones/config is mounted.
-        cp /tmp/SUNWdefault.xml /etc/zones/
-        rm -f /tmp/SUNWdefault.xml
+    # Mount and configure all system datasets
+    mount_zfs ${SYS_ZPOOL}/var /var
+    mount_zfs ${SYS_ZPOOL}/config /etc/zones
+    mount_zfs ${SYS_ZPOOL}/opt /opt
 
-        #
-        # We include a manifest of all files shipped in the platform image,
-        # along with an MD5 hash of their contents.  This was originally
-        # shipped as "/var/log/manifest", but once a machine is set up, "/var"
-        # now comes from the pool.  The upshot of this is that every SmartOS
-        # machine has the manifest from the platform at setup time stored in
-        # "/var/log/manifest".  Now that the manifest has moved to an
-        # accessible location, we should remove this file and replace it with a
-        # symbolic link.
-        #
-        if [[ -f '/var/log/manifest' && ! -L '/var/log/manifest' &&
-            ! -e '/var/log/manifest.original' ]]; then
-                mv '/var/log/manifest' '/var/log/manifest.original'
-                ln -s '../../usr/share/smartos/manifest' '/var/log/manifest'
-        fi
+    # Update the the persistent SUNWdefault.xml file to match the
+    # contents on ramdisk now that zones/config is mounted.
+    cp /tmp/SUNWdefault.xml /etc/zones/
+    rm -f /tmp/SUNWdefault.xml
 
-        if [[ -z $(/bin/bootparams | grep '^smartos=true') ]]; then
-            mkdir -p /opt/smartdc/agents/smf
-            mount -O -F lofs /var/svc/manifest/site /opt/smartdc/agents/smf
-        fi
-
-        if [[ -n $(/bin/bootparams | grep '^headnode=true') || \
-            -n $(/bin/bootparams | grep '^smartos=true') ]]; then
-            mkdir /usbkey
-            mount_zfs ${SYS_ZPOOL}/usbkey /usbkey
-        fi
-
-        if [[ -n $(/bin/bootparams | grep '^smartos=true') ]]; then
-            mount -F lofs /usbkey/shadow /etc/shadow
-            mount -F lofs /usbkey/ssh /etc/ssh
-        fi
-
-        swap -a /dev/zvol/dsk/${SYS_ZPOOL}/swap || \
-            fatal "failed to configure swap device"
-
-        #
-        # Configure the dump device on top of a ZFS volume.  In addition to the
-        # usual dumpadm(1m) call, there are two prerequisites for using this
-        # volume as a dump device: (1) that zvol must be using the noparity
-        # checksum algorithem, and (2) the MULTI_VDEV_CRASH_DUMP ZFS feature
-        # must be enabled.  Prerequisite (1) is necessary since the exact
-        # on-disk value for ZIO_CHECKSUM_NOPARITY has changed, so to avoid a
-        # flag day on all systems, this service just sets that property again
-        # every time.
-        #
-        zfs set checksum=noparity ${SYS_ZPOOL}/dump || \
-            fatal "failed to set checksum=noparity on dump zvol"
-        zpool set feature@multi_vdev_crash_dump=enabled ${SYS_ZPOOL} || \
-            fatal "failed to enable multi_vdev_crash_dump ZFS feature"
-	dumpadm -y -d /dev/zvol/dsk/${SYS_ZPOOL}/dump || \
-            fatal "failed to configure dump device"
-
-	zfs list -H -o name ${SYS_ZPOOL}/cores/global >/dev/null 2>&1
-	if [ $? -ne 0 ]; then
-	    # Booting for the first time on a CN whose cores dataset is setup
-	    # in the 6.x style.  Convert to the new style.
-	    zfs destroy -r ${SYS_ZPOOL}/cores
-	    zfs create -o compression=gzip -o mountpoint=none ${SYS_ZPOOL}/cores
-	    zfs create -o quota=10g -o mountpoint=/${SYS_ZPOOL}/global/cores \
-	        ${SYS_ZPOOL}/cores/global
-	fi
-
-	ln -s /${SYS_ZPOOL}/global/cores /cores
-
-	[[ -f /${SYS_ZPOOL}/currbooted ]] && \
-            mv /${SYS_ZPOOL}/currbooted /${SYS_ZPOOL}/lastbooted
-	uname -v >/${SYS_ZPOOL}/currbooted
+    #
+    # We include a manifest of all files shipped in the platform image,
+    # along with an MD5 hash of their contents.  This was originally
+    # shipped as "/var/log/manifest", but once a machine is set up, "/var"
+    # now comes from the pool.  The upshot of this is that every SmartOS
+    # machine has the manifest from the platform at setup time stored in
+    # "/var/log/manifest".  Now that the manifest has moved to an
+    # accessible location, we should remove this file and replace it with a
+    # symbolic link.
+    #
+    if [[ -f '/var/log/manifest' && ! -L '/var/log/manifest' &&
+        ! -e '/var/log/manifest.original' ]]; then
+            mv '/var/log/manifest' '/var/log/manifest.original'
+            ln -s '../../usr/share/smartos/manifest' '/var/log/manifest'
     fi
+
+    if [[ -z $(/bin/bootparams | grep '^smartos=true') ]]; then
+        mkdir -p /opt/smartdc/agents/smf
+        mount -O -F lofs /var/svc/manifest/site /opt/smartdc/agents/smf
+    fi
+
+    if [[ -n $(/bin/bootparams | grep '^headnode=true') || \
+        -n $(/bin/bootparams | grep '^smartos=true') ]]; then
+        mkdir /usbkey
+        mount_zfs ${SYS_ZPOOL}/usbkey /usbkey
+    fi
+
+    if [[ -n $(/bin/bootparams | grep '^smartos=true') ]]; then
+        mount -F lofs /usbkey/shadow /etc/shadow
+        mount -F lofs /usbkey/ssh /etc/ssh
+    fi
+
+    swap -a /dev/zvol/dsk/${SYS_ZPOOL}/swap || \
+        fatal "failed to configure swap device"
+
+    #
+    # Configure the dump device on top of a ZFS volume.  In addition to the
+    # usual dumpadm(1m) call, there are two prerequisites for using this
+    # volume as a dump device: (1) that zvol must be using the noparity
+    # checksum algorithem, and (2) the MULTI_VDEV_CRASH_DUMP ZFS feature
+    # must be enabled.  Prerequisite (1) is necessary since the exact
+    # on-disk value for ZIO_CHECKSUM_NOPARITY has changed, so to avoid a
+    # flag day on all systems, this service just sets that property again
+    # every time.
+    #
+    zfs set checksum=noparity ${SYS_ZPOOL}/dump || \
+        fatal "failed to set checksum=noparity on dump zvol"
+    zpool set feature@multi_vdev_crash_dump=enabled ${SYS_ZPOOL} || \
+        fatal "failed to enable multi_vdev_crash_dump ZFS feature"
+    dumpadm -y -d /dev/zvol/dsk/${SYS_ZPOOL}/dump || \
+        fatal "failed to configure dump device"
+
+    zfs list -H -o name ${SYS_ZPOOL}/cores/global >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        # Booting for the first time on a CN whose cores dataset is setup
+        # in the 6.x style.  Convert to the new style.
+        zfs destroy -r ${SYS_ZPOOL}/cores
+        zfs create -o compression=gzip -o mountpoint=none ${SYS_ZPOOL}/cores
+        zfs create -o quota=10g -o mountpoint=/${SYS_ZPOOL}/global/cores \
+            ${SYS_ZPOOL}/cores/global
+    fi
+
+    ln -s /${SYS_ZPOOL}/global/cores /cores
+
+    [[ -f /${SYS_ZPOOL}/currbooted ]] && \
+        mv /${SYS_ZPOOL}/currbooted /${SYS_ZPOOL}/lastbooted
+    uname -v >/${SYS_ZPOOL}/currbooted
 fi
 
 

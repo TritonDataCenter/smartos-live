@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright (c) 2017, Joyent, Inc.
+# Copyright (c) 2018, Joyent, Inc.
 #
 
 set -o xtrace
@@ -111,13 +111,21 @@ if [ $? -ne 0 ]; then
         destroy_zpools
     fi
 
-    # For the system zpool, mount and configure all system datasets
-    zpool status -v ${SYS_ZPOOL}
+    # Capture the zpool's status output in the method's log file for
+    # troubleshooting.
+    #
+    # Note: It is critical that we do not run 'status -v'. If there are errors
+    # in the zpool error log and the zpool is large (e.g. > 200TB), then the
+    # lookup for the error file names can take a very long time (several hours).
+    # This would block the system boot until it completed.
+    zpool status ${SYS_ZPOOL}
     if [ $? -eq 0 ]; then
+
         # Stash the SUNWdefault.xml file so we can update the
         # persistent version after mounting zones/config.
         cp /etc/zones/SUNWdefault.xml /tmp/
 
+        # Mount and configure all system datasets
         mount_zfs ${SYS_ZPOOL}/var /var
         mount_zfs ${SYS_ZPOOL}/config /etc/zones
         mount_zfs ${SYS_ZPOOL}/opt /opt
@@ -176,24 +184,24 @@ if [ $? -ne 0 ]; then
             fatal "failed to set checksum=noparity on dump zvol"
         zpool set feature@multi_vdev_crash_dump=enabled ${SYS_ZPOOL} || \
             fatal "failed to enable multi_vdev_crash_dump ZFS feature"
-	dumpadm -y -d /dev/zvol/dsk/${SYS_ZPOOL}/dump || \
+        dumpadm -y -d /dev/zvol/dsk/${SYS_ZPOOL}/dump || \
             fatal "failed to configure dump device"
 
-	zfs list -H -o name ${SYS_ZPOOL}/cores/global >/dev/null 2>&1
-	if [ $? -ne 0 ]; then
-	    # Booting for the first time on a CN whose cores dataset is setup
-	    # in the 6.x style.  Convert to the new style.
-	    zfs destroy -r ${SYS_ZPOOL}/cores
-	    zfs create -o compression=gzip -o mountpoint=none ${SYS_ZPOOL}/cores
-	    zfs create -o quota=10g -o mountpoint=/${SYS_ZPOOL}/global/cores \
-	        ${SYS_ZPOOL}/cores/global
-	fi
+        zfs list -H -o name ${SYS_ZPOOL}/cores/global >/dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            # Booting for the first time on a CN whose cores dataset is setup
+            # in the 6.x style.  Convert to the new style.
+            zfs destroy -r ${SYS_ZPOOL}/cores
+            zfs create -o compression=gzip -o mountpoint=none ${SYS_ZPOOL}/cores
+            zfs create -o quota=10g -o mountpoint=/${SYS_ZPOOL}/global/cores \
+                ${SYS_ZPOOL}/cores/global
+        fi
 
-	ln -s /${SYS_ZPOOL}/global/cores /cores
+        ln -s /${SYS_ZPOOL}/global/cores /cores
 
-	[[ -f /${SYS_ZPOOL}/currbooted ]] && \
+        [[ -f /${SYS_ZPOOL}/currbooted ]] && \
             mv /${SYS_ZPOOL}/currbooted /${SYS_ZPOOL}/lastbooted
-	uname -v >/${SYS_ZPOOL}/currbooted
+        uname -v >/${SYS_ZPOOL}/currbooted
     fi
 fi
 

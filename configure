@@ -47,14 +47,8 @@ function check_loc
 	[[ "$(readlink -f "$PWD")" != "$(readlink -f "$conf_arg0_dir")" ]] && \
 	    fatal "configure must be run from inside $conf_arg0_dir"
 	[[ "$(uname -s)" != "SunOS" ]] && fatal "build only works on SunOS"
-	if [[ "$(uname -v)" =~ "joyent_" ]]; then
-		[[ "$(zonename)" == "global" ]] && fatal \
+	[[ "$(zonename)" == "global" ]] && fatal \
 		    "building in a GZ on SmartOS is not supported"
-	else	
-		echo "Not on SmartOS, assuming IPS and sudo"
-		conf_ips=1
-		conf_priv="sudo"
-	fi
 }
 
 function create_projects

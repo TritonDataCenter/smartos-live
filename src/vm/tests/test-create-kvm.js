@@ -1,4 +1,4 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2018 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that create works with specific options set.
 //
@@ -295,8 +295,8 @@ test('test default refreservation', function(t) {
                 }
                 disks = obj.disks;
                 t.ok(disks.length === 2, 'VM has 2 disks');
-                t.ok(disks[0].refreservation === disks[0].size, 'disk 0 has correct refreservation: ' + disks[0].refreservation + '/' + disks[0].size);
-                t.ok(disks[1].refreservation === disks[1].size, 'disk 1 has correct refreservation: ' + disks[1].refreservation + '/' + disks[1].size);
+                t.ok(disks[0].refreservation > disks[0].size, 'disk 0 has correct refreservation: ' + disks[0].refreservation + '>' + disks[0].size);
+                t.ok(disks[1].refreservation > disks[1].size, 'disk 1 has correct refreservation: ' + disks[1].refreservation + '>' + disks[1].size);
                 state.vmobj = obj;
                 cb();
             });

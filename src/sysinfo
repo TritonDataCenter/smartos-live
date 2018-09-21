@@ -219,6 +219,7 @@ function get_bhyve_capability()
             if [[ -n ${vcpus} ]]; then
                 Bhyve_Max_Vcpus=${vcpus}
             fi
+            HVM_API="true"
         fi
     fi
 }
@@ -691,6 +692,7 @@ CPU_Virtualization='${CPU_Virtualization}'
 CPU_Physical_Cores=${CPU_Count}
 Bhyve_Capable='${Bhyve_Capable}'
 Bhyve_Max_Vcpus=${Bhyve_Max_Vcpus}
+HVM_API='${HVM_API}'
 Nic_Tags=${NicTagList}
 Admin_NIC_Tag=${Admin_NIC_Tag}
 Setup='${Setup_complete}'
@@ -826,6 +828,7 @@ END
   "VM Capable": ${VM_Capable},
   "Bhyve Capable": ${Bhyve_Capable},
   "Bhyve Max Vcpus": ${Bhyve_Max_Vcpus},
+  "HVM API": ${HVM_API},
   "CPU Type": "${CPU_Version}",
   "CPU Virtualization": "${CPU_Virtualization}",
   "CPU Physical Cores": ${CPU_Count},

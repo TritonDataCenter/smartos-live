@@ -20,14 +20,14 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2017, Joyent, Inc.
+ * Copyright (c) 2018, Joyent, Inc.
  *
  * These tests ensure that delete behaves correctly.
  */
 
 var libuuid = require('/usr/node/node_modules/uuid');
-var VM = require('/usr/vm/node_modules/VM');
 var vasync = require('/usr/vm/node_modules/vasync');
+var VM = require('/usr/vm/node_modules/VM');
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
@@ -48,7 +48,7 @@ test('test deleting nonexistent VM', function(t) {
             var uuid = libuuid.create();
             t.ok(uuid, 'uuid is: ' + uuid);
             VM.delete(uuid, {}, function (err) {
-                if (err && err.message.match(/No such zone configured/)) {
+                if (err && err.code === 'ENOENT') {
                     t.ok(true, 'zone ' + uuid + ' already does not exist, skipping');
                 } else {
                     t.ok(!err, 'deleted VM: ' + (err ? err.message : 'success'));

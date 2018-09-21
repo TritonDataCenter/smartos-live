@@ -1,9 +1,34 @@
-// Copyright (c) 2018, Joyent, Inc.
-//
-// These tests ensure that docker flag works as expected when setting/unsetting
-// Also test that /etc/resolv.conf, /etc/hosts and /etc/hostname are set
-// correctly.
-//
+/*
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright (c) 2018, Joyent, Inc.
+ *
+ */
+
+/*
+ * These tests ensure that docker flag works as expected when
+ * setting/unsetting.  Also test that /etc/resolv.conf, /etc/hosts and
+ * /etc/hostname are set correctly.
+ */
 
 var async = require('/usr/node/node_modules/async');
 var EventEmitter = require('events').EventEmitter;
@@ -11,9 +36,9 @@ var exec = require('child_process').exec;
 var fs = require('fs');
 var libuuid = require('/usr/node/node_modules/uuid');
 var path = require('path');
-var SyseventStream = require('/usr/vm/node_modules/sysevent-stream');
 var util = require('util');
 var VM = require('/usr/vm/node_modules/VM');
+var vminfod = require('/usr/vm/node_modules/vminfod/client');
 var vmtest = require('../common/vmtest.js');
 
 // this puts test stuff in global, so we need to tell jsl about that:
@@ -738,7 +763,8 @@ test('test docker VM with "docker:extraHosts"', function (t) {
     payload.docker = true;
     payload.autoboot = false;
     payload.internal_metadata = {
-        'docker:extraHosts': '["foo:1.2.3.4"]'
+        'docker:extraHosts': '["foo:1.2.3.4"]',
+        'docker:cmd': '["sleep","5"]'
     };
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
@@ -1242,9 +1268,9 @@ test('test restart delay reset', function (t) {
     var emitter = new EventEmitter();
     var events = [];
     var payload = JSON.parse(JSON.stringify(common_payload));
-    var se;
     var state = {brand: payload.brand};
     var num_cycles = (cycles_fail * 2) + 1;
+    var vs;
 
     payload.autoboot = false;
     payload.brand = 'lx';
@@ -1260,59 +1286,79 @@ test('test restart delay reset', function (t) {
             + '\"mkdir -p /var/tmp; '
             + '[[ $(ls -1 /var/tmp | wc -l) == ' + cycles_fail + ' ]] '
             + '&& (sleep ' + cycle_reset_delay + '; rm -f /var/tmp/*; exit 0) '
-            + '|| (touch /var/tmp/$(/native/usr/bin/uuid); exit 1)\"]',
+            + '|| (touch /var/tmp/$(/native/usr/bin/uuid); sleep 2; exit 1)\"]',
         'docker:restartpolicy': 'always'
     };
     payload.kernel_version = '3.13.0';
 
     vmtest.on_new_vm(t, payload.image_uuid, payload, state, [
         function (cb) {
+            var restartKeys = [
+                'internal_metadata.docker:restartcount',
+                'internal_metadata.docker:restartdelay'
+            ];
+            var running = false;
             var starts = 0;
             var stops = 0;
 
-            se = new SyseventStream({
-                class: 'status',
-                channel: 'com.sun:zones:status'
-            });
-            se.on('readable', function () {
+            vs = new vminfod.VminfodEventStream('test-docker.js');
+            vs.on('readable', function () {
+                var dockerRestartKeysHaveChanged;
                 var ev;
                 var im;
 
                 // for each start/stop, if it's for the VM we just created we'll
                 // push an event on the events array.
-                while ((ev = se.read()) !== null) {
-                    if (ev.data.zonename === state.uuid) {
-                        if (ev.data.newstate === 'uninitialized') {
-                            // VM went to state === 'stopped'
-                            im = JSON.parse(fs.readFileSync('/zones/'
-                                + ev.data.zonename + '/config/metadata.json'))
-                                .internal_metadata;
-                            stops++;
-                            events.push({
-                                action: 'stop',
-                                time: ev.data.when,
-                                restartcount: im['docker:restartcount'],
-                                restartdelay: im['docker:restartdelay']
-                            });
-                        } else if (ev.data.newstate === 'running') {
-                            // VM went to state === 'running'
-                            starts++;
-                            events.push({
-                                action: 'start',
-                                time: ev.data.when
-                            });
-                        }
+                while ((ev = vs.read()) !== null) {
+                    if (ev.zonename !== state.uuid)
+                        return;
+
+                    dockerRestartKeysHaveChanged = (ev.changes || []).map(
+                        function (change) {
+
+                        return (change.prettyPath);
+                    }).filter(function (p) {
+                        return (restartKeys.indexOf(p) > -1);
+                    }).length > 0;
+
+                    if (running && ev.vm.state === 'stopped') {
+                        // VM went to state === 'stopped'
+                        running = false;
+                        stops++;
+                        events.push({
+                            action: 'stop',
+                            time: ev.date
+                        });
+                    } else if (!running && ev.vm.state === 'running') {
+                        // VM went to state === 'running'
+                        running = true;
+                        starts++;
+                        events.push({
+                            action: 'start',
+                            time: ev.date
+                        });
+                    }
+
+                    if (dockerRestartKeysHaveChanged) {
+                        im = ev.vm.internal_metadata;
+                        events.push({
+                            action: 'docker-keys-changed',
+                            time: ev.date,
+                            restartcount: im['docker:restartcount'],
+                            restartdelay: im['docker:restartdelay']
+                        });
                     }
                 }
 
                 if (starts >= num_cycles && stops >= num_cycles) {
                     // stop the zoneevent watcher
-                    se.stop();
-                    se = null;
+                    vs.stop();
+                    vs = null;
                     emitter.emit('done');
                 }
             });
-            se.once('ready', function () {
+
+            vs.once('ready', function () {
                 cb();
             });
         }, function (cb) {
@@ -1336,35 +1382,32 @@ test('test restart delay reset', function (t) {
                 // next start (this will be the restart delay + the time it
                 // actually takes to start).
                 events.forEach(function (evt) {
-                    if (evt.action === 'start') {
+                    switch (evt.action) {
+                    case 'start':
                         if (last_stop > 0) {
-                            deltas.push((evt.time - last_stop) / 1000000);
+                            deltas.push(evt.time - last_stop);
                         }
-                    } else if (evt.action === 'stop') {
+                        break;
+                    case 'stop':
                         last_stop = evt.time;
-                    } else {
+                        break;
+                    case 'docker-keys-changed':
+                        break;
+                    default:
                         throw (new Error('Unexpected action: ' + evt.action));
                     }
                 });
 
-                // Only 'stop' events have a restartcount, so create an array
-                // just of the restart counts.
+                // Create an array just of the restart counts.
                 restartcounts = events.filter(function (evt) {
-                    if (evt.action === 'stop') {
-                        return (true);
-                    }
-                    return (false);
+                    return (evt.action === 'docker-keys-changed');
                 }).map(function (evt) {
                     return (evt.restartcount);
                 });
 
-                // Only 'stop' events have a restartdelay, so create an array
-                // just of the restart delays.
+                // Create an array just of the restart delays.
                 restartdelays = events.filter(function (evt) {
-                    if (evt.action === 'stop') {
-                        return (true);
-                    }
-                    return (false);
+                    return (evt.action === 'docker-keys-changed');
                 }).map(function (evt) {
                     return (evt.restartdelay);
                 });
@@ -1435,10 +1478,10 @@ test('test restart delay reset', function (t) {
             });
         }
     ], function () {
-        // stop the zoneevent watcher
-        if (se != null) {
-            se.stop();
-            se = null;
+        // stop the vminfod watcher
+        if (vs !== null) {
+            vs.stop();
+            vs = null;
         }
 
         t.end();

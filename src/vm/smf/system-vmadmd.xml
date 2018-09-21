@@ -11,6 +11,10 @@
       <service_fmri value="svc:/system/smartdc/init"/>
     </dependency>
 
+    <dependency name="vminfod" grouping="require_all" restart_on="none" type="service" >
+      <service_fmri value="svc:/system/smartdc/vminfod:default" />
+    </dependency>
+
     <exec_method
       type="method"
       name="start"

@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2018 Joyent, Inc.
+ * Copyright (c) 2018, Joyent, Inc.
  *
  */
 
@@ -40,11 +40,11 @@ var path = require('path');
 var http = require('http');
 var Qmp = require('/usr/vm/node_modules/qmp').Qmp;
 var qs = require('querystring');
-var SyseventStream = require('/usr/vm/node_modules/sysevent-stream');
 var url = require('url');
 var util = require('util');
 var vasync = require('vasync');
 var zonecfg = require('/usr/vm/node_modules/zonecfg');
+var ZoneEvent = require('/usr/vm/node_modules/zoneevent').ZoneEvent;
 
 /*
  * The DOCKER_RUNTIME_DELAY_RESET parameter is used when restarting a Docker VM
@@ -827,8 +827,8 @@ function applyDockerRestartPolicy(vmobj)
 /*
  * This function waits for a VM (vmUuid) to change to a specified state. It is
  * passed to VM.start() so that we avoid creating an additional zoneevent
- * watcher for each, and instead re-use the existing sysevent watcher that we've
- * already got.
+ * watcher for each, and instead re-use the existing zoneevent watcher that
+ * we've already got.
  */
 function stateWaiter(vmUuid, state, opts, callback) {
     assert.uuid(vmUuid, 'vmUuid');
@@ -888,14 +888,14 @@ function updateZoneStatus(ev)
 {
     var load_fields;
     var reprovisioning = false;
-    ev = ev.data;
 
     if (! ev.hasOwnProperty('zonename') || ! ev.hasOwnProperty('oldstate')
-        || ! ev.hasOwnProperty('newstate') || ! ev.hasOwnProperty('when')) {
+        || ! ev.hasOwnProperty('newstate') || ! ev.hasOwnProperty('date')) {
 
         log.debug('skipping unknown event: ' + JSON.stringify(ev, null, 2));
         return;
     }
+
 
     /*
      * With OS-4942 and OS-5011 additional states were added which occur before
@@ -946,14 +946,14 @@ function updateZoneStatus(ev)
     // if we've never seen this VM before, we always load once.
     if (!seen_vms.hasOwnProperty(ev.zonename)) {
         log.debug(ev.zonename + ' is a VM we haven\'t seen before and went '
-            + 'from ' + ev.oldstate + ' to ' + ev.newstate + ' at ' + ev.when);
+            + 'from ' + ev.oldstate + ' to ' + ev.newstate + ' at ' + ev.date);
         seen_vms[ev.zonename] = {};
         // We'll continue on to load this VM below with VM.load()
     } else if (!seen_vms[ev.zonename].hasOwnProperty('uuid')) {
         // We just saw this machine and haven't finished loading it the first
         // time.
         log.debug('Already loading VM ' + ev.zonename + ' ignoring transition'
-            + ' from ' + ev.oldstate + ' to ' + ev.newstate + ' at ' + ev.when);
+            + ' from ' + ev.oldstate + ' to ' + ev.newstate + ' at ' + ev.date);
         return;
     } else if (PROV_WAIT[seen_vms[ev.zonename].uuid]) {
         // We're already waiting for this machine to provision, other
@@ -989,7 +989,7 @@ function updateZoneStatus(ev)
             'zonepath'
         ]}, function (err, vmobj) {
             log.info(ev.zonename + ' (docker) went from ' + ev.oldstate + ' to '
-                + ev.newstate + ' at ' + ev.when);
+                + ev.newstate + ' at ' + ev.date);
 
             /*
              * If we stop while autoboot is set, the user was intending for it
@@ -1029,7 +1029,7 @@ function updateZoneStatus(ev)
         if (!reprovisioning) {
             log.trace('ignoring transition for ' + ev.zonename + ' ('
                 + seen_vms[ev.zonename].brand + ') from ' + ev.oldstate + ' to '
-                + ev.newstate + ' at ' + ev.when);
+                + ev.newstate + ' at ' + ev.date);
             return;
         }
     }
@@ -1158,18 +1158,14 @@ function updateZoneStatus(ev)
     });
 }
 
-function startZoneWatcher(callback)
+function startZoneEvent(callback)
 {
-
-    var se = new SyseventStream({
-        class: 'status',
-        logger: log,
-        channel: 'com.sun:zones:status'
+    var ze = new ZoneEvent({
+        name: 'vmadmd ZoneEvent',
+        log: log
     });
-    se.on('readable', function () {
-        var ev;
-        while ((ev = se.read()) !== null)
-            callback(ev);
+    ze.on('event', function (ev) {
+        callback(ev);
     });
 }
 
@@ -2091,6 +2087,7 @@ function upgradeVM(vmobj, fields, callback)
 
                 image_uuid = origin.split('@')[0].split('/').pop();
                 log.info('setting new image_uuid: ' + image_uuid);
+
                 cmd = [
                     'add attr',
                     'set name=dataset-uuid',
@@ -2100,7 +2097,6 @@ function upgradeVM(vmobj, fields, callback)
                 ].join('; ');
 
                 zonecfg(vmobj.uuid, [cmd], {log: log},
-
                     function (add_err, add_fds) {
                         if (add_err) {
                             log.error(add_err);
@@ -2353,7 +2349,6 @@ function upgradeVM(vmobj, fields, callback)
             var cmd;
 
             log.debug('setting vm-version = 1');
-
             cmd = [
                 'add attr',
                 'set name=vm-version',
@@ -2397,7 +2392,7 @@ function main()
 {
     // XXX TODO: load fs-ext so we can flock a pid file to be exclusive
 
-    startZoneWatcher(updateZoneStatus);
+    startZoneEvent(updateZoneStatus);
     startHTTPHandler();
     startTraceLoop();
     startSeenCleaner();

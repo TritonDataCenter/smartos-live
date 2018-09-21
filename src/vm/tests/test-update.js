@@ -1,8 +1,34 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
-//
-// NOTE: we use 169.254.169.x as *non-Private* here because it's not in the
-// designated private ranges we're concerned with. It may cause problems in
-// which case it can be changed to some other non-Private address.
+/*
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright (c) 2018, Joyent, Inc.
+ *
+ */
+
+/*
+ * NOTE: we use 169.254.169.x as *non-Private* here because it's not in the
+ * designated private ranges we're concerned with. It may cause problems in
+ * which case it can be changed to some other non-Private address.
+ */
 
 var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
@@ -1062,67 +1088,77 @@ test('update max_locked_memory', function (t) {
     });
 });
 
-function zonecfg(args, callback)
-{
-    var cmd = '/usr/sbin/zonecfg';
-
-    execFile(cmd, args, function (error, stdout, stderr) {
-        if (error) {
-            callback(error, {stdout: stdout, stderr: stderr});
-        } else {
-            callback(null, {stdout: stdout, stderr: stderr});
+test('update resolvers when empty', function (t) {
+    var payload = {
+        resolvers: ['4.2.2.1', '4.2.2.2']
+    };
+    VM.update(vm_uuid, payload, function (up_err) {
+        if (up_err) {
+            t.ok(false, 'updating resolvers: ' + up_err.message);
+            t.end();
+            return;
         }
-    });
-}
 
-test('update resolvers when no resolvers', function (t) {
-
-    zonecfg([
-        '-z', vm_uuid,
-        'remove attr name=resolvers;'
-    ], function (err, fds) {
-        VM.update(vm_uuid, {resolvers: ['4.2.2.1', '4.2.2.2']},
-            function (up_err) {
-                t.ok(!up_err, 'no error adding resolvers: '
-                    + (up_err ? up_err.message : 'ok'));
-                t.end();
-            }
-        );
-    });
-});
-
-test('update resolvers to empty when already empty', function (t) {
-    zonecfg(['-z', vm_uuid, 'remove attr name=resolvers;'],
-        function (err, fds) {
-
-        VM.load(vm_uuid, function (l_err, before_obj) {
-            if (l_err) {
-                t.ok(false, 'loading VM: ' + l_err.message);
+        VM.load(vm_uuid, function (load_err, vmobj) {
+            if (load_err) {
+                t.ok(false, 'loading VM (after): ' + load_err.message);
                 t.end();
                 return;
             }
 
-            t.deepEqual(before_obj.resolvers, [], 'initial state has no '
-                + 'resolvers: ' + JSON.stringify(before_obj.resolvers));
-            VM.update(vm_uuid, {'resolvers': []}, function (up_err) {
-                if (up_err) {
-                    t.ok(false, 'updating resolvers: ' + up_err.message);
-                    t.end();
-                    return;
-                }
+            t.deepEqual(vmobj.resolvers, payload.resolvers,
+                'resolvers after update: ' + JSON.stringify(vmobj.resolvers));
+            t.end();
+        });
+    });
+});
 
-                VM.load(vm_uuid, function (error, after_obj) {
-                    if (error) {
-                        t.ok(false, 'loading VM (after): ' + error.message);
-                        t.end();
-                        return;
-                    }
+test('update resolvers to empty when filled', function (t) {
+    var payload = {
+        resolvers: []
+    };
+    VM.update(vm_uuid, payload, function (up_err) {
+        if (up_err) {
+            t.ok(false, 'updating resolvers: ' + up_err.message);
+            t.end();
+            return;
+        }
 
-                    t.deepEqual(after_obj.resolvers, [], 'no resolvers after '
-                        + 'update: ' + JSON.stringify(after_obj.resolvers));
-                    t.end();
-                });
-            });
+        VM.load(vm_uuid, function (load_err, vmobj) {
+            if (load_err) {
+                t.ok(false, 'loading VM (after): ' + load_err.message);
+                t.end();
+                return;
+            }
+
+            t.deepEqual(vmobj.resolvers, payload.resolvers,
+                'resolvers after update: ' + JSON.stringify(vmobj.resolvers));
+            t.end();
+        });
+    });
+});
+
+test('update resolvers to empty when empty', function (t) {
+    var payload = {
+        resolvers: []
+    };
+    VM.update(vm_uuid, payload, function (up_err) {
+        if (up_err) {
+            t.ok(false, 'updating resolvers: ' + up_err.message);
+            t.end();
+            return;
+        }
+
+        VM.load(vm_uuid, function (load_err, vmobj) {
+            if (load_err) {
+                t.ok(false, 'loading VM (after): ' + load_err.message);
+                t.end();
+                return;
+            }
+
+            t.deepEqual(vmobj.resolvers, payload.resolvers,
+                'resolvers after update: ' + JSON.stringify(vmobj.resolvers));
+            t.end();
         });
     });
 });

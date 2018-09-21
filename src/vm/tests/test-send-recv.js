@@ -1,8 +1,33 @@
-// Copyright 2018 Joyent, Inc.  All rights reserved.
+/*
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright (c) 2018, Joyent, Inc.
+ *
+ */
 
-var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
-var execFile = cp.execFile;
+var fs = require('fs');
+var util = require('util');
+
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
 
@@ -12,11 +37,9 @@ require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
-var abort = false;
-var bundle_filename;
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var kvm_image_uuid = vmtest.CURRENT_UBUNTU_UUID;
-var vmobj;
+var VMADM = '/usr/vm/sbin/vmadm';
 
 var kvm_payload = {
     alias: 'test-send-recv-' + process.pid,
@@ -45,196 +68,252 @@ var smartos_payload = {
 };
 
 [['zone', smartos_payload], ['kvm', kvm_payload]].forEach(function (d) {
+    var abort = false;
+    var bundle_filename;
+    var vmobj;
+
     var thing_name = d[0];
     var thing_payload = d[1];
 
-    test('create ' + thing_name, function(t) {
+    test('create ' + thing_name, function (t) {
         VM.create(thing_payload, function (err, obj) {
             if (err) {
+                abort = true;
                 t.ok(false, 'error creating VM: ' + err.message);
                 t.end();
-            } else {
-                VM.load(obj.uuid, function (e, o) {
-                    // we wait 5 seconds here as there's a bug in the zone startup
-                    // where shutdown doesn't work while part of smf is still
-                    // starting itself. This should be fixed with OS-1027 when
-                    // that's in as we could then just wait for the zone to go from
-                    // 'provisioning' -> 'running' before continuing.
-                    setTimeout(function() {
-                        if (e) {
-                            t.ok(false, 'unable to load VM after create');
-                            abort = true;
-                            t.end()
-                            return;
-                        }
-                        vmobj = o;
-                        t.ok(true, 'created VM: ' + vmobj.uuid);
-                        t.end();
-                    }, 5000);
-                });
+                return;
             }
+
+            VM.load(obj.uuid, function (e, o) {
+                if (e) {
+                    t.ok(false, 'unable to load VM after create');
+                    abort = true;
+                    t.end();
+                    return;
+                }
+
+                vmobj = o;
+                t.ok(true, 'created VM: ' + vmobj.uuid);
+                t.end();
+            });
         });
     });
 
-    test('send ' + thing_name, function(t) {
+    test('send ' + thing_name, function (t) {
         if (abort) {
             t.ok(false, 'skipping send as test run is aborted.');
             t.end();
             return;
         }
-        bundle_filename = '/var/tmp/test.' + vmobj.uuid + '.vmbundle.' + process.pid;
 
-        cp.exec('/usr/vm/sbin/vmadm send ' + vmobj.uuid + ' > ' + bundle_filename,
-            function (error, stdout, stderr) {
-                if (error) {
-                    t.ok(false, 'vm send to ' + bundle_filename + ': ' + error.message);
+        bundle_filename = util.format('/var/tmp/test.%s.vmbundle.%d',
+            vmobj.uuid, process.pid);
+
+        var stderr = '';
+        var ws = fs.createWriteStream(bundle_filename);
+        var args = [
+            'send',
+            vmobj.uuid
+        ];
+
+        var child = cp.spawn(VMADM, args);
+        child.stdout.pipe(ws);
+        child.stderr.setEncoding('utf8');
+        child.stderr.on('data', function (data) {
+            stderr += data;
+        });
+
+        child.once('error', function (err) {
+            t.ok(false, util.format('vm send to "%s": %s',
+                bundle_filename, err.message));
+            abort = true;
+            t.end();
+        });
+
+        child.once('close', function (code) {
+            if (code !== 0) {
+                t.ok(false, util.format('vm send to "%s": code %d',
+                    bundle_filename, code));
+                abort = true;
+                console.error(stderr);
+                t.end();
+            }
+
+            VM.load(vmobj.uuid, function (e, o) {
+                if (e) {
+                    t.ok(false, 'reloading after send: ' + e.message);
                     abort = true;
                     t.end();
-                } else {
-                    VM.load(vmobj.uuid, function (e, o) {
-                        if (e) {
-                            t.ok(false, 'reloading after send: ' + e.message);
-                            abort = true;
-                        } else {
-                            t.ok(o.state === 'stopped', 'VM is stopped after send (actual: ' + o.state + ')');
-                        }
-                        t.end();
-                    });
+                    return;
                 }
-            }
-        );
+                t.ok(o.state === 'stopped', util.format(
+                    'VM is stopped after send (actual: %s)', o.state));
+                t.end();
+            });
+        });
     });
 
-    test('delete after sending ' + thing_name, function(t) {
+    test('delete after sending ' + thing_name, function (t) {
         if (abort) {
             t.ok(false, 'skipping send as test run is aborted.');
             t.end();
             return;
         }
-        if (vmobj.uuid) {
-            VM.delete(vmobj.uuid, function (err) {
-                if (err) {
-                    t.ok(false, 'error deleting VM: ' + err.message);
-                    abort = true;
-                } else {
-                    t.ok(true, 'deleted VM: ' + vmobj.uuid);
-                }
-                t.end();
-            });
-        } else {
+
+        if (!vmobj.uuid) {
             t.ok(false, 'no VM to delete');
             abort = true;
             t.end();
+            return;
         }
+
+        VM.delete(vmobj.uuid, function (err) {
+            if (err) {
+                t.ok(false, 'error deleting VM: ' + err.message);
+                abort = true;
+                t.end();
+                return;
+            }
+
+            t.ok(true, 'deleted VM: ' + vmobj.uuid);
+            t.end();
+        });
     });
 
-    test('receive ' + thing_name, function(t) {
+    test('receive ' + thing_name, function (t) {
         if (abort) {
             t.ok(false, 'skipping send as test run is aborted.');
             t.end();
             return;
         }
 
-        cp.exec('/usr/vm/sbin/vmadm recv < ' + bundle_filename,
-            function (error, stdout, stderr) {
-                var ival;
-                var loading = false;
-                var loops = 0;
+        var rs = fs.createReadStream(bundle_filename);
+        var stderr = '';
 
-                // we don't really care if this works, this is just cleanup.
-                cp.exec('rm -f ' + bundle_filename, function() {});
+        var child = cp.spawn(VMADM, ['recv']);
+        rs.pipe(child.stdin);
+        child.stderr.setEncoding('utf8');
+        child.stderr.on('data', function (data) {
+            stderr += data;
+        });
 
-                if (error) {
-                    t.ok(false, 'vm recv from ' + bundle_filename + ': ' + error.message);
+        child.once('error', function (err) {
+            t.ok(false, util.format('vm send to "%s": %s',
+                bundle_filename, err.message));
+            abort = true;
+            t.end();
+        });
+
+        child.once('close', function (code) {
+            // we don't really care if this works, this is just cleanup.
+            try {
+                fs.unlinkSync(bundle_filename);
+            } catch (e) {}
+
+            if (code !== 0) {
+                t.ok(false, util.format('vm send to "%s": code %d',
+                    bundle_filename, code));
+                console.error(stderr);
+                abort = true;
+                t.end();
+            }
+
+            var started = Math.floor(Date.now() / 1000);
+            function waitForZoneToSettle() {
+                var now = Math.floor(Date.now() / 1000);
+
+                if (now - started > 120) {
+                    t.ok(false, 'Timeout waiting for zone to settle');
                     abort = true;
                     t.end();
-                } else {
-                    obj = {};
+                    return;
+                }
 
-                    ival = setInterval(function () {
-                        if (loading === false) {
-                            loading = true;
-                        } else {
-                            // already loading, skip;
-                            loops = loops + 5;
+                VM.load(vmobj.uuid, function (err, obj) {
+                    if (err) {
+                        // give up
+                        t.ok(false, 'reloading after receive: ' + err.message);
+                        abort = true;
+                        t.end();
+                        return;
+                    }
+
+                    if (obj.hasOwnProperty('transition')
+                        || ['running', 'stopped'].indexOf(obj.state) === -1) {
+
+                        // wait for zone to settle
+                        t.ok(true, util.format(
+                            'Zone in state: %s - waiting to settle',
+                            obj.state));
+                        setTimeout(waitForZoneToSettle, 5 * 1000);
+                        return;
+                    }
+
+                    // zone settled!
+                    t.ok(true, 'Zone went to state: ' + obj.state);
+
+                    Object.keys(vmobj).forEach(function (prop) {
+                        // we expect these properties to be different.
+                        var skipProps = [
+                            'boot_timestamp',
+                            'last_modified',
+                            'pid',
+                            'zonedid',
+                            'zoneid'
+                        ];
+                        if (skipProps.indexOf(prop) !== -1) {
                             return;
                         }
-                        if (loops > 120) {
-                            clearInterval(ival);
-                            t.ok(false, "Timed out after 2 mins waiting for zone to settle.");
-                            abort = true;
+
+                        t.ok(obj.hasOwnProperty(prop),
+                            'new object still has property ' + prop);
+
+                        if (obj.hasOwnProperty(prop)) {
+                            var old_vm = JSON.stringify(vmobj[prop]);
+                            var new_vm = JSON.stringify(obj[prop]);
+                            t.ok(new_vm === old_vm, util.format(
+                                'matching properties "%s": [%s][%s]',
+                                prop, old_vm, new_vm));
                         }
-                        VM.load(vmobj.uuid, function (err, obj) {
-                            if (err) {
-                                clearInterval(ival);
-                                t.ok(false, 'reloading after receive: ' + err.message);
-                                abort = true;
-                                t.end();
-                                // leave loading since we don't want any more runs.
-                                return;
-                            } else {
-                                if (!obj.hasOwnProperty('transition') && (obj.state === 'running' || obj.state === 'stopped')) {
-                                    // DONE!
-                                    clearInterval(ival);
-                                    t.ok(true, 'Zone went to state: ' + obj.state);
+                    });
 
-                                    for (prop in vmobj) {
-                                        if ([
-                                            'boot_timestamp',
-                                            'last_modified',
-                                            'pid',
-                                            'zonedid',
-                                            'zoneid'
-                                        ].indexOf(prop) !== -1) {
-                                            // we expect these properties to be different.
-                                            continue;
-                                        }
-                                        t.ok(obj.hasOwnProperty(prop), 'new object still has property ' + prop);
-                                        if (obj.hasOwnProperty(prop)) {
-                                            old_vm = JSON.stringify(vmobj[prop]);
-                                            new_vm = JSON.stringify(obj[prop]);
-                                            t.ok(new_vm == old_vm, 'matching properties ' + prop + ': [' + old_vm + '][' + new_vm + ']');
-                                        }
-                                    }
-                                    for (prop in obj) {
-                                        if (!vmobj.hasOwnProperty(prop)) {
-                                            t.ok(false, 'new object has extra property ' + JSON.stringify(prop));
-                                        }
-                                    }
+                    Object.keys(obj).forEach(function (prop) {
+                        if (!vmobj.hasOwnProperty(prop)) {
+                            t.ok(false, util.format(
+                                'new object has extra property %s', prop));
+                        }
+                    });
 
-                                    t.end();
-                                    return;
-                                } else {
-                                    t.ok(true, 'Zone in state: ' + obj.state + ' waiting to settle.');
-                                }
-                                loading = false;
-                            }
-                        });
-                        loops = loops + 5;
-                    }, 5000);
-                }
+                    t.end();
+                });
             }
-        );
+
+            waitForZoneToSettle();
+        });
     });
 
-    test('delete after receiving ' + thing_name, function(t) {
+    test('delete after receiving ' + thing_name, function (t) {
         if (abort) {
             t.ok(false, 'skipping send as test run is aborted.');
             t.end();
             return;
         }
-        if (vmobj.uuid) {
-            VM.delete(vmobj.uuid, function (err) {
-                if (err) {
-                    t.ok(false, 'error deleting VM: ' + err.message);
-                } else {
-                    t.ok(true, 'deleted VM: ' + vmobj.uuid);
-                }
-                t.end();
-            });
-        } else {
+
+        if (!vmobj.uuid) {
             t.ok(false, 'no VM to delete');
             t.end();
+            return;
         }
+
+        VM.delete(vmobj.uuid, function (err) {
+            if (err) {
+                t.ok(false, 'error deleting VM: ' + err.message);
+                t.end();
+                return;
+            }
+
+            t.ok(true, 'deleted VM: ' + vmobj.uuid);
+            t.end();
+        });
     });
 });

@@ -1,20 +1,48 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
-//
-// These tests ensure that the internal_metadata_namespaces feature:
-//
-//  * shows up in KEYS when internal_metadata has namespaced key
-//  * does not allow PUT to namespaced key from in the zone
-//  * does not allow DELETE to namespaced key from in the zone
-//  * shows GET result from internal_metadata for namespaced keys
-//  * does not interfere with PUT or DELETE on non-namespaced keys
-//  * does not show non-namespaced internal_metadata keys
-//
+/*
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright (c) 2018, Joyent, Inc.
+ *
+ */
+
+/*
+ * These tests ensure that the internal_metadata_namespaces feature:
+ *
+ *  * shows up in KEYS when internal_metadata has namespaced key
+ *  * does not allow PUT to namespaced key from in the zone
+ *  * does not allow DELETE to namespaced key from in the zone
+ *  * shows GET result from internal_metadata for namespaced keys
+ *  * does not interfere with PUT or DELETE on non-namespaced keys
+ *  * does not show non-namespaced internal_metadata keys
+ */
 
 var async = require('/usr/node/node_modules/async');
 var exec = require('child_process').exec;
 var fs = require('fs');
+var util = require('util');
 var utils = require('/usr/vm/node_modules/utils');
 var VM = require('/usr/vm/node_modules/VM');
+var vasync = require('/usr/vm/node_modules/vasync');
+var vminfod = require('/usr/vm/node_modules/vminfod/client');
 var vmtest = require('../common/vmtest.js');
 
 // this puts test stuff in global, so we need to tell jsl about that:
@@ -109,17 +137,53 @@ test('test exercising internal_metadata_namespaces', function (t) {
 
     vmtest.on_new_vm(t, image_uuid, payload, state, [
         function (cb) {
-            // replace metadata.json with version that tells us which we got
-            fs.writeFile('/zones/' + state.uuid + '/config/metadata.json',
-                JSON.stringify(metadata, null, 2) + '\n',
-                function (err) {
-                    if (err) {
-                        cb(err);
-                        return;
-                    }
-                    cb();
-                }
-            );
+            var vs = new vminfod.VminfodEventStream({
+                name: 'test-internal_metadata_namespaces.js'
+            });
+            vs.on('ready', function () {
+                vasync.parallel({funcs: [
+                    function (cb2) {
+                        var obj = {
+                            type: 'modify',
+                            zonename: state.uuid,
+                            vm: metadata
+                        };
+
+                        var opts = {
+                            timeout: 30 * 1000,
+                            catchErrors: true,
+                            teardown: true
+                        };
+
+                        vs.watchForEvent(obj, opts,
+                            function (err) {
+                            if (err) {
+                                cb2(err);
+                                return;
+                            }
+
+                            cb2();
+                        });
+                    },
+                    function (cb2) {
+                        // replace metadata.json with version that tells us
+                        // which we got
+                        fs.writeFile('/zones/' + state.uuid
+                            + '/config/metadata.json',
+                            JSON.stringify(metadata, null, 2) + '\n',
+                            function (err) {
+                                if (err) {
+                                    cb2(err);
+                                    return;
+                                }
+                                cb2();
+                            }
+                        );
+                    }]
+                }, function (err) {
+                    cb(err);
+                });
+            });
         }, function (cb) {
             // Sanity check VM metadata
             VM.load(state.uuid, function (err, obj) {

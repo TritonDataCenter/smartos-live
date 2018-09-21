@@ -438,6 +438,7 @@ f usr/img/test/update.test.js 0444 root bin
 # new vmadmd
 s etc/bash/bash_completion.d/vmadm=/usr/vm/etc/vmadm.completion
 f lib/svc/manifest/system/system-vmadmd.xml 0444 root bin
+f lib/svc/manifest/system/system-vminfod.xml 0444 root bin
 f usr/bin/bunyan 0555 root bin
 f usr/share/man/man1/bunyan.1 0444 root bin
 f usr/share/man/man1m/vmadmd.1m 0444 root bin
@@ -461,10 +462,13 @@ f usr/vm/sbin/add-userscript 0555 root bin
 f usr/vm/sbin/dockerexec 0555 root bin
 f usr/vm/sbin/dockerinit 0555 root bin
 f usr/vm/sbin/filewait 0555 root bin
+f usr/vm/sbin/fswatcher 0555 root bin
 f usr/vm/sbin/rotate-kvm-logs.sh 0555 root bin
 f usr/vm/sbin/rotate-logs.sh 0555 root bin
 f usr/vm/sbin/vmadm 0555 root bin
 f usr/vm/sbin/vmadmd 0555 root bin
+f usr/vm/sbin/vminfo 0555 root bin
+f usr/vm/sbin/vminfod 0555 root bin
 f usr/vm/sbin/vmunbundle 0555 root bin
 f usr/vm/sbin/zfs_recv 0555 root bin
 f usr/vm/sbin/zfs_send 0555 root bin
@@ -474,10 +478,43 @@ f usr/node/0.10/node_modules/bunyan.js 0444 root bin
 f usr/node/0.10/node_modules/expat_binding.node 0444 root bin
 f usr/node/0.10/node_modules/node-expat.js 0444 root bin
 f usr/vm/node_modules/bunyan.js 0444 root bin
+f usr/vm/node_modules/diff.js 0644 root root
 f usr/vm/node_modules/dladm.js 0444 root bin
 f usr/vm/node_modules/expander.js 0444 root bin
+f usr/vm/node_modules/fswatcher.js 0444 root root
 f usr/vm/node_modules/hrtime.js 0444 root root
 f usr/vm/node_modules/ip.js 0444 root bin
+d usr/vm/node_modules/jsprim 0755 root root
+d usr/vm/node_modules/jsprim/node_modules 0755 root root
+d usr/vm/node_modules/jsprim/node_modules/json-schema 0755 root root
+f usr/vm/node_modules/jsprim/node_modules/json-schema/README.md 0644 root root
+f usr/vm/node_modules/jsprim/node_modules/json-schema/package.json 0644 root root
+d usr/vm/node_modules/jsprim/node_modules/json-schema/lib 0755 root root
+f usr/vm/node_modules/jsprim/node_modules/json-schema/lib/links.js 0644 root root
+f usr/vm/node_modules/jsprim/node_modules/json-schema/lib/validate.js 0644 root root
+d usr/vm/node_modules/jsprim/node_modules/extsprintf 0755 root root
+f usr/vm/node_modules/jsprim/node_modules/extsprintf/LICENSE 0644 root root
+d usr/vm/node_modules/jsprim/node_modules/extsprintf/lib 0755 root root
+f usr/vm/node_modules/jsprim/node_modules/extsprintf/lib/extsprintf.js 0644 root root
+f usr/vm/node_modules/jsprim/node_modules/extsprintf/package.json 0644 root root
+d usr/vm/node_modules/jsprim/node_modules/verror 0755 root root
+d usr/vm/node_modules/jsprim/node_modules/verror/lib 0755 root root
+f usr/vm/node_modules/jsprim/node_modules/verror/lib/verror.js 0644 root root
+d usr/vm/node_modules/jsprim/node_modules/verror/node_modules 0755 root root
+d usr/vm/node_modules/jsprim/node_modules/verror/node_modules/core-util-is 0755 root root
+f usr/vm/node_modules/jsprim/node_modules/verror/node_modules/core-util-is/package.json 0644 root root
+f usr/vm/node_modules/jsprim/node_modules/verror/node_modules/core-util-is/LICENSE 0644 root root
+d usr/vm/node_modules/jsprim/node_modules/verror/node_modules/core-util-is/lib 0755 root root
+f usr/vm/node_modules/jsprim/node_modules/verror/node_modules/core-util-is/lib/util.js 0644 root root
+f usr/vm/node_modules/jsprim/node_modules/verror/package.json 0644 root root
+f usr/vm/node_modules/jsprim/node_modules/verror/LICENSE 0644 root root
+d usr/vm/node_modules/jsprim/node_modules/assert-plus 0755 root root
+f usr/vm/node_modules/jsprim/node_modules/assert-plus/package.json 0644 root root
+f usr/vm/node_modules/jsprim/node_modules/assert-plus/assert.js 0644 root root
+d usr/vm/node_modules/jsprim/lib 0755 root root
+f usr/vm/node_modules/jsprim/lib/jsprim.js 0644 root root
+f usr/vm/node_modules/jsprim/LICENSE 0644 root root
+f usr/vm/node_modules/jsprim/package.json 0644 root root
 f usr/vm/node_modules/locker.js 0444 root bin
 f usr/vm/node_modules/nic.js 0444 root bin
 d usr/vm/node_modules/macaddr/ 0755 root root
@@ -727,6 +764,7 @@ f usr/vm/node_modules/openonerrlogger.js 0444 root bin
 f usr/vm/node_modules/props.js 0444 root bin
 f usr/vm/node_modules/proptable.js 0444 root bin
 f usr/vm/node_modules/qmp.js 0444 root bin
+f usr/vm/node_modules/queue.js 0644 root root
 f usr/vm/node_modules/sysevent-stream.js 0444 root bin
 f usr/vm/node_modules/utils.js 0444 root bin
 d usr/vm/node_modules/vasync 0755 root root
@@ -769,10 +807,18 @@ f usr/vm/node_modules/vmload/vmload-utils.js 0644 root root
 f usr/vm/node_modules/vmload/vmload-xml.js 0644 root root
 f usr/vm/node_modules/vmload/dump-json.js 0755 root root
 f usr/vm/node_modules/vmload/index.js 0644 root root
+d usr/vm/node_modules/vminfod 0755 root root
+f usr/vm/node_modules/vminfod/vminfod.js 0644 root root
+f usr/vm/node_modules/vminfod/zpoolwatcher.js 0644 root root
+f usr/vm/node_modules/vminfod/zonewatcher.js 0644 root root
+f usr/vm/node_modules/vminfod/client.js 0644 root root
 f usr/vm/node_modules/VM.js 0444 root bin
 f usr/vm/node_modules/zonecfg.js 0444 root bin
+f usr/vm/node_modules/zoneevent.js 0444 root bin
 f usr/vm/smf/system-vmadmd 0555 root bin
 f usr/vm/smf/system-vmadmd.xml 0444 root bin
+f usr/vm/smf/system-vminfod 0555 root bin
+f usr/vm/smf/system-vminfod.xml 0444 root bin
 # fwadm
 s etc/bash/bash_completion.d/fwadm=/usr/fw/etc/fwadm.completion
 d usr/fw 0555 root bin
@@ -995,7 +1041,6 @@ d usr/vm/lib 0555 root bin
 d usr/vm/lib/metadata 0555 root bin
 f usr/vm/lib/metadata/common.js 0444 root bin
 f usr/vm/lib/metadata/crc32.js 0444 root bin
-f usr/vm/lib/metadata/zwatch.js 0444 root bin
 f usr/vm/lib/metadata/agent.js 0444 root bin
 f usr/vm/sbin/metadata 0555 root bin
 f usr/vm/smf/system-metadata 0555 root bin
@@ -1039,6 +1084,7 @@ f usr/lib/sdc/net-boot-config 0555 root bin
 f usr/sbin/sysevent 0555 root bin
 s usr/sbin/fwadm=../fw/sbin/fwadm
 s usr/sbin/vmadm=../vm/sbin/vmadm
+s usr/sbin/vminfo=../vm/sbin/vminfo
 d usr/node 0755 root bin
 d usr/node/0.10 0755 root bin
 d usr/node/0.10/node_modules 0755 root bin
@@ -1073,6 +1119,7 @@ f usr/share/man/man1m/hotplug.1m 0444 root bin
 f usr/share/man/man1m/nictagadm.1m 0444 root bin
 f usr/share/man/man1m/sysevent.1m 0444 root bin
 f usr/share/man/man1m/sysinfo.1m 0444 root bin
+f usr/share/man/man1m/vminfo.1m 0444 root bin
 f usr/share/man/man1m/zonemon.1m 0444 root bin
 f usr/share/man/man1m/zonememstat.1m 0444 root bin
 d usr/share/man/man3lib 0755 root bin

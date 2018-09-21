@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+<service_bundle type="manifest" name="vminfod">
+  <service name="system/smartdc/vminfod" type="service" version="1.0.0">
+
+    <create_default_instance enabled="true"/>
+    <single_instance/>
+
+    <dependency name='filesystem-local' grouping='require_all' restart_on='none' type='service'>
+      <service_fmri value='svc:/system/filesystem/local'/>
+    </dependency>
+
+    <exec_method
+      type="method"
+      name="start"
+      exec="/usr/vm/smf/system-vminfod %m"
+      timeout_seconds="300">
+      <method_context working_directory='/'>
+        <method_credential user="root" group="staff"/>
+      </method_context>
+    </exec_method>
+
+    <exec_method type="method" name="restart" exec=":kill" timeout_seconds="300">
+      <method_context>
+        <method_credential user="root" group="staff"/>
+      </method_context>
+    </exec_method>
+
+    <exec_method type="method" name="stop" exec=":kill" timeout_seconds="60">
+      <method_context>
+        <method_credential user="root" group="staff"/>
+      </method_context>
+    </exec_method>
+
+    <property_group name="application" type="application">
+    </property_group>
+
+    <stability value="Evolving"/>
+
+    <template>
+      <common_name>
+        <loctext xml:lang="C">VM Info Daemon (node)</loctext>
+      </common_name>
+    </template>
+
+  </service>
+</service_bundle>

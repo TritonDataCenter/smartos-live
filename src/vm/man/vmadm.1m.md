@@ -94,6 +94,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         See the 'SNAPSHOTS' section below for some more details on how to use
         these snapshots, and their restrictions.
 
+      events [-fjr] [uuid]
+
+        Output events seen for a given VM (all VMs on the system if the uuid
+        argument is omitted).  The command will run indefinitely outputting a
+        single line per event to stdout as they are seen.
+
+          -f, --full    Output the full event (full zone names, timestamp,
+                        etc.)  No data will be truncated.
+          -j, --json    Output in JSON.  If `-j` is supplied `-f` is ignored.
+          -r, --ready   Output an extra event when the event stream is first
+                        opened and ready.
+
       get <uuid>
 
         Output the JSON object describing a VM. The JSON object will be dumped

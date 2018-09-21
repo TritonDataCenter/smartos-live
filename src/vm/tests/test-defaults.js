@@ -1,11 +1,35 @@
-// Copyright 2018 Joyent, Inc.  All rights reserved.
-//
-// These tests ensure that default values don't change accidentally.
-//
+/*
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright (c) 2018, Joyent, Inc.
+ *
+ * These tests ensure that default values don't change accidentally.
+ */
 
 var execFile = require('child_process').execFile;
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
+var vasync = require('/usr/vm/node_modules/vasync');
+var vminfod = require('/usr/vm/node_modules/vminfod/client');
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
@@ -220,6 +244,8 @@ function check_values(t, state)
             continue;
         } else if (state.brand === 'kvm' && prop === 'pid') {
             continue;
+        } else if (prop.match(/^transition_/)) {
+            continue;
         } else if (!defaults.hasOwnProperty(prop)) {
             t.ok(false, 'unexpected property: ' + prop);
         }
@@ -279,12 +305,50 @@ test('check default create_timestamp', function (t) {
         do_not_inventory: true
     }, state, [
         function (cb) {
-            zonecfg(['-z', state.uuid, 'remove attr name=create-timestamp;'],
-                function (err, fds) {
+            var vs = new vminfod.VminfodEventStream('test-defaults.js');
+            vs.once('ready', function () {
+                vasync.parallel({
+                    funcs: [
+                        function (cb2) {
+                            var obj = {
+                                type: 'modify',
+                                zonename: state.uuid
+                            };
+                            var opts = {
+                                timeout: 30 * 1000,
+                                catchErrors: true,
+                                teardown: true
+                            };
+                            var changes = [
+                                {
+                                    path: ['create_timestamp'],
+                                    action: 'changed'
+                                }
+                            ];
+                            vs.watchForChanges(obj, changes, opts,
+                                function (err) {
+                                if (err) {
+                                    cb2(err);
+                                    return;
+                                }
 
-                t.ok(!err, 'removing create-timestamp: '
-                    + (err ? err.message : 'ok'));
-                cb(err);
+                                cb2();
+                            });
+                        },
+                        function (cb2) {
+                            zonecfg(['-z', state.uuid,
+                                'remove attr name=create-timestamp;'],
+                                function (err, fds) {
+
+                                t.ok(!err, 'removing create-timestamp: '
+                                    + (err ? err.message : 'ok'));
+                                cb2(err);
+                            });
+                        }
+                    ]
+                }, function (err) {
+                    cb(err);
+                });
             });
         }, function (cb) {
             VM.load(state.uuid, function (err, obj) {

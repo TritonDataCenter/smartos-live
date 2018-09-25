@@ -211,6 +211,7 @@ function get_bhyve_capability()
 {
     Bhyve_Capable="false"
     Bhyve_Max_Vcpus="0"
+    HVM_API="false"
 
     if [[ -x /usr/lib/brand/bhyve/bhhwcompat ]]; then
         if /usr/lib/brand/bhyve/bhhwcompat; then

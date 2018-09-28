@@ -157,19 +157,19 @@ inside of a non-global zone.
 
 #### Importing the Zone Image
 
-The SmartOS build currently uses the `base-multiarch-lts 14.4.2` image
-which has a UUID of `e69a0918-055d-11e5-8912-e3ceb6df4cf8`. To import
+The SmartOS build currently uses the `base-multiarch-lts 16.4.1` image
+which has a UUID of `bafa230e-e6ea-11e6-8438-c72c10ff2d1f `. To import
 the image, you should run the imgadm command from the global zone:
 
 ```
-# imgadm import e69a0918-055d-11e5-8912-e3ceb6df4cf8
-Importing e69a0918-055d-11e5-8912-e3ceb6df4cf8 (base-multiarch-lts@14.4.2) from "https://images.joyent.com"
-Gather image e69a0918-055d-11e5-8912-e3ceb6df4cf8 ancestry
-Must download and install 1 image (161.1 MiB)
-Download 1 image       [===============================>] 100% 161.17MB  12.92MB/s    12s
-Downloaded image e69a0918-055d-11e5-8912-e3ceb6df4cf8 (161.1 MiB)
-...5-8912-e3ceb6df4cf8 [===============================>] 100% 161.17MB  20.75MB/s     7s
-Imported image e69a0918-055d-11e5-8912-e3ceb6df4cf8 (base-multiarch-lts@14.4.2)
+# imgadm import bafa230e-e6ea-11e6-8438-c72c10ff2d1f
+Importing bafa230e-e6ea-11e6-8438-c72c10ff2d1f (base-multiarch-lts@16.4.1) from "https://images.joyent.com"
+Gather image bafa230e-e6ea-11e6-8438-c72c10ff2d1f ancestry
+Must download and install 1 image (220.6 MiB)
+Download 1 image                     [=======================================================================>] 100% 220.65MB   7.95MB/s    27s
+Downloaded image bafa230e-e6ea-11e6-8438-c72c10ff2d1f (220.6 MiB)
+...a230e-e6ea-11e6-8438-c72c10ff2d1f [=======================================================================>] 100% 220.65MB  18.76MB/s    11s
+Imported image bafa230e-e6ea-11e6-8438-c72c10ff2d1f (base-multiarch-lts@16.4.1)
 ```
 
 #### Creating the Zone
@@ -178,7 +178,7 @@ To create a zone, you need to create a `joyent` branded zone with
 `vmadm`. We recommend that the zone have the following attributes:
 
 * The brand set to `"joyent"`
-* The `image_uuid` set to `"e69a0918-055d-11e5-8912-e3ceb6df4cf8"`.
+* The `image_uuid` set to `"bafa230e-e6ea-11e6-8438-c72c10ff2d1f"`
 * At least 25 GiB of disk space specified in the `quota` property
 * At least 2-4 GiB of DRAM specified in the `max-physical-memory`
 property

@@ -68,6 +68,7 @@ man/man/man1m/sysinfo.1m
 man/man/man1m/diskinfo.1m
 man/man/man1m/disklayout.1m
 man/man/man1m/mkzpool.1m
+man/man/man1m/vminfo.1m
 man/man/man5/fwrule.5
 src/cryptpass
 src/diskinfo

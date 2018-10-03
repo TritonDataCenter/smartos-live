@@ -3493,6 +3493,16 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 log.debug({brand: m.requirements.brand},
                     'set image requirements.brand to source VM brand');
             }
+            if (vmInfo.brand === 'bhyve' && vmInfo.bootrom
+                && !(options.manifest.requirements
+                    && options.manifest.requirements.hasOwnProperty('bootrom')))
+            {
+                if (!m.requirements)
+                    m.requirements = {};
+                m.requirements.bootrom = vmInfo.bootrom;
+                log.debug({bootrom: m.requirements.bootrom},
+                    'set image requirements.bootrom to source VM bootrom');
+            }
             if (incremental) {
                 if (!originInfo) {
                     next(new errors.VmHasNoOriginError(vmUuid));

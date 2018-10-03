@@ -12,7 +12,7 @@ mkdir -p projects/local
 if [[ ! -f configure-branches ]]; then
     cat >configure-branches <<EOF
 # after editing, rerun configure
-illumos-live: master
+smartos-live: master
 illumos-extra: master
 illumos-joyent: master
 ur-agent: master

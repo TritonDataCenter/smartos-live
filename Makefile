@@ -10,8 +10,17 @@
 #
 
 #
-# Copyright (c) 2017, Joyent, Inc.
+# Copyright 2018 Joyent, Inc.
 #
+
+#
+# MG runs make check prior to ./configure, so allow build.env not to exist.
+#
+ifeq ($(MAKECMDGOALS),check)
+-include build.env
+else
+include build.env
+endif
 
 ROOT =		$(PWD)
 PROTO =		$(ROOT)/proto
@@ -118,7 +127,7 @@ TOOLS_TARGETS = \
 	$(UCODECHECK) \
 	tools/cryptpass
 
-world: 0-extra-stamp 0-illumos-stamp 1-extra-stamp 0-livesrc-stamp \
+world: 0-strap-stamp 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp \
 	0-local-stamp 0-tools-stamp 0-man-stamp 0-devpro-stamp \
 	$(TOOLS_TARGETS) sdcman
 
@@ -209,12 +218,12 @@ $(MCPROTO)/illumos.mancheck.conf: projects/illumos/mancheck.conf | $(MCPROTO)
 $(BOOT_MPROTO)/illumos.manifest: projects/illumos/manifest | $(BOOT_MPROTO)
 	cp projects/illumos/boot.manifest $(BOOT_MPROTO)/illumos.manifest
 
-$(MPROTO)/illumos-extra.manifest: 1-extra-stamp \
+$(MPROTO)/illumos-extra.manifest: 0-extra-stamp \
     projects/illumos-extra/manifest | $(MPROTO)
 	gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest \
 	    -C projects/illumos-extra manifest; \
 
-$(MCPROTO)/illumos-extra.mancheck.conf: FRC | 1-extra-stamp $(MCPROTO)
+$(MCPROTO)/illumos-extra.mancheck.conf: FRC | 0-extra-stamp $(MCPROTO)
 	gmake DESTDIR=$(MCPROTO) DESTNAME=illumos-extra.mancheck.conf \
 	    -C projects/illumos-extra mancheck_conf; \
 
@@ -254,7 +263,7 @@ $(BOOT_MANIFEST): $(BOOT_MANIFESTS)
 
 #
 # Update source code from parent repositories.  We do this for each local
-# project as well as for illumos, illumos-extra, and illumos-live via the
+# project as well as for illumos, illumos-extra, and smartos-live via the
 # update_base tool.
 #
 update: update-base $(LOCAL_SUBDIRS:%=%.update)
@@ -292,23 +301,29 @@ update-base:
 	    (cd projects/devpro && gmake DESTDIR=$(PROTO) install)
 	touch $@
 
-0-illumos-stamp: 0-extra-stamp
+0-illumos-stamp: 0-strap-stamp
+	@if [[ "$(ILLUMOS_CLOBBER)" = "yes" ]]; then \
+		(cd $(ROOT) && MAX_JOBS=$(MAX_JOBS) ./tools/clobber_illumos) \
+	fi
 	(cd $(ROOT) && MAX_JOBS=$(MAX_JOBS) ./tools/build_illumos)
 	touch $@
 
-0-extra-stamp:
-	(cd $(ROOT)/projects/illumos-extra && \
-	    gmake MAX_JOBS=$(MAX_JOBS) STRAP=strap DESTDIR=$(STRAP_PROTO) \
-	    install_strap)
-	(cd $(STRAP_PROTO) && gtar xzf $(ADJUNCT_TARBALL))
+FORCEARG_yes=-f
+
+# build our proto.strap area
+0-strap-stamp:
+	$(ROOT)/tools/build_strap -j $(MAX_JOBS) -d $(STRAP_PROTO) \
+	    -a $(ADJUNCT_TARBALL) $(FORCEARG_$(FORCE_STRAP_REBUILD))
 	touch $@
 
-1-extra-stamp: 0-illumos-stamp
+# additional illumos-extra content for proto itself
+0-extra-stamp: 0-illumos-stamp
 	(cd $(ROOT)/projects/illumos-extra && \
-	    gmake $(SUBDIR_DEFS) DESTDIR=$(PROTO) install)
+	    gmake $(SUBDIR_DEFS) DESTDIR=$(PROTO) \
+	    install)
 	touch $@
 
-0-livesrc-stamp: 0-illumos-stamp 0-extra-stamp 1-extra-stamp
+0-livesrc-stamp: 0-illumos-stamp 0-strap-stamp 0-extra-stamp
 	(cd $(ROOT)/src && \
 	    gmake -j$(MAX_JOBS) NATIVEDIR=$(STRAP_PROTO) \
 	    DESTDIR=$(PROTO) && \
@@ -380,7 +395,7 @@ clean:
 	done
 	(cd $(PKGSRC) && gmake clean)
 	(cd $(ROOT) && rm -rf $(PROTO))
-	(cd $(ROOT) && rm -rf $(STRAP_PROTO))
+	(cd $(ROOT) && [ -h $(STRAP_PROTO) ] || rm -rf $(STRAP_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(BOOT_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(IMAGES_PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO) \

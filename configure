@@ -42,6 +42,13 @@ function fatal
 	exit 1
 }
 
+function source_vars
+{
+	for file in "$(ls configure.*)"; do
+		source "$file" || fatal "failed to source $file"
+	done
+}
+
 function check_loc
 {
 	[[ "$(readlink -f "$PWD")" != "$(readlink -f "$conf_arg0_dir")" ]] && \
@@ -50,7 +57,7 @@ function check_loc
 	if [[ "$(uname -v)" =~ "joyent_" ]]; then
 		[[ "$(zonename)" == "global" ]] && fatal \
 		    "building in a GZ on SmartOS is not supported"
-	else	
+	else
 		echo "Not on SmartOS, assuming IPS and sudo"
 		conf_ips=1
 		conf_priv="sudo"
@@ -61,13 +68,6 @@ function create_projects
 {
 	local dir="projects"
 	[[ -d "$dir" ]] || mkdir -p "$dir" || fatal "failed to create $dir"
-}
-
-function source_vars
-{
-	for file in "$(ls configure.*)"; do
-		source "$file" || fatal "failed to source $file"
-	done
 }
 
 function install_pkgin
@@ -219,27 +219,43 @@ function fetch_closed
 
 function generate_env
 {
+	#
+	# Note: since a nightly clobber build removes the whole proto, and we're
+	# installing non-Illumos things there, we always use the -i option, and
+	# ILLUMOS_CLOBBER is handled separately in Makefile.
+	#
 	local nopts="-CimMNnt"
-	local lint debug lprefix
+	local lprefix
 
-	if [[ -n "$ILLUMOS_ENABLE_LINT" ]]; then
-		lint=1
-		debug=1
-	fi
+	[[ "$ILLUMOS_LINT" = "yes" ]] && nopts="${nopts}l"
 
-	if [[ "$ILLUMOS_ENABLE_DEBUG" == "exclusive" ]]; then
-		debug=2
-	elif [[ "$ILLUMOS_ENABLE_DEBUG" == "yes" ]]; then
-		debug=1
-	elif [[ "$ILLUMOS_ENABLE_DEBUG" == "no" ]]; then
-		debug=
-	elif [[ -n "$ILLUMOS_ENABLE_DEBUG" ]]; then
-		fatal "Unknown value for $ILLUMOS_ENABLE_DEBUG"
-	fi
+	case $ILLUMOS_ENABLE_DEBUG in
+	exclusive)
+		nopts="${nopts}DF" ;;
+	yes)
+		nopts="${nopts}D" ;;
+	no|"")
+		;;
+	*)
+		echo "unknown debug option $ILLUMOS_ENABLE_DEBUG" >&2
+		exit 2 ;;
+	esac
 
-	[[ -n "$lint" ]] && nopts="${nopts}l"
-	[[ "$debug" -eq 1 ]] && nopts="${nopts}D"
-	[[ "$debug" -eq 2 ]] && nopts="${nopts}DF"
+	GNUC_ROOT="$conf_root/proto.strap/usr/gcc/$PRIMARY_COMPILER_VER"
+	PRIMARY_CC="gcc$PRIMARY_COMPILER_VER,$GNUC_ROOT/bin/gcc,gnu"
+	PRIMARY_CCC="gcc$PRIMARY_COMPILER_VER,$GNUC_ROOT/bin/g++,gnu"
+
+	SHADOW_CCS=
+	SHADOW_CCCS=
+
+	IFS=,
+	for cc in $SHADOW_COMPILERS; do
+		gcc_ver=$(echo $cc | sed 's/^gcc//')
+		root="$conf_root/proto.strap/usr/gcc/$gcc_ver"
+		SHADOW_CCS+=" gcc${gcc_ver},$root/bin/gcc,gnu"
+		SHADOW_CCCS+=" gcc${gcc_ver},$root/bin/g++,gnu"
+	done
+	unset IFS
 
 	lprefix=$(echo $conf_root | tr / _)
 	[[ $? -eq 0 ]] || fatal "failed to create lock prefix"
@@ -283,20 +299,22 @@ PKGARCHIVE="\${CODEMGR_WS}/packages/\${MACH}/nightly";
 PKGPUBLISHER_REDIST="${PUBLISHER}";		export PKGPUBLISHER_REDIST
 MAKEFLAGS=k;					export MAKEFLAGS
 UT_NO_USAGE_TRACKING="1";			export UT_NO_USAGE_TRACKING
-CW_NO_SHADOW="1";				export CW_NO_SHADOW
 MULTI_PROTO="no";				export MULTI_PROTO
 BUILD_TOOLS="\${CODEMGR_WS}/usr/src/tools/proto/root_\${MACH}-nd/opt";
 						export BUILD_TOOLS
 SPRO_ROOT=/opt/SUNWspro;			export SPRO_ROOT
 SPRO_VROOT=\$SPRO_ROOT;				export SPRO_VROOT
 GNU_ROOT="$conf_root/proto.strap/usr/gnu"	export GNU_ROOT
-GCC_ROOT="$conf_root/proto.strap/usr/gcc/4";	export GCC_ROOT
-# A temporary hack to allow bootstrap of cw(1)
-CW_GCC_DIR="\${GCC_ROOT}/bin";			export CW_GCC_DIR
 # Use GCC as the primary compiler
 __GNUC="";					export __GNUC
-# Use GCC4 specific flags
+# Use GCC4 or later specific flags
 __GNUC4="";					export __GNUC4
+# root of \$PRIMARY_CC
+GNUC_ROOT="$GNUC_ROOT";				export GNUC_ROOT
+PRIMARY_CC="$PRIMARY_CC";			export PRIMARY_CC
+PRIMARY_CCC="$PRIMARY_CCC";			export PRIMARY_CCC
+SHADOW_CCS="$SHADOW_CCS";			export SHADOW_CCS
+SHADOW_CCCS="$SHADOW_CCCS";			export SHADOW_CCCS
 JAVA_ROOT=/opt/local/java/openjdk7;		export JAVA_ROOT
 FLEX=/opt/local/bin/flex;			export FLEX
 GNUXGETTEXT=/opt/local/bin/xgettext;		export GNUXGETTEXT
@@ -338,7 +356,7 @@ function update_git
 }
 
 function update_branches
-{	
+{
 	local line repo branch
 
 	[[ ! -f "configure-branches" ]] && return
@@ -357,18 +375,15 @@ function update_branches
 		    "missing repository entry in line: [$line]"
 		[[ -z "$branch" ]] && fatal \
 		    "missing branch entry in line: [$branch]"
-		
-		#
-		# Handle the legacy name of smartos-live
-		#
-		if [[ "$repo" == "smartos-live" || \
+
+		# Lots of "configure.smartos" out there with "illumos-live"
+		if [[ "$repo" == "smartos-live" ||
 		    "$repo" == "illumos-live" ]]; then
 			warn "configure-branches can't update smartos-live"
-			warn "ignoring and continuing on..."	
+			warn "ignoring and continuing on..."
 			continue
 		fi
-		if [[ "$repo" == "illumos-joyent" || \
-		    "$repo" == "illumos" ]]; then
+		if [[ "$repo" == "illumos-joyent" ]]; then
 			update_git "projects/illumos" $branch && continue
 		elif  [[ "$repo" == "smartos-overlay" ]]; then
 			update_git "overlay/smartos" $branch && continue
@@ -382,14 +397,91 @@ function update_branches
 	done < "configure-branches"
 }
 
+#
+# This construction lets us place a block of text verbatim into $usage.
+#
+read -r -d '' usage <<EOF
+./configure [options]:
+	-c
+		clobber Illumos before each build [default: no]
+	-d
+		build Illumos in DEBUG mode only [default: no]
+	-h
+		this message
+	-l
+		run lint pass on Illumos [default: no]
+	-p gcc4
+		primary compiler version [default: gcc4]
+	-r
+		full strap build (no cache) [default: no]
+	-s gcc6,gcc7
+		shadow compilers [default: none]
+EOF
+
+source_vars
+
+while getopts "cdhlp:rs:" arg; do
+	case $arg in
+	c)
+		ILLUMOS_CLOBBER=yes ;;
+
+	#
+	# We have only one proto area: we'll skip building non-debug here, as
+	# the results are over-written by nightly.  If the user really wants a
+	# sanity check build, they can specify =yes via the env var, or by
+	# directly editing illumos.sh.
+	#
+	d)
+		ILLUMOS_ENABLE_DEBUG=exclusive ;;
+	h)
+		echo "$usage"
+		exit 0 ;;
+	l)
+		ILLUMOS_LINT=yes ;;
+	p)
+		PRIMARY_COMPILER=$OPTARG
+		FORCE_STRAP_REBUILD=yes ;;
+	r)
+		FORCE_STRAP_REBUILD=yes ;;
+	s)
+		SHADOW_COMPILERS=$OPTARG
+		FORCE_STRAP_REBUILD=yes ;;
+	?)
+		echo "$usage" >&2
+		exit 2 ;;
+	esac
+done
+
+if [[ -n "$ILLUMOS_LINT" ]]; then
+	if [[ -z "$ILLUMOS_ENABLE_DEBUG" ]]; then
+		ILLUMOS_ENABLE_DEBUG=yes
+	fi
+else
+	ILLUMOS_LINT=no
+fi
+
+[[ -n "$ILLUMOS_ENABLE_DEBUG" ]] || ILLUMOS_ENABLE_DEBUG=no
+[[ -n "$ILLUMOS_CLOBBER" ]] || ILLUMOS_CLOBBER=no
+[[ -n "$PRIMARY_COMPILER" ]] || PRIMARY_COMPILER=gcc4
+
+PRIMARY_COMPILER_VER=$(echo $PRIMARY_COMPILER | sed 's/^gcc//')
+
+cat >build.env <<EOF
+FORCE_STRAP_REBUILD=$FORCE_STRAP_REBUILD
+ILLUMOS_CLOBBER=$ILLUMOS_CLOBBER
+ILLUMOS_ENABLE_DEBUG=$ILLUMOS_ENABLE_DEBUG
+ILLUMOS_LINT=$ILLUMOS_LINT
+PRIMARY_COMPILER=$PRIMARY_COMPILER
+PRIMARY_COMPILER_VER=$PRIMARY_COMPILER_VER
+SHADOW_COMPILERS=$SHADOW_COMPILERS
+EOF
+
 echo "Doing pre-flight checks... \c "
 check_loc
 echo "done."
 echo "Creating projects directory ... \c "
 create_projects
 echo "done."
-echo "Sourcing configure.* files ... \c "
-source_vars
 echo "done."
 echo "Installing packages ... \c "
 install_packages

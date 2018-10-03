@@ -340,12 +340,11 @@ clean : TARGET = clean
 install : TARGET = install
 check : TARGET = lint
 
-$(SUBDIRS): FRC
-	@cd $@; pwd; $(MAKE) $(SUBDIRS_ENV) $(TARGET)
-
-
 all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm sysevent \
 	$(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) $(SUBDIRS)
+
+$(SUBDIRS): FRC
+	@cd $@; pwd; $(MAKE) $(SUBDIRS_ENV) $(TARGET)
 
 install: all $(SUBDIRS)
 	mkdir -p $(DESTDIR)/usr/bin

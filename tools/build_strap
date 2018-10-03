@@ -1,0 +1,202 @@
+#!/usr/bin/bash
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+# Copyright 2018 Joyent, Inc.
+#
+
+#
+# build_strap - populate proto.strap
+#
+# This script attempts to download a pre-built proto.strap, depending on the
+# pkgsrc branch and projects/illumos-extra git HEAD to determine the right
+# tarball.  This avoids a considerable amount of time building.
+#
+# Cached bootstrap directories are kept at /opt/SmartOS/build-cache, and
+# symlinked into the build area; this allows multiple different builds to share
+# a cached strap dir.
+#
+# If we can't find a suitable tarball, or we find a non-symlinked proto.strap,
+# we'll fall back to doing a full strap build of illumos-extra.  This is also
+# true if the user specified non-default compilers.
+#
+
+usage="$0 -a adjunct.tar -d protodir [-f] [-j maxjobs]"
+wsroot=$(cd $(dirname $0)/../; pwd)
+pkgin_file="/opt/local/etc/pkgin/repositories.conf"
+manta_base="https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/build-cache/proto.strap/"
+cache_base="/opt/SmartOS/build-cache/"
+srcdir="$wsroot/projects/illumos-extra"
+adjunct=""
+protodir=""
+max_jobs="128"
+force_build="no"
+
+function fatal
+{
+        local msg="$*"
+        [[ -z "$msg" ]] && msg="failed"
+        echo "$msg" >&2
+        exit 1
+}
+
+function verbose
+{
+	echo "$@"
+	"$@"
+}
+
+function identify_pkgsrc_branch
+{
+	local branch=$($wsroot/tools/pkgsrc_branch.nawk "$pkgin_file")
+	[[ $? -ne 0 ]] && fatal "failed to extract pkgsrc branch"
+	[[ -z "$branch" ]] && fatal "pkgsrc branch is empty"
+	echo $branch
+}
+
+function identify_srcsha
+{
+	local sha=$(cd $srcdir && git rev-list -1 HEAD)
+	[[ $? -ne 0 ]] && fatal "failed to extract illumos-extra SHA"
+	[[ -z "$sha" ]] && fatal "illumos-extra SHA is empty"
+	echo $sha
+}
+
+function build_strap
+{
+	echo "Building illumos-extra bootstrap"
+
+	verbose gmake STRAP=strap MAX_JOBS=$max_jobs DESTDIR=$protodir \
+	    -C $wsroot/projects/illumos-extra install_strap ||
+	    fatal "failed to build install_strap"
+
+	verbose gtar xzf $adjunct -C "$protodir" ||
+	    fatal "failed to extract adjunct"
+}
+
+#
+# Download a copy of the proto.strap we need, if there is one. If curl fails,
+# we'll presume it's because there isn't a matching tarball available, and fall
+# back to building locally.
+#
+function download
+{
+	local pkgsrc_branch=$1
+	local srcdirsha=$2
+	local cache_dir="$cache_base/$pkgsrc_branch/$srcdirsha"
+	local outfile="/var/tmp/$srcdirsha.proto.strap.tgz.$$"
+	local url="$manta_base/$pkgsrc_branch/$srcdirsha/proto.strap.tgz"
+	local tmpdir="$cache_dir.$$"
+
+	pfexec mkdir -p "$tmpdir" || fatal "failed to make $cache_dir"
+
+	echo "Downloading proto.strap contents from $url ..."
+
+	if ! curl -f -o "$outfile" "$url"; then
+		rm -f "$outfile"
+		pfexec rm -rf "$tmpdir"
+		echo "Failed to download $url: building locally"
+		build_strap
+		return 0
+	fi
+
+	if ! pfexec tar xzf "$outfile" -C "$tmpdir"; then
+		rm -f "$outfile"
+		pfexec rm -rf "$tmpdir"
+		fatal "failed to extract tar file"
+	fi
+
+	rm -f "$outfile"
+
+	if ! pfexec mv "$tmpdir" "$cache_dir"; then
+		#
+		# It's possible we lost a rename race. If we did, then let's not
+		# worry about that and roll with it and just remove our download
+		# and copy. However, we need to remove our local copy anyway.
+		#
+		pfexec rm -rf "$tmpdir"
+		if [[ ! -d "$cache_dir" ]]; then
+			fatal "failed to rename our temporary directory to " \
+			    "$cache_dir"
+		fi
+	fi
+}
+
+#
+# Populate proto.strap: either we do a local build, or we download and use a
+# cached copy, sym-linking it in.
+#
+function populate_strap
+{
+	local pkgsrc_branch=$1
+	local srcdirsha=$2
+	local cache_dir="$cache_base/$pkgsrc_branch/$srcdirsha"
+
+	if [[ -e "$cache_dir" && ! -d "$cache_dir" ]]; then
+		fatal "found weird non-directory $cache_dir"
+	fi
+
+	#
+	# First we should clean up: if not a symlink or empty dir, it must be a
+	# local strap build we need.
+	#
+	if [[ -d "$protodir" ]];then
+		rm "$protodir" 2>/dev/null
+		rmdir "$protodir" 2>/dev/null
+		if [[ -d "$protodir" ]]; then
+			build_strap
+			return 0
+		fi
+	fi
+
+	if [[ "$force_build" = "yes" ]]; then
+		build_strap
+		return 0
+	fi
+
+	if [[ ! -d "$cache_dir" ]]; then
+		download $pkgsrc_branch $srcdirsha
+	fi
+
+	verbose ln -s "$cache_dir" "$protodir" ||
+	    fatal "failed to symlink $protodir"
+
+}
+
+export PATH=/usr/bin:/usr/sbin:/sbin:/opt/local/bin:/opt/local/sbin
+set -o pipefail
+
+while getopts "a:d:fhj:" arg; do
+	case $arg in
+	a)
+		adjunct=$OPTARG ;;
+	d)
+		protodir=$OPTARG ;;
+	f)
+		force_build=yes ;;
+	h)
+		echo "$usage"
+		exit 0 ;;
+	j)
+		max_jobs=$OPTARG ;;
+	?)
+		echo "$usage" >&2
+		exit 1 ;;
+	esac
+done
+
+[[ -n "$adjunct" ]] || fatal "missing -a argument"
+[[ -n "$protodir" ]] || fatal "missing -d argument"
+[[ -d "$srcdir" ]] || fatal "cannot find illumos-extra in $srcdir"
+[[ -d "$srcdir/.git" ]] || fatal "$srcdir is not a git repo"
+
+populate_strap $(identify_pkgsrc_branch) $(identify_srcsha)
+
+exit 0

@@ -1,8 +1,10 @@
-// Copyright 2016 Joyent, Inc.  All rights reserved.
+// Copyright 2018 Joyent, Inc.  All rights reserved.
 
 var async = require('/usr/node/node_modules/async');
+var common = require('./common');
 var cp = require('child_process');
 var execFile = cp.execFile;
+var f = require('util').format;
 var fs = require('fs');
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
@@ -421,7 +423,7 @@ test('delete docker VM', function (t) {
     }
 });
 
-test('test zfs reprovision properties', function (t) {
+test('test zfs reprovision default properties', function (t) {
     var p = JSON.parse(JSON.stringify(payload_test_zfs_on_reprovision));
     var state = {brand: p.brand};
     var _vmobj;
@@ -454,5 +456,92 @@ test('test zfs reprovision properties', function (t) {
                 cb);
         }
     ]);
+});
 
+test('test zfs reprovision custom properties', function (t) {
+    var p = JSON.parse(JSON.stringify(payload_test_zfs_on_reprovision));
+    var state = {
+        brand: p.brand
+    };
+    var zfsArgs = [
+        'get',
+        '-Hpo',
+        'value',
+        'compression',
+        'zones'
+    ];
+    var algorithmToUse;
+
+    // Figure out the current compression algorithm set for 'zones'
+    common.zfs(zfsArgs, function (zfsErr, out) {
+        common.ifError(t, zfsErr, 'zfs get compression');
+        if (zfsErr) {
+            t.done();
+            return;
+        }
+
+        /*
+         * We want to use an algorithm here that is different than what 'zones'
+         * (the parent dataset) is currently set to use.  The algorithm we use
+         * here doesn't really matter, we just want something other than what
+         * will be inherited by default.
+         *
+         * ZFS also has the notion of a "default compression algorithm" if the
+         * property is set to 'on'.  The VM JSON payload however, does not know
+         * this and will still consider "on" to be a different property than
+         * whatever the default algorithm according to ZFS happens to be (could
+         * be "lzib", or even "lz4").
+         *
+         * To make things even more confusing, `proptable.js` has a default
+         * value set for `zfs_root_compression` (currently set to "off").  This
+         * means setting the property to "off" will result in the property being
+         * removed from the VM JSON payload.
+         *
+         * With all of this knowledge, we avoid manually setting the
+         * `zfs_root_compression` property on the JSON payload to "off", and we
+         * also ensure it is set to something that is different than what the
+         * 'zones' dataset is currently set to.
+         */
+        var alg = out.trim();
+        switch (alg) {
+        case 'gzip':
+            algorithmToUse = 'lz4';
+            break;
+        default:
+            algorithmToUse = 'gzip';
+            break;
+        }
+
+        t.ok(true, f('zones compression: %j, using for vm: %j',
+            alg, algorithmToUse));
+
+        p.zfs_root_compression = algorithmToUse;
+
+        vmtest.on_new_vm(t, p.image_uuid, p, state, [
+            function (cb) {
+                VM.load(state.uuid, {}, function (err, obj) {
+                    common.ifError(t, err, 'reload VM after create');
+
+                    cb(err);
+                });
+            }, function (cb) {
+                VM.reprovision(state.uuid, {image_uuid: p.image_uuid},
+                    function (err) {
+                        common.ifError(t, err, 'reprovision VM');
+
+                        cb(err);
+                    }
+                );
+            }, function (cb) {
+                VM.load(state.uuid, {}, function (err, obj) {
+                    common.ifError(t, err, 'reload VM after reprovision');
+
+                    t.equal(obj.zfs_root_compression, algorithmToUse,
+                        'zfs_root_compression set properly');
+
+                    cb(err);
+                });
+            }
+        ]);
+    });
 });

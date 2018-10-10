@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright (c) 2017, Joyent, Inc.
+# Copyright (c) 2018, Joyent, Inc.
 #
 
 ROOT =		$(PWD)
@@ -153,11 +153,10 @@ $(BOOT_TARBALL): world manifest
 #
 images: $(IMAGES_SIZES_GB:%=$(IMAGES_PROTO)/%gb.img)
 
-$(IMAGES_PROTO)/%.img: boot tools/images/%.fdisk tools/images/make_image
+$(IMAGES_PROTO)/%.img: boot tools/images/%.fdisk 
 	rm -f $@
 	mkdir -p $(IMAGES_PROTO)
-	./tools/images/make_image -s $* -G $(ROOT)/proto \
-	    -F tools/images/$*.fdisk $@
+	./tools/build_image -p $* -r $(ROOT)
 
 images-tar: $(IMAGES_TARBALL)
 
@@ -396,10 +395,10 @@ clobber: clean
 	pfexec rm -rf output/* output-iso/* output-usb/*
  
 iso: live
-	./tools/build_iso
+	./tools/build_image -I -r $(ROOT)
 
 usb: live
-	./tools/build_usb
+	./tools/build_image -r $(ROOT)
 
 FRC:
 

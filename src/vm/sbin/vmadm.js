@@ -94,6 +94,7 @@ var LIST_FIELDS = {
     exit_timestamp: {header: 'EXIT_TIMESTAMP', width: 24},
     firewall_enabled: {header: 'FIREWALL_ENABLED', width: 16},
     hostname: {header: 'HOSTNAME', width: 32},
+    hvm: {header: 'HVM', width: 5},
     image_uuid: {header: 'IMAGE_UUID', width: 36},
     indestructible_delegated: {header: 'INDESTR_DATA', width: 12},
     indestructible_zoneroot: {header: 'INDESTR_ROOT', width: 12},

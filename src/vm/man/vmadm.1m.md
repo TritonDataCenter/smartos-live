@@ -1108,6 +1108,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (but does nothing for OS VMs)
         default: the value of zonename
 
+    hvm:
+
+        A boolean that depicts whether or not the VM is hardware virtualized.
+        This property is computed based on the "brand" property and is not
+        modifiable.
+
+        type: boolean
+        vmtype: ANY
+        listable: yes
+        create: no
+        update: no
+
     image_uuid:
 
         This should be a UUID identifying the image for the VM if a VM was

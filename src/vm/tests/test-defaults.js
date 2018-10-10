@@ -57,6 +57,7 @@ var zone_defaults = {
     do_not_inventory: [true],
     firewall_enabled: [false],
     headnode_id: ['<OPTIONAL-NON-EMPTY>'],
+    hvm: [false],
     image_uuid: [image_uuid],
     internal_metadata: ['<EMPTY-OBJ>'],
     last_modified: ['<NON-EMPTY>'],
@@ -102,6 +103,7 @@ var kvm_defaults = {
     billing_id: ['00000000-0000-0000-0000-000000000000'],
     brand: ['kvm'],
     disks: ['<EMPTY-ARRAY>'],
+    hvm: [true],
     /* JSSTYLED */
     limit_priv: ['default,-file_link_any,-net_access,-proc_fork,-proc_info,-proc_session'],
     max_physical_memory: [1280],

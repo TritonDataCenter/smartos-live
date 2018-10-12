@@ -61,9 +61,12 @@ function fail
 
 function usage
 {
-	print -u2 "Usage: build-usb.sh [-U] [-x] [-p 1g|2g|4g|8g] -r <smartos-live repo>"
-	print -u2 "\n -U\tcreate UFS filesystem on root partition (default: PCFS)\n"
-	print -u2 " -p\tbuild proforma USB image for Triton (1, 2, 4 or 8GB)"
+	[[ ! -z $1 ]] && printf "%s\n\n" "$1" 1>&2
+
+	print -u2 "Usage: build-usb.sh [-U] [-I] [-x] [-p <size>] -r <smartos-live repo>"
+	print -u2 "\n -U\tcreate UFS filesystem on root partition (default: PCFS)"
+	print -u2 " -I\tbuild SmartOS ISO image (default: USB image)"
+	print -u2 " -p\tbuild proforma USB image for Triton"
 	print -u2 " -x\tdon't cleanup on exit (for debugging use)\n"
 	exit 2
 }
@@ -91,7 +94,6 @@ while getopts "IUp:r:x" c $@; do
 		bi_make_iso=1
 		;;
 	p)
-		[[ -z $OPTARG ]] && usage
 		bi_proforma_only=1
 		bi_imgsz=$OPTARG
 		;;
@@ -113,10 +115,13 @@ done
 
 [[ $bi_make_iso == 1 ]] && fail "ISO support not implemented, yet"
 
-[[ -z $bi_wsroot ]] && fail "-r is required"
+[[ -z $bi_wsroot ]] && usage "-r is required"
 
 [[ $bi_proforma_only == 1 ]] && [[ $bi_ufs_root == 1 ]] && \
-	fail "-p and -U are mutually exclusive"
+	usage "-p and -U are mutually exclusive"
+
+[[ $bi_proforma_only == 1 ]] && [[ $bi_make_iso == 1 ]] && \
+	usage "-p and -I are mutually exclusive"
 
 [[ -e $bi_wsroot/output/platform-latest ]] || \
 	fail "No platform image found in $bi_wsroot/output"
@@ -236,9 +241,10 @@ print "done"
 # If we're only building a proforma image for Triton, then we're done.
 #
 if [[ $bi_proforma_only == 1 ]]; then
-	pfrun mv $tmpdir/smartos.usb $bi_wsroot/proto.images/${bi_imgsz}gb.img
-	pfrun chmod 444 $bi_wsroot/proto.images/${bi_imgsz}.img
-	print "Successfully created proforma image: $bi_wsroot/proto.images/${bi_imgsz}.img"
+	pfrun mkdir -p $bi_wsroot/proto.images
+	pfrun mv $tmpdir/smartos.usb $bi_wsroot/proto.images/${bi_imgsz}b.img
+	pfrun chmod 444 $bi_wsroot/proto.images/${bi_imgsz}b.img
+	print "Successfully created proforma image: $bi_wsroot/proto.images/${bi_imgsz}b.img"
 	exit 0
 fi
 

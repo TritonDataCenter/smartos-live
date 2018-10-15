@@ -1,4 +1,5 @@
 f .smartdc_version 0444 root root
+f boot/forth/menu.rc 0444 root root
 d etc/bash 0755 root sys
 f etc/bash/bash_completion 0644 root sys
 d etc/bash/bash_completion.d 0755 root sys

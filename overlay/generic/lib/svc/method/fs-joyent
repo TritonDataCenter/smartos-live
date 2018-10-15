@@ -290,57 +290,40 @@ if [[ -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
 fi
 
 # First thing to do is to mount the USB key / VMWare disk
-USBKEYS=`/usr/bin/disklist -a`
-for key in ${USBKEYS}; do
-    if [[ `/usr/sbin/fstyp /dev/dsk/${key}p0:1` == 'pcfs' ]]; then
-        /usr/sbin/mount -F pcfs -o foldcase,noatime /dev/dsk/${key}p0:1 \
-            ${USBMOUNTPOINT};
-        if [[ $? == "0" ]]; then
-            if [[ ! -f ${USBMOUNTPOINT}/.joyliveusb ]]; then
-                if [[ ${DEBUG} == "true" ]]; then
-                    mount_usb_msg="${mount_usb_msg}\n[debug] didn't find ${USBMOUNTPOINT}/.joyliveusb on pcfs /dev/dsk/${key}p0:1"
-                fi
-                /usr/sbin/umount ${USBMOUNTPOINT};
-            else
-                if [[ ${DEBUG} == "true" ]]; then
-                    mount_usb_msg="${mount_usb_msg}\n[debug] found ${USBMOUNTPOINT}/.joyliveusb on pcfs /dev/dsk/${key}p0:1"
-                fi
-                break;
-            fi
-        elif [[ ${DEBUG} == "true" ]]; then
-            mount_usb_msg="${mount_usb_msg}\n[debug] mount failed for pcfs /dev/dsk/${key}p0:1"
-        fi
-    elif [[ ${DEBUG} == "true" ]]; then
-        mount_usb_msg="${mount_usb_msg}\n[debug] /dev/dsk/${key}p0:1 is not pcfs"
-    fi
-done
+readonly alldisks=$(/usr/bin/disklist -a)
+readonly partitions=("p0:1" "p1" "s2")
 
-if [[ ! -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
-    # we're probably VMWare, so we're looking at a non-USB disk.
-    for disk in `/usr/bin/disklist -a`; do
-        if [[ `/usr/sbin/fstyp /dev/dsk/${disk}p1` == 'pcfs' ]]; then
-            /usr/sbin/mount -F pcfs -o foldcase,noatime /dev/dsk/${disk}p1 \
-                ${USBMOUNTPOINT};
+for disk in ${alldisks}; do
+    for part in ${partitions[@]}; do
+        devpath="/dev/dsk/${disk}${part}"
+        if [[ `/usr/sbin/fstyp $devpath` == 'pcfs' ]]; then
+            /usr/sbin/mount -F pcfs -o foldcase,noatime $devpath \
+              ${USBMOUNTPOINT};
             if [[ $? == "0" ]]; then
                 if [[ ! -f ${USBMOUNTPOINT}/.joyliveusb ]]; then
                     if [[ ${DEBUG} == "true" ]]; then
-                        mount_usb_msg="${mount_usb_msg}\n[debug] didn't find ${USBMOUNTPOINT}/.joyliveusb on pcfs /dev/dsk/${disk}p1"
+                        mount_usb_msg="${mount_usb_msg}\n[debug] didn't find 
+		          ${USBMOUNTPOINT}/.joyliveusb on pcfs $devpath"
                     fi
                     /usr/sbin/umount ${USBMOUNTPOINT};
                 else
                     if [[ ${DEBUG} == "true" ]]; then
-                        mount_usb_msg="${mount_usb_msg}\n[debug] found ${USBMOUNTPOINT}/.joyliveusb on pcfs /dev/dsk/${disk}p1"
+                        mount_usb_msg="${mount_usb_msg}\n[debug] found 
+		          ${USBMOUNTPOINT}/.joyliveusb on pcfs $devpath"
                     fi
+		    found_key=1
                     break;
                 fi
             elif [[ ${DEBUG} == "true" ]]; then
-                mount_usb_msg="${mount_usb_msg}\n[debug] unable to mount /dev/dsk/${disk}p1"
+                mount_usb_msg="${mount_usb_msg}\n[debug] mount failed for 
+	          pcfs $devpath"
             fi
         elif [[ ${DEBUG} == "true" ]]; then
-            mount_usb_msg="${mount_usb_msg}\n[debug] /dev/dsk/${disk}p1 is not pcfs"
+            mount_usb_msg="${mount_usb_msg}\n[debug] $devpath is not pcfs"
         fi
     done
-fi
+    [[ $found_key == 1 ]] && break
+done
 
 if [[ -f "${USBMOUNTPOINT}/.joyliveusb" ]]; then
     mount_usb_msg="success"

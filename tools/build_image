@@ -229,7 +229,7 @@ print "done"
 if [[ $bi_ufs_root == 1 ]]; then
 	print "Creating UFS filesystem in root partition ...\c"
 	pfexec newfs $lofi_raws2 < /dev/null
-	mntopts="-o lologging"
+	mntopts="-o nologging"
 else
 	print "Creating PCFS filesystem in root partition ...\c"
 	pfrun mkfs -F pcfs -o b=SMARTOSBOOT,fat=32 $lofi_raws2 < /dev/null
@@ -290,6 +290,7 @@ pfrun cp -rp $bi_wsroot/output/platform-latest $rootmnt/platform
 print "done"
 
 
+pfrun mkdir -p $bi_wsroot/output-usb
 pfrun mv $tmpdir/smartos.usb $bi_wsroot/output-usb/$usb_image_name
 pfrun chmod 644 $bi_wsroot/output-usb/$usb_image_name
 

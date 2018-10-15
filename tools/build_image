@@ -159,8 +159,13 @@ readonly tmp_pool=build-usb-$$
 
 #
 # We're not actually trying to create a ZFS pool.  We're just leveraging the
-# ability of zpool(1m) to create the EFI system partion and legacy boot slice
-# for us.
+# ability of zpool(1m) to create the initial GPT partition table.  This results
+# in a VTOC that looks like this:
+#
+# Partition  Tag        Size 
+#      0     efi        34 MB
+#      1     usr        sizeof disk - 42MB 
+#      8     reserved    8 MB
 #
 print "Creating GUID Partition Table ...\c"
 pfrun zpool create -B -o bootsize=34M $tmp_pool $lofi_disk
@@ -170,7 +175,15 @@ print "done"
 
 #
 # This nawk bit was shamelessly taken from usr/src/cmd/install-tools/usbgen in
-# the OpenIndiana/slim_source git repo
+# the OpenIndiana/slim_source git repo.  It transforms the above VTOC to add
+# the 1 MB boot slide that's used to hold the stage2 loader for legacy BIOS
+# boot (gptzfsboot).  The final VTOC should look roughly like this:
+#
+# Partition  Tag        Size 
+#      0     efi        34 MB
+#      1     boot        1 MB
+#      2     root       sizeof disk - 43MB 
+#      8     reserved    8 MB
 #
 print "Partitioning $lofi_raws2 ..."
 pfexec prtvtoc "${lofi_raws2}" | nawk '

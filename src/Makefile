@@ -109,6 +109,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-create.js \
 	vm/tests/test-defaults.js \
 	vm/tests/test-docker.js \
+	vm/tests/test-firewall.js \
 	vm/tests/test-fswatcher.js \
 	vm/tests/test-hrtime.js \
 	vm/tests/test-indestructible.js \

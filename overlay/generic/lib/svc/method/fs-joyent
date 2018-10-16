@@ -291,6 +291,13 @@ fi
 
 # First thing to do is to mount the USB key / VMWare disk
 readonly alldisks=$(/usr/bin/disklist -a)
+#
+# Older MBR/GRUB-based USB keys will have a single primary partition containing
+# the root filesystem.  Newer, GPT/Loader-based USB keys will have multiple
+# slices with the root partition at slice 2.  We don't currently have a good
+# way of knowing in advance which style of USB key we're dealing with, so we
+# search for both possibilities.
+#
 readonly partitions=("p0:1" "p1" "s2")
 
 for disk in ${alldisks}; do

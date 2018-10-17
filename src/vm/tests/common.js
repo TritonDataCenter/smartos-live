@@ -28,6 +28,7 @@ var f = require('util').format;
 var cp = require('child_process');
 
 var assert = require('/usr/node/node_modules/assert-plus');
+var jsprim = require('/usr/vm/node_modules/jsprim');
 
 function vmadm(args, opts, callback) {
     assert.arrayOfString(args, 'args');
@@ -75,14 +76,29 @@ function vmadm(args, opts, callback) {
     });
 }
 
-function zfs(args, callback) {
+/*
+ * Wrapper for `cp.execFile` that will:
+ *
+ * 1. Use `utf-8` as the default encoding for output.
+ * 2. Callback with an error if any stderr is generated.
+ * 3. Take command and arguments as a single argument.
+ *
+ * Example:
+ *
+ * exec(['ls', '-lha'], function (err, stdout) {
+ * });
+ */
+function exec(args, callback) {
     assert.arrayOfString(args, 'args');
     assert.func(callback, 'callback');
 
+    args = jsprim.deepCopy(args);
+
+    var cmd = args.shift();
     var opts = {
         encoding: 'utf8'
     };
-    cp.execFile('/usr/sbin/zfs', args, opts, function (err, stdout, stderr) {
+    cp.execFile(cmd, args, opts, function (err, stdout, stderr) {
         if (err) {
             callback(err);
             return;
@@ -95,6 +111,22 @@ function zfs(args, callback) {
 
         callback(null, stdout);
     });
+}
+
+/*
+ * Call zfs with arguments (same output as `exec` above), example:
+ *
+ * zfs(['list', '-Hp'], function (err, stdout) {
+ * });
+ */
+function zfs(args, callback) {
+    assert.arrayOfString(args, 'args');
+    assert.func(callback, 'callback');
+
+    args = jsprim.deepCopy(args);
+    args.unshift('/usr/sbin/zfs');
+
+    exec(args, callback);
 }
 
 /*
@@ -125,5 +157,6 @@ function ifError(t, err, msg) {
 module.exports = {
     ifError: ifError,
     vmadm: vmadm,
+    exec: exec,
     zfs: zfs
 };

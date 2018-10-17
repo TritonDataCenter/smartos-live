@@ -122,6 +122,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-send-recv.js \
 	vm/tests/test-snapshots.js \
 	vm/tests/test-spoof-opts.js \
+	vm/tests/test-sysinfo.js \
 	vm/tests/test-tmpfs.js \
 	vm/tests/test-update.js \
 	vm/tests/test-vrrp-nics.js \

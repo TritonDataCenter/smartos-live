@@ -85,8 +85,8 @@ test('create joyent-minimal VM with delegated dataset', function (t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                common.ifError(t, err, 'loading VM after create');
-                if (!err) {
+                common.ifError(t, e, 'loading VM after create');
+                if (!e) {
                     t.ok(o.snapshots.length === 0, 'no snapshots after create');
                     t.ok(o.hasOwnProperty('zfs_filesystem'),
                         'has zfs_filesystem');
@@ -1142,6 +1142,90 @@ test('rollback to garbage snapshot, try mdata-get again', function (t) {
                 });
             });
         });
+    });
+});
+
+test('modify tags and rollback', function (t) {
+    t.ok(vmobj, 'have vmobj');
+
+    if (!vmobj) {
+        t.end();
+        return;
+    }
+
+    var firstTags = {
+        foo: 1
+    };
+    var secondTags = {
+        foo: 2
+    };
+
+    vasync.pipeline({funcs: [
+        // Set the initial tags
+        function (_, cb) {
+            VM.update(vmobj.uuid, {set_tags: firstTags}, function (err) {
+                common.ifError(t, err, 'VM.update first tags');
+                cb(err);
+            });
+        },
+
+        // Ensure the first set worked
+        function (_, cb) {
+            VM.load(vmobj.uuid, function (err, o) {
+                common.ifError(t, err, 'loading VM after update first tags');
+                t.deepEqual(o.tags, firstTags, 'first tags are correct');
+                cb(err);
+            });
+        },
+
+        // Create a snapshot
+        function (_, cb) {
+            VM.create_snapshot(vmobj.uuid, 'initial-tags-snap', {},
+                function (err) {
+
+                common.ifError(t, err, 'VM.create_snapshot initial-tags-snap');
+                cb(err);
+            });
+        },
+
+        // Set the second set of tags
+        function (_, cb) {
+            VM.update(vmobj.uuid, {set_tags: secondTags}, function (err) {
+                common.ifError(t, err, 'VM.update second tags');
+                cb(err);
+            });
+        },
+
+        // Ensure the second tags set worked
+        function (_, cb) {
+            VM.load(vmobj.uuid, function (err, o) {
+                common.ifError(t, err, 'loading VM after update second tags');
+                t.deepEqual(o.tags, secondTags, 'second tags are correct');
+                cb(err);
+            });
+        },
+
+        // Rollback the VM
+        function (_, cb) {
+            VM.rollback_snapshot(vmobj.uuid, 'initial-tags-snap', {},
+                function (err) {
+
+                common.ifError(t, err, 'VM.rollback initial-tags-snap');
+                cb(err);
+            });
+        },
+
+        // Ensure the tags have now reverted to the first set
+        function (_, cb) {
+            VM.load(vmobj.uuid, function (err, o) {
+                common.ifError(t, err, 'loading VM after rollback');
+                t.deepEqual(o.tags, firstTags, 'rollback tags are correct');
+                cb(err);
+            });
+        }
+    ]}, function (err) {
+        common.ifError(t, err, 'test modify tags and rollback');
+        t.end();
     });
 });
 

@@ -118,8 +118,6 @@ f smartdc/vm-upgrade/001_upgrade 0555 root bin
 f usr/bin/json 0555 root bin
 f usr/include/usb.h 0444 root bin
 d usr/lib/brand 0755 root bin
-d usr/lib/brand/bhyve 0755 root bin
-f usr/lib/brand/bhyve/statechange 0444 root root
 d usr/lib/brand/jcommon 0755 root bin
 f usr/lib/brand/jcommon/cattach 0444 root root
 f usr/lib/brand/jcommon/cdetach 0444 root root

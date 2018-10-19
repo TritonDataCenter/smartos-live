@@ -979,6 +979,32 @@ function (t) {
     });
 });
 
+test('delete stopped joyent-minimal VM', function (t) {
+
+    if (abort) {
+        t.ok(false, 'skipping send as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    if (vmobj.uuid) {
+        VM.delete(vmobj.uuid, function (err) {
+            if (err) {
+                t.ok(false, 'error deleting VM: ' + err.message);
+                abort = true;
+            } else {
+                t.ok(true, 'deleted VM: ' + vmobj.uuid);
+            }
+            t.end();
+            vmobj = {};
+        });
+    } else {
+        t.ok(false, 'no VM to delete');
+        abort = true;
+        t.end();
+    }
+});
+
 test('create joyent-minimal VM to test metadata through rollback',
 function (t) {
     var payload = {

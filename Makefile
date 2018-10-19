@@ -320,6 +320,7 @@ update-base:
 
 0-tools-stamp: 0-pwgen-stamp
 	(cd $(ROOT)/tools/builder && gmake builder)
+	(cd $(ROOT)/tools/format_image && gmake)
 	touch $@
 
 0-pwgen-stamp:
@@ -385,6 +386,8 @@ clean:
 	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO) \
 	    $(IMAGES_PROTO))
 	rm -f tools/cryptpass
+	(cd tools/builder && gmake clean)
+	(cd tools/format_image && gmake clean)
 	(cd tools/mancheck && gmake clean)
 	(cd tools/mancf && gmake clean)
 	(cd tools/tzcheck && gmake clean)

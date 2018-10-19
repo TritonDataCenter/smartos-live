@@ -17,53 +17,88 @@
 #
 # This script automates the process of building ISO and USB images of a SmartOS
 # build.  It can also be used to produce the proforma disk images used by the
-# tools in sdc-headnodegit to produce Triton USB and Coal images.  When
+# tools in sdc-headnode.git to produce Triton USB and COAL images.  When
 # building SmartOS media, it uses the latest platform file that's been built.
-# This program can be invoked standalone of via the "gmake iso", "gmake usb"
-# and "gmake images" targets of the top-level Makefile in "smartos-live.git".
-#
+# This program can be invoked standalone via the "gmake iso", "gmake usb" and
+# "gmake images" targets of the top-level Makefile in "smartos-live.git".
 #
 # This script needs to be run either as root or as a user that is granted the
-# "Primary Administator" profile.  When run in a local zone, the local zone
-# by be configured with "fs_allowed=ufs,pcfs"
+# "Primary Administator" profile.  When run in a non-global zone, it must be
+# configured with "fs_allowed=ufs,pcfs"
+#
+# Things are complicated here by the fact that we would like to run inside a
+# non-global with older kernels.  Most of our partitioning tools such as format
+# do not run well inside a non-global zone, and non-labeled lofi doesn't have
+# sufficient support either.  So we delegate the tricky bits to format_image.
 #
 
-function cleanup
+bi_make_iso=0
+bi_proforma_only=0
+bi_ufs_root=0
+bi_nocleanup=0
+bi_imgsz="512m"
+lofi_blkdev=
+lofi_rawdev=
+esp_blkdev=
+usb_image_name=
+platver=
+rootmnt=
+efimnt=
+tmpdir=
+
+function detach_lofi()
+{
+	local readonly dev=$1
+
+	if [[ -z "$dev" ]]; then
+		return
+	fi
+
+	if pfexec lofiadm $dev 2>/dev/null; then
+		print "Detaching LOFI device $dev ... \c"
+		pfexec lofiadm -d $dev
+		print "done"
+	fi
+}
+
+function cleanup()
 {
 	[[ $bi_nocleanup == 1 ]] && return
 
 	print "Cleaning up"
-	mount | grep $lofi_blks0 > /dev/null
-	[[ $? == 0 ]] && pfexec umount $efimnt
 
-	mount | grep $lofi_blks2 > /dev/null
-	[[ $? == 0 ]] && pfexec umount $rootmnt
-
-	pfexec lofiadm $lofi_blkdev > /dev/null
-	if [[ $? == 0 ]]; then
-		print "Detaching LOFI device ...\c"
-		pfexec lofiadm -d $lofi_blkdev
-		print "done"
+	if mount | grep $efimnt >/dev/null; then
+		pfexec umount $efimnt
 	fi
+
+	if mount | grep $rootmnt >/dev/null; then
+		pfexec umount $rootmnt
+	fi
+
+	detach_lofi $lofi_blkdev
+	detach_lofi $esp_blkdev
 
 	pfexec rm -f $tmpdir/pmbr
 	pfexec rm -f $tmpdir/gptzfsboot
+	pfexec rm -f $tmpdir/esp.img
+	pfexec rm -f $tmpdir/rootfs.img
 	pfexec rm -f $tmpdir/smartos.usb
+	pfexec rm -f $tmpdir/partitions.out
 	pfexec rm -rf $tmpdir/mnt
 	pfexec rmdir $tmpdir
 }
 
-function fail
+function fail()
 {
-        printf "%s\n" "$1" 1>&2 
+        printf "%s\n" "$1" 1>&2
         exit 1
 }
 
-function usage
+function usage()
 {
 	[[ ! -z $1 ]] && printf "%s\n\n" "$1" 1>&2
 
-	print -u2 "Usage: build-usb.sh [-U] [-I] [-x] [-p <size>] -r <smartos-live repo>"
+	print -u2 "Usage: build_image [-U] [-I] [-x] [-p <size>] -r <smartos-live repo>"
 	print -u2 "\n -U\tcreate UFS filesystem on root partition (default: PCFS)"
 	print -u2 " -I\tbuild SmartOS ISO image (default: USB image)"
 	print -u2 " -p\tbuild proforma USB image for Triton"
@@ -71,7 +106,7 @@ function usage
 	exit 2
 }
 
-function pfrun
+function pfrun()
 {
 	pfexec $*
 	local status=$?
@@ -82,218 +117,244 @@ function pfrun
 	fi
 }
 
-bi_make_iso=0
-bi_proforma_only=0
-bi_ufs_root=0
-bi_nocleanup=0
-bi_imgsz="512m"
+#
+# Construct the EFI System Partition image: right now, this only contains
+# loader, so the 34Mb size is plenty.
+#
+function create_esp()
+{
+	local readonly tmpdir=$1
+	local readonly efimnt=$2
+	local readonly boot_tgz=$3
+	local readonly esp_size=34 # Mb
+	local readonly esp_sects=$(( $esp_size * 1024 * 1024 / 512 ))
+
+	pfrun mkfile -n ${esp_size}m $tmpdir/esp.img
+	esp_blkdev=$(pfexec lofiadm -a $tmpdir/esp.img)
+	[[ $? == 0 ]] || fail "Failed to create ESP lofi device"
+	readonly esp_rawdev=${esp_blkdev/lofi/rlofi}
+
+	pfrun mkfs -F pcfs -o b=system,size=$esp_sects,nofdisk,fat=32 \
+	    $esp_rawdev </dev/null
+
+	pfrun mkdir -p $efimnt
+	pfrun mount -F pcfs $esp_blkdev $efimnt
+	pfrun mkdir -p $efimnt/efi/boot
+	pfrun gtar Oxfz $boot_tgz \
+	    ./boot/loader64.efi >$efimnt/efi/boot/BOOTX64.efi
+	pfrun umount $efimnt
+	pfrun lofiadm -d $esp_blkdev
+}
+
+#
+# Assemble all our boot parts into the disk image.
+#
+function label_image()
+{
+	local readonly tmpdir=$1
+	local readonly boot_tgz=$2
+	local readonly dev=$3
+
+	pfrun gtar Oxfz $boot_tgz ./boot/pmbr >$tmpdir/pmbr
+	pfrun gtar Oxfz $boot_tgz ./boot/gptzfsboot >$tmpdir/gptzfsboot
+
+	args="-m $tmpdir/pmbr -b $tmpdir/gptzfsboot -e $tmpdir/esp.img -o $dev"
+	pfrun $bi_wsroot/tools/format_image/format_image $args >$tmpdir/partitions.out
+}
+
+#
+# Create the blank root filesystem.
+#
+function create_root()
+{
+	local readonly dev=$1
+	local readonly image=$2
+	local readonly offset=$3
+	local readonly sects=$(( $4 / 512 ))
+
+	if [[ $bi_ufs_root == 1 ]]; then
+		print "Creating UFS filesystem in root partition ... \c"
+		pfexec newfs $dev </dev/null
+	else
+		print "Creating PCFS filesystem in root partition ... \c"
+		pfrun mkfs -F pcfs -o b=SMARTOSBOOT,size=$sects,nofdisk,fat=32 \
+		    $dev </dev/null
+	fi
+
+	print "done"
+
+	if [[ $bi_proforma_only == 1 ]]; then
+		return
+	fi
+}
+
+#
+# Copy the root filesystem image into the correct place inside the image.
+#
+function copy_root()
+{
+	local readonly dev=$1
+	local readonly image=$2
+	local readonly offset=$3
+
+	print "Copying root filesystem at offset $offset ... \c"
+	pfrun /usr/bin/dd bs=512 conv=notrunc if=$dev of=$image \
+	    oseek=$(( $offset / 512 )) >/dev/null 2>&1
+	print "done"
+}
+
+#
+# Populate the root filesystem with all the SmartOS bits, as well as the loader
+# used in legacy boot mode.
+#
+function populate_root()
+{
+	local readonly dev=$1
+	local readonly rootmnt=$2
+	local mntopts="-F pcfs"
+
+	if [[ $bi_ufs_root == 1 ]]; then
+		mntopts="-o nologging"
+	fi
+
+	print "Mounting root partition at $rootmnt ... \c"
+	pfrun mkdir -p $rootmnt
+	pfrun mount $mntopts $dev $rootmnt 2>/dev/null
+	print "done"
+
+	print "Installing boot tarball onto root partition ... \c"
+
+	#
+	# This partially fails due to being unable to set permissions under a
+	# nodevices mount inside an NGZ.
+	#
+	(cd $rootmnt; pfexec tar xfz \
+	    $bi_wsroot/output/boot-${platver}.tgz 2>/dev/null || true)
+
+	pfrun cp -f $bi_wsroot/overlay/generic/boot/forth/menu.rc \
+	    $rootmnt/boot/forth/
+
+	print "done"
+
+	print "Customizing boot loader configuration ... \c"
+	readonly shadow='$5$2HOHRnK3$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA'
+	pfrun touch $rootmnt/boot/loader.conf
+	pfrun chmod 666 $rootmnt/boot/loader.conf
+	pfrun echo "loader_logo=\"smartos\"" >> $rootmnt/boot/loader.conf
+	pfrun echo "loader_brand=\"smartos\"" >> $rootmnt/boot/loader.conf
+	pfrun echo "boot-args=\"-B root_shadow=${shadow},smartos=true\"" >> \
+	    $rootmnt/boot/loader.conf
+	print "done"
+
+	print "Copying platform image to root partition" \
+	    "(this will take a while) ... \c"
+
+	#
+	# Fails similarly to tar, and no, --no-preserve does not help.
+	#
+	pfexec cp -rp $bi_wsroot/output/platform-latest/ \
+	    $rootmnt/platform 2>/dev/null || true
+
+	print "done"
+
+	pfrun umount $rootmnt
+}
+
 
 while getopts "IUp:r:x" c $@; do
 	case "$c" in
-	I)
-		bi_make_iso=1
-		;;
-	p)
-		bi_proforma_only=1
-		bi_imgsz=$OPTARG
-		;;
-	r)
-		bi_wsroot=$(readlink -f $OPTARG)
-		;;
-	U)	bi_ufs_root=1
-		;;
-	x)	bi_nocleanup=1
-		;;
-	:)
-		usage
-		;;
-	*)
-		usage
-		;;
+	I)	bi_make_iso=1 ;;
+	p)	bi_proforma_only=1
+		bi_imgsz=$OPTARG ;;
+	r)	bi_wsroot=$(readlink -f $OPTARG) ;;
+	U)	bi_ufs_root=1 ;;
+	x)	bi_nocleanup=1 ;;
+	:)	usage ;;
+	*)	usage ;;
 	esac
 done
+
+set -eou pipefail
+export SHELLOPTS
 
 [[ $bi_make_iso == 1 ]] && fail "ISO support not implemented, yet"
 
 [[ -z $bi_wsroot ]] && usage "-r is required"
 
 [[ $bi_proforma_only == 1 ]] && [[ $bi_ufs_root == 1 ]] && \
-	usage "-p and -U are mutually exclusive"
+    usage "-p and -U are mutually exclusive"
 
 [[ $bi_proforma_only == 1 ]] && [[ $bi_make_iso == 1 ]] && \
-	usage "-p and -I are mutually exclusive"
+    usage "-p and -I are mutually exclusive"
 
 [[ -e $bi_wsroot/output/platform-latest ]] || \
-	fail "No platform image found in $bi_wsroot/output"
+    fail "No platform image found in $bi_wsroot/output"
 
-readonly tmpdir=$(mktemp -d -p /var/tmp)
-[[ $? == 0 ]] || fail "mktemp failed!"
 
-readonly efimnt=$tmpdir/mnt/efi
-readonly rootmnt=$tmpdir/mnt/root
+tmpdir=$(mktemp -d -p /var/tmp) || fail "mktemp failed!"
 
+trap cleanup EXIT
+
+efimnt=$tmpdir/mnt/efi
+rootmnt=$tmpdir/mnt/root
 usb_image_name=$(readlink -f $bi_wsroot/output/platform-latest)
 usb_image_name=$(basename $usb_image_name)
 platver=$(echo $usb_image_name | awk -F\- '{ print $2 }')
 usb_image_name="${usb_image_name}.usb"
 
-trap cleanup EXIT
-
-print "Creating empty $bi_imgsz image at $tmpdir/smartos.usb ...\c"
+print "Creating empty $bi_imgsz image at $tmpdir/smartos.usb ... \c"
 pfrun mkfile -n $bi_imgsz $tmpdir/smartos.usb
 print "done"
 
-print "LOFI mounting empty image ...\c"
-lofi_blkdev=$(pfexec lofiadm -la $tmpdir/smartos.usb)
+lofi_blkdev=$(pfexec lofiadm -a $tmpdir/smartos.usb)
 [[ $? == 0 ]] || fail "Failed to create lofi device"
+
+lofi_rawdev=${lofi_blkdev/lofi/rlofi}
+
+print "Creating EFI System Partition image ... \c"
+create_esp $tmpdir $efimnt $bi_wsroot/output/boot-${platver}.tgz
 print "done"
 
-readonly lofi_rawdev=${lofi_blkdev/dsk/rdsk}
-readonly lofi_disk=${lofi_blkdev/p0/}
-readonly lofi_blks0=${lofi_blkdev/p0/s0}
-readonly lofi_blks2=${lofi_blkdev/p0/s2}
-readonly lofi_raws0=${lofi_rawdev/p0/s0}
-readonly lofi_raws2=${lofi_rawdev/p0/s2}
-
-readonly tmp_pool=build-usb-$$
-
-#
-# We're not actually trying to create a ZFS pool.  We're just leveraging the
-# ability of zpool(1m) to create the initial GPT partition table.  This results
-# in a VTOC that looks like this:
-#
-# Partition  Tag        Size 
-#      0     efi        34 MB
-#      1     usr        sizeof disk - 42MB 
-#      8     reserved    8 MB
-#
-print "Creating GUID Partition Table ...\c"
-pfrun zpool create -B -o bootsize=34M $tmp_pool $lofi_disk
-
-until pfexec zpool destroy $tmp_pool; do sleep 1; done
+print "Labelling USB image ... \c"
+label_image $tmpdir $bi_wsroot/output/boot-${platver}.tgz $lofi_rawdev
 print "done"
 
-#
-# This nawk bit was shamelessly taken from usr/src/cmd/install-tools/usbgen in
-# the OpenIndiana/slim_source git repo.  It transforms the above VTOC to add
-# the 1 MB boot slide that's used to hold the stage2 loader for legacy BIOS
-# boot (gptzfsboot).  The final VTOC should look roughly like this:
-#
-# Partition  Tag        Size 
-#      0     efi        34 MB
-#      1     boot        1 MB
-#      2     root       sizeof disk - 43MB 
-#      8     reserved    8 MB
-#
-print "Partitioning $lofi_raws2 ..."
-pfexec prtvtoc "${lofi_raws2}" | nawk '
-/^[^\*]/ { r = $1; for(n = 1; n <= NF; n++) vtoc[r,n] = $n }
-END {
-vtoc[1,1] = 1;
-vtoc[1,2] = 1;
-vtoc[1,3] = 00;
-vtoc[1,5] = 1024 * 1024 / 512;
-vtoc[1,6] = vtoc[1,4] + vtoc[1,5] - 1;
+pfrun lofiadm -d $lofi_blkdev
 
-vtoc[2,1] = 2;
-vtoc[2,2] = 2;
-vtoc[2,3] = 00;
-vtoc[2,4] = vtoc[1,6] + 1;
-vtoc[2,6] = vtoc[8,4] - 1;
-vtoc[2,5] = vtoc[2,6] - vtoc[2,4];
+rootoff=$(nawk '$1 == "root" { print $3 }' <$tmpdir/partitions.out)
+rootsize=$(nawk '$1 == "root" { print $4 }' <$tmpdir/partitions.out)
 
-printf("\t%d\t%d\t%02d\t%d\t%d\t%d\n",
-        vtoc[0,1], vtoc[0,2], vtoc[0,3], vtoc[0,4], vtoc[0,5], vtoc[0,6]);
-printf("\t%d\t%d\t%02d\t%d\t%d\t%d\n",
-        vtoc[1,1], vtoc[1,2], vtoc[1,3], vtoc[1,4], vtoc[1,5], vtoc[1,6]);
-printf("\t%d\t%d\t%02d\t%d\t%d\t%d\n",
-        vtoc[2,1], vtoc[2,2], vtoc[2,3], vtoc[2,4], vtoc[2,5], vtoc[2,6]);
-printf("\t%d\t%d\t%02d\t%d\t%d\t%d\n",
-        vtoc[8,1], vtoc[8,2], vtoc[8,3], vtoc[8,4], vtoc[8,5], vtoc[8,6]);
-}' | pfexec fmthard -s- "${lofi_raws2}"
+pfrun mkfile -n $rootsize $tmpdir/rootfs.img
 
-#
-# Create the EFI System Partition (ESP) and copy the EFI bootloader into it.
-# The ESP must be created with a FAT filesystem.
-# 
-print "Creating and populating PCFS filesystem in EFI System Partition ...\c"
-pfrun mkfs -F pcfs -o b=system $lofi_raws0 < /dev/null
-pfrun mkdir -p $efimnt
-pfrun mount -F pcfs $lofi_blks0 $efimnt
+lofi_blkdev=$(pfexec lofiadm -a $tmpdir/rootfs.img)
+[[ $? == 0 ]] || fail "Failed to create lofi device"
 
-pfrun mkdir -p $efimnt/efi/boot
-pfrun gtar Oxfz $bi_wsroot/output/boot-${platver}.tgz ./boot/loader64.efi \
-    > $efimnt/efi/boot/BOOTX64.efi
-print "done"
+lofi_rawdev=${lofi_blkdev/lofi/rlofi}
 
-if [[ $bi_ufs_root == 1 ]]; then
-	print "Creating UFS filesystem in root partition ...\c"
-	pfexec newfs $lofi_raws2 < /dev/null
-	mntopts="-o nologging"
-else
-	print "Creating PCFS filesystem in root partition ...\c"
-	pfrun mkfs -F pcfs -o b=SMARTOSBOOT,fat=32 $lofi_raws2 < /dev/null
-	mntops="-F pcfs -o nologging"
-fi
-print "done"
-
-#
-# Next we install the boot blocks necessary to also support booting
-# from legacy BIOS mode.  This involves installing a tiny stage1 into the
-# protected MBR and then installing stage2 into the boot partition.
-#
-print "Installing legacy BIOS boot blocks to $lofi_raws2 ..."
-pfrun gtar Oxfz $bi_wsroot/output/boot-${platver}.tgz ./boot/pmbr > $tmpdir/pmbr
-pfrun gtar Oxfz $bi_wsroot/output/boot-${platver}.tgz ./boot/gptzfsboot \
-   > $tmpdir/gptzfsboot
-
-pfrun installboot -mf $tmpdir/pmbr $tmpdir/gptzfsboot $lofi_raws2
-print "done"
+create_root $lofi_rawdev $tmpdir/smartos.usb $rootoff $rootsize
 
 #
 # If we're only building a proforma image for Triton, then we're done.
 #
 if [[ $bi_proforma_only == 1 ]]; then
+	copy_root $lofi_rawdev $tmpdir/smartos.usb $rootoff
+	pfrun lofiadm -d $lofi_blkdev
 	pfrun mkdir -p $bi_wsroot/proto.images
 	pfrun mv $tmpdir/smartos.usb $bi_wsroot/proto.images/${bi_imgsz}b.img
 	pfrun chmod 444 $bi_wsroot/proto.images/${bi_imgsz}b.img
-	print "Successfully created proforma image: $bi_wsroot/proto.images/${bi_imgsz}b.img"
+	print "Successfully created proforma image:" \
+	    "$bi_wsroot/proto.images/${bi_imgsz}b.img"
 	exit 0
 fi
 
-print "Mounting root partition at $rootmnt ...\c"
-pfrun mkdir -p $rootmnt
+populate_root $lofi_blkdev $rootmnt
 
-pfrun mount $mntops $lofi_blks2 $rootmnt 2>/dev/null
-print "done"
-
-
-print "Installing boot tarball onto root partition ... \c"
-(cd $rootmnt; pfrun tar xfz $bi_wsroot/output/boot-${platver}.tgz) > /dev/null 2>&1
-pfrun cp -f $bi_wsroot/overlay/generic/boot/forth/menu.rc \
-    $rootmnt/boot/forth/
-print "done"
-
-print "Customizing boot loader configuration ...\c"
-readonly shadow="'$5$2HOHRnK3$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA'"
-
-pfrun touch $rootmnt/boot/loader.conf
-pfrun chmod 666 $rootmnt/boot/loader.conf
-pfrun echo "loader_logo=\"smartos\"" >> $rootmnt/boot/loader.conf
-pfrun echo "loader_brand=\"smartos\"" >> $rootmnt/boot/loader.conf
-pfrun echo "boot-args=\"-B root_shadow=${shadow},smartos=true\"" >> \
-    $rootmnt/boot/loader.conf
-print "done"
-
-print "Copying platform image to root partition (this will take awhile) ...\c"
-pfrun cp -rp $bi_wsroot/output/platform-latest $rootmnt/platform
-print "done"
-
-
+copy_root $lofi_rawdev $tmpdir/smartos.usb $rootoff
+pfrun lofiadm -d $lofi_blkdev
 pfrun mkdir -p $bi_wsroot/output-usb
 pfrun mv $tmpdir/smartos.usb $bi_wsroot/output-usb/$usb_image_name
 pfrun chmod 644 $bi_wsroot/output-usb/$usb_image_name
 
-print "SmartOS USB image successfully created at $bi_wsroot/output-usb/$usb_image_name"
-
+print "Successfully created SmartOS USB image:" \
+    "$bi_wsroot/output-usb/$usb_image_name"
 exit 0

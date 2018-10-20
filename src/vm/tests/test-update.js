@@ -234,6 +234,40 @@ var PAYLOADS = {
                 ips: []
             }
         ]
+    }, add_filesystems: {
+        add_filesystems: [
+            {
+                type: 'lofs',
+                source: '/var/empty',
+                target: '/a',
+                options: [ 'ro', 'noexec' ]
+            },
+            {
+                type: 'lofs',
+                source: '/var/empty',
+                target: '/b',
+                options: [ 'ro', 'noexec' ]
+            },
+            {
+                type: 'lofs',
+                source: '/opt',
+                target: '/gzopt',
+                options: [ 'ro' ]
+            }
+        ]
+    }, remove_absent_filesystem: {
+        remove_filesystems: [
+            '/not/there'
+        ]
+    }, remove_one_filesystem: {
+        remove_filesystems: [
+            '/b'
+        ]
+    }, remove_two_filesystems: {
+        remove_filesystems: [
+            '/gzopt',
+            '/a'
+        ]
     }, set_rctls: {
         max_msg_ids: 3333,
         max_sem_ids: 2332,
@@ -729,6 +763,106 @@ test('add NIC with minimal properties', function (t) {
                 t.end();
             });
         }
+    });
+});
+
+test('add file systems', function (t) {
+    VM.update(vm_uuid, PAYLOADS.add_filesystems, function (update_err) {
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
+            t.end();
+            return;
+        }
+
+        VM.load(vm_uuid, function (err, obj) {
+            var nic;
+            var prop;
+
+            t.ok(!err, 'failed reloading VM');
+            if (err) {
+                return;
+            }
+
+            t.ok(obj.filesystems.length === 3, 'VM has ' +
+                obj.filesystems.length + ' file systems, expected: 3');
+            t.end();
+        });
+    });
+});
+
+test('remove a file system that does not exist', function (t) {
+    VM.update(vm_uuid, PAYLOADS.remove_absent_filesystem,
+        function (update_err) {
+
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
+            t.end();
+            return;
+        }
+
+        VM.load(vm_uuid, function (err, obj) {
+            var nic;
+            var prop;
+
+            t.ok(!err, 'failed reloading VM');
+            if (err) {
+                return;
+            }
+
+            t.ok(obj.filesystems.length === 3, 'VM has ' +
+                obj.filesystems.length + ' file systems, expected: 3');
+            t.end();
+        });
+    });
+});
+
+test('remove one of the added file systems', function (t) {
+    VM.update(vm_uuid, PAYLOADS.remove_one_filesystem, function (update_err) {
+
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
+            t.end();
+            return;
+        }
+
+        VM.load(vm_uuid, function (err, obj) {
+            var nic;
+            var prop;
+
+            t.ok(!err, 'failed reloading VM');
+            if (err) {
+                return;
+            }
+
+            t.ok(obj.filesystems.length === 2, 'VM has ' +
+                obj.filesystems.length + ' file systems, expected: 2');
+            t.end();
+        });
+    });
+});
+
+test('remove the other two added file systems', function (t) {
+    VM.update(vm_uuid, PAYLOADS.remove_two_filesystems, function (update_err) {
+
+        if (update_err) {
+            t.ok(false, 'error updating VM: ' + update_err.message);
+            t.end();
+            return;
+        }
+
+        VM.load(vm_uuid, function (err, obj) {
+            var nic;
+            var prop;
+
+            t.ok(!err, 'failed reloading VM');
+            if (err) {
+                return;
+            }
+
+            t.ok(obj.filesystems.length === 0, 'VM has ' +
+                obj.filesystems.length + ' file systems, expected: 0');
+            t.end();
+        });
     });
 });
 

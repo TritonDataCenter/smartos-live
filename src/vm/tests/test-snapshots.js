@@ -1309,6 +1309,7 @@ test('create bhyve VM', function (t) {
                 'fi;',
                 'cat $DISK0_TMP_FILE | mdata-put disk0test',
                 'cat $DISK1_TMP_FILE | mdata-put disk1test',
+                'sync',
                 'mdata-put userScriptHasRun "true"'
             ].join('\n')
         }
@@ -1420,7 +1421,7 @@ test('reboot to change file', function (t) {
     });
 });
 
-test('verify metadata', function (t) {
+test('verify updated metadata', function (t) {
     if (abort) {
         t.ok(false, 'skipping verification as test run is aborted.');
         t.end();
@@ -1542,7 +1543,7 @@ test('start VM and verify files have been rolled back', function (t) {
     });
 });
 
-test('verify metadata', function (t) {
+test('verify rolled back metadata', function (t) {
     if (abort) {
         t.ok(false, 'skipping verification as test run is aborted.');
         t.end();

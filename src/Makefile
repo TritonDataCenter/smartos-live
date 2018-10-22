@@ -117,6 +117,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-lastexited.js \
 	vm/tests/test-openonerrlogger.js \
 	vm/tests/test-queue.js \
+	vm/tests/test-quota.js \
 	vm/tests/test-reboot.js \
 	vm/tests/test-reprovision.js \
 	vm/tests/test-send-recv.js \

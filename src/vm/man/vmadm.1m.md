@@ -1751,11 +1751,9 @@ tab-complete UUIDs rather than having to type them out for every command.
     quota:
 
         This sets a quota on the zone filesystem. For OS VMs, this value is the
-        space actually visible/usable in the guest. For kvm VMs, this value is
-        the quota for the Zone containing the VM, which is not directly
-        available to users. For bhyve VMs, disks are part of the zones/<uuid>
-        dataset, as well as the zone itself, so the quota needs to be sized
-        appropriately.
+        space actually visible/usable in the guest. For kvm and bhyve VMs, this
+        value is the quota (kvm) or refquota (bhyve) for the Zone containing
+        the VM, which is not directly available to users.
 
         Set quota to 0 to disable (ie. for no quota).
 

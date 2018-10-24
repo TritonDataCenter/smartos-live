@@ -17,11 +17,11 @@
  * looking to create an image of the following form:
  *
  * Part Tag      First Sector Size     Type
- * -    mbr/GPT  0            128KB    MBR+EFI GPT (-m option plus libefi)
- * 0    system   256          34.00MB  EFI System Partition (-e option)
- * 1    boot     69888        1.00MB   Legacy BIOS boot partition (-b option)
- * 2    root     71936        468.86MB pcfs or ufs root
- * 8    reserved 1032159      8.00MB   EFI backup GPT
+ * -    mbr/GPT  0            1MB      MBR+EFI GPT (-m option plus libefi)
+ * 0    system   2048         34.00MB  EFI System Partition (-e option)
+ * 1    boot     71680        1.00MB   Legacy BIOS boot partition (-b option)
+ * 2    root     73728        467MB    pcfs or ufs root
+ * 8    reserved 1032159      8.00MB   V_RESERVED / devid (not really used)
  *
  * This boots under BIOS as follows:
  *
@@ -45,14 +45,17 @@
  * It is sort of an unholy merger of zpool_label_disk(ZPOOL_CREATE_BOOT_LABEL)
  * and installboot(1m).
  *
- * It only currently supports 512 block size, and isn't endian-vetted.
+ * We only currently support 512 block size, and isn't endian-vetted.
  *
- * The "root" partition is populated later, not by this tool.
+ * The "root" partition is populated later, not by this tool. This is the main
+ * reason we megabyte-align the partitions: it's much faster if we can dd with
+ * a larger block size.
  */
 
 #include <uuid/uuid.h>
 #include <strings.h>
 #include <string.h>
+#include <assert.h>
 #include <unistd.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -64,6 +67,7 @@
 
 #include <sys/efi_partition.h>
 #include <sys/dktp/fdisk.h>
+#include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <sys/vtoc.h>
 #include <sys/stat.h>
@@ -71,15 +75,15 @@
 #define	EXIT_USAGE (2)
 
 #define	LBSIZE (SECTOR_SIZE)
-#define	PART_ALIGN (SECTOR_SIZE)
-#define	LEGACY_BOOTPART_BLOCKS (2048) /* in LBSIZE */
+#define	MB_BLOCKS (2048) /* 1Mb in blocks */
+#define	PART_ALIGN (MB_BLOCKS * SECTOR_SIZE)
+#define	LEGACY_BOOTPART_BLOCKS (MB_BLOCKS) /* in LBSIZE */
 #define	LEGACY_BOOTPART_SIZE (LEGACY_BOOTPART_BLOCKS * LBSIZE)
 
 /*
- * Space for MBR+GPT prior to first partition.  We use what zpool create does
- * here, but not for any particular reason.
+ * Space for MBR+GPT prior to first partition, aligned up to the first MB.
  */
-#define	START_SECT (256)
+#define	START_SECT (MB_BLOCKS)
 
 /*
  * From installboot.h, these are a set of offsets into the MBR.
@@ -204,7 +208,13 @@ static void
 set_part(struct dk_part *part, diskaddr_t start, diskaddr_t size,
     const char *name, ushort_t tag)
 {
+	if (tag != V_RESERVED) {
+		assert((start % MB_BLOCKS) == 0);
+		assert((size % MB_BLOCKS) == 0);
+	}
+
 	printf("%s %d %llu %llu\n", name, tag, start * LBSIZE, size * LBSIZE);
+
 	part->p_start = start;
 	part->p_size = size;
 	(void) strlcpy(part->p_name, name, sizeof (part->p_name));
@@ -232,10 +242,14 @@ write_efi(size_t esplen)
 	    "boot", V_BOOT);
 
 	start += LEGACY_BOOTPART_BLOCKS;
+
 	size = vtoc->efi_last_u_lba + 1 - (EFI_MIN_RESV_SIZE + start);
+	size = P2ALIGN(size, MB_BLOCKS);
+
 	set_part(&vtoc->efi_parts[2], start, size, "root", V_ROOT);
 
-	start += size;
+	start = vtoc->efi_last_u_lba + 1 - EFI_MIN_RESV_SIZE;
+
 	set_part(&vtoc->efi_parts[8], start, EFI_MIN_RESV_SIZE,
 	    "reserved", V_RESERVED);
 
@@ -361,11 +375,6 @@ main(int argc, char *argv[])
 	if (esplen % PART_ALIGN) {
 		errx(EXIT_FAILURE, "ESP image is not %lu-byte aligned",
 		    PART_ALIGN);
-	}
-
-	if (esplen % LBSIZE) {
-		errx(EXIT_FAILURE, "ESP image is not %lu-byte aligned",
-		    LBSIZE);
 	}
 
 	biosboot = read_file(biosbootpath, LEGACY_BOOTPART_SIZE, &biosbootlen);

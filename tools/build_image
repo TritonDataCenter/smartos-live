@@ -198,8 +198,8 @@ function copy_root()
 	local readonly offset=$3
 
 	print "Copying root filesystem at offset $offset ... \c"
-	pfrun /usr/bin/dd bs=512 conv=notrunc if=$dev of=$image \
-	    oseek=$(( $offset / 512 )) >/dev/null 2>&1
+	pfrun /usr/bin/dd bs=1048576 conv=notrunc if=$dev of=$image \
+	    oseek=$(( $offset / 1048576 )) >/dev/null 2>&1
 	print "done"
 }
 

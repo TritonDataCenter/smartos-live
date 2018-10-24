@@ -153,7 +153,7 @@ $(BOOT_TARBALL): world manifest
 #
 images: $(IMAGES_SIZES_GB:%=$(IMAGES_PROTO)/%gb.img)
 
-$(IMAGES_PROTO)/%.img: boot tools/images/%.fdisk 
+$(IMAGES_PROTO)/%.img: boot
 	rm -f $@
 	mkdir -p $(IMAGES_PROTO)
 	./tools/build_image -p $* -r $(ROOT)

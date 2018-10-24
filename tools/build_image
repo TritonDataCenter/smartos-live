@@ -341,7 +341,7 @@ if [[ $bi_proforma_only == 1 ]]; then
 	pfrun lofiadm -d $lofi_blkdev
 	pfrun mkdir -p $bi_wsroot/proto.images
 	pfrun mv $tmpdir/smartos.usb $bi_wsroot/proto.images/${bi_imgsz}b.img
-	pfrun chmod 444 $bi_wsroot/proto.images/${bi_imgsz}b.img
+	pfrun chmod 644 $bi_wsroot/proto.images/${bi_imgsz}b.img
 	print "Successfully created proforma image:" \
 	    "$bi_wsroot/proto.images/${bi_imgsz}b.img"
 	exit 0

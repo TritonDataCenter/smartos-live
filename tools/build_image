@@ -101,7 +101,7 @@ function usage()
 	print -u2 "Usage: build_image [-U] [-I] [-x] [-p <size>] -r <smartos-live repo>"
 	print -u2 "\n -U\tcreate UFS filesystem on root partition (default: PCFS)"
 	print -u2 " -I\tbuild SmartOS ISO image (default: USB image)"
-	print -u2 " -p\tbuild proforma USB image for Triton"
+	print -u2 " -p\tbuild proforma USB image for Triton (e.g. 1gb)"
 	print -u2 " -x\tdon't cleanup on exit (for debugging use)\n"
 	exit 2
 }
@@ -265,7 +265,7 @@ while getopts "IUp:r:x" c $@; do
 	case "$c" in
 	I)	bi_make_iso=1 ;;
 	p)	bi_proforma_only=1
-		bi_imgsz=$OPTARG ;;
+		bi_imgsz=${OPTARG/gb/g} ;;
 	r)	bi_wsroot=$(readlink -f $OPTARG) ;;
 	U)	bi_ufs_root=1 ;;
 	x)	bi_nocleanup=1 ;;

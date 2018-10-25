@@ -200,7 +200,7 @@ function load_sdc_bootparams {
     [[ -z ${prefix} ]] && prefix="BOOT_"
     for line in $(/bin/bootparams); do
         fields=(${line//=/ })
-        key=$(echo ${fields[0]} | sed -e "s/-/_/g")
+        key=$(echo ${fields[0]} | sed -e "s/-/_/g;s/#//g")
         eval "${prefix}${key}=\"${fields[1]}\""
     done
 }
@@ -211,7 +211,7 @@ function sdc_bootparams_keys {
     #keys=$(cat /tmp/bootparams | sed -e "s/=.*//")
     for line in $(/bin/bootparams); do
         fields=(${line//=/ })
-        key=$(echo ${fields[0]} | sed -e "s/=.*//")
+        key=$(echo ${fields[0]} | sed -e "s/=.*//;s/#//g")
         echo ${key}
     done
 }

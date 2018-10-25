@@ -109,7 +109,7 @@ IMAGES_VERSION :=	images-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
 IMAGES_TARBALL :=	output/$(IMAGES_VERSION).tgz
 
-IMAGES_SIZES_GB :=	1 2 4 8
+IMAGES_SIZES_GB :=	4 8
 
 TOOLS_TARGETS = \
 	$(MANCHECK) \

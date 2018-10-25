@@ -141,7 +141,7 @@ $(BOOT_TARBALL): world manifest
 	mkdir -p $(BOOT_PROTO)
 	mkdir -p $(ROOT)/output
 	pfexec ./tools/builder/builder $(ROOT)/$(BOOT_MANIFEST) \
-	    $(BOOT_PROTO) $(ROOT)/proto
+	    $(BOOT_PROTO) $(OVERLAYS) $(ROOT)/proto
 	(cd $(BOOT_PROTO) && pfexec gtar czf $(ROOT)/$@ .)
 
 #

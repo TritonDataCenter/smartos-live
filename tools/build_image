@@ -41,7 +41,6 @@ lofi_blkdev=
 lofi_rawdev=
 esp_blkdev=
 usb_image_name=
-platver=
 rootmnt=
 efimnt=
 tmpdir=
@@ -125,7 +124,6 @@ function create_esp()
 {
 	local readonly tmpdir=$1
 	local readonly efimnt=$2
-	local readonly boot_tgz=$3
 	local readonly esp_size=34 # Mb
 	local readonly esp_sects=$(( $esp_size * 1024 * 1024 / 512 ))
 
@@ -140,8 +138,8 @@ function create_esp()
 	pfrun mkdir -p $efimnt
 	pfrun mount -F pcfs $esp_blkdev $efimnt
 	pfrun mkdir -p $efimnt/efi/boot
-	pfrun gtar Oxfz $boot_tgz \
-	    ./boot/loader64.efi >$efimnt/efi/boot/BOOTX64.efi
+	pfrun cp $bi_wsroot/proto.boot/boot/loader64.efi \
+	    $efimnt/efi/boot/BOOTX64.efi
 	pfrun umount $efimnt
 	pfrun lofiadm -d $esp_blkdev
 }
@@ -152,11 +150,10 @@ function create_esp()
 function label_image()
 {
 	local readonly tmpdir=$1
-	local readonly boot_tgz=$2
-	local readonly dev=$3
+	local readonly dev=$2
 
-	pfrun gtar Oxfz $boot_tgz ./boot/pmbr >$tmpdir/pmbr
-	pfrun gtar Oxfz $boot_tgz ./boot/gptzfsboot >$tmpdir/gptzfsboot
+	pfrun cp $bi_wsroot/proto.boot/boot/pmbr $tmpdir/pmbr
+	pfrun cp $bi_wsroot/proto.boot/boot/gptzfsboot $tmpdir/gptzfsboot
 
 	args="-m $tmpdir/pmbr -b $tmpdir/gptzfsboot -e $tmpdir/esp.img -o $dev"
 	pfrun $bi_wsroot/tools/format_image/format_image $args >$tmpdir/partitions.out
@@ -223,17 +220,7 @@ function populate_root()
 	print "done"
 
 	print "Installing boot tarball onto root partition ... \c"
-
-	#
-	# This partially fails due to being unable to set permissions under a
-	# nodevices mount inside an NGZ.
-	#
-	(cd $rootmnt; pfexec tar xfz \
-	    $bi_wsroot/output/boot-${platver}.tgz 2>/dev/null || true)
-
-	pfrun cp -f $bi_wsroot/overlay/generic/boot/forth/menu.rc \
-	    $rootmnt/boot/forth/
-
+	pfexec cp -r $bi_wsroot/proto.boot/* $rootmnt/
 	print "done"
 
 	print "Customizing boot loader configuration ... \c"
@@ -249,11 +236,7 @@ function populate_root()
 	print "Copying platform image to root partition" \
 	    "(this will take a while) ... \c"
 
-	#
-	# Fails similarly to tar, and no, --no-preserve does not help.
-	#
-	pfexec cp -rp $bi_wsroot/output/platform-latest/ \
-	    $rootmnt/platform 2>/dev/null || true
+	pfexec cp -r $bi_wsroot/output/platform-latest/ $rootmnt/platform
 
 	print "done"
 
@@ -299,7 +282,6 @@ efimnt=$tmpdir/mnt/efi
 rootmnt=$tmpdir/mnt/root
 usb_image_name=$(readlink -f $bi_wsroot/output/platform-latest)
 usb_image_name=$(basename $usb_image_name)
-platver=$(echo $usb_image_name | awk -F\- '{ print $2 }')
 usb_image_name="${usb_image_name}.usb"
 
 print "Creating empty $bi_imgsz image at $tmpdir/smartos.usb ... \c"
@@ -312,11 +294,11 @@ lofi_blkdev=$(pfexec lofiadm -a $tmpdir/smartos.usb)
 lofi_rawdev=${lofi_blkdev/lofi/rlofi}
 
 print "Creating EFI System Partition image ... \c"
-create_esp $tmpdir $efimnt $bi_wsroot/output/boot-${platver}.tgz
+create_esp $tmpdir $efimnt
 print "done"
 
 print "Labelling USB image ... \c"
-label_image $tmpdir $bi_wsroot/output/boot-${platver}.tgz $lofi_rawdev
+label_image $tmpdir $lofi_rawdev
 print "done"
 
 pfrun lofiadm -d $lofi_blkdev

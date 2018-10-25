@@ -161,8 +161,7 @@ $(IMAGES_PROTO)/%.img: boot
 images-tar: $(IMAGES_TARBALL)
 
 $(IMAGES_TARBALL): images
-	cd $(IMAGES_PROTO) && gtar -Scvz --owner=0 --group=0 -f $(ROOT)/$@ \
-	    $(IMAGES_SIZES_GB:%=%gb.img)
+	cd $(IMAGES_PROTO) && gtar -Scvz --owner=0 --group=0 -f $(ROOT)/$@ *
 
 #
 # Manifest construction.  There are 5 sources for manifests we need to collect

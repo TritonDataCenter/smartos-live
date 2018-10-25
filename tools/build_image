@@ -27,9 +27,17 @@
 # configured with "fs_allowed=ufs,pcfs"
 #
 # Things are complicated here by the fact that we would like to run inside a
-# non-global with older kernels.  Most of our partitioning tools such as format
-# do not run well inside a non-global zone, and non-labeled lofi doesn't have
-# sufficient support either.  So we delegate the tricky bits to format_image.
+# non-global zone with older kernels.  Most of our partitioning tools such as
+# format do not run well inside a non-global zone, and labeled lofi doesn't
+# have sufficient support either.  So we delegate the tricky bits to
+# format_image.
+#
+# Equally, we can no longer directly mount the root partition for populating:
+# pcfs has no logic of its own for parsing GPT partitions.  So we have to play
+# games using dd(1) to copy the root FS image into the right place based on
+# its partition offset.  We also place the partition layout into the images
+# tarball, so sdc-headnode can do the same.  (As it is, the offset is actually
+# fixed, but that seems like a bad thing to rely on.)
 #
 
 bi_make_iso=0
@@ -47,8 +55,6 @@ tmpdir=
 
 # FIXME old options, -c definitely, kmdb, extra boot opts?
 # 115200,8,n,1,- for serial, multi-console loader
-# FIXME: don't need root fs at all  for proforma, need to bundle
-# offsets in tarball instead
 # FIXME: why multiple proforma sizes exactly?
 # FIXME: legacy ISO boot fails
 
@@ -87,7 +93,7 @@ function cleanup()
 	pfexec rm -f $tmpdir/esp.img
 	pfexec rm -f $tmpdir/rootfs.img
 	pfexec rm -f $tmpdir/smartos.usb
-	pfexec rm -f $tmpdir/partitions.out
+	pfexec rm -f $tmpdir/partition.map
 	pfexec rm -rf $tmpdir/mnt
 	pfexec rmdir $tmpdir
 }
@@ -122,8 +128,8 @@ function pfrun()
 }
 
 #
-# Construct the EFI System Partition image: right now, this only contains
-# loader, so the 34Mb size is plenty.
+# Construct the EFI System Partition image, which is a FAT32 FS of the minimum
+# size.
 #
 function create_esp()
 {
@@ -137,14 +143,12 @@ function create_esp()
 	[[ $? == 0 ]] || fail "Failed to create ESP lofi device"
 	readonly esp_rawdev=${esp_blkdev/lofi/rlofi}
 
-	# FIXME: fat32 for ISO?
 	pfrun mkfs -F pcfs -o b=system,size=$esp_sects,nofdisk,fat=32 \
 	    $esp_rawdev </dev/null
 
 	pfrun mkdir -p $efimnt
 	pfrun mount -F pcfs $esp_blkdev $efimnt
 	pfrun mkdir -p $efimnt/efi/boot
-	# FIXME: BOOTIA32.efi ?
 	pfrun cp $bi_wsroot/proto.boot/boot/loader64.efi \
 	    $efimnt/efi/boot/BOOTX64.efi
 	pfrun umount $efimnt
@@ -152,7 +156,8 @@ function create_esp()
 }
 
 #
-# FIXME
+# Populate the root filesystem with all the SmartOS bits, as well as the loader
+# used in legacy boot mode.
 #
 function populate_root()
 {
@@ -227,11 +232,12 @@ function create_iso()
 	#    -o 	$isopath		\
 	#    $bi_tmpdir/ >/dev/null
 
-	rm -rf $rootdir
+	print "Successfully created $iso"
 }
 
 #
-# Assemble all our boot parts into the disk image.
+# Assemble all our boot parts into the disk image (the root partition is copied
+# over later).
 #
 function create_image()
 {
@@ -247,7 +253,7 @@ function create_image()
 	pfrun $bi_wsroot/tools/format_image/format_image \
 	    -m $bi_wsroot/proto.boot/boot/pmbr \
 	    -b $bi_wsroot/proto.boot/boot/gptzfsboot -e $tmpdir/esp.img \
-	    -o ${lofi_blkdev/lofi/rlofi} >$tmpdir/partitions.out
+	    -o ${lofi_blkdev/lofi/rlofi} >$tmpdir/partition.map
 
 	pfrun lofiadm -d $lofi_blkdev
 }
@@ -294,10 +300,8 @@ function copy_root()
 }
 
 #
-# Populate the root filesystem with all the SmartOS bits, as well as the loader
-# used in legacy boot mode.
 #
-function build_root()
+function mount_root()
 {
 	local readonly dev=$1
 	local readonly rootmnt=$2
@@ -311,12 +315,20 @@ function build_root()
 	pfrun mkdir -p $rootmnt
 	pfrun mount $mntopts $dev $rootmnt 2>/dev/null
 	print "done"
-
-	populate_root $rootmnt
-
-	pfrun umount $rootmnt
 }
 
+function copy_results()
+{
+	local readonly outdir=$1
+	local readonly outfile=$2
+	local readonly prefix=$3
+
+	pfrun mkdir -p $outdir
+	pfrun mv $tmpdir/smartos.usb $outdir/$outfile
+	pfrun chmod 644 $outdir/$outfile
+	pfrun cp $tmpdir/partition.map $outdir/${prefix}partition.map
+	print "Successfully created $outdir/$outfile"
+}
 
 while getopts "IUp:r:x" c $@; do
 	case "$c" in
@@ -363,7 +375,6 @@ print "done"
 
 if [[  $bi_make_iso == 1 ]]; then
 	create_iso $tmpdir $iso_image_name $tmpdir/esp.img
-	print "Successfully created SmartOS ISO image: $iso_image_name"
 	exit 0
 fi
 
@@ -371,8 +382,8 @@ print "Creating $bi_imgsz image at $tmpdir/smartos.usb ... \c"
 create_image $tmpdir $bi_imgsz $tmpdir/smartos.usb
 print "done"
 
-rootoff=$(nawk '$1 == "root" { print $3 }' <$tmpdir/partitions.out)
-rootsize=$(nawk '$1 == "root" { print $4 }' <$tmpdir/partitions.out)
+rootoff=$(nawk '$1 == "root" { print $3 }' <$tmpdir/partition.map)
+rootsize=$(nawk '$1 == "root" { print $4 }' <$tmpdir/partition.map)
 
 pfrun mkfile -n $rootsize $tmpdir/rootfs.img
 
@@ -381,31 +392,25 @@ lofi_blkdev=$(pfexec lofiadm -a $tmpdir/rootfs.img)
 
 lofi_rawdev=${lofi_blkdev/lofi/rlofi}
 
+create_root $lofi_rawdev $tmpdir/smartos.usb $rootoff $rootsize
+
 #
-# If we're only building a proforma image for Triton, then we're done.
+# The proforma image's root partition is populated by sdc-headnode, not us.
 #
-if [[ $bi_proforma_only == 1 ]]; then
-	create_root $lofi_rawdev $tmpdir/smartos.usb $rootoff $rootsize
-	copy_root $lofi_rawdev $tmpdir/smartos.usb $rootoff
-	pfrun lofiadm -d $lofi_blkdev
-	pfrun mkdir -p $bi_wsroot/proto.images
-	pfrun mv $tmpdir/smartos.usb $bi_wsroot/proto.images/${bi_imgsz}b.img
-	pfrun chmod 644 $bi_wsroot/proto.images/${bi_imgsz}b.img
-	print "Successfully created proforma image:" \
-	    "$bi_wsroot/proto.images/${bi_imgsz}b.img"
-	exit 0
+if [[ $bi_proforma_only != 1 ]]; then
+	mount_root $lofi_blkdev $rootdir
+	populate_root $rootdir
+	pfrun umount $rootdir
 fi
 
-# FIXME: combine some later?
-create_root $lofi_rawdev $tmpdir/smartos.usb $rootoff $rootsize
-build_root $lofi_blkdev $rootdir
 copy_root $lofi_rawdev $tmpdir/smartos.usb $rootoff
 
 pfrun lofiadm -d $lofi_blkdev
-pfrun mkdir -p $bi_wsroot/output-usb
-pfrun mv $tmpdir/smartos.usb $bi_wsroot/output-usb/$usb_image_name
-pfrun chmod 644 $bi_wsroot/output-usb/$usb_image_name
 
-print "Successfully created SmartOS USB image:" \
-    "$bi_wsroot/output-usb/$usb_image_name"
+if [[ $bi_proforma_only == 1 ]]; then
+	copy_results $bi_wsroot/proto.images ${bi_imgsz}b.img ${bi_imgsz}b.
+else
+	copy_results $bi_wsroot/output-usb $usb_image_name ""
+fi
+
 exit 0

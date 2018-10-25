@@ -237,7 +237,7 @@ function populate_root()
 	print "done"
 
 	print "Customizing boot loader configuration ... \c"
-	readonly shadow='$5$2HOHRnK3$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA'
+	readonly shadow="'\$5\$2HOHRnK3\$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA'"
 	pfrun touch $rootmnt/boot/loader.conf
 	pfrun chmod 666 $rootmnt/boot/loader.conf
 	pfrun echo "loader_logo=\"smartos\"" >> $rootmnt/boot/loader.conf

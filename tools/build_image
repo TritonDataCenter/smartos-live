@@ -41,9 +41,16 @@ lofi_blkdev=
 lofi_rawdev=
 esp_blkdev=
 usb_image_name=
-rootmnt=
+rootdir=
 efimnt=
 tmpdir=
+
+# FIXME old options, -c definitely, kmdb, extra boot opts?
+# 115200,8,n,1,- for serial, multi-console loader
+# FIXME: don't need root fs at all  for proforma, need to bundle
+# offsets in tarball instead
+# FIXME: why multiple proforma sizes exactly?
+# FIXME: legacy ISO boot fails
 
 function detach_lofi()
 {
@@ -70,15 +77,13 @@ function cleanup()
 		pfexec umount $efimnt
 	fi
 
-	if mount | grep $rootmnt >/dev/null; then
-		pfexec umount $rootmnt
+	if mount | grep $rootdir >/dev/null; then
+		pfexec umount $rootdir
 	fi
 
-	detach_lofi $lofi_blkdev
-	detach_lofi $esp_blkdev
+	detach_lofi "$lofi_blkdev"
+	detach_lofi "$esp_blkdev"
 
-	pfexec rm -f $tmpdir/pmbr
-	pfexec rm -f $tmpdir/gptzfsboot
 	pfexec rm -f $tmpdir/esp.img
 	pfexec rm -f $tmpdir/rootfs.img
 	pfexec rm -f $tmpdir/smartos.usb
@@ -132,12 +137,14 @@ function create_esp()
 	[[ $? == 0 ]] || fail "Failed to create ESP lofi device"
 	readonly esp_rawdev=${esp_blkdev/lofi/rlofi}
 
+	# FIXME: fat32 for ISO?
 	pfrun mkfs -F pcfs -o b=system,size=$esp_sects,nofdisk,fat=32 \
 	    $esp_rawdev </dev/null
 
 	pfrun mkdir -p $efimnt
 	pfrun mount -F pcfs $esp_blkdev $efimnt
 	pfrun mkdir -p $efimnt/efi/boot
+	# FIXME: BOOTIA32.efi ?
 	pfrun cp $bi_wsroot/proto.boot/boot/loader64.efi \
 	    $efimnt/efi/boot/BOOTX64.efi
 	pfrun umount $efimnt
@@ -145,18 +152,104 @@ function create_esp()
 }
 
 #
-# Assemble all our boot parts into the disk image.
+# FIXME
 #
-function label_image()
+function populate_root()
+{
+	local readonly dir=$1
+
+	print "Installing boot tarball onto root partition ... \c"
+	pfexec cp -r $bi_wsroot/proto.boot/* $dir/
+	print "done"
+
+	print "Customizing boot loader configuration ... \c"
+	readonly shadow="'\$5\$2HOHRnK3\$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA'"
+	pfrun touch $dir/boot/loader.conf
+	pfrun chmod 666 $dir/boot/loader.conf
+	pfrun echo "loader_logo=\"smartos\"" >> $dir/boot/loader.conf
+	pfrun echo "loader_brand=\"smartos\"" >> $dir/boot/loader.conf
+	pfrun echo "boot-args=\"-B root_shadow=${shadow},smartos=true\"" >> \
+	    $dir/boot/loader.conf
+	print "done"
+
+	print "Copying platform image to root partition" \
+	    "(this will take a while) ... \c"
+
+	pfexec cp -r $bi_wsroot/output/platform-latest/ $dir/platform
+
+	print "done"
+}
+
+#
+# FIXME
+#
+function create_iso()
 {
 	local readonly tmpdir=$1
-	local readonly dev=$2
+	local readonly iso=$2
+	local readonly espimg=$3
 
-	pfrun cp $bi_wsroot/proto.boot/boot/pmbr $tmpdir/pmbr
-	pfrun cp $bi_wsroot/proto.boot/boot/gptzfsboot $tmpdir/gptzfsboot
+	pfrun mkdir -p $bi_wsroot/output-iso
+	pfrun mkdir -p $rootdir
 
-	args="-m $tmpdir/pmbr -b $tmpdir/gptzfsboot -e $tmpdir/esp.img -o $dev"
-	pfrun $bi_wsroot/tools/format_image/format_image $args >$tmpdir/partitions.out
+	populate_root $rootdir
+
+	pfrun cp $espimg $rootdir/boot/efiboot.img
+
+	pfrun mkisofs -quiet -R \
+	    -eltorito-boot boot/cdboot -no-emul-boot -boot-info-table \
+	    -eltorito-alt-boot -eltorito-platform efi \
+	    -eltorito-boot boot/efiboot.img -no-emul-boot \
+	    -o $iso $rootdir
+
+	# FIXME: boot-load-size??
+
+	# unused: -N -allow-multidot -cache-inodes -l -U -d -D -volset -V
+	# -no-iso-translate
+	# FIXME: use -volset -V ??
+	#
+        # $MKISOFS -o "$DIST_ISO" -c .catalog -N -l -R -U \
+        #    -allow-multidot -no-iso-translate -cache-inodes -d -D -volset \
+        #    "$VOLSETID" -V "$DISTRO_NAME" \
+        #    -eltorito-boot boot/cdboot -no-emul-boot -boot-info-table \
+        #    -eltorito-alt-boot \
+        #    -eltorito-platform efi \
+        #    -eltorito-boot boot/efiboot.img -no-emul-boot \
+        #    "$PKG_IMG_PATH"
+
+	#isopath="$bi_output_dir/$bi_platform_name.iso"
+	#LC_ALL=C mkisofs -R -b 		\
+	#    boot/grub/stage2_eltorito	\
+	#    -no-emul-boot 		\
+	#    -boot-load-size 4		\
+	#    -boot-info-table		\
+	#    -quiet			\
+	#    -o 	$isopath		\
+	#    $bi_tmpdir/ >/dev/null
+
+	rm -rf $rootdir
+}
+
+#
+# Assemble all our boot parts into the disk image.
+#
+function create_image()
+{
+	local readonly tmpdir=$1
+	local readonly size=$2
+	local readonly file=$3
+
+	pfrun mkfile -n $size $file
+
+	lofi_blkdev=$(pfexec lofiadm -a $file)
+	[[ $? == 0 ]] || fail "Failed to create lofi device"
+
+	pfrun $bi_wsroot/tools/format_image/format_image \
+	    -m $bi_wsroot/proto.boot/boot/pmbr \
+	    -b $bi_wsroot/proto.boot/boot/gptzfsboot -e $tmpdir/esp.img \
+	    -o ${lofi_blkdev/lofi/rlofi} >$tmpdir/partitions.out
+
+	pfrun lofiadm -d $lofi_blkdev
 }
 
 #
@@ -204,7 +297,7 @@ function copy_root()
 # Populate the root filesystem with all the SmartOS bits, as well as the loader
 # used in legacy boot mode.
 #
-function populate_root()
+function build_root()
 {
 	local readonly dev=$1
 	local readonly rootmnt=$2
@@ -219,26 +312,7 @@ function populate_root()
 	pfrun mount $mntopts $dev $rootmnt 2>/dev/null
 	print "done"
 
-	print "Installing boot tarball onto root partition ... \c"
-	pfexec cp -r $bi_wsroot/proto.boot/* $rootmnt/
-	print "done"
-
-	print "Customizing boot loader configuration ... \c"
-	readonly shadow="'\$5\$2HOHRnK3\$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA'"
-	pfrun touch $rootmnt/boot/loader.conf
-	pfrun chmod 666 $rootmnt/boot/loader.conf
-	pfrun echo "loader_logo=\"smartos\"" >> $rootmnt/boot/loader.conf
-	pfrun echo "loader_brand=\"smartos\"" >> $rootmnt/boot/loader.conf
-	pfrun echo "boot-args=\"-B root_shadow=${shadow},smartos=true\"" >> \
-	    $rootmnt/boot/loader.conf
-	print "done"
-
-	print "Copying platform image to root partition" \
-	    "(this will take a while) ... \c"
-
-	pfexec cp -r $bi_wsroot/output/platform-latest/ $rootmnt/platform
-
-	print "done"
+	populate_root $rootmnt
 
 	pfrun umount $rootmnt
 }
@@ -260,8 +334,6 @@ done
 set -eou pipefail
 export SHELLOPTS
 
-[[ $bi_make_iso == 1 ]] && fail "ISO support not implemented, yet"
-
 [[ -z $bi_wsroot ]] && usage "-r is required"
 
 [[ $bi_proforma_only == 1 ]] && [[ $bi_ufs_root == 1 ]] && \
@@ -279,29 +351,25 @@ tmpdir=$(mktemp -d -p /var/tmp) || fail "mktemp failed!"
 trap cleanup EXIT
 
 efimnt=$tmpdir/mnt/efi
-rootmnt=$tmpdir/mnt/root
+rootdir=$tmpdir/mnt/root
 usb_image_name=$(readlink -f $bi_wsroot/output/platform-latest)
 usb_image_name=$(basename $usb_image_name)
+iso_image_name="$bi_wsroot/output-iso/${usb_image_name}.iso"
 usb_image_name="${usb_image_name}.usb"
-
-print "Creating empty $bi_imgsz image at $tmpdir/smartos.usb ... \c"
-pfrun mkfile -n $bi_imgsz $tmpdir/smartos.usb
-print "done"
-
-lofi_blkdev=$(pfexec lofiadm -a $tmpdir/smartos.usb)
-[[ $? == 0 ]] || fail "Failed to create lofi device"
-
-lofi_rawdev=${lofi_blkdev/lofi/rlofi}
 
 print "Creating EFI System Partition image ... \c"
 create_esp $tmpdir $efimnt
 print "done"
 
-print "Labelling USB image ... \c"
-label_image $tmpdir $lofi_rawdev
-print "done"
+if [[  $bi_make_iso == 1 ]]; then
+	create_iso $tmpdir $iso_image_name $tmpdir/esp.img
+	print "Successfully created SmartOS ISO image: $iso_image_name"
+	exit 0
+fi
 
-pfrun lofiadm -d $lofi_blkdev
+print "Creating $bi_imgsz image at $tmpdir/smartos.usb ... \c"
+create_image $tmpdir $bi_imgsz $tmpdir/smartos.usb
+print "done"
 
 rootoff=$(nawk '$1 == "root" { print $3 }' <$tmpdir/partitions.out)
 rootsize=$(nawk '$1 == "root" { print $4 }' <$tmpdir/partitions.out)
@@ -313,12 +381,11 @@ lofi_blkdev=$(pfexec lofiadm -a $tmpdir/rootfs.img)
 
 lofi_rawdev=${lofi_blkdev/lofi/rlofi}
 
-create_root $lofi_rawdev $tmpdir/smartos.usb $rootoff $rootsize
-
 #
 # If we're only building a proforma image for Triton, then we're done.
 #
 if [[ $bi_proforma_only == 1 ]]; then
+	create_root $lofi_rawdev $tmpdir/smartos.usb $rootoff $rootsize
 	copy_root $lofi_rawdev $tmpdir/smartos.usb $rootoff
 	pfrun lofiadm -d $lofi_blkdev
 	pfrun mkdir -p $bi_wsroot/proto.images
@@ -329,9 +396,11 @@ if [[ $bi_proforma_only == 1 ]]; then
 	exit 0
 fi
 
-populate_root $lofi_blkdev $rootmnt
-
+# FIXME: combine some later?
+create_root $lofi_rawdev $tmpdir/smartos.usb $rootoff $rootsize
+build_root $lofi_blkdev $rootdir
 copy_root $lofi_rawdev $tmpdir/smartos.usb $rootoff
+
 pfrun lofiadm -d $lofi_blkdev
 pfrun mkdir -p $bi_wsroot/output-usb
 pfrun mv $tmpdir/smartos.usb $bi_wsroot/output-usb/$usb_image_name

@@ -57,29 +57,80 @@ var vmobj = {};
 //   don't actually use that zoneroot.
 
 var test_cases = [
-    [ {brand: 'joyent-minimal', quota: 0, image_uuid: smartos_image_uuid}, 0],
-    [ {brand: 'joyent-minimal', quota: 1024, image_uuid: smartos_image_uuid},
-        1024],
-    [ {brand: 'joyent', quota: 0, image_uuid: smartos_image_uuid}, 0],
-    [ {brand: 'joyent', quota: 1048576, image_uuid: smartos_image_uuid},
-        1048576],
-    [ {brand: 'kvm', quota: 0}, 0],
-    [ {brand: 'kvm', quota: 0, image_uuid: smartos_image_uuid}, 0],
-    [ {brand: 'kvm', quota: 10, image_uuid: smartos_image_uuid}, 10],
-    [ {brand: 'bhyve', quota: 1,
-        disks: [
-            {boot: true, model: 'virtio',
-            image_uuid: vmtest.CURRENT_BHYVE_CENTOS_UUID}]
-    }, 1],
-    [ {brand: 'bhyve', quota: 10,
-        disks: [
-            {boot: true, model: 'virtio',
-                image_uuid: vmtest.CURRENT_BHYVE_CENTOS_UUID}]
-    }, 10]
+    {
+        payload: {brand: 'joyent-minimal', quota: 0,
+            image_uuid: smartos_image_uuid}
+    }, {
+        payload: {brand: 'joyent-minimal', quota: 1024,
+            image_uuid: smartos_image_uuid}
+    }, {
+        payload: {brand: 'joyent', quota: 0, image_uuid: smartos_image_uuid}
+    }, {
+        payload: {brand: 'joyent', quota: 1048576,
+            image_uuid: smartos_image_uuid}
+    }, {
+        payload: {brand: 'kvm', quota: 0}
+    }, {
+        payload: {brand: 'kvm', quota: 0, image_uuid: smartos_image_uuid}
+    }, {
+        payload: {brand: 'kvm', quota: 10, image_uuid: smartos_image_uuid}
+    }, {
+        payload: {brand: 'bhyve', quota: 1,
+            disks: [ {boot: true, model: 'virtio',
+                image_uuid: vmtest.CURRENT_BHYVE_CENTOS_UUID} ]
+        }
+    }, {
+        payload: {brand: 'bhyve', quota: 1, flexible_disk_size: 15 * 1024,
+            disks: [ {boot: true, model: 'virtio',
+                image_uuid: vmtest.CURRENT_BHYVE_CENTOS_UUID} ]
+        }
+    }, {
+        payload: {brand: 'bhyve', quota: 10,
+            disks: [ {boot: true, model: 'virtio',
+                image_uuid: vmtest.CURRENT_BHYVE_CENTOS_UUID} ]
+        }
+    },
+
+    /*
+     * For better or worse, VM.create() allows payloads with invalid properties,
+     * logging "bad property $prop because: missing from allowed_properties".
+     * The following test cases ensure that flexible_disk_size does not make it
+     * into non-bhyve instances' configuration or affect the quota.
+     */
+    {
+        payload: {brand: 'joyent-minimal', quota: 10,
+            flexible_disk_size: 12 * 1024, image_uuid: smartos_image_uuid},
+        expected: {quota: 10, flexible_disk_size: undefined}
+    }, {
+        payload: {brand: 'joyent', quota: 10,
+            flexible_disk_size: 12 * 1024, image_uuid: smartos_image_uuid},
+        expected: {quota: 10, flexible_disk_size: undefined}
+    }, {
+        payload: {brand: 'kvm', quota: 1,
+            flexible_disk_size: 12 * 1024, image_uuid: smartos_image_uuid},
+        expected: {quota: 1, flexible_disk_size: undefined}
+    }, {
+        payload: {brand: 'lx', quota: 10,
+            flexible_disk_size: 12 * 1024, kernel_version: '3.13.0',
+            image_uuid: vmtest.CURRENT_UBUNTU_LX_IMAGE_UUID},
+        expected: {quota: 10, flexible_disk_size: undefined}
+    }
 ];
 
-function do_test(payload, expected_result)
+function do_test(testcase)
 {
+    var desc = [];
+    var payload = testcase.payload;
+    var expected = testcase.expected || JSON.parse(JSON.stringify(payload));
+
+    Object.keys(payload).forEach(
+        function (key) {
+            if (['string', 'number'].indexOf(typeof (payload[key])) !== -1) {
+                desc.push(key + '=' + payload[key]);
+            }
+        });
+    desc = desc.join(' ');
+
     abort = false;
 
     // some common properties
@@ -87,25 +138,25 @@ function do_test(payload, expected_result)
     payload.autoboot = false;
     payload.do_not_inventory = true;
 
-    test('create ' + payload.brand + ' zone with ' + payload.quota + ' quota',
+    test('create ' + desc,
         function (t) {
             doCreateTest({
                 t: t,
                 payload: payload,
-                expected_result: expected_result
+                expected: expected
             });
         });
 
-    test('update ' + payload.brand + ' zone with ' + payload.quota + ' quota',
+    test('update ' + desc,
         function (t) {
             doUpdateTest({
                 t: t,
                 payload: payload,
-                expected_result: expected_result
+                expected: expected
             });
         });
 
-    test('delete ' + payload.brand + ' zone with ' + payload.quota + ' quota',
+    test('delete ' + desc,
         function (t) {
             if (abort) {
                 t.ok(false, 'skipping delete as test run is aborted.');
@@ -137,7 +188,7 @@ function do_test(payload, expected_result)
 function doCreateTest(opts) {
     var t = opts.t;
     var payload = opts.payload;
-    var expected_result = opts.expected_result;
+    var expected = opts.expected;
 
     async.waterfall([
         function _create(next) {
@@ -152,26 +203,18 @@ function doCreateTest(opts) {
             });
         },
         function _load(next) {
-            VM.load(vmobj.uuid, function (err, o) {
-                common.ifError(t, err, 'loading vm');
-                if (err) {
-                    abort = true;
-                    next(err);
-                    return;
-                }
-                vmobj = o;
-
-                t.ok(o.quota === expected_result,
-                    'correct quota [' + o.quota + ','
-                    + expected_result + ']');
-                next(err);
-            });
+            checkProps({
+                expected: expected,
+                uuid: vmobj.uuid,
+                t: t
+            }, next);
         },
         function _checkZfsProperties(next) {
             checkZfs({
+                payload: payload,
+                expected: expected,
                 uuid: vmobj.uuid,
-                t: t,
-                expected_result: expected_result
+                t: t
             }, next);
         }
     ],
@@ -183,13 +226,12 @@ function doCreateTest(opts) {
 function doUpdateTest(opts) {
     var t = opts.t;
     var payload = opts.payload;
-    var expected_result = opts.expected_result;
+    var expected = opts.expected;
+    var updatePayload = {quota: payload.quota * 2 };
 
     async.waterfall([
         // Double the quota
         function _updateQuotaUp(next) {
-            var updatePayload = { quota: payload.quota * 2 };
-
             VM.update(vmobj.uuid, updatePayload, {}, function (err) {
                 common.ifError(t, err, 'updating quota up');
                 if (err) {
@@ -200,32 +242,27 @@ function doUpdateTest(opts) {
             });
         },
         function _checkQuotaUp(next) {
-            VM.load(vmobj.uuid, function (err, o) {
-                common.ifError(t, err, 'loading vm');
-                if (err) {
-                    next(err);
-                    return;
-                }
-
-                t.ok(o.quota === payload.quota * 2,
-                    'correct quota [' + o.quota + ','
-                    + payload.quota * 2 + ']');
-                next(err);
-            });
+            checkProps({
+                expected: updatePayload,
+                uuid: vmobj.uuid,
+                t: t
+            }, next);
         },
         function _checkZfsProperties(next) {
             checkZfs({
+                payload: payload,
+                expected: expected,
+                expected: updatePayload,
                 uuid: vmobj.uuid,
-                t: t,
-                expected_result: expected_result * 2
+                t: t
             }, next);
         },
         function _updateQuotaDown(next) {
-            // Halve the quota
-            var updatePayload = { quota: expected_result };
+            // Reset the quota to what it started out as
+            updatePayload = {quota: payload.quota };
 
             VM.update(vmobj.uuid, updatePayload, {}, function (err) {
-                common.ifError(t, err, 'updating quota up');
+                common.ifError(t, err, 'updating quota down');
 
                 if (err) {
                     next(err);
@@ -235,24 +272,18 @@ function doUpdateTest(opts) {
             });
         },
         function _checkQuotaDown(next) {
-            VM.load(vmobj.uuid, function (err, o) {
-                common.ifError(t, err, 'loading vm');
-                if (err) {
-                    next(err);
-                    return;
-                }
-
-                t.ok(o.quota === expected_result,
-                    'correct quota [' + o.quota + ','
-                    + expected_result + ']');
-                next(err);
-            });
+            checkProps({
+                expected: expected,
+                uuid: vmobj.uuid,
+                t: t
+            }, next);
         },
         function _checkZfsPropertiesAgain(next) {
             checkZfs({
+                payload: payload,
+                expected: expected,
                 uuid: vmobj.uuid,
-                t: t,
-                expected_result: expected_result
+                t: t
             }, next);
         }
     ],
@@ -261,9 +292,45 @@ function doUpdateTest(opts) {
     });
 }
 
+/*
+ * Checks most (see skipProps) opts.exected.* against corresponding vmobj.*.
+ * Ignores vmobj properties that are not present in opts.expected. To verify
+ * that vmobj.foo is undefined, set opts.expected.foo to undefined.
+ *
+ * Updates vmobj global as a side effect.
+ */
+function checkProps(opts, callback) {
+    var t = opts.t;
+    var uuid = opts.uuid;
+    var expected = opts.expected;
+    /*
+     * There are required in some payloads but are not present and/or of
+     * interest in vmobj.
+     */
+    var skipProps = ['disks', 'ram', 'zonename'];
+
+    VM.load(uuid, function (err, o) {
+        common.ifError(t, err, 'loading vm');
+        if (err) {
+            callback(err);
+            return;
+        }
+        vmobj = o;
+
+        Object.keys(expected).forEach(function (prop) {
+            if (skipProps.indexOf(prop) === -1) {
+                t.ok(expected[prop] === o[prop],
+                    'correct ' + prop + ' [' + o[prop] + ','
+                    + expected[prop] + ']');
+            }
+        });
+        callback();
+    });
+}
+
 function checkZfs(opts, callback) {
     var t = opts.t;
-    var expected_result = opts.expected_result;
+    var expected = opts.expected;
     var props = [
         'used', 'refquota', 'quota', 'refreservation', 'copies',
         'volsize', 'volblocksize'
@@ -284,6 +351,7 @@ function checkZfs(opts, callback) {
         var zrRefreservation =
             datasetValues[zoneroot].refreservation;
 
+        t.ok(vmobj.brand, 'brand is ' + vmobj.brand);
         switch (vmobj.brand) {
             case 'bhyve':
                 zvol = zoneroot + '/disk0';
@@ -297,30 +365,40 @@ function checkZfs(opts, callback) {
                 var zvRefreservation =
                     datasetValues[zvol].refreservation;
 
+                var expQuota;
+                if (opts.payload.hasOwnProperty('flexible_disk_size')) {
+                    var flexsize = opts.payload.flexible_disk_size;
+                    t.ok(vmobj.flexible_disk_size === flexsize,
+                        'vmobj.flexible_disk_size is ' + flexsize);
+                    expQuota = flexsize * 1024 * 1024 + zrRefreservation
+                        + datasetValues[zvol].refreservation
+                        - datasetValues[zvol].volsize;
+                } else {
+                    t.ok(!vmobj.hasOwnProperty('flexible_disk_size'),
+                        'vmobj does not have flexible_disk_size');
+                    expQuota = zvRefreservation + zrRefquota;
+                }
+
                 t.equal(
                     zrRefquota / 1024 / 1024 / 1024,
-                    expected_result, 'bhyve quota uses refquota');
+                    expected.quota, 'bhyve quota uses refquota');
 
                 t.equal(
                     zrRefreservation / 1024 / 1024 / 1024,
-                    expected_result, 0,
-                    'no refreservation set');
+                    expected.quota, 'no refreservation set');
 
                 t.equal(
                     zvRefreservation,
                     expReservationsSize,
                     'zvol refreseration matches expected');
 
-                t.equal(
-                    zrQuota,
-                    zvRefreservation + zrRefquota,
-                    'bhyve zone root quota value');
+                t.equal(zrQuota, expQuota, 'bhyve zone root quota value');
                 break;
 
             default:
                 t.equal(
                     zrQuota / 1024 / 1024 / 1024,
-                    expected_result, 'quota should match');
+                    expected.quota, 'quota should match');
                 break;
         }
         callback();
@@ -361,7 +439,7 @@ for (test_case in test_cases) {
     test_case = test_cases[test_case];
     test_case.alias = 'test-quota-' + process.pid;
 
-    do_test(test_case[0], test_case[1]);
+    do_test(test_case);
 }
 
 test('create joyent-minimal zone with invalid type of quota', function (t) {

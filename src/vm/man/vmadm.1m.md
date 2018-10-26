@@ -1081,6 +1081,21 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    flexible_disk_size:
+
+        This sets an upper bound for the amount of space that a bhyve instance
+        may use for its disks and snapshots of those disks. If this value is not
+        set, it will not be possible to create snapshots of the instance.
+
+        This value must be at least as large as the sum of all of the
+        disk.*.size values.
+
+        type: integer (number of MiB)
+        vmtype: bhyve
+        listable: yes
+        create: yes
+        update: yes (live update)
+
     fs_allowed:
 
         This option allows you to specify filesystem types this zone is allowed

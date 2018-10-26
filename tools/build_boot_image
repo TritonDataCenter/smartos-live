@@ -45,6 +45,7 @@ bi_proforma_only=0
 bi_ufs_root=0
 bi_nocleanup=0
 bi_imgsz="512m"
+bi_wsroot=
 lofi_blkdev=
 lofi_rawdev=
 esp_blkdev=
@@ -108,7 +109,7 @@ function usage()
 {
 	[[ ! -z $1 ]] && printf "%s\n\n" "$1" 1>&2
 
-	print -u2 "Usage: build_image [-U] [-I] [-x] [-p <size>] -r <smartos-live repo>"
+	print -u2 "Usage: $0 [-U] [-I] [-x] [-p <size>] -r <smartos-live repo>"
 	print -u2 "\n -U\tcreate UFS filesystem on root partition (default: PCFS)"
 	print -u2 " -I\tbuild SmartOS ISO image (default: USB image)"
 	print -u2 " -p\tbuild proforma USB image for Triton (e.g. 1gb)"
@@ -346,7 +347,7 @@ done
 set -eou pipefail
 export SHELLOPTS
 
-[[ -z $bi_wsroot ]] && usage "-r is required"
+[[ -z "$bi_wsroot" ]] && usage "-r is required"
 
 [[ $bi_proforma_only == 1 ]] && [[ $bi_ufs_root == 1 ]] && \
     usage "-p and -U are mutually exclusive"

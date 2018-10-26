@@ -156,7 +156,7 @@ images: $(IMAGES_SIZES_GB:%=$(IMAGES_PROTO)/%gb.img)
 $(IMAGES_PROTO)/%.img: boot
 	rm -f $@
 	mkdir -p $(IMAGES_PROTO)
-	./tools/build_image -p $* -r $(ROOT)
+	./tools/build_boot_image -p $* -r $(ROOT)
 
 images-tar: $(IMAGES_TARBALL)
 
@@ -397,10 +397,10 @@ clobber: clean
 	pfexec rm -rf output/* output-iso/* output-usb/*
  
 iso: live
-	./tools/build_image -I -r $(ROOT)
+	./tools/build_boot_image -I -r $(ROOT)
 
 usb: live
-	./tools/build_image -r $(ROOT)
+	./tools/build_boot_image -r $(ROOT)
 
 FRC:
 

@@ -420,11 +420,12 @@ tab-complete UUIDs rather than having to type them out for every command.
         The same pattern is used for customer_metadata, internal_metadata and
         routes.
 
-        In the case of nics and disks, there are 3 special objects:
+        In the case of NICs, disks, and file systems, there are 3 special
+        objects:
 
-          add_disks || add_nics
-          remove_disks || remove_nics
-          update_disks || update_nics
+          add_disks    || add_nics    || add_filesystems
+          remove_disks || remove_nics || remove_filesystems
+          update_disks || update_nics || update_filesystems
 
         For NICs for example, you can include an array of NIC objects with the
         parameter add_nics in your input. Those NICs would get added to the VM.
@@ -456,6 +457,10 @@ tab-complete UUIDs rather than having to type them out for every command.
              "dangerous_allow_shrink": true
            }
          }
+
+        For updating file systems, use the same format described above for NICs
+        except that the options are add_filesystems, remove_filesystems, and
+        update_filesystems.  Removal and update will be keyed on "target".
 
         Those fields marked in the PROPERTIES section below as updatable and
         modified with '(live update)' mean that when you update the property
@@ -1060,16 +1065,15 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     filesystems:
 
-        This property can be used to mount additional filesystems into an OS
-        VM. It is primarily intended for SDC special VMs. The value is an
-        array of objects. The properties available are listed below under the
-        filesystems.*.<property> options. Those objects can have the following
-        properties: source, target, raw (optional), type and options.
+        This property can be used to mount additional file systems into an OS
+        VM. The value is an array of objects.  Each object in the array can
+        have the following properties: type, source, target, raw (optional),
+        and options.  These properties are documented below.
 
     filesystems.*.type:
 
-        For OS VMs this specifies the type of the filesystem being mounted in.
-        Example: lofs
+        For OS VMs, this specifies the type of the file system to be mounted.
+        Example: "lofs" or "pcfs"
 
         type: string (fs type)
         vmtype: OS
@@ -1079,10 +1083,12 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     filesystems.*.source:
 
-        For OS VMs this specifies the directory in the global zone of the
-        filesystem being mounted in.  Example: /pool/somedirectory
+        For OS VMs, this specifies the device, file, or directory that is to
+        be mounted within the zone; i.e., the "special" argument to
+        mount(1M).  This path is interpreted in the global zone.
+        Example: "/dev/dsk/somedisk" or "/zones/somedirectory"
 
-        type: string (path)
+        type: string (path or device)
         vmtype: OS
         listable: no
         create: yes
@@ -1090,8 +1096,9 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     filesystems.*.target:
 
-        For OS VMs this specifies the directory inside the Zone where this
-        filesystem should be mounted.  Example: /somedirectory
+        For OS VMs, this specifies the path of the mount point as seen from
+        within the zone.
+        Example: "/var/somedirectory"
 
         type: string (path)
         vmtype: OS
@@ -1101,8 +1108,10 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     filesystems.*.raw:
 
-        For OS VMs this specifies the additional raw device that should be
-        associated with the source filesystem.  Example: /dev/rdsk/somedisk
+        For OS VMs, this specifies the additional raw device that should be
+        associated with the source file system.  The raw device is used for
+        tools such as fsck(1M).
+        Example: "/dev/rdsk/somedisk"
 
         type: string (device)
         vmtype: OS
@@ -1112,9 +1121,9 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     filesystems.*.options:
 
-        For OS VMs this specifies the array of mount options for this file
-        system when it is mounted into the zone.  Examples of options include:
-        "ro" and "nodevices".
+        For OS VMs, this specifies the array of mount options for this file
+        system when it is mounted into the zone.
+        Example: "ro", "noatime", or "nodevices"
 
         type: array of strings (each string is an option)
         vmtype: OS
@@ -1165,12 +1174,12 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     fs_allowed:
 
-        This option allows you to specify filesystem types this zone is allowed
-        to mount.  For example on a zone for building SmartOS you probably want
-        to set this to: "ufs,pcfs,tmpfs".  To unset this property, set the
-        value to the empty string.
+        This option allows you to specify file system types this zone is
+        allowed to mount.  For example on a zone for building SmartOS you
+        probably want to set this to: "ufs,pcfs,tmpfs".  To unset this
+        property, set the value to the empty string.
 
-        type: string (comma separated list of filesystem types)
+        type: string (comma separated list of file system types)
         vmtype: OS
         listable: no
         create: yes

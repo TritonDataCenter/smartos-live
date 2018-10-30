@@ -288,10 +288,11 @@ function copy_root()
 	local readonly dev=$1
 	local readonly image=$2
 	local readonly offset=$3
+	local readonly bs=1048576
 
-	print "Copying root filesystem at offset $offset ... \c"
-	pfrun /usr/bin/dd bs=1048576 conv=notrunc if=$dev of=$image \
-	    oseek=$(( $offset / 1048576 )) >/dev/null 2>&1
+	print "Copying root filesystem ..."
+	pfrun /usr/bin/dd bs=$bs conv=notrunc if=$dev of=$image \
+	    oseek=$(( $offset / $bs )) >/dev/null
 	print "done"
 }
 
@@ -377,6 +378,9 @@ fi
 print "Creating $bi_imgsz image at $tmpdir/smartos.usb ... \c"
 create_image $tmpdir $bi_imgsz $tmpdir/smartos.usb
 print "done"
+
+echo "partition.map:"
+cat $tmpdir/partition.map
 
 rootoff=$(nawk '$1 == "root" { print $3 }' <$tmpdir/partition.map)
 rootsize=$(nawk '$1 == "root" { print $4 }' <$tmpdir/partition.map)

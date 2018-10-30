@@ -1,9 +1,9 @@
 
 This is just a convenient temporary TODO list...
 
+ - need RICHMOND-16 handling
  - do we need the 8Gb image? If so, what S/W uses it upstream
    that may need fixing?
- - booting either COAL or ISO in legacy mode hits an issue during fakebop
  - boot modules (e.g. dtrace anon tracing) - works?
  - need old options for console etc. back in build_boot_image
  - multiconsole in loader

@@ -376,7 +376,7 @@ if [[  $bi_make_iso == 1 ]]; then
 	exit 0
 fi
 
-print "Creating $bi_imgsz image at $tmpdir/smartos.usb ... \c"
+print "Creating $num_gb GB image at $tmpdir/smartos.usb ... \c"
 create_image $tmpdir $bi_imgsz $tmpdir/smartos.usb
 print "done"
 
@@ -409,7 +409,7 @@ copy_root $lofi_rawdev $tmpdir/smartos.usb $rootoff
 pfrun lofiadm -d $lofi_blkdev
 
 if [[ $bi_proforma_only == 1 ]]; then
-	copy_results $bi_wsroot/proto.images ${bi_imgsz}b.img ${bi_imgsz}b.
+	copy_results $bi_wsroot/proto.images ${num_gb}gb.img ${num_gb}gb.
 else
 	copy_results $bi_wsroot/output-usb $usb_image_name ""
 fi

@@ -44,7 +44,7 @@ bi_make_iso=0
 bi_proforma_only=0
 bi_ufs_root=0
 bi_nocleanup=0
-bi_imgsz="512m"
+bi_imgsz="2000000000"
 bi_wsroot=
 lofi_blkdev=
 lofi_rawdev=
@@ -331,7 +331,8 @@ while getopts "IUp:r:x" c $@; do
 	case "$c" in
 	I)	bi_make_iso=1 ;;
 	p)	bi_proforma_only=1
-		bi_imgsz=${OPTARG/gb/g} ;;
+		num_gb=${OPTARG%gb}
+		bi_imgsz=$(( $num_gb * 1000000000 )) ;;
 	r)	bi_wsroot=$(readlink -f $OPTARG) ;;
 	U)	bi_ufs_root=1 ;;
 	x)	bi_nocleanup=1 ;;

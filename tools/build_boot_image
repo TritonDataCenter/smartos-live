@@ -44,7 +44,8 @@ bi_make_iso=0
 bi_proforma_only=0
 bi_ufs_root=0
 bi_nocleanup=0
-bi_imgsz="2000000000"
+bi_imgsz_gb="2"
+bi_imgsz=$(( $bi_imgsz_gb * 1000000000 ))
 bi_wsroot=
 lofi_blkdev=
 lofi_rawdev=
@@ -331,8 +332,8 @@ while getopts "IUp:r:x" c $@; do
 	case "$c" in
 	I)	bi_make_iso=1 ;;
 	p)	bi_proforma_only=1
-		num_gb=${OPTARG%gb}
-		bi_imgsz=$(( $num_gb * 1000000000 )) ;;
+		bi_imgsz_gb=${OPTARG%gb}
+		bi_imgsz=$(( $bi_imgsz_gb * 1000000000 )) ;;
 	r)	bi_wsroot=$(readlink -f $OPTARG) ;;
 	U)	bi_ufs_root=1 ;;
 	x)	bi_nocleanup=1 ;;
@@ -376,7 +377,7 @@ if [[  $bi_make_iso == 1 ]]; then
 	exit 0
 fi
 
-print "Creating $num_gb GB image at $tmpdir/smartos.usb ... \c"
+print "Creating $bi_imgsz_gb GB image at $tmpdir/smartos.usb ... \c"
 create_image $tmpdir $bi_imgsz $tmpdir/smartos.usb
 print "done"
 
@@ -409,7 +410,7 @@ copy_root $lofi_rawdev $tmpdir/smartos.usb $rootoff
 pfrun lofiadm -d $lofi_blkdev
 
 if [[ $bi_proforma_only == 1 ]]; then
-	copy_results $bi_wsroot/proto.images ${num_gb}gb.img ${num_gb}gb.
+	copy_results $bi_wsroot/proto.images ${bi_imgsz_gb}gb.img ${bi_imgsz_gb}gb.
 else
 	copy_results $bi_wsroot/output-usb $usb_image_name ""
 fi

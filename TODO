@@ -4,7 +4,6 @@ This is just a convenient temporary TODO list...
  - need RICHMOND-16 handling
  - do we need the 8Gb image? If so, what S/W uses it upstream
    that may need fixing?
- - boot modules (e.g. dtrace anon tracing) - works?
  - need old options for console etc. back in build_boot_image
  - multiconsole in loader
  - usb key conversion tool
@@ -15,3 +14,5 @@ This is just a convenient temporary TODO list...
  - sdcadm platform
  - bin/reflash
  - sdc-usbkey
+ - replace screen-rows/cols name with ncols name? avoid problems?
+ - fix sdc-headnode to use tmpfs again not /var/tmp

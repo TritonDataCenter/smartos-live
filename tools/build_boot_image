@@ -128,14 +128,15 @@ function pfrun()
 }
 
 #
-# Construct the EFI System Partition image, which is a FAT32 FS of the minimum
-# size.
+# Construct the EFI System Partition (ESP) image,  We size it at 256 MB, which
+# is intentionally much larger than what we need currently, in order to leave
+# heaedroom for future projects which may need to store data in the ESP.
 #
 function create_esp()
 {
 	local readonly tmpdir=$1
 	local readonly efimnt=$2
-	local readonly esp_size=34 # Mb
+	local readonly esp_size=256 # MiB
 	local readonly esp_sects=$(( $esp_size * 1024 * 1024 / 512 ))
 
 	pfrun mkfile -n ${esp_size}m $tmpdir/esp.img

@@ -16,3 +16,5 @@ This is just a convenient temporary TODO list...
  - sdc-usbkey
  - replace screen-rows/cols name with ncols name? avoid problems?
  - fix sdc-headnode to use tmpfs again not /var/tmp
+ - sdc-headnode: tools/bin/sdc-setconsole
+ - scripts/joysetup.sh

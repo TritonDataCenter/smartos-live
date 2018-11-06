@@ -105,6 +105,8 @@ JS_CHECK_TARGETS=\
 	vm/tests/common.js \
 	vm/tests/test-alias.js \
 	vm/tests/test-bhyve-disk-resize.js \
+	vm/tests/test-bhyve-pci.js \
+	vm/tests/test-bhyve-pci_slot.js \
 	vm/tests/test-cleanup-on-failure.js \
 	vm/tests/test-create-filesystems.js \
 	vm/tests/test-create.js \

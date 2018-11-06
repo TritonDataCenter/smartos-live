@@ -39,11 +39,11 @@ require('nodeunit-plus');
 VM.loglevel = 'DEBUG';
 
 var payload = {
-    alias: 'test-create-bhyve-' + process.pid,
+    alias: 'test-bhyve-pci-' + process.pid,
     autoboot: false,
     brand: 'bhyve',
-    ram: "1024",
-    vcpus: "2",
+    ram: 1024,
+    vcpus: 2,
     do_not_inventory: true,
     nics: [
         {
@@ -56,7 +56,7 @@ var payload = {
         {
             image_uuid: vmtest.CURRENT_BHYVE_CENTOS_UUID,
             boot: true,
-            model: "virtio"
+            model: 'virtio'
         }
     ]
 };
@@ -91,92 +91,92 @@ function validate_missing_property(t, prop, devs) {
     });
 }
 
-test('test validate with bad pci_device path', function(t) {
+test('test validate with bad pci_device path', function (t) {
     validate_bad_value(t, 'path', [
         {
-            path: "/notdevices/pci@0,0/",
-            pci_slot: "5:0:0"
+            path: '/notdevices/pci@0,0/',
+            pci_slot: '5:0:0'
         }
     ]);
 });
 
-test('test validate with bad pci_slot', function(t) {
+test('test validate with bad pci_slot', function (t) {
     validate_bad_value(t, 'pci_slot', [
         {
-            path: "/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1",
-            pci_slot: "foo"
+            path: '/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1',
+            pci_slot: 'foo'
         }
     ]);
 });
 
-test('test validate with bad pci_slot (2)', function(t) {
+test('test validate with bad pci_slot (2)', function (t) {
     validate_bad_value(t, 'pci_slot', [
         {
-            path: "/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1",
-            pci_slot: "4:0:0:0"
+            path: '/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1',
+            pci_slot: '4:0:0:0'
         }
     ]);
 });
 
-test('test validate with bad pci_slot (3)', function(t) {
+test('test validate with bad pci_slot (3)', function (t) {
     validate_bad_value(t, 'pci_slot', [
         {
-            path: "/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1",
-            pci_slot: "256:0:0"
+            path: '/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1',
+            pci_slot: '256:0:0'
         }
     ]);
 });
 
-test('test validate with bad pci_slot (4)', function(t) {
+test('test validate with bad pci_slot (4)', function (t) {
     validate_bad_value(t, 'pci_slot', [
         {
-            path: "/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1",
-            pci_slot: "-1:0:0"
+            path: '/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1',
+            pci_slot: '-1:0:0'
         }
     ]);
 });
 
 
-test('test validate with bad pci_slot (4)', function(t) {
+test('test validate with bad pci_slot (5)', function (t) {
     validate_bad_value(t, 'pci_slot', [
         {
-            path: "/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1",
-            pci_slot: "4:32:0"
+            path: '/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1',
+            pci_slot: '4:32:0'
         }
     ]);
 });
 
-test('test validate with bad pci_slot (5)', function(t) {
+test('test validate with bad pci_slot (6)', function (t) {
     validate_bad_value(t, 'pci_slot', [
         {
-            path: "/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1",
-            pci_slot: "4:0:8"
+            path: '/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1',
+            pci_slot: '4:0:8'
         }
     ]);
 });
 
-test('test validate with bad model)', function(t) {
+test('test validate with bad model)', function (t) {
     validate_bad_value(t, 'model', [
         {
-            path: "/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1",
-            pci_slot: "4:0:0",
-            model: "passover"
+            path: '/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1',
+            pci_slot: '4:0:0',
+            model: 'passover'
         }
     ]);
 });
 
-test('test validate with missing path', function(t) {
+test('test validate with missing path', function (t) {
     validate_missing_property(t, 'path', [
         {
-            pci_slot: "4:0:0"
+            pci_slot: '4:0:0'
         }
     ]);
 });
 
-test('test validate with missing pci_slot', function(t) {
+test('test validate with missing pci_slot', function (t) {
     validate_missing_property(t, 'pci_slot', [
         {
-            path: "/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1",
+            path: '/devices/pci@0,0/pci8086,6f0a@3,2/pci15d9,1528@9,1'
         }
     ]);
 });

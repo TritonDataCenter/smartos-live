@@ -896,6 +896,44 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (special, see description in 'update' section above)
         default: no
 
+    disks.*.pci_slot:
+
+        Specifies the virtual PCI slot that this disk will occupy. Bhyve places
+        each disk into a PCI slot that is identified by the PCI bus, device, and
+        function (BDF). The slot may be specified as <bus>:<device>:<function>
+        ("0:4:0"), <device>:<function> ("4:0") or <device> ("4"). If bus or
+        function is not specified, 0 is used.
+
+        Per the PCI specification legal values for bus, device and function are:
+
+          bus: 0 - 255, inclusive
+          device: 0 - 31, inclusive
+          function: 0 - 7, inclusive
+
+        All functions on devices 0, 6, 30, and 31 on bus 0 are reserved.  For
+        maximum compatibility with boot ROMs and guest operating systems, the
+        disk with boot=true should exist on bus 0 device 3, 4, or 5. If any
+        function other than zero (e.g. 0:5:1) is used, function zero on the same
+        device (e.g. 0:5:0) must also be used for the guest OS to recognize the
+        disk in the non-zero slot.
+
+        If pci_slot is not specified, disks will be assigned to available slots
+        in the 0:4:0 - 0:4:7 range. Disks with media=cdrom will be assigned to
+        0:3:0 - 0:3:7.
+
+        The format used by pci_slot is slightly different than that reported by
+        the Linux `lspci` utility that may be used in guests. The format used by
+        `lspci` is <bus>:<device>.<function> with each number is represented in
+        hexadecimal. Also notice the mixture of `:` and `.` separators by
+        `lspci`.
+
+        type: string (<bus>:<device>:<function>, <device>:function, or <device>)
+        vmtype: bhyve
+        listable: yes
+        create: yes
+        update: yes (special, see description in 'update' section above)
+        default: no
+
     disks.*.refreservation:
 
         Specifies a refreservation for this disk. This property controls the
@@ -1807,14 +1845,14 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     routes:
 
-	This is a key-value object that maps destinations to gateways. These
-	will be set as static routes in the VM. The destinations can be either
-	IPs or subnets in CIDR form. The gateways can either be IP addresses,
-	or can be of the form "nics[0]" or "macs[aa:bb:cc:12:34:56]". Using
-	nics[] or macs[] specifies a link-local route. When using nics[] the IP
-	of the numbered nic in that VM's nics array (the first nic is 0) is
-	used. When using macs[] the IP of the nic with the matching mac address
-	in that VM's nic array is used. As an example:
+        This is a key-value object that maps destinations to gateways. These
+        will be set as static routes in the VM. The destinations can be either
+        IPs or subnets in CIDR form. The gateways can either be IP addresses,
+        or can be of the form "nics[0]" or "macs[aa:bb:cc:12:34:56]". Using
+        nics[] or macs[] specifies a link-local route. When using nics[] the IP
+        of the numbered nic in that VM's nics array (the first nic is 0) is
+        used. When using macs[] the IP of the nic with the matching mac address
+        in that VM's nic array is used. As an example:
 
             {
                 "10.2.2.0/24": "10.2.1.1",
@@ -1822,10 +1860,10 @@ tab-complete UUIDs rather than having to type them out for every command.
                 "10.4.0.1": "macs[aa:bb:cc:12:34:56]"
             }
 
-	This sets three static routes: to the 10.2.2.0/24 subnet with a gateway
-	of 10.2.1.1, a link-local route to the host 10.3.0.1 over the VM's
-	second nic, and a link-local route to the host 10.4.0.1 over the VM's
-	nic with the corresponding mac address.
+        This sets three static routes: to the 10.2.2.0/24 subnet with a gateway
+        of 10.2.1.1, a link-local route to the host 10.3.0.1 over the VM's
+        second nic, and a link-local route to the host 10.4.0.1 over the VM's
+        nic with the corresponding mac address.
 
         type: object
         vmtype: OS

@@ -4,8 +4,10 @@ This is just a convenient temporary TODO list...
  - need RICHMOND-16 handling
  - do we need the 8Gb image? If so, what S/W uses it upstream
    that may need fixing?
- - need old options for console etc. back in build_boot_image
- - multiconsole in loader
+ - COAL doesn't auto-boot?
+ - 4GB usb image has noise about disk read failures
+ - upstream multi-console fix for loader
+ - can we version via the MBR? And fix tools to look there?
  - usb key conversion tool
  - ipxe
  - doc changes

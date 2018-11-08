@@ -92,6 +92,7 @@
 #define	STAGE1_STAGE2_SIZE (0xfc)  /* 16bits */
 #define	STAGE1_STAGE2_LBA (0xfe)  /* 64bits */
 #define	STAGE1_STAGE2_UUID (0x106) /* 128bits */
+#define	STAGE1_MBR_VERSION (0xfa) /* 2 bytes, major/minor */
 #define	STAGE1_BPB_OFFSET (0x3)   /* technically BPB starts at 0xb */
 #define	STAGE1_BPB_SIZE (0x3b)
 #define	STAGE1_MAGIC (0x1fe) /* 0xAA55 */
@@ -100,6 +101,16 @@
  * From multiboot.h
  */
 #define	MB_HEADER_MAGIC		 0x1BADB002	/* magic */
+
+/*
+ * These define the basic layout of a USB key image, and are sniffed by
+ * /lib/sdc/usb-key.sh (and potentially elsewhere).  The legacy grub key is
+ * implicitly version 1.  A revision of IMAGE_MAJOR implies that old code cannot
+ * successfully mount the root of the USB key image in the expected place (that
+ * is, slice 2).
+ */
+#define	IMAGE_MAJOR (2)
+#define	IMAGE_MINOR (0)
 
 typedef struct multiboot_header {
 	uint32_t	magic;
@@ -187,10 +198,14 @@ write_mbr(char *mbr, size_t esplen, size_t biosbootlen)
 {
 	uint64_t *stage2_lbap = (uint64_t *)(mbr + STAGE1_STAGE2_LBA);
 	uint16_t *stage2_sizep = (uint16_t *)(mbr + STAGE1_STAGE2_SIZE);
+	uint8_t *stage1_major = (uint8_t *)(mbr + STAGE1_MBR_VERSION);
+	uint8_t *stage1_minor = (uint8_t *)(mbr + STAGE1_MBR_VERSION + 1);
 	uchar_t *uuidp = (uchar_t *)(mbr + STAGE1_STAGE2_UUID);
 
 	*stage2_lbap = START_SECT + esplen / LBSIZE;
 	*stage2_sizep = biosbootlen / LBSIZE;
+	*stage1_major = IMAGE_MAJOR;
+	*stage1_minor = IMAGE_MINOR;
 
 	/*
 	 * This is all "nops" in the MBR image: let's clear it out like

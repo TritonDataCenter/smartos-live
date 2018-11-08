@@ -4,19 +4,18 @@ This is just a convenient temporary TODO list...
  - need RICHMOND-16 handling
  - do we need the 8Gb image? If so, what S/W uses it upstream
    that may need fixing?
- - COAL doesn't auto-boot?
- - 4GB usb image has noise about disk read failures
  - upstream multi-console fix for loader
- - can we version via the MBR? And fix tools to look there?
+ - encode joyent boot image version into MBR
+   - update tools/lib/usbkey.js and lib/sdc/usb-key.sh to consume it
  - usb key conversion tool
  - ipxe
- - doc changes
- - scripts/mount-usb.sh
- - tools/lib/usbkey.js
- - sdcadm platform
+   - build triton/coal image with updated ipxe
+   - make PXE boot menu entry in loader actually work
+ - Add option in Loader menu to toggle DR
+ - Triton Doc changes
+ - Get "sdcadm platform" working with Loader
+ - Get sdc-setconsole working with Loader
  - bin/reflash
  - sdc-usbkey
+   - add subcommand to dump boot component version JSON blob
  - replace screen-rows/cols name with ncols name? avoid problems?
- - fix sdc-headnode to use tmpfs again not /var/tmp
- - sdc-headnode: tools/bin/sdc-setconsole
- - scripts/joysetup.sh

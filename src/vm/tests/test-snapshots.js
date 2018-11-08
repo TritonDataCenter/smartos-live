@@ -1280,13 +1280,12 @@ test('create bhyve VM', function (t) {
         ram: 128,
         disks: [
             {
-                size: 5120,
                 boot: true,
                 image_uuid: vmtest.CURRENT_BHYVE_CENTOS_UUID,
                 model: 'virtio'
             },
             {
-                size: 5120,
+                size: 2048,
                 model: 'virtio'
             }
         ],

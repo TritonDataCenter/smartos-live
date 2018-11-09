@@ -1278,6 +1278,7 @@ test('create bhyve VM', function (t) {
         autoboot: true,
         do_not_inventory: true,
         ram: 128,
+        flexible_disk_size: 20480,
         disks: [
             {
                 boot: true,

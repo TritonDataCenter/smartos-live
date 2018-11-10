@@ -33,17 +33,10 @@ set maintoggled_ansi[1]="R^[1me^[mcovery (root/root) ^[1m[Enter]^[m"
 set mainmenu_command[1]="boot"
 \ keycode set by init_boot
 
-set mainmenu_caption[2]="Boot [S]ingle User"
-set maintoggled_text[2]="Boot [M]ulti User"
-set mainansi_caption[2]="Boot ^[1mS^[mingle User"
-set maintoggled_ansi[2]="Boot ^[1mM^[multi User"
-set mainmenu_command[2]="altboot"
-\ keycode set by init_altboot
-
-set mainmenu_caption[3]="[Esc]ape to loader prompt"
-set mainmenu_command[3]="goto_prompt"
-set mainmenu_keycode[3]=27
-set mainansi_caption[3]="^[1mEsc^[mape to loader prompt"
+set mainmenu_caption[2]="[Esc]ape to loader prompt"
+set mainmenu_command[2]="goto_prompt"
+set mainmenu_keycode[2]=27
+set mainansi_caption[2]="^[1mEsc^[mape to loader prompt"
 
 \ Enable built-in "Reboot" trailing menuitem
 \ NOTE: appears before menu_options if configured
@@ -53,17 +46,12 @@ set mainmenu_reboot
 \ Enable "Options:" separator. When set to a numerical value (1-8), a visual
 \ separator is inserted before that menuitem number.
 \
-set mainmenu_options=5
+set mainmenu_options=4
 
-\ illumos does not have multiple kernels
-\ set mainmenu_kernel=5
-\ set mainmenu_command[5]="cycle_kernel"
-\ set mainmenu_keycode[5]=107
-
-set mainmenu_caption[5]="Configure Boot [O]ptions..."
-set mainmenu_command[5]="2 goto_menu"
-set mainmenu_keycode[5]=111
-set mainansi_caption[5]="Configure Boot ^[1mO^[mptions..."
+set mainmenu_caption[4]="Configure Boot [O]ptions..."
+set mainmenu_command[4]="2 goto_menu"
+set mainmenu_keycode[4]=111
+set mainansi_caption[4]="Configure Boot ^[1mO^[mptions..."
 
 \
 \ BOOT OPTIONS MENU
@@ -88,46 +76,37 @@ set optionsmenu_osconsole=2
 set optionsmenu_command[2]="cycle_osconsole"
 set optionsmenu_keycode[2]=99
 
-set optionsmenu_init[3]="init_singleuser"
-set optionsmenu_caption[3]="[S]ingle User. Off"
-set optionstoggled_text[3]="[S]ingle User. On"
-set optionsmenu_command[3]="toggle_singleuser"
-set optionsmenu_keycode[3]=115
-set optionsansi_caption[3]="^[1mS^[mingle User. ^[34;1mOff^[m"
-set optionstoggled_ansi[3]="^[1mS^[mingle User. ^[32;7mOn^[m"
+set optionsmenu_init[3]="init_verbose"
+set optionsmenu_caption[3]="[V]erbose............. Off"
+set optionstoggled_text[3]="[V]erbose............. On"
+set optionsmenu_command[3]="toggle_verbose"
+set optionsmenu_keycode[3]=118
+set optionsansi_caption[3]="^[1mV^[merbose............... ^[34;1mOff^[m"
+set optionstoggled_ansi[3]="^[1mV^[merbose............... ^[32;7mOn^[m"
 
-set optionsmenu_init[4]="init_verbose"
-set optionsmenu_caption[4]="[V]erbose..... Off"
-set optionstoggled_text[4]="[V]erbose..... On"
-set optionsmenu_command[4]="toggle_verbose"
-set optionsmenu_keycode[4]=118
-set optionsansi_caption[4]="^[1mV^[merbose..... ^[34;1mOff^[m"
-set optionstoggled_ansi[4]="^[1mV^[merbose..... ^[32;7mOn^[m"
+set optionsmenu_init[4]="init_kmdb"
+set optionsmenu_caption[4]="k[m]db................ Off"
+set optionstoggled_text[4]="k[m]db................ On"
+set optionsmenu_command[4]="toggle_kmdb"
+set optionsmenu_keycode[4]=109
+set optionsansi_caption[4]="k^[1mm^[mdb.................. ^[34;1mOff^[m"
+set optionstoggled_ansi[4]="k^[1mm^[mdb.................. ^[32;7mOn^[m"
 
-\ XXX - chnage this menu item to Rescue Mode
-set optionsmenu_init[5]="init_reconfigure"
-set optionsmenu_caption[5]="[R]econfigure. Off"
-set optionstoggled_text[5]="[R]econfigure. On"
-set optionsmenu_command[5]="toggle_reconfigure"
-set optionsmenu_keycode[5]=114
-set optionsansi_caption[5]="^[1mR^[meconfigure. ^[34;1mOff^[m"
-set optionstoggled_ansi[5]="^[1mR^[meconfigure. ^[32;7mOn^[m"
+set optionsmenu_init[5]="init_debug"
+set optionsmenu_caption[5]="[D]ebug............... Off"
+set optionstoggled_text[5]="[D]ebug............... On"
+set optionsmenu_command[5]="toggle_debug"
+set optionsmenu_keycode[5]=100
+set optionsansi_caption[5]="^[1mD^[mebug................. ^[34;1mOff^[m"
+set optionstoggled_ansi[5]="^[1mD^[mebug................. ^[32;7mOn^[m"
 
-set optionsmenu_init[6]="init_kmdb"
-set optionsmenu_caption[6]="k[m]db........ Off"
-set optionstoggled_text[6]="k[m]db........ On"
-set optionsmenu_command[6]="toggle_kmdb"
-set optionsmenu_keycode[6]=109
-set optionsansi_caption[6]="k^[1mm^[mdb........ ^[34;1mOff^[m"
-set optionstoggled_ansi[6]="k^[1mm^[mdb........ ^[32;7mOn^[m"
-
-set optionsmenu_init[7]="init_debug"
-set optionsmenu_caption[7]="[D]ebug....... Off"
-set optionstoggled_text[7]="[D]ebug....... On"
-set optionsmenu_command[7]="toggle_debug"
-set optionsmenu_keycode[7]=100
-set optionsansi_caption[7]="^[1mD^[mebug....... ^[34;1mOff^[m"
-set optionstoggled_ansi[7]="^[1mD^[mebug....... ^[32;7mOn^[m"
+set optionsmenu_init[6]="init_dr"
+set optionsmenu_caption[6]="Disaster [R]ecovery... Off"
+set optionstoggled_text[6]="Disaster [R]ecovery... On"
+set optionsmenu_command[6]="toggle_dr"
+set optionsmenu_keycode[6]=114
+set optionsansi_caption[6]="Disaster ^[1mR^mecovery.... ^[34;1mOff^[m"
+set optionstoggled_ansi[6]="Disaster ^[1mR^mecovery.... ^[32;7mOn^[m"
 
 \ Enable automatic booting (add ``autoboot_delay=N'' to loader.conf(5) to
 \ customize the timeout; default is 10-seconds)

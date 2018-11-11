@@ -340,11 +340,15 @@ function copy_results()
 	local readonly outdir=$1
 	local readonly outfile=$2
 	local readonly prefix=$3
+	local readonly uid=$(id -u)
+	local readonly gid=$(id -g)
 
-	pfrun mkdir -p $outdir
+	mkdir -p $outdir
 	pfrun mv $tmpdir/smartos.usb $outdir/$outfile
 	pfrun chmod 644 $outdir/$outfile
+	pfrun chown ${uid}:${gid} $outdir/$outfile
 	pfrun cp $tmpdir/partition.map $outdir/${prefix}partition.map
+	pfrun chown ${uid}:${gid} $outdir/${prefix}partition.map
 	print "Successfully created $outdir/$outfile"
 }
 

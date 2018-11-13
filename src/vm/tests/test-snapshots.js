@@ -1278,7 +1278,7 @@ test('create bhyve VM', function (t) {
         autoboot: true,
         do_not_inventory: true,
         ram: 128,
-        flexible_disk_size: 20480,
+        flexible_disk_size: 13824,
         disks: [
             {
                 boot: true,
@@ -1286,7 +1286,7 @@ test('create bhyve VM', function (t) {
                 model: 'virtio'
             },
             {
-                size: 2048,
+                size: 512,
                 model: 'virtio'
             }
         ],

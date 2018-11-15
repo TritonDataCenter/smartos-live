@@ -99,3 +99,24 @@ function mount_usb_key()
 	echo "Couldn't find USB key" >&2
 	return 1
 }
+
+function unmount_usb_key()
+{
+	local readonly mnt=$1
+
+	if [[ -z "$mnt" ]]; then
+		mnt=/mnt/$(svcprop -p "joyentfs/usb_mountpoint" \
+		    "svc:/system/filesystem/smartdc:default")
+	fi
+
+	typ=$(awk -v "mnt=$mnt" '$2 == mnt { print $3 }' /etc/mnttab)
+
+	[[ -z $typ ]] && return 0
+
+	if [[ ! -f "$mnt/.joyliveusb" ]]; then
+		echo "$mnt does not contain a USB key" >&2
+		return 1
+	fi
+
+	umount "$mnt"
+}

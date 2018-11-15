@@ -109,8 +109,6 @@ IMAGES_VERSION :=	images-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
 IMAGES_TARBALL :=	output/$(IMAGES_VERSION).tgz
 
-IMAGES_SIZES_GB :=	4 8
-
 TOOLS_TARGETS = \
 	$(MANCHECK) \
 	$(MANCF) \
@@ -145,23 +143,19 @@ $(BOOT_TARBALL): world manifest
 	(cd $(BOOT_PROTO) && pfexec gtar czf $(ROOT)/$@ .)
 
 #
-# Create proforma images for use in assembling bootable USB device images.
-# These images are assembled into a sparse tar file which takes up hardly any
-# space, despite the large size of the (mostly blank) images.  This tar file is
-# used by "make coal" and "make usb" in "sdc-headnode.git" to create Triton
-# boot and installation media.
+# Create proforma images for use in assembling bootable USB device images.  The
+# images tar file is by used by "make coal" and "make usb" in "sdc-headnode.git"
+# to create Triton boot and installation media.
 #
-images: $(IMAGES_SIZES_GB:%=$(IMAGES_PROTO)/%gb.img)
-
-$(IMAGES_PROTO)/%.img: boot
+$(IMAGES_PROTO)/4gb.img: boot
 	rm -f $@
 	mkdir -p $(IMAGES_PROTO)
-	./tools/build_boot_image -p $* -r $(ROOT)
+	./tools/build_boot_image -p 4 -r $(ROOT)
+
+$(IMAGES_TARBALL): $(IMAGES_PROTO)/4gb.img
+	cd $(IMAGES_PROTO) && gtar -Scvz --owner=0 --group=0 -f $(ROOT)/$@ *
 
 images-tar: $(IMAGES_TARBALL)
-
-$(IMAGES_TARBALL): images
-	cd $(IMAGES_PROTO) && gtar -Scvz --owner=0 --group=0 -f $(ROOT)/$@ *
 
 #
 # Manifest construction.  There are 5 sources for manifests we need to collect

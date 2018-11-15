@@ -1,17 +1,11 @@
 
 This is just a convenient temporary TODO list...
 
- - need RICHMOND-16 handling
- - do we need the 8Gb image? If so, what S/W uses it upstream
-   that may need fixing? check into sdc-headnode makefiles for picking
-   an image? Maybe remove?
- - COAL doesn't auto-boot?
+ - fix nictagadm
+ - need RICHMOND-16 testing
+ - COAL doesn't auto-boot? (fixed?)
  - sdcboot image needs versioning for freedos, ipxe, memtest version,
-   loader
- - upstream multi-console fix for loader
- - encode joyent boot image version into MBR
-   - update tools/lib/usbkey.js and lib/sdc/usb-key.sh to consume it
- - usb key conversion tool
+   loader, sdc-headnode tools?
  - ipxe
    - build triton/coal image with updated ipxe
    - make PXE boot menu entry in loader actually work
@@ -23,5 +17,5 @@ This is just a convenient temporary TODO list...
  - sdc-usbkey
    - add subcommand to dump boot component version JSON blob
  - resync with loader gate
- - /etc/release style file in usb key
  - replace screen-rows/cols name with ncols name? avoid problems?
+ - usb key conversion tool

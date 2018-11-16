@@ -456,13 +456,30 @@ MetadataAgent.prototype.start = function start() {
 
         /*
          * For non-KVM and non-bhyve, we only care about create/delete since
-         * the socket only needs to be created once for these zones. For KVM
-         * however, the qemu process recreates the socket on every boot, so we
-         * want to catch 'start' events for KVM to ensure we connect to
-         * metadata as soon as possible.
+         * the socket only needs to be created once for these zones.
+         *
+         * For KVM the qemu process recreates the socket on every boot, so we
+         * want to catch 'start' events to ensure we connect to metadata as soon
+         * as possible.
+         *
+         * For bhyve, the bhyve process recreates the socket every time it
+         * starts. This happens when the zone first starts and every time the
+         * guest reboots. The 'running' state change will catch the first one.
+         * Guest reboots can be detected by 'init_restarts' incrementing.
          */
         if (ev.vm.brand !== 'kvm' && ev.vm.brand !== 'bhyve') {
             return;
+        }
+
+        var restarts = ev.changes.filter(function (change) {
+            return (change.path.length === 1
+                && change.path[0] === 'init_restarts');
+        });
+        if (restarts.length !== 0) {
+            // The previous zoneConnection should have already been cleaned up
+            // when the bhyve process died and the kernel closed the connection.
+            assert(!self.zoneKvmReconnTimers.hasOwnProperty(ev.zonename));
+            self.handleZoneCreated(ev.vm);
         }
 
         // Find state transition
@@ -498,7 +515,7 @@ MetadataAgent.prototype.start = function start() {
             delay: (new Date()) - ev.date,
             when: ev.date,
             zonename: ev.zonename
-        }, 'VminfodWatcher saw KVM zone boot');
+        }, 'VminfodWatcher saw KVM or bhyve zone boot');
 
         self.addDebug(ev.zonename, 'last_zone_start');
 

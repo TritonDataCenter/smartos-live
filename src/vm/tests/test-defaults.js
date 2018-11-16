@@ -59,6 +59,7 @@ var zone_defaults = {
     headnode_id: ['<OPTIONAL-NON-EMPTY>'],
     hvm: [false],
     image_uuid: [image_uuid],
+    init_restarts: [0],
     internal_metadata: ['<EMPTY-OBJ>'],
     last_modified: ['<NON-EMPTY>'],
     limit_priv: ['default'],

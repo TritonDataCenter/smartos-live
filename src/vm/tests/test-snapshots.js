@@ -33,6 +33,7 @@ var path = require('path');
 var VM = require('/usr/vm/node_modules/VM');
 var vasync = require('/usr/vm/node_modules/vasync');
 var vmtest = require('../common/vmtest.js');
+var vminfod = require('/usr/vm/node_modules/vminfod/client');
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
@@ -168,8 +169,8 @@ test('create KVM VM', function (t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                common.ifError(t, err, 'loading VM after create');
-                if (!err) {
+                common.ifError(t, e, 'loading VM after create');
+                if (!e) {
                     t.ok(o.snapshots.length === 0, 'VM has no snapshots');
                     vmobj = o;
                 } else {
@@ -241,7 +242,6 @@ test('delete KVM VM', function (t) {
 //    create 100 snapshots
 //    delete 100 snapshots
 
-
 test('create joyent-minimal VM w/o delegated', function (t) {
     var payload = {
         alias: 'test-snapshots-' + process.pid,
@@ -258,8 +258,8 @@ test('create joyent-minimal VM w/o delegated', function (t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                common.ifError(t, err, 'loading VM after create');
-                if (!err) {
+                common.ifError(t, e, 'loading VM after create');
+                if (!e) {
                     t.ok(o.snapshots.length === 0, 'no snapshots after create');
                     t.ok(o.hasOwnProperty('zfs_filesystem'),
                         'has zfs_filesystem');
@@ -931,8 +931,8 @@ test('create stopped joyent-minimal VM', function (t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                common.ifError(t, err, 'loading VM after create');
-                if (!err) {
+                common.ifError(t, e, 'loading VM after create');
+                if (!e) {
                     t.ok(o.snapshots.length === 0, 'no snapshots after create');
                     t.ok(o.hasOwnProperty('zfs_filesystem'),
                         'has zfs_filesystem');
@@ -1023,8 +1023,8 @@ function (t) {
         } else {
             t.ok(true, 'VM created with uuid ' + obj.uuid);
             VM.load(obj.uuid, function (e, o) {
-                common.ifError(t, err, 'loading VM after create');
-                if (!err) {
+                common.ifError(t, e, 'loading VM after create');
+                if (!e) {
                     t.ok(o.snapshots.length === 0, 'no snapshots after create');
                     t.ok(o.hasOwnProperty('zfs_filesystem'),
                         'has zfs_filesystem');
@@ -1242,4 +1242,360 @@ test('delete VM with garbage snapshot', function (t) {
         t.end();
         vmobj = {};
     });
+});
+
+function waitForUserScript(uuid, callback) {
+    var watchObj = {
+        uuid: uuid
+    };
+
+    var changes = [
+        {
+            path: ['customer_metadata', 'userScriptHasRun'],
+            action: 'changed',
+            oldValue: 'false',
+            newValue: 'true'
+        }
+    ];
+
+    var opts = {
+        timeout: 300 * 1000,
+        teardown: true
+    };
+
+    var vs = new vminfod.VminfodEventStream();
+    vs.watchForChanges(watchObj, changes, opts, callback);
+}
+
+
+// To observe file changes on bhyve disks, we use a user-script to
+// read relevant files and mdata-put their contents, allowing us to
+// observe the files from the global zone.
+test('create bhyve VM', function (t) {
+    var payload = {
+        alias: 'test-snapshots-' + process.pid,
+        brand: 'bhyve',
+        autoboot: true,
+        do_not_inventory: true,
+        ram: 128,
+        flexible_disk_size: 13824,
+        disks: [
+            {
+                boot: true,
+                image_uuid: vmtest.CURRENT_BHYVE_CENTOS_UUID,
+                model: 'virtio'
+            },
+            {
+                size: 512,
+                model: 'virtio'
+            }
+        ],
+        customer_metadata: {
+            'user-script': [
+                'DISK0_TMP_DIR="/mnt/tmp"',
+                'DISK0_TMP_FILE="/mnt/tmp/snapshot-test.txt"',
+                'DISK1_TMP_FILE="/snapshot-test.txt"',
+                'mdata-put userScriptHasRun "false"',
+                'if [ -f $DISK0_TMP_FILE ]; then',
+                '    echo -n "newString" > $DISK0_TMP_FILE',
+                'else',
+                '    mkdir $DISK0_TMP_DIR',
+                '    echo -n "oldString" > $DISK0_TMP_FILE',
+                'fi;',
+                'if [ -f $DISK1_TMP_FILE ]; then',
+                '   echo -n "newString" > $DISK1_TMP_FILE',
+                'else',
+                '   echo -n "oldString" > $DISK1_TMP_FILE',
+                'fi;',
+                'cat $DISK0_TMP_FILE | mdata-put disk0test',
+                'cat $DISK1_TMP_FILE | mdata-put disk1test',
+                'sync',
+                'mdata-put userScriptHasRun "true"'
+            ].join('\n')
+        }
+    };
+
+    VM.create(payload, function (err, obj) {
+        common.ifError(t, err, 'error creating VM');
+        if (err) {
+            abort = true;
+            t.end();
+            return;
+        }
+
+        t.ok(true, 'VM created with uuid ' + obj.uuid);
+
+        vmobj = obj;
+
+        waitForUserScript(vmobj.uuid, function onUserScript(e) {
+            common.ifError(t, e, 'error waiting for user script');
+            if (e) {
+                abort = true;
+                t.end();
+                return;
+            }
+
+            t.end();
+        });
+    });
+});
+
+test('verify metadata', function (t) {
+    if (abort) {
+        t.ok(false, 'skipping verification as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    VM.load(vmobj.uuid, function onLoaded(err, obj) {
+        common.ifError(t, err, 'loading VM after create');
+
+        if (err) {
+            abort = true;
+            t.end();
+            return;
+        }
+
+        t.ok(obj.snapshots.length === 0, 'VM has no snapshots');
+        t.ok(obj.customer_metadata.disk0test === 'oldString',
+                'File written to disk0');
+        t.ok(obj.customer_metadata.disk1test === 'oldString',
+                'File written to disk1');
+        t.end();
+    });
+});
+
+test('take snapshot', function (t) {
+    if (abort) {
+        t.ok(false, 'skipping snapshot as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    VM.create_snapshot(vmobj.uuid, 'snapshot1', {}, function (err) {
+        common.ifError(t, err, 'creating snapshot of ' + vmobj.uuid);
+
+        VM.load(vmobj.uuid, function (e, o) {
+            common.ifError(t, e, 'loading VM after create snapshot');
+
+            if (e) {
+                abort = true;
+                t.end();
+                return;
+            }
+
+            t.ok(o.snapshots.length === 1,
+                '1 snapshot after create snapshot');
+            t.ok(hasSnapshot(o.snapshots, 'snapshot1'),
+                'snapshot1 after create snapshot');
+            t.end();
+        });
+    });
+});
+
+test('reboot to change file', function (t) {
+    if (abort) {
+        t.ok(false, 'skipping reboot as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    VM.reboot(vmobj.uuid, {}, function (err) {
+        common.ifError(t, err, 'rebooting vm');
+
+        if (err) {
+            abort = true;
+            t.end();
+            return;
+        }
+
+        waitForUserScript(vmobj.uuid, function onUserScript(e) {
+            common.ifError(t, e, 'error waiting for user script');
+
+            if (e) {
+                abort = true;
+            }
+
+            t.end();
+        });
+    });
+});
+
+test('verify updated metadata', function (t) {
+    if (abort) {
+        t.ok(false, 'skipping verification as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    VM.load(vmobj.uuid, function onLoaded(err, obj) {
+        common.ifError(t, err, 'loading vm');
+
+        if (err) {
+            abort = true;
+            t.end();
+            return;
+        }
+
+        t.ok(obj.customer_metadata.disk0test === 'newString',
+            'disk0 file updates');
+        t.ok(obj.customer_metadata.disk1test === 'newString',
+            'disk1 file updates');
+        t.end();
+    });
+});
+
+test('rollback to snapshot1 and verify metadata', function (t) {
+    if (abort) {
+        t.ok(false, 'skipping rollback as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    VM.rollback_snapshot(vmobj.uuid, 'snapshot1', {do_not_start: true},
+        function (err) {
+            common.ifError(t, err, 'error rolling back snapshot');
+
+            VM.load(vmobj.uuid, function (e, o) {
+                common.ifError(t, e, 'loading vm after rollback');
+                if (e) {
+                    abort = true;
+                    t.end();
+                    return;
+                }
+
+                t.ok(o.snapshots.length === 1,
+                    '1 snapshot remains after rollback');
+                t.ok(hasSnapshot(o.snapshots, 'snapshot1'),
+                    'snapshot1 after rollback');
+                // verifies that the zoneroot gets rolled back
+                t.ok(o.customer_metadata.disk0test === 'oldString',
+                    'disk0 metadata gets rolled back');
+                t.ok(o.customer_metadata.disk1test === 'oldString',
+                    'disk1 metadata gets rolled back');
+                t.end();
+            });
+        }
+    );
+});
+
+test('clear metadata keys and change user-script', function (t) {
+    if (abort) {
+        t.ok(false, 'skipping metadata update as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    VM.update(vmobj.uuid, {
+        remove_customer_metadata: ['disk0test', 'disk1test'],
+        set_customer_metadata: {
+            'user-script': 'mdata-put userScriptHasRun "false"; '
+                + 'cat /mnt/tmp/snapshot-test.txt | '
+                + 'mdata-put disk0test; '
+                + 'cat /snapshot-test.txt | mdata-put disk1test; '
+                + 'mdata-put userScriptHasRun "true"'
+        }
+    }, function (err) {
+        common.ifError(t, err, 'error updating customer_metadata');
+
+        VM.load(vmobj.uuid, function onLoaded(e, o) {
+            common.ifError(t, e, 'loading VM after updating metadata');
+            if (e) {
+                abort = true;
+                t.end();
+                return;
+            }
+
+            t.ok(o.customer_metadata.disk0test === undefined,
+                'disk0 metdata was cleared');
+            t.ok(o.customer_metadata.disk1test === undefined,
+                'disk1 metdata was cleared');
+
+            t.end();
+        });
+    });
+});
+
+test('start VM and verify files have been rolled back', function (t) {
+    if (abort) {
+        t.ok(false, 'skipping VM start as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    VM.start(vmobj.uuid, {}, {}, function (err) {
+        if (err) {
+            abort = true;
+            t.end();
+            return;
+        }
+
+        waitForUserScript(vmobj.uuid, function onUserScript(e) {
+            common.ifError(t, e, 'error waiting for user script');
+            if (e) {
+                abort = true;
+                t.end();
+                return;
+            }
+
+            t.end();
+        });
+    });
+});
+
+test('verify rolled back metadata', function (t) {
+    if (abort) {
+        t.ok(false, 'skipping verification as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    VM.load(vmobj.uuid, function onLoaded(err, obj) {
+        common.ifError(t, err, 'loading VM after start');
+
+        if (err) {
+            abort = true;
+            t.end();
+            return;
+        }
+
+        t.ok(obj.customer_metadata.disk0test === 'oldString',
+            'file on disk0 was successfully rolled back');
+        t.ok(obj.customer_metadata.disk1test === 'oldString',
+            'file on disk1 was successfully rolled back');
+        t.end();
+    });
+});
+
+test('delete snapshot1 from bhyve', function (t) {
+    if (abort) {
+        t.ok(false, 'skipping deletion as test run is aborted.');
+        t.end();
+        return;
+    }
+
+    deleteSnapshot(t, vmobj.uuid, 'snapshot1', 0, function (err) {
+        common.ifError(t, err, 'deleting snapshot1 of ' + vmobj.uuid);
+        if (err) {
+            abort = true;
+        }
+        t.end();
+    });
+});
+
+test('delete bhyve VM', function (t) {
+    if (vmobj.uuid) {
+        VM.delete(vmobj.uuid, function (err) {
+            common.ifError(t, err, 'error deleting VM');
+
+            if (!err) {
+                t.ok(true, 'deleted VM: ' + vmobj.uuid);
+            }
+
+            t.end();
+        });
+    } else {
+        t.ok(false, 'no VM to delete');
+        t.end();
+    }
 });

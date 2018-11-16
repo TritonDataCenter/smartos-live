@@ -25,6 +25,7 @@
  */
 
 var assert = require('/usr/node/node_modules/assert-plus');
+var bunyan = require('/usr/vm/node_modules/bunyan');
 var common = require('./common');
 var f = require('util').format;
 var libuuid = require('/usr/node/node_modules/uuid');
@@ -32,6 +33,13 @@ var VM = require('/usr/vm/node_modules/VM');
 var vasync = require('/usr/vm/node_modules/vasync');
 var vminfod = require('/usr/vm/node_modules/vminfod/client');
 var vmtest = require('../common/vmtest.js');
+
+var log = bunyan.createLogger({
+    level: 'fatal',
+    name: 'vminfod-test-dummy',
+    stream: process.stderr,
+    serializers: bunyan.stdSerializers
+});
 
 // this puts test stuff in global, so we need to tell jsl about that:
 /* jsl:import ../node_modules/nodeunit-plus/index.js */
@@ -55,6 +63,103 @@ test('create VminfodClient object and test /status', function (t) {
     vc.status(function (err, stats) {
         t.ifError(err, 'vc.status no error');
         t.ok(stats, 'vc.status object found');
+        t.end();
+    });
+});
+
+/*
+ * Ensure that errors created as a result of a vminfod timeout contain specific
+ * bits of information.
+ */
+test('vminfod event stream timeout errors', function (t) {
+    var vs;
+    var name = f('test-vminfod.js custom-vminfod-identifier-%d', process.pid);
+
+    vasync.pipeline({funcs: [
+        // create an event stream
+        function (_, cb) {
+            vs = new vminfod.VminfodEventStream({
+                name: name,
+                log: log
+            });
+
+            vs.on('ready', function () {
+                cb();
+            });
+        },
+
+        // watchForEvent timeout
+        function (_, cb) {
+            // watch for an event that will never happen
+            var obj = {
+                invalid_root_key: 'foo'
+            };
+
+            var opts = {
+                timeout: 1 // 1 ms
+            };
+
+            vs.watchForEvent(obj, opts, function (err, ev) {
+                t.ok(err, 'error set');
+
+                if (!err) {
+                    cb();
+                    return;
+                }
+
+                assert.string(err.message, 'err.message');
+                var msg = err.message.trim();
+
+                t.ok(msg, 'error message: ' + msg);
+                t.ok(msg.match(/watchForEvent/), 'watchForEvent message');
+                t.ok(msg.match(/timeout exceeded/), 'timeout exceeded message');
+                t.ok(msg.indexOf(name) >= 0, 'name in error message');
+
+                cb();
+            });
+        },
+
+        // watchForChanges timeout
+        function (_, cb) {
+            // watch for changes that will never happen
+            var obj = {
+                uuid: '00000000-0000-0000-0000-000000000000'
+            };
+
+            var changes = [
+                {
+                    path: ['invalid_root_key'],
+                    newValue: 'foo'
+                }
+            ];
+
+            var opts = {
+                timeout: 1 // 1 ms
+            };
+
+            vs.watchForChanges(obj, changes, opts, function (err) {
+                t.ok(err, 'error set');
+
+                if (!err) {
+                    cb();
+                    return;
+                }
+
+                assert.string(err.message, 'err.message');
+                var msg = err.message.trim();
+
+                t.ok(msg, 'error message: ' + msg);
+                t.ok(msg.match(/watchForChanges/), 'watchForEvent message');
+                t.ok(msg.match(/timeout exceeded/), 'timeout exceeded message');
+                t.ok(msg.indexOf(name) >= 0, 'name in error message');
+
+                cb();
+            });
+        }
+    ]}, function (err) {
+        common.ifError(t, err, 'cleanup');
+
+        vs.stop();
         t.end();
     });
 });
@@ -129,7 +234,8 @@ test('test vminfod zfs rollback', function (t) {
         // Create a vminfod stream
         function (_, cb) {
             vs = new vminfod.VminfodEventStream({
-                name: 'test-vminfod.js'
+                name: 'test-vminfod.js',
+                log: log
             });
             vs.on('ready', function () {
                 cb();

@@ -28,16 +28,20 @@
 # true if the user specified non-default compilers.
 #
 
-usage="$0 -a adjunct.tar -d protodir [-f] [-j maxjobs]"
+usage="$0 [-l | -a adjunct.tar [-f] [-j maxjobs] [-c | -d protodir]]"
 wsroot=$(cd $(dirname $0)/../; pwd)
 pkgin_file="/opt/local/etc/pkgin/repositories.conf"
-manta_base="https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/build-cache/proto.strap/"
+manta_host="https://us-east.manta.joyent.com"
+manta_dir="/Joyent_Dev/public/SmartOS/build-cache/proto.strap/"
+manta_base="$manta_host/$manta_dir"
 cache_base="/opt/SmartOS/build-cache/"
 srcdir="$wsroot/projects/illumos-extra"
 adjunct=""
 protodir=""
 max_jobs="128"
 force_build="no"
+report_loc="no"
+create_cache="no"
 
 function fatal
 {
@@ -71,9 +75,16 @@ function identify_srcsha
 
 function build_strap
 {
-	echo "Building illumos-extra bootstrap"
+	echo "Building illumos-extra bootstrap at $protodir"
 
-	verbose gmake STRAP=strap MAX_JOBS=$max_jobs DESTDIR=$protodir \
+	#
+	# Strip any double slashes. Certain pieces of software simply hate you -
+	# yes, YOU - and get very confused given double slashes. Namely
+	# projects/illumos-extra/make
+	#
+	DESTDIR=$(echo $protodir | sed 's+//*+/+g')
+
+	verbose gmake STRAP=strap MAX_JOBS=$max_jobs DESTDIR=$DESTDIR \
 	    -C $wsroot/projects/illumos-extra install_strap ||
 	    fatal "failed to build install_strap"
 
@@ -130,6 +141,36 @@ function download
 }
 
 #
+# Do a strap build into the cache directory, then create the tarball for
+# uploading.
+#
+function create_cache
+{
+	local cache_dir="$1"
+
+	if [[ "$force_build" = "no" ]]; then
+		if [[ -d "$cache_dir" ]]; then
+			echo "$cache_dir exists; not building"
+			return
+		fi
+	fi
+
+	pfexec mkdir -p "$cache_dir" || fatal "couldn't mkdir $cache_dir"
+	pfexec chown $(id -u) "$cache_dir" || fatal "couldn't chown $cache_dir"
+
+	protodir="$cache_dir"
+
+	build_strap
+
+	mkdir -p $wsroot/output || fatal "couldn't mkdir $wsroot/output"
+
+	gtar -C "$cache_dir" -czf $wsroot/output/proto.strap.tgz . ||
+	    fatal "failed to create tarball"
+
+	echo "Created $wsroot/output/proto.strap.tgz"
+}
+
+#
 # Populate proto.strap: either we do a local build, or we download and use a
 # cached copy, sym-linking it in.
 #
@@ -141,6 +182,11 @@ function populate_strap
 
 	if [[ -e "$cache_dir" && ! -d "$cache_dir" ]]; then
 		fatal "found weird non-directory $cache_dir"
+	fi
+
+	if [[ "$create_cache" = "yes" ]]; then
+		create_cache $cache_dir
+		return
 	fi
 
 	#
@@ -173,10 +219,12 @@ function populate_strap
 export PATH=/usr/bin:/usr/sbin:/sbin:/opt/local/bin:/opt/local/sbin
 set -o pipefail
 
-while getopts "a:d:fhj:" arg; do
+while getopts "a:cd:fhlj:" arg; do
 	case $arg in
 	a)
 		adjunct=$OPTARG ;;
+	c)
+		create_cache="yes" ;;
 	d)
 		protodir=$OPTARG ;;
 	f)
@@ -186,16 +234,28 @@ while getopts "a:d:fhj:" arg; do
 		exit 0 ;;
 	j)
 		max_jobs=$OPTARG ;;
+	l)
+		report_loc="yes" ;;
 	?)
 		echo "$usage" >&2
 		exit 1 ;;
 	esac
 done
 
+if [[ "$report_loc" = "yes" ]]; then
+	echo $manta_dir/$(identify_pkgsrc_branch)/$(identify_srcsha)/proto.strap.tgz
+	exit 0
+fi
+
 [[ -n "$adjunct" ]] || fatal "missing -a argument"
-[[ -n "$protodir" ]] || fatal "missing -d argument"
 [[ -d "$srcdir" ]] || fatal "cannot find illumos-extra in $srcdir"
 [[ -d "$srcdir/.git" ]] || fatal "$srcdir is not a git repo"
+
+if [[ "$create_cache" = "yes" ]]; then
+	[[ -z "$protodir" ]] || fatal "can't specify -u and -d"
+else
+	[[ -n "$protodir" ]] || fatal "missing -d argument"
+fi
 
 populate_strap $(identify_pkgsrc_branch) $(identify_srcsha)
 

@@ -316,6 +316,14 @@ FORCEARG_yes=-f
 	    -a $(ADJUNCT_TARBALL) $(FORCEARG_$(FORCE_STRAP_REBUILD))
 	touch $@
 
+# report the Manta location of the proto.strap cache
+strap-cache-location:
+	@$(ROOT)/tools/build_strap -l
+
+# build a proto.strap cache tarball
+strap-cache:
+	$(ROOT)/tools/build_strap -c -j $(MAX_JOBS) -a $(ADJUNCT_TARBALL)
+
 # additional illumos-extra content for proto itself
 0-extra-stamp: 0-illumos-stamp
 	(cd $(ROOT)/projects/illumos-extra && \

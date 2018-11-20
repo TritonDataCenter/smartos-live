@@ -3,8 +3,9 @@
 #
 
 CC=gcc
-CFLAGS=-std=gnu99 -Wall -W -Werror -Wno-sign-compare
 SRC_ROOT=$(PWD)/../..
+CFLAGS=-std=gnu99 -Wall -W -Werror -Wno-sign-compare -Wno-unknown-pragmas \
+	-I$(SRC_ROOT)/proto/usr/include
 
 TARGETS=format_image
 LIBS=-lsmbios -luuid

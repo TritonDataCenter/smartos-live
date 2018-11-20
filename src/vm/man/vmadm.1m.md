@@ -37,8 +37,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
       create-snapshot <uuid> <snapname>
 
-        Support for snapshots is currently experimental. It only works for OS
-        VMS which also have no additional datasets.
+        Support for snapshots is currently experimental. It only works for bhyve
+        VMs and OS VMs which also have no additional datasets.
 
         The <snapname> parameter specifies the name of the snapshot to take
         of the specified VM. The snapname must be 64 characters or less and
@@ -83,8 +83,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
       delete-snapshot <uuid> <snapname>
 
-        Support for snapshots is currently experimental. It only works for OS
-        VMS which also have no additional datasets.
+        Support for snapshots is currently experimental. It only works for bhyve
+        VMs and OS VMs which also have no additional datasets.
 
         This command deletes the ZFS snapshot that exists with the name
         <snapname> from the VM with the specified uuid. You cannot undo this
@@ -260,8 +260,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
       rollback-snapshot <uuid> <snapname>
 
-        Support for snapshots is currently experimental. It only works for OS
-        VMS which also have no additional datasets.
+        Support for snapshots is currently experimental. It only works for bhyve
+        VMs and OS VMs which also have no additional datasets.
 
         This command rolls the dataset backing the the VM with the specified
         uuid back to its state at the point when the snapshot with snapname was
@@ -494,9 +494,9 @@ tab-complete UUIDs rather than having to type them out for every command.
 
 ## SNAPSHOTS
 
-    Snapshots are currently only implemented for OS VMs, and only for those
-    that do not utilize delegated datasets or any other datasets other than
-    the zoneroot dataset.
+    Snapshots are currently only implemented for bhyve VMs and OS VMs, and only
+    for those that do not utilize delegated datasets or any other datasets other
+    than the zoneroot dataset and its dependent datasets.
 
     When you create a snapshot with create-snapshot, it will create a ZFS
     snapshot of that dataset with the name dataset@vmsnap-<snapname> and the
@@ -1081,6 +1081,21 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
+    flexible_disk_size:
+
+        This sets an upper bound for the amount of space that a bhyve instance
+        may use for its disks and snapshots of those disks. If this value is not
+        set, it will not be possible to create snapshots of the instance.
+
+        This value must be at least as large as the sum of all of the
+        disk.*.size values.
+
+        type: integer (number of MiB)
+        vmtype: bhyve
+        listable: yes
+        create: yes
+        update: yes (live update)
+
     fs_allowed:
 
         This option allows you to specify filesystem types this zone is allowed
@@ -1107,6 +1122,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (but does nothing for OS VMs)
         default: the value of zonename
+
+    hvm:
+
+        A boolean that depicts whether or not the VM is hardware virtualized.
+        This property is computed based on the "brand" property and is not
+        modifiable.
+
+        type: boolean
+        vmtype: ANY
+        listable: yes
+        create: no
+        update: no
 
     image_uuid:
 
@@ -1739,11 +1766,9 @@ tab-complete UUIDs rather than having to type them out for every command.
     quota:
 
         This sets a quota on the zone filesystem. For OS VMs, this value is the
-        space actually visible/usable in the guest. For kvm VMs, this value is
-        the quota for the Zone containing the VM, which is not directly
-        available to users. For bhyve VMs, disks are part of the zones/<uuid>
-        dataset, as well as the zone itself, so the quota needs to be sized
-        appropriately.
+        space actually visible/usable in the guest. For kvm and bhyve VMs, this
+        value is the quota (kvm) or refquota (bhyve) for the Zone containing
+        the VM, which is not directly available to users.
 
         Set quota to 0 to disable (ie. for no quota).
 
@@ -1810,12 +1835,13 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     snapshots (EXPERIMENTAL):
 
-        For OS VMs, this will display a list of snapshots from which you can
-        restore the root dataset for your VM.  Currently this is only supported
-        when your VM does not have any delegated datasets.
+        For bhyve VMs and OS VMs, this will display a list of snapshots from
+        which you can restore the root dataset and its dependent datasets for
+        your VM.  Currently this is only supported when your VM does not have
+        any delegated datasets.
 
         type: array
-        vmtype: OS
+        vmtype: OS or bhyve
         listable: no
         create: no (but you can use create-snapshot)
         update: no (but you can use rollback-snapshot and delete-snapshot)

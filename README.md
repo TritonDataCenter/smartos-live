@@ -255,6 +255,9 @@ This will produce a tarball that contains the platform. The platform
 will be placed in the `output` directory and a symlink to the latest
 tarball will be there.
 
+The configure script takes a few options that allow you to do a DEBUG
+build, configure shadow compilers, etc. See `./configure -h`.
+
 #### Build Outputs
 
 By default, running `gmake live` produces a directory and a tarball in
@@ -383,7 +386,7 @@ would modify the normal workflow as follows:
 $ git clone git://github.com/joyent/smartos-live
 $ cd smartos-live
 $ cp sample.configure.smartos configure.smartos
-$ ILLUMOS_ENABLE_DEBUG=exclusive ./configure
+$ ./configure -d
 $ gmake live
 ```
 
@@ -405,12 +408,6 @@ non-debug build. This is done because we do not set up the build to
 support multiple proto-areas, this will end up just causing the system
 to clobber one build with the other. For more information on the nightly
 flags, see [nightly(1ONBLD)](https://illumos.org/man/1onbld/nightly)
-
-When performing a debug build and [using `bldenv` for incremental
-building of illumos](#incremental-building-of-illumos), make sure to
-specify the -d option to make sure that a debug build is enabled.
-`bldenv` ignores the settings in the illumos environment file to
-determine whether or not it should build debug bits.
 
 #### Controlling Maximum Number of Jobs
 
@@ -434,13 +431,13 @@ will be rebuilt. Each of these components will be built incrementally.
 They will not be rebuilt from scratch unless they are cleaned up.
 
 The one project which is different here is illumos-extra. illumos-extra
-has two stamps: the `0-extra-stamp` and the `1-extra-stamp`. The
-`0-extra-stamp` represents building the bootstrap phase of
+has two stamps: the `0-strap-stamp` and the `0-extra-stamp`. The
+`0-strap-stamp` represents building the bootstrap phase of
 illumos-extra. This is the version of illumos-extra which builds the
 dependencies we need for the build. These are built against the host
 build system. After illumos is built, we then move onto the primary
 phase of illumos-extra where we build everything that we need against
-the proto area. This represents the `1-extra-stamp`.
+the proto area. This represents the `0-extra-stamp`.
 
 To rebuild most components you can simply remove the stamp file and
 build that stamp file again. For illumos and illumos-extra this may
@@ -492,6 +489,11 @@ risks and rewards of using `bldenv`.
 
 #### Iterating on illumos-extra
 
+If you're working on the bootstrap phase, make sure you're not using a cached
+`proto.strap` first. Using `./configure -r` will tell `./tools/build_strap` not
+to download a pre-built tarball for `proto.strap`, but instead do a full strap
+build of illumos-extra. Remember to explicitly `rm 0-strap-stamp`.
+
 Working on illumos-extra can sometimes be frustrating if you're simply
 building it from the top-level via the stamp each time. This is because
 some parts of GCC and other software will often be rebuilt. It is
@@ -499,10 +501,10 @@ possible to rebuild just a single directory by manually invoking what
 the Makefile would do. Note, that this manual process requires you to
 use the path of the repository that you're operating on.
 
-The simplest way to figure out how to rebuild what you need is to
-examine the make output. For example, if you were iterating on gas and
-the root of the smartos-live repository was at `/home/rm/src/mdb_v8`,
-then you might run a manual command like:
+The simplest way to figure out how to rebuild what you need is to examine the
+make output from a build. For example, if you were iterating on gas and the root
+of the smartos-live repository was at `/home/rm/src/mdb_v8`, then you might run
+a manual command like:
 
 ```
 $ cd projects/illumos-extra/binutils

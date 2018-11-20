@@ -222,3 +222,29 @@ function checkDefaultZfsProperties(t, dataset, message, callback) {
         callback();
     });
 };
+
+/*
+ * Adapted from usr/src/lib/libzfs/common/libzfs_dataset.c and related headers.
+ */
+var SPA_BLKPTRSHIFT = 7;        /* blkptr_t is 128 bytes */
+var SPA_DVAS_PER_BP = 3;        /* Number of DVAs in a bp */
+var DN_MAX_INDBLKSHIFT = 17;    /* 128k */
+var DNODES_PER_LEVEL_SHIFT = DN_MAX_INDBLKSHIFT - SPA_BLKPTRSHIFT;
+var DNODES_PER_LEVEL = 1 << DNODES_PER_LEVEL_SHIFT;
+
+exports.zvol_volsize_to_reservation =
+function zvol_volsize_to_reservation(volsize, volblocksize, copies) {
+    var blocks = volsize / volblocksize;
+    var numdb = 7;
+
+    while (blocks > 1) {
+        blocks = Math.floor((blocks + DNODES_PER_LEVEL - 1) / DNODES_PER_LEVEL);
+        numdb += blocks;
+    }
+
+    numdb *= Math.min(SPA_DVAS_PER_BP, copies + 1);
+    volsize *= copies;
+
+    numdb *= 1 << DN_MAX_INDBLKSHIFT;
+    return (volsize + numdb);
+}

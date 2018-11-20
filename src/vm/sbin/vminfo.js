@@ -51,6 +51,17 @@ var client = new vminfod.VminfodClient({
     log: log
 });
 
+/*
+ * Safely escape the user-agent value to be printed to the screen.  This was
+ * taken from `escapePath` in node-manta (joyent/node-manta#231).
+ */
+function safeUserAgent(s) {
+    assert.string(s, 'safeUserAgent');
+
+    /* JSSTYLED */
+    return JSON.stringify(s).replace(/^"|"$/g, '').replace(/\\"/g, '"');
+}
+
 function usage() {
     var _args = Array.prototype.slice.call(arguments);
     var msg = f.apply(null, _args);
@@ -183,7 +194,7 @@ function do_status(args) {
         output.push(f('eventsListeners: (%d listeners)', evls.length));
         evls.forEach(function forEachEvLs(uuid) {
             var el = msg.eventsListeners[uuid];
-            output.push(f('  - %s', el.userAgent));
+            output.push(f('  - %s', safeUserAgent(el.userAgent)));
             output.push(f('    %s created %s ago', uuid, el.createdAgo));
             output.push('');
         });

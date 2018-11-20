@@ -109,6 +109,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-create.js \
 	vm/tests/test-defaults.js \
 	vm/tests/test-docker.js \
+	vm/tests/test-firewall.js \
 	vm/tests/test-fswatcher.js \
 	vm/tests/test-hrtime.js \
 	vm/tests/test-indestructible.js \
@@ -116,14 +117,17 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-lastexited.js \
 	vm/tests/test-openonerrlogger.js \
 	vm/tests/test-queue.js \
+	vm/tests/test-quota.js \
 	vm/tests/test-reboot.js \
 	vm/tests/test-reprovision.js \
 	vm/tests/test-send-recv.js \
 	vm/tests/test-snapshots.js \
 	vm/tests/test-spoof-opts.js \
+	vm/tests/test-sysinfo.js \
 	vm/tests/test-tmpfs.js \
 	vm/tests/test-update.js \
 	vm/tests/test-vrrp-nics.js \
+	vm/tests/test-vminfod.js \
 	vm/tests/test-vminfod-zonewatcher.js \
 	vm/tests/test-vminfod-zonewatcher-overflow.js \
 	vm/tests/test-vminfod-zpoolwatcher.js \
@@ -338,12 +342,11 @@ clean : TARGET = clean
 install : TARGET = install
 check : TARGET = lint
 
-$(SUBDIRS): FRC
-	@cd $@; pwd; $(MAKE) $(SUBDIRS_ENV) $(TARGET)
-
-
 all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm sysevent \
 	$(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) $(SUBDIRS)
+
+$(SUBDIRS): FRC
+	@cd $@; pwd; $(MAKE) $(SUBDIRS_ENV) $(TARGET)
 
 install: all $(SUBDIRS)
 	mkdir -p $(DESTDIR)/usr/bin

@@ -1,4 +1,4 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2018 Joyent, Inc.  All rights reserved.
 //
 // These tests ensure that things created before a zone is created are cleaned
 // up on failure. Those things created after the zone exists can be cleaned up
@@ -42,6 +42,25 @@ var common_payload = {
     vcpus: 1
 };
 
+var bhyve_common_payload = {
+    alias: 'test-bhyve-cleanup-on-failure-' + process.pid,
+    autoboot: false,
+    brand: 'bhyve',
+    do_not_inventory: true,
+    disks: [
+        {
+            size: 5120,
+            boot: true,
+            image_uuid: vmtest.CURRENT_BHYVE_CENTOS_UUID,
+            model: 'virtio'
+        },
+        {
+            size: 5120,
+            model: 'virtio'
+        }
+    ]
+};
+
 function zfs(args, callback)
 {
     var cmd = '/usr/sbin/zfs';
@@ -69,6 +88,45 @@ test('test impossible disk1 refreservation', function (t) {
     // value is in MiB so:         GiB    TiB    PiB    EiB
     payload.disks[1].size = 10 * (1024 * 1024 * 1024 * 1024);
     payload.disks[1].refreservation = payload.disks[1].size;
+
+    VM.create(payload, function (err, obj) {
+        if (err) {
+            t.ok(true, 'failed to create VM: ' + err.message);
+        } else {
+            t.ok(false, 'VM created with uuid ' + obj.uuid);
+        }
+
+        // now we want to make sure there were no disks left behind
+        zfs(['list', '-H', '-t', 'filesystem,volume', '-o', 'name'],
+            function (e, fds) {
+                var ds = fds.stdout.split('\n');
+                var created_ds = [];
+
+                t.ok(!e, 'loaded list of datasets after create');
+
+                ds.forEach(function (d) {
+                    if (d.match(obj.uuid)) {
+                        t.ok(false, 'abandoned dataset: ' + d);
+                        created_ds.push(d);
+                    }
+                });
+
+                if (created_ds.length === 0) {
+                    t.ok(true, 'no datasets abandoned');
+                }
+
+                t.end();
+            }
+        );
+    });
+});
+
+test('test impossible bhyve flexible_disk_size', function (t) {
+    var payload = JSON.parse(JSON.stringify(bhyve_common_payload));
+
+    // TODO: When we have CNs with more than 10 EiB we should up this number
+    // value is in MiB so:         GiB    TiB    PiB    EiB
+    payload.flexible_disk_size = 10 * (1024 * 1024 * 1024 * 1024);
 
     VM.create(payload, function (err, obj) {
         if (err) {

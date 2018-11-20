@@ -38,6 +38,8 @@ if [[ -z "$1" ]]; then
     exit 1
 fi
 
+echo "# Running $1"
+
 # Before starting tests, ensure we have the source(s) we want for test VM images
 
 have_sources="imgadm sources | sort"

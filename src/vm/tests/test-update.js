@@ -30,10 +30,13 @@
  * which case it can be changed to some other non-Private address.
  */
 
-var async = require('/usr/node/node_modules/async');
+var assert = require('/usr/node/node_modules/assert-plus');
+var common = require('./common');
 var execFile = require('child_process').execFile;
+var f = require('util').format;
 var fs = require('fs');
 var VM = require('/usr/vm/node_modules/VM');
+var vasync = require('/usr/vm/node_modules/vasync');
 var vmtest = require('../common/vmtest.js');
 
 // this puts test stuff in global, so we need to tell jsl about that:
@@ -248,6 +251,21 @@ var simple_properties = [
     ['owner_uuid', '36bf401a-28ef-11e1-b4a7-c344deb1a5d6'],
     ['package_name', 'really expensive package'],
     ['package_version', 'XP']
+];
+
+/*
+ * An array of properties that cannot be changed (but are still validated).  In
+ * each array item is another array, and inside that the first item is the
+ * property name, and the second item is a bogus property value that will pass
+ * validation.
+ */
+var UNMODIFIABLE_PROPS = [
+    ['brand', 'bogus-brand'],
+    ['hvm', 'bogus-hvm'],
+    ['last_modified', 'bogus-last-modified'],
+    ['server_uuid', '00000000-0000-0000-0000-000000000000'],
+    ['uuid', '00000000-0000-0000-0000-000000000000'],
+    ['zonename', 'bogus-zonename']
 ];
 
 test('create VM', function (t) {
@@ -701,8 +719,9 @@ test('add NIC with minimal properties', function (t) {
 });
 
 test('set then unset simple properties', function (t) {
-    async.forEachSeries(simple_properties,
-        function (item, cb) {
+    vasync.forEachPipeline({
+        inputs: simple_properties,
+        func: function (item, cb) {
             var prop = item[0];
             var value = item[1];
             var payload = {};
@@ -749,11 +768,10 @@ test('set then unset simple properties', function (t) {
                     });
                 }
             });
-        },
-        function (err) {
-            t.end();
         }
-    );
+    }, function (err) {
+        t.end();
+    });
 });
 
 test('update quota', function (t) {
@@ -1315,6 +1333,82 @@ test('get vmobj for full VM after modifications', function (t) {
         }
 
         t.end();
+    });
+});
+
+/*
+ * Attempt to update the unmodifiable properties to a generic value.
+ *
+ * These properties should be silently ignored and return success even though
+ * nothing was modified.  This is useful in situations such as reprovisioning,
+ * or updating from an old VM where all the properties from `vmadm get` would be
+ * present.  This test ensures that `VM.update` silently ignores any keys that
+ * cannot be changed.
+ */
+test('attempt to modify unmodifiable properties', function (t) {
+    VM.load(vm_uuid, function (loadErr, vmobj) {
+        common.ifError(t, loadErr, 'load VM');
+
+        if (loadErr) {
+            t.end();
+            return;
+        }
+
+        vasync.forEachPipeline({
+            inputs: UNMODIFIABLE_PROPS,
+            func: function (item, cb) {
+                var prop = item[0];
+                var value = item[1];
+
+                var payload = {};
+                payload[prop] = value;
+
+                /*
+                 * Update the property (should be a success but nothing should
+                 * change).
+                 */
+                VM.update(vm_uuid, payload, function (updateErr) {
+                    common.ifError(t, updateErr,
+                        f('update unmodifiable VM property "%s" to %j',
+                        prop, value));
+
+                    if (updateErr) {
+                        cb(updateErr);
+                        return;
+                    }
+
+                    /*
+                     * Ensure the property hasn't changed.  The exception here
+                     * is the "last_modified" property that will get updated
+                     * under a variety of conditions.  We just skip looking it
+                     * up here and move on.
+                     */
+                    if (prop === 'last_modified') {
+                        cb();
+                        return;
+                    }
+
+                    VM.load(vm_uuid, function (loadErr2, obj) {
+                        common.ifError(t, loadErr2, 'load VM');
+
+                        if (loadErr2) {
+                            cb(loadErr2);
+                            return;
+                        }
+
+                        t.equal(obj[prop], vmobj[prop],
+                            f('value has not been modified '
+                            + '(original: %j, found %j)',
+                            vmobj[prop], obj[prop]));
+
+                        cb();
+                    });
+                });
+            }
+        }, function (err) {
+            common.ifError(t, err, 'unmodifiable properties');
+            t.end();
+        });
     });
 });
 

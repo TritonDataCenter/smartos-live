@@ -3,19 +3,13 @@ This is just a convenient temporary TODO list...
 
  - fix nictagadm
  - need RICHMOND-16 testing
- - COAL doesn't auto-boot? (fixed?)
  - sdcboot image needs versioning for freedos, ipxe, memtest version,
    loader, sdc-headnode tools?
- - ipxe
-   - build triton/coal image with updated ipxe
-   - make PXE boot menu entry in loader actually work
- - Add option in Loader menu to toggle DR
  - Triton Doc changes
- - Get "sdcadm platform" working with Loader
- - Get sdc-setconsole working with Loader
  - bin/reflash
  - sdc-usbkey
    - add subcommand to dump boot component version JSON blob
- - resync with loader gate
  - replace screen-rows/cols name with ncols name? avoid problems?
  - usb key conversion tool
+ - figure out why freedos.img doesn't boot under Loader
+ - Coal image should default to text console

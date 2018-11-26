@@ -440,6 +440,23 @@ tab-complete UUIDs rather than having to type them out for every command.
         except that the options are add_disks, remove_disks and update_disks
         and instead of "mac" these will be keyed on "path".
 
+        When updating disks.*.size, the system protects against accidental
+        shrinkage and associated data loss. If the size of a disk is reduced,
+        the end of the disk is removed. If that space contains data, it is
+        permanently lost. Snapshots do not provide protection. To allow a disk
+        to shrink, set the dangerous_allow_shrink property to true. This
+        property is used only for the update - it is not stored. For example,
+        the following will resize a disk to 10 MiB, even if it had previously
+        been larger.
+
+         {
+           "update_disks": {
+             "path": "/dev/zvol/rdsk/zones/.../disk1",
+             "size": 10,
+             "dangerous_allow_shrink": true
+           }
+         }
+
         Those fields marked in the PROPERTIES section below as updatable and
         modified with '(live update)' mean that when you update the property
         the change takes effect immediately for the VM without the VM being

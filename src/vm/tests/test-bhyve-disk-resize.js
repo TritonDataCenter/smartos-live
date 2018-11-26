@@ -25,6 +25,7 @@
  */
 
 var assert = require('/usr/node/node_modules/assert-plus');
+var jsprim = require('/usr/vm/node_modules/jsprim');
 var sprintf = require('/usr/node/node_modules/sprintf').sprintf;
 var vasync = require('/usr/vm/node_modules/vasync');
 var VM = require('/usr/vm/node_modules/VM');
@@ -55,18 +56,18 @@ before(function (cb) {
 });
 
 after(function (cb) {
-    if (vmobj) {
-        VM.delete(vmobj.uuid, {}, function _delete_cb(err) {
-            if (err) {
-                console.log(sprintf('Could not delete vm %s: %s', vmobj.uuid,
-                    err.message));
-            }
-            vmobj = undefined;
-            cb();
-        });
-    } else {
+    if (!vmobj) {
         cb();
+        return;
     }
+    VM.delete(vmobj.uuid, {}, function _delete_cb(err) {
+        if (err) {
+            console.log(sprintf('Could not delete vm %s: %s', vmobj.uuid,
+                err.message));
+        }
+        vmobj = undefined;
+        cb();
+    });
 });
 
 /*
@@ -89,8 +90,8 @@ after(function (cb) {
 function testCreateAndCheckDisks(opts) {
     var t = opts.t;
     var payload = opts.payload;
-    var disks = opts.disks;
     var update = opts.update;
+    var disks = opts.disks;
 
     vasync.waterfall([
         function _create(next) {
@@ -110,6 +111,7 @@ function testCreateAndCheckDisks(opts) {
                 next();
                 return;
             }
+            update = expandDiskPaths(update);
             VM.update(vmobj.uuid, update, function _update_cb(err) {
                 if (err) {
                     t.ok(false, 'error updating VM: ' + err);
@@ -138,13 +140,131 @@ function testCreateAndCheckDisks(opts) {
                 uuid: vmobj.uuid
             }));
         }
-    ], function _done(err) {
-        t.end(err);
-    });
+        ], function (err) {
+            t.end();
+        });
 }
 
-function dup(thing) {
-    return JSON.parse(JSON.stringify(thing));
+/*
+ * This is the main driver for tests that will fail during VM.create().
+ *
+ * opts.t           test object
+ * opts.payload     VM.create payload. Most likely should have autoboot set to
+ *                  false.
+ * opts.expect      A string containing the beginning of Error.message that is
+ *                  expected.  Up to one '%s' will be replaced by the instance
+ *                  uuid via sprintf().  Any other percent symbols should be
+ *                  escaped with %, as is common with strings passed to sprintf.
+ */
+function testFailCreate(opts) {
+    assert.object(opts, 'opts');
+    assert.object(opts.t, 't must be test object');
+    assert.object(opts.payload, 'payload must be an object');
+    assert.string(opts.expect, 'expect must be a string');
+    assert.notEqual(opts.expect.length, 0, 'expect must not be empty');
+
+    var t = opts.t;
+    var payload = opts.payload;
+    var expect = opts.expect;
+
+    vasync.waterfall([
+        function _create(next) {
+            VM.create(payload, function _create_cb(err, obj) {
+                if (err) {
+                    t.equal(err.message.substring(0, expect.length), expect,
+                        'error detected');
+                } else {
+                    t.ok(false, 'No error detected');
+                }
+                // This is a stub. We load() the full object below to see if it
+                // was really created.
+                vmobj = obj;
+
+                next();
+            });
+        },
+        function _load(next) {
+            VM.load(vmobj.uuid, function _load_cb(err, obj) {
+                vmobj = obj;
+                t.ok(err, 'VM load should fail');
+                if (err) {
+                    next(err);
+                    return;
+                }
+                next(new Error('VM ' + vmobj.uuid
+                    + '  unexpectedly exists'));
+            });
+        }
+        ], function _done(err) {
+            t.end();
+        });
+}
+
+/*
+ * This is the main driver for tests that will fail during VM.update().
+ *
+ * opts.t           test object
+ * opts.payload     VM.create payload. Most likely should have autoboot set to
+ *                  false.
+ * opts.update      VM.update payload
+ * opts.expect      A string containing the beginning of Error.message that is
+ *                  expected.  Up to one '%s' will be replaced by the instance
+ *                  uuid via sprintf().  Any other percent symbols should be
+ *                  escaped with %, as is common with strings passed to sprintf.
+ */
+function testCreateAndFailUpdate(opts) {
+    assert.object(opts, 'opts');
+    assert.object(opts.t, 't must be test object');
+    assert.object(opts.payload, 'payload must be an object');
+    assert.object(opts.update, 'update must be an object');
+    assert.string(opts.expect, 'expect must be a string');
+    assert.notEqual(opts.expect.length, 0, 'expect must not be empty');
+
+    var t = opts.t;
+    var payload = opts.payload;
+    var update = opts.update;
+    var expect = opts.expect;
+
+    vasync.waterfall([
+        function _create(next) {
+            VM.create(payload, function _create_cb(err, obj) {
+                vmobj = obj;
+                expect = sprintf(expect, vmobj.uuid);
+
+                next(err);
+            });
+        },
+        function _update(next) {
+            update = expandDiskPaths(update);
+            VM.update(vmobj.uuid, update, function _update_cb(err) {
+                if (err) {
+                    t.equal(err.message.substring(0, expect.length), expect,
+                        'error detected');
+                } else {
+                    t.ok(false, 'No error detected');
+                }
+                next();
+            });
+        }
+        ], function (err) {
+            t.end();
+        });
+}
+
+function expandDiskPaths(payload) {
+    assert.uuid(vmobj.uuid);
+    if (!payload || !payload.hasOwnProperty('update_disks')) {
+        return (payload);
+    }
+
+    payload = jsprim.deepCopy(payload);
+    payload.update_disks.forEach(function expandDisk(disk) {
+        if (disk.hasOwnProperty('path')) {
+            disk.path = sprintf(disk.path, vmobj.uuid);
+        }
+    });
+
+    return payload;
 }
 
 function checkDisks(opts) {
@@ -189,53 +309,6 @@ function checkDisks(opts) {
 }
 
 /*
- * VM.create() is expected to fail with an Error message that starts with
- * opts.expect.
- */
-function testFailCreate(opts) {
-    assert.object(opts.t, 't must be test object');
-    assert.object(opts.payload, 'payload must be an object');
-    assert.string(opts.expect, 'expect must be a string');
-    assert.notEqual(opts.expect.length, 0, 'expect must not be empty');
-
-    var t = opts.t;
-    var payload = opts.payload;
-    var expect = opts.expect;
-
-    vasync.waterfall([
-        function _create(next) {
-            VM.create(payload, function _create_cb(err, obj) {
-                if (err) {
-                    t.equal(err.message.substring(0, expect.length), expect,
-                        'error detected');
-                } else {
-                    t.ok(false, 'No error detected');
-                }
-                // This is a stub. We load() the full object below to see if it
-                // was really created.
-                vmobj = obj;
-
-                next();
-            });
-        },
-        function _load(next) {
-            VM.load(vmobj.uuid, function _load_cb(err, obj) {
-                vmobj = obj;
-                t.ok(err, 'VM load should fail');
-                if (err) {
-                    next(err);
-                    return;
-                }
-                next(new Error('VM ' + vmobj.uuid
-                    + '  unexpectedly exists'));
-            });
-        }
-        ], function _done(err) {
-            t.end(err);
-        });
-}
-
-/*
  * Common payload elements
  */
 var image_uuid = vmtest.CURRENT_BHYVE_CENTOS_UUID;
@@ -266,7 +339,7 @@ var base_payload = {
 
 test('boot disk is grown when size > image_size',
     function _verify_grow_boot_disk(t) {
-        var payload = dup(base_payload);
+        var payload = jsprim.deepCopy(base_payload);
         var newsize = image_size + 1024;
         var check_disks = [
             {
@@ -287,12 +360,200 @@ test('boot disk is grown when size > image_size',
 
 test('create fails when size < image_size',
     function _conflict_no_shrink_boot_disk(t) {
-        var payload = dup(base_payload);
+        var payload = jsprim.deepCopy(base_payload);
         payload.disks[0].size = image_size - 1024;
 
         testFailCreate({
             t: t,
             payload: payload,
             expect: 'Invalid value(s) for: size'
+        });
+    });
+
+test('boot disk can be grown with update_disk',
+    function _verify_disk0_grow_with_update_disk(t) {
+        var payload = jsprim.deepCopy(base_payload);
+        var newsize = image_size + 1024;
+        var update = {
+            update_disks: [
+                {
+                    path: '/dev/zvol/rdsk/zones/%s/disk0',
+                    size: newsize
+                }
+            ]
+        };
+        var check_disks = [
+            {
+                path: '/dev/zvol/rdsk/zones/%s/disk0',
+                image_uuid: image_uuid,
+                boot: true,
+                size: newsize
+            }
+        ];
+
+        payload.flexible_disk_size = newsize;
+
+        testCreateAndCheckDisks({
+            t: t,
+            payload: payload,
+            update: update,
+            disks: check_disks
+        });
+    });
+
+test('data disk can be grown with update_disk',
+    function _verify_disk1_grow_with_update_disk(t) {
+        var payload = jsprim.deepCopy(base_payload);
+        var datasize = 2048;
+        payload.disks.push({model: 'virtio', size: datasize});
+        var newsize =  datasize + 1024;
+        var update = {
+            update_disks: [
+                {
+                    path: '/dev/zvol/rdsk/zones/%s/disk1',
+                    size: newsize
+                }
+            ]
+        };
+        var check_disks = [
+            {
+                path: '/dev/zvol/rdsk/zones/%s/disk0',
+                image_uuid: image_uuid,
+                boot: true,
+                size: image_size
+            }, {
+                path: '/dev/zvol/rdsk/zones/%s/disk1',
+                image_uuid: undefined,
+                size: newsize
+            }
+        ];
+
+        payload.flexible_disk_size = image_size + newsize;
+
+        testCreateAndCheckDisks({
+            t: t,
+            payload: payload,
+            update: update,
+            disks: check_disks
+        });
+    });
+
+test('disk can be shrunk with update_disk',
+    function _verify_disk1_shrink_with_update_disk(t) {
+        var payload = jsprim.deepCopy(base_payload);
+        var datasize = 2048;
+        payload.disks.push({model: 'virtio', size: datasize});
+        var newsize =  datasize - 1024;
+        var update = {
+            update_disks: [
+                {
+                    path: '/dev/zvol/rdsk/zones/%s/disk1',
+                    size: newsize,
+                    dangerous_allow_shrink: true
+                }
+            ]
+        };
+        var check_disks = [
+            {
+                path: '/dev/zvol/rdsk/zones/%s/disk0',
+                image_uuid: image_uuid,
+                boot: true,
+                size: image_size
+            }, {
+                path: '/dev/zvol/rdsk/zones/%s/disk1',
+                image_uuid: undefined,
+                size: newsize
+            }
+        ];
+
+        testCreateAndCheckDisks({
+            t: t,
+            payload: payload,
+            update: update,
+            disks: check_disks
+        });
+    });
+
+test('disk shrink protection works',
+    function _verify_disk1_shrink_fail(t) {
+        var payload = jsprim.deepCopy(base_payload);
+        var datasize = 2048;
+        payload.disks.push({model: 'virtio', size: datasize});
+        var newsize =  datasize - 1024;
+        var update = {
+            update_disks: [
+                {
+                    path: '/dev/zvol/rdsk/zones/%s/disk1',
+                    size: newsize
+                }
+            ]
+        };
+
+        payload.flexible_disk_size = image_size + datasize;
+
+        testCreateAndFailUpdate({
+            t: t,
+            payload: payload,
+            update: update,
+            expect: 'first of 1 error: cannot resize '
+        });
+    });
+
+test('grow fails without flexible_disk_size',
+    function _grow_fails_enospc(t) {
+        var payload = jsprim.deepCopy(base_payload);
+        var datasize = 2048;
+        payload.disks.push({model: 'virtio', size: datasize});
+        var newsize =  datasize + 1;
+        var update = {
+            update_disks: [
+                {
+                    path: '/dev/zvol/rdsk/zones/%s/disk1',
+                    size: newsize
+                }
+            ]
+        };
+        var expect = 'first of 1 error: Command failed: cannot set property '
+            + 'for \'zones/%s/disk1\': size is greater than available space';
+
+        testCreateAndFailUpdate({
+            t: t,
+            payload: payload,
+            update: update,
+            expect: expect
+        });
+    });
+
+test('add a disk works up to flexible_disk_size',
+    function _add_disk_use_all_flexible_space(t) {
+        var payload = jsprim.deepCopy(base_payload);
+        var newsize = 1024;
+        var update = {
+            add_disks: [
+                {
+                    model: 'virtio',
+                    size: newsize
+                }
+            ]
+        };
+        var check_disks = [
+            {
+                path: '/dev/zvol/rdsk/zones/%s/disk0',
+                image_uuid: image_uuid,
+                boot: true,
+                size: image_size
+            }, {
+                path: '/dev/zvol/rdsk/zones/%s/disk1',
+                size: newsize
+            }
+        ];
+
+        payload.flexible_disk_size = image_size + newsize;
+
+        testCreateAndCheckDisks({
+            t: t,
+            payload: payload,
+            update: update,
+            disks: check_disks
         });
     });

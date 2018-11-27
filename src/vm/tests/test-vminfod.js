@@ -28,6 +28,7 @@ var assert = require('/usr/node/node_modules/assert-plus');
 var bunyan = require('/usr/vm/node_modules/bunyan');
 var common = require('./common');
 var f = require('util').format;
+var fs = require('fs');
 var libuuid = require('/usr/node/node_modules/uuid');
 var VM = require('/usr/vm/node_modules/VM');
 var vasync = require('/usr/vm/node_modules/vasync');
@@ -48,7 +49,7 @@ require('nodeunit-plus');
 var IMAGE_UUID = vmtest.CURRENT_SMARTOS_UUID;
 var PAYLOAD = {
     alias: f('test-vminfod-%d', process.pid),
-    autoboot: true,
+    autoboot: false,
     brand: 'joyent-minimal',
     do_not_inventory: true,
     image_uuid: IMAGE_UUID,
@@ -165,6 +166,189 @@ test('vminfod event stream timeout errors', function (t) {
 });
 
 /*
+ * Modifying the zone's XML file directly can result in a "delete" event seen
+ * for the file, even though the zone itself may not be deleted.  This test
+ * will create e "delete" event for a zone that isn't deleted, and ensure that
+ * vminfod doesn't think the zone is actually deleted.
+ */
+test('test vminfod zone XML delete event', function (t) {
+    var vmobj;
+    var xmlFile;
+    var tmpXmlFile = '/tmp/.vminfod-test-delete-event.xml';
+    var vs;
+
+    vasync.pipeline({funcs: [
+        // Create a vminfod stream
+        function (_, cb) {
+            vs = new vminfod.VminfodEventStream({
+                name: 'test-vminfod.js zone XML delete event',
+                log: log
+            });
+            vs.on('ready', function () {
+                cb();
+            });
+        },
+
+        // Create a new VM
+        function (_, cb) {
+            VM.create(PAYLOAD, function (err, _vmobj) {
+                common.ifError(t, err, 'VM.create');
+
+                if (err) {
+                    cb(err);
+                    return;
+                }
+
+                vmobj = _vmobj;
+                assert.object(vmobj, 'vmobj');
+                assert.uuid(vmobj.zonename, 'vmobj.zonename');
+
+                xmlFile = f('/etc/zones/%s.xml', vmobj.zonename);
+                cb();
+            });
+        },
+
+        // Copy the zone's XML file
+        function (_, cb) {
+            var opts = {
+                encoding: 'utf8'
+            };
+
+            fs.readFile(xmlFile, opts, function (err, data) {
+                common.ifError(t, err, f('read %s', xmlFile));
+                if (err) {
+                    cb(err);
+                    return;
+                }
+
+                fs.writeFile(tmpXmlFile, data, opts, function (_err) {
+                    common.ifError(t, _err, f('write %s', tmpXmlFile));
+                    cb(_err);
+                });
+            });
+        },
+
+        /*
+         * Rename the temporary XML file to the zone's XML file location.
+         *
+         * `mv(1)` is used here because fs.rename will fail.  `/etc/zones` is on
+         * its own mounted filesystem and the temp file is in `/tmp`.  Because
+         * `mv` or fs.rename can be used, and the temporary file could live
+         * inside or outside the `/etc/zones` filesystem, there are 4 possible
+         * scenarios:
+         *
+         * 1. `mv` temp file from `/etc/zones`: FILE_EXCEPTION FILE_RENAME_TO
+         * 2. `mv` temp file from `/tmp`:       FILE_EXCEPTION FILE_DELETE
+         * 3. fs.rename file from `/etc/zones`: FILE_EXCEPTION FILE_RENAME_TO
+         * 4. fs.rename file from '/tmp`:       EXDEV, cross-device link not
+         *    permitted
+         *
+         * The first three scenarios show the events as seen from event ports,
+         * and the 4th scenario shows the error that fs.rename returns. `mv(1)`
+         * attempts to rename(2) the file first, and will then move on to a full
+         * file copy (if the source is a regular file) if EXDEV is the error
+         * given.
+         *
+         * The code below will create scenario 2.
+         *
+         * This logic will simultaneously block on vminfod for the delete event
+         * to be seen (which shouldn't happen), and ensure that instead a
+         * timeout is seen.
+         */
+        function (_, cb) {
+            var cancelFn;
+
+            vasync.parallel({funcs: [
+                function (cb2) {
+                    // This event should *not* happen - we expect a timeout
+                    var obj = {
+                        type: 'delete',
+                        uuid: vmobj.uuid
+                    };
+                    var opts = {
+                        timeout: 5 * 1000,
+                        catchErrors: true,
+                        startFresh: true
+                    };
+
+                    cancelFn = vs.watchForEvent(obj, opts, function (err) {
+                        if (err && err.code === 'ETIMEOUT') {
+                            t.ok(true, 'vminfod watchForEvent timeout');
+                            cb2();
+                            return;
+                        }
+
+                        // if we are here, something is wrong
+                        if (err) {
+                            common.ifError(t, err,
+                                'vminfod watchForEvent delete');
+                        } else {
+                            t.ok(false, 'vminfod delete event seen!');
+                        }
+
+                        cb2(err);
+                    });
+                }, function (cb2) {
+                    var args = [
+                        'mv',
+                        tmpXmlFile,
+                        xmlFile
+                    ];
+
+                    common.exec(args, function (err, out) {
+                        common.ifError(t, err, f('mv %s -> %s',
+                            tmpXmlFile, xmlFile));
+
+                        if (err) {
+                            cancelFn(err);
+                            cb2(err);
+                            return;
+                        }
+
+                        cb2();
+                    });
+                }]
+            }, cb);
+        }
+
+    ]}, function (e) {
+        // catch any error above
+        common.ifError(t, e, 'test-vminfod-zone-xml-delete-event');
+
+        /*
+         * Cleanup
+         *
+         * Errors are handled by the test suite but ignored inside this call to
+         * vasync.pipeline to ensure all tasks are run.
+         */
+        vasync.pipeline({funcs: [
+            // Stop the vminfod stream
+            function (_, cb) {
+                if (vs) {
+                    vs.stop();
+                    vs = null;
+                }
+                cb();
+            },
+            // Remove the VM
+            function (_, cb) {
+                if (!vmobj) {
+                    cb();
+                    return;
+                }
+
+                VM.delete(vmobj.uuid, function (err) {
+                    common.ifError(t, err, 'VM.delete');
+                    cb();
+                });
+            }
+        ]}, function () {
+            t.end();
+        });
+    });
+});
+
+/*
  * OS-7365: vminfod crashes when restarting watches for nonexistent zone
  *
  * vminfod has relatively complex logic to handle a ZFS rollback of a dataset
@@ -234,7 +418,7 @@ test('test vminfod zfs rollback', function (t) {
         // Create a vminfod stream
         function (_, cb) {
             vs = new vminfod.VminfodEventStream({
-                name: 'test-vminfod.js',
+                name: 'test-vminfod.js vminfod zfs rollback',
                 log: log
             });
             vs.on('ready', function () {

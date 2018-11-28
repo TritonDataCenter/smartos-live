@@ -732,6 +732,15 @@ function bi_finish_archive
 		fail "could not store hash of boot_archive in output directory"
 	fi
 
+	version_dir="$bi_out_dir/$bi_prefix/etc/version"
+	if ! /usr/bin/mkdir -p "$version_dir"; then
+		fail "could not create \"$version_dir\""
+	fi
+
+	if ! printf '%s\n' "$bi_buildstamp" >"$version_dir/platform"; then
+		fail "could not store buildstamp in platform tarball"
+	fi
+
 	if ! printf '%s\n' "$bi_buildstamp" >"$bi_out_dir/buildstamp"; then
 		fail "could not store buildstamp in output directory"
 	fi

@@ -145,10 +145,11 @@ pkgsrc:
 
 $(BOOT_TARBALL): world manifest
 	pfexec rm -rf $(BOOT_PROTO)
-	mkdir -p $(BOOT_PROTO)
+	mkdir -p $(BOOT_PROTO)/etc/version/
 	mkdir -p $(ROOT)/output
 	pfexec ./tools/builder/builder $(ROOT)/$(BOOT_MANIFEST) \
 	    $(BOOT_PROTO) $(OVERLAYS) $(ROOT)/proto
+	cp $(STAMPFILE) $(BOOT_PROTO)/etc/version/boot
 	(cd $(BOOT_PROTO) && pfexec gtar czf $(ROOT)/$@ .)
 
 #

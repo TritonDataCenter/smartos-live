@@ -468,7 +468,8 @@ MetadataAgent.prototype.start = function start() {
          * For bhyve, the bhyve process recreates the socket every time it
          * starts. This happens when the zone first starts and every time the
          * guest reboots. The 'running' state change will catch the first one.
-         * Guest reboots can be detected by 'init_restarts' incrementing.
+         * Guest reboots can be detected by 'init_restarts' incrementing, which
+         * is seen when "action" is "changed" - not "added".
          */
         if (ev.vm.brand !== 'kvm' && ev.vm.brand !== 'bhyve') {
             return;
@@ -476,7 +477,8 @@ MetadataAgent.prototype.start = function start() {
 
         var restarts = ev.changes.filter(function (change) {
             return (change.path.length === 1
-                && change.path[0] === 'init_restarts');
+                && change.path[0] === 'init_restarts'
+                && change.action === 'changed');
         });
         if (restarts.length !== 0) {
             // The previous zoneConnection should have already been cleaned up

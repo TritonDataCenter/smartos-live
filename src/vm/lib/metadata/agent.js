@@ -353,6 +353,9 @@ MetadataAgent.prototype.purgeZoneCache = function purgeZoneCache(zonename) {
 
     if (self.zoneConnections.hasOwnProperty(zonename)) {
         if (self.zoneConnections[zonename]) {
+            // If deleting the instance before the metadata socket connected, we
+            // must cancel reconnection attempts.
+            self.stopKvmReconnTimer(zonename);
             // it's not undefined, so attempt to close it
             closeZoneConnection(self.zoneConnections[zonename]);
         }
@@ -365,8 +368,8 @@ MetadataAgent.prototype.stopKvmReconnTimer =
 function stopKvmReconnTimer(zonename) {
     var self = this;
 
-    self.log.warn({zonename: zonename},
-        'clearing connection retries for KVM VM.');
+    self.log.info({zonename: zonename},
+        'clearing connection retries for HVM instance.');
 
     if (self.zoneKvmReconnTimers.hasOwnProperty(zonename)) {
         clearTimeout(self.zoneKvmReconnTimers[zonename]);
@@ -642,6 +645,8 @@ MetadataAgent.prototype.createKVMServer = function (zopts, callback) {
 
         handler = self.makeMetadataHandler(zopts.zone, kvmstream);
 
+        assert.object(self.zoneConnections[zopts.zone],
+            'zone connection initialized and not yet reaped');
         self.zoneConnections[zopts.zone].conn = kvmstream;
 
         kvmstream.on('connect', function _onConnect() {

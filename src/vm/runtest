@@ -174,6 +174,9 @@ if ! imgadm info "$uefi_img_uuid" >/dev/null 2>&1; then
 	zfs destroy -r "$uefi_zvol"
 fi
 
+# Keep track of when we started so it is easy to identify new core files
+touch /tmp/runtest.start.$$
+
 set +o errexit
 set -o pipefail
 /usr/bin/ctrun -l child -o noorphan /usr/node/bin/node \
@@ -202,6 +205,11 @@ if [[ ${TEST_EXIT_CODE} != 0 ]]; then
     tests="?"
 fi
 
+coredir=$(cd $(dirname $(coreadm $$ | awk '{gsub("%Z", "/", $2); print $2;}')) \
+    && pwd -P)
+cores=$(find "$coredir" -type f -newer /tmp/runtest.start.$$)
+rm /tmp/runtest.start.$$
+
 if [[ -t 0 ]]; then
     # We're on a terminal so output the summary
     echo "#"
@@ -216,10 +224,18 @@ if [[ -t 0 ]]; then
     if [[ ${fail} -gt 0 ]]; then
         echo -e "# \033[31mFAIL: ${fail} / ${tests}\033[39m"
     fi
+    if [[ -n "$cores" ]]; then
+        echo -e "# \033[31mNew core files\033[39m"
+        # Send a list of core files to stdout for testers and `runtests` to see
+        # and another in this run's log.
+        for core in $cores; do
+            echo "# new core: $core"
+        done | tee -a /tmp/test.output.$$
+    fi
     echo "#"
 fi
 
-if [[ ${fail} -gt 0 ]]; then
+if [[ ${fail} -gt 0 || -n "$cores" ]]; then
     exit 1
 fi
 

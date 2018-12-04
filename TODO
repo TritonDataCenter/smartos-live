@@ -12,8 +12,11 @@ This is just a convenient temporary TODO list...
  - replace screen-rows/cols name with ncols name? avoid problems?
  - usb key conversion tool
  - Coal image should default to text console
+ - ipxe boot: "boot_archive.hash will not be loaded"
+ - coal: defaults to ipxe?
+ - bunch of files on key are world-writable (need to be read only)
  - Add support for "default-boot-option" build.spec option
  - Verify support for "config_console" build.spec option
  - Add Joyent/SmartOS image/branding for VGA console?
- - Remove freedos from sdcboot?
+ - Remove freedos from sdcboot? Kill sdcboot altogether?
  - Rework menu.rc so we deliver static file instead of template

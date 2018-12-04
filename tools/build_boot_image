@@ -148,10 +148,10 @@ function create_esp()
 	    $esp_rawdev </dev/null
 
 	pfrun mkdir -p $efimnt
-	pfrun mount -F pcfs $esp_blkdev $efimnt
+	pfrun mount -F pcfs -o foldcase $esp_blkdev $efimnt
 	pfrun mkdir -p $efimnt/efi/boot
 	pfrun cp $bi_wsroot/proto.boot/boot/loader64.efi \
-	    $efimnt/efi/boot/BOOTX64.efi
+	    $efimnt/efi/boot/bootx64.efi
 	pfrun umount $efimnt
 	pfrun lofiadm -d $esp_blkdev
 }

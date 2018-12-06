@@ -3,7 +3,6 @@ This is just a convenient temporary TODO list...
 
  - need RICHMOND-16 testing
  - sdcboot image needs versioning for ipxe, loader, sdc-headnode tools?
- - Triton Doc changes
  - bin/reflash
  - sdc-usbkey
    - add subcommand to dump boot component version JSON blob
@@ -19,4 +18,4 @@ This is just a convenient temporary TODO list...
  - Verify support for "config_console" build.spec option
  - Add Joyent/SmartOS image/branding for VGA console?
  - Remove freedos from sdcboot? Kill sdcboot altogether?
- - Rework menu.rc so we deliver static file instead of template
+ - Need to update or get rid of sdc-booter/tools/update_ipxe?

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright 2018 Joyent, Inc.
  *
  * * *
  *
@@ -101,9 +101,9 @@ test('setup: get test image id', function (t) {
 
 test('precondition1: remove image UUID-OF:' + testImgArg, function (t) {
     var cmd = format(
-        'imgadm get %s 2>/dev/null >/dev/null && ' +
-            'imgadm ancestry %s -H -o uuid | ' +
-            'xargs -n1 imgadm delete || true',
+        'imgadm get %s 2>/dev/null >/dev/null && '
+            + 'imgadm ancestry %s -H -o uuid | '
+            + 'xargs -n1 imgadm delete || true',
         testImg.uuid, testImg.uuid);
     t.exec(cmd, function () {
         t.end();
@@ -155,7 +155,7 @@ test('imgadm list type=docker', function (t) {
             lines.length, stdout));
         var matchingLines = lines.filter(function (line) {
             return line.split(/ +/g)[0] === testImg.uuid;
-        })
+        });
         t.equal(matchingLines.length, 1, 'one of the lines\' first column '
             + 'value is the UUID from "imgadm show"');
         t.end();
@@ -187,9 +187,9 @@ test('imgadm list --docker', function (t) {
 // TODO: should remove as much as possible of its layer chain.
 test('cleanup: remove image UUID-OF:' + testImgArg, function (t) {
     var cmd = format(
-        'imgadm get %s 2>/dev/null >/dev/null && ' +
-            'imgadm ancestry %s -H -o uuid | ' +
-            'xargs -n1 imgadm delete || true',
+        'imgadm get %s 2>/dev/null >/dev/null && '
+            + 'imgadm ancestry %s -H -o uuid | '
+            + 'xargs -n1 imgadm delete || true',
         testImg.uuid, testImg.uuid);
     t.exec(cmd, function () {
         t.end();

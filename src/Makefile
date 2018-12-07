@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright (c) 2019, Joyent, Inc.
+# Copyright 2019 Joyent, Inc.
 #
 
 BASE =		$(CURDIR)
@@ -101,6 +101,7 @@ JS_CHECK_TARGETS=\
 	vm/node_modules/zoneevent.js \
 	img/lib/*.js \
 	img/sbin/imgadm \
+	img/test/*.test.js \
 	vm/common/nictag.js \
 	vm/tests/common.js \
 	vm/tests/test-alias.js \

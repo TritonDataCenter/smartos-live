@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * * *
  *
@@ -87,8 +87,8 @@ test('setup: ensure images.joyent.com source', function (t) {
 });
 
 test('setup: get test image in local SDC IMGAPI (if available)', function (t) {
-    var cmd = 'sdc-imgadm import ' + TEST_IMAGE_UUID +
-        ' -S https://images.joyent.com || true';
+    var cmd = 'sdc-imgadm import ' + TEST_IMAGE_UUID
+        + ' -S https://images.joyent.com || true';
     exec(cmd, function (err, o, e) {
         t.ifError(err);
         t.end();
@@ -99,7 +99,7 @@ test('setup: CACHEDIR (' + CACHEDIR + ')', function (t) {
     mkdirp(CACHEDIR, function (err) {
         t.ifError(err);
         t.end();
-    })
+    });
 });
 
 test('setup: cache test image manifest', function (t) {
@@ -119,7 +119,6 @@ test('setup: cache test image manifest', function (t) {
 });
 
 test('setup: cache test image file', function (t) {
-    var pth = format('%s/%s.file', CACHEDIR, TEST_IMAGE_UUID);
     fs.exists(CACHEFILE, function (exists) {
         if (!exists) {
             var cmd = format(
@@ -212,7 +211,8 @@ test('concurrent: imgadm install ... ' + TEST_IMAGE_UUID, function (t) {
         function installTheImage(who, next) {
             // TODO: capture this log and assert that there was some waiting
             //       on locks?
-            var cmd = format('imgadm install -m %s/%s.imgmanifest -f %s/%s.file',
+            var cmd = format(
+                'imgadm install -m %s/%s.imgmanifest -f %s/%s.file',
                 CACHEDIR, TEST_IMAGE_UUID, CACHEDIR, TEST_IMAGE_UUID);
             t.exec(cmd, function () {
                 t.exec('imgadm get ' + TEST_IMAGE_UUID, function () {
@@ -226,7 +226,7 @@ test('concurrent: imgadm install ... ' + TEST_IMAGE_UUID, function (t) {
                 t.end();
             });
         }
-    )
+    );
 });
 
 
@@ -257,7 +257,7 @@ test('concurrent: imgadm import ' + TEST_IMAGE_UUID, function (t) {
                 t.end();
             });
         }
-    )
+    );
 });
 
 
@@ -284,7 +284,8 @@ test('pre-downloaded file; imgadm import ' + TEST_IMAGE_UUID, function (t) {
         t.exec('imgadm -v import ' + TEST_IMAGE_UUID, function (err, o, e) {
             // Stderr has the imgadm log output. Look for the tell-tale sign
             // that the pre-downloaded image file was used.
-            var marker = /"msg":"using pre-downloaded image file/;
+            // The '.' instead of '"' is to make jsstyle happy.
+            var marker = /.msg.:.using pre-downloaded image file/;
             t.ok(marker.test(e), 'pre-downloaded image file was used');
             t.notOk(fs.existsSync(downFile));
             t.exec('imgadm get ' + TEST_IMAGE_UUID, function () {
@@ -304,14 +305,17 @@ test('setup6: remove image ' + TEST_IMAGE_UUID, function (t) {
 });
 
 // This is #2 pre-downloaded-image-file test. See above.
-test('pre-downloaded file (bad size); imgadm import ' + TEST_IMAGE_UUID, function (t) {
+test('pre-downloaded file (bad size); imgadm import ' + TEST_IMAGE_UUID,
+    function (t) {
+
     var wrongSizeFile = '/usr/img/package.json';
     var downFile = common.downloadFileFromUuid(TEST_IMAGE_UUID);
     t.exec(format('cp %s %s', wrongSizeFile, downFile), function () {
         t.exec('imgadm -v import ' + TEST_IMAGE_UUID, function (err, o, e) {
             // Stderr has the imgadm log output. Look for the tell-tale sign
             // that the pre-downloaded image file was discarded.
-            var marker = /"msg":"unexpected size for pre-downloaded image/;
+            // The '.' instead of '"' is to make jsstyle happy.
+            var marker = /.msg.:.unexpected size for pre-downloaded image/;
             t.ok(marker.test(e), 'pre-downloaded image file was discarded');
             t.notOk(fs.existsSync(downFile));
             t.exec('imgadm get ' + TEST_IMAGE_UUID, function () {
@@ -331,17 +335,21 @@ test('setup7: remove image ' + TEST_IMAGE_UUID, function (t) {
 });
 
 // This is #3 pre-downloaded-image-file test. See above.
-test('pre-downloaded file (bad checksum); imgadm import ' + TEST_IMAGE_UUID, function (t) {
+test('pre-downloaded file (bad checksum); imgadm import ' + TEST_IMAGE_UUID,
+    function (t) {
+
     // Copy in our cached file and change it (keeping same size):
     var downFile = common.downloadFileFromUuid(TEST_IMAGE_UUID);
     t.exec(format('cp %s %s', CACHEFILE, downFile), function () {
-    t.exec('echo -ne BLARG | dd conv=notrunc bs=1 count=5 of=' + downFile, function () {
+    t.exec('echo -ne BLARG | dd conv=notrunc bs=1 count=5 of=' + downFile,
+        function () {
 
         // Then test import with that bogus file there.
         t.exec('imgadm -v import ' + TEST_IMAGE_UUID, function (err, o, e) {
             // Stderr has the imgadm log output. Look for the tell-tale sign
             // that the pre-downloaded image file was discarded.
-            var marker = /"msg":"unexpected checksum for pre-downloaded image/;
+            // The '.' instead of '"' is to make jsstyle happy.
+            var marker = /.msg.:.unexpected checksum for pre-downloaded image/;
             t.ok(marker.test(e), 'pre-downloaded image file was discarded');
             t.notOk(fs.existsSync(downFile));
             t.exec('imgadm get ' + TEST_IMAGE_UUID, function () {

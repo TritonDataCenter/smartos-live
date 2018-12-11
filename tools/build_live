@@ -893,7 +893,7 @@ bi_setup_work_dir
 # Create and mount the "/" (root) ramdisk image:
 #
 bi_file_root="$bi_tmpdir/root.image"
-bi_root_size=278000
+bi_root_size=300000
 if strings "$bi_wsroot/proto/kernel/amd64/genunix" |
     grep "DEBUG enabled" >/dev/null; then
 	#

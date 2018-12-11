@@ -2,20 +2,26 @@
 This is just a convenient temporary TODO list...
 
  - need RICHMOND-16 testing
+ - Triton doc changes
  - sdcboot image needs versioning for ipxe, loader, sdc-headnode tools?
- - bin/reflash
+ - test reflash
+ - Need to update or get rid of sdc-booter/tools/update_ipxe?
+ - sdc-booter menu.lst code??
+ - sdcadm platform is still grub specific
+ - last bits of mount-usb.sh users (sdc-headnode, sdcadm); should we deliver a "don't use this"
+   placeholder?
+ - replace screen-rows/cols name with ncols name? avoid problems?
+ - ipxe boot: "boot_archive.hash will not be loaded"
+ - Add Joyent/SmartOS image/branding for VGA console?
+ - smartdc-init:update_local_key - can we kill 6.5 upgrade?
+ - triton/repos.json: sdcboot still mentioned
+ - what else to do to retire sdcboot? archive?
+
+Later
+
  - sdc-usbkey
    - add subcommand to dump boot component version JSON blob
- - Triton Doc changes
- - bin/reflash
- - replace screen-rows/cols name with ncols name? avoid problems?
+ - need to run loader install for headnode not just CNs
+ - would be nice if autoboot showed what it was going boot
+ - would be nice to show the default console device again
  - usb key conversion tool
- - Coal image should default to text console
- - ipxe boot: "boot_archive.hash will not be loaded"
- - coal: defaults to ipxe?
- - bunch of files on key are world-writable (need to be read only)
- - Add support for "default-boot-option" build.spec option
- - Verify support for "config_console" build.spec option
- - Add Joyent/SmartOS image/branding for VGA console?
- - Remove freedos from sdcboot? Kill sdcboot altogether?
- - Need to update or get rid of sdc-booter/tools/update_ipxe?

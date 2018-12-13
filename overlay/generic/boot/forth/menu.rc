@@ -27,9 +27,7 @@ set menuset_name1="main"
 set mainmenu_init[1]="init_boot"
 
 set mainmenu_caption[1]="Boot SmartOS [Enter]"
-set maintoggled_text[1]="R[e]covery (root/root) [Enter]"
 set mainansi_caption[1]="^[1mB^[moot SmartOS ^[1m[Enter]^[m"
-set maintoggled_ansi[1]="R^[1me^[mcovery (root/root) ^[1m[Enter]^[m"
 set mainmenu_command[1]="boot"
 \ keycode set by init_boot
 
@@ -63,11 +61,6 @@ set optionsmenu_caption[1]="Back to Main Menu [Backspace]"
 set optionsmenu_command[1]="1 goto_menu"
 set optionsmenu_keycode[1]=8
 set optionsansi_caption[1]="Back to Main Menu ^[1m[Backspace]^[m"
-
-\ set optionsmenu_caption[2]="Load System [D]efaults"
-\ set optionsmenu_command[2]="set_default_boot_options"
-\ set optionsmenu_keycode[2]=100
-\ set optionsansi_caption[2]="Load System ^[1mD^[mefaults"
 
 set optionsmenu_options=2
 set optionsmenu_optionstext="Boot Options:"
@@ -105,8 +98,8 @@ set optionsmenu_caption[6]="Disaster [R]ecovery... Off"
 set optionstoggled_text[6]="Disaster [R]ecovery... On"
 set optionsmenu_command[6]="toggle_dr"
 set optionsmenu_keycode[6]=114
-set optionsansi_caption[6]="Disaster ^[1mR^mecovery.... ^[34;1mOff^[m"
-set optionstoggled_ansi[6]="Disaster ^[1mR^mecovery.... ^[32;7mOn^[m"
+set optionsansi_caption[6]="Disaster ^[1mR^[mecovery..... ^[34;1mOff^[m"
+set optionstoggled_ansi[6]="Disaster ^[1mR^[mecovery..... ^[32;7mOn^[m"
 
 \ Enable automatic booting (add ``autoboot_delay=N'' to loader.conf(5) to
 \ customize the timeout; default is 10-seconds)

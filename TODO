@@ -1,21 +1,17 @@
 
 This is just a convenient temporary TODO list...
 
+ - derive bootfile etc.from "platform-version" ?
+ - scripts/joysetup.sh
  - need RICHMOND-16 testing
  - Triton doc changes
- - sdcboot image needs versioning for ipxe, loader, sdc-headnode tools?
  - test reflash
  - Need to update or get rid of sdc-booter/tools/update_ipxe?
  - sdc-booter menu.lst code??
- - sdcadm platform is still grub specific
- - last bits of mount-usb.sh users (sdc-headnode, sdcadm); should we deliver a "don't use this"
-   placeholder?
- - replace screen-rows/cols name with ncols name? avoid problems?
+ - sdcadm platform is still grub specific (hnPlatform / TOOLS-1000)
  - ipxe boot: "boot_archive.hash will not be loaded"
- - Add Joyent/SmartOS image/branding for VGA console?
- - smartdc-init:update_local_key - can we kill 6.5 upgrade?
  - triton/repos.json: sdcboot still mentioned
- - what else to do to retire sdcboot? archive?
+ - update sdcboot to show it's not used
 
 Later
 
@@ -25,3 +21,5 @@ Later
  - would be nice if autoboot showed what it was going boot
  - would be nice to show the default console device again
  - usb key conversion tool
+ - replace screen-rows/cols name with ncols name? avoid problems?
+ - Add Joyent/SmartOS image/branding for VGA console?

@@ -18,15 +18,15 @@
  *
  * Part Tag      First Sector Size     Type
  * -    mbr/GPT  0            1MB      MBR+EFI GPT (-m option plus libefi)
- * 0    system   2048         34.00MB  EFI System Partition (-e option)
- * 1    boot     71680        1.00MB   Legacy BIOS boot partition (-b option)
- * 2    root     73728        467MB    pcfs or ufs root
- * 8    reserved 1032159      8.00MB   V_RESERVED / devid (not really used)
+ * 0    system   2048         256MB    EFI System Partition (-e option)
+ * 1    boot     526336       1MB      Legacy BIOS boot partition (-b option)
+ * 2    root     528384       3.46GB   pcfs or ufs root
+ * 8    reserved 7796083      8MB      V_RESERVED / devid (not really used)
  *
  * This boots under BIOS as follows:
  *
  * 1. BIOS loads the MBR, which jumps to stage2_sector (see pmbr.s)
- * 2. stage2 is gptzfsboot, in partition 1 above
+ * 2. stage2 is a modified gptzfsboot, in partition 1 above
  * 3. despite the name, this can also load pcfs/ufs - partition 2 above.
  *    To find the partition, there is a weirdo fake multiboot header embedded
  *    that we need to update with the starting LBA of partition 2.
@@ -36,7 +36,7 @@
  * On a UEFI system:
  *
  * 1. BIOS finds the ESP at partition 0, and loads /EFI/BOOT/BOOTX64.EFI
- * as defined by the EFI spec. This is "loader"
+ *    as defined by the EFI spec. This is "loader"
  * 2. loader loads kernel from the pcfs/ufs root from partition 2
  * 3. kernel takes control
  *
@@ -45,7 +45,7 @@
  * It is sort of an unholy merger of zpool_label_disk(ZPOOL_CREATE_BOOT_LABEL)
  * and installboot(1m).
  *
- * We only currently support 512 block size, and isn't endian-vetted.
+ * We only currently support 512 block size, and the code isn't endian-vetted.
  *
  * The "root" partition is populated later, not by this tool. This is the main
  * reason we megabyte-align the partitions: it's much faster if we can dd with

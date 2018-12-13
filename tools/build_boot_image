@@ -23,8 +23,8 @@
 # "gmake images" targets of the top-level Makefile in "smartos-live.git".
 #
 # This script needs to be run either as root or as a user that is granted the
-# "Primary Administator" profile.  When run in a non-global zone, it must be
-# configured with "fs_allowed=ufs,pcfs"
+# "Primary Administrator" profile.  When run in a non-global zone, it must be
+# configured with "fs_allowed=ufs,pcfs".
 #
 # Things are complicated here by the fact that we would like to run inside a
 # non-global zone with older kernels.  Most of our partitioning tools such as
@@ -130,7 +130,7 @@ function pfrun()
 #
 # Construct the EFI System Partition (ESP) image,  We size it at 256 MB, which
 # is intentionally much larger than what we need currently, in order to leave
-# heaedroom for future projects which may need to store data in the ESP.
+# headroom for future projects which may need to store data in the ESP.
 #
 function create_esp()
 {
@@ -223,31 +223,6 @@ function create_iso()
 	    -eltorito-alt-boot -eltorito-platform efi \
 	    -eltorito-boot boot/efiboot.img -no-emul-boot \
 	    -o $iso $rootdir
-
-	# FIXME: boot-load-size??
-	# FIXME: use -volset and -V ??
-
-	# unused: -N -allow-multidot -cache-inodes -l -U -d -D -volset -V
-	# -no-iso-translate
-	#
-        # $MKISOFS -o "$DIST_ISO" -c .catalog -N -l -R -U \
-        #    -allow-multidot -no-iso-translate -cache-inodes -d -D -volset \
-        #    "$VOLSETID" -V "$DISTRO_NAME" \
-        #    -eltorito-boot boot/cdboot -no-emul-boot -boot-info-table \
-        #    -eltorito-alt-boot \
-        #    -eltorito-platform efi \
-        #    -eltorito-boot boot/efiboot.img -no-emul-boot \
-        #    "$PKG_IMG_PATH"
-
-	#isopath="$bi_output_dir/$bi_platform_name.iso"
-	#LC_ALL=C mkisofs -R -b 		\
-	#    boot/grub/stage2_eltorito	\
-	#    -no-emul-boot 		\
-	#    -boot-load-size 4		\
-	#    -boot-info-table		\
-	#    -quiet			\
-	#    -o 	$isopath		\
-	#    $bi_tmpdir/ >/dev/null
 
 	print "Successfully created $iso"
 }

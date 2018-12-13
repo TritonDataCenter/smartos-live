@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc. All rights reserved.
  *
  * * *
  *
@@ -35,6 +35,16 @@ var fs = require('fs');
 var rimraf = require('rimraf');
 var mkdirp = require('mkdirp');
 var IMGAPI = require('sdc-clients').IMGAPI;
+var createImgadm = require('/usr/img/lib/imgadm').createTool;
+var VM = require('/usr/vm/node_modules/VM');
+var vminfod = require('/usr/vm/node_modules/vminfod/client');
+var common = require('/usr/vm/test/tests/common');
+var zfs = common.zfs;
+var vasync = require('/usr/img/node_modules/vasync');
+var bunyan = require('/usr/img/node_modules/bunyan');
+var jsprim = require('/usr/vm/node_modules/jsprim');
+
+var log = bunyan.createLogger({name: 'imgadm-create-test'});
 
 // node-tap API
 if (require.cache[__dirname + '/tap4nodeunit.js'])
@@ -48,12 +58,12 @@ var test = tap4nodeunit.test;
 var WRKDIR = '/var/tmp/img-test-create'
 var TESTDIR = __dirname;
 
-// Base image from which we'll be creating a custom images.
+// Base images from which we'll be creating a custom images.
 var BASE_UUID = 'f669428c-a939-11e2-a485-b790efc0f0c1'; // base 13.1.0
+var BHYVE_BASE_UUID = '462d1d03-8457-e134-a408-cf9ea2b9be96'; // centos 7
 
 var envWithTrace = objCopy(process.env);
 envWithTrace.TRACE = '1';
-
 
 
 // ---- internal support stuff
@@ -80,7 +90,6 @@ test('setup: clean WRKDIR (' + WRKDIR + ')', function (t) {
         });
     });
 });
-
 
 // ---- tests
 
@@ -214,5 +223,304 @@ test('custom image (incremental, compression=xz)', function (t) {
                     output));
             t.end();
         });
+    });
+});
+
+function waitForUserScript(uuid, callback) {
+    var watchObj = {
+        uuid: uuid
+    };
+
+    var changes = [
+        {
+            path: ['customer_metadata', 'userScriptHasRun'],
+            action: 'changed',
+            oldValue: 'false',
+            newValue: 'true'
+        }
+    ];
+
+    var opts = {
+        timeout: 300 * 1000,
+        teardown: true
+    };
+
+    var vs = new vminfod.VminfodEventStream();
+    vs.watchForChanges(watchObj, changes, opts, callback);
+}
+
+test('create image from bhyve vm', function (t) {
+    var dsQuota;
+    var imgFilePath;
+    var imgadm;
+    var manifest;
+    var manifestPath;
+    var vmobj;
+
+    var payloadCommon = {
+        brand: 'bhyve',
+        autoboot: true,
+        do_not_inventory: true,
+        ram: 128,
+        disks: [
+            {
+                boot: true,
+                image_uuid: BHYVE_BASE_UUID,
+                model: 'virtio'
+            },
+            {
+                size: 512,
+                model: 'virtio'
+            }
+        ]
+    };
+
+    vasync.pipeline({
+        funcs: [
+            function createImgadmTool(_, next) {
+                createImgadm({log: log}, function onCreated(err, tool) {
+                    common.ifError(t, err, 'error creating imgadm');
+
+                    if (err) {
+                        next(err);
+                        return;
+                    }
+
+                    imgadm = tool;
+                    next();
+                });
+            },
+            function createVm(_, next) {
+                var payload = jsprim.deepCopy(payloadCommon);
+                payload.alias = 'test-image-create-' + process.pid;
+                payload.customer_metadata = {
+                    'user-script': [
+                        'mdata-put userScriptHasRun "false"',
+                        'echo -n "foo" > /etc/motd',
+                        'cat /etc/motd | mdata-put disktest',
+                        'mdata-put userScriptHasRun "true"'
+                    ].join('\n')
+                };
+
+                VM.create(payload, function createdVm(err, obj) {
+                    common.ifError(t, err, 'error creating VM');
+
+                    if (err) {
+                        next(err);
+                        return;
+                    }
+
+                    vmobj = obj;
+                    next();
+                });
+            },
+            function waitForBoot(_, next) {
+                waitForUserScript(vmobj.uuid, function onUserScript(err) {
+                    common.ifError(t, err, 'error waiting for user script');
+                    next(err);
+                });
+            },
+            function verifyCustomization(_, next) {
+                VM.load(vmobj.uuid, function onLoaded(err, obj) {
+                    common.ifError(t, err, 'loading VM after customization');
+
+                    if (err) {
+                        next(err);
+                        return;
+                    }
+
+                    vmobj = obj;
+
+                    t.strictEqual(vmobj.customer_metadata.disktest, 'foo',
+                            'File written to disk');
+                    next();
+                });
+            },
+            function stopVm(_, next) {
+                VM.stop(vmobj.uuid, {}, function vmStopped(err) {
+                    common.ifError(t, err, 'error stopping VM');
+                    next(err);
+                });
+            },
+            function loadQuota(_, next) {
+                var zfsArgs = ['list', '-Hp', '-o', 'quota',
+                    vmobj.zfs_filesystem];
+
+                zfs(zfsArgs, function onList(err, stdout) {
+                    common.ifError(t, err, 'error getting quota');
+
+                    if (err) {
+                        next(err);
+                        return;
+                    }
+
+                    dsQuota = stdout;
+                    next();
+                });
+            },
+            function createImageFromVm(_, next) {
+                var createImageOpts = {
+                    vmUuid: vmobj.uuid,
+                    savePrefix: WRKDIR,
+                    manifest: {
+                        name: 'test-image-create-' + process.pid,
+                        version: '1.0.0'
+                    }
+                };
+
+                imgadm.createImage(createImageOpts,
+                    function onCreate(err, info) {
+                        common.ifError(t, err, 'error creating image');
+
+                        if (err) {
+                            next(err);
+                            return;
+                        }
+
+                        t.ok(info.manifest, 'has manifest');
+                        t.ok(info.manifestPath, 'has manifestPath');
+                        t.ok(info.filePath, 'has filePath');
+
+                        manifest = info.manifest;
+                        manifestPath = info.manifestPath;
+                        imgFilePath = info.filePath;
+
+                        next();
+                    }
+                );
+            },
+            function verifyQuotaRestored(_, next) {
+                var zfsArgs = ['list', '-Hp', '-o', 'quota',
+                    vmobj.zfs_filesystem];
+
+                zfs(zfsArgs, function onList(err, stdout) {
+                    common.ifError(t, err, 'error getting quota');
+
+                    if (err) {
+                        next(err);
+                        return;
+                    }
+
+                    t.strictEqual(dsQuota, stdout, 'dataset quota is restored');
+                    next();
+                });
+            },
+            function destroyVm(_, next) {
+                if (!vmobj.uuid) {
+                    next();
+                    return;
+                }
+
+                VM.delete(vmobj.uuid, function (err) {
+                    common.ifError(t, err, 'error deleting VM');
+                    next(err);
+                });
+            },
+            function installImage(_, next) {
+                var installArgs = {
+                    manifest: manifest,
+                    zpool: 'zones',
+                    file: imgFilePath,
+                    logCb: console.log
+                };
+
+                imgadm.installImage(installArgs, function installed(err) {
+                    common.ifError(t, err, 'error installing image');
+                    next(err);
+                });
+            },
+            function createVmFromImage(_, next) {
+                var payload = jsprim.deepCopy(payloadCommon);
+                payload.alias = 'test-new-image-create-' + process.pid;
+                payload.disks[0].image_uuid = manifest.uuid;
+                payload.customer_metadata = {
+                    'user-script': [
+                        'mdata-put userScriptHasRun "false"',
+                        'cat /etc/motd | mdata-put disktest',
+                        'mdata-put userScriptHasRun "true"'
+                    ].join('\n')
+                };
+
+                VM.create(payload, function createVm(err, obj) {
+                    common.ifError(t, err, 'error creating VM');
+
+                    if (err) {
+                        next(err);
+                        return;
+                    }
+
+                    vmobj = obj;
+                    next();
+                });
+            },
+            function waitForNewBoot(_, next) {
+                waitForUserScript(vmobj.uuid, function onUserScript(err) {
+                    common.ifError(t, err, 'error waiting for user script');
+                    next(err);
+                });
+            },
+            function verifyCustomization(_, next) {
+                VM.load(vmobj.uuid, function onLoaded(err, obj) {
+                    common.ifError(t, err, 'loading VM after create');
+
+                    if (err) {
+                        next(err);
+                        return;
+                    }
+
+                    t.strictEqual(obj.customer_metadata.disktest, 'foo',
+                            'File written to disk');
+                    next();
+                });
+            },
+            function destroyVm(_, next) {
+                if (!vmobj.uuid) {
+                    next();
+                    return;
+                }
+
+                VM.delete(vmobj.uuid, function (err) {
+                    common.ifError(t, err, 'error deleting VM');
+                    next(err);
+                });
+            },
+            function deleteImage(_, next) {
+                var deleteOpts = {
+                    uuid: manifest.uuid,
+                    zpool: 'zones'
+                };
+
+                imgadm.deleteImage(deleteOpts, function onDelete(err) {
+                    common.ifError(t, err, 'error deleting image');
+                    next(err);
+                    return;
+                });
+            },
+            function deleteImgFiles(_, next) {
+                vasync.parallel({
+                    funcs: [
+                        function deletManifest(done) {
+                            fs.unlink(manifestPath, function onDelete(err) {
+                                common.ifError(t, err,
+                                    'error deleting manifest file');
+                                done(err);
+                            });
+                        },
+                        function deleteFile(done) {
+                            fs.unlink(imgFilePath, function onDelete(err) {
+                                common.ifError(t, err,
+                                'error deleting image file');
+                                done(err);
+                            });
+                        }
+                    ]
+                }, function onFinished(err) {
+                    next(err);
+                });
+            }
+        ]
+    }, function onDone(err) {
+        common.ifError(t, err, 'error testing image create');
+        t.end();
     });
 });

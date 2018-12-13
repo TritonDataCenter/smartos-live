@@ -114,6 +114,43 @@ var test_cases = [
             flexible_disk_size: 12 * 1024, kernel_version: '3.13.0',
             image_uuid: vmtest.CURRENT_UBUNTU_LX_IMAGE_UUID},
         expected: {quota: 10, flexible_disk_size: undefined}
+    },
+
+    /*
+     * When quota is not specified, bhyve defaults to 1 GiB, others default to
+     * 10 GiB.
+     */
+    {
+        payload: {
+            brand: 'bhyve',
+            disks: [ {boot: true, model: 'virtio',
+                image_uuid: vmtest.CURRENT_BHYVE_CENTOS_UUID} ]
+        },
+        expected: {quota: 1}
+    },
+    {
+        payload: {
+            brand: 'kvm',
+            disks: [ {boot: true, model: 'virtio',
+                image_uuid: vmtest.CURRENT_BHYVE_CENTOS_UUID} ]
+        },
+        expected: {quota: 10}
+    },
+    {
+        payload: {brand: 'joyent', image_uuid: smartos_image_uuid},
+        expected: {quota: 10}
+    },
+    {
+        payload: {brand: 'joyent-minimal', image_uuid: smartos_image_uuid},
+        expected: {quota: 10}
+    },
+    {
+        payload: {
+            brand: 'lx',
+            kernel_version: '3.13.0',
+            image_uuid: vmtest.CURRENT_UBUNTU_LX_IMAGE_UUID
+        },
+        expected: {quota: 10}
     }
 ];
 
@@ -319,9 +356,7 @@ function checkProps(opts, callback) {
 
         Object.keys(expected).forEach(function (prop) {
             if (skipProps.indexOf(prop) === -1) {
-                t.ok(expected[prop] === o[prop],
-                    'correct ' + prop + ' [' + o[prop] + ','
-                    + expected[prop] + ']');
+                t.equal(expected[prop], o[prop], 'correct ' + prop);
             }
         });
         callback();

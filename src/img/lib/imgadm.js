@@ -3572,6 +3572,37 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
                 next();
             }
         },
+        function removeBhyveQuota(next) {
+            if (vmInfo.brand !== 'bhyve') {
+                next();
+                return;
+            }
+
+            getZfsDataset(vmInfo.zfs_filesystem, ['quota'],
+                function onDataset(err, ds) {
+                    if (err) {
+                        next(err);
+                        return;
+                    }
+
+                    zfs.set(vmInfo.zfs_filesystem, {quota: 'none'},
+                        function quotaSet(e) {
+                            if (e) {
+                                next(e);
+                                return;
+                            }
+
+                            if (ds.quota === '0') {
+                                ds.quota = 'none';
+                            }
+
+                            toCleanup.bhyveQuota = ds.quota;
+                            next();
+                        }
+                    );
+                }
+            );
+        },
         function autoprepSnapshotDatasets(next) {
             if (!prepareScript) {
                 next();
@@ -4059,6 +4090,15 @@ IMGADM.prototype.createImage = function createImage(options, callback) {
 
                         zfsDestroy(snap, self.log, nextSnapshot);
                     },
+                    next);
+            },
+            function cleanupBhyveQuota(next) {
+                if (!toCleanup.bhyveQuota) {
+                    next();
+                    return;
+                }
+
+                zfs.set(vmInfo.zfs_filesystem, {quota: toCleanup.bhyveQuota},
                     next);
             },
             function cleanupAutoprepStartVm(next) {

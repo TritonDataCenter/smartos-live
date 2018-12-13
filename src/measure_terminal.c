@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright (c) 2013 Joyent Inc., All rights reserved.
+ * Copyright (c) 2018, Joyent, Inc.
  */
 
 /*
@@ -175,7 +175,7 @@ process_size(char *buf)
 int
 main(int argc __UNUSED, char **argv __UNUSED)
 {
-	char *buf0 = NULL, *buf1 = NULL;
+	char *buf0 = NULL;
 	boolean_t is_match = B_FALSE;
 	char *term = getenv("TERM");
 
@@ -246,7 +246,7 @@ main(int argc __UNUSED, char **argv __UNUSED)
 			 * enroute.
 			 */
 			is_match = B_TRUE;
-			buf1 = read_cseq();
+			free(read_cseq());
 		}
 	}
 

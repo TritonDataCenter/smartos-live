@@ -1,18 +1,37 @@
 
 This is just a convenient temporary TODO list...
 
- - derive bootfile etc.from "platform-version" ?
  - scripts/joysetup.sh
- - need RICHMOND-16 testing
  - Triton doc changes
- - test reflash
  - Need to update or get rid of sdc-booter/tools/update_ipxe?
  - sdc-booter menu.lst code??
- - sdcadm platform is still grub specific (hnPlatform / TOOLS-1000)
+ - can we remove TOOLS-1000 changes?
  - ipxe boot: "boot_archive.hash will not be loaded"
- - triton/repos.json: sdcboot still mentioned
- - update sdcboot to show it's not used
+ - retire sdcboot on git hub
 
+Specific testing lists
+----------------------
+
+ - need RICHMOND-16 testing
+ - sdcadm platform HN version (TOOLS-1000)
+ - bin/reflash
+ - sdc-usbkey mount/set-variable/update on grub and uefi
+ - build-tgz=false sdc-headnode builds
+ - serial=ttya or similar sdc-headnode builds
+
+Repos with changes
+------------------
+
+	illumos-joyent
+	smartos-live
+	sdc-headnode
+	mountain-gorilla
+	triton
+	sdcboot
+	sdc-booter (?)
+	sdcadm
+	ipxe
+	
 Later
 
  - sdc-usbkey

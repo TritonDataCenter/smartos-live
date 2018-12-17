@@ -1,0 +1,27 @@
+{
+  "v": 2,
+  "uuid": "UUID",
+  "owner": "00000000-0000-0000-0000-000000000000",
+  "name": "platform",
+  "type": "other",
+  "version": "VERSION_STAMP",
+  "state": "active",
+  "disabled": false,
+  "public": false,
+  "os": "other",
+  "files": [
+    {
+      "sha1": "SHA",
+      "size": SIZE,
+      "compression": "gzip"
+    }
+  ],
+  "description": "SmartDataCenter platform image",
+  "tags": {
+    "smartdc_service": "true",
+    "buildstamp": "BUILDSTAMP"
+  },
+  "channels": [
+    "dev"
+  ]
+}

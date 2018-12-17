@@ -14,7 +14,9 @@
 #
 
 #
-# MG runs make check prior to ./configure, so allow build.env not to exist.
+# We allow build.env not to exist in case build automation expects to run
+# generic 'make check' actions without actually running ./configure in
+# advance of a full build.
 #
 ifeq ($(MAKECMDGOALS),check)
 -include build.env
@@ -56,6 +58,11 @@ MAX_JOBS ?=	8
 else
 MAX_JOBS ?=	128
 endif
+
+#
+# deps/eng is a submodule that includes build tools, ensure it gets checked out
+#
+ENGBLD_REQUIRE := $(shell git submodule update --init deps/eng)
 
 LOCAL_SUBDIRS :=	$(shell ls projects/local)
 OVERLAYS :=	$(shell cat overlay/order)
@@ -415,12 +422,233 @@ clean:
 
 clobber: clean
 	pfexec rm -rf output/* output-iso/* output-usb/*
- 
+
 iso: live
 	./tools/build_boot_image -I -r $(ROOT)
 
 usb: live
 	./tools/build_boot_image -r $(ROOT)
+
+#
+# Targets and macros to create Triton manifests and publish build artifacts.
+#
+
+#
+# The build itself doesn't add debug suffixes to its outputs when running
+# in the 'ILLUMOS_ENABLE_DEBUG=exclusive' (configure -d) mode, so the settings
+# below add suffixes to the bits-dir copies of these files as appropriate.
+# The 'PUB_' prefix below indicates published build artifacts.
+#
+ifeq ($(ILLUMOS_ENABLE_DEBUG),exclusive)
+    PLATFORM_DEBUG_SUFFIX = -debug
+endif
+
+BUILD_NAME			?= platform
+
+#
+# Values specific to the 'platform' build.
+#
+PLATFORM_BITS_DIR		= $(ROOT)/output/bits/platform$(PLATFORM_DEBUG_SUFFIX)
+PLATFORM_BRANCH ?= $(shell git symbolic-ref HEAD | awk -F/ '{print $$3}')
+
+#
+# PUB_BRANCH_DESC indicates the different 'projects' branches used by the build.
+# Our shell script uniqifies the branches used, then emits a
+# hyphen-separated string of 'projects' branches *other* than ones which
+# match $PLATFORM_BRANCH (the branch of smartos-live.git itself).
+# While this doesn't perfectly disambiguate builds from different branches,
+# it is good enough for our needs.
+#
+PUB_BRANCH_DESC		= $(shell ./tools/projects_branch_desc $(PLATFORM_BRANCH))
+
+PLATFORM_TIMESTAMP		= $(shell head -n1 $(STAMPFILE))
+PLATFORM_STAMP			= $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC)-$(PLATFORM_TIMESTAMP)
+
+PLATFORM_TARBALL_BASE		= platform-$(PLATFORM_TIMESTAMP).tgz
+PLATFORM_TARBALL		= output/$(PLATFORM_TARBALL_BASE)
+
+PUB_IMAGES_BASE			= images$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
+PUB_BOOT_BASE			= boot$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
+
+PUB_PLATFORM_IMG_BASE		= platform$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
+PUB_PLATFORM_MF_BASE		= platform$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).imgmanifest
+
+PUB_PLATFORM_MF			= $(PLATFORM_BITS_DIR)/$(PUB_PLATFORM_MF_BASE)
+PUB_PLATFORM_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_PLATFORM_IMG_BASE)
+
+PUB_IMAGES_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_IMAGES_BASE)
+PUB_BOOT_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_BOOT_BASE)
+
+PLATFORM_IMAGE_UUID		?= $(shell uuid -v4)
+
+#
+# platform-publish, platform-bits-upload and platform-bits-upload-latest
+# are analogous to the 'publish', 'bits-upload' and 'bits-upload-latest'
+# targets defined in the eng.git Makefile.defs and Makefile.targ files.
+# Typically a user would 'make world && make live' before invoking any
+# of these targets, though the '*-release' targets are likely more convenient.
+# Those are not dependencies to allow more flexibility during the publication
+# process.
+#
+# The platform-bits-publish|upload targets are also used for pushing
+# SmartOS releases to Manta.
+#
+
+
+.PHONY: common-platform-publish
+common-platform-publish:
+	@echo "# Publish common platform$(PLATFORM_DEBUG_SUFFIX) bits"
+	mkdir -p $(PLATFORM_BITS_DIR)
+	cp $(PLATFORM_TARBALL) $(PUB_PLATFORM_TARBALL)
+	for config_file in configure-projects configure-build; do \
+	    if [[ -f $$config_file ]]; then \
+	        cp $$config_file $(PLATFORM_BITS_DIR); \
+	    fi; \
+	done
+	echo $(PLATFORM_STAMP) > latest-build-stamp
+
+.PHONY: triton-platform-publish
+triton-platform-publish: common-platform-publish
+	@echo "# Publish Triton-specific platform$(PLATFORM_DEBUG_SUFFIX) bits"
+	mkdir -p $(PLATFORM_BITS_DIR)
+	cat src/platform.imgmanifest.in | sed \
+	    -e "s/UUID/$(PLATFORM_IMAGE_UUID)/" \
+	    -e "s/VERSION_STAMP/$(PLATFORM_STAMP)/" \
+	    -e "s/BUILDSTAMP/$(PLATFORM_STAMP)/" \
+	    -e "s/SIZE/$$(stat --printf="%s" $(PLATFORM_TARBALL))/" \
+	    -e "s#SHA#$$(digest -a sha1 $(PLATFORM_TARBALL))#" \
+	    > $(PUB_PLATFORM_MF)
+	cp $(IMAGES_TARBALL) $(PUB_IMAGES_TARBALL)
+	cp $(BOOT_TARBALL) $(PUB_BOOT_TARBALL)
+	cd $(ROOT)/output/bits/platform$(PLATFORM_DEBUG_SUFFIX)
+	rm -f platform$(PLATFORM_DEBUG_SUFFIX)-latest.imgmanifest
+	ln -s $(PUB_PLATFORM_MF_BASE) \
+	    platform$(PLATFORM_DEBUG_SUFFIX)-latest.imgmanifest
+
+#
+# The bits-upload.sh script in deps/eng is used to upload bits
+# either to a Manta instance under $ENGBLD_DEST_OUT_PATH (requiring $MANTA_USER,
+# $MANTA_KEY_ID and $MANTA_URL to be set in the environment, and
+# $MANTA_TOOLS_PATH pointing to the manta-client tools scripts) or, with
+# $ENGBLD_BITS_UPLOAD_LOCAL set to 'true', will upload to $ENGBLD_DEST_OUT_PATH
+# on a local filesystem. If $ENGBLD_BITS_UPLOAD_IMGAPI is set in the environment
+# it also publishes any images from the -D directory to updates.joyent.com.
+#
+
+ENGBLD_DEST_OUT_PATH ?=	/public/builds
+
+ifeq ($(ENGBLD_BITS_UPLOAD_LOCAL), true)
+BITS_UPLOAD_LOCAL_ARG = -L
+else
+BITS_UPLOAD_LOCAL_ARG =
+endif
+
+ifeq ($(ENGBLD_BITS_UPLOAD_IMGAPI), true)
+BITS_UPLOAD_IMGAPI_ARG = -p
+else
+BITS_UPLOAD_IMGAPI_ARG =
+endif
+
+.PHONY: platform-bits-upload
+platform-bits-upload:
+	PATH=$(MANTA_TOOLS_PATH):$(PATH) \
+	    $(ROOT)/deps/eng/tools/bits-upload.sh \
+	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+	        $(BITS_UPLOAD_LOCAL_ARG) \
+	        $(BITS_UPLOAD_IMGAPI_ARG) \
+	        -D $(ROOT)/output/bits \
+	        -d $(ENGBLD_DEST_OUT_PATH)/$(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX) \
+	        -n $(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX) \
+	        -t $(PLATFORM_STAMP)
+
+#
+# Clear TIMESTAMP due to TOOLS-2241, where bits-upload would otherwise interpret
+# that environment variable as the '-t' option
+#
+.PHONY: platform-bits-upload-latest
+platform-bits-upload-latest:
+	PATH=$(MANTA_TOOLS_PATH):$(PATH) TIMESTAMP= \
+	    $(ROOT)/deps/eng/tools/bits-upload.sh \
+	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+	        $(BITS_UPLOAD_LOCAL_ARG) \
+	        $(BITS_UPLOAD_IMGAPI_ARG) \
+	        -D $(ROOT)/output/bits \
+	        -d $(ENGBLD_DEST_OUT_PATH)/$(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX) \
+	        -n $(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX)
+
+#
+# A wrapper to build the additional components that a standard
+# SmartOS release needs.
+#
+.PHONY: smartos-build
+smartos-build:
+	./tools/build_changelog
+	./tools/build_boot_image -I -r $(ROOT)
+	./tools/build_boot_image -r $(ROOT)
+	./tools/build_vmware -r $(ROOT)
+
+.PHONY: smartos-publish
+smartos-publish:
+	@echo "# Publish SmartOS platform $(PLATFORM_TIMESTAMP) images"
+	mkdir -p $(PLATFORM_BITS_DIR)
+	cp output/changelog.txt $(PLATFORM_BITS_DIR)
+	cp output/platform-$(PLATFORM_TIMESTAMP)/root.password \
+	    $(PLATFORM_BITS_DIR)/SINGLE_USER_ROOT_PASSWORD.txt
+	cp output-iso/platform-$(PLATFORM_TIMESTAMP).iso \
+	    $(PLATFORM_BITS_DIR)/smartos-$(PLATFORM_TIMESTAMP).iso
+	cp output-usb/platform-$(PLATFORM_TIMESTAMP).usb.gz \
+	    $(PLATFORM_BITS_DIR)/smartos-$(PLATFORM_TIMESTAMP)-USB.img.gz
+	cp output-vmware/smartos-$(PLATFORM_TIMESTAMP).vmwarevm.tar.gz \
+		$(PLATFORM_BITS_DIR)
+	(cd $(PLATFORM_BITS_DIR) && \
+	    $(ROOT)/tools/smartos-index $(PLATFORM_TIMESTAMP) > index.html)
+	(cd $(PLATFORM_BITS_DIR) && \
+	    /usr/bin/sum -x md5 * > md5sums.txt)
+
+#
+# Define a series of phony targets that encapsulate a standard 'release' process
+# for both SmartOS and Triton platform builds. These are a convenience to allow
+# callers to invoke only two 'make' commands after './configure' has been run.
+# We can't combine these because our stampfile likely doesn't exist at the point
+# that the various build artifact Makefile macros are set, resulting in
+# misnamed artifacts. Thus, expected usage is:
+#
+# ./configure
+# make common-release; make triton-release
+#  or
+# make common-release; make triton-smartos-release
+# or
+# make common-release; make smartos-only-release
+#
+.PHONY: common-release
+common-release: \
+    check \
+    live \
+    pkgsrc
+
+.PHONY: triton-release
+triton-release: \
+    images-tar \
+    triton-platform-publish \
+    platform-bits-upload
+
+.PHONY: triton-smartos-release
+triton-smartos-release: \
+    images-tar \
+    triton-platform-publish \
+    smartos-build \
+    smartos-publish \
+    platform-bits-upload
+
+.PHONY: smartos-only-release
+smartos-only-release: \
+    common-platform-publish \
+    smartos-build \
+    smartos-publish \
+    platform-bits-upload
+
+print-%:
+	@echo '$*=$($*)'
 
 FRC:
 

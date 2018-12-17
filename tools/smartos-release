@@ -1,0 +1,108 @@
+#!/bin/bash
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+#
+# Copyright 2019, Joyent, Inc.
+#
+
+#
+# This script is run as part of the biweekly SmartOS release process, and
+# creates snaplinks in Manta to point ~~/public/SmartOS/<timestamp>/ to the
+# current ~~/public/builds/platform/<release>-<timestamp>/platform directory.
+#
+
+# Update the SmartOS release directory
+if [ "$TRACE" != "" ]; then
+    export PS4='${BASH_SOURCE}:${LINENO}: '
+    set -o xtrace
+fi
+
+TOP=$(cd $(dirname $0)/../; pwd)
+PATH=$PATH:${TOP}/node_modules/manta/bin
+
+
+# --- Manta config
+
+if [[ -z "$MANTA_KEY_ID" ]]; then
+    export MANTA_KEY_ID=`ssh-keygen -l -f ~/.ssh/id_rsa.pub | awk '{print $2}' | tr -d '\n'`
+fi
+if [[ -z "$MANTA_URL" ]]; then
+    export MANTA_URL=https://us-east.manta.joyent.com
+fi
+if [[ -z "$MANTA_USER" ]]; then
+    export MANTA_USER="Joyent_Dev";
+fi
+
+
+# --- support functions
+
+function fatal {
+    echo "$(basename $0): error: $1"
+    exit 1
+}
+
+function errexit {
+    [[ $1 -ne 0 ]] || exit 0
+    fatal "error exit status $1 at line $2"
+}
+
+function print_help() {
+    echo "Usage:"
+    echo "  ./tools/smartos-release BRANCH TIMESTAMP"
+    echo ""
+    echo "Create snaplinks under /\${MANTA_USER}/public/SmartOS/\${TIMESTAMP}"
+    echo "pointing to objects under /\${MANTA_USER}/public/builds/platform/\${BRANCH}-\${TIMESTAMP}/platform/"
+}
+
+
+# --- mainline
+
+trap 'errexit $? $LINENO' EXIT
+
+BRANCH=$1
+shift
+TIMESTAMP=$1
+
+if [[ -z "$BRANCH" ]] || [[ -z "$TIMESTAMP" ]]; then
+    echo "Error: Missing branch and/or timestamp arguments"
+    print_help
+    exit 2
+fi
+
+set -o errexit
+
+# Note that ${BRANCH} appears only once here as we assume that for release
+# builds, all project branches and smartos-live itself use the same branch
+# name. See $(PUB_BRANCH_DESC) in the top-level Makefile for more details.
+SOURCE=/${MANTA_USER}/public/builds/platform/${BRANCH}-${TIMESTAMP}/platform/
+SMARTOS=/${MANTA_USER}/public/SmartOS
+DESTINATION=${SMARTOS}/${TIMESTAMP}
+
+start_time=$(date +%s)
+echo "Creating release snaplinks under ${DESTINATION}"
+
+mmkdir -v -p ${DESTINATION}
+mfind ${SOURCE} -t o | while read OBJECT; do
+    mln ${OBJECT} ${DESTINATION}/$(basename ${OBJECT})
+done
+
+echo "Updating top level ${SMARTOS} snaplinks"
+mln ${SOURCE}/platform-${TIMESTAMP}.tgz ${SMARTOS}/platform-latest.tgz
+mln ${SOURCE}/smartos-${TIMESTAMP}.iso ${SMARTOS}/smartos-latest.iso
+mln ${SOURCE}/smartos-${TIMESTAMP}-USB.img.gz ${SMARTOS}/smartos-latest-USB.img.gz
+mln ${SOURCE}/smartos-${TIMESTAMP}.vmwarevm.tar.gz ${SMARTOS}/smartos-latest.vmwarevm.tar.gz
+
+echo "Updating ${SMARTOS}/latest object"
+echo ${DESTINATION} | mput -v -H 'content-type: text/plain' ${SMARTOS}/latest
+
+# The index.html file referenced here gets created by 'smartos-index'
+echo "<html><head><meta HTTP-EQUIV=\"REFRESH\" content=\"0; url=${SOURCE}/index.html\"></head></html>" | mput -H 'content-type: text/html' ${SMARTOS}/latest.html
+
+end_time=$(date +%s)
+elapsed=$((${end_time} - ${start_time}))
+echo "Creating release snaplinks took ${elapsed} seconds (Manta path=${DESTINATION})"
+exit 0

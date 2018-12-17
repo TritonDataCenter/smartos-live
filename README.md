@@ -5,7 +5,6 @@
 ```
 git clone https://github.com/joyent/smartos-live.git
 cd smartos-live
-cp sample.configure.smartos configure.smartos
 ./configure
 gmake world
 gmake live
@@ -238,6 +237,10 @@ $
 With this, you should be all set in your new environment. The normal
 build process will make sure that any required packages are installed.
 
+If you're running any of the release-engineering targets, the build will
+also require Manta tools and `updates-imgadm` to be available on `$PATH`,
+but most users are unlikely to need to build these targets.
+
 ### Basic Build Pattern
 
 Once the build zone has been configured, you can kick off a build in a
@@ -246,7 +249,6 @@ few easy steps:
 ```
 $ git clone git://github.com/joyent/smartos-live
 $ cd smartos-live
-$ cp sample.configure.smartos configure.smartos
 $ ./configure
 $ gmake live
 ```
@@ -304,6 +306,74 @@ The following summarizes the primary targets used on a day to day basis:
 * `iso`: Builds a CD-ROM ISO image, defaulting to the VGA console
 * `usb`: Builds a FAT 32 USB image, defaulting to the VGA console
 
+### Build Targets for Release Engineering
+
+This section is likely to only interest users who perform release builds
+of SmartOS, or the Triton Platform Image.
+
+When performing release builds, the following are convenient targets
+which encapsulate the entire release process for a specific Triton
+and/or SmartOS build variety:
+
+* `common-release`: depends on `check`, `live` and `pkgsrc` targets and
+   needs to be run before a subsequent `make` invocation of any of
+   the `-release` targets below
+* `smartos-release`: builds, publishes and uploads SmartOS artifacts
+* `triton-release`: builds, publishes and uploads a Triton platform
+  image
+* `triton-and-smartos-release`: all of the above
+
+The following are used by the targets listed above as part of the
+release engineering process when publishing release builds of the
+SmartOS and Triton platform image. There are varieties of each target
+for both build flavors.
+
+* `*-publish`: stage bits from the output directory, preparing for
+  upload
+* `*-bits-upload`: upload bits to either Manta, a remote filesystem
+  and optionally, a Triton imgapi instance, defaulting to
+  `updates.joyent.com`
+* `*-bits-upload-latest`: as above, except attempt to re-upload the
+  latest built bits, useful in case of interrupted uploads
+
+The `bits-upload` tool comes from
+[eng.git](http://github.com/joyent/eng) which the build pulls in via
+the `deps/eng` "git submodule" from the top-level of the workspace.
+
+The upload can be influenced by the following shell environment
+variables:
+
+* `ENGBLD_DEST_OUT_PATH`: The path where we wish to upload bits. This is
+  assumed to be relative to `$MANTA_USER` if using a Manta path.
+  Otherwise this can be set to a local (or NFS) path where we wish to
+  upload build arifacts.
+* `ENGBLD_BITS_UPLOAD_LOCAL`: If set to `true`, this causes us to simply
+  `cp(1)` bits to `$ENGBLD_DEST_OUT_PATH` rather than upload using
+  Manta tools.
+* `ENGBLD_BITS_UPLOAD_IMGAPI`: If set to `true`, this causes the build to
+  also attempt to upload any Triton images found in the `output/bits`
+  directory to an imgapi instance, which defaults to
+  `updates.joyent.com`.
+
+For Manta and imgapi uploads, the following environment variables are
+used to configure the upload:
+
+* `MANTA_USER`
+* `MANTA_KEY_ID`
+* `MANTA_URL`
+* `UPDATES_IMGADM_URL`
+* `UPDATES_IMGADM_IDENTITY`
+* `UPDATES_IMGADM_CHANNEL`
+* `UPDATES_IMGADM_USER`
+
+For details on the default values of these variables, and how they are
+used, see
+[bits-upload.sh](https://github.com/joyent/eng/blob/master/tools/bits-upload.sh)
+
+Finally, release engineers may find the script
+[`build_jenkins`](/tools/build_jenkins) useful, intended to be run
+directly as part of a Jenkins job, invoking the targets above.
+
 ### Common Tasks
 
 #### Cleaning Up
@@ -352,14 +422,45 @@ enough quality that we could cut a release at any time.
 
 While developing, you may want to use local branches, sometimes there
 are longer lived branches that exist for project development or for
-releases. To automate the configuration of branches, there is a
-`configure-branches` file in the root of the smartos-live repository. If
-you update the branch name that corresponds to a repository and rerun
-`./configure`, it will make sure that every branch is set to the correct
+releases. To automate the configuration of branches when creating the
+`projects` directory, create a file called `configure-projects` in the
+root of the smartos-live repository.
+
+The `configure-projects` file takes the format:
+
+```
+<path relative to ./projects>:<project branch>:[project git repo URL or path]
+```
+
+The special tokens `cr` or `origin` can be used in place of a full git
+repo URL to denote either standard github.com or joyent gerrit URLs for that
+project. If no URL is given, we default to github.com.
+
+If you update the branch name that corresponds to a repository, rerun
+`./configure` to make sure that every branch is set to the correct
 one, except that of smartos-live which needs to be changed manually.
 
 Not all repositories have to be on the same branch. It's totally fine to
 mix and match.
+
+#### Additional build customization
+
+Several variables can also be set in a shell script at the top of the
+smartos-live repository called `configure-build` and are sourced by `configure`
+if this file exists. This allows you to override `configure` script defaults,
+or include additional pre-build customization.
+
+If this file does not exist, the following defaults are set by `configure`:
+
+```
+PUBLISHER="joyent"
+RELEASE_VER="joyent_147"
+SUNW_SPRO12_URL="https://download.joyent.com/pub/build/SunStudio.tar.bz2"
+ON_CLOSED_BINS_URL="https://download.joyent.com/pub/build/illumos/on-closed-bins.i386.tar.bz2"
+ON_CLOSED_BINS_ND_URL="https://download.joyent.com/pub/build/illumos/on-closed-bins-nd.i386.tar.bz2"
+ILLUMOS_ADJUNCT_TARBALL_URL="https://download.joyent.com/pub/build/adjuncts/"
+OVERLAYS="generic"
+```
 
 #### Debug Builds
 
@@ -385,7 +486,6 @@ would modify the normal workflow as follows:
 ```
 $ git clone git://github.com/joyent/smartos-live
 $ cd smartos-live
-$ cp sample.configure.smartos configure.smartos
 $ ./configure -d
 $ gmake live
 ```

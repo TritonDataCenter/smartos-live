@@ -27,6 +27,22 @@ conf_ips=
 conf_priv="pfexec"
 conf_pkgsrcurl="https://download.joyent.com/pub/build/pkgsrc"
 
+#
+# Build defaults which are unlikely to change, but may be overridden by
+# configure-build.
+#
+if [[ ! -f configure-build ]]; then
+	source default.configure-build
+fi
+
+#
+# We configure the projects framework using a 'configure-projects' file. This
+# is a plain text file which contains the project name, the branch we wish to
+# build it at, and either a URL to a git repository or a keyword to denote
+# which git repository to use, either 'cr' or 'origin'. See create_projects.
+#
+read -r -d '' configure_projects < default.configure-projects
+
 function warn
 {
 	local msg="$*"
@@ -44,9 +60,9 @@ function fatal
 
 function source_vars
 {
-	for file in "$(ls configure.*)"; do
-		source "$file" || fatal "failed to source $file"
-	done
+	if [[ -f "configure-build" ]]; then
+		source "$file" || fatal "failed to source configure-build"
+	fi
 }
 
 function check_loc
@@ -64,10 +80,114 @@ function check_loc
 	fi
 }
 
+#
+# Checkout a project at the specific branch if the repository doesn't exist,
+# or isn't already at the required branch. Warn if the repository contains
+# uncommitted contents.
+#
+function checkout_project
+{
+	local dir="$1"
+	local branch="$2"
+	local url="$3"
+
+	echo "Using $url at $branch in $dir"
+
+	if [[ ! -d "$dir" ]]; then
+		git clone "$url" "${dir}" || fatal "unable to clone $dir"
+	fi
+
+	local cur=$(git -C ${dir} branch | grep "^*" | \
+	    awk 'BEGIN{ FS=" " } { print $2 }')
+
+	# If our repository is already at the desired branch, then do nothing,
+	# intentionally preserving whatever's in the repository.
+	if [[ "$cur " != "$branch" ]]; then
+		git -C ${dir} checkout ${branch}
+		if [[ $? -ne 0 ]]; then
+
+			# If this is a remote branch, say 'refs/changes/34/1234/1',
+			# then we might need to fetch it before being able to check it out.
+			echo "unable to checkout $branch, attempting to fetch it ..."
+
+			# Use a local branch name without '/' chars so a detached head
+			# doesn't confuse our standard parsing of 'git describe' output
+			local branch_desc=$(echo $branch | sed -e 's/\//_/g')
+
+			# We assume the remote is named 'origin', regardless as to whether
+			# it's from cr.joyent.us or github. Our Jenkins instance doesn't
+			# have multi-SCM support, so ./projects won't have 'cr' remotes.
+			git -C ${dir} fetch origin ${branch}:${branch_desc} || \
+				fatal "unable to fetch ${branch} from origin"
+
+			git -C ${dir} checkout ${branch_desc} || \
+				fatal "unable to checkout ${branch_desc}"
+		fi
+	fi
+
+	git -C ${dir} describe --all --long --dirty | egrep -e '-dirty$' &&
+	    echo "Warning: ${dir} contains uncommitted changes!"
+	return 0
+}
+
+#
+# Read a flat file called 'configure-projects' of the form:
+# <project name>:<project branch>:[project git repo URL or path]
+#
+# The special tokens 'cr' or 'origin' can be used in place of a full git
+# repo URL to denote either standard github.com or gerrit URLs for that
+# project. If no URL is given, we default to github.com.
+#
+# Once the configure-projects file has been read (or we've parsed the
+# defaults), invoke checkout_project for each one.
+#
 function create_projects
 {
-	local dir="projects"
+	local dir="projects/local"
+	local git_stem="https://github.com/joyent"
+
 	[[ -d "$dir" ]] || mkdir -p "$dir" || fatal "failed to create $dir"
+
+	if [[ -f "configure-projects" ]]; then
+		# note we're not attempting to merge configure-projects with the default
+		read -r -d '' configure_projects  < configure-projects
+		echo "Info: using the following configure-projects file:"
+		echo "$configure_projects"
+	else
+		echo "Info: no configure-projects file found, using defaults."
+	fi
+	echo "$configure_projects" | grep -v '^#' | while read -r line; do
+		local project_dir=$(echo $line | cut -d: -f 1 | sed -e 's/ //g')
+		local project_name=$(basename $project_dir)
+		local git_name="${project_name}.git"
+		local project_branch=$(echo $line | cut -d: -f 2 | sed -e 's/ //g')
+		local project_url=$(echo $line | cut -d: -f 3- | sed -e 's/ //g')
+
+		# special cases for some projects
+		case ${project_name} in
+		'kvm'|'kvm-cmd')
+			git_name="illumos-${project_name}.git"
+			;;
+		'illumos')
+			git_name="illumos-joyent.git"
+			;;
+		'ur-agent')
+			git_name="sdc-ur-agent.git"
+			;;
+		esac
+
+		# process URL keywords
+		case $project_url in
+		'cr')
+			project_url="https://cr.joyent.us/joyent/$git_name"
+			;;
+		'origin'|'')
+			project_url="$git_stem/$git_name"
+			;;
+		esac
+		checkout_project "projects/$project_dir" "$project_branch" \
+		    "$project_url"
+	done || fatal "Error encountered when creating projects directory"
 }
 
 function install_pkgin
@@ -154,31 +274,6 @@ function fetch_studio
 	[[ -e /opt/SUNspro/sunstudio12.1 ]] && return
 	$conf_priv ln -s /opt/SUNWspro /opt/SUNWspro/sunstudio12.1 || fatal \
 	    "cannot create Studio symlink"
-}
-
-function fetch_illumos
-{
-	local tfile="projects/illumos/usr/src/tools/env/illumos.sh"
-	[[ -f "$tfile" ]] && return
-	[[ -z "$GET_ILLUMOS" ]] && fatal "configure must define GET_ILLUMOS"
-	cd projects >/dev/null || fatal "failed to cd into projects directory"
-	/bin/bash -c "$GET_ILLUMOS " || fatal "fetching illumos failed"
-	cd - >/dev/null || fatal "failed to cd out of projects directory"
-	[[ -f "$tfile" ]] || fatal "fetched illumos appears to be missing files"
-}
-
-function fetch_illumos_extra
-{
-	local tfile="projects/illumos-extra/Makefile"
-	[[ -f "$tfile" ]] && return
-	[[ -z "$GET_ILLUMOS_EXTRA" ]] && fatal \
-	    "configure must define GET_ILLUMOS_EXTRA"
-	cd projects >/dev/null || fatal "failed to cd into projects directory"
-	/bin/bash -c  "$GET_ILLUMOS_EXTRA" || fatal \
-	    "fetching illumos-extra failed"
-	cd - >/dev/null || fatal "failed to cd out of projects directory"
-	[[ -f "$tfile" ]] || fatal \
-	    "fetched illumos-extra appears to be missing files"
 }
 
 function fetch_adjuncts
@@ -364,65 +459,6 @@ EOF
 	[[ $? -eq 0 ]] || fatal "failed to write illumos nightly env file"
 }
 
-function update_git
-{
-	local path=$1
-	local branch=$2
-	local cur
-
-	[[ -d "$path" ]] || fatal "can't find directory $path"
-	[[ -z "$branch" ]] && fatal "unspecified branch"
-
-	cd $path >/dev/null 2>&1 || fatal "can't cd into $path"
-	cur=$(git branch | grep "^*" | awk 'BEGIN{ FS=" " } { print $2 }')
-	[[ $? -ne 0 || -z "$cur" ]] && fatal "failed to get current branch"
-	[[ "$cur " == "$branch" ]] && return
-	git checkout $branch >/dev/null || fatal "failed to checkout $branch"
-	cd - >/dev/null 2>&1 || fatal "can't return to previous directory"
-}
-
-function update_branches
-{
-	local line repo branch
-
-	[[ ! -f "configure-branches" ]] && return
-
-	while read line; do
-		line=$(echo $line | sed -e 's/#.*$//')
-		[[ $? -eq 0 ]] || fatal \
-		    "failed to remove comments in configure-branches"
-
-		[[ -z "$line" ]] && continue
-
-		repo=${line%%:*}
-		branch=${line##*:}
-
-		[[ -z "$repo" ]] && fatal \
-		    "missing repository entry in line: [$line]"
-		[[ -z "$branch" ]] && fatal \
-		    "missing branch entry in line: [$branch]"
-
-		# Lots of "configure.smartos" out there with "illumos-live"
-		if [[ "$repo" == "smartos-live" ||
-		    "$repo" == "illumos-live" ]]; then
-			warn "configure-branches can't update smartos-live"
-			warn "ignoring and continuing on..."
-			continue
-		fi
-		if [[ "$repo" == "illumos-joyent" ]]; then
-			update_git "projects/illumos" $branch && continue
-		elif  [[ "$repo" == "smartos-overlay" ]]; then
-			update_git "overlay/smartos" $branch && continue
-		elif  [[ "$repo" == "illumos-extra" ]]; then
-			update_git "projects/illumos-extra" $branch && continue
-		else
-			[[ -d "projects/local/$repo" ]] && update_git \
-			    "projects/local/$repo" $branch && continue
-		fi
-		fatal "failed to update $repo to $branch"
-	done < "configure-branches"
-}
-
 #
 # This construction lets us place a block of text verbatim into $usage.
 #
@@ -492,21 +528,14 @@ EOF
 echo "Doing pre-flight checks... \c "
 check_loc
 echo "done."
-echo "Creating projects directory ... \c "
+echo "Creating and updating projects directory ..."
 create_projects
-echo "done."
 echo "done."
 echo "Installing packages ... \c "
 install_packages
 echo "done."
 echo "Fetching studio... \c "
 fetch_studio
-echo "done."
-echo "Fetching illumos... \c "
-fetch_illumos
-echo "done."
-echo "Fetching illumos-extra... \c "
-fetch_illumos_extra
 echo "done."
 echo "Fetching adjuncts tgz... \c "
 fetch_adjuncts
@@ -520,10 +549,6 @@ echo "done."
 echo "Generating illumos environment file... \c "
 generate_env
 echo "done."
-echo "Setting up branches... \c "
-update_branches
-echo "done."
-
 
 cat <<EOF
 Configuration complete. To build the live image run:

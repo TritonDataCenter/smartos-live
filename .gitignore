@@ -1,10 +1,11 @@
 /build.env
-/configure.*
-/configure-*
+/configure-build
+/configure-projects
 /output
 /output-iso
 /output-usb
 /output-vmware
+/output*.old
 /projects
 /proto
 /proto.boot

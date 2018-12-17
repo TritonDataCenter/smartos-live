@@ -39,14 +39,14 @@ function ci_fatal
 #
 # We assume that this will be run from the root of smartos-live. If
 # we're not being run from there, error, since we assume paths. We use
-# the presence of the file sample.configure.smartos for this, since it's
+# the presence of the file default.configure-projects for this, since it's
 # a relatively unique file in the top level.
 #
 function ci_verify_root
 {
-	[[ ! -f "$ci_wsroot/sample.configure.smartos" ]] && ci_fatal \
+	[[ ! -f "$ci_wsroot/default.configure-projects" ]] && ci_fatal \
 	    "determined workspace root as $ci_wsroot: but missing indicating" \
-	    "file sample.configure.smartos"
+	    "file default.configure-projects"
 }
 
 #

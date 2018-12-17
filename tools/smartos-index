@@ -1,0 +1,30 @@
+#!/bin/bash
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+#
+# Copyright 2019, Joyent, Inc.
+#
+
+#
+# This script runs as part of the 'smartos-publish' Makefile target.
+# It is intended to be run from the smartos-live ./output/bits/platform
+# directory during build publication. It creates an index.html fragment
+# which gets redirected to from
+# https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/latest.html
+#
+# The latest.html file above gets created by the 'smartos-release' script
+# which is run as part of the biweekly release process.
+#
+
+echo "<html>"
+echo "<head><title>SmartOS ${1}</title></head>"
+echo "<body>"
+for x in `ls * | grep -v index.html`; do
+  echo "<a href=\"$x\">$x</a><br>"
+done
+echo "<a href=\"md5sums.txt\">md5sums.txt</a>"
+echo "</body></html>"

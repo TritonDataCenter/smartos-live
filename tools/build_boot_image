@@ -216,6 +216,7 @@ function create_iso()
 
 	populate_root $rootdir
 
+	pfrun cp $bi_wsroot/proto/boot/cdboot $rootdir/boot/cdboot
 	pfrun cp $espimg $rootdir/boot/efiboot.img
 
 	pfrun mkisofs -quiet -R \

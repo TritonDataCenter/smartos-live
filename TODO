@@ -3,21 +3,12 @@ This is just a convenient temporary TODO list...
 
  - scripts/joysetup.sh
  - Triton doc changes
- - Need to update or get rid of sdc-booter/tools/update_ipxe?
- - sdc-booter menu.lst code??
+ - sdc-booter: need EFI ipxe support?
  - can we remove TOOLS-1000 changes?
  - ipxe boot: "boot_archive.hash will not be loaded"
- - retire sdcboot on git hub
-
-Specific testing lists
-----------------------
-
- - need RICHMOND-16 testing
- - sdcadm platform HN version (TOOLS-1000)
- - bin/reflash
- - sdc-usbkey mount/set-variable/update on grub and uefi
- - build-tgz=false sdc-headnode builds
- - serial=ttya or similar sdc-headnode builds
+ - archive sdcboot on git hub
+ - ipxe multiboot support
+ - sync ipxe into kvm-cmd
 
 Repos with changes
 ------------------
@@ -28,9 +19,10 @@ Repos with changes
 	mountain-gorilla
 	triton
 	sdcboot
-	sdc-booter (?)
+	sdc-booter
 	sdcadm
 	ipxe
+	kvm-cmd?
 	
 Later
 

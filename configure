@@ -319,6 +319,11 @@ JAVA_ROOT=/opt/local/java/openjdk7;		export JAVA_ROOT
 FLEX=/opt/local/bin/flex;			export FLEX
 GNUXGETTEXT=/opt/local/bin/xgettext;		export GNUXGETTEXT
 PYTHON=/opt/local/bin/python2.7;		export PYTHON
+#
+# Note that this isn't the strap perl: that only really exists for the benefit
+# of projects/illumos-extra/openssl
+#
+PERL=/opt/local/bin/perl;			export PERL
 ELFDUMP=/usr/bin/elfdump;			export ELFDUMP
 LORDER=/usr/bin/lorder;				export LORDER
 MCS=/usr/bin/mcs;				export MCS

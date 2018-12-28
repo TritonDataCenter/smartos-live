@@ -268,6 +268,20 @@ var UNMODIFIABLE_PROPS = [
     ['zonename', 'bogus-zonename']
 ];
 
+/*
+ * Items that are set using zonecfg with an array of bogus (but valid) property
+ * values.
+ */
+var ZONECFG_PROPS = {
+    cpu_shares: [undefined, 5, undefined],
+    limit_priv: ['', 'default', 'default,dtrace_user', ''],
+    max_lwps: [undefined, 5000, undefined],
+    max_msg_ids: [undefined, 5000, undefined],
+    max_shm_ids: [undefined, 5000, undefined],
+    max_shm_memory: [undefined, 5000, undefined],
+    zfs_io_priority: [undefined, 50, undefined]
+};
+
 test('create VM', function (t) {
     VM.create(PAYLOADS.create, function (err, vmobj) {
         if (err) {
@@ -1409,6 +1423,36 @@ test('attempt to modify unmodifiable properties', function (t) {
             common.ifError(t, err, 'unmodifiable properties');
             t.end();
         });
+    });
+});
+
+/*
+ * Attempt to remove and set properties that are stored in zonecfg.
+ */
+test('attempt to remove and set zonecfg properties', function (t) {
+    vasync.forEachPipeline({
+        inputs: Object.keys(ZONECFG_PROPS),
+        func: function (prop, cb) {
+            var values = ZONECFG_PROPS[prop];
+
+            vasync.forEachPipeline({
+                inputs: values,
+                func: function (value, cb2) {
+                    var payload = {};
+                    payload[prop] = value;
+
+                    VM.update(vm_uuid, payload, function (err) {
+                        common.ifError(t, err, f('update VM property %j to %j',
+                            prop, value));
+
+                        cb2(err);
+                    });
+                }
+            }, cb);
+        }
+    }, function (err) {
+        common.ifError(t, err, 'zonecfg properties');
+        t.end();
     });
 });
 

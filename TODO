@@ -5,9 +5,7 @@ This is just a convenient temporary TODO list...
  - Triton doc changes
  - sdc-booter: need EFI ipxe support?
  - can we remove TOOLS-1000 changes?
- - ipxe boot: "boot_archive.hash will not be loaded"
  - archive sdcboot on git hub
- - ipxe multiboot support
  - sync ipxe into kvm-cmd
 
 Repos with changes
@@ -23,7 +21,7 @@ Repos with changes
 	sdcadm
 	ipxe
 	kvm-cmd?
-	
+
 Later
 
  - sdc-usbkey

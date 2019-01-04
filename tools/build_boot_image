@@ -328,6 +328,8 @@ function copy_results()
 	print "Successfully created $outdir/$outfile"
 }
 
+export PATH=/usr/bin/:/usr/sbin/:/opt/local/bin
+
 while getopts "IUc:p:r:x" c $@; do
 	case "$c" in
 	I)	bi_make_iso=1 ;;

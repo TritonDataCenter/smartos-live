@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2019, Joyent, Inc.
  *
  */
 
@@ -570,7 +570,8 @@ test('test with one zone and one image', function (t) {
         '-o',
         'compression,creation,filesystem_limit,mountpoint,name,quota,'
             + 'recsize,refquota,refreservation,snapshot_limit,type,userrefs,'
-            + 'volblocksize,volsize,zoned'
+            + 'volblocksize,volsize,zoned',
+        '-r'
     ];
 
     var out = {};

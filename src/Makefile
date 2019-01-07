@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright (c) 2018, Joyent, Inc.
+# Copyright (c) 2019, Joyent, Inc.
 #
 
 include Makefile.defs
@@ -117,6 +117,7 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-hrtime.js \
 	vm/tests/test-indestructible.js \
 	vm/tests/test-internal_metadata_namespaces.js \
+	vm/tests/test-info.js \
 	vm/tests/test-lastexited.js \
 	vm/tests/test-openonerrlogger.js \
 	vm/tests/test-queue.js \

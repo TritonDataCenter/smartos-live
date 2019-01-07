@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright (c) 2019, Joyent, Inc.
  *
  */
 
@@ -1457,6 +1457,7 @@ function infoVM(uuid, types, callback)
         'query-pci',
         'query-kvm'
     ];
+    var loadCbs = {};
 
     log.debug('LOADING: ' + uuid);
 
@@ -1468,18 +1469,15 @@ function infoVM(uuid, types, callback)
     ];
 
     VM.load(uuid, {fields: load_fields}, function (err, vmobj) {
-        var q;
-        var socket;
-        var type;
-
         if (err) {
-            callback('Unable to load vm: ' + JSON.stringify(err));
+            callback(new Error('Unable to load vm: ' + JSON.stringify(err)));
             return;
         }
 
-        if (vmobj.brand !== 'kvm') {
-            callback(new Error('vmadmd only handles "info" for kvm ('
-                + 'your brand is: ' + vmobj.brand + ')'));
+        if (!loadCbs.hasOwnProperty(vmobj.brand)) {
+            callback(new Error('vmadmd only handles "info" for: "'
+                + vmobj.keys.join('", "') + '".  Your brand is: "'
+                + vmobj.brand + '".'));
             return;
         }
 
@@ -1489,19 +1487,28 @@ function infoVM(uuid, types, callback)
             return;
         }
 
-        q = new Qmp(log);
-
         if (!types) {
             types = ['all'];
         }
 
-        for (type in types) {
-            type = types[type];
-            if (VM.INFO_TYPES.indexOf(type) === -1) {
-                callback(new Error('unknown info type: ' + type));
-                return;
-            }
+        try {
+            VM.checkInfoTypes(vmobj, types);
+        } catch (_err) {
+            callback(_err);
+            return;
         }
+
+        loadCbs[vmobj.brand](vmobj);
+    });
+
+    loadCbs.kvm = function loadKvmCb(vmobj) {
+        assert.object(vmobj);
+        assert.uuid(vmobj.uuid);
+
+        var q;
+        var socket;
+
+        q = new Qmp(log);
 
         socket = vmobj.zonepath + '/root/tmp/vm.qmp';
 
@@ -1540,19 +1547,7 @@ function infoVM(uuid, types, callback)
                     if ((types.indexOf('all') !== -1)
                         || (types.indexOf('vnc') !== -1)) {
 
-                        res.vnc = {};
-                        if (VNC.hasOwnProperty(vmobj.uuid)) {
-                            res.vnc.host = VNC[vmobj.uuid].host;
-                            res.vnc.port = VNC[vmobj.uuid].port;
-                            if (VNC[vmobj.uuid].hasOwnProperty('display')) {
-                                res.vnc.display = VNC[vmobj.uuid].display;
-                            }
-                            if (VNC[vmobj.uuid].hasOwnProperty('password')
-                                && VNC[vmobj.uuid].password.length > 0) {
-
-                                res.vnc.password = VNC[vmobj.uuid].password;
-                            }
-                        }
+                        infoVNC();
                     }
                     if ((types.indexOf('all') !== -1)
                         || (types.indexOf('spice') !== -1)) {
@@ -1578,7 +1573,33 @@ function infoVM(uuid, types, callback)
                 }
             });
         });
-    });
+    };
+
+    loadCbs.bhyve = function loadBhyveCb(vmobj) {
+        assert.object(vmobj);
+        assert.uuid(vmobj.uuid);
+
+        if (types.indexOf('all') !== -1 || types.indexOf('vnc') !== -1) {
+            infoVNC();
+        }
+        callback(null, res);
+    };
+
+    function infoVNC() {
+        res.vnc = {};
+        if (VNC.hasOwnProperty(uuid)) {
+            res.vnc.host = VNC[uuid].host;
+            res.vnc.port = VNC[uuid].port;
+            if (VNC[uuid].hasOwnProperty('display')) {
+                res.vnc.display = VNC[uuid].display;
+            }
+            if (VNC[uuid].hasOwnProperty('password')
+                && VNC[uuid].password.length > 0) {
+
+                res.vnc.password = VNC[uuid].password;
+            }
+        }
+    }
 }
 
 function resetVM(uuid, callback)

@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright (c) 2019, Joyent, Inc.
  *
  */
 
@@ -360,17 +360,10 @@ function parseStartArgs(args)
 function parseInfoArgs(args)
 {
     var arg;
-    var type;
     var types = [];
 
     for (arg in args) {
         types = types.concat(args[arg].split(','));
-    }
-
-    for (type in types) {
-        if (VM.INFO_TYPES.indexOf(types[type]) === -1) {
-            usage('Invalid info type: ' + types[type]);
-        }
     }
 
     if (types.length === 0) {

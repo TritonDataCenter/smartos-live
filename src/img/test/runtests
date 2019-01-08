@@ -21,7 +21,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2013, Joyent, Inc. All rights reserved.
+# Copyright (c) 2019, Joyent, Inc. All rights reserved.
 #
 #
 # Run the imgadm tests. This is expected to be run from a SmartOS GZ.
@@ -141,6 +141,8 @@ mkdir -p $OUTPUT_DIR
 # Simplify: just run everything from $TOP.
 cd $TOP
 
+# Ensure images used by tests are installed
+imgadm import -S https://images.joyent.com ac99517a-72ac-44c0-90e6-c7ce3d944a0a
 
 # Run the tests.
 echo ""

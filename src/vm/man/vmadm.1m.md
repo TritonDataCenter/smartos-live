@@ -1151,6 +1151,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes (live update)
 
+    free_space:
+
+        This specifies the amount of space in a bhyve instance that is neither
+        allocated to disks nor in use by snapshots of those disks. If snapshots
+        are present, writes to disks may reduce this value.
+
+        type: integer (number of MiB)
+        vmtype: bhyve
+        listable: no
+        create: no
+        update: no
+
     fs_allowed:
 
         This option allows you to specify filesystem types this zone is allowed

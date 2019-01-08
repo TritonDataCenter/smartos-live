@@ -93,6 +93,8 @@ var LIST_FIELDS = {
     exit_status: {header: 'EXIT', width: 4},
     exit_timestamp: {header: 'EXIT_TIMESTAMP', width: 24},
     firewall_enabled: {header: 'FIREWALL_ENABLED', width: 16},
+    flexible_disk_size: {header: 'FLEX_DISK_SIZE', width: 14},
+    free_space: {header: 'FREE_SPACE', width: 14},
     hostname: {header: 'HOSTNAME', width: 32},
     hvm: {header: 'HVM', width: 5},
     image_uuid: {header: 'IMAGE_UUID', width: 36},

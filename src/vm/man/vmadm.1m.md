@@ -1019,6 +1019,18 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         NOTE: SDC does not support any pool name other than the default 'zones'.
 
+    disks.*.uuid:
+
+        A UUID that may be used to uniquely identify this disk.  It must be
+        unique across all disks associated with this VM.
+
+        type: uuid
+        vmtype: bhyve
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: Assigned while adding the disk or at next `vmadm start`.
+
     disk_driver:
 
         This specifies the default values for disks.*.model for disks attached

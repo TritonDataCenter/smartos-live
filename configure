@@ -320,6 +320,7 @@ FLEX=/opt/local/bin/flex;			export FLEX
 GNUXGETTEXT=/opt/local/bin/xgettext;		export GNUXGETTEXT
 PYTHON=/opt/local/bin/python2.7;		export PYTHON
 BUILDPY3='#';					export BUILDPY3
+BUILDPY3TOOLS='#';				export BUILDPY3TOOLS
 #
 # Note that this isn't the strap perl: that only really exists for the benefit
 # of projects/illumos-extra/openssl

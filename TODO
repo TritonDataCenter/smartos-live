@@ -3,10 +3,11 @@ This is just a convenient temporary TODO list...
 
  - scripts/joysetup.sh
  - Triton doc changes
- - sdc-booter: need EFI ipxe support?
  - can we remove TOOLS-1000 changes?
  - archive sdcboot on git hub
  - sync ipxe into kvm-cmd
+ - should we bzip usb image?
+ - update copyrights?
 
 Repos with changes
 ------------------
@@ -18,7 +19,6 @@ Repos with changes
 	triton
 	sdcboot
 	sdc-booter
-	sdcadm
 	ipxe
 	kvm-cmd?
 

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2019, Joyent, Inc. All rights reserved.
  *
  * * *
  *
@@ -60,7 +60,9 @@ var TESTDIR = __dirname;
 
 // Base images from which we'll be creating a custom images.
 var BASE_UUID = 'f669428c-a939-11e2-a485-b790efc0f0c1'; // base 13.1.0
-var BHYVE_BASE_UUID = '462d1d03-8457-e134-a408-cf9ea2b9be96'; // centos 7
+
+// This image is installed in /usr/img/test/runtests
+var BHYVE_IMAGE_UUID = 'ac99517a-72ac-44c0-90e6-c7ce3d944a0a'; // ubuntu 18.04.1
 
 var envWithTrace = objCopy(process.env);
 envWithTrace.TRACE = '1';
@@ -251,8 +253,8 @@ function waitForUserScript(uuid, callback) {
 
 test('create image from bhyve vm', function (t) {
     var dsQuota;
-    var imgFilePath;
     var imgadm;
+    var imgFilePath;
     var manifest;
     var manifestPath;
     var vmobj;
@@ -261,11 +263,11 @@ test('create image from bhyve vm', function (t) {
         brand: 'bhyve',
         autoboot: true,
         do_not_inventory: true,
-        ram: 128,
+        ram: 512,
         disks: [
             {
                 boot: true,
-                image_uuid: BHYVE_BASE_UUID,
+                image_uuid: BHYVE_IMAGE_UUID,
                 model: 'virtio'
             },
             {
@@ -277,7 +279,7 @@ test('create image from bhyve vm', function (t) {
 
     vasync.pipeline({
         funcs: [
-            function createImgadmTool(_, next) {
+            function createImgadmClient(_, next) {
                 createImgadm({log: log}, function onCreated(err, tool) {
                     common.ifError(t, err, 'error creating imgadm');
 

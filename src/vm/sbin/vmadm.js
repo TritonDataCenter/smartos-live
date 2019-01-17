@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright (c) 2019, Joyent, Inc.
  *
  */
 
@@ -93,6 +93,8 @@ var LIST_FIELDS = {
     exit_status: {header: 'EXIT', width: 4},
     exit_timestamp: {header: 'EXIT_TIMESTAMP', width: 24},
     firewall_enabled: {header: 'FIREWALL_ENABLED', width: 16},
+    flexible_disk_size: {header: 'FLEX_DISK_SIZE', width: 14},
+    free_space: {header: 'FREE_SPACE', width: 14},
     hostname: {header: 'HOSTNAME', width: 32},
     hvm: {header: 'HVM', width: 5},
     image_uuid: {header: 'IMAGE_UUID', width: 36},
@@ -358,17 +360,10 @@ function parseStartArgs(args)
 function parseInfoArgs(args)
 {
     var arg;
-    var type;
     var types = [];
 
     for (arg in args) {
         types = types.concat(args[arg].split(','));
-    }
-
-    for (type in types) {
-        if (VM.INFO_TYPES.indexOf(types[type]) === -1) {
-            usage('Invalid info type: ' + types[type]);
-        }
     }
 
     if (types.length === 0) {

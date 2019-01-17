@@ -775,16 +775,13 @@ test('add file systems', function (t) {
         }
 
         VM.load(vm_uuid, function (err, obj) {
-            var nic;
-            var prop;
-
             t.ok(!err, 'failed reloading VM');
             if (err) {
                 return;
             }
 
-            t.ok(obj.filesystems.length === 3, 'VM has ' +
-                obj.filesystems.length + ' file systems, expected: 3');
+            t.ok(obj.filesystems.length === 3, 'VM has '
+                + obj.filesystems.length + ' file systems, expected: 3');
             t.end();
         });
     });
@@ -794,8 +791,8 @@ test('remove a file system that does not exist', function (t) {
     VM.update(vm_uuid, PAYLOADS.remove_absent_filesystem,
         function (update_err) {
 
-        t.ok(update_err, 'failed to remove invalid file system: ' +
-            (update_err ? update_err.message : ''));
+        t.ok(update_err, 'failed to remove invalid file system: '
+            + (update_err ? update_err.message : ''));
         t.end();
     });
 });
@@ -810,16 +807,13 @@ test('remove one of the added file systems', function (t) {
         }
 
         VM.load(vm_uuid, function (err, obj) {
-            var nic;
-            var prop;
-
             t.ok(!err, 'failed reloading VM');
             if (err) {
                 return;
             }
 
-            t.ok(obj.filesystems.length === 2, 'VM has ' +
-                obj.filesystems.length + ' file systems, expected: 2');
+            t.ok(obj.filesystems.length === 2, 'VM has '
+                + obj.filesystems.length + ' file systems, expected: 2');
             t.end();
         });
     });
@@ -835,9 +829,6 @@ test('remove the other two added file systems', function (t) {
         }
 
         VM.load(vm_uuid, function (err, obj) {
-            var nic;
-            var prop;
-
             t.ok(!err, 'failed reloading VM');
             if (err) {
                 return;

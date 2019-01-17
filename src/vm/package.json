@@ -1,14 +1,15 @@
 {
   "name": "vmadm",
   "description": "administrative tool(s) for managing VMs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Joyent (joyent.com)",
   "private": true,
   "devDependencies": {
   },
   "dependencies": {
     "nodeunit-plus": "0.0.1",
-    "nodeunit": "0.8.4"
+    "nodeunit": "0.8.4",
+    "triton-netconfig": "1.0.0"
   },
   "scripts": {
     "postinstall": "rm -rf node_modules/nodeunit-plus/node_modules/bunyan"

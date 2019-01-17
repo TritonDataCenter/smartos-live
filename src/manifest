@@ -766,6 +766,11 @@ f usr/vm/node_modules/proptable.js 0444 root bin
 f usr/vm/node_modules/qmp.js 0444 root bin
 f usr/vm/node_modules/queue.js 0644 root root
 f usr/vm/node_modules/sysevent-stream.js 0444 root bin
+d usr/vm/node_modules/triton-netconfig 0755 root root
+d usr/vm/node_modules/triton-netconfig/lib 0755 root root
+f usr/vm/node_modules/triton-netconfig/lib/index.js 0444 root root
+f usr/vm/node_modules/triton-netconfig/LICENSE 0444 root root
+f usr/vm/node_modules/triton-netconfig/package.json 0444 root root
 f usr/vm/node_modules/utils.js 0444 root bin
 d usr/vm/node_modules/vasync 0755 root root
 d usr/vm/node_modules/vasync/lib 0755 root root

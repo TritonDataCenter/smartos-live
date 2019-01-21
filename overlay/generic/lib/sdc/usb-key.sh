@@ -1,8 +1,9 @@
 #!/usr/bin/bash
 #
-# Utilities for dealing with the USB key.
+# Utilities for dealing with the USB key. In general, sdc-usbkey should be used.
+# These routines are for use prior to sdc-usbkey being installed.
 #
-# Copyright (c) 2018, Joyent, Inc.
+# Copyright (c) 2019, Joyent, Inc.
 #
 
 #
@@ -23,18 +24,26 @@
 function usb_key_version()
 {
 	local readonly devpath=$1
+	local readonly mbr_sig_offset=0x1fe
+	local readonly mbr_grub_offset=0x3e
+	local readonly mbr_stage1_offset=0xfa
+	local readonly mbr_grub_version=0203
+	local readonly mbr_sig=aa55
 
-	mbr_sig=$(echo $(/usr/bin/od -t x2 -j 0x1fe -A n -N 2 $devpath) )
+	sig=$(echo $(/usr/bin/od -t x2 \
+	    -j $mbr_sig_offset -A n -N 2 $devpath) )
 
-	if [[ "$mbr_sig" != "aa55" ]]; then
+	if [[ "$sig" != $mbr_sig ]]; then
 		echo "unknown"
 		return
 	fi
 
-	grub_val=$(echo $(/usr/bin/od -t x2 -j 0x3e -A n -N 2 $devpath) )
-	loader_major=$(echo $(/usr/bin/od -t x1 -j 0xfa -A n -N 1 $devpath) )
+	grub_val=$(echo $(/usr/bin/od -t x2 \
+	    -j $mbr_grub_offset -A n -N 2 $devpath) )
+	loader_major=$(echo $(/usr/bin/od -t x1 \
+	    -j $mbr_stage1_offset -A n -N 1 $devpath) )
 
-	if [[ "$grub_val" = "0203" ]]; then
+	if [[ "$grub_val" = $mbr_grub_version ]]; then
 		echo "1"
 		return
 	fi
@@ -122,27 +131,6 @@ function unmount_usb_key()
 	umount "$mnt"
 }
 
-function unmount_usb_key()
-{
-	local readonly mnt=$1
-
-	if [[ -z "$mnt" ]]; then
-		mnt=/mnt/$(svcprop -p "joyentfs/usb_mountpoint" \
-		    "svc:/system/filesystem/smartdc:default")
-	fi
-
-	typ=$(awk -v "mnt=$mnt" '$2 == mnt { print $3 }' /etc/mnttab)
-
-	[[ -z $typ ]] && return 0
-
-	if [[ ! -f "$mnt/.joyliveusb" ]]; then
-		echo "$mnt does not contain a USB key" >&2
-		return 1
-	fi
-
-	umount "$mnt"
-}
-
 #
 # Mount the EFI system partition, if there is one.  Note that since we need to
 # peek at .joyliveusb to be sure, the only way to find a USB key is to mount its
@@ -150,7 +138,7 @@ function unmount_usb_key()
 #
 function mount_usb_key_esp()
 {
-	rootmnt=$(mount_usb_key)
+	local readonly rootmnt=$(mount_usb_key)
 
 	if [[ $? -ne 0 ]]; then
 		return 1
@@ -186,4 +174,72 @@ function mount_usb_key_esp()
 
 	echo $mnt
 	return 0
+}
+
+# replace a loader conf value
+function edit_param
+{
+	local readonly file="$1"
+	local readonly key="$2"
+	local readonly value="$3"
+	if ! /usr/bin/grep "^\s*$key\s*=\s*" $file >/dev/null; then
+		echo "$key=\"$value\"" >>$file
+		return
+	fi
+
+	/usr/bin/sed -i '' "s+^\s*$key\s*=.*+$key=\"$value\"+" $file
+}
+
+#
+# Presumes a mounted USB key.
+#
+function usb_key_disable_ipxe()
+{
+	local readonly mnt=/mnt/$(svcprop -p "joyentfs/usb_mountpoint" \
+	    "svc:/system/filesystem/smartdc:default")
+	local readonly dev=$(mount | nawk "\$0~\"^$mnt\" { print \$3 ; }")
+	local readonly dsk=${dev%[ps]?}
+	local readonly version=$(usb_key_version ${dsk}p0)
+
+	case $version in
+	1)
+		sed -i '' "s/^default.*/default 1/" $mnt/boot/grub/menu.lst.tmpl
+		if [[ -f $mnt/boot/grub/menu.lst ]]; then
+			sed -i '' "s/^default.*/default 1/" \
+			    $mnt/boot/grub/menu.lst
+		fi
+		;;
+	2)
+		edit_param $mnt/boot/loader.conf ipxe "false"
+		;;
+	*) echo "unknown USB key version $version" >&2; return 1 ;;
+	esac
+}
+
+#
+# This only sets os_console. Presumes a mounted USB key.
+#
+function usb_key_set_console()
+{
+	local readonly mnt=/mnt/$(svcprop -p "joyentfs/usb_mountpoint" \
+	    "svc:/system/filesystem/smartdc:default")
+	local readonly dev=$(mount | nawk "\$0~\"^$mnt\" { print \$3 ; }")
+	local readonly dsk=${dev%[ps]?}
+	local readonly version=$(usb_key_version ${dsk}p0)
+	local readonly console=$1
+
+	case $version in
+	1)
+		sed -i '' "s/^variable os_console.*/variable os_console ${console}/" \
+		    $mnt/boot/grub/menu.lst.tmpl
+		if [[ -f $mnt/boot/grub/menu.lst ]]; then
+			sed -i '' "s/^variable os_console.*/variable os_console ${console}/" \
+			    $mnt/boot/grub/menu.lst
+		fi
+		;;
+	2)
+		edit_param $mnt/boot/loader.conf os_console "$console"
+		;;
+	*) echo "unknown USB key version $version" >&2; return 1 ;;
+	esac
 }

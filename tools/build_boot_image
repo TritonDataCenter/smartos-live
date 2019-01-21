@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 #
 # This file and its contents are supplied under the terms of the
 # Common Development and Distribution License ("CDDL"), version 1.0.
@@ -98,7 +98,7 @@ function cleanup()
 
 function fail()
 {
-        printf "%s\n" "$1" 1>&2
+        printf "$0: %s\n" "$1" 1>&2
         exit 1
 }
 
@@ -179,7 +179,7 @@ function populate_root()
 	esac
 
 	pfrun touch $dir/boot/loader.conf
-	pfrun chmod 666 $dir/boot/loader.conf
+	pfrun chmod 644 $dir/boot/loader.conf
 	pfrun cat <<EOF >$dir/boot/loader.conf
 console="$console"
 os_console="$bi_console"
@@ -347,6 +347,7 @@ done
 
 set -eou pipefail
 export SHELLOPTS
+unalias -a
 
 [[ -z "$bi_wsroot" ]] && usage "-r is required"
 

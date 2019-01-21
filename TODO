@@ -1,13 +1,15 @@
 
 This is just a convenient temporary TODO list...
 
- - scripts/joysetup.sh
+ - remove sdc-booter pxegrub?
+ - actually remove scripts/mount-usb.sh?
  - Triton doc changes
  - can we remove TOOLS-1000 changes?
- - archive sdcboot on git hub
+ - archive sdcboot on github
  - sync ipxe into kvm-cmd
  - should we bzip usb image?
  - update copyrights?
+ - "enable-disaster-recovery" support missing
 
 Repos with changes
 ------------------

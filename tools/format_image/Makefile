@@ -1,11 +1,13 @@
 #
-# Copyright (c) 2018, Joyent, Inc.
+# Copyright (c) 2019, Joyent, Inc.
 #
 
 CC=gcc
 SRC_ROOT=$(PWD)/../..
-CFLAGS=-std=gnu99 -Wall -W -Werror -Wno-sign-compare -Wno-unknown-pragmas \
-	-I$(SRC_ROOT)/proto/usr/include
+#CFLAGS=-std=gnu99 -Wall -W -Werror -Wno-sign-compare \
+#	-isystem $(SRC_ROOT)/proto/usr/include
+
+CFLAGS=-std=gnu99 -Wall -W -Werror -Wno-sign-compare
 
 TARGETS=format_image
 LIBS=-lsmbios -luuid

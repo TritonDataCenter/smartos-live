@@ -74,17 +74,6 @@
 
 #define	EXIT_USAGE (2)
 
-#define	LBSIZE (SECTOR_SIZE)
-#define	MB_BLOCKS (2048) /* 1Mb in blocks */
-#define	PART_ALIGN (MB_BLOCKS * SECTOR_SIZE)
-#define	LEGACY_BOOTPART_BLOCKS (MB_BLOCKS) /* in LBSIZE */
-#define	LEGACY_BOOTPART_SIZE (LEGACY_BOOTPART_BLOCKS * LBSIZE)
-
-/*
- * Space for MBR+GPT prior to first partition, aligned up to the first MB.
- */
-#define	START_SECT (MB_BLOCKS)
-
 /*
  * From installboot.h, these are a set of offsets into the MBR.
  */
@@ -101,6 +90,17 @@
  * From multiboot.h
  */
 #define	MB_HEADER_MAGIC		 0x1BADB002	/* magic */
+
+#define	LBSIZE (SECTOR_SIZE)
+#define	MB_BLOCKS (2048) /* 1Mb in blocks */
+#define	PART_ALIGN (MB_BLOCKS * SECTOR_SIZE)
+#define	LEGACY_BOOTPART_BLOCKS (MB_BLOCKS) /* in LBSIZE */
+#define	LEGACY_BOOTPART_SIZE (LEGACY_BOOTPART_BLOCKS * LBSIZE)
+
+/*
+ * Space for MBR+GPT prior to first partition, aligned up to the first MB.
+ */
+#define	START_SECT (MB_BLOCKS)
 
 /*
  * These define the basic layout of a USB key image, and are sniffed by
@@ -133,11 +133,9 @@ usage(const char *fmt, ...)
 	if (fmt != NULL) {
 		va_list ap;
 
-		(void) fprintf(stderr, "%s: ", progname);
 		va_start(ap, fmt);
-		(void) vfprintf(stderr, fmt, ap);
+		vwarnx(fmt, ap);
 		va_end(ap);
-		(void) fputs("\n", stderr);
 	}
 
 	(void) fprintf(stderr,
@@ -232,7 +230,10 @@ set_part(struct dk_part *part, diskaddr_t start, diskaddr_t size,
 
 	part->p_start = start;
 	part->p_size = size;
-	(void) strlcpy(part->p_name, name, sizeof (part->p_name));
+	if (strlcpy(part->p_name, name, sizeof (part->p_name)) >=
+	    sizeof (part->p_name))
+		errx(EXIT_FAILURE, "partition name %s is too long", name);
+
 	part->p_tag = tag;
 }
 
@@ -398,6 +399,8 @@ main(int argc, char *argv[])
 	write_efi(esplen);
 	write_esp(esp, esplen);
 	write_biosboot(biosboot, biosbootlen);
+
+	(void) close(outfile);
 
 	return (EXIT_SUCCESS);
 }

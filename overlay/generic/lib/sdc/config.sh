@@ -78,9 +78,9 @@ function load_sdc_sysinfo {
     #
     tmpfile=$(mktemp -p /tmp)
     /usr/bin/sysinfo -p | while read -r entry; do
-        lval=$(echo $entry | awk -F\= '{ print $1}' | sed -e 's/#//g')
-	rval=$(echo $entry | awk -F\= '{ print $2 }')
-	echo ${prefix}${lval}=${rval} >> $tmpfile
+        lval=$(echo $entry | cut -d= -f 1 | sed -e 's/#//g')
+        rval=$(echo $entry | cut -d= -f 2-)
+        echo ${prefix}${lval}=${rval} >> $tmpfile
     done
     eval $(cat $tmpfile)
     rm -f $tmpfile

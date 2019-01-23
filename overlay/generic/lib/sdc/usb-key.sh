@@ -56,7 +56,7 @@ function usb_key_version()
 #
 function mount_usb_key()
 {
-	local readonly mnt=$1
+	local mnt=$1
 
 	if [[ -z "$mnt" ]]; then
 		mnt=/mnt/$(svcprop -p "joyentfs/usb_mountpoint" \
@@ -69,7 +69,7 @@ function mount_usb_key()
 	fi
 
 	if ! mkdir -p $mnt; then
-		echo "failed to mkdir $mnt" 2>&1
+		echo "failed to mkdir $mnt" >&2
 		return 1
 	fi
 
@@ -112,7 +112,7 @@ function mount_usb_key()
 
 function unmount_usb_key()
 {
-	local readonly mnt=$1
+	local mnt=$1
 
 	if [[ -z "$mnt" ]]; then
 		mnt=/mnt/$(svcprop -p "joyentfs/usb_mountpoint" \
@@ -150,7 +150,7 @@ function mount_usb_key_esp()
 	mnt=/tmp/mnt.$$
 
 	if ! mkdir -p $mnt; then
-		echo "failed to mkdir $mnt" 2>&1
+		echo "failed to mkdir $mnt" >&2
 		return 1
 	fi
 

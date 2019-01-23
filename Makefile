@@ -154,7 +154,7 @@ $(BOOT_TARBALL): world manifest
 
 #
 # Create proforma images for use in assembling bootable USB device images.  The
-# images tar file is by used by "make coal" and "make usb" in "sdc-headnode.git"
+# images tar file is used by "make coal" and "make usb" in "sdc-headnode.git"
 # to create Triton boot and installation media.
 #
 $(IMAGES_PROTO)/4gb.img: boot

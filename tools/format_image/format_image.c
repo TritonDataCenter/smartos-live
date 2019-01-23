@@ -166,7 +166,7 @@ read_file(const char *path, size_t size, size_t *lenp)
 		err(EXIT_FAILURE, "couldn't open %s", path);
 
 	if (fstat(fd, &st) != 0)
-		err(EXIT_FAILURE, "couldn't state %s", path);
+		err(EXIT_FAILURE, "couldn't stat %s", path);
 
 	if (size != 0 && st.st_size > size) {
 		errx(EXIT_FAILURE, "file %s exceeds maximum %lu bytes",

@@ -110,3 +110,93 @@ disklayout -f s16.di -s 0 raidz3 > /var/tmp/s16.out
 printf "%-16s " 16z3-0.out
 diff -u s16.di.z3-0.out /var/tmp/s16.out
 rm -f /var/tmp/s16.out
+
+# Width tests
+
+disklayout -s 0 -w 12 -f 60.di > /var/tmp/s60.out
+printf "%-16s " 60.0s.w12.out
+diff -u 60.di.0s.w12.out /var/tmp/s60.out
+rm -f /var/tmp/s60.out
+
+# 6x10
+disklayout -s 0 -f 60.di raidz3 > /var/tmp/s60.out
+printf "%-16s " 60.0s.z3.out
+diff -u 60.di.0s.z3.out /var/tmp/s60.out
+rm -f /var/tmp/s60.out
+
+# 4x15
+disklayout -s 0 -w 15 -f 60.di raidz3 > /var/tmp/s60.out
+printf "%-16s " 60.0s.w15.z3.out
+diff -u 60.di.0s.w15.z3.out /var/tmp/s60.out
+rm -f /var/tmp/s60.out
+
+# should be same as above, but without explicit raidz3
+disklayout -s 0 -w 15 -f 60.di > /var/tmp/s60.out
+printf "%-16s " 60.0s.w15.out
+diff -u 60.di.0s.w15.z3.out /var/tmp/s60.out
+rm -f /var/tmp/s60.out
+
+disklayout -w 15 -f s16.di > /var/tmp/s16.out
+printf "%-16s " 16.w15.out
+diff -u s16.di.w15.out /var/tmp/s16.out
+rm -f /var/tmp/s16.out
+
+# raidz2 (9-wide overlaps with valid raidz3 range width)
+disklayout -w 9 -f s18.di > /var/tmp/s18.out
+printf "%-16s " 18.w9.out
+diff -u s18.di.w9.out /var/tmp/s18.out
+rm -f /var/tmp/s18.out
+
+disklayout -w 9 -f s18.di raidz3 > /var/tmp/s18.out
+printf "%-16s " 18.w9.out
+diff -u s18.di.w9.z3.out /var/tmp/s18.out
+rm -f /var/tmp/s18.out
+
+# 3-way mirror
+disklayout -w 3 -f 3.di mirror > /var/tmp/3.out
+printf "%-16s " 3.w3.m.out
+diff -u 3.di.w3.m.out /var/tmp/3.out
+rm -f /var/tmp/3.out
+
+echo
+echo "invalid input tests"
+
+disklayout -s 5 -f 7.di raidz1 > /var/tmp/err.out
+printf "%-16s " 7.5s.z1.out
+diff -u 7.di.5s.z1.out /var/tmp/err.out
+rm -f /var/tmp/err.out
+
+disklayout -s 2 -w 6 -f 7.di raidz1 > /var/tmp/err.out
+printf "%-16s " 7.2s.w6.z1.out
+diff -u 7.di.2s.w6.z1.out /var/tmp/err.out
+rm -f /var/tmp/err.out
+
+disklayout -w 7 -f 7.di raidz1 > /var/tmp/err.out
+printf "%-16s " 7.w7.z1.out
+diff -u 7.di.w7.z1.out /var/tmp/err.out
+rm -f /var/tmp/err.out
+
+disklayout -w 6 -f 7.di raidz2 > /var/tmp/err.out
+printf "%-16s " 7.w6.z2.out
+diff -u 7.di.w6.z2.out /var/tmp/err.out
+rm -f /var/tmp/err.out
+
+disklayout -w 16 -f s16.di raidz3 > /var/tmp/err.out
+printf "%-16s " 16.w16.z3.out
+diff -u 16.di.w16.z3.out /var/tmp/err.out
+rm -f /var/tmp/err.out
+
+disklayout -w 15 -s 2 -f s16.di raidz3 > /var/tmp/err.out
+printf "%-16s " 16.2s.w15.z3.out
+diff -u 16.di.2s.w15.z3.out /var/tmp/err.out
+rm -f /var/tmp/err.out
+
+disklayout -w 3 -s 3 -f 5.di mirror > /var/tmp/err.out
+printf "%-16s " 5.3s.w3.m.out
+diff -u 5.di.3s.w3.m.out /var/tmp/err.out
+rm -f /var/tmp/err.out
+
+disklayout -s 2 -f 3.di mirror > /var/tmp/err.out
+printf "%-16s " 3.2s.m.out
+diff -u 3.di.2s.m.out /var/tmp/err.out
+rm -f /var/tmp/err.out

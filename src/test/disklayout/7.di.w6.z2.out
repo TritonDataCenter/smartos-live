@@ -1,0 +1,1 @@
+fatal error: 6 is an invalid width for raidz2 and 7 disks (min: 7, max: 12)

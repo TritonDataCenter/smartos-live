@@ -1,0 +1,450 @@
+{
+	"vdevs": [
+		{
+			"type": "raidz2",
+			"devices": [
+				{
+					"name": "disk00",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk01",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk02",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk03",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk04",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk05",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk06",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk07",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk08",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk09",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk0a",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk0b",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		},
+		{
+			"type": "raidz2",
+			"devices": [
+				{
+					"name": "disk0c",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk0d",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk0e",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk0f",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk10",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk11",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk12",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk13",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk14",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk15",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk16",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk17",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		},
+		{
+			"type": "raidz2",
+			"devices": [
+				{
+					"name": "disk18",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk19",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk1a",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk1b",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk1c",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk1d",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk1e",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk1f",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk20",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk21",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk22",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk23",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		},
+		{
+			"type": "raidz2",
+			"devices": [
+				{
+					"name": "disk24",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk25",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk26",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk27",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk28",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk29",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk2a",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk2b",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk2c",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk2d",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk2e",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk2f",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		},
+		{
+			"type": "raidz2",
+			"devices": [
+				{
+					"name": "disk30",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk31",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk32",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk33",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk34",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk35",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk36",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk37",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk38",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk39",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk3a",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk3b",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		}
+	],
+	"capacity": 30006363340800
+}

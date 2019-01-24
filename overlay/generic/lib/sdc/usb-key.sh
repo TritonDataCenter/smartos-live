@@ -212,7 +212,10 @@ function usb_key_disable_ipxe()
 	2)
 		edit_param $mnt/boot/loader.conf ipxe "false"
 		;;
-	*) echo "unknown USB key version $version" >&2; return 1 ;;
+	*)
+		echo "unknown USB key version $version" >&2
+		return 1
+		;;
 	esac
 }
 
@@ -240,6 +243,9 @@ function usb_key_set_console()
 	2)
 		edit_param $mnt/boot/loader.conf os_console "$console"
 		;;
-	*) echo "unknown USB key version $version" >&2; return 1 ;;
+	*)
+		echo "unknown USB key version $version" >&2
+		return 1
+		;;
 	esac
 }

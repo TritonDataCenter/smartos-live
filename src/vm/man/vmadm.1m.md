@@ -450,11 +450,13 @@ tab-complete UUIDs rather than having to type them out for every command.
         been larger.
 
          {
-           "update_disks": {
-             "path": "/dev/zvol/rdsk/zones/.../disk1",
-             "size": 10,
-             "dangerous_allow_shrink": true
-           }
+           "update_disks": [
+             {
+               "path": "/dev/zvol/rdsk/zones/.../disk1",
+               "size": 10,
+               "dangerous_allow_shrink": true
+             }
+           ]
          }
 
         Those fields marked in the PROPERTIES section below as updatable and

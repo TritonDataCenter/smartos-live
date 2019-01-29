@@ -1,12 +1,13 @@
 
 This is just a convenient temporary TODO list...
 
+ - convert ipxe to lullaby
+ - https://gist.github.com/jlevon/f0d1aae43b92597f570829e86a606650
  - remove sdc-booter pxegrub?
- - actually remove scripts/mount-usb.sh?
  - Triton doc changes
  - can we remove TOOLS-1000 changes?
  - archive sdcboot on github
- - sync ipxe into kvm-cmd
+ - sync ipxe into kvm-cmd?
  - should we bzip usb image?
  - update copyrights?
  - "enable-disaster-recovery" support missing

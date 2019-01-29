@@ -84,7 +84,9 @@ function mount_usb_key()
 		*) continue ;;
 		esac
 
-		if [[ "$(/usr/sbin/fstyp $devpath 2>/dev/null)" != "pcfs" ]]; then
+		fstyp="$(/usr/sbin/fstyp $devpath 2>/dev/null)"
+
+		if [[ "$fstyp" != "pcfs" ]]; then
 			continue
 		fi
 
@@ -129,51 +131,6 @@ function unmount_usb_key()
 	fi
 
 	umount "$mnt"
-}
-
-#
-# Mount the EFI system partition, if there is one.  Note that since we need to
-# peek at .joyliveusb to be sure, the only way to find a USB key is to mount its
-# root first...
-#
-function mount_usb_key_esp()
-{
-	local readonly rootmnt=$(mount_usb_key)
-
-	if [[ $? -ne 0 ]]; then
-		return 1
-	fi
-
-	dev=$(mount | nawk "\$0~\"^$rootmnt\" { print \$3 ; }")
-	dsk=${dev%[ps]?}
-
-	mnt=/tmp/mnt.$$
-
-	if ! mkdir -p $mnt; then
-		echo "failed to mkdir $mnt" >&2
-		return 1
-	fi
-
-	version=$(usb_key_version ${dsk}p0)
-
-	#
-	# If this key is still grub, then we don't have an ESP, but we shouldn't
-	# report an error.
-	#
-	if [[ "$version" = "1" ]]; then
-		rmdir $mnt
-		return 0
-	fi
-
-	/usr/sbin/mount -F pcfs -o foldcase,noatime ${dsk}s0 $mnt
-
-	if [[ $? -ne 0 ]]; then
-		rmdir $mnt
-		return 1
-	fi
-
-	echo $mnt
-	return 0
 }
 
 # replace a loader conf value

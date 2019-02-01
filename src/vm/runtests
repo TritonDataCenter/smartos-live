@@ -1,4 +1,18 @@
 #!/bin/bash
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright (c) 2019, Joyent, Inc.
+#
 
 # All tests must pass!
 set -o errexit
@@ -15,6 +29,7 @@ EOF
 fi
 
 start_time=$(date +%s)
+test_log_dir="/tmp/vmtest.$start_time.$$"
 
 if [[ $(uname -s) != 'SunOS' ]]; then
     echo "FATAL: this can only run on SmartOS"
@@ -31,6 +46,8 @@ if [[ $(id -u) != 0 ]]; then
     exit 1
 fi
 
+mkdir -p "$test_log_dir"
+
 test_errors=0
 failed_tests=
 
@@ -39,7 +56,11 @@ for test in "$pwd/tests"/test-*.js; do
     test=${test##*/}
     set +o errexit
     set -o pipefail
-    (/usr/vm/test/runtest $pwd/tests/${test} 2>&1) > >(tee -a /tmp/test.output.$$)
+    (
+    export VMADM_DEBUG_LEVEL='debug'
+    export VMADM_DEBUG_FILE="$test_log_dir/$test.log"
+    /usr/vm/test/runtest "$pwd/tests/$test" 2>&1
+    ) > >(tee -a /tmp/test.output.$$)
     TEST_EXIT_CODE=$?
     set +o pipefail
     set -o errexit
@@ -99,6 +120,8 @@ if [[ -n "$cores" ]]; then
         echo -e "#  ${FAIL_COLOR}${core}${NORMAL_COLOR}"
     done
 fi
+echo "#"
+echo "# log files available in: $test_log_dir"
 echo "#"
 
 if [[ ${fail} -gt 0 || ${test_errors} -gt 0 ]]; then

@@ -328,7 +328,7 @@ function copy_results()
 	local readonly gid=$(id -g)
 
 	mkdir -p $outdir
-	pfrun mv $bi_tmpdir/smartos.usb.gz $outdir/$outfile
+	pfrun mv $bi_tmpdir/smartos.usb* $outdir/$outfile
 	pfrun chmod 644 $outdir/$outfile
 	pfrun chown ${uid}:${gid} $outdir/$outfile
 	pfrun cp $bi_tmpdir/partition.map $outdir/${prefix}partition.map

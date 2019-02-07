@@ -168,7 +168,7 @@ function populate_root()
 	print "done"
 
 	print "Customizing boot loader configuration ... \c"
-	readonly shadow="'\$5\$2HOHRnK3\$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA'"
+	readonly shadow=\'\$5\$2HOHRnK3\$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA\'
 
 	case "$bi_console" in
 	text)	console="text" ;;
@@ -186,7 +186,7 @@ ttyc-mode="115200,8,n,1,-"
 ttyd-mode="115200,8,n,1,-"
 loader_logo="smartos"
 loader_brand="smartos"
-root_shadow="${shadow}"
+root_shadow=${shadow}
 smartos="true"
 EOF
 	pfrun mv $bi_tmpdir/loader.conf $dir/boot/loader.conf

@@ -1,7 +1,7 @@
 #! /usr/node/bin/node
 
 /*
- * Copyright 2016 Joyent, Inc.
+ * Copyright 2019 Joyent, Inc.
  */
 
 var fs = require('fs');
@@ -20,14 +20,14 @@ function
 usage()
 {
 	console.log('usage: ' + process.argv[0] +
-	    ' [-c] [-f file] [-s spares] [<layout>]');
+	    ' [-c] [-f file] [-s spares] [-w width] [<layout>]');
 	console.log('supported layouts:\n\t' +
 	    disklayout.list_supported().join('\n\t'));
 	process.exit(-1);
 }
 
 function
-dolayout(disks, layout, nspares, enable_cache)
+dolayout(disks, layout, nspares, enable_cache, width)
 {
 	var config;
 	var mnttab = fs.readFileSync('/etc/mnttab', 'utf8');
@@ -38,7 +38,8 @@ dolayout(disks, layout, nspares, enable_cache)
 		return (true);
 	});
 
-	config = disklayout.compute(disks, layout, nspares, enable_cache);
+	config = disklayout.compute(disks, layout, nspares, enable_cache,
+	    width);
 	if (config.error !== undefined) {
 		fatal(config.error);
 	}
@@ -49,8 +50,9 @@ var g_layout;
 var g_enable_cache = true;
 var opt_f;
 var opt_s;
+var opt_w;
 var option;
-var parser = new getopt.BasicParser('cf:s:', process.argv);
+var parser = new getopt.BasicParser('cf:s:w:', process.argv);
 
 while ((option = parser.getopt()) !== undefined && !option.error) {
 	switch (option.option) {
@@ -67,6 +69,15 @@ while ((option = parser.getopt()) !== undefined && !option.error) {
 		    !isFinite(opt_s) || opt_s < 0) {
 			console.log('invalid value for number of spares: ' +
 			    option.optarg);
+			usage();
+		}
+		break;
+	case 'w':
+		opt_w = parseInt(option.optarg, 10);
+		/* Width must be a positive number */
+		if (opt_w != option.optarg || isNaN(opt_w) ||
+		    !isFinite(opt_w) || opt_w < 2) {
+			console.log('invalid width: ' + option.optarg);
 			usage();
 		}
 		break;
@@ -104,13 +115,13 @@ if (opt_f) {
 				});
 			}
 		});
-		dolayout(disks, g_layout, opt_s, g_enable_cache);
+		dolayout(disks, g_layout, opt_s, g_enable_cache, opt_w);
 	});
 } else {
 	zfs.zpool.listDisks(function (err, disks) {
 		if (err) {
 			fatal(err);
 		}
-		dolayout(disks, g_layout, opt_s, g_enable_cache);
+		dolayout(disks, g_layout, opt_s, g_enable_cache, opt_w);
 	});
 }

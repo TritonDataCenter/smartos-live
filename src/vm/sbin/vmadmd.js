@@ -34,6 +34,7 @@ var execFile = cp.execFile;
 var fs = require('fs');
 var mod_nic = require('/usr/vm/node_modules/nic');
 var net = require('net');
+var netconfig = require('triton-netconfig');
 var VM = require('/usr/vm/node_modules/VM');
 var onlyif = require('/usr/node/node_modules/onlyif');
 var path = require('path');
@@ -431,23 +432,18 @@ function loadConfig(callback)
     log.debug('loadConfig()');
 
     sysinfo(function (error, s) {
-        var nic, nics;
-
         if (error) {
             callback(error);
         } else {
             SDC.sysinfo = s;
-            // nic tags are in sysinfo but not readily available, we need
-            // admin_ip to know where to listen for stuff like VNC.
-            nics = SDC.sysinfo['Network Interfaces'];
-            for (nic in nics) {
-                if (nics.hasOwnProperty(nic)) {
-                    if (nics[nic]['NIC Names'].indexOf('admin') !== -1) {
-                        SDC.sysinfo.admin_ip = nics[nic].ip4addr;
-                        log.debug('found admin_ip: '
-                            + SDC.sysinfo.admin_ip);
-                    }
-                }
+
+            // We need admin_ip to know where to listen for stuff like VNC.
+            SDC.sysinfo.admin_ip = netconfig.adminIpFromSysinfo(SDC.sysinfo);
+            if (!SDC.sysinfo.admin_ip) {
+                log.warn({sysinfo: SDC.sysinfo},
+                    'Could not find admin IP in sysinfo');
+            } else {
+                log.debug('found admin_ip: ' + SDC.sysinfo.admin_ip);
             }
 
             callback();

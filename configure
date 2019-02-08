@@ -107,11 +107,26 @@ function install_pkgin
 			curl -k "$conf_pkgsrcurl/$pkg.tgz" -o \
 			    /var/tmp/$pkg.tgz || fatal \
 			    "failed to fetch $pkg.tgz"
-			$conf_priv pkg_add -C /dev/null /var/tmp/$pkg.tgz || fatal \
+
+			#
+			# We set the machine to be i386 to force pkg_add
+			# to install the package even if we are on x86_64.
+			#
+			$conf_priv pkg_add -m i386 -C /dev/null \
+			    /var/tmp/$pkg.tgz || fatal \
 			    "failed to pkg_add $pkg"
 			rm -f /var/tmp/$pkg.tgz
 		fi
 	done
+
+	#
+	# There is a bug in pkgsrc (PKGSRC-1338) in that installing a package
+	# as i386 on x86_64 results in some temporary confusion in the
+	# database.  To workaround this, we perform a meaningless pkgin
+	# operation to get the database back into a correct state with respect
+	# to our true machine architecture.
+	#
+	pkgin -y list > /dev/null
 }
 
 function install_ips

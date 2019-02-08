@@ -450,11 +450,13 @@ tab-complete UUIDs rather than having to type them out for every command.
         been larger.
 
          {
-           "update_disks": {
-             "path": "/dev/zvol/rdsk/zones/.../disk1",
-             "size": 10,
-             "dangerous_allow_shrink": true
-           }
+           "update_disks": [
+             {
+               "path": "/dev/zvol/rdsk/zones/.../disk1",
+               "size": 10,
+               "dangerous_allow_shrink": true
+             }
+           ]
          }
 
         Those fields marked in the PROPERTIES section below as updatable and
@@ -1018,6 +1020,18 @@ tab-complete UUIDs rather than having to type them out for every command.
         default: zones
 
         NOTE: SDC does not support any pool name other than the default 'zones'.
+
+    disks.*.uuid:
+
+        A UUID that may be used to uniquely identify this disk.  It must be
+        unique across all disks associated with this VM.
+
+        type: uuid
+        vmtype: bhyve
+        listable: yes (see above)
+        create: yes
+        update: yes
+        default: Assigned while adding the disk or at next `vmadm start`.
 
     disk_driver:
 

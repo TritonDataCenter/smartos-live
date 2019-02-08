@@ -74,7 +74,7 @@ CTFBINDIR = \
 	$(ROOT)/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386
 CTFMERGE =	$(CTFBINDIR)/ctfmerge
 CTFCONVERT =	$(CTFBINDIR)/ctfconvert
-ALTCTFCONVERT =	$(CTFBINDIR)/ctfconvert-altexec
+ALTCTFCONVERT =	$(CTFBINDIR)/ctfconvert
 
 SUBDIR_DEFS = \
 	CTFMERGE=$(CTFMERGE) \

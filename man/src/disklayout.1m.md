@@ -2,7 +2,7 @@
 
 ## SYNOPSIS
 
-    disklayout [-c] [-f file] [-s spares] [layout]
+    disklayout [-c] [-f file] [-s spares] [-w width] [layout]
 
 
 ## DESCRIPTION
@@ -69,6 +69,10 @@ be used in a zone if desired.
 **-s spares**
 
 Specify **spares** as the number of disks to be be allocated as spares.
+
+**-w width**
+
+Specify **width** as the number of disks in the mirror or raidz vdevs.
 
 **layout**
 

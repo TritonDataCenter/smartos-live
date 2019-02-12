@@ -209,6 +209,8 @@ function create_iso()
 	local readonly tmpdir=$1
 	local readonly iso=$2
 	local readonly espimg=$3
+        local readonly uid=$(id -u)
+        local readonly gid=$(id -g)
 
 	pfrun mkdir -p $bi_wsroot/output-iso
 	pfrun mkdir -p $bi_rootdir
@@ -223,6 +225,8 @@ function create_iso()
 	    -eltorito-alt-boot -eltorito-platform efi \
 	    -eltorito-boot boot/efiboot.img -no-emul-boot \
 	    -o $iso $bi_rootdir
+
+	pfrun chown -R ${uid}:${gid} $bi_wsroot/output-iso
 
 	print "Successfully created $iso"
 }

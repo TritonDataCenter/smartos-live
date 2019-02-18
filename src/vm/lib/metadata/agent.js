@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright (c) 2019, Joyent, Inc.
  *
  *
  * # OVERVIEW
@@ -496,7 +496,9 @@ MetadataAgent.prototype.start = function start() {
         }
         // Only 1 state change event should be seen per vminfod event
         assert.equal(state.length, 1, 'multiple "state" changes seen');
-        state = state[0];
+        assert.object(state[0], 'state[0]');
+        assert.string(state[0].newValue, 'state[0].newValue');
+        state = state[0].newValue;
 
         // If a KVM zone stops while we're trying to reconnect to its metadata
         // socket, stop trying to reconnect.

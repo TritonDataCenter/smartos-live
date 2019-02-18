@@ -3,9 +3,10 @@
 #
 
 CC=gcc
-SRC_ROOT=$(PWD)/../..
+ILLUMOS_SRC=$(PWD)/../../projects/illumos/usr/src
 
 CFLAGS=-std=gnu99 -Wall -W -Werror -Wno-sign-compare
+CPPFLAGS += -isystem $(PWD)/../../proto/usr/include
 
 TARGETS=format_image
 LIBS=-lsmbios -luuid
@@ -30,10 +31,10 @@ format_image: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
 
 %.o: %.c
-	$(CC) -c $(CFLAGS) -o $@ $<
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
-%.o: $(SRC_ROOT)/projects/illumos/usr/src/lib/libefi/common/%.c
-	$(CC) -c $(CFLAGS) -o $@ $<
+%.o: $(ILLUMOS_SRC)/lib/libefi/common/%.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
 clean:
 	rm $(TARGETS) $(OBJS)

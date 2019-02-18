@@ -1,29 +1,70 @@
 
 This is just a convenient temporary TODO list...
 
- - convert ipxe to lullaby
- - https://gist.github.com/jlevon/f0d1aae43b92597f570829e86a606650
  - remove sdc-booter pxegrub?
  - Triton doc changes
  - can we remove TOOLS-1000 changes?
  - archive sdcboot on github
  - sync ipxe into kvm-cmd?
- - should we bzip usb image?
  - update copyrights?
  - "enable-disaster-recovery" support missing
 
-Repos with changes
-------------------
+Sets of changes
+---------------
 
-	illumos-joyent
-	smartos-live
-	sdc-headnode
-	mountain-gorilla
-	triton
-	sdcboot
-	sdc-booter
-	ipxe
-	kvm-cmd?
+smartos-live
+
+	OS-7260 SmartOS should support booting with loader
+	OS-7271 proto.boot should include loader instead of grub
+	OS-7309 build tools should support loader-based boot images
+	OS-7364 fs_joyent.sh test needs quotes
+
+illumos-joyent
+
+	OS-7260 SmartOS should support booting with loader
+	OS-7332 RICHMOND-16 mitigation ensnares stock loaders
+	OS-7584 MDB module for disk labelling would be useful
+	OS-7585 Need workaround to EFI boot on AMI BIOS
+
+sdc-headnode
+
+	OS-7260 SmartOS should support booting with loader
+	OS-7309 build tools should support loader-based boot images
+	TRITON-855 Triton headnode tools need to handle new boot architecture
+	TRITON-933 Put mount-usb.sh out to pasture
+	TRITON-1016 Need to build and deliver the ipxe EFI binary
+
+ipxe
+
+	TRITON-854 Resync joyent/ipxe with upstream
+	TRITON-1021 Re-enable bzimage support in ipxe
+	TRITON-1071 iPXE needs multiboot2 EFI support
+	TRITON-1191 iPXE hangs when chain-loaded under EFI vmware
+	TRITON-1016 Need to build and deliver the ipxe EFI binary
+
+sdc-booter
+
+	TRITON-1016 Need to build and deliver the ipxe EFI binary
+	TRITON-1072 sdc-booter needs EFI chain-loading support
+
+mountain-gorilla
+
+	TRITON-1017 iPXE should be provided directly from joyent/ipxe
+
+sdcboot
+
+	TRITON-1017 iPXE should be provided directly from joyent/ipxe
+
+triton
+
+	TRITON-892 Triton documentation updates related to switch to GPT/Loader-based USB keys
+	TRITON-1017 iPXE should be provided directly from joyent/ipxe
+	TRITON-1158 triton docs build needs fixes on SmartOS
+
+sdcadm
+
+	TRITON-861 add ability to manage GPT/loader-based USB keys to sdcadm platform
+
 
 Later
 

@@ -1,6 +1,0 @@
-*   12: FDISK_EXT_WIN
-* Id    Act  Bhead  Bsect  Bcyl    Ehead  Esect  Ecyl    Rsect      Numsect
-  12    128  9      34     0       149    33     972     600        15624000
-  0     0    0      0      0       0      0      0       0          0
-  0     0    0      0      0       0      0      0       0          0
-  0     0    0      0      0       0      0      0       0          0

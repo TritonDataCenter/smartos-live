@@ -44,6 +44,8 @@
 /tools/builder/users.c
 /tools/builder/users.c.tmp
 /tools/cryptpass
+/tools/format_image/*.o
+/tools/format_image/format_image
 /tools/pwgen
 /tools/pwgen-2.06/configure
 /tools/javascriptlint/build

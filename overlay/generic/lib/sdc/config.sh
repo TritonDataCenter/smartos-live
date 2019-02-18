@@ -7,7 +7,7 @@
 #
 # bash config.sh -json
 #
-# Copyright 2016 Joyent Inc.
+# Copyright 2018 Joyent Inc.
 #
 
 CACHE_FILE_JSON="/tmp/.config.json"
@@ -70,7 +70,20 @@ function load_sdc_sysinfo {
     prefix=$1
     [[ -z ${prefix} ]] && prefix="SYSINFO_"
 
-    eval $(/usr/bin/sysinfo -p | sed -e "s/^/${prefix}/")
+    #
+    # We've seen cases where Loader will set boot parameters that have a '#'
+    # character in the name.  Not surprisingly, bash won't let you have a '#'
+    # character in a shell variable name, so we strip any out of the lvalue
+    # as we process the sysinfo output.
+    #
+    tmpfile=$(mktemp -p /tmp)
+    /usr/bin/sysinfo -p | while read -r entry; do
+        lval=$(echo $entry | cut -d= -f 1 | sed -e 's/#//g')
+        rval=$(echo $entry | cut -d= -f 2-)
+        echo ${prefix}${lval}=${rval} >> $tmpfile
+    done
+    eval $(cat $tmpfile)
+    rm -f $tmpfile
 }
 
 # Sets SDC_CONFIG_FILENAME with the location of the config file. This can
@@ -187,7 +200,7 @@ function load_sdc_bootparams {
     [[ -z ${prefix} ]] && prefix="BOOT_"
     for line in $(/bin/bootparams); do
         fields=(${line//=/ })
-        key=$(echo ${fields[0]} | sed -e "s/-/_/g")
+        key=$(echo ${fields[0]} | sed -e "s/-/_/g;s/#//g")
         eval "${prefix}${key}=\"${fields[1]}\""
     done
 }
@@ -198,7 +211,7 @@ function sdc_bootparams_keys {
     #keys=$(cat /tmp/bootparams | sed -e "s/=.*//")
     for line in $(/bin/bootparams); do
         fields=(${line//=/ })
-        key=$(echo ${fields[0]} | sed -e "s/=.*//")
+        key=$(echo ${fields[0]} | sed -e "s/=.*//;s/#//g")
         echo ${key}
     done
 }

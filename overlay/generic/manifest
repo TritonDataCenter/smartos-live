@@ -1,4 +1,6 @@
 f .smartdc_version 0444 root root
+d boot/forth 0755 root root
+f boot/forth/menu.rc 0444 root root
 d etc/bash 0755 root sys
 f etc/bash/bash_completion 0644 root sys
 d etc/bash/bash_completion.d 0755 root sys
@@ -64,6 +66,7 @@ f kernel/drv/mpt_sas.conf 0644 root sys
 f kernel/drv/sd.conf 0644 root sys
 d lib/sdc 0755 root bin
 f lib/sdc/config.sh 0444 root bin
+f lib/sdc/usb-key.sh 0444 root bin
 f lib/sdc/network.sh 0444 root bin
 f lib/sdc/zone.sh 0444 root bin
 d lib/svc 0755 root bin

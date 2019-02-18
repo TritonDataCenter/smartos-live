@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright 2016 Joyent, Inc.
+# Copyright (c) 2018, Joyent, Inc.
 #
 
 export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
@@ -40,26 +40,6 @@ wait_and_clear()
         done
         sleep 1
     done
-}
-
-create_setup_status()
-{
-    [[ -e /var/lib/setup.json ]] && rm -f /var/lib/setup.json
-    echo "{" \
-	"\"node_type\": \"computenode\"," \
-	"\"start_time\": \"$(date "+%Y-%m-%dT%H:%M:%SZ")\"," \
-	"\"current_state\": \"setup_complete\"," \
-	"\"seen_states\": [" \
-	"\"zpool_created\"," \
-	"\"filesystems_setup\"," \
-	"\"agents_installed\"," \
-	"\"upgrade_complete\"," \
-	"\"setup_complete\"" \
-	"]," \
-	"\"complete\": true," \
-	"\"last_updated\": \"$(date "+%Y-%m-%dT%H:%M:%SZ")\"" \
-	"}" >/var/lib/setup.json
-    chmod 400 /var/lib/setup.json
 }
 
 # Sets the default firewall rules for a node (unless they're already set)
@@ -109,107 +89,6 @@ RULES
         [[ $? -ne 0 ]] && return 1
         echo 2 > /var/fw/.default_rules_setup
     fi
-}
-
-# This process is execessively complex but if not done carefully we can wedge
-# with svcs in maintenance.  We start by removing all but the agents_core.
-# Sometimes this leaves one or more agents still installed, so we do it again.
-# Finally we remove the agents_core (which should be the only thing left) and
-# then clean up the dirs so new agents will install into a fresh environment.
-# The wait_and_clear function is used to watch for svcs goint into maintenance
-# during this process and clear them so that the agent uninstall can continue.
-uninstall_agents6()
-{
-    echo "Removing the old agents..." > /dev/console
-
-    local AGENTS_DIR=/opt/smartdc/agents
-
-    local agent=
-    local TOREMOVE=`/opt/smartdc/agents/bin/agents-npm --no-registry \
-        ls installed 2>/dev/null | nawk '{print $1}'`
-    for agent in $TOREMOVE
-    do
-        (echo "$agent" | egrep -s '^atropos@') && continue
-        # We have to do agents_core after the others
-        (echo "$agent" | egrep -s '^agents_core@') && continue
-
-        # Supress possible npm warning removing CA (See AGENT-392)
-        if (echo "$agent" | egrep -s '^cainstsvc'); then
-            [ -e $AGENTS_DIR/smf/cainstsvc-default.xml ] && \
-                touch $AGENTS_DIR/smf/cainstsvc.xml
-        fi
-
-        echo "Uninstall: $agent"
-        /opt/smartdc/agents/bin/agents-npm uninstall $agent &
-        wait_and_clear
-    done
-
-    TOREMOVE=`/opt/smartdc/agents/bin/agents-npm --no-registry ls installed \
-        2>/dev/null | nawk '{print $1}'`
-    for agent in $TOREMOVE
-    do
-        (echo "$agent" | egrep -s '^atropos@') && continue
-        # We have to do agents_core after the others
-        (echo "$agent" | egrep -s '^agents_core@') && continue
-
-        echo "Uninstall: $agent"
-        /opt/smartdc/agents/bin/agents-npm uninstall $agent &
-        wait_and_clear
-    done
-
-    TOREMOVE=`/opt/smartdc/agents/bin/agents-npm --no-registry ls installed \
-        2>/dev/null | nawk '{print $1}'`
-    for agent in $TOREMOVE
-    do
-        (echo "$agent" | egrep -s '^atropos@') && continue
-
-        echo "Uninstall: $agent"
-        /opt/smartdc/agents/bin/agents-npm uninstall $agent &
-        wait_and_clear
-    done
-
-    for dir in $(ls "$AGENTS_DIR"); do
-        case "$dir" in
-        db|smf) continue ;;
-        *)      rm -fr $AGENTS_DIR/$dir ;;
-        esac
-    done
-
-    rm -rf $AGENTS_DIR/smf/*
-}
-
-install_agents7()
-{
-    echo "Installing the new agents..." > /dev/console
-
-    # Note: the preceeding call to install_config has called load_sdc_config
-
-    rm -f /var/tmp/agents_latest.sh
-    curl -k -o /var/tmp/agents_latest.sh \
-        -s "http://${CONFIG_assets_admin_ip}/extra/agents/latest"
-
-    [[ ! -f /var/tmp/agents_latest.sh ]] && return 1
-    (cd /var/tmp; bash /var/tmp/agents_latest.sh)
-    rm -f /var/tmp/agents_latest.sh
-    return 0
-}
-
-configure_imgadm()
-{
-    if [[ ! -f /var/imgadm/imgadm.conf ]]; then
-        mkdir -p /var/imgadm
-        echo '{}' > /var/imgadm/imgadm.conf
-    fi
-    if [[ -z "$(json -f /var/imgadm/imgadm.conf sources)" ]]; then
-        # re-load config
-        load_sdc_config
-
-        imgadm sources -f -a http://$CONFIG_imgapi_domain
-        # remove the default
-        imgadm sources -f -d https://images.joyent.com
-    fi
-
-    imgadm update
 }
 
 configure_fwadm()
@@ -304,96 +183,6 @@ install_config()
     fi
 }
 
-# If the CN has a local USB key, make sure its setup for universal booting
-update_local_key()
-{
-    local key=`diskinfo -H | nawk -F\t '{
-        if ($1 == "USB" && $6 == "yes" && $7 == "no") print $2}'`
-    local nkeys=`echo $key | wc -w`
-    [ $nkeys -ne 1 ] && return
-
-    curl -k -o /var/tmp/cnkey.tgz -f -s \
-        "http://${CONFIG_assets_admin_ip}/extra/usbkey/cnkey.tgz"
-    [ ! -f /var/tmp/cnkey.tgz ] && return
-
-    local console=$(bootparams | grep ^console= | cut -d= -f2)
-    [ -z "$console" ] && console=text
-
-    local kmnt=/mnt/usbkey
-    mkdir -p $kmnt
-    mount -F pcfs -o noatime /dev/dsk/${key}p0:1 $kmnt
-    if [[ $? == 0 ]]; then
-        if [[ -d $kmnt/dos && -f $kmnt/boot/grub/menu.lst &&
-            -f $kmnt/boot/ipxe.lkrn ]]; then
-            # already setup
-
-            # Ensure grub timeout is 5 secs for CNs and console is correct
-            sed -e "s/^variable os_console.*/variable os_console ${console}/" \
-                -e "s/^timeout.*/timeout 5/" \
-                < $kmnt/boot/grub/menu.lst > $kmnt/boot/grub/menu.lst.$$
-            mv -f $kmnt/boot/grub/menu.lst.$$ $kmnt/boot/grub/menu.lst
-
-            umount $kmnt
-            rm -f /var/tmp/cnkey.tgz
-            return
-        fi
-        # cleanup in preparation for new image
-        rm -rf $kmnt/* $kmnt/.[a-zA_Z]
-    else
-        # Key in an unknown state, clear it and set it up
-
-        # First clear label since fdisk -g fails on a labeled disk
-        dd if=/dev/zero of=/dev/rdsk/${key}p0 count=2
-
-        nsect=`fdisk -g /dev/rdsk/${key}p0 | nawk '{
-            if ($1 == "*") next; print $1 * $5 * $6 }'`
-        printf "12 128 0 0 0 0 0 0 4096 %d\n" $nsect >/tmp/fdisk.in
-        fdisk -F /tmp/fdisk.in /dev/rdsk/${key}p0
-
-        # Need temp copy of files for grub stage1
-        mkdir /var/tmp/key$$
-        (cd /var/tmp/key$$; gzcat /var/tmp/cnkey.tgz | tar xf -)
-
-        echo "y" | mkfs -F pcfs \
-            -o B=/var/tmp/key$$/boot/grub/stage1,fat=32 /dev/rdsk/${key}p0:c
-        mount -F pcfs -o noatime /dev/dsk/${key}p0:c $kmnt
-        if [[ $? != 0 ]]; then
-            rm -f /var/tmp/cnkey.tgz
-            rm -rf /var/tmp/key$$
-            return
-        fi
-        rm -rf /var/tmp/key$$
-    fi
-
-    # install new files
-    (cd $kmnt; gzcat /var/tmp/cnkey.tgz | tar xf -)
-    rm -f /var/tmp/cnkey.tgz
-
-    # setup CN boot menu
-    cat <<-MENU_DONE >$kmnt/boot/grub/menu.lst
-	default 0
-	timeout 5
-	min_mem64 1024
-	serial --speed=115200 --unit=1 --word=8 --parity=no --stop=1
-	terminal composite
-	variable os_console $console
-
-	title Compute Node (PXE)
-	kernel /boot/ipxe.lkrn
-
-	title Legacy Firmware Upgrade Mode
-	kernel$ /boot/memdisk console=\${os_console}
-	module /boot/freedos.img raw
-	MENU_DONE
-
-    umount $kmnt
-
-    # Always install stage1.5 since we don't know if key was bootable
-    printf "(hd0) %s\n" /dev/dsk/${key}p0 >/tmp/grub.map
-    printf "root (hd0,0)\nsetup (hd0)\n" | \
-        TERM=xterm grub --device-map=/tmp/grub.map
-}
-
 case "$1" in
 'start')
 
@@ -435,61 +224,6 @@ case "$1" in
         set_default_fw_rules
     else
 	install_config
-
-        # If this CN was running 6.5.x and has now been booted onto 7.0, we
-        # need to uninstall the old 6.5.x agents and install the new 7.0 agents.
-        if [[ -d /opt/smartdc/agents/modules && \
-            ! -d  /opt/smartdc/agents/lib ]]; then
-
-	    # During upgrade (or even before) we know the config file should
-	    # have been upgraded to include the imgapi_domain entry. If that
-	    # didn't happen, fail now.
-	    egrep -s imgapi_domain /opt/smartdc/config/node.config
-	    if [ $? -ne 0 ]; then
-                echo "ERROR: the local config file was not updated for upgrade."
-                exit $SMF_EXIT_ERR_FATAL
-	    fi
-
-            # Enable new ZFS features. The pool will no longer be usable on 6.5
-            zpool set feature@async_destroy=enabled zones
-            zpool set feature@empty_bpobj=enabled zones
-            zpool set feature@lz4_compress=enabled zones
-
-            # Convert to 7.0-style cores datasets
-            zfs destroy -r zones/cores
-            zfs create -o compression=lz4 -o mountpoint=none zones/cores
-            for i in `zoneadm list -c`
-            do
-                zfs destroy -rf zones/$i/cores
-                zfs create -o quota=100g -o mountpoint=/zones/$i/cores \
-                    zones/cores/$i
-            done
-
-            echo "Upgrading the system's agents" > /dev/console
-
-	    # disable the smartdc agent svcs
-	    echo "stopping svcs"
-	    for i in `svcs -a | nawk '/smartdc\/agent/{print $3}'`
-	    do
-		[[ "$i" == "svc:/smartdc/agent/ur:default" || \
-		   "$i" == "svc:/smartdc/agent/metadata:default" ]] && \
-		    continue
-		svcadm disable $i
-	    done
-
-            uninstall_agents6
-            install_agents7
-
-            create_setup_status
-            sysinfo -u
-            rm -f /tmp/.ur-startup
-            svcadm restart ur
-
-            update_local_key
-            configure_imgadm
-
-            echo "Upgrade done" > /dev/console
-        fi
     fi
 
     configure_fwadm

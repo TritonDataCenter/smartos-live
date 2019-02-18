@@ -118,8 +118,6 @@ IMAGES_VERSION :=	images-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
 IMAGES_TARBALL :=	output/$(IMAGES_VERSION).tgz
 
-IMAGES_SIZES_GB :=	1 2 4 8
-
 TOOLS_TARGETS = \
 	$(MANCHECK) \
 	$(MANCF) \
@@ -147,32 +145,27 @@ pkgsrc:
 
 $(BOOT_TARBALL): world manifest
 	pfexec rm -rf $(BOOT_PROTO)
-	mkdir -p $(BOOT_PROTO)
+	mkdir -p $(BOOT_PROTO)/etc/version/
 	mkdir -p $(ROOT)/output
 	pfexec ./tools/builder/builder $(ROOT)/$(BOOT_MANIFEST) \
-	    $(BOOT_PROTO) $(ROOT)/proto
+	    $(BOOT_PROTO) $(OVERLAYS) $(ROOT)/proto
+	cp $(STAMPFILE) $(BOOT_PROTO)/etc/version/boot
 	(cd $(BOOT_PROTO) && pfexec gtar czf $(ROOT)/$@ .)
 
 #
-# Create proforma images for use in assembling bootable USB device images.
-# These images are assembled into a sparse tar file which takes up hardly any
-# space, despite the large size of the (mostly blank) images.  This tar file is
-# used by "make coal" and "make usb" in "sdc-headnode.git" to create Triton
-# boot and installation media.
+# Create proforma images for use in assembling bootable USB device images.  The
+# images tar file is used by "make coal" and "make usb" in "sdc-headnode.git"
+# to create Triton boot and installation media.
 #
-images: $(IMAGES_SIZES_GB:%=$(IMAGES_PROTO)/%gb.img)
-
-$(IMAGES_PROTO)/%.img: boot tools/images/%.fdisk tools/images/make_image
+$(IMAGES_PROTO)/4gb.img: boot
 	rm -f $@
 	mkdir -p $(IMAGES_PROTO)
-	./tools/images/make_image -s $* -G $(ROOT)/proto \
-	    -F tools/images/$*.fdisk $@
+	./tools/build_boot_image -p 4 -r $(ROOT)
+
+$(IMAGES_TARBALL): $(IMAGES_PROTO)/4gb.img
+	cd $(IMAGES_PROTO) && gtar -Scvz --owner=0 --group=0 -f $(ROOT)/$@ *
 
 images-tar: $(IMAGES_TARBALL)
-
-$(IMAGES_TARBALL): images
-	cd $(IMAGES_PROTO) && gtar -Scvz --owner=0 --group=0 -f $(ROOT)/$@ \
-	    $(IMAGES_SIZES_GB:%=%gb.img)
 
 #
 # Manifest construction.  There are 5 sources for manifests we need to collect
@@ -346,6 +339,7 @@ strap-cache:
 
 0-tools-stamp: 0-pwgen-stamp
 	(cd $(ROOT)/tools/builder && gmake builder)
+	(cd $(ROOT)/tools/format_image && gmake)
 	touch $@
 
 0-pwgen-stamp:
@@ -411,6 +405,8 @@ clean:
 	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO) \
 	    $(IMAGES_PROTO))
 	rm -f tools/cryptpass
+	(cd tools/builder && gmake clean)
+	(cd tools/format_image && gmake clean)
 	(cd tools/mancheck && gmake clean)
 	(cd tools/mancf && gmake clean)
 	(cd tools/tzcheck && gmake clean)
@@ -421,10 +417,10 @@ clobber: clean
 	pfexec rm -rf output/* output-iso/* output-usb/*
  
 iso: live
-	./tools/build_iso
+	./tools/build_boot_image -I -r $(ROOT)
 
 usb: live
-	./tools/build_usb
+	./tools/build_boot_image -r $(ROOT)
 
 FRC:
 

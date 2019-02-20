@@ -15,16 +15,18 @@ Sets of changes
 smartos-live
 
 	OS-7260 SmartOS should support booting with loader
-	OS-7271 proto.boot should include loader instead of grub
 	OS-7309 build tools should support loader-based boot images
 	OS-7364 fs_joyent.sh test needs quotes
 
 illumos-joyent
 
 	OS-7260 SmartOS should support booting with loader
+	OS-7271 proto.boot should include loader instead of grub
 	OS-7332 RICHMOND-16 mitigation ensnares stock loaders
 	OS-7584 MDB module for disk labelling would be useful
 	OS-7585 Need workaround to EFI boot on AMI BIOS
+	OS-7594 Disable efinet support in Loader to workaround TRITON-1191
+	OS-7595 Triton-specific extensions to Loader
 
 sdc-headnode
 
@@ -71,7 +73,6 @@ Later
  - sdc-usbkey
    - add subcommand to dump boot component version JSON blob
  - need to run loader install for headnode not just CNs
- - would be nice if autoboot showed what it was going boot
  - would be nice to show the default console device again
  - usb key conversion tool
  - replace screen-rows/cols name with ncols name? avoid problems?

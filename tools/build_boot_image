@@ -303,26 +303,6 @@ function mount_root()
 	print "done"
 }
 
-readonly bi_no_pigz=$(cat <<-EOF
-\n
-Didn't find pigz installed - falling back to gzip for image compression.\n
-To speed up future builds, install pigz by running "pkgin -y install pigz"\n
-EOF
-)
-
-function compress_image()
-{
-	local gzcmd=/opt/local/bin/pigz
-
-	if [ ! -x $gzcmd ]; then
-		print $bi_no_pigz
-		gzcmd=/usr/bin/gzip
-	fi
-	print "Compressing USB image ... \c"
-	pfrun $gzcmd $bi_tmpdir/smartos.usb
-	print "done"
-}
-
 function copy_results()
 {
 	local readonly outdir=$1
@@ -424,7 +404,8 @@ pfrun lofiadm -d $bi_lofi_blkdev
 if [[ $bi_proforma_only == 1 ]]; then
 	copy_results $bi_wsroot/proto.images ${bi_imgsz_gb}gb.img ${bi_imgsz_gb}gb.
 else
-	compress_image
+	print "Compressing USB image ..."
+	pfrun /opt/local/bin/pigz $bi_tmpdir/smartos.usb
 	copy_results $bi_wsroot/output-usb $bi_usb_image_name ""
 fi
 

@@ -93,13 +93,13 @@ set optionsmenu_keycode[5]=100
 set optionsansi_caption[5]="^[1mD^[mebug................. ^[34;1mOff^[m"
 set optionstoggled_ansi[5]="^[1mD^[mebug................. ^[32;7mOn^[m"
 
-set optionsmenu_init[6]="init_dr"
-set optionsmenu_caption[6]="Disaster [R]ecovery... Off"
-set optionstoggled_text[6]="Disaster [R]ecovery... On"
-set optionsmenu_command[6]="toggle_dr"
+set optionsmenu_init[6]="init_rescue"
+set optionsmenu_caption[6]="[R]escue Mode......... Off"
+set optionstoggled_text[6]="[R]escue Mode......... On"
+set optionsmenu_command[6]="toggle_rescue"
 set optionsmenu_keycode[6]=114
-set optionsansi_caption[6]="Disaster ^[1mR^[mecovery..... ^[34;1mOff^[m"
-set optionstoggled_ansi[6]="Disaster ^[1mR^[mecovery..... ^[32;7mOn^[m"
+set optionsansi_caption[6]="^[1mR^[mescue Mode........... ^[34;1mOff^[m"
+set optionstoggled_ansi[6]="^[1mR^[mescue Mode........... ^[32;7mOn^[m"
 
 \ Enable automatic booting (add ``autoboot_delay=N'' to loader.conf(5) to
 \ customize the timeout; default is 10-seconds)

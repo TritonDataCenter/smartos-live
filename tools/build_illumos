@@ -52,9 +52,17 @@ else
 fi
 gsed -i -e "s|^MAX_JOBS=.*$|MAX_JOBS=${MJ}; export MAX_JOBS|" illumos.sh
 
+#
+# illumos.sh sets the value of $MAKE by default, which is used by bldenv
+# and nightly. By setting MAKE below to the bootstrap dmake, illumos.sh
+# will honor the one in the environment and let us solve the chicken and
+# egg problem that we have.
+#
+export MAKE=/opt/local/bin/dmake
 ksh93 ./usr/src/tools/scripts/bldenv.sh illumos.sh \
     'cd $CODEMGR_WS/usr/src && export PATH="$PATH:/opt/local/bin" && \
     dmake setup && cd tools && dmake install'
+export -n MAKE
 
 printf "\nRunning illumos nightly(1).\n"
 printf "This will take a while.\n"

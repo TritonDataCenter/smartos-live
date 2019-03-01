@@ -315,7 +315,7 @@ PKGPUBLISHER_REDIST="${PUBLISHER}";		export PKGPUBLISHER_REDIST
 MAKEFLAGS=k;					export MAKEFLAGS
 UT_NO_USAGE_TRACKING="1";			export UT_NO_USAGE_TRACKING
 MULTI_PROTO="no";				export MULTI_PROTO
-BUILD_TOOLS="\${CODEMGR_WS}/usr/src/tools/proto/root_\${MACH}-nd/opt";
+BUILD_TOOLS="\$SRC/tools/proto/root_\${MACH}-nd/opt";
 						export BUILD_TOOLS
 SPRO_ROOT=/opt/SUNWspro;			export SPRO_ROOT
 SPRO_VROOT=\$SPRO_ROOT;				export SPRO_VROOT
@@ -348,7 +348,13 @@ NM=/usr/bin/nm;					export NM
 STRIP=/usr/bin/strip;				export STRIP
 TSORT=/usr/bin/tsort;				export TSORT
 AR=/usr/bin/ar;					export AR
-MAKE="$conf_root/proto.strap/usr/bin/dmake";	export MAKE
+#
+# We override $MAKE in ./tools/build_illumos so we can properly
+# bootstrap the tools build.
+#
+if [[ -z "\$MAKE" ]]; then
+MAKE="\$SRC/tools/proto/root_i386-nd/opt/onbld/bin/i386/dmake";	export MAKE
+fi
 LEX=/opt/local/bin/lex;				export LEX
 YACC=/opt/local/bin/yacc;			export YACC
 BISON=/opt/local/bin/bison;			export BISON

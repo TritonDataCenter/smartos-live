@@ -15,27 +15,16 @@
 #
 
 #
-# Attempt to clobber an illumos build. We need to make sure that we have
-# a dmake available. The one that's in -extra is the one that we
-# generally need. As a heuristic, we use its presence for determining
-# whether or not we need it. This isn't perfect. Ideally we'd ship a set
-# of onbld tools to always use this. However, this should work for most
-# folks. You can't build illumos without the 0-extra-stramp. Therefore
-# if the dmake from proto.strap is missing, illumos likely hasn't been
-# built.
-#
-# This does mean that a user that manually removes things in proto.strap
-# and then calls gmake clobber at the top level will result in build
-# failures; however, we can at least let folks know about that. Ideally,
-# this will be a rare case.
+# Attempt to clobber an illumos build. We override $MAKE in the
+# environment to explicitly point at the bootstrap dmake that we install
+# as part of ./configure.
 #
 set -o pipefail
 
 ci_wsroot=$(cd $(dirname $0)/../; pwd)
 ci_arg0=$(basename $0)
-ci_dmake=$ci_wsroot/proto.strap/usr/bin/dmake
-ci_stamp=$ci_wsroot/0-illumos-stamp
-ci_illumos=$ci_wsroot/projects/illumos/usr/src
+ci_illumos="$ci_wsroot/projects/illumos/usr/src"
+ci_dmake="/opt/local/bin/dmake"
 
 export PATH=/usr/bin:/usr/sbin:/opt/local/bin:/opt/local/sbin
 
@@ -61,58 +50,16 @@ function ci_verify_root
 }
 
 #
-# Verify if we have dmake available. If dmake hasn't been built, we
-# won't consider clobbering illumos, but will inform the user. If,
-# however, the 0-illumos-stamp file is present, that indicates that
-# the workspace is in a bad state and the user will have to manually
-# clobber illumos. We'll give them instructions on what to do, but exit
-# 1.
-#
-function ci_check_dmake
-{
-	[[ -f $ci_dmake && -x $ci_dmake ]] && return
-
-	if [[ ! -f $ci_stamp ]]; then
-		cat >&2 << EOF
-dmake not found and 0-illumos-stamp is not present. Assuming that
-illumos has never been built and skipping the clobber.
-EOF
-		exit 0
-	fi
-
-	#
-	# So we have a stamp file, but no dmake. We're not certain about
-	# the state of this workspace, so advise the user on what to do.
-	#
-	cat >&2 << EOF
-Warning: repository is in a state where an automated clobber cannot be
-performed. You will need to manually clobber illumos or rebuild the
-initial part of illumos-extra. To rebuild illumos-extra, run:
-
-$ rm -f 0-extra-stamp
-$ gmake 0-extra-stamp
-
-At this point, it should be safe to run gmake clean / clobber again. If
-you still have problems, please reach out to the SmartOS community by
-either asking in #smartos on irc.freenode.net, e-mailing the
-smartos-discuss mailng list, or filing a bug on
-https://github.com/joyent/smartos-live/issues.
-EOF
-
-	exit 1
-}
-
-#
 # Do the hard work of actually running dmake clobber. We purposefully
 # allow its exit status to propagate out of here.
 #
 function ci_do_clobber
 {
 	echo "Clobbering $ci_wsroot/projects/illumos"
+	export MAKE="$ci_dmake"
 	ksh93 $ci_illumos/tools/scripts/bldenv.sh $ci_illumos/../../illumos.sh \
 	    'cd $CODEMGR_WS/usr/src && dmake clobber'
 }
 
 ci_verify_root
-ci_check_dmake
 ci_do_clobber

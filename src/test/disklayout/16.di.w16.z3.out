@@ -1,1 +1,0 @@
-fatal error: 16 is an invalid width for raidz3 and 16 disks (min: 9, max: 15)

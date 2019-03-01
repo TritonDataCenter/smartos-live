@@ -1,1 +1,122 @@
-fatal error: no acceptable raidz3 layout is possible with 16 disks and 0 spares
+{
+	"vdevs": [
+		{
+			"type": "raidz3",
+			"devices": [
+				{
+					"name": "disk0",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "disk1",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "disk2",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "disk3",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "disk4",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "disk5",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "disk6",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "disk7",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "disk8",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "disk9",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "diska",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "diskb",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "diskc",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "diskd",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "diske",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "diskf",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				}
+			]
+		}
+	],
+	"capacity": 20804177092608
+}

@@ -136,6 +136,11 @@ printf "%-16s " 60.0s.w15.out
 diff -u 60.di.0s.w15.z3.out /var/tmp/s60.out
 rm -f /var/tmp/s60.out
 
+disklayout -s 0 -w 17 -f 36.di > /var/tmp/s34.out
+printf "%-16s " 36.0s.w17.z3.out
+diff -u 36.0s.w17.z3.out /var/tmp/s34.out
+rm -f /var/tmp/s34.out
+
 disklayout -w 15 -f s16.di > /var/tmp/s16.out
 printf "%-16s " 16.w15.out
 diff -u s16.di.w15.out /var/tmp/s16.out
@@ -181,9 +186,9 @@ printf "%-16s " 7.w6.z2.out
 diff -u 7.di.w6.z2.out /var/tmp/err.out
 rm -f /var/tmp/err.out
 
-disklayout -w 16 -f s16.di raidz3 > /var/tmp/err.out
-printf "%-16s " 16.w16.z3.out
-diff -u 16.di.w16.z3.out /var/tmp/err.out
+disklayout -w 21 -f 60.di raidz3 > /var/tmp/err.out
+printf "%-16s " 60.di.w21.z3.out
+diff -u 60.di.w21.z3.out /var/tmp/err.out
 rm -f /var/tmp/err.out
 
 disklayout -w 15 -s 2 -f s16.di raidz3 > /var/tmp/err.out

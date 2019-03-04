@@ -442,8 +442,8 @@ read -r -d '' usage <<EOF
 		primary compiler version [default: gcc4]
 	-r
 		full strap build (no cache) [default: no]
-	-s gcc6,gcc7
-		shadow compilers [default: none]
+	-s gcc7
+		shadow compilers, comma delimited (gcc7,gcc#) [default: none]
 EOF
 
 source_vars

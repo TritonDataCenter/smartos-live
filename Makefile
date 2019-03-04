@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2018 Joyent, Inc.
+# Copyright (c) 2019, Joyent, Inc.
 #
 
 #
@@ -287,6 +287,7 @@ update-base:
 	touch $@
 
 0-subdir-%-stamp: 0-illumos-stamp
+	@echo "========== building $* =========="
 	cd "$(ROOT)/projects/local/$*" && \
 	    if [[ -f Makefile.joyent ]]; then \
 		gmake -f Makefile.joyent $(SUBDIR_DEFS) DESTDIR=$(PROTO) \
@@ -332,6 +333,7 @@ strap-cache:
 	touch $@
 
 0-livesrc-stamp: 0-illumos-stamp 0-strap-stamp 0-extra-stamp
+	@echo "========== building src =========="
 	(cd $(ROOT)/src && \
 	    gmake -j$(MAX_JOBS) NATIVEDIR=$(STRAP_PROTO) \
 	    DESTDIR=$(PROTO) && \

@@ -1,12 +1,12 @@
 #
-# Copyright (c) 2014, Joyent, Inc. All rights reserved.
+# Copyright (c) 2019, Joyent, Inc. All rights reserved.
 #
 
 
 #
 # Directories
 #
-ROOT = $(PWD)/../..
+ROOT = $(CURDIR)/../..
 TOP := $(shell pwd)
 NM := node_modules
 NM_ORIG := node_modules.orig

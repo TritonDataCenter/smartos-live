@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019, Joyent, Inc.
+ */
+
 #include <errno.h>
 #include <signal.h>
 #include <stdio.h>
@@ -36,7 +40,7 @@ size_t zfs_receive(int fd, const char * snapshot);
 ssize_t
 write_bytes(int fd, const void *buf, size_t bytes)
 {
-    ssize_t numwritten;
+    ssize_t numwritten = 0;
     void * ptr;
     size_t remain;
 
@@ -61,7 +65,7 @@ ssize_t
 read_bytes(int fd, char *data, size_t bytes)
 {
     size_t remain;
-    ssize_t numread;
+    ssize_t numread = 0;
     ssize_t total_read = 0;
     char *ptr;
 
@@ -314,7 +318,7 @@ main(int argc, char *argv[])
 {
     header_t header;
     char * json = NULL;
-    enum {JSON = 0, DATASET} mode;
+    enum {JSON = 0, DATASET} mode = JSON;
     int res;
 
     progname = argv[0];

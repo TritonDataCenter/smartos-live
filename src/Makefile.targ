@@ -10,12 +10,30 @@
 #
 
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright (c) 2019, Joyent, Inc.
 #
 
 %: %.c
-	$(GCC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
+	$(LINK.c) $< $(LIBS)
 
 %.so: %.c
-	$(GCC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
-	$(ALTCTFCONV) -L VERSION -i $@
+	$(LINK.c) $< $(LIBS)
+	$(CTFCONVERT) -l $(BUILDSTAMP) $@
+
+%.o: src/%.c
+	$(COMPILE.c) $<
+
+mdata_%.o: $(DOCKER_DIR)/mdata-client/%.c
+	$(COMPILE.c) $^
+
+mdata_%.o: $(DOCKER_DIR)/mdata-client/plat/%.c
+	$(COMPILE.c) $^
+
+%.o: $(STRINGS_DIR)/%.c
+	$(COMPILE.c) $^
+
+%.o: $(DOCKER_DIR)/src/%.c
+	$(COMPILE.c) $^
+
+%.o: $(DOCKER_DIR)/json-nvlist/%.c
+	$(COMPILE.c) $^

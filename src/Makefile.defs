@@ -18,13 +18,23 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2015, Joyent, Inc.
+# Copyright (c) 2019, Joyent, Inc.
 #
 
-BASE =		$(PWD)
+#
+# MG runs make check prior to ./configure, so allow build.env not to exist.
+#
+ifeq ($(MAKECMDGOALS),check)
+-include	$(BASE)/../build.env
+else
+include		$(BASE)/../build.env
+endif
+
 DESTDIR =	$(BASE)/../proto
 NATIVEDIR =	$(BASE)/../proto.strap
 ILLUMOS_SRC =	$(BASE)/../projects/illumos/usr/src
+
+BUILDSTAMP =	$(shell cat $(BASE)/../proto/buildstamp)
 
 ifeq ($(shell uname -s),Darwin)
 MAKE =		make
@@ -36,13 +46,13 @@ endif
 
 MAX_JOBS =	128
 PARALLEL =	-j$(MAX_JOBS)
+CSTYLE =	$(BASE)/../tools/cstyle
 GCC =		$(NATIVEDIR)/usr/bin/gcc
 GXX =		$(NATIVEDIR)/usr/bin/g++
 
 CTFBINDIR =	$(ILLUMOS_SRC)/tools/proto/root_i386-nd/opt/onbld/bin/i386
 CTFMERGE =	$(CTFBINDIR)/ctfmerge
 CTFCONVERT =	$(CTFBINDIR)/ctfconvert
-ALTCTFCONV =	$(CTFBINDIR)/ctfconvert
 
 SYSINCDIRS =	/usr/include
 SYSLIBDIRS =	/usr/lib /lib
@@ -57,9 +67,21 @@ NODE_EXEC =	$(NATIVEDIR)/usr/node/0.10/bin/node
 DEBUG_FLAGS =	-g
 WARN_FLAGS =	-Wall -Wextra -Werror
 PIC_FLAGS =	-fPIC
-OPT_FLAGS =	-O2
 
-NODE_CFLAGS =	$(DEBUG_FLAGS) $(WARN_FLAGS) $(PIC_FLAGS) $(OPT_FLAGS)
+OPT_FLAGS = -O2
+
+#
+# Avoid GCC's overly aggressive optimizations. We don't know of any specific
+# instances this causes problems, so this is just in case.
+#
+ifneq ($(PRIMARY_COMPILER_VER),4)
+OPT_FLAGS += -fno-aggressive-loop-optimizations
+endif
+
+CFLAGS =	-std=gnu99 $(WARN_FLAGS) $(OPT_FLAGS)
+CXXFLAGS =	$(WARN_FLAGS) $(OPT_FLAGS)
+NODE_CFLAGS =	$(DEBUG_FLAGS) $(PIC_FLAGS)
+NODE_CXXFLAGS =	$(DEBUG_FLAGS) $(PIC_FLAGS)
 
 STD_DEFS =	-D_GNU_SOURCE
 NODE_DEFS =	-DBUILDING_NODE_EXTENSION
@@ -75,23 +97,23 @@ NODE_LIBDIR =	-L$(PREFIX_NODE)/lib
 
 NODE_LDFLAGS =	$(SHARED_FLAGS) $(ZTEXT) $(NODE_LIBDIR)
 
-SUBDIR_CC =		CC="$(GCC)"
-SUBDIR_CXX =		CXX="$(GXX)"
-SUBDIR_CPPFLAGS =	CPPFLAGS="$(CPPFLAGS)"
-SUBDIR_CFLAGS =		CFLAGS="$(CFLAGS)"
-SUBDIR_CXXFLAGS =	CXXFLAGS="$(CXXFLAGS)"
-SUBDIR_LDFLAGS =	LDFLAGS="$(LDFLAGS)"
-SUBDIR_LIBS =		LIBS="$(LIBS)"
-SUBDIR_MAKE =		MAKE="$(MAKE)"
-SUBDIR_DESTDIR =	DESTDIR="$(DESTDIR)"
+STRINGS_DIR =	$(BASE)/common/strings
+DOCKER_DIR =	$(BASE)/dockerinit
 
-SUBDIR_ENV = \
-	$(SUBDIR_CC) \
-	$(SUBDIR_CXX) \
-	$(SUBDIR_CPPFLAGS) \
-	$(SUBDIR_CFLAGS) \
-	$(SUBDIR_CXXFLAGS) \
-	$(SUBDIR_LDFLAGS) \
-	$(SUBDIR_LIBS) \
-	$(SUBDIR_MAKE) \
-	$(SUBDIR_DESTDIR)
+INSTALL_PROG =	mkdir -p $(@D) && rm -f $@ && cp $^ $@ && \
+		chmod 755 $@ && touch $@
+
+COMPILE.c =	$(GCC) $(CPPFLAGS) $(CFLAGS) -o $@ -c
+LINK.c =	$(GCC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
+COMPILE.cc =	$(GXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c
+LINK.cc =	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@
+
+MDATA_OBJS = \
+		mdata_dynstr.o \
+		mdata_proto.o \
+		mdata_common.o \
+		mdata_base64.o \
+		mdata_crc32.o \
+		mdata_reqid.o \
+		mdata_sunos.o \
+		mdata_unix_common.o

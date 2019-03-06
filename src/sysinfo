@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2018 Joyent Inc., All rights reserved.
+# Copyright (c) 2019 Joyent Inc., All rights reserved.
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -289,6 +289,15 @@ function get_zpool()
         local size=$(( $used + $available ))
         Zpool_size=$(($size / 1024 / 1024 / 1024))
         Zpool_creation=$(zfs get -Hpo value creation ${Zpool})
+        Zpool_encrypted=$(zfs get -Hpo value encryption ${Zpool})
+
+        # The encryption property can be 'off', 'on', or a specific mechanism
+        # We treat anything but 'off' as enabled.
+        if [[ "$Zpool_encrypted" == "off" ]]; then
+            Zpool_encrypted="false"
+        else
+            Zpool_encrypted="true"
+        fi
 
         get_zpool_disks ${Zpool}
         get_zpool_profile ${Zpool}
@@ -863,6 +872,7 @@ END
 if [[ ${ZONENAME} == "global" ]]; then
     if [[ -n ${Zpool} ]]; then
         echo '  "Zpool": "'${Zpool}'",'
+        echo '  "Zpool Encrypted": '${Zpool_encrypted}','
         echo '  "Zpool Disks": "'${Zpool_disks}'",'
         echo '  "Zpool Profile": "'${Zpool_profile}'",'
         echo '  "Zpool Creation":' ${Zpool_creation}','

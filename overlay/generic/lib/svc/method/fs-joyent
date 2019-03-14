@@ -69,6 +69,60 @@ function mount_zfs
     echo ${output} 1>&2
 }
 
+function load_key
+{
+    local zpool="$1"
+    local uuid=
+    local host=
+    local url=
+    local key=
+    local pool_present=
+    local is_encrypted=
+    local key_loaded=
+
+    # If we are being run on an machine that has not been setup, we still
+    # try to import 'zones', though fail non-fatally.  However on a setup,
+    # encrypted CN, we will be able to import ${SYS_ZPOOL}, however we cannot
+    # look at the value of 'Setup' from sysinfo, because that requires looking
+    # at /var/lib/setup.json, which is not available until after we load the
+    # key.
+    #
+    # Thus, the best we can do is see if we have a pool imported and try to
+    # load its key.  If no pool was imported, we assume the node is not
+    # setup and return.
+    pool_present=$(zpool list -Hp | \
+        awk -v pool="$zpool" '$1 == pool { print "1" }')
+    [[ -z "$pool_present" ]] && return
+
+    # If the pool is not encrypted, or if the key has already been loaded
+    # through some other means (e.g. operator intervention), trying to load
+    # the key will fail, so we do not attempt it.
+    is_encrypted=$(zfs get -Hpo value encryption $zpool)
+    key_loaded=$(zfs get -Hpo value keystatus $zpool)
+    [[ "$is_encrypted" == "off" || "$key_loaded" == "available" ]] && return
+
+    uuid=$(sysinfo -p | grep '^UUID=' | sed -e 's/^UUID=//' -e "s/'//g")
+    # Awful hack
+    host=$(bootparams | \
+        awk -F: '$1 ~ /^rabbitmq_dns/ { print $3 }' | \
+        sed 's/rabbitmq/kbmapi/')
+    url="http://${host}/key/${uuid}"
+    #host=$(bash /lib/sdc/config.sh -json | \
+    #    json datacenter_name dns_domain | \
+    #    sed 'N;s/\n/./')
+    #url="http://kbmapi.${host}/key/$uuid"
+
+    key=$(curl -sS "$url" | json encryptKey)
+    if [[ -z "$key" ]];
+    then
+        echo "WARNING: Could not find encryption key for host $uuid" | \
+            tee /dev/console >&2
+        return
+    fi
+
+    echo "$key" | zfs load-key $zpool
+}
+
 /bin/bootparams | grep "^noimport=true" >/dev/null
 if [ $? -ne 0 ]; then
     # If the zpool doesn't exist, then there's nothing to mount.
@@ -93,6 +147,9 @@ if [ $? -ne 0 ]; then
             SYS_ZPOOL=$pool
         fi
     done
+
+    # This does nothing on non-encrypted pools
+    load_key "$SYS_ZPOOL"
 
     svccfg -s svc:/system/smartdc/init setprop \
         config/zpool=${SYS_ZPOOL}

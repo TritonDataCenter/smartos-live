@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright (c) 2018, Joyent, Inc.
+# Copyright (c) 2019, Joyent, Inc.
 #
 
 #
@@ -67,13 +67,15 @@ bi_mnt_usr=
 
 bi_root_size=
 
+bi_root_pw=
+
 bi_log=
 
 
 function usage
 {
 	cat <<-USAGE
-	Usage: $bi_arg0 -m MANIFEST_FILE -o OUTPUT_DIR { INPUT_DIR ... }
+	Usage: $bi_arg0 [-p rootpass] -m MANIFEST_FILE -o OUTPUT_DIR { INPUT_DIR ... }
 	USAGE
 	exit 2
 }
@@ -342,6 +344,8 @@ function bi_smf_seeds
 
 function bi_create_password
 {
+    set -x
+
 	local pwgen="$bi_wsroot/tools/pwgen"
 	local cryptpass="$bi_wsroot/tools/cryptpass"
 	local cp_password
@@ -349,15 +353,21 @@ function bi_create_password
 	local shadow="$bi_mnt_root/etc/shadow"
 	local stash="$bi_out_dir/$bi_prefix/root.password"
 
-	bi_emit_start 'Setting random "root" password'
+    if [[ -z "$bi_root_pw" ]]
+    then
+        bi_emit_start 'Setting random "root" password'
 
-	#
-	# Generate a random root password.
-	#
-	if ! cp_password=$("$pwgen" -B -c -n 16 1) ||
-	    [[ -z $cp_password ]]; then
-		fail 'unable to generate root password.'
-	fi
+    	#
+    	# Generate a random root password.
+    	#
+    	if ! cp_password=$("$pwgen" -B -c -n 16 1) ||
+    	    [[ -z $cp_password ]]; then
+    		fail 'unable to generate root password.'
+    	fi
+    else
+        cp_password="$bi_root_pw"
+    fi
+
 	bi_emit_info 'Password' "$cp_password"
 
 	#
@@ -788,7 +798,7 @@ function bi_safe_update_symlink
 #
 # Process options:
 #
-while getopts "m:o:" c $@; do
+while getopts "m:o:p:" c $@; do
 	case "$c" in
 	m)
 		bi_manifest=$OPTARG
@@ -796,6 +806,9 @@ while getopts "m:o:" c $@; do
 	o)
 		bi_out_dir=$OPTARG
 		;;
+    p)
+        bi_root_pw=$OPTARG
+        ;;
 	*)
 		usage
 		;;

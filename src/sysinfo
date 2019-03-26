@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2018 Joyent Inc., All rights reserved.
+# Copyright 2019 Joyent, Inc.
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -182,11 +182,6 @@ function get_smartos_cpu_info()
             CPU_Version="Unknown"
         fi
 
-        CPU_Count=`smbios -t SMB_TYPE_PROCESSOR | grep -v "Version: 0000000000" \
-            | grep "Version: " \
-            | wc -l \
-            | tr -d ' '`
-
         isainfo=$(isainfo -x)
         if [[ -n $(echo " ${isainfo} " | /usr/bin/grep " vmx ") ]]; then
             CPU_Virtualization="vmx"
@@ -197,14 +192,21 @@ function get_smartos_cpu_info()
         fi
     fi
 
-    CPU_Cores=`psrinfo \
-        | grep "^[0-9]" \
-        | wc -l \
-        | tr -d ' '`
+    CPU_Socket_Count=$(psrinfo -t -p)
+    CPU_Core_Count=$(psrinfo -t -c)
+    CPU_Count=$(psrinfo -t)
+    CPU_Online_Count=$(( $(psrinfo -t -S "on-line") + $(psrinfo -t -S "no-intr") ))
 
-    #echo "${CPU_Version}"
-    #echo "${CPU_Count}"
-    #echo "${CPU_Cores}"
+    #
+    # Below, we also report these two legacy values, both of which are
+    # unfortunately named:
+    #
+    # CPU Physical Cores: this is really $CPU_Socket_Count
+    # CPU Total Cores: this is really $CPU_Count
+    #
+    # Consumers that care about the CPU resources actually available to use
+    # should look to $CPU_Online_Count.
+    #
 }
 
 function get_bhyve_capability()
@@ -607,28 +609,42 @@ function get_aggr_params()
 function get_bootparams()
 {
     WHICH_GREP="/usr/xpg4/bin/grep"
+    ORIGIFS=$IFS
+
+    IFS=`echo -en "\n\b"`
 
     count=1
     for line in $(/usr/bin/bootparams); do
         fields=(${line//=/ })
-        key=$(echo ${fields[0]} | sed -e "s/\-/\_/g")
-        if ! (echo "${key}" | ${WHICH_GREP} \
+        if ! (echo "${fields[0]}" | ${WHICH_GREP} \
           -e "^tty" \
           -e "^atapi" \
-          -e "^ata_dma" \
-          -e "^keyboard_" \
-          -e "^bios_boot_device" \
-          -e "^lba_access_" \
-          -e "^boot_ncpus" \
-          -e "^boot_file" \
+          -e "^ata-dma" \
+          -e "^keyboard-" \
+          -e "^bios-boot-device" \
+          -e "^lba-access-" \
+          -e "^boot-ncpus" \
+          -e "^boot-file" \
           -e "^whoami" \
-          -e "^mfg_name" \
-          -e "^impl_arch_name" \
-          -e "_max_ncpus$" \
+          -e "^mfg-name" \
+          -e "^impl-arch-name" \
+          -e "-max-ncpus$" \
           >/dev/null); then
             Bootparams[${count}]=${line}
             ((count++))
         fi
+    done
+
+    IFS=$ORIGIFS
+}
+
+function get_psrinfo()
+{
+    count=1
+    for line in $(/usr/sbin/psrinfo -r all); do
+        fields=(${line//=/ })
+        Psrinfo[${count}]=${line}
+        ((count++))
     done
 }
 
@@ -702,7 +718,7 @@ HW_Family='${HW_Family}'
 VM_Capable='${VM_Capable}'
 CPU_Type='${CPU_Version}'
 CPU_Virtualization='${CPU_Virtualization}'
-CPU_Physical_Cores=${CPU_Count}
+CPU_Physical_Cores=${CPU_Socket_Count}
 Bhyve_Capable='${Bhyve_Capable}'
 Bhyve_Max_Vcpus=${Bhyve_Max_Vcpus}
 HVM_API='${HVM_API}'
@@ -718,7 +734,11 @@ END
     cat <<END
 UUID='${UUID}'
 Hostname='${Hostname}'
-CPU_Total_Cores=${CPU_Cores}
+CPU_Total_Cores=${CPU_Count}
+CPU_Socket_Count=${CPU_Socket_Count}
+CPU_Core_Count=${CPU_Core_Count}
+CPU_Online_Count=${CPU_Online_Count}
+CPU_Count=${CPU_Count}
 MiB_of_Memory=${Memory_in_MiB}
 END
 
@@ -784,9 +804,16 @@ END
 
     for entry in "${Bootparams[@]}"; do
         fields=(${entry//=/ })
-        key=$(echo ${fields[0]} | sed -e "s/\-/\_/g")
+        key=$(echo ${fields[0]} | sed -e 's+[^A-Za-z0-9_]+_+g')
         val=${fields[1]}
         echo "Bootparam_${key}='${val}'"
+    done
+
+    for entry in "${Psrinfo[@]}"; do
+        fields=(${entry//=/ })
+        key=$(echo ${fields[0]} | sed -e 's+[^A-Za-z0-9_]+_+g')
+        val=${fields[1]}
+        echo "Psrinfo_${key}='${val}'"
     done
 
     if [[ -n "$CompleteAggrs" ]]; then
@@ -845,7 +872,7 @@ END
   "HVM API": ${HVM_API},
   "CPU Type": "${CPU_Version}",
   "CPU Virtualization": "${CPU_Virtualization}",
-  "CPU Physical Cores": ${CPU_Count},
+  "CPU Physical Cores": ${CPU_Socket_Count},
   "Admin NIC Tag": "${Admin_NIC_Tag}",
   "Admin IP": "${Admin_IP}",
 END
@@ -856,7 +883,11 @@ END
 cat <<END
   "UUID": "${UUID}",
   "Hostname": "${Hostname}",
-  "CPU Total Cores": ${CPU_Cores},
+  "CPU Total Cores": ${CPU_Count},
+  "CPU Socket Count": ${CPU_Socket_Count},
+  "CPU Core Count": ${CPU_Core_Count},
+  "CPU Online Count": ${CPU_Online_Count},
+  "CPU Count": ${CPU_Count},
   "MiB of Memory": "${Memory_in_MiB}",
 END
 
@@ -890,11 +921,25 @@ END
     printed=0
     for entry in "${Bootparams[@]}"; do
         fields=(${entry//=/ })
-        key=$(echo ${fields[0]} | sed -e "s/\-/\_/g")
+        key=$(echo ${fields[0]} | sed -e 's+[^A-Za-z0-9_]+_+g')
         val=${fields[1]}
         ((printed++))
         trailing_comma=","
         [[ ${printed} -eq ${#Bootparams[*]} ]] && trailing_comma=''
+        echo "    \"${key}\": \"$val\"${trailing_comma}"
+    done
+    cat <<END
+  },
+  "Psrinfo": {
+END
+    printed=0
+    for entry in "${Psrinfo[@]}"; do
+        fields=(${entry//=/ })
+        key=$(echo ${fields[0]} | sed -e 's+[^A-Za-z0-9_]+_+g')
+        val=${fields[1]}
+        ((printed++))
+        trailing_comma=","
+        [[ ${printed} -eq ${#Psrinfo[*]} ]] && trailing_comma=''
         echo "    \"${key}\": \"$val\"${trailing_comma}"
     done
     cat <<END
@@ -1023,6 +1068,7 @@ if [[ ${ZONENAME} == "global" ]]; then
     get_zpool
     get_disks
     get_bootparams
+    get_psrinfo
     get_sdc_version
     if [[ -n ${SMARTDC_VERSION} ]]; then
         # Setup is SDC specific

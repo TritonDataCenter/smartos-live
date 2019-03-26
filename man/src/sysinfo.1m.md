@@ -75,17 +75,44 @@ making changes.
 
     GZ and NGZ
 
+  "CPU Socket Count"
+
+    Number of physical CPU sockets in this host.
+
+    GZ and NGZ
+
+  "CPU Core Count"
+
+    Number of physical CPU cores in this host.
+
+    GZ and NGZ
+
+  "CPU Online Count"
+
+    Number of online CPUs in this host.
+
+    GZ and NGZ
+
+  "CPU Count"
+
+    Total number of CPUs, including offline and disabled CPUs, in this host.
+
+    GZ and NGZ
+
   "CPU Physical Cores"
 
-    Number of physical CPUs in this host.
+    Number of physical CPU sockets (*not* cores) in this host.
+    Legacy value, set for compatibility only. Prefer "CPU Socket Count".
 
-    GZ only
+    GZ and NGZ
 
   "CPU Total Cores"
 
-    The number of CPU cores in this host.
+    Total number of CPUs, including offline and disabled CPUs, in this host.
+    *Not* the number of cores. Legacy value, set for compatibility only.
+    Prefer "CPU Count" or "CPU Online Count".
 
-    GZ only
+    GZ and NGZ
 
   "CPU Type"
 

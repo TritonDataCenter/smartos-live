@@ -13,15 +13,16 @@
 # Copyright (c) 2019, Joyent, Inc.
 #
 
+BASE =		$(CURDIR)
+
 include Makefile.defs
 
 #
 # ROOT is used only when building and running the below tools.
 #
-ROOT =		$(PWD)/..
+ROOT =		$(BASE)/..
 JSSTYLE =	$(ROOT)/tools/jsstyle/jsstyle
 JSLINT =	$(ROOT)/tools/javascriptlint/build/install/jsl
-CSTYLE =	$(ROOT)/tools/cstyle
 
 #
 # Tool options
@@ -67,10 +68,9 @@ fswatcher :	LIBS +=		-lthread -lnvpair -lavl
 zfs_recv :	LIBS +=		-lsocket
 zfs_send :	LIBS +=		-lsocket
 vmbundle :	CPPFLAGS +=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-sdc-on-tty :	CFLAGS +=	$(OPT_FLAG)
 sysevent :	LIBS +=		-lnvpair -lsysevent
 sysinfo_mod.so : CPPFLAGS +=	-D_REENTRANT
-sysinfo_mod.so : CFLAGS +=	-fpic -Wno-unused-parameter
+sysinfo_mod.so : CFLAGS +=	-fpic -Wno-unused-parameter $(DEBUG_FLAGS)
 sysinfo_mod.so : LDFLAGS +=	-shared -Wl,-ztext
 
 SYSINFO_MOD_DIR = $(DESTDIR)/usr/lib/sysevent/modules
@@ -159,17 +159,7 @@ C_CHECK_TARGETS=\
 	zfs_send.c \
 	sdc-on-tty.c \
 	sysinfo_mod.c \
-	sysevent.c \
-	dockerinit/src/dockerexec.c \
-	dockerinit/src/dockerinit.c \
-	dockerinit/src/docker-common.c \
-	lx_hook_postnet/main.c
-
-#
-# Generic flags we apply by default to everything.
-#
-CFLAGS +=	$(WARN_FLAGS)
-CXXFLAGS =	$(CFLAGS)
+	sysevent.c
 
 #
 # Node native add-on patterns.  For add-ons with a single source file in the
@@ -183,7 +173,7 @@ EXPAT.NODE =	$(EXPAT_OBJDIR)/node-expat.node
 
 $(EXPAT.NODE) :	WARN_FLAGS +=	-Wno-unused
 $(EXPAT.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
-$(EXPAT.NODE) :	CXXFLAGS +=	$(NODE_CFLAGS)
+$(EXPAT.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
 $(EXPAT.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 $(EXPAT.NODE) :	LIBS +=		-lexpat
 
@@ -195,7 +185,7 @@ KSTAT.NODE =	$(KSTAT_OBJDIR)/kstat.node
 
 $(KSTAT.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-write-strings -Wno-sign-compare
 $(KSTAT.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
-$(KSTAT.NODE) :	CXXFLAGS +=	$(NODE_CFLAGS)
+$(KSTAT.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
 $(KSTAT.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 $(KSTAT.NODE) :	LIBS +=		-lkstat
 
@@ -208,6 +198,7 @@ V8PLUS_SUBDIR_ENV = \
 			CXX=$(GXX) \
 			PREFIX_NODE=$(PREFIX_NODE) \
 			NODE_EXEC=$(NODE_EXEC) \
+			OPT_FLAGS="$(OPT_FLAGS)" \
 			CTFCONVERT=$(CTFCONVERT) \
 			CTFMERGE=$(CTFMERGE)
 
@@ -257,7 +248,7 @@ $(DTRACE_PROVIDER.NODE) :	CFLAGS +=	$(NODE_CFLAGS)
 $(DTRACE_PROVIDER.NODE) :	CPPFLAGS +=	\
 					$(NODE_CPPFLAGS) \
 					-Inode-dtrace-provider/libusdt
-$(DTRACE_PROVIDER.NODE) :	CXXFLAGS +=	$(NODE_CFLAGS)
+$(DTRACE_PROVIDER.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
 $(DTRACE_PROVIDER.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 
 CLEANFILES +=	$(DTRACE_PROVIDER.NODE) $(DTRACE_PROVIDER_OBJS)
@@ -271,7 +262,7 @@ UUID.NODE =	$(UUID_OBJDIR)/uuid.node
 
 $(UUID.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-write-strings -Wno-sign-compare
 $(UUID.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
-$(UUID.NODE) :	CXXFLAGS +=	$(NODE_CFLAGS)
+$(UUID.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
 $(UUID.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 $(UUID.NODE) :	LIBS +=		-luuid
 
@@ -282,9 +273,12 @@ NOMKNOD_SRC =		nomknod.c
 NOMKNOD_SO =		nomknod.so
 NOMKNOD_32 =		$(NOMKNOD_SO).32
 NOMKNOD_64 =		$(NOMKNOD_SO).64
-NOMKNOD_32_FLAGS =	-m32
-NOMKNOD_64_FLAGS =	-m64
-NOMKNOD_FLAGS =		-nostdlib $(PIC_FLAGS) $(SHARED_FLAGS)
+
+NOMKNOD_FLAGS =		-nostdlib $(PIC_FLAGS) $(SHARED_FLAGS) \
+			-Wno-unused-parameter
+
+$(NOMKNOD_32) :		CFLAGS += -m32 $(NOMKNOD_FLAGS)
+$(NOMKNOD_64) :		CFLAGS += -m64 $(NOMKNOD_FLAGS)
 NOMKNOD_TARGS =		$(NOMKNOD_32) $(NOMKNOD_64)
 NOMKNOD_ROOT =		$(DESTDIR)/usr/img/lib
 NOMKNOD_ROOT64 =	$(DESTDIR)/usr/img/lib/amd64
@@ -337,21 +331,16 @@ SMARTDC_LIB_TARGETS = \
 #
 SUBDIRS = dockerinit routeinfo lx_hook_postnet
 
-SUBDIRS_ENV = \
-	CTFCONVERT=$(CTFCONVERT) \
-	CTFMERGE=$(CTFMERGE) \
-	DESTDIR=$(DESTDIR)
-
 all : TARGET = all
 clean : TARGET = clean
 install : TARGET = install
-check : TARGET = lint
+check : TARGET = check
 
 all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm sysevent \
 	$(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) $(SUBDIRS)
 
 $(SUBDIRS): FRC
-	@cd $@; pwd; $(MAKE) $(SUBDIRS_ENV) $(TARGET)
+	@cd $@; pwd; $(MAKE) $(TARGET)
 
 install: all $(SUBDIRS)
 	mkdir -p $(DESTDIR)/usr/bin
@@ -447,8 +436,8 @@ install: all $(SUBDIRS)
 	    > $(DESTDIR)/usr/fw/node_modules/bunyan.js
 	mkdir -m 0755 -p $(DESTDIR)/usr/lib/sdc
 	cp -p net-boot-config $(DESTDIR)/usr/lib/sdc
-	cd routeinfo && $(MAKE) install $(SUBDIRS_ENV)
-	cd lx_hook_postnet && $(MAKE) install $(SUBDIRS_ENV)
+	cd routeinfo && $(MAKE) install
+	cd lx_hook_postnet && $(MAKE) install
 	mkdir -p $(SYSINFO_MOD_DIR)
 	rm -f $(SYSINFO_MOD_DIR)/sysinfo_mod.so
 	/usr/sbin/install -f $(SYSINFO_MOD_DIR) -m 0555 sysinfo_mod.so
@@ -465,7 +454,7 @@ check: $(JSLINT) $(SUBDIRS)
 	@echo "==> Running cstyle..."
 	@# cstyle doesn't echo as it goes so we add an echo to each line below
 	@(for file in $(C_CHECK_TARGETS); do \
-		echo $(PWD)/$$file; \
+		echo $(BASE)/$$file; \
 		$(CSTYLE) $$file; \
 		[[ $$? == "0" ]] || exit 1; \
 	done)
@@ -476,12 +465,12 @@ check: $(JSLINT) $(SUBDIRS)
 	@printf "\n==> Running jsstyle...\n"
 	@# jsstyle doesn't echo as it goes so we add an echo to each line below
 	(for file in $(JS_CHECK_TARGETS); do \
-		echo $(PWD)/$$file; \
+		echo $(BASE)/$$file; \
 		$(JSSTYLE) $(JSSTYLE_OPTS) $$file; \
 		[[ $$? == "0" ]] || exit 1; \
 	done)
 	(for file in $(JS_CHECK_OLDSKOOL_TARGETS); do \
-		echo $(PWD)/$$file; \
+		echo $(BASE)/$$file; \
 		$(JSSTYLE) $(JSSTYLE_OLDSKOOL_OPTS) $$file; \
 		[[ $$? == "0" ]] || exit 1; \
 	done)
@@ -556,8 +545,8 @@ vm/node_modules/props.js: vm/node_modules/proptable.js vm/node_modules/expander.
 # add-on and see the comment and definitions for EXPAT.NODE above as well.
 #
 $(EXPAT.NODE): node-expat/node-expat.cc
-	@mkdir -p $(EXPAT_OBJDIR)
-	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
+	@mkdir -p $(@D)
+	$(LINK.cc) $^ $(LIBS)
 
 #
 # node-lockfd and node-zonename are built using the v8plus-based Makefile
@@ -570,14 +559,14 @@ $(LOCKFD_BINDING.NODE): FRC
 	LD_OPTIONS=-lc \
 	$(MAKE) \
 		$(V8PLUS_SUBDIR_ENV) \
-		V8PLUS=$(PWD)/$(LOCKFD_V8PLUS_DIR)
+		V8PLUS=$(BASE)/$(LOCKFD_V8PLUS_DIR)
 
 $(ZONENAME_BINDING.NODE): FRC
 	cd $(ZONENAME_SRC_DIR) && \
 	LD_OPTIONS=-lc \
 	$(MAKE) \
 		$(V8PLUS_SUBDIR_ENV) \
-		V8PLUS=$(PWD)/$(ZONENAME_V8PLUS_DIR)
+		V8PLUS=$(BASE)/$(ZONENAME_V8PLUS_DIR)
 
 #
 # The next two are used to build libusdt files into
@@ -585,37 +574,34 @@ $(ZONENAME_BINDING.NODE): FRC
 #
 $(DTRACE_PROVIDER_OBJDIR)/%.o: $(DTRACE_PROVIDER_SRCDIR)/%.c \
 	    $(DTRACE_PROVIDER_HDRS)
-	@mkdir -p $(DTRACE_PROVIDER_OBJDIR)/libusdt
-	$(GCC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+	@mkdir -p $(@D)
+	$(COMPILE.c) $<
 
 $(DTRACE_PROVIDER_OBJDIR)/%.o: $(DTRACE_PROVIDER_SRCDIR)/%.s
-	@mkdir -p $(DTRACE_PROVIDER_OBJDIR)/libusdt
-	$(GCC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+	@mkdir -p $(@D)
+	$(COMPILE.c) $^
 
 $(DTRACE_PROVIDER_OBJDIR)/%.o: $(DTRACE_PROVIDER_SRCDIR)/%.cc \
 	    $(DTRACE_PROVIDER_HDRS)
-	@mkdir -p $(DTRACE_PROVIDER_OBJDIR)
-	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ -c $<
+	@mkdir -p $(@D)
+	$(COMPILE.cc) $<
 
 $(DTRACE_PROVIDER.NODE): $(DTRACE_PROVIDER_OBJS)
-	@mkdir -p $(DTRACE_PROVIDER_OBJDIR)
-	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $(DTRACE_PROVIDER_OBJS) $(LIBS)
+	@mkdir -p $(@D)
+	$(LINK.cc) $^ $(LIBS)
 
 $(KSTAT.NODE): node-kstat/kstat.cc
-	@mkdir -p $(KSTAT_OBJDIR)
-	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
+	@mkdir -p $(@D)
+	$(LINK.cc) $^ $(LIBS)
 
 $(UUID.NODE): $(UUID_SRCDIR)/uuid.cc
-	@mkdir -p $(UUID_OBJDIR)
-	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
+	@mkdir -p $(@D)
+	$(LINK.cc) $^ $(LIBS)
 
 $(NOMKNOD_32):	$(NOMKNOD_SRC)
-	$(GCC) $(NOMKNOD_FLAGS) $(NOMKNOD_32_FLAGS) -o $@ $<
+	$(LINK.c) $^
 
 $(NOMKNOD_64):	$(NOMKNOD_SRC)
-	$(GCC) $(NOMKNOD_FLAGS) $(NOMKNOD_64_FLAGS) -o $@ $<
-
-$(SYSINFO_MOD): $(SYSINFO_MOD_SRC)
-	$(GCC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+	$(LINK.c) $^
 
 FRC:

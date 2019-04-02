@@ -1,7 +1,7 @@
 #! /usr/node/bin/node
 
 /*
- * Copyright 2012 Joyent, Inc.  All rights reserved.
+ * Copyright 2019 Joyent, Inc.  All rights reserved.
  */
 
 var fs = require('fs');
@@ -27,11 +27,15 @@ var config;
 var pool;
 
 var option;
+var opt_e = false;
 var opt_f = false;
-var parser = new getopt.BasicParser('f', process.argv);
+var parser = new getopt.BasicParser('ef', process.argv);
 
 while ((option = parser.getopt()) !== undefined && !option.error) {
-	switch (option.option) {
+    switch (option.option) {
+	case 'e':
+		opt_e = true;
+		break;
 	case 'f':
 		opt_f = true;
 		break;
@@ -51,7 +55,7 @@ pool = process.argv[parser.optind()];
 json = fs.readFileSync(process.argv[parser.optind() + 1], 'utf8');
 config = JSON.parse(json);
 
-zfs.zpool.create(pool, config, opt_f, function (err) {
+zfs.zpool.create(pool, config, opt_f, opt_e, function (err) {
 	if (err) {
 		fatal('pool creation failed: ' + err);
 	}

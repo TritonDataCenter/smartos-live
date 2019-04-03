@@ -717,11 +717,10 @@ tested this on older platform images?
 You can interact with the SmartOS community in a number of ways. This
 includes:
 
-* The *smartos-discuss* mailing list. Once you [subscribe to the
-  list](https://www.listbox.com/subscribe/?list_id=184463), you can send mail to
-  the list address: smartos-discuss@lists.smartdatacenter.org.
-  The mailing list archives are also [available on the
-  web](https://www.listbox.com/member/archive/184463/=now).
+* The *smartos-discuss*
+  [mailing list](https://smartos.topicbox.com/groups/smartos-discuss).
+  If you wish to send mail to the list you'll need to join, but you can view
+  and search the archives online without being a member.
 
 * In the *#smartos* IRC channel on the [Freenode IRC
   network](https://freenode.net/).

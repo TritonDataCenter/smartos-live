@@ -37,4 +37,4 @@ format_image: $(OBJS)
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
 clean:
-	rm $(TARGETS) $(OBJS)
+	rm -f $(TARGETS) $(OBJS)

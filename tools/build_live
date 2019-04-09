@@ -67,14 +67,15 @@ bi_mnt_usr=
 
 bi_root_size=
 
+bi_root_pw=
+
 bi_log=
 
 
 function usage
 {
-	cat <<-USAGE
-	Usage: $bi_arg0 -m MANIFEST_FILE -o OUTPUT_DIR { INPUT_DIR ... }
-	USAGE
+	printf "Usage: %s [-p root_password] -m MANIFEST_FILE " "$bi_arg0"
+	printf -- "-o OUTPUTDIR { INPUT_DIR ... }\n"
 	exit 2
 }
 
@@ -349,15 +350,20 @@ function bi_create_password
 	local shadow="$bi_mnt_root/etc/shadow"
 	local stash="$bi_out_dir/$bi_prefix/root.password"
 
-	bi_emit_start 'Setting random "root" password'
+	if [[ -z "$bi_root_pw" ]]; then
+		bi_emit_start 'Setting random "root" password'
 
-	#
-	# Generate a random root password.
-	#
-	if ! cp_password=$("$pwgen" -B -c -n 16 1) ||
-	    [[ -z $cp_password ]]; then
-		fail 'unable to generate root password.'
+		#
+		# Generate a random root password.
+		#
+		if ! cp_password=$("$pwgen" -B -c -n 16 1) ||
+		    [[ -z $cp_password ]]; then
+			fail 'unable to generate root password.'
+		fi
+	else
+		cp_password="$bi_root_pw"
 	fi
+
 	bi_emit_info 'Password' "$cp_password"
 
 	#
@@ -798,13 +804,16 @@ function bi_safe_update_symlink
 #
 # Process options:
 #
-while getopts "m:o:" c $@; do
+while getopts "m:o:p:" c $@; do
 	case "$c" in
 	m)
 		bi_manifest=$OPTARG
 		;;
 	o)
 		bi_out_dir=$OPTARG
+		;;
+	p)
+		bi_root_pw="$OPTARG"
 		;;
 	*)
 		usage

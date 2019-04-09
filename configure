@@ -466,13 +466,15 @@ read -r -d '' usage <<EOF
 		this message
 	-p gcc4
 		primary compiler version [default: gcc4]
+	-P password
+		platform root password [default: randomly chosen]
 	-r
 		full strap build (no cache) [default: no]
 	-s gcc7
 		shadow compilers, comma delimited (gcc7,gcc#) [default: none]
 EOF
 
-while getopts "cdhp:rs:" arg; do
+while getopts "cdhp:P:rs:" arg; do
 	case $arg in
 	c)
 		ILLUMOS_CLOBBER=yes ;;
@@ -491,6 +493,8 @@ while getopts "cdhp:rs:" arg; do
 	p)
 		PRIMARY_COMPILER=$OPTARG
 		FORCE_STRAP_REBUILD=yes ;;
+	P)
+		PLATFORM_PASSWORD="$OPTARG" ;;
 	r)
 		FORCE_STRAP_REBUILD=yes ;;
 	s)
@@ -523,6 +527,9 @@ PRIMARY_COMPILER_VER=$PRIMARY_COMPILER_VER
 SHADOW_COMPILERS=$SHADOW_COMPILERS
 HOST_GCC4_PREFIX=$HOST_GCC4_PREFIX
 EOF
+
+[[ -n "$PLATFORM_PASSWORD" ]] && \
+	echo "PLATFORM_PASSWORD=$PLATFORM_PASSWORD" >> build.env
 
 echo "Doing pre-flight checks... \c "
 check_loc

@@ -125,6 +125,10 @@ IMAGES_VERSION :=	images-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
 IMAGES_TARBALL :=	output/$(IMAGES_VERSION).tgz
 
+ifdef PLATFORM_PASSWORD
+PLATFORM_PASSWORD_OPT=-p $(PLATFORM_PASSWORD)
+endif
+
 TOOLS_TARGETS = \
 	$(MANCHECK) \
 	$(MANCF) \
@@ -141,8 +145,8 @@ live: world manifest mancheck_conf boot sdcman $(TOOLS_TARGETS) $(MANCF_FILE)
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
 	ALTCTFCONVERT=$(ALTCTFCONVERT) ./tools/build_live \
-	    -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output $(OVERLAYS) $(ROOT)/proto \
-	    $(ROOT)/man/man
+	    -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output $(PLATFORM_PASSWORD_OPT) \
+	    $(OVERLAYS) $(ROOT)/proto $(ROOT)/man/man
 
 boot: $(BOOT_TARBALL)
 

@@ -755,6 +755,12 @@ promptpool()
 						bootdisk = 1;
 				}
 				close(cmd);
+				cmd = "fstyp -v /dev/dsk/" $2 "s2 2>/dev/null";
+				while ((cmd | getline) > 0) {
+					if ($0 ~ /^Volume Label:/ && $3 == "SMARTOSBOOT")
+						bootdisk = 1;
+				}
+				close(cmd);
 				if (bootdisk)
 					next;
 				print diskinfo;

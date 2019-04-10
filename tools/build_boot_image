@@ -171,8 +171,12 @@ function populate_root()
 	readonly shadow=\'\$5\$2HOHRnK3\$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA\'
 
 	case "$bi_console" in
-	text)	console="text" ;;
-	tty*)	console="$bi_console,text" ;;
+	text) console="text,ttya,ttyb,ttyc,ttyd" ;;
+	ttya) console="ttya,ttyb,ttyc,ttyd,text" ;;
+	ttyb) console="ttyb,ttya,ttyc,ttyd,text" ;;
+	ttyc) console="ttyc,ttya,ttyb,ttyd,text" ;;
+	ttyd) console="ttyd,ttya,ttyb,ttyc,text" ;;
+
 	*)	echo "unknown console $bi_console" 2>&1
 		exit 1 ;;
 	esac

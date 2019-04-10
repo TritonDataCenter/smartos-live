@@ -270,9 +270,9 @@ to the VGA console. To make an ISO or USB image you can run from the
 root of the smartos-live repository:
 
 ```
-$ ./tools/build_iso
-$ ./tools/build_usb
-$ ./tools/build_iso -c ttyb # sets the default console to ttyb
+$ ./tools/build_boot_image -r $ROOT
+$ ./tools/build_boot_image -I -r $ROOT
+$ ./tools/build_boot_image -I -r $ROOT -c ttyb # sets the default console to ttyb
 ```
 
 These will create images in the `output-usb` and `output-iso`

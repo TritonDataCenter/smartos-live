@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2019, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * * *
  *
@@ -261,6 +261,7 @@ test('create image from bhyve vm', function (t) {
 
     var payloadCommon = {
         brand: 'bhyve',
+        cpu_cap: 100,
         autoboot: true,
         do_not_inventory: true,
         ram: 512,

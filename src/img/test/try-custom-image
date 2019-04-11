@@ -71,6 +71,7 @@ vmadm create <<EOM
 {
   "uuid": "$vm_uuid",
   "brand": "joyent",
+  "cpu_cap": 100,
   "zfs_io_priority": 30,
   "quota": 20,
   "image_uuid": "$image_uuid",

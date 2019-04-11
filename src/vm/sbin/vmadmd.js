@@ -2606,6 +2606,14 @@ function main()
                                 }
                             }
 
+                            if (upgrade_payload.update_nics.length === 0) {
+                                log.debug({
+                                    vm_uuid: vmobj.uuid
+                                }, 'no nics to update, skipping VM.update()');
+                                finishUpgrade(vmobj);
+                                return;
+                            }
+
                             log.info('updating ' + vmobj.uuid + ' with: '
                                 + JSON.stringify(upgrade_payload));
 

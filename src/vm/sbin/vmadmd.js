@@ -903,8 +903,11 @@ function updateZoneStatus(ev)
         || (ev.oldstate === 'configured' && ev.newstate === 'incomplete')
         || (ev.oldstate === 'incomplete' && ev.newstate === 'installed')) {
         // just log it
-        log.debug({old: ev.oldstate, new: ev.newstate},
-            'ignoring state transitions before first boot');
+        log.debug({
+            old: ev.oldstate,
+            new: ev.newstate,
+            vm: ev.zonename
+        }, 'ignoring state transitions before first boot');
         return;
     }
 

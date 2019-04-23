@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright (c) 2019, Joyent, Inc.
  *
  */
 
@@ -1286,7 +1286,7 @@ test('fill up zoneroot', function (t) {
     execFile('/usr/bin/dd', [
         'if=/dev/zero',
         'of=/zones/' + vm_uuid + '/root/zeros',
-        'bs=1M'
+        'bs=37M' // Use a value that doesn't go evenly into the 1GB VM quota.
     ], function (err, stdout, stderr) {
         var match = stderr.match(/dd: unexpected short write, wrote/);
         t.ok(match, 'expected short write'

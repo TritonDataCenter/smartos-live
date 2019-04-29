@@ -210,7 +210,7 @@ function install_pkgin
 	pkglist="$pkglist flex libxslt openjdk7 nodejs"
 	pkglist="$pkglist p5-XML-Parser gettext python27 py27-expat"
 	pkglist="$pkglist coreutils gsed pkg_alternatives cdrtools"
-	pkglist="$pkglist py27-sqlite3 nasm pigz"
+	pkglist="$pkglist py27-sqlite3 nasm pigz gcc49"
 
 	for pkg in $pkglist; do
 		if ! pkg_info -qe $pkg; then
@@ -516,6 +516,12 @@ done
 
 PRIMARY_COMPILER_VER=$(echo $PRIMARY_COMPILER | sed 's/^gcc//')
 
+# To allow building on base-64-lts 18.4 systems where
+# /opt/local/bin/gcc is incapable of building our local copy
+# of gcc 4, specify where to find gcc49 which gets installed
+# during 'install_pkgin'.
+HOST_GCC4_PREFIX=/opt/local/gcc49/bin
+
 cat >build.env <<EOF
 FORCE_STRAP_REBUILD=$FORCE_STRAP_REBUILD
 ILLUMOS_CLOBBER=$ILLUMOS_CLOBBER
@@ -523,6 +529,7 @@ ILLUMOS_ENABLE_DEBUG=$ILLUMOS_ENABLE_DEBUG
 PRIMARY_COMPILER=$PRIMARY_COMPILER
 PRIMARY_COMPILER_VER=$PRIMARY_COMPILER_VER
 SHADOW_COMPILERS=$SHADOW_COMPILERS
+HOST_GCC4_PREFIX=$HOST_GCC4_PREFIX
 EOF
 
 echo "Doing pre-flight checks... \c "

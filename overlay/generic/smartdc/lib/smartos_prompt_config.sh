@@ -1005,6 +1005,14 @@ create_zpools()
 	touch /${SYS_ZPOOL}/.system_pool
 }
 
+update_root_password()
+{
+	[[ -z "$1" ]] && return 0
+	(umask 066; sed -e "s|^root:[^\:]*:|root:$1:|" /etc/shadow \
+		> /etc/shadow.tmp) && \
+	mv /etc/shadow.tmp "$2"
+}
+
 trap "" SIGINT
 
 while getopts "f:" opt
@@ -1048,10 +1056,15 @@ if [[ $nic_cnt -lt 1 ]]; then
 	exit 0
 fi
 
+run_sshd=$(/bin/bootparams | grep "^run_sshd=" | sed "s,^[^=]*=,,")
+
 # Don't do an 'ifconfig -a' - this causes some nics (bnx) to not
 # work when combined with the later dladm commands
 for iface in $(dladm show-phys -pmo link); do
 	ifconfig $iface plumb 2>/dev/null
+	if [[ "$run_sshd" = "true" ]]; then
+		ifconfig $iface dhcp
+	fi
 done
 updatenicstates
 
@@ -1060,6 +1073,18 @@ export TERM=xterm-color
 trap sig_doshell SIGINT
 
 printheader "Joyent"
+
+if [[ "$run_sshd" = "true" ]] && \
+   [[ -z $(/usr/bin/ps -e -o comm | /usr/bin/grep sshd) ]]; then
+	/usr/bin/ssh-keygen -A
+	/usr/bin/ssh-keygen -l -f /var/ssh/ssh_host_dsa_key
+	/usr/bin/ssh-keygen -l -f /var/ssh/ssh_host_rsa_key
+	/usr/bin/ssh-keygen -l -f /var/ssh/ssh_host_ecdsa_key
+	/usr/bin/ssh-keygen -l -f /var/ssh/ssh_host_ed25519_key
+
+	update_root_password "$(/bin/bootparams | grep "^root_shadow=" | sed "s,^[^=]*=,,")" /etc/shadow
+	/usr/lib/ssh/sshd
+fi
 
 message="
 You must answer the following questions to configure your SmartOS node.
@@ -1329,9 +1354,7 @@ create_zpools "$DISK_LAYOUT"
 mv $tmp_config /usbkey/config || fatal "failed to persist configuration"
 
 # set the root password
-root_shadow=$(/usr/lib/cryptpass "$root_shadow")
-sed -e "s|^root:[^\:]*:|root:${root_shadow}:|" /etc/shadow > /usbkey/shadow \
-      && chmod 400 /usbkey/shadow
+update_root_password "$(/usr/lib/cryptpass "$root_shadow")" /usbkey/shadow
 [[ $? -eq 0 ]] || fatal "failed to preserve root pasword"
 
 cp -rp /etc/ssh /usbkey/ssh || fatal "failed to set up preserve host keys"

@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2019, Joyent, Inc.
+ * Copyright 2019 Joyent, Inc.
  *
  */
 
@@ -152,7 +152,7 @@ function usage(message, code)
     out('console <uuid>');
     out('delete <uuid>');
     out('delete-snapshot <uuid> <snapname>');
-    out('events [-fjr] [uuid]');
+    out('events [-fjr] [<uuid>]');
     out('get <uuid>');
     out('info <uuid> [type,...]');
     out('install <uuid>');

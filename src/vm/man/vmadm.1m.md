@@ -94,7 +94,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         See the 'SNAPSHOTS' section below for some more details on how to use
         these snapshots, and their restrictions.
 
-      events [-fjr] [uuid]
+      events [-fjr] [<uuid>]
 
         Output events seen for a given VM (all VMs on the system if the uuid
         argument is omitted).  The command will run indefinitely outputting a
@@ -2745,4 +2745,3 @@ Some of the vmadm commands depend on the vmadmd(1M) service:
 If the vmadmd service is stopped while the vmadm utility is running, the vmadm
 command behaviour will be undefined. Additionally if the service is not
 running, some commands will be unavailable.
-

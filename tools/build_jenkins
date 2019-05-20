@@ -6,7 +6,7 @@
 #
 
 #
-# Copyright (c) 2019, Joyent, Inc.
+# Copyright 2019 Joyent, Inc.
 #
 
 #
@@ -24,7 +24,7 @@ set -o pipefail
 
 # Allow users to override the Manta path where we publish artifacts
 if [[ -z "${ENGBLD_DEST_OUT_PATH}" ]]; then
-    export ENGBLD_DEST_OUT_PATH=/stor/builds
+    export ENGBLD_DEST_OUT_PATH=/public/builds
 fi
 
 export TIMESTAMP=$(TZ=UTC /bin/date "+%Y%m%dT%H%M%SZ")

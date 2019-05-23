@@ -13,6 +13,7 @@
     ],
     "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
     "ram": 128,
+    "cpu_cap": 100,
     "tags": {
         "blocksmtp": true
     },

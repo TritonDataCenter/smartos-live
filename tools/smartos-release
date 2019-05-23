@@ -6,7 +6,7 @@
 #
 
 #
-# Copyright 2019, Joyent, Inc.
+# Copyright 2019 Joyent, Inc.
 #
 
 #
@@ -91,7 +91,7 @@ mfind ${SOURCE} -t o | while read OBJECT; do
 done
 
 echo "Updating top level ${SMARTOS} snaplinks"
-mln ${SOURCE}/platform-${TIMESTAMP}.tgz ${SMARTOS}/platform-latest.tgz
+mln ${SOURCE}/platform-${BRANCH}-${TIMESTAMP}.tgz ${SMARTOS}/platform-latest.tgz
 mln ${SOURCE}/smartos-${TIMESTAMP}.iso ${SMARTOS}/smartos-latest.iso
 mln ${SOURCE}/smartos-${TIMESTAMP}-USB.img.gz ${SMARTOS}/smartos-latest-USB.img.gz
 mln ${SOURCE}/smartos-${TIMESTAMP}.vmwarevm.tar.gz ${SMARTOS}/smartos-latest.vmwarevm.tar.gz

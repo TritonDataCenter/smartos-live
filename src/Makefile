@@ -475,6 +475,7 @@ check: $(JSLINT) $(SUBDIRS)
 		$(JSSTYLE) $(JSSTYLE_OLDSKOOL_OPTS) $$file; \
 		[[ $$? == "0" ]] || exit 1; \
 	done)
+	@$(MAKE) -C fw check
 	@printf "\nJS style ok!\n"
 
 .PHONY: manifest

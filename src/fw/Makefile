@@ -85,7 +85,7 @@ jsstyle:
 	@printf "\n==> Running jsstyle...\n"
 	@# jsstyle doesn't echo as it goes so we add an echo to each line below
 	@(for file in $(JS_CHECK_TARGETS); do \
-		echo $(PWD)/$$file; \
+		echo $(TOP)/$$file; \
 		$(JSSTYLE) $(JSSTYLE_OPTS) $$file; \
 		[[ $$? == "0" ]] || exit 1; \
 	done)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * mocks for tests
  */
@@ -43,7 +43,8 @@ var MOCKS = {
         rename: rename,
         link: link,
         unlink: unlink,
-        writeFile: writeFile
+        writeFile: writeFile,
+        existsSync: existsSync
     },
     './locker': {
         acquireSharedLock: acquireLock,
@@ -52,8 +53,6 @@ var MOCKS = {
     },
     mkdirp: mkdirp
 };
-var ORIG_PROCESS;
-var PID;
 
 
 
@@ -238,6 +237,12 @@ function execFile(path, args, opts, cb) {
 
 // --- fs
 
+function existsSync(file) {
+    var p = _splitFile(file);
+    var root = VALUES.fs;
+
+    return hasKey(root, p.dir) && hasKey(root[p.dir], p.file);
+}
 
 function stat(file, cb) {
     var p = _splitFile(file);
@@ -357,16 +362,6 @@ mkdirp.sync = function mkdirpSync(dir) {
     }
     return;
 };
-
-
-
-// --- path
-
-
-
-function basename(file) {
-    return file;
-}
 
 
 

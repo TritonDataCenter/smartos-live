@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * fwadm update unit tests
  */
@@ -30,12 +30,8 @@ var clone = require('clone');
 var fw;
 var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
-var mod_obj = require('../../lib/util/obj');
 var mod_uuid = require('uuid');
 var util = require('util');
-var util_vm = require('../../lib/util/vm');
-
-var mergeObjects = mod_obj.mergeObjects;
 
 
 
@@ -46,7 +42,6 @@ var mergeObjects = mod_obj.mergeObjects;
 // Set this to any of the exports in this file to only run that test,
 // plus setup and teardown
 var runOne;
-var printVMs = false;
 
 
 
@@ -115,6 +110,7 @@ exports['update non-existent rule'] = function (t) {
 
             t.ok(res.rules[0].version, 'rule has a version');
             expRules[0].version = res.rules[0].version;
+            expRules[0].log = false;
 
             t.deepEqual(res, {
                 rules: expRules,
@@ -191,6 +187,7 @@ exports['description and created_by'] = function (t) {
                 return cb();
             }
 
+            expRules[0].log = false;
             t.deepEqual(res, {
                 rules: expRules,
                 vms: [ payload.vms[0].uuid ]
@@ -212,6 +209,7 @@ exports['description and created_by'] = function (t) {
         payload.rules[0].description = 'two';
 
         expRules = [clone(payload.rules[0])];
+        expRules[0].log = false;
         fw.update(payload, function (err, res) {
             t.ifError(err);
             if (err) {
@@ -298,6 +296,7 @@ exports['FWAPI-237: Ignore rules that don\'t change'] = function (t) {
 
                 t.ok(res.rules[i].version, 'rule has a version');
                 expRules[i].version = res.rules[i].version;
+                expRules[i].log = false;
             }
 
             t.deepEqual(helpers.sortRes(res), helpers.sortRes({
@@ -363,6 +362,7 @@ exports['FWAPI-237: Ignore rules that don\'t change'] = function (t) {
                 return cb();
             }
 
+            updatePayload.rules[0].log = false;
             // This rule should only affect the VM that it mentions.
             t.deepEqual(helpers.sortRes(res), {
                 vms: [ vm1.uuid ],
@@ -430,6 +430,7 @@ exports['FWAPI-237: Ignore rules that don\'t change'] = function (t) {
             if (err) {
                 return cb();
             }
+            addPayload.rules[0].log = false;
 
             t.deepEqual(helpers.sortRes(res), {
                 vms: [ vm1.uuid, vm2.uuid, vm3.uuid ],

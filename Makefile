@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright (c) 2019, Joyent, Inc.
+# Copyright 2019 Joyent, Inc.
 #
 
 #
@@ -506,6 +506,9 @@ common-platform-publish:
 	    fi; \
 	done
 	echo $(PLATFORM_STAMP) > latest-build-stamp
+	./tools/build_changelog
+	cp output/gitstatus.json $(PLATFORM_BITS_DIR)
+	cp output/changelog.txt $(PLATFORM_BITS_DIR)
 
 .PHONY: triton-platform-publish
 triton-platform-publish: common-platform-publish
@@ -582,7 +585,6 @@ platform-bits-upload-latest:
 #
 .PHONY: smartos-build
 smartos-build:
-	./tools/build_changelog
 	./tools/build_boot_image -I -r $(ROOT)
 	./tools/build_boot_image -r $(ROOT)
 	./tools/build_vmware -r $(ROOT)
@@ -591,7 +593,6 @@ smartos-build:
 smartos-publish:
 	@echo "# Publish SmartOS platform $(PLATFORM_TIMESTAMP) images"
 	mkdir -p $(PLATFORM_BITS_DIR)
-	cp output/changelog.txt $(PLATFORM_BITS_DIR)
 	cp output/platform-$(PLATFORM_TIMESTAMP)/root.password \
 	    $(PLATFORM_BITS_DIR)/SINGLE_USER_ROOT_PASSWORD.txt
 	cp output-iso/platform-$(PLATFORM_TIMESTAMP).iso \

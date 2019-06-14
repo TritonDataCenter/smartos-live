@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright (c) 2018, Joyent, Inc.
+# Copyright 2019 Joyent, Inc.
 #
 
 #
@@ -423,6 +423,7 @@ function bi_gen_etcrelease
 	    >"$bi_archive.gitstatus"; then
 		fail "could not generate gitstatus file"
 	fi
+	cp "$bi_archive.gitstatus" "$bi_out_dir/gitstatus.json"
 
 	bi_emit_done
 }

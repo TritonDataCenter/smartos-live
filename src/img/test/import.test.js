@@ -54,11 +54,9 @@ var WRKDIR = '/var/tmp/img-test-import';
 var CACHEDIR = '/var/tmp/img-test-cache';
 
 /*
- * Pick an image that (a) exists on datasets.jo (they *do* occassionally get
- * deprecated) and (b) is relatively small and (c) is unlikely to collide with
- * current usage.
- *
- * Also don't collide with TEST_IMAGE_UUID used in "dsapi.test.js".
+ * Pick an image that (a) exists on images.joyent.com (they *do* occassionally
+ * get deprecated) and (b) is relatively small and (c) is unlikely to collide
+ * with current usage.
  */
 // minimal-32@15.2.0
 var TEST_IMAGE_UUID = '0764d78e-3472-11e5-8949-4f31abea4e05';

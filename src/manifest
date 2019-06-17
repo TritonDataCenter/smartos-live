@@ -427,7 +427,6 @@ f usr/img/test/IMG.test.js 0444 root bin
 f usr/img/test/basics.test.js 0444 root bin
 f usr/img/test/create.test.js 0444 root bin
 f usr/img/test/docker.test.js 0444 root bin
-f usr/img/test/dsapi.test.js 0444 root bin
 f usr/img/test/import.test.js 0444 root bin
 f usr/img/test/mk-custom-image 0555 root bin
 f usr/img/test/runtests 0555 root bin

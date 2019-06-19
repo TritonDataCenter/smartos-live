@@ -31,8 +31,9 @@ conf_pkgsrcurl="https://download.joyent.com/pub/build/pkgsrc"
 # Build defaults which are unlikely to change, but may be overridden by
 # configure-build.
 #
-if [[ ! -f configure-build ]]; then
-	source default.configure-build
+source default.configure-build
+if [[ -f configure-build ]]; then
+	source configure-build || fatal "failed to source configure-build"
 fi
 
 #
@@ -56,13 +57,6 @@ function fatal
 	[[ -z "$msg" ]] && msg="failed"
 	echo "$conf_arg0: $msg" >&2
 	exit 1
-}
-
-function source_vars
-{
-	if [[ -f "configure-build" ]]; then
-		source "$file" || fatal "failed to source configure-build"
-	fi
 }
 
 function check_loc
@@ -477,8 +471,6 @@ read -r -d '' usage <<EOF
 	-s gcc7
 		shadow compilers, comma delimited (gcc7,gcc#) [default: none]
 EOF
-
-source_vars
 
 while getopts "cdhp:rs:" arg; do
 	case $arg in

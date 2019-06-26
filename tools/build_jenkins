@@ -173,12 +173,12 @@ case "${PLATFORM_BUILD_FLAVOR}" in
         ;;
 esac
 
-# Update Manta snaplinks for smartos, only if this is a release build
-case "${PLATFORM_BUILD_FLAVOR}" in
-    'smartos'|'triton-and-smartos')
-        if [[ -n "${ENGBLD_RELEASE}" ]]; then
+# Update Manta snaplinks for smartos, only if this is a non-debug release build
+if [[ -z "${ENGBLD_CONFIGURE_DEBUG_ARG}" && -n "${ENGBLD_RELEASE}" ]]; then
+    case "${PLATFORM_BUILD_FLAVOR}" in
+        'smartos'|'triton-and-smartos')
             log_cmd env TRACE=1 ./tools/smartos-release \
                 "${BRANCH}" "${TIMESTAMP}"
-        fi
-        ;;
-esac
+            ;;
+    esac
+fi

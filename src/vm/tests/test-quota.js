@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright 2019 Joyent, Inc.
  *
  */
 
@@ -391,52 +391,57 @@ function checkZfs(opts, callback) {
             case 'bhyve':
                 zvol = zoneroot + '/disk0';
 
-                var expReservationsSize =
-                    vmtest.zvol_volsize_to_reservation(
-                        datasetValues[zvol].volsize,
-                        datasetValues[zvol].volblocksize,
-                        datasetValues[zvol].copies);
+                VM.volsizeToRefreservation(zvol, datasetValues[zvol],
+                    createLogger(),
+                    function gotRefres(err2, expReservationsSize) {
 
-                var zvRefreservation =
-                    datasetValues[zvol].refreservation;
+                    if (err2) {
+                        t.ok(false, 'error getting refreservation: ' + err2);
+                        callback(err2);
+                        return;
+                    }
 
-                var expQuota;
-                if (opts.payload.hasOwnProperty('flexible_disk_size')) {
-                    var flexsize = opts.payload.flexible_disk_size;
-                    t.ok(vmobj.flexible_disk_size === flexsize,
-                        'vmobj.flexible_disk_size is ' + flexsize);
-                    expQuota = flexsize * 1024 * 1024 + zrRefreservation
-                        + datasetValues[zvol].refreservation
-                        - datasetValues[zvol].volsize;
-                } else {
-                    t.ok(!vmobj.hasOwnProperty('flexible_disk_size'),
-                        'vmobj does not have flexible_disk_size');
-                    expQuota = zvRefreservation + zrRefquota;
-                }
+                    var zvRefreservation = datasetValues[zvol].refreservation;
 
-                t.equal(
-                    zrRefquota / 1024 / 1024 / 1024,
-                    expected.quota, 'bhyve quota uses refquota');
+                    var expQuota;
+                    if (opts.payload.hasOwnProperty('flexible_disk_size')) {
+                        var flexsize = opts.payload.flexible_disk_size;
+                        t.ok(vmobj.flexible_disk_size === flexsize,
+                            'vmobj.flexible_disk_size is ' + flexsize);
+                        expQuota = flexsize * 1024 * 1024 + zrRefreservation
+                            + datasetValues[zvol].refreservation
+                            - datasetValues[zvol].volsize;
+                    } else {
+                        t.ok(!vmobj.hasOwnProperty('flexible_disk_size'),
+                            'vmobj does not have flexible_disk_size');
+                        expQuota = zvRefreservation + zrRefquota;
+                    }
 
-                t.equal(
-                    zrRefreservation / 1024 / 1024 / 1024,
-                    expected.quota, 'no refreservation set');
+                    t.equal(
+                        zrRefquota / 1024 / 1024 / 1024,
+                        expected.quota, 'bhyve quota uses refquota');
 
-                t.equal(
-                    zvRefreservation,
-                    expReservationsSize,
-                    'zvol refreseration matches expected');
+                    t.equal(
+                        zrRefreservation / 1024 / 1024 / 1024,
+                        expected.quota, 'no refreservation set');
 
-                t.equal(zrQuota, expQuota, 'bhyve zone root quota value');
+                    t.equal(
+                        zvRefreservation,
+                        expReservationsSize,
+                        'zvol refreseration matches expected');
+
+                    t.equal(zrQuota, expQuota, 'bhyve zone root quota value');
+                    callback();
+                });
                 break;
 
             default:
                 t.equal(
                     zrQuota / 1024 / 1024 / 1024,
                     expected.quota, 'quota should match');
+                callback();
                 break;
         }
-        callback();
     });
 }
 

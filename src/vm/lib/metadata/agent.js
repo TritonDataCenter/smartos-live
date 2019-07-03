@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2019, Joyent, Inc.
+ * Copyright 2019 Joyent, Inc.
  *
  *
  * # OVERVIEW
@@ -158,6 +158,10 @@ var PERIODIC_CONNECTION_RETRY = 60 * 1000; // every minute
 
 function noop() {}
 
+function hasKey(obj, key) {
+    return (Object.prototype.hasOwnProperty.call(obj, key));
+}
+
 function closeZoneConnection(zoneConn) {
     assert.object(zoneConn, 'zoneConn');
 
@@ -199,13 +203,13 @@ function elapsedTimer(timer) {
 }
 
 
-var MetadataAgent = module.exports = function (options) {
+function MetadataAgent(options) {
     this.log = options.log;
     this.zlog = {};
     this.zonesDebug = {};
     this.zoneConnections = {};
     this.zoneKvmReconnTimers = {};
-};
+}
 
 /*
  * This function exists to add debug information to the zonesDebug object. That
@@ -1129,6 +1133,13 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
                     returnit(null, vmobj.internal_metadata['operator-script']);
                 } else if (want === 'volumes') {
                     returnit(null, vmobj.internal_metadata['sdc:volumes']);
+                } else if (want.slice(0, 5) === 'tags.') {
+                    want = want.slice(5);
+                    if (vmobj.tags && hasKey(vmobj.tags, want)) {
+                        val = vmobj.tags[want];
+                    }
+
+                    returnit(null, val);
                 } else {
                     val = VM.flatten(vmobj, want);
                     returnit(null, val);
@@ -1439,3 +1450,5 @@ MetadataAgent.prototype.makeMetadataHandler = function (zone, socket) {
         }
     };
 };
+
+module.exports = MetadataAgent;

@@ -25,6 +25,8 @@ d etc/inet 0755 root sys
 f etc/inet/ntp.conf 0644 root sys
 f etc/inet/services 0644 root sys
 f etc/inittab 0644 root sys
+d etc/ipf 0755 root sys
+f etc/ipf/smartos_version 0444 root sys
 f etc/issue 0644 root sys
 f etc/logadm.conf 0644 root sys
 f etc/minor_perm 0644 root sys

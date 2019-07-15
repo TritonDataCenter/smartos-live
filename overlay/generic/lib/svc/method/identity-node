@@ -164,23 +164,33 @@ fi
 # Reloading sysinfo here serves two purposes:
 #   - getting the IP info (which should exist now)
 #   - updating the host info (which we just set)
+#   - ndp needs some time to stabilize to get addrconf
+[ -n "$CONFIG_admin_ip6" ] && sleep 3
 eval $(/usr/bin/sysinfo -f -p | sed -e "s/^/SYSINFO_/")
 
 # Try to add the /etc/hosts entry if we can find an IP
 if [[ -n ${SYSINFO_NIC_admin} ]]; then
-    eval "ipaddr=\${SYSINFO_Network_Interface_${SYSINFO_NIC_admin}_IPv4_Address}"
+    eval "ip4addr=\${SYSINFO_Network_Interface_${SYSINFO_NIC_admin}_IPv4_Address}"
+    eval "ip6addr=\${SYSINFO_Network_Interface_${SYSINFO_NIC_admin}_IPv6_Address}"
 fi
-if [[ -z ${ipaddr} ]]; then
-    ipaddr=$(set | grep "^SYSINFO_Network_Interface_.*_IPv4_Address" | head -n1 | cut -d'=' -f2)
+if [[ -z ${ip4addr} ]]; then
+    ip4addr=$(set | grep "^SYSINFO_Network_Interface_.*_IPv4_Address" | head -n1 | cut -d'=' -f2)
+    # empty values end up as '' sometimes, so we clear them
+    [[ "${ip4addr}" == "''" ]] && unset ip4addr
 fi
-if [[ -n ${ipaddr} ]]; then
+if [[ -z ${ip6addr} ]]; then
+    ip6addr=$(set | grep "^SYSINFO_Network_Interface_.*_IPv6_Address" | head -n1 | cut -d'=' -f2)
+    # empty values end up as '' sometimes, so we clear them
+    [[ "${ip6addr}" == "''" ]] && unset ip6addr
+fi
+if [[ -n ${ip4addr} ]] || [[ -n ${ip6addr} ]]; then
     fullname=""
 
     if [ -n "$CONFIG_dns_domain" ]; then
         fullname=" ${hostname}.${CONFIG_dns_domain}"
     fi
-
-    printf "${ipaddr}\t${hostname}${fullname}\n" >> /etc/hosts
+    [[ -n ${ip4addr} ]] && printf "${ip4addr}\t${hostname}${fullname}\n" >> /etc/hosts
+    [[ -n ${ip6addr} ]] && printf "${ip6addr}\t${hostname}${fullname}\n" >> /etc/hosts
 fi
 
 # Reset the library path now that we are past the critical stage

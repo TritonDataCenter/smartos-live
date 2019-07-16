@@ -825,6 +825,10 @@ includes:
 * In the *#smartos* IRC channel on the [Freenode IRC
   network](https://freenode.net/).
 
+This project is released with a Contributor [Code of
+Conduct](./CODE_OF_CONDUCT.md).  By participating in this project and our
+community, you agree to abide by its terms.
+
 ## Bug Reports
 
 If you encounter a problem, please reach out for assistance. You can

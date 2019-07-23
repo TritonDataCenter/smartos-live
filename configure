@@ -359,6 +359,10 @@ function generate_env
 	done
 	unset IFS
 
+	if [[ "$ENABLE_SMATCH" = "yes" ]]; then
+		SHADOW_CCS+=" smatch,\$BUILD_TOOLS/onbld/bin/\$MACH/smatch,smatch"
+	fi
+
 	lprefix=$(echo $conf_root | tr / _)
 	[[ $? -eq 0 ]] || fatal "failed to create lock prefix"
 
@@ -470,11 +474,13 @@ read -r -d '' usage <<EOF
 		platform root password [default: randomly chosen]
 	-r
 		full strap build (no cache) [default: no]
+	-S
+		do *not* run smatch [default is to run smatch]
 	-s gcc7
 		shadow compilers, comma delimited (gcc7,gcc#) [default: none]
 EOF
 
-while getopts "cdhp:P:rs:" arg; do
+while getopts "cdhp:P:rSs:" arg; do
 	case $arg in
 	c)
 		ILLUMOS_CLOBBER=yes ;;
@@ -497,6 +503,8 @@ while getopts "cdhp:P:rs:" arg; do
 		PLATFORM_PASSWORD="$OPTARG" ;;
 	r)
 		FORCE_STRAP_REBUILD=yes ;;
+	S)
+		ENABLE_SMATCH=no ;;
 	s)
 		SHADOW_COMPILERS=$OPTARG
 		FORCE_STRAP_REBUILD=yes ;;
@@ -509,6 +517,7 @@ done
 [[ -n "$ILLUMOS_ENABLE_DEBUG" ]] || ILLUMOS_ENABLE_DEBUG=no
 [[ -n "$ILLUMOS_CLOBBER" ]] || ILLUMOS_CLOBBER=no
 [[ -n "$PRIMARY_COMPILER" ]] || PRIMARY_COMPILER=gcc4
+[[ -n "$ENABLE_SMATCH" ]] || ENABLE_SMATCH=yes
 
 PRIMARY_COMPILER_VER=$(echo $PRIMARY_COMPILER | sed 's/^gcc//')
 
@@ -526,6 +535,7 @@ PRIMARY_COMPILER=$PRIMARY_COMPILER
 PRIMARY_COMPILER_VER=$PRIMARY_COMPILER_VER
 SHADOW_COMPILERS=$SHADOW_COMPILERS
 HOST_GCC4_PREFIX=$HOST_GCC4_PREFIX
+ENABLE_SMATCH=$ENABLE_SMATCH
 EOF
 
 [[ -n "$PLATFORM_PASSWORD" ]] && \

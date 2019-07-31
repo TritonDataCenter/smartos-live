@@ -41,9 +41,8 @@ _vmadm()
         || ${prev} == 'delete-snapshot'
         || ${prev} == 'rollback-snapshot' ]]; then
 
-        # OS only commands
-        vms_uuids=$(zoneadm list -cp | grep -v ':global:' \
-            | grep -v ":[bh]*[ky]v[em]:excl:" | cut -d':' -f5 | sort | uniq)
+        vms_uuids=$(zoneadm list -cp |
+	    nawk -F: '$2 != "global" && $6 != "kvm" { print $5 }' | sort -u)
         COMPREPLY=( $(compgen -W "${vms_uuids}" -- ${cur}) )
 
     elif [[ ${prev} == 'validate' ]]; then

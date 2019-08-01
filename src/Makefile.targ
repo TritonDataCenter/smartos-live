@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright (c) 2019, Joyent, Inc.
+# Copyright 2019 Joyent, Inc.
 #
 
 %: %.c
@@ -37,3 +37,15 @@ mdata_%.o: $(DOCKER_DIR)/mdata-client/plat/%.c
 
 %.o: $(DOCKER_DIR)/json-nvlist/%.c
 	$(COMPILE.c) $^
+
+%: %.js
+	cp $< $@
+	chmod 0755 $@
+
+%: %.sh
+	cp $< $@
+	chmod 0755 $@
+
+%: %.d
+	cp $< $@
+	chmod 0755 $@

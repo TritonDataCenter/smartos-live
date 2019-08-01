@@ -15,9 +15,8 @@ ls output/
 This repository is smartos-live, which builds a SmartOS platform image
 containing the illumos core OS components; a set of "extra" mostly
 third-party software required by illumos, by other SmartOS software, or
-for system management; a collection of utilities comprising
-SmartOS-specific functionality found in `projects/local/`; and
-implementation-specific overlays that deliver additional files verbatim.
+for system management; and a collection of utilities comprising
+SmartOS-specific functionality found in `projects/local/`.
 
 ## Contents
 
@@ -40,28 +39,6 @@ the root of SmartOS. It has logic for how to build all of the different
 components that make up SmartOS and has components that are specific to
 the SmartOS live image environment. For example, it has tools like
 `vmadm` and `imgadm`.
-
-#### overlay
-
-In smartos-live, there is a directory called [overlay](/overlay) that
-contains two different things:
-
-1. Files that we use in place of the standard ones provided by another
-part of the system. This is often done for files that come from
-illumos-joyent so as to minimize the differences we have from upstream.
-For example, we have replacements for the `/etc/name_to_major` and
-`/etc/driver_aliases` files.
-
-2. There are some additional files that are found here that don't
-currently have another, better home.
-
-Historically, there were multiple overlays that were switched between
-when building the SmartOS platform for use in Triton or as a standalone
-image. Today, there is only one overlay used, the
-[generic](/overlay/generic) overlay.
-
-When the platform image is built, the generic overlay directory is
-searched for files ahead of the normal proto area used by builder.
 
 ### illumos-joyent
 
@@ -459,7 +436,6 @@ SUNW_SPRO12_URL="https://download.joyent.com/pub/build/SunStudio.tar.bz2"
 ON_CLOSED_BINS_URL="https://download.joyent.com/pub/build/illumos/on-closed-bins.i386.tar.bz2"
 ON_CLOSED_BINS_ND_URL="https://download.joyent.com/pub/build/illumos/on-closed-bins-nd.i386.tar.bz2"
 ILLUMOS_ADJUNCT_TARBALL_URL="https://download.joyent.com/pub/build/adjuncts/"
-OVERLAYS="generic"
 ```
 
 #### Debug Builds
@@ -611,7 +587,6 @@ $ cd projects/illumos-extra/binutils
 $ STRAP= \
   CTFMERGE=/home/rm/src/mdb_v8/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386/ctfmerge \
   CTFCONVERT=/home/rm/src/mdb_v8/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386/ctfconvert \
-  ALTCTFCONVERT=/home/rm/src/mdb_v8/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386/ctfconvert-altexec \
   gmake DESTDIR=/home/rm/src/mdb_v8/proto install
 ```
 
@@ -697,13 +672,17 @@ multiple repositories at once.
 
 #### Device Drivers
 
-Device drivers represent a slight exception to the normal rules. While
-they should be added to the standard manifest directory, they also need
-to be added to two files in smartos-live. Specifically, the driver
-should be listed in `overlay/generic/etc/name_to_major` and assigned the
-next free major number. Any aliases for the driver, devices which the
-driver should attach to, should be added to
-`overlay/generic/etc/driver_aliases`.
+For SmartOS, adding a device driver involves updating files that are
+assembled at run-time under vanilla illumos. You should check and update if
+necessary the following files under `projects/illumos`:
+
+```
+usr/src/uts/intel/os/device_policy
+usr/src/uts/intel/os/driver_aliases
+usr/src/uts/intel/os/driver_classes
+usr/src/uts/intel/os/name_to_major
+usr/src/uts/intel/os/minor_perm
+```
 
 ## Testing and Things to Think About
 

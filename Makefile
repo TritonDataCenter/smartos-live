@@ -65,7 +65,6 @@ endif
 ENGBLD_REQUIRE := $(shell git submodule update --init deps/eng)
 
 LOCAL_SUBDIRS :=	$(shell ls projects/local)
-OVERLAYS :=	$(shell cat overlay/order)
 PKGSRC =	$(ROOT)/pkgsrc
 MANIFEST =	manifest.gen
 BOOT_MANIFEST =	boot.manifest.gen
@@ -81,12 +80,10 @@ CTFBINDIR = \
 	$(ROOT)/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386
 CTFMERGE =	$(CTFBINDIR)/ctfmerge
 CTFCONVERT =	$(CTFBINDIR)/ctfconvert
-ALTCTFCONVERT =	$(CTFBINDIR)/ctfconvert
 
 SUBDIR_DEFS = \
 	CTFMERGE=$(CTFMERGE) \
 	CTFCONVERT=$(CTFCONVERT) \
-	ALTCTFCONVERT=$(ALTCTFCONVERT) \
 	MAX_JOBS=$(MAX_JOBS)
 
 ADJUNCT_TARBALL :=	$(shell ls `pwd`/illumos-adjunct*.tgz 2>/dev/null \
@@ -110,12 +107,9 @@ BOOT_MANIFESTS := \
 	$(BOOT_MPROTO)/illumos.manifest
 
 SUBDIR_MANIFESTS :=	$(LOCAL_SUBDIRS:%=$(MPROTO)/%.sd.manifest)
-OVERLAY_MANIFESTS :=	$(OVERLAYS:$(ROOT)/overlay/%=$(MPROTO)/%.ov.manifest)
 
 SUBDIR_MANCHECK_CONFS := \
 	$(LOCAL_SUBDIRS:%=$(MCPROTO)/%.sd.mancheck.conf)
-OVERLAY_MANCHECK_CONFS := \
-	$(OVERLAYS:$(ROOT)/overlay/%=$(MCPROTO)/%.ov.mancheck.conf)
 
 BOOT_VERSION :=	boot-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
@@ -138,15 +132,14 @@ TOOLS_TARGETS = \
 
 world: 0-strap-stamp 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp \
 	0-local-stamp 0-tools-stamp 0-man-stamp 0-devpro-stamp \
-	$(TOOLS_TARGETS) sdcman
+	$(TOOLS_TARGETS)
 
-live: world manifest mancheck_conf boot sdcman $(TOOLS_TARGETS) $(MANCF_FILE)
-	@echo $(OVERLAY_MANIFESTS)
+live: world manifest mancheck_conf boot $(TOOLS_TARGETS) $(MANCF_FILE)
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
-	ALTCTFCONVERT=$(ALTCTFCONVERT) ./tools/build_live \
+	CTFCONVERT=$(CTFCONVERT) ./tools/build_live \
 	    -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output $(PLATFORM_PASSWORD_OPT) \
-	    $(OVERLAYS) $(ROOT)/proto $(ROOT)/man/man
+	    $(ROOT)/proto $(ROOT)/man/man
 
 boot: $(BOOT_TARBALL)
 
@@ -159,7 +152,7 @@ $(BOOT_TARBALL): world manifest
 	mkdir -p $(BOOT_PROTO)/etc/version/
 	mkdir -p $(ROOT)/output
 	pfexec ./tools/builder/builder $(ROOT)/$(BOOT_MANIFEST) \
-	    $(BOOT_PROTO) $(OVERLAYS) $(ROOT)/proto
+	    $(BOOT_PROTO) $(ROOT)/proto
 	cp $(STAMPFILE) $(BOOT_PROTO)/etc/version/boot
 	(cd $(BOOT_PROTO) && pfexec gtar czf $(ROOT)/$@ .)
 
@@ -183,7 +176,8 @@ images-tar: $(IMAGES_TARBALL)
 # in $(MPROTO) before running the manifest tool.  One each comes from
 # illumos, illumos-extra, and the root of live (covering mainly what's in src).
 # Additional manifests come from each of $(LOCAL_SUBDIRS), which may choose
-# to construct them programmatically, and $(OVERLAYS), which must be static.
+# to construct them programmatically.
+#
 # These all end up in $(MPROTO), where we tell tools/build_manifest to look;
 # it will pick up every file in that directory and treat it as a manifest.
 #
@@ -194,8 +188,7 @@ images-tar: $(IMAGES_TARBALL)
 #
 manifest: $(MANIFEST) $(BOOT_MANIFEST)
 
-mancheck_conf: $(WORLD_MANCHECK_CONFS) $(SUBDIR_MANCHECK_CONFS) \
-    $(OVERLAY_MANCHECK_CONFS)
+mancheck_conf: $(WORLD_MANCHECK_CONFS) $(SUBDIR_MANCHECK_CONFS)
 
 dump_mancheck_conf: manifest mancheck_conf $(MANCHECK)
 	args=; for x in $(MCPROTO)/*.mancheck.conf; do \
@@ -251,13 +244,7 @@ $(MCPROTO)/%.sd.mancheck.conf: FRC | $(MCPROTO)
 		    mancheck_conf; \
 	    fi
 
-$(MPROTO)/%.ov.manifest: $(MPROTO) $(ROOT)/overlay/%/manifest
-	cp $(ROOT)/overlay/$*/manifest $@
-
-$(MCPROTO)/%.ov.mancheck.conf: $(ROOT)/overlay/%/mancheck.conf | $(MCPROTO)
-	cp $(ROOT)/overlay/$*/mancheck.conf $@
-
-$(MANIFEST): $(WORLD_MANIFESTS) $(SUBDIR_MANIFESTS) $(OVERLAY_MANIFESTS)
+$(MANIFEST): $(WORLD_MANIFESTS) $(SUBDIR_MANIFESTS)
 	-rm -f $@
 	./tools/build_manifest $(MPROTO) | ./tools/sorter > $@
 
@@ -345,6 +332,7 @@ strap-cache:
 	touch $@
 
 0-man-stamp:
+	(cd $(ROOT)/man/sdc && gmake install DESTDIR=$(PROTO) $(SUBDIR_DEFS))
 	(cd $(ROOT)/man/src && gmake clean && gmake)
 	touch $@
 
@@ -380,10 +368,6 @@ $(TZCHECK): 0-illumos-stamp
 .PHONY: $(UCODECHECK)
 $(UCODECHECK): 0-illumos-stamp
 	(cd tools/ucodecheck && gmake ucodecheck CC=$(NATIVE_CC) $(SUBDIR_DEFS))
-
-.PHONY: sdcman
-sdcman:
-	(cd $(ROOT)/man/sdc && gmake install DESTDIR=$(PROTO) $(SUBDIR_DEFS))
 
 jsl: $(JSLINT)
 

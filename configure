@@ -283,19 +283,6 @@ function fetch_adjuncts
 	[[ $? -eq 0 ]] || fatal "failed to fetch adjuncts tarball"
 }
 
-function setup_overlays
-{
-	local of="overlay/order"
-	[[ -z "$OVERLAYS" ]] && fatal \
-	    "OVERLAYS variable missing from configure.*"
-	rm -f $of
-	touch $of || fail "failed to create $of"
-	for o in $OVERLAYS; do
-		echo -n "$conf_root/overlay/$o " >> $of || fatal \
-		    "failed to append to $of"
-	done
-}
-
 function fetch_closed
 {
 	local ildir="projects/illumos"
@@ -555,9 +542,6 @@ fetch_studio
 echo "done."
 echo "Fetching adjuncts tgz... \c "
 fetch_adjuncts
-echo "done."
-echo "Configuring overlays... \c "
-setup_overlays
 echo "done."
 echo "Fetching and extracting closed bins ... \c "
 fetch_closed

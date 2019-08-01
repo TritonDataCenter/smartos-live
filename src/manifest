@@ -1,13 +1,3 @@
-d usr/lib 0755 root bin
-d usr/lib/brand 0755 root bin
-d usr/lib/brand/lx 0755 root bin
-f usr/lib/brand/lx/lx_boot_zone_docker 0755 root root
-f usr/lib/brand/lx/lx_hook_postnet 0755 root root
-f usr/lib/brand/lx/routeinfo 0755 root root
-
-# automatically generated man.cf file
-f usr/share/man/man.cf 0444 root bin
-
 # imgadm
 s etc/bash/bash_completion.d/imgadm=/usr/img/etc/imgadm.completion
 s usr/sbin/dsadm=../img/sbin/imgadm
@@ -433,6 +423,8 @@ f usr/img/test/runtests 0555 root bin
 f usr/img/test/tap4nodeunit.js 0444 root bin
 f usr/img/test/try-custom-image 0555 root bin
 f usr/img/test/update.test.js 0444 root bin
+d var/db 0755 root sys
+d var/db/imgadm 0755 root bin
 
 # new vmadmd
 s etc/bash/bash_completion.d/vmadm=/usr/vm/etc/vmadm.completion
@@ -1053,6 +1045,7 @@ f usr/fw/test/node_modules/uglify-js/lib/process.js 0444 root root
 f usr/fw/test/node_modules/uglify-js/lib/squeeze-more.js 0444 root root
 f usr/fw/test/node_modules/yamlish/LICENSE 0444 root root
 f usr/fw/test/node_modules/yamlish/index.js 0444 root root
+d var/fw 0755 root bin
 # metadata daemon
 d usr/vm/lib 0555 root bin
 d usr/vm/lib/metadata 0555 root bin
@@ -1076,32 +1069,58 @@ f usr/lib/amd64/libdemangle.so.1 0755 root bin
 s usr/lib/amd64/libdemangle.so=libdemangle.so.1
 f usr/lib/amd64/libiostream.so.1 0755 root bin
 # 0-livesrc-stamp
+f .smartdc_version 0444 root root
+d etc/ssh 0755 root sys
+f etc/ssh/sshd_config 0644 root sys
+f etc/rtc_config 0644 root root
+f etc/nodename 0644 root root
+d etc/notices 0755 root sys
+f etc/notices/COPYRIGHT 0444 root sys
+d lib/sdc 0755 root bin
+f lib/sdc/config.sh 0444 root bin
+f lib/sdc/network.sh 0444 root bin
+f lib/sdc/usb-key.sh 0444 root bin
+f lib/sdc/zone.sh 0444 root bin
 d smartdc 0555 root bin
 d smartdc/bin 0555 root bin
 f smartdc/bin/qemu-exec 0555 root bin
+f smartdc/bin/sdc-factoryreset 0555 root bin
+f smartdc/bin/sdc-lastcomm 0555 root bin
+f smartdc/bin/sdc-zfs-io-throttle 0555 root bin
 d smartdc/lib 0555 root bin
 f smartdc/lib/ntp_config 0555 root bin
 f smartdc/lib/sdc-on-tty 0555 root bin
+f smartdc/lib/smartos_prompt_config.sh 0555 root bin
 d smartdc/man 0555 root bin
-d smartdc/man/man1 0555 root bin
-f smartdc/man/man1/sdc-factoryreset.1 0444 root bin
 f usr/bin/nictagadm 0555 root bin
 f usr/bin/sysinfo 0555 root bin
 f usr/bin/bootparams 0555 root bin
 f usr/bin/disklayout 0555 root bin
 f usr/bin/disklist 0555 root bin
 f usr/bin/disk_size 0555 root bin
+f usr/bin/json 0555 root bin
 f usr/bin/removable_disk 0555 root bin
 f usr/bin/mkzpool 0555 root bin
+d usr/lib 0755 root bin
+d usr/lib/brand 0755 root bin
+d usr/lib/brand/lx 0755 root bin
+f usr/lib/brand/lx/lx_hook_postnet 0755 root root
+f usr/lib/brand/lx/routeinfo 0755 root root
 f usr/lib/cryptpass 0555 root bin
 f usr/lib/measure_terminal 0555 root bin
 f usr/lib/sysevent/modules/sysinfo_mod.so 0555 root bin
 d usr/lib/sdc 0755 root bin
 f usr/lib/sdc/net-boot-config 0555 root bin
-f usr/sbin/sysevent 0555 root bin
 s usr/sbin/fwadm=../fw/sbin/fwadm
+f usr/sbin/fssstat 0555 root bin
+f usr/sbin/sysevent 0555 root bin
 s usr/sbin/vmadm=../vm/sbin/vmadm
 s usr/sbin/vminfo=../vm/sbin/vminfo
+f usr/sbin/zonememstat 0555 root bin
+f usr/sbin/zonemon 0555 root bin
+d usr/share/bhyve 0555 root bin
+f usr/share/bhyve/uefi-csm-rom.bin 0444 root bin
+f usr/share/bhyve/uefi-rom.bin 0444 root bin
 d usr/node 0755 root bin
 d usr/node/0.10 0755 root bin
 d usr/node/0.10/node_modules 0755 root bin
@@ -1124,9 +1143,24 @@ f usr/node/0.10/node_modules/uuid.node 0444 root bin
 f usr/node/0.10/node_modules/zfs.js 0444 root bin
 f usr/node/0.10/node_modules/zonename.js 0444 root bin
 f usr/node/0.10/node_modules/zonename_binding.node 0444 root bin
+# automatically generated man.cf file
+f usr/share/man/man.cf 0444 root bin
+f var/log/syslog 0644 root root
+d var/log 0755 root sys
+d var/log/sdc 0755 root sys
+d var/log/sdc/upload 0755 root sys
+d var/log/vm 0755 root sys
+
 # 0-man-stamp
+d smartdc/man/man1 0555 root bin
+f smartdc/man/man1/sdc-factoryreset.1 0444 root bin
+f smartdc/man/man1/sdc-lastcomm.1 0444 root bin
+f smartdc/man/man1/sdc-zfs-io-throttle.1 0444 root bin
+d usr/share/man/man1 0755 root bin
+f usr/share/man/man1/json.1 0444 root bin
 d usr/share/man/man1m 0755 root bin
 f usr/share/man/man1m/disklayout.1m 0444 root bin
+f usr/share/man/man1m/fssstat.1m 0444 root bin
 f usr/share/man/man1m/fwadm.1m 0444 root bin
 f usr/share/man/man1m/mkzpool.1m 0444 root bin
 f usr/share/man/man1m/tzreload.1m 0444 root bin

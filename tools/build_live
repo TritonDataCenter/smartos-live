@@ -508,7 +508,7 @@ function bi_gen_buildstamp_module
 		fail "could not link buildstamp module"
 	fi
 
-	if ! $ALTCTFCONVERT "$tmp_module"; then
+	if ! $CTFCONVERT "$tmp_module"; then
 		fail "could not add CTF to buildstamp module"
 	fi
 
@@ -550,25 +550,6 @@ function bi_ship_manifest
 	    ! pfexec /usr/bin/chown 0:0 "$fl_manifest_img"; then
 		fail "could not copy manifest file into image"
 	fi
-
-	bi_emit_done
-}
-
-function bi_fill_templates
-{
-	bi_emit_start 'Filling in template files'
-
-	#
-	# The buildstamp needs to be included in various files in place of
-	# the template value of an all-zero date.
-	#
-	for f in etc/motd etc/issue; do
-		if ! pfexec gsed -i -e \
-		    "s/ [0-9]\{8\}T[0-9]\{6\}Z/ $bi_buildstamp/" \
-		    "$bi_mnt_root/$f"; then
-			fail "could not set buildstamp in \"$f\""
-		fi
-	done
 
 	bi_emit_done
 }
@@ -962,7 +943,6 @@ bi_create_password
 bi_gen_etcrelease
 bi_gen_buildstamp_module
 bi_ship_manifest
-bi_fill_templates
 bi_file_fixups
 bi_compress_usr
 bi_finish_archive

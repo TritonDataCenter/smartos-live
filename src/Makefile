@@ -142,8 +142,10 @@ JS_CHECK_TARGETS=\
 JS_CHECK_OLDSKOOL_TARGETS = \
 	disklayout.js \
 	mkzpool.js \
-	ntp_config.js \
+	smartdc/lib/ntp_config.js \
 	node_modules/disklayout.js
+
+# "json.js" intentionally missing
 
 # These files will get run through cstyle on 'make check'
 C_CHECK_TARGETS=\
@@ -153,12 +155,12 @@ C_CHECK_TARGETS=\
 	fswatcher.c \
 	measure_terminal.c \
 	nomknod.c \
-	qemu-exec.c \
+	smartdc/bin/qemu-exec.c \
 	removable_disk.c \
 	vmunbundle.c \
 	zfs_recv.c \
 	zfs_send.c \
-	sdc-on-tty.c \
+	smartdc/lib/sdc-on-tty.c \
 	sysinfo_mod.c \
 	sysevent.c
 
@@ -286,27 +288,26 @@ NOMKNOD_ROOT64 =	$(DESTDIR)/usr/img/lib/amd64
 
 CLEANFILES +=		$(NOMKNOD_TARGS)
 
-#
-# List of targets.  TARGETS, SMARTDC_TARGETS, and SMARTDC_LIB_TARGETS must
-# include only those files that are safe to remove when the clean target is
-# built.
-#
-TARGETS = \
+BUILT_TARGETS = \
 	bootparams \
 	disklayout \
 	disklist \
 	disk_size \
+	fssstat \
 	fswatcher \
+	json \
 	mkzpool \
+	nomknod.so.32 \
+	nomknod.so.64 \
 	removable_disk \
+	sysevent \
+	sysinfo_mod.so \
+	vm/node_modules/props.js \
 	vmunbundle \
 	zfs_recv \
 	zfs_send \
-	sysevent \
-	sysinfo_mod.so \
-	nomknod.so.32 \
-	nomknod.so.64 \
-	vm/node_modules/props.js \
+	zonememstat \
+	zonemon \
 	$(EXPAT.NODE) \
 	$(DTRACE_PROVIDER.NODE) \
 	$(KSTAT.NODE) \
@@ -316,16 +317,51 @@ TARGETS = \
 	$(SYSLOG.NODE) \
 	$(UUID.NODE)
 
-USR_LIB_TARGETS = \
+TARGETS = $(BUILT_TARGETS) \
+	nictagadm \
+	sysinfo
+
+BUILT_USR_LIB_TARGETS = \
 	cryptpass \
 	measure_terminal
 
-SMARTDC_TARGETS = \
-	qemu-exec
+USR_LIB_TARGETS = $(BUILT_USR_LIB_TARGETS)
+
+BUILT_SMARTDC_TARGETS = \
+	smartdc/bin/sdc-factoryreset \
+	smartdc/bin/sdc-lastcomm \
+	smartdc/bin/sdc-zfs-io-throttle \
+	smartdc/bin/qemu-exec
+
+SMARTDC_TARGETS = $(BUILT_SMARTDC_TARGETS)
+
+BUILT_SMARTDC_LIB_TARGETS = \
+	smartdc/lib/ntp_config \
+	smartdc/lib/sdc-on-tty
 
 SMARTDC_LIB_TARGETS = \
-	ntp_config \
-	sdc-on-tty
+	$(BUILT_SMARTDC_LIB_TARGETS) \
+	smartdc/lib/smartos_prompt_config.sh
+
+LIBSDC_TARGETS = \
+	lib/sdc/config.sh \
+	lib/sdc/network.sh \
+	lib/sdc/usb-key.sh \
+	lib/sdc/zone.sh
+
+ETC_TARGETS = \
+	etc/nodename \
+	etc/notices/COPYRIGHT \
+	etc/rtc_config \
+	etc/ssh/sshd_config
+
+BHYVE_TARGETS = \
+	bhyve/uefi-csm-rom.bin \
+	bhyve/uefi-rom.bin \
+	bhyve/README
+
+CLEANFILES += $(NOMKNOD_TARGETS) $(BUILT_TARGETS) \
+    $(BUILT_SMARTDC_TARGETS) $(BUILT_SMARTDC_LIB_TARGETS)
 
 #
 # Subdirectory management
@@ -337,22 +373,33 @@ clean : TARGET = clean
 install : TARGET = install
 check : TARGET = check
 
-all: $(TARGETS) $(USR_LIB_TARGETS) sysinfo nictagadm sysevent \
-	$(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) $(SUBDIRS)
+all: $(TARGETS) $(USR_LIB_TARGETS) $(SMARTDC_TARGETS) \
+    $(SMARTDC_LIB_TARGETS) $(LIBSDC_TARGETS) $(ETC_TARGETS) \
+    $(SUBDIRS) $(BHYVE_TARGETS)
+
 
 $(SUBDIRS): FRC
 	@cd $@; pwd; $(MAKE) $(TARGET)
 
 install: all $(SUBDIRS)
+	echo "7.0" >$(DESTDIR)/.smartdc_version
+	mkdir -p $(DESTDIR)/var/db/imgadm $(DESTDIR)/var/fw
+	mkdir -p $(DESTDIR)/var/log/sdc/upload $(DESTDIR)/var/log/vm
 	mkdir -p $(DESTDIR)/usr/bin
-	cp -p $(TARGETS) sysinfo nictagadm $(DESTDIR)/usr/bin
+	cp -p $(TARGETS) $(DESTDIR)/usr/bin
 	mkdir -p $(DESTDIR)/usr/sbin
-	cp -p sysevent $(DESTDIR)/usr/sbin
+	cp -p fssstat sysevent zonememstat zonemon $(DESTDIR)/usr/sbin
 	cp -p $(USR_LIB_TARGETS) $(DESTDIR)/usr/lib
 	mkdir -p $(DESTDIR)/smartdc/bin
 	cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin
+	mkdir -p $(DESTDIR)/lib/sdc
+	cp -p $(LIBSDC_TARGETS) $(DESTDIR)/lib/sdc/
 	mkdir -p $(DESTDIR)/smartdc/lib
 	cp -p $(SMARTDC_LIB_TARGETS) $(DESTDIR)/smartdc/lib
+	mkdir -p $(DESTDIR)/etc/ssh $(DESTDIR)/etc/notices
+	for file in $(ETC_TARGETS); do \
+		cp -r $$file $(DESTDIR)/$$file; \
+	done
 	mkdir -m 0755 -p $(PREFIX_NODE)/node_modules
 	cp -Pr node_modules/* $(PREFIX_NODE)/node_modules
 	cp $(KSTAT.NODE) $(PREFIX_NODE)/node_modules/
@@ -450,6 +497,8 @@ install: all $(SUBDIRS)
 	mv $(NOMKNOD_ROOT)/$(NOMKNOD_32) $(NOMKNOD_ROOT)/$(NOMKNOD_SO)
 	/usr/sbin/install -f $(NOMKNOD_ROOT64) -m 0555 $(NOMKNOD_64)
 	mv $(NOMKNOD_ROOT64)/$(NOMKNOD_64) $(NOMKNOD_ROOT64)/$(NOMKNOD_SO)
+	mkdir -p $(DESTDIR)/usr/share/bhyve
+	cp $(BHYVE_TARGETS) $(DESTDIR)/usr/share/bhyve
 
 check: $(JSLINT) $(SUBDIRS)
 	@echo "==> Running cstyle..."
@@ -505,8 +554,7 @@ $(JSLINT):
 	(cd $(ROOT); $(MAKE) jsl)
 
 clean: $(SUBDIRS)
-	-rm -f $(TARGETS) $(SMARTDC_TARGETS) $(SMARTDC_LIB_TARGETS) *.o \
-	    $(CLEANFILES)
+	-rm -f $(CLEANFILES) *.o
 	cd $(LOCKFD_SRC_DIR) && $(MAKE) clean
 	cd $(ZONENAME_SRC_DIR) && $(MAKE) clean
 
@@ -516,28 +564,6 @@ include Makefile.targ
 # Custom rules for building our various real targets follow.  Generic rules
 # belong in Makefile.targ.
 #
-disklayout: disklayout.js
-	cp disklayout.js disklayout
-	chmod 0755 disklayout
-
-disklist: disklist.sh
-	cp disklist.sh disklist
-	chmod 0755 disklist
-
-mkzpool: mkzpool.js
-	cp mkzpool.js mkzpool
-	chmod 0755 mkzpool
-
-ntp_config: ntp_config.js
-	cp $^ $@
-	chmod 0755 $@
-
-sysinfo:
-	touch sysinfo
-
-nictagadm:
-	touch nictagadm
-
 vm/node_modules/props.js: vm/node_modules/proptable.js vm/node_modules/expander.js
 	node vm/node_modules/expander.js > vm/node_modules/props.js.new \
 		&& mv vm/node_modules/props.js.new vm/node_modules/props.js

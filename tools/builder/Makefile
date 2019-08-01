@@ -18,7 +18,7 @@ builder: $(OBJS)
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 users.c:
-	./build_users_c.sh $(SRC_ROOT)/overlay/generic > users.c.tmp && mv users.c.tmp users.c
+	./build_users_c.sh $(SRC_ROOT)/proto/ > users.c.tmp && mv users.c.tmp users.c
 
 clean:
 	rm -f $(TARGETS) $(OBJS)

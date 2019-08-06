@@ -25,7 +25,7 @@ conf_arg0_dir=$(dirname $0)
 conf_root=$PWD
 conf_ips=
 conf_priv="pfexec"
-conf_pkgsrcurl="https://download.joyent.com/pub/build/pkgsrc"
+conf_pkgsrcurl="https://us-east.manta.joyent.com/Joyent_Dev/public/releng/pkgsrc"
 
 #
 # Build defaults which are unlikely to change, but may be overridden by
@@ -216,7 +216,12 @@ function install_pkgin
 	#
 	# Packages not in pkgsrc
 	#
-	for pkg in dmake sgstools rpcgen astmsgtools; do
+	local unpublished_pkgs="
+		astmsgtools-20130402
+		dmake-20130927
+		rpcgen-20130402
+		sgstools-20130402"
+	for pkg in $unpublished_pkgs; do
 		if ! pkg_info -qe $pkg; then
 			curl -k "$conf_pkgsrcurl/$pkg.tgz" -o \
 			    /var/tmp/$pkg.tgz || fatal \
@@ -275,11 +280,7 @@ function fetch_adjuncts
 	local tgz
 	[[ -z "$ILLUMOS_ADJUNCT_TARBALL_URL" ]] && fatal \
 	    "ILLUMOS_ADJUNCT_TARBALL_URL missing from configure"
-	tgz=$(curl -k "$ILLUMOS_ADJUNCT_TARBALL_URL" | grep href | tail -n1 | \
-	    cut -d '"' -f2)
-	[[ -z "$tgz" ]] && fatal \
-	    "Unable to get adjuncts from ILLUMOS_ADJUNCT_TARBALL_URL"
-	curl -kO $ILLUMOS_ADJUNCT_TARBALL_URL/$tgz
+	curl -kO $ILLUMOS_ADJUNCT_TARBALL_URL
 	[[ $? -eq 0 ]] || fatal "failed to fetch adjuncts tarball"
 }
 

@@ -223,7 +223,7 @@ function install_pkgin
 		sgstools-20130402"
 	for pkg in $unpublished_pkgs; do
 		if ! pkg_info -qe $pkg; then
-			curl -k "$conf_pkgsrcurl/$pkg.tgz" -o \
+			curl "$conf_pkgsrcurl/$pkg.tgz" -o \
 			    /var/tmp/$pkg.tgz || fatal \
 			    "failed to fetch $pkg.tgz"
 
@@ -268,7 +268,7 @@ function fetch_studio
 	[[ -f "/opt/SUNWspro/prod/bin/cc" ]] && return
 	[[ -z "$SUNW_SPRO12_URL" ]] && fatal \
 	    "SUNW_SPRO12_URL not set in configure.*"
-	curl -k "$SUNW_SPRO12_URL" | bzcat | $conf_priv tar xf - -C /opt
+	curl "$SUNW_SPRO12_URL" | bzcat | $conf_priv tar xf - -C /opt
 	[[ $? -eq 0 ]] || fatal "failed to fetch Studio"
 	[[ -e /opt/SUNspro/sunstudio12.1 ]] && return
 	$conf_priv ln -s /opt/SUNWspro /opt/SUNWspro/sunstudio12.1 || fatal \
@@ -280,7 +280,7 @@ function fetch_adjuncts
 	local tgz
 	[[ -z "$ILLUMOS_ADJUNCT_TARBALL_URL" ]] && fatal \
 	    "ILLUMOS_ADJUNCT_TARBALL_URL missing from configure"
-	curl -kO $ILLUMOS_ADJUNCT_TARBALL_URL
+	curl -O $ILLUMOS_ADJUNCT_TARBALL_URL
 	[[ $? -eq 0 ]] || fatal "failed to fetch adjuncts tarball"
 }
 
@@ -294,11 +294,11 @@ function fetch_closed
 	[[ -z "$ON_CLOSED_BINS_ND_URL" ]] && fatal \
 	    "missing ON_CLOSED_BINS_ND_URL from configure"
 	if [[ ! -f $ildir/$cld ]]; then
-		curl -k $ON_CLOSED_BINS_URL -o $ildir/$cld || fatal \
+		curl $ON_CLOSED_BINS_URL -o $ildir/$cld || fatal \
 		"failed to fetch closed bins (debug)"
 	fi
 	if [[ ! -f $ildir/$clnd ]]; then
-		curl -k $ON_CLOSED_BINS_ND_URL -o $ildir/$clnd || fatal \
+		curl $ON_CLOSED_BINS_ND_URL -o $ildir/$clnd || fatal \
 		"failed to fetch closed bins (non-debug)"
 	fi
 	cd $ildir >/dev/null 2>&1 || fatal "failed to cd into $ildir"

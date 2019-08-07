@@ -25,7 +25,7 @@ conf_arg0_dir=$(dirname $0)
 conf_root=$PWD
 conf_ips=
 conf_priv="pfexec"
-conf_pkgsrcurl="https://download.joyent.com/pub/build/pkgsrc"
+conf_pkgsrcurl="https://us-east.manta.joyent.com/Joyent_Dev/public/releng/pkgsrc"
 
 #
 # Build defaults which are unlikely to change, but may be overridden by
@@ -216,9 +216,14 @@ function install_pkgin
 	#
 	# Packages not in pkgsrc
 	#
-	for pkg in dmake sgstools rpcgen astmsgtools; do
+	local unpublished_pkgs="
+		astmsgtools-20130402
+		dmake-20130927
+		rpcgen-20130402
+		sgstools-20130402"
+	for pkg in $unpublished_pkgs; do
 		if ! pkg_info -qe $pkg; then
-			curl -k "$conf_pkgsrcurl/$pkg.tgz" -o \
+			curl "$conf_pkgsrcurl/$pkg.tgz" -o \
 			    /var/tmp/$pkg.tgz || fatal \
 			    "failed to fetch $pkg.tgz"
 
@@ -263,7 +268,7 @@ function fetch_studio
 	[[ -f "/opt/SUNWspro/prod/bin/cc" ]] && return
 	[[ -z "$SUNW_SPRO12_URL" ]] && fatal \
 	    "SUNW_SPRO12_URL not set in configure.*"
-	curl -k "$SUNW_SPRO12_URL" | bzcat | $conf_priv tar xf - -C /opt
+	curl "$SUNW_SPRO12_URL" | bzcat | $conf_priv tar xf - -C /opt
 	[[ $? -eq 0 ]] || fatal "failed to fetch Studio"
 	[[ -e /opt/SUNspro/sunstudio12.1 ]] && return
 	$conf_priv ln -s /opt/SUNWspro /opt/SUNWspro/sunstudio12.1 || fatal \
@@ -275,11 +280,7 @@ function fetch_adjuncts
 	local tgz
 	[[ -z "$ILLUMOS_ADJUNCT_TARBALL_URL" ]] && fatal \
 	    "ILLUMOS_ADJUNCT_TARBALL_URL missing from configure"
-	tgz=$(curl -k "$ILLUMOS_ADJUNCT_TARBALL_URL" | grep href | tail -n1 | \
-	    cut -d '"' -f2)
-	[[ -z "$tgz" ]] && fatal \
-	    "Unable to get adjuncts from ILLUMOS_ADJUNCT_TARBALL_URL"
-	curl -kO $ILLUMOS_ADJUNCT_TARBALL_URL/$tgz
+	curl -O $ILLUMOS_ADJUNCT_TARBALL_URL
 	[[ $? -eq 0 ]] || fatal "failed to fetch adjuncts tarball"
 }
 
@@ -293,11 +294,11 @@ function fetch_closed
 	[[ -z "$ON_CLOSED_BINS_ND_URL" ]] && fatal \
 	    "missing ON_CLOSED_BINS_ND_URL from configure"
 	if [[ ! -f $ildir/$cld ]]; then
-		curl -k $ON_CLOSED_BINS_URL -o $ildir/$cld || fatal \
+		curl $ON_CLOSED_BINS_URL -o $ildir/$cld || fatal \
 		"failed to fetch closed bins (debug)"
 	fi
 	if [[ ! -f $ildir/$clnd ]]; then
-		curl -k $ON_CLOSED_BINS_ND_URL -o $ildir/$clnd || fatal \
+		curl $ON_CLOSED_BINS_ND_URL -o $ildir/$clnd || fatal \
 		"failed to fetch closed bins (non-debug)"
 	fi
 	cd $ildir >/dev/null 2>&1 || fatal "failed to cd into $ildir"

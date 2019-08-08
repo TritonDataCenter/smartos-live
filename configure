@@ -456,16 +456,16 @@ read -r -d '' usage <<EOF
 		build Illumos in DEBUG mode only [default: no]
 	-h
 		this message
-	-p gcc4
-		primary compiler version [default: gcc4]
+	-p gcc7
+		primary compiler version [default: gcc7]
 	-P password
 		platform root password [default: randomly chosen]
 	-r
 		full strap build (no cache) [default: no]
 	-S
 		do *not* run smatch [default is to run smatch]
-	-s gcc7
-		shadow compilers, comma delimited (gcc7,gcc#) [default: none]
+	-s gcc4
+		shadow compilers, comma delimited (gcc4,gcc#) [default: none]
 EOF
 
 while getopts "cdhp:P:rSs:" arg; do
@@ -504,7 +504,7 @@ done
 
 [[ -n "$ILLUMOS_ENABLE_DEBUG" ]] || ILLUMOS_ENABLE_DEBUG=no
 [[ -n "$ILLUMOS_CLOBBER" ]] || ILLUMOS_CLOBBER=no
-[[ -n "$PRIMARY_COMPILER" ]] || PRIMARY_COMPILER=gcc4
+[[ -n "$PRIMARY_COMPILER" ]] || PRIMARY_COMPILER=gcc7
 [[ -n "$ENABLE_SMATCH" ]] || ENABLE_SMATCH=yes
 
 PRIMARY_COMPILER_VER=$(echo $PRIMARY_COMPILER | sed 's/^gcc//')

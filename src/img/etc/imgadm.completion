@@ -85,6 +85,9 @@ _imgadm()
         # VM UUIDs.
         local vm_uuids=$(vmadm list -H -o uuid)
         COMPREPLY=( $(compgen -W "${vm_uuids}" -- ${cur}) )
+        if [[ -z "$COMPREPLY" ]]; then
+            _zone_alias
+        fi
 
     else
         # Just expand files by default.

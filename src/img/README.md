@@ -16,7 +16,7 @@ This can only be run in the global zone (GZ).
 
 # Development
 
-The src/img tree has not binary components, so you can get away
+The src/img tree has no binary components, so you can get away
 with faster edit/test cycle than having to do a full smartos platform
 build and rebooting on it. Here is how:
 
@@ -48,6 +48,10 @@ build and rebooting on it. Here is how:
     # Or run the test suite:
     ssh root@MY-SMARTOS-BOX /var/img/test/runtests
 
+Note that at the time of writing, version 3.9.4, we have backported
+imgapi channel support to the version of sdc-clients that is included
+in `node_modules`. This solution was preferred over upgrading sdc-clients
+in order to minimize the size of the platform image.
 
 Before commits, please (a) run the test suite on a test box per the notes
 above and (b) maintain style by running `make check`.

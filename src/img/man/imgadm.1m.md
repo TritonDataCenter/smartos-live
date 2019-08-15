@@ -42,6 +42,11 @@ The manifest is a JSON serialized description.
 The identifier for an image is its UUID. Most commands operate on images by
 UUID.
 
+Image API servers that support channels can be configured as sources by
+specifying URLs with the 'channel=<channel name>' parameter. The 'import'
+command also allows a '-C' argument to override all sources and use the
+supplied channel.
+
 
 ## OPTIONS
 
@@ -75,6 +80,9 @@ UUID.
 
         An image source is a URL to a server implementing the IMGAPI, or
         the Docker Registry API. The default IMGAPI is https://images.joyent.com
+
+        Image API server channels can be specified by including a
+        '?channel=<channel name>' parameter as part of the supplied <url>.
 
         Usage:
             imgadm sources [--verbose|-v] [--json|-j]  # list sources
@@ -167,8 +175,14 @@ UUID.
         Options:
             -h, --help                Show this help.
             -q, --quiet               Disable progress bar.
+            -C <channel>              Override the channel used for all sources
+                                      when looking for images.
             -P <pool>                 Name of zpool in which to look for the image.
                                       Default is "zones".
+            -S <url>                  Specify the URL from which to import the
+                                      image. The URL may include a '?channel='
+                                      parameter, but note that the -C argument,
+                                      if used, will take precedence.
 
 
     imgadm install [-P <pool>] -m <manifest> -f <file>

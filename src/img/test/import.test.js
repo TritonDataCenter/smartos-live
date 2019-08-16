@@ -380,7 +380,8 @@ test('setup8: rm experimental image ' + TEST_EXPERIMENTAL_UUID, function (t) {
     var cmd = format(
         'imgadm delete %s ;'
             + 'imgadm sources -d https://updates.joyent.com ;'
-            + 'imgadm sources -d https://updates.joyent.com?channel=experimental',
+            + 'imgadm sources -d '
+            + 'https://updates.joyent.com?channel=experimental',
         TEST_EXPERIMENTAL_UUID);
     t.exec(cmd, function () {
         t.end();
@@ -412,8 +413,8 @@ test('setup9: add updates.joyent.com source', function (t) {
 test('experimental image import with -C arg', function (t) {
     var cmd = 'imgadm import -C experimental ' + TEST_EXPERIMENTAL_UUID;
     exec(cmd, function (err, stdout, stderr) {
-        exec('imgadm get ' + TEST_EXPERIMENTAL_UUID, function (err, o, e) {
-            t.ifError(err);
+        exec('imgadm get ' + TEST_EXPERIMENTAL_UUID, function (err2, o, e) {
+            t.ifError(err2);
             t.end();
         });
     });
@@ -432,8 +433,8 @@ test('experimental image import with -S channel url', function (t) {
             + '-S https://updates.joyent.com?channel=experimental '
             + TEST_EXPERIMENTAL_UUID);
     exec(cmd, function (err, stdout, stderr) {
-        exec('imgadm get ' + TEST_EXPERIMENTAL_UUID, function (err, o, e) {
-            t.ifError(err);
+        exec('imgadm get ' + TEST_EXPERIMENTAL_UUID, function (err2, o, e) {
+            t.ifError(err2);
             t.end();
         });
     });
@@ -449,7 +450,7 @@ test('setup11: delete experimental image', function (t) {
             + 'https://updates.joyent.com?channel=experimental ',
         TEST_EXPERIMENTAL_UUID);
     exec(cmd, function (err, o, e) {
-        t.ifError(err)
+        t.ifError(err);
         t.end();
     });
 });
@@ -457,9 +458,9 @@ test('setup11: delete experimental image', function (t) {
 // With a configured experimental channel, this should succeed
 test('experimental image import configured channel', function (t) {
     var cmd = 'imgadm import ' + TEST_EXPERIMENTAL_UUID;
-    exec(cmd, function (err, o, e) {
-        exec('imgadm get ' + TEST_EXPERIMENTAL_UUID, function (err, o, e) {
-            t.ifError(err);
+    exec(cmd, function (err, stdout, stderr) {
+        exec('imgadm get ' + TEST_EXPERIMENTAL_UUID, function (err2, o, e) {
+            t.ifError(err2);
             t.end();
         });
     });

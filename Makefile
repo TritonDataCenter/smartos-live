@@ -137,9 +137,8 @@ world: 0-strap-stamp 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp \
 live: world manifest mancheck_conf boot $(TOOLS_TARGETS) $(MANCF_FILE)
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
-	CTFCONVERT=$(CTFCONVERT) ./tools/build_live \
-	    -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output $(PLATFORM_PASSWORD_OPT) \
-	    $(ROOT)/proto $(ROOT)/man/man
+	./tools/build_live -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output \
+	    $(PLATFORM_PASSWORD_OPT) $(ROOT)/proto $(ROOT)/man/man
 
 boot: $(BOOT_TARBALL)
 

@@ -441,6 +441,10 @@ GM4=/opt/local/bin/gm4;				export GM4
 RPCGEN=/opt/local/bin/rpcgen;			export RPCGEN
 ASTBINDIR=/opt/local/ast/bin;			export ASTBINDIR
 LD_TOXIC_PATH="\$ROOT/lib:\$ROOT/usr/lib";	export LD_TOXIC_PATH
+# generate buildversion for illumos buildversion module
+BUILDVERSION_EXEC="${conf_root}/tools/build_etcrelease";
+						export BUILDVERSION_EXEC
+
 EOF
 	[[ $? -eq 0 ]] || fatal "failed to write illumos nightly env file"
 }

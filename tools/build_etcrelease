@@ -11,11 +11,18 @@
 #
 
 #
-# Copyright (c) 2017, Joyent, Inc.
+# Copyright 2019 Joyent, Inc.
+#
+
+#
+# MDB is pernickety about the exact format of this output, so be
+# careful. In particular the json-4 formatting/spacing is required.
 #
 
 set -o errexit
 set -o pipefail
+
+export PATH=/opt/local/bin/:$PATH
 
 ber_arg0=$(basename $0)
 ber_wsroot=$(cd "$(dirname "$0")/.." && pwd)
@@ -132,7 +139,7 @@ if [[ -n $ber_template ]]; then
 	printf '%s\n\n' "$ber_template_data"
 fi
 
-printf '[\n'
+( printf '[\n'
 get_status "$ber_wsroot" smartos-live
 get_status "$ber_wsroot/projects/illumos" illumos-joyent
 get_status "$ber_wsroot/projects/illumos-extra" illumos-extra
@@ -140,6 +147,6 @@ for d in $ber_wsroot/projects/local/*; do
 	get_status $d $(basename $d)
 done
 
-printf '\n]\n'
+printf '\n]\n' ) | json -o json-4
 
 exit 0

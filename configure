@@ -263,18 +263,6 @@ function install_packages
 	[[ $? -eq 0 ]] || fatal "failed to install packages"
 }
 
-function fetch_studio
-{
-	[[ -f "/opt/SUNWspro/prod/bin/cc" ]] && return
-	[[ -z "$SUNW_SPRO12_URL" ]] && fatal \
-	    "SUNW_SPRO12_URL not set in configure.*"
-	curl "$SUNW_SPRO12_URL" | bzcat | $conf_priv tar xf - -C /opt
-	[[ $? -eq 0 ]] || fatal "failed to fetch Studio"
-	[[ -e /opt/SUNspro/sunstudio12.1 ]] && return
-	$conf_priv ln -s /opt/SUNWspro /opt/SUNWspro/sunstudio12.1 || fatal \
-	    "cannot create Studio symlink"
-}
-
 function fetch_adjuncts
 {
 	local tgz
@@ -541,9 +529,6 @@ create_projects
 echo "done."
 echo "Installing packages ... \c "
 install_packages
-echo "done."
-echo "Fetching studio... \c "
-fetch_studio
 echo "done."
 echo "Fetching adjuncts tgz... \c "
 fetch_adjuncts

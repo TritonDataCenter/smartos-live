@@ -50,6 +50,7 @@ function ImgapiSource(opts) {
             }
             this._client = imgapi.createClient({
                 url: self.normUrl,
+                channel: self.channel,
                 version: '~2',
                 headers: headers,
                 log: self.log,

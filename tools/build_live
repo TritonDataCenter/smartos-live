@@ -261,38 +261,6 @@ function bi_create_ufs
 	bi_emit_done
 }
 
-#
-# We want to explicitly rebuild the kernel module so it reflects the status of
-# all our repositories, even if we didn't choose to rebuild projects/illumos.
-#
-function bi_remake_buildversion
-{
-	local artefact="$bi_out_dir/gitstatus.json"
-	local bvfile="$bi_wsroot/projects/illumos/usr/src/buildversion"
-
-	#
-	# We include the JSON-only version of the release information as a
-	# separate build artefact.
-	#
-	if ! "$bi_wsroot/tools/build_etcrelease" >"$artefact"; then
-		fail "could not generate gitstatus file"
-	fi
-
-	if cmp "$artefact" "$bvfile" >/dev/null 2>&1; then
-		return
-	fi
-
-	bi_emit_start 'Updating buildversion kernel module'
-
-	cp "$artefact" "$bvfile"
-
-	(cd $bi_wsroot/projects/illumos && ksh93 \
-	    usr/src/tools/scripts/bldenv.sh illumos.sh \
-	    'cd $CODEMGR_WS/usr/src/uts/intel/buildversion && dmake install')
-
-	bi_emit_done
-}
-
 function bi_copy_files
 {
 	local builder="$bi_wsroot/tools/builder/builder"
@@ -435,24 +403,43 @@ function bi_create_password
 	bi_emit_done
 }
 
-function bi_gen_etcrelease
+#
+# Generate the gitstatus file and make sure it's included in the platform image
+# as /etc/versions/build. We already did this via nightly(1), but we re-do it
+# here in case we updated other components without re-building illumos.
+#
+# On boot, the kernel will pull this in.
+#
+# We also generate the platform's /etc/release here.
+#
+function bi_gen_version_files
 {
-	local template="$bi_wsroot/tools/etc_release.template.txt"
+	local etcrelease_template="$bi_wsroot/tools/etc_release.template.txt"
 	local build_etcrelease="$bi_wsroot/tools/build_etcrelease"
+	local bvfile="$bi_mnt_root/etc/versions/build"
+	local gitstatus="$bi_out_dir/gitstatus.json"
 
-	bi_emit_start 'Building "/etc/release" file'
+	bi_emit_start 'Building version files'
+
+	"$build_etcrelease" >"$gitstatus" ||
+	    fail "could not generate $gitstatus"
+
+	pfexec cp "$gitstatus" "$bi_archive.gitstatus" ||
+	    fail "failed to copy gitstatus"
+
+	if ! cmp "$gitstatus" "$bvfile" >/dev/null 2>&1; then
+		cp "$gitstatus" "$bvfile" ||
+		    fail "could not copy build version"
+	fi
 
 	#
-	# Create the file using "pfexec tee", as the build user might not have
+	# Create this file using "pfexec tee", as the build user might not have
 	# permission to write in the mounted image using regular shell
 	# redirection.
 	#
-	if ! "$build_etcrelease" "$bi_buildstamp" "$template" |
-	    pfexec /usr/bin/tee "$bi_mnt_root/etc/release" >/dev/null; then
-		fail 'failed to build "/etc/release" file'
-	fi
-
-	pfexec cp "$bi_out_dir/gitstatus.json" "$bi_archive.gitstatus"
+	"$build_etcrelease" "$bi_buildstamp" "$etcrelease_template" |
+	    pfexec /usr/bin/tee "$bi_mnt_root/etc/release" >/dev/null ||
+	     fail 'failed to build "/etc/release" file'
 
 	bi_emit_done
 }
@@ -867,13 +854,12 @@ fi
 #
 # Assemble the boot_archive:
 #
-bi_remake_buildversion
 bi_copy_files
 bi_gen_whatis
 bi_smf_import
 bi_smf_seeds
 bi_create_password
-bi_gen_etcrelease
+bi_gen_version_files
 bi_ship_manifest
 bi_file_fixups
 bi_compress_usr

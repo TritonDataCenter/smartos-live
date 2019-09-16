@@ -133,19 +133,20 @@ inside of a non-global zone.
 
 #### Importing the Zone Image
 
-The SmartOS build currently uses the `base-multiarch-lts 16.4.1` image
-which has a UUID of `bafa230e-e6ea-11e6-8438-c72c10ff2d1f `. To import
+The SmartOS build currently uses the `base-64-lts 18.4.0` image
+which has a UUID of `c193a558-1d63-11e9-97cf-97bb3ee5c14f `. To import
 the image, you should run the imgadm command from the global zone:
 
 ```
-# imgadm import bafa230e-e6ea-11e6-8438-c72c10ff2d1f
-Importing bafa230e-e6ea-11e6-8438-c72c10ff2d1f (base-multiarch-lts@16.4.1) from "https://images.joyent.com"
-Gather image bafa230e-e6ea-11e6-8438-c72c10ff2d1f ancestry
-Must download and install 1 image (220.6 MiB)
-Download 1 image                     [=======================================================================>] 100% 220.65MB   7.95MB/s    27s
-Downloaded image bafa230e-e6ea-11e6-8438-c72c10ff2d1f (220.6 MiB)
-...a230e-e6ea-11e6-8438-c72c10ff2d1f [=======================================================================>] 100% 220.65MB  18.76MB/s    11s
-Imported image bafa230e-e6ea-11e6-8438-c72c10ff2d1f (base-multiarch-lts@16.4.1)
+# imgadm import c193a558-1d63-11e9-97cf-97bb3ee5c14f
+Importing c193a558-1d63-11e9-97cf-97bb3ee5c14f (base-64-lts@18.4.0) from "https://images.joyent.com"
+Gather image c193a558-1d63-11e9-97cf-97bb3ee5c14f ancestry
+Must download and install 1 image (148.6 MiB)
+Download 1 image     [=======================>] 100% 148.62MB 497.77KB/s  5m 5s
+Downloaded image c193a558-1d63-11e9-97cf-97bb3ee5c14f (148.6 MiB)
+...97cf-97bb3ee5c14f [=======================>] 100% 148.62MB   5.12MB/s    29s
+Imported image c193a558-1d63-11e9-97cf-97bb3ee5c14f (base-64-lts@18.4.0)
+#
 ```
 
 #### Creating the Zone
@@ -154,7 +155,7 @@ To create a zone, you need to create a `joyent` branded zone with
 `vmadm`. We recommend that the zone have the following attributes:
 
 * The brand set to `"joyent"`
-* The `image_uuid` set to `"bafa230e-e6ea-11e6-8438-c72c10ff2d1f"`
+* The `image_uuid` set to `"c193a558-1d63-11e9-97cf-97bb3ee5c14f"`
 * At least 25 GiB of disk space specified in the `quota` property
 * At least 2-4 GiB of DRAM specified in the `max-physical-memory`
 property

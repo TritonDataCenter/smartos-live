@@ -428,7 +428,7 @@ function bi_gen_version_files
 	    fail "failed to copy gitstatus"
 
 	if ! cmp "$gitstatus" "$bvfile" >/dev/null 2>&1; then
-		cp "$gitstatus" "$bvfile" ||
+		pfexec cp "$gitstatus" "$bvfile" ||
 		    fail "could not copy build version"
 	fi
 

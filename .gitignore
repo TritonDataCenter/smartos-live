@@ -18,6 +18,7 @@
 /proto.boot
 /proto.images
 /proto.strap
+/proto.tests
 /src/*.o
 /src/bootparams
 /src/disk_size
@@ -95,6 +96,7 @@ src/sysinfo_mod.so
 src/vm/node_modules/props.js
 src/zonememstat
 src/zonemon
+tests.manifest.gen
 tools/pwgen-2.06/Makefile
 tools/pwgen-2.06/autom4te.cache
 zonestat.1

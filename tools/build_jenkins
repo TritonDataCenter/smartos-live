@@ -173,8 +173,17 @@ case "${PLATFORM_BUILD_FLAVOR}" in
         ;;
 esac
 
-# Update Manta snaplinks for smartos, only if this is a non-debug release build
-if [[ -z "${ENGBLD_CONFIGURE_DEBUG_ARG}" && -n "${ENGBLD_RELEASE}" ]]; then
+#
+# Update Manta snaplinks for smartos, only if this is a non-debug, release
+# build.
+# We check for an empty $PLATFORM_DEBUG_SUFFIX as that gets used as the way to
+# prevent downstream Jenkins builds (e.g. 'platform-gcc4') uploading artifacts
+# to the 'platform' Manta directory, even though they may not strictly be debug
+# builds.
+#
+if [[ -n "${ENGBLD_RELEASE}" && \
+        -z "${ENGBLD_CONFIGURE_DEBUG_ARG}" && \
+        -z "${PLATFORM_DEBUG_SUFFIX}" ]]; then
     case "${PLATFORM_BUILD_FLAVOR}" in
         'smartos'|'triton-and-smartos')
             log_cmd env TRACE=1 ./tools/smartos-release \

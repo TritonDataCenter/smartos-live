@@ -58,8 +58,8 @@ my $usage =
 "Usage: jsstyle [-h?vcC] [-t <num>] [-f <path>] [-o <config>] file ...
 
 Check your JavaScript file for style.
-See <https://github.com/davepacheco/jsstyle> for details on config options.
-Report bugs to <https://github.com/davepacheco/jsstyle/issues>.
+See <https://github.com/joyent/jsstyle> for details on config options.
+Report bugs to <https://github.com/joyent/jsstyle/issues>.
 
 Options:
 	-h 	print this help and exit
@@ -672,12 +672,12 @@ line: while (<$filehandle>) {
 	if (/^\s*\(void\)[^ ]/) {
 		err("missing space after (void) cast");
 	}
-	if (/\S\{/ && !/({|\(){/ &&
+	if (/\S\{/ && !/(\{|\()\{/ &&
 	    # Allow a brace in a regex quantifier.
 	    !/\/.*?\{\d+,?\d*\}.*?\//) {
 		err("missing space before left brace");
 	}
-	if ($in_function && /^\s+{/ &&
+	if ($in_function && /^\s+\{/ &&
 	    ($prev =~ /\)\s*$/ || $prev =~ /\bstruct\s+\w+$/)) {
 		err("left brace starting a line");
 	}
@@ -790,8 +790,8 @@ process_indent($)
 
 	# skip over enumerations, array definitions, initializers, etc.
 	if ($cont_off <= 0 && !/^\s*$special/ &&
-	    (/(?:(?:\b(?:enum|struct|union)\s*[^\{]*)|(?:\s+=\s*)){/ ||
-	    (/^\s*{/ && $prev =~ /=\s*(?:\/\*.*\*\/\s*)*$/))) {
+	    (/(?:(?:\b(?:enum|struct|union)\s*[^\{]*)|(?:\s+=\s*))\{/ ||
+	    (/^\s*\{/ && $prev =~ /=\s*(?:\/\*.*\*\/\s*)*$/))) {
 		$cont_in = 0;
 		$cont_off = tr/{/{/ - tr/}/}/;
 		return;
@@ -814,14 +814,14 @@ process_indent($)
 		return		if (/^\s*\}?$/);
 		return		if (/^\s*\}?\s*else\s*\{?$/);
 		return		if (/^\s*do\s*\{?$/);
-		return		if (/{$/);
+		return		if (/\{$/);
 		return		if (/}[,;]?$/);
 
 		# Allow macros on their own lines
 		return		if (/^\s*[A-Z_][A-Z_0-9]*$/);
 
 		# cases we don't deal with, generally non-kosher
-		if (/{/) {
+		if (/\{/) {
 			err("stuff after {");
 			return;
 		}
@@ -935,7 +935,7 @@ process_indent($)
 					$cont_in = 0;
 					last;
 				}
-				if ($rest =~ /^\s*special/) {
+				if ($rest =~ /^\s*$special/) {
 					err("if/for/while/switch not started ".
 					    "on its own line");
 				}

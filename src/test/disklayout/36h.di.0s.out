@@ -1,135 +1,7 @@
 {
-	"spares": [
-		{
-			"name": "disk2a",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk2b",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk2c",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk2d",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk2e",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk2f",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk30",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk31",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk32",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk33",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk34",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk35",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk36",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk37",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk38",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk39",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk3a",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		},
-		{
-			"name": "disk3b",
-			"vid": "MFG",
-			"pid": "DISK",
-			"size": "600127266816",
-			"solid_state": false
-		}
-	],
 	"vdevs": [
 		{
-			"type": "raidz3",
+			"type": "raidz2",
 			"devices": [
 				{
 					"name": "disk00",
@@ -193,7 +65,12 @@
 					"pid": "DISK",
 					"size": "600127266816",
 					"solid_state": false
-				},
+				}
+			]
+		},
+		{
+			"type": "raidz2",
+			"devices": [
 				{
 					"name": "disk09",
 					"vid": "MFG",
@@ -256,7 +133,12 @@
 					"pid": "DISK",
 					"size": "600127266816",
 					"solid_state": false
-				},
+				}
+			]
+		},
+		{
+			"type": "raidz2",
+			"devices": [
 				{
 					"name": "disk12",
 					"vid": "MFG",
@@ -277,12 +159,7 @@
 					"pid": "DISK",
 					"size": "600127266816",
 					"solid_state": false
-				}
-			]
-		},
-		{
-			"type": "raidz3",
-			"devices": [
+				},
 				{
 					"name": "disk15",
 					"vid": "MFG",
@@ -324,7 +201,12 @@
 					"pid": "DISK",
 					"size": "600127266816",
 					"solid_state": false
-				},
+				}
+			]
+		},
+		{
+			"type": "raidz2",
+			"devices": [
 				{
 					"name": "disk1b",
 					"vid": "MFG",
@@ -387,51 +269,9 @@
 					"pid": "DISK",
 					"size": "600127266816",
 					"solid_state": false
-				},
-				{
-					"name": "disk24",
-					"vid": "MFG",
-					"pid": "DISK",
-					"size": "600127266816",
-					"solid_state": false
-				},
-				{
-					"name": "disk25",
-					"vid": "MFG",
-					"pid": "DISK",
-					"size": "600127266816",
-					"solid_state": false
-				},
-				{
-					"name": "disk26",
-					"vid": "MFG",
-					"pid": "DISK",
-					"size": "600127266816",
-					"solid_state": false
-				},
-				{
-					"name": "disk27",
-					"vid": "MFG",
-					"pid": "DISK",
-					"size": "600127266816",
-					"solid_state": false
-				},
-				{
-					"name": "disk28",
-					"vid": "MFG",
-					"pid": "DISK",
-					"size": "600127266816",
-					"solid_state": false
-				},
-				{
-					"name": "disk29",
-					"vid": "MFG",
-					"pid": "DISK",
-					"size": "600127266816",
-					"solid_state": false
 				}
 			]
 		}
 	],
-	"capacity": 21604581605376
+	"capacity": 16803563470848
 }

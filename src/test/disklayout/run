@@ -163,6 +163,29 @@ printf "%-16s " 3.w3.m.out
 diff -u 3.di.w3.m.out /var/tmp/3.out
 rm -f /var/tmp/3.out
 
+# Next two tests specify width larger than default max
+disklayout -w 7 -f 7.di raidz1 > /var/tmp/7.out
+printf "%-16s " 7.w7.z1.out
+diff -u 7.di.w7.z1.out /var/tmp/7.out
+rm -f /var/tmp/7.out
+
+disklayout -w 21 -f 60.di raidz3 > /var/tmp/21.out
+printf "%-16s " 60.di.w21.z3.out
+diff -u 60.di.w21.z3.out /var/tmp/21.out
+rm -f /var/tmp/21.out
+
+# 36 disk server with raidz1 - defaults to 3-wide stripes
+disklayout -f 36h.di -s 0 raidz1 > /var/tmp/3.out
+printf "%-16s " 36.w3.z1.out
+diff -u 36.di.w3.z1.out /var/tmp/3.out
+rm -f /var/tmp/3.out
+
+# 36 disk server with 12-wide raidz1 for max capacity
+disklayout -f 36h.di -w 12 -s 0 raidz1 > /var/tmp/12.out
+printf "%-16s " 36.w12.z1.out
+diff -u 36.di.w12.z1.out /var/tmp/12.out
+rm -f /var/tmp/12.out
+
 echo
 echo "invalid input tests"
 
@@ -176,19 +199,9 @@ printf "%-16s " 7.2s.w6.z1.out
 diff -u 7.di.2s.w6.z1.out /var/tmp/err.out
 rm -f /var/tmp/err.out
 
-disklayout -w 7 -f 7.di raidz1 > /var/tmp/err.out
-printf "%-16s " 7.w7.z1.out
-diff -u 7.di.w7.z1.out /var/tmp/err.out
-rm -f /var/tmp/err.out
-
 disklayout -w 6 -f 7.di raidz2 > /var/tmp/err.out
 printf "%-16s " 7.w6.z2.out
 diff -u 7.di.w6.z2.out /var/tmp/err.out
-rm -f /var/tmp/err.out
-
-disklayout -w 21 -f 60.di raidz3 > /var/tmp/err.out
-printf "%-16s " 60.di.w21.z3.out
-diff -u 60.di.w21.z3.out /var/tmp/err.out
 rm -f /var/tmp/err.out
 
 disklayout -w 15 -s 2 -f s16.di raidz3 > /var/tmp/err.out

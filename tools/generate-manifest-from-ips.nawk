@@ -180,7 +180,6 @@ function parse_or_next() {
 #
 /^file|^\$\(i386_ONLY\)file/ {
     debug("file action: " $0);
-    action = "";
     action_name = "file";
     res = parse_or_next();
     if (res == 1) {

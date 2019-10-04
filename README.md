@@ -708,6 +708,188 @@ If changing a device driver, you may need to track down multiple
 generations of said hardware to test against to verify that there aren't
 regressions.
 
+Along with the various build artifacts created by the SmartOS build that
+deliver the operating system media, we produce a tarball containing the
+test suites that were included in the 'illumos-joyent' repository.
+
+A wrapper script is included in the archive which can configure a test system
+to run these tests, will extract the tests to the correct location on the
+system, and will optionally execute some of the included test suites.
+
+It has the following usage:
+
+```
+[root@kura ~]# /opt/smartos-test/bin/smartos-test -h
+Usage: smartos-test [-h] [-c] [-e] [-r] [-w] <path to tests.tgz>
+
+At least one of -c, -e, -r is required.
+
+  -h       print usage
+  -c       configure the system for testing
+  -e       execute known tests
+  -f       skip the check to ensure platform version == test version
+  -r       snapshot or rollback to zones/opt@system-test-smartos-test
+           before doing any system configuration or test execution
+  -w       when mounting the lofs /usr, make it writable
+
+```
+
+Developers should extract the script from the test archive, then run it with an
+argument that points to the test archive, and use one or more of the options
+`-r`, `-c`, `-e`.
+
+When called with all of the options listed above, `smartos-test` will do the
+following:
+
+* verify we're running on the global zone
+* verify that the user has indicated that no production data exists on this
+  system
+* verify that the test archive version matches the version of the running
+  SmartOS instance
+* take a named-snapshot of /opt if one doesn't already exist, or rollback to
+  that snapshot prior to extracting the tests to /opt
+* create an lofs-mount of /usr in order to extract portions of the test archive
+  that need to reside there
+* temporarily add any local user accounts needed to execute tests
+* download a pkgsrc bootstrap to /opt and install the pkgsrc dependencies
+  needed to run the tests
+* execute the tests serially, accumulating result codes
+* exit 0 if all tests passed, or 1 if one or more tests failed
+
+For example:
+
+```
+[root@kura /var/tmp]# tar zvxf tests-test_archive-master-20191001T134222Z.tgz ./opt/smartos-test
+Decompressing 'tests-test_archive-master-20191001T134222Z.tgz' with '/usr/bin/gzcat'...
+x ./opt/smartos-test, 0 bytes, 0 tape blocks
+x ./opt/smartos-test/README, 958 bytes, 2 tape blocks
+x ./opt/smartos-test/bin, 0 bytes, 0 tape blocks
+x ./opt/smartos-test/bin/smartos-test, 10062 bytes, 20 tape blocks
+
+[root@kura /var/tmp]# ./opt/smartos-test/bin/smartos-test -rce ./tests-test_archive-master-20191001T134222Z.tgz
+Platform version: 20191001T134222Z
+   Tests version: 20191001T134222Z
+To setup and run these tests you must create the file:
+    /lib/sdc/.sdc-test-no-production-data
+after ensuring you have no production data on this system.
+[root@kura /var/tmp]# touch /lib/sdc/.sdc-test-no-production-data
+
+[root@kura /var/tmp]# ./opt/smartos-test/bin/smartos-test -rce ./tests-test_archive-master-20191001T134222Z.tgz
+Platform version: 20191001T134222Z
+   Tests version: 20191001T134222Z
+Running zfs snapshot zones/opt@system-test-smartos-test
+Creating new lofs mount for /usr on /var/tmp/smartos-test-loopback
+820704 blocks
+Running tar -xzf ./tests-test_archive-master-20191001T134222Z.tgz -C /var/tmp/smartos-test-loopback ./usr
+Running mount -O -F lofs -o ro /var/tmp/smartos-test-loopback/usr /usr
+Running tar -xzf ./tests-test_archive-master-20191001T134222Z.tgz -C / ./opt ./kernel ./tests.manifest.gen ./tests.buildstamp
+adding cyrus user
+adding ztest user
+Running curl -kO https://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2018Q4-tools.tar.gz
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 22.9M  100 22.9M    0     0   566k      0  0:00:41  0:00:41 --:--:--  577k
+Running tar -zxpf bootstrap-2018Q4-tools.tar.gz -C /
+Running ln -s /opt/tools /opt/local
+Running pkgin -y in python27 sudo coreutils gcc7 gmake
+reading local summary...
+processing local summary...
+processing remote summary (https://pkgsrc.joyent.com/packages/SmartOS/2018Q4/tools/All)...
+pkg_summary.xz                                                                                        100%  120KB 119.9KB/s   00:00
+calculating dependencies...done.
+
+1 package to refresh:
+  bzip2-1.0.8
+
+13 packages to install:
+  libiconv-1.14nb3 tcp_wrappers-7.6.4 libffi-3.2.1nb4 gettext-lib-0.19.8.1 db4-4.8.30 openldap-client-2.4.47 cyrus-sasl-2.1.27
+  binutils-2.26.1nb1 python27-2.7.15nb1 sudo-1.8.26 coreutils-8.29nb1 gcc7-7.3.0nb4 gmake-4.2.1nb1
+
+1 to refresh, 0 to upgrade, 13 to install
+137M to download, 415M to install
+
+libiconv-1.14nb3.tgz                                                                                  100% 2068KB 689.3KB/s   00:03
+libffi-3.2.1nb4.tgz                                                                                   100%   59KB  59.4KB/s   00:00
+gettext-lib-0.19.8.1.tgz                                                                              100%   67KB  67.3KB/s   00:00
+
+.
+. (output omitted for brevity)
+.
+
+gcc7-7.3.0nb4: registering info file /opt/tools/gcc7/info/libquadmath.info
+installing gmake-4.2.1nb1...
+gmake-4.2.1nb1: registering info file /opt/tools/info/make.info
+pkg_install warnings: 0, errors: 0
+reading local summary...
+processing local summary...
+marking python27-2.7.15nb1 as non auto-removable
+marking sudo-1.8.26 as non auto-removable
+marking coreutils-8.29nb1 as non auto-removable
+marking gcc7-7.3.0nb4 as non auto-removable
+marking gmake-4.2.1nb1 as non auto-removable
+Starting test runs
+
+Starting test for bhyvetest with /opt/bhyvetest/bin/bhyvetest -ak
+Starting tests...
+output directory: /var/tmp/bhyvetest.23953
+Executing test /opt/bhyvetest/tst/mevent/lists.delete.exe ... passed
+Executing test /opt/bhyvetest/tst/mevent/read.disable.exe ... passed
+Executing test /opt/bhyvetest/tst/mevent/read.pause.exe ... passed
+Executing test /opt/bhyvetest/tst/mevent/read.requeue.exe ... passed
+
+-------------
+Results
+-------------
+
+Tests passed: 4
+Tests failed: 0
+Tests ran:    4
+
+Congrats, some tiny parts of bhyve aren't completely broken, the tests pass.
+
+Starting test-runner for crypto-tests with /opt/crypto-tests/runfiles/default.run
+Test: /opt/crypto-tests/tests/aes/kcf/setup (run as root)         [00:00] [PASS]
+Test: /opt/crypto-tests/tests/aes/kcf/aes_cbc_32 (run as root)    [00:00] [PASS]
+Test: /opt/crypto-tests/tests/aes/kcf/aes_ccm_32 (run as root)    [00:00] [PASS]
+
+.
+. (output omitted for brevity)
+.
+
+Test: /opt/util-tests/tests/vnic-mtu (run as root)                [00:00] [PASS]
+Test: /opt/util-tests/tests/xargs_test (run as root)              [00:00] [PASS]
+Test: /opt/util-tests/tests/awk/runtests.sh (run as nobody)       [02:35] [PASS]
+Test: /opt/util-tests/tests/ctf/precheck (run as root)            [00:00] [PASS]
+Test: /opt/util-tests/tests/ctf/ctftest (run as root)             [00:06] [PASS]
+Test: /opt/util-tests/tests/demangle/afl-fast (run as root)       [00:01] [PASS]
+Test: /opt/util-tests/tests/demangle/gcc-libstdc++ (run as root)  [00:00] [PASS]
+Test: /opt/util-tests/tests/demangle/llvm-stdcxxabi (run as root) [00:00] [PASS]
+Test: /opt/util-tests/tests/libnvpair_json/json_00_blank (run as root) [00:00] [PASS]
+Test: /opt/util-tests/tests/libnvpair_json/json_01_boolean (run as root) [00:00] [PASS]
+Test: /opt/util-tests/tests/libnvpair_json/json_02_numbers (run as root) [00:00] [PASS]
+Test: /opt/util-tests/tests/libnvpair_json/json_03_empty_arrays (run as root) [00:00] [PASS]
+Test: /opt/util-tests/tests/libnvpair_json/json_04_number_arrays (run as root) [00:00] [PASS]
+Test: /opt/util-tests/tests/libnvpair_json/json_05_strings (run as root) [00:00] [PASS]
+Test: /opt/util-tests/tests/libnvpair_json/json_06_nested (run as root) [00:00] [PASS]
+Test: /opt/util-tests/tests/libnvpair_json/json_07_nested_arrays (run as root) [00:00] [PASS]
+
+Results Summary
+PASS      30
+
+Running Time:   00:02:47
+Percent passed: 100.0%
+Log directory:  /var/tmp/test_results/20191002T101510
+[root@kura /var/tmp]#
+```
+
+Note that each test suite emits its own results summary. If any test suites
+failed, the names of those suites are emitted by `smartos-test` just before
+the script exits.
+
+When developers are adding tests to the `illumos-gate`, they should ensure
+that new tests are added to `$SRC/usr/src/pkg/manifest/*.mf` as these IPS
+manifests are used to generate the test archive during the SmartOS build.
+
 ### Public Interfaces
 
 One important thing to always think about is whether or not the thing

@@ -132,6 +132,8 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-sysinfo.js \
 	vm/tests/test-tmpfs.js \
 	vm/tests/test-update.js \
+	vm/tests/test-update-kvm.js \
+	vm/tests/test-update-bhyve.js \
 	vm/tests/test-vrrp-nics.js \
 	vm/tests/test-vminfod.js \
 	vm/tests/test-vminfod-zonewatcher.js \

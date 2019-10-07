@@ -1,4 +1,27 @@
-// Copyright 2015 Joyent, Inc.  All rights reserved.
+/*
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright 2019 Joyent, Inc.
+ */
 
 var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
@@ -15,15 +38,19 @@ var vm_uuid;
 
 var PAYLOADS = {
     create: {
-        alias: 'test-update-kvm-' + process.pid,
-        brand: 'kvm',
-        ram: 256,
+        alias: 'test-update-bhyve-' + process.pid,
+        brand: 'bhyve',
+        ram: 1024,
         autoboot: false,
-        disks: [ {size: 1024, model: 'ide'} ],
+        flexible_disk_size: 10240, // 10G
+        disks: [
+            {size: 1024, model: 'virtio', compression: 'off'}
+        ],
         do_not_inventory: true
     }, add_net0: {
         add_nics: [
             {
+                primary: true,
                 model: 'e1000',
                 ip: '10.254.254.254',
                 ips: ['10.254.254.254/24'],
@@ -59,6 +86,7 @@ var PAYLOADS = {
     }, add_net0_and_net1: {
         add_nics: [
             {
+                primary: true,
                 model: 'virtio',
                 ip: '10.254.254.254',
                 ips: ['10.254.254.254/24'],
@@ -90,6 +118,7 @@ var PAYLOADS = {
     }, add_net0_through_net2: {
         add_nics: [
             {
+                primary: true,
                 model: 'virtio',
                 ip: '10.254.254.254',
                 netmask: '255.255.255.0',
@@ -118,44 +147,14 @@ var PAYLOADS = {
                 mac: '02:03:04:05:06:08'
             }
         ]
-    }, remove_net1: {
+    }, remove_net1_2nd_time: {
         remove_nics: [
             '02:03:04:05:06:07'
         ]
     }, add_disk1: {
         add_disks: [
-            {size: 1024}
+            {size: 1024, compression: 'off'}
         ]
-    }, create_w_drivers: {
-        alias: 'test-update-kvm-' + process.pid,
-        brand: 'kvm',
-        ram: 256,
-        autoboot: false,
-        nic_driver: 'e1000',
-        disk_driver: 'ide',
-        nics: [
-            {
-                model: 'virtio',
-                ip: '10.254.254.254',
-                netmask: '255.255.255.0',
-                nic_tag: 'external',
-                gateway: '10.254.254.1',
-                mac: '00:02:03:04:05:06'
-            }
-        ],
-        disks: [ {size: 1024, model: 'virtio'} ],
-        do_not_inventory: true
-    }, add_nic_and_disk_wo_model: {
-        add_disks: [ {size: 1024} ],
-        add_nics: [ {
-            ip: '10.254.254.253',
-            netmask: '255.255.255.0',
-            nic_tag: 'external',
-            interface: 'net1',
-            vlan_id: 253,
-            gateway: '10.254.254.1',
-            mac: '02:03:04:05:06:07'
-        } ]
     }
 };
 
@@ -164,15 +163,13 @@ var simple_properties = [
     ['billing_id', '9.99'],
     ['hostname', 'hamburgerhelper'],
     ['owner_uuid', '36bf401a-28ef-11e1-b4a7-c344deb1a5d6'],
-    ['package_name', 'really expensive package'],
-    ['package_version', 'XP'],
-    ['virtio_txtimer', 150000],
-    ['virtio_txtimer', '200000', 200000],
-    ['virtio_txburst', 256],
-    ['virtio_txburst', '128', 128]
+    // Bhyve only properties.
+    ['bhyve_extra_opts', '-c sockets=1,cores=2,threads=2'],
+    ['bootrom', 'uefi']
 ];
 
-test('create KVM VM', function (t) {
+
+test('create bhyve VM', function (t) {
     VM.create(PAYLOADS.create, function (err, vmobj) {
         if (err) {
             t.ok(false, 'error creating VM: ' + err.message);
@@ -184,75 +181,38 @@ test('create KVM VM', function (t) {
     });
 });
 
-test('update KVM VM disk model', function (t) {
-
-    VM.load(vm_uuid, function (err, before_obj) {
-        var path;
-        var params;
-
-        if (err) {
-            t.ok(false, 'error loading existing VM: ' + err.message);
-            t.end();
-            return;
-        }
-
-        path = before_obj.disks[0].path;
-        params = {
-            'update_disks': [ {'path': path, 'model': 'virtio'} ]
-        };
-
-        VM.update(vm_uuid, params, function (err2) {
-            if (err2) {
-                t.ok(false, 'error updating VM: ' + err2.message);
-                t.end();
-            } else {
-                VM.load(vm_uuid, function (err3, obj) {
-                    if (err3) {
-                        t.ok(false, 'failed reloading VM');
-                        t.end();
-                        return;
-                    }
-                    t.ok((obj.disks[0].model === 'virtio'),
-                        'obj.disks[0].model: '
-                        + obj.disks[0].model + ' expected: virtio');
-                    t.end();
-                });
-            }
-        });
-    });
-});
-
 // Add disk1 w/o model and ensure it gets same model as disk0 (See OS-2363)
-test('add disk1 to KVM VM', function (t) {
+test('add disk1 to bhyve VM', function (t) {
     VM.update(vm_uuid, PAYLOADS.add_disk1, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
             t.end();
-        } else {
-            VM.load(vm_uuid, function (err2, obj) {
-                if (err2) {
-                    t.ok(false, 'failed reloading VM');
-                } else if (obj.disks.length !== 2) {
-                    t.ok(false, 'VM has ' + obj.disks.length + ' != 2 disks');
-                } else {
-                    t.ok(obj.disks[0].model === obj.disks[1].model,
-                        'models of disk0 and disk1 match ['
-                        + obj.disks[0].model + ',' + obj.disks[1].model + ']');
-                }
-                t.end();
-            });
+            return;
         }
+
+        VM.load(vm_uuid, function (err2, obj) {
+            if (err2) {
+                t.ok(false, 'failed loading VM: ' + err2.message);
+            } else if (obj.disks.length !== 2) {
+                t.ok(false, 'VM has ' + obj.disks.length + ' != 2 disks');
+            } else {
+                t.ok(obj.disks[0].model === obj.disks[1].model,
+                    'models of disk0 and disk1 match [' + obj.disks[0].model
+                    + ',' + obj.disks[1].model + ']');
+            }
+            t.end();
+        });
     });
 });
 
-test('boot KVM VM', function (t) {
+test('start bhyve VM', function (t) {
     VM.start(vm_uuid, {}, function (err) {
         t.ok(!err, 'error starting VM' + (err ? ': ' + err.message : ''));
         t.end();
     });
 });
 
-test('add net0 to KVM VM', function (t) {
+test('add net0 to bhyve VM', function (t) {
     VM.update(vm_uuid, PAYLOADS.add_net0, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -260,7 +220,7 @@ test('add net0 to KVM VM', function (t) {
         } else {
             VM.load(vm_uuid, function (err2, obj) {
                 if (err2) {
-                    t.ok(false, 'failed reloading VM');
+                    t.ok(false, 'failed loading VM: ' + err2.message);
                 } else if (obj.nics.length !== 1) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 1 nics');
                 } else {
@@ -274,7 +234,8 @@ test('add net0 to KVM VM', function (t) {
                             PAYLOADS.add_net0.add_nics[0][field],
                             'failed to set ' + field
                             + ', was ' + JSON.stringify(obj.nics[0][field])
-                            + ', expected ' + JSON.stringify(
+                            + ', expected '
+                            + JSON.stringify(
                                 PAYLOADS.add_net0.add_nics[0][field]));
                     }
                 }
@@ -284,11 +245,10 @@ test('add net0 to KVM VM', function (t) {
     });
 });
 
-test('update nic model on KVM VM', function (t) {
+test('update nic model on bhyve VM', function (t) {
 
     VM.load(vm_uuid, function (err, before_obj) {
         var mac;
-        var params;
 
         if (err) {
             t.ok(false, 'error loading existing VM: ' + err.message);
@@ -305,7 +265,8 @@ test('update nic model on KVM VM', function (t) {
         }
 
         mac = before_obj.nics[0].mac;
-        params = {
+
+        var params = {
             update_nics: [
                 {'mac': mac, 'model': 'virtio'}
             ]
@@ -318,13 +279,12 @@ test('update nic model on KVM VM', function (t) {
             } else {
                 VM.load(vm_uuid, function (err3, obj) {
                     if (err3) {
-                        t.ok(false, 'failed reloading VM');
+                        t.ok(false, 'failed loading VM: ' + err3.message);
                         t.end();
                         return;
                     }
-                    t.ok((obj.nics[0].model === 'virtio'),
-                        'obj.nics[0].model: ' + obj.nics[0].model
-                        + ' expected: virtio');
+                    t.ok((obj.nics[0].model === 'virtio'), 'obj.nics[0].model: '
+                        + obj.nics[0].model + ' expected: virtio');
                     t.end();
                 });
             }
@@ -333,7 +293,7 @@ test('update nic model on KVM VM', function (t) {
 });
 
 // Add net1 w/o model and ensure it gets same model as net0 (See OS-2363)
-test('add net1 to KVM VM', function (t) {
+test('add net1 to bhyve VM', function (t) {
     VM.update(vm_uuid, PAYLOADS.add_net1, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -341,13 +301,13 @@ test('add net1 to KVM VM', function (t) {
         } else {
             VM.load(vm_uuid, function (err2, obj) {
                 if (err2) {
-                    t.ok(false, 'failed reloading VM');
+                    t.ok(false, 'failed loading VM: ' + err2.message);
                 } else if (obj.nics.length !== 2) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
                 } else {
                     t.ok(obj.nics[0].model === obj.nics[1].model,
-                        'models of net0 and net1 match ['
-                        + obj.nics[0].model + ',' + obj.nics[1].model + ']');
+                        'models of net0 and net1 match [' + obj.nics[0].model
+                        + ',' + obj.nics[1].model + ']');
                 }
                 t.end();
             });
@@ -355,7 +315,7 @@ test('add net1 to KVM VM', function (t) {
     });
 });
 
-test('remove net0 from KVM VM', function (t) {
+test('remove net0 from bhyve VM', function (t) {
     VM.update(vm_uuid, PAYLOADS.remove_net0, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -363,7 +323,7 @@ test('remove net0 from KVM VM', function (t) {
         } else {
             VM.load(vm_uuid, function (err2, obj) {
                 if (err2) {
-                    t.ok(false, 'failed reloading VM');
+                    t.ok(false, 'failed loading VM: ' + err2.message);
                 } else if (obj.nics.length !== 1) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 1 nics');
                 } else {
@@ -375,7 +335,7 @@ test('remove net0 from KVM VM', function (t) {
     });
 });
 
-test('remove net1 from KVM VM', function (t) {
+test('remove net1 from bhyve VM', function (t) {
     VM.update(vm_uuid, PAYLOADS.remove_net1, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -383,7 +343,7 @@ test('remove net1 from KVM VM', function (t) {
         } else {
             VM.load(vm_uuid, function (err2, obj) {
                 if (err2) {
-                    t.ok(false, 'failed reloading VM');
+                    t.ok(false, 'failed loading VM: ' + err2.message);
                 } else if (obj.nics.length !== 0) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 0 nics');
                 } else {
@@ -395,7 +355,7 @@ test('remove net1 from KVM VM', function (t) {
     });
 });
 
-test('add net0 and net1 to KVM VM', function (t) {
+test('add net0 and net1 to bhyve VM', function (t) {
     VM.update(vm_uuid, PAYLOADS.add_net0_and_net1, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -403,7 +363,7 @@ test('add net0 and net1 to KVM VM', function (t) {
         } else {
             VM.load(vm_uuid, function (err2, obj) {
                 if (err2) {
-                    t.ok(false, 'failed reloading VM');
+                    t.ok(false, 'failed loading VM: ' + err2.message);
                 } else if (obj.nics.length !== 2) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
                 } else {
@@ -416,10 +376,10 @@ test('add net0 and net1 to KVM VM', function (t) {
                                 continue;
                             }
                             t.deepEqual(obj.nics[nic][field],
-                                PAYLOADS.add_net0_and_net1.add_nics[nic][field],
+                                nics[nic][field],
                                 'failed to set ' + field
-                                + ', was '
-                                + JSON.stringify(obj.nics[nic][field])
+                                + ', was ' + JSON.stringify(
+                                    obj.nics[nic][field])
                                 + ', expected '
                                 + JSON.stringify(nics[nic][field]));
                         }
@@ -431,7 +391,7 @@ test('add net0 and net1 to KVM VM', function (t) {
     });
 });
 
-test('remove net0 and net1 from KVM VM', function (t) {
+test('remove net0 and net1 from bhyve VM', function (t) {
     VM.update(vm_uuid, PAYLOADS.remove_net0_and_net1, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -439,7 +399,7 @@ test('remove net0 and net1 from KVM VM', function (t) {
         } else {
             VM.load(vm_uuid, function (err2, obj) {
                 if (err2) {
-                    t.ok(false, 'failed reloading VM');
+                    t.ok(false, 'failed loading VM: ' + err2.message);
                 } else if (obj.nics.length !== 0) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 0 nics');
                 } else {
@@ -451,7 +411,7 @@ test('remove net0 and net1 from KVM VM', function (t) {
     });
 });
 
-test('add 3 NICs to KVM VM', function (t) {
+test('add 3 NICs to bhyve VM', function (t) {
     VM.update(vm_uuid, PAYLOADS.add_net0_through_net2, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
@@ -459,7 +419,7 @@ test('add 3 NICs to KVM VM', function (t) {
         } else {
             VM.load(vm_uuid, function (err2, obj) {
                 if (err2) {
-                    t.ok(false, 'failed reloading VM');
+                    t.ok(false, 'failed loading VM: ' + err2.message);
                 } else if (obj.nics.length !== 3) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 3 nics');
                 } else {
@@ -471,15 +431,15 @@ test('add 3 NICs to KVM VM', function (t) {
     });
 });
 
-test('remove net1 from KVM VM -- 2nd time', function (t) {
-    VM.update(vm_uuid, PAYLOADS.remove_net1, function (err) {
+test('remove net1 from bhyve VM -- 2nd time', function (t) {
+    VM.update(vm_uuid, PAYLOADS.remove_net1_2nd_time, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
             t.end();
         } else {
             VM.load(vm_uuid, function (err2, obj) {
                 if (err2) {
-                    t.ok(false, 'failed reloading VM');
+                    t.ok(false, 'failed loading VM: ' + err2.message);
                 } else if (obj.nics.length !== 2) {
                     t.ok(false, 'VM has ' + obj.nics.length + ' != 2 nics');
                 } else {
@@ -491,14 +451,14 @@ test('remove net1 from KVM VM -- 2nd time', function (t) {
     });
 });
 
-test('reboot KVM VM', function (t) {
+test('restart bhyve VM', function (t) {
     VM.stop(vm_uuid, {'force': true}, function (err) {
         t.ok(!err, 'stopping VM' + (err ? ': ' + err.message : ''));
         VM.start(vm_uuid, {}, function (err2) {
-            t.ok(!err2, 'starting VM' + (err2 ? ': ' + err2.message : ''));
+            t.ok(!err, 'starting VM' + (err2 ? ': ' + err2.message : ''));
             VM.load(vm_uuid, function (err3, obj) {
                 if (err3) {
-                    t.ok(false, 'failed reloading VM');
+                    t.ok(false, 'failed loading VM: ' + err3.message);
                 } else {
                     t.ok(obj.state === 'running',
                         'VM is running after restart: ' + obj.state);
@@ -510,7 +470,7 @@ test('reboot KVM VM', function (t) {
     });
 });
 
-test('set then unset simple properties on KVM VM', function (t) {
+test('set simple properties on bhyve VM', function (t) {
     async.forEachSeries(simple_properties,
         function (item, cb) {
             var prop = item[0];
@@ -528,42 +488,21 @@ test('set then unset simple properties on KVM VM', function (t) {
                 if (err) {
                     t.ok(false, 'error updating VM: ' + err.message);
                     cb();
-                } else {
-                    VM.load(vm_uuid, function (err2, obj) {
-                        if (err2) {
-                            t.ok(false, 'failed reloading VM');
-                            cb();
-                            return;
-                        } else {
-                            t.ok(obj[prop] === expected_value, prop + ' is '
-                                + obj[prop] + ' (' + typeof (obj[prop])
-                                + '), expected: ' + expected_value + ' ('
-                                + typeof (expected_value) + ')'
-                            );
-                        }
-                        payload[prop] = undefined;
-                        VM.update(vm_uuid, payload, function (err3) {
-                            if (err3) {
-                                t.ok(false, 'error updating VM: '
-                                    + err3.message);
-                                cb();
-                            } else {
-                                VM.load(vm_uuid, function (err4, obj2) {
-                                    if (err4) {
-                                        t.ok(false, 'failed reloading VM');
-                                        cb();
-                                        return;
-                                    }
-                                    t.ok(!obj2.hasOwnProperty(prop), prop
-                                        + ' is ' + obj2[prop] + ' ('
-                                        + typeof (obj2[prop]) + '), expected: '
-                                        + 'undefined');
-                                    cb();
-                                });
-                            }
-                        });
-                    });
+                    return;
                 }
+
+                VM.load(vm_uuid, function (err2, obj) {
+                    if (err2) {
+                        t.ok(false, 'failed loading VM: ' + err2.message);
+                    } else {
+                        t.ok(obj[prop] === expected_value, prop + ' is '
+                            + obj[prop] + ' (' + typeof (obj[prop])
+                            + '), expected: ' + expected_value + ' ('
+                            + typeof (expected_value) + ')'
+                        );
+                    }
+                    cb();
+                });
             });
         },
         function (err) {
@@ -572,77 +511,24 @@ test('set then unset simple properties on KVM VM', function (t) {
     );
 });
 
-test('update KVM VM quota', function (t) {
-    VM.update(vm_uuid, {'quota': 13}, function (err) {
+test('update bhyve VM flexible_disk_size', function (t) {
+    var newSize = PAYLOADS.create.flexible_disk_size + 1024;
+    VM.update(vm_uuid, {'flexible_disk_size': newSize}, function (err) {
         if (err) {
             t.ok(false, 'error updating VM: ' + err.message);
             t.end();
-        } else {
-            VM.load(vm_uuid, function (err2, obj) {
-                if (err2) {
-                    t.ok(false, 'failed reloading VM');
-                    t.end();
-                } else if (obj.quota !== 13) {
-                    t.ok(false, 'VM has ' + obj.quota + ' != 13');
-                    t.end();
-                } else {
-                    var args = ['get', '-H', '-o', 'value', 'quota',
-                        obj.zonepath.substr(1)];
-                    execFile('/usr/sbin/zfs', args,
-                        function (error, stdout, stderr) {
-                            var res;
-                            if (error) {
-                                t.ok(false, 'Failed to get quota from zfs: '
-                                    + error.message);
-                            } else {
-                                res = stdout.replace(
-                                    new RegExp('[\\s]+$', 'g'), '');
-                                t.ok(res === '13G', 'updated quota now: '
-                                    + res + ' vs 13G');
-                            }
-                            t.end();
-                        }
-                    );
-                }
-            });
+            return;
         }
-    });
-});
 
-test('remove KVM VM quota', function (t) {
-    VM.update(vm_uuid, {'quota': 0}, function (err) {
-        if (err) {
-            t.ok(false, 'error updating VM: ' + err.message);
+        VM.load(vm_uuid, function (err2, obj) {
+            if (err2) {
+                t.ok(false, 'failed loading VM: ' + err2.message);
+            } else {
+                t.equal(obj.flexible_disk_size, newSize,
+                    'VM has ' + obj.flexible_disk_size + ' != ' + newSize);
+            }
             t.end();
-        } else {
-            VM.load(vm_uuid, function (err2, obj) {
-                if (err2) {
-                    t.ok(false, 'failed reloading VM');
-                    t.end();
-                } else if (obj.quota !== 0) {
-                    t.ok(false, 'VM has ' + obj.quota + ' != 0');
-                    t.end();
-                } else {
-                    var args = ['get', '-H', '-o', 'value', 'quota',
-                        obj.zonepath.substr(1)];
-                    execFile('/usr/sbin/zfs', args,
-                        function (error, stdout, stderr) {
-                            var res;
-                            if (error) {
-                                t.ok(false, 'Failed to get quota from zfs: '
-                                    + error.message);
-                            } else {
-                                res = stdout.replace(
-                                    new RegExp('[\\s]+$', 'g'), '');
-                                t.ok(res === 'none', 'updated quota now: '
-                                    + res + ' vs none');
-                            }
-                            t.end();
-                        }
-                    );
-                }
-            });
-        }
+        });
     });
 });
 
@@ -656,11 +542,11 @@ function test_update_ram(ram)
             } else {
                 VM.load(vm_uuid, function (err2, obj) {
                     if (err2) {
-                        t.ok(false, 'failed reloading VM');
+                        t.ok(false, 'failed loading VM: ' + err2.message);
                         t.end();
                     }
 
-                    var overhead = VM.KVM_MEM_OVERHEAD;
+                    var overhead = VM.BHYVE_MEM_OVERHEAD;
                     t.ok((obj.ram === ram), 'vm.ram: ' + obj.ram
                         + ' expected: ' + ram);
                     t.ok((obj.max_physical_memory === (ram + overhead)),
@@ -680,16 +566,16 @@ function test_update_ram(ram)
     });
 }
 
-// We started at 256, double that
-test_update_ram(512);
-// Update to a lower value should lower everything...
-test_update_ram(128);
 // Now something bigger
+test_update_ram(1024);
+// We started at 1024, double that
+test_update_ram(2048);
+// Update to a lower value should lower everything...
 test_update_ram(1024);
 
 // now try *just* updating swap
-test('update KVM VM max_swap', function (t) {
-    var test_value = 2560;
+test('update bhyve VM max_swap', function (t) {
+    var test_value = 4096;
 
     VM.load(vm_uuid, function (err, before_obj) {
         if (err) {
@@ -704,18 +590,18 @@ test('update KVM VM max_swap', function (t) {
             } else {
                 VM.load(vm_uuid, function (err3, obj) {
                     if (err3) {
-                        t.ok(false, 'failed reloading VM');
+                        t.ok(false, 'failed loading VM: ' + err3.message);
                         t.end();
                         return;
                     }
                     t.ok((obj.max_swap === test_value), 'vm.max_swap: '
                         + obj.max_swap + ' expected: ' + test_value);
                     t.ok((obj.max_physical_memory ==
-                        before_obj.max_physical_memory),
+                            before_obj.max_physical_memory),
                         'vm.max_physical_memory: ' + obj.max_physical_memory
                         + ' expected: ' + before_obj.max_physical_memory);
                     t.ok((obj.max_locked_memory ==
-                        before_obj.max_locked_memory),
+                            before_obj.max_locked_memory),
                         'vm.max_locked_memory: ' + obj.max_locked_memory
                         + ' expected: ' + before_obj.max_locked_memory);
                     t.end();
@@ -726,7 +612,7 @@ test('update KVM VM max_swap', function (t) {
 });
 
 // now try *just* updating swap, and to a lower than RAM.
-test('update KVM VM max_swap to lower value than RAM', function (t) {
+test('update bhyve VM max_swap to lower value than RAM', function (t) {
     var test_value;
 
     VM.load(vm_uuid, function (err, before_obj) {
@@ -743,7 +629,7 @@ test('update KVM VM max_swap to lower value than RAM', function (t) {
             } else {
                 VM.load(vm_uuid, function (err3, obj) {
                     if (err3) {
-                        t.ok(false, 'failed reloading VM');
+                        t.ok(false, 'failed loading VM: ' + err3.message);
                         t.end();
                         return;
                     }
@@ -753,11 +639,11 @@ test('update KVM VM max_swap to lower value than RAM', function (t) {
                         'vm.max_swap: ' + obj.max_swap
                         + ' expected: ' + before_obj.max_physical_memory);
                     t.ok((obj.max_physical_memory ==
-                        before_obj.max_physical_memory),
+                            before_obj.max_physical_memory),
                         'vm.max_physical_memory: ' + obj.max_physical_memory
                         + ' expected: ' + before_obj.max_physical_memory);
                     t.ok((obj.max_locked_memory ==
-                        before_obj.max_locked_memory),
+                            before_obj.max_locked_memory),
                         'vm.max_locked_memory: ' + obj.max_locked_memory
                         + ' expected: ' + before_obj.max_locked_memory);
                     t.end();
@@ -786,14 +672,15 @@ test('update max_physical_memory to RAM + 256', function (t) {
             } else {
                 VM.load(vm_uuid, function (err3, obj) {
                     if (err3) {
-                        t.ok(false, 'failed reloading VM');
+                        t.ok(false, 'failed loading VM: ' + err3.message);
                         t.end();
                         return;
                     }
 
                     // everything else should have been lowered to match too
                     t.ok((obj.max_swap === test_value), 'vm.max_swap: '
-                        + obj.max_swap + ' expected: ' + test_value);
+                        + obj.max_swap
+                        + ' expected: ' + test_value);
                     t.ok((obj.max_physical_memory === test_value),
                         'vm.max_physical_memory: ' + obj.max_physical_memory
                         + ' expected: ' + test_value);
@@ -826,7 +713,7 @@ test('update max_physical_memory to RAM + 1024', function (t) {
             } else {
                 VM.load(vm_uuid, function (err3, obj) {
                     if (err3) {
-                        t.ok(false, 'failed reloading VM');
+                        t.ok(false, 'failed loading VM: ' + err3.message);
                         t.end();
                         return;
                     }
@@ -867,7 +754,7 @@ test('update max_swap to RAM - 64', function (t) {
             }
             VM.load(vm_uuid, function (err3, obj) {
                 if (err3) {
-                    t.ok(false, 'failed reloading VM');
+                    t.ok(false, 'failed loading VM: ' + err3.message);
                     t.end();
                     return;
                 }
@@ -899,7 +786,7 @@ test('update max_locked_memory to high value', function (t) {
             } else {
                 VM.load(vm_uuid, function (err3, obj) {
                     if (err3) {
-                        t.ok(false, 'failed reloading VM');
+                        t.ok(false, 'failed loading VM: ' + err3.message);
                         t.end();
                         return;
                     }
@@ -907,12 +794,12 @@ test('update max_locked_memory to high value', function (t) {
                         'vm.max_swap: ' + obj.max_swap
                         + ' expected: ' + before_obj.max_swap);
                     t.ok((obj.max_physical_memory ==
-                        before_obj.max_physical_memory),
+                            before_obj.max_physical_memory),
                         'vm.max_physical_memory: ' + obj.max_physical_memory
                         + ' expected: ' + before_obj.max_physical_memory);
                     // should have been clamped
                     t.ok((obj.max_locked_memory ==
-                        before_obj.max_physical_memory),
+                            before_obj.max_physical_memory),
                         'vm.max_locked_memory: ' + obj.max_locked_memory
                         + ' expected: ' + before_obj.max_physical_memory);
                     t.end();
@@ -937,7 +824,7 @@ test('set vnc_port=-1', function (t) {
             } else {
                 VM.load(vm_uuid, function (err3, obj) {
                     if (err3) {
-                        t.ok(false, 'failed reloading VM');
+                        t.ok(false, 'failed loading VM: ' + err3.message);
                         t.end();
                         return;
                     }
@@ -981,17 +868,19 @@ test('enable / disable compression', function (t) {
         }
         disk0 = vmobj.disks[0];
         disk1 = vmobj.disks[1];
+
+        t.ok(disk0.compression === 'off',
+            'disk0 has compression off: ' + disk0.compression);
+        t.ok(disk1.compression === 'off',
+            'disk1 has compression off: ' + disk1.compression);
+
         params = {
-            'update_disks': [
+            update_disks: [
                 {path: disk0.path, compression: 'gzip'},
                 {path: disk1.path, compression: 'gzip'}
             ]
         };
 
-        t.ok(disk0.compression === 'off', 'disk0 has compression off: '
-            + disk0.compression);
-        t.ok(disk1.compression === 'off', 'disk1 has compression off: '
-            + disk1.compression);
         VM.update(vmobj.uuid, params, function (err2) {
             if (err2) {
                 t.ok(false, 'VM.update failed to update disks: '
@@ -1016,7 +905,7 @@ test('enable / disable compression', function (t) {
                     'disk1 has compression=gzip: ' + disk1.compression);
 
                 params = {
-                    'update_disks': [
+                    update_disks: [
                         {path: disk0.path, compression: 'off'},
                         {path: disk1.path, compression: 'off'}
                     ]
@@ -1056,7 +945,7 @@ test('enable / disable compression', function (t) {
 // VM should at this point be running, so removing the disk should fail.
 // Stopping and removing should succeed.
 // Adding should also succeed at that point.
-test('remove KVM disks', function (t) {
+test('remove bhyve disks', function (t) {
     VM.load(vm_uuid, function (err, vmobj) {
         var disk0;
         var disk1;
@@ -1139,7 +1028,7 @@ test('remove KVM disks', function (t) {
     });
 });
 
-test('delete KVM VM', function (t) {
+test('delete bhyve VM', function (t) {
     if (vm_uuid) {
         VM.delete(vm_uuid, function (err) {
             if (err) {
@@ -1155,67 +1044,10 @@ test('delete KVM VM', function (t) {
     }
 });
 
-test('create KVM VM w/ *_drivers', function (t) {
-    var state = {'brand': 'kvm'};
-    vmtest.on_new_vm(t, null, PAYLOADS['create_w_drivers'], state, [
-        function (cb) {
-            VM.load(state.uuid, function (err, obj) {
-                if (err) {
-                    t.ok(false, 'load obj from new VM: ' + err.message);
-                    cb(err);
-                    return;
-                }
-
-                // ensure nic_driver + disk_driver properties are set, we expect
-                // model to be virtio since we explicitly set, when we add
-                // another it should be the *_driver value
-                t.ok(obj.nic_driver === 'e1000', 'VM has nic_driver');
-                t.ok(obj.disk_driver === 'ide', 'VM has disk_driver');
-                t.ok(obj.nics[0].model === 'virtio',
-                    'VM has correct nic.model');
-                t.ok(obj.disks[0].model === 'virtio',
-                    'VM has correct disk.model');
-
-                cb();
-            });
-        }, function (cb) {
-
-            // add a disk and a nic w/o model and ensure they've also got the
-            // correct.model matching *_driver not the first nic.
-            VM.update(state.uuid, PAYLOADS['add_nic_and_disk_wo_model'],
-                    function (err) {
-                t.ok(!err, 'updating VM: ' + (err ? err.message : 'success'));
-                if (err) {
-                    cb();
-                    return;
-                }
-                VM.load(state.uuid, function (err2, obj) {
-                    t.ok(!err2, 'load VM: '
-                        + (err2 ? err2.message : 'success'));
-                    if (err2) {
-                        cb(err2);
-                        return;
-                    }
-                    t.ok(obj.disks[1].model === obj.disk_driver,
-                        'disk1 model is ' + obj.disks[1].model + ' expected '
-                        + obj.disk_driver);
-                    t.ok(obj.nics[1].model === obj.nic_driver,
-                        'nic1 model is ' + obj.nics[1].model + ' expected '
-                        + obj.nic_driver);
-
-                    cb();
-                });
-            });
-        }
-    ], function (err) {
-        t.end();
-    });
-});
-
 test('test 100%/10% refreservation, change to 50%/75%', function (t) {
     var p = {
-        'alias': 'test-update-kvm-' + process.pid,
-        'brand': 'kvm',
+        'alias': 'test-update-bhyve-' + process.pid,
+        'brand': 'bhyve',
         'vcpus': 1,
         'ram': 256,
         'do_not_inventory': true,
@@ -1259,16 +1091,16 @@ test('test 100%/10% refreservation, change to 50%/75%', function (t) {
 
                 VM.update(state.uuid, params, function (err2) {
 
-                    t.ok(!err2, 'updating VM: '
-                        + (err2 ? err2.message : 'success'));
+                    t.ok(!err2,
+                        'updating VM: ' + (err2 ? err2.message : 'success'));
                     if (err2) {
                         cb();
                         return;
                     }
                     VM.load(state.uuid, function (err3, obj) {
                         var disks;
-                        t.ok(!err3, 'load VM: '
-                            + (err3 ? err3.message : 'success'));
+                        t.ok(!err3,
+                            'load VM: ' + (err3 ? err3.message : 'success'));
                         if (err3) {
                             cb(err3);
                             return;

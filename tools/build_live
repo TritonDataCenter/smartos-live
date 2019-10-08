@@ -414,14 +414,13 @@ function bi_create_password
 #
 function bi_gen_version_files
 {
-	local etcrelease_template="$bi_wsroot/tools/etc_release.template.txt"
 	local build_etcrelease="$bi_wsroot/tools/build_etcrelease"
 	local bvfile="$bi_mnt_root/etc/versions/build"
 	local gitstatus="$bi_out_dir/gitstatus.json"
 
 	bi_emit_start 'Building version files'
 
-	"$build_etcrelease" >"$gitstatus" ||
+	"$build_etcrelease" -g >"$gitstatus" ||
 	    fail "could not generate $gitstatus"
 
 	pfexec cp "$gitstatus" "$bi_archive.gitstatus" ||
@@ -437,7 +436,7 @@ function bi_gen_version_files
 	# permission to write in the mounted image using regular shell
 	# redirection.
 	#
-	"$build_etcrelease" "$bi_buildstamp" "$etcrelease_template" |
+	"$build_etcrelease" -v "$bi_buildstamp" |
 	    pfexec /usr/bin/tee "$bi_mnt_root/etc/release" >/dev/null ||
 	     fail 'failed to build "/etc/release" file'
 

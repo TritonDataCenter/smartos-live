@@ -886,8 +886,8 @@ Note that each test suite emits its own results summary. If any test suites
 failed, the names of those suites are emitted by `smartos-test` just before
 the script exits.
 
-When developers are adding tests to the `illumos-gate`, they should ensure
-that new tests are added to `$SRC/usr/src/pkg/manifest/*.mf` as these IPS
+When developers are adding tests to illumos, they should ensure that new
+tests are added to `$SRC/usr/src/pkg/manifests/*.mf` as these IPS
 manifests are used to generate the test archive during the SmartOS build.
 
 ### Public Interfaces

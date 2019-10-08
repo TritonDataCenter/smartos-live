@@ -436,7 +436,7 @@ RPCGEN=/opt/local/bin/rpcgen;			export RPCGEN
 ASTBINDIR=/opt/local/ast/bin;			export ASTBINDIR
 LD_TOXIC_PATH="\$ROOT/lib:\$ROOT/usr/lib";	export LD_TOXIC_PATH
 # generate buildversion for illumos buildversion module
-BUILDVERSION_EXEC="${conf_root}/tools/build_etcrelease";
+BUILDVERSION_EXEC="${conf_root}/tools/build_etcrelease -g";
 						export BUILDVERSION_EXEC
 
 EOF

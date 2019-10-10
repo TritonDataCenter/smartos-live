@@ -31,6 +31,7 @@ MPROTO =	$(ROOT)/manifest.d
 BOOT_MPROTO =	$(ROOT)/boot.manifest.d
 BOOT_PROTO =	$(ROOT)/proto.boot
 IMAGES_PROTO =	$(ROOT)/proto.images
+TESTS_PROTO =	$(ROOT)/proto.tests
 MCPROTO =	$(ROOT)/mancheck.conf.d
 
 # On Darwin/OS X we support running 'make check'
@@ -108,6 +109,19 @@ BOOT_MANIFESTS := \
 
 SUBDIR_MANIFESTS :=	$(LOCAL_SUBDIRS:%=$(MPROTO)/%.sd.manifest)
 
+TEST_IPS_MANIFEST_ROOT = projects/illumos/usr/src/pkg/manifests
+
+#
+# To avoid cross-repository flag days, the list of IPS manifest
+# files which define the files included in the test archive is
+# stored in the illumos-joyent.git repository. By including the
+# following Makefile, we get the $(TEST_IPS_MANIFEST_FILES) macro.
+#
+include projects/illumos/usr/src/Makefile.testarchive
+
+TEST_IPS_MANIFESTS = $(TEST_IPS_MANIFEST_FILES:%=$(TEST_IPS_MANIFEST_ROOT)/%)
+TESTS_MANIFEST = $(ROOT)/tests.manifest.gen
+
 SUBDIR_MANCHECK_CONFS := \
 	$(LOCAL_SUBDIRS:%=$(MCPROTO)/%.sd.mancheck.conf)
 
@@ -118,6 +132,10 @@ BOOT_TARBALL :=	output/$(BOOT_VERSION).tgz
 IMAGES_VERSION :=	images-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
 IMAGES_TARBALL :=	output/$(IMAGES_VERSION).tgz
+
+TESTS_VERSION :=	tests-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
+    echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
+TESTS_TARBALL :=	output/$(TESTS_VERSION).tgz
 
 ifdef PLATFORM_PASSWORD
 PLATFORM_PASSWORD_OPT=-p $(PLATFORM_PASSWORD)
@@ -251,6 +269,33 @@ $(BOOT_MANIFEST): $(BOOT_MANIFESTS)
 	-rm -f $@
 	./tools/build_manifest $(BOOT_MPROTO) | ./tools/sorter > $@
 
+$(TESTS_MANIFEST): world
+	-rm -f $@
+	echo "f tests.manifest.gen 0444 root sys" >> $@
+	echo "f tests.buildstamp 0444 root sys" >> $@
+	cat $(TEST_IPS_MANIFESTS) | \
+	    ./tools/generate-manifest-from-ips.nawk | \
+	    ./tools/sorter >> $@
+
+
+#
+# We want a copy of the buildstamp in the tests archive, but
+# don't want to call it 'buildstamp' since that would potentially
+# overwrite the same file in the platform.tgz if they were
+# ever extracted to the same area for investigation. Juggle a bit.
+#
+$(TESTS_TARBALL): $(TESTS_MANIFEST)
+	pfexec rm -f $@
+	pfexec rm -rf $(TESTS_PROTO)
+	mkdir -p $(TESTS_PROTO)
+	cp $(STAMPFILE) $(ROOT)/tests.buildstamp
+	pfexec ./tools/builder/builder $(TESTS_MANIFEST) $(TESTS_PROTO) \
+	    $(PROTO) $(ROOT)
+	pfexec gtar -C $(TESTS_PROTO) -I pigz -cf $@ .
+	rm $(ROOT)/tests.buildstamp
+
+tests-tar: $(TESTS_TARBALL)
+
 #
 # Update source code from parent repositories.  We do this for each local
 # project as well as for illumos, illumos-extra, and smartos-live via the
@@ -378,7 +423,7 @@ check: $(JSLINT)
 
 clean:
 	./tools/clobber_illumos
-	rm -f $(MANIFEST) $(BOOT_MANIFEST)
+	rm -f $(MANIFEST) $(BOOT_MANIFEST) $(TESTS_MANIFEST)
 	rm -rf $(MPROTO)/* $(BOOT_MPROTO)/* $(MCPROTO)/*
 	(cd $(ROOT)/src && gmake clean)
 	[ ! -d $(ROOT)/projects/illumos-extra ] || \
@@ -396,8 +441,9 @@ clean:
 	(cd $(ROOT) && [ -h $(STRAP_PROTO) ] || rm -rf $(STRAP_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(BOOT_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(IMAGES_PROTO))
+	(cd $(ROOT) && pfexec rm -rf $(TESTS_PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO) \
-	    $(IMAGES_PROTO))
+	    $(IMAGES_PROTO) $(TESTS_PROTO))
 	rm -f tools/cryptpass
 	(cd tools/builder && gmake clean)
 	(cd tools/format_image && gmake clean)
@@ -456,6 +502,7 @@ PLATFORM_TARBALL		= output/$(PLATFORM_TARBALL_BASE)
 
 PUB_IMAGES_BASE			= images$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
 PUB_BOOT_BASE			= boot$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
+PUB_TESTS_BASE			= tests$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
 
 PUB_PLATFORM_IMG_BASE		= platform$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
 PUB_PLATFORM_MF_BASE		= platform$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).imgmanifest
@@ -465,6 +512,7 @@ PUB_PLATFORM_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_PLATFORM_IMG_BASE)
 
 PUB_IMAGES_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_IMAGES_BASE)
 PUB_BOOT_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_BOOT_BASE)
+PUB_TESTS_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_TESTS_BASE)
 
 PLATFORM_IMAGE_UUID		?= $(shell uuid -v4)
 
@@ -487,6 +535,7 @@ common-platform-publish:
 	@echo "# Publish common platform$(PLATFORM_DEBUG_SUFFIX) bits"
 	mkdir -p $(PLATFORM_BITS_DIR)
 	cp $(PLATFORM_TARBALL) $(PUB_PLATFORM_TARBALL)
+	cp $(TESTS_TARBALL) $(PUB_TESTS_TARBALL)
 	for config_file in configure-projects configure-build; do \
 	    if [[ -f $$config_file ]]; then \
 	        cp $$config_file $(PLATFORM_BITS_DIR); \
@@ -617,12 +666,14 @@ common-release: \
 .PHONY: triton-release
 triton-release: \
     images-tar \
+    tests-tar \
     triton-platform-publish \
     platform-bits-upload
 
 .PHONY: triton-smartos-release
 triton-smartos-release: \
     images-tar \
+    tests-tar \
     triton-platform-publish \
     smartos-build \
     smartos-publish \

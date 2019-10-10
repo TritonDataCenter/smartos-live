@@ -64,6 +64,7 @@ SMARTDCLIBDIR =	$(DESTDIR)/smartdc/lib
 #
 bootparams :	LIBS +=		-ldevinfo
 bootparams :	WARN_FLAGS +=	-Wno-unused
+fswatcher :	CPPFLAGS +=	-D_REENTRANT
 fswatcher :	LIBS +=		-lthread -lnvpair -lavl
 zfs_recv :	LIBS +=		-lsocket
 zfs_send :	LIBS +=		-lsocket

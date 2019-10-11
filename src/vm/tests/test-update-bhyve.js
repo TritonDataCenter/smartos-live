@@ -25,6 +25,7 @@
 
 var async = require('/usr/node/node_modules/async');
 var execFile = require('child_process').execFile;
+var properties = require('/usr/vm/node_modules/props');
 var VM = require('/usr/vm/node_modules/VM');
 var vmtest = require('../common/vmtest.js');
 
@@ -532,9 +533,13 @@ test('update bhyve VM flexible_disk_size', function (t) {
     });
 });
 
+var unique_id = 0;
+
 function test_update_ram(ram)
 {
-    test('update ram ' + ram, function (t) {
+    unique_id += 1; // Ensures each test has it's own unique id.
+
+    test('update ram ' + ram + ' (' +unique_id + ')', function (t) {
         VM.update(vm_uuid, {'ram': ram}, function (err) {
             if (err) {
                 t.ok(false, 'error updating VM: ' + err.message);
@@ -567,11 +572,54 @@ function test_update_ram(ram)
 }
 
 // Now something bigger
-test_update_ram(1024);
-// We started at 1024, double that
 test_update_ram(2048);
 // Update to a lower value should lower everything...
 test_update_ram(1024);
+// Update to use the same size (should be a no-op).
+test_update_ram(1024);
+
+// TRITON-1910 Test the setting both ram and max_physical_memory together.
+test('update mixed mem properties on BHYVE VM', function (t) {
+    var mixed_mem_properties = {
+        'ram': 2048,
+        'max_physical_memory': 2048
+    };
+
+    var payload = JSON.parse(JSON.stringify(mixed_mem_properties));
+
+    VM.update(vm_uuid, payload, function (err) {
+        if (err) {
+            t.ok(false, 'error updating VM: ' + err.message);
+            t.end();
+            return;
+        }
+
+        VM.load(vm_uuid, function (err2, obj) {
+            if (err2) {
+                t.ok(false, 'failed reloading VM');
+                t.end();
+                return;
+            }
+
+            var min_overhead = (properties.BRAND_OPTIONS['bhyve'].features.
+                min_memory_overhead);
+            var ram = mixed_mem_properties.ram;
+
+            t.ok((obj.ram === ram), 'vm.ram: ' + obj.ram + ' expected: ' + ram);
+            t.ok((obj.max_locked_memory === (ram + min_overhead)),
+                'vm.max_locked_memory: ' + obj.max_locked_memory + ' expected: '
+                + (ram + min_overhead));
+            // All other memory values should be the same as the locked memory.
+            t.ok((obj.max_swap === (ram + min_overhead)), 'vm.max_swap: '
+                + obj.max_swap + ' expected: ' + (ram + min_overhead));
+            t.ok((obj.max_physical_memory === (ram + min_overhead)),
+                'vm.max_physical_memory: ' + obj.max_physical_memory
+                + ' expected: ' + (ram + min_overhead));
+
+            t.end();
+        });
+    });
+});
 
 // now try *just* updating swap
 test('update bhyve VM max_swap', function (t) {

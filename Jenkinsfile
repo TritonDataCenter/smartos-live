@@ -9,6 +9,8 @@ pipeline {
         timestamps()
     }
 
+
+    // UGH https://issues.jenkins-ci.org/browse/JENKINS-41929
     parameters {
         string(
             name: 'PLAT_CONFIGURE_ARGS', trim: true,

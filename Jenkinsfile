@@ -110,12 +110,12 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
 ./tools/build_jenkins''')
                             }
                         }
-                    }
                     // TODO: Does archiving artifacts with the same pattern from
                     // multiple agents aggravate the way we want?
                     stage('archive') {
                         steps {
                             archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,log/*,output/bits/artifacts.txt,output/gitstatus.json,output/changelog.txt', onlyIfSuccessful: true
+                            }
                         }
                     }
                 }
@@ -138,10 +138,10 @@ set -o pipefail
 ./tools/build_jenkins -d''')
                             }
                         }
-                    }
-                    stage('archive') {
-                        steps {
-                            archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,log/*,output/bits/artifacts.txt,output/gitstatus.json,output/changelog.txt', onlyIfSuccessful: true
+                        stage('archive') {
+                            steps {
+                                archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,log/*,output/bits/artifacts.txt,output/gitstatus.json,output/changelog.txt', onlyIfSuccessful: true
+                            }
                         }
                     }
                 }
@@ -166,14 +166,13 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
 ./tools/build_jenkins''')
                             }
                         }
-                    }
-                    stage('archive') {
-                        steps {
-                            archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,log/*,output/bits/artifacts.txt,output/gitstatus.json,output/changelog.txt', onlyIfSuccessful: true
+                        stage('archive') {
+                            steps {
+                                archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,log/*,output/bits/artifacts.txt,output/gitstatus.json,output/changelog.txt', onlyIfSuccessful: true
+                            }
                         }
                     }
                 }
-
 
                 stage('platform-strap-cache') {
                     agent {

@@ -84,16 +84,18 @@ The following are the SmartOS artifacts that will be published when selecting on
 
 
     stages {
-        stage('check') {
-            agent {
-                label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-            }
-            steps{
-                sh('make check')
-            }
-        }
+        // TODO: This fails with ls: cannot access 'projects/local': No such
+        // file or directory, is there any linting we can do before building?
+        // stage('check') {
+        //     agent {
+        //         label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+        //     }
+        //     steps{
+        //         sh('make check')
+        //     }
+        // }
 
-        stage('parallel:builds') {
+        stage('parallel') {
             parallel {
                 stage('platform') {
                     agent {

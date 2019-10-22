@@ -12,6 +12,7 @@ pipeline {
     parameters {
         string(
             name: 'PLAT_CONFIGURE_ARGS', trim: true,
+            defaultValue: '',
             description:'''
 Arguments to smartos-live's configure script:<br>
 <dl>

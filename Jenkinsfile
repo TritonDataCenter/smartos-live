@@ -60,7 +60,7 @@ in order to specify the default github or cr.joyent.us git remote URLs.
         )
 
         choice(
-            name: 'PLATFORM_BUILD_FLAVOR'
+            name: 'PLATFORM_BUILD_FLAVOR',
             choices: ['triton',
                       'smartos',
                       'triton-and-smartos'],

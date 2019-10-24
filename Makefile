@@ -681,6 +681,7 @@ triton-smartos-release: \
 
 .PHONY: smartos-only-release
 smartos-only-release: \
+    tests-tar \
     common-platform-publish \
     smartos-build \
     smartos-publish \

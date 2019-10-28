@@ -450,6 +450,7 @@ clean:
 	(cd tools/mancheck && gmake clean)
 	(cd tools/mancf && gmake clean)
 	(cd tools/tzcheck && gmake clean)
+	(cd tools/ucodecheck && gmake clean)
 	(cd man/sdc && gmake clean)
 	rm -f 0-*-stamp 1-*-stamp
 

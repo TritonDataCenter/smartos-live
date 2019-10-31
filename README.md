@@ -999,7 +999,7 @@ failed, the names of those suites are emitted by `smartos-test` just before
 the script exits.
 
 When developers are adding tests to illumos, they should ensure that new
-tests are added to `$SRC/usr/src/pkg/manifests/*.mf` as these IPS
+tests are added to `$SRC/usr/src/pkg/manifests/\*.mf` as these IPS
 manifests are used to generate the test archive during the SmartOS build.
 
 ## Public Interfaces
@@ -1026,11 +1026,12 @@ to the change.
 ## Mapfiles
 
 We have a hard rule: a public mapfile version should not be added directly
-to illumos-joyent. Instead, if you have a change that you need to make,
-it should be added to a private version and moved to a public version
-when it is upstreamed to illumos.
+to illumos-joyent. Instead, if you need to add a new version to a mapfile,
+it should be done directly via contributing to illumos-gate.
+
+If for some reason that's not feasible, then it should be added to a private
+version and moved to a public version if/when it is upstreamed to illumos.
 
 If the library in question is specific to illumos-joyent, then it's
 alright to version it. However, this is not true for the vast majority
 of libraries.
-

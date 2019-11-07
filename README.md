@@ -50,7 +50,7 @@ includes:
 # Bug Reports
 
 If you encounter a problem, please reach out for assistance. You can
-file a [github issue](https://github.com/joyent/smartos-live/issues) for
+file a [GitHub issue](https://github.com/joyent/smartos-live/issues) for
 any problem you encounter. When filing a bug, please include the
 platform version that you're running and a description of the problem.
 
@@ -61,9 +61,9 @@ available.
 While there are multiple repositories that make up the smartos-live
 image, if you're in doubt about where to file a bug or just are
 uncertain, please file it on the [SmartOS live issue
-tracker](https://github.com/joyent/smartos-live) and we'll help from
-there. It's more important that the bug is recorded and we can work on
-solving it than it end up in the right location.
+tracker](https://github.com/joyent/smartos-live/issues) and we'll help
+from there. It's more important that the bug is recorded and we can work
+on solving it than it end up in the right location.
 
 # Components of SmartOS
 
@@ -447,9 +447,9 @@ The `configure-projects` file takes the format:
 <path relative to ./projects>:<project branch>:[project git repo URL or path]
 ```
 
-The special `origin` can be used in place of a full git repo URL to denote the
-standard github.com location for that project.  If no URL is given, we default
-to github.com.
+The special token `origin` can be used in place of a full git repo URL to denote
+the standard github.com location for that project.  If no URL is given, we
+default to github.com.
 
 If you update the branch name that corresponds to a repository, rerun
 `./configure` to make sure that every branch is set to the correct
@@ -723,22 +723,28 @@ usr/src/uts/intel/os/minor_perm
 
 # Contributing
 
-All the repositories contained within this build use github pull requests for
+All the repositories contained within this build use GitHub pull requests for
 new changes.
 
 All changes should have an associated issue. You can use the [GitHub
 issue tracker](https://github.com/joyent/smartos-live/issues). Joyent
 employees use an internal JIRA exposed at
-<https://smartos.org/bugview>. The commit message should be of the form used by
-illumos-gate, for example:
+<https://smartos.org/bugview>. The commit message should be of this form:
 
 ```
-smartos-live#9999 make some changes
-Reviewed-by: Steve Reviewer <steve.reviewer@gmail.com>
-Approved-by: Amy Approver <amy.approver@gmail.com>
+joyent/smartos-live#9999 make some changes (#23)
+
+joyent/smartos-live#10000
+Reviewed by: Steve Reviewer <steve.reviewer@gmail.com>
+Approved by: Amy Approver <amy.approver@gmail.com>
 ```
 
-(Yes, there is no blank line after the commit title.)
+The first line should be the bug ID and title, optionally followed by the PR
+number as added by GitHub. After a blank line, the commit body should list any
+additional bugs fixed in this change, along with the usual reviewer tags.
+
+In addition to at least one code review, you will need to document your testing
+and gain "integration approval" (the Approved by tag).
 
 If you would like to make a change to `illumos-joyent` specifically, please see
 [Upstreaming](#upstreaming) below.
@@ -757,8 +763,8 @@ If you're not sure of who to ask or are having trouble finding someone,
 then consider asking in a public forum such as internal chat or IRC.
 Even if you're not sure if someone would make sense as a reviewer or
 not, don't hesitate to reach out and folks will help you find or suggest
-reviewers. For more information on where to reach out, see the community
-section.
+reviewers. For more information on where to reach out, see
+[Community](#community).
 
 ## Upstreaming
 
@@ -774,7 +780,7 @@ stack, this may not be the best choice.
 ## Integration
 
 When thinking about integrating, the following are questions that you or
-your approver should be asking yourself:
+your approver should be asking:
 
 * Have I tested this in all the ways I can think of? Might this impact
 standalone SmartOS or Triton in some way?
@@ -782,13 +788,13 @@ standalone SmartOS or Triton in some way?
 * Have I built this both debug and non-debug?
 * Have I reviewed the `git pbchk` output when working in bldenv in
 illumos-joyent?
-* Have I run any appropriate make check targets?
+* Have I run any appropriate `make check` targets?
 * Have I looked for memory leaks?
 * Have I performed appropriate stress testing to try and find issues
 that might only arise after prolonged use?
 * Is this a particularly risky change? If so, should I wait
-until the start of the next release cycle to put this back?
-* Are there any heads up notices I need to send as part of this? For
+until the start of the next release cycle to integrate?
+* Are there any heads-up notices I need to send as part of this? For
 example, this might happen because of a flag day.
 * Have I added a new tool that's required to run at build-time and
 tested this on older platform images?

@@ -734,7 +734,7 @@ employees use an internal JIRA exposed at
 ```
 joyent/smartos-live#9999 make some changes (#23)
 
-joyent/smartos-live#10000
+joyent/smartos-live#10000 make a related change
 Reviewed by: Steve Reviewer <steve.reviewer@gmail.com>
 Approved by: Amy Approver <amy.approver@gmail.com>
 ```

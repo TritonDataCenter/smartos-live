@@ -39,8 +39,8 @@ fi
 #
 # We configure the projects framework using a 'configure-projects' file. This
 # is a plain text file which contains the project name, the branch we wish to
-# build it at, and either a URL to a git repository or a keyword to denote
-# which git repository to use, either 'cr' or 'origin'. See create_projects.
+# build it at, and either a URL to a git repository or 'origin' to denote the
+# github.com/joyent/<repo> location. See create_projects.
 #
 read -r -d '' configure_projects < default.configure-projects
 
@@ -108,9 +108,7 @@ function checkout_project
 			# doesn't confuse our standard parsing of 'git describe' output
 			local branch_desc=$(echo $branch | sed -e 's/\//_/g')
 
-			# We assume the remote is named 'origin', regardless as to whether
-			# it's from cr.joyent.us or github. Our Jenkins instance doesn't
-			# have multi-SCM support, so ./projects won't have 'cr' remotes.
+			# We assume the remote is named 'origin'.
 			git -C ${dir} fetch origin ${branch}:${branch_desc} || \
 				fatal "unable to fetch ${branch} from origin"
 
@@ -131,9 +129,9 @@ function checkout_project
 # Read a flat file called 'configure-projects' of the form:
 # <project name>:<project branch>:[project git repo URL or path]
 #
-# The special tokens 'cr' or 'origin' can be used in place of a full git
-# repo URL to denote either standard github.com or gerrit URLs for that
-# project. If no URL is given, we default to github.com.
+# The special token 'origin' can be used in place of a full git
+# repo URL to denote the standard github.com URL for that project.
+# If no URL is given, we default to github.com.
 #
 # Once the configure-projects file has been read (or we've parsed the
 # defaults), invoke checkout_project for each one.
@@ -175,9 +173,6 @@ function create_projects
 
 		# process URL keywords
 		case $project_url in
-		'cr')
-			project_url="https://cr.joyent.us/joyent/$git_name"
-			;;
 		'origin'|'')
 			project_url="$git_stem/$git_name"
 			;;

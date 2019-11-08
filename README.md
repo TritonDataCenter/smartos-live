@@ -1,6 +1,4 @@
-# smartos-live: SmartOS Platform
-
-## Quickstart
+# Quickstart
 
 ```
 git clone https://github.com/joyent/smartos-live.git
@@ -10,7 +8,8 @@ gmake world
 gmake live
 ls output/
 ```
-## Overview
+
+# Overview
 
 This repository is smartos-live, which builds a SmartOS platform image
 containing the illumos core OS components; a set of "extra" mostly
@@ -18,21 +17,59 @@ third-party software required by illumos, by other SmartOS software, or
 for system management; and a collection of utilities comprising
 SmartOS-specific functionality found in `projects/local/`.
 
-## Contents
+# Contents
 
-1. [Components of SmartOS](#components-of-smartos)
-2. [Building SmartOS](#building-smartos)
-   - [Incremental Development](#incremental-development)
-3. [Testing and Things to Think About](#testing-and-things-to-think-about)
-4. [Contributing](#contributing)
-5. [Community](#community)
-6. [Bug Reports](#bug-reports)
+- [Community](#community)
+- [Bug Reports](#bug-reports)
+- [Components of SmartOS](#components-of-smartos)
+- [Building SmartOS](#building-smartos)
+  * [Setting up a Build Environment](#setting-up-a-build-environment)
+  * [Common Tasks](#common-tasks)
+  * [Incremental Development](#incremental-development)
+  * [Proto Area](#proto-area)
+  * [Packaging and Manifests](#packaging-and-manifests)
+- [Contributing](#contributing)
+  * [Review](#review)
+  * [Upstreaming](#upstreaming)
+  * [Integration](#integration)
+  * [Testing changes](#testing-changes)
 
-## Components of SmartOS
+# Community
+
+You can interact with the SmartOS community in a number of ways. This
+includes:
+
+* The *smartos-discuss*
+  [mailing list](https://smartos.topicbox.com/groups/smartos-discuss).
+  If you wish to send mail to the list you'll need to join, but you can view
+  and search the archives online without being a member.
+
+* In the *#smartos* IRC channel on the [Freenode IRC
+  network](https://freenode.net/).
+
+# Bug Reports
+
+If you encounter a problem, please reach out for assistance. You can
+file a [GitHub issue](https://github.com/joyent/smartos-live/issues) for
+any problem you encounter. When filing a bug, please include the
+platform version that you're running and a description of the problem.
+
+If there was an operating system crash dump or a program generated a
+core dump, it would be greatly appreciated if you could make that
+available.
+
+While there are multiple repositories that make up the smartos-live
+image, if you're in doubt about where to file a bug or just are
+uncertain, please file it on the [SmartOS live issue
+tracker](https://github.com/joyent/smartos-live/issues) and we'll help
+from there. It's more important that the bug is recorded and we can work
+on solving it than it end up in the right location.
+
+# Components of SmartOS
 
 SmartOS is made up of several different components. These components are:
 
-### smartos-live
+## smartos-live
 
 The [smartos-live](https://github.com/joyent/smartos-live) repository is
 the root of SmartOS. It has logic for how to build all of the different
@@ -40,7 +77,7 @@ components that make up SmartOS and has components that are specific to
 the SmartOS live image environment. For example, it has tools like
 `vmadm` and `imgadm`.
 
-### illumos-joyent
+## illumos-joyent
 
 The [illumos-joyent](https://github.com/joyent/illumos-joyent)
 repository is the core of the operating system. It represents Joyent's
@@ -51,7 +88,7 @@ The illumos-joyent code can be found in the smartos-live tree under
 `projects/illumos`. The SmartOS build only supports using illumos-joyent
 and not stock illumos-gate.
 
-### illumos-extra
+## illumos-extra
 
 The [illumos-extra](https://github.com/joyent/illumos-extra) repository
 contains a few different sets of software:
@@ -72,7 +109,7 @@ from illumos-extra.
 The illumos-extra code can be found in the smartos-live tree under
 `projects/illumos-extra`.
 
-#### illumos-extra design
+### illumos-extra design
 
 illumos-extra operates in a different fashion from the rest of the tree.
 Because it consists solely of third-party software, it operates in a
@@ -108,7 +145,7 @@ the ever increasing size of the repository, we are transitioning to
 having the contents stored externally and downloaded initially as part
 of the set up process.
 
-### Local Projects
+## Local Projects
 
 There are a collection of extra projects that live in separate
 repositories. Each of these projects lives in the `projects/local`
@@ -122,16 +159,16 @@ The current set of local projects include:
 * [mdata-client](https://github.com/joyent/mdata-client)
 * [ur-agent](https://github.com/joyent/sdc-ur-agent)
 
-## Building SmartOS
+# Building SmartOS
 
-### Setting up a Build Environment
+## Setting up a Build Environment
 
 The first step when building is to set up a build environment. The
 SmartOS build requires building on SmartOS. This can be done in VMware,
 on an existing SmartOS machine, or other virtualization. You must build
 inside of a non-global zone.
 
-#### Importing the Zone Image
+### Importing the Zone Image
 
 The SmartOS build currently uses the `base-64-lts 18.4.0` image
 which has a UUID of `c193a558-1d63-11e9-97cf-97bb3ee5c14f `. To import
@@ -149,7 +186,7 @@ Imported image c193a558-1d63-11e9-97cf-97bb3ee5c14f (base-64-lts@18.4.0)
 #
 ```
 
-#### Creating the Zone
+### Creating the Zone
 
 To create a zone, you need to create a `joyent` branded zone with
 `vmadm`. We recommend that the zone have the following attributes:
@@ -182,7 +219,7 @@ Once that's done, then you can create the VM using vmadm as:
 ```
 # vmadm create -f /var/tmp/build.json
 ```
-#### Setting Up the Zone
+### Setting Up the Zone
 
 While you can build as the root user, we recommend that you create a
 user to do your day to day work as. If you do create that user there are
@@ -219,7 +256,7 @@ If you're running any of the release-engineering targets, the build will
 also require Manta tools and `updates-imgadm` to be available on `$PATH`,
 but most users are unlikely to need to build these targets.
 
-### Basic Build Pattern
+## Basic Build Pattern
 
 Once the build zone has been configured, you can kick off a build in a
 few easy steps:
@@ -238,7 +275,7 @@ tarball will be there.
 The configure script takes a few options that allow you to do a DEBUG
 build, configure shadow compilers, etc. See `./configure -h`.
 
-#### Build Outputs
+### Build Outputs
 
 By default, running `gmake live` produces a directory and a tarball in
 the `output` directory.  This can be used in Triton with the `sdcadm`
@@ -258,7 +295,7 @@ $ ./tools/build_boot_image -I -r $ROOT -c ttyb # sets the default console to tty
 These will create images in the `output-usb` and `output-iso`
 directories based on the latest platform image.
 
-### Build Order and Common Targets
+## Build Order and Common Targets
 
 When you kick off a smartos-live build (running `gmake live`), it will
 build components in the following order:
@@ -284,7 +321,7 @@ The following summarizes the primary targets used on a day to day basis:
 * `iso`: Builds a CD-ROM ISO image, defaulting to the VGA console
 * `usb`: Builds a FAT 32 USB image, defaulting to the VGA console
 
-### Build Targets for Release Engineering
+## Build Targets for Release Engineering
 
 This section is likely to only interest users who perform release builds
 of SmartOS, or the Triton Platform Image.
@@ -352,9 +389,9 @@ Finally, release engineers may find the script
 [`build_jenkins`](/tools/build_jenkins) useful, intended to be run
 directly as part of a Jenkins job, invoking the targets above.
 
-### Common Tasks
+## Common Tasks
 
-#### Cleaning Up
+### Cleaning Up
 
 To clean out all the built contents of the various repositories, there
 is a top level 'clean' target. This will remove all of the built
@@ -369,7 +406,7 @@ files that aren't in the git repository, this will mistakenly remove
 them. If you encounter cases where we're not properly removing files,
 please report a bug.
 
-#### Updating
+### Updating
 
 To update all of the repositories that are part of the platform, you
 should first make sure that all of your changes have been committed.
@@ -391,7 +428,7 @@ repositories and kick off a full build again before performing
 incremental building. Occasionally, there will be flag days that will
 require you to rerun `./configure` before proceeding.
 
-#### Changing Branches
+### Changing Branches
 
 Most of the time, all development happens on the `master` branch. All
 SmartOS images are built from the master branch and the general theory
@@ -410,9 +447,9 @@ The `configure-projects` file takes the format:
 <path relative to ./projects>:<project branch>:[project git repo URL or path]
 ```
 
-The special tokens `cr` or `origin` can be used in place of a full git
-repo URL to denote either standard github.com or joyent gerrit URLs for that
-project. If no URL is given, we default to github.com.
+The special token `origin` can be used in place of a full git repo URL to denote
+the standard github.com location for that project.  If no URL is given, we
+default to github.com.
 
 If you update the branch name that corresponds to a repository, rerun
 `./configure` to make sure that every branch is set to the correct
@@ -421,7 +458,7 @@ one, except that of smartos-live which needs to be changed manually.
 Not all repositories have to be on the same branch. It's totally fine to
 mix and match.
 
-#### Additional build customization
+### Additional build customization
 
 Several variables can also be set in a shell script at the top of the
 smartos-live repository called `configure-build` and are sourced by `configure`
@@ -438,7 +475,7 @@ ON_CLOSED_BINS_ND_URL="https://us-east.manta.joyent.com/Joyent_Dev/public/releng
 ILLUMOS_ADJUNCT_TARBALL_URL="https://us-east.manta.joyent.com/Joyent_Dev/public/releng/adjuncts/illumos-adjunct.20130131.tgz"
 ```
 
-#### Debug Builds
+### Debug Builds
 
 By default, all of SmartOS is built non-debug. It is possible to build a
 debug build of SmartOS. This debug build primarily changes things by
@@ -485,14 +522,14 @@ support multiple proto-areas, this will end up just causing the system
 to clobber one build with the other. For more information on the nightly
 flags, see [nightly(1ONBLD)](https://illumos.org/man/1onbld/nightly)
 
-#### Controlling Maximum Number of Jobs
+### Controlling Maximum Number of Jobs
 
 By default, the build will determine the maximum number of jobs to use
 based on the DRAM and CPU available in the zone. However, there are
 times where you may want to control this manually. To do this, you
 should set the `MAX_JOBS` environment variable.
 
-### Incremental Development
+## Incremental Development
 
 Each of the different build phases is represented with a stamp file that
 exists in the root of the smartos-live clone. These files are named based
@@ -521,7 +558,7 @@ prove to be rather cumbersome. For incremental building of these
 components, we recommend that you first build the system completely
 before performing any incremental work.
 
-#### Incremental Building of illumos
+### Incremental Building of illumos
 
 If you are going to perform incremental building of illumos, you should
 first familiarize yourself with the [illumos Developer's
@@ -563,7 +600,7 @@ perform the same actions as if you removed the `0-illumos-stamp` and ran
 will not cause dependent items to be rebuilt. This comes with the same
 risks and rewards of using `bldenv`.
 
-#### Iterating on illumos-extra
+### Iterating on illumos-extra
 
 If you're working on the bootstrap phase, make sure you're not using a cached
 `proto.strap` first. Using `./configure -r` will tell `./tools/build_strap` not
@@ -601,7 +638,7 @@ extracted again and patches will not be applied. If you're changing any
 patches that apply or configure options, you should use the `clean`
 target inside of the target directory.
 
-#### Iterating on vmadm and imgadm
+### Iterating on vmadm and imgadm
 
 While working on `vmadm` and `imgadm` there often isn't a need to rebuild
 the platform image every single time that you want to make a change. A
@@ -610,7 +647,7 @@ local change from the smartos-live `src/vm` and `src/img` directories
 and apply them to the target server by copying them into `/var/tmp/` and
 then performing a lofs mount.
 
-### Proto Area
+## Proto Area
 
 When various pieces of software build, they are eventually installed
 into a proto area. The proto area represents the file system layout of
@@ -629,7 +666,7 @@ and libraries should not be assumed to work on the existing system. That
 said, in many cases you can get away with it. However, testing out of
 the proto area is no substitute for doing full testing.
 
-### Packaging and Manifests
+## Packaging and Manifests
 
 There are a lot of items which are installed into the proto area.
 However, not everything installed into the proto area is actually placed
@@ -670,7 +707,7 @@ illumos-joyent and not any other repository. Keeping them separate this
 way allows us to minimize build-time flag days that require updating
 multiple repositories at once.
 
-#### Device Drivers
+### Device Drivers
 
 For SmartOS, adding a device driver involves updating files that are
 assembled at run-time under vanilla illumos. You should check and update if
@@ -684,7 +721,88 @@ usr/src/uts/intel/os/name_to_major
 usr/src/uts/intel/os/minor_perm
 ```
 
-## Testing and Things to Think About
+# Contributing
+
+All the repositories contained within this build use GitHub pull requests for
+new changes.
+
+All changes should have an associated issue. You can use the [GitHub
+issue tracker](https://github.com/joyent/smartos-live/issues). Joyent
+employees use an internal JIRA exposed at
+<https://smartos.org/bugview>. The commit message should be of this form:
+
+```
+joyent/smartos-live#9999 make some changes (#23)
+
+joyent/smartos-live#10000 make a related change
+Reviewed by: Steve Reviewer <steve.reviewer@gmail.com>
+Approved by: Amy Approver <amy.approver@gmail.com>
+```
+
+The first line should be the bug ID and title, optionally followed by the PR
+number as added by GitHub. After a blank line, the commit body should list any
+additional bugs fixed in this change, along with the usual reviewer tags.
+
+In addition to at least one code review, you will need to document your testing
+and gain "integration approval" (the Approved by tag).
+
+If you would like to make a change to `illumos-joyent` specifically, please see
+[Upstreaming](#upstreaming) below.
+
+## Review
+
+In general, before putting something up for review, some amount of
+testing should have already been done. Once you post it for review, then
+you need to seek out reviewers. A good first step for finding reviewers
+is to see who has worked on changes in similar areas. A good way to do
+this is to use `git log` in portions of the source tree and note who the
+authors, reviewers, and approvers have been. This can often be a good
+source of trying to figure out who to ask.
+
+If you're not sure of who to ask or are having trouble finding someone,
+then consider asking in a public forum such as internal chat or IRC.
+Even if you're not sure if someone would make sense as a reviewer or
+not, don't hesitate to reach out and folks will help you find or suggest
+reviewers. For more information on where to reach out, see
+[Community](#community).
+
+## Upstreaming
+
+If you are making a change to `illumos-joyent`, please consider contributing
+directly to [illumos-gate](https://github.com/illumos/illumos-gate) instead.
+We automatically merge this into `illumos-joyent` every working day, so your fix
+will soon make it into SmartOS itself.
+
+The default case should be contributing directly to upstream. However, in areas
+of significant divergence, such as `lx` brand or certain areas of the networking
+stack, this may not be the best choice.
+
+## Integration
+
+When thinking about integrating, the following are questions that you or
+your approver should be asking:
+
+* Have I tested this in all the ways I can think of? Might this impact
+standalone SmartOS or Triton in some way?
+* Have I documented any new commands or interfaces in manual pages?
+* Have I built this both debug and non-debug?
+* Have I reviewed the `git pbchk` output when working in bldenv in
+illumos-joyent?
+* Have I run any appropriate `make check` targets?
+* Have I looked for memory leaks?
+* Have I performed appropriate stress testing to try and find issues
+that might only arise after prolonged use?
+* Is this a particularly risky change? If so, should I wait
+until the start of the next release cycle to integrate?
+* Are there any heads-up notices I need to send as part of this? For
+example, this might happen because of a flag day.
+* Have I added a new tool that's required to run at build-time and
+tested this on older platform images?
+
+Prior to a PR being merged, it must have at least one code reviewer and one
+approver. They can be the same person, but two sets of eyes are preferred.
+
+## Testing changes
 
 A large part of development in the platform should be focused around
 testing. Some components such as vmadm and DTrace have extensive test
@@ -887,10 +1005,10 @@ failed, the names of those suites are emitted by `smartos-test` just before
 the script exits.
 
 When developers are adding tests to illumos, they should ensure that new
-tests are added to `$SRC/usr/src/pkg/manifests/*.mf` as these IPS
+tests are added to `$SRC/usr/src/pkg/manifests/\*.mf` as these IPS
 manifests are used to generate the test archive during the SmartOS build.
 
-### Public Interfaces
+## Public Interfaces
 
 One important thing to always think about is whether or not the thing
 that's changing is a public interface or not. If this is a standard
@@ -911,95 +1029,15 @@ issues?
 These are intended to help guide understand the impact and risk related
 to the change.
 
-### Mapfiles
+## Mapfiles
 
 We have a hard rule: a public mapfile version should not be added directly
-to illumos-joyent. Instead, if you have a change that you need to make,
-it should be added to a private version and moved to a public version
-when it is upstreamed to illumos.
+to illumos-joyent. Instead, if you need to add a new version to a mapfile,
+it should be done directly via contributing to illumos-gate.
+
+If for some reason that's not feasible, then it should be added to a private
+version and moved to a public version if/when it is upstreamed to illumos.
 
 If the library in question is specific to illumos-joyent, then it's
 alright to version it. However, this is not true for the vast majority
 of libraries.
-
-## Contributing
-
-This repository uses [cr.joyent.us](https://cr.joyent.us) (Gerrit) for new
-changes. Anyone can submit changes. To get started, see the [cr.joyent.us user
-guide](https://github.com/joyent/joyent-gerrit/blob/master/docs/user/README.md).
-This repository does not use GitHub pull requests.
-
-All changes should have an associated issue. You can use the [GitHub
-issue tracker](https://github.com/joyent/smartos-live/issues). (Joyent
-employees use an internal JIRA exposed at
-<https://smartos.org/bugview>.)
-
-### Review
-
-In general, before putting something up for review, some amount of
-testing should have already been done. Once you post it for review, then
-you need to seek out reviewers. A good first step for finding reviewers
-is to see who has worked on changes in similar areas. A good way to do
-this is to use `git log` in portions of the source tree and note who the
-authors, reviewers, and approvers have been. This can often be a good
-source of trying to figure out who to ask.
-
-If you're not sure of who to ask or are having trouble finding someone,
-then consider asking in a public forum such as internal chat or IRC.
-Even if you're not sure if someone would make sense as a reviewer or
-not, don't hesitate to reach out and folks will help you find or suggest
-reviewers. For more information on where to reach out, see the community
-section.
-
-### Integration
-
-When thinking about integrating, the following are questions that you or
-your approver should be asking yourself:
-
-* Have I tested this in all the ways I can think of? Might this impact
-standalone SmartOS or Triton in some way?
-* Have I documented any new commands or interfaces in manual pages?
-* Have I built this both debug and non-debug?
-* Have I reviewed the `git pbchk` output when working in bldenv in
-illumos-joyent?
-* Have I run any appropriate make check targets?
-* Have I looked for memory leaks?
-* Have I performed appropriate stress testing to try and find issues
-that might only arise after prolonged use?
-* Is this a particularly risky change? If so, should I wait
-until the start of the next release cycle to put this back?
-* Are there any heads up notices I need to send as part of this? For
-example, this might happen because of a flag day.
-* Have I added a new tool that's required to run at build-time and
-tested this on older platform images?
-
-## Community
-
-You can interact with the SmartOS community in a number of ways. This
-includes:
-
-* The *smartos-discuss*
-  [mailing list](https://smartos.topicbox.com/groups/smartos-discuss).
-  If you wish to send mail to the list you'll need to join, but you can view
-  and search the archives online without being a member.
-
-* In the *#smartos* IRC channel on the [Freenode IRC
-  network](https://freenode.net/).
-
-## Bug Reports
-
-If you encounter a problem, please reach out for assistance. You can
-file a [github issue](https://github.com/joyent/smartos-live/issues) for
-any problem you encounter. When filing a bug, please include the
-platform version that you're running and a description of the problem.
-
-If there was an operating system crash dump or a program generated a
-core dump, it would be greatly appreciated if you could make that
-available.
-
-While there are multiple repositories that make up the smartos-live
-image, if you're in doubt about where to file a bug or just are
-uncertain, please file it on the [SmartOS live issue
-tracker](https://github.com/joyent/smartos-live) and we'll help from
-there. It's more important that the bug is recorded and we can work on
-solving it than it end up in the right location.

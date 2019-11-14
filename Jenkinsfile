@@ -93,10 +93,14 @@ pipeline {
     stages {
         stage('check') {
             steps{
-                sh('make check')
+                sh('''
+set -o errexit
+set -o pipefail
+./tools/build_jenkins -C
+''')
             }
         }
-        // in case make check left anything hanging around
+        // in case 'make check' left anything hanging around
         stage('re-clean') {
             steps {
                 sh('git clean -fdx')
@@ -123,5 +127,4 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                 'output/changelog.txt'
         }
     }
-
 }

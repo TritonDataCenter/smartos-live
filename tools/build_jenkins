@@ -47,6 +47,7 @@ fi
 function usage {
     echo "Usage: build_jenkins [options]"
     echo "OPTIONS"
+    echo "  -C            only do configure and 'make check'"
     echo "  -d            build a debug platform"
     echo "  -F <flavor>   build one of the following build flavors:"
     echo "                    triton (default)    a normal platform build"
@@ -84,8 +85,11 @@ function log {
 #
 # Main
 #
-while getopts "dhF:" opt; do
+while getopts "CdhF:" opt; do
     case "${opt}" in
+        C)
+            MAKE_CHECK_ONLY=true
+	    ;;
         d)
             # build debug platform bits
             ENGBLD_CONFIGURE_DEBUG_ARG='-d'
@@ -158,6 +162,12 @@ fi
 log_cmd  ./configure -r \
     ${ENGBLD_CONFIGURE_DEBUG_ARG} \
     ${PLAT_CONFIGURE_ARGS}
+
+# Jenkins has a 'check' pipeline stage which we might be running
+if [[ -n "$MAKE_CHECK_ONLY" ]]; then
+    log_cmd gmake check
+    exit $?
+fi
 
 log_cmd gmake common-release
 

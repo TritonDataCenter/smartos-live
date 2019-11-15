@@ -91,6 +91,15 @@ pipeline {
         )
     }
     stages {
+        // Jenkins PR builds defaults to a lightweight checkout, which
+        // doesn't include all branch information, which causes the
+        // smartos-live ./tools/build_changelog script to fail, breaking
+        // the build. Get those branches before doing anything.
+        stage('get-all-branches') {
+            steps{
+                sh("git fetch origin '+refs/heads/*:refs/remotes/origin/*'")
+            }
+        }
         stage('check') {
             steps{
                 sh('''

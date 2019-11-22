@@ -117,7 +117,7 @@ function checkout_project
 		fi
 	fi
 
-	git -C ${dir} show -s
+	git -C ${dir} --no-pager show -s
 	git -C ${dir} describe --all --long --dirty | egrep -e '-dirty$' &&
 	    echo "Warning: ${dir} contains uncommitted changes!"
 	echo

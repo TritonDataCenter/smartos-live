@@ -158,13 +158,13 @@ function valid_mtu
 
     if ! [[ $mtu =~ ^[0-9]{1,5}$ ]] ; then
         echo "Invalid mtu specified for tag $tag: $mtu"
-        echo "Valid MTU range is from 1500-65536"
+        echo "Valid MTU range is from 1500-65535"
         exit $SMF_EXIT_ERR_FATAL
     fi
 
-    if ((mtu > 65536 || $mtu < 1500 )); then
+    if ((mtu > 65535 || $mtu < 1500 )); then
         echo "Invalid mtu specified for tag $tag: $mtu"
-        echo "Valid MTU range is from 1500-65536"
+        echo "Valid MTU range is from 1500-65535"
         exit $SMF_EXIT_ERR_FATAL
     fi
 }

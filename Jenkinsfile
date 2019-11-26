@@ -90,6 +90,14 @@ pipeline {
                 '</ul>'
         )
     }
+    triggers {
+        githubPullRequest {
+            triggerPhrase('OK to build')
+            onlyTriggerPhrase()
+            useGitHubHooks()
+            permitAll()
+        }
+    }
     stages {
         // Jenkins PR builds defaults to a lightweight checkout, which
         // doesn't include all branch information, which causes the

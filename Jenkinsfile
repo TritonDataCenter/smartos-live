@@ -91,11 +91,7 @@ pipeline {
         )
     }
     triggers {
-        githubPullRequest(triggerPhrase: 'OK to build', onlyTriggerPhrase: true, useGitHubHooks: true, permitAll: true)
-            //triggerPhrase('OK to build')
-            //onlyTriggerPhrase()
-            //useGitHubHooks()
-            //permitAll()
+        issueCommentTrigger('.*OK to build.*')
     }
     stages {
         // Jenkins PR builds defaults to a lightweight checkout, which

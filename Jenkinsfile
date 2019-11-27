@@ -96,7 +96,6 @@ pipeline {
             //onlyTriggerPhrase()
             //useGitHubHooks()
             //permitAll()
-        }
     }
     stages {
         // Jenkins PR builds defaults to a lightweight checkout, which

@@ -91,11 +91,11 @@ pipeline {
         )
     }
     triggers {
-        githubPullRequest {
-            triggerPhrase('OK to build')
-            onlyTriggerPhrase()
-            useGitHubHooks()
-            permitAll()
+        githubPullRequest(triggerPhrase: 'OK to build', onlyTriggerPhrase: true, useGitHubHooks: true, permitAll: true)
+            //triggerPhrase('OK to build')
+            //onlyTriggerPhrase()
+            //useGitHubHooks()
+            //permitAll()
         }
     }
     stages {

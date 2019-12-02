@@ -90,6 +90,13 @@ pipeline {
                 '</ul>'
         )
     }
+    environment {
+        // set variables here in hopes the existence of the var
+        // will allow get-causes to set them globally for all
+        // stages
+        JOYENT_BUILD_CAUSE=""
+        JOYENT_BUILD_CAUSE_DESC=""
+    }
     stages {
         // Jenkins PR builds defaults to a lightweight checkout, which
         // doesn't include all branch information, which causes the
@@ -105,8 +112,18 @@ pipeline {
                script {
                    def causes = currentBuild.getBuildCauses()
                    echo causes.toString()
+                   env.JOYENT_BUILD_CAUSE=causes[0]._class
+                   env.JOYENT_BUILD_CAUSE_DESC=causes[0].shortDescription
                }
            }
+        }
+        stage('show-cause') {
+            steps {
+                sh('''
+echo "This is the environment!"
+env
+''')
+            }
         }
         stage('check') {
             steps{

@@ -94,8 +94,11 @@ pipeline {
         // set variables here in hopes the existence of the var
         // will allow get-causes to set them globally for all
         // stages
-        JOYENT_BUILD_CAUSE=""
-        JOYENT_BUILD_CAUSE_DESC=""
+        script {
+            def causes = currentBuild.getBuildCauses()
+            echo causes.toString()
+            env.JOYENT_BUILD_CAUSE = causes[0]._class
+            env.JOYENT_BUILD_CAUSE_DESC = causes[0].shortDescription
     }
     stages {
         // Jenkins PR builds defaults to a lightweight checkout, which
@@ -106,16 +109,6 @@ pipeline {
             steps{
                 sh("git fetch origin '+refs/heads/*:refs/remotes/origin/*'")
             }
-        }
-        stage('get-causes') {
-           steps {
-               script {
-                   def causes = currentBuild.getBuildCauses()
-                   echo causes.toString()
-                   env.JOYENT_BUILD_CAUSE=causes[0]._class
-                   env.JOYENT_BUILD_CAUSE_DESC=causes[0].shortDescription
-               }
-           }
         }
         stage('show-cause') {
             steps {

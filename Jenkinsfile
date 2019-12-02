@@ -99,6 +99,7 @@ pipeline {
             echo causes.toString()
             env.JOYENT_BUILD_CAUSE = causes[0]._class
             env.JOYENT_BUILD_CAUSE_DESC = causes[0].shortDescription
+        }
     }
     stages {
         // Jenkins PR builds defaults to a lightweight checkout, which

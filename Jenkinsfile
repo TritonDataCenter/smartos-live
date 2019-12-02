@@ -100,6 +100,10 @@ pipeline {
                 sh("git fetch origin '+refs/heads/*:refs/remotes/origin/*'")
             }
         }
+        stage('get-causes') {
+           def causes = currentBuild.getBuildCauses()
+           echo '${causes}'
+        }
         stage('check') {
             steps{
                 sh('''

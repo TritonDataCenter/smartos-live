@@ -101,8 +101,10 @@ pipeline {
             }
         }
         stage('get-causes') {
-           def causes = currentBuild.getBuildCauses()
-           echo '${causes}'
+           steps {
+               def causes = currentBuild.getBuildCauses()
+               echo '${causes}'
+           }
         }
         stage('check') {
             steps{

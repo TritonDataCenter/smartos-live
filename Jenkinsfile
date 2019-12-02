@@ -103,9 +103,8 @@ pipeline {
         stage('get-causes') {
            steps {
                script {
-                   import groovy.json.JsonOutput
                    def causes = currentBuild.getBuildCauses()
-                   echo JsonOutput.prettyPrint(causes)
+                   echo causes.toString()
                }
            }
         }

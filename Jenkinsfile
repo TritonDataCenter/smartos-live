@@ -91,15 +91,9 @@ pipeline {
         )
     }
     environment {
-        // set variables here in hopes the existence of the var
-        // will allow get-causes to set them globally for all
-        // stages
-        script {
-            def causes = currentBuild.getBuildCauses()
-            echo causes.toString()
-            env.JOYENT_BUILD_CAUSE = causes[0]._class
-            env.JOYENT_BUILD_CAUSE_DESC = causes[0].shortDescription
-        }
+        // the DSL requires key/val entries, but
+        // apparently runs functions ok?
+        JOYENT_BUILD_CAUSE=getJoyentBuildCause()
     }
     stages {
         // Jenkins PR builds defaults to a lightweight checkout, which
@@ -161,3 +155,12 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
         }
     }
 }
+
+def getJoyentBuildCause() {
+    def causes = currentBuild.getBuildCauses()
+    echo causes.toString()
+    env.JOYENT_BUILD_CAUSE = causes[0]._class
+    env.JOYENT_BUILD_CAUSE_DESC = causes[0].shortDescription
+    return causes[0]._class
+}
+

@@ -90,9 +90,6 @@ pipeline {
                 '</ul>'
         )
     }
-    triggers {
-        issueCommentTrigger('.*OK to build.*')
-    }
     stages {
         // Jenkins PR builds defaults to a lightweight checkout, which
         // doesn't include all branch information, which causes the
@@ -119,6 +116,11 @@ set -o pipefail
             }
         }
         stage('build image and upload') {
+            when {
+                not {
+                    changeRequest() 
+                }
+            }
             steps {
                 sh('''
 set -o errexit

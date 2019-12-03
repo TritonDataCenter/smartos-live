@@ -163,7 +163,7 @@ function valid_mtu
         exit $SMF_EXIT_ERR_FATAL
     fi
 
-    if ((mtu > 65535 || $mtu < 1500 )); then
+    if (( $mtu > 65535 || $mtu < 1500 )); then
         echo "Invalid mtu specified for tag $tag: $mtu"
         echo "Valid MTU range is from 1500-65535"
         exit $SMF_EXIT_ERR_FATAL

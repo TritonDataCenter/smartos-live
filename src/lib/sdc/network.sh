@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+# This script is to be sourced and be compatible with both bash and ksh93
 #
 # network-related functions (intended to be sourced from other scripts)
 #
@@ -155,16 +155,17 @@ function valid_mtu
 
     tag="$1"
     mtu="$2"
+    mtu_is_int=`echo $mtu | grep -E '(^[0-9]{1,5}$)'`
 
-    if ! [[ $mtu =~ [1-9][0-9][0-9][0-9] ]] ; then
+    if [[ -z $mtu_is_int ]] ; then
         echo "Invalid mtu specified for tag $tag: $mtu"
-        echo "Valid MTU range is from 1500-9000"
+        echo "Valid MTU range is from 1500-65535"
         exit $SMF_EXIT_ERR_FATAL
     fi
 
-    if ((mtu > 9000 || $mtu < 1500 )); then
+    if (( $mtu > 65535 || $mtu < 1500 )); then
         echo "Invalid mtu specified for tag $tag: $mtu"
-        echo "Valid MTU range is from 1500-9000"
+        echo "Valid MTU range is from 1500-65535"
         exit $SMF_EXIT_ERR_FATAL
     fi
 }

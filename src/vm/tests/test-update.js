@@ -273,13 +273,13 @@ var UNMODIFIABLE_PROPS = [
  * values.
  */
 var ZONECFG_PROPS = {
-    cpu_shares: [undefined, 5, undefined],
-    limit_priv: ['', 'default', 'default,dtrace_user', ''],
-    max_lwps: [undefined, 5000, undefined],
-    max_msg_ids: [undefined, 5000, undefined],
-    max_shm_ids: [undefined, 5000, undefined],
-    max_shm_memory: [undefined, 5000, undefined],
-    zfs_io_priority: [undefined, 50, undefined]
+    cpu_shares: [undefined, 5, undefined, undefined],
+    limit_priv: ['', 'default', 'default,dtrace_user', '', ''],
+    max_lwps: [undefined, 5000, undefined, undefined],
+    max_msg_ids: [undefined, 5000, undefined, undefined],
+    max_shm_ids: [undefined, 5000, undefined, undefined],
+    max_shm_memory: [undefined, 5000, undefined, undefined],
+    zfs_io_priority: [undefined, 50, undefined, undefined]
 };
 
 test('create VM', function (t) {

@@ -1,0 +1,193 @@
+#!/bin/bash
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+#
+# Copyright 2019 Joyent, Inc.
+#
+
+#
+# This is a wrapper used by jenkins to invoke the different targets needed for
+# the Triton platform and SmartOS build variants.
+#
+
+if [[ -n "${TRACE}" ]]; then
+    export PS4='${BASH_SOURCE}:${LINENO}: '
+    set -o xtrace
+fi
+
+set -o errexit
+set -o pipefail
+
+# Allow users to override the Manta path where we publish artifacts
+if [[ -z "${ENGBLD_DEST_OUT_PATH}" ]]; then
+    export ENGBLD_DEST_OUT_PATH=/public/builds
+fi
+
+export TIMESTAMP=$(TZ=UTC /bin/date "+%Y%m%dT%H%M%SZ")
+export BUILDSTAMP=${TIMESTAMP}
+
+# Used to flag if this is a non-default build. This modifies the description
+# used for the platform manifest.
+export ENGBLD_CUSTOM=''
+
+# Jenkins should set this, otherwise default to the current branch, assuming
+# our working directory is a smartos-live repository.
+if [[ -z "${BRANCH}" ]]; then
+    export BRANCH=$(git branch 2> /dev/null | \
+        sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
+fi
+
+#
+# Emit usage information
+#
+function usage {
+    echo "Usage: build_jenkins [options]"
+    echo "OPTIONS"
+    echo "  -d            build a debug platform"
+    echo "  -F <flavor>   build one of the following build flavors:"
+    echo "                    triton (default)    a normal platform build"
+    echo "                    smartos             only smartos platform bits"
+    echo "                    triton-and-smartos  both of the above"
+    echo ""
+    echo "ENVIRONMENT"
+    echo "  BRANCH                the branch of smartos-live being built"
+    echo "  ENGBLD_DEST_OUT_PATH  the Manta path used when uploading artifacts"
+    echo "  PLAT_CONFIGURE_ARGS   additional arguments to pass to 'configure'"
+    echo "  PLATFORM_BUILD_FLAVOR one of the -F arguments, as above"
+    echo "  CONFIGURE_PROJECTS    content for the 'configure-projects' file"
+    echo ""
+    echo "NOTE"
+    echo "  Production builds expect we're building in a freshly cloned"
+    echo "  repository. We do not attempt to 'make clean' before rebuilding."
+    exit 2
+}
+
+#
+# A simple log wrapper for running a major build step
+#
+function log_cmd {
+    echo "==== Running $@ ====" | tee -a ${ENGBLD_LOG}
+    $@ 2>&1 | tee -a ${ENGBLD_LOG}
+}
+
+#
+# A simple log wrapper
+#
+function log {
+    $@ 2>&1 | tee -a ${ENGBLD_LOG}
+}
+
+#
+# Main
+#
+while getopts "dhF:" opt; do
+    case "${opt}" in
+        d)
+            # build debug platform bits
+            ENGBLD_CONFIGURE_DEBUG_ARG='-d'
+            ENGBLD_DEBUG_SUFFIX='-debug'
+            ;;
+        F)
+            PLATFORM_BUILD_FLAVOR="${OPTARG}"
+            ;;
+        h)
+            usage
+            ;;
+        *)
+            echo "Error: Unknown argument ${opt}"
+            usage
+    esac
+done
+shift $((OPTIND - 1))
+
+if [[ -z "$PLATFORM_BUILD_FLAVOR" ]]; then
+    PLATFORM_BUILD_FLAVOR="triton"
+fi
+
+case "${PLATFORM_BUILD_FLAVOR}" in
+    'triton'|'smartos'|'triton-and-smartos')
+        ;;
+    *)
+        echo "Error: unknown platform build flavor: ${PLATFORM_BUILD_FLAVOR}"
+        usage
+esac
+
+ENGBLD_LOGDIR=output/bits/platform${ENGBLD_DEBUG_SUFFIX}
+ENGBLD_LOG=${ENGBLD_LOGDIR}/build.log
+
+# Rotate our output directories, mostly for the benefit of non-production builds
+# We can't log these commands as we're physically removing the log location.
+for output in output output-iso output-usb output-vmware; do
+    if [[ -d "${output}" ]]; then
+        echo "Removing old ${output} directory"
+        rm -rf ${output}.old
+        echo "Renaming output to ${output}.old"
+        mv ${output} ${output}.old
+    fi
+done
+
+mkdir -p ${ENGBLD_LOGDIR}
+touch ${ENGBLD_LOG}
+
+# Remove any old logs so that these don't get swept up as Jenkins artifacts
+log rm -rf log projects/illumos/log
+
+# Is this a release branch build
+if echo "${BRANCH}" | grep -q "^release"; then
+    ENGBLD_RELEASE=true
+else
+    ENGBLD_RELEASE=""
+fi
+
+#
+# ${CONFIGURE_PROJECTS} is multi-line jenkins parameter, set so that users can
+# specify which branches of the repositories in the smartos-live 'projects'
+# framework to build, and from where they should be cloned.
+#
+if [[ -z "${CONFIGURE_PROJECTS}" ]]; then
+    echo "using default configure-projects"
+else
+    echo "${CONFIGURE_PROJECTS}" > configure-projects
+fi
+
+# Configure the build based on the arguments we've gathered
+log_cmd  ./configure -r \
+    ${ENGBLD_CONFIGURE_DEBUG_ARG} \
+    ${PLAT_CONFIGURE_ARGS}
+
+log_cmd gmake common-release
+
+case "${PLATFORM_BUILD_FLAVOR}" in
+    'triton')
+        log_cmd gmake triton-release
+        ;;
+    'smartos')
+        log_cmd gmake smartos-only-release
+        ;;
+    'triton-and-smartos')
+        log_cmd gmake triton-smartos-release
+        ;;
+esac
+
+#
+# Update Manta snaplinks for smartos, only if this is a non-debug, release
+# build.
+# We check for an empty $PLATFORM_DEBUG_SUFFIX as that gets used as the way to
+# prevent downstream Jenkins builds (e.g. 'platform-gcc4') uploading artifacts
+# to the 'platform' Manta directory, even though they may not strictly be debug
+# builds.
+#
+if [[ -n "${ENGBLD_RELEASE}" && \
+        -z "${ENGBLD_CONFIGURE_DEBUG_ARG}" && \
+        -z "${PLATFORM_DEBUG_SUFFIX}" ]]; then
+    case "${PLATFORM_BUILD_FLAVOR}" in
+        'smartos'|'triton-and-smartos')
+            log_cmd env TRACE=1 ./tools/smartos-release \
+                "${BRANCH}" "${TIMESTAMP}"
+            ;;
+    esac
+fi

@@ -1,0 +1,65 @@
+{
+  "zonename": "aaac8650-4b58-6633-9054-a2c22e7beb36",
+  "autoboot": false,
+  "brand": "bhyve",
+  "limit_priv": "default,-file_link_any,-net_access,-proc_fork,-proc_info,-proc_session",
+  "v": 1,
+  "create_timestamp": "2019-05-23T15:54:24.802Z",
+  "cpu_shares": 100,
+  "max_lwps": 2000,
+  "max_msg_ids": 4096,
+  "max_sem_ids": 4096,
+  "max_shm_ids": 4096,
+  "max_shm_memory": 2304,
+  "zfs_io_priority": 100,
+  "max_physical_memory": 2304,
+  "max_locked_memory": 2304,
+  "max_swap": 2304,
+  "billing_id": "00000000-0000-0000-0000-000000000000",
+  "owner_uuid": "00000000-0000-0000-0000-000000000000",
+  "ram": 1024,
+  "vcpus": 2,
+  "device": null,
+  "disks": [
+    {
+      "path": "/dev/zvol/rdsk/zones/aaac8650-4b58-6633-9054-a2c22e7beb36/disk0",
+      "boot": true,
+      "model": "virtio",
+      "media": "disk",
+      "image_size": 10240,
+      "image_uuid": "cf6b54f9-2952-4213-ba84-b6f64a7ec229",
+      "pci_slot": "0:4:0",
+      "uuid": "11adf075-d948-6518-eaa7-fab9fcadb934"
+    },
+    {
+      "path": "/dev/zvol/rdsk/zones/aaac8650-4b58-6633-9054-a2c22e7beb36/disk1",
+      "boot": false,
+      "model": "virtio",
+      "media": "disk",
+      "pci_slot": "0:4:1",
+      "uuid": "4869641c-555b-6809-bd97-b9fc2a84e1b9"
+    }
+  ],
+  "nics": [
+    {
+      "interface": "net0",
+      "mac": "b2:f6:32:07:6c:3b",
+      "nic_tag": "admin",
+      "gateway": "10.88.88.2",
+      "gateways": [
+        "10.88.88.2"
+      ],
+      "netmask": "255.255.255.0",
+      "ip": "10.88.88.221",
+      "ips": [
+        "10.88.88.221/24"
+      ],
+      "model": "virtio",
+      "primary": true
+    }
+  ],
+  "com1": "/dev/zconsole",
+  "com2": "socket,/tmp/vm.ttyb",
+  "zlog_mode": "g--",
+  "zlog_name": "platform.log"
+}

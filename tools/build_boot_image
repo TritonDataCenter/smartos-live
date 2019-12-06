@@ -1,0 +1,416 @@
+#!/bin/bash
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright (c) 2019, Joyent, Inc.
+#
+
+#
+# This script automates the process of building ISO and USB images of a SmartOS
+# build.  It can also be used to produce the proforma disk images used by the
+# tools in sdc-headnode.git to produce Triton USB and COAL images.  When
+# building SmartOS media, it uses the latest platform file that's been built.
+# This program can be invoked standalone via the "gmake iso", "gmake usb" and
+# "gmake images" targets of the top-level Makefile in "smartos-live.git".
+#
+# This script needs to be run either as root or as a user that is granted the
+# "Primary Administrator" profile.  When run in a non-global zone, it must be
+# configured with "fs_allowed=ufs,pcfs".
+#
+# Things are complicated here by the fact that we would like to run inside a
+# non-global zone with older kernels.  Most of our partitioning tools such as
+# format do not run well inside a non-global zone, and labeled lofi doesn't
+# have sufficient support either.  So we delegate the tricky bits to
+# format_image.
+#
+# Equally, we can no longer directly mount the root partition for populating:
+# pcfs has no logic of its own for parsing GPT partitions.  So we have to play
+# games using dd(1) to copy the root FS image into the right place based on
+# its partition offset.  We also place the partition layout into the images
+# tarball, so sdc-headnode can do the same.  (As it is, the offset is actually
+# fixed, but that seems like a bad thing to rely on.)
+#
+
+bi_console="text"
+bi_make_iso=0
+bi_proforma_only=0
+bi_nocleanup=0
+bi_imgsz_gb="2"
+bi_imgsz=$(( $bi_imgsz_gb * 1000000000 ))
+bi_wsroot=
+bi_lofi_blkdev=
+bi_lofi_rawdev=
+bi_esp_blkdev=
+bi_usb_image_name=
+bi_rootdir=
+bi_efimnt=
+bi_tmpdir=
+
+function detach_lofi()
+{
+	local readonly dev=$1
+
+	if [[ -z "$dev" ]]; then
+		return
+	fi
+
+	if pfexec lofiadm $dev 2>/dev/null; then
+		print "Detaching LOFI device $dev ... \c"
+		pfexec lofiadm -d $dev
+		print "done"
+	fi
+}
+
+function cleanup()
+{
+	[[ $bi_nocleanup == 1 ]] && return
+
+	print "Cleaning up"
+
+	if mount | grep $bi_efimnt >/dev/null; then
+		pfexec umount $bi_efimnt
+	fi
+
+	if mount | grep $bi_rootdir >/dev/null; then
+		pfexec umount $bi_rootdir
+	fi
+
+	detach_lofi "$bi_lofi_blkdev"
+	detach_lofi "$bi_esp_blkdev"
+
+	pfexec rm -f $bi_tmpdir/esp.img
+	pfexec rm -f $bi_tmpdir/rootfs.img
+	pfexec rm -f $bi_tmpdir/smartos.usb
+	pfexec rm -f $bi_tmpdir/partition.map
+	pfexec rm -f $bi_tmpdir/loader.conf
+	pfexec rm -rf $bi_tmpdir/mnt
+	pfexec rmdir $bi_tmpdir
+}
+
+function fail()
+{
+        printf "$(basename $0): %s\n" "$1" 1>&2
+        exit 1
+}
+
+function usage()
+{
+	[[ ! -z $1 ]] && printf "%s\n\n" "$1" 1>&2
+
+	print -u2 "Usage: $(basename $0) [-I] [-x] [-c console] " \
+	    "[-p <size>] -r <smartos-live repo>"
+	print -u2 " -I\tbuild SmartOS ISO image (default: USB image)"
+	print -u2 " -c\tspecify primary console (e.g. ttyb)"
+	print -u2 " -p\tbuild proforma USB image for Triton (e.g. 1gb)"
+	print -u2 " -x\tdon't cleanup on exit (for debugging use)\n"
+	exit 2
+}
+
+function pfrun()
+{
+	pfexec $*
+	local status=$?
+
+	if [[ $status != 0 ]]; then
+		print -u2 "\nCommand failed: $*\nExit status: $status"
+		exit 1
+	fi
+}
+
+#
+# Construct the EFI System Partition (ESP) image,  We size it at 256 MB, which
+# is intentionally much larger than what we need currently, in order to leave
+# headroom for future projects which may need to store data in the ESP.
+#
+function create_esp()
+{
+	local readonly tmpdir=$1
+	local readonly efimnt=$2
+	local readonly esp_size=256 # MiB
+	local readonly esp_sects=$(( $esp_size * 1024 * 1024 / 512 ))
+
+	pfrun mkfile -n ${esp_size}m $tmpdir/esp.img
+	bi_esp_blkdev=$(pfexec lofiadm -a $tmpdir/esp.img)
+	[[ $? == 0 ]] || fail "Failed to create ESP lofi device"
+	readonly esp_rawdev=${bi_esp_blkdev/lofi/rlofi}
+
+	pfrun mkfs -F pcfs -o b=system,size=$esp_sects,nofdisk,fat=32 \
+	    $esp_rawdev </dev/null
+
+	pfrun mkdir -p $efimnt
+	pfrun mount -F pcfs -o foldcase $bi_esp_blkdev $efimnt
+	pfrun mkdir -p $efimnt/efi/boot
+	pfrun cp $bi_wsroot/proto.boot/boot/loader64.efi \
+	    $efimnt/efi/boot/bootx64.efi
+	pfrun umount $efimnt
+	pfrun lofiadm -d $bi_esp_blkdev
+}
+
+#
+# Populate the root filesystem with all the SmartOS bits, as well as the loader
+# used in legacy boot mode.
+#
+function populate_root()
+{
+	local readonly dir=$1
+
+	print "Installing boot tarball onto root partition ... \c"
+	pfexec cp -r $bi_wsroot/proto.boot/* $dir/
+	print "done"
+
+	print "Customizing boot loader configuration ... \c"
+	readonly shadow=\'\$5\$2HOHRnK3\$NvLlm.1KQBbB0WjoP7xcIwGnllhzp2HnT.mDO7DpxYA\'
+
+	case "$bi_console" in
+	text) console="text,ttya,ttyb,ttyc,ttyd" ;;
+	ttya) console="ttya,ttyb,ttyc,ttyd,text" ;;
+	ttyb) console="ttyb,ttya,ttyc,ttyd,text" ;;
+	ttyc) console="ttyc,ttya,ttyb,ttyd,text" ;;
+	ttyd) console="ttyd,ttya,ttyb,ttyc,text" ;;
+
+	*)	echo "unknown console $bi_console" 2>&1
+		exit 1 ;;
+	esac
+
+	cat <<EOF >$bi_tmpdir/loader.conf
+console="$console"
+os_console="$bi_console"
+ttya-mode="115200,8,n,1,-"
+ttyb-mode="115200,8,n,1,-"
+ttyc-mode="115200,8,n,1,-"
+ttyd-mode="115200,8,n,1,-"
+loader_logo="smartos"
+loader_brand="smartos"
+root_shadow=${shadow}
+smartos="true"
+EOF
+	pfrun mv $bi_tmpdir/loader.conf $dir/boot/loader.conf
+	pfrun chmod 644 $dir/boot/loader.conf
+	print "done"
+
+	print "Copying platform image to root partition" \
+	    "(this will take a while) ... \c"
+
+	pfexec cp -r $bi_wsroot/output/platform-latest/ $dir/platform
+
+	print "done"
+}
+
+#
+# Build our actual ISO image
+#
+function create_iso()
+{
+	local readonly tmpdir=$1
+	local readonly iso=$2
+	local readonly espimg=$3
+        local readonly uid=$(id -u)
+        local readonly gid=$(id -g)
+
+	pfrun mkdir -p $bi_wsroot/output-iso
+	pfrun mkdir -p $bi_rootdir
+
+	populate_root $bi_rootdir
+
+	pfrun cp $bi_wsroot/proto/boot/cdboot $bi_rootdir/boot/cdboot
+	pfrun cp $espimg $bi_rootdir/boot/efiboot.img
+
+	pfrun mkisofs -quiet -R \
+	    -eltorito-boot boot/cdboot -no-emul-boot -boot-info-table \
+	    -eltorito-alt-boot -eltorito-platform efi \
+	    -eltorito-boot boot/efiboot.img -no-emul-boot \
+	    -o $iso $bi_rootdir
+
+	pfrun chown -R ${uid}:${gid} $bi_wsroot/output-iso
+
+	print "Successfully created $iso"
+}
+
+#
+# Assemble all our boot parts into the disk image (the root partition is copied
+# over later).
+#
+function create_image()
+{
+	local readonly tmpdir=$1
+	local readonly size=$2
+	local readonly file=$3
+
+	pfrun mkfile -n $size $file
+
+	bi_lofi_blkdev=$(pfexec lofiadm -a $file)
+	[[ $? == 0 ]] || fail "Failed to create lofi device"
+
+	pfrun $bi_wsroot/tools/format_image/format_image \
+	    -m $bi_wsroot/proto.boot/boot/pmbr \
+	    -b $bi_wsroot/proto.boot/boot/gptzfsboot -e $tmpdir/esp.img \
+	    -o ${bi_lofi_blkdev/lofi/rlofi} >$tmpdir/partition.map
+
+	pfrun lofiadm -d $bi_lofi_blkdev
+}
+
+#
+# Create the blank root filesystem.
+#
+function create_root()
+{
+	local readonly dev=$1
+	local readonly image=$2
+	local readonly offset=$3
+	local readonly sects=$(( $4 / 512 ))
+
+	print "Creating PCFS filesystem in root partition ... \c"
+	pfrun mkfs -F pcfs -o b=SMARTOSBOOT,size=$sects,nofdisk,fat=32 \
+	    $dev </dev/null
+
+	print "done"
+
+	if [[ $bi_proforma_only == 1 ]]; then
+		return
+	fi
+}
+
+#
+# Copy the root filesystem image into the correct place inside the image.
+#
+function copy_root()
+{
+	local readonly dev=$1
+	local readonly image=$2
+	local readonly offset=$3
+	local readonly bs=1048576
+
+	print "Copying root filesystem ..."
+	pfrun /usr/bin/dd bs=$bs conv=notrunc if=$dev of=$image \
+	    oseek=$(( $offset / $bs )) >/dev/null
+	print "done"
+}
+
+function mount_root()
+{
+	local readonly dev=$1
+	local readonly rootmnt=$2
+	local mntopts="-F pcfs"
+
+	print "Mounting root partition at $rootmnt ... \c"
+	pfrun mkdir -p $rootmnt
+	pfrun mount $mntopts $dev $rootmnt 2>/dev/null
+	print "done"
+}
+
+function copy_results()
+{
+	local readonly outdir=$1
+	local readonly outfile=$2
+	local readonly prefix=$3
+	local readonly uid=$(id -u)
+	local readonly gid=$(id -g)
+
+	mkdir -p $outdir
+	pfrun mv $bi_tmpdir/smartos.usb* $outdir/$outfile
+	pfrun chmod 644 $outdir/$outfile
+	pfrun chown ${uid}:${gid} $outdir/$outfile
+	pfrun cp $bi_tmpdir/partition.map $outdir/${prefix}partition.map
+	pfrun chown ${uid}:${gid} $outdir/${prefix}partition.map
+	print "Successfully created $outdir/$outfile"
+}
+
+export PATH=/usr/bin/:/usr/sbin/:/opt/local/bin
+
+while getopts "Ic:p:r:x" c $@; do
+	case "$c" in
+	I)	bi_make_iso=1 ;;
+	c)	bi_console=${OPTARG} ;;
+	p)	bi_proforma_only=1
+		bi_imgsz_gb=${OPTARG%gb}
+		bi_imgsz=$(( $bi_imgsz_gb * 1000000000 )) ;;
+	r)	bi_wsroot=$(readlink -f $OPTARG) ;;
+	x)	bi_nocleanup=1 ;;
+	:)	usage ;;
+	*)	usage ;;
+	esac
+done
+
+set -eou pipefail
+export SHELLOPTS
+unalias -a
+
+[[ -z "$bi_wsroot" ]] && usage "-r is required"
+
+[[ $bi_proforma_only == 1 ]] && [[ $bi_make_iso == 1 ]] && \
+    usage "-p and -I are mutually exclusive"
+
+[[ -e $bi_wsroot/output/platform-latest ]] || \
+    fail "No platform image found in $bi_wsroot/output"
+
+
+bi_tmpdir=$(mktemp -d -p /var/tmp) || fail "mktemp failed!"
+
+trap cleanup EXIT
+
+bi_efimnt=$bi_tmpdir/mnt/efi
+bi_rootdir=$bi_tmpdir/mnt/root
+bi_usb_image_name=$(readlink -f $bi_wsroot/output/platform-latest)
+bi_usb_image_name=$(basename $bi_usb_image_name)
+iso_image_name="$bi_wsroot/output-iso/${bi_usb_image_name}.iso"
+bi_usb_image_name="${bi_usb_image_name}.usb.gz"
+
+print "Creating EFI System Partition image ... \c"
+create_esp $bi_tmpdir $bi_efimnt
+print "done"
+
+if [[  $bi_make_iso == 1 ]]; then
+	create_iso $bi_tmpdir $iso_image_name $bi_tmpdir/esp.img
+	exit 0
+fi
+
+print "Creating $bi_imgsz_gb GB image at $bi_tmpdir/smartos.usb ... \c"
+create_image $bi_tmpdir $bi_imgsz $bi_tmpdir/smartos.usb
+print "done"
+
+echo "partition.map:"
+cat $bi_tmpdir/partition.map
+
+rootoff=$(nawk '$1 == "root" { print $3 }' <$bi_tmpdir/partition.map)
+rootsize=$(nawk '$1 == "root" { print $4 }' <$bi_tmpdir/partition.map)
+
+pfrun mkfile -n $rootsize $bi_tmpdir/rootfs.img
+
+bi_lofi_blkdev=$(pfexec lofiadm -a $bi_tmpdir/rootfs.img)
+[[ $? == 0 ]] || fail "Failed to create lofi device"
+
+bi_lofi_rawdev=${bi_lofi_blkdev/lofi/rlofi}
+
+create_root $bi_lofi_rawdev $bi_tmpdir/smartos.usb $rootoff $rootsize
+
+#
+# The proforma image's root partition is populated by sdc-headnode, not us.
+#
+if [[ $bi_proforma_only != 1 ]]; then
+	mount_root $bi_lofi_blkdev $bi_rootdir
+	populate_root $bi_rootdir
+	pfrun umount $bi_rootdir
+fi
+
+copy_root $bi_lofi_rawdev $bi_tmpdir/smartos.usb $rootoff
+
+pfrun lofiadm -d $bi_lofi_blkdev
+
+if [[ $bi_proforma_only == 1 ]]; then
+	copy_results $bi_wsroot/proto.images ${bi_imgsz_gb}gb.img ${bi_imgsz_gb}gb.
+else
+	print "Compressing USB image ..."
+	pfrun /opt/local/bin/pigz $bi_tmpdir/smartos.usb
+	copy_results $bi_wsroot/output-usb $bi_usb_image_name ""
+fi
+
+exit 0

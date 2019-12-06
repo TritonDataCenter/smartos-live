@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright 2019 Joyent, Inc.
  */
 
 /*
@@ -97,11 +97,11 @@ ucc_manifest_cb(manifest_ent_t *me, void *arg)
 	}
 
 	/*
-	 * The only entries we expect in here are files and the directory entry
-	 * themselves. If for some reason they exist, then we need to error and
-	 * figure out what happened.
+	 * The only entries we expect in here are files and links and the
+	 * directory entry themselves. If for some reason they exist, then we
+	 * need to error and figure out what happened.
 	 */
-	if (me->me_type != ME_TYPE_FILE) {
+	if (me->me_type != ME_TYPE_FILE && me->me_type != ME_TYPE_HARDLINK) {
 		if (me->me_type == ME_TYPE_DIRECTORY)
 			return (MECB_NEXT);
 

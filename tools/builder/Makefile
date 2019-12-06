@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2010 Joyent Inc., All rights reserved.
+# Copyright 2019 Joyent, Inc.
 #
 
 CC=gcc
@@ -18,7 +18,7 @@ builder: $(OBJS)
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 users.c:
-	./build_users_c.sh $(SRC_ROOT)/overlay/generic > users.c.tmp && mv users.c.tmp users.c
+	./build_users_c.sh $(SRC_ROOT)/proto/ > users.c.tmp && mv users.c.tmp users.c
 
 clean:
-	rm $(TARGETS) $(OBJS)
+	rm -f $(TARGETS) $(OBJS)

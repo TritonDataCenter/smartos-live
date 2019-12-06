@@ -10,107 +10,46 @@
 #
 
 #
-# Copyright (c) 2017, Joyent, Inc.
+# Copyright (c) 2019, Joyent, Inc.
 #
 
-BASE :=		$(PWD)
-DESTDIR =	$(BASE)/../../proto
-NATIVEDIR =	$(BASE)/../../proto.strap
+BASE :=		$(CURDIR)/../
+
+include		$(BASE)/Makefile.defs
 
 PROGRAM =	routeinfo
 
-GCC =		$(NATIVEDIR)/usr/bin/gcc
-GXX =		$(NATIVEDIR)/usr/bin/g++
+CFLAGS +=	$(DEBUG_FLAGS) -m32 -I$(DOCKER_DIR) -I$(STRINGS_DIR) \
+		-I$(DOCKER_DIR)/mdata-client -I$(DOCKER_DIR)/json-nvlist \
+		 -Wno-unused-parameter -D__HAVE_BOOLEAN_T
 
-SYSINCDIRS =	/usr/include
-SYSLIBDIRS =	/usr/lib /lib
-
-CFLAGS =	-std=gnu99 -Wall -Wextra -Werror -m32 -g \
-		-I$(DOCKER_DIR) \
-		-Wno-unused-parameter
-CPPFLAGS =	$(SYSINCDIRS:%=-isystem $(DESTDIR)/%)
-LDFLAGS =	$(SYSLIBDIRS:%=-L$(DESTDIR)/%) \
-		-Wl,-zassert-deflib -Wl,-zfatal-warnings
-
-STRINGS_DIR =	$(BASE)/../common/strings
-DOCKER_DIR =	$(BASE)/../dockerinit
-
-ROUTEINFO_OBJECTS = \
+ROUTEINFO_OBJS = \
 		main.o
 
-MDATA_OBJECTS = \
-		dynstr.o \
-		proto.o \
-		common.o \
-		base64.o \
-		crc32.o \
-		reqid.o \
-		sunos.o \
-		unix_common.o
-
-custr.o :	CFLAGS += -I$(STRINGS_DIR)
-mdata_%.o :	CFLAGS += -I$(DOCKER_DIR)/mdata-client -D__HAVE_BOOLEAN_T
-
-OBJECTS = \
-		$(MDATA_OBJECTS:%=mdata_%) \
+OBJS = \
+		$(MDATA_OBJS) \
+		$(ROUTEINFO_OBJS) \
 		custr.o \
-		json-nvlist.o \
-		main.o
-
-json-nvlist.o :	CFLAGS += -I$(DOCKER_DIR)/json-nvlist -I$(STRINGS_DIR)
+		json-nvlist.o
 
 LIBS =		-lnvpair -lnsl -lsocket -lsmbios
-
-CTFCONVERT =	/usr/bin/true
-CTFMERGE =	/usr/bin/true
-
-CC=$(GCC)
-CFLAGS +=	-Wall -Wextra -Werror -D__HAVE_BOOLEAN_T -m32
-CSTYLE =	../../tools/cstyle
-
-COMPILE_C =	$(CC) $(CPPFLAGS) $(LDFLAGS) $(CFLAGS) -c -o $@ $<
-
-INSTALL_PROG =	mkdir -p $(@D) && rm -f $@ && cp $^ $@ && \
-		chmod 755 $@ && touch $@
 
 .PHONY: all
 all: $(PROGRAM)
 
 .PHONY: check
-check: $(ROUTEINFO_OBJECTS:%.o=%.check)
+check: $(ROUTEINFO_OBJS:%.o=%.check)
 
 %.check: %.c
 	$(CSTYLE) -cPp $<
 
-lint:
-	/usr/bin/true
-
 clean:
-	rm -f $(OBJECTS)
+	rm -f $(OBJS)
 	rm -f $(PROGRAM)
 
-#
-# Compilation and linking targets
-#
-$(PROGRAM): $(OBJECTS)
-	$(CC) $(CPPFLAGS) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJECTS) $(LIBS)
-	$(CTFMERGE) -L VERSION -o $@ $(OBJECTS)
-
-%.o: $(STRINGS_DIR)/%.c
-	$(COMPILE_C)
-	$(CTFCONVERT) -L VERSION $@
-
-mdata_%.o: $(DOCKER_DIR)/mdata-client/%.c
-	$(COMPILE_C)
-	$(CTFCONVERT) -L VERSION $@
-
-mdata_%.o: $(DOCKER_DIR)/mdata-client/plat/%.c
-	$(COMPILE_C)
-	$(CTFCONVERT) -L VERSION $@
-
-%.o: $(DOCKER_DIR)/json-nvlist/%.c
-	$(COMPILE_C)
-	$(CTFCONVERT) -L VERSION $@
+$(PROGRAM): $(OBJS)
+	$(LINK.c) $^ $(LIBS)
+	$(CTFCONVERT) -l $(BUILDSTAMP) $@
 
 #
 # Installation
@@ -120,3 +59,5 @@ install: $(DESTDIR)/usr/lib/brand/lx/$(PROGRAM)
 
 $(DESTDIR)/usr/lib/brand/lx/$(PROGRAM): $(PROGRAM)
 	$(INSTALL_PROG)
+
+include		$(BASE)/Makefile.targ

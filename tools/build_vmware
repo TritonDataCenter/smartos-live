@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright 2015 Joyent, Inc.
+# Copyright (c) 2019, Joyent, Inc.
 #
 
 #
@@ -37,7 +37,7 @@ function bi_ensure_usb_image
 	if [[ -z "${bi_platform_name}" ]]; then
 		fail "\$bi_platform_name not set"
 	fi
-	bi_usb_image="output-usb/${bi_platform_name}.usb.bz2"
+	bi_usb_image="output-usb/${bi_platform_name}.usb.gz"
 
 	bi_emit_start 'Looking for USB image'
 	if [[ -f "${bi_usb_image}" ]]; then
@@ -53,7 +53,7 @@ function bi_ensure_usb_image
 
 	bi_emit_start 'Building USB image'
 	bi_emit_newline
-	if ! "${bi_wsroot}/tools/build_usb"; then
+	if ! ${bi_wsroot}/tools/build_boot_image -r ${bi_wsroot}; then
 		fail 'Failed to build USB image'
 	fi
 	bi_emit_done
@@ -93,7 +93,7 @@ function bi_ensure_fresh_template
 function bi_unpack_usb_image
 {
 	bi_emit_start 'Unpacking USB image into template'
-	if ! bzip2 --keep --decompress --stdout "${bi_usb_image}" \
+	if ! gunzip --decompress --stdout "${bi_usb_image}" \
 	    >"${bi_output_dir}/${bi_template_name}/smartos.img"; then
 		fail 'could not unpack USB image'
 	fi
@@ -106,10 +106,10 @@ function bi_generate_vmware_tar
 	local output_file
 
 	output_name=$(echo "${bi_platform_name}" | sed 's/^platform/smartos/')
-	output_file="${output_name}.vmwarevm.tar.bz2"
+	output_file="${output_name}.vmwarevm.tar.gz"
 
 	bi_emit_start 'Generating VMware tarball'
-	if ! (cd "${bi_output_dir}" && gtar -jcf "${output_file}" \
+	if ! (cd "${bi_output_dir}" && gtar -I pigz -cf "${output_file}" \
 	    "${bi_template_name}"); then
 		fail 'gtar failed'
 	fi
@@ -118,6 +118,13 @@ function bi_generate_vmware_tar
 	bi_emit_info 'VMware Output' "$(pwd)/${bi_output_dir}/${output_file}"
 }
 
+while getopts "r:" c $@; do
+	case "$c" in
+	r)	bi_wsroot=$(readlink -f $OPTARG) ;;
+	:)	usage ;;
+	*)	usage ;;
+	esac
+done
 
 #
 # Get us to the root of the workspace

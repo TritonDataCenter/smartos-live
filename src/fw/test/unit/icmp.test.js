@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * fwadm tests : ICMP
  */
@@ -30,14 +30,7 @@ var clone = require('clone');
 var fw;
 var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
-var mod_obj = require('../../lib/util/obj');
-var mod_uuid = require('uuid');
 var util = require('util');
-var util_vm = require('../../lib/util/vm');
-
-var createSubObjects = mod_obj.createSubObjects;
-var mergeObjects = mod_obj.mergeObjects;
-
 
 
 // --- Globals
@@ -106,6 +99,7 @@ exports['add / update ICMPv4'] = function (t) {
             expRule.uuid = res.rules[0].uuid;
             t.ok(res.rules[0].version, 'rule has a version');
             expRule.version = res.rules[0].version;
+            expRule.log = false;
 
             t.deepEqual(res, {
                 vms: [ vm.uuid ],
@@ -155,6 +149,7 @@ exports['add / update ICMPv4'] = function (t) {
             t.ok(res.rules[0].version, 'rule has a version');
             expRule.version = res.rules[0].version;
             expRule.rule = res.rules[0].rule;
+            expRule.log = false;
 
             t.deepEqual(res, {
                 vms: [ vm.uuid ],
@@ -327,6 +322,7 @@ exports['add / update ICMPv6'] = function (t) {
             expRule.uuid = res.rules[0].uuid;
             t.ok(res.rules[0].version, 'rule has a version');
             expRule.version = res.rules[0].version;
+            expRule.log = false;
 
             t.deepEqual(res, {
                 vms: [ vm.uuid ],

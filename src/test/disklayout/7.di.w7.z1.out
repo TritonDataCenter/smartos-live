@@ -1,1 +1,59 @@
-fatal error: 7 is an invalid width for raidz and 7 disks (min: 3, max: 6)
+{
+	"vdevs": [
+		{
+			"type": "raidz",
+			"devices": [
+				{
+					"name": "disk0",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk1",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk2",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk3",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk4",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk5",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				},
+				{
+					"name": "disk6",
+					"vid": "MFG",
+					"pid": "DISK",
+					"size": "600127266816",
+					"solid_state": false
+				}
+			]
+		}
+	],
+	"capacity": 3600763600896
+}

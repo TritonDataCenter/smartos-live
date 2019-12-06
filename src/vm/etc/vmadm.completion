@@ -27,6 +27,9 @@ _vmadm()
         vms_uuids=$(zoneadm list -cp | grep -v ':global:' | cut -d':' -f5 | \
             sort | uniq)
         COMPREPLY=( $(compgen -W "${vms_uuids}" -- ${cur}) )
+        if [[ -z "$COMPREPLY" ]]; then
+            _zone_alias
+        fi
 
     elif [[ ${prev} == 'info'
           || ${prev} == 'sysrq' ]]; then
@@ -36,15 +39,20 @@ _vmadm()
             grep ":[bh]*[ky]v[em]:excl:" | \
             cut -d':' -f5 | sort | uniq)
         COMPREPLY=( $(compgen -W "${vms_uuids}" -- ${cur}) )
+        if [[ -z "$COMPREPLY" ]]; then
+            _zone_alias
+        fi
 
     elif [[ ${prev} == 'create-snapshot'
         || ${prev} == 'delete-snapshot'
         || ${prev} == 'rollback-snapshot' ]]; then
 
-        # OS only commands
-        vms_uuids=$(zoneadm list -cp | grep -v ':global:' \
-            | grep -v ":[bh]*[ky]v[em]:excl:" | cut -d':' -f5 | sort | uniq)
+        vms_uuids=$(zoneadm list -cp |
+	    nawk -F: '$2 != "global" && $6 != "kvm" { print $5 }' | sort -u)
         COMPREPLY=( $(compgen -W "${vms_uuids}" -- ${cur}) )
+        if [[ -z "$COMPREPLY" ]]; then
+            _zone_alias
+        fi
 
     elif [[ ${prev} == 'validate' ]]; then
 

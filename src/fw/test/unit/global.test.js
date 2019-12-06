@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * fwadm add unit tests
  */
@@ -9,14 +9,6 @@ var clone = require('clone');
 var fw;
 var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
-var mod_obj = require('../../lib/util/obj');
-var mod_uuid = require('uuid');
-var util = require('util');
-var util_vm = require('../../lib/util/vm');
-
-var createSubObjects = mod_obj.createSubObjects;
-var mergeObjects = mod_obj.mergeObjects;
-
 
 
 // --- Globals
@@ -26,7 +18,6 @@ var mergeObjects = mod_obj.mergeObjects;
 // Set this to any of the exports in this file to only run that test,
 // plus setup and teardown
 var runOne;
-var printVMs = false;
 
 
 
@@ -73,6 +64,7 @@ exports['global'] = function (t) {
 
     var expRules = clone(payload.rules);
     expRules[0].created_by = payload.createdBy;
+    expRules[0].log = false;
 
     var expRulesOnDisk = {};
 

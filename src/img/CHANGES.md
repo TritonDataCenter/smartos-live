@@ -5,6 +5,10 @@ Known issues:
 - Docker image imports are experimental. Docker image import also only supports
   Docker Registry v2.
 
+## 3.9.3
+
+- joyent/smartos-live#771 imgadm vacuum will try to reap images used by bhyve vms
+
 ## 3.9.2
 
 - TRITON-622 'stdin.write' in promptYesNo func in common.js breaks on node v10

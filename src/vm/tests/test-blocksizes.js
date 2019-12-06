@@ -1,4 +1,4 @@
-// Copyright 2017 Joyent, Inc.
+// Copyright 2019 Joyent, Inc.
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
@@ -23,6 +23,7 @@ test('create zone with root_recsize 64k', function(t) {
     var payload = {
         alias: 'test-blocksizes-' + process.pid,
         brand: 'joyent-minimal',
+        cpu_cap: 100,
         autoboot: false,
         image_uuid: image_uuid,
         do_not_inventory: true,
@@ -245,6 +246,7 @@ test('create zone with data_recsize 64k', function(t) {
     var payload = {
         alias: 'test-blocksizes-' + process.pid,
         brand: 'joyent-minimal',
+        cpu_cap: 100,
         autoboot: false,
         image_uuid: image_uuid,
         do_not_inventory: true,
@@ -458,6 +460,7 @@ test('create zone with compression', function(t) {
     var payload = {
         alias: 'test-blocksizes-' + process.pid,
         brand: 'joyent-minimal',
+        cpu_cap: 100,
         autoboot: false,
         image_uuid: image_uuid,
         do_not_inventory: true,
@@ -592,6 +595,7 @@ test('create KVM with block_size 64k', function(t) {
     var payload = {
         alias: 'test-blocksizes-' + process.pid,
         brand: 'kvm',
+        cpu_cap: 100,
         autoboot: false,
         do_not_inventory: true,
         ram: 128,
@@ -735,6 +739,7 @@ test('create KVM with compression', function(t) {
     var payload = {
         alias: 'test-blocksizes-' + process.pid,
         brand: 'kvm',
+        cpu_cap: 100,
         autoboot: false,
         do_not_inventory: true,
         ram: 128,

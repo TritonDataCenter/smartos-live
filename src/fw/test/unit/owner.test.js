@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * test rules with owner_uuid set
  */
@@ -30,11 +30,8 @@ var clone = require('clone');
 var fw;
 var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
-var mod_obj = require('../../lib/util/obj');
 var mod_uuid = require('uuid');
 var util = require('util');
-
-var createSubObjects = mod_obj.createSubObjects;
 
 
 
@@ -106,6 +103,8 @@ exports['tag to IP'] = function (t) {
             expRule.version = res.rules[0].version;
             delete res.rules[0].version;
 
+            payload.rules[0].log = expRule.log = false;
+
             t.deepEqual(res, {
                 vms: [ vm2.uuid ],
                 rules: [ payload.rules[0] ]
@@ -173,6 +172,8 @@ exports['tag to IP'] = function (t) {
 
             t.ok(res.rules[0].version, 'rule has a version');
             delete res.rules[0].version;
+
+            expRule2.log = payload2.rules[0].log = false;
 
             t.deepEqual(res, {
                 vms: [ vm1.uuid, vm2.uuid ],

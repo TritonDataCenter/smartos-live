@@ -1,0 +1,6 @@
+illumos-extra: master: origin
+illumos: master: origin
+local/kvm-cmd: master: origin
+local/kvm: master: origin
+local/mdata-client: master: origin
+local/ur-agent: master: origin

@@ -1,0 +1,59 @@
+{
+  "zonename": "5a02245a-422c-4e0a-c5f8-fd6fac1ac04e",
+  "autoboot": false,
+  "brand": "kvm",
+  "limit_priv": "default,-file_link_any,-net_access,-proc_fork,-proc_info,-proc_session",
+  "v": 1,
+  "create_timestamp": "2019-06-19T04:34:48.243Z",
+  "cpu_shares": 100,
+  "max_lwps": 2000,
+  "max_msg_ids": 4096,
+  "max_sem_ids": 4096,
+  "max_shm_ids": 4096,
+  "max_shm_memory": 2048,
+  "zfs_io_priority": 100,
+  "max_physical_memory": 2048,
+  "max_locked_memory": 2048,
+  "max_swap": 2048,
+  "billing_id": "00000000-0000-0000-0000-000000000000",
+  "owner_uuid": "00000000-0000-0000-0000-000000000000",
+  "hostname": "kvm7",
+  "alias": "kvm7",
+  "ram": 1024,
+  "vcpus": 2,
+  "device": null,
+  "disks": [
+    {
+      "path": "/dev/zvol/rdsk/zones/5a02245a-422c-4e0a-c5f8-fd6fac1ac04e-disk0",
+      "boot": true,
+      "model": "virtio",
+      "media": "disk",
+      "image_size": 10240,
+      "image_uuid": "462d1d03-8457-e134-a408-cf9ea2b9be96"
+    },
+    {
+      "path": "/dev/zvol/rdsk/zones/5a02245a-422c-4e0a-c5f8-fd6fac1ac04e-disk1",
+      "boot": false,
+      "model": "virtio",
+      "media": "disk"
+    }
+  ],
+  "nics": [
+    {
+      "interface": "net0",
+      "mac": "b2:db:d2:3f:36:d9",
+      "nic_tag": "admin",
+      "gateway": "10.88.88.2",
+      "gateways": [
+        "10.88.88.2"
+      ],
+      "netmask": "255.255.255.0",
+      "ip": "10.88.88.213",
+      "ips": [
+        "10.88.88.213/24"
+      ],
+      "model": "virtio",
+      "primary": true
+    }
+  ]
+}

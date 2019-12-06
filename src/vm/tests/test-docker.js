@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright 2019 Joyent, Inc.
  *
  */
 
@@ -51,6 +51,7 @@ var common_payload = {
     alias: 'test-docker-' + process.pid,
     autoboot: false,
     brand: 'joyent-minimal',
+    cpu_cap: 100,
     do_not_inventory: true,
     max_locked_memory: 512,
     max_physical_memory: 512,

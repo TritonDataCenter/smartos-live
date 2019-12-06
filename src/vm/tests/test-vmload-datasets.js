@@ -622,7 +622,8 @@ test('test with one zone, one bhyve VM, and four images', function (t) {
         'compression,creation,filesystem_limit,mountpoint,name,quota,'
             + 'recsize,refquota,refreservation,snapshot_limit,type,'
             + 'usedbysnapshots,userrefs,volblocksize,volsize,written,zoned',
-        '-r'
+        '-d',
+        '2'
     ];
 
     var out = {};

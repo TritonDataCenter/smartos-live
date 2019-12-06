@@ -1,24 +1,30 @@
 # Upgrading Development Zones
 
-The purpose of this guide is to describe how a development zone should
-be upgraded from one version of pkgsrc to the next. Over time, we update
-the base development environment that everyone is using. The current
-target is the multiarch 2016.4.x image series as noted in [the SmartOS
-Getting Started Guide](../README.md#importing-the-zone-image).
+Over time, we update the base development environment that everyone is using.
+The current target is the x86_64 2018.4.x image series as noted in
+[the SmartOS Getting Started Guide](../README.md#importing-the-zone-image).
 
-This guide is intended to describe how to transition an **existing**
-zone on either a 2014.4.x or 2015.4.x multiarch image in place. A much
-simpler path is to simply create a [fresh
-zone](../README.md#setting-up-a-build-environment). However, if there
-is a lot of customization or work in this zone, then this guide will
-help.
+The purpose of this guide is to describe how an **existing** development zone
+should be upgraded from one version of pkgsrc to the next. In the past, because
+pkgsrc versions were compatible, we've been able to upgrade devzones in
+place (e.g. use pkgin and pkg_* utilities to upgrade from 2015.4.x -> 2016.4)
 
-If you're using a zone image older than 2014.4, you should just create a
-new zone or consider using the optional instructions in [Appendix:
-upgrading from 2013.Q3](#appendix-upgrading-from-2013q3).
+The upgrade for this target is more disruptive than previous ones, as we're
+going from a `multiarch` release to an `x86_64` release, which need an entirely
+new /opt/local installation as pkgsrc cannot be upgraded across this sort of
+boundary.
 
-Again, just creating a new zone is going to be the simplest and safest
-way to go about this.
+The simplest and safest route is to simply create a [fresh
+zone](../README.md#setting-up-a-build-environment)
+
+However, if you have customisations in your zone, reinstalling may be
+time-consuming. This guide documents a procedure to allow you to upgrade
+without provisioning a new devzone. Unfortunately due to the nature of the
+upgrade, it cannot be complete for every use case, and you will likely need
+to take additional steps to preserve and restore your configuration.
+
+If you have advice on what else we could add to these instructions, please
+do get in touch.
 
 ## Preparing to Upgrade
 
@@ -28,15 +34,25 @@ First, it's helpful to snapshot the package list that you have
 installed. You should do this by running:
 
 ```
-$ pkgin export > ~/package.list
+pkg_info -u | cut -d' ' -f1 | sort > /package.list
 ```
+
+Aside: normally, we would produce this list using:
+
+```
+pkgin export | sort > /package.list
+```
+
+but we believe a bug in pkgin from 2016 causes the resulting list to
+be empty. That bug has been fixed in the version of pkgsrc we're upgrading
+to in these instructions.
 
 ### Cleaning up existing builds
 
-Because all of the base pkgsrc libraries that are used are going to
+Because all the base pkgsrc libraries that are used are going to
 change, each build environment will need to be cleaned out. You should
 identify the root of each smartos-live repository clone and for each
-one, run the `gmake clean` target. This will cause all of the builds to
+one, run the `gmake clean` target. This will cause all the builds to
 be cleaned out.
 
 ### Backing up / Snapshotting
@@ -55,7 +71,7 @@ can usually be done by running `triton inst list`. For example:
 ```
 $ triton inst list
 SHORTID   NAME       IMG                        STATE    FLAGS  AGE
-122fff4d  march-dev  base-multiarch-lts@14.4.1  running  -      3y
+122fff4d  march-dev  base-multiarch-lts@16.4    running  -      3y
 b80d08de  python     base-multiarch-lts@15.4.1  running  -      2y
 2de86964  iasl       ubuntu-16.04@20161004      running  -      1y
 ```
@@ -64,11 +80,11 @@ In this case, we're interested in upgrading the instance called
 `march-dev`. Next we create a snapshot and verify it exists:
 
 ```
-$ triton inst snapshot create --name=2016.4-upgrade march-dev
-Creating snapshot 2016.4-upgrade of instance march-dev
+$ triton inst snapshot create --name=2018.4-upgrade march-dev
+Creating snapshot 2018.4-upgrade of instance march-dev
 $ triton inst snapshot list march-dev
 NAME            STATE    CREATED
-2016.4-upgrade  created  2018-09-28T18:40:14.000Z
+2018.4-upgrade  created  2018-09-28T18:40:14.000Z
 ```
 
 #### Manual Snapshots in SmartOS
@@ -81,9 +97,21 @@ Then you use the `create-snapshot` option.
 [root@00-0c-29-37-80-28 ~]# vmadm list
 UUID                                  TYPE  RAM      STATE             ALIAS
 79809c3b-6c21-4eee-ba85-b524bcecfdb8  OS    4096     running           multiarch
-[root@00-0c-29-37-80-28 ~]# vmadm create-snapshot 79809c3b-6c21-4eee-ba85-b524bcecfdb8 2016.4-upgrade
-Created snapshot 2016.4-upgrade for VM 79809c3b-6c21-4eee-ba85-b524bcecfdb8
+[root@00-0c-29-37-80-28 ~]# vmadm create-snapshot 79809c3b-6c21-4eee-ba85-b524bcecfdb8 2018.4-upgrade
+Created snapshot 2018.4-upgrade for VM 79809c3b-6c21-4eee-ba85-b524bcecfdb8
 ```
+
+If your VM has delegated snapshots, you won't be able to use `vmadm` to take
+snapshots. In this case (and assuming you have CLI access to the global zone)
+you should take a manual recursive snapshot of the VM instead:
+
+```
+[root@00-0c-29-37-80-28 ~]# zfs snapshot -r zones/79809c3b-6c21-4eee-ba85-b524bcecfdb8@pre-upgrade
+```
+
+You will not be able to use `vmadm` to roll-back to snapshots created with
+`zfs`, so you would need to use manual zfs commands to do so. You should
+halt the VM before attempting such a rollback.
 
 ## Upgrading
 
@@ -91,125 +119,63 @@ At this point we will be taking steps which will potentially break your
 development zone. If you encounter problems, please don't hesitate to
 reach out for assistance.
 
-### Update pkgin config files
+The approach we describe is to cleanly shutdown services that
+are running from /opt/local, move /opt/local aside, install the 2018Q4
+x86-64 pkgsrc bootstrap bundle. We then reinstall as many packages as
+possible from the set that was previously manually installed, noting that
+some packages may have been dropped from the pkgsrc repository.
 
-First we need to edit the pkgin metadata to point to the new repository.
-The files we need to edit are `/opt/local/etc/pkgin/repositories.conf`
-and `/opt/local/etc/pkg_install.conf`. Note, you will need to have root
-privileges to edit these files. First, let's look at `pkg_install.conf`.
+### Shutdown running SMF services from /opt/local
 
-```
-# cat /opt/local/etc/pkg_install.conf
-GPG_KEYRING_VERIFY=/opt/local/etc/gnupg/pkgsrc.gpg
-GPG_KEYRING_PKGVULN=/opt/local/share/gnupg/pkgsrc-security.gpg
-PKG_PATH=http://pkgsrc.joyent.com/packages/SmartOS/2014Q4/multiarch/All
-VERIFIED_INSTALLATION=trusted
-```
+First we need to determine which SMF services are running from /opt/local
+in order to shut them down cleanly. We save a list of SMF manifests as
+well as the SMF services and instances that were present.
 
-We need to change the `PKG_PATH` line. It should now refer to 2016Q4.
-The full line would be:
+You may choose to further prune this list to select only services that
+were actually online at the time of upgrade.
 
 ```
-PKG_PATH=http://pkgsrc.joyent.com/packages/SmartOS/2016Q4/multiarch/All
+cd /tmp
+for mf in $(pkg_admin dump | grep svc/manifest | cut -d' ' -f2); do
+    echo "Disabling services from $mf"
+    echo $mf >> /old-smf-manifests.list
+    for svc in $(svccfg inventory $mf); do
+        svcadm disable $svc
+        echo $svc >> /disabled-services.list
+    done
+done
 ```
 
-Next, we need to make a similar change in repositories.conf. Inside of
-it you will find a single uncommented line:
-`http://pkgsrc.joyent.com/packages/SmartOS/2014Q4/multiarch/All`. Again
-here, we should change from 2014Q4 to 2016Q4.
+Determining which SMF properties were set locally on SMF services or
+SMF instances vs. which are the shipped defaults is tricky in SmartOS.
 
-### Update pkgin and pkg_install
-
-The next step is to update the `pkgin` and `pkg_install` packages which
-are used to manage and install everything else. To do so, run the
-following command. Note, a lot of output will show up from this which
-we've included below:
+Doing a diff of the `svccfg -s <instance> listprop` against the output of:
 
 ```
-# pkg_add -U pkgin
-===========================================================================
-The following files are no longer being used by pkgin-0.9.4nb5,
-and they can be removed if no other packages are using them:
-
-        /opt/local/etc/pkgin/repositories.conf
-
-===========================================================================
-===========================================================================
-The following directories are no longer being used by pkgin-0.9.4nb5,
-and they can be removed if no other packages are using them:
-
-        /opt/local/etc/pkgin
-        /var/db/pkgin
-
-===========================================================================
-pkgin-0.9.4nb5: /opt/local/etc/pkgin/repositories.conf already exists
-===========================================================================
-$NetBSD: MESSAGE,v 1.3 2010/06/10 08:05:00 is Exp $
-
-First steps before using pkgin.
-
-. Modify /opt/local/etc/pkgin/repositories.conf to suit your platform
-. Initialize the database :
-
-        # pkgin update
-
-===========================================================================
-
-# pkg_add -U pkg_install
-===========================================================================
-$NetBSD: MESSAGE,v 1.6 2014/12/05 14:31:07 schmonz Exp $
-
-You may wish to have the vulnerabilities file downloaded daily so that
-it remains current.  This may be done by adding an appropriate entry
-to a user's crontab(5) entry.  For example the entry
-
-# download vulnerabilities file
-0 3 * * * /opt/local/sbin/pkg_admin fetch-pkg-vulnerabilities >/dev/null
-2>&1
-
-will update the vulnerability list every day at 3AM. You may wish to do
-this more often than once a day.
-
-In addition, you may wish to run the package audit from the daily
-security script.  This may be accomplished by adding the following
-lines to /etc/security.local
-
-if [ -x /opt/local/sbin/pkg_admin ]; then
-        /opt/local/sbin/pkg_admin audit
-fi
-
-Alternatively this can also be acomplished by adding an entry to a
-user's
-crontab(5) file. e.g.:
-
-# run audit-packages
-0 3 * * * /opt/local/sbin/pkg_admin audit
-
-Both pkg_admin subcommands can be run as as an unprivileged user,
-as long as the user chosen has permission to read the pkgdb and to write
-the pkg-vulnerabilities to /opt/local/pkg.
-
-The behavior of pkg_admin and pkg_add can be customised with
-pkg_install.conf.  Please see pkg_install.conf(5) for details.
-
-If you want to use GPG signature verification you will need to install
-GnuPG and set the path for GPG appropriately in your pkg_install.conf.
-===========================================================================
+# svccfg -s <instance>
+svc:/instance> selectsnap initial
+[initial]svc:/instance> listprop
 ```
 
-### Switch config files to HTTPS
+can provide some answers (omitting the 'general/enabled' property group
+in the comparison). As 'listprop' output adjusts to column width, stripping
+spaces and sorting with `sed -e 's/ \+/ /g' | sort` will be necessary.
 
-The next change is to go back and edit both
-`/opt/local/etc/pkg_install.conf` and
-`/opt/local/etc/pkgin/repositories.conf` and edit the URLs that have
-HTTP to refer to HTTPS.
+Unfortunately, that diff won't include a list of the properties modified
+on the SMF _service_ itself since SMF snapshots in SmartOS do not track
+properties set at the service level. To find those properties, it might
+be possible to logically compare the XML produced from:
 
-For `pkg_install.conf` the final value for the `PKG_PATH` line should
-be:
-`PKG_PATH=https://pkgsrc.joyent.com/packages/SmartOS/2016Q4/multiarch/All`.
+`svccfg -s <service> export`
 
-For `repositories.conf` the final value shoud be
-`https://pkgsrc.joyent.com/packages/SmartOS/2016Q4/multiarch/All`.
+against the shipped XML manifest from /opt/local, included in the list of
+manifest files we found earlier.
+
+The pkgsrc package `xmlstarlet` provides a command `xml canonic`, which when
+run against an XML file, produces a canonical representation which could then
+be used to determine modified properties. `xmllint` may also be used to
+produce a view of a given pair of XML files in order to more easily compare
+them.
 
 ### Clean up pkgin database
 
@@ -217,111 +183,150 @@ The pkgin repository database needs to be removed. To do that you will
 need to run the following command:
 
 ```
-# rm -rf /var/db/pkgin
+rm -rf /var/db/pkgin
 ```
 
-### Updating packages
+### Move aside /opt/local and bootstrap the new pkgsrc install
 
-Finally, the moment of truth. It's time to update all of your installed
-packages. You should do this by running a pkgin full-upgrade. The list
-of packages to be upgraded will vary based on the zone and what you have
-installed. You should see something similar to, but somewhat different:
+The instructions in this step are an abbreviated version of the [pkgsrc illumos
+installation](http://pkgsrc.joyent.com/install-on-illumos/) instructions.
+
+Note that the old /opt/local directory is saved to /opt/local.bak
 
 ```
-# pkgin fug
-reading local summary...
-processing local summary...
-pkg_summary.xz                   100% 1924KB 481.0KB/s 452.0KB/s   00:04
-calculating dependencies... done.
+cd /var/tmp
+curl -O https://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2018Q4-x86_64.tar.gz
+mv /opt/local/ /opt/local.bak
+tar xzf bootstrap-2018Q4-x86_64.tar.gz -C /
+pkg_add -U pkgin
+```
 
-120 packages to be upgraded:
+### Reinstall packages
 
-wget-1.16.1 unrar-5.2.2 sudo-1.7.10p9 rsyslog-8.6.0 postfix-2.11.6
-p5-XML-Parser-2.43 nginx-1.7.10 netperf-2.6.0 nasm-2.11.06
-mozilla-rootcerts-1.0.20141117nb1 mercurial-3.2.3 libxslt-1.1.28nb3
-libpcap-1.4.0nb1 less-470 icu-54.1nb2 gtar-base-1.28 grep-2.21
-ghostscript-9.05nb7 gettext-0.19.3 gawk-4.1.1 flex-2.5.39nb2
-findutils-4.4.2 diffutils-3.3 diffstat-1.59 coreutils-8.22nb1
-cdrtools-3.01alpha24nb1 bsdinstall-20130905 bmake-20140314 zip-3.0nb2
-unzip-6.0nb2 pcre-8.36nb1 patch-2.7.4 mpfr-3.1.2pl11
-py27-mercurial-3.2.3nb1 libuuid-2.24.2 libtool-2.4.2nb2 liblognorm-1.0.1
-liblogging-1.0.4 libgcrypt-1.6.3 libestr-0.1.9 libXtst-1.2.2nb1
-libXi-1.7.4 json-c-0.12nb2 gmp-6.0.0a gmake-4.1nb1 git-2.2.1
-ghostscript-gpl-9.06nb4 gettext-asprintf-0.19.3 gettext-tools-0.19.3
-gettext-m4-0.19.3 dejavu-ttf-2.34nb1 bootstrap-mk-files-20141122
-bison-3.0.2nb1 binutils-2.24nb3 automake-1.14.1nb1 autoconf-2.69nb5
-tiff-4.0.8nb1 readline-6.3nb3 mkfontscale-1.1.1 libtool-fortran-2.4.2nb5
-libtool-base-2.4.2nb9 libgpg-error-1.17nb1 libffi-3.2.1 libXt-1.1.4
-libXfixes-5.0.1 git-gitk-2.2.1 git-docs-2.2.1 git-base-2.2.1
-zlib-1.2.8nb2 xz-5.0.7nb1 tk-8.6.3 perl-5.20.1 p5-Net-SMTP-SSL-1.01nb5
-p5-MailTools-2.14 p5-Error-0.17022 p5-Email-Valid-1.195
-p5-Authen-SASL-2.16nb2 ncurses-5.9nb4 libjpeg-turbo-1.3.0nb1
-libfontenc-1.1.2 expat-2.1.0 curl-7.51.0 tcl-8.6.3 p5-TimeDate-2.30nb1
-p5-Net-Domain-TLD-1.72 p5-Net-DNS-0.81 p5-IO-Socket-SSL-2.007
-p5-IO-CaptureOutput-1.11.03 p5-GSSAPI-0.28nb5 p5-Digest-HMAC-1.03nb4
-openldap-client-2.4.40 libidn-1.32 libX11-1.6.2nb1 libssh2-1.5.0
-p5-Socket6-0.25 p5-Net-SSLeay-1.66 p5-Net-LibIDN-0.12nb6
-p5-Net-IP-1.26nb2 p5-IO-Socket-INET6-2.72 mit-krb5-1.10.7nb5 libxcb-1.11
-libXrender-0.9.8 libXdmcp-1.1.1 gettext-lib-0.19.3 fontconfig-2.11.1nb1
-cyrus-sasl-2.1.26nb4 png-1.6.16
+Now that we've bootstrapped, we'd like to reinstall packages that were
+previously installed. Noting that these may not map exactly, we prune the
+old version numbers, and install the latest versions of each package.
 
-128 packages to be installed (258M to download, 172M to install):
+Slightly complicating things, is the fact that the Illumos build needs
+specific versions of certain packages. We'll avoid re-installing packages
+in that set and let the smartos-live `configure` script install them for
+us instead.
 
-png-1.6.27 p5-Socket6-0.28 p5-Net-SSLeay-1.78 p5-Net-LibIDN-0.12nb8
-p5-Net-IP-1.26nb4 p5-IO-Socket-INET6-2.72nb2 mit-krb5-1.14.4 libxcb-1.12
-libXrender-0.9.10 libXdmcp-1.1.2 gettext-lib-0.19.8.1 fontconfig-2.12.1
-cyrus-sasl-2.1.26nb5 tcl-8.6.6nb2 p5-TimeDate-2.30nb3
-p5-Net-Domain-TLD-1.75 p5-Net-DNS-1.06nb1 p5-IO-Socket-SSL-2.040
-p5-IO-CaptureOutput-1.11.04nb2 p5-GSSAPI-0.28nb7 p5-Digest-HMAC-1.03nb6
-openldap-client-2.4.44nb3 libidn-1.33 libX11-1.6.4 libssh2-1.8.0
-zlib-1.2.8nb3 xz-5.2.2 tk-8.6.6 perl-5.24.0 p5-Net-SMTP-SSL-1.04
-p5-MailTools-2.18nb1 p5-Error-0.17024nb2 p5-Email-Valid-1.202
-p5-Authen-SASL-2.16nb4 ncurses-6.0nb3 libjpeg-turbo-1.5.0
-libfontenc-1.1.3 libunistring-0.9.7 expat-2.2.4 curl-7.57.0nb1
-tiff-4.0.9nb1 readline-7.0 mkfontscale-1.1.2 libtool-fortran-2.4.2nb6
-libtool-base-2.4.2nb13 libgpg-error-1.25 libffi-3.2.1nb2 libXt-1.1.5
-libXfixes-5.0.3 nghttp2-1.17.0nb1 libidn2-2.0.4 git-gitk-2.15.1
-git-docs-2.15.1 git-base-2.15.1 zip-3.0nb3 unzip-6.0nb8 pcre-8.41
-patch-2.7.5 p5-Mozilla-CA-20160104nb1 mpfr-3.1.5 py27-mercurial-4.0.1
-libuuid-2.28.2 libtool-2.4.2nb3 liblognorm-2.0.3 liblogging-1.0.5
-libgcrypt-1.8.1 libestr-0.1.10 libXtst-1.2.3 libXi-1.7.8 json-c-0.12.1
-gmp-6.1.2 gmake-4.1nb3 pcre2-10.30nb1 git-2.15.1 ghostscript-gpl-9.06nb9
-gettext-asprintf-0.19.8.1 gettext-tools-0.19.8.1 gettext-m4-0.19.8.1
-dejavu-ttf-2.37 bootstrap-mk-files-20160908 bison-3.0.4nb3
-binutils-2.26.1 automake-1.15nb4 autoconf-2.69nb7 wget-1.19.1nb2
-unrar-5.4.5 sudo-1.8.21p2 libfastjson-0.99.6 rsyslog-8.28.0
-py27-curses-2.7.12nb2 postfix-3.1.3nb1 p5-XML-Parser-2.44nb2
-nginx-1.13.3 netperf-2.7.0 nasm-2.12.01nb1
-mozilla-rootcerts-1.0.20160610 mercurial-4.0.1 libxslt-1.1.32
-libpcap-1.7.4 less-481 icu-60.2nb1 gtar-base-1.29 grep-2.24nb1
-git-contrib-2.15.1 ghostscript-9.05nb8 gettext-0.19.8.1 gawk-4.1.3
-flex-2.6.3 findutils-4.6.0nb1 diffutils-3.4 diffstat-1.61
-coreutils-8.25nb1 cdrtools-3.01nb1 bsdinstall-20160108 bmake-20150505
+```
+LIST=""
+AVOID_PKGS="dmake sgstools rpcgen astmsgtools"
+for package in $(/bin/cat /package.list); do
+    VER=$(echo $package | /bin/awk -F- '{print $NF}')
+    PKG=$(echo $package | /bin/sed -e "s/-$VER$//g")
+    avoid=''
+    for avoid_pkg in $AVOID_PKGS; do
+        if [[ "$avoid_pkg" == "$PKG" ]]; then
+            avoid=true
+        fi
+    done
+    if [[ -n "$avoid" ]]; then
+        continue
+    fi
+    LIST="$LIST $PKG"
+done
+pkgin in $LIST
+```
+
+At this point you will see output similar to:
+
+```
+calculating dependencies...done.
+
+133 packages to install:
+  png-1.6.36 libidn-1.34 libxcb-1.13.1 libXdmcp-1.1.2nb1 libXau-1.0.8nb1 libXrender-0.9.10nb1 freetype2-2.9.1nb1 fontconfig-2.13.1 xmlcatmgr-2.2nb1 p5-Net-SSLeay-1.85nb1
+  p5-Net-LibIDN-0.12nb10 p5-Mozilla-CA-20180117nb1 p5-Socket6-0.29 p5-Net-IP-1.26nb6 p5-MIME-Base64-3.15nb4 p5-IO-Socket-INET6-2.72nb4 p5-Digest-MD5-2.55nb3 mit-krb5-1.16.2
+  tcl-8.5.19 libXft-2.3.2nb2 libXext-1.3.3nb1 libX11-1.6.7 libunistring-0.9.10 libxml2-2.9.9 p5-GSSAPI-0.28nb9 p5-Digest-HMAC-1.03nb8 p5-Net-Domain-TLD-1.75nb2 p5-Net-DNS-1.19
+  p5-IO-CaptureOutput-1.11.04nb4 p5-TimeDate-2.30nb5 p5-IO-Socket-SSL-2.060 tk-8.6.9 py27-pytz-2018.7 libfontenc-1.1.3nb1 db4-4.8.30 tcp_wrappers-7.6.4 libiconv-1.14nb3
+  libffi-3.2.1nb4 nghttp2-1.35.1nb2 libssh2-1.8.0 libidn2-2.0.5 perl-5.28.1 pcre2-10.32 p5-Net-SMTP-SSL-1.04nb2 p5-MailTools-2.20nb1 p5-Error-0.17027 p5-Email-Valid-1.202nb2
+  p5-Authen-SASL-2.16nb6 libtool-info-2.4.6 libtool-fortran-2.4.6nb1 libtool-base-2.4.6nb2 git-gitk-2.20.1 git-contrib-2.20.1 libgpg-error-1.33 py27-setuptools-40.6.3
+  py27-babel-2.6.0 mkfontscale-1.1.3 mkfontdir-1.0.7 encodings-1.0.4nb1 libXfixes-5.0.3nb1 openldap-client-2.4.47 cyrus-sasl-2.1.27 gettext-lib-0.19.8.1 mpfr-4.0.1 gmp-6.1.2
+  python27-2.7.15nb1 expat-2.2.6 libuuid-2.32.1 liblognorm-2.0.5 libfastjson-0.99.8 libestr-0.1.10 curl-7.64.0 libuv-1.24.1 libcares-1.15.0 icu-63.1nb2 http-parser-2.8.1
+  pcre-8.42 gettext-tools-0.19.8.1nb1 gettext-m4-0.19.8.1nb1 gettext-asprintf-0.19.8.1 pkgconf-1.4.1nb1 m4-1.4.18nb1 libtool-2.4.6 gmake-4.2.1nb1 git-docs-2.20.1 git-base-2.20.1
+  gcc7-7.3.0nb4 bison-3.0.4nb4 binutils-2.26.1nb1 automake-1.16.1 autoconf-2.69nb8 libltdl-2.4.6 git-2.20.1 libgcrypt-1.8.4 py27-genshi-0.7 zip-3.0nb3 unzip-6.0nb8
+  libXtst-1.2.3nb1 libXi-1.7.9nb1 dejavu-ttf-2.37 libpsl-0.20.2nb2 sudo-1.8.26 gtar-base-1.30 smtools-20160926 zoneinit-1.6.9 gawk-4.2.1 py27-expat-2.7.15 rsyslog-8.38.0nb1
+  findutils-4.6.0nb2 coreutils-8.29nb1 patch-2.7.6nb1 nodejs-10.14.2nb1 gsed-4.6 grep-3.1nb2 pigz-2.4 cdrtools-3.01nb1 py27-sqlite3-2.7.15nb14 gettext-0.19.8.1
+  build-essential-1.3 postfix-3.3.2 squid-3.5.28nb1 diffutils-3.6 scmgit-2.0 flex-2.6.4 less-530 libxslt-1.1.32nb1 nasm-2.14 manifold-0.2.0 openjdk7-1.7.141nb9
+  wget-1.20.1 p5-XML-Parser-2.44nb4 changepass-1.3.3
+
+0 to refresh, 0 to upgrade, 132 to install
+357M to download, 1009M to install
 
 proceed ? [Y/n]
+.
+.
+.
 ```
 
-At this point, to proceed, reply yes. Everything should install
-successfully. You should verify the last lines of output. There may be
-errors that show up. If so please reach out for additional assistance so
-we can review the error log and determine what happened:
+After the install has completed, you should review the install output,
+and consult `/var/db/pkgin/pkg_install-err.log` to see if there are any
+packages which failed to install which may be important.
+
+### Re-enable SMF services
+
+We can now enable the SMF services that were previously disabled. If you had
+previously identified SMF properties that should be reset on your updated
+instances, you should set those properties on instances before enabling them.
+
+Similarly, if there were /opt/local/etc configuration files that need to be
+restored or merged from any changes you may have made in /opt/local.bak/etc,
+now is the time to do that.
+
+Recall that before upgrading, we saved a list of old SMF manifests in
+`/old-smf-manifests`. You should check that those manifest files still exist
+on your new /opt/local pkgsrc installation.
+
+If those manifests do not exist, then it's likely that the corresponding
+package does not exist in the 2018Q4 pkgsrc install, and that attempting to
+re-enable the SMF service post-upgrade will fail.
+
+In that case, the SMF service should be deleted using:
 
 ```
-...
-pkg_install warnings: 0, errors: 3
-pkg_install error log can be found in /var/db/pkgin/pkg_install-err.log
-reading local summary...
-processing local summary...
-#
+svccfg -s <instance> delete
 ```
 
-If you do have a non-zero error log, I recommend that copy the error log
-for analysis:
+Otherwise, the services can now be enabled using:
 
 ```
-# cp /var/db/pkgin/pkg_install-err.log ~/upgrade.log
-#
+svcadm restart manifest-import
+for service in $(cat disabled-services.list) ; do
+    svcadm enable -rs $service
+done
 ```
+
+During this command, we may see warnings about `svc:/milestone/network:default`
+having a dependency on `svc:/network/physical`, which has multiple instances,
+but this warning can be ignored.
+
+
+### See what packages changed
+
+Finally, we can compare which packages are now installed:
+
+```
+pkg_info -u | cut -d' ' -f1 | sort > /package.list.new
+/opt/local/bin/diff -y /package.list /package.list.new
+```
+
+Note that the packages normally installed by smartos-live's `configure`
+script will be missing at this point. When you next run `configure` in
+advance of doing a smartos-live build, they will be installed from
+http://us-east.manta.joyent.com/Joyent_Dev/public/releng/pkgsrc.
+
+At this point, you should be able to reboot your dev zone and have it
+come up cleanly. Note that the following files in /etc will now lie to
+you:
+
+* /etc/motd
+* /etc/pkgsrc_version
+
+You may find it useful to manually update those files to correspond to
+the /opt/local 2018Q4 pkgsrc installation.
 
 ## Testing
 
@@ -331,10 +336,13 @@ example:
 ```
 $ git clone git://github.com/joyent/smartos-live test
 $ cd test
-$ cp sample.configure.smartos configure.smartos
 $ ./configure && gmake live
 $
 ```
+
+Note that during the `configure` phase, if gcc49 does not exist on the
+system, it will be installed as it's still needed for bootstrapping the
+`proto.strap` gcc compiler used by the build.
 
 ## Cleaning Up
 
@@ -344,81 +352,5 @@ that you created in the beginning. To do so, you would either use the
 
 ## Known Issues
 
-There are a number of issues that we've seen with this in the wild that
-you may or may not encounter and you'll have to fix manually.
-
-### gawk doesn't work
-
-We've seen cases where when going from 2015.q4 to 2016.q4 gawk does not
-properly get updated. You can see if this is the case by running gawk.
-If you're in this case you'll see something like:
-
-```
-# gawk
-ld.so.1: gawk: fatal: libreadline.so.6: open failed: No such file or
-directory
-Killed
-```
-
-The solution is to remove and reinstall gawk as follows:
-
-```
-# pkgin rm gawk
-1 packages to delete:
-
-gawk-4.1.3
-
-proceed ? [Y/n] y
-removing gawk-4.1.3...
-gawk-4.1.3: unregistering info file /opt/local/info/gawk.info
-gawk-4.1.3: unregistering info file /opt/local/info/gawkinet.info
-pkg_install warnings: 0, errors: 0
-reading local summary...
-processing local summary...
-pk[root@b80d08de-e649-43c9-9cc2-3229ae8b55b1 ~/smartos-live]# pkgin in
-gawk
-calculating dependencies... done.
-
-nothing to upgrade.
-1 packages to be installed (1222K to download, 4172K to install):
-
-gawk-4.1.3
-
-proceed ? [Y/n] y
-downloading packages...
-gawk-4.1.3.tgz
-100% 1222KB   1.2MB/s   1.2MB/s   00:00
-installing packages...
-installing gawk-4.1.3...
-gawk-4.1.3: registering info file /opt/local/info/gawk.info
-gawk-4.1.3: registering info file /opt/local/info/gawkinet.info
-pkg_install warnings: 0, errors: 0
-reading local summary...
-processing local summary...
-marking gawk-4.1.3 as non auto-removable
-#
-```
-
-## Appendix: Upgrading from 2013.Q3
-
-The upgrade path from 2013.q3 is much more complicated. You should first
-perform all of the [preparation steps](#preparing-to-upgrade). Next,
-we're going to basically blow away the old pkgsrc install completely and
-then install a fresh one. Please review the [pkgsrc illumos
-installation](http://pkgsrc.joyent.com/install-on-illumos/)
-instructions. What follows will be an abbreviated version of them.
-
-```
-# cd /var/tmp
-# curl -O https://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2016Q4-multiarch.tar.gz
-# mv /opt/local/ /opt/local.bak
-# rm -rf /var/db/pkgin/
-# tar xzf bootstrap-2016Q4-multiarch.tar.gz -C /
-# pkg_add -U openssl
-# pkg_add -U pkgin
-# pkgin update
-# pkgin fug
-```
-
-At this point you should reinstall any packages that you previously had that
-aren't part of a normal SmartOS build.
+This section is a placeholder for issues users may encounter during upgrade.
+To date, no issues have been encountered.

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2017, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * fwadm test: tags
  */
@@ -30,9 +30,7 @@ var clone = require('clone');
 var fw;
 var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
-var mod_addr = require('ip6addr');
 var mod_obj = require('../../lib/util/obj');
-var mod_uuid = require('uuid');
 var net = require('net');
 var util = require('util');
 var util_vm = require('../../lib/util/vm');
@@ -181,6 +179,7 @@ exports['add / update: tag to tag'] = function (t) {
 
             rule1.uuid = res.rules[0].uuid;
             rule1.version = res.rules[0].version;
+            rule1.log = false;
             t.deepEqual(helpers.sortRes(res), {
                 vms: tagOneVMs.map(getUUID).sort(),
                 rules: [ rule1 ]
@@ -1011,6 +1010,7 @@ exports['tags with values'] = function (t) {
 
             t.ok(res.rules[0].version, 'rule has a version');
             expRules[0].version = res.rules[0].version;
+            expRules[0].log = false;
 
             t.deepEqual(helpers.sortRes(res), {
                 remoteVMs: helpers.sortedUUIDs([rvm1, rvm2, rvm3]),
@@ -1076,6 +1076,8 @@ exports['tags with values'] = function (t) {
 
             t.ok(res.rules[0].version, 'rule has a version');
             expRules[1].version = res.rules[0].version;
+
+            expRules[1].log = false;
 
             t.deepEqual(helpers.sortRes(res), {
                 vms: [ vm2.uuid, vm4.uuid, vm5.uuid ].sort(),

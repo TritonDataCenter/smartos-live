@@ -21,7 +21,7 @@
  * CDDL HEADER END
  *
  *
- * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  *
  * fwadm: Main entry points
@@ -105,6 +105,9 @@ var v6fallbacks = fallbacks.concat([
     'pass out quick proto ipv6-icmp from any to any keep state',
     'pass out proto ipv6-icmp from any to any']);
 
+// Do not use directly - use haveIpfEventLogger() instead.
+var haveDevIpfEv = undefined;
+var DEV_IPFEV = '/dev/ipfev';
 
 // --- Internal helper functions
 
@@ -119,6 +122,17 @@ function assertStringOrObject(obj, name) {
     }
 }
 
+
+/**
+ * Determine if /dev/ipfev exists, caching the result for future calls in the
+ * global variable haveDevIpfEv.
+ */
+function haveIpfEventLogger() {
+    if (haveDevIpfEv === undefined) {
+        haveDevIpfEv = fs.existsSync(DEV_IPFEV);
+    }
+    return haveDevIpfEv;
+}
 
 /**
  * For a rule and a direction, return whether or not we actually need to
@@ -841,10 +855,8 @@ function validateRules(vms, rvms, rules, log, callback) {
                 sideData[rule.uuid][dir].vms[vm] = 1;
             }
             delete rulesLeft[rule.uuid];
-
         } else if (hasKey(rvms[type], t)) {
             delete rulesLeft[rule.uuid];
-
         } else {
             sideData[rule.uuid][dir].missing[type][t] = 1;
         }
@@ -901,7 +913,6 @@ function protoTarget(rule, target) {
     } else {
         if (hasKey(target, 'start')
             && hasKey(target, 'end')) {
-
             return 'port ' + target.start + ' : ' + target.end;
         } else {
             return 'port = ' + target;
@@ -1083,6 +1094,16 @@ function ipfRuleObj(opts) {
     // ipfilter uses /etc/protocols which calls ICMPv6 'ipv6-icmp'
     var ipfProto = (rule.protocol === 'icmp6') ? 'ipv6-icmp' : rule.protocol;
 
+    var readtags = [];
+    if (haveIpfEventLogger()) {
+        if (rule.uuid) {
+            readtags.push(util.format('uuid=%s', rule.uuid));
+        }
+        if (rule.log) {
+            readtags.push('cfwlog');
+        }
+    }
+
     var sortObj = {
         action: rule.action,
         direction: dir,
@@ -1097,7 +1118,9 @@ function ipfRuleObj(opts) {
         type: opts.type,
         uuid: rule.uuid,
         value: opts.value,
-        version: rule.version
+        version: rule.version,
+        allTags: readtags.length !== 0 ?
+            util.format(' set-tag(%s)', readtags.join(', ')) : ''
     };
 
     if (opts.type === 'wildcard' && opts.value === 'any') {
@@ -1107,10 +1130,8 @@ function ipfRuleObj(opts) {
                 dir === 'from' ? 'out' : 'in',
                 ipfProto,
                 protoTarget(rule, t));
-            if (rule.protocol !== 'icmp6')
-                sortObj.v4text.push(wild);
-            if (rule.protocol !== 'icmp')
-                sortObj.v6text.push(wild);
+            if (rule.protocol !== 'icmp6') { sortObj.v4text.push(wild); }
+            if (rule.protocol !== 'icmp') { sortObj.v6text.push(wild); }
         });
 
         return sortObj;
@@ -1252,16 +1273,21 @@ function prepareIPFdata(opts, log, callback) {
             '# AND MAY BE OVERWRITTEN AT ANY TIME.',
             '#',
             '# File generated at ' + date.toString(),
-            '#',
-            ''];
+            '#'
+        ];
+        if (haveIpfEventLogger()) {
+            ipf4Conf.push('# smartos_ipf_version 2');
+        }
+        ipf4Conf.push('#', '');
         var ipf6Conf = ipf4Conf.slice();
         var iks = hasKey(keepInboundState, vm) ? keepInboundState[vm] : {};
 
         conf[vm].sort(compareRules).forEach(function (sortObj) {
             var ktxt = KEEP_FRAGS;
-            if ((sortObj.direction === 'from' && sortObj.action === 'allow')
+            if (sortObj.allTags !== ''
+                || (sortObj.direction === 'from' && sortObj.action === 'allow')
                 || (sortObj.direction === 'to' && iks[sortObj.protocol])) {
-                ktxt += KEEP_STATE;
+                ktxt += KEEP_STATE + sortObj.allTags;
             }
 
             if (!hasKey(rulesIncluded, sortObj.uuid)) {
@@ -1981,7 +2007,6 @@ function del(opts, callback) {
             throw new Error(
                 'Payload must contain one of: rvmUUIDs, uuids');
         }
-
     } catch (err) {
         return callback(err);
     }
@@ -2183,7 +2208,7 @@ function listRemoteVMs(opts, callback) {
 
             // XXX: support sorting by other fields, filtering
             var sortFn = function _sort(a, b) {
-                return (a.uuid > b.uuid) ? 1: -1;
+                return (a.uuid > b.uuid) ? 1 : -1;
             };
 
             log.debug('listRemoteVMs: finish');
@@ -2238,7 +2263,7 @@ function listRules(opts, callback) {
             // XXX: support sorting by other fields, filtering
             // (eg: enabled=true vm=<uuid>)
             var sortFn = function _defaultSort(a, b) {
-                return (a.uuid > b.uuid) ? 1: -1;
+                return (a.uuid > b.uuid) ? 1 : -1;
             };
             var mapFn = function _defaultMap(r) {
                 return r.serialize();
@@ -2709,7 +2734,6 @@ function getRemoteTargets(opts, callback) {
         if (opts.rules.length === 0) {
             throw new Error('Must specify rules');
         }
-
     } catch (err) {
         return callback(err);
     }

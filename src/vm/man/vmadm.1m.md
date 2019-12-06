@@ -247,8 +247,8 @@ tab-complete UUIDs rather than having to type them out for every command.
         in attempt to minimize data loss.
 
         For OS VMs, the shutdown command '/usr/sbin/shutdown -y -g 0 -i 6'
-        will be run within the zone, which will cause the VM to reboot
-        after shutting down.
+        (or '/sbin/shutdown -r now' if brand is 'lx') will be run within the
+        zone, which will cause the VM to reboot after shutting down.
 
         For HVM VMs, vmadmd will act as a helper here for the reboot in the
         same manner as described below for the 'stop' command.
@@ -336,11 +336,13 @@ tab-complete UUIDs rather than having to type them out for every command.
         that processes within the VM are given an opportunity to shut down
         correctly in attempt to minimize data loss.
 
-        For OS VMs, the shutdown command '/usr/sbin/shutdown -y -g 0 -i 5'
-        will be run within the zone, which will cause the VM to go to the
-        'off' state after shutting down all processes. OS VMs do not
-        support the [-t timeout] option unless they also have the docker
-        property set to true.
+        For OS VMs, a shutdown command will be run in the zone, which will cause
+        the VM to go to the 'off' state after shutting down all processes.  If
+        brand is 'lx', the shutdown command is '/sbin/shutdown -h now'.  For
+        other OS VMs, the shutdown command is '/usr/sbin/shutdown -y -g 0 -i 5'.
+        If the VM does not shutdown before its timer expires (60 seconds), the
+        VM is forcibly halted. OS VMs do not support the [-t timeout] option
+        unless they also have the docker property set to true.
 
         For HVM VMs, the running qemu/bhyve process sends an ACPI signal to the
         guest kernel telling it to shut down. In case the guest kernel ignores

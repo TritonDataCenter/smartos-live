@@ -11,18 +11,28 @@
 #
 
 #
-# Copyright (c) 2017, Joyent, Inc.
+# Copyright 2019 Joyent, Inc.
+#
+
+#
+# MDB is pernickety about the exact format of this output, so be
+# careful. In particular the json-4 formatting/spacing is required.
 #
 
 set -o errexit
 set -o pipefail
 
+export PATH=/opt/local/bin/:$PATH
+
 ber_arg0=$(basename $0)
 ber_wsroot=$(cd "$(dirname "$0")/.." && pwd)
 ber_first=true
-ber_version=$1
-ber_template=$2
-ber_template_data=
+
+ber_template="                     SmartOS %%VERSION%% x86_64
+                       Copyright %%YEAR%% Joyent, Inc.
+
+  Built with the following components:
+"
 
 function fatal
 {
@@ -105,34 +115,52 @@ function get_status
 	return 0
 }
 
-#
-# We support two modes of operation:
-#
-#	1. Generating the "/etc/release" file which starts with a header and
-#	   includes the JSON manifest underneath.  To use this mode, the
-#	   caller must provide a VERSION and a TEMPLATE_FILE argument.
-#
-#	2. Generating the bare JSON for the "boot_archive.gitstatus" file.
-#	   This mode is active when no arguments are passed.
-#
-if (( $# != 0 && $# != 2 )); then
-	fatal "usage: $ber_arg0 [ VERSION TEMPLATE_FILE ]"
+function usage {
+	echo "Usage: build_etcrelease <options>"
+	echo "    -g                  emit gitstatus.json content"
+	echo "    -h                  print this message"
+	echo "    -v <version>        emit an etc/release file with <version>,"
+	echo "                        including the gistatus.json content."
+	echo ""
+}
+
+while getopts "ghv:" opt; do
+	case "${opt}" in
+		g)
+			do_gitstatus=true
+			;;
+		h)
+			do_help=true
+			;;
+		v)
+			ber_version=$OPTARG
+			;;
+		*)
+			warn "unknown option ${opt}"
+			usage
+	esac
+done
+shift $((OPTIND - 1))
+
+if [[ -z "$do_help" && -z "$do_gitstatus" && -z "$ber_version" ]]; then
+	usage
+	exit 2
 fi
 
-if [[ -n $ber_template ]]; then
-	if [[ ! -f $ber_template ]]; then
-		fatal "could not find template file \"$ber_template\""
-	fi
-
-	if ! ber_template_data=$(sed -e "s,%%VERSION%%,$ber_version,g" \
-	    "$ber_template"); then
-		fatal "could not load template file \"$ber_template\""
-	fi
-
-	printf '%s\n\n' "$ber_template_data"
+if [[ -n "$do_help" ]]; then
+	usage
+	exit 2
 fi
 
-printf '[\n'
+if [[ -n "$ber_version" ]]; then
+	ber_year=$(date +%Y)
+	ber_content=$(echo "$ber_template" | \
+	    sed -e "s,%%VERSION%%,$ber_version,g" \
+		-e "s,%%YEAR%%,$ber_year,g");
+	printf '%s\n\n' "$ber_content"
+fi
+
+( printf '[\n'
 get_status "$ber_wsroot" smartos-live
 get_status "$ber_wsroot/projects/illumos" illumos-joyent
 get_status "$ber_wsroot/projects/illumos-extra" illumos-extra
@@ -140,6 +168,6 @@ for d in $ber_wsroot/projects/local/*; do
 	get_status $d $(basename $d)
 done
 
-printf '\n]\n'
+printf '\n]\n' ) | json -o json-4
 
 exit 0

@@ -15,7 +15,6 @@
 ./bin/git-pbchk
 ./bin/hdrchk
 ./bin/i386/aw
-./bin/i386/codereview
 ./bin/i386/cscope-fast
 ./bin/i386/ctfconvert
 ./bin/i386/ctfdiff
@@ -106,7 +105,6 @@
 ./man/man1onbld/cddlchk.1onbld
 ./man/man1onbld/check_rtime.1onbld
 ./man/man1onbld/checkpaths.1onbld
-./man/man1onbld/codereview.1onbld
 ./man/man1onbld/cstyle.1onbld
 ./man/man1onbld/cw.1onbld
 ./man/man1onbld/find_elf.1onbld

@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+#
+# Copyright (c) 2019, Joyent, Inc.
+#
+
+#
+# Query the projects framework to emit a uniquified hyphen-separated list of
+# branch names, omitting any branch names identical to the current smartos-live
+# branch, passed as $1.
+#
+
+if [[ "$1" == "-h" ]]; then
+	echo "Usage: projects_branch_desc <current_branch>"
+	exit 1
+fi
+
+# This can be an empty string, in which case our descriptor contains all
+# branch information.
+current_branch=$1
+
+PROJECT_REPOS="projects/illumos-extra \
+    projects/illumos \
+	projects/local/ur-agent \
+	projects/local/kvm \
+	projects/local/kvm-cmd \
+	projects/local/mdata-client"
+
+for repo in $PROJECT_REPOS; do
+	if [[ ! -d $repo ]]; then
+		echo "Missing repository $repo"
+		exit 1
+	fi
+
+	branch=$(git -C $repo rev-parse --abbrev-ref HEAD)
+	if [[ "$branch" == "$current_branch" ]]; then
+		continue
+	fi
+	echo $branch
+done | sort -u | while read branch; do
+		echo -n "-$branch"
+done
+echo ""

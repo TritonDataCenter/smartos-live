@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * * *
  * The main imgadm functionality. The CLI is a light wrapper around this tool.
@@ -88,7 +88,15 @@ var DEFAULT_CONFIG = {};
 var SET_REQUIREMENTS_BRAND_BRANDS = ['bhyve', 'lx', 'kvm'];
 
 /* BEGIN JSSTYLED */
-var VMADM_FS_NAME_RE = /^([a-zA-Z][a-zA-Z\._-]*)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(-disk\d+)?$/;
+/**
+ * For vm filesystems, we have three variations to which an image can be
+ * cloned to:
+ *  1. /zones/<uuid>        (smartos, lx and docker)
+ *  2. /zones/<uuid>-diskN  (kvm)
+ *  3. /zones/<uuid>/diskN  (bhyve)
+ */
+var VMADM_FS_NAME_RE = /^([a-zA-Z][a-zA-Z\._-]*)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})([-/]disk\d+)?$/;
+
 var VMADM_IMG_NAME_RE = /^([a-zA-Z][a-zA-Z\._-]*)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 /* END JSSTYLED */

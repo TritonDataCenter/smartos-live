@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright (c) 2016 Joyent, Inc. All rights reserved.
+# Copyright (c) 2018, Joyent, Inc.
 #
 
 #
@@ -20,6 +20,7 @@
 
 PATH=/usr/bin:/usr/sbin
 . /lib/sdc/config.sh
+. /lib/sdc/usb-key.sh
 
 CMD=
 CONF=
@@ -309,25 +310,7 @@ function mount_usb()
         return 0
     fi
 
-    USBKEYS=$(disklist -a)
-    for key in $USBKEYS; do
-        if [[ $(fstyp "/dev/dsk/${key}p0:1") == 'pcfs' ]]; then
-            mount -F pcfs -o foldcase,noatime "/dev/dsk/${key}p0:1" "$USB_MNT"
-            if (( $? == 0 )); then
-                if [[ ! -f $USB_MNT/.joyliveusb ]]; then
-                    umount "$USB_MNT"
-                else
-                    break
-                fi
-            fi
-        fi
-    done
-
-    typ=$(awk -v "mnt=$USB_MNT" '$2 == mnt { print $3 }' /etc/mnttab)
-    if [[ -z $typ ]]; then
-        verbose "Could not mount $USB_MNT"
-        return 0
-    fi
+    mount_usb_key || fatal 'failed to mount USB key'
 
     if [[ ! -f $USB_CONFIG ]]; then
         verbose "$USB_CONFIG does not exist"
@@ -354,13 +337,7 @@ function umount_usb()
         return 0
     fi
 
-    typ=$(awk -v "mnt=$USB_MNT" '$2 == mnt { print $3 }' /etc/mnttab)
-    if [[ -z $typ ]]; then
-        verbose "USB key no longer mounted: not unmounting"
-        return 0
-    fi
-
-    umount "$USB_MNT"
+    unmount_usb_key || fatal 'failed to unmount USB key'
 }
 
 

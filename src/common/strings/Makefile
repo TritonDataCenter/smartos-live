@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright (c) 2017, Joyent, Inc.
+# Copyright (c) 2019, Joyent, Inc.
 #
 
 #
@@ -20,18 +20,14 @@
 # objects from this source in their own Makefile.
 #
 
-BASE :=		$(PWD)
-DESTDIR =	$(BASE)/../../../proto
-NATIVEDIR =	$(BASE)/../../../proto.strap
+BASE =		$(CURDIR)/../../
 
-GCC =		$(NATIVEDIR)/usr/bin/gcc
-GXX =		$(NATIVEDIR)/usr/bin/g++
+include $(BASE)/Makefile.defs
 
 .SUFFIXES:
 .SECONDARY:
 
-CFLAGS =	-std=gnu99 -Wall -Wextra -Werror -m32 -g \
-		-Wno-unused-parameter -I$(BASE)
+CFLAGS +=	$(DEBUG_FLAGS) -m32 -Wno-unused-parameter -I.
 
 TEST_PROGRAMS = \
 		test0 \
@@ -41,70 +37,39 @@ TEST_PROGRAMS = \
 		test4 \
 		testpath
 
-TEST_BINS =	$(TEST_PROGRAMS:%=obj/%)
-
-STRINGS_OBJECTS = \
+OBJS = 		\
 		custr.o \
 		strlist.o \
 		strpath.o
 
-OBJECTS = \
-		$(STRINGS_OBJECTS:%=obj/%)
-
-CTFCONVERT =	/usr/bin/true
-CTFMERGE =	/usr/bin/true
-
-CC =		$(GCC)
-CSTYLE =	../../../tools/cstyle
-
 LIBS =		-lumem
 
-COMPILE_C =	$(CC) $(CPPFLAGS) $(LDFLAGS) $(CFLAGS) -c -o $@ $< $(LIBS)
-
-INSTALL_PROG =	mkdir -p $(@D) && rm -f $@ && cp $^ $@ && \
-		chmod 755 $@ && touch $@
-
 .PHONY: all
-all: $(TEST_BINS)
+all: $(TEST_PROGRAMS)
 
 .PHONY: check
-check: $(STRINGS_OBJECTS:%.o=%.check)
-
-%.check: %.c
-	$(CSTYLE) -cPp $<
-
-lint:
-	/usr/bin/true
+check: $(OBJS:%.o=%.check)
 
 clean:
-	rm -f $(OBJECTS) $(TEST_BINS:%=%.o)
-	rm -f $(TEST_BINS)
-	rmdir obj/
+	rm -f $(OBJS) $(TEST_PROGRAMS:%=%.o)
+	rm -f $(TEST_PROGRAMS)
 
 .PHONY: test
 test: all $(TEST_PROGRAMS:%=%.runtest)
 
-%.runtest: obj/%
+%.runtest: %
 	@echo RUNNING TEST $^ ...
 	@./$^
 	@echo OK
 	@echo ""
 
-#
-# Compilation and linking targets
-#
-obj/test%: obj/test%.o $(OBJECTS)
-	$(CC) $(CPPFLAGS) $(LDFLAGS) $(CFLAGS) -o $@ $^ $(LIBS) \
-	    tests/force_umem_debug.c
-	$(CTFMERGE) -L VERSION -o $@ $(OBJECTS)
-
-obj/test%.o: tests/test%.c
+test%: test%.o $(OBJS) tests/force_umem_debug.c
 	@mkdir -p $(@D)
-	$(COMPILE_C)
-	$(CTFCONVERT) -L VERSION $@
+	$(LINK.c) $^ $(LIBS)
+	$(CTFCONVERT) -l $(BUILDSTAMP) $@
 
-obj/%.o: %.c
+test%.o: tests/test%.c
 	@mkdir -p $(@D)
-	$(COMPILE_C)
-	$(CTFCONVERT) -L VERSION $@
+	$(COMPILE.c) $^
 
+include $(BASE)/Makefile.targ

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * Test utilities for running vmadm commands
  */
@@ -52,7 +52,8 @@ function create(t, opts, callback) {
             autoboot: true,
             do_not_inventory: true,
             nowait: false,
-            ram: 128
+            ram: 128,
+            cpu_cap: 100
         };
 
         for (var p in opts.params) {

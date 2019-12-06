@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2016 Joyent, Inc.
+# Copyright 2019 Joyent, Inc.
 #
 
 PROG =		mancheck
@@ -42,7 +42,7 @@ LDLIBS =					\
 ILLUMOS_SRC =	../../projects/illumos
 TOOLS_BIN =	$(ILLUMOS_SRC)/usr/src/tools/proto/root_i386-nd/opt/onbld/bin
 CC =		gcc
-ALTCTFCONVERT =	$(TOOLS_BIN)/i386/ctfconvert-altexec
+CTFCONVERT =	$(TOOLS_BIN)/i386/ctfconvert
 
 COMPILE_C =	$(CC) -c -gdwarf-2 $(CFLAGS) -o $@ $^
 
@@ -59,7 +59,7 @@ all: $(PROG)
 
 mancheck: $(OBJECTS)
 	$(CC) -o $@ $^ $(LDLIBS)
-	$(ALTCTFCONVERT) -l $(PROG) $@
+	$(CTFCONVERT) -l $(PROG) $@
 
 clean:
 	rm -f $(OBJECTS) $(PROG)

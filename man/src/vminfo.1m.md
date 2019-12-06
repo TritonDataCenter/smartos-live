@@ -47,5 +47,5 @@ determine service level health and status.
 
 This tool should be used for interactive output only, and is not meant to
 provide a stable interface to use for vminfod.  If you are trying to interface
-directly with `vminfod` use the `vminfod/client` JavaScript library or use the
-`vmadm(1M)` command that will use `vminfod` under the hood automatically.
+with `vminfod` use the `vmadm(1M)` command (especially `vmadm events`) and, for
+internal platform code, the `vminfod/client` Node.js library.

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright 2018, Joyent, Inc.
  *
  * * *
  * Some basic imgadm tests.
@@ -64,7 +64,7 @@ test('imgadm -E', function (t) {
     exec('imgadm -E', function (err, stdout, stderr) {
         t.ok(err);
         var lines = stderr.trimRight().split(/\n/g);
-        structuredErr = JSON.parse(lines[lines.length - 1]);
+        var structuredErr = JSON.parse(lines[lines.length - 1]);
         t.equal(structuredErr.err.code, 'NoCommand');
         t.end();
     });
@@ -77,7 +77,7 @@ test('imgadm --version', function (t) {
         t.equal(stderr, '', 'stderr');
         t.ok(/^imgadm \d+\.\d+\.\d+/.test(stdout),
             format('stdout is a version: "%s"', stdout.trim()));
-        version = stdout.split(/\s+/g)[1];
+        var version = stdout.split(/\s+/g)[1];
         var expectedVersion = require('/usr/img/package.json').version;
         t.equal(version, expectedVersion);
         t.end();
@@ -107,7 +107,9 @@ test('imgadm -v list  # bunyan trace log on stderr', function (t) {
     });
 });
 
-test('IMGADM_LOG_LEVEL=trace imgadm   # bunyan "src" log on stderr', function (t) {
+test('IMGADM_LOG_LEVEL=trace imgadm   # bunyan "src" log on stderr',
+    function (t) {
+
     var env = objCopy(process.env);
     env.IMGADM_LOG_LEVEL = 'trace';
     var execOpts = {env: env};
@@ -156,7 +158,7 @@ test('imgadm help sources', function (t) {
         t.equal(stderr, '', 'stderr');
         t.ok(/imgadm sources/.test(stdout),
             format('stdout is imgadm sources help: "%s..."',
-                   stdout.trim().split(/\n/, 1)[0]));
+                stdout.trim().split(/\n/, 1)[0]));
         t.end();
     });
 });

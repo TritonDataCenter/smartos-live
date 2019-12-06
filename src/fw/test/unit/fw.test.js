@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * fwadm tests
  */
@@ -30,13 +30,7 @@ var clone = require('clone');
 var fw;
 var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
-var mod_obj = require('../../lib/util/obj');
-var mod_uuid = require('uuid');
 var util = require('util');
-var util_vm = require('../../lib/util/vm');
-
-var mergeObjects = mod_obj.mergeObjects;
-
 
 
 // --- Globals
@@ -78,7 +72,8 @@ exports['add: no rules or VMs'] = function (t) {
     fw.add({}, function (err, res) {
         t.ok(err, 'error returned');
         if (!err) {
-            return t.done();
+            t.done();
+            return;
         }
 
         t.equal(err.message, 'opts.vms ([object]) required', 'VMs required');
@@ -124,7 +119,8 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
         fw.add(payload, function (err, res) {
             t.ifError(err);
             if (err) {
-                return cb();
+                cb();
+                return;
             }
 
             t.ok(res.rules[0].uuid, 'rule has a uuid');
@@ -132,6 +128,8 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
 
             t.ok(res.rules[0].version, 'rule has a version');
             expRule.version = res.rules[0].version;
+
+            expRule.log = false;
 
             t.deepEqual(res, {
                 vms: [ vm.uuid ],
@@ -157,22 +155,22 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
 
             cb();
         });
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwGetEquals(t, expRule, cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwListEquals(t, [expRule], cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.vmsAffected({
             t: t,
             allVMs: [vm],
             rule: expRule,
             vms: [vm]
         }, cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         var updatePayload = {
             rules: [
                 {
@@ -188,7 +186,8 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
         fw.update(updatePayload, function (err, res) {
             t.ifError(err);
             if (err) {
-                return cb();
+                cb();
+                return;
             }
 
             t.equal(res.rules[0].uuid, expRule.uuid, 'uuid is the same');
@@ -219,30 +218,30 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
 
             cb();
         });
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwGetEquals(t, expRule, cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwListEquals(t, [expRule], cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwRulesEqual({
             t: t,
             rules: [ expRule ],
             vm: vm,
             vms: [vm]
         }, cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.vmsAffected({
             t: t,
             allVMs: [vm],
             rule: expRule,
             vms: [vm]
         }, cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         // Disabling and re-enabling the firewall should have no effect on the
         // zone rules
         helpers.testEnableDisable({
@@ -250,7 +249,8 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
             vm: vm,
             vms: [vm]
         }, cb);
-    }, function (cb) {
+    },
+    function (cb) {
         // Delete the rule - the firewall should remain running, but only the
         // default rules should remain
 
@@ -262,7 +262,8 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
         fw.del(delPayload, function (err, res) {
             t.ifError(err);
             if (err) {
-                return cb();
+                cb();
+                return;
             }
 
             t.deepEqual(res, {
@@ -284,8 +285,8 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
 
             cb();
         });
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwRulesEqual({
             t: t,
             rules: [ ],
@@ -294,7 +295,8 @@ exports['add / update: vm to IP: BLOCK'] = function (t) {
         }, cb);
     }
 
-    ], function () {
+    ],
+    function () {
         t.done();
     });
 };
@@ -321,7 +323,8 @@ exports['add / update: vm to IP: ALLOW'] = function (t) {
         fw.add(payload, function (err, res) {
             t.ifError(err);
             if (err) {
-                return cb();
+                cb();
+                return;
             }
 
             helpers.fillInRuleBlanks(res.rules, expRule);
@@ -347,13 +350,10 @@ exports['add / update: vm to IP: ALLOW'] = function (t) {
 
             cb();
         });
-
     }, function (cb) {
         helpers.fwGetEquals(t, expRule, cb);
-
     }, function (cb) {
         helpers.fwListEquals(t, [expRule], cb);
-
     }, function (cb) {
         helpers.vmsAffected({
             t: t,
@@ -361,7 +361,6 @@ exports['add / update: vm to IP: ALLOW'] = function (t) {
             rule: expRule,
             vms: [vm]
         }, cb);
-
     }, function (cb) {
         helpers.fwRulesEqual({
             t: t,
@@ -378,8 +377,8 @@ exports['add / update: vm to IP: ALLOW'] = function (t) {
 
 
 exports['add: tag to IP'] = function (t) {
-    var vm1 = helpers.generateVM({ tags: { foo : true } });
-    var vm2 = helpers.generateVM({ tags: { foo : true } });
+    var vm1 = helpers.generateVM({ tags: { foo: true } });
+    var vm2 = helpers.generateVM({ tags: { foo: true } });
     var payload = {
         rules: [
             {
@@ -398,7 +397,8 @@ exports['add: tag to IP'] = function (t) {
         fw.add(payload, function (err, res) {
             t.ifError(err);
             if (err) {
-                return cb();
+                cb();
+                return;
             }
 
             t.ok(res.rules[0].uuid, 'rule has a uuid');
@@ -408,6 +408,9 @@ exports['add: tag to IP'] = function (t) {
             t.ok(res.rules[0].version, 'rule has a version');
             expRule.version = res.rules[0].version;
             delete res.rules[0].version;
+
+            expRule.log = false;
+            payload.rules[0].log = false;
 
             t.deepEqual(res, {
                 vms: [ vm1.uuid, vm2.uuid ],
@@ -437,17 +440,14 @@ exports['add: tag to IP'] = function (t) {
 
             cb();
         });
-
     }, function (cb) {
         fw.get({ uuid: expRule.uuid }, function (err, res) {
             t.ifError(err);
             t.deepEqual(res, expRule, 'get returns same rule');
             cb();
         });
-
     }, function (cb) {
         helpers.fwListEquals(t, [expRule], cb);
-
     }, function (cb) {
         helpers.vmsAffected({
             t: t,
@@ -455,7 +455,6 @@ exports['add: tag to IP'] = function (t) {
             rule: expRule,
             vms: [vm1, vm2]
         }, cb);
-
     }, function (cb) {
         helpers.fwRulesEqual({
             t: t,
@@ -463,7 +462,6 @@ exports['add: tag to IP'] = function (t) {
             vm: vm1,
             vms: [vm1, vm2]
         }, cb);
-
     }, function (cb) {
         helpers.fwRulesEqual({
             t: t,
@@ -479,8 +477,8 @@ exports['add: tag to IP'] = function (t) {
 
 
 exports['add: tag to subnet'] = function (t) {
-    var vm1 = helpers.generateVM({ tags: { foo : true } });
-    var vm2 = helpers.generateVM({ tags: { foo : true } });
+    var vm1 = helpers.generateVM({ tags: { foo: true } });
+    var vm2 = helpers.generateVM({ tags: { foo: true } });
     var payload = {
         rules: [
             {
@@ -506,14 +504,14 @@ exports['add: tag to subnet'] = function (t) {
     function (cb) {
         fw.validatePayload(payload, function (err, res) {
             t.ifError(err);
-            return cb();
+            cb();
         });
-
     }, function (cb) {
         fw.add(payload, function (err, res) {
             t.ifError(err);
             if (err) {
-                return cb(err);
+                cb(err);
+                return;
             }
 
             helpers.fillInRuleBlanks(res.rules, [rule1, rule2]);
@@ -554,17 +552,14 @@ exports['add: tag to subnet'] = function (t) {
 
             cb();
         });
-
     }, function (cb) {
         fw.get({ uuid: rule1.uuid }, function (err, res) {
             t.ifError(err);
             t.deepEqual(res, rule1, 'get returns same rule');
             cb();
         });
-
     }, function (cb) {
         helpers.fwListEquals(t, [rule1, rule2].sort(helpers.uuidSort), cb);
-
     }, function (cb) {
         helpers.fwRulesEqual({
             t: t,
@@ -572,7 +567,6 @@ exports['add: tag to subnet'] = function (t) {
             vm: vm1,
             vms: [vm1, vm2]
         }, cb);
-
     }, function (cb) {
         helpers.fwRulesEqual({
             t: t,
@@ -580,7 +574,6 @@ exports['add: tag to subnet'] = function (t) {
             vm: vm2,
             vms: [vm1, vm2]
         }, cb);
-
     }, function (cb) {
         helpers.vmsAffected({
             t: t,
@@ -588,7 +581,6 @@ exports['add: tag to subnet'] = function (t) {
             rule: rule1,
             vms: [vm1, vm2]
         }, cb);
-
     }, function (cb) {
         helpers.vmsAffected({
             t: t,
@@ -596,7 +588,6 @@ exports['add: tag to subnet'] = function (t) {
             rule: rule2,
             vms: [vm1, vm2]
         }, cb);
-
     }, function (cb) {
         helpers.testEnableDisable({
             t: t,
@@ -611,9 +602,9 @@ exports['add: tag to subnet'] = function (t) {
 
 
 exports['add: vm to subnet'] = function (t) {
-    var vm1 = helpers.generateVM({ tags: { foo : true } });
+    var vm1 = helpers.generateVM({ tags: { foo: true } });
     // Not the target of the rule:
-    var vm2 = helpers.generateVM({ tags: { foo : true } });
+    var vm2 = helpers.generateVM({ tags: { foo: true } });
     var payload = {
         rules: [
             {
@@ -641,14 +632,14 @@ exports['add: vm to subnet'] = function (t) {
     function (cb) {
         fw.validatePayload(payload, function (err, res) {
             t.ifError(err);
-            return cb();
+            cb();
         });
-
     }, function (cb) {
         fw.add(payload, function (err, res) {
             t.ifError(err);
             if (err) {
-                return cb(err);
+                cb(err);
+                return;
             }
 
             helpers.fillInRuleBlanks(res.rules, [rule1, rule2]);
@@ -682,17 +673,14 @@ exports['add: vm to subnet'] = function (t) {
 
             cb();
         });
-
     }, function (cb) {
         fw.get({ uuid: rule1.uuid }, function (err, res) {
             t.ifError(err);
             t.deepEqual(res, rule1, 'get returns same rule');
             cb();
         });
-
     }, function (cb) {
         helpers.fwListEquals(t, [rule1, rule2].sort(helpers.uuidSort), cb);
-
     }, function (cb) {
         helpers.fwRulesEqual({
             t: t,
@@ -700,7 +688,6 @@ exports['add: vm to subnet'] = function (t) {
             vm: vm1,
             vms: [vm1, vm2]
         }, cb);
-
     }, function (cb) {
         helpers.fwRulesEqual({
             t: t,
@@ -708,7 +695,6 @@ exports['add: vm to subnet'] = function (t) {
             vm: vm2,
             vms: [vm1, vm2]
         }, cb);
-
     }, function (cb) {
         helpers.vmsAffected({
             t: t,
@@ -716,7 +702,6 @@ exports['add: vm to subnet'] = function (t) {
             rule: rule1,
             vms: [vm1]
         }, cb);
-
     }, function (cb) {
         // Ensure we can use the rule UUID to check
         helpers.vmsAffected({
@@ -725,7 +710,6 @@ exports['add: vm to subnet'] = function (t) {
             rule: rule1.uuid,
             vms: [vm1]
         }, cb);
-
     }, function (cb) {
         helpers.vmsAffected({
             t: t,
@@ -733,7 +717,6 @@ exports['add: vm to subnet'] = function (t) {
             rule: rule2,
             vms: [vm1]
         }, cb);
-
     }, function (cb) {
         // Ensure we can use the rule UUID to check
         helpers.vmsAffected({
@@ -806,8 +789,8 @@ exports['sorting: multiple ip and subnet rules'] = function (t) {
             t.ifError(err);
             cb();
         });
-
-    }, function (cb) {
+    },
+    function (cb) {
         fw.add(payload, function (err, res) {
             t.ifError(err);
             if (err) {
@@ -853,18 +836,17 @@ exports['sorting: multiple ip and subnet rules'] = function (t) {
 
             cb();
         });
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwListEquals(t, rules.sort(helpers.uuidSort), cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwRulesEqual({
             t: t,
             rules: rules,
             vm: vm,
             vms: [vm]
         }, cb);
-
     }
     ], function () {
         t.done();
@@ -929,8 +911,8 @@ exports['sorting: multiple icmp types'] = function (t) {
             t.ifError(err);
             cb();
         });
-
-    }, function (cb) {
+    },
+    function (cb) {
         fw.add(payload, function (err, res) {
             t.ifError(err);
             if (err) {
@@ -976,18 +958,17 @@ exports['sorting: multiple icmp types'] = function (t) {
 
             cb();
         });
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwListEquals(t, rules.sort(helpers.uuidSort), cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwRulesEqual({
             t: t,
             rules: rules,
             vm: vm,
             vms: [vm]
         }, cb);
-
     }
     ], function () {
         t.done();
@@ -1003,7 +984,8 @@ exports['enable / disable rule'] = function (t) {
                 owner_uuid: vm.owner_uuid,
                 rule: util.format('FROM vm %s TO ip 192.168.5.2 BLOCK tcp '
                                 + 'PORT 25', vm.uuid),
-                enabled: false
+                enabled: false,
+                log: true
             }
         ],
         vms: [vm]
@@ -1019,7 +1001,8 @@ exports['enable / disable rule'] = function (t) {
         fw.add(payload, function (err, res) {
             t.ifError(err);
             if (err) {
-                return cb();
+                cb();
+                return;
             }
 
             helpers.fillInRuleBlanks(res.rules, expRule);
@@ -1042,22 +1025,22 @@ exports['enable / disable rule'] = function (t) {
 
             cb();
         });
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwGetEquals(t, expRule, cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwListEquals(t, [expRule], cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.fwRulesEqual({
             t: t,
             rules: [expRule],
             vm: vm,
             vms: [vm]
         }, cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         // Even though the rule is disabled, it should still show up as
         // affected
         helpers.vmsAffected({
@@ -1066,8 +1049,8 @@ exports['enable / disable rule'] = function (t) {
             rule: expRule,
             vms: [vm]
         }, cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         // Update the rule - it should still not affect the VM
         var updatePayload = {
             rules: [
@@ -1084,7 +1067,8 @@ exports['enable / disable rule'] = function (t) {
         fw.update(updatePayload, function (err, res) {
             t.ifError(err);
             if (err) {
-                return cb();
+                cb();
+                return;
             }
 
             expRule.version = res.rules[0].version;
@@ -1103,15 +1087,16 @@ exports['enable / disable rule'] = function (t) {
 
             cb();
         });
-
-    }, function (cb) {
+    },
+    function (cb) {
         // Add an enabled rule - disabled rule should still not affect the vm
         var addPayload = {
             rules: [
                 {
                     owner_uuid: vm.owner_uuid,
                     rule: 'FROM any TO all vms ALLOW tcp PORT 33',
-                    enabled: true
+                    enabled: true,
+                    log: true
                 }
             ],
             vms: [vm]
@@ -1121,7 +1106,8 @@ exports['enable / disable rule'] = function (t) {
         fw.add(addPayload, function (err, res) {
             t.ifError(err);
             if (err) {
-                return cb();
+                cb();
+                return;
             }
 
             helpers.fillInRuleBlanks(res.rules, expRule2);
@@ -1134,7 +1120,6 @@ exports['enable / disable rule'] = function (t) {
                 [ helpers.allowPortInTCP('any', 33) ];
             v6rules[vm.uuid].in.tcp =
                 [ helpers.allowPortInTCP('any', 33) ];
-
             t.deepEqual(helpers.zoneIPFconfigs(4), v4rules,
                 'zone ipf.conf files still the same');
             t.deepEqual(helpers.zoneIPFconfigs(6), v6rules,
@@ -1145,16 +1130,16 @@ exports['enable / disable rule'] = function (t) {
 
             cb();
         });
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.vmsAffected({
             t: t,
             allVMs: [vm],
             rule: expRule,
             vms: [vm]
         }, cb);
-
-    }, function (cb) {
+    },
+    function (cb) {
         helpers.vmsAffected({
             t: t,
             allVMs: [vm],
@@ -1169,11 +1154,13 @@ exports['enable / disable rule'] = function (t) {
 };
 
 
+
 exports['del: no uuids or rvmUUIDs'] = function (t) {
     fw.del({ vms: [ helpers.generateVM() ] }, function (err, res) {
         t.ok(err, 'error returned');
         if (!err) {
-            return t.done();
+            t.done();
+            return;
         }
 
         t.equal(err.message, 'Payload must contain one of: rvmUUIDs, uuids',

@@ -10,11 +10,13 @@
 #
 
 #
-# Copyright 2018 Joyent, Inc.
+# Copyright 2019 Joyent, Inc.
 #
 
 #
-# MG runs make check prior to ./configure, so allow build.env not to exist.
+# We allow build.env not to exist in case build automation expects to run
+# generic 'make check' actions without actually running ./configure in
+# advance of a full build.
 #
 ifeq ($(MAKECMDGOALS),check)
 -include build.env
@@ -29,6 +31,7 @@ MPROTO =	$(ROOT)/manifest.d
 BOOT_MPROTO =	$(ROOT)/boot.manifest.d
 BOOT_PROTO =	$(ROOT)/proto.boot
 IMAGES_PROTO =	$(ROOT)/proto.images
+TESTS_PROTO =	$(ROOT)/proto.tests
 MCPROTO =	$(ROOT)/mancheck.conf.d
 
 # On Darwin/OS X we support running 'make check'
@@ -57,8 +60,12 @@ else
 MAX_JOBS ?=	128
 endif
 
+#
+# deps/eng is a submodule that includes build tools, ensure it gets checked out
+#
+ENGBLD_REQUIRE := $(shell git submodule update --init deps/eng)
+
 LOCAL_SUBDIRS :=	$(shell ls projects/local)
-OVERLAYS :=	$(shell cat overlay/order)
 PKGSRC =	$(ROOT)/pkgsrc
 MANIFEST =	manifest.gen
 BOOT_MANIFEST =	boot.manifest.gen
@@ -74,12 +81,10 @@ CTFBINDIR = \
 	$(ROOT)/projects/illumos/usr/src/tools/proto/*/opt/onbld/bin/i386
 CTFMERGE =	$(CTFBINDIR)/ctfmerge
 CTFCONVERT =	$(CTFBINDIR)/ctfconvert
-ALTCTFCONVERT =	$(CTFBINDIR)/ctfconvert
 
 SUBDIR_DEFS = \
 	CTFMERGE=$(CTFMERGE) \
 	CTFCONVERT=$(CTFCONVERT) \
-	ALTCTFCONVERT=$(ALTCTFCONVERT) \
 	MAX_JOBS=$(MAX_JOBS)
 
 ADJUNCT_TARBALL :=	$(shell ls `pwd`/illumos-adjunct*.tgz 2>/dev/null \
@@ -103,12 +108,22 @@ BOOT_MANIFESTS := \
 	$(BOOT_MPROTO)/illumos.manifest
 
 SUBDIR_MANIFESTS :=	$(LOCAL_SUBDIRS:%=$(MPROTO)/%.sd.manifest)
-OVERLAY_MANIFESTS :=	$(OVERLAYS:$(ROOT)/overlay/%=$(MPROTO)/%.ov.manifest)
+
+TEST_IPS_MANIFEST_ROOT = projects/illumos/usr/src/pkg/manifests
+
+#
+# To avoid cross-repository flag days, the list of IPS manifest
+# files which define the files included in the test archive is
+# stored in the illumos-joyent.git repository. By including the
+# following Makefile, we get the $(TEST_IPS_MANIFEST_FILES) macro.
+#
+include projects/illumos/usr/src/Makefile.testarchive
+
+TEST_IPS_MANIFESTS = $(TEST_IPS_MANIFEST_FILES:%=$(TEST_IPS_MANIFEST_ROOT)/%)
+TESTS_MANIFEST = $(ROOT)/tests.manifest.gen
 
 SUBDIR_MANCHECK_CONFS := \
 	$(LOCAL_SUBDIRS:%=$(MCPROTO)/%.sd.mancheck.conf)
-OVERLAY_MANCHECK_CONFS := \
-	$(OVERLAYS:$(ROOT)/overlay/%=$(MCPROTO)/%.ov.mancheck.conf)
 
 BOOT_VERSION :=	boot-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
@@ -118,7 +133,13 @@ IMAGES_VERSION :=	images-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
 IMAGES_TARBALL :=	output/$(IMAGES_VERSION).tgz
 
-IMAGES_SIZES_GB :=	1 2 4 8
+TESTS_VERSION :=	tests-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
+    echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
+TESTS_TARBALL :=	output/$(TESTS_VERSION).tgz
+
+ifdef PLATFORM_PASSWORD
+PLATFORM_PASSWORD_OPT=-p $(PLATFORM_PASSWORD)
+endif
 
 TOOLS_TARGETS = \
 	$(MANCHECK) \
@@ -129,15 +150,13 @@ TOOLS_TARGETS = \
 
 world: 0-strap-stamp 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp \
 	0-local-stamp 0-tools-stamp 0-man-stamp 0-devpro-stamp \
-	$(TOOLS_TARGETS) sdcman
+	$(TOOLS_TARGETS)
 
-live: world manifest mancheck_conf boot sdcman $(TOOLS_TARGETS) $(MANCF_FILE)
-	@echo $(OVERLAY_MANIFESTS)
+live: world manifest mancheck_conf boot $(TOOLS_TARGETS) $(MANCF_FILE)
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
-	ALTCTFCONVERT=$(ALTCTFCONVERT) ./tools/build_live \
-	    -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output $(OVERLAYS) $(ROOT)/proto \
-	    $(ROOT)/man/man
+	./tools/build_live -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output \
+	    $(PLATFORM_PASSWORD_OPT) $(ROOT)/proto $(ROOT)/man/man
 
 boot: $(BOOT_TARBALL)
 
@@ -147,39 +166,35 @@ pkgsrc:
 
 $(BOOT_TARBALL): world manifest
 	pfexec rm -rf $(BOOT_PROTO)
-	mkdir -p $(BOOT_PROTO)
+	mkdir -p $(BOOT_PROTO)/etc/version/
 	mkdir -p $(ROOT)/output
 	pfexec ./tools/builder/builder $(ROOT)/$(BOOT_MANIFEST) \
 	    $(BOOT_PROTO) $(ROOT)/proto
+	cp $(STAMPFILE) $(BOOT_PROTO)/etc/version/boot
 	(cd $(BOOT_PROTO) && pfexec gtar czf $(ROOT)/$@ .)
 
 #
-# Create proforma images for use in assembling bootable USB device images.
-# These images are assembled into a sparse tar file which takes up hardly any
-# space, despite the large size of the (mostly blank) images.  This tar file is
-# used by "make coal" and "make usb" in "sdc-headnode.git" to create Triton
-# boot and installation media.
+# Create proforma images for use in assembling bootable USB device images.  The
+# images tar file is used by "make coal" and "make usb" in "sdc-headnode.git"
+# to create Triton boot and installation media.
 #
-images: $(IMAGES_SIZES_GB:%=$(IMAGES_PROTO)/%gb.img)
-
-$(IMAGES_PROTO)/%.img: boot tools/images/%.fdisk tools/images/make_image
+$(IMAGES_PROTO)/4gb.img: boot
 	rm -f $@
 	mkdir -p $(IMAGES_PROTO)
-	./tools/images/make_image -s $* -G $(ROOT)/proto \
-	    -F tools/images/$*.fdisk $@
+	./tools/build_boot_image -p 4 -r $(ROOT)
+
+$(IMAGES_TARBALL): $(IMAGES_PROTO)/4gb.img
+	cd $(IMAGES_PROTO) && gtar -Scvz --owner=0 --group=0 -f $(ROOT)/$@ *
 
 images-tar: $(IMAGES_TARBALL)
-
-$(IMAGES_TARBALL): images
-	cd $(IMAGES_PROTO) && gtar -Scvz --owner=0 --group=0 -f $(ROOT)/$@ \
-	    $(IMAGES_SIZES_GB:%=%gb.img)
 
 #
 # Manifest construction.  There are 5 sources for manifests we need to collect
 # in $(MPROTO) before running the manifest tool.  One each comes from
 # illumos, illumos-extra, and the root of live (covering mainly what's in src).
 # Additional manifests come from each of $(LOCAL_SUBDIRS), which may choose
-# to construct them programmatically, and $(OVERLAYS), which must be static.
+# to construct them programmatically.
+#
 # These all end up in $(MPROTO), where we tell tools/build_manifest to look;
 # it will pick up every file in that directory and treat it as a manifest.
 #
@@ -190,8 +205,7 @@ $(IMAGES_TARBALL): images
 #
 manifest: $(MANIFEST) $(BOOT_MANIFEST)
 
-mancheck_conf: $(WORLD_MANCHECK_CONFS) $(SUBDIR_MANCHECK_CONFS) \
-    $(OVERLAY_MANCHECK_CONFS)
+mancheck_conf: $(WORLD_MANCHECK_CONFS) $(SUBDIR_MANCHECK_CONFS)
 
 dump_mancheck_conf: manifest mancheck_conf $(MANCHECK)
 	args=; for x in $(MCPROTO)/*.mancheck.conf; do \
@@ -247,19 +261,40 @@ $(MCPROTO)/%.sd.mancheck.conf: FRC | $(MCPROTO)
 		    mancheck_conf; \
 	    fi
 
-$(MPROTO)/%.ov.manifest: $(MPROTO) $(ROOT)/overlay/%/manifest
-	cp $(ROOT)/overlay/$*/manifest $@
-
-$(MCPROTO)/%.ov.mancheck.conf: $(ROOT)/overlay/%/mancheck.conf | $(MCPROTO)
-	cp $(ROOT)/overlay/$*/mancheck.conf $@
-
-$(MANIFEST): $(WORLD_MANIFESTS) $(SUBDIR_MANIFESTS) $(OVERLAY_MANIFESTS)
+$(MANIFEST): $(WORLD_MANIFESTS) $(SUBDIR_MANIFESTS)
 	-rm -f $@
 	./tools/build_manifest $(MPROTO) | ./tools/sorter > $@
 
 $(BOOT_MANIFEST): $(BOOT_MANIFESTS)
 	-rm -f $@
 	./tools/build_manifest $(BOOT_MPROTO) | ./tools/sorter > $@
+
+$(TESTS_MANIFEST): world
+	-rm -f $@
+	echo "f tests.manifest.gen 0444 root sys" >> $@
+	echo "f tests.buildstamp 0444 root sys" >> $@
+	cat $(TEST_IPS_MANIFESTS) | \
+	    ./tools/generate-manifest-from-ips.nawk | \
+	    ./tools/sorter >> $@
+
+
+#
+# We want a copy of the buildstamp in the tests archive, but
+# don't want to call it 'buildstamp' since that would potentially
+# overwrite the same file in the platform.tgz if they were
+# ever extracted to the same area for investigation. Juggle a bit.
+#
+$(TESTS_TARBALL): $(TESTS_MANIFEST)
+	pfexec rm -f $@
+	pfexec rm -rf $(TESTS_PROTO)
+	mkdir -p $(TESTS_PROTO)
+	cp $(STAMPFILE) $(ROOT)/tests.buildstamp
+	pfexec ./tools/builder/builder $(TESTS_MANIFEST) $(TESTS_PROTO) \
+	    $(PROTO) $(ROOT)
+	pfexec gtar -C $(TESTS_PROTO) -I pigz -cf $@ .
+	rm $(ROOT)/tests.buildstamp
+
+tests-tar: $(TESTS_TARBALL)
 
 #
 # Update source code from parent repositories.  We do this for each local
@@ -287,6 +322,7 @@ update-base:
 	touch $@
 
 0-subdir-%-stamp: 0-illumos-stamp
+	@echo "========== building $* =========="
 	cd "$(ROOT)/projects/local/$*" && \
 	    if [[ -f Makefile.joyent ]]; then \
 		gmake -f Makefile.joyent $(SUBDIR_DEFS) DESTDIR=$(PROTO) \
@@ -332,6 +368,7 @@ strap-cache:
 	touch $@
 
 0-livesrc-stamp: 0-illumos-stamp 0-strap-stamp 0-extra-stamp
+	@echo "========== building src =========="
 	(cd $(ROOT)/src && \
 	    gmake -j$(MAX_JOBS) NATIVEDIR=$(STRAP_PROTO) \
 	    DESTDIR=$(PROTO) && \
@@ -339,11 +376,13 @@ strap-cache:
 	touch $@
 
 0-man-stamp:
+	(cd $(ROOT)/man/sdc && gmake install DESTDIR=$(PROTO) $(SUBDIR_DEFS))
 	(cd $(ROOT)/man/src && gmake clean && gmake)
 	touch $@
 
 0-tools-stamp: 0-pwgen-stamp
 	(cd $(ROOT)/tools/builder && gmake builder)
+	(cd $(ROOT)/tools/format_image && gmake)
 	touch $@
 
 0-pwgen-stamp:
@@ -374,10 +413,6 @@ $(TZCHECK): 0-illumos-stamp
 $(UCODECHECK): 0-illumos-stamp
 	(cd tools/ucodecheck && gmake ucodecheck CC=$(NATIVE_CC) $(SUBDIR_DEFS))
 
-.PHONY: sdcman
-sdcman:
-	(cd $(ROOT)/man/sdc && gmake install DESTDIR=$(PROTO) $(SUBDIR_DEFS))
-
 jsl: $(JSLINT)
 
 $(JSLINT):
@@ -388,7 +423,7 @@ check: $(JSLINT)
 
 clean:
 	./tools/clobber_illumos
-	rm -f $(MANIFEST) $(BOOT_MANIFEST)
+	rm -f $(MANIFEST) $(BOOT_MANIFEST) $(TESTS_MANIFEST)
 	rm -rf $(MPROTO)/* $(BOOT_MPROTO)/* $(MCPROTO)/*
 	(cd $(ROOT)/src && gmake clean)
 	[ ! -d $(ROOT)/projects/illumos-extra ] || \
@@ -406,23 +441,255 @@ clean:
 	(cd $(ROOT) && [ -h $(STRAP_PROTO) ] || rm -rf $(STRAP_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(BOOT_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(IMAGES_PROTO))
+	(cd $(ROOT) && pfexec rm -rf $(TESTS_PROTO))
 	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO) \
-	    $(IMAGES_PROTO))
+	    $(IMAGES_PROTO) $(TESTS_PROTO))
 	rm -f tools/cryptpass
+	(cd tools/builder && gmake clean)
+	(cd tools/format_image && gmake clean)
 	(cd tools/mancheck && gmake clean)
 	(cd tools/mancf && gmake clean)
 	(cd tools/tzcheck && gmake clean)
+	(cd tools/ucodecheck && gmake clean)
 	(cd man/sdc && gmake clean)
 	rm -f 0-*-stamp 1-*-stamp
 
 clobber: clean
 	pfexec rm -rf output/* output-iso/* output-usb/*
- 
+
 iso: live
-	./tools/build_iso
+	./tools/build_boot_image -I -r $(ROOT)
 
 usb: live
-	./tools/build_usb
+	./tools/build_boot_image -r $(ROOT)
+
+#
+# Targets and macros to create Triton manifests and publish build artifacts.
+#
+
+#
+# The build itself doesn't add debug suffixes to its outputs when running
+# in the 'ILLUMOS_ENABLE_DEBUG=exclusive' (configure -d) mode, so the settings
+# below add suffixes to the bits-dir copies of these files as appropriate.
+# The 'PUB_' prefix below indicates published build artifacts.
+#
+ifeq ($(ILLUMOS_ENABLE_DEBUG),exclusive)
+    PLATFORM_DEBUG_SUFFIX = -debug
+endif
+
+BUILD_NAME			?= platform
+
+#
+# Values specific to the 'platform' build.
+#
+PLATFORM_BITS_DIR		= $(ROOT)/output/bits/platform$(PLATFORM_DEBUG_SUFFIX)
+PLATFORM_BRANCH ?= $(shell git symbolic-ref HEAD | awk -F/ '{print $$3}')
+
+#
+# PUB_BRANCH_DESC indicates the different 'projects' branches used by the build.
+# Our shell script uniqifies the branches used, then emits a
+# hyphen-separated string of 'projects' branches *other* than ones which
+# match $PLATFORM_BRANCH (the branch of smartos-live.git itself).
+# While this doesn't perfectly disambiguate builds from different branches,
+# it is good enough for our needs.
+#
+PUB_BRANCH_DESC		= $(shell ./tools/projects_branch_desc $(PLATFORM_BRANCH))
+
+PLATFORM_TIMESTAMP		= $(shell head -n1 $(STAMPFILE))
+PLATFORM_STAMP			= $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC)-$(PLATFORM_TIMESTAMP)
+
+PLATFORM_TARBALL_BASE		= platform-$(PLATFORM_TIMESTAMP).tgz
+PLATFORM_TARBALL		= output/$(PLATFORM_TARBALL_BASE)
+
+PUB_IMAGES_BASE			= images$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
+PUB_BOOT_BASE			= boot$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
+PUB_TESTS_BASE			= tests$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
+
+PUB_PLATFORM_IMG_BASE		= platform$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
+PUB_PLATFORM_MF_BASE		= platform$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).imgmanifest
+
+PUB_PLATFORM_MF			= $(PLATFORM_BITS_DIR)/$(PUB_PLATFORM_MF_BASE)
+PUB_PLATFORM_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_PLATFORM_IMG_BASE)
+
+PUB_IMAGES_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_IMAGES_BASE)
+PUB_BOOT_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_BOOT_BASE)
+PUB_TESTS_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_TESTS_BASE)
+
+PLATFORM_IMAGE_UUID		?= $(shell uuid -v4)
+
+#
+# platform-publish, platform-bits-upload and platform-bits-upload-latest
+# are analogous to the 'publish', 'bits-upload' and 'bits-upload-latest'
+# targets defined in the eng.git Makefile.defs and Makefile.targ files.
+# Typically a user would 'make world && make live' before invoking any
+# of these targets, though the '*-release' targets are likely more convenient.
+# Those are not dependencies to allow more flexibility during the publication
+# process.
+#
+# The platform-bits-publish|upload targets are also used for pushing
+# SmartOS releases to Manta.
+#
+
+
+.PHONY: common-platform-publish
+common-platform-publish:
+	@echo "# Publish common platform$(PLATFORM_DEBUG_SUFFIX) bits"
+	mkdir -p $(PLATFORM_BITS_DIR)
+	cp $(PLATFORM_TARBALL) $(PUB_PLATFORM_TARBALL)
+	cp $(TESTS_TARBALL) $(PUB_TESTS_TARBALL)
+	for config_file in configure-projects configure-build; do \
+	    if [[ -f $$config_file ]]; then \
+	        cp $$config_file $(PLATFORM_BITS_DIR); \
+	    fi; \
+	done
+	echo $(PLATFORM_STAMP) > latest-build-stamp
+	./tools/build_changelog
+	cp output/gitstatus.json $(PLATFORM_BITS_DIR)
+	cp output/changelog.txt $(PLATFORM_BITS_DIR)
+
+.PHONY: triton-platform-publish
+triton-platform-publish: common-platform-publish
+	@echo "# Publish Triton-specific platform$(PLATFORM_DEBUG_SUFFIX) bits"
+	mkdir -p $(PLATFORM_BITS_DIR)
+	cat src/platform.imgmanifest.in | sed \
+	    -e "s/UUID/$(PLATFORM_IMAGE_UUID)/" \
+	    -e "s/VERSION_STAMP/$(PLATFORM_STAMP)/" \
+	    -e "s/BUILDSTAMP/$(PLATFORM_STAMP)/" \
+	    -e "s/SIZE/$$(stat --printf="%s" $(PLATFORM_TARBALL))/" \
+	    -e "s#SHA#$$(digest -a sha1 $(PLATFORM_TARBALL))#" \
+	    > $(PUB_PLATFORM_MF)
+	cp $(IMAGES_TARBALL) $(PUB_IMAGES_TARBALL)
+	cp $(BOOT_TARBALL) $(PUB_BOOT_TARBALL)
+	cd $(ROOT)/output/bits/platform$(PLATFORM_DEBUG_SUFFIX)
+	rm -f platform$(PLATFORM_DEBUG_SUFFIX)-latest.imgmanifest
+	ln -s $(PUB_PLATFORM_MF_BASE) \
+	    platform$(PLATFORM_DEBUG_SUFFIX)-latest.imgmanifest
+
+#
+# The bits-upload.sh script in deps/eng is used to upload bits
+# either to a Manta instance under $ENGBLD_DEST_OUT_PATH (requiring $MANTA_USER,
+# $MANTA_KEY_ID and $MANTA_URL to be set in the environment, and
+# $MANTA_TOOLS_PATH pointing to the manta-client tools scripts) or, with
+# $ENGBLD_BITS_UPLOAD_LOCAL set to 'true', will upload to $ENGBLD_DEST_OUT_PATH
+# on a local filesystem. If $ENGBLD_BITS_UPLOAD_IMGAPI is set in the environment
+# it also publishes any images from the -D directory to updates.joyent.com.
+#
+
+ENGBLD_DEST_OUT_PATH ?=	/public/builds
+
+ifeq ($(ENGBLD_BITS_UPLOAD_LOCAL), true)
+BITS_UPLOAD_LOCAL_ARG = -L
+else
+BITS_UPLOAD_LOCAL_ARG =
+endif
+
+ifeq ($(ENGBLD_BITS_UPLOAD_IMGAPI), true)
+BITS_UPLOAD_IMGAPI_ARG = -p
+else
+BITS_UPLOAD_IMGAPI_ARG =
+endif
+
+.PHONY: platform-bits-upload
+platform-bits-upload:
+	PATH=$(MANTA_TOOLS_PATH):$(PATH) \
+	    $(ROOT)/deps/eng/tools/bits-upload.sh \
+	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+	        $(BITS_UPLOAD_LOCAL_ARG) \
+	        $(BITS_UPLOAD_IMGAPI_ARG) \
+	        -D $(ROOT)/output/bits \
+	        -d $(ENGBLD_DEST_OUT_PATH)/$(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX) \
+	        -n $(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX) \
+	        -t $(PLATFORM_STAMP)
+
+#
+# Clear TIMESTAMP due to TOOLS-2241, where bits-upload would otherwise interpret
+# that environment variable as the '-t' option
+#
+.PHONY: platform-bits-upload-latest
+platform-bits-upload-latest:
+	PATH=$(MANTA_TOOLS_PATH):$(PATH) TIMESTAMP= \
+	    $(ROOT)/deps/eng/tools/bits-upload.sh \
+	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+	        $(BITS_UPLOAD_LOCAL_ARG) \
+	        $(BITS_UPLOAD_IMGAPI_ARG) \
+	        -D $(ROOT)/output/bits \
+	        -d $(ENGBLD_DEST_OUT_PATH)/$(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX) \
+	        -n $(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX)
+
+#
+# A wrapper to build the additional components that a standard
+# SmartOS release needs.
+#
+.PHONY: smartos-build
+smartos-build:
+	./tools/build_boot_image -I -r $(ROOT)
+	./tools/build_boot_image -r $(ROOT)
+	./tools/build_vmware -r $(ROOT)
+
+.PHONY: smartos-publish
+smartos-publish:
+	@echo "# Publish SmartOS platform $(PLATFORM_TIMESTAMP) images"
+	mkdir -p $(PLATFORM_BITS_DIR)
+	cp output/platform-$(PLATFORM_TIMESTAMP)/root.password \
+	    $(PLATFORM_BITS_DIR)/SINGLE_USER_ROOT_PASSWORD.txt
+	cp output-iso/platform-$(PLATFORM_TIMESTAMP).iso \
+	    $(PLATFORM_BITS_DIR)/smartos-$(PLATFORM_TIMESTAMP).iso
+	cp output-usb/platform-$(PLATFORM_TIMESTAMP).usb.gz \
+	    $(PLATFORM_BITS_DIR)/smartos-$(PLATFORM_TIMESTAMP)-USB.img.gz
+	cp output-vmware/smartos-$(PLATFORM_TIMESTAMP).vmwarevm.tar.gz \
+		$(PLATFORM_BITS_DIR)
+	(cd $(PLATFORM_BITS_DIR) && \
+	    $(ROOT)/tools/smartos-index $(PLATFORM_TIMESTAMP) > index.html)
+	(cd $(PLATFORM_BITS_DIR) && \
+	    /usr/bin/sum -x md5 * > md5sums.txt)
+
+#
+# Define a series of phony targets that encapsulate a standard 'release' process
+# for both SmartOS and Triton platform builds. These are a convenience to allow
+# callers to invoke only two 'make' commands after './configure' has been run.
+# We can't combine these because our stampfile likely doesn't exist at the point
+# that the various build artifact Makefile macros are set, resulting in
+# misnamed artifacts. Thus, expected usage is:
+#
+# ./configure
+# make common-release; make triton-release
+#  or
+# make common-release; make triton-smartos-release
+# or
+# make common-release; make smartos-only-release
+#
+.PHONY: common-release
+common-release: \
+    check \
+    live \
+    pkgsrc
+
+.PHONY: triton-release
+triton-release: \
+    images-tar \
+    tests-tar \
+    triton-platform-publish \
+    platform-bits-upload
+
+.PHONY: triton-smartos-release
+triton-smartos-release: \
+    images-tar \
+    tests-tar \
+    triton-platform-publish \
+    smartos-build \
+    smartos-publish \
+    platform-bits-upload
+
+.PHONY: smartos-only-release
+smartos-only-release: \
+    tests-tar \
+    common-platform-publish \
+    smartos-build \
+    smartos-publish \
+    platform-bits-upload
+
+print-%:
+	@echo '$*=$($*)'
 
 FRC:
 

@@ -17,6 +17,9 @@ _fwadm()
         vms_uuids=$(zoneadm list -cp | grep -v ':global:' | cut -d':' -f5 | \
             sort | uniq)
         COMPREPLY=( $(compgen -W "${vms_uuids}" -- ${cur}) )
+        if [[ -z "$COMPREPLY" ]]; then
+            _zone_alias
+        fi
 
     elif [[ ${prev} == 'delete'
           || ${prev} == 'disable'

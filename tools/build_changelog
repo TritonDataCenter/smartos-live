@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright (c) 2013, Joyent, Inc. All rights reserved.
+# Copyright 2019 Joyent, Inc.
 # Copyright (c) 2014 Elysium Digital, L.L.C.
 #
 
@@ -85,10 +85,3 @@ for git_dir in $(/usr/bin/find projects -maxdepth 3 -type d -name .git || \
 	(build_section ${git_dir}/.. ${lastbranch} >> output/changelog.txt) || \
 	    fail "failed to build_section for projects/${project}"
 done
-
-if [[ -d overlay/smartos ]] && \
-    grep -q ${PWD}/overlay/smartos overlay/order; then
-	(build_section overlay/smartos ${lastbranch} smartos-overlay >> \
-	    output/changelog.txt) || \
-	    fail "failed to build_section for overlay/smartos"
-fi

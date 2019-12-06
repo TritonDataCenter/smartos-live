@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2019, Joyent, Inc.
+ * Copyright 2019 Joyent, Inc.
  *
  */
 
@@ -60,7 +60,6 @@ var ZoneEvent = require('/usr/vm/node_modules/zoneevent').ZoneEvent;
 var DOCKER_RUNTIME_DELAY_RESET = 10000;
 
 var REPORTED_STATES = ['running', 'stopped'];
-var UPGRADE_SCRIPT = '/smartdc/vm-upgrade/001_upgrade';
 var VMADMD_PORT = 8080;
 var VMADMD_AUTOBOOT_FILE = '/tmp/.autoboot_vmadmd';
 
@@ -903,8 +902,11 @@ function updateZoneStatus(ev)
         || (ev.oldstate === 'configured' && ev.newstate === 'incomplete')
         || (ev.oldstate === 'incomplete' && ev.newstate === 'installed')) {
         // just log it
-        log.debug({old: ev.oldstate, new: ev.newstate},
-            'ignoring state transitions before first boot');
+        log.debug({
+            old: ev.oldstate,
+            new: ev.newstate,
+            vm: ev.zonename
+        }, 'ignoring state transitions before first boot');
         return;
     }
 
@@ -2341,27 +2343,6 @@ function upgradeVM(vmobj, fields, callback)
                 cb();
             });
         }, function (cb) {
-            fs.exists(UPGRADE_SCRIPT, function (exists) {
-                if (exists) {
-                    execFile(UPGRADE_SCRIPT, [vmobj.uuid],
-                        function (err, stdout, stderr) {
-                            log.debug({err: err, stdout: stdout,
-                                stderr: stderr}, 'upgrade output');
-                            if (err) {
-                                log.error(err);
-                                cb(err);
-                                return;
-                            }
-                            log.info('successfully ran 001_upgrade');
-                            cb();
-                        }
-                    );
-                } else {
-                    log.warn('No ' + UPGRADE_SCRIPT + ', skipping');
-                    cb();
-                }
-            });
-        }, function (cb) {
             // zonecfg update vm-version = 1
             var cmd;
 
@@ -2604,6 +2585,14 @@ function main()
                                     upgrade_payload.update_nics.push(
                                         update_nic);
                                 }
+                            }
+
+                            if (upgrade_payload.update_nics.length === 0) {
+                                log.debug({
+                                    vm_uuid: vmobj.uuid
+                                }, 'no nics to update, skipping VM.update()');
+                                finishUpgrade(vmobj);
+                                return;
                             }
 
                             log.info('updating ' + vmobj.uuid + ' with: '

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * fwadm tests: all and any targets
  */
@@ -30,14 +30,7 @@ var clone = require('clone');
 var fw;
 var helpers = require('../lib/helpers');
 var mocks = require('../lib/mocks');
-var mod_obj = require('../../lib/util/obj');
-var mod_uuid = require('uuid');
 var util = require('util');
-var util_vm = require('../../lib/util/vm');
-
-var createSubObjects = mod_obj.createSubObjects;
-var mergeObjects = mod_obj.mergeObjects;
-
 
 
 // --- Globals
@@ -109,6 +102,7 @@ exports['any <-> vm: add / update'] = function (t) {
 
             t.ok(res.rules[0].version, 'rule has a version');
             expRules[0].version = res.rules[0].version;
+            expRules[0].log = false;
 
             t.deepEqual(res, {
                 rules: expRules,
@@ -169,6 +163,7 @@ exports['any <-> vm: add / update'] = function (t) {
 
             t.ok(res.rules[0].version, 'rule has a version');
             expRules[1].version = res.rules[0].version;
+            expRules[1].log = false;
 
             t.deepEqual(res, {
                 vms: [ vm.uuid ],
@@ -636,6 +631,7 @@ exports['add / update: all ports'] = function (t) {
 
             t.ok(res.rules[0].version, 'rule has a version');
             expRules[0].version = res.rules[0].version;
+            expRules[0].log = false;
 
             t.deepEqual(res, {
                 rules: expRules,
@@ -691,6 +687,7 @@ exports['add / update: all ports'] = function (t) {
 
             t.ok(res.rules[0].version, 'rule has a version');
             expRules[1].version = res.rules[0].version;
+            expRules[1].log = false;
 
             t.deepEqual(res, {
                 vms: [ vm.uuid ],
@@ -749,6 +746,7 @@ exports['add / update: all ports'] = function (t) {
 
             t.ok(res.rules[0].version, 'rule has a version');
             expRules[1].version = res.rules[0].version;
+            expRules[1].log = false;
 
             t.deepEqual(helpers.sortRes(res), {
                 vms: [ vm.uuid, vm2.uuid ].sort(),

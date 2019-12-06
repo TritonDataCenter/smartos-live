@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright 2018 Joyent, Inc.
  */
 
 /*
@@ -61,7 +61,7 @@ test('require("/usr/img/lib/IMG")', function (t) {
 });
 
 test('IMG.*', function (t) {
-    IMG.quickGetImage;
+    t.ok(IMG.quickGetImage);
     t.end();
 });
 
@@ -84,4 +84,3 @@ test('IMG.quickGetImage err', function (t) {
         t.end();
     });
 });
-

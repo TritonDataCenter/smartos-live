@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2019, Joyent, Inc. All rights reserved.
  *
  *
  * fwadm: firewall rule model
@@ -48,6 +48,7 @@ var FIELDS = [
     'description',
     'enabled',
     'global',
+    'log',
     'owner_uuid',
     'rule',
     'uuid',
@@ -379,6 +380,18 @@ function FwRule(data, opts) {
         this.enabled = false;
     }
 
+    if (hasOwnProperty(data, 'log')) {
+        if (!validators.bool(data.log)) {
+            errs.push(new validators.InvalidParamError('log',
+                'log must be true or false'));
+        }
+
+        this.log = data.log;
+    } else {
+        this.log = false;
+    }
+
+
     for (var s in STRING_PROPS) {
         var str = STRING_PROPS[s];
         if (hasOwnProperty(data, str)) {
@@ -591,6 +604,7 @@ FwRule.prototype.raw = function () {
     var raw = {
         action: this.action,
         enabled: this.enabled,
+        log: this.log,
         from: this.from,
         priority: this.priority,
         protocol: this.protocol,

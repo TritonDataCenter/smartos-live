@@ -1,7 +1,7 @@
 {
   "name": "fw",
   "description": "Administrative tool for managing SmartOS VM firewalls",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": "Joyent (joyent.com)",
   "private": true,
   "main": "./lib/fw.js",

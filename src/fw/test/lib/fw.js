@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2019, Joyent, Inc. All rights reserved.
  *
  * Test utilities for running fwadm commands
  */
@@ -47,8 +47,8 @@ function statsContain(t, uuid, wantedRules, inDesc, cb) {
 
         t.equal(missingRules.length, 0, desc + ' should be 0 missing rules');
         if (missingRules.length) {
-            t.ok(false, 'Missing rules:\n  ' + missingRules.join('\n  ') +
-                '\nVm rules:\n  ' + vmRules.join('\n  '));
+            t.ok(false, 'Missing rules:\n  ' + missingRules.join('\n  ')
+                + '\nVm rules:\n  ' + vmRules.join('\n  '));
         }
 
         return cb();

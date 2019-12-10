@@ -301,7 +301,6 @@
         "node-cmdutil",
         "node-codel",
         "node-consulite",
-        "node-contract",
         "node-crc",
         "node-ctype",
         "node-cueball",

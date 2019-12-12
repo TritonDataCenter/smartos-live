@@ -1,7 +1,7 @@
 {
   "name": "vmadm",
   "description": "administrative tool(s) for managing VMs",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "author": "Joyent (joyent.com)",
   "private": true,
   "devDependencies": {

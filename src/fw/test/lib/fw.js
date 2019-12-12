@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * Test utilities for running fwadm commands
  */

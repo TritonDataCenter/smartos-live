@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * Integration tests for rules that allow IPsec traffic into an instance.
  */

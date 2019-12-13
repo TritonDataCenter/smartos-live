@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * Integration tests for rules that allow IPsec traffic into an instance.
  */
@@ -13,8 +13,7 @@ var uuid = require('uuid');
 
 // --- Globals
 
-var KS = ' keep state';
-var KF = ' keep frags';
+var KSKF = ' keep state keep frags';
 
 var d = {
     owner_uuid: uuid.v4()
@@ -95,10 +94,10 @@ exports['create vm and rules'] = {
 
     'check ipf rules': function (t) {
         mod_fw.statsContain(t, d.vm.uuid, [
-            'pass in quick proto ah from any to any' + KF,
-            'pass in quick proto esp from any to any' + KF,
-            'pass in quick proto udp from any to any port = isakmp' + KF,
-            'pass in quick proto udp from any to any port = ipsec-nat-t' + KF
+            'pass in quick proto ah from any to any' + KSKF,
+            'pass in quick proto esp from any to any' + KSKF,
+            'pass in quick proto udp from any to any port = isakmp' + KSKF,
+            'pass in quick proto udp from any to any port = ipsec-nat-t' + KSKF
         ], 'ipsec rules applied', function () {
             t.done();
         });

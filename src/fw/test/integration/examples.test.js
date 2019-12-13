@@ -267,7 +267,7 @@ exports['vmadm'] = {
 
     'stats after vmadm_vm1': function (t) {
         mod_fw.statsContain(t, VMS[0], [
-            'block out quick proto tcp from any to any port = smtp' + KF
+            'block out quick proto tcp from any to any port = smtp' + KS + KF
         ], 'smtp block rule applied', function () {
             return t.done();
         });
@@ -300,7 +300,7 @@ exports['vmadm'] = {
 
     'stats after vmadm_cmd1': function (t) {
         mod_fw.statsContain(t, VMS[0], [
-            'block out quick proto tcp from any to any port = smtp' + KF,
+            'block out quick proto tcp from any to any port = smtp' + KS + KF,
             'pass in quick proto tcp from any to any port = www' + KS + KF,
             'pass in quick proto tcp from any to any port = https' + KS + KF
         ], 'smtp block rule applied', function () {
@@ -349,7 +349,7 @@ exports['vmadm'] = {
 
     'stats after start': function (t) {
         mod_fw.statsContain(t, VMS[0], [
-            'block out quick proto tcp from any to any port = smtp' + KF,
+            'block out quick proto tcp from any to any port = smtp' + KS + KF,
             'pass in quick proto tcp from any to any port = www' + KS + KF,
             'pass in quick proto tcp from any to any port = https' + KS + KF
         ], 'smtp block rule applied', function () {

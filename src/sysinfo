@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2019 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -693,13 +693,19 @@ function get_setup()
 
 function get_recovery_configs()
 {
+    # This gets set to indicate if we should emit a
+    # 'Zpool_Recovery' property in the output. CNs without
+    # encryption should never emit this property.
+    has_recovery=
+
     for line in $(kbmadm recovery list -p 2>/dev/null); do
         fields=(${line//:/ })
         cfg=${fields[0]}
         cfguuid=${fields[1]}
-        [[ -n "$cfguuid" ]] && \
+        if [[ -n "$cfguuid" ]]; then
             printf -v "Zpool_Recovery_${cfg}" "%s" "$cfguuid" && \
             has_recovery=1
+        fi
      done
 }
 
@@ -930,10 +936,12 @@ if [[ ${ZONENAME} == "global" ]]; then
         fi
 
         echo '  "Zpool Recovery": {'
-        [[ -n "${Zpool_Recovery_active}" ]] && \
+        if [[ -n "${Zpool_Recovery_active}" ]]; then
             echo '    "active": "'${Zpool_Recovery_active}'"'${comma}
-        [[ -n "${Zpool_Recovery_staged}" ]] && \
+        fi
+        if [[ -n "${Zpool_Recovery_staged}" ]]; then
             echo '    "staged": "'${Zpool_Recovery_staged}'"'
+        fi
         echo '  },'
     fi
 

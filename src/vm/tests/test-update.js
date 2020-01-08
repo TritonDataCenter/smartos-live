@@ -258,8 +258,7 @@ var PAYLOADS = {
             }
         ]
     }, remove_fs_tmp_global: {
-        remove_filesystems: [
-	  '/var/tmp/global']
+        remove_filesystems: ['/var/tmp/global']
     }
 };
 
@@ -1487,14 +1486,20 @@ test('add fs /var/tmp/global', function (t) {
                 if (err) {
                     t.ok(false, 'failed reloading VM');
                 } else if (obj.filesystems.length !== 1) {
-                    t.ok(false, 'VM has ' + obj.filesystems.length + ' != 1 filesystem');
+                    t.ok(false, 'VM has ' + obj.filesystems.length
+                        + ' != 1 filesystem');
                 } else {
-                    for (field in PAYLOADS.add_fs_tmp_global.add_filesystems[0]) {
-                        var cmp_value_set = JSON.stringify(obj.filesystems[0][field]);
-                        var cmp_value_payload = JSON.stringify(PAYLOADS.add_fs_tmp_global.add_filesystems[0][field]);
+                    for (field in PAYLOADS.add_fs_tmp_global.
+                        add_filesystems[0]) {
+                        var cmp_value_set = JSON.stringify(
+                            obj.filesystems[0][field]);
+                        var cmp_value_payload = JSON.stringify(PAYLOADS.
+                            add_fs_tmp_global.add_filesystems[0][field]);
                         var cmp_result = (cmp_value_set === cmp_value_payload);
-                        var msg_ok = 'field ' + field + ' was set to ' + cmp_value_set;
-                        var msg_fail = msg_ok + ', but expected value is ' + cmp_value_payload;
+                        var msg_ok = 'field ' + field + ' was set to '
+                            + cmp_value_set;
+                        var msg_fail = msg_ok + ', but expected value is '
+                            + cmp_value_payload;
                         t.ok(cmp_result, cmp_result ? msg_ok : msg_fail);
                     }
                 }
@@ -1516,14 +1521,20 @@ test('set fs /var/tmp/global as readonly', function (t) {
                 if (err) {
                     t.ok(false, 'failed reloading VM');
                 } else if (obj.filesystems.length !== 1) {
-                    t.ok(false, 'VM has ' + obj.filesystems.length + ' != 1 filesystem');
+                    t.ok(false, 'VM has ' + obj.filesystems.length
+                        + ' != 1 filesystem');
                 } else {
-                    for (field in PAYLOADS.update_fs_tmp_global.update_filesystems[0]) {
-                        var cmp_value_set = JSON.stringify(obj.filesystems[0][field]);
-                        var cmp_value_payload = JSON.stringify(PAYLOADS.update_fs_tmp_global.update_filesystems[0][field]);
+                    for (field in PAYLOADS.update_fs_tmp_global.
+                        update_filesystems[0]) {
+                        var cmp_value_set = JSON.stringify(
+                            obj.filesystems[0][field]);
+                        var cmp_value_payload = JSON.stringify(PAYLOADS.
+                            update_fs_tmp_global.update_filesystems[0][field]);
                         var cmp_result = (cmp_value_set === cmp_value_payload);
-                        var msg_ok = 'field ' + field + ' was set to ' + cmp_value_set;
-                        var msg_fail = msg_ok + ', but expected value is ' + cmp_value_payload;
+                        var msg_ok = 'field ' + field + ' was set to '
+                            + cmp_value_set;
+                        var msg_fail = msg_ok + ', but expected value is '
+                            + cmp_value_payload;
                         t.ok(cmp_result, cmp_result ? msg_ok : msg_fail);
                     }
                 }
@@ -1543,7 +1554,8 @@ test('remove fs /var/tmp/global', function (t) {
                 if (err) {
                     t.ok(false, 'failed reloading VM');
                 } else if (obj.hasOwnProperty('filesystems')) {
-                    t.ok(false, 'VM has ' + obj.filesystems.length + ' != 0 filesystems');
+                    t.ok(false, 'VM has ' + obj.filesystems.length
+                        + ' != 0 filesystems');
                 } else {
                     t.ok(true, 'Successfully removed filesystem from VM');
                 }

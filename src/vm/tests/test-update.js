@@ -1485,8 +1485,9 @@ test('add fs /var/tmp/global', function (t) {
 
                 if (err) {
                     t.ok(false, 'failed reloading VM');
-                } else if (obj.filesystems === undefined
-                            || obj.filesystems.length !== 1) {
+                } else if (obj.filesystems === undefined) {
+                    t.ok(false, 'VM has no filesystems');
+                } else if (obj.filesystems.length !== 1) {
                     t.ok(false, 'VM has ' + obj.filesystems.length
                         + ' != 1 filesystem');
                 } else {
@@ -1521,8 +1522,9 @@ test('set fs /var/tmp/global as readonly', function (t) {
 
                 if (err) {
                     t.ok(false, 'failed reloading VM');
-                } else if (obj.filesystems === undefined
-                            || obj.filesystems.length !== 1) {
+                } else if (obj.filesystems === undefined) {
+                    t.ok(false, 'VM has no filesystems');
+                } else if (obj.filesystems.length !== 1) {
                     t.ok(false, 'VM has ' + obj.filesystems.length
                         + ' != 1 filesystem');
                 } else {

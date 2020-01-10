@@ -92,7 +92,7 @@ echo "Creating release objects under ${DESTINATION}"
 mmkdir -v -p ${DESTINATION}
 # Add an object pointing to the actual platform Manta directory, along with
 # a html version, for convenience.
-echo ${SOURCE} | mput ${DESTINATION}/platform-link
+echo ${SOURCE} | mput -H 'content-type: text/plain' ${DESTINATION}/platform-link
 echo "
 <html>
 <head><title>SmartOS ${BRANCH}-${TIMESTAMP}</title></head>

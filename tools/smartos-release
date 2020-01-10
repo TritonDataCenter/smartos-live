@@ -59,7 +59,7 @@ function print_help() {
     echo ""
     echo "Write a 'platform-link' file to /\${MANTA_USER}/public/SmartOS/\${TIMESTAMP}"
     echo "pointing to /\${MANTA_USER}/public/builds/platform/\${BRANCH}-\${TIMESTAMP}/platform/"
-    echo "and upload *-latest.* files to /\${MANTA_USER}/public/SmartOS/"
+    echo "and uploading *-latest.* files to /\${MANTA_USER}/public/SmartOS/"
 }
 
 
@@ -84,15 +84,15 @@ set -o errexit
 # name. See $(PUB_BRANCH_DESC) in the top-level Makefile for more details.
 SOURCE=/${MANTA_USER}/public/builds/platform/${BRANCH}-${TIMESTAMP}/platform
 SMARTOS=/${MANTA_USER}/public/SmartOS
-DESTINATION=${SMARTOS}/${TIMESTAMP}
+SMARTOS_RELEASE=${SMARTOS}/${TIMESTAMP}
 
 start_time=$(date +%s)
-echo "Creating release objects under ${DESTINATION}"
+echo "Creating release objects under ${SMARTOS_RELEASE}"
 
-mmkdir -v -p ${DESTINATION}
+mmkdir -v -p ${SMARTOS_RELEASE}
 # Add an object pointing to the actual platform Manta directory, along with
 # a html version, for convenience.
-echo ${SOURCE} | mput -H 'content-type: text/plain' ${DESTINATION}/platform-link
+echo ${SOURCE} | mput -H 'content-type: text/plain' ${SMARTOS_RELEASE}/platform-link
 echo "
 <html>
 <head><title>SmartOS ${BRANCH}-${TIMESTAMP}</title></head>
@@ -100,7 +100,7 @@ echo "
 <a href='../../builds/platform/${BRANCH}-${TIMESTAMP}/platform/index.html'>
 $BRANCH-$TIMESTAMP artifacts</a>
 </body>
-</html>" | mput -H 'content-type: text/html' ${DESTINATION}/platform-link.html
+</html>" | mput -H 'content-type: text/html' ${SMARTOS_RELEASE}/platform-link.html
 
 echo "Uploading 'latest' ${SMARTOS} objects to ${SMARTOS}"
 BITS=output/bits/platform
@@ -117,5 +117,5 @@ echo "<html><head><meta HTTP-EQUIV=\"REFRESH\" content=\"0; url=${SOURCE}/index.
 
 end_time=$(date +%s)
 elapsed=$((${end_time} - ${start_time}))
-echo "Uploading SmartOS release bits took ${elapsed} seconds (Manta path=${DESTINATION})"
+echo "Uploading SmartOS release bits took ${elapsed} seconds (Manta path=${SMARTOS_RELEASE})"
 exit 0

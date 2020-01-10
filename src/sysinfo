@@ -703,10 +703,10 @@ function get_recovery_configs()
         cfg=${fields[0]}
         cfguuid=${fields[1]}
         if [[ -n "$cfguuid" ]]; then
-            printf -v "Zpool_Recovery_${cfg}" "%s" "$cfguuid" && \
+            printf -v "Zpool_Recovery_${cfg}" "%s" "$cfguuid"
             has_recovery=1
         fi
-     done
+    done
 }
 
 function output_parsable()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2019, Joyent, Inc.
  *
  * Integration tests for enabling / disabling firewalls in a VM
  */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Joyent, Inc. All rights reserved.
+ * Copyright 2019 Joyent, Inc.
  *
  * Test utilities for running fwadm commands
  */
@@ -18,38 +18,37 @@ var util = require('util');
 /**
  * Test whether the ipf rules show up in 'fwadm status' for a VM
  */
-function statsContain(t, uuid, inLines, inDesc, cb) {
+function statsContain(t, uuid, wantedRules, inDesc, cb) {
     var cmd = 'fwadm stats ' + uuid;
     var desc = inDesc + ': ';
-    // clone the input:
-    var lines = inLines.slice();
 
     mod_cp.exec(cmd, function compareStats(err, stdout, stderr) {
         t.ifError(err, desc + 'error running: ' + cmd);
         t.equal(stderr, '', desc + 'stderr: ' + cmd);
 
-        var rules = [];
+        var vmRules = [];
 
         stdout.split('\n').forEach(function (line) {
             if (line === '') {
                 return;
             }
 
-            var parts = line.split(/\s+/g);
-            parts.shift();
-            var rule = parts.join(' ');
-            var idx = lines.indexOf(rule);
-            if (idx !== -1) {
-                t.ok(true, desc + 'found rule: ' + rule);
-                lines.splice(idx, 1);
-            }
-
-            rules.push(rule);
+            // Sanitize and strip the first word/number off the rule.
+            var rule = line.split(/\s+/g).slice(1).join(' ');
+            vmRules.push(rule);
         });
 
-        t.deepEqual(lines, [], desc + 'found all rules');
-        if (lines.length !== 0) {
-            t.deepEqual(rules, [], desc + 'rules found');
+        var missingRules = wantedRules.filter(function (wantedRule) {
+            // One of the vm rules must match the wanted rule.
+            return vmRules.some(function (vmRule) {
+                return vmRule.indexOf(wantedRule) === 0;
+            }) === false;
+        });
+
+        t.equal(missingRules.length, 0, desc + ' should be 0 missing rules');
+        if (missingRules.length) {
+            t.ok(false, 'Missing rules:\n  ' + missingRules.join('\n  ')
+                + '\nVm rules:\n  ' + vmRules.join('\n  '));
         }
 
         return cb();

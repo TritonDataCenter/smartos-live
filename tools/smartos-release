@@ -6,13 +6,16 @@
 #
 
 #
-# Copyright 2019 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 #
-# This script is run as part of the biweekly SmartOS release process, and
-# creates snaplinks in Manta to point ~~/public/SmartOS/<timestamp>/ to the
-# current ~~/public/builds/platform/<release>-<timestamp>/platform directory.
+# This script is run as part of the biweekly SmartOS release process. It
+# uploads the release artifacts from the platform build bits directory to
+# ~~/public/SmartOS/<timestamp>/ , for processing
+# by the https://github.com/joyent/smartos-changelog generator, and uploads
+# the 'latest' release artifacts to ~~/public/SmartOS/*-latest.* to preserve
+# compatibility with scripts that expect to find them there.
 #
 
 # Update the SmartOS release directory
@@ -23,7 +26,6 @@ fi
 
 TOP=$(cd $(dirname $0)/../; pwd)
 PATH=$PATH:${TOP}/node_modules/manta/bin
-
 
 # --- Manta config
 
@@ -36,7 +38,6 @@ fi
 if [[ -z "$MANTA_USER" ]]; then
     export MANTA_USER="Joyent_Dev";
 fi
-
 
 # --- support functions
 
@@ -54,10 +55,10 @@ function print_help() {
     echo "Usage:"
     echo "  ./tools/smartos-release BRANCH TIMESTAMP"
     echo ""
-    echo "Create snaplinks under /\${MANTA_USER}/public/SmartOS/\${TIMESTAMP}"
-    echo "pointing to objects under /\${MANTA_USER}/public/builds/platform/\${BRANCH}-\${TIMESTAMP}/platform/"
+    echo "Upload build artifacts to /\${MANTA_USER}/public/SmartOS/\${TIMESTAMP}"
+    echo "duplicating content from /\${MANTA_USER}/public/builds/platform/\${BRANCH}-\${TIMESTAMP}/platform/"
+    echo "and uploading *-latest.* files to /\${MANTA_USER}/public/SmartOS/"
 }
-
 
 # --- mainline
 
@@ -75,34 +76,46 @@ fi
 
 set -o errexit
 
-# Note that ${BRANCH} appears only once here as we assume that for release
-# builds, all project branches and smartos-live itself use the same branch
-# name. See $(PUB_BRANCH_DESC) in the top-level Makefile for more details.
-SOURCE=/${MANTA_USER}/public/builds/platform/${BRANCH}-${TIMESTAMP}/platform/
 SMARTOS=/${MANTA_USER}/public/SmartOS
-DESTINATION=${SMARTOS}/${TIMESTAMP}
+SMARTOS_RELEASE=${SMARTOS}/${TIMESTAMP}
+BITS=output/bits/platform
 
 start_time=$(date +%s)
-echo "Creating release snaplinks under ${DESTINATION}"
 
-mmkdir -v -p ${DESTINATION}
-mfind ${SOURCE} -t o | while read OBJECT; do
-    mln ${OBJECT} ${DESTINATION}/$(basename ${OBJECT})
+echo "Uploading release objects to ${SMARTOS_RELEASE}"
+mmkdir -p ${SMARTOS_RELEASE}
+
+BUILD_FILES="platform-${BRANCH}-${TIMESTAMP}.tgz
+    platform-${BRANCH}-${TIMESTAMP}.imgmanifest
+    boot-${BRANCH}-${TIMESTAMP}.tgz
+    tests-${BRANCH}-${TIMESTAMP}.tgz
+    smartos-${TIMESTAMP}.iso
+    smartos-${TIMESTAMP}-USB.img.gz
+    smartos-${TIMESTAMP}.vmwarevm.tar.gz
+    SINGLE_USER_ROOT_PASSWORD.txt
+    build.log
+    changelog.txt
+    configure-projects
+    gitstatus.json
+    index.html
+    md5sums.txt"
+for file in ${BUILD_FILES}; do
+    mput -f ${BITS}/$file ${SMARTOS_RELEASE}/$file
 done
 
-echo "Updating top level ${SMARTOS} snaplinks"
-mln ${SOURCE}/platform-${BRANCH}-${TIMESTAMP}.tgz ${SMARTOS}/platform-latest.tgz
-mln ${SOURCE}/smartos-${TIMESTAMP}.iso ${SMARTOS}/smartos-latest.iso
-mln ${SOURCE}/smartos-${TIMESTAMP}-USB.img.gz ${SMARTOS}/smartos-latest-USB.img.gz
-mln ${SOURCE}/smartos-${TIMESTAMP}.vmwarevm.tar.gz ${SMARTOS}/smartos-latest.vmwarevm.tar.gz
+echo "Uploading 'latest' ${SMARTOS} objects to ${SMARTOS}"
+mput -f $BITS/platform-${BRANCH}-${TIMESTAMP}.tgz ${SMARTOS}/platform-latest.tgz
+mput -f $BITS/smartos-${TIMESTAMP}.iso ${SMARTOS}/smartos-latest.iso
+mput -f $BITS/smartos-${TIMESTAMP}-USB.img.gz ${SMARTOS}/smartos-latest-USB.img.gz
+mput -f $BITS/smartos-${TIMESTAMP}.vmwarevm.tar.gz ${SMARTOS}/smartos-latest.vmwarevm.tar.gz
 
 echo "Updating ${SMARTOS}/latest object"
-echo ${DESTINATION} | mput -v -H 'content-type: text/plain' ${SMARTOS}/latest
+echo ${SMARTOS_RELEASE} | mput -H 'content-type: text/plain' ${SMARTOS}/latest
 
 # The index.html file referenced here gets created by 'smartos-index'
-echo "<html><head><meta HTTP-EQUIV=\"REFRESH\" content=\"0; url=${SOURCE}/index.html\"></head></html>" | mput -H 'content-type: text/html' ${SMARTOS}/latest.html
+echo "<html><head><meta HTTP-EQUIV=\"REFRESH\" content=\"0; url=${SMARTOS_RELEASE}/index.html\"></head></html>" | mput -H 'content-type: text/html' ${SMARTOS}/latest.html
 
 end_time=$(date +%s)
 elapsed=$((${end_time} - ${start_time}))
-echo "Creating release snaplinks took ${elapsed} seconds (Manta path=${DESTINATION})"
+echo "Uploading SmartOS release bits took ${elapsed} seconds (Manta path=${SMARTOS_RELEASE})"
 exit 0

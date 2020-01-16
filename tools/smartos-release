@@ -85,14 +85,17 @@ start_time=$(date +%s)
 echo "Uploading release objects to ${SMARTOS_RELEASE}"
 mmkdir -p ${SMARTOS_RELEASE}
 
-mput -f $BITS/platform-${BRANCH}-${TIMESTAMP}.tgz ${SMARTOS_RELEASE}/platform-${BRANCH}-${TIMESTAMP}.tgz
-mput -f $BITS/platform-${BRANCH}-${TIMESTAMP}.imgmanifest ${SMARTOS_RELEASE}/platform-${BRANCH}-${TIMESTAMP}.imgmanifest
-mput -f $BITS/boot-${BRANCH}-${TIMESTAMP}.tgz ${SMARTOS_RELEASE}/boot-${BRANCH}-${TIMESTAMP}.tgz
-mput -f $BITS/tests-${BRANCH}-${TIMESTAMP}.tgz ${SMARTOS_RELEASE}/tests-${BRANCH}-${TIMESTAMP}.tgz
+BUILD_FILES="platform-${BRANCH}-${TIMESTAMP}.tgz
+    platform-${BRANCH}-${TIMESTAMP}.imgmanifest
+    boot-${BRANCH}-${TIMESTAMP}.tgz
+    tests-${BRANCH}-${TIMESTAMP}.tgz
+    smartos-${TIMESTAMP}.iso
+    smartos-${TIMESTAMP}-USB.img.gz
+    smartos-${TIMESTAMP}.vmwarevm.tar.gz"
 
-mput -f $BITS/smartos-${TIMESTAMP}.iso ${SMARTOS_RELEASE}/smartos-${TIMESTAMP}.iso
-mput -f $BITS/smartos-${TIMESTAMP}-USB.img.gz ${SMARTOS_RELEASE}/smartos-${TIMESTAMP}-USB.img.gz
-mput -f $BITS/smartos-${TIMESTAMP}.vmwarevm.tar.gz ${SMARTOS_RELEASE}/smartos-${TIMESTAMP}.vmwarevm.tar.gz
+for file in ${BUILD_FILES}; do
+    mput -f ${BITS}/$file ${SMARTOS_RELEASE}/$file
+done
 
 ADDITIONAL_FILES="SINGLE_USER_ROOT_PASSWORD.txt
     build.log
@@ -101,8 +104,8 @@ ADDITIONAL_FILES="SINGLE_USER_ROOT_PASSWORD.txt
     gitstatus.json
     index.html
     md5sums.txt"
-for file in $ADDITIONAL_FILES; do
-    mput -f $BITS/$file ${SMARTOS_RELEASE}/$file
+for file in ${ADDITIONAL_FILES}; do
+    mput -f ${BITS}/$file ${SMARTOS_RELEASE}/$file
 done
 
 echo "Uploading 'latest' ${SMARTOS} objects to ${SMARTOS}"

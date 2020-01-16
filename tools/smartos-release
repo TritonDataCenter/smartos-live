@@ -91,20 +91,15 @@ BUILD_FILES="platform-${BRANCH}-${TIMESTAMP}.tgz
     tests-${BRANCH}-${TIMESTAMP}.tgz
     smartos-${TIMESTAMP}.iso
     smartos-${TIMESTAMP}-USB.img.gz
-    smartos-${TIMESTAMP}.vmwarevm.tar.gz"
-
-for file in ${BUILD_FILES}; do
-    mput -f ${BITS}/$file ${SMARTOS_RELEASE}/$file
-done
-
-ADDITIONAL_FILES="SINGLE_USER_ROOT_PASSWORD.txt
+    smartos-${TIMESTAMP}.vmwarevm.tar.gz
+    SINGLE_USER_ROOT_PASSWORD.txt
     build.log
     changelog.txt
     configure-projects
     gitstatus.json
     index.html
     md5sums.txt"
-for file in ${ADDITIONAL_FILES}; do
+for file in ${BUILD_FILES}; do
     mput -f ${BITS}/$file ${SMARTOS_RELEASE}/$file
 done
 

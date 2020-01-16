@@ -86,8 +86,6 @@ echo "Uploading release objects to ${SMARTOS_RELEASE}"
 mmkdir -p ${SMARTOS_RELEASE}
 
 BUILD_FILES="platform-${BRANCH}-${TIMESTAMP}.tgz
-    platform-${BRANCH}-${TIMESTAMP}.imgmanifest
-    boot-${BRANCH}-${TIMESTAMP}.tgz
     tests-${BRANCH}-${TIMESTAMP}.tgz
     smartos-${TIMESTAMP}.iso
     smartos-${TIMESTAMP}-USB.img.gz

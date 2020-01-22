@@ -1504,7 +1504,8 @@ test('add fs /var/tmp/global', function (t) {
                                 obj.filesystems[0][field]);
                             var cmp_value_payload = JSON.stringify(PAYLOADS.
                                 add_fs_tmp_global.add_filesystems[0][field]);
-                            var cmp_result = (cmp_value_set === cmp_value_payload);
+                            var cmp_result =
+                                (cmp_value_set === cmp_value_payload);
                             var msg_ok = 'field ' + field + ' was set to '
                                 + cmp_value_set;
                             var msg_fail = msg_ok + ', but expected value is '
@@ -1548,8 +1549,10 @@ test('set fs /var/tmp/global as readonly', function (t) {
                             var cmp_value_set = JSON.stringify(
                                 obj.filesystems[0][field]);
                             var cmp_value_payload = JSON.stringify(PAYLOADS.
-                                update_fs_tmp_global.update_filesystems[0][field]);
-                            var cmp_result = (cmp_value_set === cmp_value_payload);
+                                update_fs_tmp_global.
+                                update_filesystems[0][field]);
+                            var cmp_result =
+                                (cmp_value_set === cmp_value_payload);
                             var msg_ok = 'field ' + field + ' was set to '
                                 + cmp_value_set;
                             var msg_fail = msg_ok + ', but expected value is '

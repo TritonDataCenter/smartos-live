@@ -1480,8 +1480,13 @@ test('add fs /var/tmp/global', function (t) {
             t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
+            /*
+	     * Sometimes we hit a race in vminfod where two events are
+	     * reversed. This results in intermittend test failures, to
+	     * avoid this we wait for 100ms before continuing, this is
+	     * sufficiant to avoid the issue.
+	     */
             setTimeout(function () {
-                t.ok(true, 'waited 1s for vminfod');
                 VM.load(vm_uuid, function (err, obj) {
                     var field;
 
@@ -1520,8 +1525,13 @@ test('set fs /var/tmp/global as readonly', function (t) {
             t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
+            /*
+	     * Sometimes we hit a race in vminfod where two events are
+	     * reversed. This results in intermittend test failures, to
+	     * avoid this we wait for 100ms before continuing, this is
+	     * sufficiant to avoid the issue.
+	     */
             setTimeout(function () {
-                t.ok(true, 'waited 1s for vminfod');
                 VM.load(vm_uuid, function (err, obj) {
                     var field;
 
@@ -1560,8 +1570,13 @@ test('remove fs /var/tmp/global', function (t) {
             t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
         } else {
+            /*
+	     * Sometimes we hit a race in vminfod where two events are
+	     * reversed. This results in intermittend test failures, to
+	     * avoid this we wait for 100ms before continuing, this is
+	     * sufficiant to avoid the issue.
+	     */
             setTimeout(function () {
-                t.ok(true, 'waited 1s for vminfod');
                 VM.load(vm_uuid, function (err, obj) {
                     if (err) {
                         t.ok(false, 'failed reloading VM');

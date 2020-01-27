@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2019, Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  *
  */
 
@@ -299,6 +299,48 @@ var ZONECFG_PROPS = {
     max_shm_memory: [undefined, 5000, undefined, undefined],
     zfs_io_priority: [undefined, 50, undefined, undefined]
 };
+
+/*
+ * Sometimes we hit a race in vminfod where two events are reversed. This
+ * results in intermittent test failures, to avoid this we try for a while to
+ * see the update before giving up.
+ */
+function waitForPayload(t, timeout_s, check_func) {
+    assert.func(check_func, 'check_func');
+    assert.number(timeout_s, 'timeout_s');
+
+    var success = false;
+
+    vasync.whilst(function () {
+        return !success && timeout_s > 0;
+    }, function (cb) {
+        VM.load(vm_uuid, function (err, obj) {
+            if (err) {
+                t.ok(false, 'failed reloading VM');
+                cb(err);
+                return;
+            }
+
+            success = check_func(obj);
+
+            if (success) {
+                cb();
+            } else {
+                timeout_s -= 1;
+                setTimeout(cb, 1000);
+            }
+        });
+    }, function (err) {
+        if (err) {
+            t.ok(err, 'failed');
+        } else if (timeout_s === 0) {
+            t.ok(false, 'timed out waiting for VM update');
+        } else {
+            t.ok(true, 'VM updated');
+        }
+        t.end();
+    });
+}
 
 test('create VM', function (t) {
     VM.create(PAYLOADS.create, function (err, vmobj) {
@@ -1479,44 +1521,30 @@ test('add fs /var/tmp/global', function (t) {
         if (update_err) {
             t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
-        } else {
-            /*
-             * Sometimes we hit a race in vminfod where two events are
-             * reversed. This results in intermittent test failures, to
-             * avoid this we wait for 100ms before continuing, this is
-             * sufficient to avoid the issue.
-             */
-            setTimeout(function () {
-                VM.load(vm_uuid, function (err, obj) {
-                    var field;
-
-                    if (err) {
-                        t.ok(false, 'failed reloading VM');
-                    } else if (obj.filesystems === undefined) {
-                        t.ok(false, 'VM has no filesystems');
-                    } else if (obj.filesystems.length !== 1) {
-                        t.ok(false, 'VM has ' + obj.filesystems.length
-                            + ' != 1 filesystem');
-                    } else {
-                        for (field in PAYLOADS.add_fs_tmp_global.
-                            add_filesystems[0]) {
-                            var cmp_value_set = JSON.stringify(
-                                obj.filesystems[0][field]);
-                            var cmp_value_payload = JSON.stringify(PAYLOADS.
-                                add_fs_tmp_global.add_filesystems[0][field]);
-                            var cmp_result =
-                                (cmp_value_set === cmp_value_payload);
-                            var msg_ok = 'field ' + field + ' was set to '
-                                + cmp_value_set;
-                            var msg_fail = msg_ok + ', but expected value is '
-                                + cmp_value_payload;
-                            t.ok(cmp_result, cmp_result ? msg_ok : msg_fail);
-                        }
-                    }
-                    t.end();
-                });
-            }, 100);
+            return;
         }
+
+        waitForPayload(t, 10, function check(obj) {
+            if (obj.filesystems === undefined) {
+                return false;
+            } else if (obj.filesystems.length !== 1) {
+                return false;
+            } else {
+                var field;
+
+                for (field in PAYLOADS.add_fs_tmp_global.add_filesystems[0]) {
+                    var cmp_value_set = JSON.stringify(
+                        obj.filesystems[0][field]);
+                    var cmp_value_payload = JSON.stringify(PAYLOADS.
+                        add_fs_tmp_global.add_filesystems[0][field]);
+                    if (cmp_value_set !== cmp_value_payload) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        });
     });
 });
 
@@ -1525,45 +1553,32 @@ test('set fs /var/tmp/global as readonly', function (t) {
         if (update_err) {
             t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
-        } else {
-            /*
-             * Sometimes we hit a race in vminfod where two events are
-             * reversed. This results in intermittent test failures, to
-             * avoid this we wait for 100ms before continuing, this is
-             * sufficient to avoid the issue.
-             */
-            setTimeout(function () {
-                VM.load(vm_uuid, function (err, obj) {
-                    var field;
-
-                    if (err) {
-                        t.ok(false, 'failed reloading VM');
-                    } else if (obj.filesystems === undefined) {
-                        t.ok(false, 'VM has no filesystems');
-                    } else if (obj.filesystems.length !== 1) {
-                        t.ok(false, 'VM has ' + obj.filesystems.length
-                            + ' != 1 filesystem');
-                    } else {
-                        for (field in PAYLOADS.update_fs_tmp_global.
-                            update_filesystems[0]) {
-                            var cmp_value_set = JSON.stringify(
-                                obj.filesystems[0][field]);
-                            var cmp_value_payload = JSON.stringify(PAYLOADS.
-                                update_fs_tmp_global.
-                                update_filesystems[0][field]);
-                            var cmp_result =
-                                (cmp_value_set === cmp_value_payload);
-                            var msg_ok = 'field ' + field + ' was set to '
-                                + cmp_value_set;
-                            var msg_fail = msg_ok + ', but expected value is '
-                                + cmp_value_payload;
-                            t.ok(cmp_result, cmp_result ? msg_ok : msg_fail);
-                        }
-                    }
-                    t.end();
-                });
-            }, 100);
+            return;
         }
+
+        waitForPayload(t, 10, function check(obj) {
+            if (obj.filesystems === undefined) {
+                return false;
+            } else if (obj.filesystems.length !== 1) {
+                return false;
+            } else {
+                var field;
+
+                for (field in PAYLOADS.update_fs_tmp_global.
+                    update_filesystems[0]) {
+                    var cmp_value_set = JSON.stringify(
+                        obj.filesystems[0][field]);
+                    var cmp_value_payload = JSON.stringify(PAYLOADS.
+                        update_fs_tmp_global.
+                        update_filesystems[0][field]);
+                    if (cmp_value_set !== cmp_value_payload) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        });
     });
 });
 
@@ -1572,27 +1587,12 @@ test('remove fs /var/tmp/global', function (t) {
         if (update_err) {
             t.ok(false, 'error updating VM: ' + update_err.message);
             t.end();
-        } else {
-            /*
-             * Sometimes we hit a race in vminfod where two events are
-             * reversed. This results in intermittent test failures, to
-             * avoid this we wait for 100ms before continuing, this is
-             * sufficient to avoid the issue.
-             */
-            setTimeout(function () {
-                VM.load(vm_uuid, function (err, obj) {
-                    if (err) {
-                        t.ok(false, 'failed reloading VM');
-                    } else if (obj.hasOwnProperty('filesystems')) {
-                        t.ok(false, 'VM has ' + obj.filesystems.length
-                            + ' != 0 filesystems');
-                    } else {
-                        t.ok(true, 'Successfully removed filesystem from VM');
-                    }
-                    t.end();
-                });
-            }, 100);
+            return;
         }
+
+        waitForPayload(t, 10, function check(obj) {
+            return !obj.hasOwnProperty('filesystems');
+        });
     });
 });
 

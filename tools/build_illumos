@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright (c) 2017 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 # Setup for building stuff!
@@ -42,8 +42,6 @@ set -e
 
 cd ${ROOT}/projects/illumos
 [[ -d "log" ]] || mkdir -p log
-cp usr/src/tools/scripts/nightly.sh ./nightly
-chmod u+x ./nightly
 gsed -i -e "s|^GATE=.*$|GATE=\"joyent_${BUILDSTAMP}\"; export GATE|" illumos.sh
 if [[ -n ${MAX_JOBS} ]]; then
     MJ=${MAX_JOBS}
@@ -59,7 +57,7 @@ gsed -i -e "s|^MAX_JOBS=.*$|MAX_JOBS=${MJ}; export MAX_JOBS|" illumos.sh
 # egg problem that we have.
 #
 export MAKE=/opt/local/bin/dmake
-ksh93 ./usr/src/tools/scripts/bldenv.sh illumos.sh \
+./usr/src/tools/scripts/bldenv illumos.sh \
     'cd $CODEMGR_WS/usr/src && export PATH="$PATH:/opt/local/bin" && \
     dmake setup && cd tools && dmake install'
 export -n MAKE
@@ -69,7 +67,7 @@ printf "This will take a while.\n"
 
 set +e
 
-time ./nightly illumos.sh
+time ./usr/src/tools/scripts/nightly illumos.sh
 
 status=$?
 if [[ $status -ne 0 ]]; then

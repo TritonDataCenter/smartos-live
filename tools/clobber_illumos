@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright 2018 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 #
@@ -57,7 +57,7 @@ function ci_do_clobber
 {
 	echo "Clobbering $ci_wsroot/projects/illumos"
 	export MAKE="$ci_dmake"
-	ksh93 $ci_illumos/tools/scripts/bldenv.sh $ci_illumos/../../illumos.sh \
+	$ci_illumos/tools/scripts/bldenv $ci_illumos/../../illumos.sh \
 	    'cd $CODEMGR_WS/usr/src && dmake clobber'
 }
 

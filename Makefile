@@ -360,6 +360,10 @@ strap-cache-location:
 strap-cache:
 	$(ROOT)/tools/build_strap -c -j $(MAX_JOBS) -a $(ADJUNCT_TARBALL)
 
+# build a CTF tools tarball
+ctftools.tar.gz: 0-strap-stamp
+	(cd $(ROOT) && MAX_JOBS=$(MAX_JOBS) ./tools/build_ctftools)
+
 # additional illumos-extra content for proto itself
 0-extra-stamp: 0-illumos-stamp
 	(cd $(ROOT)/projects/illumos-extra && \

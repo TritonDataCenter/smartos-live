@@ -1,0 +1,64 @@
+#!/usr/bin/bash
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright 2020 Joyent, Inc.
+#
+
+# Setup for building stuff!
+unset CC
+unset CXX
+ROOT=`pwd`
+export PATH=/opt/onbld/bin:/sbin:/usr/sbin:/usr/bin:/usr/ccs/bin:/opt/SUNWspro/bin:/opt/local/bin
+export SHELL=/usr/bin/bash
+
+TARBALL=${ROOT}/ctftools.tar.gz
+
+mkdir -p ${ROOT}/proto
+if [[ ! -f ${ROOT}/proto/buildstamp ]]; then
+    if [[ -z $BUILDSTAMP ]]; then
+        BUILDSTAMP=$(TZ=UTC date "+%Y%m%dT%H%M%SZ"); export BUILDSTAMP
+    fi
+    echo "${BUILDSTAMP}" > ${ROOT}/proto/buildstamp
+else
+    BUILDSTAMP=$(<${ROOT}/proto/buildstamp)
+    if [[ $? -ne 0 || -z "${BUILDSTAMP}" ]]; then
+        printf "failed to read existing buildstamp\n" >&2
+        exit 1
+    fi
+fi
+
+echo "==> Building ctftools tarball (${BUILDSTAMP})"
+
+set -o pipefail
+set -e
+
+cd ${ROOT}/projects/illumos
+[[ -d "log" ]] || mkdir -p log
+gsed -i -e "s|^GATE=.*$|GATE=\"joyent_${BUILDSTAMP}\"; export GATE|" illumos.sh
+if [[ -n ${MAX_JOBS} ]]; then
+    MJ=${MAX_JOBS}
+else
+    MJ=128
+fi
+gsed -i -e "s|^MAX_JOBS=.*$|MAX_JOBS=${MJ}; export MAX_JOBS|" illumos.sh
+
+#
+# illumos.sh sets the value of $MAKE by default, which is used by bldenv
+# and nightly. By setting MAKE below to the bootstrap dmake, illumos.sh
+# will honor the one in the environment and let us solve the chicken and
+# egg problem that we have.
+#
+export MAKE=/opt/local/bin/dmake
+./usr/src/tools/scripts/bldenv illumos.sh \
+    'cd $CODEMGR_WS/usr/src && export PATH="$PATH:/opt/local/bin" && \
+    dmake setup && cd tools/ctf && dmake ctftools'

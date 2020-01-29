@@ -422,11 +422,11 @@ tab-complete UUIDs rather than having to type them out for every command.
         The same pattern is used for customer_metadata, internal_metadata and
         routes.
 
-        In the case of nics and disks, there are 3 special objects:
+        In the case of nics, disks, and filesystems, there are 3 special objects:
 
-          add_disks || add_nics
-          remove_disks || remove_nics
-          update_disks || update_nics
+          add_disks || add_nics || add_filesystems
+          remove_disks || remove_nics || remove_filesystems
+          update_disks || update_nics || update_filesystems
 
         For NICs for example, you can include an array of NIC objects with the
         parameter add_nics in your input. Those NICs would get added to the VM.
@@ -437,6 +437,10 @@ tab-complete UUIDs rather than having to type them out for every command.
         and a different MAC, and remove the existing one. To remove a NIC, the
         remove_nics property should be an array of MAC addresses only (not NIC
         objects).
+
+        For updating filesystems, you use the same format as described above for NICs
+        except that the options are add_filesystems, remove_filesystems and update_filesystems
+        and instead of "mac" these will be keyed on "target".
 
         For updating disks, you use the same format as described above for NICs
         except that the options are add_disks, remove_disks and update_disks
@@ -2680,8 +2684,8 @@ stopping
               "gateways": ["10.2.121.1"]
             }
           ]
-      }
-      EOF
+        }
+        EOF
 
     Example 10: Change the IP of the NIC with MAC b2:1e:ba:a5:6e:71 for the VM
                 with the UUID 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0.
@@ -2703,19 +2707,36 @@ stopping
         echo '{"remove_nics": ["b2:1e:ba:a5:6e:71"]}' | \
             vmadm update 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
-    Example 12: Stop VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
+    Example 12: Adding a lofs filesystem mount to the VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
+
+        vmadm update 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0 <<EOF
+        {
+          "add_filesystems": [
+            {
+	      "source": "/bulk/logs/54f1cc77-68f1-42ab-acac-5c4f64f5d6e0",
+	      "target": "/var/log",
+	      "type": "lofs",
+	      "options": [
+	        "nodevice"
+	      ]
+            }
+          ]
+        }
+        EOF
+
+    Example 13: Stop VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
         vmadm stop 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
-    Example 13: Start VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
+    Example 14: Start VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
         vmadm start 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
-    Example 14: Reboot VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
+    Example 15: Reboot VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
         vmadm reboot 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
-    Example 15: Delete VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
+    Example 16: Delete VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
         vmadm delete 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 

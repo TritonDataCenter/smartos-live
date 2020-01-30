@@ -90,11 +90,6 @@ pipeline {
                 '</ul>'
         )
     }
-    environment {
-        // the DSL requires key/val entries, but
-        // apparently runs functions ok?
-        JOYENT_BUILD_CAUSE=getJoyentBuildCause()
-    }
     stages {
         // Jenkins PR builds defaults to a lightweight checkout, which
         // doesn't include all branch information, which causes the
@@ -103,14 +98,6 @@ pipeline {
         stage('get-all-branches') {
             steps{
                 sh("git fetch origin '+refs/heads/*:refs/remotes/origin/*'")
-            }
-        }
-        stage('show-cause') {
-            steps {
-                sh('''
-echo "This is the environment!"
-env
-''')
             }
         }
         stage('check') {
@@ -130,8 +117,10 @@ set -o pipefail
         }
         stage('build image and upload') {
             when {
-                not {
-                    environment name: 'JOYENT_BUILD_CAUSE', value: 'production'
+                anyOf {
+                    branch 'master'
+                    branch pattern: 'release-\\d+', comparator: 'REGEXP'
+                    triggeredBy cause: 'UserIdCause'
                 }
             }
             steps {
@@ -155,12 +144,3 @@ echo ./tools/build_jenkins
         }
     }
 }
-
-def getJoyentBuildCause() {
-    def causes = currentBuild.getBuildCauses()
-    echo causes.toString()
-    env.JOYENT_BUILD_CAUSE = causes[0]._class
-    env.JOYENT_BUILD_CAUSE_DESC = causes[0].shortDescription
-    return causes[0]._class
-}
-

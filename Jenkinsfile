@@ -131,16 +131,16 @@ set -o pipefail
         stage('build image and upload') {
             when {
                 not {
-                    changeRequest() 
+                    environment name: 'JOYENT_BUILD_CAUSE', value: 'production'
                 }
             }
             steps {
                 sh('''
 set -o errexit
 set -o pipefail
-
+env
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
-./tools/build_jenkins
+echo ./tools/build_jenkins
 ''')
             }
         }

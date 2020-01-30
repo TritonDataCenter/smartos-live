@@ -149,7 +149,7 @@ echo ./tools/build_jenkins
     post {
         always {
             joyMattermostNotification(channel: 'jenkins')
-            archiveArtifacts allowEmptyArchive: True,
+            archiveArtifacts allowEmptyArchive: true,
                 artifacts: 'projects/illumos/log/log.*/*,' +
                     'log/*,output/bits/artifacts.txt,' +
                     'output/gitstatus.json,' +

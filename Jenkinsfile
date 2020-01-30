@@ -100,6 +100,18 @@ pipeline {
                 sh("git fetch origin '+refs/heads/*:refs/remotes/origin/*'")
             }
         }
+        stage('clean stale projects') {
+            steps{
+                sh('''
+rm -rf ./projects/illumos
+rm -rf ./projects/illumos-extra
+rm -rf ./projects/ur-agent
+rm -rf ./projects/kvm
+rm -rf ./projects/kvm-cmd
+rm -rf ./projects/mdata-client
+''')
+            }
+        }
         stage('check') {
             steps{
                 sh('''

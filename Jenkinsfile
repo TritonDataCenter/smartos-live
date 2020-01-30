@@ -147,7 +147,12 @@ echo ./tools/build_jenkins
         }
     }
     post {
-        always {
+        when {
+            anyOf {
+                branch 'master'
+                branch pattern: 'release-\\d+', comparator: 'REGEXP'
+                triggeredBy cause: 'UserIdCause'
+            }
             joyMattermostNotification(channel: 'jenkins')
             archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
                 'log/*,output/bits/artifacts.txt,' +

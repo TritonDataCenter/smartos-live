@@ -147,17 +147,13 @@ echo ./tools/build_jenkins
         }
     }
     post {
-        when {
-            anyOf {
-                branch 'master'
-                branch pattern: 'release-\\d+', comparator: 'REGEXP'
-                triggeredBy cause: 'UserIdCause'
-            }
+        always {
             joyMattermostNotification(channel: 'jenkins')
-            archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
-                'log/*,output/bits/artifacts.txt,' +
-                'output/gitstatus.json,' +
-                'output/changelog.txt'
+            archiveArtifacts allowEmptyArchive: True,
+                artifacts: 'projects/illumos/log/log.*/*,' +
+                    'log/*,output/bits/artifacts.txt,' +
+                    'output/gitstatus.json,' +
+                    'output/changelog.txt'
         }
     }
 }

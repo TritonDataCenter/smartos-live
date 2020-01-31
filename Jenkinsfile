@@ -5,10 +5,10 @@
  */
 
 /*
- * Copyright 2019 Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  */
 
-@Library('jenkins-joylib@v1.0.2') _
+@Library('jenkins-joylib@v1.0.2')
 
 pipeline {
 
@@ -103,6 +103,7 @@ pipeline {
         stage('clean stale projects') {
             steps{
                 sh('''
+set -o errexit
 rm -rf ./projects/illumos
 rm -rf ./projects/illumos-extra
 rm -rf ./projects/ur-agent
@@ -139,7 +140,6 @@ set -o pipefail
                 sh('''
 set -o errexit
 set -o pipefail
-env
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
 echo ./tools/build_jenkins
 ''')
@@ -149,6 +149,9 @@ echo ./tools/build_jenkins
     post {
         always {
             joyMattermostNotification(channel: 'jenkins')
+            // We allow for missing artifacts because there won't be
+            // artifacts for automatic PR builds which just run
+            // the 'check' stage
             archiveArtifacts allowEmptyArchive: true,
                 artifacts: 'projects/illumos/log/log.*/*,' +
                     'log/*,output/bits/artifacts.txt,' +

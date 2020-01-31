@@ -20,6 +20,7 @@ pipeline {
     options {
         buildDiscarder(logRotator(numToKeepStr: '30'))
         timestamps()
+        parallelsAlwaysFailFast()
     }
 
     parameters {
@@ -145,6 +146,79 @@ echo ./tools/build_jenkins
 ''')
             }
         }
+        // Save the artifacts from the main build, so that downstream stages
+        // don't clobber them, or we don't end up archiving log files from
+        // multiple
+        stage('stash-artifacts') {
+            when {
+                anyOf {
+                    branch 'master'
+                    branch pattern: 'release-\\d+', comparator: 'REGEXP'
+                    triggeredBy cause: 'UserIdCause'
+                }
+            }
+            steps {
+                sh('''
+mkdir -p jenkins-artifacts
+tar cf - projects/illumos/log/log.*/* \
+    log/* \
+    output/bits/artifacts.txt \
+    output/gitstatus.json \
+    output/changelog.txt | (cd jenkins-artifacts ; tar xf -)
+rm -rf projects/illumos/log/log.* \
+    log/* \
+    output/bits/artifacts.txt \
+    output/gitstatus.json \
+    output/changelog.txt
+''')
+            }
+        }
+        stage('Ancillary builds') {
+            parallel {
+                stage('debug') {
+                    agent {
+                        label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                            'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    }
+                    when {
+                        anyOf {
+                            branch 'master'
+                            branch pattern: 'release-\\d+', comparator: 'REGEXP'
+                            triggeredBy cause: 'UserIdCause'
+                        }
+                    }
+                    steps {
+                        sh('''
+        export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
+        export ENGBLD_BITS_UPLOAD_IMGAPI=true
+        echo ./tools/build_jenkins -d
+        ''')
+                    }
+                }
+                stage('gcc4') {
+                    agent {
+                        label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                            'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    }
+                    when {
+                        anyOf {
+                            branch 'master'
+                            branch pattern: 'release-\\d+', comparator: 'REGEXP'
+                            triggeredBy cause: 'UserIdCause'
+                        }
+                    }
+                    steps {
+                        sh('''
+        export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
+        # enough to make sure we don't pollute the main Manta dir
+        export PLATFORM_DEBUG_SUFFIX=-gcc4
+        export ENGBLD_BITS_UPLOAD_IMGAPI=true
+        echo ./tools/build_jenkins -d
+        ''')
+                    }
+                }
+            }
+        }
     }
     post {
         always {
@@ -153,10 +227,10 @@ echo ./tools/build_jenkins
             // artifacts for automatic PR builds which just run
             // the 'check' stage
             archiveArtifacts allowEmptyArchive: true,
-                artifacts: 'projects/illumos/log/log.*/*,' +
-                    'log/*,output/bits/artifacts.txt,' +
-                    'output/gitstatus.json,' +
-                    'output/changelog.txt'
+                artifacts: 'jenkins-artifacts/projects/illumos/log/log.*/*,' +
+                    'jenkins-artifacts/log/*,output/bits/artifacts.txt,' +
+                    'jenkins-artifacts/output/gitstatus.json,' +
+                    'jenkins-artifacts/output/changelog.txt'
         }
     }
 }

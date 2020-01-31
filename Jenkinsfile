@@ -92,7 +92,7 @@ pipeline {
         )
     }
     stages {
-        // Jenkins PR builds defaults to a lightweight checkout, which
+        // Jenkins PR builds default to a lightweight checkout, which
         // doesn't include all branch information, which causes the
         // smartos-live ./tools/build_changelog script to fail, breaking
         // the build. Get those branches before doing anything.
@@ -111,7 +111,7 @@ rm -rf ./projects/ur-agent
 rm -rf ./projects/kvm
 rm -rf ./projects/kvm-cmd
 rm -rf ./projects/mdata-client
-''')
+                ''')
             }
         }
         stage('check') {
@@ -120,7 +120,7 @@ rm -rf ./projects/mdata-client
 set -o errexit
 set -o pipefail
 ./tools/build_jenkins -C
-''')
+                ''')
             }
         }
         // in case 'make check' left anything hanging around
@@ -142,8 +142,8 @@ set -o pipefail
 set -o errexit
 set -o pipefail
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
-echo ./tools/build_jenkins
-''')
+./tools/build_jenkins
+                ''')
             }
         }
         // Save the artifacts from the main build, so that downstream stages
@@ -170,7 +170,7 @@ rm -rf projects/illumos/log/log.* \
     output/bits/artifacts.txt \
     output/gitstatus.json \
     output/changelog.txt
-''')
+                ''')
             }
         }
         stage('Ancillary builds') {
@@ -189,10 +189,10 @@ rm -rf projects/illumos/log/log.* \
                     }
                     steps {
                         sh('''
-        export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
-        export ENGBLD_BITS_UPLOAD_IMGAPI=true
-        echo ./tools/build_jenkins -d
-        ''')
+export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
+export ENGBLD_BITS_UPLOAD_IMGAPI=true
+./tools/build_jenkins -d
+                    ''')
                     }
                 }
                 stage('gcc4') {
@@ -209,12 +209,12 @@ rm -rf projects/illumos/log/log.* \
                     }
                     steps {
                         sh('''
-        export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
-        # enough to make sure we don't pollute the main Manta dir
-        export PLATFORM_DEBUG_SUFFIX=-gcc4
-        export ENGBLD_BITS_UPLOAD_IMGAPI=true
-        echo ./tools/build_jenkins -d
-        ''')
+export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
+# enough to make sure we don't pollute the main Manta dir
+export PLATFORM_DEBUG_SUFFIX=-gcc4
+export ENGBLD_BITS_UPLOAD_IMGAPI=true
+./tools/build_jenkins -d
+                     ''')
                     }
                 }
             }

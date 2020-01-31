@@ -144,33 +144,10 @@ set -o pipefail
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
 ./tools/build_jenkins
                 ''')
-            }
-        }
-        // Save the artifacts from the main build, so that downstream stages
-        // don't clobber them, or we don't end up archiving log files from
-        // multiple
-        stage('stash-artifacts') {
-            when {
-                anyOf {
-                    branch 'master'
-                    branch pattern: 'release-\\d+', comparator: 'REGEXP'
-                    triggeredBy cause: 'UserIdCause'
-                }
-            }
-            steps {
-                sh('''
-mkdir -p jenkins-artifacts
-tar cf - projects/illumos/log/log.*/* \
-    log/* \
-    output/bits/artifacts.txt \
-    output/gitstatus.json \
-    output/changelog.txt | (cd jenkins-artifacts ; tar xf -)
-rm -rf projects/illumos/log/log.* \
-    log/* \
-    output/bits/artifacts.txt \
-    output/gitstatus.json \
-    output/changelog.txt
-                ''')
+                archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
+                    'log/*,output/bits/artifacts.txt,' +
+                    'output/gitstatus.json,' +
+                    'output/changelog.txt'
             }
         }
         stage('Ancillary builds') {
@@ -217,20 +194,53 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                      ''')
                     }
                 }
+                stage('strap-cache') {
+                    agent {
+                        label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                            'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    }
+                    when {
+                        anyOf {
+                            branch 'master'
+                            triggeredBy cause: 'UserIdCause'
+                        }
+                    }
+                    steps {
+                        sh('''
+# XXX timf: I'm a wee bit suspicious of this git manipulation here, need
+#           to check with jlevon
+set -o errexit
+set -o pipefail
+env
+git checkout origin/master
+git clean -fdx
+
+echo "illumos-extra: master: origin" >configure-projects
+echo "illumos: master: origin" >>configure-projects
+
+./configure
+
+git -C projects/illumos pull
+git -C projects/illumos-extra pull
+git -C projects/illumos-extra clean -fdx
+
+mloc=$(make strap-cache-location)
+
+if mls $mloc >/dev/null; then
+    echo "$mloc exists; skipping build"
+    exit 0
+fi
+make strap-cache
+mput -pf output/proto.strap.tgz ${mloc}
+                     ''')
+                    }
+                }
             }
         }
     }
     post {
         always {
             joyMattermostNotification(channel: 'jenkins')
-            // We allow for missing artifacts because there won't be
-            // artifacts for automatic PR builds which just run
-            // the 'check' stage
-            archiveArtifacts allowEmptyArchive: true,
-                artifacts: 'jenkins-artifacts/projects/illumos/log/log.*/*,' +
-                    'jenkins-artifacts/log/*,output/bits/artifacts.txt,' +
-                    'jenkins-artifacts/output/gitstatus.json,' +
-                    'jenkins-artifacts/output/changelog.txt'
         }
     }
 }

@@ -8,7 +8,7 @@
  * Copyright 2020 Joyent, Inc.
  */
 
-@Library('jenkins-joylib@v1.0.2') 
+@Library('jenkins-joylib@v1.0.2') _
 
 pipeline {
 
@@ -147,11 +147,11 @@ echo ./tools/build_jenkins
         }
     }
     post {
-        // We allow for missing artifacts because there won't be
-        // artifacts for automatic PR builds which just run
-        // the 'check' stage
         always {
             joyMattermostNotification(channel: 'jenkins')
+            // We allow for missing artifacts because there won't be
+            // artifacts for automatic PR builds which just run
+            // the 'check' stage
             archiveArtifacts allowEmptyArchive: true,
                 artifacts: 'projects/illumos/log/log.*/*,' +
                     'log/*,output/bits/artifacts.txt,' +

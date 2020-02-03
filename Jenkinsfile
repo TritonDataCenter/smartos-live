@@ -211,6 +211,8 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
 #           to check with jlevon
 set -o errexit
 set -o pipefail
+# timf need to get all heads
+git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 env
 git checkout origin/master
 git clean -fdx

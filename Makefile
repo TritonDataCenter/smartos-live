@@ -139,6 +139,10 @@ TESTS_VERSION :=	tests-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
 TESTS_TARBALL :=	output/$(TESTS_VERSION).tgz
 
+CTFTOOLS_TARBALL := $(ROOT)/output/ctftools/ctftools.tar.gz
+
+STRAP_CACHE_TARBALL := $(ROOT)/output/strap-cache/proto.tar.gz
+
 ifdef PLATFORM_PASSWORD
 PLATFORM_PASSWORD_OPT=-p $(PLATFORM_PASSWORD)
 endif
@@ -354,13 +358,11 @@ FORCEARG_yes=-f
 	    -a $(ADJUNCT_TARBALL) $(FORCEARG_$(FORCE_STRAP_REBUILD))
 	touch $@
 
-# report the Manta location of the proto.strap cache
-strap-cache-location:
-	@$(ROOT)/tools/build_strap -l
-
 # build a proto.strap cache tarball
-strap-cache:
-	$(ROOT)/tools/build_strap -c -j $(MAX_JOBS) -a $(ADJUNCT_TARBALL)
+$(STRAP_CACHE_TARBALL):
+	mkdir -p $(ROOT)/output/strap-cache
+	$(ROOT)/tools/build_strap -t $(STRAP_CACHE_TARBALL) \
+	    -j $(MAX_JOBS) -a $(ADJUNCT_TARBALL)
 
 # build a CTF tools tarball
 $(CTFTOOLS_TARBALL): 0-strap-stamp
@@ -495,6 +497,8 @@ PLATFORM_BRANCH ?= $(shell git symbolic-ref HEAD | awk -F/ '{print $$3}')
 
 CTFTOOLS_BITS_DIR		= $(ROOT)/output/ctftools/bits
 
+STRAP_CACHE_BITS_DIR		= $(ROOT)/output/strap-cache/bits
+
 #
 # PUB_BRANCH_DESC indicates the different 'projects' branches used by the build.
 # Our shell script uniqifies the branches used, then emits a
@@ -524,8 +528,6 @@ PUB_PLATFORM_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_PLATFORM_IMG_BASE)
 PUB_IMAGES_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_IMAGES_BASE)
 PUB_BOOT_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_BOOT_BASE)
 PUB_TESTS_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_TESTS_BASE)
-
-CTFTOOLS_TARBALL		:= $(ROOT)/output/ctftools/ctftools-$(PLATFORM_TIMESTAMP).tar.gz
 
 PLATFORM_IMAGE_UUID		?= $(shell uuid -v4)
 
@@ -601,6 +603,12 @@ else
 BITS_UPLOAD_IMGAPI_ARG =
 endif
 
+CTFTOOLS_DEST_OUT_PATH ?= \
+    /public/build/SmartOS/ctftools/$(PLATFORM_BRANCH)$(PUB_BRANCH_DESC)
+
+STRAP_CACHE_DEST_OUT_PATH ?= \
+    /public/build/SmartOS/build-cache/$(PLATFORM_BRANCH)$(PUB_BRANCH_DESC)
+
 .PHONY: platform-bits-upload
 platform-bits-upload:
 	PATH=$(MANTA_TOOLS_PATH):$(PATH) \
@@ -635,9 +643,20 @@ ctftools-bits-upload:
 	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
 		-t $(BUILD_PLATFORM_TIMESTAMP) \
 	        $(BITS_UPLOAD_LOCAL_ARG) \
-	        -D $(ROOT)/output/ctftools/bits \
-	        -d /public/build/SmartOS/ctftools/$(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+	        -D $(CTFTOOLS_BITS_DIR) \
+	        -d $(CTFTOOLS_DEST_OUT_PATH) \
 	        -n ctftools
+
+.PHONE: strap-cache-bits-upload
+strap-cache-bits-upload:
+	PATH=$(MANTA_TOOLS_PATH):$(PATH) \
+	    $(ROOT)/deps/eng/tools/bits-upload.sh \
+	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+		-t $(shell ./tools/build_strap -l) \
+	        $(BITS_UPLOAD_LOCAL_ARG) \
+	        -D $(STRAP_CACHE_BITS_DIR) \
+	        -d $(STRAP_CACHE_DEST_OUT_PATH) \
+	        -n strap-cache
 
 #
 # A wrapper to build the additional components that a standard
@@ -672,6 +691,13 @@ ctftools-publish:
 	mkdir -p $(CTFTOOLS_BITS_DIR)
 	cp output/gitstatus.json $(CTFTOOLS_BITS_DIR)
 	cp $(CTFTOOLS_TARBALL) $(CTFTOOLS_BITS_DIR)/ctftools.tar.gz
+
+.PHONY: strap-cache-publish
+strap-cache-publish:
+	@echo "# Publish strap-cache tarball"
+	mkdir -p $(STRAP_CACHE_BITS_DIR)
+	cp output/gitstatus.json $(STRAP_CACHE_BITS_DIR)
+	cp $(STRAP_CACHE_TARBALL) $(STRAP_CACHE_BITS_DIR)/proto.strap.tar.gz
 
 #
 # Define a series of phony targets that encapsulate a standard 'release' process
@@ -723,6 +749,12 @@ ctftools-release: \
     $(CTFTOOLS_TARBALL) \
     ctftools-publish \
     ctftools-bits-upload
+
+.PHONY: strap-cache-release
+strap-cache-release: \
+    $(STRAP_CACHE_TARBALL) \
+    strap-cache-publish \
+    strap-cache-bits-upload
 
 print-%:
 	@echo '$*=$($*)'

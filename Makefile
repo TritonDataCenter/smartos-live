@@ -43,6 +43,8 @@ PATH =		/usr/bin:/usr/sbin:/sbin:/opt/local/bin
 NATIVE_CC =	/opt/local/bin/gcc
 endif
 
+BUILD_PLATFORM_TIMESTAMP := $(shell uname -v | sed 's+joyent_++')
+
 #
 # This number establishes a maximum for smartos-live, illumos-extra, and
 # illumos-joyent.  Support for it can and should be added to other projects
@@ -361,8 +363,10 @@ strap-cache:
 	$(ROOT)/tools/build_strap -c -j $(MAX_JOBS) -a $(ADJUNCT_TARBALL)
 
 # build a CTF tools tarball
-ctftools.tar.gz: 0-strap-stamp
-	(cd $(ROOT) && MAX_JOBS=$(MAX_JOBS) ./tools/build_ctftools)
+$(CTFTOOLS_TARBALL): 0-strap-stamp
+	mkdir -p $(ROOT)/output/ctftools
+	(cd $(ROOT) && MAX_JOBS=$(MAX_JOBS) \
+	    ./tools/build_ctftools $(CTFTOOLS_TARBALL))
 
 # additional illumos-extra content for proto itself
 0-extra-stamp: 0-illumos-stamp
@@ -489,6 +493,8 @@ BUILD_NAME			?= platform
 PLATFORM_BITS_DIR		= $(ROOT)/output/bits/platform$(PLATFORM_DEBUG_SUFFIX)
 PLATFORM_BRANCH ?= $(shell git symbolic-ref HEAD | awk -F/ '{print $$3}')
 
+CTFTOOLS_BITS_DIR		= $(ROOT)/output/ctftools/bits
+
 #
 # PUB_BRANCH_DESC indicates the different 'projects' branches used by the build.
 # Our shell script uniqifies the branches used, then emits a
@@ -518,6 +524,8 @@ PUB_PLATFORM_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_PLATFORM_IMG_BASE)
 PUB_IMAGES_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_IMAGES_BASE)
 PUB_BOOT_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_BOOT_BASE)
 PUB_TESTS_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_TESTS_BASE)
+
+CTFTOOLS_TARBALL		:= $(ROOT)/output/ctftools/ctftools-$(PLATFORM_TIMESTAMP).tar.gz
 
 PLATFORM_IMAGE_UUID		?= $(shell uuid -v4)
 
@@ -620,6 +628,17 @@ platform-bits-upload-latest:
 	        -d $(ENGBLD_DEST_OUT_PATH)/$(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX) \
 	        -n $(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX)
 
+.PHONE: ctftools-bits-upload
+ctftools-bits-upload:
+	PATH=$(MANTA_TOOLS_PATH):$(PATH) \
+	    $(ROOT)/deps/eng/tools/bits-upload.sh \
+	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+		-t $(BUILD_PLATFORM_TIMESTAMP) \
+	        $(BITS_UPLOAD_LOCAL_ARG) \
+	        -D $(ROOT)/output/ctftools/bits \
+	        -d /public/build/SmartOS/ctftools/$(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+	        -n ctftools
+
 #
 # A wrapper to build the additional components that a standard
 # SmartOS release needs.
@@ -646,6 +665,13 @@ smartos-publish:
 	    $(ROOT)/tools/smartos-index $(PLATFORM_TIMESTAMP) > index.html)
 	(cd $(PLATFORM_BITS_DIR) && \
 	    /usr/bin/sum -x md5 * > md5sums.txt)
+
+.PHONY: ctftools-publish
+ctftools-publish:
+	@echo "# Publish ctftools tarball"
+	mkdir -p $(CTFTOOLS_BITS_DIR)
+	cp output/gitstatus.json $(CTFTOOLS_BITS_DIR)
+	cp $(CTFTOOLS_TARBALL) $(CTFTOOLS_BITS_DIR)/ctftools.tar.gz
 
 #
 # Define a series of phony targets that encapsulate a standard 'release' process
@@ -691,6 +717,12 @@ smartos-only-release: \
     smartos-build \
     smartos-publish \
     platform-bits-upload
+
+.PHONY: ctftools-release
+ctftools-release: \
+    $(CTFTOOLS_TARBALL) \
+    ctftools-publish \
+    ctftools-bits-upload
 
 print-%:
 	@echo '$*=$($*)'

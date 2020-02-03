@@ -21,7 +21,7 @@ ROOT=`pwd`
 export PATH=/opt/onbld/bin:/sbin:/usr/sbin:/usr/bin:/usr/ccs/bin:/opt/SUNWspro/bin:/opt/local/bin
 export SHELL=/usr/bin/bash
 
-export CTFTOOLS_TARBALL=${ROOT}/ctftools.tar.gz
+export CTFTOOLS_TARBALL=$1
 
 mkdir -p ${ROOT}/proto
 if [[ ! -f ${ROOT}/proto/buildstamp ]]; then

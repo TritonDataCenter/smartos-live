@@ -166,8 +166,9 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                     }
                     steps {
                         sh('''
+# need to get all heads since we're on a new agent
+git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
-export ENGBLD_BITS_UPLOAD_IMGAPI=true
 ./tools/build_jenkins -d
                     ''')
                     }
@@ -186,10 +187,11 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                     }
                     steps {
                         sh('''
+# need to get all heads since we're on a new agent
+git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
 export PLATFORM_DEBUG_SUFFIX=-gcc4
-export ENGBLD_BITS_UPLOAD_IMGAPI=true
 ./tools/build_jenkins -d
                      ''')
                     }
@@ -211,7 +213,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
 #           to check with jlevon
 set -o errexit
 set -o pipefail
-# timf need to get all heads
+# need to get all heads again since we're on a new agent
 git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 env
 git checkout origin/master

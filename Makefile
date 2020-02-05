@@ -700,7 +700,7 @@ strap-cache-publish:
 	@echo "# Publish strap-cache tarball"
 	mkdir -p $(STRAP_CACHE_BITS_DIR)
 	git -C projects/illumos-extra log -1 \
-	    >$(CTFTOOLS_BITS_DIR)/gitstatus.illumos-extra
+	    >$(STRAP_CACHE_BITS_DIR)/gitstatus.illumos-extra
 	cp $(STRAP_CACHE_TARBALL) $(STRAP_CACHE_BITS_DIR)/proto.strap.tar.gz
 
 #

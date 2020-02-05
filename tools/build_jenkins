@@ -156,8 +156,11 @@ else
     echo "${CONFIGURE_PROJECTS}" > configure-projects
 fi
 
+# this can be set to " " to avoid a full strap rebuild for dev purposes
+FORCE_STRAP_REBUILD_ARG=${FORCE_STRAP_REBUILD_ARG:--r}
+
 # Configure the build based on the arguments we've gathered
-log_cmd  ./configure -r \
+log_cmd  ./configure ${FORCE_STRAP_REBUILD_ARG} \
     ${ENGBLD_CONFIGURE_DEBUG_ARG} \
     ${PLAT_CONFIGURE_ARGS}
 

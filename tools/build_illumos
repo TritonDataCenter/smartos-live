@@ -21,18 +21,10 @@ ROOT=`pwd`
 export PATH=/opt/onbld/bin:/sbin:/usr/sbin:/usr/bin:/usr/ccs/bin:/opt/SUNWspro/bin:/opt/local/bin
 export SHELL=/usr/bin/bash
 
-mkdir -p ${ROOT}/proto
-if [[ ! -f ${ROOT}/proto/buildstamp ]]; then
-    if [[ -z $BUILDSTAMP ]]; then
-        BUILDSTAMP=$(TZ=UTC date "+%Y%m%dT%H%M%SZ"); export BUILDSTAMP
-    fi
-    echo "${BUILDSTAMP}" > ${ROOT}/proto/buildstamp
-else
-    BUILDSTAMP=$(<${ROOT}/proto/buildstamp)
-    if [[ $? -ne 0 || -z "${BUILDSTAMP}" ]]; then
-        printf "failed to read existing buildstamp\n" >&2
-        exit 1
-    fi
+BUILDSTAMP=$(<${ROOT}/proto/buildstamp)
+if [[ $? -ne 0 || -z "${BUILDSTAMP}" ]]; then
+	printf "failed to read existing buildstamp\n" >&2
+	exit 1
 fi
 
 echo "==> Building Illumos (${BUILDSTAMP})"

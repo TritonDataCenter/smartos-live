@@ -343,7 +343,14 @@ update-base:
 	    (cd projects/devpro && gmake DESTDIR=$(PROTO) install)
 	touch $@
 
-0-illumos-stamp: 0-strap-stamp
+$(ROOT)/proto/buildstamp:
+	mkdir -p $(ROOT)/proto
+	if [[ -z $$BUILDSTAMP ]]; then \
+	    BUILDSTAMP=$$(TZ=UTC date "+%Y%m%dT%H%M%SZ"); \
+	fi ; \
+	echo "$$BUILDSTAMP" > $(ROOT)/proto/buildstamp
+
+0-illumos-stamp: 0-strap-stamp ${ROOT}/proto/buildstamp
 	@if [[ "$(ILLUMOS_CLOBBER)" = "yes" ]]; then \
 		(cd $(ROOT) && MAX_JOBS=$(MAX_JOBS) ./tools/clobber_illumos) \
 	fi
@@ -366,7 +373,7 @@ $(STRAP_CACHE_TARBALL):
             -o $(STRAP_CACHE_TARBALL) $(FORCEARG_$(FORCE_STRAP_REBUILD))
 
 # build a CTF tools tarball
-$(CTFTOOLS_TARBALL): 0-strap-stamp
+$(CTFTOOLS_TARBALL): 0-strap-stamp $(ROOT)/proto/buildstamp
 	$(ROOT)/tools/build_ctftools make \
 	    -j $(MAX_JOBS) -o $(CTFTOOLS_TARBALL)
 
@@ -647,7 +654,7 @@ platform-bits-upload-latest:
 #
 
 .PHONE: ctftools-bits-upload
-ctftools-bits-upload:
+ctftools-bits-upload: $(ROOT)/proto/buildstamp
 	PATH=$(MANTA_TOOLS_PATH):$(PATH) ./tools/build_ctftools upload \
 	    -D $(CTFTOOLS_BITS_DIR) \
 	    -d $(CTFTOOLS_DEST_OUT_PATH) \
@@ -655,7 +662,7 @@ ctftools-bits-upload:
 	    -t $(PLATFORM_TIMESTAMP)
 
 .PHONE: strap-cache-bits-upload
-strap-cache-bits-upload:
+strap-cache-bits-upload: $(ROOT)/proto/buildstamp
 	PATH=$(MANTA_TOOLS_PATH):$(PATH) ./tools/build_strap upload \
 	    -D $(STRAP_CACHE_BITS_DIR) \
 	    -d $(STRAP_CACHE_DEST_OUT_PATH) \

@@ -57,18 +57,10 @@ function make
 
 	[[ -n "$CTFTOOLS_TARBALL" ]] || fatal "missing -o argument"
 
-	mkdir -p ${ROOT}/proto
-	if [[ ! -f ${ROOT}/proto/buildstamp ]]; then
-		if [[ -z $BUILDSTAMP ]]; then
-			export BUILDSTAMP=$(TZ=UTC date "+%Y%m%dT%H%M%SZ")
-		fi
-		echo "${BUILDSTAMP}" > ${ROOT}/proto/buildstamp
-	else
-		BUILDSTAMP=$(<${ROOT}/proto/buildstamp)
-		if [[ $? -ne 0 || -z "${BUILDSTAMP}" ]]; then
-			printf "failed to read existing buildstamp\n" >&2
-			exit 1
-		fi
+	BUILDSTAMP=$(<${ROOT}/proto/buildstamp)
+	if [[ $? -ne 0 || -z "${BUILDSTAMP}" ]]; then
+		printf "failed to read existing buildstamp\n" >&2
+		exit 1
 	fi
 
 	echo "==> Building ctftools tarball (${BUILDSTAMP})"
@@ -97,6 +89,7 @@ function make
 #
 function upload
 {
+	set -x
 	local bits_dir=""
 	local upload_dir=""
 	local platform=""
@@ -145,6 +138,7 @@ set -e
 cmd=$1
 shift
 
+	set -x
 case $cmd in
 	make) make $* ;;
 	upload) upload $* ;;

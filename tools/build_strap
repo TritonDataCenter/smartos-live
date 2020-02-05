@@ -27,21 +27,21 @@
 # we'll fall back to doing a full strap build of illumos-extra.  This is also
 # true if the user specified non-default compilers.
 #
-# The -l and -t options are used when building and uploading a new cache.
+# The -u, -D, and -t options are used when building and uploading a strap cache
+# tarball.
 #
 
-usage="$0 [-l | -a adjunct.tar [-f] [-j maxjobs] [-t tarfile | -d protodir]]"
+usage="$0 build -a adjunct.tar -j maxjobs -d protodir [-f] [-o tarball]"
+usage="$usage | upload -D bits -d path -t timestamp ]-u path -d inpath -t timestamp"
 wsroot=$(cd $(dirname $0)/../; pwd)
 pkgin_file="/opt/local/etc/pkgin/repositories.conf"
-manta_dir="/Joyent_Dev/public/SmartOS/build-cache/master"
-manta_base="https://us-east.manta.joyent.com/$manta_dir"
+manta_dir="/Joyent_Dev/public/builds/SmartOS/strap-cache/master"
 cache_base="/opt/SmartOS/build-cache/"
 srcdir="$wsroot/projects/illumos-extra"
 adjunct=""
 protodir=""
 max_jobs="128"
 force_build="no"
-report_loc="no"
 tarfile=""
 
 function fatal
@@ -104,20 +104,26 @@ function download
 	local srcdirsha=$2
 	local cache_dir="$cache_base/$pkgsrc_branch/$srcdirsha"
 	local outfile="/var/tmp/$srcdirsha.proto.strap.tar.gz.$$"
-	local url="$manta_base/$pkgsrc_branch/$srcdirsha/proto.strap.tar.gz"
 	local tmpdir="$cache_dir.$$"
-
-	pfexec mkdir -p "$tmpdir" || fatal "failed to make $cache_dir"
+	local latest="$manta_dir/$pkgsrc_branch/$srcdirsha/latest"
+	local url="$(mget -q $latest 2>/dev/null)"
 
 	echo "Downloading proto.strap contents from $url ..."
 
+	if [[ -z "$url" ]]; then
+		echo "Failed to find $latest: building locally"
+		build_strap
+		return 0
+	fi
+
 	if ! curl -f -o "$outfile" "$url"; then
 		rm -f "$outfile"
-		pfexec rm -rf "$tmpdir"
 		echo "Failed to download $url: building locally"
 		build_strap
 		return 0
 	fi
+
+	pfexec mkdir -p "$tmpdir" || fatal "failed to make $tmpdir"
 
 	if ! pfexec tar xzf "$outfile" -C "$tmpdir"; then
 		rm -f "$outfile"
@@ -161,6 +167,9 @@ function create_cache
 		build_strap
 	fi
 
+	mkdir -p $(dirname $tarfile) ||
+	    fatal "failed to mkdir for $tarfile"
+
 	pfexec gtar -C "$cache_dir" -czf "$tarfile" . ||
 	    fatal "failed to create $tarfile"
 
@@ -176,9 +185,35 @@ function create_cache
 #
 function populate_strap
 {
-	local pkgsrc_branch=$1
-	local srcdirsha=$2
+	local pkgsrc_branch=$(identify_pkgsrc_branch)
+	local srcdirsha=$(identify_srcsha)
 	local cache_dir="$cache_base/$pkgsrc_branch/$srcdirsha"
+
+	set -x
+
+	while getopts "a:d:fhlj:o:" arg; do
+		case $arg in
+		a)
+			adjunct=$OPTARG ;;
+		d)
+			protodir=$OPTARG ;;
+		f)
+			force_build=yes ;;
+		h)
+			echo "$usage"
+			exit 0 ;;
+		j)
+			max_jobs=$OPTARG ;;
+		o)
+			tarfile=$OPTARG ;;
+		?)
+			echo "$usage" >&2
+			exit 1 ;;
+		esac
+	done
+
+	[[ -n "$adjunct" ]] || fatal "missing -a argument"
+	[[ -n "$protodir" ]] || fatal "missing -d argument"
 
 	if [[ -e "$cache_dir" && ! -d "$cache_dir" ]]; then
 		fatal "found weird non-directory $cache_dir"
@@ -216,47 +251,61 @@ function populate_strap
 
 }
 
+#
+# Upload a proto.strap tarball.
+#
+function upload_strap
+{
+	local pkgsrc_branch=$(identify_pkgsrc_branch)
+	local srcdirsha=$(identify_srcsha)
+	local bits_dir=""
+	local upload_dir=""
+	local timestamp=""
+
+	while getopts "D:d:ht:" arg; do
+		case $arg in
+		D)
+			bits_dir=$OPTARG ;;
+		d)
+			upload_dir=$OPTARG ;;
+		t)
+			timestamp=$OPTARG ;;
+		h)
+			echo "$usage"
+			exit 0 ;;
+		?)
+			echo "$usage" >&2
+			exit 1 ;;
+		esac
+	done
+
+	[[ -n "$bits_dir" ]] || fatal "missing -D argument"
+	[[ -n "$upload_dir" ]] || fatal "missing -d argument"
+	[[ -n "$timestamp" ]] || fatal "missing -t argument"
+
+	mdir="/$MANTA_USER/$upload_dir/$pkgsrc_branch/$srcdirsha/"
+	mbdir="$mdir/$timestamp"
+
+	verbose mmkdir -p "$mbdir"
+
+	for file in $bits_dir/*; do
+		verbose mput -f $file $mbdir/$(basename $file)
+	done
+
+	echo $mbdir | mput -H "content-type: text/plain" "$mdir/latest"
+}
+
 export PATH=/usr/bin:/usr/sbin:/sbin:/opt/local/bin:/opt/local/sbin
 set -o pipefail
+set -e
 
-while getopts "a:d:fhlj:t:" arg; do
-	case $arg in
-	a)
-		adjunct=$OPTARG ;;
-	d)
-		protodir=$OPTARG ;;
-	f)
-		force_build=yes ;;
-	h)
-		echo "$usage"
-		exit 0 ;;
-	j)
-		max_jobs=$OPTARG ;;
-	l)
-		report_loc="yes" ;;
-	t)
-		tarfile=$OPTARG ;;
-	?)
+cmd=$1
+shift
+
+case $cmd in
+	make) populate_strap $* ;;
+	upload) upload_strap $* ;;
+	*)
 		echo "$usage" >&2
 		exit 1 ;;
-	esac
-done
-
-if [[ "$report_loc" = "yes" ]]; then
-	echo $(identify_pkgsrc_branch)/$(identify_srcsha)
-	exit 0
-fi
-
-[[ -n "$adjunct" ]] || fatal "missing -a argument"
-[[ -d "$srcdir" ]] || fatal "cannot find illumos-extra in $srcdir"
-[[ -d "$srcdir/.git" ]] || fatal "$srcdir is not a git repo"
-
-if [[ -n "$tarfile" ]]; then
-	[[ -z "$protodir" ]] || fatal "can't specify -n and -d"
-else
-	[[ -n "$protodir" ]] || fatal "missing -d argument"
-fi
-
-populate_strap $(identify_pkgsrc_branch) $(identify_srcsha)
-
-exit 0
+esac

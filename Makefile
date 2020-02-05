@@ -43,7 +43,7 @@ PATH =		/usr/bin:/usr/sbin:/sbin:/opt/local/bin
 NATIVE_CC =	/opt/local/bin/gcc
 endif
 
-BUILD_PLATFORM_TIMESTAMP := $(shell uname -v | sed 's+joyent_++')
+BUILD_PLATFORM := $(shell uname -v)
 
 #
 # This number establishes a maximum for smartos-live, illumos-extra, and
@@ -354,21 +354,21 @@ FORCEARG_yes=-f
 
 # build our proto.strap area
 0-strap-stamp:
-	$(ROOT)/tools/build_strap -j $(MAX_JOBS) -d $(STRAP_PROTO) \
-	    -a $(ADJUNCT_TARBALL) $(FORCEARG_$(FORCE_STRAP_REBUILD))
+	$(ROOT)/tools/build_strap make \
+	    -a $(ADJUNCT_TARBALL) -d $(STRAP_PROTO) -j $(MAX_JOBS) \
+	    $(FORCEARG_$(FORCE_STRAP_REBUILD))
 	touch $@
 
 # build a proto.strap cache tarball
 $(STRAP_CACHE_TARBALL):
-	mkdir -p $(ROOT)/output/strap-cache
-	$(ROOT)/tools/build_strap -t $(STRAP_CACHE_TARBALL) \
-	    -j $(MAX_JOBS) -a $(ADJUNCT_TARBALL)
+	$(ROOT)/tools/build_strap make \
+	    -a $(ADJUNCT_TARBALL) -d $(STRAP_PROTO) -j $(MAX_JOBS) \
+            -o $(STRAP_CACHE_TARBALL) $(FORCEARG_$(FORCE_STRAP_REBUILD))
 
 # build a CTF tools tarball
 $(CTFTOOLS_TARBALL): 0-strap-stamp
-	mkdir -p $(ROOT)/output/ctftools
-	(cd $(ROOT) && MAX_JOBS=$(MAX_JOBS) \
-	    ./tools/build_ctftools $(CTFTOOLS_TARBALL))
+	$(ROOT)/tools/build_ctftools make \
+	    -j $(MAX_JOBS) -o $(CTFTOOLS_TARBALL)
 
 # additional illumos-extra content for proto itself
 0-extra-stamp: 0-illumos-stamp
@@ -603,17 +603,21 @@ else
 BITS_UPLOAD_IMGAPI_ARG =
 endif
 
-CTFTOOLS_DEST_OUT_PATH ?= \
-    /public/build/SmartOS/ctftools/$(PLATFORM_BRANCH)$(PUB_BRANCH_DESC)
+BITS_UPLOAD_BRANCH = $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC)
 
-STRAP_CACHE_DEST_OUT_PATH ?= \
-    /public/build/SmartOS/build-cache/$(PLATFORM_BRANCH)$(PUB_BRANCH_DESC)
+SMARTOS_DEST_OUT_PATH := $(ENGBLD_DEST_OUT_PATH)/SmartOS
+
+CTFTOOLS_DEST_OUT_PATH := \
+    $(SMARTOS_DEST_OUT_PATH)/ctftools/$(BITS_UPLOAD_BRANCH)
+
+STRAP_CACHE_DEST_OUT_PATH := \
+    $(SMARTOS_DEST_OUT_PATH)/strap-cache/$(BITS_UPLOAD_BRANCH)
 
 .PHONY: platform-bits-upload
 platform-bits-upload:
 	PATH=$(MANTA_TOOLS_PATH):$(PATH) \
 	    $(ROOT)/deps/eng/tools/bits-upload.sh \
-	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+	        -b $(BITS_UPLOAD_BRANCH) \
 	        $(BITS_UPLOAD_LOCAL_ARG) \
 	        $(BITS_UPLOAD_IMGAPI_ARG) \
 	        -D $(ROOT)/output/bits \
@@ -629,34 +633,33 @@ platform-bits-upload:
 platform-bits-upload-latest:
 	PATH=$(MANTA_TOOLS_PATH):$(PATH) TIMESTAMP= \
 	    $(ROOT)/deps/eng/tools/bits-upload.sh \
-	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+	        -b $(BITS_UPLOAD_BRANCH) \
 	        $(BITS_UPLOAD_LOCAL_ARG) \
 	        $(BITS_UPLOAD_IMGAPI_ARG) \
 	        -D $(ROOT)/output/bits \
 	        -d $(ENGBLD_DEST_OUT_PATH)/$(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX) \
 	        -n $(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX)
 
+#
+# ctftools and strap-cache do not fit well into the bits-upload.sh
+# infrastructure, as we need to differentiate based on aspects of our build
+# platform. So we do it by hand instead.
+#
+
 .PHONE: ctftools-bits-upload
 ctftools-bits-upload:
-	PATH=$(MANTA_TOOLS_PATH):$(PATH) \
-	    $(ROOT)/deps/eng/tools/bits-upload.sh \
-	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
-		-t $(BUILD_PLATFORM_TIMESTAMP) \
-	        $(BITS_UPLOAD_LOCAL_ARG) \
-	        -D $(CTFTOOLS_BITS_DIR) \
-	        -d $(CTFTOOLS_DEST_OUT_PATH) \
-	        -n ctftools
+	PATH=$(MANTA_TOOLS_PATH):$(PATH) ./tools/build_ctftools upload \
+	    -D $(CTFTOOLS_BITS_DIR) \
+	    -d $(CTFTOOLS_DEST_OUT_PATH) \
+	    -p $(BUILD_PLATFORM) \
+	    -t $(PLATFORM_TIMESTAMP)
 
 .PHONE: strap-cache-bits-upload
 strap-cache-bits-upload:
-	PATH=$(MANTA_TOOLS_PATH):$(PATH) \
-	    $(ROOT)/deps/eng/tools/bits-upload.sh \
-	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
-		-t $(shell ./tools/build_strap -l) \
-	        $(BITS_UPLOAD_LOCAL_ARG) \
-	        -D $(STRAP_CACHE_BITS_DIR) \
-	        -d $(STRAP_CACHE_DEST_OUT_PATH) \
-	        -n strap-cache
+	PATH=$(MANTA_TOOLS_PATH):$(PATH) ./tools/build_strap upload \
+	    -D $(STRAP_CACHE_BITS_DIR) \
+	    -d $(STRAP_CACHE_DEST_OUT_PATH) \
+	    -t $(PLATFORM_TIMESTAMP)
 
 #
 # A wrapper to build the additional components that a standard
@@ -689,14 +692,15 @@ smartos-publish:
 ctftools-publish:
 	@echo "# Publish ctftools tarball"
 	mkdir -p $(CTFTOOLS_BITS_DIR)
-	cp output/gitstatus.json $(CTFTOOLS_BITS_DIR)
+	git -C projects/illumos log -1 >$(CTFTOOLS_BITS_DIR)/gitstatus.illumos
 	cp $(CTFTOOLS_TARBALL) $(CTFTOOLS_BITS_DIR)/ctftools.tar.gz
 
 .PHONY: strap-cache-publish
 strap-cache-publish:
 	@echo "# Publish strap-cache tarball"
 	mkdir -p $(STRAP_CACHE_BITS_DIR)
-	cp output/gitstatus.json $(STRAP_CACHE_BITS_DIR)
+	git -C projects/illumos-extra log -1 \
+	    >$(CTFTOOLS_BITS_DIR)/gitstatus.illumos-extra
 	cp $(STRAP_CACHE_TARBALL) $(STRAP_CACHE_BITS_DIR)/proto.strap.tar.gz
 
 #

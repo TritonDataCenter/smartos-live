@@ -151,7 +151,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
             }
         }
         stage('Ancillary builds') {
-            parallel {
+            stage {
                 stage('debug') {
                     agent {
                         label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +

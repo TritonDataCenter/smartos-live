@@ -189,8 +189,6 @@ function populate_strap
 	local srcdirsha=$(identify_srcsha)
 	local cache_dir="$cache_base/$pkgsrc_branch/$srcdirsha"
 
-	set -x
-
 	while getopts "a:d:fhlj:o:" arg; do
 		case $arg in
 		a)

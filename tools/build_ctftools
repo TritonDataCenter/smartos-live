@@ -89,7 +89,6 @@ function make
 #
 function upload
 {
-	set -x
 	local bits_dir=""
 	local upload_dir=""
 	local platform=""
@@ -138,7 +137,6 @@ set -e
 cmd=$1
 shift
 
-	set -x
 case $cmd in
 	make) make $* ;;
 	upload) upload $* ;;

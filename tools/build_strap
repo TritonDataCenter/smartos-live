@@ -27,12 +27,12 @@
 # we'll fall back to doing a full strap build of illumos-extra.  This is also
 # true if the user specified non-default compilers.
 #
-# The -u, -D, and -t options are used when building and uploading a strap cache
-# tarball.
+# In "upload" mode, we build a strap, then upload it to Manta for use by other
+# builds.
 #
 
-usage="$0 build -a adjunct.tar -j maxjobs -d protodir [-f] [-o tarball]"
-usage="$usage | upload -D bits -d path -t timestamp ]-u path -d inpath -t timestamp"
+usage="$0 make -a adjunct.tar -j maxjobs -d protodir [-f] [-o tarball]"
+usage="$usage | upload -D bits -d path -t timestamp"
 wsroot=$(cd $(dirname $0)/../; pwd)
 pkgin_file="/opt/local/etc/pkgin/repositories.conf"
 manta_dir="/Joyent_Dev/public/builds/SmartOS/strap-cache/master"

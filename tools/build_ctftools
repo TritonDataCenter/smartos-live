@@ -14,6 +14,15 @@
 # Copyright 2020 Joyent, Inc.
 #
 
+#
+# Build a "ctftools" tarball. This is the CTF tools for use in repositories
+# outside of the platform build. Via a download script provided by eng.git,
+# consumers on the min_platform upwards can use these as part of their build.
+#
+
+usage="$0 make -j maxjobs -o tarball"
+usage="$usage | upload -D bits -d path -p platform -t timestamp"
+
 function fatal
 {
         local msg="$*"

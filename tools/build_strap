@@ -189,7 +189,7 @@ function populate_strap
 	local srcdirsha=$(identify_srcsha)
 	local cache_dir="$cache_base/$pkgsrc_branch/$srcdirsha"
 
-	while getopts "a:d:fhlj:o:" arg; do
+	while getopts "a:d:fhj:o:" arg; do
 		case $arg in
 		a)
 			adjunct=$OPTARG ;;
@@ -266,11 +266,11 @@ function upload_strap
 			bits_dir=$OPTARG ;;
 		d)
 			upload_dir=$OPTARG ;;
-		t)
-			timestamp=$OPTARG ;;
 		h)
 			echo "$usage"
 			exit 0 ;;
+		t)
+			timestamp=$OPTARG ;;
 		?)
 			echo "$usage" >&2
 			exit 1 ;;

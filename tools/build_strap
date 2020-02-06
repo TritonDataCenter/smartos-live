@@ -293,7 +293,7 @@ function upload_strap
 	echo $mbdir | mput -H "content-type: text/plain" "$mdir/latest"
 }
 
-export PATH=/usr/bin:/usr/sbin:/sbin:/opt/local/bin:/opt/local/sbin
+export PATH=/usr/bin:/usr/sbin:/sbin:/opt/local/bin:/opt/local/sbin:$PATH
 set -o pipefail
 set -e
 

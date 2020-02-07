@@ -24,7 +24,10 @@ fi
 # branch information.
 current_branch=$1
 
-PROJECT_REPOS=$(awk -F: '{ print "projects/" $1; }' <configure-projects)
+PROJECT_FILE=configure-projects
+[[ -f "$PROJECT_FILE" ]] || PROJECT_FILE=default.configure-projects
+
+PROJECT_REPOS=$(awk -F: '{ print "projects/" $1; }' <$PROJECT_FILE)
 
 for repo in $PROJECT_REPOS; do
 	if [[ ! -d $repo ]]; then

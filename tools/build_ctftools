@@ -46,7 +46,7 @@ function make
 	unset CC
 	unset CXX
 	ROOT=`pwd`
-	export PATH=/opt/onbld/bin:/sbin:/usr/sbin:/usr/bin:/usr/ccs/bin:/opt/SUNWspro/bin:/opt/local/bin
+	export PATH=/opt/onbld/bin:/sbin:/usr/sbin:/usr/bin:/usr/ccs/bin:/opt/local/bin
 	export SHELL=/usr/bin/bash
 
 	while getopts "hj:o:" arg; do

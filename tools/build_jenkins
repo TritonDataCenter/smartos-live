@@ -47,6 +47,7 @@ fi
 function usage {
     echo "Usage: build_jenkins [options]"
     echo "OPTIONS"
+    echo "  -c            remove projects dirs prior to building"
     echo "  -C            only do configure and 'make check'"
     echo "  -d            build a debug platform"
     echo "  -F <flavor>   build one of the following build flavors:"
@@ -85,11 +86,14 @@ function log {
 #
 # Main
 #
-while getopts "CdhF:" opt; do
+while getopts "cCdhF:" opt; do
     case "${opt}" in
+        c)
+            CLEAN_PROJECTS_DIR=true;
+            ;;
         C)
             MAKE_CHECK_ONLY=true
-	    ;;
+            ;;
         d)
             # build debug platform bits
             ENGBLD_CONFIGURE_DEBUG_ARG='-d'
@@ -156,6 +160,13 @@ if [[ -z "${CONFIGURE_PROJECTS}" ]]; then
     echo "using default configure-projects"
 else
     echo "${CONFIGURE_PROJECTS}" > configure-projects
+fi
+
+if [[ -n "${CLEAN_PROJECTS_DIR}" ]]; then
+    echo "Removing potentially stale projects dirs"
+    for proj in $(cat configure-projects | awk -F: '{print $1}'); do
+        log_cmd rm -rf projects/$proj
+    done
 fi
 
 # Configure the build based on the arguments we've gathered

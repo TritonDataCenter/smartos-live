@@ -101,25 +101,12 @@ pipeline {
                 sh("git fetch origin '+refs/heads/*:refs/remotes/origin/*'")
             }
         }
-        stage('clean stale projects') {
-            steps{
-                sh('''
-set -o errexit
-rm -rf ./projects/illumos
-rm -rf ./projects/illumos-extra
-rm -rf ./projects/ur-agent
-rm -rf ./projects/kvm
-rm -rf ./projects/kvm-cmd
-rm -rf ./projects/mdata-client
-                ''')
-            }
-        }
         stage('check') {
             steps{
                 sh('''
 set -o errexit
 set -o pipefail
-./tools/build_jenkins -C
+./tools/build_jenkins -c -C
                 ''')
             }
         }
@@ -142,7 +129,7 @@ set -o pipefail
 set -o errexit
 set -o pipefail
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
-./tools/build_jenkins
+./tools/build_jenkins -c
                 ''')
                 archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
                     'log/*,output/bits/artifacts.txt,' +
@@ -172,7 +159,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
 # need to get all heads since we're on a new agent
 git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
-./tools/build_jenkins -d
+./tools/build_jenkins -c -d
                     ''')
                     }
                 }
@@ -198,7 +185,7 @@ git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
 export PLATFORM_DEBUG_SUFFIX=-gcc4
-./tools/build_jenkins -d
+./tools/build_jenkins -c -d
                      ''')
                     }
                 }

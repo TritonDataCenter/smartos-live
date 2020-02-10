@@ -154,9 +154,11 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
             stages {
                 stage('debug') {
                     agent {
+                      node {
                         label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                             'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                         customWorkspace "debug"
+                      }
                     }
                     when {
                         anyOf {
@@ -176,9 +178,11 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 }
                 stage('gcc4') {
                     agent {
+                      node {
                         label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                             'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                         customWorkspace "gcc4"
+                      }
                     }
                     when {
                         anyOf {
@@ -200,9 +204,11 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                 }
                 stage('strap-cache') {
                     agent {
+                      node {
                         label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                             'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                         customWorkspace "strap-cache"
+                      }
                     }
                     when {
                         anyOf {

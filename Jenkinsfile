@@ -134,7 +134,9 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                 archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
                     'log/*,output/bits/artifacts.txt,' +
                     'output/gitstatus.json,' +
-                    'output/changelog.txt'
+                    'output/changelog.txt',
+                    onlyIfSuccessful: false,
+                    allowEmptyArchive: true
             }
         }
         stage('Ancillary builds') {

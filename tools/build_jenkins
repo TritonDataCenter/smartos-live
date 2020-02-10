@@ -52,6 +52,8 @@ function usage {
     echo "                    triton (default)    a normal platform build"
     echo "                    smartos             only smartos platform bits"
     echo "                    triton-and-smartos  both of the above"
+    echo "                    strap-cache         build the strap cache tarball"
+    echo "                    ctftools            build the ctftools tarball"
     echo ""
     echo "ENVIRONMENT"
     echo "  BRANCH                the branch of smartos-live being built"
@@ -109,7 +111,7 @@ if [[ -z "$PLATFORM_BUILD_FLAVOR" ]]; then
 fi
 
 case "${PLATFORM_BUILD_FLAVOR}" in
-    'triton'|'smartos'|'triton-and-smartos')
+    'triton'|'smartos'|'triton-and-smartos'|'strap-cache'|'ctftools')
         ;;
     *)
         echo "Error: unknown platform build flavor: ${PLATFORM_BUILD_FLAVOR}"
@@ -154,22 +156,32 @@ else
     echo "${CONFIGURE_PROJECTS}" > configure-projects
 fi
 
+# this can be set to " " to avoid a full strap rebuild for dev purposes
+FORCE_STRAP_REBUILD_ARG=${FORCE_STRAP_REBUILD_ARG:--r}
+
 # Configure the build based on the arguments we've gathered
-log_cmd  ./configure -r \
+log_cmd  ./configure ${FORCE_STRAP_REBUILD_ARG} \
     ${ENGBLD_CONFIGURE_DEBUG_ARG} \
     ${PLAT_CONFIGURE_ARGS}
 
-log_cmd gmake common-release
-
 case "${PLATFORM_BUILD_FLAVOR}" in
     'triton')
+	log_cmd gmake common-release
         log_cmd gmake triton-release
         ;;
     'smartos')
+	log_cmd gmake common-release
         log_cmd gmake smartos-only-release
         ;;
     'triton-and-smartos')
+	log_cmd gmake common-release
         log_cmd gmake triton-smartos-release
+        ;;
+    'strap-cache')
+        log_cmd gmake strap-cache-release
+        ;;
+    'ctftools')
+        log_cmd gmake ctftools-release
         ;;
 esac
 

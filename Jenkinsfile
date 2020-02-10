@@ -106,7 +106,7 @@ pipeline {
                 sh('''
 set -o errexit
 set -o pipefail
-./tools/build_jenkins -c -C
+./tools/build_jenkins -c -F check
                 ''')
             }
         }

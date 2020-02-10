@@ -1,0 +1,155 @@
+#!/usr/bin/bash
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright 2020 Joyent, Inc.
+#
+
+#
+# Build a "ctftools" tarball. This is the CTF tools for use in repositories
+# outside of the platform build. Via a download script provided by eng.git,
+# consumers on the min_platform upwards can use these as part of their build.
+#
+
+usage="$0 make -j maxjobs -o tarball"
+usage="$usage | upload -D bits -d path -p platform -t timestamp"
+
+function fatal
+{
+        local msg="$*"
+        [[ -z "$msg" ]] && msg="failed"
+        echo "$msg" >&2
+        exit 1
+}
+
+function verbose
+{
+	echo "$@"
+	"$@"
+}
+
+function make
+{
+	local max_jobs=128
+	local tarball=""
+
+	# Setup for building stuff!
+	unset CC
+	unset CXX
+	ROOT=`pwd`
+	export PATH=/opt/onbld/bin:/sbin:/usr/sbin:/usr/bin:/usr/ccs/bin:/opt/local/bin
+	export SHELL=/usr/bin/bash
+
+	while getopts "hj:o:" arg; do
+		case $arg in
+		h)
+			echo "$usage"
+			exit 0 ;;
+		j)
+			max_jobs=$OPTARG ;;
+		o)
+			export CTFTOOLS_TARBALL=$OPTARG ;;
+		?)
+			echo "$usage" >&2
+			exit 1 ;;
+		esac
+	done
+
+	[[ -n "$CTFTOOLS_TARBALL" ]] || fatal "missing -o argument"
+
+	BUILDSTAMP=$(<${ROOT}/proto/buildstamp)
+	if [[ $? -ne 0 || -z "${BUILDSTAMP}" ]]; then
+		printf "failed to read existing buildstamp\n" >&2
+		exit 1
+	fi
+
+	echo "==> Building ctftools tarball (${BUILDSTAMP})"
+
+	mkdir -p "$(dirname $CTFTOOLS_TARBALL)"
+
+	cd ${ROOT}/projects/illumos
+	[[ -d "log" ]] || mkdir -p log
+	gsed -i -e "s|^GATE=.*$|GATE=\"joyent_${BUILDSTAMP}\"; export GATE|" illumos.sh
+	gsed -i -e "s|^MAX_JOBS=.*$|MAX_JOBS=${max_jobs}; export MAX_JOBS|" illumos.sh
+
+	#
+	# illumos.sh sets the value of $MAKE by default, which is used by bldenv
+	# and nightly. By setting MAKE below to the bootstrap dmake, illumos.sh
+	# will honor the one in the environment and let us solve the chicken and
+	# egg problem that we have.
+	#
+	export MAKE=/opt/local/bin/dmake
+	./usr/src/tools/scripts/bldenv illumos.sh \
+	    'cd $CODEMGR_WS/usr/src && export PATH="$PATH:/opt/local/bin" && \
+	    dmake setup && cd tools/ctf && dmake ctftools'
+}
+
+#
+# Upload a ctftools tarball.
+#
+function upload
+{
+	local bits_dir=""
+	local upload_dir=""
+	local platform=""
+	local timestamp=""
+
+	while getopts "D:d:hp:t:" arg; do
+		case $arg in
+		D)
+			bits_dir=$OPTARG ;;
+		d)
+			upload_dir=$OPTARG ;;
+		h)
+			echo "$usage"
+			exit 0 ;;
+		p)
+			platform=$OPTARG ;;
+		t)
+			timestamp=$OPTARG ;;
+		?)
+			echo "$usage" >&2
+			exit 1 ;;
+		esac
+	done
+
+	[[ -n "$bits_dir" ]] || fatal "missing -D argument"
+	[[ -n "$upload_dir" ]] || fatal "missing -d argument"
+	[[ -n "$platform" ]] || fatal "missing -p argument"
+	[[ -n "$timestamp" ]] || fatal "missing -t argument"
+
+	mdir="/$MANTA_USER/$upload_dir/built.$platform/"
+	mbdir="$mdir/$timestamp"
+
+	verbose mmkdir -p "$mbdir"
+
+	for file in $bits_dir/*; do
+		verbose mput -f "$file" "$mbdir/$(basename $file)"
+	done
+
+	echo "$mbdir" | mput -H "content-type: text/plain" "$mdir/latest"
+}
+
+export PATH=/usr/bin:/usr/sbin:/sbin:/opt/local/bin:/opt/local/sbin:$PATH
+set -o pipefail
+set -e
+
+cmd=$1
+shift
+
+case $cmd in
+	make) make $* ;;
+	upload) upload $* ;;
+	*)
+		echo "$usage" >&2
+		exit 1 ;;
+esac

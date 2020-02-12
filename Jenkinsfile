@@ -158,6 +158,8 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                     }
                     steps {
                         sh('''
+set -o errexit
+set -o pipefail
 # need to get all heads since we're on a new agent
 git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
@@ -207,33 +209,10 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                     }
                     steps {
                         sh('''
-# XXX timf: I'm a wee bit suspicious of this git manipulation here, need
-#           to check with jlevon
 set -o errexit
 set -o pipefail
-# need to get all heads again since we're on a new agent
 git fetch origin '+refs/heads/*:refs/remotes/origin/*'
-env
-git checkout origin/master
-git clean -fdx
-
-echo "illumos-extra: master: origin" >configure-projects
-echo "illumos: master: origin" >>configure-projects
-
-./configure
-
-git -C projects/illumos pull
-git -C projects/illumos-extra pull
-git -C projects/illumos-extra clean -fdx
-
-mloc=$(make strap-cache-location)
-
-if mls $mloc >/dev/null; then
-    echo "$mloc exists; skipping build"
-    exit 0
-fi
-make strap-cache
-mput -pf output/proto.strap.tgz ${mloc}
+./tools/build_jenkins -c -F strap-cache
                      ''')
                     }
                 }

@@ -35,6 +35,7 @@ usage="$0 make -a adjunct.tar -j maxjobs -d protodir [-f] [-o tarball]"
 usage="$usage | upload -D bits -d path -t timestamp"
 wsroot=$(cd $(dirname $0)/../; pwd)
 pkgin_file="/opt/local/etc/pkgin/repositories.conf"
+manta_host="https://us-east.manta.joyent.com"
 manta_dir="/Joyent_Dev/public/builds/SmartOS/strap-cache/master"
 cache_base="/opt/SmartOS/build-cache/"
 srcdir="$wsroot/projects/illumos-extra"
@@ -106,9 +107,7 @@ function download
 	local outfile="/var/tmp/$srcdirsha.proto.strap.tar.gz.$$"
 	local tmpdir="$cache_dir.$$"
 	local latest="$manta_dir/$pkgsrc_branch/$srcdirsha/latest"
-	local url="$(mget -q $latest 2>/dev/null)"
-
-	echo "Downloading proto.strap contents from $url ..."
+	local url="$(/usr/bin/curl -sS $manta_host/$latest 2>/dev/null)"
 
 	if [[ -z "$url" ]]; then
 		echo "Failed to find $latest: building locally"
@@ -116,7 +115,10 @@ function download
 		return 0
 	fi
 
-	if ! curl -f -o "$outfile" "$url"; then
+	url="$manta_host/$url/proto.strap.tar.gz"
+	echo "Downloading proto.strap contents from $url ..."
+
+	if ! /usr/bin/curl -f -o "$outfile" "$url"; then
 		rm -f "$outfile"
 		echo "Failed to download $url: building locally"
 		build_strap

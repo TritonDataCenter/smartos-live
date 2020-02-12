@@ -2116,12 +2116,16 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         This property allows you to set a password which will be required when
         connecting to the VNC port. IMPORTANT: this password will be visible
-        from the GZ of the CN and anyone with access to the serial port in the
-        guest. Set to an empty string (default) to not require a password at
-        this level.
+        from the GZ of the CN. For KVM anyone with access to the serial port in
+        the guest can also see the password. Set to an empty string (default) to
+        not require a password at this level.
+
+        Changing the password will require a reboot of the zone before the
+        change becomes active. Reboots from inside the guest will not make
+        the changed password active.
 
         type: string (8 chars max)
-        vmtype: kvm
+        vmtype: HVM
         listable: no
         create: yes
         update: yes

@@ -698,7 +698,13 @@ function get_recovery_configs()
     # encryption should never emit this property.
     has_recovery=
 
-    for line in $(kbmadm recovery list -p 2>/dev/null); do
+    # This is a bit ugly, but we depend on get_zpool() being
+    # called prior to get_recovery_configs() so that ${Zpool} is set.
+    # The rest of the script already treats ${Zpool} as a global variable
+    # set by get_zpool(), so we're not introducing any new ugliness.
+    [[ -z "$Zpool" ]] && return
+
+    for line in $(kbmadm recovery list -p "$Zpool" 2>/dev/null); do
         fields=(${line//:/ })
         cfg=${fields[0]}
         cfguuid=${fields[1]}

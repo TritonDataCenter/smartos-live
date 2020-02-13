@@ -193,29 +193,6 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                      ''')
                     }
                 }
-                stage('strap-cache') {
-                    agent {
-                      node {
-                        label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                            'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                        customWorkspace "${env.WORKSPACE}-strap-cache"
-                      }
-                    }
-                    when {
-                        anyOf {
-                            branch 'master'
-                            triggeredBy cause: 'UserIdCause'
-                        }
-                    }
-                    steps {
-                        sh('''
-set -o errexit
-set -o pipefail
-git fetch origin '+refs/heads/*:refs/remotes/origin/*'
-./tools/build_jenkins -c -F strap-cache
-                     ''')
-                    }
-                }
             }
         }
     }

@@ -8,7 +8,7 @@
  * Copyright 2020 Joyent, Inc.
  */
 
-@Library('jenkins-joylib@v1.0.2') _
+@Library('jenkins-joylib@v1.0.4') _
 
 pipeline {
 
@@ -190,6 +190,32 @@ export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
 export PLATFORM_DEBUG_SUFFIX=-gcc4
 ./tools/build_jenkins -c -d
+                     ''')
+                    }
+                }
+                stage('strap-cache') {
+                    agent {
+                      node {
+                        label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                            'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                        customWorkspace "${env.WORKSPACE}-strap-cache"
+                      }
+                    }
+                    when {
+                        // We only build strap-cache as a result of a push to
+                        // illumos-extra. See the Jenkinsfile in that repository
+                        // which has a build(..) step for smartos-live
+                        anyOf {
+                            triggeredBy cause: 'UpstreamCause' detail: 'joyent-org/smartos-live/master'
+                        }
+                    }
+                    steps {
+                        sh('''
+set -o errexit
+set -o pipefail
+git fetch origin '+refs/heads/*:refs/remotes/origin/*'
+export MANTA_TOOLS_PATH=/root/bin/
+./tools/build_jenkins -c -F strap-cache
                      ''')
                     }
                 }

@@ -212,7 +212,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                         // We only build strap-cache as a result of a push to
                         // illumos-extra. See the Jenkinsfile in that repository
                         // which has a build(..) step for smartos-live
-                        environment name: 'BUILD_STRAP', value: true
+                        environment name: 'BUILD_STRAP', value: 'true'
                     }
                     steps {
                         sh('''

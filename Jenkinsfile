@@ -90,6 +90,13 @@ pipeline {
                 '  <li>SmartOS Changelog file</li>\n' +
                 '</ul>'
         )
+        booleanParam(
+            name: 'BUILD_STRAP',
+            defaultValue: false,
+            description: 'This parameter declares whether to build a new ' +
+                'strap-cache as part of this build. This should only be ' +
+                'true when triggered by a push to illumos-extra.'
+        )
     }
     stages {
         // Jenkins PR builds default to a lightweight checkout, which
@@ -205,9 +212,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                         // We only build strap-cache as a result of a push to
                         // illumos-extra. See the Jenkinsfile in that repository
                         // which has a build(..) step for smartos-live
-                        anyOf {
-                            triggeredBy cause: 'UpstreamCause' detail: 'joyent-org/smartos-live/master'
-                        }
+                        environment name: 'BUILD_STRAP', value: true
                     }
                     steps {
                         sh('''

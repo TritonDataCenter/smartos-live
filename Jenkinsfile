@@ -127,7 +127,6 @@ set -o pipefail
             when {
                 anyOf {
                     branch 'master'
-                    branch pattern: 'release-\\d+', comparator: 'REGEXP'
                     triggeredBy cause: 'UserIdCause'
                 }
             }
@@ -157,7 +156,6 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
             when {
                 anyOf {
                     branch 'master'
-                    branch pattern: 'release-\\d+', comparator: 'REGEXP'
                     triggeredBy cause: 'UserIdCause'
                 }
             }
@@ -183,7 +181,6 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
             when {
                 anyOf {
                     branch 'master'
-                    branch pattern: 'release-\\d+', comparator: 'REGEXP'
                     triggeredBy cause: 'UserIdCause'
                 }
             }

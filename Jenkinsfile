@@ -146,84 +146,80 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                     allowEmptyArchive: true
             }
         }
-        stage('Ancillary builds') {
-            stages {
-                stage('debug') {
-                    agent {
-                      node {
-                        label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                            'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                        customWorkspace "${env.WORKSPACE}-debug"
-                      }
-                    }
-                    when {
-                        anyOf {
-                            branch 'master'
-                            branch pattern: 'release-\\d+', comparator: 'REGEXP'
-                            triggeredBy cause: 'UserIdCause'
-                        }
-                    }
-                    steps {
-                        sh('''
+        stage('debug') {
+            agent {
+                node {
+                label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                    'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                customWorkspace "${env.WORKSPACE}-debug"
+                }
+            }
+            when {
+                anyOf {
+                    branch 'master'
+                    branch pattern: 'release-\\d+', comparator: 'REGEXP'
+                    triggeredBy cause: 'UserIdCause'
+                }
+            }
+            steps {
+                sh('''
 set -o errexit
 set -o pipefail
 # need to get all heads since we're on a new agent
 git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
 ./tools/build_jenkins -c -d
-                    ''')
-                    }
+            ''')
+            }
+        }
+        stage('gcc4') {
+            agent {
+                node {
+                label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                    'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                customWorkspace "${env.WORKSPACE}-gcc4"
                 }
-                stage('gcc4') {
-                    agent {
-                      node {
-                        label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                            'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                        customWorkspace "${env.WORKSPACE}-gcc4"
-                      }
-                    }
-                    when {
-                        anyOf {
-                            branch 'master'
-                            branch pattern: 'release-\\d+', comparator: 'REGEXP'
-                            triggeredBy cause: 'UserIdCause'
-                        }
-                    }
-                    steps {
-                        sh('''
+            }
+            when {
+                anyOf {
+                    branch 'master'
+                    branch pattern: 'release-\\d+', comparator: 'REGEXP'
+                    triggeredBy cause: 'UserIdCause'
+                }
+            }
+            steps {
+                sh('''
 # need to get all heads since we're on a new agent
 git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
 export PLATFORM_DEBUG_SUFFIX=-gcc4
 ./tools/build_jenkins -c -d
-                     ''')
-                    }
+                ''')
+            }
+        }
+        stage('strap-cache') {
+            agent {
+                node {
+                label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                    'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                customWorkspace "${env.WORKSPACE}-strap-cache"
                 }
-                stage('strap-cache') {
-                    agent {
-                      node {
-                        label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                            'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                        customWorkspace "${env.WORKSPACE}-strap-cache"
-                      }
-                    }
-                    when {
-                        // We only build strap-cache as a result of a push to
-                        // illumos-extra. See the Jenkinsfile in that repository
-                        // which has a build(..) step for smartos-live
-                        environment name: 'BUILD_STRAP', value: 'true'
-                    }
-                    steps {
-                        sh('''
+            }
+            when {
+                // We only build strap-cache as a result of a push to
+                // illumos-extra. See the Jenkinsfile in that repository
+                // which has a build(..) step for smartos-live
+                environment name: 'BUILD_STRAP', value: 'true'
+            }
+            steps {
+                sh('''
 set -o errexit
 set -o pipefail
 git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export MANTA_TOOLS_PATH=/root/bin/
 ./tools/build_jenkins -c -F strap-cache
-                     ''')
-                    }
-                }
+                ''')
             }
         }
     }

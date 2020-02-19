@@ -456,10 +456,11 @@ clean:
 	(cd $(PKGSRC) && gmake clean)
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && [ -h $(STRAP_PROTO) ] || rm -rf $(STRAP_PROTO))
+	(cd $(ROOT) && rm -f $(STRAP_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(BOOT_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(IMAGES_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(TESTS_PROTO))
-	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO) \
+	(cd $(ROOT) && mkdir -p $(PROTO) $(BOOT_PROTO) \
 	    $(IMAGES_PROTO) $(TESTS_PROTO))
 	rm -f tools/cryptpass
 	(cd tools/builder && gmake clean)
@@ -653,7 +654,7 @@ platform-bits-upload-latest:
 # platform. So we do it by hand instead.
 #
 
-.PHONE: ctftools-bits-upload
+.PHONY: ctftools-bits-upload
 ctftools-bits-upload: $(STAMPFILE)
 	PATH=$(MANTA_TOOLS_PATH):$(PATH) ./tools/build_ctftools upload \
 	    -D $(CTFTOOLS_BITS_DIR) \
@@ -661,7 +662,7 @@ ctftools-bits-upload: $(STAMPFILE)
 	    -p $(BUILD_PLATFORM) \
 	    -t $(PLATFORM_TIMESTAMP)
 
-.PHONE: strap-cache-bits-upload
+.PHONY: strap-cache-bits-upload
 strap-cache-bits-upload: $(STAMPFILE)
 	PATH=$(MANTA_TOOLS_PATH):$(PATH) ./tools/build_strap upload \
 	    -D $(STRAP_CACHE_BITS_DIR) \

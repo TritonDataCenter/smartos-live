@@ -12,6 +12,8 @@
 # Copyright 2020 Joyent, Inc.
 #
 
+set -x
+
 #
 # build_strap - populate proto.strap
 #
@@ -224,13 +226,15 @@ function populate_strap
 		return
 	fi
 
+	set -x
+
 	#
 	# First we should clean up: if not a symlink or empty dir, it must be a
 	# local strap build we need.
 	#
 	if [[ -d "$protodir" ]];then
-		rm "$protodir" 2>/dev/null
-		rmdir "$protodir" 2>/dev/null
+		rm -f "$protodir" 2>/dev/null
+		rmdir "$protodir" 2>/dev/null || true
 		if [[ -d "$protodir" ]]; then
 			build_strap
 			return 0

@@ -12,8 +12,6 @@
 # Copyright 2020 Joyent, Inc.
 #
 
-set -x
-
 #
 # build_strap - populate proto.strap
 #
@@ -225,8 +223,6 @@ function populate_strap
 		create_cache $cache_dir $tarfile
 		return
 	fi
-
-	set -x
 
 	#
 	# First we should clean up: if not a symlink or empty dir, it must be a

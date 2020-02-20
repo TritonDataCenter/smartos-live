@@ -28,7 +28,9 @@ pipeline {
             name: 'PLAT_CONFIGURE_ARGS',
             defaultValue: '',
             description:
-                'Arguments to smartos-live\'s configure script:<br>\n' +
+                'Arguments to smartos-live\'s configure script.\n' +
+                'By setting any of these, we only run the <b>"default"</b>\n' +
+                'Jenkins pipeline stage using the user-supplied value.<br/>' +
                 '<dl>\n' +
                 '<dt>-c</dt>\n' +
                 '<dd>clobber Illumos before each build [default: no]</dd>\n' +
@@ -123,7 +125,7 @@ set -o pipefail
                 sh('git clean -fdx')
             }
         }
-        stage('build image and upload') {
+        stage('default') {
             when {
                 anyOf {
                     branch 'master'

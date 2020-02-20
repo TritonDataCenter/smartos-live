@@ -143,6 +143,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                     'output/changelog.txt',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
+                joyMattermostNotification(channel: 'jenkins')
             }
         }
         stage('debug') {
@@ -168,6 +169,13 @@ git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
 ./tools/build_jenkins -c -d
             ''')
+                archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
+                    'log/*,output/bits/artifacts.txt,' +
+                    'output/gitstatus.json,' +
+                    'output/changelog.txt',
+                    onlyIfSuccessful: false,
+                    allowEmptyArchive: true
+                joyMattermostNotification(channel: 'jenkins')
             }
         }
         stage('gcc4') {
@@ -193,6 +201,13 @@ export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
 export PLATFORM_DEBUG_SUFFIX=-gcc4
 ./tools/build_jenkins -c -d
                 ''')
+                archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
+                    'log/*,output/bits/artifacts.txt,' +
+                    'output/gitstatus.json,' +
+                    'output/changelog.txt',
+                    onlyIfSuccessful: false,
+                    allowEmptyArchive: true
+                joyMattermostNotification(channel: 'jenkins')
             }
         }
         stage('strap-cache') {
@@ -218,6 +233,13 @@ export MANTA_TOOLS_PATH=/root/bin/
 ./tools/build_jenkins -c -F strap-cache
                 ''')
             }
+                archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
+                    'log/*,output/bits/artifacts.txt,' +
+                    'output/gitstatus.json,' +
+                    'output/changelog.txt',
+                    onlyIfSuccessful: false,
+                    allowEmptyArchive: true
+                joyMattermostNotification(channel: 'jenkins')
         }
     }
     post {

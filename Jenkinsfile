@@ -207,7 +207,6 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                     'output/changelog.txt',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
-                joyMattermostNotification(channel: 'jenkins')
             }
         }
         stage('strap-cache') {
@@ -232,7 +231,6 @@ git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export MANTA_TOOLS_PATH=/root/bin/
 ./tools/build_jenkins -c -F strap-cache
                 ''')
-            }
                 archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
                     'log/*,output/bits/artifacts.txt,' +
                     'output/gitstatus.json,' +
@@ -240,6 +238,7 @@ export MANTA_TOOLS_PATH=/root/bin/
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
                 joyMattermostNotification(channel: 'jenkins')
+            }
         }
     }
     post {

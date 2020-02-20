@@ -155,9 +155,12 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                 }
             }
             when {
-                anyOf {
-                    branch 'master'
-                    triggeredBy cause: 'UserIdCause'
+                allOf {
+                    anyOf {
+                        branch 'master'
+                        triggeredBy cause: 'UserIdCause'
+                    }
+                    environment name: 'PLAT_CONFIGURE_ARGS', value: ''
                 }
             }
             steps {
@@ -187,9 +190,12 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 }
             }
             when {
-                anyOf {
-                    branch 'master'
-                    triggeredBy cause: 'UserIdCause'
+                allOf {
+                    anyOf {
+                        branch 'master'
+                        triggeredBy cause: 'UserIdCause'
+                    }
+                    environment name: 'PLAT_CONFIGURE_ARGS', value: ''
                 }
             }
             steps {

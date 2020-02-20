@@ -20,9 +20,8 @@ pipeline {
     // Don't assign a specific agent for the entire job, in order to better
     // share resources between jobs. Otherwise, we'd tie up an agent here for
     // the duration of all stages for a given build.
-    agent {
-        none
-    }
+    agent none
+
     parameters {
         string(
             name: 'PLAT_CONFIGURE_ARGS',

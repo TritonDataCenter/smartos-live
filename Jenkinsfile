@@ -12,11 +12,6 @@
 
 pipeline {
 
-    agent {
-        label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-            'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-    }
-
     options {
         buildDiscarder(logRotator(numToKeepStr: '30'))
         timestamps()
@@ -101,17 +96,17 @@ pipeline {
         )
     }
     stages {
-        // Jenkins PR builds default to a lightweight checkout, which
-        // doesn't include all branch information, which causes the
-        // smartos-live ./tools/build_changelog script to fail, breaking
-        // the build. Get those branches before doing anything.
-        stage('get-all-branches') {
-            steps{
-                sh("git fetch origin '+refs/heads/*:refs/remotes/origin/*'")
-            }
-        }
         stage('check') {
+            agent {
+                label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+            }
             steps{
+                // Jenkins PR builds default to a lightweight checkout, which
+                // doesn't include all branch information, which causes the
+                // smartos-live ./tools/build_changelog script to fail, breaking
+                // the build. Get those branches before doing anything.
+                sh("git fetch origin '+refs/heads/*:refs/remotes/origin/*'")
                 sh('''
 set -o errexit
 set -o pipefail
@@ -119,13 +114,11 @@ set -o pipefail
                 ''')
             }
         }
-        // in case 'make check' left anything hanging around
-        stage('re-clean') {
-            steps {
-                sh('git clean -fdx')
-            }
-        }
         stage('default') {
+            agent {
+                label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+            }
             when {
                 anyOf {
                     branch 'master'
@@ -133,6 +126,7 @@ set -o pipefail
                 }
             }
             steps {
+                sh('git clean -fdx')
                 sh('''
 set -o errexit
 set -o pipefail
@@ -166,6 +160,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                 }
             }
             steps {
+                sh('git clean -fdx')
                 sh('''
 set -o errexit
 set -o pipefail
@@ -201,6 +196,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 }
             }
             steps {
+                sh('git clean -fdx')
                 sh('''
 # need to get all heads since we're on a new agent
 git fetch origin '+refs/heads/*:refs/remotes/origin/*'
@@ -232,6 +228,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                 environment name: 'BUILD_STRAP', value: 'true'
             }
             steps {
+                sh('git clean -fdx')
                 sh('''
 set -o errexit
 set -o pipefail

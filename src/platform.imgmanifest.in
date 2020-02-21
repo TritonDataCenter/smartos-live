@@ -8,7 +8,7 @@
   "state": "active",
   "disabled": false,
   "public": false,
-  "os": "other",
+  "os": "smartos",
   "files": [
     {
       "sha1": "SHA",

@@ -54,6 +54,13 @@
             }
         },
         {
+            "name": "kbmd",
+            "labels": {
+                "release": true,
+                "mg": "platform"
+            }
+        },
+        {
             "name": "libMicro"
         },
         {

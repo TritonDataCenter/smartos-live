@@ -1,0 +1,41 @@
+.Dd February 26, 2020
+.Dt MKZPOOL 1M
+.Os
+.Sh NAME
+.Nm mkzpool
+.Nd Create a zpool from a JSON specification
+.Sh SYNOPSIS
+.Cm mkzpool
+.Op Fl ef
+.Ar pool
+.Ar file.json
+.Sh DESCRIPTION
+.Nm
+functions as a wrapper around
+.Xr zpool 1M .
+It creates a pool named
+.Ar pool
+from a JSON specification in the file named
+.Ar file.json
+instead of command\-line arguments.
+The input JSON must satisfy the schema described in the
+.Xr disklayout 1M
+output specification.
+.Ss OPTIONS
+.Bl -tag -width Fl
+.It Fl e
+Encrypt.
+Create the zpool as an encrypted zpool.
+A PIV token must be present on the system for the command to succeed.
+.It Fl f
+Force.
+This flag has the same meaning as the same flag when passed to
+.Cm zpool create .
+.El
+.Sh WARNINGS
+Use of this command is subject to the same caveats and warnings as the
+.Xr zpool 1M
+create command.
+.Sh "SEE ALSO"
+.Xr disklayout 1M ,
+.Xr zpool 1M

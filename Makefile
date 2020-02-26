@@ -43,6 +43,8 @@ PATH =		/usr/bin:/usr/sbin:/sbin:/opt/local/bin
 NATIVE_CC =	/opt/local/bin/gcc
 endif
 
+BUILD_PLATFORM := $(shell uname -v)
+
 #
 # This number establishes a maximum for smartos-live, illumos-extra, and
 # illumos-joyent.  Support for it can and should be added to other projects
@@ -136,6 +138,10 @@ IMAGES_TARBALL :=	output/$(IMAGES_VERSION).tgz
 TESTS_VERSION :=	tests-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
 TESTS_TARBALL :=	output/$(TESTS_VERSION).tgz
+
+CTFTOOLS_TARBALL := $(ROOT)/output/ctftools/ctftools.tar.gz
+
+STRAP_CACHE_TARBALL := $(ROOT)/output/strap-cache/proto.tar.gz
 
 ifdef PLATFORM_PASSWORD
 PLATFORM_PASSWORD_OPT=-p $(PLATFORM_PASSWORD)
@@ -337,7 +343,14 @@ update-base:
 	    (cd projects/devpro && gmake DESTDIR=$(PROTO) install)
 	touch $@
 
-0-illumos-stamp: 0-strap-stamp
+$(STAMPFILE):
+	mkdir -p $(ROOT)/proto
+	if [[ -z $$BUILDSTAMP ]]; then \
+	    BUILDSTAMP=$$(TZ=UTC date "+%Y%m%dT%H%M%SZ"); \
+	fi ; \
+	echo "$$BUILDSTAMP" >$(STAMPFILE)
+
+0-illumos-stamp: 0-strap-stamp $(STAMPFILE)
 	@if [[ "$(ILLUMOS_CLOBBER)" = "yes" ]]; then \
 		(cd $(ROOT) && MAX_JOBS=$(MAX_JOBS) ./tools/clobber_illumos) \
 	fi
@@ -348,17 +361,21 @@ FORCEARG_yes=-f
 
 # build our proto.strap area
 0-strap-stamp:
-	$(ROOT)/tools/build_strap -j $(MAX_JOBS) -d $(STRAP_PROTO) \
-	    -a $(ADJUNCT_TARBALL) $(FORCEARG_$(FORCE_STRAP_REBUILD))
+	$(ROOT)/tools/build_strap make \
+	    -a $(ADJUNCT_TARBALL) -d $(STRAP_PROTO) -j $(MAX_JOBS) \
+	    $(FORCEARG_$(FORCE_STRAP_REBUILD))
 	touch $@
 
-# report the Manta location of the proto.strap cache
-strap-cache-location:
-	@$(ROOT)/tools/build_strap -l
-
 # build a proto.strap cache tarball
-strap-cache:
-	$(ROOT)/tools/build_strap -c -j $(MAX_JOBS) -a $(ADJUNCT_TARBALL)
+$(STRAP_CACHE_TARBALL):
+	$(ROOT)/tools/build_strap make \
+	    -a $(ADJUNCT_TARBALL) -d $(STRAP_PROTO) -j $(MAX_JOBS) \
+            -o $(STRAP_CACHE_TARBALL) $(FORCEARG_$(FORCE_STRAP_REBUILD))
+
+# build a CTF tools tarball
+$(CTFTOOLS_TARBALL): 0-strap-stamp $(STAMPFILE)
+	$(ROOT)/tools/build_ctftools make \
+	    -j $(MAX_JOBS) -o $(CTFTOOLS_TARBALL)
 
 # additional illumos-extra content for proto itself
 0-extra-stamp: 0-illumos-stamp
@@ -439,10 +456,11 @@ clean:
 	(cd $(PKGSRC) && gmake clean)
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && [ -h $(STRAP_PROTO) ] || rm -rf $(STRAP_PROTO))
+	(cd $(ROOT) && rm -f $(STRAP_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(BOOT_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(IMAGES_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(TESTS_PROTO))
-	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO) \
+	(cd $(ROOT) && mkdir -p $(PROTO) $(BOOT_PROTO) \
 	    $(IMAGES_PROTO) $(TESTS_PROTO))
 	rm -f tools/cryptpass
 	(cd tools/builder && gmake clean)
@@ -484,6 +502,10 @@ BUILD_NAME			?= platform
 #
 PLATFORM_BITS_DIR		= $(ROOT)/output/bits/platform$(PLATFORM_DEBUG_SUFFIX)
 PLATFORM_BRANCH ?= $(shell git symbolic-ref HEAD | awk -F/ '{print $$3}')
+
+CTFTOOLS_BITS_DIR		= $(ROOT)/output/ctftools/bits
+
+STRAP_CACHE_BITS_DIR		= $(ROOT)/output/strap-cache/bits
 
 #
 # PUB_BRANCH_DESC indicates the different 'projects' branches used by the build.
@@ -589,11 +611,21 @@ else
 BITS_UPLOAD_IMGAPI_ARG =
 endif
 
+BITS_UPLOAD_BRANCH = $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC)
+
+SMARTOS_DEST_OUT_PATH := $(ENGBLD_DEST_OUT_PATH)/SmartOS
+
+CTFTOOLS_DEST_OUT_PATH := \
+    $(SMARTOS_DEST_OUT_PATH)/ctftools/$(BITS_UPLOAD_BRANCH)
+
+STRAP_CACHE_DEST_OUT_PATH := \
+    $(SMARTOS_DEST_OUT_PATH)/strap-cache/$(BITS_UPLOAD_BRANCH)
+
 .PHONY: platform-bits-upload
 platform-bits-upload:
 	PATH=$(MANTA_TOOLS_PATH):$(PATH) \
 	    $(ROOT)/deps/eng/tools/bits-upload.sh \
-	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+	        -b $(BITS_UPLOAD_BRANCH) \
 	        $(BITS_UPLOAD_LOCAL_ARG) \
 	        $(BITS_UPLOAD_IMGAPI_ARG) \
 	        -D $(ROOT)/output/bits \
@@ -609,12 +641,33 @@ platform-bits-upload:
 platform-bits-upload-latest:
 	PATH=$(MANTA_TOOLS_PATH):$(PATH) TIMESTAMP= \
 	    $(ROOT)/deps/eng/tools/bits-upload.sh \
-	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+	        -b $(BITS_UPLOAD_BRANCH) \
 	        $(BITS_UPLOAD_LOCAL_ARG) \
 	        $(BITS_UPLOAD_IMGAPI_ARG) \
 	        -D $(ROOT)/output/bits \
 	        -d $(ENGBLD_DEST_OUT_PATH)/$(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX) \
 	        -n $(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX)
+
+#
+# ctftools and strap-cache do not fit well into the bits-upload.sh
+# infrastructure, as we need to differentiate based on aspects of our build
+# platform. So we do it by hand instead.
+#
+
+.PHONY: ctftools-bits-upload
+ctftools-bits-upload: $(STAMPFILE)
+	PATH=$(MANTA_TOOLS_PATH):$(PATH) ./tools/build_ctftools upload \
+	    -D $(CTFTOOLS_BITS_DIR) \
+	    -d $(CTFTOOLS_DEST_OUT_PATH) \
+	    -p $(BUILD_PLATFORM) \
+	    -t $(PLATFORM_TIMESTAMP)
+
+.PHONY: strap-cache-bits-upload
+strap-cache-bits-upload: $(STAMPFILE)
+	PATH=$(MANTA_TOOLS_PATH):$(PATH) ./tools/build_strap upload \
+	    -D $(STRAP_CACHE_BITS_DIR) \
+	    -d $(STRAP_CACHE_DEST_OUT_PATH) \
+	    -t $(PLATFORM_TIMESTAMP)
 
 #
 # A wrapper to build the additional components that a standard
@@ -642,6 +695,21 @@ smartos-publish:
 	    $(ROOT)/tools/smartos-index $(PLATFORM_TIMESTAMP) > index.html)
 	(cd $(PLATFORM_BITS_DIR) && \
 	    /usr/bin/sum -x md5 * > md5sums.txt)
+
+.PHONY: ctftools-publish
+ctftools-publish:
+	@echo "# Publish ctftools tarball"
+	mkdir -p $(CTFTOOLS_BITS_DIR)
+	git -C projects/illumos log -1 >$(CTFTOOLS_BITS_DIR)/gitstatus.illumos
+	cp $(CTFTOOLS_TARBALL) $(CTFTOOLS_BITS_DIR)/ctftools.tar.gz
+
+.PHONY: strap-cache-publish
+strap-cache-publish:
+	@echo "# Publish strap-cache tarball"
+	mkdir -p $(STRAP_CACHE_BITS_DIR)
+	git -C projects/illumos-extra log -1 \
+	    >$(STRAP_CACHE_BITS_DIR)/gitstatus.illumos-extra
+	cp $(STRAP_CACHE_TARBALL) $(STRAP_CACHE_BITS_DIR)/proto.strap.tar.gz
 
 #
 # Define a series of phony targets that encapsulate a standard 'release' process
@@ -687,6 +755,18 @@ smartos-only-release: \
     smartos-build \
     smartos-publish \
     platform-bits-upload
+
+.PHONY: ctftools-release
+ctftools-release: \
+    $(CTFTOOLS_TARBALL) \
+    ctftools-publish \
+    ctftools-bits-upload
+
+.PHONY: strap-cache-release
+strap-cache-release: \
+    $(STRAP_CACHE_TARBALL) \
+    strap-cache-publish \
+    strap-cache-bits-upload
 
 print-%:
 	@echo '$*=$($*)'

@@ -56,6 +56,7 @@ function usage {
     echo "                    strap-cache         build the strap cache tarball"
     echo "                    ctftools            build the ctftools tarball"
     echo "                    check               do a 'make check' only"
+    echo "  -S <stage>    the Jenkins stage name, used to distinguish artifacts"
     echo ""
     echo "ENVIRONMENT"
     echo "  BRANCH                the branch of smartos-live being built"
@@ -86,9 +87,39 @@ function log {
 }
 
 #
+# Write the Jenkins build artifacts (log files, etc.) to an output
+# directory named after the current Jenkins stage name in order to
+# disambiguate the artifacts by stage name. gitstatus.json and the
+# generated changelog shouldn't change across stages, but let's err
+# on the side of caution.
+#
+function archive_artifacts {
+    # Do our best to save all artifacts
+    set +o errexit
+    if [[ -n "$JENKINS_STAGE_NAME" ]]; then
+        echo "Writing Jenkins artifacts to output/$JENKINS_STAGE_NAME"
+        mkdir -p output/$JENKINS_STAGE_NAME
+        # move these logs because they're large
+        mv projects/illumos/log/log.* output/$JENKINS_STAGE_NAME
+        cp log/* output/$JENKINS_STAGE_NAME
+        for file in output/bits/artifacts.txt \
+                output/gitstatus.json \
+                output/changelog.txt; do
+            cp $file output/$JENKINS_STAGE_NAME
+        done
+    fi
+}
+
+#
+# Install a trap handler to archive_artifacts so that it gets called regardless
+# of errexit or pipefail.
+#
+trap archive_artifacts EXIT
+
+#
 # Main
 #
-while getopts "cdhF:" opt; do
+while getopts "cdhF:S:" opt; do
     case "${opt}" in
         c)
             CLEAN_PROJECTS_DIR=true;
@@ -100,6 +131,9 @@ while getopts "cdhF:" opt; do
             ;;
         F)
             PLATFORM_BUILD_FLAVOR="${OPTARG}"
+            ;;
+        S)
+            JENKINS_STAGE_NAME="${OPTARG}"
             ;;
         h)
             usage
@@ -191,7 +225,7 @@ case "${PLATFORM_BUILD_FLAVOR}" in
         log_cmd gmake smartos-only-release
         ;;
     'triton-and-smartos')
-	log_cmd gmake common-release
+        log_cmd gmake common-release
         log_cmd gmake triton-smartos-release
         ;;
     'strap-cache')

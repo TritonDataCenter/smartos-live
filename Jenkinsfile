@@ -136,12 +136,9 @@ set -o pipefail
 set -o errexit
 set -o pipefail
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
-./tools/build_jenkins -c
+./tools/build_jenkins -c -S default
                 ''')
-                archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
-                    'log/*,output/bits/artifacts.txt,' +
-                    'output/gitstatus.json,' +
-                    'output/changelog.txt',
+                archiveArtifacts artifacts: 'output/default',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
                 joyMattermostNotification(channel: 'jenkins')
@@ -172,12 +169,9 @@ set -o pipefail
 # need to get all heads since we're on a new agent
 git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
-./tools/build_jenkins -c -d
+./tools/build_jenkins -c -d -S debug
             ''')
-                archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
-                    'log/*,output/bits/artifacts.txt,' +
-                    'output/gitstatus.json,' +
-                    'output/changelog.txt',
+                archiveArtifacts artifacts: 'output/debug',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
                 joyMattermostNotification(channel: 'jenkins')
@@ -208,12 +202,9 @@ git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
 export PLATFORM_DEBUG_SUFFIX=-gcc4
-./tools/build_jenkins -c -d
+./tools/build_jenkins -c -d -S gcc4
                 ''')
-                archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
-                    'log/*,output/bits/artifacts.txt,' +
-                    'output/gitstatus.json,' +
-                    'output/changelog.txt',
+                archiveArtifacts artifacts: 'output/gcc4',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
             }
@@ -239,12 +230,9 @@ set -o errexit
 set -o pipefail
 git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export MANTA_TOOLS_PATH=/root/bin/
-./tools/build_jenkins -c -F strap-cache
+./tools/build_jenkins -c -F strap-cache -S strap-cache
                 ''')
-                archiveArtifacts artifacts: 'projects/illumos/log/log.*/*,' +
-                    'log/*,output/bits/artifacts.txt,' +
-                    'output/gitstatus.json,' +
-                    'output/changelog.txt',
+                archiveArtifacts artifacts: 'output/strap-cache',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
                 joyMattermostNotification(channel: 'jenkins')

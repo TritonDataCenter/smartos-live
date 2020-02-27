@@ -229,8 +229,8 @@ function populate_strap
 	# local strap build we need.
 	#
 	if [[ -d "$protodir" ]];then
-		rm "$protodir" 2>/dev/null
-		rmdir "$protodir" 2>/dev/null
+		rm -f "$protodir" 2>/dev/null || true
+		rmdir "$protodir" 2>/dev/null || true
 		if [[ -d "$protodir" ]]; then
 			build_strap
 			return 0

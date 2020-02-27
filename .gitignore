@@ -83,5 +83,3 @@ src/zonemon
 tests.manifest.gen
 tools/pwgen-2.06/Makefile
 tools/pwgen-2.06/autom4te.cache
-zonestat.1
-zonestatd.1m

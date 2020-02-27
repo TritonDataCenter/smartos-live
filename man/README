@@ -1,12 +1,10 @@
-FIXME
+This directory installs man pages corresponding to software delivered by
+smartos-live itself.  For mainly historical reasons, some of these live under
+/smartdc/man, although they're still delivered into SmartOS, not just a Triton
+build.
 
-Most of the man pages are in the illumos-joyent repo under usr/src/man.
-This directory only contains extra man pages that are not included in
-illumos-joyent.  Only add or update a man page here if it doesn't exist
-in illumos-joyent.
+Some are built from markdown via ronnjs, others not.
 
-Most of the original Sun versions of the files here come from the opensolaris
-man consolidation which were released under the CDDL.  Modifications since also
-subject to CDDL and:
-
-Copyright 2020 Joyent, Inc.
+In addition, there are some waifs and strays - such as the bzip2 manpages -
+that are referenced from manifests other than man/manifest, and mainly here for
+convenience.

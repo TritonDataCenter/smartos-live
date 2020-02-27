@@ -10,7 +10,6 @@ MAN_FILES = \
 	smartdc/man/man1/sdc-factoryreset.1 \
 	smartdc/man/man1/sdc-lastcomm.1 \
 	smartdc/man/man1/sdc-zfs-io-throttle.1 \
-	usr/share/man/man1/as.1 \
 	usr/share/man/man1/bunzip2.1 \
 	usr/share/man/man1/bzcat.1 \
 	usr/share/man/man1/bzcmp.1 \
@@ -18,14 +17,11 @@ MAN_FILES = \
 	usr/share/man/man1/bzfgrep.1 \
 	usr/share/man/man1/bzip2recover.1 \
 	usr/share/man/man1/bzless.1 \
-	usr/share/man/man1/ex.1 \
 	usr/share/man/man1/gzcat.1 \
 	usr/share/man/man1/gzcmp.1 \
 	usr/share/man/man1/gzegrep.1 \
 	usr/share/man/man1/gzfgrep.1 \
 	usr/share/man/man1/json.1 \
-	usr/share/man/man1/vi.1 \
-	usr/share/man/man1/zonestat.1 \
 	usr/share/man/man1m/disklayout.1m \
 	usr/share/man/man1m/fssstat.1m \
 	usr/share/man/man1m/fwadm.1m \
@@ -33,20 +29,14 @@ MAN_FILES = \
 	usr/share/man/man1m/imgadm.1m \
 	usr/share/man/man1m/mkzpool.1m \
 	usr/share/man/man1m/nictagadm.1m \
-	usr/share/man/man1m/sys-unconfig.1m \
 	usr/share/man/man1m/sysevent.1m \
 	usr/share/man/man1m/sysinfo.1m \
-	usr/share/man/man1m/tzreload.1m \
 	usr/share/man/man1m/vmadm.1m \
 	usr/share/man/man1m/vmadmd.1m \
 	usr/share/man/man1m/vminfo.1m \
 	usr/share/man/man1m/ziostat.1m \
 	usr/share/man/man1m/zonememstat.1m \
 	usr/share/man/man1m/zonemon.1m \
-	usr/share/man/man1m/zonestatd.1m \
-	usr/share/man/man3lib/libm.3lib \
-	usr/share/man/man3lib/libmvec.3lib \
-	usr/share/man/man3lib/libusb.3lib \
 	usr/share/man/man5/fwrule.5 \
 	usr/share/man/man5/joyent.5 \
 	usr/share/man/man5/openssl.5

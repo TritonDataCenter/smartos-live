@@ -1,1 +1,0 @@
-../../src/img/man/imgadm.1m.md

@@ -1,3 +1,5 @@
+FIXME
+
 Most of the man pages are in the illumos-joyent repo under usr/src/man.
 This directory only contains extra man pages that are not included in
 illumos-joyent.  Only add or update a man page here if it doesn't exist
@@ -7,4 +9,4 @@ Most of the original Sun versions of the files here come from the opensolaris
 man consolidation which were released under the CDDL.  Modifications since also
 subject to CDDL and:
 
-Copyright (c) 2014, Joyent Inc., All Rights Reserved.
+Copyright 2020 Joyent, Inc.

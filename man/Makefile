@@ -25,7 +25,6 @@ MAN_FILES = \
 	usr/share/man/man1m/disklayout.1m \
 	usr/share/man/man1m/fssstat.1m \
 	usr/share/man/man1m/fwadm.1m \
-	usr/share/man/man1m/hotplug.1m \
 	usr/share/man/man1m/imgadm.1m \
 	usr/share/man/man1m/mkzpool.1m \
 	usr/share/man/man1m/nictagadm.1m \

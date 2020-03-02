@@ -107,11 +107,6 @@ pipeline {
                 'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
             }
             steps{
-                // Jenkins PR builds default to a lightweight checkout, which
-                // doesn't include all branch information, which causes the
-                // smartos-live ./tools/build_changelog script to fail, breaking
-                // the build. Get those branches before doing anything.
-                sh("git fetch origin '+refs/heads/*:refs/remotes/origin/*'")
                 sh('''
 set -o errexit
 set -o pipefail

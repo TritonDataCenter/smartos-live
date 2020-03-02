@@ -166,8 +166,6 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                 sh('''
 set -o errexit
 set -o pipefail
-# need to get all heads since we're on a new agent
-git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
 ./tools/build_jenkins -c -d -S debug
             ''')
@@ -197,8 +195,6 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
             steps {
                 sh('git clean -fdx')
                 sh('''
-# need to get all heads since we're on a new agent
-git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
 export PLATFORM_DEBUG_SUFFIX=-gcc4
@@ -228,7 +224,6 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                 sh('''
 set -o errexit
 set -o pipefail
-git fetch origin '+refs/heads/*:refs/remotes/origin/*'
 export MANTA_TOOLS_PATH=/root/bin/
 ./tools/build_jenkins -c -F strap-cache -S strap-cache
                 ''')

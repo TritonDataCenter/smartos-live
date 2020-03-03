@@ -140,11 +140,12 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
             }
         }
         stage('debug') {
+            parentWs = sh(returnStdout: true, script: 'echo $WORKSPACE')
             agent {
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace workspace + "-debug"
+                customWorkspace parentWs + "-debug"
                 }
             }
             when {
@@ -171,11 +172,12 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
             }
         }
         stage('gcc4') {
+            parentWs = sh(returnStdout: true, script: 'echo $WORKSPACE')
             agent {
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace workspace + "-gcc4"
+                customWorkspace parentWs + "-gcc4"
                 }
             }
             when {
@@ -201,11 +203,12 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
             }
         }
         stage('strap-cache') {
+            parentWs = sh(returnStdout: true, script: 'echo $WORKSPACE')
             agent {
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace workspace + "-strap-cache"
+                customWorkspace parentWs + "-strap-cache"
                 }
             }
             when {

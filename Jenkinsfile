@@ -131,7 +131,7 @@ set -o pipefail
 set -o errexit
 set -o pipefail
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
-./tools/build_jenkins -c -S default
+echo ./tools/build_jenkins -c -S default
                 ''')
                 archiveArtifacts artifacts: 'output/default/**',
                     onlyIfSuccessful: false,
@@ -144,7 +144,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace "${BUILD_TAG}-debug"
+                customWorkspace "${WORKSPACE}-debug"
                 }
             }
             when {
@@ -175,7 +175,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace "${BUILD_TAG}-gcc4"
+                customWorkspace "${WORKSPACE}-gcc4"
                 }
             }
             when {
@@ -193,7 +193,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
 export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
 export PLATFORM_DEBUG_SUFFIX=-gcc4
-./tools/build_jenkins -c -d -S gcc4
+echo ./tools/build_jenkins -c -d -S gcc4
                 ''')
                 archiveArtifacts artifacts: 'output/gcc4/**',
                     onlyIfSuccessful: false,
@@ -205,7 +205,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace "${BUILD_TAG}-strap-cache"
+                customWorkspace "${WORKSPACE}-strap-cache"
                 }
             }
             when {

@@ -18,8 +18,9 @@ pipeline {
         parallelsAlwaysFailFast()
     }
     // Don't assign a specific agent for the entire job, in order to better
-    // share resources between jobs. Otherwise, we'd tie up an agent here for
-    // the duration of all stages for a given build.
+    // share resources across jobs. Otherwise, we'd tie up an agent here for
+    // the duration of all stages for a given build, despite it not doing any
+    // actual work.
     agent none
 
     parameters {
@@ -74,7 +75,7 @@ pipeline {
             name: 'PLATFORM_BUILD_FLAVOR',
             choices: ['triton', 'smartos', 'triton-and-smartos'],
             description:
-                '<dl>\n' +
+                '<p><dl>\n' +
                 '<dt>triton</dt>' +
                   '<dd>the default, build a platform image and publish it</dd>\n' +
                 '<dt>smartos</dt>' +
@@ -90,7 +91,7 @@ pipeline {
                 '  <li>SmartOS usb image</li>\n' +
                 '  <li>SmartOS vmware image</li>\n' +
                 '  <li>SmartOS Changelog file</li>\n' +
-                '</ul>'
+                '</ul></p>'
         )
         booleanParam(
             name: 'BUILD_STRAP',
@@ -115,10 +116,22 @@ set -o errexit
 set -o pipefail
 echo ./tools/build_jenkins -c -F check
                 ''')
+                // We don't mattermost-notify here, as that doesn't add much
+                // value. The checks should always pass, and it's unlikely
+                // that developers will care when they do. If they don't
+                // pass, then the (likely) GitHub PR will be updated with a
+                // failure status, and the developer can then investigate.
             }
         }
         stage('default') {
             agent {
+                // There seems to be a Jenkins bug where ${WORKSPACE} isn't
+                // resolved at the time of node declaration, so we can't reuse
+                // that when setting our custom workspace for each separate
+                // pipeline stage (to allow users the chance of inspecting
+                // workspaces from different pipeline stages after the build
+                // completes).
+                // Use ${BRANCH_NAME} instead.
                 node {
                     label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
@@ -126,6 +139,11 @@ echo ./tools/build_jenkins -c -F check
                 }
             }
             when {
+                // We only want to trigger most pipeline stages on either a
+                // push to master, or an explicit build request from a user.
+                // Otherwise, every push to a PR branch would cause a build,
+                // which might be excessive. The exception is the 'check' stage
+                // above, which is ~ a 2 minute build.
                 anyOf {
                     branch 'master'
                     triggeredBy cause: 'UserIdCause'
@@ -137,12 +155,14 @@ echo ./tools/build_jenkins -c -F check
 set -o errexit
 set -o pipefail
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
-echo ./tools/build_jenkins -c -S default
+./tools/build_jenkins -c -S default
                 ''')
                 archiveArtifacts artifacts: 'output/default/**',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
                 joyMattermostNotification(channel: 'jenkins')
+                joyMattermostNotification(channel: 'os')
+
             }
         }
         stage('debug') {
@@ -159,6 +179,12 @@ echo ./tools/build_jenkins -c -S default
                         branch 'master'
                         triggeredBy cause: 'UserIdCause'
                     }
+                    // If a user has set PLAT_CONFIGURE_ARGS, that
+                    // suggests we may have been asked for a special debug, or
+                    // gcc, etc. build. In that case, don't bother building
+                    // any stages which may duplicate the arguments they
+                    // specified. The same goes for the rest of the pipeline
+                    // stages.
                     environment name: 'PLAT_CONFIGURE_ARGS', value: ''
                 }
             }
@@ -174,6 +200,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
                 joyMattermostNotification(channel: 'jenkins')
+                joyMattermostNotification(channel: 'os')
             }
         }
         stage('gcc4') {
@@ -199,7 +226,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
 export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
 export PLATFORM_DEBUG_SUFFIX=-gcc4
-echo ./tools/build_jenkins -c -d -S gcc4
+./tools/build_jenkins -c -d -S gcc4
                 ''')
                 archiveArtifacts artifacts: 'output/gcc4/**',
                     onlyIfSuccessful: false,
@@ -217,7 +244,8 @@ echo ./tools/build_jenkins -c -d -S gcc4
             when {
                 // We only build strap-cache as a result of a push to
                 // illumos-extra. See the Jenkinsfile in that repository
-                // which has a build(..) step for smartos-live
+                // which has a build(..) step for smartos-live that sets
+                // this environment value.
                 environment name: 'BUILD_STRAP', value: 'true'
             }
             steps {
@@ -232,12 +260,14 @@ export MANTA_TOOLS_PATH=/root/bin/
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
                 joyMattermostNotification(channel: 'jenkins')
+                joyMattermostNotification(channel: 'os')
             }
         }
     }
     post {
         always {
             joyMattermostNotification(channel: 'jenkins')
+            joyMattermostNotification(channel: 'os')
         }
     }
 }

@@ -20,8 +20,7 @@ pipeline {
     // Don't assign a specific agent for the entire job, in order to better
     // share resources between jobs. Otherwise, we'd tie up an agent here for
     // the duration of all stages for a given build.
-    // TIMF: perhaps this is what sets env.WORKSPACE?
-    agent any
+    agent none
 
     parameters {
         string(
@@ -106,6 +105,7 @@ pipeline {
             agent {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                 'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                customWorkspace "workspace/smartos-${BRANCH_NAME}-check"
             }
             steps{
                 sh('''
@@ -119,6 +119,8 @@ echo ./tools/build_jenkins -c -F check
             agent {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                 'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                customWorkspace "workspace/smartos-${BRANCH_NAME}-default"
+
             }
             when {
                 anyOf {
@@ -141,14 +143,11 @@ echo ./tools/build_jenkins -c -S default
             }
         }
         stage('debug') {
-            environment {
-                CWORKSPACE = "${env.WORKSPACE}"
-            }
             agent {
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace "${env.CWORKSPACE}-debug"
+                customWorkspace "workspace/smartos-${BRANCH_NAME}-debug"
                 }
             }
             when {
@@ -179,7 +178,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace "{env.WORKSPACE}-gcc4"
+                customWorkspace "workspace/smartos-${BRANCH_NAME}-gcc4"
                 }
             }
             when {
@@ -209,7 +208,7 @@ echo ./tools/build_jenkins -c -d -S gcc4
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace "${env.WORKSPACE}-strap-cache"
+                customWorkspace "workspace/smartos-${BRANCH_NAME}-strap-cache"
                 }
             }
             when {

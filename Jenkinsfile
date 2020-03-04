@@ -140,11 +140,14 @@ echo ./tools/build_jenkins -c -S default
             }
         }
         stage('debug') {
+            environment {
+                CWORKSPACE = "${env.WORKSPACE}"
+            }
             agent {
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace "${env.WORKSPACE}-debug"
+                customWorkspace "${env.CWORKSPACE}-debug"
                 }
             }
             when {

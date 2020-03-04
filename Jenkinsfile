@@ -110,7 +110,7 @@ pipeline {
                 sh('''
 set -o errexit
 set -o pipefail
-./tools/build_jenkins -c -F check
+echo ./tools/build_jenkins -c -F check
                 ''')
             }
         }
@@ -144,7 +144,7 @@ echo ./tools/build_jenkins -c -S default
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace "${WORKSPACE}-debug"
+                customWorkspace "${env.WORKSPACE}-debug"
                 }
             }
             when {
@@ -175,7 +175,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace "${WORKSPACE}-gcc4"
+                customWorkspace "{env.WORKSPACE}-gcc4"
                 }
             }
             when {
@@ -205,7 +205,7 @@ echo ./tools/build_jenkins -c -d -S gcc4
                 node {
                 label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                customWorkspace "${WORKSPACE}-strap-cache"
+                customWorkspace "${env.WORKSPACE}-strap-cache"
                 }
             }
             when {

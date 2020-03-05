@@ -108,6 +108,7 @@ function archive_artifacts {
             cp $file output/$JENKINS_STAGE_NAME
         done
     fi
+    set -o errexit
 }
 
 #

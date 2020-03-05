@@ -123,7 +123,7 @@ trap archive_artifacts EXIT
 while getopts "cdhF:S:" opt; do
     case "${opt}" in
         c)
-            CLEAN_PROJECTS_DIR=true;
+            CLEAN_PROJECTS_DIR=true
             ;;
         d)
             # build debug platform bits
@@ -180,7 +180,7 @@ touch ${ENGBLD_LOG}
 # 'remote.origin.fetch' config setting, along the lines of
 # "git config --add remote.origin.fetch +refs/heads/prr-OS-8046:refs/remotes/origin/prr-OS-8046"
 # which will break the 'tools/build_changelog' script as we won't have an
-# accurate list of the 'release-*'' branches when building PRs.
+# accurate list of the 'release-*' branches when building PRs.
 # Reset that now to something sane, and force a fetch.
 # This will not modify which branch is currently checked out.
 #

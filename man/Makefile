@@ -2,9 +2,9 @@
 # Copyright 2020 Joyent, Inc.
 #
 
-ROOT=$(PWD)/..
-RONNJS=/opt/local/bin/node $(ROOT)/tools/ronnjs/bin/ronn.js
-DESTDIR =		$(ROOT)/proto
+ROOT = $(PWD)/..
+RONNJS = /opt/local/bin/node $(ROOT)/tools/ronnjs/bin/ronn.js
+DESTDIR = $(ROOT)/proto
 
 MAN_FILES = \
 	smartdc/man/man1/sdc-factoryreset.1 \

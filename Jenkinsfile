@@ -112,7 +112,7 @@ pipeline {
                 sh('''
 set -o errexit
 set -o pipefail
-echo ./tools/build_jenkins -c -F check
+./tools/build_jenkins -c -F check
                 ''')
                 // We don't mattermost-notify here, as that doesn't add much
                 // value. The checks should always pass, and it's unlikely

@@ -42,8 +42,6 @@ pipeline {
                 '<dd>primary compiler version [default: gcc7]</dd>\n' +
                 '<dt>-P password</dt>\n' +
                 '<dd>platform root password [default: randomly chosen]</dd>\n' +
-                '<dt>-r</dt>\n' +
-                '<dd>full strap build (no cache) [default: no]</dd>\n' +
                 '<dt>-S</dt>\n' +
                 '<dd>do *not* run smatch [default is to run smatch]</dd>\n' +
                 '<dt>-s gcc7</dt>\n' +
@@ -94,11 +92,11 @@ pipeline {
                 '</ul></p>'
         )
         booleanParam(
-            name: 'BUILD_STRAP',
+            name: 'BUILD_STRAP_CACHE',
             defaultValue: false,
-            description: 'This parameter declares whether to build a new ' +
-                'strap-cache as part of this build. This should only be ' +
-                'true when triggered by a push to illumos-extra.'
+            description: 'This parameter declares whether to build and ' +
+                'upload a new strap-cache as part of this build. This ' +
+                'should only be true when triggered by a push to illumos-extra.'
         )
     }
     stages {

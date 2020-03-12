@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright 2019 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 # Copyright (c) 2014 Elysium Digital, L.L.C.
 #
 
@@ -59,7 +59,11 @@ function build_section
 	directory=$1
 	lastbranch=$2
 	cd $directory || fail "Unable to cd to $directory"
-	description=${3:-$(basename $PWD)}
+	if [[ "$directory" = "." ]]; then
+		description="platform"
+	else
+		description=${3:-$(basename $PWD)}
+	fi
 	echo $description ; echo "--------" ; echo
 	get_log ${lastbranch} || fail "failed to get log for $directory"
 }

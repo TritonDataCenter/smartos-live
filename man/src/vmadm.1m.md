@@ -1,1 +1,0 @@
-../../src/vm/man/vmadm.1m.md

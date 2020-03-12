@@ -11,7 +11,7 @@
 #
 
 #
-# Copyright 2019 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 #
@@ -142,28 +142,6 @@ function bi_find_buildstamp
 		bi_prefix="platform-$bi_buildstamp"
 	fi
 
-}
-
-function bi_run_mancheck
-{
-	local mancheck="$bi_wsroot/tools/mancheck/mancheck"
-	local mancheck_conf_dir="$bi_wsroot/mancheck.conf.d"
-	local -a mancheck_args
-
-	bi_emit_start 'Checking manual pages...'
-
-	for f in "$mancheck_conf_dir"/*.mancheck.conf; do
-		if [[ -f $f ]]; then
-			mancheck_args+=( "$f" )
-		fi
-	done
-
-	if ! bi_extra=$("$mancheck" -f "$bi_manifest" \
-	    -s "${mancheck_args[@]}" 2>&1); then
-		fail "not mancheck clean"
-	fi
-
-	bi_emit_done
 }
 
 function bi_run_tzcheck
@@ -801,7 +779,6 @@ bi_log_setup "$bi_wsroot/log/build_live.$bi_buildstamp.$(date +%s).log"
 #
 # Run pre-flight checks:
 #
-bi_run_mancheck
 bi_run_tzcheck
 bi_run_ucodecheck
 

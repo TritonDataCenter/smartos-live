@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2019 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 #
@@ -32,7 +32,6 @@ BOOT_MPROTO =	$(ROOT)/boot.manifest.d
 BOOT_PROTO =	$(ROOT)/proto.boot
 IMAGES_PROTO =	$(ROOT)/proto.images
 TESTS_PROTO =	$(ROOT)/proto.tests
-MCPROTO =	$(ROOT)/mancheck.conf.d
 
 # On Darwin/OS X we support running 'make check'
 ifeq ($(shell uname -s),Darwin)
@@ -99,12 +98,14 @@ MANCF_FILE :=	$(ROOT)/proto/usr/share/man/man.cf
 WORLD_MANIFESTS := \
 	$(MPROTO)/illumos.manifest \
 	$(MPROTO)/live.manifest \
+	$(MPROTO)/man.manifest \
 	$(MPROTO)/illumos-extra.manifest
 
-WORLD_MANCHECK_CONFS := \
-	$(MCPROTO)/illumos.mancheck.conf \
-	$(MCPROTO)/live.mancheck.conf \
-	$(MCPROTO)/illumos-extra.mancheck.conf
+MANCHECK_CONFS := \
+	$(ROOT)/man/mancheck.conf \
+	$(ROOT)/projects/illumos/mancheck.conf \
+	$(ROOT)/projects/illumos-extra/mancheck.conf \
+	$(shell ls projects/local/*/mancheck.conf 2>/dev/null)
 
 BOOT_MANIFESTS := \
 	$(BOOT_MPROTO)/illumos.manifest
@@ -123,9 +124,6 @@ include projects/illumos/usr/src/Makefile.testarchive
 
 TEST_IPS_MANIFESTS = $(TEST_IPS_MANIFEST_FILES:%=$(TEST_IPS_MANIFEST_ROOT)/%)
 TESTS_MANIFEST = $(ROOT)/tests.manifest.gen
-
-SUBDIR_MANCHECK_CONFS := \
-	$(LOCAL_SUBDIRS:%=$(MCPROTO)/%.sd.mancheck.conf)
 
 BOOT_VERSION :=	boot-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
@@ -155,14 +153,13 @@ TOOLS_TARGETS = \
 	tools/cryptpass
 
 world: 0-strap-stamp 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp \
-	0-local-stamp 0-tools-stamp 0-man-stamp 0-devpro-stamp \
-	$(TOOLS_TARGETS)
+	0-local-stamp 0-tools-stamp 0-devpro-stamp $(TOOLS_TARGETS)
 
-live: world manifest mancheck_conf boot $(TOOLS_TARGETS) $(MANCF_FILE)
+live: world manifest boot $(TOOLS_TARGETS) $(MANCF_FILE) mancheck
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
 	./tools/build_live -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output \
-	    $(PLATFORM_PASSWORD_OPT) $(ROOT)/proto $(ROOT)/man/man
+	    $(PLATFORM_PASSWORD_OPT) $(ROOT)/proto
 
 boot: $(BOOT_TARBALL)
 
@@ -211,29 +208,25 @@ images-tar: $(IMAGES_TARBALL)
 #
 manifest: $(MANIFEST) $(BOOT_MANIFEST)
 
-mancheck_conf: $(WORLD_MANCHECK_CONFS) $(SUBDIR_MANCHECK_CONFS)
+mancheck.conf: $(MANCHECK_CONFS)
+	cat $(MANCHECK_CONFS) >$@ 2>/dev/null
 
-dump_mancheck_conf: manifest mancheck_conf $(MANCHECK)
-	args=; for x in $(MCPROTO)/*.mancheck.conf; do \
-	    args="$$args -c $$x"; done; \
-	    $(MANCHECK) -f manifest.gen -s -D $$args
+.PHONY: mancheck
+mancheck: manifest mancheck.conf $(MANCHECK)
+	$(MANCHECK) -f manifest.gen -s -c $(ROOT)/mancheck.conf
 
-$(MPROTO) $(BOOT_MPROTO) $(MCPROTO):
+$(MPROTO) $(BOOT_MPROTO):
 	mkdir -p $@
 
 $(MPROTO)/live.manifest: src/manifest | $(MPROTO)
 	gmake DESTDIR=$(MPROTO) DESTNAME=live.manifest \
 	    -C src manifest
 
-$(MCPROTO)/live.mancheck.conf: src/mancheck.conf | $(MCPROTO)
-	gmake DESTDIR=$(MCPROTO) DESTNAME=live.mancheck.conf \
-	    -C src mancheck_conf
+$(MPROTO)/man.manifest: man/manifest | $(MPROTO)
+	cp man/manifest $@
 
 $(MPROTO)/illumos.manifest: projects/illumos/manifest | $(MPROTO)
 	cp projects/illumos/manifest $(MPROTO)/illumos.manifest
-
-$(MCPROTO)/illumos.mancheck.conf: projects/illumos/mancheck.conf | $(MCPROTO)
-	cp projects/illumos/mancheck.conf $(MCPROTO)/illumos.mancheck.conf
 
 $(BOOT_MPROTO)/illumos.manifest: projects/illumos/manifest | $(BOOT_MPROTO)
 	cp projects/illumos/boot.manifest $(BOOT_MPROTO)/illumos.manifest
@@ -243,10 +236,6 @@ $(MPROTO)/illumos-extra.manifest: 0-extra-stamp \
 	gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest \
 	    -C projects/illumos-extra manifest; \
 
-$(MCPROTO)/illumos-extra.mancheck.conf: FRC | 0-extra-stamp $(MCPROTO)
-	gmake DESTDIR=$(MCPROTO) DESTNAME=illumos-extra.mancheck.conf \
-	    -C projects/illumos-extra mancheck_conf; \
-
 $(MPROTO)/%.sd.manifest: projects/local/%/Makefile projects/local/%/manifest
 	cd $(ROOT)/projects/local/$* && \
 	    if [[ -f Makefile.joyent ]]; then \
@@ -255,16 +244,6 @@ $(MPROTO)/%.sd.manifest: projects/local/%/Makefile projects/local/%/manifest
 	    else \
 		gmake DESTDIR=$(MPROTO) DESTNAME=$*.sd.manifest \
 		    manifest; \
-	    fi
-
-$(MCPROTO)/%.sd.mancheck.conf: FRC | $(MCPROTO)
-	cd $(ROOT)/projects/local/$* && \
-	    if [[ -f Makefile.joyent ]]; then \
-		gmake DESTDIR=$(MCPROTO) DESTNAME=$*.sd.mancheck.conf \
-		    -f Makefile.joyent mancheck_conf; \
-	    else \
-		gmake DESTDIR=$(MCPROTO) DESTNAME=$*.sd.mancheck.conf \
-		    mancheck_conf; \
 	    fi
 
 $(MANIFEST): $(WORLD_MANIFESTS) $(SUBDIR_MANIFESTS)
@@ -390,11 +369,7 @@ $(CTFTOOLS_TARBALL): 0-strap-stamp $(STAMPFILE)
 	    gmake -j$(MAX_JOBS) NATIVEDIR=$(STRAP_PROTO) \
 	    DESTDIR=$(PROTO) && \
 	    gmake NATIVEDIR=$(STRAP_PROTO) DESTDIR=$(PROTO) install)
-	touch $@
-
-0-man-stamp:
-	(cd $(ROOT)/man/sdc && gmake install DESTDIR=$(PROTO) $(SUBDIR_DEFS))
-	(cd $(ROOT)/man/src && gmake clean && gmake)
+	(cd $(ROOT)/man/ && gmake install DESTDIR=$(PROTO) $(SUBDIR_DEFS))
 	touch $@
 
 0-tools-stamp: 0-pwgen-stamp
@@ -441,7 +416,7 @@ check: $(JSLINT)
 clean:
 	./tools/clobber_illumos
 	rm -f $(MANIFEST) $(BOOT_MANIFEST) $(TESTS_MANIFEST)
-	rm -rf $(MPROTO)/* $(BOOT_MPROTO)/* $(MCPROTO)/*
+	rm -rf $(MPROTO)/* $(BOOT_MPROTO)/*
 	(cd $(ROOT)/src && gmake clean)
 	[ ! -d $(ROOT)/projects/illumos-extra ] || \
 	    (cd $(ROOT)/projects/illumos-extra && gmake clean)
@@ -469,7 +444,8 @@ clean:
 	(cd tools/mancf && gmake clean)
 	(cd tools/tzcheck && gmake clean)
 	(cd tools/ucodecheck && gmake clean)
-	(cd man/sdc && gmake clean)
+	(cd man && gmake clean)
+	rm -f mancheck.conf
 	rm -f 0-*-stamp 1-*-stamp
 
 clobber: clean
@@ -773,4 +749,4 @@ print-%:
 
 FRC:
 
-.PHONY: manifest mancheck_conf check jsl FRC
+.PHONY: manifest check jsl FRC

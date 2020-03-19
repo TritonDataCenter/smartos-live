@@ -156,6 +156,7 @@ set -o pipefail
                 // Otherwise, every push to a PR branch would cause a build,
                 // which might be excessive. The exception is the 'check' stage
                 // above, which is ~ a 2 minute build.
+                beforeAgent true
                 anyOf {
                     branch 'master'
                     triggeredBy cause: 'UserIdCause'
@@ -192,6 +193,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                 }
             }
             when {
+                beforeAgent true
                 allOf {
                     anyOf {
                         branch 'master'
@@ -238,6 +240,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 }
             }
             when {
+                beforeAgent true
                 allOf {
                     anyOf {
                         branch 'master'
@@ -276,6 +279,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                 }
             }
             when {
+                beforeAgent true
                 // We only build strap-cache as a result of a push to
                 // illumos-extra. See the Jenkinsfile in that repository
                 // which has a build(..) step for smartos-live that sets

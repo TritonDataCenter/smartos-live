@@ -114,16 +114,23 @@ set -o errexit
 set -o pipefail
 ./tools/build_jenkins -c -F check
                 ''')
-                // https://jenkins.io/doc/pipeline/steps/ws-cleanup/
-                cleanWs cleanWhenSuccess: true,
-                    cleanWhenAborted: true,
-                    cleanWhenNotBuilt: true,
-                    deleteDirs: true
+
                 // We don't mattermost-notify here, as that doesn't add much
                 // value. The checks should always pass, and it's unlikely
                 // that developers will care when they do. If they don't
                 // pass, then the (likely) GitHub PR will be updated with a
                 // failure status, and the developer can then investigate.
+            }
+            post {
+                // https://jenkins.io/doc/pipeline/steps/ws-cleanup/
+                // We don't clean on build failure so that there's a chance to
+                // investigate the breakage. Hopefully, a subsequent successful
+                // build will then clean up the workspace, though that's not
+                // guaranteed for abandoned branches.
+                cleanWs cleanWhenSuccess: true,
+                    cleanWhenAborted: true,
+                    cleanWhenNotBuilt: true,
+                    deleteDirs: true
             }
         }
         stage('default') {
@@ -163,11 +170,13 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                 archiveArtifacts artifacts: 'output/default/**',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
+                joyMattermostNotification(channel: 'os')
+            }
+            post {
                 cleanWs cleanWhenSuccess: true,
                     cleanWhenAborted: true,
                     cleanWhenNotBuilt: true,
                     deleteDirs: true
-                joyMattermostNotification(channel: 'os')
             }
         }
         stage('debug') {
@@ -204,12 +213,14 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 archiveArtifacts artifacts: 'output/debug/**',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
+                joyMattermostNotification(channel: 'jenkins')
+                joyMattermostNotification(channel: 'os')
+            }
+            post {
                 cleanWs cleanWhenSuccess: true,
                     cleanWhenAborted: true,
                     cleanWhenNotBuilt: true,
                     deleteDirs: true
-                joyMattermostNotification(channel: 'jenkins')
-                joyMattermostNotification(channel: 'os')
             }
         }
         stage('gcc4') {
@@ -240,6 +251,8 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                 archiveArtifacts artifacts: 'output/gcc4/**',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
+            }
+            post {
                 cleanWs cleanWhenSuccess: true,
                     cleanWhenAborted: true,
                     cleanWhenNotBuilt: true,
@@ -272,12 +285,14 @@ export MANTA_TOOLS_PATH=/root/bin/
                 archiveArtifacts artifacts: 'output/strap-cache/**',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
+                joyMattermostNotification(channel: 'jenkins')
+                joyMattermostNotification(channel: 'os')
+            }
+            post {
                 cleanWs cleanWhenSuccess: true,
                     cleanWhenAborted: true,
                     cleanWhenNotBuilt: true,
                     deleteDirs: true
-                joyMattermostNotification(channel: 'jenkins')
-                joyMattermostNotification(channel: 'os')
             }
         }
     }

@@ -127,10 +127,12 @@ set -o pipefail
                 // investigate the breakage. Hopefully, a subsequent successful
                 // build will then clean up the workspace, though that's not
                 // guaranteed for abandoned branches.
-                cleanWs cleanWhenSuccess: true,
-                    cleanWhenAborted: true,
-                    cleanWhenNotBuilt: true,
-                    deleteDirs: true
+                always {
+                    cleanWs cleanWhenSuccess: true,
+                        cleanWhenAborted: true,
+                        cleanWhenNotBuilt: true,
+                        deleteDirs: true
+                }
             }
         }
         stage('default') {
@@ -173,10 +175,12 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                 joyMattermostNotification(channel: 'os')
             }
             post {
-                cleanWs cleanWhenSuccess: true,
-                    cleanWhenAborted: true,
-                    cleanWhenNotBuilt: true,
-                    deleteDirs: true
+                always {
+                    cleanWs cleanWhenSuccess: true,
+                        cleanWhenAborted: true,
+                        cleanWhenNotBuilt: true,
+                        deleteDirs: true
+                }
             }
         }
         stage('debug') {
@@ -217,10 +221,12 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 joyMattermostNotification(channel: 'os')
             }
             post {
-                cleanWs cleanWhenSuccess: true,
-                    cleanWhenAborted: true,
-                    cleanWhenNotBuilt: true,
-                    deleteDirs: true
+                always {
+                    cleanWs cleanWhenSuccess: true,
+                        cleanWhenAborted: true,
+                        cleanWhenNotBuilt: true,
+                        deleteDirs: true
+                }
             }
         }
         stage('gcc4') {
@@ -253,10 +259,12 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                     allowEmptyArchive: true
             }
             post {
-                cleanWs cleanWhenSuccess: true,
-                    cleanWhenAborted: true,
-                    cleanWhenNotBuilt: true,
-                    deleteDirs: true
+                always {
+                    cleanWs cleanWhenSuccess: true,
+                        cleanWhenAborted: true,
+                        cleanWhenNotBuilt: true,
+                        deleteDirs: true
+                }
             }
         }
         stage('strap-cache') {
@@ -289,10 +297,12 @@ export MANTA_TOOLS_PATH=/root/bin/
                 joyMattermostNotification(channel: 'os')
             }
             post {
-                cleanWs cleanWhenSuccess: true,
-                    cleanWhenAborted: true,
-                    cleanWhenNotBuilt: true,
-                    deleteDirs: true
+                always {
+                    cleanWs cleanWhenSuccess: true,
+                        cleanWhenAborted: true,
+                        cleanWhenNotBuilt: true,
+                        deleteDirs: true
+                }
             }
         }
     }

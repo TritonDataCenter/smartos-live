@@ -114,6 +114,11 @@ set -o errexit
 set -o pipefail
 ./tools/build_jenkins -c -F check
                 ''')
+                // https://jenkins.io/doc/pipeline/steps/ws-cleanup/
+                cleanWs cleanWhenSuccess: true,
+                    cleanWhenAborted: true,
+                    cleanWhenNotBuilt: true,
+                    deleteDirs: true
                 // We don't mattermost-notify here, as that doesn't add much
                 // value. The checks should always pass, and it's unlikely
                 // that developers will care when they do. If they don't
@@ -158,9 +163,11 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                 archiveArtifacts artifacts: 'output/default/**',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
-                joyMattermostNotification(channel: 'jenkins')
+                cleanWs cleanWhenSuccess: true,
+                    cleanWhenAborted: true,
+                    cleanWhenNotBuilt: true,
+                    deleteDirs: true
                 joyMattermostNotification(channel: 'os')
-
             }
         }
         stage('debug') {
@@ -197,6 +204,10 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 archiveArtifacts artifacts: 'output/debug/**',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
+                cleanWs cleanWhenSuccess: true,
+                    cleanWhenAborted: true,
+                    cleanWhenNotBuilt: true,
+                    deleteDirs: true
                 joyMattermostNotification(channel: 'jenkins')
                 joyMattermostNotification(channel: 'os')
             }
@@ -229,6 +240,10 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                 archiveArtifacts artifacts: 'output/gcc4/**',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
+                cleanWs cleanWhenSuccess: true,
+                    cleanWhenAborted: true,
+                    cleanWhenNotBuilt: true,
+                    deleteDirs: true
             }
         }
         stage('strap-cache') {
@@ -257,6 +272,10 @@ export MANTA_TOOLS_PATH=/root/bin/
                 archiveArtifacts artifacts: 'output/strap-cache/**',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
+                cleanWs cleanWhenSuccess: true,
+                    cleanWhenAborted: true,
+                    cleanWhenNotBuilt: true,
+                    deleteDirs: true
                 joyMattermostNotification(channel: 'jenkins')
                 joyMattermostNotification(channel: 'os')
             }

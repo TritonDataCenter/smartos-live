@@ -408,7 +408,8 @@ $(UCODECHECK): 0-illumos-stamp
 jsl: $(JSLINT)
 
 $(JSLINT):
-	@(cd $(ROOT)/tools/javascriptlint; make CC=$(NATIVE_CC) install)
+	@(cd $(ROOT)/tools/javascriptlint; \
+	  make CC=$(NATIVE_CC) PY_PYTHON=/opt/local/bin/python2.7 install)
 
 check: $(JSLINT)
 	@(cd $(ROOT)/src && make check)

@@ -103,8 +103,9 @@ pipeline {
         stage('check') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                    'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    label 'platform:true && image_ver:19.4.0 && pkgsrc_arch:x86_64 && ' +
+                    'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2' +
+                    ' && pi:20191107T035849Z'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-check"
                 }
             }
@@ -131,8 +132,9 @@ set -o pipefail
                 // completes).
                 // Use ${BRANCH_NAME} instead.
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                    'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    label 'platform:true && image_ver:19.4.0 && pkgsrc_arch:x86_64 && ' +
+                    'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2' +
+                    ' && pi:20191107T035849Z'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-default"
                 }
             }
@@ -166,8 +168,9 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
         stage('debug') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    label 'platform:true && image_ver:19.4.0 && pkgsrc_arch:x86_64 && ' +
+                        'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2' +
+                        ' && pi:20191107T035849Z'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-debug"
                 }
             }
@@ -204,8 +207,9 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
         stage('gcc4') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    label 'platform:true && image_ver:19.4.0 && pkgsrc_arch:x86_64 && ' +
+                        'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2' +
+                        ' && pi:20191107T035849Z'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-gcc4"
                 }
             }
@@ -234,8 +238,10 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
         stage('strap-cache') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    label 'platform:true && image_ver:19.4.0 && pkgsrc_arch:x86_64 && ' +
+                        'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2' +
+                        ' && pi:20191107T035849Z'
+
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-strap-cache"
                 }
             }

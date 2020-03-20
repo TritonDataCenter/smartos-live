@@ -1,18 +1,22 @@
 # Upgrading Development Zones
 
 Over time, we update the base development environment that everyone is using.
-The current target is the x86_64 2018.4.x image series as noted in
+The current target is the x86_64 2019.4.x image series as noted in
 [the SmartOS Getting Started Guide](../README.md#importing-the-zone-image).
 
 The purpose of this guide is to describe how an **existing** development zone
-should be upgraded from one version of pkgsrc to the next. In the past, because
-pkgsrc versions were compatible, we've been able to upgrade devzones in
-place (e.g. use pkgin and pkg_* utilities to upgrade from 2015.4.x -> 2016.4)
+should be upgraded from one version of pkgsrc to the next.
+Since previous supported devzone was 2018.4, upgrades to 2019.4 are
+straightforward.
 
-The upgrade for this target is more disruptive than previous ones, as we're
-going from a `multiarch` release to an `x86_64` release, which need an entirely
-new /opt/local installation as pkgsrc cannot be upgraded across this sort of
-boundary.
+If  an In the past, because pkgsrc versions were compatible, we've been able to
+upgrade devzones in place (e.g. use pkgin and pkg_* utilities to upgrade from
+2015.4.x -> 2016.4)
+
+If you are upgrading from an earlier image (e.g. 2016.4) the process is more
+disruptive as we're going from a `multiarch` release to an `x86_64` release,
+which needs an entirely new /opt/local installation as pkgsrc cannot be
+upgraded across this sort of boundary.
 
 The simplest and safest route is to simply create a [fresh
 zone](../README.md#setting-up-a-build-environment)
@@ -44,8 +48,7 @@ pkgin export | sort > /package.list
 ```
 
 but we believe a bug in pkgin from 2016 causes the resulting list to
-be empty. That bug has been fixed in the version of pkgsrc we're upgrading
-to in these instructions.
+be empty. That bug was fixed by the time 2018Q4 was released.
 
 ### Cleaning up existing builds
 
@@ -71,7 +74,7 @@ can usually be done by running `triton inst list`. For example:
 ```
 $ triton inst list
 SHORTID   NAME       IMG                        STATE    FLAGS  AGE
-122fff4d  march-dev  base-multiarch-lts@16.4    running  -      3y
+122fff4d  march-dev  base-64-lts@19.4           running  -      2m
 b80d08de  python     base-multiarch-lts@15.4.1  running  -      2y
 2de86964  iasl       ubuntu-16.04@20161004      running  -      1y
 ```
@@ -80,11 +83,11 @@ In this case, we're interested in upgrading the instance called
 `march-dev`. Next we create a snapshot and verify it exists:
 
 ```
-$ triton inst snapshot create --name=2018.4-upgrade march-dev
-Creating snapshot 2018.4-upgrade of instance march-dev
+$ triton inst snapshot create --name=2019.4-upgrade march-dev
+Creating snapshot 2019.4-upgrade of instance march-dev
 $ triton inst snapshot list march-dev
 NAME            STATE    CREATED
-2018.4-upgrade  created  2018-09-28T18:40:14.000Z
+2019.4-upgrade  created  2020-02-04T18:40:14.000Z
 ```
 
 #### Manual Snapshots in SmartOS
@@ -94,11 +97,11 @@ create the snapshot. First, find the VM you want to use in vmadm list.
 Then you use the `create-snapshot` option.
 
 ```
-[root@00-0c-29-37-80-28 ~]# vmadm list
+# vmadm list
 UUID                                  TYPE  RAM      STATE             ALIAS
 79809c3b-6c21-4eee-ba85-b524bcecfdb8  OS    4096     running           multiarch
-[root@00-0c-29-37-80-28 ~]# vmadm create-snapshot 79809c3b-6c21-4eee-ba85-b524bcecfdb8 2018.4-upgrade
-Created snapshot 2018.4-upgrade for VM 79809c3b-6c21-4eee-ba85-b524bcecfdb8
+# vmadm create-snapshot 79809c3b-6c21-4eee-ba85-b524bcecfdb8 2019.4-upgrade
+Created snapshot 2019.4-upgrade for VM 79809c3b-6c21-4eee-ba85-b524bcecfdb8
 ```
 
 If your VM has delegated snapshots, you won't be able to use `vmadm` to take
@@ -106,20 +109,183 @@ snapshots. In this case (and assuming you have CLI access to the global zone)
 you should take a manual recursive snapshot of the VM instead:
 
 ```
-[root@00-0c-29-37-80-28 ~]# zfs snapshot -r zones/79809c3b-6c21-4eee-ba85-b524bcecfdb8@pre-upgrade
+# zfs snapshot -r zones/79809c3b-6c21-4eee-ba85-b524bcecfdb8@2019.4-upgrade
 ```
 
 You will not be able to use `vmadm` to roll-back to snapshots created with
 `zfs`, so you would need to use manual zfs commands to do so. You should
 halt the VM before attempting such a rollback.
 
-## Upgrading
+## Upgrading from 2018.4
 
 At this point we will be taking steps which will potentially break your
 development zone. If you encounter problems, please don't hesitate to
 reach out for assistance.
 
-The approach we describe is to cleanly shutdown services that
+This is the simplest upgrade that you can do, though again, creating a new
+dev zone may be an easier option for many.
+
+First we remove some packages that are no longer needed in 2019Q4. Their
+replacement package will be installed automatically by the smartos-live.git
+`configure` script after we have upgrade the devzone.
+
+```
+root@smartos-build-64 /]# pkgin rm dmake sgstools rpcgen astmsgtools
+4 packages to delete:
+  dmake-20130927 sgstools-20130402 rpcgen-20130402 astmsgtools-20130402
+
+proceed ? [Y/n] y
+removing dmake-20130927...
+removing sgstools-20130402...
+removing rpcgen-20130402...
+removing astmsgtools-20130402...
+pkg_install warnings: 0, errors: 0
+reading local summary...
+processing local summary...
+[root@smartos-build-64 /]#
+```
+
+Next we need to edit the pkgin metadata to point to the new repository.
+The files we need to edit are `/opt/local/etc/pkgin/repositories.conf`
+and `/opt/local/etc/pkg_install.conf`. Note, you will need to have root
+privileges to edit these files. First, let's look at `pkg_install.conf`.
+
+```
+# cat /opt/local/etc/pkg_install.conf
+GPG_KEYRING_PKGVULN=/opt/local/share/gnupg/pkgsrc-security.gpg
+GPG_KEYRING_VERIFY=/opt/local/etc/gnupg/pkgsrc.gpg
+PKG_PATH=https://pkgsrc.joyent.com/packages/SmartOS/2018Q4/x86_64/All
+VERIFIED_INSTALLATION=always
+```
+
+We need to change the `PKG_PATH` line. It should now refer to 2019Q4.
+The full line would be:
+
+```
+PKG_PATH=https://pkgsrc.joyent.com/packages/SmartOS/2019Q4/x86_64/All
+```
+
+Next, we need to make a similar change in repositories.conf. Inside of
+it you will find a single uncommented line:
+`https://pkgsrc.joyent.com/packages/SmartOS/2018Q4/x86_64/All`. Again
+here, we should change from 2018Q4 to 2019Q4.
+
+### Update pkgin and pkg_install
+
+The next step is to update the `pkgin` and `pkg_install` packages which
+are used to manage and install everything else. To do so, run the
+following commands. Note, a lot of output will show up from this which
+we've included below:
+
+```
+[root@smartos-build-64 /]# PKG_PATH=http://pkgsrc.joyent.com/packages/SmartOS/2019Q4/x86_64/All pkg_add -U pkg_install pkgin libarchive
+===========================================================================
+The following files are no longer being used by pkgin-0.11.6nb1,
+and they can be removed if no other packages are using them:
+
+	/opt/local/etc/pkgin/repositories.conf
+
+===========================================================================
+===========================================================================
+The following directories are no longer being used by pkgin-0.11.6nb1,
+and they can be removed if no other packages are using them:
+
+	/opt/local/etc/pkgin
+	/var/db/pkgin
+
+===========================================================================
+===========================================================================
+The following directories are no longer being used by openssl-1.0.2p,
+and they can be removed if no other packages are using them:
+
+	/opt/local/etc/openssl/certs
+
+===========================================================================
+openssl-1.1.1d: copying /opt/local/share/examples/openssl/openssl.cnf to /opt/local/etc/openssl/openssl.cnf
+pkgin-0.15.0: /opt/local/etc/pkgin/repositories.conf already exists
+===========================================================================
+$NetBSD: MESSAGE,v 1.3 2010/06/10 08:05:00 is Exp $
+
+First steps before using pkgin.
+
+. Modify /opt/local/etc/pkgin/repositories.conf to suit your platform
+. Initialize the database :
+
+	# pkgin update
+```
+
+### Clean up pkgin database
+
+The pkgin repository database needs to be removed. To do that you will
+need to run the following command:
+
+```
+# rm -rf /var/db/pkgin
+```
+
+### Updating packages
+
+Finally, the moment of truth. It's time to update all of your installed
+packages. You should do this by running a pkgin full-upgrade. The list
+of packages to be upgraded will vary based on the zone and what you have
+installed. You should see something similar to, but somewhat different:
+
+```
+[root@smartos-build-64 /]# pkgin full-upgrade
+calculating dependencies...done.
+
+32 packages to refresh:
+  readline-7.0 p5-GSSAPI-0.28nb9 zip-3.0nb3 less-530 mkfontscale-1.1.3
+  pcre2-10.32 p5-Authen-SASL-2.16nb6 gettext-tools-0.19.8.1nb1
+  freetype2-2.9.1nb1 git-docs-2.20.1 git-base-2.20.1 rsyslog-8.38.0nb1
+  python27-2.7.15nb1 py27-sqlite3-2.7.15nb14 py27-expat-2.7.15
+  openldap-client-2.4.47 openjdk7-1.7.141nb9 npm-6.4.1 nodejs-10.14.2nb1
+  nghttp2-1.35.1nb2 nasm-2.14 mkfontdir-1.0.7 libpsl-0.20.2nb2 gettext-0.19.8.1
+  gawk-4.2.1 fontconfig-2.13.1 dejavu-ttf-2.37 cyrus-sasl-2.1.27
+  cwrappers-20180325 curl-7.64.0 build-essential-1.3
+  bootstrap-mk-files-20180901
+
+8 packages to upgrade:
+  wget-1.20.1 sudo-1.8.28nb1 postfix-3.3.3 pkgsrc-gnupg-keys-20190423
+  ncurses-6.1nb5 mit-krb5-1.16.2nb2 icu-63.1nb2 bzip2-1.0.8
+
+32 to refresh, 8 to upgrade, 0 to install
+179M to download, 729K to install
+
+proceed ? [Y/n]
+```
+
+At this point, to proceed, reply yes. Everything should install
+successfully. You should verify the last lines of output. There may be
+errors that show up. If so please reach out for additional assistance so
+we can review the error log and determine what happened:
+
+```
+...
+pkg_install warnings: 0, errors: 0
+reading local summary...
+processing local summary...
+#
+```
+
+If you do have a non-zero error log, we recommend that you copy the error log
+for analysis:
+
+```
+# cp /var/db/pkgin/pkg_install-err.log ~/upgrade.log
+#
+```
+
+Now, skip to the section 'Testing', later in this document.
+
+
+## Upgrading from an earlier release
+
+The approach above worked because both 2018.4 and 2019.4 were both "x86-64"
+releases. Earlier SmartOS devzones were "multiarch", and cannot be as easily
+upgraded.
+
+The approach we describe here is to cleanly shutdown services that
 are running from /opt/local, move /opt/local aside, install the 2018Q4
 x86-64 pkgsrc bootstrap bundle. We then reinstall as many packages as
 possible from the set that was previously manually installed, noting that
@@ -195,9 +361,9 @@ Note that the old /opt/local directory is saved to /opt/local.bak
 
 ```
 cd /var/tmp
-curl -O https://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2018Q4-x86_64.tar.gz
+curl -O https://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2019Q4-x86_64.tar.gz
 mv /opt/local/ /opt/local.bak
-tar xzf bootstrap-2018Q4-x86_64.tar.gz -C /
+tar xzf bootstrap-2019Q4-x86_64.tar.gz -C /
 pkg_add -U pkgin
 ```
 
@@ -281,7 +447,7 @@ Recall that before upgrading, we saved a list of old SMF manifests in
 on your new /opt/local pkgsrc installation.
 
 If those manifests do not exist, then it's likely that the corresponding
-package does not exist in the 2018Q4 pkgsrc install, and that attempting to
+package does not exist in the 2019Q4 pkgsrc install, and that attempting to
 re-enable the SMF service post-upgrade will fail.
 
 In that case, the SMF service should be deleted using:
@@ -326,7 +492,7 @@ you:
 * /etc/pkgsrc_version
 
 You may find it useful to manually update those files to correspond to
-the /opt/local 2018Q4 pkgsrc installation.
+the /opt/local 2019Q4 pkgsrc installation.
 
 ## Testing
 

@@ -51,7 +51,7 @@ pipeline {
         text(
             name: 'CONFIGURE_PROJECTS',
             defaultValue:
-                'illumos-extra: master: origin\n' +
+                'illumos-extra: prr-OS-8098: origin\n' +
                 'illumos: master: origin\n' +
                 'local/kbmd: master: origin\n' +
                 'local/kvm-cmd: master: origin\n' +

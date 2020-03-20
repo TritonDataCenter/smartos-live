@@ -284,7 +284,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                 // illumos-extra. See the Jenkinsfile in that repository
                 // which has a build(..) step for smartos-live that sets
                 // this environment value.
-                environment name: 'BUILD_STRAP', value: 'true'
+                environment name: 'BUILD_STRAP_CACHE', value: 'true'
             }
             steps {
                 sh('git clean -fdx')

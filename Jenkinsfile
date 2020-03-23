@@ -114,11 +114,25 @@ set -o errexit
 set -o pipefail
 ./tools/build_jenkins -c -F check
                 ''')
+
                 // We don't mattermost-notify here, as that doesn't add much
                 // value. The checks should always pass, and it's unlikely
                 // that developers will care when they do. If they don't
                 // pass, then the (likely) GitHub PR will be updated with a
                 // failure status, and the developer can then investigate.
+            }
+            post {
+                // https://jenkins.io/doc/pipeline/steps/ws-cleanup/
+                // We don't clean on build failure so that there's a chance to
+                // investigate the breakage. Hopefully, a subsequent successful
+                // build will then clean up the workspace, though that's not
+                // guaranteed for abandoned branches.
+                always {
+                    cleanWs cleanWhenSuccess: true,
+                        cleanWhenAborted: true,
+                        cleanWhenNotBuilt: true,
+                        deleteDirs: true
+                }
             }
         }
         stage('default') {
@@ -142,6 +156,7 @@ set -o pipefail
                 // Otherwise, every push to a PR branch would cause a build,
                 // which might be excessive. The exception is the 'check' stage
                 // above, which is ~ a 2 minute build.
+                beforeAgent true
                 anyOf {
                     branch 'master'
                     triggeredBy cause: 'UserIdCause'
@@ -158,9 +173,15 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                 archiveArtifacts artifacts: 'output/default/**',
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
-                joyMattermostNotification(channel: 'jenkins')
                 joyMattermostNotification(channel: 'os')
-
+            }
+            post {
+                always {
+                    cleanWs cleanWhenSuccess: true,
+                        cleanWhenAborted: true,
+                        cleanWhenNotBuilt: true,
+                        deleteDirs: true
+                }
             }
         }
         stage('debug') {
@@ -172,6 +193,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                 }
             }
             when {
+                beforeAgent true
                 allOf {
                     anyOf {
                         branch 'master'
@@ -200,6 +222,14 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 joyMattermostNotification(channel: 'jenkins')
                 joyMattermostNotification(channel: 'os')
             }
+            post {
+                always {
+                    cleanWs cleanWhenSuccess: true,
+                        cleanWhenAborted: true,
+                        cleanWhenNotBuilt: true,
+                        deleteDirs: true
+                }
+            }
         }
         stage('gcc4') {
             agent {
@@ -210,6 +240,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 }
             }
             when {
+                beforeAgent true
                 allOf {
                     anyOf {
                         branch 'master'
@@ -230,6 +261,14 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                     onlyIfSuccessful: false,
                     allowEmptyArchive: true
             }
+            post {
+                always {
+                    cleanWs cleanWhenSuccess: true,
+                        cleanWhenAborted: true,
+                        cleanWhenNotBuilt: true,
+                        deleteDirs: true
+                }
+            }
         }
         stage('strap-cache') {
             agent {
@@ -240,6 +279,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                 }
             }
             when {
+                beforeAgent true
                 // We only build strap-cache as a result of a push to
                 // illumos-extra. See the Jenkinsfile in that repository
                 // which has a build(..) step for smartos-live that sets
@@ -259,6 +299,14 @@ export MANTA_TOOLS_PATH=/root/bin/
                     allowEmptyArchive: true
                 joyMattermostNotification(channel: 'jenkins')
                 joyMattermostNotification(channel: 'os')
+            }
+            post {
+                always {
+                    cleanWs cleanWhenSuccess: true,
+                        cleanWhenAborted: true,
+                        cleanWhenNotBuilt: true,
+                        deleteDirs: true
+                }
             }
         }
     }

@@ -921,6 +921,19 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (special, see description in 'update' section above)
         default: no
 
+    disks.*.notrim:
+
+        Explicitly disables TRIM functionality for the disk in the guest. This
+        functionality is also known as UNMAP or DISCARD. This corresponds to
+        the bhyve `nodelete` block-device-option.
+
+        type: boolean
+        vmtype: bhyve
+        listable: yes (see above)
+        create: yes
+        update: yes (special, see description in 'update' section above)
+        default: no
+
     disks.*.pci_slot:
 
         Specifies the virtual PCI slot that this disk will occupy. Bhyve places

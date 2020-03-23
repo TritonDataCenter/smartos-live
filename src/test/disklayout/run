@@ -190,7 +190,7 @@ diff -u 36.di.w12.z1.out /var/tmp/12.out
 rm -f /var/tmp/12.out
 
 echo
-echo "ignore disks tests"
+echo "excluded disks tests"
 
 disklayout -f opt-e.in -i "foo,bar" mirror >/var/tmp/opt-e.out
 printf "%-16s " "opt-e.none.out"

@@ -1,7 +1,7 @@
 #! /usr/node/bin/node
 
 /*
- * Copyright 2019 Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  */
 
 var fs = require('fs');
@@ -20,14 +20,14 @@ function
 usage()
 {
 	console.log('usage: ' + process.argv[0] +
-	    ' [-c] [-f file] [-s spares] [-w width] [<layout>]');
+	    ' [-c] [-f file] [-s spares] [-w width] [-i disk,...] [<layout>]');
 	console.log('supported layouts:\n\t' +
 	    disklayout.list_supported().join('\n\t'));
 	process.exit(-1);
 }
 
 function
-dolayout(disks, layout, nspares, enable_cache, width)
+dolayout(disks, layout, nspares, excluded, enable_cache, width)
 {
 	var config;
 	var mnttab = fs.readFileSync('/etc/mnttab', 'utf8');
@@ -35,6 +35,10 @@ dolayout(disks, layout, nspares, enable_cache, width)
 	disks = disks.filter(function (disk) {
 		if (mnttab.search(disk.name) != -1)
 			return (false);
+
+        if (excluded.indexOf(disk.name.toLowerCase()) !== -1)
+            return (false);
+
 		return (true);
 	});
 
@@ -48,17 +52,21 @@ dolayout(disks, layout, nspares, enable_cache, width)
 
 var g_layout;
 var g_enable_cache = true;
+var excluded_disks = [];
 var opt_f;
 var opt_s;
 var opt_w;
 var option;
-var parser = new getopt.BasicParser('cf:s:w:', process.argv);
+var parser = new getopt.BasicParser('ce:f:s:w:', process.argv);
 
 while ((option = parser.getopt()) !== undefined && !option.error) {
 	switch (option.option) {
 	case 'c':
 		g_enable_cache = false;
 		break;
+    case 'e':
+        excluded_disks = option.optarg.toLowerCase().split(',');
+        break;
 	case 'f':
 		opt_f = option.optarg;
 		break;
@@ -115,13 +123,13 @@ if (opt_f) {
 				});
 			}
 		});
-		dolayout(disks, g_layout, opt_s, g_enable_cache, opt_w);
+		dolayout(disks, g_layout, opt_s, excluded_disks, g_enable_cache, opt_w);
 	});
 } else {
 	zfs.zpool.listDisks(function (err, disks) {
 		if (err) {
 			fatal(err);
 		}
-		dolayout(disks, g_layout, opt_s, g_enable_cache, opt_w);
+		dolayout(disks, g_layout, opt_s, excluded_disks, g_enable_cache, opt_w);
 	});
 }

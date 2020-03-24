@@ -129,6 +129,7 @@ set -o pipefail
                 // guaranteed for abandoned branches.
                 always {
                     cleanWs cleanWhenSuccess: true,
+                        cleanWhenFailure: false,
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
@@ -168,7 +169,8 @@ set -o pipefail
 set -o errexit
 set -o pipefail
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
-./tools/build_jenkins -c -S default
+# XXX timf debug code to skip the default build
+echo ./tools/build_jenkins -c -S default
                 ''')
                 archiveArtifacts artifacts: 'output/default/**',
                     onlyIfSuccessful: false,
@@ -178,6 +180,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
             post {
                 always {
                     cleanWs cleanWhenSuccess: true,
+                        cleanWhenFailure: false,
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
@@ -214,7 +217,8 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
 set -o errexit
 set -o pipefail
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
-./tools/build_jenkins -c -d -S debug
+# XXX debug code from timf to skip the debug build
+echo ./tools/build_jenkins -c -d -S debug
             ''')
                 archiveArtifacts artifacts: 'output/debug/**',
                     onlyIfSuccessful: false,
@@ -225,6 +229,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
             post {
                 always {
                     cleanWs cleanWhenSuccess: true,
+                        cleanWhenFailure: false,
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
@@ -264,6 +269,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
             post {
                 always {
                     cleanWs cleanWhenSuccess: true,
+                        cleanWhenFailure: false,
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
@@ -303,6 +309,7 @@ export MANTA_TOOLS_PATH=/root/bin/
             post {
                 always {
                     cleanWs cleanWhenSuccess: true,
+                        cleanWhenFailure: false,
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true

@@ -169,8 +169,7 @@ set -o pipefail
 set -o errexit
 set -o pipefail
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
-# XXX timf debug code to skip the default build
-echo ./tools/build_jenkins -c -S default
+./tools/build_jenkins -c -S default
                 ''')
             }
             post {
@@ -218,8 +217,7 @@ echo ./tools/build_jenkins -c -S default
 set -o errexit
 set -o pipefail
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
-# XXX debug code from timf to skip the debug build
-echo ./tools/build_jenkins -c -d -S debug
+./tools/build_jenkins -c -d -S debug
             ''')
             }
             post {

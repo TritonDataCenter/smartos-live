@@ -8,7 +8,7 @@
  * Copyright 2020 Joyent, Inc.
  */
 
-@Library('jenkins-joylib@v1.0.4') _
+@Library('jenkins-joylib@v1.0.5') _
 
 pipeline {
 
@@ -112,7 +112,7 @@ pipeline {
                 sh('''
 set -o errexit
 set -o pipefail
-./tools/build_jenkins -c -F check
+echo ./tools/build_jenkins -c -F check
                 ''')
             }
             post {
@@ -182,7 +182,8 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
-                    joyMattermostNotification(channel: 'os')
+                    joyMattermostNotification(
+                        channel: 'timf-mm-test', comment: 'default')
 
                 }
             }
@@ -217,7 +218,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
 set -o errexit
 set -o pipefail
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
-./tools/build_jenkins -c -d -S debug
+echo ./tools/build_jenkins -c -d -S debug
             ''')
             }
             post {
@@ -230,7 +231,8 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
-                    joyMattermostNotification(channel: 'os')
+                    joyMattermostNotification(
+                        channel: 'timf-mm-test', comment: 'debug')
                 }
             }
         }
@@ -258,7 +260,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
 export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
 export PLATFORM_DEBUG_SUFFIX=-gcc4
-./tools/build_jenkins -c -d -S gcc4
+echo ./tools/build_jenkins -c -d -S gcc4
                 ''')
             }
             post {
@@ -271,7 +273,8 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
-                    joyMattermostNotification(channel: 'os')
+                    joyMattermostNotification(
+                        channel: 'timf-mm-test', comment: 'gcc4')
                 }
             }
         }
@@ -297,7 +300,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
 set -o errexit
 set -o pipefail
 export MANTA_TOOLS_PATH=/root/bin/
-./tools/build_jenkins -c -F strap-cache -S strap-cache
+echo ./tools/build_jenkins -c -F strap-cache -S strap-cache
                 ''')
             }
             post {
@@ -310,15 +313,16 @@ export MANTA_TOOLS_PATH=/root/bin/
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
-                    joyMattermostNotification(channel: 'os')
+                    joyMattermostNotification(
+                        channel: 'timf-mm-test', comment: 'strap-cache')
                 }
             }
         }
     }
     post {
         always {
-            joyMattermostNotification(channel: 'jenkins')
-            joyMattermostNotification(channel: 'os')
+            joyMattermostNotification(
+                channel: 'timf-mm-test', comment: 'pipeline complete')
         }
     }
 }

@@ -5,6 +5,7 @@
  */
 
 var fs = require('fs');
+var os = require('os');
 var zfs = require('/usr/node/node_modules/zfs');
 var getopt = require('/usr/node/node_modules/getopt');
 var disklayout = require('/usr/node/node_modules/disklayout');
@@ -30,17 +31,28 @@ function
 dolayout(disks, layout, nspares, excluded, enable_cache, width)
 {
 	var config;
-	var mnttab = fs.readFileSync('/etc/mnttab', 'utf8');
 
-	disks = disks.filter(function (disk) {
-		if (mnttab.search(disk.name) != -1)
-			return (false);
+	// Filter out in-use (mounted) disks.
+	if (os.type() === 'SunOS') {
+		var mnttab = fs.readFileSync('/etc/mnttab', 'utf8');
 
-		if (excluded.indexOf(disk.name.toLowerCase()) !== -1)
-			return (false);
+		disks = disks.filter(function (disk) {
+			if (mnttab.search(disk.name) != -1)
+				return (false);
 
-		return (true);
-	});
+			if (excluded.indexOf(disk.name.toLowerCase()) !== -1)
+				return (false);
+
+			return (true);
+		});
+	} else if (os.type() === 'Linux') {
+		disks = disks.filter(function (d) {
+			if (excluded.indexOf(disk.name.toLowerCase()) !== -1)
+				return (false);
+
+			return d.mountpoint === null;
+		})
+	}
 
 	config = disklayout.compute(disks, layout, nspares, enable_cache,
 		width);

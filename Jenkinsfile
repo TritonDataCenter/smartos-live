@@ -169,7 +169,7 @@ echo ./tools/build_jenkins -c -F check
 set -o errexit
 set -o pipefail
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
-./tools/build_jenkins -c -S default
+echo ./tools/build_jenkins -c -S default
                 ''')
             }
             post {

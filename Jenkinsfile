@@ -114,14 +114,14 @@ set -o errexit
 set -o pipefail
 ./tools/build_jenkins -c -F check
                 ''')
-
+            }
+            post {
                 // We don't mattermost-notify here, as that doesn't add much
                 // value. The checks should always pass, and it's unlikely
                 // that developers will care when they do. If they don't
                 // pass, then the (likely) GitHub PR will be updated with a
                 // failure status, and the developer can then investigate.
-            }
-            post {
+
                 // https://jenkins.io/doc/pipeline/steps/ws-cleanup/
                 // We don't clean on build failure so that there's a chance to
                 // investigate the breakage. Hopefully, a subsequent successful
@@ -129,6 +129,7 @@ set -o pipefail
                 // guaranteed for abandoned branches.
                 always {
                     cleanWs cleanWhenSuccess: true,
+                        cleanWhenFailure: false,
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
@@ -170,17 +171,19 @@ set -o pipefail
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
 ./tools/build_jenkins -c -S default
                 ''')
-                archiveArtifacts artifacts: 'output/default/**',
-                    onlyIfSuccessful: false,
-                    allowEmptyArchive: true
-                joyMattermostNotification(channel: 'os')
             }
             post {
                 always {
+                    archiveArtifacts artifacts: 'output/default/**',
+                        onlyIfSuccessful: false,
+                        allowEmptyArchive: true
                     cleanWs cleanWhenSuccess: true,
+                        cleanWhenFailure: false,
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
+                    joyMattermostNotification(channel: 'os')
+
                 }
             }
         }
@@ -216,18 +219,18 @@ set -o pipefail
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
 ./tools/build_jenkins -c -d -S debug
             ''')
-                archiveArtifacts artifacts: 'output/debug/**',
-                    onlyIfSuccessful: false,
-                    allowEmptyArchive: true
-                joyMattermostNotification(channel: 'jenkins')
-                joyMattermostNotification(channel: 'os')
             }
             post {
                 always {
+                    archiveArtifacts artifacts: 'output/debug/**',
+                        onlyIfSuccessful: false,
+                        allowEmptyArchive: true
                     cleanWs cleanWhenSuccess: true,
+                        cleanWhenFailure: false,
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
+                    joyMattermostNotification(channel: 'os')
                 }
             }
         }
@@ -257,16 +260,18 @@ export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
 export PLATFORM_DEBUG_SUFFIX=-gcc4
 ./tools/build_jenkins -c -d -S gcc4
                 ''')
-                archiveArtifacts artifacts: 'output/gcc4/**',
-                    onlyIfSuccessful: false,
-                    allowEmptyArchive: true
             }
             post {
                 always {
+                    archiveArtifacts artifacts: 'output/gcc4/**',
+                        onlyIfSuccessful: false,
+                        allowEmptyArchive: true
                     cleanWs cleanWhenSuccess: true,
+                        cleanWhenFailure: false,
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
+                    joyMattermostNotification(channel: 'os')
                 }
             }
         }
@@ -294,18 +299,18 @@ set -o pipefail
 export MANTA_TOOLS_PATH=/root/bin/
 ./tools/build_jenkins -c -F strap-cache -S strap-cache
                 ''')
-                archiveArtifacts artifacts: 'output/strap-cache/**',
-                    onlyIfSuccessful: false,
-                    allowEmptyArchive: true
-                joyMattermostNotification(channel: 'jenkins')
-                joyMattermostNotification(channel: 'os')
             }
             post {
                 always {
+                    archiveArtifacts artifacts: 'output/strap-cache/**',
+                        onlyIfSuccessful: false,
+                        allowEmptyArchive: true
                     cleanWs cleanWhenSuccess: true,
+                        cleanWhenFailure: false,
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
+                    joyMattermostNotification(channel: 'os')
                 }
             }
         }

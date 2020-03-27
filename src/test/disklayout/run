@@ -192,27 +192,27 @@ rm -f /var/tmp/12.out
 echo
 echo "excluded disks tests"
 
-disklayout -f opt-e.in -i "foo,bar" mirror >/var/tmp/opt-e.out
+disklayout -f opt-e.in -e "foo,bar" mirror >/var/tmp/opt-e.out
 printf "%-16s " "opt-e.none.out"
 diff -u opt-e.none.out /var/tmp/opt-e.out
 rm -f /var/tmp/opt-e.out
 
-disklayout -f opt-e.in -i "disk6" mirror >/var/tmp/opt-e.out
+disklayout -f opt-e.in -e "disk6" mirror >/var/tmp/opt-e.out
 printf "%-16s " "opt-e.disk6.out"
 diff -u opt-e.disk6.out /var/tmp/opt-e.out
 rm -f /var/tmp/opt-e.out
 
-disklayout -f opt-e.in -i "disk1" mirror >/var/tmp/opt-e.out
+disklayout -f opt-e.in -e "disk1" mirror >/var/tmp/opt-e.out
 printf "%-16s " "opt-e.disk1.out"
 diff -u opt-e.disk1.out /var/tmp/opt-e.out
 rm -f /var/tmp/opt-e.out
 
-disklayout -f opt-e.in -i "disk1,disk2" mirror >/var/tmp/opt-e.out
+disklayout -f opt-e.in -e "disk1,disk2" mirror >/var/tmp/opt-e.out
 printf "%-16s " "opt-e.disk1,2.out"
 diff -u opt-e.disk1,2.out /var/tmp/opt-e.out
 rm -f /var/tmp/opt-e.out
 
-disklayout -f opt-e.in -i "disk2,disk3,disk4" mirror >/var/tmp/opt-e.out
+disklayout -f opt-e.in -e "disk2,disk3,disk4" mirror >/var/tmp/opt-e.out
 printf "%-16s " "opt-e.disk2,3,4.out"
 diff -u opt-e.disk2,3,4.out /var/tmp/opt-e.out
 rm -f /var/tmp/opt-e.out

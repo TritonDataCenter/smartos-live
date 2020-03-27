@@ -203,12 +203,12 @@ fi
 # framework to build, and from where they should be cloned. For release builds,
 # override all repositories.
 #
-if [[ -z "${CONFIGURE_PROJECTS}" ]]; then
-    echo "Using default configure-projects"
-elif [[ -n "${ENGBLD_RELEASE}" ]]; then
+if [[ -n "${ENGBLD_RELEASE}" ]]; then
     echo "Doing release build - setting configure projects to:"
     sed -e "s/ master: / ${BRANCH}: /g" default.configure-projects > configure-projects
     cat configure-projects
+elif [[ -z "${CONFIGURE_PROJECTS}" ]]; then
+    echo "Using default configure-projects"
 else
     echo "${CONFIGURE_PROJECTS}" > configure-projects
 fi

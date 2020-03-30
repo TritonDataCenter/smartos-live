@@ -1,4 +1,7 @@
 #!/bin/sh
+#
+# Copyright 2020 Joyent, Inc.
+#
 
 for f in *.di
 do
@@ -185,6 +188,34 @@ disklayout -f 36h.di -w 12 -s 0 raidz1 > /var/tmp/12.out
 printf "%-16s " 36.w12.z1.out
 diff -u 36.di.w12.z1.out /var/tmp/12.out
 rm -f /var/tmp/12.out
+
+echo
+echo "excluded disks tests"
+
+disklayout -f opt-e.in -e "foo,bar" mirror >/var/tmp/opt-e.out
+printf "%-16s " "opt-e.none.out"
+diff -u opt-e.none.out /var/tmp/opt-e.out
+rm -f /var/tmp/opt-e.out
+
+disklayout -f opt-e.in -e "disk6" mirror >/var/tmp/opt-e.out
+printf "%-16s " "opt-e.disk6.out"
+diff -u opt-e.disk6.out /var/tmp/opt-e.out
+rm -f /var/tmp/opt-e.out
+
+disklayout -f opt-e.in -e "disk1" mirror >/var/tmp/opt-e.out
+printf "%-16s " "opt-e.disk1.out"
+diff -u opt-e.disk1.out /var/tmp/opt-e.out
+rm -f /var/tmp/opt-e.out
+
+disklayout -f opt-e.in -e "disk1,disk2" mirror >/var/tmp/opt-e.out
+printf "%-16s " "opt-e.disk1,2.out"
+diff -u opt-e.disk1,2.out /var/tmp/opt-e.out
+rm -f /var/tmp/opt-e.out
+
+disklayout -f opt-e.in -e "disk2,disk3,disk4" mirror >/var/tmp/opt-e.out
+printf "%-16s " "opt-e.disk2,3,4.out"
+diff -u opt-e.disk2,3,4.out /var/tmp/opt-e.out
+rm -f /var/tmp/opt-e.out
 
 echo
 echo "invalid input tests"

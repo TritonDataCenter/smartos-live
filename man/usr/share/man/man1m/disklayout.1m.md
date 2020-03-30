@@ -2,7 +2,7 @@
 
 ## SYNOPSIS
 
-    disklayout [-c] [-f file] [-s spares] [-w width] [layout]
+    disklayout [-c] [-f file] [-e excluded,...] [-s spares] [-w width] [layout]
 
 
 ## DESCRIPTION
@@ -59,6 +59,10 @@ to change at any time without notice.
 **-c**
 
 Prevent disklayout from allocating any disks as cache devices.
+
+**-e disk,disks...**
+
+Exclude any disks specified in the given comma-separated list.
 
 **-f file**
 

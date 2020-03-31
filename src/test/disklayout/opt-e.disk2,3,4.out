@@ -1,0 +1,52 @@
+{
+	"spares": [
+		{
+			"name": "disk7",
+			"vid": "ATA",
+			"pid": "INTEL SSDSC2BX01",
+			"size": "1600321314816",
+			"solid_state": true
+		}
+	],
+	"vdevs": [
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "disk0",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "disk1",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				}
+			]
+		},
+		{
+			"type": "mirror",
+			"devices": [
+				{
+					"name": "disk5",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				},
+				{
+					"name": "disk6",
+					"vid": "ATA",
+					"pid": "INTEL SSDSC2BX01",
+					"size": "1600321314816",
+					"solid_state": true
+				}
+			]
+		}
+	],
+	"capacity": 3200642629632
+}

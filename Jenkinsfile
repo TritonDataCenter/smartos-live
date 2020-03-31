@@ -183,7 +183,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
                     joyMattermostNotification(
-                        channel: 'timf-mm-test', comment: 'default')
+                        channel: 'os', comment: 'default')
 
                 }
             }
@@ -232,7 +232,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
                     joyMattermostNotification(
-                        channel: 'timf-mm-test', comment: 'debug')
+                        channel: 'os', comment: 'debug')
                 }
             }
         }
@@ -274,7 +274,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
                     joyMattermostNotification(
-                        channel: 'timf-mm-test', comment: 'gcc4')
+                        channel: 'os', comment: 'gcc4')
                 }
             }
         }
@@ -314,7 +314,7 @@ export MANTA_TOOLS_PATH=/root/bin/
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
                     joyMattermostNotification(
-                        channel: 'timf-mm-test', comment: 'strap-cache')
+                        channel: 'os', comment: 'strap-cache')
                 }
             }
         }
@@ -322,7 +322,9 @@ export MANTA_TOOLS_PATH=/root/bin/
     post {
         always {
             joyMattermostNotification(
-                channel: 'timf-mm-test', comment: 'pipeline complete')
+                channel: 'jenkins', comment: 'pipeline complete')
+            joyMattermostNotification(
+                channel: 'os', comment: 'pipeline complete')
         }
     }
 }

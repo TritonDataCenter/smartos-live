@@ -120,6 +120,7 @@ pipeline {
                 sh('''
 set -o errexit
 set -o pipefail
+env
 echo ./tools/build_jenkins -c -F check
                 ''')
             }
@@ -311,6 +312,7 @@ echo ./tools/build_jenkins -c -d -S gcc4
                 sh('''
 set -o errexit
 set -o pipefail
+env
 export MANTA_TOOLS_PATH=/root/bin/
 echo ./tools/build_jenkins -c -F strap-cache -S strap-cache
                 ''')

@@ -120,7 +120,7 @@ pipeline {
                 sh('''
 set -o errexit
 set -o pipefail
-./tools/build_jenkins -c -F check
+echo ./tools/build_jenkins -c -F check
                 ''')
             }
             post {
@@ -180,7 +180,7 @@ set -o pipefail
 set -o errexit
 set -o pipefail
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
-./tools/build_jenkins -c -S default
+echo ./tools/build_jenkins -c -S default
                 ''')
             }
             post {
@@ -228,7 +228,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
 set -o errexit
 set -o pipefail
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
-./tools/build_jenkins -c -d -S debug
+echo ./tools/build_jenkins -c -d -S debug
             ''')
             }
             post {
@@ -270,7 +270,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
 export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
 export PLATFORM_DEBUG_SUFFIX=-gcc4
-./tools/build_jenkins -c -d -S gcc4
+echo ./tools/build_jenkins -c -d -S gcc4
                 ''')
             }
             post {
@@ -312,7 +312,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
 set -o errexit
 set -o pipefail
 export MANTA_TOOLS_PATH=/root/bin/
-./tools/build_jenkins -c -F strap-cache -S strap-cache
+echo ./tools/build_jenkins -c -F strap-cache -S strap-cache
                 ''')
             }
             post {

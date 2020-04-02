@@ -98,6 +98,14 @@ pipeline {
                 'upload a new strap-cache as part of this build. This ' +
                 'should only be true when triggered by a push to illumos-extra.'
         )
+        booleanParam(
+            name: 'ONLY_BUILD_STRAP_CACHE',
+            defaultValue: false,
+            description: '<p>This parameter declares that this build should ' +
+                '<b>only</b> build and upload the strap cache tarball. This ' +
+                'is useful in cases where a push to illumos-extra coincides ' +
+                'with an otherwise broken platform build.</p>'
+        )
     }
     stages {
         stage('check') {
@@ -158,9 +166,12 @@ set -o pipefail
                 // which might be excessive. The exception is the 'check' stage
                 // above, which is ~ a 2 minute build.
                 beforeAgent true
-                anyOf {
-                    branch 'master'
-                    triggeredBy cause: 'UserIdCause'
+                allOf {
+                    anyOf {
+                        branch 'master'
+                        triggeredBy cause: 'UserIdCause'
+                    }
+                    environment name: 'ONLY_BUILD_STRAP_CACHE', value: 'false'
                 }
             }
             steps {
@@ -183,7 +194,6 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
                     joyMattermostNotification(channel: 'os')
-
                 }
             }
         }
@@ -209,6 +219,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                     // specified. The same goes for the rest of the pipeline
                     // stages.
                     environment name: 'PLAT_CONFIGURE_ARGS', value: ''
+                    environment name: 'ONLY_BUILD_STRAP_CACHE', value: 'false'
                 }
             }
             steps {
@@ -250,6 +261,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                         triggeredBy cause: 'UserIdCause'
                     }
                     environment name: 'PLAT_CONFIGURE_ARGS', value: ''
+                    environment name: 'ONLY_BUILD_STRAP_CACHE', value: 'false'
                 }
             }
             steps {
@@ -289,7 +301,10 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                 // illumos-extra. See the Jenkinsfile in that repository
                 // which has a build(..) step for smartos-live that sets
                 // this environment value.
-                environment name: 'BUILD_STRAP_CACHE', value: 'true'
+                anyOf {
+                    environment name: 'BUILD_STRAP_CACHE', value: 'true'
+                    environment name: 'ONLY_BUILD_STRAP_CACHE', value: 'true'
+                }
             }
             steps {
                 sh('git clean -fdx')

@@ -8,7 +8,7 @@
  * Copyright 2020 Joyent, Inc.
  */
 
-@Library('jenkins-joylib@v1.0.4') _
+@Library('jenkins-joylib@v1.0.5') _
 
 pipeline {
 
@@ -193,7 +193,8 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
-                    joyMattermostNotification(channel: 'os')
+                    joyMattermostNotification(
+                        channel: 'os', comment: 'default')
                 }
             }
         }
@@ -241,7 +242,8 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
-                    joyMattermostNotification(channel: 'os')
+                    joyMattermostNotification(
+                        channel: 'os', comment: 'debug')
                 }
             }
         }
@@ -283,7 +285,8 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
-                    joyMattermostNotification(channel: 'os')
+                    joyMattermostNotification(
+                        channel: 'os', comment: 'gcc4')
                 }
             }
         }
@@ -325,15 +328,18 @@ export MANTA_TOOLS_PATH=/root/bin/
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
-                    joyMattermostNotification(channel: 'os')
+                    joyMattermostNotification(
+                        channel: 'os', comment: 'strap-cache')
                 }
             }
         }
     }
     post {
         always {
-            joyMattermostNotification(channel: 'jenkins')
-            joyMattermostNotification(channel: 'os')
+            joyMattermostNotification(
+                channel: 'jenkins', comment: 'pipeline complete')
+            joyMattermostNotification(
+                channel: 'os', comment: 'pipeline complete')
         }
     }
 }

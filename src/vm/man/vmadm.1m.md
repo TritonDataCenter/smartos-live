@@ -423,7 +423,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         routes.
 
         In the case of nics, disks, and filesystems, there are 3 special
-	objects:
+        objects:
 
           add_disks || add_nics || add_filesystems
           remove_disks || remove_nics || remove_filesystems
@@ -440,8 +440,8 @@ tab-complete UUIDs rather than having to type them out for every command.
         objects).
 
         For updating filesystems, you use the same format as described above for
-	NICs except that the options are add_filesystems, remove_filesystems and
-	update_filesystems and instead of "mac" these will be keyed on "target".
+        NICs except that the options are add_filesystems, remove_filesystems and
+        update_filesystems and instead of "mac" these will be keyed on "target".
 
         For updating disks, you use the same format as described above for NICs
         except that the options are add_disks, remove_disks and update_disks

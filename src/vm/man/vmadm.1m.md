@@ -871,24 +871,24 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         Specifies the device block size reported to the guest. By default, the
         block size of the underlying device is reported to the guest (see
-	'disk.*.block_size' above). This setting will override the default
-	value. It also allows reporting of both a physical and logical block
-	size using a _string_ of the form "logical_size/physical_size" (e.g.
-	"512/4096" to look like a 512e drive. This is useful for guests such as
-	Windows where older versions of the Windows virtio driver always
-	reported the block size of a virtio device as 512 bytes (regardless of
-	the block size presented to the guest) while newer versions of the
-	driver report the actual size of the device being reported by the host.
+        'disk.*.block_size' above). This setting will override the default
+        value. It also allows reporting of both a physical and logical block
+        size using a _string_ of the form "logical_size/physical_size" (e.g.
+        "512/4096" to look like a 512e drive. This is useful for guests such as
+        Windows where older versions of the Windows virtio driver always
+        reported the block size of a virtio device as 512 bytes (regardless of
+        the block size presented to the guest) while newer versions of the
+        driver report the actual size of the device being reported by the host.
 
-	NOTE: the value is _always_ a string, and all values must be a power of
-	two.
+        NOTE: the value is _always_ a string, and all values must be a power of
+        two.
 
-	type: string of the form "NNN" or "NNN/NNN"
-	vmtype: bhyve
-	listable: yes
-	create: yes
-	update: yes (special, see description in 'update' section above)
-	default: no
+        type: string of the form "NNN" or "NNN/NNN"
+        vmtype: bhyve
+        listable: yes
+        create: yes
+        update: yes (special, see description in 'update' section above)
+        default: no
 
     disks.*.nocreate:
 

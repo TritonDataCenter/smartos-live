@@ -47,6 +47,7 @@ dns_resolver2="8.8.4.4"
 declare -a states
 declare -a nics
 declare -a assigned
+declare ondisk=no
 declare prmpt_str
 
 #
@@ -739,6 +740,26 @@ printdisklayout()
     ' out
 }
 
+# Assume $1 is the prompt, $2 is "yes" or "no"
+promptyesno()
+{
+    val=""
+    while [ -z "$val" ]; do
+	printf "$1 [$2]: "
+	read val
+	[ -z "$val" ] && val="$2"
+
+	# Normalize to lowercase
+	val=`echo $val | sed 's/A-Z/a-z/g'`
+
+	if [[ $val != "yes" && $val != "no" ]]; then
+	    echo "Must be 'yes' or 'no'."
+	    val=""
+	    continue
+	fi
+    done
+}
+
 promptpool()
 {
 	local layout=""
@@ -969,7 +990,7 @@ create_zpool()
 
 	# If this is not a manual layout, then we've been given
 	# a JSON file describing the desired pool, so use that:
-	mkzpool -f $pool $layout || \
+	mkzpool -B -f $pool $layout || \
 	    fatal "failed to create pool ${pool}"
 
 	zfs set atime=off ${pool} || \
@@ -1234,6 +1255,19 @@ your own zpool.\n"
 
 	promptpool
 
+	printheader "Self-booting"
+
+	message="
+SmartOS can boot off the zpool in lieu of a USB stick or a CD-ROM.  Enter
+'yes' if you wish to make this SmartOS zpool self-booting.\n"
+
+	
+	if [[ $(getanswer "skip_instructions") != "true" ]]; then
+		printf "$message"
+	fi
+
+	promptyesno "Boot SmartOS from disk" $ondisk
+	ondisk="$val"
 
 	printheader "System Configuration"
 	message="
@@ -1338,6 +1372,38 @@ sed -e "s|^root:[^\:]*:|root:${root_shadow}:|" /etc/shadow > /usbkey/shadow \
 [[ $? -eq 0 ]] || fatal "failed to preserve root pasword"
 
 cp -rp /etc/ssh /usbkey/ssh || fatal "failed to set up preserve host keys"
+
+if [ $ondisk == "yes" ]; then
+    printf "%-56s" "Creating self-bootable zones pool... "
+
+    # Create SYS_ZPOOL/boot and set bootfs.
+    zfs create ${SYS_ZPOOL}/boot || fatal "Cannot create boot filesystem"
+    zpool set bootfs=${SYS_ZPOOL}/boot ${SYS_ZPOOL} || \
+	fatal "Cannot set bootfs"
+
+    # Get "install media mounted" and copy over boot stuff:
+    # /zones/boot/{boot,etc,platform}
+    echo "XXX KEBE SAYS for now, exiting to shell to populate /zones/boot/"
+    /usr/bin/bash
+
+    # XXX KEBE SAYS Determine which disk(s) to install things in.
+    # Then for each disk:
+    # 	installboot -m -b....
+    # <SNIP!>
+    # XXX KEBE SCREAMS This is a cheesy workaround:
+    # - Takes first disk only, regardless
+    # - Assumes `zpool create -B` has s0 == ESP, s1 == data-for-SYS_ZPOOL
+    diskname=`zpool list -v ${SYS_ZPOOL} | egrep 'c[0-9]+t[0-9]+d[0-0]+ ' | awk '{print $1}'`
+    installboot -m -b /zones/boot/boot /zones/boot/boot/pmbr \
+	/zones/boot/boot/gptzfsboot /dev/rdsk/${diskname}s1 ||
+	fatal "Can't install boot sector and/or UEFI loader."
+
+    # Append 'fstype="ufs"' to /zones/boot/boot/loader.conf for ramdisk root.
+    echo 'fstype="ufs"' >> /zones/boot/boot/loader.conf || \
+	fatal "Can't append to /zones/boot/boot/loader.conf"
+
+    printf "%4s\n" done
+fi
 
 printf "System setup has completed.\n\nPress enter to reboot.\n"
 

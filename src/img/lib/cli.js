@@ -1325,13 +1325,17 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
     var log = self.log;
     var zpool = opts.P || common.DEFAULT_ZPOOL;
 
-    // reload any configured sources, using this channel argument instead
-    if (opts.channel !== undefined) {
-        self.tool.channel = opts.channel;
-        self.tool.init();
-    }
-
     vasync.pipeline({arg: {}, funcs: [
+        function reloadSources(ctx, next) {
+            // reload any configured sources, using the channel specified
+            if (opts.channel !== undefined) {
+                self.tool.channel = opts.channel;
+                self.tool.init(next);
+            } else {
+                next();
+            }
+        },
+
         function validateArg(ctx, next) {
             if (common.UUID_RE.test(arg)) {
                 ctx.uuid = arg;

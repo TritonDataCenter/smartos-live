@@ -5,11 +5,11 @@
  */
 
 /*
- * Copyright 2019 Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  */
 
 /*
- * Client library for the SDC Image API (IMGAPI).
+ * Client library for the TritonDC Image API (IMGAPI).
  *
  * Usage without auth (e.g. when talking to in-SDC IMGAPI on admin network):
  *
@@ -278,8 +278,8 @@ function IMGAPI(options) {
     } else {
         this.url = options.url;
     }
-    // the URL subpath *without* a trailing '/' or query params
-    this._basePath = parsed.path.split('?')[0];
+    // _basePath: the URL subpath *without* a trailing '/'
+    this._basePath = parsed.pathname;
     if (this._basePath.slice(-1) === '/') {
         this._basePath = this._basePath.slice(0, -1);
     }

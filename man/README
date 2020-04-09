@@ -1,0 +1,10 @@
+This directory installs man pages corresponding to software delivered by
+smartos-live itself.  For mainly historical reasons, some of these live under
+/smartdc/man, although they're still delivered into SmartOS, not just a Triton
+build.
+
+Some are built from markdown via ronnjs, others not.
+
+In addition, there are some waifs and strays - such as the bzip2 manpages -
+that are referenced from manifests other than man/manifest, and mainly here for
+convenience.

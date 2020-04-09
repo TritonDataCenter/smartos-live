@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2015 Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  */
 
 /*
@@ -59,7 +59,6 @@ static const char *cm_bpaths[] = {
  */
 static const char *cm_mpaths[] = {
 	"proto/usr/share/man",
-	"man/man",
 	NULL
 };
 

@@ -9,7 +9,7 @@
 # source.  A copy of the CDDL is also available via the Internet at
 # http://www.illumos.org/license/CDDL.
 #
-# Copyright 2018 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 #
@@ -27,21 +27,23 @@
 # we'll fall back to doing a full strap build of illumos-extra.  This is also
 # true if the user specified non-default compilers.
 #
+# In "upload" mode, we build a strap, then upload it to Manta for use by other
+# builds.
+#
 
-usage="$0 [-l | -a adjunct.tar [-f] [-j maxjobs] [-c | -d protodir]]"
+usage="$0 make -a adjunct.tar -j maxjobs -d protodir [-f] [-o tarball]"
+usage="$usage | upload -D bits -d path -t timestamp"
 wsroot=$(cd $(dirname $0)/../; pwd)
 pkgin_file="/opt/local/etc/pkgin/repositories.conf"
 manta_host="https://us-east.manta.joyent.com"
-manta_dir="/Joyent_Dev/public/SmartOS/build-cache/proto.strap/"
-manta_base="$manta_host/$manta_dir"
+manta_dir="/Joyent_Dev/public/builds/SmartOS/strap-cache/master"
 cache_base="/opt/SmartOS/build-cache/"
 srcdir="$wsroot/projects/illumos-extra"
 adjunct=""
 protodir=""
 max_jobs="128"
 force_build="no"
-report_loc="no"
-create_cache="no"
+tarfile=""
 
 function fatal
 {
@@ -102,21 +104,28 @@ function download
 	local pkgsrc_branch=$1
 	local srcdirsha=$2
 	local cache_dir="$cache_base/$pkgsrc_branch/$srcdirsha"
-	local outfile="/var/tmp/$srcdirsha.proto.strap.tgz.$$"
-	local url="$manta_base/$pkgsrc_branch/$srcdirsha/proto.strap.tgz"
+	local outfile="/var/tmp/$srcdirsha.proto.strap.tar.gz.$$"
 	local tmpdir="$cache_dir.$$"
+	local latest="$manta_dir/$pkgsrc_branch/$srcdirsha/latest"
+	local url="$(/usr/bin/curl -sS $manta_host/$latest 2>/dev/null)"
 
-	pfexec mkdir -p "$tmpdir" || fatal "failed to make $cache_dir"
+	if [[ -z "$url" ]]; then
+		echo "Failed to find $latest: building locally"
+		build_strap
+		return 0
+	fi
 
+	url="$manta_host/$url/proto.strap.tar.gz"
 	echo "Downloading proto.strap contents from $url ..."
 
-	if ! curl -f -o "$outfile" "$url"; then
+	if ! /usr/bin/curl -f -o "$outfile" "$url"; then
 		rm -f "$outfile"
-		pfexec rm -rf "$tmpdir"
 		echo "Failed to download $url: building locally"
 		build_strap
 		return 0
 	fi
+
+	pfexec mkdir -p "$tmpdir" || fatal "failed to make $tmpdir"
 
 	if ! pfexec tar xzf "$outfile" -C "$tmpdir"; then
 		rm -f "$outfile"
@@ -147,27 +156,29 @@ function download
 function create_cache
 {
 	local cache_dir="$1"
+	local tarfile="$2"
 
-	if [[ "$force_build" = "no" ]]; then
-		if [[ -d "$cache_dir" ]]; then
-			echo "$cache_dir exists; not building"
-			return
-		fi
+	if [[ "$force_build" = "yes" || ! -d "$cache_dir" ]]; then
+		pfexec mkdir -p "$cache_dir" || \
+		    fatal "couldn't mkdir $cache_dir"
+		pfexec chown $(id -u) "$cache_dir" || \
+		    fatal "couldn't chown $cache_dir"
+
+		protodir="$cache_dir"
+
+		build_strap
 	fi
 
-	pfexec mkdir -p "$cache_dir" || fatal "couldn't mkdir $cache_dir"
-	pfexec chown $(id -u) "$cache_dir" || fatal "couldn't chown $cache_dir"
+	mkdir -p $(dirname $tarfile) ||
+	    fatal "failed to mkdir for $tarfile"
 
-	protodir="$cache_dir"
+	pfexec gtar -C "$cache_dir" -czf "$tarfile" . ||
+	    fatal "failed to create $tarfile"
 
-	build_strap
+	pfexec chown $(id -u) "$tarfile" || \
+	    fatal "couldn't chown $tarfile"
 
-	mkdir -p $wsroot/output || fatal "couldn't mkdir $wsroot/output"
-
-	gtar -C "$cache_dir" -czf $wsroot/output/proto.strap.tgz . ||
-	    fatal "failed to create tarball"
-
-	echo "Created $wsroot/output/proto.strap.tgz"
+	echo "Created $tarfile."
 }
 
 #
@@ -176,16 +187,40 @@ function create_cache
 #
 function populate_strap
 {
-	local pkgsrc_branch=$1
-	local srcdirsha=$2
+	local pkgsrc_branch=$(identify_pkgsrc_branch)
+	local srcdirsha=$(identify_srcsha)
 	local cache_dir="$cache_base/$pkgsrc_branch/$srcdirsha"
+
+	while getopts "a:d:fhj:o:" arg; do
+		case $arg in
+		a)
+			adjunct=$OPTARG ;;
+		d)
+			protodir=$OPTARG ;;
+		f)
+			force_build=yes ;;
+		h)
+			echo "$usage"
+			exit 0 ;;
+		j)
+			max_jobs=$OPTARG ;;
+		o)
+			tarfile=$OPTARG ;;
+		?)
+			echo "$usage" >&2
+			exit 1 ;;
+		esac
+	done
+
+	[[ -n "$adjunct" ]] || fatal "missing -a argument"
+	[[ -n "$protodir" ]] || fatal "missing -d argument"
 
 	if [[ -e "$cache_dir" && ! -d "$cache_dir" ]]; then
 		fatal "found weird non-directory $cache_dir"
 	fi
 
-	if [[ "$create_cache" = "yes" ]]; then
-		create_cache $cache_dir
+	if [[ -n "$tarfile" ]]; then
+		create_cache $cache_dir $tarfile
 		return
 	fi
 
@@ -194,8 +229,8 @@ function populate_strap
 	# local strap build we need.
 	#
 	if [[ -d "$protodir" ]];then
-		rm "$protodir" 2>/dev/null
-		rmdir "$protodir" 2>/dev/null
+		rm -f "$protodir" 2>/dev/null || true
+		rmdir "$protodir" 2>/dev/null || true
 		if [[ -d "$protodir" ]]; then
 			build_strap
 			return 0
@@ -216,47 +251,61 @@ function populate_strap
 
 }
 
-export PATH=/usr/bin:/usr/sbin:/sbin:/opt/local/bin:/opt/local/sbin
-set -o pipefail
+#
+# Upload a proto.strap tarball.
+#
+function upload_strap
+{
+	local pkgsrc_branch=$(identify_pkgsrc_branch)
+	local srcdirsha=$(identify_srcsha)
+	local bits_dir=""
+	local upload_dir=""
+	local timestamp=""
 
-while getopts "a:cd:fhlj:" arg; do
-	case $arg in
-	a)
-		adjunct=$OPTARG ;;
-	c)
-		create_cache="yes" ;;
-	d)
-		protodir=$OPTARG ;;
-	f)
-		force_build=yes ;;
-	h)
-		echo "$usage"
-		exit 0 ;;
-	j)
-		max_jobs=$OPTARG ;;
-	l)
-		report_loc="yes" ;;
-	?)
+	while getopts "D:d:ht:" arg; do
+		case $arg in
+		D)
+			bits_dir=$OPTARG ;;
+		d)
+			upload_dir=$OPTARG ;;
+		h)
+			echo "$usage"
+			exit 0 ;;
+		t)
+			timestamp=$OPTARG ;;
+		?)
+			echo "$usage" >&2
+			exit 1 ;;
+		esac
+	done
+
+	[[ -n "$bits_dir" ]] || fatal "missing -D argument"
+	[[ -n "$upload_dir" ]] || fatal "missing -d argument"
+	[[ -n "$timestamp" ]] || fatal "missing -t argument"
+
+	mdir="/$MANTA_USER/$upload_dir/$pkgsrc_branch/$srcdirsha/"
+	mbdir="$mdir/$timestamp"
+
+	verbose mmkdir -p "$mbdir"
+
+	for file in $bits_dir/*; do
+		verbose mput -f $file $mbdir/$(basename $file)
+	done
+
+	echo $mbdir | mput -H "content-type: text/plain" "$mdir/latest"
+}
+
+export PATH=/usr/bin:/usr/sbin:/sbin:/opt/local/bin:/opt/local/sbin:$PATH
+set -o pipefail
+set -e
+
+cmd=$1
+shift
+
+case $cmd in
+	make) populate_strap $* ;;
+	upload) upload_strap $* ;;
+	*)
 		echo "$usage" >&2
 		exit 1 ;;
-	esac
-done
-
-if [[ "$report_loc" = "yes" ]]; then
-	echo $manta_dir/$(identify_pkgsrc_branch)/$(identify_srcsha)/proto.strap.tgz
-	exit 0
-fi
-
-[[ -n "$adjunct" ]] || fatal "missing -a argument"
-[[ -d "$srcdir" ]] || fatal "cannot find illumos-extra in $srcdir"
-[[ -d "$srcdir/.git" ]] || fatal "$srcdir is not a git repo"
-
-if [[ "$create_cache" = "yes" ]]; then
-	[[ -z "$protodir" ]] || fatal "can't specify -u and -d"
-else
-	[[ -n "$protodir" ]] || fatal "missing -d argument"
-fi
-
-populate_strap $(identify_pkgsrc_branch) $(identify_srcsha)
-
-exit 0
+esac

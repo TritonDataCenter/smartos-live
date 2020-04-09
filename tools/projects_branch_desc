@@ -6,7 +6,7 @@
 #
 
 #
-# Copyright (c) 2019, Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 #
@@ -24,12 +24,10 @@ fi
 # branch information.
 current_branch=$1
 
-PROJECT_REPOS="projects/illumos-extra \
-    projects/illumos \
-	projects/local/ur-agent \
-	projects/local/kvm \
-	projects/local/kvm-cmd \
-	projects/local/mdata-client"
+PROJECT_FILE=configure-projects
+[[ -f "$PROJECT_FILE" ]] || PROJECT_FILE=default.configure-projects
+
+PROJECT_REPOS=$(awk -F: '{ print "projects/" $1; }' <$PROJECT_FILE)
 
 for repo in $PROJECT_REPOS; do
 	if [[ ! -d $repo ]]; then

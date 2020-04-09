@@ -64,6 +64,7 @@ SMARTDCLIBDIR =	$(DESTDIR)/smartdc/lib
 #
 bootparams :	LIBS +=		-ldevinfo
 bootparams :	WARN_FLAGS +=	-Wno-unused
+fswatcher :	CPPFLAGS +=	-D_REENTRANT
 fswatcher :	LIBS +=		-lthread -lnvpair -lavl
 zfs_recv :	LIBS +=		-lsocket
 zfs_send :	LIBS +=		-lsocket
@@ -132,6 +133,8 @@ JS_CHECK_TARGETS=\
 	vm/tests/test-sysinfo.js \
 	vm/tests/test-tmpfs.js \
 	vm/tests/test-update.js \
+	vm/tests/test-update-kvm.js \
+	vm/tests/test-update-bhyve.js \
 	vm/tests/test-vrrp-nics.js \
 	vm/tests/test-vminfod.js \
 	vm/tests/test-vminfod-zonewatcher.js \
@@ -351,9 +354,10 @@ LIBSDC_TARGETS = \
 
 ETC_TARGETS = \
 	etc/nodename \
-	etc/notices/COPYRIGHT \
 	etc/rtc_config \
 	etc/ssh/sshd_config
+
+ETC_COPYRIGHT_TARGET = etc/notices/COPYRIGHT
 
 BHYVE_TARGETS = \
 	bhyve/uefi-csm-rom.bin \
@@ -375,7 +379,7 @@ check : TARGET = check
 
 all: $(TARGETS) $(USR_LIB_TARGETS) $(SMARTDC_TARGETS) \
     $(SMARTDC_LIB_TARGETS) $(LIBSDC_TARGETS) $(ETC_TARGETS) \
-    $(SUBDIRS) $(BHYVE_TARGETS)
+    $(SUBDIRS) $(BHYVE_TARGETS) $(ETC_COPYRIGHT_TARGET)
 
 
 $(SUBDIRS): FRC
@@ -446,10 +450,10 @@ install: all $(SUBDIRS)
 	mv $(DESTDIR)/usr/vm/sbin/add-userscript.js \
 	    $(DESTDIR)/usr/vm/sbin/add-userscript
 	mv $(DESTDIR)/usr/vm/sbin/metadata.js $(DESTDIR)/usr/vm/sbin/metadata
-	mkdir -p $(DESTDIR)/usr/share/man/man1
 	sed -e "s|require('dtrace-provider'|require('/usr/node/node_modules/dtrace-provider'|" \
 	    < node-bunyan/lib/bunyan.js \
 	    > $(PREFIX_NODE)/node_modules/bunyan.js
+	mkdir -p $(DESTDIR)/usr/share/man/man1
 	cp node-bunyan/docs/bunyan.1 $(DESTDIR)/usr/share/man/man1/bunyan.1
 	mkdir -p $(DESTDIR)/usr/bin
 	sed -e 's|^#!/usr/bin/env node.*$$|#!/usr/node/bin/node|' \
@@ -461,7 +465,6 @@ install: all $(SUBDIRS)
 	cp img/package.json $(DESTDIR)/usr/img/package.json
 	cp -PR img/etc $(DESTDIR)/usr/img/
 	cp -PR img/lib $(DESTDIR)/usr/img/
-	cp -PR img/man $(DESTDIR)/usr/img/
 	cp -PR img/node_modules $(DESTDIR)/usr/img/
 	cp -PR img/sbin $(DESTDIR)/usr/img/
 	cp -PR img/test $(DESTDIR)/usr/img/
@@ -499,6 +502,8 @@ install: all $(SUBDIRS)
 	mv $(NOMKNOD_ROOT64)/$(NOMKNOD_64) $(NOMKNOD_ROOT64)/$(NOMKNOD_SO)
 	mkdir -p $(DESTDIR)/usr/share/bhyve
 	cp $(BHYVE_TARGETS) $(DESTDIR)/usr/share/bhyve
+	sed -e "s/%%YEAR%%/$$(date +%Y)/1" $(ETC_COPYRIGHT_TARGET) \
+		> $(DESTDIR)/$(ETC_COPYRIGHT_TARGET)
 
 check: $(JSLINT) $(SUBDIRS)
 	@echo "==> Running cstyle..."
@@ -545,10 +550,6 @@ manifest:
 	    | sed -e 's|^|f usr/fw/etc/|' -e 's|$$| 0444 root bin|' \
 	    >> ./$(DESTNAME).tmp
 	mv ./$(DESTNAME).tmp $(DESTDIR)/$(DESTNAME)
-
-.PHONY: mancheck_conf
-mancheck_conf:
-	cp mancheck.conf $(DESTDIR)/$(DESTNAME)
 
 $(JSLINT):
 	(cd $(ROOT); $(MAKE) jsl)

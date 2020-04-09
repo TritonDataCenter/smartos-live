@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright 2019 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 #
@@ -31,7 +31,7 @@ MPROTO =	$(ROOT)/manifest.d
 BOOT_MPROTO =	$(ROOT)/boot.manifest.d
 BOOT_PROTO =	$(ROOT)/proto.boot
 IMAGES_PROTO =	$(ROOT)/proto.images
-MCPROTO =	$(ROOT)/mancheck.conf.d
+TESTS_PROTO =	$(ROOT)/proto.tests
 
 # On Darwin/OS X we support running 'make check'
 ifeq ($(shell uname -s),Darwin)
@@ -41,6 +41,8 @@ else
 PATH =		/usr/bin:/usr/sbin:/sbin:/opt/local/bin
 NATIVE_CC =	/opt/local/bin/gcc
 endif
+
+BUILD_PLATFORM := $(shell uname -v)
 
 #
 # This number establishes a maximum for smartos-live, illumos-extra, and
@@ -96,20 +98,32 @@ MANCF_FILE :=	$(ROOT)/proto/usr/share/man/man.cf
 WORLD_MANIFESTS := \
 	$(MPROTO)/illumos.manifest \
 	$(MPROTO)/live.manifest \
+	$(MPROTO)/man.manifest \
 	$(MPROTO)/illumos-extra.manifest
 
-WORLD_MANCHECK_CONFS := \
-	$(MCPROTO)/illumos.mancheck.conf \
-	$(MCPROTO)/live.mancheck.conf \
-	$(MCPROTO)/illumos-extra.mancheck.conf
+MANCHECK_CONFS := \
+	$(ROOT)/man/mancheck.conf \
+	$(ROOT)/projects/illumos/mancheck.conf \
+	$(ROOT)/projects/illumos-extra/mancheck.conf \
+	$(shell ls projects/local/*/mancheck.conf 2>/dev/null)
 
 BOOT_MANIFESTS := \
 	$(BOOT_MPROTO)/illumos.manifest
 
 SUBDIR_MANIFESTS :=	$(LOCAL_SUBDIRS:%=$(MPROTO)/%.sd.manifest)
 
-SUBDIR_MANCHECK_CONFS := \
-	$(LOCAL_SUBDIRS:%=$(MCPROTO)/%.sd.mancheck.conf)
+TEST_IPS_MANIFEST_ROOT = projects/illumos/usr/src/pkg/manifests
+
+#
+# To avoid cross-repository flag days, the list of IPS manifest
+# files which define the files included in the test archive is
+# stored in the illumos-joyent.git repository. By including the
+# following Makefile, we get the $(TEST_IPS_MANIFEST_FILES) macro.
+#
+include projects/illumos/usr/src/Makefile.testarchive
+
+TEST_IPS_MANIFESTS = $(TEST_IPS_MANIFEST_FILES:%=$(TEST_IPS_MANIFEST_ROOT)/%)
+TESTS_MANIFEST = $(ROOT)/tests.manifest.gen
 
 BOOT_VERSION :=	boot-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
@@ -118,6 +132,14 @@ BOOT_TARBALL :=	output/$(BOOT_VERSION).tgz
 IMAGES_VERSION :=	images-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
     echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
 IMAGES_TARBALL :=	output/$(IMAGES_VERSION).tgz
+
+TESTS_VERSION :=	tests-$(shell [[ -f $(ROOT)/configure-buildver ]] && \
+    echo $$(head -n1 $(ROOT)/configure-buildver)-)$(shell head -n1 $(STAMPFILE))
+TESTS_TARBALL :=	output/$(TESTS_VERSION).tgz
+
+CTFTOOLS_TARBALL := $(ROOT)/output/ctftools/ctftools.tar.gz
+
+STRAP_CACHE_TARBALL := $(ROOT)/output/strap-cache/proto.tar.gz
 
 ifdef PLATFORM_PASSWORD
 PLATFORM_PASSWORD_OPT=-p $(PLATFORM_PASSWORD)
@@ -131,14 +153,13 @@ TOOLS_TARGETS = \
 	tools/cryptpass
 
 world: 0-strap-stamp 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp \
-	0-local-stamp 0-tools-stamp 0-man-stamp 0-devpro-stamp \
-	$(TOOLS_TARGETS)
+	0-local-stamp 0-tools-stamp 0-devpro-stamp $(TOOLS_TARGETS)
 
-live: world manifest mancheck_conf boot $(TOOLS_TARGETS) $(MANCF_FILE)
+live: world manifest boot $(TOOLS_TARGETS) $(MANCF_FILE) mancheck
 	@echo $(SUBDIR_MANIFESTS)
 	mkdir -p ${ROOT}/log
 	./tools/build_live -m $(ROOT)/$(MANIFEST) -o $(ROOT)/output \
-	    $(PLATFORM_PASSWORD_OPT) $(ROOT)/proto $(ROOT)/man/man
+	    $(PLATFORM_PASSWORD_OPT) $(ROOT)/proto
 
 boot: $(BOOT_TARBALL)
 
@@ -187,29 +208,25 @@ images-tar: $(IMAGES_TARBALL)
 #
 manifest: $(MANIFEST) $(BOOT_MANIFEST)
 
-mancheck_conf: $(WORLD_MANCHECK_CONFS) $(SUBDIR_MANCHECK_CONFS)
+mancheck.conf: $(MANCHECK_CONFS)
+	cat $(MANCHECK_CONFS) >$@ 2>/dev/null
 
-dump_mancheck_conf: manifest mancheck_conf $(MANCHECK)
-	args=; for x in $(MCPROTO)/*.mancheck.conf; do \
-	    args="$$args -c $$x"; done; \
-	    $(MANCHECK) -f manifest.gen -s -D $$args
+.PHONY: mancheck
+mancheck: manifest mancheck.conf $(MANCHECK)
+	$(MANCHECK) -f manifest.gen -s -c $(ROOT)/mancheck.conf
 
-$(MPROTO) $(BOOT_MPROTO) $(MCPROTO):
+$(MPROTO) $(BOOT_MPROTO):
 	mkdir -p $@
 
 $(MPROTO)/live.manifest: src/manifest | $(MPROTO)
 	gmake DESTDIR=$(MPROTO) DESTNAME=live.manifest \
 	    -C src manifest
 
-$(MCPROTO)/live.mancheck.conf: src/mancheck.conf | $(MCPROTO)
-	gmake DESTDIR=$(MCPROTO) DESTNAME=live.mancheck.conf \
-	    -C src mancheck_conf
+$(MPROTO)/man.manifest: man/manifest | $(MPROTO)
+	cp man/manifest $@
 
 $(MPROTO)/illumos.manifest: projects/illumos/manifest | $(MPROTO)
 	cp projects/illumos/manifest $(MPROTO)/illumos.manifest
-
-$(MCPROTO)/illumos.mancheck.conf: projects/illumos/mancheck.conf | $(MCPROTO)
-	cp projects/illumos/mancheck.conf $(MCPROTO)/illumos.mancheck.conf
 
 $(BOOT_MPROTO)/illumos.manifest: projects/illumos/manifest | $(BOOT_MPROTO)
 	cp projects/illumos/boot.manifest $(BOOT_MPROTO)/illumos.manifest
@@ -218,10 +235,6 @@ $(MPROTO)/illumos-extra.manifest: 0-extra-stamp \
     projects/illumos-extra/manifest | $(MPROTO)
 	gmake DESTDIR=$(MPROTO) DESTNAME=illumos-extra.manifest \
 	    -C projects/illumos-extra manifest; \
-
-$(MCPROTO)/illumos-extra.mancheck.conf: FRC | 0-extra-stamp $(MCPROTO)
-	gmake DESTDIR=$(MCPROTO) DESTNAME=illumos-extra.mancheck.conf \
-	    -C projects/illumos-extra mancheck_conf; \
 
 $(MPROTO)/%.sd.manifest: projects/local/%/Makefile projects/local/%/manifest
 	cd $(ROOT)/projects/local/$* && \
@@ -233,16 +246,6 @@ $(MPROTO)/%.sd.manifest: projects/local/%/Makefile projects/local/%/manifest
 		    manifest; \
 	    fi
 
-$(MCPROTO)/%.sd.mancheck.conf: FRC | $(MCPROTO)
-	cd $(ROOT)/projects/local/$* && \
-	    if [[ -f Makefile.joyent ]]; then \
-		gmake DESTDIR=$(MCPROTO) DESTNAME=$*.sd.mancheck.conf \
-		    -f Makefile.joyent mancheck_conf; \
-	    else \
-		gmake DESTDIR=$(MCPROTO) DESTNAME=$*.sd.mancheck.conf \
-		    mancheck_conf; \
-	    fi
-
 $(MANIFEST): $(WORLD_MANIFESTS) $(SUBDIR_MANIFESTS)
 	-rm -f $@
 	./tools/build_manifest $(MPROTO) | ./tools/sorter > $@
@@ -250,6 +253,33 @@ $(MANIFEST): $(WORLD_MANIFESTS) $(SUBDIR_MANIFESTS)
 $(BOOT_MANIFEST): $(BOOT_MANIFESTS)
 	-rm -f $@
 	./tools/build_manifest $(BOOT_MPROTO) | ./tools/sorter > $@
+
+$(TESTS_MANIFEST): world
+	-rm -f $@
+	echo "f tests.manifest.gen 0444 root sys" >> $@
+	echo "f tests.buildstamp 0444 root sys" >> $@
+	cat $(TEST_IPS_MANIFESTS) | \
+	    ./tools/generate-manifest-from-ips.nawk | \
+	    ./tools/sorter >> $@
+
+
+#
+# We want a copy of the buildstamp in the tests archive, but
+# don't want to call it 'buildstamp' since that would potentially
+# overwrite the same file in the platform.tgz if they were
+# ever extracted to the same area for investigation. Juggle a bit.
+#
+$(TESTS_TARBALL): $(TESTS_MANIFEST)
+	pfexec rm -f $@
+	pfexec rm -rf $(TESTS_PROTO)
+	mkdir -p $(TESTS_PROTO)
+	cp $(STAMPFILE) $(ROOT)/tests.buildstamp
+	pfexec ./tools/builder/builder $(TESTS_MANIFEST) $(TESTS_PROTO) \
+	    $(PROTO) $(ROOT)
+	pfexec gtar -C $(TESTS_PROTO) -I pigz -cf $@ .
+	rm $(ROOT)/tests.buildstamp
+
+tests-tar: $(TESTS_TARBALL)
 
 #
 # Update source code from parent repositories.  We do this for each local
@@ -292,7 +322,14 @@ update-base:
 	    (cd projects/devpro && gmake DESTDIR=$(PROTO) install)
 	touch $@
 
-0-illumos-stamp: 0-strap-stamp
+$(STAMPFILE):
+	mkdir -p $(ROOT)/proto
+	if [[ -z $$BUILDSTAMP ]]; then \
+	    BUILDSTAMP=$$(TZ=UTC date "+%Y%m%dT%H%M%SZ"); \
+	fi ; \
+	echo "$$BUILDSTAMP" >$(STAMPFILE)
+
+0-illumos-stamp: 0-strap-stamp $(STAMPFILE)
 	@if [[ "$(ILLUMOS_CLOBBER)" = "yes" ]]; then \
 		(cd $(ROOT) && MAX_JOBS=$(MAX_JOBS) ./tools/clobber_illumos) \
 	fi
@@ -303,17 +340,21 @@ FORCEARG_yes=-f
 
 # build our proto.strap area
 0-strap-stamp:
-	$(ROOT)/tools/build_strap -j $(MAX_JOBS) -d $(STRAP_PROTO) \
-	    -a $(ADJUNCT_TARBALL) $(FORCEARG_$(FORCE_STRAP_REBUILD))
+	$(ROOT)/tools/build_strap make \
+	    -a $(ADJUNCT_TARBALL) -d $(STRAP_PROTO) -j $(MAX_JOBS) \
+	    $(FORCEARG_$(FORCE_STRAP_REBUILD))
 	touch $@
 
-# report the Manta location of the proto.strap cache
-strap-cache-location:
-	@$(ROOT)/tools/build_strap -l
-
 # build a proto.strap cache tarball
-strap-cache:
-	$(ROOT)/tools/build_strap -c -j $(MAX_JOBS) -a $(ADJUNCT_TARBALL)
+$(STRAP_CACHE_TARBALL):
+	$(ROOT)/tools/build_strap make \
+	    -a $(ADJUNCT_TARBALL) -d $(STRAP_PROTO) -j $(MAX_JOBS) \
+            -o $(STRAP_CACHE_TARBALL) $(FORCEARG_$(FORCE_STRAP_REBUILD))
+
+# build a CTF tools tarball
+$(CTFTOOLS_TARBALL): 0-strap-stamp $(STAMPFILE)
+	$(ROOT)/tools/build_ctftools make \
+	    -j $(MAX_JOBS) -o $(CTFTOOLS_TARBALL)
 
 # additional illumos-extra content for proto itself
 0-extra-stamp: 0-illumos-stamp
@@ -328,11 +369,7 @@ strap-cache:
 	    gmake -j$(MAX_JOBS) NATIVEDIR=$(STRAP_PROTO) \
 	    DESTDIR=$(PROTO) && \
 	    gmake NATIVEDIR=$(STRAP_PROTO) DESTDIR=$(PROTO) install)
-	touch $@
-
-0-man-stamp:
-	(cd $(ROOT)/man/sdc && gmake install DESTDIR=$(PROTO) $(SUBDIR_DEFS))
-	(cd $(ROOT)/man/src && gmake clean && gmake)
+	(cd $(ROOT)/man/ && gmake install DESTDIR=$(PROTO) $(SUBDIR_DEFS))
 	touch $@
 
 0-tools-stamp: 0-pwgen-stamp
@@ -378,8 +415,8 @@ check: $(JSLINT)
 
 clean:
 	./tools/clobber_illumos
-	rm -f $(MANIFEST) $(BOOT_MANIFEST)
-	rm -rf $(MPROTO)/* $(BOOT_MPROTO)/* $(MCPROTO)/*
+	rm -f $(MANIFEST) $(BOOT_MANIFEST) $(TESTS_MANIFEST)
+	rm -rf $(MPROTO)/* $(BOOT_MPROTO)/*
 	(cd $(ROOT)/src && gmake clean)
 	[ ! -d $(ROOT)/projects/illumos-extra ] || \
 	    (cd $(ROOT)/projects/illumos-extra && gmake clean)
@@ -394,17 +431,21 @@ clean:
 	(cd $(PKGSRC) && gmake clean)
 	(cd $(ROOT) && rm -rf $(PROTO))
 	(cd $(ROOT) && [ -h $(STRAP_PROTO) ] || rm -rf $(STRAP_PROTO))
+	(cd $(ROOT) && rm -f $(STRAP_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(BOOT_PROTO))
 	(cd $(ROOT) && pfexec rm -rf $(IMAGES_PROTO))
-	(cd $(ROOT) && mkdir -p $(PROTO) $(STRAP_PROTO) $(BOOT_PROTO) \
-	    $(IMAGES_PROTO))
+	(cd $(ROOT) && pfexec rm -rf $(TESTS_PROTO))
+	(cd $(ROOT) && mkdir -p $(PROTO) $(BOOT_PROTO) \
+	    $(IMAGES_PROTO) $(TESTS_PROTO))
 	rm -f tools/cryptpass
 	(cd tools/builder && gmake clean)
 	(cd tools/format_image && gmake clean)
 	(cd tools/mancheck && gmake clean)
 	(cd tools/mancf && gmake clean)
 	(cd tools/tzcheck && gmake clean)
-	(cd man/sdc && gmake clean)
+	(cd tools/ucodecheck && gmake clean)
+	(cd man && gmake clean)
+	rm -f mancheck.conf
 	rm -f 0-*-stamp 1-*-stamp
 
 clobber: clean
@@ -438,6 +479,10 @@ BUILD_NAME			?= platform
 PLATFORM_BITS_DIR		= $(ROOT)/output/bits/platform$(PLATFORM_DEBUG_SUFFIX)
 PLATFORM_BRANCH ?= $(shell git symbolic-ref HEAD | awk -F/ '{print $$3}')
 
+CTFTOOLS_BITS_DIR		= $(ROOT)/output/ctftools/bits
+
+STRAP_CACHE_BITS_DIR		= $(ROOT)/output/strap-cache/bits
+
 #
 # PUB_BRANCH_DESC indicates the different 'projects' branches used by the build.
 # Our shell script uniqifies the branches used, then emits a
@@ -456,6 +501,7 @@ PLATFORM_TARBALL		= output/$(PLATFORM_TARBALL_BASE)
 
 PUB_IMAGES_BASE			= images$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
 PUB_BOOT_BASE			= boot$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
+PUB_TESTS_BASE			= tests$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
 
 PUB_PLATFORM_IMG_BASE		= platform$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).tgz
 PUB_PLATFORM_MF_BASE		= platform$(PLATFORM_DEBUG_SUFFIX)-$(PLATFORM_STAMP).imgmanifest
@@ -465,6 +511,7 @@ PUB_PLATFORM_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_PLATFORM_IMG_BASE)
 
 PUB_IMAGES_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_IMAGES_BASE)
 PUB_BOOT_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_BOOT_BASE)
+PUB_TESTS_TARBALL		= $(PLATFORM_BITS_DIR)/$(PUB_TESTS_BASE)
 
 PLATFORM_IMAGE_UUID		?= $(shell uuid -v4)
 
@@ -487,6 +534,7 @@ common-platform-publish:
 	@echo "# Publish common platform$(PLATFORM_DEBUG_SUFFIX) bits"
 	mkdir -p $(PLATFORM_BITS_DIR)
 	cp $(PLATFORM_TARBALL) $(PUB_PLATFORM_TARBALL)
+	cp $(TESTS_TARBALL) $(PUB_TESTS_TARBALL)
 	for config_file in configure-projects configure-build; do \
 	    if [[ -f $$config_file ]]; then \
 	        cp $$config_file $(PLATFORM_BITS_DIR); \
@@ -539,11 +587,21 @@ else
 BITS_UPLOAD_IMGAPI_ARG =
 endif
 
+BITS_UPLOAD_BRANCH = $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC)
+
+SMARTOS_DEST_OUT_PATH := $(ENGBLD_DEST_OUT_PATH)/SmartOS
+
+CTFTOOLS_DEST_OUT_PATH := \
+    $(SMARTOS_DEST_OUT_PATH)/ctftools/$(BITS_UPLOAD_BRANCH)
+
+STRAP_CACHE_DEST_OUT_PATH := \
+    $(SMARTOS_DEST_OUT_PATH)/strap-cache/$(BITS_UPLOAD_BRANCH)
+
 .PHONY: platform-bits-upload
 platform-bits-upload:
 	PATH=$(MANTA_TOOLS_PATH):$(PATH) \
 	    $(ROOT)/deps/eng/tools/bits-upload.sh \
-	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+	        -b $(BITS_UPLOAD_BRANCH) \
 	        $(BITS_UPLOAD_LOCAL_ARG) \
 	        $(BITS_UPLOAD_IMGAPI_ARG) \
 	        -D $(ROOT)/output/bits \
@@ -559,12 +617,33 @@ platform-bits-upload:
 platform-bits-upload-latest:
 	PATH=$(MANTA_TOOLS_PATH):$(PATH) TIMESTAMP= \
 	    $(ROOT)/deps/eng/tools/bits-upload.sh \
-	        -b $(PLATFORM_BRANCH)$(PUB_BRANCH_DESC) \
+	        -b $(BITS_UPLOAD_BRANCH) \
 	        $(BITS_UPLOAD_LOCAL_ARG) \
 	        $(BITS_UPLOAD_IMGAPI_ARG) \
 	        -D $(ROOT)/output/bits \
 	        -d $(ENGBLD_DEST_OUT_PATH)/$(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX) \
 	        -n $(BUILD_NAME)$(PLATFORM_DEBUG_SUFFIX)
+
+#
+# ctftools and strap-cache do not fit well into the bits-upload.sh
+# infrastructure, as we need to differentiate based on aspects of our build
+# platform. So we do it by hand instead.
+#
+
+.PHONY: ctftools-bits-upload
+ctftools-bits-upload: $(STAMPFILE)
+	PATH=$(MANTA_TOOLS_PATH):$(PATH) ./tools/build_ctftools upload \
+	    -D $(CTFTOOLS_BITS_DIR) \
+	    -d $(CTFTOOLS_DEST_OUT_PATH) \
+	    -p $(BUILD_PLATFORM) \
+	    -t $(PLATFORM_TIMESTAMP)
+
+.PHONY: strap-cache-bits-upload
+strap-cache-bits-upload: $(STAMPFILE)
+	PATH=$(MANTA_TOOLS_PATH):$(PATH) ./tools/build_strap upload \
+	    -D $(STRAP_CACHE_BITS_DIR) \
+	    -d $(STRAP_CACHE_DEST_OUT_PATH) \
+	    -t $(PLATFORM_TIMESTAMP)
 
 #
 # A wrapper to build the additional components that a standard
@@ -593,6 +672,21 @@ smartos-publish:
 	(cd $(PLATFORM_BITS_DIR) && \
 	    /usr/bin/sum -x md5 * > md5sums.txt)
 
+.PHONY: ctftools-publish
+ctftools-publish:
+	@echo "# Publish ctftools tarball"
+	mkdir -p $(CTFTOOLS_BITS_DIR)
+	git -C projects/illumos log -1 >$(CTFTOOLS_BITS_DIR)/gitstatus.illumos
+	cp $(CTFTOOLS_TARBALL) $(CTFTOOLS_BITS_DIR)/ctftools.tar.gz
+
+.PHONY: strap-cache-publish
+strap-cache-publish:
+	@echo "# Publish strap-cache tarball"
+	mkdir -p $(STRAP_CACHE_BITS_DIR)
+	git -C projects/illumos-extra log -1 \
+	    >$(STRAP_CACHE_BITS_DIR)/gitstatus.illumos-extra
+	cp $(STRAP_CACHE_TARBALL) $(STRAP_CACHE_BITS_DIR)/proto.strap.tar.gz
+
 #
 # Define a series of phony targets that encapsulate a standard 'release' process
 # for both SmartOS and Triton platform builds. These are a convenience to allow
@@ -617,12 +711,14 @@ common-release: \
 .PHONY: triton-release
 triton-release: \
     images-tar \
+    tests-tar \
     triton-platform-publish \
     platform-bits-upload
 
 .PHONY: triton-smartos-release
 triton-smartos-release: \
     images-tar \
+    tests-tar \
     triton-platform-publish \
     smartos-build \
     smartos-publish \
@@ -630,14 +726,27 @@ triton-smartos-release: \
 
 .PHONY: smartos-only-release
 smartos-only-release: \
+    tests-tar \
     common-platform-publish \
     smartos-build \
     smartos-publish \
     platform-bits-upload
+
+.PHONY: ctftools-release
+ctftools-release: \
+    $(CTFTOOLS_TARBALL) \
+    ctftools-publish \
+    ctftools-bits-upload
+
+.PHONY: strap-cache-release
+strap-cache-release: \
+    $(STRAP_CACHE_TARBALL) \
+    strap-cache-publish \
+    strap-cache-bits-upload
 
 print-%:
 	@echo '$*=$($*)'
 
 FRC:
 
-.PHONY: manifest mancheck_conf check jsl FRC
+.PHONY: manifest check jsl FRC

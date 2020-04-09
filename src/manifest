@@ -2,7 +2,6 @@
 s etc/bash/bash_completion.d/imgadm=/usr/img/etc/imgadm.completion
 s usr/sbin/dsadm=../img/sbin/imgadm
 s usr/sbin/imgadm=../img/sbin/imgadm
-f usr/share/man/man1m/imgadm.1m 0444 root bin
 d usr/img 0555 root bin
 f usr/img/README.md 0444 root bin
 d usr/img/etc 0555 root bin
@@ -432,11 +431,8 @@ f lib/svc/manifest/system/system-vmadmd.xml 0444 root bin
 f lib/svc/manifest/system/system-vminfod.xml 0444 root bin
 f usr/bin/bunyan 0555 root bin
 f usr/share/man/man1/bunyan.1 0444 root bin
-f usr/share/man/man1m/vmadmd.1m 0444 root bin
-f usr/share/man/man1m/vmadm.1m 0444 root bin
 d usr/vm 0555 root bin
 d usr/vm/etc 0555 root bin
-d usr/vm/man 0555 root bin
 d usr/vm/node_modules 0555 root bin
 d usr/vm/sbin 0555 root bin
 d usr/vm/smf 0555 root bin
@@ -1091,7 +1087,6 @@ d smartdc/lib 0555 root bin
 f smartdc/lib/ntp_config 0555 root bin
 f smartdc/lib/sdc-on-tty 0555 root bin
 f smartdc/lib/smartos_prompt_config.sh 0555 root bin
-d smartdc/man 0555 root bin
 f usr/bin/nictagadm 0555 root bin
 f usr/bin/sysinfo 0555 root bin
 f usr/bin/bootparams 0555 root bin
@@ -1143,43 +1138,11 @@ f usr/node/0.10/node_modules/uuid.node 0444 root bin
 f usr/node/0.10/node_modules/zfs.js 0444 root bin
 f usr/node/0.10/node_modules/zonename.js 0444 root bin
 f usr/node/0.10/node_modules/zonename_binding.node 0444 root bin
-# automatically generated man.cf file
-f usr/share/man/man.cf 0444 root bin
 f var/log/syslog 0644 root root
 d var/log 0755 root sys
 d var/log/sdc 0755 root sys
 d var/log/sdc/upload 0755 root sys
 d var/log/vm 0755 root sys
-
-# 0-man-stamp
-d smartdc/man/man1 0555 root bin
-f smartdc/man/man1/sdc-factoryreset.1 0444 root bin
-f smartdc/man/man1/sdc-lastcomm.1 0444 root bin
-f smartdc/man/man1/sdc-zfs-io-throttle.1 0444 root bin
-d usr/share/man/man1 0755 root bin
-f usr/share/man/man1/json.1 0444 root bin
-d usr/share/man/man1m 0755 root bin
-f usr/share/man/man1m/disklayout.1m 0444 root bin
-f usr/share/man/man1m/fssstat.1m 0444 root bin
-f usr/share/man/man1m/fwadm.1m 0444 root bin
-f usr/share/man/man1m/mkzpool.1m 0444 root bin
-f usr/share/man/man1m/tzreload.1m 0444 root bin
-f usr/share/man/man1m/sys-unconfig.1m 0444 root bin
-f usr/share/man/man1m/ziostat.1m 0444 root bin
-f usr/share/man/man1m/hotplug.1m 0444 root bin
-f usr/share/man/man1m/nictagadm.1m 0444 root bin
-f usr/share/man/man1m/sysevent.1m 0444 root bin
-f usr/share/man/man1m/sysinfo.1m 0444 root bin
-f usr/share/man/man1m/vminfo.1m 0444 root bin
-f usr/share/man/man1m/zonemon.1m 0444 root bin
-f usr/share/man/man1m/zonememstat.1m 0444 root bin
-d usr/share/man/man3lib 0755 root bin
-f usr/share/man/man3lib/libm.3lib 0444 root bin
-f usr/share/man/man3lib/libmvec.3lib 0444 root bin
-d usr/share/man/man5 0755 root bin
-f usr/share/man/man5/openssl.5 0444 root bin
-f usr/share/man/man5/joyent.5 0444 root bin
-f usr/share/man/man5/fwrule.5 0444 root bin
 
 # compatibility symlink to new shipped file manifest location
 s var/log/manifest=../../usr/share/smartos/manifest

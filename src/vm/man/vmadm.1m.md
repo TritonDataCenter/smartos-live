@@ -422,11 +422,12 @@ tab-complete UUIDs rather than having to type them out for every command.
         The same pattern is used for customer_metadata, internal_metadata and
         routes.
 
-        In the case of nics and disks, there are 3 special objects:
+        In the case of nics, disks, and filesystems, there are 3 special
+        objects:
 
-          add_disks || add_nics
-          remove_disks || remove_nics
-          update_disks || update_nics
+          add_disks || add_nics || add_filesystems
+          remove_disks || remove_nics || remove_filesystems
+          update_disks || update_nics || update_filesystems
 
         For NICs for example, you can include an array of NIC objects with the
         parameter add_nics in your input. Those NICs would get added to the VM.
@@ -437,6 +438,10 @@ tab-complete UUIDs rather than having to type them out for every command.
         and a different MAC, and remove the existing one. To remove a NIC, the
         remove_nics property should be an array of MAC addresses only (not NIC
         objects).
+
+        For updating filesystems, you use the same format as described above for
+        NICs except that the options are add_filesystems, remove_filesystems and
+        update_filesystems and instead of "mac" these will be keyed on "target".
 
         For updating disks, you use the same format as described above for NICs
         except that the options are add_disks, remove_disks and update_disks
@@ -862,6 +867,29 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes (see caveat in zfs_root_compression section below)
         default: off
 
+    disks.*.guest_block_size:
+
+        Specifies the device block size reported to the guest. By default, the
+        block size of the underlying device is reported to the guest (see
+        'disk.*.block_size' above). This setting will override the default
+        value. It also allows reporting of both a physical and logical block
+        size using a _string_ of the form "logical_size/physical_size" (e.g.
+        "512/4096" to look like a 512e drive. This is useful for guests such as
+        Windows where older versions of the Windows virtio driver always
+        reported the block size of a virtio device as 512 bytes (regardless of
+        the block size presented to the guest) while newer versions of the
+        driver report the actual size of the device being reported by the host.
+
+        NOTE: the value is _always_ a string, and all values must be a power of
+        two.
+
+        type: string of the form "NNN" or "NNN/NNN"
+        vmtype: bhyve
+        listable: yes
+        create: yes
+        update: yes (special, see description in 'update' section above)
+        default: no
+
     disks.*.nocreate:
 
         This parameter indicates whether or not the disk should be created. It
@@ -912,6 +940,19 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         type: string (UUID)
         vmtype: HVM
+        listable: yes (see above)
+        create: yes
+        update: yes (special, see description in 'update' section above)
+        default: no
+
+    disks.*.notrim:
+
+        Explicitly disables TRIM functionality for the disk in the guest. This
+        functionality is also known as UNMAP or DISCARD. This corresponds to
+        the bhyve `nodelete` block-device-option.
+
+        type: boolean
+        vmtype: bhyve
         listable: yes (see above)
         create: yes
         update: yes (special, see description in 'update' section above)
@@ -2112,12 +2153,16 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         This property allows you to set a password which will be required when
         connecting to the VNC port. IMPORTANT: this password will be visible
-        from the GZ of the CN and anyone with access to the serial port in the
-        guest. Set to an empty string (default) to not require a password at
-        this level.
+        from the GZ of the CN. For KVM anyone with access to the serial port in
+        the guest can also see the password. Set to an empty string (default) to
+        not require a password at this level.
+
+        Changing the password will require a reboot of the zone before the
+        change becomes active. Reboots from inside the guest will not make
+        the changed password active.
 
         type: string (8 chars max)
-        vmtype: kvm
+        vmtype: HVM
         listable: no
         create: yes
         update: yes
@@ -2680,8 +2725,8 @@ stopping
               "gateways": ["10.2.121.1"]
             }
           ]
-      }
-      EOF
+        }
+        EOF
 
     Example 10: Change the IP of the NIC with MAC b2:1e:ba:a5:6e:71 for the VM
                 with the UUID 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0.
@@ -2703,19 +2748,36 @@ stopping
         echo '{"remove_nics": ["b2:1e:ba:a5:6e:71"]}' | \
             vmadm update 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
-    Example 12: Stop VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
+    Example 12: Adding a lofs filesystem mount to the VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
+
+        vmadm update 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0 <<EOF
+        {
+          "add_filesystems": [
+            {
+	      "source": "/bulk/logs/54f1cc77-68f1-42ab-acac-5c4f64f5d6e0",
+	      "target": "/var/log",
+	      "type": "lofs",
+	      "options": [
+	        "nodevice"
+	      ]
+            }
+          ]
+        }
+        EOF
+
+    Example 13: Stop VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
         vmadm stop 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
-    Example 13: Start VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
+    Example 14: Start VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
         vmadm start 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
-    Example 14: Reboot VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
+    Example 15: Reboot VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
         vmadm reboot 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
-    Example 15: Delete VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
+    Example 16: Delete VM 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 
         vmadm delete 54f1cc77-68f1-42ab-acac-5c4f64f5d6e0
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2019 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -691,6 +691,30 @@ function get_setup()
     fi
 }
 
+function get_recovery_configs()
+{
+    # This gets set to indicate if we should emit a
+    # 'Zpool_Recovery' property in the output. CNs without
+    # encryption should never emit this property.
+    has_recovery=
+
+    # This is a bit ugly, but we depend on get_zpool() being
+    # called prior to get_recovery_configs() so that ${Zpool} is set.
+    # The rest of the script already treats ${Zpool} as a global variable
+    # set by get_zpool(), so we're not introducing any new ugliness.
+    [[ -z "$Zpool" ]] && return
+
+    for line in $(kbmadm recovery list -p "$Zpool" 2>/dev/null); do
+        fields=(${line//:/ })
+        cfg=${fields[0]}
+        cfguuid=${fields[1]}
+        if [[ -n "$cfguuid" ]]; then
+            printf -v "Zpool_Recovery_${cfg}" "%s" "$cfguuid"
+            has_recovery=1
+        fi
+    done
+}
+
 function output_parsable()
 {
     cat <<END
@@ -910,6 +934,23 @@ if [[ ${ZONENAME} == "global" ]]; then
         echo '  "Zpool Size in GiB":' ${Zpool_size}','
     fi
 
+    if [[ -n "has_recovery" ]]; then
+        if [[ -n "$Zpool_Recovery_staged" ]]; then
+            comma=","
+        else
+            comma=""
+        fi
+
+        echo '  "Zpool Recovery": {'
+        if [[ -n "${Zpool_Recovery_active}" ]]; then
+            echo '    "active": "'${Zpool_Recovery_active}'"'${comma}
+        fi
+        if [[ -n "${Zpool_Recovery_staged}" ]]; then
+            echo '    "staged": "'${Zpool_Recovery_staged}'"'
+        fi
+        echo '  },'
+    fi
+
     echo '  "Disks": {'
 
     printed=0
@@ -1077,6 +1118,7 @@ if [[ ${ZONENAME} == "global" ]]; then
     get_vm_capable
     get_zpool
     get_disks
+    get_recovery_configs
     get_bootparams
     get_psrinfo
     get_sdc_version

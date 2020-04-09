@@ -768,7 +768,8 @@ function MultiError(errs) {
         var err = errs[i];
         // deal with errors where the code appears in the 'body' object
         if (err.body && err.body.code) {
-            lines.push(format('    error (%s): %s', err.body.code, err.message));
+            lines.push(
+                format('    error (%s): %s', err.body.code, err.message));
         } else {
             lines.push(format('    error (%s): %s', err.code, err.message));
         }

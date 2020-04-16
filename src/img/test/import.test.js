@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2019 Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  *
  * * *
  *
@@ -54,12 +54,23 @@ var WRKDIR = '/var/tmp/img-test-import';
 var CACHEDIR = '/var/tmp/img-test-cache';
 
 /*
- * Pick an image that (a) exists on images.joyent.com (they *do* occassionally
+ * Pick an image that (a) exists on images.joyent.com (they *do* occasionally
  * get deprecated) and (b) is relatively small and (c) is unlikely to collide
  * with current usage.
  */
 // minimal-32@15.2.0
 var TEST_IMAGE_UUID = '0764d78e-3472-11e5-8949-4f31abea4e05';
+
+/*
+ * An image that only exists on the experimental channel of updates.joyent.com.
+ * Similar to the note above, hopefully this image will always be here and will
+ * not be present on images.joyent.com, since tests rely on this fact.
+ * During setup, we import the origin image for this experimental image.
+ */
+var TEST_EXPERIMENTAL_SOURCE =
+    'https://updates.joyent.com?channel=experimental';
+var TEST_EXPERIMENTAL_ORIGIN = 'fd2cc906-8938-11e3-beab-4359c665ac99';
+var TEST_EXPERIMENTAL_UUID = 'b323e23f-e762-4677-a2c8-b56f3bd5ef48';
 
 var CACHEFILE = format('%s/%s.file', CACHEDIR, TEST_IMAGE_UUID);
 
@@ -88,6 +99,13 @@ test('setup: get test image in local SDC IMGAPI (if available)', function (t) {
     var cmd = 'sdc-imgadm import ' + TEST_IMAGE_UUID
         + ' -S https://images.joyent.com || true';
     exec(cmd, function (err, o, e) {
+        t.ifError(err);
+        t.end();
+    });
+});
+
+test('setup: get origin for experimental image', function (t) {
+    exec('imgadm import ' + TEST_EXPERIMENTAL_ORIGIN, function (err, o, e) {
         t.ifError(err);
         t.end();
     });
@@ -359,7 +377,115 @@ test('pre-downloaded file (bad checksum); imgadm import ' + TEST_IMAGE_UUID,
     }); // cp
 });
 
+// Force removal of any dangling experimental image and sources which might
+// prevent these tests from reporting correct results.
+test('setup8: rm experimental image ' + TEST_EXPERIMENTAL_UUID, function (t) {
+    var cmd = format(
+        'imgadm delete %s ;'
+            + 'imgadm sources -d https://updates.joyent.com ;'
+            + 'imgadm sources -d '
+            + TEST_EXPERIMENTAL_SOURCE,
+        TEST_EXPERIMENTAL_UUID);
+    t.exec(cmd, function () {
+        // it's ok if any of these fail, since those may not have been
+        // configured in the first place.
+        t.end();
+    });
+});
 
+// With no configured experimental sources, this should fail, which will
+// also help determine whether the image has perhaps been added to
+// images.joyent.com, in which case, maintainers should select a different
+// TEST_EXPERIMENTAL_UUID (and TEST_EXPERIMENTAL_ORIGIN if necessary)
+test('experimental image import fails', function (t) {
+    var cmd = 'imgadm import ' + TEST_EXPERIMENTAL_UUID;
+    exec(cmd, function (err, o, e) {
+        t.ok(/ActiveImageNotFound/.test(e),
+            'ActiveImageNotFound error code on stderr');
+        t.end();
+    });
+});
+
+test('setup9: add updates.joyent.com source', function (t) {
+    var cmd = 'imgadm sources -a https://updates.joyent.com';
+    exec(cmd, function () {
+        t.end();
+    });
+});
+
+// With a -C argument, this should succeed, assuming our test experimental
+// image does still exist on that channel.
+test('experimental image import with -C arg', function (t) {
+    var cmd = 'imgadm import -C experimental ' + TEST_EXPERIMENTAL_UUID;
+    exec(cmd, function (err, stdout, stderr) {
+        t.ifError(err);
+        exec('imgadm get ' + TEST_EXPERIMENTAL_UUID, function (err2, o, e) {
+            t.ifError(err2);
+            t.end();
+        });
+    });
+});
+
+test('setup10: delete experimental image', function (t) {
+    var cmd = format('imgadm delete %s', TEST_EXPERIMENTAL_UUID);
+    exec(cmd, function () {
+        t.end();
+    });
+});
+
+// With a -S argument, this should succeed
+test('experimental image import with -S channel url', function (t) {
+    var cmd = ('imgadm import '
+            + '-S ' + TEST_EXPERIMENTAL_SOURCE + ' '
+            + TEST_EXPERIMENTAL_UUID);
+    exec(cmd, function (err, stdout, stderr) {
+        t.ifError(err);
+        exec('imgadm get ' + TEST_EXPERIMENTAL_UUID, function (err2, o, e) {
+            t.ifError(err2);
+            t.end();
+        });
+    });
+});
+
+// delete our experimental image and our updates.joyent.com url, then add
+// that source, this time with a channel.
+test('setup11: delete experimental image', function (t) {
+    var cmd = format(
+        'imgadm delete %s ; '
+            + 'imgadm sources -d https://updates.joyent.com ; '
+            + 'imgadm sources -a '
+            + TEST_EXPERIMENTAL_SOURCE + ' ',
+        TEST_EXPERIMENTAL_UUID);
+    exec(cmd, function (err, o, e) {
+        t.ifError(err);
+        t.end();
+    });
+});
+
+// With a configured experimental channel, this should succeed
+test('experimental image import configured channel', function (t) {
+    var cmd = 'imgadm import ' + TEST_EXPERIMENTAL_UUID;
+    exec(cmd, function (err, stdout, stderr) {
+        t.ifError(err);
+        exec('imgadm get ' + TEST_EXPERIMENTAL_UUID, function (err2, o, e) {
+            t.ifError(err2);
+            t.end();
+        });
+    });
+});
+
+test('experimental channel sources show up in list output', function (t) {
+    exec('imgadm list -o uuid,source | grep ' + TEST_EXPERIMENTAL_UUID,
+    function (err, o, e) {
+        t.ifError(err);
+        var firstLine = o.split(/\n/g)[0];
+        var results = firstLine.split('  ');
+        t.equal(results.length, 2);
+        t.equal(results[0], TEST_EXPERIMENTAL_UUID);
+        t.equal(results[1], TEST_EXPERIMENTAL_SOURCE);
+        t.end();
+    });
+});
 
 // Need a test IMGAPI for the following:
 // TODO: test case importing from IMGAPI *with an origin*

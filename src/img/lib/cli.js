@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright 2020 Joyent, Inc.
  *
  * * *
  *
@@ -485,7 +485,7 @@ CLI.prototype.printHelp = function printHelp(cb) {
         '    imgadm avail [<filters>]               list available images',
         '    imgadm show <uuid|docker-repo-tag>     show manifest of an available image',
         '',
-        '    imgadm import [-P <pool>] <image-id>   import image from a source',
+        '    imgadm import [-C <channel>] [-P <pool>] <image-id>   import image from a source',
         '    imgadm install [-P <pool>] -m <manifest> -f <file>',
         '                                           import from local image data',
         '',
@@ -1326,6 +1326,16 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
     var zpool = opts.P || common.DEFAULT_ZPOOL;
 
     vasync.pipeline({arg: {}, funcs: [
+        function reloadSources(ctx, next) {
+            // reload any configured sources, using the channel specified
+            if (opts.channel !== undefined) {
+                self.tool.channel = opts.channel;
+                self.tool.init(next);
+            } else {
+                next();
+            }
+        },
+
         function validateArg(ctx, next) {
             if (common.UUID_RE.test(arg)) {
                 ctx.uuid = arg;
@@ -1373,6 +1383,7 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
             if (opts.source) {
                 getOpts.sources = opts.source.map(function (s) {
                     return self.tool.sourceFromInfo({
+                        channel: opts.channel,
                         url: s,
                         type: 'imgapi'
                     });
@@ -1462,6 +1473,12 @@ CLI.prototype.do_import.help = (
     + '{{options}}'
 );
 CLI.prototype.do_import.options = [
+    {
+        names: ['channel', 'C'],
+        type: 'string',
+        help: 'The channel to import from. This overrides any channel '
+            + 'parameter that may be set in the source url.'
+    },
     {
         names: ['help', 'h'],
         type: 'bool',

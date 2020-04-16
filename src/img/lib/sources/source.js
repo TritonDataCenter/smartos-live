@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright 2020 Joyent, Inc.
  */
 
 var assert = require('assert-plus');
@@ -36,18 +36,24 @@ var errors = require('../errors');
 function Source(opts) {
     assert.object(opts, 'opts');
     assert.string(opts.url, 'opts.url');
+    assert.optionalString(opts.channel, 'opts.channel');
     assert.optionalBool(opts.insecure, 'opts.insecure');
     assert.object(opts.log, 'opts.log');
     assert.string(opts.userAgent, 'opts.userAgent');
 
     this.log = opts.log.child({
         component: 'source',
-        source: {type: this.type, url: this.url, insecure: opts.insecure}
+        source: {
+            type: this.type,
+            url: this.url,
+            insecure: opts.insecure,
+            channel: opts.channel}
     }, true);
     this.url = opts.url;
     this.insecure = opts.insecure;
     this.normUrl = common.normUrlFromUrl(this.url);
     this.userAgent = opts.userAgent;
+    this.channel = opts.channel;
 }
 
 /**
@@ -55,11 +61,13 @@ function Source(opts) {
  * a roundtripping serialization.
  */
 Source.prototype.toJSON = function toJSON() {
-    return {type: this.type, url: this.url, insecure: this.insecure};
+    return {type: this.type, url: this.url, insecure: this.insecure,
+        channel: this.channel};
 };
 
 Source.prototype.toString = function toString() {
     var extra = (this.insecure ? ' (insecure)' : '');
+    extra += (this.channel ? ' (channel=' + this.channel + ')' : '');
     return format('"%s" image source "%s"%s',
         this.type, this.url, extra);
 };

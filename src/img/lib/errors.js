@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright 2020 Joyent, Inc.
  *
  * * *
  * Error classes that imgadm may produce.
@@ -766,7 +766,13 @@ function MultiError(errs) {
     var lines = [format('multiple (%d) errors', errs.length)];
     for (var i = 0; i < errs.length; i++) {
         var err = errs[i];
-        lines.push(format('    error (%s): %s', err.code, err.message));
+        // deal with errors where the code appears in the 'body' object
+        if (err.body && err.body.code) {
+            lines.push(
+                format('    error (%s): %s', err.body.code, err.message));
+        } else {
+            lines.push(format('    error (%s): %s', err.code, err.message));
+        }
     }
     ImgadmError.call(this, {
         cause: errs[0],

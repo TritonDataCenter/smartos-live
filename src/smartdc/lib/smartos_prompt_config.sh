@@ -47,7 +47,7 @@ dns_resolver2="8.8.4.4"
 declare -a states
 declare -a nics
 declare -a assigned
-declare ondisk=no
+declare ondisk="no"
 declare prmpt_str
 
 #
@@ -751,6 +751,7 @@ promptyesno()
 
 	# Normalize to lowercase
 	val=`echo $val | sed 's/A-Z/a-z/g'`
+	val="$val"
 
 	if [[ $val != "yes" && $val != "no" ]]; then
 	    echo "Must be 'yes' or 'no'."
@@ -990,8 +991,14 @@ create_zpool()
 
 	# If this is not a manual layout, then we've been given
 	# a JSON file describing the desired pool, so use that:
-	mkzpool -B -f $pool $layout || \
-	    fatal "failed to create pool ${pool}"
+	# Try and make a bootable one first.
+	mkzpool -B -f $pool $layout
+	if [[ $? != 0 ]]; then
+	    ondisk="never"
+	    printf "%-56s\n" \
+		"Cannot boot from $pool - creating non-bootable instead."
+	    mkzpool -f $pool $layout || fatal "failed to create pool ${pool}"
+	fi
 
 	zfs set atime=off ${pool} || \
 	    fatal "failed to set atime=off for pool ${pool}"
@@ -1263,7 +1270,7 @@ SmartOS can boot off the zpool in lieu of a USB stick or a CD-ROM.  Enter
 
 	
 	if [[ $(getanswer "skip_instructions") != "true" ]]; then
-		printf "$message"
+	    printf "$message"
 	fi
 
 	promptyesno "Boot SmartOS from disk" $ondisk
@@ -1309,6 +1316,9 @@ up and all data on the disks will be erased.\n\n"
 		    "$dns_resolver1" "$dns_resolver2" "$dns_domain"
 		printf "Hostname: %s\n" "$hostname"
 		printf "NTP server: $ntp_hosts\n"
+		if [[ $ondisk == "yes" ]]; then
+		    printf "==> Making the zones pool bootable"
+		fi
 		echo
 	fi
 

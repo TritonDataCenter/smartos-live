@@ -1388,31 +1388,39 @@ if [ $ondisk == "yes" ]; then
 
     # Create SYS_ZPOOL/boot and set bootfs.
     zfs create ${SYS_ZPOOL}/boot || fatal "Cannot create boot filesystem"
-    zpool set bootfs=${SYS_ZPOOL}/boot ${SYS_ZPOOL} || \
-	fatal "Cannot set bootfs"
+    zpool set bootfs=${SYS_ZPOOL}/boot ${SYS_ZPOOL}
+    if [[ $? != 0 ]]; then
+	if [[ $DISK_LAYOUT != "manual" ]]; then
+	    fatal "Cannot set bootfs"
+	else
+	    printf "\nManually created pool is not bootable, skipping.\n"
+	fi
+    else
+	# Get "install media mounted" and copy over boot stuff:
+	# /zones/boot/{boot,etc,platform}
+	echo "XXX KEBE SAYS for now, exit to shell to populate /zones/boot/"
+	/usr/bin/bash
 
-    # Get "install media mounted" and copy over boot stuff:
-    # /zones/boot/{boot,etc,platform}
-    echo "XXX KEBE SAYS for now, exiting to shell to populate /zones/boot/"
-    /usr/bin/bash
+	# XXX KEBE SAYS Determine which disk(s) to install things in.
+	# Then for each disk:
+	# 	installboot -m -b....
+	# <SNIP!>
+	# XXX KEBE SCREAMS This is a cheesy workaround:
+	# - Takes first disk only, regardless
+	# - Assumes `zpool create -B` has s0 == ESP, s1 == data-for-SYS_ZPOOL
+	for a in `zpool list -v ${SYS_ZPOOL} | egrep 'c[0-9]+' | awk '{print $1}'`; do
+	    installboot -m -b /zones/boot/boot /zones/boot/boot/pmbr \
+		/zones/boot/boot/gptzfsboot /dev/rdsk/${a}s1 || \
+		fatal "Can't install boot sector and/or UEFI loader, $a."
+	done
 
-    # XXX KEBE SAYS Determine which disk(s) to install things in.
-    # Then for each disk:
-    # 	installboot -m -b....
-    # <SNIP!>
-    # XXX KEBE SCREAMS This is a cheesy workaround:
-    # - Takes first disk only, regardless
-    # - Assumes `zpool create -B` has s0 == ESP, s1 == data-for-SYS_ZPOOL
-    diskname=`zpool list -v ${SYS_ZPOOL} | egrep 'c[0-9]+t[0-9]+d[0-0]+ ' | awk '{print $1}'`
-    installboot -m -b /zones/boot/boot /zones/boot/boot/pmbr \
-	/zones/boot/boot/gptzfsboot /dev/rdsk/${diskname}s1 ||
-	fatal "Can't install boot sector and/or UEFI loader."
+	# Append 'fstype="ufs"' to /zones/boot/boot/loader.conf for
+	# ramdisk root.
+	echo 'fstype="ufs"' >> /zones/boot/boot/loader.conf || \
+	    fatal "Can't append to /zones/boot/boot/loader.conf"
 
-    # Append 'fstype="ufs"' to /zones/boot/boot/loader.conf for ramdisk root.
-    echo 'fstype="ufs"' >> /zones/boot/boot/loader.conf || \
-	fatal "Can't append to /zones/boot/boot/loader.conf"
-
-    printf "%4s\n" done
+	printf "%4s\n" done
+    fi
 fi
 
 printf "System setup has completed.\n\nPress enter to reboot.\n"

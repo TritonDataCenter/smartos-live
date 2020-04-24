@@ -995,8 +995,8 @@ create_zpool()
 	mkzpool -B -f $pool $layout
 	if [[ $? != 0 ]]; then
 	    ondisk="never"
-	    printf "%-56s\n" \
-		"Cannot boot from $pool - creating non-bootable instead."
+	    printf "\n\t%-56s\n" \
+		"$pool cannot be bootable, creating non-bootable..."
 	    mkzpool -f $pool $layout || fatal "failed to create pool ${pool}"
 	fi
 
@@ -1266,7 +1266,7 @@ your own zpool.\n"
 
 	message="
 SmartOS can boot off the zpool in lieu of a USB stick or a CD-ROM.  Enter
-'yes' if you wish to make this SmartOS zpool self-booting.\n"
+'yes' if you wish to try and make this SmartOS zpool self-booting.\n"
 
 	
 	if [[ $(getanswer "skip_instructions") != "true" ]]; then
@@ -1394,6 +1394,7 @@ if [ $ondisk == "yes" ]; then
 	    fatal "Cannot set bootfs"
 	else
 	    printf "\nManually created pool is not bootable, skipping.\n"
+	    zfs destroy ${SYS_ZPOOL}/boot
 	fi
     else
 	# Get "install media mounted" and copy over boot stuff:
@@ -1408,9 +1409,10 @@ if [ $ondisk == "yes" ]; then
 	# XXX KEBE SCREAMS This is a cheesy workaround:
 	# - Takes first disk only, regardless
 	# - Assumes `zpool create -B` has s0 == ESP, s1 == data-for-SYS_ZPOOL
-	for a in `zpool list -v ${SYS_ZPOOL} | egrep 'c[0-9]+' | awk '{print $1}'`; do
+	for a in \
+	`zpool list -v ${SYS_ZPOOL} | egrep 'c[0-9]+' | awk '{print $1}'`; do
 	    installboot -m -b /zones/boot/boot /zones/boot/boot/pmbr \
-		/zones/boot/boot/gptzfsboot /dev/rdsk/${a}s1 || \
+	    /zones/boot/boot/gptzfsboot /dev/rdsk/${a}s1 2>&1 > /dev/null || \
 		fatal "Can't install boot sector and/or UEFI loader, $a."
 	done
 

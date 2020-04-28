@@ -1384,7 +1384,7 @@ mountNfsVolumes()
     }
 
      /* Attempt to start lx_lockd if one is not already running. */
-    dlog("DEBUG attempting to start lx_lockd")
+    dlog("DEBUG attempting to start lx_lockd");
     (void) syscall(SYS_brand, B_START_NFS_LOCKD);
 
     nvlist_free(nvl);

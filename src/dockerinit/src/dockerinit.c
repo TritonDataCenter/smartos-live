@@ -86,7 +86,7 @@
 #define ATTACH_CHECK_INTERVAL 200000 // 200ms
 #define ZFD_OPEN_RETRIES 300 /* retries to open a zfd device (10 / second) */
 
-/* This comes private header in illumos-joyent */
+/* This comes from a private header in illumos-joyent */
 #define B_START_NFS_LOCKD 131
 
 int addRoute(const char *, const char *, const char *, int);

@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (c) 2017, Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  */
 
 /*
@@ -60,6 +60,7 @@
 #include <sys/mntent.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
+#include <sys/syscall.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/zfd.h>
@@ -84,6 +85,9 @@
 #define RTMBUFSZ sizeof (struct rt_msghdr) + (3 * sizeof (struct sockaddr_in))
 #define ATTACH_CHECK_INTERVAL 200000 // 200ms
 #define ZFD_OPEN_RETRIES 300 /* retries to open a zfd device (10 / second) */
+
+/* This comes private header in illumos-joyent */
+#define B_START_NFS_LOCKD 131
 
 int addRoute(const char *, const char *, const char *, int);
 void closeIpadmHandle();
@@ -1324,6 +1328,10 @@ doNfsMount(const char *nfsvolume, const char *mountpoint, boolean_t readonly)
         fatal(ERR_EXEC_FAILED, "mount[%d] failed in unknown way\n",
             (int)pid);
     }
+
+     /* Attempt to start lx_lockd if one is not already running. */
+    dlog("DEBUG attempting to start lx_lockd")
+    (void) syscall(SYS_brand, B_START_NFS_LOCKD);
 }
 
 static void

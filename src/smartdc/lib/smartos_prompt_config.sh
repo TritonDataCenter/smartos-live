@@ -29,6 +29,7 @@ export PATH
 . /lib/svc/share/smf_include.sh
 
 . /lib/sdc/config.sh
+. /lib/sdc/usb-key.sh
 load_sdc_sysinfo
 load_sdc_config
 
@@ -1033,6 +1034,36 @@ create_zpools()
 	touch /${SYS_ZPOOL}/.system_pool
 }
 
+copy_installmedia()
+{
+	# Try the USB key first...
+	mount_usb_key /mnt
+	if [[ $? != 0 ]]; then
+	    # If that fails, try mounting the ISO.
+	    mount_ISO /mnt || fatal "Odd, can't find install media!"
+	    usb=0
+	else
+	    usb=1
+	fi
+
+	# Move it all over!
+	tar -cf - -C /mnt . | tar -xf - -C /zones/boot
+	if [[ $? != 0 ]]; then
+		fatal "Cannot move install media bits to bootable disk"
+	fi
+
+	if [[ $usb == 0 ]]; then
+	    unmount_ISO /mnt || fatal "Cannot unmount install ISO!"
+	else
+	    unmount_usb_key /mnt || fatal "Cannot unmount install USB!"
+	fi
+
+	# Extract the PI stamp for the platform and symlinks.
+	pistamp=`cat /zones/boot/platform/etc/version/platform`
+	mv /zones/boot/platform /zones/boot/platform-${pistamp}
+	ln -s ./platform-${pistamp} /zones/boot/platform
+}
+
 trap "" SIGINT
 
 while getopts "f:" opt
@@ -1398,9 +1429,7 @@ if [ $ondisk == "yes" ]; then
 	fi
     else
 	# Get "install media mounted" and copy over boot stuff:
-	# /zones/boot/{boot,etc,platform}
-	echo "XXX KEBE SAYS for now, exit to shell to populate /zones/boot/"
-	/usr/bin/bash
+	copy_installmedia
 
 	# XXX KEBE SAYS Determine which disk(s) to install things in.
 	# Then for each disk:

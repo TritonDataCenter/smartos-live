@@ -1328,10 +1328,6 @@ doNfsMount(const char *nfsvolume, const char *mountpoint, boolean_t readonly)
         fatal(ERR_EXEC_FAILED, "mount[%d] failed in unknown way\n",
             (int)pid);
     }
-
-     /* Attempt to start lx_lockd if one is not already running. */
-    dlog("DEBUG attempting to start lx_lockd")
-    (void) syscall(SYS_brand, B_START_NFS_LOCKD);
 }
 
 static void
@@ -1386,6 +1382,10 @@ mountNfsVolumes()
             mountNfsVolume(data);
         }
     }
+
+     /* Attempt to start lx_lockd if one is not already running. */
+    dlog("DEBUG attempting to start lx_lockd")
+    (void) syscall(SYS_brand, B_START_NFS_LOCKD);
 
     nvlist_free(nvl);
 }

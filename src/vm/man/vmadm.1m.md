@@ -1044,7 +1044,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         guest.
 
         type: string (kvm: ['virtio','ide','scsi'])
-                     (bhyve: ['virtio','ahci'])
+                     (bhyve: ['virtio','ahci','nvme'])
         vmtype: HVM
         listable: yes (see above)
         create: yes

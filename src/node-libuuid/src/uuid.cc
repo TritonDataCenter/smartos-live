@@ -42,7 +42,7 @@ class libuuid {
 };
 
 extern "C" void
-init(Handle<Object> target) {
+init(Handle<Object> target, Handle<Value> value) {
   HandleScope scope;
   libuuid::Initialize(target);
 }

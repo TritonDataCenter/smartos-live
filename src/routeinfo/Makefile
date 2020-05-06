@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright (c) 2019, Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 BASE :=		$(CURDIR)/../
@@ -19,7 +19,7 @@ include		$(BASE)/Makefile.defs
 
 PROGRAM =	routeinfo
 
-CFLAGS +=	$(DEBUG_FLAGS) -m32 -I$(DOCKER_DIR) -I$(STRINGS_DIR) \
+CFLAGS +=	$(DEBUG_FLAGS) -I$(DOCKER_DIR) -I$(STRINGS_DIR) \
 		-I$(DOCKER_DIR)/mdata-client -I$(DOCKER_DIR)/json-nvlist \
 		 -Wno-unused-parameter -D__HAVE_BOOLEAN_T
 
@@ -48,7 +48,7 @@ clean:
 	rm -f $(PROGRAM)
 
 $(PROGRAM): $(OBJS)
-	$(LINK.c) $^ $(LIBS)
+	$(LINK32.c) $^ $(LIBS)
 	$(CTFCONVERT) -l $(BUILDSTAMP) $@
 
 #

@@ -204,6 +204,7 @@ V8PLUS_SUBDIR_ENV = \
 			CXX=$(GXX) \
 			PREFIX_NODE=$(PREFIX_NODE) \
 			NODE_EXEC=$(NODE_EXEC) \
+			WARN_FLAGS="$(WARN_FLAGS)" \
 			OPT_FLAGS="$(OPT_FLAGS)" \
 			CTFCONVERT=$(CTFCONVERT) \
 			CTFMERGE=$(CTFMERGE)
@@ -283,8 +284,8 @@ NOMKNOD_64 =		$(NOMKNOD_SO).64
 NOMKNOD_FLAGS =		-nostdlib $(PIC_FLAGS) $(SHARED_FLAGS) \
 			-Wno-unused-parameter
 
-$(NOMKNOD_32) :		CFLAGS += -m32 $(NOMKNOD_FLAGS)
-$(NOMKNOD_64) :		CFLAGS += -m64 $(NOMKNOD_FLAGS)
+$(NOMKNOD_32) :		CFLAGS += $(NOMKNOD_FLAGS)
+$(NOMKNOD_64) :		CFLAGS += $(NOMKNOD_FLAGS)
 NOMKNOD_TARGS =		$(NOMKNOD_32) $(NOMKNOD_64)
 NOMKNOD_ROOT =		$(DESTDIR)/usr/img/lib
 NOMKNOD_ROOT64 =	$(DESTDIR)/usr/img/lib/amd64
@@ -575,7 +576,11 @@ vm/node_modules/props.js: vm/node_modules/proptable.js vm/node_modules/expander.
 #
 $(EXPAT.NODE): node-expat/node-expat.cc
 	@mkdir -p $(@D)
-	$(LINK.cc) $^ $(LIBS)
+	$(LINK32.cc) $^ $(LIBS)
+
+$(LOCKFD_BINDING.NODE) : WARN_FLAGS += -Wno-cast-function-type -Wno-format
+$(LOCKFD_BINDING.NODE) : WARN_FLAGS += -Wno-unused-parameter
+$(ZONENAME_BINDING.NODE) : WARN_FLAGS += -Wno-cast-function-type -Wno-format
 
 #
 # node-lockfd and node-zonename are built using the v8plus-based Makefile
@@ -583,6 +588,7 @@ $(EXPAT.NODE): node-expat/node-expat.cc
 # linker to include libc, which gcc as configured in proto.strap does not, but
 # which other C compilers generally do.
 #
+
 $(LOCKFD_BINDING.NODE): FRC
 	cd $(LOCKFD_SRC_DIR) && \
 	LD_OPTIONS=-lc \
@@ -604,33 +610,33 @@ $(ZONENAME_BINDING.NODE): FRC
 $(DTRACE_PROVIDER_OBJDIR)/%.o: $(DTRACE_PROVIDER_SRCDIR)/%.c \
 	    $(DTRACE_PROVIDER_HDRS)
 	@mkdir -p $(@D)
-	$(COMPILE.c) $<
+	$(COMPILE32.c) $<
 
 $(DTRACE_PROVIDER_OBJDIR)/%.o: $(DTRACE_PROVIDER_SRCDIR)/%.s
 	@mkdir -p $(@D)
-	$(COMPILE.c) $^
+	$(COMPILE32.c) $^
 
 $(DTRACE_PROVIDER_OBJDIR)/%.o: $(DTRACE_PROVIDER_SRCDIR)/%.cc \
 	    $(DTRACE_PROVIDER_HDRS)
 	@mkdir -p $(@D)
-	$(COMPILE.cc) $<
+	$(COMPILE32.cc) $<
 
 $(DTRACE_PROVIDER.NODE): $(DTRACE_PROVIDER_OBJS)
 	@mkdir -p $(@D)
-	$(LINK.cc) $^ $(LIBS)
+	$(LINK32.cc) $^ $(LIBS)
 
 $(KSTAT.NODE): node-kstat/kstat.cc
 	@mkdir -p $(@D)
-	$(LINK.cc) $^ $(LIBS)
+	$(LINK32.cc) $^ $(LIBS)
 
 $(UUID.NODE): $(UUID_SRCDIR)/uuid.cc
 	@mkdir -p $(@D)
-	$(LINK.cc) $^ $(LIBS)
+	$(LINK32.cc) $^ $(LIBS)
 
 $(NOMKNOD_32):	$(NOMKNOD_SRC)
-	$(LINK.c) $^
+	$(LINK32.c) $^
 
 $(NOMKNOD_64):	$(NOMKNOD_SRC)
-	$(LINK.c) $^
+	$(LINK64.c) $^
 
 FRC:

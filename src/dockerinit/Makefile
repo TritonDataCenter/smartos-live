@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright (c) 2019, Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 BASE :=		$(CURDIR)/../
@@ -44,7 +44,7 @@ OBJS =		$(JSON_OBJS) \
 		$(STRINGS_OBJS) \
 		$(DOCKER_OBJS)
 
-CFLAGS +=	$(DEBUG_FLAGS) -D__HAVE_BOOLEAN_T -m32 -I$(STRINGS_DIR) \
+CFLAGS +=	$(DEBUG_FLAGS) -D__HAVE_BOOLEAN_T -I$(STRINGS_DIR) \
 		-I$(DOCKER_DIR)/mdata-client
 
 all: $(BUILD_PROGS)
@@ -52,7 +52,7 @@ all: $(BUILD_PROGS)
 install: all
 
 $(BUILD)/%: %.o $(OBJS) | $(BUILD)
-	$(LINK.c) $^ $(LIBS)
+	$(LINK32.c) $^ $(LIBS)
 	$(CTFCONVERT) -l $(BUILDSTAMP) $@
 
 $(BUILD):

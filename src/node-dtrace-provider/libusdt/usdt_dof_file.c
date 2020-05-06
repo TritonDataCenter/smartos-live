@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012, Chris Andrews. All rights reserved.
+ * Copyright 2020 Joyent, Inc.
  */
 
 #include "usdt_internal.h"
@@ -182,7 +183,7 @@ usdt_dof_file_load(usdt_dof_file_t *file, const char *module)
 
         dh.dofhp_dof  = (uintptr_t)dof;
         dh.dofhp_addr = (uintptr_t)dof;
-        (void) strncpy(dh.dofhp_mod, module, sizeof (dh.dofhp_mod));
+        (void) strncpy(dh.dofhp_mod, module, sizeof (dh.dofhp_mod) - 1);
 
         if ((fd = open(helper, O_RDWR)) < 0)
                 return (-1);

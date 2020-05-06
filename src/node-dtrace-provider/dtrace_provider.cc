@@ -18,7 +18,7 @@ namespace node {
   }
 
   Persistent<FunctionTemplate> DTraceProvider::constructor_template;
-  
+
   void DTraceProvider::Initialize(Handle<Object> target) {
     HandleScope scope;
 
@@ -186,7 +186,7 @@ namespace node {
   }
 
   extern "C" void
-  init(Handle<Object> target) {
+  init(Handle<Object> target, Handle<Value> value) {
     DTraceProvider::Initialize(target);
   }
 

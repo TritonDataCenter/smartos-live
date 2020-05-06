@@ -17,7 +17,7 @@ static Persistent<String> sym_startElement, sym_endElement,
 
 class Parser : public ObjectWrap {
 public:
-  static void Initialize(Handle<Object> target)
+  static void Initialize(Handle<Object> target, Handle<Value> value)
   {
     HandleScope scope;
     Local<FunctionTemplate> t = FunctionTemplate::New(New);

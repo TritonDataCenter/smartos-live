@@ -18,11 +18,11 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2019, Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 #
-# MG runs make check prior to ./configure, so allow build.env not to exist.
+# We can run make check prior to ./configure, so allow build.env not to exist.
 #
 ifeq ($(MAKECMDGOALS),check)
 -include	$(BASE)/../build.env
@@ -103,10 +103,15 @@ DOCKER_DIR =	$(BASE)/dockerinit
 INSTALL_PROG =	mkdir -p $(@D) && rm -f $@ && cp $^ $@ && \
 		chmod 755 $@ && touch $@
 
-COMPILE.c =	$(GCC) $(CPPFLAGS) $(CFLAGS) -o $@ -c
-LINK.c =	$(GCC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
-COMPILE.cc =	$(GXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c
-LINK.cc =	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@
+COMPILE32.c =	$(GCC) -m32 $(CPPFLAGS) $(CFLAGS) -o $@ -c
+LINK32.c =	$(GCC) -m32 $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
+COMPILE32.cc =	$(GXX) -m32 $(CPPFLAGS) $(CXXFLAGS) -o $@ -c
+LINK32.cc =	$(GXX) -m32 $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@
+
+COMPILE64.c =	$(GCC) -m64 $(CPPFLAGS) $(CFLAGS) -o $@ -c
+LINK64.c =	$(GCC) -m64 $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
+COMPILE64.cc =	$(GXX) -m64 $(CPPFLAGS) $(CXXFLAGS) -o $@ -c
+LINK64.cc =	$(GXX) -m64 $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@
 
 MDATA_OBJS = \
 		mdata_dynstr.o \

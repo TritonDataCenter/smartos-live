@@ -10,33 +10,36 @@
 #
 
 #
-# Copyright 2019 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 %: %.c
-	$(LINK.c) $< $(LIBS)
+	$(LINK32.c) $< $(LIBS)
 
 %.so: %.c
-	$(LINK.c) $< $(LIBS)
+	$(LINK32.c) $< $(LIBS)
 	$(CTFCONVERT) -l $(BUILDSTAMP) $@
 
 %.o: src/%.c
-	$(COMPILE.c) $<
+	$(COMPILE32.c) $<
+
+%.o: %.c
+	$(COMPILE32.c) $<
 
 mdata_%.o: $(DOCKER_DIR)/mdata-client/%.c
-	$(COMPILE.c) $^
+	$(COMPILE32.c) $^
 
 mdata_%.o: $(DOCKER_DIR)/mdata-client/plat/%.c
-	$(COMPILE.c) $^
+	$(COMPILE32.c) $^
 
 %.o: $(STRINGS_DIR)/%.c
-	$(COMPILE.c) $^
+	$(COMPILE32.c) $^
 
 %.o: $(DOCKER_DIR)/src/%.c
-	$(COMPILE.c) $^
+	$(COMPILE32.c) $^
 
 %.o: $(DOCKER_DIR)/json-nvlist/%.c
-	$(COMPILE.c) $^
+	$(COMPILE32.c) $^
 
 %: %.js
 	cp $< $@

@@ -115,7 +115,7 @@ function checkout_project
 			# PR-xxx branch name, and if so, add the relevant refspec for
 			# pull requests
 			if [[ $? -eq 0 ]]; then
-				PR_BRANCH=$(echo "${branch}" | sed -e 's/^PR-[0-9]+$//g')
+				PR_BRANCH=$(echo "${branch}" | sed -E -e 's/^PR-[0-9]+$//g')
 				if [[ -z "${PR_BRANCH}" ]]; then
 					echo "Branch appears to be from a PR, adding github refspec"
 					PR_NUMBER=$(echo ${PR_BRANCH} | awk -F- '{print $2}')

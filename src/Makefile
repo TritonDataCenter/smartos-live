@@ -200,8 +200,8 @@ $(KSTAT.NODE) :	LIBS +=		-lkstat
 # system of Makefiles.
 #
 V8PLUS_SUBDIR_ENV = \
-			CC=$(GCC) \
-			CXX=$(GXX) \
+			CC="$(GCC) -m32" \
+			CXX="$(GXX) -m32" \
 			PREFIX_NODE=$(PREFIX_NODE) \
 			NODE_EXEC=$(NODE_EXEC) \
 			WARN_FLAGS="$(WARN_FLAGS)" \

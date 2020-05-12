@@ -115,10 +115,10 @@ function checkout_project
 			# PR-xxx branch name, and if so, add the relevant refspec for
 			# pull requests.
 			if [[ $? -ne 0 ]]; then
-				PR_BRANCH=$(echo "${branch}" | sed -E -e 's/^PR-[0-9]+$//g')
-				if [[ -z "${PR_BRANCH}" ]]; then
+				PR_NUMBER=$(echo "${branch}" | sed -nEe 's/^PR-([0-9]+)$/\1/p')
+				if [[ -n "${PR_NUMBER}" ]]; then
 					echo "Branch appears to be from a PR, adding GitHub refspec"
-					PR_NUMBER=$(echo "${branch}" | awk -F- '{print $2}')
+					echo "    +refs/pull/${PR_NUMBER}/head:refs/remotes/origin/${branch}"
 					git -C ${dir} config --add remote.origin.fetch \
 					    +refs/pull/${PR_NUMBER}/head:refs/remotes/origin/${branch}
 					git -C ${dir} fetch || \

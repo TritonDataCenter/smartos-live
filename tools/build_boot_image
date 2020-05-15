@@ -39,13 +39,16 @@
 # tarball, so sdc-headnode can do the same.  (As it is, the offset is actually
 # fixed, but that seems like a bad thing to rely on.)
 #
+# Image size in bytes (bi_imgsz) is set to accommodate 2GB devices that are
+# actually a bit smaller than 2GB. In this case, 1.94GB with 256 extra bytes
+# to meet a requirement to be a multiple of 512 bytes.
 
 bi_console="text"
 bi_make_iso=0
 bi_proforma_only=0
 bi_nocleanup=0
-bi_imgsz_gb="2"
-bi_imgsz=$(( $bi_imgsz_gb * 1000000000 ))
+bi_proforma_prefix="2"
+bi_imgsz="1940000256"
 bi_wsroot=
 bi_lofi_blkdev=
 bi_lofi_rawdev=
@@ -331,8 +334,8 @@ while getopts "Ic:p:r:x" c $@; do
 	I)	bi_make_iso=1 ;;
 	c)	bi_console=${OPTARG} ;;
 	p)	bi_proforma_only=1
-		bi_imgsz_gb=${OPTARG%gb}
-		bi_imgsz=$(( $bi_imgsz_gb * 1000000000 )) ;;
+		bi_proforma_prefix=${OPTARG%gb}
+		bi_imgsz=$(( $bi_proforma_prefix * 1000000000 )) ;;
 	r)	bi_wsroot=$(readlink -f $OPTARG) ;;
 	x)	bi_nocleanup=1 ;;
 	:)	usage ;;
@@ -373,7 +376,7 @@ if [[  $bi_make_iso == 1 ]]; then
 	exit 0
 fi
 
-print "Creating $bi_imgsz_gb GB image at $bi_tmpdir/smartos.usb ... \c"
+print "Creating $bi_imgsz byte image at $bi_tmpdir/smartos.usb ... \c"
 create_image $bi_tmpdir $bi_imgsz $bi_tmpdir/smartos.usb
 print "done"
 
@@ -406,7 +409,7 @@ copy_root $bi_lofi_rawdev $bi_tmpdir/smartos.usb $rootoff
 pfrun lofiadm -d $bi_lofi_blkdev
 
 if [[ $bi_proforma_only == 1 ]]; then
-	copy_results $bi_wsroot/proto.images ${bi_imgsz_gb}gb.img ${bi_imgsz_gb}gb.
+	copy_results $bi_wsroot/proto.images ${bi_proforma_prefix}gb.img ${bi_proforma_prefix}gb.
 else
 	print "Compressing USB image ..."
 	pfrun /opt/local/bin/pigz $bi_tmpdir/smartos.usb

@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright 2019 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 shopt -s xpg_echo
 unalias -a
@@ -109,9 +109,24 @@ function checkout_project
 			local branch_desc=$(echo $branch | sed -e 's/\//_/g')
 
 			# We assume the remote is named 'origin'.
-			git -C ${dir} fetch origin ${branch}:${branch_desc} || \
-				fatal "unable to fetch ${branch} from origin"
+			git -C ${dir} fetch origin ${branch}:${branch_desc}
 
+			# If the above fails, see if the project appears to be a GitHub
+			# PR-xxx branch name, and if so, add the relevant refspec for
+			# pull requests.
+			if [[ $? -ne 0 ]]; then
+				PR_NUMBER=$(echo "${branch}" | sed -nEe 's/^PR-([0-9]+)$/\1/p')
+				if [[ -n "${PR_NUMBER}" ]]; then
+					echo "Branch appears to be from a PR, adding GitHub refspec"
+					echo "    +refs/pull/${PR_NUMBER}/head:refs/remotes/origin/${branch}"
+					git -C ${dir} config --add remote.origin.fetch \
+					    +refs/pull/${PR_NUMBER}/head:refs/remotes/origin/${branch}
+					git -C ${dir} fetch || \
+					    fatal "unable to fetch using PR refspec"
+				else
+					fatal "unable to fetch ${branch} from origin"
+				fi
+			fi
 			git -C ${dir} checkout ${branch_desc} || \
 				fatal "unable to checkout ${branch_desc}"
 		fi

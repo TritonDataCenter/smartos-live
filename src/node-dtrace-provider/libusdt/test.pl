@@ -26,10 +26,10 @@ sub run_tests {
     my ($type, $start_arg) = @_;
     
     for my $i (0..$USDT_ARG_MAX) {
-	my ($t_status, $d_status, $output) = run_dtrace('type'.$type, $i.'arg', split(//, $type x $i));
+        my ($t_status, $d_status, $output) = run_dtrace('type'.$type, $i.'arg', split(//, $type x $i));
         is($t_status, 0, 'test exit status is 0');
         is($d_status, 0, 'dtrace exit status is 0');
-	like($output, qr/type[ic]:\d+arg/, 'function and name match');
+        like($output, qr/type[ic]:\d+arg/, 'function and name match');
 
         my $arg = $start_arg;
         for my $j (0..$i - 1) {

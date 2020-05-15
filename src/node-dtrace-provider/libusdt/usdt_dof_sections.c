@@ -23,7 +23,7 @@ usdt_dof_probes_sect(usdt_dof_section_t *probes,
                 type = 0;
 
                 for (i = 0; i < pd->argc; i++) {
-			type = usdt_strtab_add(strtab, pd->types[i]);
+                        type = usdt_strtab_add(strtab, pd->types[i]);
                         argc++;
                         if (argv == 0)
                                 argv = type;

@@ -184,6 +184,19 @@ $(EXPAT.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 $(EXPAT.NODE) :	LIBS +=		-lexpat
 
 #
+# The libuuid Node add-on follows the same pattern as EXPAT.NODE.
+#
+UUID_OBJDIR =	node-libuuid/build/Release
+UUID_SRCDIR =	node-libuuid/src
+UUID.NODE =	$(UUID_OBJDIR)/uuid.node
+
+$(UUID.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-write-strings -Wno-sign-compare
+$(UUID.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
+$(UUID.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
+$(UUID.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
+$(UUID.NODE) :	LIBS +=		-luuid
+
+#
 # The kstat Node add-on follows the same pattern as EXPAT.NODE.
 #
 KSTAT_OBJDIR =	node-kstat/build/Release
@@ -217,61 +230,29 @@ ZONENAME_BINDING.NODE =		node-zonename/lib/zonename_binding.node
 ZONENAME_SRC_DIR =		node-zonename/src
 ZONENAME_V8PLUS_DIR =		node-zonename/node_modules/v8plus
 
-#
-# The dtrace-provider add-on uses a combination of C, assembly and C++ files in
-# multiple directories.
-#
-DTRACE_PROVIDER_OBJDIR =	node-dtrace-provider/build/Release
 DTRACE_PROVIDER_SRCDIR =	node-dtrace-provider
+DTRACE_PROVIDER_OBJDIR =	$(DTRACE_PROVIDER_SRCDIR)/src/build/Release
 DTRACE_PROVIDER.NODE =		$(DTRACE_PROVIDER_OBJDIR)/DTraceProviderBindings.node
 
-DTRACE_PROVIDER_SRCS += \
-			dtrace_argument.cc \
-			dtrace_probe.cc \
-			dtrace_provider.cc
+NODE_SUBDIR_ENV = \
+			V=1 \
+			NODE_DTRACE_PROVIDER_REQUIRE=hard \
+			CC="$(GCC)" \
+			CXX="$(GXX)" \
+			CPPFLAGS="$(NODE_CPPFLAGS)" \
+			CFLAGS="$(NODE_CFLAGS)" \
+			CXXFLAGS="$(NODE_CXXFLAGS)" \
+			LDFLAGS="$(NODE_LDFLAGS)"
 
-DTRACE_PROVIDER_LIBUSDT_SRCS += \
-			libusdt/usdt.c \
-			libusdt/usdt_dof_file.c \
-			libusdt/usdt_probe.c \
-			libusdt/usdt_dof.c \
-			libusdt/usdt_dof_sections.c
+$(DTRACE_PROVIDER.NODE) : WARN_FLAGS += -Wno-sign-compare -Wno-unused-parameter
+$(DTRACE_PROVIDER.NODE) : WARN_FLAGS += -Wno-cast-function-type
 
-DTRACE_PROVIDER_LIBUSDT_ASM_SRCS += \
-			libusdt/usdt_tracepoints_i386.s
+$(DTRACE_PROVIDER.NODE) :
+	cd $(DTRACE_PROVIDER_SRCDIR) && $(NODE_SUBDIR_ENV) $(NPM_EXEC) install
 
-DTRACE_PROVIDER_HDRS += \
-			node-dtrace-provider/dtrace_provider.h \
-			node-dtrace-provider/libusdt/usdt_internal.h \
-			node-dtrace-provider/libusdt/usdt.h
-
-DTRACE_PROVIDER_OBJS += \
-			$(DTRACE_PROVIDER_SRCS:%.cc=$(DTRACE_PROVIDER_OBJDIR)/%.o) \
-			$(DTRACE_PROVIDER_LIBUSDT_SRCS:%.c=$(DTRACE_PROVIDER_OBJDIR)/%.o) \
-			$(DTRACE_PROVIDER_LIBUSDT_ASM_SRCS:%.s=$(DTRACE_PROVIDER_OBJDIR)/%.o)
-
-$(DTRACE_PROVIDER.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-sign-compare
-$(DTRACE_PROVIDER.NODE) :	CFLAGS +=	$(NODE_CFLAGS)
-$(DTRACE_PROVIDER.NODE) :	CPPFLAGS +=	\
-					$(NODE_CPPFLAGS) \
-					-Inode-dtrace-provider/libusdt
-$(DTRACE_PROVIDER.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
-$(DTRACE_PROVIDER.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
-
-CLEANFILES +=	$(DTRACE_PROVIDER.NODE) $(DTRACE_PROVIDER_OBJS)
-
-#
-# The libuuid Node add-on follows the same pattern as EXPAT.NODE.
-#
-UUID_OBJDIR =	node-libuuid/build/Release
-UUID_SRCDIR =	node-libuuid/src
-UUID.NODE =	$(UUID_OBJDIR)/uuid.node
-
-$(UUID.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-write-strings -Wno-sign-compare
-$(UUID.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
-$(UUID.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
-$(UUID.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
-$(UUID.NODE) :	LIBS +=		-luuid
+CLEANFILES += $(DTRACE_PROVIDER_SRCDIR)/build
+CLEANFILES += $(DTRACE_PROVIDER_SRCDIR)/node_modules
+CLEANFILES += $(DTRACE_PROVIDER_SRCDIR)/src/build
 
 #
 # Rules for building the nomknod related shared object.
@@ -602,28 +583,6 @@ $(ZONENAME_BINDING.NODE): FRC
 	$(MAKE) \
 		$(V8PLUS_SUBDIR_ENV) \
 		V8PLUS=$(BASE)/$(ZONENAME_V8PLUS_DIR)
-
-#
-# The next two are used to build libusdt files into
-# $(DTRACE_PROVIDER_OBJDIR)/libusdt/*.o, instead of building libusdt.a
-#
-$(DTRACE_PROVIDER_OBJDIR)/%.o: $(DTRACE_PROVIDER_SRCDIR)/%.c \
-	    $(DTRACE_PROVIDER_HDRS)
-	@mkdir -p $(@D)
-	$(COMPILE32.c) $<
-
-$(DTRACE_PROVIDER_OBJDIR)/%.o: $(DTRACE_PROVIDER_SRCDIR)/%.s
-	@mkdir -p $(@D)
-	$(COMPILE32.c) $^
-
-$(DTRACE_PROVIDER_OBJDIR)/%.o: $(DTRACE_PROVIDER_SRCDIR)/%.cc \
-	    $(DTRACE_PROVIDER_HDRS)
-	@mkdir -p $(@D)
-	$(COMPILE32.cc) $<
-
-$(DTRACE_PROVIDER.NODE): $(DTRACE_PROVIDER_OBJS)
-	@mkdir -p $(@D)
-	$(LINK32.cc) $^ $(LIBS)
 
 $(KSTAT.NODE): node-kstat/kstat.cc
 	@mkdir -p $(@D)

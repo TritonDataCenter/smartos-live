@@ -3,6 +3,43 @@ dtrace-provider - Changes
 
 ## HISTORY
 
+ * 0.8.8:
+   Known support for v0.10.48, v0.12.16, v4.8.1, v6.17.0, v7.5.0, v8.16.0,
+   v9.3.0, v10.16.0, v12.7.0 (#125)
+
+ * 0.8.7:
+   Known support for v0.10.48, v0.12.16, v4.6.0, v7.5.0, v8.9.4, v10.3.0 (#119)
+   Don't crash when attempting to fire unknown probes (#120)
+
+ * 0.8.6:
+   Improved compilation failure behaviour (#96)
+
+ * 0.8.5:
+   Reverted "Install fails on Debian due to differently named node binary" for
+   now
+
+ * 0.8.4:
+   Only log error once when DTraceProviderBindings can't be found
+   Install fails on Debian due to differently named node binary
+
+ * 0.8.3:
+   Install fails with yarn
+
+ * 0.8.2:
+   Error installing in 64-bit SmartOS zones with 32-bit node
+
+ * 0.8.1:
+   Support FreeBSD 10 & 11
+
+ * 0.8.0:
+   Support passing additional arguments to probe function via `.fire()`
+
+ * 0.7.1:
+   Update libusdt for chrisa/libusdt#12 fix
+
+ * 0.7.0: known support for v0.10.47, v0.12.16, v4.6.0.
+   Updated NaN dependency to remove warnings on newer Node versions.
+
  * 0.2.8:
    Add NODE_MODULE() declaration for compatibility with Node 0.9.1+
    (reported by Trent Mick)

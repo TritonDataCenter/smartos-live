@@ -177,7 +177,7 @@ C_CHECK_TARGETS=\
 EXPAT_OBJDIR =	node-expat/build/Release
 EXPAT.NODE =	$(EXPAT_OBJDIR)/node-expat.node
 
-$(EXPAT.NODE) :	WARN_FLAGS +=	-Wno-unused
+$(EXPAT.NODE) :	NODE_WARN_FLAGS += -Wno-unused
 $(EXPAT.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
 $(EXPAT.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
 $(EXPAT.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
@@ -190,7 +190,8 @@ UUID_OBJDIR =	node-libuuid/build/Release
 UUID_SRCDIR =	node-libuuid/src
 UUID.NODE =	$(UUID_OBJDIR)/uuid.node
 
-$(UUID.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-write-strings -Wno-sign-compare
+$(UUID.NODE) :	NODE_WARN_FLAGS += -Wno-unused -Wno-write-strings
+$(UUID.NODE) :  NODE_WARN_FLAGS += -Wno-sign-compare
 $(UUID.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
 $(UUID.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
 $(UUID.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
@@ -202,7 +203,9 @@ $(UUID.NODE) :	LIBS +=		-luuid
 KSTAT_OBJDIR =	node-kstat/build/Release
 KSTAT.NODE =	$(KSTAT_OBJDIR)/kstat.node
 
-$(KSTAT.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-write-strings -Wno-sign-compare
+$(KSTAT.NODE) :	NODE_WARN_FLAGS += -Wno-unused -Wno-write-strings
+$(KSTAT.NODE) :	NODE_WARN_FLAGS += -Wno-sign-compare
+$(KSTAT.NODE) :	NODE_WARN_FLAGS += -Wno-format-truncation
 $(KSTAT.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
 $(KSTAT.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
 $(KSTAT.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
@@ -217,7 +220,7 @@ V8PLUS_SUBDIR_ENV = \
 			CXX="$(GXX) -m32" \
 			PREFIX_NODE=$(PREFIX_NODE) \
 			NODE_EXEC=$(NODE_EXEC) \
-			WARN_FLAGS="$(WARN_FLAGS)" \
+			WARN_FLAGS="$(NODE_WARN_FLAGS)" \
 			OPT_FLAGS="$(OPT_FLAGS)" \
 			CTFCONVERT=$(CTFCONVERT) \
 			CTFMERGE=$(CTFMERGE)
@@ -226,9 +229,14 @@ LOCKFD_BINDING.NODE =		node-lockfd/lib/lockfd_binding.node
 LOCKFD_SRC_DIR =		node-lockfd/src
 LOCKFD_V8PLUS_DIR =		node-lockfd/node_modules/v8plus
 
+$(LOCKFD_BINDING.NODE) : NODE_WARN_FLAGS += -Wno-format
+$(LOCKFD_BINDING.NODE) : NODE_WARN_FLAGS += -Wno-unused-parameter
+
 ZONENAME_BINDING.NODE =		node-zonename/lib/zonename_binding.node
 ZONENAME_SRC_DIR =		node-zonename/src
 ZONENAME_V8PLUS_DIR =		node-zonename/node_modules/v8plus
+
+$(ZONENAME_BINDING.NODE) : NODE_WARN_FLAGS += -Wno-format
 
 DTRACE_PROVIDER_SRCDIR =	node-dtrace-provider
 DTRACE_PROVIDER_OBJDIR =	$(DTRACE_PROVIDER_SRCDIR)/src/build/Release
@@ -244,8 +252,8 @@ NODE_SUBDIR_ENV = \
 			CXXFLAGS="$(NODE_CXXFLAGS)" \
 			LDFLAGS="$(NODE_LDFLAGS)"
 
-$(DTRACE_PROVIDER.NODE) : WARN_FLAGS += -Wno-sign-compare -Wno-unused-parameter
-$(DTRACE_PROVIDER.NODE) : WARN_FLAGS += -Wno-cast-function-type
+$(DTRACE_PROVIDER.NODE) : NODE_WARN_FLAGS += -Wno-sign-compare
+$(DTRACE_PROVIDER.NODE) : NODE_WARN_FLAGS += -Wno-unused-parameter
 
 $(DTRACE_PROVIDER.NODE) :
 	cd $(DTRACE_PROVIDER_SRCDIR) && $(NODE_SUBDIR_ENV) $(NPM_EXEC) install
@@ -299,7 +307,6 @@ BUILT_TARGETS = \
 	$(LOCKFD_BINDING.NODE) \
 	$(ZONENAME_BINDING.NODE) \
 	$(NOMKNOD_TARGS) \
-	$(SYSLOG.NODE) \
 	$(UUID.NODE)
 
 TARGETS = $(BUILT_TARGETS) \
@@ -558,10 +565,6 @@ vm/node_modules/props.js: vm/node_modules/proptable.js vm/node_modules/expander.
 $(EXPAT.NODE): node-expat/node-expat.cc
 	@mkdir -p $(@D)
 	$(LINK32.cc) $^ $(LIBS)
-
-$(LOCKFD_BINDING.NODE) : WARN_FLAGS += -Wno-cast-function-type -Wno-format
-$(LOCKFD_BINDING.NODE) : WARN_FLAGS += -Wno-unused-parameter
-$(ZONENAME_BINDING.NODE) : WARN_FLAGS += -Wno-cast-function-type -Wno-format
 
 #
 # node-lockfd and node-zonename are built using the v8plus-based Makefile

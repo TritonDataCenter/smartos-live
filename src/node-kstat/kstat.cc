@@ -15,8 +15,7 @@ using std::vector;
 
 class KStatReader : node::ObjectWrap {
 public:
-	static void Initialize(Handle<Object> target,
-	    Handle<Value> value);
+	static void Initialize(Handle<Object> target);
 
 protected:
 	static Persistent<FunctionTemplate> templ;
@@ -104,7 +103,7 @@ KStatReader::update()
 }
 
 void
-KStatReader::Initialize(Handle<Object> target, Handle<Value> value)
+KStatReader::Initialize(Handle<Object> target)
 {
 	HandleScope scope;
 
@@ -172,22 +171,25 @@ KStatReader::New(const Arguments& args)
 Handle<Value>
 KStatReader::error(const char *fmt, ...)
 {
-	char buf[1024] = "";
+	char buf[1024], buf2[1024];
+	char *err = buf;
 	va_list ap;
 
 	va_start(ap, fmt);
 	(void) vsnprintf(buf, sizeof (buf), fmt, ap);
 
-	/*
-	 * If our error doesn't end in a new-line, we'll append the
-	 * strerror of errno.
-	 */
 	if (buf[strlen(buf) - 1] != '\n') {
-		(void) strncat(buf, ": ", sizeof (buf) - 1);
-		(void) strncat(buf, strerror(errno), sizeof (buf) - 1);
+		/*
+		 * If our error doesn't end in a new-line, we'll append the
+		 * strerror of errno.
+		 */
+		(void) snprintf(err = buf2, sizeof (buf2),
+		    "%s: %s", buf, strerror(errno));
+	} else {
+		buf[strlen(buf) - 1] = '\0';
 	}
 
-	return (ThrowException(Exception::Error(String::New(buf))));
+	return (ThrowException(Exception::Error(String::New(err))));
 }
 
 Handle<Object>

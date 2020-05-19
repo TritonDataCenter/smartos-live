@@ -412,7 +412,8 @@ install: all $(SUBDIRS)
 	cp vm/runtests $(DESTDIR)/usr/vm/test/
 	cp $(EXPAT.NODE) $(PREFIX_NODE)/node_modules/expat_binding.node
 	cp $(UUID.NODE) $(PREFIX_NODE)/node_modules/uuid.node
-	cp $(DTRACE_PROVIDER.NODE) $(PREFIX_NODE)/node_modules/DTraceProviderBindings.node
+	mkdir -p $(PREFIX_NODE)/node_modules/src/build/Release
+	cp $(DTRACE_PROVIDER.NODE) $(PREFIX_NODE)/node_modules/src/build/Release/DTraceProviderBindings.node
 	cp node-dtrace-provider/dtrace-provider.js $(PREFIX_NODE)/node_modules/dtrace-provider.js
 	sed -e "s|var expat.*;|var expat = require('./expat_binding');|" \
 	    < node-expat/lib/node-expat.js \

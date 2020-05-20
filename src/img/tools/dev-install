@@ -1,5 +1,7 @@
 #!/bin/bash
 #
+# Copyright 2020 Joyent, Inc.
+#
 # Install (rsync) this local imgadm install image to the given
 # smartos node. The node global zone must have been prepared with
 # a writeable /usr/img and /usr/man/man1m for testing like this:
@@ -51,5 +53,4 @@ INSTALLIMAGE=/var/tmp/img-install-image
 
 rsync -av -e "$SSH" $INSTALLIMAGE/ $NODE:/usr/img/
 
-$SSH $NODE 'cp /usr/vm/node_modules/locker.js /usr/img/node_modules/locker.js'
 $SSH $NODE 'cd /usr/man/man1m && rm -f imgadm.1m && ln -s /usr/img/man/imgadm.1m'

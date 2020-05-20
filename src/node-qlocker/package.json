@@ -1,0 +1,33 @@
+{
+  "name": "qlocker",
+  "description": "Ordered file locks",
+  "version": "1.0.1",
+  "keywords": [
+    "file lock"
+  ],
+  "author": "",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "tap test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joyent/node-qlocker.git"
+  },
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/joyent/node-qlocker/issues"
+  },
+  "homepage": "https://github.com/joyent/node-qlocker#README.md",
+  "dependencies": {
+    "fs-ext": "git://github.com/joyent/node-fs-ext.git#node-0.10"
+  },
+  "devDependencies": {
+    "tap": "12.7.0",
+    "vasync": "2.2.0",
+    "assert-plus": "1.0.0"
+  }
+}

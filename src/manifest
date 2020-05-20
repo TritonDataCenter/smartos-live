@@ -280,7 +280,6 @@ d usr/img/node_modules/imgmanifest 0555 root bin
 d usr/img/node_modules/imgmanifest/lib 0555 root bin
 f usr/img/node_modules/imgmanifest/lib/imgmanifest.js 0444 root bin
 f usr/img/node_modules/imgmanifest/package.json 0444 root bin
-h usr/img/node_modules/locker.js=usr/vm/node_modules/locker.js
 d usr/img/node_modules/mkdirp 0555 root bin
 f usr/img/node_modules/mkdirp/index.js 0444 root bin
 f usr/img/node_modules/mkdirp/package.json 0444 root bin
@@ -464,6 +463,17 @@ f usr/vm/etc/vmadm.completion 0444 root bin
 f usr/node/0.10/node_modules/bunyan.js 0444 root bin
 f usr/node/0.10/node_modules/expat_binding.node 0444 root bin
 f usr/node/0.10/node_modules/node-expat.js 0444 root bin
+d usr/node/0.10/node_modules/node-qlocker 0444 root bin
+f usr/node/0.10/node_modules/node-qlocker/index.js 0444 root bin
+d usr/node/0.10/node_modules/node-qlocker/lib 0444 root bin
+f usr/node/0.10/node_modules/node-qlocker/lib/qlocker.js 0444 root bin
+d usr/node/0.10/node_modules/node-qlocker/node_modules 0555 root bin
+d usr/node/0.10/node_modules/fs-ext 0555 root bin
+d usr/node/0.10/node_modules/fs-ext/build 0555 root bin
+d usr/node/0.10/node_modules/fs-ext/build/Release 0555 root bin
+f usr/node/0.10/node_modules/fs-ext/build/Release/fs-ext.node 0555 root bin
+f usr/node/0.10/node_modules/fs-ext/fs-ext.js 0444 root bin
+f usr/node/0.10/node_modules/fs-ext/package.json 0444 root bin
 f usr/vm/node_modules/bunyan.js 0444 root bin
 f usr/vm/node_modules/diff.js 0644 root root
 f usr/vm/node_modules/dladm.js 0444 root bin

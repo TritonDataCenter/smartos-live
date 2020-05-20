@@ -191,7 +191,7 @@ UUID_SRCDIR =	node-libuuid/src
 UUID.NODE =	$(UUID_OBJDIR)/uuid.node
 
 $(UUID.NODE) :	NODE_WARN_FLAGS += -Wno-unused -Wno-write-strings
-$(UUID.NODE) :  NODE_WARN_FLAGS += -Wno-sign-compare
+$(UUID.NODE) :	NODE_WARN_FLAGS += -Wno-sign-compare
 $(UUID.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
 $(UUID.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
 $(UUID.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)

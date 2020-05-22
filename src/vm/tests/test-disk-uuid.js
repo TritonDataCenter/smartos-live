@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2019, Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  *
  */
 
@@ -253,6 +253,7 @@ function removeDiskUuids(t, next)
                     uuid: vmobj.uuid
                 };
                 var _opts = {
+                    ident: 'remove disks',
                     timeout: 5000,
                     catchErrors: true,
                     teardown: true

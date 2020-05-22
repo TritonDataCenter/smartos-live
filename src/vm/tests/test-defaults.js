@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  *
  * These tests ensure that default values don't change accidentally.
  */
@@ -318,6 +318,7 @@ test('check default create_timestamp', function (t) {
                                 zonename: state.uuid
                             };
                             var opts = {
+                                ident: 'create_timestamp remove',
                                 timeout: 30 * 1000,
                                 catchErrors: true,
                                 teardown: true

@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  *
  */
 
@@ -1259,6 +1259,7 @@ function waitForUserScript(uuid, callback) {
     ];
 
     var opts = {
+        ident: 'userScriptHasRun change to true',
         timeout: 300 * 1000,
         teardown: true
     };

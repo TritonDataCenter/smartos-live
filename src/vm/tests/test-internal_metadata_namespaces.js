@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  *
  */
 
@@ -150,6 +150,7 @@ test('test exercising internal_metadata_namespaces', function (t) {
                         };
 
                         var opts = {
+                            ident: 'manually writing metadata',
                             timeout: 30 * 1000,
                             catchErrors: true,
                             teardown: true

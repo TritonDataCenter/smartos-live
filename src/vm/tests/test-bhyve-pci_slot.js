@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  *
  */
 
@@ -290,6 +290,7 @@ function zonecfgSync(uuid, args, opts, changes, cb)
                     uuid: uuid
                 };
                 var _opts = {
+                    ident: 'zonecfgSync',
                     timeout: 5000,
                     catchErrors: true,
                     teardown: true

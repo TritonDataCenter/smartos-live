@@ -97,6 +97,7 @@ test('vminfod event stream timeout errors', function (t) {
             };
 
             var opts = {
+                ident: 'timeout fail',
                 timeout: 1 // 1 ms
             };
 
@@ -135,6 +136,7 @@ test('vminfod event stream timeout errors', function (t) {
             ];
 
             var opts = {
+                ident: 'timeout fail',
                 timeout: 1 // 1 ms
             };
 
@@ -266,6 +268,7 @@ test('test vminfod zone XML delete event', function (t) {
                         uuid: vmobj.uuid
                     };
                     var opts = {
+                        ident: 'zone tmp file rename to xml file',
                         timeout: 5 * 1000,
                         catchErrors: true,
                         startFresh: true

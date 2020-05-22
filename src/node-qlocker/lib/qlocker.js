@@ -5,20 +5,18 @@
  */
 
 /*
- * Copyright 2019 Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  */
 
 var mod_path = require('path');
 var mod_fs = require('fs');
 var mod_assert = require('assert');
-var fcntl = require('fs-ext').fcntl;
-var constants = require('constants');
+var fsext = require('fs-ext');
 
-// If we fail to lock (i.e. the call to fcntl() in node-lockfd), and
-// the errno is in this list, then we should back off for some delay
-// and retry.  Note that an EDEADLK, in particular, is not necessarilly
-// a permanent failure in a program using multiple lock files through
-// multiple threads of control.
+// If we fail to lock (i.e. the call to fcntl()), and the errno is in this list,
+// then we should back off for some delay and retry.  Note that an EDEADLK, in
+// particular, is not necessarilly a permanent failure in a program using
+// multiple lock files through multiple threads of control.
 var RETRY_CODES = [
     'EAGAIN',
     'ENOLCK',
@@ -130,7 +128,7 @@ function lockfile_to_locking(lf) {
 
         // Attempt to get an exclusive lock on the file via our file
         // descriptor:
-        fcntl(lf.lf_fd, 'setlkw', constants.F_WRLCK,
+        fsext.fcntl(lf.lf_fd, 'setlkw', fsext.constants.F_WRLCK,
             function __lockfdcb(_err) {
 
             if (_err) {

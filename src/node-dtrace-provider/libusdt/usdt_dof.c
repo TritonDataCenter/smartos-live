@@ -80,7 +80,7 @@ usdt_dof_section_init(usdt_dof_section_t *section, uint32_t type, dof_secidx_t i
 void
 usdt_dof_section_free(usdt_dof_section_t *section)
 {
-	free(section->data);
+        free(section->data);
 }
 
 int

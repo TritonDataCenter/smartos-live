@@ -70,6 +70,8 @@ src/fssstat
 src/json
 src/mkzpool
 src/node-dtrace-provider/build
+src/node-dtrace-provider/node_modules
+src/node-dtrace-provider/src/build
 src/node-libuuid/build
 src/smartdc/bin/sdc-factoryreset
 src/smartdc/bin/sdc-lastcomm

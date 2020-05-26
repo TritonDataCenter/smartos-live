@@ -1,54 +1,35 @@
 {
     'conditions': [
-	['OS=="mac" or OS=="solaris"', {
-
-	    # If we are on the Mac, or a Solaris derivative, attempt
-	    # to build the DTrace provider extension.
-
-	    'targets': [
-		{
-		    'target_name': 'DTraceProviderBindings',
-                    'sources': [
-			'dtrace_provider.cc',
-			'dtrace_probe.cc',
-			'dtrace_argument.cc'
-                    ],
-                    'include_dirs': [
-	                'libusdt'
-                    ],
-                    'dependencies': [
-                        'libusdt'
-                    ],
-                    'libraries': [
-                        '-L<(module_root_dir)/libusdt -l usdt'
-                    ]
-		},
-		{
-		    'target_name': 'libusdt',
-		    'type': 'none',
+        # If we are on Mac OS X, FreeBSD, or a Solarish system, attempt
+        # to build the DTrace provider extension.
+        ['OS=="mac" or OS=="solaris" or OS=="freebsd"', {
+            'targets': [
+                {
+                    'target_name': 'ndtp',
+                    'type': 'none',
                     'actions': [{
                         'inputs': [''],
                         'outputs': [''],
-                        'action_name': 'build_libusdt',
-	      	        'action': [
-                            'sh', 'libusdt-build.sh'
-		        ]
-		    }]
-		}
-	    ]
-	},
-
-	# If we are not on the Mac or Solaris, DTrace is unavailable.
-	# This target is necessary because GYP requires at least one
-	# target to exist.
-
-	{
-	    'targets': [
-		{
-		    'target_name': 'DTraceProviderStub',
-		    'type': 'none'
-		}
+                        'action_name': 'build_ndtp',
+                        'action': [
+                            'bash', 'build.sh'
+                        ]
+                    }]
+                }
             ]
-	}]
-    ]
+        },
+
+        # If we are on another system (like Windows or Linux), then DTrace is
+        # unavailable. This target is necessary because GYP requires at least
+        # one target to exist. We end up building nothing, and fall back to the
+        # stub implementation when the package is loaded.
+        {
+            'targets': [
+                {
+                    'target_name': 'DTraceProviderStub',
+                    'type': 'none'
+                }
+            ]
+        }]
+   ]
 }

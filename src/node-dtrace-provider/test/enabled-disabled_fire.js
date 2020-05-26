@@ -11,3 +11,4 @@ for (var i = 1; i <= 10; i++) {
     //gc();
 }
 dtp.fire("probe1", function(p) { return [42]; });
+

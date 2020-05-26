@@ -54,7 +54,7 @@ _usdt_probe_args:
         movl    %esp,%ebp
         subl    $8,%esp
         subl    $8,%esp
-        movl    8(%ebp),%ebx 
+        movl    8(%ebp),%edx
         movl    0xc(%ebp),%ecx
         test    %ecx,%ecx
         je      fire
@@ -65,5 +65,5 @@ args:   movl    %ecx,%eax
         pushl   (%eax)
         dec     %ecx
         jne     args
-fire:   jmp     *%ebx
+fire:   jmp     *%edx
 

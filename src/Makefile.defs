@@ -18,11 +18,11 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2019, Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 #
-# MG runs make check prior to ./configure, so allow build.env not to exist.
+# We can run make check prior to ./configure, so allow build.env not to exist.
 #
 ifeq ($(MAKECMDGOALS),check)
 -include	$(BASE)/../build.env
@@ -63,6 +63,7 @@ LDFLAGS =	$(SYSLIBDIRS:%=-L$(DESTDIR)/%) -Wl,-zassert-deflib \
 
 PREFIX_NODE =	$(DESTDIR)/usr/node/0.10
 NODE_EXEC =	$(NATIVEDIR)/usr/node/0.10/bin/node
+NPM_EXEC =	$(NATIVEDIR)/usr/node/0.10/bin/npm
 
 DEBUG_FLAGS =	-g
 WARN_FLAGS =	-Wall -Wextra -Werror
@@ -78,10 +79,13 @@ ifneq ($(PRIMARY_COMPILER_VER),4)
 OPT_FLAGS += -fno-aggressive-loop-optimizations
 endif
 
+# Node code wilfully casts function types, but this can be ignored
+NODE_WARN_FLAGS = $(WARN_FLAGS) -Wno-cast-function-type
+
 CFLAGS =	-std=gnu99 $(WARN_FLAGS) $(OPT_FLAGS)
 CXXFLAGS =	$(WARN_FLAGS) $(OPT_FLAGS)
-NODE_CFLAGS =	$(DEBUG_FLAGS) $(PIC_FLAGS)
-NODE_CXXFLAGS =	$(DEBUG_FLAGS) $(PIC_FLAGS)
+NODE_CFLAGS =	-m32 $(DEBUG_FLAGS) $(PIC_FLAGS) $(NODE_WARN_FLAGS) $(OPT_FLAGS)
+NODE_CXXFLAGS =	-m32 $(DEBUG_FLAGS) $(PIC_FLAGS) $(NODE_WARN_FLAGS) $(OPT_FLAGS)
 
 STD_DEFS =	-D_GNU_SOURCE
 NODE_DEFS =	-DBUILDING_NODE_EXTENSION
@@ -103,10 +107,15 @@ DOCKER_DIR =	$(BASE)/dockerinit
 INSTALL_PROG =	mkdir -p $(@D) && rm -f $@ && cp $^ $@ && \
 		chmod 755 $@ && touch $@
 
-COMPILE.c =	$(GCC) $(CPPFLAGS) $(CFLAGS) -o $@ -c
-LINK.c =	$(GCC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
-COMPILE.cc =	$(GXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c
-LINK.cc =	$(GXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@
+COMPILE32.c =	$(GCC) -m32 $(CPPFLAGS) $(CFLAGS) -o $@ -c
+LINK32.c =	$(GCC) -m32 $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
+COMPILE32.cc =	$(GXX) -m32 $(CPPFLAGS) $(CXXFLAGS) -o $@ -c
+LINK32.cc =	$(GXX) -m32 $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@
+
+COMPILE64.c =	$(GCC) -m64 $(CPPFLAGS) $(CFLAGS) -o $@ -c
+LINK64.c =	$(GCC) -m64 $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
+COMPILE64.cc =	$(GXX) -m64 $(CPPFLAGS) $(CXXFLAGS) -o $@ -c
+LINK64.cc =	$(GXX) -m64 $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@
 
 MDATA_OBJS = \
 		mdata_dynstr.o \

@@ -9,6 +9,6 @@ for (var i = 1; i < 10; i++) {
     dtp.disable();
     dtp.enable();
     for (var j = 0; j < i; j++) {
-	dtp.fire("probe" + j, function(p) { return [i]; });
+        dtp.fire("probe" + j, function(p) { return [i]; });
     }
 }

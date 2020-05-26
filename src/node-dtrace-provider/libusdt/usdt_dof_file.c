@@ -60,15 +60,14 @@ static const char *helper = "/dev/dtrace/helper";
 static int
 load_dof(int fd, dof_helper_t *dh)
 {
-	int ret;
+        int ret;
 
-	ret = ioctl(fd, DTRACEHIOC_ADDDOF, dh);
-
-#ifdef __FreeBSD__
+        ret = ioctl(fd, DTRACEHIOC_ADDDOF, dh);
+#if defined(__FreeBSD__) && __FreeBSD__ <= 10
 	if (ret != -1)
-		ret = dh->gen;
+	    ret = dh ->gen;
 #endif
-	return ret;
+        return ret;
 }
 
 #endif
@@ -157,7 +156,7 @@ usdt_dof_file_unload(usdt_dof_file_t *file)
                 return (-1);
 
 #ifdef __FreeBSD__
-	ret = ioctl(fd, DTRACEHIOC_REMOVE, &file->gen);
+        ret = ioctl(fd, DTRACEHIOC_REMOVE, &file->gen);
 #else
         ret = ioctl(fd, DTRACEHIOC_REMOVE, file->gen);
 #endif
@@ -182,7 +181,11 @@ usdt_dof_file_load(usdt_dof_file_t *file, const char *module)
 
         dh.dofhp_dof  = (uintptr_t)dof;
         dh.dofhp_addr = (uintptr_t)dof;
-        (void) strncpy(dh.dofhp_mod, module, sizeof (dh.dofhp_mod));
+#if __FreeBSD__ >= 11
+        dh.dofhp_pid = getpid();
+#endif
+        (void) strncpy(dh.dofhp_mod, module, sizeof (dh.dofhp_mod) - 1);
+        dh.dofhp_mod[sizeof (dh.dofhp_mod) - 1] = '\0';
 
         if ((fd = open(helper, O_RDWR)) < 0)
                 return (-1);
@@ -283,6 +286,6 @@ usdt_dof_file_init(usdt_provider_t *provider, size_t size)
 void
 usdt_dof_file_free(usdt_dof_file_t *file)
 {
-	free(file->dof);
-	free(file);
+        free(file->dof);
+        free(file);
 }

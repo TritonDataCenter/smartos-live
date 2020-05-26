@@ -22,26 +22,26 @@ char *usdt_errors[] = {
 static void
 free_probedef(usdt_probedef_t *pd)
 {
-	int i;
+        int i;
 
-	switch (pd->refcnt) {
-	case 1:
-		free((char *)pd->function);
-		free((char *)pd->name);
-		if (pd->probe) {
-			usdt_free_tracepoints(pd->probe);
-			free(pd->probe);
-		}
-		for (i = 0; i < pd->argc; i++)
-			free(pd->types[i]);
-		free(pd);
-		break;
-	case 2:
-		pd->refcnt = 1;
-		break;
-	default:
-		break;
-	}
+        switch (pd->refcnt) {
+        case 1:
+                free((char *)pd->function);
+                free((char *)pd->name);
+                if (pd->probe) {
+                        usdt_free_tracepoints(pd->probe);
+                        free(pd->probe);
+                }
+                for (i = 0; i < pd->argc; i++)
+                        free(pd->types[i]);
+                free(pd);
+                break;
+        case 2:
+                pd->refcnt = 1;
+                break;
+        default:
+                break;
+        }
 }
 
 usdt_provider_t *
@@ -72,14 +72,14 @@ usdt_create_probe(const char *func, const char *name, size_t argc, const char **
         if ((p = malloc(sizeof *p)) == NULL)
                 return (NULL);
 
-	p->refcnt = 2;
+        p->refcnt = 2;
         p->function = strdup(func);
         p->name = strdup(name);
         p->argc = argc;
         p->probe = NULL;
 
-	for (i = 0; i < argc; i++)
-		p->types[i] = strdup(types[i]);
+        for (i = 0; i < argc; i++)
+                p->types[i] = strdup(types[i]);
 
         return (p);
 }
@@ -87,7 +87,7 @@ usdt_create_probe(const char *func, const char *name, size_t argc, const char **
 void
 usdt_probe_release(usdt_probedef_t *probedef)
 {
-	free_probedef(probedef);
+        free_probedef(probedef);
 }
 
 int
@@ -207,9 +207,9 @@ usdt_provider_enable(usdt_provider_t *provider)
 
         usdt_dof_file_generate(file, &strtab);
 
-	usdt_dof_section_free((usdt_dof_section_t *)&strtab);
-	for (i = 0; i < 5; i++)
-		usdt_dof_section_free(&sects[i]);
+        usdt_dof_section_free((usdt_dof_section_t *)&strtab);
+        for (i = 0; i < 5; i++)
+                usdt_dof_section_free(&sects[i]);
 
         if ((usdt_dof_file_load(file, provider->module)) < 0) {
                 usdt_error(provider, USDT_ERROR_LOADDOF, strerror(errno));
@@ -225,7 +225,7 @@ usdt_provider_enable(usdt_provider_t *provider)
 int
 usdt_provider_disable(usdt_provider_t *provider)
 {
-	usdt_probedef_t *pd;
+        usdt_probedef_t *pd;
 
         if (provider->enabled == 0)
                 return (0);
@@ -235,32 +235,32 @@ usdt_provider_disable(usdt_provider_t *provider)
                 return (-1);
         }
 
-	usdt_dof_file_free(provider->file);
+        usdt_dof_file_free(provider->file);
         provider->file = NULL;
 
-	/* We would like to free the tracepoints here too, but OS X
-	 * (and to a lesser extent Illumos) struggle with this:
-	 *
-	 * If a provider is repeatedly disabled and re-enabled, and is
-	 * allowed to reuse the same memory for its tracepoints, *and*
-	 * there's a DTrace consumer running with enablings for these
-	 * probes, tracepoints are not always cleaned up sufficiently
-	 * that the newly-created probes work.
-	 *
-	 * Here, then, we will leak the memory holding the
-	 * tracepoints, which serves to stop us reusing the same
-	 * memory address for new tracepoints, avoiding the bug.
-	 */
+        /* We would like to free the tracepoints here too, but OS X
+         * (and to a lesser extent Illumos) struggle with this:
+         *
+         * If a provider is repeatedly disabled and re-enabled, and is
+         * allowed to reuse the same memory for its tracepoints, *and*
+         * there's a DTrace consumer running with enablings for these
+         * probes, tracepoints are not always cleaned up sufficiently
+         * that the newly-created probes work.
+         *
+         * Here, then, we will leak the memory holding the
+         * tracepoints, which serves to stop us reusing the same
+         * memory address for new tracepoints, avoiding the bug.
+         */
 
-	for (pd = provider->probedefs; (pd != NULL); pd = pd->next) {
-		/* may have an as yet never-enabled probe on an
-		   otherwise enabled provider */
-		if (pd->probe) {
-			/* usdt_free_tracepoints(pd->probe); */
-			free(pd->probe);
-			pd->probe = NULL;
-		}
-	}
+        for (pd = provider->probedefs; (pd != NULL); pd = pd->next) {
+                /* may have an as yet never-enabled probe on an
+                   otherwise enabled provider */
+                if (pd->probe) {
+                        /* usdt_free_tracepoints(pd->probe); */
+                        free(pd->probe);
+                        pd->probe = NULL;
+                }
+        }
 
         provider->enabled = 0;
 
@@ -270,16 +270,16 @@ usdt_provider_disable(usdt_provider_t *provider)
 void
 usdt_provider_free(usdt_provider_t *provider)
 {
-	usdt_probedef_t *pd, *next;
+        usdt_probedef_t *pd, *next;
 
-	for (pd = provider->probedefs; pd != NULL; pd = next) {
-		next = pd->next;
-		free_probedef(pd);
-	}
+        for (pd = provider->probedefs; pd != NULL; pd = next) {
+                next = pd->next;
+                free_probedef(pd);
+        }
 
-	free((char *)provider->name);
-	free((char *)provider->module);
-	free(provider);
+        free((char *)provider->name);
+        free((char *)provider->module);
+        free(provider);
 }
 
 int

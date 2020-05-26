@@ -1,5 +1,5 @@
-CC = gcc
-CFLAGS = -O2 -Wall
+CC := gcc
+CFLAGS := -O2 -Wall
 
 # MAC_BUILD - set this to "universal" to build a 2-way fat library 
 MAC_BUILD = universal
@@ -20,7 +20,7 @@ endif
 
 ifeq ($(UNAME), SunOS)
 RANLIB=/bin/true
-PATH +=:/usr/perl5/5.10.0/bin:/usr/perl5/5.12/bin
+PATH := $(PATH):/usr/perl5/5.10.0/bin:/usr/perl5/5.12/bin
 CFLAGS += -fPIC
 ifeq ($(ARCH), i86pc)
 ARCH = $(shell isainfo -k)
@@ -32,6 +32,8 @@ endif
 endif 
 ifeq ($(ARCH), x86_64)
 CFLAGS += -m64
+else
+CFLAGS += -m32
 endif
 endif
 
@@ -123,7 +125,7 @@ clean:
 # testing
 
 test_mem_usage: libusdt.a test_mem_usage.o
-	$(CC) $(CFLAGS) -o test_mem_usage test_mem_usage.o libusdt.a
+	$(CC) $(CFLAGS) -o test_mem_usage test_mem_usage.o libusdt.a 
 
 ifeq ($(UNAME), Darwin)
 ifeq ($(MAC_BUILD), universal)

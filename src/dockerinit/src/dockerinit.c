@@ -980,7 +980,7 @@ plumbIf(const char *ifname)
     dlog("PLUMB %s\n", ifname);
 
     /* ipadm_create_if stomps on ifbuf, so create a copy: */
-    (void) strncpy(ifbuf, ifname, sizeof (ifbuf));
+    (void) strlcpy(ifbuf, ifname, sizeof (ifbuf));
 
     if ((status = ipadm_create_if(iph, ifbuf, AF_INET, IPADM_OPT_ACTIVE))
         != IPADM_SUCCESS) {
@@ -996,7 +996,7 @@ plumbIf(const char *ifname)
 }
 
 void
-upIPv6Addr(char *ifname)
+upIPv6Addr(const char *ifname)
 {
     struct lifreq lifr;
     int s;
@@ -1007,7 +1007,7 @@ upIPv6Addr(char *ifname)
             errno, ifname, strerror(errno));
     }
 
-    (void) strncpy(lifr.lifr_name, ifname, sizeof (lifr.lifr_name));
+    (void) strlcpy(lifr.lifr_name, ifname, sizeof (lifr.lifr_name));
     if (ioctl(s, SIOCGLIFFLAGS, (caddr_t)&lifr) < 0) {
         fatal(ERR_UP_IP6, "SIOCGLIFFLAGS error %d: bringing up %s: %s\n",
             errno, ifname, strerror(errno));

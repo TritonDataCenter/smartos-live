@@ -177,11 +177,25 @@ C_CHECK_TARGETS=\
 EXPAT_OBJDIR =	node-expat/build/Release
 EXPAT.NODE =	$(EXPAT_OBJDIR)/node-expat.node
 
-$(EXPAT.NODE) :	WARN_FLAGS +=	-Wno-unused
+$(EXPAT.NODE) :	NODE_WARN_FLAGS += -Wno-unused
 $(EXPAT.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
 $(EXPAT.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
 $(EXPAT.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 $(EXPAT.NODE) :	LIBS +=		-lexpat
+
+#
+# The libuuid Node add-on follows the same pattern as EXPAT.NODE.
+#
+UUID_OBJDIR =	node-libuuid/build/Release
+UUID_SRCDIR =	node-libuuid/src
+UUID.NODE =	$(UUID_OBJDIR)/uuid.node
+
+$(UUID.NODE) :	NODE_WARN_FLAGS += -Wno-unused -Wno-write-strings
+$(UUID.NODE) :	NODE_WARN_FLAGS += -Wno-sign-compare
+$(UUID.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
+$(UUID.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
+$(UUID.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
+$(UUID.NODE) :	LIBS +=		-luuid
 
 #
 # The kstat Node add-on follows the same pattern as EXPAT.NODE.
@@ -189,7 +203,9 @@ $(EXPAT.NODE) :	LIBS +=		-lexpat
 KSTAT_OBJDIR =	node-kstat/build/Release
 KSTAT.NODE =	$(KSTAT_OBJDIR)/kstat.node
 
-$(KSTAT.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-write-strings -Wno-sign-compare
+$(KSTAT.NODE) :	NODE_WARN_FLAGS += -Wno-unused -Wno-write-strings
+$(KSTAT.NODE) :	NODE_WARN_FLAGS += -Wno-sign-compare
+$(KSTAT.NODE) :	NODE_WARN_FLAGS += -Wno-format-truncation
 $(KSTAT.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
 $(KSTAT.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
 $(KSTAT.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
@@ -200,10 +216,11 @@ $(KSTAT.NODE) :	LIBS +=		-lkstat
 # system of Makefiles.
 #
 V8PLUS_SUBDIR_ENV = \
-			CC=$(GCC) \
-			CXX=$(GXX) \
+			CC="$(GCC) -m32" \
+			CXX="$(GXX) -m32" \
 			PREFIX_NODE=$(PREFIX_NODE) \
 			NODE_EXEC=$(NODE_EXEC) \
+			WARN_FLAGS="$(NODE_WARN_FLAGS)" \
 			OPT_FLAGS="$(OPT_FLAGS)" \
 			CTFCONVERT=$(CTFCONVERT) \
 			CTFMERGE=$(CTFMERGE)
@@ -212,65 +229,38 @@ LOCKFD_BINDING.NODE =		node-lockfd/lib/lockfd_binding.node
 LOCKFD_SRC_DIR =		node-lockfd/src
 LOCKFD_V8PLUS_DIR =		node-lockfd/node_modules/v8plus
 
+$(LOCKFD_BINDING.NODE) : NODE_WARN_FLAGS += -Wno-format
+$(LOCKFD_BINDING.NODE) : NODE_WARN_FLAGS += -Wno-unused-parameter
+
 ZONENAME_BINDING.NODE =		node-zonename/lib/zonename_binding.node
 ZONENAME_SRC_DIR =		node-zonename/src
 ZONENAME_V8PLUS_DIR =		node-zonename/node_modules/v8plus
 
-#
-# The dtrace-provider add-on uses a combination of C, assembly and C++ files in
-# multiple directories.
-#
-DTRACE_PROVIDER_OBJDIR =	node-dtrace-provider/build/Release
+$(ZONENAME_BINDING.NODE) : NODE_WARN_FLAGS += -Wno-format
+
 DTRACE_PROVIDER_SRCDIR =	node-dtrace-provider
+DTRACE_PROVIDER_OBJDIR =	$(DTRACE_PROVIDER_SRCDIR)/src/build/Release
 DTRACE_PROVIDER.NODE =		$(DTRACE_PROVIDER_OBJDIR)/DTraceProviderBindings.node
 
-DTRACE_PROVIDER_SRCS += \
-			dtrace_argument.cc \
-			dtrace_probe.cc \
-			dtrace_provider.cc
+NODE_SUBDIR_ENV = \
+			V=1 \
+			NODE_DTRACE_PROVIDER_REQUIRE=hard \
+			CC="$(GCC)" \
+			CXX="$(GXX)" \
+			CPPFLAGS="$(NODE_CPPFLAGS)" \
+			CFLAGS="$(NODE_CFLAGS)" \
+			CXXFLAGS="$(NODE_CXXFLAGS)" \
+			LDFLAGS="$(NODE_LDFLAGS)"
 
-DTRACE_PROVIDER_LIBUSDT_SRCS += \
-			libusdt/usdt.c \
-			libusdt/usdt_dof_file.c \
-			libusdt/usdt_probe.c \
-			libusdt/usdt_dof.c \
-			libusdt/usdt_dof_sections.c
+$(DTRACE_PROVIDER.NODE) : NODE_WARN_FLAGS += -Wno-sign-compare
+$(DTRACE_PROVIDER.NODE) : NODE_WARN_FLAGS += -Wno-unused-parameter
 
-DTRACE_PROVIDER_LIBUSDT_ASM_SRCS += \
-			libusdt/usdt_tracepoints_i386.s
+$(DTRACE_PROVIDER.NODE) :
+	cd $(DTRACE_PROVIDER_SRCDIR) && $(NODE_SUBDIR_ENV) $(NPM_EXEC) install
 
-DTRACE_PROVIDER_HDRS += \
-			node-dtrace-provider/dtrace_provider.h \
-			node-dtrace-provider/libusdt/usdt_internal.h \
-			node-dtrace-provider/libusdt/usdt.h
-
-DTRACE_PROVIDER_OBJS += \
-			$(DTRACE_PROVIDER_SRCS:%.cc=$(DTRACE_PROVIDER_OBJDIR)/%.o) \
-			$(DTRACE_PROVIDER_LIBUSDT_SRCS:%.c=$(DTRACE_PROVIDER_OBJDIR)/%.o) \
-			$(DTRACE_PROVIDER_LIBUSDT_ASM_SRCS:%.s=$(DTRACE_PROVIDER_OBJDIR)/%.o)
-
-$(DTRACE_PROVIDER.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-sign-compare
-$(DTRACE_PROVIDER.NODE) :	CFLAGS +=	$(NODE_CFLAGS)
-$(DTRACE_PROVIDER.NODE) :	CPPFLAGS +=	\
-					$(NODE_CPPFLAGS) \
-					-Inode-dtrace-provider/libusdt
-$(DTRACE_PROVIDER.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
-$(DTRACE_PROVIDER.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
-
-CLEANFILES +=	$(DTRACE_PROVIDER.NODE) $(DTRACE_PROVIDER_OBJS)
-
-#
-# The libuuid Node add-on follows the same pattern as EXPAT.NODE.
-#
-UUID_OBJDIR =	node-libuuid/build/Release
-UUID_SRCDIR =	node-libuuid/src
-UUID.NODE =	$(UUID_OBJDIR)/uuid.node
-
-$(UUID.NODE) :	WARN_FLAGS +=	-Wno-unused -Wno-write-strings -Wno-sign-compare
-$(UUID.NODE) :	CPPFLAGS +=	$(NODE_CPPFLAGS)
-$(UUID.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
-$(UUID.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
-$(UUID.NODE) :	LIBS +=		-luuid
+CLEANFILES += $(DTRACE_PROVIDER_SRCDIR)/build
+CLEANFILES += $(DTRACE_PROVIDER_SRCDIR)/node_modules
+CLEANFILES += $(DTRACE_PROVIDER_SRCDIR)/src/build
 
 #
 # Rules for building the nomknod related shared object.
@@ -283,8 +273,8 @@ NOMKNOD_64 =		$(NOMKNOD_SO).64
 NOMKNOD_FLAGS =		-nostdlib $(PIC_FLAGS) $(SHARED_FLAGS) \
 			-Wno-unused-parameter
 
-$(NOMKNOD_32) :		CFLAGS += -m32 $(NOMKNOD_FLAGS)
-$(NOMKNOD_64) :		CFLAGS += -m64 $(NOMKNOD_FLAGS)
+$(NOMKNOD_32) :		CFLAGS += $(NOMKNOD_FLAGS)
+$(NOMKNOD_64) :		CFLAGS += $(NOMKNOD_FLAGS)
 NOMKNOD_TARGS =		$(NOMKNOD_32) $(NOMKNOD_64)
 NOMKNOD_ROOT =		$(DESTDIR)/usr/img/lib
 NOMKNOD_ROOT64 =	$(DESTDIR)/usr/img/lib/amd64
@@ -317,7 +307,6 @@ BUILT_TARGETS = \
 	$(LOCKFD_BINDING.NODE) \
 	$(ZONENAME_BINDING.NODE) \
 	$(NOMKNOD_TARGS) \
-	$(SYSLOG.NODE) \
 	$(UUID.NODE)
 
 TARGETS = $(BUILT_TARGETS) \
@@ -423,7 +412,8 @@ install: all $(SUBDIRS)
 	cp vm/runtests $(DESTDIR)/usr/vm/test/
 	cp $(EXPAT.NODE) $(PREFIX_NODE)/node_modules/expat_binding.node
 	cp $(UUID.NODE) $(PREFIX_NODE)/node_modules/uuid.node
-	cp $(DTRACE_PROVIDER.NODE) $(PREFIX_NODE)/node_modules/DTraceProviderBindings.node
+	mkdir -p $(PREFIX_NODE)/node_modules/src/build/Release
+	cp $(DTRACE_PROVIDER.NODE) $(PREFIX_NODE)/node_modules/src/build/Release/DTraceProviderBindings.node
 	cp node-dtrace-provider/dtrace-provider.js $(PREFIX_NODE)/node_modules/dtrace-provider.js
 	sed -e "s|var expat.*;|var expat = require('./expat_binding');|" \
 	    < node-expat/lib/node-expat.js \
@@ -575,7 +565,7 @@ vm/node_modules/props.js: vm/node_modules/proptable.js vm/node_modules/expander.
 #
 $(EXPAT.NODE): node-expat/node-expat.cc
 	@mkdir -p $(@D)
-	$(LINK.cc) $^ $(LIBS)
+	$(LINK32.cc) $^ $(LIBS)
 
 #
 # node-lockfd and node-zonename are built using the v8plus-based Makefile
@@ -583,6 +573,7 @@ $(EXPAT.NODE): node-expat/node-expat.cc
 # linker to include libc, which gcc as configured in proto.strap does not, but
 # which other C compilers generally do.
 #
+
 $(LOCKFD_BINDING.NODE): FRC
 	cd $(LOCKFD_SRC_DIR) && \
 	LD_OPTIONS=-lc \
@@ -597,40 +588,18 @@ $(ZONENAME_BINDING.NODE): FRC
 		$(V8PLUS_SUBDIR_ENV) \
 		V8PLUS=$(BASE)/$(ZONENAME_V8PLUS_DIR)
 
-#
-# The next two are used to build libusdt files into
-# $(DTRACE_PROVIDER_OBJDIR)/libusdt/*.o, instead of building libusdt.a
-#
-$(DTRACE_PROVIDER_OBJDIR)/%.o: $(DTRACE_PROVIDER_SRCDIR)/%.c \
-	    $(DTRACE_PROVIDER_HDRS)
-	@mkdir -p $(@D)
-	$(COMPILE.c) $<
-
-$(DTRACE_PROVIDER_OBJDIR)/%.o: $(DTRACE_PROVIDER_SRCDIR)/%.s
-	@mkdir -p $(@D)
-	$(COMPILE.c) $^
-
-$(DTRACE_PROVIDER_OBJDIR)/%.o: $(DTRACE_PROVIDER_SRCDIR)/%.cc \
-	    $(DTRACE_PROVIDER_HDRS)
-	@mkdir -p $(@D)
-	$(COMPILE.cc) $<
-
-$(DTRACE_PROVIDER.NODE): $(DTRACE_PROVIDER_OBJS)
-	@mkdir -p $(@D)
-	$(LINK.cc) $^ $(LIBS)
-
 $(KSTAT.NODE): node-kstat/kstat.cc
 	@mkdir -p $(@D)
-	$(LINK.cc) $^ $(LIBS)
+	$(LINK32.cc) $^ $(LIBS)
 
 $(UUID.NODE): $(UUID_SRCDIR)/uuid.cc
 	@mkdir -p $(@D)
-	$(LINK.cc) $^ $(LIBS)
+	$(LINK32.cc) $^ $(LIBS)
 
 $(NOMKNOD_32):	$(NOMKNOD_SRC)
-	$(LINK.c) $^
+	$(LINK32.c) $^
 
 $(NOMKNOD_64):	$(NOMKNOD_SRC)
-	$(LINK.c) $^
+	$(LINK64.c) $^
 
 FRC:

@@ -1,5 +1,5 @@
 // expected output:
-//
+// 
 // $ sudo dtrace -Zn 'nodeapp*:::gcprobe{ trace(arg0); }' -c 'node --expose_gc test/gc.js'
 // Dtrace: description 'nodeapp*:::gcprobe' matched 0 probes
 // dtrace: pid 66257 has exited

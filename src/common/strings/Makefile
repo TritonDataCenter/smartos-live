@@ -10,7 +10,7 @@
 #
 
 #
-# Copyright (c) 2019, Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 #
@@ -27,7 +27,7 @@ include $(BASE)/Makefile.defs
 .SUFFIXES:
 .SECONDARY:
 
-CFLAGS +=	$(DEBUG_FLAGS) -m32 -Wno-unused-parameter -I.
+CFLAGS +=	$(DEBUG_FLAGS) -Wno-unused-parameter -I.
 
 TEST_PROGRAMS = \
 		test0 \
@@ -65,11 +65,11 @@ test: all $(TEST_PROGRAMS:%=%.runtest)
 
 test%: test%.o $(OBJS) tests/force_umem_debug.c
 	@mkdir -p $(@D)
-	$(LINK.c) $^ $(LIBS)
+	$(LINK32.c) $^ $(LIBS)
 	$(CTFCONVERT) -l $(BUILDSTAMP) $@
 
 test%.o: tests/test%.c
 	@mkdir -p $(@D)
-	$(COMPILE.c) $^
+	$(COMPILE32.c) $^
 
 include $(BASE)/Makefile.targ

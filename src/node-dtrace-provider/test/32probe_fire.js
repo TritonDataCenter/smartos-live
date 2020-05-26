@@ -16,6 +16,6 @@ var args = [];
 for (var n = 1; n <= 32; n++) {
     args.push(n);
     probe.fire(function(p) {
-	return args;
+        return args;
     });
 }

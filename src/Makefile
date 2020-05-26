@@ -257,7 +257,8 @@ $(DTRACE_PROVIDER_SRCDIR): NODE_WARN_FLAGS += -Wno-sign-compare
 $(DTRACE_PROVIDER_SRCDIR): NODE_WARN_FLAGS += -Wno-unused-parameter
 
 $(DTRACE_PROVIDER_SRCDIR):
-	cd $(DTRACE_PROVIDER_SRCDIR) && $(NODE_SUBDIR_ENV) $(NPM_EXEC) install --production
+	cd $(DTRACE_PROVIDER_SRCDIR) && $(NODE_SUBDIR_ENV) $(NPM_EXEC) install \
+	    --production --unsafe-perm
 
 CLEANFILES += $(DTRACE_PROVIDER_SRCDIR)/build
 CLEANFILES += $(DTRACE_PROVIDER_SRCDIR)/node_modules
@@ -267,7 +268,8 @@ QLOCKER_SRCDIR =		node-qlocker
 QLOCKER_DESTDIR =		$(NODE_DESTDIR)/node-qlocker
 
 $(QLOCKER_SRCDIR):
-	cd $(QLOCKER_SRCDIR) && $(NODE_SUBDIR_ENV) $(NPM_EXEC) install --production
+	cd $(QLOCKER_SRCDIR) && $(NODE_SUBDIR_ENV) $(NPM_EXEC) install \
+	    --production --unsafe-perm
 
 CLEANFILES += node-qlocker/node_modules
 

@@ -215,8 +215,8 @@ $(KSTAT.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 $(KSTAT.NODE) :	LIBS +=		-lkstat
 
 #
-# The lockfd and zonename Node add-on are based on v8plus, which has its own
-# system of Makefiles.
+# The zonename Node add-on is based on v8plus, which has its own system of
+# Makefiles.
 #
 V8PLUS_SUBDIR_ENV = \
 			CC="$(GCC) -m32" \
@@ -227,13 +227,6 @@ V8PLUS_SUBDIR_ENV = \
 			OPT_FLAGS="$(OPT_FLAGS)" \
 			CTFCONVERT=$(CTFCONVERT) \
 			CTFMERGE=$(CTFMERGE)
-
-LOCKFD_BINDING.NODE =		node-lockfd/lib/lockfd_binding.node
-LOCKFD_SRC_DIR =		node-lockfd/src
-LOCKFD_V8PLUS_DIR =		node-lockfd/node_modules/v8plus
-
-$(LOCKFD_BINDING.NODE) : NODE_WARN_FLAGS += -Wno-format
-$(LOCKFD_BINDING.NODE) : NODE_WARN_FLAGS += -Wno-unused-parameter
 
 ZONENAME_BINDING.NODE =		node-zonename/lib/zonename_binding.node
 ZONENAME_SRC_DIR =		node-zonename/src
@@ -314,7 +307,6 @@ BUILT_TARGETS = \
 	zonemon \
 	$(EXPAT.NODE) \
 	$(KSTAT.NODE) \
-	$(LOCKFD_BINDING.NODE) \
 	$(ZONENAME_BINDING.NODE) \
 	$(NOMKNOD_TARGS) \
 	$(UUID.NODE)
@@ -437,8 +429,6 @@ install: all $(SUBDIRS)
 	cp $(KSTAT.NODE) $(NODE_DESTDIR)/
 	cp $(EXPAT.NODE) $(NODE_DESTDIR)/expat_binding.node
 	cp $(UUID.NODE) $(NODE_DESTDIR)/uuid.node
-	cp node-lockfd/lib/index.js $(NODE_DESTDIR)/lockfd.js
-	cp $(LOCKFD_BINDING.NODE) $(NODE_DESTDIR)/lockfd_binding.node
 	cp node-zonename/lib/index.js $(NODE_DESTDIR)/zonename.js
 	cp $(ZONENAME_BINDING.NODE) $(NODE_DESTDIR)/zonename_binding.node
 	mkdir -p $(NODE_DESTDIR)/src/build/Release
@@ -588,7 +578,6 @@ $(JSLINT):
 
 clean: $(SUBDIRS)
 	-rm -f $(CLEANFILES) *.o
-	cd $(LOCKFD_SRC_DIR) && $(MAKE) clean
 	cd $(ZONENAME_SRC_DIR) && $(MAKE) clean
 
 include Makefile.targ
@@ -610,18 +599,11 @@ $(EXPAT.NODE): node-expat/node-expat.cc
 	$(LINK32.cc) $^ $(LIBS)
 
 #
-# node-lockfd and node-zonename are built using the v8plus-based Makefile
-# contained within their projects.  We use LD_OPTIONS, here, to induce the
-# linker to include libc, which gcc as configured in proto.strap does not, but
-# which other C compilers generally do.
+# node-zonename is built using the v8plus-based Makefile contained within their
+# projects.  We use LD_OPTIONS, here, to induce the linker to include libc,
+# which gcc as configured in proto.strap does not, but which other C compilers
+# generally do.
 #
-
-$(LOCKFD_BINDING.NODE): FRC
-	cd $(LOCKFD_SRC_DIR) && \
-	LD_OPTIONS=-lc \
-	$(MAKE) \
-		$(V8PLUS_SUBDIR_ENV) \
-		V8PLUS=$(BASE)/$(LOCKFD_V8PLUS_DIR)
 
 $(ZONENAME_BINDING.NODE): FRC
 	cd $(ZONENAME_SRC_DIR) && \

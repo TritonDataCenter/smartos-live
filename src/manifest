@@ -512,7 +512,6 @@ d usr/vm/node_modules/jsprim/lib 0755 root root
 f usr/vm/node_modules/jsprim/lib/jsprim.js 0644 root root
 f usr/vm/node_modules/jsprim/LICENSE 0644 root root
 f usr/vm/node_modules/jsprim/package.json 0644 root root
-f usr/vm/node_modules/locker.js 0444 root bin
 f usr/vm/node_modules/nic.js 0444 root bin
 d usr/vm/node_modules/macaddr/ 0755 root root
 d usr/vm/node_modules/macaddr/lib 0755 root root
@@ -879,8 +878,6 @@ f usr/fw/node_modules/fuzzyset.js/index.js 0444 root bin
 f usr/fw/node_modules/ip6addr.js 0444 root bin
 f usr/fw/node_modules/dtrace-provider.js 0444 root bin
 f usr/fw/node_modules/DTraceProviderBindings.node 0444 root bin
-h usr/fw/node_modules/lockfd.js=usr/node/0.10/node_modules/lockfd.js
-h usr/fw/node_modules/lockfd_binding.node=usr/node/0.10/node_modules/lockfd_binding.node
 f usr/fw/node_modules/fwrule/index.js 0444 root bin
 f usr/fw/node_modules/fwrule/parser.js 0444 root bin
 f usr/fw/node_modules/fwrule/rule.js 0444 root bin
@@ -1136,8 +1133,6 @@ f usr/node/0.10/node_modules/disklayout.js 0444 root bin
 f usr/node/0.10/node_modules/dtrace-provider.js 0444 root bin
 f usr/node/0.10/node_modules/getopt.js 0444 root bin
 f usr/node/0.10/node_modules/kstat.node 0444 root bin
-f usr/node/0.10/node_modules/lockfd.js 0444 root bin
-f usr/node/0.10/node_modules/lockfd_binding.node 0444 root bin
 f usr/node/0.10/node_modules/net-boot-config.js 0444 root bin
 f usr/node/0.10/node_modules/onlyif.js 0444 root bin
 f usr/node/0.10/node_modules/linestream.js 0444 root bin

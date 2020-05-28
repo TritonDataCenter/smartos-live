@@ -256,6 +256,7 @@ function bi_copy_files
 		#bi_emit_newline
 		#printf 'Builder failures:\n' >&2
 		#/usr/bin/grep 'FAILED$' "$builder_log" >&2
+		cat $builder_log
 		bi_extra=$(/usr/bin/grep 'FAILED$' "$builder_log")
 		fail "\"builder\" failed to copy from proto area to image"
 	fi

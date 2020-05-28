@@ -1144,8 +1144,12 @@ f usr/node/0.10/node_modules/src/build/Release/DTraceProviderBindings.node 0444 
 f usr/node/0.10/node_modules/system.js 0444 root bin
 f usr/node/0.10/node_modules/uuid.node 0444 root bin
 f usr/node/0.10/node_modules/zfs.js 0444 root bin
-f usr/node/0.10/node_modules/zonename.js 0444 root bin
-f usr/node/0.10/node_modules/zonename_binding.node 0444 root bin
+d usr/node/0.10/node_modules/node-zonename 0755 root bin
+f usr/node/0.10/node_modules/node-zonename/index.js 0444 root bin
+f usr/node/0.10/node_modules/node-zonename/package.json 0444 root bin
+d usr/node/0.10/node_modules/node-zonename/build 0755 root bin
+d usr/node/0.10/node_modules/node-zonename/build/Release 0755 root bin
+f usr/node/0.10/node_modules/node-zonename/build/Release/zonename.node 0444 root bin
 f var/log/syslog 0644 root root
 d var/log 0755 root sys
 d var/log/sdc 0755 root sys

@@ -214,26 +214,6 @@ $(KSTAT.NODE) :	CXXFLAGS +=	$(NODE_CXXFLAGS)
 $(KSTAT.NODE) :	LDFLAGS +=	$(NODE_LDFLAGS)
 $(KSTAT.NODE) :	LIBS +=		-lkstat
 
-#
-# The zonename Node add-on is based on v8plus, which has its own system of
-# Makefiles.
-#
-V8PLUS_SUBDIR_ENV = \
-			CC="$(GCC) -m32" \
-			CXX="$(GXX) -m32" \
-			PREFIX_NODE=$(PREFIX_NODE) \
-			NODE_EXEC=$(NODE_EXEC) \
-			WARN_FLAGS="$(NODE_WARN_FLAGS)" \
-			OPT_FLAGS="$(OPT_FLAGS)" \
-			CTFCONVERT=$(CTFCONVERT) \
-			CTFMERGE=$(CTFMERGE)
-
-ZONENAME_BINDING.NODE =		node-zonename/lib/zonename_binding.node
-ZONENAME_SRC_DIR =		node-zonename/src
-ZONENAME_V8PLUS_DIR =		node-zonename/node_modules/v8plus
-
-$(ZONENAME_BINDING.NODE) : NODE_WARN_FLAGS += -Wno-format
-
 NODE_SUBDIR_ENV = \
 			V=1 \
 			NODE_DTRACE_PROVIDER_REQUIRE=hard \
@@ -265,6 +245,16 @@ $(QLOCKER_SRCDIR):
 	    --production --unsafe-perm
 
 CLEANFILES += node-qlocker/node_modules
+
+ZONENAME_SRCDIR =		node-zonename
+ZONENAME_DESTDIR =		$(NODE_DESTDIR)/node-zonename
+
+$(ZONENAME_SRCDIR):
+	cd $(ZONENAME_SRCDIR) && $(NODE_SUBDIR_ENV) $(NPM_EXEC) install \
+	    --production --unsafe-perm
+
+CLEANFILES += node-zonename/build
+CLEANFILES += node-zonename/node_modules
 
 #
 # Rules for building the nomknod related shared object.
@@ -307,12 +297,12 @@ BUILT_TARGETS = \
 	zonemon \
 	$(EXPAT.NODE) \
 	$(KSTAT.NODE) \
-	$(ZONENAME_BINDING.NODE) \
 	$(NOMKNOD_TARGS) \
 	$(UUID.NODE)
 
 NPM_TARGETS = \
 	$(DTRACE_PROVIDER_SRCDIR) \
+	$(ZONENAME_SRCDIR) \
 	$(QLOCKER_SRCDIR)
 
 .PHONY: $(NPM_TARGETS)
@@ -429,8 +419,11 @@ install: all $(SUBDIRS)
 	cp $(KSTAT.NODE) $(NODE_DESTDIR)/
 	cp $(EXPAT.NODE) $(NODE_DESTDIR)/expat_binding.node
 	cp $(UUID.NODE) $(NODE_DESTDIR)/uuid.node
-	cp node-zonename/lib/index.js $(NODE_DESTDIR)/zonename.js
-	cp $(ZONENAME_BINDING.NODE) $(NODE_DESTDIR)/zonename_binding.node
+	mkdir -p $(ZONENAME_DESTDIR)/build/Release
+	cp $(ZONENAME_SRCDIR)/build/Release/zonename.node \
+	    $(ZONENAME_DESTDIR)/build/Release
+	cp $(ZONENAME_SRCDIR)/index.js $(ZONENAME_SRCDIR)/package.json \
+	    $(ZONENAME_DESTDIR)/
 	mkdir -p $(NODE_DESTDIR)/src/build/Release
 	cp $(DTRACE_PROVIDER_SRCDIR)/src/build/Release/DTraceProviderBindings.node \
 	    $(NODE_DESTDIR)/src/build/Release/DTraceProviderBindings.node
@@ -578,7 +571,6 @@ $(JSLINT):
 
 clean: $(SUBDIRS)
 	-rm -f $(CLEANFILES) *.o
-	cd $(ZONENAME_SRC_DIR) && $(MAKE) clean
 
 include Makefile.targ
 
@@ -597,20 +589,6 @@ vm/node_modules/props.js: vm/node_modules/proptable.js vm/node_modules/expander.
 $(EXPAT.NODE): node-expat/node-expat.cc
 	@mkdir -p $(@D)
 	$(LINK32.cc) $^ $(LIBS)
-
-#
-# node-zonename is built using the v8plus-based Makefile contained within their
-# projects.  We use LD_OPTIONS, here, to induce the linker to include libc,
-# which gcc as configured in proto.strap does not, but which other C compilers
-# generally do.
-#
-
-$(ZONENAME_BINDING.NODE): FRC
-	cd $(ZONENAME_SRC_DIR) && \
-	LD_OPTIONS=-lc \
-	$(MAKE) \
-		$(V8PLUS_SUBDIR_ENV) \
-		V8PLUS=$(BASE)/$(ZONENAME_V8PLUS_DIR)
 
 $(KSTAT.NODE): node-kstat/kstat.cc
 	@mkdir -p $(@D)

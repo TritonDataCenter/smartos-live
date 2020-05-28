@@ -7,7 +7,7 @@ Usage
 -----
 
 ``` js
-var zone = require('zonename');
+var zone = require('node-zonename');
 ```
 
 ### `zone.getzoneid()`
@@ -30,7 +30,7 @@ Example
 -------
 
 ``` js
-var zone = require('zonename');
+var zone = require('node-zonename');
 
 zone.getzonename();
 // => "global"

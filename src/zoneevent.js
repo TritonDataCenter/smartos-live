@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2018, Joyent, Inc.
+ * Copyright 2020 Joyent, Inc.
  *
  */
 
@@ -34,7 +34,7 @@ var f = require('util').format;
 var bunyan = require('/usr/node/node_modules/bunyan');
 var getopt = require('/usr/node/node_modules/getopt');
 var ZoneEvent = require('/usr/vm/node_modules/zoneevent').ZoneEvent;
-var zone = require('/usr/node/node_modules/zonename');
+var zone = require('/usr/node/node_modules/node-zonename');
 
 // ms to wait before retrying VM.events
 var TRY_TIMEOUT = 1000;

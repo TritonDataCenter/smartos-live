@@ -238,23 +238,23 @@ CLEANFILES += $(DTRACE_PROVIDER_SRCDIR)/node_modules
 CLEANFILES += $(DTRACE_PROVIDER_SRCDIR)/src/build
 
 QLOCKER_SRCDIR =		node-qlocker
-QLOCKER_DESTDIR =		$(NODE_DESTDIR)/node-qlocker
+QLOCKER_DESTDIR =		$(NODE_DESTDIR)/qlocker
 
 $(QLOCKER_SRCDIR):
 	cd $(QLOCKER_SRCDIR) && $(NODE_SUBDIR_ENV) $(NPM_EXEC) install \
 	    --production --unsafe-perm
 
-CLEANFILES += node-qlocker/node_modules
+CLEANFILES += $(QLOCKER_SRCDIR)/node_modules
 
 ZONENAME_SRCDIR =		node-zonename
-ZONENAME_DESTDIR =		$(NODE_DESTDIR)/node-zonename
+ZONENAME_DESTDIR =		$(NODE_DESTDIR)/zonename
 
 $(ZONENAME_SRCDIR):
 	cd $(ZONENAME_SRCDIR) && $(NODE_SUBDIR_ENV) $(NPM_EXEC) install \
 	    --production --unsafe-perm
 
-CLEANFILES += node-zonename/build
-CLEANFILES += node-zonename/node_modules
+CLEANFILES += $(ZONENAME_SRCDIR)/build
+CLEANFILES += $(ZONENAME_SRCDIR)/node_modules
 
 #
 # Rules for building the nomknod related shared object.

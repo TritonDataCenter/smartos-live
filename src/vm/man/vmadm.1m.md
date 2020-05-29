@@ -2220,7 +2220,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         mechanism to limit the number of filesystems that can be created from
         within the zone. The root user in the GZ is immune to this limit.
 
-        type: integer (0+, set to '' or undefined to unset)
+        type: integer (0+, set to '', null, or undefined to unset)
         vmtype: OS
         listable: no
         create: yes
@@ -2295,7 +2295,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         mechanism to limit the number of snapshots that can be taken from within
         the zone. The root user in the GZ is immune to this limit.
 
-        type: integer (0+, set to '' or undefined to unset)
+        type: integer (0+, set to '', null, or undefined to unset)
         vmtype: OS
         listable: no
         create: yes

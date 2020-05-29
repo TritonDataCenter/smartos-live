@@ -16,7 +16,7 @@ VM.loglevel = 'DEBUG';
 var image_uuid = vmtest.CURRENT_SMARTOS_UUID;
 var trim = utils.trim;
 
-test('test create vm with snapshot limits, disabled by NULL', function (t) {
+test('test create vm with snapshot limits, disabled by null', function (t) {
     var payload = {
         alias: 'test-zfs-limits-null-' + process.pid,
         autoboot: true,

@@ -390,6 +390,15 @@ tab-complete UUIDs rather than having to type them out for every command.
         JSON object on stdin (though it will refuse to work if stdin is a tty),
         or pass property=value arguments on the command line.
 
+	NOTE that property=value arguments may behave differently than JSON
+	objects. For example, using 'zfs_snapshot_limit=null' will fail, but
+	a JSON object of:
+
+          {"zfs_snapshot_limit": null}
+
+	will work.
+
+
         If you pass in a JSON object, that object should be formatted in the
         same manner as a create payload. The only exception is with fields
         that are themselves objects: VM NICs, KVM VM disks, customer_metadata,

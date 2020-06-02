@@ -467,7 +467,6 @@ d usr/node/0.10/node_modules/qlocker 0444 root bin
 f usr/node/0.10/node_modules/qlocker/index.js 0444 root bin
 d usr/node/0.10/node_modules/qlocker/lib 0444 root bin
 f usr/node/0.10/node_modules/qlocker/lib/qlocker.js 0444 root bin
-d usr/node/0.10/node_modules/qlocker/node_modules 0555 root bin
 d usr/node/0.10/node_modules/fs-ext 0555 root bin
 d usr/node/0.10/node_modules/fs-ext/build 0555 root bin
 d usr/node/0.10/node_modules/fs-ext/build/Release 0555 root bin

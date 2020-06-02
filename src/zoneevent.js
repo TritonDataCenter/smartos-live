@@ -21,7 +21,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright 2020 Joyent, Inc.
+ * Copyright (c) 2018, Joyent, Inc.
  *
  */
 

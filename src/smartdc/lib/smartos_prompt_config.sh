@@ -1047,7 +1047,7 @@ copy_installmedia()
 	fi
 
 	# Move it all over!
-	tar -cf - -C /mnt . | tar -xf - -C /zones/boot
+	tar -cf - -C /mnt . | tar -xf - -C /${SYS_ZPOOL}/boot
 	if [[ $? != 0 ]]; then
 		fatal "Cannot move install media bits to bootable disk"
 	fi
@@ -1059,9 +1059,9 @@ copy_installmedia()
 	fi
 
 	# Extract the PI stamp for the platform and symlinks.
-	pistamp=`cat /zones/boot/platform/etc/version/platform`
-	mv /zones/boot/platform /zones/boot/platform-${pistamp}
-	ln -s ./platform-${pistamp} /zones/boot/platform
+	pistamp=`cat /${SYS_ZPOOL}/boot/platform/etc/version/platform`
+	mv /${SYS_ZPOOL}/boot/platform /${SYS_ZPOOL}/boot/platform-${pistamp}
+	ln -s ./platform-${pistamp} /${SYS_ZPOOL}/boot/platform
 }
 
 trap "" SIGINT
@@ -1440,15 +1440,17 @@ if [ $ondisk == "yes" ]; then
 	# - Assumes `zpool create -B` has s0 == ESP, s1 == data-for-SYS_ZPOOL
 	for a in \
 	`zpool list -v ${SYS_ZPOOL} | egrep 'c[0-9]+' | awk '{print $1}'`; do
-	    installboot -m -b /zones/boot/boot /zones/boot/boot/pmbr \
-	    /zones/boot/boot/gptzfsboot /dev/rdsk/${a}s1 2>&1 > /dev/null || \
+	    installboot -m -b /${SYS_ZPOOL}/boot/boot \
+	    /${SYS_ZPOOL}/boot/boot/pmbr \
+	    /${SYS_ZPOOL}/boot/boot/gptzfsboot \
+	    /dev/rdsk/${a}s1 2>&1 > /dev/null || \
 		fatal "Can't install boot sector and/or UEFI loader, $a."
 	done
 
-	# Append 'fstype="ufs"' to /zones/boot/boot/loader.conf for
+	# Append 'fstype="ufs"' to /${SYS_ZPOOL}/boot/boot/loader.conf for
 	# ramdisk root.
-	echo 'fstype="ufs"' >> /zones/boot/boot/loader.conf || \
-	    fatal "Can't append to /zones/boot/boot/loader.conf"
+	echo 'fstype="ufs"' >> /${SYS_ZPOOL}/boot/boot/loader.conf || \
+	    fatal "Can't append to /${SYS_ZPOOL}/boot/boot/loader.conf"
 
 	printf "%4s\n" done
     fi

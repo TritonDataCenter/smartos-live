@@ -317,7 +317,7 @@ function generate_env
 	# installing non-Illumos things there, we always use the -i option, and
 	# ILLUMOS_CLOBBER is handled separately in Makefile.
 	#
-	local nopts="-CimMNnt"
+	local nopts="-CiLmMNnt"
 	local lprefix
 
 	case $ILLUMOS_ENABLE_DEBUG in

@@ -1,4 +1,0 @@
-src/*.o
-src/v8plus_errno.[ch]
-lib/*.node
-src/mapfile_node

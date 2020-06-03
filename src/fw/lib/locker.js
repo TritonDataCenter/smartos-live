@@ -21,14 +21,13 @@
  * CDDL HEADER END
  *
  *
- * Copyright 2016, Joyent, Inc. All rights reserved.
- *
+ * Copyright 2020 Joyent, Inc.
  *
  * fwadm: functions for managing shared/exclusive locks
  */
 
 var fs = require('fs');
-var mod_lockfd = require('lockfd');
+var fsext = require('/usr/node/node_modules/fs-ext');
 
 // --- Globals
 
@@ -75,7 +74,7 @@ function acquireLock(operation, callback) {
             return;
         }
 
-        mod_lockfd.flock(fd, operation, function (err2) {
+        fsext.flock(fd, operation, function (err2) {
             if (err2) {
                 releaseLock(fd);
                 callback(err2);
@@ -92,18 +91,18 @@ function acquireLock(operation, callback) {
 
 
 function acquireSharedLock(callback) {
-    acquireLock(mod_lockfd.LOCK_SH, callback);
+    acquireLock('sh', callback);
 }
 
 
 function acquireExclusiveLock(callback) {
-    acquireLock(mod_lockfd.LOCK_EX, callback);
+    acquireLock('ex', callback);
 }
 
 
 function releaseLock(fd) {
     if (fd !== undefined) {
-        mod_lockfd.flockSync(fd, mod_lockfd.LOCK_UN);
+        fsext.flockSync(fd, 'un');
         fs.closeSync(fd);
     }
 }

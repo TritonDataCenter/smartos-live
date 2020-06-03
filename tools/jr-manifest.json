@@ -86,7 +86,19 @@
                 "release": true,
                 "mg": "platform"
             }
-        }
+        },
+	{
+	    "name": "libusdt"
+	},
+	{
+	    "name": "node-dtrace-provider"
+	},
+	{
+	    "name": "node-fs-ext"
+	},
+	{
+	    "name": "node-qlocker"
+	}
     ],
     "excludedRepositories": [
         "Cassandra-Operator",

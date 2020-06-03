@@ -52,7 +52,7 @@ var fs = require('fs');
 var genUuid = require('node-uuid');
 var imgapi = require('sdc-clients/lib/imgapi');
 var imgmanifest = require('imgmanifest');
-var lock = require('/usr/img/node_modules/locker').lock;
+var qlocker = require('/usr/node/node_modules/qlocker');
 var mkdirp = require('mkdirp');
 var once = require('once');
 var path = require('path');
@@ -2065,7 +2065,7 @@ IMGADM.prototype._lockAcquire = function _lockAcquire(opts, cb) {
             var lockPath = self._lockPathFromUuid(uuid);
             log.debug({uuid: uuid, lockPath: lockPath}, 'acquiring lock');
 
-            lock(lockPath, function (lockErr, unlockFn) {
+            qlocker.lock(lockPath, function (lockErr, unlockFn) {
                 if (acquireLogTimeout) {
                     clearTimeout(acquireLogTimeout);
                 }

@@ -280,7 +280,6 @@ d usr/img/node_modules/imgmanifest 0555 root bin
 d usr/img/node_modules/imgmanifest/lib 0555 root bin
 f usr/img/node_modules/imgmanifest/lib/imgmanifest.js 0444 root bin
 f usr/img/node_modules/imgmanifest/package.json 0444 root bin
-h usr/img/node_modules/locker.js=usr/vm/node_modules/locker.js
 d usr/img/node_modules/mkdirp 0555 root bin
 f usr/img/node_modules/mkdirp/index.js 0444 root bin
 f usr/img/node_modules/mkdirp/package.json 0444 root bin
@@ -464,6 +463,16 @@ f usr/vm/etc/vmadm.completion 0444 root bin
 f usr/node/0.10/node_modules/bunyan.js 0444 root bin
 f usr/node/0.10/node_modules/expat_binding.node 0444 root bin
 f usr/node/0.10/node_modules/node-expat.js 0444 root bin
+d usr/node/0.10/node_modules/qlocker 0444 root bin
+f usr/node/0.10/node_modules/qlocker/index.js 0444 root bin
+d usr/node/0.10/node_modules/qlocker/lib 0444 root bin
+f usr/node/0.10/node_modules/qlocker/lib/qlocker.js 0444 root bin
+d usr/node/0.10/node_modules/fs-ext 0555 root bin
+d usr/node/0.10/node_modules/fs-ext/build 0555 root bin
+d usr/node/0.10/node_modules/fs-ext/build/Release 0555 root bin
+f usr/node/0.10/node_modules/fs-ext/build/Release/fs-ext.node 0555 root bin
+f usr/node/0.10/node_modules/fs-ext/fs-ext.js 0444 root bin
+f usr/node/0.10/node_modules/fs-ext/package.json 0444 root bin
 f usr/vm/node_modules/bunyan.js 0444 root bin
 f usr/vm/node_modules/diff.js 0644 root root
 f usr/vm/node_modules/dladm.js 0444 root bin
@@ -502,7 +511,6 @@ d usr/vm/node_modules/jsprim/lib 0755 root root
 f usr/vm/node_modules/jsprim/lib/jsprim.js 0644 root root
 f usr/vm/node_modules/jsprim/LICENSE 0644 root root
 f usr/vm/node_modules/jsprim/package.json 0644 root root
-f usr/vm/node_modules/locker.js 0444 root bin
 f usr/vm/node_modules/nic.js 0444 root bin
 d usr/vm/node_modules/macaddr/ 0755 root root
 d usr/vm/node_modules/macaddr/lib 0755 root root
@@ -869,8 +877,6 @@ f usr/fw/node_modules/fuzzyset.js/index.js 0444 root bin
 f usr/fw/node_modules/ip6addr.js 0444 root bin
 f usr/fw/node_modules/dtrace-provider.js 0444 root bin
 f usr/fw/node_modules/DTraceProviderBindings.node 0444 root bin
-h usr/fw/node_modules/lockfd.js=usr/node/0.10/node_modules/lockfd.js
-h usr/fw/node_modules/lockfd_binding.node=usr/node/0.10/node_modules/lockfd_binding.node
 f usr/fw/node_modules/fwrule/index.js 0444 root bin
 f usr/fw/node_modules/fwrule/parser.js 0444 root bin
 f usr/fw/node_modules/fwrule/rule.js 0444 root bin
@@ -1126,8 +1132,6 @@ f usr/node/0.10/node_modules/disklayout.js 0444 root bin
 f usr/node/0.10/node_modules/dtrace-provider.js 0444 root bin
 f usr/node/0.10/node_modules/getopt.js 0444 root bin
 f usr/node/0.10/node_modules/kstat.node 0444 root bin
-f usr/node/0.10/node_modules/lockfd.js 0444 root bin
-f usr/node/0.10/node_modules/lockfd_binding.node 0444 root bin
 f usr/node/0.10/node_modules/net-boot-config.js 0444 root bin
 f usr/node/0.10/node_modules/onlyif.js 0444 root bin
 f usr/node/0.10/node_modules/linestream.js 0444 root bin
@@ -1139,8 +1143,12 @@ f usr/node/0.10/node_modules/src/build/Release/DTraceProviderBindings.node 0444 
 f usr/node/0.10/node_modules/system.js 0444 root bin
 f usr/node/0.10/node_modules/uuid.node 0444 root bin
 f usr/node/0.10/node_modules/zfs.js 0444 root bin
-f usr/node/0.10/node_modules/zonename.js 0444 root bin
-f usr/node/0.10/node_modules/zonename_binding.node 0444 root bin
+d usr/node/0.10/node_modules/zonename 0755 root bin
+f usr/node/0.10/node_modules/zonename/index.js 0444 root bin
+f usr/node/0.10/node_modules/zonename/package.json 0444 root bin
+d usr/node/0.10/node_modules/zonename/build 0755 root bin
+d usr/node/0.10/node_modules/zonename/build/Release 0755 root bin
+f usr/node/0.10/node_modules/zonename/build/Release/zonename.node 0444 root bin
 f var/log/syslog 0644 root root
 d var/log 0755 root sys
 d var/log/sdc 0755 root sys

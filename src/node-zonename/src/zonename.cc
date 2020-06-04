@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <zone.h>
+#include <errno.h>
 
 #include <node.h>
 #include <nan.h>

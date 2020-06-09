@@ -847,7 +847,17 @@ EOF
 			echo "Please manually create/import a zpool named \"zones\"."
 			echo "If you no longer wish to manually create a zpool,"
 			echo "simply exit the shell."
+			echo ""
+			echo "You may also create a \"standalone\" pool in addition"
+			echo "to \"zones\" if you wish to boot from disks that are"
+			echo "not part of the \"zones\" zpool."
 			/usr/bin/bash
+			zpool list standalone >/dev/null 2>/dev/null
+			if [[ $? -eq 0 ]]; then
+				BOOTPOOL="standalone"
+			else
+				BOOTPOOL="zones"
+			fi
 			zpool list zones >/dev/null 2>/dev/null
 			[[ $? -eq 0 ]] && return
 		else
@@ -1296,8 +1306,9 @@ your own zpool.\n"
 	printheader "Self-booting"
 
 	message="
-SmartOS can boot off the zpool in lieu of a USB stick or a CD-ROM.  Enter
-'yes' if you wish to try and make this SmartOS zpool self-booting.\n"
+SmartOS can boot off either the \"zones\" zpool, or a dedicated \"standalone\"
+zpool in lieu of a USB stick or a CD-ROM.  Enter 'yes' if you wish to try and
+make this SmartOS zpool self-booting.\n"
 
 	
 	if [[ $(getanswer "skip_instructions") != "true" ]]; then
@@ -1348,7 +1359,10 @@ up and all data on the disks will be erased.\n\n"
 		printf "Hostname: %s\n" "$hostname"
 		printf "NTP server: $ntp_hosts\n"
 		if [[ $ondisk == "yes" ]]; then
-		    printf "==> Making the zones pool bootable"
+		    if [[ -z "$BOOTPOOL" ]]; then
+			BOOTPOOL=$SYS_ZPOOL
+		    fi
+		    printf "==> Making the $BOOTPOOL pool bootable"
 		fi
 		echo
 	fi
@@ -1415,17 +1429,17 @@ sed -e "s|^root:[^\:]*:|root:${root_shadow}:|" /etc/shadow > /usbkey/shadow \
 cp -rp /etc/ssh /usbkey/ssh || fatal "failed to set up preserve host keys"
 
 if [ $ondisk == "yes" ]; then
-    printf "%-56s" "Creating self-bootable zones pool... "
+    printf "%-56s" "Creating self-bootable $BOOTPOOL pool... "
 
-    # Create SYS_ZPOOL/boot and set bootfs.
-    zfs create ${SYS_ZPOOL}/boot || fatal "Cannot create boot filesystem"
-    zpool set bootfs=${SYS_ZPOOL}/boot ${SYS_ZPOOL}
+    # Create BOOTPOOL/boot and set bootfs.
+    zfs create ${BOOTPOOL}/boot || fatal "Cannot create boot filesystem"
+    zpool set bootfs=${BOOTPOOL}/boot ${BOOTPOOL}
     if [[ $? != 0 ]]; then
 	if [[ $DISK_LAYOUT != "manual" ]]; then
 	    fatal "Cannot set bootfs"
 	else
 	    printf "\nManually created pool is not bootable, skipping.\n"
-	    zfs destroy ${SYS_ZPOOL}/boot
+	    zfs destroy ${BOOTPOOL}/boot
 	fi
     else
 	# Get "install media mounted" and copy over boot stuff:
@@ -1437,20 +1451,20 @@ if [ $ondisk == "yes" ]; then
 	# <SNIP!>
 	# XXX KEBE SCREAMS This is a cheesy workaround:
 	# - Takes first disk only, regardless
-	# - Assumes `zpool create -B` has s0 == ESP, s1 == data-for-SYS_ZPOOL
+	# - Assumes `zpool create -B` has s0 == ESP, s1 == data-for-BOOTPOOL
 	for a in \
-	`zpool list -v ${SYS_ZPOOL} | egrep 'c[0-9]+' | awk '{print $1}'`; do
-	    installboot -m -b /${SYS_ZPOOL}/boot/boot \
-	    /${SYS_ZPOOL}/boot/boot/pmbr \
-	    /${SYS_ZPOOL}/boot/boot/gptzfsboot \
+	`zpool list -v ${BOOTPOOL} | egrep 'c[0-9]+' | awk '{print $1}'`; do
+	    installboot -m -b /${BOOTPOOL}/boot/boot \
+	    /${BOOTPOOL}/boot/boot/pmbr \
+	    /${BOOTPOOL}/boot/boot/gptzfsboot \
 	    /dev/rdsk/${a}s1 2>&1 > /dev/null || \
 		fatal "Can't install boot sector and/or UEFI loader, $a."
 	done
 
-	# Append 'fstype="ufs"' to /${SYS_ZPOOL}/boot/boot/loader.conf for
+	# Append 'fstype="ufs"' to /${BOOTPOOL}/boot/boot/loader.conf for
 	# ramdisk root.
-	echo 'fstype="ufs"' >> /${SYS_ZPOOL}/boot/boot/loader.conf || \
-	    fatal "Can't append to /${SYS_ZPOOL}/boot/boot/loader.conf"
+	echo 'fstype="ufs"' >> /${BOOTPOOL}/boot/boot/loader.conf || \
+	    fatal "Can't append to /${BOOTPOOL}/boot/boot/loader.conf"
 
 	printf "%4s\n" done
     fi

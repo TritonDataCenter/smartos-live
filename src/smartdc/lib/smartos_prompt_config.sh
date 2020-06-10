@@ -852,12 +852,6 @@ EOF
 			echo "to \"zones\" if you wish to boot from disks that are"
 			echo "not part of the \"zones\" zpool."
 			/usr/bin/bash
-			zpool list standalone >/dev/null 2>/dev/null
-			if [[ $? -eq 0 ]]; then
-				BOOTPOOL="standalone"
-			else
-				BOOTPOOL="zones"
-			fi
 			zpool list zones >/dev/null 2>/dev/null
 			[[ $? -eq 0 ]] && return
 		else
@@ -1302,6 +1296,15 @@ your own zpool.\n"
 	fi
 
 	promptpool
+
+	# Set value for BOOTPOOL now.  Use "standalone" if the user
+	# created it manually.
+	zpool list standalone >/dev/null 2>/dev/null
+	if [[ $? -eq 0 ]]; then
+		BOOTPOOL="standalone"
+	else
+		BOOTPOOL="zones"
+	fi
 
 	printheader "Self-booting"
 

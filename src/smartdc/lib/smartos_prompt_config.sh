@@ -1041,7 +1041,7 @@ create_zpools()
 copy_installmedia()
 {
 	# Try the USB key first, quietly...
-	mount_usb_key /mnt 2>&1 > /dev/null
+	mount_usb_key /mnt > /dev/null 2>&1 
 	if [[ $? != 0 ]]; then
 	    # If that fails, try mounting the ISO.
 	    mount_ISO /mnt || fatal "Odd, can't find install media!"
@@ -1445,6 +1445,11 @@ if [ $ondisk == "yes" ]; then
 	# Get "install media mounted" and copy over boot stuff:
 	copy_installmedia
 
+	# Append 'fstype="ufs"' to /${BOOTPOOL}/boot/boot/loader.conf for
+	# ramdisk root.
+	echo 'fstype="ufs"' >> /${BOOTPOOL}/boot/boot/loader.conf || \
+	    fatal "Can't append to /${BOOTPOOL}/boot/boot/loader.conf"
+
 	# XXX KEBE SAYS Determine which disk(s) to install things in.
 	# Then for each disk:
 	# 	installboot -m -b....
@@ -1457,14 +1462,9 @@ if [ $ondisk == "yes" ]; then
 	    installboot -m -b /${BOOTPOOL}/boot/boot \
 	    /${BOOTPOOL}/boot/boot/pmbr \
 	    /${BOOTPOOL}/boot/boot/gptzfsboot \
-	    /dev/rdsk/${a}s1 2>&1 > /dev/null || \
+	    /dev/rdsk/${a}s1 > /dev/null 2>&1 || \
 		fatal "Can't install boot sector and/or UEFI loader, $a."
 	done
-
-	# Append 'fstype="ufs"' to /${BOOTPOOL}/boot/boot/loader.conf for
-	# ramdisk root.
-	echo 'fstype="ufs"' >> /${BOOTPOOL}/boot/boot/loader.conf || \
-	    fatal "Can't append to /${BOOTPOOL}/boot/boot/loader.conf"
 
 	printf "%4s\n" done
     fi

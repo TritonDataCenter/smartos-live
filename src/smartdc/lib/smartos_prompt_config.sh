@@ -1040,8 +1040,8 @@ create_zpools()
 
 copy_installmedia()
 {
-	# Try the USB key first...
-	mount_usb_key /mnt
+	# Try the USB key first, quietly...
+	mount_usb_key /mnt 2>&1 > /dev/null
 	if [[ $? != 0 ]]; then
 	    # If that fails, try mounting the ISO.
 	    mount_ISO /mnt || fatal "Odd, can't find install media!"

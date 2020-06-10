@@ -1298,7 +1298,7 @@ your own zpool.\n"
 	promptpool
 
 	# Set value for BOOTPOOL now.  Use "standalone" if the user
-	# created it manually.
+	# created it manually up on promptpool.
 	zpool list standalone >/dev/null 2>/dev/null
 	if [[ $? -eq 0 ]]; then
 		BOOTPOOL="standalone"
@@ -1362,9 +1362,6 @@ up and all data on the disks will be erased.\n\n"
 		printf "Hostname: %s\n" "$hostname"
 		printf "NTP server: $ntp_hosts\n"
 		if [[ $ondisk == "yes" ]]; then
-		    if [[ -z "$BOOTPOOL" ]]; then
-			BOOTPOOL=$SYS_ZPOOL
-		    fi
 		    printf "==> Making the $BOOTPOOL pool bootable"
 		fi
 		echo

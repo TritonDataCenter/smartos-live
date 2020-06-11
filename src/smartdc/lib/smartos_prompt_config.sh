@@ -1431,16 +1431,19 @@ cp -rp /etc/ssh /usbkey/ssh || fatal "failed to set up preserve host keys"
 if [ $ondisk == "yes" ]; then
     printf "%-56s" "Creating self-bootable $BOOTPOOL pool... "
 
+    # Reality check $BOOTPOOL was created with -B.
+    # Easiest way to do this is to check for the `bootsize` property not
+    # its default, which is NO bootsize.
+    zpool get bootsize ${BOOTPOOL} | grep -q -w default
+    if [[ $? == 0 ]];
+	fatal "\nDesired bootable pool $BOOTPOOL was not created with -B"
+    fi
+
     # Create BOOTPOOL/boot and set bootfs.
     zfs create ${BOOTPOOL}/boot || fatal "Cannot create boot filesystem"
     zpool set bootfs=${BOOTPOOL}/boot ${BOOTPOOL}
     if [[ $? != 0 ]]; then
-	if [[ $DISK_LAYOUT != "manual" ]]; then
-	    fatal "Cannot set bootfs"
-	else
-	    printf "\nManually created pool is not bootable, skipping.\n"
-	    zfs destroy ${BOOTPOOL}/boot
-	fi
+	fatal "\nCannot set bootfs"
     else
 	# Get "install media mounted" and copy over boot stuff:
 	copy_installmedia

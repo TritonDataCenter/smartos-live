@@ -1435,7 +1435,7 @@ if [ $ondisk == "yes" ]; then
     # Easiest way to do this is to check for the `bootsize` property not
     # its default, which is NO bootsize.
     zpool get bootsize ${BOOTPOOL} | grep -q -w default
-    if [[ $? == 0 ]];
+    if [[ $? == 0 ]]; then
 	fatal "\nDesired bootable pool $BOOTPOOL was not created with -B"
     fi
 

@@ -1051,7 +1051,7 @@ copy_installmedia()
 	fi
 
 	# Move it all over!
-	tar -cf - -C /mnt . | tar -xf - -C /${SYS_ZPOOL}/boot
+	tar -cf - -C /mnt . | tar -xf - -C /${BOOTPOOL}/boot
 	if [[ $? != 0 ]]; then
 		fatal "Cannot move install media bits to bootable disk"
 	fi
@@ -1063,9 +1063,9 @@ copy_installmedia()
 	fi
 
 	# Extract the PI stamp for the platform and symlinks.
-	pistamp=`cat /${SYS_ZPOOL}/boot/platform/etc/version/platform`
-	mv /${SYS_ZPOOL}/boot/platform /${SYS_ZPOOL}/boot/platform-${pistamp}
-	ln -s ./platform-${pistamp} /${SYS_ZPOOL}/boot/platform
+	pistamp=`cat /${BOOTPOOL}/boot/platform/etc/version/platform`
+	mv /${BOOTPOOL}/boot/platform /${BOOTPOOL}/boot/platform-${pistamp}
+	ln -s ./platform-${pistamp} /${BOOTPOOL}/boot/platform
 }
 
 trap "" SIGINT

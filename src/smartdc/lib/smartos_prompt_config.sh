@@ -6,7 +6,7 @@
 #
 
 #
-# Copyright 2019 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 # XXX - TODO
@@ -1066,6 +1066,15 @@ copy_installmedia()
 	pistamp=`cat /${BOOTPOOL}/boot/platform/etc/version/platform`
 	mv /${BOOTPOOL}/boot/platform /${BOOTPOOL}/boot/platform-${pistamp}
 	ln -s ./platform-${pistamp} /${BOOTPOOL}/boot/platform
+	#
+	# The idea is that a new PI can be booted by doing the following:
+	# - Unpack the platform-YYYYMMDDhhmmssZ.tgz PI into
+	#   $BOOTPOOL/boot/platform-YYYYMMDDhhmmssZ/.
+	# - Remove the "platform" symlink.
+	# - Re-add the "platform" symlink to point to the new
+	#   platform-YYYYMMDDhhmmssZ/ directory.
+	# - Next boot will extract "platform" from the new YYYYMMDDhhmmssZ
+	#
 }
 
 trap "" SIGINT
@@ -1453,13 +1462,13 @@ if [ $ondisk == "yes" ]; then
 	echo 'fstype="ufs"' >> /${BOOTPOOL}/boot/boot/loader.conf || \
 	    fatal "Can't append to /${BOOTPOOL}/boot/boot/loader.conf"
 
-	# XXX KEBE SAYS Determine which disk(s) to install things in.
+	# Determine which disk(s) to install things in.
 	# Then for each disk:
 	# 	installboot -m -b....
-	# <SNIP!>
-	# XXX KEBE SCREAMS This is a cheesy workaround:
-	# - Takes first disk only, regardless
-	# - Assumes `zpool create -B` has s0 == ESP, s1 == data-for-BOOTPOOL
+	#
+	# We created the pool, so we can assume
+	# `zpool create -B` generates things such that for disk X, Xs0 == ESP,
+	# Xs1 == data-for-BOOTPOOL
 	for a in \
 	`zpool list -v ${BOOTPOOL} | egrep 'c[0-9]+' | awk '{print $1}'`; do
 	    installboot -m -b /${BOOTPOOL}/boot/boot \

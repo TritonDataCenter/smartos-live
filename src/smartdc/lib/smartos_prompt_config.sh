@@ -1307,7 +1307,8 @@ your own zpool.\n"
 	promptpool
 
 	# Set value for BOOTPOOL now.  Use "standalone" if the user
-	# created it manually up on promptpool.
+	# created it manually during the promptpool function a few
+	# lines earlier.
 	zpool list standalone >/dev/null 2>/dev/null
 	if [[ $? -eq 0 ]]; then
 		BOOTPOOL="standalone"

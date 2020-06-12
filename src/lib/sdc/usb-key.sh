@@ -143,10 +143,9 @@ function mount_ISO
 {
 	local mnt=`extract_mountpath $1`
 
-	# XXX KEBE SAYS JUST TRUST IT FOR NOW...
 	for disk in `disklist -r`; do
 		mount -F hsfs /dev/dsk/${disk}s0 $mnt
-		if [[ $? != 0 ]]; then
+		if [[ $? -ne 0 ]]; then
 			continue
 		fi
 		if [[ -d ${mnt}/boot ]]; then

@@ -1450,7 +1450,8 @@ if [ $boot_non_removable == "yes" ]; then
     fi
 
     # Create BOOTPOOL/boot and set bootfs.
-    zfs create ${BOOTPOOL}/boot || fatal "Cannot create boot filesystem"
+    zfs create -o encryption=off ${BOOTPOOL}/boot || \
+	fatal "Cannot create boot filesystem"
     zpool set bootfs=${BOOTPOOL}/boot ${BOOTPOOL}
     if [[ $? -ne 0 ]]; then
 	fatal "\nCannot set bootfs"
@@ -1470,8 +1471,9 @@ if [ $boot_non_removable == "yes" ]; then
 	# We created the pool, so we can assume
 	# `zpool create -B` generates things such that for disk X, Xs0 == ESP,
 	# Xs1 == data-for-BOOTPOOL
-	for a in \
-	`zpool list -v ${BOOTPOOL} | egrep 'c[0-9]+' | awk '{print $1}'`; do
+	mapfile -t boot_devices < <(zpool list -v "${BOOTPOOL}" | \
+		grep -E 'c[0-9]+' | awk '{print $1}')
+	for a in "${boot_devices[@]}"; do
 	    installboot -m -b /${BOOTPOOL}/boot/boot \
 	    /${BOOTPOOL}/boot/boot/pmbr \
 	    /${BOOTPOOL}/boot/boot/gptzfsboot \

@@ -48,7 +48,7 @@ dns_resolver2="8.8.4.4"
 declare -a states
 declare -a nics
 declare -a assigned
-declare ondisk="no"
+declare boot_non_removable="no"
 declare prmpt_str
 
 #
@@ -263,7 +263,7 @@ is_email() {
 # You can call this like:
 #
 #  value=$(getanswer "foo")
-#  [[ $? == 0 ]] || fatal "no answer for question foo"
+#  [[ $? -eq 0 ]] || fatal "no answer for question foo"
 #
 getanswer()
 {
@@ -280,7 +280,7 @@ getanswer()
 	answer=$(/usr/bin/cat ${answer_file} \
 		| /usr/bin/json -e "if (this['${key}'] === undefined) this['${key}'] = '<<undefined>>';" \
 		"${key}" 2>&1)
-	if [[ $? != 0 ]]; then
+	if [[ $? -ne 0 ]]; then
 		if [[ -n $(echo "${answer}" | grep "input is not JSON") ]]; then
 			return ${EBADJSON}
 		else
@@ -305,7 +305,7 @@ promptopt()
 
 	if [[ -n ${key} ]]; then
 		val=$(getanswer "${key}")
-		if [[ $? == 0 ]]; then
+		if [[ $? -eq 0 ]]; then
 			if [[ ${val} == "<default>" ]]; then
 				val=${def}
 			fi
@@ -354,7 +354,7 @@ promptval()
 		    if (index($0, "`") != 0)
 		        exit 1
 		}'
-		if [ $? != 0 ]; then
+		if [[ $? -ne 0 ]]; then
 			echo "Single quotes are not allowed."
 			val=""
 			continue
@@ -390,7 +390,7 @@ prompt_host_ok_val()
 			trap "" SIGINT
 			printf "Checking connectivity..."
 			ping $val >/dev/null 2>&1
-			if [ $? != 0 ]; then
+			if [[ $? -ne 0 ]]; then
 				printf "UNREACHABLE\n"
 			else
 				printf "OK\n"
@@ -751,7 +751,7 @@ promptyesno()
 	[ -z "$val" ] && val="$2"
 
 	# Normalize to lowercase
-	val=`echo $val | sed 's/A-Z/a-z/g'`
+	val=$(tr 'A-Z' 'a-z' <<< "$val")
 	val="$val"
 
 	if [[ $val != "yes" && $val != "no" ]]; then
@@ -998,8 +998,8 @@ create_zpool()
 	# a JSON file describing the desired pool, so use that:
 	# Try and make a bootable one first.
 	mkzpool -B -f $pool $layout
-	if [[ $? != 0 ]]; then
-	    ondisk="never"
+	if [[ $? -ne 0 ]]; then
+	    boot_non_removable="never"
 	    printf "\n\t%-56s\n" \
 		"$pool cannot be bootable, creating non-bootable..."
 	    mkzpool -f $pool $layout || fatal "failed to create pool ${pool}"
@@ -1042,9 +1042,9 @@ copy_installmedia()
 {
 	# Try the USB key first, quietly...
 	mount_usb_key /mnt > /dev/null 2>&1 
-	if [[ $? != 0 ]]; then
+	if [[ $? -ne 0 ]]; then
 	    # If that fails, try mounting the ISO.
-	    mount_ISO /mnt || fatal "Odd, can't find install media!"
+	    mount_ISO /mnt || fatal "Can't find install media!"
 	    usb=0
 	else
 	    usb=1
@@ -1052,7 +1052,7 @@ copy_installmedia()
 
 	# Move it all over!
 	tar -cf - -C /mnt . | tar -xf - -C /${BOOTPOOL}/boot
-	if [[ $? != 0 ]]; then
+	if [[ $? -ne 0 ]]; then
 		fatal "Cannot move install media bits to bootable disk"
 	fi
 
@@ -1289,7 +1289,7 @@ set the headnode to be an NTP client to synchronize to another NTP server.\n"
 skip_ntp=$(getanswer "skip_ntp_check")
 if [[ -z ${skip_ntp} || ${skip_ntp} != "true" ]]; then
 		ntpdate -b $ntp_hosts >/dev/null 2>&1
-		[ $? != 0 ] && print_warning "NTP failure setting date and time"
+		[[ $? -ne 0 ]] && print_warning "NTP failure setting date and time"
 fi
 
 	printheader "Storage"
@@ -1328,8 +1328,8 @@ make this SmartOS zpool self-booting.\n"
 	    printf "$message"
 	fi
 
-	promptyesno "Boot SmartOS from disk" $ondisk
-	ondisk="$val"
+	promptyesno "Boot SmartOS from non-removable media" $boot_non_removable
+	boot_non_removable="$val"
 
 	printheader "System Configuration"
 	message="
@@ -1371,7 +1371,7 @@ up and all data on the disks will be erased.\n\n"
 		    "$dns_resolver1" "$dns_resolver2" "$dns_domain"
 		printf "Hostname: %s\n" "$hostname"
 		printf "NTP server: $ntp_hosts\n"
-		if [[ $ondisk == "yes" ]]; then
+		if [[ $boot_non_removable == "yes" ]]; then
 		    printf "==> Making the $BOOTPOOL pool bootable"
 		fi
 		echo
@@ -1438,21 +1438,21 @@ sed -e "s|^root:[^\:]*:|root:${root_shadow}:|" /etc/shadow > /usbkey/shadow \
 
 cp -rp /etc/ssh /usbkey/ssh || fatal "failed to set up preserve host keys"
 
-if [ $ondisk == "yes" ]; then
+if [ $boot_non_removable == "yes" ]; then
     printf "%-56s" "Creating self-bootable $BOOTPOOL pool... "
 
     # Reality check $BOOTPOOL was created with -B.
     # Easiest way to do this is to check for the `bootsize` property not
     # its default, which is NO bootsize.
     zpool get bootsize ${BOOTPOOL} | grep -q -w default
-    if [[ $? == 0 ]]; then
+    if [[ $? -eq 0 ]]; then
 	fatal "\nDesired bootable pool $BOOTPOOL was not created with -B"
     fi
 
     # Create BOOTPOOL/boot and set bootfs.
     zfs create ${BOOTPOOL}/boot || fatal "Cannot create boot filesystem"
     zpool set bootfs=${BOOTPOOL}/boot ${BOOTPOOL}
-    if [[ $? != 0 ]]; then
+    if [[ $? -ne 0 ]]; then
 	fatal "\nCannot set bootfs"
     else
 	# Get "install media mounted" and copy over boot stuff:

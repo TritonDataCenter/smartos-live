@@ -996,12 +996,18 @@ create_zpool()
 
 	# If this is not a manual layout, then we've been given
 	# a JSON file describing the desired pool, so use that:
-	# Try and make a bootable one first.
-	mkzpool -B -f $pool $layout
-	if [[ $? -ne 0 ]]; then
-	    boot_non_removable="never"
-	    printf "\n\t%-56s\n" \
-		"$pool cannot be bootable, creating non-bootable..."
+	# Try and make a bootable one if so desired.
+	if [[ $boot_non_removable == "yes" && $BOOTPOOL == $pool ]]; then
+	    mkzpool -B -f $pool $layout
+	    if [[ $? -ne 0 ]]; then
+		# reset boot_non_removable so we proceed w/o a bootable pool.
+		boot_non_removable="never"
+		printf "\n\t%-56s\n" \
+		       "$pool cannot be bootable, creating non-bootable..."
+	    fi
+	fi
+	# User didn't specify bootable pool OR we have a standalone boot pool.
+	if [[ $boot_non_removable != "yes" || $pool != $BOOTPOOL ]]; then
 	    mkzpool -f $pool $layout || fatal "failed to create pool ${pool}"
 	fi
 

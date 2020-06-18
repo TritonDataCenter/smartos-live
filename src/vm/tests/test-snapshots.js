@@ -894,7 +894,8 @@ function (t) {
 
     vasync.pipeline({funcs: [
         function (_, cb) {
-            createSnapshot(t, vmobj.uuid, snapname, ++snapshot_count,
+            snapshot_count += 1;
+            createSnapshot(t, vmobj.uuid, snapname, snapshot_count,
                 function (err) {
                     common.ifError(t, err,
                         'created snapshot for nomountdir test');
@@ -918,10 +919,11 @@ function (t) {
                 }
             );
         }, function (_, cb) {
-            deleteSnapshot(t, vmobj.uuid, snapname, --snapshot_count,
+            snapshot_count -= 1;
+            deleteSnapshot(t, vmobj.uuid, snapname, snapshot_count,
                 function (err) {
-                    common.ifError(t, err, 'deleted ' + snapname +
-                        ' snapshot for ' + vmobj.uuid);
+                    common.ifError(t, err,
+                        'deleted ' + snapname + ' snapshot for ' + vmobj.uuid);
                     cb(err);
                 }
             );

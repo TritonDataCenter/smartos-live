@@ -141,9 +141,10 @@ function unmount_usb_key()
 
 function mount_ISO
 {
-	local mnt=`extract_mountpath $1`
+	local mnt=$(extract_mountpath "$1")
 
-	for disk in `disklist -r`; do
+	mapfile -t disks < <(disklist -r)
+	for a in "${disks[@]}"; do
 		mount -F hsfs /dev/dsk/${disk}s0 $mnt
 		if [[ $? -ne 0 ]]; then
 			continue

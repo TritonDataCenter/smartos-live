@@ -286,6 +286,7 @@ BUILT_TARGETS = \
 	mkzpool \
 	nomknod.so.32 \
 	nomknod.so.64 \
+	piadm \
 	removable_disk \
 	sysevent \
 	sysinfo_mod.so \
@@ -390,7 +391,7 @@ install: all $(SUBDIRS)
 	mkdir -p $(DESTDIR)/usr/bin
 	cp -p $(USRBIN_TARGETS) $(DESTDIR)/usr/bin
 	mkdir -p $(DESTDIR)/usr/sbin
-	cp -p fssstat sysevent zonememstat zonemon $(DESTDIR)/usr/sbin
+	cp -p fssstat piadm sysevent zonememstat zonemon $(DESTDIR)/usr/sbin
 	cp -p $(USR_LIB_TARGETS) $(DESTDIR)/usr/lib
 	mkdir -p $(DESTDIR)/smartdc/bin
 	cp -p $(SMARTDC_TARGETS) $(DESTDIR)/smartdc/bin

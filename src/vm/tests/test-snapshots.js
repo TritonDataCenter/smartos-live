@@ -637,8 +637,9 @@ function createSnapshot(t, uuid, snapname, expected_count, cb) {
         VM.load(vmobj.uuid, function (e, o) {
             t.ok(!e, 'loading VM after create');
             if (!e) {
-                t.ok(o.snapshots.length === expected_count, expected_count
-                    + ' snapshot(s) after create');
+                t.ok(o.snapshots.length === expected_count, o.snapshots.length
+                    + ' snapshot(s) after create: [expected: '
+                    + expected_count + ']');
             } else {
                 abort = true;
             }
@@ -662,9 +663,8 @@ function deleteSnapshot(t, uuid, snapname, expected_remaining, cb) {
                 cb(e);
                 return;
             }
-            // snapshot3 should have been deleted since it's newer
             t.ok(o.snapshots.length === expected_remaining, o.snapshots.length
-                + ' snapshots remain after rollback: [expected: '
+                + ' snapshot(s) after delete: [expected: '
                 + expected_remaining + ']');
             cb();
         });
@@ -879,6 +879,60 @@ test('create/delete joyent-minimal snapshot should handle mounting '
     });
 });
 
+test('delete unmounted snapshot with missing checkpoint directory',
+function (t) {
+    var snapname = 'nomountdir';
+    var checkpoint_dir
+        = path.join(vmobj.zonepath, 'root', 'checkpoints', snapname);
+
+    if (abort) {
+        t.ok(false, 'skipping unmounted checkpoint tests');
+        t.end();
+        return;
+    }
+    var snapshot_count = 0;
+
+    vasync.pipeline({funcs: [
+        function (_, cb) {
+            snapshot_count += 1;
+            createSnapshot(t, vmobj.uuid, snapname, snapshot_count,
+                function (err) {
+                    common.ifError(t, err,
+                        'created snapshot for nomountdir test');
+                    cb(err);
+                }
+            );
+        }, function (_, cb) {
+                var argv;
+                var cmd = '/usr/sbin/umount';
+                argv = [checkpoint_dir];
+                execFile(cmd, argv, function (err) {
+                    common.ifError(t, err, 'umount-ed ' + checkpoint_dir);
+                    cb(err);
+                });
+        }, function (_, cb) {
+            fs.rmdir(checkpoint_dir,
+                function (err) {
+                    common.ifError(t, err,
+                        'deleted ' + checkpoint_dir +' for nomountdir test');
+                    cb(err);
+                }
+            );
+        }, function (_, cb) {
+            snapshot_count -= 1;
+            deleteSnapshot(t, vmobj.uuid, snapname, snapshot_count,
+                function (err) {
+                    common.ifError(t, err,
+                        'deleted ' + snapname + ' snapshot for ' + vmobj.uuid);
+                    cb(err);
+                }
+            );
+        }
+    ]}, function (err) {
+        common.ifError(t, err, 'testing snapshot deletion without mountpoint');
+        t.end();
+    });
+});
 
 // create 10 snapshots (to test that deleting a VM with snapshots works)
 test('create 10 more snapshots of joyent-minimal VM', function (t) {

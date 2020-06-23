@@ -61,7 +61,7 @@ piadm(1M) -- Manage SmartOS Platform Images
         `activate` and `assign` are synonyms, for those used to other
         distros' `beadm`, or Triton's `sdcadm platform`, respectively.
 
-      bootable [-d] [-e] [ZFS-pool-name]
+      bootable [-d|-e] [ZFS-pool-name]
 
         Query or upgrade a ZFS pool's bootable status.  With no arguments,
         the status of all imported pools will be queried.  -d will disable a

@@ -43,6 +43,43 @@ poolpresent() {
     fi
 }
 
+# Common-code to obtain the bootable filesystem.  Bails if a pool name
+# needs to be specified, or if the PI is blank. Prints the boot
+# filesystem name.  Takes a PI name (for reality-checking a PI stamp
+# or path exists) AND a pool (can be blank).
+piname_present_get_bootfs() {
+    if [[ "$1" == "" ]]; then
+	echo "Must specify a Platform Image"
+	usage
+    fi
+
+    getbootable
+    if [[ $numbootable -ne 1 && "$2" == "" ]]; then
+	echo "Multiple bootable pools are available, please specify one"
+	usage
+    elif [[ $numbootable -eq 1 ]]; then
+	bootfs=$allbootable
+	pool=$(echo $bootfs | awk -F/ '{print $1}')
+    else
+	pool=$2
+	bootfs=""
+	for check in $allbootable; do
+	    thispool=$(echo $check | awk -F/ '{print $1}')
+	    if [[ $thispool == $pool ]]; then
+		bootfs=$check
+		break
+	    fi
+	done
+	if [[ "$bootfs" == "" ]]; then
+	    echo "Pool $pool does not appear to be bootable."
+	    usage
+	fi
+    fi
+
+    poolpresent $pool
+    echo $bootfs
+}
+
 install_tarball() {
     tarball=$1
     bootfs=$2
@@ -74,39 +111,7 @@ install_tarball() {
 URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
 
 install() {
-    ### XXX KEBE SAYS REFACTOR HERE...
-    getbootable
-    if [[ $numbootable -ne 1 && "$2" == "" ]]; then
-	echo "Multiple bootable pools are available, please specify one"
-	usage
-    elif [[ $numbootable -eq 1 ]]; then
-	bootfs=$allbootable
-	pool=$(echo $bootfs | awk -F/ '{print $1}')
-    else
-	pool=$2
-	bootfs=""
-	for check in $allbootable; do
-	    thispool=$(echo $check | awk -F/ '{print $1}')
-	    if [[ $thispool == $pool ]]; then
-		bootfs=$check
-		break
-	    fi
-	done
-	if [[ "$bootfs" == "" ]]; then
-	    echo "Pool $pool does not appear to be bootable."
-	    usage
-	fi
-    fi
-    poolpresent $pool
-
-    # echo "Installing $1 on pool $pool"
-
-    if [[ "$1" == "" ]]; then
-	echo "Must specify a Platform Image"
-	usage
-    fi
-    ### XXX KEBE SAYS END REFACTOR
-
+    bootfs=`piname_present_get_bootfs $1 $2`
 
     # If .tgz, expand it.
     if [[ -f $1 ]]; then
@@ -181,39 +186,30 @@ list() {
     done
 }
 
-remove() {
-    ### XXX KEBE SAYS REFACTOR HERE...
-    getbootable
-    if [[ $numbootable -ne 1 && "$2" == "" ]]; then
-	echo "Multiple bootable pools are available, please specify one"
-	usage
-    elif [[ $numbootable -eq 1 ]]; then
-	bootfs=$allbootable
-	pool=$(echo $bootfs | awk -F/ '{print $1}')
-    else
-	pool=$2
-	bootfs=""
-	for check in $allbootable; do
-	    thispool=$(echo $check | awk -F/ '{print $1}')
-	    if [[ $thispool == $pool ]]; then
-		bootfs=$check
-		break
-	    fi
-	done
-	if [[ "$bootfs" == "" ]]; then
-	    echo "Pool $pool does not appear to be bootable."
-	    usage
-	fi
-    fi
-    poolpresent $pool
-
-    if [[ "$1" == "" ]]; then
-	echo "Must specify a Platform Image"
-	usage
-    fi
-    ### XXX KEBE SAYS END REFACTOR
-
+activate() {
     pistamp=$1
+    bootfs=`piname_present_get_bootfs $1 $2`
+
+    cd /$bootfs
+    bootstamp=$(file -h platform | awk '{print $5}' | sed 's/\.\/platform-//g')
+    if [[ -d platform-$pistamp ]]; then
+	if [[ $bootstamp == $pistamp ]]; then
+	    echo "$pistamp is the current active PI.  All set."
+	else
+	    rm -f platform
+	    ln -s ./platform-$pistamp platform
+	    echo "Platform Image $pistamp will be loaded on next boot."
+	fi
+	return
+    else
+	echo "$pistamp is not a stamp for a PI on pool $pool"
+	usage
+    fi
+}
+
+remove() {
+    pistamp=$1
+    bootfs=`piname_present_get_bootfs $pistamp $2`
     cd /$bootfs
     bootstamp=$(file -h platform | awk '{print $5}' | sed 's/\.\/platform-//g')
 
@@ -245,7 +241,7 @@ shift 1
 
 case $cmd in
 activate | assign )
-    echo "Activating/assigning"
+    activate $@
     ;;
 
 bootable )

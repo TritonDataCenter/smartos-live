@@ -1114,6 +1114,7 @@ d usr/lib/sdc 0755 root bin
 f usr/lib/sdc/net-boot-config 0555 root bin
 s usr/sbin/fwadm=../fw/sbin/fwadm
 f usr/sbin/fssstat 0555 root bin
+f usr/sbin/piadm 0555 root bin
 f usr/sbin/sysevent 0555 root bin
 s usr/sbin/vmadm=../vm/sbin/vmadm
 s usr/sbin/vminfo=../vm/sbin/vminfo

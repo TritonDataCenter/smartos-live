@@ -73,13 +73,13 @@ piadm(1M) -- Manage SmartOS Platform Images
 	other can also be bootable from UEFI systems.  The `bootable`
 	subcommand will indicate this.
 
-      install <PI-stamp, PI-tarball, PI-tarball-URL> [ZFS-pool-name]
+      install <PI-stamp, PI-tarball, PI-tarball-URL, "latest"> [ZFS-pool-name]
 
         Installs a new Platform Image into the bootable pool.  If there are
         more than one bootable pools, a pool name will be required.
         piadm(1M) requires a Platform Image gzipped tar file.  If a PI-stamp
-        is supplied, the well-known public SmartOS PI repository will be
-        queried with the specified PI-stamp.
+        or the word "latest" is supplied, the well-known public SmartOS PI
+        repository will be queried with the specified PI-stamp.
 
       list [ZFS-pool-name]
 
@@ -104,9 +104,6 @@ The following exit values are returned:
 
      1
          An error occurred.
-
-     2
-         Invalid Platform Image
 
 
 ## SEE ALSO

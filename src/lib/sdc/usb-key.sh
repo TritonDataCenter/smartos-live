@@ -144,7 +144,7 @@ function mount_ISO
 	local mnt=$(extract_mountpath "$1")
 
 	mapfile -t disks < <(disklist -r)
-	for a in "${disks[@]}"; do
+	for disk in "${disks[@]}"; do
 		mount -F hsfs /dev/dsk/${disk}s0 $mnt
 		if [[ $? -ne 0 ]]; then
 			continue

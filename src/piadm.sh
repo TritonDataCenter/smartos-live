@@ -100,22 +100,34 @@ install_tarball() {
 	echo "Use:   piadm remove $stamp    before installing this one."
 	popd > /dev/null
 	/bin/rm -rf $tdir
-	usage
+	return 1
     fi
     mv * /$bootfs/platform-$stamp
     popd > /dev/null
     rmdir $tdir
 }
 
+# Use "-k" for now until we ship CAs with the Platform Image again.
+CURL="curl -k"
+
 # Well-known source of SmartOS Platform Images
 URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
 
+# Install a Platform Image.
+#
+# XXX KEBE SAYS there is a security discussion to be had about the integrity
+# of the tarball.  The install_tarball() function shows WHERE to check the
+# post-download integrity, but the transfer itself needs to be careful as
+# well.
 install() {
     bootfs=`piname_present_get_bootfs $1 $2`
 
     # If .tgz, expand it.
     if [[ -f $1 ]]; then
 	install_tarball $1 $bootfs
+	if [[ $? -ne 0 ]]; then
+	    usage
+	fi
 	return 0
     fi
 
@@ -127,25 +139,29 @@ install() {
 	# Confirm this is a legitimate build stamp.
 	# Use conventions from site hosted in URL_PREFIX.
 	checkurl=${URL_PREFIX}/$1/index.html
-	curl -s $checkurl | head | grep -qv "not found"
+	${CURL} -s $checkurl | head | grep -qv "not found"
 	if [[ $? -ne 0 ]]; then
 	    echo "PI-stamp $1 is invalid for download from $URL_PREFIX"
 	    usage
 	fi
-	pitar=`curl -s $checkurl | grep platform-release | grep tgz | awk -F\" '{print $2}'`
+	pitar=`${CURL} -s $checkurl | grep platform-release | grep tgz | awk -F\" '{print $2}'`
 	url=${URL_PREFIX}/$1/$pitar
     fi
 
     tfile=`mktemp`
-    curl -o $tfile $url
+    ${CURL} -o $tfile $url
     if [[ $? -ne 0 ]]; then
 	/bin/rm -f $tfile
-	echo "FETCH FAILED: curl -o $tfile $url"
+	echo "FETCH FAILED: $CURL -o $tfile $url"
 	usage
     fi
     mv $tfile ${tfile}.tgz
     install_tarball ${tfile}.tgz $bootfs
+    rc=$?
     /bin/rm -f ${tfile}.tgz
+    if [[ $rc -ne 0 ]]; then
+	usage
+    fi
 }
 
 list() {
@@ -226,10 +242,82 @@ remove() {
     fi
 }
 
-#echo "Coming soon..."
-#usage
+changepool() {
+    poolpresent $2
+
+    if [[ $1 == "-d" ]]; then
+	# XXX KEBE SAYS we may need to do more complicated things like wipe
+	# the boot sectors clean or some other such cleanup.
+
+	# For now, disabling is merely unsetting `bootfs` in the pool.
+	zpool set bootfs="" $2
+	return
+    fi
+
+    # See if we can enable booting on this pool, even in a limited manner.
+
+    echo "XXX KEBE SAYS FILL ME IN!"
+
+    exit 1
+}
+
+bootable() {
+    if [[ "$1" == "-d" || "$1" == "-e" ]]; then
+	if [[ "$2" == "" ]]; then
+	    echo "To enable/disable a pool for booting, please specify a pool"
+	    usage
+	fi
+	changepool $1 $2
+	return
+    fi
+
+    # If we reach here, we're querying about a pool.
+
+    if [[ "$1" == "" ]]; then
+	allpools=$(zpool list -H | awk '{print $1}')
+    else
+	# Reality check for bad pool name.
+	poolpresent $1
+	# Or have a list of one pool...
+	allpools=$1
+    fi
+
+    # We're guaranteed that, modulo background processes, $allpools has a list
+    # of actual pools, even if it's a list-of-one.
+
+    for pool in $allpools; do
+	zpool get -H bootfs $pool | grep -vw default | grep -q ${pool}/boot
+	if [[ $? -eq 0 ]]; then
+	    bootable="BIOS"
+	    # Check for pcfs partition on pool disks.
+	    mapfile -t boot_devices < <(zpool list -v "${pool}" | \
+		grep -E 'c[0-9]+' | awk '{print $1}')
+	    for a in "${boot_devices[@]}"; do
+		noslice=$(echo $a | sed 's/s[0-9]+//g')
+		tdir=`mktemp -d`
+		# Assume that s0 on the physical disk would be where the EFI
+		# System Partition (ESP) lives.  A pcfs mount can confirm/deny
+		# it.
+		mount -F pcfs /dev/dsk/${noslice}s0 $tdir > /dev/null 2>&1
+		if [[ $? -eq 0 && -f $tdir/EFI/Boot/bootx64.efi ]]; then
+		    efi="and UEFI"
+		    umount $tdir
+		else
+		    efi=""
+		fi
+		rmdir $tdir
+	    done
+	else
+	    bootable="non-bootable"
+	    efi=""
+	fi
+	
+	printf "%-30s ==> %s %s\n" "$pool" "$bootable" "$efi"
+    done
+}
 
 if [[ "$1" == "-v" ]]; then
+    # XXX KEBE ASKS, do "set -x" here?
     DEBUG=1
     shift 1
 else
@@ -245,7 +333,7 @@ activate | assign )
     ;;
 
 bootable )
-    echo "Doing bootable check or upgrade"
+    bootable $@
     ;;
 
 install )

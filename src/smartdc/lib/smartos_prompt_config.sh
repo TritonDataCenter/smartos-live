@@ -29,7 +29,6 @@ export PATH
 . /lib/svc/share/smf_include.sh
 
 . /lib/sdc/config.sh
-. /lib/sdc/usb-key.sh
 load_sdc_sysinfo
 load_sdc_config
 
@@ -1044,45 +1043,6 @@ create_zpools()
 	touch /${SYS_ZPOOL}/.system_pool
 }
 
-copy_installmedia()
-{
-	# Try the USB key first, quietly...
-	mount_usb_key /mnt > /dev/null 2>&1 
-	if [[ $? -ne 0 ]]; then
-	    # If that fails, try mounting the ISO.
-	    mount_ISO /mnt || fatal "Can't find install media!"
-	    usb=0
-	else
-	    usb=1
-	fi
-
-	# Move it all over!
-	tar -cf - -C /mnt . | tar -xf - -C /${BOOTPOOL}/boot
-	if [[ $? -ne 0 ]]; then
-		fatal "Cannot move install media bits to bootable disk"
-	fi
-
-	if [[ $usb == 0 ]]; then
-	    unmount_ISO /mnt || fatal "Cannot unmount install ISO!"
-	else
-	    unmount_usb_key /mnt || fatal "Cannot unmount install USB!"
-	fi
-
-	# Extract the PI stamp for the platform and symlinks.
-	pistamp=`cat /${BOOTPOOL}/boot/platform/etc/version/platform`
-	mv /${BOOTPOOL}/boot/platform /${BOOTPOOL}/boot/platform-${pistamp}
-	ln -s ./platform-${pistamp} /${BOOTPOOL}/boot/platform
-	#
-	# The idea is that a new PI can be booted by doing the following:
-	# - Unpack the platform-YYYYMMDDhhmmssZ.tgz PI into
-	#   $BOOTPOOL/boot/platform-YYYYMMDDhhmmssZ/.
-	# - Remove the "platform" symlink.
-	# - Re-add the "platform" symlink to point to the new
-	#   platform-YYYYMMDDhhmmssZ/ directory.
-	# - Next boot will extract "platform" from the new YYYYMMDDhhmmssZ
-	#
-}
-
 trap "" SIGINT
 
 while getopts "f:" opt
@@ -1447,48 +1407,8 @@ cp -rp /etc/ssh /usbkey/ssh || fatal "failed to set up preserve host keys"
 if [ $boot_non_removable == "yes" ]; then
     printf "%-56s" "Creating self-bootable $BOOTPOOL pool... "
 
-    # Reality check $BOOTPOOL was created with -B.
-    # Easiest way to do this is to check for the `bootsize` property not
-    # its default, which is NO bootsize.
-    zpool get bootsize ${BOOTPOOL} | grep -q -w default
-    if [[ $? -eq 0 ]]; then
-	fatal "\nDesired bootable pool $BOOTPOOL was not created with -B"
-    fi
-
-    # Create BOOTPOOL/boot and set bootfs.
-    zfs create -o encryption=off ${BOOTPOOL}/boot || \
-	fatal "Cannot create boot filesystem"
-    zpool set bootfs=${BOOTPOOL}/boot ${BOOTPOOL}
-    if [[ $? -ne 0 ]]; then
-	fatal "\nCannot set bootfs"
-    else
-	# Get "install media mounted" and copy over boot stuff:
-	copy_installmedia
-
-	# Append 'fstype="ufs"' to /${BOOTPOOL}/boot/boot/loader.conf for
-	# ramdisk root.
-	echo 'fstype="ufs"' >> /${BOOTPOOL}/boot/boot/loader.conf || \
-	    fatal "Can't append to /${BOOTPOOL}/boot/boot/loader.conf"
-
-	# Determine which disk(s) to install things in.
-	# Then for each disk:
-	# 	installboot -m -b....
-	#
-	# We created the pool, so we can assume
-	# `zpool create -B` generates things such that for disk X, Xs0 == ESP,
-	# Xs1 == data-for-BOOTPOOL
-	mapfile -t boot_devices < <(zpool list -v "${BOOTPOOL}" | \
-		grep -E 'c[0-9]+' | awk '{print $1}')
-	for a in "${boot_devices[@]}"; do
-	    installboot -m -b /${BOOTPOOL}/boot/boot \
-	    /${BOOTPOOL}/boot/boot/pmbr \
-	    /${BOOTPOOL}/boot/boot/gptzfsboot \
-	    /dev/rdsk/${a}s1 > /dev/null 2>&1 || \
-		fatal "Can't install boot sector and/or UEFI loader, $a."
-	done
-
-	printf "%4s\n" done
-    fi
+    piadm bootable -e $BOOTPOOL || fatal "Cannot create boot filesystem"
+    printf "%4s\n" done
 fi
 
 printf "System setup has completed.\n\nPress enter to reboot.\n"

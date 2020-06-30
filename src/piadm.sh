@@ -15,7 +15,19 @@
 # Copyright 2020 Joyent, Inc.
 #
 
+. /lib/sdc/usb-key.sh
+
+fatal() {
+	echo
+	if [[ -n "$1" ]]; then
+		echo "ERROR: $1"
+	fi
+	echo
+	exit 2
+}
+
 usage() {
+    echo ""
     echo "Usage: piadm [-v] <command> [command-specific arguments]"
     echo ""
     echo "    piadm activate <PI-stamp> [ZFS-pool-name]"
@@ -242,29 +254,180 @@ remove() {
     fi
 }
 
+copy_installmedia()
+{
+    tdir=`mktemp -d`
+    bootdir=$1
+
+    # Try the USB key first, quietly...
+    mount_usb_key $tdir > /dev/null 2>&1 
+    if [[ $? -ne 0 ]]; then
+	# If that fails, try mounting the ISO.
+	mount_ISO $tdir
+	if [[ $? -ne 0 ]]; then
+	    rmdir $tdir
+	    fatal "Can't find install media, please load one."
+	fi
+	usb=0
+    else
+	usb=1
+    fi
+
+    # Move it all over!
+    tar -cf - -C $tdir . | tar -xf - -C /$bootdir
+    if [[ $? -ne 0 ]]; then
+	umount -f $tdir
+	rmdir $tdir
+	fatal "Cannot move install media bits to bootable disk"
+    fi
+
+    if [[ $usb == 0 ]]; then
+	unmount_ISO $tdir || fatal "Cannot unmount install ISO on $tdir!"
+    else
+	unmount_usb_key $tdir || fatal "Cannot unmount install USB on $tdir!"
+    fi
+    rmdir $tdir
+
+    # Extract the PI stamp for the platform and symlinks.
+    pistamp=`cat /${bootdir}/platform/etc/version/platform`
+    mv /${bootdir}/platform /${bootdir}/platform-${pistamp}
+    ln -s ./platform-${pistamp} /${bootdir}/platform
+    #
+    # The idea is that a new PI can be booted by doing the following:
+    # - Unpack the platform-YYYYMMDDhhmmssZ.tgz PI into
+    #   $BOOTPOOL/boot/platform-YYYYMMDDhhmmssZ/.
+    # - Remove the "platform" symlink.
+    # - Re-add the "platform" symlink to point to the new
+    #   platform-YYYYMMDDhhmmssZ/ directory.
+    # - Next boot will extract "platform" from the new YYYYMMDDhhmmssZ
+    #
+}
+
 changepool() {
     poolpresent $2
 
-    if [[ $1 == "-d" ]]; then
+    # SmartOS convention is $POOL/boot.
+    bootfs=$(zpool get -H bootfs $2 | awk '{print $3}')
+    if [[ "$bootfs" == "${2}/boot" ]]; then
+	if [[ "$1" == "-e" ]]; then
+	   echo "It appears pool $2 is already bootable."
+	   exit 0
+	fi
+	# Else we're good to go for -d check below.
+    elif [[ "$bootfs" != "-" ]]; then
+	echo "It appears pool $2 has a different boot filesystem than the"
+	echo "standard SmartOS filesystem of ${2}/boot. It will need manual"
+	echo "intervention."
+	exit 2
+    fi
+
+    if [[ "$1" == "-d" ]]; then
 	# XXX KEBE SAYS we may need to do more complicated things like wipe
 	# the boot sectors clean or some other such cleanup.
 
 	# For now, disabling is merely unsetting `bootfs` in the pool.
 	zpool set bootfs="" $2
+
+	# Example cleanup.
+	# if [[ "$bootfs" == "${2}/boot" ]]; then
+	#     zfs destroy $bootfs
+	# fi
 	return
     fi
 
     # See if we can enable booting on this pool, even in a limited manner.
 
-    echo "XXX KEBE SAYS FILL ME IN!"
+    # At this point we have a pool without any bootfs specified.
+    # POOL/boot is the SmartOS standard bootfs.
+    bootfs=${2}/boot
 
-    exit 1
+    output=$(zfs list -H $bootfs 2>&1)
+    if [[ $? -eq 0 ]]; then
+	# At this point we have an existing SmartOS-standard boot filesystem,
+	# but it's not specified as bootfs in the pool.
+	# XXX KEBE SAYS we may need to do some reality checking.  For now,
+	# just wing it. and plow forward.
+	echo > /dev/null
+    else
+	# Create a new bootfs and set it.
+	# NOTE:  Encryption should be turned off for this dataset.
+	zfs create -o encryption=off $bootfs
+	if [[ $? -ne 0 ]]; then
+	    echo "Cannot create $bootfs dataset"
+	    exit 1
+	fi
+    fi
+
+    # Test if bootfs can be set...
+    zpool set bootfs=${bootfs} ${2}
+    if [[ $? -ne 0 ]]; then
+	fatal "Cannot make $2 bootable"
+    else
+	zpool set bootfs="" ${2}
+    fi
+
+    if [[ -L /${bootfs}/platform && -d /${bootfs}/platform && \
+	-d /${bootfs}/boot ]]; then
+	# We appear to have a fully formed bootfs already.
+	echo > /dev/null
+    else
+	# Let's populate it.
+	copy_installmedia $bootfs
+	# Fix the loader.conf for keep-the-ramdisk booting.
+	echo 'fstype="ufs"' >> /${bootfs}/boot/loader.conf
+    fi
+
+    # Re-up the boot sectors...
+
+
+    # XXX KEBE WARNS -- illumos#12894 will allow slogs.  We will need to
+    # alter the generation of boot_devices accordingly.
+    # Generate the pool's boot devices now, in case we did something
+    # hyper-clever for the pool.  s1 may be created, but not yet PCFS...
+    mapfile -t boot_devices < <(zpool list -v "${2}" | \
+        grep -E 'c[0-9]+' | awk '{print $1}' | sed -E 's/s[0-9]+//g')
+
+    # Reality check the pool was created with -B.
+    # First way to do this is to check for the `bootsize` property not
+    # its default, which is NO bootsize.
+    zpool get bootsize ${2} | grep -q -w default
+    if [[ $? -eq 0 ]]; then
+	# No bootsize is a first-cut test.  It passes if the pool was
+	# created with `zpool create -B`. There's one other that needs
+	# to be peformed, because some bootable pools are manually
+	# configured to share slices with other functions (slog,
+	# l2arc, dedup):
+
+	# XXX KEBE SAYS FILL ME IN!!!  Use boot_devices once we get there.
+	# WE NEED TO FIGURE OUT IF s1 IS SUITABLE (256MB, e.g.) FOR EXAMPLE.
+
+	suffix=s0
+    else
+	suffix=s1
+    fi
+
+    some=0
+    for a in "${boot_devices[@]}"; do
+	# Plow through devices, even if some fail.
+	installboot -m -b /${bootfs}/boot /${bootfs}/boot/pmbr \
+	    /${bootfs}/boot/gptzfsboot \
+	    /dev/rdsk/${a}${suffix} > /dev/null 2>&1 || \
+	    echo "Can't installboot on ${a}${suffix}"
+	if [[ $? -eq 0 ]]; then
+	    some=1
+	fi
+    done
+    if [[ $some -eq 0 ]]; then
+	fatal "Could not installboot(1M) on ANY vdevs of pool $2"
+    fi
+
+    zpool set bootfs=${bootfs} ${2}
 }
 
 bootable() {
     if [[ "$1" == "-d" || "$1" == "-e" ]]; then
 	if [[ "$2" == "" ]]; then
-	    echo "To enable/disable a pool for booting, please specify a pool"
+	    echo "To enable/disable a pool for booting, please specify a pool."
 	    usage
 	fi
 	changepool $1 $2
@@ -293,11 +456,12 @@ bootable() {
 	    mapfile -t boot_devices < <(zpool list -v "${pool}" | \
 		grep -E 'c[0-9]+' | awk '{print $1}')
 	    for a in "${boot_devices[@]}"; do
-		noslice=$(echo $a | sed 's/s[0-9]+//g')
+		noslice=$(echo $a | sed -E 's/s[0-9]+//g')
 		tdir=`mktemp -d`
 		# Assume that s0 on the physical disk would be where the EFI
 		# System Partition (ESP) lives.  A pcfs mount can confirm/deny
-		# it.
+		# it.  Do this instead of just checkint for bootsize because
+		# we can further integrity-check here if need be.
 		mount -F pcfs /dev/dsk/${noslice}s0 $tdir > /dev/null 2>&1
 		if [[ $? -eq 0 && -f $tdir/EFI/Boot/bootx64.efi ]]; then
 		    efi="and UEFI"
@@ -317,7 +481,10 @@ bootable() {
 }
 
 if [[ "$1" == "-v" ]]; then
-    # XXX KEBE ASKS, do "set -x" here?
+    DEBUG=1
+    shift 1
+elif [[ "$1" == "-vv" ]]; then
+    set -x
     DEBUG=1
     shift 1
 else

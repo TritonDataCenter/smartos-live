@@ -69,8 +69,12 @@ piname_present_get_bootfs() {
     if [[ $numbootable -ne 1 && "$2" == "" ]]; then
 	echo "Multiple bootable pools are available, please specify one"
 	usage
-    elif [[ $numbootable -eq 1 ]]; then
+    elif [[ $numbootable -le 1 ]]; then
 	bootfs=$allbootable
+	if [[ "$bootfs" == "" ]]; then
+	    echo "No bootable pools available..."
+	    usage
+	fi
 	pool=$(echo $bootfs | awk -F/ '{print $1}')
     else
 	pool=$2
@@ -216,7 +220,7 @@ list() {
 
 activate() {
     pistamp=$1
-    bootfs=`piname_present_get_bootfs $1 $2`
+    bootfs=`piname_present_get_bootfs $pistamp $2`
 
     cd /$bootfs
     bootstamp=$(file -h platform | awk '{print $5}' | sed 's/\.\/platform-//g')

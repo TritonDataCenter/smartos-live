@@ -257,21 +257,28 @@ remove() {
 copy_installmedia()
 {
     tdir=`mktemp -d`
+    tfile=`mktemp`
     bootdir=$1
 
-    # Try the USB key first, quietly...
-    mount_usb_key $tdir > /dev/null 2>&1 
+    # Try the USB key first, quietly and without $tdir/.joyentusb check...
+    mount_usb_key $tdir skip > $tfile 2>&1
     if [[ $? -ne 0 ]]; then
 	# If that fails, try mounting the ISO.
 	mount_ISO $tdir
 	if [[ $? -ne 0 ]]; then
 	    rmdir $tdir
-	    fatal "Can't find install media, please load one."
+	    echo "Can't find install media: ISO errors above, USB stick below."
+	    echo ""
+	    cat $tfile
+	    echo ""
+	    rm -f $tfile
+	    fatal "Can't find install media."
 	fi
 	usb=0
     else
 	usb=1
     fi
+    rm -f $tfile
 
     # Move it all over!
     tar -cf - -C $tdir . | tar -xf - -C /$bootdir

@@ -104,7 +104,7 @@ function mount_usb_key()
 			continue
 		fi
 
-		if [[ -f $mnt/.joyliveusb ]]; then
+		if [[ -f $mnt/.joyliveusb || "$2" == "skip" ]]; then
 			echo $mnt
 			return 0
 		fi

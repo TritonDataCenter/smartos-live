@@ -218,6 +218,7 @@ install() {
 	    echo "Installing $1"
 	    echo "        (downloaded to $dload)"
 	    install $dload $2
+	    return 0
 	fi
 	# Else we treat it like a boot stamp.
 

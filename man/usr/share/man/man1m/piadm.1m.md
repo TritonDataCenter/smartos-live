@@ -9,14 +9,14 @@ piadm(1M) -- Manage SmartOS Platform Images
     Historically, SmartOS booted off of a USB key or a read-only media like
     CD-ROM.  The copy and version of the SmartOS software on one of these
     media is called a Platform Image.  A Platform Image is described in
-    detail in the next section. 
+    detail in the next section.
 
     piadm(1M) manages multiple copies of Platform Images on a bootable ZFS
     pool, allowing easier updates to Platform Images and maintaining multiple
     Platform Images on a single boot media.  The method and implementation of
     SmartOS booting does not change vs. a USB key or CD-ROM, but merely uses
     a bootable ZFS pool as the source of the Platform Image, which can be the
-    SmartOS `zones` pool if it is a bootable pool.
+    traditional SmartOS `zones` pool if it is a bootable pool.
 
 ## PLATFORM IMAGES
 
@@ -58,6 +58,46 @@ piadm(1M) -- Manage SmartOS Platform Images
     itself without issue.  Occasionally, however, a PI will have Boot Image
     changes also that need to accompany it.
 
+## BOOTABLE POOLS
+
+    A SmartOS bootable pool (POOL in the examples) contains:
+
+        - A dataset named POOL/boot
+
+        - A `bootfs` pool property set to POOL/boot.
+
+        - At least an MBR on its physical disks for BIOS booting, or if the
+          pool was created with `zpool create -B`, an EFI System Partition
+          (ESP) with loader(5) installed in it.
+
+        - At least one Platform Image in /POOL/boot/platform-<PI-stamp>.
+
+        - At least one Boot Image in /POOL/boot/boot-<PI-stamp>.
+
+        - A /POOL/boot/etc directory that indicates the PI-stamp for the Boot
+          Image.
+
+        - Symbolic links /POOL/boot/platform and /POOL/boot/boot that point
+          to the on-next-boot Platform Image and Boot Image.
+
+    For example:
+
+```
+[root@smartos ~]# piadm bootable
+standalone                     ==> BIOS and UEFI
+zones                          ==> non-bootable 
+[root@smartos ~]# piadm list
+PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT  
+20200714T195617Z   standalone/boot                next         yes   yes  
+[root@smartos ~]# ls -l /standalone/boot
+total 7
+lrwxrwxrwx   1 root     root          23 Jul 15 04:22 boot -> ./boot-20200714T195617Z
+drwxr-xr-x   4 root     root          15 Jul 15 04:12 boot-20200714T195617Z
+drwxr-xr-x   3 root     root           3 Jul 15 04:22 etc
+lrwxrwxrwx   1 root     root          27 Jul 15 04:22 platform -> ./platform-20200714T195617Z
+drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
+[root@smartos ~]# 
+```
 
 ## COMMANDS
 
@@ -132,7 +172,26 @@ piadm(1M) -- Manage SmartOS Platform Images
 
 ## EXAMPLES
 
+### Making a new bootable pool, and seeing the handiwork
 
+```
+[root@smartos ~]# zpool create -f -B standalone c1t1d0
+[root@smartos ~]# piadm bootable
+standalone                     ==> non-bootable 
+zones                          ==> non-bootable 
+[root@smartos ~]# piadm bootable -e -i latest standalone
+Installing PI 20200701T231659Z
+Platform Image 20200701T231659Z will be loaded on next boot,
+    with a new boot image,
+    boot image  20200701T231659Z
+[root@smartos ~]# piadm bootable
+standalone                     ==> BIOS and UEFI
+zones                          ==> non-bootable 
+[root@smartos ~]# piadm list
+PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT  
+20200701T231659Z   standalone/boot                next         no    yes  
+[root@smartos ~]# 
+```
 
 ## EXIT STATUS
 

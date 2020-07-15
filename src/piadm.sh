@@ -198,13 +198,31 @@ install() {
 	    mv ${tdir}/mnt/platform-* ${tdir}/mnt/platform
 	    iso=no
 	    stamp=$(cat ${tdir}/mnt/platform/etc/version/platform)
+	else
+	    /bin/rm -rf ${tdir}
+	    fatal "Unknown file type for $1"
 	fi
     else
-	# Explicit boot stamp.
+	# Explicit boot stamp or URL.
 
-	# XXX KEBE ASKS CHECK SYNTAX?!?  Or just hope the curl failure DTRT?
+	# Do a URL reality check.
+	${CURL} -s -o ${tdir}/download $1
+	if [[ -e ${tdir}/download ]]; then
+	    # Recurse with the downloaded file.
+	    dload=`mktemp`
+	    mv -f ${tdir}/download $dload
+	    /bin/rm -rf ${tdir}
 
-	# First, check if it's the current one or if it exists.
+	    # in case `install` exits out early...
+	    ( pwait $$ ; rm -f $dload ) &
+	    echo "Installing $1"
+	    echo "        (downloaded to $dload)"
+	    install $dload $2
+	fi
+	# Else we treat it like a boot stamp.
+
+	# Now that we think it's a boot stamp, check if it's the
+	# current one or if it exists.
 	# XXX KEBE SAYS WE MIGHT NEED TO OVERRIDE OR NUKE THIS.
 	if [[ -d ${bootfs}/platform-${1} ]]; then
 	    echo "PI-stamp $1 appears to be already on /${bootfs}"

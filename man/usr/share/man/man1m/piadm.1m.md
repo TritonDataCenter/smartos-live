@@ -193,6 +193,35 @@ PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT
 [root@smartos ~]# 
 ```
 
+### Installing a PI-only (use old boot bits) update and activating it
+
+```
+[root@smartos ~]# piadm list
+PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT  
+20200714T195617Z   standalone/boot                next         yes   yes  
+[root@smartos ~]# piadm install https://example.com/PIs/platform-20200715T192200Z.tgz
+Installing https://example.com/PIs/platform-20200715T192200Z.tgz
+        (downloaded to /tmp/tmp.Bba0Ac)
+Installing PI 20200715T192200Z
+umount: warning: /tmp/tmp.XbaqBc/mnt not in mnttab
+umount: /tmp/tmp.XbaqBc/mnt not mounted
+[root@smartos ~]# piadm list
+PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT  
+20200714T195617Z   standalone/boot                next         yes   yes  
+20200715T192200Z   standalone/boot                none         no    no   
+[root@smartos ~]# piadm activate 20200715T192200Z
+Platform Image 20200715T192200Z will be loaded on next boot,
+    WARNING:  20200715T192200Z has no matching boot image, using
+    boot image  20200714T195617Z
+[root@smartos ~]# piadm list
+PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT  
+20200714T195617Z   standalone/boot                next         yes   no   
+20200715T192200Z   standalone/boot                none         no    yes  
+[root@smartos ~]# 
+
+```
+
+
 ## EXIT STATUS
 
 The following exit values are returned:

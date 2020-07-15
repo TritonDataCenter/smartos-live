@@ -99,33 +99,6 @@ piname_present_get_bootfs() {
     echo $bootfs
 }
 
-install_tarball() {
-    tarball=$1
-    bootfs=$2
-
-    tdir=`mktemp -d`
-    pushd $tdir > /dev/null
-    gtar -xzf $1
-
-    ## XXX KEBE SAYS INSPECT THE untarred directory for integrity, etc.
-    ## For now, however, assume:
-    ## - tarball only extracts to one directory.
-    ## - $DIR/etc/version/platform has `pistamp`.
-    ## - All of the other bits are in place properly (unix, boot archive, etc.)
-	
-    stamp=`cat */etc/version/platform`
-    if [[ -e /$bootfs/platform-$stamp ]]; then
-	echo "PI-stamp $stamp appears to exist on /$bootfs"
-	echo "Use:   piadm remove $stamp    before installing this one."
-	popd > /dev/null
-	/bin/rm -rf $tdir
-	return 1
-    fi
-    mv * /$bootfs/platform-$stamp
-    popd > /dev/null
-    rmdir $tdir
-}
-
 # Use "-k" for now until we ship CAs with the Platform Image again.
 CURL="curl -k"
 
@@ -547,18 +520,19 @@ copy_installmedia()
 
 ispoolenabled() {
     pool=$1
-    # SmartOS convention is $POOL/boot.
+    poolpresent $pool
 
-    bootfs=$(zpool get -H bootfs $pool | awk '{print $3}')
-    if [[ "$bootfs" == "${pool}/boot" ]]; then
-	output=$(zfs list -H $bootfs 2>&1)
+    # SmartOS convention is $POOL/boot.
+    currbootfs=$(zpool get -H bootfs $pool | awk '{print $3}')
+    if [[ "$currbootfs" == "${pool}/boot" ]]; then
+	output=$(zfs list -H $currbootfs 2>&1)
 	if [[ $? -eq 0 ]]; then
 	    # We're bootable (at least bootable enough)
 	    return 0
 	fi
 	# else drop out to not-bootable, but honestly this shouldn't happen.
 	echo ".... odd, ${pool}/boot is pool's bootfs, but isn't a filesystem"
-    elif [[ "$bootfs" != "-" ]]; then
+    elif [[ "$currbootfs" != "-" ]]; then
 	echo "It appears pool $pool has a different boot filesystem than the"
 	echo "standard SmartOS filesystem of ${2}/boot. It will need manual"
 	echo "intervention."
@@ -571,8 +545,15 @@ ispoolenabled() {
 
 enablepool() {
     if [[ $1 == "-i" ]]; then
+	if [[ -z $2 || -z $3 ]]; then
+	    echo "-i must take an option, and then a pool must be specified."
+	    usage
+	fi
 	installsource=$2
 	pool=$3
+    elif [[ -z $1 ]]; then
+	echo "To enable a pool for booting, please specify at least a pool"
+	usage
     else
 	installsource="media"
 	pool=$1
@@ -584,7 +565,7 @@ enablepool() {
     if [[ $? -eq 0 ]]; then
        if [[ -d /${bootfs}/platform/. && -d /${bootfs}/boot/. ]]; then
 	   echo "Pool $pool appears to be bootable."
-	   echo "Use `piadm install` or `piadm activate` to change PIs."
+	   echo "Use 'piadm install' or 'piadm activate' to change PIs."
 	   return
        fi
        # XXX KEBE SAYS one of "platform" or "boot" isn't there.
@@ -610,9 +591,9 @@ enablepool() {
     zpool set bootfs=${bootfs} ${pool}
     if [[ $? -ne 0 ]]; then
 	fatal "Cannot make $pool bootable"
-    else
-	zpool set bootfs="" ${pool}
     fi
+    # Reset our view of available bootable pools.
+    getbootable
 
     install $installsource $pool
 
@@ -621,76 +602,6 @@ enablepool() {
 
     # install set 'installstamp' on our behalf.
     activate $installstamp $pool
-}
-
-changepool() {
-    poolpresent $2
-
-    # SmartOS convention is $POOL/boot.
-    bootfs=$(zpool get -H bootfs $2 | awk '{print $3}')
-    if [[ "$bootfs" == "${2}/boot" ]]; then
-	if [[ "$1" == "-e" ]]; then
-	   echo "It appears pool $2 is already bootable."
-	   exit 0
-	fi
-	# Else we're good to go for -d check below.
-    elif [[ "$bootfs" != "-" ]]; then
-	echo "It appears pool $2 has a different boot filesystem than the"
-	echo "standard SmartOS filesystem of ${2}/boot. It will need manual"
-	echo "intervention."
-	exit 2
-    fi
-
-    if [[ "$1" == "-d" ]]; then
-	return
-    fi
-
-    # See if we can enable booting on this pool, even in a limited manner.
-
-    # At this point we have a pool without any bootfs specified.
-    # POOL/boot is the SmartOS standard bootfs.
-    bootfs=${2}/boot
-
-    output=$(zfs list -H $bootfs 2>&1)
-    if [[ $? -eq 0 ]]; then
-	# At this point we have an existing SmartOS-standard boot filesystem,
-	# but it's not specified as bootfs in the pool.
-	# XXX KEBE SAYS we may need to do some reality checking.  For now,
-	# just wing it. and plow forward.
-	echo > /dev/null
-    else
-	# Create a new bootfs and set it.
-	# NOTE:  Encryption should be turned off for this dataset.
-	zfs create -o encryption=off $bootfs
-	if [[ $? -ne 0 ]]; then
-	    echo "Cannot create $bootfs dataset"
-	    exit 1
-	fi
-    fi
-
-    # Test if bootfs can be set...
-    zpool set bootfs=${bootfs} ${2}
-    if [[ $? -ne 0 ]]; then
-	fatal "Cannot make $2 bootable"
-    else
-	zpool set bootfs="" ${2}
-    fi
-
-    if [[ -L /${bootfs}/platform && -d /${bootfs}/platform && \
-	-d /${bootfs}/boot ]]; then
-	# We appear to have a fully formed bootfs already.
-	echo > /dev/null
-    else
-	# Let's populate it.
-	copy_installmedia $bootfs
-	# Fix the loader.conf for keep-the-ramdisk booting.
-	echo 'fstype="ufs"' >> /${bootfs}/boot/loader.conf
-    fi
-
-    # Re-up the boot sectors...
-    update_boot_sectors $2 $bootfs
-
-    zpool set bootfs=${bootfs} ${2}
 }
 
 bootable() {

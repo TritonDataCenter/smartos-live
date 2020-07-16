@@ -115,7 +115,7 @@ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
         `activate` and `assign` are synonyms, for those used to other
         distros' `beadm`, or Triton's `sdcadm platform`, respectively.
 
-      bootable [-d|-e [-i <source>]] [ZFS-pool-name]
+      bootable [-d|-e [-i <source>]|-r] [ZFS-pool-name]
 
         Query or upgrade a ZFS pool's bootable status.  With no arguments,
         the status of all imported pools will be queried.  -d will disable a
@@ -125,6 +125,10 @@ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
         As mentioned earlier, it is up to the administrator to know which
         pool the system will actually boot. Unlike install, this command will
         always attempt to install a corresponding boot image as well.
+
+	The -r flag will refresh a bootable pool's MBR and/or ESP.  This is
+	especially useful on mirror or raidz pools that have new devices
+	attached.
 
         Some pools can only be bootable from an older BIOS system, while
         other can also be bootable from UEFI systems.  The `bootable`

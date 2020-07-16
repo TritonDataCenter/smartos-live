@@ -126,9 +126,9 @@ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
         pool the system will actually boot. Unlike install, this command will
         always attempt to install a corresponding boot image as well.
 
-	The -r flag will refresh a bootable pool's MBR and/or ESP.  This is
-	especially useful on mirror or raidz pools that have new devices
-	attached.
+        The -r flag will refresh a bootable pool's MBR and/or ESP.  This is
+        especially useful on mirror or raidz pools that have new devices
+        attached.
 
         Some pools can only be bootable from an older BIOS system, while
         other can also be bootable from UEFI systems.  The `bootable`

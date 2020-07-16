@@ -31,7 +31,7 @@ usage() {
     echo "Usage: piadm [-v] <command> [command-specific arguments]"
     echo ""
     echo "    piadm activate|assign <PI-stamp> [ZFS-pool-name]"
-    echo "    piadm bootable [-d] [-e [-i <source>]] [ZFS-pool-name]"
+    echo "    piadm bootable [-d] [-e [-i <source>]] [-r] [ZFS-pool-name]"
     echo "    piadm install <source> [ZFS-pool-name]"
     echo "    piadm list <-H> [ZFS-pool-name]"
     echo "    piadm remove <PI-stamp> [ZFS-pool-name]"
@@ -623,6 +623,26 @@ enablepool() {
     activate $installstamp $pool
 }
 
+refreshpool() {
+    pool=$1
+
+    if [[ -z $pool ]]; then
+	echo "Must specify a pool for refresh"
+	usage
+    fi
+
+    currbootfs=""
+    # ispoolenabled sets currbootfs as a side-effect.
+    ispoolenabled $pool
+    if [[ $? -ne 0 ]]; then
+	fatal "Pool $pool is not bootable, and cannot be refreshed"
+    fi
+
+    update_boot_sectors $pool $currbootfs
+
+    exit 0
+}
+
 bootable() {
     if [[ "$1" == "-d" ]]; then
 	if [[ "$2" == "" ]]; then
@@ -645,6 +665,9 @@ bootable() {
     elif [[ "$1" == "-e" ]]; then
 	shift 1
 	enablepool $@
+	return
+    elif [[ "$1" == "-r" ]]; then
+	refreshpool $2
 	return
     fi
 

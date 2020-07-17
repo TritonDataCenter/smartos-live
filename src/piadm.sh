@@ -58,10 +58,10 @@ poolpresent() {
     fi
 }
 
-# Common-code to obtain the bootable filesystem.  Bails if a pool name
-# needs to be specified, or if the PI is blank. Prints the boot
-# filesystem name.  Takes a PI name (for reality-checking a PI stamp
-# or path exists) AND a pool (can be blank).
+# Common-code to obtain the bootable filesystem.  Also checks that the
+# PI stamp or source name is not empty. Prints the boot filesystem
+# name.  Takes a PI name or source name (which must not be blank) AND
+# a pool (which can).
 piname_present_get_bootfs() {
     if [[ "$1" == "" ]]; then
 	echo "Must specify a Platform Image"
@@ -143,8 +143,6 @@ install() {
     tdir=`mktemp -d`
     mkdir ${tdir}/mnt
 
-    # XXX KEBE SAYS CONTINUE HERE !!!
-
     # $1 contains a "source".  Deal with it correctly in the big
     # if/elif/else block.  Once done, we can copy over bits into $tdir or
     # ${tdir}/mnt.
@@ -224,7 +222,6 @@ install() {
 
 	# Now that we think it's a boot stamp, check if it's the
 	# current one or if it exists.
-	# XXX KEBE SAYS WE MIGHT NEED TO OVERRIDE OR NUKE THIS.
 	if [[ -d ${bootfs}/platform-${1} ]]; then
 	    echo "PI-stamp $1 appears to be already on /${bootfs}"
 	    echo "Use   piadm remove $1   to remove any old copies."
@@ -268,7 +265,7 @@ install() {
 	    /bin/rm -rf ${tdir}
 	    fatal "Boot stamp $stamp mismatches platform stamp $pstamp"
 	fi
-	# XXX KEBE SAYS WE MIGHT NEED TO OVERRIDE OR NUKE THIS.
+
 	if [[ -e /${bootfs}/boot-${stamp} ]]; then
 	    echo "PI-stamp $stamp has boot bits already on /${bootfs}"
 	    echo "Use   piadm remove $stamp   to remove any old copies."
@@ -280,7 +277,6 @@ install() {
 	tar -cf - -C ${tdir}/mnt/boot . | tar -xf - -C /${bootfs}/boot-${stamp}
     fi
 
-    # XXX KEBE SAYS WE MIGHT NEED TO OVERRIDE OR NUKE THIS.
     if [[ -e /${bootfs}/platform-${stamp} ]]; then
 	echo "PI-stamp $stamp appears to be already on /${bootfs}"
 	echo "Use   piadm remove $stamp   to remove any old copies."
@@ -370,11 +366,13 @@ update_boot_sectors() {
 	# Use fstyp to confirm if this is a stealth EFI booter...
 	type=$(fstyp /dev/dsk/${boot_devices[0]}s0)
 	if [[ "$type" == "pcfs" ]]; then
-	    # If we detect PCFS on s0, it's LIKELY an EFI System
-	    # Partition that was crafted manually.  Use s1.
+	    # If we detect PCFS on s0, it's LIKELY an EFI System Partition that
+	    # was crafted manually.  Use s1 if it's ZFS, or bail if it's not.
 
-	    # XXX KEBE SAYS maybe mount it and confirm?!?
-
+	    s1type=$(fstyp /dev/dsk/${boot_devices[0]}s1)
+	    if [[ "$s1type" != "zfs" ]]; then
+		fatal "Unusual configuration, ${boot_devices[0]}s1 not ZFS"
+	    fi
 	    suffix=s1
 	else
 	    suffix=s0
@@ -587,7 +585,7 @@ enablepool() {
 	   echo "Use 'piadm install' or 'piadm activate' to change PIs."
 	   return
        fi
-       # XXX KEBE SAYS one of "platform" or "boot" isn't there.
+       # One or both of "platform" or "boot" aren't there.
        # For now, proceed clobber-style.
     fi
 
@@ -655,9 +653,8 @@ bootable() {
 	# Reality check for REALLY messed-up bootfs...
 	ispoolenabled $2
 
-	# XXX KEBE SAYS we may need to do more complicated things like wipe
+	# Eventually we may need to do more complicated things like wipe
 	# the boot sectors clean or some other such cleanup.
-
 	# For now, disabling is merely unsetting `bootfs` in the pool.
 	zpool set bootfs="" $2
 	

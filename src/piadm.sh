@@ -453,7 +453,7 @@ remove() {
     if [[ -d platform-$pistamp ]]; then
 	if [[ $bootstamp == $pistamp ]]; then
 	    echo "$pistamp is the next-booting PI. Please activate another PI"
-	    echo "using    piadm activate <other-PI-stamp>    first."
+	    echo "using 'piadm activate <other-PI-stamp>' first."
 	    usage
 	fi
 
@@ -466,7 +466,7 @@ remove() {
 	    if [[ $? -eq 0 ]]; then
 		# Oh no, pistamp points to the current boot bits.
 		echo "$pistamp is the current set of boot binaries.  Please"
-		echo "activate another pi using   piadm activate <other-PI-stamp>     first."
+		echo "activate another pi using 'piadm activate <other-PI-stamp>' first."
 		usage
 	    fi
 	    /bin/rm -rf boot-$pistamp

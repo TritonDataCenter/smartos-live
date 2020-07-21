@@ -17,6 +17,11 @@
 
 . /lib/sdc/usb-key.sh
 
+err() {
+    echo $1
+    exit 1
+}
+
 fatal() {
 	echo
 	if [[ -n "$1" ]]; then
@@ -24,6 +29,11 @@ fatal() {
 	fi
 	echo
 	exit 2
+}
+
+corrupt() {
+    echo $1
+    exit 3
 }
 
 usage() {
@@ -35,8 +45,13 @@ usage() {
     echo "    piadm install <source> [ZFS-pool-name]"
     echo "    piadm list <-H> [ZFS-pool-name]"
     echo "    piadm remove <PI-stamp> [ZFS-pool-name]"
-    echo ""
-    exit 1
+    err ""
+}
+
+vecho() {
+    if [[ $VERBOSE -eq 1 ]]; then
+	echo $@
+    fi
 }
 
 declare -a allbootable
@@ -108,6 +123,7 @@ URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
 # Scan for available installation media and mount it.
 mount_installmedia() {
     tfile=`mktemp`
+    tfile2=`mktemp`
 
     mntdir=$1
 
@@ -115,14 +131,19 @@ mount_installmedia() {
     mount_usb_key $mntdir skip > $tfile 2>&1
     if [[ $? -ne 0 ]]; then
 	# If that fails, try mounting the ISO.
-	mount_ISO $mntdir
+	mount_ISO $mntdir > $tfile2 2>&1
 	if [[ $? -ne 0 ]]; then
 	    rmdir $mntdir
-	    echo "Can't find install media: ISO errors above, USB stick below."
-	    echo ""
-	    cat $tfile
-	    echo ""
-	    rm -f $tfile
+	    if [[ $VERBOSE -eq 1 ]]; then
+		echo "Can't find install media: USB stick errors:"
+		echo ""
+		cat $tfile
+		echo ""
+		echo "ISO errors"
+		echo ""
+		cat $tfile2
+	    fi
+	    rm -f $tfile $tfile2
 	    return 1
 	fi
 	usb=0
@@ -130,7 +151,7 @@ mount_installmedia() {
 	usb=1
     fi
 
-    rm -f $tfile
+    rm -f $tfile $tfile2
     return 0
 }
 
@@ -166,7 +187,7 @@ install() {
 	mount_installmedia ${tdir}/mnt
 	if [[ $? -ne 0 ]]; then
 	    /bin/rm -rf ${tdir}
-	    fatal "Cannot find install media"
+	    err "Cannot find install media"
 	fi
 
 	# For now, assume boot stamp and PI stamp are the same on
@@ -187,7 +208,7 @@ install() {
 	    gtar -xzOf $1 > /dev/null 2>&1
 	    if [[ $? -ne 0 ]]; then
 		/bin/rm -rf ${tdir}
-		fatal "File $1 is not an ISO or a .tgz file."
+		err "File $1 is not an ISO or a .tgz file."
 	    fi
 	    # We're most-likely good here.
 	    # NOTE: SmartOS/Triton PI files expand to platform-$STAMP.
@@ -198,7 +219,7 @@ install() {
 	    stamp=$(cat ${tdir}/mnt/platform/etc/version/platform)
 	else
 	    /bin/rm -rf ${tdir}
-	    fatal "Unknown file type for $1"
+	    err "Unknown file type for $1"
 	fi
     else
 	# Explicit boot stamp or URL.
@@ -213,8 +234,8 @@ install() {
 
 	    # in case `install` exits out early...
 	    ( pwait $$ ; rm -f $dload ) &
-	    echo "Installing $1"
-	    echo "        (downloaded to $dload)"
+	    vecho "Installing $1"
+	    vecho "        (downloaded to $dload)"
 	    install $dload $2
 	    return 0
 	fi
@@ -223,10 +244,9 @@ install() {
 	# Now that we think it's a boot stamp, check if it's the
 	# current one or if it exists.
 	if [[ -d ${bootfs}/platform-${1} ]]; then
-	    echo "PI-stamp $1 appears to be already on /${bootfs}"
-	    echo "Use   piadm remove $1   to remove any old copies."
 	    /bin/rm -rf ${tdir}
-	    exit 0
+	    echo "PI-stamp $1 appears to be already on /${bootfs}"
+	    err "Use   piadm remove $1   to remove any old copies."
 	fi
 
 	# Confirm this is a legitimate build stamp.
@@ -246,11 +266,11 @@ install() {
 	if [[ "$stamp" != "$bstamp" ]]; then
 	    umount ${tdir}/mnt
 	    /bin/rm -rf ${tdir}
-	    fatal "Boot bits stamp says $bstamp, vs. argument stamp $stamp"
+	    err "Boot bits stamp says $bstamp, vs. argument stamp $stamp"
 	fi
     fi
 
-    echo "Installing PI $stamp"
+    vecho "Installing PI $stamp"
 
     # At this point we have ${tdir}/mnt which contains at least "platform".
     # If "iso" is yes, it also contains "boot", "boot.catalog" and "etc", but
@@ -263,26 +283,24 @@ install() {
 	if [[ "$stamp" != "$pstamp" ]];	then
 	    umount ${tdir}/mnt
 	    /bin/rm -rf ${tdir}
-	    fatal "Boot stamp $stamp mismatches platform stamp $pstamp"
+	    err "Boot stamp $stamp mismatches platform stamp $pstamp"
 	fi
 
 	if [[ -e /${bootfs}/boot-${stamp} ]]; then
-	    echo "PI-stamp $stamp has boot bits already on /${bootfs}"
-	    echo "Use   piadm remove $stamp   to remove any old copies."
 	    umount ${tdir}/mnt
 	    /bin/rm -rf ${tdir}
-	    exit 0
+	    echo "PI-stamp $stamp has boot bits already on /${bootfs}"
+	    err "Use   piadm remove $stamp   to remove any old copies."
 	fi
 	mkdir /${bootfs}/boot-${stamp}
 	tar -cf - -C ${tdir}/mnt/boot . | tar -xf - -C /${bootfs}/boot-${stamp}
     fi
 
     if [[ -e /${bootfs}/platform-${stamp} ]]; then
-	echo "PI-stamp $stamp appears to be already on /${bootfs}"
-	echo "Use   piadm remove $stamp   to remove any old copies."
 	umount ${tdir}/mnt
 	/bin/rm -rf ${tdir}
-	exit 0
+	echo "PI-stamp $stamp appears to be already on /${bootfs}"
+	err "Use   piadm remove $stamp   to remove any old copies."
     fi
     mkdir /${bootfs}/platform-${stamp}
     tar -cf - -C ${tdir}/mnt/platform . | \
@@ -310,8 +328,8 @@ list() {
     getbootable
     for bootfs in $allbootable; do
 	if [[ ! -L /$bootfs/platform ]]; then
-	    echo "WARNING: Bootable filesystem $bootfs has non-symlink platform"
-	    exit 1
+	    corrupt \
+		"WARNING: Bootable filesystem $bootfs has non-symlink platform"
 	fi
 	cd /$bootfs
 	bootbitsstamp=$(cat etc/version/boot)
@@ -391,7 +409,7 @@ update_boot_sectors() {
 	installboot -m -b /${bootfs}/boot/ /${bootfs}/boot/pmbr \
 	    /${bootfs}/boot/gptzfsboot \
 	    /dev/rdsk/${a}${suffix} > /dev/null 2>&1 || \
-	    echo "Can't installboot on ${a}${suffix}"
+	    echo "WARNING: Can't installboot on ${a}${suffix}"
 	if [[ $? -eq 0 ]]; then
 	    some=1
 	fi
@@ -411,7 +429,7 @@ activate() {
     bootstamp=$(file -h platform | awk '{print $5}' | sed 's/\.\/platform-//g')
     if [[ -d platform-$pistamp ]]; then
 	if [[ $bootstamp == $pistamp ]]; then
-	    echo "NOTE: $pistamp is the current active PI."
+	    vecho "NOTE: $pistamp is the current active PI."
 	    return
 	fi
     else
@@ -419,7 +437,7 @@ activate() {
 	usage
     fi
 
-    echo "Platform Image $pistamp will be loaded on next boot,"
+    vecho "Platform Image $pistamp will be loaded on next boot,"
 
     # Okay, at this point we have the platform sorted out.  Let's see
     # if we can do the same with the boot.
@@ -479,62 +497,6 @@ remove() {
     fi
 }
 
-copy_installmedia()
-{
-    tdir=`mktemp -d`
-    tfile=`mktemp`
-    bootdir=$1
-
-    # Try the USB key first, quietly and without $tdir/.joyentusb check...
-    mount_usb_key $tdir skip > $tfile 2>&1
-    if [[ $? -ne 0 ]]; then
-	# If that fails, try mounting the ISO.
-	mount_ISO $tdir
-	if [[ $? -ne 0 ]]; then
-	    rmdir $tdir
-	    echo "Can't find install media: ISO errors above, USB stick below."
-	    echo ""
-	    cat $tfile
-	    echo ""
-	    rm -f $tfile
-	    fatal "Can't find install media."
-	fi
-	usb=0
-    else
-	usb=1
-    fi
-    rm -f $tfile
-
-    # Move it all over!
-    tar -cf - -C $tdir . | tar -xf - -C /$bootdir
-    if [[ $? -ne 0 ]]; then
-	umount $tdir
-	rmdir $tdir
-	fatal "Cannot move install media bits to bootable disk"
-    fi
-
-    if [[ $usb == 0 ]]; then
-	unmount_ISO $tdir || fatal "Cannot unmount install ISO on $tdir!"
-    else
-	unmount_usb_key $tdir || fatal "Cannot unmount install USB on $tdir!"
-    fi
-    rmdir $tdir
-
-    # Extract the PI stamp for the platform and symlinks.
-    pistamp=`cat /${bootdir}/platform/etc/version/platform`
-    mv /${bootdir}/platform /${bootdir}/platform-${pistamp}
-    ln -s ./platform-${pistamp} /${bootdir}/platform
-    #
-    # The idea is that a new PI can be booted by doing the following:
-    # - Unpack the platform-YYYYMMDDhhmmssZ.tgz PI into
-    #   $BOOTPOOL/boot/platform-YYYYMMDDhhmmssZ/.
-    # - Remove the "platform" symlink.
-    # - Re-add the "platform" symlink to point to the new
-    #   platform-YYYYMMDDhhmmssZ/ directory.
-    # - Next boot will extract "platform" from the new YYYYMMDDhhmmssZ
-    #
-}
-
 ispoolenabled() {
     pool=$1
     poolpresent $pool
@@ -548,12 +510,11 @@ ispoolenabled() {
 	    return 0
 	fi
 	# else drop out to not-bootable, but honestly this shouldn't happen.
-	echo ".... odd, ${pool}/boot is pool's bootfs, but isn't a filesystem"
+	vecho ".... odd, ${pool}/boot is pool's bootfs, but isn't a filesystem"
     elif [[ "$currbootfs" != "-" ]]; then
 	echo "It appears pool $pool has a different boot filesystem than the"
-	echo "standard SmartOS filesystem of ${2}/boot. It will need manual"
-	echo "intervention."
-	exit 2
+	echo "standard SmartOS filesystem of ${pool}/boot. It will need manual"
+	corrupt "intervention."
     fi
 
     # Not bootable.
@@ -581,9 +542,9 @@ enablepool() {
     ispoolenabled $pool
     if [[ $? -eq 0 ]]; then
        if [[ -d /${bootfs}/platform/. && -d /${bootfs}/boot/. ]]; then
-	   echo "Pool $pool appears to be bootable."
-	   echo "Use 'piadm install' or 'piadm activate' to change PIs."
-	   return
+	   vecho "Pool $pool appears to be bootable."
+	   vecho "Use 'piadm install' or 'piadm activate' to change PIs."
+	   return 0
        fi
        # One or both of "platform" or "boot" aren't there.
        # For now, proceed clobber-style.
@@ -595,8 +556,7 @@ enablepool() {
 	# NOTE:  Encryption should be turned off for this dataset.
 	zfs create -o encryption=off $bootfs
 	if [[ $? -ne 0 ]]; then
-	    echo "Cannot create $bootfs dataset"
-	    exit 1
+	    fatal "Cannot create $bootfs dataset"
 	fi
     fi
     # We MAY need to do some reality checking if the `zfs list` shows
@@ -633,12 +593,12 @@ refreshpool() {
     # ispoolenabled sets currbootfs as a side-effect.
     ispoolenabled $pool
     if [[ $? -ne 0 ]]; then
-	fatal "Pool $pool is not bootable, and cannot be refreshed"
+	err "Pool $pool is not bootable, and cannot be refreshed"
     fi
 
     update_boot_sectors $pool $currbootfs
 
-    exit 0
+    return 0
 }
 
 bootable() {
@@ -715,14 +675,14 @@ bootable() {
 }
 
 if [[ "$1" == "-v" ]]; then
-    DEBUG=1
+    VERBOSE=1
     shift 1
 elif [[ "$1" == "-vv" ]]; then
     set -x
-    DEBUG=1
+    VERBOSE=1
     shift 1
 else
-    DEBUG=0
+    VERBOSE=0
 fi
 
 cmd=$1

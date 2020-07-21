@@ -2,7 +2,7 @@ piadm(1M) -- Manage SmartOS Platform Images
 ===========================================
 
 ## SYNOPSIS
-    /usr/sbin/piadm [-v] <command> [command-specific arguments]
+    /usr/sbin/piadm [-v | -vv] <command> [command-specific arguments]
 
 ## DESCRIPTION
 
@@ -101,7 +101,11 @@ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
 
 ## COMMANDS
 
-    The following commands and options are supported:
+    The piadm(1M) command will produce more verbose output if run with -v, or
+    with -vv will produce both -v output and enable the shell's -x flag,
+    which produces output of all of the commands run in the piadm(1M) script.
+
+    piadm(1M) commands and options are:
 
       activate <PI-stamp> [ZFS-pool-name]
       assign <PI-stamp> [ZFS-pool-name]
@@ -234,7 +238,14 @@ The following exit values are returned:
          Successful completion.
 
      1
-         An error occurred.
+         An error occurred, but no change was made
+
+     2
+	 A fatal error occurred, and there may be partial change or
+	 other residual files or directories.
+
+     3
+         A corrupt environment on what is supposed to be a bootable pool.
 
 
 ## SEE ALSO

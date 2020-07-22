@@ -451,12 +451,12 @@ activate() {
 	    # Fix the loader.conf for keep-the-ramdisk booting.
 	    echo 'fstype="ufs"' >> ./boot/loader.conf
 	fi
-	echo "    with a new boot image,"
+	vecho "    with a new boot image,"
     else
-	echo "    WARNING:  $pistamp has no matching boot image, using"
+	vecho "    WARNING:  $pistamp has no matching boot image, using"
     fi
 
-    echo "    boot image " `cat etc/version/boot`
+    vecho "    boot image " `cat etc/version/boot`
 
     rm -f platform
     ln -s ./platform-$pistamp platform

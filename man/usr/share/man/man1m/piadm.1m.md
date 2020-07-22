@@ -255,9 +255,21 @@ The following exit values are returned:
 ## NOTES
 
     Many ZFS pool types are not allowed to be bootable.  The system's BIOS or
-    EFI must locate a bootable disk on a bootable pool in order to boot.
+    UEFI must locate a bootable disk on a bootable pool in order to boot.
+    Future work in illumos will enable more ZFS pool types to be bootable,
+    but for now a ZFS pool should be a single-level-vdev pool, namely one of:
+
+      - Single disk
+      - Mirror
+      - RaidZ (any parity)
 
     SmartOS still loads a ramdisk root with a read-only /usr filesystem, even
-    with a bootable pool.
+    when booted from a bootable pool.  This means a bootable pool that isn't
+    the SmartOS `zones` pool receives relatively few writes unless it it used
+    for some other purpose as well.
 
-    <Notes of ZFS pools>
+    A bootable pool created without the -B option, but using whole disks,
+    will be BIOS bootable thanks to space for the MBR, but not bootable with
+    UEFI.  A hand-partitioned GPT disk may be able to be bootable with both
+    BIOS and UEFI, and can have some of its other GPT parititions used for
+    other purposes.

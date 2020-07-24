@@ -297,7 +297,9 @@ install() {
     fi
 
     if [[ -e /${bootfs}/platform-${stamp} ]]; then
-	umount ${tdir}/mnt
+	if [[ "$iso" == "yes" ]]; then
+	    umount ${tdir}/mnt
+	fi
 	/bin/rm -rf ${tdir}
 	echo "PI-stamp $stamp appears to be already on /${bootfs}"
 	err "Use   piadm remove $stamp   to remove any old copies."
@@ -306,7 +308,9 @@ install() {
     tar -cf - -C ${tdir}/mnt/platform . | \
 	tar -xf - -C /${bootfs}/platform-${stamp}
 
-    umount ${tdir}/mnt
+    if [[ "$iso" == "yes" ]]; then
+	umount ${tdir}/mnt
+    fi
     /bin/rm -rf ${tdir}
 
     # Global variable for enablepool() usage...

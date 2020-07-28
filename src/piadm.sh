@@ -54,11 +54,18 @@ vecho() {
     fi
 }
 
-declare -a allbootable
-declare -a numbootable
+declare bootfs
+declare -a allbootfs
+declare -a numbootfs
+#
+# Inventory pools and bootable file systems.
+#
 getbootable() {
-    allbootable=$(zpool get -H bootfs $pool | grep -vw default | awk '{print $3}')
-    numbootable=${#allbootable[@]}
+    IFS=" "
+    # Use `mapfile -t` so bash array constructs can work.
+    mapfile -t allbootfs \
+	    < <(zpool get -H bootfs | grep -vw default | awk '{print $3}')
+    numbootfs=${#allbootfs[@]}
 }
 
 declare -a activestamp
@@ -66,6 +73,7 @@ activestamp=$(uname -v | sed 's/joyent_//g')
 declare -a installstamp
 
 poolpresent() {
+    # Works for an empty $1, which is "all of them" or "unspecified"
     zpool list $1 > /dev/null 2>&1
     if [[ $? -ne 0 ]]; then
 	echo "Pool $1 not present"
@@ -73,31 +81,38 @@ poolpresent() {
     fi
 }
 
-# Common-code to obtain the bootable filesystem.  Also checks that the
-# PI stamp or source name is not empty. Prints the boot filesystem
-# name.  Takes a PI name or source name (which must not be blank) AND
-# a pool (which can).
+# Common-code to obtain the bootable filesystem, and setting $bootfs
+# to it.  Also checks that the PI stamp or source name is not empty.
+# Takes a PI name or source name (which must not be blank) AND a pool
+# (which can).
 piname_present_get_bootfs() {
     if [[ "$1" == "" ]]; then
 	echo "Must specify a Platform Image"
 	usage
     fi
 
+    poolpresent $pool
+
     getbootable
-    if [[ $numbootable -ne 1 && "$2" == "" ]]; then
+    if [[ $numbootfs -gt 1 && "$2" == "" ]]; then
 	echo "Multiple bootable pools are available, please specify one"
 	usage
-    elif [[ $numbootable -le 1 ]]; then
-	bootfs=$allbootable
+    elif [[ "$2" == "" ]]; then
+	# If we reach here, no more than one bootable pool.
+	bootfs=$allbootfs
 	if [[ "$bootfs" == "" ]]; then
 	    echo "No bootable pools available..."
 	    usage
 	fi
 	pool=$(echo $bootfs | awk -F/ '{print $1}')
+	vecho "Selecting lone boot pool $pool by default."
     else
+	# If we reach here, the CLI specifies a known-present (passes
+	# poolpresent()) pool in $2 and we have at least one to check
+	# against..
 	pool=$2
 	bootfs=""
-	for check in $allbootable; do
+	for check in ${allbootfs[@]}; do
 	    thispool=$(echo $check | awk -F/ '{print $1}')
 	    if [[ $thispool == $pool ]]; then
 		bootfs=$check
@@ -109,9 +124,6 @@ piname_present_get_bootfs() {
 	    usage
 	fi
     fi
-
-    poolpresent $pool
-    echo $bootfs
 }
 
 # Use "-k" for now until we ship CAs with the Platform Image again.
@@ -160,7 +172,7 @@ mount_installmedia() {
 # XXX KEBE SAYS there is a security discussion to be had about the integrity
 # of the source.
 install() {
-    bootfs=`piname_present_get_bootfs $1 $2`
+    piname_present_get_bootfs $1 $2
     tdir=`mktemp -d`
     mkdir ${tdir}/mnt
 
@@ -330,7 +342,12 @@ list() {
     poolpresent $pool
 
     getbootable
-    for bootfs in $allbootable; do
+    for bootfs in ${allbootfs[@]}; do
+	bfspool=$(echo $bootfs | awk -F/ '{print $1}')
+	if [[ "$pool" != "" && "$bfspool" != "$pool" ]]; then
+	    # If we specify a pool for listing, skip ones not in the pool.
+	    continue
+	fi
 	if [[ ! -L /$bootfs/platform ]]; then
 	    corrupt \
 		"WARNING: Bootable filesystem $bootfs has non-symlink platform"
@@ -338,8 +355,9 @@ list() {
 	cd /$bootfs
 	bootbitsstamp=$(cat etc/version/boot)
 	bootstamp=$(cat platform/etc/version/platform)
-	pis=$(cd /$bootfs ; cat platform-*/etc/version/platform)
-	for pi in $pis; do
+	mapfile -t pis \
+		< <(cd /$bootfs ; cat platform-*/etc/version/platform)
+	for pi in ${pis[@]}; do
 	    if [[ $activestamp == $pi ]]; then
 		active="yes"
 	    else
@@ -426,7 +444,7 @@ update_boot_sectors() {
 
 activate() {
     pistamp=$1
-    bootfs=`piname_present_get_bootfs $pistamp $2`
+    piname_present_get_bootfs $pistamp $2
     pool=$(echo $bootfs | awk -F/ '{print $1}')
 
     cd /$bootfs
@@ -468,7 +486,7 @@ activate() {
 
 remove() {
     pistamp=$1
-    bootfs=`piname_present_get_bootfs $pistamp $2`
+    piname_present_get_bootfs $pistamp $2
     cd /$bootfs
     bootstamp=$(file -h platform | awk '{print $5}' | sed 's/\.\/platform-//g')
 
@@ -527,7 +545,7 @@ ispoolenabled() {
 
 enablepool() {
     if [[ $1 == "-i" ]]; then
-	if [[ -z $2 || -z $3 ]]; then
+	if [[ "$2" == "" || "$3" == "" ]]; then
 	    echo "-i must take an option, and then a pool must be specified."
 	    usage
 	fi

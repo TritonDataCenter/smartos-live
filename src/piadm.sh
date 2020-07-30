@@ -126,8 +126,8 @@ piname_present_get_bootfs() {
     fi
 }
 
-# Use "-k" for now until we ship CAs with the Platform Image again.
-CURL="curl -k"
+# Defined as a variable in case we need to add parameters (like -s) to it.
+CURL="curl -s"
 
 # Well-known source of SmartOS Platform Images
 URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
@@ -187,7 +187,7 @@ install() {
 	# Grab the latest-version ISO.  Before proceeding, make sure it's the
 	# current one.
 	iso=yes
-	${CURL} -s -o ${tdir}/smartos.iso ${URL_PREFIX}/smartos-latest.iso
+	${CURL} -o ${tdir}/smartos.iso ${URL_PREFIX}/smartos-latest.iso
 	mount -F hsfs ${tdir}/smartos.iso ${tdir}/mnt
 
 	# For now, assume boot stamp and PI stamp are the same on an ISO...
@@ -237,7 +237,7 @@ install() {
 	# Explicit boot stamp or URL.
 
 	# Do a URL reality check.
-	${CURL} -s -o ${tdir}/download $1
+	${CURL} -o ${tdir}/download $1
 	if [[ -e ${tdir}/download ]]; then
 	    # Recurse with the downloaded file.
 	    dload=`mktemp`
@@ -264,12 +264,12 @@ install() {
 	# Confirm this is a legitimate build stamp.
 	# Use conventions from site hosted in URL_PREFIX.
 	checkurl=${URL_PREFIX}/$1/index.html
-	${CURL} -s $checkurl | head | grep -qv "not found"
+	${CURL} $checkurl | head | grep -qv "not found"
 	if [[ $? -ne 0 ]]; then
 	    echo "PI-stamp $1 is invalid for download from $URL_PREFIX"
 	    usage
 	fi
-	${CURL} -s -o ${tdir}/smartos.iso ${URL_PREFIX}/$1/smartos-${1}.iso
+	${CURL} -o ${tdir}/smartos.iso ${URL_PREFIX}/$1/smartos-${1}.iso
 	mount -F hsfs ${tdir}/smartos.iso ${tdir}/mnt
 	iso=yes
 	stamp=$1

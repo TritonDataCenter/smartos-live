@@ -187,7 +187,7 @@ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
 [root@smartos ~]# piadm bootable
 standalone                     ==> non-bootable
 zones                          ==> non-bootable
-[root@smartos ~]# piadm bootable -e -i latest standalone
+[root@smartos ~]# piadm -v bootable -e -i latest standalone
 Installing PI 20200701T231659Z
 Platform Image 20200701T231659Z will be loaded on next boot,
     with a new boot image,
@@ -207,17 +207,15 @@ PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT
 [root@smartos ~]# piadm list
 PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT
 20200714T195617Z   standalone/boot                next         yes   yes
-[root@smartos ~]# piadm install https://example.com/PIs/platform-20200715T192200Z.tgz
+[root@smartos ~]# piadm -v install https://example.com/PIs/platform-20200715T192200Z.tgz
 Installing https://example.com/PIs/platform-20200715T192200Z.tgz
         (downloaded to /tmp/tmp.Bba0Ac)
 Installing PI 20200715T192200Z
-umount: warning: /tmp/tmp.XbaqBc/mnt not in mnttab
-umount: /tmp/tmp.XbaqBc/mnt not mounted
 [root@smartos ~]# piadm list
 PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT
 20200714T195617Z   standalone/boot                next         yes   yes
 20200715T192200Z   standalone/boot                none         no    no
-[root@smartos ~]# piadm activate 20200715T192200Z
+[root@smartos ~]# piadm -v activate 20200715T192200Z
 Platform Image 20200715T192200Z will be loaded on next boot,
     WARNING:  20200715T192200Z has no matching boot image, using
     boot image  20200714T195617Z

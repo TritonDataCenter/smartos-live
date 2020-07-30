@@ -68,9 +68,9 @@ getbootable() {
     numbootfs=${#allbootfs[@]}
 }
 
-declare -a activestamp
+declare activestamp
 activestamp=$(uname -v | sed 's/joyent_//g')
-declare -a installstamp
+declare installstamp
 
 poolpresent() {
     # Works for an empty $1, which is "all of them" or "unspecified"

@@ -241,8 +241,8 @@ The following exit values are returned:
          An error occurred, but no change was made
 
      2
-	 A fatal error occurred, and there may be partial change or
-	 other residual files or directories.
+         A fatal error occurred, and there may be partial change or
+         other residual files or directories.
 
      3
          A corrupt environment on what is supposed to be a bootable pool.
@@ -273,3 +273,7 @@ The following exit values are returned:
     UEFI.  A hand-partitioned GPT disk may be able to be bootable with both
     BIOS and UEFI, and can have some of its other GPT parititions used for
     other purposes.
+
+    If a bootable pool's boot image or platform image becomes corrupt, even
+    if it's `zones`, a machine can still be booted with a USB stick, CD-ROM,
+    or other method of booting SmartOS, and recovery methods can occur.

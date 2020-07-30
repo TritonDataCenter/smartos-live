@@ -672,9 +672,10 @@ bootable() {
 		noslice=$(echo $a | sed -E 's/s[0-9]+//g')
 		tdir=`mktemp -d`
 		# Assume that s0 on the physical disk would be where the EFI
-		# System Partition (ESP) lives.  A pcfs mount can confirm/deny
-		# it.  Do this instead of just checkint for bootsize because
-		# we can further integrity-check here if need be.
+		# System Partition (ESP) lives.  A pcfs mount, ALONG WITH a
+		# check for a bootx64.efi executable, can confirm/deny it. Do
+		# this instead of just checkint for bootsize because we can
+		# further integrity-check here if need be.
 		mount -F pcfs /dev/dsk/${noslice}s0 $tdir > /dev/null 2>&1
 		if [[ $? -eq 0 && -f $tdir/EFI/Boot/bootx64.efi ]]; then
 		    efi="and UEFI"

@@ -158,9 +158,6 @@ mount_installmedia() {
 	    rm -f $tfile $tfile2
 	    return 1
 	fi
-	usb=0
-    else
-	usb=1
     fi
 
     rm -f $tfile $tfile2

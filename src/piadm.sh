@@ -56,7 +56,7 @@ vecho() {
 
 declare bootfs
 declare -a allbootfs
-declare -a numbootfs
+declare numbootfs
 #
 # Inventory pools and bootable file systems.
 #

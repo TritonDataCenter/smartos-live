@@ -274,4 +274,5 @@ The following exit values are returned:
 
     If a bootable pool's boot image or platform image becomes corrupt, even
     if it's `zones`, a machine can still be booted with a USB stick, CD-ROM,
-    or other method of booting SmartOS, and recovery methods can occur.
+    or other method of booting SmartOS.  A bootable pool can then be
+    repaired using piadm(1M) from the USB stick or CD-ROM.

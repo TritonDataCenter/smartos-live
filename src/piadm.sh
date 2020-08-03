@@ -130,7 +130,10 @@ piname_present_get_bootfs() {
 CURL="curl -s"
 
 # Well-known source of SmartOS Platform Images
-URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
+DEFAULT_URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
+
+# Can be overridden by the user's environment.
+URL_PREFIX=${URL_PREFIX:-${DEFAULT_URL_PREFIX}}
 
 # Scan for available installation media and mount it.
 mount_installmedia() {

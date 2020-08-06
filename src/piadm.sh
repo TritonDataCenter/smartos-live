@@ -169,7 +169,7 @@ mount_installmedia() {
 
 # Install a Platform Image.
 #
-# XXX KEBE SAYS there is a security discussion to be had about the integrity
+# XXX WARNING - there is a security discussion to be had about the integrity
 # of the source.
 install() {
     piname_present_get_bootfs $1 $2
@@ -385,7 +385,7 @@ update_boot_sectors() {
     pool=$1
     bootfs=$2
 
-    # XXX KEBE WARNS -- illumos#12894 will allow slogs.  We will need to
+    # XXX WARNING -- illumos#12894 will allow slogs.  We will need to
     # alter the generation of boot_devices accordingly.
     # Generate the pool's boot devices now, in case we did something
     # hyper-clever for the pool.  s1 may be created, but not yet PCFS...

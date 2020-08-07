@@ -1,15 +1,26 @@
 piadm(1M) -- Manage SmartOS Platform Images
 ===========================================
 
+
 ## SYNOPSIS
     /usr/sbin/piadm [-v | -vv] <command> [command-specific arguments]
+
+    piadm activate <PI-stamp> [ZFS-pool-name]
+    piadm assign <PI-stamp> [ZFS-pool-name]
+    piadm bootable
+    piadm bootable [-dr] <ZFS-pool-name>
+    piadm bootable -e [ -i <source> ] <ZFS-pool-name>
+    piadm install <source> [ZFS-pool-name]
+    piadm list [ZFS-pool-name]
+    piadm remove <PI-stamp> [ZFS-pool-name]
 
 ## DESCRIPTION
 
     Historically, SmartOS booted off of a USB key or a read-only media like
     CD-ROM.  The copy and version of the SmartOS software on one of these
     media is called a Platform Image.  A Platform Image is described in
-    detail in the next section.
+    detail in the next section.  The piadm(1M) utility enables and manages
+    the ability to instead boot directly off of a ZFS pool.
 
     piadm(1M) manages multiple copies of Platform Images on a bootable ZFS
     pool, allowing easier updates to Platform Images and maintaining multiple
@@ -101,14 +112,15 @@ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
 
 ## COMMANDS
 
-    The piadm(1M) command will produce more verbose output if run with -v, or
-    with -vv will produce both -v output and enable the shell's -x flag,
-    which produces output of all of the commands run in the piadm(1M) script.
+    The piadm(1M) command will produce more verbose output if -v is stated
+    prior to the command. If -vv is stated prior to the command, piadm(1M)
+    will produce both -v output and enable the shell's -x flag, which
+    produces output of all of the commands run in the piadm(1M) script.
 
     piadm(1M) commands and options are:
 
-      activate <PI-stamp> [ZFS-pool-name]
-      assign <PI-stamp> [ZFS-pool-name]
+      piadm activate <PI-stamp> [ZFS-pool-name]
+      piadm assign <PI-stamp> [ZFS-pool-name]
 
         Activate a Platform Image for the next boot, on a specified ZFS pool
         if there are more than one bootable pools imported.  It is up to the
@@ -119,7 +131,7 @@ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
         `activate` and `assign` are synonyms, for those used to other
         distros' `beadm`, or Triton's `sdcadm platform`, respectively.
 
-      bootable [-d|-e [-i <source>]|-r] [ZFS-pool-name]
+      piadm bootable [-d | -e [-i <source>] | -r] [ZFS-pool-name]
 
         Query or upgrade a ZFS pool's bootable status.  With no arguments,
         the status of all imported pools will be queried.  -d will disable a
@@ -134,11 +146,11 @@ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
         especially useful on mirror or raidz pools that have new devices
         attached.
 
-        Some pools can only be bootable from an older BIOS system, while
-        other can also be bootable from UEFI systems.  The `bootable`
-        subcommand will indicate this.
+        Some pools can only be bootable on systems configured to boot in
+        legacy BIOS mode, while others can also be bootable from UEFI
+        systems.  The `bootable` subcommand will indicate this.
 
-      install <source> [ZFS-pool-name]
+      piadm install <source> [ZFS-pool-name]
 
         Installs a new Platform Image into the bootable pool.  If the source
         also contains the boot image (like an ISO does), the Boot Image will
@@ -165,12 +177,12 @@ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
 
           - A URL to either one of an ISO image or a gzipped PI tarball.
 
-      list [ZFS-pool-name]
+      piadm list [ZFS-pool-name]
 
         Lists the available platform images (and boot images) on bootable
         pools.
 
-      remove <PI-stamp> [ZFS-pool-name]
+      piadm remove <PI-stamp> [ZFS-pool-name]
 
         The opposite of `install`, and only accepts a PI-stamp.  If a boot
         image exists with the specified PI-stamp, it will also be removed
@@ -263,7 +275,7 @@ The following exit values are returned:
 
     SmartOS still loads a ramdisk root with a read-only /usr filesystem, even
     when booted from a bootable pool.  This means a bootable pool that isn't
-    the SmartOS `zones` pool receives relatively few writes unless it it used
+    the SmartOS `zones` pool receives relatively few writes unless it is used
     for some other purpose as well.
 
     A bootable pool created without the -B option, but using whole disks,

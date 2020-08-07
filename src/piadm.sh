@@ -17,39 +17,44 @@
 
 . /lib/sdc/usb-key.sh
 
+eecho() {
+    echo $@ > /dev/stderr
+}
+
 err() {
-    echo $1
+    eecho $1
     exit 1
 }
 
 fatal() {
-	echo
-	if [[ -n "$1" ]]; then
-		echo "ERROR: $1"
-	fi
-	echo
-	exit 2
+    eecho
+    if [[ -n "$1" ]]; then
+	eecho "ERROR: $1"
+    fi
+    eecho
+    exit 2
 }
 
 corrupt() {
-    echo $1
+    eecho $1
     exit 3
 }
 
 usage() {
-    echo ""
-    echo "Usage: piadm [-v] <command> [command-specific arguments]"
-    echo ""
-    echo "    piadm activate|assign <PI-stamp> [ZFS-pool-name]"
-    echo "    piadm bootable [-d] [-e [-i <source>]] [-r] [ZFS-pool-name]"
-    echo "    piadm install <source> [ZFS-pool-name]"
-    echo "    piadm list <-H> [ZFS-pool-name]"
-    echo "    piadm remove <PI-stamp> [ZFS-pool-name]"
+    eecho ""
+    eecho "Usage: piadm [-v] <command> [command-specific arguments]"
+    eecho ""
+    eecho "    piadm activate|assign <PI-stamp> [ZFS-pool-name]"
+    eecho "    piadm bootable [-d] [-e [-i <source>]] [-r] [ZFS-pool-name]"
+    eecho "    piadm install <source> [ZFS-pool-name]"
+    eecho "    piadm list <-H> [ZFS-pool-name]"
+    eecho "    piadm remove <PI-stamp> [ZFS-pool-name]"
     err ""
 }
 
 vecho() {
     if [[ $VERBOSE -eq 1 ]]; then
+	# Verbose echoes invoked by -v go to stdout, not stderr.
 	echo $@
     fi
 }
@@ -76,7 +81,7 @@ poolpresent() {
     # Works for an empty $1, which is "all of them" or "unspecified"
     zpool list $1 > /dev/null 2>&1
     if [[ $? -ne 0 ]]; then
-	echo "Pool $1 not present"
+	eecho "Pool $1 not present"
 	usage
     fi
 }
@@ -87,7 +92,7 @@ poolpresent() {
 # (which can).
 piname_present_get_bootfs() {
     if [[ "$1" == "" ]]; then
-	echo "Must specify a Platform Image"
+	eecho "Must specify a Platform Image"
 	usage
     fi
 
@@ -95,13 +100,13 @@ piname_present_get_bootfs() {
 
     getbootable
     if [[ $numbootfs -gt 1 && "$2" == "" ]]; then
-	echo "Multiple bootable pools are available, please specify one"
+	eecho "Multiple bootable pools are available, please specify one"
 	usage
     elif [[ "$2" == "" ]]; then
 	# If we reach here, no more than one bootable pool.
 	bootfs=$allbootfs
 	if [[ "$bootfs" == "" ]]; then
-	    echo "No bootable pools available..."
+	    eecho "No bootable pools available..."
 	    usage
 	fi
 	pool=$(echo $bootfs | awk -F/ '{print $1}')
@@ -120,7 +125,7 @@ piname_present_get_bootfs() {
 	    fi
 	done
 	if [[ "$bootfs" == "" ]]; then
-	    echo "Pool $pool does not appear to be bootable."
+	    eecho "Pool $pool does not appear to be bootable."
 	    usage
 	fi
     fi
@@ -150,13 +155,13 @@ mount_installmedia() {
 	if [[ $? -ne 0 ]]; then
 	    rmdir $mntdir
 	    if [[ $VERBOSE -eq 1 ]]; then
-		echo "Can't find install media: USB stick errors:"
-		echo ""
-		cat $tfile
-		echo ""
-		echo "ISO errors"
-		echo ""
-		cat $tfile2
+		eecho "Can't find install media: USB stick errors:"
+		eecho ""
+		cat $tfile > /dev/stderr
+		eecho ""
+		eecho "ISO errors"
+		eecho ""
+		cat $tfile2 > /dev/stderr
 	    fi
 	    rm -f $tfile $tfile2
 	    return 1
@@ -188,6 +193,10 @@ install() {
 	# current one.
 	iso=yes
 	${CURL} -o ${tdir}/smartos.iso ${URL_PREFIX}/smartos-latest.iso
+	if [[ $? -ne 0 ]]; then
+	    /bin/rm -rf ${tdir}
+	    fatal "Curl exit code $?"
+	fi
 	mount -F hsfs ${tdir}/smartos.iso ${tdir}/mnt
 
 	# For now, assume boot stamp and PI stamp are the same on an ISO...
@@ -257,7 +266,7 @@ install() {
 	# current one or if it exists.
 	if [[ -d ${bootfs}/platform-${1} ]]; then
 	    /bin/rm -rf ${tdir}
-	    echo "PI-stamp $1 appears to be already on /${bootfs}"
+	    eecho "PI-stamp $1 appears to be already on /${bootfs}"
 	    err "Use   piadm remove $1   to remove any old copies."
 	fi
 
@@ -266,10 +275,14 @@ install() {
 	checkurl=${URL_PREFIX}/$1/index.html
 	${CURL} $checkurl | head | grep -qv "not found"
 	if [[ $? -ne 0 ]]; then
-	    echo "PI-stamp $1 is invalid for download from $URL_PREFIX"
+	    eecho "PI-stamp $1 is invalid for download from $URL_PREFIX"
 	    usage
 	fi
 	${CURL} -o ${tdir}/smartos.iso ${URL_PREFIX}/$1/smartos-${1}.iso
+	if [[ $? -ne 0 ]]; then
+	    /bin/rm -rf ${tdir}
+	    fatal "Curl exit code $?"
+	fi
 	mount -F hsfs ${tdir}/smartos.iso ${tdir}/mnt
 	iso=yes
 	stamp=$1
@@ -301,11 +314,14 @@ install() {
 	if [[ -e /${bootfs}/boot-${stamp} ]]; then
 	    umount ${tdir}/mnt
 	    /bin/rm -rf ${tdir}
-	    echo "PI-stamp $stamp has boot bits already on /${bootfs}"
+	    eecho "PI-stamp $stamp has boot bits already on /${bootfs}"
 	    err "Use   piadm remove $stamp   to remove any old copies."
 	fi
-	mkdir /${bootfs}/boot-${stamp}
-	tar -cf - -C ${tdir}/mnt/boot . | tar -xf - -C /${bootfs}/boot-${stamp}
+	mkdir /${bootfs}/boot-${stamp} || \
+	    eecho "Can't mkdir /${bootfs}/boot-${stamp}"
+	tar -cf - -C ${tdir}/mnt/boot . | \
+	    tar -xf - -C /${bootfs}/boot-${stamp} || \
+	    eecho "Problem in tar of boot bits"
     fi
 
     if [[ -e /${bootfs}/platform-${stamp} ]]; then
@@ -313,17 +329,24 @@ install() {
 	    umount ${tdir}/mnt
 	fi
 	/bin/rm -rf ${tdir}
-	echo "PI-stamp $stamp appears to be already on /${bootfs}"
+	eecho "PI-stamp $stamp appears to be already on /${bootfs}"
 	err "Use   piadm remove $stamp   to remove any old copies."
     fi
-    mkdir /${bootfs}/platform-${stamp}
+    mkdir /${bootfs}/platform-${stamp} || \
+	eecho "Can't mkdir /${bootfs}/platform-${stamp}"
     tar -cf - -C ${tdir}/mnt/platform . | \
-	tar -xf - -C /${bootfs}/platform-${stamp}
+	tar -xf - -C /${bootfs}/platform-${stamp} || \
+	eecho "Problem in tar of platform bits"
 
     if [[ "$iso" == "yes" ]]; then
 	umount ${tdir}/mnt
     fi
     /bin/rm -rf ${tdir}
+
+    if [[ ! -d /${bootfs}/platform-${stamp} || ! -d /${bootfs}/boot-${stamp} ]]
+    then
+	fatal "Installation problem"
+    fi
 
     # Global variable for enablepool() usage...
     installstamp=$stamp
@@ -431,7 +454,7 @@ update_boot_sectors() {
 	installboot -m -b /${bootfs}/boot/ /${bootfs}/boot/pmbr \
 	    /${bootfs}/boot/gptzfsboot \
 	    /dev/rdsk/${a}${suffix} > /dev/null 2>&1 || \
-	    echo "WARNING: Can't installboot on ${a}${suffix}"
+	    eecho "WARNING: Can't installboot on ${a}${suffix}"
 	if [[ $? -eq 0 ]]; then
 	    some=1
 	fi
@@ -448,14 +471,14 @@ activate() {
     pool=$(echo $bootfs | awk -F/ '{print $1}')
 
     cd /$bootfs
-    bootstamp=$(file -h platform | awk '{print $5}' | sed 's/\.\/platform-//g')
+    bootstamp=$(cat platform/etc/version/platform)
     if [[ -d platform-$pistamp ]]; then
 	if [[ $bootstamp == $pistamp ]]; then
 	    vecho "NOTE: $pistamp is the current active PI."
 	    return
 	fi
     else
-	echo "$pistamp is not a stamp for a PI on pool $pool"
+	eecho "$pistamp is not a stamp for a PI on pool $pool"
 	usage
     fi
 
@@ -488,12 +511,12 @@ remove() {
     pistamp=$1
     piname_present_get_bootfs $pistamp $2
     cd /$bootfs
-    bootstamp=$(file -h platform | awk '{print $5}' | sed 's/\.\/platform-//g')
+    bootstamp=$(cat platform/etc/version/platform)
 
     if [[ -d platform-$pistamp ]]; then
 	if [[ $bootstamp == $pistamp ]]; then
-	    echo "$pistamp is the next-booting PI. Please activate another PI"
-	    echo "using 'piadm activate <other-PI-stamp>' first."
+	    eecho "$pistamp is the next-booting PI. Please activate another PI"
+	    eecho "using 'piadm activate <other-PI-stamp>' first."
 	    usage
 	fi
 
@@ -505,8 +528,8 @@ remove() {
 	    grep -q $pistamp etc/version/boot
 	    if [[ $? -eq 0 ]]; then
 		# Oh no, pistamp points to the current boot bits.
-		echo "$pistamp is the current set of boot binaries.  Please"
-		echo "activate another pi using 'piadm activate <other-PI-stamp>' first."
+		eecho "$pistamp is the current set of boot binaries.  Please"
+		eecho "activate another pi using 'piadm activate <other-PI-stamp>' first."
 		usage
 	    fi
 	    /bin/rm -rf boot-$pistamp
@@ -514,7 +537,7 @@ remove() {
 
 	/bin/rm -rf platform-$pistamp
     else
-	echo "$pistamp is not a stamp for a PI on pool $pool"
+	eecho "$pistamp is not a stamp for a PI on pool $pool"
 	usage
     fi
 }
@@ -534,8 +557,8 @@ ispoolenabled() {
 	# else drop out to not-bootable, but honestly this shouldn't happen.
 	vecho ".... odd, ${pool}/boot is pool's bootfs, but isn't a filesystem"
     elif [[ "$currbootfs" != "-" ]]; then
-	echo "It appears pool $pool has a different boot filesystem than the"
-	echo "standard SmartOS filesystem of ${pool}/boot. It will need manual"
+	eecho "It appears pool $pool has a different boot filesystem than the"
+	eecho "standard SmartOS filesystem of ${pool}/boot. It will need manual"
 	corrupt "intervention."
     fi
 
@@ -546,13 +569,13 @@ ispoolenabled() {
 enablepool() {
     if [[ $1 == "-i" ]]; then
 	if [[ "$2" == "" || "$3" == "" ]]; then
-	    echo "-i must take an option, and then a pool must be specified."
+	    eecho "-i must take an option, and then a pool must be specified."
 	    usage
 	fi
 	installsource=$2
 	pool=$3
     elif [[ -z $1 ]]; then
-	echo "To enable a pool for booting, please specify at least a pool"
+	eecho "To enable a pool for booting, please specify at least a pool"
 	usage
     else
 	installsource="media"
@@ -607,7 +630,7 @@ refreshpool() {
     pool=$1
 
     if [[ -z $pool ]]; then
-	echo "Must specify a pool for refresh"
+	eecho "Must specify a pool for refresh"
 	usage
     fi
 
@@ -626,7 +649,7 @@ refreshpool() {
 bootable() {
     if [[ "$1" == "-d" ]]; then
 	if [[ "$2" == "" ]]; then
-	    echo "To disable a pool for booting, please specify a pool."
+	    eecho "To disable a pool for booting, please specify a pool."
 	    usage
 	fi
 
@@ -677,7 +700,7 @@ bootable() {
 		# Assume that s0 on the physical disk would be where the EFI
 		# System Partition (ESP) lives.  A pcfs mount, ALONG WITH a
 		# check for a bootx64.efi executable, can confirm/deny it. Do
-		# this instead of just checkint for bootsize because we can
+		# this instead of just checking for bootsize because we can
 		# further integrity-check here if need be.
 		mount -F pcfs /dev/dsk/${noslice}s0 $tdir > /dev/null 2>&1
 		if [[ $? -eq 0 && -f $tdir/EFI/Boot/bootx64.efi ]]; then

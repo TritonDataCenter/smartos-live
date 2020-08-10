@@ -343,9 +343,11 @@ install() {
     fi
     /bin/rm -rf ${tdir}
 
-    if [[ ! -d /${bootfs}/platform-${stamp} || ! -d /${bootfs}/boot-${stamp} ]]
-    then
-	fatal "Installation problem"
+    if [[ ! -d /${bootfs}/platform-${stamp} ]]; then
+	fatal "Installation problem (no ${bootfs}/platform-${stamp})"
+    fi
+    if [[ ! -d /${bootfs}/boot-${stamp} && "$iso" == "yes" ]]; then
+	fatal "Installation problem (no ${bootfs}/boot-${stamp} from ISO)"
     fi
 
     # Global variable for enablepool() usage...

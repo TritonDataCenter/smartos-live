@@ -1294,8 +1294,10 @@ make a SmartOS zpool self-booting.\n"
 
 	promptyesno "Boot SmartOS from a zpool" $boot_from_zpool
 	boot_from_zpool="$val"
-	promptval "Bootable pool's name" $BOOTPOOL
-	BOOTPOOL=$val
+	if [[ "$boot_from_zpool" == "yes" ]]; then
+	    promptval "Bootable pool's name" $BOOTPOOL
+	    BOOTPOOL=$val
+	fi
 
 	printheader "System Configuration"
 	message="

@@ -471,8 +471,12 @@ activate() {
     pool=$(echo $bootfs | awk -F/ '{print $1}')
 
     cd /$bootfs
-    bootstamp=$(cat platform/etc/version/platform)
     if [[ -d platform-$pistamp ]]; then
+	if [[ -f platform/etc/version/platform ]]; then
+	    bootstamp=$(cat platform/etc/version/platform)
+	else
+	    bootstamp=""
+	fi
 	if [[ $bootstamp == $pistamp ]]; then
 	    vecho "NOTE: $pistamp is the current active PI."
 	    return
@@ -489,6 +493,7 @@ activate() {
     if [[ -d boot-$pistamp ]]; then
 	rm -f boot
 	ln -s ./boot-$pistamp boot
+	mkdir -p etc/version
 	echo $pistamp > etc/version/boot
 	update_boot_sectors $pool $bootfs
 	grep -q 'fstype="ufs"' ./boot/loader.conf
@@ -612,15 +617,12 @@ enablepool() {
     # Test if bootfs can be set...
     zpool set bootfs=${bootfs} ${pool}
     if [[ $? -ne 0 ]]; then
-	fatal "Cannot make $pool bootable"
+	fatal "Cannot set bootfs for $pool"
     fi
     # Reset our view of available bootable pools.
     getbootable
 
     install $installsource $pool
-
-    # In case this is a first-time install:
-    mkdir -p /${bootfs}/etc/version
 
     # install set 'installstamp' on our behalf.
     activate $installstamp $pool

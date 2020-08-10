@@ -68,7 +68,7 @@ function extract_mountpath()
 #
 function mount_usb_key()
 {
-	local mnt=`extract_mountpath $1`
+	local mnt=$(extract_mountpath $1)
 
 	if [[ -f "$mnt/.joyliveusb" ]]; then
 		echo $mnt
@@ -121,7 +121,7 @@ function mount_usb_key()
 
 function unmount_usb_key()
 {
-	local mnt=`extract_mountpath $1`
+	local mnt=$(extract_mountpath $1)
 
 	typ=$(awk -v "mnt=$mnt" '$2 == mnt { print $3 }' /etc/mnttab)
 
@@ -164,7 +164,7 @@ function mount_ISO
 
 function unmount_ISO
 {
-	local mnt=`extract_mountpath $1`
+	local mnt=$(extract_mountpath $1)
 
 	if ! umount $mnt; then
 		echo "Failed to unmount $mnt" >&2

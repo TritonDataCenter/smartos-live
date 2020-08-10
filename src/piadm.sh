@@ -69,7 +69,7 @@ getbootable() {
     IFS=" "
     # Use `mapfile -t` so bash array constructs can work.
     mapfile -t allbootfs \
-	    < <(zpool get -H bootfs | grep -vw default | awk '{print $3}')
+	    < <(zpool get -H bootfs | awk '{if ($3 != "-") print $3}')
     numbootfs=${#allbootfs[@]}
 }
 
@@ -132,18 +132,19 @@ piname_present_get_bootfs() {
 }
 
 # Defined as a variable in case we need to add parameters (like -s) to it.
-CURL="curl -s"
+# WARNING:  Including -k for now.
+CURL="curl -ks"
 
 # Well-known source of SmartOS Platform Images
 DEFAULT_URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
 
-# Can be overridden by the user's environment.
-URL_PREFIX=${URL_PREFIX:-${DEFAULT_URL_PREFIX}}
+# Can be overridden by the user's PIADM_URL_PREFIX.
+URL_PREFIX=${PIADM_URL_PREFIX:-${DEFAULT_URL_PREFIX}}
 
 # Scan for available installation media and mount it.
 mount_installmedia() {
-    tfile=`mktemp`
-    tfile2=`mktemp`
+    tfile=$(mktemp)
+    tfile2=$(mktemp)
 
     mntdir=$1
 
@@ -153,7 +154,6 @@ mount_installmedia() {
 	# If that fails, try mounting the ISO.
 	mount_ISO $mntdir > $tfile2 2>&1
 	if [[ $? -ne 0 ]]; then
-	    rmdir $mntdir
 	    if [[ $VERBOSE -eq 1 ]]; then
 		eecho "Can't find install media: USB stick errors:"
 		eecho ""
@@ -178,7 +178,7 @@ mount_installmedia() {
 # of the source.
 install() {
     piname_present_get_bootfs $1 $2
-    tdir=`mktemp -d`
+    tdir=$(mktemp -d)
     mkdir ${tdir}/mnt
 
     # $1 contains a "source".  Deal with it correctly in the big
@@ -189,7 +189,7 @@ install() {
     # Special-case of "latest"
     if [[ "$1" == "latest" ]]; then
 	# Well-known URL for the latest PI using conventions from URL_PREFIX.
-	# Grab the latest-version ISO.  Before proceeding, make sure it's the
+	# Grab the latest-version ISO.	Before proceeding, make sure it's the
 	# current one.
 	iso=yes
 	${CURL} -o ${tdir}/smartos.iso ${URL_PREFIX}/smartos-latest.iso
@@ -249,14 +249,14 @@ install() {
 	${CURL} -o ${tdir}/download $1
 	if [[ -e ${tdir}/download ]]; then
 	    # Recurse with the downloaded file.
-	    dload=`mktemp`
+	    dload=$(mktemp)
 	    mv -f ${tdir}/download $dload
 	    /bin/rm -rf ${tdir}
 
 	    # in case `install` exits out early...
 	    ( pwait $$ ; rm -f $dload ) &
 	    vecho "Installing $1"
-	    vecho "        (downloaded to $dload)"
+	    vecho "	   (downloaded to $dload)"
 	    install $dload $2
 	    return 0
 	fi
@@ -267,7 +267,7 @@ install() {
 	if [[ -d ${bootfs}/platform-${1} ]]; then
 	    /bin/rm -rf ${tdir}
 	    eecho "PI-stamp $1 appears to be already on /${bootfs}"
-	    err "Use   piadm remove $1   to remove any old copies."
+	    err "Use   piadm remove $1	 to remove any old copies."
 	fi
 
 	# Confirm this is a legitimate build stamp.
@@ -299,7 +299,7 @@ install() {
 
     # At this point we have ${tdir}/mnt which contains at least "platform".
     # If "iso" is yes, it also contains "boot", "boot.catalog" and "etc", but
-    # we only really care about boot.catalog and boot.  These may be remounted
+    # we only really care about boot.catalog and boot.	These may be mounted
     # as read-only, so we can't do mv.
 
     if [[ "$iso" == "yes" ]]; then
@@ -330,7 +330,7 @@ install() {
 	fi
 	/bin/rm -rf ${tdir}
 	eecho "PI-stamp $stamp appears to be already on /${bootfs}"
-	err "Use   piadm remove $stamp   to remove any old copies."
+	err "Use   piadm remove $stamp	 to remove any old copies."
     fi
     mkdir /${bootfs}/platform-${stamp} || \
 	eecho "Can't mkdir /${bootfs}/platform-${stamp}"
@@ -358,7 +358,7 @@ list() {
 	pool=$2
     else
 	printf "%-18s %-30s %-12s %-5s %-5s \n" "PI STAMP" \
-	   "BOOTABLE FILESYSTEM" "BOOT BITS?" "NOW" "NEXT"
+	       "BOOTABLE FILESYSTEM" "BOOT BITS?" "NOW" "NEXT"
 	pool=$1
     fi
 
@@ -399,7 +399,7 @@ list() {
 		bootbits="none"
 	    fi
 	    printf "%-18s %-30s %-12s %-5s %-5s\n" $pi $bootfs $bootbits \
-		$active $booting
+		   $active $booting
 	done
     done
 }
@@ -413,20 +413,20 @@ update_boot_sectors() {
     # Generate the pool's boot devices now, in case we did something
     # hyper-clever for the pool.  s1 may be created, but not yet PCFS...
     mapfile -t boot_devices < <(zpool list -v "$pool" | \
-        grep -E 'c[0-9]+' | awk '{print $1}' | sed -E 's/s[0-9]+//g')
+	    grep -E 'c[0-9]+' | awk '{print $1}' | sed -E 's/s[0-9]+//g')
 
     # Reality check the pool was created with -B.
     # First way to do this is to check for the `bootsize` property not
     # its default, which is NO bootsize.
-    zpool get bootsize $pool | grep -q -w default
-    if [[ $? -eq 0 ]]; then
+    if [[ $(zpool list -Ho bootsize $pool) == "-" ]]; then
 	# No bootsize is a first-cut test.  It passes if the pool was
 	# created with `zpool create -B`. There's one other that needs
-	# to be peformed, because some bootable pools are manually
+	# to be performed, because some bootable pools are manually
 	# configured to share slices with other functions (slog,
 	# l2arc, dedup):
 
-	# Use fstyp to confirm if this is a stealth EFI booter...
+	# Use fstyp to confirm if this is a manually created EFI
+	# System Partition (ESP)
 	type=$(fstyp /dev/dsk/${boot_devices[0]}s0)
 	if [[ "$type" == "pcfs" ]]; then
 	    # If we detect PCFS on s0, it's LIKELY an EFI System Partition that
@@ -452,8 +452,8 @@ update_boot_sectors() {
 	# Trailing / is important in the -b argument because boot is actually
 	# a symlink.
 	installboot -m -b /${bootfs}/boot/ /${bootfs}/boot/pmbr \
-	    /${bootfs}/boot/gptzfsboot \
-	    /dev/rdsk/${a}${suffix} > /dev/null 2>&1 || \
+		    /${bootfs}/boot/gptzfsboot \
+		    /dev/rdsk/${a}${suffix} > /dev/null 2>&1 || \
 	    eecho "WARNING: Can't installboot on ${a}${suffix}"
 	if [[ $? -eq 0 ]]; then
 	    some=1
@@ -496,12 +496,12 @@ activate() {
 	    # Fix the loader.conf for keep-the-ramdisk booting.
 	    echo 'fstype="ufs"' >> ./boot/loader.conf
 	fi
-	vecho "    with a new boot image,"
+	vecho "	   with a new boot image,"
     else
-	vecho "    WARNING:  $pistamp has no matching boot image, using"
+	vecho "	   WARNING:  $pistamp has no matching boot image, using"
     fi
 
-    vecho "    boot image " `cat etc/version/boot`
+    vecho "    boot image " $(cat etc/version/boot)
 
     rm -f platform
     ln -s ./platform-$pistamp platform
@@ -523,7 +523,7 @@ remove() {
 	# Boot image processing.
 	if [[ -d boot-$pistamp ]]; then
 	    # Boot bits may be older than the current PI, and the current PI
-	    # may not have matching boot bits for some reason.  Guard against
+	    # may not have matching boot bits for some reason.	Guard against
 	    # shooting yourself in the foot.
 	    grep -q $pistamp etc/version/boot
 	    if [[ $? -eq 0 ]]; then
@@ -586,26 +586,26 @@ enablepool() {
 
     ispoolenabled $pool
     if [[ $? -eq 0 ]]; then
-       if [[ -d /${bootfs}/platform/. && -d /${bootfs}/boot/. ]]; then
-	   vecho "Pool $pool appears to be bootable."
-	   vecho "Use 'piadm install' or 'piadm activate' to change PIs."
-	   return 0
-       fi
-       # One or both of "platform" or "boot" aren't there.
-       # For now, proceed clobber-style.
+	if [[ -d /${bootfs}/platform/. && -d /${bootfs}/boot/. ]]; then
+	    vecho "Pool $pool appears to be bootable."
+	    vecho "Use 'piadm install' or 'piadm activate' to change PIs."
+	    return 0
+	fi
+	# One or both of "platform" or "boot" aren't there.
+	# For now, proceed clobber-style.
     fi
 
     output=$(zfs list -H $bootfs 2>&1)
     if [[ $? -ne 0 ]]; then
 	# Create a new bootfs and set it.
-	# NOTE:  Encryption should be turned off for this dataset.
+	# NOTE:	 Encryption should be turned off for this dataset.
 	zfs create -o encryption=off $bootfs
 	if [[ $? -ne 0 ]]; then
 	    fatal "Cannot create $bootfs dataset"
 	fi
     fi
     # We MAY need to do some reality checking if the `zfs list` shows
-    # $bootfs.  For now, just wing it. and plow forward.
+    # $bootfs.	For now, just wing it. and plow forward.
 
     # At this point we have an existing SmartOS-standard boot
     # filesystem, but it's not specified as bootfs in the pool.
@@ -693,12 +693,12 @@ bootable() {
 	    bootable="BIOS"
 	    # Check for pcfs partition on pool disks.
 	    mapfile -t boot_devices < <(zpool list -v "${pool}" | \
-		grep -E 'c[0-9]+' | awk '{print $1}')
+					    grep -E 'c[0-9]+' | awk '{print $1}')
 	    for a in "${boot_devices[@]}"; do
 		noslice=$(echo $a | sed -E 's/s[0-9]+//g')
-		tdir=`mktemp -d`
+		tdir=$(mktemp -d)
 		# Assume that s0 on the physical disk would be where the EFI
-		# System Partition (ESP) lives.  A pcfs mount, ALONG WITH a
+		# System Partition (ESP) lives.	 A pcfs mount, ALONG WITH a
 		# check for a bootx64.efi executable, can confirm/deny it. Do
 		# this instead of just checking for bootsize because we can
 		# further integrity-check here if need be.
@@ -735,29 +735,29 @@ cmd=$1
 shift 1
 
 case $cmd in
-activate | assign )
-    activate $@
-    ;;
+    activate | assign )
+	activate $@
+	;;
 
-bootable )
-    bootable $@
-    ;;
+    bootable )
+	bootable $@
+	;;
 
-install )
-    install $@
-    ;;
+    install )
+	install $@
+	;;
 
-list )
-    list $@
-    ;;
+    list )
+	list $@
+	;;
 
-remove )
-    remove $@
-    ;;
+    remove )
+	remove $@
+	;;
 
-*)
-    usage
-    ;;
+    *)
+	usage
+	;;
 
 esac
 

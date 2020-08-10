@@ -47,7 +47,7 @@ dns_resolver2="8.8.4.4"
 declare -a states
 declare -a nics
 declare -a assigned
-declare boot_non_removable="no"
+declare boot_from_zpool="no"
 declare prmpt_str
 
 #
@@ -348,10 +348,10 @@ promptval()
 		[ -z "$val" ] && val="$def"
 		# Forward and back quotes not allowed
 		echo $val | nawk '{
-		    if (index($0, "\047") != 0)
-		        exit 1
-		    if (index($0, "`") != 0)
-		        exit 1
+			if (index($0, "\047") != 0)
+				exit 1
+			if (index($0, "`") != 0)
+				exit 1
 		}'
 		if [[ $? -ne 0 ]]; then
 			echo "Single quotes are not allowed."
@@ -844,11 +844,11 @@ EOF
 			DISK_LAYOUT="manual"
 			echo "Launching a shell."
 			echo "Please manually create/import a zpool named \"zones\"."
-			echo "If you no longer wish to manually create a zpool,"
-			echo "simply exit the shell."
+			echo "If you no longer wish to manually create a"
+			echo "\"zones\" pool, simply exit the shell."
 			echo ""
-			echo "You may also create a \"standalone\" pool in addition"
-			echo "to \"zones\" if you wish to boot from disks that are"
+			echo "You may also create an extra pool in addition to"
+			echo "\"zones\" if you wish to boot from disks that are"
 			echo "not part of the \"zones\" zpool."
 			/usr/bin/bash
 			zpool list zones >/dev/null 2>/dev/null
@@ -996,22 +996,22 @@ create_zpool()
 	# If this is not a manual layout, then we've been given
 	# a JSON file describing the desired pool, so use that:
 	# Try and make a bootable one if so desired.
-	if [[ $boot_non_removable == "yes" && $BOOTPOOL == $pool ]]; then
-	    mkzpool -B -f $pool $layout
-	    if [[ $? -ne 0 ]]; then
-		# reset boot_non_removable so we proceed w/o a bootable pool.
-		boot_non_removable="never"
-		printf "\n\t%-56s\n" \
-		       "$pool cannot be bootable, creating non-bootable..."
-	    fi
+	if [[ $boot_from_zpool == "yes" && $BOOTPOOL == $pool ]]; then
+		mkzpool -B -f $pool $layout
+		if [[ $? -ne 0 ]]; then
+		    # reset boot_from_zpool so we proceed w/o a bootable pool.
+		    boot_from_zpool="never"
+		    printf "\n\t%-56s\n" \
+			   "$pool cannot be bootable, creating non-bootable..."
+		fi
 	fi
 	# User didn't specify bootable pool OR we have a standalone boot pool.
-	if [[ $boot_non_removable != "yes" || $pool != $BOOTPOOL ]]; then
+	if [[ $boot_from_zpool != "yes" || $pool != $BOOTPOOL ]]; then
 	    mkzpool -f $pool $layout || fatal "failed to create pool ${pool}"
 	fi
 
 	zfs set atime=off ${pool} || \
-	    fatal "failed to set atime=off for pool ${pool}"
+		fatal "failed to set atime=off for pool ${pool}"
 
 	printf "%4s\n" "done"
 }
@@ -1073,7 +1073,7 @@ nic_cnt=0
 while IFS=: read -r link addr ; do
 	((nic_cnt++))
 	nics[$nic_cnt]=$link
-	macs[$nic_cnt]=`echo $addr | sed 's/\\\:/:/g'`
+	macs[$nic_cnt]=$(echo $addr | sed 's/\\\:/:/g')
 	# reformat the nic so that it's in the proper 00:00:ab... form not 0:0:ab...
 	macs[$nic_cnt]=$(printf "%02x:%02x:%02x:%02x:%02x:%02x" \
 	    $(echo "${macs[${nic_cnt}]}" \
@@ -1272,30 +1272,30 @@ your own zpool.\n"
 
 	promptpool
 
-	# Set value for BOOTPOOL now.  Use "standalone" if the user
-	# created it manually during the promptpool function a few
-	# lines earlier.
-	zpool list standalone >/dev/null 2>/dev/null
-	if [[ $? -eq 0 ]]; then
-		BOOTPOOL="standalone"
-	else
+	# Set value for BOOTPOOL now.  If the user created one or more
+	# additional non-zones pool(s) manually during the promptpool
+	# function, use the first non-zones one we find.
+	BOOTPOOL=$(zpool list -Ho name | grep -vw zones | head -1)
+	if [[ "$BOOTPOOL" == "" ]]; then
 		BOOTPOOL="zones"
 	fi
 
 	printheader "Self-booting"
 
 	message="
-SmartOS can boot off either the \"zones\" zpool, or a dedicated \"standalone\"
+SmartOS can boot off either the \"zones\" zpool, or a dedicated named
 zpool in lieu of a USB stick or a CD-ROM.  Enter 'yes' if you wish to try and
-make this SmartOS zpool self-booting.\n"
+make a SmartOS zpool self-booting.\n"
 
 	
 	if [[ $(getanswer "skip_instructions") != "true" ]]; then
 	    printf "$message"
 	fi
 
-	promptyesno "Boot SmartOS from non-removable media" $boot_non_removable
-	boot_non_removable="$val"
+	promptyesno "Boot SmartOS from a zpool" $boot_from_zpool
+	boot_from_zpool="$val"
+	promptval "Bootable pool's name" $BOOTPOOL
+	BOOTPOOL=$val
 
 	printheader "System Configuration"
 	message="
@@ -1337,7 +1337,7 @@ up and all data on the disks will be erased.\n\n"
 		    "$dns_resolver1" "$dns_resolver2" "$dns_domain"
 		printf "Hostname: %s\n" "$hostname"
 		printf "NTP server: $ntp_hosts\n"
-		if [[ $boot_non_removable == "yes" ]]; then
+		if [[ $boot_from_zpool == "yes" ]]; then
 		    printf "==> Making the $BOOTPOOL pool bootable"
 		fi
 		echo
@@ -1404,7 +1404,7 @@ sed -e "s|^root:[^\:]*:|root:${root_shadow}:|" /etc/shadow > /usbkey/shadow \
 
 cp -rp /etc/ssh /usbkey/ssh || fatal "failed to set up preserve host keys"
 
-if [ $boot_non_removable == "yes" ]; then
+if [ $boot_from_zpool == "yes" ]; then
     printf "%-56s" "Creating self-bootable $BOOTPOOL pool... "
 
     piadm bootable -e $BOOTPOOL || fatal "Cannot create boot filesystem"

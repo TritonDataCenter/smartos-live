@@ -506,6 +506,11 @@ activate() {
 	vecho "	   with a new boot image,"
     else
 	vecho "	   WARNING:  $pistamp has no matching boot image, using"
+	if [[ ! -f etc/version/boot ]]; then
+	    fatal "No boot version available on /$bootfs"
+	elif [[ ! -d boot/. ]]; then
+	    fatal "No boot bits directory on /$bootfs"
+	fi
     fi
 
     vecho "    boot image " $(cat etc/version/boot)

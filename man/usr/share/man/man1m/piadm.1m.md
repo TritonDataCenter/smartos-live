@@ -5,8 +5,7 @@ piadm(1M) -- Manage SmartOS Platform Images
 ## SYNOPSIS
     /usr/sbin/piadm [-v | -vv] <command> [command-specific arguments]
 
-    piadm activate <PI-stamp> [ZFS-pool-name]
-    piadm assign <PI-stamp> [ZFS-pool-name]
+    piadm activate|assign <PI-stamp> [ZFS-pool-name]
     piadm bootable
     piadm bootable [-dr] <ZFS-pool-name>
     piadm bootable -e [ -i <source> ] <ZFS-pool-name>

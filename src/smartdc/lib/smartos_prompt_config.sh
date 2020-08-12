@@ -740,27 +740,6 @@ printdisklayout()
     ' out
 }
 
-# Assume $1 is the prompt, $2 is "yes" or "no"
-promptyesno()
-{
-    val=""
-    while [ -z "$val" ]; do
-	printf "$1 [$2]: "
-	read val
-	[ -z "$val" ] && val="$2"
-
-	# Normalize to lowercase
-	val=$(tr 'A-Z' 'a-z' <<< "$val")
-	val="$val"
-
-	if [[ $val != "yes" && $val != "no" ]]; then
-	    echo "Must be 'yes' or 'no'."
-	    val=""
-	    continue
-	fi
-    done
-}
-
 promptpool()
 {
 	local layout=""
@@ -1272,14 +1251,6 @@ your own zpool.\n"
 
 	promptpool
 
-	# Set value for BOOTPOOL now.  If the user created one or more
-	# additional non-zones pool(s) manually during the promptpool
-	# function, use the first non-zones one we find.
-	BOOTPOOL=$(zpool list -Ho name | grep -vw zones | head -1)
-	if [[ "$BOOTPOOL" == "" ]]; then
-		BOOTPOOL="zones"
-	fi
-
 	printheader "Self-booting"
 
 	message="
@@ -1290,13 +1261,16 @@ make a SmartOS zpool self-booting.\n"
 	
 	if [[ $(getanswer "skip_instructions") != "true" ]]; then
 	    printf "$message"
+	    echo "Available pre-created pools: " $(zpool list -Ho name)
 	fi
 
-	promptyesno "Boot SmartOS from a zpool" $boot_from_zpool
-	boot_from_zpool="$val"
-	if [[ "$boot_from_zpool" == "yes" ]]; then
-	    promptval "Bootable pool's name" $BOOTPOOL
-	    BOOTPOOL=$val
+	promptopt "Specify a (configured) zpool from which to boot" "none" \
+		"bootpool"
+	if [[ "$val" != "none" ]]; then
+		boot_from_zpool="yes"
+		BOOTPOOL=$val
+	else
+		boot_from_zpool="no"
 	fi
 
 	printheader "System Configuration"
@@ -1407,10 +1381,15 @@ sed -e "s|^root:[^\:]*:|root:${root_shadow}:|" /etc/shadow > /usbkey/shadow \
 cp -rp /etc/ssh /usbkey/ssh || fatal "failed to set up preserve host keys"
 
 if [ $boot_from_zpool == "yes" ]; then
-    printf "%-56s" "Creating self-bootable $BOOTPOOL pool... "
+	printf "%-56s" "Creating self-bootable $BOOTPOOL pool... "
 
-    piadm bootable -e $BOOTPOOL || fatal "Cannot create boot filesystem"
-    printf "%4s\n" done
+	piadm bootable -e $BOOTPOOL
+	if [[ $? -ne 0 ]]; then
+		printf "%6s\n\t(but you can still boot from USB or ISO)\n" \
+			failed   
+	else
+		printf "%4s\n" done
+	fi
 fi
 
 printf "System setup has completed.\n\nPress enter to reboot.\n"

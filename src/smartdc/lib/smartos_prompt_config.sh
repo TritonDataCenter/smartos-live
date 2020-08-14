@@ -1255,8 +1255,9 @@ your own zpool.\n"
 
 	message="
 SmartOS can boot off either the \"zones\" zpool, or a dedicated named
-zpool in lieu of a USB stick or a CD-ROM.  Enter 'yes' if you wish to try and
-make a SmartOS zpool self-booting.\n"
+zpool in lieu of a USB stick or a CD-ROM.  Enter a pool name if you wish to
+try and make a SmartOS zpool self-booting.  Enter \"none\" to not create
+a self-booting pool.\n"
 
 	
 	if [[ $(getanswer "skip_instructions") != "true" ]]; then
@@ -1264,14 +1265,14 @@ make a SmartOS zpool self-booting.\n"
 	    echo "Available pre-created pools: " $(zpool list -Ho name)
 	fi
 
-	promptopt "Specify a (configured) zpool from which to boot" "none" \
-		"bootpool"
+	promptopt "Specify a (configured) zpool from which to boot" \
+		${BOOTPOOL-"none"} "bootpool"
 	if [[ "$val" != "none" ]]; then
 		boot_from_zpool="yes"
-		BOOTPOOL=$val
 	else
 		boot_from_zpool="no"
 	fi
+	BOOTPOOL=$val
 
 	printheader "System Configuration"
 	message="

@@ -22,7 +22,7 @@ eecho() {
 }
 
 err() {
-	eecho $1
+	eecho $@
 	exit 1
 }
 
@@ -36,7 +36,7 @@ fatal() {
 }
 
 corrupt() {
-	eecho $1
+	eecho $@
 	exit 3
 }
 

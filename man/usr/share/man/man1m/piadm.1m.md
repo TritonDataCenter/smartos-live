@@ -21,8 +21,8 @@ piadm(1M) -- Manage SmartOS Platform Images
     detail in the next section.  The piadm(1M) utility enables and manages
     the ability to instead boot directly off of a ZFS pool.
 
-    piadm(1M) manages multiple copies of Platform Images on a bootable ZFS
-    pool, allowing easier updates to Platform Images and maintaining multiple
+    piadm(1M) manages multiple Platform Images on a bootable ZFS pool,
+    allowing easier updates to Platform Images and maintaining multiple
     Platform Images on a single boot media.  The method and implementation of
     SmartOS booting does not change vs. a USB key or CD-ROM, but merely uses
     a bootable ZFS pool as the source of the Platform Image, which can be the
@@ -88,7 +88,8 @@ piadm(1M) -- Manage SmartOS Platform Images
           Image.
 
         - Symbolic links /POOL/boot/platform and /POOL/boot/boot that point
-          to the on-next-boot Platform Image and Boot Image.
+          to the Platform Image and Boot Image that will be used at the next
+          boot.
 
     For example:
 

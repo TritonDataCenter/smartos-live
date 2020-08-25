@@ -28,6 +28,7 @@ MAN_FILES = \
 	usr/share/man/man1m/imgadm.1m \
 	usr/share/man/man1m/mkzpool.1m \
 	usr/share/man/man1m/nictagadm.1m \
+	usr/share/man/man1m/piadm.1m \
 	usr/share/man/man1m/sysevent.1m \
 	usr/share/man/man1m/sysinfo.1m \
 	usr/share/man/man1m/vmadm.1m \

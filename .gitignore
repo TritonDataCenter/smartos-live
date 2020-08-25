@@ -32,6 +32,7 @@
 /src/node-kstat/build
 /src/nomknod.so.32
 /src/nomknod.so.64
+/src/piadm
 /src/removable_disk
 /src/smartdc/bin/qemu-exec
 /src/sysevent

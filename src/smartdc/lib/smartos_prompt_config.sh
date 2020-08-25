@@ -6,7 +6,7 @@
 #
 
 #
-# Copyright 2019 Joyent, Inc.
+# Copyright 2020 Joyent, Inc.
 #
 
 # XXX - TODO
@@ -47,6 +47,7 @@ dns_resolver2="8.8.4.4"
 declare -a states
 declare -a nics
 declare -a assigned
+declare boot_from_zpool="no"
 declare prmpt_str
 
 #
@@ -261,7 +262,7 @@ is_email() {
 # You can call this like:
 #
 #  value=$(getanswer "foo")
-#  [[ $? == 0 ]] || fatal "no answer for question foo"
+#  [[ $? -eq 0 ]] || fatal "no answer for question foo"
 #
 getanswer()
 {
@@ -278,7 +279,7 @@ getanswer()
 	answer=$(/usr/bin/cat ${answer_file} \
 		| /usr/bin/json -e "if (this['${key}'] === undefined) this['${key}'] = '<<undefined>>';" \
 		"${key}" 2>&1)
-	if [[ $? != 0 ]]; then
+	if [[ $? -ne 0 ]]; then
 		if [[ -n $(echo "${answer}" | grep "input is not JSON") ]]; then
 			return ${EBADJSON}
 		else
@@ -303,7 +304,7 @@ promptopt()
 
 	if [[ -n ${key} ]]; then
 		val=$(getanswer "${key}")
-		if [[ $? == 0 ]]; then
+		if [[ $? -eq 0 ]]; then
 			if [[ ${val} == "<default>" ]]; then
 				val=${def}
 			fi
@@ -347,12 +348,12 @@ promptval()
 		[ -z "$val" ] && val="$def"
 		# Forward and back quotes not allowed
 		echo $val | nawk '{
-		    if (index($0, "\047") != 0)
-		        exit 1
-		    if (index($0, "`") != 0)
-		        exit 1
+			if (index($0, "\047") != 0)
+				exit 1
+			if (index($0, "`") != 0)
+				exit 1
 		}'
-		if [ $? != 0 ]; then
+		if [[ $? -ne 0 ]]; then
 			echo "Single quotes are not allowed."
 			val=""
 			continue
@@ -388,7 +389,7 @@ prompt_host_ok_val()
 			trap "" SIGINT
 			printf "Checking connectivity..."
 			ping $val >/dev/null 2>&1
-			if [ $? != 0 ]; then
+			if [[ $? -ne 0 ]]; then
 				printf "UNREACHABLE\n"
 			else
 				printf "OK\n"
@@ -822,8 +823,12 @@ EOF
 			DISK_LAYOUT="manual"
 			echo "Launching a shell."
 			echo "Please manually create/import a zpool named \"zones\"."
-			echo "If you no longer wish to manually create a zpool,"
-			echo "simply exit the shell."
+			echo "If you no longer wish to manually create a"
+			echo "\"zones\" pool, simply exit the shell."
+			echo ""
+			echo "You may also create an extra pool in addition to"
+			echo "\"zones\" if you wish to boot from disks that are"
+			echo "not part of the \"zones\" zpool."
 			/usr/bin/bash
 			zpool list zones >/dev/null 2>/dev/null
 			[[ $? -eq 0 ]] && return
@@ -969,11 +974,23 @@ create_zpool()
 
 	# If this is not a manual layout, then we've been given
 	# a JSON file describing the desired pool, so use that:
-	mkzpool -f $pool $layout || \
-	    fatal "failed to create pool ${pool}"
+	# Try and make a bootable one if so desired.
+	if [[ $boot_from_zpool == "yes" && $BOOTPOOL == $pool ]]; then
+		mkzpool -B -f $pool $layout
+		if [[ $? -ne 0 ]]; then
+		    # reset boot_from_zpool so we proceed w/o a bootable pool.
+		    boot_from_zpool="never"
+		    printf "\n\t%-56s\n" \
+			   "$pool cannot be bootable, creating non-bootable..."
+		fi
+	fi
+	# User didn't specify bootable pool OR we have a standalone boot pool.
+	if [[ $boot_from_zpool != "yes" || $pool != $BOOTPOOL ]]; then
+	    mkzpool -f $pool $layout || fatal "failed to create pool ${pool}"
+	fi
 
 	zfs set atime=off ${pool} || \
-	    fatal "failed to set atime=off for pool ${pool}"
+		fatal "failed to set atime=off for pool ${pool}"
 
 	printf "%4s\n" "done"
 }
@@ -1035,7 +1052,7 @@ nic_cnt=0
 while IFS=: read -r link addr ; do
 	((nic_cnt++))
 	nics[$nic_cnt]=$link
-	macs[$nic_cnt]=`echo $addr | sed 's/\\\:/:/g'`
+	macs[$nic_cnt]=$(echo $addr | sed 's/\\\:/:/g')
 	# reformat the nic so that it's in the proper 00:00:ab... form not 0:0:ab...
 	macs[$nic_cnt]=$(printf "%02x:%02x:%02x:%02x:%02x:%02x" \
 	    $(echo "${macs[${nic_cnt}]}" \
@@ -1217,7 +1234,7 @@ set the headnode to be an NTP client to synchronize to another NTP server.\n"
 skip_ntp=$(getanswer "skip_ntp_check")
 if [[ -z ${skip_ntp} || ${skip_ntp} != "true" ]]; then
 		ntpdate -b $ntp_hosts >/dev/null 2>&1
-		[ $? != 0 ] && print_warning "NTP failure setting date and time"
+		[[ $? -ne 0 ]] && print_warning "NTP failure setting date and time"
 fi
 
 	printheader "Storage"
@@ -1234,6 +1251,28 @@ your own zpool.\n"
 
 	promptpool
 
+	printheader "Self-booting"
+
+	message="
+SmartOS can boot off either the \"zones\" zpool, or a dedicated named
+zpool in lieu of a USB stick or a CD-ROM.  Enter a pool name if you wish to
+try and make a SmartOS zpool self-booting.  Enter \"none\" to not create
+a self-booting pool.\n"
+
+	
+	if [[ $(getanswer "skip_instructions") != "true" ]]; then
+	    printf "$message"
+	    echo "Available pre-created pools: " $(zpool list -Ho name)
+	fi
+
+	promptopt "Specify a (configured) zpool from which to boot" \
+		${BOOTPOOL-"none"} "bootpool"
+	if [[ "$val" != "none" ]]; then
+		boot_from_zpool="yes"
+	else
+		boot_from_zpool="no"
+	fi
+	BOOTPOOL=$val
 
 	printheader "System Configuration"
 	message="
@@ -1275,6 +1314,9 @@ up and all data on the disks will be erased.\n\n"
 		    "$dns_resolver1" "$dns_resolver2" "$dns_domain"
 		printf "Hostname: %s\n" "$hostname"
 		printf "NTP server: $ntp_hosts\n"
+		if [[ $boot_from_zpool == "yes" ]]; then
+		    printf "==> Making the $BOOTPOOL pool bootable"
+		fi
 		echo
 	fi
 
@@ -1338,6 +1380,18 @@ sed -e "s|^root:[^\:]*:|root:${root_shadow}:|" /etc/shadow > /usbkey/shadow \
 [[ $? -eq 0 ]] || fatal "failed to preserve root pasword"
 
 cp -rp /etc/ssh /usbkey/ssh || fatal "failed to set up preserve host keys"
+
+if [ $boot_from_zpool == "yes" ]; then
+	printf "%-56s" "Creating self-bootable $BOOTPOOL pool... "
+
+	piadm bootable -e $BOOTPOOL
+	if [[ $? -ne 0 ]]; then
+		printf "%6s\n\t(but you can still boot from USB or ISO)\n" \
+			failed   
+	else
+		printf "%4s\n" done
+	fi
+fi
 
 printf "System setup has completed.\n\nPress enter to reboot.\n"
 

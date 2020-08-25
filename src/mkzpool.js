@@ -18,7 +18,7 @@ fatal(msg)
 function
 usage()
 {
-	console.log('usage: ' + process.argv[0] + '[-f] <pool> <file.json>');
+	console.log('usage: ' + process.argv[0] + '[-Bef] <pool> <file.json>');
 	process.exit(-1);
 }
 
@@ -27,12 +27,16 @@ var config;
 var pool;
 
 var option;
+var opt_B = false;
 var opt_e = false;
 var opt_f = false;
-var parser = new getopt.BasicParser('ef', process.argv);
+var parser = new getopt.BasicParser('Bef', process.argv);
 
 while ((option = parser.getopt()) !== undefined && !option.error) {
     switch (option.option) {
+	case 'B':
+		opt_B = true;
+		break;
 	case 'e':
 		opt_e = true;
 		break;
@@ -55,7 +59,7 @@ pool = process.argv[parser.optind()];
 json = fs.readFileSync(process.argv[parser.optind() + 1], 'utf8');
 config = JSON.parse(json);
 
-zfs.zpool.create(pool, config, opt_f, opt_e, function (err) {
+zfs.zpool.create(pool, config, opt_f, opt_e, opt_B, function (err) {
 	if (err) {
 		fatal('pool creation failed: ' + err);
 	}

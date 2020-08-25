@@ -51,10 +51,7 @@ function usb_key_version()
 	echo $(( 0x$loader_major ))
 }
 
-#
-# Mount the usbkey at the standard mount location (or whatever is specified).
-#
-function mount_usb_key()
+function extract_mountpath()
 {
 	local mnt=$1
 
@@ -62,6 +59,16 @@ function mount_usb_key()
 		mnt=/mnt/$(svcprop -p "joyentfs/usb_mountpoint" \
 		    "svc:/system/filesystem/smartdc:default")
 	fi
+
+	echo "$mnt"
+}
+
+#
+# Mount the usbkey at the standard mount location (or whatever is specified).
+#
+function mount_usb_key()
+{
+	local mnt=$(extract_mountpath $1)
 
 	if [[ -f "$mnt/.joyliveusb" ]]; then
 		echo $mnt
@@ -97,7 +104,7 @@ function mount_usb_key()
 			continue
 		fi
 
-		if [[ -f $mnt/.joyliveusb ]]; then
+		if [[ -f $mnt/.joyliveusb || "$2" == "skip" ]]; then
 			echo $mnt
 			return 0
 		fi
@@ -114,12 +121,7 @@ function mount_usb_key()
 
 function unmount_usb_key()
 {
-	local mnt=$1
-
-	if [[ -z "$mnt" ]]; then
-		mnt=/mnt/$(svcprop -p "joyentfs/usb_mountpoint" \
-		    "svc:/system/filesystem/smartdc:default")
-	fi
+	local mnt=$(extract_mountpath $1)
 
 	typ=$(awk -v "mnt=$mnt" '$2 == mnt { print $3 }' /etc/mnttab)
 
@@ -131,6 +133,45 @@ function unmount_usb_key()
 	fi
 
 	umount "$mnt"
+}
+
+# Evil twins of the {,un}mount_usb_key functions.  These are specific
+# to ISO/hsfs (aka. {C,DV,B}D-ROM) disks.  We may be able to factor-out
+# even more common bits from the usb_key functions, but not today.
+
+function mount_ISO
+{
+	local mnt=$(extract_mountpath "$1")
+
+	mapfile -t disks < <(disklist -r)
+	for disk in "${disks[@]}"; do
+		mount -F hsfs /dev/dsk/${disk}s0 $mnt
+		if [[ $? -ne 0 ]]; then
+			continue
+		fi
+		if [[ -d ${mnt}/boot ]]; then
+			return 0
+		fi
+		if ! umount $mnt; then
+			echo "Failed to unmount $mnt">&2
+			return 1
+		fi
+	done
+
+	echo "Couldn't find an ISO" >&2
+	return 1
+}
+
+function unmount_ISO
+{
+	local mnt=$(extract_mountpath $1)
+
+	if ! umount $mnt; then
+		echo "Failed to unmount $mnt" >&2
+		return 1
+	fi
+
+	return 0
 }
 
 # replace a loader conf value

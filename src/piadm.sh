@@ -45,6 +45,7 @@ usage() {
 	eecho "Usage: piadm [-v] <command> [command-specific arguments]"
 	eecho ""
 	eecho "    piadm activate|assign <PI-stamp> [ZFS-pool-name]"
+	eecho "    piadm avail"
 	eecho "    piadm bootable [-d] [-e [-i <source>]] [-r] [ZFS-pool-name]"
 	eecho "    piadm install <source> [ZFS-pool-name]"
 	eecho "    piadm list <-H> [ZFS-pool-name]"
@@ -140,6 +141,24 @@ DEFAULT_URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
 
 # Can be overridden by the user's PIADM_URL_PREFIX.
 URL_PREFIX=${PIADM_URL_PREFIX:-${DEFAULT_URL_PREFIX}}
+
+avail() {
+	# For now, assume that the URL_PREFIX points to a Manta
+	# back-end and we use Manta methods for querying (and json(1)
+	# to help us out).  If the user overrides with
+	# PIADM_URL_PREFIX, the behavior is undefined, and we issue a
+	# warning.
+
+	if [[ "$URL_PREFIX" != "$DEFAULT_URL_PREFIX" ]]; then
+		eecho "WARNING: $URL_PREFIX is being queried for available"
+		eecho "platform images. Output may be empty, or unusual."
+		eecho ""
+	fi
+
+	# The aforementioned Manta method, parsed by json(1).
+	$CURL ${URL_PREFIX}/?limit=1000 | \
+		json -ga -c 'this.name.match("Z$")' name
+}
 
 # Scan for available installation media and mount it.
 mount_installmedia() {
@@ -777,6 +796,10 @@ shift 1
 case $cmd in
 	activate | assign )
 		activate $@
+		;;
+
+	avail )
+		avail
 		;;
 
 	bootable )

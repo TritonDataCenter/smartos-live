@@ -6,6 +6,7 @@ piadm(1M) -- Manage SmartOS Platform Images
     /usr/sbin/piadm [-v | -vv] <command> [command-specific arguments]
 
     piadm activate|assign <PI-stamp> [ZFS-pool-name]
+    piadm avail
     piadm bootable
     piadm bootable [-dr] <ZFS-pool-name>
     piadm bootable -e [ -i <source> ] <ZFS-pool-name>
@@ -130,6 +131,11 @@ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
 
         `activate` and `assign` are synonyms, for those used to other
         distros' `beadm`, or Triton's `sdcadm platform`, respectively.
+
+      piadm avail
+
+        Query the well-known SmartOS PI repository for available ISO images,
+        listed by PI-Stamp.
 
       piadm bootable [-d | -e [-i <source>] | -r] [ZFS-pool-name]
 

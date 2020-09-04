@@ -135,7 +135,8 @@ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
       piadm avail
 
         Query the well-known SmartOS PI repository for available ISO images,
-        listed by PI-Stamp.
+        listed by PI-Stamp. No PI-Stamps older than ones that contain
+        piadm(1M) will be listed.
 
       piadm bootable [-d | -e [-i <source>] | -r] [ZFS-pool-name]
 

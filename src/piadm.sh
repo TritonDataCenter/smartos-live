@@ -394,7 +394,7 @@ list() {
 		pool=$2
 	else
 		printf "%-18s %-30s %-12s %-5s %-5s \n" "PI STAMP" \
-			"BOOTABLE FILESYSTEM" "BOOT BITS?" "NOW" "NEXT"
+			"BOOTABLE FILESYSTEM" "BOOT IMAGE" "NOW" "NEXT"
 		pool=$1
 	fi
 

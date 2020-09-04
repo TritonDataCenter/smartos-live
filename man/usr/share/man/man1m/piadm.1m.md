@@ -94,22 +94,20 @@ piadm(1M) -- Manage SmartOS Platform Images
 
     For example:
 
-```
-[root@smartos ~]# piadm bootable
-standalone                     ==> BIOS and UEFI
-zones                          ==> non-bootable
-[root@smartos ~]# piadm list
-PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT
-20200714T195617Z   standalone/boot                next         yes   yes
-[root@smartos ~]# ls -l /standalone/boot
-total 7
-lrwxrwxrwx   1 root     root          23 Jul 15 04:22 boot -> ./boot-20200714T195617Z
-drwxr-xr-x   4 root     root          15 Jul 15 04:12 boot-20200714T195617Z
-drwxr-xr-x   3 root     root           3 Jul 15 04:22 etc
-lrwxrwxrwx   1 root     root          27 Jul 15 04:22 platform -> ./platform-20200714T195617Z
-drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
-[root@smartos ~]#
-```
+ [root@smartos ~]# piadm bootable
+ standalone                     ==> BIOS and UEFI
+ zones                          ==> non-bootable
+ [root@smartos ~]# piadm list
+ PI STAMP           BOOTABLE FILESYSTEM            BOOT IMAGE   NOW   NEXT
+ 20200714T195617Z   standalone/boot                next         yes   yes
+ [root@smartos ~]# ls -l /standalone/boot
+ total 7
+ lrwxrwxrwx   1 root     root          23 Jul 15 04:22 boot -> ./boot-20200714T195617Z
+ drwxr-xr-x   4 root     root          15 Jul 15 04:12 boot-20200714T195617Z
+ drwxr-xr-x   3 root     root           3 Jul 15 04:22 etc
+ lrwxrwxrwx   1 root     root          27 Jul 15 04:22 platform -> ./platform-20200714T195617Z
+ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
+ [root@smartos ~]#
 
 ## COMMANDS
 
@@ -201,50 +199,45 @@ drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
 
 ### Making a new bootable pool, and seeing the handiwork
 
-```
-[root@smartos ~]# zpool create -f -B standalone c1t1d0
-[root@smartos ~]# piadm bootable
-standalone                     ==> non-bootable
-zones                          ==> non-bootable
-[root@smartos ~]# piadm -v bootable -e -i latest standalone
-Installing PI 20200701T231659Z
-Platform Image 20200701T231659Z will be loaded on next boot,
-    with a new boot image,
-    boot image  20200701T231659Z
-[root@smartos ~]# piadm bootable
-standalone                     ==> BIOS and UEFI
-zones                          ==> non-bootable
-[root@smartos ~]# piadm list
-PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT
-20200701T231659Z   standalone/boot                next         no    yes
-[root@smartos ~]#
-```
+ [root@smartos ~]# zpool create -f -B standalone c1t1d0
+ [root@smartos ~]# piadm bootable
+ standalone                     ==> non-bootable
+ zones                          ==> non-bootable
+ [root@smartos ~]# piadm -v bootable -e -i latest standalone
+ Installing PI 20200701T231659Z
+ Platform Image 20200701T231659Z will be loaded on next boot,
+     with a new boot image,
+     boot image  20200701T231659Z
+ [root@smartos ~]# piadm bootable
+ standalone                     ==> BIOS and UEFI
+ zones                          ==> non-bootable
+ [root@smartos ~]# piadm list
+ PI STAMP           BOOTABLE FILESYSTEM            BOOT IMAGE   NOW   NEXT
+ 20200701T231659Z   standalone/boot                next         no    yes
+ [root@smartos ~]#
 
-### Installing a PI-only (use old boot bits) update and activating it
+### Installing a PI-only (use an old boot image) update and activating it
 
-```
-[root@smartos ~]# piadm list
-PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT
-20200714T195617Z   standalone/boot                next         yes   yes
-[root@smartos ~]# piadm -v install https://example.com/PIs/platform-20200715T192200Z.tgz
-Installing https://example.com/PIs/platform-20200715T192200Z.tgz
-        (downloaded to /tmp/tmp.Bba0Ac)
-Installing PI 20200715T192200Z
-[root@smartos ~]# piadm list
-PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT
-20200714T195617Z   standalone/boot                next         yes   yes
-20200715T192200Z   standalone/boot                none         no    no
-[root@smartos ~]# piadm -v activate 20200715T192200Z
-Platform Image 20200715T192200Z will be loaded on next boot,
-    WARNING:  20200715T192200Z has no matching boot image, using
-    boot image  20200714T195617Z
-[root@smartos ~]# piadm list
-PI STAMP           BOOTABLE FILESYSTEM            BOOT BITS?   NOW   NEXT
-20200714T195617Z   standalone/boot                next         yes   no
-20200715T192200Z   standalone/boot                none         no    yes
-[root@smartos ~]#
-
-```
+ [root@smartos ~]# piadm list
+ PI STAMP           BOOTABLE FILESYSTEM            BOOT IMAGE   NOW   NEXT
+ 20200714T195617Z   standalone/boot                next         yes   yes
+ [root@smartos ~]# piadm -v install https://example.com/PIs/platform-20200715T192200Z.tgz
+ Installing https://example.com/PIs/platform-20200715T192200Z.tgz
+         (downloaded to /tmp/tmp.Bba0Ac)
+ Installing PI 20200715T192200Z
+ [root@smartos ~]# piadm list
+ PI STAMP           BOOTABLE FILESYSTEM            BOOT IMAGE   NOW   NEXT
+ 20200714T195617Z   standalone/boot                next         yes   yes
+ 20200715T192200Z   standalone/boot                none         no    no
+ [root@smartos ~]# piadm -v activate 20200715T192200Z
+ Platform Image 20200715T192200Z will be loaded on next boot,
+     WARNING:  20200715T192200Z has no matching boot image, using
+     boot image  20200714T195617Z
+ [root@smartos ~]# piadm list
+ PI STAMP           BOOTABLE FILESYSTEM            BOOT IMAGE   NOW   NEXT
+ 20200714T195617Z   standalone/boot                next         yes   no
+ 20200715T192200Z   standalone/boot                none         no    yes
+ [root@smartos ~]#
 
 
 ## EXIT STATUS

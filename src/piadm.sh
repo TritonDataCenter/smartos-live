@@ -157,9 +157,8 @@ avail() {
 
 	# The aforementioned Manta method, parsed by json(1).
 	# Don't print ones old enough to NOT contain piadm(1M) itself.
-	$CURL ${URL_PREFIX}/?limit=1000 | \
-		json -ga -c 'this.name.match("Z$")' name | \
-		awk '{if ($1 > 20200825) print $1}'
+	$CURL ${URL_PREFIX}/?limit=1000 | json -ga -c \
+		'this.name.match(/Z$/) && this.name>"20200825T000000Z"' name
 }
 
 # Scan for available installation media and mount it.

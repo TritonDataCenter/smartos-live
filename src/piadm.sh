@@ -444,6 +444,8 @@ list() {
 update_boot_sectors() {
 	pool=$1
 	bootfs=$2
+	flag=$3
+	tdir=""
 
 	# XXX WARNING -- illumos#12894 will allow slogs.  We will need to
 	# alter the generation of boot_devices accordingly.  Generate the
@@ -486,20 +488,50 @@ update_boot_sectors() {
 
 	some=0
 	for a in "${boot_devices[@]}"; do
-		# Plow through devices, even if some fail.  installboot also
-		# does loader-into-EFI-System-Partition this way.  Trailing /
-		# is important in the -b argument because boot is actually a
-		# symlink.
-		installboot -m -b /${bootfs}/boot/ /${bootfs}/boot/pmbr \
-			/${bootfs}/boot/gptzfsboot \
-			/dev/rdsk/${a}${suffix} > /dev/null 2>&1 || \
-			eecho "WARNING: Can't installboot on ${a}${suffix}"
+		if [[ "$flag" == "-d" ]]; then
+			if [[ "$suffix" == "s0" ]]; then
+				# BIOS boot, we don't care.
+				continue
+			fi
+			# otherwise mount the ESP and trash it.
+			if [[ "$tdir" == "" ]]; then
+				tdir=`mktemp -d`
+			fi
+			mount -F pcfs /dev/dsk/${a}s0 ${tdir}
+			if [[ $? -ne 0 ]]; then
+				eecho "disk $a has no PCFS ESP, it seems"
+				continue
+			fi
+			# Just take out the EFI directory, in case someone
+			# is using it for something ELSE also.
+			/bin/rm -rf ${tdir}/EFI
+			umount ${tdir}
+			# If we make it here, at least some disks had
+			# ESP and we managed to clean them out.  "some" below
+			# will get set.
+		else
+			# Plow through devices, even if some fail.
+			# installboot also does
+			# loader-into-EFI-System-Partition this way.
+			# Trailing / is important in the -b argument
+			# because boot is actually a symlink.
+			installboot -m -b /${bootfs}/boot/ \
+				/${bootfs}/boot/pmbr \
+				/${bootfs}/boot/gptzfsboot \
+				/dev/rdsk/${a}${suffix} > /dev/null 2>&1 || \
+				eecho \
+				"WARNING: Can't installboot on ${a}${suffix}"
+		fi
+
 		if [[ $? -eq 0 ]]; then
 			some=1
 		fi
 	done
+
+	# Partial success (altering some of the pool's disks) is good
+	# enough for command success.
 	if [[ $some -eq 0 ]]; then
-		fatal "Could not installboot(1M) on ANY vdevs of pool $2"
+		fatal "Could not make alterations on ANY vdevs of pool $2"
 	fi
 }
 
@@ -643,8 +675,8 @@ enablepool() {
 	ispoolenabled $pool
 	if [[ $? -eq 0 ]]; then
 		if [[ -d /${bootfs}/platform/. && -d /${bootfs}/boot/. ]]; then
-			vecho "Pool $pool appears to be bootable."
-			vecho "Use 'piadm install' or 'piadm activate' to" \
+			echo "Pool $pool appears to be bootable."
+			echo "Use 'piadm install' or 'piadm activate' to" \
 				"change PIs."
 			return 0
 		fi
@@ -680,11 +712,12 @@ enablepool() {
 	activate $installstamp $pool
 }
 
-refreshpool() {
-	pool=$1
+refresh_or_disable_pool() {
+	flag=$1
+	pool=$2
 
 	if [[ -z $pool ]]; then
-		eecho "Must specify a pool for refresh"
+		eecho "Must specify a pool for disabling or refresh"
 		usage
 	fi
 
@@ -692,39 +725,29 @@ refreshpool() {
 	# ispoolenabled sets currbootfs as a side-effect.
 	ispoolenabled $pool
 	if [[ $? -ne 0 ]]; then
-		err "Pool $pool is not bootable, and cannot be refreshed"
+		err "Pool $pool is not bootable, and cannot be disabled" \
+			"or refreshed"
 	fi
 
-	update_boot_sectors $pool $currbootfs
+	if [[ "$flag" == "-d" ]]; then
+		vecho "Disabling bootfs on pool $pool"
+		zpool set bootfs="" $pool
+	else
+		vecho "Refreshing boot sectors and/or ESP on pool $pool"
+	fi
+
+	update_boot_sectors $pool $currbootfs $flag
 
 	return 0
 }
 
 bootable() {
-	if [[ "$1" == "-d" ]]; then
-		if [[ "$2" == "" ]]; then
-			eecho "To disable a pool for booting, please specify" \
-				"a pool."
-			usage
-		fi
-
-		# Reality check for bad pool name.
-		poolpresent $2
-		# Reality check for REALLY messed-up bootfs...
-		ispoolenabled $2
-
-		# Eventually we may need to do more complicated things like
-		# wipe the boot sectors clean or some other such cleanup.  For
-		# now, disabling is merely unsetting `bootfs` in the pool.
-		zpool set bootfs="" $2
-	
+	if [[ "$1" == "-d" || "$1" == "-r" ]]; then
+		refresh_or_disable_pool $1 $2
 		return
 	elif [[ "$1" == "-e" ]]; then
 		shift 1
 		enablepool $@
-		return
-	elif [[ "$1" == "-r" ]]; then
-		refreshpool $2
 		return
 	fi
 
@@ -765,10 +788,10 @@ bootable() {
 				if [[ $? -eq 0 && \
 					-f $tdir/EFI/Boot/bootx64.efi ]]; then
 					efi="and UEFI"
-					umount $tdir
 				else
 					efi=""
 				fi
+				umount -f $tdir > /dev/null 2>&1
 				rmdir $tdir
 			done
 		else

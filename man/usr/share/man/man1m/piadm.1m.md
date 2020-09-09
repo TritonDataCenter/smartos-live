@@ -94,6 +94,7 @@ piadm(1M) -- Manage SmartOS Platform Images
 
     For example:
 
+```
  [root@smartos ~]# piadm bootable
  standalone                     ==> BIOS and UEFI
  zones                          ==> non-bootable
@@ -108,6 +109,7 @@ piadm(1M) -- Manage SmartOS Platform Images
  lrwxrwxrwx   1 root     root          27 Jul 15 04:22 platform -> ./platform-20200714T195617Z
  drwxr-xr-x   4 root     root           5 Jul 15 04:12 platform-20200714T195617Z
  [root@smartos ~]#
+```
 
 ## COMMANDS
 
@@ -199,6 +201,7 @@ piadm(1M) -- Manage SmartOS Platform Images
 
 ### Making a new bootable pool, and seeing the handiwork
 
+```
  [root@smartos ~]# zpool create -f -B standalone c1t1d0
  [root@smartos ~]# piadm bootable
  standalone                     ==> non-bootable
@@ -215,9 +218,11 @@ piadm(1M) -- Manage SmartOS Platform Images
  PI STAMP           BOOTABLE FILESYSTEM            BOOT IMAGE   NOW   NEXT
  20200701T231659Z   standalone/boot                next         no    yes
  [root@smartos ~]#
+```
 
 ### Installing a PI-only (use an old boot image) update and activating it
 
+```
  [root@smartos ~]# piadm list
  PI STAMP           BOOTABLE FILESYSTEM            BOOT IMAGE   NOW   NEXT
  20200714T195617Z   standalone/boot                next         yes   yes
@@ -238,7 +243,7 @@ piadm(1M) -- Manage SmartOS Platform Images
  20200714T195617Z   standalone/boot                next         yes   no
  20200715T192200Z   standalone/boot                none         no    yes
  [root@smartos ~]#
-
+```
 
 ## EXIT STATUS
 

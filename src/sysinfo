@@ -597,10 +597,10 @@ function get_admin_ip()
     tag=${Admin_NIC_Tag:-"admin"}
 
     # Translate the NIC tag into an IP address.  First look for the desired
-    # state expressed in various configuration source, then fall back to the
+    # state expressed in various configuration sources, then fall back to the
     # running state.
     prop=$(net_conf_grep "^${tag}_ip=")
-    if [[ -n "$prop" ]]; then
+    if [[ -n "$prop" ]] && [[ "$prop" != "${tag}_ip=dhcp" ]]; then
         fields=(${prop//=/ })
         Admin_IP=${fields[1]}
     else

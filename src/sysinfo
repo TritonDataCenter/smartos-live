@@ -331,10 +331,15 @@ function net_conf_grep()
 {
     if /usr/lib/sdc/net-boot-config --enabled; then
         /usr/lib/sdc/net-boot-config | grep "$1"
-    else
-        /usr/bin/bootparams 2>/dev/null | grep "$1"
-        grep "$1" ${configfile} 2>/dev/null
+        return 0
     fi
+    if /usr/bin/bootparams 2>/dev/null | grep "$1"; then
+        return 0
+    fi
+    if grep "$1" ${configfile} 2>/dev/null; then
+        return 0
+    fi
+    return 1
 }
 
 function get_aggregation_mappings()
@@ -558,6 +563,31 @@ function get_admin_nic_tag()
     eval "Admin_NIC_Tag=${fields[1]:-"admin"}"
 }
 
+# Find one IP address associated with a NIC tag by parsing nictagadm and
+# ifconfig output.
+function get_tag_ip()
+{
+    local tag=$1
+    local fields nic
+
+    nic=$(/usr/bin/nictagadm list -p | while IFS=: read -a fields; do
+        if [[ "${fields[0]}" == "$tag" ]]; then
+            echo "${fields[2]}"
+            break
+        fi
+    done)
+    if [[ -z "$nic" ]]; then
+        return
+    fi
+
+    /usr/sbin/ifconfig "$nic" | while read -a fields; do
+        if [[ "${fields[0]}" == "inet" ]]; then
+            echo "${fields[1]}"
+            break
+        fi
+    done
+}
+
 function get_admin_ip()
 {
     # In case get_admin_nic_tag hasn't been called yet.
@@ -565,9 +595,17 @@ function get_admin_ip()
 
     # If we are still missing the "Admin_NIC_Tag" default to "admin"
     tag=${Admin_NIC_Tag:-"admin"}
+
+    # Translate the NIC tag into an IP address.  First look for the desired
+    # state expressed in various configuration sources, then fall back to the
+    # running state.
     prop=$(net_conf_grep "^${tag}_ip=")
-    fields=(${prop//=/ })
-    eval "Admin_IP=${fields[1]}"
+    if [[ -n "$prop" ]] && [[ "$prop" != "${tag}_ip=dhcp" ]]; then
+        fields=(${prop//=/ })
+        Admin_IP=${fields[1]}
+    else
+        Admin_IP=$(get_tag_ip "$tag")
+    fi
 }
 
 function get_nic_tags()

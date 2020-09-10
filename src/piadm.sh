@@ -445,7 +445,6 @@ update_boot_sectors() {
 	pool=$1
 	bootfs=$2
 	flag=$3
-	tdir=""
 
 	# XXX WARNING -- illumos#12894 will allow slogs.  We will need to
 	# alter the generation of boot_devices accordingly.  Generate the
@@ -494,9 +493,7 @@ update_boot_sectors() {
 				continue
 			fi
 			# otherwise mount the ESP and trash it.
-			if [[ "$tdir" == "" ]]; then
-				tdir=`mktemp -d`
-			fi
+			tdir=`mktemp -d`
 			mount -F pcfs /dev/dsk/${a}s0 ${tdir}
 			if [[ $? -ne 0 ]]; then
 				eecho "disk $a has no PCFS ESP, it seems"
@@ -505,7 +502,7 @@ update_boot_sectors() {
 			# Just take out the EFI directory, in case someone
 			# is using it for something ELSE also.
 			/bin/rm -rf ${tdir}/EFI
-			umount ${tdir}
+			umount ${tdir} && rmdir "$tdir"
 			# If we make it here, at least some disks had
 			# ESP and we managed to clean them out.  "some" below
 			# will get set.
@@ -531,7 +528,7 @@ update_boot_sectors() {
 	# Partial success (altering some of the pool's disks) is good
 	# enough for command success.
 	if [[ $some -eq 0 ]]; then
-		fatal "Could not make alterations on ANY vdevs of pool $2"
+		fatal "Could not modify ANY vdevs of pool $2"
 	fi
 }
 
@@ -791,8 +788,7 @@ bootable() {
 				else
 					efi=""
 				fi
-				umount -f $tdir > /dev/null 2>&1
-				rmdir $tdir
+				umount -f $tdir > /dev/null 2>&1 && rmdir $tdir
 			done
 		else
 			bootable="non-bootable"

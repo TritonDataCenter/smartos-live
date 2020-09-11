@@ -493,7 +493,7 @@ update_boot_sectors() {
 				continue
 			fi
 			# otherwise mount the ESP and trash it.
-			tdir=`mktemp -d`
+			tdir=$(mktemp -d)
 			mount -F pcfs /dev/dsk/${a}s0 ${tdir}
 			if [[ $? -ne 0 ]]; then
 				eecho "disk $a has no PCFS ESP, it seems"

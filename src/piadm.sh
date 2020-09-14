@@ -632,7 +632,7 @@ ispoolenabled() {
 	currbootfs=$(zpool list -Ho bootfs "$pool")
 	if [[ $currbootfs == "${pool}/boot" ]]; then
 		# We're bootable (at least bootable enough)
-		zfs list -H "$currbootfs" 2>&1  && return 0
+		zfs list -H "$currbootfs" > /dev/null 2>&1  && return 0
 		# else drop out to not-bootable, but this shouldn't happen.
 		vecho ".... odd, ${pool}/boot is pool's bootfs," \
 			"but isn't a filesystem"

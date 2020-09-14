@@ -489,9 +489,8 @@ update_boot_sectors() {
 			fi
 			# otherwise mount the ESP and trash it.
 			tdir=$(mktemp -d)
-			if mount -F pcfs "/dev/dsk/${a}s0" "${tdir:?}" ; then
-				some=1
-			else
+			if ! mount -F pcfs "/dev/dsk/${a}s0" "${tdir:?}" ; then
+				# Wrong filesystem, so skip the rest of this loop
 				eecho "disk $a has no PCFS ESP, it seems"
 				continue
 			fi
@@ -499,6 +498,7 @@ update_boot_sectors() {
 			# is using it for something ELSE also.
 			/bin/rm -rf "${tdir}/EFI"
 			umount "$tdir" && rmdir "$tdir"
+			some=1
 			# If we make it here, at least some disks had
 			# ESP and we managed to clean them out.  "some" below
 			# will get set.
@@ -597,7 +597,7 @@ remove() {
 			# Boot bits may be older than the current PI, and the
 			# current PI may not have matching boot bits for some
 			# reason. Guard against shooting yourself in the foot.
-			if ! grep -q "$pistamp" etc/version/boot; then
+			if grep -q "$pistamp" etc/version/boot; then
 				eecho "$pistamp is the current set of boot" \
 					"binaries.  Please"
 				eecho "activate another pi using" \

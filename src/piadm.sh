@@ -80,8 +80,17 @@ activestamp=$(uname -v | sed 's/joyent_//g')
 declare installstamp
 
 poolpresent() {
-	# Works for an empty $1, which is "all of them" or "unspecified"
-	if ! zpool list "$1" > /dev/null 2>&1 ; then
+	local pool_len cmd
+	pool_len="${#1}"
+	# This seems a bit obtuse, but we need to pass the pool specification we
+	# received on the command line to zpool verbatim, but having an empty
+	# variable passed to zpool won't give us any valid output.
+	if (( pool_len == 0 )); then
+		zp_cmd=( zpool list )
+	else
+		zp_cmd=( zpool list "$1" )
+	fi
+	if ! "${zp_cmd[@]}" > /dev/null 2>&1 ; then
 		eecho "Pool $1 not present"
 		usage
 	fi
@@ -253,7 +262,7 @@ install() {
 			# PI files expand to platform-$STAMP.  Fix it here
 			# before proceeding.
 			gtar -xzf "$1" -C "${tdir}/mnt"
-			mv "${tdir}/mnt/platform-*" "${tdir}/mnt/platform"
+			mv "${tdir}"/mnt/platform-* "${tdir}/mnt/platform"
 			iso=no
 			stamp=$(cat "${tdir}/mnt/platform/etc/version/platform")
 		else

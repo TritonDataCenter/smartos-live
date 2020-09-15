@@ -45,12 +45,13 @@ usage() {
 	eecho ""
 	eecho "Usage: piadm [-v] <command> [command-specific arguments]"
 	eecho ""
-	eecho "    piadm activate|assign <PI-stamp> [ZFS-pool-name]"
+	eecho "    piadm activate|assign <PI-stamp/ipxe> [ZFS-pool-name]"
 	eecho "    piadm avail"
 	eecho "    piadm bootable [-d] [-e [-i <source>]] [-r] [ZFS-pool-name]"
 	eecho "    piadm install <source> [ZFS-pool-name]"
 	eecho "    piadm list <-H> [ZFS-pool-name]"
-	eecho "    piadm remove <PI-stamp> [ZFS-pool-name]"
+	eecho "    piadm remove <PI-stamp/ipxe> [ZFS-pool-name]"
+	eecho "    piadm update ipxe [ZFS-pool-name]"
 	err ""
 }
 
@@ -151,6 +152,16 @@ DEFAULT_URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
 # Can be overridden by the user's PIADM_URL_PREFIX.
 URL_PREFIX=${PIADM_URL_PREFIX:-${DEFAULT_URL_PREFIX}}
 
+# Data for Triton Compute Node (CN) iPXE.
+TRITON_IPXE_PATH=/opt/smartdc/share/usbkey/contents
+TRITON_IPXE_ETC=${TRITON_IPXE_PATH}/etc
+TRITON_IPXE_BOOT=${TRITON_IPXE_PATH}/boot
+IPXE_LKRN=ipxe.lkrn
+IPXE_ARCHIVE=default.ipxe
+TRITON_IPXE_LKRN=${TRITON_IPXE_BOOT}/${IPXE_LKRN}
+TRITON_IPXE_ARCHIVE=${TRITON_IPXE_BOOT}/${IPXE_ARCHIVE}
+
+
 avail() {
 	# For now, assume that the URL_PREFIX points to a Manta
 	# back-end and we use Manta methods for querying (and json(1)
@@ -168,6 +179,14 @@ avail() {
 	# Don't print ones old enough to NOT contain piadm(1M) itself.
 	"${CURL[@]}" "${URL_PREFIX}/?limit=1000" | json -ga -c \
 		"this.name.match(/Z$/) && this.name>=\"$activestamp\"" name
+
+	#
+	# Additionally, check to see if we have a Triton CN, where we can
+	# create an ipxe boot. Restrict to searching only locally on-disk.
+	#
+	if [[ -f "$TRITON_IPXE_LKRN" && -f "$TRITON_IPXE_ARCHIVE" ]]; then
+		echo "ipxe"
+	fi
 }
 
 # Scan for available installation media and mount it.
@@ -199,6 +218,103 @@ mount_installmedia() {
 	return 0
 }
 
+# README file for /${bootfs}/platform-ipxe/README.
+cat_readme() {
+    cat <<EOF
+For iPXE boots, the platform/ directory is empty.  This README is here so
+there's something in the platform/ directory to prevent piadm (especially 
+older versions) from thinking something is wrong.
+EOF
+}
+
+# Install iPXE on a pool.
+#
+# iPXE can be booted one of two ways from a disk.  If the disk has an
+# EFI System Partition (ESP), it can boot iPXE straight off of the
+# ESP.  If it is a BIOS disk, or loader is in the ESP, it will boot to
+# loader like SmartOS, but instead of using "unix" and "boot_archive"
+# from the platform directory, it will instead boot "ipxe.lkrn" and
+# "default.ipxe" from the boot directory.
+#
+# Because of the desire to have a Triton Compute Node possibly boot to
+# a recovery SmartOS, we will never install iPXE on the ESP.
+#
+# "bootfs" has been set already.
+install_ipxe() {
+	cd /${bootfs}
+	if [[ -e platform-ipxe || -e boot-ipxe ]]; then
+		eecho "existing ipxe appears to exist, version: " \
+			$(cat etc/version/ipxe)
+		err "Use 'piadm update ipxe' to upgrade it"
+	fi
+
+	# The "platform" directory for on-disk iPXE is a placeholder.
+	# We put a README (see cat_readme() above) and the string "ipxe"
+	# for the PI-stamp.
+	mkdir -p ./platform-ipxe/etc/version
+	cat_readme > ./platform-ipxe/README
+	echo "ipxe" > ./platform-ipxe/etc/version/platform
+
+	# Entry to this function is predicated by existence of
+	# TRITON_IPXE_LKRN and TRITON_IPXE_ARCHIVE.  Assume
+	# TRITON_IPXE_ETC is there too.
+	mkdir -p etc/version
+	cp -f ${TRITON_IPXE_ETC}/version/ipxe etc/version/.
+	# So 'piadm list' doesn't seize up...
+	echo "ipxe" > etc/version/boot
+	vecho "installing ipxe version: " $(cat etc/version/ipxe)
+
+	mkdir boot-ipxe
+	tar -cf - -C ${TRITON_IPXE_BOOT} . | tar -xf - -C boot-ipxe
+
+	# Populate loader.conf.
+	# XXX KEBE SAYS make loader.conf work for ipxe.
+	# XXX KEBE SAYS FILL ME IN!  AND ONCE FILLED IN CHECK ME!
+	sed 's/headnode="true"/headnode="false"/g' \
+	    < boot-ipxe/loader.conf.tmpl > boot-ipxe/loader.conf
+	echo 'ipxe="true"' >> boot-ipxe/loader.conf
+	echo 'smt_enabled="true"' >> boot-ipxe/loader.conf
+	echo 'console="ttyb,ttya,ttyc,ttyd,text"' >> boot-ipxe/loader.conf
+	echo 'os_console="ttyb"' >> boot-ipxe/loader.conf
+	echo 'fstype="ufs"' >> boot-ipxe/loader.conf
+
+	# Rewhack symlinks
+	ln -s boot-ipxe boot
+	ln -s platform-ipxe platform
+
+	# We're good.
+	return 0
+}
+
+# Remove iPXE on a pool. Called by remove(), which means "bootfs" has
+# been set already and it's PWD.  Unlike SmartOS PIs, we remove iPXE
+# even if it's the next thing to boot.  ./platform-ipxe is guaranteed
+# to be present.
+remove_ipxe() {
+	bootstamp=$1
+
+	if [[ ! -d ./boot-ipxe ]]; then
+		# Catch this now before we remove symlinks
+		corrupt "boot-ipxe is missing for some weird reason"
+	fi
+
+	vecho "Removing ipxe version" $(cat ./etc/version/ipxe)
+
+	/bin/rm -rf ./platform-ipxe ./boot-ipxe ./etc/version/ipxe
+
+	if [[ $bootstamp == "ipxe" ]]; then
+		# Remove the symlinks.
+		# iPXE CAN NOT have mismatched boot and platform symlinks.
+		# It is safe to remove boot as well.
+		rm ./platform ./boot
+		vecho "Removal of active iPXE leaves nothing for $bootfs to find."
+		vecho "Use 'piadm install' to provide something."
+		vecho "If you're using 'piadm update', that will happen now."
+	else
+		vecho "Removing inactive ipxe"
+	fi
+}
+
 # Install a Platform Image.
 #
 # XXX WARNING - there is a security discussion to be had about the integrity
@@ -213,8 +329,8 @@ install() {
 	# ${tdir}/mnt.
 	#
 
-	# Special-case of "latest"
 	if [[ "$1" == "latest" ]]; then
+		# Special-case of "latest"...
 		# Well-known URL for the latest PI using conventions from
 		# URL_PREFIX.  Grab the latest-version ISO. Before proceeding,
 		# make sure it's the current one.
@@ -230,6 +346,7 @@ install() {
 		# For now, assume boot stamp and PI stamp are the same on an ISO...
 		stamp=$(cat "${tdir}/mnt/etc/version/boot")
 	elif [[ "$1" == "media" ]]; then
+		# Special-case of "media"...
 		# Scan the available media to find what we seek.  Same advice
 		# about making sure it's the current one.
 		iso=yes
@@ -241,6 +358,11 @@ install() {
 		# For now, assume boot stamp and PI stamp are the same on
 		# install media.
 		stamp=$(cat "${tdir}/mnt/etc/version/boot")
+	elif [[ "$1" == "ipxe" ]]; then
+		# Special-case of "ipxe"...
+		# See if we're on a Triton CN that has iPXE available.
+		install_ipxe
+		return
 	elif [[ -f $1 ]]; then
 		# File input!  Check for what kind, etc. etc.
 
@@ -262,6 +384,11 @@ install() {
 			# PI files expand to platform-$STAMP.  Fix it here
 			# before proceeding.
 			gtar -xzf "$1" -C "${tdir}/mnt"
+			if [[ ! -e "${tdir}"/mnt/platform-* ]]; then
+				# Corrupt tarball.
+				/bin/rm -rf ${tdir}
+				err "Tarball is not a SmartOS PI"
+			fi
 			mv "${tdir}"/mnt/platform-* "${tdir}/mnt/platform"
 			iso=no
 			stamp=$(cat "${tdir}/mnt/platform/etc/version/platform")
@@ -291,7 +418,7 @@ install() {
 
 		# Now that we think it's a boot stamp, check if it's the
 		# current one or if it exists.
-		if [[ -d ${bootfs}/platform-${1} ]]; then
+		if [[ -d /${bootfs}/platform-${1} ]]; then
 			/bin/rm -rf "${tdir}"
 			eecho "PI-stamp $1 appears to be already on /${bootfs}"
 			err "Use  piadm remove $1  to remove any old copies."
@@ -594,6 +721,10 @@ remove() {
 	bootstamp=$(cat platform/etc/version/platform)
 
 	if [[ -d platform-$pistamp ]]; then
+		if [[ $pistamp == "ipxe" ]]; then
+			remove_ipxe "$bootstamp"
+			return
+		fi
 		if [[ $bootstamp == "$pistamp" ]]; then
 			eecho "$pistamp is the next-booting PI." \
 		    		"Please activate another PI"
@@ -666,6 +797,7 @@ enablepool() {
 		pool=$1
 	fi
 
+	# SmartOS convention is $POOL/boot.
 	bootfs=${pool}/boot
 
 	if ispoolenabled "$pool" ; then
@@ -825,6 +957,21 @@ case $cmd in
 
 	remove )
 		remove "$@"
+		;;
+
+	update )
+		if [[ "$1" != "ipxe" ]]; then
+			err "Only a Triton CN's ipxe can be updated."
+		fi
+		if [[ -f "$TRITON_IPXE_LKRN" && -f "$TRITON_IPXE_ARCHIVE" ]]
+		then
+			# Remove and install ipxe.  The remove() function
+			# will perform the requisite setups and reality checks.
+			remove "$@"
+			install_ipxe
+		else
+			err "No local replacement ipxe available."
+		fi
 		;;
 
 	*)

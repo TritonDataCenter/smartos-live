@@ -679,7 +679,7 @@ enablepool() {
 		# For now, proceed clobber-style.
 	fi
 
-	if ! zfs list -H "$bootfs" 2>&1; then
+	if ! zfs list -H "$bootfs" > /dev/null 2>&1; then
 		# Create a new bootfs and set it.
 		# NOTE:	 Encryption should be turned off for this dataset.
 		zfs create -o encryption=off "$bootfs" || \

@@ -25,7 +25,6 @@ conf_arg0_dir=$(dirname $0)
 conf_root=$PWD
 conf_ips=
 conf_priv="pfexec"
-conf_pkgsrcurl="https://us-east.manta.joyent.com/Joyent_Dev/public/releng/pkgsrc"
 
 #
 # Build defaults which are unlikely to change, but may be overridden by
@@ -199,25 +198,23 @@ function create_projects
 
 function install_pkgin
 {
-	local pkglist=
+	local pkglist
 
-	#
-	# Newer images have a pkgin repo with a 'build-essential' package
-	# that pulls in several of the packages we need.  This is useful since
-	# it allows us to not worry about things like gcc46 vs. gcc47 etc.
-	#
-	$conf_priv pkgin -f update || fatal "failed to update pkgsrc repository"
-	if pkgin av build-essential | grep ^build-essential >/dev/null; then
-		pkglist="build-essential"
-	else
-		pkglist="gmake binutils autoconf automake bison m4"
-		pkglist="$pkglist libtool-base gcc-compiler"
-	fi
-
-	pkglist="$pkglist flex libxslt openjdk7 nodejs"
+	pkglist="build-essential flex libxslt openjdk7 nodejs"
 	pkglist="$pkglist p5-XML-Parser gettext python27 py27-expat"
 	pkglist="$pkglist coreutils gsed pkg_alternatives cdrtools"
-	pkglist="$pkglist py27-sqlite3 nasm pigz gcc49"
+	pkglist="$pkglist py27-sqlite3 nasm pigz gcc49 smartos-build-tools"
+
+	$conf_priv pkgin -f update || fatal "failed to update pkgsrc repository"
+
+	#
+	# Remove legacy packages replaced by the smartos-build-tools package.
+	#
+	for pkg in astmsgtools dmake rpcgen sgstools; do
+		if pkg_info -qe $pkg; then
+			$conf_priv pkg_delete ${pkg}
+		fi
+	done
 
 	for pkg in $pkglist; do
 		if ! pkg_info -qe $pkg; then
@@ -225,40 +222,6 @@ function install_pkgin
 		    "failed to install $pkg"
 		fi
 	done
-
-	#
-	# Packages not in pkgsrc
-	#
-	local unpublished_pkgs="
-		astmsgtools-20130402
-		dmake-20130927
-		rpcgen-20130402
-		sgstools-20130402"
-	for pkg in $unpublished_pkgs; do
-		if ! pkg_info -qe $pkg; then
-			curl "$conf_pkgsrcurl/$pkg.tgz" -o \
-			    /var/tmp/$pkg.tgz || fatal \
-			    "failed to fetch $pkg.tgz"
-
-			#
-			# We set the machine to be i386 to force pkg_add
-			# to install the package even if we are on x86_64.
-			#
-			$conf_priv pkg_add -m i386 -C /dev/null \
-			    /var/tmp/$pkg.tgz || fatal \
-			    "failed to pkg_add $pkg"
-			rm -f /var/tmp/$pkg.tgz
-		fi
-	done
-
-	#
-	# There is a bug in pkgsrc (PKGSRC-1338) in that installing a package
-	# as i386 on x86_64 results in some temporary confusion in the
-	# database.  To workaround this, we perform a meaningless pkgin
-	# operation to get the database back into a correct state with respect
-	# to our true machine architecture.
-	#
-	pkgin -y list > /dev/null
 }
 
 function install_ips

@@ -200,7 +200,7 @@ function install_pkgin
 {
 	local pkglist
 
-	pkglist="build-essential flex libxslt openjdk7 nodejs"
+	pkglist="build-essential flex libxslt openjdk8 nodejs"
 	pkglist="$pkglist p5-XML-Parser gettext python27 py27-expat"
 	pkglist="$pkglist coreutils gsed pkg_alternatives cdrtools"
 	pkglist="$pkglist py27-sqlite3 nasm pigz gcc49 smartos-build-tools"
@@ -373,7 +373,7 @@ PRIMARY_CC="$PRIMARY_CC";			export PRIMARY_CC
 PRIMARY_CCC="$PRIMARY_CCC";			export PRIMARY_CCC
 SHADOW_CCS="$SHADOW_CCS";			export SHADOW_CCS
 SHADOW_CCCS="$SHADOW_CCCS";			export SHADOW_CCCS
-JAVA_ROOT=/opt/local/java/openjdk7;		export JAVA_ROOT
+JAVA_ROOT=/opt/local/java/openjdk8;		export JAVA_ROOT
 FLEX=/opt/local/bin/flex;			export FLEX
 GNUXGETTEXT=/opt/local/bin/xgettext;		export GNUXGETTEXT
 PYTHON=/opt/local/bin/python2.7;		export PYTHON

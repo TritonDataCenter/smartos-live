@@ -221,8 +221,9 @@ mount_installmedia() {
 # README file for /${bootfs}/platform-ipxe/README.
 cat_readme() {
     cat <<EOF
-For iPXE boots, the platform/ directory is empty.  This README is here so
-there's something in the platform/ directory to prevent piadm (especially 
+For iPXE boots, the platform/ directory is empty.  This README, and
+the word "ipxe" in platform/etc/version/platform, are here so there's
+something in the platform/ directory to prevent piadm (especially
 older versions) from thinking something is wrong.
 EOF
 }
@@ -961,7 +962,8 @@ case $cmd in
 
 	update )
 		if [[ "$1" != "ipxe" ]]; then
-			err "Only a Triton CN's ipxe can be updated."
+			eecho "Only a Triton CN's ipxe can be updated."
+			usage
 		fi
 		if [[ -f "$TRITON_IPXE_LKRN" && -f "$TRITON_IPXE_ARCHIVE" ]]
 		then

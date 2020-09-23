@@ -250,6 +250,49 @@ piadm(1M) -- Manage SmartOS Platform Images
  [root@smartos ~]#
 ```
 
+### Customizing a boot image to load /etc/ppt_aliasses and /etc/ppt_matches
+
+```
+ [root@smartos ~]# piadm list
+ PI STAMP           BOOTABLE FILESYSTEM            BOOT IMAGE   NOW   NEXT
+ 20200714T195617Z   standalone/boot                next         yes   yes
+ [root@smartos ~]# mkdir -p /standalone/boot/common
+ [root@smartos ~]# cat > /standalone/boot/common/loader.conf.local <<EOF
+ > ppt_aliases_type="file"
+ > ppt_aliases_name="/common/etc/ppt_aliases"
+ > ppt_aliases_flags="name=/etc/ppt_aliases"
+ > ppt_matches_load="YES"
+ > ppt_matches_type="file"
+ > ppt_matches_name="/common/etc/ppt_matches"
+ > ppt_matches_flags="name=/etc/ppt_matches"
+ > EOF
+ [root@smartos ~]# mkdir -p /standalone/boot/common/etc
+ [root@smartos ~]# cat > /standalone/boot/common/etc/ppt_aliases <<EOF
+ > ppt "/pci@5e,0/pci8086,2030@0/pci8086,37c0@0/pci8086,37c5@3/pci15d9,37d2@0"
+ > EOF
+ [root@smartos ~]# cat > /standalone/boot/common/etc/ppt_matches <<EOF
+ > pciex8086,37d2
+ > EOF
+ [root@smartos ~]# piadm install 20200910T013122Z
+ [root@smartos ~]# ls -l /standalone/boot/boot-20200910T013122Z
+ total 527245
+ -r--r--r--   1 root     root        1249 Sep 10 04:29 cdboot
+ drwxr-xr-x   2 root     root           3 Sep 10 04:29 defaults
+ -rw-------   1 root     root     268435456 Sep 10 04:29 efiboot.img
+ drwxr-xr-x   2 root     root          22 Sep 10 04:29 forth
+ -r--r--r--   1 root     root      142848 Sep 10 04:29 gptzfsboot
+ -r--r--r--   1 root     root       12303 Sep 10 04:29 joyent.png
+ -r--r--r--   1 root     root      405504 Sep 10 04:29 loader
+ -rw-r--r--   1 root     root         291 Sep 10 04:29 loader.conf
+ lrwxrwxrwx   1 root     root          27 Sep 23 13:26 loader.conf.local -> ../common/loader.conf.local
+ -r--r--r--   1 root     root       13586 Sep 10 04:29 loader.help
+ -r--r--r--   1 root     root         789 Sep 10 04:29 loader.rc
+ -r-xr-xr-x   1 root     root      565248 Sep 10 04:29 loader64.efi
+ -r--r--r--   1 root     root         512 Sep 10 04:29 pmbr
+ -r--r--r--   1 root     root        2561 Sep 10 04:29 triton.png
+ [root@smartos ~]#
+```
+
 ## EXIT STATUS
 
 The following exit values are returned:
@@ -302,4 +345,6 @@ The following exit values are returned:
     Boot image customization is done at install time, other boot images
     already present will not be updated. Older versions of piadm can still
     be used to switch to and from boot images that have been customized but
-    won't be able to customize images.
+    won't be able to customize images. Because symlinks are used, changes
+    to common/loader.conf.local and common/loader.rc.local will be
+    be applied to all boot images that have been customized.

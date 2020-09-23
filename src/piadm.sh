@@ -243,7 +243,7 @@ EOF
 # "bootfs" has been set already.
 install_ipxe() {
 	cd /${bootfs}
-	if [[ -e platform-ipxe || -e boot-ipxe ]]; then
+	if [[ -d platform-ipxe || -d boot-ipxe ]]; then
 		eecho "existing ipxe appears to exist, version: " \
 			$(cat etc/version/ipxe)
 		err "Use 'piadm update ipxe' to upgrade it"
@@ -261,8 +261,6 @@ install_ipxe() {
 	# TRITON_IPXE_ETC is there too.
 	mkdir -p etc/version
 	cp -f ${TRITON_IPXE_ETC}/version/ipxe etc/version/.
-	# So 'piadm list' doesn't seize up...
-	echo "ipxe" > etc/version/boot
 	vecho "installing ipxe version: " $(cat etc/version/ipxe)
 
 	mkdir boot-ipxe
@@ -279,9 +277,7 @@ install_ipxe() {
 	echo 'os_console="ttyb"' >> boot-ipxe/loader.conf
 	echo 'fstype="ufs"' >> boot-ipxe/loader.conf
 
-	# Rewhack symlinks
-	ln -s boot-ipxe boot
-	ln -s platform-ipxe platform
+	# Symlink rewhacking will have to be done by "activate", if needed.
 
 	# We're good.
 	return 0
@@ -304,13 +300,11 @@ remove_ipxe() {
 	/bin/rm -rf ./platform-ipxe ./boot-ipxe ./etc/version/ipxe
 
 	if [[ $bootstamp == "ipxe" ]]; then
-		# Remove the symlinks.
-		# iPXE CAN NOT have mismatched boot and platform symlinks.
-		# It is safe to remove boot as well.
-		rm ./platform ./boot
-		vecho "Removal of active iPXE leaves nothing for $bootfs to find."
-		vecho "Use 'piadm install' to provide something."
-		vecho "If you're using 'piadm update', that will happen now."
+		# This better be an "update" operation.
+		if [[ $cmd != "update" ]]; then
+			corrupt "Removing next-to-boot ipxe (this is a bug)"
+		fi
+		vecho "Replacing currently active ipxe."
 	else
 		vecho "Removing inactive ipxe"
 	fi
@@ -560,6 +554,7 @@ list() {
 			else
 				booting="no"
 			fi
+			# XXX KEBE SAYS we may need to special-case "ipxe" here
 			if [[ $bootbitsstamp == "$pi" ]]; then
 				bootbits="next"
 			elif [[ -d "boot-$pi" ]]; then
@@ -692,6 +687,8 @@ activate() {
 		rm -f boot
 		ln -s ./boot-"$pistamp" boot
 		mkdir -p etc/version
+		# XXX KEBE SAYS, code-review feedback suggests we special-case
+		# when $pistamp is "ipxe"...
 		echo "$pistamp" > etc/version/boot
 		update_boot_sectors "$pool" "$bootfs"
 
@@ -701,6 +698,8 @@ activate() {
 
 		vecho "    with a new boot image,"
 	else
+		# XXX KEBE SAYS when we special-case ipxe above, perform
+		# extra checks here too.
 		vecho "	   WARNING: $pistamp has no matching boot image, using"
 		if [[ ! -f etc/version/boot ]]; then
 			fatal "No boot version available on /$bootfs"
@@ -722,15 +721,23 @@ remove() {
 	bootstamp=$(cat platform/etc/version/platform)
 
 	if [[ -d platform-$pistamp ]]; then
+		# If invoked from "update" don't check for current-bootstamp.
+		if [[ $bootstamp == "$pistamp" && $cmd != "update" ]]; then
+			if [[ $bootstamp == "ipxe" ]]; then
+				eecho "iPXE is booting next.  Please either" \
+					"'piadm activate <PI-stamp>', or use"
+				eecho "'piadm update ipxe' for a refreshed iPXE"
+			else
+				eecho "$pistamp is the next-booting PI." \
+					"Please activate another PI using"
+				eecho "'piadm activate <other-PI-stamp>' first."
+			fi
+			usage
+		fi
+
 		if [[ $pistamp == "ipxe" ]]; then
 			remove_ipxe "$bootstamp"
 			return
-		fi
-		if [[ $bootstamp == "$pistamp" ]]; then
-			eecho "$pistamp is the next-booting PI." \
-		    		"Please activate another PI"
-			eecho "using 'piadm activate <other-PI-stamp>' first."
-			usage
 		fi
 
 		# Boot image processing.
@@ -971,6 +978,9 @@ case $cmd in
 			# will perform the requisite setups and reality checks.
 			remove "$@"
 			install_ipxe
+			if [[ $bootstamp == "ipxe" ]]; then
+				activate ipxe
+			fi
 		else
 			err "No local replacement ipxe available."
 		fi

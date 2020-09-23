@@ -5,7 +5,7 @@ piadm(1M) -- Manage SmartOS Platform Images
 ## SYNOPSIS
     /usr/sbin/piadm [-v | -vv] <command> [command-specific arguments]
 
-    piadm activate|assign <PI-stamp> [ZFS-pool-name]
+    piadm activate|assign <PI-stamp/ipxe> [ZFS-pool-name]
     piadm avail
     piadm bootable
     piadm bootable [-dr] <ZFS-pool-name>
@@ -13,6 +13,7 @@ piadm(1M) -- Manage SmartOS Platform Images
     piadm install <source> [ZFS-pool-name]
     piadm list [ZFS-pool-name]
     piadm remove <PI-stamp> [ZFS-pool-name]
+    piadm update ipxe [ZFS-pool-name]
 
 ## DESCRIPTION
 
@@ -57,8 +58,8 @@ piadm(1M) -- Manage SmartOS Platform Images
     bootable ZFS pool, and will load `unix` and then the boot archive.
 
     Platform images are supplied by either a gzipped tarball containing the
-    above. Or inside an ISO image file which contains the above AND the boot
-    image as well (see below).
+    above. Or inside an ISO image file which contains the above AND the Boot
+    Image as well (see below).
 
 ## BOOT IMAGES
 
@@ -68,6 +69,15 @@ piadm(1M) -- Manage SmartOS Platform Images
     gzipped PI tarball.  Often, a PI can use an older Boot Image to boot
     itself without issue.  Occasionally, however, a PI will have Boot Image
     changes also that need to accompany it.
+
+## iPXE
+
+    On Triton Compute Nodes, which run SmartOS booted off a network, stored
+    locally is an implementation of iPXE, an enhanced for of Preboot
+    eXecution Environment (PXE). piadm(1M) can install iPXE in lieu of the
+    normal Boot Image and Platform Image.  The word "ipxe" can be used in
+    place of a PI stamp or a source.  Unlike Platform Images, ipxe can only
+    have one instance maintained on a given bootable pool.
 
 ## BOOTABLE POOLS
 
@@ -120,14 +130,16 @@ piadm(1M) -- Manage SmartOS Platform Images
 
     piadm(1M) commands and options are:
 
-      piadm activate <PI-stamp> [ZFS-pool-name]
-      piadm assign <PI-stamp> [ZFS-pool-name]
+      piadm activate <PI-stamp/ipxe> [ZFS-pool-name]
+      piadm assign <PI-stamp/ipxe> [ZFS-pool-name]
 
         Activate a Platform Image for the next boot, on a specified ZFS pool
         if there are more than one bootable pools imported.  It is up to the
         administrator to know which pool the system will actually boot.  If a
         boot image with the specified PI-stamp is unavailable, a warning will
-        be issued but the new PI will be activated anyway.
+        be issued but the new PI will be activated anyway.  If "ipxe" is
+        specified, the pool will boot the system into iPXE instead of
+        SmartOS.
 
         `activate` and `assign` are synonyms, for those used to other
         distros' `beadm`, or Triton's `sdcadm platform`, respectively.
@@ -136,7 +148,8 @@ piadm(1M) -- Manage SmartOS Platform Images
 
         Query the well-known SmartOS PI repository for available ISO images,
         listed by PI-Stamp. No PI-Stamps older than the currently running PI
-        stamp will be listed.
+        stamp will be listed.  If locally available Triton iPXE is present,
+        "ipxe" will be listed as well.
 
       piadm bootable [-d | -e [-i <source>] | -r] [ZFS-pool-name]
 
@@ -183,18 +196,28 @@ piadm(1M) -- Manage SmartOS Platform Images
             a boot image in it.
 
           - A URL to either one of an ISO image or a gzipped PI tarball.
+ 
+          - "ipxe", which will seek a local Triton implementation of iPXE if
+            and only if one is not installed already.  If one is, one should
+            use the update subcommand.  Also, an installation of "ipxe" will
+            override any existing Boot Images and Platform Images.
 
       piadm list [ZFS-pool-name]
 
         Lists the available platform images (and boot images) on bootable
         pools.
 
-      piadm remove <PI-stamp> [ZFS-pool-name]
+      piadm remove <PI-stamp/ipxe> [ZFS-pool-name]
 
-        The opposite of `install`, and only accepts a PI-stamp.  If a boot
-        image exists with the specified PI-stamp, it will also be removed
-        unless it is the only boot image available.
+        The opposite of `install`, and only accepts a PI-stamp or "ipxe".  If
+        a boot image exists with the specified PI-stamp, it will also be
+        removed unless it is the only boot image available.
 
+      piadm update ipxe [ZFS-pool-name]
+
+        For active ipxe deployments, this is a shortcut which combines "piadm
+        remove ipxe" and "piadm install pxe". piadm(1M)'s -v flag will
+        provide details about iPXE revisions both old and new.
 
 
 ## EXAMPLES
@@ -243,6 +266,26 @@ piadm(1M) -- Manage SmartOS Platform Images
  20200714T195617Z   standalone/boot                next         yes   no
  20200715T192200Z   standalone/boot                none         no    yes
  [root@smartos ~]#
+```
+
+### Updating an installed iPXE on a Triton Compute node (with verbose output)
+
+```
+ [root@CN (triton) ~]# piadm list
+ PI STAMP           BOOTABLE FILESYSTEM            BOOT IMAGE   NOW   NEXT  
+ ipxe               zones/boot                     next         no    yes  
+ [root@CN (triton) ~]# piadm -v update ipxe
+ Selecting lone boot pool zones by default.
+ Removing ipxe version 20191221T198413Z
+ Removal of active iPXE leaves nothing for zones/boot to find.
+ Use 'piadm install' to provide something.
+ If you're using 'piadm update', that will happen now.
+ installing ipxe version:  20200219T112943Z
+ [root@CN (triton) ~]# piadm list
+ PI STAMP           BOOTABLE FILESYSTEM            BOOT IMAGE   NOW   NEXT  
+ ipxe               zones/boot                     next         no    yes  
+ [root@CN (triton) ~]# 
+
 ```
 
 ## EXIT STATUS

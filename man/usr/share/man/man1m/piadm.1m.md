@@ -69,6 +69,11 @@ piadm(1M) -- Manage SmartOS Platform Images
     itself without issue.  Occasionally, however, a PI will have Boot Image
     changes also that need to accompany it.
 
+    Boot images can be customized by providing loader.conf.local and/or
+    loader.rc.local files in POOL/boot/common/. When a new boot image is
+    installed using `piadm install` these files are symlinked into the
+    images.
+
 ## BOOTABLE POOLS
 
     A SmartOS bootable pool (POOL in the examples) contains:
@@ -293,3 +298,8 @@ The following exit values are returned:
     if it's `zones`, a machine can still be booted with a USB stick, CD-ROM,
     or other method of booting SmartOS.  A bootable pool can then be
     repaired using piadm(1M) from the USB stick or CD-ROM.
+
+    Boot image customization is done at install time, other boot images
+    already present will not be updated. Older versions of piadm can still
+    be used to switch to and from boot images that have been customized but
+    won't be able to customize images.

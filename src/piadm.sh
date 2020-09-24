@@ -361,6 +361,7 @@ install() {
 		# Special-case of "ipxe"...
 		# See if we're on a Triton CN that has iPXE available.
 		install_ipxe
+		installstamp="ipxe"
 		return
 	elif [[ -f $1 ]]; then
 		# File input!  Check for what kind, etc. etc.

@@ -37,7 +37,7 @@ fatal() {
 }
 
 corrupt() {
-	eecho "$@"
+	eecho "POSSIBLE CORRUPTION: $@"
 	exit 3
 }
 
@@ -264,7 +264,11 @@ install_ipxe() {
 	vecho "installing ipxe version: " $(cat etc/version/ipxe)
 
 	mkdir boot-ipxe
+	# XXX KEBE ASKS... rsync?
 	tar -cf - -C ${TRITON_IPXE_BOOT} . | tar -xf - -C boot-ipxe
+	# Preserve versions in boot-ipxe...
+	cp -f ${TRITON_IPXE_ETC}/version/boot boot-ipxe/bootversion
+	cp -f etc/version/ipxe boot-ipxe/ipxeversion
 
 	# Populate loader.conf.
 	# XXX KEBE SAYS make loader.conf work for ipxe.
@@ -519,7 +523,7 @@ list() {
 	if [[ $1 == "-H" ]]; then
 		pool=$2
 	else
-		printf "%-18s %-30s %-12s %-5s %-5s \n" "PI STAMP" \
+		printf "%-22s %-30s %-10s %-4s %-4s \n" "PI STAMP" \
 			"BOOTABLE FILESYSTEM" "BOOT IMAGE" "NOW" "NEXT"
 		pool=$1
 	fi
@@ -547,22 +551,32 @@ list() {
 			if [[ $activestamp == "$pi" ]]; then
 				active="yes"
 			else
-			    active="no"
+				active="no"
 			fi
 			if [[ $bootstamp == "$pi" ]]; then
 				booting="yes"
 			else
 				booting="no"
 			fi
-			# XXX KEBE SAYS we may need to special-case "ipxe" here
 			if [[ $bootbitsstamp == "$pi" ]]; then
 				bootbits="next"
 			elif [[ -d "boot-$pi" ]]; then
-				bootbits="available"
+				if [[ $pi == "ipxe" ]]
+				then
+					# Special-case of ipxe booting next...
+					pi="ipxe($(cat etc/version/ipxe))"
+					if [[ $booting == "yes" ]]; then
+						bootbits="next"
+					else
+						bootbits="available"
+					fi
+				else
+					bootbits="available"
+				fi
 			else
 				bootbits="none"
 			fi
-			printf "%-18s %-30s %-12s %-5s %-5s\n" \
+			printf "%-22s %-30s %-10s %-4s %-4s\n" \
 				"$pi" "$bootfs" "$bootbits" "$active" "$booting"
 		done
 	done
@@ -616,7 +630,8 @@ update_boot_sectors() {
 	for a in "${boot_devices[@]}"; do
 		if [[ "$flag" == "-d" ]]; then
 			if [[ "$suffix" == "s0" ]]; then
-				# BIOS boot, we don't care.
+				# BIOS boot, we don't care, treat as success.
+				some=1
 				continue
 			fi
 			# otherwise mount the ESP and trash it.
@@ -687,9 +702,14 @@ activate() {
 		rm -f boot
 		ln -s ./boot-"$pistamp" boot
 		mkdir -p etc/version
-		# XXX KEBE SAYS, code-review feedback suggests we special-case
-		# when $pistamp is "ipxe"...
-		echo "$pistamp" > etc/version/boot
+		if [[ $pistamp == "ipxe" ]]; then
+			# Preserve the version of loader/boot with iPXE.
+			cp boot-ipxe/bootversion etc/version/boot
+			cp boot-ipxe/ipxeversion etc/version/ipxe
+			vecho "    ipxe version $(cat etc/version/ipxe),"
+		else
+			echo "$pistamp" > etc/version/boot
+		fi
 		update_boot_sectors "$pool" "$bootfs"
 
 		# Fix the loader.conf for keep-the-ramdisk booting.
@@ -697,9 +717,11 @@ activate() {
 			echo 'fstype="ufs"' >> ./boot/loader.conf
 
 		vecho "    with a new boot image,"
+	elif [[ $pistamp == "ipxe" ]]; then
+		# Special-case ipxe here.  We're in trouble if we reach here.
+		corrupt "ipxe missing boot-ipxe, but has platform-ipxe"
 	else
-		# XXX KEBE SAYS when we special-case ipxe above, perform
-		# extra checks here too.
+		# New PI, but using old boot image.
 		vecho "	   WARNING: $pistamp has no matching boot image, using"
 		if [[ ! -f etc/version/boot ]]; then
 			fatal "No boot version available on /$bootfs"
@@ -708,7 +730,7 @@ activate() {
 		fi
 	fi
 
-	vecho "    boot image " "$(cat etc/version/boot)"
+	vecho "    boot image $(cat etc/version/boot)"
 
 	rm -f platform
 	ln -s "./platform-$pistamp" platform

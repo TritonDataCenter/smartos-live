@@ -12,7 +12,7 @@ piadm(1M) -- Manage SmartOS Platform Images
     piadm bootable -e [ -i <source> ] <ZFS-pool-name>
     piadm install <source> [ZFS-pool-name]
     piadm list [ZFS-pool-name]
-    piadm remove <PI-stamp> [ZFS-pool-name]
+    piadm remove <PI-stamp/ipxe> [ZFS-pool-name]
     piadm update ipxe [ZFS-pool-name]
 
 ## DESCRIPTION

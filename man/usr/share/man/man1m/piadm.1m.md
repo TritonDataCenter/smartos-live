@@ -73,7 +73,7 @@ piadm(1M) -- Manage SmartOS Platform Images
 ## iPXE
 
     On Triton Compute Nodes, which run SmartOS booted off a network, stored
-    locally is an implementation of iPXE, an enhanced for of Preboot
+    locally is an implementation of iPXE, an enhanced form of Preboot
     eXecution Environment (PXE). piadm(1M) can install iPXE in lieu of the
     normal Boot Image and Platform Image.  The word "ipxe" can be used in
     place of a PI stamp or a source.  Unlike Platform Images, ipxe can only
@@ -272,18 +272,18 @@ piadm(1M) -- Manage SmartOS Platform Images
 
 ```
  [root@CN (triton) ~]# piadm list
- PI STAMP           BOOTABLE FILESYSTEM            BOOT IMAGE   NOW   NEXT  
- ipxe               zones/boot                     next         no    yes  
+ PI STAMP               BOOTABLE FILESYSTEM            BOOT IMAGE NOW  NEXT 
+ ipxe(20191221T198413Z) zones/boot                     next       no   yes 
  [root@CN (triton) ~]# piadm -v update ipxe
  Selecting lone boot pool zones by default.
  Removing ipxe version 20191221T198413Z
- Removal of active iPXE leaves nothing for zones/boot to find.
- Use 'piadm install' to provide something.
- If you're using 'piadm update', that will happen now.
+ Replacing currently active ipxe.
  installing ipxe version:  20200219T112943Z
+ Selecting lone boot pool zones by default.
+ NOTE: ipxe is the current active PI.
  [root@CN (triton) ~]# piadm list
- PI STAMP           BOOTABLE FILESYSTEM            BOOT IMAGE   NOW   NEXT  
- ipxe               zones/boot                     next         no    yes  
+ PI STAMP               BOOTABLE FILESYSTEM            BOOT IMAGE NOW  NEXT 
+ ipxe(20200219T112943Z) zones/boot                     next       no   yes 
  [root@CN (triton) ~]# 
 
 ```

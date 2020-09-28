@@ -51,7 +51,14 @@ usage() {
 	eecho "    piadm install <source> [ZFS-pool-name]"
 	eecho "    piadm list <-H> [ZFS-pool-name]"
 	eecho "    piadm remove <PI-stamp> [ZFS-pool-name]"
+	eecho "    piadm update [ZFS-pool-name]"
 	err ""
+}
+
+not_triton_CN() {
+	if [[ "$TRITON_CN" == "yes" ]]; then
+		err "The $1 command cannot be used on a Triton Compute Node"
+	fi
 }
 
 vecho() {
@@ -655,6 +662,34 @@ ispoolenabled() {
 	return 1
 }
 
+# XXX KEBE SAYS FILL ME IN!
+# Routines and variables related specifically to Triton Compute Nodes.
+
+initialize_as_CN() {
+	TRITON_CN="yes"
+
+	source /lib/sdc/config.sh
+	load_sdc_config
+
+	# Establish the CNAPI default boot Platform Image
+	cnapi_domain=$(${CURL[@]} http://${CONFIG_sapi_domain}/applications?name=sdc | json -Ha metadata.cnapi_domain)
+	CNAPI_DEFAULT_PI=$(${CURL[@]} http://${cnapi_domain}/boot/default | json platform)
+}
+
+# Enabling a bootable pool, specifically for a Triton Compute Node.
+bringup_CN() {
+	# XXX KEBE SAYS FILL ME IN!
+	echo "not yet..."
+}
+
+update_CN() {
+	if [[ "$TRITON_CN" != "yes" ]]; then
+		err "The update command may only be used on a Triton Compute Node"
+	fi
+
+	# XXX KEBE SAYS FILL ME IN!
+}
+
 enablepool() {
 	if [[ $1 == "-i" ]]; then
 		if [[ "$2" == "" || "$3" == "" ]]; then
@@ -662,6 +697,7 @@ enablepool() {
 				"and then a pool must be specified."
 			usage
 		fi
+		not_triton_CN "'bootable -e' with '-i'"
 		installsource=$2
 		pool=$3
 	elif [[ -z $1 ]]; then
@@ -673,13 +709,19 @@ enablepool() {
 		pool=$1
 	fi
 
+	# SmartOS standard bootable filesystem is POOL/boot.
 	bootfs=${pool}/boot
 
 	if ispoolenabled "$pool" ; then
 		if [[ -d /${bootfs}/platform/. && -d /${bootfs}/boot/. ]]; then
 			echo "Pool $pool appears to be bootable."
-			echo "Use 'piadm install' or 'piadm activate' to" \
-				"change PIs."
+			if [[ "$TRITON_CN" != "yes" ]]; then
+				echo "Use 'piadm install' or" \
+					"'piadm activate' to change PIs."
+			else
+				echo "Use 'piadm update' to update the CN's" \
+					"iPXE and backup PI."
+			fi
 			return 0
 		fi
 		# One or both of "platform" or "boot" aren't there.
@@ -703,10 +745,13 @@ enablepool() {
 	# Reset our view of available bootable pools.
 	getbootable
 
-	install $installsource "$pool"
-
-	# install set 'installstamp' on our behalf.
-	activate "$installstamp" "$pool"
+	if [[ "$TRITON_CN" == "yes" ]]; then
+		bringup_CN
+	else
+		install $installsource "$pool"
+		# install set 'installstamp' on our behalf.
+		activate "$installstamp" "$pool"
+	fi
 }
 
 refresh_or_disable_pool() {
@@ -806,15 +851,20 @@ else
 	VERBOSE=0
 fi
 
+# Determine if we're running on a Triton Compute Node (CN) or not:
+bootparams | egrep -q 'smartos=|headnode=' || initialize_as_CN
+
 cmd=$1
 shift 1
 
 case $cmd in
 	activate | assign )
+		not_triton_CN $cmd
 		activate "$@"
 		;;
 
 	avail )
+		not_triton_CN avail
 		avail
 		;;
 
@@ -823,6 +873,7 @@ case $cmd in
 		;;
 
 	install )
+		not_triton_CN install
 		install "$@"
 		;;
 
@@ -831,7 +882,12 @@ case $cmd in
 		;;
 
 	remove )
+		not_triton_CN remove
 		remove "$@"
+		;;
+
+	update )
+		update_CN "$@"
 		;;
 
 	*)

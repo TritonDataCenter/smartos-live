@@ -359,6 +359,13 @@ install() {
 		tar -cf - -C "${tdir}/mnt/boot" . | \
 			tar -xf - -C "/${bootfs}/boot-${stamp}" || \
 			eecho "Problem in tar of boot bits"
+
+		[[ -e "/${bootfs}/custom/loader.conf.local" ]] && \
+			ln -sf "../custom/loader.conf.local" \
+				"/${bootfs}/boot-${stamp}/loader.conf.local"
+		[[ -e "/${bootfs}/custom/loader.rc.local" ]] && \
+			ln -sf "../custom/loader.rc.local" \
+				"/${bootfs}/boot-${stamp}/loader.rc.local"
 	fi
 
 	if [[ -e /${bootfs}/platform-${stamp} ]]; then

@@ -70,6 +70,13 @@ piadm(1M) -- Manage SmartOS Platform Images
     itself without issue.  Occasionally, however, a PI will have Boot Image
     changes also that need to accompany it.
 
+    The behavior of loader can be controlled by providing loader.conf.local
+    and/or loader.rc.local files in the ${BOOTPOOL}/boot-${VERSION}
+    directory. Loader config files can also be placed in ${BOOTPOOL}/custom,
+    and will be used by all subsequently installed boot images.
+
+    See loader.conf(4) and loader(5) for the format of these files.
+
 ## iPXE
 
     On Triton Compute Nodes, which run SmartOS booted off a network, stored

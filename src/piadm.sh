@@ -411,7 +411,7 @@ list() {
 	if [[ $1 == "-H" ]]; then
 		pool=$2
 	else
-		printf "%-18s %-30s %-12s %-5s %-5s \n" "PI STAMP" \
+		printf "%-22s %-30s %-10s %-4s %-4s \n" "PI STAMP" \
 			"BOOTABLE FILESYSTEM" "BOOT IMAGE" "NOW" "NEXT"
 		pool=$1
 	fi
@@ -439,7 +439,7 @@ list() {
 			if [[ $activestamp == "$pi" ]]; then
 				active="yes"
 			else
-			    active="no"
+				active="no"
 			fi
 			if [[ $bootstamp == "$pi" ]]; then
 				booting="yes"
@@ -450,10 +450,18 @@ list() {
 				bootbits="next"
 			elif [[ -d "boot-$pi" ]]; then
 				bootbits="available"
+				# Special-case of ipxe booting next needs "next"
+				if [[ $pi == "ipxe" ]]
+				then
+					pi="ipxe($(cat etc/version/ipxe))"
+					if [[ $booting == "yes" ]]; then
+						bootbits="next"
+					fi
+				fi
 			else
 				bootbits="none"
 			fi
-			printf "%-18s %-30s %-12s %-5s %-5s\n" \
+			printf "%-22s %-30s %-10s %-4s %-4s\n" \
 				"$pi" "$bootfs" "$bootbits" "$active" "$booting"
 		done
 	done
@@ -508,6 +516,7 @@ update_boot_sectors() {
 		if [[ "$flag" == "-d" ]]; then
 			if [[ "$suffix" == "s0" ]]; then
 				# BIOS boot, we don't care.
+				some=1
 				continue
 			fi
 			# otherwise mount the ESP and trash it.
@@ -662,8 +671,16 @@ ispoolenabled() {
 	return 1
 }
 
-# XXX KEBE SAYS FILL ME IN!
 # Routines and variables related specifically to Triton Compute Nodes.
+
+# Data for Triton Compute Node (CN) iPXE.
+TRITON_IPXE_PATH=/opt/smartdc/share/usbkey/contents
+TRITON_IPXE_ETC=${TRITON_IPXE_PATH}/etc
+TRITON_IPXE_BOOT=${TRITON_IPXE_PATH}/boot
+IPXE_LKRN=ipxe.lkrn
+IPXE_ARCHIVE=default.ipxe
+TRITON_IPXE_LKRN=${TRITON_IPXE_BOOT}/${IPXE_LKRN}
+TRITON_IPXE_ARCHIVE=${TRITON_IPXE_BOOT}/${IPXE_ARCHIVE}
 
 initialize_as_CN() {
 	TRITON_CN="yes"
@@ -676,10 +693,134 @@ initialize_as_CN() {
 	CNAPI_DEFAULT_PI=$(${CURL[@]} http://${cnapi_domain}/boot/default | json platform)
 }
 
+# README file for /${bootfs}/platform-ipxe/README.
+cat_readme() {
+    cat <<EOF
+For iPXE boots, the platform/ directory is empty.  This README, and
+the word "ipxe" in platform/etc/version/platform, are here so there's
+something in the platform/ directory to prevent piadm (especially
+older versions) from thinking something is wrong.
+EOF
+}
+
+# Given a bootstamp, install a Platform Image as a backup for the compute node.
+# PWD is /${bootfs} at this point.
+install_pi_CN() {
+	vecho "Installing as a backup Platform image PI stamp $1"
+
+	if [[ -d ./platform-$1 ]]; then
+		# XXX KEBE ASKS - more stringent checking before victory?
+		vecho "PI stamp $1 already installed."
+		installstamp=$1
+		return 0
+	fi
+
+	# Obtain at least unix and boot archive.
+
+	# For now, use bootparams to get the URL needed, and pull
+	# files from there.  If there's a better way to obtain things, use it.
+	unix_path=$(bootparams | grep boot-file | awk -F= '{print $2}')
+	archive_prefix=$(echo $unix_path | sed 's/kernel\/amd64\/unix/amd64/g')
+
+	# Reality check the buildstamp passed, which will become installstamp,
+	# is in the unix_path.
+	echo $unix_path | grep -q $1 || corrupt "PI $1 not in $unix_path"
+
+	installstamp=$1
+	vecho "making platform-$installstamp directories"
+	mkdir -p platform-$installstamp/etc/version
+	echo $installstamp > platform-$installstamp/etc/version/platform
+	mkdir -p platform-$installstamp/i86pc/kernel/amd64
+	mkdir -p platform-$installstamp/i86pc/amd64
+	# To enable a platform/ component in the boot file pathname to confirm
+	# "unix" is also in the boot archive (as /platform/..../unix).
+	ln -s . platform-$installstamp/platform
+
+	vecho "Pulling unix"
+	${CURL[@]} $unix_path > platform-$installstamp/i86pc/kernel/amd64/unix \
+		|| return 1   
+	for file in boot_archive boot_archive.hash boot_archive.manifest \
+		boot_archive.gitstatus; do
+		vecho "Pulling $file"
+		${CURL[@]} ${archive_prefix}/${file} > \
+			platform-$installstamp/i86pc/amd64/${file} || return 1
+	done
+
+	return 0
+}
+
 # Enabling a bootable pool, specifically for a Triton Compute Node.
 bringup_CN() {
-	# XXX KEBE SAYS FILL ME IN!
-	echo "not yet..."
+	# Bootfs is already set at this point.
+
+	if [[ "$CNAPI_DEFAULT_PI" != "$activestamp" ]]; then
+		vecho "Current booted PI $activestamp is not default PI" \
+			"$CNAPI_DEFAULT_PI"
+	fi
+
+	# First install ipxe in $bootfs.
+	cd /${bootfs}
+	# Clobber everything in $bootfs.  We do not care about dot-files.
+	rm -rf ./*
+
+	# The "platform-ipxe" directory for on-disk iPXE is a placeholder.
+	# We put a README (see cat_readme() above) and the string "ipxe"
+	# for the PI-stamp.
+	mkdir -p ./platform-ipxe/etc/version
+	cat_readme > ./platform-ipxe/README
+	echo "ipxe" > ./platform-ipxe/etc/version/platform
+
+	# Now we set up the "etc" directory, which contains versions of
+	# both loader ("boot") and iPXE ("ipxe").
+	mkdir -p etc/version
+	cp -f ${TRITON_IPXE_ETC}/version/* etc/version/.
+	vecho "installing ipxe version: " $(cat etc/version/ipxe)
+
+	# Now we set up the "boot-ipxe" directory.
+	mkdir boot-ipxe
+	# Use tar here because it's the first time.
+	tar -cf - -C ${TRITON_IPXE_BOOT} . | tar -xf - -C boot-ipxe
+	# Preserve versions in boot-ipxe too in case we need them later.
+	cp -f ${TRITON_IPXE_ETC}/version/boot boot-ipxe/bootversion
+	cp -f etc/version/ipxe boot-ipxe/ipxeversion
+
+	# Symlinks for loader default and `piadm list` consistency.
+	ln -s platform-ipxe platform
+	ln -s boot-ipxe boot
+
+	# Install a PI for backup booting purposes.
+	install_pi_CN $activestamp
+	if [[ $? -ne 0 && "$CNAPI_DEFAULT_PI" != "$activestamp" ]]; then
+		install_pi_CN $CNAPI_DEFAULT_PI
+		if [[ $? -ne 0 ]]; then
+			/bin/rm -rf platform-$activestamp
+			/bin/rm -rf platform-$CNAPI_DEFAULT_PI
+			err "No PIs available"
+		fi
+	fi
+	# installstamp will be set by the successful install_pi_CN()
+
+	# Populate loader.conf.
+	# KEBE SAYS uncomment and replace the cp if you wish to have
+	# the CN backup-boot not go into the Triton HN installer but act
+	# in a different kind of weird.
+	#sed 's/headnode="true"/headnode="false"/g' \
+	#	< boot-ipxe/loader.conf.tmpl > boot-ipxe/loader.conf
+	cp boot-ipxe/loader.conf.tmpl boot-ipxe/loader.conf
+	echo 'ipxe="true"' >> boot-ipxe/loader.conf
+	echo 'smt_enabled="true"' >> boot-ipxe/loader.conf
+	echo 'console="ttyb,ttya,ttyc,ttyd,text"' >> boot-ipxe/loader.conf
+	echo 'os_console="ttyb"' >> boot-ipxe/loader.conf
+	echo 'fstype="ufs"' >> boot-ipxe/loader.conf
+	# use $installstamp to help!
+	echo "platform-version=$installstamp" >> boot-ipxe/loader.conf
+	# Need an extra "platform" in here to satisfy the illumos load-time
+	# that looks for a unix in the boot archive.  The boot file path MUST
+	# have /platform/i86pc/kernel/amd64/unix as its trailing components.
+	# See install_pi_CN() for the insertion of a symlink to help out.
+	echo bootfile=\"/platform-$installstamp/platform/i86pc/kernel/amd64/unix\" >> boot-ipxe/loader.conf
+	echo boot_archive_name=\"/platform-$installstamp/i86pc/amd64/boot_archive\" >> boot-ipxe/loader.conf
+	echo boot_archive.hash_name=\"/platform-$installstamp/i86pc/amd64/boot_archive.hash\" >> boot-ipxe/loader.conf
 }
 
 update_CN() {

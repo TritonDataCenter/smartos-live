@@ -821,6 +821,8 @@ bringup_CN() {
 	echo bootfile=\"/platform-$installstamp/platform/i86pc/kernel/amd64/unix\" >> boot-ipxe/loader.conf
 	echo boot_archive_name=\"/platform-$installstamp/i86pc/amd64/boot_archive\" >> boot-ipxe/loader.conf
 	echo boot_archive.hash_name=\"/platform-$installstamp/i86pc/amd64/boot_archive.hash\" >> boot-ipxe/loader.conf
+
+	# Caller will invoke update_boot_sectors.
 }
 
 update_CN() {
@@ -829,6 +831,8 @@ update_CN() {
 	fi
 
 	# XXX KEBE SAYS FILL ME IN!
+
+	# First check if the backup PI is in need of update.
 }
 
 enablepool() {
@@ -888,6 +892,7 @@ enablepool() {
 
 	if [[ "$TRITON_CN" == "yes" ]]; then
 		bringup_CN
+		update_boot_sectors "$pool" "$bootfs"
 	else
 		install $installsource "$pool"
 		# install set 'installstamp' on our behalf.

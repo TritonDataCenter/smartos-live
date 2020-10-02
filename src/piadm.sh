@@ -453,7 +453,11 @@ list() {
 				# Special-case of ipxe booting next needs "next"
 				if [[ $pi == "ipxe" ]]
 				then
-					pi="ipxe($(cat etc/version/ipxe))"
+					if [[ $VERBOSE -eq 1 ]]; then
+						pi="ipxe($(cat etc/version/ipxe))"
+					else
+						pi="ipxe"
+					fi
 					if [[ $booting == "yes" ]]; then
 						bootbits="next"
 					fi
@@ -888,8 +892,10 @@ update_CN() {
 		exit 0
 	fi
 
-	[[ "$diskipxe" != "$newipxe" ]] && vecho "Updating iPXE to $newipxe"
-	[[ "$diskboot" != "$newboot" ]] && vecho "Updating boot to $newboot"
+	[[ "$diskipxe" != "$newipxe" ]] && \
+		vecho "Updating iPXE provided by headnode (ver: $newipxe)"
+	[[ "$diskboot" != "$newboot" ]] && \
+		vecho "Updating boot provided by headnode (ver: $newboot)"
 	cp -f ${TRITON_IPXE_ETC}/version/* etc/version/.
 
 	# XXX KEBE ASKS Will this disrupt loader.conf?

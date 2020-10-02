@@ -13,6 +13,7 @@ piadm(1M) -- Manage SmartOS Platform Images
     piadm install <source> [ZFS-pool-name]
     piadm list [ZFS-pool-name]
     piadm remove <PI-stamp> [ZFS-pool-name]
+    piadm update [ZFS-pool-name]
 
 ## DESCRIPTION
 
@@ -119,6 +120,26 @@ piadm(1M) -- Manage SmartOS Platform Images
  [root@smartos ~]#
 ```
 
+## TRITON COMPUTE NODES and iPXE
+
+    The Triton Cloud Orchestration system is constructed to contain a Head
+    Node (sometimes more than one) and several Compute Nodes.  The Compute
+    Nodes use iPXE, an improved Preboot eXecution Environment (PXE) for
+    network booting. Originally Triton Compute Nodes required a USB key or
+    CD-ROM which contained iPXE and booted directly into iPXE.
+
+    piadm(1M) can enable a Triton Compute Node's ZFS pool to boot iPXE,
+    obviating the need for a USB key or a CD-ROM.  It detects if a machine is
+    a Triton Compute Node, and enables maintenance of iPXE on the bootable
+    pool.  Many piadm(1M) subcommands are disabled on a Triton Compute Node.
+
+    The layout of a Triton Compute Node bootable pool is limited to `boot`
+    and `platform` symbolic links to a populated-with-iPXE `boot-ipxe`
+    directory, and a mostly empty `platform-ipxe` directory.  There is an
+    additional platform-STAMP for a backup on-disk PI, in case of emergency.
+    This directory contains an additional in-directory `platform` link to
+    enable its selection as a backup.
+
 ## COMMANDS
 
     The piadm(1M) command will produce more verbose output if -v is stated
@@ -140,11 +161,15 @@ piadm(1M) -- Manage SmartOS Platform Images
         `activate` and `assign` are synonyms, for those used to other
         distros' `beadm`, or Triton's `sdcadm platform`, respectively.
 
+        This command is disallowed on Triton Compute Nodes.
+
       piadm avail
 
         Query the well-known SmartOS PI repository for available ISO images,
         listed by PI-Stamp. No PI-Stamps older than the currently running PI
         stamp will be listed.
+
+        This command is disallowed on Triton Compute Nodes.
 
       piadm bootable [-d | -e [-i <source>] | -r] [ZFS-pool-name]
 
@@ -164,6 +189,16 @@ piadm(1M) -- Manage SmartOS Platform Images
         Some pools can only be bootable on systems configured to boot in
         legacy BIOS mode, while others can also be bootable from UEFI
         systems.  The `bootable` subcommand will indicate this.
+
+        For Triton Compute Nodes, the -i option is disallowed.  Otherwise,
+        this will enable a Triton Compute Node to boot iPXE from the disk,
+        obviating the need for USB key with iPXE on it.  It will also allow
+        boot to a backup PI that is either the currently-running PI, or the
+        Triton default PI if the currently-running one is not available.  The
+        iPXE is provided by the Triton Head Node, and if it needs updating,
+        the `sdcadm experimental update-gz-tools` command will update it on
+        the head node.  See below for post-bootable iPXE updating on the
+        Triton Compute Node.
 
       piadm install <source> [ZFS-pool-name]
 
@@ -192,6 +227,8 @@ piadm(1M) -- Manage SmartOS Platform Images
 
           - A URL to either one of an ISO image or a gzipped PI tarball.
 
+        This command is disallowed on Triton Compute Nodes.
+
       piadm list [ZFS-pool-name]
 
         Lists the available platform images (and boot images) on bootable
@@ -203,7 +240,16 @@ piadm(1M) -- Manage SmartOS Platform Images
         image exists with the specified PI-stamp, it will also be removed
         unless it is the only boot image available.
 
+        This command is disallowed on Triton Compute Nodes.
 
+      piadm update [ZFS-pool-name]
+
+        This command is exclusive to Triton Compute Nodes.  This command
+        updates iPXE and loader (boot) for the specified pool on the Triton
+        Compute Node.  If the Triton Compute Node has booted to a different
+        PI than what is currently cached as the bootable backup PI, this
+        command will update the bootable backup PI as well, or attempt to
+        refresh the the Triton default PI.
 
 ## EXAMPLES
 
@@ -273,7 +319,7 @@ The following exit values are returned:
 
 ## SEE ALSO
 
-    zpool(1M), loader(5)
+    sdcadm(1), zpool(1M), loader(5)
 
 ## NOTES
 

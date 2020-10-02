@@ -37,7 +37,7 @@ fatal() {
 }
 
 corrupt() {
-	eecho "$@"
+	eecho "POSSIBLE CORRUPTION: $@"
 	exit 3
 }
 
@@ -738,7 +738,7 @@ install_pi_CN() {
 
 	vecho "Pulling unix"
 	${CURL[@]} $unix_path > platform-$installstamp/i86pc/kernel/amd64/unix \
-		|| return 1   
+		|| return 1
 	for file in boot_archive boot_archive.hash boot_archive.manifest \
 		boot_archive.gitstatus; do
 		vecho "Pulling $file"
@@ -781,7 +781,7 @@ bringup_CN() {
 	# Use tar here because it's the first time.
 	tar -cf - -C ${TRITON_IPXE_BOOT} . | tar -xf - -C boot-ipxe
 	# Preserve versions in boot-ipxe too in case we need them later.
-	cp -f ${TRITON_IPXE_ETC}/version/boot boot-ipxe/bootversion
+	cp -f etc/version/boot boot-ipxe/bootversion
 	cp -f etc/version/ipxe boot-ipxe/ipxeversion
 
 	# Symlinks for loader default and `piadm list` consistency.
@@ -801,7 +801,7 @@ bringup_CN() {
 	# installstamp will be set by the successful install_pi_CN()
 
 	# Populate loader.conf.
-	# KEBE SAYS uncomment and replace the cp if you wish to have
+	# KEBE SAYS uncomment the sed and replace the cp if you wish to have
 	# the CN backup-boot not go into the Triton HN installer but act
 	# in a different kind of weird.
 	#sed 's/headnode="true"/headnode="false"/g' \
@@ -826,13 +826,76 @@ bringup_CN() {
 }
 
 update_CN() {
+	declare -a pdirs
+
 	if [[ "$TRITON_CN" != "yes" ]]; then
 		err "The update command may only be used on a Triton Compute Node"
 	fi
 
-	# XXX KEBE SAYS FILL ME IN!
+	piname_present_get_bootfs "ipxe" $1
+	cd /${bootfs}
 
 	# First check if the backup PI is in need of update.
+	# The standard iPXE/CN deployment has exactly one platform-STAMP.
+	mapfile -t pdirs < <(ls | grep -v ipxe | grep platform-)
+	if [[ ${#pdirs[@]} -gt 1 ]]; then
+		corrupt "Multiple platform-STAMP in CN bootfs /${bootfs}/."
+	elif [[ ${#pdirs[@]} -lt 1 ]]; then
+		corrupt "No platform-STAMP in CN bootfs /${bootfs}/."
+	fi
+
+	pdir=${pdirs[0]}
+
+	pstamp=$(cat ${pdir}/etc/version/platform)
+	if [[ "$pstamp" != "$activestamp" ]]; then
+		vecho "Updating backup PI to $activestamp"
+		install_pi_CN $activestamp
+		if [[ $? -ne 0 && "$CNAPI_DEFAULT_PI" != "$activestamp" ]]
+		then
+			vecho "...trying $CNAPI_DEFAULT_PI instead"
+			install_pi_CN $CNAPI_DEFAULT_PI
+			if [[ $? -ne 0 ]]; then
+				/bin/rm -rf platform-$activestamp
+				/bin/rm -rf platform-$CNAPI_DEFAULT_PI
+				err "No PIs available, keeping $pstamp"
+			fi
+		fi
+
+		# Success, don't keep the old one!
+		# $installstamp will have new PI stamp, will inform below.
+		vecho "...success installing $installstamp"
+		/bin/rm -rf $pdir
+		tfile=$(mktemp)
+		# Alter loader.conf's backup PI stamp.
+		# NOTE: If loader.conf has a flag day, we really need to
+		# Do Better here.
+		cp ./boot-ipxe/loader.conf ${tfile}
+		sed s/${pstamp}/${installstamp}/g < ${tfile} \
+			> ./boot-ipxe/loader.conf
+		rm -f ${tfile}
+	fi
+
+	# THEN check to see if we need to update iPXE...
+	diskipxe=$(cat etc/version/ipxe)
+	diskboot=$(cat etc/version/boot)
+	newipxe=$(cat ${TRITON_IPXE_ETC}/version/ipxe)
+	newboot=$(cat ${TRITON_IPXE_ETC}/version/boot)
+	if [[ "$diskipxe" == "$newipxe" && "$diskboot" == "$newboot" ]]; then
+		vecho "No updates needed for iPXE and its loader."
+		vecho "If you think there should be an update, run"
+		vecho "'sdcadm experimental update-gz-tools' on your"\
+			"Triton Head Node" 
+		exit 0
+	fi
+
+	[[ "$diskipxe" != "$newipxe" ]] && vecho "Updating iPXE to $newipxe"
+	[[ "$diskboot" != "$newboot" ]] && vecho "Updating boot to $newboot"
+	cp -f ${TRITON_IPXE_ETC}/version/* etc/version/.
+
+	# XXX KEBE ASKS Will this disrupt loader.conf?
+	# Because if loader.conf has a flag day, we really need to
+	# Do Better here.
+	rsync -r ${TRITON_IPXE_BOOT} ./boot/.
 }
 
 enablepool() {

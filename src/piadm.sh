@@ -895,7 +895,7 @@ update_CN() {
 	[[ "$diskipxe" != "$newipxe" ]] && \
 		vecho "Updating iPXE provided by headnode (ver: $newipxe)"
 	[[ "$diskboot" != "$newboot" ]] && \
-		vecho "Updating boot provided by headnode (ver: $newboot)"
+		vecho "Updating boot loader provided by headnode (ver: $newboot)"
 	cp -f ${TRITON_IPXE_ETC}/version/* etc/version/.
 
 	# XXX KEBE ASKS Will this disrupt loader.conf?

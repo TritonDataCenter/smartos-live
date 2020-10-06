@@ -37,7 +37,7 @@ fatal() {
 }
 
 corrupt() {
-	eecho "POSSIBLE CORRUPTION: $@"
+	eecho "POSSIBLE CORRUPTION:" "$@"
 	exit 3
 }
 
@@ -681,20 +681,19 @@ ispoolenabled() {
 TRITON_IPXE_PATH=/opt/smartdc/share/usbkey/contents
 TRITON_IPXE_ETC=${TRITON_IPXE_PATH}/etc
 TRITON_IPXE_BOOT=${TRITON_IPXE_PATH}/boot
-IPXE_LKRN=ipxe.lkrn
-IPXE_ARCHIVE=default.ipxe
-TRITON_IPXE_LKRN=${TRITON_IPXE_BOOT}/${IPXE_LKRN}
-TRITON_IPXE_ARCHIVE=${TRITON_IPXE_BOOT}/${IPXE_ARCHIVE}
 
 initialize_as_CN() {
 	TRITON_CN="yes"
+
+	# To get shellcheck to be quiet, even though load_sdc_config DTRT:
+	CONFIG_sapi_domain=""
 
 	source /lib/sdc/config.sh
 	load_sdc_config
 
 	# Establish the CNAPI default boot Platform Image
-	cnapi_domain=$(${CURL[@]} http://${CONFIG_sapi_domain}/applications?name=sdc | json -Ha metadata.cnapi_domain)
-	CNAPI_DEFAULT_PI=$(${CURL[@]} http://${cnapi_domain}/boot/default | json platform)
+	cnapi_domain=$("${CURL[@]}" http://"${CONFIG_sapi_domain}"/applications?name=sdc | json -Ha metadata.cnapi_domain)
+	CNAPI_DEFAULT_PI=$("${CURL[@]}" http://"${cnapi_domain}"/boot/default | json platform)
 }
 
 # README file for /${bootfs}/platform-ipxe/README.
@@ -723,30 +722,31 @@ install_pi_CN() {
 	# For now, use bootparams to get the URL needed, and pull
 	# files from there.  If there's a better way to obtain things, use it.
 	unix_path=$(bootparams | grep boot-file | awk -F= '{print $2}')
-	archive_prefix=$(echo $unix_path | sed 's/kernel\/amd64\/unix/amd64/g')
+	archive_prefix=$(echo "$unix_path" | sed 's/kernel\/amd64\/unix/amd64/g')
 
 	# Reality check the buildstamp passed, which will become installstamp,
 	# is in the unix_path.
-	echo $unix_path | grep -q $1 || corrupt "PI $1 not in $unix_path"
+	echo "$unix_path" | grep -q "$1" || corrupt "PI $1 not in" "$unix_path"
 
 	installstamp=$1
 	vecho "making platform-$installstamp directories"
-	mkdir -p platform-$installstamp/etc/version
-	echo $installstamp > platform-$installstamp/etc/version/platform
-	mkdir -p platform-$installstamp/i86pc/kernel/amd64
-	mkdir -p platform-$installstamp/i86pc/amd64
+	mkdir -p platform-"$installstamp"/etc/version
+	echo "$installstamp" > platform-"$installstamp"/etc/version/platform
+	mkdir -p platform-"$installstamp"/i86pc/kernel/amd64
+	mkdir -p platform-"$installstamp"/i86pc/amd64
 	# To enable a platform/ component in the boot file pathname to confirm
 	# "unix" is also in the boot archive (as /platform/..../unix).
-	ln -s . platform-$installstamp/platform
+	ln -s . platform-"$installstamp"/platform
 
 	vecho "Pulling unix"
-	${CURL[@]} $unix_path > platform-$installstamp/i86pc/kernel/amd64/unix \
-		|| return 1
+	"${CURL[@]}" "$unix_path" > \
+		platform-"$installstamp"/i86pc/kernel/amd64/unix || return 1
 	for file in boot_archive boot_archive.hash boot_archive.manifest \
 		boot_archive.gitstatus; do
-		vecho "Pulling $file"
-		${CURL[@]} ${archive_prefix}/${file} > \
-			platform-$installstamp/i86pc/amd64/${file} || return 1
+		vecho "Pulling" "$file"
+		"${CURL[@]}" "${archive_prefix}"/"${file}" > \
+			platform-"$installstamp"/i86pc/amd64/"${file}" || \
+			return 1
 	done
 
 	return 0
@@ -762,7 +762,7 @@ bringup_CN() {
 	fi
 
 	# First install ipxe in $bootfs.
-	cd /${bootfs}
+	cd "/${bootfs}" || fatal "Could not chdir to /$bootfs"
 	# Clobber everything in $bootfs.  We do not care about dot-files.
 	rm -rf ./*
 
@@ -777,7 +777,7 @@ bringup_CN() {
 	# both loader ("boot") and iPXE ("ipxe").
 	mkdir -p etc/version
 	cp -f ${TRITON_IPXE_ETC}/version/* etc/version/.
-	vecho "installing ipxe version: " $(cat etc/version/ipxe)
+	vecho "installing ipxe version: " "$(cat etc/version/ipxe)"
 
 	# Now we set up the "boot-ipxe" directory.
 	mkdir boot-ipxe
@@ -792,12 +792,11 @@ bringup_CN() {
 	ln -s boot-ipxe boot
 
 	# Install a PI for backup booting purposes.
-	install_pi_CN $activestamp
-	if [[ $? -ne 0 && "$CNAPI_DEFAULT_PI" != "$activestamp" ]]; then
-		install_pi_CN $CNAPI_DEFAULT_PI
-		if [[ $? -ne 0 ]]; then
-			/bin/rm -rf platform-$activestamp
-			/bin/rm -rf platform-$CNAPI_DEFAULT_PI
+	if ! install_pi_cn "$activestamp" && \
+		[[ "$CNAPI_DEFAULT_PI" != "$activestamp" ]]; then
+		if ! install_pi_CN "$CNAPI_DEFAULT_PI"; then
+			/bin/rm -rf platform-"$activestamp"
+			/bin/rm -rf platform-"$CNAPI_DEFAULT_PI"
 			err "No PIs available"
 		fi
 	fi
@@ -810,20 +809,23 @@ bringup_CN() {
 	# sed 's/headnode="true"/headnode="false"/g' \ <
 	#	boot-ipxe/loader.conf.tmpl > boot-ipxe/loader.conf
 	cp boot-ipxe/loader.conf.tmpl boot-ipxe/loader.conf
-	echo 'ipxe="true"' >> boot-ipxe/loader.conf
-	echo 'smt_enabled="true"' >> boot-ipxe/loader.conf
-	echo 'console="ttyb,ttya,ttyc,ttyd,text"' >> boot-ipxe/loader.conf
-	echo 'os_console="ttyb"' >> boot-ipxe/loader.conf
-	echo 'fstype="ufs"' >> boot-ipxe/loader.conf
-	# use $installstamp to help!
-	echo "platform-version=$installstamp" >> boot-ipxe/loader.conf
-	# Need an extra "platform" in here to satisfy the illumos load-time
-	# that looks for a unix in the boot archive.  The boot file path MUST
-	# have /platform/i86pc/kernel/amd64/unix as its trailing components.
-	# See install_pi_CN() for the insertion of a symlink to help out.
-	echo bootfile=\"/platform-$installstamp/platform/i86pc/kernel/amd64/unix\" >> boot-ipxe/loader.conf
-	echo boot_archive_name=\"/platform-$installstamp/i86pc/amd64/boot_archive\" >> boot-ipxe/loader.conf
-	echo boot_archive.hash_name=\"/platform-$installstamp/i86pc/amd64/boot_archive.hash\" >> boot-ipxe/loader.conf
+	{
+		echo 'ipxe="true"'
+		echo 'smt_enabled="true"'
+		echo 'console="ttyb,ttya,ttyc,ttyd,text"'
+		echo 'os_console="ttyb"'
+		echo 'fstype="ufs"'
+		# use $installstamp to help!
+		echo "platform-version=$installstamp"
+		# Need an extra "platform" in here to satisfy the illumos
+		# load-time that looks for a unix in the boot archive.  The
+		# boot file path MUST have /platform/i86pc/kernel/amd64/unix
+		# as its trailing components.  See install_pi_CN() for the
+		# insertion of a symlink to help out.
+		echo bootfile=\"/platform-"$installstamp"/platform/i86pc/kernel/amd64/unix\"
+		echo boot_archive_name=\"/platform-"$installstamp"/i86pc/amd64/boot_archive\"
+		echo boot_archive.hash_name=\"/platform-"$installstamp"/i86pc/amd64/boot_archive.hash\"
+	} >> boot-ipxe/loader.conf
 
 	# Caller will invoke update_boot_sectors.
 }
@@ -835,12 +837,12 @@ update_CN() {
 		err "The update command may only be used on a Triton Compute Node"
 	fi
 
-	piname_present_get_bootfs "ipxe" $1
-	cd /${bootfs}
+	piname_present_get_bootfs "ipxe" "$1"
+	cd "/${bootfs}" || fatal "Could not chdir to /$bootfs"
 
 	# First check if the backup PI is in need of update.
 	# The standard iPXE/CN deployment has exactly one platform-STAMP.
-	mapfile -t pdirs < <(ls | grep -v ipxe | grep platform-)
+	mapfile -t pdirs < <(ls -d platform-[0-9]*Z)
 	if [[ ${#pdirs[@]} -gt 1 ]]; then
 		corrupt "Multiple platform-STAMP in CN bootfs /${bootfs}/."
 	elif [[ ${#pdirs[@]} -lt 1 ]]; then
@@ -849,33 +851,31 @@ update_CN() {
 
 	pdir=${pdirs[0]}
 
-	pstamp=$(cat ${pdir}/etc/version/platform)
+	pstamp=$(cat "${pdir}"/etc/version/platform)
 	if [[ "$pstamp" != "$activestamp" ]]; then
-		vecho "Updating backup PI to $activestamp"
-		install_pi_CN $activestamp
-		if [[ $? -ne 0 && "$CNAPI_DEFAULT_PI" != "$activestamp" ]]
-		then
-			vecho "...trying $CNAPI_DEFAULT_PI instead"
-			install_pi_CN $CNAPI_DEFAULT_PI
-			if [[ $? -ne 0 ]]; then
-				/bin/rm -rf platform-$activestamp
-				/bin/rm -rf platform-$CNAPI_DEFAULT_PI
-				err "No PIs available, keeping $pstamp"
+		vecho "Updating backup PI to" "$activestamp"
+		if ! install_pi_CN "$activestamp" && \
+			[[ "$CNAPI_DEFAULT_PI" != "$activestamp" ]]; then
+			vecho "...trying" "$CNAPI_DEFAULT_PI" "instead"
+			if ! install_pi_CN "$CNAPI_DEFAULT_PI" ; then
+				/bin/rm -rf platform-"$activestamp"
+				/bin/rm -rf platform-"$CNAPI_DEFAULT_PI"
+				err "No PIs available, keeping" "$pstamp"
 			fi
 		fi
 
 		# Success, don't keep the old one!
 		# $installstamp will have new PI stamp, will inform below.
 		vecho "...success installing $installstamp"
-		/bin/rm -rf $pdir
+		/bin/rm -rf "$pdir"
 		tfile=$(mktemp)
 		# Alter loader.conf's backup PI stamp.
 		# NOTE: If loader.conf has a flag day, we really need to
 		# Do Better here.
-		cp ./boot-ipxe/loader.conf ${tfile}
-		sed s/${pstamp}/${installstamp}/g < ${tfile} \
+		cp ./boot-ipxe/loader.conf "${tfile}"
+		sed s/"${pstamp}"/"${installstamp}"/g < "${tfile}" \
 			> ./boot-ipxe/loader.conf
-		rm -f ${tfile}
+		rm -f "${tfile}"
 	fi
 
 	# THEN check to see if we need to update iPXE...
@@ -1065,14 +1065,14 @@ else
 fi
 
 # Determine if we're running on a Triton Compute Node (CN) or not:
-bootparams | egrep -q 'smartos=|headnode=' || initialize_as_CN
+bootparams | grep -E -q 'smartos=|headnode=' || initialize_as_CN
 
 cmd=$1
 shift 1
 
 case $cmd in
 	activate | assign )
-		not_triton_CN $cmd
+		not_triton_CN "$cmd"
 		activate "$@"
 		;;
 

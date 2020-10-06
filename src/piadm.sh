@@ -713,7 +713,6 @@ install_pi_CN() {
 	vecho "Installing as a backup Platform image PI stamp $1"
 
 	if [[ -d ./platform-$1 ]]; then
-		# XXX KEBE ASKS - more stringent checking before victory?
 		vecho "PI stamp $1 already installed."
 		installstamp=$1
 		return 0
@@ -805,11 +804,11 @@ bringup_CN() {
 	# installstamp will be set by the successful install_pi_CN()
 
 	# Populate loader.conf.
-	# KEBE SAYS uncomment the sed and replace the cp if you wish to have
-	# the CN backup-boot not go into the Triton HN installer but act
-	# in a different kind of weird.
-	#sed 's/headnode="true"/headnode="false"/g' \
-	#	< boot-ipxe/loader.conf.tmpl > boot-ipxe/loader.conf
+	# NOTE: One could uncomment the sed below and replace the cp if one
+	# wished to have the CN backup-boot not go into the Triton HN
+	# installer but act in a different kind of weird way.
+	# sed 's/headnode="true"/headnode="false"/g' \ <
+	#	boot-ipxe/loader.conf.tmpl > boot-ipxe/loader.conf
 	cp boot-ipxe/loader.conf.tmpl boot-ipxe/loader.conf
 	echo 'ipxe="true"' >> boot-ipxe/loader.conf
 	echo 'smt_enabled="true"' >> boot-ipxe/loader.conf
@@ -898,9 +897,8 @@ update_CN() {
 		vecho "Updating boot loader provided by headnode (ver: $newboot)"
 	cp -f ${TRITON_IPXE_ETC}/version/* etc/version/.
 
-	# XXX KEBE ASKS Will this disrupt loader.conf?
-	# Because if loader.conf has a flag day, we really need to
-	# Do Better here.
+	# NOTE:  If there is an illumos loader flag day, one may have to
+	# perform more than simple rsync to update ./boot/.
 	rsync -r ${TRITON_IPXE_BOOT} ./boot/.
 }
 

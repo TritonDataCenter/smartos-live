@@ -125,13 +125,13 @@ piadm(1M) -- Manage SmartOS Platform Images
     The Triton Cloud Orchestration system is constructed to contain a Head
     Node (sometimes more than one) and several Compute Nodes.  The Compute
     Nodes use iPXE, an improved Preboot eXecution Environment (PXE) for
-    network booting. Originally Triton Compute Nodes required a USB key or
-    CD-ROM which contained iPXE and booted directly into iPXE.
+    network booting. Originally Triton Compute Nodes required a USB key which
+    contained iPXE and booted directly into iPXE.
 
     piadm(1M) can enable a Triton Compute Node's ZFS pool to boot iPXE,
-    obviating the need for a USB key or a CD-ROM.  It detects if a machine is
-    a Triton Compute Node, and enables maintenance of iPXE on the bootable
-    pool.  Many piadm(1M) subcommands are disabled on a Triton Compute Node.
+    obviating the need for a USB key.  It detects if a machine is a Triton
+    Compute Node, and enables maintenance of iPXE on the bootable pool.  Many
+    piadm(1M) subcommands are disabled on a Triton Compute Node.
 
     The layout of a Triton Compute Node bootable pool is limited to `boot`
     and `platform` symbolic links to a populated-with-iPXE `boot-ipxe`

@@ -792,7 +792,7 @@ bringup_CN() {
 	ln -s boot-ipxe boot
 
 	# Install a PI for backup booting purposes.
-	if ! install_pi_cn "$activestamp" && \
+	if ! install_pi_CN "$activestamp" && \
 		[[ "$CNAPI_DEFAULT_PI" != "$activestamp" ]]; then
 		if ! install_pi_CN "$CNAPI_DEFAULT_PI"; then
 			/bin/rm -rf platform-"$activestamp"
@@ -900,6 +900,10 @@ update_CN() {
 	# NOTE:  If there is an illumos loader flag day, one may have to
 	# perform more than simple rsync to update ./boot/.
 	rsync -r ${TRITON_IPXE_BOOT} ./boot/.
+
+	# Preserve versions in boot-ipxe too in case we need them later.
+	cp -f etc/version/boot boot-ipxe/bootversion
+	cp -f etc/version/ipxe boot-ipxe/ipxeversion
 }
 
 enablepool() {

@@ -685,13 +685,11 @@ TRITON_IPXE_BOOT=${TRITON_IPXE_PATH}/boot
 initialize_as_CN() {
 	TRITON_CN="yes"
 
-	# To get shellcheck to be quiet, even though load_sdc_config DTRT:
-	CONFIG_sapi_domain=""
-
 	source /lib/sdc/config.sh
 	load_sdc_config
 
 	# Establish the CNAPI default boot Platform Image
+	# shellcheck disable=2154
 	cnapi_domain=$("${CURL[@]}" http://"${CONFIG_sapi_domain}"/applications?name=sdc | json -Ha metadata.cnapi_domain)
 	CNAPI_DEFAULT_PI=$("${CURL[@]}" http://"${cnapi_domain}"/boot/default | json platform)
 }

@@ -689,8 +689,7 @@ initialize_as_CN() {
 	load_sdc_config
 
 	# Establish the CNAPI default boot Platform Image
-	# shellcheck disable=2154
-	cnapi_domain=$("${CURL[@]}" http://"${CONFIG_sapi_domain}"/applications?name=sdc | json -Ha metadata.cnapi_domain)
+	cnapi_domain=$("${CURL[@]}" http://"${CONFIG_sapi_domain:?}"/applications?name=sdc | json -Ha metadata.cnapi_domain)
 	CNAPI_DEFAULT_PI=$("${CURL[@]}" http://"${cnapi_domain}"/boot/default | json platform)
 }
 

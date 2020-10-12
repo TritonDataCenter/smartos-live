@@ -37,7 +37,7 @@ fatal() {
 }
 
 corrupt() {
-	eecho "POSSIBLE CORRUPTION:" "$@"
+	eecho "POSSIBLE CORRUPTION:" "$*"
 	exit 3
 }
 

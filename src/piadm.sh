@@ -839,7 +839,7 @@ update_CN() {
 
 	# First check if the backup PI is in need of update.
 	# The standard iPXE/CN deployment has exactly one platform-STAMP.
-	mapfile -t pdirs < <(ls -d platform-[0-9]*Z)
+	mapfile -t pdirs < <(ls -d platform-[0-9]*T*Z)
 	if [[ ${#pdirs[@]} -gt 1 ]]; then
 		corrupt "Multiple platform-STAMP in CN bootfs /${bootfs}/."
 	elif [[ ${#pdirs[@]} -lt 1 ]]; then

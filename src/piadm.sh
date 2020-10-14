@@ -901,6 +901,9 @@ update_CN() {
 	# Preserve versions in boot-ipxe too in case we need them later.
 	cp -f etc/version/boot boot-ipxe/bootversion
 	cp -f etc/version/ipxe boot-ipxe/ipxeversion
+
+	# And make sure we update the boot sectors.
+	update_boot_sectors "$pool" "$bootfs"
 }
 
 enablepool() {

@@ -719,11 +719,16 @@ install_pi_CN() {
 	# For now, use bootparams to get the URL needed, and pull
 	# files from there.  If there's a better way to obtain things, use it.
 	unix_path=$(bootparams | grep boot-file | awk -F= '{print $2}')
+	if [[ "$1" == "$CNAPI_DEFAULT_PI" ]]; then
+		# We need to edit out the bootstamp part.  Count on path
+		# having "os/STAMP/" in it.
+		unix_path=$(echo "$unix_path" | sed "s/os\/[0-9TZ]*\//os\/$CNAPI_DEFAULT_PI\//g")
+	fi
 	archive_prefix=$(echo "$unix_path" | sed 's/kernel\/amd64\/unix/amd64/g')
 
 	# Reality check the buildstamp passed, which will become installstamp,
 	# is in the unix_path.
-	echo "$unix_path" | grep -q "$1" || corrupt "PI $1 not in" "$unix_path"
+	echo "$unix_path" | grep -q "$1" || return 1
 
 	installstamp=$1
 	vecho "making platform-$installstamp directories"
@@ -791,8 +796,8 @@ bringup_CN() {
 	# Install a PI for backup booting purposes.
 	if ! install_pi_CN "$activestamp" && \
 		[[ "$CNAPI_DEFAULT_PI" != "$activestamp" ]]; then
+		/bin/rm -rf platform-"$activestamp"
 		if ! install_pi_CN "$CNAPI_DEFAULT_PI"; then
-			/bin/rm -rf platform-"$activestamp"
 			/bin/rm -rf platform-"$CNAPI_DEFAULT_PI"
 			err "No PIs available"
 		fi

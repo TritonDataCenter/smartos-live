@@ -901,7 +901,7 @@ update_CN() {
 
 	# NOTE:  If there is an illumos loader flag day, one may have to
 	# perform more than simple rsync to update ./boot/.
-	rsync -r ${TRITON_IPXE_BOOT} ./boot/.
+	rsync -r ${TRITON_IPXE_BOOT}/. ./boot/.
 
 	# Preserve versions in boot-ipxe too in case we need them later.
 	cp -f etc/version/boot boot-ipxe/bootversion

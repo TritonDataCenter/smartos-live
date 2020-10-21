@@ -718,7 +718,7 @@ install_pi_CN() {
 
 	# For now, use bootparams to get the URL needed, and pull
 	# files from there.  If there's a better way to obtain things, use it.
-	unix_path=$(bootparams | awk -F= '$1 == "boot-file" {print $2}')
+	unix_path=$(bootparams | awk -F= '/^boot-file=/ {print $2}')
 	if [[ "$1" == "$CNAPI_DEFAULT_PI" ]]; then
 		# We need to edit out the bootstamp part.  Count on path
 		# having "os/STAMP/" in it.

@@ -37,7 +37,7 @@ fatal() {
 }
 
 corrupt() {
-	eecho "$@"
+	eecho "POSSIBLE CORRUPTION:" "$*"
 	exit 3
 }
 
@@ -51,7 +51,14 @@ usage() {
 	eecho "    piadm install <source> [ZFS-pool-name]"
 	eecho "    piadm list <-H> [ZFS-pool-name]"
 	eecho "    piadm remove <PI-stamp> [ZFS-pool-name]"
+	eecho "    piadm update [ZFS-pool-name]"
 	err ""
+}
+
+not_triton_CN() {
+	if [[ "$TRITON_CN" == "yes" ]]; then
+		err "The $1 command cannot be used on a Triton Compute Node"
+	fi
 }
 
 vecho() {
@@ -404,7 +411,7 @@ list() {
 	if [[ $1 == "-H" ]]; then
 		pool=$2
 	else
-		printf "%-18s %-30s %-12s %-5s %-5s \n" "PI STAMP" \
+		printf "%-22s %-30s %-10s %-4s %-4s \n" "PI STAMP" \
 			"BOOTABLE FILESYSTEM" "BOOT IMAGE" "NOW" "NEXT"
 		pool=$1
 	fi
@@ -432,7 +439,7 @@ list() {
 			if [[ $activestamp == "$pi" ]]; then
 				active="yes"
 			else
-			    active="no"
+				active="no"
 			fi
 			if [[ $bootstamp == "$pi" ]]; then
 				booting="yes"
@@ -443,10 +450,22 @@ list() {
 				bootbits="next"
 			elif [[ -d "boot-$pi" ]]; then
 				bootbits="available"
+				# Special-case of ipxe booting next needs "next"
+				if [[ $pi == "ipxe" ]]
+				then
+					if [[ $VERBOSE -eq 1 ]]; then
+						pi="ipxe($(cat etc/version/ipxe))"
+					else
+						pi="ipxe"
+					fi
+					if [[ $booting == "yes" ]]; then
+						bootbits="next"
+					fi
+				fi
 			else
 				bootbits="none"
 			fi
-			printf "%-18s %-30s %-12s %-5s %-5s\n" \
+			printf "%-22s %-30s %-10s %-4s %-4s\n" \
 				"$pi" "$bootfs" "$bootbits" "$active" "$booting"
 		done
 	done
@@ -501,6 +520,7 @@ update_boot_sectors() {
 		if [[ "$flag" == "-d" ]]; then
 			if [[ "$suffix" == "s0" ]]; then
 				# BIOS boot, we don't care.
+				some=1
 				continue
 			fi
 			# otherwise mount the ESP and trash it.
@@ -655,6 +675,242 @@ ispoolenabled() {
 	return 1
 }
 
+# Routines and variables related specifically to Triton Compute Nodes.
+
+# Data for Triton Compute Node (CN) iPXE.
+TRITON_IPXE_PATH=/opt/smartdc/share/usbkey/contents
+TRITON_IPXE_ETC=${TRITON_IPXE_PATH}/etc
+TRITON_IPXE_BOOT=${TRITON_IPXE_PATH}/boot
+
+initialize_as_CN() {
+	TRITON_CN="yes"
+
+	source /lib/sdc/config.sh
+	load_sdc_config
+
+	# Establish the CNAPI default boot Platform Image
+	cnapi_domain=$("${CURL[@]}" http://"${CONFIG_sapi_domain:?}"/applications?name=sdc | json -Ha metadata.cnapi_domain)
+	CNAPI_DEFAULT_PI=$("${CURL[@]}" http://"${cnapi_domain}"/boot/default | json platform)
+}
+
+# README file for /${bootfs}/platform-ipxe/README.
+cat_readme() {
+    cat <<EOF
+For iPXE boots, the platform/ directory is empty.  This README, and
+the word "ipxe" in platform/etc/version/platform, are here so there's
+something in the platform/ directory to prevent piadm (especially
+older versions) from thinking something is wrong.
+EOF
+}
+
+# Given a bootstamp, install a Platform Image as a backup for the compute node.
+# PWD is /${bootfs} at this point.
+install_pi_CN() {
+	vecho "Installing as a backup Platform image PI stamp $1"
+
+	if [[ -d ./platform-$1 ]]; then
+		vecho "PI stamp $1 already installed."
+		installstamp=$1
+		return 0
+	fi
+
+	# Obtain at least unix and boot archive.
+
+	# For now, use bootparams to get the URL needed, and pull
+	# files from there.  If there's a better way to obtain things, use it.
+	unix_path=$(bootparams | awk -F= '/^boot-file=/ {print $2}')
+	if [[ "$1" == "$CNAPI_DEFAULT_PI" ]]; then
+		# We need to edit out the bootstamp part.  Count on path
+		# having "os/STAMP/" in it.
+		unix_path=$(sed "s/os\/[0-9TZ]*\//os\/$CNAPI_DEFAULT_PI\//g" <<< "$unix_path")
+	fi
+	archive_prefix=$(sed 's/kernel\/amd64\/unix/amd64/g' <<< "$unix_path")
+
+	# Reality check the buildstamp passed, which will become installstamp,
+	# is in the unix_path.
+	echo "$unix_path" | grep -q "$1" || return 1
+
+	installstamp=$1
+	vecho "making platform-$installstamp directories"
+	mkdir -p platform-"$installstamp"/etc/version
+	echo "$installstamp" > platform-"$installstamp"/etc/version/platform
+	mkdir -p platform-"$installstamp"/i86pc/kernel/amd64
+	mkdir -p platform-"$installstamp"/i86pc/amd64
+	# To enable a platform/ component in the boot file pathname to confirm
+	# "unix" is also in the boot archive (as /platform/..../unix).
+	ln -s . platform-"$installstamp"/platform
+
+	vecho "Pulling unix"
+	"${CURL[@]}" "$unix_path" > \
+		platform-"$installstamp"/i86pc/kernel/amd64/unix || return 1
+	for file in boot_archive boot_archive.hash boot_archive.manifest \
+		boot_archive.gitstatus; do
+		vecho "Pulling" "$file"
+		"${CURL[@]}" "${archive_prefix}"/"${file}" > \
+			platform-"$installstamp"/i86pc/amd64/"${file}" || \
+			return 1
+	done
+
+	return 0
+}
+
+# Enabling a bootable pool, specifically for a Triton Compute Node.
+bringup_CN() {
+	# Bootfs is already set at this point.
+
+	if [[ "$CNAPI_DEFAULT_PI" != "$activestamp" ]]; then
+		vecho "Current booted PI $activestamp is not default PI" \
+			"$CNAPI_DEFAULT_PI"
+	fi
+
+	# First install ipxe in $bootfs.
+	cd "/${bootfs}" || fatal "Could not chdir to /$bootfs"
+	# Clobber everything in $bootfs.  We do not care about dot-files.
+	rm -rf ./*
+
+	# The "platform-ipxe" directory for on-disk iPXE is a placeholder.
+	# We put a README (see cat_readme() above) and the string "ipxe"
+	# for the PI-stamp.
+	mkdir -p ./platform-ipxe/etc/version
+	cat_readme > ./platform-ipxe/README
+	echo "ipxe" > ./platform-ipxe/etc/version/platform
+
+	# Now we set up the "etc" directory, which contains versions of
+	# both loader ("boot") and iPXE ("ipxe").
+	mkdir -p etc/version
+	cp -f ${TRITON_IPXE_ETC}/version/* etc/version/.
+	vecho "installing ipxe version: " "$(cat etc/version/ipxe)"
+
+	# Now we set up the "boot-ipxe" directory.
+	mkdir boot-ipxe
+	# Use tar here because it's the first time.
+	tar -cf - -C ${TRITON_IPXE_BOOT} . | tar -xf - -C boot-ipxe
+	# Preserve versions in boot-ipxe too in case we need them later.
+	cp -f etc/version/boot boot-ipxe/bootversion
+	cp -f etc/version/ipxe boot-ipxe/ipxeversion
+
+	# Symlinks for loader default and `piadm list` consistency.
+	ln -s platform-ipxe platform
+	ln -s boot-ipxe boot
+
+	# Install a PI for backup booting purposes.
+	if ! install_pi_CN "$activestamp" && \
+		[[ "$CNAPI_DEFAULT_PI" != "$activestamp" ]]; then
+		/bin/rm -rf platform-"$activestamp"
+		if ! install_pi_CN "$CNAPI_DEFAULT_PI"; then
+			/bin/rm -rf platform-"$CNAPI_DEFAULT_PI"
+			err "No PIs available"
+		fi
+	fi
+	# installstamp will be set by the successful install_pi_CN()
+
+	# Populate loader.conf.
+	# NOTE: One could uncomment the sed below and replace the cp if one
+	# wished to have the CN backup-boot not go into the Triton HN
+	# installer but act in a different kind of weird way.
+	# sed 's/headnode="true"/headnode="false"/g' \ <
+	#	boot-ipxe/loader.conf.tmpl > boot-ipxe/loader.conf
+	cp boot-ipxe/loader.conf.tmpl boot-ipxe/loader.conf
+	{
+		echo 'ipxe="true"'
+		echo 'smt_enabled="true"'
+		echo 'console="ttyb,ttya,ttyc,ttyd,text"'
+		echo 'os_console="ttyb"'
+		echo 'fstype="ufs"'
+		# use $installstamp to help!
+		echo "platform-version=$installstamp"
+		# Need an extra "platform" in here to satisfy the illumos
+		# load-time that looks for a unix in the boot archive.  The
+		# boot file path MUST have /platform/i86pc/kernel/amd64/unix
+		# as its trailing components.  See install_pi_CN() for the
+		# insertion of a symlink to help out.
+		echo bootfile=\"/platform-"$installstamp"/platform/i86pc/kernel/amd64/unix\"
+		echo boot_archive_name=\"/platform-"$installstamp"/i86pc/amd64/boot_archive\"
+		echo boot_archive.hash_name=\"/platform-"$installstamp"/i86pc/amd64/boot_archive.hash\"
+	} >> boot-ipxe/loader.conf
+
+	# Caller will invoke update_boot_sectors.
+}
+
+update_CN() {
+	declare -a pdirs
+
+	if [[ "$TRITON_CN" != "yes" ]]; then
+		err "The update command may only be used on a Triton Compute Node"
+	fi
+
+	piname_present_get_bootfs "ipxe" "$1"
+	cd "/${bootfs}" || fatal "Could not chdir to /$bootfs"
+
+	# First check if the backup PI is in need of update.
+	# The standard iPXE/CN deployment has exactly one platform-STAMP.
+	mapfile -t pdirs < <(ls -d platform-[0-9]*T*Z)
+	if [[ ${#pdirs[@]} -gt 1 ]]; then
+		corrupt "Multiple platform-STAMP in CN bootfs /${bootfs}/."
+	elif [[ ${#pdirs[@]} -lt 1 ]]; then
+		corrupt "No platform-STAMP in CN bootfs /${bootfs}/."
+	fi
+
+	pdir=${pdirs[0]}
+
+	pstamp=$(cat "${pdir}"/etc/version/platform)
+	if [[ "$pstamp" != "$activestamp" ]]; then
+		vecho "Updating backup PI to" "$activestamp"
+		if ! install_pi_CN "$activestamp" && \
+			[[ "$CNAPI_DEFAULT_PI" != "$activestamp" ]]; then
+			vecho "...trying" "$CNAPI_DEFAULT_PI" "instead"
+			if ! install_pi_CN "$CNAPI_DEFAULT_PI" ; then
+				/bin/rm -rf platform-"$activestamp"
+				/bin/rm -rf platform-"$CNAPI_DEFAULT_PI"
+				err "No PIs available, keeping" "$pstamp"
+			fi
+		fi
+
+		# Success, don't keep the old one!
+		# $installstamp will have new PI stamp, will inform below.
+		vecho "...success installing $installstamp"
+		/bin/rm -rf "$pdir"
+		tfile=$(mktemp)
+		# Alter loader.conf's backup PI stamp.
+		# NOTE: If loader.conf has a flag day, we really need to
+		# Do Better here.
+		cp ./boot-ipxe/loader.conf "${tfile}"
+		sed s/"${pstamp}"/"${installstamp}"/g < "${tfile}" \
+			> ./boot-ipxe/loader.conf
+		rm -f "${tfile}"
+	fi
+
+	# THEN check to see if we need to update iPXE...
+	diskipxe=$(cat etc/version/ipxe)
+	diskboot=$(cat etc/version/boot)
+	newipxe=$(cat ${TRITON_IPXE_ETC}/version/ipxe)
+	newboot=$(cat ${TRITON_IPXE_ETC}/version/boot)
+	if [[ "$diskipxe" == "$newipxe" && "$diskboot" == "$newboot" ]]; then
+		vecho "No updates needed for iPXE and its loader."
+		vecho "If you think there should be an update, run"
+		vecho "'sdcadm experimental update-gz-tools' on your"\
+			"Triton Head Node" 
+		exit 0
+	fi
+
+	[[ "$diskipxe" != "$newipxe" ]] && \
+		vecho "Updating iPXE provided by headnode (ver: $newipxe)"
+	[[ "$diskboot" != "$newboot" ]] && \
+		vecho "Updating boot loader provided by headnode (ver: $newboot)"
+	cp -f ${TRITON_IPXE_ETC}/version/* etc/version/.
+
+	# NOTE:  If there is an illumos loader flag day, one may have to
+	# perform more than simple rsync to update ./boot/.
+	rsync -r ${TRITON_IPXE_BOOT}/. ./boot/.
+
+	# Preserve versions in boot-ipxe too in case we need them later.
+	cp -f etc/version/boot boot-ipxe/bootversion
+	cp -f etc/version/ipxe boot-ipxe/ipxeversion
+
+	# And make sure we update the boot sectors.
+	update_boot_sectors "$pool" "$bootfs"
+}
+
 enablepool() {
 	if [[ $1 == "-i" ]]; then
 		if [[ "$2" == "" || "$3" == "" ]]; then
@@ -662,6 +918,7 @@ enablepool() {
 				"and then a pool must be specified."
 			usage
 		fi
+		not_triton_CN "'bootable -e' with '-i'"
 		installsource=$2
 		pool=$3
 	elif [[ -z $1 ]]; then
@@ -673,13 +930,19 @@ enablepool() {
 		pool=$1
 	fi
 
+	# SmartOS standard bootable filesystem is POOL/boot.
 	bootfs=${pool}/boot
 
 	if ispoolenabled "$pool" ; then
 		if [[ -d /${bootfs}/platform/. && -d /${bootfs}/boot/. ]]; then
 			echo "Pool $pool appears to be bootable."
-			echo "Use 'piadm install' or 'piadm activate' to" \
-				"change PIs."
+			if [[ "$TRITON_CN" != "yes" ]]; then
+				echo "Use 'piadm install' or" \
+					"'piadm activate' to change PIs."
+			else
+				echo "Use 'piadm update' to update the CN's" \
+					"iPXE and backup PI."
+			fi
 			return 0
 		fi
 		# One or both of "platform" or "boot" aren't there.
@@ -703,10 +966,14 @@ enablepool() {
 	# Reset our view of available bootable pools.
 	getbootable
 
-	install $installsource "$pool"
-
-	# install set 'installstamp' on our behalf.
-	activate "$installstamp" "$pool"
+	if [[ "$TRITON_CN" == "yes" ]]; then
+		bringup_CN
+		update_boot_sectors "$pool" "$bootfs"
+	else
+		install "$installsource" "$pool"
+		# install set 'installstamp' on our behalf.
+		activate "$installstamp" "$pool"
+	fi
 }
 
 refresh_or_disable_pool() {
@@ -806,15 +1073,20 @@ else
 	VERBOSE=0
 fi
 
+# Determine if we're running on a Triton Compute Node (CN) or not:
+bootparams | grep -E -q 'smartos=|headnode=' || initialize_as_CN
+
 cmd=$1
 shift 1
 
 case $cmd in
 	activate | assign )
+		not_triton_CN "$cmd"
 		activate "$@"
 		;;
 
 	avail )
+		not_triton_CN avail
 		avail
 		;;
 
@@ -823,6 +1095,7 @@ case $cmd in
 		;;
 
 	install )
+		not_triton_CN install
 		install "$@"
 		;;
 
@@ -831,7 +1104,12 @@ case $cmd in
 		;;
 
 	remove )
+		not_triton_CN remove
 		remove "$@"
+		;;
+
+	update )
+		update_CN "$@"
 		;;
 
 	*)

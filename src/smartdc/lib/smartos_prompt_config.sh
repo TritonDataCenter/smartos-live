@@ -1261,18 +1261,29 @@ a self-booting pool.\n"
 
 	
 	if [[ $(getanswer "skip_instructions") != "true" ]]; then
-	    printf "$message"
-	    echo "Available pre-created pools: " $(zpool list -Ho name)
+		printf "$message"
+		echo "Available pre-created pools: " $(zpool list -Ho name)
+		echo "(Even if not listed, \"zones\" is selectable.)"
 	fi
 
 	promptopt "Specify a (configured) zpool from which to boot" \
 		${BOOTPOOL-"none"} "bootpool"
+	BOOTPOOL=$val
 	if [[ "$val" != "none" ]]; then
 		boot_from_zpool="yes"
+		echo ""
+		echo "A source for SmartOS can be the boot media itself," \
+			"\"media\","
+		echo "or for a network boot, use \"latest\", or the URL of" \
+			"an ISO"
+		promptopt "Source for SmartOS to install" \
+			  ${PI_SOURCE-"media"} "pisource"
+		PI_SOURCE=$val
+		# If someone didn't take "media" by default or "latest",
+		# it's on them when piadm below fails.
 	else
 		boot_from_zpool="no"
 	fi
-	BOOTPOOL=$val
 
 	printheader "System Configuration"
 	message="
@@ -1315,7 +1326,8 @@ up and all data on the disks will be erased.\n\n"
 		printf "Hostname: %s\n" "$hostname"
 		printf "NTP server: $ntp_hosts\n"
 		if [[ $boot_from_zpool == "yes" ]]; then
-		    printf "==> Making the $BOOTPOOL pool bootable"
+		    printf "=> Making the $BOOTPOOL pool bootable (using %s)" \
+			   "$PI_SOURCE"
 		fi
 		echo
 	fi
@@ -1384,7 +1396,7 @@ cp -rp /etc/ssh /usbkey/ssh || fatal "failed to set up preserve host keys"
 if [ $boot_from_zpool == "yes" ]; then
 	printf "%-56s" "Creating self-bootable $BOOTPOOL pool... "
 
-	piadm bootable -e $BOOTPOOL
+	piadm bootable -e -i $PI_SOURCE $BOOTPOOL
 	if [[ $? -ne 0 ]]; then
 		printf "%6s\n\t(but you can still boot from USB or ISO)\n" \
 			failed   

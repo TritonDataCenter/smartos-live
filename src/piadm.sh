@@ -718,13 +718,13 @@ install_pi_CN() {
 
 	# For now, use bootparams to get the URL needed, and pull
 	# files from there.  If there's a better way to obtain things, use it.
-	unix_path=$(bootparams | grep boot-file | awk -F= '{print $2}')
+	unix_path=$(bootparams | awk -F= '$1 == "boot-file" {print $2}')
 	if [[ "$1" == "$CNAPI_DEFAULT_PI" ]]; then
 		# We need to edit out the bootstamp part.  Count on path
 		# having "os/STAMP/" in it.
-		unix_path=$(echo "$unix_path" | sed "s/os\/[0-9TZ]*\//os\/$CNAPI_DEFAULT_PI\//g")
+		unix_path=$(sed "s/os\/[0-9TZ]*\//os\/$CNAPI_DEFAULT_PI\//g" <<< "$unix_path")
 	fi
-	archive_prefix=$(echo "$unix_path" | sed 's/kernel\/amd64\/unix/amd64/g')
+	archive_prefix=$(sed 's/kernel\/amd64\/unix/amd64/g' <<< "$unix_path")
 
 	# Reality check the buildstamp passed, which will become installstamp,
 	# is in the unix_path.
@@ -970,7 +970,7 @@ enablepool() {
 		bringup_CN
 		update_boot_sectors "$pool" "$bootfs"
 	else
-		install $installsource "$pool"
+		install "$installsource" "$pool"
 		# install set 'installstamp' on our behalf.
 		activate "$installstamp" "$pool"
 	fi

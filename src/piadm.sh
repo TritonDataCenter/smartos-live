@@ -964,7 +964,7 @@ enablepool() {
 	bootfs=${pool}/boot
 
 	if ispoolenabled "$pool" ; then
-		# XXX KEBE ASKS --> different checks for $bootfs for Head Node?
+		# XXX KEBE SAYS --> different checks for $bootfs for Head Node!
 		if [[ -d /${bootfs}/platform/. && -d /${bootfs}/boot/. ]]; then
 			echo "Pool $pool appears to be bootable."
 			if [[ "$TRITON_CN" == "yes" ]]; then

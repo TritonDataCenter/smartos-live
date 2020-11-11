@@ -1029,7 +1029,7 @@ refresh_or_disable_pool() {
 		err "Pool $pool is not bootable, and cannot be disabled or refreshed"
 
 	if [[ "$flag" == "-d" ]]; then
-		if [[ "$TRITON_HN" == "yes" ]];
+		if [[ "$TRITON_HN" == "yes" ]]; then
 			# XXX KEBE ASKS --> what do I do here?
 			err "Head Node support disable-pool needs enabling"
 		fi
@@ -1037,7 +1037,7 @@ refresh_or_disable_pool() {
 		zpool set bootfs="" "$pool"
 	else
 		vecho "Refreshing boot sectors and/or ESP on pool $pool"
-		if [[ "$TRITON_HN" == "yes" ]];
+		if [[ "$TRITON_HN" == "yes" ]]; then
 			# XXX KEBE ASKS --> what do I do here?
 			err "Head Node refresh-pool support needs enabling"
 		fi
@@ -1121,7 +1121,7 @@ fi
 
 # Determine if we're running on a Triton Compute Node (CN) or not:
 bootparams | grep -E -q 'smartos=|headnode=' || initialize_as_CN
-bootparams | grep -q 'smartos=' || intialize_as_HN
+bootparams | grep -q 'smartos=' || initialize_as_HN
 
 cmd=$1
 shift 1
@@ -1147,7 +1147,7 @@ case $cmd in
 		;;
 
 	list )
-		not_triton_HN "$@"
+		not_triton_HN list
 		list "$@"
 		;;
 

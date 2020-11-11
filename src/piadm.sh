@@ -61,6 +61,18 @@ not_triton_CN() {
 	fi
 }
 
+not_triton_HN() {
+	if [[ "$TRITON_HN" == "yes" ]]; then
+		eecho "The $1 command cannot be used on a Triton Head Node"
+		err "On a headnode, please use 'sdcadm platform'."
+	fi
+}
+
+standalone_only() {
+	not_triton_CN "$@"
+	not_triton_HN "$@"
+}
+
 vecho() {
 	if [[ $VERBOSE -eq 1 ]]; then
 		# Verbose echoes invoked by -v go to stdout, not stderr.
@@ -693,6 +705,24 @@ initialize_as_CN() {
 	CNAPI_DEFAULT_PI=$("${CURL[@]}" http://"${cnapi_domain}"/boot/default | json platform)
 }
 
+initialize_as_HN() {
+	#
+	# For the Triton Head Node, we only really want piadm doing one of
+	# two things:
+	#
+	# 1.) Enabling a bootable pool, which will invoke a bunch of
+	#     Triton-side scripts.
+	# 2.) Disabling a bootable pool, which will ALSO invoke a bunch of
+	#     Triton-side scripts.
+	#
+	# "list" is probably okay too, and might just exec
+	#  `sdcadm platform list`.
+	#
+
+	TRITON_HN="yes"
+	# XXX KEBE ASKS --> Do more here?
+}
+
 # README file for /${bootfs}/platform-ipxe/README.
 cat_readme() {
     cat <<EOF
@@ -918,7 +948,7 @@ enablepool() {
 				"and then a pool must be specified."
 			usage
 		fi
-		not_triton_CN "'bootable -e' with '-i'"
+		standalone_only "'bootable -e' with '-i'"
 		installsource=$2
 		pool=$3
 	elif [[ -z $1 ]]; then
@@ -934,14 +964,17 @@ enablepool() {
 	bootfs=${pool}/boot
 
 	if ispoolenabled "$pool" ; then
+		# XXX KEBE ASKS --> different checks for $bootfs for Head Node?
 		if [[ -d /${bootfs}/platform/. && -d /${bootfs}/boot/. ]]; then
 			echo "Pool $pool appears to be bootable."
-			if [[ "$TRITON_CN" != "yes" ]]; then
-				echo "Use 'piadm install' or" \
-					"'piadm activate' to change PIs."
-			else
+			if [[ "$TRITON_CN" == "yes" ]]; then
 				echo "Use 'piadm update' to update the CN's" \
 					"iPXE and backup PI."
+			elif [[ "$TRITON_HN" == "yes" ]]; then
+				echo "Use 'sdcadm platform' to change PIs."
+			else
+				echo "Use 'piadm install' or" \
+					"'piadm activate' to change PIs."
 			fi
 			return 0
 		fi
@@ -969,6 +1002,11 @@ enablepool() {
 	if [[ "$TRITON_CN" == "yes" ]]; then
 		bringup_CN
 		update_boot_sectors "$pool" "$bootfs"
+	elif [[ "$TRITON_HN" == "yes" ]]; then
+		# XXX KEBE SAYS FILL ME IN. Likely an exec of something in
+		# sdc-headnode OR doing something specifically on an
+		# sdc-headnode's behest in, say, bringup_HN().
+		err "Created bootfs ${bootfs} but HN support not yet ready."
 	else
 		install "$installsource" "$pool"
 		# install set 'installstamp' on our behalf.
@@ -991,10 +1029,18 @@ refresh_or_disable_pool() {
 		err "Pool $pool is not bootable, and cannot be disabled or refreshed"
 
 	if [[ "$flag" == "-d" ]]; then
+		if [[ "$TRITON_HN" == "yes" ]];
+			# XXX KEBE ASKS --> what do I do here?
+			err "Head Node support disable-pool needs enabling"
+		fi
 		vecho "Disabling bootfs on pool $pool"
 		zpool set bootfs="" "$pool"
 	else
 		vecho "Refreshing boot sectors and/or ESP on pool $pool"
+		if [[ "$TRITON_HN" == "yes" ]];
+			# XXX KEBE ASKS --> what do I do here?
+			err "Head Node refresh-pool support needs enabling"
+		fi
 	fi
 
 	update_boot_sectors "$pool" "$currbootfs" "$flag"
@@ -1075,18 +1121,19 @@ fi
 
 # Determine if we're running on a Triton Compute Node (CN) or not:
 bootparams | grep -E -q 'smartos=|headnode=' || initialize_as_CN
+bootparams | grep -q 'smartos=' || intialize_as_HN
 
 cmd=$1
 shift 1
 
 case $cmd in
 	activate | assign )
-		not_triton_CN "$cmd"
+		standalone_only "$cmd"
 		activate "$@"
 		;;
 
 	avail )
-		not_triton_CN avail
+		standalone_only avail
 		avail
 		;;
 
@@ -1095,16 +1142,17 @@ case $cmd in
 		;;
 
 	install )
-		not_triton_CN install
+		standalone_only install
 		install "$@"
 		;;
 
 	list )
+		not_triton_HN "$@"
 		list "$@"
 		;;
 
 	remove )
-		not_triton_CN remove
+		standalone_only remove
 		remove "$@"
 		;;
 

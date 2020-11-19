@@ -1111,8 +1111,28 @@ refresh_or_disable_pool() {
 			if [[ "$pool" == "$TRITON_HN_BOOTPOOL" ]]; then
 				echo "WARNING: Disabling currently-booting" \
 					"pool"
-				# Check to see if there are alternatives...
+
+				# XXX KEBE ASKS, should we just bail
+				# in this case?
+				err "Please boot from a USB key or other pool"
+
+				# If not, check to see if there
+				# are alternatives...
+				# echo "Other available pools:"
+				# echo ""
+				# bootable | grep -v "$pool"
+				# echo ""
+				# Check to see if there's an actual USB key
+				# available.
 				# XXX KEBE SAYS FILL ME IN!
+				# tdir=$(mktemp -d)
+				# ... use new -u (force USB key search) option
+				# sdc-usbkey mount -u $tdir
+				# ... if tdir has a usb key, mention it
+				# sdc-usbkey unmount $tdir
+			else
+				vecho "Disabling Triton Head Node inactive" \
+					"bootable pool."
 			fi
 		fi
 		vecho "Disabling bootfs on pool $pool"

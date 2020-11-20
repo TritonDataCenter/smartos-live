@@ -3,7 +3,7 @@
 # Utilities for dealing with the USB key. In general, sdc-usbkey should be used.
 # These routines are for use prior to sdc-usbkey being installed.
 #
-# Copyright (c) 2019, Joyent, Inc.
+# Copyright 2020, Joyent, Inc.
 #
 
 #
@@ -64,6 +64,43 @@ function extract_mountpath()
 }
 
 #
+# Mount the Head Node's bootable pool's bootfs as the "USB Key"
+# 
+function mount_bootpool_fake_usbkey()
+{
+	local mnt=$1
+	local pool=$(/sbin/bootparams | awk -F= '/^triton_bootpool=/ {print $2}')
+	local bootfs="$pool/boot"
+
+	# First some reality checks...
+	if [[ "$pool" == "" ]]; then
+		echo "Boot pool is not specified in triton_bootpool" >&2
+		return 1
+	fi
+
+	if [[ ! -d /"$bootfs"/. ]]; then
+		echo "Boot filesystem $bootfs is not available" >&2
+		return 1
+	fi
+
+	if [[ ! -f /"$bootfs"/.joyliveusb]]; then
+		echo "Boot filesystem $bootfs does not have .joyliveusb" >&2
+		return 1
+	fi
+
+	# Use lofs to actually MOUNT the $bootfs on to $mnt.  This
+	# way, unmount_usb_key() works regardless whether or not we
+	# booted from a pool or a USB key.
+	if ! /usr/sbin/mount -F lofs /"$bootfs" $mnt 2>/dev/null; then
+		echo "Failed to lofs-mount /$bootfs to $mnt" >&2
+		return 1
+	fi
+
+	echo $mnt
+	return 0
+}
+
+#
 # Mount the usbkey at the standard mount location (or whatever is specified).
 #
 function mount_usb_key()
@@ -79,6 +116,23 @@ function mount_usb_key()
 		echo "failed to mkdir $mnt" >&2
 		return 1
 	fi
+
+	### Triton-boot-from-pool section.
+	if /sbin/bootparams | grep "^triton_bootpool=" > /dev/null; then
+		# Technically we shouldn't ever see "skip" here
+		# because the only caller of mount_usb_key() with skip
+		# is piadm(1M)'s `install`, which can't be invoked on
+		# a Triton Head Node.  Checking to be safe.
+		if [[ "$2" == "skip" ]]; then
+			echo "Somehow a piadm(1M) install on a Head Node is" \
+				"happening. This is disallowed." >&2
+			return 1
+		fi
+
+		mount_bootpool_fake_usbkey $mnt
+		return $?
+	fi
+	###
 
 	readonly alldisks=$(/usr/bin/disklist -a)
 

@@ -972,6 +972,14 @@ bringup_HN() {
 	stickmount=$(sdc-usbkey mount)
 	vecho "Mounted USB key on $stickmount"
 
+	# NOTE:  BAIL ON VERSION 1 STICKS FOR NOW
+	version=$(sdc-usbkey status -j | json version)
+	if [[ "$version" != "2" ]]; then
+		# Unmount on version-mismatch...
+		sdc-usbkey unmount
+		err "USB key must be Version 2 (loader) to install on a pool."
+	fi
+
 	# Copy over the whole thing to ${bootfs}
 	vecho "Copying over USB key contents to /$bootfs"
 	tar -cf - -C "$stickmount" . | tar -xf - || \

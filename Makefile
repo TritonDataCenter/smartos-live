@@ -186,7 +186,12 @@ $(IMAGES_PROTO)/4gb.img: boot
 	mkdir -p $(IMAGES_PROTO)
 	./tools/build_boot_image -p 4 -r $(ROOT)
 
-$(IMAGES_TARBALL): $(IMAGES_PROTO)/4gb.img
+$(IMAGES_PROTO)/16gb.img: boot
+	rm -f $@
+	mkdir -p $(IMAGES_PROTO)
+	./tools/build_boot_image -p 16 -r $(ROOT)
+
+$(IMAGES_TARBALL): $(IMAGES_PROTO)/4gb.img $(IMAGES_PROTO)/16gb.img
 	cd $(IMAGES_PROTO) && gtar -Scvz --owner=0 --group=0 -f $(ROOT)/$@ *
 
 images-tar: $(IMAGES_TARBALL)

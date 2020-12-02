@@ -1113,28 +1113,28 @@ refresh_or_disable_pool() {
 
 	if [[ "$flag" == "-d" ]]; then
 		if [[ "$TRITON_HN" == "yes" ]]; then
-			# NOTE: Disabling a Head Node's boot pool may
-			# This might be where we call sdc-usbkey with
-			# a forcing-flag to seek a stick!  Or at least to
-			# scan for alternate bootable pools.
-
 			if [[ "$pool" == "$TRITON_HN_BOOTPOOL" ]]; then
-				echo "WARNING: Disabling currently-booting" \
+				# The warning says it all.
+				eecho "WARNING: Disabling currently-booting" \
 					"pool"
 
-				# XXX KEBE ASKS, should we just bail
-				# in this case?
+				# For now, just bail in this case.
 				err "Please boot from a USB key or other pool"
 
-				# If not, check to see if there
-				# are alternatives...
+				# TODO? -- Check to see if there
+				# are alternatives before disabling?
+				#
+				# First, use this tool to find other
+				# bootable pools.
+				#
 				# echo "Other available pools:"
 				# echo ""
 				# bootable | grep -v "$pool"
 				# echo ""
-				# Check to see if there's an actual USB key
-				# available.
-				# XXX KEBE SAYS FILL ME IN!
+				# 
+				# Then check to see if there's an
+				# actual USB key available.
+				# 
 				# tdir=$(mktemp -d)
 				# ... use new -u (force USB key search) option
 				# sdc-usbkey mount -u $tdir

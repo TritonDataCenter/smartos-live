@@ -954,6 +954,25 @@ update_CN() {
 	update_boot_sectors "$pool" "$bootfs"
 }
 
+declare stick_already_mounted
+
+# Wrapper around `sdc-usbkey mount`. Preserves was-already-mounted (or not).
+usb_mount_if_not_already() {
+	status=$(sdc-usbkey status)
+	if [[ "$status" == "mounted" ]]; then
+		stick_already_mounted="yes"
+	fi
+	sdc-usbkey mount
+}
+
+# Wrapper around `sdc-usbkey unmount`. Preserves was-already-mounted (or not).
+usb_unmount_unless_already() {
+	if [[ "$stick_already_mounted" == "yes" ]]; then
+		return
+	fi
+	sdc-usbkey unmount
+}
+
 bringup_HN() {
 	# One last reality check...
 	if [[ "$pool" == "$TRITON_HN_BOOTPOOL" ]]; then
@@ -971,21 +990,25 @@ bringup_HN() {
 	cd /"$bootfs"
 
 	# Mount the Triton USB key (even if it's a virtual one...).
-	stickmount=$(sdc-usbkey mount)
+	stickmount=$(usb_mount_if_not_already)
 	vecho "Mounted USB key on $stickmount"
 
 	# NOTE:  BAIL ON VERSION 1 STICKS FOR NOW
 	version=$(sdc-usbkey status -j | json version)
 	if [[ "$version" != "2" ]]; then
 		# Unmount on version-mismatch...
-		sdc-usbkey unmount
+		usb_unmount_unless_already
 		err "USB key must be Version 2 (loader) to install on a pool."
 	fi
 
 	# Copy over the whole thing to ${bootfs}
 	vecho "Copying over USB key contents to /$bootfs"
+
+	# NOTE: If failed here, USB key will still be mounted for debugging
+	# reasons.
 	tar -cf - -C "$stickmount" . | tar -xf - || \
-		err "Problem copying USB key on $stickmount to /$bootfs"
+		err "Problem copying USB key on $stickmount (still mounted)" \
+			"to /$bootfs"
 
 	# Add both fstype="ufs" to loader.conf.
 	vecho "Modifying loader.conf for pool-based Triton Head Node boot"
@@ -1013,6 +1036,8 @@ bringup_HN() {
 	for a in *; do
 		mv "$a" "${a^^}"
 	done
+
+	usb_unmount_unless_already
 }
 
 enablepool() {

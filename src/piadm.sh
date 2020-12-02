@@ -440,7 +440,9 @@ list() {
 		fi
 		cd "/$bootfs" || fatal "Could not chdir to /$bootfs"
 		bootbitsstamp=$(cat etc/version/boot)
+		# Triton Head Nodes are special.
 		if [[ "$TRITON_HN" != "yes" ]]; then
+			# Regular standalone SmartOS case.
 			if [[ ! -L /$bootfs/platform ]]; then
 				corrupt "WARNING: Bootable filesystem" \
 					"$bootfs has non-symlink platform"
@@ -449,7 +451,7 @@ list() {
 			mapfile -t pis \
 				< <(cat platform-*/etc/version/platform)
 		else
-			# Triton Head Nodes are special.
+			# Triton Head Node case.
 			if [[ ! -d /$bootfs/os ]]; then
 				corrupt "WARNING: Headnode boot filesystem" \
 					"$bootfs has no os/ directory."
@@ -955,7 +957,7 @@ update_CN() {
 bringup_HN() {
 	# One last reality check...
 	if [[ "$pool" == "$TRITON_HN_BOOTPOOL" ]]; then
-		err "Enabling pool we just booted from."
+		err "Pool $pool is already bootable, and we just booted it."
 	fi
 
 	# If we reach here, we've checked for the already-bootable
@@ -1009,7 +1011,7 @@ bringup_HN() {
 	vecho "Case-correcting os/ entries."
 	cd ./os
 	for a in *; do
-		mv $a $(tr '[a-z]' '[A-Z]' <<< $a)
+		mv "$a" "${a^^}"
 	done
 }
 
@@ -1229,7 +1231,7 @@ fi
 
 # Determine if we're running on a Triton Compute Node (CN) or not:
 bootparams | grep -E -q 'smartos=|headnode=' || initialize_as_CN
-bootparams | grep -q 'smartos=' || initialize_as_HN
+bootparams | grep -q 'headnode=' && initialize_as_HN
 
 cmd=$1
 shift 1

@@ -83,7 +83,7 @@ function mount_bootpool_fake_usbkey()
 		return 1
 	fi
 
-	if [[ ! -f /"$bootfs"/.joyliveusb]]; then
+	if [[ ! -f /"$bootfs"/.joyliveusb ]]; then
 		echo "Boot filesystem $bootfs does not have .joyliveusb" >&2
 		return 1
 	fi

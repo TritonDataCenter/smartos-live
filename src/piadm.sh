@@ -83,6 +83,7 @@ vecho() {
 declare bootfs
 declare -a allbootfs
 declare numbootfs
+
 #
 # Inventory pools and bootable file systems.
 #
@@ -954,25 +955,6 @@ update_CN() {
 	update_boot_sectors "$pool" "$bootfs"
 }
 
-declare stick_already_mounted
-
-# Wrapper around `sdc-usbkey mount`. Preserves was-already-mounted (or not).
-usb_mount_if_not_already() {
-	status=$(sdc-usbkey status)
-	if [[ "$status" == "mounted" ]]; then
-		stick_already_mounted="yes"
-	fi
-	sdc-usbkey mount
-}
-
-# Wrapper around `sdc-usbkey unmount`. Preserves was-already-mounted (or not).
-usb_unmount_unless_already() {
-	if [[ "$stick_already_mounted" == "yes" ]]; then
-		return
-	fi
-	sdc-usbkey unmount
-}
-
 bringup_HN() {
 	# One last reality check...
 	if [[ "$pool" == "$TRITON_HN_BOOTPOOL" ]]; then
@@ -990,7 +972,10 @@ bringup_HN() {
 	cd /"$bootfs"
 
 	# Mount the Triton USB key (even if it's a virtual one...).
-	stickmount=$(usb_mount_if_not_already)
+	if [[ $(sdc-usbkey status) == "mounted" ]]; then
+		stick_premounted=yes
+	fi
+	stickmount=$(sdc-usbkey mount)
 	vecho "Mounted USB key on $stickmount"
 
 	# NOTE:  BAIL ON VERSION 1 STICKS FOR NOW
@@ -1005,7 +990,7 @@ bringup_HN() {
 	vecho "Copying over USB key contents to /$bootfs"
 
 	# NOTE: If failed here, USB key will still be mounted for debugging
-	# reasons.
+	# reasons, regardless of $stick_premounted.
 	tar -cf - -C "$stickmount" . | tar -xf - || \
 		err "Problem copying USB key on $stickmount (still mounted)" \
 			"to /$bootfs"
@@ -1037,7 +1022,9 @@ bringup_HN() {
 		mv "$a" "${a^^}"
 	done
 
-	usb_unmount_unless_already
+	if [[ "$stick_premounted" != "yes" ]]; then
+		sdc-usbkey unmount
+	fi
 }
 
 enablepool() {
@@ -1112,8 +1099,8 @@ enablepool() {
 		echo "and then reboot this headnode from a disk in $pool"
 		echo ""
 		echo "The USB key (even if it's another pool's bootfs) is"
-		echo "mounted in" $(sdc-usbkey mount) "and will remain so,"
-		echo "in case one needs to inspect before-and-after."
+		echo "now" $(sdc-usbkey status) "because that is what it was"
+		echo "before piadm ran."
 		echo ""
 	else
 		install "$installsource" "$pool"

@@ -731,10 +731,11 @@ initialize_as_HN() {
 	#     Triton-savvy maneuvers.
 	# 4.) List the pools available that are Triton-savvy and bootable.
 	#
+	# For right now, we merely need to indicate we're a headnode and
+	# if we're booted off of a pool, which one.
 
 	TRITON_HN="yes"
 	TRITON_HN_BOOTPOOL=$(bootparams | awk -F= '/^triton_bootpool=/ {print $2}')
-	# XXX KEBE ASKS --> Do more here?
 }
 
 # README file for /${bootfs}/platform-ipxe/README.
@@ -957,6 +958,7 @@ update_CN() {
 
 bringup_HN() {
 	# One last reality check...
+	# 1.) Check if we're trying to enable our currently booting pool.
 	if [[ "$pool" == "$TRITON_HN_BOOTPOOL" ]]; then
 		err "Pool $pool is already bootable, and we just booted it."
 	fi
@@ -1048,6 +1050,19 @@ enablepool() {
 
 	# SmartOS standard bootable filesystem is POOL/boot.
 	bootfs=${pool}/boot
+
+	# If we're a head node, bail early if we don't have a sufficiently
+	# advanced set of gz-tools.
+	if [[ "$TRITON_HN" == "yes" && ! -f /opt/smartdc/lib/bootpool.js ]]
+	then
+		eecho ""
+		eecho "To activate a pool for Triton head node booting, newer"
+		eecho "global-zone tools (namely support for sdc-usbkey to"
+		eecho "treat $bootfs as a USB key equivalent) are required."
+		eecho ""
+		eecho "Please update your headnode global-zone tools by"
+		err "using 'sdcadm experimental update-gz-tools' and try again."
+	fi
 
 	if ispoolenabled "$pool" ; then
 		# NOTE: Different actions depending on standalone, CN, or HN.

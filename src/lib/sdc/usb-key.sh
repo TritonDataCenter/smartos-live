@@ -172,7 +172,7 @@ function mount_installer_fake_usb()
 	# lofs mount it.
 
 	tar -cf - -C $tmount . | tar -xf - -C $tdir
-	# XXX KEBE ASKS, normalize os/ entries?  Or let piadm do it?
+	# Let piadm capitalize entries (for now).
 	umount $tmount
 
 	# NOTE: Because this function only gets used in an installer,
@@ -282,7 +282,19 @@ function unmount_usb_key()
 		return 1
 	fi
 
+	# Check for lofs from a temp directory...
+	if [[ "$typ" == "lofs" ]]; then
+		nuke=$(awk -v "mnt=$mnt" '$2 == mnt { print $1 }' /etc/mnttab |\
+			grep '^/tmp/')
+	else
+		nuke=""
+	fi
+
 	umount "$mnt"
+
+	if [[ "$nuke" != "" ]]; then
+		/bin/rm -rf "$nuke"
+	fi
 }
 
 # replace a loader conf value

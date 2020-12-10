@@ -69,7 +69,7 @@ function extract_mountpath()
 function mount_bootpool_fake_usbkey()
 {
 	local mnt=$1
-	local pool=$(/sbin/bootparams | awk -F= '/^triton_bootpool=/ {print $2}')
+	local pool=$(/bin/bootparams | awk -F= '/^triton_bootpool=/ {print $2}')
 	local bootfs="$pool/boot"
 
 	# First some reality checks...
@@ -146,7 +146,7 @@ function mount_installer_fake_usb()
 	local tmount=$(mktemp -d)
 	local tdir=$(mktemp -d)
 
-	installertype=$(/sbin/bootparams | \
+	installertype=$(/bin/bootparams | \
 		awk -F= '/^triton_installer=/ {print $2}')
 
 	# Okay, so we need to not only mount an ISO or ISO-image from
@@ -200,7 +200,7 @@ function mount_usb_key()
 	fi
 
 	### Triton-boot-from-pool or boot-from-read-only-installer section.
-	if /sbin/bootparams | grep -q "^triton_bootpool=" ; then
+	if /bin/bootparams | grep -q "^triton_bootpool=" ; then
 		# Technically we shouldn't ever see "skip" here
 		# because the only caller of mount_usb_key() with skip
 		# is piadm(1M)'s `install`, which can't be invoked on
@@ -215,7 +215,7 @@ function mount_usb_key()
 		return $?
 	fi
 
-	if /sbin/bootparams | grep -q "^triton_installer=" ; then
+	if /bin/bootparams | grep -q "^triton_installer=" ; then
 		# Technically we shouldn't ever see "skip" here
 		# because the only caller of mount_usb_key() with skip
 		# is piadm(1M)'s `install`, which can't be invoked on

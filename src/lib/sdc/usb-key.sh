@@ -176,8 +176,8 @@ function mount_installer_fake_usb()
 	umount $tmount
 
 	# NOTE: Because this function only gets used in an installer,
-	# we won't bother cleaning up $tdir, because it's in tmpfs and
-	# will go away after reboot.
+	# we will clean up $tdir in unmount_usb_key, because it's in tmpfs
+	# and we might unmount (and the remount) it.
 	mount -F lofs $tdir $mnt
 	return $?
 }

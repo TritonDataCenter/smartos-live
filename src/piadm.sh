@@ -1001,19 +1001,13 @@ bringup_HN() {
 	vecho "Modifying loader.conf for pool-based Triton Head Node boot"
 	grep -q 'fstype="ufs"' ./boot/loader.conf || \
 		echo 'fstype="ufs"' >> ./boot/loader.conf
-	# Also check triton_bootpool="${pool}" status.  We may be using a
-	# "USB Key" that's actually another pool.
-	if grep -q 'triton_bootpool=' ./boot/loader.conf; then
-		# From another pool's bootfs.  Let's be cautious and use
-		# a temp file instead of sed's -i or -I.
-		tfile=$(mktemp)
-		sed "s/triton_bootpool=.*/triton_bootpool=\"$pool\"/g" \
-			< ./boot/loader.conf > $tfile
-		mv -f $tfile ./boot/loader.conf
-	else
-		# From an actual USB key...
-		echo "triton_bootpool=\"$pool\"" >> ./boot/loader.conf
-	fi
+	# Filter out any old triton_ bootparams (either old bootpool OR
+	# installer properties) and replace them with JUST the new bootpool.
+	# Let's be cautious and use a temp file instead of sed's -i or -I.
+	tfile=$(mktemp)
+	grep -v '^triton_' ./boot/loader.conf > $tfile
+	mv -f $tfile ./boot/loader.conf
+	echo "triton_bootpool=\"$pool\"" >> ./boot/loader.conf
 
 	# (OPTIONAL) Add "from-pool" indicator to boot.4th.
 

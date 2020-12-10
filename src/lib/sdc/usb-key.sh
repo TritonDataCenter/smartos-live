@@ -100,6 +100,88 @@ function mount_bootpool_fake_usbkey()
 	return 0
 }
 
+# Evil twins of the {,un}mount_usb_key functions.  These are specific
+# to ISO/hsfs (aka. {C,DV,B}D-ROM) disks.  We may be able to factor-out
+# even more common bits from the usb_key functions, but not today.
+# Now declared prior to mount_usb_key because a Triton installer ISO may
+# wish to mount itself to make a fake "USB key".
+function mount_ISO
+{
+	local mnt=$(extract_mountpath "$1")
+
+	mapfile -t disks < <(disklist -r)
+	for disk in "${disks[@]}"; do
+		mount -F hsfs /dev/dsk/${disk}s0 $mnt
+		if [[ $? -ne 0 ]]; then
+			continue
+		fi
+		if [[ -d ${mnt}/boot ]]; then
+			return 0
+		fi
+		if ! umount $mnt; then
+			echo "Failed to unmount $mnt">&2
+			return 1
+		fi
+	done
+
+	echo "Couldn't find an ISO" >&2
+	return 1
+}
+
+function unmount_ISO
+{
+	local mnt=$(extract_mountpath $1)
+
+	if ! umount $mnt; then
+		echo "Failed to unmount $mnt" >&2
+		return 1
+	fi
+
+	return 0
+}
+
+function mount_installer_fake_usb()
+{
+	local mnt=$(extract_mountpath $1)
+	local tmount=$(mktemp -d)
+	local tdir=$(mktemp -d)
+
+	installertype=$(/sbin/bootparams | \
+		awk -F= '/^triton_installer=/ {print $2}')
+
+	# Okay, so we need to not only mount an ISO or ISO-image from
+	# the installer, we ALSO need to copy it into /tmp so it's writable
+	# and THEN we lofs-mount it to $mnt above.
+	if [[ "$installertype" == "iso" ]]; then
+		mount_ISO $tmount
+		if [[ $? -ne 0 ]]; then
+			return $?
+		fi
+	else
+		# Okay, so we're a bootable image with a .iso lying around
+		# somewhere.
+
+		# mount -F hsfs /path/to/image.iso $tmount
+		echo "NOT YET SUPPORTED"
+		return 1
+	fi
+
+	# So $tmount has a read-only ISO mounted (either an actual
+	# disk or an included-on-boot-archive filesystem.  We need to
+	# copy it over to $tdir so it can be read-write, and THEN we
+	# lofs mount it.
+
+	tar -cf - -C $tmount . | tar -xf - -C $tdir
+	# XXX KEBE ASKS, normalize os/ entries?  Or let piadm do it?
+	umount $tmount
+
+	# NOTE: Because this function only gets used in an installer,
+	# we won't bother cleaning up $tdir, because it's in tmpfs and
+	# will go away after reboot.
+	mount -F lofs $tdir $mnt
+	return $?
+}
+
 #
 # Mount the usbkey at the standard mount location (or whatever is specified).
 #
@@ -117,8 +199,8 @@ function mount_usb_key()
 		return 1
 	fi
 
-	### Triton-boot-from-pool section.
-	if /sbin/bootparams | grep "^triton_bootpool=" > /dev/null; then
+	### Triton-boot-from-pool or boot-from-read-only-installer section.
+	if /sbin/bootparams | grep -q "^triton_bootpool=" ; then
 		# Technically we shouldn't ever see "skip" here
 		# because the only caller of mount_usb_key() with skip
 		# is piadm(1M)'s `install`, which can't be invoked on
@@ -130,6 +212,20 @@ function mount_usb_key()
 		fi
 
 		mount_bootpool_fake_usbkey $mnt
+		return $?
+	fi
+
+	if /sbin/bootparams | grep -q "^triton_installer=" ; then
+		# Technically we shouldn't ever see "skip" here
+		# because the only caller of mount_usb_key() with skip
+		# is piadm(1M)'s `install`, which can't be invoked on
+		# a Triton Head Node.  Checking to be safe.
+		if [[ "$2" == "skip" ]]; then
+			echo "Somehow a piadm(1M) install on a Head Node is" \
+				"happening. This is disallowed." >&2
+			return 1
+		fi
+		mount_installer_fake_usbkey $mnt
 		return $?
 	fi
 	###
@@ -187,45 +283,6 @@ function unmount_usb_key()
 	fi
 
 	umount "$mnt"
-}
-
-# Evil twins of the {,un}mount_usb_key functions.  These are specific
-# to ISO/hsfs (aka. {C,DV,B}D-ROM) disks.  We may be able to factor-out
-# even more common bits from the usb_key functions, but not today.
-
-function mount_ISO
-{
-	local mnt=$(extract_mountpath "$1")
-
-	mapfile -t disks < <(disklist -r)
-	for disk in "${disks[@]}"; do
-		mount -F hsfs /dev/dsk/${disk}s0 $mnt
-		if [[ $? -ne 0 ]]; then
-			continue
-		fi
-		if [[ -d ${mnt}/boot ]]; then
-			return 0
-		fi
-		if ! umount $mnt; then
-			echo "Failed to unmount $mnt">&2
-			return 1
-		fi
-	done
-
-	echo "Couldn't find an ISO" >&2
-	return 1
-}
-
-function unmount_ISO
-{
-	local mnt=$(extract_mountpath $1)
-
-	if ! umount $mnt; then
-		echo "Failed to unmount $mnt" >&2
-		return 1
-	fi
-
-	return 0
 }
 
 # replace a loader conf value

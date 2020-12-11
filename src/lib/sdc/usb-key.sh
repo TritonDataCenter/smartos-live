@@ -140,7 +140,7 @@ function unmount_ISO
 	return 0
 }
 
-function mount_installer_fake_usb()
+function mount_installer_fake_usbkey()
 {
 	local mnt=$(extract_mountpath $1)
 	local tmount=$(mktemp -d)

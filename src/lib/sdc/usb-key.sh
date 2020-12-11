@@ -143,15 +143,16 @@ function unmount_ISO
 function mount_installer_fake_usbkey()
 {
 	local mnt=$(extract_mountpath $1)
-	local tmount=$(mktemp -d)
-	local tdir=$(mktemp -d)
+	local tmount=$(TMPDIR=/etc/svc/volatile mktemp -d)
+	local tdir=$(TMPDIR=/etc/svc/volatile mktemp -d)
 
 	installertype=$(/bin/bootparams | \
 		awk -F= '/^triton_installer=/ {print $2}')
 
 	# Okay, so we need to not only mount an ISO or ISO-image from
-	# the installer, we ALSO need to copy it into /tmp so it's writable
-	# and THEN we lofs-mount it to $mnt above.
+	# the installer, we ALSO need to copy it into tmpfs so it's writable
+	# and THEN we lofs-mount it to $mnt above.  The only known-available
+	# tmpfs at this point might be /etc/system/volatile.
 	if [[ "$installertype" == "iso" ]]; then
 		mount_ISO $tmount
 		if [[ $? -ne 0 ]]; then
@@ -171,6 +172,7 @@ function mount_installer_fake_usbkey()
 	# copy it over to $tdir so it can be read-write, and THEN we
 	# lofs mount it.
 
+	echo "Triton installer copying from read-only to "fake" USB key."
 	tar -cf - -C $tmount . | tar -xf - -C $tdir
 	# Let piadm capitalize entries (for now).
 	umount $tmount

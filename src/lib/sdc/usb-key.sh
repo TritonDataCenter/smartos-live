@@ -172,7 +172,7 @@ function mount_installer_fake_usbkey()
 	# copy it over to $tdir so it can be read-write, and THEN we
 	# lofs mount it.
 
-	echo "Triton installer copying from read-only to "fake" USB key."
+	echo "Triton installer copying from read-only to fake USB key."
 	tar -cf - -C $tmount . | tar -xf - -C $tdir
 	# Let piadm capitalize entries (for now).
 	umount $tmount

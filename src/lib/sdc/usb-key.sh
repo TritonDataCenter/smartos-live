@@ -235,6 +235,7 @@ function mount_usb_key()
 	readonly alldisks=$(/usr/bin/disklist -a)
 
 	for disk in $alldisks; do
+		# Can do usb_key_version safely here.
 		version=$(usb_key_version "/dev/dsk/${disk}p0")
 
 		case $version in
@@ -322,7 +323,19 @@ function usb_key_disable_ipxe()
 	    "svc:/system/filesystem/smartdc:default")
 	local readonly dev=$(mount | nawk "\$0~\"^$mnt\" { print \$3 ; }")
 	local readonly dsk=${dev%[ps]?}
-	local readonly version=$(usb_key_version ${dsk}p0)
+	local version
+
+	# Check if mnt is lofs mounted...
+	if [[ $(awk -v "mnt=$mnt" '$2 == mnt { print $3 }' /etc/mnttab) == \
+		"lofs" ]]; then
+		# lofs mount of the key means either zpool boot or installer
+		# and tmpfs-created copy to fake out the rest.  Those are,
+		# unless we go beyond loader, always loader, i.e. version 2.
+		version=2
+	else
+		# Just check the raw disk bits for GRUB vs. Loader.
+		version=$(usb_key_version ${dsk}p0)
+	fi
 
 	case $version in
 	1)
@@ -351,8 +364,20 @@ function usb_key_set_console()
 	    "svc:/system/filesystem/smartdc:default")
 	local readonly dev=$(mount | nawk "\$0~\"^$mnt\" { print \$3 ; }")
 	local readonly dsk=${dev%[ps]?}
-	local readonly version=$(usb_key_version ${dsk}p0)
+	local version
 	local readonly console=$1
+
+	# Check if mnt is lofs mounted...
+	if [[ $(awk -v "mnt=$mnt" '$2 == mnt { print $3 }' /etc/mnttab) == \
+		"lofs" ]]; then
+		# lofs mount of the key means either zpool boot or installer
+		# and tmpfs-created copy to fake out the rest.  Those are,
+		# unless we go beyond loader, always loader, i.e. version 2.
+		version=2
+	else
+		# Just check the raw disk bits for GRUB vs. Loader.
+		version=$(usb_key_version ${dsk}p0)
+	fi
 
 	case $version in
 	1)

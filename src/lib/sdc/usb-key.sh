@@ -288,7 +288,7 @@ function unmount_usb_key()
 	# Check for lofs from a temp directory...
 	if [[ "$typ" == "lofs" ]]; then
 		nuke=$(awk -v "mnt=$mnt" '$2 == mnt { print $1 }' /etc/mnttab |\
-			grep '^/tmp/')
+			grep '^/etc/svc/volatile/')
 	else
 		nuke=""
 	fi

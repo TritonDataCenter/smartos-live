@@ -294,10 +294,16 @@ function unmount_usb_key()
 	fi
 
 	umount "$mnt"
+	if [[ $? -ne 0 ]]; then
+		echo "Can't unmount $mnt" >&2
+		return 1
+	fi
 
 	if [[ "$nuke" != "" ]]; then
 		/bin/rm -rf "$nuke"
 	fi
+
+	return 0
 }
 
 # replace a loader conf value

@@ -158,12 +158,15 @@ function mount_installer_fake_usbkey()
 		if [[ $? -ne 0 ]]; then
 			return $?
 		fi
-	else
+	elif [[ "$installertype" == "ipxe" ]]; then
 		# Okay, so we're a bootable image with a .iso lying around
 		# somewhere.
 
-		# mount -F hsfs /path/to/image.iso $tmount
-		echo "NOT YET SUPPORTED"
+		mount -F hsfs /installer.iso $tmount
+	else
+		echo "Unknown Triton installer type: $installertype" >&2
+		rmdir $tmount
+		rmdir $tdir
 		return 1
 	fi
 
@@ -176,6 +179,7 @@ function mount_installer_fake_usbkey()
 	tar -cf - -C $tmount . | tar -xf - -C $tdir
 	# Let piadm capitalize entries (for now).
 	umount $tmount
+	rmdir $tmount
 
 	# NOTE: Because this function only gets used in an installer,
 	# we will clean up $tdir in unmount_usb_key, because it's in tmpfs

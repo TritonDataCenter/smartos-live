@@ -65,7 +65,7 @@ function extract_mountpath()
 
 #
 # Mount the Head Node's bootable pool's bootfs as the "USB Key"
-# 
+#
 function mount_bootpool_fake_usbkey()
 {
 	local mnt=$1

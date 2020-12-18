@@ -143,7 +143,6 @@ function unmount_ISO
 function mount_installer_fake_usbkey()
 {
 	local mnt=$(extract_mountpath $1)
-	local tmount=$(TMPDIR=/etc/svc/volatile mktemp -d)
 	local tdir=$(TMPDIR=/etc/svc/volatile mktemp -d)
 
 	installertype=$(/bin/bootparams | \
@@ -154,32 +153,35 @@ function mount_installer_fake_usbkey()
 	# and THEN we lofs-mount it to $mnt above.  The only known-available
 	# tmpfs at this point might be /etc/system/volatile.
 	if [[ "$installertype" == "iso" ]]; then
+		local tmount=$(TMPDIR=/etc/svc/volatile mktemp -d)
+
 		mount_ISO $tmount
 		if [[ $? -ne 0 ]]; then
 			return $?
 		fi
-	elif [[ "$installertype" == "ipxe" ]]; then
-		# Okay, so we're a bootable image with a .iso lying around
-		# somewhere.
+		# So $tmount has a read-only ISO mounted (either an actual
+		# disk or an included-on-boot-archive filesystem.  We need to
+		# copy it over to $tdir so it can be read-write, and THEN we
+		# lofs mount it.
 
-		mount -F hsfs /installer.iso $tmount
+		echo "Triton installer copying from read-only to fake USB key."
+		tar -cf - -C $tmount . | tar -xf - -C $tdir
+		# Let piadm capitalize entries (for now).
+		umount $tmount
+		rmdir $tmount
+	elif [[ "$installertype" == "ipxe" ]]; then
+		# Okay, so we're a bootable image, and we need to copy over
+		# any .txt files from / into $tdir.  The Triton installer
+		# will know what to do.
+
+		cp -rp /*.txt /scripts /config.inc $tdir/.
+		# LIE about it.
+		touch $tdir/.joyliveusb
 	else
 		echo "Unknown Triton installer type: $installertype" >&2
-		rmdir $tmount
 		rmdir $tdir
 		return 1
 	fi
-
-	# So $tmount has a read-only ISO mounted (either an actual
-	# disk or an included-on-boot-archive filesystem.  We need to
-	# copy it over to $tdir so it can be read-write, and THEN we
-	# lofs mount it.
-
-	echo "Triton installer copying from read-only to fake USB key."
-	tar -cf - -C $tmount . | tar -xf - -C $tdir
-	# Let piadm capitalize entries (for now).
-	umount $tmount
-	rmdir $tmount
 
 	# NOTE: Because this function only gets used in an installer,
 	# we will clean up $tdir in unmount_usb_key, because it's in tmpfs

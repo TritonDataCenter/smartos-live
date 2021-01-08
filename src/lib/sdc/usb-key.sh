@@ -3,7 +3,7 @@
 # Utilities for dealing with the USB key. In general, sdc-usbkey should be used.
 # These routines are for use prior to sdc-usbkey being installed.
 #
-# Copyright 2020, Joyent, Inc.
+# Copyright 2021, Joyent, Inc.
 #
 
 #

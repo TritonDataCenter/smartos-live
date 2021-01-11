@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright 2020 Joyent, Inc.
+# Copyright 2021 Joyent, Inc.
 #
 
 # shellcheck disable=1091
@@ -61,6 +61,18 @@ not_triton_CN() {
 	fi
 }
 
+not_triton_HN() {
+	if [[ "$TRITON_HN" == "yes" ]]; then
+		eecho "The $1 command cannot be used on a Triton Head Node"
+		err "On a headnode, please use 'sdcadm platform'."
+	fi
+}
+
+standalone_only() {
+	not_triton_CN "$@"
+	not_triton_HN "$@"
+}
+
 vecho() {
 	if [[ $VERBOSE -eq 1 ]]; then
 		# Verbose echoes invoked by -v go to stdout, not stderr.
@@ -71,6 +83,7 @@ vecho() {
 declare bootfs
 declare -a allbootfs
 declare numbootfs
+
 #
 # Inventory pools and bootable file systems.
 #
@@ -426,15 +439,28 @@ list() {
 			# the pool.
 			continue
 		fi
-		if [[ ! -L /$bootfs/platform ]]; then
-			corrupt "WARNING: Bootable filesystem $bootfs" \
-				"has non-symlink platform"
-		fi
 		cd "/$bootfs" || fatal "Could not chdir to /$bootfs"
 		bootbitsstamp=$(cat etc/version/boot)
-		bootstamp=$(cat platform/etc/version/platform)
-		mapfile -t pis \
-			< <(cd "/$bootfs" || exit; cat platform-*/etc/version/platform)
+		# Triton Head Nodes are special.
+		if [[ "$TRITON_HN" != "yes" ]]; then
+			# Regular standalone SmartOS case.
+			if [[ ! -L /$bootfs/platform ]]; then
+				corrupt "WARNING: Bootable filesystem" \
+					"$bootfs has non-symlink platform"
+			fi
+			bootstamp=$(cat platform/etc/version/platform)
+			mapfile -t pis \
+				< <(cat platform-*/etc/version/platform)
+		else
+			# Triton Head Node case.
+			if [[ ! -d /$bootfs/os ]]; then
+				corrupt "WARNING: Headnode boot filesystem" \
+					"$bootfs has no os/ directory."
+			fi
+			bootstamp=$(awk -F= '/^platform-version=/ {print $2}' \
+				< boot/loader.conf | sed 's/"//g')
+			mapfile -t pis < <(cat os/*/platform/etc/version/platform)
+		fi
 		for pi in "${pis[@]}"; do
 			if [[ $activestamp == "$pi" ]]; then
 				active="yes"
@@ -693,6 +719,25 @@ initialize_as_CN() {
 	CNAPI_DEFAULT_PI=$("${CURL[@]}" http://"${cnapi_domain}"/boot/default | json platform)
 }
 
+initialize_as_HN() {
+	#
+	# For the Triton Head Node, we only really want piadm doing one of
+	# four things:
+	#
+	# 1.) Enabling a bootable pool, which will involve a bunch of
+	#     Triton-savvy maneuvers.
+	# 2.) Updating the boot sector and/or EFI boot.
+	# 3.) Disabling a bootable pool, which will ALSO involved a bunch of
+	#     Triton-savvy maneuvers.
+	# 4.) List the pools available that are Triton-savvy and bootable.
+	#
+	# For right now, we merely need to indicate we're a headnode and
+	# if we're booted off of a pool, which one.
+
+	TRITON_HN="yes"
+	TRITON_HN_BOOTPOOL=$(bootparams | awk -F= '/^triton_bootpool=/ {print $2}')
+}
+
 # README file for /${bootfs}/platform-ipxe/README.
 cat_readme() {
     cat <<EOF
@@ -911,6 +956,73 @@ update_CN() {
 	update_boot_sectors "$pool" "$bootfs"
 }
 
+bringup_HN() {
+	# One last reality check...
+	# 1.) Check if we're trying to enable our currently booting pool.
+	if [[ "$pool" == "$TRITON_HN_BOOTPOOL" ]]; then
+		err "Pool $pool is already bootable, and we just booted it."
+	fi
+
+	# If we reach here, we've checked for the already-bootable
+	# case, checked for the can-be-bootable case, and have a
+	# $bootfs ready to go.  For the head node, we will be extra
+	# cautious and remove all of its contents first.  NOTE: rm(1)
+	# will complain because you'll get EBUSY for the mountpoint
+	# itself.
+	vecho "Cleaning up $bootfs"
+	/bin/rm -rf /"$bootfs" >& /dev/null
+	cd /"$bootfs"
+
+	# Mount the Triton USB key (even if it's a virtual one...).
+	if [[ $(sdc-usbkey status) == "mounted" ]]; then
+		stick_premounted=yes
+	fi
+	stickmount=$(sdc-usbkey mount)
+	vecho "Mounted USB key on $stickmount"
+
+	# NOTE:  BAIL ON VERSION 1 STICKS FOR NOW
+	version=$(sdc-usbkey status -j | json version)
+	if [[ "$version" != "2" ]]; then
+		# Unmount on version-mismatch...
+		usb_unmount_unless_already
+		err "USB key must be Version 2 (loader) to install on a pool."
+	fi
+
+	# Copy over the whole thing to ${bootfs}
+	vecho "Copying over USB key contents to /$bootfs"
+
+	# NOTE: If failed here, USB key will still be mounted for debugging
+	# reasons, regardless of $stick_premounted.
+	tar -cf - -C "$stickmount" . | tar -xf - || \
+		err "Problem copying USB key on $stickmount (still mounted)" \
+			"to /$bootfs"
+
+	# Add both fstype="ufs" to loader.conf.
+	vecho "Modifying loader.conf for pool-based Triton Head Node boot"
+	grep -q 'fstype="ufs"' ./boot/loader.conf || \
+		echo 'fstype="ufs"' >> ./boot/loader.conf
+	# Filter out any old triton_ bootparams (either old bootpool OR
+	# installer properties) and replace them with JUST the new bootpool.
+	# Let's be cautious and use a temp file instead of sed's -i or -I.
+	tfile=$(mktemp)
+	grep -v '^triton_' ./boot/loader.conf > $tfile
+	mv -f $tfile ./boot/loader.conf
+	echo "triton_bootpool=\"$pool\"" >> ./boot/loader.conf
+
+	# (OPTIONAL) Add "from-pool" indicator to boot.4th.
+
+	# 4.) Properly capitalize ${bootfs}/os/ entries.
+	vecho "Case-correcting os/ entries."
+	cd ./os
+	for a in *; do
+		mv "$a" "${a^^}"
+	done
+
+	if [[ "$stick_premounted" != "yes" ]]; then
+		sdc-usbkey unmount
+	fi
+}
+
 enablepool() {
 	if [[ $1 == "-i" ]]; then
 		if [[ "$2" == "" || "$3" == "" ]]; then
@@ -918,7 +1030,7 @@ enablepool() {
 				"and then a pool must be specified."
 			usage
 		fi
-		not_triton_CN "'bootable -e' with '-i'"
+		standalone_only "'bootable -e' with '-i'"
 		installsource=$2
 		pool=$3
 	elif [[ -z $1 ]]; then
@@ -933,15 +1045,31 @@ enablepool() {
 	# SmartOS standard bootable filesystem is POOL/boot.
 	bootfs=${pool}/boot
 
+	# If we're a head node, bail early if we don't have a sufficiently
+	# advanced set of gz-tools.
+	if [[ "$TRITON_HN" == "yes" && ! -f /opt/smartdc/lib/bootpool.js ]]
+	then
+		eecho ""
+		eecho "To activate a pool for Triton head node booting, newer"
+		eecho "global-zone tools (namely support for sdc-usbkey to"
+		eecho "treat $bootfs as a USB key equivalent) are required."
+		eecho ""
+		eecho "Please update your headnode global-zone tools by"
+		err "using 'sdcadm experimental update-gz-tools' and try again."
+	fi
+
 	if ispoolenabled "$pool" ; then
+		# NOTE: Different actions depending on standalone, CN, or HN.
 		if [[ -d /${bootfs}/platform/. && -d /${bootfs}/boot/. ]]; then
 			echo "Pool $pool appears to be bootable."
-			if [[ "$TRITON_CN" != "yes" ]]; then
-				echo "Use 'piadm install' or" \
-					"'piadm activate' to change PIs."
-			else
+			if [[ "$TRITON_CN" == "yes" ]]; then
 				echo "Use 'piadm update' to update the CN's" \
 					"iPXE and backup PI."
+			elif [[ "$TRITON_HN" == "yes" ]]; then
+				echo "Use 'sdcadm platform' to change PIs."
+			else
+				echo "Use 'piadm install' and" \
+					"'piadm activate' to change PIs."
 			fi
 			return 0
 		fi
@@ -969,6 +1097,20 @@ enablepool() {
 	if [[ "$TRITON_CN" == "yes" ]]; then
 		bringup_CN
 		update_boot_sectors "$pool" "$bootfs"
+	elif [[ "$TRITON_HN" == "yes" ]]; then
+		bringup_HN
+		update_boot_sectors "$pool" "$bootfs"
+		echo "NOTE:  Directory $bootfs on pool $pool is now able to be"
+		echo "this head node's virtual bootable USB key."
+		echo ""
+		echo "If this isn't a replacement pool for an existing bootable"
+		echo "pool, you should remove the USB key from this headnode"
+		echo "and then reboot this headnode from a disk in $pool"
+		echo ""
+		echo "The USB key (even if it's another pool's bootfs) is"
+		echo "now" $(sdc-usbkey status) "because that is what it was"
+		echo "before piadm ran."
+		echo ""
 	else
 		install "$installsource" "$pool"
 		# install set 'installstamp' on our behalf.
@@ -991,10 +1133,45 @@ refresh_or_disable_pool() {
 		err "Pool $pool is not bootable, and cannot be disabled or refreshed"
 
 	if [[ "$flag" == "-d" ]]; then
+		if [[ "$TRITON_HN" == "yes" ]]; then
+			if [[ "$pool" == "$TRITON_HN_BOOTPOOL" ]]; then
+				# The warning says it all.
+				eecho "WARNING: Disabling currently-booting" \
+					"pool"
+
+				# For now, just bail in this case.
+				err "Please boot from a USB key or other pool"
+
+				# TODO? -- Check to see if there
+				# are alternatives before disabling?
+				#
+				# First, use this tool to find other
+				# bootable pools.
+				#
+				# echo "Other available pools:"
+				# echo ""
+				# bootable | grep -v "$pool"
+				# echo ""
+				# 
+				# Then check to see if there's an
+				# actual USB key available.
+				# 
+				# tdir=$(mktemp -d)
+				# ... use new -u (force USB key search) option
+				# sdc-usbkey mount -u $tdir
+				# ... if tdir has a usb key, mention it
+				# sdc-usbkey unmount $tdir
+			else
+				vecho "Disabling Triton Head Node inactive" \
+					"bootable pool."
+			fi
+		fi
 		vecho "Disabling bootfs on pool $pool"
 		zpool set bootfs="" "$pool"
 	else
 		vecho "Refreshing boot sectors and/or ESP on pool $pool"
+		# Refreshing works the same for all of standalone, compute
+		# node, or head node.
 	fi
 
 	update_boot_sectors "$pool" "$currbootfs" "$flag"
@@ -1075,18 +1252,19 @@ fi
 
 # Determine if we're running on a Triton Compute Node (CN) or not:
 bootparams | grep -E -q 'smartos=|headnode=' || initialize_as_CN
+bootparams | grep -q 'headnode=' && initialize_as_HN
 
 cmd=$1
 shift 1
 
 case $cmd in
 	activate | assign )
-		not_triton_CN "$cmd"
+		standalone_only "$cmd"
 		activate "$@"
 		;;
 
 	avail )
-		not_triton_CN avail
+		standalone_only avail
 		avail
 		;;
 
@@ -1095,7 +1273,7 @@ case $cmd in
 		;;
 
 	install )
-		not_triton_CN install
+		standalone_only install
 		install "$@"
 		;;
 
@@ -1104,7 +1282,7 @@ case $cmd in
 		;;
 
 	remove )
-		not_triton_CN remove
+		standalone_only remove
 		remove "$@"
 		;;
 

@@ -1021,6 +1021,7 @@ bringup_HN() {
 			mv "$a" "${a^^}"
 		fi
 	done
+	cd ..
 
 	if [[ "$stick_premounted" != "yes" ]]; then
 		sdc-usbkey unmount

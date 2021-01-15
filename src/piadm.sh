@@ -1015,7 +1015,11 @@ bringup_HN() {
 	vecho "Case-correcting os/ entries."
 	cd ./os
 	for a in *; do
-		mv "$a" "${a^^}"
+		# If our "usb key" is already a ZFS bootfs, don't mv
+		# identically-named things.
+		if [[ "$a" != "${a^^}" ]]; then
+			mv "$a" "${a^^}"
+		fi
 	done
 
 	if [[ "$stick_premounted" != "yes" ]]; then

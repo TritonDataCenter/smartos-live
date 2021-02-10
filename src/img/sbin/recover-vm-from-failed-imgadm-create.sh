@@ -2,6 +2,7 @@
 
 #
 # Copyright (c) 2018, Joyent, Inc.
+# Copyright 2021 ASS-Einrichtungssysteme GmbH
 #
 
 #
@@ -97,7 +98,7 @@ vmInfo="$(vmadm get "$RECOVER_VM")"
 
 # Sanity check that the VM is in that state.
 rollbackSnap="zones/$RECOVER_VM@imgadm-create-pre-prepare"
-zfs list -Ho name "$rollbackSnap" >/dev/null \
+zfs list -d 3 -Ho name "$rollbackSnap" >/dev/null \
     || fatal "vm $RECOVER_VM is not in the expected failed state: cannot find $rollbackSnap snapshot"
 
 vmBrand=$(echo "$vmInfo" | json brand)

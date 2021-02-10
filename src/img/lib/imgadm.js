@@ -21,6 +21,7 @@
  * CDDL HEADER END
  *
  * Copyright 2020 Joyent, Inc.
+ * Copyright 2021 ASS-Einrichtungssysteme GmbH
  *
  * * *
  * The main imgadm functionality. The CLI is a light wrapper around this tool.
@@ -273,7 +274,7 @@ function getZfsDataset(name, properties, callback) {
     var dataset;
 
     function getDataset(next) {
-        var cmd = format('/usr/sbin/zfs list -H -p -o %s %s',
+        var cmd = format('/usr/sbin/zfs list -d 3 -H -p -o %s %s',
             properties.join(','), name);
         exec(cmd, {maxBuffer: 10485760}, function (err, stdout, stderr) {
             if (err) {
@@ -307,7 +308,7 @@ function getZfsDataset(name, properties, callback) {
             return;
         }
         dataset.children = {};
-        var cmd = format('/usr/sbin/zfs list -t all -pHr -o name %s', name);
+        var cmd = format('/usr/sbin/zfs list -d 3 -t all -pHr -o name %s', name);
         exec(cmd, {maxBuffer: 10485760}, function (err, stdout, stderr) {
             if (err) {
                 next(new errors.InternalError({
@@ -338,7 +339,7 @@ function getZfsDataset(name, properties, callback) {
             next();
             return;
         }
-        var cmd = '/usr/sbin/zfs list -t filesystem,volume -o origin,name -pH';
+        var cmd = '/usr/sbin/zfs list -d 3 -t filesystem,volume -o origin,name -pH';
         exec(cmd, {maxBuffer: 10485760}, function (err, stdout, stderr) {
             if (err) {
                 next(new errors.InternalError({
@@ -851,7 +852,7 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
          * is fine with false positives.
          */
         execPlus({
-            command: '/usr/sbin/zfs list -t filesystem,volume,snapshot -pH '
+            command: '/usr/sbin/zfs list -d 3 -t filesystem,volume,snapshot -pH '
                 + '-o name,origin,mountpoint,imgadm:ignore',
             log: self.log,
             errMsg: 'could not load images',

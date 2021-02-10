@@ -7,6 +7,7 @@
 
 #
 # Copyright 2020 Joyent, Inc.
+# Copyright 2021 ASS-Einrichtungssysteme GmbH
 #
 
 # XXX - TODO
@@ -879,7 +880,7 @@ create_dump()
 #
 setup_datasets()
 {
-	datasets=$(zfs list -H -o name | xargs)
+	datasets=$(zfs list -d 3 -H -o name | xargs)
 
 	if ! echo $datasets | grep dump > /dev/null; then
 		printf "%-56s" "Making dump zvol... "

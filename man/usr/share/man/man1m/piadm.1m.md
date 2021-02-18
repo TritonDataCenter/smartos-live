@@ -213,14 +213,14 @@ piadm(1M) -- Manage SmartOS Platform Images
 	For Triton Head Nodes, the -i option is also disabled.  When invoked
 	with -e on a Head Node, the piadm(1M) command will attempt to convert
 	a pool to be bootable for a Triton Head Node.  If a Head Node is
-	booting from a USB key, the boot data comes from the USB Key.  If
-	a Head Node is booting from another pool, the boot data comes from
-	the current booted pool.  After invoking `piadm bootable -e $POOL`,
-	$POOL can boot the Triton Head Node, BUT any pre-reboot USB-key
-	operations (even if the USB key is actually the bootable ZFS
-	filesystem), will not copy over to the newly-enabled bootable pool.
-	It is therefore recommended that a Head Node reboot to the
-	newly-enabled pool as soon as possible.
+	booting from a USB key, the boot data comes from the USB Key.  If a
+	Head Node is booting from another pool, the boot data comes from the
+	current booted pool.  After invoking `piadm bootable -e $POOL`, $POOL
+	can boot the Triton Head Node, BUT any pre-reboot operations
+	(regardless if the current Head Node boot comes from USB or an
+	existing bootable pool), will not copy over to the newly-enabled
+	bootable pool.  It is therefore recommended that a Head Node reboot
+	to the newly-enabled pool as soon as possible.
 
       piadm install <source> [ZFS-pool-name]
 

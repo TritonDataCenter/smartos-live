@@ -111,7 +111,7 @@ pipeline {
         stage('check') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                    label 'dc:iad001 && platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-check"
                 }

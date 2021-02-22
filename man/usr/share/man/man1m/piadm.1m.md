@@ -140,6 +140,16 @@ piadm(1M) -- Manage SmartOS Platform Images
     This directory contains an additional in-directory `platform` link to
     enable its selection as a backup.
 
+## TRITON HEAD NODES
+
+    The piadm(1M) command can convert a USB-key-booting Triton Head Node into
+    a ZFS-pool-booting one.  It can also transfer boot duties from an
+    existing ZFS pool to a new one.
+
+    The `piadm list` subcommand will also show Platform Images available to
+    the Head Node, but it is highly recommended that Head Nodes continue to
+    use sdcadm(1) for such information.
+
 ## COMMANDS
 
     The piadm(1M) command will produce more verbose output if -v is stated
@@ -199,6 +209,18 @@ piadm(1M) -- Manage SmartOS Platform Images
         the `sdcadm experimental update-gz-tools` command will update it on
         the head node.  See below for post-bootable iPXE updating on the
         Triton Compute Node.
+
+	For Triton Head Nodes, the -i option is also disabled.  When invoked
+	with -e on a Head Node, the piadm(1M) command will attempt to convert
+	a pool to be bootable for a Triton Head Node.  If a Head Node is
+	booting from a USB key, the boot data comes from the USB Key.  If a
+	Head Node is booting from another pool, the boot data comes from the
+	current booted pool.  After invoking `piadm bootable -e $POOL`, $POOL
+	can boot the Triton Head Node, BUT any pre-reboot operations
+	(regardless if the current Head Node boot comes from USB or an
+	existing bootable pool), will not copy over to the newly-enabled
+	bootable pool.  It is therefore recommended that a Head Node reboot
+	to the newly-enabled pool as soon as possible.
 
       piadm install <source> [ZFS-pool-name]
 

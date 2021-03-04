@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright 2020 Joyent, Inc.
+ * Copyright 2021 Joyent, Inc.
  */
 
 @Library('jenkins-joylib@v1.0.5') _
@@ -112,7 +112,7 @@ pipeline {
             agent {
                 node {
                     label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                    'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-check"
                 }
             }
@@ -155,7 +155,7 @@ set -o pipefail
                 // Use ${BRANCH_NAME} instead.
                 node {
                     label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                    'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-default"
                 }
             }
@@ -202,7 +202,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
             agent {
                 node {
                     label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-debug"
                 }
             }
@@ -251,7 +251,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
             agent {
                 node {
                     label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-gcc4"
                 }
             }
@@ -294,7 +294,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
             agent {
                 node {
                     label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:8gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-strap-cache"
                 }
             }

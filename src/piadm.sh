@@ -13,6 +13,7 @@
 
 #
 # Copyright 2021 Joyent, Inc.
+# Copyright 2021 ASS-Einrichtungssysteme GmbH
 #
 
 # shellcheck disable=1091
@@ -685,7 +686,7 @@ ispoolenabled() {
 	currbootfs=$(zpool list -Ho bootfs "$pool")
 	if [[ $currbootfs == "${pool}/boot" ]]; then
 		# We're bootable (at least bootable enough)
-		zfs list -H "$currbootfs" > /dev/null 2>&1  && return 0
+		zfs list -d 3 -H "$currbootfs" > /dev/null 2>&1  && return 0
 		# else drop out to not-bootable, but this shouldn't happen.
 		vecho ".... odd, ${pool}/boot is pool's bootfs," \
 			"but isn't a filesystem"
@@ -1082,7 +1083,7 @@ enablepool() {
 		# For now, proceed clobber-style.
 	fi
 
-	if ! zfs list -H "$bootfs" > /dev/null 2>&1; then
+	if ! zfs list -d 3 -H "$bootfs" > /dev/null 2>&1; then
 		# Create a new bootfs and set it.
 		# NOTE:	 Encryption should be turned off for this dataset.
 		zfs create -o encryption=off "$bootfs" || \

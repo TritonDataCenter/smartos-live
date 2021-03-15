@@ -1,4 +1,5 @@
 // Copyright 2015 Joyent, Inc.  All rights reserved.
+// Copyright 2021 ASS-Einrichtungssysteme GmbH
 
 var async = require('/usr/node/node_modules/async');
 var cp = require('child_process');
@@ -61,7 +62,7 @@ test('check delegated', function(t) {
         return;
     }
 
-    cp.exec('zlogin ' + vmobj.uuid + ' zfs list | grep zones/' + vmobj.uuid + '/data',
+    cp.exec('zlogin ' + vmobj.uuid + ' zfs list -d 3 | grep zones/' + vmobj.uuid + '/data',
         function (error, stdout, stderr) {
             if (error) {
                 t.ok(false, 'VM does not appear to have dataset: ' + error.message);

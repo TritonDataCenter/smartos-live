@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Copyright 2020 Joyent, Inc.
+# Copyright 2021 ASS-Einrichtungssysteme GmbH
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -143,7 +144,7 @@ function get_nonglobal_info()
     QUOTA=$(/usr/sbin/mdata-get sdc:quota)
     if [[ $? != 0 ]]; then
         QUOTA="unknown"
-        if [[ $(/usr/sbin/zfs list -H | wc -l | tr -d ' ') != 0 ]]; then
+        if [[ $(/usr/sbin/zfs list -d 3 -H | wc -l | tr -d ' ') != 0 ]]; then
             ROOTQUOTA=$(($(/usr/sbin/zfs get -pHo value quota / | tr -d 'GMT') / (1024 * 1024 * 1024)))
             if [[ $? == 0 ]]; then
                 QUOTA="${ROOTQUOTA}"

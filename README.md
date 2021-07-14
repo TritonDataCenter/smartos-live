@@ -44,8 +44,8 @@ includes:
   If you wish to send mail to the list you'll need to join, but you can view
   and search the archives online without being a member.
 
-* In the *#smartos* IRC channel on the [Freenode IRC
-  network](https://freenode.net/).
+* In the *#smartos* IRC channel on the [Libera Chat IRC
+  network](https://libera.chat.net/).
 
 # Bug Reports
 

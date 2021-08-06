@@ -164,6 +164,17 @@ piname_present_get_bootfs() {
 # Defined as a variable in case we need to add parameters (like -s) to it.
 # WARNING:  Including -k for now.
 CURL=( curl -ks -f )
+VCURL=( curl -k -f --progress-bar )
+
+vcurl() {
+	if [[ $VERBOSE -eq 1 ]]; then
+		# Verbose curls show progress.
+		"${VCURL[@]}" "$@"
+	else
+		# Non-verbose ones do not.
+		"${CURL[@]}" "$@"
+	fi
+}
 
 # Well-known source of SmartOS Platform Images
 DEFAULT_URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
@@ -186,6 +197,7 @@ avail() {
 
 	# The aforementioned Manta method, parsed by json(1).
 	# Don't print ones old enough to NOT contain piadm(1M) itself.
+	# Always be silent (i.e. use ${CURL[@]}).
 	"${CURL[@]}" "${URL_PREFIX}/?limit=1000" | json -ga -c \
 		"this.name.match(/Z$/) && this.name>=\"$activestamp\"" name
 }
@@ -240,7 +252,7 @@ install() {
 		# make sure it's the current one.
 		iso=yes
 		vecho "Downloading latest SmartOS ISO"
-		"${CURL[@]}" -o "${tdir}/smartos.iso" "${URL_PREFIX}/smartos-latest.iso"
+		vcurl -o "${tdir}/smartos.iso" "${URL_PREFIX}/smartos-latest.iso"
 		code=$?
 		if [[ $code -ne 0 ]]; then
 			/bin/rm -rf "${tdir}"
@@ -296,8 +308,8 @@ install() {
 		# Explicit boot stamp or URL.
 
 		# Do a URL reality check.
-		vecho "Attempting download of $1"
-		"${CURL[@]}" -o "${tdir}/download" "$1"
+		vecho "Attempting download of URL $1"
+		vcurl -o "${tdir}/download" "$1"
 		if [[ -e ${tdir}/download ]]; then
 			# Recurse with the downloaded file.
 			dload=$(mktemp)
@@ -325,12 +337,13 @@ install() {
 		# Use conventions from site hosted in URL_PREFIX.
 		vecho "Downloading ISO for Platform Image $1"
 		checkurl=${URL_PREFIX}/$1/index.html
+		# Always be silent, use ${CURL[@]}.
 		if ! "${CURL[@]}" "$checkurl" | head | grep -qv "not found" ; then
 			eecho "PI-stamp $1" \
 				"is invalid for download from $URL_PREFIX"
 			usage
 		fi
-		"${CURL[@]}" -o "${tdir}/smartos.iso" "${URL_PREFIX}/$1/smartos-${1}.iso"
+		vcurl -o "${tdir}/smartos.iso" "${URL_PREFIX}/$1/smartos-${1}.iso"
 		code=$?
 		if [[ $code -ne 0 ]]; then
 			/bin/rm -rf "${tdir}"
@@ -868,6 +881,7 @@ initialize_as_CN() {
 	load_sdc_config
 
 	# Establish the CNAPI default boot Platform Image
+	# Always be silent, use ${CURL[@]}.
 	cnapi_domain=$("${CURL[@]}" http://"${CONFIG_sapi_domain:?}"/applications?name=sdc | json -Ha metadata.cnapi_domain)
 	CNAPI_DEFAULT_PI=$("${CURL[@]}" http://"${cnapi_domain}"/boot/default | json platform)
 }
@@ -939,12 +953,12 @@ install_pi_CN() {
 	ln -s . platform-"$installstamp"/platform
 
 	vecho "Pulling unix"
-	"${CURL[@]}" "$unix_path" > \
+	vcurl "$unix_path" > \
 		platform-"$installstamp"/i86pc/kernel/amd64/unix || return 1
 	for file in boot_archive boot_archive.hash boot_archive.manifest \
 		boot_archive.gitstatus; do
 		vecho "Pulling" "$file"
-		"${CURL[@]}" "${archive_prefix}"/"${file}" > \
+		vcurl "${archive_prefix}"/"${file}" > \
 			platform-"$installstamp"/i86pc/amd64/"${file}" || \
 			return 1
 	done

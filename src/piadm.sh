@@ -726,7 +726,7 @@ EOF
 		fi
 		# else menusetprefix is already set for this round!
 
-		# Emit the entry.  XXX KEBE SAYS FILL ME IN!
+		# Emit the entry.
 		cat >> ./os/pi.rc <<EOF
 
 set ${menusetprefix}caption[$((itemnum + 3))]="${pi}"

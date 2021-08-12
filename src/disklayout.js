@@ -46,11 +46,11 @@ dolayout(disks, layout, nspares, excluded, enable_cache, width)
 			return (true);
 		});
 	} else if (os.type() === 'Linux') {
-		disks = disks.filter(function (d) {
+		disks = disks.filter(function (disk) {
 			if (excluded.indexOf(disk.name.toLowerCase()) !== -1)
 				return (false);
 
-			return d.mountpoint === null;
+			return disk.mountpoint === null;
 		})
 	}
 

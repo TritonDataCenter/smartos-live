@@ -45,7 +45,7 @@ includes:
   and search the archives online without being a member.
 
 * In the *#smartos* IRC channel on the [Libera Chat IRC
-  network](https://libera.chat.net/).
+  network](https://libera.chat/).
 
 # Bug Reports
 

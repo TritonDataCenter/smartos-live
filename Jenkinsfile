@@ -8,7 +8,7 @@
  * Copyright 2021 Joyent, Inc.
  */
 
-@Library('jenkins-joylib@v1.0.5') _
+@Library('jenkins-joylib@v1.0.8') _
 
 pipeline {
 
@@ -193,7 +193,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
-                    joyMattermostNotification(
+                    joySlackNotification(
                         channel: 'os', comment: 'default')
                 }
             }
@@ -242,7 +242,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
-                    joyMattermostNotification(
+                    joySlackNotification(
                         channel: 'os', comment: 'debug')
                 }
             }
@@ -285,7 +285,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
-                    joyMattermostNotification(
+                    joySlackNotification(
                         channel: 'os', comment: 'gcc4')
                 }
             }
@@ -328,7 +328,7 @@ export MANTA_TOOLS_PATH=/root/bin/
                         cleanWhenAborted: true,
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
-                    joyMattermostNotification(
+                    joySlackNotification(
                         channel: 'os', comment: 'strap-cache')
                 }
             }
@@ -336,9 +336,9 @@ export MANTA_TOOLS_PATH=/root/bin/
     }
     post {
         always {
-            joyMattermostNotification(
+            joySlackNotification(
                 channel: 'jenkins', comment: 'pipeline complete')
-            joyMattermostNotification(
+            joySlackNotification(
                 channel: 'os', comment: 'pipeline complete')
         }
     }

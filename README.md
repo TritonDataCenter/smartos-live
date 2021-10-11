@@ -44,8 +44,8 @@ includes:
   If you wish to send mail to the list you'll need to join, but you can view
   and search the archives online without being a member.
 
-* In the *#smartos* IRC channel on the [Freenode IRC
-  network](https://freenode.net/).
+* In the *#smartos* IRC channel on the [Libera Chat IRC
+  network](https://libera.chat/).
 
 # Bug Reports
 
@@ -472,7 +472,7 @@ PUBLISHER="joyent"
 RELEASE_VER="joyent_147"
 ON_CLOSED_BINS_URL="https://us-east.manta.joyent.com/Joyent_Dev/public/releng/illumos/on-closed-bins.i386.tar.bz2"
 ON_CLOSED_BINS_ND_URL="https://us-east.manta.joyent.com/Joyent_Dev/public/releng/illumos/on-closed-bins-nd.i386.tar.bz2"
-ILLUMOS_ADJUNCT_TARBALL_URL="https://us-east.manta.joyent.com/Joyent_Dev/public/releng/adjuncts/illumos-adjunct.20130131.tgz"
+ILLUMOS_ADJUNCT_TARBALL_URL="https://us-east.manta.joyent.com/Joyent_Dev/public/releng/adjuncts/illumos-adjunct.20210922.tgz"
 ```
 
 ### Debug Builds

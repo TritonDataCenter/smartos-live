@@ -44,7 +44,7 @@ pipeline {
                 '<dd>platform root password [default: randomly chosen]</dd>\n' +
                 '<dt>-S</dt>\n' +
                 '<dd>do *not* run smatch [default is to run smatch]</dd>\n' +
-                '<dt>-s gcc7</dt>\n' +
+                '<dt>-s gcc10</dt>\n' +
                 '<dd>shadow compilers, comma delimited (gcc4,gcc#) [default: none]</dd>\n' +
                 '</dl>'
         )
@@ -247,6 +247,12 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 }
             }
         }
+/*
+ * Eliminate the gcc4 stage.  Keep it commented-out so when we bring up a
+ * gcc10 stage, we don't have as much work to do.
+ */
+/* BEGIN COMMENTED-OUT gcc4 STAGE */
+/*
         stage('gcc4') {
             agent {
                 node {
@@ -290,6 +296,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                 }
             }
         }
+*/ /* END COMMENTED-OUT gcc4 STAGE */
         stage('strap-cache') {
             agent {
                 node {

@@ -3,7 +3,7 @@
   "description": "Native bindings to the getzonebyid(3C) library",
   "version": "1.2.0",
   "author": "Dave Eddy <dave@daveeddy.com> (http://www.daveeddy.com)",
-  "repository": "git://github.com/joyent/node-zonename.git",
+  "repository": "https://github.com/joyent/node-zonename.git",
   "main": ".index.js",
   "dependencies": {
     "nan": "^2.14.1"

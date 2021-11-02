@@ -9,7 +9,7 @@
 ,"dependencies": []
 ,"devDependencies": ["vows"]
 ,"repositories": [{ "type": "git"
-		   ,"path": "git://github.com/astro/node-expat.git"
+		   ,"path": "https://github.com/astro/node-expat.git"
 		  }]
 ,"homepage": "http://github.com/astro/node-expat"
 ,"bugs": "http://github.com/astro/node-expat/issues"

@@ -334,7 +334,7 @@ To test this, start a fresh clone of smartos-live and build. For
 example:
 
 ```
-$ git clone git://github.com/joyent/smartos-live test
+$ git clone https://github.com/joyent/smartos-live test
 $ cd test
 $ ./configure && gmake live
 $

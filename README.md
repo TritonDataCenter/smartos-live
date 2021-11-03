@@ -262,7 +262,7 @@ Once the build zone has been configured, you can kick off a build in a
 few easy steps:
 
 ```
-$ git clone git://github.com/joyent/smartos-live
+$ git clone https://github.com/joyent/smartos-live
 $ cd smartos-live
 $ ./configure
 $ gmake live
@@ -497,7 +497,7 @@ arguments when running `./configure` to take care of it. For example, you
 would modify the normal workflow as follows:
 
 ```
-$ git clone git://github.com/joyent/smartos-live
+$ git clone https://github.com/joyent/smartos-live
 $ cd smartos-live
 $ ./configure -d
 $ gmake live

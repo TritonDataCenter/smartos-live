@@ -6,7 +6,7 @@
 , "directories": { "lib": "." }
 , "repository" :
   { "type" : "git"
-  , "url" : "git://github.com/postwait/node-libuuid.git"
+  , "url" : "https://github.com/postwait/node-libuuid.git"
   }
 , "bugs" :
   { "url" : "http://github.com/postwait/node-libuuid/issues"

@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright 2020 Joyent, Inc.
+# Copyright 2021 Joyent, Inc.
 #
 shopt -s xpg_echo
 unalias -a
@@ -409,7 +409,6 @@ LEX=/opt/local/bin/lex;				export LEX
 YACC=/opt/local/bin/yacc;			export YACC
 BISON=/opt/local/bin/bison;			export BISON
 GM4=/opt/local/bin/gm4;				export GM4
-RPCGEN=/opt/local/bin/rpcgen;			export RPCGEN
 ASTBINDIR=/opt/local/ast/bin;			export ASTBINDIR
 LD_TOXIC_PATH="\$ROOT/lib:\$ROOT/usr/lib";	export LD_TOXIC_PATH
 # generate buildversion for illumos buildversion module

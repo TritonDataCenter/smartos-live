@@ -256,7 +256,7 @@ esac
 # Upload artifacts separately for smartos to ~~/public/SmartOS, only if this is
 # a non-debug, release build.
 # We check for an empty $PLATFORM_DEBUG_SUFFIX as that gets used as the way to
-# prevent downstream Jenkins builds (e.g. 'platform-gcc4') uploading artifacts
+# prevent downstream Jenkins builds (e.g. 'platform-gcc10') uploading artifacts
 # to the 'platform' Manta directory, even though they may not strictly be debug
 # builds.
 #

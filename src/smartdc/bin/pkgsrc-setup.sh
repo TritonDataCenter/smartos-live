@@ -37,7 +37,7 @@ root="/${1}"
 BOOTSTRAP_TAR="bootstrap-trunk-tools-20201019.tar.gz"
 BOOTSTRAP_SHA="9b7a6daff5528d800e8cea20692f61ccd3b81471"
 
-cd /var/tmp || fatal 'cd to /var/tmp failed'
+cd /tmp || fatal 'cd to /tmp failed'
 
 curl -kO https://pkgsrc.joyent.com/packages/SmartOS/bootstrap/${BOOTSTRAP_TAR}
 DOWNLOADED_SHA="$(/bin/digest -a sha1 ${BOOTSTRAP_TAR})"

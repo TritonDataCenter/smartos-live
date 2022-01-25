@@ -1018,9 +1018,11 @@ create_zpools()
 
 	if [[ -n $install_pkgsrc ]]; then
 		tmproot=$(mktemp -d)
-		mount -F zfs "$OPTDS" "$tmproot"
+		tmpopt="${tmproot}/opt"
+		mkdir -p "$tmpopt"
+		mount -F zfs "$OPTDS" "$tmpopt"
 		/opt/smartdc/bin/pkgsrc-setup.sh "$tmproot"
-		umount "$tmproot"
+		umount "$tmpopt"
 	fi
 
 	#

@@ -27,6 +27,11 @@ function fatal () {
     exit 1
 }
 
+if [[ -n "$TRACE" ]]; then
+    export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -o xtrace
+fi
+
 root="/${1}"
 
 BOOTSTRAP_TAR="bootstrap-trunk-tools-20201019.tar.gz"

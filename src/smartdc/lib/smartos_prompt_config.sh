@@ -1021,7 +1021,7 @@ create_zpools()
 		tmpopt="${tmproot}/opt"
 		mkdir -p "$tmpopt"
 		mount -F zfs "$OPTDS" "$tmpopt"
-		/opt/smartdc/bin/pkgsrc-setup.sh "$tmproot"
+		/smartdc/bin/pkgsrc-setup "$tmproot"
 		umount "$tmpopt"
 	fi
 
@@ -1303,6 +1303,7 @@ a self-booting pool.\n"
 
 	Note that external Internet access is required to use pkgsrc.\n"
 
+	printf "$message"
 	promptval "Install pkgsrc? [y/n] " "$install_pkgsrc" "install_pkgsrc"
 	if [[ $val =~ [YyEeSs] ]]; then
 		install_pkgsrc=true

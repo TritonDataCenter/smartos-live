@@ -333,6 +333,7 @@ BUILT_SMARTDC_TARGETS = \
 	smartdc/bin/sdc-factoryreset \
 	smartdc/bin/sdc-lastcomm \
 	smartdc/bin/sdc-zfs-io-throttle \
+	smartdc/bin/pkgsrc-setup \
 	smartdc/bin/qemu-exec
 
 SMARTDC_TARGETS = $(BUILT_SMARTDC_TARGETS)

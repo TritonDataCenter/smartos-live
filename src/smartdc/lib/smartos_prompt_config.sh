@@ -1301,11 +1301,10 @@ Would you like to install 3rd party add-on software tools?
 These tools, while not part of SmartOS, have been compiled to work
 in the global zone.
 
-Note that external Internet access is required to install pkgsrc.
-"
+Note that external Internet access is required to install pkgsrc.\n\n"
 
 	printf "$message"
-	promptval "Install pkgsrc? [y/n] " "$install_pkgsrc" "install_pkgsrc"
+	promptval "Install pkgsrc?" "$install_pkgsrc" "install_pkgsrc" "y"
 	if [[ $val =~ [YyEeSs] ]]; then
 		install_pkgsrc=true
 	fi

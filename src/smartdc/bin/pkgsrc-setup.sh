@@ -39,11 +39,12 @@ BOOTSTRAP_SHA="9b7a6daff5528d800e8cea20692f61ccd3b81471"
 
 cd /tmp || fatal 'cd to /tmp failed'
 
-curl -kO https://pkgsrc.joyent.com/packages/SmartOS/bootstrap/${BOOTSTRAP_TAR}
+printf 'Downloading pkgsrc bootstrap...\n'
+curl -# -kO https://pkgsrc.joyent.com/packages/SmartOS/bootstrap/${BOOTSTRAP_TAR}
 DOWNLOADED_SHA="$(/bin/digest -a sha1 ${BOOTSTRAP_TAR})"
 
 if ! [[ "${BOOTSTRAP_SHA}" = "${DOWNLOADED_SHA}" ]]; then
-    fatal "ERROR: checksum failure"
+    fatal "ERROR: pkgsrc bootstrap checksum failure"
 fi
 
 if [[ -d "$root" ]]; then

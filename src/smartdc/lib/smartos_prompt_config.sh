@@ -1301,7 +1301,7 @@ a self-booting pool.\n"
 	These tools, while not part of SmartOS, have been compiled to work
 	in the global zone.
 
-	Note that external Internet access is required to use pkgsrc.\n"
+	Note that external Internet access is required to install pkgsrc.\n\n"
 
 	printf "$message"
 	promptval "Install pkgsrc? [y/n] " "$install_pkgsrc" "install_pkgsrc"

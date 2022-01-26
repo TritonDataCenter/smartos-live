@@ -1304,7 +1304,7 @@ in the global zone.
 Note that external Internet access is required to install pkgsrc.\n\n"
 
 	printf "$message"
-	promptval "Install pkgsrc?" "$install_pkgsrc" "install_pkgsrc" "y"
+	promptval "Install pkgsrc?" "y" "install_pkgsrc"
 	if [[ $val =~ [YyEeSs] ]]; then
 		install_pkgsrc=true
 	fi

@@ -51,5 +51,7 @@ if [[ -d "$root" ]]; then
     tar -zxpf ${BOOTSTRAP_TAR} -C "${root}"
 fi
 
-printf 'The pkgsrc-tools collection is now ready for use. It will be in\n'
-printf 'your PATH the next time you log in.\n'
+if [[ ${#root} == 1 ]]; then
+    printf 'The pkgsrc-tools collection is now ready for use. It will be in\n'
+    printf 'your PATH the next time you log in.\n'
+fi

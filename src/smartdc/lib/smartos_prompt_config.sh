@@ -1296,12 +1296,13 @@ a self-booting pool.\n"
 
 	printheader "Pkgsrc Tools"
 	message="
-	Would you like to install 3rd party add-on software tools?
+Would you like to install 3rd party add-on software tools?
 
-	These tools, while not part of SmartOS, have been compiled to work
-	in the global zone.
+These tools, while not part of SmartOS, have been compiled to work
+in the global zone.
 
-	Note that external Internet access is required to install pkgsrc.\n\n"
+Note that external Internet access is required to install pkgsrc.
+"
 
 	printf "$message"
 	promptval "Install pkgsrc? [y/n] " "$install_pkgsrc" "install_pkgsrc"

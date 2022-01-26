@@ -34,6 +34,10 @@ fi
 
 root="/${1}"
 
+# Occasionally, the filename and hash will need to be updated. Refer to
+# pkgsrc.joyent.com for changes. Old boostrap tars are kept around indefinitely,
+# so there's no particular urgency for getting it done when a new bootstrap
+# is available, but we'll want to stay relatively up to date.
 BOOTSTRAP_TAR="bootstrap-trunk-tools-20201019.tar.gz"
 BOOTSTRAP_SHA="9b7a6daff5528d800e8cea20692f61ccd3b81471"
 

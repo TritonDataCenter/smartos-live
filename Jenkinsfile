@@ -45,7 +45,7 @@ pipeline {
                 '<dt>-S</dt>\n' +
                 '<dd>do *not* run smatch [default is to run smatch]</dd>\n' +
                 '<dt>-s gcc10</dt>\n' +
-                '<dd>shadow compilers, comma delimited (gcc4,gcc#) [default: none]</dd>\n' +
+                '<dd>shadow compilers, comma delimited (gcc10,gcc#) [default: none]</dd>\n' +
                 '</dl>'
         )
         text(

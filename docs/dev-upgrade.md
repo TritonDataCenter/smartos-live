@@ -340,10 +340,6 @@ $ ./configure && gmake live
 $
 ```
 
-Note that during the `configure` phase, if gcc49 does not exist on the
-system, it will be installed as it's still needed for bootstrapping the
-`proto.strap` gcc compiler used by the build.
-
 ## Cleaning Up
 
 Once you're satisfied, you should go through and delete the snapshots

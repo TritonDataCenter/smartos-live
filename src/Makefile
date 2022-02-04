@@ -217,6 +217,7 @@ $(KSTAT.NODE) :	LIBS +=		-lkstat
 NODE_SUBDIR_ENV = \
 			V=1 \
 			NODE_DTRACE_PROVIDER_REQUIRE=hard \
+			PYTHON="/opt/local/bin/python2.7" \
 			CC="$(GCC)" \
 			CXX="$(GXX)" \
 			CPPFLAGS="$(NODE_CPPFLAGS)" \

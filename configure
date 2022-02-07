@@ -483,14 +483,6 @@ done
 
 PRIMARY_COMPILER_VER=$(echo $PRIMARY_COMPILER | sed 's/^gcc//')
 
-# XXX KEBE SAYS POSSIBLY NUKE THIS WHOLE SECTION.
-# XXX KEBE SAYS BUT FOR NOW, JUST COMMENT IT OUT.
-# To allow building on base-64-lts 18.4 systems where
-# /opt/local/bin/gcc is incapable of building our local copy
-# of gcc 4, specify where to find gcc49 which gets installed
-# during 'install_pkgin'.
-#HOST_GCC4_PREFIX=/opt/local/gcc49/bin
-
 cat >build.env <<EOF
 FORCE_STRAP_REBUILD=$FORCE_STRAP_REBUILD
 ILLUMOS_CLOBBER=$ILLUMOS_CLOBBER

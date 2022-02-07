@@ -111,7 +111,7 @@ pipeline {
         stage('check') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-check"
                 }
@@ -154,7 +154,7 @@ set -o pipefail
                 // completes).
                 // Use ${BRANCH_NAME} instead.
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
                     'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-default"
                 }
@@ -201,7 +201,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
         stage('debug') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
                         'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-debug"
                 }
@@ -250,7 +250,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
         stage('gcc10') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
                         'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-gcc10"
                 }
@@ -293,7 +293,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc10
         stage('strap-cache') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
+                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
                         'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-strap-cache"
                 }

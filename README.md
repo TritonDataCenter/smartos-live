@@ -170,19 +170,19 @@ inside of a non-global zone.
 
 ### Importing the Zone Image
 
-The SmartOS build currently uses the `base-64-lts 18.4.0` image
-which has a UUID of `c193a558-1d63-11e9-97cf-97bb3ee5c14f `. To import
+The SmartOS build currently uses the `base-64-lts 21.4.0` image
+which has a UUID of `c8715b60-7e98-11ec-82d1-03d16599f529 `. To import
 the image, you should run the imgadm command from the global zone:
 
 ```
-# imgadm import c193a558-1d63-11e9-97cf-97bb3ee5c14f
-Importing c193a558-1d63-11e9-97cf-97bb3ee5c14f (base-64-lts@18.4.0) from "https://images.joyent.com"
-Gather image c193a558-1d63-11e9-97cf-97bb3ee5c14f ancestry
+# imgadm import c8715b60-7e98-11ec-82d1-03d16599f529
+Importing c8715b60-7e98-11ec-82d1-03d16599f529 (base-64-lts@21.4.0) from "https://images.joyent.com"
+Gather image c8715b60-7e98-11ec-82d1-03d16599f529 ancestry
 Must download and install 1 image (148.6 MiB)
 Download 1 image     [=======================>] 100% 148.62MB 497.77KB/s  5m 5s
-Downloaded image c193a558-1d63-11e9-97cf-97bb3ee5c14f (148.6 MiB)
-...97cf-97bb3ee5c14f [=======================>] 100% 148.62MB   5.12MB/s    29s
-Imported image c193a558-1d63-11e9-97cf-97bb3ee5c14f (base-64-lts@18.4.0)
+Downloaded image c8715b60-7e98-11ec-82d1-03d16599f529 (148.6 MiB)
+...82d1-03d16599f529 [=======================>] 100% 148.62MB   5.12MB/s    29s
+Imported image c8715b60-7e98-11ec-82d1-03d16599f529 (base-64-lts@21.4.0)
 #
 ```
 
@@ -192,7 +192,7 @@ To create a zone, you need to create a `joyent` branded zone with
 `vmadm`. We recommend that the zone have the following attributes:
 
 * The brand set to `"joyent"`
-* The `image_uuid` set to `"c193a558-1d63-11e9-97cf-97bb3ee5c14f"`
+* The `image_uuid` set to `"c8715b60-7e98-11ec-82d1-03d16599f529"`
 * At least 25 GiB of disk space specified in the `quota` property
 * At least 2-4 GiB of DRAM specified in the `max-physical-memory`
 property
@@ -903,16 +903,16 @@ Running mount -O -F lofs -o ro /var/tmp/smartos-test-loopback/usr /usr
 Running tar -xzf ./tests-test_archive-master-20191001T134222Z.tgz -C / ./opt ./kernel ./tests.manifest.gen ./tests.buildstamp
 adding cyrus user
 adding ztest user
-Running curl -kO https://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2018Q4-tools.tar.gz
+Running curl -kO https://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2021Q4-tools.tar.gz
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
 100 22.9M  100 22.9M    0     0   566k      0  0:00:41  0:00:41 --:--:--  577k
-Running tar -zxpf bootstrap-2018Q4-tools.tar.gz -C /
+Running tar -zxpf bootstrap-2021Q4-tools.tar.gz -C /
 Running ln -s /opt/tools /opt/local
 Running pkgin -y in python27 sudo coreutils gcc7 gmake
 reading local summary...
 processing local summary...
-processing remote summary (https://pkgsrc.joyent.com/packages/SmartOS/2018Q4/tools/All)...
+processing remote summary (https://pkgsrc.joyent.com/packages/SmartOS/2021Q4/tools/All)...
 pkg_summary.xz                                                                                        100%  120KB 119.9KB/s   00:00
 calculating dependencies...done.
 

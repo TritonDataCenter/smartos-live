@@ -1,7 +1,7 @@
 # Upgrading Development Zones
 
 Over time, we update the base development environment that everyone is using.
-The current target is the x86_64 2018.4.x image series as noted in
+The current target is the x86_64 2021.4.x image series as noted in
 [the SmartOS Getting Started Guide](../README.md#importing-the-zone-image).
 
 The purpose of this guide is to describe how an **existing** development zone
@@ -80,11 +80,11 @@ In this case, we're interested in upgrading the instance called
 `march-dev`. Next we create a snapshot and verify it exists:
 
 ```
-$ triton inst snapshot create --name=2018.4-upgrade march-dev
-Creating snapshot 2018.4-upgrade of instance march-dev
+$ triton inst snapshot create --name=2021.4-upgrade march-dev
+Creating snapshot 2021.4-upgrade of instance march-dev
 $ triton inst snapshot list march-dev
 NAME            STATE    CREATED
-2018.4-upgrade  created  2018-09-28T18:40:14.000Z
+2021.4-upgrade  created  2018-09-28T18:40:14.000Z
 ```
 
 #### Manual Snapshots in SmartOS
@@ -97,8 +97,8 @@ Then you use the `create-snapshot` option.
 [root@00-0c-29-37-80-28 ~]# vmadm list
 UUID                                  TYPE  RAM      STATE             ALIAS
 79809c3b-6c21-4eee-ba85-b524bcecfdb8  OS    4096     running           multiarch
-[root@00-0c-29-37-80-28 ~]# vmadm create-snapshot 79809c3b-6c21-4eee-ba85-b524bcecfdb8 2018.4-upgrade
-Created snapshot 2018.4-upgrade for VM 79809c3b-6c21-4eee-ba85-b524bcecfdb8
+[root@00-0c-29-37-80-28 ~]# vmadm create-snapshot 79809c3b-6c21-4eee-ba85-b524bcecfdb8 2021.4-upgrade
+Created snapshot 2021.4-upgrade for VM 79809c3b-6c21-4eee-ba85-b524bcecfdb8
 ```
 
 If your VM has delegated snapshots, you won't be able to use `vmadm` to take

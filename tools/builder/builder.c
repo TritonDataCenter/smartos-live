@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/fcntl.h>
 
 #define MAX_DIRS     10
 #define MAX_LINE_LEN 1024

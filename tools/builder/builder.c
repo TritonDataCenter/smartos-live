@@ -111,6 +111,13 @@ void handle_file(const char *target, const char *mode, const char *user, const c
 
 }
 
+/* Disambiguate the chasing of symlinks at the end... */
+static int
+no_xpg4_link(const char *existing, const char *new)
+{
+	return (linkat(AT_FDCWD, existing, AT_FDCWD, new, 0));
+}
+
 void handle_link(const char *target, const char *type, int(*linker)(const char *, const char *))
 {
   char *copy, *ptr, *oldpath, *newpath;
@@ -234,7 +241,7 @@ int main(int argc, char *argv[])
            case 'h':
              if (args_found == 2) {
                if (pass == 4) {
-                 handle_link(target, "link", link);
+                 handle_link(target, "link", no_xpg4_link);
                }
              } else {
                printf("Wrong number of arguments for link on line[%d]: %s\n", lineno, line);

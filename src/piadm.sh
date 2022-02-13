@@ -176,11 +176,43 @@ vcurl() {
 	fi
 }
 
-# Well-known source of SmartOS Platform Images
+# Default well-known source of SmartOS Platform Images
 DEFAULT_URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
 
-# Can be overridden by the user's PIADM_URL_PREFIX.
-URL_PREFIX=${PIADM_URL_PREFIX:-${DEFAULT_URL_PREFIX}}
+#
+# (Re)-Configure the default URL (and potentially other things in the future)
+# using 
+#
+config_check() {
+	# Can't do standalone_only per se as it errors out, but this only
+	# applies to standalone SmartOS.
+	if [[ "$TRITON_CN" == "yes" || "$TRITON_HN" == "yes" ]]; then
+		return
+	fi
+
+	if [[ -e /var/piadm/piadm.conf ]]; then
+		. /var/piadm/piadm.conf
+	else
+		# We're create /var/piadm/piadm.conf.
+		# NOTE: On an installation this will disappear as /var is
+		# on the ramdisk.
+		mkdir -p /var/piadm
+
+		# Update as we add more things.  Each change bumps
+		# PIADM_CONFIG_VERSION by one.
+		PIADM_CONFIG_VERSION=1
+		printf "PIADM_CONFIG_VERSION=%s\n" $PIADM_CONFIG_VERSION > \
+			/var/piadm/piadm.conf
+		printf "DEFAULT_URL_PREFIX=%s\n" $DEFAULT_URL_PREFIX >> \
+			/var/piadm/piadm.conf
+	fi
+
+	# XXX KEBE SAYS FILL IN REALITY CHECKS FOR PIADM_CONFIG_VERSION
+	# and more
+
+	# Can furthermore be overridden by the user's PIADM_URL_PREFIX.
+	URL_PREFIX=${PIADM_URL_PREFIX:-${DEFAULT_URL_PREFIX}}
+}
 
 avail() {
 	# For now, assume that the URL_PREFIX points to a Manta
@@ -1425,6 +1457,9 @@ fi
 # Determine if we're running on a Triton Compute Node (CN) or not:
 bootparams | grep -E -q 'smartos=|headnode=' || initialize_as_CN
 bootparams | grep -q 'headnode=' && initialize_as_HN
+
+# Check the /var/piadm/piadm.sh out.
+config_check
 
 cmd=$1
 shift 1

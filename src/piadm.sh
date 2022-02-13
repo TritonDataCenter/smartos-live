@@ -41,7 +41,7 @@ corrupt() {
 	exit 3
 }
 
-# Don't run in the global zone.
+# Only run in the global zone.
 [[ "$(zonename)" == "global" ]] || err "Cannot run piadm in the global zone"
 
 usage() {

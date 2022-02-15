@@ -42,7 +42,7 @@ corrupt() {
 }
 
 # Only run in the global zone.
-[[ "$(zonename)" == "global" ]] || err "Cannot run piadm in the global zone"
+[[ "$(zonename)" == "global" ]] || err "Must run piadm in the global zone"
 
 usage() {
 	eecho ""

@@ -178,10 +178,12 @@ vcurl() {
 
 # Default well-known source of SmartOS Platform Images
 DEFAULT_URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
+# Default path for piadm's configuration
+PIADM_CONF=/var/piadm/piadm.conf
 
 #
 # (Re)-Configure the default URL (and potentially other things in the future)
-# using 
+# using the configuration file (in $PIADM_CONF).
 #
 config_check() {
 	# Can't do standalone_only per se as it errors out, but this only
@@ -190,25 +192,48 @@ config_check() {
 		return
 	fi
 
-	if [[ -e /var/piadm/piadm.conf ]]; then
-		. /var/piadm/piadm.conf
+	OLD_DEFAULT="$DEFAULT_URL_PREFIX"
+	if [[ -f $PIADM_CONF ]]; then
+		. $PIADM_CONF
 	else
-		# We're create /var/piadm/piadm.conf.
+		# We're creating $PIADM_CONF.
 		# NOTE: On an installation this will disappear as /var is
 		# on the ramdisk.
+		vecho "Creating $PIADM_CONF"
+		rm -rf $PIADM_CONF
 		mkdir -p /var/piadm
 
+		# The latest default behavior should be hardcoded in this path.
 		# Update as we add more things.  Each change bumps
 		# PIADM_CONFIG_VERSION by one.
 		PIADM_CONFIG_VERSION=1
 		printf "PIADM_CONFIG_VERSION=%s\n" $PIADM_CONFIG_VERSION > \
-			/var/piadm/piadm.conf
+			$PIADM_CONF
 		printf "DEFAULT_URL_PREFIX=%s\n" $DEFAULT_URL_PREFIX >> \
-			/var/piadm/piadm.conf
+			$PIADM_CONF
 	fi
 
-	# XXX KEBE SAYS FILL IN REALITY CHECKS FOR PIADM_CONFIG_VERSION
-	# and more
+	# Reality checks for PIADM_CONFIG_VERSION and more.
+	# Currently we only have one version. In the future, we will need to
+	# change that.  We will do strict string comparisons too, instead of
+	# numeric ones, to harden against corrupt piadm.conf files.
+	#
+	if [[ "$PIADM_CONFIG_VERSION" == "1" ]]; then
+		if [[ $VERBOSE -eq 1 ]]; then
+			echo "Version 1 of $PIADM_CONF"
+			echo "The following file contents have been configured:"
+			echo ""
+			cat $PIADM_CONF
+			echo ""
+			if [[ "$OLD_DEFAULT" != "$DEFAULT_URL_PREFIX" ]]; then
+				echo "DEFAULT_URL_PREFIX was $OLD_DEFAULT ,"
+				echo "but now is $DEFAULT_URL_PREFIX"
+			fi
+		fi
+	else
+		eecho "WARNING: Bad config file version: $PIADM_CONFIG_VERSION"
+		err "Please fix, or delete, $PIADM_CONF and run again"
+	fi
 
 	# Can furthermore be overridden by the user's PIADM_URL_PREFIX.
 	URL_PREFIX=${PIADM_URL_PREFIX:-${DEFAULT_URL_PREFIX}}
@@ -1458,7 +1483,7 @@ fi
 bootparams | grep -E -q 'smartos=|headnode=' || initialize_as_CN
 bootparams | grep -q 'headnode=' && initialize_as_HN
 
-# Check the /var/piadm/piadm.sh out.
+# Check the configuration file out.
 config_check
 
 cmd=$1

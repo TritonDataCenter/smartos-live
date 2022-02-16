@@ -203,14 +203,12 @@ config_check() {
 		rm -rf $PIADM_CONF
 		mkdir -p /var/piadm
 
-		# The latest default behavior should be hardcoded in this path.
-		# Update as we add more things.  Each change bumps
-		# PIADM_CONFIG_VERSION by one.
 		PIADM_CONFIG_VERSION=1
-		printf "PIADM_CONFIG_VERSION=%s\n" $PIADM_CONFIG_VERSION > \
-			$PIADM_CONF
-		printf "DEFAULT_URL_PREFIX=%s\n" $DEFAULT_URL_PREFIX >> \
-			$PIADM_CONF
+		cat <<EOF  > $PIADM_CONF
+PIADM_CONFIG_VERSION=$PIADM_CONFIG_VERSION
+DEFAULT_URL_PREFIX=$DEFAULT_URL_PREFIX
+EOF
+
 	fi
 
 	# Reality checks for PIADM_CONFIG_VERSION and more.

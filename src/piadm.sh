@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright 2021 Joyent, Inc.
+# Copyright 2022 Joyent, Inc.
 #
 
 # shellcheck disable=1091
@@ -40,6 +40,9 @@ corrupt() {
 	eecho "POSSIBLE CORRUPTION:" "$*"
 	exit 3
 }
+
+# Only run in the global zone.
+[[ "$(zonename)" == "global" ]] || err "Must run piadm in the global zone"
 
 usage() {
 	eecho ""
@@ -83,6 +86,16 @@ vecho() {
 declare bootfs
 declare -a allbootfs
 declare numbootfs
+
+#
+# Privilege check.  For now, lets just make sure we're root (user 0).
+# NOTE: Global zone check was earlier, but some subcommands do NOT
+# need privilege, so functionalize that check here for easy naming,
+# and potential for more sophistication later.
+#
+privcheck() {
+	[[ "$(id -u)" == 0 ]] || err "Must be root for $1"
+}
 
 #
 # Inventory pools and bootable file systems.
@@ -1489,6 +1502,7 @@ shift 1
 
 case $cmd in
 	activate | assign )
+		privcheck "$cmd"
 		standalone_only "$cmd"
 		activate "$@"
 		;;
@@ -1499,10 +1513,12 @@ case $cmd in
 		;;
 
 	bootable )
+		privcheck bootable
 		bootable "$@"
 		;;
 
 	install )
+		privcheck install
 		standalone_only install
 		install "$@"
 		cd /${bootfs}
@@ -1514,11 +1530,13 @@ case $cmd in
 		;;
 
 	remove )
+		privcheck remove
 		standalone_only remove
 		remove "$@"
 		;;
 
 	update )
+		privcheck update
 		update_CN "$@"
 		;;
 

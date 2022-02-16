@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright 2021 Joyent, Inc.
+# Copyright 2022 Joyent, Inc.
 #
 
 # shellcheck disable=1091
@@ -40,6 +40,9 @@ corrupt() {
 	eecho "POSSIBLE CORRUPTION:" "$*"
 	exit 3
 }
+
+# Only run in the global zone.
+[[ "$(zonename)" == "global" ]] || err "Must run piadm in the global zone"
 
 usage() {
 	eecho ""
@@ -83,6 +86,16 @@ vecho() {
 declare bootfs
 declare -a allbootfs
 declare numbootfs
+
+#
+# Privilege check.  For now, lets just make sure we're root (user 0).
+# NOTE: Global zone check was earlier, but some subcommands do NOT
+# need privilege, so functionalize that check here for easy naming,
+# and potential for more sophistication later.
+#
+privcheck() {
+	[[ "$(id -u)" == 0 ]] || err "Must be root for $1"
+}
 
 #
 # Inventory pools and bootable file systems.
@@ -176,11 +189,66 @@ vcurl() {
 	fi
 }
 
-# Well-known source of SmartOS Platform Images
+# Default well-known source of SmartOS Platform Images
 DEFAULT_URL_PREFIX=https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/
+# Default path for piadm's configuration
+PIADM_CONF=/var/piadm/piadm.conf
 
-# Can be overridden by the user's PIADM_URL_PREFIX.
-URL_PREFIX=${PIADM_URL_PREFIX:-${DEFAULT_URL_PREFIX}}
+#
+# (Re)-Configure the default URL (and potentially other things in the future)
+# using the configuration file (in $PIADM_CONF).
+#
+config_check() {
+	# Can't do standalone_only per se as it errors out, but this only
+	# applies to standalone SmartOS.
+	if [[ "$TRITON_CN" == "yes" || "$TRITON_HN" == "yes" ]]; then
+		return
+	fi
+
+	OLD_DEFAULT="$DEFAULT_URL_PREFIX"
+	if [[ -f $PIADM_CONF ]]; then
+		. $PIADM_CONF
+	else
+		# We're creating $PIADM_CONF.
+		# NOTE: On an installation this will disappear as /var is
+		# on the ramdisk.
+		vecho "Creating $PIADM_CONF"
+		rm -rf $PIADM_CONF
+		mkdir -p /var/piadm
+
+		PIADM_CONFIG_VERSION=1
+		cat <<EOF  > $PIADM_CONF
+PIADM_CONFIG_VERSION=$PIADM_CONFIG_VERSION
+DEFAULT_URL_PREFIX=$DEFAULT_URL_PREFIX
+EOF
+
+	fi
+
+	# Reality checks for PIADM_CONFIG_VERSION and more.
+	# Currently we only have one version. In the future, we will need to
+	# change that.  We will do strict string comparisons too, instead of
+	# numeric ones, to harden against corrupt piadm.conf files.
+	#
+	if [[ "$PIADM_CONFIG_VERSION" == "1" ]]; then
+		if [[ $VERBOSE -eq 1 ]]; then
+			echo "Version 1 of $PIADM_CONF"
+			echo "The following file contents have been configured:"
+			echo ""
+			cat $PIADM_CONF
+			echo ""
+			if [[ "$OLD_DEFAULT" != "$DEFAULT_URL_PREFIX" ]]; then
+				echo "DEFAULT_URL_PREFIX was $OLD_DEFAULT ,"
+				echo "but now is $DEFAULT_URL_PREFIX"
+			fi
+		fi
+	else
+		eecho "WARNING: Bad config file version: $PIADM_CONFIG_VERSION"
+		err "Please fix, or delete, $PIADM_CONF and run again"
+	fi
+
+	# Can furthermore be overridden by the user's PIADM_URL_PREFIX.
+	URL_PREFIX=${PIADM_URL_PREFIX:-${DEFAULT_URL_PREFIX}}
+}
 
 avail() {
 	# For now, assume that the URL_PREFIX points to a Manta
@@ -1426,11 +1494,15 @@ fi
 bootparams | grep -E -q 'smartos=|headnode=' || initialize_as_CN
 bootparams | grep -q 'headnode=' && initialize_as_HN
 
+# Check the configuration file out.
+config_check
+
 cmd=$1
 shift 1
 
 case $cmd in
 	activate | assign )
+		privcheck "$cmd"
 		standalone_only "$cmd"
 		activate "$@"
 		;;
@@ -1441,10 +1513,12 @@ case $cmd in
 		;;
 
 	bootable )
+		privcheck bootable
 		bootable "$@"
 		;;
 
 	install )
+		privcheck install
 		standalone_only install
 		install "$@"
 		cd /${bootfs}
@@ -1456,11 +1530,13 @@ case $cmd in
 		;;
 
 	remove )
+		privcheck remove
 		standalone_only remove
 		remove "$@"
 		;;
 
 	update )
+		privcheck update
 		update_CN "$@"
 		;;
 

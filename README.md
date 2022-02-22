@@ -1005,7 +1005,7 @@ failed, the names of those suites are emitted by `smartos-test` just before
 the script exits.
 
 When developers are adding tests to illumos, they should ensure that new
-tests are added to `$SRC/usr/src/pkg/manifests/\*.mf` as these IPS
+tests are added to `$SRC/usr/src/pkg/manifests/\*.p5m` as these IPS
 manifests are used to generate the test archive during the SmartOS build.
 
 ## Public Interfaces

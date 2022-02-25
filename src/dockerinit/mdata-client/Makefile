@@ -19,7 +19,7 @@ CFLAGS = -I$(PWD) -Wall -Wextra -Werror -g -O2 -m32
 LDLIBS =
 
 BINDIR = /usr/sbin
-MANSECT = 1m
+MANSECT = 8
 MANDIR = /usr/share/man/man$(MANSECT)
 DESTDIR = $(PWD)/proto
 
@@ -93,7 +93,7 @@ $(DESTDIR)$(BINDIR)/%: %
 	cp $< $@
 	touch $@
 
-$(DESTDIR)$(MANDIR)/%.$(MANSECT): man/man1m/%.1m
+$(DESTDIR)$(MANDIR)/%.$(MANSECT): man/man8/%.8
 	@mkdir -p $(DESTDIR)$(MANDIR)
 	sed 's/__SECT__/$(MANSECT)/g' < $< > $@
 

@@ -15,14 +15,14 @@
 
 /*
  * This program forms a private interface between the LX brand in
- * illumos-joyent and the route configuration information stored by vmadm(1M)
+ * illumos-joyent and the route configuration information stored by vmadm(8)
  * in SmartOS/SDC.
  *
- * When an LX branded zone boots, a special replacement for init(1M) is used,
+ * When an LX branded zone boots, a special replacement for init(8) is used,
  * viz.  "/usr/lib/brand/lx/lxinit".  This program is responsible for
  * configuring basic networking settings before starting the emulated Linux
  * "init".  Some of these settings are stored in the zone configuration, but
- * static routes are not; they are stored by vmadm(1M) in a form that requires
+ * static routes are not; they are stored by vmadm(8) in a form that requires
  * some processing at runtime.   The route configuration is, thus, accessed
  * through the "sdc:routes" metadata key from within the zone.
  *

@@ -786,7 +786,7 @@ promptpool()
 WARNING: failed to determine possible disk layout. It is possible that
 the system detected no disks. We are launching a shell to allow you to
 investigate the problem. Check for disks and their sizes with the
-diskinfo(1M) command. If you do not see disks that you expect, please
+diskinfo(8) command. If you do not see disks that you expect, please
 determine your storage controller and reach out to the SmartOS community
 if you require assistence.
 
@@ -1135,7 +1135,7 @@ refers to a physical NIC or an aggregation. Virtual machines will be created on
 top of a network tag. Setup will first create a network tag and configure a NIC
 so that you can access the SmartOS global zone. After setup has been completed,
 you will have the option of creating additional network tags and configuring
-additional NICs for accessing the global zone through the nictagadm(1M) command.
+additional NICs for accessing the global zone through the nictagadm(8) command.
 
 Press [enter] to continue"
 
@@ -1211,7 +1211,7 @@ connected to your 'admin' network. Use 'none' if you have no gateway.\n\n"
 	message="
 The DNS servers set here will be used to provide name resolution abilities to
 the SmartOS global zone itself. These DNS servers are independent of anything
-you use to create virtual machines through vmadm(1M).\n\n"
+you use to create virtual machines through vmadm(8).\n\n"
 
 	if [[ $(getanswer "skip_instructions") != "true" ]]; then
 		printf "$message"

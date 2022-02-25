@@ -1,4 +1,4 @@
-piadm(1M) -- Manage SmartOS Platform Images
+piadm(8) -- Manage SmartOS Platform Images
 ===========================================
 
 
@@ -20,10 +20,10 @@ piadm(1M) -- Manage SmartOS Platform Images
     Historically, SmartOS booted off of a USB key or a read-only media like
     CD-ROM.  The copy and version of the SmartOS software on one of these
     media is called a Platform Image.  A Platform Image is described in
-    detail in the next section.  The piadm(1M) utility enables and manages
+    detail in the next section.  The piadm(8) utility enables and manages
     the ability to instead boot directly off of a ZFS pool.
 
-    piadm(1M) manages multiple Platform Images on a bootable ZFS pool,
+    piadm(8) manages multiple Platform Images on a bootable ZFS pool,
     allowing easier updates to Platform Images and maintaining multiple
     Platform Images on a single boot media.  The method and implementation of
     SmartOS booting does not change vs. a USB key or CD-ROM, but merely uses
@@ -33,7 +33,7 @@ piadm(1M) -- Manage SmartOS Platform Images
 ## PLATFORM IMAGES
 
     A SmartOS Platform Image (PI) is identified by creation timestamp,
-    referred to here as a PI-stamp.  One can see it in uname(1M):
+    referred to here as a PI-stamp.  One can see it in uname(8):
 
         smartos-build(~)[0]% uname -a
         SunOS smartos-build 5.11 joyent_20200602T173751Z i86pc i386 i86pc
@@ -43,7 +43,7 @@ piadm(1M) -- Manage SmartOS Platform Images
 
     The Platform Image is a directory containing:
 
-        - A directory structure in a format used by loader(5).
+        - A directory structure in a format used by loader(7).
 
         - The SmartOS `unix` kernel
 
@@ -54,7 +54,7 @@ piadm(1M) -- Manage SmartOS Platform Images
 
         - A file containing the PI-stamp.
 
-    The SmartOS loader(5) will find a path to a Platform Image on the
+    The SmartOS loader(7) will find a path to a Platform Image on the
     bootable ZFS pool, and will load `unix` and then the boot archive.
 
     Platform images are supplied by either a gzipped tarball containing the
@@ -63,7 +63,7 @@ piadm(1M) -- Manage SmartOS Platform Images
 
 ## BOOT IMAGES
 
-    In addition to platform images, the loader(5) also has a directory
+    In addition to platform images, the loader(7) also has a directory
     structure containing the loader itself and its support files.  These are
     stamped as well with PI stamps, but are distinct from the contents of a
     gzipped PI tarball.  Often, a PI can use an older Boot Image to boot
@@ -76,7 +76,7 @@ piadm(1M) -- Manage SmartOS Platform Images
     directory. Loader config files can also be placed in ${BOOTPOOL}/custom,
     and will be used by all subsequently installed boot images.
 
-    See loader.conf(4) and loader(5) for the format of these files.
+    See loader.conf(5) and loader(7) for the format of these files.
 
 ## BOOTABLE POOLS
 
@@ -88,7 +88,7 @@ piadm(1M) -- Manage SmartOS Platform Images
 
         - At least an MBR on its physical disks for BIOS booting, or if the
           pool was created with `zpool create -B`, an EFI System Partition
-          (ESP) with loader(5) installed in it.
+          (ESP) with loader(7) installed in it.
 
         - At least one Platform Image in /POOL/boot/platform-<PI-stamp>.
 
@@ -128,10 +128,10 @@ piadm(1M) -- Manage SmartOS Platform Images
     network booting. Originally Triton Compute Nodes required a USB key which
     contained iPXE and booted directly into iPXE.
 
-    piadm(1M) can enable a Triton Compute Node's ZFS pool to boot iPXE,
+    piadm(8) can enable a Triton Compute Node's ZFS pool to boot iPXE,
     obviating the need for a USB key.  It detects if a machine is a Triton
     Compute Node, and enables maintenance of iPXE on the bootable pool.  Many
-    piadm(1M) subcommands are disabled on a Triton Compute Node.
+    piadm(8) subcommands are disabled on a Triton Compute Node.
 
     The layout of a Triton Compute Node bootable pool is limited to `boot`
     and `platform` symbolic links to a populated-with-iPXE `boot-ipxe`
@@ -142,7 +142,7 @@ piadm(1M) -- Manage SmartOS Platform Images
 
 ## TRITON HEAD NODES
 
-    The piadm(1M) command can convert a USB-key-booting Triton Head Node into
+    The piadm(8) command can convert a USB-key-booting Triton Head Node into
     a ZFS-pool-booting one.  It can also transfer boot duties from an
     existing ZFS pool to a new one.
 
@@ -152,12 +152,12 @@ piadm(1M) -- Manage SmartOS Platform Images
 
 ## COMMANDS
 
-    The piadm(1M) command will produce more verbose output if -v is stated
-    prior to the command. If -vv is stated prior to the command, piadm(1M)
+    The piadm(8) command will produce more verbose output if -v is stated
+    prior to the command. If -vv is stated prior to the command, piadm(8)
     will produce both -v output and enable the shell's -x flag, which
-    produces output of all of the commands run in the piadm(1M) script.
+    produces output of all of the commands run in the piadm(8) script.
 
-    piadm(1M) commands and options are:
+    piadm(8) commands and options are:
 
       piadm activate <PI-stamp> [ZFS-pool-name]
       piadm assign <PI-stamp> [ZFS-pool-name]
@@ -211,7 +211,7 @@ piadm(1M) -- Manage SmartOS Platform Images
         Triton Compute Node.
 
 	For Triton Head Nodes, the -i option is also disabled.  When invoked
-	with -e on a Head Node, the piadm(1M) command will attempt to convert
+	with -e on a Head Node, the piadm(8) command will attempt to convert
 	a pool to be bootable for a Triton Head Node.  If a Head Node is
 	booting from a USB key, the boot data comes from the USB Key.  If a
 	Head Node is booting from another pool, the boot data comes from the
@@ -227,7 +227,7 @@ piadm(1M) -- Manage SmartOS Platform Images
         Installs a new Platform Image into the bootable pool.  If the source
         also contains the boot image (like an ISO does), the Boot Image will
         also be installed, if available.  If there are more than one bootable
-        pools, a pool name will be required.  piadm(1M) requires a Platform
+        pools, a pool name will be required.  piadm(8) requires a Platform
         Image source.  That source can be:
 
           - A PI-stamp, which will consult the well-known SmartOS PI
@@ -341,7 +341,7 @@ The following exit values are returned:
 
 ## SEE ALSO
 
-    sdcadm(1), zpool(1M), loader(5)
+    sdcadm(1), loader.conf(5), loader(7), zpool(8)
 
 ## NOTES
 
@@ -368,4 +368,4 @@ The following exit values are returned:
     If a bootable pool's boot image or platform image becomes corrupt, even
     if it's `zones`, a machine can still be booted with a USB stick, CD-ROM,
     or other method of booting SmartOS.  A bootable pool can then be
-    repaired using piadm(1M) from the USB stick or CD-ROM.
+    repaired using piadm(8) from the USB stick or CD-ROM.

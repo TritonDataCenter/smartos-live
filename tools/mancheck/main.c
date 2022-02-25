@@ -18,7 +18,7 @@
  *
  * This tool ensures that no manual page is left behind.  We want to audit the
  * traditional paths where user binaries are delivered, ensuring that we ship
- * section "1" and section "1M" manual pages for all of them.
+ * section "1" and section "8" manual pages for all of them.
  */
 
 #include <stdio.h>
@@ -65,11 +65,12 @@ static const char *cm_mpaths[] = {
 /*
  * List of manual sections where pages may be shipped for executable commands.
  * The case of these sections should match the case of the shipped filenames,
- * e.g. "1m", not "1M".
+ * e.g. "1m", not "1M", BUT with illumos IPD 4 renumbering, that shouldn't
+ * matter any more.
  */
 static const char *cm_mansects[] = {
 	"1",
-	"1m",
+	"8",
 	NULL
 };
 
@@ -225,7 +226,7 @@ parse_opts(mancheck_t *mc, int argc, char **argv)
  * Given a filename, e.g. "usr/bin/prstat", check to see if manual pages exist
  * in any of the proto or source directories (cm_mpaths) that we know contain
  * manual pages.  The manual pages must be in a known section (cm_mansects),
- * e.g. "proto/usr/share/man/man1m/prstat.1m".
+ * e.g. "proto/usr/share/man/man8/prstat.8".
  *
  * All matching pages are added to the string set "pages".  The function
  * returns B_TRUE if any matching pages were found in the filesystem, or
@@ -334,7 +335,7 @@ populate_shiplist(manifest_ent_t *me, void *arg)
 }
 
 /*
- * Check if this manual page, e.g. "man1m/prstat.1m", is being shipped in
+ * Check if this manual page, e.g. "man8/prstat.8", is being shipped in
  * the manifest under the manual page tree (cm_pdir).  Return B_TRUE if
  * it is shipped, or B_FALSE otherwise.
  */

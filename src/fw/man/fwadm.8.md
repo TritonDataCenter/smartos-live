@@ -1,4 +1,4 @@
-# fwadm(1M) -- Manage SmartOS firewall rules
+# fwadm(8) -- Manage SmartOS firewall rules
 
 
 ## SYNOPSIS
@@ -35,11 +35,11 @@ The fwadm tool allows you to manage firewall data on a SmartOS system. It
 is primarily used to manage firewall rules and remote VMs.
 
 Firewall rules are JSON objects. They contain a rule written in a
-Domain-Specific Language, as well as other metadata.  See fwrule(5) and
+Domain-Specific Language, as well as other metadata.  See fwrule(7) and
 the "EXAMPLES" section below for rule syntax.
 
 Remote VMs are JSON objects. They represent VMs on other SmartOS hosts.
-The format is similar to the vmadm(1M) format with most properties omitted
+The format is similar to the vmadm(8) format with most properties omitted
 and some simplified properties. See the "REMOTE VMS", "REMOTE VM PROPERTIES"
 and "EXAMPLES" sections below for details.
 
@@ -96,7 +96,7 @@ the firewalls of any VMs affected.
 
         Arguments:
             <rule>                  Firewall rule, written in the rule DSL.  See
-                                    fwrule(5) for syntax.
+                                    fwrule(7) for syntax.
 
         Examples:
             # Add a disabled rule with an owner by specifying it on the
@@ -228,7 +228,7 @@ the firewalls of any VMs affected.
 
         Arguments:
             <rule>                  Firewall rule, written in the rule DSL.
-                                    See fwrule(5) for syntax.
+                                    See fwrule(7) for syntax.
 
         Examples:
             # Update a rule by specifying it on the commandline.
@@ -374,7 +374,7 @@ the firewalls of any VMs affected.
 
 ## REMOTE VM PROPERTIES
 
-    Remote VMs are simplified versions of the VM objects used by vmadm(1M).
+    Remote VMs are simplified versions of the VM objects used by vmadm(8).
     They are also in a JSON format, but only the properties below will be
     stored and used by fwadm. All other properties will be discarded. The
     properties used are:
@@ -387,7 +387,7 @@ the firewalls of any VMs affected.
 
     nics:
 
-        Array of nics, as per vmadm(1M). Only the "ip" property of each of
+        Array of nics, as per vmadm(8). Only the "ip" property of each of
         these nic objects is required - all other properties will be ignored.
         This property is used for creation of remote VMs only - it is not
         stored in the object. IPs from these objects will be added to the ips
@@ -401,12 +401,12 @@ the firewalls of any VMs affected.
 
     tags:
 
-        vmadm(1M) tags object, mapping tag keys to values.
+        vmadm(8) tags object, mapping tag keys to values.
 
     uuid (required):
 
         UUID. This must not be the same as the UUID of any other remote VM or
-        local VM managed by vmadm(1M).
+        local VM managed by vmadm(8).
 
     Note that VMs can be added and updated in this simplified representation,
     or using the same representation as "vmadm get". This enables the output
@@ -414,9 +414,9 @@ the firewalls of any VMs affected.
     "SUBCOMMANDS" section.
 
 
-## INTERACTION WITH VMADM(1M)
+## INTERACTION WITH VMADM(8)
 
-    fwadm relies on properties of VMs from vmadm(1M) in order to generate
+    fwadm relies on properties of VMs from vmadm(8) in order to generate
     firewall rules correctly. Therefore, when vmadm is used to create a new
     VM or update properties on an existing VM that can affect firewall rules,
     it will update firewall rules through fwadm accordingly.
@@ -486,4 +486,4 @@ The following exit values are returned:
 
 ## SEE ALSO
 
-    vmadm(1M), fwrule(5), ipf(1M), ipfilter(5)
+    fwrule(7), ipfilter(7), ipf(8), vmadm(8)

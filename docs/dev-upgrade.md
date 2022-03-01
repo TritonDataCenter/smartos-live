@@ -16,8 +16,7 @@ zone](../README.md#setting-up-a-build-environment)
 
 However, if you have customisations in your zone, reinstalling may be
 time-consuming. This guide documents a procedure to allow you to upgrade
-without provisioning a new devzone. Because the 2018.4 bringup involved a
-great leap, it allows this upgrade to be more straightforward.
+without provisioning a new devzone.
 
 If you have advice on what else we could add to these instructions, please
 do get in touch.

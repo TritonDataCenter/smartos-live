@@ -163,10 +163,11 @@ The current set of local projects include:
 
 ## Setting up a Build Environment
 
-The first step when building is to set up a build environment. The
-SmartOS build requires building on SmartOS. This can be done in VMware,
-on an existing SmartOS machine, or other virtualization. You must build
-inside of a non-global zone.
+The first step when building is to set up a build environment. The SmartOS
+build requires building on SmartOS.  As of the `base-64-lts 21.4.0` build
+image, the SmartOS Platform Image must be 20211007 or newer. This can be done
+in VMware, on an existing SmartOS machine, or other virtualization. You must
+build inside of a non-global zone.
 
 ### Importing the Zone Image
 

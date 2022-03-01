@@ -24,6 +24,9 @@ do get in touch.
 
 ## Preparing to Upgrade
 
+NOTE:  All pkgin and pkg_add instructions below should be done as root, or
+with pfexec, or with sudo.
+
 ### Snapshot package list
 
 First, it's helpful to snapshot the package list that you have

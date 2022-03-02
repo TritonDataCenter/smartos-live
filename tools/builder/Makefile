@@ -21,4 +21,4 @@ users.c:
 	./build_users_c.sh $(SRC_ROOT)/proto/ > users.c.tmp && mv users.c.tmp users.c
 
 clean:
-	rm -f $(TARGETS) $(OBJS)
+	rm -f $(TARGETS) $(OBJS) users.c

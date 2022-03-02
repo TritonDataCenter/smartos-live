@@ -203,7 +203,7 @@ function install_pkgin
 	pkglist="build-essential flex libxslt openjdk11 nodejs"
 	pkglist="$pkglist p5-XML-Parser gettext python27 py27-expat"
 	pkglist="$pkglist coreutils gsed pkg_alternatives cdrtools"
-	pkglist="$pkglist py27-sqlite3 nasm pigz gcc49 smartos-build-tools"
+	pkglist="$pkglist py27-sqlite3 nasm pigz smartos-build-tools"
 
 	$conf_priv pkgin -f update || fatal "failed to update pkgsrc repository"
 
@@ -438,8 +438,8 @@ read -r -d '' usage <<EOF
 		full strap build (no cache) [default: no]
 	-S
 		do *not* run smatch [default is to run smatch]
-	-s gcc4
-		shadow compilers, comma delimited (gcc4,gcc#) [default: none]
+	-s gcc10
+		shadow compilers, comma delimited (gcc10,gcc#) [default: none]
 EOF
 
 while getopts "cdhp:P:rSs:" arg; do
@@ -482,12 +482,6 @@ done
 [[ -n "$ENABLE_SMATCH" ]] || ENABLE_SMATCH=yes
 
 PRIMARY_COMPILER_VER=$(echo $PRIMARY_COMPILER | sed 's/^gcc//')
-
-# To allow building on base-64-lts 18.4 systems where
-# /opt/local/bin/gcc is incapable of building our local copy
-# of gcc 4, specify where to find gcc49 which gets installed
-# during 'install_pkgin'.
-HOST_GCC4_PREFIX=/opt/local/gcc49/bin
 
 cat >build.env <<EOF
 FORCE_STRAP_REBUILD=$FORCE_STRAP_REBUILD

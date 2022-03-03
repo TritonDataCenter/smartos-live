@@ -33,7 +33,7 @@ piadm(8) -- Manage SmartOS Platform Images
 ## PLATFORM IMAGES
 
     A SmartOS Platform Image (PI) is identified by creation timestamp,
-    referred to here as a PI-stamp.  One can see it in uname(8):
+    referred to here as a PI-stamp.  One can see it in uname(1):
 
         smartos-build(~)[0]% uname -a
         SunOS smartos-build 5.11 joyent_20200602T173751Z i86pc i386 i86pc

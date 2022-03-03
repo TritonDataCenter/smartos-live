@@ -21,7 +21,7 @@
  * CDDL HEADER END
  *
  *
- * Copyright 2019 Joyent, Inc.
+ * Copyright 2022 Joyent, Inc.
  *
  *
  * fwadm: Main entry points

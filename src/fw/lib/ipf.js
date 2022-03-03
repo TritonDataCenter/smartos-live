@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright 2022 Joyent, Inc.
  *
  * fwadm: ipf control functions
  */

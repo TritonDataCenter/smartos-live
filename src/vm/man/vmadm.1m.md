@@ -1745,6 +1745,35 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update yes (requires zone stop/boot)
 
+    nics.*.pci_slot:
+
+        Specifies the virtual PCI slot that this NIC will occupy. Bhyve places
+        each NIC into a PCI slot that is identified by the PCI bus, device, and
+        function (BDF). The slot may be specified as <bus>:<device>:<function>
+        ("0:10:0"), <device>:<function> ("10:0") or <device> ("10"). If a bus
+        is not specified, 0 is used. Multiple NIC instances may be grouped
+        together on the same device by specifying different function values
+        for each NIC (e.g. "0:10:0", "0:10:1").
+
+        Per the PCI specification legal values for bus, device and function are:
+
+          bus: 0 - 255, inclusive
+          device: 0 - 31, inclusive
+          function: 0 - 7, inclusive
+
+        All functions on devices 0, 6, 30, and 31 on bus 0 are reserved. By
+        default, NICs do not include a `pci_slot` property. Instead, each
+        NIC instance is allocated its own function on the reserved bus 0,
+        device 6 virtual PCI slot. This property is generally only required
+        when it is necessary to have more than 8 NICs in a single bhyve VM.
+
+        type: string (<bus>:<device>:<function>, <device>:function, or <device>)
+        vmtype: bhyve
+        listable: yes
+        create: yes
+        update: yes (special, see description in 'update' section above)
+        default: no
+
     nics.*.primary
 
         This option selects which NIC's default gateway and nameserver values

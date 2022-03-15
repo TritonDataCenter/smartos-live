@@ -4,14 +4,14 @@
 #
 # Install (rsync) this local imgadm install image to the given
 # smartos node. The node global zone must have been prepared with
-# a writeable /usr/img and /usr/man/man1m for testing like this:
+# a writeable /usr/img and /usr/man/man8 for testing like this:
 #
 #       rm -rf /var/tmp/img \
 #           && cp -RP /usr/img /var/tmp/img \
 #           && mount -O -F lofs /var/tmp/img /usr/img \
-#           && rm -rf /var/tmp/man1m \
-#           && cp -RP /usr/man/man1m /var/tmp/man1m \
-#           && mount -O -F lofs /var/tmp/man1m /usr/man/man1m
+#           && rm -rf /var/tmp/man8 \
+#           && cp -RP /usr/man/man8 /var/tmp/man8 \
+#           && mount -O -F lofs /var/tmp/man8 /usr/man/man8
 #
 
 if [[ -n "$TRACE" ]]; then
@@ -53,4 +53,4 @@ INSTALLIMAGE=/var/tmp/img-install-image
 
 rsync -av -e "$SSH" $INSTALLIMAGE/ $NODE:/usr/img/
 
-$SSH $NODE 'cd /usr/man/man1m && rm -f imgadm.1m && ln -s /usr/img/man/imgadm.1m'
+$SSH $NODE 'cd /usr/man/man8 && rm -f imgadm.8 && ln -s /usr/img/man/imgadm.8'

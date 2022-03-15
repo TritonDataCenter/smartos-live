@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, Joyent, Inc. All rights reserved.
+ * Copyright 2022 Joyent, Inc.
  *
  * Integration test: test that commands and payloads in etc/examples are
  * actually valid

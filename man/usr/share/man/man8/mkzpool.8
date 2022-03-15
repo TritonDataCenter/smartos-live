@@ -1,5 +1,5 @@
 .Dd February 26, 2020
-.Dt MKZPOOL 1M
+.Dt MKZPOOL 8
 .Os
 .Sh NAME
 .Nm mkzpool
@@ -12,14 +12,14 @@
 .Sh DESCRIPTION
 .Nm
 functions as a wrapper around
-.Xr zpool 1M .
+.Xr zpool 8 .
 It creates a pool named
 .Ar pool
 from a JSON specification in the file named
 .Ar file.json
 instead of command\-line arguments.
 The input JSON must satisfy the schema described in the
-.Xr disklayout 1M
+.Xr disklayout 8
 output specification.
 .Ss OPTIONS
 .Bl -tag -width Fl
@@ -34,8 +34,8 @@ This flag has the same meaning as the same flag when passed to
 .El
 .Sh WARNINGS
 Use of this command is subject to the same caveats and warnings as the
-.Xr zpool 1M
+.Xr zpool 8
 create command.
 .Sh "SEE ALSO"
-.Xr disklayout 1M ,
-.Xr zpool 1M
+.Xr disklayout 8 ,
+.Xr zpool 8

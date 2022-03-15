@@ -94,7 +94,7 @@ Subcommands:
         update          [-l] [-p prop=value,...] <name> [mac]
         vms             <name>
 
-See nictagadm(1M) for more information
+See nictagadm(8) for more information
 USAGE
     exit "$code"
 }

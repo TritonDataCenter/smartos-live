@@ -501,7 +501,7 @@ CLI.prototype.printHelp = function printHelp(cb) {
         '    imgadm publish -m <manifest> -f <file> <imgapi-url>',
         '                                           publish an image to an image repo',
         '',
-        'See `imgadm help <command>` or the imgadm(1m) man page for more details.'
+        'See `imgadm help <command>` or the imgadm(8) man page for more details.'
     ]);
     /* END JSSTYLED */
 

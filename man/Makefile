@@ -22,24 +22,24 @@ MAN_FILES = \
 	usr/share/man/man1/gzegrep.1 \
 	usr/share/man/man1/gzfgrep.1 \
 	usr/share/man/man1/json.1 \
-	usr/share/man/man1m/disklayout.1m \
-	usr/share/man/man1m/fssstat.1m \
-	usr/share/man/man1m/fwadm.1m \
-	usr/share/man/man1m/imgadm.1m \
-	usr/share/man/man1m/mkzpool.1m \
-	usr/share/man/man1m/nictagadm.1m \
-	usr/share/man/man1m/piadm.1m \
-	usr/share/man/man1m/sysevent.1m \
-	usr/share/man/man1m/sysinfo.1m \
-	usr/share/man/man1m/vmadm.1m \
-	usr/share/man/man1m/vmadmd.1m \
-	usr/share/man/man1m/vminfo.1m \
-	usr/share/man/man1m/ziostat.1m \
-	usr/share/man/man1m/zonememstat.1m \
-	usr/share/man/man1m/zonemon.1m \
-	usr/share/man/man5/fwrule.5 \
-	usr/share/man/man5/joyent.5 \
-	usr/share/man/man5/openssl.5
+	usr/share/man/man7/fwrule.7 \
+	usr/share/man/man7/joyent.7 \
+	usr/share/man/man7/openssl.7 \
+	usr/share/man/man8/disklayout.8 \
+	usr/share/man/man8/fssstat.8 \
+	usr/share/man/man8/fwadm.8 \
+	usr/share/man/man8/imgadm.8 \
+	usr/share/man/man8/mkzpool.8 \
+	usr/share/man/man8/nictagadm.8 \
+	usr/share/man/man8/piadm.8 \
+	usr/share/man/man8/sysevent.8 \
+	usr/share/man/man8/sysinfo.8 \
+	usr/share/man/man8/vmadm.8 \
+	usr/share/man/man8/vmadmd.8 \
+	usr/share/man/man8/vminfo.8 \
+	usr/share/man/man8/ziostat.8 \
+	usr/share/man/man8/zonememstat.8 \
+	usr/share/man/man8/zonemon.8
 
 PROTO_FILES = $(MAN_FILES:%=$(DESTDIR)/%)
 
@@ -60,22 +60,22 @@ $(DESTDIR)/%: %.md
 	rm -f $@
 	$(RONNJS) --roff $< > $@
 
-$(DESTDIR)/usr/share/man/man1m/%: $(ROOT)/src/fw/man/%.md
+$(DESTDIR)/usr/share/man/man8/%: $(ROOT)/src/fw/man/%.md
 	mkdir -p $(@D)
 	rm -f $@
 	$(RONNJS) --roff $< > $@
 
-$(DESTDIR)/usr/share/man/man5/%: $(ROOT)/src/fw/man/%.md
+$(DESTDIR)/usr/share/man/man7/%: $(ROOT)/src/fw/man/%.md
 	mkdir -p $(@D)
 	rm -f $@
 	$(RONNJS) --roff $< > $@
 
-$(DESTDIR)/usr/share/man/man1m/%: $(ROOT)/src/img/man/%.md
+$(DESTDIR)/usr/share/man/man8/%: $(ROOT)/src/img/man/%.md
 	mkdir -p $(@D)
 	rm -f $@
 	$(RONNJS) --roff $< > $@
 
-$(DESTDIR)/usr/share/man/man1m/%: $(ROOT)/src/vm/man/%.md
+$(DESTDIR)/usr/share/man/man8/%: $(ROOT)/src/vm/man/%.md
 	mkdir -p $(@D)
 	rm -f $@
 	$(RONNJS) --roff $< > $@

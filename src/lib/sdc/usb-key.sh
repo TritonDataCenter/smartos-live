@@ -211,10 +211,10 @@ function mount_usb_key()
 	if /bin/bootparams | grep -q "^triton_bootpool=" ; then
 		# Technically we shouldn't ever see "skip" here
 		# because the only caller of mount_usb_key() with skip
-		# is piadm(1M)'s `install`, which can't be invoked on
+		# is piadm(8)'s `install`, which can't be invoked on
 		# a Triton Head Node.  Checking to be safe.
 		if [[ "$2" == "skip" ]]; then
-			echo "Somehow a piadm(1M) install on a Head Node is" \
+			echo "Somehow a piadm(8) install on a Head Node is" \
 				"happening. This is disallowed." >&2
 			return 1
 		fi
@@ -226,10 +226,10 @@ function mount_usb_key()
 	if /bin/bootparams | grep -q "^triton_installer=" ; then
 		# Technically we shouldn't ever see "skip" here
 		# because the only caller of mount_usb_key() with skip
-		# is piadm(1M)'s `install`, which can't be invoked on
+		# is piadm(8)'s `install`, which can't be invoked on
 		# a Triton Head Node.  Checking to be safe.
 		if [[ "$2" == "skip" ]]; then
-			echo "Somehow a piadm(1M) install on a Head Node is" \
+			echo "Somehow a piadm(8) install on a Head Node is" \
 				"happening. This is disallowed." >&2
 			return 1
 		fi

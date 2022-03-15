@@ -43,7 +43,7 @@
  * So this tool needs to fix up then write a modified MBR, populate the GPT
  * header and partition tables, and write out the ESP and biosboot images.
  * It is sort of an unholy merger of zpool_label_disk(ZPOOL_CREATE_BOOT_LABEL)
- * and installboot(1m).
+ * and installboot(8).
  *
  * We only currently support 512 block size, and the code isn't endian-vetted.
  *
@@ -207,7 +207,7 @@ write_mbr(char *mbr, size_t esplen, size_t biosbootlen)
 
 	/*
 	 * This is all "nops" in the MBR image: let's clear it out like
-	 * installboot(1M) does.
+	 * installboot(8) does.
 	 */
 	bzero(mbr + STAGE1_BPB_OFFSET, STAGE1_BPB_SIZE);
 

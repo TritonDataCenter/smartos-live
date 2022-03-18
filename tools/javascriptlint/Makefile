@@ -17,7 +17,7 @@ CPPFLAGS += -DNDEBUG -D_REENTRANT					\
 	-I/usr/include							\
 
 
-PY_PYTHON=$(shell python -c "import sys; print(sys.executable)")
+PY_PYTHON=$(shell python2.7 -c "import sys; print(sys.executable)")
 PY_PREFIX=$(shell $(PY_PYTHON) -c "import sys; print(sys.prefix)")
 PY_VERSION=$(shell $(PY_PYTHON) -c "import sys; print('.'.join(map(str, sys.version_info[:2])))")
 ifeq ($(BUILDOS),Darwin)

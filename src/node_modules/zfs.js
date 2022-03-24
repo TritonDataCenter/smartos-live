@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright 2021 Joyent, Inc.
+ * Copyright 2022 Joyent, Inc.
  */
 
 /*
@@ -173,7 +173,7 @@ zpool.create = function (pool, config, force, encrypt, efi, callback) {
 
 	if (encrypt === true) {
 		cmd = exports.paths.kbmadm;
-		args = [ 'create-zpool' ];
+		args = [ 'create-zpool', '--' ];
 	} else {
 		cmd = exports.paths.zpool;
 		args = [ 'create' ];

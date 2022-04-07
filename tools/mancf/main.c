@@ -69,7 +69,7 @@ static const manorder_t cm_manorders[] = {
 	{ "9",		100 },
 
 	/*
-	 * Prefer shutdown(1M) over shutdown(1B):
+	 * Shouldn't need these anymore, but prefer (1M) over (1B) anyway.
 	 */
 	{ "1m",		99 },
 	{ "1b",		-100 },

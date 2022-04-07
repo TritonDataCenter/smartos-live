@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019, Joyent, Inc. All rights reserved.
+# Copyright 2022 Joyent, Inc.
 #
 
 
@@ -32,8 +32,8 @@ JS_CHECK_TARGETS=\
 	test/integration/*.js \
 	test/lib/*.js
 MAN_CHECK_TARGETS=\
-	man/fwadm.1m.md \
-	man/fwrule.5.md
+	man/fwadm.8.md \
+	man/fwrule.7.md
 
 #
 # Tool options
@@ -60,15 +60,15 @@ $(NM):
 	$(TOP)/tools/bin/rebuild-node-modules
 
 .PHONY: man
-man: man/fwadm.1m.md man/fwrule.5.md
+man: man/fwadm.8.md man/fwrule.7.md
 
-man/fwadm.1m.md: man/fwadm.1m.md.in etc/examples/*
-	$(RAMSEY) -d etc/examples man/fwadm.1m.md.in man/fwadm.1m.md
+man/fwadm.8.md: man/fwadm.8.md.in etc/examples/*
+	$(RAMSEY) -d etc/examples man/fwadm.8.md.in man/fwadm.8.md
 
-man/fwrule.5.md: man/fwrule.5.header tools/fwrule/docs/rules.md.in man/fwrule.5.footer
-	@cat man/fwrule.5.header > $@
+man/fwrule.7.md: man/fwrule.7.header tools/fwrule/docs/rules.md.in man/fwrule.7.footer
+	@cat man/fwrule.7.header > $@
 	$(RAMSEY) -p wrap=80 tools/fwrule/docs/rules.md.in | sed -e 's,^#,##,' -e 's,&lt;,<,g' | awk '/^## / { print toupper($$0); next } 1' >> $@
-	@cat man/fwrule.5.footer >> $@
+	@cat man/fwrule.7.footer >> $@
 
 
 #

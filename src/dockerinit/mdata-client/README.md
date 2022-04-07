@@ -12,10 +12,10 @@ contribution guidelines, issues, and general documentation, visit the main
 
 There are four commands provided in this consolidation:
 
-* [mdata-list(1M)][mdata_list]; list custom metadata keys in the metadata store
-* [mdata-get(1M)][mdata_get]; get the value of a particular metadata key
-* [mdata-put(1M)][mdata_put]; set the value of a particular metadata key
-* [mdata-delete(1M)][mdata_delete]; remove a metadata key
+* [mdata-list(8)][mdata_list]; list custom metadata keys in the metadata store
+* [mdata-get(8)][mdata_get]; get the value of a particular metadata key
+* [mdata-put(8)][mdata_put]; set the value of a particular metadata key
+* [mdata-delete(8)][mdata_delete]; remove a metadata key
 
 Manual pages for these tools are available in this repository, and are
 generally shipped with the OS (in the case of SmartOS) or in the package (e.g.
@@ -48,8 +48,8 @@ MIT (See _LICENSE_.)
 [mdata_docs]: http://eng.joyent.com/mdata/
 [protocol]: http://eng.joyent.com/mdata/protocol.html
 [datadict]: http://eng.joyent.com/mdata/datadict.html
-[mdata_get]: http://smartos.org/man/1M/mdata-get
-[mdata_delete]: http://smartos.org/man/1M/mdata-delete
-[mdata_put]: http://smartos.org/man/1M/mdata-put
-[mdata_list]: http://smartos.org/man/1M/mdata-list
+[mdata_get]: http://smartos.org/man/8/mdata-get
+[mdata_delete]: http://smartos.org/man/8/mdata-delete
+[mdata_put]: http://smartos.org/man/8/mdata-put
+[mdata_list]: http://smartos.org/man/8/mdata-list
 [launchpad_pkg]: https://launchpad.net/ubuntu/+source/joyent-mdata-client

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2.7
 # vi: expandtab ts=4 sw=4
 #
 # Takes a 'manifest' style file and outputs a sorted version. It will emit
@@ -9,6 +9,10 @@
 #   <manifest content on stdin> | ./tools/sorter
 #
 # Dev Note: This should work with any Python >= 2.6 (including Python 3).
+#
+# Dev Note 2: Sometimes pkgsrc zones don't deliver "python" so the above
+# has been hardwired to Python 2.7, which other components (e.g. our old
+# Node.JS) require anyway.
 #
 
 import os

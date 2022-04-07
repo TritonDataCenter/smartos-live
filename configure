@@ -12,7 +12,7 @@
 #
 
 #
-# Copyright 2020 Joyent, Inc.
+# Copyright 2021 Joyent, Inc.
 #
 shopt -s xpg_echo
 unalias -a
@@ -203,7 +203,7 @@ function install_pkgin
 	pkglist="build-essential flex libxslt openjdk11 nodejs"
 	pkglist="$pkglist p5-XML-Parser gettext python27 py27-expat"
 	pkglist="$pkglist coreutils gsed pkg_alternatives cdrtools"
-	pkglist="$pkglist py27-sqlite3 nasm pigz gcc49 smartos-build-tools"
+	pkglist="$pkglist py27-sqlite3 nasm pigz smartos-build-tools"
 
 	$conf_priv pkgin -f update || fatal "failed to update pkgsrc repository"
 
@@ -409,7 +409,6 @@ LEX=/opt/local/bin/lex;				export LEX
 YACC=/opt/local/bin/yacc;			export YACC
 BISON=/opt/local/bin/bison;			export BISON
 GM4=/opt/local/bin/gm4;				export GM4
-RPCGEN=/opt/local/bin/rpcgen;			export RPCGEN
 ASTBINDIR=/opt/local/ast/bin;			export ASTBINDIR
 LD_TOXIC_PATH="\$ROOT/lib:\$ROOT/usr/lib";	export LD_TOXIC_PATH
 # generate buildversion for illumos buildversion module
@@ -439,8 +438,8 @@ read -r -d '' usage <<EOF
 		full strap build (no cache) [default: no]
 	-S
 		do *not* run smatch [default is to run smatch]
-	-s gcc4
-		shadow compilers, comma delimited (gcc4,gcc#) [default: none]
+	-s gcc10
+		shadow compilers, comma delimited (gcc10,gcc#) [default: none]
 EOF
 
 while getopts "cdhp:P:rSs:" arg; do
@@ -483,12 +482,6 @@ done
 [[ -n "$ENABLE_SMATCH" ]] || ENABLE_SMATCH=yes
 
 PRIMARY_COMPILER_VER=$(echo $PRIMARY_COMPILER | sed 's/^gcc//')
-
-# To allow building on base-64-lts 18.4 systems where
-# /opt/local/bin/gcc is incapable of building our local copy
-# of gcc 4, specify where to find gcc49 which gets installed
-# during 'install_pkgin'.
-HOST_GCC4_PREFIX=/opt/local/gcc49/bin
 
 cat >build.env <<EOF
 FORCE_STRAP_REBUILD=$FORCE_STRAP_REBUILD

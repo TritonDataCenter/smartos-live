@@ -6,7 +6,7 @@ goal of running the tool is to ensure that no available manual pages are left
 accidentally unshipped.
 
 To that end, the `-m` and `-s` flags may be used to check shipped binaries in
-directories like `usr/bin` against pages in section `1` or `1m`.  In addition
+directories like `usr/bin` against pages in section `1` or `8`.  In addition
 to these checks, configuration files containing pattern-based rules may be
 provided to describe the full set of manual pages we expect to ship.  Those
 files are described in the following section.
@@ -36,7 +36,7 @@ For example, to exclude the `3perl` section, use this directive:
 
 All directives also accept partially specified section names using the globbing
 tokens described in _fnmatch(5)_.  For example, to exclude section `1` and
-every subsection (e.g. `1m`, `1b`, etc), use:
+every subsection (e.g. `1b`, etc), use:
 
     -section "1*";
 
@@ -48,9 +48,9 @@ when excluding sections or subsections.
 
 If a section is not explicitly excluded in _Pass 1_, it may then be included
 for processing with an inclusion directive.  For example, to include all of
-section `7` (and subsections), use:
+section `4` (and subsections), use:
 
-    +section "7*";
+    +section "4*";
 
 If a section is not matched by any inclusion directive, it is implicitly left
 out of all further processing.

@@ -1,4 +1,4 @@
-# fwrule(5) -- SmartOS fwadm firewall rule syntax
+# fwrule(7) -- SmartOS fwadm firewall rule syntax
 
 
 ## OVERVIEW
@@ -323,4 +323,4 @@ Some examples of rules that would cause this message include:
 
 ## SEE ALSO
 
-    fwadm(1M), vmadm(1M), ipf(1M), ipfilter(5)
+    ipfilter(7), vmadm(8), ipf(8), fwadm(8)

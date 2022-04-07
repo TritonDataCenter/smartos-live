@@ -1,4 +1,4 @@
-# nictagadm(1M) -- Manage SmartOS nic tags.
+# nictagadm(8) -- Manage SmartOS nic tags.
 
 
 ## SYNOPSIS
@@ -19,7 +19,7 @@ about SmartOS nic tags. Both standard nic tags and local-only etherstubs can
 be managed.
 
 Nic tags are used in SmartOS to refer to a physical nic without needing its
-underlying MAC address or interface name. Both vmadm(1M) and the SmartOS
+underlying MAC address or interface name. Both vmadm(8) and the SmartOS
 config file use them as identifiers. In addition, the nic tag is used to
 describe the maximum mtu of the network. When the system is started, the
 physical device will be programmed with the MTU that is the maximum of
@@ -171,5 +171,5 @@ The following exit values are returned:
 
 ## SEE ALSO
 
-    dladm(1M), sysinfo(1M), vmadm(1M)
+    dladm(8), sysinfo(8), vmadm(8)
 

@@ -59,4 +59,4 @@ dev-install-image:
 	mkdir -p $(INSTALLIMAGE)/tools
 	cp -PR tools/coal-create-docker-vm.sh $(INSTALLIMAGE)/tools/
 	mkdir -p $(INSTALLIMAGE)/man
-	node ../../tools/ronnjs/bin/ronn.js man/imgadm.1m.md > $(INSTALLIMAGE)/man/imgadm.1m
+	node ../../tools/ronnjs/bin/ronn.js man/imgadm.8.md > $(INSTALLIMAGE)/man/imgadm.8

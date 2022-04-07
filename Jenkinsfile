@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright 2021 Joyent, Inc.
+ * Copyright 2022 Joyent, Inc.
  */
 
 @Library('jenkins-joylib@v1.0.8') _
@@ -38,14 +38,14 @@ pipeline {
                 '<dd>build Illumos in DEBUG mode only [default: no]</dd>\n' +
                 '<dt>-h</dt>\n' +
                 '<dd>this message</dd>\n' +
-                '<dt>-p gcc4</dt>\n' +
+                '<dt>-p gcc10</dt>\n' +
                 '<dd>primary compiler version [default: gcc7]</dd>\n' +
                 '<dt>-P password</dt>\n' +
                 '<dd>platform root password [default: randomly chosen]</dd>\n' +
                 '<dt>-S</dt>\n' +
                 '<dd>do *not* run smatch [default is to run smatch]</dd>\n' +
-                '<dt>-s gcc7</dt>\n' +
-                '<dd>shadow compilers, comma delimited (gcc4,gcc#) [default: none]</dd>\n' +
+                '<dt>-s gcc10</dt>\n' +
+                '<dd>shadow compilers, comma delimited (gcc10,gcc#) [default: none]</dd>\n' +
                 '</dl>'
         )
         text(
@@ -111,8 +111,8 @@ pipeline {
         stage('check') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                    'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
+                    'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-check"
                 }
             }
@@ -154,8 +154,8 @@ set -o pipefail
                 // completes).
                 // Use ${BRANCH_NAME} instead.
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                    'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
+                    'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-default"
                 }
             }
@@ -201,8 +201,8 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
         stage('debug') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
+                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-debug"
                 }
             }
@@ -247,12 +247,12 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 }
             }
         }
-        stage('gcc4') {
+        stage('gcc10') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                    customWorkspace "workspace/smartos-${BRANCH_NAME}-gcc4"
+                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
+                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
+                    customWorkspace "workspace/smartos-${BRANCH_NAME}-gcc10"
                 }
             }
             when {
@@ -269,15 +269,15 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
             steps {
                 sh('git clean -fdx')
                 sh('''
-export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
+export PLAT_CONFIGURE_ARGS="-p gcc10 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
-export PLATFORM_DEBUG_SUFFIX=-gcc4
-./tools/build_jenkins -c -d -S gcc4
+export PLATFORM_DEBUG_SUFFIX=-gcc10
+./tools/build_jenkins -c -d -S gcc10
                 ''')
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'output/gcc4/**',
+                    archiveArtifacts artifacts: 'output/gcc10/**',
                         onlyIfSuccessful: false,
                         allowEmptyArchive: true
                     cleanWs cleanWhenSuccess: true,
@@ -286,15 +286,15 @@ export PLATFORM_DEBUG_SUFFIX=-gcc4
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
                     joySlackNotifications(
-                        channel: 'os', comment: 'gcc4')
+                        channel: 'os', comment: 'gcc10')
                 }
             }
         }
         stage('strap-cache') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
+                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-strap-cache"
                 }
             }

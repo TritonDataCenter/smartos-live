@@ -12,7 +12,7 @@ to look at information from other runtime or system-level providers.
 The provider is not created in the usual way, by declaring it and then
 changing the build process to include it, but instead dynamically at
 runtime. This is done entirely in-process, and there is no background
-compiler or [dtrace(1M)](https://illumos.org/man/1M/dtrace) invocation.
+compiler or [dtrace(8)](https://illumos.org/man/8/dtrace) invocation.
 The process creating the provider need not run as root.
 
 ## INSTALL

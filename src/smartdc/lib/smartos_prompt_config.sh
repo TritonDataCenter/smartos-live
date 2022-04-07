@@ -6,7 +6,7 @@
 #
 
 #
-# Copyright 2020 Joyent, Inc.
+# Copyright 2022 Joyent, Inc.
 #
 
 # XXX - TODO
@@ -624,7 +624,7 @@ printheader()
 
 	clear
 	printf " %-40s\n" "SmartOS Setup"
-	printf " %-40s%38s\n" "$subheader" "https://wiki.smartos.org/install"
+	printf " %-40s%38s\n" "$subheader" "https://docs.smartos.org/install"
 
 	printruler
 }
@@ -786,7 +786,7 @@ promptpool()
 WARNING: failed to determine possible disk layout. It is possible that
 the system detected no disks. We are launching a shell to allow you to
 investigate the problem. Check for disks and their sizes with the
-diskinfo(1M) command. If you do not see disks that you expect, please
+diskinfo(8) command. If you do not see disks that you expect, please
 determine your storage controller and reach out to the SmartOS community
 if you require assistence.
 
@@ -1004,7 +1004,7 @@ create_zpools()
 	create_zpool "$layout" "$devs"
 	sleep 5
 
-	svccfg -s svc:/system/smartdc/init setprop config/zpool="zones"
+	svccfg -s svc:/system/smartdc/init setprop config/zpool="$SYS_ZPOOL"
 	svccfg -s svc:/system/smartdc/init:default refresh
 
 	export CONFDS=${SYS_ZPOOL}/config
@@ -1015,6 +1015,16 @@ create_zpools()
 	export SWAPVOL=${SYS_ZPOOL}/swap
 
 	setup_datasets
+
+	if [[ -n $install_pkgsrc ]]; then
+		tmproot=$(mktemp -d)
+		tmpopt="${tmproot}/opt"
+		mkdir -p "$tmpopt"
+		mount -F zfs "$OPTDS" "$tmpopt"
+		/smartdc/bin/pkgsrc-setup "$tmproot"
+		umount "$tmpopt"
+	fi
+
 	#
 	# Since there may be more than one storage pool on the system, put a
 	# file with a certain name in the actual "system" pool.
@@ -1125,7 +1135,7 @@ refers to a physical NIC or an aggregation. Virtual machines will be created on
 top of a network tag. Setup will first create a network tag and configure a NIC
 so that you can access the SmartOS global zone. After setup has been completed,
 you will have the option of creating additional network tags and configuring
-additional NICs for accessing the global zone through the nictagadm(1M) command.
+additional NICs for accessing the global zone through the nictagadm(8) command.
 
 Press [enter] to continue"
 
@@ -1201,7 +1211,7 @@ connected to your 'admin' network. Use 'none' if you have no gateway.\n\n"
 	message="
 The DNS servers set here will be used to provide name resolution abilities to
 the SmartOS global zone itself. These DNS servers are independent of anything
-you use to create virtual machines through vmadm(1M).\n\n"
+you use to create virtual machines through vmadm(8).\n\n"
 
 	if [[ $(getanswer "skip_instructions") != "true" ]]; then
 		printf "$message"
@@ -1259,7 +1269,6 @@ zpool in lieu of a USB stick or a CD-ROM.  Enter a pool name if you wish to
 try and make a SmartOS zpool self-booting.  Enter \"none\" to not create
 a self-booting pool.\n"
 
-	
 	if [[ $(getanswer "skip_instructions") != "true" ]]; then
 		printf "$message"
 		echo "Available pre-created pools: " $(zpool list -Ho name)
@@ -1283,6 +1292,21 @@ a self-booting pool.\n"
 		# it's on them when piadm below fails.
 	else
 		boot_from_zpool="no"
+	fi
+
+	printheader "Pkgsrc Tools"
+	message="
+Would you like to install 3rd party add-on software tools?
+
+These tools, while not part of SmartOS, have been compiled to work
+in the global zone.
+
+Note that external Internet access is required to install pkgsrc.\n\n"
+
+	printf "$message"
+	promptval "Install pkgsrc?" "y" "install_pkgsrc"
+	if [[ $val =~ [YyEeSs] ]]; then
+		install_pkgsrc=true
 	fi
 
 	printheader "System Configuration"
@@ -1399,7 +1423,7 @@ if [ $boot_from_zpool == "yes" ]; then
 	piadm bootable -e -i $PI_SOURCE $BOOTPOOL
 	if [[ $? -ne 0 ]]; then
 		printf "%6s\n\t(but you can still boot from USB or ISO)\n" \
-			failed   
+			failed
 	else
 		printf "%4s\n" done
 	fi

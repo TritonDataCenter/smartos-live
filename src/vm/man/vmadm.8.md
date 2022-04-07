@@ -1,4 +1,4 @@
-vmadm(1M) -- Manage SmartOS virtual machines
+vmadm(8) -- Manage SmartOS virtual machines
 ============================================
 
 ## SYNOPSIS
@@ -115,7 +115,7 @@ tab-complete UUIDs rather than having to type them out for every command.
       info <uuid> [type,...]
 
         The info command operates on running KVM VMs only. It talks to the
-        vmadmd(1M) daemon and requests some information about the running VM.
+        vmadmd(8) daemon and requests some information about the running VM.
         The information is output to stdout as a JSON object with member
         objects for each type specified. If no types are specified, all info
         is included. The type values can be separated either by commas or
@@ -804,7 +804,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         default: zones/<uuid>/data) added to it. This dataset will be also be
         mounted on /<zoneroot dataset>/data inside the zone (again by default:
         /zones/<uuid>/data) but you can change this by setting the mountpoint
-        option on the dataset from within the zone with zfs(1M). When using
+        option on the dataset from within the zone with zfs(8). When using
         this option, sub-datasets can be created, snapshots can be taken and
         many other options can be performed on this dataset from within the
         VM.
@@ -1190,7 +1190,7 @@ tab-complete UUIDs rather than having to type them out for every command.
     firewall_enabled:
 
         This enables the firewall for this VM, allowing firewall rules set
-        by fwadm(1M) to be applied.
+        by fwadm(8) to be applied.
 
         Note: this property will only show up in a 'vmadm get' when it's set
         true. When set false the property will not appear.
@@ -2235,7 +2235,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes
         default: none (no limit)
 
-        See zfs(1M) `filesystem_limit` for more details.
+        See zfs(8) `filesystem_limit` for more details.
 
     zfs_io_priority:
 
@@ -2256,7 +2256,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         Specifies a compression algorithm used for this VM's root dataset. This
         option affects only the zoneroot dataset. Setting to 'on' is equivalent
         to setting to 'lzjb'. If you want more information about the specific
-        compression types, see the man page for zfs(1M).
+        compression types, see the man page for zfs(8).
 
         WARNING: If you change this value for an existing VM, only *new* data
         will be compressed. It will not rewrite existing data compress.
@@ -2310,12 +2310,12 @@ tab-complete UUIDs rather than having to type them out for every command.
         update: yes
         default: none (no limit)
 
-        See zfs(1M) `snapshot_limit` for more details.
+        See zfs(8) `snapshot_limit` for more details.
 
     zlog_max_size:
 
         This property is used to set/show the maximum size for a docker zone's
-        stdio.log file before zoneadmd(1m) will rotate it.
+        stdio.log file before zoneadmd(8) will rotate it.
 
         type: integer (size in bytes)
         vmtype: ANY
@@ -2438,7 +2438,7 @@ tab-complete UUIDs rather than having to type them out for every command.
 ## VM STATES
 
 The 'zone_state' field represents the state of the zone which contains the VM.
-The zones(5) man page has some more information about these zone states.
+The zones(7) man page has some more information about these zone states.
 
 The 'state' field defaults to the value of zone\_state, but in some cases the
 state indicates details of the VM that are not reflected directly by the zone.
@@ -2806,11 +2806,11 @@ The following exit values are returned:
 
 ## SEE ALSO
 
-    vmadmd(1M), zonecfg(1M), zoneadm(1M), zones(5)
+     zones(7), vmadmd(8), zonecfg(8), zoneadm(8)
 
 ## NOTES
 
-Some of the vmadm commands depend on the vmadmd(1M) service:
+Some of the vmadm commands depend on the vmadmd(8) service:
 
     svc/system/smartdc/vmadmd:default
 

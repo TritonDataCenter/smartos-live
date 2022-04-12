@@ -7,6 +7,7 @@
 
 #
 # Copyright 2022 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 # XXX - TODO
@@ -1086,7 +1087,7 @@ export TERM=xterm-color
 
 trap sig_doshell SIGINT
 
-printheader "Joyent"
+printheader "Triton SmartOS"
 
 message="
 You must answer the following questions to configure your SmartOS node.

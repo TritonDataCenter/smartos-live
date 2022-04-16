@@ -339,7 +339,7 @@ export MANTA_TOOLS_PATH=/root/bin/
             joySlackNotifications(
                 channel: 'jenkins', comment: 'pipeline complete')
             joySlackNotifications(
-                channel: 'os', comment: 'pipeline complete')
+                channel: 'smartos', comment: 'pipeline complete')
         }
     }
 }

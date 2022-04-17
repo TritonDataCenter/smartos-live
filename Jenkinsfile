@@ -6,6 +6,7 @@
 
 /*
  * Copyright 2022 Joyent, Inc.
+ * Copyright 2022 MNX Cloud, Inc.
  */
 
 @Library('jenkins-joylib@v1.0.8') _

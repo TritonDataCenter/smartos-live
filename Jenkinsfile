@@ -6,6 +6,7 @@
 
 /*
  * Copyright 2022 Joyent, Inc.
+ * Copyright 2022 MNX Cloud, Inc.
  */
 
 @Library('jenkins-joylib@v1.0.8') _
@@ -339,7 +340,7 @@ export MANTA_TOOLS_PATH=/root/bin/
             joySlackNotifications(
                 channel: 'jenkins', comment: 'pipeline complete')
             joySlackNotifications(
-                channel: 'os', comment: 'pipeline complete')
+                channel: 'smartos', comment: 'pipeline complete')
         }
     }
 }

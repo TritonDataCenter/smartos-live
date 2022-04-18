@@ -195,7 +195,7 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
                     joySlackNotifications(
-                        channel: 'os', comment: 'default')
+                        channel: 'smartos', comment: 'default')
                 }
             }
         }
@@ -244,7 +244,7 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
                     joySlackNotifications(
-                        channel: 'os', comment: 'debug')
+                        channel: 'smartos', comment: 'debug')
                 }
             }
         }
@@ -287,7 +287,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc10
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
                     joySlackNotifications(
-                        channel: 'os', comment: 'gcc10')
+                        channel: 'smartos', comment: 'gcc10')
                 }
             }
         }
@@ -330,7 +330,7 @@ export MANTA_TOOLS_PATH=/root/bin/
                         cleanWhenNotBuilt: true,
                         deleteDirs: true
                     joySlackNotifications(
-                        channel: 'os', comment: 'strap-cache')
+                        channel: 'smartos', comment: 'strap-cache')
                 }
             }
         }

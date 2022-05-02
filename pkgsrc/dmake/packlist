@@ -1,5 +1,0 @@
-bin/dmake
-lib/64
-lib/libmakestate.so.1
-lib/amd64/libmakestate.so.1
-share/lib/make/make.rules

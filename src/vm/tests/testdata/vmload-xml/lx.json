@@ -1,7 +1,0 @@
-{
-    "zonename": "lx-zone",
-    "autoboot": false,
-    "brand": "lx",
-    "kernel_version" : "2.6",
-    "nics": []
-}

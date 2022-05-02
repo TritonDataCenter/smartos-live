@@ -1,8 +1,0 @@
-f usr/sbin/mdata-delete 0555 root bin
-f usr/sbin/mdata-get 0555 root bin
-f usr/sbin/mdata-list 0555 root bin
-f usr/sbin/mdata-put 0555 root bin
-f usr/share/man/man8/mdata-delete.8 0444 root bin
-f usr/share/man/man8/mdata-get.8 0444 root bin
-f usr/share/man/man8/mdata-list.8 0444 root bin
-f usr/share/man/man8/mdata-put.8 0444 root bin

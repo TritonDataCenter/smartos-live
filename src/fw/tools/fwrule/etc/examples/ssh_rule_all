@@ -1,5 +1,0 @@
-{
-    "description": "allow SSH to all VMs",
-    "enabled": true,
-    "rule": "FROM any TO all vms ALLOW tcp PORT 22"
-}

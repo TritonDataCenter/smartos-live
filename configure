@@ -325,7 +325,11 @@ CODEMGR_WS="$conf_root/projects/illumos";	export CODEMGR_WS
 MAX_JOBS=128
 maxjobs() {
         ncpu=\`kstat -p cpu_info:::state | grep -c on-line\`
-        if [[ \$(( \$ncpu + 2 )) -lt \${MAX_JOBS} ]]; then
+	zcpucap=\`pfexec mdata-get sdc:cpu_cap\`
+	zcpu=\`expr \$zcpucap / 100\`
+	if [[ \$zcpu -lt \$ncpu ]]; then
+		expr \$zcpu + 2
+        elif [[ \$(( \$ncpu + 2 )) -lt \${MAX_JOBS} ]]; then
                 expr \$ncpu + 2
         else
                 printf "%d\n" \${MAX_JOBS}

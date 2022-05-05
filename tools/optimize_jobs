@@ -15,15 +15,20 @@
 # Copyright 2022 MNX Cloud, Inc.
 #
 
-# Start with the oldie-but-goodie...
-MAX_JOBS=128
+# Start with the oldie-but-goodie 128 if it's not in the environment already.
+MAX_JOBS=${MAX_JOBS:-128}
 
 # Then let's count CPUs
 ncpu=$(kstat -p cpu_info:::state | grep -c on-line)
 
 # And our zone's cpu_cap
 zcpucap=$(pfexec mdata-get sdc:cpu_cap)
-zcpu=$(( $zcpucap / 100 ))
+if [[ $zcpucap == 0 ]]; then
+	# 0 cpu_cap means NO LIMIT so make it the same as MAX_JOBS.
+	zcpu=${MAX_JOBS}
+else
+	zcpu=$(( $zcpucap / 100 ))
+fi
 
 if [[ $zcpu -lt $ncpu ]]; then
 	expr $zcpu + 2

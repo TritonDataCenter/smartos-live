@@ -323,11 +323,15 @@ cat > "projects/illumos/illumos.sh" <<EOF
 NIGHTLY_OPTIONS="$nopts";			export NIGHTLY_OPTIONS
 GATE="${RELEASE_VER}";				export GATE
 CODEMGR_WS="$conf_root/projects/illumos";	export CODEMGR_WS
-MAX_JOBS=128
+MAX_JOBS=${MAX_JOBS:-128}
 maxjobs() {
         ncpu=\`kstat -p cpu_info:::state | grep -c on-line\`
 	zcpucap=\`pfexec mdata-get sdc:cpu_cap\`
-	zcpu=\`expr \$zcpucap / 100\`
+	if [[ \$zcpucap -eq 0 ]]; then
+		zcpu=\${MAX_JOBS}
+	else
+		zcpu=\`expr \$zcpucap / 100\`
+	vi
 	if [[ \$zcpu -lt \$ncpu ]]; then
 		expr \$zcpu + 2
         elif [[ \$(( \$ncpu + 2 )) -lt \${MAX_JOBS} ]]; then

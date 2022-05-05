@@ -44,7 +44,7 @@ MAKE =		gmake
 PATH =		$(NATIVEDIR)/usr/bin:/usr/bin:/usr/sbin:/sbin:/opt/local/bin
 endif
 
-MAX_JOBS =	128
+MAX_JOBS ?=	128
 PARALLEL =	-j$(MAX_JOBS)
 CSTYLE =	$(BASE)/../tools/cstyle
 GCC =		$(NATIVEDIR)/usr/bin/gcc

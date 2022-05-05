@@ -41,7 +41,7 @@ cache_base="/opt/SmartOS/build-cache/"
 srcdir="$wsroot/projects/illumos-extra"
 adjunct=""
 protodir=""
-max_jobs="128"
+max_jobs=$($wsroot/tools/optimize_jobs)
 force_build="no"
 tarfile=""
 

@@ -11,6 +11,7 @@
 
 #
 # Copyright 2022 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 #

@@ -323,7 +323,8 @@ cat > "projects/illumos/illumos.sh" <<EOF
 NIGHTLY_OPTIONS="$nopts";			export NIGHTLY_OPTIONS
 GATE="${RELEASE_VER}";				export GATE
 CODEMGR_WS="$conf_root/projects/illumos";	export CODEMGR_WS
-MAX_JOBS=${MAX_JOBS:-128}
+# NOTE: build_illumos modifies this initial constant
+MAX_JOBS=128
 maxjobs() {
         ncpu=\`kstat -p cpu_info:::state | grep -c on-line\`
 	zcpucap=\`pfexec mdata-get sdc:cpu_cap\`

@@ -35,7 +35,7 @@ if [[ $zcpu -lt $ncpu ]]; then
 elif [[ $(( $ncpu + 2 )) -lt ${MAX_JOBS} ]]; then
 	expr $ncpu + 2
 else
-	printf "%d\n" \${MAX_JOBS}
+	printf "%d\n" ${MAX_JOBS}
 fi
 
 exit 0

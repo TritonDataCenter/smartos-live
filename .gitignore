@@ -68,6 +68,7 @@ src/node-dtrace-provider/build
 src/node-dtrace-provider/node_modules
 src/node-dtrace-provider/src/build
 src/node-libuuid/build
+src/smartdc/bin/pkgsrc-setup
 src/smartdc/bin/sdc-factoryreset
 src/smartdc/bin/sdc-lastcomm
 src/smartdc/bin/sdc-zfs-io-throttle

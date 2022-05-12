@@ -10,6 +10,7 @@
 # http://www.illumos.org/license/CDDL.
 #
 # Copyright 2020 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 #
@@ -41,7 +42,7 @@ cache_base="/opt/SmartOS/build-cache/"
 srcdir="$wsroot/projects/illumos-extra"
 adjunct=""
 protodir=""
-max_jobs="128"
+max_jobs=$($wsroot/tools/optimize_jobs)
 force_build="no"
 tarfile=""
 

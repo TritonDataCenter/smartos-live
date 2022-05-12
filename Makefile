@@ -11,6 +11,7 @@
 
 #
 # Copyright 2022 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 #
@@ -58,7 +59,7 @@ CRIPPLED_HOST :=	$(shell [[ `prtconf -m 2>/dev/null || echo 999999` -lt \
 ifeq ($(CRIPPLED_HOST),yes)
 MAX_JOBS ?=	8
 else
-MAX_JOBS ?=	128
+MAX_JOBS ?=	$(shell tools/optimize_jobs)
 endif
 
 #

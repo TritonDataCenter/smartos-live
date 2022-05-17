@@ -245,7 +245,7 @@ The final prerequisite is to make sure that `git` is installed. To do
 that, you should run as your user:
 
 ```
-$ pfexec pkgin -y in scmgit
+$ pfexec pkgin -y in git
 ...
 $
 ```

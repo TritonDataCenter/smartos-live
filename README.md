@@ -23,28 +23,28 @@ SmartOS-specific functionality found in `projects/local/`.
 - [Bug Reports](#bug-reports)
 - [Components of SmartOS](#components-of-smartos)
 - [Building SmartOS](#building-smartos)
-  - [Setting up a Build Environment](#setting-up-a-build-environment)
-  - [Common Tasks](#common-tasks)
-  - [Incremental Development](#incremental-development)
-  - [Proto Area](#proto-area)
-  - [Packaging and Manifests](#packaging-and-manifests)
+  * [Setting up a Build Environment](#setting-up-a-build-environment)
+  * [Common Tasks](#common-tasks)
+  * [Incremental Development](#incremental-development)
+  * [Proto Area](#proto-area)
+  * [Packaging and Manifests](#packaging-and-manifests)
 - [Contributing](#contributing)
-  - [Review](#review)
-  - [Upstreaming](#upstreaming)
-  - [Integration](#integration)
-  - [Testing changes](#testing-changes)
+  * [Review](#review)
+  * [Upstreaming](#upstreaming)
+  * [Integration](#integration)
+  * [Testing changes](#testing-changes)
 
 # Community
 
 You can interact with the SmartOS community in a number of ways. This
 includes:
 
-- The _smartos-discuss_
+* The *smartos-discuss*
   [mailing list](https://smartos.topicbox.com/groups/smartos-discuss).
   If you wish to send mail to the list you'll need to join, but you can view
   and search the archives online without being a member.
 
-- In the _#smartos_ IRC channel on the [Libera Chat IRC
+* In the *#smartos* IRC channel on the [Libera Chat IRC
   network](https://libera.chat/).
 
 # Bug Reports
@@ -94,11 +94,11 @@ The [illumos-extra](https://github.com/joyent/illumos-extra) repository
 contains a few different sets of software:
 
 1. Software which is held at a specific version that is required for the
-   platform to build. For example, GNU binutils fall into this category.
+platform to build. For example, GNU binutils fall into this category.
 1. Software which is required for illumos-gate to build and is required
-   at run time. This category includes things like OpenSSL and libz.
+at run time. This category includes things like OpenSSL and libz.
 1. Extra software that we want to exist in the platform image at run
-   time. This category includes software like bash, curl, and Node.js.
+time. This category includes software like bash, curl, and Node.js.
 
 illumos-extra serves to make sure that we have the specific versions of
 software that we require at build time. The theory is that given a basic
@@ -154,17 +154,17 @@ series of Makefile targets that a local project is required to implement.
 
 The current set of local projects include:
 
-- [illumos-kvm](https://github.com/joyent/illumos-kvm)
-- [illumos-kvm-cmd](https://github.com/joyent/illumos-kvm-cmd) aka QEMU
-- [mdata-client](https://github.com/joyent/mdata-client)
-- [ur-agent](https://github.com/joyent/sdc-ur-agent)
+* [illumos-kvm](https://github.com/joyent/illumos-kvm)
+* [illumos-kvm-cmd](https://github.com/joyent/illumos-kvm-cmd) aka QEMU
+* [mdata-client](https://github.com/joyent/mdata-client)
+* [ur-agent](https://github.com/joyent/sdc-ur-agent)
 
 # Building SmartOS
 
 ## Setting up a Build Environment
 
 The first step when building is to set up a build environment. The SmartOS
-build requires building on SmartOS. As of the `base-64-lts 21.4.0` build
+build requires building on SmartOS.  As of the `base-64-lts 21.4.0` build
 image, the SmartOS Platform Image must be 20211007 or newer. This can be done
 in VMware, on an existing SmartOS machine, or other virtualization. You must
 build inside of a non-global zone.
@@ -192,17 +192,18 @@ Imported image c8715b60-7e98-11ec-82d1-03d16599f529 (base-64-lts@21.4.0)
 To create a zone, you need to create a `joyent` branded zone with
 `vmadm`. We recommend that the zone have the following attributes:
 
-- The brand set to `"joyent"`
-- The `image_uuid` set to `"c8715b60-7e98-11ec-82d1-03d16599f529"`
-- At least 25 GiB of disk space specified in the `quota` property
-- At least 2-4 GiB of DRAM specified in the `max-physical-memory`
-  property
-- 1.5-2x the amount of DRAM in the `max_swap` property
-- At least 1 network interface that can reach the Internet
-- The `fs_allowed` property set to `"ufs,pcfs,tmpfs"`
+* The brand set to `"joyent"`
+* The `image_uuid` set to `"c8715b60-7e98-11ec-82d1-03d16599f529"`
+* At least 25 GiB of disk space specified in the `quota` property
+* At least 2-4 GiB of DRAM specified in the `max-physical-memory`
+property
+* 1.5-2x the amount of DRAM in the `max_swap` property
+* At least 1 network interface that can reach the Internet
+* The `fs_allowed` property set to `"ufs,pcfs,tmpfs"`
 
 For more information, please see the vmadm manual page and its EXAMPLES
-section. Once written, you can validate your JSON file by running `vmadm validate`. For example, if your JSON file was in /var/tmp/build.json you
+section. Once written, you can validate your JSON file by running `vmadm
+validate`. For example, if your JSON file was in /var/tmp/build.json you
 would run:
 
 ```
@@ -211,14 +212,14 @@ would run:
 
 If there are problems, then it will tell you which portions of the JSON
 are incorrect and need to be fixed. You can always check if a file is
-valid JSON by using the `json` command as `json --validate -f /var/tmp/build.json`
+valid JSON by using the `json` command as `json --validate -f
+/var/tmp/build.json`
 
 Once that's done, then you can create the VM using vmadm as:
 
 ```
 # vmadm create -f /var/tmp/build.json
 ```
-
 ### Setting Up the Zone
 
 While you can build as the root user, we recommend that you create a
@@ -226,19 +227,19 @@ user to do your day to day work as. If you do create that user there are
 two things that you should do:
 
 1. Make sure that the user has the 'Primary Administrator' privilege.
-   There are occasional parts of the build that require administrator
-   privileges and these will use `pfexec` to do so. To add a user to the
-   primary administrator role, as the root user in the zone, you should
-   run:
+There are occasional parts of the build that require administrator
+privileges and these will use `pfexec` to do so. To add a user to the
+primary administrator role, as the root user in the zone, you should
+run:
 
 ```
 # usermod -P 'Primary Administrator' <user>
 ```
 
 2. Make sure that the user's shell is set to `/bin/bash`. There have
-   occasionally been build issues when using different shells. Ultimately,
-   those are bugs. If you do use another shell and encounter issues,
-   [please tell us](#bug-reports).
+occasionally been build issues when using different shells.  Ultimately,
+those are bugs. If you do use another shell and encounter issues,
+[please tell us](#bug-reports).
 
 The final prerequisite is to make sure that `git` is installed. To do
 that, you should run as your user:
@@ -278,7 +279,7 @@ build, configure shadow compilers, etc. See `./configure -h`.
 ### Build Outputs
 
 By default, running `gmake live` produces a directory and a tarball in
-the `output` directory. This can be used in Triton with the `sdcadm`
+the `output` directory.  This can be used in Triton with the `sdcadm`
 commands and can be used to boot through `ipxe` or other network boot
 loaders.
 
@@ -313,13 +314,13 @@ stop after all of the components have been built.
 
 The following summarizes the primary targets used on a day to day basis:
 
-- `world`: Builds all the components
-- `live`: Assembles the live image from the built components
-- `check`: Runs various style and lint tools on code in smartos-live
-- `clean`: Removes built artifacts and intermediate objects
-- `update`: Updates all of the repositories to the latest
-- `iso`: Builds a CD-ROM ISO image, defaulting to the VGA console
-- `usb`: Builds a FAT 32 USB image, defaulting to the VGA console
+* `world`: Builds all the components
+* `live`: Assembles the live image from the built components
+* `check`: Runs various style and lint tools on code in smartos-live
+* `clean`: Removes built artifacts and intermediate objects
+* `update`: Updates all of the repositories to the latest
+* `iso`: Builds a CD-ROM ISO image, defaulting to the VGA console
+* `usb`: Builds a FAT 32 USB image, defaulting to the VGA console
 
 ## Build Targets for Release Engineering
 
@@ -330,25 +331,25 @@ When performing release builds, the following are convenient targets
 which encapsulate the entire release process for a specific Triton
 and/or SmartOS build variety:
 
-- `common-release`: depends on `check`, `live` and `pkgsrc` targets and
-  needs to be run before a subsequent `make` invocation of any of
-  the `-release` targets below
-- `smartos-release`: builds, publishes and uploads SmartOS artifacts
-- `triton-release`: builds, publishes and uploads a Triton platform
+* `common-release`: depends on `check`, `live` and `pkgsrc` targets and
+   needs to be run before a subsequent `make` invocation of any of
+   the `-release` targets below
+* `smartos-release`: builds, publishes and uploads SmartOS artifacts
+* `triton-release`: builds, publishes and uploads a Triton platform
   image
-- `triton-and-smartos-release`: all of the above
+* `triton-and-smartos-release`: all of the above
 
 The following are used by the targets listed above as part of the
 release engineering process when publishing release builds of the
 SmartOS and Triton platform image. There are varieties of each target
 for both build flavors.
 
-- `*-publish`: stage bits from the output directory, preparing for
+* `*-publish`: stage bits from the output directory, preparing for
   upload
-- `*-bits-upload`: upload bits to either Manta, a remote filesystem
+* `*-bits-upload`: upload bits to either Manta, a remote filesystem
   and optionally, a Triton imgapi instance, defaulting to
   `updates.joyent.com`
-- `*-bits-upload-latest`: as above, except attempt to re-upload the
+* `*-bits-upload-latest`: as above, except attempt to re-upload the
   latest built bits, useful in case of interrupted uploads
 
 The `bits-upload` tool comes from
@@ -358,14 +359,14 @@ the `deps/eng` "git submodule" from the top-level of the workspace.
 The upload can be influenced by the following shell environment
 variables:
 
-- `ENGBLD_DEST_OUT_PATH`: The path where we wish to upload bits. This is
+* `ENGBLD_DEST_OUT_PATH`: The path where we wish to upload bits. This is
   assumed to be relative to `$MANTA_USER` if using a Manta path.
   Otherwise this can be set to a local (or NFS) path where we wish to
   upload build arifacts.
-- `ENGBLD_BITS_UPLOAD_LOCAL`: If set to `true`, this causes us to simply
+* `ENGBLD_BITS_UPLOAD_LOCAL`: If set to `true`, this causes us to simply
   `cp(1)` bits to `$ENGBLD_DEST_OUT_PATH` rather than upload using
   Manta tools.
-- `ENGBLD_BITS_UPLOAD_IMGAPI`: If set to `true`, this causes the build to
+* `ENGBLD_BITS_UPLOAD_IMGAPI`: If set to `true`, this causes the build to
   also attempt to upload any Triton images found in the `output/bits`
   directory to an imgapi instance, which defaults to
   `updates.joyent.com`.
@@ -373,13 +374,13 @@ variables:
 For Manta and imgapi uploads, the following environment variables are
 used to configure the upload:
 
-- `MANTA_USER`
-- `MANTA_KEY_ID`
-- `MANTA_URL`
-- `UPDATES_IMGADM_URL`
-- `UPDATES_IMGADM_IDENTITY`
-- `UPDATES_IMGADM_CHANNEL`
-- `UPDATES_IMGADM_USER`
+* `MANTA_USER`
+* `MANTA_KEY_ID`
+* `MANTA_URL`
+* `UPDATES_IMGADM_URL`
+* `UPDATES_IMGADM_IDENTITY`
+* `UPDATES_IMGADM_CHANNEL`
+* `UPDATES_IMGADM_USER`
 
 For details on the default values of these variables, and how they are
 used, see
@@ -448,7 +449,7 @@ The `configure-projects` file takes the format:
 ```
 
 The special token `origin` can be used in place of a full git repo URL to denote
-the standard github.com location for that project. If no URL is given, we
+the standard github.com location for that project.  If no URL is given, we
 default to github.com.
 
 If you update the branch name that corresponds to a repository, rerun
@@ -482,10 +483,10 @@ debug build of SmartOS. This debug build primarily changes things by
 creating a debug build of illumos. A debug build of illumos will result
 in various things such as:
 
-- Additional assertions
-- Additional log messages
-- Kernel memory debugging being enabled by default
-- Several daemons will enable user land memory debugging
+* Additional assertions
+* Additional log messages
+* Kernel memory debugging being enabled by default
+* Several daemons will enable user land memory debugging
 
 Note, the overhead of some things like kernel memory debugging is
 non-trivial. Debug builds should not be used for performance testing. In
@@ -782,22 +783,22 @@ stack, this may not be the best choice.
 When thinking about integrating, the following are questions that you or
 your approver should be asking:
 
-- Have I tested this in all the ways I can think of? Might this impact
-  standalone SmartOS or Triton in some way?
-- Have I documented any new commands or interfaces in manual pages?
-- Have I built this both debug and non-debug?
-- Have I reviewed the `git pbchk` output when working in bldenv in
-  illumos-joyent?
-- Have I run any appropriate `make check` targets?
-- Have I looked for memory leaks?
-- Have I performed appropriate stress testing to try and find issues
-  that might only arise after prolonged use?
-- Is this a particularly risky change? If so, should I wait
-  until the start of the next release cycle to integrate?
-- Are there any heads-up notices I need to send as part of this? For
-  example, this might happen because of a flag day.
-- Have I added a new tool that's required to run at build-time and
-  tested this on older platform images?
+* Have I tested this in all the ways I can think of? Might this impact
+standalone SmartOS or Triton in some way?
+* Have I documented any new commands or interfaces in manual pages?
+* Have I built this both debug and non-debug?
+* Have I reviewed the `git pbchk` output when working in bldenv in
+illumos-joyent?
+* Have I run any appropriate `make check` targets?
+* Have I looked for memory leaks?
+* Have I performed appropriate stress testing to try and find issues
+that might only arise after prolonged use?
+* Is this a particularly risky change? If so, should I wait
+until the start of the next release cycle to integrate?
+* Are there any heads-up notices I need to send as part of this? For
+example, this might happen because of a flag day.
+* Have I added a new tool that's required to run at build-time and
+tested this on older platform images?
 
 Prior to a PR being merged, it must have at least one code reviewer and one
 approver. They can be the same person, but two sets of eyes are preferred.
@@ -859,20 +860,20 @@ argument that points to the test archive, and use one or more of the options
 When called with all of the options listed above, `smartos-test` will do the
 following:
 
-- verify we're running on the global zone
-- verify that the user has indicated that no production data exists on this
+* verify we're running on the global zone
+* verify that the user has indicated that no production data exists on this
   system
-- verify that the test archive version matches the version of the running
+* verify that the test archive version matches the version of the running
   SmartOS instance
-- take a named-snapshot of /opt if one doesn't already exist, or rollback to
+* take a named-snapshot of /opt if one doesn't already exist, or rollback to
   that snapshot prior to extracting the tests to /opt
-- create an lofs-mount of /usr in order to extract portions of the test archive
+* create an lofs-mount of /usr in order to extract portions of the test archive
   that need to reside there
-- temporarily add any local user accounts needed to execute tests
-- download a pkgsrc bootstrap to /opt and install the pkgsrc dependencies
+* temporarily add any local user accounts needed to execute tests
+* download a pkgsrc bootstrap to /opt and install the pkgsrc dependencies
   needed to run the tests
-- execute the tests serially, accumulating result codes
-- exit 0 if all tests passed, or 1 if one or more tests failed
+* execute the tests serially, accumulating result codes
+* exit 0 if all tests passed, or 1 if one or more tests failed
 
 For example:
 
@@ -1017,14 +1018,14 @@ mapfile section, then it probably is.
 
 When changing a public interface, you need to always pause and work
 through several cases and make sure that we aren't breaking backwards
-compatibility. Some questions to ask include ones like:
+compatibility.  Some questions to ask include ones like:
 
 1. If I take an old binary and use it against the new library, what
-   happens?
+happens?
 2. If I had written a shell script that used a command and the output
-   changed, what will happen?
+changed, what will happen?
 3. What expectations come from standards or other system about these
-   issues?
+issues?
 
 These are intended to help guide understand the impact and risk related
 to the change.

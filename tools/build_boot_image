@@ -12,6 +12,7 @@
 
 #
 # Copyright (c) 2019, Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 #
@@ -48,6 +49,8 @@ bi_make_iso=0
 bi_proforma_only=0
 bi_nocleanup=0
 bi_proforma_prefix="2"
+# Note, if this changes you also need to update SmartOS.vmwarevm/SmartOS.vmdk
+# See OS-8386
 bi_imgsz="1940000256"
 bi_wsroot=
 bi_lofi_blkdev=

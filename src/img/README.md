@@ -4,7 +4,7 @@
 can import and destroy local images, present information about how they're
 being used.  To find and install new images, imgadm speaks to a server
 implementing the IMGAPI. The default and canonical IMGAPI server is the Joyent
-Images repository at <https://images.joyent.com>.
+Images repository at <https://images.smartos.org>.
 
 
 # Test Suite

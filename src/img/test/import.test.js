@@ -21,6 +21,7 @@
  * CDDL HEADER END
  *
  * Copyright 2020 Joyent, Inc.
+ * Copyright 2022 MNX Cloud, Inc.
  *
  * * *
  *
@@ -54,7 +55,7 @@ var WRKDIR = '/var/tmp/img-test-import';
 var CACHEDIR = '/var/tmp/img-test-cache';
 
 /*
- * Pick an image that (a) exists on images.joyent.com (they *do* occasionally
+ * Pick an image that (a) exists on images.smartos.org (they *do* occasionally
  * get deprecated) and (b) is relatively small and (c) is unlikely to collide
  * with current usage.
  */
@@ -64,7 +65,7 @@ var TEST_IMAGE_UUID = '0764d78e-3472-11e5-8949-4f31abea4e05';
 /*
  * An image that only exists on the experimental channel of updates.joyent.com.
  * Similar to the note above, hopefully this image will always be here and will
- * not be present on images.joyent.com, since tests rely on this fact.
+ * not be present on images.smartos.org, since tests rely on this fact.
  * During setup, we import the origin image for this experimental image.
  */
 var TEST_EXPERIMENTAL_SOURCE =
@@ -88,8 +89,8 @@ test('setup: clean WRKDIR (' + WRKDIR + ')', function (t) {
     });
 });
 
-test('setup: ensure images.joyent.com source', function (t) {
-    exec('imgadm sources -a https://images.joyent.com', function (err, o, e) {
+test('setup: ensure images.smartos.org source', function (t) {
+    exec('imgadm sources -a https://images.smartos.org', function (err, o, e) {
         t.ifError(err);
         t.end();
     });
@@ -97,7 +98,7 @@ test('setup: ensure images.joyent.com source', function (t) {
 
 test('setup: get test image in local SDC IMGAPI (if available)', function (t) {
     var cmd = 'sdc-imgadm import ' + TEST_IMAGE_UUID
-        + ' -S https://images.joyent.com || true';
+        + ' -S https://images.smartos.org || true';
     exec(cmd, function (err, o, e) {
         t.ifError(err);
         t.end();
@@ -122,7 +123,7 @@ test('setup: cache test image manifest', function (t) {
     var pth = format('%s/%s.imgmanifest', CACHEDIR, TEST_IMAGE_UUID);
     fs.exists(pth, function (exists) {
         if (!exists) {
-            var cmd = format('curl -kf https://images.joyent.com/images/%s >%s',
+            var cmd = format('curl -kf https://images.smartos.org/images/%s >%s',
                 TEST_IMAGE_UUID, pth);
             exec(cmd, function (err, stdout, stderr) {
                 t.ifError(err);
@@ -138,7 +139,7 @@ test('setup: cache test image file', function (t) {
     fs.exists(CACHEFILE, function (exists) {
         if (!exists) {
             var cmd = format(
-                'curl -kf https://images.joyent.com/images/%s/file >%s',
+                'curl -kf https://images.smartos.org/images/%s/file >%s',
                 TEST_IMAGE_UUID, CACHEFILE);
             exec(cmd, function (err, stdout, stderr) {
                 t.ifError(err);
@@ -395,7 +396,7 @@ test('setup8: rm experimental image ' + TEST_EXPERIMENTAL_UUID, function (t) {
 
 // With no configured experimental sources, this should fail, which will
 // also help determine whether the image has perhaps been added to
-// images.joyent.com, in which case, maintainers should select a different
+// images.smartos.org, in which case, maintainers should select a different
 // TEST_EXPERIMENTAL_UUID (and TEST_EXPERIMENTAL_ORIGIN if necessary)
 test('experimental image import fails', function (t) {
     var cmd = 'imgadm import ' + TEST_EXPERIMENTAL_UUID;

@@ -1,5 +1,21 @@
 #!/bin/bash
 #
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright 2019 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
+#
+
+#
 # Make a SmartOS custom virtual image for testing.
 #
 # Usage:
@@ -9,7 +25,7 @@
 #   ./mk-custom-image f669428c-a939-11e2-a485-b790efc0f0c1 /var/tmp/custom-image none
 #
 # This will:
-# - install the base image, if necessary (from images.joyent.com)
+# - install the base image, if necessary (from images.smartos.org)
 # - vmadm create a basis zone
 # - customize it (just set /etc/motd)
 # - prepare and stop the basis zone
@@ -51,8 +67,8 @@ function install_image {
     imgadm get $uuid >/dev/null 2>/dev/null && return
 
     echo "Installing image $uuid"
-    curl -ksS https://images.joyent.com/images/$uuid > $uuid.manifest
-    curl -ksS https://images.joyent.com/images/$uuid/file > $uuid.file
+    curl -ksS https://images.smartos.org/images/$uuid > $uuid.manifest
+    curl -ksS https://images.smartos.org/images/$uuid/file > $uuid.file
     imgadm install -m $uuid.manifest -f $uuid.file -q
 }
 

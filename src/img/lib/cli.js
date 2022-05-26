@@ -21,6 +21,7 @@
  * CDDL HEADER END
  *
  * Copyright 2020 Joyent, Inc.
+ * Copyright 2022 MNX Cloud, Inc.
  *
  * * *
  *
@@ -750,7 +751,7 @@ CLI.prototype.do_sources.help = (
     + '\n'
     + 'Examples:\n'
     + '    # Joyent\'s primary public image repository (defaults to "imgapi")\n'
-    + '    {{name}} sources -a https://images.joyent.com\n'
+    + '    {{name}} sources -a https://images.smartos.org\n'
     + '    # Docker Hub\n'
     + '    {{name}} sources -a https://docker.io -t docker\n'
     + '    # Legacy SDC 6.5 DSAPI (deprecated)\n'

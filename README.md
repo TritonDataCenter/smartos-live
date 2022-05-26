@@ -177,7 +177,7 @@ the image, you should run the imgadm command from the global zone:
 
 ```
 # imgadm import c8715b60-7e98-11ec-82d1-03d16599f529
-Importing c8715b60-7e98-11ec-82d1-03d16599f529 (base-64-lts@21.4.0) from "https://images.joyent.com"
+Importing c8715b60-7e98-11ec-82d1-03d16599f529 (base-64-lts@21.4.0) from "https://images.smartos.org"
 Gather image c8715b60-7e98-11ec-82d1-03d16599f529 ancestry
 Must download and install 1 image (148.6 MiB)
 Download 1 image     [=======================>] 100% 148.62MB 497.77KB/s  5m 5s

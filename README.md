@@ -348,7 +348,7 @@ for both build flavors.
   upload
 * `*-bits-upload`: upload bits to either Manta, a remote filesystem
   and optionally, a Triton imgapi instance, defaulting to
-  `updates.joyent.com`
+  `updates.tritondatacenter.com`
 * `*-bits-upload-latest`: as above, except attempt to re-upload the
   latest built bits, useful in case of interrupted uploads
 
@@ -369,7 +369,7 @@ variables:
 * `ENGBLD_BITS_UPLOAD_IMGAPI`: If set to `true`, this causes the build to
   also attempt to upload any Triton images found in the `output/bits`
   directory to an imgapi instance, which defaults to
-  `updates.joyent.com`.
+  `updates.tritondatacenter.com`.
 
 For Manta and imgapi uploads, the following environment variables are
 used to configure the upload:

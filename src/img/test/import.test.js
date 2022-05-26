@@ -63,13 +63,13 @@ var CACHEDIR = '/var/tmp/img-test-cache';
 var TEST_IMAGE_UUID = '0764d78e-3472-11e5-8949-4f31abea4e05';
 
 /*
- * An image that only exists on the experimental channel of updates.joyent.com.
+ * An image that only exists on the experimental channel of updates.tritondatacenter.com.
  * Similar to the note above, hopefully this image will always be here and will
  * not be present on images.smartos.org, since tests rely on this fact.
  * During setup, we import the origin image for this experimental image.
  */
 var TEST_EXPERIMENTAL_SOURCE =
-    'https://updates.joyent.com?channel=experimental';
+    'https://updates.tritondatacenter.com?channel=experimental';
 var TEST_EXPERIMENTAL_ORIGIN = 'fd2cc906-8938-11e3-beab-4359c665ac99';
 var TEST_EXPERIMENTAL_UUID = 'b323e23f-e762-4677-a2c8-b56f3bd5ef48';
 
@@ -123,7 +123,8 @@ test('setup: cache test image manifest', function (t) {
     var pth = format('%s/%s.imgmanifest', CACHEDIR, TEST_IMAGE_UUID);
     fs.exists(pth, function (exists) {
         if (!exists) {
-            var cmd = format('curl -kf https://images.smartos.org/images/%s >%s',
+            var cmd = format(
+                'curl -kf https://images.smartos.org/images/%s >%s',
                 TEST_IMAGE_UUID, pth);
             exec(cmd, function (err, stdout, stderr) {
                 t.ifError(err);
@@ -383,7 +384,7 @@ test('pre-downloaded file (bad checksum); imgadm import ' + TEST_IMAGE_UUID,
 test('setup8: rm experimental image ' + TEST_EXPERIMENTAL_UUID, function (t) {
     var cmd = format(
         'imgadm delete %s ;'
-            + 'imgadm sources -d https://updates.joyent.com ;'
+            + 'imgadm sources -d https://updates.tritondatacenter.com ;'
             + 'imgadm sources -d '
             + TEST_EXPERIMENTAL_SOURCE,
         TEST_EXPERIMENTAL_UUID);
@@ -407,8 +408,8 @@ test('experimental image import fails', function (t) {
     });
 });
 
-test('setup9: add updates.joyent.com source', function (t) {
-    var cmd = 'imgadm sources -a https://updates.joyent.com';
+test('setup9: add updates.tritondatacenter.com source', function (t) {
+    var cmd = 'imgadm sources -a https://updates.tritondatacenter.com';
     exec(cmd, function () {
         t.end();
     });
@@ -448,12 +449,12 @@ test('experimental image import with -S channel url', function (t) {
     });
 });
 
-// delete our experimental image and our updates.joyent.com url, then add
+// delete our experimental image and our updates.tritondatacenter.com url, then add
 // that source, this time with a channel.
 test('setup11: delete experimental image', function (t) {
     var cmd = format(
         'imgadm delete %s ; '
-            + 'imgadm sources -d https://updates.joyent.com ; '
+            + 'imgadm sources -d https://updates.tritondatacenter.com ; '
             + 'imgadm sources -a '
             + TEST_EXPERIMENTAL_SOURCE + ' ',
         TEST_EXPERIMENTAL_UUID);

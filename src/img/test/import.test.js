@@ -63,10 +63,11 @@ var CACHEDIR = '/var/tmp/img-test-cache';
 var TEST_IMAGE_UUID = '0764d78e-3472-11e5-8949-4f31abea4e05';
 
 /*
- * An image that only exists on the experimental channel of updates.tritondatacenter.com.
- * Similar to the note above, hopefully this image will always be here and will
- * not be present on images.smartos.org, since tests rely on this fact.
- * During setup, we import the origin image for this experimental image.
+ * An image that only exists on the experimental channel of
+ * updates.tritondatacenter.com. Similar to the note above, hopefully this image
+ * will always be here and will not be present on images.smartos.org, since
+ * tests rely on this fact. During setup, we import the origin image for this
+ * experimental image.
  */
 var TEST_EXPERIMENTAL_SOURCE =
     'https://updates.tritondatacenter.com?channel=experimental';
@@ -449,8 +450,8 @@ test('experimental image import with -S channel url', function (t) {
     });
 });
 
-// delete our experimental image and our updates.tritondatacenter.com url, then add
-// that source, this time with a channel.
+// delete our experimental image and our updates.tritondatacenter.com url, then
+// add that source, this time with a channel.
 test('setup11: delete experimental image', function (t) {
     var cmd = format(
         'imgadm delete %s ; '

@@ -21,7 +21,7 @@
  * CDDL HEADER END
  *
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
- * Copyright 2013 MNX Cloud Inc.
+ * Copyright 2022 MNX Cloud Inc.
  *
  * * *
  * Dump for shared stuff for this package.

@@ -64,15 +64,19 @@ var TEST_IMAGE_UUID = '0764d78e-3472-11e5-8949-4f31abea4e05';
 
 /*
  * An image that only exists on the experimental channel of
- * updates.tritondatacenter.com. Similar to the note above, hopefully this image
- * will always be here and will not be present on images.smartos.org, since
- * tests rely on this fact. During setup, we import the origin image for this
- * experimental image.
+ * updates.tritondatacenter.com. Similar to the note above, hopefully this
+ * image will always be here and will not be present on images.smartos.org,
+ * since tests rely on this fact. During setup, we import the origin image for
+ * this experimental image. The origin image must exist on images.smartos.org
+ * because the experimental source hasn't been added when the origin is
+ * imported.
  */
 var TEST_EXPERIMENTAL_SOURCE =
     'https://updates.tritondatacenter.com?channel=experimental';
-var TEST_EXPERIMENTAL_ORIGIN = 'fd2cc906-8938-11e3-beab-4359c665ac99';
-var TEST_EXPERIMENTAL_UUID = 'b323e23f-e762-4677-a2c8-b56f3bd5ef48';
+// triton-origin-multiarch-15.4.1
+var TEST_EXPERIMENTAL_ORIGIN = '04a48d7d-6bb5-4e83-8c3b-e60a99e0f48f';
+// vmapi@TRITON-2-20170509T232314Z-g59995b6
+var TEST_EXPERIMENTAL_UUID = '7322d2f6-350f-11e7-9aac-cb944265a7cd';
 
 var CACHEFILE = format('%s/%s.file', CACHEDIR, TEST_IMAGE_UUID);
 

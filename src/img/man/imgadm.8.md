@@ -120,7 +120,7 @@ supplied channel.
             # Docker Hub
             imgadm sources -a https://docker.io -t docker
             # Legacy SDC 6.5 DSAPI (deprecated)
-            imgadm sources -a https://datasets.tritondatacenter.com.com/datasets -t dsapi
+            imgadm sources -a https://datasets.tritondatacenter.com/datasets -t dsapi
 
     imgadm avail [<filters>]
 

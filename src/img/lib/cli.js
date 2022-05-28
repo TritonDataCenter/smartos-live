@@ -755,7 +755,7 @@ CLI.prototype.do_sources.help = (
     + '    # Docker Hub\n'
     + '    {{name}} sources -a https://docker.io -t docker\n'
     + '    # Legacy SDC 6.5 DSAPI (deprecated)\n'
-    + '    {{name}} sources -a https://datasets.tritondatacenter.com.com/datasets -t dsapi\n'
+    + '    {{name}} sources -a https://datasets.tritondatacenter.com/datasets -t dsapi\n'
     /* END JSSTYLED */
 );
 CLI.prototype.do_sources.options = [

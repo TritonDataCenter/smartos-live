@@ -3,18 +3,16 @@
 `imgadm` is a tool for managing images on a local headnode or compute node. It
 can import and destroy local images, present information about how they're
 being used.  To find and install new images, imgadm speaks to a server
-implementing the IMGAPI. The default and canonical IMGAPI server is the Joyent
+implementing the IMGAPI. The default and canonical IMGAPI server is the SmartOS
 Images repository at <https://images.smartos.org>.
 
-
-# Test Suite
+## Test Suite
 
     /usr/img/test/runtests
 
 This can only be run in the global zone (GZ).
 
-
-# Development
+## Development
 
 The src/img tree has no binary components, so you can get away
 with faster edit/test cycle than having to do a full smartos platform
@@ -32,7 +30,7 @@ build and rebooting on it. Here is how:
 
     # On a dev machine:
     # Get a clone of the repo.
-    git clone git@github.com:joyent/smartos-live.git
+    git clone git@github.com:TritonDataCenter/smartos-live.git
     cd src/img
 
     # Make edits, e.g. change the version:
@@ -56,8 +54,7 @@ in order to minimize the size of the platform image.
 Before commits, please (a) run the test suite on a test box per the notes
 above and (b) maintain style by running `make check`.
 
-
-# /var/imgadm/imgadm.conf
+## /var/imgadm/imgadm.conf
 
 "/var/imgadm/imgadm.conf" is imgadm's config file. Typically it should not be
 edited as most configuration is done via `imgadm ...` commands. For example,

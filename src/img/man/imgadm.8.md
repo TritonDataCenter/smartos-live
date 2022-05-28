@@ -115,12 +115,12 @@ supplied channel.
                                       IMGAPI server.
 
         Examples:
-            # Joyent's primary public image repository (defaults to "imgapi")
+            # SmartOS primary public image repository (defaults to "imgapi")
             imgadm sources -a https://images.smartos.org
             # Docker Hub
             imgadm sources -a https://docker.io -t docker
             # Legacy SDC 6.5 DSAPI (deprecated)
-            imgadm sources -a https://datasets.joyent.com/datasets -t dsapi
+            imgadm sources -a https://datasets.tritondatacenter.com.com/datasets -t dsapi
 
     imgadm avail [<filters>]
 

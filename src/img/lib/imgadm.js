@@ -928,7 +928,7 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
                 }
                 if (origin !== '-') {
                     // This *may* be a filesystem using an image. See
-                    // joyent/smartos-live#180 for a counter-example.
+                    // TritonDataCenter/smartos-live#180 for a counter-example.
                     var oname = origin.split('@')[0];
                     if (usageFromImageName[oname] === undefined) {
                         usageFromImageName[oname] = [name];
@@ -3289,7 +3289,8 @@ IMGADM.prototype.vacuumImages = function vacuumImages(opts, cb) {
  *    Dev Note: This mode with prepareScript is called "autoprep" in vars
  *    below.
  * 2. The VM is already prepared (via the typical prepare-image scripts,
- *    see <https://download.joyent.com/pub/prepare-image/>) and shutdown.
+ *    see <https://download.tritondatacenter.com/pub/prepare-image/>) and
+ *    shutdown.
  *    For this "mode" do NOT pass in `options.prepareScript`.
  *
  * @param options {Object}

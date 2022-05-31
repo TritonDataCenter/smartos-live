@@ -582,7 +582,8 @@ triton-platform-publish: common-platform-publish
 # $MANTA_TOOLS_PATH pointing to the manta-client tools scripts) or, with
 # $ENGBLD_BITS_UPLOAD_LOCAL set to 'true', will upload to $ENGBLD_DEST_OUT_PATH
 # on a local filesystem. If $ENGBLD_BITS_UPLOAD_IMGAPI is set in the environment
-# it also publishes any images from the -D directory to updates.joyent.com.
+# it also publishes any images from the -D directory to
+# updates.tritondatacenter.com.
 #
 
 ENGBLD_DEST_OUT_PATH ?=	/public/builds

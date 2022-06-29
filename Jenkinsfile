@@ -145,6 +145,7 @@ set -o pipefail
                 }
             }
         }
+	stage('build-variants') {
         parallel {
             stage('default') {
                 agent {
@@ -335,6 +336,7 @@ export MANTA_TOOLS_PATH=/root/bin/
                     }
                 }
             }
+	}
 	}
     }
     post {

@@ -184,7 +184,7 @@ instance in each file.  Here's is a pre-upgrade view:
 smartos-build(~)[0]% grep Q4 /opt/local/etc/pkg_install.conf 
 PKG_PATH=https://pkgsrc.joyent.com/packages/SmartOS/2018Q4/x86_64/All
 smartos-build(~)[0]% grep Q4 /opt/local/etc/pkgin/repositories.conf 
-https://pkgsrc.smartos.org/packages/SmartOS/2018Q4/x86_64/All
+https://pkgsrc.joyent.com/packages/SmartOS/2018Q4/x86_64/All
 smartos-build(~)[0]% 
 ```
 
@@ -192,7 +192,7 @@ and a post-upgrade view:
 
 ```
 smartos-build-2(~)[0]% grep Q4 /opt/local/etc/pkg_install.conf 
-PKG_PATH=https://pkgsrc.joyent.com/packages/SmartOS/2021Q4/x86_64/All
+PKG_PATH=https://pkgsrc.smartos.org/packages/SmartOS/2021Q4/x86_64/All
 smartos-build-2(~)[0]% grep Q4 /opt/local/etc/pkgin/repositories.conf
 https://pkgsrc.smartos.org/packages/SmartOS/2021Q4/x86_64/All
 smartos-build-2(~)[0]% 

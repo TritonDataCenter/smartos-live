@@ -48,10 +48,10 @@ be cleaned out.
 The next thing you should do is take a snapshot of your instance or
 potentially back up important information. To snapshot your instance,
 you can use the
-[triton](https://github.com/joyent/node-triton#node-triton) tool. If you
-have not already, follow the
-[setup](https://github.com/joyent/node-triton#setup) instructions such
-that you can point it at the system with your instance.
+[triton](https://github.com/TritonDataCenter/node-triton#node-triton)
+tool. If you have not already, follow the
+[setup](https://github.com/TritonDataCenter/node-triton#setup) instructions
+such that you can point it at the system with your instance.
 
 First, identify the name of the instance that you are working on. This
 can usually be done by running `triton inst list`. For example:
@@ -176,14 +176,15 @@ Edit these files:
 /opt/local/etc/pkgin/repositories.conf
 ```
 
-And change any instance of `2018Q4` to `2021Q4`.  There should be one
+And change any instance of `2018Q4` to `2021Q4`, and any instance of
+`pkgsrc.joyent.com` to `pkgsrc.smartos.org`.  There should be one
 instance in each file.  Here's is a pre-upgrade view:
 
 ```
 smartos-build(~)[0]% grep Q4 /opt/local/etc/pkg_install.conf 
 PKG_PATH=https://pkgsrc.joyent.com/packages/SmartOS/2018Q4/x86_64/All
 smartos-build(~)[0]% grep Q4 /opt/local/etc/pkgin/repositories.conf 
-https://pkgsrc.joyent.com/packages/SmartOS/2018Q4/x86_64/All
+https://pkgsrc.smartos.org/packages/SmartOS/2018Q4/x86_64/All
 smartos-build(~)[0]% 
 ```
 
@@ -193,7 +194,7 @@ and a post-upgrade view:
 smartos-build-2(~)[0]% grep Q4 /opt/local/etc/pkg_install.conf 
 PKG_PATH=https://pkgsrc.joyent.com/packages/SmartOS/2021Q4/x86_64/All
 smartos-build-2(~)[0]% grep Q4 /opt/local/etc/pkgin/repositories.conf
-https://pkgsrc.joyent.com/packages/SmartOS/2021Q4/x86_64/All
+https://pkgsrc.smartos.org/packages/SmartOS/2021Q4/x86_64/All
 smartos-build-2(~)[0]% 
 ```
 
@@ -325,7 +326,7 @@ To test this, start a fresh clone of smartos-live and build. For
 example:
 
 ```
-$ git clone https://github.com/joyent/smartos-live test
+$ git clone https://github.com/TritonDataCenter/smartos-live test
 $ cd test
 $ ./configure && gmake live
 $

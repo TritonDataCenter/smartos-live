@@ -10,6 +10,7 @@
 # http://www.illumos.org/license/CDDL.
 #
 # Copyright 2018 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 # Determine pkgsrc branch given a repositories.conf file.
 #

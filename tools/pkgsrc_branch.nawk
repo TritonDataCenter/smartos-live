@@ -32,7 +32,7 @@ BEGIN {
 	next;
 }
 
-$3 != "pkgsrc.smartos.org" || $4 != "packages" {
+$3 != "pkgsrc.smartos.org" && $3 != "pkgsrc.joyent.com" || $4 != "packages" {
 	print("WARNING: unexpected URL format: " $0) >"/dev/stderr";
 	next;
 }

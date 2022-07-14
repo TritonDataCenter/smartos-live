@@ -24,8 +24,8 @@ root="/${1}"
 # pkgsrc.smartos.org for changes. Old boostrap tars are kept around indefinitely,
 # so there's no particular urgency for getting it done when a new bootstrap
 # is available, but we'll want to stay relatively up to date.
-BOOTSTRAP_TAR="bootstrap-trunk-tools-20201019.tar.gz"
-BOOTSTRAP_SHA="9b7a6daff5528d800e8cea20692f61ccd3b81471"
+BOOTSTRAP_TAR="bootstrap-trunk-tools-20220706-upgrade.tar.gz"
+BOOTSTRAP_SHA="6779b158a17600172585406e67adaeb1a147e045"
 
 cd /tmp || fatal 'cd to /tmp failed'
 

@@ -202,7 +202,7 @@ function install_pkgin
 	local pkglist
 
 	pkglist="build-essential flex libxslt openjdk11 nodejs"
-	pkglist="$pkglist p5-XML-Parser gettext python27 py27-expat"
+	pkglist="$pkglist p5-XML-Parser gettext python27 py27-expat python39"
 	pkglist="$pkglist coreutils gsed pkg_alternatives cdrtools"
 	pkglist="$pkglist py27-sqlite3 nasm pigz smartos-build-tools"
 
@@ -386,9 +386,10 @@ SHADOW_CCCS="$SHADOW_CCCS";			export SHADOW_CCCS
 JAVA_ROOT=/opt/local/java/openjdk11;		export JAVA_ROOT
 FLEX=/opt/local/bin/flex;			export FLEX
 GNUXGETTEXT=/opt/local/bin/xgettext;		export GNUXGETTEXT
-PYTHON=/opt/local/bin/python2.7;		export PYTHON
-BUILDPY3='#';					export BUILDPY3
-BUILDPY3TOOLS='#';				export BUILDPY3TOOLS
+PYTHON3=/opt/local/bin/python3.9;		export PYTHON3
+PYTHON3_VERSION=3.9;				export PYTHON3_VERSION
+PYTHON3_PKGVERS=-39;				export PYTHON3_PKGVERS
+PYTHON3_SUFFIX='';				export PYTHON3_SUFFIX
 BLD_JAVA_11='';					export BLD_JAVA_11
 
 # Disable the split 32/64 perl module builds since smartos doesn't exec perl

@@ -386,9 +386,9 @@ SHADOW_CCCS="$SHADOW_CCCS";			export SHADOW_CCCS
 JAVA_ROOT=/opt/local/java/openjdk11;		export JAVA_ROOT
 FLEX=/opt/local/bin/flex;			export FLEX
 GNUXGETTEXT=/opt/local/bin/xgettext;		export GNUXGETTEXT
-PYTHON=/opt/local/bin/python2.7;		export PYTHON
-BUILDPY3='#';					export BUILDPY3
-BUILDPY3TOOLS='#';				export BUILDPY3TOOLS
+PYTHON3=/opt/local/bin/python3.9;		export PYTHON3
+PYTHON3_VERSION=3.9;				export PYTHON3_VERSION
+PYTHON3_PKGVERS=-39				export PYTHON3_PKGVERS
 BLD_JAVA_11='';					export BLD_JAVA_11
 
 # Disable the split 32/64 perl module builds since smartos doesn't exec perl

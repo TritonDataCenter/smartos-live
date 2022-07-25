@@ -1486,7 +1486,8 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         With this property set to true, this VM will be able to operate as a
         DHCP server on this interface.  Without this, some of the packets
-        required of a DHCP server will not get through.
+        required of a DHCP server will not get through. This property also
+        implies the behavior of allow_ip_spoofing.
 
         type: boolean
         vmtype: ANY
@@ -1588,18 +1589,9 @@ tab-complete UUIDs rather than having to type them out for every command.
         create: yes
         update: yes
 
-    nics.*.dhcp_server:
+    nics.*.dhcp_server (DEPRECATED):
 
-        With this property set to true, this VM will be able to operate as a
-        DHCP server on this interface.  Without this, some of the packets
-        required of a DHCP server will not get through.
-
-        type: boolean
-        vmtype: ANY
-        listable: yes (see above)
-        create: yes
-        update: yes
-        default: false
+        This option behaves identically to allow_dhcp_spoofing.
 
     nics.*.gateway (DEPRECATED):
 

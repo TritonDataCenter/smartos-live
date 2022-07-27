@@ -18,6 +18,21 @@ if [[ -n "$TRACE" ]]; then
     set -o xtrace
 fi
 
+# If there's an existing install...
+if [[ -e /opt/tools/bin/pkgin ]]; then
+    # Re-bootstrap pkgsrc if requested.
+    if [[ $1 == '--clean' ]]; then
+        pkg_stash=$(mktemp)
+        pkgin export > "$pkg_stash"
+        rm -rf /opt/tools
+        shift
+    else
+        # Don't stomp an existing install.
+        printf 'pkgsrc has already been set up.\n'
+        exit
+    fi
+fi
+
 root="/${1}"
 
 # Occasionally, the filename and hash will need to be updated. Refer to
@@ -41,7 +56,12 @@ if [[ -d "$root" ]]; then
     tar -zxpf ${BOOTSTRAP_TAR} -C "${root}"
 fi
 
+if [[ -n $pkg_stash ]]; then
+    pkgin -y import "$pkg_stash"
+    rm "${pkg_stash:?}"
+fi
+
 if [[ ${#root} == 1 ]]; then
-    printf 'The pkgsrc-tools collection is now ready for use. It will be in\n'
+    printf '\nThe pkgsrc-tools collection is now ready for use. It will be in\n'
     printf 'your PATH the next time you log in.\n'
 fi

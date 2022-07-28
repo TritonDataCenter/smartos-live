@@ -1,5 +1,6 @@
 #
 # Copyright 2020 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 ROOT = $(PWD)/..
@@ -7,6 +8,7 @@ RONNJS = /opt/local/bin/node $(ROOT)/tools/ronnjs/bin/ronn.js
 DESTDIR = $(ROOT)/proto
 
 MAN_FILES = \
+	smartdc/man/man1/pkgsrc-setup.1 \
 	smartdc/man/man1/sdc-factoryreset.1 \
 	smartdc/man/man1/sdc-lastcomm.1 \
 	smartdc/man/man1/sdc-zfs-io-throttle.1 \

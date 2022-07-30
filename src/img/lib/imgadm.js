@@ -856,7 +856,7 @@ IMGADM.prototype._loadImages = function _loadImages(callback) {
             log: self.log,
             errMsg: 'could not load images',
             execOpts: {
-                maxBuffer: 10485760  /* >200k hit in prod, 10M should suffice */
+                maxBuffer: 20971520  /* >200k hit in prod, 20M should suffice */
             }
         }, function (zfsErr, stdout, stderr) {
             if (zfsErr) {

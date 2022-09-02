@@ -115,6 +115,7 @@ pipeline {
 		'(false/DEFAULT).</p>'
         )
     }
+    def stages_to_run = [:]
     stages_to_run['default'] = {
             stage('default') {
                 agent {

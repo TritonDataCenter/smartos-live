@@ -360,7 +360,8 @@ set -o pipefail
 			environment name: 'PARALLEL_STAGES', value: 'true'
 		}
         	parallel stages_to_run
-	}	
+	}
+    }
     post {
         always {
             joySlackNotifications(

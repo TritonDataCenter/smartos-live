@@ -112,7 +112,7 @@ pipeline {
             defaultValue: false,
             description: '<p>This parameter declares if this build should ' +
                 'build its variants in parallel (true) or sequentially ' +
-		'(false/DEFAULT).'.</p>'
+		'(false/DEFAULT).</p>'
         )
     }
     stages_to_run['default'] = {

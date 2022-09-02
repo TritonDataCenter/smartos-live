@@ -125,7 +125,7 @@ set -o pipefail
                 ''')
             }
             post {
-                // We don't slack-notify here, as that doesn't add much
+                // We don't notify here, as that doesn't add much
                 // value. The checks should always pass, and it's unlikely
                 // that developers will care when they do. If they don't
                 // pass, then the (likely) GitHub PR will be updated with a

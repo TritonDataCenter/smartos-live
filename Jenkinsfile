@@ -107,46 +107,15 @@ pipeline {
                 'is useful in cases where a push to illumos-extra coincides ' +
                 'with an otherwise broken platform build.</p>'
         )
+        booleanParam(
+            name: 'PARALLEL_STAGES',
+            defaultValue: false,
+            description: '<p>This parameter declares if this build should ' +
+                'build its variants in parallel (true) or sequentially ' +
+		'(false/DEFAULT).'.</p>'
+        )
     }
-    stages {
-        stage('check') {
-            agent {
-                node {
-                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
-                    'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
-                    customWorkspace "workspace/smartos-${BRANCH_NAME}-check"
-                }
-            }
-            steps{
-                sh('''
-set -o errexit
-set -o pipefail
-./tools/build_jenkins -c -F check
-                ''')
-            }
-            post {
-                // We don't mattermost-notify here, as that doesn't add much
-                // value. The checks should always pass, and it's unlikely
-                // that developers will care when they do. If they don't
-                // pass, then the (likely) GitHub PR will be updated with a
-                // failure status, and the developer can then investigate.
-
-                // https://jenkins.io/doc/pipeline/steps/ws-cleanup/
-                // We don't clean on build failure so that there's a chance to
-                // investigate the breakage. Hopefully, a subsequent successful
-                // build will then clean up the workspace, though that's not
-                // guaranteed for abandoned branches.
-                always {
-                    cleanWs cleanWhenSuccess: true,
-                        cleanWhenFailure: false,
-                        cleanWhenAborted: true,
-                        cleanWhenNotBuilt: true,
-                        deleteDirs: true
-                }
-            }
-        }
-	stage('build-variants') {
-        parallel {
+    stages_to_run['default'] = {
             stage('default') {
                 agent {
                     // There seems to be a Jenkins bug where ${WORKSPACE} isn't
@@ -201,6 +170,8 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
                     }
                 }
             }
+    }
+    stages_to_run['debug'] = {
             stage('debug') {
                 agent {
                     node {
@@ -250,6 +221,8 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                     }
                 }
             }
+    }
+    stages_to_run['gcc10'] = {
             stage('gcc10') {
                 agent {
                     node {
@@ -293,6 +266,8 @@ export PLATFORM_DEBUG_SUFFIX=-gcc10
                     }
                 }
             }
+    }
+    stages_to_run['strap-cache'] = {
             stage('strap-cache') {
                 agent {
                     node {
@@ -336,9 +311,56 @@ export MANTA_TOOLS_PATH=/root/bin/
                     }
                 }
             }
-	}
-	}
     }
+    stages {
+        stage('check') {
+            agent {
+                node {
+                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
+                    'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
+                    customWorkspace "workspace/smartos-${BRANCH_NAME}-check"
+                }
+            }
+            steps{
+                sh('''
+set -o errexit
+set -o pipefail
+./tools/build_jenkins -c -F check
+                ''')
+            }
+            post {
+                // We don't mattermost-notify here, as that doesn't add much
+                // value. The checks should always pass, and it's unlikely
+                // that developers will care when they do. If they don't
+                // pass, then the (likely) GitHub PR will be updated with a
+                // failure status, and the developer can then investigate.
+
+                // https://jenkins.io/doc/pipeline/steps/ws-cleanup/
+                // We don't clean on build failure so that there's a chance to
+                // investigate the breakage. Hopefully, a subsequent successful
+                // build will then clean up the workspace, though that's not
+                // guaranteed for abandoned branches.
+                always {
+                    cleanWs cleanWhenSuccess: true,
+                        cleanWhenFailure: false,
+                        cleanWhenAborted: true,
+                        cleanWhenNotBuilt: true,
+                        deleteDirs: true
+                }
+            }
+        }
+	stage('build-sequential') {
+		when {
+			environment name: 'PARALLEL_STAGES', value: 'false'
+		}
+        	stage stages_to_run
+	}	
+	stage('build-parallel') {
+		when {
+			environment name: 'PARALLEL_STAGES', value: 'true'
+		}
+        	parallel stages_to_run
+	}	
     post {
         always {
             joySlackNotifications(

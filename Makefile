@@ -54,9 +54,9 @@ BUILD_PLATFORM := $(shell uname -v)
 #
 # gmake world live MAX_JOBS=32
 #
-CRIPPLED_HOST :=	$(shell [[ `prtconf -m 2>/dev/null || echo 999999` -lt \
+LOWMEM_HOST :=	$(shell [[ `prtconf -m 2>/dev/null || echo 999999` -lt \
     16384 ]] && echo yes || echo no)
-ifeq ($(CRIPPLED_HOST),yes)
+ifeq ($(LOWMEM_HOST),yes)
 MAX_JOBS ?=	8
 else
 MAX_JOBS ?=	$(shell tools/optimize_jobs)
@@ -480,7 +480,19 @@ usb: live
 # The 'PUB_' prefix below indicates published build artifacts.
 #
 ifeq ($(ILLUMOS_ENABLE_DEBUG),exclusive)
-    PLATFORM_DEBUG_SUFFIX = -debug
+    #
+    # NOTE: If there is a provided suffix, we will use it instead.  This means,
+    # however, that the suffix must have noted (or have known semantics) that
+    # it is DEBUG. Current practice is that the alternate-compiler stage (see
+    # the Jenkinsfile's gcc10 stage) also enabled DEBUG.
+    #
+    ifndef PLATFORM_DEBUG_SUFFIX
+	PLATFORM_DEBUG_SUFFIX = -debug
+    else
+	ifeq($(PLATFORM_DEBUG_SUFFIX),"")
+	    PLATFORM_DEBUG_SUFFIX = -debug
+	endif
+    endif
 endif
 
 BUILD_NAME			?= platform

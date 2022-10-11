@@ -1,7 +1,7 @@
 # Quickstart
 
 ```
-git clone https://github.com/joyent/smartos-live.git
+git clone https://github.com/TritonDataCenter/smartos-live.git
 cd smartos-live
 ./configure
 gmake world
@@ -49,10 +49,10 @@ includes:
 
 # Bug Reports
 
-If you encounter a problem, please reach out for assistance. You can
-file a [GitHub issue](https://github.com/joyent/smartos-live/issues) for
-any problem you encounter. When filing a bug, please include the
-platform version that you're running and a description of the problem.
+If you encounter a problem, please reach out for assistance. You can file a
+[GitHub issue](https://github.com/TritonDataCenter/smartos-live/issues) for
+any problem you encounter. When filing a bug, please include the platform
+version that you're running and a description of the problem.
 
 If there was an operating system crash dump or a program generated a
 core dump, it would be greatly appreciated if you could make that
@@ -61,8 +61,8 @@ available.
 While there are multiple repositories that make up the smartos-live
 image, if you're in doubt about where to file a bug or just are
 uncertain, please file it on the [SmartOS live issue
-tracker](https://github.com/joyent/smartos-live/issues) and we'll help
-from there. It's more important that the bug is recorded and we can work
+tracker](https://github.com/TritonDataCenter/smartos-live/issues) and we'll
+help from there. It's more important that the bug is recorded and we can work
 on solving it than it end up in the right location.
 
 # Components of SmartOS
@@ -71,16 +71,16 @@ SmartOS is made up of several different components. These components are:
 
 ## smartos-live
 
-The [smartos-live](https://github.com/joyent/smartos-live) repository is
-the root of SmartOS. It has logic for how to build all of the different
-components that make up SmartOS and has components that are specific to
-the SmartOS live image environment. For example, it has tools like
-`vmadm` and `imgadm`.
+The [smartos-live](https://github.com/TritonDataCenter/smartos-live)
+repository is the root of SmartOS. It has logic for how to build all of the
+different components that make up SmartOS and has components that are
+specific to the SmartOS live image environment. For example, it has tools
+like `vmadm` and `imgadm`.
 
 ## illumos-joyent
 
-The [illumos-joyent](https://github.com/joyent/illumos-joyent)
-repository is the core of the operating system. It represents Joyent's
+The [illumos-joyent](https://github.com/TritonDataCenter/illumos-joyent)
+repository is the core of the operating system. It represents SmartOS's
 child of [illumos-gate](https://github.com/illumos/illumos-gate). This
 has the core kernel, libraries, and user commands.
 
@@ -90,8 +90,8 @@ and not stock illumos-gate.
 
 ## illumos-extra
 
-The [illumos-extra](https://github.com/joyent/illumos-extra) repository
-contains a few different sets of software:
+The [illumos-extra](https://github.com/TritonDataCenter/illumos-extra)
+repository contains a few different sets of software:
 
 1. Software which is held at a specific version that is required for the
 platform to build. For example, GNU binutils fall into this category.
@@ -154,10 +154,11 @@ series of Makefile targets that a local project is required to implement.
 
 The current set of local projects include:
 
-* [illumos-kvm](https://github.com/joyent/illumos-kvm)
-* [illumos-kvm-cmd](https://github.com/joyent/illumos-kvm-cmd) aka QEMU
-* [mdata-client](https://github.com/joyent/mdata-client)
-* [ur-agent](https://github.com/joyent/sdc-ur-agent)
+* [illumos-kvm](https://github.com/TritonDataCenter/illumos-kvm)
+* [illumos-kvm-cmd](https://github.com/TritonDataCenter/illumos-kvm-cmd) aka
+QEMU
+* [mdata-client](https://github.com/TritonDataCenter/mdata-client)
+* [ur-agent](https://github.com/TritonDataCenter/sdc-ur-agent)
 
 # Building SmartOS
 
@@ -177,7 +178,7 @@ the image, you should run the imgadm command from the global zone:
 
 ```
 # imgadm import c8715b60-7e98-11ec-82d1-03d16599f529
-Importing c8715b60-7e98-11ec-82d1-03d16599f529 (base-64-lts@21.4.0) from "https://images.joyent.com"
+Importing c8715b60-7e98-11ec-82d1-03d16599f529 (base-64-lts@21.4.0) from "https://images.smartos.org"
 Gather image c8715b60-7e98-11ec-82d1-03d16599f529 ancestry
 Must download and install 1 image (148.6 MiB)
 Download 1 image     [=======================>] 100% 148.62MB 497.77KB/s  5m 5s
@@ -245,7 +246,7 @@ The final prerequisite is to make sure that `git` is installed. To do
 that, you should run as your user:
 
 ```
-$ pfexec pkgin -y in scmgit
+$ pfexec pkgin -y in git
 ...
 $
 ```
@@ -263,7 +264,7 @@ Once the build zone has been configured, you can kick off a build in a
 few easy steps:
 
 ```
-$ git clone https://github.com/joyent/smartos-live
+$ git clone https://github.com/TritonDataCenter/smartos-live
 $ cd smartos-live
 $ ./configure
 $ gmake live
@@ -348,12 +349,12 @@ for both build flavors.
   upload
 * `*-bits-upload`: upload bits to either Manta, a remote filesystem
   and optionally, a Triton imgapi instance, defaulting to
-  `updates.joyent.com`
+  `updates.tritondatacenter.com`
 * `*-bits-upload-latest`: as above, except attempt to re-upload the
   latest built bits, useful in case of interrupted uploads
 
 The `bits-upload` tool comes from
-[eng.git](http://github.com/joyent/eng) which the build pulls in via
+[eng.git](http://github.com/TritonDataCenter/eng) which the build pulls in via
 the `deps/eng` "git submodule" from the top-level of the workspace.
 
 The upload can be influenced by the following shell environment
@@ -369,7 +370,7 @@ variables:
 * `ENGBLD_BITS_UPLOAD_IMGAPI`: If set to `true`, this causes the build to
   also attempt to upload any Triton images found in the `output/bits`
   directory to an imgapi instance, which defaults to
-  `updates.joyent.com`.
+  `updates.tritondatacenter.com`.
 
 For Manta and imgapi uploads, the following environment variables are
 used to configure the upload:
@@ -384,7 +385,7 @@ used to configure the upload:
 
 For details on the default values of these variables, and how they are
 used, see
-[bits-upload.sh](https://github.com/joyent/eng/blob/master/tools/bits-upload.sh)
+[bits-upload.sh](https://github.com/TritonDataCenter/eng/blob/master/tools/bits-upload.sh)
 
 Finally, release engineers may find the script
 [`build_jenkins`](/tools/build_jenkins) useful, intended to be run
@@ -498,7 +499,7 @@ arguments when running `./configure` to take care of it. For example, you
 would modify the normal workflow as follows:
 
 ```
-$ git clone https://github.com/joyent/smartos-live
+$ git clone https://github.com/TritonDataCenter/smartos-live
 $ cd smartos-live
 $ ./configure -d
 $ gmake live
@@ -728,14 +729,14 @@ All the repositories contained within this build use GitHub pull requests for
 new changes.
 
 All changes should have an associated issue. You can use the [GitHub
-issue tracker](https://github.com/joyent/smartos-live/issues). Joyent
+issue tracker](https://github.com/TritonDataCenter/smartos-live/issues). MNX
 employees use an internal JIRA exposed at
 <https://smartos.org/bugview>. The commit message should be of this form:
 
 ```
-joyent/smartos-live#9999 make some changes (#23)
+TritonDataCenter/smartos-live#9999 make some changes (#23)
 
-joyent/smartos-live#10000 make a related change
+TritonDataCenter/smartos-live#10000 make a related change
 Reviewed by: Steve Reviewer <steve.reviewer@gmail.com>
 Approved by: Amy Approver <amy.approver@gmail.com>
 ```
@@ -904,7 +905,7 @@ Running mount -O -F lofs -o ro /var/tmp/smartos-test-loopback/usr /usr
 Running tar -xzf ./tests-test_archive-master-20191001T134222Z.tgz -C / ./opt ./kernel ./tests.manifest.gen ./tests.buildstamp
 adding cyrus user
 adding ztest user
-Running curl -kO https://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2021Q4-tools.tar.gz
+Running curl -kO https://pkgsrc.smartos.org/packages/SmartOS/bootstrap/bootstrap-2021Q4-tools.tar.gz
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
 100 22.9M  100 22.9M    0     0   566k      0  0:00:41  0:00:41 --:--:--  577k
@@ -913,7 +914,7 @@ Running ln -s /opt/tools /opt/local
 Running pkgin -y in python27 sudo coreutils gcc7 gmake
 reading local summary...
 processing local summary...
-processing remote summary (https://pkgsrc.joyent.com/packages/SmartOS/2021Q4/tools/All)...
+processing remote summary (https://pkgsrc.smartos.org/packages/SmartOS/2021Q4/tools/All)...
 pkg_summary.xz                                                                                        100%  120KB 119.9KB/s   00:00
 calculating dependencies...done.
 

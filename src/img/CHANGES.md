@@ -15,9 +15,9 @@ Known issues:
 
   Otherwise, channels can be specified as a component of any URL parameter, e.g.
 
-      imgadm sources -a 'https://updates.joyent.com?channel=experimental'
+      imgadm sources -a 'https://updates.tritondatacenter.com?channel=experimental'
       or
-      imgadm import -S 'https://updates.joyent.com?channel=experimental' <uuid>
+      imgadm import -S 'https://updates.tritondatacenter.com?channel=experimental' <uuid>
 
 ## 3.9.3
 

@@ -5,6 +5,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 # Copyright 2022 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 function fatal () {
@@ -17,19 +18,34 @@ if [[ -n "$TRACE" ]]; then
     set -o xtrace
 fi
 
+# If there's an existing install...
+if [[ -e /opt/tools/bin/pkgin ]]; then
+    # Re-bootstrap pkgsrc if requested.
+    if [[ $1 == '--clean' ]]; then
+        pkg_stash=$(mktemp)
+        pkgin export > "$pkg_stash"
+        rm -rf /opt/tools
+        shift
+    else
+        # Don't stomp an existing install.
+        printf 'pkgsrc has already been set up.\n'
+        exit
+    fi
+fi
+
 root="/${1}"
 
 # Occasionally, the filename and hash will need to be updated. Refer to
-# pkgsrc.joyent.com for changes. Old boostrap tars are kept around indefinitely,
+# pkgsrc.smartos.org for changes. Old boostrap tars are kept around indefinitely,
 # so there's no particular urgency for getting it done when a new bootstrap
 # is available, but we'll want to stay relatively up to date.
-BOOTSTRAP_TAR="bootstrap-trunk-tools-20201019.tar.gz"
-BOOTSTRAP_SHA="9b7a6daff5528d800e8cea20692f61ccd3b81471"
+BOOTSTRAP_TAR="bootstrap-trunk-tools-20220706.tar.gz"
+BOOTSTRAP_SHA="c15932a7cc791b8c5f7a0137a7521c28c503b453"
 
 cd /tmp || fatal 'cd to /tmp failed'
 
 printf 'Downloading pkgsrc bootstrap...\n'
-curl -# -kO https://pkgsrc.joyent.com/packages/SmartOS/bootstrap/${BOOTSTRAP_TAR}
+curl -# -kO https://pkgsrc.smartos.org/packages/SmartOS/bootstrap/${BOOTSTRAP_TAR}
 DOWNLOADED_SHA="$(/bin/digest -a sha1 ${BOOTSTRAP_TAR})"
 
 if ! [[ "${BOOTSTRAP_SHA}" = "${DOWNLOADED_SHA}" ]]; then
@@ -40,7 +56,12 @@ if [[ -d "$root" ]]; then
     tar -zxpf ${BOOTSTRAP_TAR} -C "${root}"
 fi
 
+if [[ -n $pkg_stash ]]; then
+    pkgin -y import "$pkg_stash"
+    rm "${pkg_stash:?}"
+fi
+
 if [[ ${#root} == 1 ]]; then
-    printf 'The pkgsrc-tools collection is now ready for use. It will be in\n'
+    printf '\nThe pkgsrc-tools collection is now ready for use. It will be in\n'
     printf 'your PATH the next time you log in.\n'
 fi

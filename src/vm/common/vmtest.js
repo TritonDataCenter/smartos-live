@@ -21,6 +21,7 @@
  * CDDL HEADER END
  *
  * Copyright 2019 Joyent, Inc.
+ * Copyright 2022 MNX Cloud, Inc.
  *
  */
 
@@ -71,7 +72,7 @@ var DEFAULT_ZFS_PROPERTIES = {
   "refcompressratio": "1.00x",
   "redundant_metadata": "all"
 };
-var IMAGES_SOURCE = 'https://images.joyent.com/';
+var IMAGES_SOURCE = 'https://images.smartos.org/';
 
 exports.CURRENT_DOCKER_IMAGE_UUID = process.env['DOCKER_BASE_IMAGE_UUID'];
 exports.CURRENT_SMARTOS_UUID = '01b2c898-945f-11e1-a523-af1afbe22822';

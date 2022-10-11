@@ -21,6 +21,7 @@
  * CDDL HEADER END
  *
  * Copyright 2020 Joyent, Inc.
+ * Copyright 2022 MNX Cloud, Inc.
  *
  * * *
  *
@@ -54,7 +55,7 @@ var WRKDIR = '/var/tmp/img-test-import';
 var CACHEDIR = '/var/tmp/img-test-cache';
 
 /*
- * Pick an image that (a) exists on images.joyent.com (they *do* occasionally
+ * Pick an image that (a) exists on images.smartos.org (they *do* occasionally
  * get deprecated) and (b) is relatively small and (c) is unlikely to collide
  * with current usage.
  */
@@ -62,15 +63,20 @@ var CACHEDIR = '/var/tmp/img-test-cache';
 var TEST_IMAGE_UUID = '0764d78e-3472-11e5-8949-4f31abea4e05';
 
 /*
- * An image that only exists on the experimental channel of updates.joyent.com.
- * Similar to the note above, hopefully this image will always be here and will
- * not be present on images.joyent.com, since tests rely on this fact.
- * During setup, we import the origin image for this experimental image.
+ * An image that only exists on the experimental channel of
+ * updates.tritondatacenter.com. Similar to the note above, hopefully this
+ * image will always be here and will not be present on images.smartos.org,
+ * since tests rely on this fact. During setup, we import the origin image for
+ * this experimental image. The origin image must exist on images.smartos.org
+ * because the experimental source hasn't been added when the origin is
+ * imported.
  */
 var TEST_EXPERIMENTAL_SOURCE =
-    'https://updates.joyent.com?channel=experimental';
-var TEST_EXPERIMENTAL_ORIGIN = 'fd2cc906-8938-11e3-beab-4359c665ac99';
-var TEST_EXPERIMENTAL_UUID = 'b323e23f-e762-4677-a2c8-b56f3bd5ef48';
+    'https://updates.tritondatacenter.com?channel=experimental';
+// triton-origin-multiarch-15.4.1
+var TEST_EXPERIMENTAL_ORIGIN = '04a48d7d-6bb5-4e83-8c3b-e60a99e0f48f';
+// vmapi@TRITON-2-20170509T232314Z-g59995b6
+var TEST_EXPERIMENTAL_UUID = '7322d2f6-350f-11e7-9aac-cb944265a7cd';
 
 var CACHEFILE = format('%s/%s.file', CACHEDIR, TEST_IMAGE_UUID);
 
@@ -88,8 +94,8 @@ test('setup: clean WRKDIR (' + WRKDIR + ')', function (t) {
     });
 });
 
-test('setup: ensure images.joyent.com source', function (t) {
-    exec('imgadm sources -a https://images.joyent.com', function (err, o, e) {
+test('setup: ensure images.smartos.org source', function (t) {
+    exec('imgadm sources -a https://images.smartos.org', function (err, o, e) {
         t.ifError(err);
         t.end();
     });
@@ -97,7 +103,7 @@ test('setup: ensure images.joyent.com source', function (t) {
 
 test('setup: get test image in local SDC IMGAPI (if available)', function (t) {
     var cmd = 'sdc-imgadm import ' + TEST_IMAGE_UUID
-        + ' -S https://images.joyent.com || true';
+        + ' -S https://images.smartos.org || true';
     exec(cmd, function (err, o, e) {
         t.ifError(err);
         t.end();
@@ -122,7 +128,8 @@ test('setup: cache test image manifest', function (t) {
     var pth = format('%s/%s.imgmanifest', CACHEDIR, TEST_IMAGE_UUID);
     fs.exists(pth, function (exists) {
         if (!exists) {
-            var cmd = format('curl -kf https://images.joyent.com/images/%s >%s',
+            var cmd = format(
+                'curl -kf https://images.smartos.org/images/%s >%s',
                 TEST_IMAGE_UUID, pth);
             exec(cmd, function (err, stdout, stderr) {
                 t.ifError(err);
@@ -138,7 +145,7 @@ test('setup: cache test image file', function (t) {
     fs.exists(CACHEFILE, function (exists) {
         if (!exists) {
             var cmd = format(
-                'curl -kf https://images.joyent.com/images/%s/file >%s',
+                'curl -kf https://images.smartos.org/images/%s/file >%s',
                 TEST_IMAGE_UUID, CACHEFILE);
             exec(cmd, function (err, stdout, stderr) {
                 t.ifError(err);
@@ -382,7 +389,7 @@ test('pre-downloaded file (bad checksum); imgadm import ' + TEST_IMAGE_UUID,
 test('setup8: rm experimental image ' + TEST_EXPERIMENTAL_UUID, function (t) {
     var cmd = format(
         'imgadm delete %s ;'
-            + 'imgadm sources -d https://updates.joyent.com ;'
+            + 'imgadm sources -d https://updates.tritondatacenter.com ;'
             + 'imgadm sources -d '
             + TEST_EXPERIMENTAL_SOURCE,
         TEST_EXPERIMENTAL_UUID);
@@ -395,7 +402,7 @@ test('setup8: rm experimental image ' + TEST_EXPERIMENTAL_UUID, function (t) {
 
 // With no configured experimental sources, this should fail, which will
 // also help determine whether the image has perhaps been added to
-// images.joyent.com, in which case, maintainers should select a different
+// images.smartos.org, in which case, maintainers should select a different
 // TEST_EXPERIMENTAL_UUID (and TEST_EXPERIMENTAL_ORIGIN if necessary)
 test('experimental image import fails', function (t) {
     var cmd = 'imgadm import ' + TEST_EXPERIMENTAL_UUID;
@@ -406,8 +413,8 @@ test('experimental image import fails', function (t) {
     });
 });
 
-test('setup9: add updates.joyent.com source', function (t) {
-    var cmd = 'imgadm sources -a https://updates.joyent.com';
+test('setup9: add updates.tritondatacenter.com source', function (t) {
+    var cmd = 'imgadm sources -a https://updates.tritondatacenter.com';
     exec(cmd, function () {
         t.end();
     });
@@ -447,12 +454,12 @@ test('experimental image import with -S channel url', function (t) {
     });
 });
 
-// delete our experimental image and our updates.joyent.com url, then add
-// that source, this time with a channel.
+// delete our experimental image and our updates.tritondatacenter.com url, then
+// add that source, this time with a channel.
 test('setup11: delete experimental image', function (t) {
     var cmd = format(
         'imgadm delete %s ; '
-            + 'imgadm sources -d https://updates.joyent.com ; '
+            + 'imgadm sources -d https://updates.tritondatacenter.com ; '
             + 'imgadm sources -a '
             + TEST_EXPERIMENTAL_SOURCE + ' ',
         TEST_EXPERIMENTAL_UUID);

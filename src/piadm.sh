@@ -13,6 +13,7 @@
 
 #
 # Copyright 2022 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 # shellcheck disable=1091
@@ -1219,7 +1220,9 @@ bringup_HN() {
 	version=$(sdc-usbkey status -j | json version)
 	if [[ "$version" != "2" ]]; then
 		# Unmount on version-mismatch...
-		usb_unmount_unless_already
+		if [[ "$stick_premounted" != "yes" ]]; then
+			sdc-usbkey unmount
+		fi
 		err "USB key must be Version 2 (loader) to install on a pool."
 	fi
 

@@ -46,9 +46,9 @@ is absolutely welcome.
 
 MIT (See _LICENSE_.)
 
-[mdata_docs]: http://eng.joyent.com/mdata/
-[protocol]: http://eng.joyent.com/mdata/protocol.html
-[datadict]: http://eng.joyent.com/mdata/datadict.html
+[mdata_docs]: http://eng.tritondatacenter.com/mdata/
+[protocol]: http://eng.tritondatacenter.com/mdata/protocol.html
+[datadict]: http://eng.tritondatacenter.com/mdata/datadict.html
 [mdata_get]: http://smartos.org/man/8/mdata-get
 [mdata_delete]: http://smartos.org/man/8/mdata-delete
 [mdata_put]: http://smartos.org/man/8/mdata-put

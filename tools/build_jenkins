@@ -126,7 +126,7 @@ while getopts "cdhF:S:" opt; do
         d)
             # build debug platform bits
             ENGBLD_CONFIGURE_DEBUG_ARG='-d'
-            ENGBLD_DEBUG_SUFFIX='-debug'
+            ENGBLD_DEBUG_SUFFIX=${PLATFORM_DEBUG_SUFFIX:--debug}
             ;;
         F)
             PLATFORM_BUILD_FLAVOR="${OPTARG}"

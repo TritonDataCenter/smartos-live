@@ -485,10 +485,11 @@ usb: live
 # below add suffixes to the bits-dir copies of these files as appropriate.
 # The 'PUB_' prefix below indicates published build artifacts.
 #
+# This is all overridden if PLATFORM_DEBUG_SUFFIX is defined in the environment,
+# however.
+#
 ifeq ($(ILLUMOS_ENABLE_DEBUG),exclusive)
-    ifndef PLATFORM_DEBUG_SUFFIX
-	PLATFORM_DEBUG_SUFFIX = -debug
-    endif
+    PLATFORM_DEBUG_SUFFIX ?= -debug
 endif
 
 BUILD_NAME			?= platform

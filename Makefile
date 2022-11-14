@@ -486,8 +486,7 @@ usb: live
 # The 'PUB_' prefix below indicates published build artifacts.
 #
 ifeq ($(ILLUMOS_ENABLE_DEBUG),exclusive)
-    ORIG_PLATFORM_DEBUG_SUFFIX = $(PLATFORM_DEBUG_SUFFIX)
-    PLATFORM_DEBUG_SUFFIX = $(ORIG_PLATFORM_DEBUG_SUFFIX)-debug
+    PLATFORM_DEBUG_SUFFIX = $(PLATFORM_DEBUG_SUFFIX)-debug
 endif
 
 BUILD_NAME			?= platform

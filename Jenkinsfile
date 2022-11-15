@@ -232,7 +232,6 @@ export ENGBLD_BITS_UPLOAD_IMGAPI=true
 set -o errexit
 set -o pipefail
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
-export PLATFORM_DEBUG_SUFFIX=-debug
 ./tools/build_jenkins -c -d -S debug
                 ''')
                 }
@@ -275,8 +274,10 @@ export PLATFORM_DEBUG_SUFFIX=-debug
                     sh('''
 export PLAT_CONFIGURE_ARGS="-p gcc10 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
-# And since we enable DEBUG here, make it in the name as well.
-export PLATFORM_DEBUG_SUFFIX=-debug-gcc10
+# Also for now we implicitly promise that the gcc10 deliverables are DEBUG,
+# but we could choose to make -gcc10 *and* -debug-gcc10 stages later and alter
+# PLATFORM_DEBUG_SUFFIX accordingly.
+export PLATFORM_DEBUG_SUFFIX=-gcc10
 ./tools/build_jenkins -c -d -S gcc10
                     ''')
                 }

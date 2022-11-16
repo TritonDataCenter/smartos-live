@@ -7,7 +7,6 @@
 
 #
 # Copyright 2022 Joyent, Inc.
-# Copyright 2022 MNX Cloud, Inc.
 #
 
 #
@@ -27,6 +26,9 @@ set -o pipefail
 if [[ -z "${ENGBLD_DEST_OUT_PATH}" ]]; then
     export ENGBLD_DEST_OUT_PATH=/public/builds
 fi
+
+export TIMESTAMP=$(TZ=UTC /bin/date "+%Y%m%dT%H%M%SZ")
+export BUILDSTAMP=${TIMESTAMP}
 
 # Used to flag if this is a non-default build. This modifies the description
 # used for the platform manifest.
@@ -143,28 +145,6 @@ while getopts "cdhF:S:" opt; do
     esac
 done
 shift $((OPTIND - 1))
-
-case "$JENKINS_STAGE_NAME" in
-    default)
-	# No sleep
-        ;;
-    debug)
-	# No sleep
-        ;;
-    *)
-	# Delay one minute to avoid STAMP collisions with default/debug
-	# stages, which are invariant and have their own directories.
-	# (stages here get put in platform-debug because they get -d,
-	# typically).
-	#
-	# Once we give manta build/ directories to stages, this could
-	# be eliminated.
-	echo "Sleeping 60 secs for $JENKINS_STAGE_NAME stage"
-	sleep 60
-	;;
-esac
-export TIMESTAMP=$(TZ=UTC /bin/date "+%Y%m%dT%H%M%SZ")
-export BUILDSTAMP=${TIMESTAMP}
 
 if [[ -z "$PLATFORM_BUILD_FLAVOR" ]]; then
     PLATFORM_BUILD_FLAVOR="triton"

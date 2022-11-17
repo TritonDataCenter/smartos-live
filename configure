@@ -40,7 +40,7 @@ fi
 # We configure the projects framework using a 'configure-projects' file. This
 # is a plain text file which contains the project name, the branch we wish to
 # build it at, and either a URL to a git repository or 'origin' to denote the
-# github.com/joyent/<repo> location. See create_projects.
+# github.com/TritonDataCenter/<repo> location. See create_projects.
 #
 read -r -d '' configure_projects < default.configure-projects
 

@@ -154,7 +154,7 @@ function checkout_project
 function create_projects
 {
 	local dir="projects/local"
-	local git_stem="https://github.com/joyent"
+	local git_stem="https://github.com/TritonDataCenter"
 
 	[[ -d "$dir" ]] || mkdir -p "$dir" || fatal "failed to create $dir"
 

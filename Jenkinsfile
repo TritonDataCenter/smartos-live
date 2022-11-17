@@ -274,6 +274,9 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                     sh('''
 export PLAT_CONFIGURE_ARGS="-p gcc10 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
+# Also for now we implicitly promise that the gcc10 deliverables are DEBUG,
+# but we could choose to make -gcc10 *and* -debug-gcc10 stages later and alter
+# PLATFORM_DEBUG_SUFFIX accordingly.
 export PLATFORM_DEBUG_SUFFIX=-gcc10
 ./tools/build_jenkins -c -d -S gcc10
                     ''')

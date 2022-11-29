@@ -60,7 +60,7 @@ function content_type
 	elif [[ "$(basename $filename .json)" != "$filename" ]]; then
 	    content_type="content-type: application/json"
 	elif [[ "$(basename $filename .iso)" != "$filename" ]]; then
-	    content_type="content-type: application/octet-stream"
+	    content_type="content-type: application/x-iso9660-image"
 	else
 	    # Default value... XXX KEBE ASKS use text/plain instead?
 	    content_type="content-type: application/octet-stream"

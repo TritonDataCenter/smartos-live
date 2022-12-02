@@ -122,14 +122,16 @@ function get_smbios_system_info()
     # Platforms that include illumos#13560, smbios  may emit "sanitized" strings
     # that are not valid json. So we need to pass these through
     # JSON.stringify.
-    Manufacturer=$(json_stringify "$Manufacturer")
-    Product=$(json_stringify "$Product")
-    HW_Version=$(json_stringify "$HW_Version")
-    Serial_Number=$(json_stringify "$Serial_Number")
-    UUID=$(json_stringify "$UUID")
-    Fixed_UUID=$(json_stringify "$Fixed_UUID")
-    SKU_Number=$(json_stringify "$SKU_Number")
-    HW_Family=$(json_stringify "$HW_Family")
+    eval $(/usr/node/bin/node -e '
+    console.log("Manufacturer=" + JSON.stringify("'"$Manufacturer"'"))
+    console.log("Product=" + JSON.stringify("'"$Product"'"))
+    console.log("HW_Version=" + JSON.stringify("'"$HW_Version"'"))
+    console.log("Serial_Number=" + JSON.stringify("'"$Serial_Number"'"))
+    console.log("UUID=" + JSON.stringify("'"$UUID"'"))
+    console.log("Fixed_UUID=" + JSON.stringify("'"$Fixed_UUID"'"))
+    console.log("SKU_Number=" + JSON.stringify("'"$SKU_Number"'"))
+    console.log("HW_Family=" + JSON.stringify("'"$HW_Family"'"))
+    ')
 
     vendor=$(smbios -t SMB_TYPE_BIOS | grep "Vendor: " \
         | sed -e 's/^.*Vendor: //;s/ *$//')

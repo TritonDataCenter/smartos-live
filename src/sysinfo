@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Copyright 2020 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -112,6 +113,20 @@ function get_smbios_system_info()
         -e 's/Version/HW_Version/' \
         -e 's/Family/HW_Family/' \
         -e 's/UUID (Endian-corrected)/Fixed_UUID/')
+
+    # Platforms that include illumos#13560, smbios  may emit "sanitized" strings
+    # that are not valid json. So we need to pass these through
+    # JSON.stringify.
+    eval $(/usr/node/bin/node -e '
+    console.log("Manufacturer=" + JSON.stringify("'"$Manufacturer"'"))
+    console.log("Product=" + JSON.stringify("'"$Product"'"))
+    console.log("HW_Version=" + JSON.stringify("'"$HW_Version"'"))
+    console.log("Serial_Number=" + JSON.stringify("'"$Serial_Number"'"))
+    console.log("UUID=" + JSON.stringify("'"$UUID"'"))
+    console.log("Fixed_UUID=" + JSON.stringify("'"$Fixed_UUID"'"))
+    console.log("SKU_Number=" + JSON.stringify("'"$SKU_Number"'"))
+    console.log("HW_Family=" + JSON.stringify("'"$HW_Family"'"))
+    ')
 
     vendor=$(smbios -t SMB_TYPE_BIOS | grep "Vendor: " \
         | sed -e 's/^.*Vendor: //;s/ *$//')

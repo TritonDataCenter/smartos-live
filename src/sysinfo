@@ -100,11 +100,6 @@ function normalize_mac()
     fi
 }
 
-function json_stringify()
-{
-    /usr/node/bin/node -e 'console.log(JSON.stringify("'"$1"'"))' | tr -d "\""
-}
-
 function get_smbios_system_info()
 {
     # This puts the variables we're pulling out into the local environment

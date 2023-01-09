@@ -196,6 +196,12 @@ function get_smartos_cpu_info()
         if [[ -z ${CPU_Version} ]]; then
             CPU_Version="Unknown"
         fi
+        # Platforms that include illumos#13560, smbios  may emit "sanitized"
+        # strings that are not valid json. So we need to pass these through
+        # JSON.stringify.
+        eval $(/usr/node/bin/node -e '
+            console.log("CPU_Version=" + JSON.stringify("'"$CPU_Version"'"))
+        ')
 
         isainfo=$(isainfo -x)
         if [[ -n $(echo " ${isainfo} " | /usr/bin/grep " vmx ") ]]; then

@@ -12,6 +12,7 @@
 
 #
 # Copyright 2020 Joyent, Inc.
+# Copyright 2023 MNX Cloud, Inc.
 #
 
 # Setup for building stuff!
@@ -26,6 +27,8 @@ if [[ $? -ne 0 || -z "${BUILDSTAMP}" ]]; then
 	printf "failed to read existing buildstamp\n" >&2
 	exit 1
 fi
+# For our boot banner in our illumos's usr/src/Makefile.master
+BANNER_YEAR=$$(TZ=UTC date "+%Y)
 
 echo "==> Building Illumos (${BUILDSTAMP})"
 

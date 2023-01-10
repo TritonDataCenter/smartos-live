@@ -28,7 +28,7 @@ if [[ $? -ne 0 || -z "${BUILDSTAMP}" ]]; then
 	exit 1
 fi
 # For our boot banner in our illumos's usr/src/Makefile.master
-BANNER_YEAR=$(TZ=UTC date "+%Y")
+export BANNER_YEAR=$(TZ=UTC date "+%Y")
 
 echo "==> Building Illumos (${BUILDSTAMP})"
 

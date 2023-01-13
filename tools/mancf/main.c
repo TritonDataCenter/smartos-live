@@ -11,6 +11,7 @@
 
 /*
  * Copyright 2016 Joyent, Inc.
+ * Copyright 2023 MNX Cloud, Inc.
  */
 
 /*
@@ -59,14 +60,14 @@ static const manorder_t cm_manorders[] = {
 	 * Prefer the base section before any named subsection:
 	 */
 	{ "1",		100 },
-	{ "2",		100 },
-	{ "3",		100 },
-	{ "4",		100 },
-	{ "5",		100 },
-	{ "6",		100 },
-	{ "7",		100 },
-	{ "8",		100 },
-	{ "9",		100 },
+	{ "2",		101 },
+	{ "3",		101 },
+	{ "4",		101 },
+	{ "5",		101 },
+	{ "6",		101 },
+	{ "7",		101 },
+	{ "8",		100 }, /* Section 8 should be before section 2 */
+	{ "9",		101 },
 
 	/*
 	 * Shouldn't need these anymore, but prefer (1M) over (1B) anyway.

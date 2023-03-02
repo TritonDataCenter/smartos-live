@@ -13,7 +13,7 @@
 
 #
 # Copyright 2021 Joyent, Inc.
-# Copyright 2022 MNX Cloud, Inc.
+# Copyright 2023 MNX Cloud, Inc.
 #
 shopt -s xpg_echo
 unalias -a
@@ -375,8 +375,6 @@ SPRO_VROOT=\$SPRO_ROOT;				export SPRO_VROOT
 GNU_ROOT="$conf_root/proto.strap/usr/gnu"	export GNU_ROOT
 # Use GCC as the primary compiler
 __GNUC="";					export __GNUC
-# Use GCC4 or later specific flags
-__GNUC4="";					export __GNUC4
 # root of \$PRIMARY_CC
 GNUC_ROOT="$GNUC_ROOT";				export GNUC_ROOT
 PRIMARY_CC="$PRIMARY_CC";			export PRIMARY_CC
@@ -441,8 +439,8 @@ read -r -d '' usage <<EOF
 		build Illumos in DEBUG mode only [default: no]
 	-h
 		this message
-	-p gcc7
-		primary compiler version [default: gcc7]
+	-p gcc10
+		primary compiler version [default: gcc10]
 	-P password
 		platform root password [default: randomly chosen]
 	-r
@@ -489,7 +487,7 @@ done
 
 [[ -n "$ILLUMOS_ENABLE_DEBUG" ]] || ILLUMOS_ENABLE_DEBUG=no
 [[ -n "$ILLUMOS_CLOBBER" ]] || ILLUMOS_CLOBBER=no
-[[ -n "$PRIMARY_COMPILER" ]] || PRIMARY_COMPILER=gcc7
+[[ -n "$PRIMARY_COMPILER" ]] || PRIMARY_COMPILER=gcc10
 [[ -n "$ENABLE_SMATCH" ]] || ENABLE_SMATCH=yes
 
 PRIMARY_COMPILER_VER=$(echo $PRIMARY_COMPILER | sed 's/^gcc//')
@@ -501,7 +499,6 @@ ILLUMOS_ENABLE_DEBUG=$ILLUMOS_ENABLE_DEBUG
 PRIMARY_COMPILER=$PRIMARY_COMPILER
 PRIMARY_COMPILER_VER=$PRIMARY_COMPILER_VER
 SHADOW_COMPILERS=$SHADOW_COMPILERS
-HOST_GCC4_PREFIX=$HOST_GCC4_PREFIX
 ENABLE_SMATCH=$ENABLE_SMATCH
 EOF
 

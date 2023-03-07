@@ -12,7 +12,6 @@
 ./bin/git-nits
 ./bin/git-pbchk
 ./bin/hdrchk
-./bin/i386/aw
 ./bin/i386/cscope-fast
 ./bin/i386/ctfconvert
 ./bin/i386/ctfdiff

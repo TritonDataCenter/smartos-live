@@ -365,7 +365,7 @@ PARENT_TOOLS_ROOT="\$PARENT_WS/usr/src/tools/proto/root_\$MACH-nd"
 PKGARCHIVE="\${CODEMGR_WS}/packages/\${MACH}/nightly";
 						export PKGARCHIVE
 PKGPUBLISHER_REDIST="${PUBLISHER}";		export PKGPUBLISHER_REDIST
-MAKEFLAGS=k;					export MAKEFLAGS
+MAKEFLAGS=ek;					export MAKEFLAGS
 UT_NO_USAGE_TRACKING="1";			export UT_NO_USAGE_TRACKING
 MULTI_PROTO="no";				export MULTI_PROTO
 BUILD_TOOLS="\$SRC/tools/proto/root_\${MACH}-nd/opt";

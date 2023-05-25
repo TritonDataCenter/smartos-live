@@ -8,6 +8,7 @@
 # bash config.sh -json
 #
 # Copyright 2018 Joyent Inc.
+# Copyright 2023 MNX Cloud, Inc.
 #
 
 CACHE_FILE_JSON="/tmp/.config.json"
@@ -133,7 +134,7 @@ function sdc_config_keys_contain {
     fi
 
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        matches=$((cat ${GEN_FILE} ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
+        matches=$( (cat ${GEN_FILE} ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
             sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
             sed -e "s/=.*//" | grep $search | wc -l)
         if [[ $matches -eq 0 ]]; then
@@ -156,7 +157,7 @@ function sdc_config_keys {
     fi
 
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        keys=$((cat ${GEN_FILE} ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
+        keys=$( (cat ${GEN_FILE} ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
             sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
             sed -e "s/=.*//")
     fi
@@ -185,9 +186,9 @@ function load_sdc_config {
     # Ignore comments, spaces at the beginning of lines and lines that don't
     # start with a letter.
     if [[ -f ${SDC_CONFIG_FILENAME} ]]; then
-        eval $((cat ${GEN_FILE} ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
+        eval "$( (cat ${GEN_FILE} ${SDC_CONFIG_FILENAME}; echo "config_inc_dir=${SDC_CONFIG_INC_DIR}") | \
             sed -e "s/^ *//" | grep -v "^#" | grep "^[a-zA-Z]" | \
-            sed -e "s/^/${prefix}/")
+            sed -e "s/^/${prefix}/")"
     elif [[ ${headnode} == "true" ]]; then
         echo "FATAL: Unable to load headnode config."
         exit 1
@@ -243,15 +244,20 @@ if [[ $1 == "-json" ]]; then
         # If called to output config as JSON, we'll do that.
         (
             echo "{"
-            load_sdc_config
+            load_sdc_config CONFIG_
             first_key=1
             keys=$(sdc_config_keys)
             for key in ${keys}; do
-                value=$(eval "echo \${CONFIG_${key}}")
+                value="$(eval 'echo "${CONFIG_'"${key}"'}"')"
                 # too bad we can't use extra commas
                 if [[ ${first_key} -eq 1 ]]; then
                     echo "    \"${key}\": \"${value}\""
                     first_key=0
+                # If this is the admin password, it may contain special
+                # characters that need to be stringified properly.
+                elif [[ ${key} == "ufds_admin_pw" ]]; then
+                    j_val="$(value="$value" /usr/node/bin/node -e 'console.log(JSON.stringify(process.env["value"]))')"
+                    printf '  , "%s": %s\n' "${key}" "${j_val}"
                 else
                     echo "  , \"${key}\": \"${value}\""
                 fi

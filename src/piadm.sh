@@ -13,6 +13,7 @@
 
 #
 # Copyright 2022 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 # shellcheck disable=1091
@@ -263,11 +264,23 @@ avail() {
 		eecho ""
 	fi
 
+	# We need to get a list of all installed PIs to exclude them from
+	# the list of available. By definition, a PI is available only if it is:
+	# * newer than the current PI
+	# * not already installed
+	getbootable
+	tmp=$(mktemp)
+	for bootfs in "${allbootfs[@]}"; do
+		cat /"${bootfs}"/platform-*/etc/version/platform > "$tmp"
+	done
+
 	# The aforementioned Manta method, parsed by json(1).
 	# Don't print ones old enough to NOT contain piadm(8) itself.
 	# Always be silent (i.e. use ${CURL[@]}).
 	"${CURL[@]}" "${URL_PREFIX}/?limit=1000" | json -ga -c \
-		"this.name.match(/Z$/) && this.name>=\"$activestamp\"" name
+		"this.name.match(/Z$/) && this.name>=\"$activestamp\"" name | \
+		grep -v -f "$tmp"
+	rm -f "${tmp:?}"
 }
 
 # Scan for available installation media and mount it.
@@ -678,7 +691,7 @@ update_boot_sectors() {
 # Emit a select-a-Platform-Image page header.  Set the menuset prefix!
 #
 # PWD is /${bootfs} at this point.
-# 
+#
 emit_pageheader() {
 	pagenum=$1
 	totalpages=$2
@@ -743,7 +756,7 @@ EOF
 # NOTE that the default one wll not have a os/$DEFAULTSTAMP/platform entry.
 #
 # PWD is /${bootfs} at this point.
-# 
+#
 regenerate_os() {
 	# Clobber old one now, generate a new one, and setup the extra
 	# main-menu item..
@@ -1169,7 +1182,7 @@ update_CN() {
 		vecho "No updates needed for iPXE and its loader."
 		vecho "If you think there should be an update, run"
 		vecho "'sdcadm experimental update-gz-tools' on your"\
-			"Triton Head Node" 
+			"Triton Head Node"
 		exit 0
 	fi
 
@@ -1219,7 +1232,9 @@ bringup_HN() {
 	version=$(sdc-usbkey status -j | json version)
 	if [[ "$version" != "2" ]]; then
 		# Unmount on version-mismatch...
-		usb_unmount_unless_already
+		if [[ "$stick_premounted" != "yes" ]]; then
+			sdc-usbkey unmount
+		fi
 		err "USB key must be Version 2 (loader) to install on a pool."
 	fi
 
@@ -1392,10 +1407,10 @@ refresh_or_disable_pool() {
 				# echo ""
 				# bootable | grep -v "$pool"
 				# echo ""
-				# 
+				#
 				# Then check to see if there's an
 				# actual USB key available.
-				# 
+				#
 				# tdir=$(mktemp -d)
 				# ... use new -u (force USB key search) option
 				# sdc-usbkey mount -u $tdir

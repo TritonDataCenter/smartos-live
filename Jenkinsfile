@@ -6,7 +6,7 @@
 
 /*
  * Copyright 2022 Joyent, Inc.
- * Copyright 2022 MNX Cloud, Inc.
+ * Copyright 2023 MNX Cloud, Inc.
  */
 
 @Library('jenkins-joylib@v1.0.8') _
@@ -40,13 +40,13 @@ pipeline {
                 '<dt>-h</dt>\n' +
                 '<dd>this message</dd>\n' +
                 '<dt>-p gcc10</dt>\n' +
-                '<dd>primary compiler version [default: gcc7]</dd>\n' +
+                '<dd>primary compiler version [default: gcc10]</dd>\n' +
                 '<dt>-P password</dt>\n' +
                 '<dd>platform root password [default: randomly chosen]</dd>\n' +
                 '<dt>-S</dt>\n' +
                 '<dd>do *not* run smatch [default is to run smatch]</dd>\n' +
-                '<dt>-s gcc10</dt>\n' +
-                '<dd>shadow compilers, comma delimited (gcc10,gcc#) [default: none]</dd>\n' +
+                '<dt>-s gcc7</dt>\n' +
+                '<dd>shadow compilers, comma delimited (gcc7,gcc#) [default: none]</dd>\n' +
                 '</dl>'
         )
         text(
@@ -250,12 +250,12 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                     }
                 }
             }
-            stage('gcc10') {
+            stage('gcc7') {
                 agent {
                     node {
                         label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
                             'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
-                        customWorkspace "workspace/smartos-${BRANCH_NAME}-gcc10"
+                        customWorkspace "workspace/smartos-${BRANCH_NAME}-gcc7"
                     }
                 }
                 when {
@@ -272,15 +272,18 @@ export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
                 steps {
                     sh('git clean -fdx')
                     sh('''
-export PLAT_CONFIGURE_ARGS="-p gcc10 -r $PLAT_CONFIGURE_ARGS"
+export PLAT_CONFIGURE_ARGS="-p gcc7 -r $PLAT_CONFIGURE_ARGS"
 # enough to make sure we don't pollute the main Manta dir
-export PLATFORM_DEBUG_SUFFIX=-gcc10
-./tools/build_jenkins -c -d -S gcc10
+# Also for now we implicitly promise that the gcc7 deliverables are DEBUG,
+# but we could choose to make -gcc7 *and* -debug-gcc7 stages later and alter
+# PLATFORM_DEBUG_SUFFIX accordingly.
+export PLATFORM_DEBUG_SUFFIX=-gcc7
+./tools/build_jenkins -c -d -S gcc7
                     ''')
                 }
                 post {
                     always {
-                        archiveArtifacts artifacts: 'output/gcc10/**',
+                        archiveArtifacts artifacts: 'output/gcc7/**',
                             onlyIfSuccessful: false,
                             allowEmptyArchive: true
                         cleanWs cleanWhenSuccess: true,
@@ -289,7 +292,7 @@ export PLATFORM_DEBUG_SUFFIX=-gcc10
                             cleanWhenNotBuilt: true,
                             deleteDirs: true
                         joySlackNotifications(
-                            channel: 'smartos', comment: 'gcc10')
+                            channel: 'smartos', comment: 'gcc7')
                     }
                 }
             }

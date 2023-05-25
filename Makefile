@@ -153,8 +153,9 @@ TOOLS_TARGETS = \
 	$(UCODECHECK) \
 	tools/cryptpass
 
-world: 0-strap-stamp 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp \
-	0-local-stamp 0-tools-stamp 0-devpro-stamp $(TOOLS_TARGETS)
+world: 0-preflight-stamp 0-strap-stamp 0-illumos-stamp 0-extra-stamp \
+	0-livesrc-stamp 0-local-stamp 0-tools-stamp 0-devpro-stamp \
+	$(TOOLS_TARGETS)
 
 live: world manifest boot $(TOOLS_TARGETS) $(MANCF_FILE) mancheck
 	@echo $(SUBDIR_MANIFESTS)
@@ -350,6 +351,11 @@ $(STAMPFILE):
 
 FORCEARG_yes=-f
 
+# Check any build requirements that are easy to catch early.
+0-preflight-stamp:
+	$(ROOT)/tools/preflight
+	touch $@
+
 # build our proto.strap area
 0-strap-stamp:
 	$(ROOT)/tools/build_strap make \
@@ -369,7 +375,7 @@ $(CTFTOOLS_TARBALL): 0-strap-stamp $(STAMPFILE)
 	    -j $(MAX_JOBS) -o $(CTFTOOLS_TARBALL)
 
 # additional illumos-extra content for proto itself
-0-extra-stamp: 0-illumos-stamp
+0-extra-stamp: 0-preflight-stamp 0-illumos-stamp
 	(cd $(ROOT)/projects/illumos-extra && \
 	    gmake $(SUBDIR_DEFS) DESTDIR=$(PROTO) \
 	    install)
@@ -479,8 +485,11 @@ usb: live
 # below add suffixes to the bits-dir copies of these files as appropriate.
 # The 'PUB_' prefix below indicates published build artifacts.
 #
+# This is all overridden if PLATFORM_DEBUG_SUFFIX is defined in the environment,
+# however.
+#
 ifeq ($(ILLUMOS_ENABLE_DEBUG),exclusive)
-    PLATFORM_DEBUG_SUFFIX = -debug
+    PLATFORM_DEBUG_SUFFIX ?= -debug
 endif
 
 BUILD_NAME			?= platform

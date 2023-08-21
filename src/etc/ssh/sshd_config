@@ -110,11 +110,9 @@ X11UseLocalhost yes
 # Should sshd print the /etc/motd file and check for mail.
 # On Solaris it is assumed that the login shell will do these (eg /etc/profile).
 PrintMotd no
-PrintLastLog no
 
 #TCPKeepAlive yes
 #UseLogin no
-UsePrivilegeSeparation sandbox		# Default for new installations.
 #PermitUserEnvironment no
 #Compression delayed
 #ClientAliveInterval 0

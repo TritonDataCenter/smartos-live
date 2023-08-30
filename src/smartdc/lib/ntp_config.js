@@ -1,6 +1,11 @@
 #!/usr/node/bin/node
 /* vim: syn=javascript ts=8 sts=8 sw=8 noet: */
 
+/*
+ * Copyright 2019 Joyent, Inc.
+ * Copyright 2023 MNX Cloud, Inc.
+ */
+
 var mod_path = require('path');
 var mod_fs = require('fs');
 var mod_net = require('net');
@@ -181,6 +186,7 @@ generate_file(servers, allowed_subnets, trusted, orphan)
 	if (allowed_subnets.length > 0) {
 		out.push('');
 		out.push('# Allow local subnets to query this server');
+		var seen = [];
 		for (i = 0; i < allowed_subnets.length; i++) {
 			var re = new RegExp('\\/');
 			var as = allowed_subnets[i].split(re);
@@ -199,9 +205,16 @@ generate_file(servers, allowed_subnets, trusted, orphan)
 				process.exit(1);
 			}
 
-			out.push(mod_util.format('%s %s mask %s',
-			    fam === 4 ? 'restrict' : 'restrict -6', as[0],
-			    mask));
+			/*
+			 * We should deduplicate these networks since the -a
+			 * flag can be passed multiple times.
+			 */
+			if (seen.indexOf(as[0] + '/' + mask) === -1) {
+				out.push(mod_util.format('%s %s mask %s',
+					fam === 4 ? 'restrict' : 'restrict -6',
+					as[0], mask));
+				seen.push(as[0] + '/' + mask);
+			}
 		}
 	}
 

@@ -1,6 +1,32 @@
 #!/usr/node/bin/node
 /* vim: syn=javascript ts=8 sts=8 sw=8 noet: */
 
+/*
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License, Version 1.0 only
+ * (the "License").  You may not use this file except in compliance
+ * with the License.
+ *
+ * You can obtain a copy of the license at http://smartos.org/CDDL
+ *
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file.
+ *
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ *
+ * Copyright 2019 Joyent, Inc.
+ * Copyright 2023 MNX Cloud, Inc.
+ */
+
 var mod_path = require('path');
 var mod_fs = require('fs');
 var mod_net = require('net');
@@ -181,6 +207,7 @@ generate_file(servers, allowed_subnets, trusted, orphan)
 	if (allowed_subnets.length > 0) {
 		out.push('');
 		out.push('# Allow local subnets to query this server');
+		var seen = [];
 		for (i = 0; i < allowed_subnets.length; i++) {
 			var re = new RegExp('\\/');
 			var as = allowed_subnets[i].split(re);
@@ -199,9 +226,16 @@ generate_file(servers, allowed_subnets, trusted, orphan)
 				process.exit(1);
 			}
 
-			out.push(mod_util.format('%s %s mask %s',
-			    fam === 4 ? 'restrict' : 'restrict -6', as[0],
-			    mask));
+			/*
+			 * Now deduplicate these networks since the -a
+			 * flag can be passed multiple times.
+			 */
+			if (seen.indexOf(as[0] + '/' + mask) === -1) {
+				out.push(mod_util.format('%s %s mask %s',
+					fam === 4 ? 'restrict' : 'restrict -6',
+					as[0], mask));
+				seen.push(as[0] + '/' + mask);
+			}
 		}
 	}
 

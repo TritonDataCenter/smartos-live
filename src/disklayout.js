@@ -2,6 +2,7 @@
 
 /*
  * Copyright 2020 Joyent, Inc.
+ * Copyright 2023 MNX Cloud, Inc.
  */
 
 var fs = require('fs');
@@ -47,10 +48,15 @@ dolayout(disks, layout, nspares, excluded, enable_cache, width)
 		});
 	} else if (os.type() === 'Linux') {
 		disks = disks.filter(function (disk) {
-			if (excluded.indexOf(disk.name.toLowerCase()) !== -1)
+			if (excluded.indexOf(disk.name.toLowerCase()) !== -1) {
 				return (false);
+			}
 
-			return disk.mountpoint === null;
+			var mountpoints = disk.mountpoints.filter(function (mountpoint) {
+				return (mountpoint !== null);
+			});
+
+			return (mountpoints.length === 0);
 		})
 	}
 

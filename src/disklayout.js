@@ -47,11 +47,21 @@ dolayout(disks, layout, nspares, excluded, enable_cache, width)
 			return (true);
 		});
 	} else if (os.type() === 'Linux') {
+		var zvolExp = /^zd[0-9a-z]*$/;
 		disks = disks.filter(function (disk) {
 			if (excluded.indexOf(disk.name.toLowerCase()) !== -1) {
 				return (false);
 			}
 
+			// Filter out any zvol devices
+			// Alternatively we could pass -e MAJOR_NUM to lsblk but would need
+			// to parse /proc/devices to get the major device number for zvols
+			if (zvolExp.test(disk.name)) {
+				return (false);
+			}
+
+			// Filter out any null values from the mountpoints array
+			// If a disk has no mountpoints the array has a single null item
 			var mountpoints = disk.mountpoints.filter(function (mountpoint) {
 				return (mountpoint !== null);
 			});

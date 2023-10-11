@@ -67,7 +67,7 @@ dolayout(disks, layout, nspares, excluded, enable_cache, width)
 			});
 
 			return (mountpoints.length === 0);
-		})
+		});
 	}
 
 	config = disklayout.compute(disks, layout, nspares, enable_cache,

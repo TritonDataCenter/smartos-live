@@ -47,7 +47,7 @@ dolayout(disks, layout, nspares, excluded, enable_cache, width)
 			return (true);
 		});
 	} else if (os.type() === 'Linux') {
-		var zvolExp = /^zd[0-9a-z]*$/;
+		var zvolExp = /^zd[0-9a-z]+$/;
 		disks = disks.filter(function (disk) {
 			if (excluded.indexOf(disk.name.toLowerCase()) !== -1) {
 				return (false);

@@ -784,11 +784,6 @@ CLI.prototype.do_sources.options = [
         help: 'Add a source. It is appended to the list of sources.'
     },
     {
-        names: ['add-docker-hub'],
-        type: 'bool',
-        help: 'A shortcut for "imgadm sources -t docker -a https://docker.io".'
-    },
-    {
         names: ['d'],
         type: 'string',
         helpArg: '<source>',

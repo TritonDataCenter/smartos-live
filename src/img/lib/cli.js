@@ -564,10 +564,10 @@ CLI.prototype.do_sources = function do_sources(subcmd, opts, args, cb) {
             + '#\n'
             + '#   URL TYPE [OPTIONS]\n'
             + '#\n'
-            + '# where "TYPE" is one of "imgapi" (the default), "docker", or\n'
-            + '# "dsapi" (deprecated); and where "OPTIONS" is the literal\n'
-            + '# string "insecure" to skip TLS server certificate checking\n'
-            + '# for this source.\n'
+            + '# where "TYPE" is one of "imgapi" (the default),\n'
+            + '# "docker" (deprecated), or  "dsapi" (deprecated); and where\n'
+            + '# "OPTIONS" is the literal string "insecure" to skip TLS \n'
+            + '# server certificate checking for this source.\n'
             + '#\n'
             + '# Comments beginning with "#" are stripped.\n'
             + '#\n';
@@ -737,8 +737,8 @@ CLI.prototype.do_sources.help = (
     /* BEGIN JSSTYLED */
     'List and edit image sources.\n'
     + '\n'
-    + 'An image source is a URL to a server implementing the IMGAPI, or\n'
-    + 'the Docker Registry API. The default IMGAPI is ' + common.DEFAULT_SOURCE.url + '\n'
+    + 'An image source is a URL to a server implementing the IMGAPI\n'
+    + 'The default IMGAPI is ' + common.DEFAULT_SOURCE.url + '\n'
     + '\n'
     + 'Usage:\n'
     + '    {{name}} sources [--verbose|-v] [--json|-j]  # list sources\n'
@@ -752,8 +752,6 @@ CLI.prototype.do_sources.help = (
     + 'Examples:\n'
     + '    # SmartOS primary public image repository (defaults to "imgapi")\n'
     + '    {{name}} sources -a https://images.smartos.org\n'
-    + '    # Docker Hub\n'
-    + '    {{name}} sources -a https://docker.io -t docker\n'
     + '    # Legacy SDC 6.5 DSAPI (deprecated)\n'
     + '    {{name}} sources -a https://datasets.tritondatacenter.com/datasets -t dsapi\n'
     /* END JSSTYLED */
@@ -784,6 +782,12 @@ CLI.prototype.do_sources.options = [
         help: 'Add a source. It is appended to the list of sources.'
     },
     {
+        names: ['add-docker-hub'],
+        type: 'bool',
+        hidden: true,
+        help: 'A shortcut for "imgadm sources -t docker -a https://docker.io".'
+    },
+    {
         names: ['d'],
         type: 'string',
         helpArg: '<source>',
@@ -808,7 +812,7 @@ CLI.prototype.do_sources.options = [
         default: 'imgapi',
         helpArg: '<type>',
         help: 'The source type for an added source. One of "imgapi" (the '
-            + 'default), "docker", or "dsapi" (deprecated).'
+            + 'default), "docker" (deprecated), or "dsapi" (deprecated).'
     },
     {
         names: ['insecure', 'k'],
@@ -1459,12 +1463,11 @@ CLI.prototype.do_import = function do_import(subcmd, opts, args, cb) {
 CLI.prototype.do_import.help = (
     'Import an image from a source IMGAPI.\n'
     + '\n'
-    + 'This finds the image with the given UUID (or repository name and tag,\n'
-    + 'for Docker sources) in the configured sources and imports it into\n'
-    + 'the local system.\n'
+    + 'This finds the image with the given UUID in the configured sources and\n'
+    + 'imports it into the local system.\n'
     + '\n'
     + 'Usage:\n'
-    + '    {{name}} import <uuid|docker repo:tag>\n'
+    + '    {{name}} import <uuid>\n'
     + '\n'
     + '{{options}}'
 );
@@ -1655,7 +1658,6 @@ CLI.prototype.do_update = function do_update(subcmd, opts, args, cb) {
 };
 CLI.prototype.do_update.help = (
     'Update currently installed images, if necessary.\n'
-    + 'This does not yet support images from a "docker" source.\n'
     + '\n'
     + 'Images that are installed without "imgadm" (e.g. via "zfs recv")\n'
     + 'may not have cached image manifest information. Also, images installed\n'

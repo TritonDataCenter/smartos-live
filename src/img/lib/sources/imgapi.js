@@ -21,6 +21,7 @@
  * CDDL HEADER END
  *
  * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright 2023 Spearhead Systems SRL.
  */
 
 var p = console.log;
@@ -227,9 +228,11 @@ ImgapiSource.prototype.getImgAncestry = function getImgAncestry(opts, cb) {
     getNextOrigin(opts.manifest.origin);
 
     function getNextOrigin(uuid) {
+        // We do not want to ensure an origin image is active, since active
+        // leaf images sometimes depend on deactivated origin images.
         var iOpts = {
             arg: uuid,
-            ensureActive: true,
+            ensureActive: false,
             errOn404: true
         };
         self.getImportInfo(iOpts, function (err, importInfo) {

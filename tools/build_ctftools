@@ -12,6 +12,7 @@
 
 #
 # Copyright 2020 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 #
@@ -22,6 +23,34 @@
 
 usage="$0 make -j maxjobs -o tarball"
 usage="$usage | upload -D bits -d path -p platform -t timestamp"
+
+function content_type
+{
+	filename="$1"
+	# basename <name> <.ext> will strip .ext off. Will be == name if it's
+	# not .ext.
+	if [[ "$(basename $filename .tgz)" != "$filename" ]]; then
+	    content_type="content-type: application/gzip"
+	elif [[ "$(basename $filename .gz)" != "$filename" ]]; then
+	    content_type="content-type: application/gzip"
+	elif [[ "$(basename $filename .txt)" != "$filename" ]]; then
+	    content_type="content-type: text/plain"
+	elif [[ "$(basename $filename .log)" != "$filename" ]]; then
+	    content_type="content-type: text/plain"
+	elif [[ "$(basename $filename .html)" != "$filename" ]]; then
+	    content_type="content-type: text/html"
+	elif [[ "$(basename $filename .json)" != "$filename" ]]; then
+	    content_type="content-type: application/json"
+	elif [[ "$(basename $filename .iso)" != "$filename" ]]; then
+	    content_type="content-type: application/x-iso9660-image"
+	else
+	    # Default value... XXX KEBE ASKS use text/plain instead?
+	    content_type="content-type: application/octet-stream"
+	fi
+
+	# Caller should use quotes around this.
+	echo $content_type
+}
 
 function fatal
 {
@@ -133,7 +162,9 @@ function upload
 	verbose mmkdir -p "$mbdir"
 
 	for file in $bits_dir/*; do
-		verbose mput -f "$file" "$mbdir/$(basename $file)"
+		filename="$(basename $file)"
+		verbose mput -H "$(content_type $filename)" -f "$file" \
+			"$mbdir/$filename"
 	done
 
 	echo "$mbdir" | mput -H "content-type: text/plain" "$mdir/latest"

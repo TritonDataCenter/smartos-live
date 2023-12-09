@@ -12,7 +12,7 @@ piadm(8) -- Manage SmartOS Platform Images
     piadm bootable -e [ -i <source> ] <ZFS-pool-name>
     piadm install <source> [ZFS-pool-name]
     piadm list [ZFS-pool-name]
-    piadm remove <PI-stamp> [ZFS-pool-name]
+    piadm destroy|remove <PI-stamp> [ZFS-pool-name]
     piadm update [ZFS-pool-name]
 
 ## DESCRIPTION
@@ -256,11 +256,15 @@ piadm(8) -- Manage SmartOS Platform Images
         Lists the available platform images (and boot images) on bootable
         pools.
 
+      piadm destroy <PI-stamp> [ZFS-pool-name]
       piadm remove <PI-stamp> [ZFS-pool-name]
 
         The opposite of `install`, and only accepts a PI-stamp.  If a boot
         image exists with the specified PI-stamp, it will also be removed
         unless it is the only boot image available.
+
+	`destroy` and `remove` are synonyms, for those used to other
+	distros' `beadm`.
 
         This command is disallowed on Triton Compute Nodes.
 

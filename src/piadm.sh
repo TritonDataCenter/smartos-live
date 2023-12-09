@@ -14,6 +14,7 @@
 #
 # Copyright 2022 Joyent, Inc.
 # Copyright 2022 MNX Cloud, Inc.
+# Copyright 2023 Jason King
 #
 
 # shellcheck disable=1091
@@ -54,7 +55,7 @@ usage() {
 	eecho "    piadm bootable [-d] [-e [-i <source>]] [-r] [ZFS-pool-name]"
 	eecho "    piadm install <source> [ZFS-pool-name]"
 	eecho "    piadm list <-H> [ZFS-pool-name]"
-	eecho "    piadm remove <PI-stamp> [ZFS-pool-name]"
+	eecho "    piadm destroy|remove <PI-stamp> [ZFS-pool-name]"
 	eecho "    piadm update [ZFS-pool-name]"
 	err ""
 }
@@ -1544,7 +1545,7 @@ case $cmd in
 		list "$@"
 		;;
 
-	remove )
+	destroy | remove )
 		privcheck remove
 		standalone_only remove
 		remove "$@"

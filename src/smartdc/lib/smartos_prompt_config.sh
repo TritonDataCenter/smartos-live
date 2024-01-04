@@ -7,7 +7,7 @@
 
 #
 # Copyright 2022 Joyent, Inc.
-# Copyright 2022 MNX Cloud, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 
 # XXX - TODO
@@ -804,12 +804,13 @@ EOF
 		fi
 		json error < /var/tmp/disklayout.json 2>/dev/null | grep . && layout="" && continue
 		prmpt_str="$(printdisklayout /var/tmp/disklayout.json)\n\n"
+		layout=$(getanswer "zpool_layout")
 		[[ -z "$layout" ]] && layout="default"
 		prmpt_str+="This is the '${layout}' storage configuration.  To use it, type 'yes'.\n"
 		prmpt_str+=" To see a different configuration, type: 'raidz2', 'mirror', or 'default'.\n"
 		prmpt_str+=" To specify a manual configuration, type: 'manual'.\n\n"
 		print $prmpt_str
-		promptval "Selected zpool layout" "yes"
+		promptval "Selected zpool layout" "yes" "zpool_confirm_layout"
 		if [[ $val == "raidz2" || $val == "mirror" ]]; then
 			# go around again
 			layout=$val
@@ -1430,7 +1431,8 @@ if [ $boot_from_zpool == "yes" ]; then
 	fi
 fi
 
-printf "System setup has completed.\n\nPress enter to reboot.\n"
-
-read foo
+if [[ $(getanswer "skip_final_confirm") != "true" ]]; then
+	printf "System setup has completed.\n\nPress enter to reboot.\n"
+	read foo
+fi
 reboot

@@ -1053,7 +1053,7 @@ shift $(($OPTIND - 1))
 # Usually, USBMNT will be /usbkey and USBMOUNTPOINT will be /mnt/usbkey.
 USBMNT=$1
 . /lib/sdc/usb-key.sh
-USBMOUNTPOINT=$(mount_usb_key "")
+USBMOUNTPOINT=$(mount_usb_key "" skip)
 
 # If there is a physical USB it needs to stay mounted for the duration of this
 # script because each call to getanswer will cat the answer_file if the file

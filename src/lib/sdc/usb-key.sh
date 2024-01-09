@@ -3,7 +3,8 @@
 # Utilities for dealing with the USB key. In general, sdc-usbkey should be used.
 # These routines are for use prior to sdc-usbkey being installed.
 #
-# Copyright 2021, Joyent, Inc.
+# Copyright 2021 Joyent, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 
 #
@@ -211,8 +212,9 @@ function mount_usb_key()
 	if /bin/bootparams | grep -q "^triton_bootpool=" ; then
 		# Technically we shouldn't ever see "skip" here
 		# because the only caller of mount_usb_key() with skip
-		# is piadm(8)'s `install`, which can't be invoked on
-		# a Triton Head Node.  Checking to be safe.
+		# is piadm(8)'s `install`, or smartos_prompt_config.sh, neither
+		# of which can be invoked on a Triton Head Node.  But checking
+		# anyway, just to be safe.
 		if [[ "$2" == "skip" ]]; then
 			echo "Somehow a piadm(8) install on a Head Node is" \
 				"happening. This is disallowed." >&2

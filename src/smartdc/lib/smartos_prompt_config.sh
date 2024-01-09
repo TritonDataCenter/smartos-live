@@ -1045,7 +1045,20 @@ done
 
 shift $(($OPTIND - 1))
 
+# There's a subtle difference here.
+#   * USBMNT is passed into us by wherever we were called from
+#     (usually svc:/system/smartdc/config:default).
+#   * USBMOUNTPOINT is where we attempt to auto discover and mount the physical
+#     USB device, if it exists.
+# Usually, USBMNT will be /usbkey and USBMOUNTPOINT will be /mnt/usbkey.
 USBMNT=$1
+. /lib/sdc/usb-key.sh
+USBMOUNTPOINT=$(mount_usb_key "")
+
+# If there is a physical USB it needs to stay mounted for the duration of this
+# script because each call to getanswer will cat the answer_file if the file
+# exists. Because we reboot at the end of setup anyway, we'll just be lazy and
+# not bother unmounting it.
 
 if [[ -n ${answer_file} ]]; then
 	if [[ ! -f ${answer_file} ]]; then
@@ -1054,6 +1067,8 @@ if [[ -n ${answer_file} ]]; then
 	fi
 elif [[ -f ${USBMNT}/private/answers.json ]]; then
 	answer_file=${USBMNT}/private/answers.json
+elif [[ -f ${USBMOUNTPOINT}/private/answers.json ]]; then
+	answer_file=${USBMOUNTPOINT}/private/answers.json
 fi
 
 #

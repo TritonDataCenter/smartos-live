@@ -1322,7 +1322,7 @@ Note that external Internet access is required to install pkgsrc.\n\n"
 
 	printf "$message"
 	promptval "Install pkgsrc?" "y" "install_pkgsrc"
-	if [[ "${val,,}" =~ ^(y|yes)$ ]] || [[ "$val" == 'true' ]]; then
+	if [[ "${val,,}" =~ ^(y|yes|true)$ ]]; then
 		install_pkgsrc=true
 	fi
 

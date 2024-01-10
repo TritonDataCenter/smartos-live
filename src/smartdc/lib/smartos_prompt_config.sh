@@ -7,7 +7,7 @@
 
 #
 # Copyright 2022 Joyent, Inc.
-# Copyright 2022 MNX Cloud, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 
 # XXX - TODO
@@ -804,12 +804,13 @@ EOF
 		fi
 		json error < /var/tmp/disklayout.json 2>/dev/null | grep . && layout="" && continue
 		prmpt_str="$(printdisklayout /var/tmp/disklayout.json)\n\n"
+		layout=$(getanswer "zpool_layout")
 		[[ -z "$layout" ]] && layout="default"
 		prmpt_str+="This is the '${layout}' storage configuration.  To use it, type 'yes'.\n"
 		prmpt_str+=" To see a different configuration, type: 'raidz2', 'mirror', or 'default'.\n"
 		prmpt_str+=" To specify a manual configuration, type: 'manual'.\n\n"
 		print $prmpt_str
-		promptval "Selected zpool layout" "yes"
+		promptval "Selected zpool layout" "yes" "zpool_confirm_layout"
 		if [[ $val == "raidz2" || $val == "mirror" ]]; then
 			# go around again
 			layout=$val
@@ -1044,7 +1045,20 @@ done
 
 shift $(($OPTIND - 1))
 
+# There's a subtle difference here.
+#   * USBMNT is passed into us by wherever we were called from
+#     (usually svc:/system/smartdc/config:default).
+#   * USBMOUNTPOINT is where we attempt to auto discover and mount the physical
+#     USB device, if it exists.
+# Usually, USBMNT will be /usbkey and USBMOUNTPOINT will be /mnt/usbkey.
 USBMNT=$1
+. /lib/sdc/usb-key.sh
+USBMOUNTPOINT=$(mount_usb_key "" skip)
+
+# If there is a physical USB it needs to stay mounted for the duration of this
+# script because each call to getanswer will cat the answer_file if the file
+# exists. Because we reboot at the end of setup anyway, we'll just be lazy and
+# not bother unmounting it.
 
 if [[ -n ${answer_file} ]]; then
 	if [[ ! -f ${answer_file} ]]; then
@@ -1053,6 +1067,8 @@ if [[ -n ${answer_file} ]]; then
 	fi
 elif [[ -f ${USBMNT}/private/answers.json ]]; then
 	answer_file=${USBMNT}/private/answers.json
+elif [[ -f ${USBMOUNTPOINT}/private/answers.json ]]; then
+	answer_file=${USBMOUNTPOINT}/private/answers.json
 fi
 
 #
@@ -1306,7 +1322,7 @@ Note that external Internet access is required to install pkgsrc.\n\n"
 
 	printf "$message"
 	promptval "Install pkgsrc?" "y" "install_pkgsrc"
-	if [[ $val =~ [YyEeSs] ]]; then
+	if [[ "${val,,}" =~ ^(y|yes|true)$ ]]; then
 		install_pkgsrc=true
 	fi
 
@@ -1430,7 +1446,8 @@ if [ $boot_from_zpool == "yes" ]; then
 	fi
 fi
 
-printf "System setup has completed.\n\nPress enter to reboot.\n"
-
-read foo
+if [[ $(getanswer "skip_final_confirm") != "true" ]]; then
+	printf "System setup has completed.\n\nPress enter to reboot.\n"
+	read foo
+fi
 reboot

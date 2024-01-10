@@ -307,7 +307,7 @@ pkgin export | sort > /package.list.new
 Note that the packages normally installed by smartos-live's `configure`
 script might be missing at this point. When you next run `configure` in
 advance of doing a smartos-live build, they will be installed from
-http://us-east.manta.joyent.com/Joyent_Dev/public/releng/pkgsrc.
+http://us-central.manta.mnx.io/Joyent_Dev/public/releng/pkgsrc.
 
 At this point, you should be able to build a post-OS-8349 (2021.4) revision
 of smartos-live and repos.  NOTE that illumos-extra must be updated

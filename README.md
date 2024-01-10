@@ -479,9 +479,9 @@ If this file does not exist, the following defaults are set by `configure`:
 ```
 PUBLISHER="joyent"
 RELEASE_VER="joyent_147"
-ON_CLOSED_BINS_URL="https://us-east.manta.joyent.com/Joyent_Dev/public/releng/illumos/on-closed-bins.i386.tar.bz2"
-ON_CLOSED_BINS_ND_URL="https://us-east.manta.joyent.com/Joyent_Dev/public/releng/illumos/on-closed-bins-nd.i386.tar.bz2"
-ILLUMOS_ADJUNCT_TARBALL_URL="https://us-east.manta.joyent.com/Joyent_Dev/public/releng/adjuncts/illumos-adjunct.20210922.tgz"
+ON_CLOSED_BINS_URL="https://us-central.manta.mnx.io/Joyent_Dev/public/releng/illumos/on-closed-bins.i386.tar.bz2"
+ON_CLOSED_BINS_ND_URL="https://us-central.manta.mnx.io/Joyent_Dev/public/releng/illumos/on-closed-bins-nd.i386.tar.bz2"
+ILLUMOS_ADJUNCT_TARBALL_URL="https://us-central.manta.mnx.io/Joyent_Dev/public/releng/adjuncts/illumos-adjunct.20210922.tgz"
 ```
 
 ### Debug Builds

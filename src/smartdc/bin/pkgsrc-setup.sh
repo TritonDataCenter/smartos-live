@@ -5,7 +5,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 # Copyright 2022 Joyent, Inc.
-# Copyright 2023 MNX Cloud, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 
 function fatal () {
@@ -39,8 +39,8 @@ root="/${1}"
 # pkgsrc.smartos.org for changes. Old boostrap tars are kept around indefinitely,
 # so there's no particular urgency for getting it done when a new bootstrap
 # is available, but we'll want to stay relatively up to date.
-BOOTSTRAP_TAR="bootstrap-trunk-tools-20230910.tar.gz"
-BOOTSTRAP_SHA="23169c6b462526799a009c76c13f2be783c86851"
+BOOTSTRAP_TAR="bootstrap-trunk-tools-20240116.tar.gz"
+BOOTSTRAP_SHA="8c104974605e7404edd9d10b9429bdf1d9b3bb60"
 
 cd /tmp || fatal 'cd to /tmp failed'
 

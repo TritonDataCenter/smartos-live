@@ -21,6 +21,7 @@
  * CDDL HEADER END
  *
  * Copyright (c) 2018, Joyent, Inc.
+ * Copyright 2024, MNX Cloud, Inc.
  */
 
 var fs = require('fs');
@@ -34,7 +35,8 @@ require('nodeunit-plus');
 
 VM.loglevel = 'DEBUG';
 
-var uefi_img_uuid = '45d86edd-8cf4-6c7c-f018-8e27b24c550e';
+var bios_img_uuid = '45d86edd-8cf4-6c7c-b105-8e27b24c550e';
+var uefi_img_uuid = '45d86edd-8cf4-6c7c-4ef1-8e27b24c550e';
 
 function get_payload() {
     var payload = {
@@ -88,7 +90,7 @@ test('validate bios payload with uefi image as boot disk', function(t) {
 test('validate uefi payload with bios image as boot disk', function(t) {
     payload = get_payload();
     payload.bootrom = 'uefi';
-    payload.disks[0].image_uuid = vmtest.CURRENT_BHYVE_CENTOS_UUID;
+    payload.disks[0].image_uuid = bios_img_uuid;
     VM.validate(payload.brand, 'create', payload, function(err) {
         t.ok(err && err.bad_values.indexOf('bootrom') !== -1,
             'bad bootrom detected');
@@ -146,7 +148,7 @@ test('validate bios/uefi boot/data disks with uefi bootrom', function(t) {
     payload.bootrom = 'uefi';
     payload.disks = [
         {
-            image_uuid: vmtest.CURRENT_BHYVE_CENTOS_UUID,
+            image_uuid: bios_img_uuid,
             boot: true,
         },
         {

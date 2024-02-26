@@ -676,10 +676,12 @@ tab-complete UUIDs rather than having to type them out for every command.
     bootrom:
 
         This indicates the bootrom to use for bhyve, valid values are 'bios',
-        'uefi', or a path to a bootrom binary. The path if specified is
-        evaluated within the zoneroot of the VM so /uefi-debug.bin will
-        actually be something like the path /zones/<uuid>/root/uefi-debug.img
-        from the global zone.
+        'uefi', or a path to a bootrom binary. At provision time, only 'bios'
+        or 'uefi' are allowed. After the instance has been provisioned
+        successfully an operator may copy a custom bootrom into the zoneroot
+        and set a path. The path specified is evaluated within the zoneroot of
+        the VM so /uefi-debug.bin will actually be something like the path
+        /zones/<uuid>/root/uefi-debug.img from the global zone.
 
         type: string
         vmtype: bhyve

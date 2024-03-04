@@ -32,7 +32,6 @@
 ./bin/i386/ndrgen1
 ./bin/i386/protocmp
 ./bin/i386/protolist
-./bin/Install
 ./bin/interface_check
 ./bin/interface_cmp
 ./bin/jstyle
@@ -108,7 +107,6 @@
 ./man/man1onbld/git-nits.1onbld
 ./man/man1onbld/git-pbchk.1onbld
 ./man/man1onbld/hdrchk.1onbld
-./man/man1onbld/Install.1onbld
 ./man/man1onbld/interface_check.1onbld
 ./man/man1onbld/interface_cmp.1onbld
 ./man/man1onbld/jstyle.1onbld

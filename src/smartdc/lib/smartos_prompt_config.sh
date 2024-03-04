@@ -1469,7 +1469,8 @@ if [ $boot_from_zpool == "yes" ]; then
 fi
 
 if [[ $(getanswer "skip_final_confirm") != "true" ]]; then
-	printf "System setup has completed.\n\nPress enter to reboot.\n"
+	printf "\nSSH to host %s or %s.local\n" "" "$hostname"
+	printf "\nSystem setup has completed.\n\nPress enter to reboot.\n"
 	read foo
 fi
 reboot

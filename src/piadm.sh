@@ -210,7 +210,7 @@ config_check() {
             # If they have a broken config with the stale joyent name,
             # nuke it.
             printf 'WARNING: Removing stale image server ' >&2
-            printf '(us-east.manta.joyent.com)' >&2
+            printf '(us-east.manta.joyent.com)\n' >&2
             rm "${PIADM_CONF:?}"
         fi
 

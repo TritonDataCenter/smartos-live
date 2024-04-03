@@ -206,6 +206,14 @@ config_check() {
 		return
 	fi
 
+        if grep -q us-east.manta.joyent.com $PIADM_CONF ; then
+            # If they have a broken config with the stale joyent name,
+            # nuke it.
+            printf 'WARNING: Removing stale image server ' >&2
+            printf '(us-east.manta.joyent.com)\n' >&2
+            rm "${PIADM_CONF:?}"
+        fi
+
 	OLD_DEFAULT="$DEFAULT_URL_PREFIX"
 	if [[ -f $PIADM_CONF ]]; then
 		. $PIADM_CONF
@@ -220,7 +228,6 @@ config_check() {
 		PIADM_CONFIG_VERSION=1
 		cat <<EOF  > $PIADM_CONF
 PIADM_CONFIG_VERSION=$PIADM_CONFIG_VERSION
-DEFAULT_URL_PREFIX=$DEFAULT_URL_PREFIX
 EOF
 
 	fi

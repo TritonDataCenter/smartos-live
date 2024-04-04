@@ -206,7 +206,7 @@ config_check() {
 		return
 	fi
 
-        if grep -q us-east.manta.joyent.com $PIADM_CONF ; then
+        if grep -sq us-east.manta.joyent.com $PIADM_CONF ; then
             # If they have a broken config with the stale joyent name,
             # nuke it.
             printf 'WARNING: Removing stale image server ' >&2

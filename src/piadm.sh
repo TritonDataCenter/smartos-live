@@ -627,13 +627,15 @@ update_boot_sectors() {
 
 		# Use fstyp to confirm if this is a manually created EFI
 		# System Partition (ESP)
-		type=$(fstyp "/dev/dsk/${boot_devices[0]}s0")
+		type=$(fstyp "/dev/dsk/${boot_devices[0]}s0" 2>/dev/null)
 		if [[ "$type" == "pcfs" ]]; then
 			# If we detect PCFS on s0, it's LIKELY an EFI System
 			# Partition that was crafted manually.  Use s1 if it's
 			# ZFS, or bail if it's not.
 
-			s1type=$(fstyp "/dev/dsk/${boot_devices[0]}s1")
+			s1type=$(
+			    fstyp "/dev/dsk/${boot_devices[0]}s1" 2>/dev/null
+			)
 			if [[ "$s1type" != "zfs" ]]; then
 				fatal "Unusual configuration," \
 					"${boot_devices[0]}s1 not ZFS"

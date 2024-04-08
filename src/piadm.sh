@@ -633,8 +633,9 @@ update_boot_sectors() {
 			# Partition that was crafted manually.  Use s1 if it's
 			# ZFS, or bail if it's not.
 
-			s1type=$( \
-			    fstyp "/dev/dsk/${boot_devices[0]}s1" 2>/dev/null)
+			s1type=$(
+			    fstyp "/dev/dsk/${boot_devices[0]}s1" 2>/dev/null
+			)
 			if [[ "$s1type" != "zfs" ]]; then
 				fatal "Unusual configuration," \
 					"${boot_devices[0]}s1 not ZFS"

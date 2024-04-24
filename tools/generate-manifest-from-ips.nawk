@@ -1,4 +1,4 @@
-#!/opt/local/bin/nawk -f
+#!/usr/bin/awk -f
 
 #
 # This Source Code Form is subject to the terms of the Mozilla Public

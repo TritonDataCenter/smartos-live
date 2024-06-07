@@ -11,6 +11,7 @@
 
 /*
  * Copyright 2016 Joyent, Inc.
+ * Copyright 2024 Oxide Computer Company
  */
 
 /*
@@ -22,6 +23,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <strings.h>
 #include <libgen.h>
 #include <fcntl.h>
@@ -37,57 +39,58 @@
 
 #include "common.h"
 #include "strset.h"
+#include "strlist.h"
 #include "parser.h"
 #include "manifest.h"
 #include "custr.h"
 
 typedef struct manorder {
-	char *mao_section;
-	int mao_priority;
+	char *mao_more_important;
+	char *mao_less_important;
 } manorder_t;
 
 /*
- * Set of manual ordering constraints.  The default priority of a manual page
- * section is 0.  These records raise or lower the priority.
+ * Set of manual section and subsection ordering constraints.  This is a list
+ * of partial ordering rules, each with two fnmatch(3C) patterns.  The first
+ * pattern matches any section that we consider more important than anything
+ * which matches the second pattern.
  *
- * Note that priority only applies to subsections within a section; e.g. all
- * subsections of section 1 will still appear before any subsection of section
- * 3.
+ * Each entry in the table creates potentially many edges in the graph of all
+ * sections and subsections.  In the absence of any entry in this table which
+ * matches a pair of sections, we break ties using the natural lexicographical
+ * sort of section name strings.
  */
 static const manorder_t cm_manorders[] = {
 	/*
-	 * Prefer the base section before any named subsection:
+	 * Section 8 (formerly subsection 1M) is "Maintenance Commands and
+	 * Procedures", which has some unfortunate overlap with the mostly
+	 * vestigial subsection 1B, "BSD Compatibility Package Commands".
 	 */
-	{ "1",		100 },
-	{ "2",		100 },
-	{ "3",		100 },
-	{ "4",		100 },
-	{ "5",		100 },
-	{ "6",		100 },
-	{ "7",		100 },
-	{ "8",		100 },
-	{ "9",		100 },
+	{ "1m",		"1b" },
+	{ "8*",		"1b" },
 
 	/*
-	 * Shouldn't need these anymore, but prefer (1M) over (1B) anyway.
+	 * There are also pages in other lower numbered sections that conflict
+	 * with the commands people are generally looking for; e.g., swap(8) is
+	 * a better first match than swap(4).  Put section 8 before everything
+	 * else.
 	 */
-	{ "1m",		99 },
-	{ "1b",		-100 },
+	{ "8*",		"[2-7]*"},
 
 	/*
-	 * Subsection 3C is likely the most important library (3) subsection.
+	 * The pages in subsection 3C are likely more immediately relevant than
+	 * those found in any other subsection of 3.  Likewise, prefer pages
+	 * from 3SOCKET before 3XNET and 3HEAD; e.g., socket(3SOCKET) is likely
+	 * more relevant than socket(3HEAD) which describes "socket.h" itself.
 	 */
-	{ "3c",		99 },
-
-	/*
-	 * Prefer 3SOCKET over 3XNET or 3HEAD:
-	 */
-	{ "3socket",	98 },
+	{ "3c",		"3?*" },
+	{ "3socket",	"3xnet" },
+	{ "3socket",	"3head" },
 
 	/*
 	 * EOL
 	 */
-	{ "",		0 }
+	{ "",		"" }
 };
 
 /*
@@ -104,9 +107,8 @@ typedef struct mancf {
 	boolean_t mcf_trailing_comma;
 
 	strset_t *mcf_sections;
+	strlist_t *mcf_output;
 } mancf_t;
-
-static strset_compare_t section_compare(const char *, const char *);
 
 static void
 mancf_reset(mancf_t *mcf)
@@ -118,58 +120,102 @@ mancf_reset(mancf_t *mcf)
 	bzero(mcf, sizeof (*mcf));
 }
 
-void
+static void
 mancf_init(mancf_t *mcf)
 {
-	int e = 0;
-
 	bzero(mcf, sizeof (*mcf));
 
-	e |= strset_allocx(&mcf->mcf_sections, 0, section_compare);
-
-	if (e != 0) {
+	if (strset_alloc(&mcf->mcf_sections, 0) != 0 ||
+	    strlist_alloc(&mcf->mcf_output, 0) != 0) {
 		err(1, "alloc failure");
 	}
 }
 
 /*
- * Comparison functions for strset to enforce priority ordering in the
- * set of sections:
+ * Determine whether "section" is more important than "other_section" by
+ * scanning the partial order constraints.  Returns true if the "section"
+ * should appear in the output list before "other_section".
  */
-static int
-section_priority(const char *section)
+static bool
+section_is_more_important(const char *section, const char *other_section)
 {
-	for (int i = 0; cm_manorders[i].mao_section[0] != '\0'; i++) {
-		if (strcmp(section, cm_manorders[i].mao_section) == 0) {
-			return (cm_manorders[i].mao_priority);
+	if (strcmp(section, other_section) == 0) {
+		/*
+		 * These are the same section.
+		 */
+		return (false);
+	}
+
+	for (int i = 0; cm_manorders[i].mao_more_important[0] != '\0'; i++) {
+		const manorder_t *mao = &cm_manorders[i];
+
+		if (fnmatch(mao->mao_more_important, section, 0) == 0 &&
+		    fnmatch(mao->mao_less_important, other_section, 0) == 0) {
+			/*
+			 * This section is more important than the other
+			 * section.
+			 */
+			return (true);
 		}
 	}
 
-	return (0);
+	return (false);
 }
 
-static strset_compare_t
-section_compare(const char *l, const char *r)
+static strset_walk_t
+section_sort_walk_blocked_check(strset_t *set _UNUSED, const char *other_sect,
+    void *arg0, void *arg1)
 {
-	if (l[0] == r[0]) {
-		/*
-		 * Same section.  Check for difference in relative priority
-		 * of subsections.
-		 */
-		int lprio = section_priority(l);
-		int rprio = section_priority(r);
+	const char *sect = arg0;
+	bool *blocked = arg1;
 
-		if (lprio > rprio)
-			return (STRSET_COMPARE_LEFT_FIRST);
-		else if (lprio < rprio)
-			return (STRSET_COMPARE_RIGHT_FIRST);
+	if (section_is_more_important(other_sect, sect)) {
+		/*
+		 * This section is blocked from inclusion in the output list
+		 * because another section is considered more important.
+		 */
+		*blocked = true;
+		return (STRSET_WALK_DONE);
 	}
 
-	int cmp = strcmp(l, r);
+	return (STRSET_WALK_NEXT);
+}
 
-	return (cmp < 0 ? STRSET_COMPARE_LEFT_FIRST :
-	    cmp > 0 ? STRSET_COMPARE_RIGHT_FIRST :
-	    STRSET_COMPARE_EQUAL);
+static strset_walk_t
+section_sort_walk(strset_t *set _UNUSED, const char *sect, void *arg0,
+    void *arg1)
+{
+	mancf_t *mcf = arg0;
+	bool *made_progress = arg1;
+
+	/*
+	 * For this section, determine if any of the _other_ sections in the
+	 * input set are more important.
+	 */
+	bool blocked = false;
+	if (strset_walk(mcf->mcf_sections, section_sort_walk_blocked_check,
+	    (void *)sect, &blocked) != 0) {
+		err(1, "section_sort_walk: strset_walk");
+	}
+
+	if (!blocked) {
+		/*
+		 * No other section is more important than this one, so prepend
+		 * it to the output list:
+		 */
+		strlist_set_tail(mcf->mcf_output, sect);
+		*made_progress = true;
+
+		/*
+		 * Remove it from the input set so that we don't consider it a
+		 * second time.  Restart the walk of the input set in case
+		 * there are sections that would sort lexicographically earlier
+		 * in the set which have now been unblocked for inclusion.
+		 */
+		return (STRSET_WALK_DONE | STRSET_WALK_REMOVE);
+	}
+
+	return (STRSET_WALK_NEXT);
 }
 
 static void
@@ -327,7 +373,10 @@ make_sects(mancf_t *mcf)
 		err(1, "custr_alloc");
 	}
 
-	(void) strset_walk(mcf->mcf_sections, append_to_str, mansect, mcf);
+	for (unsigned i = 0; i < strlist_contig_count(mcf->mcf_output); i++) {
+		append_to_str(NULL, strlist_get(mcf->mcf_output, i),
+		    mansect, mcf);
+	}
 
 	if (fprintf(stdout, filestr, custr_cstr(mansect)) < 0) {
 		err(1, "fprintf");
@@ -347,7 +396,7 @@ main(int argc _UNUSED, char **argv _UNUSED)
 	parse_opts(&mcf, argc, argv);
 
 	/*
-	 * Read the manifest file once to populate the list of shipped
+	 * Read the manifest file once to populate the input set of shipped
 	 * manual pages.
 	 */
 	if (read_manifest_file(mcf.mcf_manifest_path, populate_sections,
@@ -357,6 +406,28 @@ main(int argc _UNUSED, char **argv _UNUSED)
 		goto out;
 	}
 
+	/*
+	 * Continuously walk the input set looking for the next viable entry to
+	 * transfer to the sorted output list, until there are no more
+	 * candidates.  The lexicographical tie-breaking is an implicit result
+	 * of the fact that strset walks in that order naturally.
+	 */
+	while (strset_count(mcf.mcf_sections) > 0) {
+		bool made_progress = false;
+
+		if (strset_walk(mcf.mcf_sections, section_sort_walk, &mcf,
+		    &made_progress) != 0) {
+			err(1, "strset_walk");
+		}
+
+		if (!made_progress) {
+			errx(1, "section ordering rules contain a cycle?");
+		}
+	}
+
+	/*
+	 * Emit the final list as a "man.cf" file to stdout.
+	 */
 	make_sects(&mcf);
 
 out:

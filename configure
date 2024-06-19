@@ -13,7 +13,7 @@
 
 #
 # Copyright 2021 Joyent, Inc.
-# Copyright 2023 MNX Cloud, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 shopt -s xpg_echo
 unalias -a
@@ -415,7 +415,7 @@ if [[ -z "\$MAKE" ]]; then
 MAKE="\$SRC/tools/proto/root_i386-nd/opt/onbld/bin/i386/dmake";	export MAKE
 fi
 LEX=/opt/local/bin/lex;				export LEX
-YACC=/opt/local/bin/yacc;			export YACC
+# As of illumos#16319, we no longer need to define YACC, as it's in tools.
 BISON=/opt/local/bin/bison;			export BISON
 GM4=/opt/local/bin/gm4;				export GM4
 ASTBINDIR=/opt/local/ast/bin;			export ASTBINDIR

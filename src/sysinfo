@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Copyright 2020 Joyent, Inc.
-# Copyright 2022 MNX Cloud, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 # Output some info representing the system.  Default: JSON
 #
@@ -304,8 +304,11 @@ function get_zpool_profile()
 
 function get_zpool()
 {
-    if [[ $(zpool list) != "no pools available" ]]; then
-        Zpool=$(svcprop -p "config/zpool" svc:/system/smartdc/init);
+    Zpool_cfg_name=$(svcprop -p "config/zpool" svc:/system/smartdc/init);
+    # If we don't find a zpool that matches the configured pool name from
+    # smartdc/init, we're going to pretend it doesn't exist. See OS-8558.
+    if zpool list "$Zpool_cfg_name" >/dev/null 2>&1; then
+        Zpool="$Zpool_cfg_name"
 
         local used=$(zfs get -Hp -o value used ${Zpool})
         local available=$(zfs get -Hp -o value available ${Zpool})

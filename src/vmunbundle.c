@@ -88,7 +88,7 @@ read_bytes(int fd, char *data, size_t bytes)
 size_t
 zfs_receive(int fd, const char * snapshot)
 {
-    char *argv[4] = {"/usr/sbin/zfs", "receive", 0, 0};
+    char *argv[5] = {"/usr/sbin/zfs", "receive", "-F", 0, 0};
     char *evp[1] = {0};
     pid_t pid;
     int stat;
@@ -96,7 +96,7 @@ zfs_receive(int fd, const char * snapshot)
 
     pid = fork();
     if (pid == 0) {
-        argv[2] = (char *)snapshot;
+        argv[3] = (char *)snapshot;
         if (dup2(fd, 0) < 0) {
             perror("dup2()");
             return (1);

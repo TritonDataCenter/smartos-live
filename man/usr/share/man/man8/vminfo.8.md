@@ -1,4 +1,4 @@
-# vminfo(1M) -- Vminfod Client Tool
+# vminfo(8) -- Vminfod Client Tool
 
 ## SYNOPSIS
 
@@ -6,7 +6,7 @@
 
 ## DESCRIPTION
 
-`vminfo(1M)` is a tool to interface with the `vminfod` service on a machine
+`vminfo(8)` is a tool to interface with the `vminfod` service on a machine
 using the exposed HTTP interface.  It can be used for administrators to
 determine service level health and status.
 
@@ -47,5 +47,5 @@ determine service level health and status.
 
 This tool should be used for interactive output only, and is not meant to
 provide a stable interface to use for vminfod.  If you are trying to interface
-with `vminfod` use the `vmadm(1M)` command (especially `vmadm events`) and, for
+with `vminfod` use the `vmadm(8)` command (especially `vmadm events`) and, for
 internal platform code, the `vminfod/client` Node.js library.

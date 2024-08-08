@@ -5,10 +5,11 @@
  */
 
 /*
- * Copyright 2021 Joyent, Inc.
+ * Copyright 2022 Joyent, Inc.
+ * Copyright 2023 MNX Cloud, Inc.
  */
 
-@Library('jenkins-joylib@v1.0.5') _
+@Library('jenkins-joylib@v1.0.8') _
 
 pipeline {
 
@@ -38,14 +39,14 @@ pipeline {
                 '<dd>build Illumos in DEBUG mode only [default: no]</dd>\n' +
                 '<dt>-h</dt>\n' +
                 '<dd>this message</dd>\n' +
-                '<dt>-p gcc4</dt>\n' +
-                '<dd>primary compiler version [default: gcc7]</dd>\n' +
+                '<dt>-p gcc10</dt>\n' +
+                '<dd>primary compiler version [default: gcc10]</dd>\n' +
                 '<dt>-P password</dt>\n' +
                 '<dd>platform root password [default: randomly chosen]</dd>\n' +
                 '<dt>-S</dt>\n' +
                 '<dd>do *not* run smatch [default is to run smatch]</dd>\n' +
                 '<dt>-s gcc7</dt>\n' +
-                '<dd>shadow compilers, comma delimited (gcc4,gcc#) [default: none]</dd>\n' +
+                '<dd>shadow compilers, comma delimited (gcc7,gcc#) [default: none]</dd>\n' +
                 '</dl>'
         )
         text(
@@ -111,8 +112,8 @@ pipeline {
         stage('check') {
             agent {
                 node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                    'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
+                    label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
+                    'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
                     customWorkspace "workspace/smartos-${BRANCH_NAME}-check"
                 }
             }
@@ -124,7 +125,7 @@ set -o pipefail
                 ''')
             }
             post {
-                // We don't mattermost-notify here, as that doesn't add much
+                // We don't notify here, as that doesn't add much
                 // value. The checks should always pass, and it's unlikely
                 // that developers will care when they do. If they don't
                 // pass, then the (likely) GitHub PR will be updated with a
@@ -144,202 +145,209 @@ set -o pipefail
                 }
             }
         }
-        stage('default') {
-            agent {
-                // There seems to be a Jenkins bug where ${WORKSPACE} isn't
-                // resolved at the time of node declaration, so we can't reuse
-                // that when setting our custom workspace for each separate
-                // pipeline stage (to allow users the chance of inspecting
-                // workspaces from different pipeline stages after the build
-                // completes).
-                // Use ${BRANCH_NAME} instead.
-                node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                    'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                    customWorkspace "workspace/smartos-${BRANCH_NAME}-default"
-                }
-            }
-            when {
-                // We only want to trigger most pipeline stages on either a
-                // push to master, or an explicit build request from a user.
-                // Otherwise, every push to a PR branch would cause a build,
-                // which might be excessive. The exception is the 'check' stage
-                // above, which is ~ a 2 minute build.
-                beforeAgent true
-                allOf {
-                    anyOf {
-                        branch 'master'
-                        triggeredBy cause: 'UserIdCause'
+	stage('build-variants') {
+        parallel {
+            stage('default') {
+                agent {
+                    // There seems to be a Jenkins bug where ${WORKSPACE} isn't
+                    // resolved at the time of node declaration, so we can't reuse
+                    // that when setting our custom workspace for each separate
+                    // pipeline stage (to allow users the chance of inspecting
+                    // workspaces from different pipeline stages after the build
+                    // completes).
+                    // Use ${BRANCH_NAME} instead.
+                    node {
+                        label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
+                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
+                        customWorkspace "workspace/smartos-${BRANCH_NAME}-default"
                     }
-                    environment name: 'ONLY_BUILD_STRAP_CACHE', value: 'false'
                 }
-            }
-            steps {
-                sh('git clean -fdx')
-                sh('''
+                when {
+                    // We only want to trigger most pipeline stages on either a
+                    // push to master, or an explicit build request from a user.
+                    // Otherwise, every push to a PR branch would cause a build,
+                    // which might be excessive. The exception is the 'check' stage
+                    // above, which is ~ a 2 minute build.
+                    beforeAgent true
+                    allOf {
+                        anyOf {
+                            branch 'master'
+                            triggeredBy cause: 'UserIdCause'
+                        }
+                        environment name: 'ONLY_BUILD_STRAP_CACHE', value: 'false'
+                    }
+                }
+                steps {
+                    sh('git clean -fdx')
+                    sh('''
 set -o errexit
 set -o pipefail
 export ENGBLD_BITS_UPLOAD_IMGAPI=true
 ./tools/build_jenkins -c -S default
-                ''')
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'output/default/**',
-                        onlyIfSuccessful: false,
-                        allowEmptyArchive: true
-                    cleanWs cleanWhenSuccess: true,
-                        cleanWhenFailure: false,
-                        cleanWhenAborted: true,
-                        cleanWhenNotBuilt: true,
-                        deleteDirs: true
-                    joyMattermostNotification(
-                        channel: 'os', comment: 'default')
+                    ''')
                 }
-            }
-        }
-        stage('debug') {
-            agent {
-                node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                    customWorkspace "workspace/smartos-${BRANCH_NAME}-debug"
-                }
-            }
-            when {
-                beforeAgent true
-                allOf {
-                    anyOf {
-                        branch 'master'
-                        triggeredBy cause: 'UserIdCause'
+                post {
+                    always {
+                        archiveArtifacts artifacts: 'output/default/**',
+                            onlyIfSuccessful: false,
+                            allowEmptyArchive: true
+                        cleanWs cleanWhenSuccess: true,
+                            cleanWhenFailure: false,
+                            cleanWhenAborted: true,
+                            cleanWhenNotBuilt: true,
+                            deleteDirs: true
+                        joySlackNotifications(
+                            channel: 'smartos', comment: 'default')
                     }
-                    // If a user has set PLAT_CONFIGURE_ARGS, that
-                    // suggests we may have been asked for a special debug, or
-                    // gcc, etc. build. In that case, don't bother building
-                    // any stages which may duplicate the arguments they
-                    // specified. The same goes for the rest of the pipeline
-                    // stages.
-                    environment name: 'PLAT_CONFIGURE_ARGS', value: ''
-                    environment name: 'ONLY_BUILD_STRAP_CACHE', value: 'false'
                 }
             }
-            steps {
-                sh('git clean -fdx')
-                sh('''
+            stage('debug') {
+                agent {
+                    node {
+                        label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
+                            'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
+                        customWorkspace "workspace/smartos-${BRANCH_NAME}-debug"
+                    }
+                }
+                when {
+                    beforeAgent true
+                    allOf {
+                        anyOf {
+                            branch 'master'
+                            triggeredBy cause: 'UserIdCause'
+                        }
+                        // If a user has set PLAT_CONFIGURE_ARGS, that
+                        // suggests we may have been asked for a special debug, or
+                        // gcc, etc. build. In that case, don't bother building
+                        // any stages which may duplicate the arguments they
+                        // specified. The same goes for the rest of the pipeline
+                        // stages.
+                        environment name: 'PLAT_CONFIGURE_ARGS', value: ''
+                        environment name: 'ONLY_BUILD_STRAP_CACHE', value: 'false'
+                    }
+                }
+                steps {
+                    sh('git clean -fdx')
+                    sh('''
 set -o errexit
 set -o pipefail
 export PLAT_CONFIGURE_ARGS="-d $PLAT_CONFIGURE_ARGS"
 ./tools/build_jenkins -c -d -S debug
-            ''')
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'output/debug/**',
-                        onlyIfSuccessful: false,
-                        allowEmptyArchive: true
-                    cleanWs cleanWhenSuccess: true,
-                        cleanWhenFailure: false,
-                        cleanWhenAborted: true,
-                        cleanWhenNotBuilt: true,
-                        deleteDirs: true
-                    joyMattermostNotification(
-                        channel: 'os', comment: 'debug')
-                }
-            }
-        }
-        stage('gcc4') {
-            agent {
-                node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                    customWorkspace "workspace/smartos-${BRANCH_NAME}-gcc4"
-                }
-            }
-            when {
-                beforeAgent true
-                allOf {
-                    anyOf {
-                        branch 'master'
-                        triggeredBy cause: 'UserIdCause'
-                    }
-                    environment name: 'PLAT_CONFIGURE_ARGS', value: ''
-                    environment name: 'ONLY_BUILD_STRAP_CACHE', value: 'false'
-                }
-            }
-            steps {
-                sh('git clean -fdx')
-                sh('''
-export PLAT_CONFIGURE_ARGS="-p gcc4 -r $PLAT_CONFIGURE_ARGS"
-# enough to make sure we don't pollute the main Manta dir
-export PLATFORM_DEBUG_SUFFIX=-gcc4
-./tools/build_jenkins -c -d -S gcc4
                 ''')
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'output/gcc4/**',
-                        onlyIfSuccessful: false,
-                        allowEmptyArchive: true
-                    cleanWs cleanWhenSuccess: true,
-                        cleanWhenFailure: false,
-                        cleanWhenAborted: true,
-                        cleanWhenNotBuilt: true,
-                        deleteDirs: true
-                    joyMattermostNotification(
-                        channel: 'os', comment: 'gcc4')
+                }
+                post {
+                    always {
+                        archiveArtifacts artifacts: 'output/debug/**',
+                            onlyIfSuccessful: false,
+                            allowEmptyArchive: true
+                        cleanWs cleanWhenSuccess: true,
+                            cleanWhenFailure: false,
+                            cleanWhenAborted: true,
+                            cleanWhenNotBuilt: true,
+                            deleteDirs: true
+                        joySlackNotifications(
+                            channel: 'smartos', comment: 'debug')
+                    }
                 }
             }
-        }
-        stage('strap-cache') {
-            agent {
-                node {
-                    label 'platform:true && image_ver:18.4.0 && pkgsrc_arch:x86_64 && ' +
-                        'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:2'
-                    customWorkspace "workspace/smartos-${BRANCH_NAME}-strap-cache"
+            stage('gcc7') {
+                agent {
+                    node {
+                        label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
+                            'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
+                        customWorkspace "workspace/smartos-${BRANCH_NAME}-gcc7"
+                    }
+                }
+                when {
+                    beforeAgent true
+                    allOf {
+                        anyOf {
+                            branch 'master'
+                            triggeredBy cause: 'UserIdCause'
+                        }
+                        environment name: 'PLAT_CONFIGURE_ARGS', value: ''
+                        environment name: 'ONLY_BUILD_STRAP_CACHE', value: 'false'
+                    }
+                }
+                steps {
+                    sh('git clean -fdx')
+                    sh('''
+export PLAT_CONFIGURE_ARGS="-p gcc7 -r $PLAT_CONFIGURE_ARGS"
+# enough to make sure we don't pollute the main Manta dir
+# Also for now we implicitly promise that the gcc7 deliverables are DEBUG,
+# but we could choose to make -gcc7 *and* -debug-gcc7 stages later and alter
+# PLATFORM_DEBUG_SUFFIX accordingly.
+export PLATFORM_DEBUG_SUFFIX=-gcc7
+./tools/build_jenkins -c -d -S gcc7
+                    ''')
+                }
+                post {
+                    always {
+                        archiveArtifacts artifacts: 'output/gcc7/**',
+                            onlyIfSuccessful: false,
+                            allowEmptyArchive: true
+                        cleanWs cleanWhenSuccess: true,
+                            cleanWhenFailure: false,
+                            cleanWhenAborted: true,
+                            cleanWhenNotBuilt: true,
+                            deleteDirs: true
+                        joySlackNotifications(
+                            channel: 'smartos', comment: 'gcc7')
+                    }
                 }
             }
-            when {
-                beforeAgent true
-                // We only build strap-cache as a result of a push to
-                // illumos-extra. See the Jenkinsfile in that repository
-                // which has a build(..) step for smartos-live that sets
-                // this environment value.
-                anyOf {
-                    environment name: 'BUILD_STRAP_CACHE', value: 'true'
-                    environment name: 'ONLY_BUILD_STRAP_CACHE', value: 'true'
+            stage('strap-cache') {
+                agent {
+                    node {
+                        label 'platform:true && image_ver:21.4.0 && pkgsrc_arch:x86_64 && ' +
+                            'dram:16gb && !virt:kvm && fs:pcfs && fs:ufs && jenkins_agent:3'
+                        customWorkspace "workspace/smartos-${BRANCH_NAME}-strap-cache"
+                    }
                 }
-            }
-            steps {
-                sh('git clean -fdx')
-                sh('''
+                when {
+                    beforeAgent true
+                    // We only build strap-cache as a result of a push to
+                    // illumos-extra. See the Jenkinsfile in that repository
+                    // which has a build(..) step for smartos-live that sets
+                    // this environment value.
+                    anyOf {
+                        environment name: 'BUILD_STRAP_CACHE', value: 'true'
+                        environment name: 'ONLY_BUILD_STRAP_CACHE', value: 'true'
+                    }
+                }
+                steps {
+                    sh('git clean -fdx')
+                    sh('''
 set -o errexit
 set -o pipefail
 export MANTA_TOOLS_PATH=/root/bin/
 ./tools/build_jenkins -c -F strap-cache -S strap-cache
-                ''')
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'output/strap-cache/**',
-                        onlyIfSuccessful: false,
-                        allowEmptyArchive: true
-                    cleanWs cleanWhenSuccess: true,
-                        cleanWhenFailure: false,
-                        cleanWhenAborted: true,
-                        cleanWhenNotBuilt: true,
-                        deleteDirs: true
-                    joyMattermostNotification(
-                        channel: 'os', comment: 'strap-cache')
+                    ''')
+                }
+                post {
+                    always {
+                        archiveArtifacts artifacts: 'output/strap-cache/**',
+                            onlyIfSuccessful: false,
+                            allowEmptyArchive: true
+                        cleanWs cleanWhenSuccess: true,
+                            cleanWhenFailure: false,
+                            cleanWhenAborted: true,
+                            cleanWhenNotBuilt: true,
+                            deleteDirs: true
+                        joySlackNotifications(
+                            channel: 'smartos', comment: 'strap-cache')
+                    }
                 }
             }
-        }
+	}
+	}
     }
     post {
         always {
-            joyMattermostNotification(
+            joySlackNotifications(
                 channel: 'jenkins', comment: 'pipeline complete')
-            joyMattermostNotification(
-                channel: 'os', comment: 'pipeline complete')
+            joySlackNotifications(
+                channel: 'smartos', comment: 'pipeline complete')
         }
     }
 }

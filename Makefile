@@ -10,7 +10,8 @@
 #
 
 #
-# Copyright 2020 Joyent, Inc.
+# Copyright 2022 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 #
@@ -58,7 +59,7 @@ CRIPPLED_HOST :=	$(shell [[ `prtconf -m 2>/dev/null || echo 999999` -lt \
 ifeq ($(CRIPPLED_HOST),yes)
 MAX_JOBS ?=	8
 else
-MAX_JOBS ?=	128
+MAX_JOBS ?=	$(shell tools/optimize_jobs)
 endif
 
 #
@@ -152,8 +153,9 @@ TOOLS_TARGETS = \
 	$(UCODECHECK) \
 	tools/cryptpass
 
-world: 0-strap-stamp 0-illumos-stamp 0-extra-stamp 0-livesrc-stamp \
-	0-local-stamp 0-tools-stamp 0-devpro-stamp $(TOOLS_TARGETS)
+world: 0-preflight-stamp 0-strap-stamp 0-illumos-stamp 0-extra-stamp \
+	0-livesrc-stamp 0-local-stamp 0-tools-stamp 0-devpro-stamp \
+	$(TOOLS_TARGETS)
 
 live: world manifest boot $(TOOLS_TARGETS) $(MANCF_FILE) mancheck
 	@echo $(SUBDIR_MANIFESTS)
@@ -186,12 +188,18 @@ $(IMAGES_PROTO)/4gb.img: boot
 	mkdir -p $(IMAGES_PROTO)
 	./tools/build_boot_image -p 4 -r $(ROOT)
 
+$(IMAGES_PROTO)/8gb.img: boot
+	rm -f $@
+	mkdir -p $(IMAGES_PROTO)
+	./tools/build_boot_image -p 8 -r $(ROOT)
+
 $(IMAGES_PROTO)/16gb.img: boot
 	rm -f $@
 	mkdir -p $(IMAGES_PROTO)
 	./tools/build_boot_image -p 16 -r $(ROOT)
 
-$(IMAGES_TARBALL): $(IMAGES_PROTO)/4gb.img $(IMAGES_PROTO)/16gb.img
+$(IMAGES_TARBALL): $(IMAGES_PROTO)/4gb.img $(IMAGES_PROTO)/8gb.img \
+	$(IMAGES_PROTO)/16gb.img
 	cd $(IMAGES_PROTO) && gtar -Scvz --owner=0 --group=0 -f $(ROOT)/$@ *
 
 images-tar: $(IMAGES_TARBALL)
@@ -343,6 +351,11 @@ $(STAMPFILE):
 
 FORCEARG_yes=-f
 
+# Check any build requirements that are easy to catch early.
+0-preflight-stamp:
+	$(ROOT)/tools/preflight
+	touch $@
+
 # build our proto.strap area
 0-strap-stamp:
 	$(ROOT)/tools/build_strap make \
@@ -362,7 +375,7 @@ $(CTFTOOLS_TARBALL): 0-strap-stamp $(STAMPFILE)
 	    -j $(MAX_JOBS) -o $(CTFTOOLS_TARBALL)
 
 # additional illumos-extra content for proto itself
-0-extra-stamp: 0-illumos-stamp
+0-extra-stamp: 0-preflight-stamp 0-illumos-stamp
 	(cd $(ROOT)/projects/illumos-extra && \
 	    gmake $(SUBDIR_DEFS) DESTDIR=$(PROTO) \
 	    install)
@@ -472,8 +485,11 @@ usb: live
 # below add suffixes to the bits-dir copies of these files as appropriate.
 # The 'PUB_' prefix below indicates published build artifacts.
 #
+# This is all overridden if PLATFORM_DEBUG_SUFFIX is defined in the environment,
+# however.
+#
 ifeq ($(ILLUMOS_ENABLE_DEBUG),exclusive)
-    PLATFORM_DEBUG_SUFFIX = -debug
+    PLATFORM_DEBUG_SUFFIX ?= -debug
 endif
 
 BUILD_NAME			?= platform
@@ -575,7 +591,8 @@ triton-platform-publish: common-platform-publish
 # $MANTA_TOOLS_PATH pointing to the manta-client tools scripts) or, with
 # $ENGBLD_BITS_UPLOAD_LOCAL set to 'true', will upload to $ENGBLD_DEST_OUT_PATH
 # on a local filesystem. If $ENGBLD_BITS_UPLOAD_IMGAPI is set in the environment
-# it also publishes any images from the -D directory to updates.joyent.com.
+# it also publishes any images from the -D directory to
+# updates.tritondatacenter.com.
 #
 
 ENGBLD_DEST_OUT_PATH ?=	/public/builds

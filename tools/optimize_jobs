@@ -1,0 +1,41 @@
+#!/usr/bin/bash
+
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+
+#
+# Copyright 2022 MNX Cloud, Inc.
+#
+
+# Start with the oldie-but-goodie 128 if it's not in the environment already.
+MAX_JOBS=${MAX_JOBS:-128}
+
+# Then let's count CPUs
+ncpu=$(kstat -p cpu_info:::state | grep -c on-line)
+
+# And our zone's cpu_cap
+zcpucap=$(pfexec mdata-get sdc:cpu_cap)
+if [[ $zcpucap == 0 || "$zcpucap" == "" ]]; then
+	# 0 cpu_cap means NO LIMIT so make it the same as MAX_JOBS.
+	zcpu=${MAX_JOBS}
+else
+	zcpu=$(( $zcpucap / 100 ))
+fi
+
+if [[ $zcpu -lt $ncpu ]]; then
+	expr $zcpu + 2
+elif [[ $(( $ncpu + 2 )) -lt ${MAX_JOBS} ]]; then
+	expr $ncpu + 2
+else
+	printf "%d\n" ${MAX_JOBS}
+fi
+
+exit 0

@@ -1,4 +1,4 @@
-ziostat(1M) -- Report ZFS read I/O activity
+ziostat(8) -- Report ZFS read I/O activity
 =============================================
 
 ## SYNOPSIS
@@ -14,7 +14,7 @@ can be observed.  When run from a the global zone (GZ), activity
 from the GZ and all other NGZs can be observed.
 
 This tool is useful for determining if disk I/O is a source of
-application latency.  Combined with vfsstat(1M), ziostat(1M) shows
+application latency.  Combined with vfsstat(8), ziostat(8) shows
 the relative contribution of disk I/O latency to overall I/O (and
 therefore application) latency.
 
@@ -63,7 +63,7 @@ Specifies the number of intervals to report.  Defaults to
 unlimited if not specified.
 
 ## SEE ALSO
-    iostat(1M), vfsstat(1M), mpstat(1M)
+    iostat(8), vfsstat(8), mpstat(8)
 
 ## NOTES
 

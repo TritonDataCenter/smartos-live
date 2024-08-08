@@ -1064,9 +1064,9 @@ function main(callback)
             if (err && err.code === 'ENOENT' && err.statusCode === 404) {
                 /*
                  * In the vminfod world, a VM not found error is expressed a
-                 * 404 instead of a failure message directly from zoneadm(1M).
+                 * 404 instead of a failure message directly from zoneadm(8).
                  * Certain tools and scripts (`node-vmadm` for example) rely on
-                 * this specific output, so we make vmadm(1M) mimic that here.
+                 * this specific output, so we make vmadm(8) mimic that here.
                  */
                 err.message = util.format(
                     'zoneadm: %s: No such zone configured', uuid);

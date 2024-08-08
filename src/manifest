@@ -1085,6 +1085,7 @@ f lib/sdc/usb-key.sh 0444 root bin
 f lib/sdc/zone.sh 0444 root bin
 d smartdc 0555 root bin
 d smartdc/bin 0555 root bin
+f smartdc/bin/pkgsrc-setup 0555 root bin
 f smartdc/bin/qemu-exec 0555 root bin
 f smartdc/bin/sdc-factoryreset 0555 root bin
 f smartdc/bin/sdc-lastcomm 0555 root bin

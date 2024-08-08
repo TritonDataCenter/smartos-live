@@ -1,4 +1,4 @@
-# fwadm(1M) -- Manage SmartOS firewall rules
+# fwadm(8) -- Manage SmartOS firewall rules
 
 
 ## SYNOPSIS
@@ -35,11 +35,11 @@ The fwadm tool allows you to manage firewall data on a SmartOS system. It
 is primarily used to manage firewall rules and remote VMs.
 
 Firewall rules are JSON objects. They contain a rule written in a
-Domain-Specific Language, as well as other metadata.  See fwrule(5) and
+Domain-Specific Language, as well as other metadata.  See fwrule(7) and
 the "EXAMPLES" section below for rule syntax.
 
 Remote VMs are JSON objects. They represent VMs on other SmartOS hosts.
-The format is similar to the vmadm(1M) format with most properties omitted
+The format is similar to the vmadm(8) format with most properties omitted
 and some simplified properties. See the "REMOTE VMS", "REMOTE VM PROPERTIES"
 and "EXAMPLES" sections below for details.
 
@@ -96,21 +96,37 @@ the firewalls of any VMs affected.
 
         Arguments:
             <rule>                  Firewall rule, written in the rule DSL.  See
-                                    fwrule(5) for syntax.
+                                    fwrule(7) for syntax.
 
         Examples:
-            {{#indent_and_wrap}}
             # Add a disabled rule with an owner by specifying it on the
             # commandline.
-            {{{fwadm_add_owner}}}
+            fwadm add --owner_uuid=e6c73bd2-fae4-4e0a-af76-2c05d088b066 FROM \
+                 any TO all vms ALLOW tcp PORT 22
 
             # Add an enabled global rule by specifying it on the commandline.
-            {{{fwadm_add_global}}}
+            fwadm add -g -e FROM any TO all vms ALLOW tcp PORT 22
 
             # Add a remote VM and a rule referencing that VM.
-            {{{fwadm_add_rvm_and_rule}}}
-            {{/indent_and_wrap}}
-
+            echo '{
+                "rules": [
+                    {
+                      "enabled": true,
+                      "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+                      "rule": "FROM vm a223bec2-c62b-4fe7-babb-ad4c4d8441bb \
+                           TO all vms ALLOW tcp PORT 22"
+                    }
+                ],
+                "remoteVMs": [
+                    {
+                        "uuid": "5baca016-6dda-11e3-a6f2-730593c54f04",
+                        "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+                        "nics": [ { "ip": "172.29.0.2" } ],
+                        "tags": { "role": "web" }
+                    }
+                ]
+            }' | fwadm add
+            
 
     fwadm add-rvm -f <file>
 
@@ -179,15 +195,13 @@ the firewalls of any VMs affected.
             -p, --parseable         Output results in parseable format.
 
         Examples:
-            {{#indent_and_wrap}}
             # Output rule list in parseable format with the "|" character as a
             # delimiter.
-            {{{fwadm_list_parseable}}}
+            fwadm list -d "|" -p
 
             # Output only the uuid and rule fields in JSON format
-            {{{fwadm_list_json}}}
-            {{/indent_and_wrap}}
-
+            fwadm list -j -o uuid,rule
+            
 
     fwadm update -f <file>
     fwadm update <rule uuid> [-e] [--desc <description>] [-g] \
@@ -214,17 +228,25 @@ the firewalls of any VMs affected.
 
         Arguments:
             <rule>                  Firewall rule, written in the rule DSL.
-                                    See fwrule(5) for syntax.
+                                    See fwrule(7) for syntax.
 
         Examples:
-            {{#indent_and_wrap}}
             # Update a rule by specifying it on the commandline.
-            {{{fwadm_update}}}
+            fwadm update 71bf3c29-bcd3-42a4-b4cb-222585429a70 'FROM (tag www \
+                 OR ip 172.30.0.250) TO tag db ALLOW tcp PORT 5432'
 
             # Add an IP to a remote VM.
-            {{{fwadm_update_rvm}}}
-            {{/indent_and_wrap}}
-
+            echo '{
+                "remoteVMs": [
+                    {
+                        "uuid": "5baca016-6dda-11e3-a6f2-730593c54f04",
+                        "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+                        "ips": [ "172.29.0.2", "172.31.0.2" ],
+                        "tags": { "role": "web" }
+                    }
+                ]
+            }' | fwadm update
+            
 
     fwadm vms <rule uuid>
 
@@ -317,28 +339,42 @@ the firewalls of any VMs affected.
     included when generating rules.  For example, if the following remote
     VM from another SmartOS host was added:
 
-    {{#indent_and_wrap}}
-    {{{rvm_rvm1}}}
+    {
+        "uuid": "86abf627-5398-45ee-8e65-8260d3466e3f",
+        "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+        "ips": [ "172.29.0.4" ],
+        "tags": {
+            "role": "bastion"
+        }
+    }
 
     And the following rule:
-    {{{rvm_rule1}}}
+    {
+        "description": "allow ssh from bastion host",
+        "enabled": true,
+        "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+        "rule": "FROM tag role=bastion TO all vms ALLOW tcp PORT 22"
+    }
 
-    {{/indent_and_wrap}}
-
+    
     The remote VM has the tag role with value bastion, which means that it
     matches the rule above. All VMs on this host with firewall_enabled set
     would then allow connections on TCP port 22 from that remote VM.
 
     This rule would also match, since it has the remote VM's UUID as a target:
 
-    {{#indent_and_wrap}}
-    {{{rvm_rule2}}}
-    {{/indent_and_wrap}}
-
+    {
+        "description": "block UDP port 5400 to bastion host",
+        "enabled": true,
+        "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+        "rule": "FROM all vms TO vm 86abf627-5398-45ee-8e65-8260d3466e3f \
+             BLOCK udp PORT 54"
+    }
+    
 
 ## REMOTE VM PROPERTIES
 
-    Remote VMs are simplified versions of the VM objects used by vmadm(1M).
+    Remote VMs are simplified versions of the VM objects used by vmadm(8).
     They are also in a JSON format, but only the properties below will be
     stored and used by fwadm. All other properties will be discarded. The
     properties used are:
@@ -351,7 +387,7 @@ the firewalls of any VMs affected.
 
     nics:
 
-        Array of nics, as per vmadm(1M). Only the "ip" property of each of
+        Array of nics, as per vmadm(8). Only the "ip" property of each of
         these nic objects is required - all other properties will be ignored.
         This property is used for creation of remote VMs only - it is not
         stored in the object. IPs from these objects will be added to the ips
@@ -365,12 +401,12 @@ the firewalls of any VMs affected.
 
     tags:
 
-        vmadm(1M) tags object, mapping tag keys to values.
+        vmadm(8) tags object, mapping tag keys to values.
 
     uuid (required):
 
         UUID. This must not be the same as the UUID of any other remote VM or
-        local VM managed by vmadm(1M).
+        local VM managed by vmadm(8).
 
     Note that VMs can be added and updated in this simplified representation,
     or using the same representation as "vmadm get". This enables the output
@@ -378,32 +414,61 @@ the firewalls of any VMs affected.
     "SUBCOMMANDS" section.
 
 
-## INTERACTION WITH VMADM(1M)
+## INTERACTION WITH VMADM(8)
 
-    fwadm relies on properties of VMs from vmadm(1M) in order to generate
+    fwadm relies on properties of VMs from vmadm(8) in order to generate
     firewall rules correctly. Therefore, when vmadm is used to create a new
     VM or update properties on an existing VM that can affect firewall rules,
     it will update firewall rules through fwadm accordingly.
 
     As an example, if the following rules are present on a SmartOS host:
 
-    {{#indent_and_wrap}}
-    {{{vmadm_rule1}}}
+    {
+        "description": "block all outgoing SMTP traffic",
+        "enabled": true,
+        "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+        "rule": "FROM tag blocksmtp TO any BLOCK tcp PORT 25"
+    }
 
-    {{{vmadm_rule2}}}
+    {
+        "description": "allow HTTP and HTTPS traffic",
+        "enabled": true,
+        "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+        "rule": "FROM any TO tag role=webserver ALLOW tcp (PORT 80 AND PORT \
+             443)"
+    }
 
     And then a VM is created with these parameters:
 
-    {{{vmadm_vm1}}}
+    {
+        "brand": "joyent",
+        "image_uuid": "7b0b4140-6e98-11e5-b1ae-ff68fe257228",
+        "firewall_enabled": true,
+        "nics": [
+          {
+            "nic_tag": "external",
+            "ip": "10.88.88.59",
+            "netmask": "255.255.255.0",
+            "gateway": "10.88.88.2",
+            "primary": true
+          }
+        ],
+        "owner_uuid": "e6c73bd2-fae4-4e0a-af76-2c05d088b066",
+        "ram": 128,
+        "tags": {
+            "blocksmtp": true
+        },
+        "uuid": "60e90d15-fb48-4bb9-90e6-1e1bb8269d1e"
+    }
 
     The first rule would be applied to that VM.  If the following vmadm command
     was then run:
 
-    {{{vmadm_cmd1}}}
+    echo '{ "set_tags": { "role": "webserver" } }' | vmadm update \
+         60e90d15-fb48-4bb9-90e6-1e1bb8269d1e
 
     The second rule would then be applied to that VM in addition to the first.
-    {{/indent_and_wrap}}
-
+    
 
 ## EXIT STATUS
 
@@ -421,4 +486,4 @@ The following exit values are returned:
 
 ## SEE ALSO
 
-    vmadm(1M), fwrule(5), ipf(1M), ipfilter(5)
+    fwrule(7), ipfilter(7), ipf(8), vmadm(8)

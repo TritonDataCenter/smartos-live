@@ -12,7 +12,8 @@
 #
 
 #
-# Copyright 2020 Joyent, Inc.
+# Copyright 2021 Joyent, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 shopt -s xpg_echo
 unalias -a
@@ -201,9 +202,9 @@ function install_pkgin
 	local pkglist
 
 	pkglist="build-essential flex libxslt openjdk11 nodejs"
-	pkglist="$pkglist p5-XML-Parser gettext python27 py27-expat"
+	pkglist="$pkglist p5-XML-Parser gettext python27 py39-expat python39"
 	pkglist="$pkglist coreutils gsed pkg_alternatives cdrtools"
-	pkglist="$pkglist py27-sqlite3 nasm pigz gcc49 smartos-build-tools"
+	pkglist="$pkglist py27-sqlite3 nasm pigz smartos-build-tools"
 
 	$conf_priv pkgin -f update || fatal "failed to update pkgsrc repository"
 
@@ -322,10 +323,19 @@ cat > "projects/illumos/illumos.sh" <<EOF
 NIGHTLY_OPTIONS="$nopts";			export NIGHTLY_OPTIONS
 GATE="${RELEASE_VER}";				export GATE
 CODEMGR_WS="$conf_root/projects/illumos";	export CODEMGR_WS
+# NOTE: build_illumos modifies this initial constant
 MAX_JOBS=128
 maxjobs() {
         ncpu=\`kstat -p cpu_info:::state | grep -c on-line\`
-        if [[ \$(( \$ncpu + 2 )) -lt \${MAX_JOBS} ]]; then
+	zcpucap=\`pfexec mdata-get sdc:cpu_cap\`
+	if [[ \$zcpucap -eq 0 || \$zcpucap == "" ]]; then
+		zcpu=\${MAX_JOBS}
+	else
+		zcpu=\`expr \$zcpucap / 100\`
+	fi
+	if [[ \$zcpu -lt \$ncpu ]]; then
+		expr \$zcpu + 2
+        elif [[ \$(( \$ncpu + 2 )) -lt \${MAX_JOBS} ]]; then
                 expr \$ncpu + 2
         else
                 printf "%d\n" \${MAX_JOBS}
@@ -355,7 +365,7 @@ PARENT_TOOLS_ROOT="\$PARENT_WS/usr/src/tools/proto/root_\$MACH-nd"
 PKGARCHIVE="\${CODEMGR_WS}/packages/\${MACH}/nightly";
 						export PKGARCHIVE
 PKGPUBLISHER_REDIST="${PUBLISHER}";		export PKGPUBLISHER_REDIST
-MAKEFLAGS=k;					export MAKEFLAGS
+MAKEFLAGS=ek;					export MAKEFLAGS
 UT_NO_USAGE_TRACKING="1";			export UT_NO_USAGE_TRACKING
 MULTI_PROTO="no";				export MULTI_PROTO
 BUILD_TOOLS="\$SRC/tools/proto/root_\${MACH}-nd/opt";
@@ -365,8 +375,6 @@ SPRO_VROOT=\$SPRO_ROOT;				export SPRO_VROOT
 GNU_ROOT="$conf_root/proto.strap/usr/gnu"	export GNU_ROOT
 # Use GCC as the primary compiler
 __GNUC="";					export __GNUC
-# Use GCC4 or later specific flags
-__GNUC4="";					export __GNUC4
 # root of \$PRIMARY_CC
 GNUC_ROOT="$GNUC_ROOT";				export GNUC_ROOT
 PRIMARY_CC="$PRIMARY_CC";			export PRIMARY_CC
@@ -376,9 +384,10 @@ SHADOW_CCCS="$SHADOW_CCCS";			export SHADOW_CCCS
 JAVA_ROOT=/opt/local/java/openjdk11;		export JAVA_ROOT
 FLEX=/opt/local/bin/flex;			export FLEX
 GNUXGETTEXT=/opt/local/bin/xgettext;		export GNUXGETTEXT
-PYTHON=/opt/local/bin/python2.7;		export PYTHON
-BUILDPY3='#';					export BUILDPY3
-BUILDPY3TOOLS='#';				export BUILDPY3TOOLS
+PYTHON3=/opt/local/bin/python3.9;		export PYTHON3
+PYTHON3_VERSION=3.9;				export PYTHON3_VERSION
+PYTHON3_PKGVERS=-39;				export PYTHON3_PKGVERS
+PYTHON3_SUFFIX='';				export PYTHON3_SUFFIX
 BLD_JAVA_11='';					export BLD_JAVA_11
 
 # Disable the split 32/64 perl module builds since smartos doesn't exec perl
@@ -406,10 +415,9 @@ if [[ -z "\$MAKE" ]]; then
 MAKE="\$SRC/tools/proto/root_i386-nd/opt/onbld/bin/i386/dmake";	export MAKE
 fi
 LEX=/opt/local/bin/lex;				export LEX
-YACC=/opt/local/bin/yacc;			export YACC
+# As of illumos#16319, we no longer need to define YACC, as it's in tools.
 BISON=/opt/local/bin/bison;			export BISON
 GM4=/opt/local/bin/gm4;				export GM4
-RPCGEN=/opt/local/bin/rpcgen;			export RPCGEN
 ASTBINDIR=/opt/local/ast/bin;			export ASTBINDIR
 LD_TOXIC_PATH="\$ROOT/lib:\$ROOT/usr/lib";	export LD_TOXIC_PATH
 # generate buildversion for illumos buildversion module
@@ -431,16 +439,16 @@ read -r -d '' usage <<EOF
 		build Illumos in DEBUG mode only [default: no]
 	-h
 		this message
-	-p gcc7
-		primary compiler version [default: gcc7]
+	-p gcc10
+		primary compiler version [default: gcc10]
 	-P password
 		platform root password [default: randomly chosen]
 	-r
 		full strap build (no cache) [default: no]
 	-S
 		do *not* run smatch [default is to run smatch]
-	-s gcc4
-		shadow compilers, comma delimited (gcc4,gcc#) [default: none]
+	-s gcc10
+		shadow compilers, comma delimited (gcc10,gcc#) [default: none]
 EOF
 
 while getopts "cdhp:P:rSs:" arg; do
@@ -479,16 +487,10 @@ done
 
 [[ -n "$ILLUMOS_ENABLE_DEBUG" ]] || ILLUMOS_ENABLE_DEBUG=no
 [[ -n "$ILLUMOS_CLOBBER" ]] || ILLUMOS_CLOBBER=no
-[[ -n "$PRIMARY_COMPILER" ]] || PRIMARY_COMPILER=gcc7
+[[ -n "$PRIMARY_COMPILER" ]] || PRIMARY_COMPILER=gcc10
 [[ -n "$ENABLE_SMATCH" ]] || ENABLE_SMATCH=yes
 
 PRIMARY_COMPILER_VER=$(echo $PRIMARY_COMPILER | sed 's/^gcc//')
-
-# To allow building on base-64-lts 18.4 systems where
-# /opt/local/bin/gcc is incapable of building our local copy
-# of gcc 4, specify where to find gcc49 which gets installed
-# during 'install_pkgin'.
-HOST_GCC4_PREFIX=/opt/local/gcc49/bin
 
 cat >build.env <<EOF
 FORCE_STRAP_REBUILD=$FORCE_STRAP_REBUILD
@@ -497,7 +499,6 @@ ILLUMOS_ENABLE_DEBUG=$ILLUMOS_ENABLE_DEBUG
 PRIMARY_COMPILER=$PRIMARY_COMPILER
 PRIMARY_COMPILER_VER=$PRIMARY_COMPILER_VER
 SHADOW_COMPILERS=$SHADOW_COMPILERS
-HOST_GCC4_PREFIX=$HOST_GCC4_PREFIX
 ENABLE_SMATCH=$ENABLE_SMATCH
 EOF
 

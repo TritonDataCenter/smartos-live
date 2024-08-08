@@ -6,7 +6,8 @@
 #
 
 #
-# Copyright 2020 Joyent, Inc.
+# Copyright 2022 Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 #
@@ -128,7 +129,7 @@ while getopts "cdhF:S:" opt; do
         d)
             # build debug platform bits
             ENGBLD_CONFIGURE_DEBUG_ARG='-d'
-            ENGBLD_DEBUG_SUFFIX='-debug'
+            ENGBLD_DEBUG_SUFFIX=${PLATFORM_DEBUG_SUFFIX:--debug}
             ;;
         F)
             PLATFORM_BUILD_FLAVOR="${OPTARG}"
@@ -256,7 +257,7 @@ esac
 # Upload artifacts separately for smartos to ~~/public/SmartOS, only if this is
 # a non-debug, release build.
 # We check for an empty $PLATFORM_DEBUG_SUFFIX as that gets used as the way to
-# prevent downstream Jenkins builds (e.g. 'platform-gcc4') uploading artifacts
+# prevent downstream Jenkins builds (e.g. 'platform-gcc10') uploading artifacts
 # to the 'platform' Manta directory, even though they may not strictly be debug
 # builds.
 #

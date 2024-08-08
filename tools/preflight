@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+# Copyright 2022 MNX Cloud, Inc.
+#
+# This script will check some build requirements and provide a helpful
+# error message early, rather than a cryptic one much later in the build.
+#
+# This is primarily intended to check things that we know will fail in
+# illumos-extra if the build host doesn't satisfy the requirements.
+#
+
+if [[ -n "$TRACE" ]]; then
+    export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -o xtrace
+fi
+
+errors=0
+
+#
+# Begin checks
+#
+
+# OpenSSH 9 requires OpenSSL 3
+mapfile -t openssl_version < <(/bin/openssl version | awk -v 'OFS=\n' -F'[ .]' '{print $2,$3,$4}')
+openssl_maj="${openssl_version[0]}"
+if (( openssl_maj < 3 )); then
+    printf 'Platform image must include OpenSSL 3.0.0 or later.\n'
+    printf 'Release 20211216T012707Z or later will satisfy this requirement.\n'
+    errors=$(( errors + 1))
+fi
+
+#
+# If any of the checks above failed, exit  with a failure so that make stops
+# here.
+#
+
+if (( errors > 0 )); then
+    exit 1
+fi

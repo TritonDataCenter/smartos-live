@@ -10,6 +10,7 @@
 # http://www.illumos.org/license/CDDL.
 #
 # Copyright 2020 Joyent, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 
 #
@@ -35,13 +36,13 @@ usage="$0 make -a adjunct.tar -j maxjobs -d protodir [-f] [-o tarball]"
 usage="$usage | upload -D bits -d path -t timestamp"
 wsroot=$(cd $(dirname $0)/../; pwd)
 pkgin_file="/opt/local/etc/pkgin/repositories.conf"
-manta_host="https://us-east.manta.joyent.com"
+manta_host="https://us-central.manta.mnx.io"
 manta_dir="/Joyent_Dev/public/builds/SmartOS/strap-cache/master"
 cache_base="/opt/SmartOS/build-cache/"
 srcdir="$wsroot/projects/illumos-extra"
 adjunct=""
 protodir=""
-max_jobs="128"
+max_jobs=$($wsroot/tools/optimize_jobs)
 force_build="no"
 tarfile=""
 

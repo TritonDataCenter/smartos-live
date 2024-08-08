@@ -6,7 +6,8 @@
 #
 
 #
-# Copyright 2019, Joyent, Inc.
+# Copyright 2019 Joyent, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 
 #
@@ -14,7 +15,7 @@
 # It is intended to be run from the smartos-live ./output/bits/platform
 # directory during build publication. It creates an index.html fragment
 # which gets redirected to from
-# https://us-east.manta.joyent.com/Joyent_Dev/public/SmartOS/latest.html
+# https://us-central.manta.mnx.io/Joyent_Dev/public/SmartOS/latest.html
 #
 # The latest.html file above gets created by the 'smartos-release' script
 # which is run as part of the biweekly release process.

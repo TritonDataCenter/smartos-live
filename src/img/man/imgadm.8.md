@@ -1,4 +1,4 @@
-# imgadm(1M) -- Manage SmartOS virtual machine images
+# imgadm(8) -- Manage SmartOS virtual machine images
 
 ## SYNOPSIS
 
@@ -78,8 +78,8 @@ supplied channel.
 
         List and edit image sources.
 
-        An image source is a URL to a server implementing the IMGAPI, or
-        the Docker Registry API. The default IMGAPI is https://images.joyent.com
+        An image source is a URL to a server implementing the IMGAPI.  The
+        default IMGAPI is https://images.smartos.org
 
         Image API server channels can be specified by including a
         '?channel=<channel name>' parameter as part of the supplied <url>.
@@ -98,15 +98,13 @@ supplied channel.
 
             -a <source>               Add a source. It is appended to the list of
                                       sources.
-            --add-docker-hub          A shortcut for "imgadm sources -t docker -a
-                                      https://docker.io".
             -d <source>               Delete a source.
             -e                        Edit sources in an editor.
             -c, --check               Ping check all sources.
 
             -t <type>, --type=<type>  The source type for an added source. One of
-                                      "imgapi" (the default), "docker", or "dsapi"
-                                      (deprecated).
+                                      "imgapi" (the default), "docker" (deprecated),
+                                      or "dsapi" (deprecated).
             -k, --insecure            Allow insecure (no server certificate checking)
                                       access to the added HTTPS source URL.
             -f, --force               Force no "ping check" on new source URLs. By
@@ -115,12 +113,8 @@ supplied channel.
                                       IMGAPI server.
 
         Examples:
-            # Joyent's primary public image repository (defaults to "imgapi")
-            imgadm sources -a https://images.joyent.com
-            # Docker Hub
-            imgadm sources -a https://docker.io -t docker
-            # Legacy SDC 6.5 DSAPI (deprecated)
-            imgadm sources -a https://datasets.joyent.com/datasets -t dsapi
+            # SmartOS primary public image repository (defaults to "imgapi")
+            imgadm sources -a https://images.smartos.org
 
     imgadm avail [<filters>]
 
@@ -504,14 +498,8 @@ default there is a 5 minute timeout on state transitions: (VM booted) -> running
 
 ## DOCKER INTEGRATION
 
-Since version 3.0.0 imgadm has support for importing Docker images: both in
-importing images of `type=docker` from an IMGAPI source and in importing Docker
-images directly from Docker Hub. Docker registries other than Docker Hub are
-technically supported, but client auth is not yet implemented.
-
-Add the Docker Hub as an import source with:
-
-    imgadm sources --add-docker-hub
+Since version 3.0.0 imgadm has support for importing Docker images in
+importing images of `type=docker` from an IMGAPI source.
 
 Use the following to mimic `docker images`:
 
@@ -614,4 +602,4 @@ The following exit values are returned:
 
 ## SEE ALSO
 
-    vmadm(1M), zfs(1M)
+    vmadm(8), zfs(8)

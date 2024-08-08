@@ -217,6 +217,7 @@ $(KSTAT.NODE) :	LIBS +=		-lkstat
 NODE_SUBDIR_ENV = \
 			V=1 \
 			NODE_DTRACE_PROVIDER_REQUIRE=hard \
+			PYTHON="/opt/local/bin/python2.7" \
 			CC="$(GCC)" \
 			CXX="$(GXX)" \
 			CPPFLAGS="$(NODE_CPPFLAGS)" \
@@ -333,6 +334,7 @@ BUILT_SMARTDC_TARGETS = \
 	smartdc/bin/sdc-factoryreset \
 	smartdc/bin/sdc-lastcomm \
 	smartdc/bin/sdc-zfs-io-throttle \
+	smartdc/bin/pkgsrc-setup \
 	smartdc/bin/qemu-exec
 
 SMARTDC_TARGETS = $(BUILT_SMARTDC_TARGETS)

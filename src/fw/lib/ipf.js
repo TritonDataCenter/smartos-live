@@ -20,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * Copyright (c) 2016, Joyent, Inc. All rights reserved.
+ * Copyright 2022 Joyent, Inc.
  *
  * fwadm: ipf control functions
  */
@@ -115,10 +115,10 @@ function zoneReload(uuid, conf4, conf6, log, callback) {
     assert.func(callback, 'callback');
 
     /*
-     * ipf(1M) acts on each of its arguments in the order that they are
+     * ipf(8) acts on each of its arguments in the order that they are
      * supplied. Since executing 6 commands for reloading each zone's
      * firewall gets expensive quickly, we perform multiple actions in
-     * a single ipf(1M) run:
+     * a single ipf(8) run:
      */
     var args = [
         // Operate on the GZ-controlled firewall
@@ -150,7 +150,7 @@ function zoneReload(uuid, conf4, conf6, log, callback) {
         args.shift();
     }
 
-    // Run ipf(1M) and reload the zone's firewall.
+    // Run ipf(8) and reload the zone's firewall.
     ipf(args, log, callback);
 }
 

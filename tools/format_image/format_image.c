@@ -9,6 +9,7 @@
  * http://www.illumos.org/license/CDDL.
  *
  * Copyright (c) 2018, Joyent, Inc.
+ * Copyright 2023 MNX Cloud, Inc.
  */
 
 /*
@@ -43,7 +44,7 @@
  * So this tool needs to fix up then write a modified MBR, populate the GPT
  * header and partition tables, and write out the ESP and biosboot images.
  * It is sort of an unholy merger of zpool_label_disk(ZPOOL_CREATE_BOOT_LABEL)
- * and installboot(1m).
+ * and installboot(8).
  *
  * We only currently support 512 block size, and the code isn't endian-vetted.
  *
@@ -207,7 +208,7 @@ write_mbr(char *mbr, size_t esplen, size_t biosbootlen)
 
 	/*
 	 * This is all "nops" in the MBR image: let's clear it out like
-	 * installboot(1M) does.
+	 * installboot(8) does.
 	 */
 	bzero(mbr + STAGE1_BPB_OFFSET, STAGE1_BPB_SIZE);
 
@@ -382,14 +383,14 @@ main(int argc, char *argv[])
 	mbr = read_file(mbrpath, SECTOR_SIZE, NULL);
 
 	if (((struct mboot *)mbr)->signature != MBB_MAGIC) {
-		errx(EXIT_FAILURE, "MBR has incorrect magic %hlx",
+		errx(EXIT_FAILURE, "MBR has incorrect magic %hx",
 		    ((struct mboot *)mbr)->signature);
 	}
 
 	esp = read_file(esppath, 0, &esplen);
 
 	if (esplen % PART_ALIGN) {
-		errx(EXIT_FAILURE, "ESP image is not %lu-byte aligned",
+		errx(EXIT_FAILURE, "ESP image is not %u-byte aligned",
 		    PART_ALIGN);
 	}
 

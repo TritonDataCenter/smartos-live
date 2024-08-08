@@ -21,6 +21,7 @@
  * CDDL HEADER END
  *
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
+ * Copyright 2022 MNX Cloud, Inc.
  *
  * * *
  * Here is how imgadm upgrade is intented to work:
@@ -238,7 +239,8 @@ function upgradeTo200(tool, callback) {
 
         // If the old sources only include the single default, then skip it.
         // The result is that imgadm v2 just uses the new default.
-        var OLD_DEFAULT_SOURCE = 'https://datasets.joyent.com/datasets/';
+        /*JSSTYLED*/
+        var OLD_DEFAULT_SOURCE = 'https://datasets.tritondatacenter.com/datasets/';
         if (oldSources.length === 1 && oldSources[0] === OLD_DEFAULT_SOURCE) {
             next();
             return;

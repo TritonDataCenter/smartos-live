@@ -1,4 +1,4 @@
-# disklayout(1m) -- Lay out a ZFS pool configuration from a disk inventory
+# disklayout(8) -- Lay out a ZFS pool configuration from a disk inventory
 
 ## SYNOPSIS
 
@@ -8,9 +8,9 @@
 ## DESCRIPTION
 
 disklayout generates a JSON description of a ZFS pool configuration
-suitable for use by the mkzpool(1M) utility.  The utility may be run in
+suitable for use by the mkzpool(8) utility.  The utility may be run in
 two modes; when the **-f** option is given, the specified file is taken
-to be the output of the diskinfo(1M) command and used as the source of
+to be the output of the diskinfo(8) command and used as the source of
 information about the available disks.  Otherwise, the disks currently
 present on the system will be enumerated and the utility will attempt to
 generate a pool layout that uses as many of the available disks as
@@ -124,7 +124,7 @@ A vdev specification contains the following properties:
 
   "type"
 
-The vdev type, as defined by ZFS.  See zpool(1M).
+The vdev type, as defined by ZFS.  See zpool(8).
 
   "devices"
 
@@ -140,11 +140,11 @@ The base name of the device's nodes under /dev/dsk.
 
   "vid"
 
-The vendor identification string of the device.  See diskinfo(1M).
+The vendor identification string of the device.  See diskinfo(8).
 
   "pid"
 
-The product identification string of the device.  See diskinfo(1M).
+The product identification string of the device.  See diskinfo(8).
 
   "size"
 
@@ -160,4 +160,4 @@ description of the error.  This message is not localised.
 
 ## SEE ALSO
 
-	diskinfo(1M), mkzpool(1M), sd(7D), zpool(1M)
+	diskinfo(8), mkzpool(8), sd(7D), zpool(8)

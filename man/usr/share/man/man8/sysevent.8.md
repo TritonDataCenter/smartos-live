@@ -1,4 +1,4 @@
-# sysevent(1M) -- Sysevent watcher
+# sysevent(8) -- Sysevent watcher
 
 ## SYNOPSIS
 
@@ -6,7 +6,7 @@
 
 ## DESCRIPTION
 
-The `sysevent(1M)` tool allows watching for arbitrary sysevents from both the
+The `sysevent(8)` tool allows watching for arbitrary sysevents from both the
 kernel and userland programs.  This program will run indefinitely, emitting
 output on stdout whenever a sysevent is generated.  This is a debugging tool;
 options and output are still evolving and may change in the future.

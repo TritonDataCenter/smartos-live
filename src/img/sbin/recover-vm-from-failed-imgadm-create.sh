@@ -2,6 +2,7 @@
 
 #
 # Copyright (c) 2018, Joyent, Inc.
+# Copyright 2022 MNX Cloud, Inc.
 #
 
 #
@@ -13,7 +14,7 @@
 #
 # This recovery script is an attempted reproduction of the relevant parts of
 # IMGADM.prototype.createImage cleanup at:
-#    https://github.com/joyent/smartos-live/blob/71a0dd0b0eade2e8a61d1d78c8a16fe9d899c3f7/src/img/lib/imgadm.js#L3958-L4063
+#    https://github.com/TritonDataCenter/smartos-live/blob/71a0dd0b0eade2e8a61d1d78c8a16fe9d899c3f7/src/img/lib/imgadm.js#L3958-L4063
 #
 # WARNING: The "attempted reproduction" is not perfect. We are rolling back
 # customer VM snapshots and deleting snapshots, and rebooting the VM here!

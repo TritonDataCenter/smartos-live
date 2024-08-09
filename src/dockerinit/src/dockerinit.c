@@ -6,6 +6,7 @@
 
 /*
  * Copyright 2020 Joyent, Inc.
+ * Copyright 2024 H. William Welliver III <william@welliver.org>
  */
 
 /*
@@ -756,7 +757,7 @@ setupGateway(nvlist_t *data)
             if ((ret == 0) && (primary == B_TRUE)) {
                 ret = nvlist_lookup_string(data, "gateway", &gateway);
                 if (ret == 0) {
-                    (void) addRoute(iface, gateway, "0.0.0.0", 0, B_FALSE);
+                    (void) addRoute(iface, gateway, "0.0.0.0", 0, 0);
                 }
             }
         }
@@ -1136,7 +1137,8 @@ prefixToNetmask(int pfx, struct sockaddr_in *netmask_sin)
 }
 
 int
-addRoute(const char *ifname, const char *gw, const char *dst, int dstpfx, boolean_t isLinkLocal)
+addRoute(const char *ifname, const char *gw, const char *dst, int dstpfx,
+    boolean_t isLinkLocal)
 {
     int idx;
     int len;
@@ -1153,7 +1155,7 @@ addRoute(const char *ifname, const char *gw, const char *dst, int dstpfx, boolea
     (void) bzero(rtm, RTMBUFSZ);
     rtm->rtm_addrs = RTA_DST | RTA_GATEWAY | RTA_NETMASK;
 
-    if(!isLinkLocal)
+    if (!isLinkLocal)
         rtm->rtm_flags = RTF_UP | RTF_STATIC | RTF_GATEWAY;
 
     rtm->rtm_msglen = sizeof (rtbuf);

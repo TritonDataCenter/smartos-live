@@ -757,7 +757,7 @@ setupGateway(nvlist_t *data)
             if ((ret == 0) && (primary == B_TRUE)) {
                 ret = nvlist_lookup_string(data, "gateway", &gateway);
                 if (ret == 0) {
-                    (void) addRoute(iface, gateway, "0.0.0.0", 0, 0);
+                    (void) addRoute(iface, gateway, "0.0.0.0", 0, B_FALSE);
                 }
             }
         }

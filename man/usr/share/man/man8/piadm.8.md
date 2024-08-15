@@ -72,9 +72,10 @@ piadm(8) -- Manage SmartOS Platform Images
 
 
     The behavior of loader can be controlled by providing loader.conf.local
-    and/or loader.rc.local files in the ${BOOTPOOL}/boot-${VERSION}
-    directory. Loader config files can also be placed in ${BOOTPOOL}/custom,
-    and will be used by all subsequently installed boot images.
+    and/or loader.rc.local files in the ${BOOTFS}/boot-${VERSION}
+    directory. Loader config files can also be placed in ${BOOTFS}/custom,
+    and will be used by all subsequently installed boot images, but not
+    existing ones.
 
     See loader.conf(5) and loader(7) for the format of these files.
 

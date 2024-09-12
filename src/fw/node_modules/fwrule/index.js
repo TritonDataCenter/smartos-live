@@ -21,6 +21,7 @@
  * CDDL HEADER END
  *
  * Copyright (c) 2018, Joyent, Inc. All rights reserved.
+ * Copyright 2024 MNX Cloud, Inc.
  *
  *
  * firewall rule parser: entry point
@@ -188,14 +189,6 @@ parser.yy.parseError = function parseError(_, details) {
         err = new validators.InvalidParamError('rule',
             'Error at character %d: \'%s\', found: unexpected text',
             pre.length, post);
-        err.details = details;
-        throw err;
-    }
-
-    if (details.text === '') {
-        err = new validators.InvalidParamError('rule',
-            'Error at character 0: \'\', expected: \'FROM\', found: '
-            + 'empty string');
         err.details = details;
         throw err;
     }

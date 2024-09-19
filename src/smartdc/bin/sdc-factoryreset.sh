@@ -7,6 +7,7 @@
 
 #
 # Copyright (c) 2014, Joyent, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 
 #
@@ -33,14 +34,26 @@ function usage()
 	exit 1
 }
 
+function wipe_bootpools()
+{
+	# disable booting on all pools
+	for pool in $(piadm bootable | grep -v non-bootable | awk '{print $1}')
+	do
+		piadm bootable -d $pool
+	done
+}
+
 if [[ -n $1 ]] && [[ $1 = "--help" ]]; then
 	usage
 fi
 
-while getopts "h" opt
+shutdown="0"
+
+while getopts "hs" opt
 do
 	case "$opt" in
 		h)	usage;;
+		s)	shutdown="1";;
 		*)	usage;;
 	esac
 done
@@ -67,7 +80,12 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		[[ -n ${SYS_ZPOOL} ]] || SYS_ZPOOL=zones
 
 		zfs set smartdc:factoryreset=yes ${SYS_ZPOOL}/var
-		reboot
+		wipe_bootpools
+		if [[ $shutdown == "1" ]]; then
+			poweroff
+		else
+			reboot
+		fi
 	else
 		abort
 	fi

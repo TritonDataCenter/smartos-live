@@ -36,7 +36,7 @@ function usage()
 
 function wipe_bootpools()
 {
-	# disable booting on all pools
+	# disable booting on all pools -- XXX KEBE ASKS, make this optional?
 	for pool in $(piadm bootable | grep -v non-bootable | awk '{print $1}')
 	do
 		piadm bootable -d $pool
@@ -47,13 +47,13 @@ if [[ -n $1 ]] && [[ $1 = "--help" ]]; then
 	usage
 fi
 
-shutdown="0"
+final_command="reboot"
 
 while getopts "hs" opt
 do
 	case "$opt" in
 		h)	usage;;
-		s)	shutdown="1";;
+		s)	final_command="poweroff";;
 		*)	usage;;
 	esac
 done
@@ -81,11 +81,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 		zfs set smartdc:factoryreset=yes ${SYS_ZPOOL}/var
 		wipe_bootpools
-		if [[ $shutdown == "1" ]]; then
-			poweroff
-		else
-			reboot
-		fi
+		$final_command
 	else
 		abort
 	fi

@@ -1,4 +1,4 @@
-#!/opt/local/bin/nawk -f
+#!/usr/bin/awk -f
 
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
@@ -8,6 +8,7 @@
 
 #
 # Copyright 2019 Joyent, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 
 #

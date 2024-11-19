@@ -45,7 +45,7 @@ while getopts "hs" opt
 do
 	case "$opt" in
 		h)	usage;;
-		s)	final_command="poweroff"; final_verb="Powering off;;
+		s)	final_command="poweroff"; final_verb="Powering off";;
 		*)	usage;;
 	esac
 done

@@ -52,9 +52,9 @@ usage() {
 	eecho "    piadm activate|assign <PI-stamp> [ZFS-pool-name]"
 	eecho "    piadm avail"
 	eecho "    piadm bootable [-d] [-e [-i <source>]] [-r] [ZFS-pool-name]"
+	eecho "    piadm destroy|remove <PI-stamp> [ZFS-pool-name]"
 	eecho "    piadm install <source> [ZFS-pool-name]"
 	eecho "    piadm list <-H> [ZFS-pool-name]"
-	eecho "    piadm remove <PI-stamp> [ZFS-pool-name]"
 	eecho "    piadm update [ZFS-pool-name]"
 	err ""
 }
@@ -1554,9 +1554,9 @@ case $cmd in
 		list "$@"
 		;;
 
-	remove )
-		privcheck remove
-		standalone_only remove
+	destroy | remove )
+		privcheck "$cmd"
+		standalone_only "$cmd"
 		remove "$@"
 		;;
 

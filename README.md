@@ -166,21 +166,20 @@ QEMU
 
 The first step when building is to set up a build environment. The SmartOS
 build requires building on SmartOS.  As of the `base-64-lts 21.4.1` build
-image, the SmartOS Platform Image must be 20211007 or newer. This can be done
+image, the SmartOS Platform Image must be 20220728 or newer. This can be done
 in VMware, on an existing SmartOS machine, or other virtualization. You must
 build inside of a non-global zone.
 
 ### Minimum Platform Image
 
-As of [OS-8412](https://smartos.org/bugview/OS-8412), OpenSSH requires OpenSSL
-3.0 to build, which means that you'll need to use a platform that includes
-[OS-8334](https://smartos.org/bugview/OS-8334). Release builds as of
-20211216T012707Z will satisfy this requirement.
+Because of changes in our build system regarding python3, you'll need to use a
+platform that includes [OS-8397](https://smartos.org/bugview/OS-8397). Release
+builds as of 20220728T031731Z will satisfy this requirement.
 
 ### Importing the Zone Image
 
 The SmartOS build currently uses the `base-64-lts 21.4.1` image
-which has a UUID of `85d0f826-0131-11ed-973d-2bfeef68011c `. To import
+which has a UUID of `85d0f826-0131-11ed-973d-2bfeef68011c`. To import
 the image, you should run the imgadm command from the global zone:
 
 ```

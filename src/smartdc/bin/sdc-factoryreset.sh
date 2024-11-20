@@ -53,7 +53,7 @@ done
 trap abort SIGINT
 
 printf "WARNING: This machine will $final_command and destroy its ZFS pools "
-printf "after the next reboot.\n"
+printf "after the next boot.\n"
 
 read -p "Do you want to proceed with the factory reset? (y/n) " -n 1
 

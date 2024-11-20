@@ -17,11 +17,11 @@ individually.
 
 If this command is invoked unintentionally, an administrator can prevent the
 system from resetting itself by booting in rescue mode (noimport=true as a
-loader boot option) and clearing the smartdc:factoryreset property from the
-var dataset.  Use of the `-s` option makes this easier to accomplish.
+boot option) and clearing the smartdc:factoryreset property from the var
+dataset.  Use of the `-s` option makes this easier to accomplish.
 
-If the affected system boots without the noimport=true loader option, the only
-way to stop the pending factory reset is to power cycle the machine, and boot
+If the affected system boots without the noimport=true option, the only way
+to stop the pending factory reset is to power cycle the machine, and boot
 again into rescue mode.  The service which does the actual factory reset
 starts well before an administrator would be able to login to the box, even
 if that administrator has console access.

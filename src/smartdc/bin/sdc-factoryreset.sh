@@ -7,6 +7,7 @@
 
 #
 # Copyright (c) 2014, Joyent, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 
 #
@@ -27,28 +28,41 @@ function abort()
 
 function usage()
 {
-	printf "\nUsage: $myname [-h | --help]\n\n"
+	printf "\nUsage: $myname [-h | --help] {-s}\n\n"
 	printf "Resets a machine to its originally installed state.  See "
 	printf "sdc-factoryreset(1)\nfor more information.\n"
 	exit 1
+}
+
+function wipe_bootpools()
+{
+	# disable booting on all pools -- XXX KEBE ASKS, make this optional?
+	for pool in $(piadm bootable | grep -v non-bootable | awk '{print $1}')
+	do
+		piadm bootable -d $pool
+	done
 }
 
 if [[ -n $1 ]] && [[ $1 = "--help" ]]; then
 	usage
 fi
 
-while getopts "h" opt
+final_command="reboot"
+final_verb="Rebooting"
+
+while getopts "hs" opt
 do
 	case "$opt" in
 		h)	usage;;
+		s)	final_command="poweroff"; final_verb="Powering off;;
 		*)	usage;;
 	esac
 done
 
 trap abort SIGINT
 
-printf "WARNING: This machine will reboot and destroy its ZFS pools after "
-printf "rebooting.\n"
+printf "WARNING: This machine will $final_command and destroy its ZFS pools "
+printf "after the next reboot.\n"
 
 read -p "Do you want to proceed with the factory reset? (y/n) " -n 1
 
@@ -59,7 +73,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	read -p "Are you sure? (y/n) " -n 1
 
 	if [[ $REPLY =~ ^[Yy]$ ]]; then
-		printf "\n\nRebooting in 5 seconds ... "
+		printf "\n\n$final_verb in 5 seconds ... "
 		sleep 5
 		printf "now!\n"
 
@@ -67,7 +81,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		[[ -n ${SYS_ZPOOL} ]] || SYS_ZPOOL=zones
 
 		zfs set smartdc:factoryreset=yes ${SYS_ZPOOL}/var
-		reboot
+		wipe_bootpools
+		$final_command
 	else
 		abort
 	fi

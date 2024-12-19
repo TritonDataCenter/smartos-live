@@ -1069,6 +1069,8 @@ elif [[ -f ${USBMNT}/private/answers.json ]]; then
 	answer_file=${USBMNT}/private/answers.json
 elif [[ -f ${USBMOUNTPOINT}/private/answers.json ]]; then
 	answer_file=${USBMOUNTPOINT}/private/answers.json
+elif [[ -f /system/boot/answers.json ]]; then
+	answer_file=/system/boot/answers.json
 fi
 
 #

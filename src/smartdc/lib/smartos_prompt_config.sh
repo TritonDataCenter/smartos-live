@@ -7,7 +7,7 @@
 
 #
 # Copyright 2022 Joyent, Inc.
-# Copyright 2025 MNX Cloud, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 
 # XXX - TODO
@@ -1069,8 +1069,6 @@ elif [[ -f ${USBMNT}/private/answers.json ]]; then
 	answer_file=${USBMNT}/private/answers.json
 elif [[ -f ${USBMOUNTPOINT}/private/answers.json ]]; then
 	answer_file=${USBMOUNTPOINT}/private/answers.json
-elif [[ -f /system/boot/private/answers.json ]]; then
-	answer_file=/system/boot/private/answers.json
 elif [[ -f /system/boot/answers.json ]]; then
 	answer_file=/system/boot/answers.json
 fi

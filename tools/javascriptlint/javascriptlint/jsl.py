@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # vim: ts=4 sw=4 expandtab
+from __future__ import print_function
+from __future__ import absolute_import
 import codecs
 import fnmatch
 import glob
@@ -8,11 +10,11 @@ import sys
 import unittest
 from optparse import OptionParser
 
-import conf
-import htmlparse
-import jsparse
-import lint
-import util
+from . import conf
+from . import htmlparse
+from . import jsparse
+from . import lint
+from . import util
 
 _lint_results = {
     'warnings': 0,
@@ -27,8 +29,8 @@ def _dump(paths):
 def _lint(paths, conf_, printpaths):
     def lint_error(path, line, col, errname, errdesc):
         _lint_results['warnings'] = _lint_results['warnings'] + 1
-        print util.format_error(conf_['output-format'], path, line, col,
-                                      errname, errdesc)
+        print(util.format_error(conf_['output-format'], path, line, col,
+                                      errname, errdesc))
     lint.lint_files(paths, lint_error, conf=conf_, printpaths=printpaths)
 
 def _resolve_paths(path, recurse):
@@ -48,8 +50,8 @@ def _resolve_paths(path, recurse):
 
 def printlogo():
     # TODO: Print version number.
-    print "JavaScript Lint"
-    print "Developed by Matthias Miller (http://www.JavaScriptLint.com)"
+    print("JavaScript Lint")
+    print("Developed by Matthias Miller (http://www.JavaScriptLint.com)")
 
 def _profile_enabled(func, *args, **kwargs):
     import tempfile
@@ -104,7 +106,7 @@ def main():
         sys.exit()
 
     if options.showdefaultconf:
-        print conf.DEFAULT_CONF
+        print(conf.DEFAULT_CONF)
         sys.exit()
 
     if options.printlogo:
@@ -142,8 +144,8 @@ def main():
         profile_func(_lint, paths, conf_, options.printlisting)
 
     if options.printsummary:
-        print '\n%i error(s), %i warnings(s)' % (_lint_results['errors'],
-                                                 _lint_results['warnings'])
+        print('\n%i error(s), %i warnings(s)' % (_lint_results['errors'],
+                                                 _lint_results['warnings']))
 
     if _lint_results['errors']:
         sys.exit(3)

@@ -1,4 +1,4 @@
-# Quickstart
+# Quickstart on SunOS
 
 ```
 git clone https://github.com/TritonDataCenter/smartos-live.git

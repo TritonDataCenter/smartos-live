@@ -6,7 +6,7 @@
 
 <!--
     Copyright 2019 Joyent, Inc.
-    Copyright 2024 MNX Cloud, Inc.
+    Copyright 2025 MNX Cloud, Inc.
 -->
 
 # Triton Contribution Guidelines
@@ -55,7 +55,7 @@ tracking -- primarily to allow interaction with those without access to JIRA.
 
 ## Code of Conduct
 
-All persons and/or organizations contributing to, or intercting with our
+All persons and/or organizations contributing to, or interacting with our
 repositories or communities are required to abide by the
 [illumos Code of Conduct][coc].
 

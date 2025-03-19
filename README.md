@@ -165,7 +165,7 @@ QEMU
 ## Setting up a Build Environment
 
 The first step when building is to set up a build environment. The SmartOS
-build requires building on SmartOS.  As of the `base-64-lts 21.4.1` build
+build requires building on SmartOS.  As of the `base-64-lts 24.4.1` build
 image, the SmartOS Platform Image must be 20220728 or newer. This can be done
 in VMware, on an existing SmartOS machine, or other virtualization. You must
 build inside of a non-global zone.

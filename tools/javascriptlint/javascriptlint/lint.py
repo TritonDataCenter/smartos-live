@@ -1,18 +1,20 @@
 #!/usr/bin/env python
 # vim: ts=4 sw=4 expandtab
+from __future__ import print_function
+from __future__ import absolute_import
 import os.path
 import re
 
-import conf
-import fs
-import htmlparse
-import jsparse
-import visitation
-import warnings
+from . import conf
+from . import fs
+from . import htmlparse
+from . import jsparse
+from . import visitation
+from . import warnings
 import unittest
-import util
+from . import util
 
-from spidermonkey import tok, op
+from .spidermonkey import tok, op
 
 _newline_kinds = (
     'eof', 'comma', 'dot', 'semi', 'colon', 'lc', 'rc', 'lp', 'rb', 'assign',
@@ -302,7 +304,7 @@ def lint_files(paths, lint_error, conf=conf.Conf(), printpaths=True):
         if normpath in lint_cache:
             return lint_cache[normpath]
         if printpaths:
-            print normpath
+            print(normpath)
         contents = fs.readfile(path)
         lint_cache[normpath] = _Script()
 
@@ -524,7 +526,7 @@ def _lint_script_parts(script_parts, script_cache, lint_error, conf, import_call
         try:
             if not conf[errname]:
                 return
-        except KeyError, err:
+        except KeyError as err:
             if require_key:
                 raise
 
@@ -568,7 +570,7 @@ def _getreporter(visitor, report):
         try:
             ret = visitor(node)
             assert ret is None, 'visitor should raise an exception, not return a value'
-        except warnings.LintWarning, warning:
+        except warnings.LintWarning as warning:
             # TODO: This is ugly hardcoding to improve the error positioning of
             # "missing_semicolon" errors.
             if visitor.warning in ('missing_semicolon', 'missing_semicolon_for_lambda'):

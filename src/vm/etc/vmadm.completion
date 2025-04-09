@@ -5,7 +5,7 @@ _vmadm()
     # NOTE: we don't want the aliases boot,halt,destroy,etc here because we
     # want people to use the 'proper' commands when they can.
     COMMANDS="console create create-snapshot delete delete-snapshot get info list lookup reboot receive reprovision rollback-snapshot send start stop sysrq update validate"
-    BRANDS="bhyve joyent joyent-minimal kvm lx"
+    BRANDS="bhyve builder joyent joyent-minimal kvm lx"
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 

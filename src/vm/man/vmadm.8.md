@@ -263,7 +263,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         Support for snapshots is currently experimental. It only works for bhyve
         VMs and OS VMs which also have no additional datasets.
 
-        This command rolls the dataset backing the the VM with the specified
+        This command rolls the dataset backing the VM with the specified
         uuid back to its state at the point when the snapshot with snapname was
         taken. You cannot undo this except by rolling back to an even older
         snapshot if one exists.
@@ -401,7 +401,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         If you pass in a JSON object, that object should be formatted in the
         same manner as a create payload. The only exception is with fields
         that are themselves objects: VM NICs, KVM VM disks, customer_metadata,
-        internal_metadata, tags and routes.  In the the case of the "simple"
+        internal_metadata, tags and routes.  In the case of the "simple"
         properties 'tags', 'customer_metadata', 'internal_metadata' and
         'routes' which are key-value pairs, there are 2 special payload members:
 
@@ -1625,7 +1625,7 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     nics.*.interface:
 
-        This is the interface name the the VM will see for this interface. It
+        This is the interface name the VM will see for this interface. It
         will always be in the format netX where X is an integer >= 0.
 
         type: string (netX)
@@ -2625,7 +2625,7 @@ stopping
   Possible For: state
 
   This is a state which only exists for HVM VMs. When we have sent a
-  system_powerdown message to qemu via QMP we will mark the the VM as
+  system_powerdown message to qemu via QMP we will mark the VM as
   being in state 'stopping' until either the shutdown times out and we
   halt the zone, or the VM reaches zone\_state 'installed'.
 

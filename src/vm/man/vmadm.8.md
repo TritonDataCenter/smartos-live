@@ -158,6 +158,15 @@ tab-complete UUIDs rather than having to type them out for every command.
             The IP, port and VNC display number for the TCP socket we're
             listening on for this VM. If VNC is enabled.
 
+      kill [-s SIGNAL|-SIGNAL] <uuid>
+
+        This command sends a specified SIGNAL to a VM init process. If no
+        signal is specified then SIGTERM is sent.
+
+        The SIGNAL could be specified by its number or by name. When specified
+        by name, both forms with or without SIG- prefix are recognized.
+
+          -s, --signal=SIGNAL, -SIGNAL      Selects a SIGNAL to be sent.
 
       list [-p] [-H] [-o field,...] [-s field,...] [field=value ...]
 
@@ -258,6 +267,31 @@ tab-complete UUIDs rather than having to type them out for every command.
         reboot will be much faster but will not necessarily give the VM any
         time to shut down its processes.
 
+      receive [-f <filename>]
+
+        This command completes a cold/non-live VM migration, which is done
+        via the VM dataset(s) and its manifest sending and receiving.
+
+        Internally, the migration implies:
+
+        Source side: stop the VM, enumerate VM datasets and filesystems, make
+        a ZFS snapshot and send it to a file for each of the datasets, delete
+        ZFS snapshots, export a VM defnition into JSON file, transfer all
+        files to the target system.
+
+        Destination side: receive ZFS datasets from files, receive a JSON VM
+        manifest from file, install the VM.
+
+      reprovision <uuid> [-f <filename>]
+
+        This command reprovisions existing VM.
+
+        Internally, this implies: stop the VM, mark the zone as in transition,
+        rename zone's dataset(s), create new root dataset, copy zone's
+        configuration files, remount cores dataset, destroy old root dataset,
+        run a relevant brand init script, update metadata, start the VM, unset
+        transition flag.
+
       rollback-snapshot <uuid> <snapname>
 
         Support for snapshots is currently experimental. It only works for bhyve
@@ -277,6 +311,22 @@ tab-complete UUIDs rather than having to type them out for every command.
 
         See the 'SNAPSHOTS' section below for some more details on how to use
         these snapshots, and their restrictions.
+
+      send <uuid> [target]
+
+        This command initiates a cold/non-live VM migration, which is done
+        via the VM dataset(s) and its manifest sending and receiving.
+        The target could be a file redirect or a pipe to a remote host.
+
+        Internally, the migration implies:
+
+        Source side: stop the VM, enumerate VM datasets and filesystems, make
+        a ZFS snapshot and send it to a file for each of the datasets, delete
+        ZFS snapshots, export a VM defnition into JSON file, transfer all
+        files to the target system.
+
+        Destination side: receive ZFS datasets from files, receive a JSON VM
+        manifest from file, install the VM.
 
       start <uuid> [option=value ...]
 

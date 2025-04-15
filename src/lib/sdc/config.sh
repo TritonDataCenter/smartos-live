@@ -8,7 +8,7 @@
 # bash config.sh -json
 #
 # Copyright 2018 Joyent Inc.
-# Copyright 2023 MNX Cloud, Inc.
+# Copyright 2025 MNX Cloud, Inc.
 #
 
 CACHE_FILE_JSON="/tmp/.config.json"
@@ -81,7 +81,11 @@ function load_sdc_sysinfo {
     /usr/bin/sysinfo -p | while read -r entry; do
         lval=$(echo $entry | cut -d= -f 1 | sed -e 's/#//g')
         rval=$(echo $entry | cut -d= -f 2-)
-        echo ${prefix}${lval}=${rval} >> $tmpfile
+
+	# lval must be a bash identifier: a sequence of letters, digits,
+	# or underscores
+	[[ -z ${lval//[a-zA-Z0-9_]} ]] &&
+            echo ${prefix}${lval}=${rval} >> $tmpfile
     done
     eval $(cat $tmpfile)
     rm -f $tmpfile
@@ -202,7 +206,10 @@ function load_sdc_bootparams {
     for line in $(/bin/bootparams); do
         fields=(${line//=/ })
         key=$(echo ${fields[0]} | sed -e "s/-/_/g;s/#//g")
-        eval "${prefix}${key}=\"${fields[1]}\""
+	# key must be a bash identifier: a sequence of letters, digits,
+	# or underscores
+	[[ -z ${key//[a-zA-Z0-9_]} ]] &&
+            eval "${prefix}${key}=\"${fields[1]}\""
     done
 }
 

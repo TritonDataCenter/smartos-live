@@ -3,10 +3,20 @@ shipped in illumos-extra, where the source was from 2014 (the last time CSM
 was available).
 
 The uefi-rom.bin is a binary generated from the illumos downstream of
-uefi-edk2, specifically the il-edk2-stable202308 branch.
+uefi-edk2, specifically the il-edk2-stable202411 branch.
 
-Building the uefi ROM in illumos-extra is difficult thanks to its dependency
-on various software that is not all currently in the 2021.4 pkgsrc zone that
-SmartOS builds with.  While it is excluded from the build until SmartOS next
-updates to a newer pkgsrc zone, it can be built from the illumos downstream in
-a 2023.4 zone.
+Building the uefi ROM in illumos-extra may be able to happen once SmartOS moves
+to the 2024.4 pkgsrc zone, but until then a 2024.4 build zone can build from
+il-edk2-* branches as long as the following variables are set:
+
+GCCVER=13
+GCCPATH=/opt/local/gcc13
+GMAKE=/opt/local/bin/gmake
+GPATCH=/opt/local/bin/gpatch
+GAS=/opt/local/bin/gas
+GAR=/opt/local/bin/gar
+GLD=/opt/local/bin/gld
+GOBJCOPY=/opt/local/bin/gobjcopy
+
+Other pkgsrc zones post-2021 (i.e. ones with `gld` present) may with with
+different settings of the above variables.

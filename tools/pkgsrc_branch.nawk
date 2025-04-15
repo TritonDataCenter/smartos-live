@@ -1,4 +1,4 @@
-#!/opt/local/bin/nawk -f
+#!/usr/bin/awk -f
 #
 # This file and its contents are supplied under the terms of the
 # Common Development and Distribution License ("CDDL"), version 1.0.
@@ -10,7 +10,7 @@
 # http://www.illumos.org/license/CDDL.
 #
 # Copyright 2018 Joyent, Inc.
-# Copyright 2022 MNX Cloud, Inc.
+# Copyright 2024 MNX Cloud, Inc.
 #
 # Determine pkgsrc branch given a repositories.conf file.
 #

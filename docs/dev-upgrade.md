@@ -1,12 +1,12 @@
 # Upgrading Development Zones
 
 Over time, we update the base development environment that everyone is using.
-The current target is the x86_64 2021.4.x image series as noted in
+The current target is the x86_64 2024.4.1 image series as noted in
 [the SmartOS Getting Started Guide](../README.md#importing-the-zone-image).
 
 The purpose of this guide is to describe how an **existing** development zone
-(x86_64 2018.4) should be upgraded from one version of pkgsrc to the next
-(x86_64 2021.4). In the past, the upgrade for this target was more disruptive
+(x86_64 2021.4) should be upgraded from one version of pkgsrc to the next
+(x86_64 2024.4). In the past, the upgrade for this target was more disruptive
 than previous ones, as we went from a `multiarch` release to an `x86_64`
 release, which needed an entirely new /opt/local installation as pkgsrc
 cannot upgraded across this sort of boundary.
@@ -68,11 +68,11 @@ In this case, we're interested in upgrading the instance called
 `march-dev`. Next we create a snapshot and verify it exists:
 
 ```
-$ triton inst snapshot create --name=2021.4-upgrade march-dev
-Creating snapshot 2021.4-upgrade of instance march-dev
+$ triton inst snapshot create --name=2024.4-upgrade march-dev
+Creating snapshot 2024.4-upgrade of instance march-dev
 $ triton inst snapshot list march-dev
 NAME            STATE    CREATED
-2021.4-upgrade  created  2018-09-28T18:40:14.000Z
+2024.4-upgrade  created  2025-04-18T18:40:14.000Z
 ```
 
 #### Manual Snapshots in SmartOS
@@ -85,8 +85,8 @@ Then you use the `create-snapshot` option.
 [root@00-0c-29-37-80-28 ~]# vmadm list
 UUID                                  TYPE  RAM      STATE             ALIAS
 79809c3b-6c21-4eee-ba85-b524bcecfdb8  OS    4096     running           multiarch
-[root@00-0c-29-37-80-28 ~]# vmadm create-snapshot 79809c3b-6c21-4eee-ba85-b524bcecfdb8 2021.4-upgrade
-Created snapshot 2021.4-upgrade for VM 79809c3b-6c21-4eee-ba85-b524bcecfdb8
+[root@00-0c-29-37-80-28 ~]# vmadm create-snapshot 79809c3b-6c21-4eee-ba85-b524bcecfdb8 2024.4-upgrade
+Created snapshot 2024.4-upgrade for VM 79809c3b-6c21-4eee-ba85-b524bcecfdb8
 ```
 
 If your VM has delegated snapshots, you won't be able to use `vmadm` to take
@@ -108,7 +108,7 @@ development zone. If you encounter problems, please don't hesitate to
 reach out for assistance.
 
 The approach we describe is to cleanly shutdown services that
-are running from /opt/local, move /opt/local aside, install the 2021Q4
+are running from /opt/local, move /opt/local aside, install the 2024Q4
 x86-64 pkgsrc bootstrap bundle. We then reinstall as many packages as
 possible from the set that was previously manually installed, noting that
 some packages may have been dropped from the pkgsrc repository.
@@ -165,7 +165,7 @@ be used to determine modified properties. `xmllint` may also be used to
 produce a view of a given pair of XML files in order to more easily compare
 them.
 
-### Update pkgin configuration from 2018.4 to 2021.4
+### Update pkgin configuration from 2021.4 to 2024.4
 
 NOTE:  This step is revertable if no subsequent steps are taken.
 
@@ -176,15 +176,15 @@ Edit these files:
 /opt/local/etc/pkgin/repositories.conf
 ```
 
-And change any instance of `2018Q4` to `2021Q4`, and any instance of
+And change any instance of `2021Q4` to `2024Q4`, and any instance of
 `pkgsrc.joyent.com` to `pkgsrc.smartos.org`.  There should be one
 instance in each file.  Here's is a pre-upgrade view:
 
 ```
 smartos-build(~)[0]% grep Q4 /opt/local/etc/pkg_install.conf 
-PKG_PATH=https://pkgsrc.joyent.com/packages/SmartOS/2018Q4/x86_64/All
+PKG_PATH=https://pkgsrc.joyent.com/packages/SmartOS/2021Q4/x86_64/All
 smartos-build(~)[0]% grep Q4 /opt/local/etc/pkgin/repositories.conf 
-https://pkgsrc.joyent.com/packages/SmartOS/2018Q4/x86_64/All
+https://pkgsrc.joyent.com/packages/SmartOS/2021Q4/x86_64/All
 smartos-build(~)[0]% 
 ```
 
@@ -192,9 +192,9 @@ and a post-upgrade view:
 
 ```
 smartos-build-2(~)[0]% grep Q4 /opt/local/etc/pkg_install.conf 
-PKG_PATH=https://pkgsrc.smartos.org/packages/SmartOS/2021Q4/x86_64/All
+PKG_PATH=https://pkgsrc.smartos.org/packages/SmartOS/2024Q4/x86_64/All
 smartos-build-2(~)[0]% grep Q4 /opt/local/etc/pkgin/repositories.conf
-https://pkgsrc.smartos.org/packages/SmartOS/2021Q4/x86_64/All
+https://pkgsrc.smartos.org/packages/SmartOS/2024Q4/x86_64/All
 smartos-build-2(~)[0]% 
 ```
 
@@ -209,7 +209,7 @@ tripping:
 pkg_add -U libarchive pkg_install pkgin
 ```
 
-Those will enable a 2021.4-savvy pkgin to perform the next step.
+Those will enable a 2024.4-savvy pkgin to perform the next step.
 
 ### Perform a full upgrade
 
@@ -272,7 +272,7 @@ Recall that before upgrading, we saved a list of old SMF manifests in
 on your new /opt/local pkgsrc installation.
 
 If those manifests do not exist, then it's likely that the corresponding
-package does not exist in the 2021Q4 pkgsrc install, and that attempting to
+package does not exist in the 2024Q4 pkgsrc install, and that attempting to
 re-enable the SMF service post-upgrade will fail.
 
 In that case, the SMF service should be deleted using:
@@ -309,7 +309,7 @@ script might be missing at this point. When you next run `configure` in
 advance of doing a smartos-live build, they will be installed from
 http://us-central.manta.mnx.io/Joyent_Dev/public/releng/pkgsrc.
 
-At this point, you should be able to build a post-OS-8349 (2021.4) revision
+At this point, you should be able to build a post-OS-8349 (2024.4) revision
 of smartos-live and repos.  NOTE that illumos-extra must be updated
 concurrently with smartos-live. You may also reboot your dev zone and have it
 come up cleanly. Note that the following files in /etc will now lie to you:
@@ -318,7 +318,7 @@ come up cleanly. Note that the following files in /etc will now lie to you:
 * /etc/pkgsrc_version
 
 You may find it useful to manually update those files to correspond to
-the /opt/local 2021Q4 pkgsrc installation.
+the /opt/local 2024Q4 pkgsrc installation.
 
 ## Testing
 

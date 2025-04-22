@@ -167,36 +167,23 @@ them.
 
 ### Update pkgin configuration from 2021.4 to 2024.4
 
-NOTE:  This step is revertable if no subsequent steps are taken.
-
-Edit these files:
+NOTE: This step is revertable if proper backups are made.  For reversability,
+backup these files:
 
 ```
+/opt/local/etc/mk.conf
 /opt/local/etc/pkg_install.conf
 /opt/local/etc/pkgin/repositories.conf
+/opt/local/etc/gnupg/pkgsrc.gpg
 ```
 
-And change any instance of `2021Q4` to `2024Q4`, and any instance of
-`pkgsrc.joyent.com` to `pkgsrc.smartos.org`.  There should be one
-instance in each file.  Here's is a pre-upgrade view:
+Next, download this tarfile:
 
-```
-smartos-build(~)[0]% grep Q4 /opt/local/etc/pkg_install.conf 
-PKG_PATH=https://pkgsrc.joyent.com/packages/SmartOS/2021Q4/x86_64/All
-smartos-build(~)[0]% grep Q4 /opt/local/etc/pkgin/repositories.conf 
-https://pkgsrc.joyent.com/packages/SmartOS/2021Q4/x86_64/All
-smartos-build(~)[0]% 
-```
+`https://pkgsrc.smartos.org/packages/SmartOS/bootstrap-upgrade/bootstrap-2024Q4-x86_64-upgrade.tar.gz`
 
-and a post-upgrade view:
+And run the following extractor with privilege:
 
-```
-smartos-build-2(~)[0]% grep Q4 /opt/local/etc/pkg_install.conf 
-PKG_PATH=https://pkgsrc.smartos.org/packages/SmartOS/2024Q4/x86_64/All
-smartos-build-2(~)[0]% grep Q4 /opt/local/etc/pkgin/repositories.conf
-https://pkgsrc.smartos.org/packages/SmartOS/2024Q4/x86_64/All
-smartos-build-2(~)[0]% 
-```
+`gtar -xzvf ./bootstrap-2024Q4-x86_64-upgrade.tar.gz -C /.`
 
 ### Manually install necessary prerequisite upgrades
 

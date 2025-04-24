@@ -1,4 +1,4 @@
-#!/opt/local/bin/nawk -f
+#!/usr/bin/awk -f
 
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
@@ -8,6 +8,7 @@
 
 #
 # Copyright 2019 Joyent, Inc.
+# Copyright 2025 MNX Cloud, Inc.
 #
 
 #
@@ -128,13 +129,23 @@ function emit_line() {
 
     if (action_name == "file" || action_name == "dir") {
         print name " " replace_macros(attrs["path"]) " " mode " " owner " " group;
-    } else if (action_name == "link" || action_name == "hardlink") {
+    } else if (action_name == "link") {
+	#
+	# SmartOS manifests expect the literal value of a symbolic
+	# link target.  Unlike hard links, we need to scribble in
+	# something that can cope with relative paths either in the
+	# proto area or in the actual filesystem. Take IPS at its word
+	# for symbolic links.
+	#
+	print name " " replace_macros(attrs["path"]) "=" replace_macros(attrs["target"]);
+    } else if (action_name == "hardlink") {
 
         #
-        # SmartOS manifests expect full paths in targets, but IPS manifests
-        # don't require that. Try to catch these cases by looking for link
-        # targets that are either relative, or contain no directory
-        # separators, and prepend the parent directory of the source path.
+        # SmartOS manifests expect full paths in targets for hard
+        # links, but IPS manifests don't require that. Try to catch
+        # these cases by looking for link targets that are either
+        # relative, or contain no directory separators, and prepend
+        # the parent directory of the source path.
         #
         if (match(attrs["target"], "^\.") != 0 || match(attrs["target"], "/") == 0) {
             split(attrs["path"], path_comps, "/");

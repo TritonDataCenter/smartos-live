@@ -7,7 +7,7 @@
 
 #
 # Copyright 2022 Joyent, Inc.
-# Copyright 2024 MNX Cloud, Inc.
+# Copyright 2025 MNX Cloud, Inc.
 #
 
 # XXX - TODO
@@ -49,7 +49,12 @@ declare -a states
 declare -a nics
 declare -a assigned
 declare boot_from_zpool="no"
+declare pagesize
 declare prmpt_str
+
+# Pagesize
+pagesize="`getconf PAGESIZE`"
+[ -z "$pagesize" ] && pagesize=4096   # x86 default
 
 #
 # Generate a horizontal ruler of appropriate length.  Doing this each time we
@@ -870,7 +875,15 @@ create_dump()
 	')
 
 	# Create the dump zvol
-	zfs create -V ${dumpsize}mb -o checksum=noparity ${SYS_ZPOOL}/dump || \
+	zfs create \
+	    -V ${dumpsize}mb \
+	    -o checksum=noparity \
+	    -b $pagesize \
+	    -o logbias=throughput \
+	    -o sync=always \
+	    -o primarycache=metadata \
+	    -o secondarycache=none \
+	    ${SYS_ZPOOL}/dump || \
 	    fatal "failed to create the dump zvol"
 	dumpadm -d /dev/zvol/dsk/${SYS_ZPOOL}/dump >/dev/null
 	[[ $? -eq 0 ]] || fatal "failed to enable dump device"
@@ -952,8 +965,15 @@ setup_datasets()
 		#
 
 		size=${SYSINFO_MiB_of_Memory}
-		zfs create -V ${size}mb ${SWAPVOL} || fatal \
-		    "failed to create swap partition"
+		zfs create \
+		    -V ${size}mb \
+		    -b $pagesize \
+		    -o logbias=throughput \
+		    -o sync=always \
+		    -o primarycache=metadata \
+		    -o secondarycache=none \
+		    ${SWAPVOL} || \
+		    fatal "failed to create swap partition"
 
 		swap -a /dev/zvol/dsk/${SWAPVOL}
 	    fi
@@ -1069,6 +1089,8 @@ elif [[ -f ${USBMNT}/private/answers.json ]]; then
 	answer_file=${USBMNT}/private/answers.json
 elif [[ -f ${USBMOUNTPOINT}/private/answers.json ]]; then
 	answer_file=${USBMOUNTPOINT}/private/answers.json
+elif [[ -f /system/boot/answers.json ]]; then
+	answer_file=/system/boot/answers.json
 fi
 
 #

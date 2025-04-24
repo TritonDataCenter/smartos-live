@@ -5,9 +5,10 @@ was available).
 The uefi-rom.bin is a binary generated from the illumos downstream of
 uefi-edk2, specifically the il-edk2-stable202411 branch.
 
-Building the uefi ROM in illumos-extra may be able to happen once SmartOS moves
-to the 2024.4 pkgsrc zone, but until then a 2024.4 build zone can build from
-il-edk2-* branches as long as the following variables are set:
+Building the uefi ROM in illumos-extra may be able to happen again, now that
+SmartOS builds require a 2024.4 pkgsrc zone. Until we decide about moving
+uefi ROM builds into illumos-extra, a 2024.4 build zone can build a ROM from
+il-edk2-* branches as long as the following environment variables are set:
 
 GCCVER=13
 GCCPATH=/opt/local/gcc13
@@ -17,6 +18,13 @@ GAS=/opt/local/bin/gas
 GAR=/opt/local/bin/gar
 GLD=/opt/local/bin/gld
 GOBJCOPY=/opt/local/bin/gobjcopy
+
+If one wants to use the strap-cache gcc14 that can SmartOS, one should
+substitute the following AFTER a successful gcc14-primary SmartOS build in
+/path/to/smartos-live :
+
+GCCVER=14
+GCCPATH=/path/to/smartos-live/proto.strap/usr/gcc/14
 
 Other pkgsrc zones post-2021 (i.e. ones with `gld` present) may with with
 different settings of the above variables.

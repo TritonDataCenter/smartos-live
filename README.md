@@ -165,33 +165,32 @@ QEMU
 ## Setting up a Build Environment
 
 The first step when building is to set up a build environment. The SmartOS
-build requires building on SmartOS.  As of the `base-64-lts 21.4.0` build
-image, the SmartOS Platform Image must be 20211007 or newer. This can be done
+build requires building on SmartOS.  As of the `base-64-lts 24.4.1` build
+image, the SmartOS Platform Image must be 20220728 or newer. This can be done
 in VMware, on an existing SmartOS machine, or other virtualization. You must
 build inside of a non-global zone.
 
 ### Minimum Platform Image
 
-As of [OS-8412](https://smartos.org/bugview/OS-8412), OpenSSH requires OpenSSL
-3.0 to build, which means that you'll need to use a platform that includes
-[OS-8334](https://smartos.org/bugview/OS-8334). Release builds as of
-20211216T012707Z will satisfy this requirement.
+Because of changes in our build system regarding python3, you'll need to use a
+platform that includes [OS-8397](https://smartos.org/bugview/OS-8397). Release
+builds as of 20220728T031731Z will satisfy this requirement.
 
 ### Importing the Zone Image
 
-The SmartOS build currently uses the `base-64-lts 21.4.0` image
-which has a UUID of `c8715b60-7e98-11ec-82d1-03d16599f529 `. To import
+The SmartOS build currently uses the `base-64-lts 24.4.1` image
+which has a UUID of `2f1dc911-6401-4fa4-8e9d-67ea2e39c271`. To import
 the image, you should run the imgadm command from the global zone:
 
 ```
-# imgadm import c8715b60-7e98-11ec-82d1-03d16599f529
-Importing c8715b60-7e98-11ec-82d1-03d16599f529 (base-64-lts@21.4.0) from "https://images.smartos.org"
-Gather image c8715b60-7e98-11ec-82d1-03d16599f529 ancestry
-Must download and install 1 image (148.6 MiB)
-Download 1 image     [=======================>] 100% 148.62MB 497.77KB/s  5m 5s
-Downloaded image c8715b60-7e98-11ec-82d1-03d16599f529 (148.6 MiB)
-...82d1-03d16599f529 [=======================>] 100% 148.62MB   5.12MB/s    29s
-Imported image c8715b60-7e98-11ec-82d1-03d16599f529 (base-64-lts@21.4.0)
+# imgadm import 2f1dc911-6401-4fa4-8e9d-67ea2e39c271
+Importing 2f1dc911-6401-4fa4-8e9d-67ea2e39c271 (base-64-lts@24.4.1) from "https://images.smartos.org"
+Gather image 2f1dc911-6401-4fa4-8e9d-67ea2e39c271 ancestry
+Must download and install 1 image (237.1 MiB)
+Download 1 image     [=======================>] 100% 237.16MB  18.90MB/s    12s
+Downloaded image 2f1dc911-6401-4fa4-8e9d-67ea2e39c271 (237.1 MiB)
+...8e9d-67ea2e39c271 [=======================>] 100% 237.16MB  31.69MB/s     7s
+Imported image 2f1dc911-6401-4fa4-8e9d-67ea2e39c271 (base-64-lts@24.4.1)
 #
 ```
 
@@ -201,7 +200,7 @@ To create a zone, you need to create a `joyent` branded zone with
 `vmadm`. We recommend that the zone have the following attributes:
 
 * The brand set to `"joyent"`
-* The `image_uuid` set to `"c8715b60-7e98-11ec-82d1-03d16599f529"`
+* The `image_uuid` set to `"2f1dc911-6401-4fa4-8e9d-67ea2e39c271"`
 * At least 25 GiB of disk space specified in the `quota` property
 * At least 2-4 GiB of DRAM specified in the `max-physical-memory`
 property

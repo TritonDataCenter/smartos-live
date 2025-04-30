@@ -20,6 +20,7 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2012 Joyent, Inc.  All rights reserved.
+# Copyright 2024 MNX Cloud, Inc.
 #
 
 #
@@ -32,8 +33,8 @@ unalias -a
 cd "$(dirname $0)/.."
 BASE="$PWD"
 ROOT="$1"
-SVCCFG="$BASE/projects/illumos/usr/src/cmd/svc/svccfg/svccfg-native"
-CONFIGD="$BASE/projects/illumos/usr/src/cmd/svc/configd/svc.configd-native"
+SVCCFG="$BASE/projects/illumos/usr/src/tools/proto/root_i386-nd/opt/onbld/bin/i386/svccfg"
+CONFIGD="$BASE/projects/illumos/usr/src/tools/proto/root_i386-nd/opt/onbld/bin/i386/svc.configd"
 MAN_BASE="$ROOT/lib/svc/manifest"
 TMPFILE="/tmp/$(basename $0).$$"
 

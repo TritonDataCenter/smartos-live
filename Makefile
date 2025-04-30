@@ -11,7 +11,7 @@
 
 #
 # Copyright 2022 Joyent, Inc.
-# Copyright 2022 MNX Cloud, Inc.
+# Copyright 2025 MNX Cloud, Inc.
 #
 
 #
@@ -357,7 +357,7 @@ FORCEARG_yes=-f
 	touch $@
 
 # build our proto.strap area
-0-strap-stamp:
+0-strap-stamp: 0-preflight-stamp
 	$(ROOT)/tools/build_strap make \
 	    -a $(ADJUNCT_TARBALL) -d $(STRAP_PROTO) -j $(MAX_JOBS) \
 	    $(FORCEARG_$(FORCE_STRAP_REBUILD))

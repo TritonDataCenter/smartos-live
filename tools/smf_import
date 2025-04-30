@@ -1,13 +1,14 @@
 #!/bin/bash
 #
 # Copyright 2013 Joyent Inc., All rights reserved.
+# Copyright 2024 MNX Cloud, Inc.
 #
 
 set -e
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 
-SVCCFG="${ROOT}/projects/illumos/usr/src/cmd/svc/svccfg/svccfg-native"
+SVCCFG="${ROOT}/projects/illumos/usr/src/tools/proto/root_i386-nd/opt/onbld/bin/i386/svccfg"
 
 rdmnt=$1
 if [ -z "${rdmnt}" ] || [ ! -d "${rdmnt}" ]; then
@@ -17,7 +18,7 @@ if [ -z "${rdmnt}" ] || [ ! -d "${rdmnt}" ]; then
 fi
 
 if [[ ! -x ${SVCCFG} ]]; then
-	echo "FATAL: Missing svccfg-native binary from illumos build looked in '${SVCCFG}'"
+	echo "FATAL: Missing svccfg binary from illumos build tools looked in '${SVCCFG}'"
 	exit 1
 fi
 

@@ -561,7 +561,7 @@ tab-complete UUIDs rather than having to type them out for every command.
         type -- type of the properties value.
 
         vmtype -- This value can be one of the following groups:
-                  - OS:  all types of OS VMs (joyent, joyent-minimal, and lx)
+                  - OS:  all types of OS VMs (joyent, joyent-minimal, builder, and lx)
                   - HVM: all types of HVM VMs (bhyve and kvm)
                   - ANY: all types of VMs
                   or an explicit brand name such as 'lx'.
@@ -692,11 +692,11 @@ tab-complete UUIDs rather than having to type them out for every command.
 
     brand:
 
-        This will be one of 'joyent', 'joyent-minimal' or 'lx' for OS
+        This will be one of 'joyent', 'joyent-minimal', 'builder', or 'lx' for OS
         virtualization, or 'kvm' or 'bhyve' for full hardware virtualization.
         This is a required value for VM creation.
 
-        type: string (joyent|joyent-minimal|lx|kvm|bhyve)
+        type: string (joyent|joyent-minimal|builder|lx|kvm|bhyve)
         vmtype: ANY
         listable: yes
         create: yes

@@ -14,6 +14,7 @@
 #
 # Copyright 2020 Joyent, Inc.
 # Copyright (c) 2014 Elysium Digital, L.L.C.
+# Copyright 2025 MNX Cloud, Inc.
 #
 
 #
@@ -83,7 +84,7 @@ cd $(dirname $0)/.. || fail "failed to cd to $(dirname $0)/.."
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 if [[ $(git rev-parse --abbrev-ref HEAD) == release* ]]; then
 	lastbranch=$(git_incache branch -a | grep origin/ | \
-	    ggrep -B 1 origin/${current_branch} | \
+	    grep -B 1 origin/${current_branch} | \
 	    head -n1 | sed -e 's:remotes/::g')
 else
 	lastbranch='origin/release-'$(git_incache branch -a | \

@@ -289,7 +289,8 @@ $(TESTS_TARBALL): $(TESTS_MANIFEST)
 	cp $(STAMPFILE) $(ROOT)/tests.buildstamp
 	pfexec ./tools/builder/builder $(TESTS_MANIFEST) $(TESTS_PROTO) \
 	    $(PROTO) $(ROOT)
-	pfexec gtar -C $(TESTS_PROTO) -I pigz -cf $@ .
+	pfexec gtar -C $(TESTS_PROTO) -I pigz -cf $@ $(shell cd $(TESTS_PROTO) \
+		&& ls)
 	rm $(ROOT)/tests.buildstamp
 
 tests-tar: $(TESTS_TARBALL)

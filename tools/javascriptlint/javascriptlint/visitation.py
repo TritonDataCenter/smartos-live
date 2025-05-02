@@ -27,9 +27,9 @@ def make_visitors(visitors, klasses):
     # Intantiate an instance of each class
     for klass in klasses:
         if klass.__name__.lower() != klass.__name__:
-            raise ValueError, 'class names must be lowercase'
+            raise ValueError('class names must be lowercase')
         if not klass.__doc__:
-            raise ValueError, 'missing docstring on class %s' % klass.__name__
+            raise ValueError('missing docstring on class %s' % klass.__name__)
 
         # Look for functions with the "_visit_nodes" property.
         visitor = klass()

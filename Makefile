@@ -282,6 +282,10 @@ $(TESTS_MANIFEST): world
 # overwrite the same file in the platform.tgz if they were
 # ever extracted to the same area for investigation. Juggle a bit.
 #
+# Also, we do NOT want a tar file that includes "." in its contents. It could
+# alter $PWD in a bad way. We use a big hammer of excluding all dot-files,
+# which is safe because we don't generate any at the top level directory anyway.
+#
 $(TESTS_TARBALL): $(TESTS_MANIFEST)
 	pfexec rm -f $@
 	pfexec rm -rf $(TESTS_PROTO)

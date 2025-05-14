@@ -21,7 +21,7 @@ Known issues:
 
 ## 3.9.3
 
-- joyent/smartos-live#771 imgadm vacuum will try to reap images used by bhyve vms
+- TritonDataCenter/smartos-live#771 imgadm vacuum will try to reap images used by bhyve vms
 
 ## 3.9.2
 
@@ -39,7 +39,7 @@ Known issues:
 
 ## 3.8.0
 
-- joyent/imgadm#644 Update imgadm to use newer docker-registry-client so it can
+- TritonDataCenter/imgadm#644 Update imgadm to use newer docker-registry-client so it can
   pull from v2 registries. Docker v1 registry pulls are no longer supported.
 
 ## 3.7.4
@@ -175,7 +175,7 @@ Known issues:
 
 ## 3.0.0
 
-- [joyent/smartos-live#120] Support using a HTTP(S) proxy via
+- [TritonDataCenter/smartos-live#120] Support using a HTTP(S) proxy via
   the `https_proxy` or `http_proxy` environment variable.
 
 - Docker image import: both in importing images of `type=docker` from an
@@ -245,7 +245,7 @@ Known issues:
 
 ## 2.6.12
 
-- [OS-2981, joyent/smartos-live#322] Fix 'imgadm avail' crash with a DSAPI
+- [OS-2981, TritonDataCenter/smartos-live#322] Fix 'imgadm avail' crash with a DSAPI
   image source.
 
 

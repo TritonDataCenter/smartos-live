@@ -1,0 +1,37 @@
+#!/usr/bin/bash -x
+#
+# This file and its contents are supplied under the terms of the
+# Common Development and Distribution License ("CDDL"), version 1.0.
+# You may only use this file in accordance with the terms of version
+# 1.0 of the CDDL.
+#
+# A full copy of the text of the CDDL should have accompanied this
+# source.  A copy of the CDDL is also available via the Internet at
+# http://www.illumos.org/license/CDDL.
+#
+# Copyright 2025 MNX Cloud, Inc.
+#
+
+#
+# build_tests_tar - built tests-*.tgz
+#
+# This script exists because we do not want to create a tests-tar that has
+# "." as an entry in its archive.  This can cause damage to $PWD, per OS-8655.
+#
+# Makefiles are a terrible place to invoke subcommands that need Makefile
+# variables inside $(shell ...) subcommands. So we have this script to make
+# things simple for the Makefile. We send the tarfile output to stdout so
+# the Makefile can send it to its proper destination.
+#
+
+
+if [[ "$1" == "" ]]; then
+	echo "usage: $0 TESTS_PROTO_PATH" >& 2
+        exit 1
+fi
+
+# Assume we get called via pfexec or we error out here, and that the
+# Makefile will take this script's stdout to its destination.
+# Use $(ls -1A) to eliminate possiblity of "." as a tar file entry.
+cd "$1"
+gtar -I pigz -cf - $(ls -1A)

@@ -282,6 +282,10 @@ $(TESTS_MANIFEST): world
 # overwrite the same file in the platform.tgz if they were
 # ever extracted to the same area for investigation. Juggle a bit.
 #
+# Also, we do NOT want a tar file that includes "." in its contents. It could
+# alter $PWD in a bad way. We use a big hammer of excluding all dot-files,
+# which is safe because we don't generate any at the top level directory anyway.
+#
 $(TESTS_TARBALL): $(TESTS_MANIFEST)
 	pfexec rm -f $@
 	pfexec rm -rf $(TESTS_PROTO)
@@ -289,7 +293,7 @@ $(TESTS_TARBALL): $(TESTS_MANIFEST)
 	cp $(STAMPFILE) $(ROOT)/tests.buildstamp
 	pfexec ./tools/builder/builder $(TESTS_MANIFEST) $(TESTS_PROTO) \
 	    $(PROTO) $(ROOT)
-	pfexec gtar -C $(TESTS_PROTO) -I pigz -cf $@ .
+	pfexec ./tools/build_tests_tar $(TESTS_PROTO) > $@
 	rm $(ROOT)/tests.buildstamp
 
 tests-tar: $(TESTS_TARBALL)

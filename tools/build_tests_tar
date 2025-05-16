@@ -13,7 +13,7 @@
 #
 
 #
-# build_tests_tar - built tests-*.tgz
+# build_tests_tar - build tests-*.tgz
 #
 # This script exists because we do not want to create a tests-tar that has
 # "." as an entry in its archive.  This can cause damage to $PWD, per OS-8655.
@@ -33,5 +33,5 @@ fi
 # Assume we get called via pfexec or we error out here, and that the
 # Makefile will take this script's stdout to its destination.
 # Use $(ls -1A) to eliminate possiblity of "." as a tar file entry.
-cd "$1"
+cd "$1" || exit 2
 gtar -I pigz -cf - $(ls -1A)

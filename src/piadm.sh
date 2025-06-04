@@ -177,6 +177,8 @@ piname_present_get_bootfs() {
 
 # Defined as a variable in case we need to add parameters (like -s) to it.
 # WARNING:  Including -k for now.
+# Including -S (--show-errors) with the intention of making curl's errors
+# easier to parse.
 CURL=( curl -ks -f )
 VCURL=( curl -k -f -S --progress-bar )
 
@@ -397,7 +399,8 @@ install() {
 
 		# Do a URL reality check.
 		vecho "Attempting download of URL $1"
-		vcurl -o "${tdir}/download" "$1" 2>/dev/null || echo "$1 seems to be a boot stamp"
+		vcurl -o "${tdir}/download" "$1"\
+		    2>/dev/null || echo "$1 seems to be a boot stamp"
 		if [[ -e ${tdir}/download ]]; then
 			# Recurse with the downloaded file.
 			dload=$(mktemp)

@@ -13,7 +13,7 @@
 
 #
 # Copyright 2022 Joyent, Inc.
-# Copyright 2024 MNX Cloud, Inc.
+# Copyright 2025 MNX Cloud, Inc.
 #
 
 # shellcheck disable=1091

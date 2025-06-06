@@ -178,8 +178,6 @@ piname_present_get_bootfs() {
 
 # Defined as a variable in case we need to add parameters (like -s) to it.
 # WARNING:  Including -k for now.
-# Including -S (--show-errors) with the intention of making curl's errors
-# easier to parse.
 CURL=( curl -ks -f )
 VCURL=( curl -k -f --progress-bar )
 

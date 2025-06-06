@@ -266,7 +266,7 @@ validate_md5sum() {
 		eecho "Could not get md5sum for PI code: ${code}"
 		return 1
 	fi
-	local_md5sum=$(md5sum "${2}" | cut -d' ' -f1; exit ${PIPESTATUS[0]})
+	local_md5sum=$(digest -a md5 "${2}")
 	code=$?
 	if [[ $code -ne 0 ]]; then
 		eecho "md5sum failed for $2"

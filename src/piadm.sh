@@ -17,6 +17,7 @@
 #
 
 # shellcheck disable=1091
+# shellcheck disable=SC2317
 . /lib/sdc/usb-key.sh
 
 eecho() {
@@ -180,7 +181,7 @@ piname_present_get_bootfs() {
 # Including -S (--show-errors) with the intention of making curl's errors
 # easier to parse.
 CURL=( curl -ks -f )
-VCURL=( curl -k -f -S --progress-bar )
+VCURL=( curl -k -f --progress-bar )
 
 vcurl() {
 	if [[ $VERBOSE -eq 1 ]]; then
@@ -196,6 +197,91 @@ vcurl() {
 DEFAULT_URL_PREFIX=https://us-central.manta.mnx.io/Joyent_Dev/public/SmartOS/
 # Default path for piadm's configuration
 PIADM_CONF=/var/piadm/piadm.conf
+
+
+# This will fetch a md5sum using platform file as key,
+# Argument $1 could be an URL, where to fetch the PI,
+# where we expect the name of the PI to be the last element from
+# the URL or the string latest, in that case we will need
+# to fetch the name of the PI for the latest release, and fetch
+# the correct md5sum from the page.
+# In the case of "latest" we limit the amount of PI names
+# from ${URL_PREFIX} to 1024, which is the max value allowed.
+# which will show us 1024 PIs, being the last one the latest.
+# We can disable the validation of the md5sum setting the environment
+# variable PIADM_NO_MD5SUM to 1, if you need to specify a custom PI URL then
+# the environment variable PIADM_MD5SUM_URL must be set to the location
+# of the md5sums.txt file retrieve the checksums from that location.
+md5_platform=""
+fetch_md5sum() {
+	if [ -z "$md5_platform" ]; then
+		local platform_file
+		local stamp
+		if [ "$1" != "latest" ]; then
+			IFS=' ' read -r stamp platform_file <<<\
+			$(echo "$1" | rev | cut -d'/' -f1,2 | rev | tr -s "/" " ")
+		else
+			#latest is a special case, we need find out stamp
+			stamps_url="${URL_PREFIX%/}?limit=1024"
+			stamp=$("${CURL[@]}" "${stamps_url}" |\
+			json -ga -c "this.name.match(/Z$/)" | json -ag name |\
+				sort  | tail -1; exit ${PIPESTATUS[0]})
+			code=$?
+			if [[ $code -ne 0 ]]; then
+				eecho "Curl failed fetching PI data from ${stamps_url}"
+				return 1
+			fi
+			platform_file="smartos-${stamp}.iso"
+		fi
+		if [[ -z ${PIADM_MD5SUM_URL} ]];then
+			local md5_url="${URL_PREFIX}${stamp}/md5sums.txt"
+		else
+			local md5_url="${PIADM_MD5SUM_URL}"
+		fi
+		md5_platform=$("${CURL[@]}"  "${md5_url}" |\
+			awk -v pattern="${platform_file}"\
+			'$0 ~ pattern { print $1; exit}'; exit ${PIPESTATUS[0]})
+		code=$?
+		if [[ $code -ne 0 ]]; then
+			eecho "fetching md5sums from ${md5_url}"
+			return 2
+		fi
+		echo ${md5_platform}
+		return 0
+	else
+		eecho "not recalculating md5sum for $1" &>2
+		echo ${md5_platform}
+		return 0
+	fi
+}
+
+# $1 is url for the object that was downloaded to fetch its md5sum
+# $2 is the local file to run md5sum to compare
+validate_md5sum() {
+	if [[ $PIADM_NO_MD5SUM -eq 1 ]]; then
+		vecho "WARNING: Not checking md5sums"
+		return 0
+	fi
+	published_md5sum=$(fetch_md5sum $1)
+	code=$?
+	if [[ $code -ne 0 ]]; then
+		eecho "Could not get md5sum for PI code: ${code}"
+		return 1
+	fi
+	local_md5sum=$(md5sum "${2}" | cut -d' ' -f1; exit ${PIPESTATUS[0]})
+	code=$?
+	if [[ $code -ne 0 ]]; then
+		eecho "md5sum failed for $2"
+		return 2
+	fi
+	if [ "${published_md5sum}" != "${local_md5sum}" ]; then
+		vecho "published_md5sum: ${published_md5sum}"
+		vecho "local_md5sum:     ${local_md5sum}"
+		eecho  "local file does not matches published md5sum"
+		return 3
+	fi
+	return 0
+}
 
 #
 # (Re)-Configure the default URL (and potentially other things in the future)
@@ -348,6 +434,12 @@ install() {
 			/bin/rm -rf "${tdir}"
 			fatal "Curl exit code $code"
 		fi
+		validate_md5sum $1 "${tdir}/smartos.iso"
+		code=$?
+		if [[ $code -ne 0 ]]; then
+			/bin/rm -rf "${tdir}"
+			err "validate_md5sum exit code  $code"
+		fi
 		mount -F hsfs "${tdir}/smartos.iso" "${tdir}/mnt"
 
 		# For now, assume boot stamp and PI stamp are the same on an ISO...
@@ -406,7 +498,11 @@ install() {
 			dload=$(mktemp)
 			mv -f "${tdir}/download" "$dload"
 			/bin/rm -rf "${tdir}"
-
+			validate_md5sum  "$1" "$dload"
+			code=$?
+			if [[ $code -ne 0 ]]; then
+				err "validate_md5sum exit code  $code"
+			fi
 			# in case `install` exits out early...
 			( pwait $$ ; rm -f "$dload" ) &
 			vecho "Installing $1"
@@ -439,6 +535,12 @@ install() {
 		if [[ $code -ne 0 ]]; then
 			/bin/rm -rf "${tdir}"
 			fatal "PI-stamp $1 -- curl exit code $code"
+		fi
+		validate_md5sum "${URL_PREFIX}/$1/smartos-${1}.iso" "${tdir}/smartos.iso"
+ 		code=$?
+		if [[ $code -ne 0 ]]; then
+			/bin/rm -rf "${tdir}"
+			err "validate_md5sum exit code  $code"
 		fi
 		mount -F hsfs "${tdir}/smartos.iso" "${tdir}/mnt"
 		code=$?

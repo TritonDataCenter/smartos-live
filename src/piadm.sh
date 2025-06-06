@@ -489,8 +489,7 @@ install() {
 
 		# Do a URL reality check.
 		vecho "Attempting download of URL $1"
-		vcurl -o "${tdir}/download" "$1"\
-		    2>/dev/null || echo "$1 seems to be a boot stamp"
+		vcurl -o "${tdir}/download" "$1"
 		if [[ -e ${tdir}/download ]]; then
 			# Recurse with the downloaded file.
 			dload=$(mktemp)

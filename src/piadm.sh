@@ -202,8 +202,8 @@ PIADM_CONF=/var/piadm/piadm.conf
 #
 # Arguments:
 #   $1 - URL from where to fetch the PI from. The name of the PI
-#   		is expected to be the last path component of the URL,
-#   		or the literal string "latest".
+#   	 is expected to be the last path component of the URL,
+#   	 or the literal string "latest".
 #
 # Environment Variables:
 #   PIADM_NO_MD5SUM     - If set to 1, skips MD5 checksum validation.

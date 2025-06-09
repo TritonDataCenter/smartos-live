@@ -196,23 +196,29 @@ DEFAULT_URL_PREFIX=https://us-central.manta.mnx.io/Joyent_Dev/public/SmartOS/
 # Default path for piadm's configuration
 PIADM_CONF=/var/piadm/piadm.conf
 
-
-# This will fetch a md5sum using platform file as key,
-# Argument $1 could be an URL, where to fetch the PI,
-# where we expect the name of the PI to be the last element from
-# the URL or the string latest, in that case we will need
-# to fetch the name of the PI for the latest release, and fetch
-# the correct md5sum from the page.
-# In the case of "latest" we limit the amount of PI names
-# from ${URL_PREFIX} to 1024, which is the max value allowed.
-# which will show us 1024 PIs, being the last one the latest.
-# We can disable the validation of the md5sum setting the environment
-# variable PIADM_NO_MD5SUM to 1, if you need to specify a custom PI URL then
-# the environment variable PIADM_MD5SUM_URL must be set to the location
-# of the md5sums.txt file retrieve the checksums from that location.
+# fetch_md5sum
+#
+# Fetches a MD5 hash using a platform file as the key.
+#
+# Arguments:
+#   $1 - URL from where to fetch the PI from. The name of the PI
+#   		is expected to be the last path component of the URL,
+#   		or the literal string "latest".
+#
+# Environment Variables:
+#   PIADM_NO_MD5SUM     - If set to 1, skips MD5 checksum validation.
+#   PIADM_MD5SUM_URL    - If set, overrides the default md5sums.txt URL
+#   					  and uses the value provided.
+#
+# Notes:
+#   - If "latest" is used, up to 1024 PIs will be listed from ${URL_PREFIX}.
+#     The last one is assumed to be the latest.
+#   - On error, this function exits with code 1, following PIADM(8)
+#     convention: the error indicates a failure, but no changes were made
+#     to the system.
 md5_platform=""
 fetch_md5sum() {
-	if [ -z "$md5_platform" ]; then
+	if [[ -z "$md5_platform" ]]; then
 		local platform_file
 		local stamp
 		if [ "$1" != "latest" ]; then
@@ -242,7 +248,7 @@ fetch_md5sum() {
 		code=$?
 		if [[ $code -ne 0 ]]; then
 			eecho "fetching md5sums from ${md5_url}"
-			return 2
+			return 1
 		fi
 		echo ${md5_platform}
 		return 0
@@ -253,8 +259,13 @@ fetch_md5sum() {
 	fi
 }
 
-# $1 is url for the object that was downloaded to fetch its md5sum
-# $2 is the local file to run md5sum to compare
+# validate_md5sum
+#
+# $1 is the URL from where the PI was downloaded.
+# $2 is the on disk PI image that was download from $1.
+#
+# Error code will always be 1, following the PIADM(8) convention where
+# a return code of 1 means: an error has occurred, but no change was made.
 validate_md5sum() {
 	if [[ $PIADM_NO_MD5SUM -eq 1 ]]; then
 		vecho "WARNING: Not checking md5sums"
@@ -270,13 +281,13 @@ validate_md5sum() {
 	code=$?
 	if [[ $code -ne 0 ]]; then
 		eecho "md5sum failed for $2"
-		return 2
+		return 1
 	fi
-	if [ "${published_md5sum}" != "${local_md5sum}" ]; then
+	if [[ "${published_md5sum}" != "${local_md5sum}" ]]; then
 		vecho "published_md5sum: ${published_md5sum}"
 		vecho "local_md5sum:     ${local_md5sum}"
 		eecho  "local file does not matches published md5sum"
-		return 3
+		return 1
 	fi
 	return 0
 }

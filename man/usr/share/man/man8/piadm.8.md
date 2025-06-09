@@ -326,6 +326,16 @@ piadm(8) -- Manage SmartOS Platform Images
  [root@smartos ~]#
 ```
 
+## ENVIRONMENT VARIABLES
+
+    The following environment variables affect the execution of PIADM(8).
+
+    PIADM_MD5SUM_URL    If set, the value will be used to retrieve the md5sums.txt file, which will
+                        used to validate the MD5 hashes of downloaded platform images.
+
+    PIADM_NO_MD5SUM     If set to 1, this will skip MD5 checksum validation for downloaded platform
+                        images.
+
 ## EXIT STATUS
 
 The following exit values are returned:
